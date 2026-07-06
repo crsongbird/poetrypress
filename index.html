@@ -6,7 +6,7 @@
 <title>PoetrySky Press 📝🦋</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Marcellus&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap" rel="stylesheet">
 <style>
 
 :root{
@@ -536,9 +536,9 @@ const FONTS = [
   { label:"Cormorant Garamond", family:"Cormorant Garamond", weight:"600" },
   { label:"EB Garamond", family:"EB Garamond", weight:"500" },
   { label:"Bodoni Moda", family:"Bodoni Moda", weight:"700" },
-  { label:"Special Elite (typewriter)", family:"Special Elite", weight:"400" },
+  { label:"Space Mono (typewriter)", family:"Space Mono", weight:"400" },
   { label:"Courier Prime (mono)", family:"Courier Prime", weight:"700" },
-  { label:"Marcellus", family:"Marcellus", weight:"400" },
+  { label:"Cinzel", family:"Cinzel", weight:"500", noItalic:true },
   { label:"Caveat (handwritten)", family:"Caveat", weight:"700" },
   { label:"Crimson Pro", family:"Crimson Pro", weight:"600" },
 ];
@@ -548,7 +548,7 @@ const FONTS = [
 // (angry/happy/sad/tired). Row 5: the four seasons — Petrichor/Boardwalk/Ember Fall/First Frost.
 const PRESETS = [
   { name:"Letterhead", bg1:"#F4F1EA", text1:"#1F1B16", outlineMode:"off", font:"EB Garamond", accent1:"#2E4A6B", accent2:"#7A2E2E", border:true, borderColor:"#2E4A6B", borderThickness:1, borderOffset:10 },
-  { name:"Midnight Page", bg1:"#111113", text1:"#F2F2EF", outlineMode:"off", font:"Marcellus", accent1:"#C9A876", accent2:"#7A8CA3", border:true, borderColor:"#C9A876", borderThickness:1, borderOffset:14 },
+  { name:"Midnight Page", bg1:"#111113", text1:"#F2F2EF", outlineMode:"off", font:"Cinzel", accent1:"#C9A876", accent2:"#7A8CA3", border:true, borderColor:"#C9A876", borderThickness:1, borderOffset:14 },
   { name:"Deep Field", bg1:"#05040A", bgGradient:true, bg2:"#181233", bgAngle:120, text1:"#F5F3FF", textGradient:true, text2:"#C9B8FF", textAngle:45, outlineMode:"shadow", outlineColor:"#6C5CE7", shadowBlur:22, shadowX:0, shadowY:0, font:"Playfair Display", texture:true, textureType:"astral", textureOpacity:12, accent1:"#C9B8FF", accent2:"#8E5CD9", border:true, borderColor:"#8E5CD9", borderThickness:2, borderOffset:12 },
   { name:"Understory", bg1:"#2F3E2E", bgGradient:true, bg2:"#4C6444", bgAngle:135, text1:"#F1EAD6", outlineMode:"off", font:"Cormorant Garamond", texture:true, textureType:"paper", textureOpacity:10, accent1:"#C9B36A", accent2:"#6B4A32", border:true, borderColor:"#6B4A32", borderThickness:3, borderOffset:8 },
 
@@ -558,19 +558,19 @@ const PRESETS = [
   { name:"Sunset Diner", bg1:"#E8A33D", bgGradient:true, bg2:"#C9642F", bgAngle:135, text1:"#FFF3D6", outlineMode:"outline", outlineColor:"#3D2411", outlineThickness:4, font:"Courier Prime", texture:true, textureType:"paper", textureOpacity:12, accent1:"#2E9E8C", accent2:"#C9425A", border:true, borderColor:"#3D2411", borderThickness:3, borderOffset:5 },
 
   { name:"Night Pulse", bg1:"#08060F", text1:"#00F0FF", textGradient:true, text2:"#FF2FD1", textAngle:45, outlineMode:"shadow", outlineColor:"#00F0FF", shadowBlur:26, shadowX:0, shadowY:0, font:"Bodoni Moda", texture:true, textureType:"noise", textureOpacity:4, accent1:"#CFFF04", accent2:"#FF2FD1", border:true, borderColor:"#CFFF04", borderThickness:1, borderOffset:14 },
-  { name:"Cotton Sky", bg1:"#8ED8FF", bgGradient:true, bg2:"#FFB3D1", bgAngle:120, text1:"#FFFFFF", outlineMode:"shadow", outlineColor:"#B98AC9", shadowBlur:14, shadowX:0, shadowY:0, font:"Caveat", texture:true, textureType:"clouds", textureOpacity:11, accent1:"#5BB8F5", accent2:"#F5789F", border:true, borderColor:"#B98AC9", borderThickness:2, borderOffset:8 },
+  { name:"Cotton Sky", bg1:"#8ED8FF", bgGradient:true, bg2:"#FFB3D1", bgAngle:120, text1:"#3D2B6B", outlineMode:"shadow", outlineColor:"#B98AC9", shadowBlur:14, shadowX:0, shadowY:0, font:"Caveat", texture:true, textureType:"clouds", textureOpacity:11, accent1:"#1E5FA8", accent2:"#B2255F", border:true, borderColor:"#B98AC9", borderThickness:2, borderOffset:8 },
   { name:"Tidewater", bg1:"#012A36", bgGradient:true, bg2:"#0C5C6E", bgAngle:135, text1:"#B8FFF0", textGradient:true, text2:"#5FD3C4", textAngle:30, outlineMode:"shadow", outlineColor:"#00232C", shadowBlur:16, shadowX:0, shadowY:0, font:"Playfair Display", texture:true, textureType:"waterspots", textureOpacity:12, accent1:"#FF8A65", accent2:"#E8D9B5", border:true, borderColor:"#E8D9B5", borderThickness:2, borderOffset:10 },
-  { name:"Indigo Weave", bg1:"#2A3F5F", bgGradient:true, bg2:"#3C567D", bgAngle:170, text1:"#F2F0E8", outlineMode:"shadow", outlineColor:"#0E1A2B", shadowBlur:12, shadowX:0, shadowY:2, font:"Marcellus", texture:true, textureType:"canvas", textureOpacity:14, accent1:"#C97A4A", accent2:"#E8E2D5", border:true, borderColor:"#C97A4A", borderThickness:3, borderOffset:6 },
+  { name:"Indigo Weave", bg1:"#2A3F5F", bgGradient:true, bg2:"#3C567D", bgAngle:170, text1:"#F2F0E8", outlineMode:"shadow", outlineColor:"#0E1A2B", shadowBlur:12, shadowX:0, shadowY:2, font:"Cinzel", texture:true, textureType:"canvas", textureOpacity:14, accent1:"#C97A4A", accent2:"#E8E2D5", border:true, borderColor:"#C97A4A", borderThickness:3, borderOffset:6 },
 
-  { name:"Boiling Point", bg1:"#1A0000", bgGradient:true, bg2:"#5A0000", bgAngle:90, text1:"#FFFFFF", outlineMode:"outline", outlineColor:"#000000", outlineThickness:7, font:"Special Elite", texture:true, textureType:"grain", textureOpacity:16, accent1:"#FF3B30", accent2:"#FF9F1C", border:true, borderColor:"#FF9F1C", borderThickness:4, borderOffset:5 },
-  { name:"Sherbet Sun", bg1:"#FFE066", bgGradient:true, bg2:"#FF6F9C", bgAngle:50, text1:"#4A1F33", outlineMode:"off", font:"Marcellus", accent1:"#6EC6FF", accent2:"#7A2E5C", border:true, borderColor:"#7A2E5C", borderThickness:2, borderOffset:9 },
+  { name:"Boiling Point", bg1:"#1A0000", bgGradient:true, bg2:"#5A0000", bgAngle:90, text1:"#FFFFFF", outlineMode:"outline", outlineColor:"#000000", outlineThickness:7, font:"Space Mono", texture:true, textureType:"grain", textureOpacity:16, accent1:"#FF3B30", accent2:"#FF9F1C", border:true, borderColor:"#FF9F1C", borderThickness:4, borderOffset:5 },
+  { name:"Sherbet Sun", bg1:"#FFE066", bgGradient:true, bg2:"#FF6F9C", bgAngle:50, text1:"#4A1F33", outlineMode:"off", font:"Cinzel", accent1:"#1E6FA8", accent2:"#7A2E5C", border:true, borderColor:"#7A2E5C", borderThickness:2, borderOffset:9 },
   { name:"Quiet Rain", bg1:"#232B36", bgGradient:true, bg2:"#3E4A58", bgAngle:160, text1:"#C7CDD6", outlineMode:"shadow", outlineColor:"#0F141A", shadowBlur:14, shadowX:0, shadowY:3, font:"Crimson Pro", texture:true, textureType:"waterspots", textureOpacity:14, accent1:"#DCE3EA", accent2:"#4A5D7A", border:true, borderColor:"#4A5D7A", borderThickness:1, borderOffset:12 },
   { name:"Worn Thin", bg1:"#4A4038", bgGradient:true, bg2:"#6B6055", bgAngle:95, text1:"#B9AFA0", outlineMode:"off", font:"Courier Prime", texture:true, textureType:"canvas", textureOpacity:20, accent1:"#9C6B4A", accent2:"#8A9482", border:true, borderColor:"#9C6B4A", borderThickness:3, borderOffset:7 },
 
   { name:"Petrichor", bg1:"#3E5C4A", bgGradient:true, bg2:"#7C93A3", bgAngle:100, text1:"#EAF2EC", outlineMode:"off", font:"EB Garamond", texture:true, textureType:"waterspots", textureOpacity:12, accent1:"#C9D98A", accent2:"#9FB8C9", border:true, borderColor:"#9FB8C9", borderThickness:2, borderOffset:11 },
-  { name:"Boardwalk", bg1:"#8ED8F0", bgGradient:true, bg2:"#F0DFC0", bgAngle:90, text1:"#2E4A55", outlineMode:"off", font:"Cormorant Garamond", texture:true, textureType:"grain", textureOpacity:8, accent1:"#FF8C69", accent2:"#7FCDBB", border:true, borderColor:"#7FCDBB", borderThickness:2, borderOffset:13 },
-  { name:"Ember Fall", bg1:"#4A2318", bgGradient:true, bg2:"#A8562E", bgAngle:110, text1:"#F2D9A8", outlineMode:"off", font:"Crimson Pro", texture:true, textureType:"grain", textureOpacity:14, accent1:"#E8A84A", accent2:"#6B2E2E", border:true, borderColor:"#E8A84A", borderThickness:3, borderOffset:6 },
-  { name:"First Frost", bg1:"#EAF4FB", bgGradient:true, bg2:"#CFE3F0", bgAngle:110, text1:"#1E3444", outlineMode:"shadow", outlineColor:"#9FC3DA", shadowBlur:10, shadowX:0, shadowY:0, font:"Cormorant Garamond", texture:true, textureType:"canvas", textureOpacity:10, accent1:"#9FDCF0", accent2:"#F0C9D9", border:true, borderColor:"#F0C9D9", borderThickness:1, borderOffset:15 },
+  { name:"Boardwalk", bg1:"#8ED8F0", bgGradient:true, bg2:"#F0DFC0", bgAngle:90, text1:"#2E4A55", outlineMode:"off", font:"Cormorant Garamond", texture:true, textureType:"grain", textureOpacity:8, accent1:"#C9421F", accent2:"#137A5E", border:true, borderColor:"#7FCDBB", borderThickness:2, borderOffset:13 },
+  { name:"Ember Fall", bg1:"#4A2318", bgGradient:true, bg2:"#A8562E", bgAngle:110, text1:"#F2D9A8", outlineMode:"off", font:"Crimson Pro", texture:true, textureType:"grain", textureOpacity:14, accent1:"#E8A84A", accent2:"#F2C98A", border:true, borderColor:"#E8A84A", borderThickness:3, borderOffset:6 },
+  { name:"First Frost", bg1:"#D9E1E6", bgGradient:true, bg2:"#A9CFE8", bgAngle:110, text1:"#1E3444", outlineMode:"shadow", outlineColor:"#9FC3DA", shadowBlur:10, shadowX:0, shadowY:0, font:"Cormorant Garamond", texture:true, textureType:"flowers", textureOpacity:42, accent1:"#1C6690", accent2:"#B2416A", border:true, borderColor:"#F0C9D9", borderThickness:1, borderOffset:15 },
 ];
 
 const ASPECTS = { "1:1":[2880,2880], "9:16":[1620,2880], "9:20":[1296,2880] };
@@ -849,8 +849,26 @@ function buildLines(rawText, accent1On, accent2On){
 
 function fontString(fontDef, seg, size){
   const weight = seg.bold ? '700' : fontDef.weight;
-  const italic = seg.italic ? 'italic ' : '';
+  const useItalic = seg.italic && !fontDef.noItalic;
+  const italic = useItalic ? 'italic ' : '';
   return `${italic}${weight} ${size}px "${fontDef.family}"`;
+}
+
+// For fonts with no italic face at all (e.g. Cinzel — Roman capitals never had a
+// cursive form), *italic* markup and > quote lines fall back to letter-spaced
+// "spaced caps" emphasis instead — a period-appropriate stand-in, and also just
+// how classical inscriptional type actually signals emphasis without slanting.
+function emphasisTracking(fontDef, seg, size){
+  return (fontDef.noItalic && seg.italic) ? size*0.14 : 0;
+}
+
+function measureSegWidth(ctx, fontDef, seg, size){
+  ctx.font = fontString(fontDef, seg, size);
+  const tracking = emphasisTracking(fontDef, seg, size);
+  if(tracking === 0) return ctx.measureText(seg.text).width;
+  let w = 0;
+  for(const ch of seg.text) w += ctx.measureText(ch).width + tracking;
+  return w;
 }
 
 function measureLineWidth(ctx, line, baseSize, fontDef){
@@ -1121,15 +1139,15 @@ function genAstral(w,h){
   fctx.filter = 'none';
   fctx.globalCompositeOperation = 'source-over';
   fctx.globalAlpha = 1;
-  const starCount = Math.round((w*h)/4250);
+  const starCount = Math.round((w*h)/2125);
   for(let i=0;i<starCount;i++){
     const x = Math.random()*w, y = Math.random()*h;
     const roll = Math.random();
     let size, brightness, spike;
-    if(roll < 0.55){ size = 1; brightness = 185+Math.random()*55; spike = false; }
-    else if(roll < 0.83){ size = 1.2+Math.random()*1.1; brightness = 210+Math.random()*25; spike = false; }
-    else if(roll < 0.96){ size = 2.1+Math.random()*1.6; brightness = 232+Math.random()*18; spike = false; }
-    else { size = 3.4+Math.random()*2.6; brightness = 248+Math.random()*7; spike = true; }
+    if(roll < 0.55){ size = 1; brightness = 205+Math.random()*50; spike = false; }
+    else if(roll < 0.83){ size = 1.2+Math.random()*1.1; brightness = 222+Math.random()*22; spike = false; }
+    else if(roll < 0.96){ size = 2.1+Math.random()*1.6; brightness = 238+Math.random()*15; spike = false; }
+    else { size = 3.4+Math.random()*2.6; brightness = 250+Math.random()*5; spike = true; }
 
     if(size <= 1){
       fctx.fillStyle = `rgb(${brightness},${brightness},${brightness})`;
@@ -1138,8 +1156,8 @@ function genAstral(w,h){
     }
 
     const grad = fctx.createRadialGradient(x,y,0,x,y,size);
-    grad.addColorStop(0, `rgba(${brightness},${brightness},${brightness},0.95)`);
-    grad.addColorStop(0.5, `rgba(${brightness},${brightness},${brightness},0.4)`);
+    grad.addColorStop(0, `rgba(${brightness},${brightness},${brightness},1)`);
+    grad.addColorStop(0.65, `rgba(${brightness},${brightness},${brightness},0.7)`);
     grad.addColorStop(1, `rgba(${brightness},${brightness},${brightness},0)`);
     fctx.fillStyle = grad;
     fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
@@ -1223,7 +1241,7 @@ function render(){
     const opacity = Math.max(0, parseFloat($('textureOpacity').value) || 0) / 100;
     ctx.save();
     ctx.globalAlpha = opacity;
-    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalCompositeOperation = (type === 'astral') ? 'lighten' : 'overlay';
     ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
     ctx.restore();
   }
@@ -1287,10 +1305,7 @@ function render(){
     const size = baseSize*line.scale;
     const lineHeight = size*1.32*lineSpacing;
 
-    const widths = line.segments.map(seg=>{
-      ctx.font = fontString(fontDef, seg, size);
-      return ctx.measureText(seg.text).width;
-    });
+    const widths = line.segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size));
     const totalWidth = widths.reduce((a,b)=>a+b,0);
     const startX = currentAlign==='center' ? (W/2 - totalWidth/2) : (currentAlign==='right' ? (W - paddingX - totalWidth) : paddingX);
 
@@ -1315,21 +1330,45 @@ function render(){
       if(seg.color==='accent1') segFill = accent1Color;
       else if(seg.color==='accent2') segFill = accent2Color;
 
-      if(outlineMode==='outline' && outlineWidth>0){
-        ctx.lineJoin='round'; ctx.miterLimit=2;
-        ctx.lineWidth = outlineWidth*2;
-        ctx.strokeStyle = outlineColor;
-        ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-        ctx.strokeText(seg.text, x, cursorY);
-      }
-      if(outlineMode==='shadow'){
-        ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
-        ctx.shadowOffsetX = shadowX; ctx.shadowOffsetY = shadowY;
+      const tracking = emphasisTracking(fontDef, seg, size);
+
+      if(tracking === 0){
+        if(outlineMode==='outline' && outlineWidth>0){
+          ctx.lineJoin='round'; ctx.miterLimit=2;
+          ctx.lineWidth = outlineWidth*2;
+          ctx.strokeStyle = outlineColor;
+          ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+          ctx.strokeText(seg.text, x, cursorY);
+        }
+        if(outlineMode==='shadow'){
+          ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
+          ctx.shadowOffsetX = shadowX; ctx.shadowOffsetY = shadowY;
+        } else {
+          ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+        }
+        ctx.fillStyle = segFill;
+        ctx.fillText(seg.text, x, cursorY);
       } else {
-        ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+        let cx = x;
+        for(const ch of seg.text){
+          if(outlineMode==='outline' && outlineWidth>0){
+            ctx.lineJoin='round'; ctx.miterLimit=2;
+            ctx.lineWidth = outlineWidth*2;
+            ctx.strokeStyle = outlineColor;
+            ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+            ctx.strokeText(ch, cx, cursorY);
+          }
+          if(outlineMode==='shadow'){
+            ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
+            ctx.shadowOffsetX = shadowX; ctx.shadowOffsetY = shadowY;
+          } else {
+            ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+          }
+          ctx.fillStyle = segFill;
+          ctx.fillText(ch, cx, cursorY);
+          cx += ctx.measureText(ch).width + tracking;
+        }
       }
-      ctx.fillStyle = segFill;
-      ctx.fillText(seg.text, x, cursorY);
       ctx.restore();
       x += w;
     }
@@ -1356,7 +1395,18 @@ function render(){
 }
 
 // wait for fonts before first paint so sizing is accurate
-const fontFaces = FONTS.map(f=>document.fonts.load(`${f.weight} 40px "${f.family}"`).catch(()=>{}));
+const fontFaces = [];
+FONTS.forEach(f=>{
+  const combos = new Set([
+    `${f.weight} 40px`,
+    `700 40px`,
+    `italic ${f.weight} 40px`,
+    `italic 700 40px`,
+  ]);
+  combos.forEach(c=>{
+    fontFaces.push(document.fonts.load(`${c} "${f.family}"`).catch(()=>{}));
+  });
+});
 Promise.all(fontFaces).then(render).catch(render);
 document.fonts.ready.then(render);
 setTimeout(render, 300);
