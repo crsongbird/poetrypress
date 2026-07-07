@@ -523,7 +523,7 @@ hope you like it.
 
   <div class="stage">
     <div class="canvas-wrap">
-      <canvas id="poemCanvas" width="1620" height="2880"></canvas>
+      <canvas id="poemCanvas" width="2304" height="4096"></canvas>
     </div>
     <button class="download-btn" id="downloadBtn">Download image</button>
   </div>
@@ -573,7 +573,7 @@ const PRESETS = [
   { name:"First Frost", bg1:"#D9E1E6", bgGradient:true, bg2:"#A9CFE8", bgAngle:110, text1:"#1E3444", outlineMode:"shadow", outlineColor:"#9FC3DA", shadowBlur:10, shadowX:0, shadowY:0, font:"Cormorant Garamond", texture:true, textureType:"flowers", textureOpacity:42, accent1:"#1C6690", accent2:"#B2416A", border:true, borderColor:"#F0C9D9", borderThickness:1, borderOffset:15 },
 ];
 
-const ASPECTS = { "1:1":[2880,2880], "9:16":[1620,2880], "9:20":[1296,2880] };
+const ASPECTS = { "1:1":[3072,3072], "9:16":[2304,4096], "9:20":[1843,4096] };
 
 function $(id){ return document.getElementById(id); }
 
@@ -1121,24 +1121,73 @@ function genFlowers(w,h){
   return c;
 }
 
-function genAstral(w,h){
+function genAstralFog(w,h){
+  // Same fBm machinery as genClouds, but tuned for faint varied nebula haze rather
+  // than distinct puffy clouds: more octaves for richer multi-scale structure, a
+  // negative bias so there's coverage everywhere instead of clear "sky" gaps, and a
+  // gentler power curve so it reads as smooth gaseous variation, not sharp edges.
+  const workDiv = 4;
+  const workW = Math.max(24, Math.round(w/workDiv));
+  const workH = Math.max(24, Math.round(h/workDiv));
+
+  const octaves = 6;
+  const gain = 0.55;
+  const lacunarity = 2.0;
+  const baseCells = 3;
+  const bias = -0.1;
+  const power = 1.4;
+
+  const octaveGrids = [];
+  let amp = 1, maxAmp = 0;
+  for(let i=0;i<octaves;i++){
+    const freq = baseCells * Math.pow(lacunarity, i);
+    const gw = Math.max(2, Math.round(freq)+1);
+    const gh = Math.max(2, Math.round(freq * (workH/workW))+1);
+    octaveGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp });
+    maxAmp += amp;
+    amp *= gain;
+  }
+
+  const small = document.createElement('canvas');
+  small.width = workW; small.height = workH;
+  const sctx = small.getContext('2d');
+  const img = sctx.createImageData(workW, workH);
+  const d = img.data;
+
+  for(let py=0; py<workH; py++){
+    for(let px=0; px<workW; px++){
+      let total = 0;
+      for(const o of octaveGrids){
+        const nx = (px/workW) * o.freq;
+        const ny = (py/workH) * o.freq;
+        total += sampleNoiseGrid(o.grid, o.gw, o.gh, nx, ny) * o.amp;
+      }
+      const v = total / maxAmp;
+      let density = Math.max(0, (v - bias) / (1 - bias));
+      density = Math.pow(density, power);
+
+      const idx = (py*workW+px)*4;
+      const val = 95 + density*90;
+      d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
+    }
+  }
+  sctx.putImageData(img,0,0);
+
   const full = document.createElement('canvas');
   full.width = w; full.height = h;
   const fctx = full.getContext('2d');
-  fctx.fillStyle = 'rgb(122,122,122)';
-  fctx.fillRect(0,0,w,h);
+  fctx.imageSmoothingEnabled = true;
+  fctx.drawImage(small, 0, 0, w, h);
+  return full;
+}
 
-  const dim = Math.max(w,h);
-  // Soft blurry nebula haze — big diffuse structure, genuinely blurred, no hard edges.
-  drawBlurredNoiseLayers(fctx, w, h, [
-    { cells:4,  blur:dim*0.13, alpha:0.7, lo:75,  hi:185 },
-    { cells:10, blur:dim*0.05, alpha:0.4, lo:100, hi:165 },
-  ]);
+function genAstralStars(w,h){
+  // Transparent canvas — only actual star pixels carry any alpha, so 'lighten'
+  // compositing leaves every non-star pixel completely untouched.
+  const full = document.createElement('canvas');
+  full.width = w; full.height = h;
+  const fctx = full.getContext('2d');
 
-  // Stars are drawn crisp, unblurred, directly on top — sharp points against soft fog.
-  fctx.filter = 'none';
-  fctx.globalCompositeOperation = 'source-over';
-  fctx.globalAlpha = 1;
   const starCount = Math.round((w*h)/2125);
   for(let i=0;i<starCount;i++){
     const x = Math.random()*w, y = Math.random()*h;
@@ -1163,7 +1212,6 @@ function genAstral(w,h){
     fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
 
     if(spike){
-      // faint 4-point diffraction spike, the signature JWST bright-star look
       fctx.save();
       fctx.globalAlpha = 0.55;
       fctx.strokeStyle = `rgb(${brightness},${brightness},${brightness})`;
@@ -1189,8 +1237,10 @@ function getTextureCanvas(type, w, h){
     result = genClouds(w,h);
   } else if(type === 'flowers'){
     result = genFlowers(w,h);
-  } else if(type === 'astral'){
-    result = genAstral(w,h);
+  } else if(type === 'astral_fog'){
+    result = genAstralFog(w,h);
+  } else if(type === 'astral_stars'){
+    result = genAstralStars(w,h);
   } else {
     let genW = w, genH = h;
     if(type==='grain'){ genW=Math.max(1,Math.round(w/5)); genH=Math.max(1,Math.round(h/5)); }
@@ -1239,11 +1289,25 @@ function render(){
   if($('textureToggle').checked){
     const type = $('textureType').value;
     const opacity = Math.max(0, parseFloat($('textureOpacity').value) || 0) / 100;
-    ctx.save();
-    ctx.globalAlpha = opacity;
-    ctx.globalCompositeOperation = (type === 'astral') ? 'lighten' : 'overlay';
-    ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
-    ctx.restore();
+    if(type === 'astral'){
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.drawImage(getTextureCanvas('astral_fog', W, H), 0, 0);
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.globalCompositeOperation = 'lighten';
+      ctx.drawImage(getTextureCanvas('astral_stars', W, H), 0, 0);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
+      ctx.restore();
+    }
   }
 
   if($('borderToggle').checked){
