@@ -6,34 +6,7 @@
 <title>Ruby's Page Press 🔶📝🦋</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2
-?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700
-&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700
-&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700
-&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700
-&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700
-&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700
-&family=Cinzel:wght@400;500;700
-&family=Caveat:wght@500;700
-&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700
-
-&family=Literata:ital,wght@0,400;0,600;1,400;1,600
-&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600
-&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700
-&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600
-&family=Oswald:wght@400;500;600
-&family=Unica+One:wght@400
-&family=Shadows+Into+Light:wght@400
-&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600
-&family=Architects+Daughter:wght@400
-&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600
-
-&family=Inter:ital,wght@0,400;0,600;1,400;1,600
-&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600
-&family=Nunito:ital,wght@0,400;0,600;1,400;1,600
-
-&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Literata:ital,wght@0,400;0,600;1,400;1,600&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Oswald:wght@400;500;600&family=Unica+One:wght@400&family=Shadows+Into+Light:wght@400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600&family=Architects+Daughter:wght@400&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Inter:ital,wght@0,400;0,600;1,400;1,600&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css"/>
 <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
 <style>
@@ -237,7 +210,7 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
     <p class="app-title">Ruby's Page Press 🔶📝🦋</p>
 
     <div class="card">
-      <p class="card-title">Text To Press</p>
+      <p class="card-title">  Page Text (Pseudo-Markdown)</p>
       <textarea id="poemText">## A Brief Demonstration
 
 This is **bold**, this is *italic*,
@@ -277,9 +250,8 @@ including **some things that never needed a slider**.
 
 -# ↙ {Don't forget to change the credits 💙}</textarea>
       <p class="hint">
-	    Accent colors: <code>[accent one]</code> and <code>{accent two}</code>.<br>
-        Inline: <code>**bold**</code>, <code>*italic*</code><br>
-		Prefixes: <code>&gt; quote line</code>, <code>## big line</code>, <code>-# small line</code>.</p>
+	  Text Styles: <code>**bold**</code>, <code>*italic*</code>, <code>[accent one]</code> and <code>{accent two}</code>.<br>
+		Line Styles: <code>&gt; quote line</code>, <code>## big line</code>, <code>-# small line</code>.</p>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
@@ -299,13 +271,13 @@ including **some things that never needed a slider**.
     </div>
 
     <div class="card">
-      <p class="card-title">Presets</p>
+      <p class="card-title">  Style Presets</p>
       <p class="hint" style="margin-top:0; margin-bottom:5px;">Set a mood, and then adjust!~</p>
       <div class="preset-grid" id="presetGrid"></div>
     </div>
 
     <div class="card">
-      <p class="card-title">Frame</p>
+      <p class="card-title">  Card Size & Alignment</p>
       <div class="card-grid">
         <div class="field full">
           <label>Aspect ratio</label>
@@ -338,15 +310,15 @@ including **some things that never needed a slider**.
     </div>
 
     <div class="card">
-      <p class="card-title">Type</p>
+      <p class="card-title">  Typesetting</p>
       <div class="card-grid">
         <div class="field full">
-          <label>Font</label>
+          <label>Font Family</label>
           <select id="fontFamily"></select>
         </div>
 
         <div class="field">
-          <label>Text color</label>
+          <label>Primary Text Color</label>
           <div class="color-pair">
             <input type="text" class="hex-input" id="textColorHex" value="#F2F2EF" data-coloris>
           </div>
@@ -358,7 +330,7 @@ including **some things that never needed a slider**.
         </div>
 
         <div class="field full">
-          <label>Line spacing</label>
+          <label>Line Spacing Modifier</label>
           <div class="angle-wrap">
             <input type="range" id="lineSpacing" min="-1" max="1" step="0.01" value="0">
             <span class="angle-val" id="lineSpacingVal">1.00x</span>
@@ -367,17 +339,17 @@ including **some things that never needed a slider**.
 
         <div class="check-row">
           <input type="checkbox" id="textGradientToggle">
-          <label for="textGradientToggle">Gradient text fill</label>
+          <label for="textGradientToggle">Radial Gradient Text?</label>
         </div>
         <div class="subblock" id="gradientBlock">
           <div class="field">
-            <label>Text color 2</label>
+            <label>Secondary Text Color</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="textColor2Hex" value="#B98A8A" data-coloris>
             </div>
           </div>
           <div class="field">
-            <label>Angle</label>
+            <label>Radial Gradient Angle</label>
             <div class="angle-wrap">
               <input type="range" id="textGradientAngle" min="0" max="360" value="45">
               <span class="angle-val" id="textGradientAngleVal">45°</span>
@@ -387,11 +359,11 @@ including **some things that never needed a slider**.
 
         <div class="check-row">
           <input type="checkbox" id="accent1Toggle" checked>
-          <label for="accent1Toggle">Accent one — <code>[this]</code></label>
+          <label for="accent1Toggle">Accent Color One Enabled?  <code>[text]</code></label>
         </div>
         <div class="subblock" id="accent1Block">
           <div class="field full">
-            <label>Color</label>
+            <label>Accent Color One</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="accent1ColorHex" value="#C9A876" data-coloris>
             </div>
@@ -400,11 +372,11 @@ including **some things that never needed a slider**.
 
         <div class="check-row">
           <input type="checkbox" id="accent2Toggle" checked>
-          <label for="accent2Toggle">Accent two — <code>{this}</code></label>
+          <label for="accent2Toggle">Accent Color Two Enabled?  <code>{text}</code></label>
         </div>
         <div class="subblock" id="accent2Block">
           <div class="field full">
-            <label>Color</label>
+            <label>Accent Color Two</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="accent2ColorHex" value="#7A8CA3" data-coloris>
             </div>
@@ -416,7 +388,7 @@ including **some things that never needed a slider**.
     </div>
 
     <div class="card">
-      <p class="card-title">Outline &amp; Shadow</p>
+      <p class="card-title">  Text Effects</p>
       <div class="card-grid">
         <div class="field full">
           <label>Mode</label>
@@ -448,7 +420,7 @@ including **some things that never needed a slider**.
     </div>
 
     <div class="card">
-      <p class="card-title">Background</p>
+      <p class="card-title">Stage Options</p>
       <div class="card-grid">
         <div class="field">
           <label>Color 1</label>
@@ -459,7 +431,7 @@ including **some things that never needed a slider**.
 
         <div class="check-row">
           <input type="checkbox" id="bgGradientToggle">
-          <label for="bgGradientToggle">Gradient background</label>
+          <label for="bgGradientToggle">Radial Gradient?</label>
         </div>
         <div class="subblock" id="bgGradientBlock">
           <div class="field">
@@ -478,51 +450,56 @@ including **some things that never needed a slider**.
         </div>
 
         <div class="check-row">
-          <input type="checkbox" id="textureToggle">
-          <label for="textureToggle">Texture overlay</label>
+          <input type="checkbox" id="textureToggle" checked>
+          <label for="textureToggle">Background Texture?</label>
         </div>
         <div class="subblock" id="textureBlock">
           <div class="field full">
             <label>Type</label>
             <select id="textureType">
               <option value="grain">Grain</option>
-              <option value="paper">Paper</option>
               <option value="noise">Noise</option>
-              <option value="waterspots">Water spots</option>
+              <option value="paper">Paper</option>
               <option value="canvas">Canvas</option>
               <option value="clouds">Clouds</option>
-              <option value="flowers">Flowers</option>
-              <option value="astral">Astral</option>
-              <option value="inkbleed">Ink Bleed</option>
-              <option value="crackedglaze">Cracked Glaze</option>
+              <option value="inkbleed" selected>Ink Bleed</option>
               <option value="bokeh">Bokeh</option>
-              <option value="embers">Embers</option>
-              <option value="tessellate">Tessellate</option>
+              <option value="flowers">Flowers</option>
+              <option value="waterspots">Circles</option>
+              <option value="astral">Stars</option>
+              <option value="crackedglaze">Cracks</option>
+              <option value="embers">Sparks</option>
+              <option value="tessellate">Squares</option>
+              <option value="snow">Flurries</option>
+              <option value="leaves">Windfall</option>
+              <option value="magicparticles">Wisps</option>
+              <option value="rainstreaks">Downpour</option>
+              <option value="leather">Hidebound</option>
             </select>
           </div>
           <div class="field full">
             <label>Opacity</label>
             <div class="angle-wrap">
-              <input type="range" id="textureOpacity" min="0" max="60" value="10">
-              <span class="angle-val" id="textureOpacityVal">10%</span>
+              <input type="range" id="textureOpacity" min="0" max="60" value="60">
+              <span class="angle-val" id="textureOpacityVal">60%</span>
             </div>
           </div>
         </div>
 
         <div class="check-row">
-          <input type="checkbox" id="borderToggle">
-          <label for="borderToggle">Border</label>
+          <input type="checkbox" id="borderToggle" checked>
+          <label for="borderToggle">Card Border?</label>
         </div>
         <div class="subblock" id="borderBlock">
           <div class="field full">
             <label>Border color</label>
             <div class="color-pair">
-              <input type="text" class="hex-input" id="borderColorHex" value="#0C0C0C" data-coloris>
+              <input type="text" class="hex-input" id="borderColorHex" value="#C9A876" data-coloris>
             </div>
           </div>
           <div class="row full">
-            <div class="field"><label>Thickness (px)</label><input type="number" id="borderThickness" value="1" min="1" step="1"></div>
-            <div class="field"><label>Offset (px)</label><input type="number" id="borderOffset" value="0" min="0" step="1"></div>
+            <div class="field"><label>Thickness (px)</label><input type="number" id="borderThickness" value="2" min="1" step="1"></div>
+            <div class="field"><label>Offset (px)</label><input type="number" id="borderOffset" value="14" min="0" step="1"></div>
           </div>
         </div>
 
@@ -584,7 +561,7 @@ const PRESETS = [
   { name:"Midnight Page", bg1:"#111113", text1:"#F2F2EF", outlineMode:"off", font:"Cinzel", texture:true, textureType:"tessellate", textureOpacity:21, accent1:"#C9A876", accent2:"#7A8CA3", border:true, borderColor:"#C9A876", borderThickness:2, borderOffset:14 }, //CINZEL
   { name:"Letterhead", bg1:"#E7DECD", text1:"#1F1B16", outlineMode:"off", font:"EB Garamond", texture:true, textureType:"inkbleed", textureOpacity:60, accent1:"#2E4A6B", accent2:"#7A2E2E", border:true, borderColor:"#2E4A6B", borderThickness:2, borderOffset:10 }, //EB GAR
   { name:"Deep Field", bg1:"#05040A", bgGradient:true, bg2:"#181233", bgAngle:120, text1:"#F5F3FF", textGradient:true, text2:"#C9B8FF", textAngle:45, outlineMode:"shadow", outlineColor:"#6C5CE7", shadowBlur:22, shadowX:0, shadowY:0, font:"Unica One", texture:true, textureType:"astral", textureOpacity:40, accent1:"#C9B8FF", accent2:"#8E5CD9", border:true, borderColor:"#8E5CD9", borderThickness:2, borderOffset:12 }, // UNICA
-  { name:"Understory", bg1:"#2F3E2E", bgGradient:true, bg2:"#4C6444", bgAngle:135, text1:"#F1EAD6", outlineMode:"off", font:"Poppins", texture:true, textureType:"bokeh", textureOpacity:50, accent1:"#C9B36A", accent2:"#d2ffa3", border:true, borderColor:"#1c2620", borderThickness:12, borderOffset:0 }, // POPPINS
+  { name:"Understory", bg1:"#2F3E2E", bgGradient:true, bg2:"#4C6444", bgAngle:135, text1:"#F1EAD6", outlineMode:"off", font:"Poppins", texture:true, textureType:"leaves", textureOpacity:32, accent1:"#C9B36A", accent2:"#d2ffa3", border:true, borderColor:"#1c2620", borderThickness:12, borderOffset:0 }, // POPPINS
 
   { name:"Grimoire", bg1:"#1B0F2E", bgGradient:true, bg2:"#3B1F5C", bgAngle:60, text1:"#F4D9A0", textGradient:true, text2:"#C9A876", textAngle:30, outlineMode:"shadow", outlineColor:"#8E5CD9", shadowBlur:20, shadowX:0, shadowY:0, font:"Playfair Display", texture:true, textureType:"noise", textureOpacity:10, accent1:"#f3d5c9", accent2:"#8E5CD9", border:true, borderColor:"#F4D9A0", borderThickness:2, borderOffset:10 }, // PLAYFAIR
   { name:"Candy Floss", bg1:"#FFD9E8", bgGradient:true, bg2:"#FFB6D5", bgAngle:135, text1:"#7A2E4A", outlineMode:"off", font:"Caveat", texture:true, textureType:"bokeh", textureOpacity:14, accent1:"#FF6FA5", accent2:"#FF0073", border:true, borderColor:"#FFD86B", borderThickness:2, borderOffset:6 }, // CAVEAT
@@ -592,20 +569,20 @@ const PRESETS = [
   { name:"Sunset Diner", bg1:"#E8A33D", bgGradient:true, bg2:"#C9642F", bgAngle:135, text1:"#FFF3D6", outlineMode:"outline", outlineColor:"#3D2411", outlineThickness:4, font:"Courier Prime", texture:true, textureType:"paper", textureOpacity:12, accent1:"#ffab77", accent2:"#9bb6eb", border:true, borderColor:"#3D2411", borderThickness:3, borderOffset:5 }, // COURIER
 
   { name:"Night Pulse", bg1:"#08060F", text1:"#00F0FF", textGradient:true, text2:"#FF2FD1", textAngle:45, outlineMode:"shadow", outlineColor:"#00F0FF", shadowBlur:100, shadowX:0, shadowY:0, font:"Josefin Sans", texture:true, textureType:"tessellate", textureOpacity:60, accent1:"#bcfcff", accent2:"#FF2FD1", border:true, borderColor:"#CFFF04", borderThickness:1, borderOffset:14 }, // Night Pulse
-  { name:"Cotton Sky", bg1:"#8ED8FF", bgGradient:true, bg2:"#FFB3D1", bgAngle:120, text1:"#3D2B6B", outlineMode:"shadow", outlineColor:"#B98AC9", shadowBlur:14, shadowX:0, shadowY:0, font:"Architects Daughter", texture:true, textureType:"clouds", textureOpacity:11, accent1:"#3e78ff", accent2:"#ff65de", border:true, borderColor:"#9b8ee7", borderThickness:2, borderOffset:8 }, // ARCHITECTS
+  { name:"Cotton Sky", bg1:"#8ED8FF", bgGradient:true, bg2:"#FFB3D1", bgAngle:120, text1:"#3D2B6B", outlineMode:"shadow", outlineColor:"#B98AC9", shadowBlur:14, shadowX:0, shadowY:0, font:"Architects Daughter", texture:true, textureType:"magicparticles", textureOpacity:22, accent1:"#3e78ff", accent2:"#ff65de", border:true, borderColor:"#9b8ee7", borderThickness:2, borderOffset:8 }, // ARCHITECTS
     { name:"Blue Jeans", bg1:"#2A3F5F", bgGradient:true, bg2:"#3C567D", bgAngle:170, text1:"#F2F0E8", outlineMode:"shadow", outlineColor:"#0E1A2B", shadowBlur:12, shadowX:0, shadowY:2, font:"Work Sans", texture:true, textureType:"canvas", textureOpacity:14, accent1:"#C97A4A", accent2:"#ffd9d9", border:true, borderColor:"#C97A4A", borderThickness:3, borderOffset:6 },
     { name:"Escape Sequence", bg1:"#0d3716", bgGradient:true, bg2:"#09150d", bgAngle:0, text1:"#81ba76",outlineMode:"shadow", outlineColor:"#6bcb58", shadowBlur:16, shadowX:0, shadowY:0, font:"JetBrains Mono", texture:true, textureType:"noise", textureOpacity:33, accent1:"#ddffe0", accent2:"#6dff81", border:true, borderColor:"#061d10", borderThickness:32, borderOffset:0 },
 
       { name:"Boiling Over", bg1:"#1A0000", bgGradient:true, bg2:"#5A0000", bgAngle:90, text1:"#FFFFFF", outlineMode:"outline", outlineColor:"#000000", outlineThickness:7, font:"Space Mono", texture:true, textureType:"embers", textureOpacity:60, accent1:"#FF3B30", accent2:"#FF9F1C", border:true, borderColor:"#FF9F1C", borderThickness:4, borderOffset:5 },
       { name:"Tidewater", bg1:"#012A36", bgGradient:true, bg2:"#0C5C6E", bgAngle:135, text1:"#B8FFF0", textGradient:true, text2:"#5FD3C4", textAngle:30, outlineMode:"shadow", outlineColor:"#00232C", shadowBlur:16, shadowX:0, shadowY:0, font:"Literata", texture:true, textureType:"waterspots", textureOpacity:21, accent1:"#FF8A65", accent2:"#E8D9B5", border:true, borderColor:"#E8D9B5", borderThickness:2, borderOffset:10 },
 
-  { name:"Quiet Rain", bg1:"#232B36", bgGradient:true, bg2:"#3E4A58", bgAngle:160, text1:"#dcdcdc", text2:"#3a83ab", textAngle:0, outlineMode:"shadow", outlineColor:"#0F141A", shadowBlur:14, shadowX:0, shadowY:3, font:"Crimson Pro", texture:true, textureType:"bokeh", textureOpacity:16, accent1:"#DCE3EA", accent2:"#7086a8", border:true, borderColor:"#bcc7d9", borderThickness:2, borderOffset:12 },
-  { name:"Worn Thin", bg1:"#151311", bgGradient:true, bg2:"#28221c", bgAngle:219, text1:"#B9AFA0", outlineMode:"off", font:"Roboto", texture:true, textureType:"grain", textureOpacity:25, accent1:"#9C6B4A", accent2:"#8A9482", border:true, borderColor:"#9C6B4A", borderThickness:3, borderOffset:7 },
+  { name:"Quiet Rain", bg1:"#232B36", bgGradient:true, bg2:"#3E4A58", bgAngle:160, text1:"#dcdcdc", text2:"#3a83ab", textAngle:0, outlineMode:"shadow", outlineColor:"#0F141A", shadowBlur:14, shadowX:0, shadowY:3, font:"Crimson Pro", texture:true, textureType:"rainstreaks", textureOpacity:20, accent1:"#DCE3EA", accent2:"#7086a8", border:true, borderColor:"#bcc7d9", borderThickness:2, borderOffset:12 },
+  { name:"Worn Thin", bg1:"#151311", bgGradient:true, bg2:"#28221c", bgAngle:219, text1:"#B9AFA0", outlineMode:"off", font:"Roboto", texture:true, textureType:"leather", textureOpacity:30, accent1:"#9C6B4A", accent2:"#8A9482", border:true, borderColor:"#9C6B4A", borderThickness:3, borderOffset:7 },
 
-  { name:"Petrichor", bg1:"#3E5C4A", bgGradient:true, bg2:"#7C93A3", bgAngle:100, text1:"#EAF2EC", outlineMode:"off", font:"Shadows Into Light", texture:true, textureType:"waterspots", textureOpacity:12, accent1:"#C9D98A", accent2:"#9FB8C9", border:true, borderColor:"#9FB8C9", borderThickness:2, borderOffset:11 },
+  { name:"Petrichor", bg1:"#3E5C4A", bgGradient:true, bg2:"#7C93A3", bgAngle:100, text1:"#EAF2EC", outlineMode:"off", font:"Shadows Into Light", texture:true, textureType:"rainstreaks", textureOpacity:18, accent1:"#C9D98A", accent2:"#9FB8C9", border:true, borderColor:"#9FB8C9", borderThickness:2, borderOffset:11 },
   { name:"Boardwalk", bg1:"#8ED8F0", bgGradient:true, bg2:"#F0DFC0", bgAngle:90, text1:"#2E4A55", outlineMode:"off", font:"Cormorant Garamond", texture:true, textureType:"grain", textureOpacity:8, accent1:"#C9421F", accent2:"#137A5E", border:true, borderColor:"#7FCDBB", borderThickness:2, borderOffset:13 },
-  { name:"Ember Fall", bg1:"#4A2318", bgGradient:true, bg2:"#A8562E", bgAngle:110, text1:"#F2D9A8", outlineMode:"off", font:"Oswald", texture:true, textureType:"embers", textureOpacity:18, accent1:"#E8A84A", accent2:"#F2C98A", border:true, borderColor:"#E8A84A", borderThickness:3, borderOffset:6 },
-  { name:"First Frost", bg1:"#D9E1E6", bgGradient:true, bg2:"#A9CFE8", bgAngle:110, text1:"#1E3444", outlineMode:"shadow", outlineColor:"#9FC3DA", shadowBlur:10, shadowX:0, shadowY:0, font:"Merriweather", texture:true, textureType:"flowers", textureOpacity:42, accent1:"#1C6690", accent2:"#B2416A", border:true, borderColor:"#77b3e8", borderThickness:2, borderOffset:15 },
+  { name:"Ember Fall", bg1:"#4A2318", bgGradient:true, bg2:"#A8562E", bgAngle:110, text1:"#F2D9A8", outlineMode:"off", font:"Oswald", texture:true, textureType:"leaves", textureOpacity:28, accent1:"#E8A84A", accent2:"#F2C98A", border:true, borderColor:"#E8A84A", borderThickness:3, borderOffset:6 },
+  { name:"First Frost", bg1:"#D9E1E6", bgGradient:true, bg2:"#A9CFE8", bgAngle:110, text1:"#1E3444", outlineMode:"shadow", outlineColor:"#9FC3DA", shadowBlur:10, shadowX:0, shadowY:0, font:"Merriweather", texture:true, textureType:"snow", textureOpacity:35, accent1:"#1C6690", accent2:"#B2416A", border:true, borderColor:"#77b3e8", borderThickness:2, borderOffset:15 },
 ];
 
 const ASPECTS = { "1:1":[3072,3072], "2:3":[2400,3600], "3:4":[2700,3600], "9:16":[2304,4096], "9:20":[1843,4096], "16:9":[4096,2304] };
@@ -618,7 +595,7 @@ FONTS.forEach((f,i)=>{
   opt.value = i; opt.textContent = f.label;
   fontSelect.appendChild(opt);
 });
-fontSelect.value = 6;
+fontSelect.value = 3;
 
 const canvas = $('poemCanvas');
 const ctx = canvas.getContext('2d');
@@ -748,7 +725,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureToggle').checked = texOn;
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
-    const types = ['grain','paper','noise','waterspots','canvas','clouds','flowers','astral','inkbleed','crackedglaze','bokeh','embers','tessellate'];
+    const types = ['grain','paper','noise','waterspots','canvas','clouds','flowers','astral','inkbleed','crackedglaze','bokeh','embers','tessellate','snow','leaves','magicparticles','rainstreaks','leather'];
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
@@ -974,15 +951,6 @@ function watermarkColor(bgHex){
 }
 
 // ---------- texture generation ----------
-// Grain / paper / noise / canvas all start as random grayscale values on a small
-// offscreen canvas, then get scaled up onto a full-size canvas (with smoothing for
-// everything except noise) so the randomness reads as soft blotches rather than
-// pixel static. Waterspots use radial gradients instead of per-pixel noise, since
-// stains are shaped blobs with a darker ring, not scattered dots. Clouds layer three
-// octaves of noise at different scales via 'overlay' blending for an organic fBm-like
-// look. Flowers are drawn as actual parametric rose curves (r = R·|cos(k·θ)|), not
-// noise at all. Astral is a faint haze base plus individually placed point/glow stars,
-// rather than three thresholded noise layers — it reads as a much cleaner starfield.
 function genWaterspots(w,h){
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -1006,9 +974,6 @@ function genWaterspots(w,h){
   return c;
 }
 
-// Shared helper: layers of small random-value grids, each scaled up and passed through
-// a real Gaussian blur (ctx.filter) rather than just relying on upscaling smoothness —
-// that's what actually gets rid of the blocky/noisy edges and reads as soft diffuse fog.
 function drawBlurredNoiseLayers(fctx, w, h, layers){
   for(const layer of layers){
     const gw = layer.cells;
@@ -1034,10 +999,6 @@ function drawBlurredNoiseLayers(fctx, w, h, layers){
   }
 }
 
-// True fBm clouds: sum several octaves of smoothed value-noise (gain shrinks amplitude,
-// lacunarity grows frequency each octave), then reshape the summed field with a bias
-// threshold (pushes low-density areas to zero, i.e. "clear sky") and a power curve
-// (sharpens the sky/cloud transition so edges look soft but centers stay dense).
 function makeNoiseGrid(gw, gh){
   const g = new Float32Array(gw*gh);
   for(let i=0;i<g.length;i++) g[i] = Math.random();
@@ -1063,11 +1024,11 @@ function genClouds(w,h){
   const workH = Math.max(24, Math.round(h/workDiv));
 
   const octaves = 6;
-  const gain = 0.5;        // amplitude shrinks by half each octave
-  const lacunarity = 2.0;  // frequency doubles each octave
-  const baseCells = 4;     // coarsest octave: ~4 noise cells across the image
-  const bias = 0.15;       // higher = more clear sky, lower = more overcast
-  const power = 2.2;       // contrast: sharpens the sky/cloud edge
+  const gain = 0.5;
+  const lacunarity = 2.0;
+  const baseCells = 4;
+  const bias = 0.15;
+  const power = 2.2;
 
   const octaveGrids = [];
   let amp = 1, maxAmp = 0;
@@ -1099,7 +1060,7 @@ function genClouds(w,h){
       density = Math.pow(density, power);
 
       const idx = (py*workW+px)*4;
-      const val = 108 + density*140; // 0 density ~ neutral (clear sky), 1 density ~ bright cloud
+      const val = 108 + density*140;
       d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
     }
   }
@@ -1156,10 +1117,6 @@ function genFlowers(w,h){
 }
 
 function genAstralFog(w,h){
-  // Same fBm machinery as genClouds, but tuned for faint varied nebula haze rather
-  // than distinct puffy clouds: more octaves for richer multi-scale structure, a
-  // negative bias so there's coverage everywhere instead of clear "sky" gaps, and a
-  // gentler power curve so it reads as smooth gaseous variation, not sharp edges.
   const workDiv = 4;
   const workW = Math.max(24, Math.round(w/workDiv));
   const workH = Math.max(24, Math.round(h/workDiv));
@@ -1215,40 +1172,46 @@ function genAstralFog(w,h){
   return full;
 }
 
-function genAstralStars(w,h){
-  // Transparent canvas — only actual star pixels carry any alpha, so 'lighten'
-  // compositing leaves every non-star pixel completely untouched.
+function genAstralStars(w,h,accent1,accent2){
   const full = document.createElement('canvas');
   full.width = w; full.height = h;
   const fctx = full.getContext('2d');
+
+  const d1 = darkenRgb(accent1, 0.35);
+  const d2 = darkenRgb(accent2, 0.35);
 
   const starCount = Math.round((w*h)/2125);
   for(let i=0;i<starCount;i++){
     const x = Math.random()*w, y = Math.random()*h;
     const roll = Math.random();
-    let size, brightness, spike;
-    if(roll < 0.55){ size = 1; brightness = 205+Math.random()*50; spike = false; }
-    else if(roll < 0.83){ size = 1.2+Math.random()*1.1; brightness = 222+Math.random()*22; spike = false; }
-    else if(roll < 0.96){ size = 2.1+Math.random()*1.6; brightness = 238+Math.random()*15; spike = false; }
-    else { size = 3.4+Math.random()*2.6; brightness = 250+Math.random()*5; spike = true; }
+    const base = Math.random() < 0.5 ? d1 : d2;
+    let size, mixT, spike;
+    if(roll < 0.55){ size = 1; mixT = 0.15+Math.random()*0.15; spike = false; }
+    else if(roll < 0.83){ size = 1.2+Math.random()*1.1; mixT = 0.3+Math.random()*0.15; spike = false; }
+    else if(roll < 0.96){ size = 2.1+Math.random()*1.6; mixT = 0.5+Math.random()*0.2; spike = false; }
+    else { size = 3.4+Math.random()*2.6; mixT = 0.75+Math.random()*0.2; spike = true; }
+
+    const r = Math.round(base.r + (255-base.r)*mixT);
+    const g = Math.round(base.g + (255-base.g)*mixT);
+    const b = Math.round(base.b + (255-base.b)*mixT);
 
     if(size <= 1){
-      fctx.fillStyle = `rgb(${brightness},${brightness},${brightness})`;
+      fctx.fillStyle = `rgb(${r},${g},${b})`;
       fctx.fillRect(x, y, 1, 1);
       continue;
     }
 
     const grad = fctx.createRadialGradient(x,y,0,x,y,size);
-    grad.addColorStop(0, `rgba(${brightness},${brightness},${brightness},1)`);
-    grad.addColorStop(0.65, `rgba(${brightness},${brightness},${brightness},0.7)`);
-    grad.addColorStop(1, `rgba(${brightness},${brightness},${brightness},0)`);
+    grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
+    grad.addColorStop(0.65, `rgba(${r},${g},${b},0.7)`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
     fctx.fillStyle = grad;
     fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
 
     if(spike){
       fctx.save();
       fctx.globalAlpha = 0.55;
-      fctx.strokeStyle = `rgb(${brightness},${brightness},${brightness})`;
+      fctx.strokeStyle = `rgb(${r},${g},${b})`;
       fctx.lineWidth = 0.7;
       fctx.beginPath();
       fctx.moveTo(x-size*2.4, y); fctx.lineTo(x+size*2.4, y);
@@ -1260,9 +1223,6 @@ function genAstralStars(w,h){
   return full;
 }
 
-// Ink Bleed: an fBm density field computed for the left half only, then mirrored
-// across the vertical axis for Rorschach-style symmetry, with a light blur to soften
-// the grid into "bled" edges rather than a crisp threshold.
 function genInkBleed(w,h){
   const workDiv = 4;
   const workW = Math.max(24, Math.round(w/workDiv));
@@ -1323,9 +1283,6 @@ function genInkBleed(w,h){
   return full;
 }
 
-// Cracked Glaze: cellular/Voronoi cracks — for each pixel, compare distance to the
-// nearest two random seed points; where those distances are close, that pixel sits
-// on a cell boundary and gets drawn as a dark crack line.
 function genCrackedGlaze(w,h){
   const workDiv = 5;
   const workW = Math.max(24, Math.round(w/workDiv));
@@ -1367,8 +1324,6 @@ function genCrackedGlaze(w,h){
   return full;
 }
 
-// Bokeh: soft, large, colorless glow blobs — no pinpoint sharpness, no diffraction
-// spikes. Astral's stars turned slow and dreamy instead of crisp.
 function genBokeh(w,h){
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
@@ -1391,15 +1346,10 @@ function genBokeh(w,h){
   return full;
 }
 
-// Embers: warm-tinted sparks with upward-drifting streak trails instead of round
-// points — actual RGB tint (not neutral gray) so overlay blending pushes a warm
-// glow specifically where the sparks are.
-function genEmbers(w,h){
+function genEmbers(w,h,accent1,accent2){
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
   const fctx = full.getContext('2d');
-  fctx.fillStyle = 'rgb(128,128,128)';
-  fctx.fillRect(0,0,w,h);
 
   const count = Math.round((w*h)/3200);
   for(let i=0;i<count;i++){
@@ -1410,8 +1360,8 @@ function genEmbers(w,h){
     else if(roll<0.88){ size=1.6+Math.random()*1.2; trailLen=(Math.random()*0.035+0.015)*Math.max(w,h); }
     else { size=2.6+Math.random()*2; trailLen=(Math.random()*0.05+0.025)*Math.max(w,h); }
 
-    const heat = Math.random();
-    const r = 200+heat*55, g = 90+heat*130, b = 40+heat*60;
+    const t = Math.random();
+    const {r,g,b} = mixHex(accent1, accent2, t);
 
     const trailGrad = fctx.createLinearGradient(x, y, x, y-trailLen);
     trailGrad.addColorStop(0, `rgba(${r},${g},${b},0.85)`);
@@ -1432,9 +1382,6 @@ function genEmbers(w,h){
   return full;
 }
 
-// Tessellate: a low-poly triangular mosaic — each grid cell split diagonally
-// (alternating direction) into two triangles, each independently shaded. Actual
-// procedural geometry rather than noise, so it reads distinctly faceted/geometric.
 function genTessellate(w,h){
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
@@ -1471,8 +1418,253 @@ function genTessellate(w,h){
   return full;
 }
 
-function getTextureCanvas(type, w, h){
-  const key = type+'_'+w+'_'+h;
+// Shared color helpers for textures that take on the current accent colors
+// instead of a fixed palette (embers, magic particles, and astral's stars).
+function mixHex(hexA, hexB, t){
+  const a = hexA.replace('#',''), b = hexB.replace('#','');
+  const ar=parseInt(a.substr(0,2),16), ag=parseInt(a.substr(2,2),16), ab=parseInt(a.substr(4,2),16);
+  const br=parseInt(b.substr(0,2),16), bg=parseInt(b.substr(2,2),16), bb=parseInt(b.substr(4,2),16);
+  return {
+    r: Math.round(ar+(br-ar)*t),
+    g: Math.round(ag+(bg-ag)*t),
+    b: Math.round(ab+(bb-ab)*t),
+  };
+}
+function darkenRgb(hex, amount){
+  const h = hex.replace('#','');
+  const r=parseInt(h.substr(0,2),16), g=parseInt(h.substr(2,2),16), b=parseInt(h.substr(4,2),16);
+  return { r: Math.round(r*(1-amount)), g: Math.round(g*(1-amount)), b: Math.round(b*(1-amount)) };
+}
+
+// Flurries: soft round flakes on a transparent canvas (composited with 'lighten' so
+// they always read bright regardless of background) — mostly small/sharp, a few
+// larger and softer, like flakes drifting slightly out of focus.
+function genSnow(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+  const count = Math.round((w*h)/3500);
+  for(let i=0;i<count;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    const roll = Math.random();
+    let size, alpha;
+    if(roll < 0.6){ size = 1+Math.random()*1.2; alpha = 0.7+Math.random()*0.3; }
+    else if(roll < 0.9){ size = 2.5+Math.random()*2.5; alpha = 0.5+Math.random()*0.3; }
+    else { size = 6+Math.random()*7; alpha = 0.25+Math.random()*0.25; }
+
+    if(size <= 1.3){
+      fctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      fctx.fillRect(x,y,1,1);
+      continue;
+    }
+    const grad = fctx.createRadialGradient(x,y,0,x,y,size);
+    grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+    grad.addColorStop(0.6, `rgba(255,255,255,${alpha*0.5})`);
+    grad.addColorStop(1, `rgba(255,255,255,0)`);
+    fctx.fillStyle = grad;
+    fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
+  }
+  return full;
+}
+
+// Windfall: simple parametric leaf shapes (two mirrored quadratic curves meeting at
+// a tip, plus a center vein), scattered and rotated. Kept neutral gray like Flowers
+// so it reads correctly via 'overlay' on both green (Understory) and warm (Ember
+// Fall) backgrounds.
+function drawLeafShape(ctx, cx, cy, size, rot, shade){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rot);
+  ctx.beginPath();
+  ctx.moveTo(0,size*0.5);
+  ctx.quadraticCurveTo(size*0.55, 0, 0, -size*0.5);
+  ctx.quadraticCurveTo(-size*0.55, 0, 0, size*0.5);
+  ctx.closePath();
+  ctx.fillStyle = `rgb(${shade},${shade*0.92},${shade*0.72})`;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0, size*0.45); ctx.lineTo(0, -size*0.45);
+  ctx.strokeStyle = `rgba(0,0,0,0.18)`;
+  ctx.lineWidth = Math.max(0.6, size*0.045);
+  ctx.stroke();
+  ctx.restore();
+}
+function genLeaves(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+  fctx.fillStyle='rgb(128,128,128)';
+  fctx.fillRect(0,0,w,h);
+  const count = Math.max(6, Math.round((w*h)/60000));
+  for(let i=0;i<count;i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const size = (Math.random()*0.03+0.018)*Math.min(w,h);
+    const rot = Math.random()*Math.PI*2;
+    const shade = 140+Math.random()*55;
+    drawLeafShape(fctx, cx, cy, size, rot, shade);
+  }
+  return full;
+}
+
+// Wisps: glowing motes that take on the current accent colors (interpolated between
+// accent one and accent two per particle) rather than a fixed palette. Three kinds:
+// simple glow dots, curved-trail motes (an actual arc via quadraticCurveTo, not a
+// straight streak like Embers), and four-point sparkle glints. Transparent base,
+// composited with 'lighten'.
+function drawSparkleGlint(ctx, x, y, size, r, g, b){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.beginPath();
+  ctx.moveTo(0,-size); ctx.lineTo(size*0.16,0); ctx.lineTo(0,size); ctx.lineTo(-size*0.16,0);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-size,0); ctx.lineTo(0,size*0.16); ctx.lineTo(size,0); ctx.lineTo(0,-size*0.16);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function genMagicParticles(w,h,accent1,accent2){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+
+  const count = Math.round((w*h)/2800);
+  for(let i=0;i<count;i++){
+    const t = Math.random();
+    const {r,g,b} = mixHex(accent1, accent2, t);
+    const x = Math.random()*w, y = Math.random()*h;
+    const roll = Math.random();
+
+    if(roll < 0.5){
+      const size = 1+Math.random()*3;
+      const grad = fctx.createRadialGradient(x,y,0,x,y,size);
+      grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      fctx.fillStyle = grad;
+      fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
+    } else if(roll < 0.85){
+      const size = 1.4+Math.random()*1.8;
+      const trailLen = (Math.random()*0.035+0.015)*Math.max(w,h);
+      const dir = Math.random()*Math.PI*2;
+      const ex = x+Math.cos(dir)*trailLen, ey = y+Math.sin(dir)*trailLen;
+      const perpX = -Math.sin(dir)*trailLen*0.3, perpY = Math.cos(dir)*trailLen*0.3;
+      const midX = (x+ex)/2+perpX, midY = (y+ey)/2+perpY;
+      fctx.save();
+      fctx.strokeStyle = `rgba(${r},${g},${b},0.6)`;
+      fctx.lineWidth = Math.max(0.8, size*0.6);
+      fctx.beginPath();
+      fctx.moveTo(x,y);
+      fctx.quadraticCurveTo(midX, midY, ex, ey);
+      fctx.stroke();
+      fctx.restore();
+
+      const grad = fctx.createRadialGradient(x,y,0,x,y,size);
+      grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      fctx.fillStyle = grad;
+      fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
+    } else {
+      const size = 3+Math.random()*4;
+      drawSparkleGlint(fctx, x, y, size, r, g, b);
+    }
+  }
+  return full;
+}
+
+// Downpour: diagonal falling streaks — a distinct linear-gradient-stroke pattern,
+// not the static blob stains that Water Spots uses.
+function genRainStreaks(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+  fctx.fillStyle='rgb(128,128,128)';
+  fctx.fillRect(0,0,w,h);
+
+  const angleRad = -14*Math.PI/180;
+  const count = Math.round((w*h)/8500);
+  for(let i=0;i<count;i++){
+    const x = Math.random()*w*1.3 - w*0.15;
+    const y = Math.random()*h;
+    const len = (Math.random()*0.09+0.04)*Math.max(w,h);
+    const dx = Math.sin(angleRad)*len, dy = Math.cos(angleRad)*len;
+    const bright = Math.random()<0.5 ? (85+Math.random()*35) : (165+Math.random()*40);
+    const grad = fctx.createLinearGradient(x,y,x+dx,y+dy);
+    grad.addColorStop(0, `rgba(${bright},${bright},${bright},0)`);
+    grad.addColorStop(0.5, `rgba(${bright},${bright},${bright},0.55)`);
+    grad.addColorStop(1, `rgba(${bright},${bright},${bright},0)`);
+    fctx.strokeStyle = grad;
+    fctx.lineWidth = 1+Math.random()*1.4;
+    fctx.beginPath(); fctx.moveTo(x,y); fctx.lineTo(x+dx,y+dy); fctx.stroke();
+  }
+  return full;
+}
+
+// Hidebound: a high-intensity paper-like grain base, plus a much-more-tiled,
+// much-lower-intensity crackle layer generated at a vertically squished working
+// resolution then stretched back to full height — elongating every cell so the
+// grain reads as vertically stretched, like natural leather.
+function genLeather(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+
+  const genW = Math.max(1,Math.round(w/3)), genH = Math.max(1,Math.round(h/3));
+  const small = document.createElement('canvas');
+  small.width=genW; small.height=genH;
+  const sctx = small.getContext('2d');
+  const img = sctx.createImageData(genW,genH);
+  const d = img.data;
+  for(let i=0;i<d.length;i+=4){
+    const v = 185+(Math.random()*2-1)*60;
+    d[i]=v; d[i+1]=v*0.95; d[i+2]=v*0.85; d[i+3]=255;
+  }
+  sctx.putImageData(img,0,0);
+  fctx.imageSmoothingEnabled = true;
+  fctx.drawImage(small,0,0,w,h);
+
+  const workW = Math.max(24, Math.round(w/6));
+  const workHNormal = Math.max(24, Math.round(h/6));
+  const workH = Math.max(12, Math.round(workHNormal*0.5));
+
+  const seedCount = 150;
+  const seeds = [];
+  for(let i=0;i<seedCount;i++) seeds.push([Math.random()*workW, Math.random()*workH]);
+
+  const crackWidth = 0.06;
+  const crackSmall = document.createElement('canvas');
+  crackSmall.width = workW; crackSmall.height = workH;
+  const cctx = crackSmall.getContext('2d');
+  const cimg = cctx.createImageData(workW, workH);
+  const cd = cimg.data;
+  for(let py=0; py<workH; py++){
+    for(let px=0; px<workW; px++){
+      let d1=Infinity, d2=Infinity;
+      for(const [sx,sy] of seeds){
+        const dx=px-sx, dy=py-sy;
+        const dist = dx*dx+dy*dy;
+        if(dist<d1){ d2=d1; d1=dist; } else if(dist<d2){ d2=dist; }
+      }
+      const r1=Math.sqrt(d1), r2=Math.sqrt(d2);
+      const diff = (r2-r1)/(r2+1e-6);
+      const idx=(py*workW+px)*4;
+      const val = diff < crackWidth ? 70 : 175;
+      cd[idx]=val; cd[idx+1]=val; cd[idx+2]=val; cd[idx+3]=255;
+    }
+  }
+  cctx.putImageData(cimg,0,0);
+
+  fctx.save();
+  fctx.globalAlpha = 0.16;
+  fctx.imageSmoothingEnabled = true;
+  fctx.drawImage(crackSmall, 0, 0, w, h);
+  fctx.restore();
+
+  return full;
+}
+
+function getTextureCanvas(type, w, h, accent1, accent2){
+  const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
+  const key = colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`;
   if(textureCache[key]) return textureCache[key];
 
   let result;
@@ -1489,13 +1681,23 @@ function getTextureCanvas(type, w, h){
   } else if(type === 'bokeh'){
     result = genBokeh(w,h);
   } else if(type === 'embers'){
-    result = genEmbers(w,h);
+    result = genEmbers(w,h,accent1,accent2);
   } else if(type === 'tessellate'){
     result = genTessellate(w,h);
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h);
   } else if(type === 'astral_stars'){
-    result = genAstralStars(w,h);
+    result = genAstralStars(w,h,accent1,accent2);
+  } else if(type === 'snow'){
+    result = genSnow(w,h);
+  } else if(type === 'leaves'){
+    result = genLeaves(w,h);
+  } else if(type === 'magicparticles'){
+    result = genMagicParticles(w,h,accent1,accent2);
+  } else if(type === 'rainstreaks'){
+    result = genRainStreaks(w,h);
+  } else if(type === 'leather'){
+    result = genLeather(w,h);
   } else {
     let genW = w, genH = h;
     if(type==='grain'){ genW=Math.max(1,Math.round(w/5)); genH=Math.max(1,Math.round(h/5)); }
@@ -1512,7 +1714,7 @@ function getTextureCanvas(type, w, h){
       if(type==='noise') v = Math.random()*255;
       else if(type==='grain') v = 128+(Math.random()*2-1)*100;
       else if(type==='canvas') v = 128+(Math.random()*2-1)*75;
-      else v = 205+(Math.random()*2-1)*32; // paper
+      else v = 205+(Math.random()*2-1)*32;
       d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255;
     }
     sctx.putImageData(img,0,0);
@@ -1544,6 +1746,8 @@ function render(){
   if($('textureToggle').checked){
     const type = $('textureType').value;
     const opacity = Math.max(0, parseFloat($('textureOpacity').value) || 0) / 100;
+    const accent1Color = $('accent1ColorHex').value;
+    const accent2Color = $('accent2ColorHex').value;
     if(type === 'astral'){
       ctx.save();
       ctx.globalAlpha = opacity;
@@ -1554,7 +1758,25 @@ function render(){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = 'lighten';
-      ctx.drawImage(getTextureCanvas('astral_stars', W, H), 0, 0);
+      ctx.drawImage(getTextureCanvas('astral_stars', W, H, accent1Color, accent2Color), 0, 0);
+      ctx.restore();
+    } else if(type === 'inkbleed'){
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.globalCompositeOperation = 'color-burn';
+      ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
+      ctx.restore();
+    } else if(type === 'embers' || type === 'magicparticles'){
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.globalCompositeOperation = 'lighten';
+      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color), 0, 0);
+      ctx.restore();
+    } else if(type === 'snow'){
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.globalCompositeOperation = 'lighten';
+      ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
@@ -1701,7 +1923,7 @@ function render(){
   const isRight = corner.endsWith('right');
   const wmColor = watermarkColor(bg1);
   ctx.save();
-  ctx.font = `400 ${Math.round((0.5*(W+H))*0.012)}px $('fontFamily')`;
+  ctx.font = `${fontDef.weight} ${Math.round(((W + H)/2)*0.01)}px "${fontDef.family}"`;
   ctx.fillStyle = wmColor;
   ctx.globalAlpha = 0.85;
   ctx.textAlign = isRight ? 'right' : 'left';
