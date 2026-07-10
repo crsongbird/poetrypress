@@ -251,7 +251,8 @@ including **some things that never needed a slider**.
 -# ↙ {Don't forget to change the credits 💙}</textarea>
       <p class="hint">
 	  Text Styles: <code>**bold**</code>, <code>*italic*</code>, <code>[accent one]</code> and <code>{accent two}</code>.<br>
-		Line Styles: <code>&gt; quote line</code>, <code>## big line</code>, <code>-# small line</code>.</p>
+		Line Styles: <code>&gt; quote line</code>, <code>## big line</code>, <code>-# small line</code>.<br>
+		Alignment override: end a line with <code>/center</code>, <code>/left</code>, or <code>/right</code>.</p>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
@@ -342,10 +343,30 @@ including **some things that never needed a slider**.
           <label for="textGradientToggle">Radial Gradient Text?</label>
         </div>
         <div class="subblock" id="gradientBlock">
+          <div class="field full">
+            <label>Gradient stops</label>
+            <div class="radio-group" id="textStopsGroup">
+              <div class="radio-btn active" data-val="2">2</div>
+              <div class="radio-btn" data-val="3">3</div>
+              <div class="radio-btn" data-val="4">4</div>
+            </div>
+          </div>
           <div class="field">
             <label>Secondary Text Color</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="textColor2Hex" value="#B98A8A" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="textColor3Field" style="display:none;">
+            <label>Text Color 3</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="textColor3Hex" value="#C9A876" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="textColor4Field" style="display:none;">
+            <label>Text Color 4</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="textColor4Hex" value="#7A8CA3" data-coloris>
             </div>
           </div>
           <div class="field">
@@ -434,10 +455,30 @@ including **some things that never needed a slider**.
           <label for="bgGradientToggle">Radial Gradient?</label>
         </div>
         <div class="subblock" id="bgGradientBlock">
+          <div class="field full">
+            <label>Gradient stops</label>
+            <div class="radio-group" id="bgStopsGroup">
+              <div class="radio-btn active" data-val="2">2</div>
+              <div class="radio-btn" data-val="3">3</div>
+              <div class="radio-btn" data-val="4">4</div>
+            </div>
+          </div>
           <div class="field">
             <label>Color 2</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="bgColor2Hex" value="#D8CFC0" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="bgColor3Field" style="display:none;">
+            <label>Color 3</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="bgColor3Hex" value="#B8A088" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="bgColor4Field" style="display:none;">
+            <label>Color 4</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="bgColor4Hex" value="#8A7048" data-coloris>
             </div>
           </div>
           <div class="field">
@@ -457,14 +498,14 @@ including **some things that never needed a slider**.
           <div class="field full">
             <label>Type</label>
             <select id="textureType">
-              <option value="grain">Grain</option>
-              <option value="noise">Noise</option>
-              <option value="paper">Paper</option>
-              <option value="canvas">Canvas</option>
-              <option value="clouds">Clouds</option>
-              <option value="inkbleed" selected>Ink Bleed</option>
-              <option value="bokeh">Bokeh</option>
-              <option value="flowers">Flowers</option>
+              <option value="grain">Dustmote</option>
+              <option value="noise">Static</option>
+              <option value="paper">Parchment</option>
+              <option value="canvas">Weave</option>
+              <option value="clouds">Haze</option>
+              <option value="inkbleed" selected>Spatter</option>
+              <option value="bokeh">Glimmer</option>
+              <option value="flowers">Blossom</option>
               <option value="waterspots">Circles</option>
               <option value="astral">Stars</option>
               <option value="crackedglaze">Cracks</option>
@@ -475,14 +516,31 @@ including **some things that never needed a slider**.
               <option value="magicparticles">Wisps</option>
               <option value="rainstreaks">Downpour</option>
               <option value="leather">Hidebound</option>
+              <option value="halftone">Dotwork</option>
+              <option value="brushstrokes">Impasto</option>
             </select>
           </div>
           <div class="field full">
             <label>Opacity</label>
             <div class="angle-wrap">
-              <input type="range" id="textureOpacity" min="0" max="60" value="60">
+              <input type="range" id="textureOpacity" min="0" max="100" value="60">
               <span class="angle-val" id="textureOpacityVal">60%</span>
             </div>
+          </div>
+          <div class="check-row full">
+            <input type="checkbox" id="textureInvert">
+            <label for="textureInvert">Invert</label>
+          </div>
+          <div class="field full">
+            <label>Texture seed</label>
+            <div class="row">
+              <div class="field"><input type="number" id="textureSeedValue" value="12345" step="1"></div>
+              <button class="ghost" id="textureSeedReroll" type="button" style="flex:0 0 auto; width:auto; padding:0 14px;">⟳ Reroll</button>
+            </div>
+          </div>
+          <div class="check-row full">
+            <input type="checkbox" id="textureSeedLock">
+            <label for="textureSeedLock">Lock seed (don't reroll on preset/randomize)</label>
           </div>
         </div>
 
@@ -503,9 +561,45 @@ including **some things that never needed a slider**.
           </div>
         </div>
 
+        <div class="check-row">
+          <input type="checkbox" id="vignetteToggle">
+          <label for="vignetteToggle">Vignette</label>
+        </div>
+        <div class="subblock" id="vignetteBlock">
+          <div class="field full">
+            <label>Blend mode</label>
+            <select id="vignetteBlend">
+              <option value="overlay">Overlay</option>
+              <option value="color-burn">Color Burn</option>
+              <option value="color-dodge">Color Dodge</option>
+              <option value="lighten">Lighten</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>Intensity</label>
+            <div class="angle-wrap">
+              <input type="range" id="vignetteIntensity" min="0" max="100" value="50">
+              <span class="angle-val" id="vignetteIntensityVal">50%</span>
+            </div>
+          </div>
+        </div>
+
         <button class="ghost full" id="randomBgBtn">⟳ Randomize background</button>
       </div>
     </div>
+
+    <details class="card" id="advancedPanel">
+      <summary class="card-title" style="cursor:pointer;">Advanced</summary>
+      <div class="card-grid" style="margin-top:8px;">
+        <div class="field full">
+          <label>Current settings (JSON) — edit or paste here, then Load</label>
+          <textarea id="advancedJson" style="min-height:140px; font-family:'Courier Prime',monospace; font-size:11px;"></textarea>
+        </div>
+        <button class="ghost" id="advancedRefreshBtn" type="button">↻ Refresh</button>
+        <button class="ghost" id="advancedCopyBtn" type="button">⧉ Copy</button>
+        <button class="ghost full" id="advancedLoadBtn" type="button">⇩ Load settings from JSON above</button>
+      </div>
+    </details>
 
   </div>
 
@@ -565,10 +659,10 @@ const PRESETS = [
 
   { name:"Grimoire", bg1:"#1B0F2E", bgGradient:true, bg2:"#3B1F5C", bgAngle:60, text1:"#F4D9A0", textGradient:true, text2:"#C9A876", textAngle:30, outlineMode:"shadow", outlineColor:"#8E5CD9", shadowBlur:20, shadowX:0, shadowY:0, font:"Playfair Display", texture:true, textureType:"noise", textureOpacity:10, accent1:"#f3d5c9", accent2:"#8E5CD9", border:true, borderColor:"#F4D9A0", borderThickness:2, borderOffset:10 }, // PLAYFAIR
   { name:"Candy Floss", bg1:"#FFD9E8", bgGradient:true, bg2:"#FFB6D5", bgAngle:135, text1:"#7A2E4A", outlineMode:"off", font:"Caveat", texture:true, textureType:"bokeh", textureOpacity:14, accent1:"#FF6FA5", accent2:"#FF0073", border:true, borderColor:"#FFD86B", borderThickness:2, borderOffset:6 }, // CAVEAT
-  { name:"Requiem", bg1:"#0A0A0C", bgGradient:true, bg2:"#1C1C22", bgAngle:90, text1:"#9797a0", textGradient:true, text2:"#540000", textAngle:261, outlineMode:"outline", outlineColor:"#420000", outlineThickness:2, font:"Bodoni Moda", texture:true, textureType:"inkbleed", textureOpacity:60, accent1:"#B23A3A", accent2:"#C9C4BE", border:true, borderColor:"#C9C4BE", borderThickness:1, borderOffset:16 }, // BODONI
+  { name:"Requiem", bg1:"#0A0A0C", bgGradient:true, bg2:"#1C1C22", bgAngle:90, text1:"#9797a0", textGradient:true, text2:"#540000", textAngle:261, outlineMode:"outline", outlineColor:"#420000", outlineThickness:2, font:"Bodoni Moda", texture:true, textureType:"brushstrokes", textureOpacity:35, accent1:"#B23A3A", accent2:"#C9C4BE", border:true, borderColor:"#C9C4BE", borderThickness:1, borderOffset:16 }, // BODONI
   { name:"Sunset Diner", bg1:"#E8A33D", bgGradient:true, bg2:"#C9642F", bgAngle:135, text1:"#FFF3D6", outlineMode:"outline", outlineColor:"#3D2411", outlineThickness:4, font:"Courier Prime", texture:true, textureType:"paper", textureOpacity:12, accent1:"#ffab77", accent2:"#9bb6eb", border:true, borderColor:"#3D2411", borderThickness:3, borderOffset:5 }, // COURIER
 
-  { name:"Night Pulse", bg1:"#08060F", text1:"#00F0FF", textGradient:true, text2:"#FF2FD1", textAngle:45, outlineMode:"shadow", outlineColor:"#00F0FF", shadowBlur:100, shadowX:0, shadowY:0, font:"Josefin Sans", texture:true, textureType:"tessellate", textureOpacity:60, accent1:"#bcfcff", accent2:"#FF2FD1", border:true, borderColor:"#CFFF04", borderThickness:1, borderOffset:14 }, // Night Pulse
+  { name:"Night Pulse", bg1:"#08060F", text1:"#00F0FF", textGradient:true, text2:"#FF2FD1", textAngle:45, outlineMode:"shadow", outlineColor:"#00F0FF", shadowBlur:100, shadowX:0, shadowY:0, font:"Josefin Sans", texture:true, textureType:"halftone", textureOpacity:55, accent1:"#bcfcff", accent2:"#FF2FD1", border:true, borderColor:"#CFFF04", borderThickness:1, borderOffset:14 }, // Night Pulse
   { name:"Cotton Sky", bg1:"#8ED8FF", bgGradient:true, bg2:"#FFB3D1", bgAngle:120, text1:"#3D2B6B", outlineMode:"shadow", outlineColor:"#B98AC9", shadowBlur:14, shadowX:0, shadowY:0, font:"Architects Daughter", texture:true, textureType:"magicparticles", textureOpacity:22, accent1:"#3e78ff", accent2:"#ff65de", border:true, borderColor:"#9b8ee7", borderThickness:2, borderOffset:8 }, // ARCHITECTS
     { name:"Blue Jeans", bg1:"#2A3F5F", bgGradient:true, bg2:"#3C567D", bgAngle:170, text1:"#F2F0E8", outlineMode:"shadow", outlineColor:"#0E1A2B", shadowBlur:12, shadowX:0, shadowY:2, font:"Work Sans", texture:true, textureType:"canvas", textureOpacity:14, accent1:"#C97A4A", accent2:"#ffd9d9", border:true, borderColor:"#C97A4A", borderThickness:3, borderOffset:6 },
     { name:"Escape Sequence", bg1:"#0d3716", bgGradient:true, bg2:"#09150d", bgAngle:0, text1:"#81ba76",outlineMode:"shadow", outlineColor:"#6bcb58", shadowBlur:16, shadowX:0, shadowY:0, font:"JetBrains Mono", texture:true, textureType:"noise", textureOpacity:33, accent1:"#ddffe0", accent2:"#6dff81", border:true, borderColor:"#061d10", borderThickness:32, borderOffset:0 },
@@ -576,10 +670,10 @@ const PRESETS = [
       { name:"Boiling Over", bg1:"#1A0000", bgGradient:true, bg2:"#5A0000", bgAngle:90, text1:"#FFFFFF", outlineMode:"outline", outlineColor:"#000000", outlineThickness:7, font:"Space Mono", texture:true, textureType:"embers", textureOpacity:60, accent1:"#FF3B30", accent2:"#FF9F1C", border:true, borderColor:"#FF9F1C", borderThickness:4, borderOffset:5 },
       { name:"Tidewater", bg1:"#012A36", bgGradient:true, bg2:"#0C5C6E", bgAngle:135, text1:"#B8FFF0", textGradient:true, text2:"#5FD3C4", textAngle:30, outlineMode:"shadow", outlineColor:"#00232C", shadowBlur:16, shadowX:0, shadowY:0, font:"Literata", texture:true, textureType:"waterspots", textureOpacity:21, accent1:"#FF8A65", accent2:"#E8D9B5", border:true, borderColor:"#E8D9B5", borderThickness:2, borderOffset:10 },
 
-  { name:"Quiet Rain", bg1:"#232B36", bgGradient:true, bg2:"#3E4A58", bgAngle:160, text1:"#dcdcdc", text2:"#3a83ab", textAngle:0, outlineMode:"shadow", outlineColor:"#0F141A", shadowBlur:14, shadowX:0, shadowY:3, font:"Crimson Pro", texture:true, textureType:"rainstreaks", textureOpacity:20, accent1:"#DCE3EA", accent2:"#7086a8", border:true, borderColor:"#bcc7d9", borderThickness:2, borderOffset:12 },
+  { name:"Quiet Rain", bg1:"#232B36", bgGradient:true, bg2:"#3E4A58", bgAngle:160, text1:"#dcdcdc", text2:"#3a83ab", textAngle:0, outlineMode:"shadow", outlineColor:"#0F141A", shadowBlur:14, shadowX:0, shadowY:3, font:"Crimson Pro", texture:true, textureType:"rainstreaks", textureOpacity:34, accent1:"#DCE3EA", accent2:"#7086a8", border:true, borderColor:"#bcc7d9", borderThickness:2, borderOffset:12 },
   { name:"Worn Thin", bg1:"#151311", bgGradient:true, bg2:"#28221c", bgAngle:219, text1:"#B9AFA0", outlineMode:"off", font:"Roboto", texture:true, textureType:"leather", textureOpacity:30, accent1:"#9C6B4A", accent2:"#8A9482", border:true, borderColor:"#9C6B4A", borderThickness:3, borderOffset:7 },
 
-  { name:"Petrichor", bg1:"#3E5C4A", bgGradient:true, bg2:"#7C93A3", bgAngle:100, text1:"#EAF2EC", outlineMode:"off", font:"Shadows Into Light", texture:true, textureType:"rainstreaks", textureOpacity:18, accent1:"#C9D98A", accent2:"#9FB8C9", border:true, borderColor:"#9FB8C9", borderThickness:2, borderOffset:11 },
+  { name:"Petrichor", bg1:"#3E5C4A", bgGradient:true, bg2:"#7C93A3", bgAngle:100, text1:"#EAF2EC", outlineMode:"off", font:"Shadows Into Light", texture:true, textureType:"rainstreaks", textureOpacity:30, accent1:"#C9D98A", accent2:"#9FB8C9", border:true, borderColor:"#9FB8C9", borderThickness:2, borderOffset:11 },
   { name:"Boardwalk", bg1:"#8ED8F0", bgGradient:true, bg2:"#F0DFC0", bgAngle:90, text1:"#2E4A55", outlineMode:"off", font:"Cormorant Garamond", texture:true, textureType:"grain", textureOpacity:8, accent1:"#C9421F", accent2:"#137A5E", border:true, borderColor:"#7FCDBB", borderThickness:2, borderOffset:13 },
   { name:"Ember Fall", bg1:"#4A2318", bgGradient:true, bg2:"#A8562E", bgAngle:110, text1:"#F2D9A8", outlineMode:"off", font:"Oswald", texture:true, textureType:"leaves", textureOpacity:28, accent1:"#E8A84A", accent2:"#F2C98A", border:true, borderColor:"#E8A84A", borderThickness:3, borderOffset:6 },
   { name:"First Frost", bg1:"#D9E1E6", bgGradient:true, bg2:"#A9CFE8", bgAngle:110, text1:"#1E3444", outlineMode:"shadow", outlineColor:"#9FC3DA", shadowBlur:10, shadowX:0, shadowY:0, font:"Merriweather", texture:true, textureType:"snow", textureOpacity:35, accent1:"#1C6690", accent2:"#B2416A", border:true, borderColor:"#77b3e8", borderThickness:2, borderOffset:15 },
@@ -602,7 +696,20 @@ const ctx = canvas.getContext('2d');
 let currentAlign = 'left';
 let currentValign = 'center';
 let currentAspect = '1:1';
+let bgStopCount = 2;
+let textStopCount = 2;
 const textureCache = {};
+
+function collectGradientColors(color1, color2Id, color3Id, color4Id, stopCount){
+  const colors = [color1, $(color2Id).value];
+  if(stopCount >= 3) colors.push($(color3Id).value);
+  if(stopCount >= 4) colors.push($(color4Id).value);
+  return colors;
+}
+function syncStopFields(count, field3Id, field4Id){
+  $(field3Id).style.display = count >= 3 ? 'block' : 'none';
+  $(field4Id).style.display = count >= 4 ? 'block' : 'none';
+}
 
 // ---------- generic bindings ----------
 function bindColorField(hexId, onChange){
@@ -637,12 +744,22 @@ function bindRadioGroup(containerId, onSelect){
     });
   });
 }
+function setActiveRadioValue(containerId, val){
+  const group = $(containerId);
+  group.querySelectorAll('.radio-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.val === String(val));
+  });
+}
 
 bindColorField('textColorHex', render);
 bindColorField('textColor2Hex', render);
+bindColorField('textColor3Hex', render);
+bindColorField('textColor4Hex', render);
 bindColorField('outlineColorHex', render);
 bindColorField('bgColor1Hex', render);
 bindColorField('bgColor2Hex', render);
+bindColorField('bgColor3Hex', render);
+bindColorField('bgColor4Hex', render);
 bindColorField('borderColorHex', render);
 bindColorField('accent1ColorHex', render);
 bindColorField('accent2ColorHex', render);
@@ -653,6 +770,9 @@ toggleSubblock('borderToggle','borderBlock');
 toggleSubblock('accent1Toggle','accent1Block');
 toggleSubblock('accent2Toggle','accent2Block');
 toggleSubblock('textureToggle','textureBlock');
+toggleSubblock('vignetteToggle','vignetteBlock');
+$('vignetteBlend').addEventListener('change', render);
+$('vignetteIntensity').addEventListener('input', ()=>{ $('vignetteIntensityVal').textContent=$('vignetteIntensity').value+'%'; render(); });
 
 bindAngle('textGradientAngle','textGradientAngleVal');
 bindAngle('bgGradientAngle','bgGradientAngleVal');
@@ -665,9 +785,32 @@ bindRadioGroup('aspectGroup', v=>{
   canvas.width=w; canvas.height=h;
   render();
 });
+bindRadioGroup('bgStopsGroup', v=>{
+  bgStopCount = parseInt(v,10);
+  syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
+  render();
+});
+bindRadioGroup('textStopsGroup', v=>{
+  textStopCount = parseInt(v,10);
+  syncStopFields(textStopCount, 'textColor3Field', 'textColor4Field');
+  render();
+});
 
 $('textureType').addEventListener('change', render);
 $('textureOpacity').addEventListener('input', ()=>{ $('textureOpacityVal').textContent=$('textureOpacity').value+'%'; render(); });
+$('textureInvert').addEventListener('change', render);
+
+function randomSeed(){ return Math.floor(Math.random()*2**31); }
+function maybeRerollSeed(explicitSeed){
+  if($('textureSeedLock').checked) return;
+  $('textureSeedValue').value = (explicitSeed !== undefined) ? explicitSeed : randomSeed();
+}
+$('textureSeedValue').addEventListener('input', render);
+$('textureSeedReroll').addEventListener('click', ()=>{
+  $('textureSeedValue').value = randomSeed();
+  render();
+});
+$('textureSeedLock').addEventListener('change', render);
 
 const outlineModeSel = $('outlineMode');
 function syncOutlineFields(){
@@ -710,6 +853,7 @@ $('randomFontBtn').addEventListener('click', ()=>{
   render();
 });
 $('randomBgBtn').addEventListener('click', ()=>{
+  maybeRerollSeed();
   setColorField('bgColor1Hex', randHex());
 
   const bgGradOn = Math.random() < 0.7;
@@ -725,11 +869,12 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureToggle').checked = texOn;
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
-    const types = ['grain','paper','noise','waterspots','canvas','clouds','flowers','astral','inkbleed','crackedglaze','bokeh','embers','tessellate','snow','leaves','magicparticles','rainstreaks','leather'];
+    const types = ['grain','paper','noise','waterspots','canvas','clouds','flowers','astral','inkbleed','crackedglaze','bokeh','embers','tessellate','snow','leaves','magicparticles','rainstreaks','leather','halftone','brushstrokes'];
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
     $('textureOpacityVal').textContent = op+'%';
+    $('textureInvert').checked = Math.random() < 0.25;
   }
 
   const borderOn = Math.random() < 0.4;
@@ -745,10 +890,171 @@ $('randomBgBtn').addEventListener('click', ()=>{
 });
 $('downloadBtn').addEventListener('click', ()=>{
   const link = document.createElement('a');
-  link.download = 'poem.png';
-  link.href = canvas.toDataURL('image/png');
+  link.download = 'poem.jpg';
+  link.href = canvas.toDataURL('image/jpeg', 1.0);
   link.click();
 });
+
+// ---------- advanced: full settings snapshot (export/import as JSON) ----------
+function serializeCurrentSettings(){
+  return {
+    bg1: $('bgColor1Hex').value,
+    bgGradient: $('bgGradientToggle').checked,
+    bg2: $('bgColor2Hex').value,
+    bg3: bgStopCount>=3 ? $('bgColor3Hex').value : undefined,
+    bg4: bgStopCount>=4 ? $('bgColor4Hex').value : undefined,
+    bgAngle: parseFloat($('bgGradientAngle').value),
+
+    text1: $('textColorHex').value,
+    textGradient: $('textGradientToggle').checked,
+    text2: $('textColor2Hex').value,
+    text3: textStopCount>=3 ? $('textColor3Hex').value : undefined,
+    text4: textStopCount>=4 ? $('textColor4Hex').value : undefined,
+    textAngle: parseFloat($('textGradientAngle').value),
+
+    font: FONTS[fontSelect.value].family,
+    maxSize: parseFloat($('maxSize').value),
+    lineSpacing: parseFloat($('lineSpacing').value),
+
+    accent1: $('accent1Toggle').checked ? $('accent1ColorHex').value : undefined,
+    accent2: $('accent2Toggle').checked ? $('accent2ColorHex').value : undefined,
+
+    outlineMode: $('outlineMode').value,
+    outlineColor: $('outlineColorHex').value,
+    outlineThickness: parseFloat($('outlineThickness').value),
+    shadowBlur: parseFloat($('shadowBlur').value),
+    shadowX: parseFloat($('shadowX').value),
+    shadowY: parseFloat($('shadowY').value),
+
+    texture: $('textureToggle').checked,
+    textureType: $('textureType').value,
+    textureOpacity: parseFloat($('textureOpacity').value),
+    textureInvert: $('textureInvert').checked,
+    textureSeed: parseInt($('textureSeedValue').value, 10),
+    textureSeedLock: $('textureSeedLock').checked,
+
+    border: $('borderToggle').checked,
+    borderColor: $('borderColorHex').value,
+    borderThickness: parseFloat($('borderThickness').value),
+    borderOffset: parseFloat($('borderOffset').value),
+
+    vignette: $('vignetteToggle').checked,
+    vignetteBlend: $('vignetteBlend').value,
+    vignetteIntensity: parseFloat($('vignetteIntensity').value),
+
+    align: currentAlign,
+    valign: currentValign,
+    aspect: currentAspect,
+
+    username: $('usernameField').value,
+    usernameCorner: $('usernameCorner').value,
+
+    poemText: $('poemText').value,
+  };
+}
+
+function restoreSettings(s){
+  if(s.bg1) setColorField('bgColor1Hex', s.bg1);
+  $('bgGradientToggle').checked = !!s.bgGradient;
+  $('bgGradientBlock').classList.toggle('open', !!s.bgGradient);
+  if(s.bg2) setColorField('bgColor2Hex', s.bg2);
+  if(s.bg3) setColorField('bgColor3Hex', s.bg3);
+  if(s.bg4) setColorField('bgColor4Hex', s.bg4);
+  bgStopCount = s.bg4 ? 4 : (s.bg3 ? 3 : 2);
+  syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
+  setActiveRadioValue('bgStopsGroup', bgStopCount);
+  if(s.bgAngle!==undefined){ $('bgGradientAngle').value=s.bgAngle; $('bgGradientAngleVal').textContent=s.bgAngle+'°'; }
+
+  if(s.text1) setColorField('textColorHex', s.text1);
+  $('textGradientToggle').checked = !!s.textGradient;
+  $('gradientBlock').classList.toggle('open', !!s.textGradient);
+  if(s.text2) setColorField('textColor2Hex', s.text2);
+  if(s.text3) setColorField('textColor3Hex', s.text3);
+  if(s.text4) setColorField('textColor4Hex', s.text4);
+  textStopCount = s.text4 ? 4 : (s.text3 ? 3 : 2);
+  syncStopFields(textStopCount, 'textColor3Field', 'textColor4Field');
+  setActiveRadioValue('textStopsGroup', textStopCount);
+  if(s.textAngle!==undefined){ $('textGradientAngle').value=s.textAngle; $('textGradientAngleVal').textContent=s.textAngle+'°'; }
+
+  if(s.font){ const idx = FONTS.findIndex(f=>f.family===s.font); if(idx>=0) fontSelect.value = idx; }
+  if(s.maxSize!==undefined) $('maxSize').value = s.maxSize;
+  if(s.lineSpacing!==undefined){ $('lineSpacing').value=s.lineSpacing; $('lineSpacingVal').textContent = Math.pow(2, s.lineSpacing).toFixed(2)+'x'; }
+
+  $('accent1Toggle').checked = !!s.accent1;
+  $('accent1Block').classList.toggle('open', !!s.accent1);
+  if(s.accent1) setColorField('accent1ColorHex', s.accent1);
+  $('accent2Toggle').checked = !!s.accent2;
+  $('accent2Block').classList.toggle('open', !!s.accent2);
+  if(s.accent2) setColorField('accent2ColorHex', s.accent2);
+
+  if(s.outlineMode){ outlineModeSel.value = s.outlineMode; syncOutlineFields(); }
+  if(s.outlineColor) setColorField('outlineColorHex', s.outlineColor);
+  if(s.outlineThickness!==undefined) $('outlineThickness').value = s.outlineThickness;
+  if(s.shadowBlur!==undefined) $('shadowBlur').value = s.shadowBlur;
+  if(s.shadowX!==undefined) $('shadowX').value = s.shadowX;
+  if(s.shadowY!==undefined) $('shadowY').value = s.shadowY;
+
+  $('textureToggle').checked = !!s.texture;
+  $('textureBlock').classList.toggle('open', !!s.texture);
+  if(s.textureType) $('textureType').value = s.textureType;
+  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; $('textureOpacityVal').textContent=s.textureOpacity+'%'; }
+  if(s.textureInvert!==undefined) $('textureInvert').checked = s.textureInvert;
+  if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
+  if(s.textureSeedLock!==undefined) $('textureSeedLock').checked = s.textureSeedLock;
+
+  $('borderToggle').checked = !!s.border;
+  $('borderBlock').classList.toggle('open', !!s.border);
+  if(s.borderColor) setColorField('borderColorHex', s.borderColor);
+  if(s.borderThickness!==undefined) $('borderThickness').value = s.borderThickness;
+  if(s.borderOffset!==undefined) $('borderOffset').value = s.borderOffset;
+
+  $('vignetteToggle').checked = !!s.vignette;
+  $('vignetteBlock').classList.toggle('open', !!s.vignette);
+  if(s.vignetteBlend) $('vignetteBlend').value = s.vignetteBlend;
+  if(s.vignetteIntensity!==undefined){ $('vignetteIntensity').value=s.vignetteIntensity; $('vignetteIntensityVal').textContent=s.vignetteIntensity+'%'; }
+
+  if(s.align){ currentAlign=s.align; setActiveRadioValue('alignGroup', s.align); }
+  if(s.valign){ currentValign=s.valign; setActiveRadioValue('valignGroup', s.valign); }
+  if(s.aspect && ASPECTS[s.aspect]){
+    currentAspect=s.aspect;
+    const [w,h] = ASPECTS[s.aspect];
+    canvas.width=w; canvas.height=h;
+    setActiveRadioValue('aspectGroup', s.aspect);
+  }
+
+  if(s.username!==undefined) $('usernameField').value = s.username;
+  if(s.usernameCorner) $('usernameCorner').value = s.usernameCorner;
+  if(s.poemText!==undefined) $('poemText').value = s.poemText;
+
+  render();
+}
+
+$('advancedRefreshBtn').addEventListener('click', ()=>{
+  $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
+});
+$('advancedCopyBtn').addEventListener('click', async ()=>{
+  const btn = $('advancedCopyBtn');
+  const original = btn.textContent;
+  try{
+    await navigator.clipboard.writeText($('advancedJson').value);
+    btn.textContent = '✓ Copied';
+  } catch(e){
+    // clipboard API can be blocked in some contexts — fall back to manual select
+    $('advancedJson').select();
+    btn.textContent = 'Select-and-copy';
+  }
+  setTimeout(()=>{ btn.textContent = original; }, 1400);
+});
+$('advancedLoadBtn').addEventListener('click', ()=>{
+  try{
+    const obj = JSON.parse($('advancedJson').value);
+    restoreSettings(obj);
+  } catch(e){
+    alert("That JSON couldn't be parsed — check for a stray comma or missing bracket.");
+  }
+});
+// populate once on load so there's something to see/copy immediately
+$('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
 
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
@@ -767,16 +1073,27 @@ PRESETS.forEach(p=>{
 });
 
 function applyPreset(p){
+  maybeRerollSeed(p.textureSeed);
   setColorField('bgColor1Hex', p.bg1);
   $('bgGradientToggle').checked = !!p.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!p.bgGradient);
   if(p.bg2) setColorField('bgColor2Hex', p.bg2);
+  if(p.bg3) setColorField('bgColor3Hex', p.bg3);
+  if(p.bg4) setColorField('bgColor4Hex', p.bg4);
+  bgStopCount = p.bg4 ? 4 : (p.bg3 ? 3 : 2);
+  syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
+  setActiveRadioValue('bgStopsGroup', bgStopCount);
   if(p.bgAngle!==undefined){ $('bgGradientAngle').value=p.bgAngle; $('bgGradientAngleVal').textContent=p.bgAngle+'°'; }
 
   setColorField('textColorHex', p.text1);
   $('textGradientToggle').checked = !!p.textGradient;
   $('gradientBlock').classList.toggle('open', !!p.textGradient);
   if(p.text2) setColorField('textColor2Hex', p.text2);
+  if(p.text3) setColorField('textColor3Hex', p.text3);
+  if(p.text4) setColorField('textColor4Hex', p.text4);
+  textStopCount = p.text4 ? 4 : (p.text3 ? 3 : 2);
+  syncStopFields(textStopCount, 'textColor3Field', 'textColor4Field');
+  setActiveRadioValue('textStopsGroup', textStopCount);
   if(p.textAngle!==undefined){ $('textGradientAngle').value=p.textAngle; $('textGradientAngleVal').textContent=p.textAngle+'°'; }
 
   outlineModeSel.value = p.outlineMode || 'off';
@@ -796,6 +1113,7 @@ function applyPreset(p){
   $('textureBlock').classList.toggle('open', !!p.texture);
   if(p.textureType) $('textureType').value = p.textureType;
   if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; $('textureOpacityVal').textContent=p.textureOpacity+'%'; }
+  $('textureInvert').checked = !!p.textureInvert;
 
   if(p.accent1){ $('accent1Toggle').checked=true; $('accent1Block').classList.add('open'); setColorField('accent1ColorHex', p.accent1); }
   else { $('accent1Toggle').checked=false; $('accent1Block').classList.remove('open'); }
@@ -808,18 +1126,23 @@ function applyPreset(p){
   if(p.borderThickness!==undefined) $('borderThickness').value = p.borderThickness;
   if(p.borderOffset!==undefined) $('borderOffset').value = p.borderOffset;
 
+  $('vignetteToggle').checked = !!p.vignette;
+  $('vignetteBlock').classList.toggle('open', !!p.vignette);
+  if(p.vignetteBlend) $('vignetteBlend').value = p.vignetteBlend;
+  if(p.vignetteIntensity!==undefined){ $('vignetteIntensity').value=p.vignetteIntensity; $('vignetteIntensityVal').textContent=p.vignetteIntensity+'%'; }
+
   render();
 }
 
 // ---------- gradient geometry ----------
-function makeGradient(ctx, w, h, angleDeg, c1, c2){
+function makeGradient(ctx, w, h, angleDeg, colors){
   const rad = angleDeg * Math.PI/180;
   const cx = w/2, cy = h/2;
   const len = Math.sqrt(w*w+h*h)/2;
   const x0 = cx - Math.cos(rad)*len, y0 = cy - Math.sin(rad)*len;
   const x1 = cx + Math.cos(rad)*len, y1 = cy + Math.sin(rad)*len;
   const g = ctx.createLinearGradient(x0,y0,x1,y1);
-  g.addColorStop(0,c1); g.addColorStop(1,c2);
+  colors.forEach((c,i)=>{ g.addColorStop(colors.length>1 ? i/(colors.length-1) : 0, c); });
   return g;
 }
 
@@ -852,9 +1175,17 @@ function buildLines(rawText, accent1On, accent2On){
     if(line.startsWith('## ')){ type='heading'; scale=1.33; content=line.slice(3); }
     else if(line.startsWith('-# ')){ type='small'; scale=0.66; content=line.slice(3); }
     else if(line.startsWith('> ')){ type='quote'; scale=1; content=line.slice(2); }
+
+    let alignOverride = null;
+    const alignMatch = content.match(/\s*\/(center|left|right)\s*$/i);
+    if(alignMatch){
+      alignOverride = alignMatch[1].toLowerCase();
+      content = content.slice(0, alignMatch.index);
+    }
+
     let segments = parseInline(content, accent1On, accent2On);
     if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
-    return {isBlank:false, type, scale, segments};
+    return {isBlank:false, type, scale, segments, alignOverride};
   });
 }
 
@@ -1121,12 +1452,12 @@ function genAstralFog(w,h){
   const workW = Math.max(24, Math.round(w/workDiv));
   const workH = Math.max(24, Math.round(h/workDiv));
 
-  const octaves = 6;
+  const octaves = 8;
   const gain = 0.55;
   const lacunarity = 2.0;
   const baseCells = 3;
-  const bias = -0.1;
-  const power = 1.4;
+  const bias = -0.05;
+  const power = 1.7;
 
   const octaveGrids = [];
   let amp = 1, maxAmp = 0;
@@ -1158,7 +1489,7 @@ function genAstralFog(w,h){
       density = Math.pow(density, power);
 
       const idx = (py*workW+px)*4;
-      const val = 95 + density*90;
+      const val = 75 + density*135;
       d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
     }
   }
@@ -1229,8 +1560,11 @@ function genInkBleed(w,h){
   const workH = Math.max(24, Math.round(h/workDiv));
   const halfW = Math.ceil(workW/2);
 
+  // Base blot mass: same mirrored-fBm technique as before, but bias/power pushed
+  // much higher so only isolated peaks survive — sparse, high-contrast blots with
+  // real clear paper between them, instead of one continuous darkening field.
   const octaves = 5, gain = 0.5, lacunarity = 2.0, baseCells = 3;
-  const bias = 0.22, power = 1.8;
+  const bias = 0.5, power = 3.2;
 
   const octaveGrids = [];
   let amp=1, maxAmp=0;
@@ -1266,7 +1600,12 @@ function genInkBleed(w,h){
       const srcX = Math.min(halfW-1, px < halfW ? px : (workW-1-px));
       const density = densityField[py*halfW+srcX];
       const idx = (py*workW+px)*4;
-      const val = 200 - density*160;
+      // clear paper sits near-white so color-burn is nearly inert there; ink masses
+      // drop to TRUE near-black (not just "dark") at peak density — color-burn only
+      // clamps fully to black when the source value is genuinely near zero, regardless
+      // of the destination's hue/lightness. Anything short of that (like ~35/255)
+      // lands in a muddy midtone on light backgrounds instead of reading as black ink.
+      const val = 250 - density*247;
       d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
     }
   }
@@ -1276,10 +1615,46 @@ function genInkBleed(w,h){
   full.width=w; full.height=h;
   const fctx = full.getContext('2d');
   const dim = Math.max(w,h);
-  fctx.filter = `blur(${dim*0.006}px)`;
+  fctx.filter = `blur(${dim*0.004}px)`;
   fctx.imageSmoothingEnabled = true;
   fctx.drawImage(small,0,0,w,h);
   fctx.filter = 'none';
+
+  // Clustered droplets — a handful of "impact points" where ink actually flicked,
+  // each spawning several droplets that taper smaller/finer moving outward from the
+  // cluster center. Reads as genuine spatter rather than uniform random scatter.
+  const clusterCount = Math.max(4, Math.round((w*h)/900000));
+  for(let c=0; c<clusterCount; c++){
+    const clx = Math.random()*w, cly = Math.random()*h;
+    const dropletsInCluster = 4+Math.floor(Math.random()*7);
+    const clusterSpread = (Math.random()*0.05+0.03)*Math.max(w,h);
+    for(let i=0;i<dropletsInCluster;i++){
+      const dist = Math.random()*clusterSpread;
+      const ang = Math.random()*Math.PI*2;
+      const cx = clx + Math.cos(ang)*dist;
+      const cy = cly + Math.sin(ang)*dist;
+      const distT = dist/clusterSpread;
+      const baseR = (Math.random()*0.022+0.01)*Math.min(w,h)*(1-distT*0.6);
+
+      const points = 8+Math.floor(Math.random()*5);
+      fctx.beginPath();
+      let prevR = baseR*(0.7+Math.random()*0.5);
+      for(let p=0;p<=points;p++){
+        const theta = (p/points)*Math.PI*2;
+        // average consecutive radii instead of fully independent per-point jitter —
+        // that's what was making these read as spiky stars instead of ink blobs
+        const r = (prevR + baseR*(0.6+Math.random()*0.7))/2;
+        prevR = r;
+        const px = cx+Math.cos(theta)*r, py = cy+Math.sin(theta)*r;
+        if(p===0) fctx.moveTo(px,py); else fctx.lineTo(px,py);
+      }
+      fctx.closePath();
+      const shade = 2+Math.random()*8;
+      fctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+      fctx.fill();
+    }
+  }
+
   return full;
 }
 
@@ -1443,14 +1818,16 @@ function genSnow(w,h){
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
   const fctx = full.getContext('2d');
-  const count = Math.round((w*h)/3500);
+  const count = Math.round((w*h)/3200);
   for(let i=0;i<count;i++){
     const x = Math.random()*w, y = Math.random()*h;
     const roll = Math.random();
     let size, alpha;
-    if(roll < 0.6){ size = 1+Math.random()*1.2; alpha = 0.7+Math.random()*0.3; }
-    else if(roll < 0.9){ size = 2.5+Math.random()*2.5; alpha = 0.5+Math.random()*0.3; }
-    else { size = 6+Math.random()*7; alpha = 0.25+Math.random()*0.25; }
+    if(roll < 0.25){ size = 0.6+Math.random()*0.5; alpha = 0.3+Math.random()*0.2; }        // distant dust
+    else if(roll < 0.55){ size = 1+Math.random()*1.2; alpha = 0.7+Math.random()*0.3; }      // tiny, sharp
+    else if(roll < 0.78){ size = 2.5+Math.random()*2.5; alpha = 0.5+Math.random()*0.3; }    // small, soft
+    else if(roll < 0.93){ size = 5+Math.random()*4; alpha = 0.35+Math.random()*0.25; }      // medium, softer
+    else { size = 9+Math.random()*9; alpha = 0.18+Math.random()*0.2; }                      // rare, large, out of focus
 
     if(size <= 1.3){
       fctx.fillStyle = `rgba(255,255,255,${alpha})`;
@@ -1581,19 +1958,20 @@ function genRainStreaks(w,h){
   fctx.fillRect(0,0,w,h);
 
   const angleRad = -14*Math.PI/180;
-  const count = Math.round((w*h)/8500);
+  const count = Math.round((w*h)/3800);
   for(let i=0;i<count;i++){
     const x = Math.random()*w*1.3 - w*0.15;
     const y = Math.random()*h;
-    const len = (Math.random()*0.09+0.04)*Math.max(w,h);
+    const len = (Math.random()*0.11+0.05)*Math.max(w,h);
     const dx = Math.sin(angleRad)*len, dy = Math.cos(angleRad)*len;
-    const bright = Math.random()<0.5 ? (85+Math.random()*35) : (165+Math.random()*40);
+    const bright = Math.random()<0.5 ? (35+Math.random()*35) : (210+Math.random()*40);
     const grad = fctx.createLinearGradient(x,y,x+dx,y+dy);
     grad.addColorStop(0, `rgba(${bright},${bright},${bright},0)`);
-    grad.addColorStop(0.5, `rgba(${bright},${bright},${bright},0.55)`);
+    grad.addColorStop(0.18, `rgba(${bright},${bright},${bright},0.9)`);
+    grad.addColorStop(0.82, `rgba(${bright},${bright},${bright},0.9)`);
     grad.addColorStop(1, `rgba(${bright},${bright},${bright},0)`);
     fctx.strokeStyle = grad;
-    fctx.lineWidth = 1+Math.random()*1.4;
+    fctx.lineWidth = 1.4+Math.random()*2.2;
     fctx.beginPath(); fctx.moveTo(x,y); fctx.lineTo(x+dx,y+dy); fctx.stroke();
   }
   return full;
@@ -1608,6 +1986,8 @@ function genLeather(w,h){
   full.width=w; full.height=h;
   const fctx = full.getContext('2d');
 
+  // base: soft paper-like grain (same technique as Parchment — narrow spread,
+  // coarse downscale — not the noisier Dustmote spread this used before)
   const genW = Math.max(1,Math.round(w/3)), genH = Math.max(1,Math.round(h/3));
   const small = document.createElement('canvas');
   small.width=genW; small.height=genH;
@@ -1615,7 +1995,7 @@ function genLeather(w,h){
   const img = sctx.createImageData(genW,genH);
   const d = img.data;
   for(let i=0;i<d.length;i+=4){
-    const v = 185+(Math.random()*2-1)*60;
+    const v = 205+(Math.random()*2-1)*32;
     d[i]=v; d[i+1]=v*0.95; d[i+2]=v*0.85; d[i+3]=255;
   }
   sctx.putImageData(img,0,0);
@@ -1647,14 +2027,17 @@ function genLeather(w,h){
       const r1=Math.sqrt(d1), r2=Math.sqrt(d2);
       const diff = (r2-r1)/(r2+1e-6);
       const idx=(py*workW+px)*4;
-      const val = diff < crackWidth ? 70 : 175;
+      // crack lines much darker, non-crack areas near-white so multiply barely
+      // touches them — the darkening should come from the cracks specifically
+      const val = diff < crackWidth ? 45 : 235;
       cd[idx]=val; cd[idx+1]=val; cd[idx+2]=val; cd[idx+3]=255;
     }
   }
   cctx.putImageData(cimg,0,0);
 
   fctx.save();
-  fctx.globalAlpha = 0.16;
+  fctx.globalAlpha = 0.55;
+  fctx.globalCompositeOperation = 'multiply';
   fctx.imageSmoothingEnabled = true;
   fctx.drawImage(crackSmall, 0, 0, w, h);
   fctx.restore();
@@ -1662,11 +2045,171 @@ function genLeather(w,h){
   return full;
 }
 
-function getTextureCanvas(type, w, h, accent1, accent2){
+// Dotwork: a regular dot grid (classic print halftone) where each dot's radius is
+// modulated by a coarse noise field — genuinely geometric (fixed grid spacing)
+// but with organic size variation, distinct from Squares' flat-shaded triangles.
+function genHalftone(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+  fctx.fillStyle = 'rgb(205,205,205)';
+  fctx.fillRect(0,0,w,h);
+
+  const fieldGW = 10, fieldGH = Math.max(2, Math.round(10*(h/w)));
+  const field = makeNoiseGrid(fieldGW, fieldGH);
+
+  const cell = Math.max(w,h)/48;
+  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
+  fctx.fillStyle = 'rgb(60,60,60)';
+  for(let ry=0; ry<rows; ry++){
+    for(let rx=0; rx<cols; rx++){
+      const cx = rx*cell+cell/2, cy = ry*cell+cell/2;
+      const nx = (rx/cols)*(fieldGW-1), ny = (ry/rows)*(fieldGH-1);
+      const v = sampleNoiseGrid(field, fieldGW, fieldGH, nx, ny);
+      const r = v*cell*0.48;
+      if(r < 0.6) continue;
+      fctx.beginPath();
+      fctx.arc(cx, cy, r, 0, Math.PI*2);
+      fctx.fill();
+    }
+  }
+  return full;
+}
+
+// Impasto: scattered curved, tapered strokes (thin at both ends, thick in the
+// middle, drawn as a run of short segments rather than a single stroke() call so
+// each one can taper) — a painterly, "highly stylistic" texture rather than a
+// noise field or point scatter.
+function drawBrushStroke(ctx, x, y, length, angle, tone, alpha){
+  const ex = x+Math.cos(angle)*length, ey = y+Math.sin(angle)*length;
+  const perpAng = angle+Math.PI/2;
+  const wob1 = (Math.random()*2-1)*length*0.3;
+  const wob2 = (Math.random()*2-1)*length*0.2;
+  const c1x = x + Math.cos(angle)*length*0.33 + Math.cos(perpAng)*wob1;
+  const c1y = y + Math.sin(angle)*length*0.33 + Math.sin(perpAng)*wob1;
+  const c2x = x + Math.cos(angle)*length*0.66 + Math.cos(perpAng)*wob2;
+  const c2y = y + Math.sin(angle)*length*0.66 + Math.sin(perpAng)*wob2;
+
+  const samples = 24;
+  const pts = [];
+  for(let i=0;i<=samples;i++){
+    const t = i/samples, mt = 1-t;
+    pts.push([
+      mt*mt*mt*x + 3*mt*mt*t*c1x + 3*mt*t*t*c2x + t*t*t*ex,
+      mt*mt*mt*y + 3*mt*mt*t*c1y + 3*mt*t*t*c2y + t*t*t*ey,
+    ]);
+  }
+
+  // Build one continuous tapered outline (wide at the middle, narrow at both ends,
+  // with a little per-sample width jitter for a bristled edge) instead of stroking
+  // separate short segments — that's what was reading as a chain of circles before.
+  const baseWidth = length*(0.05+Math.random()*0.06);
+  const leftPts = [], rightPts = [];
+  for(let i=0;i<=samples;i++){
+    const t = i/samples;
+    const taper = Math.pow(Math.sin(Math.PI*t), 0.6);
+    const jitter = 0.75+Math.random()*0.5;
+    const halfW = (baseWidth*taper*jitter)/2;
+    const [cx,cy] = pts[i];
+    const [nx,ny] = pts[Math.min(samples,i+1)];
+    const dx = nx-cx, dy = ny-cy;
+    const segLen = Math.hypot(dx,dy) || 1;
+    const px = -dy/segLen, py = dx/segLen;
+    leftPts.push([cx+px*halfW, cy+py*halfW]);
+    rightPts.push([cx-px*halfW, cy-py*halfW]);
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(leftPts[0][0], leftPts[0][1]);
+  for(const [px,py] of leftPts) ctx.lineTo(px,py);
+  for(let i=rightPts.length-1;i>=0;i--) ctx.lineTo(rightPts[i][0], rightPts[i][1]);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(${tone},${tone},${tone},${alpha})`;
+  ctx.fill();
+
+  // a couple of thin dry-brush streaks running alongside for a bristled feel
+  for(let s=0;s<2;s++){
+    const off = (Math.random()*2-1)*baseWidth*0.6;
+    ctx.beginPath();
+    for(let i=0;i<=samples;i++){
+      const [cx,cy] = pts[i];
+      const [nx,ny] = pts[Math.min(samples,i+1)];
+      const dx=nx-cx, dy=ny-cy; const segLen=Math.hypot(dx,dy)||1;
+      const px=-dy/segLen, py=dx/segLen;
+      const sx = cx+px*off, sy = cy+py*off;
+      if(i===0) ctx.moveTo(sx,sy); else ctx.lineTo(sx,sy);
+    }
+    ctx.strokeStyle = `rgba(${tone},${tone},${tone},${alpha*0.4})`;
+    ctx.lineWidth = 0.6+Math.random()*0.8;
+    ctx.stroke();
+  }
+}
+function genBrushstrokes(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+  fctx.fillStyle='rgb(128,128,128)';
+  fctx.fillRect(0,0,w,h);
+
+  const count = Math.max(10, Math.round((w*h)/85000));
+  for(let i=0;i<count;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    const length = (Math.random()*0.16+0.08)*Math.max(w,h);
+    const angle = Math.random()*Math.PI*2;
+    const tone = 90+Math.random()*110;
+    const alpha = 0.55+Math.random()*0.35;
+    drawBrushStroke(fctx, x, y, length, angle, tone, alpha);
+  }
+  return full;
+}
+
+function invertTextureCanvas(srcCanvas){
+  const w = srcCanvas.width, h = srcCanvas.height;
+  const tmp = document.createElement('canvas');
+  tmp.width = w; tmp.height = h;
+  const tctx = tmp.getContext('2d');
+  tctx.drawImage(srcCanvas, 0, 0);
+  const imgData = tctx.getImageData(0,0,w,h);
+  const d = imgData.data;
+  for(let i=0;i<d.length;i+=4){
+    d[i] = 255-d[i];
+    d[i+1] = 255-d[i+1];
+    d[i+2] = 255-d[i+2];
+    // alpha (d[i+3]) is left untouched — matters for the transparent-canvas
+    // particle textures (snow, embers, wisps, astral stars), where only the
+    // particle pixels carry any alpha and everywhere else should stay invisible.
+  }
+  tctx.putImageData(imgData,0,0);
+  return tmp;
+}
+
+// Seeded PRNG (mulberry32) so a given seed always produces the same texture
+// pattern. Rather than threading an rng param through all 18+ generator
+// functions, withSeed() temporarily substitutes the global Math.random for the
+// duration of one texture generation call, then restores it — every generator
+// still just calls Math.random() as before, it's transparently deterministic
+// whenever it's actually needed.
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function withSeed(seed, fn){
+  const original = Math.random;
+  Math.random = mulberry32(seed >>> 0);
+  try { return fn(); }
+  finally { Math.random = original; }
+}
+
+function getTextureCanvas(type, w, h, accent1, accent2, invert, seed){
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
-  const key = colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`;
+  const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`) + (invert ? '_inv' : '') + `_s${seed}`;
   if(textureCache[key]) return textureCache[key];
 
+  let result = withSeed(seed, () => {
   let result;
   if(type === 'waterspots'){
     result = genWaterspots(w,h);
@@ -1698,6 +2241,10 @@ function getTextureCanvas(type, w, h, accent1, accent2){
     result = genRainStreaks(w,h);
   } else if(type === 'leather'){
     result = genLeather(w,h);
+  } else if(type === 'halftone'){
+    result = genHalftone(w,h);
+  } else if(type === 'brushstrokes'){
+    result = genBrushstrokes(w,h);
   } else {
     let genW = w, genH = h;
     if(type==='grain'){ genW=Math.max(1,Math.round(w/5)); genH=Math.max(1,Math.round(h/5)); }
@@ -1726,6 +2273,9 @@ function getTextureCanvas(type, w, h, accent1, accent2){
     fctx.drawImage(small,0,0,w,h);
     result = full;
   }
+  return result;
+  });
+  if(invert) result = invertTextureCanvas(result);
   textureCache[key] = result;
   return result;
 }
@@ -1736,8 +2286,8 @@ function render(){
 
   const bg1 = $('bgColor1Hex').value;
   if($('bgGradientToggle').checked){
-    const bg2 = $('bgColor2Hex').value;
-    ctx.fillStyle = makeGradient(ctx, W, H, parseFloat($('bgGradientAngle').value), bg1, bg2);
+    const colors = collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount);
+    ctx.fillStyle = makeGradient(ctx, W, H, parseFloat($('bgGradientAngle').value), colors);
   } else {
     ctx.fillStyle = bg1;
   }
@@ -1748,43 +2298,62 @@ function render(){
     const opacity = Math.max(0, parseFloat($('textureOpacity').value) || 0) / 100;
     const accent1Color = $('accent1ColorHex').value;
     const accent2Color = $('accent2ColorHex').value;
+    const invert = $('textureInvert').checked;
+    const seed = parseInt($('textureSeedValue').value, 10) || 0;
+
     if(type === 'astral'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = 'overlay';
-      ctx.drawImage(getTextureCanvas('astral_fog', W, H), 0, 0);
+      ctx.drawImage(getTextureCanvas('astral_fog', W, H, null, null, invert, seed), 0, 0);
       ctx.restore();
 
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = 'lighten';
-      ctx.drawImage(getTextureCanvas('astral_stars', W, H, accent1Color, accent2Color), 0, 0);
+      ctx.globalCompositeOperation = invert ? 'darken' : 'lighten';
+      ctx.drawImage(getTextureCanvas('astral_stars', W, H, accent1Color, accent2Color, invert, seed), 0, 0);
       ctx.restore();
     } else if(type === 'inkbleed'){
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = 'color-burn';
-      ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
+      ctx.globalCompositeOperation = invert ? 'color-dodge' : 'color-burn';
+      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed), 0, 0);
       ctx.restore();
-    } else if(type === 'embers' || type === 'magicparticles'){
+    } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = 'lighten';
-      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color), 0, 0);
-      ctx.restore();
-    } else if(type === 'snow'){
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = 'lighten';
-      ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
+      ctx.globalCompositeOperation = invert ? 'darken' : 'lighten';
+      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color, invert, seed), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = 'overlay';
-      ctx.drawImage(getTextureCanvas(type, W, H), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed), 0, 0);
       ctx.restore();
     }
+  }
+
+  // --- vignette (drawn here, before border/text, so it only affects the
+  // background+texture layers underneath rather than the whole composed image) ---
+  if($('vignetteToggle').checked){
+    const intensity = Math.max(0, parseFloat($('vignetteIntensity').value) || 0) / 100;
+    const blend = $('vignetteBlend').value;
+    const vcx = W/2, vcy = H/2;
+    const outerR = Math.sqrt(W*W+H*H)/2;
+    const vgrad = ctx.createRadialGradient(vcx,vcy,outerR*0.35, vcx,vcy,outerR*1.05);
+    // lighten/color-dodge are brightening blend modes — a black source is
+    // mathematically a no-op for both (lighten never picks black over anything
+    // brighter, and color-dodge's dst/(1-src) reduces to plain dst when src=0).
+    // They need a white source to have any visible effect at all.
+    const vignetteRGB = (blend === 'lighten' || blend === 'color-dodge') ? '255,255,255' : '0,0,0';
+    vgrad.addColorStop(0, `rgba(${vignetteRGB},0)`);
+    vgrad.addColorStop(1, `rgba(${vignetteRGB},${intensity})`);
+    ctx.save();
+    ctx.globalCompositeOperation = blend;
+    ctx.fillStyle = vgrad;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
   }
 
   if($('borderToggle').checked){
@@ -1826,7 +2395,8 @@ function render(){
 
   let baseFillStyle;
   if($('textGradientToggle').checked){
-    baseFillStyle = makeGradient(ctx, W, H, parseFloat($('textGradientAngle').value), $('textColorHex').value, $('textColor2Hex').value);
+    const textColors = collectGradientColors($('textColorHex').value, 'textColor2Hex', 'textColor3Hex', 'textColor4Hex', textStopCount);
+    baseFillStyle = makeGradient(ctx, W, H, parseFloat($('textGradientAngle').value), textColors);
   } else {
     baseFillStyle = $('textColorHex').value;
   }
@@ -1848,7 +2418,8 @@ function render(){
 
     const widths = line.segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size));
     const totalWidth = widths.reduce((a,b)=>a+b,0);
-    const startX = currentAlign==='center' ? (W/2 - totalWidth/2) : (currentAlign==='right' ? (W - paddingX - totalWidth) : paddingX);
+    const lineAlign = line.alignOverride || currentAlign;
+    const startX = lineAlign==='center' ? (W/2 - totalWidth/2) : (lineAlign==='right' ? (W - paddingX - totalWidth) : paddingX);
 
     if(line.type==='quote'){
       const barWidth = Math.max(2, size*0.06);
