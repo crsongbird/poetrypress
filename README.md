@@ -148,49 +148,77 @@ End a line with `/l`, `/c`, or `/r`.
 
 ### 6. Segmentation Operator (advanced)
 
-`<...>` isolates part of a line for independent formatting, chainable with
-`/`:
+# PoetrySky Press
 
-- `/l /c /r` — Justification for this segment
-- `/#:hex` — Custom color, overrides accents
-- `/f:N` — Custom font by index (see live list in-app)
-- `/scale:N` — Custom size in pixels
-- `/fx1,color,width` — Custom outline
-- `/fx2,color,blur,x,y` — Custom shadow
-- `/fx0` — Force outline/shadow off, even if on globally
+A single-file, browser-based tool for turning poems into shareable images.
+
+Live at: poetrypress.unfixable.place
+
+## Features
+
+- 20 built-in themes, fully editable after picking one
+- 20+ procedural textures (noise, ink spatter, embers, snow, brush strokes, halftone, and more), each with opacity, invert, and a lockable random seed
+- Multi-stop gradients (2-4 colors) for background and text
+- Vignette with 4 blend modes
+- A small markdown-like formatting language for poem text (see below)
+- 6 aspect ratios, justification, line spacing
+- Randomize buttons for font and background
+- Advanced panel: export/import full config as JSON
+- Auto-named JPG export, filename pulled from your poem's first heading
+
+## Using It
+
+Pick a theme from Style Presets, or build one from scratch — every control still works normally either way. Type your poem into the text box; formatting is plain text (see below). Textures use a seeded RNG — lock the seed to keep a pattern while you tweak everything else. Download exports a full-quality JPG. The Advanced panel lets you save/restore your entire setup as JSON.
+
+## Formatting Language
+
+### 1. Line prefixes
+- `## text` — heading, 1.33x size
+- `-# text` — small aside, 0.66x size
+- `> text` — quote: italic, left bar, 68% opacity
+
+### 2. Inline styles
+- `**bold**` `*italic*` `_underline_` `~~strike~~`
+- `[accent one]` `{accent two}` — active only when that accent is enabled
+
+Nest freely: `**bold [with accent] still bold**`. `*`/`_`/`~~`/`**` won't trigger touching whitespace (`5 * 3 * 2` stays plain); brackets/braces have no such rule.
+
+### 3. Hidden gradient blend
+- `{[text]}` — accent one → accent two
+- `[{text]}` — accent two → accent one
+
+Either closing order works (`]}` or `}]`). Needs both accents enabled.
+
+### 4. Escaping
+`\X` prints X literally, no formatting. Escapable: `\ * _ ~ [ ] { } < > /`
+
+### 5. Whole-line justification
+End a line with `/l`, `/c`, or `/r`.
+
+### 6. Segmentation Operator (advanced)
+`<...>` isolates part of a line, directives chained with `/`:
+- `/l /c /r` — justify this segment
+- `/#:hex` — custom color, overrides accents
+- `/f:N` — custom font by index (live list in-app)
+- `/scale:N` — custom size in px
+- `/fx1,color,width` — custom outline
+- `/fx2,color,blur,x,y` — custom shadow
+- `/fx0` — force outline/shadow off even if on globally
 
 Chain freely: `<text/#:ff00ff/f:4/scale:100/r/fx2,#ffffff,10,10,10>`
 
-**Layout**: a segment without a justification directive flows normally in
-sequence (positioned as a block per the line's own justification); a segment
-with one is pulled out and anchored to that margin. So `plain text <right
-side/r>` flows the plain part naturally and pins only the tagged part to the
-edge.
+Unjustified segments flow inline as one block; justified ones anchor to that margin. `plain text <right side/r>` — first part flows normally, second pins to the edge.
 
-### 7. Emoji colorization
-
-Emoji inside an accent/custom/gradient-colored span get tinted
-(silhouette-filled) to match, instead of rendering in native full color.
+### 7. Emoji
+Tinted to match inside any accent/custom/gradient span, instead of native color.
 
 ### 8. Parsing order
-
-1. Escaping resolved first (sentinel substitution, restored at the end)
-2. Line prefixes checked next (start-of-line only)
-3. Segmentation parsed next
-4. Whole-line justification suffix only checked if no segmentation groups
-   found
-5. Inline styles parsed per-part
-6. Quote's forced italic layers on top of existing inline styles, doesn't
-   override them
+Escape → prefixes → segmentation → whole-line justification (only if no segmentation) → inline styles per part. Quote's forced italic layers on top of other styles, doesn't override them.
 
 ### 9. Known limitations
-
-- Custom `scale:N` doesn't participate in the line's auto-fit height — a
-  much-larger custom size can visually overflow into the next line.
-- Font indices are positional — reordering the font list changes what old
-  `f:N` references point to. The in-app guide's list is generated live to
-  make this checkable.
+- `scale:N` doesn't affect line auto-fit height — an oversized segment can overflow into the next line.
+- Font indices are positional; reordering the font list changes what old `f:N` refers to.
 
 ## Support
 
-If this is useful to you: ko-fi.com/c0222f
+ko-fi.com/c0222f
