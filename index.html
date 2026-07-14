@@ -53,6 +53,11 @@ body{
 .controls::-webkit-scrollbar-thumb{background:var(--line); border-radius:2px;}
 
 .app-title{ font-family:'Playfair Display', serif; font-size:22px; letter-spacing:0.03em; margin:0 0 2px 0; }
+.kofi-link{
+  display:inline-block; font-size:12px; color:var(--accent); text-decoration:none;
+  margin:0 0 11px 0; border-bottom:1px dotted var(--accent-dim);
+}
+.kofi-link:hover{ color:var(--rose); border-bottom-color:var(--rose); }
 .app-sub{ font-size:13px; color:var(--text-dim); margin:0 0 11px 0; font-style:italic; }
 
 .card{
@@ -186,7 +191,11 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 }
 
 /* ---------- RESPONSIVE / MOBILE LAYOUT ---------- */
-@media (max-width: 860px){
+/* Width alone misses some real phones (e.g. larger-screen Android devices can
+   report a CSS width above 860px while still being unmistakably phone-shaped
+   in portrait). Catching (orientation: portrait) with a higher width ceiling
+   alongside the plain width check is more reliable than either alone. */
+@media (max-width: 860px), (orientation: portrait) and (max-width: 1024px){
   .app{ flex-direction:column; height:100vh; overflow:hidden; }
   .app-header{ display:flex; }
   .controls{
@@ -197,6 +206,20 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
   .stage{ order:1; flex:0 0 auto; height:44vh; gap:8px; padding-top:6px; }
   #poemCanvas{ max-height:calc(44vh - 30px); max-width:92vw; }
   .download-btn{ top:auto; bottom:14px; right:14px; padding:8px 16px; font-size:13px; }
+
+  /* Canonical desktop reference is ~2560x1440; canonical mobile is ~1080x1920,
+     which typically carries higher effective density. Rather than detecting
+     DPI directly (unreliable across devices), just nudge base sizes up a
+     little here — enough to help readability/tappability, not enough to lose
+     the compact feel. */
+  label{ font-size:14px; }
+  select, textarea, input[type="text"], input[type="number"]{ font-size:16px; }
+  .card-title{ font-size:13.5px; }
+  .hint{ font-size:13px; }
+  button.ghost{ font-size:15px; }
+  .radio-btn{ font-size:14px; }
+  .check-row label{ font-size:15px; }
+  .preset-label{ font-size:10.5px; }
 }
 </style>
 </head>
@@ -208,6 +231,7 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 
   <div class="controls">
     <p class="app-title">Ruby's Page Press 🔶📝🦋</p>
+    <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="kofi-link">☕ Support on Ko-fi</a>
 
     <div class="card">
       <p class="card-title">  Page Text (Pseudo-Markdown)</p>
@@ -249,10 +273,6 @@ including **some things that never needed a slider**.
 
 
 -# ↙ {Don't forget to change the credits 💙}</textarea>
-      <p class="hint">
-	  Text Styles: <code>**bold**</code>, <code>*italic*</code>, <code>[accent one]</code> and <code>{accent two}</code>.<br>
-		Line Styles: <code>&gt; quote line</code>, <code>## big line</code>, <code>-# small line</code>.<br>
-		Alignment override: end a line with <code>/center</code>, <code>/left</code>, or <code>/right</code>.</p>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
@@ -270,6 +290,30 @@ including **some things that never needed a slider**.
         </div>
       </div>
     </div>
+
+    <details class="card" id="formattingGuidePanel">
+      <summary class="card-title" style="cursor:pointer;">Formatting Guide</summary>
+      <div style="margin-top:8px; font-size:12px; color:var(--text-dim); line-height:1.6;">
+        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Inline styles</strong> — freely combinable and nestable, e.g. <code>**bold [with accent] still bold**</code>:</p>
+        <p style="margin:0 0 3px 0;"><code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strikethrough~~</code></p>
+        <p style="margin:0 0 3px 0;"><code>[accent one]</code>, <code>{accent two}</code> — only apply when that accent color is enabled above</p>
+        <p style="margin:0 0 10px 0;"><code>{[gradient left-to-right]}</code>, <code>[{gradient right-to-left]}</code> — a hidden extra: blends accent one into accent two across just that span (both accents must be enabled)</p>
+
+        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Line prefixes</strong> (start of line):</p>
+        <p style="margin:0 0 3px 0;"><code>## text</code> — big heading line</p>
+        <p style="margin:0 0 3px 0;"><code>-# text</code> — small aside line</p>
+        <p style="margin:0 0 10px 0;"><code>&gt; text</code> — quote line: gets a left bar, a slight tilt, and a touch of transparency</p>
+
+        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Alignment</strong>:</p>
+        <p style="margin:0 0 3px 0;">End a whole line with <code>/l</code>, <code>/c</code>, or <code>/r</code> to override that line's alignment.</p>
+        <p style="margin:0 0 10px 0;">For one line split between two edges: <code>&lt;left side text/l&gt;&lt;right side text/r&gt;</code> — or mix plain text with one tagged chunk: <code>plain text &lt;right side/r&gt;</code>. Each chunk can use any of the inline styles above.</p>
+
+        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Escaping</strong>:</p>
+        <p style="margin:0 0 10px 0;">Put a backslash before any special character to print it literally: <code>\[not accent\]</code> prints <code>[not accent]</code> exactly, with no color applied.</p>
+
+        <p style="margin:0;"><strong style="color:var(--text-main);">Emoji</strong> inside an accent-colored or gradient span get tinted to match, instead of rendering in their normal full-color glyph.</p>
+      </div>
+    </details>
 
     <div class="card">
       <p class="card-title">  Style Presets</p>
@@ -681,6 +725,166 @@ const PRESETS = [
 
 const ASPECTS = { "1:1":[3072,3072], "2:3":[2400,3600], "3:4":[2700,3600], "9:16":[2304,4096], "9:20":[1843,4096], "16:9":[4096,2304] };
 
+// ---------- markdown-lite parsing ----------
+// ---------- escaping ----------
+// \X for any special char X prints a literal X, with the backslash itself
+// consumed. Done as a sentinel-substitution pass before any markup parsing so
+// escaped characters can never trigger delimiter behavior, then restored to
+// their literal form once styling is resolved.
+const ESCAPABLE_CHARS = ['\\','*','_','~','[',']','{','}','<','>','/'];
+const ESCAPE_TO_SENTINEL = {};
+const SENTINEL_TO_CHAR = {};
+ESCAPABLE_CHARS.forEach((ch,i)=>{
+  const sentinel = String.fromCodePoint(0xE000+i);
+  ESCAPE_TO_SENTINEL[ch] = sentinel;
+  SENTINEL_TO_CHAR[sentinel] = ch;
+});
+function applyEscapes(text){
+  let out = '';
+  for(let i=0;i<text.length;i++){
+    if(text[i]==='\\' && ESCAPE_TO_SENTINEL[text[i+1]]){
+      out += ESCAPE_TO_SENTINEL[text[i+1]];
+      i++;
+    } else {
+      out += text[i];
+    }
+  }
+  return out;
+}
+function restoreEscapes(text){
+  let out = '';
+  for(const ch of text) out += (SENTINEL_TO_CHAR[ch] !== undefined) ? SENTINEL_TO_CHAR[ch] : ch;
+  return out;
+}
+
+// ---------- emoji detection (for the accent-color "colorize" feature) ----------
+function isEmojiCodePoint(cp){
+  return (cp>=0x1F300 && cp<=0x1FAFF) ||
+         (cp>=0x2600 && cp<=0x27BF) ||
+         (cp>=0x1F1E6 && cp<=0x1F1FF) ||
+         (cp>=0x2B00 && cp<=0x2BFF) ||
+         cp===0xFE0F || cp===0x200D || cp===0x20E3;
+}
+function segmentHasEmoji(text){
+  for(const ch of text){ if(isEmojiCodePoint(ch.codePointAt(0))) return true; }
+  return false;
+}
+
+// ---------- inline tokenizer (nesting-aware) ----------
+// A stack-based scanner rather than a single regex pass — this is what actually
+// makes **bold [accent] still bold** work: every character gets a snapshot of
+// whichever styles are currently "open" on the stack, and consecutive characters
+// with identical snapshots get coalesced into one run at the end. Handles bold,
+// italic, underline, strikethrough, both accent colors, and the hidden gradient
+// wraps {[...]} / [{...]} — all freely combinable and nestable.
+function findLastStackIndex(stack, type){
+  for(let i=stack.length-1;i>=0;i--) if(stack[i].type===type) return i;
+  return -1;
+}
+function tokenizeInline(text, accent1On, accent2On){
+  const stack = [];
+  const chars = [];
+  function snapshot(){
+    let bold=false, italic=false, underline=false, strike=false, color=null;
+    for(const item of stack){
+      if(item.type==='bold') bold=true;
+      else if(item.type==='italic') italic=true;
+      else if(item.type==='underline') underline=true;
+      else if(item.type==='strike') strike=true;
+      else if(item.type==='accent1') color='accent1';
+      else if(item.type==='accent2') color='accent2';
+      else if(item.type==='gradFwd') color='gradFwd';
+      else if(item.type==='gradRev') color='gradRev';
+    }
+    return {bold,italic,underline,strike,color};
+  }
+  const isSpace = c => c===' ' || c==='\t' || c===undefined;
+  const n = text.length;
+  let i = 0;
+  while(i<n){
+    if(accent1On && accent2On && text.startsWith('{[', i)){ stack.push({type:'gradFwd'}); i+=2; continue; }
+    if(accent1On && accent2On && text.startsWith('[{', i)){ stack.push({type:'gradRev'}); i+=2; continue; }
+    if(text.startsWith(']}', i) || text.startsWith('}]', i)){
+      const idxFwd = findLastStackIndex(stack,'gradFwd');
+      const idxRev = findLastStackIndex(stack,'gradRev');
+      if(idxFwd!==-1 || idxRev!==-1){
+        if(idxFwd > idxRev){ stack.splice(idxFwd,1); } else { stack.splice(idxRev,1); }
+        i+=2; continue;
+      }
+      // no gradient open — fall through so the plain ] and } handlers below
+      // process this as two ordinary (non-gradient) closes instead
+    }
+    const prevCh = chars.length ? chars[chars.length-1].ch : undefined;
+    if(text.startsWith('~~', i)){
+      const idx = findLastStackIndex(stack,'strike');
+      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=2; continue; }
+      if(idx===-1 && !isSpace(text[i+2])){ stack.push({type:'strike'}); i+=2; continue; }
+    }
+    if(text.startsWith('**', i)){
+      const idx = findLastStackIndex(stack,'bold');
+      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=2; continue; }
+      if(idx===-1 && !isSpace(text[i+2])){ stack.push({type:'bold'}); i+=2; continue; }
+    }
+    const c = text[i];
+    if(c==='*'){
+      const idx = findLastStackIndex(stack,'italic');
+      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=1; continue; }
+      if(idx===-1 && !isSpace(text[i+1])){ stack.push({type:'italic'}); i+=1; continue; }
+    }
+    if(c==='_'){
+      const idx = findLastStackIndex(stack,'underline');
+      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=1; continue; }
+      if(idx===-1 && !isSpace(text[i+1])){ stack.push({type:'underline'}); i+=1; continue; }
+    }
+    if(accent1On && c==='['){ stack.push({type:'accent1'}); i+=1; continue; }
+    if(accent1On && c===']'){
+      const idx = findLastStackIndex(stack,'accent1');
+      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+    }
+    if(accent2On && c==='{'){ stack.push({type:'accent2'}); i+=1; continue; }
+    if(accent2On && c==='}'){
+      const idx = findLastStackIndex(stack,'accent2');
+      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+    }
+    chars.push({ch:c, ...snapshot()});
+    i += 1;
+  }
+  const runs = [];
+  for(const cd of chars){
+    const restored = restoreEscapes(cd.ch);
+    const last = runs[runs.length-1];
+    if(last && last.bold===cd.bold && last.italic===cd.italic && last.underline===cd.underline && last.strike===cd.strike && last.color===cd.color){
+      last.text += restored;
+    } else {
+      runs.push({text:restored, bold:cd.bold, italic:cd.italic, underline:cd.underline, strike:cd.strike, color:cd.color});
+    }
+  }
+  if(runs.length===0) runs.push({text:'', bold:false, italic:false, underline:false, strike:false, color:null});
+  return runs;
+}
+
+// ---------- split-alignment: <text/l><text/r> etc, on one line ----------
+function parseSplitAlignment(content){
+  const re = /<([\s\S]*?)\/([lcr])>/gi;
+  let m, lastIndex=0, found=false;
+  const chunks = [];
+  while((m = re.exec(content))){
+    found = true;
+    if(m.index > lastIndex){
+      const plain = content.slice(lastIndex, m.index);
+      if(plain.length) chunks.push({text:plain, align:'left'});
+    }
+    chunks.push({text:m[1], align:{l:'left',c:'center',r:'right'}[m[2].toLowerCase()]});
+    lastIndex = re.lastIndex;
+  }
+  if(!found) return null;
+  if(lastIndex < content.length){
+    const plain = content.slice(lastIndex);
+    if(plain.length) chunks.push({text:plain, align:'left'});
+  }
+  return chunks;
+}
+
 function $(id){ return document.getElementById(id); }
 
 const fontSelect = $('fontFamily');
@@ -888,9 +1092,54 @@ $('randomBgBtn').addEventListener('click', ()=>{
 
   render();
 });
+function plainTextFromLine(rawContent, accent1On, accent2On){
+  const escaped = applyEscapes(rawContent);
+  const segments = tokenizeInline(escaped, accent1On, accent2On);
+  return segments.map(s=>s.text).join('');
+}
+function slugifyForFilename(text){
+  const alnumAndSpaces = text.replace(/[^a-zA-Z0-9\s]/g, '');
+  const slug = alnumAndSpaces.trim().replace(/\s+/g, '-');
+  return slug;
+}
+function generateFilenameBase(){
+  const accent1On = $('accent1Toggle').checked;
+  const accent2On = $('accent2Toggle').checked;
+  const rawLines = $('poemText').value.replace(/\r\n/g,'\n').split('\n');
+
+  let sourceLine = null;
+
+  for(const rawLine of rawLines){
+    if(rawLine.startsWith('## ')){
+      sourceLine = rawLine.slice(3);
+      break;
+    }
+  }
+
+  if(sourceLine === null){
+    for(const rawLine of rawLines){
+      if(rawLine.trim() === '') continue;
+      let content = rawLine;
+      if(content.startsWith('-# ')) content = content.slice(3);
+      else if(content.startsWith('> ')) content = content.slice(2);
+      sourceLine = content;
+      break;
+    }
+  }
+
+  if(sourceLine === null) return 'poem';
+
+  const plain = plainTextFromLine(sourceLine, accent1On, accent2On);
+  const truncated = plain.slice(0, 40);
+  const slug = slugifyForFilename(truncated);
+  return slug || 'poem';
+}
+
 $('downloadBtn').addEventListener('click', ()=>{
+  const base = generateFilenameBase();
+  const ts = Math.floor(Date.now()/1000);
   const link = document.createElement('a');
-  link.download = 'poem.jpg';
+  link.download = `poetrypress-${base}-${ts}.jpg`;
   link.href = canvas.toDataURL('image/jpeg', 1.0);
   link.click();
 });
@@ -1146,44 +1395,36 @@ function makeGradient(ctx, w, h, angleDeg, colors){
   return g;
 }
 
-// ---------- markdown-lite parsing ----------
-function parseInline(text, accent1On, accent2On){
-  let parts = ['\\*\\*(?<bold>.+?)\\*\\*', '\\*(?<italic>.+?)\\*'];
-  if(accent1On) parts.push('\\[(?<accent1>.+?)\\]');
-  if(accent2On) parts.push('\\{(?<accent2>.+?)\\}');
-  const re = new RegExp(parts.join('|'), 'g');
-  const segments = [];
-  let lastIndex = 0, m;
-  while((m = re.exec(text))){
-    if(m.index > lastIndex) segments.push({text:text.slice(lastIndex,m.index), bold:false, italic:false, color:null});
-    if(m.groups.bold !== undefined) segments.push({text:m.groups.bold, bold:true, italic:false, color:null});
-    else if(m.groups.italic !== undefined) segments.push({text:m.groups.italic, bold:false, italic:true, color:null});
-    else if(m.groups.accent1 !== undefined) segments.push({text:m.groups.accent1, bold:false, italic:false, color:'accent1'});
-    else if(m.groups.accent2 !== undefined) segments.push({text:m.groups.accent2, bold:false, italic:false, color:'accent2'});
-    lastIndex = re.lastIndex;
-  }
-  if(lastIndex < text.length) segments.push({text:text.slice(lastIndex), bold:false, italic:false, color:null});
-  if(segments.length===0) segments.push({text:'', bold:false, italic:false, color:null});
-  return segments;
-}
 
 function buildLines(rawText, accent1On, accent2On){
   const rawLines = rawText.replace(/\r\n/g,'\n').split('\n');
-  return rawLines.map(line=>{
-    if(line === '') return {isBlank:true};
+  return rawLines.map(rawLine=>{
+    if(rawLine === '') return {isBlank:true};
+    const line = applyEscapes(rawLine);
+
     let type='normal', scale=1, content=line;
     if(line.startsWith('## ')){ type='heading'; scale=1.33; content=line.slice(3); }
     else if(line.startsWith('-# ')){ type='small'; scale=0.66; content=line.slice(3); }
     else if(line.startsWith('> ')){ type='quote'; scale=1; content=line.slice(2); }
 
+    const splitChunksRaw = parseSplitAlignment(content);
+    if(splitChunksRaw){
+      const splitChunks = splitChunksRaw.map(ch=>{
+        let segments = tokenizeInline(ch.text, accent1On, accent2On);
+        if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
+        return {align: ch.align, segments};
+      });
+      return {isBlank:false, type, scale, splitChunks};
+    }
+
     let alignOverride = null;
-    const alignMatch = content.match(/\s*\/(center|left|right)\s*$/i);
+    const alignMatch = content.match(/\s*\/(l|c|r)\s*$/i);
     if(alignMatch){
-      alignOverride = alignMatch[1].toLowerCase();
+      alignOverride = {l:'left',c:'center',r:'right'}[alignMatch[1].toLowerCase()];
       content = content.slice(0, alignMatch.index);
     }
 
-    let segments = parseInline(content, accent1On, accent2On);
+    let segments = tokenizeInline(content, accent1On, accent2On);
     if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
     return {isBlank:false, type, scale, segments, alignOverride};
   });
@@ -1213,12 +1454,129 @@ function measureSegWidth(ctx, fontDef, seg, size){
   return w;
 }
 
+// Canvas glyphs for emoji ignore fillStyle entirely (they're full-color bitmap
+// glyphs, not shape-based). To "colorize" one: draw it once to a transparent
+// offscreen canvas, then flat-fill with 'source-atop' so the new color only
+// lands where the glyph itself has any alpha — a silhouette tint.
+function tintedEmojiCanvas(ch, font, fillStyle, size){
+  const dim = Math.ceil(size*2);
+  const off = document.createElement('canvas');
+  off.width = dim; off.height = dim;
+  const octx = off.getContext('2d');
+  octx.font = font;
+  octx.textBaseline = 'top';
+  octx.textAlign = 'left';
+  octx.fillStyle = '#000';
+  octx.fillText(ch, 0, 0);
+  octx.globalCompositeOperation = 'source-atop';
+  octx.fillStyle = fillStyle;
+  octx.fillRect(0,0,dim,dim);
+  return off;
+}
+
+// Draws one run of segments (a whole line, or one chunk of a split-alignment
+// line) starting at startX/cursorY. Handles outline/shadow, the no-italic-font
+// letter-spacing fallback, underline/strikethrough, per-segment gradient fill
+// (for the {[...]}/[{...]} hidden feature), and emoji colorization — all as one
+// shared path so normal lines and split-alignment chunks render identically.
+function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, style){
+  const { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY,
+          baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
+
+  const widths = segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size));
+  let x = startX;
+
+  for(let i=0;i<segments.length;i++){
+    const seg = segments[i];
+    const w = widths[i];
+    ctx.save();
+    ctx.font = fontString(fontDef, seg, size);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.globalAlpha = quoteAlpha;
+
+    let segFill = baseFillStyle;
+    if(seg.color==='accent1') segFill = accent1Color;
+    else if(seg.color==='accent2') segFill = accent2Color;
+    else if(seg.color==='gradFwd' || seg.color==='gradRev'){
+      const c1 = seg.color==='gradFwd' ? accent1Color : accent2Color;
+      const c2 = seg.color==='gradFwd' ? accent2Color : accent1Color;
+      const g = ctx.createLinearGradient(x, cursorY, x+Math.max(w,1), cursorY);
+      g.addColorStop(0, c1); g.addColorStop(1, c2);
+      segFill = g;
+    }
+
+    const emojiTint = (seg.color==='accent1') ? accent1Color
+      : (seg.color==='accent2') ? accent2Color
+      : (seg.color==='gradFwd' || seg.color==='gradRev')
+        ? (m=>`rgb(${m.r},${m.g},${m.b})`)(mixHex(accent1Color, accent2Color, 0.5))
+        : null;
+    const hasEmoji = emojiTint && segmentHasEmoji(seg.text);
+
+    const tracking = emphasisTracking(fontDef, seg, size);
+
+    const applyOutlineShadow = (str, px)=>{
+      if(outlineMode==='outline' && outlineWidth>0){
+        ctx.lineJoin='round'; ctx.miterLimit=2;
+        ctx.lineWidth = outlineWidth*2;
+        ctx.strokeStyle = outlineColor;
+        ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+        ctx.strokeText(str, px, cursorY);
+      }
+      if(outlineMode==='shadow'){
+        ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
+        ctx.shadowOffsetX = shadowX; ctx.shadowOffsetY = shadowY;
+      } else {
+        ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+      }
+    };
+
+    if(tracking === 0 && !hasEmoji){
+      applyOutlineShadow(seg.text, x);
+      ctx.fillStyle = segFill;
+      ctx.fillText(seg.text, x, cursorY);
+    } else {
+      let cx = x;
+      for(const ch of seg.text){
+        const chW = ctx.measureText(ch).width;
+        if(hasEmoji && isEmojiCodePoint(ch.codePointAt(0))){
+          const tinted = tintedEmojiCanvas(ch, ctx.font, emojiTint, size);
+          ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+          ctx.drawImage(tinted, cx, cursorY);
+        } else {
+          applyOutlineShadow(ch, cx);
+          ctx.fillStyle = segFill;
+          ctx.fillText(ch, cx, cursorY);
+        }
+        cx += chW + tracking;
+      }
+    }
+
+    if(seg.underline || seg.strike){
+      const lineY = seg.underline ? cursorY + size*0.92 : cursorY + size*0.55;
+      ctx.beginPath();
+      ctx.moveTo(x, lineY);
+      ctx.lineTo(x+w, lineY);
+      ctx.strokeStyle = segFill;
+      ctx.lineWidth = Math.max(1, size*0.045);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    x += w;
+  }
+  return x;
+}
+
 function measureLineWidth(ctx, line, baseSize, fontDef){
   const size = baseSize*line.scale;
+  const segLists = line.splitChunks ? line.splitChunks.map(c=>c.segments) : [line.segments];
   let total = 0;
-  for(const seg of line.segments){
-    ctx.font = fontString(fontDef, seg, size);
-    total += ctx.measureText(seg.text).width;
+  for(const segments of segLists){
+    for(const seg of segments){
+      ctx.font = fontString(fontDef, seg, size);
+      total += ctx.measureText(seg.text).width;
+    }
   }
   return total;
 }
@@ -2411,13 +2769,30 @@ function render(){
   let cursorY = startY;
   ctx.textBaseline = 'top';
 
+  const runStyle = { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY, baseFillStyle, accent1Color, accent2Color, quoteAlpha: 1 };
+
   for(const line of lines){
     if(line.isBlank){ cursorY += baseSize*0.55*lineSpacing; continue; }
     const size = baseSize*line.scale;
     const lineHeight = size*1.32*lineSpacing;
+    const style = { ...runStyle, quoteAlpha: line.type==='quote' ? 0.68 : 1 };
 
-    const widths = line.segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size));
-    const totalWidth = widths.reduce((a,b)=>a+b,0);
+    if(line.splitChunks){
+      // Each chunk anchors independently to the left margin, center, or right
+      // margin — same row, so a line can read "left text ... right text" with
+      // the gap filled by whitespace, like a two-point justified line.
+      for(const chunk of line.splitChunks){
+        const chunkWidth = chunk.segments.reduce((sum,seg)=>sum+measureSegWidth(ctx, fontDef, seg, size), 0);
+        const chunkX = chunk.align==='center' ? (W/2 - chunkWidth/2)
+          : chunk.align==='right' ? (W - paddingX - chunkWidth)
+          : paddingX;
+        drawTextRun(ctx, chunk.segments, chunkX, cursorY, size, lineHeight, fontDef, style);
+      }
+      cursorY += lineHeight;
+      continue;
+    }
+
+    const totalWidth = line.segments.reduce((sum,seg)=>sum+measureSegWidth(ctx, fontDef, seg, size), 0);
     const lineAlign = line.alignOverride || currentAlign;
     const startX = lineAlign==='center' ? (W/2 - totalWidth/2) : (lineAlign==='right' ? (W - paddingX - totalWidth) : paddingX);
 
@@ -2428,62 +2803,7 @@ function render(){
       ctx.fillRect(startX - barGap - barWidth, cursorY + size*0.05, barWidth, lineHeight*0.85);
     }
 
-    let x = startX;
-    for(let i=0;i<line.segments.length;i++){
-      const seg = line.segments[i];
-      const w = widths[i];
-      ctx.save();
-      ctx.font = fontString(fontDef, seg, size);
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.globalAlpha = line.type==='quote' ? 0.68 : 1;
-
-      let segFill = baseFillStyle;
-      if(seg.color==='accent1') segFill = accent1Color;
-      else if(seg.color==='accent2') segFill = accent2Color;
-
-      const tracking = emphasisTracking(fontDef, seg, size);
-
-      if(tracking === 0){
-        if(outlineMode==='outline' && outlineWidth>0){
-          ctx.lineJoin='round'; ctx.miterLimit=2;
-          ctx.lineWidth = outlineWidth*2;
-          ctx.strokeStyle = outlineColor;
-          ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-          ctx.strokeText(seg.text, x, cursorY);
-        }
-        if(outlineMode==='shadow'){
-          ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
-          ctx.shadowOffsetX = shadowX; ctx.shadowOffsetY = shadowY;
-        } else {
-          ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
-        }
-        ctx.fillStyle = segFill;
-        ctx.fillText(seg.text, x, cursorY);
-      } else {
-        let cx = x;
-        for(const ch of seg.text){
-          if(outlineMode==='outline' && outlineWidth>0){
-            ctx.lineJoin='round'; ctx.miterLimit=2;
-            ctx.lineWidth = outlineWidth*2;
-            ctx.strokeStyle = outlineColor;
-            ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-            ctx.strokeText(ch, cx, cursorY);
-          }
-          if(outlineMode==='shadow'){
-            ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
-            ctx.shadowOffsetX = shadowX; ctx.shadowOffsetY = shadowY;
-          } else {
-            ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
-          }
-          ctx.fillStyle = segFill;
-          ctx.fillText(ch, cx, cursorY);
-          cx += ctx.measureText(ch).width + tracking;
-        }
-      }
-      ctx.restore();
-      x += w;
-    }
+    drawTextRun(ctx, line.segments, startX, cursorY, size, lineHeight, fontDef, style);
     cursorY += lineHeight;
   }
 
