@@ -304,9 +304,24 @@ including **some things that never needed a slider**.
         <p style="margin:0 0 3px 0;"><code>-# text</code> — small aside line</p>
         <p style="margin:0 0 10px 0;"><code>&gt; text</code> — quote line: gets a left bar, a slight tilt, and a touch of transparency</p>
 
-        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Alignment</strong>:</p>
-        <p style="margin:0 0 3px 0;">End a whole line with <code>/l</code>, <code>/c</code>, or <code>/r</code> to override that line's alignment.</p>
-        <p style="margin:0 0 10px 0;">For one line split between two edges: <code>&lt;left side text/l&gt;&lt;right side text/r&gt;</code> — or mix plain text with one tagged chunk: <code>plain text &lt;right side/r&gt;</code>. Each chunk can use any of the inline styles above.</p>
+        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Justification</strong>:</p>
+        <p style="margin:0 0 3px 0;">End a whole line with <code>/l</code>, <code>/c</code>, or <code>/r</code> to override that line's justification.</p>
+        <p style="margin:0 0 10px 0;">Split a line's justification (for example: one part aligned left and the other right) using the Segmentation Operator, below.</p>
+
+        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Segmentation (Advanced)</strong>:</p>
+        <p style="margin:0 0 6px 0;">Use <code>&lt;...&gt;</code> — the Segmentation Operator — to isolate part of a line for advanced formatting. A segment can contain any of the inline styles above, plus:</p>
+        <ul style="margin:0 0 6px 0; padding-left:18px;">
+          <li style="margin-bottom:3px;">custom color (overrides accent colors): <code>&lt;text/#:ff00ff&gt;</code></li>
+          <li style="margin-bottom:3px;">custom font, by index number (list below): <code>&lt;text/f:4&gt;</code></li>
+          <li style="margin-bottom:3px;">custom size, in pixels: <code>&lt;text/scale:100&gt;</code></li>
+          <li style="margin-bottom:3px;">split justification: <code>left text &lt;right text/r&gt;</code> or <code>&lt;left text/l&gt;&lt;right text/r&gt;</code></li>
+          <li style="margin-bottom:3px;">custom shadow: <code>&lt;text/fx2,#FF00FF,blur,x,y&gt;</code></li>
+          <li style="margin-bottom:3px;">custom outline: <code>&lt;text/fx1,#ABC123,thickness&gt;</code></li>
+          <li style="margin-bottom:3px;">turn off outline/shadow for this segment even if on globally: <code>&lt;text/fx0&gt;</code></li>
+          <li>chain as many as you like: <code>&lt;text/#:ff00ff/f:4/scale:100/r/fx2,#ffffff,10,10,10&gt;</code></li>
+        </ul>
+        <p style="margin:0 0 4px 0;">Font indexes (matches the Typesetting dropdown):</p>
+        <p id="fontIndexList" style="margin:0 0 10px 0; font-size:11px;"></p>
 
         <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Escaping</strong>:</p>
         <p style="margin:0 0 10px 0;">Put a backslash before any special character to print it literally: <code>\[not accent\]</code> prints <code>[not accent]</code> exactly, with no color applied.</p>
@@ -322,7 +337,7 @@ including **some things that never needed a slider**.
     </div>
 
     <div class="card">
-      <p class="card-title">  Card Size & Alignment</p>
+      <p class="card-title">  Card Size & Justification</p>
       <div class="card-grid">
         <div class="field full">
           <label>Aspect ratio</label>
@@ -336,7 +351,7 @@ including **some things that never needed a slider**.
           </div>
         </div>
         <div class="field">
-          <label>Alignment</label>
+          <label>Justification</label>
           <div class="radio-group" id="alignGroup">
             <div class="radio-btn" data-val="center">Centered</div>
             <div class="radio-btn active" data-val="left">Left</div>
@@ -864,25 +879,52 @@ function tokenizeInline(text, accent1On, accent2On){
 }
 
 // ---------- split-alignment: <text/l><text/r> etc, on one line ----------
-function parseSplitAlignment(content){
-  const re = /<([\s\S]*?)\/([lcr])>/gi;
+function parseSegmentDirective(dirStr, part){
+  const d = dirStr.trim();
+  const lower = d.toLowerCase();
+  if(lower==='l'){ part.justify='left'; return; }
+  if(lower==='c'){ part.justify='center'; return; }
+  if(lower==='r'){ part.justify='right'; return; }
+  if(d.startsWith('#:')){ part.customColor = '#'+d.slice(2); return; }
+  if(lower.startsWith('f:')){ part.customFontIdx = parseInt(d.slice(2),10); return; }
+  if(lower.startsWith('scale:')){ part.customSize = parseFloat(d.slice(6)); return; }
+  if(lower==='fx0'){ part.customEffect = {type:'none'}; return; }
+  if(lower.startsWith('fx1,')){
+    const p = d.slice(4).split(',');
+    part.customEffect = {type:'outline', color:p[0], width:parseFloat(p[1])};
+    return;
+  }
+  if(lower.startsWith('fx2,')){
+    const p = d.slice(4).split(',');
+    part.customEffect = {type:'shadow', color:p[0], blur:parseFloat(p[1]), x:parseFloat(p[2]), y:parseFloat(p[3])};
+    return;
+  }
+  // unrecognized directive — ignored rather than thrown, so a typo doesn't break the whole line
+}
+
+function parseSegmentedLine(content){
+  const re = /<([\s\S]*?)((?:\/[^\/<>]+)+)>/g;
   let m, lastIndex=0, found=false;
-  const chunks = [];
+  const parts = [];
+  const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customEffect:null});
   while((m = re.exec(content))){
     found = true;
     if(m.index > lastIndex){
       const plain = content.slice(lastIndex, m.index);
-      if(plain.length) chunks.push({text:plain, align:'left'});
+      if(plain.length) parts.push(blankPart(plain));
     }
-    chunks.push({text:m[1], align:{l:'left',c:'center',r:'right'}[m[2].toLowerCase()]});
+    const part = blankPart(m[1]);
+    const directives = m[2].split('/').filter(Boolean);
+    for(const dir of directives) parseSegmentDirective(dir, part);
+    parts.push(part);
     lastIndex = re.lastIndex;
   }
   if(!found) return null;
   if(lastIndex < content.length){
     const plain = content.slice(lastIndex);
-    if(plain.length) chunks.push({text:plain, align:'left'});
+    if(plain.length) parts.push(blankPart(plain));
   }
-  return chunks;
+  return parts;
 }
 
 function $(id){ return document.getElementById(id); }
@@ -894,6 +936,8 @@ FONTS.forEach((f,i)=>{
   fontSelect.appendChild(opt);
 });
 fontSelect.value = 3;
+
+$('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i}: ${f.label}`).join('<br>');
 
 const canvas = $('poemCanvas');
 const ctx = canvas.getContext('2d');
@@ -1407,14 +1451,14 @@ function buildLines(rawText, accent1On, accent2On){
     else if(line.startsWith('-# ')){ type='small'; scale=0.66; content=line.slice(3); }
     else if(line.startsWith('> ')){ type='quote'; scale=1; content=line.slice(2); }
 
-    const splitChunksRaw = parseSplitAlignment(content);
-    if(splitChunksRaw){
-      const splitChunks = splitChunksRaw.map(ch=>{
-        let segments = tokenizeInline(ch.text, accent1On, accent2On);
+    const rawParts = parseSegmentedLine(content);
+    if(rawParts){
+      const parts = rawParts.map(p=>{
+        let segments = tokenizeInline(p.text, accent1On, accent2On);
         if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
-        return {align: ch.align, segments};
+        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customEffect:p.customEffect, segments };
       });
-      return {isBlank:false, type, scale, splitChunks};
+      return {isBlank:false, type, scale, parts};
     }
 
     let alignOverride = null;
@@ -1479,6 +1523,32 @@ function tintedEmojiCanvas(ch, font, fillStyle, size){
 // letter-spacing fallback, underline/strikethrough, per-segment gradient fill
 // (for the {[...]}/[{...]} hidden feature), and emoji colorization — all as one
 // shared path so normal lines and split-alignment chunks render identically.
+function resolvePartStyle(part, baseStyle){
+  if(!part.customColor && !part.customEffect) return baseStyle;
+  const s = { ...baseStyle };
+  if(part.customColor){
+    s.baseFillStyle = part.customColor;
+    s.accent1Color = part.customColor;
+    s.accent2Color = part.customColor;
+  }
+  if(part.customEffect){
+    if(part.customEffect.type==='none'){
+      s.outlineMode = 'off';
+    } else if(part.customEffect.type==='outline'){
+      s.outlineMode = 'outline';
+      s.outlineColor = part.customEffect.color;
+      s.outlineWidth = part.customEffect.width;
+    } else if(part.customEffect.type==='shadow'){
+      s.outlineMode = 'shadow';
+      s.outlineColor = part.customEffect.color;
+      s.shadowBlur = part.customEffect.blur;
+      s.shadowX = part.customEffect.x;
+      s.shadowY = part.customEffect.y;
+    }
+  }
+  return s;
+}
+
 function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, style){
   const { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY,
           baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
@@ -1570,13 +1640,22 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
 
 function measureLineWidth(ctx, line, baseSize, fontDef){
   const size = baseSize*line.scale;
-  const segLists = line.splitChunks ? line.splitChunks.map(c=>c.segments) : [line.segments];
-  let total = 0;
-  for(const segments of segLists){
-    for(const seg of segments){
-      ctx.font = fontString(fontDef, seg, size);
-      total += ctx.measureText(seg.text).width;
+  if(line.parts){
+    let total = 0;
+    for(const part of line.parts){
+      const partFontDef = (part.customFontIdx!=null && FONTS[part.customFontIdx]) ? FONTS[part.customFontIdx] : fontDef;
+      const partSize = part.customSize!=null ? part.customSize : size;
+      for(const seg of part.segments){
+        ctx.font = fontString(partFontDef, seg, partSize);
+        total += ctx.measureText(seg.text).width;
+      }
     }
+    return total;
+  }
+  let total = 0;
+  for(const seg of line.segments){
+    ctx.font = fontString(fontDef, seg, size);
+    total += ctx.measureText(seg.text).width;
   }
   return total;
 }
@@ -2777,17 +2856,39 @@ function render(){
     const lineHeight = size*1.32*lineSpacing;
     const style = { ...runStyle, quoteAlpha: line.type==='quote' ? 0.68 : 1 };
 
-    if(line.splitChunks){
-      // Each chunk anchors independently to the left margin, center, or right
-      // margin — same row, so a line can read "left text ... right text" with
-      // the gap filled by whitespace, like a two-point justified line.
-      for(const chunk of line.splitChunks){
-        const chunkWidth = chunk.segments.reduce((sum,seg)=>sum+measureSegWidth(ctx, fontDef, seg, size), 0);
-        const chunkX = chunk.align==='center' ? (W/2 - chunkWidth/2)
-          : chunk.align==='right' ? (W - paddingX - chunkWidth)
-          : paddingX;
-        drawTextRun(ctx, chunk.segments, chunkX, cursorY, size, lineHeight, fontDef, style);
+    if(line.parts){
+      const flowingParts = line.parts.filter(p=>p.justify===null);
+      const anchoredParts = line.parts.filter(p=>p.justify!==null);
+
+      const partFont = p => (p.customFontIdx!=null && FONTS[p.customFontIdx]) ? FONTS[p.customFontIdx] : fontDef;
+      const partSizeOf = p => p.customSize!=null ? p.customSize : size;
+      const partWidth = p => p.segments.reduce((sum,seg)=>sum+measureSegWidth(ctx, partFont(p), seg, partSizeOf(p)), 0);
+
+      // Flowing parts render as one continuous sequence, positioned as a whole
+      // block using the line's own alignment — this is what makes "plain text
+      // <right side/r>" read as normal flowing text plus one anchored chunk,
+      // rather than every plain segment being independently pinned to the
+      // left margin.
+      const flowingTotalWidth = flowingParts.reduce((sum,p)=>sum+partWidth(p), 0);
+      const lineAlign = line.alignOverride || currentAlign;
+      let flowX = lineAlign==='center' ? (W/2 - flowingTotalWidth/2)
+        : lineAlign==='right' ? (W - paddingX - flowingTotalWidth)
+        : paddingX;
+
+      for(const part of flowingParts){
+        const pStyle = resolvePartStyle(part, style);
+        flowX = drawTextRun(ctx, part.segments, flowX, cursorY, partSizeOf(part), lineHeight, partFont(part), pStyle);
       }
+
+      for(const part of anchoredParts){
+        const pWidth = partWidth(part);
+        const pX = part.justify==='center' ? (W/2 - pWidth/2)
+          : part.justify==='right' ? (W - paddingX - pWidth)
+          : paddingX;
+        const pStyle = resolvePartStyle(part, style);
+        drawTextRun(ctx, part.segments, pX, cursorY, partSizeOf(part), lineHeight, partFont(part), pStyle);
+      }
+
       cursorY += lineHeight;
       continue;
     }
