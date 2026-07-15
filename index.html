@@ -235,44 +235,23 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 
     <div class="card">
       <p class="card-title">  Page Text (Pseudo-Markdown)</p>
-      <textarea id="poemText">## A Brief Demonstration
+      <textarea id="poemText">## {[Flood]}/c
 
-This is **bold**, this is *italic*,
-this is [accent one] and this is {accent two} —
-    and this line is indented,
-    because someone, eventually, will want that.
+   I think you're fine just how [you're made],
+a <blinding light/scale:150> in a <cascade/grad:1#ffe066,2#ff6f9c,3#5bb8f5,4#8e5cd9>.
+    I think you're just so, how you came,
+<so softly **broken,**/l><**spoken,**/c>< plain.**/r>
 
--# (this line is small, like your patience for tutorials)
+>     {Overwhelming} your old ~~dreams~~:
+> your <catecholamines/f:8/fx2,#ff6f9c,14,3,3>
+>     <drowning/fx1,#1e5fa8,3> out your old ~~routines~~.
+> **{[Overwrites you at your _seams_]}.**
 
-Blank lines make a gap.
-
-See?
-
-
-
-Wider gap, if you need.
-
-
-[Single breaks]
-[keep things]
-{close} [together], like emotionally unavailable stanzas.
-
-> Quotes get a little bar and a style change,
-> for when the poet needs to sound
-> a little bit beside herself.
-
-**Twenty unique themes.** *Thirteen background textures.* Sliders for everything,
-including **some things that never needed a slider**.
-
--# built with too many color pickers and not enough sleep
-
-## Go Make Something
--# [and post it to social media]
-
-
-
-
--# ↙ {Don't forget to change the credits 💙}</textarea>
+And in the end, leaves you in *pain*—
+     a burning <{ember 🔥}/fx2,#ff3d00,18,4,4> in your brain.
+**But you were fine just how you came,**
+     so *softly* [spoken, broken, whole/lg]
+-# <[and same.]/fx0></textarea>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
@@ -298,6 +277,7 @@ including **some things that never needed a slider**.
         <p style="margin:0 0 3px 0;"><code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strikethrough~~</code></p>
         <p style="margin:0 0 3px 0;"><code>[accent one]</code>, <code>{accent two}</code> — only apply when that accent color is enabled above</p>
         <p style="margin:0 0 10px 0;"><code>{[gradient left-to-right]}</code>, <code>[{gradient right-to-left]}</code> — a hidden extra: blends accent one into accent two across just that span (both accents must be enabled)</p>
+        <p style="margin:0 0 10px 0;">A single accent can also gradient into the normal text color: <code>[text/lg]</code> and <code>{text/lg}</code> fade from normal text color into that accent (left to right); <code>[text/rg]</code> and <code>{text/rg}</code> run the other way</p>
 
         <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Line prefixes</strong> (start of line):</p>
         <p style="margin:0 0 3px 0;"><code>## text</code> — big heading line</p>
@@ -314,6 +294,7 @@ including **some things that never needed a slider**.
           <li style="margin-bottom:3px;">custom color (overrides accent colors): <code>&lt;text/#:ff00ff&gt;</code></li>
           <li style="margin-bottom:3px;">custom font, by index number (list below): <code>&lt;text/f:4&gt;</code></li>
           <li style="margin-bottom:3px;">custom size, in pixels: <code>&lt;text/scale:100&gt;</code></li>
+          <li style="margin-bottom:3px;">full custom gradient, up to 4 stops: <code>&lt;text/grad:1#ff0000,2#00ff00,3#0000ff,4#ffffff&gt;</code></li>
           <li style="margin-bottom:3px;">split justification: <code>left text &lt;right text/r&gt;</code> or <code>&lt;left text/l&gt;&lt;right text/r&gt;</code></li>
           <li style="margin-bottom:3px;">custom shadow: <code>&lt;text/fx2,#FF00FF,blur,x,y&gt;</code></li>
           <li style="margin-bottom:3px;">custom outline: <code>&lt;text/fx1,#ABC123,thickness&gt;</code></li>
@@ -557,26 +538,28 @@ including **some things that never needed a slider**.
           <div class="field full">
             <label>Type</label>
             <select id="textureType">
-              <option value="grain">Dustmote</option>
+              <option value="grain">Fine Grain</option>
               <option value="noise">Static</option>
               <option value="paper">Parchment</option>
-              <option value="canvas">Weave</option>
-              <option value="clouds">Haze</option>
-              <option value="inkbleed" selected>Spatter</option>
-              <option value="bokeh">Glimmer</option>
-              <option value="flowers">Blossom</option>
-              <option value="waterspots">Circles</option>
-              <option value="astral">Stars</option>
-              <option value="crackedglaze">Cracks</option>
-              <option value="embers">Sparks</option>
-              <option value="tessellate">Squares</option>
-              <option value="snow">Flurries</option>
-              <option value="leaves">Windfall</option>
-              <option value="magicparticles">Wisps</option>
-              <option value="rainstreaks">Downpour</option>
-              <option value="leather">Hidebound</option>
-              <option value="halftone">Dotwork</option>
-              <option value="brushstrokes">Impasto</option>
+              <option value="canvas">Canvas Weave</option>
+              <option value="clouds">Cloud Haze</option>
+              <option value="inkbleed" selected>Ink Spatter</option>
+              <option value="alienSurface">Cratered Surface</option>
+              <option value="habitableSurface">Terrain Relief</option>
+              <option value="bokeh">Soft Bokeh Glow</option>
+              <option value="flowers">Floral Petals</option>
+              <option value="waterspots">Water Rings</option>
+              <option value="astral">Starfield</option>
+              <option value="crackedglaze">Glaze Cracks</option>
+              <option value="embers">Glowing Embers</option>
+              <option value="tessellate">Triangle Mosaic</option>
+              <option value="snow">Falling Snow</option>
+              <option value="leaves">Falling Leaves</option>
+              <option value="magicparticles">Magic Sparkle</option>
+              <option value="rainstreaks">Rain Streaks</option>
+              <option value="leather">Leather Grain</option>
+              <option value="halftone">Halftone Dots</option>
+              <option value="brushstrokes">Brush Strokes</option>
             </select>
           </div>
           <div class="field full">
@@ -754,6 +737,17 @@ ESCAPABLE_CHARS.forEach((ch,i)=>{
   ESCAPE_TO_SENTINEL[ch] = sentinel;
   SENTINEL_TO_CHAR[sentinel] = ch;
 });
+
+// Sentinels for [text/lg] [text/rg] {text/lg} {text/rg} — a gradient between
+// the normal text color and an accent, in either direction. Converted from
+// their bracket form to these single-character markers in a pre-pass, so the
+// main tokenizer can treat them exactly like a push/pop delimiter (same as
+// plain [ ] { }) while still fully supporting nested bold/italic/etc inside.
+const SENT_LG1_OPEN = String.fromCodePoint(0xE010), SENT_LG1_CLOSE = String.fromCodePoint(0xE011);
+const SENT_RG1_OPEN = String.fromCodePoint(0xE012), SENT_RG1_CLOSE = String.fromCodePoint(0xE013);
+const SENT_LG2_OPEN = String.fromCodePoint(0xE014), SENT_LG2_CLOSE = String.fromCodePoint(0xE015);
+const SENT_RG2_OPEN = String.fromCodePoint(0xE016), SENT_RG2_CLOSE = String.fromCodePoint(0xE017);
+
 function applyEscapes(text){
   let out = '';
   for(let i=0;i<text.length;i++){
@@ -797,6 +791,19 @@ function findLastStackIndex(stack, type){
   return -1;
 }
 function tokenizeInline(text, accent1On, accent2On){
+  // Pre-pass: [content/lg] etc become sentinel-wrapped so the main scanner
+  // below can treat them as simple push/pop delimiters (like plain [ ]),
+  // while the wrapped content itself is untouched and still gets scanned
+  // normally for nested bold/italic/etc.
+  if(accent1On){
+    text = text.replace(/\[([^\[\]]*?)\/lg\]/g, (m,inner)=>SENT_LG1_OPEN+inner+SENT_LG1_CLOSE);
+    text = text.replace(/\[([^\[\]]*?)\/rg\]/g, (m,inner)=>SENT_RG1_OPEN+inner+SENT_RG1_CLOSE);
+  }
+  if(accent2On){
+    text = text.replace(/\{([^\{\}]*?)\/lg\}/g, (m,inner)=>SENT_LG2_OPEN+inner+SENT_LG2_CLOSE);
+    text = text.replace(/\{([^\{\}]*?)\/rg\}/g, (m,inner)=>SENT_RG2_OPEN+inner+SENT_RG2_CLOSE);
+  }
+
   const stack = [];
   const chars = [];
   function snapshot(){
@@ -810,6 +817,10 @@ function tokenizeInline(text, accent1On, accent2On){
       else if(item.type==='accent2') color='accent2';
       else if(item.type==='gradFwd') color='gradFwd';
       else if(item.type==='gradRev') color='gradRev';
+      else if(item.type==='lgAccent1') color='lgAccent1';
+      else if(item.type==='rgAccent1') color='rgAccent1';
+      else if(item.type==='lgAccent2') color='lgAccent2';
+      else if(item.type==='rgAccent2') color='rgAccent2';
     }
     return {bold,italic,underline,strike,color};
   }
@@ -817,6 +828,26 @@ function tokenizeInline(text, accent1On, accent2On){
   const n = text.length;
   let i = 0;
   while(i<n){
+    if(text[i]===SENT_LG1_OPEN){ stack.push({type:'lgAccent1'}); i+=1; continue; }
+    if(text[i]===SENT_LG1_CLOSE){
+      const idx = findLastStackIndex(stack,'lgAccent1');
+      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+    }
+    if(text[i]===SENT_RG1_OPEN){ stack.push({type:'rgAccent1'}); i+=1; continue; }
+    if(text[i]===SENT_RG1_CLOSE){
+      const idx = findLastStackIndex(stack,'rgAccent1');
+      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+    }
+    if(text[i]===SENT_LG2_OPEN){ stack.push({type:'lgAccent2'}); i+=1; continue; }
+    if(text[i]===SENT_LG2_CLOSE){
+      const idx = findLastStackIndex(stack,'lgAccent2');
+      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+    }
+    if(text[i]===SENT_RG2_OPEN){ stack.push({type:'rgAccent2'}); i+=1; continue; }
+    if(text[i]===SENT_RG2_CLOSE){
+      const idx = findLastStackIndex(stack,'rgAccent2');
+      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+    }
     if(accent1On && accent2On && text.startsWith('{[', i)){ stack.push({type:'gradFwd'}); i+=2; continue; }
     if(accent1On && accent2On && text.startsWith('[{', i)){ stack.push({type:'gradRev'}); i+=2; continue; }
     if(text.startsWith(']}', i) || text.startsWith('}]', i)){
@@ -899,6 +930,17 @@ function parseSegmentDirective(dirStr, part){
     part.customEffect = {type:'shadow', color:p[0], blur:parseFloat(p[1]), x:parseFloat(p[2]), y:parseFloat(p[3])};
     return;
   }
+  if(lower.startsWith('grad:')){
+    const stops = d.slice(5).split(',').map(pair=>{
+      const hashIdx = pair.indexOf('#');
+      if(hashIdx===-1) return null;
+      const n = parseInt(pair.slice(0,hashIdx),10);
+      const color = '#'+pair.slice(hashIdx+1);
+      return isNaN(n) ? null : {n, color};
+    }).filter(Boolean).sort((a,b)=>a.n-b.n).map(s=>s.color);
+    if(stops.length>=2) part.customGradient = stops.slice(0,4);
+    return;
+  }
   // unrecognized directive — ignored rather than thrown, so a typo doesn't break the whole line
 }
 
@@ -906,7 +948,7 @@ function parseSegmentedLine(content){
   const re = /<([\s\S]*?)((?:\/[^\/<>]+)+)>/g;
   let m, lastIndex=0, found=false;
   const parts = [];
-  const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customEffect:null});
+  const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customEffect:null, customGradient:null});
   while((m = re.exec(content))){
     found = true;
     if(m.index > lastIndex){
@@ -1117,7 +1159,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureToggle').checked = texOn;
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
-    const types = ['grain','paper','noise','waterspots','canvas','clouds','flowers','astral','inkbleed','crackedglaze','bokeh','embers','tessellate','snow','leaves','magicparticles','rainstreaks','leather','halftone','brushstrokes'];
+    const types = ['grain','paper','noise','waterspots','canvas','clouds','flowers','astral','inkbleed','crackedglaze','bokeh','embers','tessellate','snow','leaves','magicparticles','rainstreaks','leather','halftone','brushstrokes','alienSurface','habitableSurface'];
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
@@ -1456,7 +1498,7 @@ function buildLines(rawText, accent1On, accent2On){
       const parts = rawParts.map(p=>{
         let segments = tokenizeInline(p.text, accent1On, accent2On);
         if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
-        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customEffect:p.customEffect, segments };
+        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customEffect:p.customEffect, customGradient:p.customGradient, segments };
       });
       return {isBlank:false, type, scale, parts};
     }
@@ -1524,12 +1566,15 @@ function tintedEmojiCanvas(ch, font, fillStyle, size){
 // (for the {[...]}/[{...]} hidden feature), and emoji colorization — all as one
 // shared path so normal lines and split-alignment chunks render identically.
 function resolvePartStyle(part, baseStyle){
-  if(!part.customColor && !part.customEffect) return baseStyle;
+  if(!part.customColor && !part.customEffect && !part.customGradient) return baseStyle;
   const s = { ...baseStyle };
   if(part.customColor){
     s.baseFillStyle = part.customColor;
     s.accent1Color = part.customColor;
     s.accent2Color = part.customColor;
+  }
+  if(part.customGradient){
+    s.customGradientColors = part.customGradient;
   }
   if(part.customEffect){
     if(part.customEffect.type==='none'){
@@ -1566,7 +1611,12 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     ctx.globalAlpha = quoteAlpha;
 
     let segFill = baseFillStyle;
-    if(seg.color==='accent1') segFill = accent1Color;
+    if(style.customGradientColors && style.customGradientColors.length>=2){
+      const colors = style.customGradientColors;
+      const g = ctx.createLinearGradient(x, cursorY, x+Math.max(w,1), cursorY);
+      colors.forEach((c,idx)=>{ g.addColorStop(idx/(colors.length-1), c); });
+      segFill = g;
+    } else if(seg.color==='accent1') segFill = accent1Color;
     else if(seg.color==='accent2') segFill = accent2Color;
     else if(seg.color==='gradFwd' || seg.color==='gradRev'){
       const c1 = seg.color==='gradFwd' ? accent1Color : accent2Color;
@@ -1574,12 +1624,23 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
       const g = ctx.createLinearGradient(x, cursorY, x+Math.max(w,1), cursorY);
       g.addColorStop(0, c1); g.addColorStop(1, c2);
       segFill = g;
+    } else if(seg.color==='lgAccent1' || seg.color==='rgAccent1' || seg.color==='lgAccent2' || seg.color==='rgAccent2'){
+      const accentColor = (seg.color==='lgAccent1' || seg.color==='rgAccent1') ? accent1Color : accent2Color;
+      const isLeftGrad = seg.color==='lgAccent1' || seg.color==='lgAccent2';
+      const c1 = isLeftGrad ? style.plainTextColor : accentColor;
+      const c2 = isLeftGrad ? accentColor : style.plainTextColor;
+      const g = ctx.createLinearGradient(x, cursorY, x+Math.max(w,1), cursorY);
+      g.addColorStop(0, c1); g.addColorStop(1, c2);
+      segFill = g;
     }
 
-    const emojiTint = (seg.color==='accent1') ? accent1Color
+    const emojiTint = style.customGradientColors && style.customGradientColors.length>=2
+      ? (m=>`rgb(${m.r},${m.g},${m.b})`)(mixHex(style.customGradientColors[0], style.customGradientColors[style.customGradientColors.length-1], 0.5))
+      : (seg.color==='accent1') ? accent1Color
       : (seg.color==='accent2') ? accent2Color
-      : (seg.color==='gradFwd' || seg.color==='gradRev')
-        ? (m=>`rgb(${m.r},${m.g},${m.b})`)(mixHex(accent1Color, accent2Color, 0.5))
+      : (seg.color==='gradFwd' || seg.color==='gradRev' || seg.color==='lgAccent1' || seg.color==='rgAccent1' || seg.color==='lgAccent2' || seg.color==='rgAccent2')
+        ? (seg.color==='lgAccent1' || seg.color==='rgAccent1' ? accent1Color : seg.color==='lgAccent2' || seg.color==='rgAccent2' ? accent2Color
+          : (m=>`rgb(${m.r},${m.g},${m.b})`)(mixHex(accent1Color, accent2Color, 0.5)))
         : null;
     const hasEmoji = emojiTint && segmentHasEmoji(seg.text);
 
@@ -1988,6 +2049,329 @@ function genAstralStars(w,h,accent1,accent2){
       fctx.restore();
     }
   }
+  return full;
+}
+
+// Craters "knock out" whatever's beneath them (erase via destination-out
+// using a soft-edged radial alpha mask, then draw fresh shading into that now-
+// clean area) rather than just blending over it — this is what keeps a crater
+// reading as a crisp bowl+rim rather than a muddy blend with the noise under it.
+function drawKnockoutCircle(fctx, cx, cy, r, drawInner){
+  fctx.save();
+  fctx.globalCompositeOperation = 'destination-out';
+  const eraseGrad = fctx.createRadialGradient(cx,cy,0, cx,cy,r);
+  eraseGrad.addColorStop(0, 'rgba(0,0,0,1)');
+  eraseGrad.addColorStop(0.90, 'rgba(0,0,0,1)');
+  eraseGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  fctx.fillStyle = eraseGrad;
+  fctx.beginPath();
+  fctx.arc(cx,cy,r,0,Math.PI*2);
+  fctx.fill();
+  fctx.restore();
+
+  fctx.save();
+  fctx.globalCompositeOperation = 'source-over';
+  drawInner(fctx, cx, cy, r);
+  fctx.restore();
+}
+
+function genAlienSurface(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+
+  // fine base noise, like dust/regolith — softened: lower contrast and a
+  // coarser downscale so the upscale blur smooths it further, plus a light,
+  // large-scale fBm elevation bias layered underneath so the surface has
+  // some gentle large-scale height variation rather than being pure grain.
+  const genW = Math.max(1,Math.round(w/6)), genH = Math.max(1,Math.round(h/6));
+
+  const elevOctaves = 3;
+  const elevBaseCells = 2+Math.random()*1.5;
+  const elevGrids = [];
+  let eAmp=1, eMaxAmp=0;
+  for(let i=0;i<elevOctaves;i++){
+    const freq = elevBaseCells*Math.pow(2.0,i);
+    const gw = Math.max(2, Math.round(freq)+1);
+    const gh = Math.max(2, Math.round(freq*(genH/genW))+1);
+    elevGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp: eAmp });
+    eMaxAmp += eAmp; eAmp *= 0.55;
+  }
+  const elevIntensity = 10+Math.random()*8;
+
+  const small = document.createElement('canvas');
+  small.width=genW; small.height=genH;
+  const sctx = small.getContext('2d');
+  const img = sctx.createImageData(genW,genH);
+  const d = img.data;
+  const noiseSpread = 32+Math.random()*24;
+  for(let py=0;py<genH;py++){
+    for(let px=0;px<genW;px++){
+      let total=0;
+      for(const o of elevGrids){
+        const nx=(px/genW)*o.freq, ny=(py/genH)*o.freq;
+        total += sampleNoiseGrid(o.grid,o.gw,o.gh,nx,ny)*o.amp;
+      }
+      const elevBias = (total/eMaxAmp - 0.5)*2*elevIntensity;
+      const v = 150 + elevBias + (Math.random()*2-1)*noiseSpread;
+      const idx=(py*genW+px)*4;
+      d[idx]=v; d[idx+1]=v; d[idx+2]=v; d[idx+3]=255;
+    }
+  }
+  sctx.putImageData(img,0,0);
+  fctx.imageSmoothingEnabled = true;
+  fctx.drawImage(small,0,0,w,h);
+
+  // craters: dramatically varied sizes, each knocking out the noise beneath it.
+  // Density itself swings per seed for real seed-to-seed variety, not just
+  // different positions at the same density.
+  const craterDensity = 0.5+Math.random()*1.6;
+  const craterCount = Math.round((w*h)/85000 * craterDensity);
+  for(let i=0;i<craterCount;i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const sizeRoll = Math.random();
+    let r;
+    if(sizeRoll < 0.55) r = (Math.random()*0.008+0.0015)*Math.min(w,h);
+    else if(sizeRoll < 0.88) r = (Math.random()*0.02+0.009)*Math.min(w,h);
+    else r = (Math.random()*0.05+0.025)*Math.min(w,h);
+
+    const terrainBase = 150; // matches the base noise layer's own center tone
+    const floorVal = terrainBase - (55+Math.random()*55);
+    const rimVal = terrainBase + (12+Math.random()*28);
+    drawKnockoutCircle(fctx, cx, cy, r, (ictx,icx,icy,ir)=>{
+      // A real crater slopes continuously from a deep center up to a raised
+      // rim — not a flat floor with a sudden ring. Build that slope with a
+      // handful of smoothstep-eased intermediate stops (steepest partway up
+      // the wall, easing off near the bottom and near the rim, like an
+      // actual bowl profile) instead of two flat plateaus.
+      const grad = ictx.createRadialGradient(icx,icy,0, icx,icy,ir);
+      const bowlSteps = 6;
+      for(let s=0; s<=bowlSteps; s++){
+        const t = s/bowlSteps;
+        const eased = t*t*(3-2*t); // smoothstep
+        const val = floorVal + (rimVal-floorVal)*eased;
+        const pos = t*0.82;
+        grad.addColorStop(pos, `rgba(${val},${val},${val},1)`);
+      }
+      grad.addColorStop(0.84, `rgba(${rimVal},${rimVal},${rimVal},1)`); // hold the rim ridge, thinner
+      grad.addColorStop(1.0, `rgba(${rimVal},${rimVal},${rimVal},0)`); // fade out over a much wider blur
+      ictx.fillStyle = grad;
+      ictx.beginPath();
+      ictx.arc(icx,icy,ir,0,Math.PI*2);
+      ictx.fill();
+    });
+  }
+
+  // sparse-to-moderate, thin, jagged, LONG cracks. Drawn fully opaque with
+  // values pushed near true black — color-burn (which this whole texture
+  // composites through) only reliably darkens when the source is genuinely
+  // close to 0, not just "dark"; a diluted semi-transparent mid-gray crack
+  // effectively disappears under color-burn regardless of opacity slider.
+  const crackCount = 32+Math.floor(Math.random()*88);
+  for(let i=0;i<crackCount;i++){
+    let x = Math.random()*w, y = Math.random()*h;
+    const segCount = 10+Math.floor(Math.random()*16);
+    fctx.save();
+    const crackVal = 3+Math.random()*14;
+    fctx.strokeStyle = `rgb(${crackVal},${crackVal},${crackVal})`;
+    fctx.lineWidth = 0.5+Math.random()*3.1;
+    fctx.beginPath();
+    fctx.moveTo(x,y);
+    let angle = Math.random()*Math.PI*2;
+    for(let s=0;s<segCount;s++){
+      angle += (Math.random()*2-1)*0.9; // jagged wander
+      const len = (Math.random()*0.022+0.012)*Math.max(w,h);
+      x += Math.cos(angle)*len;
+      y += Math.sin(angle)*len;
+      fctx.lineTo(x,y);
+    }
+    fctx.stroke();
+    fctx.restore();
+  }
+
+  return full;
+}
+
+function genHabitableSurface(w,h){
+  const full = document.createElement('canvas');
+  full.width=w; full.height=h;
+  const fctx = full.getContext('2d');
+
+  const workDiv = 4;
+  const workW = Math.max(24, Math.round(w/workDiv));
+  const workH = Math.max(24, Math.round(h/workDiv));
+
+  // Base height field — one fBm, used both to threshold a genuine land/sea
+  // boundary (not a soft gradient blur) and to shade elevation within land.
+  const heightOctaves = 6, heightGain = 0.5, heightLacunarity = 2.0;
+  const heightBaseCells = 2.5+Math.random()*2;
+  const heightGrids = [];
+  let amp=1, maxAmp=0;
+  for(let i=0;i<heightOctaves;i++){
+    const freq = heightBaseCells*Math.pow(heightLacunarity,i);
+    const gw = Math.max(2, Math.round(freq)+1);
+    const gh = Math.max(2, Math.round(freq*(workH/workW))+1);
+    heightGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp });
+    maxAmp += amp; amp *= heightGain;
+  }
+  const heightMaxAmp = maxAmp;
+
+  function heightAt(fullX, fullY){
+    let total=0;
+    for(const o of heightGrids){
+      const nx=(fullX/w)*o.freq, ny=(fullY/h)*o.freq;
+      total += sampleNoiseGrid(o.grid,o.gw,o.gh,nx,ny)*o.amp;
+    }
+    return total/heightMaxAmp; // 0-1
+  }
+
+  // Ridge/mountain noise — a separate, higher-frequency fBm where each octave
+  // is transformed via 1-abs(2n-1), turning smooth bumps into sharp creases.
+  // This is the classic "ridged multifractal" trick used for mountain-range
+  // terrain, and it's the piece that actually gives linear structure instead
+  // of everything reading as one soft blob.
+  const ridgeOctaves = 5, ridgeGain = 0.55, ridgeLacunarity = 2.1;
+  const ridgeBaseCells = 5+Math.random()*4;
+  const ridgeGrids = [];
+  amp=1; maxAmp=0;
+  for(let i=0;i<ridgeOctaves;i++){
+    const freq = ridgeBaseCells*Math.pow(ridgeLacunarity,i);
+    const gw = Math.max(2, Math.round(freq)+1);
+    const gh = Math.max(2, Math.round(freq*(workH/workW))+1);
+    ridgeGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp });
+    maxAmp += amp; amp *= ridgeGain;
+  }
+  const ridgeMaxAmp = maxAmp;
+
+  function ridgeAt(fullX, fullY){
+    let total=0;
+    for(const o of ridgeGrids){
+      const nx=(fullX/w)*o.freq, ny=(fullY/h)*o.freq;
+      const n = sampleNoiseGrid(o.grid,o.gw,o.gh,nx,ny);
+      total += (1-Math.abs(n*2-1))*o.amp;
+    }
+    return total/ridgeMaxAmp; // 0-1, peaks near ridge crests
+  }
+
+  // Sea level as a PERCENTILE of the actual achieved height distribution,
+  // not a fixed absolute threshold — a raw fBm sum's practical range varies
+  // seed to seed, so a fixed threshold could occasionally sit above nearly
+  // everything the field actually reaches, producing all-ocean. Sampling the
+  // real distribution and picking a level that guarantees a genuine land
+  // fraction fixes this by construction, regardless of the noise's shape.
+  const heightSamples = new Float32Array(2000);
+  for(let s=0;s<2000;s++) heightSamples[s] = heightAt(Math.random()*w, Math.random()*h);
+  const sortedHeights = Float32Array.from(heightSamples).sort();
+  const landFraction = 0.35+Math.random()*0.4; // 35%-75% of the surface is land
+  const seaLevel = sortedHeights[Math.max(0, Math.min(sortedHeights.length-1, Math.floor((1-landFraction)*sortedHeights.length)))];
+
+  const bandCount = 4+Math.floor(Math.random()*3); // 4-6 discrete elevation bands
+
+  const small = document.createElement('canvas');
+  small.width=workW; small.height=workH;
+  const sctx = small.getContext('2d');
+  const img = sctx.createImageData(workW, workH);
+  const d = img.data;
+  for(let py=0; py<workH; py++){
+    for(let px=0; px<workW; px++){
+      const fx = (px/workW)*w, fy = (py/workH)*h;
+      const hgt = heightAt(fx, fy);
+      let val;
+      if(hgt <= seaLevel){
+        const depth = seaLevel>0.001 ? 1-(hgt/seaLevel) : 0;
+        val = 85 - depth*55; // shallow/coast ~85 down to deep ~30
+      } else {
+        const elevAboveSea = (hgt-seaLevel)/Math.max(0.001, 1-seaLevel);
+        const bandIdx = Math.min(bandCount-1, Math.floor(elevAboveSea*bandCount));
+        const bandFrac = bandIdx/(bandCount-1);
+        // Land needs to sit close to true white to actually read as "land"
+        // under color-burn — even the old ceiling of 230/255 still caused
+        // real, visible darkening (no genuinely bright/protected region to
+        // contrast against the near-black ocean), so the whole thing read as
+        // varying shades of dark instead of a clear land/water split.
+        let landVal = 175 + bandFrac*77; // 175 (lowland) to 252 (highland, near no-op)
+
+        // ridges only affect land, and matter more at higher elevation bands
+        // — mountains form at altitude, not down at the coastline.
+        const ridgeInfluence = 0.15+bandFrac*0.5;
+        landVal += (ridgeAt(fx,fy)-0.5)*50*ridgeInfluence;
+        val = landVal;
+      }
+      val = Math.max(15, Math.min(255, val));
+      const idx=(py*workW+px)*4;
+      d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
+    }
+  }
+  sctx.putImageData(img,0,0);
+  fctx.imageSmoothingEnabled = true;
+  fctx.drawImage(small,0,0,w,h);
+
+  // Rivers — same steering/branching mechanic as before, now sampling the
+  // height field directly. "Connect two low points" is a more physically apt
+  // read in this model too: rivers terminate toward the sea.
+  function findLowPoint(){
+    let best = null;
+    for(let attempt=0; attempt<14; attempt++){
+      const px = Math.random()*w, py = Math.random()*h;
+      const hgt = heightAt(px,py);
+      if(!best || hgt < best.h) best = {x:px, y:py, h:hgt};
+    }
+    return best;
+  }
+  function strokePolyline(pts, lineW, val){
+    if(pts.length < 2) return;
+    fctx.save();
+    fctx.strokeStyle = `rgb(${val},${val},${val})`;
+    fctx.lineWidth = lineW;
+    fctx.lineCap = 'round';
+    fctx.lineJoin = 'round';
+    fctx.beginPath();
+    fctx.moveTo(pts[0][0], pts[0][1]);
+    for(let i=1;i<pts.length;i++) fctx.lineTo(pts[i][0], pts[i][1]);
+    fctx.stroke();
+    fctx.restore();
+  }
+
+  const riverSystemCount = 2+Math.floor(Math.random()*6);
+  for(let i=0; i<riverSystemCount; i++){
+    const a = findLowPoint(), b = findLowPoint();
+    let x = a.x, y = a.y;
+    let angle = Math.atan2(b.y-y, b.x-x);
+    const mainPts = [[x,y]];
+    const segCount = 40+Math.floor(Math.random()*40);
+    const branchStarts = [];
+    for(let s=0; s<segCount; s++){
+      const toTarget = Math.atan2(b.y-y, b.x-x);
+      let diff = toTarget-angle;
+      while(diff>Math.PI) diff-=Math.PI*2;
+      while(diff<-Math.PI) diff+=Math.PI*2;
+      angle += diff*0.18 + (Math.random()*2-1)*0.32;
+      const len = (Math.random()*0.018+0.013)*Math.max(w,h);
+      x += Math.cos(angle)*len;
+      y += Math.sin(angle)*len;
+      mainPts.push([x,y]);
+      if(s>3 && s<segCount-3 && Math.random()<0.16) branchStarts.push({x,y,angle});
+    }
+
+    const riverVal = 3+Math.random()*13;
+    const baseWidth = (0.006+Math.random()*0.014)*Math.max(w,h);
+    strokePolyline(mainPts, baseWidth, riverVal);
+
+    for(const br of branchStarts){
+      let bx=br.x, by=br.y, bangle = br.angle + (Math.random()<0.5?1:-1)*(0.5+Math.random()*0.9);
+      const bPts = [[bx,by]];
+      const bSeg = 5+Math.floor(Math.random()*8);
+      for(let s=0;s<bSeg;s++){
+        bangle += (Math.random()*2-1)*0.35;
+        const len = (Math.random()*0.015+0.008)*Math.max(w,h);
+        bx += Math.cos(bangle)*len;
+        by += Math.sin(bangle)*len;
+        bPts.push([bx,by]);
+      }
+      strokePolyline(bPts, baseWidth*(0.4+Math.random()*0.35), riverVal);
+    }
+  }
+
   return full;
 }
 
@@ -2656,6 +3040,10 @@ function getTextureCanvas(type, w, h, accent1, accent2, invert, seed){
     result = genFlowers(w,h);
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h);
+  } else if(type === 'alienSurface'){
+    result = genAlienSurface(w,h);
+  } else if(type === 'habitableSurface'){
+    result = genHabitableSurface(w,h);
   } else if(type === 'crackedglaze'){
     result = genCrackedGlaze(w,h);
   } else if(type === 'bokeh'){
@@ -2750,7 +3138,7 @@ function render(){
       ctx.globalCompositeOperation = invert ? 'darken' : 'lighten';
       ctx.drawImage(getTextureCanvas('astral_stars', W, H, accent1Color, accent2Color, invert, seed), 0, 0);
       ctx.restore();
-    } else if(type === 'inkbleed'){
+    } else if(type === 'inkbleed' || type === 'alienSurface' || type === 'habitableSurface'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = invert ? 'color-dodge' : 'color-burn';
@@ -2848,7 +3236,7 @@ function render(){
   let cursorY = startY;
   ctx.textBaseline = 'top';
 
-  const runStyle = { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY, baseFillStyle, accent1Color, accent2Color, quoteAlpha: 1 };
+  const runStyle = { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY, baseFillStyle, plainTextColor: $('textColorHex').value, accent1Color, accent2Color, quoteAlpha: 1 };
 
   for(const line of lines){
     if(line.isBlank){ cursorY += baseSize*0.55*lineSpacing; continue; }
@@ -2874,6 +3262,13 @@ function render(){
       let flowX = lineAlign==='center' ? (W/2 - flowingTotalWidth/2)
         : lineAlign==='right' ? (W - paddingX - flowingTotalWidth)
         : paddingX;
+
+      if(line.type==='quote'){
+        const barWidth = Math.max(2, size*0.06);
+        const barGap = size*0.35;
+        ctx.fillStyle = accent1On ? accent1Color : (outlineMode!=='off' ? outlineColor : baseFillStyle);
+        ctx.fillRect(flowX - barGap - barWidth, cursorY + size*0.05, barWidth, lineHeight*0.85);
+      }
 
       for(const part of flowingParts){
         const pStyle = resolvePartStyle(part, style);
