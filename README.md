@@ -1,120 +1,91 @@
-# PoetrySky Press
+# Ruby's Page Press
 
-A single-file, browser-based tool for turning poems into shareable images.
+A poem. A theme. A texture. Done.
 
-Live at: poetrypress.unfixable.place
+Single-page web app for turning verse into images. No install. No Photoshop. Works from a phone, in bed, at 2am.
 
-## Features
+Live: [poetrypress.unfixable.place](https://poetrypress.unfixable.place)
 
-- 20 built-in themes, fully editable after picking one
-- 20+ procedural textures (noise, ink spatter, embers, snow, brush strokes, halftone, and more), each with opacity, invert, and a lockable random seed
-- Multi-stop gradients (2-4 colors) for background and text
-- Vignette with 4 blend modes
-- A small markdown-like formatting language for poem text (see below)
-- 6 aspect ratios, justification, line spacing
-- Randomize buttons for font and background
-- Advanced panel: export/import full config as JSON
-- Auto-named JPG export, filename pulled from your poem's first heading
+## What it does
 
-## Using It
+- 20 themes. Fully editable after you pick one.
+- 20+ generated textures — noise, ink, snow, embers, brushwork, cratered worlds, whole relief maps. Each one seedable, invertible, never the same twice unless you lock it.
+- Multi-stop gradients, background and text.
+- Vignette. Four blend modes.
+- A small language for the poem itself — see below.
+- Randomize buttons for font and background, when you don't know what you want yet.
+- Save your whole setup as JSON. Load it back later.
+- Export a full-quality JPG, named for you, from your own first line.
 
-Pick a theme from Style Presets, or build one from scratch — every control still works normally either way. Type your poem into the text box; formatting is plain text (see below). Textures use a seeded RNG — lock the seed to keep a pattern while you tweak everything else. Download exports a full-quality JPG. The Advanced panel lets you save/restore your entire setup as JSON.
+## Architecture
 
-## Formatting Language
+Five files, no bundler, no build step.
 
-### 1. Line prefixes
-- `## text` — heading, 1.33x size
-- `-# text` — small aside, 0.66x size
-- `> text` — quote: italic, left bar, 68% opacity
+```
+index.html            — markup
+poetrypress.css        — styling
+appOptions.js          — fonts, presets, aspects
+textParsers.js         — the DSL, below
+textureGenerators.js   — every texture, self-contained
+canvasRenderer.js      — parsed lines into pixels
+appEvents.js           — wires the page together
+```
 
-### 2. Inline styles
-- `**bold**` `*italic*` `_underline_` `~~strike~~`
-- `[accent one]` `{accent two}` — active only when that accent is enabled
+Tests live in [`test/`](./test). Run them with plain `node`.
 
-Nest freely: `**bold [with accent] still bold**`. `*`/`_`/`~~`/`**` won't trigger touching whitespace (`5 * 3 * 2` stays plain); brackets/braces have no such rule.
+## The Language
 
-### 3. Hidden gradient blend
-- `{[text]}` — accent one → accent two
-- `[{text]}` — accent two → accent one
+Plain text, mostly. A little markup, when you want it.
 
-Either closing order works (`]}` or `}]`). Needs both accents enabled.
+**Lines**
+```
+## heading
+-# small aside
+> quote — italic, barred, a little transparent
+```
 
-### 4. Escaping
-`\X` prints X literally, no formatting. Escapable: `\ * _ ~ [ ] { } < > /`
+**Inline**
+```
+**bold**   *italic*   _underline_   ~~strike~~
+[accent one]   {accent two}
+```
+Nest them however. `**bold [with accent] still bold**` — it just works.
 
-### 5. Whole-line justification
-End a line with `/l`, `/c`, or `/r`.
+**Gradients**
+```
+{[left to right]}   [{right to left]}
+[text/lg]   [text/rg]   {text/lg}   {text/rg}
+```
+The first pair blends your two accents into each other. The second fades a single accent into your normal ink.
 
-### 6. Segmentation Operator (advanced)
-`<...>` isolates part of a line, directives chained with `/`:
-- `/l /c /r` — justify this segment
-- `/#:hex` — custom color, overrides accents
-- `/f:N` — custom font by index (live list in-app)
-- `/scale:N` — custom size in px
-- `/fx1,color,width` — custom outline
-- `/fx2,color,blur,x,y` — custom shadow
-- `/fx0` — force outline/shadow off even if on globally
+**Escape**
+```
+\[literal brackets\]
+```
+A backslash, and the mark means nothing. Just words again.
 
-Chain freely: `<text/#:ff00ff/f:4/scale:100/r/fx2,#ffffff,10,10,10>`
+**Justify**
+End a line — `/l` `/c` `/r`. Or split it:
+```
+<left side/l><right side/r>
+```
 
-Unjustified segments flow inline as one block; justified ones anchor to that margin. `plain text <right side/r>` — first part flows normally, second pins to the edge.
-# PoetrySky Press
+**The long form** — one bracket, many directives:
+```
+<text/#:ff00ff/f:4/scale:100/r/fx1,#abc,3/fx2,#ff0,10,5,5/fx0/grad:1#f00,2#00f>
+```
+- `#:hex` — a color of your own
+- `f:N` — a different font, by number
+- `scale:N` — size, in pixels
+- `fx1,color,width` — outline
+- `fx2,color,blur,x,y` — shadow
+- `fx0` — strip whatever effect is on, just here
+- `grad:1#..,2#..` — up to four stops, your own gradient
 
-A single-file, browser-based tool for turning poems into shareable images.
+Chain as many as you like. One slash between each.
 
-Live at: poetrypress.unfixable.place
+**Emoji**, inside a colored span, take the color. 🔥 becomes yours.
 
-## Features
+## Ko-fi
 
-- 20 built-in themes, fully editable after picking one
-- 20+ procedural textures (noise, ink spatter, embers, snow, brush strokes, halftone, and more), each with opacity, invert, and a lockable random seed
-- Multi-stop gradients (2-4 colors) for background and text
-- Vignette with 4 blend modes
-- A small markdown-like formatting language for poem text (see below)
-- 6 aspect ratios, justification, line spacing
-- Randomize buttons for font and background
-- Advanced panel: export/import full config as JSON
-- Auto-named JPG export, filename pulled from your poem's first heading
-
-## Using It
-
-Pick a theme from Style Presets, or build one from scratch — every control still works normally either way. Type your poem into the text box; formatting is plain text (see below). Textures use a seeded RNG — lock the seed to keep a pattern while you tweak everything else. Download exports a full-quality JPG. The Advanced panel lets you save/restore your entire setup as JSON.
-
-## Formatting Language
-
-### 1. Line prefixes
-- `## text` — heading, 1.33x size
-- `-# text` — small aside, 0.66x size
-- `> text` — quote: italic, left bar, 68% opacity
-
-### 2. Inline styles
-- `**bold**` `*italic*` `_underline_` `~~strike~~`
-- `[accent one]` `{accent two}` — active only when that accent is enabled
-
-Nest freely: `**bold [with accent] still bold**`. `*`/`_`/`~~`/`**` won't trigger touching whitespace (`5 * 3 * 2` stays plain); brackets/braces have no such rule.
-
-### 3. Hidden gradient blend
-- `{[text]}` — accent one → accent two
-- `[{text]}` — accent two → accent one
-
-Either closing order works (`]}` or `}]`). Needs both accents enabled.
-
-### 4. Escaping
-`\X` prints X literally, no formatting. Escapable: `\ * _ ~ [ ] { } < > /`
-
-### 5. Whole-line justification
-End a line with `/l`, `/c`, or `/r`.
-
-### 6. Segmentation Operator (advanced)
-`<...>` isolates part of a line, directives chained with `/`:
-- `/l /c /r` — justify this segment
-- `/#:hex` — custom color, overrides accents
-- `/f:N` — custom font by index (live list in-app)
-- `/scale:N` — custom size in px
-- `/fx1,color,width` — custom outline
-- `/fx2,color,blur,x,y` — custom shadow
-- `/fx0` — force outline/shadow off even if on globally
-
-Chain freely: `<text/#:ff00ff/f:4/scale:100/r/fx2,#ffffff,10,10,10>`
-
-Unjustified segments flow inline as one block; justified ones anchor to that margin. `plain text <right side/r>` — first part flows normally, second pins to the edge.
+If it's useful: [ko-fi.com/c0222f](https://ko-fi.com/c0222f)
