@@ -18,6 +18,15 @@
  *              this file has zero imports of its own — every other module
  *              can safely import $ from here with no risk of a circular
  *              dependency.
+ *   getActiveRadioValue(containerId) — reads whichever .radio-btn in a
+ *              radio-group currently has the .active class. Exists so
+ *              canvasRenderer.js can read the current justification /
+ *              gradient-stop-count directly from the DOM at render time,
+ *              the same way it reads every other control — rather than
+ *              needing a live mutable binding shared with appEvents.js
+ *              (which set off a real bug: canvasRenderer.js used to read
+ *              a bare currentAlign/bgStopCount identifier that only ever
+ *              existed as a local variable in appEvents.js).
  *
  * This module has NO imports. Every other file in the app may import from
  * it; it must never import from any of them.
@@ -234,3 +243,9 @@ export const PRESETS = [
 export const ASPECTS = { "1:1":[3072,3072], "2:3":[2400,3600], "3:4":[2700,3600], "9:16":[2304,4096], "9:20":[1843,4096], "16:9":[4096,2304] };
 
 export function $(id){ return document.getElementById(id); }
+
+export function getActiveRadioValue(containerId){
+  const group = document.getElementById(containerId);
+  const active = group.querySelector('.radio-btn.active');
+  return active ? active.dataset.val : null;
+}

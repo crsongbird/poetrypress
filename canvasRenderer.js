@@ -44,9 +44,9 @@
  * getTextureCanvas from textureGenerators.js. Exports: render.
  */
 
-import { $, FONTS } from './appOptions.js';
+import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines } from './textParsers.js';
-import { getTextureCanvas } from './textureGenerators.js';
+import { getTextureCanvas, mixHex } from './textureGenerators.js';
 
 
 function isEmojiCodePoint(cp){
@@ -353,7 +353,14 @@ function watermarkColor(bgHex){
 
 // ---------- texture generation ----------
 export function render(){
+  const canvas = $('poemCanvas');
+  const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
+
+  const currentAlign = getActiveRadioValue('alignGroup') || 'left';
+  const currentValign = getActiveRadioValue('valignGroup') || 'center';
+  const bgStopCount = parseInt(getActiveRadioValue('bgStopsGroup'), 10) || 2;
+  const textStopCount = parseInt(getActiveRadioValue('textStopsGroup'), 10) || 2;
 
   const bg1 = $('bgColor1Hex').value;
   if($('bgGradientToggle').checked){
@@ -446,7 +453,7 @@ export function render(){
   const rawText = $('poemText').value;
   const lines = buildLines(rawText, accent1On, accent2On);
 
-  const fontDef = FONTS[fontSelect.value];
+  const fontDef = FONTS[$('fontFamily').value];
   const maxSizePx = Math.max(10, parseFloat($('maxSize').value) || 120);
   const lineSpacing = Math.pow(2, parseFloat($('lineSpacing').value) || 0);
 

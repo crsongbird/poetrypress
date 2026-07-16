@@ -901,7 +901,7 @@ function genTessellate(w,h){
 
 // Shared color helpers for textures that take on the current accent colors
 // instead of a fixed palette (embers, magic particles, and astral's stars).
-function mixHex(hexA, hexB, t){
+export function mixHex(hexA, hexB, t){
   const a = hexA.replace('#',''), b = hexB.replace('#','');
   const ar=parseInt(a.substr(0,2),16), ag=parseInt(a.substr(2,2),16), ab=parseInt(a.substr(4,2),16);
   const br=parseInt(b.substr(0,2),16), bg=parseInt(b.substr(2,2),16), bb=parseInt(b.substr(4,2),16);
