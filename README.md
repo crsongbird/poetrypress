@@ -58,17 +58,3 @@ End a line with `/l`, `/c`, or `/r`.
 Chain freely: `<text/#:ff00ff/f:4/scale:100/r/fx2,#ffffff,10,10,10>`
 
 Unjustified segments flow inline as one block; justified ones anchor to that margin. `plain text <right side/r>` — first part flows normally, second pins to the edge.
-
-### 7. Emoji
-Tinted to match inside any accent/custom/gradient span, instead of native color.
-
-### 8. Parsing order
-Escape → prefixes → segmentation → whole-line justification (only if no segmentation) → inline styles per part. Quote's forced italic layers on top of other styles, doesn't override them.
-
-### 9. Known limitations
-- `scale:N` doesn't affect line auto-fit height — an oversized segment can overflow into the next line.
-- Font indices are positional; reordering the font list changes what old `f:N` refers to.
-
-## Support
-
-ko-fi.com/c0222f
