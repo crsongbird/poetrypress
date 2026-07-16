@@ -1,4 +1,4 @@
-# Ruby's Page Press
+# Ruby's Poetry Press
 
 A poem. A theme. A texture. Done.
 
