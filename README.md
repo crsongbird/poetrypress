@@ -67,7 +67,8 @@ Nest them however you want: `**bold [with accent] still bold**`.
 {[left to right]}   [{right to left]}
 [text/lg]   [text/rg]   {text/lg}   {text/rg}
 ```
-The first pair blends your two accents into each other. The second fades a single accent into your normal ink.
+The first pair blends your two accents into each other using bracket order implicitly. 
+The second group fades a single accent into your normal ink. `lg` is left gradient and `rg` is right gradient.
 
 **Escape**
 ```
