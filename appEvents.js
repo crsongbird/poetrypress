@@ -45,11 +45,22 @@ import { $, FONTS, PRESETS, ASPECTS } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, hexToHsl, hslToHex } from './canvasRenderer.js';
 
-// Base Coloris config. Must run before any later Coloris({swatches:...}) call
-// (see applyThemePalette below) -- Coloris merges/updates options at runtime
-// rather than replacing them, so this establishes theme/alpha/etc once, and
-// subsequent calls only ever touch swatches on top of it.
-Coloris({
+// Coloris is loaded from an external CDN (see index.html) -- if that ever
+// fails (network hiccup, CDN issue), `Coloris` is undefined, and calling it
+// directly would throw a ReferenceError during this file's synchronous
+// top-level execution, taking down everything that runs after it -- INCLUDING
+// the preset grid further down. This guard means that failure degrades to
+// "color pickers lose their custom styling/swatches" instead of "the whole
+// app doesn't load".
+function safeColoris(config){
+  if(typeof Coloris === 'function') Coloris(config);
+}
+
+// Base Coloris config. Must run before any later safeColoris({swatches:...})
+// call (see applyThemePalette below) -- Coloris merges/updates options at
+// runtime rather than replacing them, so this establishes theme/alpha/etc
+// once, and subsequent calls only ever touch swatches on top of it.
+safeColoris({
   el: '[data-coloris]',
   theme: 'pill',
   themeMode: 'dark',
@@ -540,7 +551,7 @@ function deriveThemePalette({text1, text2, accent1, accent2, bg1, bg2}){
 let currentThemePalette = [];
 function applyThemePalette(colors){
   currentThemePalette = colors;
-  Coloris({ swatches: colors });
+  safeColoris({ swatches: colors });
 }
 
 // Midnight Page's own colors are already what the page's static HTML defaults
@@ -554,7 +565,7 @@ applyThemePalette(deriveThemePalette(defaultPalettePreset));
 // bound input itself when its picker is about to show.
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
-    Coloris({ swatches: [...currentThemePalette, e.target.value] });
+    safeColoris({ swatches: [...currentThemePalette, e.target.value] });
   }
 });
 
