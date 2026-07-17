@@ -1311,12 +1311,19 @@ function withSeed(seed, fn){
 }
 
 // Cache of already-generated textures, keyed by type+dims+colors+invert+seed.
-const textureCache = {};
+// A plain object here never shrinks -- a long session of seed-rerolling and
+// texture-browsing accumulates many multi-megapixel offscreen canvases with
+// nothing ever freed, which matters more on mobile (memory pressure gets you
+// tab-killed, not just slow). A Map's insertion-order iteration gives
+// oldest-first (FIFO) eviction in one line; real LRU would need to track
+// access order too, which this app's actual usage doesn't call for.
+const TEXTURE_CACHE_MAX_ENTRIES = 40;
+const textureCache = new Map();
 
 export function getTextureCanvas(type, w, h, accent1, accent2, invert, seed){
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`) + (invert ? '_inv' : '') + `_s${seed}`;
-  if(textureCache[key]) return textureCache[key];
+  if(textureCache.has(key)) return textureCache.get(key);
 
   let result = withSeed(seed, () => {
   let result;
@@ -1389,7 +1396,10 @@ export function getTextureCanvas(type, w, h, accent1, accent2, invert, seed){
   return result;
   });
   if(invert) result = invertTextureCanvas(result);
-  textureCache[key] = result;
+  if(textureCache.size >= TEXTURE_CACHE_MAX_ENTRIES){
+    textureCache.delete(textureCache.keys().next().value);
+  }
+  textureCache.set(key, result);
   return result;
 }
 

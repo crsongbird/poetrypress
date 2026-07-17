@@ -453,6 +453,13 @@ export function installDomMock(makeMockContext, makeMockCanvas){
     return cachedCtx;
   };
 
+  // requestAnimationFrame is a browser-only API; scheduleRender() in
+  // canvasRenderer.js depends on it. A setTimeout-based stand-in is fine for
+  // tests -- it doesn't need to be frame-accurate, just present and async.
+  if(typeof global.requestAnimationFrame !== 'function'){
+    global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+  }
+
   global.document = {
     getElementById(id){
       if(!registry[id]) registry[id] = makeFakeElement(id); // anything not explicitly listed still works generically

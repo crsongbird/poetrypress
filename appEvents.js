@@ -43,7 +43,7 @@
 
 import { $, FONTS, PRESETS, ASPECTS } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
-import { render } from './canvasRenderer.js';
+import { render, scheduleRender } from './canvasRenderer.js';
 
 
 const fontSelect = $('fontFamily');
@@ -82,14 +82,14 @@ function randHex(){ return '#'+Math.floor(Math.random()*0xFFFFFF).toString(16).p
 
 function toggleSubblock(checkboxId, blockId){
   const box = $(checkboxId), block = $(blockId);
-  const sync = ()=>{ block.classList.toggle('open', box.checked); render(); };
+  const sync = ()=>{ block.classList.toggle('open', box.checked); scheduleRender(); };
   box.addEventListener('change', sync);
   sync();
 }
 
 function bindAngle(rangeId, labelId){
   const r = $(rangeId), l = $(labelId);
-  r.addEventListener('input', ()=>{ l.textContent = r.value+'°'; render(); });
+  r.addEventListener('input', ()=>{ l.textContent = r.value+'°'; scheduleRender(); });
 }
 
 function bindRadioGroup(containerId, onSelect){
@@ -109,18 +109,18 @@ function setActiveRadioValue(containerId, val){
   });
 }
 
-bindColorField('textColorHex', render);
-bindColorField('textColor2Hex', render);
-bindColorField('textColor3Hex', render);
-bindColorField('textColor4Hex', render);
-bindColorField('outlineColorHex', render);
-bindColorField('bgColor1Hex', render);
-bindColorField('bgColor2Hex', render);
-bindColorField('bgColor3Hex', render);
-bindColorField('bgColor4Hex', render);
-bindColorField('borderColorHex', render);
-bindColorField('accent1ColorHex', render);
-bindColorField('accent2ColorHex', render);
+bindColorField('textColorHex', scheduleRender);
+bindColorField('textColor2Hex', scheduleRender);
+bindColorField('textColor3Hex', scheduleRender);
+bindColorField('textColor4Hex', scheduleRender);
+bindColorField('outlineColorHex', scheduleRender);
+bindColorField('bgColor1Hex', scheduleRender);
+bindColorField('bgColor2Hex', scheduleRender);
+bindColorField('bgColor3Hex', scheduleRender);
+bindColorField('bgColor4Hex', scheduleRender);
+bindColorField('borderColorHex', scheduleRender);
+bindColorField('accent1ColorHex', scheduleRender);
+bindColorField('accent2ColorHex', scheduleRender);
 
 toggleSubblock('textGradientToggle','gradientBlock');
 toggleSubblock('bgGradientToggle','bgGradientBlock');
@@ -129,46 +129,46 @@ toggleSubblock('accent1Toggle','accent1Block');
 toggleSubblock('accent2Toggle','accent2Block');
 toggleSubblock('textureToggle','textureBlock');
 toggleSubblock('vignetteToggle','vignetteBlock');
-$('vignetteBlend').addEventListener('change', render);
-$('vignetteIntensity').addEventListener('input', ()=>{ $('vignetteIntensityVal').textContent=$('vignetteIntensity').value+'%'; render(); });
+$('vignetteBlend').addEventListener('change', scheduleRender);
+$('vignetteIntensity').addEventListener('input', ()=>{ $('vignetteIntensityVal').textContent=$('vignetteIntensity').value+'%'; scheduleRender(); });
 
 bindAngle('textGradientAngle','textGradientAngleVal');
 bindAngle('bgGradientAngle','bgGradientAngleVal');
 
-bindRadioGroup('alignGroup', v=>{ currentAlign=v; render(); });
-bindRadioGroup('valignGroup', v=>{ currentValign=v; render(); });
+bindRadioGroup('alignGroup', v=>{ currentAlign=v; scheduleRender(); });
+bindRadioGroup('valignGroup', v=>{ currentValign=v; scheduleRender(); });
 bindRadioGroup('aspectGroup', v=>{
   currentAspect=v;
   const [w,h] = ASPECTS[v];
   canvas.width=w; canvas.height=h;
-  render();
+  scheduleRender();
 });
 bindRadioGroup('bgStopsGroup', v=>{
   bgStopCount = parseInt(v,10);
   syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
-  render();
+  scheduleRender();
 });
 bindRadioGroup('textStopsGroup', v=>{
   textStopCount = parseInt(v,10);
   syncStopFields(textStopCount, 'textColor3Field', 'textColor4Field');
-  render();
+  scheduleRender();
 });
 
-$('textureType').addEventListener('change', render);
-$('textureOpacity').addEventListener('input', ()=>{ $('textureOpacityVal').textContent=$('textureOpacity').value+'%'; render(); });
-$('textureInvert').addEventListener('change', render);
+$('textureType').addEventListener('change', scheduleRender);
+$('textureOpacity').addEventListener('input', ()=>{ $('textureOpacityVal').textContent=$('textureOpacity').value+'%'; scheduleRender(); });
+$('textureInvert').addEventListener('change', scheduleRender);
 
 function randomSeed(){ return Math.floor(Math.random()*2**31); }
 function maybeRerollSeed(explicitSeed){
   if($('textureSeedLock').checked) return;
   $('textureSeedValue').value = (explicitSeed !== undefined) ? explicitSeed : randomSeed();
 }
-$('textureSeedValue').addEventListener('input', render);
+$('textureSeedValue').addEventListener('input', scheduleRender);
 $('textureSeedReroll').addEventListener('click', ()=>{
   $('textureSeedValue').value = randomSeed();
-  render();
+  scheduleRender();
 });
-$('textureSeedLock').addEventListener('change', render);
+$('textureSeedLock').addEventListener('change', scheduleRender);
 
 const outlineModeSel = $('outlineMode');
 function syncOutlineFields(){
@@ -176,20 +176,32 @@ function syncOutlineFields(){
   $('outlineColorField').style.display = mode==='off' ? 'none' : 'block';
   $('outlineThicknessField').style.display = mode==='outline' ? 'block' : 'none';
   $('shadowThicknessField').style.display = mode==='shadow' ? 'flex' : 'none';
-  render();
+  scheduleRender();
 }
 outlineModeSel.addEventListener('change', syncOutlineFields);
 syncOutlineFields();
 
-['poemText','fontFamily','outlineThickness','shadowBlur','shadowX','shadowY','maxSize','borderThickness','borderOffset','usernameField'].forEach(id=>{
-  $(id).addEventListener('input', render);
+['fontFamily','outlineThickness','shadowBlur','shadowX','shadowY','maxSize','borderThickness','borderOffset','usernameField'].forEach(id=>{
+  $(id).addEventListener('input', scheduleRender);
 });
-$('usernameCorner').addEventListener('change', render);
+$('usernameCorner').addEventListener('change', scheduleRender);
+
+// Typing fires far more often than any other input in this app, and a full
+// DSL reparse + autofit search on every keystroke is real, avoidable work.
+// Debounce specifically here rather than everywhere -- sliders and color
+// pickers feel worse with any added delay, since people expect those to
+// track their input directly; scheduleRender's rAF-coalescing alone is
+// enough for those.
+let poemTextDebounceTimer = null;
+$('poemText').addEventListener('input', ()=>{
+  clearTimeout(poemTextDebounceTimer);
+  poemTextDebounceTimer = setTimeout(scheduleRender, 150);
+});
 
 $('lineSpacing').addEventListener('input', ()=>{
   const spacing = Math.pow(2, parseFloat($('lineSpacing').value) || 0);
   $('lineSpacingVal').textContent = spacing.toFixed(2)+'x';
-  render();
+  scheduleRender();
 });
 
 $('randomFontBtn').addEventListener('click', ()=>{
@@ -208,7 +220,7 @@ $('randomFontBtn').addEventListener('click', ()=>{
   setColorField('accent1ColorHex', randHex());
   setColorField('accent2ColorHex', randHex());
 
-  render();
+  scheduleRender();
 });
 $('randomBgBtn').addEventListener('click', ()=>{
   maybeRerollSeed();
@@ -244,7 +256,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
     $('borderOffset').value = Math.floor(Math.random()*40);
   }
 
-  render();
+  scheduleRender();
 });
 function plainTextFromLine(rawContent, accent1On, accent2On){
   const escaped = applyEscapes(rawContent);
@@ -429,7 +441,7 @@ function restoreSettings(s){
   if(s.usernameCorner) $('usernameCorner').value = s.usernameCorner;
   if(s.poemText!==undefined) $('poemText').value = s.poemText;
 
-  render();
+  scheduleRender();
 }
 
 $('advancedRefreshBtn').addEventListener('click', ()=>{
@@ -534,7 +546,7 @@ function applyPreset(p){
   if(p.vignetteBlend) $('vignetteBlend').value = p.vignetteBlend;
   if(p.vignetteIntensity!==undefined){ $('vignetteIntensity').value=p.vignetteIntensity; $('vignetteIntensityVal').textContent=p.vignetteIntensity+'%'; }
 
-  render();
+  scheduleRender();
 }
 
 // ---------- gradient geometry ----------

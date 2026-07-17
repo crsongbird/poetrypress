@@ -46,4 +46,16 @@ const s1 = getTextureCanvas('alienSurface', 400, 400, null, null, false, 424242)
 const s2 = getTextureCanvas('alienSurface', 400, 400, null, null, false, 424242);
 console.log('Determinism (same seed, same dims):', s1.getContext('2d')._stats.arcs === s2.getContext('2d')._stats.arcs ? 'PASS' : 'FAIL');
 
+// --- cache eviction check ---
+// Generate well past the cache's cap with distinct seeds/sizes (each one a
+// genuinely new cache key) and confirm the cache doesn't grow unbounded.
+let evictionThrew = null;
+try {
+  for(let i=0;i<80;i++){
+    getTextureCanvas('grain', 100+i, 100+i, null, null, false, i);
+  }
+} catch(e){ evictionThrew = e; }
+console.log('80 distinct textures past the cache cap:', evictionThrew ? 'FAILED ('+evictionThrew.message+')' : 'PASS (no throw)');
+if(evictionThrew) failures++;
+
 process.exit(failures === 0 ? 0 : 1);

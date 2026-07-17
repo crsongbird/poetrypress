@@ -271,43 +271,57 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
   return x;
 }
 
-function measureLineWidth(ctx, line, baseSize, fontDef){
+// Computes a line's full width info once, using measureSegWidth consistently
+// (this used to be two separate code paths -- fitTextSize's search called
+// measureLineWidth, which measured via raw ctx.measureText and so silently
+// ignored the letter-spacing "tracking" fallback that no-italic fonts use
+// for italic emphasis; the draw loop separately re-measured everything via
+// measureSegWidth, which does account for tracking. Same line, two slightly
+// different answers, and the search's answer -- the one that actually
+// decides what fits -- was the less accurate of the two. One function now.
+function computeLineWidths(ctx, line, baseSize, fontDef){
   const size = baseSize*line.scale;
   if(line.parts){
-    let total = 0;
-    for(const part of line.parts){
+    const partWidths = line.parts.map(part=>{
       const partFontDef = (part.customFontIdx!=null && FONTS[part.customFontIdx]) ? FONTS[part.customFontIdx] : fontDef;
       const partSize = part.customSize!=null ? part.customSize : size;
-      for(const seg of part.segments){
-        ctx.font = fontString(partFontDef, seg, partSize);
-        total += ctx.measureText(seg.text).width;
-      }
-    }
-    return total;
+      let total = 0;
+      for(const seg of part.segments) total += measureSegWidth(ctx, partFontDef, seg, partSize);
+      return total;
+    });
+    const flowingTotal = line.parts.reduce((sum,p,i)=>p.justify===null ? sum+partWidths[i] : sum, 0);
+    return { total: partWidths.reduce((a,b)=>a+b,0), partWidths, flowingTotal };
   }
   let total = 0;
-  for(const seg of line.segments){
-    ctx.font = fontString(fontDef, seg, size);
-    total += ctx.measureText(seg.text).width;
-  }
-  return total;
+  for(const seg of line.segments) total += measureSegWidth(ctx, fontDef, seg, size);
+  return { total, partWidths: null, flowingTotal: null };
 }
 
+// Returns { size, widths } -- widths is a Map from line -> the same shape
+// computeLineWidths returns, measured at the winning size, so the draw pass
+// can look these up instead of remeasuring everything from scratch a second
+// time immediately after this function already measured it once.
 function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing){
   let size = maxSizePx;
   const minSize = 8;
   while(size > minSize){
     let maxLineWidth = 0, totalHeight = 0;
+    const widths = new Map();
     for(const line of lines){
       if(line.isBlank){ totalHeight += size*0.55*spacing; continue; }
       totalHeight += size*line.scale*1.32*spacing;
-      const w = measureLineWidth(ctx, line, size, fontDef);
-      if(w > maxLineWidth) maxLineWidth = w;
+      const w = computeLineWidths(ctx, line, size, fontDef);
+      widths.set(line, w);
+      if(w.total > maxLineWidth) maxLineWidth = w.total;
     }
-    if(maxLineWidth <= maxWidth && totalHeight <= maxHeight) return size;
+    if(maxLineWidth <= maxWidth && totalHeight <= maxHeight) return { size, widths };
     size -= 2;
   }
-  return minSize;
+  const widths = new Map();
+  for(const line of lines){
+    if(!line.isBlank) widths.set(line, computeLineWidths(ctx, line, minSize, fontDef));
+  }
+  return { size: minSize, widths };
 }
 
 function blockHeight(lines, size, spacing){
@@ -352,6 +366,35 @@ function watermarkColor(bgHex){
 }
 
 // ---------- texture generation ----------
+// buildLines/fitTextSize are pure functions of a small set of inputs, but
+// were being called fresh on every single render() -- including renders
+// triggered by things that can't possibly change their output, like
+// dragging a border-thickness slider. Cache both, invalidated only when
+// something that actually feeds them changes. (Module-level state, so it
+// survives across render() calls -- that's the whole point.)
+let linesCacheKey = null;
+let linesCacheValue = null;
+function getCachedLines(rawText, accent1On, accent2On){
+  const key = rawText + '\u0000' + accent1On + '\u0000' + accent2On;
+  if(key === linesCacheKey) return linesCacheValue;
+  linesCacheValue = buildLines(rawText, accent1On, accent2On);
+  linesCacheKey = key;
+  return linesCacheValue;
+}
+
+let fitCacheKey = null;
+let fitCacheValue = null;
+function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing){
+  // linesCacheKey stands in for "did the parsed content change" -- it changes
+  // exactly when `lines` itself would be a new array, so it's a cheap valid
+  // proxy without needing to hash the (possibly large) lines structure itself.
+  const key = [linesCacheKey, fontDef.family, fontDef.weight, maxWidth, maxHeight, maxSizePx, spacing].join('|');
+  if(key === fitCacheKey) return fitCacheValue;
+  fitCacheValue = fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing);
+  fitCacheKey = key;
+  return fitCacheValue;
+}
+
 export function render(){
   const canvas = $('poemCanvas');
   const ctx = canvas.getContext('2d');
@@ -451,7 +494,7 @@ export function render(){
   const accent2Color = $('accent2ColorHex').value;
 
   const rawText = $('poemText').value;
-  const lines = buildLines(rawText, accent1On, accent2On);
+  const lines = getCachedLines(rawText, accent1On, accent2On);
 
   const fontDef = FONTS[$('fontFamily').value];
   const maxSizePx = Math.max(10, parseFloat($('maxSize').value) || 120);
@@ -462,7 +505,7 @@ export function render(){
   const maxWidth = W - paddingX*2;
   const maxHeight = H - paddingY*2;
 
-  const baseSize = fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing);
+  const { size: baseSize, widths: fitWidths } = getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing);
   const totalHeight = blockHeight(lines, baseSize, lineSpacing);
 
   let startY;
@@ -498,19 +541,20 @@ export function render(){
     const style = { ...runStyle, quoteAlpha: line.type==='quote' ? 0.68 : 1 };
 
     if(line.parts){
+      const cached = fitWidths.get(line);
+      const partWidthMap = new Map(line.parts.map((p,i)=>[p, cached.partWidths[i]]));
       const flowingParts = line.parts.filter(p=>p.justify===null);
       const anchoredParts = line.parts.filter(p=>p.justify!==null);
 
       const partFont = p => (p.customFontIdx!=null && FONTS[p.customFontIdx]) ? FONTS[p.customFontIdx] : fontDef;
       const partSizeOf = p => p.customSize!=null ? p.customSize : size;
-      const partWidth = p => p.segments.reduce((sum,seg)=>sum+measureSegWidth(ctx, partFont(p), seg, partSizeOf(p)), 0);
 
       // Flowing parts render as one continuous sequence, positioned as a whole
       // block using the line's own alignment — this is what makes "plain text
       // <right side/r>" read as normal flowing text plus one anchored chunk,
       // rather than every plain segment being independently pinned to the
       // left margin.
-      const flowingTotalWidth = flowingParts.reduce((sum,p)=>sum+partWidth(p), 0);
+      const flowingTotalWidth = cached.flowingTotal;
       const lineAlign = line.alignOverride || currentAlign;
       let flowX = lineAlign==='center' ? (W/2 - flowingTotalWidth/2)
         : lineAlign==='right' ? (W - paddingX - flowingTotalWidth)
@@ -529,7 +573,7 @@ export function render(){
       }
 
       for(const part of anchoredParts){
-        const pWidth = partWidth(part);
+        const pWidth = partWidthMap.get(part);
         const pX = part.justify==='center' ? (W/2 - pWidth/2)
           : part.justify==='right' ? (W - paddingX - pWidth)
           : paddingX;
@@ -541,7 +585,7 @@ export function render(){
       continue;
     }
 
-    const totalWidth = line.segments.reduce((sum,seg)=>sum+measureSegWidth(ctx, fontDef, seg, size), 0);
+    const totalWidth = fitWidths.get(line).total;
     const lineAlign = line.alignOverride || currentAlign;
     const startX = lineAlign==='center' ? (W/2 - totalWidth/2) : (lineAlign==='right' ? (W - paddingX - totalWidth) : paddingX);
 
@@ -573,4 +617,19 @@ export function render(){
   const wmY = isTop ? (H*0.025) : (H - H*0.025);
   ctx.fillText(username, wmX, wmY);
   ctx.restore();
+}
+
+// Most controls call this instead of render() directly. requestAnimationFrame
+// naturally caps how often a render can actually happen to the display's own
+// refresh rate, and coalesces multiple synchronous triggers within the same
+// frame into a single call — e.g. applyPreset() touches a dozen+ fields, each
+// of which would otherwise ask for its own full render.
+let renderScheduled = false;
+export function scheduleRender(){
+  if(renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(()=>{
+    renderScheduled = false;
+    render();
+  });
 }
