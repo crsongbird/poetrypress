@@ -331,7 +331,7 @@ function blockHeight(lines, size, spacing){
 }
 
 // ---------- color math for watermark ----------
-function hexToHsl(hex){
+export function hexToHsl(hex){
   hex = hex.replace('#','');
   const r=parseInt(hex.substr(0,2),16)/255, g=parseInt(hex.substr(2,2),16)/255, b=parseInt(hex.substr(4,2),16)/255;
   const max=Math.max(r,g,b), min=Math.min(r,g,b);
@@ -348,7 +348,7 @@ function hexToHsl(hex){
   }
   return {h:h*360, s:s*100, l:l*100};
 }
-function hslToHex(h,s,l){
+export function hslToHex(h,s,l){
   h=((h%360)+360)%360; s=Math.max(0,Math.min(100,s))/100; l=Math.max(0,Math.min(100,l))/100;
   const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
   let r,g,b;

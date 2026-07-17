@@ -43,8 +43,20 @@
 
 import { $, FONTS, PRESETS, ASPECTS } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
-import { render, scheduleRender } from './canvasRenderer.js';
+import { render, scheduleRender, hexToHsl, hslToHex } from './canvasRenderer.js';
 
+// Base Coloris config. Must run before any later Coloris({swatches:...}) call
+// (see applyThemePalette below) -- Coloris merges/updates options at runtime
+// rather than replacing them, so this establishes theme/alpha/etc once, and
+// subsequent calls only ever touch swatches on top of it.
+Coloris({
+  el: '[data-coloris]',
+  theme: 'pill',
+  themeMode: 'dark',
+  alpha: false,
+  format: 'hex',
+  clearButton: false,
+});
 
 const fontSelect = $('fontFamily');
 FONTS.forEach((f,i)=>{
@@ -487,7 +499,67 @@ PRESETS.forEach(p=>{
   presetGrid.appendChild(btn);
 });
 
+// Derives a 15-color Coloris swatch palette from a theme's own colors, so
+// the color picker's swatches change to match whichever preset is active
+// (a 16th, the color currently being edited, gets appended live -- see the
+// 'open' event listener near the bottom of this file).
+//
+//   6 base colors   — text1, text2, accent1, accent2, bg1, bg2 (text2/bg2
+//                     fall back to a derived tone for presets with no
+//                     gradient second stop, so every theme yields 6)
+//   3 relationships — complementary of text1, a triadic point from accent1,
+//                     a tonal sibling of bg1
+//   6 tonal siblings — one per base color, nudged lighter+more saturated if
+//                     it's currently dark, darker+less saturated if light
+//                     (the same "move toward a punchier midtone" rule
+//                     watermarkColor() already uses, just reused here)
+//
+// 6 + 3 + 6 = 15.
+function tonalSibling(hex){
+  const {h,s,l} = hexToHsl(hex);
+  const lNudge = l > 50 ? -18 : 18;
+  const sNudge = l > 50 ? -12 : 12;
+  return hslToHex(h, Math.max(0,Math.min(100, s+sNudge)), Math.max(0,Math.min(100, l+lNudge)));
+}
+function hueShift(hex, degrees){
+  const {h,s,l} = hexToHsl(hex);
+  return hslToHex(h+degrees, s, l);
+}
+function deriveThemePalette({text1, text2, accent1, accent2, bg1, bg2}){
+  const t2 = text2 || hueShift(text1, 30);
+  const b2 = bg2 || tonalSibling(bg1);
+  const base = [text1, t2, accent1, accent2, bg1, b2];
+
+  const complementaryOfText = hueShift(text1, 180);
+  const triadicOfAccent = hueShift(accent1, 120);
+  const bgVariant = tonalSibling(bg1);
+
+  return [...base, complementaryOfText, triadicOfAccent, bgVariant, ...base.map(tonalSibling)];
+}
+
+let currentThemePalette = [];
+function applyThemePalette(colors){
+  currentThemePalette = colors;
+  Coloris({ swatches: colors });
+}
+
+// Midnight Page's own colors are already what the page's static HTML defaults
+// match (established a while back), so it's the natural default palette too.
+const defaultPalettePreset = PRESETS.find(p=>p.name==='Midnight Page') || PRESETS[0];
+applyThemePalette(deriveThemePalette(defaultPalettePreset));
+
+// The 16th swatch: whatever THIS specific field's current value is, appended
+// live right as its picker opens -- lets you audition one of the 15 theme
+// colors and still get back to what you had. Coloris fires 'open' on the
+// bound input itself when its picker is about to show.
+document.addEventListener('open', (e)=>{
+  if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
+    Coloris({ swatches: [...currentThemePalette, e.target.value] });
+  }
+});
+
 function applyPreset(p){
+  applyThemePalette(deriveThemePalette(p));
   maybeRerollSeed(p.textureSeed);
   setColorField('bgColor1Hex', p.bg1);
   $('bgGradientToggle').checked = !!p.bgGradient;
