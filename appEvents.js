@@ -45,15 +45,26 @@ import { $, FONTS, PRESETS, ASPECTS } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, hexToHsl, hslToHex } from './canvasRenderer.js';
 
-// Coloris is loaded from an external CDN (see index.html) -- if that ever
-// fails (network hiccup, CDN issue), `Coloris` is undefined, and calling it
-// directly would throw a ReferenceError during this file's synchronous
-// top-level execution, taking down everything that runs after it -- INCLUDING
-// the preset grid further down. This guard means that failure degrades to
-// "color pickers lose their custom styling/swatches" instead of "the whole
-// app doesn't load".
+// Coloris is loaded from an external CDN (see index.html). Two separate
+// failure modes can happen there, and this guards against both:
+//   1. The CDN fails to load at all (network hiccup, CDN issue) -- Coloris
+//      is undefined, and calling it directly throws a ReferenceError.
+//   2. Coloris loads fine and IS callable, but throws internally anyway
+//      (this actually happened: a specific pinned version threw
+//      "Cannot set properties of undefined (setting 'className')" from
+//      inside its own init code, for reasons outside this app's control).
+// Either way, without this guard, the throw happens during this file's
+// synchronous top-level execution and takes down everything that runs
+// after it -- INCLUDING the preset grid further down. With it, the failure
+// degrades to "color pickers lose their custom styling/swatches" instead of
+// "the whole app doesn't load".
 function safeColoris(config){
-  if(typeof Coloris === 'function') Coloris(config);
+  if(typeof Coloris !== 'function') return;
+  try {
+    Coloris(config);
+  } catch(e){
+    console.warn('Coloris call failed, continuing without it:', e);
+  }
 }
 
 // Base Coloris config. Must run before any later safeColoris({swatches:...})
