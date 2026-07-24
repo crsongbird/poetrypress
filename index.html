@@ -24,23 +24,20 @@
 
     <div class="card">
       <p class="card-title">  Page Text (PoetryPress Markdown Language)</p>
-      <textarea id="poemText">## {[Flood]}/c
+      <textarea id="poemText">#D She wakes before the color has a name~A
+#S the whole house holding quiet, holding still~B
+A thin **light** stumbles toward the windowframe~A
+> not sure herself which way the morning tilts, until —
 
-   I think you're fine just how [you're made],
-a <blinding light/scale:150> in a <cascade/grad:1#ffe066,2#ff6f9c,3#5bb8f5,4#8e5cd9>.
-    I think you're just so, how you came,
-<so softly **broken,**/l><**spoken,**/c>< plain.**/r>
+it finds her waiting, half in sleep, half <not/jitter:60>~C
+    and something in her answers like a child~D
+who's just remembered every word she'd forgot~C
+    the sky goes <low/basis:-30>, then it <climbs/basis:35> so wild~D
 
->     {Overwhelming} your old ~~dreams~~:
-> your <catecholamines/f:8/fx2,#ff6f9c,14,3,3>
->     <drowning/fx1,#1e5fa8,3> out your old ~~routines~~.
-> **{[Overwrites you at your _seams_]}.**
-
-And in the end, leaves you in *pain*—
-     a burning <{ember 🔥}/fx2,#ff3d00,18,4,4> in your brain.
-**But you were fine just how you came,**
-     so *softly* [spoken, broken, whole/lg]
--# <[and same.]/fx0></textarea>
+She rises then, to meet what <light/rainbow> can do,
+    to see how far a <color/track:140> learns to spread,
+and finds, somehow, the whole sky feels made new
+    a <door held open/l><and she walks ahead/r></textarea>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
@@ -71,10 +68,15 @@ And in the end, leaves you in *pain*—
         <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Line prefixes</strong> (start of line):</p>
         <p style="margin:0 0 3px 0;"><code>## text</code> — big heading line</p>
         <p style="margin:0 0 3px 0;"><code>-# text</code> — small aside line</p>
-        <p style="margin:0 0 10px 0;"><code>&gt; text</code> — quote line: gets a left bar, a slight tilt, and a touch of transparency</p>
+        <p style="margin:0 0 3px 0;"><code>&gt; text</code> — quote line: gets a left bar, a slight tilt, and a touch of transparency</p>
+        <p style="margin:0 0 3px 0;"><code>#D text</code> — drop cap: the first letter renders much larger, top-aligned with the line</p>
+        <p style="margin:0 0 10px 0;"><code>#S text</code> — small caps: lowercase letters render as smaller capitals</p>
+
+        <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Rhyme scheme</strong>:</p>
+        <p style="margin:0 0 10px 0;">End a line with <code>~A</code>, <code>~B</code>, <code>~C</code>, or <code>~D</code> to mark its rhyme group — stripped from display, shown instead as a small colored bar after the line. A and B use accent one and two; C and D are each accent's split-complement. Coexists with a trailing justification suffix: <code>text~A/r</code>.</p>
 
         <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Justification</strong>:</p>
-        <p style="margin:0 0 3px 0;">End a whole line with <code>/l</code>, <code>/c</code>, or <code>/r</code> to override that line's justification.</p>
+        <p style="margin:0 0 3px 0;">End a whole line with <code>/l</code> <code>/c</code> <code>/r</code> (or the longer <code>/left</code> <code>/center</code> <code>/right</code> — both forms always work) to override that line's justification.</p>
         <p style="margin:0 0 10px 0;">Split a line's justification (for example: one part aligned left and the other right) using the Segmentation Operator, below.</p>
 
         <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Segmentation (Advanced)</strong>:</p>
@@ -82,13 +84,17 @@ And in the end, leaves you in *pain*—
         <ul style="margin:0 0 6px 0; padding-left:18px;">
           <li style="margin-bottom:3px;">custom color (overrides accent colors): <code>&lt;text/#:ff00ff&gt;</code></li>
           <li style="margin-bottom:3px;">custom font, by index number (list below): <code>&lt;text/f:4&gt;</code></li>
-          <li style="margin-bottom:3px;">custom size, in pixels: <code>&lt;text/scale:100&gt;</code></li>
+          <li style="margin-bottom:3px;">custom size, as a percentage of the line's own fitted size: <code>&lt;text/scale:150&gt;</code> (150%); bare <code>&lt;text/scale&gt;</code> is a no-op at 100%. Scaling stays visually centered on the line automatically.</li>
+          <li style="margin-bottom:3px;">letter-spacing, as a percentage: <code>&lt;text/track:150&gt;</code>; bare <code>&lt;text/track&gt;</code> defaults to 100%</li>
+          <li style="margin-bottom:3px;">raise or lower on the line, as a signed percentage of this segment's own size: <code>&lt;text/basis:50&gt;</code> raises, <code>&lt;text/basis:-50&gt;</code> lowers; bare <code>&lt;text/basis&gt;</code> defaults to a modest +30 raise</li>
+          <li style="margin-bottom:3px;">hand-jitter, per-letter, as a percentage: <code>&lt;text/jitter:150&gt;</code>; bare <code>&lt;text/jitter&gt;</code> defaults to 100%</li>
           <li style="margin-bottom:3px;">full custom gradient, up to 4 stops: <code>&lt;text/grad:1#ff0000,2#00ff00,3#0000ff,4#ffffff&gt;</code></li>
-          <li style="margin-bottom:3px;">split justification: <code>left text &lt;right text/r&gt;</code> or <code>&lt;left text/l&gt;&lt;right text/r&gt;</code></li>
-          <li style="margin-bottom:3px;">custom shadow: <code>&lt;text/fx2,#FF00FF,blur,x,y&gt;</code></li>
-          <li style="margin-bottom:3px;">custom outline: <code>&lt;text/fx1,#ABC123,thickness&gt;</code></li>
+          <li style="margin-bottom:3px;">flag/rainbow gradient shortcuts, no stops needed: <code>&lt;text/rainbow&gt;</code>, <code>&lt;text/trans&gt;</code>, <code>&lt;text/lesbian&gt;</code> — add <code>:rev</code> to any of them to reverse direction, e.g. <code>&lt;text/rainbow:rev&gt;</code></li>
+          <li style="margin-bottom:3px;">split justification: <code>left text &lt;right text/r&gt;</code> or <code>&lt;left text/l&gt;&lt;right text/r&gt;</code> (or the longer <code>/left</code> <code>/right</code>)</li>
+          <li style="margin-bottom:3px;">custom shadow: <code>&lt;text/fx2,#FF00FF,blur,x,y&gt;</code>; bare <code>&lt;text/fx2&gt;</code> gets a sane default shadow</li>
+          <li style="margin-bottom:3px;">custom outline: <code>&lt;text/fx1,#ABC123,thickness&gt;</code>; bare <code>&lt;text/fx1&gt;</code> gets a sane default outline</li>
           <li style="margin-bottom:3px;">turn off outline/shadow for this segment even if on globally: <code>&lt;text/fx0&gt;</code></li>
-          <li>chain as many as you like: <code>&lt;text/#:ff00ff/f:4/scale:100/r/fx2,#ffffff,10,10,10&gt;</code></li>
+          <li>chain as many as you like: <code>&lt;text/#:ff00ff/f:4/scale:150/r/fx2,#ffffff,10,10,10&gt;</code></li>
         </ul>
         <p style="margin:0 0 8px 0;"><strong style="color:var(--text-main);">Escaping</strong>:</p>
         <p style="margin:0 0 10px 0;">Put a backslash before any special character to print it literally: <code>\[not accent\]</code> prints <code>[not accent]</code> exactly, with no color applied.</p>

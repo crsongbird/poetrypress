@@ -138,7 +138,7 @@ function tintedEmojiCanvas(ch, font, fillStyle, size){
 // (for the {[...]}/[{...]} hidden feature), and emoji colorization — all as one
 // shared path so normal lines and split-alignment chunks render identically.
 function resolvePartStyle(part, baseStyle){
-  if(!part.customColor && !part.customEffect && !part.customGradient) return baseStyle;
+  if(!part.customColor && !part.customEffect && !part.customGradient && part.customTracking==null && part.customJitter==null) return baseStyle;
   const s = { ...baseStyle };
   if(part.customColor){
     s.baseFillStyle = part.customColor;
@@ -147,6 +147,12 @@ function resolvePartStyle(part, baseStyle){
   }
   if(part.customGradient){
     s.customGradientColors = part.customGradient;
+  }
+  if(part.customTracking!=null){
+    s.customTracking = part.customTracking;
+  }
+  if(part.customJitter!=null){
+    s.customJitter = part.customJitter;
   }
   if(part.customEffect){
     if(part.customEffect.type==='none'){
@@ -166,12 +172,23 @@ function resolvePartStyle(part, baseStyle){
   return s;
 }
 
+// Cheap deterministic pseudo-random in roughly [-1, 1], seeded by a
+// character's position and codepoint -- a classic sin-hash trick (common in
+// shader code) rather than a real PRNG, chosen specifically so /jitter
+// doesn't need the texture-seed system threaded through the whole call
+// chain just to be reproducible. Same text always jitters the same way.
+function charJitterOffset(seedBase){
+  const x = Math.sin(seedBase) * 43758.5453;
+  return (x - Math.floor(x)) * 2 - 1;
+}
+
 function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, style){
   const { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY,
           baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
 
   const widths = segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size));
   let x = startX;
+  let charSeed = 0; // advances across the whole run, not just per-segment, so jitter doesn't repeat identically at the start of every segment
 
   for(let i=0;i<segments.length;i++){
     const seg = segments[i];
@@ -216,15 +233,20 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
         : null;
     const hasEmoji = emojiTint && segmentHasEmoji(seg.text);
 
-    const tracking = emphasisTracking(fontDef, seg, size);
+    // An explicit /track wins outright over the automatic no-italic-font
+    // emphasis fallback (see emphasisTracking) -- same base magnitude
+    // (size*0.14) either way, just scaled by the user's percentage instead
+    // of the fixed 1x the fallback uses.
+    const tracking = style.customTracking!=null ? size*0.14*(style.customTracking/100) : emphasisTracking(fontDef, seg, size);
+    const jitterMag = style.customJitter!=null ? size*0.06*(style.customJitter/100) : 0;
 
-    const applyOutlineShadow = (str, px)=>{
+    const applyOutlineShadow = (str, px, py)=>{
       if(outlineMode==='outline' && outlineWidth>0){
         ctx.lineJoin='round'; ctx.miterLimit=2;
         ctx.lineWidth = outlineWidth*2;
         ctx.strokeStyle = outlineColor;
         ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-        ctx.strokeText(str, px, cursorY);
+        ctx.strokeText(str, px, py);
       }
       if(outlineMode==='shadow'){
         ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
@@ -234,24 +256,42 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
       }
     };
 
-    if(tracking === 0 && !hasEmoji){
-      applyOutlineShadow(seg.text, x);
+    const needsPerChar = tracking !== 0 || hasEmoji || style.smallCaps || jitterMag > 0;
+
+    if(!needsPerChar){
+      applyOutlineShadow(seg.text, x, cursorY);
       ctx.fillStyle = segFill;
       ctx.fillText(seg.text, x, cursorY);
     } else {
       let cx = x;
+      const normalFont = ctx.font;
+      // A rough small-caps proportion -- canvas doesn't expose precise
+      // baseline/cap-height metrics without more invasive font-metrics
+      // calls, so the Y-compensation below is an approximation (shift down
+      // by the size delta) rather than exact baseline alignment.
+      const smallCapRatio = 0.78;
       for(const ch of seg.text){
-        const chW = ctx.measureText(ch).width;
+        const isLower = style.smallCaps && ch !== ch.toUpperCase() && ch === ch.toLowerCase();
+        const drawCh = isLower ? ch.toUpperCase() : ch;
+        if(isLower) ctx.font = fontString(fontDef, seg, size*smallCapRatio);
+        const chW = ctx.measureText(drawCh).width;
+
+        const jx = jitterMag > 0 ? charJitterOffset(charSeed*12.9898) * jitterMag : 0;
+        const jy = jitterMag > 0 ? charJitterOffset(charSeed*78.233 + 4.12) * jitterMag * 0.6 : 0;
+        const py = cursorY + jy + (isLower ? size*(1-smallCapRatio) : 0);
+
         if(hasEmoji && isEmojiCodePoint(ch.codePointAt(0))){
           const tinted = tintedEmojiCanvas(ch, ctx.font, emojiTint, size);
           ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-          ctx.drawImage(tinted, cx, cursorY);
+          ctx.drawImage(tinted, cx+jx, py);
         } else {
-          applyOutlineShadow(ch, cx);
+          applyOutlineShadow(drawCh, cx+jx, py);
           ctx.fillStyle = segFill;
-          ctx.fillText(ch, cx, cursorY);
+          ctx.fillText(drawCh, cx+jx, py);
         }
+        if(isLower) ctx.font = normalFont;
         cx += chW + tracking;
+        charSeed++;
       }
     }
 
@@ -279,12 +319,20 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
 // measureSegWidth, which does account for tracking. Same line, two slightly
 // different answers, and the search's answer -- the one that actually
 // decides what fits -- was the less accurate of the two. One function now.
+// Shared between the measurement pass (below) and the draw loop -- both
+// MUST agree on this, or a part's measured width (used for layout/alignment)
+// and its actually-drawn size would disagree. Percentage-based: /scale:150
+// means 150% of the line's own fitted size, not 150 absolute pixels.
+function partSizeFor(part, size){
+  return part.customSize!=null ? size * (part.customSize/100) : size;
+}
+
 function computeLineWidths(ctx, line, baseSize, fontDef){
   const size = baseSize*line.scale;
   if(line.parts){
     const partWidths = line.parts.map(part=>{
       const partFontDef = (part.customFontIdx!=null && FONTS[part.customFontIdx]) ? FONTS[part.customFontIdx] : fontDef;
-      const partSize = part.customSize!=null ? part.customSize : size;
+      const partSize = partSizeFor(part, size);
       let total = 0;
       for(const seg of part.segments) total += measureSegWidth(ctx, partFontDef, seg, partSize);
       return total;
@@ -324,9 +372,19 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
   return { size: minSize, widths };
 }
 
+// How much bigger the first letter of a #D (drop cap) line renders, as a
+// multiple of that line's own font size. Shared between blockHeight (so the
+// extra space actually gets reserved, and later lines don't overlap the big
+// letter) and the actual draw code.
+const DROP_CAP_SCALE = 2.2;
+
 function blockHeight(lines, size, spacing){
   let total = 0;
-  for(const line of lines) total += line.isBlank ? size*0.55*spacing : size*line.scale*1.32*spacing;
+  for(const line of lines){
+    if(line.isBlank){ total += size*0.55*spacing; continue; }
+    const lineOwnHeight = size*line.scale*1.32*spacing;
+    total += line.dropCap ? Math.max(lineOwnHeight, size*line.scale*DROP_CAP_SCALE*1.05) : lineOwnHeight;
+  }
   return total;
 }
 
@@ -363,6 +421,18 @@ function watermarkColor(bgHex){
   const newS = Math.max(0, s-10);
   const newL = l>50 ? Math.max(0,l-15) : Math.min(100,l+15);
   return hslToHex(newH,newS,newL);
+}
+
+// A=accent1, B=accent2 directly. C/D are each accent's split-complement
+// (base hue +150°) -- one of the two hues flanking the true complement
+// (+180°), a standard, defensible choice when only one derived color is
+// needed rather than the customary two.
+function resolveRhymeColor(letter, accent1Color, accent2Color){
+  if(letter==='A') return accent1Color;
+  if(letter==='B') return accent2Color;
+  if(letter==='C'){ const {h,s,l} = hexToHsl(accent1Color); return hslToHex(h+150, s, l); }
+  if(letter==='D'){ const {h,s,l} = hexToHsl(accent2Color); return hslToHex(h+150, s, l); }
+  return null;
 }
 
 // ---------- texture generation ----------
@@ -538,7 +608,16 @@ export function render(){
     if(line.isBlank){ cursorY += baseSize*0.55*lineSpacing; continue; }
     const size = baseSize*line.scale;
     const lineHeight = size*1.32*lineSpacing;
-    const style = { ...runStyle, quoteAlpha: line.type==='quote' ? 0.68 : 1 };
+    const style = { ...runStyle, quoteAlpha: line.type==='quote' ? 0.68 : 1, smallCaps: !!line.smallCaps };
+
+    const drawRhymeMarker = (afterX) => {
+      if(!line.rhymeLetter) return;
+      const rhymeColor = resolveRhymeColor(line.rhymeLetter, accent1Color, accent2Color);
+      const barWidth = Math.max(2, size*0.06);
+      const barGap = size*0.35;
+      ctx.fillStyle = rhymeColor;
+      ctx.fillRect(afterX + barGap, cursorY + size*0.05, barWidth, lineHeight*0.85);
+    };
 
     if(line.parts){
       const cached = fitWidths.get(line);
@@ -547,7 +626,21 @@ export function render(){
       const anchoredParts = line.parts.filter(p=>p.justify!==null);
 
       const partFont = p => (p.customFontIdx!=null && FONTS[p.customFontIdx]) ? FONTS[p.customFontIdx] : fontDef;
-      const partSizeOf = p => p.customSize!=null ? p.customSize : size;
+
+      // Scaling stays visually centered by default: a bigger/smaller part's
+      // draw position is nudged by half its size delta from the line's own
+      // size, so it grows/shrinks symmetrically rather than only downward
+      // from a shared top edge (textBaseline is 'top' throughout). An
+      // explicit /basis then adds a further, deliberate raise/lower on top,
+      // computed as a percentage of THIS part's own final (post-scale) size
+      // -- so a raised, scaled-up word raises by a proportionally sensible
+      // amount rather than a fixed amount that would look tiny or huge
+      // relative to its own size.
+      const partCursorY = (part, partSize) => {
+        const centering = -(partSize - size) / 2;
+        const basis = part.customBasis!=null ? -(part.customBasis/100) * partSize : 0;
+        return cursorY + centering + basis;
+      };
 
       // Flowing parts render as one continuous sequence, positioned as a whole
       // block using the line's own alignment — this is what makes "plain text
@@ -568,20 +661,54 @@ export function render(){
       }
 
       for(const part of flowingParts){
+        const partSize = partSizeFor(part, size);
         const pStyle = resolvePartStyle(part, style);
-        flowX = drawTextRun(ctx, part.segments, flowX, cursorY, partSizeOf(part), lineHeight, partFont(part), pStyle);
+        flowX = drawTextRun(ctx, part.segments, flowX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
       }
 
+      drawRhymeMarker(flowX);
+
       for(const part of anchoredParts){
+        const partSize = partSizeFor(part, size);
         const pWidth = partWidthMap.get(part);
         const pX = part.justify==='center' ? (W/2 - pWidth/2)
           : part.justify==='right' ? (W - paddingX - pWidth)
           : paddingX;
         const pStyle = resolvePartStyle(part, style);
-        drawTextRun(ctx, part.segments, pX, cursorY, partSizeOf(part), lineHeight, partFont(part), pStyle);
+        drawTextRun(ctx, part.segments, pX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
       }
 
       cursorY += lineHeight;
+      continue;
+    }
+
+    // Drop caps only apply to plain lines (no Segmentation Operator parts) --
+    // a self-contained special case rather than trying to reach into or
+    // reserve space across subsequent lines, which this per-line renderer
+    // isn't architected for. The first character renders at DROP_CAP_SCALE
+    // its line's size, top-aligned with where the line would normally
+    // start; the rest of the line draws at normal size immediately after it.
+    if(line.dropCap && line.segments.length && line.segments[0].text.length){
+      const firstSeg = line.segments[0];
+      const bigChar = firstSeg.text[0];
+      const restOfFirst = firstSeg.text.slice(1);
+      const dropCapSize = size*DROP_CAP_SCALE;
+
+      const bigSegment = { ...firstSeg, text: bigChar };
+      const restSegments = [
+        ...(restOfFirst ? [{ ...firstSeg, text: restOfFirst }] : []),
+        ...line.segments.slice(1),
+      ];
+
+      const dropCapWidth = measureSegWidth(ctx, fontDef, bigSegment, dropCapSize);
+      drawTextRun(ctx, [bigSegment], paddingX, cursorY, dropCapSize, lineHeight, fontDef, style);
+      let afterX = paddingX + dropCapWidth;
+      if(restSegments.length){
+        afterX = drawTextRun(ctx, restSegments, afterX, cursorY, size, lineHeight, fontDef, style);
+      }
+      drawRhymeMarker(afterX);
+
+      cursorY += Math.max(lineHeight, dropCapSize*1.05);
       continue;
     }
 
@@ -597,6 +724,7 @@ export function render(){
     }
 
     drawTextRun(ctx, line.segments, startX, cursorY, size, lineHeight, fontDef, style);
+    drawRhymeMarker(startX + totalWidth);
     cursorY += lineHeight;
   }
 

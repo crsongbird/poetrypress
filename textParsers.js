@@ -201,21 +201,98 @@ export function tokenizeInline(text, accent1On, accent2On){
 }
 
 // ---------- split-alignment: <text/l><text/r> etc, on one line ----------
+// Fixed color sequences for the flag/rainbow gradient shortcuts. Verified
+// against multiple independently-converging sources rather than typed from
+// memory -- getting these wrong would be a real mistake, not a cosmetic one.
+// rainbow: the modern 6-stripe Pride flag (red/orange/yellow/green/blue/violet).
+// trans: Monica Helms' 1999 design (light blue, pink, white, pink, light blue).
+// lesbian: Emily Gwen's 2018 "Sunset" flag, the current community-adopted
+// design (not the retired 2010 "lipstick lesbian" flag) -- using the full
+// 7-stripe original rather than the simplified 5-stripe version, since a
+// gradient renders more stops more smoothly than a flag's stripes need to.
+const FLAG_GRADIENTS = {
+  rainbow: ['#E40303','#FF8C00','#FFED00','#008026','#004DFF','#750787'],
+  trans:   ['#5BCEFA','#F5A9B8','#FFFFFF','#F5A9B8','#5BCEFA'],
+  lesbian: ['#D52D00','#EF7627','#FF9A56','#FFFFFF','#D162A4','#B55690','#A30262'],
+};
+
 function parseSegmentDirective(dirStr, part){
   const d = dirStr.trim();
   const lower = d.toLowerCase();
-  if(lower==='l'){ part.justify='left'; return; }
-  if(lower==='c'){ part.justify='center'; return; }
-  if(lower==='r'){ part.justify='right'; return; }
+  if(lower==='l' || lower==='left'){ part.justify='left'; return; }
+  if(lower==='c' || lower==='center'){ part.justify='center'; return; }
+  if(lower==='r' || lower==='right'){ part.justify='right'; return; }
   if(d.startsWith('#:')){ part.customColor = '#'+d.slice(2); return; }
+
+  // bare /f has no sane default -- there's no "correct" font index to fall
+  // back to without knowing which font is currently selected, which this
+  // parser (a pure function of text alone) has no access to. No-op rather
+  // than guessing.
+  if(lower==='f'){ return; }
   if(lower.startsWith('f:')){ part.customFontIdx = parseInt(d.slice(2),10); return; }
-  if(lower.startsWith('scale:')){ part.customSize = parseFloat(d.slice(6)); return; }
+
+  // Percentage-based, not absolute pixels: /scale:150 means 150% of the
+  // fitted size, matching the same convention line.scale already uses
+  // internally for ## headings (133%) and -# small asides (66%). Bare
+  // /scale (no colon) is a no-op at 100%, valid syntax even though there's
+  // rarely a reason to write it.
+  if(lower==='scale' || lower.startsWith('scale:')){
+    const v = lower.startsWith('scale:') ? parseFloat(d.slice(6)) : 100;
+    part.customSize = isNaN(v) ? 100 : v;
+    return;
+  }
+
+  // Letter-spacing, percentage of the same base tracking amount the
+  // no-italic-font emphasis fallback already uses (see emphasisTracking in
+  // canvasRenderer.js) -- so /track:100 matches that fallback's own
+  // magnitude, and bare /track defaults to exactly that.
+  if(lower==='track' || lower.startsWith('track:')){
+    const v = lower.startsWith('track:') ? parseFloat(d.slice(6)) : 100;
+    part.customTracking = isNaN(v) ? 100 : v;
+    return;
+  }
+
+  // Baseline shift: positive raises, negative lowers, as a percentage of
+  // this part's own (post-scale) rendered size -- see the renderer's
+  // "basis math" comment for why that matters. Bare /basis defaults to a
+  // modest +30 (a superscript-like nudge) since a raise is the more common
+  // reason to reach for this than a lower.
+  if(lower==='basis' || lower.startsWith('basis:')){
+    const v = lower.startsWith('basis:') ? parseFloat(d.slice(6)) : 30;
+    part.customBasis = isNaN(v) ? 30 : v;
+    return;
+  }
+
+  // Per-character position jitter, percentage of a default magnitude. Bare
+  // /jitter defaults to 100%.
+  if(lower==='jitter' || lower.startsWith('jitter:')){
+    const v = lower.startsWith('jitter:') ? parseFloat(d.slice(7)) : 100;
+    part.customJitter = isNaN(v) ? 100 : v;
+    return;
+  }
+
+  // Flag/rainbow gradient shortcuts -- same effect as spelling out a /grad:
+  // with the right stops, just without needing to know or type them.
+  // :rev reverses the stripe order (e.g. /rainbow:rev).
+  for(const [name, colors] of Object.entries(FLAG_GRADIENTS)){
+    if(lower===name){ part.customGradient = colors; return; }
+    if(lower===name+':rev'){ part.customGradient = [...colors].reverse(); return; }
+  }
+
   if(lower==='fx0'){ part.customEffect = {type:'none'}; return; }
+
+  // Bare /fx1 and /fx2 get sane hardcoded defaults (a plain black outline /
+  // shadow) rather than erroring -- there's no live UI state available here
+  // to fall back to (this parser is a pure function of the text alone), so
+  // "a reasonable default" is the best available answer, matching the same
+  // reasoning as /track and /basis above.
+  if(lower==='fx1'){ part.customEffect = {type:'outline', color:'#000000', width:3}; return; }
   if(lower.startsWith('fx1,')){
     const p = d.slice(4).split(',');
     part.customEffect = {type:'outline', color:p[0], width:parseFloat(p[1])};
     return;
   }
+  if(lower==='fx2'){ part.customEffect = {type:'shadow', color:'#000000', blur:8, x:4, y:4}; return; }
   if(lower.startsWith('fx2,')){
     const p = d.slice(4).split(',');
     part.customEffect = {type:'shadow', color:p[0], blur:parseFloat(p[1]), x:parseFloat(p[2]), y:parseFloat(p[3])};
@@ -229,6 +306,9 @@ function parseSegmentDirective(dirStr, part){
       const color = '#'+pair.slice(hashIdx+1);
       return isNaN(n) ? null : {n, color};
     }).filter(Boolean).sort((a,b)=>a.n-b.n).map(s=>s.color);
+    // Bare /grad (no stops at all) has no sane default -- unlike track/basis/
+    // jitter, there's no single "neutral" 2-color gradient to fall back to,
+    // so this one genuinely requires at least 2 explicit stops.
     if(stops.length>=2) part.customGradient = stops.slice(0,4);
     return;
   }
@@ -239,7 +319,7 @@ function parseSegmentedLine(content){
   const re = /<([\s\S]*?)((?:\/[^\/<>]+)+)>/g;
   let m, lastIndex=0, found=false;
   const parts = [];
-  const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customEffect:null, customGradient:null});
+  const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customTracking:null, customBasis:null, customJitter:null, customEffect:null, customGradient:null});
   while((m = re.exec(content))){
     found = true;
     if(m.index > lastIndex){
@@ -265,19 +345,34 @@ export function buildLines(rawText, accent1On, accent2On){
     if(rawLine === '') return {isBlank:true};
     const line = applyEscapes(rawLine);
 
-    let type='normal', scale=1, content=line;
+    let type='normal', scale=1, content=line, dropCap=false, smallCaps=false;
     if(line.startsWith('## ')){ type='heading'; scale=1.33; content=line.slice(3); }
     else if(line.startsWith('-# ')){ type='small'; scale=0.66; content=line.slice(3); }
     else if(line.startsWith('> ')){ type='quote'; scale=1; content=line.slice(2); }
+    else if(line.startsWith('#D ')){ dropCap=true; content=line.slice(3); }
+    else if(line.startsWith('#S ')){ smallCaps=true; content=line.slice(3); }
+
+    // Rhyme-scheme marker: a bare ~A/~B/~C/~D at the very end of the line,
+    // stripped from display entirely. A=accent1, B=accent2, C/D are each
+    // accent's split-complement (resolved to an actual color at render
+    // time, since this parser has no access to live accent hex values).
+    // Checked before the /l /c /r suffix below, so both can coexist on one
+    // line ("text~A/r").
+    let rhymeLetter = null;
+    const rhymeMatch = content.match(/~([A-Da-d])(?=\s*(?:\/[lcr])?\s*$)/i);
+    if(rhymeMatch){
+      rhymeLetter = rhymeMatch[1].toUpperCase();
+      content = content.slice(0, rhymeMatch.index) + content.slice(rhymeMatch.index + rhymeMatch[0].length);
+    }
 
     const rawParts = parseSegmentedLine(content);
     if(rawParts){
       const parts = rawParts.map(p=>{
         let segments = tokenizeInline(p.text, accent1On, accent2On);
         if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
-        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customEffect:p.customEffect, customGradient:p.customGradient, segments };
+        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customGradient:p.customGradient, segments };
       });
-      return {isBlank:false, type, scale, parts};
+      return {isBlank:false, type, scale, parts, dropCap, smallCaps, rhymeLetter};
     }
 
     let alignOverride = null;
@@ -289,6 +384,6 @@ export function buildLines(rawText, accent1On, accent2On){
 
     let segments = tokenizeInline(content, accent1On, accent2On);
     if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
-    return {isBlank:false, type, scale, segments, alignOverride};
+    return {isBlank:false, type, scale, segments, alignOverride, dropCap, smallCaps, rhymeLetter};
   });
 }
