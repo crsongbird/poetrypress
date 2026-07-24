@@ -103,12 +103,28 @@ function emphasisTracking(fontDef, seg, size){
   return (fontDef.noItalic && seg.italic) ? size*0.14 : 0;
 }
 
-function measureSegWidth(ctx, fontDef, seg, size){
+// Shared between measureSegWidth and drawTextRun -- both MUST agree, or a
+// small-caps line's measured width (used for layout, alignment, and the
+// rhyme-marker position) disagrees with what's actually drawn. This is
+// exactly the bug that already happened once with tracking: drawTextRun
+// used style.customTracking but measureSegWidth had no idea it existed,
+// so a /track:140 word measured narrow but drew wide, and the text after
+// it ended up drawn on top of it.
+const SMALL_CAP_RATIO = 0.78;
+
+// trackingOverridePercent and smallCaps must match whatever drawTextRun is
+// about to actually use for this same segment -- see the comment above.
+function measureSegWidth(ctx, fontDef, seg, size, trackingOverridePercent, smallCaps){
   ctx.font = fontString(fontDef, seg, size);
-  const tracking = emphasisTracking(fontDef, seg, size);
-  if(tracking === 0) return ctx.measureText(seg.text).width;
+  const tracking = trackingOverridePercent!=null ? size*0.14*(trackingOverridePercent/100) : emphasisTracking(fontDef, seg, size);
+  if(!smallCaps && tracking === 0) return ctx.measureText(seg.text).width;
   let w = 0;
-  for(const ch of seg.text) w += ctx.measureText(ch).width + tracking;
+  for(const ch of seg.text){
+    const isLower = smallCaps && ch !== ch.toUpperCase() && ch === ch.toLowerCase();
+    if(isLower) ctx.font = fontString(fontDef, seg, size*SMALL_CAP_RATIO);
+    w += ctx.measureText(isLower ? ch.toUpperCase() : ch).width + tracking;
+    if(isLower) ctx.font = fontString(fontDef, seg, size);
+  }
   return w;
 }
 
@@ -186,7 +202,7 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
   const { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY,
           baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
 
-  const widths = segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size));
+  const widths = segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size, style.customTracking, style.smallCaps));
   let x = startX;
   let charSeed = 0; // advances across the whole run, not just per-segment, so jitter doesn't repeat identically at the start of every segment
 
@@ -269,16 +285,16 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
       // baseline/cap-height metrics without more invasive font-metrics
       // calls, so the Y-compensation below is an approximation (shift down
       // by the size delta) rather than exact baseline alignment.
-      const smallCapRatio = 0.78;
+      // uses the module-level SMALL_CAP_RATIO (shared with measureSegWidth)
       for(const ch of seg.text){
         const isLower = style.smallCaps && ch !== ch.toUpperCase() && ch === ch.toLowerCase();
         const drawCh = isLower ? ch.toUpperCase() : ch;
-        if(isLower) ctx.font = fontString(fontDef, seg, size*smallCapRatio);
+        if(isLower) ctx.font = fontString(fontDef, seg, size*SMALL_CAP_RATIO);
         const chW = ctx.measureText(drawCh).width;
 
         const jx = jitterMag > 0 ? charJitterOffset(charSeed*12.9898) * jitterMag : 0;
         const jy = jitterMag > 0 ? charJitterOffset(charSeed*78.233 + 4.12) * jitterMag * 0.6 : 0;
-        const py = cursorY + jy + (isLower ? size*(1-smallCapRatio) : 0);
+        const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0);
 
         if(hasEmoji && isEmojiCodePoint(ch.codePointAt(0))){
           const tinted = tintedEmojiCanvas(ch, ctx.font, emojiTint, size);
@@ -334,14 +350,14 @@ function computeLineWidths(ctx, line, baseSize, fontDef){
       const partFontDef = (part.customFontIdx!=null && FONTS[part.customFontIdx]) ? FONTS[part.customFontIdx] : fontDef;
       const partSize = partSizeFor(part, size);
       let total = 0;
-      for(const seg of part.segments) total += measureSegWidth(ctx, partFontDef, seg, partSize);
+      for(const seg of part.segments) total += measureSegWidth(ctx, partFontDef, seg, partSize, part.customTracking, line.smallCaps);
       return total;
     });
     const flowingTotal = line.parts.reduce((sum,p,i)=>p.justify===null ? sum+partWidths[i] : sum, 0);
     return { total: partWidths.reduce((a,b)=>a+b,0), partWidths, flowingTotal };
   }
   let total = 0;
-  for(const seg of line.segments) total += measureSegWidth(ctx, fontDef, seg, size);
+  for(const seg of line.segments) total += measureSegWidth(ctx, fontDef, seg, size, null, line.smallCaps);
   return { total, partWidths: null, flowingTotal: null };
 }
 
@@ -700,7 +716,7 @@ export function render(){
         ...line.segments.slice(1),
       ];
 
-      const dropCapWidth = measureSegWidth(ctx, fontDef, bigSegment, dropCapSize);
+      const dropCapWidth = measureSegWidth(ctx, fontDef, bigSegment, dropCapSize, null, line.smallCaps);
       drawTextRun(ctx, [bigSegment], paddingX, cursorY, dropCapSize, lineHeight, fontDef, style);
       let afterX = paddingX + dropCapWidth;
       if(restSegments.length){
