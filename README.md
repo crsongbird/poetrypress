@@ -1,6 +1,6 @@
 # Ruby's Poetry Press
 
-Your poem. Your theme. Your style. Formatted for social media.
+Your text. Your theme. Your style. Pressed on a page for social media.
 
 Single-page web app for turning verse into images. Fuck Photoshop and Canva.
 
