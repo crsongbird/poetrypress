@@ -292,10 +292,24 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
         if(isLower) ctx.font = fontString(fontDef, seg, size*SMALL_CAP_RATIO);
         const chW = ctx.measureText(drawCh).width;
 
-        const jx = jitterMag > 0 ? charJitterOffset(charSeed*12.9898) * jitterMag : 0;
-        const jy = jitterMag > 0 ? charJitterOffset(charSeed*78.233 + 4.12) * jitterMag * 0.6 : 0;
+        // Biased hard toward vertical: sideways jitter mostly reads as bad
+        // kerning, whereas vertical displacement reads as a shaking hand.
+        const jx = jitterMag > 0 ? charJitterOffset(charSeed*12.9898) * jitterMag * 0.28 : 0;
+        const jy = jitterMag > 0 ? charJitterOffset(charSeed*78.233 + 4.12) * jitterMag * 1.15 : 0;
+        // Rotation scales with the jitter percentage but hard-stops at 12deg;
+        // past that letters stop reading as letters.
+        const maxRot = Math.min(12, 4 * ((style.customJitter || 0) / 100)) * Math.PI / 180;
+        const rot = jitterMag > 0 ? charJitterOffset(charSeed*31.7 + 9.3) * maxRot : 0;
         const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0);
 
+        // Rotate ABOUT the glyph's centre while keeping absolute coordinates,
+        // so a gradient fill (defined in absolute space) stays aligned.
+        const rotating = rot !== 0;
+        if(rotating){
+          const rx = cx + jx + chW/2, ry = py + size/2;
+          ctx.save();
+          ctx.translate(rx, ry); ctx.rotate(rot); ctx.translate(-rx, -ry);
+        }
         if(hasEmoji && isEmojiCodePoint(ch.codePointAt(0))){
           const tinted = tintedEmojiCanvas(ch, ctx.font, emojiTint, size);
           ctx.shadowColor='transparent'; ctx.shadowBlur=0;
@@ -305,6 +319,7 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
           ctx.fillStyle = segFill;
           ctx.fillText(drawCh, cx+jx, py);
         }
+        if(rotating) ctx.restore();
         if(isLower) ctx.font = normalFont;
         cx += chW + tracking;
         charSeed++;

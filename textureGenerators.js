@@ -65,54 +65,6 @@
  * ink-spatter droplets, then the crack/river redesign) before it stuck.
  */
 
-function genWaterspots(w,h){
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const cctx = c.getContext('2d');
-  cctx.fillStyle = 'rgb(128,128,128)';
-  cctx.fillRect(0,0,w,h);
-  const count = 26;
-  for(let i=0;i<count;i++){
-    const r = (Math.random()*0.16+0.05) * Math.min(w,h);
-    const cx = Math.random()*w, cy = Math.random()*h;
-    const ringVal = 88 + Math.random()*20;
-    const centerVal = 142 + Math.random()*18;
-    const grad = cctx.createRadialGradient(cx,cy,r*0.1,cx,cy,r);
-    grad.addColorStop(0, `rgba(${centerVal},${centerVal*0.95},${centerVal*0.83},0.35)`);
-    grad.addColorStop(0.7, `rgba(${centerVal},${centerVal*0.95},${centerVal*0.83},0.14)`);
-    grad.addColorStop(0.86, `rgba(${ringVal},${ringVal*0.88},${ringVal*0.72},0.42)`);
-    grad.addColorStop(1, 'rgba(128,128,128,0)');
-    cctx.fillStyle = grad;
-    cctx.beginPath(); cctx.arc(cx,cy,r,0,Math.PI*2); cctx.fill();
-  }
-  return c;
-}
-
-function drawBlurredNoiseLayers(fctx, w, h, layers){
-  for(const layer of layers){
-    const gw = layer.cells;
-    const gh = Math.max(2, Math.round(layer.cells * (h/w)));
-    const small = document.createElement('canvas');
-    small.width = gw; small.height = gh;
-    const sctx = small.getContext('2d');
-    const img = sctx.createImageData(gw, gh);
-    const d = img.data;
-    for(let i=0;i<d.length;i+=4){
-      const v = layer.lo + Math.random()*(layer.hi-layer.lo);
-      d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255;
-    }
-    sctx.putImageData(img,0,0);
-
-    fctx.save();
-    fctx.globalAlpha = layer.alpha;
-    fctx.globalCompositeOperation = layer.blend || 'overlay';
-    fctx.filter = `blur(${layer.blur}px)`;
-    fctx.imageSmoothingEnabled = true;
-    fctx.drawImage(small, 0, 0, w, h);
-    fctx.restore();
-  }
-}
-
 function makeNoiseGrid(gw, gh){
   const g = new Float32Array(gw*gh);
   for(let i=0;i<g.length;i++) g[i] = Math.random();
@@ -341,325 +293,6 @@ function genAstralStars(w,h,accent1,accent2){
 // using a soft-edged radial alpha mask, then draw fresh shading into that now-
 // clean area) rather than just blending over it — this is what keeps a crater
 // reading as a crisp bowl+rim rather than a muddy blend with the noise under it.
-function drawKnockoutCircle(fctx, cx, cy, r, drawInner){
-  fctx.save();
-  fctx.globalCompositeOperation = 'destination-out';
-  const eraseGrad = fctx.createRadialGradient(cx,cy,0, cx,cy,r);
-  eraseGrad.addColorStop(0, 'rgba(0,0,0,1)');
-  eraseGrad.addColorStop(0.90, 'rgba(0,0,0,1)');
-  eraseGrad.addColorStop(1, 'rgba(0,0,0,0)');
-  fctx.fillStyle = eraseGrad;
-  fctx.beginPath();
-  fctx.arc(cx,cy,r,0,Math.PI*2);
-  fctx.fill();
-  fctx.restore();
-
-  fctx.save();
-  fctx.globalCompositeOperation = 'source-over';
-  drawInner(fctx, cx, cy, r);
-  fctx.restore();
-}
-
-function genAlienSurface(w,h){
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
-
-  // fine base noise, like dust/regolith — softened: lower contrast and a
-  // coarser downscale so the upscale blur smooths it further, plus a light,
-  // large-scale fBm elevation bias layered underneath so the surface has
-  // some gentle large-scale height variation rather than being pure grain.
-  const genW = Math.max(1,Math.round(w/6)), genH = Math.max(1,Math.round(h/6));
-
-  const elevOctaves = 3;
-  const elevBaseCells = 2+Math.random()*1.5;
-  const elevGrids = [];
-  let eAmp=1, eMaxAmp=0;
-  for(let i=0;i<elevOctaves;i++){
-    const freq = elevBaseCells*Math.pow(2.0,i);
-    const gw = Math.max(2, Math.round(freq)+1);
-    const gh = Math.max(2, Math.round(freq*(genH/genW))+1);
-    elevGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp: eAmp });
-    eMaxAmp += eAmp; eAmp *= 0.55;
-  }
-  const elevIntensity = 10+Math.random()*8;
-
-  const small = document.createElement('canvas');
-  small.width=genW; small.height=genH;
-  const sctx = small.getContext('2d');
-  const img = sctx.createImageData(genW,genH);
-  const d = img.data;
-  const noiseSpread = 32+Math.random()*24;
-  for(let py=0;py<genH;py++){
-    for(let px=0;px<genW;px++){
-      let total=0;
-      for(const o of elevGrids){
-        const nx=(px/genW)*o.freq, ny=(py/genH)*o.freq;
-        total += sampleNoiseGrid(o.grid,o.gw,o.gh,nx,ny)*o.amp;
-      }
-      const elevBias = (total/eMaxAmp - 0.5)*2*elevIntensity;
-      const v = 150 + elevBias + (Math.random()*2-1)*noiseSpread;
-      const idx=(py*genW+px)*4;
-      d[idx]=v; d[idx+1]=v; d[idx+2]=v; d[idx+3]=255;
-    }
-  }
-  sctx.putImageData(img,0,0);
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(small,0,0,w,h);
-
-  // craters: dramatically varied sizes, each knocking out the noise beneath it.
-  // Density itself swings per seed for real seed-to-seed variety, not just
-  // different positions at the same density.
-  const craterDensity = 0.5+Math.random()*1.6;
-  const craterCount = Math.round((w*h)/85000 * craterDensity);
-  for(let i=0;i<craterCount;i++){
-    const cx = Math.random()*w, cy = Math.random()*h;
-    const sizeRoll = Math.random();
-    let r;
-    if(sizeRoll < 0.55) r = (Math.random()*0.008+0.0015)*Math.min(w,h);
-    else if(sizeRoll < 0.88) r = (Math.random()*0.02+0.009)*Math.min(w,h);
-    else r = (Math.random()*0.05+0.025)*Math.min(w,h);
-
-    const terrainBase = 150; // matches the base noise layer's own center tone
-    const floorVal = terrainBase - (55+Math.random()*55);
-    const rimVal = terrainBase + (12+Math.random()*28);
-    drawKnockoutCircle(fctx, cx, cy, r, (ictx,icx,icy,ir)=>{
-      // A real crater slopes continuously from a deep center up to a raised
-      // rim — not a flat floor with a sudden ring. Build that slope with a
-      // handful of smoothstep-eased intermediate stops (steepest partway up
-      // the wall, easing off near the bottom and near the rim, like an
-      // actual bowl profile) instead of two flat plateaus.
-      const grad = ictx.createRadialGradient(icx,icy,0, icx,icy,ir);
-      const bowlSteps = 6;
-      for(let s=0; s<=bowlSteps; s++){
-        const t = s/bowlSteps;
-        const eased = t*t*(3-2*t); // smoothstep
-        const val = floorVal + (rimVal-floorVal)*eased;
-        const pos = t*0.82;
-        grad.addColorStop(pos, `rgba(${val},${val},${val},1)`);
-      }
-      grad.addColorStop(0.84, `rgba(${rimVal},${rimVal},${rimVal},1)`); // hold the rim ridge, thinner
-      grad.addColorStop(1.0, `rgba(${rimVal},${rimVal},${rimVal},0)`); // fade out over a much wider blur
-      ictx.fillStyle = grad;
-      ictx.beginPath();
-      ictx.arc(icx,icy,ir,0,Math.PI*2);
-      ictx.fill();
-    });
-  }
-
-  // sparse-to-moderate, thin, jagged, LONG cracks. Drawn fully opaque with
-  // values pushed near true black — color-burn (which this whole texture
-  // composites through) only reliably darkens when the source is genuinely
-  // close to 0, not just "dark"; a diluted semi-transparent mid-gray crack
-  // effectively disappears under color-burn regardless of opacity slider.
-  const crackCount = 32+Math.floor(Math.random()*88);
-  for(let i=0;i<crackCount;i++){
-    let x = Math.random()*w, y = Math.random()*h;
-    const segCount = 10+Math.floor(Math.random()*16);
-    fctx.save();
-    const crackVal = 3+Math.random()*14;
-    fctx.strokeStyle = `rgb(${crackVal},${crackVal},${crackVal})`;
-    fctx.lineWidth = 0.5+Math.random()*3.1;
-    fctx.beginPath();
-    fctx.moveTo(x,y);
-    let angle = Math.random()*Math.PI*2;
-    for(let s=0;s<segCount;s++){
-      angle += (Math.random()*2-1)*0.9; // jagged wander
-      const len = (Math.random()*0.022+0.012)*Math.max(w,h);
-      x += Math.cos(angle)*len;
-      y += Math.sin(angle)*len;
-      fctx.lineTo(x,y);
-    }
-    fctx.stroke();
-    fctx.restore();
-  }
-
-  return full;
-}
-
-function genHabitableSurface(w,h){
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
-
-  const workDiv = 4;
-  const workW = Math.max(24, Math.round(w/workDiv));
-  const workH = Math.max(24, Math.round(h/workDiv));
-
-  // Base height field — one fBm, used both to threshold a genuine land/sea
-  // boundary (not a soft gradient blur) and to shade elevation within land.
-  const heightOctaves = 6, heightGain = 0.5, heightLacunarity = 2.0;
-  const heightBaseCells = 2.5+Math.random()*2;
-  const heightGrids = [];
-  let amp=1, maxAmp=0;
-  for(let i=0;i<heightOctaves;i++){
-    const freq = heightBaseCells*Math.pow(heightLacunarity,i);
-    const gw = Math.max(2, Math.round(freq)+1);
-    const gh = Math.max(2, Math.round(freq*(workH/workW))+1);
-    heightGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp });
-    maxAmp += amp; amp *= heightGain;
-  }
-  const heightMaxAmp = maxAmp;
-
-  function heightAt(fullX, fullY){
-    let total=0;
-    for(const o of heightGrids){
-      const nx=(fullX/w)*o.freq, ny=(fullY/h)*o.freq;
-      total += sampleNoiseGrid(o.grid,o.gw,o.gh,nx,ny)*o.amp;
-    }
-    return total/heightMaxAmp; // 0-1
-  }
-
-  // Ridge/mountain noise — a separate, higher-frequency fBm where each octave
-  // is transformed via 1-abs(2n-1), turning smooth bumps into sharp creases.
-  // This is the classic "ridged multifractal" trick used for mountain-range
-  // terrain, and it's the piece that actually gives linear structure instead
-  // of everything reading as one soft blob.
-  const ridgeOctaves = 5, ridgeGain = 0.55, ridgeLacunarity = 2.1;
-  const ridgeBaseCells = 5+Math.random()*4;
-  const ridgeGrids = [];
-  amp=1; maxAmp=0;
-  for(let i=0;i<ridgeOctaves;i++){
-    const freq = ridgeBaseCells*Math.pow(ridgeLacunarity,i);
-    const gw = Math.max(2, Math.round(freq)+1);
-    const gh = Math.max(2, Math.round(freq*(workH/workW))+1);
-    ridgeGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp });
-    maxAmp += amp; amp *= ridgeGain;
-  }
-  const ridgeMaxAmp = maxAmp;
-
-  function ridgeAt(fullX, fullY){
-    let total=0;
-    for(const o of ridgeGrids){
-      const nx=(fullX/w)*o.freq, ny=(fullY/h)*o.freq;
-      const n = sampleNoiseGrid(o.grid,o.gw,o.gh,nx,ny);
-      total += (1-Math.abs(n*2-1))*o.amp;
-    }
-    return total/ridgeMaxAmp; // 0-1, peaks near ridge crests
-  }
-
-  // Sea level as a PERCENTILE of the actual achieved height distribution,
-  // not a fixed absolute threshold — a raw fBm sum's practical range varies
-  // seed to seed, so a fixed threshold could occasionally sit above nearly
-  // everything the field actually reaches, producing all-ocean. Sampling the
-  // real distribution and picking a level that guarantees a genuine land
-  // fraction fixes this by construction, regardless of the noise's shape.
-  const heightSamples = new Float32Array(2000);
-  for(let s=0;s<2000;s++) heightSamples[s] = heightAt(Math.random()*w, Math.random()*h);
-  const sortedHeights = Float32Array.from(heightSamples).sort();
-  const landFraction = 0.35+Math.random()*0.4; // 35%-75% of the surface is land
-  const seaLevel = sortedHeights[Math.max(0, Math.min(sortedHeights.length-1, Math.floor((1-landFraction)*sortedHeights.length)))];
-
-  const bandCount = 4+Math.floor(Math.random()*3); // 4-6 discrete elevation bands
-
-  const small = document.createElement('canvas');
-  small.width=workW; small.height=workH;
-  const sctx = small.getContext('2d');
-  const img = sctx.createImageData(workW, workH);
-  const d = img.data;
-  for(let py=0; py<workH; py++){
-    for(let px=0; px<workW; px++){
-      const fx = (px/workW)*w, fy = (py/workH)*h;
-      const hgt = heightAt(fx, fy);
-      let val;
-      if(hgt <= seaLevel){
-        const depth = seaLevel>0.001 ? 1-(hgt/seaLevel) : 0;
-        val = 85 - depth*55; // shallow/coast ~85 down to deep ~30
-      } else {
-        const elevAboveSea = (hgt-seaLevel)/Math.max(0.001, 1-seaLevel);
-        const bandIdx = Math.min(bandCount-1, Math.floor(elevAboveSea*bandCount));
-        const bandFrac = bandIdx/(bandCount-1);
-        // Land needs to sit close to true white to actually read as "land"
-        // under color-burn — even the old ceiling of 230/255 still caused
-        // real, visible darkening (no genuinely bright/protected region to
-        // contrast against the near-black ocean), so the whole thing read as
-        // varying shades of dark instead of a clear land/water split.
-        let landVal = 175 + bandFrac*77; // 175 (lowland) to 252 (highland, near no-op)
-
-        // ridges only affect land, and matter more at higher elevation bands
-        // — mountains form at altitude, not down at the coastline.
-        const ridgeInfluence = 0.15+bandFrac*0.5;
-        landVal += (ridgeAt(fx,fy)-0.5)*50*ridgeInfluence;
-        val = landVal;
-      }
-      val = Math.max(15, Math.min(255, val));
-      const idx=(py*workW+px)*4;
-      d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
-    }
-  }
-  sctx.putImageData(img,0,0);
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(small,0,0,w,h);
-
-  // Rivers — same steering/branching mechanic as before, now sampling the
-  // height field directly. "Connect two low points" is a more physically apt
-  // read in this model too: rivers terminate toward the sea.
-  function findLowPoint(){
-    let best = null;
-    for(let attempt=0; attempt<14; attempt++){
-      const px = Math.random()*w, py = Math.random()*h;
-      const hgt = heightAt(px,py);
-      if(!best || hgt < best.h) best = {x:px, y:py, h:hgt};
-    }
-    return best;
-  }
-  function strokePolyline(pts, lineW, val){
-    if(pts.length < 2) return;
-    fctx.save();
-    fctx.strokeStyle = `rgb(${val},${val},${val})`;
-    fctx.lineWidth = lineW;
-    fctx.lineCap = 'round';
-    fctx.lineJoin = 'round';
-    fctx.beginPath();
-    fctx.moveTo(pts[0][0], pts[0][1]);
-    for(let i=1;i<pts.length;i++) fctx.lineTo(pts[i][0], pts[i][1]);
-    fctx.stroke();
-    fctx.restore();
-  }
-
-  const riverSystemCount = 2+Math.floor(Math.random()*6);
-  for(let i=0; i<riverSystemCount; i++){
-    const a = findLowPoint(), b = findLowPoint();
-    let x = a.x, y = a.y;
-    let angle = Math.atan2(b.y-y, b.x-x);
-    const mainPts = [[x,y]];
-    const segCount = 40+Math.floor(Math.random()*40);
-    const branchStarts = [];
-    for(let s=0; s<segCount; s++){
-      const toTarget = Math.atan2(b.y-y, b.x-x);
-      let diff = toTarget-angle;
-      while(diff>Math.PI) diff-=Math.PI*2;
-      while(diff<-Math.PI) diff+=Math.PI*2;
-      angle += diff*0.18 + (Math.random()*2-1)*0.32;
-      const len = (Math.random()*0.018+0.013)*Math.max(w,h);
-      x += Math.cos(angle)*len;
-      y += Math.sin(angle)*len;
-      mainPts.push([x,y]);
-      if(s>3 && s<segCount-3 && Math.random()<0.16) branchStarts.push({x,y,angle});
-    }
-
-    const riverVal = 3+Math.random()*13;
-    const baseWidth = (0.006+Math.random()*0.014)*Math.max(w,h);
-    strokePolyline(mainPts, baseWidth, riverVal);
-
-    for(const br of branchStarts){
-      let bx=br.x, by=br.y, bangle = br.angle + (Math.random()<0.5?1:-1)*(0.5+Math.random()*0.9);
-      const bPts = [[bx,by]];
-      const bSeg = 5+Math.floor(Math.random()*8);
-      for(let s=0;s<bSeg;s++){
-        bangle += (Math.random()*2-1)*0.35;
-        const len = (Math.random()*0.015+0.008)*Math.max(w,h);
-        bx += Math.cos(bangle)*len;
-        by += Math.sin(bangle)*len;
-        bPts.push([bx,by]);
-      }
-      strokePolyline(bPts, baseWidth*(0.4+Math.random()*0.35), riverVal);
-    }
-  }
-
-  return full;
-}
-
 function genInkBleed(w,h){
   const workDiv = 4;
   const workW = Math.max(24, Math.round(w/workDiv));
@@ -954,41 +587,6 @@ function genSnow(w,h){
 // a tip, plus a center vein), scattered and rotated. Kept neutral gray like Flowers
 // so it reads correctly via 'overlay' on both green (Understory) and warm (Ember
 // Fall) backgrounds.
-function drawLeafShape(ctx, cx, cy, size, rot, shade){
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(rot);
-  ctx.beginPath();
-  ctx.moveTo(0,size*0.5);
-  ctx.quadraticCurveTo(size*0.55, 0, 0, -size*0.5);
-  ctx.quadraticCurveTo(-size*0.55, 0, 0, size*0.5);
-  ctx.closePath();
-  ctx.fillStyle = `rgb(${shade},${shade*0.92},${shade*0.72})`;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(0, size*0.45); ctx.lineTo(0, -size*0.45);
-  ctx.strokeStyle = `rgba(0,0,0,0.18)`;
-  ctx.lineWidth = Math.max(0.6, size*0.045);
-  ctx.stroke();
-  ctx.restore();
-}
-function genLeaves(w,h){
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
-  fctx.fillStyle='rgb(128,128,128)';
-  fctx.fillRect(0,0,w,h);
-  const count = Math.max(6, Math.round((w*h)/60000));
-  for(let i=0;i<count;i++){
-    const cx = Math.random()*w, cy = Math.random()*h;
-    const size = (Math.random()*0.03+0.018)*Math.min(w,h);
-    const rot = Math.random()*Math.PI*2;
-    const shade = 140+Math.random()*55;
-    drawLeafShape(fctx, cx, cy, size, rot, shade);
-  }
-  return full;
-}
-
 // Wisps: glowing motes that take on the current accent colors (interpolated between
 // accent one and accent two per particle) rather than a fixed palette. Three kinds:
 // simple glow dots, curved-trail motes (an actual arc via quadraticCurveTo, not a
@@ -1087,70 +685,6 @@ function genRainStreaks(w,h){
 // much-lower-intensity crackle layer generated at a vertically squished working
 // resolution then stretched back to full height — elongating every cell so the
 // grain reads as vertically stretched, like natural leather.
-function genLeather(w,h){
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
-
-  // base: soft paper-like grain (same technique as Parchment — narrow spread,
-  // coarse downscale — not the noisier Dustmote spread this used before)
-  const genW = Math.max(1,Math.round(w/3)), genH = Math.max(1,Math.round(h/3));
-  const small = document.createElement('canvas');
-  small.width=genW; small.height=genH;
-  const sctx = small.getContext('2d');
-  const img = sctx.createImageData(genW,genH);
-  const d = img.data;
-  for(let i=0;i<d.length;i+=4){
-    const v = 205+(Math.random()*2-1)*32;
-    d[i]=v; d[i+1]=v*0.95; d[i+2]=v*0.85; d[i+3]=255;
-  }
-  sctx.putImageData(img,0,0);
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(small,0,0,w,h);
-
-  const workW = Math.max(24, Math.round(w/6));
-  const workHNormal = Math.max(24, Math.round(h/6));
-  const workH = Math.max(12, Math.round(workHNormal*0.5));
-
-  const seedCount = 150;
-  const seeds = [];
-  for(let i=0;i<seedCount;i++) seeds.push([Math.random()*workW, Math.random()*workH]);
-
-  const crackWidth = 0.06;
-  const crackSmall = document.createElement('canvas');
-  crackSmall.width = workW; crackSmall.height = workH;
-  const cctx = crackSmall.getContext('2d');
-  const cimg = cctx.createImageData(workW, workH);
-  const cd = cimg.data;
-  for(let py=0; py<workH; py++){
-    for(let px=0; px<workW; px++){
-      let d1=Infinity, d2=Infinity;
-      for(const [sx,sy] of seeds){
-        const dx=px-sx, dy=py-sy;
-        const dist = dx*dx+dy*dy;
-        if(dist<d1){ d2=d1; d1=dist; } else if(dist<d2){ d2=dist; }
-      }
-      const r1=Math.sqrt(d1), r2=Math.sqrt(d2);
-      const diff = (r2-r1)/(r2+1e-6);
-      const idx=(py*workW+px)*4;
-      // crack lines much darker, non-crack areas near-white so multiply barely
-      // touches them — the darkening should come from the cracks specifically
-      const val = diff < crackWidth ? 45 : 235;
-      cd[idx]=val; cd[idx+1]=val; cd[idx+2]=val; cd[idx+3]=255;
-    }
-  }
-  cctx.putImageData(cimg,0,0);
-
-  fctx.save();
-  fctx.globalAlpha = 0.55;
-  fctx.globalCompositeOperation = 'multiply';
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(crackSmall, 0, 0, w, h);
-  fctx.restore();
-
-  return full;
-}
-
 // Dotwork: a regular dot grid (classic print halftone) where each dot's radius is
 // modulated by a coarse noise field — genuinely geometric (fixed grid spacing)
 // but with organic size variation, distinct from Squares' flat-shaded triangles.
@@ -1310,6 +844,153 @@ function withSeed(seed, fn){
   finally { Math.random = original; }
 }
 
+// A sigil is drawn, then gone —
+// the mark remembers nothing.
+// Ink on nothing. Ink.
+function genSigils(w,h){
+  const c = document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0,0,w,h);
+
+  const unit = Math.max(w,h);
+  const count = Math.round(38 + Math.random()*26);
+
+  for(let i=0;i<count;i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const r = unit*(0.012 + Math.random()*0.038);
+    // some sigils advance out of the ground, some recede back into it
+    const emerging = Math.random() < 0.62;
+    const tone = emerging ? 18 : 226;
+    const alpha = 0.30 + Math.random()*0.55;
+    ctx.strokeStyle = `rgba(${tone},${tone},${tone},${alpha})`;
+    ctx.lineWidth = Math.max(0.6, unit*0.0012*(0.5+Math.random()*1.8));
+    ctx.lineCap = 'round';
+
+    const strokes = 3 + Math.floor(Math.random()*4);
+    const rot = Math.random()*Math.PI*2;
+    for(let s=0;s<strokes;s++){
+      const a1 = rot + (s/strokes)*Math.PI*2 + (Math.random()-0.5)*0.9;
+      const a2 = a1 + (Math.random()-0.5)*2.4;
+      const r1 = r*(0.15+Math.random()*0.5);
+      const r2 = r*(0.55+Math.random()*0.6);
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(a1)*r1, cy+Math.sin(a1)*r1);
+      if(Math.random()<0.4){
+        ctx.quadraticCurveTo(cx, cy, cx+Math.cos(a2)*r2, cy+Math.sin(a2)*r2);
+      } else {
+        ctx.lineTo(cx+Math.cos(a2)*r2, cy+Math.sin(a2)*r2);
+      }
+      ctx.stroke();
+    }
+    if(Math.random()<0.45){
+      ctx.beginPath();
+      ctx.arc(cx, cy, r*(0.2+Math.random()*0.45), 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  return c;
+}
+
+// Counting backwards from
+// a number nobody wrote down.
+// The grid keeps the score.
+function genMathNoise(w,h){
+  const c = document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0,0,w,h);
+
+  const cell = Math.max(6, Math.round(Math.max(w,h)/72));
+  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
+  const gw = Math.max(2, Math.round(cols/6)), gh = Math.max(2, Math.round(rows/6));
+  const field = makeNoiseGrid(gw, gh);
+
+  for(let ry=0; ry<rows; ry++){
+    for(let rx=0; rx<cols; rx++){
+      const n = sampleNoiseGrid(field, gw, gh, rx/cols, ry/rows);
+      // low field values stay empty ground; the pattern surfaces out of it
+      if(n < 0.46) continue;
+      const strength = (n-0.46)/0.54;
+      const x = rx*cell, y = ry*cell;
+      const pad = cell*0.22;
+      const dark = Math.random() < 0.7;
+      const tone = dark ? 26 : 232;
+      ctx.globalAlpha = 0.18 + strength*0.62*Math.random();
+      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`;
+      ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
+      ctx.lineWidth = Math.max(0.5, cell*0.09);
+
+      const kind = Math.floor(Math.random()*4);
+      if(kind===0){
+        ctx.fillRect(x+pad, y+pad, cell-pad*2, cell-pad*2);
+      } else if(kind===1){
+        ctx.strokeRect(x+pad, y+pad, cell-pad*2, cell-pad*2);
+      } else if(kind===2){
+        ctx.beginPath();
+        ctx.moveTo(x+pad, y+cell*0.5);
+        ctx.lineTo(x+cell-pad, y+cell*0.5);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x+cell*0.5, y+pad);
+        ctx.lineTo(x+cell*0.5, y+cell-pad);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
+
+// Gold beaten so thin
+// it forgets it was ever
+// heavier than light.
+function genMetalLeaf(w,h){
+  const c = document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0,0,w,h);
+
+  const unit = Math.max(w,h);
+  const flakes = Math.round(120 + Math.random()*90);
+
+  for(let i=0;i<flakes;i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const r = unit*(0.015 + Math.random()*0.055);
+    const sides = 5 + Math.floor(Math.random()*4);
+    const rot = Math.random()*Math.PI*2;
+
+    const pts = [];
+    for(let s=0;s<sides;s++){
+      const a = rot + (s/sides)*Math.PI*2;
+      const rr = r*(0.55 + Math.random()*0.7);
+      pts.push([cx+Math.cos(a)*rr, cy+Math.sin(a)*rr]);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]);
+    ctx.closePath();
+
+    const lift = 178 + Math.floor(Math.random()*66);
+    ctx.globalAlpha = 0.16 + Math.random()*0.4;
+    ctx.fillStyle = `rgb(${lift},${lift},${lift})`;
+    ctx.fill();
+
+    // the seam where one leaf overlaps the next
+    ctx.globalAlpha = 0.10 + Math.random()*0.25;
+    ctx.strokeStyle = 'rgb(48,48,48)';
+    ctx.lineWidth = Math.max(0.5, unit*0.0009);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
+
 // Cache of already-generated textures, keyed by type+dims+colors+invert+seed.
 // A plain object here never shrinks -- a long session of seed-rerolling and
 // texture-browsing accumulates many multi-megapixel offscreen canvases with
@@ -1326,19 +1007,12 @@ export function getTextureCanvas(type, w, h, accent1, accent2, invert, seed){
   if(textureCache.has(key)) return textureCache.get(key);
 
   let result = withSeed(seed, () => {
-  let result;
-  if(type === 'waterspots'){
-    result = genWaterspots(w,h);
-  } else if(type === 'clouds'){
+  let result;  if(type === 'clouds'){
     result = genClouds(w,h);
   } else if(type === 'flowers'){
     result = genFlowers(w,h);
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h);
-  } else if(type === 'alienSurface'){
-    result = genAlienSurface(w,h);
-  } else if(type === 'habitableSurface'){
-    result = genHabitableSurface(w,h);
   } else if(type === 'crackedglaze'){
     result = genCrackedGlaze(w,h);
   } else if(type === 'bokeh'){
@@ -1353,23 +1027,23 @@ export function getTextureCanvas(type, w, h, accent1, accent2, invert, seed){
     result = genAstralStars(w,h,accent1,accent2);
   } else if(type === 'snow'){
     result = genSnow(w,h);
-  } else if(type === 'leaves'){
-    result = genLeaves(w,h);
   } else if(type === 'magicparticles'){
     result = genMagicParticles(w,h,accent1,accent2);
   } else if(type === 'rainstreaks'){
     result = genRainStreaks(w,h);
-  } else if(type === 'leather'){
-    result = genLeather(w,h);
   } else if(type === 'halftone'){
     result = genHalftone(w,h);
   } else if(type === 'brushstrokes'){
     result = genBrushstrokes(w,h);
+  } else if(type === 'sigils'){
+    result = genSigils(w,h);
+  } else if(type === 'mathnoise'){
+    result = genMathNoise(w,h);
+  } else if(type === 'metalleaf'){
+    result = genMetalLeaf(w,h);
   } else {
     let genW = w, genH = h;
     if(type==='grain'){ genW=Math.max(1,Math.round(w/5)); genH=Math.max(1,Math.round(h/5)); }
-    else if(type==='paper'){ genW=Math.max(1,Math.round(w/3)); genH=Math.max(1,Math.round(h/3)); }
-    else if(type==='canvas'){ genW=Math.max(1,Math.round(w/70)); genH=Math.max(1,Math.round(h/2)); }
 
     const small = document.createElement('canvas');
     small.width = genW; small.height = genH;
@@ -1380,7 +1054,6 @@ export function getTextureCanvas(type, w, h, accent1, accent2, invert, seed){
       let v;
       if(type==='noise') v = Math.random()*255;
       else if(type==='grain') v = 128+(Math.random()*2-1)*100;
-      else if(type==='canvas') v = 128+(Math.random()*2-1)*75;
       else v = 205+(Math.random()*2-1)*32;
       d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255;
     }

@@ -208,3 +208,313 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
   .check-row label{ font-size:15px; }
   .preset-label{ font-size:10.5px; }
 }
+
+/* ============================================================
+   MOBILE LAYOUT
+   Applied only when appEvents.js has confirmed an actual mobile
+   device and set .is-mobile on <body>. Deliberately not a media
+   query: a narrow desktop window is still a desktop, with a mouse
+   and a keyboard that never covers anything.
+
+   These rules OVERRIDE the media query above rather than running
+   beside it. That distinction matters: the media query already
+   builds a full mobile layout (fixed-height flex column, page does
+   not scroll, .controls scrolls internally), so anything here that
+   merely *added* to it ended up fighting it. In particular
+   #poemCanvas is styled by ID up there, which outranks any
+   class-based rule -- so the canvas is re-sized by ID here too.
+   ============================================================ */
+
+:root {
+  --preview-frac: 0.30;
+  --kb-height: 0px;
+  --tabbar-h: 58px;
+  /* vh on mobile Chrome means "viewport with the URL bar hidden" --
+     always taller than what is actually visible. appEvents.js replaces
+     this with visualViewport.height, the real number. The 100vh is only
+     a fallback for the instant before that runs. */
+  --vvh: 100vh;
+}
+
+.tabbar { display: none; }
+
+/* the whole app is exactly as tall as the screen really is */
+body.is-mobile .app { height: var(--vvh); overflow: hidden; flex-direction: column; }
+body.is-mobile .app-header { font-size: 12px; padding: 5px 8px; }
+
+/* preview on top, fixed share of the real viewport */
+body.is-mobile .stage {
+  order: 1;
+  flex: 0 0 auto;
+  /* --vvh-stable ignores the keyboard, so the preview does not shrink
+     out from under you mid-edit. The tab bar still uses --vvh. */
+  height: calc(var(--vvh-stable, var(--vvh)) * var(--preview-frac));
+  gap: 4px;
+  padding: 4px 8px 6px;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+/* ID selector, because the media query sizes this by ID as well */
+body.is-mobile #poemCanvas {
+  max-height: 100%;
+  max-width: 100%;
+  height: auto;
+  width: auto;
+}
+/* the wrapper clips (overflow:hidden), so it must never be shorter
+   than the canvas it holds -- that is what cropped the preview */
+/* The frame keeps ONE shape no matter the card's aspect ratio -- the card
+   letterboxes inside it. Previously the frame reshaped itself to match, so
+   switching to 16:9 moved everything and left dead space. */
+body.is-mobile .canvas-wrap {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  background: rgba(0,0,0,0.25);
+  border-radius: 3px;
+}
+body.is-mobile .canvas-wrap canvas { margin: auto; }
+
+/* controls take the rest and scroll inside themselves; the page
+   itself does not scroll, so the clearance for the tab bar has to
+   live in here rather than on .app */
+body.is-mobile .controls {
+  order: 3;
+  flex: 1 1 auto;
+  max-height: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--tabbar-h) + 20px);
+}
+
+/* one panel at a time */
+body.is-mobile .card[data-tab] { display: none; }
+body.is-mobile .card[data-tab].tab-active { display: block; }
+
+/* Anchored by top rather than bottom: position:fixed resolves against
+   the layout viewport, which on Android Chrome is taller than what you
+   can see, so bottom:0 can land underneath the URL bar. The page does
+   not scroll here, so top is exact. */
+body.is-mobile .tabbar {
+  display: flex;
+  position: fixed;
+  left: 0; right: 0;
+  top: calc(var(--vvh) - var(--tabbar-h));
+  z-index: 60;
+  height: var(--tabbar-h);
+  background: rgba(12,14,20,0.96);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255,255,255,0.09);
+}
+body.is-mobile .tab-btn {
+  flex: 1 1 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  border: 0; background: transparent;
+  color: var(--text-dim, #8b93a7);
+  font-size: 10px; letter-spacing: 0.04em;
+  font-family: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+body.is-mobile .tab-btn .tab-ico { font-size: 17px; line-height: 1; }
+body.is-mobile .tab-btn.active { color: var(--text-main, #f2f2ef); }
+
+/* was sitting directly under the tab bar at a lower z-index */
+body.is-mobile .download-btn {
+  top: calc(var(--vvh) - var(--tabbar-h) - 52px);
+  bottom: auto;
+  right: 12px;
+  z-index: 70;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+/* presets read better as a swipe than as a wall */
+/* Aspects is its own page now, so the presets get a real grid instead of a
+   sideways scroller -- no hunting left and right for a mood. */
+body.is-mobile .preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  overflow: visible;
+}
+body.is-mobile .preset-btn { width: auto; }
+body.is-mobile .preset-label { font-size: clamp(9px, 2.4vw, 11px); }
+
+/* the poem is the point — give it room, measured not guessed */
+body.is-mobile #poemText {
+  height: calc(var(--vvh) * 0.40);
+  /* floor so it is editable without pinch-zooming, ceiling so it does not
+     balloon on a large phone or tablet. vw is safe here -- horizontal units
+     are not affected by the URL bar the way vh is. */
+  font-size: clamp(13px, 3.3vw, 15px);
+  line-height: 1.5;
+}
+
+/* every pixel of chrome costs a line of poem on a small screen */
+body.is-mobile .card { padding: 10px; margin-bottom: 10px; }
+body.is-mobile .card-title { font-size: clamp(10px, 2.6vw, 12px); margin-bottom: 6px; }
+body.is-mobile .card-grid { gap: 8px; }
+body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
+body.is-mobile .kofi-link { font-size: 10px; }
+
+/* no zoom-on-focus, bigger targets */
+body.is-mobile input[type="text"],
+body.is-mobile input[type="number"],
+body.is-mobile select,
+body.is-mobile textarea { font-size: clamp(14px, 3.5vw, 16px); }
+
+/* the picker must clear the tab bar and the download button */
+body.is-mobile #clr-picker { z-index: 80; }
+body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(11px, 2.9vw, 13px); }
+
+
+/* drawn tab icons — one stroke weight, one grid, so they read as a set */
+body.is-mobile .tab-ico { display: block; width: 21px; height: 21px; }
+body.is-mobile .tab-ico svg { width: 100%; height: 100%; display: block; }
+body.is-mobile .tab-btn { font-size: clamp(9px, 2.4vw, 11px); gap: 2px; }
+
+/* the divider: drag it to trade preview height against controls */
+.drag-handle { display: none; }
+body.is-mobile .drag-handle {
+  display: flex;
+  order: 2;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  flex: 0 0 auto;
+  cursor: row-resize;
+  touch-action: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+body.is-mobile .drag-grip {
+  width: 44px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.28);
+}
+body.is-mobile.dragging-divider { user-select: none; }
+
+/* the canvas can be pinched and dragged inside its frame */
+body.is-mobile .canvas-wrap { touch-action: none; }
+body.is-mobile #poemCanvas { transform-origin: center center; will-change: transform; }
+
+/* collapsible sections need to look tappable */
+body.is-mobile summary.card-title { cursor: pointer; list-style: none; padding: 2px 0; }
+body.is-mobile summary.card-title::-webkit-details-marker { display: none; }
+body.is-mobile summary.card-title::after { content: " ▾"; opacity: 0.55; }
+body.is-mobile details[open] > summary.card-title::after { content: " ▴"; }
+
+
+/* ---------- Unfixable Vellum header ---------- */
+.app-header{ align-items:center; justify-content:space-between; gap:8px; }
+.app-header-title{ flex:1 1 auto; text-align:center; font-weight:700; letter-spacing:0.04em; }
+.app-header-spacer{ flex:0 0 auto; width:76px; }
+.app-header .kofi-link{ flex:0 0 auto; width:76px; text-align:right; font-style:italic; font-size:0.62em; opacity:0.75; }
+body.is-mobile .app-header{ padding:4px 8px; }
+body.is-mobile .app-header-spacer,
+body.is-mobile .app-header .kofi-link{ width:62px; }
+
+/* download lives in the corner of the viewer now, out of the controls' way */
+body.is-mobile .canvas-wrap{ position:relative; }
+body.is-mobile .download-btn{
+  position:absolute; top:auto; left:auto;
+  right:7px; bottom:7px; z-index:45;
+  padding:6px 11px; font-size:clamp(11px,2.8vw,13px);
+  opacity:0.93;
+}
+
+/* the grip was eating real estate */
+body.is-mobile .drag-handle{ height:11px; }
+body.is-mobile .drag-grip{ width:34px; height:3px; }
+
+/* tighter bar */
+body.is-mobile .tabbar{ padding:0 2px; }
+body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
+:root{ --tabbar-h: 50px; }
+
+/* ---------- PML help ---------- */
+.pml-help h4{
+  margin:12px 0 4px; font-size:1em; letter-spacing:0.06em;
+  text-transform:uppercase; color:var(--accent);
+}
+.pml-help h4:first-child{ margin-top:2px; }
+.pml-help p{ margin:0 0 4px; }
+.pml-help dl{ margin:0 0 4px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
+.pml-help dt{ color:var(--text-main); }
+.pml-help dd{ margin:0; }
+.pml-help .fontlist{
+  margin:0; columns:2; column-gap:14px; font-size:0.86em; line-height:1.45;
+}
+
+/* ---------- Spellcrafting & Grimoire ---------- */
+.spell-wheel{
+  display:flex; gap:8px; overflow-x:auto; padding:2px 0 8px;
+  scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch;
+}
+.spell-wheel:empty{ display:none; }
+.spell-chip{
+  flex:0 0 auto; scroll-snap-align:start; cursor:pointer;
+  min-width:104px; max-width:104px;
+  border:1px solid var(--line); border-radius:3px;
+  background:var(--bg-deep); padding:0; overflow:hidden;
+  font-family:inherit; color:var(--text-dim);
+}
+.spell-chip .chip-swatch{ height:34px; display:block; }
+.spell-chip .chip-name{
+  display:block; padding:5px 6px; font-size:10.5px; letter-spacing:0.04em;
+  text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.spell-chip.selected{ border-color:var(--accent); color:var(--text-main); }
+
+.btn-row{ display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
+.btn-row > button{ flex:1 1 0; min-width:84px; }
+.btn-major, .btn-danger{
+  padding:8px 12px; border-radius:2px; cursor:pointer;
+  font-family:'Playfair Display', serif; font-size:13px; letter-spacing:0.03em;
+  border:2px solid var(--accent); background:var(--accent); color:#1a1610;
+  transition:opacity .12s ease;
+}
+.btn-danger{ border-color:#7d2230; background:#7d2230; color:#ffe9ec; }
+/* disabled reads as hollow, not merely dim — it must be obvious it is inert */
+.btn-major:disabled, .btn-danger:disabled{
+  background:transparent; color:var(--text-dim);
+  border-color:var(--line); cursor:not-allowed; opacity:0.75;
+}
+.subcard{ margin-top:10px; border-top:1px solid var(--line); padding-top:7px; }
+.subcard > summary{
+  cursor:pointer; list-style:none; font-size:11px; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--text-dim);
+}
+.subcard > summary::-webkit-details-marker{ display:none; }
+.subcard > summary::after{ content:" ▾"; opacity:.55; }
+.subcard[open] > summary::after{ content:" ▴"; }
+#grimoireList{ width:100%; font-size:12px; }
+
+/* ---------- modal ---------- */
+.modal-veil{
+  position:fixed; inset:0; z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.62); padding:18px;
+}
+.modal-veil[hidden]{ display:none; }
+.modal{
+  width:min(420px, 100%); max-height:80vh; overflow:auto;
+  background:var(--bg-deep); border:1px solid var(--line);
+  border-radius:4px; padding:16px;
+  box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
+}
+.modal-title{
+  margin:0 0 6px; font-family:'Playfair Display', serif;
+  font-size:15px; letter-spacing:0.05em; color:var(--accent);
+}
+.modal-body{ margin:0 0 10px; font-size:12.5px; color:var(--text-dim); line-height:1.55; }
+.modal-input{
+  width:100%; font-size:16px; padding:8px;
+  background:var(--bg); color:var(--text-main);
+  border:1px solid var(--line); border-radius:2px; resize:vertical;
+}
+.modal-input[hidden]{ display:none; }
+body.is-mobile .modal{ width:100%; }
+body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }

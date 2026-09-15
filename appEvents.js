@@ -73,7 +73,7 @@ function safeColoris(config){
 // once, and subsequent calls only ever touch swatches on top of it.
 safeColoris({
   el: '[data-coloris]',
-  theme: 'pill',
+  theme: 'polaroid',
   themeMode: 'dark',
   alpha: false,
   format: 'hex',
@@ -88,7 +88,7 @@ FONTS.forEach((f,i)=>{
 });
 fontSelect.value = 3;
 
-$('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i}: ${f.label}`).join('<br>');
+$('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i} &nbsp;${f.family}`).join('<br>');
 
 const canvas = $('poemCanvas');
 const ctx = canvas.getContext('2d');
@@ -273,7 +273,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureToggle').checked = texOn;
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
-    const types = ['grain','paper','noise','waterspots','canvas','clouds','flowers','astral','inkbleed','crackedglaze','bokeh','embers','tessellate','snow','leaves','magicparticles','rainstreaks','leather','halftone','brushstrokes','alienSurface','habitableSurface'];
+    const types = ['clouds','bokeh','astral','magicparticles','embers','snow','grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks','sigils','mathnoise','noise','inkbleed','crackedglaze','tessellate'];
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
@@ -565,18 +565,60 @@ function applyThemePalette(colors){
   safeColoris({ swatches: colors });
 }
 
-// Midnight Page's own colors are already what the page's static HTML defaults
-// match (established a while back), so it's the natural default palette too.
-const defaultPalettePreset = PRESETS.find(p=>p.name==='Midnight Page') || PRESETS[0];
+// Quintessence opens the grid and opens the app -- the first Whimsy, and
+// the face the page wears before anything is chosen.
+const defaultPalettePreset = PRESETS.find(p=>p.name==='Quintessence') || PRESETS[0];
 applyThemePalette(deriveThemePalette(defaultPalettePreset));
+
+// The page opens on a real preset rather than a scatter of static HTML
+// defaults that no longer correspond to anything -- one source of truth,
+// so the opening view is always a coherent Element rather than whatever
+// the markup happened to hardcode.
+applyPreset(defaultPalettePreset);
 
 // The 16th swatch: whatever THIS specific field's current value is, appended
 // live right as its picker opens -- lets you audition one of the 15 theme
 // colors and still get back to what you had. Coloris fires 'open' on the
 // bound input itself when its picker is about to show.
+// Coloris positions its picker against the page, but on mobile .controls is
+// the thing that scrolls (the page itself does not), so the picker could open
+// nowhere near the field it belongs to. Re-anchor it to the field's own
+// on-screen rect, flipping above when there is no room below, and keeping it
+// clear of the tab bar.
+function positionPickerNearField(field){
+  const picker = document.getElementById('clr-picker');
+  if(!picker || !field.getBoundingClientRect) return;
+  const rootStyle = getComputedStyle(document.documentElement);
+  const num = (name, fallback) => parseFloat(rootStyle.getPropertyValue(name)) || fallback;
+  const visible = num('--vvh', window.innerHeight);
+  const barH = num('--tabbar-h', 58);
+  const gap = 8;
+
+  const r = field.getBoundingClientRect();
+  const pw = picker.offsetWidth || 240;
+  const ph = picker.offsetHeight || 260;
+
+  let top = r.bottom + gap;
+  if(top + ph > visible - barH){
+    const above = r.top - ph - gap;          // flip above the field
+    top = above >= gap ? above : Math.max(gap, visible - barH - ph - gap);
+  }
+  const left = Math.min(Math.max(gap, r.left), Math.max(gap, window.innerWidth - pw - gap));
+
+  picker.style.position = 'fixed';
+  picker.style.top = top + 'px';
+  picker.style.left = left + 'px';
+  picker.style.margin = '0';
+}
+
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
     safeColoris({ swatches: [...currentThemePalette, e.target.value] });
+    if(document.body && document.body.classList && document.body.classList.contains('is-mobile')
+       && typeof requestAnimationFrame === 'function'){
+      // after Coloris has done its own positioning, not before
+      requestAnimationFrame(()=>positionPickerNearField(e.target));
+    }
   }
 });
 
@@ -644,6 +686,174 @@ function applyPreset(p){
 }
 
 // ---------- gradient geometry ----------
+
+
+// ---------- mobile layout ----------
+// Deliberately device detection, not a media query. A narrow desktop window
+// is still a desktop: it has a mouse, and its keyboard never covers half the
+// screen. Only an actual phone should get the phone layout.
+function detectMobile(){
+  if(typeof navigator === 'undefined') return false;
+  // the modern answer, where it exists (Chrome/Android reports this directly)
+  if(navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean'){
+    return navigator.userAgentData.mobile;
+  }
+  const ua = navigator.userAgent || '';
+  if(/Android|iPhone|iPod|Opera Mini|IEMobile|Mobile Safari|webOS|BlackBerry/i.test(ua)) return true;
+  // iPadOS reports itself as a Mac and has done for years; touch points give it away
+  if(/iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+
+if(detectMobile() && typeof document.querySelectorAll === 'function'){
+  document.body.classList.add('is-mobile');
+
+  const panels = Array.from(document.querySelectorAll('.card[data-tab]'));
+  const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
+
+  function activateTab(name){
+    panels.forEach(p => p.classList.toggle('tab-active', p.dataset.tab === name));
+    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    // a tab change is a context change; start it from the top
+    if(typeof window !== 'undefined' && window.scrollTo) window.scrollTo({top:0, behavior:'instant'});
+  }
+  tabBtns.forEach(b => b.addEventListener('click', () => activateTab(b.dataset.tab)));
+  activateTab('write');
+
+  // Keyboard awareness. visualViewport shrinks when the soft keyboard opens,
+  // which is the only reliable signal there is -- window.innerHeight does not
+  // budge on Android Chrome. The measured height becomes a CSS variable so the
+  // tab bar rides above the keyboard instead of hiding behind it.
+  const root = document.documentElement;
+  const tabBar = $('tabBar');
+
+  // The tab bar's height is measured rather than assumed -- it changes with
+  // the device's own font scaling, and a wrong constant here is exactly what
+  // lets the bar sit on top of the last control in a panel.
+  const syncBarHeight = () => {
+    const h = tabBar && tabBar.offsetHeight;
+    if(h) root.style.setProperty('--tabbar-h', h + 'px');
+  };
+
+  const vv = window.visualViewport;
+  let baselineVisible = 0;
+  const syncViewport = () => {
+    // visualViewport.height is what is ACTUALLY visible: it already excludes
+    // the browser's URL bar and the soft keyboard. vh does not, which is why
+    // nothing sized in vh fits on an Android phone.
+    const visible = vv ? vv.height : window.innerHeight;
+    root.style.setProperty('--vvh', visible + 'px');
+    // visualViewport shrinks for the URL bar AND for the keyboard, so raw
+    // shrinkage alone would read a tall bottom URL bar as a keyboard and
+    // float the tab bar up over empty space. Requiring a focused text field
+    // as well is what distinguishes the two.
+    if(visible > baselineVisible) baselineVisible = visible;
+    const shrink = Math.max(0, baselineVisible - visible);
+    const ae = typeof document.activeElement === 'object' ? document.activeElement : null;
+    const typing = !!ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT');
+    const keyboard = typing && shrink > 140;
+    root.style.setProperty('--kb-height', keyboard ? shrink + 'px' : '0px');
+    // The preview keeps the height it had before the keyboard appeared --
+    // watching it shrink while typing was worse than losing the space.
+    if(!keyboard) root.style.setProperty('--vvh-stable', visible + 'px');
+    document.body.classList.toggle('keyboard-open', keyboard);
+    syncBarHeight();
+  };
+
+  if(vv){
+    vv.addEventListener('resize', syncViewport);
+    vv.addEventListener('scroll', syncViewport);
+  }
+  if(window.addEventListener) window.addEventListener('orientationchange', syncViewport);
+  syncViewport();
+
+  // Polaroid is the compact build -- the pill theme leaves a dead band where
+  // the alpha slider would be and pushes the preview bubble off to one side.
+  safeColoris({ theme: 'polaroid', themeMode: 'dark', alpha: false });
+
+  // ---- draggable divider ----
+  // An image editor whose image you cannot see is not an image editor. The
+  // preview's share of the screen is a variable, and this drags it.
+  const handle = $('dragHandle');
+  const stageEl = typeof document.querySelector === 'function' ? document.querySelector('.stage') : null;
+  if(handle && handle.addEventListener && stageEl){
+    let dragging = false;
+    const setFrac = (f) => root.style.setProperty('--preview-frac', Math.min(0.72, Math.max(0.14, f)).toFixed(3));
+    const fracFor = (clientY) => {
+      const visible = parseFloat(getComputedStyle(root).getPropertyValue('--vvh')) || window.innerHeight;
+      const top = stageEl.getBoundingClientRect().top;
+      return (clientY - top) / visible;
+    };
+    handle.addEventListener('pointerdown', (e)=>{
+      dragging = true;
+      if(handle.setPointerCapture) handle.setPointerCapture(e.pointerId);
+      document.body.classList.add('dragging-divider');
+    });
+    handle.addEventListener('pointermove', (e)=>{ if(dragging){ setFrac(fracFor(e.clientY)); e.preventDefault(); } });
+    ['pointerup','pointercancel'].forEach(t => handle.addEventListener(t, ()=>{
+      dragging = false;
+      document.body.classList.remove('dragging-divider');
+    }));
+    // a double-tap on the grip restores the default split
+    let lastTap = 0;
+    handle.addEventListener('pointerup', ()=>{
+      const now = Date.now();
+      if(now - lastTap < 320) setFrac(0.30);
+      lastTap = now;
+    });
+  }
+
+  // ---- pinch to zoom, drag to pan ----
+  // Transform-only: the canvas bitmap is untouched, so the downloaded image
+  // is never affected by how it is being inspected.
+  const wrap = typeof document.querySelector === 'function' ? document.querySelector('.canvas-wrap') : null;
+  const cv = $('poemCanvas');
+  if(wrap && cv && wrap.addEventListener){
+    let scale = 1, tx = 0, ty = 0;
+    let pinchStart = 0, scaleStart = 1, panX = 0, panY = 0, mode = null;
+    const apply = () => { cv.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'; };
+    const reset = () => { scale = 1; tx = 0; ty = 0; apply(); };
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+
+    wrap.addEventListener('touchstart', (e)=>{
+      if(e.touches.length === 2){
+        mode = 'pinch'; pinchStart = dist(e.touches); scaleStart = scale;
+      } else if(e.touches.length === 1 && scale > 1.01){
+        mode = 'pan'; panX = e.touches[0].clientX - tx; panY = e.touches[0].clientY - ty;
+      } else { mode = null; }
+    }, {passive:true});
+
+    wrap.addEventListener('touchmove', (e)=>{
+      if(mode === 'pinch' && e.touches.length === 2 && pinchStart > 0){
+        scale = Math.min(6, Math.max(1, scaleStart * (dist(e.touches) / pinchStart)));
+        if(scale <= 1.01){ tx = 0; ty = 0; }
+        apply(); e.preventDefault();
+      } else if(mode === 'pan' && e.touches.length === 1){
+        tx = e.touches[0].clientX - panX; ty = e.touches[0].clientY - panY;
+        apply(); e.preventDefault();
+      }
+    }, {passive:false});
+
+    wrap.addEventListener('touchend', ()=>{ mode = null; }, {passive:true});
+
+    // Changing the aspect ratio resizes the canvas underneath a transform that
+    // was computed for the old shape, which is what threw the preview
+    // off-centre and clipped it. Any change to the bitmap's dimensions drops
+    // the zoom back to neutral.
+    if(typeof MutationObserver === 'function'){
+      new MutationObserver(reset).observe(cv, { attributes: true, attributeFilter: ['width','height'] });
+    }
+
+    // double-tap the preview to zoom back out
+    let lastPreviewTap = 0;
+    wrap.addEventListener('touchend', (e)=>{
+      if(e.touches && e.touches.length) return;
+      const now = Date.now();
+      if(now - lastPreviewTap < 320) reset();
+      lastPreviewTap = now;
+    }, {passive:true});
+  }
+}
 
 
 // Wait for fonts before first paint so sizing is accurate -- preload every
