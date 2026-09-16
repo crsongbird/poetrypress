@@ -357,7 +357,7 @@ body.is-mobile .card { padding: 10px; margin-bottom: 10px; }
 body.is-mobile .card-title { font-size: clamp(10px, 2.6vw, 12px); margin-bottom: 6px; }
 body.is-mobile .card-grid { gap: 8px; }
 body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
-body.is-mobile .kofi-link { font-size: 10px; }
+
 
 /* no zoom-on-focus, bigger targets */
 body.is-mobile input[type="text"],
@@ -410,11 +410,18 @@ body.is-mobile details[open] > summary.card-title::after { content: " ▴"; }
 /* ---------- Unfixable Vellum header ---------- */
 .app-header{ align-items:center; justify-content:space-between; gap:8px; }
 .app-header-title{ flex:1 1 auto; text-align:center; font-weight:700; letter-spacing:0.04em; }
-.app-header-spacer{ flex:0 0 auto; width:76px; }
-.app-header .kofi-link{ flex:0 0 auto; width:76px; text-align:right; font-style:italic; font-size:0.62em; opacity:0.75; }
+.app-header-spacer{ flex:0 0 auto; width:88px; }
+.app-header .kofi-link{
+  flex:0 0 auto; text-align:right; font-style:italic;
+  /* was 0.62em and width-capped, which made it both unreadable AND forced a
+     line break mid-phrase. Readable size, no wrap, no fixed width. */
+  font-size:0.78em; opacity:0.8; white-space:nowrap; text-decoration:none;
+  border-bottom:1px solid currentColor; padding-bottom:1px;
+}
+.app-header .kofi-link:hover{ opacity:1; }
 body.is-mobile .app-header{ padding:4px 8px; }
-body.is-mobile .app-header-spacer,
-body.is-mobile .app-header .kofi-link{ width:62px; }
+body.is-mobile .app-header-spacer{ width:70px; }
+body.is-mobile .app-header .kofi-link{ font-size:0.72em; }
 
 /* download lives in the corner of the viewer now, out of the controls' way */
 body.is-mobile .canvas-wrap{ position:relative; }
@@ -500,7 +507,10 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 }
 .modal-veil[hidden]{ display:none; }
 .modal{
-  width:min(420px, 100%); max-height:80vh; overflow:auto;
+  width:min(420px, 100%);
+  /* measured, not vh -- a vh-sized modal overflows the visible area on
+     Android, which is the same trap the layout hit earlier */
+  max-height:calc(var(--vvh, 100vh) * 0.8); overflow:auto;
   background:var(--bg-deep); border:1px solid var(--line);
   border-radius:4px; padding:16px;
   box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
@@ -518,3 +528,133 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .modal-input[hidden]{ display:none; }
 body.is-mobile .modal{ width:100%; }
 body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }
+
+/* ---------- texture sliders: own line, full width ---------- */
+.field.full > input[type="range"]{ width:100%; display:block; }
+body.is-mobile .field.full{ width:100%; }
+body.is-mobile .field.full > label{ display:block; margin-bottom:2px; }
+body.is-mobile .field.full > .range-val{ float:right; font-size:11px; opacity:0.8; }
+
+/* ---------- stop the page scrolling while typing ----------
+   .app is a fixed-height column and .controls scrolls inside it, so the
+   document itself must never scroll. Without this, focusing the textarea
+   made Chrome scroll the whole page to reveal the caret and a scrollbar
+   appeared from the stage keeping its pre-keyboard height. */
+body.is-mobile, html:has(body.is-mobile){ overflow:hidden; height:100%; overscroll-behavior:none; }
+body.is-mobile .stage{
+  /* never let the frozen preview height push the layout past the screen */
+  max-height: calc(var(--vvh) * 0.55);
+}
+body.is-mobile #poemText{ scroll-margin:0; }
+
+/* ---------- texture tools ---------- */
+.light-pad{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:3px;
+  width:96px; padding:3px; border:1px solid var(--line); border-radius:3px;
+}
+.light-pad button{
+  aspect-ratio:1; border:1px solid var(--line); border-radius:2px;
+  background:transparent; cursor:pointer; padding:0;
+}
+.light-pad button::after{
+  content:""; display:block; width:5px; height:5px; margin:auto;
+  border-radius:50%; background:var(--text-dim); opacity:.5;
+}
+.light-pad button.active{ border-color:var(--accent); background:rgba(212,175,55,0.14); }
+.light-pad button.active::after{ background:var(--accent); opacity:1; }
+.light-core{
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; color:var(--text-dim); opacity:.65;
+}
+body.is-mobile .light-pad{ width:128px; gap:4px; }
+
+/* a disabled tool must look inert, not merely quiet */
+.field.tool-off{ opacity:.34; pointer-events:none; }
+.field.tool-off label::after{ content:" — n/a"; font-size:.85em; opacity:.8; }
+
+/* ---------- locks ---------- */
+.lock-btn{
+  border:0; background:transparent; cursor:pointer; padding:0 2px;
+  font-size:11px; line-height:1; opacity:.35; color:var(--text-dim);
+}
+.lock-btn:hover{ opacity:.7; }
+.lock-btn.locked{ opacity:1; color:var(--accent); }
+body.is-mobile .lock-btn{ font-size:13px; padding:0 4px; }
+
+/* light direction reads as arrows: the arrow points the way the light travels */
+.light-pad button{ font-size:12px; color:var(--text-dim); line-height:1; }
+.light-pad button::after{ display:none; }
+.light-pad button.active{ color:var(--accent); }
+body.is-mobile .light-pad button{ font-size:14px; }
+
+/* preview reset — silver against the gold download, and quiet until wanted */
+.reset-view-btn{
+  position:absolute; left:7px; bottom:7px; z-index:45;
+  border:1px solid rgba(190,196,208,0.45); border-radius:2px;
+  background:rgba(18,20,26,0.55); color:#BEC4D0;
+  font-size:13px; line-height:1; padding:5px 9px; cursor:pointer; opacity:0.55;
+}
+.reset-view-btn:hover{ opacity:1; }
+body.is-mobile .reset-view-btn{ font-size:15px; padding:6px 10px; }
+
+/* ---------- mobile spacing: expansive, but not wasteful ---------- */
+body.is-mobile .card{ padding:8px 9px; margin-bottom:8px; }
+body.is-mobile .card-grid{ gap:6px; }
+body.is-mobile .field{ margin-bottom:0; }
+body.is-mobile .check-row{ margin:2px 0; }
+body.is-mobile .app-header{ padding:3px 6px; }
+body.is-mobile .app-header-title{ letter-spacing:0.02em; }
+body.is-mobile .controls{ padding-left:6px; padding-right:6px; }
+body.is-mobile .preset-grid{ grid-template-columns:repeat(4,1fr); gap:5px; }
+body.is-mobile .preset-label{ font-size:clamp(8px,2.1vw,10px); }
+
+/* ---------- FOCUS MODE ----------
+   Entered when the poem field takes focus on a phone. Chrome hides its own
+   title bar as the keyboard opens, which changes the layout viewport under a
+   fixed-height app and lets the page scroll into empty space — the rare but
+   brutal bug on this page. Focus mode removes everything that could scroll:
+   header, preview, editor, bar, keyboard, and nothing else. */
+body.is-mobile.focus-mode .card[data-tab]:not(.focus-keep){ display:none; }
+body.is-mobile.focus-mode .app-header{ padding:2px 6px; font-size:11px; }
+body.is-mobile.focus-mode .app-header .kofi-link{ display:none; }
+body.is-mobile.focus-mode .stage{ height:calc(var(--vvh) * 0.24); }
+body.is-mobile.focus-mode .controls{ padding-bottom:6px; overflow:hidden; }
+body.is-mobile.focus-mode #poemText{
+  height:auto;
+  /* what is left after header, preview, grip and bar — so the field fits the
+     gap exactly instead of overflowing it and inviting a scroll */
+  min-height:0;
+  flex:1 1 auto;
+}
+body.is-mobile.focus-mode .card.focus-keep{ display:flex; flex-direction:column; height:100%; margin:0; }
+body.is-mobile.focus-mode .card.focus-keep .card-title{ display:none; }
+body.is-mobile.focus-mode .tab-btn:not([data-tab="more"]){ display:none; }
+body.is-mobile.focus-mode .tab-btn[data-tab="more"]{ flex:1 1 100%; }
+
+/* ---------- nav glyph states ----------
+   Deselected glyphs RELAX: thinner stroke, softer, slightly smaller, cooled
+   toward whimsy's blue. Selected glyphs STIFFEN: full weight, full size,
+   warmed. No motion — the state is legible standing still, and animation
+   here would mostly advertise the frame rate. */
+body.is-mobile .tab-btn svg{
+  stroke-width:1.15;
+  opacity:.62;
+  transform:scale(.94);
+  color:#8E86B8;               /* whimsy, heavily muted */
+}
+body.is-mobile .tab-btn.active svg{
+  stroke-width:1.85;
+  opacity:1;
+  transform:scale(1);
+  color:#C9B8FF;               /* whimsy, allowed forward */
+}
+body.is-mobile .tab-btn{ color:#6E6880; }
+body.is-mobile .tab-btn.active{ color:#D8CEF6; }
+body.is-mobile .tabbar{
+  background:linear-gradient(180deg, rgba(24,20,38,0.97), rgba(12,14,20,0.97));
+}
+body.is-mobile .tab-ico-glyph{
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; line-height:1; color:#C9B8FF;
+  font-family:"Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;
+}

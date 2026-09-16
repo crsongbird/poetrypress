@@ -46,7 +46,8 @@
 
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines } from './textParsers.js';
-import { getTextureCanvas, mixHex } from './textureGenerators.js';
+import { spellForSeed, spellToPML } from './spell.js';
+import { getTextureCanvas, mixHex, capsFor, defaultBlendFor } from './textureGenerators.js';
 
 
 function isEmojiCodePoint(cp){
@@ -520,38 +521,50 @@ export function render(){
     const opacity = Math.max(0, parseFloat($('textureOpacity').value) || 0) / 100;
     const accent1Color = $('accent1ColorHex').value;
     const accent2Color = $('accent2ColorHex').value;
-    const invert = $('textureInvert').checked;
+    // blend, light and tints are now chosen per texture rather than inferred
+    const caps = capsFor(type);
+    const chosen = $('textureBlend').value;
+    const blend = caps.blends.includes(chosen) ? chosen : defaultBlendFor(type);
+    const light = caps.light ? (parseFloat($('textureLight').value) || 0) : null;
+    const tint1 = caps.tints >= 1 ? $('textureTint1Hex').value : null;
+    const tint2 = caps.tints >= 2 ? $('textureTint2Hex').value : null;
+    const invert = false;
     const seed = parseInt($('textureSeedValue').value, 10) || 0;
+
+    const tp1 = parseFloat($('texP1').value);
+    const tp2 = parseFloat($('texP2').value);
+    const p1 = isNaN(tp1) ? null : tp1;
+    const p2 = isNaN(tp2) ? null : tp2;
 
     if(type === 'astral'){
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = 'overlay';
-      ctx.drawImage(getTextureCanvas('astral_fog', W, H, null, null, invert, seed), 0, 0);
+      ctx.globalCompositeOperation = blend === 'lighten' ? 'overlay' : blend;
+      ctx.drawImage(getTextureCanvas('astral_fog', W, H, null, null, invert, seed, p2, null, tint2), 0, 0);
       ctx.restore();
 
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = invert ? 'darken' : 'lighten';
-      ctx.drawImage(getTextureCanvas('astral_stars', W, H, accent1Color, accent2Color, invert, seed), 0, 0);
+      ctx.globalCompositeOperation = blend;
+      ctx.drawImage(getTextureCanvas('astral_stars', W, H, accent1Color, accent2Color, invert, seed, p1, null, tint1), 0, 0);
       ctx.restore();
-    } else if(type === 'inkbleed' || type === 'alienSurface' || type === 'habitableSurface'){
+    } else if(type === 'inkbleed'){
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = invert ? 'color-dodge' : 'color-burn';
-      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed), 0, 0);
+      ctx.globalCompositeOperation = blend;
+      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2), 0, 0);
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = invert ? 'darken' : 'lighten';
-      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color, invert, seed), 0, 0);
+      ctx.globalCompositeOperation = blend;
+      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color, invert, seed, p1, p2, light, tint1, tint2), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = 'overlay';
-      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed), 0, 0);
+      ctx.globalCompositeOperation = blend;
+      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2), 0, 0);
       ctx.restore();
     }
   }
@@ -759,6 +772,9 @@ export function render(){
     cursorY += lineHeight;
   }
 
+  // the spell is tied to the texture seed even when textures are off
+  const seedForSpell = parseInt($('textureSeedValue').value, 10) || 0;
+
   // --- watermark ---
   const username = ($('usernameField').value.trim()) || '';
   const corner = $('usernameCorner').value;
@@ -775,6 +791,39 @@ export function render(){
   const wmX = isRight ? (W - W*0.035) : (W*0.035);
   const wmY = isTop ? (H*0.025) : (H - H*0.025);
   ctx.fillText(username, wmX, wmY);
+  ctx.restore();
+
+  // --- the spell ---
+  // Diagonally opposite the credit, at the same size, fully rendered rather
+  // than faded. Derived from the texture seed, so a given look always carries
+  // the same glyphs instead of reshuffling on every repaint. Written in PML
+  // and parsed by the app's own parser, which is the whole joke: the accent
+  // colouring and the visible brackets come from the language, not from a
+  // special case here.
+  const spellSegs = buildLines(spellToPML(spellForSeed(seedForSpell)), true, true)[0].segments;
+  ctx.save();
+  const spellSize = Math.round(((W + H)/2)*0.01);
+  ctx.globalAlpha = 0.95;
+  ctx.textBaseline = isTop ? 'alphabetic' : 'top';
+  ctx.textAlign = isRight ? 'left' : 'right';
+  ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+  // Noto Sans Symbols 2 carries these code points; the UI face almost
+  // certainly does not, hence the explicit stack rather than the poem's font
+  const spellFont = `${spellSize}px "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif`;
+  const spX = isRight ? (W*0.035) : (W - W*0.035);
+  const spY = isTop ? (H - H*0.025) : (H*0.025);
+  ctx.font = spellFont;
+  let spellW = 0;
+  for(const sg of spellSegs) spellW += ctx.measureText(sg.text).width;
+  let sx = ctx.textAlign === 'right' ? spX - spellW : spX;
+  ctx.textAlign = 'left';
+  for(const sg of spellSegs){
+    ctx.fillStyle = sg.color === 'accent1' ? accent1Color
+                  : sg.color === 'accent2' ? accent2Color
+                  : wmColor;
+    ctx.fillText(sg.text, sx, spY);
+    sx += ctx.measureText(sg.text).width;
+  }
   ctx.restore();
 }
 

@@ -44,6 +44,8 @@
 import { $, FONTS, PRESETS, ASPECTS } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, hexToHsl, hslToHex } from './canvasRenderer.js';
+import { paramsFor, capsFor, defaultBlendFor } from './textureGenerators.js';
+import { createVault } from './vault.js';
 
 // Coloris is loaded from an external CDN (see index.html). Two separate
 // failure modes can happen there, and this guards against both:
@@ -190,7 +192,6 @@ bindRadioGroup('textStopsGroup', v=>{
 
 $('textureType').addEventListener('change', scheduleRender);
 $('textureOpacity').addEventListener('input', ()=>{ $('textureOpacityVal').textContent=$('textureOpacity').value+'%'; scheduleRender(); });
-$('textureInvert').addEventListener('change', scheduleRender);
 
 function randomSeed(){ return Math.floor(Math.random()*2**31); }
 function maybeRerollSeed(explicitSeed){
@@ -239,6 +240,8 @@ $('lineSpacing').addEventListener('input', ()=>{
 });
 
 $('randomFontBtn').addEventListener('click', ()=>{
+  // locked controls are restored after the randomiser runs
+  withLocksPreserved(()=>{
   fontSelect.value = Math.floor(Math.random()*FONTS.length);
   setColorField('textColorHex', randHex());
 
@@ -255,8 +258,11 @@ $('randomFontBtn').addEventListener('click', ()=>{
   setColorField('accent2ColorHex', randHex());
 
   scheduleRender();
+  });
 });
 $('randomBgBtn').addEventListener('click', ()=>{
+  // locked controls are restored after the randomiser runs
+  withLocksPreserved(()=>{
   maybeRerollSeed();
   setColorField('bgColor1Hex', randHex());
 
@@ -273,12 +279,12 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureToggle').checked = texOn;
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
-    const types = ['clouds','bokeh','astral','magicparticles','embers','snow','grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks','sigils','mathnoise','noise','inkbleed','crackedglaze','tessellate'];
+    const types = ['clouds','bokeh','astral','magicparticles','embers','snow','grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks','sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate','aurora','hatch','cards',
+      'linen','coldpress','foxing','foldghost','cupring','wax','whorl'];
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
     $('textureOpacityVal').textContent = op+'%';
-    $('textureInvert').checked = Math.random() < 0.25;
   }
 
   const borderOn = Math.random() < 0.4;
@@ -291,6 +297,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
   }
 
   scheduleRender();
+  });
 });
 function plainTextFromLine(rawContent, accent1On, accent2On){
   const escaped = applyEscapes(rawContent);
@@ -377,8 +384,13 @@ function serializeCurrentSettings(){
 
     texture: $('textureToggle').checked,
     textureType: $('textureType').value,
+    textureBlend: $('textureBlend').value,
+    textureLight: $('textureLight').value,
+    textureTint1: $('textureTint1Hex').value,
+    textureTint2: $('textureTint2Hex').value,
+    texP1: $('texP1').value,
+    texP2: $('texP2').value,
     textureOpacity: parseFloat($('textureOpacity').value),
-    textureInvert: $('textureInvert').checked,
     textureSeed: parseInt($('textureSeedValue').value, 10),
     textureSeedLock: $('textureSeedLock').checked,
 
@@ -446,8 +458,18 @@ function restoreSettings(s){
   $('textureToggle').checked = !!s.texture;
   $('textureBlock').classList.toggle('open', !!s.texture);
   if(s.textureType) $('textureType').value = s.textureType;
+  // relabel/re-range for the incoming texture BEFORE restoring the knob
+  // values, or they would be clamped against the previous texture's range
+  syncTextureParams(true);
+  syncTextureTools(true);
+  if(s.textureBlend) $('textureBlend').value = s.textureBlend;
+  if(s.textureLight !== undefined){ $('textureLight').value = s.textureLight; syncLightPad(); }
+  if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
+  if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
+  if(s.texP1 !== undefined) $('texP1').value = s.texP1;
+  if(s.texP2 !== undefined) $('texP2').value = s.texP2;
+  syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; $('textureOpacityVal').textContent=s.textureOpacity+'%'; }
-  if(s.textureInvert!==undefined) $('textureInvert').checked = s.textureInvert;
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
   if(s.textureSeedLock!==undefined) $('textureSeedLock').checked = s.textureSeedLock;
 
@@ -545,6 +567,18 @@ function tonalSibling(hex){
 }
 function hueShift(hex, degrees){
   const {h,s,l} = hexToHsl(hex);
+  // On a near-neutral colour a hue shift does essentially nothing -- rotate
+  // grey and you get grey. The 🜚 Touch presets are neutral by design, so
+  // without this branch all fifteen of their swatches collapse into the same
+  // beige. Vary lightness and warmth instead, which is what actually
+  // separates one neutral from another.
+  if(s < 12){
+    const warm = ((degrees % 360) + 360) % 360 < 180;
+    const lShift = (degrees / 180) * 22;
+    return hslToHex(warm ? 34 : 210,
+                    Math.min(100, s + 7 + Math.abs(degrees)/40),
+                    Math.max(4, Math.min(96, l + (l > 50 ? -lShift : lShift))));
+  }
   return hslToHex(h+degrees, s, l);
 }
 function deriveThemePalette({text1, text2, accent1, accent2, bg1, bg2}){
@@ -574,7 +608,10 @@ applyThemePalette(deriveThemePalette(defaultPalettePreset));
 // defaults that no longer correspond to anything -- one source of truth,
 // so the opening view is always a coherent Element rather than whatever
 // the markup happened to hardcode.
-applyPreset(defaultPalettePreset);
+// Applied during the boot sequence at the bottom of this file instead:
+// applyPreset now snapshots the lock set, and `locked` is a const declared
+// further down, so reading it this early is a temporal-dead-zone error.
+
 
 // The 16th swatch: whatever THIS specific field's current value is, appended
 // live right as its picker opens -- lets you audition one of the 15 theme
@@ -623,6 +660,9 @@ document.addEventListener('open', (e)=>{
 });
 
 function applyPreset(p){
+  // a locked control is put back exactly as it was once the preset lands
+  const __locks = snapshotLocked();
+  try {
   applyThemePalette(deriveThemePalette(p));
   maybeRerollSeed(p.textureSeed);
   setColorField('bgColor1Hex', p.bg1);
@@ -663,8 +703,13 @@ function applyPreset(p){
   $('textureToggle').checked = !!p.texture;
   $('textureBlock').classList.toggle('open', !!p.texture);
   if(p.textureType) $('textureType').value = p.textureType;
+  // re-range for the new texture first, then apply the preset's own knobs;
+  // a preset that names none simply gets that texture's defaults
+  syncTextureParams(true);
+  if(p.texP1 !== undefined) $('texP1').value = p.texP1;
+  if(p.texP2 !== undefined) $('texP2').value = p.texP2;
+  syncTextureParams(false);
   if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; $('textureOpacityVal').textContent=p.textureOpacity+'%'; }
-  $('textureInvert').checked = !!p.textureInvert;
 
   if(p.accent1){ $('accent1Toggle').checked=true; $('accent1Block').classList.add('open'); setColorField('accent1ColorHex', p.accent1); }
   else { $('accent1Toggle').checked=false; $('accent1Block').classList.remove('open'); }
@@ -683,6 +728,11 @@ function applyPreset(p){
   if(p.vignetteIntensity!==undefined){ $('vignetteIntensity').value=p.vignetteIntensity; $('vignetteIntensityVal').textContent=p.vignetteIntensity+'%'; }
 
   scheduleRender();
+  } finally {
+    restoreLocked(__locks);
+    syncTextureTools(false);
+    syncLightPad();
+  }
 }
 
 // ---------- gradient geometry ----------
@@ -855,6 +905,308 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
   }
 }
 
+
+
+
+// ---------- texture parameters ----------
+// Each texture declares two knobs (see TEXTURE_PARAMS). The sliders relabel
+// and re-range themselves when the texture changes, so a control never says
+// "value 1" -- it says Sigil zoom, or Slant, or Nebula density.
+function syncTextureParams(useDefaults){
+  const defs = paramsFor($('textureType').value);
+  [0,1].forEach(i=>{
+    const def = defs[i];
+    const row = $('texP'+(i+1)).parentElement;
+    const slider = $('texP'+(i+1));
+    const label = $('texP'+(i+1)+'Label');
+    const out = $('texP'+(i+1)+'Val');
+    if(!def){
+      if(row) row.style.display = 'none';
+      return;
+    }
+    if(row) row.style.display = '';
+    slider.min = def.min; slider.max = def.max;
+    if(useDefaults || slider.value === '' || +slider.value < def.min || +slider.value > def.max){
+      slider.value = def.def;
+    }
+    label.textContent = def.label;
+    out.textContent = slider.value + (def.unit || '');
+  });
+}
+
+['texP1','texP2'].forEach(id=>{
+  $(id).addEventListener('input', ()=>{
+    const defs = paramsFor($('textureType').value);
+    const i = id === 'texP1' ? 0 : 1;
+    if(defs[i]) $(id+'Val').textContent = $(id).value + (defs[i].unit || '');
+    scheduleRender();
+  });
+});
+$('textureType').addEventListener('change', ()=>{ syncTextureParams(true); scheduleRender(); });
+syncTextureParams(true);
+
+
+// ---------- texture tools ----------
+// Blend mode, light direction and tints are declared per texture (see
+// TEXTURE_CAPS). Anything a texture cannot use is disabled rather than left
+// live and inert -- a control that silently does nothing is worse than one
+// that is visibly unavailable.
+const BLEND_LABELS = {
+  'overlay':'Overlay', 'soft-light':'Soft light', 'hard-light':'Hard light',
+  'multiply':'Multiply', 'screen':'Screen', 'lighten':'Lighten',
+  'darken':'Darken', 'color-burn':'Colour burn', 'color-dodge':'Colour dodge',
+};
+
+function syncTextureTools(resetToDefaults){
+  const type = $('textureType').value;
+  const caps = capsFor(type);
+
+  // blend list is rebuilt per texture; the first entry is that texture's default
+  const sel = $('textureBlend');
+  const previous = sel.value;
+  sel.innerHTML = '';
+  caps.blends.forEach((b, i)=>{
+    const opt = document.createElement('option');
+    opt.value = b;
+    opt.textContent = BLEND_LABELS[b] || b;
+    if(i === 0) opt.textContent += ' (default)';
+    sel.appendChild(opt);
+  });
+  sel.value = (!resetToDefaults && caps.blends.includes(previous)) ? previous : caps.blends[0];
+
+  const lightRow = $('lightRow');
+  if(lightRow) lightRow.classList.toggle('tool-off', !caps.light);
+
+  const t1 = $('tint1Row'), t2 = $('tint2Row');
+  if(t1) t1.classList.toggle('tool-off', caps.tints < 1);
+  if(t2) t2.classList.toggle('tool-off', caps.tints < 2);
+  if(caps.tints >= 1) $('tint1Label').textContent = (caps.tintLabels||[])[0] || 'Tint';
+  if(caps.tints >= 2) $('tint2Label').textContent = (caps.tintLabels||[])[1] || 'Second tint';
+
+  // a texture that takes its colour from the accents starts there
+  if(resetToDefaults && caps.tints >= 1){
+    const defs = caps.tintDefaults || [];
+    const resolve = (d, fallback) =>
+      d === 'accent1' ? $('accent1ColorHex').value
+      : d === 'accent2' ? $('accent2ColorHex').value
+      : (d || fallback);
+    setColorField('textureTint1Hex', resolve(defs[0], '#7A2B2B'));
+    if(caps.tints >= 2) setColorField('textureTint2Hex', resolve(defs[1], '#8A6A3C'));
+  }
+}
+
+// The light pad is a compass, not a slider: eight directions around a centre,
+// which reads the same on a phone as on a desktop and needs no dragging.
+function syncLightPad(){
+  const deg = $('textureLight').value;
+  const pad = $('lightPad');
+  if(!pad || !pad.querySelectorAll) return;
+  pad.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.deg === String(deg));
+  });
+}
+if($('lightPad') && $('lightPad').addEventListener){
+  $('lightPad').addEventListener('click', (e)=>{
+    const btn = e.target && e.target.closest ? e.target.closest('button') : null;
+    if(!btn || !btn.dataset.deg) return;
+    $('textureLight').value = btn.dataset.deg;
+    syncLightPad();
+    scheduleRender();
+  });
+}
+$('textureBlend').addEventListener('change', scheduleRender);
+bindColorField('textureTint1Hex', scheduleRender);
+bindColorField('textureTint2Hex', scheduleRender);
+
+// ---------- locks ----------
+// A locked control survives Randomize and preset changes. Rather than
+// teaching every one of those paths about every control, the locked values
+// are snapshotted before the change and written back after -- which works
+// for any control, including ones added later.
+const LOCKABLE = [
+  'bgColor1Hex','bgColor2Hex','bgColor3Hex','bgColor4Hex',
+  'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
+  'accent1ColorHex','accent2ColorHex','outlineColorHex','borderColorHex',
+  'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
+  'textureTint1Hex','textureTint2Hex','texP1','texP2','textureSeedValue',
+];
+const locked = new Set();
+
+function installLocks(){
+  for(const id of LOCKABLE){
+    const node = $(id);
+    if(!node || !node.parentElement) continue;
+    const host = node.parentElement.querySelector
+      ? (node.parentElement.querySelector('label') || node.parentElement)
+      : node.parentElement;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'lock-btn';
+    btn.title = 'Lock this — Randomize and presets will leave it alone';
+    btn.textContent = '🔓';
+    btn.addEventListener('click', ()=>{
+      if(locked.has(id)) locked.delete(id); else locked.add(id);
+      btn.textContent = locked.has(id) ? '🔒' : '🔓';
+      btn.classList.toggle('locked', locked.has(id));
+    });
+    if(host && host.appendChild) host.appendChild(btn);
+  }
+}
+
+function snapshotLocked(){
+  const snap = {};
+  for(const id of locked){
+    const n = $(id);
+    if(n) snap[id] = (n.type === 'checkbox') ? n.checked : n.value;
+  }
+  return snap;
+}
+function restoreLocked(snap){
+  for(const id in snap){
+    const n = $(id);
+    if(!n) continue;
+    if(n.type === 'checkbox') n.checked = snap[id];
+    else n.value = snap[id];
+  }
+}
+/** Runs a change, then puts every locked control back the way it was. */
+function withLocksPreserved(fn){
+  const snap = snapshotLocked();
+  fn();
+  restoreLocked(snap);
+}
+
+$('textureType').addEventListener('change', ()=>{ syncTextureTools(true); scheduleRender(); });
+syncTextureTools(true);
+syncLightPad();
+installLocks();
+
+
+// ---------- focus mode ----------
+// The Inscribe page collapses to five things when the poem field is focused:
+// header, preview, editor, bar, keyboard. Chrome hides its own title bar as
+// the keyboard opens, which changes the layout viewport underneath a
+// fixed-height app and lets the page scroll into empty space. Removing every
+// other scrollable element removes the opportunity.
+if(typeof document.querySelectorAll === 'function'){
+  const poem = $('poemText');
+  const body = document.body;
+  const moreBtn = Array.from(document.querySelectorAll('.tab-btn'))
+    .find(b => b.dataset.tab === 'more');
+  const moreLabel = moreBtn ? moreBtn.textContent : '';
+  const moreIcon = moreBtn && moreBtn.innerHTML;
+
+  function enterFocus(){
+    if(!body.classList || body.classList.contains('focus-mode')) return;
+    body.classList.add('focus-mode');
+    const card = poem.closest ? poem.closest('.card') : null;
+    if(card) card.classList.add('focus-keep');
+    // Schema becomes Return, carrying the Touch mark — the glyph the app
+    // uses to mean "touch this"
+    if(moreBtn) moreBtn.innerHTML = '<span class="tab-ico tab-ico-glyph">🜚</span>Return';
+  }
+  function exitFocus(){
+    if(!body.classList || !body.classList.contains('focus-mode')) return;
+    body.classList.remove('focus-mode');
+    document.querySelectorAll('.focus-keep').forEach(c => c.classList.remove('focus-keep'));
+    if(moreBtn && moreIcon) moreBtn.innerHTML = moreIcon;
+    if(poem.blur) poem.blur();
+  }
+
+  if(poem.addEventListener){
+    poem.addEventListener('focus', enterFocus);
+    poem.addEventListener('blur', ()=> setTimeout(exitFocus, 40));
+  }
+  if(moreBtn && moreBtn.addEventListener){
+    moreBtn.addEventListener('click', (e)=>{
+      if(body.classList && body.classList.contains('focus-mode')){
+        e.preventDefault(); e.stopPropagation();
+        exitFocus();
+      }
+    }, true);
+  }
+  // the phone's own back gesture should leave focus mode, not the page
+  if(typeof window !== 'undefined' && window.addEventListener){
+    window.addEventListener('popstate', ()=>{
+      if(body.classList && body.classList.contains('focus-mode')) exitFocus();
+    });
+  }
+}
+
+// reset the preview to its default framing
+if($('resetViewBtn') && $('resetViewBtn').addEventListener){
+  $('resetViewBtn').addEventListener('click', ()=>{
+    const root2 = document.documentElement;
+    if(root2 && root2.style) root2.style.setProperty('--preview-frac', '0.30');
+    const cv = $('poemCanvas');
+    if(cv && cv.style) cv.style.transform = '';
+  });
+}
+
+// ---------- Spellcrafting & Grimoire ----------
+// One modal serves every confirm/name/paste flow. Resolves to the typed
+// string when it has an input, `true` for a plain confirm, or null on cancel.
+function modalPrompt(opts){
+  return new Promise((resolve)=>{
+    const veil = $('modalVeil');
+    if(!veil){ resolve(null); return; }
+    const titleEl = $('modalTitle'), bodyEl = $('modalBody'), input = $('modalInput');
+    const ok = $('modalConfirm'), cancel = $('modalCancel');
+    const wantsInput = !!opts.input;
+
+    titleEl.textContent = opts.title || '';
+    bodyEl.textContent = opts.body || '';
+    input.hidden = !wantsInput;
+    input.value = wantsInput ? (opts.defaultValue || '') : '';
+    input.rows = opts.rows || 1;
+    ok.textContent = opts.confirmLabel || 'OK';
+    ok.className = opts.danger ? 'btn-danger' : 'btn-major';
+    veil.hidden = false;
+
+    const finish = (val)=>{
+      veil.hidden = true;
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      resolve(val);
+    };
+    const onOk = ()=> finish(wantsInput ? input.value : true);
+    const onCancel = ()=> finish(null);
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+  });
+}
+
+// A spell is the look, never the words -- the poem belongs to the Grimoire.
+function settingsForSpell(){
+  const snapshot = serializeCurrentSettings();
+  delete snapshot.poemText;
+  return snapshot;
+}
+
+const vault = createVault({
+  $,
+  getSettings: settingsForSpell,
+  applySettings: (settings)=>{ restoreSettings(settings); scheduleRender(); },
+  getText: ()=> $('poemText').value,
+  setText: (t)=>{ $('poemText').value = t; },
+  onChange: scheduleRender,
+  prompt: modalPrompt,
+});
+
+// Create/Save stay hollow until something has actually diverged, so the
+// buttons have to re-evaluate whenever any control moves.
+if(document.addEventListener){
+  let vaultTick = null;
+  const nudge = ()=>{
+    clearTimeout(vaultTick);
+    vaultTick = setTimeout(()=>vault.refresh(), 120);
+  };
+  document.addEventListener('input', nudge);
+  document.addEventListener('change', nudge);
+}
+
+// The opening face of the app, applied once every control, tool and lock exists.
+applyPreset(defaultPalettePreset);
 
 // Wait for fonts before first paint so sizing is accurate -- preload every
 // weight/style combo actually used by FONTS, then render once as soon as

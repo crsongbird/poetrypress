@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Without this, Android Chrome assumes a ~980px desktop layout and scales the
+     whole page down to fit the screen -- which is why every control rendered at
+     roughly a third of its intended size. viewport-fit=cover is what makes
+     env(safe-area-inset-*) resolve to real numbers. User zoom is deliberately
+     left enabled. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA2NCA2NCc+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9J2cnIHgxPScwJyB5MT0nMCcgeDI9JzEnIHkyPScxJz4KPHN0b3Agb2Zmc2V0PScwJyBzdG9wLWNvbG9yPScjQzlCOEZGJy8+CjxzdG9wIG9mZnNldD0nMScgc3RvcC1jb2xvcj0nIzhFNUNEOScvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxwYXRoIGQ9J00zMiAzMCBDMjAgOCAyIDEwIDYgMjYgQzkgNDAgMjIgMzQgMzIgMzAgWicgZmlsbD0ndXJsKCNnKScvPgo8cGF0aCBkPSdNMzIgMzAgQzQ0IDggNjIgMTAgNTggMjYgQzU1IDQwIDQyIDM0IDMyIDMwIFonIGZpbGw9J3VybCgjZyknLz4KPHBhdGggZD0nTTMyIDMwIEMyMiA0NiA4IDUwIDEwIDU4IEMxNCA2MiAyNiA1MCAzMiAzNCBaJyBmaWxsPSd1cmwoI2cpJyBvcGFjaXR5PScwLjg1Jy8+CjxwYXRoIGQ9J00zMiAzMCBDNDIgNDYgNTYgNTAgNTQgNTggQzUwIDYyIDM4IDUwIDMyIDM0IFonIGZpbGw9J3VybCgjZyknIG9wYWNpdHk9JzAuODUnLz4KPGxpbmUgeDE9JzMyJyB5MT0nMTYnIHgyPSczMicgeTI9JzQ2JyBzdHJva2U9JyM0QjJFN0EnIHN0cm9rZS13aWR0aD0nMicgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8+Cjwvc3ZnPgo=">
+<title>Ruby's Poetry Press 🔶📝🦋</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Literata:ital,wght@0,400;0,600;1,400;1,600&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Oswald:wght@400;500;600&family=Unica+One:wght@400&family=Shadows+Into+Light:wght@400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600&family=Architects+Daughter:wght@400&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Inter:ital,wght@0,400;0,600;1,400;1,600&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.css"/>
+<script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="poetrypress.css">
+
+</head>
+<body>
+
+<div class="app">
+
+  <div class="app-header">
+    <span class="app-header-spacer"></span>
+    <strong class="app-header-title">Unfixable Vellum ♦️</strong>
+    <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="kofi-link">support (Ko-fi)</a>
+  </div>
+
+  <div class="controls">
+
+    <div class="card" data-tab="write">
+      <p class="card-title">  Page Text (Poetry Markup Language)</p>
+      <textarea id="poemText">## Wanting [(Aether)]
+
+I had to greet you
+in  <our native language/f:12>
+but our species knew nothing.
+
+Only love,
+       {[merged with anguish...]}
+
+So I opened your helmet.
+
+The <aether/scale:115/fx2,#A98CFF,26,0,0> <b/basis:-5><l/basis:-10><e/basis:-18><d/basis:-26> <o/basis:-33><u/basis:-45><t/basis:-55> of your [held-shut jaw] like
+<*rainbows and starlight and awe*/rainbow>, and
+{whatever} stirs,
+                  <*wanting*/jitter:300>
+inside of a <~~dead person~~/trans>'s dreams.
+
+
+-# It sounds beautiful and rotten, both,
+-# as it occupies all the [empty space] in you.</textarea>
+
+      <div class="row" style="margin-top:7px;">
+        <div class="field">
+          <label>Credit / username</label>
+          <input type="text" id="usernameField" value="@unfixable.place">
+        </div>
+        <div class="field">
+          <label>Corner</label>
+          <select id="usernameCorner">
+            <option value="bottom-left" selected>Bottom left</option>
+            <option value="bottom-right">Bottom right</option>
+            <option value="top-left">Top left</option>
+            <option value="top-right">Top right</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <details class="card" data-tab="write" id="formattingGuidePanel">
+      <summary class="card-title">PML Help</summary>
+      <div class="pml-help" style="margin-top:6px; font-size:12px; color:var(--text-dim); line-height:1.6;">
+
+        <h4>Inline styles</h4>
+        <p>Freely mixable and nestable: <code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strike~~</code></p>
+
+        <h4>Accents &amp; gradients</h4>
+        <dl>
+          <dt><code>[one]</code> <code>{two}</code></dt><dd>accent one, accent two</dd>
+          <dt><code>{[text]}</code> <code>[{text]}</code></dt><dd>blend one accent into the other</dd>
+          <dt><code>[text/lg]</code> <code>[text/rg]</code></dt><dd>fade an accent into the normal ink</dd>
+          <dt><code>{text/lg}</code> <code>{text/rg}</code></dt><dd>same, using accent two</dd>
+        </dl>
+        <p>Emoji inside an accent or gradient span tint to match.</p>
+
+        <h4>Line types</h4>
+        <dl>
+          <dt><code>##</code></dt><dd>large heading</dd>
+          <dt><code>-#</code></dt><dd>small aside</dd>
+          <dt><code>&gt;</code></dt><dd>quote — left bar, tilt, slight transparency</dd>
+          <dt><code>#D</code></dt><dd>drop cap — first letter enlarged</dd>
+          <dt><code>#S</code></dt><dd>small caps — lowercase becomes small capitals</dd>
+        </dl>
+
+        <h4>Rhyme markers</h4>
+        <p>End a line with <code>~A</code> <code>~B</code> <code>~C</code> <code>~D</code> to tag its rhyme group — shown as a small colored bar, not as text. A and B use the accents; C and D use their split-complements. Combines with justification: <code>text~A/r</code></p>
+
+        <h4>Justification</h4>
+        <p><code>/l</code> <code>/c</code> <code>/r</code> — or <code>/left</code> <code>/center</code> <code>/right</code> — at the end of a line.</p>
+        <p>Split one line between alignments using segments:<br>
+        <code>left text &lt;right text/r&gt;</code><br>
+        <code>&lt;left/l&gt;&lt;center/c&gt;&lt;right/r&gt;</code></p>
+
+        <h4>Segments <code>&lt;…&gt;</code></h4>
+        <p>Isolate part of a line. Segments accept any inline style above, plus:</p>
+        <dl>
+          <dt><code>/#:ff00ff</code></dt><dd>custom color</dd>
+          <dt><code>/f:4</code></dt><dd>font, by index (below)</dd>
+          <dt><code>/scale:150</code></dt><dd>size, percent of the fitted size</dd>
+          <dt><code>/track:150</code></dt><dd>letter-spacing, percent</dd>
+          <dt><code>/basis:50</code></dt><dd>raise; negative lowers</dd>
+          <dt><code>/jitter:150</code></dt><dd>per-letter hand jitter, percent</dd>
+          <dt><code>/grad:1#f00,2#00f</code></dt><dd>custom gradient, up to 4 stops</dd>
+          <dt><code>/rainbow</code> <code>/trans</code> <code>/lesbian</code></dt><dd>preset gradients; add <code>:rev</code> to reverse</dd>
+          <dt><code>/fx1,#abc,3</code></dt><dd>outline — color, thickness</dd>
+          <dt><code>/fx2,#f0f,10,4,4</code></dt><dd>shadow — color, blur, x, y</dd>
+          <dt><code>/fx0</code></dt><dd>drop effects for this segment only</dd>
+        </dl>
+        <p>Every directive has a sane bare form: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>.</p>
+        <p>Chain as many as you like:<br><code>&lt;text/#:ff00ff/f:4/scale:150/r/fx2,#fff,10,4,4&gt;</code></p>
+
+        <h4>Escaping</h4>
+        <p>Prefix any special character with <code>\</code> to print it literally: <code>\[text\]</code> prints <code>[text]</code></p>
+
+        <h4>Fonts, by index</h4>
+        <p id="fontIndexList" class="fontlist"></p>
+
+      </div>
+    </details>
+
+    <div class="card" data-tab="style">
+      <p class="card-title">  Size &amp; Layout</p>
+      <div class="card-grid">
+        <div class="field full">
+          <label>Aspect ratio</label>
+          <div class="radio-group" id="aspectGroup">
+            <div class="radio-btn active" data-val="1:1">1:1</div>
+            <div class="radio-btn" data-val="2:3">2:3</div>
+            <div class="radio-btn" data-val="3:4">3:4</div>
+            <div class="radio-btn" data-val="9:16">9:16</div>
+            <div class="radio-btn" data-val="9:20">9:20</div>
+            <div class="radio-btn" data-val="16:9">16:9</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Justification</label>
+          <div class="radio-group" id="alignGroup">
+            <div class="radio-btn" data-val="center">Centered</div>
+            <div class="radio-btn active" data-val="left">Left</div>
+            <div class="radio-btn" data-val="right">Right</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Vertical Alignment</label>
+          <div class="radio-group" id="valignGroup">
+            <div class="radio-btn" data-val="top">Top</div>
+            <div class="radio-btn active" data-val="center">Center</div>
+            <div class="radio-btn" data-val="bottom">Bottom</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-tab="style">
+      <p class="card-title">  Presets</p>
+      <div class="preset-grid" id="presetGrid"></div>
+    </div>
+
+
+
+        <details class="card" data-tab="type" open>
+      <summary class="card-title">Type</summary>
+      
+      <div class="card-grid">
+        <div class="field full">
+          <label>Font Family</label>
+          <select id="fontFamily"></select>
+        </div>
+
+        <div class="field">
+          <label>Text Color</label>
+          <div class="color-pair">
+            <input type="text" class="hex-input" id="textColorHex" value="#F2F2EF" data-coloris>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Maximum size (px)</label>
+          <input type="number" id="maxSize" value="120" min="10" max="400" step="2">
+        </div>
+
+        <div class="field full">
+          <label>Global Line Spacing Modifier</label>
+          <div class="angle-wrap">
+            <input type="range" id="lineSpacing" min="-1" max="1" step="0.01" value="0">
+            <span class="angle-val" id="lineSpacingVal">1.00x</span>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="textGradientToggle">
+          <label for="textGradientToggle">Radial Gradient Text?</label>
+        </div>
+        <div class="subblock" id="gradientBlock">
+          <div class="field full">
+            <label>Gradient stops</label>
+            <div class="radio-group" id="textStopsGroup">
+              <div class="radio-btn active" data-val="2">2</div>
+              <div class="radio-btn" data-val="3">3</div>
+              <div class="radio-btn" data-val="4">4</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Text Color 2</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="textColor2Hex" value="#B98A8A" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="textColor3Field" style="display:none;">
+            <label>Text Color 3</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="textColor3Hex" value="#C9A876" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="textColor4Field" style="display:none;">
+            <label>Text Color 4</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="textColor4Hex" value="#7A8CA3" data-coloris>
+            </div>
+          </div>
+          <div class="field">
+            <label>Radial Gradient Angle</label>
+            <div class="angle-wrap">
+              <input type="range" id="textGradientAngle" min="0" max="360" value="45">
+              <span class="angle-val" id="textGradientAngleVal">45°</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="accent1Toggle" checked>
+          <label for="accent1Toggle">Accent 1 Enabled?  <code>[text]</code></label>
+        </div>
+        <div class="subblock" id="accent1Block">
+          <div class="field full">
+            <label>Accent 1</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="accent1ColorHex" value="#C9A876" data-coloris>
+            </div>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="accent2Toggle" checked>
+          <label for="accent2Toggle">Accent 2 Enabled?  <code>{text}</code></label>
+        </div>
+        <div class="subblock" id="accent2Block">
+          <div class="field full">
+            <label>Accent 2</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="accent2ColorHex" value="#7A8CA3" data-coloris>
+            </div>
+          </div>
+        </div>
+
+        <button class="ghost full" id="randomFontBtn">⟳ Randomize font</button>
+      </div>
+    </details>
+
+        <details class="card" data-tab="type">
+      <summary class="card-title">Text Effects</summary>
+      
+      <div class="card-grid">
+        <div class="field full">
+          <label>Mode</label>
+          <select id="outlineMode">
+            <option value="off" selected>Off</option>
+            <option value="outline">Outline</option>
+            <option value="shadow">Shadow</option>
+          </select>
+        </div>
+
+        <div class="field" id="outlineColorField">
+          <label>Color</label>
+          <div class="color-pair">
+            <input type="text" class="hex-input" id="outlineColorHex" value="#FFFFFF" data-coloris>
+          </div>
+        </div>
+
+        <div class="field" id="outlineThicknessField">
+          <label>Thickness (px)</label>
+          <input type="number" id="outlineThickness" value="2" min="0" step="0.5">
+        </div>
+
+        <div class="row full" id="shadowThicknessField" style="display:none;">
+          <div class="field"><label>Blur</label><input type="number" id="shadowBlur" value="6" min="0" step="0.5"></div>
+          <div class="field"><label>X offset</label><input type="number" id="shadowX" value="3" step="0.5"></div>
+          <div class="field"><label>Y offset</label><input type="number" id="shadowY" value="3" step="0.5"></div>
+        </div>
+      </div>
+    </details>
+
+        <details class="card" data-tab="page" open>
+      <summary class="card-title">Background</summary>
+      <div class="card-grid">
+
+        <div class="field">
+          <label>Color 1</label>
+          <div class="color-pair">
+            <input type="text" class="hex-input" id="bgColor1Hex" value="#111113" data-coloris>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="bgGradientToggle">
+          <label for="bgGradientToggle">Radial Gradient?</label>
+        </div>
+        <div class="subblock" id="bgGradientBlock">
+          <div class="field full">
+            <label>Gradient stops</label>
+            <div class="radio-group" id="bgStopsGroup">
+              <div class="radio-btn active" data-val="2">2</div>
+              <div class="radio-btn" data-val="3">3</div>
+              <div class="radio-btn" data-val="4">4</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Color 2</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="bgColor2Hex" value="#D8CFC0" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="bgColor3Field" style="display:none;">
+            <label>Color 3</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="bgColor3Hex" value="#B8A088" data-coloris>
+            </div>
+          </div>
+          <div class="field" id="bgColor4Field" style="display:none;">
+            <label>Color 4</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="bgColor4Hex" value="#8A7048" data-coloris>
+            </div>
+          </div>
+          <div class="field">
+            <label>Angle</label>
+            <div class="angle-wrap">
+              <input type="range" id="bgGradientAngle" min="0" max="360" value="135">
+              <span class="angle-val" id="bgGradientAngleVal">135°</span>
+            </div>
+          </div>
+        </div>
+        <button class="ghost full" id="randomBgBtn">⟳ Randomize background</button>
+      </div>
+    </details>
+
+    <details class="card" data-tab="page" open>
+      <summary class="card-title">Texture</summary>
+      <div class="card-grid">
+        <div class="check-row">
+          <input type="checkbox" id="textureToggle" checked>
+          <label for="textureToggle">Enable texture</label>
+        </div>
+        <div class="subblock" id="textureBlock">
+          <div class="field full">
+            <label>Type</label>
+            <select id="textureType">
+              <optgroup label="♡ Whimsy">
+                <option value="clouds">Sleep Haze</option>
+                <option value="bokeh">Dream Bloom</option>
+                <option value="astral">Deep Field</option>
+                <option value="magicparticles">Euphoria Dust</option>
+                <option value="embers">Burning Mana</option>
+                <option value="snow">First Snow</option>
+                <option value="aurora">Aurora Veil</option>
+              </optgroup>
+              <optgroup label="√ Sharpness">
+                <option value="grain">Waking Grain</option>
+                <option value="metalleaf">Metal Leaf</option>
+                <option value="flowers">Lotus Pond</option>
+                <option value="brushstrokes">Painter's Frustration</option>
+                <option value="halftone">90s Dots</option>
+                <option value="rainstreaks">Still Rain</option>
+                <option value="hatch">Silverpoint Hatch</option>
+              </optgroup>
+              <optgroup label="∆ Chaos">
+                <option value="sigils">Sigil Scatter</option>
+                <option value="mathnoise">Enochian Noise</option>
+                <option value="summoning">Summoning Circles</option>
+                <option value="inkbleed">Rorschach Test</option>
+                <option value="crackedglaze">Fractured Glaze</option>
+                <option value="tessellate">Facet Field</option>
+                <option value="cards">Cartomancy</option>
+              </optgroup>
+              <optgroup label="🜚 Touch">
+                <option value="linen">Linen Tooth</option>
+                <option value="coldpress">Cold Press</option>
+                <option value="foxing">Foxing</option>
+                <option value="foldghost">Fold Ghost</option>
+                <option value="cupring">Cup Ring</option>
+                <option value="wax">Poured Wax</option>
+                <option value="whorl">Whorl</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field full">
+            <label id="texP1Label">—</label>
+            <input type="range" id="texP1" min="0" max="100" value="100">
+            <span class="range-val" id="texP1Val"></span>
+          </div>
+          <div class="field full">
+            <label id="texP2Label">—</label>
+            <input type="range" id="texP2" min="0" max="100" value="100">
+            <span class="range-val" id="texP2Val"></span>
+          </div>
+          <div class="field full">
+            <label>Opacity</label>
+            <div class="angle-wrap">
+              <input type="range" id="textureOpacity" min="0" max="100" value="60">
+              <span class="angle-val" id="textureOpacityVal">60%</span>
+            </div>
+          </div>
+          <div class="field full">
+            <label for="textureBlend">Blend mode</label>
+            <select id="textureBlend"></select>
+          </div>
+          <div class="field full" id="lightRow">
+            <label>Light direction</label>
+            <div class="light-pad" id="lightPad">
+              <button type="button" data-deg="315">↖</button>
+              <button type="button" data-deg="0">↑</button>
+              <button type="button" data-deg="45">↗</button>
+              <button type="button" data-deg="270">←</button>
+              <span class="light-core">🜚</span>
+              <button type="button" data-deg="90">→</button>
+              <button type="button" data-deg="225">↙</button>
+              <button type="button" data-deg="180">↓</button>
+              <button type="button" data-deg="135">↘</button>
+            </div>
+            <input type="hidden" id="textureLight" value="315">
+          </div>
+          <div class="field full" id="tint1Row">
+            <label id="tint1Label">Tint</label>
+            <input type="text" id="textureTint1Hex" value="#7A2B2B" data-coloris>
+          </div>
+          <div class="field full" id="tint2Row">
+            <label id="tint2Label">Second tint</label>
+            <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
+          </div>
+          <div class="field full">
+            <label>Texture seed</label>
+            <div class="row">
+              <div class="field"><input type="number" id="textureSeedValue" value="12345" step="1"></div>
+              <button class="ghost" id="textureSeedReroll" type="button" style="flex:0 0 auto; width:auto; padding:0 14px;">⟳ Reroll</button>
+            </div>
+          </div>
+          <div class="check-row full">
+            <input type="checkbox" id="textureSeedLock">
+            <label for="textureSeedLock">Lock seed (don't reroll on preset/randomize)</label>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="card" data-tab="page">
+      <summary class="card-title">Border</summary>
+      <div class="card-grid">
+        <div class="check-row">
+          <input type="checkbox" id="borderToggle" checked>
+          <label for="borderToggle">Enable border</label>
+        </div>
+        <div class="subblock" id="borderBlock">
+          <div class="field full">
+            <label>Border color</label>
+            <div class="color-pair">
+              <input type="text" class="hex-input" id="borderColorHex" value="#C9A876" data-coloris>
+            </div>
+          </div>
+          <div class="row full">
+            <div class="field"><label>Thickness (px)</label><input type="number" id="borderThickness" value="2" min="1" step="1"></div>
+            <div class="field"><label>Offset (px)</label><input type="number" id="borderOffset" value="14" min="0" step="1"></div>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="card" data-tab="page">
+      <summary class="card-title">Vignette</summary>
+      <div class="card-grid">
+        <div class="check-row">
+          <input type="checkbox" id="vignetteToggle">
+          <label for="vignetteToggle">Enable vignette</label>
+        </div>
+        <div class="subblock" id="vignetteBlock">
+          <div class="field full">
+            <label>Blend mode</label>
+            <select id="vignetteBlend">
+              <option value="overlay">Overlay</option>
+              <option value="color-burn">Color Burn</option>
+              <option value="color-dodge">Color Dodge</option>
+              <option value="lighten">Lighten</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>Intensity</label>
+            <div class="angle-wrap">
+              <input type="range" id="vignetteIntensity" min="0" max="100" value="50">
+              <span class="angle-val" id="vignetteIntensityVal">50%</span>
+            </div>
+          </div>
+        </div>
+
+            </div>
+    </details>
+
+    <details class="card" data-tab="more" id="spellPanel" open>
+      <summary class="card-title">Spellcrafting</summary>
+      <div style="margin-top:6px;">
+        <div class="spell-wheel" id="spellWheel"></div>
+        <p class="hint" id="spellEmpty" style="margin:5px 0 0;">Nothing bound yet. Tune a look, then Create.</p>
+        <div class="btn-row">
+          <button class="btn-major" id="spellCreateBtn" type="button" disabled>Create</button>
+          <button class="btn-major" id="spellApplyBtn" type="button" disabled>Apply</button>
+          <button class="btn-danger" id="spellDeleteBtn" type="button" disabled>Delete</button>
+        </div>
+        <details class="subcard">
+          <summary>Advanced</summary>
+          <div class="btn-row">
+            <button class="ghost" id="spellExportBtn" type="button">Export JSON</button>
+            <button class="ghost" id="spellImportBtn" type="button">Import JSON</button>
+          </div>
+        </details>
+      </div>
+    </details>
+
+    <details class="card" data-tab="more" id="grimoirePanel" open>
+      <summary class="card-title">Grimoire</summary>
+      <div style="margin-top:6px;">
+        <div class="field full">
+          <select id="grimoireList" size="5"></select>
+        </div>
+        <p class="hint" id="grimoireEmpty" style="margin:5px 0 0;">The book is empty. Write, then Save.</p>
+        <div class="btn-row">
+          <button class="btn-major" id="poemSaveBtn" type="button" disabled>Save</button>
+          <button class="btn-major" id="poemApplyBtn" type="button" disabled>Apply</button>
+          <button class="btn-danger" id="poemDeleteBtn" type="button" disabled>Delete</button>
+        </div>
+        <details class="subcard">
+          <summary>Advanced</summary>
+          <div class="btn-row">
+            <button class="ghost" id="poemExportBtn" type="button">Export JSON</button>
+            <button class="ghost" id="poemImportBtn" type="button">Import JSON</button>
+          </div>
+        </details>
+      </div>
+    </details>
+
+    <details class="card" data-tab="more" id="advancedPanel">
+      <summary class="card-title" style="cursor:pointer;">Workbench</summary>
+      <div class="card-grid" style="margin-top:8px;">
+        <div class="field full">
+          <textarea id="advancedJson" style="min-height:140px; font-family:'Courier Prime',monospace; font-size:11px;"></textarea>
+        </div>
+        <button class="ghost" id="advancedRefreshBtn" type="button">↻ Refresh</button>
+        <button class="ghost" id="advancedCopyBtn" type="button">⧉ Copy</button>
+        <button class="ghost full" id="advancedLoadBtn" type="button">⇩ Load settings from JSON above</button>
+      </div>
+    </details>
+
+  </div>
+
+  <div class="stage">
+    <div class="canvas-wrap">
+      <canvas id="poemCanvas" width="3072" height="3072"></canvas>
+      <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position">⟲</button>
+      <button class="download-btn" id="downloadBtn">Download image</button>
+    </div>
+  </div>
+  <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
+
+  <nav class="tabbar" id="tabBar">
+    <button class="tab-btn active" data-tab="write" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4A2.5 2.5 0 0 1 9 6.5V9h6V6.5A2.5 2.5 0 1 1 17.5 9H15v6h2.5A2.5 2.5 0 1 1 15 17.5V15H9v2.5A2.5 2.5 0 1 1 6.5 15H9V9H6.5A2.5 2.5 0 0 1 6.5 4Z"/></svg></span>Inscripton</button>
+    <button class="tab-btn" data-tab="style" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.1 17.3 19.3 3.5 9.3h17L6.7 19.3Z"/><circle cx="12" cy="12.4" r="10" opacity=".3"/></svg></span>Aspects</button>
+    <button class="tab-btn" data-tab="type" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 19.4C6.9 15.2 7.5 9.3 10.6 5.6"/><path d="M10.6 5.6c1.9-1.4 3.6-.5 3.8 1V19.4"/><path d="M8.9 13.9h5.5"/><path d="M6.3 19.6h4.2M12.5 19.6h4.4"/><path d="M14.4 6.6c1.2-1 2.6-.9 3.3.1" opacity=".45"/></svg></span>Runeforms</button>
+    <button class="tab-btn" data-tab="page" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/></svg></span>Materia</button>
+    <button class="tab-btn" data-tab="more" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z"/><circle cx="12" cy="12" r="3.3"/><path d="M12 2.9v2.2M12 18.9v2.2"/></svg></span>Schema</button>
+  </nav>
+
+</div>
+
+<script type="module" src="appEvents.js"></script>
+
+
+<div class="modal-veil" id="modalVeil" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <p class="modal-title" id="modalTitle"></p>
+    <p class="modal-body" id="modalBody"></p>
+    <textarea class="modal-input" id="modalInput" rows="1" hidden></textarea>
+    <div class="btn-row">
+      <button class="ghost" id="modalCancel" type="button">Cancel</button>
+      <button class="btn-major" id="modalConfirm" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
