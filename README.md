@@ -1,104 +1,133 @@
-# Ruby's Poetry Press
+# Unfixable Vellum ♦️
 
-Your text. Your theme. Your style. Pressed on a page for social media.
+Turn poems into images, in the browser. No install.
 
-Single-page web app for turning verse into images. Fuck Photoshop and Canva.
+**[poetrypress.unfixable.place](https://poetrypress.unfixable.place)**
 
-Works from a phone, in bed, at 2am, with no apps to install and no ads or bullshit.
+---
 
-Live: [poetrypress.unfixable.place](https://poetrypress.unfixable.place)
+## Features
 
-## What is this?
+- 16 presets, fully editable
+- 28 procedural background textures, two adjustable parameters each
+- Per-texture blend mode and light direction
+- Multi-stop gradients for background and text
+- PML, a small markup language for poems (below)
+- Lock any control so Randomize and presets skip it
+- Save looks (Spellcrafting) and poems (Grimoire) to local storage
+- Import/export as JSON
+- Export full-quality JPG, filename from your first line
 
-It's a tool like google canva, but typesetting-first, for poets and authors who want to present text content beautifully with no effort.
+## The four elements
 
-- 20 default theme options. Fully editable after you pick one.
-- 20+ procedurally generated backdrops: noise, ink, snow, embers, brushwork, relief maps.
-  - Each one seedable, invertible, never the same image twice... unless you lock it in!
-- Selectable Multi-stop radial gradients, customizable accent colors, 22 fonts, background and text polish all over.
-- Sliders for everything.
-- Border and vignette options, if you wanna be pretentious.
-- Randomizer buttons for font and background, when you don't know what you want yet.
-- Save custom themes as JSON. Load them later.
-- Export a full-quality JPG.
+Presets and textures are grouped by these.
 
-> We ended up inventing a light Domain Specific Language to do typesetting here that's similar to markdown and PCL, see the glossary below.
+| | Element | Palette | Feeling |
+|---|---|---|---|
+| ♡ | **Whimsy** | red, purple, blue gradients | sleep |
+| √ | **Sharpness** | off-white, blue-black, metal | waking |
+| ∆ | **Chaos** | sigils, noise, broken geometry | pain |
+| 🜚 | **Touch** | neutrals only | contact |
 
-## Was this vibe coded?
+---
 
-Of course it was? I'm just a good vibe-coder.
+## PML reference
 
-## What's in each file?
+### Inline
+
+| Syntax | Result |
+|---|---|
+| `**bold**` | bold |
+| `*italic*` | italic |
+| `_underline_` | underline |
+| `~~strike~~` | strikethrough |
+| `[text]` | accent one |
+| `{text}` | accent two |
+| `{[text]}` | accent one → accent two |
+| `[{text]}` | accent two → accent one |
+| `[text/lg]` `[text/rg]` | fade accent one into the ink |
+| `{text/lg}` `{text/rg}` | same, accent two |
+| `\[` | literal `[` — escapes any character |
+
+Nesting works: `**bold [with accent] still bold**`
+
+### Line prefixes
+
+| Syntax | Result |
+|---|---|
+| `## text` | heading |
+| `-# text` | small aside |
+| `> text` | quote — left bar, italic, slight transparency |
+| `#D text` | drop cap |
+| `#S text` | small caps |
+
+### Line suffixes
+
+| Syntax | Result |
+|---|---|
+| `/l` `/c` `/r` | align left, center, right |
+| `/left` `/center` `/right` | same |
+| `~A` `~B` `~C` `~D` | rhyme marker — shown as a coloured bar, not text |
+
+Combine: `a rhyming line~A/r`
+
+### Segments
+
+Wrap part of a line in `<…>` and chain directives after it.
 
 ```
-index.html             — markup
-poetrypress.css        — styling
-appOptions.js          — fonts, presets, aspects
-textParsers.js         — PML and text parsers, below
-textureGenerators.js   — texture procedures, portable code
-canvasRenderer.js      — canvas.js renderer implementation
-appEvents.js           — addiitional wiring and DOM events
+<text/#:ff00ff/scale:150/fx2,#ffff00,10,4,4>
 ```
 
-Tests live in [`test/`](./test). Run them with plain `node`.
+| Directive | Effect | Bare form |
+|---|---|---|
+| `#:hex` | custom colour | — |
+| `f:N` | typeface by index | — |
+| `scale:N` | size, % of fitted size | 100 |
+| `track:N` | letter-spacing, % | 100 |
+| `basis:N` | raise; negative lowers | 30 |
+| `jitter:N` | per-letter shake, % | 100 |
+| `grad:1#f00,2#00f` | custom gradient, up to 4 stops | — |
+| `rainbow` `trans` `lesbian` | preset gradients; `:rev` reverses | — |
+| `fx1,color,width` | outline | black, 3 |
+| `fx2,color,blur,x,y` | shadow | black, 8, 4, 4 |
+| `fx0` | remove effects from this segment | — |
+| `l` `c` `r` | align this segment only | — |
 
-## PoetryPress Markdown Language (PML) Guide
+Split a line between alignments:
 
-PoetryPress Markdown Language (PML) is a limited subset of and expansion of markdown. 
-
-PML is plain text, mostly: the advanced and optional markup language features are simply always there for you when you want them.
-
-**Lines**
-```
-## heading
--# small aside
-> quote — italic, barred, a little transparent
-```
-
-**Inline**
-```
-**bold**   *italic*   _underline_   ~~strike~~
-[accent one]   {accent two}
-```
-Nest them however you want: `**bold [with accent] still bold**`.
-
-**Gradients**
-```
-{[left to right]}   [{right to left]}
-[text/lg]   [text/rg]   {text/lg}   {text/rg}
-```
-The first pair blends your two accents into each other using bracket order implicitly. 
-The second group fades a single accent into your normal ink. `lg` is left gradient and `rg` is right gradient.
-
-**Escape**
-```
-\[literal brackets\]
-```
-
-**Justify yourself**
-End a line with `/l` `/c` `/r`. Or split it using *The Segmentation Operator*.
 ```
 <left side/l><right side/r>
 ```
 
-Advanced usage of **The Segmentation Operator**: Inspired by HP Printer Control Language... but for your markdown editor!
+Emoji inside a coloured span are tinted to match.
+
+---
+
+## Development
+
 ```
-<text/#:ff00ff/f:4/scale:100/r/fx1,#abc,3/fx2,#ff0,10,5,5/fx0/grad:1#f00,2#00f>
+node build.mjs          # bundle to dist/index.html
+node test/<name>.test.mjs
 ```
-- `#:hex` — a color of your own
-- `f:N` — a different font, by index number
-- `scale:N` — size, in pixels
-- `fx1,color,width` — outline
-- `fx2,color,blur,x,y` — shadow
-- `fx0` — strip outline and shadow effects off
-- `grad:1#..,2#..` — up to four stops, your own gradient
-- `l` `c` `r` — left, center, right justification
 
-Chain as many as you like. One slash between each dividing effects `"this is an <exmple/c/fx0/f:4>"` to set left justification, effects off, and font to index 4 for the word `example`.
+| File | Contents |
+|---|---|
+| `index.html` | markup |
+| `poetrypress.css` | styles |
+| `appOptions.js` | typefaces, presets, aspect ratios |
+| `textParsers.js` | PML parser |
+| `textureGenerators.js` | texture generators |
+| `canvasRenderer.js` | rendering |
+| `editor.js` | syntax highlighting |
+| `spell.js` | glyph generator |
+| `vault.js` | Spellcrafting and Grimoire storage |
+| `appEvents.js` | UI wiring, entry point |
 
-One note about **Emoji**:
-- inside a colored span, they take the color. Not sure why I added this feature but it's pretty neat.
+Edit the modules; deploy `dist/index.html`. Nineteen test suites in [`test/`](./test), no dependencies.
 
-## Ko-fi
+See [OPEN-ISSUES.md](./OPEN-ISSUES.md) for known gaps and constraints.
 
-If it's useful: [ko-fi.com/c0222f](https://ko-fi.com/c0222f)
+---
+
+Support: [ko-fi.com/c0222f](https://ko-fi.com/c0222f)

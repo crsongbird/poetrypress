@@ -46,7 +46,7 @@
 
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines } from './textParsers.js';
-import { spellForSeed, spellToPML } from './spell.js';
+import { spellForSeed, spellToPML, validateSpell } from './spell.js';
 import { getTextureCanvas, mixHex, capsFor, defaultBlendFor } from './textureGenerators.js';
 
 
@@ -800,7 +800,14 @@ export function render(){
   // and parsed by the app's own parser, which is the whole joke: the accent
   // colouring and the visible brackets come from the language, not from a
   // special case here.
-  const spellSegs = buildLines(spellToPML(spellForSeed(seedForSpell)), true, true)[0].segments;
+  // A stored spell wins: it identifies which preset a page came from, so it
+  // must not change when the texture seed rerolls. Deriving is only the
+  // fallback for a look that has never been saved.
+  const storedSpell = $('activeSpell').value;
+  const activeSpell = (storedSpell && validateSpell(storedSpell).ok)
+    ? storedSpell
+    : spellForSeed(seedForSpell);
+  const spellSegs = buildLines(spellToPML(activeSpell), true, true)[0].segments;
   ctx.save();
   const spellSize = Math.round(((W + H)/2)*0.01);
   ctx.globalAlpha = 0.95;
@@ -818,9 +825,10 @@ export function render(){
   let sx = ctx.textAlign === 'right' ? spX - spellW : spX;
   ctx.textAlign = 'left';
   for(const sg of spellSegs){
+    // the bare segment takes the page's own ink, not the credit's muted tone
     ctx.fillStyle = sg.color === 'accent1' ? accent1Color
                   : sg.color === 'accent2' ? accent2Color
-                  : wmColor;
+                  : (typeof baseFillStyle === 'string' ? baseFillStyle : $('textColorHex').value);
     ctx.fillText(sg.text, sx, spY);
     sx += ctx.measureText(sg.text).width;
   }

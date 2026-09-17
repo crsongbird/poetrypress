@@ -29,6 +29,8 @@
  *                  file can be tested without a browser.
  */
 
+import { generateSpell, validateSpell } from './spell.js';
+
 export const SPELL_KEY = 'uv.spells.v1';
 export const POEM_KEY  = 'uv.poems.v1';
 
@@ -67,9 +69,14 @@ export function writeStore(key, records){
 const isPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 
 export function isValidSpell(rec){
-  return isPlainObject(rec)
-    && typeof rec.name === 'string' && rec.name.trim().length > 0
-    && isPlainObject(rec.settings);
+  if(!isPlainObject(rec)) return false;
+  if(typeof rec.name !== 'string' || !rec.name.trim()) return false;
+  if(!isPlainObject(rec.settings)) return false;
+  // a record may arrive from an export file, or from a hand-edited
+  // localStorage entry; a malformed glyph string is rejected rather than
+  // rendered, since the renderer would fall back and show the wrong identity
+  if(rec.spell !== undefined && !validateSpell(rec.spell).ok) return false;
+  return true;
 }
 
 export function isValidPoem(rec){
@@ -166,11 +173,22 @@ export function createVault(deps){
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'spell-chip' + (s.name === selectedSpell ? ' selected' : '');
-        const sw = document.createElement('span');
-        sw.className = 'chip-swatch';
-        const bg = (s.settings && s.settings.bg1) || '#222';
-        const bg2 = (s.settings && s.settings.bg2) || bg;
-        sw.style.background = 'linear-gradient(135deg,' + bg + ',' + bg2 + ')';
+        // the same snapshot the preset grid draws, if the host supplied a
+        // painter; otherwise a plain gradient, so this file stays testable
+        // without a canvas
+        let sw;
+        if(typeof deps.paintSwatch === 'function'){
+          sw = document.createElement('canvas');
+          sw.className = 'chip-swatch';
+          const shot = Object.assign({}, s.settings, { spell: s.spell });
+          try { deps.paintSwatch(sw, shot, 160, 56); } catch(e){ /* never fail the list */ }
+        } else {
+          sw = document.createElement('span');
+          sw.className = 'chip-swatch';
+          const bg = (s.settings && s.settings.bg1) || '#222';
+          const bg2 = (s.settings && s.settings.bg2) || bg;
+          sw.style.background = 'linear-gradient(135deg,' + bg + ',' + bg2 + ')';
+        }
         const nm = document.createElement('span');
         nm.className = 'chip-name';
         nm.textContent = s.name;
@@ -228,17 +246,22 @@ export function createVault(deps){
   // ---- spells ----
   async function createSpell(){
     const name = await prompt({
-      title: 'Save this look as a spell',
-      body: 'The current colors, font, texture, border and effects will be saved under a name. The poem itself is not saved — use the Grimoire for that.',
+      title: 'Retain forbidden knowledge?',
+      body: 'Determine a True Name by which to reference this knowledge, for use in future spells. Remember to write your Incantation to the Grimoire if you wish to preserve that, as well!',
       input: true,
       defaultValue: 'Spell ' + (spells.length + 1),
-      confirmLabel: 'Save',
+      confirmLabel: 'Inscribe',
     });
     if(!name) return;
     const clean = String(name).trim();
     if(!clean) return;
     const existing = spells.findIndex(s => spellKeyOf(s) === clean.toLowerCase());
-    const record = { name: clean, settings: getSettings(), savedAt: stamp() };
+    // The glyphs are generated ONCE, here, and stored. They identify this
+    // record; deriving them later would let them change under the user.
+    // An existing record keeps the glyphs it was created with.
+    const prior = existing >= 0 ? spells[existing] : null;
+    const glyphs = (prior && validateSpell(prior.spell || '').ok) ? prior.spell : generateSpell();
+    const record = { name: clean, spell: glyphs, settings: getSettings(), savedAt: stamp() };
     if(existing >= 0){
       const ok = await prompt({
         title: 'Overwrite?',
@@ -259,7 +282,8 @@ export function createVault(deps){
   function applySpell(){
     const s = spells.find(x => x.name === selectedSpell);
     if(!s) return;
-    applySettings(s.settings);
+    // the spell's own glyphs travel with its look
+    applySettings(s.spell ? { ...s.settings, spell: s.spell } : s.settings);
     appliedSpellSnapshot = settingsJson();
     refresh();
   }
@@ -268,9 +292,9 @@ export function createVault(deps){
     const s = spells.find(x => x.name === selectedSpell);
     if(!s) return;
     const ok = await prompt({
-      title: 'Delete this spell?',
-      body: '“' + s.name + '” will be removed from this browser. This cannot be undone.',
-      confirmLabel: 'Delete', danger: true,
+      title: 'Unlearn a Talent?',
+      body: '“' + s.name + '” will be unusable in your dimension. Proceed?',
+      confirmLabel: 'Yes (Remove)', cancelLabel: 'No (Retain)', danger: true,
     });
     if(!ok) return;
     spells = spells.filter(x => x.name !== s.name);
@@ -285,9 +309,9 @@ export function createVault(deps){
     if(!text.trim()) return;
     const title = poemTitleFrom(text, 'Untitled');
     const ok = await prompt({
-      title: 'Save to the Grimoire',
-      body: 'Saved as “' + title + '”, with today’s date. Only the poem text is kept — the look is saved separately as a spell.',
-      confirmLabel: 'Save',
+      title: 'Write in the Grimoire?',
+      body: 'Record “' + title + '” in your dark book of secrets?',
+      confirmLabel: 'Yes (Decide)', cancelLabel: 'No (Deny)',
     });
     if(!ok) return;
     poems.push({ id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
@@ -310,9 +334,9 @@ export function createVault(deps){
     const p = poems.find(x => x.id === selectedPoem);
     if(!p) return;
     const ok = await prompt({
-      title: 'Delete this poem?',
-      body: '“' + p.title + '” will be removed from this browser. This cannot be undone.',
-      confirmLabel: 'Delete', danger: true,
+      title: 'Unwrite History?',
+      body: 'Tear the “' + p.title + '” page from the book under the watch of the moon?',
+      confirmLabel: 'Yes (Preclude)', cancelLabel: 'No (Preserve)', danger: true,
     });
     if(!ok) return;
     poems = poems.filter(x => x.id !== p.id);

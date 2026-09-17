@@ -42,10 +42,12 @@
  */
 
 import { $, FONTS, PRESETS, ASPECTS } from './appOptions.js';
-import { applyEscapes, tokenizeInline } from './textParsers.js';
+import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, hexToHsl, hslToHex } from './canvasRenderer.js';
-import { paramsFor, capsFor, defaultBlendFor } from './textureGenerators.js';
+import { paramsFor, capsFor, defaultBlendFor, getTextureCanvas } from './textureGenerators.js';
+import { spellToPML } from './spell.js';
 import { createVault } from './vault.js';
+import { installEditor } from './editor.js';
 
 // Coloris is loaded from an external CDN (see index.html). Two separate
 // failure modes can happen there, and this guards against both:
@@ -81,6 +83,35 @@ safeColoris({
   format: 'hex',
   clearButton: false,
 });
+
+
+// ---------- lock state ----------
+// Declared up here, not beside the lock UI further down: the settings
+// serializer runs during boot and reads `locked`, and a const is in its
+// temporal dead zone until its declaration is evaluated. Reading it earlier
+// throws — which it did.
+const LOCKABLE = [
+  'bgColor1Hex','bgColor2Hex','bgColor3Hex','bgColor4Hex',
+  'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
+  'accent1ColorHex','accent2ColorHex','outlineColorHex','borderColorHex',
+  'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
+  'textureTint1Hex','textureTint2Hex','texP1','texP2','textureSeedValue',
+];
+// A padlock in the same scratchy hand as the tab glyphs — the shackle swings
+// open when unlocked, which reads at a glance without colour.
+const LOCK_GLYPH =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ' +
+  'stroke-linecap="round" stroke-linejoin="round">' +
+  '<rect class="lk-body" x="4.6" y="10.4" width="14.8" height="10.2" rx="1.6"/>' +
+  '<rect class="lk-body" x="4.9" y="10.7" width="14.2" height="9.6" rx="1.6" opacity=".45"/>' +
+  '<path class="lk-shackle" d="M8.1 10.4V7.3a3.9 3.9 0 0 1 7.8 0v3.1"/>' +
+  '<path class="lk-shackle" d="M8.3 10.2V7.2a3.9 3.9 0 0 1 7.6 0v3" opacity=".45"/>' +
+  '<circle cx="12" cy="15.4" r="1.5"/>' +
+  '</svg>';
+
+const locked = new Set();
+// id -> its lock button, so saved lock state can be reflected in the UI
+const lockButtons = new Map();
 
 const fontSelect = $('fontFamily');
 FONTS.forEach((f,i)=>{
@@ -384,6 +415,10 @@ function serializeCurrentSettings(){
 
     texture: $('textureToggle').checked,
     textureType: $('textureType').value,
+    spell: $('activeSpell').value,
+    highlight: $('highlightToggle') ? $('highlightToggle').checked : true,
+    // which controls the user has pinned against Randomize and presets
+    locks: Array.from(locked),
     textureBlend: $('textureBlend').value,
     textureLight: $('textureLight').value,
     textureTint1: $('textureTint1Hex').value,
@@ -462,6 +497,12 @@ function restoreSettings(s){
   // values, or they would be clamped against the previous texture's range
   syncTextureParams(true);
   syncTextureTools(true);
+  if(s.spell !== undefined) $('activeSpell').value = s.spell;
+  if(s.highlight !== undefined && $('highlightToggle')){
+    $('highlightToggle').checked = !!s.highlight;
+    if(document.body && document.body.classList) document.body.classList.toggle('plain-editor', !s.highlight);
+  }
+  if(Array.isArray(s.locks)) restoreLockState(s.locks);
   if(s.textureBlend) $('textureBlend').value = s.textureBlend;
   if(s.textureLight !== undefined){ $('textureLight').value = s.textureLight; syncLightPad(); }
   if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
@@ -495,7 +536,7 @@ function restoreSettings(s){
 
   if(s.username!==undefined) $('usernameField').value = s.username;
   if(s.usernameCorner) $('usernameCorner').value = s.usernameCorner;
-  if(s.poemText!==undefined) $('poemText').value = s.poemText;
+  if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
   scheduleRender();
 }
@@ -527,14 +568,88 @@ $('advancedLoadBtn').addEventListener('click', ()=>{
 // populate once on load so there's something to see/copy immediately
 $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
 
+
+// ---------- preset snapshots ----------
+/**
+ * Paints one swatch: the ground, a hint of its surface, its border, and its
+ * glyphs. The texture is generated at swatch size rather than scaled down
+ * from a full render — a few thousand pixels each, cached like any other
+ * texture, so sixteen of them cost about one ordinary repaint.
+ */
+function paintPresetSwatch(canvas, p, w, h){
+  canvas.width = w; canvas.height = h;
+  const c = canvas.getContext('2d');
+
+  // ground
+  if(p.bgGradient && p.bg2){
+    const a = ((p.bgAngle || 135) - 90) * Math.PI / 180;
+    const g = c.createLinearGradient(
+      w/2 - Math.cos(a)*w/2, h/2 - Math.sin(a)*h/2,
+      w/2 + Math.cos(a)*w/2, h/2 + Math.sin(a)*h/2);
+    [p.bg1, p.bg2, p.bg3, p.bg4].filter(Boolean).forEach((col, i, all) => {
+      g.addColorStop(all.length > 1 ? i/(all.length-1) : 0, col);
+    });
+    c.fillStyle = g;
+  } else {
+    c.fillStyle = p.bg1 || '#111';
+  }
+  c.fillRect(0, 0, w, h);
+
+  // surface
+  if(p.texture && p.textureType){
+    try {
+      const caps = capsFor(p.textureType);
+      const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
+      const tex = getTextureCanvas(type, w, h, p.accent1, p.accent2, false,
+        (p.textureSeed != null ? p.textureSeed : 4242), p.texP1, p.texP2, 315);
+      if(tex){
+        c.save();
+        c.globalCompositeOperation = caps.blends[0] || 'overlay';
+        c.globalAlpha = Math.min(1, (p.textureOpacity || 30) / 100);
+        c.drawImage(tex, 0, 0, w, h);
+        c.restore();
+      }
+    } catch(e){ /* a swatch is never worth failing a render over */ }
+  }
+
+  // border
+  if(p.border && p.borderColor){
+    c.strokeStyle = p.borderColor;
+    c.lineWidth = Math.max(1, Math.round(h * 0.035));
+    const inset = c.lineWidth / 2 + Math.round(h * 0.06);
+    c.strokeRect(inset, inset, w - inset*2, h - inset*2);
+  }
+
+  // glyphs, in the preset's own accents, at the size the swatch allows
+  if(p.spell){
+    const segs = buildLines(spellToPML(p.spell), true, true)[0].segments;
+    const size = Math.max(6, Math.round(h * 0.26));
+    c.font = `${size}px "Noto Sans Symbols 2","Segoe UI Symbol",sans-serif`;
+    c.textBaseline = 'alphabetic';
+    let total = 0;
+    for(const sg of segs) total += c.measureText(sg.text).width;
+    let x = Math.max(3, (w - total) / 2);
+    const y = h - Math.max(3, Math.round(h * 0.12));
+    c.globalAlpha = 0.92;
+    for(const sg of segs){
+      c.fillStyle = sg.color === 'accent1' ? (p.accent1 || '#fff')
+                  : sg.color === 'accent2' ? (p.accent2 || '#fff')
+                  : (p.text1 || '#fff');
+      c.fillText(sg.text, x, y);
+      x += c.measureText(sg.text).width;
+    }
+    c.globalAlpha = 1;
+  }
+}
+
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
 PRESETS.forEach(p=>{
   const btn = document.createElement('div');
   btn.className = 'preset-btn';
-  const swatch = document.createElement('div');
+  const swatch = document.createElement('canvas');
   swatch.className = 'preset-swatch';
-  swatch.style.background = p.bgGradient ? `linear-gradient(${p.bgAngle||135}deg, ${p.bg1}, ${p.bg2})` : p.bg1;
+  paintPresetSwatch(swatch, p, 168, 62);
   const label = document.createElement('span');
   label.className = 'preset-label';
   label.textContent = p.name;
@@ -702,6 +817,8 @@ function applyPreset(p){
 
   $('textureToggle').checked = !!p.texture;
   $('textureBlock').classList.toggle('open', !!p.texture);
+  // the preset's own spell travels with it
+  $('activeSpell').value = p.spell || '';
   if(p.textureType) $('textureType').value = p.textureType;
   // re-range for the new texture first, then apply the preset's own knobs;
   // a preset that names none simply gets that texture's defaults
@@ -729,9 +846,13 @@ function applyPreset(p){
 
   scheduleRender();
   } finally {
-    restoreLocked(__locks);
+    // Sync FIRST, restore locks LAST. syncTextureTools rebuilds the blend
+    // select and re-clamps the texture params, so restoring before it ran
+    // meant those values were immediately overwritten — which is why locks
+    // held on colours but not on the texture tools.
     syncTextureTools(false);
     syncLightPad();
+    restoreLocked(__locks);
   }
 }
 
@@ -824,22 +945,40 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
   // ---- draggable divider ----
   // An image editor whose image you cannot see is not an image editor. The
   // preview's share of the screen is a variable, and this drags it.
+  // ?grip in the URL paints the divider and its hit area — a way to see
+  // whether the handle is where you think it is, and how big it really is.
+  // hash as well as query: a content:// or file:// URL may drop the query string
+  if(typeof location !== 'undefined' &&
+     (/[?&]grip\b/.test(location.search || '') || /grip/.test(location.hash || ''))){
+    if(document.body && document.body.classList) document.body.classList.add('debug-grip');
+  }
+
   const handle = $('dragHandle');
   const stageEl = typeof document.querySelector === 'function' ? document.querySelector('.stage') : null;
   if(handle && handle.addEventListener && stageEl){
     let dragging = false;
-    const setFrac = (f) => root.style.setProperty('--preview-frac', Math.min(0.72, Math.max(0.14, f)).toFixed(3));
-    const fracFor = (clientY) => {
+    const setFrac = (f) => root.style.setProperty('--preview-frac', Math.min(0.80, Math.max(0.10, f)).toFixed(3));
+    // One variable drives both orientations: in portrait it is a share of
+    // height, in landscape a share of width. The handle reads whichever axis
+    // it is actually dividing.
+    const sideBySide = () => window.innerWidth > window.innerHeight;
+    const fracFor = (e) => {
+      const r = stageEl.getBoundingClientRect();
+      if(sideBySide()) return (e.clientX - r.left) / (window.innerWidth || 1);
       const visible = parseFloat(getComputedStyle(root).getPropertyValue('--vvh')) || window.innerHeight;
-      const top = stageEl.getBoundingClientRect().top;
-      return (clientY - top) / visible;
+      return (e.clientY - r.top) / visible;
     };
     handle.addEventListener('pointerdown', (e)=>{
+      // Do NOT let this steal focus. Resizing the preview mid-edit should not
+      // close the keyboard and drop you out of focus mode — preventing the
+      // default action on pointerdown is what stops the browser moving focus,
+      // while leaving the drag itself working normally.
+      e.preventDefault();
       dragging = true;
       if(handle.setPointerCapture) handle.setPointerCapture(e.pointerId);
       document.body.classList.add('dragging-divider');
     });
-    handle.addEventListener('pointermove', (e)=>{ if(dragging){ setFrac(fracFor(e.clientY)); e.preventDefault(); } });
+    handle.addEventListener('pointermove', (e)=>{ if(dragging){ setFrac(fracFor(e)); e.preventDefault(); } });
     ['pointerup','pointercancel'].forEach(t => handle.addEventListener(t, ()=>{
       dragging = false;
       document.body.classList.remove('dragging-divider');
@@ -865,13 +1004,18 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
     const reset = () => { scale = 1; tx = 0; ty = 0; apply(); };
     const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
 
+    // same reasoning as the divider: pinching or panning the preview must not
+    // pull focus out of the poem
+    wrap.addEventListener('pointerdown', (e)=>{ e.preventDefault(); });
+
     wrap.addEventListener('touchstart', (e)=>{
+      if(e.preventDefault) e.preventDefault();
       if(e.touches.length === 2){
         mode = 'pinch'; pinchStart = dist(e.touches); scaleStart = scale;
       } else if(e.touches.length === 1 && scale > 1.01){
         mode = 'pan'; panX = e.touches[0].clientX - tx; panY = e.touches[0].clientY - ty;
       } else { mode = null; }
-    }, {passive:true});
+    }, {passive:false});
 
     wrap.addEventListener('touchmove', (e)=>{
       if(mode === 'pinch' && e.touches.length === 2 && pinchStart > 0){
@@ -1023,34 +1167,66 @@ bindColorField('textureTint2Hex', scheduleRender);
 // teaching every one of those paths about every control, the locked values
 // are snapshotted before the change and written back after -- which works
 // for any control, including ones added later.
-const LOCKABLE = [
-  'bgColor1Hex','bgColor2Hex','bgColor3Hex','bgColor4Hex',
-  'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
-  'accent1ColorHex','accent2ColorHex','outlineColorHex','borderColorHex',
-  'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','texP1','texP2','textureSeedValue',
-];
-const locked = new Set();
+
+/** The nearest enclosing .field / .check-row, however deeply the control is
+ *  wrapped. Used so a lock always lands next to its setting's name. */
+function nearestField(node){
+  let el = node, firstField = null;
+  for(let i = 0; i < 7 && el; i++){
+    const isField = el.classList &&
+      (el.classList.contains('field') || el.classList.contains('check-row'));
+    if(isField){
+      if(!firstField) firstField = el;
+      // Keep walking past a field that holds no label of its own — the
+      // texture seed, for one, sits in a bare inner .field inside a labelled
+      // outer one, and stopping at the inner one left its lock stranded
+      // below the input with nothing to sit beside.
+      if(el.querySelector && el.querySelector('label')) return el;
+    }
+    el = el.parentElement;
+  }
+  return firstField || node.parentElement;
+}
 
 function installLocks(){
   for(const id of LOCKABLE){
     const node = $(id);
     if(!node || !node.parentElement) continue;
-    const host = node.parentElement.querySelector
-      ? (node.parentElement.querySelector('label') || node.parentElement)
-      : node.parentElement;
+    // Several controls sit inside a wrapper (.angle-wrap, .color-pair, .row),
+    // so the input's immediate parent is NOT the field and holds no label —
+    // the lock then fell through to the wrapper and rendered underneath the
+    // control instead of beside its name. Walk up to the real field first.
+    const field = nearestField(node);
+    const host = (field && field.querySelector && field.querySelector('label')) || field;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'lock-btn';
     btn.title = 'Lock this — Randomize and presets will leave it alone';
-    btn.textContent = '🔓';
+    btn.innerHTML = LOCK_GLYPH;
+    const paint = ()=>{
+      const on = locked.has(id);
+      btn.classList.toggle('locked', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.title = on ? 'Locked — Randomize and presets leave this alone'
+                     : 'Lock this against Randomize and presets';
+      // the control itself dims, so a locked setting is obvious at a glance
+      if(field && field.classList) field.classList.toggle('field-locked', on);
+    };
     btn.addEventListener('click', ()=>{
       if(locked.has(id)) locked.delete(id); else locked.add(id);
-      btn.textContent = locked.has(id) ? '🔒' : '🔓';
-      btn.classList.toggle('locked', locked.has(id));
+      paint();
     });
+    btn._paint = paint;
+    lockButtons.set(id, btn);
     if(host && host.appendChild) host.appendChild(btn);
   }
+}
+
+/** Rebuilds the lock set and the buttons' appearance from a saved list. */
+function restoreLockState(ids){
+  locked.clear();
+  for(const id of ids) if(LOCKABLE.includes(id)) locked.add(id);
+  for(const [, btn] of lockButtons) if(btn._paint) btn._paint();
 }
 
 function snapshotLocked(){
@@ -1067,6 +1243,12 @@ function restoreLocked(snap){
     if(!n) continue;
     if(n.type === 'checkbox') n.checked = snap[id];
     else n.value = snap[id];
+    // value readouts and swatches listen for these; writing .value alone
+    // leaves the slider number and the colour chip showing the old value
+    if(n.dispatchEvent && typeof Event === 'function'){
+      n.dispatchEvent(new Event('input', { bubbles: true }));
+      n.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   }
 }
 /** Runs a change, then puts every locked control back the way it was. */
@@ -1081,6 +1263,38 @@ syncTextureTools(true);
 syncLightPad();
 installLocks();
 
+
+
+// ---------- PML editor ----------
+// The mirror carries the colour; the textarea keeps the caret, the selection
+// and the system keyboard. Repainted on input, and again whenever anything
+// else writes to the field (presets, the Grimoire, restored settings).
+const pmlEditor = installEditor({
+  textarea: $('poemText'),
+  mirror: $('poemMirror'),
+  gutter: $('poemGutter'),
+});
+function repaintEditor(){ if(pmlEditor) pmlEditor.paint(); }
+
+// A way out. Highlighting is an overlay of two layers that must agree about
+// where every glyph lands; if they ever disagree on a given device, this turns
+// the mirror off and hands back a plain, exact textarea. Writing must never be
+// blocked by a colouring bug.
+if($('highlightToggle') && $('highlightToggle').addEventListener){
+  const applyHighlightPref = ()=>{
+    const on = $('highlightToggle').checked;
+    if(document.body && document.body.classList) document.body.classList.toggle('plain-editor', !on);
+    if(on) repaintEditor();
+  };
+  $('highlightToggle').addEventListener('change', applyHighlightPref);
+  applyHighlightPref();
+}
+
+// The editor is repainted explicitly wherever the box changes size, since an
+// observer on the textarea would loop against its own height write.
+if(typeof window !== 'undefined' && window.visualViewport && window.visualViewport.addEventListener){
+  window.visualViewport.addEventListener('resize', repaintEditor);
+}
 
 // ---------- focus mode ----------
 // The Inscribe page collapses to five things when the poem field is focused:
@@ -1103,19 +1317,24 @@ if(typeof document.querySelectorAll === 'function'){
     if(card) card.classList.add('focus-keep');
     // Schema becomes Return, carrying the Touch mark — the glyph the app
     // uses to mean "touch this"
-    if(moreBtn) moreBtn.innerHTML = '<span class="tab-ico tab-ico-glyph">🜚</span>Return';
+    // the box changes size as the class lands; repaint once it has
+    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
+    if(moreBtn) moreBtn.innerHTML = '<span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span>' + 'Return';
   }
   function exitFocus(){
     if(!body.classList || !body.classList.contains('focus-mode')) return;
     body.classList.remove('focus-mode');
     document.querySelectorAll('.focus-keep').forEach(c => c.classList.remove('focus-keep'));
     if(moreBtn && moreIcon) moreBtn.innerHTML = moreIcon;
+    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
     if(poem.blur) poem.blur();
   }
 
   if(poem.addEventListener){
     poem.addEventListener('focus', enterFocus);
-    poem.addEventListener('blur', ()=> setTimeout(exitFocus, 40));
+    // Deliberately NOT leaving on blur: double-tapping to select a word blurs
+    // the field for an instant, which used to throw you out of focus mode
+    // mid-selection. Return and the back gesture are the ways out.
   }
   if(moreBtn && moreBtn.addEventListener){
     moreBtn.addEventListener('click', (e)=>{
@@ -1159,7 +1378,9 @@ function modalPrompt(opts){
     input.hidden = !wantsInput;
     input.value = wantsInput ? (opts.defaultValue || '') : '';
     input.rows = opts.rows || 1;
+    input.setAttribute('rows', String(opts.rows || 1));
     ok.textContent = opts.confirmLabel || 'OK';
+    cancel.textContent = opts.cancelLabel || 'Cancel';
     ok.className = opts.danger ? 'btn-danger' : 'btn-major';
     veil.hidden = false;
 
@@ -1188,9 +1409,10 @@ const vault = createVault({
   getSettings: settingsForSpell,
   applySettings: (settings)=>{ restoreSettings(settings); scheduleRender(); },
   getText: ()=> $('poemText').value,
-  setText: (t)=>{ $('poemText').value = t; },
+  setText: (t)=>{ $('poemText').value = t; repaintEditor(); },
   onChange: scheduleRender,
   prompt: modalPrompt,
+  paintSwatch: paintPresetSwatch,
 });
 
 // Create/Save stay hollow until something has actually diverged, so the

@@ -321,14 +321,7 @@ body.is-mobile .tab-btn .tab-ico { font-size: 17px; line-height: 1; }
 body.is-mobile .tab-btn.active { color: var(--text-main, #f2f2ef); }
 
 /* was sitting directly under the tab bar at a lower z-index */
-body.is-mobile .download-btn {
-  top: calc(var(--vvh) - var(--tabbar-h) - 52px);
-  bottom: auto;
-  right: 12px;
-  z-index: 70;
-  padding: 8px 16px;
-  font-size: 13px;
-}
+/* (superseded: the download button is positioned inside the preview frame) */
 
 /* presets read better as a swipe than as a wall */
 /* Aspects is its own page now, so the presets get a real grid instead of a
@@ -343,8 +336,8 @@ body.is-mobile .preset-btn { width: auto; }
 body.is-mobile .preset-label { font-size: clamp(9px, 2.4vw, 11px); }
 
 /* the poem is the point — give it room, measured not guessed */
+body.is-mobile .editor-wrap { height: calc(var(--vvh) * 0.40); }
 body.is-mobile #poemText {
-  height: calc(var(--vvh) * 0.40);
   /* floor so it is editable without pinch-zooming, ceiling so it does not
      balloon on a large phone or tablet. vw is safe here -- horizontal units
      are not affected by the URL bar the way vh is. */
@@ -617,15 +610,18 @@ body.is-mobile .preset-label{ font-size:clamp(8px,2.1vw,10px); }
 body.is-mobile.focus-mode .card[data-tab]:not(.focus-keep){ display:none; }
 body.is-mobile.focus-mode .app-header{ padding:2px 6px; font-size:11px; }
 body.is-mobile.focus-mode .app-header .kofi-link{ display:none; }
-body.is-mobile.focus-mode .stage{ height:calc(var(--vvh) * 0.24); }
-body.is-mobile.focus-mode .controls{ padding-bottom:6px; overflow:hidden; }
-body.is-mobile.focus-mode #poemText{
-  height:auto;
-  /* what is left after header, preview, grip and bar — so the field fits the
-     gap exactly instead of overflowing it and inviting a scroll */
-  min-height:0;
-  flex:1 1 auto;
+body.is-mobile.focus-mode .stage{
+  /* Must read --preview-frac like everywhere else. A constant here meant the
+     divider updated the variable and nothing in focus mode listened, so the
+     preview could not be resized while writing — which is when you most want
+     to. Capped, because the keyboard leaves little room. */
+  height:calc(var(--vvh-stable, var(--vvh)) * var(--preview-frac));
+  max-height:58dvh;
+  min-height:44px;
 }
+body.is-mobile.focus-mode .controls{ padding-bottom:6px; overflow:hidden; }
+/* (superseded further down: the wrap needs flex-basis 0 to be allowed to
+   shrink below its content and become a scroll box) */
 body.is-mobile.focus-mode .card.focus-keep{ display:flex; flex-direction:column; height:100%; margin:0; }
 body.is-mobile.focus-mode .card.focus-keep .card-title{ display:none; }
 body.is-mobile.focus-mode .tab-btn:not([data-tab="more"]){ display:none; }
@@ -658,3 +654,476 @@ body.is-mobile .tab-ico-glyph{
   font-size:17px; line-height:1; color:#C9B8FF;
   font-family:"Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;
 }
+
+/* ---------- PML editor ----------
+   A highlighted mirror behind a transparent textarea. The two MUST agree on
+   every property that affects line breaking, or the colour drifts away from
+   the text — so font, size, line-height, padding, wrapping and word-breaking
+   are declared once, for both, in the shared block below. */
+.editor-wrap{
+  display:flex; align-items:stretch;
+  border:1px solid var(--line); border-radius:3px;
+  background:var(--bg-deep); overflow:hidden;
+}
+.editor-gutter{
+  flex:0 0 auto; width:3.1em; overflow:hidden;
+  background:rgba(255,255,255,0.028);
+  border-right:1px solid var(--line);
+  user-select:none; -webkit-user-select:none;
+}
+.gutter-line{
+  display:flex; align-items:flex-start; justify-content:flex-end; gap:3px;
+  padding:0 5px 0 3px; box-sizing:border-box;
+}
+.gutter-n{ opacity:.42; }
+.gutter-wrap{ opacity:.5; color:#9B7FE8; }
+.editor-scroll{ position:relative; flex:1 1 auto; min-width:0; }
+
+/* the two layers, sharing everything that decides where a line breaks */
+.editor-input, .editor-mirror, .editor-gutter{
+  font-family:"JetBrains Mono","Courier Prime",ui-monospace,monospace;
+  font-size:13px;
+  line-height:1.62;
+  letter-spacing:0;
+  tab-size:4;
+}
+.editor-input, .editor-mirror{
+  margin:0; padding:7px 9px; border:0;
+  white-space:pre-wrap;
+  overflow-wrap:break-word;
+  word-break:normal;
+  box-sizing:border-box;
+  width:100%;
+}
+.editor-gutter{ padding:7px 0; }
+.editor-mirror{
+  position:absolute; inset:0;
+  overflow:hidden; pointer-events:none;
+  color:var(--text-main);
+}
+.editor-input{
+  position:relative;
+  display:block; resize:none; outline:none;
+  background:transparent;
+  color:transparent;              /* the mirror supplies every visible glyph */
+  caret-color:var(--accent);
+  -webkit-text-fill-color:transparent;
+}
+.editor-input::selection{ background:rgba(155,127,232,0.30); }
+
+/* ---------- PML colours, by element ---------- */
+.pml-bracket  { color:#C0C8D4; }                 /* sharpness — structure */
+.pml-op       { color:#9AA3B0; }
+.pml-directive{ color:#C2A882; }                 /* touch — advanced work */
+.pml-value    { color:#8FA88C; }
+.pml-emph     { color:#E0526F; }                 /* chaos — the disruptive marks */
+.pml-rhyme    { color:#E0526F; opacity:.9; }
+.pml-escape   { color:#6E6880; }
+.pml-prefix   { color:#9B7FE8; }                 /* whimsy — line voice */
+.pml-line     { min-height:1.62em; }
+
+body.is-mobile .editor-input,
+body.is-mobile .editor-mirror,
+body.is-mobile .editor-gutter{ font-size:clamp(12px,3.1vw,13.5px); }
+body.is-mobile .editor-gutter{ width:2.6em; }
+/* (sizing lives in the flex-basis-0 rule further down) */
+body.is-mobile.focus-mode .editor-scroll{ min-height:0; }
+
+/* bracket families, told apart at a glance and weighted so they read as
+   structure. Parens are literal text in PML, so they recede. */
+.pml-sq    { color:#7FD4C1; font-weight:700; }   /* [ ] accent one */
+.pml-cu    { color:#C9A0FF; font-weight:700; }   /* { } accent two */
+.pml-bracket{ color:#D6DCE6; font-weight:700; }  /* < > segmentation */
+.pml-paren { color:#6E6880; }                    /* ( ) literal, set back */
+.pml-op    { font-weight:600; }
+
+/* ---------- focus mode: one frame, not three ---------- */
+body.is-mobile.focus-mode .card.focus-keep{
+  padding:0; border:0; background:transparent; border-radius:0;
+}
+body.is-mobile.focus-mode .editor-wrap{ border-left:0; border-right:0; border-radius:0; }
+body.is-mobile.focus-mode .controls{ padding-left:0; padding-right:0; }
+/* the credit fields belong to the page, not to writing it */
+body.is-mobile.focus-mode .card.focus-keep .field:not(.editor-field){ display:none; }
+body.is-mobile.focus-mode .card.focus-keep .card-grid{ gap:0; }
+/* the header must not shift sideways when the Ko-fi link leaves */
+body.is-mobile.focus-mode .app-header-spacer{ display:none; }
+body.is-mobile.focus-mode .app-header-title{ text-align:center; }
+
+/* Caret alignment: a textarea reserves room for its scrollbar and the mirror
+   does not, so the two wrap at different widths and the highlight drifts off
+   the text. Hiding the textarea's scrollbar makes both layers exactly as wide
+   as each other. */
+.editor-input{ scrollbar-width:none; -ms-overflow-style:none; }
+.editor-input::-webkit-scrollbar{ width:0; height:0; display:none; }
+.editor-input, .editor-mirror{ border:0 !important; }
+
+/* arrows point the way the light travels: inward, toward the page */
+.light-pad{ width:126px; gap:4px; }
+.light-pad button{ font-size:17px; }
+body.is-mobile .light-pad{ width:152px; }
+body.is-mobile .light-pad button{ font-size:19px; }
+.light-core svg{ width:17px; height:17px; opacity:.7; }
+
+/* locks sit at the end of their own label row, the same place every time,
+   instead of wherever the markup happened to put them */
+.field{ position:relative; }
+.field > label{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+/* (superseded: the lock sits beside its label — see the locks block below) */
+
+/* justification and vertical alignment are two groups, not one row of six */
+label.group-split{ border-left:1px solid var(--line); padding-left:10px; }
+
+/* a name is one line; only the JSON panes need height */
+.modal-input{ min-height:0; }
+.modal-input[rows="1"]{ height:2.5em; resize:none; overflow:hidden; }
+
+
+/* ---------- editor scrolling: one scroller, no sync ----------
+   The textarea used to scroll inside itself while the mirror was scrolled to
+   match by hand. Any difference in their content heights accumulated into a
+   growing vertical gap — several lines off by the bottom of a long poem, and
+   worse whenever the box was resized.
+
+   Now the textarea is grown to its full content height (see installEditor),
+   so it never scrolls. The wrap is the only scrolling box, and it carries the
+   gutter, the mirror and the textarea together. There is nothing left to
+   synchronise, so there is nothing left to drift. */
+.editor-wrap{ overflow:auto; align-items:flex-start; }
+.editor-gutter{ overflow:visible; align-self:stretch; }
+.editor-scroll{ overflow:visible; }
+.editor-mirror{ overflow:visible; }
+.editor-input{ overflow:hidden; resize:none; display:block; }
+
+
+/* ---------- editor overlay: one grid cell, two layers ----------
+   Absolute positioning only promises the mirror fills its container; it does
+   not promise the mirror and the textarea lay out identically. Putting both
+   in the SAME grid cell does: grid gives them the same origin and the same
+   width, and with identical font, padding and wrapping rules they produce
+   identical line boxes. Nothing is positioned by hand, so nothing can be off
+   by a line. */
+.editor-scroll{ display:grid; grid-template-columns:minmax(0,1fr); }
+.editor-mirror{
+  position:static !important;
+  grid-area:1 / 1 / 2 / 2;
+  min-width:0;
+}
+.editor-input{
+  position:relative;
+  grid-area:1 / 1 / 2 / 2;
+  min-width:0;
+  z-index:1;
+  height:auto;
+}
+
+/* ============================================================
+   EDITOR METRICS — the two layers must shape text IDENTICALLY
+   ============================================================
+   Everything above this point can be overridden by a rule written later, and
+   several were: a bare `textarea{}` rule sets its own font, line-height and a
+   280px min-height that no class rule was cancelling. Rather than keep
+   chasing which selector wins, every property that affects where a glyph
+   lands is forced on BOTH layers here, together, at the end of the file.
+
+   Two causes of drift that are invisible when reading CSS:
+
+   1. LIGATURES AND KERNING. The mirror splits text into many <span>s for
+      colour; the textarea is one continuous run. Shaping does not cross span
+      boundaries, so a ligature or kern pair that forms in the textarea does
+      not form in the mirror — and the two advance differently, by an amount
+      that depends on what was typed. That is the "off by a seemingly random
+      amount" behaviour exactly.
+
+   2. MOBILE TEXT AUTOSIZING. Chrome on Android inflates text in ordinary
+      block elements but leaves form controls alone. The mirror is a <pre>;
+      the textarea is a form control. One gets boosted, the other does not.
+   ============================================================ */
+.editor-input, .editor-mirror{
+  font-family:"JetBrains Mono","Courier Prime",ui-monospace,monospace !important;
+  font-size:13px !important;
+  font-weight:400 !important;
+  font-style:normal !important;
+  line-height:1.62 !important;
+  letter-spacing:0 !important;
+  word-spacing:0 !important;
+  tab-size:4 !important;
+  text-transform:none !important;
+  text-indent:0 !important;
+  white-space:pre-wrap !important;
+  overflow-wrap:break-word !important;
+  word-break:normal !important;
+  padding:7px 9px !important;
+  border:0 !important;
+  box-sizing:border-box !important;
+  min-height:0 !important;
+  max-width:none !important;
+  direction:ltr !important;
+  text-align:left !important;
+
+  /* shaping must not depend on how the text is cut into elements */
+  font-variant-ligatures:none !important;
+  font-kerning:none !important;
+  font-feature-settings:"liga" 0, "clig" 0, "calt" 0 !important;
+  font-optical-sizing:none;
+
+  /* and neither layer may be silently inflated */
+  -webkit-text-size-adjust:100% !important;
+  text-size-adjust:100% !important;
+}
+body.is-mobile .editor-input, body.is-mobile .editor-mirror{
+  font-size:13px !important;
+}
+/* colour only — never weight, which would change advance in the mirror and
+   not in the textarea */
+.pml-sq, .pml-cu, .pml-bracket, .pml-op{ font-weight:400 !important; }
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+
+/* the line anchors must take up no space and create no box */
+.ln-mark{
+  display:inline !important;
+  width:0; height:0;
+  font-size:inherit !important;
+  line-height:inherit !important;
+  letter-spacing:0 !important;
+}
+/* no per-line block boxes in the mirror: each one would round its own height
+   to device pixels and the errors would stack down the page */
+.pml-line{ display:inline; min-height:0; }
+
+/* highlighting off: the mirror goes away and the textarea shows its own text */
+body.plain-editor .editor-mirror{ display:none; }
+body.plain-editor .editor-input{
+  color:var(--text-main) !important;
+  -webkit-text-fill-color:var(--text-main) !important;
+}
+.editor-toggle{ margin-bottom:5px; }
+body.is-mobile.focus-mode .editor-toggle{ display:none; }
+
+/* ============================================================
+   VIEWPORT HEIGHT — let the browser tell us, not JavaScript
+   ============================================================
+   --vvh is measured in JS from visualViewport and goes stale whenever the
+   browser changes its own chrome without firing an event I happen to be
+   listening for. That staleness is the dead gap under the tab bar.
+
+   `interactive-widget=resizes-content` (in the viewport meta) makes the soft
+   keyboard resize the LAYOUT viewport on Android, and `dvh` then tracks the
+   real visible height including the URL bar. Between them the browser reports
+   its own geometry and nothing can be stale.
+
+   --vvh stays as the fallback: the first declaration applies where dvh is
+   unsupported, the second overrides it where it is.
+   ============================================================ */
+body.is-mobile .app{ height:var(--vvh); height:100dvh; }
+body.is-mobile .tabbar{
+  top:calc(var(--vvh) - var(--tabbar-h));
+  top:calc(100dvh - var(--tabbar-h));
+}
+/* (superseded: the download button is positioned inside the preview frame) */
+body.is-mobile .stage{ max-height:calc(100dvh * 0.66); }
+
+/* ---------- the editor must be able to become a scroll box ----------
+   A flex child only scrolls if it is allowed to be SHORTER than its content.
+   By default `min-height:auto` on a flex item refuses that, so the wrap grew
+   to its full content height, pushed past the screen, and the last lines
+   became unreachable. flex-basis 0 + min-height 0 down the whole chain is
+   what makes the overflow land on the wrap, where it can scroll. */
+body.is-mobile .controls{ min-height:0; }
+body.is-mobile.focus-mode .card.focus-keep{ min-height:0; }
+body.is-mobile.focus-mode .card.focus-keep .card-grid{ min-height:0; display:flex; flex-direction:column; flex:1 1 0; }
+/* (superseded: .controls is the single scroller in focus mode — see below) */
+/* outside focus mode the wrap has a definite height, so it scrolls already */
+body.is-mobile .editor-wrap{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
+/* ============================================================
+   FOCUS MODE SCROLLING — one scroller, and it is .controls
+   ============================================================
+   The editor was being made into its own scroll box nested inside several
+   flex items, each of which had to agree to shrink below its content. That
+   is a lot of conditions for scrolling to work, and when any one of them
+   failed the last lines simply became unreachable.
+
+   .controls already scrolls correctly everywhere else in the app, so in focus
+   mode it scrolls here too and the editor is left at its natural full height.
+   Fewer moving parts, and the failure mode is gone rather than mitigated.
+
+   The `overflow:hidden` this replaces was guarding the old Chrome
+   scroll-into-empty-space bug; `interactive-widget=resizes-content` plus dvh
+   now handle that at the browser level.
+   ============================================================ */
+body.is-mobile.focus-mode .controls{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  /* clear the fixed Return bar, plus room to scroll the last line free of it */
+  padding-bottom:calc(var(--tabbar-h) + 28px);
+}
+body.is-mobile.focus-mode .card.focus-keep{ height:auto; min-height:0; display:block; }
+body.is-mobile.focus-mode .card.focus-keep .card-grid{ display:block; }
+body.is-mobile.focus-mode .editor-wrap{
+  flex:0 0 auto;
+  height:auto;
+  max-height:none;
+  overflow:visible;          /* the editor no longer scrolls; .controls does */
+}
+
+/* ---------- locks ----------
+   The lock sits immediately after its label's text, not pushed to the far
+   edge: it has to read as belonging to that one setting. */
+.field > label{ justify-content:flex-start; }
+.lock-btn{
+  margin-left:4px;
+  flex:0 0 auto;
+  width:17px; height:17px;
+  padding:0; border:0; background:transparent;
+  color:#6E6880;
+  opacity:.55; cursor:pointer;
+  vertical-align:middle;
+}
+.lock-btn svg{ width:100%; height:100%; display:block; }
+.lock-btn:hover{ opacity:.85; }
+/* unlocked: the shackle swings open and to one side */
+.lock-btn .lk-shackle{ transform:translate(3px,-1.6px) rotate(-16deg); transform-origin:12px 10px; }
+.lock-btn.locked{ opacity:1; color:var(--accent); }
+.lock-btn.locked .lk-shackle{ transform:none; }
+body.is-mobile .lock-btn{ width:19px; height:19px; margin-left:5px; }
+
+/* a locked control dims, so its state is visible without reading the icon */
+.field-locked > input:not(.lock-btn),
+.field-locked > select,
+.field-locked > .light-pad,
+.field-locked > input[type="range"]{ opacity:.45; }
+.field-locked > label{ color:var(--accent-dim, #9a8556); }
+
+/* ---------- locks, refined ---------- */
+/* Smaller hit area: easy to hit on purpose, harder to catch with the side of
+   a thumb while reaching for the control it sits beside. */
+.lock-btn{
+  width:14px; height:14px;
+  margin-left:6px;
+  padding:0;
+  opacity:.4;
+}
+body.is-mobile .lock-btn{ width:16px; height:16px; margin-left:7px; }
+.lock-btn:hover, .lock-btn:focus-visible{ opacity:.9; }
+.lock-btn.locked{ opacity:1; }
+
+/* A locked control is genuinely inert, not merely dimmed — the fade is the
+   signal and the pointer-events make it true. Descendant selectors, because
+   several controls sit inside a wrapper rather than directly in the field. */
+.field-locked input:not(.lock-btn),
+.field-locked select,
+.field-locked textarea,
+.field-locked .light-pad,
+.field-locked .angle-wrap,
+.field-locked .color-pair{
+  opacity:.3;
+  pointer-events:none;
+  filter:grayscale(0.6);
+}
+.field-locked > label{ color:var(--accent); opacity:.75; }
+/* the lock itself must stay live inside a locked field */
+.field-locked .lock-btn{ opacity:1; pointer-events:auto; filter:none; }
+
+/* ============================================================
+   LANDSCAPE — split by width, not by height
+   ============================================================
+   Sideways there is plenty of width and very little height, so stacking the
+   preview above the controls wastes both: the preview becomes a letterbox
+   strip and the controls get a narrow column with the rest of the screen
+   empty. The same two-column shape the desktop already uses fits far better,
+   and --preview-frac drives the split either way — height in portrait, width
+   here — so the drag handle keeps working with no second variable.
+   ============================================================ */
+@media (orientation: landscape){
+  body.is-mobile .app{ flex-direction:row; }
+
+  body.is-mobile .stage{
+    order:1;
+    flex:0 0 auto;
+    width:clamp(28%, calc(100% * var(--preview-frac) * 1.6), 62%);
+    height:100%;
+    max-height:none;
+    padding:6px;
+  }
+  body.is-mobile .canvas-wrap{ height:100%; }
+  body.is-mobile #poemCanvas{ max-height:100%; max-width:100%; }
+
+  /* the divider becomes vertical */
+  body.is-mobile .drag-handle{
+    order:2;
+    width:12px; height:auto;
+    flex:0 0 auto;
+    align-self:stretch;
+    cursor:col-resize;
+    background:linear-gradient(90deg, rgba(255,255,255,0.05), transparent);
+    border-top:0; border-bottom:0;
+    border-left:1px solid rgba(255,255,255,0.07);
+    border-right:1px solid rgba(255,255,255,0.07);
+  }
+  body.is-mobile .drag-grip{ width:3px; height:40px; }
+
+  body.is-mobile .controls{
+    order:3;
+    flex:1 1 0;
+    min-width:0;
+    height:100%;
+    overflow-y:auto;
+    padding-bottom:calc(var(--tabbar-h) + 20px);
+  }
+
+  /* the bar stays across the bottom; it is the one thing that should not
+     become a column */
+  body.is-mobile .tabbar{ flex-direction:row; }
+
+  /* in focus mode the editor still gets the whole right-hand column */
+  body.is-mobile.focus-mode .stage{ width:clamp(24%, calc(100% * var(--preview-frac)), 45%); }
+  body.is-mobile.focus-mode .controls{ padding-bottom:calc(var(--tabbar-h) + 24px); }
+
+  /* short landscape (a phone on its side) has almost no height to spare */
+  @media (max-height: 460px){
+    body.is-mobile .app-header{ display:none; }
+    body.is-mobile .tabbar{ --tabbar-h:44px; height:44px; }
+    body.is-mobile .tab-btn{ font-size:9px; }
+    body.is-mobile .tab-ico{ width:17px; height:17px; }
+  }
+}
+
+/* ---------- the divider must always be grabbable ----------
+   The stage is position:sticky with z-index:40 and the handle was a plain
+   sibling with no stacking context of its own. Wherever the two boxes touch —
+   and they do once the keyboard shrinks the app — the stage painted on top and
+   took the touch. The handle now sits above it and carries a hit area larger
+   than its visible height, since 11px is a hard target on a phone. */
+body.is-mobile .drag-handle{
+  position:relative;
+  z-index:55;
+  touch-action:none;
+  overflow:visible;
+}
+body.is-mobile .drag-handle::before{
+  content:"";
+  position:absolute;
+  left:0; right:0;
+  top:-11px; bottom:-11px;     /* ~33px tall to the thumb, 11px to the eye */
+  z-index:1;
+}
+@media (orientation: landscape){
+  body.is-mobile .drag-handle::before{
+    top:0; bottom:0; left:-11px; right:-11px;
+  }
+}
+/* the grip is the visible affordance; widen it so it reads as a handle */
+body.is-mobile .drag-grip{ width:52px; height:4px; }
+body.is-mobile.focus-mode .drag-handle{ background:rgba(255,255,255,0.07); }
+
+/* ?grip in the URL: paints the handle and its true hit area, so a
+   can-I-even-touch-this question can be answered by looking */
+body.debug-grip .drag-handle{ background:rgba(255,0,200,0.35) !important; }
+body.debug-grip .drag-handle::before{ background:rgba(255,0,200,0.16); }
+body.debug-grip .drag-grip{ background:#ff00c8; }
+
+/* the swatch is a canvas now — ground, surface, border and glyphs */
+.preset-swatch{ display:block; width:100%; height:34px; object-fit:cover; }
+body.is-mobile .preset-swatch{ height:30px; }
+canvas.chip-swatch{ display:block; width:100%; height:34px; }
