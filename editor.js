@@ -134,11 +134,6 @@ function highlightInline(text){
   return out;
 }
 
-/** Leading whitespace, in characters — drives the hanging indent on wrap. */
-export function indentOf(line){
-  const m = String(line).match(/^[ \t]*/);
-  return m ? m[0].replace(/\t/g, '    ').length : 0;
-}
 
 /**
  * Full document to mirror HTML.

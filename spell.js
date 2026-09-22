@@ -22,6 +22,8 @@
  * prime-length guarantee holds.
  */
 
+import { SPELLS } from './tunables.js';
+
 /** The only glyphs considered safe to render. Noto Sans Symbols 2 covers these. */
 export const GLYPHS = [
   "🜁","🜂","🜃","🜄","🜅","🜆","🜇","🜈","🜉","🜊","🜋","🜌","🜍","🜎",
@@ -33,7 +35,7 @@ export const GLYPHS = [
   "⛤","⛧","⚝","✡","✝","☥","🝆","🝊","🝓","♡",
 ];
 
-export const SPELL_PRIMES = [5, 7, 11, 13, 17];
+export const SPELL_PRIMES = SPELLS.primes;
 
 export function isPrime(n){
   if(!Number.isInteger(n) || n < 2) return false;

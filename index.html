@@ -32,7 +32,7 @@
   <div class="controls">
 
     <div class="card" data-tab="write">
-      <p class="card-title">  Incantation Editor (Poetic Magick Language)</p>
+      <p class="card-title" data-str="card.incantation_editor_poetic_magick_l">  Incantation Editor (Poetic Magick Language)</p>
       <div class="check-row editor-toggle">
         <input type="checkbox" id="highlightToggle" checked>
         <label for="highlightToggle">Script Highlighting</label>
@@ -82,7 +82,7 @@ inside of a <~~dead person~~/trans>'s dreams.
     </div>
 
     <details class="card" data-tab="write" id="formattingGuidePanel">
-      <summary class="card-title">Arcane Guidance</summary>
+      <summary class="card-title" data-str="card.arcane_guidance_pml_syntax">Arcane Guidance (PML Syntax)</summary>
       <div class="pml-help" style="margin-top:6px; font-size:12px; color:var(--text-dim); line-height:1.6;">
 
         <h4>Inline styles</h4>
@@ -109,7 +109,7 @@ inside of a <~~dead person~~/trans>'s dreams.
         <h4>Rhyme markers</h4>
         <p>End a line with <code>~A</code> <code>~B</code> <code>~C</code> <code>~D</code> to tag its rhyme group — shown as a small colored bar, not as text. A and B use the accents; C and D use their split-complements. Combines with justification: <code>text~A/r</code></p>
 
-        <h4>Alignment</h4>
+        <h4>Alignment (Horizontal)</h4>
         <p><code>/l</code> <code>/c</code> <code>/r</code> — or <code>/left</code> <code>/center</code> <code>/right</code> — at the end of a line.</p>
         <p>Split one line between alignments using segments:<br>
         <code>left text &lt;right text/r&gt;</code><br>
@@ -143,29 +143,46 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
     <div class="card" data-tab="style">
-      <p class="card-title">  Form &amp; Bearing</p>
+      <p class="card-title" data-str="card.form_amp_bearing">  Form &amp; Bearing</p>
       <div class="card-grid">
         <div class="field full">
           <label>Aspect ratio</label>
+          <p class="sub-label" data-str="hint.standard">Standard</p>
           <div class="radio-group" id="aspectGroup">
             <div class="radio-btn active" data-val="1:1">1:1</div>
             <div class="radio-btn" data-val="2:3">2:3</div>
             <div class="radio-btn" data-val="3:4">3:4</div>
             <div class="radio-btn" data-val="9:16">9:16</div>
-            <div class="radio-btn" data-val="9:20">9:20</div>
+            <div class="radio-btn" data-val="1:2">1:2</div>
+            <div class="radio-btn" data-val="9:20.5">9:20.5</div>
+          </div>
+          <p class="sub-label" data-str="hint.landscape">Landscape</p>
+          <div class="radio-group" id="aspectGroupWide">
             <div class="radio-btn" data-val="16:9">16:9</div>
+            <div class="radio-btn" data-val="4:3">4:3</div>
+            <div class="radio-btn" data-val="2:1">2:1</div>
+          </div>
+          <div class="check-row full">
+            <input type="checkbox" id="customSizeToggle">
+            <label for="customSizeToggle">Custom resolution</label>
+          </div>
+          <div class="row" id="customSizeRow">
+            <div class="field"><label for="customW">Width</label>
+              <input type="number" id="customW" min="256" max="4096" step="1" value="3072"></div>
+            <div class="field"><label for="customH">Height</label>
+              <input type="number" id="customH" min="256" max="4096" step="1" value="3072"></div>
           </div>
         </div>
         <div class="field">
           <label>Alignment</label>
           <div class="radio-group" id="alignGroup">
-            <div class="radio-btn" data-val="center">Neutral</div>
             <div class="radio-btn active" data-val="left">West</div>
+            <div class="radio-btn" data-val="center">Neutral</div>
             <div class="radio-btn" data-val="right">East</div>
           </div>
         </div>
         <div class="field">
-          <label class="group-split">Attunement</label>
+          <label class="group-split">Attunement (Vertical)</label>
           <div class="radio-group" id="valignGroup">
             <div class="radio-btn" data-val="top">Crest</div>
             <div class="radio-btn active" data-val="center">Heart</div>
@@ -176,14 +193,14 @@ inside of a <~~dead person~~/trans>'s dreams.
     </div>
 
     <div class="card" data-tab="style">
-      <p class="card-title">  Elementary Magics</p>
+      <p class="card-title" data-str="card.known_rituals">  Known Rituals</p>
       <div class="preset-grid" id="presetGrid"></div>
     </div>
 
 
 
         <details class="card" data-tab="type" open>
-      <summary class="card-title">Script Options</summary>
+      <summary class="card-title" data-str="card.script_options">Script Options</summary>
       
       <div class="card-grid">
         <div class="field full">
@@ -277,12 +294,12 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
         </div>
 
-        <button class="ghost full" id="randomFontBtn">⟳ Summon New Typeface</button>
+        <button class="ghost full" id="randomFontBtn" data-str="button.randomFontBtn">⟳ Summon New Typeface</button>
       </div>
     </details>
 
         <details class="card" data-tab="type">
-      <summary class="card-title">Glamour Options</summary>
+      <summary class="card-title" data-str="card.typeface_effects">Typeface Effects</summary>
       
       <div class="card-grid">
         <div class="field full">
@@ -315,11 +332,11 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
         <details class="card" data-tab="page" open>
-      <summary class="card-title">Grounding Field</summary>
+      <summary class="card-title" data-str="card.backdrop_color">Backdrop Color</summary>
       <div class="card-grid">
 
         <div class="field">
-          <label>Field Hue</label>
+          <label>Background Hue</label>
           <div class="color-pair">
             <input type="text" class="hex-input" id="bgColor1Hex" value="#111113" data-coloris>
           </div>
@@ -364,12 +381,12 @@ inside of a <~~dead person~~/trans>'s dreams.
             </div>
           </div>
         </div>
-        <button class="ghost full" id="randomBgBtn">⟳ Summon New Field</button>
+        <button class="ghost full" id="randomBgBtn" data-str="button.randomBgBtn">⟳ Summon New Backdrop</button>
       </div>
     </details>
 
     <details class="card" data-tab="page" open>
-      <summary class="card-title">Surface</summary>
+      <summary class="card-title" data-str="card.surface_texture">Surface Texture</summary>
       <div class="card-grid">
         <div class="check-row">
           <input type="checkbox" id="textureToggle" checked>
@@ -413,7 +430,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="foldghost">Fold Ghost</option>
                 <option value="cupring">Cup Ring</option>
                 <option value="wax">Poured Wax</option>
-                <option value="whorl">Whorl</option>
+                <option value="whorl">Raked Substrate</option>
               </optgroup>
             </select>
           </div>
@@ -438,7 +455,8 @@ inside of a <~~dead person~~/trans>'s dreams.
             <label for="textureBlend">Blend mode</label>
             <select id="textureBlend"></select>
           </div>
-          <div class="field full" id="lightRow">
+          <div class="tool-row" id="textureToolRow">
+<div class="field full" id="lightRow">
             <label>Light direction</label>
             <div class="light-pad" id="lightPad">
               <button type="button" data-deg="315">↘</button>
@@ -466,12 +484,9 @@ inside of a <~~dead person~~/trans>'s dreams.
             <label>Texture seed</label>
             <div class="row">
               <div class="field"><input type="number" id="textureSeedValue" value="12345" step="1"></div>
-              <button class="ghost" id="textureSeedReroll" type="button" style="flex:0 0 auto; width:auto; padding:0 14px;">⟳ Reroll</button>
+              <button class="ghost" id="textureSeedReroll" type="button" style="flex:0 0 auto; width:auto; padding:0 14px;" data-str="button.textureSeedReroll">⟳ Reroll</button>
             </div>
           </div>
-          <div class="check-row full">
-            <input type="checkbox" id="textureSeedLock">
-            <label for="textureSeedLock">Seal Seed</label>
           </div>
         </div>
 
@@ -479,7 +494,7 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
     <details class="card" data-tab="page">
-      <summary class="card-title">Border</summary>
+      <summary class="card-title" data-str="card.border_options">Border Options</summary>
       <div class="card-grid">
         <div class="check-row">
           <input type="checkbox" id="borderToggle" checked>
@@ -491,6 +506,23 @@ inside of a <~~dead person~~/trans>'s dreams.
             <div class="color-pair">
               <input type="text" class="hex-input" id="borderColorHex" value="#C9A876" data-coloris>
             </div>
+          <div class="check-row full">
+            <input type="checkbox" id="borderGradientToggle">
+            <label for="borderGradientToggle">Radial Gradient Border?</label>
+          </div>
+          <div class="field" id="borderColor2Field">
+            <label>Border Hue 2</label>
+            <input type="text" id="borderColor2Hex" value="#9B7FE8" data-coloris>
+          </div>
+          <div class="field" id="borderColor3Field">
+            <label>Border Hue 3</label>
+            <input type="text" id="borderColor3Hex" value="#7FD4C1" data-coloris>
+          </div>
+          <div class="field full">
+            <label>Bloom</label>
+            <input type="range" id="borderBloom" min="0" max="100" value="0">
+            <span class="range-val" id="borderBloomVal">0</span>
+          </div>
           </div>
           <div class="row full">
             <div class="field"><label>Thickness (px)</label><input type="number" id="borderThickness" value="2" min="1" step="1"></div>
@@ -502,7 +534,7 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
     <details class="card" data-tab="page">
-      <summary class="card-title">Vignette</summary>
+      <summary class="card-title" data-str="card.vignette_options">Vignette Options</summary>
       <div class="card-grid">
         <div class="check-row">
           <input type="checkbox" id="vignetteToggle">
@@ -525,62 +557,95 @@ inside of a <~~dead person~~/trans>'s dreams.
               <span class="angle-val" id="vignetteIntensityVal">50%</span>
             </div>
           </div>
+          <div class="field full">
+            <label>Aperture</label>
+            <input type="range" id="vignetteAperture" min="0" max="100" value="35">
+            <span class="range-val" id="vignetteApertureVal">35</span>
+          </div>
+          <div class="field full">
+            <label>Centre X</label>
+            <input type="range" id="vignetteCx" min="0" max="100" value="50">
+            <span class="range-val" id="vignetteCxVal">50</span>
+          </div>
+          <div class="field full">
+            <label>Centre Y</label>
+            <input type="range" id="vignetteCy" min="0" max="100" value="50">
+            <span class="range-val" id="vignetteCyVal">50</span>
+          </div>
+          <div class="field full">
+            <label>Grit</label>
+            <input type="range" id="vignetteNoise" min="0" max="100" value="0">
+            <span class="range-val" id="vignetteNoiseVal">0</span>
+          </div>
         </div>
 
             </div>
     </details>
 
+    <div class="card" data-tab="more">
+      <p class="card-title" data-str="card.appearance">  Appearance</p>
+      <div class="field full">
+        <label for="uiTheme">Theme</label>
+        <select id="uiTheme">
+          <option value="cinder">Cinder</option>
+          <option value="aether">Aether</option>
+          <option value="fathom">Fathom</option>
+          <option value="vellum">Vellum</option>
+        </select>
+      </div>
+      <p class="hint theme-note" id="themeNote"></p>
+    </div>
     <details class="card" data-tab="more" id="spellPanel" open>
-      <summary class="card-title">Spellcrafting</summary>
+      <summary class="card-title" data-str="card.spellcrafting">Spellcrafting</summary>
       <div style="margin-top:6px;">
         <div class="spell-wheel" id="spellWheel"></div>
-        <p class="hint" id="spellEmpty" style="margin:5px 0 0;">Use Create to memorize a custom ritual for your own spells.</p>
+        <p class="hint" id="spellEmpty" style="margin:5px 0 0;" data-str="hint.create_saves_the_current_look_as_a">Create saves the current look as a spell you can bring back later.</p>
         <div class="btn-row">
-          <button class="btn-major" id="spellCreateBtn" type="button" disabled>Create</button>
-          <button class="btn-major" id="spellApplyBtn" type="button" disabled>Invoke</button>
-          <button class="btn-danger" id="spellDeleteBtn" type="button" disabled>Dissolve</button>
+          <button class="btn-major" id="spellCreateBtn" type="button" disabled data-str="button.spellCreateBtn">Create</button>
+          <button class="btn-major" id="spellApplyBtn" type="button" disabled data-str="button.spellApplyBtn">Invoke</button>
+          <button class="btn-danger" id="spellDeleteBtn" type="button" disabled data-str="button.spellDeleteBtn">Dissolve</button>
         </div>
         <details class="subcard">
           <summary>Advanced</summary>
           <div class="btn-row">
-            <button class="ghost" id="spellExportBtn" type="button">Export JSON</button>
-            <button class="ghost" id="spellImportBtn" type="button">Import JSON</button>
+            <button class="ghost" id="spellExportBtn" type="button" data-str="button.spellExportBtn">Export JSON</button>
+            <button class="ghost" id="spellImportBtn" type="button" data-str="button.spellImportBtn">Import JSON</button>
           </div>
         </details>
       </div>
     </details>
 
     <details class="card" data-tab="more" id="grimoirePanel" open>
-      <summary class="card-title">Grimoire</summary>
+      <summary class="card-title" data-str="card.grimoire">Grimoire</summary>
       <div style="margin-top:6px;">
         <div class="field full">
           <select id="grimoireList" size="5"></select>
         </div>
-        <p class="hint" id="grimoireEmpty" style="margin:5px 0 0;">A hungry book begs for your knowledge. Record something?</p>
+        <p class="hint" id="grimoireEmpty" style="margin:5px 0 0;" data-str="hint.the_grimoire_is_empty_record_a_poe">The Grimoire is empty. Record a poem to keep it.</p>
         <div class="btn-row">
-          <button class="btn-major" id="poemSaveBtn" type="button" disabled>Record</button>
-          <button class="btn-major" id="poemApplyBtn" type="button" disabled>Invoke</button>
-          <button class="btn-danger" id="poemDeleteBtn" type="button" disabled>Dissolve</button>
+          <button class="btn-major" id="poemSaveBtn" type="button" disabled data-str="button.poemSaveBtn">Record</button>
+          <button class="btn-major" id="poemApplyBtn" type="button" disabled data-str="button.poemApplyBtn">Invoke</button>
+          <button class="btn-danger" id="poemDeleteBtn" type="button" disabled data-str="button.poemDeleteBtn">Dissolve</button>
         </div>
         <details class="subcard">
           <summary>Advanced</summary>
           <div class="btn-row">
-            <button class="ghost" id="poemExportBtn" type="button">Export JSON</button>
-            <button class="ghost" id="poemImportBtn" type="button">Import JSON</button>
+            <button class="ghost" id="poemExportBtn" type="button" data-str="button.poemExportBtn">Export JSON</button>
+            <button class="ghost" id="poemImportBtn" type="button" data-str="button.poemImportBtn">Import JSON</button>
           </div>
         </details>
       </div>
     </details>
 
     <details class="card" data-tab="more" id="advancedPanel">
-      <summary class="card-title" style="cursor:pointer;">Workbench</summary>
+      <summary class="card-title" style="cursor:pointer;" data-str="card.workbench">Workbench</summary>
       <div class="card-grid" style="margin-top:8px;">
         <div class="field full">
           <textarea id="advancedJson" style="min-height:140px; font-family:'Courier Prime',monospace; font-size:11px;"></textarea>
         </div>
-        <button class="ghost" id="advancedRefreshBtn" type="button">↻ Refresh</button>
-        <button class="ghost" id="advancedCopyBtn" type="button">⧉ Copy</button>
-        <button class="ghost full" id="advancedLoadBtn" type="button">⇩ Load settings from JSON above</button>
+        <button class="ghost" id="advancedRefreshBtn" type="button" data-str="button.advancedRefreshBtn">↻ Refresh</button>
+        <button class="ghost" id="advancedCopyBtn" type="button" data-str="button.advancedCopyBtn">⧉ Copy</button>
+        <button class="ghost full" id="advancedLoadBtn" type="button" data-str="button.advancedLoadBtn">⇩ Load settings from JSON above</button>
       </div>
     </details>
 
@@ -589,18 +654,18 @@ inside of a <~~dead person~~/trans>'s dreams.
   <div class="stage">
     <div class="canvas-wrap">
       <canvas id="poemCanvas" width="3072" height="3072"></canvas>
-      <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position">⟲</button>
-      <button class="download-btn" id="downloadBtn">Download image</button>
+      <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position" data-str="button.resetViewBtn">⟲</button>
+      <button class="download-btn" id="downloadBtn" data-str="button.downloadBtn">Save image</button>
     </div>
   </div>
   <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
 
   <nav class="tabbar" id="tabBar">
-    <button class="tab-btn active" data-tab="write" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z"/><path d="M6.41 3.82A2.67 2.03 0.04 -0.15 0.51 9.11 6.19V9.03h5.43V6.15A2.42 2.86 -0.41 0.70 1.14 17.99 9.18H14.89v6.42h1.90A2.89 2.27 -0.39 0.58 0.79 15.35 17.05V15.09H9.25v2.26A2.55 2.02 -0.48 0.68 1.20 6.52 14.80H9.09V9.05H6.38A2.82 2.72 -0.28 0.08 1.03 7.01 4.45Z" opacity="0.55"/><path d="M6.37 4.73A2.08 2.41 0.28 -0.38 0.99 8.59 6.89V9.39h5.98V7.01A2.30 2.71 0.10 1.09 0.95 17.87 9.59H14.97v6.08h1.92A2.72 2.66 0.54 1.35 0.76 14.87 17.59V14.47H9.06v2.03A2.08 2.01 0.30 0.59 0.72 6.48 15.41H8.54V9.04H6.65A2.92 2.85 0.40 -0.24 0.91 6.44 4.62Z" opacity="0.35"/></svg></span>Inscripton</button>
-    <button class="tab-btn" data-tab="style" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z"/><path d="M12.50 20.52 6.34 4.41 20.21 14.68H3.60L17.04 4.15Z" opacity="0.55"/><path d="M11.91 20.76 6.77 5.20 20.71 14.72H3.63L17.49 4.21Z" opacity="0.35"/><circle cx="12" cy="11.6" r="9.6" opacity=".22"/><circle cx="12.3" cy="11.3" r="10.1" opacity=".14"/></svg></span>Aspects</button>
-    <button class="tab-btn" data-tab="type" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z"/><path d="M4.84 4.91H20.01L12.33 15.78Z" opacity="0.55"/><path d="M4.29 4.16H19.75L11.52 15.42Z" opacity="0.35"/><path d="M12 7.4V12.4"/><path d="M11.68 7.03V12.22" opacity="0.55"/><path d="M11.51 6.85V12.02" opacity="0.35"/><path d="M2.4 16.1H21.6"/><path d="M1.96 15.95H21.08" opacity="0.55"/><path d="M2.81 16.23H21.21" opacity="0.35"/><circle cx="12" cy="20" r="2.25"/><circle cx="12.2" cy="20.2" r="2.6" opacity=".45"/><circle cx="11.8" cy="19.8" r="1.95" opacity=".3"/></svg></span>Runeforms</button>
-    <button class="tab-btn" data-tab="page" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z"/><path d="M11.73 2.53 21.15 11.59 12.38 21.84 2.66 11.98Z" opacity="0.55"/><path d="M11.54 2.26 21.13 11.74 12.36 20.93 2.18 12.50Z" opacity="0.35"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M12.2 8.2 16.4 12.2 12.2 16.3 8.1 12.2Z" opacity=".4"/></svg></span>Materia</button>
-    <button class="tab-btn" data-tab="more" type="button"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z"/><path d="M12.03 2.51 19.95 6.98v9.03L12.53 21.50 4.32 16.24v-9.15Z" opacity="0.55"/><path d="M11.63 3.20 19.94 7.81v8.81L11.70 21.44 4.63 16.89v-8.66Z" opacity="0.35"/><path d="M12 2.9v2.2M12 18.9v2.2"/><path d="M12.35 3.16v1.90M12.02 18.74v1.68" opacity="0.55"/><path d="M11.48 2.66v1.94M12.21 19.40v2.14" opacity="0.35"/><circle cx="12" cy="12" r="3.3"/><circle cx="12.2" cy="11.8" r="3.7" opacity=".4"/></svg></span>Esoterica</button>
+    <button class="tab-btn active" data-tab="write" type="button" data-str="tab.inscripton"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z"/><path d="M6.41 3.82A2.67 2.03 0.04 -0.15 0.51 9.11 6.19V9.03h5.43V6.15A2.42 2.86 -0.41 0.70 1.14 17.99 9.18H14.89v6.42h1.90A2.89 2.27 -0.39 0.58 0.79 15.35 17.05V15.09H9.25v2.26A2.55 2.02 -0.48 0.68 1.20 6.52 14.80H9.09V9.05H6.38A2.82 2.72 -0.28 0.08 1.03 7.01 4.45Z" opacity="0.55"/><path d="M6.37 4.73A2.08 2.41 0.28 -0.38 0.99 8.59 6.89V9.39h5.98V7.01A2.30 2.71 0.10 1.09 0.95 17.87 9.59H14.97v6.08h1.92A2.72 2.66 0.54 1.35 0.76 14.87 17.59V14.47H9.06v2.03A2.08 2.01 0.30 0.59 0.72 6.48 15.41H8.54V9.04H6.65A2.92 2.85 0.40 -0.24 0.91 6.44 4.62Z" opacity="0.35"/></svg></span>Inscripton</button>
+    <button class="tab-btn" data-tab="style" type="button" data-str="tab.rituals"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z"/><path d="M12.50 20.52 6.34 4.41 20.21 14.68H3.60L17.04 4.15Z" opacity="0.55"/><path d="M11.91 20.76 6.77 5.20 20.71 14.72H3.63L17.49 4.21Z" opacity="0.35"/><circle cx="12" cy="11.6" r="9.6" opacity=".22"/><circle cx="12.3" cy="11.3" r="10.1" opacity=".14"/></svg></span>Rituals</button>
+    <button class="tab-btn" data-tab="type" type="button" data-str="tab.thoughtforms"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z"/><path d="M4.84 4.91H20.01L12.33 15.78Z" opacity="0.55"/><path d="M4.29 4.16H19.75L11.52 15.42Z" opacity="0.35"/><path d="M12 7.4V12.4"/><path d="M11.68 7.03V12.22" opacity="0.55"/><path d="M11.51 6.85V12.02" opacity="0.35"/><path d="M2.4 16.1H21.6"/><path d="M1.96 15.95H21.08" opacity="0.55"/><path d="M2.81 16.23H21.21" opacity="0.35"/><circle cx="12" cy="20" r="2.25"/><circle cx="12.2" cy="20.2" r="2.6" opacity=".45"/><circle cx="11.8" cy="19.8" r="1.95" opacity=".3"/></svg></span>Thoughtforms</button>
+    <button class="tab-btn" data-tab="page" type="button" data-str="tab.materia"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z"/><path d="M11.73 2.53 21.15 11.59 12.38 21.84 2.66 11.98Z" opacity="0.55"/><path d="M11.54 2.26 21.13 11.74 12.36 20.93 2.18 12.50Z" opacity="0.35"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M12.2 8.2 16.4 12.2 12.2 16.3 8.1 12.2Z" opacity=".4"/></svg></span>Materia</button>
+    <button class="tab-btn" data-tab="more" type="button" data-str="tab.esoterica"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z"/><path d="M12.03 2.51 19.95 6.98v9.03L12.53 21.50 4.32 16.24v-9.15Z" opacity="0.55"/><path d="M11.63 3.20 19.94 7.81v8.81L11.70 21.44 4.63 16.89v-8.66Z" opacity="0.35"/><path d="M12 2.9v2.2M12 18.9v2.2"/><path d="M12.35 3.16v1.90M12.02 18.74v1.68" opacity="0.55"/><path d="M11.48 2.66v1.94M12.21 19.40v2.14" opacity="0.35"/><circle cx="12" cy="12" r="3.3"/><circle cx="12.2" cy="11.8" r="3.7" opacity=".4"/></svg></span>Esoterica</button>
   </nav>
 
 </div>
@@ -614,8 +679,8 @@ inside of a <~~dead person~~/trans>'s dreams.
     <p class="modal-body" id="modalBody"></p>
     <textarea class="modal-input" id="modalInput" rows="1" hidden></textarea>
     <div class="btn-row">
-      <button class="ghost" id="modalCancel" type="button">Cancel</button>
-      <button class="btn-major" id="modalConfirm" type="button">OK</button>
+      <button class="btn-major" id="modalConfirm" type="button" data-str="button.modalConfirm">OK</button>
+      <button class="ghost" id="modalCancel" type="button" data-str="button.modalCancel">Cancel</button>
     </div>
   </div>
 </div>

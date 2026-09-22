@@ -48,6 +48,7 @@ import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell } from './spell.js';
 import { getTextureCanvas, mixHex, capsFor, defaultBlendFor } from './textureGenerators.js';
+import { EFFECTS } from './tunables.js';
 
 
 function isEmojiCodePoint(cp){
@@ -486,6 +487,22 @@ function getCachedLines(rawText, accent1On, accent2On){
 
 let fitCacheKey = null;
 let fitCacheValue = null;
+
+/**
+ * Throws away the measured text size and line breakdown.
+ *
+ * Needed once at boot: the first render happens with fallback metrics because
+ * the webfonts have not arrived, and the fitted size is cached against a key
+ * that does not mention which font actually painted. Without this the page
+ * keeps that wrong size until the poem is edited — which is why the default
+ * poem ran off the canvas until you touched it.
+ */
+export function invalidateTextMeasurements(){
+  fitCacheKey = null;
+  fitCacheValue = null;
+  linesCacheKey = null;
+  linesCacheValue = null;
+}
 function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing){
   // linesCacheKey stands in for "did the parsed content change" -- it changes
   // exactly when `lines` itself would be a new array, so it's a cheap valid
@@ -540,7 +557,8 @@ export function render(){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend === 'lighten' ? 'overlay' : blend;
-      ctx.drawImage(getTextureCanvas('astral_fog', W, H, null, null, invert, seed, p2, null, tint2), 0, 0);
+      // the light slot stays empty here; the nebula colour is a TINT
+      ctx.drawImage(getTextureCanvas('astral_fog', W, H, null, null, invert, seed, p2, null, null, tint2), 0, 0);
       ctx.restore();
 
       ctx.save();
@@ -574,9 +592,18 @@ export function render(){
   if($('vignetteToggle').checked){
     const intensity = Math.max(0, parseFloat($('vignetteIntensity').value) || 0) / 100;
     const blend = $('vignetteBlend').value;
-    const vcx = W/2, vcy = H/2;
-    const outerR = Math.sqrt(W*W+H*H)/2;
-    const vgrad = ctx.createRadialGradient(vcx,vcy,outerR*0.35, vcx,vcy,outerR*1.05);
+    // aperture moves where the darkening BEGINS: low pulls it inward until
+    // the whole page is falling off, high pushes it out to the corners only
+    const aperture = Math.max(0, Math.min(100, parseFloat($('vignetteAperture').value) || 0)) / 100;
+    const vcx = W * (Math.max(0, Math.min(100, parseFloat($('vignetteCx').value) || 50)) / 100);
+    const vcy = H * (Math.max(0, Math.min(100, parseFloat($('vignetteCy').value) || 50)) / 100);
+    const grit = Math.max(0, Math.min(100, parseFloat($('vignetteNoise').value) || 0)) / 100;
+    // off-centre means one corner is further away than the others; reach to
+    // the furthest so the falloff still covers the page
+    const outerR = Math.max(
+      Math.hypot(vcx, vcy), Math.hypot(W - vcx, vcy),
+      Math.hypot(vcx, H - vcy), Math.hypot(W - vcx, H - vcy));
+    const vgrad = ctx.createRadialGradient(vcx,vcy,outerR*aperture*0.9, vcx,vcy,outerR*1.02);
     // lighten/color-dodge are brightening blend modes — a black source is
     // mathematically a no-op for both (lighten never picks black over anything
     // brighter, and color-dodge's dst/(1-src) reduces to plain dst when src=0).
@@ -588,6 +615,21 @@ export function render(){
     ctx.globalCompositeOperation = blend;
     ctx.fillStyle = vgrad;
     ctx.fillRect(0,0,W,H);
+    // Grit breaks the smooth ramp: speckle weighted by the same falloff, so
+    // it gathers where the vignette is strongest instead of dusting evenly.
+    if(grit > 0){
+      const dots = Math.round((W*H)/EFFECTS.gritDensity * grit);
+      for(let i=0;i<dots;i++){
+        const x = Math.random()*W, y = Math.random()*H;
+        const d = Math.hypot(x-vcx, y-vcy) / outerR;
+        if(d < aperture) continue;
+        const falloff = Math.min(1, (d - aperture) / Math.max(0.05, 1 - aperture));
+        ctx.globalAlpha = falloff * intensity * grit * (0.25 + Math.random()*0.55);
+        ctx.fillStyle = vignetteRGB === '255,255,255' ? '#fff' : '#000';
+        ctx.fillRect(x, y, 1 + Math.random()*1.6, 1 + Math.random()*1.6);
+      }
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   }
 
@@ -595,10 +637,43 @@ export function render(){
     const bColor = $('borderColorHex').value;
     const bThick = Math.max(1, parseFloat($('borderThickness').value) || 1);
     const bOffset = Math.max(0, parseFloat($('borderOffset').value) || 0);
-    ctx.lineWidth = bThick;
-    ctx.strokeStyle = bColor;
     const inset = bOffset + bThick/2;
+    const bloom = Math.max(0, Math.min(100, parseFloat($('borderBloom').value) || 0)) / 100;
+
+    // A gradient border runs a radial ramp from the middle of the page
+    // outward, so each side picks up a different part of the ramp and the
+    // corners catch the far end. Multiple stops make that worth doing.
+    let stroke = bColor;
+    if($('borderGradientToggle').checked){
+      const cx = W/2, cy = H/2;
+      const r = Math.hypot(W, H) / 2;
+      const g = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r);
+      const stops = [bColor, $('borderColor2Hex').value, $('borderColor3Hex').value].filter(Boolean);
+      stops.forEach((col, i) => g.addColorStop(stops.length > 1 ? i/(stops.length-1) : 0, col));
+      stroke = g;
+    }
+
+    ctx.save();
+    // Bloom is drawn as widening, fading passes UNDER the border rather than
+    // with shadowBlur: a shadow would smear in one direction and clip at the
+    // canvas edge, where the border actually lives.
+    if(bloom > 0){
+      const passes = EFFECTS.bloomPasses;
+      for(let i = passes; i >= 1; i--){
+        const spread = bThick * (1 + i * EFFECTS.bloomSpread * bloom);
+        ctx.globalAlpha = (bloom * EFFECTS.bloomAlpha) / i;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineWidth = spread;
+        ctx.strokeStyle = stroke;
+        ctx.strokeRect(inset, inset, W - inset*2, H - inset*2);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.lineWidth = bThick;
+    ctx.strokeStyle = stroke;
     ctx.strokeRect(inset, inset, W - inset*2, H - inset*2);
+    ctx.restore();
   }
 
   // --- text prep ---

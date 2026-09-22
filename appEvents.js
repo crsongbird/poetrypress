@@ -41,13 +41,15 @@
  * Exports: nothing -- this is the entry point, nothing imports FROM it.
  */
 
-import { $, FONTS, PRESETS, ASPECTS } from './appOptions.js';
+import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS } from './appOptions.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, hexToHsl, hslToHex } from './canvasRenderer.js';
-import { paramsFor, capsFor, defaultBlendFor, getTextureCanvas } from './textureGenerators.js';
+import { render, scheduleRender, hexToHsl, hslToHex, invalidateTextMeasurements } from './canvasRenderer.js';
+import { paramsFor, capsFor, getTextureCanvas } from './textureGenerators.js';
 import { spellToPML } from './spell.js';
 import { createVault } from './vault.js';
 import { installEditor } from './editor.js';
+import { PREVIEW, SWATCH } from './tunables.js';
+import { applyStrings, DIALOGS, THEME_NOTES, fill } from './strings.js';
 
 // Coloris is loaded from an external CDN (see index.html). Two separate
 // failure modes can happen there, and this guards against both:
@@ -204,12 +206,48 @@ bindAngle('bgGradientAngle','bgGradientAngleVal');
 
 bindRadioGroup('alignGroup', v=>{ currentAlign=v; scheduleRender(); });
 bindRadioGroup('valignGroup', v=>{ currentValign=v; scheduleRender(); });
-bindRadioGroup('aspectGroup', v=>{
-  currentAspect=v;
-  const [w,h] = ASPECTS[v];
-  canvas.width=w; canvas.height=h;
+// ---------- page size ----------
+/** Applies a page size, mirroring it into the custom boxes so switching to
+ *  Custom starts from whatever you were just looking at. */
+function setPageSize(w, h, mirror){
+  canvas.width = w; canvas.height = h;
+  if(mirror !== false){ $('customW').value = w; $('customH').value = h; }
+}
+const clampSize = (n) =>
+  Math.max(SIZE_LIMITS.min, Math.min(SIZE_LIMITS.max, Math.round(+n || 0)));
+
+function pickAspect(v){
+  if(!ASPECTS[v]) return;
+  currentAspect = v;
+  const [w, h] = ASPECTS[v];
+  setPageSize(w, h);
+  // the two groups are one choice; clear the other's selection
+  setActiveRadioValue('aspectGroup', v);
+  setActiveRadioValue('aspectGroupWide', v);
   scheduleRender();
-});
+}
+bindRadioGroup('aspectGroup', pickAspect);
+bindRadioGroup('aspectGroupWide', pickAspect);
+
+function applyCustomSize(){
+  const w = clampSize($('customW').value);
+  const h = clampSize($('customH').value);
+  $('customW').value = w; $('customH').value = h;
+  currentAspect = 'custom';
+  setPageSize(w, h, false);
+  scheduleRender();
+}
+function syncCustomSize(){
+  const on = $('customSizeToggle').checked;
+  if(document.body && document.body.classList) document.body.classList.toggle('custom-size', on);
+  if(on) applyCustomSize();
+  else if(ASPECTS[currentAspect]) pickAspect(currentAspect);
+  else pickAspect('1:1');
+}
+$('customSizeToggle').addEventListener('change', syncCustomSize);
+['customW','customH'].forEach(id => $(id).addEventListener('change', ()=>{
+  if($('customSizeToggle').checked) applyCustomSize();
+}));
 bindRadioGroup('bgStopsGroup', v=>{
   bgStopCount = parseInt(v,10);
   syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
@@ -226,7 +264,8 @@ $('textureOpacity').addEventListener('input', ()=>{ $('textureOpacityVal').textC
 
 function randomSeed(){ return Math.floor(Math.random()*2**31); }
 function maybeRerollSeed(explicitSeed){
-  if($('textureSeedLock').checked) return;
+  // the seed field's lock is the one control for this now
+  if(locked.has('textureSeedValue')) return;
   $('textureSeedValue').value = (explicitSeed !== undefined) ? explicitSeed : randomSeed();
 }
 $('textureSeedValue').addEventListener('input', scheduleRender);
@@ -234,7 +273,6 @@ $('textureSeedReroll').addEventListener('click', ()=>{
   $('textureSeedValue').value = randomSeed();
   scheduleRender();
 });
-$('textureSeedLock').addEventListener('change', scheduleRender);
 
 const outlineModeSel = $('outlineMode');
 function syncOutlineFields(){
@@ -415,6 +453,14 @@ function serializeCurrentSettings(){
 
     texture: $('textureToggle').checked,
     textureType: $('textureType').value,
+    borderGradientToggle: $('borderGradientToggle').checked,
+    borderColor2: $('borderColor2Hex').value,
+    borderColor3: $('borderColor3Hex').value,
+    borderBloom: $('borderBloom').value,
+    vignetteAperture: $('vignetteAperture').value,
+    vignetteCx: $('vignetteCx').value,
+    vignetteCy: $('vignetteCy').value,
+    vignetteNoise: $('vignetteNoise').value,
     spell: $('activeSpell').value,
     highlight: $('highlightToggle') ? $('highlightToggle').checked : true,
     // which controls the user has pinned against Randomize and presets
@@ -427,7 +473,6 @@ function serializeCurrentSettings(){
     texP2: $('texP2').value,
     textureOpacity: parseFloat($('textureOpacity').value),
     textureSeed: parseInt($('textureSeedValue').value, 10),
-    textureSeedLock: $('textureSeedLock').checked,
 
     border: $('borderToggle').checked,
     borderColor: $('borderColorHex').value,
@@ -441,6 +486,9 @@ function serializeCurrentSettings(){
     align: currentAlign,
     valign: currentValign,
     aspect: currentAspect,
+    customSize: $('customSizeToggle').checked,
+    customW: $('customW').value,
+    customH: $('customH').value,
 
     username: $('usernameField').value,
     usernameCorner: $('usernameCorner').value,
@@ -497,6 +545,14 @@ function restoreSettings(s){
   // values, or they would be clamped against the previous texture's range
   syncTextureParams(true);
   syncTextureTools(true);
+  if(s.borderGradientToggle!==undefined) $('borderGradientToggle').checked = s.borderGradientToggle;
+  if(s.borderColor2) setColorField('borderColor2Hex', s.borderColor2);
+  if(s.borderColor3) setColorField('borderColor3Hex', s.borderColor3);
+  if(s.borderBloom!==undefined){ $('borderBloom').value = s.borderBloom; const o=$('borderBloomVal'); if(o) o.textContent = s.borderBloom; }
+  if(s.vignetteAperture!==undefined){ $('vignetteAperture').value = s.vignetteAperture; const o=$('vignetteApertureVal'); if(o) o.textContent = s.vignetteAperture; }
+  if(s.vignetteCx!==undefined){ $('vignetteCx').value = s.vignetteCx; const o=$('vignetteCxVal'); if(o) o.textContent = s.vignetteCx; }
+  if(s.vignetteCy!==undefined){ $('vignetteCy').value = s.vignetteCy; const o=$('vignetteCyVal'); if(o) o.textContent = s.vignetteCy; }
+  if(s.vignetteNoise!==undefined){ $('vignetteNoise').value = s.vignetteNoise; const o=$('vignetteNoiseVal'); if(o) o.textContent = s.vignetteNoise; }
   if(s.spell !== undefined) $('activeSpell').value = s.spell;
   if(s.highlight !== undefined && $('highlightToggle')){
     $('highlightToggle').checked = !!s.highlight;
@@ -512,7 +568,6 @@ function restoreSettings(s){
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; $('textureOpacityVal').textContent=s.textureOpacity+'%'; }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
-  if(s.textureSeedLock!==undefined) $('textureSeedLock').checked = s.textureSeedLock;
 
   $('borderToggle').checked = !!s.border;
   $('borderBlock').classList.toggle('open', !!s.border);
@@ -527,11 +582,15 @@ function restoreSettings(s){
 
   if(s.align){ currentAlign=s.align; setActiveRadioValue('alignGroup', s.align); }
   if(s.valign){ currentValign=s.valign; setActiveRadioValue('valignGroup', s.valign); }
-  if(s.aspect && ASPECTS[s.aspect]){
-    currentAspect=s.aspect;
-    const [w,h] = ASPECTS[s.aspect];
-    canvas.width=w; canvas.height=h;
-    setActiveRadioValue('aspectGroup', s.aspect);
+  if((s.customSize || s.aspect === 'custom') && s.customW && s.customH){
+    $('customSizeToggle').checked = true;
+    $('customW').value = clampSize(s.customW);
+    $('customH').value = clampSize(s.customH);
+    syncCustomSize();
+  } else if(s.aspect && ASPECTS[s.aspect]){
+    $('customSizeToggle').checked = false;
+    if(document.body && document.body.classList) document.body.classList.remove('custom-size');
+    pickAspect(s.aspect);
   }
 
   if(s.username!==undefined) $('usernameField').value = s.username;
@@ -601,7 +660,7 @@ function paintPresetSwatch(canvas, p, w, h){
       const caps = capsFor(p.textureType);
       const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
       const tex = getTextureCanvas(type, w, h, p.accent1, p.accent2, false,
-        (p.textureSeed != null ? p.textureSeed : 4242), p.texP1, p.texP2, 315);
+        (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p.texP1, p.texP2, 315);
       if(tex){
         c.save();
         c.globalCompositeOperation = caps.blends[0] || 'overlay';
@@ -615,21 +674,23 @@ function paintPresetSwatch(canvas, p, w, h){
   // border
   if(p.border && p.borderColor){
     c.strokeStyle = p.borderColor;
-    c.lineWidth = Math.max(1, Math.round(h * 0.035));
-    const inset = c.lineWidth / 2 + Math.round(h * 0.06);
+    c.lineWidth = Math.max(1.5, Math.round(h * SWATCH.borderScale));
+    // half the stroke sits outside the path, so inset by at least that much
+    // or the top and bottom edges fall off the canvas
+    const inset = c.lineWidth;
     c.strokeRect(inset, inset, w - inset*2, h - inset*2);
   }
 
   // glyphs, in the preset's own accents, at the size the swatch allows
   if(p.spell){
     const segs = buildLines(spellToPML(p.spell), true, true)[0].segments;
-    const size = Math.max(6, Math.round(h * 0.26));
+    const size = Math.max(6, Math.round(h * SWATCH.glyphScale));
     c.font = `${size}px "Noto Sans Symbols 2","Segoe UI Symbol",sans-serif`;
-    c.textBaseline = 'alphabetic';
+    c.textBaseline = 'middle';
     let total = 0;
     for(const sg of segs) total += c.measureText(sg.text).width;
-    let x = Math.max(3, (w - total) / 2);
-    const y = h - Math.max(3, Math.round(h * 0.12));
+    let x = (w - total) / 2;          // centred horizontally
+    const y = h / 2;                  // and vertically
     c.globalAlpha = 0.92;
     for(const sg of segs){
       c.fillStyle = sg.color === 'accent1' ? (p.accent1 || '#fff')
@@ -644,19 +705,61 @@ function paintPresetSwatch(canvas, p, w, h){
 
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
-PRESETS.forEach(p=>{
+const PRESET_COLUMNS = 4;
+
+/** One tile: painted snapshot above its name. */
+function presetTile(p, onPick, extraClass){
   const btn = document.createElement('div');
-  btn.className = 'preset-btn';
+  btn.className = 'preset-btn' + (extraClass ? ' ' + extraClass : '');
   const swatch = document.createElement('canvas');
   swatch.className = 'preset-swatch';
-  paintPresetSwatch(swatch, p, 168, 62);
+  paintPresetSwatch(swatch, p, SWATCH.width, SWATCH.height);
   const label = document.createElement('span');
   label.className = 'preset-label';
   label.textContent = p.name;
-  btn.appendChild(swatch); btn.appendChild(label);
-  btn.addEventListener('click', ()=>applyPreset(p));
-  presetGrid.appendChild(btn);
-});
+  btn.appendChild(swatch);
+  btn.appendChild(label);
+  if(onPick) btn.addEventListener('click', onPick);
+  return btn;
+}
+
+PRESETS.forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+
+// Saved spells join the same grid rather than living only in Esoterica.
+// Everything from the divider down is rebuilt whenever the saved set changes,
+// so the built-in tiles above it are never touched.
+const builtInCount = presetGrid.children.length;
+
+function renderSavedPresets(saved){
+  while(presetGrid.children.length > builtInCount){
+    presetGrid.removeChild(presetGrid.children[presetGrid.children.length - 1]);
+  }
+  if(!saved || !saved.length) return;
+
+  const divider = document.createElement('p');
+  divider.className = 'preset-divider';
+  divider.textContent = 'Bound Spells';
+  presetGrid.appendChild(divider);
+
+  for(const rec of saved){
+    const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
+    presetGrid.appendChild(presetTile(shot, ()=>{
+      restoreSettings(Object.assign({}, rec.settings, { spell: rec.spell }));
+      scheduleRender();
+    }, 'preset-custom'));
+  }
+
+  // blanks so a part-filled last row stays rectangular
+  const remainder = saved.length % PRESET_COLUMNS;
+  if(remainder){
+    for(let i = remainder; i < PRESET_COLUMNS; i++){
+      const blank = document.createElement('div');
+      blank.className = 'preset-btn preset-empty';
+      blank.setAttribute('aria-hidden', 'true');
+      presetGrid.appendChild(blank);
+    }
+  }
+}
 
 // Derives a 15-color Coloris swatch palette from a theme's own colors, so
 // the color picker's swatches change to match whichever preset is active
@@ -819,6 +922,11 @@ function applyPreset(p){
   $('textureBlock').classList.toggle('open', !!p.texture);
   // the preset's own spell travels with it
   $('activeSpell').value = p.spell || '';
+  $('borderGradientToggle').checked = !!p.borderGradient;
+  if(p.borderColor2) setColorField('borderColor2Hex', p.borderColor2);
+  if(p.borderColor3) setColorField('borderColor3Hex', p.borderColor3);
+  $('borderBloom').value = p.borderBloom != null ? p.borderBloom : 0;
+  if($('borderBloomVal')) $('borderBloomVal').textContent = $('borderBloom').value;
   if(p.textureType) $('textureType').value = p.textureType;
   // re-range for the new texture first, then apply the preset's own knobs;
   // a preset that names none simply gets that texture's defaults
@@ -957,7 +1065,8 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
   const stageEl = typeof document.querySelector === 'function' ? document.querySelector('.stage') : null;
   if(handle && handle.addEventListener && stageEl){
     let dragging = false;
-    const setFrac = (f) => root.style.setProperty('--preview-frac', Math.min(0.80, Math.max(0.10, f)).toFixed(3));
+    const setFrac = (f) => root.style.setProperty('--preview-frac',
+    Math.min(PREVIEW.maxFraction, Math.max(PREVIEW.minFraction, f)).toFixed(3));
     // One variable drives both orientations: in portrait it is a share of
     // height, in landscape a share of width. The handle reads whichever axis
     // it is actually dividing.
@@ -1004,12 +1113,15 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
     const reset = () => { scale = 1; tx = 0; ty = 0; apply(); };
     const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
 
-    // same reasoning as the divider: pinching or panning the preview must not
-    // pull focus out of the poem
-    wrap.addEventListener('pointerdown', (e)=>{ e.preventDefault(); });
+    // Same reasoning as the divider: pinching or panning must not pull focus
+    // out of the poem. But the Save and reset buttons live INSIDE the preview,
+    // and preventDefault on pointerdown suppresses their click — which is
+    // exactly why Save stopped working. Controls are exempt.
+    const isControl = (e) => !!(e.target && e.target.closest && e.target.closest('button'));
+    wrap.addEventListener('pointerdown', (e)=>{ if(!isControl(e)) e.preventDefault(); });
 
     wrap.addEventListener('touchstart', (e)=>{
-      if(e.preventDefault) e.preventDefault();
+      if(!isControl(e) && e.preventDefault) e.preventDefault();
       if(e.touches.length === 2){
         mode = 'pinch'; pinchStart = dist(e.touches); scaleStart = scale;
       } else if(e.touches.length === 1 && scale > 1.01){
@@ -1074,7 +1186,7 @@ function syncTextureParams(useDefaults){
       slider.value = def.def;
     }
     label.textContent = def.label;
-    out.textContent = slider.value + (def.unit || '');
+    out.textContent = paramReadout(def, +slider.value);
   });
 }
 
@@ -1082,13 +1194,29 @@ function syncTextureParams(useDefaults){
   $(id).addEventListener('input', ()=>{
     const defs = paramsFor($('textureType').value);
     const i = id === 'texP1' ? 0 : 1;
-    if(defs[i]) $(id+'Val').textContent = $(id).value + (defs[i].unit || '');
+    if(defs[i]) $(id+'Val').textContent = paramReadout(defs[i], +$(id).value);
     scheduleRender();
   });
 });
 $('textureType').addEventListener('change', ()=>{ syncTextureParams(true); scheduleRender(); });
 syncTextureParams(true);
 
+
+
+/**
+ * What a slider should read. A param declaring `base` — the number of things
+ * drawn at 100% on a default page — shows that number instead of a
+ * percentage, because "1124 sparkles" says more than "100%". Size params keep
+ * percentages, since they scale with the page rather than counting anything.
+ */
+function paramReadout(def, value){
+  if(!def) return '';
+  if(def.base != null){
+    const n = Math.max(1, Math.round(def.base * (value / 100)));
+    return n.toLocaleString() + (def.absUnit != null ? def.absUnit : '');
+  }
+  return value + (def.unit || '');
+}
 
 // ---------- texture tools ----------
 // Blend mode, light direction and tints are declared per texture (see
@@ -1362,6 +1490,46 @@ if($('resetViewBtn') && $('resetViewBtn').addEventListener){
   });
 }
 
+
+// ---------- border & vignette extras ----------
+$('borderGradientToggle').addEventListener('change', scheduleRender);
+bindColorField('borderColor2Hex', scheduleRender);
+bindColorField('borderColor3Hex', scheduleRender);
+$('borderBloom').addEventListener('input', scheduleRender);
+$('vignetteAperture').addEventListener('input', scheduleRender);
+$('vignetteCx').addEventListener('input', scheduleRender);
+$('vignetteCy').addEventListener('input', scheduleRender);
+$('vignetteNoise').addEventListener('input', scheduleRender);
+['borderBloom','vignetteAperture','vignetteCx','vignetteCy','vignetteNoise'].forEach(id=>{
+  const out = $(id + 'Val');
+  if(out) $(id).addEventListener('input', ()=>{ out.textContent = $(id).value; });
+});
+
+// every data-str element takes its text from the table in strings.js
+applyStrings(document);
+
+// ---------- theme ----------
+// Kept out of the settings JSON on purpose: a theme is how YOU like the app
+// to look, not part of a saved page, so it lives in its own key and does not
+// travel with an exported spell.
+const THEME_KEY = 'uv.theme.v1';
+function applyTheme(name){
+  const themes = Object.keys(THEME_NOTES);
+  const theme = themes.includes(name) ? name : 'cinder';
+  if(document.documentElement && document.documentElement.setAttribute){
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+  if($('uiTheme')) $('uiTheme').value = theme;
+  if($('themeNote')) $('themeNote').textContent = THEME_NOTES[theme];
+  try { localStorage.setItem(THEME_KEY, theme); } catch(e){ /* private mode */ }
+}
+if($('uiTheme') && $('uiTheme').addEventListener){
+  $('uiTheme').addEventListener('change', ()=> applyTheme($('uiTheme').value));
+}
+let savedTheme = 'cinder';
+try { savedTheme = localStorage.getItem(THEME_KEY) || 'cinder'; } catch(e){ /* private mode */ }
+applyTheme(savedTheme);
+
 // ---------- Spellcrafting & Grimoire ----------
 // One modal serves every confirm/name/paste flow. Resolves to the typed
 // string when it has an input, `true` for a plain confirm, or null on cancel.
@@ -1413,6 +1581,7 @@ const vault = createVault({
   onChange: scheduleRender,
   prompt: modalPrompt,
   paintSwatch: paintPresetSwatch,
+  onSpellsChanged: renderSavedPresets,
 });
 
 // Create/Save stay hollow until something has actually diverged, so the
@@ -1447,6 +1616,13 @@ FONTS.forEach(f=>{
   });
 });
 Promise.all(fontFaces).then(render).catch(render);
-document.fonts.ready.then(render);
-setTimeout(render, 300);
-setTimeout(render, 900);
+// The first paint uses fallback metrics, and the fitted size is cached — so
+// once the real fonts land the measurements have to be thrown away, or the
+// page keeps a size that was measured against the wrong typeface.
+function remeasureAndRender(){
+  invalidateTextMeasurements();
+  render();
+}
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(remeasureAndRender);
+setTimeout(remeasureAndRender, 300);
+setTimeout(remeasureAndRender, 900);

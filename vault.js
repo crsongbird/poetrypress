@@ -30,6 +30,7 @@
  */
 
 import { generateSpell, validateSpell } from './spell.js';
+import { DIALOGS, fill } from './strings.js';
 
 export const SPELL_KEY = 'uv.spells.v1';
 export const POEM_KEY  = 'uv.poems.v1';
@@ -226,7 +227,12 @@ export function createVault(deps){
     setDisabled('poemSaveBtn', !poemIsDirty());
   }
 
-  function refresh(){ renderSpells(); renderPoems(); }
+  function refresh(){
+    renderSpells();
+    renderPoems();
+    // the Aspects grid mirrors the saved spells, so it is told when they change
+    if(typeof deps.onSpellsChanged === 'function') deps.onSpellsChanged(spells);
+  }
 
   function persistSpells(){
     if(!writeStore(SPELL_KEY, spells)){
@@ -246,11 +252,11 @@ export function createVault(deps){
   // ---- spells ----
   async function createSpell(){
     const name = await prompt({
-      title: 'Retain forbidden knowledge?',
-      body: 'Determine a True Name by which to reference this knowledge, for use in future spells. Remember to write your Incantation to the Grimoire if you wish to preserve that, as well!',
+      title: DIALOGS.spellCreate.title,
+      body: DIALOGS.spellCreate.body,
       input: true,
       defaultValue: 'Spell ' + (spells.length + 1),
-      confirmLabel: 'Inscribe',
+      confirmLabel: DIALOGS.spellCreate.confirm, cancelLabel: DIALOGS.spellCreate.cancel,
     });
     if(!name) return;
     const clean = String(name).trim();
@@ -264,9 +270,9 @@ export function createVault(deps){
     const record = { name: clean, spell: glyphs, settings: getSettings(), savedAt: stamp() };
     if(existing >= 0){
       const ok = await prompt({
-        title: 'Overwrite?',
-        body: 'A spell named “' + clean + '” already exists. Replace it?',
-        confirmLabel: 'Replace',
+        title: DIALOGS.overwrite.title,
+        body: fill(DIALOGS.overwrite.body, clean),
+        confirmLabel: DIALOGS.overwrite.confirm,
       });
       if(!ok) return;
       spells[existing] = record;
@@ -292,9 +298,9 @@ export function createVault(deps){
     const s = spells.find(x => x.name === selectedSpell);
     if(!s) return;
     const ok = await prompt({
-      title: 'Unlearn a Talent?',
-      body: '“' + s.name + '” will be unusable in your dimension. Proceed?',
-      confirmLabel: 'Yes (Remove)', cancelLabel: 'No (Retain)', danger: true,
+      title: DIALOGS.spellDelete.title,
+      body: fill(DIALOGS.spellDelete.body, s.name),
+      confirmLabel: DIALOGS.spellDelete.confirm, cancelLabel: DIALOGS.spellDelete.cancel, danger: true,
     });
     if(!ok) return;
     spells = spells.filter(x => x.name !== s.name);
@@ -309,9 +315,9 @@ export function createVault(deps){
     if(!text.trim()) return;
     const title = poemTitleFrom(text, 'Untitled');
     const ok = await prompt({
-      title: 'Write in the Grimoire?',
-      body: 'Record “' + title + '” in your dark book of secrets?',
-      confirmLabel: 'Yes (Decide)', cancelLabel: 'No (Deny)',
+      title: DIALOGS.poemSave.title,
+      body: fill(DIALOGS.poemSave.body, title),
+      confirmLabel: DIALOGS.poemSave.confirm, cancelLabel: DIALOGS.poemSave.cancel,
     });
     if(!ok) return;
     poems.push({ id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
@@ -334,9 +340,9 @@ export function createVault(deps){
     const p = poems.find(x => x.id === selectedPoem);
     if(!p) return;
     const ok = await prompt({
-      title: 'Unwrite History?',
-      body: 'Tear the “' + p.title + '” page from the book under the watch of the moon?',
-      confirmLabel: 'Yes (Preclude)', cancelLabel: 'No (Preserve)', danger: true,
+      title: DIALOGS.poemDelete.title,
+      body: fill(DIALOGS.poemDelete.body, p.title),
+      confirmLabel: DIALOGS.poemDelete.confirm, cancelLabel: DIALOGS.poemDelete.cancel, danger: true,
     });
     if(!ok) return;
     poems = poems.filter(x => x.id !== p.id);
@@ -348,20 +354,20 @@ export function createVault(deps){
   // ---- import / export ----
   async function exportJson(label, records){
     await prompt({
-      title: 'Export ' + label,
-      body: 'Copy this somewhere safe. Paste it back through Import to restore.',
+      title: fill(DIALOGS.exportList.title, label),
+      body: DIALOGS.exportList.body,
       input: true,
       defaultValue: JSON.stringify(records, null, 2),
-      confirmLabel: 'Done',
+      confirmLabel: DIALOGS.exportList.confirm,
       rows: 8,
     });
   }
 
   async function importJson(label, isValid, keyOf, current, commit){
     const raw = await prompt({
-      title: 'Import ' + label,
-      body: 'Paste a previously exported list. Existing entries are kept; duplicates and malformed records are skipped.',
-      input: true, defaultValue: '', confirmLabel: 'Import', rows: 8,
+      title: fill(DIALOGS.importList.title, label),
+      body: DIALOGS.importList.body,
+      input: true, defaultValue: '', confirmLabel: DIALOGS.importList.confirm, rows: 8,
     });
     if(!raw) return;
     let parsed;
@@ -373,9 +379,10 @@ export function createVault(deps){
     const result = mergeRecords(current, parsed, keyOf, isValid);
     commit(result.merged);
     await prompt({
-      title: 'Import finished',
-      body: result.added + ' added · ' + result.duplicates + ' already present · ' + result.rejected + ' skipped as malformed.',
-      confirmLabel: 'OK',
+      title: DIALOGS.importDone.title,
+      body: fill(DIALOGS.importDone.body,
+        result.added + ' added · ' + result.duplicates + ' already present · ' + result.rejected + ' skipped as malformed.'),
+      confirmLabel: DIALOGS.importDone.confirm,
     });
     refresh();
   }

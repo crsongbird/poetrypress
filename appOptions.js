@@ -100,9 +100,9 @@ export const PRESETS = [
   },
 
   // ---- SHARPNESS ----  off-white against blue-black, silver and gold at the edges
-  { name: "Repose",
+  { name: "Daydream",
     spell: "🜇🜫🜝🜬☋⚹{{⚻}}[[🜯🜉⛤☊]]",
-    bg1: "#F2F0E9",
+    bg1: "#E4E0D4",
     text1: "#0D1017",
     outlineMode: "off",
     font: "EB Garamond",
@@ -110,13 +110,13 @@ export const PRESETS = [
     accent1: "#9AA3B0", accent2: "#C9A227",
     border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12
   },
-  { name: "Silver Wake",
+  { name: "December",
     spell: "{{☋🜫🜄⚸🜥}}🜢🜟🜹🜞[[🜯🜃🜛🜈🜌🝓🜾🜂]]",
     bg1: "#0D1017",
     text1: "#F2F0E9",
     outlineMode: "off",
     font: "Bodoni Moda",
-    texture: true, textureType: "snow", textureOpacity: 22, texP1: 130, texP2: 70,
+    texture: true, textureType: "snow", textureOpacity: 62, texP1: 130, texP2: 70,
     accent1: "#C0C8D4", accent2: "#7E8794",
     border: true, borderColor: "#C0C8D4", borderThickness: 1, borderOffset: 16
   },
@@ -130,9 +130,9 @@ export const PRESETS = [
     accent1: "#D4AF37", accent2: "#8C6D1F",
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 10
   },
-  { name: "Lotus",
+  { name: "Lotus Bloom",
     spell: "⚻☊[[🜃🜜🜯🜭🜬🜁♡☥✡🜅]]{{🝆✝🜇🜱🜿}}",
-    bg1: "#F6EFEA",
+    bg1: "#F7E3D2", bgGradient: true, bg2: "#E8B9A6", bgAngle: 160,
     text1: "#3A2233",
     outlineMode: "off",
     font: "Cormorant Garamond",
@@ -159,23 +159,27 @@ export const PRESETS = [
     texture: true, textureType: "hatch", textureOpacity: 30, texP1: 22, texP2: 130,
     accent1: "#5E4632", accent2: "#7A5C6B"
   },
-  { name: "Fold",
+  { name: "Gateway",
     spell: "🜺🜶🜈[[🜣✡⚸]]{{🜍}}",
-    bg1: "#041418", bgGradient: true, bg2: "#1A0A2E", bgAngle: 200,
-    text1: "#B8F0E8",
+    bg1: "#041418", bgGradient: true, bg2: "#07242a", bgAngle: 135,
+    text1: "#E8FFF6",
     outlineMode: "off",
     font: "Space Mono",
-    texture: true, textureType: "tessellate", textureOpacity: 28, texP1: 150, texP2: 160,
-    accent1: "#00E5C0", accent2: "#A855F7"
+    texture: true, textureType: "tessellate", textureOpacity: 30, texP1: 150, texP2: 160,
+    accent1: "#3DF5A0", accent2: "#5AC8FF",
+    border: true, borderColor: "#3DF5A0", borderThickness: 7, borderOffset: 26,
+    borderGradient: true, borderColor2: "#5AC8FF", borderColor3: "#B8FFE4",
+    borderBloom: 82
   },
-  { name: "Rewind",
+  { name: "Hourglass",
     spell: "🜍🜉🜔🜨🜥✡✝🜟🜄🜆{{🜱🜾🜼⚼⛧}}[[🜈🝊]]",
-    bg1: "#14141A", bgGradient: true, bg2: "#0A0A0F", bgAngle: 270,
-    text1: "#9AA0B0", textGradient: true, text2: "#3A3A4A", textAngle: 270,
-    outlineMode: "outline", outlineColor: "#000000", outlineThickness: 1,
+    bg1: "#1B0A12", bgGradient: true, bg2: "#2E1338", bg3: "#0E1B3A", bgAngle: 200,
+    text1: "#FFEFE6",
+    outlineMode: "off",
     font: "Bodoni Moda",
-    texture: true, textureType: "crackedglaze", textureOpacity: 34, texP1: 180, texP2: 120,
-    accent1: "#B03030", accent2: "#7A7A8C"
+    texture: true, textureType: "crackedglaze", textureOpacity: 34, texP1: 170, texP2: 220,
+    accent1: "#FF6B6B", accent2: "#6FA8FF",
+    borderBloom: 0
   },
   // ---- 🜚 TOUCH ----  surface, not hue: what the page is made of and what
   // has happened to it. Neutrals carrying a breath of green or brown, and
@@ -219,7 +223,29 @@ export const PRESETS = [
   },
 ];
 
-export const ASPECTS = { "1:1":[3072,3072], "2:3":[2400,3600], "3:4":[2700,3600], "9:16":[2304,4096], "9:20":[1843,4096], "16:9":[4096,2304] };
+/**
+ * Page sizes. Grouped for the picker: portrait and square first, then
+ * landscape. Every one is capped at 4096 on its long edge.
+ *
+ * The landscape entries are named by their true ratio (4:3, 2:1) rather than
+ * reusing the portrait names — two different "3:4" buttons meaning different
+ * shapes would be a trap.
+ */
+export const ASPECTS = {
+  "1:1":    [3072, 3072],
+  "2:3":    [2400, 3600],
+  "3:4":    [2700, 3600],
+  "9:16":   [2304, 4096],
+  "1:2":    [2048, 4096],
+  "9:20.5": [1797, 4096],
+  "16:9":   [4096, 2304],
+  "4:3":    [3600, 2700],
+  "2:1":    [4096, 2048],
+};
+
+
+/** Custom page sizes are clamped to what a browser canvas reliably handles. */
+export const SIZE_LIMITS = { min: 256, max: 4096 };
 
 export function $(id){ return document.getElementById(id); }
 

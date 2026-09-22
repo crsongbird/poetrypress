@@ -65,6 +65,8 @@
  * ink-spatter droplets, then the crack/river redesign) before it stuck.
  */
 
+import { TEXTURES } from './tunables.js';
+
 function makeNoiseGrid(gw, gh){
   const g = new Float32Array(gw*gh);
   for(let i=0;i<g.length;i++) g[i] = Math.random();
@@ -174,7 +176,7 @@ function genFlowers(w,h,amt,zoom){
   ctx.fillRect(0,0,w,h);
 
   const unit = Math.min(w,h);
-  const count = Math.max(2, Math.round((w*h)/95000 * amt));
+  const count = Math.max(2, Math.round((w*h)/285000 * amt));
 
   // A lotus petal is BROAD and ROUND -- widest near the middle, blunt at the
   // tip. Two earlier attempts used quadratic curves pulling straight from the
@@ -263,8 +265,9 @@ function genFlowers(w,h,amt,zoom){
   return c;
 }
 
-function genAstralFog(w,h,amt,zoom){
+function genAstralFog(w,h,amt,zoom,light,tint){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const neb = tint ? parseHex(tint) : null;
   const workDiv = Math.max(1, 4 * zoom);
   const workW = Math.max(24, Math.round(w/workDiv));
   const workH = Math.max(24, Math.round(h/workDiv));
@@ -308,7 +311,14 @@ function genAstralFog(w,h,amt,zoom){
       const idx = (py*workW+px)*4;
       // Nebula density: how far the fog swings from neutral grey
       const val = 128 + (75 - 128 + density*135) * amt;
-      d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
+      // a tint pushes the fog toward a hue instead of leaving it neutral
+      if(neb){
+        const t = Math.max(0, Math.min(1, (val - 128) / 127));
+        d[idx]   = val + (neb.r - 128) * t;
+        d[idx+1] = val + (neb.g - 128) * t;
+        d[idx+2] = val + (neb.b - 128) * t;
+      } else { d[idx]=val; d[idx+1]=val; d[idx+2]=val; }
+      d[idx+3]=255;
     }
   }
   sctx.putImageData(img,0,0);
@@ -664,7 +674,7 @@ function genMagicParticles(w,h,accent1,accent2,amt,zoom){
   full.width=w; full.height=h;
   const fctx = full.getContext('2d');
 
-  const count = Math.round((w*h)/2800 * amt);
+  const count = Math.round((w*h)/8400 * amt);
   for(let i=0;i<count;i++){
     const t = Math.random();
     const {r,g,b} = mixHex(accent1, accent2, t);
@@ -700,7 +710,7 @@ function genMagicParticles(w,h,accent1,accent2,amt,zoom){
       fctx.fillStyle = grad;
       fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
     } else {
-      const size = (3+Math.random()*4) * zoom;
+      const size = (6+Math.random()*7) * zoom;
       drawSparkleGlint(fctx, x, y, size, r, g, b);
     }
   }
@@ -1043,8 +1053,9 @@ function genMathNoise(w,h,amt,zoom){
 // Gold beaten so thin
 // it forgets it was ever
 // heavier than light.
-function genMetalLeaf(w,h,amt,zoom){
+function genMetalLeaf(w,h,amt,zoom,light,tint){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const leaf = parseHex(tint || '#D9B45B');
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
   const ctx = c.getContext('2d');
@@ -1101,56 +1112,56 @@ export const TEXTURE_PARAMS = {
   clouds:        [{key:'zoom',  label:'Cloud scale',     min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Billow',          min:30, max:220, def:100, unit:'%'}],
   bokeh:         [{key:'zoom',  label:'Orb size',        min:50, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Orb count',       min:20, max:260, def:100, unit:'%'}],
+                  {key:'amt',   label:'Orb count',       min:20, max:260, def:100, unit:'%', base:67}],
   astral:        [{key:'stars', label:'Star density',    min:10, max:300, def:100, unit:'%'},
                   {key:'fog',   label:'Nebula density',  min:0,  max:260, def:100, unit:'%'}],
   magicparticles:[{key:'zoom',  label:'Sparkle size',    min:60, max:600, def:100, unit:'%'},
-                  {key:'amt',   label:'Sparkle count',   min:20, max:400, def:100, unit:'%'}],
+                  {key:'amt',   label:'Sparkle count',   min:20, max:400, def:100, unit:'%', base:1124}],
   embers:        [{key:'zoom',  label:'Ember size',      min:60, max:600, def:100, unit:'%'},
-                  {key:'amt',   label:'Ember count',     min:20, max:500, def:100, unit:'%'}],
+                  {key:'amt',   label:'Ember count',     min:20, max:500, def:100, unit:'%', base:2950}],
   snow:          [{key:'zoom',  label:'Flake size',      min:60, max:340, def:100, unit:'%'},
-                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%'}],
+                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950}],
   grain:         [{key:'zoom',  label:'Grain size',      min:100,max:600, def:100, unit:'%'},
                   {key:'amt',   label:'Contrast',        min:30, max:240, def:100, unit:'%'}],
   metalleaf:     [{key:'zoom',  label:'Leaf size',       min:60, max:360, def:100, unit:'%'},
-                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%'}],
+                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165}],
   flowers:       [{key:'zoom',  label:'Bloom size',      min:50, max:450, def:150, unit:'%'},
-                  {key:'amt',   label:'Bloom count',     min:10, max:300, def:60,  unit:'%'}],
+                  {key:'amt',   label:'Bloom count',     min:10, max:300, def:60,  unit:'%', base:33}],
   brushstrokes:  [{key:'zoom',  label:'Stroke width',    min:60, max:380, def:100, unit:'%'},
-                  {key:'amt',   label:'Stroke count',    min:20, max:260, def:100, unit:'%'}],
+                  {key:'amt',   label:'Stroke count',    min:20, max:260, def:100, unit:'%', base:111}],
   halftone:      [{key:'zoom',  label:'Dot scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot weight',      min:30, max:240, def:100, unit:'%'}],
   rainstreaks:   [{key:'zoom',  label:'Rain zoom',       min:100,max:500, def:100, unit:'%'},
                   {key:'angle', label:'Slant',           min:-45,max:45,  def:0,   unit:'°'}],
   sigils:        [{key:'zoom',  label:'Sigil zoom',      min:100,max:500, def:100, unit:'%'},
-                  {key:'amt',   label:'Sigil count',     min:15, max:260, def:100, unit:'%'}],
+                  {key:'amt',   label:'Sigil count',     min:15, max:260, def:100, unit:'%', base:2484, base:51}],
   mathnoise:     [{key:'zoom',  label:'Glyph zoom',      min:100,max:500, def:140, unit:'%'},
                   {key:'amt',   label:'Emergence',       min:30, max:240, def:130, unit:'%'}],
   summoning:     [{key:'zoom',  label:'Circle size',     min:40, max:500, def:100, unit:'%'},
-                  {key:'amt',   label:'Circle count',    min:20, max:700, def:100, unit:'%'}],
+                  {key:'amt',   label:'Circle count',    min:20, max:700, def:100, unit:'%', base:3}],
   inkbleed:      [{key:'zoom',  label:'Blot scale',      min:60, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'}],
   crackedglaze:  [{key:'zoom',  label:'Fracture scale',  min:60, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Crack density',   min:10, max:900, def:100, unit:'%'}],
+                  {key:'amt',   label:'Crack density',   min:10, max:900, def:100, unit:'%', base:26}],
   linen:         [{key:'zoom',  label:'Weave scale',     min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Slub frequency',  min:0,  max:400, def:100, unit:'%'}],
   coldpress:     [{key:'zoom',  label:'Tooth scale',     min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Tooth depth',     min:20, max:300, def:100, unit:'%'}],
   foxing:        [{key:'zoom',  label:'Bloom size',      min:40, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Spot count',      min:20, max:400, def:100, unit:'%'}],
-  foldghost:     [{key:'zoom',  label:'Crease softness', min:30, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Fold count',      min:25, max:300, def:100, unit:'%'}],
+                  {key:'amt',   label:'Spot count',      min:20, max:400, def:100, unit:'%', base:7}],
+  foldghost:     [{key:'zoom',  label:'Crease depth',    min:30, max:400, def:100, unit:'%'},
+                  {key:'amt',   label:'Fold count',      min:25, max:300, def:100, unit:'%', base:3}],
   cupring:       [{key:'zoom',  label:'Ring size',       min:40, max:320, def:100, unit:'%'},
-                  {key:'amt',   label:'Ring count',      min:30, max:300, def:100, unit:'%'}],
+                  {key:'amt',   label:'Ring count',      min:30, max:300, def:100, unit:'%', base:2}],
   wax:           [{key:'zoom',  label:'Pool size',       min:40, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Pool count',      min:25, max:300, def:100, unit:'%'}],
-  whorl:         [{key:'zoom',  label:'Print size',      min:50, max:360, def:100, unit:'%'},
-                  {key:'amt',   label:'Print count',     min:20, max:320, def:100, unit:'%'}],
-  aurora:        [{key:'zoom',  label:'Curtain height',  min:40, max:220, def:100, unit:'%'},
-                  {key:'amt',   label:'Ribbon count',    min:20, max:320, def:100, unit:'%'}],
+                  {key:'amt',   label:'Pool count',      min:25, max:300, def:100, unit:'%', base:3}],
+  whorl:         [{key:'zoom',  label:'Furrow spacing',  min:50, max:360, def:100, unit:'%'},
+                  {key:'amt',   label:'Rake passes',     min:25, max:400, def:100, unit:'%', base:2}],
+  aurora:        [{key:'zoom',  label:'Curtain height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
+                  {key:'amt',   label:'Ribbon count',    min:20, max:900, def:100, unit:'%', base:9, absUnit:''}],
   hatch:         [{key:'angle', label:'Hatch angle',     min:-90,max:90,  def:35,  unit:'°'},
                   {key:'amt',   label:'Line density',    min:25, max:400, def:100, unit:'%'}],
-  cards:         [{key:'amt',   label:'Fragment count',  min:20, max:400, def:100, unit:'%'},
+  cards:         [{key:'amt',   label:'Fragment count',  min:20, max:400, def:100, unit:'%', base:23},
                   {key:'angle', label:'Angular scatter', min:0,  max:90,  def:35,  unit:'°'}],
   tessellate:    [{key:'zoom',  label:'Facet size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:100, unit:'%'}],
@@ -1183,10 +1194,12 @@ export const TEXTURE_CAPS = {
   embers:        { blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
                    tintLabels:['Ember colour','Spark colour'], tintDefaults:['accent1','accent2'] },
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:false, tints:0 },
-  aurora:        { blends:['screen','lighten','overlay','soft-light'],  light:false, tints:0 },
+  aurora:        { blends:['screen','lighten','overlay','soft-light'],  light:false, tints:1,
+                   tintLabels:['Curtain colour'], tintDefaults:['accent1'] },
   // — sharpness —
   grain:         { blends:['overlay','soft-light','multiply','screen'], light:false, tints:0 },
-  metalleaf:     { blends:['overlay','soft-light','hard-light','screen'], light:false, tints:0 },
+  metalleaf:     { blends:['overlay','soft-light','hard-light','screen'], light:false, tints:1,
+                   tintLabels:['Leaf colour'], tintDefaults:['#D9B45B'] },
   flowers:       { blends:['overlay','soft-light','multiply','screen'], light:false, tints:0 },
   brushstrokes:  { blends:['overlay','soft-light','multiply','screen'], light:false, tints:0 },
   halftone:      { blends:['overlay','multiply','soft-light','screen'], light:false, tints:0 },
@@ -1294,8 +1307,9 @@ function genSummoningCircles(w,h,amt,zoom){
 // Light hung in sheets —
 // no particle, no edge, just
 // the sky leaning down.
-function genAuroraVeil(w,h,amt,zoom){
+function genAuroraVeil(w,h,amt,zoom,light,tint){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const glow = tint ? parseHex(tint) : null;
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
   const ctx = c.getContext('2d');
@@ -1314,14 +1328,16 @@ function genAuroraVeil(w,h,amt,zoom){
     const drop  = h*curtain*(0.5 + Math.random()*0.5);
     const wob   = w*(0.03 + Math.random()*0.07);
     const phase = Math.random()*Math.PI*2;
-    const light = Math.random() < 0.75;
-    const tone  = light ? 244 : 28;
+    const bright = Math.random() < 0.75;
+    const tone  = bright ? 244 : 28;
+    // a tint colours the curtain; without one it stays a value pattern
+    const rgb = glow && bright ? `${glow.r},${glow.g},${glow.b}` : `${tone},${tone},${tone}`;
 
     // vertical falloff: brightest at the top edge, gone by the hem
     const fall = ctx.createLinearGradient(0, 0, 0, drop);
-    fall.addColorStop(0,    `rgba(${tone},${tone},${tone},${light?0.62:0.45})`);
-    fall.addColorStop(0.45, `rgba(${tone},${tone},${tone},${light?0.30:0.22})`);
-    fall.addColorStop(1,    `rgba(${tone},${tone},${tone},0)`);
+    fall.addColorStop(0,    `rgba(${rgb},${bright?0.62:0.45})`);
+    fall.addColorStop(0.45, `rgba(${rgb},${bright?0.30:0.22})`);
+    fall.addColorStop(1,    `rgba(${rgb},0)`);
 
     // the fold: a wavy quad traced down one side and back up the other
     const steps = 26;
@@ -1346,7 +1362,7 @@ function genAuroraVeil(w,h,amt,zoom){
 
     // a brighter seam along the leading edge, the way a curtain catches light
     ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = `rgba(${tone},${tone},${tone},0.5)`;
+    ctx.strokeStyle = `rgba(${rgb},0.5)`;
     ctx.lineWidth = Math.max(0.8, w*0.0022);
     ctx.beginPath();
     for(let sIdx=0; sIdx<=steps; sIdx++){
@@ -1378,10 +1394,13 @@ function genSilverpointHatch(w,h,amt,zoom,angle){
   // which is exactly what the first version looked like. Three passes at
   // different angles, tighter spacing, and short strokes rather than
   // full-width rules.
+  // The knob sets the CROSS angle: the two main passes open away from each
+  // other as it turns, so the lattice widens and closes instead of merely
+  // rotating as one rigid grid.
   const passes = [
-    { rot: rad,                 weight: 1.00, spacingMul: 1.00 },
-    { rot: rad + Math.PI/2.35,  weight: 0.78, spacingMul: 1.25 },
-    { rot: rad + Math.PI/4.1,   weight: 0.52, spacingMul: 1.9  },
+    { rot:  rad,       weight: 1.00, spacingMul: 1.00 },
+    { rot: -rad,       weight: 0.82, spacingMul: 1.2  },
+    { rot:  rad * 0.4, weight: 0.45, spacingMul: 2.0  },
   ];
 
   for(const pass of passes){
@@ -1626,41 +1645,74 @@ function genFoxing(w,h,amt,zoom,light,tint){
 // opened. It still knows.
 function genFoldGhost(w,h,amt,zoom,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const {lx,ly} = lightVec(light);
+  const {lx,ly}=lightVec(light);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d');
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
-  const folds = Math.max(1, Math.round((2+Math.random()*2)*amt));
-  const soft = Math.max(1.5, (Math.max(w,h)/220)*zoom);   // crease sharpness
-  for(let i=0;i<folds;i++){
-    const vertical = Math.random()<0.5;
-    const at = (vertical? w : h) * (0.22+Math.random()*0.56);
-    const wobble = (Math.max(w,h))*0.004;
-    // a crease is a ridge: one lit face, one shadowed, offset along the light
-    for(const [shift,tone,alpha] of [[-1,240,0.34],[1,32,0.30]]){
-      const g = vertical
-        ? ctx.createLinearGradient(at+lx*soft*shift-soft, 0, at+lx*soft*shift+soft, 0)
-        : ctx.createLinearGradient(0, at+ly*soft*shift-soft, 0, at+ly*soft*shift+soft);
-      g.addColorStop(0,   `rgba(${tone},${tone},${tone},0)`);
-      g.addColorStop(0.5, `rgba(${tone},${tone},${tone},${alpha})`);
-      g.addColorStop(1,   `rgba(${tone},${tone},${tone},0)`);
-      ctx.fillStyle=g;
-      if(vertical) ctx.fillRect(at+lx*soft*shift-soft, 0, soft*2, h);
-      else ctx.fillRect(0, at+ly*soft*shift-soft, w, soft*2);
+  // Paper that lived in a pocket. A crease seen close is never one line: it
+  // is several irregular ones running together at slightly different depths,
+  // widths and opacities, which the eye reads as a single fold. So each fold
+  // is built from a few near-parallel curves — a straight run whose control
+  // points are nudged a little perpendicular, alternating sides, then copied
+  // and nudged again.
+  const folds = Math.max(1, Math.round((2 + Math.random()*2) * amt));
+  const soft = Math.max(1.2, (Math.max(w,h)/260) * zoom);
+
+  for(let f=0; f<folds; f++){
+    const vertical = Math.random() < 0.5;
+    const at = (vertical ? w : h) * (0.16 + Math.random()*0.68);
+    const strands = 3 + Math.floor(Math.random()*3);
+    const nodes = 7 + Math.floor(Math.random()*5);
+
+    for(let s=0; s<strands; s++){
+      // each strand sits a few pixels off the last and has its own weight
+      const lateral = (s - (strands-1)/2) * soft * (0.9 + Math.random()*0.8);
+      const depth = 0.3 + Math.random()*0.7;
+      const lit = s % 2 === 0;
+      const tone = lit ? 238 : 30;
+
+      // node positions along the run, each pushed slightly off the straight
+      // line, alternating sides so the crease wanders without drifting
+      const pts = [];
+      for(let n=0; n<=nodes; n++){
+        const u = n/nodes;
+        const sway = (n % 2 ? 1 : -1) * soft * (0.25 + Math.random()*0.85);
+        const a = at + lateral + sway + (lx*(lit?-1:1) + ly*(lit?-1:1)) * soft * 0.35;
+        pts.push(vertical ? [a, u*h] : [u*w, a]);
+      }
+
+      ctx.globalAlpha = (lit ? 0.16 : 0.14) * depth;
+      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`;
+      ctx.lineWidth = Math.max(0.5, soft * (0.35 + depth*0.8));
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      // through the nodes as a smooth curve: midpoints as anchors, the nodes
+      // themselves as control points
+      for(let n=1; n<pts.length-1; n++){
+        const mx = (pts[n][0] + pts[n+1][0]) / 2;
+        const my = (pts[n][1] + pts[n+1][1]) / 2;
+        ctx.quadraticCurveTo(pts[n][0], pts[n][1], mx, my);
+      }
+      ctx.lineTo(pts[pts.length-1][0], pts[pts.length-1][1]);
+      ctx.stroke();
     }
-    // the crease itself wanders slightly, the way paper actually creases
-    ctx.globalAlpha=0.18; ctx.strokeStyle='rgb(28,28,28)';
-    ctx.lineWidth=Math.max(0.4, soft*0.16);
-    ctx.beginPath();
-    const steps=20;
-    for(let sIdx=0;sIdx<=steps;sIdx++){
-      const t=sIdx/steps, jitter=(Math.random()-0.5)*wobble;
-      if(vertical){ const y=t*h; sIdx?ctx.lineTo(at+jitter,y):ctx.moveTo(at+jitter,y); }
-      else { const x=t*w; sIdx?ctx.lineTo(x,at+jitter):ctx.moveTo(x,at+jitter); }
-    }
-    ctx.stroke(); ctx.globalAlpha=1;
+
+    // the broad soft shading either side of the fold, where the sheet lifts
+    const g = vertical
+      ? ctx.createLinearGradient(at - soft*5, 0, at + soft*5, 0)
+      : ctx.createLinearGradient(0, at - soft*5, 0, at + soft*5);
+    g.addColorStop(0,    'rgba(20,20,20,0)');
+    g.addColorStop(0.42, 'rgba(20,20,20,0.10)');
+    g.addColorStop(0.55, 'rgba(240,240,240,0.12)');
+    g.addColorStop(1,    'rgba(240,240,240,0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = g;
+    if(vertical) ctx.fillRect(at - soft*5, 0, soft*10, h);
+    else ctx.fillRect(0, at - soft*5, w, soft*10);
   }
+  ctx.globalAlpha = 1;
   return c;
 }
 
@@ -1763,39 +1815,45 @@ function genWhorl(w,h,amt,zoom,light){
   const ctx=c.getContext('2d');
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
+  // A raked surface, not a fingerprint: one continuous furrow that travels
+  // the whole field, doubling back on itself, with the rest of the rake's
+  // teeth following it at a fixed spacing. Each furrow gets a lit and a
+  // shadowed flank so it reads as cut into the ground rather than drawn on.
   const unit=Math.min(w,h);
-  const prints=Math.max(1, Math.round((3+Math.random()*3)*amt));
-  for(let i=0;i<prints;i++){
-    const cx=Math.random()*w, cy=Math.random()*h;
-    const R=unit*(0.05+Math.random()*0.05)*zoom;
-    const rot=Math.random()*Math.PI*2;
-    const squash=0.62+Math.random()*0.3;
-    const spacing=Math.max(1.1, R*0.055);
-    const rings=Math.floor(R/spacing);
-    // an arc of the print, never the whole oval
-    const arcFrom=Math.random()*Math.PI*2;
-    const arcSpan=Math.PI*(0.6+Math.random()*0.9);
+  const spacing=Math.max(2.4, unit*0.022*zoom);
+  const teeth=Math.max(2, Math.round(3*amt));
+  const passes=Math.max(1, Math.round(2.2*amt));
 
-    ctx.save();
-    ctx.translate(cx,cy); ctx.rotate(rot);
-    for(let k=1;k<rings;k++){
-      const rr=k*spacing*(1+Math.sin(k*0.8)*0.04);
-      for(const [shift,tone,alpha] of [[-1,238,0.16],[1,36,0.13]]){
+  for(let p=0;p<passes;p++){
+    const vertical = Math.random()<0.5;
+    const span = vertical ? h : w;
+    const across = vertical ? w : h;
+    const waves = 1.4 + Math.random()*2.6;
+    // a wider-set rake sweeps a broader arc, so spacing widens the wander
+    const depth = across*(0.05 + Math.random()*0.10) * zoom;
+    const start = Math.random()*across;
+    const steps = 150;
+
+    for(let t=0;t<teeth;t++){
+      const offset = (t - (teeth-1)/2) * spacing;
+      for(const [shift,tone,alpha] of [[-1,236,0.15],[1,34,0.13]]){
         ctx.globalAlpha=alpha;
         ctx.strokeStyle=`rgb(${tone},${tone},${tone})`;
-        ctx.lineWidth=Math.max(0.35, spacing*0.34);
+        ctx.lineWidth=Math.max(0.5, spacing*0.30);
         ctx.beginPath();
-        const steps=30;
-        for(let sIdx=0;sIdx<=steps;sIdx++){
-          const a=arcFrom+(sIdx/steps)*arcSpan;
-          const x=Math.cos(a)*rr + lx*shift*spacing*0.22;
-          const y=Math.sin(a)*rr*squash + ly*shift*spacing*0.22;
-          sIdx?ctx.lineTo(x,y):ctx.moveTo(x,y);
+        for(let k=0;k<=steps;k++){
+          const u=k/steps;
+          // the furrow snakes across the field and folds back at the edges
+          const wander = Math.sin(u*Math.PI*waves)*depth
+                       + Math.sin(u*Math.PI*waves*2.7 + p)*depth*0.22;
+          const a = start + wander + offset;
+          const px = vertical ? a + lx*shift*spacing*0.2 : u*span;
+          const py = vertical ? u*span : a + ly*shift*spacing*0.2;
+          k ? ctx.lineTo(px,py) : ctx.moveTo(px,py);
         }
         ctx.stroke();
       }
     }
-    ctx.restore();
   }
   ctx.globalAlpha=1;
   return c;
@@ -1808,7 +1866,7 @@ function genWhorl(w,h,amt,zoom,light){
 // tab-killed, not just slow). A Map's insertion-order iteration gives
 // oldest-first (FIFO) eviction in one line; real LRU would need to track
 // access order too, which this app's actual usage doesn't call for.
-const TEXTURE_CACHE_MAX_ENTRIES = 40;
+const TEXTURE_CACHE_MAX_ENTRIES = TEXTURES.cacheEntries;
 const textureCache = new Map();
 
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2){
@@ -1827,7 +1885,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'tessellate'){
     result = genTessellate(w,h,amt,zoom);
   } else if(type === 'astral_fog'){
-    result = genAstralFog(w,h,amt,zoom);
+    result = genAstralFog(w,h,amt,zoom,light,tint1);
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom);
   } else if(type === 'snow'){
@@ -1859,7 +1917,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'whorl'){
     result = genWhorl(w,h,amt,zoom,light);
   } else if(type === 'aurora'){
-    result = genAuroraVeil(w,h,amt,zoom);
+    result = genAuroraVeil(w,h,amt,zoom,light,tint1);
   } else if(type === 'hatch'){
     result = genSilverpointHatch(w,h,amt,zoom,angle);
   } else if(type === 'cards'){
@@ -1867,7 +1925,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'summoning'){
     result = genSummoningCircles(w,h,amt,zoom);
   } else if(type === 'metalleaf'){
-    result = genMetalLeaf(w,h,amt,zoom);
+    result = genMetalLeaf(w,h,amt,zoom,light,tint1);
   } else {
     let genW = w, genH = h;
     if(type==='grain'){ const gz = 5*zoom; genW=Math.max(1,Math.round(w/gz)); genH=Math.max(1,Math.round(h/gz)); }

@@ -646,9 +646,7 @@ body.is-mobile .tab-btn.active svg{
 }
 body.is-mobile .tab-btn{ color:#6E6880; }
 body.is-mobile .tab-btn.active{ color:#D8CEF6; }
-body.is-mobile .tabbar{
-  background:linear-gradient(180deg, rgba(24,20,38,0.97), rgba(12,14,20,0.97));
-}
+/* (themed below — the bar follows the theme like everything else) */
 body.is-mobile .tab-ico-glyph{
   display:flex; align-items:center; justify-content:center;
   font-size:17px; line-height:1; color:#C9B8FF;
@@ -1035,7 +1033,11 @@ body.is-mobile .lock-btn{ width:16px; height:16px; margin-left:7px; }
    and --preview-frac drives the split either way — height in portrait, width
    here — so the drag handle keeps working with no second variable.
    ============================================================ */
-@media (orientation: landscape){
+/* PARKED. The landscape layout fired in situations it should not have, and is
+   better reconsidered on a laptop alongside the question of whether it should
+   replace the desktop layout outright. The min-width below never matches a
+   phone or tablet; drop it to re-enable. */
+@media (orientation: landscape) and (min-width: 4000px){
   body.is-mobile .app{ flex-direction:row; }
 
   body.is-mobile .stage{
@@ -1124,6 +1126,198 @@ body.debug-grip .drag-handle::before{ background:rgba(255,0,200,0.16); }
 body.debug-grip .drag-grip{ background:#ff00c8; }
 
 /* the swatch is a canvas now — ground, surface, border and glyphs */
-.preset-swatch{ display:block; width:100%; height:34px; object-fit:cover; }
-body.is-mobile .preset-swatch{ height:30px; }
-canvas.chip-swatch{ display:block; width:100%; height:34px; }
+/* No object-fit: `cover` cropped the canvas top and bottom, which is why the
+   border only showed on the left and right. The canvas is painted at roughly
+   the box's own aspect so stretching it to fill is invisible. */
+.preset-swatch{ display:block; width:100%; height:39px; }
+body.is-mobile .preset-swatch{ height:35px; }
+canvas.chip-swatch{ display:block; width:100%; height:39px; }
+
+
+/* saved presets join the grid; blanks keep the rows square */
+.preset-btn.preset-empty{
+  border-style:dashed;
+  opacity:.28;
+  pointer-events:none;
+}
+.preset-btn.preset-custom .preset-label{ font-style:italic; }
+.preset-divider{
+  grid-column:1 / -1;
+  font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--text-dim); opacity:.7;
+  margin:6px 0 1px;
+}
+
+/* ============================================================
+   FOCUS — one consistent ring, chosen rather than inherited
+   ============================================================
+   The stray yellow-and-red box was two browser defaults stacking: Chrome's
+   tap-highlight flash (which picks its own colour) and the default focus ring
+   on <summary>, which nothing here had ever styled. Both are replaced with a
+   single quiet ring in the app's own accent, shown only for keyboard focus.
+   ============================================================ */
+*{ -webkit-tap-highlight-color:transparent; }
+:focus{ outline:none; }
+summary:focus, summary:active, details:focus{ outline:none; }
+summary::-moz-list-bullet{ list-style-type:none; }
+
+:focus-visible{
+  outline:2px solid var(--accent-dim);
+  outline-offset:2px;
+  border-radius:3px;
+}
+.card:focus-visible, summary:focus-visible{
+  outline:1px solid var(--accent-dim);
+  outline-offset:-1px;
+}
+
+/* aspect subgroup headings */
+.sub-label{
+  margin:6px 0 3px; font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--text-dim); opacity:.75;
+}
+#customSizeRow{ display:flex; gap:8px; }
+#customSizeRow .field{ flex:1 1 0; }
+/* aspect buttons defer to an explicit resolution */
+body.custom-size #aspectGroup,
+body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
+
+/* ============================================================
+   THEMES
+   ============================================================
+   The original violet-and-gold is kept intact as "Aether" — nothing is lost
+   by trying another. Each theme also names a faint surface for the page
+   behind the panels, so the UI has a little tooth of its own.
+   ============================================================ */
+
+/* Cinder — rosier, greyer, darker. Violet kept as an accent, not a ground. */
+:root[data-theme="cinder"]{
+  --bg-deep:#0a0607;
+  --bg-panel:#120c0e;
+  --bg-panel-2:#181012;
+  --bg-card:#150e10;
+  --line:#2c1e21;
+  --text-main:#ebdfe1;
+  --text-dim:#9b8a8d;
+  --accent:#c3a07c;
+  --accent-dim:#8a705a;
+  --rose:#c08d92;
+  --ui-violet:#9B7FE8;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
+}
+
+/* Aether — the original. */
+:root[data-theme="aether"]{
+  --bg-deep:#100e16;
+  --bg-panel:#17151f;
+  --bg-panel-2:#1e1b28;
+  --bg-card:#1b1824;
+  --line:#2c283a;
+  --text-main:#e9e4f2;
+  --text-dim:#9a92ae;
+  --accent:#c9a876;
+  --accent-dim:#8a7657;
+  --rose:#b98a8a;
+  --ui-violet:#C9B8FF;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><g fill='white' opacity='0.5'><circle cx='12' cy='20' r='1'/><circle cx='58' cy='9' r='.8'/><circle cx='77' cy='52' r='1.1'/><circle cx='33' cy='66' r='.9'/><circle cx='68' cy='80' r='.7'/></g></svg>");
+}
+
+/* Fathom — deep water. */
+:root[data-theme="fathom"]{
+  --bg-deep:#070d14;
+  --bg-panel:#0e1620;
+  --bg-panel-2:#131d29;
+  --bg-card:#101923;
+  --line:#22303f;
+  --text-main:#dfe8f2;
+  --text-dim:#8397aa;
+  --accent:#8fb3c9;
+  --accent-dim:#5d7d92;
+  --rose:#a98a9a;
+  --ui-violet:#7FB5D4;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><g stroke='white' stroke-width='1' fill='none' opacity='0.5'><path d='M0 30 Q35 20 70 30 T140 30'/><path d='M0 78 Q35 68 70 78 T140 78'/><path d='M0 124 Q35 114 70 124 T140 124'/></g></svg>");
+}
+
+/* Vellum — light. It exists. */
+:root[data-theme="vellum"]{
+  --bg-deep:#e9e3d6;
+  --bg-panel:#f3eee3;
+  --bg-panel-2:#faf6ed;
+  --bg-card:#f7f2e7;
+  --line:#d4cbb8;
+  --text-main:#2b2620;
+  --text-dim:#6f675a;
+  --accent:#96703c;
+  --accent-dim:#b09268;
+  --rose:#a4646a;
+  --ui-violet:#6C5AA6;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='p'><feTurbulence baseFrequency='0.7' numOctaves='2'/></filter><rect width='100' height='100' filter='url(%23p)' opacity='0.5'/></svg>");
+}
+
+/* the theme's surface, faint, behind everything */
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:var(--ui-texture);
+  background-repeat:repeat;
+  opacity:.05;
+  pointer-events:none;
+  z-index:0;
+}
+:root[data-theme="vellum"] body::before{ opacity:.09; }
+.app{ position:relative; z-index:1; }
+
+/* nav glyphs follow the theme's accent violet rather than a fixed one */
+body.is-mobile .tab-btn svg{ color:color-mix(in srgb, var(--ui-violet) 72%, var(--text-dim)); }
+body.is-mobile .tab-btn.active svg{ color:var(--ui-violet); }
+
+/* ---------- a little less padding throughout ---------- */
+.card{ padding:9px 10px; }
+.card-grid{ gap:7px; }
+body.is-mobile .card{ padding:7px 8px; margin-bottom:7px; }
+body.is-mobile .card-grid{ gap:5px; }
+body.is-mobile .controls{ padding-left:5px; padding-right:5px; }
+
+.theme-note{
+  margin:5px 0 0; font-size:11px; font-style:italic;
+  color:var(--text-dim); opacity:.85; min-height:1em;
+}
+
+
+/* ---------- the navigation bar belongs to the theme ---------- */
+body.is-mobile .tabbar{
+  background:linear-gradient(180deg,
+    color-mix(in srgb, var(--bg-panel) 94%, transparent),
+    color-mix(in srgb, var(--bg-deep) 96%, transparent));
+  border-top:1px solid var(--line);
+}
+body.is-mobile .tab-btn{ color:color-mix(in srgb, var(--text-dim) 78%, transparent); }
+body.is-mobile .tab-btn.active{ color:var(--text-main); }
+body.is-mobile .app-header{
+  background:color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  border-bottom:1px solid var(--line);
+}
+body.is-mobile .drag-handle{
+  background:linear-gradient(180deg, color-mix(in srgb, var(--text-main) 5%, transparent), transparent);
+}
+body.is-mobile.focus-mode .drag-handle{
+  background:color-mix(in srgb, var(--text-main) 7%, transparent);
+}
+
+/* ---------- texture tools, side by side on a phone ----------
+   The light pad is square and short; the tints and seed are single-line
+   fields. Stacked they wasted the width beside the pad, so on mobile the pad
+   takes the left column and the fields stack to its right. */
+body.is-mobile .tool-row{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:6px 10px;
+  align-items:start;
+}
+body.is-mobile .tool-row > #lightRow{ grid-row:1 / span 4; margin:0; }
+body.is-mobile .tool-row > .field{ margin:0; }
+body.is-mobile .tool-row > .field label{ font-size:11px; }
+body.is-mobile .tool-row input[type="text"],
+body.is-mobile .tool-row input[type="number"]{ padding:3px 5px; font-size:13px; }
+body.is-mobile .tool-row .light-pad{ width:118px; }
+body.is-mobile .tool-row .light-pad button{ font-size:16px; }
