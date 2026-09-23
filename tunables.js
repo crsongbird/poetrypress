@@ -10,6 +10,12 @@
  * so any sensible value works. Change one, reload, look.
  */
 
+/** What the app opens with. Must match a preset's `name` exactly; an unknown
+ *  name falls back to the first preset rather than failing. */
+export const DEFAULTS = {
+  preset: 'Lotus Bloom',
+};
+
 /** The preview pane and the divider that sizes it. */
 export const PREVIEW = {
   /** Fraction of the screen the preview may occupy. Portrait: height.

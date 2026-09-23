@@ -30,6 +30,13 @@ const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;' };
 const escapeHtml = t => String(t).replace(/[&<>]/g, c => ESC[c]);
 const span = (cls, text) => `<span class="pml-${cls}">${escapeHtml(text)}</span>`;
 
+// Bracket spans know their absolute position in the document, so the pair
+// under the caret can be marked. The mark is a class only — see .pml-match in
+// the stylesheet, which is restricted to properties that cannot move text.
+let BRACKET_MARKS = null;          // Set of absolute indices to mark, or null
+const bspan = (cls, ch, at) =>
+  `<span class="pml-${cls}${BRACKET_MARKS && BRACKET_MARKS.has(at) ? ' pml-match' : ''}">${escapeHtml(ch)}</span>`;
+
 /** Colours the directive run inside a segment: <content/f:4/scale:150>. */
 function highlightDirectives(run){
   // split on the slashes that separate directives, keeping them
@@ -47,7 +54,8 @@ function highlightDirectives(run){
  * Turns one line of PML into HTML. Pure — no DOM, no state — which is what
  * makes it testable without a browser.
  */
-export function highlightLine(line){
+export function highlightLine(line, base){
+  base = base || 0;
   let out = '';
   let i = 0;
   const src = String(line);
@@ -75,14 +83,14 @@ export function highlightLine(line){
       if(close !== -1){
         const inner = src.slice(i + 1, close);
         const cut = inner.search(/(?<!\\)\//);
-        out += span('bracket', '<');
+        out += bspan('bracket', '<', base + i);
         if(cut === -1){
-          out += highlightInline(inner);
+          out += highlightInline(inner, base + i + 1);
         } else {
-          out += highlightInline(inner.slice(0, cut));
+          out += highlightInline(inner.slice(0, cut), base + i + 1);
           out += highlightDirectives(inner.slice(cut));
         }
-        out += span('bracket', '>');
+        out += bspan('bracket', '>', base + close);
         i = close + 1;
         continue;
       }
@@ -104,9 +112,9 @@ export function highlightLine(line){
       continue;
     }
 
-    if(ch === '[' || ch === ']'){ out += span('sq', ch); i++; continue; }
-    if(ch === '{' || ch === '}'){ out += span('cu', ch); i++; continue; }
-    if(ch === '(' || ch === ')'){ out += span('paren', ch); i++; continue; }
+    if(ch === '[' || ch === ']'){ out += bspan('sq', ch, base + i); i++; continue; }
+    if(ch === '{' || ch === '}'){ out += bspan('cu', ch, base + i); i++; continue; }
+    if(ch === '(' || ch === ')'){ out += bspan('paren', ch, base + i); i++; continue; }
 
     const emph = src.slice(i).match(/^(\*\*|~~|\*|_)/);
     if(emph){ out += span('emph', emph[0]); i += emph[0].length; continue; }
@@ -118,14 +126,15 @@ export function highlightLine(line){
 }
 
 /** Inline-only pass, used for the text part inside a segment. */
-function highlightInline(text){
+function highlightInline(text, base){
+  base = base || 0;
   let out = '', i = 0;
   while(i < text.length){
     const ch = text[i];
     if(ch === '\\' && i + 1 < text.length){ out += span('escape', text.slice(i, i+2)); i += 2; continue; }
-    if(ch === '[' || ch === ']'){ out += span('sq', ch); i++; continue; }
-    if(ch === '{' || ch === '}'){ out += span('cu', ch); i++; continue; }
-    if(ch === '(' || ch === ')'){ out += span('paren', ch); i++; continue; }
+    if(ch === '[' || ch === ']'){ out += bspan('sq', ch, base + i); i++; continue; }
+    if(ch === '{' || ch === '}'){ out += bspan('cu', ch, base + i); i++; continue; }
+    if(ch === '(' || ch === ')'){ out += bspan('paren', ch, base + i); i++; continue; }
     const emph = text.slice(i).match(/^(\*\*|~~|\*|_)/);
     if(emph){ out += span('emph', emph[0]); i += emph[0].length; continue; }
     out += escapeHtml(ch);
@@ -153,11 +162,50 @@ function highlightInline(text){
  * zero-width inline anchors, which the gutter measures without introducing
  * any block box of their own.
  */
-export function highlightDocument(text){
+export function highlightDocument(text, marks){
+  BRACKET_MARKS = marks && marks.size ? marks : null;
   const lines = String(text).split('\n');
-  return lines.map((line, i) =>
-    `<span class="ln-mark" data-n="${i + 1}"></span>` + highlightLine(line)
-  ).join('\n') + '\u200b';
+  let base = 0;
+  const html = lines.map((line, i) => {
+    const out = `<span class="ln-mark" data-n="${i + 1}"></span>` + highlightLine(line, base);
+    base += line.length + 1;          // + the newline
+    return out;
+  }).join('\n') + '\u200b';
+  BRACKET_MARKS = null;
+  return html;
+}
+
+const OPEN = { '(': ')', '[': ']', '{': '}', '<': '>' };
+const CLOSE = { ')': '(', ']': '[', '}': '{', '>': '<' };
+
+/**
+ * The bracket touching the caret and its partner, as absolute indices, or
+ * null. Looks at the character just before the caret first, then just after,
+ * which is how most editors behave. Escaped brackets are not brackets: PML
+ * prints them literally, so they are skipped both as a start and while
+ * counting depth.
+ */
+export function findBracketPair(text, caret){
+  const t = String(text);
+  // escaped only by an ODD run of backslashes: in \\[ the backslash is itself
+  // escaped, and the bracket after it is real
+  const escaped = at => { let n = 0; for(let j = at - 1; j >= 0 && t[j] === '\\'; j--) n++; return n % 2 === 1; };
+  for(const at of [caret - 1, caret]){
+    if(at < 0 || at >= t.length) continue;
+    const ch = t[at];
+    if(!(ch in OPEN) && !(ch in CLOSE)) continue;
+    if(escaped(at)) continue;
+    const forward = ch in OPEN;
+    const self = ch, other = forward ? OPEN[ch] : CLOSE[ch];
+    let depth = 0;
+    for(let j = at; forward ? j < t.length : j >= 0; j += forward ? 1 : -1){
+      if(escaped(j)) continue;
+      if(t[j] === self) depth++;
+      else if(t[j] === other && --depth === 0) return [at, j];
+    }
+    return null;                       // unmatched: nothing to show
+  }
+  return null;
 }
 
 /**
@@ -167,8 +215,15 @@ export function highlightDocument(text){
 export function installEditor({ textarea, mirror, gutter, onInput }){
   if(!textarea || !mirror) return null;
 
+  function currentMarks(){
+    if(typeof textarea.selectionStart !== 'number') return null;
+    if(textarea.selectionStart !== textarea.selectionEnd) return null;  // not while selecting
+    const pair = findBracketPair(textarea.value, textarea.selectionStart);
+    return pair ? new Set(pair) : null;
+  }
+
   function paint(){
-    mirror.innerHTML = highlightDocument(textarea.value);
+    mirror.innerHTML = highlightDocument(textarea.value, currentMarks());
     fitHeight();
     if(gutter) paintGutter();
   }
@@ -206,6 +261,8 @@ export function installEditor({ textarea, mirror, gutter, onInput }){
 
   if(textarea.addEventListener){
     textarea.addEventListener('input', ()=>{ paint(); if(onInput) onInput(); });
+    // the caret can move without any input: taps, arrow keys, selection
+    for(const evt of ['click', 'keyup', 'select']) textarea.addEventListener(evt, paint);
   }
   if(typeof window !== 'undefined' && window.addEventListener){
     window.addEventListener('resize', paint);

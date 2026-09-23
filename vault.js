@@ -137,6 +137,23 @@ export function stamp(date){
  * deps: { $, getSettings, applySettings, getText, setText, onChange, prompt }
  *   prompt({title, body, input, defaultValue, confirmLabel, danger}) -> Promise<string|true|null>
  */
+/**
+ * A spell is a LOOK. These are not part of one, so a spell never carries them
+ * and applying one never touches them:
+ *   poemText   the poem belongs in the Grimoire
+ *   locks      which of YOUR controls you have pinned
+ *   highlight  how you like the editor to behave
+ *   username   who YOU are — a shared spell must not sign your page as theirs
+ * The Workbench JSON is a full session save and keeps all of them. Same
+ * reasoning as the theme, which lives outside settings entirely.
+ */
+export const NOT_PART_OF_A_LOOK = ['poemText', 'locks', 'highlight', 'username'];
+export function stripToLook(settings){
+  const out = { ...settings };
+  for(const k of NOT_PART_OF_A_LOOK) delete out[k];
+  return out;
+}
+
 export function createVault(deps){
   const { $, getSettings, applySettings, getText, setText, onChange, prompt } = deps;
 

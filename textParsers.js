@@ -58,6 +58,11 @@ const SENT_RG1_OPEN = String.fromCodePoint(0xE012), SENT_RG1_CLOSE = String.from
 const SENT_LG2_OPEN = String.fromCodePoint(0xE014), SENT_LG2_CLOSE = String.fromCodePoint(0xE015);
 const SENT_RG2_OPEN = String.fromCodePoint(0xE016), SENT_RG2_CLOSE = String.fromCodePoint(0xE017);
 
+/** Names /effect: accepts. The renderer reads this same list, so the parser
+ *  and the drawing code can never disagree about which effects exist. */
+export const TYPE_EFFECT_NAMES = ['none', 'letterpress', 'longshadow', 'doublestrike', 'chromatic', 'halo',
+  'bevel', 'erosion', 'doubleline', 'wavyline', 'dottedline', 'bloom'];
+
 export function applyEscapes(text){
   let out = '';
   for(let i=0;i<text.length;i++){
@@ -279,6 +284,32 @@ function parseSegmentDirective(dirStr, part){
     if(lower===name+':rev'){ part.customGradient = [...colors].reverse(); return; }
   }
 
+  // /effect:NAME[,strength][,hue][,angle][,distance][,grain] — the typeface effects. A separate
+  // directive from /fx0 /fx1 /fx2 on purpose: those keep exactly their old
+  // meaning, and an effect can sit alongside an outline or shadow. An unknown
+  // name is ignored rather than guessed at. Bare /effect is a halo.
+  if(lower==='effect' || lower.startsWith('effect:')){
+    const bits = lower==='effect' ? [] : d.slice(7).split(',');
+    const name = (bits[0] || 'halo').trim().toLowerCase();
+    if(!TYPE_EFFECT_NAMES.includes(name)) return;
+    const strength = bits[1] != null && bits[1].trim() !== '' ? parseFloat(bits[1]) : 60;
+    const num = (b, lo, hi) => {
+      if(b == null || b.trim() === '') return null;
+      const v = parseFloat(b);
+      return isNaN(v) ? null : Math.max(lo, Math.min(hi, v));
+    };
+    part.customTypeEffect = {
+      type: name,
+      strength: isNaN(strength) ? 60 : Math.max(0, Math.min(100, strength)),
+      color: bits[2] ? bits[2].trim() : null,
+      // optional trailing fields: angle in degrees, distance and grain in %
+      angle: num(bits[3], -360, 720),
+      distance: num(bits[4], 10, 400),
+      grain: num(bits[5], 0, 100),
+    };
+    return;
+  }
+
   if(lower==='fx0'){ part.customEffect = {type:'none'}; return; }
 
   // Bare /fx1 and /fx2 get sane hardcoded defaults (a plain black outline /
@@ -319,7 +350,7 @@ function parseSegmentedLine(content){
   const re = /<([\s\S]*?)((?:\/[^\/<>]+)+)>/g;
   let m, lastIndex=0, found=false;
   const parts = [];
-  const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customTracking:null, customBasis:null, customJitter:null, customEffect:null, customGradient:null});
+  const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customTracking:null, customBasis:null, customJitter:null, customEffect:null, customTypeEffect:null, customGradient:null});
   while((m = re.exec(content))){
     found = true;
     if(m.index > lastIndex){
@@ -370,7 +401,9 @@ export function buildLines(rawText, accent1On, accent2On){
       const parts = rawParts.map(p=>{
         let segments = tokenizeInline(p.text, accent1On, accent2On);
         if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
-        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customGradient:p.customGradient, segments };
+        // every field a directive can set must be copied here, or it is
+        // parsed and then silently dropped — which is what /effect did
+        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customTypeEffect:p.customTypeEffect, customGradient:p.customGradient, segments };
       });
       return {isBlank:false, type, scale, parts, dropCap, smallCaps, rhymeLetter};
     }

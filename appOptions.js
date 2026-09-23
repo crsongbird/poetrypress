@@ -45,7 +45,7 @@ export const FONTS = [
   { label:"Courier Prime (mono)", family:"Courier Prime", weight:"700" },
   { label:"Space Mono (mono)", family:"Space Mono", weight:"400" }, // Non-Euclid
   { label:"JetBrains Mono (mono)", family:"JetBrains Mono", weight:"400" },
-  { label:"Cinzel (gothic)", family:"Cinzel", weight:"500", noItalic:true }, // Quintessence, Desire
+  { label:"Cinzel (gothic)", family:"Cinzel", weight:"500", noItalic:true }, // Desire
   { label:"Oswald (gothic)", family:"Oswald", weight:"400" },
   { label:"Architects Daughter (handwritten)", family:"Architects Daughter", weight:"400" },
   { label:"Caveat (handwritten)", family:"Caveat", weight:"700" },
@@ -136,7 +136,7 @@ export const PRESETS = [
     text1: "#3A2233",
     outlineMode: "off",
     font: "Cormorant Garamond",
-    texture: true, textureType: "flowers", textureOpacity: 26, texP1: 210, texP2: 45,
+    texture: true, textureType: "flowers", textureOpacity: 95, texP1: 210, texP2: 45,
     accent1: "#C4708F", accent2: "#8FA88C"
   },
 

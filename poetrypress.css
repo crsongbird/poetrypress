@@ -51,7 +51,6 @@ body{
   background:var(--bg-card);
   border:1px solid var(--line);
   border-radius:2px;
-  padding:10px 10px 8px;
   margin-bottom:8px;
 }
 
@@ -64,7 +63,7 @@ body{
   margin:0 0 7px 0;
 }
 
-.card-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
+.card-grid{ display:grid; grid-template-columns:1fr 1fr; }
 .card-grid > .full{ grid-column:1/-1; }
 .card-grid > .check-row{ grid-column:1/-1; margin-bottom:1px; }
 .card-grid > .subblock{ grid-column:1/-1; }
@@ -143,7 +142,7 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
   transition:transform .12s ease, border-color .12s ease;
 }
 .preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); }
-.preset-swatch{ height:24px; width:100%; }
+
 .preset-label{ display:block; font-size:8.5px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
 
 /* ---------- RIGHT RENDER PANE ---------- */
@@ -171,7 +170,7 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 
 /* ---------- MOBILE APP HEADER (hidden on desktop) ---------- */
 .app-header{
-  display:none; align-items:center; justify-content:center;
+  display:none;
   padding:10px 14px; background:var(--bg-panel); border-bottom:1px solid var(--line);
   font-family:'Playfair Display', serif; font-size:17px; letter-spacing:0.02em;
   position:sticky; top:0; z-index:70;
@@ -228,7 +227,6 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 :root {
   --preview-frac: 0.30;
   --kb-height: 0px;
-  --tabbar-h: 58px;
   /* vh on mobile Chrome means "viewport with the URL bar hidden" --
      always taller than what is actually visible. appEvents.js replaces
      this with visualViewport.height, the real number. The 100vh is only
@@ -239,8 +237,8 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 .tabbar { display: none; }
 
 /* the whole app is exactly as tall as the screen really is */
-body.is-mobile .app { height: var(--vvh); overflow: hidden; flex-direction: column; }
-body.is-mobile .app-header { font-size: 12px; padding: 5px 8px; }
+body.is-mobile .app { overflow: hidden; flex-direction: column; }
+body.is-mobile .app-header { font-size: 12px; }
 
 /* preview on top, fixed share of the real viewport */
 body.is-mobile .stage {
@@ -300,25 +298,20 @@ body.is-mobile .tabbar {
   display: flex;
   position: fixed;
   left: 0; right: 0;
-  top: calc(var(--vvh) - var(--tabbar-h));
   z-index: 60;
   height: var(--tabbar-h);
-  background: rgba(12,14,20,0.96);
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255,255,255,0.09);
 }
 body.is-mobile .tab-btn {
   flex: 1 1 0;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 3px;
-  border: 0; background: transparent;
-  color: var(--text-dim, #8b93a7);
-  font-size: 10px; letter-spacing: 0.04em;
+  align-items: center; justify-content: center;
+  border: 0; background: transparent; letter-spacing: 0.04em;
   font-family: inherit; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 body.is-mobile .tab-btn .tab-ico { font-size: 17px; line-height: 1; }
-body.is-mobile .tab-btn.active { color: var(--text-main, #f2f2ef); }
+
 
 /* was sitting directly under the tab bar at a lower z-index */
 /* (superseded: the download button is positioned inside the preview frame) */
@@ -328,12 +321,10 @@ body.is-mobile .tab-btn.active { color: var(--text-main, #f2f2ef); }
    sideways scroller -- no hunting left and right for a mood. */
 body.is-mobile .preset-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
   overflow: visible;
 }
 body.is-mobile .preset-btn { width: auto; }
-body.is-mobile .preset-label { font-size: clamp(9px, 2.4vw, 11px); }
+
 
 /* the poem is the point — give it room, measured not guessed */
 body.is-mobile .editor-wrap { height: calc(var(--vvh) * 0.40); }
@@ -345,10 +336,9 @@ body.is-mobile #poemText {
   line-height: 1.5;
 }
 
-/* every pixel of chrome costs a line of poem on a small screen */
-body.is-mobile .card { padding: 10px; margin-bottom: 10px; }
+
 body.is-mobile .card-title { font-size: clamp(10px, 2.6vw, 12px); margin-bottom: 6px; }
-body.is-mobile .card-grid { gap: 8px; }
+
 body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 
 
@@ -366,7 +356,7 @@ body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(11px, 2.9vw, 13px
 /* drawn tab icons — one stroke weight, one grid, so they read as a set */
 body.is-mobile .tab-ico { display: block; width: 21px; height: 21px; }
 body.is-mobile .tab-ico svg { width: 100%; height: 100%; display: block; }
-body.is-mobile .tab-btn { font-size: clamp(9px, 2.4vw, 11px); gap: 2px; }
+body.is-mobile .tab-btn { font-size: clamp(9px, 2.4vw, 11px); }
 
 /* the divider: drag it to trade preview height against controls */
 .drag-handle { display: none; }
@@ -375,16 +365,12 @@ body.is-mobile .drag-handle {
   order: 2;
   align-items: center;
   justify-content: center;
-  height: 18px;
   flex: 0 0 auto;
   cursor: row-resize;
-  touch-action: none;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
   border-top: 1px solid rgba(255,255,255,0.07);
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
-body.is-mobile .drag-grip {
-  width: 44px; height: 4px; border-radius: 2px;
+body.is-mobile .drag-grip { border-radius: 2px;
   background: rgba(255,255,255,0.28);
 }
 body.is-mobile.dragging-divider { user-select: none; }
@@ -412,7 +398,7 @@ body.is-mobile details[open] > summary.card-title::after { content: " ▴"; }
   border-bottom:1px solid currentColor; padding-bottom:1px;
 }
 .app-header .kofi-link:hover{ opacity:1; }
-body.is-mobile .app-header{ padding:4px 8px; }
+
 body.is-mobile .app-header-spacer{ width:70px; }
 body.is-mobile .app-header .kofi-link{ font-size:0.72em; }
 
@@ -427,7 +413,7 @@ body.is-mobile .download-btn{
 
 /* the grip was eating real estate */
 body.is-mobile .drag-handle{ height:11px; }
-body.is-mobile .drag-grip{ width:34px; height:3px; }
+
 
 /* tighter bar */
 body.is-mobile .tabbar{ padding:0 2px; }
@@ -473,7 +459,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .btn-major, .btn-danger{
   padding:8px 12px; border-radius:2px; cursor:pointer;
   font-family:'Playfair Display', serif; font-size:13px; letter-spacing:0.03em;
-  border:2px solid var(--accent); background:var(--accent); color:#1a1610;
+  border:2px solid var(--accent); background:var(--accent); color:var(--on-accent, #1a1610);
   transition:opacity .12s ease;
 }
 .btn-danger{ border-color:#7d2230; background:#7d2230; color:#ffe9ec; }
@@ -534,23 +520,19 @@ body.is-mobile .field.full > .range-val{ float:right; font-size:11px; opacity:0.
    made Chrome scroll the whole page to reveal the caret and a scrollbar
    appeared from the stage keeping its pre-keyboard height. */
 body.is-mobile, html:has(body.is-mobile){ overflow:hidden; height:100%; overscroll-behavior:none; }
-body.is-mobile .stage{
-  /* never let the frozen preview height push the layout past the screen */
-  max-height: calc(var(--vvh) * 0.55);
-}
+
 body.is-mobile #poemText{ scroll-margin:0; }
 
 /* ---------- texture tools ---------- */
 .light-pad{
-  display:grid; grid-template-columns:repeat(3,1fr); gap:3px;
-  width:96px; padding:3px; border:1px solid var(--line); border-radius:3px;
+  display:grid; grid-template-columns:repeat(3,1fr); padding:3px; border:1px solid var(--line); border-radius:3px;
 }
 .light-pad button{
   aspect-ratio:1; border:1px solid var(--line); border-radius:2px;
   background:transparent; cursor:pointer; padding:0;
 }
 .light-pad button::after{
-  content:""; display:block; width:5px; height:5px; margin:auto;
+  content:""; width:5px; height:5px; margin:auto;
   border-radius:50%; background:var(--text-dim); opacity:.5;
 }
 .light-pad button.active{ border-color:var(--accent); background:rgba(212,175,55,0.14); }
@@ -559,7 +541,7 @@ body.is-mobile #poemText{ scroll-margin:0; }
   display:flex; align-items:center; justify-content:center;
   font-size:13px; color:var(--text-dim); opacity:.65;
 }
-body.is-mobile .light-pad{ width:128px; gap:4px; }
+body.is-mobile .light-pad{ gap:4px; }
 
 /* a disabled tool must look inert, not merely quiet */
 .field.tool-off{ opacity:.34; pointer-events:none; }
@@ -567,18 +549,17 @@ body.is-mobile .light-pad{ width:128px; gap:4px; }
 
 /* ---------- locks ---------- */
 .lock-btn{
-  border:0; background:transparent; cursor:pointer; padding:0 2px;
-  font-size:11px; line-height:1; opacity:.35; color:var(--text-dim);
+  font-size:11px; line-height:1;
 }
-.lock-btn:hover{ opacity:.7; }
-.lock-btn.locked{ opacity:1; color:var(--accent); }
+
+
 body.is-mobile .lock-btn{ font-size:13px; padding:0 4px; }
 
 /* light direction reads as arrows: the arrow points the way the light travels */
-.light-pad button{ font-size:12px; color:var(--text-dim); line-height:1; }
+.light-pad button{ color:var(--text-dim); line-height:1; }
 .light-pad button::after{ display:none; }
 .light-pad button.active{ color:var(--accent); }
-body.is-mobile .light-pad button{ font-size:14px; }
+
 
 /* preview reset — silver against the gold download, and quiet until wanted */
 .reset-view-btn{
@@ -590,14 +571,13 @@ body.is-mobile .light-pad button{ font-size:14px; }
 .reset-view-btn:hover{ opacity:1; }
 body.is-mobile .reset-view-btn{ font-size:15px; padding:6px 10px; }
 
-/* ---------- mobile spacing: expansive, but not wasteful ---------- */
-body.is-mobile .card{ padding:8px 9px; margin-bottom:8px; }
-body.is-mobile .card-grid{ gap:6px; }
+
+
 body.is-mobile .field{ margin-bottom:0; }
 body.is-mobile .check-row{ margin:2px 0; }
 body.is-mobile .app-header{ padding:3px 6px; }
 body.is-mobile .app-header-title{ letter-spacing:0.02em; }
-body.is-mobile .controls{ padding-left:6px; padding-right:6px; }
+
 body.is-mobile .preset-grid{ grid-template-columns:repeat(4,1fr); gap:5px; }
 body.is-mobile .preset-label{ font-size:clamp(8px,2.1vw,10px); }
 
@@ -619,10 +599,10 @@ body.is-mobile.focus-mode .stage{
   max-height:58dvh;
   min-height:44px;
 }
-body.is-mobile.focus-mode .controls{ padding-bottom:6px; overflow:hidden; }
+body.is-mobile.focus-mode .controls{ overflow:hidden; }
 /* (superseded further down: the wrap needs flex-basis 0 to be allowed to
    shrink below its content and become a scroll box) */
-body.is-mobile.focus-mode .card.focus-keep{ display:flex; flex-direction:column; height:100%; margin:0; }
+body.is-mobile.focus-mode .card.focus-keep{ flex-direction:column; margin:0; }
 body.is-mobile.focus-mode .card.focus-keep .card-title{ display:none; }
 body.is-mobile.focus-mode .tab-btn:not([data-tab="more"]){ display:none; }
 body.is-mobile.focus-mode .tab-btn[data-tab="more"]{ flex:1 1 100%; }
@@ -635,17 +615,15 @@ body.is-mobile.focus-mode .tab-btn[data-tab="more"]{ flex:1 1 100%; }
 body.is-mobile .tab-btn svg{
   stroke-width:1.15;
   opacity:.62;
-  transform:scale(.94);
-  color:#8E86B8;               /* whimsy, heavily muted */
+  transform:scale(.94);               /* whimsy, heavily muted */
 }
 body.is-mobile .tab-btn.active svg{
   stroke-width:1.85;
   opacity:1;
-  transform:scale(1);
-  color:#C9B8FF;               /* whimsy, allowed forward */
+  transform:scale(1);               /* whimsy, allowed forward */
 }
-body.is-mobile .tab-btn{ color:#6E6880; }
-body.is-mobile .tab-btn.active{ color:#D8CEF6; }
+
+
 /* (themed below — the bar follows the theme like everything else) */
 body.is-mobile .tab-ico-glyph{
   display:flex; align-items:center; justify-content:center;
@@ -659,12 +637,12 @@ body.is-mobile .tab-ico-glyph{
    the text — so font, size, line-height, padding, wrapping and word-breaking
    are declared once, for both, in the shared block below. */
 .editor-wrap{
-  display:flex; align-items:stretch;
+  display:flex;
   border:1px solid var(--line); border-radius:3px;
-  background:var(--bg-deep); overflow:hidden;
+  background:var(--bg-deep);
 }
 .editor-gutter{
-  flex:0 0 auto; width:3.1em; overflow:hidden;
+  flex:0 0 auto; width:3.1em;
   background:rgba(255,255,255,0.028);
   border-right:1px solid var(--line);
   user-select:none; -webkit-user-select:none;
@@ -686,22 +664,14 @@ body.is-mobile .tab-ico-glyph{
   tab-size:4;
 }
 .editor-input, .editor-mirror{
-  margin:0; padding:7px 9px; border:0;
-  white-space:pre-wrap;
-  overflow-wrap:break-word;
-  word-break:normal;
-  box-sizing:border-box;
+  margin:0;
   width:100%;
 }
 .editor-gutter{ padding:7px 0; }
-.editor-mirror{
-  position:absolute; inset:0;
-  overflow:hidden; pointer-events:none;
+.editor-mirror{ inset:0; pointer-events:none;
   color:var(--text-main);
 }
-.editor-input{
-  position:relative;
-  display:block; resize:none; outline:none;
+.editor-input{ outline:none;
   background:transparent;
   color:transparent;              /* the mirror supplies every visible glyph */
   caret-color:var(--accent);
@@ -709,16 +679,14 @@ body.is-mobile .tab-ico-glyph{
 }
 .editor-input::selection{ background:rgba(155,127,232,0.30); }
 
-/* ---------- PML colours, by element ---------- */
-.pml-bracket  { color:#C0C8D4; }                 /* sharpness — structure */
+                 /* sharpness — structure */
 .pml-op       { color:#9AA3B0; }
 .pml-directive{ color:#C2A882; }                 /* touch — advanced work */
 .pml-value    { color:#8FA88C; }
 .pml-emph     { color:#E0526F; }                 /* chaos — the disruptive marks */
 .pml-rhyme    { color:#E0526F; opacity:.9; }
 .pml-escape   { color:#6E6880; }
-.pml-prefix   { color:#9B7FE8; }                 /* whimsy — line voice */
-.pml-line     { min-height:1.62em; }
+.pml-prefix   { color:#9B7FE8; }                 
 
 body.is-mobile .editor-input,
 body.is-mobile .editor-mirror,
@@ -740,7 +708,10 @@ body.is-mobile.focus-mode .card.focus-keep{
   padding:0; border:0; background:transparent; border-radius:0;
 }
 body.is-mobile.focus-mode .editor-wrap{ border-left:0; border-right:0; border-radius:0; }
-body.is-mobile.focus-mode .controls{ padding-left:0; padding-right:0; }
+/* The editor's focus ring sits 4px outside its box (2px wide, 2px offset),
+   and .controls scrolls, so its scrollbar occupies the right edge. With no
+   right padding the ring's right side ran underneath the scrollbar. */
+body.is-mobile.focus-mode .controls{ padding-left:4px; padding-right:10px; }
 /* the credit fields belong to the page, not to writing it */
 body.is-mobile.focus-mode .card.focus-keep .field:not(.editor-field){ display:none; }
 body.is-mobile.focus-mode .card.focus-keep .card-grid{ gap:0; }
@@ -754,7 +725,7 @@ body.is-mobile.focus-mode .app-header-title{ text-align:center; }
    as each other. */
 .editor-input{ scrollbar-width:none; -ms-overflow-style:none; }
 .editor-input::-webkit-scrollbar{ width:0; height:0; display:none; }
-.editor-input, .editor-mirror{ border:0 !important; }
+
 
 /* arrows point the way the light travels: inward, toward the page */
 .light-pad{ width:126px; gap:4px; }
@@ -766,7 +737,7 @@ body.is-mobile .light-pad button{ font-size:19px; }
 /* locks sit at the end of their own label row, the same place every time,
    instead of wherever the markup happened to put them */
 .field{ position:relative; }
-.field > label{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.field > label{ display:flex; align-items:center; gap:6px; }
 /* (superseded: the lock sits beside its label — see the locks block below) */
 
 /* justification and vertical alignment are two groups, not one row of six */
@@ -928,8 +899,8 @@ body.is-mobile .stage{ max-height:calc(100dvh * 0.66); }
    became unreachable. flex-basis 0 + min-height 0 down the whole chain is
    what makes the overflow land on the wrap, where it can scroll. */
 body.is-mobile .controls{ min-height:0; }
-body.is-mobile.focus-mode .card.focus-keep{ min-height:0; }
-body.is-mobile.focus-mode .card.focus-keep .card-grid{ min-height:0; display:flex; flex-direction:column; flex:1 1 0; }
+
+body.is-mobile.focus-mode .card.focus-keep .card-grid{ min-height:0; flex-direction:column; flex:1 1 0; }
 /* (superseded: .controls is the single scroller in focus mode — see below) */
 /* outside focus mode the wrap has a definite height, so it scrolls already */
 body.is-mobile .editor-wrap{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -970,28 +941,24 @@ body.is-mobile.focus-mode .editor-wrap{
    edge: it has to read as belonging to that one setting. */
 .field > label{ justify-content:flex-start; }
 .lock-btn{
-  margin-left:4px;
-  flex:0 0 auto;
-  width:17px; height:17px;
-  padding:0; border:0; background:transparent;
-  color:#6E6880;
-  opacity:.55; cursor:pointer;
+  flex:0 0 auto; border:0; background:transparent;
+  color:#6E6880; cursor:pointer;
   vertical-align:middle;
 }
 .lock-btn svg{ width:100%; height:100%; display:block; }
 .lock-btn:hover{ opacity:.85; }
 /* unlocked: the shackle swings open and to one side */
 .lock-btn .lk-shackle{ transform:translate(3px,-1.6px) rotate(-16deg); transform-origin:12px 10px; }
-.lock-btn.locked{ opacity:1; color:var(--accent); }
+.lock-btn.locked{ color:var(--accent); }
 .lock-btn.locked .lk-shackle{ transform:none; }
-body.is-mobile .lock-btn{ width:19px; height:19px; margin-left:5px; }
+
 
 /* a locked control dims, so its state is visible without reading the icon */
 .field-locked > input:not(.lock-btn),
 .field-locked > select,
 .field-locked > .light-pad,
 .field-locked > input[type="range"]{ opacity:.45; }
-.field-locked > label{ color:var(--accent-dim, #9a8556); }
+
 
 /* ---------- locks, refined ---------- */
 /* Smaller hit area: easy to hit on purpose, harder to catch with the side of
@@ -1117,7 +1084,7 @@ body.is-mobile .drag-handle::before{
 }
 /* the grip is the visible affordance; widen it so it reads as a handle */
 body.is-mobile .drag-grip{ width:52px; height:4px; }
-body.is-mobile.focus-mode .drag-handle{ background:rgba(255,255,255,0.07); }
+
 
 /* ?grip in the URL: paints the handle and its true hit area, so a
    can-I-even-touch-this question can be answered by looking */
@@ -1191,18 +1158,21 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
    ============================================================ */
 
 /* Cinder — rosier, greyer, darker. Violet kept as an accent, not a ground. */
-:root[data-theme="cinder"]{
-  --bg-deep:#0a0607;
-  --bg-panel:#120c0e;
-  --bg-panel-2:#181012;
-  --bg-card:#150e10;
-  --line:#2c1e21;
-  --text-main:#ebdfe1;
-  --text-dim:#9b8a8d;
-  --accent:#c3a07c;
-  --accent-dim:#8a705a;
-  --rose:#c08d92;
-  --ui-violet:#9B7FE8;
+:root[data-theme="rose"]{
+  /* Faded Rosewood — 161414 · 2D2A2A · 6C5E5F · C68892 · E5D3D5 —
+     with the two pinks kept from the earlier palette */
+  --bg-deep:#161414;
+  --bg-panel:#1d1a1a;
+  --bg-panel-2:#2D2A2A;
+  --bg-card:#221f1f;
+  --line:#3d3637;
+  --text-main:#E5D3D5;
+  --text-dim:#a3979a;         /* 6C5E5F lifted: as body text it would fail contrast */
+  --accent:#d9a6b3;           /* kept */
+  --accent-dim:#C68892;
+  --rose:#C68892;
+  --ui-violet:#efc3cf;        /* kept */
+  --on-accent:#161414;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
 }
 
@@ -1220,6 +1190,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --rose:#b98a8a;
   --ui-violet:#C9B8FF;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><g fill='white' opacity='0.5'><circle cx='12' cy='20' r='1'/><circle cx='58' cy='9' r='.8'/><circle cx='77' cy='52' r='1.1'/><circle cx='33' cy='66' r='.9'/><circle cx='68' cy='80' r='.7'/></g></svg>");
+  --on-accent:#1a1610;
 }
 
 /* Fathom — deep water. */
@@ -1231,27 +1202,29 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --line:#22303f;
   --text-main:#dfe8f2;
   --text-dim:#8397aa;
-  --accent:#8fb3c9;
-  --accent-dim:#5d7d92;
+  --accent:#6fc2b6;
+  --accent-dim:#4c8a82;
   --rose:#a98a9a;
   --ui-violet:#7FB5D4;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><g stroke='white' stroke-width='1' fill='none' opacity='0.5'><path d='M0 30 Q35 20 70 30 T140 30'/><path d='M0 78 Q35 68 70 78 T140 78'/><path d='M0 124 Q35 114 70 124 T140 124'/></g></svg>");
+  --on-accent:#06201c;
 }
 
 /* Vellum — light. It exists. */
 :root[data-theme="vellum"]{
-  --bg-deep:#e9e3d6;
-  --bg-panel:#f3eee3;
-  --bg-panel-2:#faf6ed;
-  --bg-card:#f7f2e7;
-  --line:#d4cbb8;
+  --bg-deep:#d8cec0;
+  --bg-panel:#e3d8ca;
+  --bg-panel-2:#ebe1d4;
+  --bg-card:#e7ddd0;
+  --line:#c2b2a1;
   --text-main:#2b2620;
-  --text-dim:#6f675a;
-  --accent:#96703c;
-  --accent-dim:#b09268;
+  --text-dim:#6b5e58;
+  --accent:#74506a;
+  --accent-dim:#a58799;
   --rose:#a4646a;
   --ui-violet:#6C5AA6;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='p'><feTurbulence baseFrequency='0.7' numOctaves='2'/></filter><rect width='100' height='100' filter='url(%23p)' opacity='0.5'/></svg>");
+  --on-accent:#fbf4ee;
 }
 
 /* the theme's surface, faint, behind everything */
@@ -1321,3 +1294,35 @@ body.is-mobile .tool-row input[type="text"],
 body.is-mobile .tool-row input[type="number"]{ padding:3px 5px; font-size:13px; }
 body.is-mobile .tool-row .light-pad{ width:118px; }
 body.is-mobile .tool-row .light-pad button{ font-size:16px; }
+
+/* ---------- colour picker: always above the keyboard ----------
+   On a phone Coloris anchors itself beside its field, using coordinates it
+   measured when it opened — so when the keyboard slides up, the picker can
+   end up underneath it with no way to reach it. The keyboard now resizes the
+   layout viewport (interactive-widget=resizes-content), so docking the picker
+   to the bottom of that viewport keeps it above both the keyboard and the
+   tab bar, however the layout shifts. */
+body.is-mobile #clr-picker{
+  position:fixed !important;
+  left:50% !important;
+  right:auto !important;
+  top:auto !important;
+  bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px) !important;
+  transform:translateX(-50%);
+  max-height:calc(100dvh - var(--tabbar-h) - 24px);
+  overflow-y:auto;
+  z-index:90;
+}
+
+/* the bracket pair touching the caret. Background and box-shadow only: they
+   paint without taking up space. Padding, borders, margins, weight or
+   spacing here would widen the mirror's glyphs and push the highlight off the
+   real text again — the same drift that made the caret unusable before. */
+.pml-match{
+  background:color-mix(in srgb, var(--accent) 34%, transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius:2px;
+}
+
+/* the Vellum sigil beside the title — the diamond, drawn in whimsy */
+.vellum-sigil{ width:1.15em; height:1.15em; vertical-align:-0.2em; margin-left:.12em; }

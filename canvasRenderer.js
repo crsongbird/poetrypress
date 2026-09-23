@@ -45,9 +45,10 @@
  */
 
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
-import { buildLines } from './textParsers.js';
+import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell } from './spell.js';
-import { getTextureCanvas, mixHex, capsFor, defaultBlendFor } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor } from './textureGenerators.js';
+import { mixHex } from './texCore.js';
 import { EFFECTS } from './tunables.js';
 
 
@@ -156,7 +157,7 @@ function tintedEmojiCanvas(ch, font, fillStyle, size){
 // (for the {[...]}/[{...]} hidden feature), and emoji colorization — all as one
 // shared path so normal lines and split-alignment chunks render identically.
 function resolvePartStyle(part, baseStyle){
-  if(!part.customColor && !part.customEffect && !part.customGradient && part.customTracking==null && part.customJitter==null) return baseStyle;
+  if(!part.customColor && !part.customEffect && !part.customTypeEffect && !part.customGradient && part.customTracking==null && part.customJitter==null) return baseStyle;
   const s = { ...baseStyle };
   if(part.customColor){
     s.baseFillStyle = part.customColor;
@@ -187,6 +188,15 @@ function resolvePartStyle(part, baseStyle){
       s.shadowY = part.customEffect.y;
     }
   }
+  // /effect overrides the page-wide typeface effect for this segment only
+  if(part.customTypeEffect){
+    s.typeEffect = part.customTypeEffect.type;
+    s.typeEffectStrength = part.customTypeEffect.strength / 100;
+    if(part.customTypeEffect.color) s.typeEffectColor = part.customTypeEffect.color;
+    if(part.customTypeEffect.angle != null) s.typeEffectAngle = part.customTypeEffect.angle;
+    if(part.customTypeEffect.distance != null) s.typeEffectDistance = part.customTypeEffect.distance / 100;
+    if(part.customTypeEffect.grain != null) s.typeEffectGrain = part.customTypeEffect.grain / 100;
+  }
   return s;
 }
 
@@ -198,6 +208,213 @@ function resolvePartStyle(part, baseStyle){
 function charJitterOffset(seedBase){
   const x = Math.sin(seedBase) * 43758.5453;
   return (x - Math.floor(x)) * 2 - 1;
+}
+
+
+/**
+ * Typeface effects. Each is extra passes of the same glyphs drawn UNDER the
+ * real fill, so none of them changes where text sits or how it measures —
+ * which is what keeps fitting, wrapping and the editor mirror in agreement.
+ *
+ *   letterpress  pressed into the page: dark edge above, light edge below
+ *   longshadow   a cast shadow stepping away from the light direction
+ *   doublestrike misregistered second impression, as on an old press
+ *   chromatic    red and blue fringes pulled to either side
+ *   halo         a soft glow, distinct from the hard outline
+ *   bevel        raised: lit edge toward the light, shadowed edge away
+ *   erosion      worn type — bites taken out of the glyphs themselves
+ *   doubleline   two rules beneath
+ *   wavyline     a wavy rule beneath
+ *   dottedline   a dotted rule beneath
+ *
+ * Erosion is the one that cannot be an underlay: it has to REMOVE ink. It is
+ * drawn through drawErodedText instead of the plain fill, and its bites are
+ * seeded from the text and its position, so they stay put while you type
+ * rather than crawling on every repaint.
+ */
+export const TYPE_EFFECTS = TYPE_EFFECT_NAMES;   // one list, owned by the parser
+
+function drawTypeEffect(ctx, str, px, py, size, fill, style){
+  const kind = style.typeEffect;
+  const k = style.typeEffectStrength;
+  if(!kind || kind === 'none' || k <= 0) return;
+  const unit = size * 0.02 * (style.typeEffectDistance || 1);  // offsets scale with the text
+  const col = style.typeEffectColor || '#000000';
+  // one direction for every directional effect, set by the Angle control
+  const ang = (style.typeEffectAngle != null ? style.typeEffectAngle : 45) * Math.PI / 180;
+  const dx = Math.cos(ang), dy = Math.sin(ang);
+  ctx.save();
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+
+  if(kind === 'letterpress'){
+    const d = Math.max(0.6, unit * 1.4 * k);
+    ctx.globalAlpha *= 0.55;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText(str, px + dx * d, py + dy * d);         // lit lip, on the falling side
+    ctx.fillStyle = col;
+    ctx.fillText(str, px - dx * d * 0.7, py - dy * d * 0.7); // shadowed wall opposite
+  }
+  else if(kind === 'longshadow'){
+    const steps = Math.max(2, Math.round((6 + 26 * k) * (style.typeEffectDistance || 1)));
+    const step = Math.max(0.5, size * 0.018);
+    ctx.fillStyle = col;
+    for(let i = steps; i >= 1; i--){
+      ctx.globalAlpha = (style.quoteAlpha || 1) * 0.5 * (1 - i / (steps + 1));
+      ctx.fillText(str, px + dx * step * i, py + dy * step * i);
+    }
+  }
+  else if(kind === 'doublestrike'){
+    ctx.globalAlpha *= 0.42 * Math.min(1, 0.4 + k);
+    ctx.fillStyle = fill;
+    ctx.fillText(str, px + dx * unit * 1.7 * k, py + dy * unit * 1.7 * k);
+  }
+  else if(kind === 'chromatic'){
+    const d = Math.max(0.6, unit * 2.2 * k);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha *= 0.7;
+    ctx.fillStyle = '#ff2a4a'; ctx.fillText(str, px - dx * d, py - dy * d);
+    ctx.fillStyle = '#2a8cff'; ctx.fillText(str, px + dx * d, py + dy * d);
+  }
+  else if(kind === 'halo'){
+    ctx.shadowColor = col;
+    ctx.shadowBlur = size * 0.45 * k * (style.typeEffectDistance || 1);
+    ctx.fillStyle = col;
+    ctx.globalAlpha *= 0.85;
+    ctx.fillText(str, px, py);
+  }
+  else if(kind === 'bloom'){
+    drawBloom(ctx, str, px, py, size, col, k, style);
+  }
+  else if(kind === 'bevel'){
+    // shadow on the side the angle points to, light on the side it comes from
+    const d = Math.max(0.6, unit * 1.2 * k);
+    ctx.globalAlpha *= 0.7;
+    ctx.fillStyle = col;
+    ctx.fillText(str, px + dx * d, py + dy * d);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText(str, px - dx * d, py - dy * d);
+  }
+  else if(kind === 'doubleline' || kind === 'wavyline' || kind === 'dottedline'){
+    const w = ctx.measureText(str).width;
+    const base = py + size * 1.04 + unit * 2;
+    const thick = Math.max(1, size * 0.045 * (0.5 + k));
+    ctx.strokeStyle = fill;   // an underline belongs to its word's own colour
+    ctx.lineWidth = thick;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    if(kind === 'doubleline'){
+      ctx.moveTo(px, base);                ctx.lineTo(px + w, base);
+      ctx.moveTo(px, base + thick * 2.4);  ctx.lineTo(px + w, base + thick * 2.4);
+    } else if(kind === 'wavyline'){
+      const amp = Math.max(1, size * 0.05 * (0.4 + k));
+      const wave = Math.max(4, size * 0.34 * (style.typeEffectDistance || 1));
+      ctx.moveTo(px, base);
+      // anchored to the page, not the word, so adjacent words' waves line up
+      for(let x = px; x <= px + w; x += 2){
+        ctx.lineTo(x, base + Math.sin((x / wave) * Math.PI * 2) * amp);
+      }
+    } else {
+      ctx.setLineDash([thick * 0.1, thick * 2.2]);
+      ctx.moveTo(px, base); ctx.lineTo(px + w, base);
+    }
+    ctx.stroke();
+    if(ctx.setLineDash) ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+/**
+ * Bloom: a blurred, brightened copy of the glyphs, screened onto the page so
+ * it only ever lightens. Built on its own canvas so grain can be cut into the
+ * glow without touching the page, then composited once. Grain is seeded from
+ * the text and position, like erosion, so it does not shimmer on repaint.
+ *
+ * The blur is made with the shadow-offset trick: the glyphs are drawn far off
+ * the canvas with a shadow thrown back onto it, so only the blur lands.
+ */
+function drawBloom(ctx, str, px, py, size, col, k, style){
+  const w = Math.ceil(ctx.measureText(str).width);
+  if(w <= 0) return;
+  const reach = Math.ceil(size * (0.35 + 0.9 * k) * (style.typeEffectDistance || 1));
+  const off = document.createElement('canvas');
+  off.width = w + reach * 2;
+  off.height = Math.ceil(size * 1.45) + reach * 2;
+  const o = off.getContext('2d');
+  o.font = ctx.font; o.textBaseline = ctx.textBaseline; o.textAlign = 'left';
+  const FAR = 10000;
+  o.shadowColor = col;
+  o.shadowBlur = reach * 0.8;
+  o.shadowOffsetX = FAR;
+  o.fillStyle = col;
+  for(let pass = 0; pass < 2; pass++) o.fillText(str, reach - FAR, reach);
+
+  const grain = style.typeEffectGrain || 0;
+  if(grain > 0){
+    const rand = seededRand(hashText(str, px, py) ^ 0x9e3779b9);
+    o.shadowColor = 'transparent'; o.shadowBlur = 0; o.shadowOffsetX = 0;
+    o.globalCompositeOperation = 'destination-out';
+    const specks = Math.round((off.width * off.height) / 22 * grain);
+    for(let i = 0; i < specks; i++){
+      o.globalAlpha = 0.25 + rand() * 0.75;
+      o.fillRect(rand() * off.width, rand() * off.height, 1 + rand() * 1.5, 1 + rand() * 1.5);
+    }
+  }
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha *= Math.min(1, 0.45 + k * 0.75);
+  ctx.drawImage(off, px - reach, py - reach);
+}
+
+/** Small deterministic generator, so erosion does not shift on repaint. */
+function seededRand(seed){
+  let t = seed >>> 0 || 1;
+  return () => {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashText(str, x, y){
+  let h = 2166136261;
+  const key = str + '|' + Math.round(x) + '|' + Math.round(y);
+  for(let i = 0; i < key.length; i++){ h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h;
+}
+
+/**
+ * Worn type. The glyphs are drawn on their own small canvas, bites are cut
+ * out of them there with destination-out, and the result is placed on the
+ * page. Cutting on the page itself would punch holes straight through the
+ * background as well. A gradient fill still lines up, because the offscreen
+ * canvas is translated so its coordinates match the page's.
+ */
+function drawErodedText(ctx, str, px, py, fill, size, k){
+  const w = Math.ceil(ctx.measureText(str).width);
+  if(w <= 0) return;
+  const pad = Math.ceil(size * 0.25);
+  const h = Math.ceil(size * 1.45) + pad * 2;
+  const off = document.createElement('canvas');
+  off.width = w + pad * 2; off.height = h;
+  const o = off.getContext('2d');
+  o.font = ctx.font;
+  o.textBaseline = ctx.textBaseline;
+  o.textAlign = 'left';
+  o.translate(pad - px, pad - py);
+  o.fillStyle = fill;
+  o.fillText(str, px, py);
+  o.setTransform(1, 0, 0, 1, 0, 0);
+
+  const rand = seededRand(hashText(str, px, py));
+  o.globalCompositeOperation = 'destination-out';
+  const bites = Math.round((off.width * off.height) / 70 * k);
+  for(let i = 0; i < bites; i++){
+    const r = size * (0.008 + rand() * 0.03) * (0.6 + k);
+    o.beginPath();
+    o.arc(rand() * off.width, rand() * off.height, r, 0, Math.PI * 2);
+    o.fill();
+  }
+  ctx.drawImage(off, px - pad, py - pad);
 }
 
 function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, style){
@@ -277,9 +494,14 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     const needsPerChar = tracking !== 0 || hasEmoji || style.smallCaps || jitterMag > 0;
 
     if(!needsPerChar){
+      drawTypeEffect(ctx, seg.text, x, cursorY, size, segFill, style);
       applyOutlineShadow(seg.text, x, cursorY);
       ctx.fillStyle = segFill;
-      ctx.fillText(seg.text, x, cursorY);
+      if(style.typeEffect === 'erosion' && style.typeEffectStrength > 0){
+        drawErodedText(ctx, seg.text, x, cursorY, segFill, size, style.typeEffectStrength);
+      } else {
+        ctx.fillText(seg.text, x, cursorY);
+      }
     } else {
       let cx = x;
       const normalFont = ctx.font;
@@ -317,9 +539,14 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
           ctx.shadowColor='transparent'; ctx.shadowBlur=0;
           ctx.drawImage(tinted, cx+jx, py);
         } else {
+          drawTypeEffect(ctx, drawCh, cx+jx, py, size, segFill, style);
           applyOutlineShadow(drawCh, cx+jx, py);
           ctx.fillStyle = segFill;
-          ctx.fillText(drawCh, cx+jx, py);
+          if(style.typeEffect === 'erosion' && style.typeEffectStrength > 0){
+            drawErodedText(ctx, drawCh, cx+jx, py, segFill, size, style.typeEffectStrength);
+          } else {
+            ctx.fillText(drawCh, cx+jx, py);
+          }
         }
         if(rotating) ctx.restore();
         if(isLower) ctx.font = normalFont;
@@ -721,7 +948,15 @@ export function render(){
   let cursorY = startY;
   ctx.textBaseline = 'top';
 
-  const runStyle = { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY, baseFillStyle, plainTextColor: $('textColorHex').value, accent1Color, accent2Color, quoteAlpha: 1 };
+  const runStyle = { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY, baseFillStyle, plainTextColor: $('textColorHex').value, accent1Color, accent2Color, quoteAlpha: 1,
+    // typeface effect: one of TYPE_EFFECTS, drawn as extra passes under each glyph
+    typeEffect: $('typeEffect') ? $('typeEffect').value : 'none',
+    typeEffectStrength: $('typeEffectStrength') ? (parseFloat($('typeEffectStrength').value) || 0) / 100 : 0,
+    typeEffectColor: $('typeEffectColorHex') ? $('typeEffectColorHex').value : '#000000',
+    // direction the effect falls, in degrees: 0 right, 90 down (screen space)
+    typeEffectAngle: $('typeEffectAngle') ? (parseFloat($('typeEffectAngle').value) || 0) : 45,
+    typeEffectDistance: $('typeEffectDistance') ? (parseFloat($('typeEffectDistance').value) || 100) / 100 : 1,
+    typeEffectGrain: $('typeEffectGrain') ? (parseFloat($('typeEffectGrain').value) || 0) / 100 : 0 };
 
   for(const line of lines){
     if(line.isBlank){ cursorY += baseSize*0.55*lineSpacing; continue; }

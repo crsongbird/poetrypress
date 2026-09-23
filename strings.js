@@ -17,7 +17,7 @@
 
 export const UI_STRINGS = {
   // ---- tab ----
-  'tab.inscripton':                        "Inscripton",
+  'tab.inscription':                        "Inscription",
   'tab.rituals':                           "Rituals",
   'tab.thoughtforms':                      "Thoughtforms",
   'tab.materia':                           "Materia",
@@ -66,6 +66,130 @@ export const UI_STRINGS = {
   'button.downloadBtn':                    "Save image",
   'button.modalConfirm':                   "OK",
   'button.modalCancel':                    "Cancel",
+  // ---- labels ----
+  'label.script_highlighting':                 "Script Highlighting",
+  'label.witch_artificer':                     "Witch / Artificer",
+  'label.corner':                              "Corner",
+  'label.aspect_ratio':                        "Aspect Ratio",
+  'label.custom_resolution':                   "Custom Resolution",
+  'label.width':                               "Width",
+  'label.height':                              "Height",
+  'label.alignment':                           "Alignment",
+  'label.attunement_vertical':                 "Attunement (Vertical)",
+  'label.typeface':                            "Typeface",
+  'label.inscription_hue':                      "Inscription Hue",
+  'label.maximum_size_px':                     "Maximum Size (px)",
+  'label.breathing_room':                      "Breathing Room",
+  'label.radial_gradient_text':                "Radial Gradient Text?",
+  'label.aura_stops':                          "Aura Stops",
+  'label.inscription_hue_2':                    "Inscription Hue 2",
+  'label.inscription_hue_3':                    "Inscription Hue 3",
+  'label.inscription_hue_4':                    "Inscription Hue 4",
+  'label.radial_gradient_angle':               "Radial Gradient Angle",
+  'label.opposition_hue':                      "Opposition Hue",
+  'label.conjunction_hue':                     "Conjunction Hue",
+  'label.mode':                                "Mode",
+  'label.color':                               "Color",
+  'label.thickness_px':                        "Thickness (px)",
+  'label.blur':                                "Blur",
+  'label.x_offset':                            "X Offset",
+  'label.y_offset':                            "Y Offset",
+  'label.background_hue':                      "Background Hue",
+  'label.radial_aura':                         "Radial Aura?",
+  'label.aura_stops2':                         "Aura Stops",
+  'label.aura_stop_2':                         "Aura Stop 2",
+  'label.aura_stop_3':                         "Aura Stop 3",
+  'label.aura_stop_4':                         "Aura Stop 4",
+  'label.arc_angle':                           "Arc Angle",
+  'label.customize_surface':                   "Customize Surface",
+  'label.surface_variant':                     "Surface Variant",
+  'label.x':                                   "—",
+  'label.x2':                                  "—",
+  'label.opacity':                             "Opacity",
+  'label.blend_mode':                          "Blend Mode",
+  'label.light_direction':                     "Light Direction",
+  'label.tint':                                "Tint",
+  'label.second_tint':                         "Second Tint",
+  'label.texture_seed':                        "Texture Seed",
+  'label.enable_border':                       "Enable Border",
+  'label.border_hue':                          "Border Hue",
+  'label.radial_gradient_border':              "Radial Gradient Border?",
+  'label.border_hue_2':                        "Border Hue 2",
+  'label.border_hue_3':                        "Border Hue 3",
+  'label.bloom':                               "Bloom",
+  'label.thickness_px2':                       "Thickness (px)",
+  'label.offset_px':                           "Offset (px)",
+  'label.enable_vignette':                     "Enable Vignette",
+  'label.blend_mode2':                         "Blend Mode",
+  'label.intensity':                           "Intensity",
+  'label.aperture':                            "Aperture",
+  'label.centre_x':                            "Center X",
+  'label.centre_y':                            "Center Y",
+  'label.grit':                                "Grit",
+  'label.theme':                               "Theme",
+
+  // ---- options ----
+  'label.typeface_effect':                    "Typeface Effect",
+  'label.effect_strength':                    "Effect Strength",
+  'label.effect_hue':                         "Effect Hue",
+  'label.effect_angle':                       "Effect Angle",
+  'label.effect_distance':                    "Effect Distance",
+  'label.effect_grain':                       "Effect Grain",
+  'option.fx_none':                           "None",
+  'option.fx_letterpress':                    "Letterpress",
+  'option.fx_longshadow':                     "Long Shadow",
+  'option.fx_doublestrike':                   "Double Strike",
+  'option.fx_chromatic':                      "Chromatic Split",
+  'option.fx_halo':                           "Halo",
+  'option.fx_bevel':                          "Bevel",
+  'option.fx_erosion':                        "Erosion",
+  'option.fx_doubleline':                     "Double Underline",
+  'option.fx_wavyline':                       "Wavy Underline",
+  'option.fx_dottedline':                     "Dotted Underline",
+  'option.fx_bloom':                          "Bloom",
+  'option.bottom_left':                        "Bottom Left",
+  'option.bottom_right':                       "Bottom Right",
+  'option.top_left':                           "Top Left",
+  'option.top_right':                          "Top Right",
+  'option.off':                                "Off",
+  'option.outline':                            "Outline",
+  'option.shadow':                             "Shadow",
+  'option.sleep_haze':                         "Sleep Haze",
+  'option.dream_bloom':                        "Dream Bloom",
+  'option.deep_field':                         "Deep Field",
+  'option.euphoria_dust':                      "Euphoria Dust",
+  'option.burning_mana':                       "Burning Mana",
+  'option.first_snow':                         "First Snow",
+  'option.aurora_veil':                        "Aurora Veil",
+  'option.waking_grain':                       "Waking Grain",
+  'option.metal_leaf':                         "Metal Leaf",
+  'option.lotus_pond':                         "Lotus Pond",
+  'option.painter_s_frustration':              "Painter's Frustration",
+  'option.90s_dots':                           "90s Dots",
+  'option.still_rain':                         "Still Rain",
+  'option.silverpoint_hatch':                  "Silverpoint Hatch",
+  'option.sigil_scatter':                      "Sigil Scatter",
+  'option.enochian_noise':                     "Enochian Noise",
+  'option.summoning_circles':                  "Summoning Circles",
+  'option.rorschach_test':                     "Rorschach Test",
+  'option.fractured_glaze':                    "Fractured Glaze",
+  'option.facet_field':                        "Facet Field",
+  'option.cartomancy':                         "Cartomancy",
+  'option.linen_tooth':                        "Linen Tooth",
+  'option.cold_press':                         "Cold Press",
+  'option.foxing':                             "Foxing",
+  'option.fold_ghost':                         "Fold Ghost",
+  'option.cup_ring':                           "Cup Ring",
+  'option.poured_wax':                         "Poured Wax",
+  'option.raked_substrate':                    "Raked Substrate",
+  'option.overlay':                            "Overlay",
+  'option.color_burn':                         "Color Burn",
+  'option.color_dodge':                        "Color Dodge",
+  'option.lighten':                            "Lighten",
+  'option.rose':                               "Rosé",
+  'option.aether':                             "Aether",
+  'option.fathom':                             "Fathom",
+  'option.vellum':                             "Vellum",
 };
 
 /**
@@ -121,17 +245,40 @@ export const DIALOGS = {
   },
 };
 
+/** The colour picker's own button. */
+export const PICKER = {
+  done: 'Done',
+};
+
 /** Shown under the theme picker. */
 export const THEME_NOTES = {
-  cinder: 'Ash and rose. The default.',
+  rose: 'Faded rosewood. The default.',
   aether: 'The original violet and gold.',
-  fathom: 'Deep water. Quiet at the edges.',
+  fathom: 'Deep blue and slate.',
   vellum: 'Light mode. A brave and lonely road — the moths will find you.',
 };
 
 /** Fills in a {name} placeholder. */
 export function fill(text, name){
   return String(text).replace(/\{name\}/g, name == null ? '' : name);
+}
+
+/**
+ * Replaces an element's OWN text while leaving its child elements alone.
+ *
+ * Several tagged elements hold other elements: tab buttons carry an icon,
+ * and labels carry the lock button injected at boot. Setting textContent
+ * would delete those children — and since strings are applied after the
+ * locks are installed, every lock in the app would silently vanish.
+ */
+function setOwnText(el, value){
+  const kids = el.childNodes ? Array.from(el.childNodes) : [];
+  const textNode = kids.find(k => k.nodeType === 3 && k.nodeValue.trim());
+  if(textNode){ textNode.nodeValue = value; return; }
+  if(!kids.some(k => k.nodeType === 1)){ el.textContent = value; return; }
+  // only element children: put the text before them
+  const doc = el.ownerDocument || (typeof document !== 'undefined' ? document : null);
+  if(doc && doc.createTextNode) el.insertBefore(doc.createTextNode(value), el.firstChild);
 }
 
 /**
@@ -146,15 +293,7 @@ export function applyStrings(root){
     const key = el.getAttribute('data-str');
     const value = UI_STRINGS[key];
     if(value === undefined) return;
-    // tab buttons hold an icon before their label; replace only the text
-    const icon = el.querySelector && el.querySelector('.tab-ico');
-    if(icon){
-      el.innerHTML = '';
-      el.appendChild(icon);
-      el.appendChild(scope.createTextNode ? scope.createTextNode(value) : document.createTextNode(value));
-    } else {
-      el.textContent = value;
-    }
+    setOwnText(el, value);
     n++;
   });
   return n;

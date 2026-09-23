@@ -42,14 +42,17 @@
  */
 
 import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS } from './appOptions.js';
-import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, hexToHsl, hslToHex, invalidateTextMeasurements } from './canvasRenderer.js';
-import { paramsFor, capsFor, getTextureCanvas } from './textureGenerators.js';
-import { spellToPML } from './spell.js';
-import { createVault } from './vault.js';
+import { applyEscapes, tokenizeInline } from './textParsers.js';
+import { render, scheduleRender, invalidateTextMeasurements } from './canvasRenderer.js';
+import { paramsFor, capsFor, paramReadout } from './textureGenerators.js';
+import { createVault, stripToLook } from './vault.js';
+import { applyTheme, savedTheme } from './theme.js';
+import { registerServiceWorker } from './pwa.js';
+import { paintPresetSwatch } from './swatches.js';
+import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
-import { PREVIEW, SWATCH } from './tunables.js';
-import { applyStrings, DIALOGS, THEME_NOTES, fill } from './strings.js';
+import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
+import { applyStrings, fill, PICKER } from './strings.js';
 
 // Coloris is loaded from an external CDN (see index.html). Two separate
 // failure modes can happen there, and this guards against both:
@@ -77,6 +80,10 @@ function safeColoris(config){
 // call (see applyThemePalette below) -- Coloris merges/updates options at
 // runtime rather than replacing them, so this establishes theme/alpha/etc
 // once, and subsequent calls only ever touch swatches on top of it.
+// On a touch screen the picker must NOT focus its own hex field when it
+// opens: that is what summoned the keyboard every time, pushing the picker
+// out of reach. The hex field still works when tapped on purpose.
+const COARSE_POINTER = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 safeColoris({
   el: '[data-coloris]',
   theme: 'polaroid',
@@ -84,8 +91,12 @@ safeColoris({
   alpha: false,
   format: 'hex',
   clearButton: false,
+  // a clear way out: confirms the colour, closes the picker, and (below)
+  // dismisses the keyboard if one is up
+  closeButton: true,
+  closeLabel: PICKER.done,
+  focusInput: !COARSE_POINTER,
 });
-
 
 // ---------- lock state ----------
 // Declared up here, not beside the lock UI further down: the settings
@@ -98,6 +109,8 @@ const LOCKABLE = [
   'accent1ColorHex','accent2ColorHex','outlineColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
   'textureTint1Hex','textureTint2Hex','texP1','texP2','textureSeedValue',
+  'typeEffect','typeEffectStrength','typeEffectColorHex',
+  'typeEffectAngle','typeEffectDistance','typeEffectGrain',
 ];
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
@@ -421,6 +434,67 @@ $('downloadBtn').addEventListener('click', ()=>{
 });
 
 // ---------- advanced: full settings snapshot (export/import as JSON) ----------
+
+// ---------- persisted controls ----------
+/**
+ * Controls whose save/restore is purely mechanical: read the element, write
+ * it back. Adding a control here is the whole job — it is then saved in
+ * settings, restored from them, and carried by exported spells.
+ *
+ * Each row: [key in the saved JSON, element id, kind, readout suffix].
+ *   kind  'text'  -> element.value as saved
+ *         'check' -> element.checked
+ *         'color' -> element.value, restored through setColorField
+ * A readout suffix means a sibling `${id}Val` span shows the value.
+ *
+ * Key names and value types are frozen: spells already saved in people's
+ * browsers use exactly these, so renaming one would silently drop that
+ * setting on load. Controls with real logic of their own — conditional
+ * gradient stops, the font by name, locks, page size — stay hand-written
+ * in serializeCurrentSettings and restoreSettings below.
+ */
+const PERSISTED = [
+  ['borderGradientToggle', 'borderGradientToggle', 'check'],
+  ['borderColor2',         'borderColor2Hex',      'color'],
+  ['borderColor3',         'borderColor3Hex',      'color'],
+  ['borderBloom',          'borderBloom',          'text', ''],
+  ['vignetteAperture',     'vignetteAperture',     'text', ''],
+  ['vignetteCx',           'vignetteCx',           'text', ''],
+  ['vignetteCy',           'vignetteCy',           'text', ''],
+  ['vignetteNoise',        'vignetteNoise',        'text', ''],
+  ['typeEffect',           'typeEffect',           'text'],
+  ['typeEffectStrength',   'typeEffectStrength',   'text', ''],
+  ['typeEffectColor',      'typeEffectColorHex',   'color'],
+  ['typeEffectAngle',      'typeEffectAngle',      'text', '°'],
+  ['typeEffectDistance',   'typeEffectDistance',   'text', '%'],
+  ['typeEffectGrain',      'typeEffectGrain',      'text', '%'],
+];
+
+function collectPersisted(){
+  const out = {};
+  for(const [key, id, kind] of PERSISTED){
+    const el = $(id);
+    if(!el) continue;
+    out[key] = kind === 'check' ? el.checked : el.value;
+  }
+  return out;
+}
+
+function applyPersisted(s){
+  for(const [key, id, kind, unit] of PERSISTED){
+    if(s[key] === undefined) continue;
+    const el = $(id);
+    if(!el) continue;
+    if(kind === 'check') el.checked = !!s[key];
+    else if(kind === 'color'){ if(s[key]) setColorField(id, s[key]); }
+    else el.value = s[key];
+    if(unit !== undefined){
+      const out = $(id + 'Val');
+      if(out) out.textContent = s[key] + unit;
+    }
+  }
+}
+
 function serializeCurrentSettings(){
   return {
     bg1: $('bgColor1Hex').value,
@@ -453,14 +527,8 @@ function serializeCurrentSettings(){
 
     texture: $('textureToggle').checked,
     textureType: $('textureType').value,
-    borderGradientToggle: $('borderGradientToggle').checked,
-    borderColor2: $('borderColor2Hex').value,
-    borderColor3: $('borderColor3Hex').value,
-    borderBloom: $('borderBloom').value,
-    vignetteAperture: $('vignetteAperture').value,
-    vignetteCx: $('vignetteCx').value,
-    vignetteCy: $('vignetteCy').value,
-    vignetteNoise: $('vignetteNoise').value,
+    // the mechanical controls, from the PERSISTED table above
+    ...collectPersisted(),
     spell: $('activeSpell').value,
     highlight: $('highlightToggle') ? $('highlightToggle').checked : true,
     // which controls the user has pinned against Randomize and presets
@@ -545,14 +613,8 @@ function restoreSettings(s){
   // values, or they would be clamped against the previous texture's range
   syncTextureParams(true);
   syncTextureTools(true);
-  if(s.borderGradientToggle!==undefined) $('borderGradientToggle').checked = s.borderGradientToggle;
-  if(s.borderColor2) setColorField('borderColor2Hex', s.borderColor2);
-  if(s.borderColor3) setColorField('borderColor3Hex', s.borderColor3);
-  if(s.borderBloom!==undefined){ $('borderBloom').value = s.borderBloom; const o=$('borderBloomVal'); if(o) o.textContent = s.borderBloom; }
-  if(s.vignetteAperture!==undefined){ $('vignetteAperture').value = s.vignetteAperture; const o=$('vignetteApertureVal'); if(o) o.textContent = s.vignetteAperture; }
-  if(s.vignetteCx!==undefined){ $('vignetteCx').value = s.vignetteCx; const o=$('vignetteCxVal'); if(o) o.textContent = s.vignetteCx; }
-  if(s.vignetteCy!==undefined){ $('vignetteCy').value = s.vignetteCy; const o=$('vignetteCyVal'); if(o) o.textContent = s.vignetteCy; }
-  if(s.vignetteNoise!==undefined){ $('vignetteNoise').value = s.vignetteNoise; const o=$('vignetteNoiseVal'); if(o) o.textContent = s.vignetteNoise; }
+  // the mechanical controls, from the PERSISTED table
+  applyPersisted(s);
   if(s.spell !== undefined) $('activeSpell').value = s.spell;
   if(s.highlight !== undefined && $('highlightToggle')){
     $('highlightToggle').checked = !!s.highlight;
@@ -627,81 +689,7 @@ $('advancedLoadBtn').addEventListener('click', ()=>{
 // populate once on load so there's something to see/copy immediately
 $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
 
-
 // ---------- preset snapshots ----------
-/**
- * Paints one swatch: the ground, a hint of its surface, its border, and its
- * glyphs. The texture is generated at swatch size rather than scaled down
- * from a full render — a few thousand pixels each, cached like any other
- * texture, so sixteen of them cost about one ordinary repaint.
- */
-function paintPresetSwatch(canvas, p, w, h){
-  canvas.width = w; canvas.height = h;
-  const c = canvas.getContext('2d');
-
-  // ground
-  if(p.bgGradient && p.bg2){
-    const a = ((p.bgAngle || 135) - 90) * Math.PI / 180;
-    const g = c.createLinearGradient(
-      w/2 - Math.cos(a)*w/2, h/2 - Math.sin(a)*h/2,
-      w/2 + Math.cos(a)*w/2, h/2 + Math.sin(a)*h/2);
-    [p.bg1, p.bg2, p.bg3, p.bg4].filter(Boolean).forEach((col, i, all) => {
-      g.addColorStop(all.length > 1 ? i/(all.length-1) : 0, col);
-    });
-    c.fillStyle = g;
-  } else {
-    c.fillStyle = p.bg1 || '#111';
-  }
-  c.fillRect(0, 0, w, h);
-
-  // surface
-  if(p.texture && p.textureType){
-    try {
-      const caps = capsFor(p.textureType);
-      const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
-      const tex = getTextureCanvas(type, w, h, p.accent1, p.accent2, false,
-        (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p.texP1, p.texP2, 315);
-      if(tex){
-        c.save();
-        c.globalCompositeOperation = caps.blends[0] || 'overlay';
-        c.globalAlpha = Math.min(1, (p.textureOpacity || 30) / 100);
-        c.drawImage(tex, 0, 0, w, h);
-        c.restore();
-      }
-    } catch(e){ /* a swatch is never worth failing a render over */ }
-  }
-
-  // border
-  if(p.border && p.borderColor){
-    c.strokeStyle = p.borderColor;
-    c.lineWidth = Math.max(1.5, Math.round(h * SWATCH.borderScale));
-    // half the stroke sits outside the path, so inset by at least that much
-    // or the top and bottom edges fall off the canvas
-    const inset = c.lineWidth;
-    c.strokeRect(inset, inset, w - inset*2, h - inset*2);
-  }
-
-  // glyphs, in the preset's own accents, at the size the swatch allows
-  if(p.spell){
-    const segs = buildLines(spellToPML(p.spell), true, true)[0].segments;
-    const size = Math.max(6, Math.round(h * SWATCH.glyphScale));
-    c.font = `${size}px "Noto Sans Symbols 2","Segoe UI Symbol",sans-serif`;
-    c.textBaseline = 'middle';
-    let total = 0;
-    for(const sg of segs) total += c.measureText(sg.text).width;
-    let x = (w - total) / 2;          // centred horizontally
-    const y = h / 2;                  // and vertically
-    c.globalAlpha = 0.92;
-    for(const sg of segs){
-      c.fillStyle = sg.color === 'accent1' ? (p.accent1 || '#fff')
-                  : sg.color === 'accent2' ? (p.accent2 || '#fff')
-                  : (p.text1 || '#fff');
-      c.fillText(sg.text, x, y);
-      x += c.measureText(sg.text).width;
-    }
-    c.globalAlpha = 1;
-  }
-}
 
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
@@ -744,7 +732,8 @@ function renderSavedPresets(saved){
   for(const rec of saved){
     const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
     presetGrid.appendChild(presetTile(shot, ()=>{
-      restoreSettings(Object.assign({}, rec.settings, { spell: rec.spell }));
+      // the same filter as applying from Esoterica — a spell is a look
+      restoreSettings(stripToLook(Object.assign({}, rec.settings, { spell: rec.spell })));
       scheduleRender();
     }, 'preset-custom'));
   }
@@ -761,65 +750,16 @@ function renderSavedPresets(saved){
   }
 }
 
-// Derives a 15-color Coloris swatch palette from a theme's own colors, so
-// the color picker's swatches change to match whichever preset is active
-// (a 16th, the color currently being edited, gets appended live -- see the
-// 'open' event listener near the bottom of this file).
-//
-//   6 base colors   — text1, text2, accent1, accent2, bg1, bg2 (text2/bg2
-//                     fall back to a derived tone for presets with no
-//                     gradient second stop, so every theme yields 6)
-//   3 relationships — complementary of text1, a triadic point from accent1,
-//                     a tonal sibling of bg1
-//   6 tonal siblings — one per base color, nudged lighter+more saturated if
-//                     it's currently dark, darker+less saturated if light
-//                     (the same "move toward a punchier midtone" rule
-//                     watermarkColor() already uses, just reused here)
-//
-// 6 + 3 + 6 = 15.
-function tonalSibling(hex){
-  const {h,s,l} = hexToHsl(hex);
-  const lNudge = l > 50 ? -18 : 18;
-  const sNudge = l > 50 ? -12 : 12;
-  return hslToHex(h, Math.max(0,Math.min(100, s+sNudge)), Math.max(0,Math.min(100, l+lNudge)));
-}
-function hueShift(hex, degrees){
-  const {h,s,l} = hexToHsl(hex);
-  // On a near-neutral colour a hue shift does essentially nothing -- rotate
-  // grey and you get grey. The 🜚 Touch presets are neutral by design, so
-  // without this branch all fifteen of their swatches collapse into the same
-  // beige. Vary lightness and warmth instead, which is what actually
-  // separates one neutral from another.
-  if(s < 12){
-    const warm = ((degrees % 360) + 360) % 360 < 180;
-    const lShift = (degrees / 180) * 22;
-    return hslToHex(warm ? 34 : 210,
-                    Math.min(100, s + 7 + Math.abs(degrees)/40),
-                    Math.max(4, Math.min(96, l + (l > 50 ? -lShift : lShift))));
-  }
-  return hslToHex(h+degrees, s, l);
-}
-function deriveThemePalette({text1, text2, accent1, accent2, bg1, bg2}){
-  const t2 = text2 || hueShift(text1, 30);
-  const b2 = bg2 || tonalSibling(bg1);
-  const base = [text1, t2, accent1, accent2, bg1, b2];
-
-  const complementaryOfText = hueShift(text1, 180);
-  const triadicOfAccent = hueShift(accent1, 120);
-  const bgVariant = tonalSibling(bg1);
-
-  return [...base, complementaryOfText, triadicOfAccent, bgVariant, ...base.map(tonalSibling)];
-}
-
 let currentThemePalette = [];
 function applyThemePalette(colors){
   currentThemePalette = colors;
   safeColoris({ swatches: colors });
 }
 
-// Quintessence opens the grid and opens the app -- the first Whimsy, and
-// the face the page wears before anything is chosen.
-const defaultPalettePreset = PRESETS.find(p=>p.name==='Quintessence') || PRESETS[0];
+// Named in tunables.js. The old literal here pointed at 'Quintessence', a
+// preset renamed long ago, so it had been silently falling back to the
+// first preset ever since.
+const defaultPalettePreset = PRESETS.find(p=>p.name===DEFAULTS.preset) || PRESETS[0];
 applyThemePalette(deriveThemePalette(defaultPalettePreset));
 
 // The page opens on a real preset rather than a scatter of static HTML
@@ -829,7 +769,6 @@ applyThemePalette(deriveThemePalette(defaultPalettePreset));
 // Applied during the boot sequence at the bottom of this file instead:
 // applyPreset now snapshots the lock set, and `locked` is a const declared
 // further down, so reading it this early is a temporal-dead-zone error.
-
 
 // The 16th swatch: whatever THIS specific field's current value is, appended
 // live right as its picker opens -- lets you audition one of the 15 theme
@@ -865,6 +804,16 @@ function positionPickerNearField(field){
   picker.style.left = left + 'px';
   picker.style.margin = '0';
 }
+
+// Closing the picker also dismisses the phone keyboard. Coloris fires 'close'
+// on the field it was editing; if its hex input still holds focus, the
+// keyboard would otherwise stay up over the page.
+document.addEventListener('close', (e)=>{
+  const t = e.target;
+  if(!t || !t.matches || !t.matches('[data-coloris]')) return;
+  const active = document.activeElement;
+  if(active && active.blur && (active.id === 'clr-color-value' || active === t)) active.blur();
+});
 
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
@@ -922,6 +871,7 @@ function applyPreset(p){
   $('textureBlock').classList.toggle('open', !!p.texture);
   // the preset's own spell travels with it
   $('activeSpell').value = p.spell || '';
+  $('typeEffect').value = p.typeEffect || 'none';
   $('borderGradientToggle').checked = !!p.borderGradient;
   if(p.borderColor2) setColorField('borderColor2Hex', p.borderColor2);
   if(p.borderColor3) setColorField('borderColor3Hex', p.borderColor3);
@@ -965,7 +915,6 @@ function applyPreset(p){
 }
 
 // ---------- gradient geometry ----------
-
 
 // ---------- mobile layout ----------
 // Deliberately device detection, not a media query. A narrow desktop window
@@ -1161,9 +1110,6 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
   }
 }
 
-
-
-
 // ---------- texture parameters ----------
 // Each texture declares two knobs (see TEXTURE_PARAMS). The sliders relabel
 // and re-range themselves when the texture changes, so a control never says
@@ -1202,31 +1148,15 @@ $('textureType').addEventListener('change', ()=>{ syncTextureParams(true); sched
 syncTextureParams(true);
 
 
-
-/**
- * What a slider should read. A param declaring `base` — the number of things
- * drawn at 100% on a default page — shows that number instead of a
- * percentage, because "1124 sparkles" says more than "100%". Size params keep
- * percentages, since they scale with the page rather than counting anything.
- */
-function paramReadout(def, value){
-  if(!def) return '';
-  if(def.base != null){
-    const n = Math.max(1, Math.round(def.base * (value / 100)));
-    return n.toLocaleString() + (def.absUnit != null ? def.absUnit : '');
-  }
-  return value + (def.unit || '');
-}
-
 // ---------- texture tools ----------
 // Blend mode, light direction and tints are declared per texture (see
 // TEXTURE_CAPS). Anything a texture cannot use is disabled rather than left
 // live and inert -- a control that silently does nothing is worse than one
 // that is visibly unavailable.
 const BLEND_LABELS = {
-  'overlay':'Overlay', 'soft-light':'Soft light', 'hard-light':'Hard light',
+  'overlay':'Overlay', 'soft-light':'Soft Light', 'hard-light':'Hard Light',
   'multiply':'Multiply', 'screen':'Screen', 'lighten':'Lighten',
-  'darken':'Darken', 'color-burn':'Colour burn', 'color-dodge':'Colour dodge',
+  'darken':'Darken', 'color-burn':'Color Burn', 'color-dodge':'Color Dodge',
 };
 
 function syncTextureTools(resetToDefaults){
@@ -1391,8 +1321,6 @@ syncTextureTools(true);
 syncLightPad();
 installLocks();
 
-
-
 // ---------- PML editor ----------
 // The mirror carries the colour; the textarea keeps the caret, the selection
 // and the system keyboard. Repainted on input, and again whenever anything
@@ -1490,6 +1418,19 @@ if($('resetViewBtn') && $('resetViewBtn').addEventListener){
   });
 }
 
+// ---------- typeface effects ----------
+$('typeEffect').addEventListener('change', scheduleRender);
+$('typeEffectStrength').addEventListener('input', ()=>{
+  $('typeEffectStrengthVal').textContent = $('typeEffectStrength').value;
+  scheduleRender();
+});
+bindColorField('typeEffectColorHex', scheduleRender);
+[['typeEffectAngle','°'], ['typeEffectDistance','%'], ['typeEffectGrain','%']].forEach(([id, unit])=>{
+  $(id).addEventListener('input', ()=>{
+    $(id + 'Val').textContent = $(id).value + unit;
+    scheduleRender();
+  });
+});
 
 // ---------- border & vignette extras ----------
 $('borderGradientToggle').addEventListener('change', scheduleRender);
@@ -1508,27 +1449,14 @@ $('vignetteNoise').addEventListener('input', scheduleRender);
 // every data-str element takes its text from the table in strings.js
 applyStrings(document);
 
-// ---------- theme ----------
-// Kept out of the settings JSON on purpose: a theme is how YOU like the app
-// to look, not part of a saved page, so it lives in its own key and does not
-// travel with an exported spell.
-const THEME_KEY = 'uv.theme.v1';
-function applyTheme(name){
-  const themes = Object.keys(THEME_NOTES);
-  const theme = themes.includes(name) ? name : 'cinder';
-  if(document.documentElement && document.documentElement.setAttribute){
-    document.documentElement.setAttribute('data-theme', theme);
-  }
-  if($('uiTheme')) $('uiTheme').value = theme;
-  if($('themeNote')) $('themeNote').textContent = THEME_NOTES[theme];
-  try { localStorage.setItem(THEME_KEY, theme); } catch(e){ /* private mode */ }
-}
+// ---------- theme ----------  (see theme.js)
 if($('uiTheme') && $('uiTheme').addEventListener){
   $('uiTheme').addEventListener('change', ()=> applyTheme($('uiTheme').value));
 }
-let savedTheme = 'cinder';
-try { savedTheme = localStorage.getItem(THEME_KEY) || 'cinder'; } catch(e){ /* private mode */ }
-applyTheme(savedTheme);
+applyTheme(savedTheme());
+
+// installable, and usable offline once visited (on https only)
+registerServiceWorker();
 
 // ---------- Spellcrafting & Grimoire ----------
 // One modal serves every confirm/name/paste flow. Resolves to the typed
@@ -1567,15 +1495,13 @@ function modalPrompt(opts){
 
 // A spell is the look, never the words -- the poem belongs to the Grimoire.
 function settingsForSpell(){
-  const snapshot = serializeCurrentSettings();
-  delete snapshot.poemText;
-  return snapshot;
+  return stripToLook(serializeCurrentSettings());
 }
 
 const vault = createVault({
   $,
   getSettings: settingsForSpell,
-  applySettings: (settings)=>{ restoreSettings(settings); scheduleRender(); },
+  applySettings: (settings)=>{ restoreSettings(stripToLook(settings)); scheduleRender(); },
   getText: ()=> $('poemText').value,
   setText: (t)=>{ $('poemText').value = t; repaintEditor(); },
   onChange: scheduleRender,

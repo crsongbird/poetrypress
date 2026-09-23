@@ -92,6 +92,7 @@ Wrap part of a line in `<…>` and chain directives after it.
 | `fx1,color,width` | outline | black, 3 |
 | `fx2,color,blur,x,y` | shadow | black, 8, 4, 4 |
 | `fx0` | remove effects from this segment | — |
+| `effect:NAME,strength,hue` | letterpress, longshadow, doublestrike, chromatic, halo, bevel, erosion, doubleline, wavyline, dottedline | halo, 60 |
 | `l` `c` `r` | align this segment only | — |
 
 Split a line between alignments:
@@ -107,6 +108,7 @@ Emoji inside a coloured span are tinted to match.
 ## Development
 
 ```
+sh test.sh              # parse everything, build, run every suite
 node build.mjs          # bundle to dist/index.html
 node test/<name>.test.mjs
 ```
@@ -115,16 +117,23 @@ node test/<name>.test.mjs
 |---|---|
 | `index.html` | markup |
 | `poetrypress.css` | styles |
+| `tunables.js` | hand-editable numbers |
+| `strings.js` | hand-editable text |
 | `appOptions.js` | typefaces, presets, aspect ratios |
 | `textParsers.js` | PML parser |
-| `textureGenerators.js` | texture generators |
+| `spell.js` | glyph spells |
+| `texCore.js` | noise, colour mixing, seeded random |
+| `texWhimsy.js` `texSharpness.js` `texChaos.js` `texTouch.js` | texture generators, by element |
+| `textureGenerators.js` | texture tables, cache and dispatch |
 | `canvasRenderer.js` | rendering |
+| `palette.js` | colour picker suggestions |
+| `swatches.js` | painted preset tiles |
+| `theme.js` | UI theme |
 | `editor.js` | syntax highlighting |
-| `spell.js` | glyph generator |
 | `vault.js` | Spellcrafting and Grimoire storage |
 | `appEvents.js` | UI wiring, entry point |
 
-Edit the modules; deploy `dist/index.html`. Nineteen test suites in [`test/`](./test), no dependencies.
+Edit the modules; deploy `dist/index.html`. Twenty-seven test suites in [`test/`](./test), no dependencies.
 
 See [OPEN-ISSUES.md](./OPEN-ISSUES.md) for known gaps and constraints.
 
