@@ -15,28 +15,33 @@
  *                      whichever styles are currently "open", so nesting
  *                      like **bold [accent] still bold** just falls out of
  *                      the algorithm instead of needing special-casing.
- *   Segmentation       parseSegmentDirective (one directive: /l, /#:hex,
- *                      /f:N, /scale:N, /fx0, /fx1,.., /fx2,.., /grad:..)
+ *   Segmentation       parseSegmentDirective (one directive: /l /c /r, /#:hex,
+ *                      /f:N, /scale:N, /track:N, /basis:N, /jitter:N,
+ *                      /fx0 /fx1 /fx2, /grad:.., /rainbow and friends,
+ *                      /effect:NAME,...)
  *                      and parseSegmentedLine (splits a line's raw content
  *                      on <...> groups, in order, handing each directive
  *                      string to parseSegmentDirective).
  *   Line builder       buildLines -- the module's main entry point. Walks
- *                      a whole poem, strips ##/-#/> prefixes, detects
+ *                      a whole poem, strips its prefixes (## -# > #D #S) and
+ *                      rhyme markers (~A..~D), detects
  *                      Segmentation groups vs. the plain whole-line /l /c
  *                      /r suffix, and calls tokenizeInline per segment.
  *
- * Exports: buildLines (primary), applyEscapes + tokenizeInline (reused
- * directly by appEvents.js for filename generation, which needs the same
- * "what does this line actually say, formatting stripped" logic).
+ * Exports: buildLines (primary); applyEscapes + tokenizeInline (appEvents.js
+ * reuses them to name exported files by what a line actually says);
+ * TYPE_EFFECT_NAMES (the one list of typeface effects).
+ *
+ * §Variables are NOT handled here: pmlVars.js resolves them to plain text
+ * and PML before this module ever sees the poem.
  *
  * This module has NO imports -- it's pure string/data-structure logic and
  * never touches the DOM or canvas. That's also what makes it the easiest
- * part of the whole app to test in isolation (see test/textParsers.test.js).
+ * part of the whole app to test in isolation (see test/textParsers.test.mjs).
  *
- * NOTE ON isEmojiCodePoint / segmentHasEmoji: these live in canvasRenderer.js,
- * not here, even though they sound parser-adjacent. Checked their call sites
- * before this refactor -- they're only ever used by drawTextRun() to decide
- * whether to tint an emoji glyph, which is a rendering concern, not parsing.
+ * isEmojiCodePoint / segmentHasEmoji live in canvasRenderer.js, not here:
+ * only drawTextRun() uses them, to decide whether to tint an emoji — a
+ * rendering concern, not parsing.
  */
 
 const ESCAPABLE_CHARS = ['\\','*','_','~','[',']','{','}','<','>','/'];
@@ -284,6 +289,11 @@ function parseSegmentDirective(dirStr, part){
     if(lower===name+':rev'){ part.customGradient = [...colors].reverse(); return; }
   }
 
+  // /code — a code segment (written in PML as `backticks`): monospace, on a
+  // backdrop chosen for contrast with the page behind it. pmlVars.js turns
+  // backticks into this directive, escaping the text so none of it is PML.
+  if(lower==='code'){ part.code = true; return; }
+
   // /effect:NAME[,strength][,hue][,angle][,distance][,grain] — the typeface effects. A separate
   // directive from /fx0 /fx1 /fx2 on purpose: those keep exactly their old
   // meaning, and an effect can sit alongside an outline or shadow. An unknown
@@ -403,7 +413,9 @@ export function buildLines(rawText, accent1On, accent2On){
         if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
         // every field a directive can set must be copied here, or it is
         // parsed and then silently dropped — which is what /effect did
-        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customTypeEffect:p.customTypeEffect, customGradient:p.customGradient, segments };
+        return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customTypeEffect:p.customTypeEffect, customGradient:p.customGradient,
+                 // present only on code segments, so every existing poem parses byte-identically
+                 ...(p.code ? { code: true } : {}), segments };
       });
       return {isBlank:false, type, scale, parts, dropCap, smallCaps, rhymeLetter};
     }

@@ -25,10 +25,7 @@
  *              canvasRenderer.js can read the current justification /
  *              gradient-stop-count directly from the DOM at render time,
  *              the same way it reads every other control — rather than
- *              needing a live mutable binding shared with appEvents.js
- *              (which set off a real bug: canvasRenderer.js used to read
- *              a bare currentAlign/bgStopCount identifier that only ever
- *              existed as a local variable in appEvents.js).
+ *              needing a live mutable binding shared with appEvents.js.
  *
  * This module has NO imports. Every other file in the app may import from
  * it; it must never import from any of them.
@@ -86,8 +83,9 @@ export const PRESETS = [
     text1: "#FFF0FA",
     outlineMode: "off",
     font: "Poppins",
-    texture: true, textureType: "magicparticles", textureOpacity: 30, texP1: 170, texP2: 140,
-    accent1: "#FF6FD8", accent2: "#7B5CFF"
+    texture: true, textureType: "magicparticles", textureOpacity: 80, texP1: 280, texP2: 85,
+    accent1: "#FF6FD8", accent2: "#7B5CFF",
+    textureBlend: 'color-dodge'
   },
   { name: "Sleepwalk",
     spell: "🜾[[🜹🜣🜌✡🜦🜺]]{{🜁⚸☊🜮🜘⛧🜖🜅⚻🜶}}",
@@ -95,7 +93,7 @@ export const PRESETS = [
     text1: "#C8D4FF",
     outlineMode: "off",
     font: "Cormorant Garamond",
-    texture: true, textureType: "clouds", textureOpacity: 30, texP1: 180, texP2: 90,
+    texture: true, textureType: "clouds", textureOpacity: 22, texP1: 180, texP2: 90,
     accent1: "#8FA8FF", accent2: "#5C6CE7"
   },
 
@@ -106,9 +104,10 @@ export const PRESETS = [
     text1: "#0D1017",
     outlineMode: "off",
     font: "EB Garamond",
-    texture: true, textureType: "grain", textureOpacity: 24, texP1: 160, texP2: 110,
+    texture: true, textureType: "tessellate", textureOpacity: 100, texP1: 100, texP2: 0,
     accent1: "#9AA3B0", accent2: "#C9A227",
-    border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12
+    border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12,
+    textureBlend: 'overlay'
   },
   { name: "December",
     spell: "{{☋🜫🜄⚸🜥}}🜢🜟🜹🜞[[🜯🜃🜛🜈🜌🝓🜾🜂]]",
@@ -126,9 +125,10 @@ export const PRESETS = [
     text1: "#F5F1E6",
     outlineMode: "off",
     font: "Playfair Display",
-    texture: true, textureType: "metalleaf", textureOpacity: 32, texP1: 140, texP2: 120,
+    texture: true, textureType: "metalleaf", textureOpacity: 70, texP1: 140, texP2: 120,
     accent1: "#D4AF37", accent2: "#8C6D1F",
-    border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 10
+    border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 10,
+    textureBlend: 'screen'
   },
   { name: "Lotus Bloom",
     spell: "⚻☊[[🜃🜜🜯🜭🜬🜁♡☥✡🜅]]{{🝆✝🜇🜱🜿}}",
@@ -136,8 +136,9 @@ export const PRESETS = [
     text1: "#3A2233",
     outlineMode: "off",
     font: "Cormorant Garamond",
-    texture: true, textureType: "flowers", textureOpacity: 95, texP1: 210, texP2: 45,
-    accent1: "#C4708F", accent2: "#8FA88C"
+    texture: true, textureType: "flowers", textureOpacity: 90, texP1: 210, texP2: 180,
+    accent1: "#C4708F", accent2: "#8FA88C",
+    textureBlend: 'source-over'
   },
 
   // ---- CHAOS ----  sigils, math-noise, geometry twisting where reality thins
@@ -147,8 +148,9 @@ export const PRESETS = [
     text1: "#F6E3E8",
     outlineMode: "off",
     font: "Cinzel",
-    texture: true, textureType: "sigils", textureOpacity: 30, texP1: 240, texP2: 70,
-    accent1: "#E0526F", accent2: "#9B5C86"
+    texture: true, textureType: "sigils", textureOpacity: 45, texP1: 240, texP2: 70,
+    accent1: "#E0526F", accent2: "#9B5C86",
+    textureBlend: 'screen'
   },
   { name: "Ashfall",
     spell: "[[🜁🜩⚻🜺☍⛤🜿🜚⛧🜎🜪🜔🝆🜻]]{{✝🜝}}✡",
@@ -165,11 +167,13 @@ export const PRESETS = [
     text1: "#E8FFF6",
     outlineMode: "off",
     font: "Space Mono",
-    texture: true, textureType: "tessellate", textureOpacity: 30, texP1: 150, texP2: 160,
+    texture: true, textureType: "summoning", textureOpacity: 30, texP1: 160, texP2: 90,
     accent1: "#3DF5A0", accent2: "#5AC8FF",
     border: true, borderColor: "#3DF5A0", borderThickness: 7, borderOffset: 26,
     borderGradient: true, borderColor2: "#5AC8FF", borderColor3: "#B8FFE4",
-    borderBloom: 82
+    borderBloom: 82,
+    textureBlend: 'screen',
+    textureTint1: '#3DF5A0'
   },
   { name: "Hourglass",
     spell: "🜍🜉🜔🜨🜥✡✝🜟🜄🜆{{🜱🜾🜼⚼⛧}}[[🜈🝊]]",

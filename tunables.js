@@ -42,20 +42,14 @@ export const SWATCH = {
   fallbackSeed: 4242,
 };
 
-/** The PML editor. */
-export const EDITOR = {
-  fontSize: 13,
-  lineHeight: 1.62,
-  /** Beyond this many characters the mirror is repainted on a timer rather
-   *  than on every keystroke. */
-  debounceMs: 150,
-};
-
 /** Texture generation. */
 export const TEXTURES = {
   /** How many generated textures are kept before the oldest is dropped.
    *  Higher costs memory; lower costs regeneration when switching around. */
   cacheEntries: 40,
+  /** Total pixels the texture cache may hold: about three full 3072×3072
+   *  pages (~110 MB). Past this the oldest are dropped. */
+  cachePixels: 3072 * 3072 * 3,
   /** The page size the absolute slider readouts are quoted against. A count
    *  of "1,124 sparkles" means 1,124 on a page this size. */
   referenceWidth: 3072,
@@ -90,3 +84,8 @@ export const SPELLS = {
    *  changing the wrapper logic in spell.js too. */
   segments: 3,
 };
+
+// ---------- sharing ----------
+/** Where a shared-spell link points when the app is not being served from
+ *  its own https address (opened as a local file, say). */
+export const SHARE_HOME = 'https://vellum.unfixable.place/';

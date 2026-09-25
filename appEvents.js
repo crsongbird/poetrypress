@@ -1,53 +1,38 @@
 /**
- * appEvents.js — the entry point. Wires every control in index.html to the
- * app's actual state and triggers a render() after anything changes. Unlike
- * the other four modules, this one isn't a portable concept on its own --
- * it's specifically the glue for THIS page's specific HTML structure.
+ * appEvents.js — the entry point: wires every control in index.html to the
+ * app's state, and asks for a render after anything changes. The glue for
+ * this page's HTML specifically; the other modules don't know the DOM's shape.
  *
- * TABLE OF CONTENTS
- *   Field/control binders   syncStopFields, bindColorField, setColorField,
- *                           randHex, toggleSubblock, bindAngle,
- *                           bindRadioGroup, setActiveRadioValue,
- *                           syncOutlineFields -- small generic helpers that
- *                           wire one control (or a small cluster of related
- *                           ones) to its DOM behavior. Below the function
- *                           definitions, the actual addEventListener calls
- *                           that use them for every control in the sidebar.
- *   Texture seed             randomSeed, maybeRerollSeed -- rerolls the
- *                           texture seed on preset-apply / randomize,
- *                           unless the Lock checkbox is on.
- *   Filename generation      plainTextFromLine, slugifyForFilename,
- *                           generateFilenameBase -- reuses applyEscapes +
- *                           tokenizeInline from textParsers.js (the same
- *                           logic that decides what actually renders) so
- *                           the generated filename can never drift out of
- *                           sync with what the poem actually says.
- *   Full-state JSON          serializeCurrentSettings, restoreSettings --
- *                           the Advanced panel's export/import. This is a
- *                           superset of what a preset covers (also captures
- *                           alignment, aspect ratio, username, the poem
- *                           text itself, the texture seed + lock state).
- *   Presets                  applyPreset -- reads one entry from PRESETS
- *                           and pushes every field it specifies into the
- *                           matching control; fields a preset omits are
- *                           left at whatever they currently are.
- *   (below the functions)   Every addEventListener binding for every
- *                           control, the PRESETS grid construction, and
- *                           finally the boot sequence: preload fonts, then
- *                           render (see bottom of file).
+ * SECTIONS, in file order
+ *   lock state          which controls are locked, applied and restored
+ *   generic bindings    colour fields, angles, radio groups, stop counts
+ *   page size           aspect ratios and custom size
+ *   settings            PERSISTED (mechanical controls) plus
+ *                       serializeCurrentSettings / restoreSettings, which the
+ *                       Workbench JSON and saved spells both use
+ *   presets             applyPreset: each texture starts from its own
+ *                       defaults, then takes what the preset specifies
+ *   colour picker       the swatch palette, the keyboard, and the pointer
+ *                       that rings the field being edited
+ *   mobile layout       device detection, the preview divider, the viewport
+ *   texture tools       knobs, blend, light pad, hues (and hues that follow
+ *                       the accents), the seed
+ *   locks · PML editor · focus mode · typeface effects · border extras
+ *   the moon            in the header, the opacity readout, the seed button
+ *   theme · Spellcrafting & Grimoire · the boot sequence (at the bottom)
  *
- * Imports: $, FONTS, PRESETS, ASPECTS from appOptions.js; applyEscapes,
- * tokenizeInline from textParsers.js; render from canvasRenderer.js.
- * Exports: nothing -- this is the entry point, nothing imports FROM it.
+ * Exports nothing: it is the entry point, and nothing imports from it.
  */
 
 import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout } from './textureGenerators.js';
+import { paramsFor, capsFor, paramReadout, clearTextureCache } from './textureGenerators.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
+import { moonPhase, moonGlyph, moonGlyphURI, phaseName } from './moon.js';
+import { moonForSeed } from './texWhimsy.js';
 import { paintPresetSwatch } from './swatches.js';
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
@@ -125,6 +110,12 @@ const LOCK_GLYPH =
   '</svg>';
 
 const locked = new Set();
+// whether each texture tint is still following its default source (see followAccents)
+const tintFollows = [true, true];
+// true while the app itself writes a tint. setColorField dispatches 'input',
+// so without this, following an accent would look like a hand-picked tint
+// and switch following off after the very first change.
+let tintBySystem = false;
 // id -> its lock button, so saved lock state can be reflected in the UI
 const lockButtons = new Map();
 
@@ -201,8 +192,8 @@ bindColorField('bgColor2Hex', scheduleRender);
 bindColorField('bgColor3Hex', scheduleRender);
 bindColorField('bgColor4Hex', scheduleRender);
 bindColorField('borderColorHex', scheduleRender);
-bindColorField('accent1ColorHex', scheduleRender);
-bindColorField('accent2ColorHex', scheduleRender);
+bindColorField('accent1ColorHex', ()=>{ followAccents(); scheduleRender(); });
+bindColorField('accent2ColorHex', ()=>{ followAccents(); scheduleRender(); });
 
 toggleSubblock('textGradientToggle','gradientBlock');
 toggleSubblock('bgGradientToggle','bgGradientBlock');
@@ -273,7 +264,7 @@ bindRadioGroup('textStopsGroup', v=>{
 });
 
 $('textureType').addEventListener('change', scheduleRender);
-$('textureOpacity').addEventListener('input', ()=>{ $('textureOpacityVal').textContent=$('textureOpacity').value+'%'; scheduleRender(); });
+$('textureOpacity').addEventListener('input', ()=>{ paintOpacityMoon(); scheduleRender(); });
 
 function randomSeed(){ return Math.floor(Math.random()*2**31); }
 function maybeRerollSeed(explicitSeed){
@@ -366,7 +357,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
-    $('textureOpacityVal').textContent = op+'%';
+    paintOpacityMoon();
   }
 
   const borderOn = Math.random() < 0.4;
@@ -433,9 +424,7 @@ $('downloadBtn').addEventListener('click', ()=>{
   link.click();
 });
 
-// ---------- advanced: full settings snapshot (export/import as JSON) ----------
-
-// ---------- persisted controls ----------
+// ---------- settings: save and restore (the Workbench JSON, spells) ----------
 /**
  * Controls whose save/restore is purely mechanical: read the element, write
  * it back. Adding a control here is the whole job — it is then saved in
@@ -628,7 +617,7 @@ function restoreSettings(s){
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
   if(s.texP2 !== undefined) $('texP2').value = s.texP2;
   syncTextureParams(false);
-  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; $('textureOpacityVal').textContent=s.textureOpacity+'%'; }
+  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintOpacityMoon(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
 
   $('borderToggle').checked = !!s.border;
@@ -660,6 +649,8 @@ function restoreSettings(s){
   if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
   scheduleRender();
+  paintOpacityMoon();
+  paintSeedMoon();
 }
 
 $('advancedRefreshBtn').addEventListener('click', ()=>{
@@ -688,8 +679,6 @@ $('advancedLoadBtn').addEventListener('click', ()=>{
 });
 // populate once on load so there's something to see/copy immediately
 $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
-
-// ---------- preset snapshots ----------
 
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
@@ -756,54 +745,9 @@ function applyThemePalette(colors){
   safeColoris({ swatches: colors });
 }
 
-// Named in tunables.js. The old literal here pointed at 'Quintessence', a
-// preset renamed long ago, so it had been silently falling back to the
-// first preset ever since.
+// the opening palette comes from the default preset named in tunables.js
 const defaultPalettePreset = PRESETS.find(p=>p.name===DEFAULTS.preset) || PRESETS[0];
 applyThemePalette(deriveThemePalette(defaultPalettePreset));
-
-// The page opens on a real preset rather than a scatter of static HTML
-// defaults that no longer correspond to anything -- one source of truth,
-// so the opening view is always a coherent Element rather than whatever
-// the markup happened to hardcode.
-// Applied during the boot sequence at the bottom of this file instead:
-// applyPreset now snapshots the lock set, and `locked` is a const declared
-// further down, so reading it this early is a temporal-dead-zone error.
-
-// The 16th swatch: whatever THIS specific field's current value is, appended
-// live right as its picker opens -- lets you audition one of the 15 theme
-// colors and still get back to what you had. Coloris fires 'open' on the
-// bound input itself when its picker is about to show.
-// Coloris positions its picker against the page, but on mobile .controls is
-// the thing that scrolls (the page itself does not), so the picker could open
-// nowhere near the field it belongs to. Re-anchor it to the field's own
-// on-screen rect, flipping above when there is no room below, and keeping it
-// clear of the tab bar.
-function positionPickerNearField(field){
-  const picker = document.getElementById('clr-picker');
-  if(!picker || !field.getBoundingClientRect) return;
-  const rootStyle = getComputedStyle(document.documentElement);
-  const num = (name, fallback) => parseFloat(rootStyle.getPropertyValue(name)) || fallback;
-  const visible = num('--vvh', window.innerHeight);
-  const barH = num('--tabbar-h', 58);
-  const gap = 8;
-
-  const r = field.getBoundingClientRect();
-  const pw = picker.offsetWidth || 240;
-  const ph = picker.offsetHeight || 260;
-
-  let top = r.bottom + gap;
-  if(top + ph > visible - barH){
-    const above = r.top - ph - gap;          // flip above the field
-    top = above >= gap ? above : Math.max(gap, visible - barH - ph - gap);
-  }
-  const left = Math.min(Math.max(gap, r.left), Math.max(gap, window.innerWidth - pw - gap));
-
-  picker.style.position = 'fixed';
-  picker.style.top = top + 'px';
-  picker.style.left = left + 'px';
-  picker.style.margin = '0';
-}
 
 // Closing the picker also dismisses the phone keyboard. Coloris fires 'close'
 // on the field it was editing; if its hex input still holds focus, the
@@ -815,14 +759,82 @@ document.addEventListener('close', (e)=>{
   if(active && active.blur && (active.id === 'clr-color-value' || active === t)) active.blur();
 });
 
+// ---------- the picker points at the field it is editing ----------
+// An accessibility aid: while the colour picker is open, the field it is
+// editing is ringed in the theme's selection colour, and the picker grows a
+// speech-bubble tail pointing at it. On a phone the picker docks at the
+// bottom of the screen, far from the field, so the field is first scrolled
+// into view above it — a pointer at a hidden field would help no one.
+let pickingField = null;
+const rafOr = f => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(f) : setTimeout(f, 0));
+function pickerPointer(){
+  let el = document.getElementById && document.getElementById('clrPointer');
+  if(!el && document.createElement && document.body && document.body.appendChild){
+    el = document.createElement('div');
+    el.id = 'clrPointer';
+    if(el.setAttribute) el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function markPicking(field, on){
+  if(!field || !field.classList) return;
+  field.classList.toggle('is-picking', on);
+  const wrap = field.closest && field.closest('.clr-field');
+  if(wrap && wrap.classList) wrap.classList.toggle('is-picking', on);
+}
+function aimPointer(){
+  const picker = document.getElementById && document.getElementById('clr-picker');
+  const ptr = pickerPointer();
+  if(!ptr) return;
+  if(!picker || !pickingField || !picker.getBoundingClientRect || !pickingField.getBoundingClientRect){ ptr.hidden = true; return; }
+  const f = pickingField.getBoundingClientRect(), p = picker.getBoundingClientRect();
+  const up = f.bottom <= p.top + 2, down = f.top >= p.bottom - 2;
+  if(!p.width || (!up && !down)){ ptr.hidden = true; return; }       // beside it: nothing to point at
+  const x = Math.max(p.left + 16, Math.min(p.right - 16, f.left + Math.min(f.width, 140) / 2));
+  ptr.dataset.dir = up ? 'up' : 'down';
+  ptr.style.left = x + 'px';
+  ptr.style.top = (up ? p.top : p.bottom) + 'px';
+  ptr.hidden = false;
+}
+document.addEventListener('open', (e)=>{
+  const t = e.target;
+  if(!t || !t.matches || !t.matches('[data-coloris]')) return;
+  if(pickingField) markPicking(pickingField, false);
+  pickingField = t;
+  markPicking(t, true);
+  rafOr(()=>{
+    const picker = document.getElementById && document.getElementById('clr-picker');
+    if(!picker || !picker.getBoundingClientRect || !t.getBoundingClientRect) return;
+    const f = t.getBoundingClientRect(), p = picker.getBoundingClientRect();
+    const scroller = document.querySelector && document.querySelector('.controls');
+    const mobile = document.body && document.body.classList && document.body.classList.contains('is-mobile');
+    if(mobile && scroller && scroller.scrollBy && f.bottom > p.top - 12){
+      scroller.scrollBy({ top: f.bottom - p.top + 28, behavior: 'smooth' });
+      setTimeout(aimPointer, 360);                     // after the scroll settles
+    } else aimPointer();
+  });
+});
+document.addEventListener('close', (e)=>{
+  const t = e.target;
+  if(!t || !t.matches || !t.matches('[data-coloris]')) return;
+  markPicking(t, false);
+  if(pickingField === t) pickingField = null;
+  const ptr = pickerPointer(); if(ptr) ptr.hidden = true;
+});
+// keep the tail on target while things move under it
+if(typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('resize', ()=>{ if(pickingField) aimPointer(); });
+}
+document.addEventListener('scroll', ()=>{ if(pickingField) aimPointer(); }, true);
+
+// The 16th swatch: the field's own current value, appended as its picker
+// opens, so you can audition the theme's colours and still get back to what
+// you had. (On phones the picker's position is set by CSS: docked above the
+// keyboard at the bottom right.)
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
     safeColoris({ swatches: [...currentThemePalette, e.target.value] });
-    if(document.body && document.body.classList && document.body.classList.contains('is-mobile')
-       && typeof requestAnimationFrame === 'function'){
-      // after Coloris has done its own positioning, not before
-      requestAnimationFrame(()=>positionPickerNearField(e.target));
-    }
   }
 });
 
@@ -884,7 +896,7 @@ function applyPreset(p){
   if(p.texP1 !== undefined) $('texP1').value = p.texP1;
   if(p.texP2 !== undefined) $('texP2').value = p.texP2;
   syncTextureParams(false);
-  if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; $('textureOpacityVal').textContent=p.textureOpacity+'%'; }
+  if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintOpacityMoon(); }
 
   if(p.accent1){ $('accent1Toggle').checked=true; $('accent1Block').classList.add('open'); setColorField('accent1ColorHex', p.accent1); }
   else { $('accent1Toggle').checked=false; $('accent1Block').classList.remove('open'); }
@@ -904,17 +916,25 @@ function applyPreset(p){
 
   scheduleRender();
   } finally {
-    // Sync FIRST, restore locks LAST. syncTextureTools rebuilds the blend
-    // select and re-clamps the texture params, so restoring before it ran
-    // meant those values were immediately overwritten — which is why locks
-    // held on colours but not on the texture tools.
-    syncTextureTools(false);
+    // Sync FIRST, restore locks LAST: syncTextureTools rebuilds the blend
+    // select and re-clamps the texture params, overwriting anything restored
+    // before it runs.
+    //
+    // true = start from the new texture's own defaults, so one preset's blend
+    // and tints never leak into the next; then take whatever this preset
+    // specifies on top.
+    syncTextureTools(true);
+    const pcaps = capsFor($('textureType').value);
+    if(p.textureBlend && pcaps.blends.includes(p.textureBlend)) $('textureBlend').value = p.textureBlend;
+    if(p.textureTint1) setColorField('textureTint1Hex', p.textureTint1);
+    if(p.textureTint2) setColorField('textureTint2Hex', p.textureTint2);
     syncLightPad();
     restoreLocked(__locks);
+    // a preset changes opacity and seed without anyone touching them
+    paintOpacityMoon();
+    paintSeedMoon();
   }
 }
-
-// ---------- gradient geometry ----------
 
 // ---------- mobile layout ----------
 // Deliberately device detection, not a media query. A narrow desktop window
@@ -971,6 +991,13 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
     // nothing sized in vh fits on an Android phone.
     const visible = vv ? vv.height : window.innerHeight;
     root.style.setProperty('--vvh', visible + 'px');
+    // The visible area's BOTTOM EDGE, in page coordinates. When Chrome lays the
+    // keyboard over the page instead of resizing it, it pans the visible area
+    // (offsetTop); a bar placed by height alone then sits under the keyboard or
+    // leaves a gap, depending on the pan. offsetTop + height is where the bar
+    // belongs in both cases.
+    const bottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;
+    root.style.setProperty('--vv-bottom', bottom + 'px');
     // visualViewport shrinks for the URL bar AND for the keyboard, so raw
     // shrinkage alone would read a tall bottom URL bar as a keyboard and
     // float the tab bar up over empty space. Requiring a focused text field
@@ -990,6 +1017,8 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
 
   if(vv){
     vv.addEventListener('resize', syncViewport);
+    // the pan changes without any resize, so it has to be watched separately
+    vv.addEventListener('scroll', syncViewport);
     vv.addEventListener('scroll', syncViewport);
   }
   if(window.addEventListener) window.addEventListener('orientationchange', syncViewport);
@@ -1154,6 +1183,7 @@ syncTextureParams(true);
 // live and inert -- a control that silently does nothing is worse than one
 // that is visibly unavailable.
 const BLEND_LABELS = {
+  'source-over':'Normal',
   'overlay':'Overlay', 'soft-light':'Soft Light', 'hard-light':'Hard Light',
   'multiply':'Multiply', 'screen':'Screen', 'lighten':'Lighten',
   'darken':'Darken', 'color-burn':'Color Burn', 'color-dodge':'Color Dodge',
@@ -1192,9 +1222,34 @@ function syncTextureTools(resetToDefaults){
       d === 'accent1' ? $('accent1ColorHex').value
       : d === 'accent2' ? $('accent2ColorHex').value
       : (d || fallback);
+    tintBySystem = true;
     setColorField('textureTint1Hex', resolve(defs[0], '#7A2B2B'));
     if(caps.tints >= 2) setColorField('textureTint2Hex', resolve(defs[1], '#8A6A3C'));
+    tintBySystem = false;
+    // a freshly defaulted tint follows its source until you pick one by hand
+    tintFollows[0] = tintFollows[1] = true;
   }
+}
+
+/**
+ * Re-derives any tint that defaults to an accent, when that accent changes.
+ * Skipped for a tint you have locked, and for one you have set by hand —
+ * picking a colour yourself is the signal that it should stay put.
+ */
+function followAccents(){
+  const caps = capsFor($('textureType').value);
+  const defs = caps.tintDefaults || [];
+  const ids = ['textureTint1Hex', 'textureTint2Hex'];
+  let changed = false;
+  for(let i = 0; i < Math.min(caps.tints || 0, 2); i++){
+    const src = defs[i] === 'accent1' ? 'accent1ColorHex' : defs[i] === 'accent2' ? 'accent2ColorHex' : null;
+    if(!src || !tintFollows[i] || locked.has(ids[i])) continue;
+    tintBySystem = true;
+    setColorField(ids[i], $(src).value);
+    tintBySystem = false;
+    changed = true;
+  }
+  if(changed) scheduleRender();
 }
 
 // The light pad is a compass, not a slider: eight directions around a centre,
@@ -1217,8 +1272,9 @@ if($('lightPad') && $('lightPad').addEventListener){
   });
 }
 $('textureBlend').addEventListener('change', scheduleRender);
-bindColorField('textureTint1Hex', scheduleRender);
-bindColorField('textureTint2Hex', scheduleRender);
+// choosing a tint yourself stops it following the accents
+bindColorField('textureTint1Hex', ()=>{ if(!tintBySystem) tintFollows[0] = false; scheduleRender(); });
+bindColorField('textureTint2Hex', ()=>{ if(!tintBySystem) tintFollows[1] = false; scheduleRender(); });
 
 // ---------- locks ----------
 // A locked control survives Randomize and preset changes. Rather than
@@ -1389,7 +1445,7 @@ if(typeof document.querySelectorAll === 'function'){
   if(poem.addEventListener){
     poem.addEventListener('focus', enterFocus);
     // Deliberately NOT leaving on blur: double-tapping to select a word blurs
-    // the field for an instant, which used to throw you out of focus mode
+    // the field for an instant, and would throw you out of focus mode
     // mid-selection. Return and the back gesture are the ways out.
   }
   if(moreBtn && moreBtn.addEventListener){
@@ -1448,6 +1504,45 @@ $('vignetteNoise').addEventListener('input', scheduleRender);
 
 // every data-str element takes its text from the table in strings.js
 applyStrings(document);
+
+// ---------- the moon, in three places ----------
+// Tonight's real moon, small, at the left of the header — an easter egg.
+{
+  const hm = $('headerMoon');
+  if(hm){
+    const p = moonPhase(new Date());
+    hm.innerHTML = moonGlyph(p, { size: 17 });
+    hm.title = phaseName(p) + ' tonight';
+  }
+}
+// The opacity READOUT is a moon that waxes with the value — new at 0%, full
+// at 100% — in place of a percentage. (It was once drawn on the slider's
+// thumb; styling the thumb makes Chrome and Firefox drop native drawing for
+// the whole slider, which is what turned it into a white box.)
+function paintOpacityMoon(){
+  const el = $('textureOpacity'), out = $('textureOpacityVal');
+  if(!el || !out) return;
+  const pct = Math.max(0, Math.min(100, Math.round(+el.value || 0)));
+  out.innerHTML = moonGlyph(pct / 200, { size: 18 });
+  out.title = pct + '%';
+  if(out.setAttribute) out.setAttribute('aria-label', 'Opacity ' + pct + '%');
+}
+// The seed button shows the phase the Fractal Moon will take for this seed,
+// so rerolling is watching the moon turn.
+function paintSeedMoon(){
+  const b = $('textureSeedReroll');
+  if(!b) return;
+  const p = moonForSeed(parseInt($('textureSeedValue').value, 10) || 0);
+  b.innerHTML = moonGlyph(p, { size: 20 });
+  b.title = 'Reroll · ' + phaseName(p);
+}
+if($('textureOpacity').addEventListener){
+  $('textureOpacity').addEventListener('input', paintOpacityMoon);
+  $('textureSeedValue').addEventListener('input', paintSeedMoon);
+  $('textureSeedReroll').addEventListener('click', ()=> setTimeout(paintSeedMoon, 0));
+}
+paintOpacityMoon();
+paintSeedMoon();
 
 // ---------- theme ----------  (see theme.js)
 if($('uiTheme') && $('uiTheme').addEventListener){
@@ -1550,5 +1645,11 @@ function remeasureAndRender(){
   render();
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(remeasureAndRender);
+// Textures that draw alchemical glyphs (transmutation circles) must not keep
+// a copy generated before the symbol font arrived — it would be empty boxes.
+if(document.fonts && document.fonts.load){
+  document.fonts.load('32px "Noto Sans Symbols"', '\u{1F701}')
+    .then(()=>{ clearTextureCache(); scheduleRender(); }).catch(()=>{});
+}
 setTimeout(remeasureAndRender, 300);
 setTimeout(remeasureAndRender, 900);

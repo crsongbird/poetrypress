@@ -12,7 +12,7 @@
  * guard follows elsewhere in this app.
  *
  * TABLE OF CONTENTS
- *   Storage        readStore / writeStore / storageAvailable — all access
+ *   Storage        readStore / writeStore — all access
  *                  is wrapped; a rejected write is reported, never thrown.
  *   Validation     isValidSpell / isValidPoem — every record crossing the
  *                  boundary (import, and equally a re-read of our own data,
@@ -31,19 +31,11 @@
 
 import { generateSpell, validateSpell } from './spell.js';
 import { DIALOGS, fill } from './strings.js';
+import { moonPhase, moonGlyph, phaseName } from './moon.js';
+import { SHARE_HOME } from './tunables.js';
 
 export const SPELL_KEY = 'uv.spells.v1';
 export const POEM_KEY  = 'uv.poems.v1';
-
-export function storageAvailable(){
-  try {
-    if(typeof localStorage === 'undefined') return false;
-    const probe = '__uv_probe__';
-    localStorage.setItem(probe, '1');
-    localStorage.removeItem(probe);
-    return true;
-  } catch(e){ return false; }
-}
 
 export function readStore(key){
   try {
@@ -128,6 +120,67 @@ export function stamp(date){
   const p = n => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate())
        + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+
+// ---------- sharing one spell ----------
+// A spell travels as a code: its record as JSON, UTF-8 encoded (the glyphs
+// are outside the basic plane), then base64url so it survives in a link.
+export const SHARE_PREFIX = '#spell=';
+
+export function encodeSpell(rec){
+  const bytes = new TextEncoder().encode(JSON.stringify({
+    name: rec.name, spell: rec.spell, settings: rec.settings, savedAt: rec.savedAt }));
+  let bin = '';
+  for(const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function decodeSpell(code){
+  try {
+    const b64 = String(code).trim().replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64 + '==='.slice((b64.length + 3) % 4));
+    const rec = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
+    return isValidSpell(rec) ? rec : null;
+  } catch(e){ return null; }
+}
+
+/**
+ * Whatever was pasted, as a list of records: a JSON list, a single JSON
+ * record, a share link, or a bare share code. Returns null if none of those.
+ */
+export function readImport(raw){
+  const text = String(raw || '').trim();
+  const at = text.indexOf(SHARE_PREFIX);
+  if(at !== -1){ const r = decodeSpell(text.slice(at + SHARE_PREFIX.length).split(/[\s&]/)[0]); return r ? [r] : null; }
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? [parsed] : null);
+  } catch(e){ /* not JSON — maybe a bare code */ }
+  if(/^[A-Za-z0-9_-]{16,}$/.test(text)){ const r = decodeSpell(text); return r ? [r] : null; }
+  return null;
+}
+
+
+/** When a poem was recorded, as a real time. Older records only carry the
+ *  local "YYYY-MM-DD HH:MM" string, so that is parsed as local time. */
+export function poemTime(p){
+  if(p && Number.isFinite(p.savedTs)) return p.savedTs;
+  const m = String(p && p.savedAt || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : 0;
+}
+
+/**
+ * Sep. 24, 2026, 9:05 PM: "The Title"   — the moon glyph is drawn before it.
+ * Months are abbreviated with a period, except May, which is not shortened.
+ */
+const MONTH_ABBR = ['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'];
+export function formatPoemEntry(p){
+  const d = new Date(poemTime(p));
+  const h = d.getHours(), h12 = h % 12 || 12;
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${MONTH_ABBR[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}, ` +
+         `${h12}:${mm} ${h < 12 ? 'AM' : 'PM'}: \u201C${p.title}\u201D`;
 }
 
 /**
@@ -222,6 +275,7 @@ export function createVault(deps){
     if(empty) empty.style.display = spells.length ? 'none' : '';
     setDisabled('spellApplyBtn', !selectedSpell);
     setDisabled('spellDeleteBtn', !selectedSpell);
+    setDisabled('spellShareBtn', !selectedSpell);
     setDisabled('spellCreateBtn', !spellIsDirty());
   }
 
@@ -229,12 +283,22 @@ export function createVault(deps){
     const list = el('grimoireList');
     if(list){
       list.innerHTML = '';
-      for(const p of poems){
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.title + '  ·  ' + p.savedAt;
-        if(p.id === selectedPoem) opt.selected = true;
-        list.appendChild(opt);
+      // newest first, by the real time recorded
+      const ordered = [...poems].sort((a, b) => poemTime(b) - poemTime(a));
+      for(const p of ordered){
+        // rows, not <option>s: an option can only hold text, and each entry
+        // carries the phase of the moon on the day it was written
+        const row = document.createElement('div');
+        row.className = 'grimoire-row' + (p.id === selectedPoem ? ' selected' : '');
+        row.setAttribute('role', 'option');
+        row.setAttribute('aria-selected', p.id === selectedPoem ? 'true' : 'false');
+        row.dataset.id = p.id;
+        const phase = moonPhase(new Date(poemTime(p)));
+        row.title = phaseName(phase);
+        row.innerHTML = moonGlyph(phase, { size: 15 }) + '<span class="grimoire-text"></span>';
+        const text = row.querySelector ? row.querySelector('.grimoire-text') : null;
+        if(text) text.textContent = formatPoemEntry(p);
+        list.appendChild(row);
       }
     }
     const empty = el('grimoireEmpty');
@@ -284,7 +348,7 @@ export function createVault(deps){
     // An existing record keeps the glyphs it was created with.
     const prior = existing >= 0 ? spells[existing] : null;
     const glyphs = (prior && validateSpell(prior.spell || '').ok) ? prior.spell : generateSpell();
-    const record = { name: clean, spell: glyphs, settings: getSettings(), savedAt: stamp() };
+    const record = { name: clean, spell: glyphs, settings: getSettings(), savedAt: stamp(), savedTs: Date.now() };
     if(existing >= 0){
       const ok = await prompt({
         title: DIALOGS.overwrite.title,
@@ -338,7 +402,7 @@ export function createVault(deps){
     });
     if(!ok) return;
     poems.push({ id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-                 title, text, savedAt: stamp() });
+                 title, text, savedAt: stamp(), savedTs: Date.now() });
     if(!persistPoems()) return;
     appliedPoemText = text;
     refresh();
@@ -387,10 +451,10 @@ export function createVault(deps){
       input: true, defaultValue: '', confirmLabel: DIALOGS.importList.confirm, rows: 8,
     });
     if(!raw) return;
-    let parsed;
-    try { parsed = JSON.parse(String(raw)); }
-    catch(e){
-      await prompt({ title:'Could not read that', body:'That is not valid JSON, so nothing was imported.', confirmLabel:'OK' });
+    // a list, a single record, a share link or a bare share code all work
+    const parsed = readImport(raw);
+    if(!parsed){
+      await prompt({ title:'Could not read that', body:'That is not a spell list, a spell, or a share link, so nothing was imported.', confirmLabel:'OK' });
       return;
     }
     const result = mergeRecords(current, parsed, keyOf, isValid);
@@ -417,6 +481,43 @@ export function createVault(deps){
         merged => { spells = merged; persistSpells(); }));
 
   bind('poemSaveBtn', savePoem);
+  async function shareSpell(){
+    const rec = spells.find(sp => sp.id === selectedSpell);
+    if(!rec) return;
+    // A link only works from the live site. Opened as a local file there is
+    // no address worth sharing, so the link points at the public app.
+    const here = (typeof location !== 'undefined' && location.protocol === 'https:')
+      ? location.origin + location.pathname : SHARE_HOME;
+    const link = here + SHARE_PREFIX + encodeSpell(rec);
+    let copied = false;
+    try { await navigator.clipboard.writeText(link); copied = true; } catch(e){ /* shown below instead */ }
+    await prompt({
+      title: fill(DIALOGS.shareSpell.title, rec.name),
+      body: copied ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareSpell.bodyManual,
+      input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm,
+    });
+  }
+
+  /** Opened from a share link: offer to add the spell it carries. */
+  async function receiveShared(){
+    if(typeof location === 'undefined' || !String(location.hash).startsWith(SHARE_PREFIX)) return;
+    const rec = decodeSpell(location.hash.slice(SHARE_PREFIX.length));
+    // clear the link either way, so a reload does not ask again
+    try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+    if(!rec){
+      await prompt({ title: DIALOGS.shareBroken.title, body: DIALOGS.shareBroken.body, confirmLabel: 'OK' });
+      return;
+    }
+    const ok = await prompt({ title: fill(DIALOGS.receiveSpell.title, rec.name),
+      body: DIALOGS.receiveSpell.body, confirmLabel: DIALOGS.receiveSpell.confirm, cancelLabel: 'Not now' });
+    if(!ok) return;
+    const result = mergeRecords(spells, [rec], spellKeyOf, isValidSpell);
+    spells = result.merged; persistSpells();
+    selectedSpell = (spells.find(sp => spellKeyOf(sp) === spellKeyOf(rec)) || {}).id || null;
+    refresh();
+  }
+
+  bind('spellShareBtn', shareSpell);
   bind('poemApplyBtn', applyPoem);
   bind('poemDeleteBtn', deletePoem);
   bind('poemExportBtn', ()=>exportJson('poems', poems));
@@ -425,10 +526,16 @@ export function createVault(deps){
 
   const list = el('grimoireList');
   if(list && list.addEventListener){
-    list.addEventListener('change', ()=>{ selectedPoem = list.value || null; renderPoems(); });
+    list.addEventListener('click', (e)=>{
+      const row = e.target && e.target.closest ? e.target.closest('.grimoire-row') : null;
+      if(!row) return;
+      selectedPoem = row.dataset.id || null;
+      renderPoems();
+    });
   }
 
   refresh();
+  receiveShared();
 
   return {
     refresh,

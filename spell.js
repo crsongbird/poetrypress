@@ -24,7 +24,9 @@
 
 import { SPELLS } from './tunables.js';
 
-/** The only glyphs considered safe to render. Noto Sans Symbols 2 covers these. */
+/** The only glyphs considered safe to render. Noto Sans Symbols covers 66 of
+ *  these and Symbols 2 the last; both are loaded. (For a long time only
+ *  Symbols 2 was, and spells relied on the system having the other.) */
 export const GLYPHS = [
   "🜁","🜂","🜃","🜄","🜅","🜆","🜇","🜈","🜉","🜊","🜋","🜌","🜍","🜎",
   "🜔","🜕","🜖","🜗","🜘","🜙","🜚","🜛","🜜","🜝","🜞","🜟","🜠","🜢",
@@ -165,3 +167,35 @@ export function spellForSeed(seed){
   };
   return generateSpell(rand);
 }
+
+/** The font stack for drawing glyphs anywhere: the alchemical block first. */
+/**
+ * Every spell glyph by its Unicode name, so a poem can ask for one:
+ * §Glyph!fire, §Glyph!salt, §Glyph!black-moon-lilith. Names are Unicode's own
+ * ("ALCHEMICAL SYMBOL FOR FIRE" -> fire), lowercased and hyphenated.
+ */
+export const GLYPH_BY_NAME = {
+  'air': '🜁', 'fire': '🜂', 'earth': '🜃', 'water': '🜄', 'aquafortis': '🜅',
+  'aqua-regia': '🜆', 'aqua-regia-2': '🜇', 'aqua-vitae': '🜈',
+  'aqua-vitae-2': '🜉', 'vinegar': '🜊', 'vinegar-2': '🜋', 'vinegar-3': '🜌',
+  'sulfur': '🜍', 'philosophers-sulfur': '🜎', 'salt': '🜔', 'nitre': '🜕',
+  'vitriol': '🜖', 'vitriol-2': '🜗', 'rock-salt': '🜘', 'rock-salt-2': '🜙',
+  'gold': '🜚', 'silver': '🜛', 'iron-ore': '🜜', 'iron-ore-2': '🜝',
+  'crocus-of-iron': '🜞', 'regulus-of-iron': '🜟', 'copper-ore': '🜠',
+  'sublimate-of-copper': '🜢', 'crocus-of-copper': '🜣',
+  'copper-antimoniate': '🜥', 'salt-of-copper-antimoniate': '🜦',
+  'sublimate-of-salt-of-copper': '🜧', 'verdigris': '🜨', 'tin-ore': '🜩',
+  'lead-ore': '🜪', 'antimony-ore': '🜫', 'sublimate-of-antimony': '🜬',
+  'salt-of-antimony': '🜭', 'sublimate-of-salt-of-antimony': '🜮',
+  'vinegar-of-antimony': '🜯', 'regulus-of-antimony-2': '🜱', 'alkali': '🜶',
+  'sal-ammoniac': '🜹', 'arsenic': '🜺', 'realgar': '🜻', 'realgar-2': '🜼',
+  'bismuth-ore': '🜾', 'tartar': '🜿', 'ascending-node': '☊',
+  'descending-node': '☋', 'conjunction': '☌', 'opposition': '☍',
+  'black-moon-lilith': '⚸', 'quincunx': '⚻', 'sextile': '⚹',
+  'semisextile': '⚺', 'sesquiquadrate': '⚼', 'pentagram': '⛤',
+  'inverted-pentagram': '⛧', 'outlined-white-star': '⚝',
+  'star-of-david': '✡', 'latin-cross': '✝', 'ankh': '☥', 'oil': '🝆',
+  'wax': '🝊', 'lodestone': '🝓', 'white-heart-suit': '♡',
+};
+
+export const GLYPH_FONT = '"Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif';
