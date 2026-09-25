@@ -1,55 +1,40 @@
 /**
- * canvasRenderer.js — turns parsed poem lines into actual pixels.
+ * canvasRenderer.js — turns the poem and every control into pixels.
  *
- * TABLE OF CONTENTS
- *   Emoji helpers        isEmojiCodePoint, segmentHasEmoji -- despite
- *                        sounding parser-adjacent, these are ONLY ever
- *                        called from drawTextRun to decide whether to tint
- *                        an emoji glyph. That's a rendering concern (the
- *                        glyph itself doesn't change, just how it's
- *                        painted), so they live here, not in textParsers.js.
- *   Color math           makeGradient (N-stop linear gradient, used for
- *                        both background and text gradients), hexToHsl /
- *                        hslToHex / watermarkColor (derives the watermark's
- *                        color from the background so it stays legible
- *                        without needing its own color picker),
- *                        collectGradientColors (reads the live color-picker
- *                        DOM values for a 2-4 stop gradient -- only ever
- *                        called from render() itself, despite living near
- *                        the color-picker bindings in the pre-refactor
- *                        file; it's a rendering-time read, not UI wiring).
- *   Font/segment sizing  fontString, emphasisTracking (the noItalic-font
- *                        letter-spacing fallback), measureSegWidth.
- *   Per-run drawing       tintedEmojiCanvas (silhouette-tints one emoji
- *                        glyph via an offscreen canvas + source-atop),
- *                        resolvePartStyle (merges a Segmentation part's
- *                        custom color/effect into the base render style --
- *                        this is what lets drawTextRun stay unchanged
- *                        while still supporting per-segment overrides),
- *                        drawTextRun (the shared per-segment draw loop:
- *                        outline/shadow, the letter-spacing fallback,
- *                        underline/strikethrough, gradient fill, emoji
- *                        tint -- used identically for normal lines and
- *                        Segmentation-Operator chunks).
- *   Layout/measurement   measureLineWidth, fitTextSize (the auto-size
- *                        search), blockHeight.
- *   render()             THE public export and the whole point of this
- *                        file: reads every control's current DOM state,
- *                        calls buildLines() once, fits and draws every
- *                        line (including the split-alignment /
- *                        Segmentation-Operator branch), then the texture
- *                        layer, border, vignette, and watermark.
+ * SECTIONS
+ *   Emoji helpers        isEmojiCodePoint, segmentHasEmoji — drawTextRun
+ *                        uses them to decide whether to tint an emoji
+ *   Colour maths         makeGradient (N-stop), hexToHsl / hslToHex,
+ *                        watermarkColor (legible against the background),
+ *                        collectGradientColors (reads the stop pickers)
+ *   Measuring text       fontString, emphasisTracking (the letter-spacing
+ *                        stand-in for fonts without an italic), measureSegWidth
+ *   Typeface effects     drawTypeEffect, drawErodedText, drawBloom — extra
+ *                        passes that never move text or change its width
+ *   Drawing a run        tintedEmojiCanvas, resolvePartStyle (a segment's own
+ *                        overrides), drawTextRun (outline, shadow, tracking,
+ *                        underline, gradient fill, emoji tint)
+ *   Layout               fitTextSize (the auto-size search), blockHeight,
+ *                        the cached parse of the poem
+ *   §Variables           pmlVarContext — what the poem can report about the
+ *                        page; resolved (pmlVars.js) before the poem is parsed
+ *   render()             reads every control, lays out and draws the lines,
+ *                        then the texture, border, vignette, credit and spell
  *
- * Imports: $ and FONTS from appOptions.js; buildLines from textParsers.js;
- * getTextureCanvas from textureGenerators.js. Exports: render.
+ * Exports render, scheduleRender, invalidateTextMeasurements, hexToHsl,
+ * hslToHex. Inline glyphs (glyphs.js) are installed on the canvas at load.
  */
 
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor } from './textureGenerators.js';
+import { resolvePmlVariables } from './pmlVars.js';
+import { moonPhase } from './moon.js';
+import { moonForSeed } from './texWhimsy.js';
+import { installInlineGlyphs } from './glyphs.js';
 import { mixHex } from './texCore.js';
-import { EFFECTS } from './tunables.js';
+import { EFFECTS, MARKS } from './tunables.js';
 
 
 function isEmojiCodePoint(cp){
@@ -232,7 +217,6 @@ function charJitterOffset(seedBase){
  * seeded from the text and its position, so they stay put while you type
  * rather than crawling on every repaint.
  */
-export const TYPE_EFFECTS = TYPE_EFFECT_NAMES;   // one list, owned by the parser
 
 function drawTypeEffect(ctx, str, px, py, size, fill, style){
   const kind = style.typeEffect;
@@ -571,14 +555,10 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
   return x;
 }
 
-// Computes a line's full width info once, using measureSegWidth consistently
-// (this used to be two separate code paths -- fitTextSize's search called
-// measureLineWidth, which measured via raw ctx.measureText and so silently
-// ignored the letter-spacing "tracking" fallback that no-italic fonts use
-// for italic emphasis; the draw loop separately re-measured everything via
-// measureSegWidth, which does account for tracking. Same line, two slightly
-// different answers, and the search's answer -- the one that actually
-// decides what fits -- was the less accurate of the two. One function now.
+// Computes a line's full width once, with measureSegWidth — the same measure
+// the draw loop uses, including the tracking fallback that fonts without an
+// italic use for emphasis. Fitting and drawing must measure identically, or
+// the size is chosen for a width that isn't the one drawn.
 // Shared between the measurement pass (below) and the draw loop -- both
 // MUST agree on this, or a part's measured width (used for layout/alignment)
 // and its actually-drawn size would disagree. Percentage-based: /scale:150
@@ -702,6 +682,50 @@ function resolveRhymeColor(letter, accent1Color, accent2Color){
 // dragging a border-thickness slider. Cache both, invalidated only when
 // something that actually feeds them changes. (Module-level state, so it
 // survives across render() calls -- that's the whole point.)
+// inline glyphs on every canvas (idempotent: glyphs.js also installs itself)
+if(typeof CanvasRenderingContext2D !== 'undefined') installInlineGlyphs(CanvasRenderingContext2D.prototype);
+
+// ---------- §Variables: what the poem can report about the page ----------
+const optionText = id => {
+  const el = $(id);
+  if(!el) return '';
+  const o = el.selectedOptions && el.selectedOptions[0];
+  return (o && o.textContent) || el.value || '';
+};
+const ARROWS = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
+function lightArrow(deg){
+  // the direction the light TRAVELS, as the light pad draws it
+  const a = ((+deg || 315) - 90) * Math.PI / 180;
+  const ang = Math.atan2(-Math.sin(a), -Math.cos(a));
+  return ARROWS[((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
+}
+function pmlVarContext(W, H){
+  const on = !$('textureToggle') || $('textureToggle').checked;
+  const type = $('textureType') ? $('textureType').value : '';
+  const caps = capsFor(type), defs = paramsFor(type) || [];
+  const seed = parseInt($('textureSeedValue') && $('textureSeedValue').value, 10) || 0;
+  const hues = [];
+  for(let i = 0; i < Math.min(2, caps.tints || 0); i++){
+    const el = $(i ? 'textureTint2Hex' : 'textureTint1Hex');
+    if(el) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Second Hue' : 'Hue'), hex: el.value });
+  }
+  return {
+    surfName: on ? optionText('textureType') : 'None',
+    blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
+    lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value) : 'n/a',
+    seed,
+    params: defs.map((d, i) => ({ label: d.label, value: ($(i ? 'texP2Val' : 'texP1Val') || {}).textContent || '' })),
+    opacity: Math.round(+($('textureOpacity') && $('textureOpacity').value) || 0),
+    hues,
+    moonTonight: moonPhase(new Date()),
+    moonSeed: moonForSeed(seed),
+    spell: ($('activeSpell') && $('activeSpell').value) || '',
+    font: optionText('fontFamily'),
+    canvas: W + '×' + H,
+    typeEffect: ($('typeEffect') && $('typeEffect').value) || 'none',
+  };
+}
+
 let linesCacheKey = null;
 let linesCacheValue = null;
 function getCachedLines(rawText, accent1On, accent2On){
@@ -772,7 +796,6 @@ export function render(){
     const light = caps.light ? (parseFloat($('textureLight').value) || 0) : null;
     const tint1 = caps.tints >= 1 ? $('textureTint1Hex').value : null;
     const tint2 = caps.tints >= 2 ? $('textureTint2Hex').value : null;
-    const invert = false;
     const seed = parseInt($('textureSeedValue').value, 10) || 0;
 
     const tp1 = parseFloat($('texP1').value);
@@ -785,31 +808,31 @@ export function render(){
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend === 'lighten' ? 'overlay' : blend;
       // the light slot stays empty here; the nebula colour is a TINT
-      ctx.drawImage(getTextureCanvas('astral_fog', W, H, null, null, invert, seed, p2, null, null, tint2), 0, 0);
+      ctx.drawImage(getTextureCanvas('astral_fog', W, H, { seed, p1: p2, tint1: tint2 }), 0, 0);
       ctx.restore();
 
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas('astral_stars', W, H, accent1Color, accent2Color, invert, seed, p1, null, tint1), 0, 0);
+      ctx.drawImage(getTextureCanvas('astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, tint1 }), 0, 0);
       ctx.restore();
     } else if(type === 'inkbleed'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2, blend), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, light, tint1, tint2, blend }), 0, 0);
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color, invert, seed, p1, p2, light, tint1, tint2, blend), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, light, tint1, tint2, blend }), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2, blend), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, light, tint1, tint2, blend }), 0, 0);
       ctx.restore();
     }
   }
@@ -909,7 +932,10 @@ export function render(){
   const accent1Color = $('accent1ColorHex').value;
   const accent2Color = $('accent2ColorHex').value;
 
-  const rawText = $('poemText').value;
+  // §Variables resolve first, to plain text and PML, before the parser sees
+  // the poem; the resolved text keys the line cache, so a changed value
+  // re-lays the poem
+  const rawText = resolvePmlVariables($('poemText').value, pmlVarContext(W, H));
   const lines = getCachedLines(rawText, accent1On, accent2On);
 
   const fontDef = FONTS[$('fontFamily').value];
@@ -949,7 +975,7 @@ export function render(){
   ctx.textBaseline = 'top';
 
   const runStyle = { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY, baseFillStyle, plainTextColor: $('textColorHex').value, accent1Color, accent2Color, quoteAlpha: 1,
-    // typeface effect: one of TYPE_EFFECTS, drawn as extra passes under each glyph
+    // typeface effect: one of TYPE_EFFECT_NAMES, drawn as extra passes under each glyph
     typeEffect: $('typeEffect') ? $('typeEffect').value : 'none',
     typeEffectStrength: $('typeEffectStrength') ? (parseFloat($('typeEffectStrength').value) || 0) / 100 : 0,
     typeEffectColor: $('typeEffectColorHex') ? $('typeEffectColorHex').value : '#000000',
@@ -1092,14 +1118,14 @@ export function render(){
   const isRight = corner.endsWith('right');
   const wmColor = watermarkColor(bg1);
   ctx.save();
-  ctx.font = `${fontDef.weight} ${Math.round(((W + H)/2)*0.01)}px "${fontDef.family}"`;
+  ctx.font = `${fontDef.weight} ${Math.round(((W + H)/2)*MARKS.scale)}px "${fontDef.family}"`;
   ctx.fillStyle = wmColor;
   ctx.globalAlpha = 0.85;
   ctx.textAlign = isRight ? 'right' : 'left';
   ctx.textBaseline = isTop ? 'top' : 'alphabetic';
   ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
-  const wmX = isRight ? (W - W*0.035) : (W*0.035);
-  const wmY = isTop ? (H*0.025) : (H - H*0.025);
+  const wmX = isRight ? (W - W*MARKS.insetX) : (W*MARKS.insetX);
+  const wmY = isTop ? (H*MARKS.insetY) : (H - H*MARKS.insetY);
   ctx.fillText(username, wmX, wmY);
   ctx.restore();
 
@@ -1119,7 +1145,7 @@ export function render(){
     : spellForSeed(seedForSpell);
   const spellSegs = buildLines(spellToPML(activeSpell), true, true)[0].segments;
   ctx.save();
-  const spellSize = Math.round(((W + H)/2)*0.01);
+  const spellSize = Math.round(((W + H)/2)*MARKS.scale);
   ctx.globalAlpha = 0.95;
   ctx.textBaseline = isTop ? 'alphabetic' : 'top';
   ctx.textAlign = isRight ? 'left' : 'right';
@@ -1128,8 +1154,8 @@ export function render(){
   // the 67 glyphs; Symbols 2 has only one of them. The UI face almost
   // certainly does not, hence the explicit stack rather than the poem's font
   const spellFont = `${spellSize}px "Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif`;
-  const spX = isRight ? (W*0.035) : (W - W*0.035);
-  const spY = isTop ? (H - H*0.025) : (H*0.025);
+  const spX = isRight ? (W*MARKS.insetX) : (W - W*MARKS.insetX);
+  const spY = isTop ? (H - H*MARKS.insetY) : (H*MARKS.insetY);
   ctx.font = spellFont;
   let spellW = 0;
   for(const sg of spellSegs) spellW += ctx.measureText(sg.text).width;

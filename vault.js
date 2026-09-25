@@ -12,7 +12,7 @@
  * guard follows elsewhere in this app.
  *
  * TABLE OF CONTENTS
- *   Storage        readStore / writeStore / storageAvailable — all access
+ *   Storage        readStore / writeStore — all access
  *                  is wrapped; a rejected write is reported, never thrown.
  *   Validation     isValidSpell / isValidPoem — every record crossing the
  *                  boundary (import, and equally a re-read of our own data,
@@ -36,16 +36,6 @@ import { SHARE_HOME } from './tunables.js';
 
 export const SPELL_KEY = 'uv.spells.v1';
 export const POEM_KEY  = 'uv.poems.v1';
-
-export function storageAvailable(){
-  try {
-    if(typeof localStorage === 'undefined') return false;
-    const probe = '__uv_probe__';
-    localStorage.setItem(probe, '1');
-    localStorage.removeItem(probe);
-    return true;
-  } catch(e){ return false; }
-}
 
 export function readStore(key){
   try {
@@ -171,7 +161,6 @@ export function readImport(raw){
   return null;
 }
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 /** When a poem was recorded, as a real time. Older records only carry the
  *  local "YYYY-MM-DD HH:MM" string, so that is parsed as local time. */

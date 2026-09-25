@@ -42,15 +42,6 @@ export const SWATCH = {
   fallbackSeed: 4242,
 };
 
-/** The PML editor. */
-export const EDITOR = {
-  fontSize: 13,
-  lineHeight: 1.62,
-  /** Beyond this many characters the mirror is repainted on a timer rather
-   *  than on every keystroke. */
-  debounceMs: 150,
-};
-
 /** Texture generation. */
 export const TEXTURES = {
   /** How many generated textures are kept before the oldest is dropped.
@@ -94,4 +85,4 @@ export const SPELLS = {
 // ---------- sharing ----------
 /** Where a shared-spell link points when the app is not being served from
  *  its own https address (opened as a local file, say). */
-export const SHARE_HOME = 'https://poetrypress.unfixable.place/';
+export const SHARE_HOME = 'https://vellum.unfixable.place/';

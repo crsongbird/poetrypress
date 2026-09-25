@@ -34,6 +34,8 @@ const ORDER = [
   'texChaos.js',          // ∆ generators
   'texTouch.js',          // 🜚 generators
   'textureGenerators.js', // texture tables, cache and dispatch
+  'glyphs.js',            // drawn symbols inside canvas text
+  'pmlVars.js',           // §Variables, resolved before PML
   'canvasRenderer.js',    // parsed lines into pixels
   'palette.js',           // colour picker suggestions
   'swatches.js',          // painted preset/spell tiles

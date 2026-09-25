@@ -25,10 +25,7 @@
  *              canvasRenderer.js can read the current justification /
  *              gradient-stop-count directly from the DOM at render time,
  *              the same way it reads every other control — rather than
- *              needing a live mutable binding shared with appEvents.js
- *              (which set off a real bug: canvasRenderer.js used to read
- *              a bare currentAlign/bgStopCount identifier that only ever
- *              existed as a local variable in appEvents.js).
+ *              needing a live mutable binding shared with appEvents.js.
  *
  * This module has NO imports. Every other file in the app may import from
  * it; it must never import from any of them.

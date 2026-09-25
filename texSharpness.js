@@ -363,9 +363,7 @@ export function genMetalLeaf(w,h,amt,zoom,light,tint){
     for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]);
     ctx.closePath();
 
-    // Each flake keeps its own brightness, carried in the leaf's colour. The
-    // tint was parsed here from the start but never used, which is why the
-    // picker appeared to do nothing.
+    // each flake keeps its own brightness, carried in the leaf's colour
     const lift = (178 + Math.floor(Math.random()*66)) / 210;
     ctx.globalAlpha = 0.16 + Math.random()*0.4;
     ctx.fillStyle = `rgb(${Math.min(255, Math.round(leaf.r*lift))},${Math.min(255, Math.round(leaf.g*lift))},${Math.min(255, Math.round(leaf.b*lift))})`;
@@ -384,106 +382,159 @@ export function genMetalLeaf(w,h,amt,zoom,light,tint){
 // Most windows are dark.
 // The few that are lit are why
 // the city looks awake.
-export function genCityscape(w,h,amt,zoom){
-  // the seed's FIRST draw decides the Needle, so which seeds show it is
-  // predictable (see needleForSeed) instead of buried mid-sequence
-  const hasNeedle = Math.random() < 0.1;
+export function genCityscape(w,h,amt,zoom,tint1,tint2){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // the seed's FIRST draw decides the Needle, so which seeds show it is
+  // predictable: withSeed(seed, () => Math.random() < 0.1)
+  const hasNeedle = Math.random() < 0.1;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d');
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
   const unit=Math.min(w,h);
+  const win=parseHex(tint1||'#FFE3A8'), wat=parseHex(tint2||'#2E4F6E');
+  const rgb=(o,a=1)=>`rgba(${o.r},${o.g},${o.b},${a})`;
+  const grey=(v,a=1)=>`rgba(${v|0},${v|0},${v|0},${a})`;
+  // A night city, and what lies at its feet. The waterfront always carries
+  // the Needle when it appears; otherwise the city may sit on farmland, or
+  // behind an elevated highway and railway.
+  const roll=Math.random();
+  const scene = hasNeedle ? 'water' : roll<0.45 ? 'water' : roll<0.72 ? 'fields' : 'rail';
+  const ground = h*(0.64 + Math.random()*0.08);
+  const H = unit*0.34*zoom;                               // tallest towers
 
-  // The seed chooses the city.
-  const KINDS=['downtown','sprawl','oldworld','future','harbor'];
-  const kind=KINDS[Math.floor(Math.random()*KINDS.length)];
-  const horizon=h*(kind==='harbor'?0.64:0.72+Math.random()*0.1);
-  const tall={downtown:0.46, sprawl:0.14, oldworld:0.2, future:0.55, harbor:0.34}[kind]*zoom;
-  const lit=Math.min(0.9, 0.06+0.22*amt);
-
-  // a night sky, with a few stars
-  const sky=ctx.createLinearGradient(0,0,0,horizon);
-  sky.addColorStop(0,'rgba(40,40,40,0.35)'); sky.addColorStop(1,'rgba(128,128,128,0)');
-  ctx.fillStyle=sky; ctx.fillRect(0,0,w,horizon);
-  ctx.fillStyle='rgb(240,240,240)';
-  for(let i=0;i<Math.round(120*(w/3072));i++){
-    ctx.globalAlpha=0.2+Math.random()*0.5;
-    ctx.beginPath(); ctx.arc(Math.random()*w, Math.random()*horizon*0.8, unit*(0.0008+Math.random()*0.0014), 0, Math.PI*2); ctx.fill();
+  // stars
+  for(let i=0;i<Math.round((w*h)/16000);i++){
+    ctx.globalAlpha=0.25+Math.random()*0.6; ctx.fillStyle=grey(230);
+    ctx.beginPath(); ctx.arc(Math.random()*w, Math.random()*ground*0.85, unit*0.0012*(0.4+Math.random()), 0, Math.PI*2); ctx.fill();
   }
-  const windows=[];                                   // lit ones, for the harbor's reflections
-  const building=(x,bw,bh,tone,front)=>{
-    const top=horizon-bh;
-    ctx.globalAlpha=front?0.92:0.6; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
-    ctx.fillRect(x,top,bw,h-top);
-    // roofs by kind
-    ctx.beginPath();
-    if(kind==='oldworld'){
-      const r=Math.random();
-      if(r<0.4){ ctx.moveTo(x,top); ctx.lineTo(x+bw/2,top-bw*0.45); ctx.lineTo(x+bw,top); }
-      else if(r<0.6){ ctx.arc(x+bw/2,top,bw*0.42,Math.PI,0); }
-      else if(r<0.75){ ctx.moveTo(x+bw*0.35,top); ctx.lineTo(x+bw/2,top-bw*1.6); ctx.lineTo(x+bw*0.65,top); }
-    } else if(kind==='future'){
-      ctx.moveTo(x,top); ctx.lineTo(x+bw*0.3,top-bh*0.18); ctx.lineTo(x+bw*0.7,top-bh*0.18); ctx.lineTo(x+bw,top);
-    } else if(kind==='downtown' && Math.random()<0.6){
-      ctx.rect(x+bw*0.15,top-bh*0.1,bw*0.7,bh*0.1+1); ctx.rect(x+bw*0.3,top-bh*0.18,bw*0.4,bh*0.08+1);
-    }
-    ctx.fill();
-    if((kind==='downtown'||kind==='future') && Math.random()<0.35){
-      ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=Math.max(1,bw*0.03);
-      ctx.beginPath(); ctx.moveTo(x+bw/2,top-bh*0.18); ctx.lineTo(x+bw/2,top-bh*0.18-unit*0.05); ctx.stroke();
-    }
-    // windows: a grid, most of it dark
-    const ww=Math.max(1.5,bw*0.09), wh=ww*1.4, gx=ww*1.9, gy=wh*1.9;
-    for(let y=top+gy*0.6;y<horizon-gy*0.4;y+=gy){
-      for(let xx=x+gx*0.45;xx<x+bw-ww;xx+=gx){
-        if(Math.random()>lit) continue;
-        const b=205+Math.random()*50;
-        ctx.globalAlpha=(front?0.85:0.5)*(0.6+Math.random()*0.4);
-        ctx.fillStyle=`rgb(${b},${b},${b})`;
-        ctx.fillRect(xx,y,ww,wh);
-        if(front) windows.push([xx,y,ww]);
-      }
-    }
+
+  const windows=(x,top,bw,bh,density)=>{
+    const cw=Math.max(3,unit*0.006), ch=Math.max(3,unit*0.008), gap=cw*0.9;
+    for(let yy=top+ch; yy<ground-ch*1.5; yy+=ch+gap*1.1)
+      for(let xx=x+gap; xx<x+bw-cw-gap*0.3; xx+=cw+gap)
+        if(Math.random()<density){ ctx.globalAlpha=0.55+Math.random()*0.45; ctx.fillStyle=rgb(win); ctx.fillRect(xx,yy,cw,ch); }
   };
-  // two rows of skyline: a paler one behind, a dark one in front
-  for(const [front,tone,scale] of [[false,70,1.15],[true,22,1]]){
+  // a contiguous row of buildings: no gaps, each type with its own silhouette
+  const row=(scale, tone, alpha, density, types)=>{
     let x=-unit*0.02;
     while(x<w){
-      const bw=unit*(kind==='sprawl'?0.05+Math.random()*0.08:0.03+Math.random()*0.06);
-      const bh=h*tall*scale*(0.25+Math.random()*0.75)*(front?1:0.8);
-      building(x,bw,bh,tone,front);
-      x+=bw+unit*(kind==='sprawl'?0.006:0.002)*Math.random();
+      const type=types[Math.floor(Math.random()*types.length)];
+      let bw=unit*(0.035+Math.random()*0.06)*scale, bh=H*scale*(0.25+Math.random()*0.75);
+      if(type==='block'||type==='warehouse') { bw*=1.8; bh*=0.45; }
+      if(type==='house'){ bw=unit*0.022*scale; bh=unit*0.02*scale; }
+      const top=ground-bh;
+      ctx.globalAlpha=alpha; ctx.fillStyle=grey(tone);
+      ctx.beginPath();
+      if(type==='setback'){                               // stepped, like an old tower
+        const s1=bw*0.18, s2=bw*0.34;
+        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.35); ctx.lineTo(x+s1,top+bh*0.35); ctx.lineTo(x+s1,top+bh*0.12);
+        ctx.lineTo(x+s2,top+bh*0.12); ctx.lineTo(x+s2,top); ctx.lineTo(x+bw-s2,top); ctx.lineTo(x+bw-s2,top+bh*0.12);
+        ctx.lineTo(x+bw-s1,top+bh*0.12); ctx.lineTo(x+bw-s1,top+bh*0.35); ctx.lineTo(x+bw,top+bh*0.35); ctx.lineTo(x+bw,ground);
+      } else if(type==='dome'){
+        ctx.rect(x,top+bw*0.3,bw,bh-bw*0.3); ctx.moveTo(x+bw,top+bw*0.3); ctx.arc(x+bw/2,top+bw*0.3,bw/2,0,Math.PI,true);
+      } else if(type==='house'){
+        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.4); ctx.lineTo(x+bw/2,top-bh*0.2); ctx.lineTo(x+bw,top+bh*0.4); ctx.lineTo(x+bw,ground);
+      } else if(type==='warehouse'){
+        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.3); ctx.quadraticCurveTo(x+bw/2,top-bh*0.1,x+bw,top+bh*0.3); ctx.lineTo(x+bw,ground);
+      } else {
+        ctx.rect(x,top,bw,bh);
+      }
+      ctx.fill();
+      if(type==='spire'){ ctx.fillRect(x+bw/2-unit*0.0015, top-bh*0.18, unit*0.003, bh*0.18);
+        ctx.beginPath(); ctx.moveTo(x+bw*0.2,top); ctx.lineTo(x+bw/2,top-bh*0.1); ctx.lineTo(x+bw*0.8,top); ctx.fill(); }
+      if(density>0 && type!=='warehouse') windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1));
+      x+=bw;                                              // flush: no gaps
     }
-  }
-  // one city in ten has its Space Needle
+  };
+
+  const types = scene==='fields' ? ['tower','block','setback'] : ['tower','tower','setback','spire','block','dome'];
+  row(scene==='fields'?0.55:0.85, 72, 0.55, 0, types);            // far skyline, unlit
+  row(scene==='fields'?0.7:1, 30, 0.96, 0.22*amt, types);        // near skyline, lit
+
   if(hasNeedle){
-    const nx=w*(0.2+Math.random()*0.6), top=horizon-h*0.52*zoom, disc=unit*0.07;
-    ctx.globalAlpha=0.95; ctx.fillStyle=ctx.strokeStyle='rgb(18,18,18)';
-    ctx.lineWidth=Math.max(1.5,unit*0.0035);
-    ctx.beginPath();                                    // the waisted legs
-    ctx.moveTo(nx-disc*0.45,horizon); ctx.quadraticCurveTo(nx-disc*0.05,top+(horizon-top)*0.55,nx-disc*0.18,top+disc*0.4);
-    ctx.moveTo(nx+disc*0.45,horizon); ctx.quadraticCurveTo(nx+disc*0.05,top+(horizon-top)*0.55,nx+disc*0.18,top+disc*0.4);
-    ctx.moveTo(nx,horizon); ctx.lineTo(nx,top+disc*0.4); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(nx,top+disc*0.28,disc*0.62,disc*0.14,0,0,Math.PI*2); ctx.fill();   // the saucer
-    ctx.beginPath(); ctx.ellipse(nx,top+disc*0.12,disc*0.42,disc*0.1,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(nx,top+disc*0.05); ctx.lineTo(nx,top-disc*0.9); ctx.stroke();       // the spire
-    ctx.fillStyle='rgb(240,240,240)'; ctx.globalAlpha=0.8;
-    for(let k=0;k<9;k++){ ctx.fillRect(nx-disc*0.55+k*disc*0.13, top+disc*0.26, disc*0.05, disc*0.035); }
+    // the Space Needle, to its real proportions: three legs pinched to a waist
+    // a third of the way up, flaring out to hold the saucer at ~0.87 of its
+    // height, a spire above
+    const nx=w*(0.25+Math.random()*0.5), NH=H*1.55, base=ground;
+    const y=f=>base-NH*f, spread=NH*0.11, waist=NH*0.035, top=NH*0.075;
+    // the legs are structural: drawn with weight, not as hairlines
+    ctx.globalAlpha=1; ctx.strokeStyle=grey(24); ctx.fillStyle=grey(24); ctx.lineWidth=Math.max(2,NH*0.012);
+    for(const s of [-1,0,1]){
+      ctx.beginPath(); ctx.moveTo(nx+s*spread, base);
+      ctx.bezierCurveTo(nx+s*waist*1.2, y(0.25), nx+s*waist, y(0.4), nx+s*waist*1.1, y(0.5));
+      ctx.bezierCurveTo(nx+s*waist*1.4, y(0.66), nx+s*top*0.8, y(0.8), nx+s*top, y(0.86));
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.ellipse(nx, y(0.87), NH*0.125, NH*0.018, 0, 0, Math.PI*2); ctx.fill();   // the halo
+    ctx.beginPath(); ctx.ellipse(nx, y(0.895), NH*0.085, NH*0.022, 0, 0, Math.PI*2); ctx.fill();  // the top house
+    ctx.fillRect(nx-NH*0.004, y(1), NH*0.008, NH*0.09);                                           // the spire
+    ctx.fillStyle=rgb(win);
+    for(let k=0;k<14;k++){ const a=(k/14)*Math.PI*2; if(Math.cos(a)<0) continue;
+      ctx.globalAlpha=0.85; ctx.fillRect(nx+Math.sin(a)*NH*0.1-1, y(0.872)-1, 2.5, 2.5); }
   }
-  // the harbor: dark water, and the lit windows broken into reflections
-  if(kind==='harbor'){
-    ctx.globalAlpha=0.55; ctx.fillStyle='rgb(30,30,30)'; ctx.fillRect(0,horizon,w,h-horizon);
-    ctx.fillStyle='rgb(220,220,220)';
-    for(const [x,y,ww] of windows){
-      const dy=horizon+(horizon-y);
-      if(dy>h) continue;
-      for(let k=0;k<3;k++){ ctx.globalAlpha=0.18+Math.random()*0.2; ctx.fillRect(x+(Math.random()-0.5)*ww,dy+k*ww*0.9,ww*(0.6+Math.random()),ww*0.35); }
+
+  if(scene==='water'){
+    const walk=unit*0.008, treesH=unit*0.02;
+    ctx.globalAlpha=1; ctx.fillStyle=grey(64); ctx.fillRect(0,ground,w,walk);                // the sidewalk
+    ctx.fillStyle=grey(34); ctx.beginPath(); ctx.moveTo(0,ground+walk+treesH);               // the treeline
+    for(let x=0;x<=w;x+=unit*0.012) ctx.lineTo(x, ground+walk+treesH*(0.2+Math.random()*0.55));
+    ctx.lineTo(w,ground+walk+treesH); ctx.closePath(); ctx.fill();
+    const wy=ground+walk+treesH;
+    const g=ctx.createLinearGradient(0,wy,0,h);                                              // the water
+    g.addColorStop(0,rgb(wat,0.85)); g.addColorStop(1,rgb({r:wat.r*0.5,g:wat.g*0.5,b:wat.b*0.5},0.95));
+    ctx.fillStyle=g; ctx.fillRect(0,wy,w,h-wy);
+    // reflections: broken streaks of window light, rippling as they go down
+    for(let i=0;i<Math.round(w/(unit*0.004)*amt);i++){
+      const x=Math.random()*w, depth=Math.random();
+      const ry=wy+depth*(h-wy)*0.8, len=unit*(0.004+Math.random()*0.012)*(1+depth);
+      ctx.globalAlpha=(1-depth)*0.55; ctx.fillStyle=rgb(win);
+      ctx.fillRect(x+Math.sin(ry*0.08)*unit*0.004, ry, len, Math.max(1,unit*0.0016));
+    }
+    ctx.globalAlpha=0.18; ctx.strokeStyle=grey(200); ctx.lineWidth=1;
+    for(let y=wy+unit*0.01;y<h;y+=unit*(0.012+Math.random()*0.02)){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y+Math.random()*2); ctx.stroke(); }
+  } else if(scene==='fields'){
+    ctx.globalAlpha=1; ctx.fillStyle=grey(92); ctx.fillRect(0,ground,w,h-ground);
+    // grain elevators: a cluster of tall silos and a gantry
+    const ex=w*(0.1+Math.random()*0.7), sil=unit*0.018;
+    ctx.fillStyle=grey(38);
+    for(let k=0;k<4;k++) ctx.fillRect(ex+k*sil, ground-H*0.4, sil*0.9, H*0.4);
+    ctx.fillRect(ex+sil*4, ground-H*0.52, sil*1.2, H*0.52);
+    ctx.fillRect(ex-sil*0.3, ground-H*0.42, sil*4.6, sil*0.35);
+    // small houses along the road
+    for(let x=0;x<w;x+=unit*(0.05+Math.random()*0.08)){
+      const bw=unit*0.02, bh=unit*0.016, top=ground-bh;
+      ctx.fillStyle=grey(40); ctx.beginPath(); ctx.moveTo(x,ground); ctx.lineTo(x,top); ctx.lineTo(x+bw/2,top-bh*0.6); ctx.lineTo(x+bw,top); ctx.lineTo(x+bw,ground); ctx.fill();
+      if(Math.random()<0.6*amt){ ctx.fillStyle=rgb(win); ctx.globalAlpha=0.8; ctx.fillRect(x+bw*0.35,top+bh*0.35,bw*0.25,bh*0.3); ctx.globalAlpha=1; }
+    }
+    // wheat: rows running away to the horizon, pale and stroked
+    const vx=w*(0.3+Math.random()*0.4);
+    for(let i=0;i<60;i++){
+      const bx=(i/59)*w*2-w*0.5;
+      ctx.globalAlpha=0.28; ctx.strokeStyle=grey(i%2?168:118); ctx.lineWidth=unit*0.006;
+      ctx.beginPath(); ctx.moveTo(vx+(bx-vx)*0.02, ground+unit*0.004); ctx.lineTo(bx, h); ctx.stroke();
+    }
+  } else {
+    ctx.globalAlpha=1; ctx.fillStyle=grey(40); ctx.fillRect(0,ground,w,h-ground);
+    // an elevated deck on pillars
+    const deck=ground+unit*0.035, dh=unit*0.012;
+    ctx.fillStyle=grey(24); ctx.fillRect(0,deck,w,dh);
+    for(let x=unit*0.02;x<w;x+=unit*0.07) ctx.fillRect(x,deck+dh,unit*0.008,h-deck);
+    if(Math.random()<0.5){
+      // traffic: streaks of headlights and tail lights
+      for(let i=0;i<Math.round(24*amt)+4;i++){
+        const x=Math.random()*w, len=unit*(0.02+Math.random()*0.05), red=Math.random()<0.5;
+        ctx.globalAlpha=0.75; ctx.fillStyle=red?'rgb(255,70,70)':rgb(win);
+        ctx.fillRect(x, deck-unit*(red?0.004:0.007), len, Math.max(1.5,unit*0.0018));
+      }
+    } else {
+      // a train crossing on the deck, windows lit
+      const tx=Math.random()*w*0.4, tl=w*(0.35+Math.random()*0.3), th=unit*0.016;
+      ctx.fillStyle=grey(30); ctx.fillRect(tx,deck-th,tl,th);
+      ctx.fillStyle=rgb(win);
+      for(let x=tx+th*0.4;x<tx+tl-th*0.4;x+=th*0.9){ ctx.globalAlpha=0.8; ctx.fillRect(x,deck-th*0.72,th*0.55,th*0.35); }
     }
   }
   ctx.globalAlpha=1;
   return c;
 }
 
-
-/** Whether Night City draws the Space Needle for this seed (one in ten). */
-export function needleForSeed(seed){ return withSeed(seed, () => Math.random() < 0.1); }

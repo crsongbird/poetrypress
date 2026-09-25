@@ -344,28 +344,6 @@ export function genSnow(w,h,amt,zoom){
   return full;
 }
 
-// Windfall: simple parametric leaf shapes (two mirrored quadratic curves meeting at
-// a tip, plus a center vein), scattered and rotated. Kept neutral gray like Flowers
-// so it reads correctly via 'overlay' on both green (Understory) and warm (Ember
-// Fall) backgrounds.
-// Wisps: glowing motes that take on the current accent colors (interpolated between
-// accent one and accent two per particle) rather than a fixed palette. Three kinds:
-// simple glow dots, curved-trail motes (an actual arc via quadraticCurveTo, not a
-// straight streak like Embers), and four-point sparkle glints. Transparent base,
-// composited with 'lighten'.
-export function drawSparkleGlint(ctx, x, y, size, r, g, b){
-  ctx.save();
-  ctx.translate(x,y);
-  ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.beginPath();
-  ctx.moveTo(0,-size); ctx.lineTo(size*0.16,0); ctx.lineTo(0,size); ctx.lineTo(-size*0.16,0);
-  ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-size,0); ctx.lineTo(0,size*0.16); ctx.lineTo(size,0); ctx.lineTo(0,-size*0.16);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
-}
-
 export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
@@ -593,12 +571,15 @@ export function genMoon(w,h,amt,zoom){
         const edge=Math.sqrt(1-v*v);
         const lit = facing*u > phase*edge;              // the terminator is an ellipse
         const limb = 1 - Math.sqrt(1-r2);               // darkening toward the rim
-        if(lit){
-          // the lit face is KNOCKED OUT: transparent, so the page shows
-          // through. Painting it solid drew a glowing orb under the design.
-          alpha = 0; val = 0;             // fully transparent, nothing underneath
+        if(!lit){
+          // the DARK side is knocked out — transparent, the page shows
+          // through — so the visible shape IS the phase, as with the real
+          // moon, and matches the glyph on the seed button. (With the lit
+          // side knocked out instead, a waxing crescent showed as everything
+          // except the crescent, which read as backwards.)
+          alpha = 0; val = 0;
         } else {
-          // the other side: noise that warps its own coordinates, twice
+          // the lit side: noise that warps its own coordinates, twice
           const qx=fbm(u*2.1+1.7, v*2.1+9.2), qy=fbm(u*2.1+8.3, v*2.1+2.8);
           const n=fbm(u*2.4+3.2*qx, v*2.4+3.2*qy);
           const band=Math.abs(((n*9)%1)-0.5)*2;         // contour lines through it
@@ -606,8 +587,15 @@ export function genMoon(w,h,amt,zoom){
           const t = Math.max(0, Math.min(1, (n - 0.28) / 0.44));
           val = 18 + t*150 + (band<0.2 ? 85 : 0) - limb*25;
         }
-      } else if(r2<1.18){
-        val = 128 + (1.18-r2)/0.18*18;                  // a faint halo
+      } else {
+        // bloom: light spilling past the rim, strongest beside the lit limb,
+        // and a soft halo all the way round
+        const r = Math.sqrt(r2);
+        const side = Math.max(0, Math.min(1, facing*u/r*0.5 + 0.5 - phase*0.35));
+        const bloom = Math.exp(-(r-1)*7) * (0.35 + 0.65*side);
+        const halo = Math.exp(-Math.pow((r-1.22)/0.05, 2)) * 0.35;
+        val = 128 + (bloom + halo) * 70;
+        if(val < 129){ val = 0; alpha = 0; }              // beyond the glow: untouched
       }
       d[idx]=d[idx+1]=d[idx+2]=Math.max(0,Math.min(255,val)); d[idx+3]=alpha;
     }
@@ -689,23 +677,42 @@ export function genLandscape(w,h,amt,zoom){
       const jit=unit*0.004*(pass+1);
       ctx.globalAlpha=0.22; ctx.strokeStyle=`rgb(${tone},${tone},${tone})`; ctx.lineWidth=unit*0.006*(1+pass);
       ctx.beginPath();
-      prof.forEach(([x,y],j)=>{ const yy=y+(Math.random()-0.35)*jit; j?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
+      // the wobble wanders SLOWLY along the crest; jittering each point on its
+      // own made a fringe of hairs
+      const ph1=Math.random()*6.28, ph2=Math.random()*6.28;
+      prof.forEach(([x,y],j)=>{
+        const yy=y+(Math.sin(x/(unit*0.05)+ph1)*0.6+Math.sin(x/(unit*0.017)+ph2)*0.4)*jit;
+        j?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
       ctx.stroke();
     }
-    // work it over with dabs that follow the ground
-    const dabs=Math.round(w/(unit*0.004)*(0.4+t)*(B.dab==='leaf'?1.6:1));
-    for(let d=0;d<dabs;d++){
+    // work it over with BRUSH strokes: few, broad and flat-ended, laid along
+    // the ground, each a slightly different tone. (Hundreds of hair-thin
+    // strokes read as fur, not paint.) Each stroke is two overlapping
+    // passes, the second narrower and offset, so it has a loaded edge.
+    const strokes=Math.round(w/(unit*0.016)*(0.5+t)*(B.dab==='leaf'?1.4:1));
+    ctx.lineCap='butt';
+    for(let d=0;d<strokes;d++){
       const k=Math.floor(Math.random()*(prof.length-1)), [x0,y0]=prof[k], [x1,y1]=prof[k+1];
       const slope=Math.atan2(y1-y0,x1-x0);
-      const depthInto=Math.pow(Math.random(),1.8)*unit*(0.02+t*0.12);
-      const x=x0+(Math.random()-0.5)*6, y=y0+depthInto;
-      const tn=Math.max(0,Math.min(255,tone+(Math.random()-0.5)*(44+t*56)));      // visible brushwork
-      const len=unit*(B.dab==='long'?0.03:B.dab==='rock'?0.012:0.008)*(0.5+t)*zoom;
-      const ang=B.dab==='grass'?-Math.PI/2+(Math.random()-0.5)*0.5 : B.dab==='leaf'?Math.random()*Math.PI : slope+(Math.random()-0.5)*0.3;
-      ctx.globalAlpha=0.35+Math.random()*0.35; ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`;
-      ctx.lineWidth=Math.max(0.8,unit*0.0025*(0.4+t*1.4)); ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(ang)*len, y+Math.sin(ang)*len); ctx.stroke();
+      const depthInto=Math.pow(Math.random(),1.5)*unit*(0.03+t*0.16);
+      const x=x0+(Math.random()-0.5)*unit*0.01, y=y0+depthInto+unit*0.004;
+      const tn=Math.max(0,Math.min(255,tone+(Math.random()-0.5)*(30+t*44)));
+      const len=unit*(B.dab==='long'?0.07:B.dab==='rock'?0.035:0.04)*(0.6+t*0.8)*(0.7+Math.random()*0.6)*zoom;
+      const wide=unit*(0.007+t*0.013)*(0.7+Math.random()*0.6);
+      const ang=B.dab==='grass'?slope-0.35+(Math.random()-0.5)*0.4
+              : B.dab==='leaf'?slope+(Math.random()-0.5)*1.1
+              : B.dab==='rock'?slope+(Math.random()-0.5)*0.9
+              : slope+(Math.random()-0.5)*0.18;
+      const ex=x+Math.cos(ang)*len, ey=y+Math.sin(ang)*len;
+      ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`;
+      ctx.globalAlpha=0.2+Math.random()*0.18; ctx.lineWidth=wide;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo((x+ex)/2, (y+ey)/2 - wide*0.4, ex, ey); ctx.stroke();
+      const tn2=Math.max(0,Math.min(255,tn+(Math.random()<0.5?-18:18)));
+      ctx.strokeStyle=`rgb(${tn2|0},${tn2|0},${tn2|0})`;
+      ctx.globalAlpha=0.22; ctx.lineWidth=wide*0.45;
+      ctx.beginPath(); ctx.moveTo(x+wide*0.2,y-wide*0.18); ctx.lineTo(ex-wide*0.4,ey-wide*0.18); ctx.stroke();
     }
+    ctx.lineCap='round';
     // a soft haze where each band meets the air behind it
     ctx.globalAlpha=0.12*(1-t); ctx.strokeStyle='rgb(200,200,200)'; ctx.lineWidth=unit*0.01;
     ctx.beginPath(); prof.forEach(([x,y],j)=>j?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.stroke();

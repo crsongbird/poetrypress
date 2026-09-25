@@ -28,6 +28,10 @@
 
 const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;' };
 const escapeHtml = t => String(t).replace(/[&<>]/g, c => ESC[c]);
+// a §Variable: its name, then an optional !param or :number (see pmlVars.js)
+const VAR_RE = /^§([A-Za-z]+)(![A-Za-z0-9_-]+|:-?\d*\.?\d+)?/;
+const varSpan = m => span('var', '§' + m[1]) + (m[2] ? span('varp', m[2]) : '');
+
 const span = (cls, text) => `<span class="pml-${cls}">${escapeHtml(text)}</span>`;
 
 // Bracket spans know their absolute position in the document, so the pair
@@ -75,6 +79,10 @@ export function highlightLine(line, base){
       out += span('escape', src.slice(i, i + 2));
       i += 2;
       continue;
+    }
+    if(ch === '§'){
+      const m = src.slice(i).match(VAR_RE);
+      if(m){ out += varSpan(m); i += m[0].length; continue; }
     }
 
     // segmentation operator: brackets are structure, the inside is directives
@@ -132,6 +140,7 @@ function highlightInline(text, base){
   while(i < text.length){
     const ch = text[i];
     if(ch === '\\' && i + 1 < text.length){ out += span('escape', text.slice(i, i+2)); i += 2; continue; }
+    if(ch === '§'){ const m = text.slice(i).match(VAR_RE); if(m){ out += varSpan(m); i += m[0].length; continue; } }
     if(ch === '[' || ch === ']'){ out += bspan('sq', ch, base + i); i++; continue; }
     if(ch === '{' || ch === '}'){ out += bspan('cu', ch, base + i); i++; continue; }
     if(ch === '(' || ch === ')'){ out += bspan('paren', ch, base + i); i++; continue; }

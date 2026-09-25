@@ -45,7 +45,6 @@ body{
   margin:0 0 11px 0; border-bottom:1px dotted var(--accent-dim);
 }
 .kofi-link:hover{ color:var(--rose); border-bottom-color:var(--rose); }
-.app-sub{ font-size:13px; color:var(--text-dim); margin:0 0 11px 0; font-style:italic; }
 
 .card{
   background:var(--bg-card);
@@ -188,7 +187,6 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
     order:2; width:100%; min-width:0; max-height:56vh;
     border-right:none; border-top:1px solid var(--line);
   }
-  .controls .app-title, .controls .app-sub{ display:none; }
   .stage{ order:1; flex:0 0 auto; height:44vh; gap:8px; padding-top:6px; }
   #poemCanvas{ max-height:calc(44vh - 30px); max-width:92vw; }
   .download-btn{ top:auto; bottom:14px; right:14px; padding:8px 16px; font-size:13px; }
@@ -623,12 +621,6 @@ body.is-mobile .tab-btn.active svg{
 }
 
 
-/* (themed below — the bar follows the theme like everything else) */
-body.is-mobile .tab-ico-glyph{
-  display:flex; align-items:center; justify-content:center;
-  font-size:17px; line-height:1; color:#C9B8FF;
-  font-family:"Noto Sans Symbols","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;
-}
 
 /* ---------- PML editor ----------
    A highlighted mirror behind a transparent textarea. The two MUST agree on
@@ -701,6 +693,8 @@ body.is-mobile.focus-mode .editor-scroll{ min-height:0; }
 .pml-bracket{ color:#D6DCE6; font-weight:700; }  /* < > segmentation */
 .pml-paren { color:#6E6880; }                    /* ( ) literal, set back */
 .pml-op    { font-weight:600; }
+.pml-var   { color:#E8C27A; }                    /* §Variable — resolved before PML */
+.pml-varp  { color:#B89A68; }                    /* its !param or :number */
 
 /* ---------- focus mode: one frame, not three ---------- */
 body.is-mobile.focus-mode .card.focus-keep{
@@ -1371,15 +1365,8 @@ body.is-mobile #clr-picker{
 .header-moon{ justify-content:flex-start; opacity:.85; }
 .app-header .kofi-link{ display:flex; align-items:center; }
 
-/* the opacity thumb is a moon that waxes with the value */
-#textureOpacity::-webkit-slider-thumb{
-  background:var(--moon-thumb) center / 100% 100% no-repeat, var(--bg-deep) !important;
-  border:0 !important; border-radius:50%; width:22px; height:22px;
-}
-#textureOpacity::-moz-range-thumb{
-  background:var(--moon-thumb) center / 100% 100% no-repeat, var(--bg-deep);
-  border:0; border-radius:50%; width:22px; height:22px;
-}
+/* the opacity readout is a moon that waxes with the value (see paintOpacityMoon) */
+#textureOpacityVal .moon-glyph{ color:var(--accent); }
 
 /* the seed button: the phase this seed's moon will take */
 .seed-moon{ flex:0 0 auto; width:40px !important; padding:0 !important; display:flex;
@@ -1466,10 +1453,32 @@ body.is-mobile .tool-row > .field:not(#lightRow){ min-width:0; }
 body.is-mobile .tool-row > .field label{
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
 }
-body.is-mobile .tool-row .color-row,
 body.is-mobile .tool-row .row{ display:flex; gap:6px; width:100%; min-width:0; }
-body.is-mobile .tool-row .color-row input[type="text"],
 body.is-mobile .tool-row .row .field{ flex:1 1 auto; min-width:0; }
 body.is-mobile .tool-row #textureSeedValue{ min-width:0; width:100%; }
 #textureSeedReroll{ display:flex; align-items:center; justify-content:center;
                     min-width:40px; padding:0 8px !important; color:var(--accent); }
+
+/* texture panel on a phone: the hue fields and the seed span their column.
+   Coloris wraps each colour input in a .clr-field that otherwise keeps its
+   natural (narrow) width, and the seed row's field could shrink to nothing. */
+body.is-mobile .tool-row > .field{ width:100%; }
+body.is-mobile .tool-row .clr-field{ display:block; width:100%; }
+body.is-mobile .tool-row .clr-field input{ width:100%; box-sizing:border-box; }
+body.is-mobile .tool-row .row > .field{ flex:1 1 auto; min-width:0; width:auto; }
+body.is-mobile .tool-row #textureSeedValue{ width:100%; min-width:0; box-sizing:border-box; }
+
+/* ---------- the picker points at the field it is editing ---------- */
+.is-picking{
+  outline:2px solid var(--ui-selected, var(--accent)) !important;
+  outline-offset:2px;
+  box-shadow:0 0 0 6px color-mix(in srgb, var(--ui-selected, var(--accent)) 28%, transparent) !important;
+  border-radius:3px;
+}
+#clr-picker.clr-open{ border-color:var(--ui-selected, var(--accent)) !important; }
+/* the speech-bubble tail, in the same colour as the picker's border */
+#clrPointer{ position:fixed; z-index:95; width:0; height:0; pointer-events:none;
+  transform:translateX(-50%); border-left:12px solid transparent; border-right:12px solid transparent; }
+#clrPointer[hidden]{ display:none; }
+#clrPointer[data-dir="up"]{ border-bottom:13px solid var(--ui-selected, var(--accent)); margin-top:-13px; }
+#clrPointer[data-dir="down"]{ border-top:13px solid var(--ui-selected, var(--accent)); }

@@ -1,44 +1,27 @@
 /**
- * appEvents.js — the entry point. Wires every control in index.html to the
- * app's actual state and triggers a render() after anything changes. Unlike
- * the other four modules, this one isn't a portable concept on its own --
- * it's specifically the glue for THIS page's specific HTML structure.
+ * appEvents.js — the entry point: wires every control in index.html to the
+ * app's state, and asks for a render after anything changes. The glue for
+ * this page's HTML specifically; the other modules don't know the DOM's shape.
  *
- * TABLE OF CONTENTS
- *   Field/control binders   syncStopFields, bindColorField, setColorField,
- *                           randHex, toggleSubblock, bindAngle,
- *                           bindRadioGroup, setActiveRadioValue,
- *                           syncOutlineFields -- small generic helpers that
- *                           wire one control (or a small cluster of related
- *                           ones) to its DOM behavior. Below the function
- *                           definitions, the actual addEventListener calls
- *                           that use them for every control in the sidebar.
- *   Texture seed             randomSeed, maybeRerollSeed -- rerolls the
- *                           texture seed on preset-apply / randomize,
- *                           unless the Lock checkbox is on.
- *   Filename generation      plainTextFromLine, slugifyForFilename,
- *                           generateFilenameBase -- reuses applyEscapes +
- *                           tokenizeInline from textParsers.js (the same
- *                           logic that decides what actually renders) so
- *                           the generated filename can never drift out of
- *                           sync with what the poem actually says.
- *   Full-state JSON          serializeCurrentSettings, restoreSettings --
- *                           the Advanced panel's export/import. This is a
- *                           superset of what a preset covers (also captures
- *                           alignment, aspect ratio, username, the poem
- *                           text itself, the texture seed + lock state).
- *   Presets                  applyPreset -- reads one entry from PRESETS
- *                           and pushes every field it specifies into the
- *                           matching control; fields a preset omits are
- *                           left at whatever they currently are.
- *   (below the functions)   Every addEventListener binding for every
- *                           control, the PRESETS grid construction, and
- *                           finally the boot sequence: preload fonts, then
- *                           render (see bottom of file).
+ * SECTIONS, in file order
+ *   lock state          which controls are locked, applied and restored
+ *   generic bindings    colour fields, angles, radio groups, stop counts
+ *   page size           aspect ratios and custom size
+ *   settings            PERSISTED (mechanical controls) plus
+ *                       serializeCurrentSettings / restoreSettings, which the
+ *                       Workbench JSON and saved spells both use
+ *   presets             applyPreset: each texture starts from its own
+ *                       defaults, then takes what the preset specifies
+ *   colour picker       the swatch palette, the keyboard, and the pointer
+ *                       that rings the field being edited
+ *   mobile layout       device detection, the preview divider, the viewport
+ *   texture tools       knobs, blend, light pad, hues (and hues that follow
+ *                       the accents), the seed
+ *   locks · PML editor · focus mode · typeface effects · border extras
+ *   the moon            in the header, the opacity readout, the seed button
+ *   theme · Spellcrafting & Grimoire · the boot sequence (at the bottom)
  *
- * Imports: $, FONTS, PRESETS, ASPECTS from appOptions.js; applyEscapes,
- * tokenizeInline from textParsers.js; render from canvasRenderer.js.
- * Exports: nothing -- this is the entry point, nothing imports FROM it.
+ * Exports nothing: it is the entry point, and nothing imports from it.
  */
 
 import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS } from './appOptions.js';
@@ -281,7 +264,7 @@ bindRadioGroup('textStopsGroup', v=>{
 });
 
 $('textureType').addEventListener('change', scheduleRender);
-$('textureOpacity').addEventListener('input', ()=>{ $('textureOpacityVal').textContent=$('textureOpacity').value+'%'; scheduleRender(); });
+$('textureOpacity').addEventListener('input', ()=>{ paintOpacityMoon(); scheduleRender(); });
 
 function randomSeed(){ return Math.floor(Math.random()*2**31); }
 function maybeRerollSeed(explicitSeed){
@@ -374,7 +357,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
-    $('textureOpacityVal').textContent = op+'%';
+    paintOpacityMoon();
   }
 
   const borderOn = Math.random() < 0.4;
@@ -441,9 +424,7 @@ $('downloadBtn').addEventListener('click', ()=>{
   link.click();
 });
 
-// ---------- advanced: full settings snapshot (export/import as JSON) ----------
-
-// ---------- persisted controls ----------
+// ---------- settings: save and restore (the Workbench JSON, spells) ----------
 /**
  * Controls whose save/restore is purely mechanical: read the element, write
  * it back. Adding a control here is the whole job — it is then saved in
@@ -636,7 +617,7 @@ function restoreSettings(s){
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
   if(s.texP2 !== undefined) $('texP2').value = s.texP2;
   syncTextureParams(false);
-  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; $('textureOpacityVal').textContent=s.textureOpacity+'%'; }
+  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintOpacityMoon(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
 
   $('borderToggle').checked = !!s.border;
@@ -698,8 +679,6 @@ $('advancedLoadBtn').addEventListener('click', ()=>{
 });
 // populate once on load so there's something to see/copy immediately
 $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
-
-// ---------- preset snapshots ----------
 
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
@@ -766,54 +745,9 @@ function applyThemePalette(colors){
   safeColoris({ swatches: colors });
 }
 
-// Named in tunables.js. The old literal here pointed at 'Quintessence', a
-// preset renamed long ago, so it had been silently falling back to the
-// first preset ever since.
+// the opening palette comes from the default preset named in tunables.js
 const defaultPalettePreset = PRESETS.find(p=>p.name===DEFAULTS.preset) || PRESETS[0];
 applyThemePalette(deriveThemePalette(defaultPalettePreset));
-
-// The page opens on a real preset rather than a scatter of static HTML
-// defaults that no longer correspond to anything -- one source of truth,
-// so the opening view is always a coherent Element rather than whatever
-// the markup happened to hardcode.
-// Applied during the boot sequence at the bottom of this file instead:
-// applyPreset now snapshots the lock set, and `locked` is a const declared
-// further down, so reading it this early is a temporal-dead-zone error.
-
-// The 16th swatch: whatever THIS specific field's current value is, appended
-// live right as its picker opens -- lets you audition one of the 15 theme
-// colors and still get back to what you had. Coloris fires 'open' on the
-// bound input itself when its picker is about to show.
-// Coloris positions its picker against the page, but on mobile .controls is
-// the thing that scrolls (the page itself does not), so the picker could open
-// nowhere near the field it belongs to. Re-anchor it to the field's own
-// on-screen rect, flipping above when there is no room below, and keeping it
-// clear of the tab bar.
-function positionPickerNearField(field){
-  const picker = document.getElementById('clr-picker');
-  if(!picker || !field.getBoundingClientRect) return;
-  const rootStyle = getComputedStyle(document.documentElement);
-  const num = (name, fallback) => parseFloat(rootStyle.getPropertyValue(name)) || fallback;
-  const visible = num('--vvh', window.innerHeight);
-  const barH = num('--tabbar-h', 58);
-  const gap = 8;
-
-  const r = field.getBoundingClientRect();
-  const pw = picker.offsetWidth || 240;
-  const ph = picker.offsetHeight || 260;
-
-  let top = r.bottom + gap;
-  if(top + ph > visible - barH){
-    const above = r.top - ph - gap;          // flip above the field
-    top = above >= gap ? above : Math.max(gap, visible - barH - ph - gap);
-  }
-  const left = Math.min(Math.max(gap, r.left), Math.max(gap, window.innerWidth - pw - gap));
-
-  picker.style.position = 'fixed';
-  picker.style.top = top + 'px';
-  picker.style.left = left + 'px';
-  picker.style.margin = '0';
-}
 
 // Closing the picker also dismisses the phone keyboard. Coloris fires 'close'
 // on the field it was editing; if its hex input still holds focus, the
@@ -825,14 +759,82 @@ document.addEventListener('close', (e)=>{
   if(active && active.blur && (active.id === 'clr-color-value' || active === t)) active.blur();
 });
 
+// ---------- the picker points at the field it is editing ----------
+// An accessibility aid: while the colour picker is open, the field it is
+// editing is ringed in the theme's selection colour, and the picker grows a
+// speech-bubble tail pointing at it. On a phone the picker docks at the
+// bottom of the screen, far from the field, so the field is first scrolled
+// into view above it — a pointer at a hidden field would help no one.
+let pickingField = null;
+const rafOr = f => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(f) : setTimeout(f, 0));
+function pickerPointer(){
+  let el = document.getElementById && document.getElementById('clrPointer');
+  if(!el && document.createElement && document.body && document.body.appendChild){
+    el = document.createElement('div');
+    el.id = 'clrPointer';
+    if(el.setAttribute) el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function markPicking(field, on){
+  if(!field || !field.classList) return;
+  field.classList.toggle('is-picking', on);
+  const wrap = field.closest && field.closest('.clr-field');
+  if(wrap && wrap.classList) wrap.classList.toggle('is-picking', on);
+}
+function aimPointer(){
+  const picker = document.getElementById && document.getElementById('clr-picker');
+  const ptr = pickerPointer();
+  if(!ptr) return;
+  if(!picker || !pickingField || !picker.getBoundingClientRect || !pickingField.getBoundingClientRect){ ptr.hidden = true; return; }
+  const f = pickingField.getBoundingClientRect(), p = picker.getBoundingClientRect();
+  const up = f.bottom <= p.top + 2, down = f.top >= p.bottom - 2;
+  if(!p.width || (!up && !down)){ ptr.hidden = true; return; }       // beside it: nothing to point at
+  const x = Math.max(p.left + 16, Math.min(p.right - 16, f.left + Math.min(f.width, 140) / 2));
+  ptr.dataset.dir = up ? 'up' : 'down';
+  ptr.style.left = x + 'px';
+  ptr.style.top = (up ? p.top : p.bottom) + 'px';
+  ptr.hidden = false;
+}
+document.addEventListener('open', (e)=>{
+  const t = e.target;
+  if(!t || !t.matches || !t.matches('[data-coloris]')) return;
+  if(pickingField) markPicking(pickingField, false);
+  pickingField = t;
+  markPicking(t, true);
+  rafOr(()=>{
+    const picker = document.getElementById && document.getElementById('clr-picker');
+    if(!picker || !picker.getBoundingClientRect || !t.getBoundingClientRect) return;
+    const f = t.getBoundingClientRect(), p = picker.getBoundingClientRect();
+    const scroller = document.querySelector && document.querySelector('.controls');
+    const mobile = document.body && document.body.classList && document.body.classList.contains('is-mobile');
+    if(mobile && scroller && scroller.scrollBy && f.bottom > p.top - 12){
+      scroller.scrollBy({ top: f.bottom - p.top + 28, behavior: 'smooth' });
+      setTimeout(aimPointer, 360);                     // after the scroll settles
+    } else aimPointer();
+  });
+});
+document.addEventListener('close', (e)=>{
+  const t = e.target;
+  if(!t || !t.matches || !t.matches('[data-coloris]')) return;
+  markPicking(t, false);
+  if(pickingField === t) pickingField = null;
+  const ptr = pickerPointer(); if(ptr) ptr.hidden = true;
+});
+// keep the tail on target while things move under it
+if(typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('resize', ()=>{ if(pickingField) aimPointer(); });
+}
+document.addEventListener('scroll', ()=>{ if(pickingField) aimPointer(); }, true);
+
+// The 16th swatch: the field's own current value, appended as its picker
+// opens, so you can audition the theme's colours and still get back to what
+// you had. (On phones the picker's position is set by CSS: docked above the
+// keyboard at the bottom right.)
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
     safeColoris({ swatches: [...currentThemePalette, e.target.value] });
-    if(document.body && document.body.classList && document.body.classList.contains('is-mobile')
-       && typeof requestAnimationFrame === 'function'){
-      // after Coloris has done its own positioning, not before
-      requestAnimationFrame(()=>positionPickerNearField(e.target));
-    }
   }
 });
 
@@ -894,7 +896,7 @@ function applyPreset(p){
   if(p.texP1 !== undefined) $('texP1').value = p.texP1;
   if(p.texP2 !== undefined) $('texP2').value = p.texP2;
   syncTextureParams(false);
-  if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; $('textureOpacityVal').textContent=p.textureOpacity+'%'; }
+  if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintOpacityMoon(); }
 
   if(p.accent1){ $('accent1Toggle').checked=true; $('accent1Block').classList.add('open'); setColorField('accent1ColorHex', p.accent1); }
   else { $('accent1Toggle').checked=false; $('accent1Block').classList.remove('open'); }
@@ -914,10 +916,9 @@ function applyPreset(p){
 
   scheduleRender();
   } finally {
-    // Sync FIRST, restore locks LAST. syncTextureTools rebuilds the blend
-    // select and re-clamps the texture params, so restoring before it ran
-    // meant those values were immediately overwritten — which is why locks
-    // held on colours but not on the texture tools.
+    // Sync FIRST, restore locks LAST: syncTextureTools rebuilds the blend
+    // select and re-clamps the texture params, overwriting anything restored
+    // before it runs.
     //
     // true = start from the new texture's own defaults, so one preset's blend
     // and tints never leak into the next; then take whatever this preset
@@ -934,8 +935,6 @@ function applyPreset(p){
     paintSeedMoon();
   }
 }
-
-// ---------- gradient geometry ----------
 
 // ---------- mobile layout ----------
 // Deliberately device detection, not a media query. A narrow desktop window
@@ -1445,7 +1444,7 @@ if(typeof document.querySelectorAll === 'function'){
   if(poem.addEventListener){
     poem.addEventListener('focus', enterFocus);
     // Deliberately NOT leaving on blur: double-tapping to select a word blurs
-    // the field for an instant, which used to throw you out of focus mode
+    // the field for an instant, and would throw you out of focus mode
     // mid-selection. Return and the back gesture are the ways out.
   }
   if(moreBtn && moreBtn.addEventListener){
@@ -1515,13 +1514,17 @@ applyStrings(document);
     hm.title = phaseName(p) + ' tonight';
   }
 }
-// The opacity slider's thumb waxes with the value: new at 0%, full at 100%.
-// Opacity already is a phase.
+// The opacity READOUT is a moon that waxes with the value — new at 0%, full
+// at 100% — in place of a percentage. (It was once drawn on the slider's
+// thumb; styling the thumb makes Chrome and Firefox drop native drawing for
+// the whole slider, which is what turned it into a white box.)
 function paintOpacityMoon(){
-  const el = $('textureOpacity');
-  if(!el || !el.style) return;
-  const v = Math.max(0, Math.min(100, +el.value || 0)) / 100;
-  el.style.setProperty('--moon-thumb', moonGlyphURI(v * 0.5, { lit: '#efc3cf', rim: '#efc3cf' }));
+  const el = $('textureOpacity'), out = $('textureOpacityVal');
+  if(!el || !out) return;
+  const pct = Math.max(0, Math.min(100, Math.round(+el.value || 0)));
+  out.innerHTML = moonGlyph(pct / 200, { size: 18 });
+  out.title = pct + '%';
+  if(out.setAttribute) out.setAttribute('aria-label', 'Opacity ' + pct + '%');
 }
 // The seed button shows the phase the Fractal Moon will take for this seed,
 // so rerolling is watching the moon turn.

@@ -41,9 +41,7 @@ export function paintPresetSwatch(canvas, p, w, h){
       const caps = capsFor(p.textureType);
       const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
       const blend = p.textureBlend && caps.blends.includes(p.textureBlend) ? p.textureBlend : caps.blends[0];
-      const tex = getTextureCanvas(type, w, h, p.accent1, p.accent2, false,
-        (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p.texP1, p.texP2, 315,
-        p.textureTint1 || null, p.textureTint2 || null, blend);
+      const tex = getTextureCanvas(type, w, h, { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, light: 315, tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, blend });
       if(tex){
         c.save();
         c.globalCompositeOperation = blend || 'overlay';

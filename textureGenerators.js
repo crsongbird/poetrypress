@@ -32,7 +32,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { withSeed, invertTextureCanvas, blendFamily, remapNeutral, tintMarks } from './texCore.js';
+import { withSeed, blendFamily, remapNeutral, tintMarks } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
@@ -133,10 +133,10 @@ export const TEXTURE_PARAMS = {
  */
 export const TEXTURE_CAPS = {
   // — whimsy —
-  clouds:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  bokeh:         { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  clouds:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  bokeh:         { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   astral:        { blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
                    tintLabels:['Star Hue','Nebula Hue'], tintDefaults:['accent1','accent2'] },
   magicparticles:{ blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
@@ -144,67 +144,67 @@ export const TEXTURE_CAPS = {
   embers:        { blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:false, tints:0 },
-  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
+                   tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
+  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // water is tinted by the page itself: neutral by default, like all of Touch
-  water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  moon:          { blends:['multiply','hard-light','overlay','soft-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  moon:          { blends:['multiply','hard-light','overlay','soft-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // Remapped for every blend EXCEPT screen: its grey ground under screen
   // lightens the page a little, and that is part of how the favourite looks.
   aurora:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'],
                    ground:'grey', keepGround:['screen'], light:false, tints:2,
                    tintLabels:['Curtain Hue','Hem Hue'], tintDefaults:['accent1','accent1'] },
   // — sharpness —
-  grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:false, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
-  flowers:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  brushstrokes:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  halftone:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  flowers:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Bloom Hue','Dark Bloom Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  brushstrokes:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  halftone:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — chaos —
-  sigils:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  mathnoise:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  inkbleed:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  sigils:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  mathnoise:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  inkbleed:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — 🜚 touch — relief, so soft-light leads and light direction applies
-  linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
-  coldpress:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  coldpress:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   foxing:        { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1,
                    tintLabels:['Spot Hue'], tintDefaults:['#8A6A3C'] },
-  foldghost:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  foldghost:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
   wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
-  whorl:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1, genericTint:true,
-                   tintLabels:['Surface Hue'], tintDefaults:['#FFFFFF'] },
+  whorl:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
 };
 
 
@@ -238,7 +238,7 @@ export function paramsFor(type){ return TEXTURE_PARAMS[type] || []; }
 // a light direction and composite through soft-light rather than overlay.
 // Light is given in degrees, 0 = from the top, running clockwise.
 
-// Cache of already-generated textures, keyed by type+dims+colors+invert+seed.
+// Cache of already-generated textures, keyed by everything that changes one.
 // A plain object here never shrinks -- a long session of seed-rerolling and
 // texture-browsing accumulates many multi-megapixel offscreen canvases with
 // nothing ever freed, which matters more on mobile (memory pressure gets you
@@ -302,7 +302,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'landscape'){
     result = genLandscape(w,h,amt,zoom);
   } else if(type === 'cityscape'){
-    result = genCityscape(w,h,amt,zoom);
+    result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
     result = genBlackHole(w,h,amt,zoom);
   } else if(type === 'water'){
@@ -353,14 +353,22 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * dimensions and scaled back up, which magnifies the pattern uniformly --
  * and costs less to generate, since the work scales with area.
  */
-export function getTextureCanvas(type, w, h, accent1, accent2, invert, seed, p1, p2, light, tint1, tint2, blend){
+/**
+ * Builds (or recalls) a texture as an offscreen canvas.
+ *   getTextureCanvas(type, w, h, { accent1, accent2, seed, p1, p2, light,
+ *                                  tint1, tint2, blend })
+ * Options are NAMED: with thirteen positional arguments, a tint twice landed
+ * in the light slot unnoticed.
+ */
+export function getTextureCanvas(type, w, h, opts = {}){
+  const { accent1, accent2, seed, p1, p2, light, tint1, tint2, blend } = opts;
   const defs = paramsFor(type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
 
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + (invert ? '_inv' : '') + `_s${seed}` + `_${v1}_${v2}`
+            + `_s${seed}` + `_${v1}_${v2}`
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '');
@@ -392,12 +400,11 @@ export function getTextureCanvas(type, w, h, accent1, accent2, invert, seed, p1,
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2));
 
-  if(invert) result = invertTextureCanvas(result);
 
   // A monochrome texture's tint moves its light marks toward the colour and
   // leaves the grey ground alone; white means no tint at all.
   const caps = capsFor(type);
-  if(result && caps.genericTint && tint1) result = tintMarks(result, tint1);
+  if(result && caps.genericTint && (tint1 || tint2)) result = tintMarks(result, tint1, tint2);
   // A grey ground is only neutral for the overlay family. For any other blend
   // it is moved to that blend's own neutral, or it would darken or wash out
   // the whole page.

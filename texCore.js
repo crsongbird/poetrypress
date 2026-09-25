@@ -65,26 +65,6 @@ export function withSeed(seed, fn){
   finally { Math.random = original; }
 }
 
-export function invertTextureCanvas(srcCanvas){
-  const w = srcCanvas.width, h = srcCanvas.height;
-  const tmp = document.createElement('canvas');
-  tmp.width = w; tmp.height = h;
-  const tctx = tmp.getContext('2d');
-  tctx.drawImage(srcCanvas, 0, 0);
-  const imgData = tctx.getImageData(0,0,w,h);
-  const d = imgData.data;
-  for(let i=0;i<d.length;i+=4){
-    d[i] = 255-d[i];
-    d[i+1] = 255-d[i+1];
-    d[i+2] = 255-d[i+2];
-    // alpha (d[i+3]) is left untouched — matters for the transparent-canvas
-    // particle textures (snow, embers, wisps, astral stars), where only the
-    // particle pixels carry any alpha and everywhere else should stay invisible.
-  }
-  tctx.putImageData(imgData,0,0);
-  return tmp;
-}
-
 export function lightVec(light){
   const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
   return { lx: Math.cos(a), ly: Math.sin(a) };
@@ -136,37 +116,32 @@ export function remapNeutral(src, family){
 }
 
 /**
- * Tints a monochrome texture's marks toward a colour — light marks toward the
- * colour, dark marks toward a deepened version of it — leaving the grey ground
- * as it was. A blanket colorize would stain the
- * neutral ground and shift the whole page; this cannot, because a pixel at
- * 128 maps to exactly 128. White is the identity — the untinted texture.
+ * Tints a monochrome texture with TWO colours: light marks move toward the
+ * light hue, dark marks toward the dark hue, and the exactly-mid ground is
+ * left alone. The defaults are white and black, which move every mark toward
+ * the value it already has — the untinted texture — so nothing changes until
+ * a hue is chosen. (Lotus Pond's white and dark blooms each take their own.)
  */
-export function tintMarks(src, hex){
-  const t = mixHex(hex, hex, 0);
-  if(t.r >= 250 && t.g >= 250 && t.b >= 250) return src;     // white: no tint
+export function tintMarks(src, lightHex, darkHex){
+  const L = mixHex(lightHex || '#FFFFFF', lightHex || '#FFFFFF', 0);
+  const D = mixHex(darkHex || '#000000', darkHex || '#000000', 0);
+  const lightIsWhite = L.r >= 250 && L.g >= 250 && L.b >= 250;
+  const darkIsBlack = D.r <= 5 && D.g <= 5 && D.b <= 5;
+  if(lightIsWhite && darkIsBlack) return src;                // identity
   const out = document.createElement('canvas');
   out.width = src.width; out.height = src.height;
   const o = out.getContext('2d');
   o.drawImage(src, 0, 0);
   const img = o.getImageData(0, 0, out.width, out.height);
   const d = img.data;
-  // Dark marks take the same hue, deepened, so a texture with light AND dark
-  // elements (the lotuses) colours both. Only exactly-mid pixels — the ground —
-  // are left alone. Before, dark marks were skipped and could not be tinted.
-  const deep = { r: t.r * 0.32, g: t.g * 0.32, b: t.b * 0.32 };
   for(let i = 0; i < d.length; i += 4){
     const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
     if(v > 128){
       const k = (v - 128) / 127;
-      d[i]     = 128 + k * (t.r - 128);
-      d[i + 1] = 128 + k * (t.g - 128);
-      d[i + 2] = 128 + k * (t.b - 128);
+      d[i] = 128 + k * (L.r - 128); d[i + 1] = 128 + k * (L.g - 128); d[i + 2] = 128 + k * (L.b - 128);
     } else if(v < 128){
       const k = (128 - v) / 128;
-      d[i]     = 128 + k * (deep.r - 128);
-      d[i + 1] = 128 + k * (deep.g - 128);
-      d[i + 2] = 128 + k * (deep.b - 128);
+      d[i] = 128 + k * (D.r - 128); d[i + 1] = 128 + k * (D.g - 128); d[i + 2] = 128 + k * (D.b - 128);
     }
   }
   o.putImageData(img, 0, 0);

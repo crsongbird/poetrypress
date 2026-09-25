@@ -1,22 +1,31 @@
-# Unfixable Vellum ♦️
+# Unfixable Vellum
 
-Turn poems into images, in the browser. No install.
+A single-page art app for visual poetry: a free replacement for paid tools like
+Photoshop, needing no desktop. It works on a phone, in a browser, with nothing
+to install.
 
-**[poetrypress.unfixable.place](https://poetrypress.unfixable.place)**
+**[vellum.unfixable.place](https://vellum.unfixable.place)**
+
+It was built entirely on a phone, by a housing-insecure, disabled housewife,
+using only the phone and cloud dev tools — no computer. It is free, and it
+will stay free.
 
 ---
 
 ## Features
 
-- 16 presets, fully editable
-- 28 procedural background textures, two adjustable parameters each
-- Per-texture blend mode and light direction
-- Multi-stop gradients for background and text
-- PML, a small markup language for poems (below)
+- 16 presets, fully editable, each with its own glyph spell
+- 33 procedural background textures in four elements, each with two knobs,
+  nine blend modes and its own hues
+- Multi-stop gradients for the background and the text
+- Typeface effects: letterpress, long shadow, bevel, erosion, bloom and more
+- PML, a small markup language for poems — including §variables that report
+  the page's own settings, for texture tests (below)
 - Lock any control so Randomize and presets skip it
-- Save looks (Spellcrafting) and poems (Grimoire) to local storage
-- Import/export as JSON
-- Export full-quality JPG, filename from your first line
+- Save looks (Spellcrafting) and poems (the Grimoire, dated by moon phase);
+  share a single look as a link
+- Installable as an app, and works offline once visited (over https)
+- Export full-quality JPG, named from your first line
 
 ## The four elements
 
@@ -105,6 +114,34 @@ Emoji inside a coloured span are tinted to match.
 
 ---
 
+### §Variables
+
+Written in the poem, resolved before PML is parsed — so a variable may expand
+into PML. Only the poem is resolved; no other field is. Unknown names stay as
+written; `\§` writes a literal §.
+
+| Variable | Becomes |
+|---|---|
+| `§SurfName` · `§SurfBlendMode` · `§LightDir` · `§TextureSeed` | the texture's name, blend, light arrow, seed |
+| `§SurfParamsA` | `Knob: [value]  Knob: [value]  Opacity: [value] {moon}`, as PML |
+| `§SurfParamsB` | the texture's hues, each in its own colour |
+| `§MoonPhase!tonight` · `!seed` · `!opacity` | a moon: tonight's, the Fractal Moon's for this seed, the opacity |
+| `§MoonPhase:x` | x from −1 to 1: 0 full, ±1 new; negative waxes, positive wanes |
+| `§Glyph!input` `ritual` `thoughtform` `materia` `esoterica` `touch` `return` `sigil` | the app's drawn glyphs, inline |
+| `§Glyph!whimsy` `sharpness` `chaos` | ♡ √ ∆ |
+| `§Spell` · `§Font` · `§Canvas` · `§TypeEffect` · `§Today` | the look's spell, the typeface, the page size, the effect, the date |
+
+A texture test page:
+
+```
+## Surface: [§SurfName]
+-# {Rendering Test} // Moon: [§MoonPhase!tonight]
+§SurfParamsA
+Blend Mode: [§SurfBlendMode]  Light: [§LightDir]
+§SurfParamsB
+-# Seed: [§TextureSeed]  {§MoonPhase!seed}
+```
+
 ## Development
 
 ```
@@ -149,7 +186,8 @@ default preset; `appOptions.js` fonts, presets, aspect ratios and size limits.
 | `pwa.js` · `pwa/` · `icons/` | the installable app |
 | `appEvents.js` | UI wiring, entry point |
 | `tools/` | icon generator, texture previewer |
-| `test/` | 29 suites, no dependencies |
+| `glyphs.js` · `pmlVars.js` | drawn glyphs inside text · §variables |
+| `test/` | 30 suites, no dependencies |
 
 See [OPEN-ISSUES.md](./OPEN-ISSUES.md) for known gaps and constraints.
 

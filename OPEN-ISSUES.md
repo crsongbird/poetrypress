@@ -11,15 +11,16 @@ redundant), or relax the rule?
 
 ## Needs checking on a phone
 
-Built and tested here, but only a real phone in Chrome can confirm:
-- the tab bar stays above the keyboard, with no gap (follows the visible
-  bottom edge, including Chrome's pan over an overlaid keyboard)
-- the colour picker: themed, right-aligned, Done dismisses the keyboard,
-  no scrollbars, and opening it no longer summons the keyboard
-- less padding at the top and bottom of the controls
-- the texture panel: light pad left, a thin rule, fields at full width
-- the moon in the header, on the opacity thumb, and on the reroll button
-- installing from the site (the app icon, offline use)
+Built and tested here, but only a real phone can confirm:
+- the colour picker: themed, right-aligned, Done dismisses the keyboard, no
+  scrollbars, the edited field ringed, the tail pointing at it, and the field
+  scrolled into view above the picker
+- the opacity readout: a moon waxing from new at 0% to full at 100%, and the
+  slider drawn normally (in Firefox too)
+- the texture panel: hue and seed fields spanning the column
+- §Glyph and §MoonPhase drawn inside the poem (the browser's Path2D draws them)
+- the tab bar with the keyboard up; the top and bottom padding
+- installing, once served over https
 
 ## Next
 
