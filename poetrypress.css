@@ -1,0 +1,1475 @@
+:root{
+  --bg-deep:#100e16;
+  --bg-panel:#17151f;
+  --bg-panel-2:#1e1b28;
+  --bg-card:#1b1824;
+  --line:#2c283a;
+  --text-main:#e9e4f2;
+  --text-dim:#9a92ae;
+  --accent:#c9a876;
+  --accent-dim:#8a7657;
+  --rose:#b98a8a;
+}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family:'EB Garamond', serif;
+  background:var(--bg-deep);
+  color:var(--text-main);
+  height:100vh;
+  overflow:hidden;
+}
+
+.app{ display:flex; height:100vh; }
+
+/* ---------- LEFT CONTROL PANEL ---------- */
+.controls{
+  width:460px;
+  min-width:460px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(201,168,118,0.05) 0, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(185,138,138,0.04) 0, transparent 45%),
+    var(--bg-panel);
+  border-right:1px solid var(--line);
+  overflow-y:auto;
+  padding:13px 13px 36px 13px;
+}
+.controls::-webkit-scrollbar{width:8px;}
+.controls::-webkit-scrollbar-thumb{background:var(--line); border-radius:2px;}
+
+.app-title{ font-family:'Playfair Display', serif; font-size:22px; letter-spacing:0.03em; margin:0 0 2px 0; }
+.kofi-link{
+  display:inline-block; font-size:12px; color:var(--accent); text-decoration:none;
+  margin:0 0 11px 0; border-bottom:1px dotted var(--accent-dim);
+}
+.kofi-link:hover{ color:var(--rose); border-bottom-color:var(--rose); }
+.app-sub{ font-size:13px; color:var(--text-dim); margin:0 0 11px 0; font-style:italic; }
+
+.card{
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-radius:2px;
+  margin-bottom:8px;
+}
+
+.card-title{
+  font-family:'Playfair Display', serif;
+  font-size:11.5px;
+  text-transform:uppercase;
+  letter-spacing:0.16em;
+  color:var(--accent);
+  margin:0 0 7px 0;
+}
+
+.card-grid{ display:grid; grid-template-columns:1fr 1fr; }
+.card-grid > .full{ grid-column:1/-1; }
+.card-grid > .check-row{ grid-column:1/-1; margin-bottom:1px; }
+.card-grid > .subblock{ grid-column:1/-1; }
+
+label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:3px; letter-spacing:0.02em; }
+.field{margin:0;}
+
+select, textarea, input[type="text"], input[type="number"]{
+  width:100%;
+  background:var(--bg-panel-2);
+  border:1px solid var(--line);
+  color:var(--text-main);
+  border-radius:2px;
+  padding:5px 6px;
+  font-family:inherit;
+  font-size:14px;
+  outline:none;
+}
+select:focus, textarea:focus, input:focus{ border-color:var(--accent-dim); }
+
+textarea{
+  min-height:280px;
+  resize:vertical;
+  white-space:pre;
+  line-height:1.5;
+  font-family:'Courier Prime', monospace;
+  font-size:13px;
+}
+
+.row{display:flex; gap:6px;}
+.row > .field{flex:1;}
+
+.color-pair{ display:block; }
+.clr-field{ width:100%; }
+.clr-field button{ border-radius:2px !important; }
+.clr-picker{ border-radius:2px !important; }
+.clr-swatches button{ border-radius:2px !important; }
+.hex-input{width:100%;}
+
+.check-row{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+.check-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+.check-row label{ margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }
+
+.subblock{ display:none; border-left:2px solid var(--line); padding:1px 0 1px 7px; margin:1px 0 2px 2px; }
+.subblock.open{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
+.subblock.open > .full{ grid-column:1/-1; }
+
+.angle-wrap{display:flex; align-items:center; gap:6px;}
+input[type="range"]{ flex:1; accent-color:var(--accent); }
+.angle-val{ font-size:12px; color:var(--text-dim); width:38px; text-align:right; font-variant-numeric:tabular-nums; }
+
+.radio-group{display:flex; gap:5px; flex-wrap:wrap;}
+.radio-btn{
+  flex:1 1 28%; text-align:center; padding:5px 0;
+  border:1px solid var(--line); border-radius:2px;
+  font-size:12px; color:var(--text-dim); cursor:pointer;
+  background:var(--bg-panel-2); transition:all .12s ease;
+}
+.radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:rgba(201,168,118,0.08); }
+
+button.ghost{
+  width:100%; padding:5px 0; border-radius:2px;
+  border:1px solid var(--accent-dim); background:transparent; color:var(--accent);
+  font-family:'EB Garamond', serif; font-size:13px; letter-spacing:0.04em;
+  cursor:pointer; transition:all .12s ease; margin-top:1px;
+}
+button.ghost:hover{ background:rgba(201,168,118,0.1); }
+
+.hint{font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.45;}
+.hint code{ background:var(--bg-panel-2); padding:1px 4px; border-radius:2px; color:var(--rose); }
+
+.preset-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+.preset-btn{
+  border:1px solid var(--line); border-radius:2px; overflow:hidden;
+  cursor:pointer; background:var(--bg-panel-2); padding:0;
+  transition:transform .12s ease, border-color .12s ease;
+}
+.preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); }
+
+.preset-label{ display:block; font-size:8.5px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
+
+/* ---------- RIGHT RENDER PANE ---------- */
+.stage{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  background: radial-gradient(circle at 50% 0%, rgba(201,168,118,0.05), transparent 55%), var(--bg-deep);
+  position:relative;
+}
+.canvas-wrap{
+  box-shadow:0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+  border-radius:2px; overflow:hidden; line-height:0;
+}
+#poemCanvas{ display:block; max-height:calc(100vh - 40px); max-width:94vw; height:auto; width:auto; }
+
+.download-btn{
+  position:fixed; top:18px; right:22px; z-index:50;
+  padding:9px 20px; border-radius:2px;
+  border:2px solid #1a1610;
+  background:var(--accent); color:#1a1610;
+  font-family:'Playfair Display', serif; font-size:14px; letter-spacing:0.03em;
+  cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;
+  box-shadow:0 8px 24px -6px rgba(0,0,0,0.65);
+}
+.download-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 28px -6px rgba(201,168,118,0.55); }
+
+/* ---------- MOBILE APP HEADER (hidden on desktop) ---------- */
+.app-header{
+  display:none;
+  padding:10px 14px; background:var(--bg-panel); border-bottom:1px solid var(--line);
+  font-family:'Playfair Display', serif; font-size:17px; letter-spacing:0.02em;
+  position:sticky; top:0; z-index:70;
+}
+
+/* ---------- RESPONSIVE / MOBILE LAYOUT ---------- */
+/* Width alone misses some real phones (e.g. larger-screen Android devices can
+   report a CSS width above 860px while still being unmistakably phone-shaped
+   in portrait). Catching (orientation: portrait) with a higher width ceiling
+   alongside the plain width check is more reliable than either alone. */
+@media (max-width: 860px), (orientation: portrait) and (max-width: 1024px){
+  .app{ flex-direction:column; height:100vh; overflow:hidden; }
+  .app-header{ display:flex; }
+  .controls{
+    order:2; width:100%; min-width:0; max-height:56vh;
+    border-right:none; border-top:1px solid var(--line);
+  }
+  .controls .app-title, .controls .app-sub{ display:none; }
+  .stage{ order:1; flex:0 0 auto; height:44vh; gap:8px; padding-top:6px; }
+  #poemCanvas{ max-height:calc(44vh - 30px); max-width:92vw; }
+  .download-btn{ top:auto; bottom:14px; right:14px; padding:8px 16px; font-size:13px; }
+
+  /* Canonical desktop reference is ~2560x1440; canonical mobile is ~1080x1920,
+     which typically carries higher effective density. Rather than detecting
+     DPI directly (unreliable across devices), just nudge base sizes up a
+     little here — enough to help readability/tappability, not enough to lose
+     the compact feel. */
+  label{ font-size:14px; }
+  select, textarea, input[type="text"], input[type="number"]{ font-size:16px; }
+  .card-title{ font-size:13.5px; }
+  .hint{ font-size:13px; }
+  button.ghost{ font-size:15px; }
+  .radio-btn{ font-size:14px; }
+  .check-row label{ font-size:15px; }
+  .preset-label{ font-size:10.5px; }
+}
+
+/* ============================================================
+   MOBILE LAYOUT
+   Applied only when appEvents.js has confirmed an actual mobile
+   device and set .is-mobile on <body>. Deliberately not a media
+   query: a narrow desktop window is still a desktop, with a mouse
+   and a keyboard that never covers anything.
+
+   These rules OVERRIDE the media query above rather than running
+   beside it. That distinction matters: the media query already
+   builds a full mobile layout (fixed-height flex column, page does
+   not scroll, .controls scrolls internally), so anything here that
+   merely *added* to it ended up fighting it. In particular
+   #poemCanvas is styled by ID up there, which outranks any
+   class-based rule -- so the canvas is re-sized by ID here too.
+   ============================================================ */
+
+:root {
+  --preview-frac: 0.30;
+  --kb-height: 0px;
+  /* vh on mobile Chrome means "viewport with the URL bar hidden" --
+     always taller than what is actually visible. appEvents.js replaces
+     this with visualViewport.height, the real number. The 100vh is only
+     a fallback for the instant before that runs. */
+  --vvh: 100vh;
+}
+
+.tabbar { display: none; }
+
+/* the whole app is exactly as tall as the screen really is */
+body.is-mobile .app { overflow: hidden; flex-direction: column; }
+body.is-mobile .app-header { font-size: 12px; }
+
+/* preview on top, fixed share of the real viewport */
+body.is-mobile .stage {
+  order: 1;
+  flex: 0 0 auto;
+  /* --vvh-stable ignores the keyboard, so the preview does not shrink
+     out from under you mid-edit. The tab bar still uses --vvh. */
+  height: calc(var(--vvh-stable, var(--vvh)) * var(--preview-frac));
+  gap: 4px;
+  padding: 4px 8px 6px;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+/* ID selector, because the media query sizes this by ID as well */
+body.is-mobile #poemCanvas {
+  max-height: 100%;
+  max-width: 100%;
+  height: auto;
+  width: auto;
+}
+/* the wrapper clips (overflow:hidden), so it must never be shorter
+   than the canvas it holds -- that is what cropped the preview */
+/* The frame keeps ONE shape no matter the card's aspect ratio -- the card
+   letterboxes inside it. Previously the frame reshaped itself to match, so
+   switching to 16:9 moved everything and left dead space. */
+body.is-mobile .canvas-wrap {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  background: rgba(0,0,0,0.25);
+  border-radius: 3px;
+}
+body.is-mobile .canvas-wrap canvas { margin: auto; }
+
+/* controls take the rest and scroll inside themselves; the page
+   itself does not scroll, so the clearance for the tab bar has to
+   live in here rather than on .app */
+body.is-mobile .controls {
+  order: 3;
+  flex: 1 1 auto;
+  max-height: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* one panel at a time */
+body.is-mobile .card[data-tab] { display: none; }
+body.is-mobile .card[data-tab].tab-active { display: block; }
+
+/* Anchored by top rather than bottom: position:fixed resolves against
+   the layout viewport, which on Android Chrome is taller than what you
+   can see, so bottom:0 can land underneath the URL bar. The page does
+   not scroll here, so top is exact. */
+body.is-mobile .tabbar {
+  display: flex;
+  position: fixed;
+  left: 0; right: 0;
+  z-index: 60;
+  height: var(--tabbar-h);
+  backdrop-filter: blur(10px);
+}
+body.is-mobile .tab-btn {
+  flex: 1 1 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border: 0; background: transparent; letter-spacing: 0.04em;
+  font-family: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+body.is-mobile .tab-btn .tab-ico { font-size: 17px; line-height: 1; }
+
+
+/* was sitting directly under the tab bar at a lower z-index */
+/* (superseded: the download button is positioned inside the preview frame) */
+
+/* presets read better as a swipe than as a wall */
+/* Aspects is its own page now, so the presets get a real grid instead of a
+   sideways scroller -- no hunting left and right for a mood. */
+body.is-mobile .preset-grid {
+  display: grid;
+  overflow: visible;
+}
+body.is-mobile .preset-btn { width: auto; }
+
+
+/* the poem is the point — give it room, measured not guessed */
+body.is-mobile .editor-wrap { height: calc(var(--vvh) * 0.40); }
+body.is-mobile #poemText {
+  /* floor so it is editable without pinch-zooming, ceiling so it does not
+     balloon on a large phone or tablet. vw is safe here -- horizontal units
+     are not affected by the URL bar the way vh is. */
+  font-size: clamp(13px, 3.3vw, 15px);
+  line-height: 1.5;
+}
+
+
+body.is-mobile .card-title { font-size: clamp(10px, 2.6vw, 12px); margin-bottom: 6px; }
+
+body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
+
+
+/* no zoom-on-focus, bigger targets */
+body.is-mobile input[type="text"],
+body.is-mobile input[type="number"],
+body.is-mobile select,
+body.is-mobile textarea { font-size: clamp(14px, 3.5vw, 16px); }
+
+/* the picker must clear the tab bar and the download button */
+body.is-mobile #clr-picker { }
+body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(11px, 2.9vw, 13px); }
+
+
+/* drawn tab icons — one stroke weight, one grid, so they read as a set */
+body.is-mobile .tab-ico { display: block; width: 21px; height: 21px; }
+body.is-mobile .tab-ico svg { width: 100%; height: 100%; display: block; }
+body.is-mobile .tab-btn { font-size: clamp(9px, 2.4vw, 11px); }
+
+/* the divider: drag it to trade preview height against controls */
+.drag-handle { display: none; }
+body.is-mobile .drag-handle {
+  display: flex;
+  order: 2;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  cursor: row-resize;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+body.is-mobile .drag-grip { border-radius: 2px;
+  background: rgba(255,255,255,0.28);
+}
+body.is-mobile.dragging-divider { user-select: none; }
+
+/* the canvas can be pinched and dragged inside its frame */
+body.is-mobile .canvas-wrap { touch-action: none; }
+body.is-mobile #poemCanvas { transform-origin: center center; will-change: transform; }
+
+/* collapsible sections need to look tappable */
+body.is-mobile summary.card-title { cursor: pointer; list-style: none; padding: 2px 0; }
+body.is-mobile summary.card-title::-webkit-details-marker { display: none; }
+body.is-mobile summary.card-title::after { content: " ▾"; opacity: 0.55; }
+body.is-mobile details[open] > summary.card-title::after { content: " ▴"; }
+
+
+/* ---------- Unfixable Vellum header ---------- */
+.app-header{ align-items:center; justify-content:space-between; gap:8px; }
+.app-header-title{ flex:1 1 auto; text-align:center; font-weight:700; letter-spacing:0.04em; }
+.app-header-spacer{ flex:0 0 auto; width:88px; }
+.app-header .kofi-link{
+  flex:0 0 auto; text-align:right; font-style:italic;
+  /* was 0.62em and width-capped, which made it both unreadable AND forced a
+     line break mid-phrase. Readable size, no wrap, no fixed width. */
+  font-size:0.78em; opacity:0.8; white-space:nowrap; text-decoration:none;
+  border-bottom:1px solid currentColor; padding-bottom:1px;
+}
+.app-header .kofi-link:hover{ opacity:1; }
+
+body.is-mobile .app-header-spacer{ width:70px; }
+body.is-mobile .app-header .kofi-link{ font-size:0.72em; }
+
+/* download lives in the corner of the viewer now, out of the controls' way */
+body.is-mobile .canvas-wrap{ position:relative; }
+body.is-mobile .download-btn{
+  position:absolute; top:auto; left:auto;
+  right:7px; bottom:7px; z-index:45;
+  padding:6px 11px; font-size:clamp(11px,2.8vw,13px);
+  opacity:0.93;
+}
+
+/* the grip was eating real estate */
+body.is-mobile .drag-handle{ height:11px; }
+
+
+/* tighter bar */
+body.is-mobile .tabbar{ padding:0 2px; }
+body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
+:root{ --tabbar-h: 50px; }
+
+/* ---------- PML help ---------- */
+.pml-help h4{
+  margin:12px 0 4px; font-size:1em; letter-spacing:0.06em;
+  text-transform:uppercase; color:var(--accent);
+}
+.pml-help h4:first-child{ margin-top:2px; }
+.pml-help p{ margin:0 0 4px; }
+.pml-help dl{ margin:0 0 4px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
+.pml-help dt{ color:var(--text-main); }
+.pml-help dd{ margin:0; }
+.pml-help .fontlist{
+  margin:0; columns:2; column-gap:14px; font-size:0.86em; line-height:1.45;
+}
+
+/* ---------- Spellcrafting & Grimoire ---------- */
+.spell-wheel{
+  display:flex; gap:8px; overflow-x:auto; padding:2px 0 8px;
+  scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch;
+}
+.spell-wheel:empty{ display:none; }
+.spell-chip{
+  flex:0 0 auto; scroll-snap-align:start; cursor:pointer;
+  min-width:104px; max-width:104px;
+  border:1px solid var(--line); border-radius:3px;
+  background:var(--bg-deep); padding:0; overflow:hidden;
+  font-family:inherit; color:var(--text-dim);
+}
+.spell-chip .chip-swatch{ height:34px; display:block; }
+.spell-chip .chip-name{
+  display:block; padding:5px 6px; font-size:10.5px; letter-spacing:0.04em;
+  text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.spell-chip.selected{ border-color:var(--accent); color:var(--text-main); }
+
+.btn-row{ display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
+.btn-row > button{ flex:1 1 0; min-width:84px; }
+.btn-major, .btn-danger{
+  padding:8px 12px; border-radius:2px; cursor:pointer;
+  font-family:'Playfair Display', serif; font-size:13px; letter-spacing:0.03em;
+  border:2px solid var(--accent); background:var(--accent); color:var(--on-accent, #1a1610);
+  transition:opacity .12s ease;
+}
+.btn-danger{ border-color:#7d2230; background:#7d2230; color:#ffe9ec; }
+/* disabled reads as hollow, not merely dim — it must be obvious it is inert */
+.btn-major:disabled, .btn-danger:disabled{
+  background:transparent; color:var(--text-dim);
+  border-color:var(--line); cursor:not-allowed; opacity:0.75;
+}
+.subcard{ margin-top:10px; border-top:1px solid var(--line); padding-top:7px; }
+.subcard > summary{
+  cursor:pointer; list-style:none; font-size:11px; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--text-dim);
+}
+.subcard > summary::-webkit-details-marker{ display:none; }
+.subcard > summary::after{ content:" ▾"; opacity:.55; }
+.subcard[open] > summary::after{ content:" ▴"; }
+#grimoireList{ width:100%; font-size:12px; }
+
+/* ---------- modal ---------- */
+.modal-veil{
+  position:fixed; inset:0; z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.62); padding:18px;
+}
+.modal-veil[hidden]{ display:none; }
+.modal{
+  width:min(420px, 100%);
+  /* measured, not vh -- a vh-sized modal overflows the visible area on
+     Android, which is the same trap the layout hit earlier */
+  max-height:calc(var(--vvh, 100vh) * 0.8); overflow:auto;
+  background:var(--bg-deep); border:1px solid var(--line);
+  border-radius:4px; padding:16px;
+  box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
+}
+.modal-title{
+  margin:0 0 6px; font-family:'Playfair Display', serif;
+  font-size:15px; letter-spacing:0.05em; color:var(--accent);
+}
+.modal-body{ margin:0 0 10px; font-size:12.5px; color:var(--text-dim); line-height:1.55; }
+.modal-input{
+  width:100%; font-size:16px; padding:8px;
+  background:var(--bg); color:var(--text-main);
+  border:1px solid var(--line); border-radius:2px; resize:vertical;
+}
+.modal-input[hidden]{ display:none; }
+body.is-mobile .modal{ width:100%; }
+body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }
+
+/* ---------- texture sliders: own line, full width ---------- */
+.field.full > input[type="range"]{ width:100%; display:block; }
+body.is-mobile .field.full{ width:100%; }
+body.is-mobile .field.full > label{ display:block; margin-bottom:2px; }
+body.is-mobile .field.full > .range-val{ float:right; font-size:11px; opacity:0.8; }
+
+/* ---------- stop the page scrolling while typing ----------
+   .app is a fixed-height column and .controls scrolls inside it, so the
+   document itself must never scroll. Without this, focusing the textarea
+   made Chrome scroll the whole page to reveal the caret and a scrollbar
+   appeared from the stage keeping its pre-keyboard height. */
+body.is-mobile, html:has(body.is-mobile){ overflow:hidden; height:100%; overscroll-behavior:none; }
+
+body.is-mobile #poemText{ scroll-margin:0; }
+
+/* ---------- texture tools ---------- */
+.light-pad{
+  display:grid; grid-template-columns:repeat(3,1fr); padding:3px; border:1px solid var(--line); border-radius:3px;
+}
+.light-pad button{
+  aspect-ratio:1; border:1px solid var(--line); border-radius:2px;
+  background:transparent; cursor:pointer; padding:0;
+}
+.light-pad button::after{
+  content:""; width:5px; height:5px; margin:auto;
+  border-radius:50%; background:var(--text-dim); opacity:.5;
+}
+.light-pad button.active{ border-color:var(--accent); background:rgba(212,175,55,0.14); }
+.light-pad button.active::after{ background:var(--accent); opacity:1; }
+.light-core{
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; color:var(--text-dim); opacity:.65;
+}
+body.is-mobile .light-pad{ gap:4px; }
+
+/* a disabled tool must look inert, not merely quiet */
+.field.tool-off{ opacity:.34; pointer-events:none; }
+.field.tool-off label::after{ content:" — n/a"; font-size:.85em; opacity:.8; }
+
+/* ---------- locks ---------- */
+.lock-btn{
+  font-size:11px; line-height:1;
+}
+
+
+body.is-mobile .lock-btn{ font-size:13px; padding:0 4px; }
+
+/* light direction reads as arrows: the arrow points the way the light travels */
+.light-pad button{ color:var(--text-dim); line-height:1; }
+.light-pad button::after{ display:none; }
+.light-pad button.active{ color:var(--accent); }
+
+
+/* preview reset — silver against the gold download, and quiet until wanted */
+.reset-view-btn{
+  position:absolute; left:7px; bottom:7px; z-index:45;
+  border:1px solid rgba(190,196,208,0.45); border-radius:2px;
+  background:rgba(18,20,26,0.55); color:#BEC4D0;
+  font-size:13px; line-height:1; padding:5px 9px; cursor:pointer; opacity:0.55;
+}
+.reset-view-btn:hover{ opacity:1; }
+body.is-mobile .reset-view-btn{ font-size:15px; padding:6px 10px; }
+
+
+
+body.is-mobile .field{ margin-bottom:0; }
+body.is-mobile .check-row{ margin:2px 0; }
+body.is-mobile .app-header{ padding:3px 6px; }
+body.is-mobile .app-header-title{ letter-spacing:0.02em; }
+
+body.is-mobile .preset-grid{ grid-template-columns:repeat(4,1fr); gap:5px; }
+body.is-mobile .preset-label{ font-size:clamp(8px,2.1vw,10px); }
+
+/* ---------- FOCUS MODE ----------
+   Entered when the poem field takes focus on a phone. Chrome hides its own
+   title bar as the keyboard opens, which changes the layout viewport under a
+   fixed-height app and lets the page scroll into empty space — the rare but
+   brutal bug on this page. Focus mode removes everything that could scroll:
+   header, preview, editor, bar, keyboard, and nothing else. */
+body.is-mobile.focus-mode .card[data-tab]:not(.focus-keep){ display:none; }
+body.is-mobile.focus-mode .app-header{ padding:2px 6px; font-size:11px; }
+body.is-mobile.focus-mode .app-header .kofi-link{ display:none; }
+body.is-mobile.focus-mode .stage{
+  /* Must read --preview-frac like everywhere else. A constant here meant the
+     divider updated the variable and nothing in focus mode listened, so the
+     preview could not be resized while writing — which is when you most want
+     to. Capped, because the keyboard leaves little room. */
+  height:calc(var(--vvh-stable, var(--vvh)) * var(--preview-frac));
+  max-height:58dvh;
+  min-height:44px;
+}
+body.is-mobile.focus-mode .controls{ overflow:hidden; }
+/* (superseded further down: the wrap needs flex-basis 0 to be allowed to
+   shrink below its content and become a scroll box) */
+body.is-mobile.focus-mode .card.focus-keep{ flex-direction:column; margin:0; }
+body.is-mobile.focus-mode .card.focus-keep .card-title{ display:none; }
+body.is-mobile.focus-mode .tab-btn:not([data-tab="more"]){ display:none; }
+body.is-mobile.focus-mode .tab-btn[data-tab="more"]{ flex:1 1 100%; }
+
+/* ---------- nav glyph states ----------
+   Deselected glyphs RELAX: thinner stroke, softer, slightly smaller, cooled
+   toward whimsy's blue. Selected glyphs STIFFEN: full weight, full size,
+   warmed. No motion — the state is legible standing still, and animation
+   here would mostly advertise the frame rate. */
+body.is-mobile .tab-btn svg{
+  stroke-width:1.15;
+  opacity:.62;
+  transform:scale(.94);               /* whimsy, heavily muted */
+}
+body.is-mobile .tab-btn.active svg{
+  stroke-width:1.85;
+  opacity:1;
+  transform:scale(1);               /* whimsy, allowed forward */
+}
+
+
+/* (themed below — the bar follows the theme like everything else) */
+body.is-mobile .tab-ico-glyph{
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; line-height:1; color:#C9B8FF;
+  font-family:"Noto Sans Symbols","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;
+}
+
+/* ---------- PML editor ----------
+   A highlighted mirror behind a transparent textarea. The two MUST agree on
+   every property that affects line breaking, or the colour drifts away from
+   the text — so font, size, line-height, padding, wrapping and word-breaking
+   are declared once, for both, in the shared block below. */
+.editor-wrap{
+  display:flex;
+  border:1px solid var(--line); border-radius:3px;
+  background:var(--bg-deep);
+}
+.editor-gutter{
+  flex:0 0 auto; width:3.1em;
+  background:rgba(255,255,255,0.028);
+  border-right:1px solid var(--line);
+  user-select:none; -webkit-user-select:none;
+}
+.gutter-line{
+  display:flex; align-items:flex-start; justify-content:flex-end; gap:3px;
+  padding:0 5px 0 3px; box-sizing:border-box;
+}
+.gutter-n{ opacity:.42; }
+.gutter-wrap{ opacity:.5; color:#9B7FE8; }
+.editor-scroll{ position:relative; flex:1 1 auto; min-width:0; }
+
+/* the two layers, sharing everything that decides where a line breaks */
+.editor-input, .editor-mirror, .editor-gutter{
+  font-family:"JetBrains Mono","Courier Prime",ui-monospace,monospace;
+  font-size:13px;
+  line-height:1.62;
+  letter-spacing:0;
+  tab-size:4;
+}
+.editor-input, .editor-mirror{
+  margin:0;
+  width:100%;
+}
+.editor-gutter{ padding:7px 0; }
+.editor-mirror{ inset:0; pointer-events:none;
+  color:var(--text-main);
+}
+.editor-input{ outline:none;
+  background:transparent;
+  color:transparent;              /* the mirror supplies every visible glyph */
+  caret-color:var(--accent);
+  -webkit-text-fill-color:transparent;
+}
+.editor-input::selection{ background:rgba(155,127,232,0.30); }
+
+                 /* sharpness — structure */
+.pml-op       { color:#9AA3B0; }
+.pml-directive{ color:#C2A882; }                 /* touch — advanced work */
+.pml-value    { color:#8FA88C; }
+.pml-emph     { color:#E0526F; }                 /* chaos — the disruptive marks */
+.pml-rhyme    { color:#E0526F; opacity:.9; }
+.pml-escape   { color:#6E6880; }
+.pml-prefix   { color:#9B7FE8; }                 
+
+body.is-mobile .editor-input,
+body.is-mobile .editor-mirror,
+body.is-mobile .editor-gutter{ font-size:clamp(12px,3.1vw,13.5px); }
+body.is-mobile .editor-gutter{ width:2.6em; }
+/* (sizing lives in the flex-basis-0 rule further down) */
+body.is-mobile.focus-mode .editor-scroll{ min-height:0; }
+
+/* bracket families, told apart at a glance and weighted so they read as
+   structure. Parens are literal text in PML, so they recede. */
+.pml-sq    { color:#7FD4C1; font-weight:700; }   /* [ ] accent one */
+.pml-cu    { color:#C9A0FF; font-weight:700; }   /* { } accent two */
+.pml-bracket{ color:#D6DCE6; font-weight:700; }  /* < > segmentation */
+.pml-paren { color:#6E6880; }                    /* ( ) literal, set back */
+.pml-op    { font-weight:600; }
+
+/* ---------- focus mode: one frame, not three ---------- */
+body.is-mobile.focus-mode .card.focus-keep{
+  padding:0; border:0; background:transparent; border-radius:0;
+}
+body.is-mobile.focus-mode .editor-wrap{ border-left:0; border-right:0; border-radius:0; }
+/* The editor's focus ring sits 4px outside its box (2px wide, 2px offset),
+   and .controls scrolls, so its scrollbar occupies the right edge. With no
+   right padding the ring's right side ran underneath the scrollbar. */
+body.is-mobile.focus-mode .controls{ padding-left:4px; padding-right:10px; }
+/* the credit fields belong to the page, not to writing it */
+body.is-mobile.focus-mode .card.focus-keep .field:not(.editor-field){ display:none; }
+body.is-mobile.focus-mode .card.focus-keep .card-grid{ gap:0; }
+/* the header must not shift sideways when the Ko-fi link leaves */
+body.is-mobile.focus-mode .app-header-spacer{ display:none; }
+body.is-mobile.focus-mode .app-header-title{ text-align:center; }
+
+/* Caret alignment: a textarea reserves room for its scrollbar and the mirror
+   does not, so the two wrap at different widths and the highlight drifts off
+   the text. Hiding the textarea's scrollbar makes both layers exactly as wide
+   as each other. */
+.editor-input{ scrollbar-width:none; -ms-overflow-style:none; }
+.editor-input::-webkit-scrollbar{ width:0; height:0; display:none; }
+
+
+/* arrows point the way the light travels: inward, toward the page */
+.light-pad{ width:126px; gap:4px; }
+.light-pad button{ font-size:17px; }
+body.is-mobile .light-pad{ width:152px; }
+body.is-mobile .light-pad button{ font-size:19px; }
+.light-core svg{ width:17px; height:17px; opacity:.7; }
+
+/* locks sit at the end of their own label row, the same place every time,
+   instead of wherever the markup happened to put them */
+.field{ position:relative; }
+.field > label{ display:flex; align-items:center; gap:6px; }
+/* (superseded: the lock sits beside its label — see the locks block below) */
+
+/* justification and vertical alignment are two groups, not one row of six */
+label.group-split{ border-left:1px solid var(--line); padding-left:10px; }
+
+/* a name is one line; only the JSON panes need height */
+.modal-input{ min-height:0; }
+.modal-input[rows="1"]{ height:2.5em; resize:none; overflow:hidden; }
+
+
+/* ---------- editor scrolling: one scroller, no sync ----------
+   The textarea used to scroll inside itself while the mirror was scrolled to
+   match by hand. Any difference in their content heights accumulated into a
+   growing vertical gap — several lines off by the bottom of a long poem, and
+   worse whenever the box was resized.
+
+   Now the textarea is grown to its full content height (see installEditor),
+   so it never scrolls. The wrap is the only scrolling box, and it carries the
+   gutter, the mirror and the textarea together. There is nothing left to
+   synchronise, so there is nothing left to drift. */
+.editor-wrap{ overflow:auto; align-items:flex-start; }
+.editor-gutter{ overflow:visible; align-self:stretch; }
+.editor-scroll{ overflow:visible; }
+.editor-mirror{ overflow:visible; }
+.editor-input{ overflow:hidden; resize:none; display:block; }
+
+
+/* ---------- editor overlay: one grid cell, two layers ----------
+   Absolute positioning only promises the mirror fills its container; it does
+   not promise the mirror and the textarea lay out identically. Putting both
+   in the SAME grid cell does: grid gives them the same origin and the same
+   width, and with identical font, padding and wrapping rules they produce
+   identical line boxes. Nothing is positioned by hand, so nothing can be off
+   by a line. */
+.editor-scroll{ display:grid; grid-template-columns:minmax(0,1fr); }
+.editor-mirror{
+  position:static !important;
+  grid-area:1 / 1 / 2 / 2;
+  min-width:0;
+}
+.editor-input{
+  position:relative;
+  grid-area:1 / 1 / 2 / 2;
+  min-width:0;
+  z-index:1;
+  height:auto;
+}
+
+/* ============================================================
+   EDITOR METRICS — the two layers must shape text IDENTICALLY
+   ============================================================
+   Everything above this point can be overridden by a rule written later, and
+   several were: a bare `textarea{}` rule sets its own font, line-height and a
+   280px min-height that no class rule was cancelling. Rather than keep
+   chasing which selector wins, every property that affects where a glyph
+   lands is forced on BOTH layers here, together, at the end of the file.
+
+   Two causes of drift that are invisible when reading CSS:
+
+   1. LIGATURES AND KERNING. The mirror splits text into many <span>s for
+      colour; the textarea is one continuous run. Shaping does not cross span
+      boundaries, so a ligature or kern pair that forms in the textarea does
+      not form in the mirror — and the two advance differently, by an amount
+      that depends on what was typed. That is the "off by a seemingly random
+      amount" behaviour exactly.
+
+   2. MOBILE TEXT AUTOSIZING. Chrome on Android inflates text in ordinary
+      block elements but leaves form controls alone. The mirror is a <pre>;
+      the textarea is a form control. One gets boosted, the other does not.
+   ============================================================ */
+.editor-input, .editor-mirror{
+  font-family:"JetBrains Mono","Courier Prime",ui-monospace,monospace !important;
+  font-size:13px !important;
+  font-weight:400 !important;
+  font-style:normal !important;
+  line-height:1.62 !important;
+  letter-spacing:0 !important;
+  word-spacing:0 !important;
+  tab-size:4 !important;
+  text-transform:none !important;
+  text-indent:0 !important;
+  white-space:pre-wrap !important;
+  overflow-wrap:break-word !important;
+  word-break:normal !important;
+  padding:7px 9px !important;
+  border:0 !important;
+  box-sizing:border-box !important;
+  min-height:0 !important;
+  max-width:none !important;
+  direction:ltr !important;
+  text-align:left !important;
+
+  /* shaping must not depend on how the text is cut into elements */
+  font-variant-ligatures:none !important;
+  font-kerning:none !important;
+  font-feature-settings:"liga" 0, "clig" 0, "calt" 0 !important;
+  font-optical-sizing:none;
+
+  /* and neither layer may be silently inflated */
+  -webkit-text-size-adjust:100% !important;
+  text-size-adjust:100% !important;
+}
+body.is-mobile .editor-input, body.is-mobile .editor-mirror{
+  font-size:13px !important;
+}
+/* colour only — never weight, which would change advance in the mirror and
+   not in the textarea */
+.pml-sq, .pml-cu, .pml-bracket, .pml-op{ font-weight:400 !important; }
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+
+/* the line anchors must take up no space and create no box */
+.ln-mark{
+  display:inline !important;
+  width:0; height:0;
+  font-size:inherit !important;
+  line-height:inherit !important;
+  letter-spacing:0 !important;
+}
+/* no per-line block boxes in the mirror: each one would round its own height
+   to device pixels and the errors would stack down the page */
+.pml-line{ display:inline; min-height:0; }
+
+/* highlighting off: the mirror goes away and the textarea shows its own text */
+body.plain-editor .editor-mirror{ display:none; }
+body.plain-editor .editor-input{
+  color:var(--text-main) !important;
+  -webkit-text-fill-color:var(--text-main) !important;
+}
+.editor-toggle{ margin-bottom:5px; }
+body.is-mobile.focus-mode .editor-toggle{ display:none; }
+
+/* ============================================================
+   VIEWPORT HEIGHT — let the browser tell us, not JavaScript
+   ============================================================
+   --vvh is measured in JS from visualViewport and goes stale whenever the
+   browser changes its own chrome without firing an event I happen to be
+   listening for. That staleness is the dead gap under the tab bar.
+
+   `interactive-widget=resizes-content` (in the viewport meta) makes the soft
+   keyboard resize the LAYOUT viewport on Android, and `dvh` then tracks the
+   real visible height including the URL bar. Between them the browser reports
+   its own geometry and nothing can be stale.
+
+   --vvh stays as the fallback: the first declaration applies where dvh is
+   unsupported, the second overrides it where it is.
+   ============================================================ */
+body.is-mobile .app{ height:var(--vvh); height:100dvh; }
+body.is-mobile .tabbar{
+  /* a chain, in one block, most capable last:
+     --vvh (measured) -> dvh -> --vv-bottom, the visible bottom edge including
+     Chrome's pan over an overlaid keyboard */
+  top:calc(var(--vvh) - var(--tabbar-h));
+  top:calc(100dvh - var(--tabbar-h));
+  top:calc(var(--vv-bottom, 100dvh) - var(--tabbar-h));
+}
+/* (superseded: the download button is positioned inside the preview frame) */
+body.is-mobile .stage{ max-height:calc(100dvh * 0.66); }
+
+/* ---------- the editor must be able to become a scroll box ----------
+   A flex child only scrolls if it is allowed to be SHORTER than its content.
+   By default `min-height:auto` on a flex item refuses that, so the wrap grew
+   to its full content height, pushed past the screen, and the last lines
+   became unreachable. flex-basis 0 + min-height 0 down the whole chain is
+   what makes the overflow land on the wrap, where it can scroll. */
+body.is-mobile .controls{ min-height:0; }
+
+body.is-mobile.focus-mode .card.focus-keep .card-grid{ min-height:0; flex-direction:column; flex:1 1 0; }
+/* (superseded: .controls is the single scroller in focus mode — see below) */
+/* outside focus mode the wrap has a definite height, so it scrolls already */
+body.is-mobile .editor-wrap{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
+/* ============================================================
+   FOCUS MODE SCROLLING — one scroller, and it is .controls
+   ============================================================
+   The editor was being made into its own scroll box nested inside several
+   flex items, each of which had to agree to shrink below its content. That
+   is a lot of conditions for scrolling to work, and when any one of them
+   failed the last lines simply became unreachable.
+
+   .controls already scrolls correctly everywhere else in the app, so in focus
+   mode it scrolls here too and the editor is left at its natural full height.
+   Fewer moving parts, and the failure mode is gone rather than mitigated.
+
+   The `overflow:hidden` this replaces was guarding the old Chrome
+   scroll-into-empty-space bug; `interactive-widget=resizes-content` plus dvh
+   now handle that at the browser level.
+   ============================================================ */
+body.is-mobile.focus-mode .controls{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  /* clear the fixed Return bar, plus room to scroll the last line free of it */
+  padding-bottom:calc(var(--tabbar-h) + 28px);
+}
+body.is-mobile.focus-mode .card.focus-keep{ height:auto; min-height:0; display:block; }
+body.is-mobile.focus-mode .card.focus-keep .card-grid{ display:block; }
+body.is-mobile.focus-mode .editor-wrap{
+  flex:0 0 auto;
+  height:auto;
+  max-height:none;
+  overflow:visible;          /* the editor no longer scrolls; .controls does */
+}
+
+/* ---------- locks ----------
+   The lock sits immediately after its label's text, not pushed to the far
+   edge: it has to read as belonging to that one setting. */
+.field > label{ justify-content:flex-start; }
+.lock-btn{
+  flex:0 0 auto; border:0; background:transparent;
+  color:#6E6880; cursor:pointer;
+  vertical-align:middle;
+}
+.lock-btn svg{ width:100%; height:100%; display:block; }
+.lock-btn:hover{ opacity:.85; }
+/* unlocked: the shackle swings open and to one side */
+.lock-btn .lk-shackle{ transform:translate(3px,-1.6px) rotate(-16deg); transform-origin:12px 10px; }
+.lock-btn.locked{ color:var(--accent); }
+.lock-btn.locked .lk-shackle{ transform:none; }
+
+
+/* a locked control dims, so its state is visible without reading the icon */
+.field-locked > input:not(.lock-btn),
+.field-locked > select,
+.field-locked > .light-pad,
+.field-locked > input[type="range"]{ opacity:.45; }
+
+
+/* ---------- locks, refined ---------- */
+/* Smaller hit area: easy to hit on purpose, harder to catch with the side of
+   a thumb while reaching for the control it sits beside. */
+.lock-btn{
+  width:14px; height:14px;
+  margin-left:6px;
+  padding:0;
+  opacity:.4;
+}
+body.is-mobile .lock-btn{ width:16px; height:16px; margin-left:7px; }
+.lock-btn:hover, .lock-btn:focus-visible{ opacity:.9; }
+.lock-btn.locked{ opacity:1; }
+
+/* A locked control is genuinely inert, not merely dimmed — the fade is the
+   signal and the pointer-events make it true. Descendant selectors, because
+   several controls sit inside a wrapper rather than directly in the field. */
+.field-locked input:not(.lock-btn),
+.field-locked select,
+.field-locked textarea,
+.field-locked .light-pad,
+.field-locked .angle-wrap,
+.field-locked .color-pair{
+  opacity:.3;
+  pointer-events:none;
+  filter:grayscale(0.6);
+}
+.field-locked > label{ color:var(--accent); opacity:.75; }
+/* the lock itself must stay live inside a locked field */
+.field-locked .lock-btn{ opacity:1; pointer-events:auto; filter:none; }
+
+/* ============================================================
+   LANDSCAPE — split by width, not by height
+   ============================================================
+   Sideways there is plenty of width and very little height, so stacking the
+   preview above the controls wastes both: the preview becomes a letterbox
+   strip and the controls get a narrow column with the rest of the screen
+   empty. The same two-column shape the desktop already uses fits far better,
+   and --preview-frac drives the split either way — height in portrait, width
+   here — so the drag handle keeps working with no second variable.
+   ============================================================ */
+/* PARKED. The landscape layout fired in situations it should not have, and is
+   better reconsidered on a laptop alongside the question of whether it should
+   replace the desktop layout outright. The min-width below never matches a
+   phone or tablet; drop it to re-enable. */
+@media (orientation: landscape) and (min-width: 4000px){
+  body.is-mobile .app{ flex-direction:row; }
+
+  body.is-mobile .stage{
+    order:1;
+    flex:0 0 auto;
+    width:clamp(28%, calc(100% * var(--preview-frac) * 1.6), 62%);
+    height:100%;
+    max-height:none;
+    padding:6px;
+  }
+  body.is-mobile .canvas-wrap{ height:100%; }
+  body.is-mobile #poemCanvas{ max-height:100%; max-width:100%; }
+
+  /* the divider becomes vertical */
+  body.is-mobile .drag-handle{
+    order:2;
+    width:12px; height:auto;
+    flex:0 0 auto;
+    align-self:stretch;
+    cursor:col-resize;
+    background:linear-gradient(90deg, rgba(255,255,255,0.05), transparent);
+    border-top:0; border-bottom:0;
+    border-left:1px solid rgba(255,255,255,0.07);
+    border-right:1px solid rgba(255,255,255,0.07);
+  }
+  body.is-mobile .drag-grip{ width:3px; height:40px; }
+
+  body.is-mobile .controls{
+    order:3;
+    flex:1 1 0;
+    min-width:0;
+    height:100%;
+    overflow-y:auto;
+    padding-bottom:calc(var(--tabbar-h) + 20px);
+  }
+
+  /* the bar stays across the bottom; it is the one thing that should not
+     become a column */
+  body.is-mobile .tabbar{ flex-direction:row; }
+
+  /* in focus mode the editor still gets the whole right-hand column */
+  body.is-mobile.focus-mode .stage{ width:clamp(24%, calc(100% * var(--preview-frac)), 45%); }
+  body.is-mobile.focus-mode .controls{ padding-bottom:calc(var(--tabbar-h) + 24px); }
+
+  /* short landscape (a phone on its side) has almost no height to spare */
+  @media (max-height: 460px){
+    body.is-mobile .app-header{ display:none; }
+    body.is-mobile .tabbar{ --tabbar-h:44px; height:44px; }
+    body.is-mobile .tab-btn{ font-size:9px; }
+    body.is-mobile .tab-ico{ width:17px; height:17px; }
+  }
+}
+
+/* ---------- the divider must always be grabbable ----------
+   The stage is position:sticky with z-index:40 and the handle was a plain
+   sibling with no stacking context of its own. Wherever the two boxes touch —
+   and they do once the keyboard shrinks the app — the stage painted on top and
+   took the touch. The handle now sits above it and carries a hit area larger
+   than its visible height, since 11px is a hard target on a phone. */
+body.is-mobile .drag-handle{
+  position:relative;
+  z-index:55;
+  touch-action:none;
+  overflow:visible;
+}
+body.is-mobile .drag-handle::before{
+  content:"";
+  position:absolute;
+  left:0; right:0;
+  top:-11px; bottom:-11px;     /* ~33px tall to the thumb, 11px to the eye */
+  z-index:1;
+}
+@media (orientation: landscape){
+  body.is-mobile .drag-handle::before{
+    top:0; bottom:0; left:-11px; right:-11px;
+  }
+}
+/* the grip is the visible affordance; widen it so it reads as a handle */
+body.is-mobile .drag-grip{ width:52px; height:4px; }
+
+
+/* ?grip in the URL: paints the handle and its true hit area, so a
+   can-I-even-touch-this question can be answered by looking */
+body.debug-grip .drag-handle{ background:rgba(255,0,200,0.35) !important; }
+body.debug-grip .drag-handle::before{ background:rgba(255,0,200,0.16); }
+body.debug-grip .drag-grip{ background:#ff00c8; }
+
+/* the swatch is a canvas now — ground, surface, border and glyphs */
+/* No object-fit: `cover` cropped the canvas top and bottom, which is why the
+   border only showed on the left and right. The canvas is painted at roughly
+   the box's own aspect so stretching it to fill is invisible. */
+.preset-swatch{ display:block; width:100%; height:39px; }
+body.is-mobile .preset-swatch{ height:35px; }
+canvas.chip-swatch{ display:block; width:100%; height:39px; }
+
+
+/* saved presets join the grid; blanks keep the rows square */
+.preset-btn.preset-empty{
+  border-style:dashed;
+  opacity:.28;
+  pointer-events:none;
+}
+.preset-btn.preset-custom .preset-label{ font-style:italic; }
+.preset-divider{
+  grid-column:1 / -1;
+  font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--text-dim); opacity:.7;
+  margin:6px 0 1px;
+}
+
+/* ============================================================
+   FOCUS — one consistent ring, chosen rather than inherited
+   ============================================================
+   The stray yellow-and-red box was two browser defaults stacking: Chrome's
+   tap-highlight flash (which picks its own colour) and the default focus ring
+   on <summary>, which nothing here had ever styled. Both are replaced with a
+   single quiet ring in the app's own accent, shown only for keyboard focus.
+   ============================================================ */
+*{ -webkit-tap-highlight-color:transparent; }
+:focus{ outline:none; }
+summary:focus, summary:active, details:focus{ outline:none; }
+summary::-moz-list-bullet{ list-style-type:none; }
+
+:focus-visible{
+  outline:2px solid var(--accent-dim);
+  outline-offset:2px;
+  border-radius:3px;
+}
+.card:focus-visible, summary:focus-visible{
+  outline:1px solid var(--accent-dim);
+  outline-offset:-1px;
+}
+
+/* aspect subgroup headings */
+.sub-label{
+  margin:6px 0 3px; font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--text-dim); opacity:.75;
+}
+#customSizeRow{ display:flex; gap:8px; }
+#customSizeRow .field{ flex:1 1 0; }
+/* aspect buttons defer to an explicit resolution */
+body.custom-size #aspectGroup,
+body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
+
+/* ============================================================
+   THEMES
+   ============================================================
+   The original violet-and-gold is kept intact as "Aether" — nothing is lost
+   by trying another. Each theme also names a faint surface for the page
+   behind the panels, so the UI has a little tooth of its own.
+   ============================================================ */
+
+/* Cinder — rosier, greyer, darker. Violet kept as an accent, not a ground. */
+:root[data-theme="rose"]{
+  /* Faded Rosewood — 161414 · 2D2A2A · 6C5E5F · C68892 · E5D3D5 —
+     with the two pinks kept from the earlier palette */
+  --bg-deep:#0f0d0d;
+  --bg-panel:#171414;
+  --bg-panel-2:#262222;
+  --bg-card:#1b1818;
+  --line:#3a3233;
+  --text-main:#E5D3D5;
+  --text-dim:#a3979a;         /* 6C5E5F lifted: as body text it would fail contrast */
+  --accent:#e79cb1;           /* kept */
+  --accent-dim:#cc7f94;
+  --rose:#C68892;
+  --ui-violet:#f3b3c6;        /* kept */
+  --on-accent:#161414;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
+  --ui-selected:#ff7fa6;
+}
+
+/* Aether — the original. */
+:root[data-theme="aether"]{
+  --bg-deep:#100e16;
+  --bg-panel:#17151f;
+  --bg-panel-2:#1e1b28;
+  --bg-card:#1b1824;
+  --line:#2c283a;
+  --text-main:#e9e4f2;
+  --text-dim:#9a92ae;
+  --accent:#c9a876;
+  --accent-dim:#8a7657;
+  --rose:#b98a8a;
+  --ui-violet:#C9B8FF;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><g fill='white' opacity='0.5'><circle cx='12' cy='20' r='1'/><circle cx='58' cy='9' r='.8'/><circle cx='77' cy='52' r='1.1'/><circle cx='33' cy='66' r='.9'/><circle cx='68' cy='80' r='.7'/></g></svg>");
+  --on-accent:#1a1610;
+  --ui-selected:#a97cff;
+}
+
+/* Fathom — deep water. */
+:root[data-theme="fathom"]{
+  --bg-deep:#070d14;
+  --bg-panel:#0e1620;
+  --bg-panel-2:#131d29;
+  --bg-card:#101923;
+  --line:#22303f;
+  --text-main:#dfe8f2;
+  --text-dim:#8397aa;
+  --accent:#6fc2b6;
+  --accent-dim:#4c8a82;
+  --rose:#a98a9a;
+  --ui-violet:#7FB5D4;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><g stroke='white' stroke-width='1' fill='none' opacity='0.5'><path d='M0 30 Q35 20 70 30 T140 30'/><path d='M0 78 Q35 68 70 78 T140 78'/><path d='M0 124 Q35 114 70 124 T140 124'/></g></svg>");
+  --on-accent:#06201c;
+  --ui-selected:#3fc4ff;
+}
+
+/* Vellum — light. It exists. */
+:root[data-theme="vellum"]{
+  --bg-deep:#d8cec0;
+  --bg-panel:#e3d8ca;
+  --bg-panel-2:#ebe1d4;
+  --bg-card:#e7ddd0;
+  --line:#c2b2a1;
+  --text-main:#2b2620;
+  --text-dim:#6b5e58;
+  --accent:#74506a;
+  --accent-dim:#a58799;
+  --rose:#a4646a;
+  --ui-violet:#6C5AA6;
+  --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='p'><feTurbulence baseFrequency='0.7' numOctaves='2'/></filter><rect width='100' height='100' filter='url(%23p)' opacity='0.5'/></svg>");
+  --on-accent:#fbf4ee;
+  --ui-selected:#8f2f6c;
+}
+
+/* the theme's surface, faint, behind everything */
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:var(--ui-texture);
+  background-repeat:repeat;
+  opacity:.05;
+  pointer-events:none;
+  z-index:0;
+}
+:root[data-theme="vellum"] body::before{ opacity:.09; }
+.app{ position:relative; z-index:1; }
+
+/* nav glyphs follow the theme's accent violet rather than a fixed one */
+body.is-mobile .tab-btn svg{ color:color-mix(in srgb, var(--ui-violet) 72%, var(--text-dim)); }
+body.is-mobile .tab-btn.active svg{ }
+
+/* ---------- a little less padding throughout ---------- */
+.card{ padding:9px 10px; }
+.card-grid{ gap:7px; }
+body.is-mobile .card{ padding:7px 8px; margin-bottom:7px; }
+body.is-mobile .card-grid{ gap:5px; }
+body.is-mobile .controls{ padding-left:5px; padding-right:5px; }
+
+.theme-note{
+  margin:5px 0 0; font-size:11px; font-style:italic;
+  color:var(--text-dim); opacity:.85; min-height:1em;
+}
+
+
+/* ---------- the navigation bar belongs to the theme ---------- */
+body.is-mobile .tabbar{
+  background:linear-gradient(180deg,
+    color-mix(in srgb, var(--bg-panel) 94%, transparent),
+    color-mix(in srgb, var(--bg-deep) 96%, transparent));
+  border-top:1px solid var(--line);
+}
+body.is-mobile .tab-btn{ color:color-mix(in srgb, var(--text-dim) 78%, transparent); }
+body.is-mobile .tab-btn.active{ }
+body.is-mobile .app-header{
+  background:color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  border-bottom:1px solid var(--line);
+}
+body.is-mobile .drag-handle{
+  background:linear-gradient(180deg, color-mix(in srgb, var(--text-main) 5%, transparent), transparent);
+}
+body.is-mobile.focus-mode .drag-handle{
+  background:color-mix(in srgb, var(--text-main) 7%, transparent);
+}
+
+/* ---------- texture tools, side by side on a phone ----------
+   The light pad is square and short; the tints and seed are single-line
+   fields. Stacked they wasted the width beside the pad, so on mobile the pad
+   takes the left column and the fields stack to its right. */
+body.is-mobile .tool-row{
+  display:grid;
+  gap:6px 10px;
+  align-items:start;
+}
+body.is-mobile .tool-row > #lightRow{ grid-row:1 / span 4; margin:0; }
+body.is-mobile .tool-row > .field{ margin:0; }
+body.is-mobile .tool-row > .field label{ font-size:11px; }
+body.is-mobile .tool-row input[type="text"],
+body.is-mobile .tool-row input[type="number"]{ padding:3px 5px; font-size:13px; }
+body.is-mobile .tool-row .light-pad{ width:118px; }
+body.is-mobile .tool-row .light-pad button{ font-size:16px; }
+
+/* ---------- colour picker: always above the keyboard ----------
+   On a phone Coloris anchors itself beside its field, using coordinates it
+   measured when it opened — so when the keyboard slides up, the picker can
+   end up underneath it with no way to reach it. The keyboard now resizes the
+   layout viewport (interactive-widget=resizes-content), so docking the picker
+   to the bottom of that viewport keeps it above both the keyboard and the
+   tab bar, however the layout shifts. */
+body.is-mobile #clr-picker{
+  position:fixed !important;
+  top:auto !important;
+  bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px) !important;
+  max-height:calc(100dvh - var(--tabbar-h) - 24px);
+  z-index:90;
+}
+
+/* the bracket pair touching the caret. Background and box-shadow only: they
+   paint without taking up space. Padding, borders, margins, weight or
+   spacing here would widen the mirror's glyphs and push the highlight off the
+   real text again — the same drift that made the caret unusable before. */
+.pml-match{
+  background:color-mix(in srgb, var(--accent) 34%, transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius:2px;
+}
+
+/* the Vellum sigil beside the title — the diamond, drawn in whimsy */
+.vellum-sigil{ width:1.15em; height:1.15em; vertical-align:-0.2em; margin-left:.12em; }
+
+
+/* ---------- texture seed: wide enough to read a ten-digit seed ---------- */
+.field:has(> #textureSeedValue){ flex:1 1 auto; min-width:0; }
+#textureSeedValue{ width:100%; min-width:12ch; font-variant-numeric:tabular-nums; }
+
+/* ---------- the colour picker, in the app's own theme ----------
+   Coloris ships its own light and dark skins; these override both with the
+   current theme's variables, so the picker changes with the theme. */
+#clr-picker.clr-picker{
+  background:var(--bg-panel) !important;
+  border:1px solid var(--line) !important;
+  box-shadow:0 14px 34px rgba(0,0,0,0.5) !important;
+  color:var(--text-main);
+}
+#clr-picker #clr-color-value{
+  background:var(--bg-panel-2) !important;
+  color:var(--text-main) !important;
+  border:1px solid var(--line) !important;
+  font-family:"JetBrains Mono", ui-monospace, monospace;
+}
+#clr-picker .clr-swatches button{ box-shadow:0 0 0 1px var(--line); }
+#clr-picker .clr-close{
+  background:var(--accent) !important;
+  color:var(--on-accent, #161414) !important;
+  border:0 !important; border-radius:2px;
+  font-family:'Playfair Display', serif; letter-spacing:.03em;
+  padding:6px 14px; cursor:pointer;
+}
+#clr-picker .clr-hue, #clr-picker .clr-gradient{ border-radius:2px; }
+
+/* on a phone: pinned to the right edge, above the keyboard and the bar */
+body.is-mobile #clr-picker{
+  left:auto !important;
+  right:8px !important;
+  transform:none !important;
+}
+
+/* ---------- the moon ---------- */
+.moon-glyph{ display:inline-block; vertical-align:middle; color:var(--ui-violet, var(--accent)); }
+.header-moon{ justify-content:flex-start; opacity:.85; }
+.app-header .kofi-link{ display:flex; align-items:center; }
+
+/* the opacity thumb is a moon that waxes with the value */
+#textureOpacity::-webkit-slider-thumb{
+  background:var(--moon-thumb) center / 100% 100% no-repeat, var(--bg-deep) !important;
+  border:0 !important; border-radius:50%; width:22px; height:22px;
+}
+#textureOpacity::-moz-range-thumb{
+  background:var(--moon-thumb) center / 100% 100% no-repeat, var(--bg-deep);
+  border:0; border-radius:50%; width:22px; height:22px;
+}
+
+/* the seed button: the phase this seed's moon will take */
+.seed-moon{ flex:0 0 auto; width:40px !important; padding:0 !important; display:flex;
+  align-items:center; justify-content:center; color:var(--ui-violet, var(--accent)); }
+
+/* ---------- Grimoire rows ---------- */
+.grimoire-list{
+  max-height:12.5em; overflow-y:auto; border:1px solid var(--line);
+  background:var(--bg-panel-2); border-radius:2px;
+}
+.grimoire-row{
+  display:flex; align-items:center; gap:8px; padding:6px 8px;
+  cursor:pointer; border-bottom:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  font-size:13px; line-height:1.3;
+}
+.grimoire-row:last-child{ border-bottom:0; }
+.grimoire-row .moon-glyph{ flex:0 0 auto; }
+.grimoire-row .grimoire-text{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.grimoire-row.selected{ background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--text-main); }
+
+/* ---------- texture tools on a phone: pad left, fields right ----------
+   The fields were squeezed beside the pad: labels collided with their "n/a",
+   hex boxes clipped, and the seed ran out of room. The pad keeps its own
+   column; everything else takes the rest, full width, behind a faint rule. */
+@media (orientation: portrait){
+  body.is-mobile .tool-row{
+    grid-template-columns:auto minmax(0,1fr);
+    column-gap:0; row-gap:4px;
+  }
+  body.is-mobile .tool-row > #lightRow{ padding-right:12px; }
+  body.is-mobile .tool-row > .field:not(#lightRow){
+    border-left:1px solid color-mix(in srgb, var(--line) 80%, transparent);
+    padding-left:12px; min-width:0;
+  }
+  body.is-mobile .tool-row .field label{
+    display:flex; align-items:center; gap:4px; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; font-size:11px;
+  }
+  body.is-mobile .tool-row input[type="text"]{ width:100%; min-width:0; }
+  body.is-mobile .tool-row .row{ display:flex; gap:6px; align-items:stretch; }
+  body.is-mobile .tool-row .row .field{ flex:1 1 auto; min-width:0; }
+  body.is-mobile #textureSeedValue{ min-width:0; }
+}
+
+
+/* ============================================================
+   Round of mobile polish
+   ============================================================ */
+
+/* the selected tab is the most saturated thing on screen, in every theme */
+body.is-mobile .tab-btn.active svg{ color:var(--ui-selected, var(--ui-violet)); }
+body.is-mobile .tab-btn.active{ color:var(--ui-selected, var(--text-main)); }
+
+/* padding: none above the controls (the drag handle already separates them),
+   and at the bottom only enough to clear the floating tab bar */
+body.is-mobile .controls{ padding-top:0; padding-bottom:calc(var(--tabbar-h) + 6px); }
+
+/* header: the moon at the left, Ko-fi centred vertically at the right */
+body.is-mobile .app-header{ align-items:center; }
+.app-header .kofi-link{ align-self:center; line-height:1; }
+.header-moon{ display:flex; align-items:center; color:var(--text-dim); }
+.header-moon .moon-glyph{ opacity:.8; }
+
+/* slider readouts: quieter, and closer to their sliders */
+.field .range-val{ display:block; text-align:right; font-size:11px; line-height:1.1;
+                   margin:1px 0 0; opacity:.62; }
+#textureOpacity{ width:100%; }
+
+/* the colour picker: no scrollbars from sub-pixel rounding */
+#clr-picker{ overflow:hidden !important; }
+body.is-mobile #clr-picker{ overflow-y:auto !important; overflow-x:hidden !important;
+                            scrollbar-width:none; }
+body.is-mobile #clr-picker::-webkit-scrollbar{ display:none; }
+
+/* the texture tools on a phone: the light pad on the left, a quiet rule,
+   and the hue and seed fields stacked on the right at full width */
+body.is-mobile .tool-row{ grid-template-columns:auto minmax(0,1fr); column-gap:12px; }
+body.is-mobile .tool-row > #lightRow{
+  padding-right:12px;
+  border-right:1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  align-self:stretch;
+}
+body.is-mobile .tool-row > .field:not(#lightRow){ min-width:0; }
+body.is-mobile .tool-row > .field label{
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+}
+body.is-mobile .tool-row .color-row,
+body.is-mobile .tool-row .row{ display:flex; gap:6px; width:100%; min-width:0; }
+body.is-mobile .tool-row .color-row input[type="text"],
+body.is-mobile .tool-row .row .field{ flex:1 1 auto; min-width:0; }
+body.is-mobile .tool-row #textureSeedValue{ min-width:0; width:100%; }
+#textureSeedReroll{ display:flex; align-items:center; justify-content:center;
+                    min-width:40px; padding:0 8px !important; color:var(--accent); }
