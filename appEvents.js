@@ -44,10 +44,12 @@
 import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout } from './textureGenerators.js';
+import { paramsFor, capsFor, paramReadout, clearTextureCache } from './textureGenerators.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
+import { moonPhase, moonGlyph, moonGlyphURI, phaseName } from './moon.js';
+import { moonForSeed } from './texWhimsy.js';
 import { paintPresetSwatch } from './swatches.js';
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
@@ -125,6 +127,12 @@ const LOCK_GLYPH =
   '</svg>';
 
 const locked = new Set();
+// whether each texture tint is still following its default source (see followAccents)
+const tintFollows = [true, true];
+// true while the app itself writes a tint. setColorField dispatches 'input',
+// so without this, following an accent would look like a hand-picked tint
+// and switch following off after the very first change.
+let tintBySystem = false;
 // id -> its lock button, so saved lock state can be reflected in the UI
 const lockButtons = new Map();
 
@@ -201,8 +209,8 @@ bindColorField('bgColor2Hex', scheduleRender);
 bindColorField('bgColor3Hex', scheduleRender);
 bindColorField('bgColor4Hex', scheduleRender);
 bindColorField('borderColorHex', scheduleRender);
-bindColorField('accent1ColorHex', scheduleRender);
-bindColorField('accent2ColorHex', scheduleRender);
+bindColorField('accent1ColorHex', ()=>{ followAccents(); scheduleRender(); });
+bindColorField('accent2ColorHex', ()=>{ followAccents(); scheduleRender(); });
 
 toggleSubblock('textGradientToggle','gradientBlock');
 toggleSubblock('bgGradientToggle','bgGradientBlock');
@@ -660,6 +668,8 @@ function restoreSettings(s){
   if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
   scheduleRender();
+  paintOpacityMoon();
+  paintSeedMoon();
 }
 
 $('advancedRefreshBtn').addEventListener('click', ()=>{
@@ -908,9 +918,20 @@ function applyPreset(p){
     // select and re-clamps the texture params, so restoring before it ran
     // meant those values were immediately overwritten — which is why locks
     // held on colours but not on the texture tools.
-    syncTextureTools(false);
+    //
+    // true = start from the new texture's own defaults, so one preset's blend
+    // and tints never leak into the next; then take whatever this preset
+    // specifies on top.
+    syncTextureTools(true);
+    const pcaps = capsFor($('textureType').value);
+    if(p.textureBlend && pcaps.blends.includes(p.textureBlend)) $('textureBlend').value = p.textureBlend;
+    if(p.textureTint1) setColorField('textureTint1Hex', p.textureTint1);
+    if(p.textureTint2) setColorField('textureTint2Hex', p.textureTint2);
     syncLightPad();
     restoreLocked(__locks);
+    // a preset changes opacity and seed without anyone touching them
+    paintOpacityMoon();
+    paintSeedMoon();
   }
 }
 
@@ -971,6 +992,13 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
     // nothing sized in vh fits on an Android phone.
     const visible = vv ? vv.height : window.innerHeight;
     root.style.setProperty('--vvh', visible + 'px');
+    // The visible area's BOTTOM EDGE, in page coordinates. When Chrome lays the
+    // keyboard over the page instead of resizing it, it pans the visible area
+    // (offsetTop); a bar placed by height alone then sits under the keyboard or
+    // leaves a gap, depending on the pan. offsetTop + height is where the bar
+    // belongs in both cases.
+    const bottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;
+    root.style.setProperty('--vv-bottom', bottom + 'px');
     // visualViewport shrinks for the URL bar AND for the keyboard, so raw
     // shrinkage alone would read a tall bottom URL bar as a keyboard and
     // float the tab bar up over empty space. Requiring a focused text field
@@ -990,6 +1018,8 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
 
   if(vv){
     vv.addEventListener('resize', syncViewport);
+    // the pan changes without any resize, so it has to be watched separately
+    vv.addEventListener('scroll', syncViewport);
     vv.addEventListener('scroll', syncViewport);
   }
   if(window.addEventListener) window.addEventListener('orientationchange', syncViewport);
@@ -1192,9 +1222,34 @@ function syncTextureTools(resetToDefaults){
       d === 'accent1' ? $('accent1ColorHex').value
       : d === 'accent2' ? $('accent2ColorHex').value
       : (d || fallback);
+    tintBySystem = true;
     setColorField('textureTint1Hex', resolve(defs[0], '#7A2B2B'));
     if(caps.tints >= 2) setColorField('textureTint2Hex', resolve(defs[1], '#8A6A3C'));
+    tintBySystem = false;
+    // a freshly defaulted tint follows its source until you pick one by hand
+    tintFollows[0] = tintFollows[1] = true;
   }
+}
+
+/**
+ * Re-derives any tint that defaults to an accent, when that accent changes.
+ * Skipped for a tint you have locked, and for one you have set by hand —
+ * picking a colour yourself is the signal that it should stay put.
+ */
+function followAccents(){
+  const caps = capsFor($('textureType').value);
+  const defs = caps.tintDefaults || [];
+  const ids = ['textureTint1Hex', 'textureTint2Hex'];
+  let changed = false;
+  for(let i = 0; i < Math.min(caps.tints || 0, 2); i++){
+    const src = defs[i] === 'accent1' ? 'accent1ColorHex' : defs[i] === 'accent2' ? 'accent2ColorHex' : null;
+    if(!src || !tintFollows[i] || locked.has(ids[i])) continue;
+    tintBySystem = true;
+    setColorField(ids[i], $(src).value);
+    tintBySystem = false;
+    changed = true;
+  }
+  if(changed) scheduleRender();
 }
 
 // The light pad is a compass, not a slider: eight directions around a centre,
@@ -1217,8 +1272,9 @@ if($('lightPad') && $('lightPad').addEventListener){
   });
 }
 $('textureBlend').addEventListener('change', scheduleRender);
-bindColorField('textureTint1Hex', scheduleRender);
-bindColorField('textureTint2Hex', scheduleRender);
+// choosing a tint yourself stops it following the accents
+bindColorField('textureTint1Hex', ()=>{ if(!tintBySystem) tintFollows[0] = false; scheduleRender(); });
+bindColorField('textureTint2Hex', ()=>{ if(!tintBySystem) tintFollows[1] = false; scheduleRender(); });
 
 // ---------- locks ----------
 // A locked control survives Randomize and preset changes. Rather than
@@ -1449,6 +1505,41 @@ $('vignetteNoise').addEventListener('input', scheduleRender);
 // every data-str element takes its text from the table in strings.js
 applyStrings(document);
 
+// ---------- the moon, in three places ----------
+// Tonight's real moon, small, at the left of the header — an easter egg.
+{
+  const hm = $('headerMoon');
+  if(hm){
+    const p = moonPhase(new Date());
+    hm.innerHTML = moonGlyph(p, { size: 17 });
+    hm.title = phaseName(p) + ' tonight';
+  }
+}
+// The opacity slider's thumb waxes with the value: new at 0%, full at 100%.
+// Opacity already is a phase.
+function paintOpacityMoon(){
+  const el = $('textureOpacity');
+  if(!el || !el.style) return;
+  const v = Math.max(0, Math.min(100, +el.value || 0)) / 100;
+  el.style.setProperty('--moon-thumb', moonGlyphURI(v * 0.5, { lit: '#efc3cf', rim: '#efc3cf' }));
+}
+// The seed button shows the phase the Fractal Moon will take for this seed,
+// so rerolling is watching the moon turn.
+function paintSeedMoon(){
+  const b = $('textureSeedReroll');
+  if(!b) return;
+  const p = moonForSeed(parseInt($('textureSeedValue').value, 10) || 0);
+  b.innerHTML = moonGlyph(p, { size: 20 });
+  b.title = 'Reroll · ' + phaseName(p);
+}
+if($('textureOpacity').addEventListener){
+  $('textureOpacity').addEventListener('input', paintOpacityMoon);
+  $('textureSeedValue').addEventListener('input', paintSeedMoon);
+  $('textureSeedReroll').addEventListener('click', ()=> setTimeout(paintSeedMoon, 0));
+}
+paintOpacityMoon();
+paintSeedMoon();
+
 // ---------- theme ----------  (see theme.js)
 if($('uiTheme') && $('uiTheme').addEventListener){
   $('uiTheme').addEventListener('change', ()=> applyTheme($('uiTheme').value));
@@ -1550,5 +1641,11 @@ function remeasureAndRender(){
   render();
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(remeasureAndRender);
+// Textures that draw alchemical glyphs (transmutation circles) must not keep
+// a copy generated before the symbol font arrived — it would be empty boxes.
+if(document.fonts && document.fonts.load){
+  document.fonts.load('32px "Noto Sans Symbols"', '\u{1F701}')
+    .then(()=>{ clearTextureCache(); scheduleRender(); }).catch(()=>{});
+}
 setTimeout(remeasureAndRender, 300);
 setTimeout(remeasureAndRender, 900);

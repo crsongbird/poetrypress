@@ -797,19 +797,19 @@ export function render(){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2, blend), 0, 0);
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color, invert, seed, p1, p2, light, tint1, tint2), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, accent1Color, accent2Color, invert, seed, p1, p2, light, tint1, tint2, blend), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, null, null, invert, seed, p1, p2, light, tint1, tint2, blend), 0, 0);
       ctx.restore();
     }
   }
@@ -1124,9 +1124,10 @@ export function render(){
   ctx.textBaseline = isTop ? 'alphabetic' : 'top';
   ctx.textAlign = isRight ? 'left' : 'right';
   ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-  // Noto Sans Symbols 2 carries these code points; the UI face almost
+  // Noto Sans Symbols (the first one) carries the alchemical block — 66 of
+  // the 67 glyphs; Symbols 2 has only one of them. The UI face almost
   // certainly does not, hence the explicit stack rather than the poem's font
-  const spellFont = `${spellSize}px "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif`;
+  const spellFont = `${spellSize}px "Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif`;
   const spX = isRight ? (W*0.035) : (W - W*0.035);
   const spY = isTop ? (H - H*0.025) : (H*0.025);
   ctx.font = spellFont;

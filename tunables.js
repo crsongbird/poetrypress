@@ -90,3 +90,8 @@ export const SPELLS = {
    *  changing the wrapper logic in spell.js too. */
   segments: 3,
 };
+
+// ---------- sharing ----------
+/** Where a shared-spell link points when the app is not being served from
+ *  its own https address (opened as a local file, say). */
+export const SHARE_HOME = 'https://poetrypress.unfixable.place/';

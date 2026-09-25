@@ -1,48 +1,61 @@
 # Unfixable Vellum — open issues
 
-## Features
+Design language: `DESIGN.md`. Building, testing, deploying: `README.md`.
+This file holds only what is still open.
 
-**Per-texture tint for monochrome textures.** Sigils, Summoning, Cartomancy,
-Hatch etc. are `tints: 0` with disabled pickers. Real colour means each
-generator consuming it; a post-hoc colorize would stain the neutral ground.
+## Decisions for Ruby
 
-**Texture-by-texture evaluation.** Needs its own session.
+**Element balance.** Whimsy has 9 textures; Sharpness, Chaos and Touch have 8.
+Equal weight was the rule: retire one Whimsy texture (First Snow was called
+redundant), or relax the rule?
 
-**Arcane Guidance body text.** The PML reference itself is still plain and
-instructional. May want to stay that way — decide before rewriting.
+## Needs checking on a phone
 
-## Possible backport
+Built and tested here, but only a real phone in Chrome can confirm:
+- the tab bar stays above the keyboard, with no gap (follows the visible
+  bottom edge, including Chrome's pan over an overlaid keyboard)
+- the colour picker: themed, right-aligned, Done dismisses the keyboard,
+  no scrollbars, and opening it no longer summons the keyboard
+- less padding at the top and bottom of the controls
+- the texture panel: light pad left, a thin rule, fields at full width
+- the moon in the header, on the opacity thumb, and on the reroll button
+- installing from the site (the app icon, offline use)
 
-Landscape now uses a two-column split (preview | divider | controls) driven by
-the same `--preview-frac` as portrait. If it reads well on a tablet, the
-desktop layout could adopt the same draggable divider — desktop is already two
-columns but the split is fixed.
+## Next
 
-## Editor follow-ups
+**appEvents.js's stateful core.** The canvas, alignment, stop counts and lock
+set are shared mutable variables. Splitting the file further needs that state
+gathered into one object first — a design change, not a move.
 
-- bracket-pair matching under the caret
-- per-wrap-row glyph (a gutter `⤶` stands in for it now)
+**Editor:** a glyph per wrapped row (a gutter `⤶` stands in for it now).
 
-## Editor invariants — do not break
+## Later
 
-Focus mode has exactly ONE scroller: `.controls`. The editor must not become
-a scroll box; nesting scrollers inside flex items requires every ancestor to
-agree to shrink below its content, and when one refuses the last lines become
-unreachable.
+**Layering textures.** A stack of surfaces, each with its own blend,
+reorderable by drag and drop, with its own UI. Design texture code on the
+assumption that one texture per page will go away.
 
-Mirror and textarea must shape text identically: no ligatures, no kerning, no
-per-line block boxes, no font-weight changes, no hanging indent. Any of these
-desynchronises the caret from the visible text.
+**Landscape layout.** Complete, parked behind a `min-width: 4000px` no device
+reaches. Reconsider on a laptop.
 
-Anything the settings serializer reads must be declared ABOVE it — it runs
-during boot, and a `const` below it is still in its temporal dead zone. This
-has bitten twice.
+## Invariants
 
-All three are test-guarded.
+Each is explained where it lives in the code and guarded by a test; this is
+the index.
 
-## Fixed constraints
-
-Dark mode only. 🜚 = Touch, also the Return glyph. Touch stays 7 textures /
-4 presets. Oxblood allowed in Sealed. Minimal animation. Bottom-bar symbols
-are hand-drawn scratchy: every stroke gone over two or three times with small
-offsets, never clean vector. Spells are stored, never derived.
+- Typeface effects never move text or change its measured width.
+- Focus mode has exactly one scroller: `.controls`.
+- The editor mirror shapes text exactly as the textarea does.
+- The bundle puts every module after what it imports; top-level names are
+  unique across modules.
+- Anything the settings serializer reads is declared above it.
+- The preview's focus guard exempts anything interactive inside it.
+- The theme lives in its own storage key, never in settings or spells.
+- A spell is a look: never `poemText`, `locks`, `highlight` or `username`.
+- Mechanically saved controls go in the `PERSISTED` table; shipped key names
+  and value types are frozen.
+- `applyStrings` replaces an element's own text only.
+- A property repeated inside one CSS block is a fallback; never dedupe it.
+- Existing PML parses identically forever; its golden fixture is never
+  regenerated. Every PML field is copied in `buildLines`'s rebuild.
+- Texture fingerprints change only on purpose (`--update`).

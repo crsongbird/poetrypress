@@ -108,32 +108,48 @@ Emoji inside a coloured span are tinted to match.
 ## Development
 
 ```
-sh test.sh              # parse everything, build, run every suite
-node build.mjs          # bundle to dist/index.html
-node test/<name>.test.mjs
+sh test.sh                 # parse every module, build, parse the bundle, run every suite
+node build.mjs             # build dist/
+node build.mjs --zip       # build, then archive the whole project for GitHub
+python3 tools/icons.py     # redraw the nav glyphs, the sigil and the app icons
+node tools/look.mjs ...    # render textures with a real canvas, to SEE them
+                           #   (needs: npm install @napi-rs/canvas)
 ```
+
+Don't trust `node --check` on these files: with no `package.json` declaring
+modules, it passes broken files that contain `export`. `sh check.sh file.js`
+does a genuine parse.
+
+**Deploying:** upload the whole `dist/` folder — the page, `sw.js`,
+`manifest.webmanifest` and `icons/`. The service worker must be its own file,
+so the page alone won't install or work offline. To move the entire project
+(sources, tests, tools, docs) into the GitHub repo with its folders intact,
+use the archive from `node build.mjs --zip`, in `release/`.
+
+**Where to change things by hand:** `strings.js` holds every user-facing
+string (markup carries `data-str="key"`); `tunables.js` the numbers and the
+default preset; `appOptions.js` fonts, presets, aspect ratios and size limits.
 
 | File | Contents |
 |---|---|
 | `index.html` | markup |
 | `poetrypress.css` | styles |
-| `tunables.js` | hand-editable numbers |
-| `strings.js` | hand-editable text |
+| `tunables.js` · `strings.js` | hand-editable numbers · text |
 | `appOptions.js` | typefaces, presets, aspect ratios |
 | `textParsers.js` | PML parser |
 | `spell.js` | glyph spells |
-| `texCore.js` | noise, colour mixing, seeded random |
+| `moon.js` | moon phase and moon glyphs |
+| `texCore.js` | noise, colour mixing, seeded random, blend neutrals, tints |
 | `texWhimsy.js` `texSharpness.js` `texChaos.js` `texTouch.js` | texture generators, by element |
 | `textureGenerators.js` | texture tables, cache and dispatch |
 | `canvasRenderer.js` | rendering |
-| `palette.js` | colour picker suggestions |
-| `swatches.js` | painted preset tiles |
-| `theme.js` | UI theme |
+| `palette.js` · `swatches.js` · `theme.js` | picker suggestions · preset tiles · UI theme |
 | `editor.js` | syntax highlighting |
-| `vault.js` | Spellcrafting and Grimoire storage |
+| `vault.js` | Spellcrafting, the Grimoire, sharing |
+| `pwa.js` · `pwa/` · `icons/` | the installable app |
 | `appEvents.js` | UI wiring, entry point |
-
-Edit the modules; deploy `dist/index.html`. Twenty-seven test suites in [`test/`](./test), no dependencies.
+| `tools/` | icon generator, texture previewer |
+| `test/` | 29 suites, no dependencies |
 
 See [OPEN-ISSUES.md](./OPEN-ISSUES.md) for known gaps and constraints.
 

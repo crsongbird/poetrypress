@@ -86,8 +86,9 @@ export const PRESETS = [
     text1: "#FFF0FA",
     outlineMode: "off",
     font: "Poppins",
-    texture: true, textureType: "magicparticles", textureOpacity: 30, texP1: 170, texP2: 140,
-    accent1: "#FF6FD8", accent2: "#7B5CFF"
+    texture: true, textureType: "magicparticles", textureOpacity: 80, texP1: 280, texP2: 85,
+    accent1: "#FF6FD8", accent2: "#7B5CFF",
+    textureBlend: 'color-dodge'
   },
   { name: "Sleepwalk",
     spell: "🜾[[🜹🜣🜌✡🜦🜺]]{{🜁⚸☊🜮🜘⛧🜖🜅⚻🜶}}",
@@ -106,9 +107,10 @@ export const PRESETS = [
     text1: "#0D1017",
     outlineMode: "off",
     font: "EB Garamond",
-    texture: true, textureType: "grain", textureOpacity: 24, texP1: 160, texP2: 110,
+    texture: true, textureType: "tessellate", textureOpacity: 100, texP1: 100, texP2: 0,
     accent1: "#9AA3B0", accent2: "#C9A227",
-    border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12
+    border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12,
+    textureBlend: 'overlay'
   },
   { name: "December",
     spell: "{{☋🜫🜄⚸🜥}}🜢🜟🜹🜞[[🜯🜃🜛🜈🜌🝓🜾🜂]]",
@@ -137,7 +139,8 @@ export const PRESETS = [
     outlineMode: "off",
     font: "Cormorant Garamond",
     texture: true, textureType: "flowers", textureOpacity: 95, texP1: 210, texP2: 45,
-    accent1: "#C4708F", accent2: "#8FA88C"
+    accent1: "#C4708F", accent2: "#8FA88C",
+    textureBlend: 'hard-light'
   },
 
   // ---- CHAOS ----  sigils, math-noise, geometry twisting where reality thins
@@ -165,11 +168,13 @@ export const PRESETS = [
     text1: "#E8FFF6",
     outlineMode: "off",
     font: "Space Mono",
-    texture: true, textureType: "tessellate", textureOpacity: 30, texP1: 150, texP2: 160,
+    texture: true, textureType: "summoning", textureOpacity: 30, texP1: 160, texP2: 90,
     accent1: "#3DF5A0", accent2: "#5AC8FF",
     border: true, borderColor: "#3DF5A0", borderThickness: 7, borderOffset: 26,
     borderGradient: true, borderColor2: "#5AC8FF", borderColor3: "#B8FFE4",
-    borderBloom: 82
+    borderBloom: 82,
+    textureBlend: 'screen',
+    textureTint1: '#3DF5A0'
   },
   { name: "Hourglass",
     spell: "🜍🜉🜔🜨🜥✡✝🜟🜄🜆{{🜱🜾🜼⚼⛧}}[[🜈🝊]]",

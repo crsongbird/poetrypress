@@ -283,7 +283,6 @@ body.is-mobile .controls {
   max-height: none;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--tabbar-h) + 20px);
 }
 
 /* one panel at a time */
@@ -349,7 +348,7 @@ body.is-mobile select,
 body.is-mobile textarea { font-size: clamp(14px, 3.5vw, 16px); }
 
 /* the picker must clear the tab bar and the download button */
-body.is-mobile #clr-picker { z-index: 80; }
+body.is-mobile #clr-picker { }
 body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(11px, 2.9vw, 13px); }
 
 
@@ -628,7 +627,7 @@ body.is-mobile .tab-btn.active svg{
 body.is-mobile .tab-ico-glyph{
   display:flex; align-items:center; justify-content:center;
   font-size:17px; line-height:1; color:#C9B8FF;
-  font-family:"Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;
+  font-family:"Noto Sans Symbols","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;
 }
 
 /* ---------- PML editor ----------
@@ -886,8 +885,12 @@ body.is-mobile.focus-mode .editor-toggle{ display:none; }
    ============================================================ */
 body.is-mobile .app{ height:var(--vvh); height:100dvh; }
 body.is-mobile .tabbar{
+  /* a chain, in one block, most capable last:
+     --vvh (measured) -> dvh -> --vv-bottom, the visible bottom edge including
+     Chrome's pan over an overlaid keyboard */
   top:calc(var(--vvh) - var(--tabbar-h));
   top:calc(100dvh - var(--tabbar-h));
+  top:calc(var(--vv-bottom, 100dvh) - var(--tabbar-h));
 }
 /* (superseded: the download button is positioned inside the preview frame) */
 body.is-mobile .stage{ max-height:calc(100dvh * 0.66); }
@@ -1161,19 +1164,20 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
 :root[data-theme="rose"]{
   /* Faded Rosewood — 161414 · 2D2A2A · 6C5E5F · C68892 · E5D3D5 —
      with the two pinks kept from the earlier palette */
-  --bg-deep:#161414;
-  --bg-panel:#1d1a1a;
-  --bg-panel-2:#2D2A2A;
-  --bg-card:#221f1f;
-  --line:#3d3637;
+  --bg-deep:#0f0d0d;
+  --bg-panel:#171414;
+  --bg-panel-2:#262222;
+  --bg-card:#1b1818;
+  --line:#3a3233;
   --text-main:#E5D3D5;
   --text-dim:#a3979a;         /* 6C5E5F lifted: as body text it would fail contrast */
-  --accent:#d9a6b3;           /* kept */
-  --accent-dim:#C68892;
+  --accent:#e79cb1;           /* kept */
+  --accent-dim:#cc7f94;
   --rose:#C68892;
-  --ui-violet:#efc3cf;        /* kept */
+  --ui-violet:#f3b3c6;        /* kept */
   --on-accent:#161414;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
+  --ui-selected:#ff7fa6;
 }
 
 /* Aether — the original. */
@@ -1191,6 +1195,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --ui-violet:#C9B8FF;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><g fill='white' opacity='0.5'><circle cx='12' cy='20' r='1'/><circle cx='58' cy='9' r='.8'/><circle cx='77' cy='52' r='1.1'/><circle cx='33' cy='66' r='.9'/><circle cx='68' cy='80' r='.7'/></g></svg>");
   --on-accent:#1a1610;
+  --ui-selected:#a97cff;
 }
 
 /* Fathom — deep water. */
@@ -1208,6 +1213,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --ui-violet:#7FB5D4;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><g stroke='white' stroke-width='1' fill='none' opacity='0.5'><path d='M0 30 Q35 20 70 30 T140 30'/><path d='M0 78 Q35 68 70 78 T140 78'/><path d='M0 124 Q35 114 70 124 T140 124'/></g></svg>");
   --on-accent:#06201c;
+  --ui-selected:#3fc4ff;
 }
 
 /* Vellum — light. It exists. */
@@ -1225,6 +1231,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --ui-violet:#6C5AA6;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='p'><feTurbulence baseFrequency='0.7' numOctaves='2'/></filter><rect width='100' height='100' filter='url(%23p)' opacity='0.5'/></svg>");
   --on-accent:#fbf4ee;
+  --ui-selected:#8f2f6c;
 }
 
 /* the theme's surface, faint, behind everything */
@@ -1242,7 +1249,7 @@ body::before{
 
 /* nav glyphs follow the theme's accent violet rather than a fixed one */
 body.is-mobile .tab-btn svg{ color:color-mix(in srgb, var(--ui-violet) 72%, var(--text-dim)); }
-body.is-mobile .tab-btn.active svg{ color:var(--ui-violet); }
+body.is-mobile .tab-btn.active svg{ }
 
 /* ---------- a little less padding throughout ---------- */
 .card{ padding:9px 10px; }
@@ -1265,7 +1272,7 @@ body.is-mobile .tabbar{
   border-top:1px solid var(--line);
 }
 body.is-mobile .tab-btn{ color:color-mix(in srgb, var(--text-dim) 78%, transparent); }
-body.is-mobile .tab-btn.active{ color:var(--text-main); }
+body.is-mobile .tab-btn.active{ }
 body.is-mobile .app-header{
   background:color-mix(in srgb, var(--bg-panel) 96%, transparent);
   border-bottom:1px solid var(--line);
@@ -1283,7 +1290,6 @@ body.is-mobile.focus-mode .drag-handle{
    takes the left column and the fields stack to its right. */
 body.is-mobile .tool-row{
   display:grid;
-  grid-template-columns:auto minmax(0,1fr);
   gap:6px 10px;
   align-items:start;
 }
@@ -1304,13 +1310,9 @@ body.is-mobile .tool-row .light-pad button{ font-size:16px; }
    tab bar, however the layout shifts. */
 body.is-mobile #clr-picker{
   position:fixed !important;
-  left:50% !important;
-  right:auto !important;
   top:auto !important;
   bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px) !important;
-  transform:translateX(-50%);
   max-height:calc(100dvh - var(--tabbar-h) - 24px);
-  overflow-y:auto;
   z-index:90;
 }
 
@@ -1326,3 +1328,148 @@ body.is-mobile #clr-picker{
 
 /* the Vellum sigil beside the title — the diamond, drawn in whimsy */
 .vellum-sigil{ width:1.15em; height:1.15em; vertical-align:-0.2em; margin-left:.12em; }
+
+
+/* ---------- texture seed: wide enough to read a ten-digit seed ---------- */
+.field:has(> #textureSeedValue){ flex:1 1 auto; min-width:0; }
+#textureSeedValue{ width:100%; min-width:12ch; font-variant-numeric:tabular-nums; }
+
+/* ---------- the colour picker, in the app's own theme ----------
+   Coloris ships its own light and dark skins; these override both with the
+   current theme's variables, so the picker changes with the theme. */
+#clr-picker.clr-picker{
+  background:var(--bg-panel) !important;
+  border:1px solid var(--line) !important;
+  box-shadow:0 14px 34px rgba(0,0,0,0.5) !important;
+  color:var(--text-main);
+}
+#clr-picker #clr-color-value{
+  background:var(--bg-panel-2) !important;
+  color:var(--text-main) !important;
+  border:1px solid var(--line) !important;
+  font-family:"JetBrains Mono", ui-monospace, monospace;
+}
+#clr-picker .clr-swatches button{ box-shadow:0 0 0 1px var(--line); }
+#clr-picker .clr-close{
+  background:var(--accent) !important;
+  color:var(--on-accent, #161414) !important;
+  border:0 !important; border-radius:2px;
+  font-family:'Playfair Display', serif; letter-spacing:.03em;
+  padding:6px 14px; cursor:pointer;
+}
+#clr-picker .clr-hue, #clr-picker .clr-gradient{ border-radius:2px; }
+
+/* on a phone: pinned to the right edge, above the keyboard and the bar */
+body.is-mobile #clr-picker{
+  left:auto !important;
+  right:8px !important;
+  transform:none !important;
+}
+
+/* ---------- the moon ---------- */
+.moon-glyph{ display:inline-block; vertical-align:middle; color:var(--ui-violet, var(--accent)); }
+.header-moon{ justify-content:flex-start; opacity:.85; }
+.app-header .kofi-link{ display:flex; align-items:center; }
+
+/* the opacity thumb is a moon that waxes with the value */
+#textureOpacity::-webkit-slider-thumb{
+  background:var(--moon-thumb) center / 100% 100% no-repeat, var(--bg-deep) !important;
+  border:0 !important; border-radius:50%; width:22px; height:22px;
+}
+#textureOpacity::-moz-range-thumb{
+  background:var(--moon-thumb) center / 100% 100% no-repeat, var(--bg-deep);
+  border:0; border-radius:50%; width:22px; height:22px;
+}
+
+/* the seed button: the phase this seed's moon will take */
+.seed-moon{ flex:0 0 auto; width:40px !important; padding:0 !important; display:flex;
+  align-items:center; justify-content:center; color:var(--ui-violet, var(--accent)); }
+
+/* ---------- Grimoire rows ---------- */
+.grimoire-list{
+  max-height:12.5em; overflow-y:auto; border:1px solid var(--line);
+  background:var(--bg-panel-2); border-radius:2px;
+}
+.grimoire-row{
+  display:flex; align-items:center; gap:8px; padding:6px 8px;
+  cursor:pointer; border-bottom:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  font-size:13px; line-height:1.3;
+}
+.grimoire-row:last-child{ border-bottom:0; }
+.grimoire-row .moon-glyph{ flex:0 0 auto; }
+.grimoire-row .grimoire-text{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.grimoire-row.selected{ background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--text-main); }
+
+/* ---------- texture tools on a phone: pad left, fields right ----------
+   The fields were squeezed beside the pad: labels collided with their "n/a",
+   hex boxes clipped, and the seed ran out of room. The pad keeps its own
+   column; everything else takes the rest, full width, behind a faint rule. */
+@media (orientation: portrait){
+  body.is-mobile .tool-row{
+    grid-template-columns:auto minmax(0,1fr);
+    column-gap:0; row-gap:4px;
+  }
+  body.is-mobile .tool-row > #lightRow{ padding-right:12px; }
+  body.is-mobile .tool-row > .field:not(#lightRow){
+    border-left:1px solid color-mix(in srgb, var(--line) 80%, transparent);
+    padding-left:12px; min-width:0;
+  }
+  body.is-mobile .tool-row .field label{
+    display:flex; align-items:center; gap:4px; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; font-size:11px;
+  }
+  body.is-mobile .tool-row input[type="text"]{ width:100%; min-width:0; }
+  body.is-mobile .tool-row .row{ display:flex; gap:6px; align-items:stretch; }
+  body.is-mobile .tool-row .row .field{ flex:1 1 auto; min-width:0; }
+  body.is-mobile #textureSeedValue{ min-width:0; }
+}
+
+
+/* ============================================================
+   Round of mobile polish
+   ============================================================ */
+
+/* the selected tab is the most saturated thing on screen, in every theme */
+body.is-mobile .tab-btn.active svg{ color:var(--ui-selected, var(--ui-violet)); }
+body.is-mobile .tab-btn.active{ color:var(--ui-selected, var(--text-main)); }
+
+/* padding: none above the controls (the drag handle already separates them),
+   and at the bottom only enough to clear the floating tab bar */
+body.is-mobile .controls{ padding-top:0; padding-bottom:calc(var(--tabbar-h) + 6px); }
+
+/* header: the moon at the left, Ko-fi centred vertically at the right */
+body.is-mobile .app-header{ align-items:center; }
+.app-header .kofi-link{ align-self:center; line-height:1; }
+.header-moon{ display:flex; align-items:center; color:var(--text-dim); }
+.header-moon .moon-glyph{ opacity:.8; }
+
+/* slider readouts: quieter, and closer to their sliders */
+.field .range-val{ display:block; text-align:right; font-size:11px; line-height:1.1;
+                   margin:1px 0 0; opacity:.62; }
+#textureOpacity{ width:100%; }
+
+/* the colour picker: no scrollbars from sub-pixel rounding */
+#clr-picker{ overflow:hidden !important; }
+body.is-mobile #clr-picker{ overflow-y:auto !important; overflow-x:hidden !important;
+                            scrollbar-width:none; }
+body.is-mobile #clr-picker::-webkit-scrollbar{ display:none; }
+
+/* the texture tools on a phone: the light pad on the left, a quiet rule,
+   and the hue and seed fields stacked on the right at full width */
+body.is-mobile .tool-row{ grid-template-columns:auto minmax(0,1fr); column-gap:12px; }
+body.is-mobile .tool-row > #lightRow{
+  padding-right:12px;
+  border-right:1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  align-self:stretch;
+}
+body.is-mobile .tool-row > .field:not(#lightRow){ min-width:0; }
+body.is-mobile .tool-row > .field label{
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+}
+body.is-mobile .tool-row .color-row,
+body.is-mobile .tool-row .row{ display:flex; gap:6px; width:100%; min-width:0; }
+body.is-mobile .tool-row .color-row input[type="text"],
+body.is-mobile .tool-row .row .field{ flex:1 1 auto; min-width:0; }
+body.is-mobile .tool-row #textureSeedValue{ min-width:0; width:100%; }
+#textureSeedReroll{ display:flex; align-items:center; justify-content:center;
+                    min-width:40px; padding:0 8px !important; color:var(--accent); }

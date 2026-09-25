@@ -24,7 +24,9 @@
 
 import { SPELLS } from './tunables.js';
 
-/** The only glyphs considered safe to render. Noto Sans Symbols 2 covers these. */
+/** The only glyphs considered safe to render. Noto Sans Symbols covers 66 of
+ *  these and Symbols 2 the last; both are loaded. (For a long time only
+ *  Symbols 2 was, and spells relied on the system having the other.) */
 export const GLYPHS = [
   "🜁","🜂","🜃","🜄","🜅","🜆","🜇","🜈","🜉","🜊","🜋","🜌","🜍","🜎",
   "🜔","🜕","🜖","🜗","🜘","🜙","🜚","🜛","🜜","🜝","🜞","🜟","🜠","🜢",
@@ -165,3 +167,6 @@ export function spellForSeed(seed){
   };
   return generateSpell(rand);
 }
+
+/** The font stack for drawing glyphs anywhere: the alchemical block first. */
+export const GLYPH_FONT = '"Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif';

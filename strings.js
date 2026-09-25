@@ -26,7 +26,7 @@ export const UI_STRINGS = {
   // ---- card ----
   'card.incantation_editor_poetic_magick_l': "Incantation Editor (Poetic Magick Language)",
   'card.arcane_guidance_pml_syntax':       "Arcane Guidance (PML Syntax)",
-  'card.form_amp_bearing':                 "Form &amp; Bearing",
+  'card.form_amp_bearing':                 "Form & Bearing",
   'card.known_rituals':                    "Known Rituals",
   'card.script_options':                   "Script Options",
   'card.typeface_effects':                 "Typeface Effects",
@@ -48,9 +48,9 @@ export const UI_STRINGS = {
   // ---- button ----
   'button.randomFontBtn':                  "⟳ Summon New Typeface",
   'button.randomBgBtn':                    "⟳ Summon New Backdrop",
-  'button.textureSeedReroll':              "⟳ Reroll",
   'button.spellCreateBtn':                 "Create",
   'button.spellApplyBtn':                  "Invoke",
+  'button.spellShareBtn':                     "Share",
   'button.spellDeleteBtn':                 "Dissolve",
   'button.spellExportBtn':                 "Export JSON",
   'button.spellImportBtn':                 "Import JSON",
@@ -129,6 +129,11 @@ export const UI_STRINGS = {
   'label.theme':                               "Theme",
 
   // ---- options ----
+  'option.landscape':                         "Painted Landscape",
+  'option.cityscape':                         "Night City",
+  'option.blackhole':                         "Black Hole",
+  'option.scrying_pool':                      "Scrying Pool",
+  'option.fractal_moon':                      "Fractal Moon",
   'label.typeface_effect':                    "Typeface Effect",
   'label.effect_strength':                    "Effect Strength",
   'label.effect_hue':                         "Effect Hue",
@@ -157,20 +162,20 @@ export const UI_STRINGS = {
   'option.sleep_haze':                         "Sleep Haze",
   'option.dream_bloom':                        "Dream Bloom",
   'option.deep_field':                         "Deep Field",
-  'option.euphoria_dust':                      "Euphoria Dust",
-  'option.burning_mana':                       "Burning Mana",
+  'option.euphoria_dust':                      "Pixie Dust",
+  'option.burning_mana':                       "Sparkler",
   'option.first_snow':                         "First Snow",
   'option.aurora_veil':                        "Aurora Veil",
   'option.waking_grain':                       "Waking Grain",
   'option.metal_leaf':                         "Metal Leaf",
   'option.lotus_pond':                         "Lotus Pond",
   'option.painter_s_frustration':              "Painter's Frustration",
-  'option.90s_dots':                           "90s Dots",
-  'option.still_rain':                         "Still Rain",
+  'option.90s_dots':                           "Retro Dots",
+  'option.still_rain':                         "Harsh Rain",
   'option.silverpoint_hatch':                  "Silverpoint Hatch",
   'option.sigil_scatter':                      "Sigil Scatter",
   'option.enochian_noise':                     "Enochian Noise",
-  'option.summoning_circles':                  "Summoning Circles",
+  'option.summoning_circles':                  "Transmutation Circles",
   'option.rorschach_test':                     "Rorschach Test",
   'option.fractured_glaze':                    "Fractured Glaze",
   'option.facet_field':                        "Facet Field",
@@ -181,7 +186,7 @@ export const UI_STRINGS = {
   'option.fold_ghost':                         "Fold Ghost",
   'option.cup_ring':                           "Cup Ring",
   'option.poured_wax':                         "Poured Wax",
-  'option.raked_substrate':                    "Raked Substrate",
+  'option.raked_substrate':                    "Zen Garden",
   'option.overlay':                            "Overlay",
   'option.color_burn':                         "Color Burn",
   'option.color_dodge':                        "Color Dodge",
@@ -197,6 +202,21 @@ export const UI_STRINGS = {
  * is about — a spell's name, a poem's title.
  */
 export const DIALOGS = {
+  shareSpell: {
+    title: 'Share \u201C{name}\u201D',
+    bodyCopied: 'The link is copied. Anyone who opens it can add this spell to their own Esoterica — only this one, not your whole list.',
+    bodyManual: 'Copy this link. Anyone who opens it can add this spell to their own Esoterica — only this one, not your whole list.',
+    confirm: 'Done',
+  },
+  receiveSpell: {
+    title: 'A spell for you: \u201C{name}\u201D',
+    body: 'Someone shared this look. Add it to your Esoterica? Your own spells are untouched either way.',
+    confirm: 'Add Spell',
+  },
+  shareBroken: {
+    title: 'That spell did not survive the trip',
+    body: 'The link was cut short or changed along the way, so there was nothing to add. Ask for it again.',
+  },
   spellCreate: {
     title: 'Keep this look?',
     body: 'Give it a name. Only the look is saved — the poem itself belongs in the Grimoire.',
