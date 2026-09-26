@@ -380,10 +380,34 @@ function parseSegmentedLine(content){
   }
   return parts;
 }
+/** A horizontal rule line, or null. Directives in <---...> may be separated
+ *  by / (as in all PML) or \ (a rule has nothing to escape). */
+export function parseRule(t, accent1On, accent2On){
+  if(t === '---') return { color: null, width: 1, align: 'c' };
+  if(t === '[---]') return { color: accent1On ? 'accent1' : null, width: 1, align: 'c' };
+  if(t === '{---}') return { color: accent2On ? 'accent2' : null, width: 1, align: 'c' };
+  const m = /^<(\[---\]|\{---\}|---)((?:[\/\\][^\/\\>]+)*)>$/.exec(t);
+  if(!m) return null;
+  const rule = { color: m[1] === '[---]' && accent1On ? 'accent1' : m[1] === '{---}' && accent2On ? 'accent2' : null, width: 1, align: 'c' };
+  for(const d of m[2].split(/[\/\\]/).filter(Boolean)){
+    const dl = d.trim().toLowerCase();
+    if(/^\d+(\.\d+)?%$/.test(dl)) rule.width = Math.max(0.02, Math.min(1, parseFloat(dl)/100));
+    else if(dl === 'l' || dl === 'c' || dl === 'r') rule.align = dl;
+    else if(dl.startsWith('#:')) rule.customColor = '#' + d.trim().slice(2);
+  }
+  return rule;
+}
+
 export function buildLines(rawText, accent1On, accent2On){
   const rawLines = rawText.replace(/\r\n/g,'\n').split('\n');
   return rawLines.map(rawLine=>{
     if(rawLine === '') return {isBlank:true};
+    // a horizontal rule: ---, [---] or {---} for the accents, or a segment
+    // <---/50%/c> with a width, an alignment (l c r) and a colour (#:hex).
+    // It is a blank line that carries a rule, so layout gives it a blank
+    // line's height and it never affects how the text is sized.
+    const rule = parseRule(rawLine.trim(), accent1On, accent2On);
+    if(rule) return {isBlank:true, rule};
     const line = applyEscapes(rawLine);
 
     let type='normal', scale=1, content=line, dropCap=false, smallCaps=false;

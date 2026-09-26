@@ -1483,3 +1483,14 @@ body.is-mobile .tool-row #textureSeedValue{ width:100%; min-width:0; box-sizing:
 #clrPointer[hidden]{ display:none; }
 #clrPointer[data-dir="up"]{ border-bottom:13px solid var(--ui-selected, var(--accent)); margin-top:-13px; }
 #clrPointer[data-dir="down"]{ border-top:13px solid var(--ui-selected, var(--accent)); }
+
+/* The texture tools span the WHOLE panel. The panel lays its children out in
+   two columns (.subblock.open), and this row sat in one of them — about half
+   the width — which squeezed the hue and seed fields to a sliver on phones.
+   (Earlier fixes widened the fields within that sliver; the row was the cause.) */
+.subblock.open > .tool-row{ grid-column:1/-1; }
+
+/* undo ☋ and redo ☊, beside the reset button */
+#undoBtn{ left:48px; } #redoBtn{ left:89px; }
+body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
+.history-btn:disabled{ opacity:0.2; cursor:default; }

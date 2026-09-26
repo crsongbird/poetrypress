@@ -31,10 +31,15 @@
  *                       Unicode name: fire water air earth gold salt sulfur
  *                       black-moon-lilith … (see GLYPH_BY_NAME in spell.js)
  *   §Spell              the current look's glyph spell
+ *   §SpellName          the name of the preset or saved spell last applied
  *   §Font               the typeface
  *   §Canvas             the page size, e.g. 3072×3072
  *   §TypeEffect         the typeface effect, or none
  *   §Today              today's date
+ *   §RenderMs           how long the last render took, in milliseconds
+ *   §CacheMB            memory held by the texture cache, in megabytes
+ *   §Fonts              how many typeface families have been fetched
+ *   §Build              which build this is (stamped by build.mjs)
  *
  * `code` — backticks mark a code segment: its PML prints literally, its
  * §Variables resolve except §Glyph and §MoonPhase, and it is drawn in a
@@ -42,6 +47,9 @@
  */
 import { glyphChar, moonChar } from './glyphs.js';
 import { GLYPH_BY_NAME } from './spell.js';
+
+// stamped with the build's date and hash by build.mjs; 'dev' when unbuilt
+export const BUILD = '__BUILD_STAMP__';
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
 const TOKEN = /(\\?)§([A-Za-z]+)(?:!([A-Za-z0-9_-]+)|:(-?\d*\.?\d+))?/g;
@@ -65,7 +73,9 @@ export function resolvePmlVariables(text, ctx){
       case 'TextureSeed':   return String(ctx.seed);
       case 'SurfParamsA':
         return [...(ctx.params || []).map(p => `${p.label}: [${p.value}]`),
-                `Opacity: [${ctx.opacity}%] {§MoonPhase!opacity}`].join('  ');
+                `Opacity: [${ctx.opacity}%] {§MoonPhase!opacity}`,
+                // the third, unusual knob — shown raw, since its meaning is the texture's own
+                ...(ctx.hidden != null ? [`Hidden Value: [${ctx.hidden}]`] : [])].join('  ');
       case 'SurfParamsB':
         return (ctx.hues || []).length
           ? ctx.hues.map(h => `${h.label}: <${h.hex}/#:${h.hex.replace('#', '')}>`).join('  ')
@@ -85,9 +95,14 @@ export function resolvePmlVariables(text, ctx){
         return glyphChar(k) || (k !== 'touch' && ELEMENTS[k]) || GLYPH_BY_NAME[k] || null;
       }
       case 'Spell':      return ctx.spell || '';
+      case 'SpellName':  return ctx.spellName || 'Unnamed Look';
       case 'Font':       return ctx.font;
       case 'Canvas':     return ctx.canvas;
       case 'TypeEffect': return ctx.typeEffect;
+      case 'RenderMs':   return ctx.renderMs == null ? '' : String(ctx.renderMs);
+      case 'CacheMB':    return ctx.cacheMB == null ? '' : String(ctx.cacheMB);
+      case 'Fonts':      return ctx.fonts == null ? '' : String(ctx.fonts);
+      case 'Build':      return BUILD;
       case 'Today':      return new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       default:           return null;
     }

@@ -52,14 +52,38 @@ export function paintPresetSwatch(canvas, p, w, h){
     } catch(e){ /* a swatch is never worth failing a render over */ }
   }
 
-  // border
+  // the inset box and the border, scaled down from the page: both share one
+  // rounded rectangle, the box beneath and the border stroked on its edge
+  const bw = Math.max(1.5, Math.round(h * SWATCH.borderScale));
+  const inset = bw * 1.6;
+  const radius = p.borderRounded ? Math.min(h * 0.28, (parseFloat(p.borderRadius) || 60) * h / 900) : 0;
+  const frame = () => {
+    const x = inset, y = inset, fw = w - inset*2, fh = h - inset*2, r = Math.min(radius, fw/2, fh/2);
+    c.beginPath();
+    c.moveTo(x + r, y); c.lineTo(x + fw - r, y); c.arcTo(x + fw, y, x + fw, y + r, r);
+    c.lineTo(x + fw, y + fh - r); c.arcTo(x + fw, y + fh, x + fw - r, y + fh, r);
+    c.lineTo(x + r, y + fh); c.arcTo(x, y + fh, x, y + fh - r, r);
+    c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
+  };
+  if(p.cardToggle){
+    c.save();
+    frame();
+    c.globalAlpha = Math.max(0, Math.min(100, parseFloat(p.cardOpacity ?? 70))) / 100;
+    c.globalCompositeOperation = p.cardBlend || 'source-over';
+    if(p.cardGradientToggle && p.cardColor2){
+      const g = c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, p.cardColor1 || '#FFF6EE'); g.addColorStop(1, p.cardColor2);
+      c.fillStyle = g;
+    } else c.fillStyle = p.cardColor1 || '#FFF6EE';
+    c.fill();
+    c.restore();
+  }
   if(p.border && p.borderColor){
+    c.save();
     c.strokeStyle = p.borderColor;
-    c.lineWidth = Math.max(1.5, Math.round(h * SWATCH.borderScale));
-    // half the stroke sits outside the path, so inset by at least that much
-    // or the top and bottom edges fall off the canvas
-    const inset = c.lineWidth;
-    c.strokeRect(inset, inset, w - inset*2, h - inset*2);
+    c.lineWidth = bw;
+    frame(); c.stroke();
+    c.restore();
   }
 
   // glyphs, in the preset's own accents, at the size the swatch allows

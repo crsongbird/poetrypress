@@ -5,6 +5,17 @@
  * conversions the generators share. No texture lives here.
  */
 
+/**
+ * Context options for every texture canvas: willReadFrequently keeps the
+ * canvas in ordinary memory instead of on the GPU. Texture work reads pixels
+ * back (tints, blend remaps, pixel-built textures), and on a GPU canvas each
+ * read copies a whole 3072×3072 image off the graphics card and back. Chrome
+ * puts canvases on the GPU by default — Firefox does not — and on a phone
+ * those round trips were crashing the GPU. The visible preview stays on the
+ * GPU, where drawing is fast; only these offscreen working canvases move.
+ */
+export const CPU = { willReadFrequently: true };
+
 export function makeNoiseGrid(gw, gh){
   const g = new Float32Array(gw*gh);
   for(let i=0;i<g.length;i++) g[i] = Math.random();
@@ -88,62 +99,54 @@ export function blendFamily(blend){
 }
 
 /**
- * Moves a grey-ground texture's neutral to the neutral of the blend it will be
- * drawn with. Grey textures are built around 128, which is "no change" only for
- * the overlay family; drawn through multiply or color-burn that grey darkens
- * the entire page (the Rorschach going black), and through screen it washes it
- * out. After the remap, 128 becomes white or black, and only the marks act.
- * Alpha is untouched, so transparent areas stay transparent.
+ * The tint and the blend remap, in ONE pass over ONE canvas — the texture's
+ * own, modified in place. They used to be two steps, each copying the whole
+ * 3072px texture to a new canvas first; that was up to ~75 MB of short-lived
+ * memory per texture change. The texture here was just generated and is not
+ * cached yet, so changing it in place is safe.
+ *
+ * TINT: light marks move toward the light hue, dark marks toward the dark
+ * hue; the exactly-mid ground is left alone. White and black are the
+ * identity, so nothing changes until a hue is chosen.
+ * REMAP: a grey ground is only "no change" for the overlay family. For
+ * multiply-type blends 128 becomes white, for screen-type blends black, so
+ * only the marks act (the Rorschach once blackened the page through burn).
  */
-export function remapNeutral(src, family){
-  if(family === 'mid') return src;
-  const out = document.createElement('canvas');
-  out.width = src.width; out.height = src.height;
-  const o = out.getContext('2d');
-  o.drawImage(src, 0, 0);
-  const img = o.getImageData(0, 0, out.width, out.height);
-  const d = img.data;
-  for(let i = 0; i < d.length; i += 4){
-    for(let c = 0; c < 3; c++){
-      const v = d[i + c];
-      d[i + c] = family === 'white'
-        ? (v < 128 ? v * 2 : 255)            // darks stay, grey and lights vanish
-        : (v > 128 ? (v - 128) * 2 : 0);     // lights stay, grey and darks vanish
-    }
-  }
-  o.putImageData(img, 0, 0);
-  return out;
-}
-
-/**
- * Tints a monochrome texture with TWO colours: light marks move toward the
- * light hue, dark marks toward the dark hue, and the exactly-mid ground is
- * left alone. The defaults are white and black, which move every mark toward
- * the value it already has — the untinted texture — so nothing changes until
- * a hue is chosen. (Lotus Pond's white and dark blooms each take their own.)
- */
-export function tintMarks(src, lightHex, darkHex){
+export function pixelPass(src, lightHex, darkHex, family){
   const L = mixHex(lightHex || '#FFFFFF', lightHex || '#FFFFFF', 0);
   const D = mixHex(darkHex || '#000000', darkHex || '#000000', 0);
   const lightIsWhite = L.r >= 250 && L.g >= 250 && L.b >= 250;
   const darkIsBlack = D.r <= 5 && D.g <= 5 && D.b <= 5;
-  if(lightIsWhite && darkIsBlack) return src;                // identity
-  const out = document.createElement('canvas');
-  out.width = src.width; out.height = src.height;
-  const o = out.getContext('2d');
-  o.drawImage(src, 0, 0);
-  const img = o.getImageData(0, 0, out.width, out.height);
+  const tint = !!(lightHex || darkHex) && !(lightIsWhite && darkIsBlack);
+  const remap = family === 'white' || family === 'black';
+  if(!tint && !remap) return src;
+  const o = src.getContext('2d', CPU);
+  const img = o.getImageData(0, 0, src.width, src.height);
   const d = img.data;
   for(let i = 0; i < d.length; i += 4){
-    const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
-    if(v > 128){
-      const k = (v - 128) / 127;
-      d[i] = 128 + k * (L.r - 128); d[i + 1] = 128 + k * (L.g - 128); d[i + 2] = 128 + k * (L.b - 128);
-    } else if(v < 128){
-      const k = (128 - v) / 128;
-      d[i] = 128 + k * (D.r - 128); d[i + 1] = 128 + k * (D.g - 128); d[i + 2] = 128 + k * (D.b - 128);
+    if(tint){
+      const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      if(v > 128){
+        const k = (v - 128) / 127;
+        d[i] = 128 + k * (L.r - 128); d[i + 1] = 128 + k * (L.g - 128); d[i + 2] = 128 + k * (L.b - 128);
+      } else if(v < 128){
+        const k = (128 - v) / 128;
+        d[i] = 128 + k * (D.r - 128); d[i + 1] = 128 + k * (D.g - 128); d[i + 2] = 128 + k * (D.b - 128);
+      }
+    }
+    if(remap){
+      for(let c = 0; c < 3; c++){
+        const v = d[i + c];
+        d[i + c] = family === 'white'
+          ? (v < 128 ? v * 2 : 255)            // darks stay, grey and lights vanish
+          : (v > 128 ? (v - 128) * 2 : 0);     // lights stay, grey and darks vanish
+      }
     }
   }
   o.putImageData(img, 0, 0);
-  return out;
+  return src;
 }
+/** The tint alone (white over black is the identity: if(lightIsWhite && darkIsBlack) return src). */
+export function tintMarks(src, lightHex, darkHex){ return pixelPass(src, lightHex, darkHex, null); }
+/** The remap alone. */
+export function remapNeutral(src, family){ return family === 'mid' ? src : pixelPass(src, null, null, family); }

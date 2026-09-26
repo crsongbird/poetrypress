@@ -5,12 +5,45 @@
  * frustration, silverpoint hatch, metal leaf. (Waking grain is a pixel
  * loop and lives in buildTexture.)
  */
-import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU } from './texCore.js';
 
-export function genFlowers(w,h,amt,zoom,tint1,tint2){
+// The flower's FORM, as keyframes of a few numbers. The Form knob (0–1)
+// blends continuously between neighbours, so every position in between is a
+// real flower too — including ones that don't exist.
+//   n       petals in the outer ring        rings    rings of petals
+//   len     petal length (of the radius)    wide     petal width
+//   round   tip roundness (0 pointed)       notch    a split tip, like cherry
+//   spread  how much of the circle the petals fan across (bell buds fan narrow)
+//   heart   centre size                     seeds    a seeded centre (sunflower)
+//   stamens count, and stamLen their length rib      a pale midrib (day lily)
+//   sepals  share of the outer ring that is green    spiral  rings turn by the golden angle
+//   cluster breaks the bloom into many small florets (hydrangea)
+const FORMS = [
+  { at:0.00, n:5,  rings:1, len:0.82, wide:0.66, round:1.3, notch:0, spread:0.30, heart:0.05, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0.5, spiral:0, cluster:0 }, // bell bud
+  { at:0.25, n:5,  rings:1, len:0.95, wide:0.62, round:1.6, notch:1, spread:1,    heart:0.07, seeds:0, stamens:26, stamLen:0.46, rib:0, sepals:0,   spiral:0, cluster:0 }, // cherry blossom
+  { at:0.38, n:6,  rings:1, len:1.00, wide:0.30, round:0.1, notch:0, spread:1,    heart:0.06, seeds:0, stamens:6,  stamLen:0.72, rib:1, sepals:0,   spiral:0, cluster:0 }, // day lily
+  { at:0.50, n:11, rings:3, len:1.00, wide:0.44, round:0.55,notch:0, spread:1,    heart:0.20, seeds:0, stamens:44, stamLen:0.26, rib:0, sepals:0.6, spiral:0, cluster:0 }, // lotus
+  { at:0.65, n:26, rings:1, len:1.00, wide:0.12, round:0.4, notch:0, spread:1,    heart:0.36, seeds:1, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:0, cluster:0 }, // daisy / sunflower
+  { at:0.82, n:7,  rings:6, len:0.92, wide:0.52, round:1.8, notch:0, spread:1,    heart:0.05, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:1, cluster:0 }, // rosette
+  { at:1.00, n:4,  rings:1, len:0.90, wide:0.62, round:1.4, notch:0, spread:1,    heart:0.08, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:0, cluster:1 }, // hydrangea
+];
+function formAt(f){
+  f = Math.max(0, Math.min(1, f));
+  let i = 0; while(i < FORMS.length - 2 && f > FORMS[i+1].at) i++;
+  const a = FORMS[i], b = FORMS[i+1], t = (f - a.at) / (b.at - a.at);
+  const s = t*t*(3 - 2*t);                                   // eased, so species hold their shape a little
+  const out = {};
+  for(const k of Object.keys(a)) out[k] = a[k] + (b[k] - a[k])*s;
+  out.n = Math.max(3, Math.round(out.n)); out.rings = Math.max(1, Math.round(out.rings));
+  out.stamens = Math.round(out.stamens);
+  return out;
+}
+
+export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const F=formAt(form==null?0.5:form);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');                              // transparent ground
+  const ctx=c.getContext('2d', CPU);                              // transparent ground
   const unit=Math.min(w,h);
   const A=parseHex(tint1||'#E8739E'), B=parseHex(tint2||'#F2B33D');
   const L=o=>(o.r*0.299+o.g*0.587+o.b*0.114)/255;
@@ -18,12 +51,39 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2){
   const WHITE={r:255,g:255,b:255};
   // Where a colour fades to, by its lightness: a light colour to white, a
   // midtone to a deeper shade of itself, a dark one to a near-black complement.
-  const fadeOf=o=> L(o)>0.6 ? mix(o,WHITE,0.85)
-                 : L(o)>0.28 ? mix(o,{r:0,g:0,b:0},0.55)
-                 : {r:(255-o.r)*0.14, g:(255-o.g)*0.14, b:(255-o.b)*0.14};
+  // The RULE is chosen once, from the Petal Hue itself — not per bloom — so a
+  // small variation can never tip one bloom across the light/midtone line
+  // and fade it toward dark.
+  const fadeRule = L(A)>0.6 ? 'light' : L(A)>0.28 ? 'mid' : 'dark';
+  const fadeOf=o=> fadeRule==='light' ? mix(o,WHITE,0.9)
+                 : fadeRule==='mid' ? mix(o,{r:0,g:0,b:0},0.62)
+                 : {r:(255-o.r)*0.11, g:(255-o.g)*0.11, b:(255-o.b)*0.11};
   // the bright version of a colour, by the same rules
-  const brightOf=o=> L(o)>0.6 ? mix(o,WHITE,0.6) : L(o)>0.28 ? mix(o,WHITE,0.45) : mix({r:255-o.r,g:255-o.g,b:255-o.b},WHITE,0.3);
+  const brightOf=o=> L(o)>0.6 ? mix(o,WHITE,0.66) : L(o)>0.28 ? mix(o,WHITE,0.5) : mix({r:255-o.r,g:255-o.g,b:255-o.b},WHITE,0.34);
+  // a small nudge of hue, saturation and value, so no two blooms are identical
+  const vary=(o,amt)=>{
+    const r=o.r/255,g=o.g/255,b=o.b/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+    let hh=0; if(d){ hh = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; hh/=6; }
+    let ss = mx ? d/mx : 0, vv = mx;
+    // hue moves a few degrees (6% of a hue is ~6°, not 6% of the whole wheel)
+    hh=(hh+(Math.random()-0.5)*2*(11/360)+1)%1; ss=Math.max(0,Math.min(1,ss*(1+(Math.random()-0.5)*2*amt)));
+    vv=Math.max(0,Math.min(1,vv*(1+(Math.random()-0.5)*2*amt)));
+    const i=Math.floor(hh*6), f=hh*6-i, P=vv*(1-ss), Q=vv*(1-f*ss), T=vv*(1-(1-f)*ss);
+    const [rr,gg,bb]=[[vv,T,P],[Q,vv,P],[P,vv,T],[P,Q,vv],[T,P,vv],[vv,P,Q]][i%6];
+    return {r:rr*255,g:gg*255,b:bb*255};
+  };
   const css=(o,a=1)=>`rgba(${o.r|0},${o.g|0},${o.b|0},${a})`;
+  // The sepals' green: the Petal Hue's complement, pulled into the band of
+  // greens (85°–160°), so it always sits opposite the flower and still reads
+  // as leaf. A pink lotus gets a cool green; a yellow one a blue-green.
+  const hueOf=o=>{ const r=o.r/255,g=o.g/255,b=o.b/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+    if(!d) return 0; let hh = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; return ((hh*60)+360)%360; };
+  const fromHSL=(hh,ss,ll)=>{ const c=(1-Math.abs(2*ll-1))*ss, x=c*(1-Math.abs((hh/60)%2-1)), m=ll-c/2;
+    const [r,g,b]=hh<60?[c,x,0]:hh<120?[x,c,0]:hh<180?[0,c,x]:hh<240?[0,x,c]:hh<300?[x,0,c]:[c,0,x];
+    return {r:(r+m)*255, g:(g+m)*255, b:(b+m)*255}; };
+  const greenHue=Math.max(85, Math.min(160, (hueOf(A)+180)%360));
+  const SEPAL=fromHSL(greenHue, 0.42, 0.36), SEPAL_TIP=fromHSL(greenHue, 0.38, 0.55);
+  const WHITE_TIP=o=>mix(o,WHITE,0.9);
 
   // The pond: a few very soft, very wide bands of light lying flat. Not
   // waves, not ripples — just the sense of a still surface.
@@ -38,14 +98,18 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2){
   // and tight (blooms may brush petal tips), largest placed first so small
   // ones fall into the gaps.
   const maxR=unit*0.085*zoom;
-  const target=Math.max(2,Math.round((w*h)/285000*amt));
-  const radii=[]; for(let i=0;i<target;i++) radii.push(maxR*(0.1+Math.pow(Math.random(),1.6)*0.9));
+  // 18 blooms per 100%, at ANY canvas size: bloom size already scales with
+  // the page, so a tile, the preview and the export hold the same flowers.
+  // The Bloom Count readout's base (textureGenerators.js) is the same 18, so
+  // the number shown is the number drawn.
+  const target=Math.max(2,Math.round(18*amt));
+  const radii=[]; for(let i=0;i<target;i++) radii.push(maxR*(0.2+Math.pow(Math.random(),1.6)*0.8));
   radii.sort((a,b)=>b-a);
   const placed=[];
   for(const r of radii){
     for(let tries=0;tries<60;tries++){
       const x=Math.random()*w, y=Math.random()*h;
-      if(placed.some(p=>Math.hypot(p.x-x,p.y-y) < (p.r+r)*0.82)) continue;
+      if(placed.some(p=>Math.hypot(p.x-x,p.y-y) < (p.r+r)*0.85)) continue;
       placed.push({x,y,r}); break;
     }
   }
@@ -57,47 +121,87 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2){
     const [x3,y3]=at(0.72+round*0.12,-(0.92+round*0.18)), [x4,y4]=at(0.18,-1.0);
     // coloured at its base, fading to its tip — the water lily's blush
     const g=ctx.createLinearGradient(cx,cy,tx,ty);
-    g.addColorStop(0,css(base,alpha)); g.addColorStop(0.45,css(base,alpha)); g.addColorStop(1,css(tip,alpha));
+    g.addColorStop(0,css(base,alpha)); g.addColorStop(0.3,css(base,alpha)); g.addColorStop(1,css(tip,alpha));
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.moveTo(cx,cy);
     ctx.bezierCurveTo(x1,y1,x2,y2,tx,ty); ctx.bezierCurveTo(x3,y3,x4,y4,cx,cy); ctx.closePath(); ctx.fill();
     ctx.strokeStyle=css(mix(base,{r:0,g:0,b:0},0.35),alpha*0.35); ctx.lineWidth=Math.max(0.5,len*0.012); ctx.stroke();
   };
 
-  for(const {x:cx,y:cy,r:R} of placed){
+  // one flower of form F, centred at (cx, cy) with radius R
+  const flower=(cx,cy,R,base,tip,F)=>{
     const rot=Math.random()*Math.PI*2;
-    const dark=Math.random()<0.22;                           // a few blooms are the deep kind
-    const base=dark ? mix(A,{r:0,g:0,b:0},0.45) : A;
+    // bell buds fan upward from a base below the centre; open flowers radiate
+    const fan=F.spread<0.999, baseY=cy+R*0.45*(1-F.spread);
+    for(let ri=0; ri<F.rings; ri++){
+      const rt=F.rings>1 ? ri/(F.rings-1) : 0;
+      const scale=1 - ri*(F.rings>3 ? 0.13 : 0.2);
+      const b2=mix(base, mix(base,{r:base.r*0.76,g:base.g*0.5,b:base.b*0.66},0.7), rt);   // deeper inward
+      const n=Math.max(3, Math.round(F.n*(1 - ri*0.1)*(0.8+Math.random()*0.2)));
+      const off=F.spiral ? ri*2.39996*F.spiral : (ri%2)*0.5/n*Math.PI*2;
+      for(let k=0;k<n;k++){
+        const a = fan ? -Math.PI/2 + ((n>1 ? k/(n-1) : 0.5) - 0.5)*Math.PI*2*F.spread*0.5 + (Math.random()-0.5)*0.08
+                      : rot + off + (k/n)*Math.PI*2 + (Math.random()-0.5)*0.12;
+        const len=R*F.len*scale*(0.92+Math.random()*0.16), wide=R*F.wide*scale*(0.9+Math.random()*0.2);
+        const ox=cx, oy=fan ? baseY : cy;
+        const sepal = ri===0 && Math.random()<F.sepals;
+        const pb=sepal ? SEPAL : vary(b2,0.04), pt=sepal ? SEPAL_TIP : WHITE_TIP(pb);
+        if(F.notch>0.05){
+          // a notched tip: two lobes, slightly apart
+          const d=F.notch*0.13;
+          petal(ox,oy,a-d,len,wide*0.62,F.round,pb,pt,0.96);
+          petal(ox,oy,a+d,len,wide*0.62,F.round,pb,pt,0.96);
+        } else petal(ox,oy,a,len*(sepal?0.94:1),wide*(sepal?0.85:1),F.round,pb,pt,0.96);
+        if(F.rib>0.05 && !sepal){
+          ctx.strokeStyle=css(WHITE_TIP(pb),0.55*F.rib); ctx.lineWidth=Math.max(0.6,R*0.012);
+          ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+Math.cos(a)*len*0.82, oy+Math.sin(a)*len*0.82); ctx.stroke();
+        }
+      }
+    }
+    // light falling on the bloom from the upper left
+    const lit=ctx.createRadialGradient(cx-R*0.35,cy-R*0.4,R*0.05,cx-R*0.2,cy-R*0.25,R*1.05);
+    lit.addColorStop(0,'rgba(255,255,255,0.22)'); lit.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=lit; ctx.beginPath(); ctx.arc(cx,cy,R*1.02,0,Math.PI*2); ctx.fill();
+    if(fan && F.spread<0.6) return;                              // a closed bud shows no heart
+    // the heart
+    const hr=R*F.heart;
+    const heart=ctx.createRadialGradient(cx,cy,0,cx,cy,hr);
+    heart.addColorStop(0,css(mix(B,{r:0,g:0,b:0},0.25))); heart.addColorStop(1,css(B));
+    ctx.fillStyle=heart; ctx.beginPath(); ctx.arc(cx,cy,hr,0,Math.PI*2); ctx.fill();
+    // a seeded centre: florets in the golden-angle spiral a sunflower uses
+    if(F.seeds>0.05){
+      const seeds=Math.round(60+hr*0.6), dark=mix(B,{r:0,g:0,b:0},0.55);
+      ctx.fillStyle=css(dark,0.8*F.seeds);
+      for(let k=1;k<seeds;k++){ const rr=hr*0.92*Math.sqrt(k/seeds), aa=k*2.39996;
+        ctx.beginPath(); ctx.arc(cx+Math.cos(aa)*rr, cy+Math.sin(aa)*rr, Math.max(0.5,hr*0.045), 0, Math.PI*2); ctx.fill(); }
+    }
+    // stamens
+    const bright=brightOf(B);
+    ctx.strokeStyle=css(bright,0.95); ctx.lineCap='round';
+    for(let k=0;k<F.stamens;k++){
+      const a=rot+(k/F.stamens)*Math.PI*2+(Math.random()-0.5)*0.08;
+      const r0=hr*0.5, r1=R*(F.stamLen*(0.9+Math.random()*0.2));
+      ctx.lineWidth=Math.max(0.6,R*0.012);
+      ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0); ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke();
+      ctx.fillStyle=css(bright); ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1,Math.max(0.6,R*0.013),0,Math.PI*2); ctx.fill();
+    }
+  };
+
+  for(const {x:cx,y:cy,r:R} of placed){
+    const base=vary(A,0.16);
     const tip=fadeOf(base);
     // its shadow on the water
     const sh=ctx.createRadialGradient(cx+R*0.12,cy+R*0.16,R*0.2,cx+R*0.12,cy+R*0.16,R*1.25);
-    sh.addColorStop(0,'rgba(10,10,14,0.28)'); sh.addColorStop(1,'rgba(10,10,14,0)');
+    sh.addColorStop(0,'rgba(10,10,14,0.34)'); sh.addColorStop(1,'rgba(10,10,14,0)');
     ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(cx+R*0.12,cy+R*0.16,R*1.25,0,Math.PI*2); ctx.fill();
-    // outer petals palest at the tips, inner ones more saturated, as in life
-    const rings=[{n:12,len:1.00,wide:0.30,off:0.0, round:0.35, t:0.0 },
-                 {n:12,len:0.82,wide:0.30,off:0.5, round:0.6,  t:0.25},
-                 {n:10,len:0.62,wide:0.29,off:0.25,round:0.9,  t:0.5 },
-                 {n:8, len:0.44,wide:0.27,off:0.0, round:1.2,  t:0.75}];
-    for(const g of rings){
-      const b2=mix(base, mix(base,{r:base.r*0.8,g:base.g*0.55,b:base.b*0.7},0.6), g.t);   // deeper inward
-      const t2=mix(tip, base, g.t*0.7);
-      for(let k=0;k<g.n;k++) petal(cx,cy,rot+((k+g.off)/g.n)*Math.PI*2,R*g.len,R*g.wide,g.round,b2,t2,0.96);
-    }
-    // the heart, then a crown of bright stamens
-    const heart=ctx.createRadialGradient(cx,cy,0,cx,cy,R*0.2);
-    heart.addColorStop(0,css(mix(B,{r:0,g:0,b:0},0.25))); heart.addColorStop(1,css(B));
-    ctx.fillStyle=heart; ctx.beginPath(); ctx.arc(cx,cy,R*0.2,0,Math.PI*2); ctx.fill();
-    const bright=brightOf(B);
-    ctx.strokeStyle=css(bright,0.95); ctx.lineCap='round';
-    const stamens=36+Math.floor(Math.random()*18);
-    for(let k=0;k<stamens;k++){
-      const a=rot+(k/stamens)*Math.PI*2+(Math.random()-0.5)*0.08;
-      const r0=R*(0.08+Math.random()*0.06), r1=R*(0.24+Math.random()*0.08);
-      ctx.lineWidth=Math.max(0.6,R*0.018);
-      ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
-      ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke();
-      ctx.fillStyle=css(bright); ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1,Math.max(0.6,R*0.014),0,Math.PI*2); ctx.fill();
-    }
+    if(F.cluster>0.02){
+      // the bloom breaks into florets: one at the start, a dome of many at the end
+      const count=Math.round(1+F.cluster*13), fr=R/(1+F.cluster*2.3);
+      for(let k=0;k<count;k++){
+        const rr=(R-fr)*Math.sqrt((k+0.5)/count), aa=k*2.39996;
+        flower(cx+Math.cos(aa)*rr, cy+Math.sin(aa)*rr, fr*(0.85+Math.random()*0.3), vary(base,0.06), tip, F);
+      }
+    } else flower(cx,cy,R,base,tip,F);
   }
   return c;
 }
@@ -113,7 +217,7 @@ export function genHalftone(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
+  const fctx = full.getContext('2d', CPU);
   fctx.fillStyle = 'rgb(205,205,205)';
   fctx.fillRect(0,0,w,h);
 
@@ -145,7 +249,7 @@ export function genRainStreaks(w,h,amt,angle,zoom){
   const slant = ((angle==null?0:angle) * Math.PI) / 180;
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
+  const fctx = full.getContext('2d', CPU);
   fctx.fillStyle='rgb(128,128,128)';
   fctx.fillRect(0,0,w,h);
 
@@ -175,7 +279,7 @@ export function genRainStreaks(w,h,amt,angle,zoom){
 export function genBrushstrokes(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
 
   // Angry paint. Each stroke is a BODY of paint first — an opaque ribbon laid
@@ -286,7 +390,7 @@ export function genSilverpointHatch(w,h,amt,zoom,angle){
   const rad = ((angle==null?35:angle) * Math.PI) / 180;
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -343,7 +447,7 @@ export function genMetalLeaf(w,h,amt,zoom,light,tint){
   const leaf = parseHex(tint || '#D9B45B');
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -393,7 +497,7 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
   // predictable: withSeed(seed, () => Math.random() < 0.1)
   const hasNeedle = Math.random() < 0.1;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
   const unit=Math.min(w,h);
   const win=parseHex(tint1||'#FFE3A8'), wat=parseHex(tint2||'#2E4F6E');

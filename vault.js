@@ -370,7 +370,7 @@ export function createVault(deps){
     const s = spells.find(x => x.name === selectedSpell);
     if(!s) return;
     // the spell's own glyphs travel with its look
-    applySettings(s.spell ? { ...s.settings, spell: s.spell } : s.settings);
+    applySettings(s.spell ? { ...s.settings, spell: s.spell } : s.settings, s.name);
     appliedSpellSnapshot = settingsJson();
     refresh();
   }

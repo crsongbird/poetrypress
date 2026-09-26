@@ -5,7 +5,7 @@
  * blend through soft-light. Linen, cold press, foxing, fold ghost, cup
  * ring, poured wax, raked substrate.
  */
-import { lightVec, parseHex } from './texCore.js';
+import { lightVec, parseHex, CPU } from './texCore.js';
 
 // Thread over thread over
 // thread. Somebody's hands did this
@@ -14,7 +14,7 @@ export function genLinenTooth(w,h,amt,zoom,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const {lx,ly} = lightVec(light);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   const pitch = Math.max(2.5, (Math.max(w,h)/240) * zoom);
@@ -65,7 +65,7 @@ export function genColdPress(w,h,amt,zoom,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const {lx,ly} = lightVec(light);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   // dimples, not grain: each pit gets a lit rim and a shadowed floor, which
@@ -99,7 +99,7 @@ export function genFoxing(w,h,amt,zoom,light,tint){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const t = parseHex(tint || '#8A6A3C');
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   const unit=Math.min(w,h);
@@ -133,7 +133,7 @@ export function genFoldGhost(w,h,amt,zoom,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const {lx,ly}=lightVec(light);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   // Paper that lived in a pocket. A crease seen close is never one line: it
@@ -209,7 +209,7 @@ export function genCupRing(w,h,amt,zoom,light,tint){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const t = parseHex(tint || '#6B4A2F');
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   const unit=Math.min(w,h);
@@ -249,7 +249,7 @@ export function genPouredWax(w,h,amt,zoom,light,tint){
   const {lx,ly}=lightVec(light);
   const t = parseHex(tint || '#7A2B2B');
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   // Real wax is not a pill. It pools unevenly, runs one way before it sets,
@@ -318,7 +318,7 @@ export function genWhorl(w,h,amt,zoom,light,tint1,tint2){
   const stone = lum>0.35 ? {r:sand.r*0.2, g:sand.g*0.2, b:sand.b*0.21}
                          : {r:sand.r+(255-sand.r)*0.78, g:sand.g+(255-sand.g)*0.78, b:sand.b+(255-sand.b)*0.78};
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
 
   // A raked garden. Sand, a few stones, and ONE rake path: rings round each
   // stone that merge where stones sit close, relaxing into gentle parallel
@@ -344,7 +344,7 @@ export function genWhorl(w,h,amt,zoom,light,tint1,tint2){
     const ang=Math.atan2(v,u); return Math.sqrt(u*u+v*v)/(1+0.07*Math.sin(ang*3+t.h1)+0.04*Math.sin(ang*5+t.h2)); };
   const shadowLen=unit*0.02;
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d'); const img=sctx.createImageData(ww,wh), d=img.data;
+  const sctx=small.getContext('2d', CPU); const img=sctx.createImageData(ww,wh), d=img.data;
   const wave=Math.random()*6.28;
   for(let py=0;py<wh;py++) for(let px=0;px<ww;px++){
     let dmin=1e9, inStone=null, qs=9, shade=0;
@@ -382,7 +382,7 @@ export function genWhorl(w,h,amt,zoom,light,tint1,tint2){
   // the sand itself: rounded grains, lit from the light, laid over the whole
   // garden at full resolution from one small tile
   const T=128, tile=document.createElement('canvas'); tile.width=T; tile.height=T;
-  const tc=tile.getContext('2d'), ti=tc.createImageData(T,T), td=ti.data, hgt=new Float32Array(T*T);
+  const tc=tile.getContext('2d', CPU), ti=tc.createImageData(T,T), td=ti.data, hgt=new Float32Array(T*T);
   for(let i=0;i<T*T;i++) hgt[i]=Math.random();
   for(let y=0;y<T;y++) for(let x=0;x<T;x++){
     const at=(xx,yy)=>hgt[((yy+T)%T)*T+((xx+T)%T)];
@@ -407,7 +407,7 @@ export function genWater(w,h,amt,zoom,light){
   amt=(amt==null?0.35:amt); zoom=(zoom==null?1:zoom);
   const {lx,ly}=lightVec(light);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
 
   // Computed at a quarter of full resolution and scaled up: caustics are soft
   // enough that nothing is lost, and it keeps the loop cheap on a phone.
@@ -437,7 +437,7 @@ export function genWater(w,h,amt,zoom,light){
   const sx0=lx*unit*0.04, sy0=ly*unit*0.04;
 
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d');
+  const sctx=small.getContext('2d', CPU);
   const img=sctx.createImageData(ww,wh), dd=img.data;
   for(let py=0;py<wh;py++){
     for(let px=0;px<ww;px++){

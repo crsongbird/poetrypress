@@ -39,6 +39,24 @@ import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
 import { applyStrings, fill, PICKER } from './strings.js';
 
+// ---------- the app's working state, in one place ----------
+/**
+ * Everything the app remembers that the controls themselves don't hold.
+ *   page   the look's own settings that live outside an <input>: alignment
+ *          and aspect (radio groups) and the gradient stop counts
+ *   ui     working flags that are not part of a look
+ *   locks  which controls the person has pinned
+ * One object, so undo can take a snapshot, texture layers can hold more than
+ * one surface, and nothing can read a half-declared variable during boot.
+ */
+const state = {
+  page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2 },
+  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null },
+  locks: new Set(),
+  // undo/redo: look snapshots (see the history section)
+  history: { stack: [], index: -1, restoring: false, timer: null },
+};
+
 // Coloris is loaded from an external CDN (see index.html). Two separate
 // failure modes can happen there, and this guards against both:
 //   1. The CDN fails to load at all (network hiccup, CDN issue) -- Coloris
@@ -84,16 +102,14 @@ safeColoris({
 });
 
 // ---------- lock state ----------
-// Declared up here, not beside the lock UI further down: the settings
-// serializer runs during boot and reads `locked`, and a const is in its
-// temporal dead zone until its declaration is evaluated. Reading it earlier
-// throws — which it did.
+// The lock set itself lives in `state.locks` (top of the file). This is the
+// list of controls that CAN be locked.
 const LOCKABLE = [
   'bgColor1Hex','bgColor2Hex','bgColor3Hex','bgColor4Hex',
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','outlineColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','texP1','texP2','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','texP1','texP2','texP3','textureSeedValue',
   'typeEffect','typeEffectStrength','typeEffectColorHex',
   'typeEffectAngle','typeEffectDistance','typeEffectGrain',
 ];
@@ -109,13 +125,6 @@ const LOCK_GLYPH =
   '<circle cx="12" cy="15.4" r="1.5"/>' +
   '</svg>';
 
-const locked = new Set();
-// whether each texture tint is still following its default source (see followAccents)
-const tintFollows = [true, true];
-// true while the app itself writes a tint. setColorField dispatches 'input',
-// so without this, following an accent would look like a hand-picked tint
-// and switch following off after the very first change.
-let tintBySystem = false;
 // id -> its lock button, so saved lock state can be reflected in the UI
 const lockButtons = new Map();
 
@@ -131,11 +140,6 @@ $('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i} &nbsp;${f.family}`).join('
 
 const canvas = $('poemCanvas');
 const ctx = canvas.getContext('2d');
-let currentAlign = 'left';
-let currentValign = 'center';
-let currentAspect = '1:1';
-let bgStopCount = 2;
-let textStopCount = 2;
 
 function syncStopFields(count, field3Id, field4Id){
   $(field3Id).style.display = count >= 3 ? 'block' : 'none';
@@ -208,8 +212,8 @@ $('vignetteIntensity').addEventListener('input', ()=>{ $('vignetteIntensityVal')
 bindAngle('textGradientAngle','textGradientAngleVal');
 bindAngle('bgGradientAngle','bgGradientAngleVal');
 
-bindRadioGroup('alignGroup', v=>{ currentAlign=v; scheduleRender(); });
-bindRadioGroup('valignGroup', v=>{ currentValign=v; scheduleRender(); });
+bindRadioGroup('alignGroup', v=>{ state.page.align=v; scheduleRender(); });
+bindRadioGroup('valignGroup', v=>{ state.page.valign=v; scheduleRender(); });
 // ---------- page size ----------
 /** Applies a page size, mirroring it into the custom boxes so switching to
  *  Custom starts from whatever you were just looking at. */
@@ -222,7 +226,7 @@ const clampSize = (n) =>
 
 function pickAspect(v){
   if(!ASPECTS[v]) return;
-  currentAspect = v;
+  state.page.aspect = v;
   const [w, h] = ASPECTS[v];
   setPageSize(w, h);
   // the two groups are one choice; clear the other's selection
@@ -237,7 +241,7 @@ function applyCustomSize(){
   const w = clampSize($('customW').value);
   const h = clampSize($('customH').value);
   $('customW').value = w; $('customH').value = h;
-  currentAspect = 'custom';
+  state.page.aspect = 'custom';
   setPageSize(w, h, false);
   scheduleRender();
 }
@@ -245,7 +249,7 @@ function syncCustomSize(){
   const on = $('customSizeToggle').checked;
   if(document.body && document.body.classList) document.body.classList.toggle('custom-size', on);
   if(on) applyCustomSize();
-  else if(ASPECTS[currentAspect]) pickAspect(currentAspect);
+  else if(ASPECTS[state.page.aspect]) pickAspect(state.page.aspect);
   else pickAspect('1:1');
 }
 $('customSizeToggle').addEventListener('change', syncCustomSize);
@@ -253,23 +257,23 @@ $('customSizeToggle').addEventListener('change', syncCustomSize);
   if($('customSizeToggle').checked) applyCustomSize();
 }));
 bindRadioGroup('bgStopsGroup', v=>{
-  bgStopCount = parseInt(v,10);
-  syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
+  state.page.bgStops = parseInt(v,10);
+  syncStopFields(state.page.bgStops, 'bgColor3Field', 'bgColor4Field');
   scheduleRender();
 });
 bindRadioGroup('textStopsGroup', v=>{
-  textStopCount = parseInt(v,10);
-  syncStopFields(textStopCount, 'textColor3Field', 'textColor4Field');
+  state.page.textStops = parseInt(v,10);
+  syncStopFields(state.page.textStops, 'textColor3Field', 'textColor4Field');
   scheduleRender();
 });
 
 $('textureType').addEventListener('change', scheduleRender);
-$('textureOpacity').addEventListener('input', ()=>{ paintOpacityMoon(); scheduleRender(); });
+$('textureOpacity').addEventListener('input', ()=>{ paintMoons(); scheduleRender(); });
 
 function randomSeed(){ return Math.floor(Math.random()*2**31); }
 function maybeRerollSeed(explicitSeed){
   // the seed field's lock is the one control for this now
-  if(locked.has('textureSeedValue')) return;
+  if(state.locks.has('textureSeedValue')) return;
   $('textureSeedValue').value = (explicitSeed !== undefined) ? explicitSeed : randomSeed();
 }
 $('textureSeedValue').addEventListener('input', scheduleRender);
@@ -294,16 +298,9 @@ syncOutlineFields();
 });
 $('usernameCorner').addEventListener('change', scheduleRender);
 
-// Typing fires far more often than any other input in this app, and a full
-// DSL reparse + autofit search on every keystroke is real, avoidable work.
-// Debounce specifically here rather than everywhere -- sliders and color
-// pickers feel worse with any added delay, since people expect those to
-// track their input directly; scheduleRender's rAF-coalescing alone is
-// enough for those.
-let poemTextDebounceTimer = null;
 $('poemText').addEventListener('input', ()=>{
-  clearTimeout(poemTextDebounceTimer);
-  poemTextDebounceTimer = setTimeout(scheduleRender, 150);
+  clearTimeout(state.ui.poemTimer);
+  state.ui.poemTimer = setTimeout(scheduleRender, 150);
 });
 
 $('lineSpacing').addEventListener('input', ()=>{
@@ -357,7 +354,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
-    paintOpacityMoon();
+    paintMoons();
   }
 
   const borderOn = Math.random() < 0.4;
@@ -443,6 +440,24 @@ $('downloadBtn').addEventListener('click', ()=>{
  * in serializeCurrentSettings and restoreSettings below.
  */
 const PERSISTED = [
+  ['bgGradientType',       'bgGradientType',       'text'],
+  ['bgRadialX',            'bgRadialX',            'text', '%'],
+  ['bgRadialY',            'bgRadialY',            'text', '%'],
+  ['bgRadialR',            'bgRadialR',            'text', '%'],
+  ['borderGrain',          'borderGrain',          'text', '%'],
+  ['borderRounded',        'borderRounded',        'check'],
+  ['borderRadius',         'borderRadius',         'text', 'px'],
+  ['cardToggle',           'cardToggle',           'check'],
+  ['cardColor1',           'cardColor1Hex',        'color'],
+  ['cardGradientToggle',   'cardGradientToggle',   'check'],
+  ['cardColor2',           'cardColor2Hex',        'color'],
+  ['cardGradientType',     'cardGradientType',     'text'],
+  ['cardGradientAngle',    'cardGradientAngle',    'text', '°'],
+  ['cardOpacity',          'cardOpacity',          'text'],
+  ['cardBlend',            'cardBlend',            'text'],
+  ['borderBlend',          'borderBlend',          'text'],
+  ['borderGradientAngle',  'borderGradientAngle',  'text', '°'],
+  ['borderBloomBlend',     'borderBloomBlend',     'text'],
   ['borderGradientToggle', 'borderGradientToggle', 'check'],
   ['borderColor2',         'borderColor2Hex',      'color'],
   ['borderColor3',         'borderColor3Hex',      'color'],
@@ -489,15 +504,15 @@ function serializeCurrentSettings(){
     bg1: $('bgColor1Hex').value,
     bgGradient: $('bgGradientToggle').checked,
     bg2: $('bgColor2Hex').value,
-    bg3: bgStopCount>=3 ? $('bgColor3Hex').value : undefined,
-    bg4: bgStopCount>=4 ? $('bgColor4Hex').value : undefined,
+    bg3: state.page.bgStops>=3 ? $('bgColor3Hex').value : undefined,
+    bg4: state.page.bgStops>=4 ? $('bgColor4Hex').value : undefined,
     bgAngle: parseFloat($('bgGradientAngle').value),
 
     text1: $('textColorHex').value,
     textGradient: $('textGradientToggle').checked,
     text2: $('textColor2Hex').value,
-    text3: textStopCount>=3 ? $('textColor3Hex').value : undefined,
-    text4: textStopCount>=4 ? $('textColor4Hex').value : undefined,
+    text3: state.page.textStops>=3 ? $('textColor3Hex').value : undefined,
+    text4: state.page.textStops>=4 ? $('textColor4Hex').value : undefined,
     textAngle: parseFloat($('textGradientAngle').value),
 
     font: FONTS[fontSelect.value].family,
@@ -521,13 +536,14 @@ function serializeCurrentSettings(){
     spell: $('activeSpell').value,
     highlight: $('highlightToggle') ? $('highlightToggle').checked : true,
     // which controls the user has pinned against Randomize and presets
-    locks: Array.from(locked),
+    locks: Array.from(state.locks),
     textureBlend: $('textureBlend').value,
     textureLight: $('textureLight').value,
     textureTint1: $('textureTint1Hex').value,
     textureTint2: $('textureTint2Hex').value,
     texP1: $('texP1').value,
     texP2: $('texP2').value,
+    texP3: $('texP3').value,
     textureOpacity: parseFloat($('textureOpacity').value),
     textureSeed: parseInt($('textureSeedValue').value, 10),
 
@@ -540,9 +556,9 @@ function serializeCurrentSettings(){
     vignetteBlend: $('vignetteBlend').value,
     vignetteIntensity: parseFloat($('vignetteIntensity').value),
 
-    align: currentAlign,
-    valign: currentValign,
-    aspect: currentAspect,
+    align: state.page.align,
+    valign: state.page.valign,
+    aspect: state.page.aspect,
     customSize: $('customSizeToggle').checked,
     customW: $('customW').value,
     customH: $('customH').value,
@@ -561,9 +577,9 @@ function restoreSettings(s){
   if(s.bg2) setColorField('bgColor2Hex', s.bg2);
   if(s.bg3) setColorField('bgColor3Hex', s.bg3);
   if(s.bg4) setColorField('bgColor4Hex', s.bg4);
-  bgStopCount = s.bg4 ? 4 : (s.bg3 ? 3 : 2);
-  syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
-  setActiveRadioValue('bgStopsGroup', bgStopCount);
+  state.page.bgStops = s.bg4 ? 4 : (s.bg3 ? 3 : 2);
+  syncStopFields(state.page.bgStops, 'bgColor3Field', 'bgColor4Field');
+  setActiveRadioValue('bgStopsGroup', state.page.bgStops);
   if(s.bgAngle!==undefined){ $('bgGradientAngle').value=s.bgAngle; $('bgGradientAngleVal').textContent=s.bgAngle+'°'; }
 
   if(s.text1) setColorField('textColorHex', s.text1);
@@ -572,9 +588,9 @@ function restoreSettings(s){
   if(s.text2) setColorField('textColor2Hex', s.text2);
   if(s.text3) setColorField('textColor3Hex', s.text3);
   if(s.text4) setColorField('textColor4Hex', s.text4);
-  textStopCount = s.text4 ? 4 : (s.text3 ? 3 : 2);
-  syncStopFields(textStopCount, 'textColor3Field', 'textColor4Field');
-  setActiveRadioValue('textStopsGroup', textStopCount);
+  state.page.textStops = s.text4 ? 4 : (s.text3 ? 3 : 2);
+  syncStopFields(state.page.textStops, 'textColor3Field', 'textColor4Field');
+  setActiveRadioValue('textStopsGroup', state.page.textStops);
   if(s.textAngle!==undefined){ $('textGradientAngle').value=s.textAngle; $('textGradientAngleVal').textContent=s.textAngle+'°'; }
 
   if(s.font){ const idx = FONTS.findIndex(f=>f.family===s.font); if(idx>=0) fontSelect.value = idx; }
@@ -604,6 +620,7 @@ function restoreSettings(s){
   syncTextureTools(true);
   // the mechanical controls, from the PERSISTED table
   applyPersisted(s);
+  if(typeof refreshReadouts === 'function'){ refreshReadouts(); syncFrameVisibility(); }
   if(s.spell !== undefined) $('activeSpell').value = s.spell;
   if(s.highlight !== undefined && $('highlightToggle')){
     $('highlightToggle').checked = !!s.highlight;
@@ -616,8 +633,9 @@ function restoreSettings(s){
   if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
   if(s.texP2 !== undefined) $('texP2').value = s.texP2;
+  if(s.texP3 !== undefined) $('texP3').value = s.texP3;
   syncTextureParams(false);
-  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintOpacityMoon(); }
+  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
 
   $('borderToggle').checked = !!s.border;
@@ -631,8 +649,8 @@ function restoreSettings(s){
   if(s.vignetteBlend) $('vignetteBlend').value = s.vignetteBlend;
   if(s.vignetteIntensity!==undefined){ $('vignetteIntensity').value=s.vignetteIntensity; $('vignetteIntensityVal').textContent=s.vignetteIntensity+'%'; }
 
-  if(s.align){ currentAlign=s.align; setActiveRadioValue('alignGroup', s.align); }
-  if(s.valign){ currentValign=s.valign; setActiveRadioValue('valignGroup', s.valign); }
+  if(s.align){ state.page.align=s.align; setActiveRadioValue('alignGroup', s.align); }
+  if(s.valign){ state.page.valign=s.valign; setActiveRadioValue('valignGroup', s.valign); }
   if((s.customSize || s.aspect === 'custom') && s.customW && s.customH){
     $('customSizeToggle').checked = true;
     $('customW').value = clampSize(s.customW);
@@ -649,7 +667,7 @@ function restoreSettings(s){
   if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
   scheduleRender();
-  paintOpacityMoon();
+  paintMoons();
   paintSeedMoon();
 }
 
@@ -723,6 +741,7 @@ function renderSavedPresets(saved){
     presetGrid.appendChild(presetTile(shot, ()=>{
       // the same filter as applying from Esoterica — a spell is a look
       restoreSettings(stripToLook(Object.assign({}, rec.settings, { spell: rec.spell })));
+      if(document.body && document.body.dataset) document.body.dataset.lookName = rec.name || '';
       scheduleRender();
     }, 'preset-custom'));
   }
@@ -739,9 +758,8 @@ function renderSavedPresets(saved){
   }
 }
 
-let currentThemePalette = [];
 function applyThemePalette(colors){
-  currentThemePalette = colors;
+  state.ui.palette = colors;
   safeColoris({ swatches: colors });
 }
 
@@ -759,13 +777,6 @@ document.addEventListener('close', (e)=>{
   if(active && active.blur && (active.id === 'clr-color-value' || active === t)) active.blur();
 });
 
-// ---------- the picker points at the field it is editing ----------
-// An accessibility aid: while the colour picker is open, the field it is
-// editing is ringed in the theme's selection colour, and the picker grows a
-// speech-bubble tail pointing at it. On a phone the picker docks at the
-// bottom of the screen, far from the field, so the field is first scrolled
-// into view above it — a pointer at a hidden field would help no one.
-let pickingField = null;
 const rafOr = f => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(f) : setTimeout(f, 0));
 function pickerPointer(){
   let el = document.getElementById && document.getElementById('clrPointer');
@@ -787,8 +798,8 @@ function aimPointer(){
   const picker = document.getElementById && document.getElementById('clr-picker');
   const ptr = pickerPointer();
   if(!ptr) return;
-  if(!picker || !pickingField || !picker.getBoundingClientRect || !pickingField.getBoundingClientRect){ ptr.hidden = true; return; }
-  const f = pickingField.getBoundingClientRect(), p = picker.getBoundingClientRect();
+  if(!picker || !state.ui.pickingField || !picker.getBoundingClientRect || !state.ui.pickingField.getBoundingClientRect){ ptr.hidden = true; return; }
+  const f = state.ui.pickingField.getBoundingClientRect(), p = picker.getBoundingClientRect();
   const up = f.bottom <= p.top + 2, down = f.top >= p.bottom - 2;
   if(!p.width || (!up && !down)){ ptr.hidden = true; return; }       // beside it: nothing to point at
   const x = Math.max(p.left + 16, Math.min(p.right - 16, f.left + Math.min(f.width, 140) / 2));
@@ -800,8 +811,8 @@ function aimPointer(){
 document.addEventListener('open', (e)=>{
   const t = e.target;
   if(!t || !t.matches || !t.matches('[data-coloris]')) return;
-  if(pickingField) markPicking(pickingField, false);
-  pickingField = t;
+  if(state.ui.pickingField) markPicking(state.ui.pickingField, false);
+  state.ui.pickingField = t;
   markPicking(t, true);
   rafOr(()=>{
     const picker = document.getElementById && document.getElementById('clr-picker');
@@ -819,14 +830,14 @@ document.addEventListener('close', (e)=>{
   const t = e.target;
   if(!t || !t.matches || !t.matches('[data-coloris]')) return;
   markPicking(t, false);
-  if(pickingField === t) pickingField = null;
+  if(state.ui.pickingField === t) state.ui.pickingField = null;
   const ptr = pickerPointer(); if(ptr) ptr.hidden = true;
 });
 // keep the tail on target while things move under it
 if(typeof window !== 'undefined' && window.addEventListener){
-  window.addEventListener('resize', ()=>{ if(pickingField) aimPointer(); });
+  window.addEventListener('resize', ()=>{ if(state.ui.pickingField) aimPointer(); });
 }
-document.addEventListener('scroll', ()=>{ if(pickingField) aimPointer(); }, true);
+document.addEventListener('scroll', ()=>{ if(state.ui.pickingField) aimPointer(); }, true);
 
 // The 16th swatch: the field's own current value, appended as its picker
 // opens, so you can audition the theme's colours and still get back to what
@@ -834,7 +845,7 @@ document.addEventListener('scroll', ()=>{ if(pickingField) aimPointer(); }, true
 // keyboard at the bottom right.)
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
-    safeColoris({ swatches: [...currentThemePalette, e.target.value] });
+    safeColoris({ swatches: [...state.ui.palette, e.target.value] });
   }
 });
 
@@ -850,9 +861,9 @@ function applyPreset(p){
   if(p.bg2) setColorField('bgColor2Hex', p.bg2);
   if(p.bg3) setColorField('bgColor3Hex', p.bg3);
   if(p.bg4) setColorField('bgColor4Hex', p.bg4);
-  bgStopCount = p.bg4 ? 4 : (p.bg3 ? 3 : 2);
-  syncStopFields(bgStopCount, 'bgColor3Field', 'bgColor4Field');
-  setActiveRadioValue('bgStopsGroup', bgStopCount);
+  state.page.bgStops = p.bg4 ? 4 : (p.bg3 ? 3 : 2);
+  syncStopFields(state.page.bgStops, 'bgColor3Field', 'bgColor4Field');
+  setActiveRadioValue('bgStopsGroup', state.page.bgStops);
   if(p.bgAngle!==undefined){ $('bgGradientAngle').value=p.bgAngle; $('bgGradientAngleVal').textContent=p.bgAngle+'°'; }
 
   setColorField('textColorHex', p.text1);
@@ -861,9 +872,9 @@ function applyPreset(p){
   if(p.text2) setColorField('textColor2Hex', p.text2);
   if(p.text3) setColorField('textColor3Hex', p.text3);
   if(p.text4) setColorField('textColor4Hex', p.text4);
-  textStopCount = p.text4 ? 4 : (p.text3 ? 3 : 2);
-  syncStopFields(textStopCount, 'textColor3Field', 'textColor4Field');
-  setActiveRadioValue('textStopsGroup', textStopCount);
+  state.page.textStops = p.text4 ? 4 : (p.text3 ? 3 : 2);
+  syncStopFields(state.page.textStops, 'textColor3Field', 'textColor4Field');
+  setActiveRadioValue('textStopsGroup', state.page.textStops);
   if(p.textAngle!==undefined){ $('textGradientAngle').value=p.textAngle; $('textGradientAngleVal').textContent=p.textAngle+'°'; }
 
   outlineModeSel.value = p.outlineMode || 'off';
@@ -895,8 +906,9 @@ function applyPreset(p){
   syncTextureParams(true);
   if(p.texP1 !== undefined) $('texP1').value = p.texP1;
   if(p.texP2 !== undefined) $('texP2').value = p.texP2;
+  if(p.texP3 !== undefined) $('texP3').value = p.texP3;
   syncTextureParams(false);
-  if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintOpacityMoon(); }
+  if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintMoons(); }
 
   if(p.accent1){ $('accent1Toggle').checked=true; $('accent1Block').classList.add('open'); setColorField('accent1ColorHex', p.accent1); }
   else { $('accent1Toggle').checked=false; $('accent1Block').classList.remove('open'); }
@@ -924,6 +936,10 @@ function applyPreset(p){
     // and tints never leak into the next; then take whatever this preset
     // specifies on top.
     syncTextureTools(true);
+    if(document.body && document.body.dataset) document.body.dataset.lookName = p.name || '';
+    // the frame and box: defaults, then whatever this preset specifies
+    applyPersisted({ ...FRAME_DEFAULTS, ...Object.fromEntries(Object.keys(FRAME_DEFAULTS).filter(k => p[k] !== undefined).map(k => [k, p[k]])) });
+    refreshReadouts(); syncFrameVisibility();
     const pcaps = capsFor($('textureType').value);
     if(p.textureBlend && pcaps.blends.includes(p.textureBlend)) $('textureBlend').value = p.textureBlend;
     if(p.textureTint1) setColorField('textureTint1Hex', p.textureTint1);
@@ -931,7 +947,7 @@ function applyPreset(p){
     syncLightPad();
     restoreLocked(__locks);
     // a preset changes opacity and seed without anyone touching them
-    paintOpacityMoon();
+    paintMoons();
     paintSeedMoon();
   }
 }
@@ -1145,7 +1161,9 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
 // "value 1" -- it says Sigil zoom, or Slant, or Nebula density.
 function syncTextureParams(useDefaults){
   const defs = paramsFor($('textureType').value);
-  [0,1].forEach(i=>{
+  // two knobs for every texture, and a third — Form — for those that declare
+  // one; a knob a texture doesn't have is hidden
+  [0,1,2].forEach(i=>{
     const def = defs[i];
     const row = $('texP'+(i+1)).parentElement;
     const slider = $('texP'+(i+1));
@@ -1165,10 +1183,10 @@ function syncTextureParams(useDefaults){
   });
 }
 
-['texP1','texP2'].forEach(id=>{
+['texP1','texP2','texP3'].forEach(id=>{
   $(id).addEventListener('input', ()=>{
     const defs = paramsFor($('textureType').value);
-    const i = id === 'texP1' ? 0 : 1;
+    const i = +id.slice(4) - 1;
     if(defs[i]) $(id+'Val').textContent = paramReadout(defs[i], +$(id).value);
     scheduleRender();
   });
@@ -1222,12 +1240,12 @@ function syncTextureTools(resetToDefaults){
       d === 'accent1' ? $('accent1ColorHex').value
       : d === 'accent2' ? $('accent2ColorHex').value
       : (d || fallback);
-    tintBySystem = true;
+    state.ui.tintBySystem = true;
     setColorField('textureTint1Hex', resolve(defs[0], '#7A2B2B'));
     if(caps.tints >= 2) setColorField('textureTint2Hex', resolve(defs[1], '#8A6A3C'));
-    tintBySystem = false;
+    state.ui.tintBySystem = false;
     // a freshly defaulted tint follows its source until you pick one by hand
-    tintFollows[0] = tintFollows[1] = true;
+    state.ui.tintFollows[0] = state.ui.tintFollows[1] = true;
   }
 }
 
@@ -1243,10 +1261,10 @@ function followAccents(){
   let changed = false;
   for(let i = 0; i < Math.min(caps.tints || 0, 2); i++){
     const src = defs[i] === 'accent1' ? 'accent1ColorHex' : defs[i] === 'accent2' ? 'accent2ColorHex' : null;
-    if(!src || !tintFollows[i] || locked.has(ids[i])) continue;
-    tintBySystem = true;
+    if(!src || !state.ui.tintFollows[i] || state.locks.has(ids[i])) continue;
+    state.ui.tintBySystem = true;
     setColorField(ids[i], $(src).value);
-    tintBySystem = false;
+    state.ui.tintBySystem = false;
     changed = true;
   }
   if(changed) scheduleRender();
@@ -1273,8 +1291,8 @@ if($('lightPad') && $('lightPad').addEventListener){
 }
 $('textureBlend').addEventListener('change', scheduleRender);
 // choosing a tint yourself stops it following the accents
-bindColorField('textureTint1Hex', ()=>{ if(!tintBySystem) tintFollows[0] = false; scheduleRender(); });
-bindColorField('textureTint2Hex', ()=>{ if(!tintBySystem) tintFollows[1] = false; scheduleRender(); });
+bindColorField('textureTint1Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[0] = false; scheduleRender(); });
+bindColorField('textureTint2Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[1] = false; scheduleRender(); });
 
 // ---------- locks ----------
 // A locked control survives Randomize and preset changes. Rather than
@@ -1318,7 +1336,7 @@ function installLocks(){
     btn.title = 'Lock this — Randomize and presets will leave it alone';
     btn.innerHTML = LOCK_GLYPH;
     const paint = ()=>{
-      const on = locked.has(id);
+      const on = state.locks.has(id);
       btn.classList.toggle('locked', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.title = on ? 'Locked — Randomize and presets leave this alone'
@@ -1327,7 +1345,7 @@ function installLocks(){
       if(field && field.classList) field.classList.toggle('field-locked', on);
     };
     btn.addEventListener('click', ()=>{
-      if(locked.has(id)) locked.delete(id); else locked.add(id);
+      if(state.locks.has(id)) state.locks.delete(id); else state.locks.add(id);
       paint();
     });
     btn._paint = paint;
@@ -1338,14 +1356,14 @@ function installLocks(){
 
 /** Rebuilds the lock set and the buttons' appearance from a saved list. */
 function restoreLockState(ids){
-  locked.clear();
-  for(const id of ids) if(LOCKABLE.includes(id)) locked.add(id);
+  state.locks.clear();
+  for(const id of ids) if(LOCKABLE.includes(id)) state.locks.add(id);
   for(const [, btn] of lockButtons) if(btn._paint) btn._paint();
 }
 
 function snapshotLocked(){
   const snap = {};
-  for(const id of locked){
+  for(const id of state.locks){
     const n = $(id);
     if(n) snap[id] = (n.type === 'checkbox') ? n.checked : n.value;
   }
@@ -1515,17 +1533,59 @@ applyStrings(document);
     hm.title = phaseName(p) + ' tonight';
   }
 }
-// The opacity READOUT is a moon that waxes with the value — new at 0%, full
+// ---------- frame and box controls: readouts, visibility, moons ----------
+const RANGE_UNITS = { borderGradientAngle:'°', bgRadialX:'%', bgRadialY:'%', bgRadialR:'%', borderThickness:'px', borderOffset:'px',
+  borderGrain:'%', borderRadius:'px', cardGradientAngle:'°' };
+function refreshReadouts(){
+  for(const [id, unit] of Object.entries(RANGE_UNITS)){ const el = $(id), out = $(id + 'Val'); if(el && out) out.textContent = el.value + unit; }
+  paintMoons();
+}
+/** Shows each control only when it applies. */
+function syncFrameVisibility(){
+  const show = (id, on) => { const el = $(id); if(el && el.style) el.style.display = on ? '' : 'none'; };
+  const bgType = ($('bgGradientType') || {}).value || 'linear';
+  show('bgAngleField', bgType === 'linear');
+  for(const id of ['bgCenterXField','bgCenterYField','bgRadiusField']) show(id, bgType !== 'linear');
+  show('borderRadiusField', $('borderRounded') && $('borderRounded').checked);
+  // sections open with the class the stylesheet keys on (.subblock.open);
+  // setting display directly loses to that rule
+  const card = $('cardToggle') && $('cardToggle').checked, grad = card && $('cardGradientToggle').checked;
+  if($('cardBlock')) $('cardBlock').classList.toggle('open', !!card);
+  const bgrad = $('borderGradientToggle') && $('borderGradientToggle').checked;
+  show('borderColor2Field', bgrad); show('borderColor3Field', bgrad); show('borderAngleField', bgrad);
+  for(const id of ['cardColor2Field','cardTypeField']) show(id, grad);
+  show('cardAngleField', grad && $('cardGradientType').value === 'linear');
+}
+for(const id of [...Object.keys(RANGE_UNITS), 'bgGradientType', 'borderRounded', 'borderGradientToggle', 'cardToggle', 'cardGradientToggle',
+                 'cardGradientType', 'cardOpacity', 'cardBlend', 'borderBlend', 'borderBloomBlend']){
+  const el = $(id); if(!el || !el.addEventListener) continue;
+  const on = ()=>{ refreshReadouts(); syncFrameVisibility(); scheduleRender(); };
+  el.addEventListener('input', on); el.addEventListener('change', on);
+}
+bindColorField('cardColor1Hex', scheduleRender);
+bindColorField('cardColor2Hex', scheduleRender);
+
+/** Settings a preset doesn't mention start from these, so one preset's box
+ *  or rounded frame never leaks into the next. */
+const FRAME_DEFAULTS = { bgGradientType:'linear', bgRadialX:'50', bgRadialY:'50', bgRadialR:'75', borderGrain:'0',
+  borderRounded:false, borderRadius:'60', cardToggle:false, cardColor1:'#FFF6EE', cardGradientToggle:false,
+  cardColor2:'#F2E2EA', cardGradientType:'linear', cardGradientAngle:'90', cardOpacity:'70', cardBlend:'source-over',
+  borderBlend:'source-over', borderBloomBlend:'source-over', borderGradientAngle:'45' };
+
+// Every opacity READOUT (any slider marked data-moon) is a moon that waxes with the value — new at 0%, full
 // at 100% — in place of a percentage. (It was once drawn on the slider's
 // thumb; styling the thumb makes Chrome and Firefox drop native drawing for
 // the whole slider, which is what turned it into a white box.)
-function paintOpacityMoon(){
-  const el = $('textureOpacity'), out = $('textureOpacityVal');
-  if(!el || !out) return;
-  const pct = Math.max(0, Math.min(100, Math.round(+el.value || 0)));
-  out.innerHTML = moonGlyph(pct / 200, { size: 18 });
-  out.title = pct + '%';
-  if(out.setAttribute) out.setAttribute('aria-label', 'Opacity ' + pct + '%');
+function paintMoons(){
+  const els = document.querySelectorAll ? document.querySelectorAll('input[data-moon]') : [];
+  for(const el of els){
+    const out = $(el.id + 'Val');
+    if(!out) continue;
+    const pct = Math.max(0, Math.min(100, Math.round(+el.value || 0)));
+    out.innerHTML = moonGlyph(pct / 200, { size: 18 });
+    out.title = pct + '%';
+    if(out.setAttribute) out.setAttribute('aria-label', 'Opacity ' + pct + '%');
+  }
 }
 // The seed button shows the phase the Fractal Moon will take for this seed,
 // so rerolling is watching the moon turn.
@@ -1537,11 +1597,13 @@ function paintSeedMoon(){
   b.title = 'Reroll · ' + phaseName(p);
 }
 if($('textureOpacity').addEventListener){
-  $('textureOpacity').addEventListener('input', paintOpacityMoon);
+  $('textureOpacity').addEventListener('input', paintMoons);
   $('textureSeedValue').addEventListener('input', paintSeedMoon);
   $('textureSeedReroll').addEventListener('click', ()=> setTimeout(paintSeedMoon, 0));
 }
-paintOpacityMoon();
+paintMoons();
+refreshReadouts();
+syncFrameVisibility();
 paintSeedMoon();
 
 // ---------- theme ----------  (see theme.js)
@@ -1596,7 +1658,9 @@ function settingsForSpell(){
 const vault = createVault({
   $,
   getSettings: settingsForSpell,
-  applySettings: (settings)=>{ restoreSettings(stripToLook(settings)); scheduleRender(); },
+  applySettings: (settings, name)=>{ restoreSettings(stripToLook(settings));
+    if(name && document.body && document.body.dataset) document.body.dataset.lookName = name;
+    scheduleRender(); },
   getText: ()=> $('poemText').value,
   setText: (t)=>{ $('poemText').value = t; repaintEditor(); },
   onChange: scheduleRender,
@@ -1624,19 +1688,9 @@ applyPreset(defaultPalettePreset);
 // weight/style combo actually used by FONTS, then render once as soon as
 // they're ready (or on a couple of timeout fallbacks, in case a font load
 // event never fires for some reason).
-const fontFaces = [];
-FONTS.forEach(f=>{
-  const combos = new Set([
-    `${f.weight} 40px`,
-    `700 40px`,
-    `italic ${f.weight} 40px`,
-    `italic 700 40px`,
-  ]);
-  combos.forEach(c=>{
-    fontFaces.push(document.fonts.load(`${c} "${f.family}"`).catch(()=>{}));
-  });
-});
-Promise.all(fontFaces).then(render).catch(render);
+// Fonts are fetched on first use now (fonts.js, asked for by the renderer);
+// the first render happens as soon as the page is ready.
+render();
 // The first paint uses fallback metrics, and the fitted size is cached — so
 // once the real fonts land the measurements have to be thrown away, or the
 // page keeps a size that was measured against the wrong typeface.
@@ -1653,3 +1707,64 @@ if(document.fonts && document.fonts.load){
 }
 setTimeout(remeasureAndRender, 300);
 setTimeout(remeasureAndRender, 900);
+
+// ---------- undo ☋ and redo ☊ ----------
+// History is a stack of LOOK snapshots — the same filtered snapshot a saved
+// spell uses, so it covers every setting but never the poem (the text box has
+// its own undo), your locks, or your name. A change is recorded a moment after
+// you stop adjusting, so one slider drag is one step, not one per pixel.
+const HISTORY_MAX = 60;
+function lookSnapshot(){ return JSON.stringify(stripToLook(serializeCurrentSettings())); }
+function paintHistoryButtons(){
+  const h = state.history;
+  if($('undoBtn')) $('undoBtn').disabled = h.index <= 0;
+  if($('redoBtn')) $('redoBtn').disabled = h.index >= h.stack.length - 1;
+}
+function commitHistory(){
+  const h = state.history;
+  if(h.restoring) return;
+  const snap = lookSnapshot();
+  if(h.stack[h.index] === snap) return;                      // nothing actually changed
+  h.stack = h.stack.slice(0, h.index + 1);                   // a new change drops the redo branch
+  h.stack.push(snap);
+  if(h.stack.length > HISTORY_MAX) h.stack.shift();
+  h.index = h.stack.length - 1;
+  paintHistoryButtons();
+}
+function commitSoon(){ clearTimeout(state.history.timer); state.history.timer = setTimeout(commitHistory, 450); }
+function stepHistory(dir){
+  const h = state.history, to = h.index + dir;
+  if(to < 0 || to >= h.stack.length) return;
+  clearTimeout(h.timer);
+  h.index = to; h.restoring = true;
+  try { restoreSettings(JSON.parse(h.stack[to])); } finally { h.restoring = false; }
+  scheduleRender(); paintHistoryButtons();
+}
+if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepHistory(-1));
+if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepHistory(1));
+// any change in the controls — typed, dragged, picked, or a button that
+// rewrites many at once (presets, randomize, spells) — records a step
+const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson']);
+for(const type of ['input', 'change']){
+  document.addEventListener(type, (e)=>{
+    const t = e.target;
+    if(!t || NOT_A_LOOK.has(t.id) || state.history.restoring) return;
+    commitSoon();
+  }, true);
+}
+document.addEventListener('click', (e)=>{
+  const t = e.target && e.target.closest ? e.target.closest('button, .preset-btn, .radio-btn') : null;
+  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn') commitSoon();
+}, true);
+// Ctrl+Z / Ctrl+Shift+Z (and Ctrl+Y), except while typing in a field
+document.addEventListener('keydown', (e)=>{
+  if(!(e.ctrlKey || e.metaKey)) return;
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if(tag === 'TEXTAREA' || tag === 'INPUT') return;
+  const k = (e.key || '').toLowerCase();
+  if(k === 'z'){ e.preventDefault(); stepHistory(e.shiftKey ? 1 : -1); }
+  else if(k === 'y'){ e.preventDefault(); stepHistory(1); }
+});
+
+// the look the page opened on is the first step of history
+commitHistory();

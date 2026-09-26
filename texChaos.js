@@ -5,7 +5,7 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -14,7 +14,7 @@ export function genSigils(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -64,7 +64,7 @@ export function genMathNoise(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -117,7 +117,7 @@ export function genMathNoise(w,h,amt,zoom){
 export function genSummoningCircles(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080'; ctx.fillRect(0,0,w,h);
 
   // Transmutation circles, each assembled from a varied set of parts so no
@@ -288,7 +288,7 @@ export function genInkBleed(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -297,7 +297,7 @@ export function genInkBleed(w,h,amt,zoom){
   // mostly EMPTY paper: one compact figure near the fold, then nothing.
   const half = document.createElement('canvas');
   half.width = Math.max(1, Math.ceil(w/2)); half.height = h;
-  const hx = half.getContext('2d');
+  const hx = half.getContext('2d', CPU);
   const HW = half.width;
   const unit = Math.min(w,h);
 
@@ -361,7 +361,7 @@ export function genCrackedGlaze(w,h,amt,zoom){
   const crackWidth = 0.045;
   const small = document.createElement('canvas');
   small.width=workW; small.height=workH;
-  const sctx = small.getContext('2d');
+  const sctx = small.getContext('2d', CPU);
   const img = sctx.createImageData(workW, workH);
   const d = img.data;
 
@@ -384,7 +384,7 @@ export function genCrackedGlaze(w,h,amt,zoom){
 
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
+  const fctx = full.getContext('2d', CPU);
   fctx.imageSmoothingEnabled = true;
   fctx.drawImage(small,0,0,w,h);
   return full;
@@ -394,7 +394,7 @@ export function genTessellate(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
+  const fctx = full.getContext('2d', CPU);
   fctx.fillStyle='rgb(128,128,128)';
   fctx.fillRect(0,0,w,h);
 
@@ -439,7 +439,7 @@ export function genCartomanticDrift(w,h,amt,zoom,angle){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const scatter=((angle==null?35:angle)*Math.PI)/180;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   // A reading dealt onto the page and half swept away: real cards — rounded
@@ -547,7 +547,7 @@ export function genCartomanticDrift(w,h,amt,zoom,angle){
 export function genBlackHole(w,h,amt,zoom){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   // A black hole, drawn as a gravity simulation rather than a picture of one.

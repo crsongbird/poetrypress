@@ -4,8 +4,8 @@
  * SECTIONS
  *   Emoji helpers        isEmojiCodePoint, segmentHasEmoji — drawTextRun
  *                        uses them to decide whether to tint an emoji
- *   Colour maths         makeGradient (N-stop), hexToHsl / hslToHex,
- *                        watermarkColor (legible against the background),
+ *   Colour maths         makeGradient (N-stop), hexToHsl / hslToHex, paintGradient
+ *                        (linear, radial, rectangular),
  *                        collectGradientColors (reads the stop pickers)
  *   Measuring text       fontString, emphasisTracking (the letter-spacing
  *                        stand-in for fonts without an italic), measureSegWidth
@@ -28,11 +28,12 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, textureCacheMB } from './textureGenerators.js';
 import { resolvePmlVariables } from './pmlVars.js';
 import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs } from './glyphs.js';
+import { ensureFonts, fontsRequested } from './fonts.js';
 import { mixHex } from './texCore.js';
 import { EFFECTS, MARKS } from './tunables.js';
 
@@ -75,6 +76,90 @@ function makeGradient(ctx, w, h, angleDeg, colors){
   return g;
 }
 
+
+// ---------- gradients for the backdrop and the inset box ----------
+/**
+ * Fills a rectangle with a gradient of any shape:
+ *   linear  along an angle across the rectangle (what the backdrop always did)
+ *   radial  circles out from a centre point (cx, cy as 0–1 of the rectangle)
+ *           to a radius (r, as a share of its longer side)
+ *   rect    concentric boxes from that centre — a framed glow, and the basis
+ *           for vignettes that follow the page's shape
+ * The caller sets any clip (rounded corners) beforehand.
+ */
+function hexRgb(h){ const n = parseInt(String(h).replace('#','').slice(0,6), 16); return [n>>16, (n>>8)&255, n&255]; }
+function paintGradient(ctx, x, y, w, h, spec, colors){
+  const stops = colors.length > 1 ? colors : [colors[0], colors[0]];
+  if(spec.type === 'radial'){
+    const cx = x + w*spec.cx, cy = y + h*spec.cy, r = Math.max(w, h)*spec.r;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, r));
+    stops.forEach((c, i) => g.addColorStop(i/(stops.length-1), c));
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  } else if(spec.type === 'rect'){
+    // no native box gradient: computed small and scaled up, which keeps it
+    // smooth and costs a few thousand pixels, not millions
+    const S = 128, small = document.createElement('canvas'); small.width = S; small.height = S;
+    const sx = small.getContext('2d'), img = sx.createImageData(S, S), d = img.data;
+    const rgb = stops.map(hexRgb), n = rgb.length - 1;
+    const hx = Math.max(spec.cx, 1 - spec.cx), hy = Math.max(spec.cy, 1 - spec.cy);
+    for(let py = 0; py < S; py++) for(let px = 0; px < S; px++){
+      const u = (px + 0.5)/S, v = (py + 0.5)/S;
+      let t = Math.max(Math.abs(u - spec.cx)/hx, Math.abs(v - spec.cy)/hy) / Math.max(0.05, spec.r/0.75);
+      t = Math.max(0, Math.min(1, t)) * n;
+      const k = Math.min(n - 1, Math.floor(t)), f = t - k, a = rgb[k], b = rgb[k+1] || a, i = (py*S + px)*4;
+      d[i] = a[0] + (b[0]-a[0])*f; d[i+1] = a[1] + (b[1]-a[1])*f; d[i+2] = a[2] + (b[2]-a[2])*f; d[i+3] = 255;
+    }
+    sx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(small, x, y, w, h);
+  } else {
+    const rad = (spec.angle || 0) * Math.PI/180, cx = x + w/2, cy = y + h/2, len = Math.hypot(w, h)/2;
+    const g = ctx.createLinearGradient(cx - Math.cos(rad)*len, cy - Math.sin(rad)*len, cx + Math.cos(rad)*len, cy + Math.sin(rad)*len);
+    stops.forEach((c, i) => g.addColorStop(i/(stops.length-1), c));
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  }
+}
+/** A rectangle path with rounded corners (radius 0 is square). */
+/** The gradient settings for a surface: 'bg' (the backdrop) or 'card' (the inset box). */
+function gradientSpec(which){
+  const v = (id, d) => { const el = $(id); const n = el ? parseFloat(el.value) : NaN; return isNaN(n) ? d : n; };
+  if(which === 'card') return { type: ($('cardGradientType') || {}).value || 'linear', angle: v('cardGradientAngle', 90), cx: 0.5, cy: 0.5, r: 0.75 };
+  return { type: ($('bgGradientType') || {}).value || 'linear', angle: v('bgGradientAngle', 135),
+           cx: v('bgRadialX', 50)/100, cy: v('bgRadialY', 50)/100, r: v('bgRadialR', 75)/100 };
+}
+function roundRectPath(ctx, x, y, w, h, r){
+  r = Math.max(0, Math.min(r, w/2, h/2));
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
+}
+/** Two small speckle tiles for border grain, made once: dark specks and bright ones. */
+let GRAIN_TILES = null;
+/** One scratch canvas for the bloom and erosion text effects, reused for every
+ *  segment. Setting its size also clears it and resets its state. */
+let SCRATCH = null;
+function scratchCanvas(w, h){
+  if(!SCRATCH) SCRATCH = document.createElement('canvas');
+  SCRATCH.width = w; SCRATCH.height = h;
+  return SCRATCH;
+}
+/** The bloom's own layer, kept between renders and resized only when the page is. */
+let BLOOM_LAYER = null;
+function bloomLayer(w, h){
+  if(!BLOOM_LAYER){ BLOOM_LAYER = document.createElement('canvas'); }
+  if(BLOOM_LAYER.width !== w || BLOOM_LAYER.height !== h){ BLOOM_LAYER.width = w; BLOOM_LAYER.height = h; }
+  return BLOOM_LAYER;
+}
+function grainTiles(){
+  if(GRAIN_TILES) return GRAIN_TILES;
+  const make = (tone) => { const T = 96, c = document.createElement('canvas'); c.width = T; c.height = T;
+    const x = c.getContext('2d'); let seed = tone === 0 ? 7 : 13;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;      // stable, so grain never shimmers
+    for(let i = 0; i < 420; i++){ x.globalAlpha = 0.35 + rand()*0.65; x.fillStyle = tone ? '#fff' : '#000';
+      x.fillRect(rand()*T, rand()*T, 1 + rand()*1.6, 1 + rand()*1.6); }
+    return c; };
+  return (GRAIN_TILES = { dark: make(0), bright: make(255) });
+}
 
 // the face for `code` segments (Courier Prime is loaded with the page)
 const CODE_FONT = { label:'code', family:'Courier Prime', weight:'400' };
@@ -355,9 +440,7 @@ function drawBloom(ctx, str, px, py, size, col, k, style){
   const w = Math.ceil(ctx.measureText(str).width);
   if(w <= 0) return;
   const reach = Math.ceil(size * (0.35 + 0.9 * k) * (style.typeEffectDistance || 1));
-  const off = document.createElement('canvas');
-  off.width = w + reach * 2;
-  off.height = Math.ceil(size * 1.45) + reach * 2;
+  const off = scratchCanvas(w + reach * 2, Math.ceil(size * 1.45) + reach * 2);
   const o = off.getContext('2d');
   o.font = ctx.font; o.textBaseline = ctx.textBaseline; o.textAlign = 'left';
   const FAR = 10000;
@@ -412,8 +495,7 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
   if(w <= 0) return;
   const pad = Math.ceil(size * 0.25);
   const h = Math.ceil(size * 1.45) + pad * 2;
-  const off = document.createElement('canvas');
-  off.width = w + pad * 2; off.height = h;
+  const off = scratchCanvas(w + pad * 2, h);
   const o = off.getContext('2d');
   o.font = ctx.font;
   o.textBaseline = ctx.textBaseline;
@@ -689,13 +771,6 @@ export function hslToHex(h,s,l){
   const toHex = v=>Math.round((v+m)*255).toString(16).padStart(2,'0');
   return '#'+toHex(r)+toHex(g)+toHex(b);
 }
-function watermarkColor(bgHex){
-  const {h,s,l} = hexToHsl(bgHex);
-  const newH = h+10;
-  const newS = Math.max(0, s-10);
-  const newL = l>50 ? Math.max(0,l-15) : Math.min(100,l+15);
-  return hslToHex(newH,newS,newL);
-}
 
 // A=accent1, B=accent2 directly. C/D are each accent's split-complement
 // (base hue +150°) -- one of the two hues flanking the true complement
@@ -748,15 +823,21 @@ function pmlVarContext(W, H){
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
     lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value) : 'n/a',
     seed,
-    params: defs.map((d, i) => ({ label: d.label, value: ($(i ? 'texP2Val' : 'texP1Val') || {}).textContent || '' })),
+    params: defs.slice(0, 2).map((d, i) => ({ label: d.label, value: ($(i ? 'texP2Val' : 'texP1Val') || {}).textContent || '' })),
     opacity: Math.round(+($('textureOpacity') && $('textureOpacity').value) || 0),
     hues,
     moonTonight: moonPhase(new Date()),
     moonSeed: moonForSeed(seed),
     spell: ($('activeSpell') && $('activeSpell').value) || '',
+    spellName: (document.body && document.body.dataset && document.body.dataset.lookName) || '',
+    hidden: $('texP3') && $('texP3Field') && $('texP3Field').style.display !== 'none' ? $('texP3').value : null,
     font: optionText('fontFamily'),
     canvas: W + '×' + H,
     typeEffect: ($('typeEffect') && $('typeEffect').value) || 'none',
+    renderMs: Math.round(LAST_RENDER_MS),
+    cacheMB: textureCacheMB().toFixed(1),
+    fonts: fontsRequested(),
+    blendOpacity: null,
   };
 }
 
@@ -799,7 +880,9 @@ function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spaci
   return fitCacheValue;
 }
 
+let LAST_RENDER_MS = 0;
 export function render(){
+  const renderStart = (typeof performance !== 'undefined' ? performance : Date).now();
   const canvas = $('poemCanvas');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
@@ -812,11 +895,11 @@ export function render(){
   const bg1 = $('bgColor1Hex').value;
   if($('bgGradientToggle').checked){
     const colors = collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount);
-    ctx.fillStyle = makeGradient(ctx, W, H, parseFloat($('bgGradientAngle').value), colors);
+    paintGradient(ctx, 0, 0, W, H, gradientSpec('bg'), colors);
   } else {
     ctx.fillStyle = bg1;
+    ctx.fillRect(0,0,W,H);
   }
-  ctx.fillRect(0,0,W,H);
 
   if($('textureToggle').checked){
     const type = $('textureType').value;
@@ -836,6 +919,8 @@ export function render(){
     const tp2 = parseFloat($('texP2').value);
     const p1 = isNaN(tp1) ? null : tp1;
     const p2 = isNaN(tp2) ? null : tp2;
+    const tp3 = $('texP3') ? parseFloat($('texP3').value) : NaN;
+    const p3 = isNaN(tp3) ? null : tp3;
 
     if(type === 'astral'){
       ctx.save();
@@ -854,19 +939,19 @@ export function render(){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, light, tint1, tint2, blend }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend }), 0, 0);
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, light, tint1, tint2, blend }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, tint1, tint2, blend }), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, light, tint1, tint2, blend }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend }), 0, 0);
       ctx.restore();
     }
   }
@@ -917,46 +1002,86 @@ export function render(){
     ctx.restore();
   }
 
+  // ---------- the inset box and the border ----------
+  // The box sits ABOVE the backdrop, texture and vignette and BELOW the text,
+  // so words stay readable over a busy surface. The border, when on, strokes
+  // the box's edge; both share the offset and the rounded corners.
+  const bThick = Math.max(1, parseFloat($('borderThickness').value) || 1);
+  const bOffset = Math.max(0, parseFloat($('borderOffset').value) || 0);
+  const inset = bOffset + bThick/2;
+  const frameCorner = ($('borderRounded') && $('borderRounded').checked) ? Math.max(0, parseFloat($('borderRadius').value) || 0) : 0;
+  const framePath = () => { ctx.beginPath(); roundRectPath(ctx, inset, inset, W - inset*2, H - inset*2, frameCorner); };
+
+  if($('cardToggle') && $('cardToggle').checked){
+    ctx.save();
+    framePath(); ctx.clip();
+    ctx.globalAlpha = Math.max(0, Math.min(100, parseFloat($('cardOpacity').value) || 0)) / 100;
+    ctx.globalCompositeOperation = $('cardBlend').value || 'source-over';
+    const c1 = $('cardColor1Hex').value;
+    if($('cardGradientToggle').checked) paintGradient(ctx, inset, inset, W - inset*2, H - inset*2, gradientSpec('card'), [c1, $('cardColor2Hex').value]);
+    else { ctx.fillStyle = c1; ctx.fillRect(inset, inset, W - inset*2, H - inset*2); }
+    ctx.restore();
+  }
+
   if($('borderToggle').checked){
     const bColor = $('borderColorHex').value;
-    const bThick = Math.max(1, parseFloat($('borderThickness').value) || 1);
-    const bOffset = Math.max(0, parseFloat($('borderOffset').value) || 0);
-    const inset = bOffset + bThick/2;
     const bloom = Math.max(0, Math.min(100, parseFloat($('borderBloom').value) || 0)) / 100;
+    const grain = Math.max(0, Math.min(100, parseFloat(($('borderGrain') || {}).value) || 0)) / 100;
 
-    // A gradient border runs a radial ramp from the middle of the page
-    // outward, so each side picks up a different part of the ramp and the
-    // corners catch the far end. Multiple stops make that worth doing.
     let stroke = bColor;
     if($('borderGradientToggle').checked){
-      const cx = W/2, cy = H/2;
-      const r = Math.hypot(W, H) / 2;
-      const g = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r);
+      // along an angle across the whole page (45°, the default, is corner to
+      // corner), so each side of the frame passes through the stops
+      const ga = (parseFloat(($('borderGradientAngle') || {}).value) || 45) * Math.PI/180, half = Math.hypot(W, H)/2;
+      const g = ctx.createLinearGradient(W/2 - Math.cos(ga)*half, H/2 - Math.sin(ga)*half, W/2 + Math.cos(ga)*half, H/2 + Math.sin(ga)*half);
       const stops = [bColor, $('borderColor2Hex').value, $('borderColor3Hex').value].filter(Boolean);
       stops.forEach((col, i) => g.addColorStop(stops.length > 1 ? i/(stops.length-1) : 0, col));
       stroke = g;
     }
 
-    ctx.save();
-    // Bloom is drawn as widening, fading passes UNDER the border rather than
-    // with shadowBlur: a shadow would smear in one direction and clip at the
-    // canvas edge, where the border actually lives.
+    // The bloom glows in the border's own colour, on a layer of its own, and
+    // the grain works INSIDE that layer: dark specks thin the glow, bright
+    // specks catch the light (blurred, so they glow too). The layer is then laid
+    // under the border, which stays a solid line. Grain never touches the page
+    // or the line itself. The glow is soft, so its layer is half resolution,
+    // reused from render to render.
     if(bloom > 0){
+      const L = bloomLayer(Math.ceil(W/2), Math.ceil(H/2)), lx = L.getContext('2d', { willReadFrequently: true });
+      lx.setTransform(1, 0, 0, 1, 0, 0); lx.clearRect(0, 0, L.width, L.height);
+      lx.setTransform(0.5, 0, 0, 0.5, 0, 0);
+      lx.lineJoin = 'round';
       const passes = EFFECTS.bloomPasses;
       for(let i = passes; i >= 1; i--){
-        const spread = bThick * (1 + i * EFFECTS.bloomSpread * bloom);
-        ctx.globalAlpha = (bloom * EFFECTS.bloomAlpha) / i;
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.lineWidth = spread;
-        ctx.strokeStyle = stroke;
-        ctx.strokeRect(inset, inset, W - inset*2, H - inset*2);
+        lx.globalAlpha = Math.min(1, (bloom * EFFECTS.bloomAlpha * 1.6) / i);
+        // wider: grows with the page as well as the stroke, so a thin border can still glow far
+        lx.lineWidth = bThick * (1 + i * EFFECTS.bloomSpread * bloom) + i * Math.min(W, H) * 0.007 * bloom;
+        lx.strokeStyle = stroke;
+        lx.beginPath(); roundRectPath(lx, inset, inset, W - inset*2, H - inset*2, frameCorner); lx.stroke();
       }
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
+      lx.globalAlpha = 1;
+      if(grain > 0 && typeof lx.createPattern === 'function'){
+        const tiles = grainTiles();
+        lx.setTransform(1, 0, 0, 1, 0, 0);
+        lx.globalAlpha = grain;
+        lx.globalCompositeOperation = 'destination-out';            // dark specks: gaps in the glow
+        lx.fillStyle = lx.createPattern(tiles.dark, 'repeat'); lx.fillRect(0, 0, L.width, L.height);
+        lx.globalCompositeOperation = 'source-atop';                // bright specks: only where glow is
+        lx.filter = `blur(${Math.max(0.5, bThick*bloom*0.18).toFixed(1)}px)`;
+        lx.fillStyle = lx.createPattern(tiles.bright, 'repeat'); lx.fillRect(0, 0, L.width, L.height);
+        lx.filter = 'none';
+        lx.globalCompositeOperation = 'source-over'; lx.globalAlpha = 1;
+      }
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.globalCompositeOperation = ($('borderBloomBlend') || {}).value || 'source-over';
+      ctx.drawImage(L, 0, 0, W, H);
+      ctx.restore();
     }
+    ctx.save();
+    ctx.globalCompositeOperation = ($('borderBlend') || {}).value || 'source-over';
     ctx.lineWidth = bThick;
     ctx.strokeStyle = stroke;
-    ctx.strokeRect(inset, inset, W - inset*2, H - inset*2);
+    framePath(); ctx.stroke();
     ctx.restore();
   }
 
@@ -973,11 +1098,22 @@ export function render(){
   const lines = getCachedLines(rawText, accent1On, accent2On);
 
   const fontDef = FONTS[$('fontFamily').value];
+  // fetch only the faces this page uses; when one arrives, re-measure and redraw
+  {
+    const used = [fontDef, CODE_FONT];
+    for(const ln of lines) if(ln.parts) for(const pt of ln.parts) if(pt.customFontIdx != null && FONTS[pt.customFontIdx]) used.push(FONTS[pt.customFontIdx]);
+    ensureFonts(used, () => { invalidateTextMeasurements(); scheduleRender(); });
+  }
   const maxSizePx = Math.max(10, parseFloat($('maxSize').value) || 120);
   const lineSpacing = Math.pow(2, parseFloat($('lineSpacing').value) || 0);
 
-  const paddingX = W*0.09;
-  const paddingY = H*0.07;
+  // Text keeps clear of the frame: with a border or box on, the margins grow
+  // to the frame's inner edge plus breathing room, instead of a fixed share of
+  // the page that a wide offset or thick border would overrun.
+  const frameOn = $('borderToggle').checked || ($('cardToggle') && $('cardToggle').checked);
+  const frameEdge = frameOn ? bOffset + bThick + Math.min(W, H)*0.04 : 0;
+  const paddingX = Math.max(W*0.09, frameEdge);
+  const paddingY = Math.max(H*0.07, frameEdge);
   const maxWidth = W - paddingX*2;
   const maxHeight = H - paddingY*2;
 
@@ -1019,7 +1155,22 @@ export function render(){
     typeEffectGrain: $('typeEffectGrain') ? (parseFloat($('typeEffectGrain').value) || 0) / 100 : 0 };
 
   for(const line of lines){
-    if(line.isBlank){ cursorY += baseSize*0.55*lineSpacing; continue; }
+    if(line.isBlank){
+      if(line.rule){
+        // a horizontal rule, centred in the blank line's height; its width is a
+        // share of the text block, aligned within it
+        const r = line.rule, gap = baseSize*0.55*lineSpacing;
+        const w = maxWidth * r.width;
+        const x0 = r.align === 'l' ? paddingX : r.align === 'r' ? paddingX + maxWidth - w : paddingX + (maxWidth - w)/2;
+        ctx.save();
+        ctx.strokeStyle = r.customColor || (r.color === 'accent1' ? accent1Color : r.color === 'accent2' ? accent2Color
+                        : (typeof baseFillStyle === 'string' ? baseFillStyle : $('textColorHex').value));
+        ctx.lineWidth = Math.max(1, baseSize*0.045); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x0, cursorY + gap/2); ctx.lineTo(x0 + w, cursorY + gap/2); ctx.stroke();
+        ctx.restore();
+      }
+      cursorY += baseSize*0.55*lineSpacing; continue;
+    }
     const size = baseSize*line.scale;
     const lineHeight = size*1.32*lineSpacing;
     const style = { ...runStyle, quoteAlpha: line.type==='quote' ? 0.68 : 1, smallCaps: !!line.smallCaps };
@@ -1152,17 +1303,25 @@ export function render(){
   const corner = $('usernameCorner').value;
   const isTop = corner.startsWith('top');
   const isRight = corner.endsWith('right');
-  const wmColor = watermarkColor(bg1);
+  // The credit is written in the page's own ink — no computed "watermark"
+  // tone — and may carry PML colour: [accent], {accent}, <text/#:hex>. Only
+  // colour: it is a signature, not a poem, and §Variables never apply here.
+  const creditParts = username ? (buildLines(username, true, true)[0] || {}).parts || [] : [];
+  const ink = typeof baseFillStyle === 'string' ? baseFillStyle : $('textColorHex').value;
   ctx.save();
   ctx.font = `${fontDef.weight} ${Math.round(((W + H)/2)*MARKS.scale)}px "${fontDef.family}"`;
-  ctx.fillStyle = wmColor;
-  ctx.globalAlpha = 0.85;
-  ctx.textAlign = isRight ? 'right' : 'left';
+  ctx.globalAlpha = 0.9;
   ctx.textBaseline = isTop ? 'top' : 'alphabetic';
   ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
   const wmX = isRight ? (W - W*MARKS.insetX) : (W*MARKS.insetX);
   const wmY = isTop ? (H*MARKS.insetY) : (H - H*MARKS.insetY);
-  ctx.fillText(username, wmX, wmY);
+  const runs = [];
+  for(const part of creditParts) for(const sg of part.segments) runs.push({ text: sg.text,
+    color: part.customColor || (sg.color === 'accent1' ? accent1Color : sg.color === 'accent2' ? accent2Color : ink) });
+  let total = 0; for(const r of runs) total += ctx.measureText(r.text).width;
+  let cx = isRight ? wmX - total : wmX;
+  ctx.textAlign = 'left';
+  for(const r of runs){ ctx.fillStyle = r.color; ctx.fillText(r.text, cx, wmY); cx += ctx.measureText(r.text).width; }
   ctx.restore();
 
   // --- the spell ---
@@ -1206,6 +1365,7 @@ export function render(){
     sx += ctx.measureText(sg.text).width;
   }
   ctx.restore();
+  LAST_RENDER_MS = (typeof performance !== 'undefined' ? performance : Date).now() - renderStart;
 }
 
 // Most controls call this instead of render() directly. requestAnimationFrame
@@ -1214,11 +1374,19 @@ export function render(){
 // frame into a single call — e.g. applyPreset() touches a dozen+ fields, each
 // of which would otherwise ask for its own full render.
 let renderScheduled = false;
+// At most 24 renders a second: dragging a slider fires far faster than that,
+// and 24 is plenty to feel live while leaving the phone room to breathe. The
+// last change always renders — a pending render picks up the latest state.
+const MIN_RENDER_GAP = 1000 / 24;
+let lastRenderAt = 0;
 export function scheduleRender(){
   if(renderScheduled) return;
   renderScheduled = true;
-  requestAnimationFrame(()=>{
+  const wait = Math.max(0, MIN_RENDER_GAP - ((typeof performance !== 'undefined' ? performance : Date).now() - lastRenderAt));
+  const go = ()=>requestAnimationFrame(()=>{
     renderScheduled = false;
+    lastRenderAt = (typeof performance !== 'undefined' ? performance : Date).now();
     render();
   });
+  wait > 0 ? setTimeout(go, wait) : go();
 }

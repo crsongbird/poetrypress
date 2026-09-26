@@ -32,7 +32,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { withSeed, blendFamily, remapNeutral, tintMarks } from './texCore.js';
+import { withSeed, blendFamily, pixelPass, CPU } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
@@ -65,7 +65,9 @@ export const TEXTURE_PARAMS = {
   metalleaf:     [{key:'zoom',  label:'Leaf Size',       min:60, max:360, def:100, unit:'%'},
                   {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165}],
   flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
-                  {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:33}],
+                  {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:18},
+                  // the third, unusual knob: which flower. 50 is the lotus
+                  {key:'form',  label:'Form',            min:0,  max:100, def:50,  unit:''}],
   brushstrokes:  [{key:'zoom',  label:'Stroke Width',    min:60, max:380, def:100, unit:'%'},
                   {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111}],
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
@@ -252,12 +254,14 @@ const textureCache = new Map();
 /** Forget every generated texture. For when something a texture draws with
  *  — the symbol font, say — has only just arrived. */
 export function clearTextureCache(){ textureCache.clear(); }
+/** What the texture cache holds, in megabytes (4 bytes a pixel). */
+export function textureCacheMB(){ let px = 0; for(const c of textureCache.values()) px += (c && c.width * c.height) || 0; return px * 4 / 1e6; }
 
-function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2){
+function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form){
   let result;  if(type === 'clouds'){
     result = genClouds(w,h,amt,zoom,light);
   } else if(type === 'flowers'){
-    result = genFlowers(w,h,amt,zoom,tint1,tint2);
+    result = genFlowers(w,h,amt,zoom,tint1,tint2,form);
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h,amt,zoom);
   } else if(type === 'crackedglaze'){
@@ -326,7 +330,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
 
     const small = document.createElement('canvas');
     small.width = genW; small.height = genH;
-    const sctx = small.getContext('2d');
+    const sctx = small.getContext('2d', CPU);
     const img = sctx.createImageData(genW,genH);
     const d = img.data;
     for(let i=0;i<d.length;i+=4){
@@ -339,7 +343,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
 
     const full = document.createElement('canvas');
     full.width = w; full.height = h;
-    const fctx = full.getContext('2d');
+    const fctx = full.getContext('2d', CPU);
     fctx.imageSmoothingEnabled = true;
     fctx.drawImage(small,0,0,w,h);
     result = full;
@@ -362,31 +366,34 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * in the light slot unnoticed.
  */
 export function getTextureCanvas(type, w, h, opts = {}){
-  const { accent1, accent2, seed, p1, p2, light, tint1, tint2, blend } = opts;
+  const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
   const defs = paramsFor(type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
+  const v3 = defs[2] ? ((p3 == null) ? defs[2].def : p3) : null;
 
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + `_s${seed}` + `_${v1}_${v2}`
+            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`)
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '');
   if(textureCache.has(key)) return textureCache.get(key);
 
-  let zoom = 1, amt = 1, angle = 0;
+  let zoom = 1, amt = 1, angle = 0, form = 0.5;
   const readParam = (def, val) => {
     if(!def) return;
     // below 100% must shrink things too — clamping at 1 made the whole
     // 50–100% range identical. 0.25 is the floor: finer than that the
     // generators produce more marks than is useful.
     if(def.key === 'zoom') zoom = Math.max(0.25, val/100);
+    else if(def.key === 'form') form = Math.max(0, Math.min(1, val/100));
     else if(def.key === 'angle') angle = val;
     else amt = Math.max(0.02, val/100);
   };
   readParam(defs[0], v1);
   readParam(defs[1], v2);
+  if(defs[2]) readParam(defs[2], v3);
   // sub-textures of a composite (astral_fog / astral_stars) declare no params
   // of their own; the caller passes their amount through p1
   if(defs.length === 0 && p1 != null) amt = Math.max(0.02, p1/100);
@@ -399,18 +406,16 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2));
+  let result = withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
   // leaves the grey ground alone; white means no tint at all.
   const caps = capsFor(type);
-  if(result && caps.genericTint && (tint1 || tint2)) result = tintMarks(result, tint1, tint2);
-  // A grey ground is only neutral for the overlay family. For any other blend
-  // it is moved to that blend's own neutral, or it would darken or wash out
-  // the whole page.
-  if(result && caps.ground === 'grey' && blend && !(caps.keepGround || []).includes(blend))
-    result = remapNeutral(result, blendFamily(blend));
+  // tint and blend remap together, in one pass over the texture itself
+  const doRemap = caps.ground === 'grey' && blend && !(caps.keepGround || []).includes(blend);
+  if(result && ((caps.genericTint && (tint1 || tint2)) || doRemap))
+    result = pixelPass(result, caps.genericTint ? tint1 : null, caps.genericTint ? tint2 : null, doRemap ? blendFamily(blend) : null);
   // Bounded by MEMORY, not just count: one full page is 3072×3072 pixels,
   // about 38 MB, and forty of them is far more than a phone browser survives
   // while knobs are dragged (every position is a new entry). Tile-sized

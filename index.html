@@ -17,7 +17,7 @@
 <title>Unfixable Vellum</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Literata:ital,wght@0,400;0,600;1,400;1,600&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Oswald:wght@400;500;600&family=Unica+One:wght@400&family=Shadows+Into+Light:wght@400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600&family=Architects+Daughter:wght@400&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Inter:ital,wght@0,400;0,600;1,400;1,600&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Literata:ital,wght@0,400;0,600;1,400;1,600&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Oswald:wght@400;500;600&family=Unica+One:wght@400&family=Shadows+Into+Light:wght@400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600&family=Architects+Daughter:wght@400&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Inter:ital,wght@0,400;0,600;1,400;1,600&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:ital,wght@0,400;0,600;1,400;1,600&family=UnifrakturMaguntia&family=Pinyon+Script&family=IM+Fell+English:ital@0;1&family=Special+Elite&family=Uncial+Antiqua&family=Poiret+One&family=Zilla+Slab:ital,wght@0,500;0,700;1,500&family=Almendra:ital,wght@0,400;0,700;1,400&family=VT323&family=Rye&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.css"/>
 <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
@@ -421,11 +421,34 @@ inside of a <~~dead person~~/trans>'s dreams.
             </div>
           </div>
           <div class="field">
+            <label data-str="label.gradient_shape">Gradient Shape</label>
+            <select id="bgGradientType">
+              <option value="linear" data-str="option.linear">Linear</option>
+              <option value="radial" data-str="option.radial">Radial</option>
+              <option value="rect" data-str="option.rectangular">Rectangular</option>
+            </select>
+          </div>
+          <div class="field" id="bgAngleField">
             <label data-str="label.arc_angle">Arc Angle</label>
             <div class="angle-wrap">
               <input type="range" id="bgGradientAngle" min="0" max="360" value="135">
               <span class="angle-val" id="bgGradientAngleVal">135°</span>
             </div>
+          </div>
+          <div class="field full" id="bgCenterXField">
+            <label data-str="label.center_x">Center X</label>
+            <input type="range" id="bgRadialX" min="0" max="100" value="50">
+            <span class="range-val" id="bgRadialXVal">50%</span>
+          </div>
+          <div class="field full" id="bgCenterYField">
+            <label data-str="label.center_y">Center Y</label>
+            <input type="range" id="bgRadialY" min="0" max="100" value="50">
+            <span class="range-val" id="bgRadialYVal">50%</span>
+          </div>
+          <div class="field full" id="bgRadiusField">
+            <label data-str="label.radius">Radius</label>
+            <input type="range" id="bgRadialR" min="10" max="150" value="75">
+            <span class="range-val" id="bgRadialRVal">75%</span>
           </div>
         </div>
         <button class="ghost full" id="randomBgBtn" data-str="button.randomBgBtn">⟳ Summon New Backdrop</button>
@@ -496,9 +519,14 @@ inside of a <~~dead person~~/trans>'s dreams.
             <input type="range" id="texP2" min="0" max="100" value="100">
             <span class="range-val" id="texP2Val"></span>
           </div>
+          <div class="field full" id="texP3Field" style="display:none">
+            <label id="texP3Label" data-str="label.form">Form</label>
+            <input type="range" id="texP3" min="0" max="100" value="50">
+            <span class="range-val" id="texP3Val"></span>
+          </div>
           <div class="field full">
             <label data-str="label.opacity">Opacity</label>
-            <input type="range" id="textureOpacity" min="0" max="100" value="60">
+            <input type="range" id="textureOpacity" min="0" max="100" value="60" data-moon>
             <span class="range-val" id="textureOpacityVal">60%</span>
           </div>
           <div class="field full">
@@ -558,7 +586,7 @@ inside of a <~~dead person~~/trans>'s dreams.
             </div>
           <div class="check-row full">
             <input type="checkbox" id="borderGradientToggle">
-            <label for="borderGradientToggle" data-str="label.radial_gradient_border">Radial Gradient Border?</label>
+            <label for="borderGradientToggle" data-str="label.radial_gradient_border">Gradient Border?</label>
           </div>
           <div class="field" id="borderColor2Field">
             <label data-str="label.border_hue_2">Border Hue 2</label>
@@ -568,15 +596,94 @@ inside of a <~~dead person~~/trans>'s dreams.
             <label data-str="label.border_hue_3">Border Hue 3</label>
             <input type="text" id="borderColor3Hex" value="#7FD4C1" data-coloris>
           </div>
+          <div class="field full" id="borderAngleField">
+            <label data-str="label.border_angle">Gradient Angle</label>
+            <input type="range" id="borderGradientAngle" min="0" max="360" value="45">
+            <span class="range-val" id="borderGradientAngleVal">45°</span>
+          </div>
           <div class="field full">
             <label data-str="label.bloom">Bloom</label>
             <input type="range" id="borderBloom" min="0" max="100" value="0">
             <span class="range-val" id="borderBloomVal">0</span>
           </div>
           </div>
-          <div class="row full">
-            <div class="field"><label data-str="label.thickness_px2">Thickness (px)</label><input type="number" id="borderThickness" value="2" min="1" step="1"></div>
-            <div class="field"><label data-str="label.offset_px">Offset (px)</label><input type="number" id="borderOffset" value="14" min="0" step="1"></div>
+          <div class="field">
+            <label data-str="label.border_blend">Border Blend</label>
+            <select id="borderBlend"><option value="source-over">Normal</option><option value="overlay">Overlay</option><option value="hard-light">Hard Light</option><option value="soft-light">Soft Light</option><option value="color-dodge">Color Dodge</option><option value="screen">Screen</option><option value="color-burn">Color Burn</option><option value="multiply">Multiply</option></select>
+          </div>
+          <div class="field">
+            <label data-str="label.bloom_blend">Bloom Blend</label>
+            <select id="borderBloomBlend"><option value="source-over">Normal</option><option value="overlay">Overlay</option><option value="hard-light">Hard Light</option><option value="soft-light">Soft Light</option><option value="color-dodge">Color Dodge</option><option value="screen">Screen</option><option value="color-burn">Color Burn</option><option value="multiply">Multiply</option></select>
+          </div>
+          <div class="field full">
+            <label data-str="label.thickness">Thickness</label>
+            <input type="range" id="borderThickness" min="1" max="40" value="2">
+            <span class="range-val" id="borderThicknessVal">2px</span>
+          </div>
+          <div class="field full">
+            <label data-str="label.offset">Offset</label>
+            <input type="range" id="borderOffset" min="0" max="400" value="14">
+            <span class="range-val" id="borderOffsetVal">14px</span>
+          </div>
+          <div class="field full">
+            <label data-str="label.grain">Grain</label>
+            <input type="range" id="borderGrain" min="0" max="100" value="0">
+            <span class="range-val" id="borderGrainVal">0%</span>
+          </div>
+          <div class="check-row full">
+            <input type="checkbox" id="borderRounded">
+            <label for="borderRounded" data-str="label.rounded_corners">Rounded Corners?</label>
+          </div>
+          <div class="field full" id="borderRadiusField">
+            <label data-str="label.roundedness">Roundedness</label>
+            <input type="range" id="borderRadius" min="0" max="400" value="60">
+            <span class="range-val" id="borderRadiusVal">60px</span>
+          </div>
+        </div>
+        <div class="check-row full">
+          <input type="checkbox" id="cardToggle">
+          <label for="cardToggle" data-str="label.inset_box">Inset Box?</label>
+        </div>
+        <div class="subblock" id="cardBlock">
+          <div class="field full">
+            <label data-str="label.box_hue">Box Hue</label>
+            <input type="text" class="hex-input" id="cardColor1Hex" value="#FFF6EE" data-coloris>
+          </div>
+          <div class="check-row full">
+            <input type="checkbox" id="cardGradientToggle">
+            <label for="cardGradientToggle" data-str="label.box_gradient">Box Gradient?</label>
+          </div>
+          <div class="field" id="cardColor2Field">
+            <label data-str="label.box_hue_2">Box Hue 2</label>
+            <input type="text" class="hex-input" id="cardColor2Hex" value="#F2E2EA" data-coloris>
+          </div>
+          <div class="field" id="cardTypeField">
+            <label data-str="label.box_gradient_shape">Gradient Shape</label>
+            <select id="cardGradientType">
+              <option value="linear" data-str="option.box_linear">Linear</option>
+              <option value="radial" data-str="option.box_radial">Radial</option>
+              <option value="rect" data-str="option.box_rectangular">Rectangular</option>
+            </select>
+          </div>
+          <div class="field full" id="cardAngleField">
+            <label data-str="label.box_arc_angle">Arc Angle</label>
+            <input type="range" id="cardGradientAngle" min="0" max="360" value="90">
+            <span class="range-val" id="cardGradientAngleVal">90°</span>
+          </div>
+          <div class="field full">
+            <label data-str="label.box_opacity">Opacity</label>
+            <input type="range" id="cardOpacity" min="0" max="100" value="70" data-moon>
+            <span class="range-val" id="cardOpacityVal"></span>
+          </div>
+          <div class="field full">
+            <label data-str="label.box_blend_mode">Blend Mode</label>
+            <select id="cardBlend">
+              <option value="source-over">Normal</option><option value="multiply">Multiply</option>
+              <option value="screen">Screen</option><option value="overlay">Overlay</option>
+              <option value="soft-light">Soft Light</option><option value="hard-light">Hard Light</option>
+              <option value="darken">Darken</option><option value="lighten">Lighten</option>
+              <option value="color-dodge">Color Dodge</option><option value="color-burn">Color Burn</option>
+            </select>
           </div>
         </div>
 
@@ -706,6 +813,8 @@ inside of a <~~dead person~~/trans>'s dreams.
     <div class="canvas-wrap">
       <canvas id="poemCanvas" width="3072" height="3072"></canvas>
       <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position" data-str="button.resetViewBtn">⟲</button>
+      <button class="reset-view-btn history-btn" id="undoBtn" type="button" title="Undo" aria-label="Undo">☋</button>
+      <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo" aria-label="Redo">☊</button>
       <button class="download-btn" id="downloadBtn" data-str="button.downloadBtn">Save image</button>
     </div>
   </div>

@@ -34,6 +34,7 @@ const ORDER = [
   'texChaos.js',          // ∆ generators
   'texTouch.js',          // 🜚 generators
   'textureGenerators.js', // texture tables, cache and dispatch
+  'fonts.js',             // typefaces fetched on first use
   'glyphs.js',            // drawn symbols inside canvas text
   'pmlVars.js',           // §Variables, resolved before PML
   'canvasRenderer.js',    // parsed lines into pixels
@@ -62,7 +63,10 @@ function flatten(src, filename) {
 }
 
 const css = readFileSync('poetrypress.css', 'utf8');
-const js = ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n');
+let js = ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n');
+// §Build: which build this is — its date and a short hash of the code
+js = js.replace("'__BUILD_STAMP__'", JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ') + ' · ' +
+  createHash('sha256').update(js).digest('hex').slice(0, 7)));
 
 let html = readFileSync('index.html', 'utf8');
 

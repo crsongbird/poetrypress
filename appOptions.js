@@ -31,29 +31,44 @@
  * it; it must never import from any of them.
  */
 
+// Labels read "Style · Family", so the list reads like a type specimen.
+// ORDER IS FROZEN: PML's /f:N selects a font by its position here, so new
+// fonts are only ever appended — inserting one would change existing poems.
 export const FONTS = [
-  { label:"Bodoni Moda (serif)", family:"Bodoni Moda", weight:"700" }, // Silver Wake, Reverse Time
-  { label:"Cormorant Garamond (serif)", family:"Cormorant Garamond", weight:"600" }, // Somnus, Lotus
-  { label:"Crimson Pro (serif)", family:"Crimson Pro", weight:"600" },
-  { label:"EB Garamond (serif)", family:"EB Garamond", weight:"500" }, // Calm Repose
-  { label:"Literata (serif)", family:"Literata", weight:"400" },
-  { label:"Playfair Display (serif)", family:"Playfair Display", weight:"400" }, // Gold Leaf
-  { label:"Merriweather (serif)", family:"Merriweather", weight:"400" },
-  { label:"Courier Prime (mono)", family:"Courier Prime", weight:"700" },
-  { label:"Space Mono (mono)", family:"Space Mono", weight:"400" }, // Non-Euclid
-  { label:"JetBrains Mono (mono)", family:"JetBrains Mono", weight:"400" },
-  { label:"Cinzel (gothic)", family:"Cinzel", weight:"500", noItalic:true }, // Desire
-  { label:"Oswald (gothic)", family:"Oswald", weight:"400" },
-  { label:"Architects Daughter (handwritten)", family:"Architects Daughter", weight:"400" },
-  { label:"Caveat (handwritten)", family:"Caveat", weight:"700" },
-  { label:"Shadows Into Light (handwritten)", family:"Shadows Into Light", weight:"500" },
-  { label:"Inter (sans)", family:"Inter", weight:"400" },
-  { label:"Poppins (sans)", family:"Poppins", weight:"400" }, // Euphoria
-  { label:"Nunito (sans)", family:"Nunito", weight:"400" },
-  { label:"Roboto (sans)", family:"Roboto", weight:"400" },
-  { label:"Work Sans (sans)", family:"Work Sans", weight:"400" },
-  { label:"Josefin Sans (futuristic)", family:"Josefin Sans", weight:"400" },
-  { label:"Unica One (futuristic)", family:"Unica One", weight:"400", noItalic:true }, // Starlight Receding, Enochian
+  { label:"Didone · Bodoni Moda", family:"Bodoni Moda", weight:"700" }, // Silver Wake, Reverse Time
+  { label:"Old-Style · Cormorant Garamond", family:"Cormorant Garamond", weight:"600" }, // Somnus, Lotus
+  { label:"Book · Crimson Pro", family:"Crimson Pro", weight:"600" },
+  { label:"Old-Style · EB Garamond", family:"EB Garamond", weight:"500" }, // Calm Repose
+  { label:"Book · Literata", family:"Literata", weight:"400" },
+  { label:"Didone · Playfair Display", family:"Playfair Display", weight:"400" }, // Gold Leaf
+  { label:"Book · Merriweather", family:"Merriweather", weight:"400" },
+  { label:"Typewriter · Courier Prime", family:"Courier Prime", weight:"700" },
+  { label:"Mono · Space Mono", family:"Space Mono", weight:"400" }, // Non-Euclid
+  { label:"Mono · JetBrains Mono", family:"JetBrains Mono", weight:"400" },
+  { label:"Inscription · Cinzel", family:"Cinzel", weight:"500", noItalic:true }, // Desire
+  { label:"Condensed · Oswald", family:"Oswald", weight:"400" },
+  { label:"Handwritten · Architects Daughter", family:"Architects Daughter", weight:"400" },
+  { label:"Handwritten · Caveat", family:"Caveat", weight:"700" },
+  { label:"Handwritten · Shadows Into Light", family:"Shadows Into Light", weight:"500" },
+  { label:"Sans · Inter", family:"Inter", weight:"400" },
+  { label:"Geometric · Poppins", family:"Poppins", weight:"400" }, // Euphoria
+  { label:"Rounded · Nunito", family:"Nunito", weight:"400" },
+  { label:"Sans · Roboto", family:"Roboto", weight:"400" },
+  { label:"Sans · Work Sans", family:"Work Sans", weight:"400" },
+  { label:"Geometric · Josefin Sans", family:"Josefin Sans", weight:"400" },
+  { label:"Futurist · Unica One", family:"Unica One", weight:"400", noItalic:true }, // Starlight Receding, Enochian
+  // ---- appended, never inserted: PML's /f:N picks fonts by position ----
+  { label:"Blackletter · UnifrakturMaguntia", family:"UnifrakturMaguntia", weight:"400", noItalic:true },
+  { label:"Copperplate · Pinyon Script", family:"Pinyon Script", weight:"400", noItalic:true },
+  { label:"Antique Print · IM Fell English", family:"IM Fell English", weight:"400" },
+  { label:"Typewriter · Special Elite", family:"Special Elite", weight:"400", noItalic:true },
+  { label:"Uncial · Uncial Antiqua", family:"Uncial Antiqua", weight:"400", noItalic:true },
+  { label:"Art Deco · Poiret One", family:"Poiret One", weight:"400", noItalic:true },
+  { label:"Slab · Zilla Slab", family:"Zilla Slab", weight:"500" },
+  { label:"Medieval · Almendra", family:"Almendra", weight:"400" },
+  { label:"Pixel · VT323", family:"VT323", weight:"400", noItalic:true },
+  { label:"Woodtype · Rye", family:"Rye", weight:"400", noItalic:true },
+  { label:"Ornate Capitals · Cinzel Decorative", family:"Cinzel Decorative", weight:"400", noItalic:true },
 ];
 
 export const PRESETS = [
@@ -84,7 +99,7 @@ export const PRESETS = [
     outlineMode: "off",
     font: "Poppins",
     texture: true, textureType: "magicparticles", textureOpacity: 80, texP1: 280, texP2: 85,
-    accent1: "#FF6FD8", accent2: "#7B5CFF",
+    accent1: "#FF6FD8", accent2: "#A48FFF",
     textureBlend: 'color-dodge'
   },
   { name: "Sleepwalk",
@@ -105,7 +120,7 @@ export const PRESETS = [
     outlineMode: "off",
     font: "EB Garamond",
     texture: true, textureType: "tessellate", textureOpacity: 100, texP1: 100, texP2: 0,
-    accent1: "#9AA3B0", accent2: "#C9A227",
+    accent1: "#727F91", accent2: "#96791D",
     border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12,
     textureBlend: 'overlay'
   },
@@ -136,9 +151,20 @@ export const PRESETS = [
     text1: "#3A2233",
     outlineMode: "off",
     font: "Cormorant Garamond",
-    texture: true, textureType: "flowers", textureOpacity: 90, texP1: 210, texP2: 180,
-    accent1: "#C4708F", accent2: "#8FA88C",
-    textureBlend: 'source-over'
+    texture: true, textureType: "flowers", textureOpacity: 85, texP1: 210, texP2: 122,
+    accent1: "#AB476C", accent2: "#576F54",
+    textureBlend: 'multiply',
+    cardToggle: true,
+    cardColor1: '#FFE4D1',
+    cardOpacity: '100',
+    cardBlend: 'hard-light',
+    borderRounded: true,
+    borderRadius: '110',
+    borderGrain: '22',
+    border: true, borderColor: "#C98FA6", borderThickness: 5, borderOffset: 150, borderBloom: 30,
+    cardGradientToggle: true,
+    cardColor2: '#FFD4B2',
+    cardGradientType: 'radial'
   },
 
   // ---- CHAOS ----  sigils, math-noise, geometry twisting where reality thins
@@ -159,7 +185,7 @@ export const PRESETS = [
     outlineMode: "off",
     font: "EB Garamond",
     texture: true, textureType: "hatch", textureOpacity: 30, texP1: 22, texP2: 130,
-    accent1: "#5E4632", accent2: "#7A5C6B"
+    accent1: "#57412E", accent2: "#543F4A"
   },
   { name: "Gateway",
     spell: "🜺🜶🜈[[🜣✡⚸]]{{🜍}}",
@@ -195,7 +221,7 @@ export const PRESETS = [
     outlineMode: "off",
     font: "Literata",
     texture: true, textureType: "linen", textureOpacity: 34, texP1: 120, texP2: 110,
-    accent1: "#7C7A63", accent2: "#A8916F"
+    accent1: "#7C7A63", accent2: "#947D5A"
   },
   { name: "Foxed",
     spell: "[[🜬🜔]]🜉{{🜿🜇🜢🜛☍⚺🜙🜘♡🜜🜭🜕☋🜨}}",
@@ -214,7 +240,7 @@ export const PRESETS = [
     outlineMode: "off",
     font: "Work Sans",
     texture: true, textureType: "foldghost", textureOpacity: 38, texP1: 110, texP2: 120,
-    accent1: "#5A6B62", accent2: "#8C9AA3"
+    accent1: "#5A6B62", accent2: "#697983"
   },
   { name: "Sealed",
     spell: "{{🜨🜈🜇🜄🜮⚸✝🝆☋🜔🜠🝓🜱}}⚻♡[[✡🜍]]",

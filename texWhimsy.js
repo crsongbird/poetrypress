@@ -4,13 +4,13 @@
  * Sleep; starlight advancing or receding. Clouds, bokeh, the deep field,
  * euphoria dust, burning mana, first snow, aurora.
  */
-import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU } from './texCore.js';
 
 export function genClouds(w,h,amt,zoom,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const {lx,ly}=lightVec(light);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
 
   // A smoky room. Smoke RISES — LIFT stretches it upward into columns that
   // thin as they climb — and is DRAGGED sideways the higher it goes, the way
@@ -43,7 +43,7 @@ export function genClouds(w,h,amt,zoom,light){
     return Math.min(1, body*0.55 + wisps*0.9) * thin;
   };
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d'); const img=sctx.createImageData(ww,wh), d=img.data;
+  const sctx=small.getContext('2d', CPU); const img=sctx.createImageData(ww,wh), d=img.data;
   const e=2;                                                    // step for the light's slope
   for(let py=0;py<wh;py++) for(let px=0;px<ww;px++){
     const s0=density(px,py);
@@ -88,7 +88,7 @@ export function genAstralFog(w,h,amt,zoom,light,tint){
 
   const small = document.createElement('canvas');
   small.width = workW; small.height = workH;
-  const sctx = small.getContext('2d');
+  const sctx = small.getContext('2d', CPU);
   const img = sctx.createImageData(workW, workH);
   const d = img.data;
 
@@ -121,7 +121,7 @@ export function genAstralFog(w,h,amt,zoom,light,tint){
 
   const full = document.createElement('canvas');
   full.width = w; full.height = h;
-  const fctx = full.getContext('2d');
+  const fctx = full.getContext('2d', CPU);
   fctx.imageSmoothingEnabled = true;
   fctx.drawImage(small, 0, 0, w, h);
   return full;
@@ -131,7 +131,7 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const full = document.createElement('canvas');
   full.width = w; full.height = h;
-  const fctx = full.getContext('2d');
+  const fctx = full.getContext('2d', CPU);
 
   const d1 = darkenRgb(accent1, 0.35);
   const d2 = darkenRgb(accent2, 0.35);
@@ -182,7 +182,7 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom){
 export function genBokeh(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = 'rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
 
   // Dust motes in real depth. Every mote has a distance z (0 near, 1 far).
@@ -233,7 +233,7 @@ export function genBokeh(w,h,amt,zoom){
 export function genEmbers(w,h,accent1,accent2,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   const A = mixHex(accent1 || '#E0526F', accent1 || '#E0526F', 0);
   const B = mixHex(accent2 || '#9B7FE8', accent2 || '#9B7FE8', 0);
 
@@ -306,7 +306,7 @@ export function genSnow(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
-  const fctx = full.getContext('2d');
+  const fctx = full.getContext('2d', CPU);
   const count = Math.round((w*h)/3200 * amt);
   for(let i=0;i<count;i++){
     const x = Math.random()*w, y = Math.random()*h;
@@ -337,7 +337,7 @@ export function genSnow(w,h,amt,zoom){
 export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   const A = mixHex(accent1 || '#E0526F', accent1 || '#E0526F', 0);
   const B = mixHex(accent2 || '#9B7FE8', accent2 || '#9B7FE8', 0);
   const rgb = (col, lift=0) => `rgb(${Math.min(255,col.r+lift)},${Math.min(255,col.g+lift)},${Math.min(255,col.b+lift)})`;
@@ -417,7 +417,7 @@ export function genAuroraVeil(w,h,amt,zoom,light,tint,tint2){
   const hem = tint2 ? parseHex(tint2) : glow;
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -516,7 +516,7 @@ export function moonForSeed(seed){
 export function genMoon(w,h,amt,zoom){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
 
   // Everything is chosen by the seed: where it sits, how full it is, which
@@ -547,7 +547,7 @@ export function genMoon(w,h,amt,zoom){
   // built at a third of the page's resolution and scaled up, like the clouds
   const div=3, ww=Math.ceil(w/div), wh=Math.ceil(h/div);
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d');
+  const sctx=small.getContext('2d', CPU);
   const img=sctx.createImageData(ww,wh), d=img.data;
   const cosT=Math.cos(tilt), sinT=Math.sin(tilt);
   for(let py=0;py<wh;py++){
@@ -604,7 +604,7 @@ export function genMoon(w,h,amt,zoom){
 export function genLandscape(w,h,amt,zoom){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
+  const ctx=c.getContext('2d', CPU);
   const unit=Math.min(w,h);
 
   // A painted landscape, a different country every seed. The biome sets the

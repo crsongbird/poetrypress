@@ -60,7 +60,7 @@ export const TEXTURES = {
 export const EFFECTS = {
   /** Widening passes drawn under a bloomed border. More is smoother and
    *  slower; each pass is fainter than the last. */
-  bloomPasses: 5,
+  bloomPasses: 10,
   bloomSpread: 1.9,
   bloomAlpha: 0.22,
   /** One speck of vignette grit per this many pixels, at full strength. */
