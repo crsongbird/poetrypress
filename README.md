@@ -4,7 +4,7 @@ A single-page art app for visual poetry: a free replacement for paid tools like
 Photoshop, needing no desktop. It works on a phone, in a browser, with nothing
 to install.
 
-**[poetrypress.unfixable.place](https://poetrypress.unfixable.place)**
+**[poetrypress.unfixable.place](http://poetrypress.unfixable.place)**
 
 It was built entirely on a phone, by a housing-insecure, disabled housewife,
 using only the phone and cloud dev tools — no computer. It is free, and it
