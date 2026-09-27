@@ -336,6 +336,10 @@ export function genSnow(w,h,amt,zoom){
 
 export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // Knobs rescaled so 100% on both is the look that works: what used to take
+  // Size at 485% and Count at 20% — both slider ends — now sits in the middle,
+  // with room either way.
+  const Z = zoom * 4.85;
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
   const A = mixHex(accent1 || '#E0526F', accent1 || '#E0526F', 0);
@@ -347,13 +351,13 @@ export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
   // than even-width circle arcs; each drops a trail of motes. Sparkles twinkle
   // unevenly: four to six arms, no two the same length, one arm always long.
   const unit = Math.min(w,h);
-  const count = Math.round((w*h)/8400 * amt);
+  const count = Math.round((w*h)/42000 * amt);        // 225 at 100% on a 3072 page
 
   const wisp = (x, y, col) => {
-    const len = unit*(0.04 + Math.random()*0.07)*zoom;
+    const len = unit*(0.04 + Math.random()*0.07)*Z;
     let a = Math.random()*Math.PI*2;
     const curl = (Math.random()-0.5)*0.22, curlGrow = (Math.random()-0.5)*0.02;
-    const W = unit*0.0022*zoom*(0.6 + Math.random());
+    const W = unit*0.0022*Z*(0.6 + Math.random());
     const steps = 26, pts = [];
     let px = x, py = y, k = curl;
     for(let s=0;s<=steps;s++){ pts.push([px, py, a]); a += k; k += curlGrow; px += Math.cos(a)*len/steps; py += Math.sin(a)*len/steps; }
@@ -371,7 +375,7 @@ export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
       ctx.beginPath(); ctx.arc(mx + (Math.random()-0.5)*W*8, my + (Math.random()-0.5)*W*8, W*(0.4+Math.random()*0.7), 0, Math.PI*2); ctx.fill(); }
   };
   const sparkle = (x, y, col) => {
-    const arms = 4 + Math.floor(Math.random()*3), base = unit*0.009*zoom*(0.5 + Math.random());
+    const arms = 4 + Math.floor(Math.random()*3), base = unit*0.009*Z*(0.5 + Math.random());
     const rot = Math.random()*Math.PI, longArm = Math.floor(Math.random()*arms);
     // a soft glow behind
     const g = ctx.createRadialGradient(x, y, 0, x, y, base*1.6);
@@ -399,7 +403,7 @@ export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
     else if(roll < 0.52) sparkle(x, y, col);
     else {                                                   // loose dust
       ctx.globalAlpha = 0.3 + Math.random()*0.5; ctx.fillStyle = rgb(col, 50);
-      ctx.beginPath(); ctx.arc(x, y, unit*0.0016*zoom*(0.4 + Math.random()), 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, unit*0.0016*Z*(0.4 + Math.random()), 0, Math.PI*2); ctx.fill();
     }
   }
   ctx.globalAlpha = 1;

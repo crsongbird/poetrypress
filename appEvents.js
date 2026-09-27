@@ -942,8 +942,10 @@ function applyPreset(p){
     refreshReadouts(); syncFrameVisibility();
     const pcaps = capsFor($('textureType').value);
     if(p.textureBlend && pcaps.blends.includes(p.textureBlend)) $('textureBlend').value = p.textureBlend;
-    if(p.textureTint1) setColorField('textureTint1Hex', p.textureTint1);
-    if(p.textureTint2) setColorField('textureTint2Hex', p.textureTint2);
+    // a preset's own tint is a choice, like a hand-picked one: it stops
+    // following the accents, so changing an accent later won't replace it
+    if(p.textureTint1){ setColorField('textureTint1Hex', p.textureTint1); state.ui.tintFollows[0] = false; }
+    if(p.textureTint2){ setColorField('textureTint2Hex', p.textureTint2); state.ui.tintFollows[1] = false; }
     syncLightPad();
     restoreLocked(__locks);
     // a preset changes opacity and seed without anyone touching them
