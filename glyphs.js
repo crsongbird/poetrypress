@@ -27,7 +27,9 @@ const NAV = {
 };
 NAV.return = NAV.touch;
 const SIGIL = [['path', 'M12 1.9 21.9 12 12 22.1 2.1 12Z'], ['path', 'M12 7.1 16.9 12 12 16.9 7.1 12Z'], ['path', 'M12 4.4V19.6']];
-const SIGIL_PASSES = [['#6FA8FF', 0.55, -0.35], ['#9B7FE8', -0.4, 0.3], ['#E0526F', 0, 0]];   // colour, dx, dy
+// the same four passes, in the same order, as the app icon and favicon
+// (tools/icons.py SIGIL_ORDER): blue, lilac, purple, red
+const SIGIL_PASSES = [['#6FA8FF', 0.55, -0.35], ['#C9A0FF', -0.3, 0.45], ['#9B7FE8', -0.4, 0.3], ['#E0526F', 0, 0]];   // colour, dx, dy
 
 // ---- the private characters ----
 export const GLYPH_NAMES = ['input', 'ritual', 'thoughtform', 'materia', 'esoterica', 'touch', 'return', 'sigil'];
@@ -77,7 +79,7 @@ function drawGlyph(ctx, code, x, top, size, colour){
     ctx.strokeStyle = colour; ctx.fillStyle = colour;
     ctx.beginPath(); ctx.arc(12, 12, 9.2, 0, Math.PI * 2); ctx.stroke();
     if(Math.min(g.moon, 1 - g.moon) > 0.015) ctx.fill(pathOf(litPath(g.moon, 12, 12, 9.2)));
-  } else if(g.name === 'sigil'){
+  } else if(g.name === 'sigil' && !ctx.__vellumEffectPass){
     // the sigil keeps its own whimsy colours, whatever the text colour is
     for(const [col, dx, dy] of SIGIL_PASSES){
       ctx.save(); ctx.translate(dx, dy); ctx.strokeStyle = col; ctx.lineWidth = 1.35;
@@ -86,10 +88,10 @@ function drawGlyph(ctx, code, x, top, size, colour){
     ctx.fillStyle = '#E0526F'; ctx.beginPath(); ctx.arc(12, 12, 1.4, 0, Math.PI * 2); ctx.fill();
   } else {
     ctx.strokeStyle = colour;
-    drawShapes(ctx, NAV[g.name], colour);
+    drawShapes(ctx, NAV[g.name] || SIGIL, colour);
     // a second, fainter pass a hair off: the same unsteady hand as the UI
     ctx.globalAlpha *= 0.4; ctx.translate(0.35, -0.3);
-    drawShapes(ctx, NAV[g.name], colour);
+    drawShapes(ctx, NAV[g.name] || SIGIL, colour);
   }
   ctx.restore();
 }

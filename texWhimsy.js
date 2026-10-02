@@ -4,7 +4,7 @@
  * Sleep; starlight advancing or receding. Clouds, bokeh, the deep field,
  * euphoria dust, burning mana, first snow, aurora.
  */
-import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv } from './texCore.js';
 
 export function genClouds(w,h,amt,zoom,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
@@ -16,7 +16,7 @@ export function genClouds(w,h,amt,zoom,light){
   // thin as they climb — and is DRAGGED sideways the higher it goes, the way
   // a draught pulls at it. The side of each wisp facing the light is lit.
   // Computed at a quarter of full resolution: smoke is soft by nature.
-  const div=4, ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const div=canonDiv(4), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
   const perm=new Uint8Array(512), base=[...Array(256).keys()];
   for(let i=255;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [base[i],base[j]]=[base[j],base[i]]; }
   for(let i=0;i<512;i++) perm[i]=base[i&255];
@@ -61,119 +61,148 @@ export function genClouds(w,h,amt,zoom,light){
   return c;
 }
 
-export function genAstralFog(w,h,amt,zoom,light,tint){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+/**
+ * Deep Field's matter map: where the stuff of a galaxy is. A band at a random
+ * angle and offset, a few clusters that prefer the band, and noise. Built from
+ * the FIRST random draws, so the nebula and the stars — drawn as separate
+ * layers under the same seed — rebuild the identical map: clouds gather where
+ * the stars are, and the voids between clouds are starless.
+ * Returns density(u, v) in 0..1, u and v across the page.
+ */
+function buildMatterMap(){
+  const bandAngle = Math.random()*Math.PI, bandOff = (Math.random()-0.5)*0.5;
+  const bandWidth = 0.13 + Math.random()*0.12, bandStrength = 0.55 + Math.random()*0.35;
+  const ca = Math.cos(bandAngle), sa = Math.sin(bandAngle);
+  const clusters = [];
+  const nc = 4 + Math.floor(Math.random()*4);
+  for(let i = 0; i < nc; i++){
+    const t = (Math.random()-0.5)*1.3, off = bandOff + (Math.random()-0.5)*bandWidth*1.8;
+    clusters.push({ x: 0.5 + ca*t - sa*off, y: 0.5 + sa*t + ca*off, r: 0.035 + Math.random()*0.08, s: 0.5 + Math.random()*0.8 });
+  }
+  const grids = []; let amp = 1, maxA = 0;
+  for(let o = 0; o < 6; o++){
+    const f = 2.5*Math.pow(2, o), g = Math.max(2, Math.round(f) + 1);
+    grids.push({ grid: makeNoiseGrid(g, g), g, f, amp }); maxA += amp; amp *= 0.55;
+  }
+  const noise = (u, v) => { let t = 0; for(const o of grids) t += sampleNoiseGrid(o.grid, o.g, o.g, u*o.f, v*o.f)*o.amp; return t/maxA; };
+  const clusterAt = (u, v) => { let c = 0; for(const k of clusters){ const q = ((u-k.x)**2 + (v-k.y)**2)/(k.r*k.r); c += k.s*Math.exp(-q); } return c; };
+  const density = (u, v) => {
+    const across = -sa*(u-0.5) + ca*(v-0.5) - bandOff;
+    const band = bandStrength*Math.exp(-(across*across)/(2*bandWidth*bandWidth));
+    const n = noise(u, v);
+    return Math.max(0, Math.min(1, (0.32*n + 0.45*band + 0.35*clusterAt(u, v))*(0.55 + 0.9*n) - 0.07));
+  };
+  return { density, clusterAt, noise, clusters };
+}
+
+export function genAstralFog(w,h,amt,zoom,light,tint,form){
+  amt = (amt==null?1:amt);
+  const M = buildMatterMap();                 // FIRST: the same map the stars use
   const neb = tint ? parseHex(tint) : null;
-  const workDiv = 4;
-  const workW = Math.max(24, Math.round(w/workDiv));
-  const workH = Math.max(24, Math.round(h/workDiv));
-
-  const octaves = 8;
-  const gain = 0.55;
-  const lacunarity = 2.0;
-  const baseCells = 3 / zoom;
-  const bias = -0.05;
-  const power = 1.7;
-
-  const octaveGrids = [];
-  let amp = 1, maxAmp = 0;
-  for(let i=0;i<octaves;i++){
-    const freq = baseCells * Math.pow(lacunarity, i);
-    const gw = Math.max(2, Math.round(freq)+1);
-    const gh = Math.max(2, Math.round(freq * (workH/workW))+1);
-    octaveGrids.push({ grid: makeNoiseGrid(gw,gh), gw, gh, freq, amp });
-    maxAmp += amp;
-    amp *= gain;
+  const workDiv = canonDiv(4);
+  const workW = Math.max(24, Math.round(w/workDiv)), workH = Math.max(24, Math.round(h/workDiv));
+  const small = document.createElement('canvas'); small.width = workW; small.height = workH;
+  const sctx = small.getContext('2d', CPU), img = sctx.createImageData(workW, workH), d = img.data;
+  for(let py = 0; py < workH; py++) for(let px = 0; px < workW; px++){
+    const u = px/workW, v = py/workH;
+    // clouds follow the matter, lit from within where the clusters are — the
+    // stars illuminate the gas around them — with fine wisps through it
+    const dens = M.density(u, v), glow = M.clusterAt(u, v);
+    const wisp = 0.75 + 0.5*M.noise(u*3.3 + 7.1, v*3.3 + 2.9);
+    const density = Math.min(1, Math.pow(dens, 1.25)*wisp + 0.35*Math.min(1, glow)*dens);
+    const val = 128 + (75 - 128 + density*150) * amt;
+    const i = (py*workW + px)*4;
+    if(neb){
+      const t = Math.max(0, Math.min(1, (val - 128) / 127));
+      d[i] = val + (neb.r - 128)*t; d[i+1] = val + (neb.g - 128)*t; d[i+2] = val + (neb.b - 128)*t;
+    } else { d[i] = val; d[i+1] = val; d[i+2] = val; }
+    d[i+3] = 255;
   }
-
-  const small = document.createElement('canvas');
-  small.width = workW; small.height = workH;
-  const sctx = small.getContext('2d', CPU);
-  const img = sctx.createImageData(workW, workH);
-  const d = img.data;
-
-  for(let py=0; py<workH; py++){
-    for(let px=0; px<workW; px++){
-      let total = 0;
-      for(const o of octaveGrids){
-        const nx = (px/workW) * o.freq;
-        const ny = (py/workH) * o.freq;
-        total += sampleNoiseGrid(o.grid, o.gw, o.gh, nx, ny) * o.amp;
-      }
-      const v = total / maxAmp;
-      let density = Math.max(0, (v - bias) / (1 - bias));
-      density = Math.pow(density, power);
-
-      const idx = (py*workW+px)*4;
-      // Nebula density: how far the fog swings from neutral grey
-      const val = 128 + (75 - 128 + density*135) * amt;
-      // a tint pushes the fog toward a hue instead of leaving it neutral
-      if(neb){
-        const t = Math.max(0, Math.min(1, (val - 128) / 127));
-        d[idx]   = val + (neb.r - 128) * t;
-        d[idx+1] = val + (neb.g - 128) * t;
-        d[idx+2] = val + (neb.b - 128) * t;
-      } else { d[idx]=val; d[idx+1]=val; d[idx+2]=val; }
-      d[idx+3]=255;
-    }
-  }
-  sctx.putImageData(img,0,0);
-
-  const full = document.createElement('canvas');
-  full.width = w; full.height = h;
+  sctx.putImageData(img, 0, 0);
+  const full = document.createElement('canvas'); full.width = w; full.height = h;
   const fctx = full.getContext('2d', CPU);
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(small, 0, 0, w, h);
+  fctx.imageSmoothingEnabled = true; fctx.drawImage(small, 0, 0, w, h);
   return full;
 }
 
-export function genAstralStars(w,h,accent1,accent2,amt,zoom){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const full = document.createElement('canvas');
-  full.width = w; full.height = h;
+export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
+  amt = (amt==null?1:amt);
+  const M = buildMatterMap();                 // FIRST: the same map the nebula uses
+  const atm = Math.max(0, Math.min(1, form==null ? 0.2 : form));
+  const full = document.createElement('canvas'); full.width = w; full.height = h;
   const fctx = full.getContext('2d', CPU);
-
-  const d1 = darkenRgb(accent1, 0.35);
-  const d2 = darkenRgb(accent2, 0.35);
-
-  const starCount = Math.round((w*h)/2125 * amt);
-  for(let i=0;i<starCount;i++){
-    const x = Math.random()*w, y = Math.random()*h;
-    const roll = Math.random();
-    const base = Math.random() < 0.5 ? d1 : d2;
-    let size, mixT, spike;
-    if(roll < 0.55){ size = 1; mixT = 0.15+Math.random()*0.15; spike = false; }
-    else if(roll < 0.83){ size = 1.2+Math.random()*1.1; mixT = 0.3+Math.random()*0.15; spike = false; }
-    else if(roll < 0.96){ size = 2.1+Math.random()*1.6; mixT = 0.5+Math.random()*0.2; spike = false; }
-    else { size = 3.4+Math.random()*2.6; mixT = 0.75+Math.random()*0.2; spike = true; }
-
-    const r = Math.round(base.r + (255-base.r)*mixT);
-    const g = Math.round(base.g + (255-base.g)*mixT);
-    const b = Math.round(base.b + (255-base.b)*mixT);
-
-    if(size <= 1){
-      fctx.fillStyle = `rgb(${r},${g},${b})`;
-      fctx.fillRect(x, y, 1, 1);
-      continue;
+  const A1 = parseHex(accent1 || '#d9a6b3'), A2 = parseHex(accent2 || '#9B7FE8');
+  // Stars as LIGHT, not dots: every star a soft glow sized by its brightness,
+  // coloured by temperature (blue-white to orange), the brightest with the
+  // six spikes of a space telescope. ATMOSPHERE: 0 is deep space, crisp; up
+  // the scale, starlight twinkles, splits into colour at the edges, dims
+  // toward the horizon, and the sky picks up airglow.
+  const TEMPS = [[175,198,255],[214,226,255],[255,250,242],[255,236,204],[255,206,164]];
+  const colourOf = () => { const t = TEMPS[Math.floor(Math.pow(Math.random(), 0.9)*TEMPS.length)], a = Math.random() < 0.5 ? A1 : A2;
+    return [t[0]*0.78 + a.r*0.22, t[1]*0.78 + a.g*0.22, t[2]*0.78 + a.b*0.22]; };
+  const n = Math.round(canonArea(w,h)/2125 * amt);
+  const unit = Math.min(w, h);
+  const glowAt = (x, y, r, c, a) => {
+    const g = fctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`);
+    g.addColorStop(0.22, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a*0.42})`);
+    g.addColorStop(1, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},0)`);
+    fctx.fillStyle = g; fctx.beginPath(); fctx.arc(x, y, r, 0, Math.PI*2); fctx.fill();
+  };
+  for(let i = 0; i < n; i++){
+    // where the matter is: a share born inside the clusters, the rest accepted
+    // by density, so the voids stay dark
+    let x, y;
+    if(Math.random() < 0.3){
+      const k = M.clusters[Math.floor(Math.random()*M.clusters.length)];
+      const r = k.r*Math.sqrt(-2*Math.log(Math.max(1e-6, Math.random())))*0.7, a = Math.random()*Math.PI*2;
+      x = (k.x + Math.cos(a)*r)*w; y = (k.y + Math.sin(a)*r)*h;
+    } else {
+      let tries = 0;
+      do { x = Math.random()*w; y = Math.random()*h; tries++; }
+      while(tries < 8 && Math.random() > 0.05 + 0.95*Math.pow(M.density(x/w, y/h), 1.1));
     }
-
-    const grad = fctx.createRadialGradient(x,y,0,x,y,size);
-    grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
-    grad.addColorStop(0.65, `rgba(${r},${g},${b},0.7)`);
-    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-    fctx.fillStyle = grad;
-    fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
-
-    if(spike){
-      fctx.save();
-      fctx.globalAlpha = 0.55;
-      fctx.strokeStyle = `rgb(${r},${g},${b})`;
-      fctx.lineWidth = 0.7;
-      fctx.beginPath();
-      fctx.moveTo(x-size*2.4, y); fctx.lineTo(x+size*2.4, y);
-      fctx.moveTo(x, y-size*2.4); fctx.lineTo(x, y+size*2.4);
-      fctx.stroke();
-      fctx.restore();
+    let b = Math.pow(Math.random(), 3.2);                     // most stars are faint
+    b *= 1 + atm*(Math.random() - 0.5)*0.9;                   // twinkle
+    b *= 1 - atm*0.7*Math.pow(Math.max(0, y/h), 2.4);         // dimmer toward the horizon
+    if(b <= 0.01) continue;
+    const c = colourOf();
+    const core = cpx(0.7 + b*2.6) * (1 + atm*0.35);           // seeing blurs a little
+    const halo = core*(2.6 + b*4.5);
+    if(atm > 0.15 && b > 0.35){
+      // the atmosphere splits bright starlight at the edges
+      const dx = cpx(0.8 + b*3)*atm;
+      fctx.globalCompositeOperation = 'lighter';
+      glowAt(x + dx, y, core*1.6, [255, 80, 80], 0.32*atm);
+      glowAt(x - dx, y, core*1.6, [80, 130, 255], 0.32*atm);
+      fctx.globalCompositeOperation = 'source-over';
+    }
+    glowAt(x, y, halo, c, Math.min(1, 0.35 + b*0.75));
+    glowAt(x, y, core, [Math.min(255, c[0] + 40), Math.min(255, c[1] + 40), Math.min(255, c[2] + 40)], 1);
+    if(b > 0.94){
+      // six diffraction spikes, and the two faint horizontal ones — only the
+      // brightest few, as in a real deep field
+      const len = cpx(16 + b*70)*(1 + atm*0.4);
+      fctx.lineCap = 'round';
+      for(let s = 0; s < 8; s++){
+        const a = s < 6 ? (s/6)*Math.PI*2 + Math.PI/2 : (s === 6 ? 0 : Math.PI);
+        const L = s < 6 ? len : len*0.45;
+        const g = fctx.createLinearGradient(x, y, x + Math.cos(a)*L, y + Math.sin(a)*L);
+        g.addColorStop(0, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},0.85)`); g.addColorStop(1, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},0)`);
+        fctx.strokeStyle = g; fctx.lineWidth = cpx(1 + b*1.6);
+        fctx.beginPath(); fctx.moveTo(x, y); fctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); fctx.stroke();
+      }
+    }
+  }
+  if(atm > 0.02){
+    // airglow low in the sky; past halfway, the warm wash of distant towns
+    const g = fctx.createLinearGradient(0, h, 0, h*0.5);
+    g.addColorStop(0, `rgba(110,255,170,${0.13*atm})`); g.addColorStop(1, 'rgba(110,255,170,0)');
+    fctx.fillStyle = g; fctx.fillRect(0, h*0.5, w, h*0.5);
+    if(atm > 0.5){
+      const p = (atm - 0.5)*2, g2 = fctx.createLinearGradient(0, h, 0, h*0.78);
+      g2.addColorStop(0, `rgba(255,170,95,${0.16*p})`); g2.addColorStop(1, 'rgba(255,170,95,0)');
+      fctx.fillStyle = g2; fctx.fillRect(0, h*0.78, w, h*0.22);
     }
   }
   return full;
@@ -194,7 +223,7 @@ export function genBokeh(w,h,amt,zoom){
   const unit = Math.min(w,h);
   // 25%..400% maps onto near..far, on a log scale so 100% sits mid-depth
   const zf = Math.max(0, Math.min(1, Math.log(zoom/0.25) / Math.log(16)));
-  const n = Math.max(20, Math.round((w*h)/9000 * amt));
+  const n = Math.max(20, Math.round(canonArea(w,h)/9000 * amt));
   const motes = [];
   for(let i=0;i<n;i++){
     // more motes far away than near, as in a real volume of air
@@ -245,7 +274,7 @@ export function genEmbers(w,h,accent1,accent2,amt,zoom){
   const unit = Math.min(w,h);
   // a fifth of the original count: sparks read better sparse, and each one
   // is a trail of calls
-  const n = Math.max(4, Math.round((w*h)/130000 * amt));
+  const n = Math.max(4, Math.round(canonArea(w,h)/130000 * amt));
   const g = unit * 0.9;                                   // gravity, px per unit time²
   const trail = (x, y, vx, vy, len, width, col, depth) => {
     const steps = 22, dt = len / steps;
@@ -257,7 +286,7 @@ export function genEmbers(w,h,accent1,accent2,amt,zoom){
       const f = s / (pts.length-1);                        // 0 tail -> 1 head
       ctx.globalAlpha = 0.08 + 0.7*f*f;
       ctx.strokeStyle = `rgb(${Math.round(col.r + (255-col.r)*f*f)},${Math.round(col.g + (255-col.g)*f*f*0.8)},${Math.round(col.b + (255-col.b)*f*f*0.6)})`;
-      ctx.lineWidth = Math.max(0.5, width*(0.25 + 0.9*f));
+      ctx.lineWidth = Math.max(cpx(0.5), width*(0.25 + 0.9*f));
       ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(pts[s-1][0], pts[s-1][1]); ctx.lineTo(pts[s][0], pts[s][1]); ctx.stroke();
     }
@@ -307,7 +336,7 @@ export function genSnow(w,h,amt,zoom){
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
   const fctx = full.getContext('2d', CPU);
-  const count = Math.round((w*h)/3200 * amt);
+  const count = Math.round(canonArea(w,h)/3200 * amt);
   for(let i=0;i<count;i++){
     const x = Math.random()*w, y = Math.random()*h;
     const roll = Math.random();
@@ -318,10 +347,14 @@ export function genSnow(w,h,amt,zoom){
     else if(roll < 0.93){ size = 5+Math.random()*4; alpha = 0.35+Math.random()*0.25; }      // medium, softer
     else { size = 9+Math.random()*9; alpha = 0.18+Math.random()*0.2; }                      // rare, large, out of focus
     size *= zoom;
+    // sizes above are canonical pixels: the tiny/large decision is made in
+    // them, and the flake is drawn at this canvas's scale
+    const tiny = size <= 1.3;
+    size = cpx(size);
 
-    if(size <= 1.3){
+    if(tiny){
       fctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      fctx.fillRect(x,y,1,1);
+      fctx.fillRect(x,y,cpx(1),cpx(1));
       continue;
     }
     const grad = fctx.createRadialGradient(x,y,0,x,y,size);
@@ -351,7 +384,7 @@ export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
   // than even-width circle arcs; each drops a trail of motes. Sparkles twinkle
   // unevenly: four to six arms, no two the same length, one arm always long.
   const unit = Math.min(w,h);
-  const count = Math.round((w*h)/42000 * amt);        // 225 at 100% on a 3072 page
+  const count = Math.round(canonArea(w,h)/42000 * amt);        // 225 at 100% on a 3072 page
 
   const wisp = (x, y, col) => {
     const len = unit*(0.04 + Math.random()*0.07)*Z;
@@ -476,7 +509,7 @@ export function genAuroraVeil(w,h,amt,zoom,light,tint,tint2){
     // a brighter seam along the leading edge, the way a curtain catches light
     ctx.globalAlpha = 0.5;
     ctx.strokeStyle = `rgba(${rgb},0.5)`;
-    ctx.lineWidth = Math.max(0.8, w*0.0022);
+    ctx.lineWidth = Math.max(cpx(0.8), w*0.0022);
     ctx.beginPath();
     for(let sIdx=0; sIdx<=steps; sIdx++){
       const t = sIdx/steps, y = t*drop;
@@ -549,7 +582,7 @@ export function genMoon(w,h,amt,zoom){
   const fbm=(x,y)=>{ let s=0,a=0.5,f=1,n=0; for(let o=0;o<octaves;o++){ s+=vnoise(x*f,y*f)*a; n+=a; a*=0.5; f*=2.03; } return s/n; };
 
   // built at a third of the page's resolution and scaled up, like the clouds
-  const div=3, ww=Math.ceil(w/div), wh=Math.ceil(h/div);
+  const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div);
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU);
   const img=sctx.createImageData(ww,wh), d=img.data;

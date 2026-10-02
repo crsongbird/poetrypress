@@ -5,54 +5,90 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
 // Ink on nothing. Ink.
-export function genSigils(w,h,amt,zoom){
+export function genSigils(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const glow = Math.max(0, Math.min(1, form==null ? 0.15 : form));
+  const {lx, ly} = lightVec(light);
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
+  // Hand-inscribed with a BROAD NIB: a stroke is thick where it crosses the
+  // nib's angle and thin where it runs along it — the thick-and-thin that makes
+  // writing look written. Ink pools where a stroke ends and bleeds a little into
+  // the page. The light direction lifts each mark by a hair (extremely subtle);
+  // GLOW wraps the inscriptions in a soft halo.
   const unit = Math.max(w,h);
   const count = Math.max(6, Math.round((38 + Math.random()*26) * amt));
-
+  // a stroke's centreline, sampled
+  const lineAt = (x1,y1,x2,y2,curve,cx,cy) => { const pts=[];
+    for(let k=0;k<=16;k++){ const t=k/16;
+      if(curve){ const u=1-t; pts.push([u*u*x1+2*u*t*cx+t*t*x2, u*u*y1+2*u*t*cy+t*t*y2]); }
+      else pts.push([x1+(x2-x1)*t, y1+(y2-y1)*t]); }
+    return pts; };
+  // the inked shape of a stroke: width from the nib's angle, tapering at the
+  // very ends
+  const nibShape = (pts, nib, nibA) => { const L=[], Rr=[];
+    for(let k=0;k<pts.length;k++){
+      const p=pts[k], q=pts[Math.min(pts.length-1,k+1)], o=pts[Math.max(0,k-1)];
+      const dir=Math.atan2(q[1]-o[1], q[0]-o[0]);
+      const t=k/(pts.length-1), end=Math.min(1, Math.min(t, 1-t)*7 + 0.35);
+      const half=nib*(0.18 + 0.82*Math.abs(Math.sin(dir - nibA)))*end/2;
+      L.push([p[0]-Math.sin(dir)*half, p[1]+Math.cos(dir)*half]); Rr.push([p[0]+Math.sin(dir)*half, p[1]-Math.cos(dir)*half]); }
+    // a plain list of points (no Path2D, so the generator runs anywhere)
+    return L.concat(Rr.reverse()); };
+  const fillPoly = pts => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0], pts[k][1]); ctx.closePath(); ctx.fill(); };
   for(let i=0;i<count;i++){
     const cx = Math.random()*w, cy = Math.random()*h;
     const r = unit*(0.012 + Math.random()*0.038) * zoom;
-    // some sigils advance out of the ground, some recede back into it
+    // some sigils are written dark into the ground, some lift light out of it
     const emerging = Math.random() < 0.62;
     const tone = emerging ? 18 : 226;
-    const alpha = 0.30 + Math.random()*0.55;
-    ctx.strokeStyle = `rgba(${tone},${tone},${tone},${alpha})`;
-    ctx.lineWidth = Math.max(0.6, unit*0.0012*(0.5+Math.random()*1.8));
-    ctx.lineCap = 'round';
-
+    const alpha = 0.40 + Math.random()*0.5;
+    const nib = Math.max(cpx(1.4), unit*0.0032*(0.6+Math.random()*0.8)*zoom);
+    const nibA = (35 + (Math.random()-0.5)*20)*Math.PI/180;    // the scribe's hand
     const strokes = 3 + Math.floor(Math.random()*4);
     const rot = Math.random()*Math.PI*2;
+    const marks = [];
     for(let s=0;s<strokes;s++){
       const a1 = rot + (s/strokes)*Math.PI*2 + (Math.random()-0.5)*0.9;
       const a2 = a1 + (Math.random()-0.5)*2.4;
-      const r1 = r*(0.15+Math.random()*0.5);
-      const r2 = r*(0.55+Math.random()*0.6);
-      ctx.beginPath();
-      ctx.moveTo(cx+Math.cos(a1)*r1, cy+Math.sin(a1)*r1);
-      if(Math.random()<0.4){
-        ctx.quadraticCurveTo(cx, cy, cx+Math.cos(a2)*r2, cy+Math.sin(a2)*r2);
-      } else {
-        ctx.lineTo(cx+Math.cos(a2)*r2, cy+Math.sin(a2)*r2);
-      }
-      ctx.stroke();
+      const r1 = r*(0.15+Math.random()*0.5), r2 = r*(0.55+Math.random()*0.6);
+      const x1=cx+Math.cos(a1)*r1, y1=cy+Math.sin(a1)*r1, x2=cx+Math.cos(a2)*r2, y2=cy+Math.sin(a2)*r2;
+      marks.push(lineAt(x1,y1,x2,y2, Math.random()<0.4, cx, cy));
     }
     if(Math.random()<0.45){
-      ctx.beginPath();
-      ctx.arc(cx, cy, r*(0.2+Math.random()*0.45), 0, Math.PI*2);
-      ctx.stroke();
+      const rr=r*(0.2+Math.random()*0.45), pts=[];
+      for(let k=0;k<=40;k++){ const t=k/40*Math.PI*2; pts.push([cx+Math.cos(t)*rr, cy+Math.sin(t)*rr]); }
+      marks.push(pts);
     }
+    const shapes = marks.map(p => nibShape(p, nib, nibA));
+    // glow: a soft halo of light around the writing
+    if(glow > 0.01){
+      // two passes: a wide soft bloom, then a tighter bright one
+      ctx.save(); ctx.shadowColor=`rgba(245,245,245,${Math.min(1,1.1*glow)})`; ctx.shadowBlur=cpx(14+70*glow);
+      ctx.fillStyle=`rgba(245,245,245,${0.5*glow})`; for(const sh of shapes) fillPoly(sh);
+      ctx.shadowBlur=cpx(5+16*glow); for(const sh of shapes) fillPoly(sh); ctx.restore();
+    }
+    // light: the mark lifted by a hair — a faint shadow away from the light,
+    // a fainter highlight toward it
+    const off = nib*0.35;
+    ctx.fillStyle='rgba(0,0,0,0.07)'; ctx.save(); ctx.translate(-lx*off, -ly*off); for(const sh of shapes) fillPoly(sh); ctx.restore();
+    ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.save(); ctx.translate(lx*off, ly*off); for(const sh of shapes) fillPoly(sh); ctx.restore();
+    // bleed, then the ink itself
+    ctx.save(); ctx.shadowColor=`rgba(${tone},${tone},${tone},${alpha*0.5})`; ctx.shadowBlur=nib*0.6;
+    ctx.fillStyle=`rgba(${tone},${tone},${tone},${alpha})`; for(const sh of shapes) fillPoly(sh); ctx.restore();
+    // ink pools where each stroke ends
+    ctx.fillStyle=`rgba(${tone},${tone},${tone},${Math.min(1,alpha*1.15)})`;
+    for(const p of marks){ const e=p[p.length-1]; ctx.beginPath(); ctx.arc(e[0],e[1],nib*0.42,0,Math.PI*2); ctx.fill(); }
   }
   return c;
 }
@@ -68,7 +104,7 @@ export function genMathNoise(w,h,amt,zoom){
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
-  const cell = Math.max(6, Math.round((Math.max(w,h)/72) * zoom));
+  const cell = Math.max(cpx(6), Math.round((Math.max(w,h)/72) * zoom));    // floor in canonical pixels
   const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
   const gw = Math.max(2, Math.round(cols/6)), gh = Math.max(2, Math.round(rows/6));
   const field = makeNoiseGrid(gw, gh);
@@ -87,7 +123,7 @@ export function genMathNoise(w,h,amt,zoom){
       ctx.globalAlpha = 0.18 + strength*0.62*Math.random();
       ctx.strokeStyle = `rgb(${tone},${tone},${tone})`;
       ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
-      ctx.lineWidth = Math.max(0.5, cell*0.09);
+      ctx.lineWidth = Math.max(cpx(0.5), cell*0.09);
 
       const kind = Math.floor(Math.random()*4);
       if(kind===0){
@@ -350,7 +386,7 @@ export function genCrackedGlaze(w,h,amt,zoom){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   // Scale means bigger fragments, i.e. fewer of them — not a lower working
   // resolution, which only made the cracks look blurred.
-  const workDiv = 5;
+  const workDiv = canonDiv(5);
   const workW = Math.max(24, Math.round(w/workDiv));
   const workH = Math.max(24, Math.round(h/workDiv));
 
@@ -500,12 +536,12 @@ export function genCartomanticDrift(w,h,amt,zoom,angle){
     ctx.clip();
     const fade=0.35+Math.random()*0.5;               // rubbed away, some more than others
     roundCard(W,H,r); ctx.globalAlpha=fade*0.55; ctx.fillStyle=`rgb(${PAPER},${PAPER},${PAPER})`; ctx.fill();
-    ctx.globalAlpha=fade; ctx.strokeStyle=`rgb(${INK},${INK},${INK})`; ctx.lineWidth=Math.max(0.8,W*0.012); ctx.stroke();
+    ctx.globalAlpha=fade; ctx.strokeStyle=`rgb(${INK},${INK},${INK})`; ctx.lineWidth=Math.max(cpx(0.8),W*0.012); ctx.stroke();
     ctx.fillStyle=`rgb(${INK},${INK},${INK})`;
     const kind=Math.random();
     if(kind<0.18){                                   // face down: a lattice back
       ctx.save(); roundCard(W*0.84,H*0.88,r*0.7); ctx.clip();
-      ctx.lineWidth=Math.max(0.5,W*0.008); ctx.beginPath();
+      ctx.lineWidth=Math.max(cpx(0.5),W*0.008); ctx.beginPath();
       for(let k=-10;k<=10;k++){ const o=k*W*0.1; ctx.moveTo(o-H,-H); ctx.lineTo(o+H,H); ctx.moveTo(o+H,-H); ctx.lineTo(o-H,H); }
       ctx.stroke(); ctx.restore(); roundCard(W*0.84,H*0.88,r*0.7); ctx.stroke();
     } else if(kind<0.36){                            // a tarot trump
@@ -513,7 +549,7 @@ export function genCartomanticDrift(w,h,amt,zoom,angle){
       ctx.font=`${W*0.16}px Georgia, "Times New Roman", serif`;
       ctx.fillText(TRUMPS[Math.floor(Math.random()*TRUMPS.length)],0,-H*0.36);
       const em=Math.floor(Math.random()*3);
-      ctx.lineWidth=Math.max(0.8,W*0.014); ctx.beginPath();
+      ctx.lineWidth=Math.max(cpx(0.8),W*0.014); ctx.beginPath();
       if(em===0){ ctx.arc(0,0,W*0.16,0,Math.PI*2); for(let k=0;k<12;k++){ const a=k/12*Math.PI*2; ctx.moveTo(Math.cos(a)*W*0.2,Math.sin(a)*W*0.2); ctx.lineTo(Math.cos(a)*W*0.3,Math.sin(a)*W*0.3); } ctx.stroke(); }
       else if(em===1){ ctx.arc(0,0,W*0.2,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='destination-out'; ctx.beginPath(); ctx.arc(W*0.09,-W*0.04,W*0.18,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'; }
       else { for(let k=0;k<5;k++){ const a=-Math.PI/2+k*4*Math.PI/5; k?ctx.lineTo(Math.cos(a)*W*0.24,Math.sin(a)*W*0.24):ctx.moveTo(Math.cos(a)*W*0.24,Math.sin(a)*W*0.24); } ctx.closePath(); ctx.stroke(); }
@@ -531,7 +567,7 @@ export function genCartomanticDrift(w,h,amt,zoom,angle){
       if(count && PIPS[Math.min(count,8)]){
         for(const [u,v] of PIPS[Math.min(count,8)]) suitPath(u*W*0.3,v*H*0.34,W*(count===1?0.16:0.075),suit);
       } else if(!count){                             // a court card: a framed figure, simply
-        ctx.lineWidth=Math.max(0.8,W*0.012); ctx.strokeRect(-W*0.3,-H*0.32,W*0.6,H*0.64);
+        ctx.lineWidth=Math.max(cpx(0.8),W*0.012); ctx.strokeRect(-W*0.3,-H*0.32,W*0.6,H*0.64);
         suitPath(0,0,W*0.12,suit);
       }
     }
@@ -581,7 +617,7 @@ export function genBlackHole(w,h,amt,zoom){
   ctx.globalAlpha=1; ctx.fillStyle=glow; ctx.fillRect(0,0,w,h);
 
   // the field: particles in depth, lensed where they pass near the hole
-  const nField=Math.round((w*h)/5200*amt);
+  const nField=Math.round(canonArea(w,h)/5200*amt);
   for(let i=0;i<nField;i++){
     const z=Math.random();                               // 0 near .. 1 far
     let x=Math.random()*w, y=Math.random()*h;
@@ -615,7 +651,7 @@ export function genBlackHole(w,h,amt,zoom){
     const v=Math.min(0.35,Math.sqrt(Rsh*2.6/r)*0.35);
     const turb=0.55+Math.random()*0.9*Math.min(1.6,chaos);  // gaps and bright bands
     const seg=20;
-    ctx.lineWidth=Math.max(0.6,Rsh*(0.03+0.05*heat));
+    ctx.lineWidth=Math.max(cpx(0.6),Rsh*(0.03+0.05*heat));
     for(let k=0;k<seg;k++){
       const p0=from+(to-from)*k/seg, p1=from+(to-from)*(k+1)/seg;
       const beam=Math.pow(1+dirSign*v*Math.cos((p0+p1)/2),2);
@@ -644,7 +680,7 @@ export function genBlackHole(w,h,amt,zoom){
   // the shadow, then the photon ring hugging it
   ctx.globalAlpha=1; ctx.fillStyle='rgb(4,4,4)';
   ctx.beginPath(); ctx.arc(cx,cy,Rsh,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='rgb(252,252,252)'; ctx.lineWidth=Math.max(1,Rsh*0.04);
+  ctx.strokeStyle='rgb(252,252,252)'; ctx.lineWidth=Math.max(cpx(1),Rsh*0.04);
   ctx.globalAlpha=0.9; ctx.beginPath(); ctx.arc(cx,cy,Rsh*1.04,0,Math.PI*2); ctx.stroke();
   // in front: the near half of every orbit, crossing over the shadow
   for(const r of orbitsR) orbitArc(r, 0, Math.PI, false, false);

@@ -25,6 +25,8 @@ const ORDER = [
   'tunables.js',          // pure data: the numbers
   'strings.js',           // pure data: the text
   'appOptions.js',        // fonts, presets, aspects, $
+  'stitches.js',           // decorative stitches along any path (rules, borders, seams)
+  'effects.js',            // the text effect stack: definitions, PML, old forms
   'textParsers.js',       // PML
   'spell.js',             // glyph spells
   'moon.js',              // moon phase and its glyph

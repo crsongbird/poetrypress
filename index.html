@@ -139,7 +139,30 @@ inside of a <~~dead person~~/trans>'s dreams.
         <p>Every directive has a sane bare form: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>, <code>/effect</code>.</p>
         <p>Chain as many as you like:<br><code>&lt;text/#:ff00ff/f:4/scale:150/r/fx2,#fff,10,4,4&gt;</code></p>
 
-        <h4>Escaping</h4>
+        <h4>Rules</h4>
+<dl>
+<dt><code>---</code> <code>[---]</code> <code>{---}</code></dt><dd>a line across; accents color it</dd>
+<dt><code>&lt;---/50%/c&gt;</code></dt><dd>width and alignment (<code>l c r</code>)</dd>
+<dt><code>&lt;---/vine/up&gt;</code></dt><dd>a stitch, pointing <code>down</code> (default) or <code>up</code></dd>
+<dt><code>/size:150</code> <code>/weight:200</code> <code>/#:ff00aa</code></dt><dd>motif size, thread weight, color</dd>
+</dl>
+<p class="stitchlist" id="stitchList"></p>
+<p>Borders take the same stitches (Materia → Border Stitch); an inset box follows a stitched border's inner edge.</p>
+
+<h4>Code</h4>
+<p><code>`text`</code> — shown as typed, in monospace, on a backdrop. Variables resolve inside; glyphs don't.</p>
+
+<h4>Variables</h4>
+<p>Resolved before PML. Unknown names stay visible; <code>\§</code> prints §.</p>
+<dl>
+<dt><code>§SurfName</code> <code>§SurfParamsA</code> <code>§SurfParamsB</code></dt><dd>the surface, its knobs, its hues</dd>
+<dt><code>§MoonPhase!tonight</code> <code>!seed</code> <code>:0.5</code></dt><dd>a moon (−1…1: 0 full, ±1 new)</dd>
+<dt><code>§Glyph!fire</code> <code>§Glyph!materia</code> <code>§UVIcon</code></dt><dd>glyphs, by name</dd>
+<dt><code>§SpellName</code> <code>§Spell</code> <code>§Font</code> <code>§TypeEffect</code></dt><dd>the look</dd>
+<dt><code>§RenderMs</code> <code>§Profile</code> <code>§CacheMB</code> <code>§Canvas</code> <code>§Scale</code> <code>§Build</code></dt><dd>the renderer</dd>
+</dl>
+
+<h4>Escaping</h4>
         <p>Prefix any special character with <code>\</code> to print it literally: <code>\[text\]</code> prints <code>[text]</code></p>
 
         <h4>Fonts, by index</h4>
@@ -305,76 +328,86 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
         <details class="card" data-tab="type">
-      <summary class="card-title" data-str="card.typeface_effects">Typeface Effects</summary>
+      <summary class="card-title" data-str="card.typeface_effects">Text Effects</summary>
       
       <div class="card-grid">
-        <div class="field full">
-          <label data-str="label.mode">Mode</label>
-          <select id="outlineMode">
-            <option value="off" selected data-str="option.off">Off</option>
-            <option value="outline" data-str="option.outline">Outline</option>
-            <option value="shadow" data-str="option.shadow">Shadow</option>
-          </select>
-        </div>
-          <div class="field full">
-            <label for="typeEffect" data-str="label.typeface_effect">Typeface Effect</label>
-            <select id="typeEffect">
-              <option value="none" data-str="option.fx_none">None</option>
-              <option value="letterpress" data-str="option.fx_letterpress">Letterpress</option>
-              <option value="longshadow" data-str="option.fx_longshadow">Long Shadow</option>
-              <option value="doublestrike" data-str="option.fx_doublestrike">Double Strike</option>
-              <option value="chromatic" data-str="option.fx_chromatic">Chromatic Split</option>
-              <option value="halo" data-str="option.fx_halo">Halo</option>
-              <option value="bevel" data-str="option.fx_bevel">Bevel</option>
-              <option value="erosion" data-str="option.fx_erosion">Erosion</option>
-              <option value="doubleline" data-str="option.fx_doubleline">Double Underline</option>
-              <option value="wavyline" data-str="option.fx_wavyline">Wavy Underline</option>
-              <option value="dottedline" data-str="option.fx_dottedline">Dotted Underline</option>
-              <option value="bloom" data-str="option.fx_bloom">Bloom</option>
-            </select>
-          </div>
-          <div class="field full">
-            <label data-str="label.effect_strength">Effect Strength</label>
-            <input type="range" id="typeEffectStrength" min="0" max="100" value="50">
-            <span class="range-val" id="typeEffectStrengthVal">50</span>
-          </div>
-          <div class="field full">
-            <label data-str="label.effect_angle">Effect Angle</label>
-            <input type="range" id="typeEffectAngle" min="0" max="359" value="45">
-            <span class="range-val" id="typeEffectAngleVal">45°</span>
-          </div>
-          <div class="field full">
-            <label data-str="label.effect_distance">Effect Distance</label>
-            <input type="range" id="typeEffectDistance" min="10" max="300" value="100">
-            <span class="range-val" id="typeEffectDistanceVal">100%</span>
-          </div>
-          <div class="field full">
-            <label data-str="label.effect_grain">Effect Grain</label>
-            <input type="range" id="typeEffectGrain" min="0" max="100" value="30">
-            <span class="range-val" id="typeEffectGrainVal">30%</span>
-          </div>
+        <p class="hint full">Up to three effects, drawn in order beneath the letters. A segment can set its own: <code>&lt;word/fx:glow(#fd0,40,70)&gt;</code></p>
+        <div class="fx-slot full" id="fxSlot1">
           <div class="field">
-            <label data-str="label.effect_hue">Effect Hue</label>
-            <input type="text" id="typeEffectColorHex" value="#1A0B12" data-coloris>
+            <label data-str="label.fx1_type">Effect 1</label>
+            <select id="fx1Type"><option value="none">None</option></select>
           </div>
-
-        <div class="field" id="outlineColorField">
-          <label data-str="label.color">Color</label>
-          <div class="color-pair">
-            <input type="text" class="hex-input" id="outlineColorHex" value="#FFFFFF" data-coloris>
+          <div class="field" id="fx1ColorField">
+            <label data-str="label.fx1_color">Color</label>
+            <input type="text" class="hex-input" id="fx1Color" value="#ffffff" data-coloris>
+          </div>
+          <div class="field full" id="fx1K1Field">
+            <label id="fx1K1Label">—</label>
+            <input type="range" id="fx1K1" min="0" max="100" value="40">
+            <span class="range-val" id="fx1K1Val"></span>
+          </div>
+          <div class="field full" id="fx1K2Field">
+            <label id="fx1K2Label">—</label>
+            <input type="range" id="fx1K2" min="0" max="100" value="70">
+            <span class="range-val" id="fx1K2Val"></span>
+          </div>
+          <div class="field full" id="fx1AngleField">
+            <label data-str="label.fx1_angle">Angle</label>
+            <input type="range" id="fx1Angle" min="0" max="360" value="45">
+            <span class="range-val" id="fx1AngleVal">45°</span>
           </div>
         </div>
-
-        <div class="field" id="outlineThicknessField">
-          <label data-str="label.thickness_px">Thickness (px)</label>
-          <input type="number" id="outlineThickness" value="2" min="0" step="0.5">
+        <div class="fx-slot full" id="fxSlot2">
+          <div class="field">
+            <label data-str="label.fx2_type">Effect 2</label>
+            <select id="fx2Type"><option value="none">None</option></select>
+          </div>
+          <div class="field" id="fx2ColorField">
+            <label data-str="label.fx2_color">Color</label>
+            <input type="text" class="hex-input" id="fx2Color" value="#ffffff" data-coloris>
+          </div>
+          <div class="field full" id="fx2K1Field">
+            <label id="fx2K1Label">—</label>
+            <input type="range" id="fx2K1" min="0" max="100" value="40">
+            <span class="range-val" id="fx2K1Val"></span>
+          </div>
+          <div class="field full" id="fx2K2Field">
+            <label id="fx2K2Label">—</label>
+            <input type="range" id="fx2K2" min="0" max="100" value="70">
+            <span class="range-val" id="fx2K2Val"></span>
+          </div>
+          <div class="field full" id="fx2AngleField">
+            <label data-str="label.fx2_angle">Angle</label>
+            <input type="range" id="fx2Angle" min="0" max="360" value="45">
+            <span class="range-val" id="fx2AngleVal">45°</span>
+          </div>
         </div>
-
-        <div class="row full" id="shadowThicknessField" style="display:none;">
-          <div class="field"><label data-str="label.blur">Blur</label><input type="number" id="shadowBlur" value="6" min="0" step="0.5"></div>
-          <div class="field"><label data-str="label.x_offset">X Offset</label><input type="number" id="shadowX" value="3" step="0.5"></div>
-          <div class="field"><label data-str="label.y_offset">Y Offset</label><input type="number" id="shadowY" value="3" step="0.5"></div>
+        <div class="fx-slot full" id="fxSlot3">
+          <div class="field">
+            <label data-str="label.fx3_type">Effect 3</label>
+            <select id="fx3Type"><option value="none">None</option></select>
+          </div>
+          <div class="field" id="fx3ColorField">
+            <label data-str="label.fx3_color">Color</label>
+            <input type="text" class="hex-input" id="fx3Color" value="#ffffff" data-coloris>
+          </div>
+          <div class="field full" id="fx3K1Field">
+            <label id="fx3K1Label">—</label>
+            <input type="range" id="fx3K1" min="0" max="100" value="40">
+            <span class="range-val" id="fx3K1Val"></span>
+          </div>
+          <div class="field full" id="fx3K2Field">
+            <label id="fx3K2Label">—</label>
+            <input type="range" id="fx3K2" min="0" max="100" value="70">
+            <span class="range-val" id="fx3K2Val"></span>
+          </div>
+          <div class="field full" id="fx3AngleField">
+            <label data-str="label.fx3_angle">Angle</label>
+            <input type="range" id="fx3Angle" min="0" max="360" value="45">
+            <span class="range-val" id="fx3AngleVal">45°</span>
+          </div>
         </div>
+        <input type="hidden" id="underAll" value="">
       </div>
     </details>
 
@@ -608,6 +641,14 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
           </div>
           <div class="field">
+            <label data-str="label.border_stitch">Border Stitch</label>
+            <select id="borderStitch"><option value="solid">Solid</option></select>
+          </div>
+          <div class="check-row">
+            <input type="checkbox" id="borderStitchOut">
+            <label for="borderStitchOut" data-str="label.border_stitch_out">Points Outward?</label>
+          </div>
+          <div class="field">
             <label data-str="label.border_blend">Border Blend</label>
             <select id="borderBlend"><option value="source-over">Normal</option><option value="overlay">Overlay</option><option value="hard-light">Hard Light</option><option value="soft-light">Soft Light</option><option value="color-dodge">Color Dodge</option><option value="screen">Screen</option><option value="color-burn">Color Burn</option><option value="multiply">Multiply</option></select>
           </div>
@@ -798,6 +839,10 @@ inside of a <~~dead person~~/trans>'s dreams.
     <details class="card" data-tab="more" id="advancedPanel">
       <summary class="card-title" style="cursor:pointer;" data-str="card.workbench">Workbench</summary>
       <div class="card-grid" style="margin-top:8px;">
+        <div class="check-row full">
+          <input type="checkbox" id="fullPreview">
+          <label for="fullPreview" data-str="label.full_preview">Full-size preview (slower — to compare)</label>
+        </div>
         <div class="field full">
           <textarea id="advancedJson" style="min-height:140px; font-family:'Courier Prime',monospace; font-size:11px;"></textarea>
         </div>

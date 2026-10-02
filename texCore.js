@@ -76,6 +76,41 @@ export function withSeed(seed, fn){
   finally { Math.random = original; }
 }
 
+// ---------- scale: canonical pixels ----------
+/**
+ * S is the ratio of the canvas being drawn to the canonical export canvas:
+ * 1 when exporting, smaller for a screen-sized preview. Generators measure in
+ * CANONICAL pixels — the export's — and convert with cpx(n) = n × S, so a
+ * texture drawn at any size looks like the export scaled.
+ *
+ * Set for the duration of one generation with withScale(S, fn), exactly as
+ * withSeed does for randomness, so no generator's arguments change. It is 1
+ * everywhere today: converting generators to cpx() is the next step, and at
+ * S = 1 each converted line computes what it did before.
+ */
+let SCALE = 1;
+export function withScale(s, fn){
+  const prev = SCALE;
+  SCALE = (s > 0 && isFinite(s)) ? s : 1;
+  try { return fn(); }
+  finally { SCALE = prev; }
+}
+/** The scale the current generation runs at. */
+export function scaleNow(){ return SCALE; }
+/** n canonical pixels, in pixels of the canvas being drawn. */
+export function cpx(n){ return n * SCALE; }
+/** The canvas's area in CANONICAL pixels. Counts written as (w*h)/K scale with
+ *  the canvas — a small preview drew fewer sparkles, flakes and stars — so
+ *  they use canonArea(w, h)/K: the same number at S = 1, the same COUNT at
+ *  any size. */
+export function canonArea(w, h){ return (w * h) / (SCALE * SCALE); }
+/** A working-resolution divisor, kept in canonical cells. Textures built on a
+ *  reduced grid (w/4, w/3…) got a COARSER grid when drawn small — the rake
+ *  lines shimmered into moiré. canonDiv(4) is exactly 4 at S = 1 and shrinks
+ *  with S, so the grid stays the export's grid at any size (never finer, so
+ *  a preview never costs more than the export to compute). */
+export function canonDiv(d){ return Math.max(1, d * SCALE); }
+
 export function lightVec(light){
   const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
   return { lx: Math.cos(a), ly: Math.sin(a) };

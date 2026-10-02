@@ -36,7 +36,10 @@
  *   §Canvas             the page size, e.g. 3072×3072
  *   §TypeEffect         the typeface effect, or none
  *   §Today              today's date
+ *   §UVIcon             the Unfixable Vellum sigil, as on the app icon
  *   §RenderMs           how long the last render took, in milliseconds
+ *   §Profile            that time by stage: backdrop+texture · frame · text · marks
+ *   §Scale              this render's size against the export (1 = full size)
  *   §CacheMB            memory held by the texture cache, in megabytes
  *   §Fonts              how many typeface families have been fetched
  *   §Build              which build this is (stamped by build.mjs)
@@ -87,6 +90,7 @@ export function resolvePmlVariables(text, ctx){
         if(param === 'opacity') return moonChar((ctx.opacity || 0) / 200);
         return null;
       }
+      case 'UVIcon':     return glyphChar('sigil');          // the Vellum sigil, in its own colours
       case 'Glyph': {
         if(!param) return null;
         const k = param.toLowerCase();
@@ -99,6 +103,8 @@ export function resolvePmlVariables(text, ctx){
       case 'Font':       return ctx.font;
       case 'Canvas':     return ctx.canvas;
       case 'TypeEffect': return ctx.typeEffect;
+      case 'Scale':      return ctx.scale == null ? '1' : String(+(+ctx.scale).toFixed(3));
+      case 'Profile':    return ctx.profile || '';
       case 'RenderMs':   return ctx.renderMs == null ? '' : String(ctx.renderMs);
       case 'CacheMB':    return ctx.cacheMB == null ? '' : String(ctx.cacheMB);
       case 'Fonts':      return ctx.fonts == null ? '' : String(ctx.fonts);

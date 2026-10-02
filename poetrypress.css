@@ -1494,3 +1494,8 @@ body.is-mobile .tool-row #textureSeedValue{ width:100%; min-width:0; box-sizing:
 #undoBtn{ left:48px; } #redoBtn{ left:89px; }
 body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 .history-btn:disabled{ opacity:0.2; cursor:default; }
+
+/* Done is always reachable: pinned to the picker's bottom edge. The picker
+   scrolls (with its scrollbar hidden) when a phone's text size or keyboard
+   leaves it short, and Done — last in the picker — scrolled out of sight. */
+#clr-picker #clr-close{ position:sticky; bottom:0; z-index:2; box-shadow:0 -6px 10px var(--bg-panel, #1a1717); }

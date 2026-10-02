@@ -4,7 +4,7 @@ A single-page art app for visual poetry: a free replacement for paid tools like
 Photoshop, needing no desktop. It works on a phone, in a browser, with nothing
 to install.
 
-**[vellum.unfixable.place](https://vellum.unfixable.place)**
+**[poetrypress.unfixable.place](https://poetrypress.unfixable.place)** · development build at vellum.unfixable.place
 
 It was built entirely on a phone, by a housing-insecure, disabled housewife,
 using only the phone and cloud dev tools — no computer. It is free, and it
@@ -114,6 +114,14 @@ Emoji inside a coloured span are tinted to match.
 
 ---
 
+### Effects and underlines
+
+`<word/fx:outline(#fff,4)+glow(#fd0,40,70)>` — up to three effects, in order
+(colour, knob 1, knob 2, angle): outline, shadow, longshadow, glow,
+letterpress, bevel, chromatic, doublestrike, erosion. `/fx:none` clears.
+`<word/under:wave,#c33,150>` — an underline in any of the stitches. The older
+`/fx0` `/fx1` `/fx2` `/effect:` forms still work.
+
 ### §Variables
 
 Written in the poem, resolved before PML is parsed — so a variable may expand
@@ -129,7 +137,8 @@ written; `\§` writes a literal §.
 | `§MoonPhase:x` | x from −1 to 1: 0 full, ±1 new; negative waxes, positive wanes |
 | `§Glyph!input` `ritual` `thoughtform` `materia` `esoterica` `touch` `return` `sigil` | the app's drawn glyphs, inline |
 | `§Glyph!whimsy` `sharpness` `chaos` | ♡ √ ∆ |
-| `§Spell` · `§Font` · `§Canvas` · `§TypeEffect` · `§Today` | the look's spell, the typeface, the page size, the effect, the date |
+| `§Spell` · `§SpellName` · `§Font` · `§Canvas` · `§TypeEffect` · `§Today` | the look's spell and its name, the typeface, the page size, the effect, the date |
+| `§RenderMs` · `§Profile` · `§CacheMB` · `§Fonts` · `§Build` | render time, and by stage; texture memory; fonts fetched; which build |
 
 A texture test page:
 
@@ -143,6 +152,10 @@ Blend Mode: [§SurfBlendMode]  Light: [§LightDir]
 ```
 
 ## Development
+
+`node tools/scale-audit.mjs` scores how each texture holds up drawn at a
+smaller size (needs `npm install @napi-rs/canvas`).
+
 
 ```
 sh test.sh                 # parse every module, build, parse the bundle, run every suite

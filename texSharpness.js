@@ -5,7 +5,7 @@
  * frustration, silverpoint hatch, metal leaf. (Waking grain is a pixel
  * loop and lives in buildTexture.)
  */
-import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx, lightVec } from './texCore.js';
 
 // The flower's FORM, as keyframes of a few numbers. The Form knob (0–1)
 // blends continuously between neighbours, so every position in between is a
@@ -125,7 +125,7 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.moveTo(cx,cy);
     ctx.bezierCurveTo(x1,y1,x2,y2,tx,ty); ctx.bezierCurveTo(x3,y3,x4,y4,cx,cy); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=css(mix(base,{r:0,g:0,b:0},0.35),alpha*0.35); ctx.lineWidth=Math.max(0.5,len*0.012); ctx.stroke();
+    ctx.strokeStyle=css(mix(base,{r:0,g:0,b:0},0.35),alpha*0.35); ctx.lineWidth=Math.max(cpx(0.5),len*0.012); ctx.stroke();
   };
 
   // one flower of form F, centred at (cx, cy) with radius R
@@ -153,7 +153,7 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
           petal(ox,oy,a+d,len,wide*0.62,F.round,pb,pt,0.96);
         } else petal(ox,oy,a,len*(sepal?0.94:1),wide*(sepal?0.85:1),F.round,pb,pt,0.96);
         if(F.rib>0.05 && !sepal){
-          ctx.strokeStyle=css(WHITE_TIP(pb),0.55*F.rib); ctx.lineWidth=Math.max(0.6,R*0.012);
+          ctx.strokeStyle=css(WHITE_TIP(pb),0.55*F.rib); ctx.lineWidth=Math.max(cpx(0.6),R*0.012);
           ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+Math.cos(a)*len*0.82, oy+Math.sin(a)*len*0.82); ctx.stroke();
         }
       }
@@ -181,7 +181,7 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
     for(let k=0;k<F.stamens;k++){
       const a=rot+(k/F.stamens)*Math.PI*2+(Math.random()-0.5)*0.08;
       const r0=hr*0.5, r1=R*(F.stamLen*(0.9+Math.random()*0.2));
-      ctx.lineWidth=Math.max(0.6,R*0.012);
+      ctx.lineWidth=Math.max(cpx(0.6),R*0.012);
       ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0); ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke();
       ctx.fillStyle=css(bright); ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1,Math.max(0.6,R*0.013),0,Math.PI*2); ctx.fill();
     }
@@ -244,34 +244,65 @@ export function genHalftone(w,h,amt,zoom){
 
 // Downpour: diagonal falling streaks — a distinct linear-gradient-stroke pattern,
 // not the static blob stains that Water Spots uses.
-export function genRainStreaks(w,h,amt,angle,zoom){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const slant = ((angle==null?0:angle) * Math.PI) / 180;
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d', CPU);
-  fctx.fillStyle='rgb(128,128,128)';
-  fctx.fillRect(0,0,w,h);
+export function genRainStreaks(w,h,amt,angle,zoom,light){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom); angle=angle||0;
+  const full=document.createElement('canvas'); full.width=w; full.height=h;
+  const fctx=full.getContext('2d', CPU);
+  fctx.fillStyle='#808080'; fctx.fillRect(0,0,w,h);
+  const unit=Math.min(w,h), a=angle*Math.PI/180, sa=Math.sin(a), ca=Math.cos(a);
+  const {lx,ly}=lightVec(light);
+  // Rain in DEPTH, seen through a pane of glass. Far back: soft, wide sheets
+  // of rain. Middle: slanted streaks, motion-blurred, wide enough to read at
+  // any size. On the glass: beaded drops — dark refracted cores, rims lit from
+  // the light, a glint — and the trails of water they left running down.
+  // SLANT tilts the falling rain; drops on glass always run straight down.
 
-  // -14deg is the resting slant; the Slant knob tilts from there
-  const angleRad = (-14*Math.PI/180) + slant;
-  const count = Math.round((w*h)/3800 * amt);
+  // far: sheets
+  for(let i=0;i<9;i++){
+    const x=Math.random()*w*1.4-w*0.2, bw=unit*(0.05+Math.random()*0.13), len=Math.max(w,h)*1.6;
+    const g=fctx.createLinearGradient(x-bw,0,x+bw,0);
+    const t=Math.random()<0.6?230:60, al=0.05+Math.random()*0.07;
+    g.addColorStop(0,`rgba(${t},${t},${t},0)`); g.addColorStop(0.5,`rgba(${t},${t},${t},${al})`); g.addColorStop(1,`rgba(${t},${t},${t},0)`);
+    fctx.save(); fctx.translate(x,h/2); fctx.rotate(-a); fctx.translate(-x,-h/2);
+    fctx.fillStyle=g; fctx.fillRect(x-bw,h/2-len/2,bw*2,len); fctx.restore();
+  }
+  // middle: streaks, each fading at both ends (motion blur)
+  const count=Math.round(canonArea(w,h)/7600*amt);
+  fctx.lineCap='round';
   for(let i=0;i<count;i++){
-    const x = Math.random()*w*1.3 - w*0.15;
-    const len = (Math.random()*0.11+0.05)*Math.max(w,h) * zoom;
-    // a streak may begin above the page: starting at y >= 0 and fading in
-    // left a band at the top where no rain fell
-    const y = Math.random()*(h + len) - len;
-    const dx = Math.sin(angleRad)*len, dy = Math.cos(angleRad)*len;
-    const bright = Math.random()<0.5 ? (35+Math.random()*35) : (210+Math.random()*40);
-    const grad = fctx.createLinearGradient(x,y,x+dx,y+dy);
-    grad.addColorStop(0, `rgba(${bright},${bright},${bright},0)`);
-    grad.addColorStop(0.18, `rgba(${bright},${bright},${bright},0.9)`);
-    grad.addColorStop(0.82, `rgba(${bright},${bright},${bright},0.9)`);
-    grad.addColorStop(1, `rgba(${bright},${bright},${bright},0)`);
-    fctx.strokeStyle = grad;
-    fctx.lineWidth = 1.4+Math.random()*2.2;
+    const len=(Math.random()*0.09+0.04)*Math.max(w,h)*zoom;
+    const x=Math.random()*(w+len)-len*0.5, y=Math.random()*(h+len)-len;
+    const dx=sa*len, dy=ca*len;
+    const t=Math.random()<0.75?(205+Math.random()*45):(40+Math.random()*30), al=0.22+Math.random()*0.3;
+    const g=fctx.createLinearGradient(x,y,x+dx,y+dy);
+    g.addColorStop(0,`rgba(${t|0},${t|0},${t|0},0)`); g.addColorStop(0.5,`rgba(${t|0},${t|0},${t|0},${al})`); g.addColorStop(1,`rgba(${t|0},${t|0},${t|0},0)`);
+    fctx.strokeStyle=g; fctx.lineWidth=cpx(2.4+Math.random()*3.6);
     fctx.beginPath(); fctx.moveTo(x,y); fctx.lineTo(x+dx,y+dy); fctx.stroke();
+  }
+  // near: drops on the glass, with their trails
+  const drops=Math.round((30+Math.random()*16)*amt);
+  for(let i=0;i<drops;i++){
+    const r=unit*(0.005+Math.pow(Math.random(),2)*0.017)*zoom, x=Math.random()*w, y=Math.random()*h;
+    if(Math.random()<0.45){
+      // the trail it left: a thin wandering run of water above it
+      const tl=r*(6+Math.random()*16); fctx.lineWidth=r*0.55; fctx.strokeStyle='rgba(60,60,60,0.28)';
+      fctx.beginPath(); fctx.moveTo(x,y);
+      for(let k=1;k<=10;k++){ fctx.lineTo(x+Math.sin(k*1.7+i)*r*0.35, y-tl*k/10); } fctx.stroke();
+      fctx.strokeStyle='rgba(235,235,235,0.18)'; fctx.lineWidth=r*0.22;
+      fctx.beginPath(); fctx.moveTo(x-lx*r*0.15,y);
+      for(let k=1;k<=10;k++){ fctx.lineTo(x-lx*r*0.15+Math.sin(k*1.7+i)*r*0.35, y-tl*k/10); } fctx.stroke();
+    }
+    const ry=r*(1.05+Math.random()*0.25);                       // drops hang a little long
+    const core=fctx.createRadialGradient(x+lx*r*0.25,y+ly*r*0.25,r*0.1,x,y,r*1.05);
+    core.addColorStop(0,'rgba(40,40,40,0.55)'); core.addColorStop(0.75,'rgba(70,70,70,0.35)'); core.addColorStop(1,'rgba(70,70,70,0)');
+    fctx.fillStyle=core; fctx.beginPath(); fctx.ellipse(x,y,r,ry,0,0,Math.PI*2); fctx.fill();
+    // the rim lit on the side AWAY from the light: light passes through and
+    // gathers on the far edge
+    fctx.strokeStyle='rgba(240,240,240,0.55)'; fctx.lineWidth=Math.max(cpx(1),r*0.16);
+    const la=Math.atan2(ly,lx);
+    fctx.beginPath(); fctx.ellipse(x,y,r*0.86,ry*0.86,0,la-1.1,la+1.1); fctx.stroke();
+    fctx.fillStyle='rgba(255,255,255,0.8)';
+    fctx.beginPath(); fctx.arc(x-lx*r*0.42,y-ly*r*0.42,Math.max(cpx(0.8),r*0.16),0,Math.PI*2); fctx.fill();
   }
   return full;
 }
@@ -350,7 +381,7 @@ export function genBrushstrokes(w,h,amt,zoom){
       const shade = tone + (Math.random()-0.5)*110;          // visible striations
       const end = dry + (1-dry)*(0.3 + Math.random()*0.7);   // some give out early
       ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0})`;
-      ctx.lineWidth = Math.max(0.6, W*0.035*(0.6+Math.random()));
+      ctx.lineWidth = Math.max(cpx(0.6), W*0.035*(0.6+Math.random()));
       ctx.lineCap = 'round';
       ctx.beginPath(); let on = false;
       for(const p of pts){
@@ -385,57 +416,53 @@ export function genBrushstrokes(w,h,amt,zoom){
 // The plate is scratched
 // in one direction, always.
 // Patience, then a line.
-export function genSilverpointHatch(w,h,amt,zoom,angle){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const rad = ((angle==null?35:angle) * Math.PI) / 180;
-  const c = document.createElement('canvas');
-  c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0,0,w,h);
-
-  const diag = Math.hypot(w,h);
-  // HATCHING means crossed sets. One set of parallel lines is just rain,
-  // which is exactly what the first version looked like. Three passes at
-  // different angles, tighter spacing, and short strokes rather than
-  // full-width rules.
-  // The knob sets the CROSS angle: the two main passes open away from each
-  // other as it turns, so the lattice widens and closes instead of merely
-  // rotating as one rigid grid.
-  const passes = [
-    { rot:  rad,       weight: 1.00, spacingMul: 1.00 },
-    { rot: -rad,       weight: 0.82, spacingMul: 1.2  },
-    { rot:  rad * 0.4, weight: 0.45, spacingMul: 2.0  },
-  ];
-
-  for(const pass of passes){
-    const spacing = Math.max(1.6, (diag/230) * pass.spacingMul / amt);
-    const lines = Math.ceil(diag/spacing);
-    ctx.save();
-    ctx.translate(w/2, h/2);
-    ctx.rotate(pass.rot);
-    for(let i=-lines; i<=lines; i++){
-      const y = i*spacing;
-      const dark = Math.random() < 0.58;
-      const tone = dark ? 48 : 216;
-      // an engraver's stroke is short and repeated, not one long rule
-      const segments = 2 + Math.floor(Math.random()*3);
-      for(let sIdx=0; sIdx<segments; sIdx++){
-        const span = diag / segments;
-        const x0 = -diag/2 + sIdx*span + Math.random()*span*0.22;
-        const x1 = x0 + span*(0.45 + Math.random()*0.45);
-        ctx.globalAlpha = (0.10 + Math.random()*0.26) * pass.weight;
-        ctx.strokeStyle = `rgb(${tone},${tone},${tone})`;
-        ctx.lineWidth = Math.max(0.3, diag*0.00055*(0.6+Math.random()*0.9));
-        ctx.beginPath();
-        ctx.moveTo(x0, y + (Math.random()-0.5)*spacing*0.3);
-        ctx.lineTo(x1, y + (Math.random()-0.5)*spacing*0.3);
-        ctx.stroke();
+export function genSilverpointHatch(w,h,amt,zoom,angle,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom); angle=(angle==null?35:angle);
+  const age = Math.max(0, Math.min(1, form==null ? 0.3 : form));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU);
+  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
+  const unit=Math.min(w,h), base=angle*Math.PI/180;
+  // A silverpoint DRAWING of something unseen. A few large soft shapes make a
+  // form — its tone says where the drawing is dark — and the hatching gathers
+  // there: patches of short strokes, parallel, tapered at both ends, slightly
+  // curved, heavier where the stylus pressed; in the deepest shadow a second
+  // layer crosses at an angle. AGE: silverpoint tarnishes, fresh cool grey
+  // turning warm brown over the years.
+  const blobs=[]; for(let i=0;i<5;i++) blobs.push({x:Math.random(), y:Math.random(), r:0.18+Math.random()*0.28, s:0.5+Math.random()*0.6});
+  const noise=makeNoiseGrid(6,6);
+  const tone=(u,v)=>{ let t=0; for(const b of blobs){ const q=((u-b.x)**2+(v-b.y)**2)/(b.r*b.r); t+=b.s*Math.exp(-q*1.6); }
+    return Math.max(0, Math.min(1, t*0.75 + (sampleNoiseGrid(noise,6,6,u*5,v*5)-0.5)*0.5)); };
+  // dark enough to read through overlay: only marks well below mid-grey darken a page
+  const fresh=[44,48,58], tarnish=[92,50,20];
+  const ink=fresh.map((f,i)=>f+(tarnish[i]-f)*age);
+  // one tapered, gently curved stroke, as a filled shape
+  const stroke=(x,y,a,len,wd,bend,alpha)=>{
+    const ca=Math.cos(a), sa=Math.sin(a), nx=-sa, ny=ca, L=[], R=[];
+    for(let k=0;k<=10;k++){ const t=k/10, along=(t-0.5)*len, off=Math.sin(t*Math.PI)*bend;
+      const px=x+ca*along+nx*off, py=y+sa*along+ny*off, half=wd*Math.pow(Math.sin(t*Math.PI),0.7)/2;
+      L.push([px+nx*half,py+ny*half]); R.push([px-nx*half,py-ny*half]); }
+    ctx.fillStyle=`rgba(${ink[0]|0},${ink[1]|0},${ink[2]|0},${alpha})`;
+    ctx.beginPath(); ctx.moveTo(L[0][0],L[0][1]); for(const p of L) ctx.lineTo(p[0],p[1]);
+    for(let k=R.length-1;k>=0;k--) ctx.lineTo(R[k][0],R[k][1]); ctx.closePath(); ctx.fill(); };
+  const patches=Math.round(150*amt);
+  for(let i=0;i<patches;i++){
+    // patches land where the form is dark
+    let u, v, t, tries=0;
+    do { u=Math.random(); v=Math.random(); t=tone(u,v); tries++; } while(tries<6 && Math.random()>0.15+0.85*t);
+    const px=u*w, py=v*h, size=unit*(0.045+Math.random()*0.06)*zoom;
+    const a=base+(sampleNoiseGrid(noise,6,6,u*5+2,v*5+2)-0.5)*0.7;
+    const layers = t>0.62 ? 2 : 1;                       // the deepest shadow cross-hatched
+    for(let l=0;l<layers;l++){
+      const la=a+l*0.95, n=Math.round(7+t*12), gap=size/n;
+      for(let k=0;k<n;k++){
+        const off=(k-(n-1)/2)*gap, len=size*(0.55+Math.random()*0.45)*Math.sqrt(1-Math.min(0.9,(off/size*1.6)**2));
+        const sx=px-Math.sin(la)*off+(Math.random()-0.5)*gap*0.4, sy=py+Math.cos(la)*off+(Math.random()-0.5)*gap*0.4;
+        const press=0.6+Math.random()*0.4;
+        stroke(sx,sy,la+(Math.random()-0.5)*0.06,len,cpx(2.6+t*3)*press,len*(Math.random()-0.5)*0.08,(0.5+t*0.45)*press);
       }
     }
-    ctx.restore();
   }
-  ctx.globalAlpha = 1;
   return c;
 }
 
@@ -481,7 +508,7 @@ export function genMetalLeaf(w,h,amt,zoom,light,tint){
     // the seam where one leaf overlaps the next
     ctx.globalAlpha = 0.10 + Math.random()*0.25;
     ctx.strokeStyle = 'rgb(48,48,48)';
-    ctx.lineWidth = Math.max(0.5, unit*0.0009);
+    ctx.lineWidth = Math.max(cpx(0.5), unit*0.0009);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -512,7 +539,7 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
   const H = unit*0.34*zoom;                               // tallest towers
 
   // stars
-  for(let i=0;i<Math.round((w*h)/16000);i++){
+  for(let i=0;i<Math.round(canonArea(w,h)/16000);i++){
     ctx.globalAlpha=0.25+Math.random()*0.6; ctx.fillStyle=grey(230);
     ctx.beginPath(); ctx.arc(Math.random()*w, Math.random()*ground*0.85, unit*0.0012*(0.4+Math.random()), 0, Math.PI*2); ctx.fill();
   }
@@ -567,7 +594,7 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
     const nx=w*(0.25+Math.random()*0.5), NH=H*1.55, base=ground;
     const y=f=>base-NH*f, spread=NH*0.11, waist=NH*0.035, top=NH*0.075;
     // the legs are structural: drawn with weight, not as hairlines
-    ctx.globalAlpha=1; ctx.strokeStyle=grey(24); ctx.fillStyle=grey(24); ctx.lineWidth=Math.max(2,NH*0.012);
+    ctx.globalAlpha=1; ctx.strokeStyle=grey(24); ctx.fillStyle=grey(24); ctx.lineWidth=Math.max(cpx(2),NH*0.012);
     for(const s of [-1,0,1]){
       ctx.beginPath(); ctx.moveTo(nx+s*spread, base);
       ctx.bezierCurveTo(nx+s*waist*1.2, y(0.25), nx+s*waist, y(0.4), nx+s*waist*1.1, y(0.5));
@@ -599,7 +626,7 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
       ctx.globalAlpha=(1-depth)*0.55; ctx.fillStyle=rgb(win);
       ctx.fillRect(x+Math.sin(ry*0.08)*unit*0.004, ry, len, Math.max(1,unit*0.0016));
     }
-    ctx.globalAlpha=0.18; ctx.strokeStyle=grey(200); ctx.lineWidth=1;
+    ctx.globalAlpha=0.18; ctx.strokeStyle=grey(200); ctx.lineWidth=cpx(1);
     for(let y=wy+unit*0.01;y<h;y+=unit*(0.012+Math.random()*0.02)){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y+Math.random()*2); ctx.stroke(); }
   } else if(scene==='fields'){
     ctx.globalAlpha=1; ctx.fillStyle=grey(92); ctx.fillRect(0,ground,w,h-ground);

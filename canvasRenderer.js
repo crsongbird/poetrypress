@@ -9,7 +9,7 @@
  *                        collectGradientColors (reads the stop pickers)
  *   Measuring text       fontString, emphasisTracking (the letter-spacing
  *                        stand-in for fonts without an italic), measureSegWidth
- *   Typeface effects     drawTypeEffect, drawErodedText, drawBloom — extra
+ *   Text effects         drawEffects (the stack, effects.js), drawErodedText — extra
  *                        passes that never move text or change its width
  *   Drawing a run        tintedEmojiCanvas, resolvePartStyle (a segment's own
  *                        overrides), drawTextRun (outline, shadow, tracking,
@@ -33,6 +33,8 @@ import { resolvePmlVariables } from './pmlVars.js';
 import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs } from './glyphs.js';
+import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge, STITCH_STYLES } from './stitches.js';
+import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './effects.js';
 import { ensureFonts, fontsRequested } from './fonts.js';
 import { mixHex } from './texCore.js';
 import { EFFECTS, MARKS } from './tunables.js';
@@ -142,6 +144,13 @@ function scratchCanvas(w, h){
   if(!SCRATCH) SCRATCH = document.createElement('canvas');
   SCRATCH.width = w; SCRATCH.height = h;
   return SCRATCH;
+}
+/** The inset box's own layer, kept between renders (see the box, in render()). */
+let CARD_LAYER = null;
+function cardLayer(w, h){
+  if(!CARD_LAYER){ CARD_LAYER = document.createElement('canvas'); }
+  if(CARD_LAYER.width !== w || CARD_LAYER.height !== h){ CARD_LAYER.width = w; CARD_LAYER.height = h; }
+  return CARD_LAYER;
 }
 /** The bloom's own layer, kept between renders and resized only when the page is. */
 let BLOOM_LAYER = null;
@@ -261,7 +270,8 @@ function drawCodeBackdrop(ctx, x, y, w, size, style){
 }
 
 function resolvePartStyle(part, baseStyle){
-  if(!part.customColor && !part.customEffect && !part.customTypeEffect && !part.customGradient && part.customTracking==null && part.customJitter==null) return baseStyle;
+  // nothing of its own: the run's style stands (every field a segment can set must be listed here)
+  if(!part.customColor && !part.customEffect && !part.customTypeEffect && !part.customFx && !part.under && !part.customGradient && part.customTracking==null && part.customJitter==null) return baseStyle;
   const s = { ...baseStyle };
   if(part.customColor){
     s.baseFillStyle = part.customColor;
@@ -277,30 +287,22 @@ function resolvePartStyle(part, baseStyle){
   if(part.customJitter!=null){
     s.customJitter = part.customJitter;
   }
-  if(part.customEffect){
-    if(part.customEffect.type==='none'){
-      s.outlineMode = 'off';
-    } else if(part.customEffect.type==='outline'){
-      s.outlineMode = 'outline';
-      s.outlineColor = part.customEffect.color;
-      s.outlineWidth = part.customEffect.width;
-    } else if(part.customEffect.type==='shadow'){
-      s.outlineMode = 'shadow';
-      s.outlineColor = part.customEffect.color;
-      s.shadowBlur = part.customEffect.blur;
-      s.shadowX = part.customEffect.x;
-      s.shadowY = part.customEffect.y;
-    }
+  // the effect stack for this segment: /fx:… replaces the page's stack; the
+  // older /fx0 /fx1 /fx2 and /effect forms translate into it (effects.js)
+  if(part.customFx){ s.fx = part.customFx; }
+  else if(part.customEffect || part.customTypeEffect){
+    const fx = [];
+    const ce = part.customEffect;
+    if(ce && ce.type === 'outline') fx.push(makeEffect('outline', ce.color, ce.width, 100));
+    else if(ce && ce.type === 'shadow') fx.push(legacyOutline('shadow', ce.color, 0, ce.blur, ce.x, ce.y));
+    if(part.customTypeEffect){
+      const t = part.customTypeEffect, L = legacyTypeEffect(t.type, t.strength, t.color, t.angle, t.distance, t.grain);
+      if(L.fx) fx.push(L.fx);
+      if(L.under) s.under = L.under;
+    } else if(!ce || ce.type !== 'none') fx.push(...(baseStyle.fx || []).filter(e => e.type !== 'outline' && e.type !== 'shadow'));
+    s.fx = fx;
   }
-  // /effect overrides the page-wide typeface effect for this segment only
-  if(part.customTypeEffect){
-    s.typeEffect = part.customTypeEffect.type;
-    s.typeEffectStrength = part.customTypeEffect.strength / 100;
-    if(part.customTypeEffect.color) s.typeEffectColor = part.customTypeEffect.color;
-    if(part.customTypeEffect.angle != null) s.typeEffectAngle = part.customTypeEffect.angle;
-    if(part.customTypeEffect.distance != null) s.typeEffectDistance = part.customTypeEffect.distance / 100;
-    if(part.customTypeEffect.grain != null) s.typeEffectGrain = part.customTypeEffect.grain / 100;
-  }
+  if(part.under) s.under = part.under;
   return s;
 }
 
@@ -337,134 +339,66 @@ function charJitterOffset(seedBase){
  * rather than crawling on every repaint.
  */
 
-function drawTypeEffect(ctx, str, px, py, size, fill, style){
-  const kind = style.typeEffect;
-  const k = style.typeEffectStrength;
-  if(!kind || kind === 'none' || k <= 0) return;
-  const unit = size * 0.02 * (style.typeEffectDistance || 1);  // offsets scale with the text
-  const col = style.typeEffectColor || '#000000';
-  // one direction for every directional effect, set by the Angle control
-  const ang = (style.typeEffectAngle != null ? style.typeEffectAngle : 45) * Math.PI / 180;
-  const dx = Math.cos(ang), dy = Math.sin(ang);
-  ctx.save();
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-
-  if(kind === 'letterpress'){
-    const d = Math.max(0.6, unit * 1.4 * k);
-    ctx.globalAlpha *= 0.55;
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.fillText(str, px + dx * d, py + dy * d);         // lit lip, on the falling side
-    ctx.fillStyle = col;
-    ctx.fillText(str, px - dx * d * 0.7, py - dy * d * 0.7); // shadowed wall opposite
-  }
-  else if(kind === 'longshadow'){
-    const steps = Math.max(2, Math.round((6 + 26 * k) * (style.typeEffectDistance || 1)));
-    const step = Math.max(0.5, size * 0.018);
-    ctx.fillStyle = col;
-    for(let i = steps; i >= 1; i--){
-      ctx.globalAlpha = (style.quoteAlpha || 1) * 0.5 * (1 - i / (steps + 1));
-      ctx.fillText(str, px + dx * step * i, py + dy * step * i);
-    }
-  }
-  else if(kind === 'doublestrike'){
-    ctx.globalAlpha *= 0.42 * Math.min(1, 0.4 + k);
-    ctx.fillStyle = fill;
-    ctx.fillText(str, px + dx * unit * 1.7 * k, py + dy * unit * 1.7 * k);
-  }
-  else if(kind === 'chromatic'){
-    const d = Math.max(0.6, unit * 2.2 * k);
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha *= 0.7;
-    ctx.fillStyle = '#ff2a4a'; ctx.fillText(str, px - dx * d, py - dy * d);
-    ctx.fillStyle = '#2a8cff'; ctx.fillText(str, px + dx * d, py + dy * d);
-  }
-  else if(kind === 'halo'){
-    ctx.shadowColor = col;
-    ctx.shadowBlur = size * 0.45 * k * (style.typeEffectDistance || 1);
-    ctx.fillStyle = col;
-    ctx.globalAlpha *= 0.85;
-    ctx.fillText(str, px, py);
-  }
-  else if(kind === 'bloom'){
-    drawBloom(ctx, str, px, py, size, col, k, style);
-  }
-  else if(kind === 'bevel'){
-    // shadow on the side the angle points to, light on the side it comes from
-    const d = Math.max(0.6, unit * 1.2 * k);
-    ctx.globalAlpha *= 0.7;
-    ctx.fillStyle = col;
-    ctx.fillText(str, px + dx * d, py + dy * d);
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.fillText(str, px - dx * d, py - dy * d);
-  }
-  else if(kind === 'doubleline' || kind === 'wavyline' || kind === 'dottedline'){
-    const w = ctx.measureText(str).width;
-    const base = py + size * 1.04 + unit * 2;
-    const thick = Math.max(1, size * 0.045 * (0.5 + k));
-    ctx.strokeStyle = fill;   // an underline belongs to its word's own colour
-    ctx.lineWidth = thick;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    if(kind === 'doubleline'){
-      ctx.moveTo(px, base);                ctx.lineTo(px + w, base);
-      ctx.moveTo(px, base + thick * 2.4);  ctx.lineTo(px + w, base + thick * 2.4);
-    } else if(kind === 'wavyline'){
-      const amp = Math.max(1, size * 0.05 * (0.4 + k));
-      const wave = Math.max(4, size * 0.34 * (style.typeEffectDistance || 1));
-      ctx.moveTo(px, base);
-      // anchored to the page, not the word, so adjacent words' waves line up
-      for(let x = px; x <= px + w; x += 2){
-        ctx.lineTo(x, base + Math.sin((x / wave) * Math.PI * 2) * amp);
-      }
-    } else {
-      ctx.setLineDash([thick * 0.1, thick * 2.2]);
-      ctx.moveTo(px, base); ctx.lineTo(px + w, base);
-    }
-    ctx.stroke();
-    if(ctx.setLineDash) ctx.setLineDash([]);
-  }
-  ctx.restore();
-}
-
 /**
- * Bloom: a blurred, brightened copy of the glyphs, screened onto the page so
- * it only ever lightens. Built on its own canvas so grain can be cut into the
- * glow without touching the page, then composited once. Grain is seeded from
- * the text and position, like erosion, so it does not shimmer on repaint.
- *
- * The blur is made with the shadow-offset trick: the glyphs are drawn far off
- * the canvas with a shadow thrown back onto it, so only the blur lands.
+ * Draws a segment's effect stack (effects.js) beneath its glyphs, in order.
+ * Distances in px are canonical pixels; the rest scale with the text. While
+ * effects draw, the sigil draws as a silhouette in the effect's colour.
  */
-function drawBloom(ctx, str, px, py, size, col, k, style){
-  const w = Math.ceil(ctx.measureText(str).width);
-  if(w <= 0) return;
-  const reach = Math.ceil(size * (0.35 + 0.9 * k) * (style.typeEffectDistance || 1));
-  const off = scratchCanvas(w + reach * 2, Math.ceil(size * 1.45) + reach * 2);
-  const o = off.getContext('2d');
-  o.font = ctx.font; o.textBaseline = ctx.textBaseline; o.textAlign = 'left';
-  const FAR = 10000;
-  o.shadowColor = col;
-  o.shadowBlur = reach * 0.8;
-  o.shadowOffsetX = FAR;
-  o.fillStyle = col;
-  for(let pass = 0; pass < 2; pass++) o.fillText(str, reach - FAR, reach);
-
-  const grain = style.typeEffectGrain || 0;
-  if(grain > 0){
-    const rand = seededRand(hashText(str, px, py) ^ 0x9e3779b9);
-    o.shadowColor = 'transparent'; o.shadowBlur = 0; o.shadowOffsetX = 0;
-    o.globalCompositeOperation = 'destination-out';
-    const specks = Math.round((off.width * off.height) / 22 * grain);
-    for(let i = 0; i < specks; i++){
-      o.globalAlpha = 0.25 + rand() * 0.75;
-      o.fillRect(rand() * off.width, rand() * off.height, 1 + rand() * 1.5, 1 + rand() * 1.5);
-    }
-  }
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha *= Math.min(1, 0.45 + k * 0.75);
-  ctx.drawImage(off, px - reach, py - reach);
+function drawEffects(ctx, str, x, y, size, fill, fx){
+  if(!fx || !fx.length) return;
+  ctx.__vellumEffectPass = true;
+  try { for(const e of fx){ if(e && e.type !== 'none' && e.type !== 'erosion'){ ctx.save(); EFFECT_DRAW[e.type](ctx, str, x, y, size, fill, e); ctx.restore(); } } }
+  finally { ctx.__vellumEffectPass = false; }
 }
+const along = (e, d) => { const a = (e.angle || 0) * Math.PI/180; return [Math.cos(a)*d, Math.sin(a)*d]; };
+const blurred = (ctx, r) => { if(r > 0.3 && 'filter' in ctx) ctx.filter = `blur(${r.toFixed(1)}px)`; };
+const EFFECT_DRAW = {
+  outline(ctx, str, x, y, size, fill, e){
+    ctx.globalAlpha = e.k2/100; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+    ctx.lineWidth = rpx(e.k1)*2; ctx.strokeStyle = e.color; ctx.strokeText(str, x, y);
+  },
+  shadow(ctx, str, x, y, size, fill, e){
+    const [dx, dy] = along(e, rpx(e.k2));
+    blurred(ctx, rpx(e.k1)/2); ctx.fillStyle = e.color; ctx.fillText(str, x + dx, y + dy);
+  },
+  longshadow(ctx, str, x, y, size, fill, e){
+    const L = size*0.7*e.k1/100, step = Math.max(rpx(1), size*0.025), n = Math.max(1, Math.ceil(L/step));
+    const [ux, uy] = along(e, 1); ctx.fillStyle = e.color;
+    for(let i = n; i >= 1; i--){ ctx.globalAlpha = (e.k2/100)*(1 - (i - 1)/n*0.85); ctx.fillText(str, x + ux*step*i, y + uy*step*i); }
+  },
+  glow(ctx, str, x, y, size, fill, e){
+    const r = Math.max(rpx(1), size*0.45*e.k1/100); ctx.fillStyle = e.color;
+    ctx.globalAlpha = e.k2/100; blurred(ctx, r); ctx.fillText(str, x, y);
+    blurred(ctx, r*0.4); ctx.fillText(str, x, y);                       // a tighter, brighter core
+  },
+  letterpress(ctx, str, x, y, size, fill, e){
+    // pressed INTO the page: a light edge on the side away from the light, a shadow toward it
+    const d = Math.max(rpx(1), size*0.05*e.k1/100), [dx, dy] = along(e, d), a = e.k2/100;
+    ctx.globalAlpha = a*0.85; ctx.fillStyle = '#ffffff'; ctx.fillText(str, x + dx, y + dy);
+    ctx.globalAlpha = a*0.6;  ctx.fillStyle = '#000000'; ctx.fillText(str, x - dx*0.6, y - dy*0.6);
+  },
+  bevel(ctx, str, x, y, size, fill, e){
+    // raised OUT of the page: lit toward the light, shadowed away, softened like a rounded edge
+    const d = Math.max(rpx(1), size*0.06*e.k1/100), [dx, dy] = along(e, d), a = e.k2/100;
+    blurred(ctx, d*0.35);
+    ctx.globalAlpha = a*0.75; ctx.fillStyle = '#000000'; ctx.fillText(str, x + dx, y + dy);
+    ctx.globalAlpha = a*0.9;  ctx.fillStyle = '#ffffff'; ctx.fillText(str, x - dx, y - dy);
+  },
+  chromatic(ctx, str, x, y, size, fill, e){
+    // a true colour split, visible on light and dark pages alike
+    const d = Math.max(rpx(1), size*0.06*e.k1/100), [dx, dy] = along(e, d);
+    ctx.globalAlpha = e.k2/100;
+    ctx.fillStyle = '#ff2a55'; ctx.fillText(str, x + dx, y + dy);
+    ctx.fillStyle = '#1ab8ff'; ctx.fillText(str, x - dx, y - dy);
+  },
+  doublestrike(ctx, str, x, y, size, fill, e){
+    // the typewriter's second, slightly misaligned strike, in the text's own ink
+    const d = Math.max(rpx(1), size*0.05*e.k1/100), [dx, dy] = along(e, d);
+    ctx.globalAlpha = (e.k2/100)*0.75; ctx.fillStyle = fill; ctx.fillText(str, x + dx, y + dy);
+  },
+};
+/** The erosion in a stack (it changes how the glyphs themselves are filled). */
+const erosionOf = fx => (fx || []).find(e => e && e.type === 'erosion');
 
 /** Small deterministic generator, so erosion does not shift on repaint. */
 function seededRand(seed){
@@ -518,8 +452,8 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
 }
 
 function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, style){
-  const { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY,
-          baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
+  const { baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
+  const fx = style.fx || [], erode = erosionOf(fx);
 
   const widths = segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size, style.customTracking, style.smallCaps));
   let x = startX;
@@ -575,93 +509,95 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     const tracking = style.customTracking!=null ? size*0.14*(style.customTracking/100) : emphasisTracking(fontDef, seg, size);
     const jitterMag = style.customJitter!=null ? size*0.06*(style.customJitter/100) : 0;
 
-    const applyOutlineShadow = (str, px, py)=>{
-      if(outlineMode==='outline' && outlineWidth>0){
-        ctx.lineJoin='round'; ctx.miterLimit=2;
-        ctx.lineWidth = outlineWidth*2;
-        ctx.strokeStyle = outlineColor;
-        ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-        ctx.strokeText(str, px, py);
-      }
-      if(outlineMode==='shadow'){
-        ctx.shadowColor = outlineColor; ctx.shadowBlur = shadowBlur;
-        ctx.shadowOffsetX = shadowX; ctx.shadowOffsetY = shadowY;
-      } else {
-        ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
-      }
-    };
+    // glyphs draw with no leftover shadow: effects are their own passes
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
 
     const needsPerChar = tracking !== 0 || hasEmoji || style.smallCaps || jitterMag > 0;
 
     if(!needsPerChar){
-      drawTypeEffect(ctx, seg.text, x, cursorY, size, segFill, style);
-      applyOutlineShadow(seg.text, x, cursorY);
+      drawEffects(ctx, seg.text, x, cursorY, size, segFill, fx);
       ctx.fillStyle = segFill;
-      if(style.typeEffect === 'erosion' && style.typeEffectStrength > 0){
-        drawErodedText(ctx, seg.text, x, cursorY, segFill, size, style.typeEffectStrength);
+      if(erode && erode.k1 > 0){
+        drawErodedText(ctx, seg.text, x, cursorY, segFill, size, erode.k1/100);
       } else {
         ctx.fillText(seg.text, x, cursorY);
       }
     } else {
-      let cx = x;
       const normalFont = ctx.font;
-      // A rough small-caps proportion -- canvas doesn't expose precise
-      // baseline/cap-height metrics without more invasive font-metrics
-      // calls, so the Y-compensation below is an approximation (shift down
-      // by the size delta) rather than exact baseline alignment.
-      // uses the module-level SMALL_CAP_RATIO (shared with measureSegWidth)
-      for(const ch of seg.text){
-        const isLower = style.smallCaps && ch !== ch.toUpperCase() && ch === ch.toLowerCase();
-        const drawCh = isLower ? ch.toUpperCase() : ch;
-        if(isLower) ctx.font = fontString(fontDef, seg, size*SMALL_CAP_RATIO);
-        const chW = ctx.measureText(drawCh).width;
-
-        // Biased hard toward vertical: sideways jitter mostly reads as bad
-        // kerning, whereas vertical displacement reads as a shaking hand.
-        const jx = jitterMag > 0 ? charJitterOffset(charSeed*12.9898) * jitterMag * 0.28 : 0;
-        const jy = jitterMag > 0 ? charJitterOffset(charSeed*78.233 + 4.12) * jitterMag * 1.15 : 0;
-        // Rotation scales with the jitter percentage but hard-stops at 12deg;
-        // past that letters stop reading as letters.
-        const maxRot = Math.min(12, 4 * ((style.customJitter || 0) / 100)) * Math.PI / 180;
-        const rot = jitterMag > 0 ? charJitterOffset(charSeed*31.7 + 9.3) * maxRot : 0;
-        const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0);
-
-        // Rotate ABOUT the glyph's centre while keeping absolute coordinates,
-        // so a gradient fill (defined in absolute space) stays aligned.
-        const rotating = rot !== 0;
-        if(rotating){
-          const rx = cx + jx + chW/2, ry = py + size/2;
-          ctx.save();
-          ctx.translate(rx, ry); ctx.rotate(rot); ctx.translate(-rx, -ry);
+      const seed0 = charSeed;
+      // Letter by letter, in TWO passes over the same positions: first every
+      // glyph's effect and outline, then every glyph on top. Drawing each
+      // letter's effect just before that letter let the NEXT letter's shadow
+      // fall across the one before it — parts of the text looked as if the
+      // effect had skipped them. Both passes replay the same jitter (charSeed
+      // is rewound), so nothing moves.
+      const walk = (draw) => {
+        let cx = x; charSeed = seed0;
+        for(const ch of seg.text){
+          const isLower = style.smallCaps && ch !== ch.toUpperCase() && ch === ch.toLowerCase();
+          const drawCh = isLower ? ch.toUpperCase() : ch;
+          if(isLower) ctx.font = fontString(fontDef, seg, size*SMALL_CAP_RATIO);
+          const chW = ctx.measureText(drawCh).width;
+          // Biased hard toward vertical: sideways jitter mostly reads as bad
+          // kerning, whereas vertical displacement reads as a shaking hand.
+          const jx = jitterMag > 0 ? charJitterOffset(charSeed*12.9898) * jitterMag * 0.28 : 0;
+          const jy = jitterMag > 0 ? charJitterOffset(charSeed*78.233 + 4.12) * jitterMag * 1.15 : 0;
+          // Rotation scales with the jitter percentage but hard-stops at 12deg;
+          // past that letters stop reading as letters.
+          const maxRot = Math.min(12, 4 * ((style.customJitter || 0) / 100)) * Math.PI / 180;
+          const rot = jitterMag > 0 ? charJitterOffset(charSeed*31.7 + 9.3) * maxRot : 0;
+          const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0);
+          // Rotate ABOUT the glyph's centre while keeping absolute coordinates,
+          // so a gradient fill (defined in absolute space) stays aligned.
+          const rotating = rot !== 0;
+          if(rotating){
+            const rx = cx + jx + chW/2, ry = py + size/2;
+            ctx.save(); ctx.translate(rx, ry); ctx.rotate(rot); ctx.translate(-rx, -ry);
+          }
+          draw(ch, drawCh, cx + jx, py);
+          if(rotating) ctx.restore();
+          if(isLower) ctx.font = normalFont;
+          cx += chW + tracking;
+          charSeed++;
         }
-        if(hasEmoji && isEmojiCodePoint(ch.codePointAt(0))){
+      };
+      const isEmojiChar = ch => hasEmoji && isEmojiCodePoint(ch.codePointAt(0));
+      // pass 1: effects and outlines, under the whole run
+      walk((ch, drawCh, gx, gy) => {
+        if(isEmojiChar(ch)) return;
+        drawEffects(ctx, drawCh, gx, gy, size, segFill, fx);
+      });
+      // pass 2: the glyphs themselves, on top (a drop shadow belongs to the fill)
+      walk((ch, drawCh, gx, gy) => {
+        if(isEmojiChar(ch)){
           const tinted = tintedEmojiCanvas(ch, ctx.font, emojiTint, size);
           ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-          ctx.drawImage(tinted, cx+jx, py);
-        } else {
-          drawTypeEffect(ctx, drawCh, cx+jx, py, size, segFill, style);
-          applyOutlineShadow(drawCh, cx+jx, py);
-          ctx.fillStyle = segFill;
-          if(style.typeEffect === 'erosion' && style.typeEffectStrength > 0){
-            drawErodedText(ctx, drawCh, cx+jx, py, segFill, size, style.typeEffectStrength);
-          } else {
-            ctx.fillText(drawCh, cx+jx, py);
-          }
+          ctx.drawImage(tinted, gx, gy);
+          return;
         }
-        if(rotating) ctx.restore();
-        if(isLower) ctx.font = normalFont;
-        cx += chW + tracking;
-        charSeed++;
-      }
+        ctx.fillStyle = segFill;
+        if(erode && erode.k1 > 0){
+          drawErodedText(ctx, drawCh, gx, gy, segFill, size, erode.k1/100);
+        } else {
+          ctx.fillText(drawCh, gx, gy);
+        }
+      });
     }
 
+    if(style.under){
+      // an underline decoration (/under:…), drawn by the stitch library
+      const u = style.under, wt = (u.weight || 100)/100;
+      drawStitch(ctx, pathFromPoints([[x, cursorY + size*0.95], [x + w, cursorY + size*0.95]], false), u.style,
+        { period: size*0.38, amp: size*0.075, width: Math.max(rpx(1), size*0.04*wt),
+          color: u.color || (typeof segFill === 'string' ? segFill : (style.plainTextColor || '#000')), side: 1 });
+    }
     if(seg.underline || seg.strike){
       const lineY = seg.underline ? cursorY + size*0.92 : cursorY + size*0.55;
       ctx.beginPath();
       ctx.moveTo(x, lineY);
       ctx.lineTo(x+w, lineY);
       ctx.strokeStyle = segFill;
-      ctx.lineWidth = Math.max(1, size*0.045);
+      ctx.lineWidth = Math.max(rpx(1), size*0.045);
       ctx.stroke();
     }
 
@@ -794,6 +730,17 @@ function resolveRhymeColor(letter, accent1Color, accent2Color){
 // inline glyphs on every canvas (idempotent: glyphs.js also installs itself)
 if(typeof CanvasRenderingContext2D !== 'undefined') installInlineGlyphs(CanvasRenderingContext2D.prototype);
 
+/** The page's effect stack, from the three effect slots in the UI. */
+function pageEffectStack(){
+  const out = [];
+  for(const i of [1, 2, 3]){
+    const t = $('fx' + i + 'Type'); if(!t || !t.value || t.value === 'none') continue;
+    const v = id => ($('fx' + i + id) || {}).value;
+    out.push(makeEffect(t.value, v('Color'), v('K1'), v('K2'), v('Angle')));
+  }
+  return out;
+}
+
 // ---------- §Variables: what the poem can report about the page ----------
 const optionText = id => {
   const el = $(id);
@@ -832,9 +779,12 @@ function pmlVarContext(W, H){
     spellName: (document.body && document.body.dataset && document.body.dataset.lookName) || '',
     hidden: $('texP3') && $('texP3Field') && $('texP3Field').style.display !== 'none' ? $('texP3').value : null,
     font: optionText('fontFamily'),
-    canvas: W + '×' + H,
-    typeEffect: ($('typeEffect') && $('typeEffect').value) || 'none',
+    canvas: Math.round(W / RENDER_SCALE) + '×' + Math.round(H / RENDER_SCALE),   // the EXPORT size
+    // the whole effect stack, compressed onto one line
+    typeEffect: describeStack(pageEffectStack(), ($('underAll') && $('underAll').value) ? { style: $('underAll').value } : null),
     renderMs: Math.round(LAST_RENDER_MS),
+    scale: RENDER_SCALE,
+    profile: LAST_PROFILE,
     cacheMB: textureCacheMB().toFixed(1),
     fonts: fontsRequested(),
     blendOpacity: null,
@@ -880,9 +830,27 @@ function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spaci
   return fitCacheValue;
 }
 
-let LAST_RENDER_MS = 0;
+let LAST_RENDER_MS = 0, LAST_PROFILE = '';
+// S: this render's scale against the canonical export canvas (texCore.js).
+// Always 1 today — the preview IS the export size. setRenderScale is where a
+// screen-sized preview will set it, once every generator measures in cpx().
+let RENDER_SCALE = 1;
+export function setRenderScale(s){ RENDER_SCALE = (s > 0 && isFinite(s)) ? s : 1; }
+/** n canonical pixels at this render's scale — for code outside render()
+ *  (the text effects) that can't see its S. Identical at S = 1. */
+const rpx = n => n * RENDER_SCALE;
+// A debug hook: lets the page-level scale audit (and, later, a switch that
+// renders the preview full size for comparison) set S from outside.
+if(typeof window !== 'undefined') window.vellumDebug = {
+  setRenderScale: s => setRenderScale(s), renderScale: () => RENDER_SCALE, render: () => render(),
+};
+// §Profile: where the last render's time went, stage by stage
+const clock = () => (typeof performance !== 'undefined' ? performance : Date).now();
 export function render(){
-  const renderStart = (typeof performance !== 'undefined' ? performance : Date).now();
+  const renderStart = clock();
+  const laps = []; let lapAt = renderStart;
+  const S = RENDER_SCALE;
+  const lap = name => { const t = clock(); laps.push(`${name} ${Math.round(t - lapAt)}`); lapAt = t; };
   const canvas = $('poemCanvas');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
@@ -927,31 +895,31 @@ export function render(){
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend === 'lighten' ? 'overlay' : blend;
       // the light slot stays empty here; the nebula colour is a TINT
-      ctx.drawImage(getTextureCanvas('astral_fog', W, H, { seed, p1: p2, tint1: tint2 }), 0, 0);
+      ctx.drawImage(getTextureCanvas('astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }), 0, 0);
       ctx.restore();
 
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas('astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, tint1 }), 0, 0);
+      ctx.drawImage(getTextureCanvas('astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, scale: S }), 0, 0);
       ctx.restore();
     } else if(type === 'inkbleed'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend, scale: S }), 0, 0);
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, tint1, tint2, blend }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, tint1, tint2, blend, scale: S }), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend, scale: S }), 0, 0);
       ctx.restore();
     }
   }
@@ -1002,24 +970,51 @@ export function render(){
     ctx.restore();
   }
 
+  lap('backdrop+texture');
   // ---------- the inset box and the border ----------
   // The box sits ABOVE the backdrop, texture and vignette and BELOW the text,
   // so words stay readable over a busy surface. The border, when on, strokes
   // the box's edge; both share the offset and the rounded corners.
-  const bThick = Math.max(1, parseFloat($('borderThickness').value) || 1);
-  const bOffset = Math.max(0, parseFloat($('borderOffset').value) || 0);
+  // your border settings are canonical pixels: the same size on the page at any S
+  const bThick = Math.max(rpx(1), (parseFloat($('borderThickness').value) || 1) * S);
+  const bOffset = Math.max(0, parseFloat($('borderOffset').value) || 0) * S;
   const inset = bOffset + bThick/2;
-  const frameCorner = ($('borderRounded') && $('borderRounded').checked) ? Math.max(0, parseFloat($('borderRadius').value) || 0) : 0;
+  const frameCorner = ($('borderRounded') && $('borderRounded').checked) ? Math.max(0, parseFloat($('borderRadius').value) || 0) * S : 0;
   const framePath = () => { ctx.beginPath(); roundRectPath(ctx, inset, inset, W - inset*2, H - inset*2, frameCorner); };
+  // The border's stitch, worked out once: the border draws it, and the inset
+  // box follows its inner edge — a scalloped border makes a scalloped box.
+  const stitchStyle = ($('borderToggle').checked && ($('borderStitch') || {}).value) || 'solid';
+  const stitchSpec = { period: Math.max(rpx(6), bThick*6 + Math.min(W, H)*0.012), amp: Math.max(rpx(3), bThick*2 + Math.min(W, H)*0.004),
+    width: bThick, side: ($('borderStitchOut') && $('borderStitchOut').checked) ? -1 : 1 };
+  const framePoints = () => roundRectPoints(inset, inset, W - inset*2, H - inset*2, frameCorner);
 
   if($('cardToggle') && $('cardToggle').checked){
+    // The box is painted on its OWN layer first, then placed on the page with
+    // its blend — the same route textures take. Filling it straight through a
+    // rounded clip while blending (Hard Light, Darken…) made phone GPUs copy
+    // the whole 3072px page to blend against, and under memory pressure Chrome
+    // silently skipped the drawing: the box "sometimes didn't appear". The
+    // layer is half resolution (a soft gradient loses nothing) and reused.
+    const L = cardLayer(Math.ceil(W/2), Math.ceil(H/2)), lx = L.getContext('2d', { willReadFrequently: true });
+    lx.setTransform(1, 0, 0, 1, 0, 0); lx.clearRect(0, 0, L.width, L.height);
+    lx.save();
+    lx.setTransform(0.5, 0, 0, 0.5, 0, 0);
+    lx.beginPath();
+    if(stitchStyle !== 'solid'){
+      // inside a stitched border, the box stops at the stitch's inner edge
+      const edge = stitchInnerEdge(pathFromPoints(framePoints(), true), stitchStyle, stitchSpec);
+      edge.forEach((p, i) => i ? lx.lineTo(p[0], p[1]) : lx.moveTo(p[0], p[1])); lx.closePath();
+    } else roundRectPath(lx, inset, inset, W - inset*2, H - inset*2, frameCorner);
+    lx.clip();
+    const c1 = $('cardColor1Hex').value;
+    if($('cardGradientToggle').checked) paintGradient(lx, inset, inset, W - inset*2, H - inset*2, gradientSpec('card'), [c1, $('cardColor2Hex').value]);
+    else { lx.fillStyle = c1; lx.fillRect(inset, inset, W - inset*2, H - inset*2); }
+    lx.restore();
     ctx.save();
-    framePath(); ctx.clip();
     ctx.globalAlpha = Math.max(0, Math.min(100, parseFloat($('cardOpacity').value) || 0)) / 100;
     ctx.globalCompositeOperation = $('cardBlend').value || 'source-over';
-    const c1 = $('cardColor1Hex').value;
-    if($('cardGradientToggle').checked) paintGradient(ctx, inset, inset, W - inset*2, H - inset*2, gradientSpec('card'), [c1, $('cardColor2Hex').value]);
-    else { ctx.fillStyle = c1; ctx.fillRect(inset, inset, W - inset*2, H - inset*2); }
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(L, 0, 0, W, H);
     ctx.restore();
   }
 
@@ -1064,10 +1059,14 @@ export function render(){
         lx.setTransform(1, 0, 0, 1, 0, 0);
         lx.globalAlpha = grain;
         lx.globalCompositeOperation = 'destination-out';            // dark specks: gaps in the glow
-        lx.fillStyle = lx.createPattern(tiles.dark, 'repeat'); lx.fillRect(0, 0, L.width, L.height);
+        const grainPattern = tile => { const pt = lx.createPattern(tile, 'repeat');
+          // the speckle tile is canonical pixels: scaled with S, untouched at 1
+          if(S !== 1 && pt && pt.setTransform && typeof DOMMatrix !== 'undefined') pt.setTransform(new DOMMatrix([S, 0, 0, S, 0, 0]));
+          return pt; };
+        lx.fillStyle = grainPattern(tiles.dark); lx.fillRect(0, 0, L.width, L.height);
         lx.globalCompositeOperation = 'source-atop';                // bright specks: only where glow is
-        lx.filter = `blur(${Math.max(0.5, bThick*bloom*0.18).toFixed(1)}px)`;
-        lx.fillStyle = lx.createPattern(tiles.bright, 'repeat'); lx.fillRect(0, 0, L.width, L.height);
+        lx.filter = `blur(${Math.max(rpx(0.5), bThick*bloom*0.18).toFixed(1)}px)`;
+        lx.fillStyle = grainPattern(tiles.bright); lx.fillRect(0, 0, L.width, L.height);
         lx.filter = 'none';
         lx.globalCompositeOperation = 'source-over'; lx.globalAlpha = 1;
       }
@@ -1081,7 +1080,13 @@ export function render(){
     ctx.globalCompositeOperation = ($('borderBlend') || {}).value || 'source-over';
     ctx.lineWidth = bThick;
     ctx.strokeStyle = stroke;
-    framePath(); ctx.stroke();
+    const stitch = ($('borderStitch') || {}).value || 'solid';
+    if(stitch === 'solid'){ framePath(); ctx.stroke(); }
+    else {
+      // a decorative stitch around the frame (stitches.js), inward unless
+      // asked to point out; its size follows the border's thickness
+      drawStitch(ctx, pathFromPoints(framePoints(), true), stitch, { ...stitchSpec, color: stroke });
+    }
     ctx.restore();
   }
 
@@ -1107,6 +1112,7 @@ export function render(){
   const maxSizePx = Math.max(10, parseFloat($('maxSize').value) || 120);
   const lineSpacing = Math.pow(2, parseFloat($('lineSpacing').value) || 0);
 
+  lap('frame');
   // Text keeps clear of the frame: with a border or box on, the margins grow
   // to the frame's inner edge plus breathing room, instead of a fixed share of
   // the page that a wide offset or thick border would overrun.
@@ -1134,25 +1140,16 @@ export function render(){
     baseFillStyle = $('textColorHex').value;
   }
 
-  const outlineMode = $('outlineMode').value;
-  const outlineColor = $('outlineColorHex').value;
-  const outlineWidth = Math.max(0, parseFloat($('outlineThickness').value) || 0);
-  const shadowBlur = Math.max(0, parseFloat($('shadowBlur').value) || 0);
-  const shadowX = parseFloat($('shadowX').value) || 0;
-  const shadowY = parseFloat($('shadowY').value) || 0;
+  // the page's effect stack, from the three effect slots (effects.js)
+  const pageFx = pageEffectStack();
+  const pageUnder = ($('underAll') && $('underAll').value) ? { style: $('underAll').value, color: null, weight: 100 } : null;
 
   let cursorY = startY;
   ctx.textBaseline = 'top';
 
-  const runStyle = { outlineMode, outlineColor, outlineWidth, shadowBlur, shadowX, shadowY, baseFillStyle, plainTextColor: $('textColorHex').value, accent1Color, accent2Color, quoteAlpha: 1,
-    // typeface effect: one of TYPE_EFFECT_NAMES, drawn as extra passes under each glyph
-    typeEffect: $('typeEffect') ? $('typeEffect').value : 'none',
-    typeEffectStrength: $('typeEffectStrength') ? (parseFloat($('typeEffectStrength').value) || 0) / 100 : 0,
-    typeEffectColor: $('typeEffectColorHex') ? $('typeEffectColorHex').value : '#000000',
-    // direction the effect falls, in degrees: 0 right, 90 down (screen space)
-    typeEffectAngle: $('typeEffectAngle') ? (parseFloat($('typeEffectAngle').value) || 0) : 45,
-    typeEffectDistance: $('typeEffectDistance') ? (parseFloat($('typeEffectDistance').value) || 100) / 100 : 1,
-    typeEffectGrain: $('typeEffectGrain') ? (parseFloat($('typeEffectGrain').value) || 0) / 100 : 0 };
+  // the effect stack and underline the page gives every run (a segment may replace them)
+  const runStyle = { fx: pageFx, under: pageUnder, baseFillStyle, plainTextColor: $('textColorHex').value,
+    accent1Color, accent2Color, quoteAlpha: 1 };
 
   for(const line of lines){
     if(line.isBlank){
@@ -1165,8 +1162,15 @@ export function render(){
         ctx.save();
         ctx.strokeStyle = r.customColor || (r.color === 'accent1' ? accent1Color : r.color === 'accent2' ? accent2Color
                         : (typeof baseFillStyle === 'string' ? baseFillStyle : $('textColorHex').value));
-        ctx.lineWidth = Math.max(1, baseSize*0.045); ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(x0, cursorY + gap/2); ctx.lineTo(x0 + w, cursorY + gap/2); ctx.stroke();
+        ctx.lineWidth = Math.max(rpx(1), baseSize*0.045*((r.weight || 100)/100)); ctx.lineCap = 'round';
+        if(!r.style || r.style === 'solid'){
+          ctx.beginPath(); ctx.moveTo(x0, cursorY + gap/2); ctx.lineTo(x0 + w, cursorY + gap/2); ctx.stroke();
+        } else {
+          // a decorative stitch along the rule, pointing in or out
+          const sz = (r.size || 100)/100, wt = (r.weight || 100)/100;
+          drawStitch(ctx, pathFromPoints([[x0, cursorY + gap/2], [x0 + w, cursorY + gap/2]], false), r.style,
+            { period: baseSize*0.55*sz, amp: baseSize*0.2*sz, width: Math.max(rpx(1), baseSize*0.045*wt), color: ctx.strokeStyle, side: r.side || 1 });
+        }
         ctx.restore();
       }
       cursorY += baseSize*0.55*lineSpacing; continue;
@@ -1221,7 +1225,7 @@ export function render(){
       if(line.type==='quote'){
         const barWidth = Math.max(2, size*0.06);
         const barGap = size*0.35;
-        ctx.fillStyle = accent1On ? accent1Color : (outlineMode!=='off' ? outlineColor : baseFillStyle);
+        ctx.fillStyle = accent1On ? accent1Color : baseFillStyle;
         ctx.fillRect(flowX - barGap - barWidth, cursorY + size*0.05, barWidth, lineHeight*0.85);
       }
 
@@ -1286,7 +1290,7 @@ export function render(){
     if(line.type==='quote'){
       const barWidth = Math.max(2, size*0.06);
       const barGap = size*0.35;
-      ctx.fillStyle = accent1On ? accent1Color : (outlineMode!=='off' ? outlineColor : baseFillStyle);
+      ctx.fillStyle = accent1On ? accent1Color : baseFillStyle;
       ctx.fillRect(startX - barGap - barWidth, cursorY + size*0.05, barWidth, lineHeight*0.85);
     }
 
@@ -1303,10 +1307,15 @@ export function render(){
   const corner = $('usernameCorner').value;
   const isTop = corner.startsWith('top');
   const isRight = corner.endsWith('right');
+  lap('text');
   // The credit is written in the page's own ink — no computed "watermark"
   // tone — and may carry PML colour: [accent], {accent}, <text/#:hex>. Only
   // colour: it is a signature, not a poem, and §Variables never apply here.
-  const creditParts = username ? (buildLines(username, true, true)[0] || {}).parts || [] : [];
+  // A line comes back as `segments` when it is plain, or as `parts` when it
+  // holds <segments>; the credit takes either (reading only `parts` drew
+  // nothing for an ordinary name like @ruby).
+  const creditLine = username ? (buildLines(username, true, true)[0] || {}) : {};
+  const creditParts = creditLine.parts || (creditLine.segments ? [{ segments: creditLine.segments }] : []);
   const ink = typeof baseFillStyle === 'string' ? baseFillStyle : $('textColorHex').value;
   ctx.save();
   ctx.font = `${fontDef.weight} ${Math.round(((W + H)/2)*MARKS.scale)}px "${fontDef.family}"`;
@@ -1365,7 +1374,9 @@ export function render(){
     sx += ctx.measureText(sg.text).width;
   }
   ctx.restore();
-  LAST_RENDER_MS = (typeof performance !== 'undefined' ? performance : Date).now() - renderStart;
+  lap('marks');
+  LAST_RENDER_MS = clock() - renderStart;
+  LAST_PROFILE = laps.join(' · ') + ' ms';
 }
 
 // Most controls call this instead of render() directly. requestAnimationFrame

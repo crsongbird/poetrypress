@@ -238,7 +238,7 @@ export const PRESETS = [
     text1: "#2B2A26",
     outlineMode: "off",
     font: "Literata",
-    texture: true, textureType: "linen", textureOpacity: 34, texP1: 120, texP2: 110,
+    texture: true, textureType: "linen", textureOpacity: 34, texP1: 120, texP2: 42,
     accent1: "#7C7A63", accent2: "#947D5A"
   },
   { name: "Foxed",
@@ -302,3 +302,13 @@ export function getActiveRadioValue(containerId){
   const active = group.querySelector('.radio-btn.active');
   return active ? active.dataset.val : null;
 }
+
+/**
+ * The page every build opens on, for now: a live instrument panel of
+ * §Variables — and a calling card for the poet behind the press. At launch,
+ * set OPEN_ON_POEM to true and production will open on a poem instead.
+ */
+export const DEV_TEMPLATE = "## <\u00a7UVIcon Unfixable Vellum/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90>\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7TextureSeed]  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
+export const OPEN_ON_POEM = false;
+/** Production is poetrypress.*; anything else — vellum, a local file — is development. */
+export const isProductionHost = () => typeof location !== 'undefined' && /^poetrypress\./i.test(location.hostname || '');

@@ -1,3 +1,5 @@
+import { STITCH_STYLES } from './stitches.js';
+import { parseFxList, parseUnder } from './effects.js';
 /**
  * textParsers.js — the poem-text markup language: escaping, inline styles
  * (bold/italic/underline/strike/accent colors, nested arbitrarily), the
@@ -230,7 +232,7 @@ function parseSegmentDirective(dirStr, part){
   const d = dirStr.trim();
   const lower = d.toLowerCase();
   if(lower==='l' || lower==='left'){ part.justify='left'; return; }
-  if(lower==='c' || lower==='center'){ part.justify='center'; return; }
+  if(lower==='c' || lower==='center' || lower==='centre'){ part.justify='center'; return; }
   if(lower==='r' || lower==='right'){ part.justify='right'; return; }
   if(d.startsWith('#:')){ part.customColor = '#'+d.slice(2); return; }
 
@@ -298,6 +300,10 @@ function parseSegmentDirective(dirStr, part){
   // directive from /fx0 /fx1 /fx2 on purpose: those keep exactly their old
   // meaning, and an effect can sit alongside an outline or shadow. An unknown
   // name is ignored rather than guessed at. Bare /effect is a halo.
+  // the effect stack, new form: /fx:outline(#fff,4)+glow(#fd0,40,70) (effects.js)
+  if(lower.startsWith('fx:')){ part.customFx = parseFxList(d.slice(3)); return; }
+  // an underline, drawn by the stitch library: /under:wave or /under:vine,#c33,150
+  if(lower === 'under' || lower.startsWith('under:')){ part.under = parseUnder(lower === 'under' ? 'solid' : d.slice(6), STITCH_STYLES); return; }
   if(lower==='effect' || lower.startsWith('effect:')){
     const bits = lower==='effect' ? [] : d.slice(7).split(',');
     const name = (bits[0] || 'halo').trim().toLowerCase();
@@ -393,6 +399,15 @@ export function parseRule(t, accent1On, accent2On){
     const dl = d.trim().toLowerCase();
     if(/^\d+(\.\d+)?%$/.test(dl)) rule.width = Math.max(0.02, Math.min(1, parseFloat(dl)/100));
     else if(dl === 'l' || dl === 'c' || dl === 'r') rule.align = dl;
+    else if(dl === 'left' || dl === 'center' || dl === 'centre' || dl === 'right') rule.align = dl[0];
+    else if(/^scale:\d+(\.\d+)?$/.test(dl)) rule.width = Math.max(0.02, Math.min(1, parseFloat(dl.slice(6))/100));
+    // a stitch from stitches.js — wave, zigzag, scallop, vine, hearts… — and
+    // which side it points to: in/down (the default) or out/up
+    else if(STITCH_STYLES.includes(dl)) rule.style = dl;
+    else if(/^size:\d+(\.\d+)?$/.test(dl)) rule.size = Math.max(10, Math.min(500, parseFloat(dl.slice(5))));
+    else if(/^weight:\d+(\.\d+)?$/.test(dl)) rule.weight = Math.max(10, Math.min(800, parseFloat(dl.slice(7))));
+    else if(dl === 'in' || dl === 'down') rule.side = 1;
+    else if(dl === 'out' || dl === 'up') rule.side = -1;
     else if(dl.startsWith('#:')) rule.customColor = '#' + d.trim().slice(2);
   }
   return rule;
@@ -438,6 +453,8 @@ export function buildLines(rawText, accent1On, accent2On){
         // every field a directive can set must be copied here, or it is
         // parsed and then silently dropped — which is what /effect did
         return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customTypeEffect:p.customTypeEffect, customGradient:p.customGradient,
+                 // undefined unless used, so they vanish when a poem is serialized
+                 customFx:p.customFx, under:p.under,
                  // present only on code segments, so every existing poem parses byte-identically
                  ...(p.code ? { code: true } : {}), segments };
       });

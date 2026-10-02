@@ -24,9 +24,11 @@
  * Exports nothing: it is the entry point, and nothing imports from it.
  */
 
-import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS } from './appOptions.js';
+import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
+import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
+import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements } from './canvasRenderer.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache } from './textureGenerators.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
@@ -39,6 +41,12 @@ import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
 import { applyStrings, fill, PICKER } from './strings.js';
 
+// the border's stitch menu and the help's stitch list, from the library itself
+{ const bs = $('borderStitch');
+  if(bs && 'innerHTML' in bs) bs.innerHTML = STITCH_STYLES.map(k => `<option value="${k}">${STITCH_LABELS[k]}</option>`).join('');
+  const sl = $('stitchList');
+  if(sl && 'innerHTML' in sl) sl.innerHTML = STITCH_STYLES.map(k => `<code>${k}</code>`).join(' '); }
+
 // ---------- the app's working state, in one place ----------
 /**
  * Everything the app remembers that the controls themselves don't hold.
@@ -50,8 +58,8 @@ import { applyStrings, fill, PICKER } from './strings.js';
  * one surface, and nothing can read a half-declared variable during boot.
  */
 const state = {
-  page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2 },
-  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null },
+  page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
+  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false },
   locks: new Set(),
   // undo/redo: look snapshots (see the history section)
   history: { stack: [], index: -1, restoring: false, timer: null },
@@ -107,11 +115,9 @@ safeColoris({
 const LOCKABLE = [
   'bgColor1Hex','bgColor2Hex','bgColor3Hex','bgColor4Hex',
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
-  'accent1ColorHex','accent2ColorHex','outlineColorHex','borderColorHex',
+  'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
   'textureTint1Hex','textureTint2Hex','texP1','texP2','texP3','textureSeedValue',
-  'typeEffect','typeEffectStrength','typeEffectColorHex',
-  'typeEffectAngle','typeEffectDistance','typeEffectGrain',
 ];
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
@@ -190,7 +196,6 @@ bindColorField('textColorHex', scheduleRender);
 bindColorField('textColor2Hex', scheduleRender);
 bindColorField('textColor3Hex', scheduleRender);
 bindColorField('textColor4Hex', scheduleRender);
-bindColorField('outlineColorHex', scheduleRender);
 bindColorField('bgColor1Hex', scheduleRender);
 bindColorField('bgColor2Hex', scheduleRender);
 bindColorField('bgColor3Hex', scheduleRender);
@@ -218,9 +223,51 @@ bindRadioGroup('valignGroup', v=>{ state.page.valign=v; scheduleRender(); });
 /** Applies a page size, mirroring it into the custom boxes so switching to
  *  Custom starts from whatever you were just looking at. */
 function setPageSize(w, h, mirror){
-  canvas.width = w; canvas.height = h;
+  // the EXPORT size; the preview canvas is drawn smaller (see the preview's scale)
+  state.page.exportW = w; state.page.exportH = h;
   if(mirror !== false){ $('customW').value = w; $('customH').value = h; }
+  applyPreviewScale();
 }
+
+// ---------- the preview's scale ----------
+// The preview is drawn at the size it is SHOWN — its box on screen times the
+// screen's pixel density, times any pinch-zoom — not at the export's 3072px,
+// which the phone then shrank. S (render size ÷ export size) is one of a few
+// fixed steps, so textures cache cleanly instead of regenerating at slightly
+// different sizes. Every texture and the renderer measure in canonical pixels
+// (texCore.js), so the preview looks like the export scaled down; Save image
+// renders the full export.
+const S_STEPS = [1/4, 1/3, 1/2, 2/3, 1];
+function previewScale(){
+  if(state.ui.fullPreview || !state.page.exportW) return 1;
+  const wrap = typeof document.querySelector === 'function' ? document.querySelector('.canvas-wrap') : null;
+  const boxW = wrap && wrap.clientWidth, boxH = wrap && wrap.clientHeight;
+  if(!boxW || !boxH) return 1;
+  const ratio = state.page.exportW / state.page.exportH;
+  const shownW = Math.min(boxW, boxH * ratio);               // the canvas fits its box
+  const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+  // at least as large as it is shown, so the layout can never shrink it
+  const need = shownW * dpr * Math.max(1, state.ui.zoom) / state.page.exportW;
+  return S_STEPS.find(s => s >= need) || 1;
+}
+// Steps UP at once when more detail is needed, but DOWN only on deliberate
+// changes (page size, zoom reset, the comparison switch) — never on a passing
+// layout change: dragging the divider or opening the keyboard would otherwise
+// step the scale down and back up, regenerating every texture each time.
+function applyPreviewScale(allowDown = true){
+  if(!state.page.exportW) return;
+  let S = previewScale();
+  const current = canvas.width / state.page.exportW;
+  if(!allowDown && !state.ui.fullPreview && S < current - 1e-6) S = current;
+  const w = Math.max(1, Math.round(state.page.exportW * S)), h = Math.max(1, Math.round(state.page.exportH * S));
+  if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+  setRenderScale(w / state.page.exportW);
+  scheduleRender();
+}
+let previewScaleTimer = null;
+// layout changes (resize, the divider, the keyboard) never step the scale down
+const applyPreviewScaleSoon = () => { clearTimeout(previewScaleTimer); previewScaleTimer = setTimeout(() => applyPreviewScale(false), 150); };
+if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', applyPreviewScaleSoon);
 const clampSize = (n) =>
   Math.max(SIZE_LIMITS.min, Math.min(SIZE_LIMITS.max, Math.round(+n || 0)));
 
@@ -282,18 +329,8 @@ $('textureSeedReroll').addEventListener('click', ()=>{
   scheduleRender();
 });
 
-const outlineModeSel = $('outlineMode');
-function syncOutlineFields(){
-  const mode = outlineModeSel.value;
-  $('outlineColorField').style.display = mode==='off' ? 'none' : 'block';
-  $('outlineThicknessField').style.display = mode==='outline' ? 'block' : 'none';
-  $('shadowThicknessField').style.display = mode==='shadow' ? 'flex' : 'none';
-  scheduleRender();
-}
-outlineModeSel.addEventListener('change', syncOutlineFields);
-syncOutlineFields();
 
-['fontFamily','outlineThickness','shadowBlur','shadowX','shadowY','maxSize','borderThickness','borderOffset','usernameField'].forEach(id=>{
+['fontFamily','maxSize','borderThickness','borderOffset','usernameField'].forEach(id=>{
   $(id).addEventListener('input', scheduleRender);
 });
 $('usernameCorner').addEventListener('change', scheduleRender);
@@ -417,7 +454,13 @@ $('downloadBtn').addEventListener('click', ()=>{
   const ts = Math.floor(Date.now()/1000);
   const link = document.createElement('a');
   link.download = `poetrypress-${base}-${ts}.jpg`;
+  // render the FULL export for the file, then go back to the preview
+  const pw = canvas.width, ph = canvas.height;
+  canvas.width = state.page.exportW || pw; canvas.height = state.page.exportH || ph;
+  setRenderScale(1); render();
   link.href = canvas.toDataURL('image/jpeg', 1.0);
+  canvas.width = pw; canvas.height = ph;
+  setRenderScale(pw / (state.page.exportW || pw)); render();
   link.click();
 });
 
@@ -457,6 +500,8 @@ const PERSISTED = [
   ['cardBlend',            'cardBlend',            'text'],
   ['borderBlend',          'borderBlend',          'text'],
   ['borderGradientAngle',  'borderGradientAngle',  'text', '°'],
+  ['borderStitch',         'borderStitch',         'text'],
+  ['borderStitchOut',      'borderStitchOut',      'check'],
   ['borderBloomBlend',     'borderBloomBlend',     'text'],
   ['borderGradientToggle', 'borderGradientToggle', 'check'],
   ['borderColor2',         'borderColor2Hex',      'color'],
@@ -466,12 +511,22 @@ const PERSISTED = [
   ['vignetteCx',           'vignetteCx',           'text', ''],
   ['vignetteCy',           'vignetteCy',           'text', ''],
   ['vignetteNoise',        'vignetteNoise',        'text', ''],
-  ['typeEffect',           'typeEffect',           'text'],
-  ['typeEffectStrength',   'typeEffectStrength',   'text', ''],
-  ['typeEffectColor',      'typeEffectColorHex',   'color'],
-  ['typeEffectAngle',      'typeEffectAngle',      'text', '°'],
-  ['typeEffectDistance',   'typeEffectDistance',   'text', '%'],
-  ['typeEffectGrain',      'typeEffectGrain',      'text', '%'],
+  ['fx1Type',             'fx1Type',             'text'],
+  ['fx1Color',            'fx1Color',            'color'],
+  ['fx1K1',               'fx1K1',               'text'],
+  ['fx1K2',               'fx1K2',               'text'],
+  ['fx1Angle',            'fx1Angle',            'text', '°'],
+  ['fx2Type',             'fx2Type',             'text'],
+  ['fx2Color',            'fx2Color',            'color'],
+  ['fx2K1',               'fx2K1',               'text'],
+  ['fx2K2',               'fx2K2',               'text'],
+  ['fx2Angle',            'fx2Angle',            'text', '°'],
+  ['fx3Type',             'fx3Type',             'text'],
+  ['fx3Color',            'fx3Color',            'color'],
+  ['fx3K1',               'fx3K1',               'text'],
+  ['fx3K2',               'fx3K2',               'text'],
+  ['fx3Angle',            'fx3Angle',            'text', '°'],
+  ['underAll',             'underAll',             'text'],
 ];
 
 function collectPersisted(){
@@ -522,12 +577,6 @@ function serializeCurrentSettings(){
     accent1: $('accent1Toggle').checked ? $('accent1ColorHex').value : undefined,
     accent2: $('accent2Toggle').checked ? $('accent2ColorHex').value : undefined,
 
-    outlineMode: $('outlineMode').value,
-    outlineColor: $('outlineColorHex').value,
-    outlineThickness: parseFloat($('outlineThickness').value),
-    shadowBlur: parseFloat($('shadowBlur').value),
-    shadowX: parseFloat($('shadowX').value),
-    shadowY: parseFloat($('shadowY').value),
 
     texture: $('textureToggle').checked,
     textureType: $('textureType').value,
@@ -604,12 +653,9 @@ function restoreSettings(s){
   $('accent2Block').classList.toggle('open', !!s.accent2);
   if(s.accent2) setColorField('accent2ColorHex', s.accent2);
 
-  if(s.outlineMode){ outlineModeSel.value = s.outlineMode; syncOutlineFields(); }
-  if(s.outlineColor) setColorField('outlineColorHex', s.outlineColor);
-  if(s.outlineThickness!==undefined) $('outlineThickness').value = s.outlineThickness;
-  if(s.shadowBlur!==undefined) $('shadowBlur').value = s.shadowBlur;
-  if(s.shadowX!==undefined) $('shadowX').value = s.shadowX;
-  if(s.shadowY!==undefined) $('shadowY').value = s.shadowY;
+  // a look saved before the effect stack: translate its outline/shadow and
+  // typeface effect into the slots (the slots themselves restore via PERSISTED)
+  if(s.fx1Type === undefined && (s.outlineMode !== undefined || s.typeEffect !== undefined)) applyLegacyEffects(s);
 
   $('textureToggle').checked = !!s.texture;
   $('textureBlock').classList.toggle('open', !!s.texture);
@@ -877,13 +923,10 @@ function applyPreset(p){
   setActiveRadioValue('textStopsGroup', state.page.textStops);
   if(p.textAngle!==undefined){ $('textGradientAngle').value=p.textAngle; $('textGradientAngleVal').textContent=p.textAngle+'°'; }
 
-  outlineModeSel.value = p.outlineMode || 'off';
-  if(p.outlineColor) setColorField('outlineColorHex', p.outlineColor);
-  if(p.outlineThickness!==undefined) $('outlineThickness').value = p.outlineThickness;
-  if(p.shadowBlur!==undefined) $('shadowBlur').value = p.shadowBlur;
-  if(p.shadowX!==undefined) $('shadowX').value = p.shadowX;
-  if(p.shadowY!==undefined) $('shadowY').value = p.shadowY;
-  syncOutlineFields();
+  // effects: a preset's own slots, or its older outline/typeface fields translated
+  if(p.fx1Type !== undefined) applyPersisted(Object.fromEntries(Object.keys(EFFECT_SLOT_DEFAULTS).map(k => [k, p[k] !== undefined ? p[k] : EFFECT_SLOT_DEFAULTS[k]])));
+  else applyLegacyEffects(p);
+  syncAllFxSlots();
 
   if(p.font){
     const idx = FONTS.findIndex(f=>f.family===p.font);
@@ -894,7 +937,6 @@ function applyPreset(p){
   $('textureBlock').classList.toggle('open', !!p.texture);
   // the preset's own spell travels with it
   $('activeSpell').value = p.spell || '';
-  $('typeEffect').value = p.typeEffect || 'none';
   $('borderGradientToggle').checked = !!p.borderGradient;
   if(p.borderColor2) setColorField('borderColor2Hex', p.borderColor2);
   if(p.borderColor3) setColorField('borderColor3Hex', p.borderColor3);
@@ -1106,7 +1148,7 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
     let scale = 1, tx = 0, ty = 0;
     let pinchStart = 0, scaleStart = 1, panX = 0, panY = 0, mode = null;
     const apply = () => { cv.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'; };
-    const reset = () => { scale = 1; tx = 0; ty = 0; apply(); };
+    const reset = () => { scale = 1; tx = 0; ty = 0; apply(); if(state.ui.zoom !== 1){ state.ui.zoom = 1; setTimeout(() => applyPreviewScale(true), 150); } };
     const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
 
     // Same reasoning as the divider: pinching or panning must not pull focus
@@ -1136,14 +1178,19 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
       }
     }, {passive:false});
 
-    wrap.addEventListener('touchend', ()=>{ mode = null; }, {passive:true});
+    // when a pinch ends, re-render sharp enough for the new magnification
+    wrap.addEventListener('touchend', ()=>{ if(mode === 'pinch'){ state.ui.zoom = scale; applyPreviewScaleSoon(); } mode = null; }, {passive:true});
 
     // Changing the aspect ratio resizes the canvas underneath a transform that
     // was computed for the old shape, which is what threw the preview
     // off-centre and clipped it. Any change to the bitmap's dimensions drops
     // the zoom back to neutral.
+    // Only a change of SHAPE resets: the preview's pixel size also changes
+    // when its scale steps up or down, or while Save image renders the export.
     if(typeof MutationObserver === 'function'){
-      new MutationObserver(reset).observe(cv, { attributes: true, attributeFilter: ['width','height'] });
+      let lastRatio = cv.width / cv.height;
+      new MutationObserver(()=>{ const r = cv.width / cv.height;
+        if(Math.abs(r - lastRatio) > 0.01){ lastRatio = r; reset(); } }).observe(cv, { attributes: true, attributeFilter: ['width','height'] });
     }
 
     // double-tap the preview to zoom back out
@@ -1494,19 +1541,48 @@ if($('resetViewBtn') && $('resetViewBtn').addEventListener){
   });
 }
 
-// ---------- typeface effects ----------
-$('typeEffect').addEventListener('change', scheduleRender);
-$('typeEffectStrength').addEventListener('input', ()=>{
-  $('typeEffectStrengthVal').textContent = $('typeEffectStrength').value;
-  scheduleRender();
-});
-bindColorField('typeEffectColorHex', scheduleRender);
-[['typeEffectAngle','°'], ['typeEffectDistance','%'], ['typeEffectGrain','%']].forEach(([id, unit])=>{
-  $(id).addEventListener('input', ()=>{
-    $(id + 'Val').textContent = $(id).value + unit;
-    scheduleRender();
-  });
-});
+// ---------- text effects: three slots (effects.js) ----------
+// Each slot is a type, a colour, two knobs whose labels follow the type (like
+// the texture knobs), and an angle for effects with a direction.
+const EFFECT_SLOT_DEFAULTS = {};
+for(const i of [1, 2, 3]) Object.assign(EFFECT_SLOT_DEFAULTS, { ['fx'+i+'Type']:'none', ['fx'+i+'Color']:'#ffffff', ['fx'+i+'K1']:'40', ['fx'+i+'K2']:'70', ['fx'+i+'Angle']:'45' });
+EFFECT_SLOT_DEFAULTS.underAll = '';
+function syncFxSlot(i, resetToDefaults){
+  const t = ($('fx'+i+'Type') || {}).value || 'none', d = EFFECT_DEFS[t] || EFFECT_DEFS.none;
+  const show = (id, on) => { const el = $(id); if(el && el.style) el.style.display = on ? '' : 'none'; };
+  show('fx'+i+'ColorField', !!d.color); show('fx'+i+'AngleField', d.angle != null);
+  for(const k of ['K1', 'K2']){
+    const def = d[k.toLowerCase()]; show('fx'+i+k+'Field', !!def);
+    if(!def) continue;
+    const el = $('fx'+i+k);
+    if($('fx'+i+k+'Label')) $('fx'+i+k+'Label').textContent = def[0];
+    el.min = def[1]; el.max = def[2];
+    if(resetToDefaults) el.value = def[3];
+    if($('fx'+i+k+'Val')) $('fx'+i+k+'Val').textContent = el.value + def[4];
+  }
+  if(resetToDefaults){ if(d.color) setColorField('fx'+i+'Color', d.color); if(d.angle != null) $('fx'+i+'Angle').value = d.angle; }
+  if($('fx'+i+'AngleVal')) $('fx'+i+'AngleVal').textContent = $('fx'+i+'Angle').value + '°';
+}
+function syncAllFxSlots(){ for(const i of [1, 2, 3]) syncFxSlot(i, false); }
+/** Older looks and presets: the Outline/Shadow mode and typeface effect, as slots. */
+function applyLegacyEffects(src){
+  const stack = [], o = legacyOutline(src.outlineMode, src.outlineColor, src.outlineThickness, src.shadowBlur, src.shadowX, src.shadowY);
+  if(o) stack.push(o);
+  const t = legacyTypeEffect(src.typeEffect, src.typeEffectStrength, src.typeEffectColor, src.typeEffectAngle, src.typeEffectDistance, src.typeEffectGrain);
+  if(t.fx) stack.push(t.fx);
+  const vals = { ...EFFECT_SLOT_DEFAULTS, underAll: t.under ? t.under.style : '' };
+  stack.slice(0, 3).forEach((fx, n) => { const i = n + 1;
+    Object.assign(vals, { ['fx'+i+'Type']: fx.type, ['fx'+i+'Color']: fx.color, ['fx'+i+'K1']: String(fx.k1), ['fx'+i+'K2']: String(fx.k2), ['fx'+i+'Angle']: String(Math.round(((fx.angle % 360) + 360) % 360)) }); });
+  applyPersisted(vals); syncAllFxSlots();
+}
+for(const i of [1, 2, 3]){
+  const sel = $('fx'+i+'Type');
+  if(sel && 'innerHTML' in sel) sel.innerHTML = EFFECT_TYPES.map(t => `<option value="${t}">${EFFECT_DEFS[t].label}</option>`).join('');
+  if(sel && sel.addEventListener) sel.addEventListener('change', () => { syncFxSlot(i, true); scheduleRender(); });
+  for(const k of ['K1', 'K2', 'Angle']){ const el = $('fx'+i+k); if(el && el.addEventListener) el.addEventListener('input', () => { syncFxSlot(i, false); scheduleRender(); }); }
+  bindColorField('fx'+i+'Color', scheduleRender);
+}
+syncAllFxSlots();
 
 // ---------- border & vignette extras ----------
 $('borderGradientToggle').addEventListener('change', scheduleRender);
@@ -1559,7 +1635,7 @@ function syncFrameVisibility(){
   show('cardAngleField', grad && $('cardGradientType').value === 'linear');
 }
 for(const id of [...Object.keys(RANGE_UNITS), 'bgGradientType', 'borderRounded', 'borderGradientToggle', 'cardToggle', 'cardGradientToggle',
-                 'cardGradientType', 'cardOpacity', 'cardBlend', 'borderBlend', 'borderBloomBlend']){
+                 'cardGradientType', 'cardOpacity', 'cardBlend', 'borderBlend', 'borderBloomBlend', 'borderStitch', 'borderStitchOut']){
   const el = $(id); if(!el || !el.addEventListener) continue;
   const on = ()=>{ refreshReadouts(); syncFrameVisibility(); scheduleRender(); };
   el.addEventListener('input', on); el.addEventListener('change', on);
@@ -1572,7 +1648,8 @@ bindColorField('cardColor2Hex', scheduleRender);
 const FRAME_DEFAULTS = { bgGradientType:'linear', bgRadialX:'50', bgRadialY:'50', bgRadialR:'75', borderGrain:'0',
   borderRounded:false, borderRadius:'60', cardToggle:false, cardColor1:'#FFF6EE', cardGradientToggle:false,
   cardColor2:'#F2E2EA', cardGradientType:'linear', cardGradientAngle:'90', cardOpacity:'70', cardBlend:'source-over',
-  borderBlend:'source-over', borderBloomBlend:'source-over', borderGradientAngle:'45' };
+  borderBlend:'source-over', borderBloomBlend:'source-over', borderGradientAngle:'45',
+  borderStitch:'solid', borderStitchOut:false };
 
 // Every opacity READOUT (any slider marked data-moon) is a moon that waxes with the value — new at 0%, full
 // at 100% — in place of a percentage. (It was once drawn on the slider's
@@ -1690,6 +1767,13 @@ applyPreset(defaultPalettePreset);
 // weight/style combo actually used by FONTS, then render once as soon as
 // they're ready (or on a couple of timeout fallbacks, in case a font load
 // event never fires for some reason).
+// The canvas starts at the size the markup gives it — the export size. Record
+// that, then draw the preview at the size it is shown.
+if(!state.page.exportW){ state.page.exportW = canvas.width; state.page.exportH = canvas.height; }
+applyPreviewScale();
+// Every build opens on the §Variables instrument panel for now; at launch,
+// OPEN_ON_POEM (appOptions.js) lets production open on a poem instead.
+if(!(OPEN_ON_POEM && isProductionHost())){ $('poemText').value = DEV_TEMPLATE; repaintEditor(); }
 // Fonts are fetched on first use now (fonts.js, asked for by the renderer);
 // the first render happens as soon as the page is ready.
 render();
@@ -1768,5 +1852,11 @@ document.addEventListener('keydown', (e)=>{
   else if(k === 'y'){ e.preventDefault(); stepHistory(1); }
 });
 
+// Full-size preview: renders the preview at the export's own size, for
+// comparing it with the screen-sized preview (slower; not part of a look)
+if($('fullPreview')) $('fullPreview').addEventListener('change', ()=>{ state.ui.fullPreview = $('fullPreview').checked; applyPreviewScale(); });
+// the box the preview sits in changes with the divider and the layout
+if(typeof ResizeObserver === 'function' && document.querySelector && document.querySelector('.canvas-wrap'))
+  new ResizeObserver(applyPreviewScaleSoon).observe(document.querySelector('.canvas-wrap'));
 // the look the page opened on is the first step of history
 commitHistory();
