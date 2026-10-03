@@ -53,7 +53,14 @@ export const TEXTURE_PARAMS = {
   bokeh:         [{key:'zoom',  label:'Focal Plane',     min:25, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Orb Count',       min:20, max:260, def:100, unit:'%', base:67},
                   // a camera's aperture: round, then 7, 6 and 5 blades, then a heart
-                  {key:'form',  label:'Bokeh Shape',     min:0,  max:100, def:0,   unit:'', ticks:[0,25,50,75,100]}],
+                  {key:'form',  label:'Aperture',        min:0,  max:100, def:0,   unit:'', ticks:[0,25,50,75,100],
+                   names:['Round','7 Blades','6 Blades','5 Blades','Heart']},
+                  // what the motes ARE: dot (as before), petal, leaf, star, snowflake,
+                  // droplet, crescent, flower — and a die to pick one at random
+                  {key:'shape', label:'Object Shape',    min:0,  max:100, def:0,   unit:'', ticks:[0,14,29,43,57,71,86,100],
+                   names:['Dot','Petal','Leaf','Star','Snowflake','Droplet','Crescent','Flower'], dice:true},
+                  // each mote's hue, rotated at random within this spread around Light Hue
+                  {key:'hue',   label:'Color Variation', min:0,  max:180, def:0,   unit:'°'}],
   astral:        [{key:'stars', label:'Star Density',    min:10, max:300, def:100, unit:'%'},
                   {key:'fog',   label:'Nebula Density',  min:0,  max:260, def:100, unit:'%'},
                   // 0 is deep space; up the scale, twinkle, colour fringes, airglow
@@ -61,7 +68,9 @@ export const TEXTURE_PARAMS = {
   magicparticles:[{key:'zoom',  label:'Sparkle Size',    min:20, max:200, def:100, unit:'%'},
                   {key:'amt',   label:'Sparkle Count',   min:10, max:400, def:100, unit:'%', base:225}],
   embers:        [{key:'zoom',  label:'Ember Size',      min:60, max:600, def:100, unit:'%'},
-                  {key:'amt',   label:'Ember Count',     min:20, max:500, def:100, unit:'%', base:590}],
+                  {key:'amt',   label:'Ember Count',     min:20, max:500, def:100, unit:'%', base:590},
+                  // how far each spark's colour may stray from its ember hue
+                  {key:'form',  label:'Hue Drift',       min:0,  max:100, def:10,  unit:''}],
   snow:          [{key:'zoom',  label:'Flake Size',      min:60, max:340, def:100, unit:'%'},
                   {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950}],
   grain:         [{key:'zoom',  label:'Grain Size',      min:100,max:600, def:100, unit:'%'},
@@ -253,6 +262,8 @@ export function defaultBlendFor(type){ return capsFor(type).blends[0]; }
  */
 export function paramReadout(def, value){
   if(!def) return '';
+  // a knob whose marks have names reads as the nearest mark's name (Object Shape)
+  if(def.names && def.ticks){ let k = 0; def.ticks.forEach((t, i) => { if(Math.abs(t - value) < Math.abs(def.ticks[k] - value)) k = i; }); return def.names[k]; }
   if(def.base != null){
     const n = Math.max(1, Math.round(def.base * (value / 100)));
     return n.toLocaleString() + (def.absUnit != null ? def.absUnit : '');
@@ -286,7 +297,7 @@ export function clearTextureCache(){ textureCache.clear(); }
 /** What the texture cache holds, in megabytes (4 bytes a pixel). */
 export function textureCacheMB(){ let px = 0; for(const c of textureCache.values()) px += (c && c.width * c.height) || 0; return px * 4 / 1e6; }
 
-function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form){
+function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
     result = genClouds(w,h,amt,zoom,light);
   } else if(type === 'flowers'){
@@ -296,9 +307,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'crackedglaze'){
     result = genCrackedGlaze(w,h,amt,zoom);
   } else if(type === 'bokeh'){
-    result = genBokeh(w,h,amt,zoom,form);
+    result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
-    result = genEmbers(w,h,accent1,accent2,amt,zoom);
+    result = genEmbers(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'tessellate'){
     result = genTessellate(w,h,amt,zoom);
   } else if(type === 'astral_fog'){
@@ -403,7 +414,32 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  */
 // the Zen Garden was retired: looks saved with it open as Dune Ripples
 const RETIRED = { whorl: 'dunes' };
-export function getTextureCanvas(type, w, h, opts = {}){
+/** A texture's cache key — shared by the page and the texture worker, so a
+ *  texture made in the worker files where the page will look for it. */
+export function textureKeyFor(type, w, h, opts = {}){ return describeRequest(type, w, h, opts).key; }
+/** The texture under `key`, if it is cached. */
+export function peekTexture(key){ return textureCache.has(key) ? textureCache.get(key) : null; }
+/** Files a finished texture (a canvas, or an ImageBitmap from the worker). */
+export function storeTexture(key, result){
+  // Bounded by MEMORY, not just count: one full page is 3072×3072 pixels,
+  // about 38 MB, and forty of them is far more than a phone browser survives
+  // while knobs are dragged (every position is a new entry). Tile-sized
+  // textures cost almost nothing, so many of those still fit.
+  const px = c => (c && c.width * c.height) || 0;
+  textureCache.set(key, result);
+  let total = 0;
+  for(const c of textureCache.values()) total += px(c);
+  while(textureCache.size > 1 && (total > TEXTURES.cachePixels || textureCache.size > TEXTURE_CACHE_MAX_ENTRIES)){
+    const oldest = textureCache.keys().next().value;
+    const gone = textureCache.get(oldest);
+    total -= px(gone);
+    textureCache.delete(oldest);
+    if(gone && typeof gone.close === 'function') gone.close();        // an ImageBitmap's memory is freed at once
+  }
+  return result;
+}
+// everything a request means: its normalised knobs, and its key
+function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
@@ -415,16 +451,25 @@ export function getTextureCanvas(type, w, h, opts = {}){
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
   // a composite's sub-layers (astral_fog / astral_stars) take their Form via p3
   const v3 = defs[2] ? ((p3 == null) ? defs[2].def : p3) : (defs.length === 0 && p3 != null ? p3 : null);
+  // knobs four and five (Dream Bloom)
+  const v4 = defs[3] ? ((opts.p4 == null) ? defs[3].def : opts.p4) : null, v5 = defs[4] ? ((opts.p5 == null) ? defs[4].def : opts.p5) : null;
 
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
+            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '');
+  return { type, key, defs, v1, v2, v3, v4, v5, scale, lightTilt };
+}
+export function getTextureCanvas(type, w, h, opts = {}){
+  const req = describeRequest(type, w, h, opts);
+  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt } = req;
+  type = req.type;
+  const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
 
-  let zoom = 1, amt = 1, angle = 0, form = 0.5;
+  let zoom = 1, amt = 1, angle = 0, form = 0.5, shape = 0, hueSpread = 0;
   const readParam = (def, val) => {
     if(!def) return;
     // below 100% must shrink things too — clamping at 1 made the whole
@@ -435,11 +480,15 @@ export function getTextureCanvas(type, w, h, opts = {}){
     // a count read exactly (amt is floored at 2%, which made 0 stones become 2)
     else if(def.key === 'stones') amt = Math.max(0, Math.round(val))/100;
     else if(def.key === 'angle') angle = val;
+    else if(def.key === 'shape') shape = val;
+    else if(def.key === 'hue') hueSpread = val;
     else amt = Math.max(0.02, val/100);
   };
   readParam(defs[0], v1);
   readParam(defs[1], v2);
   if(defs[2]) readParam(defs[2], v3);
+  if(defs[3]) readParam(defs[3], v4);
+  if(defs[4]) readParam(defs[4], v5);
   // sub-textures of a composite (astral_fog / astral_stars) declare no params
   // of their own; the caller passes their amount through p1
   if(defs.length === 0 && p1 != null) amt = Math.max(0.02, p1/100);
@@ -453,7 +502,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form))));
+  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -461,21 +510,12 @@ export function getTextureCanvas(type, w, h, opts = {}){
   const caps = capsFor(type);
   // tint and blend remap together, in one pass over the texture itself
   const doRemap = caps.ground === 'grey' && blend && !(caps.keepGround || []).includes(blend);
-  if(result && ((caps.genericTint && (tint1 || tint2)) || doRemap))
-    result = pixelPass(result, caps.genericTint ? tint1 : null, caps.genericTint ? tint2 : null, doRemap ? blendFamily(blend) : null);
-  // Bounded by MEMORY, not just count: one full page is 3072×3072 pixels,
-  // about 38 MB, and forty of them is far more than a phone browser survives
-  // while knobs are dragged (every position is a new entry). Tile-sized
-  // textures cost almost nothing, so many of those still fit.
-  const px = c => (c && c.width * c.height) || 0;
-  textureCache.set(key, result);
-  let total = 0;
-  for(const c of textureCache.values()) total += px(c);
-  while(textureCache.size > 1 && (total > TEXTURES.cachePixels || textureCache.size > TEXTURE_CACHE_MAX_ENTRIES)){
-    const oldest = textureCache.keys().next().value;
-    total -= px(textureCache.get(oldest));
-    textureCache.delete(oldest);
-  }
+  // Dream Bloom with Colour Variation colours its own motes; the grey tint pass would erase their hues
+  const ownColour = type === 'bokeh' && hueSpread > 0;
+  const tintNow = caps.genericTint && !ownColour;
+  if(result && ((tintNow && (tint1 || tint2)) || doRemap))
+    result = pixelPass(result, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null);
+  storeTexture(key, result);
   return result;
 }
 

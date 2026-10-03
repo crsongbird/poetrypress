@@ -209,6 +209,35 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
   return full;
 }
 
+// What Dream Bloom's motes ARE (its Object Shape knob): their outline, as a
+// path to fill. 'snowflake' returns false: it is drawn as strokes instead.
+const BOKEH_OBJECTS = ['dot', 'petal', 'leaf', 'star', 'snowflake', 'droplet', 'crescent', 'flower'];
+export function objectPath(ctx, kind, x, y, r, rot){
+  const c = Math.cos(rot), s = Math.sin(rot), P = (u, v) => [x + u*c - v*s, y + u*s + v*c];
+  const poly = pts => { ctx.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); };
+  const curve = (n, f) => { const pts = []; for(let k = 0; k <= n; k++){ const t = k/n*Math.PI*2; pts.push(f(t)); } poly(pts); };
+  switch(kind){
+    case 'petal':    curve(40, t => [Math.sin(t)*r*0.55*Math.pow(Math.abs(Math.sin(t/2)), 0.6), -Math.cos(t)*r]); return true;
+    case 'leaf':     curve(40, t => [Math.sin(t)*r*0.42, -Math.cos(t)*r*(1 + 0.08*Math.sin(t))]); return true;
+    case 'star':     { const pts = []; for(let k = 0; k < 8; k++){ const a = k*Math.PI/4, rr = k % 2 ? r*0.28 : r; pts.push([Math.sin(a)*rr, -Math.cos(a)*rr]); } poly(pts); return true; }
+    case 'droplet':  curve(40, t => { const q = Math.sin(t/2); return [Math.sin(t)*r*0.62*q, (-Math.cos(t)*r*0.75) + r*0.2]; }); return true;
+    case 'crescent': { const q = P(r*0.38, -r*0.1); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.arc(q[0], q[1], r*0.82, 0, Math.PI*2, true); return true; }
+    case 'flower':   curve(60, t => { const rr = r*(0.55 + 0.45*Math.abs(Math.cos(t*2.5))); return [Math.sin(t)*rr, -Math.cos(t)*rr]; }); return true;
+    case 'snowflake':{ ctx.beginPath(); for(let k = 0; k < 6; k++){ const a = k*Math.PI/3, e = P(Math.sin(a)*r, -Math.cos(a)*r), o = P(0, 0);
+                       ctx.moveTo(o[0], o[1]); ctx.lineTo(e[0], e[1]);
+                       for(const d of [-0.55, 0.55]){ const m = P(Math.sin(a)*r*0.58, -Math.cos(a)*r*0.58), b = P(Math.sin(a + d)*r*0.82, -Math.cos(a + d)*r*0.82); ctx.moveTo(m[0], m[1]); ctx.lineTo(b[0], b[1]); } }
+                       return false; }
+    default:         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); return true;
+  }
+}
+// a colour's hue turned by `deg` degrees (in RGB, about the grey axis)
+function hueTurn(rgb, deg){
+  const a = deg*Math.PI/180, c = Math.cos(a), s = Math.sin(a), k = 1/3, q = Math.sqrt(k);
+  const m = [c + (1 - c)*k, k*(1 - c) - q*s, k*(1 - c) + q*s];
+  const [r, g, b] = rgb, cl = v => Math.max(0, Math.min(255, v));
+  return [cl(r*m[0] + g*m[1] + b*m[2]), cl(r*m[2] + g*m[0] + b*m[1]), cl(r*m[1] + g*m[2] + b*m[0])];
+}
+
 // An aperture's outline, for bokeh: f runs round (0) → 7 blades (0.25) →
 // 6 (0.5) → 5 (0.75) → a heart (1), easing between neighbours.
 function aperturePath(ctx, x, y, r, f, rot){
@@ -233,10 +262,16 @@ function aperturePath(ctx, x, y, r, f, rot){
   }
   ctx.closePath();
 }
-export function genBokeh(w,h,amt,zoom,form){
+export function genBokeh(w,h,amt,zoom,form,shapeKnob,hueSpread,tint){
   // the aperture's shape, and one rotation for every orb (a lens has one aperture)
   const shape = Math.max(0, Math.min(1, form || 0)), rot = Math.random()*Math.PI*2;
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // OBJECT SHAPE: what the motes are (the nearest mark); COLOUR VARIATION: each
+  // mote's hue turned at random within this spread, around Light Hue
+  const obj = BOKEH_OBJECTS[Math.max(0, Math.min(7, Math.round((shapeKnob || 0)/100*7)))];
+  const spread = Math.max(0, Math.min(180, hueSpread || 0));
+  const baseHex = (tint && !/^#?f{6}$/i.test(tint.replace('#','')) ) ? tint : '#ffc7da';
+  const B = parseHex(baseHex), base = [B.r, B.g, B.b];
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = 'rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
@@ -255,38 +290,43 @@ export function genBokeh(w,h,amt,zoom,form){
   for(let i=0;i<n;i++){
     // more motes far away than near, as in a real volume of air
     motes.push({ x: Math.random()*w, y: Math.random()*h, z: Math.sqrt(Math.random()),
-                 lum: 200 + Math.random()*55 });
+                 lum: 200 + Math.random()*55, spin: Math.random()*Math.PI*2, hue: (Math.random() - 0.5)*spread });
   }
   motes.sort((a,b) => b.z - a.z);
+  // a mote's outline: the aperture for dots (as before), its object otherwise —
+  // droplets hang as gravity points; everything else tumbles
+  const outline = (m, r) => obj === 'dot' ? (aperturePath(ctx, m.x, m.y, r, shape, rot), true)
+                                          : objectPath(ctx, obj, m.x, m.y, r, obj === 'droplet' ? 0 : m.spin);
   for(const m of motes){
     const near = 1 / (0.18 + m.z);                        // perspective scale
-    const speck = unit*0.0022*near;                       // size when in focus
+    const speck = unit*0.0022*near*(obj === 'dot' ? 1 : 2.4);   // objects read at a larger size than dots
     const coc = Math.abs(m.z - zf) * unit*0.05 * near;    // blur disc radius
     const r = Math.max(speck, coc);
     // the same light spread over a bigger disc is dimmer
     const a = Math.min(0.95, Math.max(0.04, Math.pow(speck / r, 0.9) * 0.95 + 0.05));
-    const tone = m.lum|0;
+    const col = spread > 0 ? hueTurn(base.map(v => v*m.lum/255), m.hue) : [m.lum, m.lum, m.lum];
+    const rgb = `${col[0]|0},${col[1]|0},${col[2]|0}`;
     if(r <= speck*1.3){
-      // in focus: a sharp speck with a tiny glint
-      ctx.globalAlpha = a; ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
-      aperturePath(ctx, m.x, m.y, r, shape, rot); ctx.fill();
+      // in focus: sharp, with a tiny glint
+      ctx.globalAlpha = a; ctx.fillStyle = `rgb(${rgb})`; ctx.strokeStyle = `rgb(${rgb})`;
+      if(outline(m, r)) ctx.fill(); else { ctx.lineWidth = Math.max(cpx(0.8), r*0.14); ctx.lineCap = 'round'; ctx.stroke(); }
     } else {
       // out of focus: a flat disc with a slightly brighter rim — how bokeh
       // actually looks — rather than a soft gaussian blob
       const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, r);
-      g.addColorStop(0,    `rgba(${tone},${tone},${tone},${a*0.75})`);
-      g.addColorStop(0.82, `rgba(${tone},${tone},${tone},${a*0.9})`);
-      g.addColorStop(0.95, `rgba(${tone},${tone},${tone},${a})`);
-      g.addColorStop(1,    `rgba(${tone},${tone},${tone},0)`);
-      ctx.globalAlpha = 1; ctx.fillStyle = g;
-      aperturePath(ctx, m.x, m.y, r, shape, rot); ctx.fill();
+      g.addColorStop(0,    `rgba(${rgb},${a*0.75})`);
+      g.addColorStop(0.82, `rgba(${rgb},${a*0.9})`);
+      g.addColorStop(0.95, `rgba(${rgb},${a})`);
+      g.addColorStop(1,    `rgba(${rgb},0)`);
+      ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.strokeStyle = g;
+      if(outline(m, r)) ctx.fill(); else { ctx.lineWidth = Math.max(cpx(1), r*0.18); ctx.lineCap = 'round'; ctx.stroke(); }
     }
   }
   ctx.globalAlpha = 1;
   return c;
 }
 
-export function genEmbers(w,h,accent1,accent2,amt,zoom){
+export function genEmbers(w,h,accent1,accent2,amt,zoom,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
@@ -303,11 +343,19 @@ export function genEmbers(w,h,accent1,accent2,amt,zoom){
   // is a trail of calls
   const n = Math.max(4, Math.round(canonArea(w,h)/130000 * amt));
   const g = unit * 0.9;                                   // gravity, px per unit time²
+  // HUE DRIFT: each spark's colour may stray this far around its ember hue;
+  // bigger embers burn more chaotically — their paths sputter and swerve
+  const drift = Math.max(0, Math.min(1, form == null ? 0.1 : form))*140;
+  const chaos = Math.max(0, (zoom || 1) - 1)*0.55;
+  const stray = c => { if(drift <= 0) return c; const t = hueTurn([c.r, c.g, c.b], (Math.random() - 0.5)*drift); return { r: t[0]|0, g: t[1]|0, b: t[2]|0 }; };
   const trail = (x, y, vx, vy, len, width, col, depth) => {
     const steps = 22, dt = len / steps;
     let px = x, py = y, pvx = vx, pvy = vy;
     const pts = [[px, py]];
-    for(let s=0;s<steps;s++){ pvy += g*dt; px += pvx*dt; py += pvy*dt; pts.push([px, py]); }
+    for(let s=0;s<steps;s++){
+      if(chaos > 0){ pvx += (Math.random() - 0.5)*chaos*unit*0.9; pvy += (Math.random() - 0.5)*chaos*unit*0.6; }
+      pvy += g*dt; px += pvx*dt; py += pvy*dt; pts.push([px, py]);
+    }
     // the trail: thin and cool at the tail, thickening toward the hot head
     for(let s=1;s<pts.length;s++){
       const f = s / (pts.length-1);                        // 0 tail -> 1 head
@@ -336,7 +384,7 @@ export function genEmbers(w,h,accent1,accent2,amt,zoom){
   };
 
   for(let i=0;i<n;i++){
-    const col = Math.random() < 0.6 ? A : B;
+    const col = stray(Math.random() < 0.6 ? A : B);
     // launched from anywhere above and across the page, mostly sideways
     const x = Math.random()*w*1.2 - w*0.1, y = Math.random()*h*1.1 - h*0.25;
     const a = -Math.PI/2 + (Math.random()-0.5)*Math.PI*1.3;
@@ -367,11 +415,11 @@ export function genSnow(w,h,amt,zoom){
   for(let i=0;i<count;i++){
     const x = Math.random()*w, y = Math.random()*h;
     const roll = Math.random();
-    let size, alpha;
+    let size, alpha, crystal = false;
     if(roll < 0.25){ size = 0.6+Math.random()*0.5; alpha = 0.3+Math.random()*0.2; }        // distant dust
     else if(roll < 0.55){ size = 1+Math.random()*1.2; alpha = 0.7+Math.random()*0.3; }      // tiny, sharp
     else if(roll < 0.78){ size = 2.5+Math.random()*2.5; alpha = 0.5+Math.random()*0.3; }    // small, soft
-    else if(roll < 0.93){ size = 5+Math.random()*4; alpha = 0.35+Math.random()*0.25; }      // medium, softer
+    else if(roll < 0.93){ size = 5+Math.random()*4; alpha = 0.35+Math.random()*0.25; crystal = true; }   // medium: in focus, crystalline
     else { size = 9+Math.random()*9; alpha = 0.18+Math.random()*0.2; }                      // rare, large, out of focus
     size *= zoom;
     // sizes above are canonical pixels: the tiny/large decision is made in
@@ -390,6 +438,12 @@ export function genSnow(w,h,amt,zoom){
     grad.addColorStop(1, `rgba(255,255,255,0)`);
     fctx.fillStyle = grad;
     fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
+    // the in-focus flakes show their crystal: six arms with side-branches,
+    // inside the glow (tiny specks and the large blurred ones don't)
+    if(crystal){
+      objectPath(fctx, 'snowflake', x, y, size*0.72, Math.random()*Math.PI);
+      fctx.strokeStyle = `rgba(255,255,255,${Math.min(1, alpha*1.5)})`; fctx.lineWidth = Math.max(cpx(0.6), size*0.075); fctx.lineCap = 'round'; fctx.stroke();
+    }
   }
   return full;
 }

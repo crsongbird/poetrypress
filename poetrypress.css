@@ -1159,20 +1159,20 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
 :root[data-theme="rose"]{
   /* Faded Rosewood — 161414 · 2D2A2A · 6C5E5F · C68892 · E5D3D5 —
      with the two pinks kept from the earlier palette */
-  --bg-deep:#0f0d0d;
-  --bg-panel:#171414;
-  --bg-panel-2:#262222;
-  --bg-card:#1b1818;
-  --line:#3a3233;
+  --bg-deep:#0a0808;          /* a step darker throughout (Ruby, on desktop) */
+  --bg-panel:#120f0f;
+  --bg-panel-2:#1e1a1a;
+  --bg-card:#161313;
+  --line:#33292b;
   --text-main:#E5D3D5;
   --text-dim:#a3979a;         /* 6C5E5F lifted: as body text it would fail contrast */
-  --accent:#e79cb1;           /* kept */
-  --accent-dim:#cc7f94;
+  --accent:#e2899f;           /* a little redder: rose, not candy */
+  --accent-dim:#c26c82;
   --rose:#C68892;
-  --ui-violet:#f3b3c6;        /* kept */
+  --ui-violet:#eda3b5;
   --on-accent:#161414;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
-  --ui-selected:#ff7fa6;
+  --ui-selected:#ff6b92;      /* redder with the accent, still fully saturated */
 }
 
 /* Aether — the original. */
@@ -1523,29 +1523,63 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 /* ---------- DESKTOP: a website's shape ----------
    The logo across the top, the navigation under it, the controls on the left
    and the image on the right — one panel at a time, as on a phone. */
-body:not(.is-mobile) .app{
+@media (min-width: 900px){
+  body:not(.is-mobile) .app{
   display:grid; grid-template-columns:460px minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr);
   grid-template-areas:"header header" "nav nav" "controls stage";
 }
-body:not(.is-mobile) .app-header{ display:flex; grid-area:header; position:static; justify-content:center; gap:14px; }
-body:not(.is-mobile) .app-header-spacer{ position:absolute; left:16px; }
-body:not(.is-mobile) .tabbar{
-  grid-area:nav; display:flex; justify-content:center; gap:2px; padding:0 12px;
+  body:not(.is-mobile) .app-header{ display:flex; grid-area:header; position:static; justify-content:center; gap:14px; }
+  body:not(.is-mobile) .app-header-spacer{ position:absolute; left:16px; }
+  body:not(.is-mobile) .tabbar{
+  grid-area:nav; display:flex; justify-content:flex-start; gap:6px; padding:6px 12px;
   background:var(--bg-panel); border-bottom:1px solid var(--line);
 }
-body:not(.is-mobile) .tab-btn{
-  display:flex; align-items:center; gap:8px; padding:10px 18px 9px; border:0; border-bottom:2px solid transparent;
-  background:transparent; color:var(--text-dim); font-family:inherit; font-size:14px; letter-spacing:.05em; cursor:pointer;
+  /* each tab its own surface: a hover, and a clearly filled active state */
+  body:not(.is-mobile) .tab-btn{
+  display:flex; align-items:center; gap:8px; padding:8px 16px; border:1px solid var(--line); border-radius:8px;
+  background:var(--bg-panel-2); color:var(--text-dim); font-family:inherit; font-size:14px; letter-spacing:.05em; cursor:pointer;
+  transition:background .15s, color .15s, border-color .15s;
 }
-body:not(.is-mobile) .tab-btn:hover{ color:var(--text); }
-body:not(.is-mobile) .tab-btn.active{ color:var(--accent); border-bottom-color:var(--accent); }
-body:not(.is-mobile) .tab-ico{ width:20px; height:20px; }
-body:not(.is-mobile) .controls{ grid-area:controls; width:auto; min-width:0; }
-body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; }
-body:not(.is-mobile) .card[data-tab]{ display:none; }
-body:not(.is-mobile) .card[data-tab].tab-active{ display:block; }
-body:not(.is-mobile) #poemCanvas{ max-height:calc(var(--vvh, 100vh) - 150px); max-width:calc(100vw - 540px); }
-body:not(.is-mobile) .drag-handle{ display:none; }
+  body:not(.is-mobile) .tab-btn:hover{ color:var(--text-main); border-color:var(--accent-dim); }
+  body:not(.is-mobile) .tab-btn.active{ color:var(--on-accent, #111); background:var(--accent); border-color:var(--accent); }
+  /* Esoterica — the options — sits at the far right and opens as a drawer */
+  body:not(.is-mobile) .tab-btn[data-tab="more"]{ margin-inline-start:auto; }
+  body.more-open:not(.is-mobile) .app{ grid-template-areas:"header header" "nav nav" "stage stage"; }
+  body.more-open:not(.is-mobile) .controls{
+    position:fixed; top:var(--desk-top, 92px); right:0; bottom:0; width:460px; z-index:60;
+    background:var(--bg-deep); border-left:1px solid var(--line); box-shadow:-14px 0 34px rgba(0,0,0,.55);
+    animation:drawerIn .22s ease-out;
+  }
+  @keyframes drawerIn{ from{ transform:translateX(100%); } to{ transform:none; } }
+  /* the image centres in the space the drawer leaves */
+  body.more-open:not(.is-mobile) .stage{ padding-right:460px; }
+  body.more-open:not(.is-mobile) #poemCanvas{ max-width:calc(100vw - 520px); }
+  body:not(.is-mobile) .tab-ico{ width:20px; height:20px; }
+  body:not(.is-mobile) .controls{ grid-area:controls; width:auto; min-width:0; }
+  body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; }
+  body:not(.is-mobile) .card[data-tab]{ display:none; }
+  body:not(.is-mobile) .card[data-tab].tab-active{ display:block; }
+  body:not(.is-mobile) #poemCanvas{ max-height:calc(var(--vvh, 100vh) - 150px); max-width:calc(100vw - 540px); }
+  body:not(.is-mobile) .drag-handle{ display:none; }
+}
 /* on a desktop, Save image sits at the stage's lower right, across from undo
    and redo (its old place at the top right now runs under the navigation) */
-body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:24px; bottom:16px; }
+@media (min-width: 900px){ body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:24px; bottom:16px; } }
+
+/* ---------- working: a shimmer along the top of the image while a texture
+   is made in the worker, or while Save image renders the full size ---------- */
+.canvas-wrap{ position:relative; }
+body.tex-busy .canvas-wrap::after, body.saving .canvas-wrap::after{
+  content:''; position:absolute; left:0; right:0; top:0; height:3px; pointer-events:none; z-index:5;
+  background:linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+  background-size:40% 100%; background-repeat:no-repeat; opacity:.85;
+  animation:texShimmer 1.15s linear infinite;
+}
+@keyframes texShimmer{ from{ background-position:-40% 0; } to{ background-position:140% 0; } }
+body.saving .download-btn{ animation:savePulse 1s ease-in-out infinite; }
+@keyframes savePulse{ 50%{ opacity:.6; } }
+/* people who asked for less motion get a gentle fade instead of a sweep */
+@media (prefers-reduced-motion: reduce){
+  body.tex-busy .canvas-wrap::after, body.saving .canvas-wrap::after{ animation:texFade 1.6s ease-in-out infinite; background-size:100% 100%; }
+  @keyframes texFade{ 50%{ opacity:.25; } }
+}

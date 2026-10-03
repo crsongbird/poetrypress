@@ -47,7 +47,8 @@ const ORDER = [
   'texSharpness.js',      // √ generators
   'texChaos.js',          // ∆ generators
   'texTouch.js',          // 🜚 generators
-  'textureGenerators.js', // texture tables, cache and dispatch
+  'textureGenerators.js',
+  'textureService.js',     // textures made in a worker, so the page stays responsive // texture tables, cache and dispatch
   'fonts.js',             // typefaces fetched on first use
   'release.js',           // the release's name (§Build)
   'glyphs.js',            // drawn symbols inside canvas text
@@ -92,6 +93,16 @@ if (!html.includes(scriptTag)) throw new Error('module script tag not found in i
 
 html = html.replace(linkTag, `<style>\n${css}\n</style>`);
 html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
+
+// The texture worker: the generator modules flattened again, with the worker's
+// own few lines last, embedded as an inert script block that the texture
+// service turns into a Blob worker (works from file:// too, unlike a URL).
+const WORKER_ORDER = ['tunables.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
+                      'texChaos.js', 'texTouch.js', 'textureGenerators.js', 'textureWorker.js'];
+const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
+// in the <head>, so it exists before the page's script first asks for a texture
+if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');
+html = html.replace('</head>', `<script type="text/js-worker" id="vellum-texture-worker">\n${workerJs}\n</script>\n</head>`);
 
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/index.html', html);

@@ -25,8 +25,7 @@ these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
   using the lighting module.
 
 **B · great, plus a third knob and/or the light**
-- Sparkler: ember size also adds chaos; third knob Hue Drift (default low).
-- First Snow: real six-armed flakes (keep the glow); third knob / light TBD.
+- First Snow: third knob / light TBD (its flakes are crystals now).
 - Aurora Veil: the dial as the BLEND direction; third
   knob Bloom, NOISY bloom (I + α·Blur(Bright(I))·N).
 - Painted Landscape: more landscape patterns and stroke kinds; third knob
@@ -68,6 +67,8 @@ these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
 - Saturn and its moons as a rare easter egg in a couple of presets.
 
 ## Later
+- Dream Bloom as the basis for a new texture (its five knobs — focal plane,
+  count, aperture, object shape, color variation — make a rich engine).
 - Split appEvents.js (~2,000 lines) into modules.
 - Texture layers (a base texture under the main one).
 - Alt text on export (the poem's words).
@@ -75,8 +76,14 @@ these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
 
 ## Check on a phone
 - The colour picker's Done; undo / redo; the preview's scale steps.
+- Textures are made in a worker (textureService.js): the page should stay
+  responsive while one is made; older Safari (before 16.4) makes them on the
+  page, as before.
 
 ## Worth knowing
+- Textures are made off the page's thread (textureWorker.js, embedded by
+  build.mjs). Textures that draw text in web fonts (Transmutation Circles,
+  Cartomancy) stay on the page — a worker can't see the page's fonts.
 - PML stays backward compatible: test/fixtures/pml-golden.json is never
   regenerated; font order is frozen.
 - Textures measure in canonical pixels (cpx, canonArea, canonDiv); check new

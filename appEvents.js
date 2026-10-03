@@ -24,6 +24,7 @@
  * Exports nothing: it is the entry point, and nothing imports from it.
  */
 
+import { texturesSettled } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
@@ -59,7 +60,7 @@ import { applyStrings, fill, PICKER } from './strings.js';
  */
 const state = {
   page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
-  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false },
+  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false },
   locks: new Set(),
   // undo/redo: look snapshots (see the history section)
   history: { stack: [], index: -1, restoring: false, timer: null },
@@ -117,7 +118,7 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','texP1','texP2','texP3','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
 ];
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
@@ -239,10 +240,10 @@ function setPageSize(w, h, mirror){
 // renders the full export.
 const S_STEPS = [1/4, 1/3, 1/2, 2/3, 1];
 function previewScale(){
-  if(state.ui.fullPreview || !state.page.exportW) return 1;
+  if(state.ui.fullPreview || !state.page.exportW) return 1;   // (null below means: not measurable yet)
   const wrap = typeof document.querySelector === 'function' ? document.querySelector('.canvas-wrap') : null;
   const boxW = wrap && wrap.clientWidth, boxH = wrap && wrap.clientHeight;
-  if(!boxW || !boxH) return 1;
+  if(!boxW || !boxH) return null;                              // not laid out yet: no measurement
   const ratio = state.page.exportW / state.page.exportH;
   const shownW = Math.min(boxW, boxH * ratio);               // the canvas fits its box
   const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
@@ -255,8 +256,14 @@ function previewScale(){
 // layout change: dragging the divider or opening the keyboard would otherwise
 // step the scale down and back up, regenerating every texture each time.
 function applyPreviewScale(allowDown = true){
-  if(!state.page.exportW) return;
+  // never while Save image is rendering the full export
+  if(!state.page.exportW || state.ui.saving) return;
   let S = previewScale();
+  if(S === null) return;                                       // try again once the layout settles
+  // The FIRST real measurement may always step down: at launch the box can't
+  // be measured, the preview starts full size, and holding it there (the rule
+  // below) left desktops drawing 3072px for the whole session.
+  if(!state.ui.previewMeasured){ state.ui.previewMeasured = true; allowDown = true; }
   const current = canvas.width / state.page.exportW;
   if(!allowDown && !state.ui.fullPreview && S < current - 1e-6) S = current;
   const w = Math.max(1, Math.round(state.page.exportW * S)), h = Math.max(1, Math.round(state.page.exportH * S));
@@ -449,18 +456,32 @@ function generateFilenameBase(){
   return slug || 'poem';
 }
 
-$('downloadBtn').addEventListener('click', ()=>{
+$('downloadBtn').addEventListener('click', async ()=>{
+  if(state.ui.saving) return;
   const base = generateFilenameBase();
   const ts = Math.floor(Date.now()/1000);
   const link = document.createElement('a');
   link.download = `poetrypress-${base}-${ts}.jpg`;
-  // render the FULL export for the file, then go back to the preview
+  // Render the FULL export for the file, then go back to the preview. The
+  // full-size textures are made in the texture worker, so the page stays
+  // responsive; the first render asks for them, the second draws them.
+  const btn = $('downloadBtn'), label = btn.textContent;
+  state.ui.saving = true; btn.textContent = 'Saving…'; btn.disabled = true;
+  if(document.body && document.body.classList) document.body.classList.add('saving');
   const pw = canvas.width, ph = canvas.height;
-  canvas.width = state.page.exportW || pw; canvas.height = state.page.exportH || ph;
-  setRenderScale(1); render();
-  link.href = canvas.toDataURL('image/jpeg', 1.0);
-  canvas.width = pw; canvas.height = ph;
-  setRenderScale(pw / (state.page.exportW || pw)); render();
+  try {
+    canvas.width = state.page.exportW || pw; canvas.height = state.page.exportH || ph;
+    setRenderScale(1); render();
+    await texturesSettled();
+    render();
+    link.href = canvas.toDataURL('image/jpeg', 1.0);
+  } finally {
+    canvas.width = pw; canvas.height = ph;
+    setRenderScale(pw / (state.page.exportW || pw));
+    state.ui.saving = false; btn.textContent = label; btn.disabled = false;
+    if(document.body && document.body.classList) document.body.classList.remove('saving');
+    render();
+  }
   link.click();
 });
 
@@ -594,6 +615,8 @@ function serializeCurrentSettings(){
     texP1: $('texP1').value,
     texP2: $('texP2').value,
     texP3: $('texP3').value,
+    texP4: $('texP4').value,
+    texP5: $('texP5').value,
     textureOpacity: parseFloat($('textureOpacity').value),
     textureSeed: parseInt($('textureSeedValue').value, 10),
 
@@ -687,6 +710,8 @@ function restoreSettings(s){
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
   if(s.texP2 !== undefined) $('texP2').value = s.texP2;
   if(s.texP3 !== undefined) $('texP3').value = s.texP3;
+  if(s.texP4 !== undefined) $('texP4').value = s.texP4;
+  if(s.texP5 !== undefined) $('texP5').value = s.texP5;
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
@@ -958,6 +983,8 @@ function applyPreset(p){
   if(p.texP1 !== undefined) $('texP1').value = p.texP1;
   if(p.texP2 !== undefined) $('texP2').value = p.texP2;
   if(p.texP3 !== undefined) $('texP3').value = p.texP3;
+  if(p.texP4 !== undefined) $('texP4').value = p.texP4;
+  if(p.texP5 !== undefined) $('texP5').value = p.texP5;
   syncTextureParams(false);
   if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintMoons(); }
 
@@ -1028,7 +1055,18 @@ function detectMobile(){
 if(typeof document.querySelectorAll === 'function'){
   const panels = Array.from(document.querySelectorAll('.card[data-tab]'));
   const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
+  let current = 'write', before = 'write';
   function activateTab(name){
+    // Esoterica is the options menu: on a desktop it opens as a drawer, and
+    // choosing it again closes it, back to whatever was open before
+    if(name === 'more' && current === 'more') name = before;
+    if(name !== current){ before = current; current = name; }
+    if(document.body && document.body.classList){
+      document.body.classList.toggle('more-open', name === 'more');
+      const bar = document.getElementById && document.getElementById('tabBar');
+      if(name === 'more' && bar && bar.getBoundingClientRect && document.documentElement.style)
+        document.documentElement.style.setProperty('--desk-top', Math.round(bar.getBoundingClientRect().bottom) + 'px');
+    }
     panels.forEach(p => p.classList.toggle('tab-active', p.dataset.tab === name));
     tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     // a tab change is a context change; start it from the top
@@ -1225,9 +1263,9 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
 // "value 1" -- it says Sigil zoom, or Slant, or Nebula density.
 function syncTextureParams(useDefaults){
   const defs = paramsFor($('textureType').value);
-  // two knobs for every texture, and a third — Form — for those that declare
-  // one; a knob a texture doesn't have is hidden
-  [0,1,2].forEach(i=>{
+  // two knobs for every texture, a third (Form) for many, up to five for the
+  // richest (Dream Bloom); a knob a texture doesn't have is hidden
+  [0,1,2,3,4].forEach(i=>{
     const def = defs[i];
     const row = $('texP'+(i+1)).parentElement;
     const slider = $('texP'+(i+1));
@@ -1251,7 +1289,7 @@ function syncTextureParams(useDefaults){
   });
 }
 
-['texP1','texP2','texP3'].forEach(id=>{
+['texP1','texP2','texP3','texP4','texP5'].forEach(id=>{
   $(id).addEventListener('input', ()=>{
     const defs = paramsFor($('textureType').value);
     const i = +id.slice(4) - 1;
@@ -1641,6 +1679,14 @@ function setKnobTicks(slider, i, def){
     addAngleSnap(slider);                       // the same toggle, set to lock to ticks
     if(btn()){ btn().textContent = '⊹'; btn().title = 'Lock to the marks'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); btn()._ticks = true; }
   } else { if(slider.removeAttribute) slider.removeAttribute('list'); hideBtn(); }
+  // 🎲 — a knob that asks for one (Object Shape) gets a die that picks a mark at random
+  if(!slider._dice && def.dice && document.createElement && slider.parentNode && slider.parentNode.insertBefore){
+    const d = document.createElement('button'); d.type = 'button'; d.className = 'snap-btn dice-btn'; d.textContent = '🎲'; d.title = 'Pick one at random';
+    d.addEventListener('click', () => { const t = (slider.dataset.ticks || '').split(',').map(Number).filter(n => !isNaN(n));
+      if(t.length){ slider.value = t[Math.floor(Math.random()*t.length)]; slider.dispatchEvent(new Event('input', { bubbles: true })); } });
+    slider.parentNode.insertBefore(d, (slider._snapBtn && slider._snapBtn.nextSibling) || slider.nextSibling); slider._dice = d;
+  }
+  if(slider._dice && slider._dice.style) slider._dice.style.display = def.dice ? '' : 'none';
 }
 
 // ---------- text effects: three slots (effects.js) ----------

@@ -35,6 +35,7 @@ import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs } from './glyphs.js';
 import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge, STITCH_STYLES } from './stitches.js';
 import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './effects.js';
+import { requestTexture, onTextureReady, textureServiceInfo } from './textureService.js';
 import { ensureFonts, fontsRequested } from './fonts.js';
 import { mixHex } from './texCore.js';
 import { EFFECTS, MARKS } from './tunables.js';
@@ -837,6 +838,8 @@ let LAST_RENDER_MS = 0, LAST_PROFILE = '';
 // Always 1 today — the preview IS the export size. setRenderScale is where a
 // screen-sized preview will set it, once every generator measures in cpx().
 let RENDER_SCALE = 1;
+// a texture finished in the worker: draw the page again
+onTextureReady(() => scheduleRender());
 export function setRenderScale(s){ RENDER_SCALE = (s > 0 && isFinite(s)) ? s : 1; }
 /** n canonical pixels at this render's scale — for code outside render()
  *  (the text effects) that can't see its S. Identical at S = 1. */
@@ -845,6 +848,7 @@ const rpx = n => n * RENDER_SCALE;
 // renders the preview full size for comparison) set S from outside.
 if(typeof window !== 'undefined') window.vellumDebug = {
   setRenderScale: s => setRenderScale(s), renderScale: () => RENDER_SCALE, render: () => render(),
+  textures: () => textureServiceInfo(),
 };
 // §Profile: where the last render's time went, stage by stage
 const clock = () => (typeof performance !== 'undefined' ? performance : Date).now();
@@ -852,6 +856,9 @@ export function render(){
   const renderStart = clock();
   const laps = []; let lapAt = renderStart;
   const S = RENDER_SCALE;
+  // a texture from the texture service: scaled to the page, since the one shown
+  // while a new one is made may have been made at another preview size
+  const drawTex = t => { if(t) ctx.drawImage(t, 0, 0, W, H); };
   const lap = name => { const t = clock(); laps.push(`${name} ${Math.round(t - lapAt)}`); lapAt = t; };
   const canvas = $('poemCanvas');
   const ctx = canvas.getContext('2d');
@@ -892,37 +899,41 @@ export function render(){
     const p2 = isNaN(tp2) ? null : tp2;
     const tp3 = $('texP3') ? parseFloat($('texP3').value) : NaN;
     const p3 = isNaN(tp3) ? null : tp3;
+    // knobs four and five, for the textures that have them (Dream Bloom)
+    const knob = id => { const el = $(id), f = el && el.parentElement; const v = el ? parseFloat(el.value) : NaN;
+      return (isNaN(v) || (f && f.style && f.style.display === 'none')) ? null : v; };
+    const p4 = knob('texP4'), p5 = knob('texP5');
 
     if(type === 'astral'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend === 'lighten' ? 'overlay' : blend;
       // the light slot stays empty here; the nebula colour is a TINT
-      ctx.drawImage(getTextureCanvas('astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }), 0, 0);
+      drawTex(requestTexture('fog', 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
       ctx.restore();
 
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas('astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, scale: S }), 0, 0);
+      drawTex(requestTexture('stars', 'astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, scale: S }));
       ctx.restore();
     } else if(type === 'inkbleed'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S }), 0, 0);
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S, p4, p5 }));
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S }), 0, 0);
+      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S, p4, p5 }));
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S }), 0, 0);
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S, p4, p5 }));
       ctx.restore();
     }
   }
