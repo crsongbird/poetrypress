@@ -5,7 +5,7 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, parseHex } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -426,45 +426,60 @@ export function genCrackedGlaze(w,h,amt,zoom){
   return full;
 }
 
-export function genTessellate(w,h,amt,zoom){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d', CPU);
-  fctx.fillStyle='rgb(128,128,128)';
-  fctx.fillRect(0,0,w,h);
-
-  const cell = (Math.max(w,h)/14) * zoom;
-  const jitterAmt = amt;
-  const cols = Math.ceil(w/cell)+1;
-  const rows = Math.ceil(h/cell)+1;
-
-  for(let ry=0; ry<rows; ry++){
-    for(let rx=0; rx<cols; rx++){
-      const x0=rx*cell, y0=ry*cell;
-      const flip = (rx+ry)%2===0;
-      const shadeA = 106+Math.random()*44;
-      const shadeB = 106+Math.random()*44;
-
-      // Irregularity nudges each vertex off the lattice; at 0 this is a
-      // clean tiling, at full it is a shattered one.
-      const J = cell * 0.30 * jitterAmt;
-      const jit = () => (Math.random()-0.5) * J;
-      fctx.beginPath();
-      if(flip){ fctx.moveTo(x0+jit(),y0+jit()); fctx.lineTo(x0+cell+jit(),y0+jit()); fctx.lineTo(x0+jit(),y0+cell+jit()); }
-      else { fctx.moveTo(x0+cell+jit(),y0+jit()); fctx.lineTo(x0+cell+jit(),y0+cell+jit()); fctx.lineTo(x0+jit(),y0+jit()); }
-      fctx.closePath();
-      fctx.fillStyle = `rgb(${shadeA},${shadeA},${shadeA})`;
-      fctx.fill();
-
-      fctx.beginPath();
-      if(flip){ fctx.moveTo(x0+cell,y0); fctx.lineTo(x0+cell,y0+cell); fctx.lineTo(x0,y0+cell); }
-      else { fctx.moveTo(x0,y0); fctx.lineTo(x0,y0+cell); fctx.lineTo(x0+cell,y0+cell); }
-      fctx.closePath();
-      fctx.fillStyle = `rgb(${shadeB},${shadeB},${shadeB})`;
-      fctx.fill();
+export function genTessellate(w,h,amt,zoom,light,tint1,tint2){
+  amt = (amt==null?0:amt); zoom = (zoom==null?1:zoom);
+  // A CARVED surface: triangles sharing their corners (no gaps), each a tilted
+  // plane at its own depth — some sunk deeper than their neighbours. Lit by
+  // lightHeights: overhead (this texture's default) the facets show by their
+  // tilts alone; lower the light and the deeper ones fall into the shadows
+  // their rims cast. LIGHT HUE is the light's colour, DARK HUE the material's.
+  const lightCol = parseHex(tint1 || '#FFFFFF'), mat = parseHex(tint2 && !/^#?0{6}$/.test(tint2.replace('#','')) ? tint2 : '#808080');
+  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const cell = (Math.max(ww,wh)/14) * zoom;
+  const cols = Math.ceil(ww/cell) + 2, rows = Math.ceil(wh/cell) + 2;
+  // the shared lattice, nudged off true by Irregularity
+  const J = cell*0.30*amt, V = [];
+  for(let ry = 0; ry <= rows; ry++){ const row = []; for(let rx = 0; rx <= cols; rx++){
+    const edge = rx === 0 || ry === 0 || rx === cols || ry === rows;
+    row.push([(rx - 1)*cell + (edge ? 0 : (Math.random() - 0.5)*J), (ry - 1)*cell + (edge ? 0 : (Math.random() - 0.5)*J)]); } V.push(row); }
+  const H = new Float32Array(ww*wh);
+  // one facet: a plane through its centre, with a depth and a tilt
+  const facet = (A, Bv, C) => {
+    const depth = -Math.pow(Math.random(), 1.6)*cell*0.32;               // most shallow, a few sunk deep
+    const tx = (Math.random() - 0.5)*0.55, ty = (Math.random() - 0.5)*0.55;
+    const cx = (A[0] + Bv[0] + C[0])/3, cy = (A[1] + Bv[1] + C[1])/3;
+    const x0 = Math.max(0, Math.floor(Math.min(A[0], Bv[0], C[0]))), x1 = Math.min(ww - 1, Math.ceil(Math.max(A[0], Bv[0], C[0])));
+    const y0 = Math.max(0, Math.floor(Math.min(A[1], Bv[1], C[1]))), y1 = Math.min(wh - 1, Math.ceil(Math.max(A[1], Bv[1], C[1])));
+    const area = (Bv[0] - A[0])*(C[1] - A[1]) - (C[0] - A[0])*(Bv[1] - A[1]);
+    if(Math.abs(area) < 1e-6) return;
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+      const px = x + 0.5, py = y + 0.5;
+      const w0 = ((Bv[0] - px)*(C[1] - py) - (C[0] - px)*(Bv[1] - py))/area;
+      const w1 = ((C[0] - px)*(A[1] - py) - (A[0] - px)*(C[1] - py))/area;
+      const w2 = 1 - w0 - w1;
+      if(w0 < -1e-6 || w1 < -1e-6 || w2 < -1e-6) continue;
+      H[y*ww + x] = depth + tx*(px - cx) + ty*(py - cy);
     }
+  };
+  for(let ry = 0; ry < rows; ry++) for(let rx = 0; rx < cols; rx++){
+    const a = V[ry][rx], b = V[ry][rx + 1], c = V[ry + 1][rx], dd = V[ry + 1][rx + 1];
+    if((rx + ry) % 2 === 0){ facet(a, b, c); facet(b, dd, c); } else { facet(a, b, dd); facet(a, dd, c); }
   }
+  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.25, shadow: 0.7, ao: 0.2, ambient: 0.4 });
+  // neutral where a facet faces the light straight on from overhead: the material as it is
+  const flat = lightHeights(new Float32Array(1), 1, 1, { light, relief: 1, gloss: 0.25, shadow: 0, ao: 0, ambient: 0.4 }).light[0] || 1;
+  const small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), dta = img.data;
+  for(let i = 0; i < ww*wh; i++){
+    const k = L.light[i]/flat, sp = L.spec[i]*0.6, q = i*4;
+    dta[q]   = Math.max(0, Math.min(255, mat.r*k*(lightCol.r/255) + lightCol.r*sp));
+    dta[q+1] = Math.max(0, Math.min(255, mat.g*k*(lightCol.g/255) + lightCol.g*sp));
+    dta[q+2] = Math.max(0, Math.min(255, mat.b*k*(lightCol.b/255) + lightCol.b*sp));
+    dta[q+3] = 255;
+  }
+  sctx.putImageData(img, 0, 0);
+  const full = document.createElement('canvas'); full.width = w; full.height = h;
+  const fctx = full.getContext('2d', CPU); fctx.imageSmoothingEnabled = true; fctx.drawImage(small, 0, 0, w, h);
   return full;
 }
 

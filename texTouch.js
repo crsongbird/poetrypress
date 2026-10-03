@@ -324,37 +324,54 @@ export function genFoldGhost(w,h,amt,zoom,light){
 export function genCupRing(w,h,amt,zoom,light,tint){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const t = parseHex(tint || '#6B4A2F');
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-
-  const unit=Math.min(w,h);
-  const rings = Math.max(1, Math.round((1+Math.random()*2)*amt));
-  for(let i=0;i<rings;i++){
-    const cx=w*(0.15+Math.random()*0.7), cy=h*(0.15+Math.random()*0.7);
+  // A dried coffee ring, lit. As a drop dries, the liquid flows outward and
+  // carries the coffee to its edge (the coffee-ring effect): the stain gathers
+  // in a slightly wobbly RIDGE at the rim, with only a faint wash inside, a gap
+  // where the cup was lifted and dragged, and sometimes a second, fainter ring.
+  // The dried film is a height field — thickest at the rim — lit by the dial:
+  // the rim catches the light on one side, a soft shadow on the other, and a
+  // gentle sheen. Dry paper stays neutral.
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const rings=[];
+  const nRings=Math.max(1, Math.round((1+Math.random()*2)*amt));
+  for(let k=0;k<nRings;k++){
     const R=unit*(0.10+Math.random()*0.10)*zoom;
-    const gapAt=Math.random()*Math.PI*2;
-    const gapW=0.5+Math.random()*0.9;      // where the cup was lifted and dragged
-    // the rim holds far more stain than the interior
-    ctx.lineWidth=Math.max(cpx(1.2), R*0.075);
-    const segs=90;
-    for(let sIdx=0;sIdx<segs;sIdx++){
-      const a0=(sIdx/segs)*Math.PI*2, a1=((sIdx+1)/segs)*Math.PI*2;
-      let d=Math.abs(((a0-gapAt+Math.PI*3)%(Math.PI*2))-Math.PI);
-      const inGap = d > Math.PI-gapW;
-      ctx.globalAlpha=(inGap?0.05:0.34)*(0.65+Math.random()*0.7);
-      ctx.strokeStyle=`rgb(${t.r},${t.g},${t.b})`;
-      ctx.beginPath(); ctx.arc(cx,cy,R*(0.99+Math.random()*0.02),a0,a1); ctx.stroke();
-    }
-    // the faint wash the liquid left inside the rim
-    const g=ctx.createRadialGradient(cx,cy,R*0.1,cx,cy,R);
-    g.addColorStop(0,`rgba(${t.r},${t.g},${t.b},0.035)`);
-    g.addColorStop(1,`rgba(${t.r},${t.g},${t.b},0.12)`);
-    ctx.globalAlpha=1; ctx.fillStyle=g;
-    ctx.beginPath(); ctx.arc(cx,cy,R*0.97,0,Math.PI*2); ctx.fill();
+    const base={ cx:ww*(0.15+Math.random()*0.7), cy:wh*(0.15+Math.random()*0.7), R, gapAt:Math.random()*Math.PI*2, gapW:0.5+Math.random()*0.9,
+                 w1:Math.random()*6.28, w2:Math.random()*6.28, strength:0.8+Math.random()*0.4 };
+    rings.push(base);
+    if(Math.random()<0.35) rings.push({ ...base, cx:base.cx + R*(Math.random()-0.5)*0.25, cy:base.cy + R*(Math.random()-0.5)*0.25,
+                                        R:R*(0.97+Math.random()*0.06), strength:base.strength*0.35, w1:Math.random()*6.28 });
   }
-  ctx.globalAlpha=1;
-  return c;
+  const D=new Float32Array(ww*wh);                          // stain density, 0..~1
+  for(const g of rings){
+    const pad=g.R*1.15, x0=Math.max(0,Math.floor(g.cx-pad)), x1=Math.min(ww-1,Math.ceil(g.cx+pad)), y0=Math.max(0,Math.floor(g.cy-pad)), y1=Math.min(wh-1,Math.ceil(g.cy+pad));
+    const width=Math.max(0.8, g.R*0.035);
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      const dx=x-g.cx, dy=y-g.cy, r=Math.hypot(dx,dy), a=Math.atan2(dy,dx);
+      const Rw=g.R*(1 + 0.012*Math.sin(a*3+g.w1) + 0.008*Math.sin(a*7+g.w2));      // rims are never true circles
+      const gapD=Math.abs(((a-g.gapAt+Math.PI*3)%(Math.PI*2))-Math.PI);
+      const keep=gapD > Math.PI-g.gapW ? 0.12 : 1;
+      const out=r-Rw;
+      // the ridge: sharp outside (the contact line), tailing inward
+      const ridge = out>0 ? Math.exp(-(out*out)/(width*width*0.35)) : Math.exp(-(out*out)/(width*width*2.2));
+      const wash = r<Rw ? 0.08 + 0.06*(r/Rw) : 0;
+      D[y*ww+x]=Math.min(1.2, D[y*ww+x] + (ridge*0.9*keep + wash)*g.strength);
+    }
+  }
+  // the film's thickness follows the stain: a little ridge at the rim
+  const H=new Float32Array(ww*wh); for(let i=0;i<H.length;i++) H[i]=D[i]*Math.max(0.6, unit*0.0045);
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.55, shadow:0.45, ao:0, ambient:0.4 });
+  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.55, shadow:0, ao:0, ambient:0.4 });
+  const fl=flat.light[0]||1, fs=flat.spec[0];
+  return paintLit(w,h,div,ww,wh, i => {
+    const dn=Math.min(1, D[i]);
+    if(dn<0.004) return [128,128,128];
+    // the stain darkens toward its hue; the light lifts and shades the film
+    const lit=(L.light[i]/fl - 1)*dn*1.6, sh=(L.spec[i]-fs)*dn*180;
+    // from paper grey toward the stain's own hue as the film thickens
+    const r=128 + (t.r - 128)*dn*0.9, g2=128 + (t.g - 128)*dn*0.9, b=128 + (t.b - 128)*dn*0.9;
+    return [clamp255(r + r*lit + sh), clamp255(g2 + g2*lit + sh), clamp255(b + b*lit + sh)];
+  });
 }
 
 // It ran before it

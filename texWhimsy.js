@@ -212,6 +212,9 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
 // What Dream Bloom's motes ARE (its Object Shape knob): their outline, as a
 // path to fill. 'snowflake' returns false: it is drawn as strokes instead.
 const BOKEH_OBJECTS = ['dot', 'petal', 'leaf', 'star', 'snowflake', 'droplet', 'crescent', 'flower'];
+// each object's narrowest feature, as a share of its radius (it sets how
+// finely the blur must be sampled)
+const FEATURE = { dot: 1, petal: 0.5, leaf: 0.4, star: 0.25, snowflake: 0.13, droplet: 0.6, crescent: 0.2, flower: 0.45 };
 export function objectPath(ctx, kind, x, y, r, rot){
   const c = Math.cos(rot), s = Math.sin(rot), P = (u, v) => [x + u*c - v*s, y + u*s + v*c];
   const poly = pts => { ctx.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); };
@@ -240,33 +243,48 @@ function hueTurn(rgb, deg){
 
 // An aperture's outline, for bokeh: f runs round (0) → 7 blades (0.25) →
 // 6 (0.5) → 5 (0.75) → a heart (1), easing between neighbours.
-function aperturePath(ctx, x, y, r, f, rot){
-  ctx.beginPath();
-  if(f >= 0.875){                                   // the heart, a novelty filter
-    const k = Math.min(1, (f - 0.875)/0.125), s = r*1.05;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(rot*0.15);
-    ctx.moveTo(0, s*0.9);
-    ctx.bezierCurveTo(-s*(1.2+0.2*k), s*0.05, -s*0.6, -s*1.05, 0, -s*0.38);
-    ctx.bezierCurveTo(s*0.6, -s*1.05, s*(1.2+0.2*k), s*0.05, 0, s*0.9);
-    ctx.restore(); return;
+// The aperture's outline as points: the same geometry both draws the disc and
+// decides which sample points lie inside it, so the two never disagree.
+function apertureOutline(x, y, r, f, rot){
+  const pts = [];
+  if(f >= 0.875){                                   // the heart, a novelty filter: two cubic Béziers
+    const k = Math.min(1, (f - 0.875)/0.125), s = r*1.05, c = Math.cos(rot*0.15), sn = Math.sin(rot*0.15);
+    const bez = (p0, p1, p2, p3, t) => { const u = 1 - t; return [u*u*u*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t*t*t*p3[0], u*u*u*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t*t*t*p3[1]]; };
+    const curves = [[[0, s*0.9], [-s*(1.2+0.2*k), s*0.05], [-s*0.6, -s*1.05], [0, -s*0.38]],
+                    [[0, -s*0.38], [s*0.6, -s*1.05], [s*(1.2+0.2*k), s*0.05], [0, s*0.9]]];
+    for(const [p0, p1, p2, p3] of curves) for(let i = 0; i < 36; i++){
+      const [u, v] = bez(p0, p1, p2, p3, i/36); pts.push([x + u*c - v*sn, y + u*sn + v*c]); }
+    return pts;
   }
   const seg = Math.min(2, Math.floor(f/0.25)), t = (f - seg*0.25)/0.25;     // between which ticks
   const blades = [0, 7, 6, 5][seg + 1] || 5, round = seg === 0 ? 1 - t : 0.18*(1 - t) + 0.08;
-  for(let k = 0; k <= 72; k++){
+  for(let k = 0; k < 72; k++){
     const a = (k/72)*Math.PI*2, sector = (Math.PI*2)/blades;
     const local = ((a - rot) % sector + sector) % sector - sector/2;
     const poly = Math.cos(sector/2)/Math.cos(local);                 // the polygon's radius at this angle
     const rr = r*(round + (1 - round)*poly)*(1 - 0.05*(1 - round));
-    const px = x + Math.cos(a)*rr, py = y + Math.sin(a)*rr;
-    k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    pts.push([x + Math.cos(a)*rr, y + Math.sin(a)*rr]);
   }
-  ctx.closePath();
+  return pts;
+}
+function aperturePath(ctx, x, y, r, f, rot){
+  const pts = apertureOutline(x, y, r, f, rot);
+  ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
+}
+// inside a polygon? (a ray cast to the right crosses its edges an odd number of times)
+function insidePolygon(pts, x, y){
+  let inside = false;
+  for(let i = 0, j = pts.length - 1; i < pts.length; j = i++){
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if((yi > y) !== (yj > y) && x < (xj - xi)*(y - yi)/(yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 export function genBokeh(w,h,amt,zoom,form,shapeKnob,hueSpread,tint){
-  // the aperture's shape, and one rotation for every orb (a lens has one aperture)
+  // the aperture's shape, and one rotation for every disc (a lens has one aperture)
   const shape = Math.max(0, Math.min(1, form || 0)), rot = Math.random()*Math.PI*2;
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  // OBJECT SHAPE: what the motes are (the nearest mark); COLOUR VARIATION: each
+  // OBJECT SHAPE: what the motes are (the nearest mark); COLOR VARIATION: each
   // mote's hue turned at random within this spread, around Light Hue
   const obj = BOKEH_OBJECTS[Math.max(0, Math.min(7, Math.round((shapeKnob || 0)/100*7)))];
   const spread = Math.max(0, Math.min(180, hueSpread || 0));
@@ -276,53 +294,150 @@ export function genBokeh(w,h,amt,zoom,form,shapeKnob,hueSpread,tint){
   const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = 'rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
 
-  // Dust motes in real depth. Every mote has a distance z (0 near, 1 far).
-  // The knob sets the FOCAL PLANE: motes at that distance are small, sharp
-  // specks; the further a mote sits from it — nearer or farther — the wider
-  // and fainter its disc, the way a lens spreads a point of light (the
-  // circle of confusion). Near motes are also larger, simply for being near.
-  // Drawn far to near, so near blur lies over what is behind it.
-  const unit = Math.min(w,h);
-  // 25%..400% maps onto near..far, on a log scale so 100% sits mid-depth
-  const zf = Math.max(0, Math.min(1, Math.log(zoom/0.25) / Math.log(16)));
+  // ---- a physically based lens ----
+  // A thin lens: 50 mm at f/1.8, a 24 mm sensor height mapped onto the page.
+  // Every mote sits at a real distance (30 cm to 6 m, more of them far, as in
+  // a real volume of air); FOCAL PLANE sets the focus distance on that scale.
+  // The circle of confusion is the thin-lens one,
+  //     c = A·f·|S2 − S1| / (S2·(S1 − f)),
+  // and a mote's image size is its real size times the magnification.
+  const unit = Math.min(w,h), F = 50, A = F/1.8, Dn = 300, Df = 6000, pxPerMm = unit/24;
+  const dist = z => Dn*Math.pow(Df/Dn, z);
+  const zf = Math.max(0, Math.min(1, Math.log(zoom/0.25) / Math.log(16)));   // 25%..400% → near..far
+  const S1 = dist(zf);
+  const cocR = S2 => 0.5*A*F*Math.abs(S2 - S1)/(S2*(S1 - F))*pxPerMm;      // blur radius, px
+  const imgR = (mm, S2) => mm*F/(S2 - F)*pxPerMm;                          // image radius, px
+
+  // ---- the aperture, sampled: blur is the object convolved with it ----
+  // Points inside the aperture's real shape (round, bladed or heart), tested
+  // against its own outline; shuffled so any prefix covers it evenly.
+  const outline = apertureOutline(0, 0, 1, shape, rot);
+  const samples = [];
+  for(let gy = -1; gy <= 1.0001; gy += 2/13) for(let gx = -1; gx <= 1.0001; gx += 2/13){
+    const jx = gx + (Math.random() - 0.5)*0.12, jy = gy + (Math.random() - 0.5)*0.12;
+    if(insidePolygon(outline, jx, jy)) samples.push([jx, jy, jx*jx + jy*jy]);
+  }
+  for(let i = samples.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [samples[i], samples[j]] = [samples[j], samples[i]]; }
+
+  // ---- the motes: light sources, brighter than white ----
+  // Intensity can exceed what a pixel holds: in focus a bright mote clips to
+  // white, as on a real sensor; defocused, the same light spreads over its
+  // disc and dims with its area. That is why real bokeh highlights stay
+  // visible while staying soft.
   const n = Math.max(20, Math.round(canonArea(w,h)/9000 * amt));
   const motes = [];
   for(let i=0;i<n;i++){
-    // more motes far away than near, as in a real volume of air
-    motes.push({ x: Math.random()*w, y: Math.random()*h, z: Math.sqrt(Math.random()),
+    const z = Math.sqrt(Math.random());
+    motes.push({ x: Math.random()*w, y: Math.random()*h, z, S2: dist(z),
+                 // dots are specular glints: many dim, a few far brighter than white.
+                 // Leaves, petals and the like are diffusely lit surfaces — about as
+                 // bright as white paper — and snowflakes a little more, for the ice.
+                 I: obj === 'dot' ? 1.5 + 180*Math.pow(Math.random(), 6)
+                  : obj === 'snowflake' ? 0.6 + 2.6*Math.pow(Math.random(), 3)
+                  : 0.45 + 1.4*Math.pow(Math.random(), 2),
+                 mm: obj === 'dot' ? 0.5 + Math.random()*1.2 : 2.5 + Math.random()*4.5,
                  lum: 200 + Math.random()*55, spin: Math.random()*Math.PI*2, hue: (Math.random() - 0.5)*spread });
   }
   motes.sort((a,b) => b.z - a.z);
-  // a mote's outline: the aperture for dots (as before), its object otherwise —
-  // droplets hang as gravity points; everything else tumbles
-  const outline = (m, r) => obj === 'dot' ? (aperturePath(ctx, m.x, m.y, r, shape, rot), true)
-                                          : objectPath(ctx, obj, m.x, m.y, r, obj === 'droplet' ? 0 : m.spin);
+  // ---- blurred shapes, made once and shared ----
+  // Each is built at a fixed resolution: the object (radius r) convolved with
+  // the aperture (radius ratio·r), by summing white copies at the aperture's
+  // sample points, weighted for spherical aberration. The canvas has room for
+  // the object's full reach plus a margin, so no shape is cut at an edge.
+  const shapes = new Map();
+  const tintCv = document.createElement('canvas'), tc = tintCv.getContext('2d', CPU);   // a clean canvas for tinting
+  function blurShape(ratioB, spinB, behind){
+    const key = ratioB + '|' + spinB + '|' + (behind ? 1 : 0);
+    if(shapes.has(key)) return shapes.get(key);
+    const ratio = Math.pow(2, ratioB/2), reach = 46;                         // the shape's radius on its canvas
+    const r0 = reach/(1.3 + ratio), coc0 = r0*ratio;
+    // sample spacing near a pixel, so the copies merge into a smooth blur
+    const spacing = coc0*2/13, k = Math.min(1, 1.25/Math.max(1e-3, spacing));
+    const rk = r0*k, ck = coc0*k, size = Math.ceil(2*(rk*1.3 + ck) + 8), cc = size/2;
+    const cv = document.createElement('canvas'); cv.width = cv.height = size;
+    const g = cv.getContext('2d', CPU);
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = '#fff'; g.strokeStyle = '#fff';
+    const sa = behind ? 0.7 : -0.6;
+    const feature = rk*(FEATURE[obj] || 1);
+    const need = Math.max(8, Math.ceil(samples.length/Math.max(1, Math.pow(feature/Math.max(spacing*k, 1e-3), 2))));
+    const pick = samples.slice(0, Math.min(samples.length, need)).map(([u, v, rr]) => [u, v, Math.max(0.05, 1 + sa*(rr - 0.5))]);
+    const wsum = pick.reduce((a2, p) => a2 + p[2], 0) || 1;
+    const spin = spinB*Math.PI/3;
+    for(const [u, v, wt] of pick){
+      g.globalAlpha = Math.min(1, wt/wsum);
+      const px = cc + u*ck, py = cc + v*ck;
+      if(obj === 'dot'){ g.beginPath(); g.arc(px, py, Math.max(0.6, rk), 0, Math.PI*2); g.fill(); }
+      else if(objectPath(g, obj, px, py, Math.max(0.6, rk), spin)) g.fill();
+      else { g.lineWidth = Math.max(cpx(0.7)*k, rk*0.14); g.lineCap = 'round'; g.stroke(); }   // a canonical floor, at this canvas's scale
+    }
+    const out = { canvas: cv, size, r: rk };
+    shapes.set(key, out);
+    return out;
+  }
+  const cx0 = w/2, cy0 = h/2, half = Math.hypot(w, h)/2;
+  ctx.globalCompositeOperation = 'lighter';                         // light adds, as on a sensor
   for(const m of motes){
-    const near = 1 / (0.18 + m.z);                        // perspective scale
-    const speck = unit*0.0022*near*(obj === 'dot' ? 1 : 2.4);   // objects read at a larger size than dots
-    const coc = Math.abs(m.z - zf) * unit*0.05 * near;    // blur disc radius
-    const r = Math.max(speck, coc);
-    // the same light spread over a bigger disc is dimmer
-    const a = Math.min(0.95, Math.max(0.04, Math.pow(speck / r, 0.9) * 0.95 + 0.05));
     const col = spread > 0 ? hueTurn(base.map(v => v*m.lum/255), m.hue) : [m.lum, m.lum, m.lum];
     const rgb = `${col[0]|0},${col[1]|0},${col[2]|0}`;
-    if(r <= speck*1.3){
-      // in focus: sharp, with a tiny glint
-      ctx.globalAlpha = a; ctx.fillStyle = `rgb(${rgb})`; ctx.strokeStyle = `rgb(${rgb})`;
-      if(outline(m, r)) ctx.fill(); else { ctx.lineWidth = Math.max(cpx(0.8), r*0.14); ctx.lineCap = 'round'; ctx.stroke(); }
-    } else {
-      // out of focus: a flat disc with a slightly brighter rim — how bokeh
-      // actually looks — rather than a soft gaussian blob
-      const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, r);
-      g.addColorStop(0,    `rgba(${rgb},${a*0.75})`);
-      g.addColorStop(0.82, `rgba(${rgb},${a*0.9})`);
-      g.addColorStop(0.95, `rgba(${rgb},${a})`);
-      g.addColorStop(1,    `rgba(${rgb},0)`);
-      ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.strokeStyle = g;
-      if(outline(m, r)) ctx.fill(); else { ctx.lineWidth = Math.max(cpx(1), r*0.18); ctx.lineCap = 'round'; ctx.stroke(); }
+    const r = Math.max(cpx(0.6), imgR(m.mm, m.S2)), coc = cocR(m.S2);
+    const behind = m.S2 > S1;
+    // cat's eye: off-axis, the barrel clips the cone of light — the disc is the
+    // aperture intersected with a second, shifted disc
+    const ox = (m.x - cx0)/half, oy = (m.y - cy0)/half, cat = 0.55;
+    // spherical aberration: behind the focus a brighter rim, in front a brighter
+    // centre with a soft edge
+    const sa = behind ? 0.7 : -0.6;
+    if(coc <= r*0.2){
+      // in focus: the object itself, clipped at full white if it is bright
+      ctx.globalAlpha = Math.min(1, m.I*0.9); ctx.fillStyle = `rgb(${rgb})`; ctx.strokeStyle = `rgb(${rgb})`;
+      if(obj === 'dot'){ ctx.beginPath(); ctx.arc(m.x, m.y, r, 0, Math.PI*2); ctx.fill(); }
+      else if(objectPath(ctx, obj, m.x, m.y, r, obj === 'droplet' ? 0 : m.spin)) ctx.fill();
+      else { ctx.lineWidth = Math.max(cpx(0.8), r*0.14); ctx.lineCap = 'round'; ctx.stroke(); }
+      continue;
     }
+    if(obj === 'dot' && coc > r*2.5){
+      // a point of light, far out of focus: the convolution IS the aperture,
+      // carrying the mote's energy spread over its area (exact, so drawn whole)
+      const v = Math.min(1, m.I*(r*r)/(coc*coc));
+      const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, coc);
+      const k = t => Math.max(0, Math.min(1, v*(1 + sa*(t*t - 0.5))));
+      g.addColorStop(0, `rgba(${rgb},${k(0)})`); g.addColorStop(0.5, `rgba(${rgb},${k(0.5)})`);
+      g.addColorStop(0.9, `rgba(${rgb},${k(0.9)})`); g.addColorStop(behind ? 0.97 : 0.8, `rgba(${rgb},${k(behind ? 0.97 : 0.8)})`);
+      g.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(m.x + ox*cat*coc, m.y + oy*cat*coc, coc*1.05, 0, Math.PI*2); ctx.clip();   // the cat's eye, gently
+      ctx.globalAlpha = 1; ctx.fillStyle = g; aperturePath(ctx, m.x, m.y, coc, shape, rot); ctx.fill();
+      ctx.restore();
+      continue;
+    }
+    // light too faint to move a pixel by one step, spread this wide, is invisible
+    // in the photograph too
+    if(m.I*Math.pow(r/(r + coc), 2) < 0.6/255) continue;
+    // An extended object (or a point not far out): its blur is the object
+    // convolved with the aperture. That SHAPE depends only on how blurred it is
+    // relative to its size, its angle, and which side of the focus it lies — so
+    // each is made once (blurShape) and shared by every mote that matches;
+    // each mote then only scales it, tints it and adds its light.
+    const ratioB = Math.max(-5, Math.min(12, Math.round(Math.log2(Math.max(1e-3, coc/r))*2)));
+    const spinB = obj === 'droplet' ? 0 : ((Math.round(m.spin/(Math.PI/3)) % 6) + 6) % 6;
+    const S = blurShape(ratioB, spinB, behind);
+    const scale = r / S.r, dw = S.size*scale;
+    // the mote's colour: the shared shape is white; tint it on a clean canvas
+    if(tintCv.width < S.size || tintCv.height < S.size){ tintCv.width = Math.max(tintCv.width, S.size); tintCv.height = Math.max(tintCv.height, S.size); }
+    tc.globalCompositeOperation = 'source-over'; tc.globalAlpha = 1; tc.clearRect(0, 0, tintCv.width, tintCv.height);
+    tc.drawImage(S.canvas, 0, 0);
+    tc.globalCompositeOperation = 'source-in'; tc.fillStyle = `rgb(${rgb})`; tc.fillRect(0, 0, S.size, S.size);
+    ctx.save();
+    // cat's eye, gently: off-axis the barrel clips the cone of light
+    ctx.beginPath(); ctx.arc(m.x + ox*cat*coc, m.y + oy*cat*coc, (coc + r*1.3)*1.05, 0, Math.PI*2); ctx.clip();
+    // light adds; a mote brighter than white is laid on more than once, so
+    // it clips the way a sensor does
+    const times = Math.max(1, Math.ceil(m.I));
+    ctx.globalAlpha = Math.min(1, m.I/times);
+    for(let t = 0; t < times; t++) ctx.drawImage(tintCv, 0, 0, S.size, S.size, m.x - dw/2, m.y - dw/2, dw, dw);
+    ctx.restore();
   }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   return c;
 }
 

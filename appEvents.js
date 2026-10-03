@@ -1297,7 +1297,14 @@ function syncTextureParams(useDefaults){
     scheduleRender();
   });
 });
-$('textureType').addEventListener('change', ()=>{ syncTextureParams(true); scheduleRender(); });
+$('textureType').addEventListener('change', ()=>{
+  syncTextureParams(true);
+  // a texture with a light of its own starts there when chosen (Facet Field:
+  // overhead); saved looks and presets keep theirs, as they don't come through here
+  const lt = (capsFor($('textureType').value) || {}).lightTilt;
+  if(lt != null && $('textureLightTilt')){ $('textureLightTilt').value = String(lt); syncLightPad(); }
+  scheduleRender();
+});
 syncTextureParams(true);
 
 

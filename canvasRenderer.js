@@ -773,14 +773,14 @@ function pmlVarContext(W, H){
     lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value)
       + (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '') : 'n/a',
     seed,
-    params: defs.slice(0, 2).map((d, i) => ({ label: d.label, value: ($(i ? 'texP2Val' : 'texP1Val') || {}).textContent || '' })),
+    // every knob the texture has, by its own label and readout (up to five)
+    params: defs.map((d, i) => ({ label: d.label, value: ($('texP' + (i + 1) + 'Val') || {}).textContent || '' })),
     opacity: Math.round(+($('textureOpacity') && $('textureOpacity').value) || 0),
     hues,
     moonTonight: moonPhase(new Date()),
     moonSeed: moonForSeed(seed),
     spell: ($('activeSpell') && $('activeSpell').value) || '',
     spellName: (document.body && document.body.dataset && document.body.dataset.lookName) || '',
-    hidden: $('texP3') && $('texP3Field') && $('texP3Field').style.display !== 'none' ? $('texP3').value : null,
     font: optionText('fontFamily'),
     canvas: Math.round(W / RENDER_SCALE) + '×' + Math.round(H / RENDER_SCALE),   // the EXPORT size
     // the whole effect stack, compressed onto one line

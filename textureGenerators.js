@@ -223,8 +223,9 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
+  tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, lightTilt:0, tints:2,
+                   tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
   cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — 🜚 touch — relief, so soft-light leads and light direction applies
@@ -311,7 +312,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'embers'){
     result = genEmbers(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'tessellate'){
-    result = genTessellate(w,h,amt,zoom);
+    result = genTessellate(w,h,amt,zoom,light,tint1,tint2);
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){

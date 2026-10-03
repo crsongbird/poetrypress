@@ -9,10 +9,11 @@ judging: `node tools/texture-gallery.mjs --only <names>` (run when asked).
 lit by the dial — diffuse, a specular per material, cast shadows (soft,
 longer as the light lowers; none overhead), occlusion in crevices. Dune
 Ripples, Kintsugi, Moss on Stone and Rain on Glass use it. Next: bring the
-other lit textures onto it (Cold Press, Fractured Glaze, Facet Field, Poured
-Wax, Linen, Cup Ring, Sigil relief, Fold Ghost), and add a per-texture
-default light (Facet Field starts overhead). Watch the cost on phones:
-these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
+other lit textures onto it (Cold Press, Fractured Glaze, Poured Wax, Linen,
+Sigil relief, Fold Ghost). Facet Field and Cup Ring are on it, and a texture
+can carry its own default light (Facet Field starts overhead). Watch the cost on phones:
+these take ~0.2–0.6 s at preview size and up to ~2 s at export here,
+in the worker (the page stays responsive).
 
 ## 2 · Texture plan (Ruby's audit, by group)
 
@@ -41,8 +42,6 @@ these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
 - Rorschach Test: revisit with the gallery tool, side by side with Ruby.
 - Fractured Glaze: peeling enamel, not a dry riverbed; lit with shadows;
   third knob Enameling (bubbling, chipping; 0 = unbroken).
-- Facet Field: light overhead by default, deeper
-  facets revealed by cast shadow; Light Hue = light, Dark Hue = material.
 - Cartomancy: divination cards, not playing cards — custom suits from the
   app's own glyphs and magical language; more realism and variation; the
   best home for easter eggs (Saturn, Enceladus, the kitsune).
@@ -53,7 +52,6 @@ these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
   relief. (It represents age spots on old paper.)
 - Fold Ghost: paper folded and crumpled in a pocket — random fold
   directions, creases lit and shadowed — not irregular tiles.
-- Cup Ring: use the light (a raised dried rim, a sheen).
 - Poured Wax: a simulation — random pour points and volumes from the seed,
   pooling together; knobs Pool Size / Viscosity / Wetness; waxy specular.
 
@@ -81,6 +79,11 @@ these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
   page, as before.
 
 ## Worth knowing
+- Dream Bloom is a thin-lens camera (50 mm f/1.8): blur is the object
+  convolved with the aperture's own outline, light is conserved and clips like
+  a sensor, with spherical aberration and cat's-eye vignetting. Dots render in
+  well under 0.1 s; extended objects (leaves, snowflakes) take 1–2 s, in the
+  worker, since each is a real convolution.
 - Textures are made off the page's thread (textureWorker.js, embedded by
   build.mjs). Textures that draw text in web fonts (Transmutation Circles,
   Cartomancy) stay on the page — a worker can't see the page's fonts.

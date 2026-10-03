@@ -79,10 +79,9 @@ export function resolvePmlVariables(text, ctx){
       case 'LightDir':      return ctx.lightArrow;
       case 'TextureSeed':   return String(ctx.seed);
       case 'SurfParamsA':
+        // every knob by its own label (Form, Weave, Aperture… — no more "Hidden Value")
         return [...(ctx.params || []).map(p => `${p.label}: [${p.value}]`),
-                `Opacity: [${ctx.opacity}%] {§MoonPhase!opacity}`,
-                // the third, unusual knob — shown raw, since its meaning is the texture's own
-                ...(ctx.hidden != null ? [`Hidden Value: [${ctx.hidden}]`] : [])].join('  ');
+                `Opacity: [${ctx.opacity}%] {§MoonPhase!opacity}`].join('  ');
       case 'SurfParamsB':
         return (ctx.hues || []).length
           ? ctx.hues.map(h => `${h.label}: <${h.hex}/#:${h.hex.replace('#', '')}>`).join('  ')
