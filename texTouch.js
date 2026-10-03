@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonDiv, scaleNow, cpx } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights } from './texCore.js';
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
 //   pitch   thread spacing (of the page)   tw     thread width (of the pitch)
@@ -424,97 +424,6 @@ export function genPouredWax(w,h,amt,zoom,light,tint){
 // Never the whole print —
 // just enough ridge to prove that
 // a hand was here once.
-export function genWhorl(w,h,amt,zoom,light,tint1,tint2){
-  zoom=(zoom==null?1:zoom);
-  const stones=Math.max(1,Math.min(8,Math.round((amt==null?0.03:amt)*100)));  // the knob is 1–8
-  const {lx,ly}=lightVec(light);
-  const sand=parseHex(tint1||'#D6C7A8'), glow=parseHex(tint2||'#FFF3DC');
-  const lum=(sand.r*0.299+sand.g*0.587+sand.b*0.114)/255;
-  // stones: a very dark version of the sand, or a light one if the sand is dark
-  const stone = lum>0.35 ? {r:sand.r*0.2, g:sand.g*0.2, b:sand.b*0.21}
-                         : {r:sand.r+(255-sand.r)*0.78, g:sand.g+(255-sand.g)*0.78, b:sand.b+(255-sand.b)*0.78};
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-
-  // A raked garden. Sand, a few stones, and ONE rake path: rings round each
-  // stone that merge where stones sit close, relaxing into gentle parallel
-  // curves away from them. All of it comes from a single distance field, so
-  // the grooves never cross or break. GRAIN sets both how fine the sand is
-  // and how close the rake lines run. Computed at a quarter resolution; the
-  // sand grain is laid over at full resolution afterwards.
-  const div=canonDiv(4), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
-  // rake spacing: wide enough that the grooves resolve cleanly at the
-  // working resolution (tighter ones shimmered into moiré)
-  const sp=Math.max(1.5, unit*0.021*zoom);
-  const rings=4;
-  const S=[];
-  for(let tries=0; tries<stones*40 && S.length<stones; tries++){
-    const rx=unit*(0.035+Math.random()*0.045), ry=rx*(0.6+Math.random()*0.35);
-    const x=ww*(0.1+Math.random()*0.8), y=wh*(0.1+Math.random()*0.8);
-    if(S.some(t=>Math.hypot(t.x-x,t.y-y) < (t.rx+rx)*1.25)) continue;
-    const a=Math.random()*Math.PI;
-    S.push({x,y,rx,ry,ca:Math.cos(a),sa:Math.sin(a),h1:Math.random()*6.28,h2:Math.random()*6.28});
-  }
-  // normalised radius to a stone: 1 on its (slightly irregular) edge
-  const q=(t,px,py)=>{ const dx=px-t.x, dy=py-t.y, u=(dx*t.ca+dy*t.sa)/t.rx, v=(-dx*t.sa+dy*t.ca)/t.ry;
-    const ang=Math.atan2(v,u); return Math.sqrt(u*u+v*v)/(1+0.07*Math.sin(ang*3+t.h1)+0.04*Math.sin(ang*5+t.h2)); };
-  const shadowLen=unit*0.02;
-  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d', CPU); const img=sctx.createImageData(ww,wh), d=img.data;
-  const wave=Math.random()*6.28;
-  for(let py=0;py<wh;py++) for(let px=0;px<ww;px++){
-    let dmin=1e9, inStone=null, qs=9, shade=0;
-    for(const t of S){
-      const qq=q(t,px,py), dist=(qq-1)*Math.min(t.rx,t.ry);
-      // smooth minimum, so the rings of neighbouring stones flow together
-      dmin = dmin===1e9 ? dist : -sp*1.5*Math.log(Math.exp(-dmin/(sp*1.5))+Math.exp(-dist/(sp*1.5)));
-      if(qq<1 && qq<qs){ qs=qq; inStone=t; }
-      // its shadow, cast away from the light
-      const sq=q(t,px+lx*shadowLen,py+ly*shadowLen);
-      if(sq<1.12) shade=Math.max(shade, 1-Math.max(0,(sq-0.92)/0.2));
-    }
-    let r,g,b;
-    if(inStone){
-      // the stone: lit on the side facing the light
-      const nx=(px-inStone.x)/inStone.rx, ny=(py-inStone.y)/inStone.ry, nl=Math.hypot(nx,ny)||1;
-      const lit=Math.max(0,-(nx*lx+ny*ly)/nl)*0.9*(1-qs*0.3)+0.25;
-      r=stone.r*(0.6+lit); g=stone.g*(0.6+lit); b=stone.b*(0.6+lit);
-    } else {
-      // the rake: rings near the stones, blending into gentle parallel curves
-      // a long, gentle handover from rings to lines, so grooves never bunch
-      const reach=sp*rings, far=sstepZ(reach, reach*2.1, dmin);
-      const straight=py + Math.sin(px/(unit*0.23)+wave)*sp*1.4;
-      const F=dmin*(1-far) + straight*far;
-      const groove=Math.sin(F/sp*6.2832);
-      const k=groove>0 ? groove*0.45 : groove*0.22;         // ridges catch light
-      r=sand.r+(k>0?(glow.r-sand.r)*k:sand.r*k); g=sand.g+(k>0?(glow.g-sand.g)*k:sand.g*k); b=sand.b+(k>0?(glow.b-sand.b)*k:sand.b*k);
-      const sh=1-shade*0.42; r*=sh; g*=sh; b*=sh;
-    }
-    const i4=(py*ww+px)*4; d[i4]=r; d[i4+1]=g; d[i4+2]=b; d[i4+3]=255;
-  }
-  sctx.putImageData(img,0,0);
-  ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
-
-  // the sand itself: rounded grains, lit from the light, laid over the whole
-  // garden at full resolution from one small tile
-  const T=128, tile=document.createElement('canvas'); tile.width=T; tile.height=T;
-  const tc=tile.getContext('2d', CPU), ti=tc.createImageData(T,T), td=ti.data, hgt=new Float32Array(T*T);
-  for(let i=0;i<T*T;i++) hgt[i]=Math.random();
-  for(let y=0;y<T;y++) for(let x=0;x<T;x++){
-    const at=(xx,yy)=>hgt[((yy+T)%T)*T+((xx+T)%T)];
-    const s=(at(x,y)*2+at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1))/6;     // rounded
-    const gx=at(x+1,y)-at(x-1,y), gy=at(x,y+1)-at(x,y-1);
-    const v=128+(gx*lx+gy*ly)*-70+(s-0.5)*40;
-    const i4=(y*T+x)*4; td[i4]=td[i4+1]=td[i4+2]=v; td[i4+3]=255;
-  }
-  tc.putImageData(ti,0,0);
-  const gs=Math.max(1,Math.round(2*zoom))*T/T;           // grain size, in page pixels per tile pixel
-  ctx.globalCompositeOperation='overlay'; ctx.globalAlpha=0.5;
-  const tsz=T*gs*scaleNow();                              // the tile, in canonical pixels
-  for(let y=0;y<h;y+=tsz) for(let x=0;x<w;x+=tsz) ctx.drawImage(tile,x,y,tsz,tsz);
-  ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
-  return c;
-}
 function sstepZ(a,b,x){ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); }
 
 // Light through water:
@@ -591,4 +500,206 @@ export function genWater(w,h,amt,zoom,light){
   ctx.imageSmoothingEnabled=true;
   ctx.drawImage(small,0,0,w,h);
   return c;
+}
+
+// ---------- Rain on Glass ----------
+/**
+ * Drops on a window, built as HEIGHTS and lit by lightHeights — so each one is
+ * a real little dome: shaded away from the light, a highlight where the
+ * dial's light catches it, darker at its steep rim. Outlines wobble; sizes
+ * run from mist to fat runners (many tiny, few large); runners leave a thin
+ * wet ridge and a trail of droplets. Dry glass stays neutral grey, so it
+ * blends like the other grey-ground textures.
+ * DROP SIZE · RAIN · CONDENSATION
+ */
+export function genGlassRain(w,h,amt,zoom,light,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const mist=Math.max(0,Math.min(1, form==null ? 0.3 : form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const H=new Float32Array(ww*wh);
+  // a drop: a wobbly dome, a little heavier at the bottom; heights combine by max
+  const drop=(cx, cy, r)=>{
+    const ph1=Math.random()*6.28, ph2=Math.random()*6.28, sag=1 + Math.min(0.35, r/(unit*0.05))*0.35;
+    const x0=Math.max(0,Math.floor(cx-r*1.3)), x1=Math.min(ww-1,Math.ceil(cx+r*1.3)), y0=Math.max(0,Math.floor(cy-r*1.3)), y1=Math.min(wh-1,Math.ceil(cy+r*1.5*sag));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      const dx=x-cx, dy=(y-cy)/((y-cy) > 0 ? sag : 1), a=Math.atan2(dy,dx);
+      const edge=r*(1 + 0.09*Math.sin(a*3+ph1) + 0.05*Math.sin(a*5+ph2));
+      const q=Math.hypot(dx,dy)/edge; if(q>=1) continue;
+      const hgt=r*0.5*Math.pow(1-q*q, 0.55), i=y*ww+x;
+      if(hgt>H[i]) H[i]=hgt;
+    }
+  };
+  // condensation: a mist of the smallest droplets
+  const fine=Math.round(canonArea(w,h)/1800*mist/(div*div));
+  for(let k=0;k<fine;k++) drop(Math.random()*ww, Math.random()*wh, Math.max(0.6, unit*(0.0012+Math.random()*0.0025)));
+  // drops, from many tiny to a few large
+  const n=Math.round((90+Math.random()*40)*amt);
+  for(let k=0;k<n;k++){
+    const r=unit*(0.003 + 0.042*Math.pow(Math.random(), 3))*zoom, x=Math.random()*ww, y=Math.random()*wh;
+    if(r > unit*0.012 && Math.random()<0.5){
+      // a runner: a thin wet ridge above it, droplets left along the way
+      const len=r*(5+Math.random()*14), wob=Math.random()*6.28;
+      for(let t=0;t<len;t+=Math.max(0.7, r*0.15)){
+        const tx=x+Math.sin(t*0.08+wob)*r*0.3, ty=y-t, rr=r*0.16*(1 - t/len*0.5);
+        drop(tx, ty, Math.max(0.6, rr));
+        if(Math.random()<0.03) drop(tx + (Math.random()-0.5)*r*0.5, ty, r*(0.12+Math.random()*0.18));
+      }
+    }
+    drop(x, y, Math.max(0.6, r));
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1.6, gloss:0.95, shadow:0.25, ao:0, ambient:0.55 });
+  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1.6, gloss:0.95, shadow:0, ao:0, ambient:0.55 });
+  const base=flat.light[0], baseSpec=flat.spec[0];
+  return paintLit(w,h,div,ww,wh, i => {
+    if(H[i] <= 0) return [128,128,128];                     // dry glass: neutral
+    const v=128 + (L.light[i]-base)*210 + (L.spec[i]-baseSpec)*240;
+    return [clamp255(v), clamp255(v), clamp255(v*1.01)];
+  });
+}
+
+// ---------- textures lit by lightHeights (texCore): a surface, then its light ----------
+// a smooth multi-octave noise sampler, on grids drawn from the seed
+function fbmSampler(cells, octaves){
+  const grids = [];
+  for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
+  const norm = grids.reduce((s, o) => s + o.amp, 0);
+  return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
+}
+// A smooth field sampled on a coarse lattice every `step` pixels and blended
+// between: broad shapes (stone, swells, where moss grows) change over dozens
+// of pixels, so sampling noise at every pixel was most of the cost.
+function smoothField(ww, wh, step, fn){
+  const cw = Math.ceil(ww/step) + 2, ch = Math.ceil(wh/step) + 2, g = new Float32Array(cw*ch);
+  for(let j = 0; j < ch; j++) for(let i = 0; i < cw; i++) g[j*cw + i] = fn(Math.min(1, i*step/ww), Math.min(1, j*step/wh));
+  const out = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ const fy = y/step, j = Math.floor(fy), ty = fy - j;
+    for(let x = 0; x < ww; x++){ const fx = x/step, i = Math.floor(fx), tx = fx - i, k = j*cw + i;
+      out[y*ww + x] = (g[k]*(1-tx) + g[k+1]*tx)*(1-ty) + (g[k+cw]*(1-tx) + g[k+cw+1]*tx)*ty; } }
+  return out;
+}
+// a lit surface, coloured per pixel and laid on the page
+function paintLit(w, h, div, ww, wh, colour){
+  const small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), d = img.data;
+  for(let i = 0; i < ww*wh; i++){ const c = colour(i); const k = i*4; d[k] = c[0]; d[k+1] = c[1]; d[k+2] = c[2]; d[k+3] = 255; }
+  sctx.putImageData(img, 0, 0);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, 0, 0, w, h);
+  return c;
+}
+const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
+
+/**
+ * Dune Ripples — wind-blown sand. Ripples run across the wind with a gentle
+ * windward slope and a steep lee face, bending and forking as the wind does,
+ * over broad dune swells. The light dial is the sun: low light fills every
+ * trough with shadow, overhead light flattens it all to glare.
+ * RIPPLE SIZE · WIND (sharper, straighter, more asymmetric ripples) · DUNE HEIGHT
+ */
+export function genDunes(w,h,amt,zoom,light,tint1,tint2,form){
+  amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
+  const swell=Math.max(0,Math.min(1, form==null ? 0.4 : form));
+  const sand=parseHex(tint1||'#D9B98C'), sun=parseHex(tint2||'#FFF1D8');
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const lambda=Math.max(3, unit*0.032*zoom), wind=Math.random()*Math.PI, cw=Math.cos(wind), sw=Math.sin(wind);
+  const warp=fbmSampler(2, 3), breakup=fbmSampler(6, 2), dunes=fbmSampler(1.4, 3), grain=fbmSampler(40, 1);
+  const lee=0.34 - 0.22*Math.min(1, amt);                     // the steep face's share of each ripple
+  const st=Math.max(2, Math.round(lambda/3));
+  // wind straightens the ripples (less meander and forking) and raises sharper crests
+  const meander=1.35 - 0.85*Math.min(1, amt), crest=0.65 + 0.8*Math.min(1, amt);
+  const Wf=smoothField(ww,wh,st,(u,v)=>(3.2*warp(u,v) + 0.9*breakup(u,v))*meander), Af=smoothField(ww,wh,st,(u,v)=>breakup(u+0.37,v+0.11)), Df=smoothField(ww,wh,st*3,(u,v)=>dunes(u,v));
+  const H=new Float32Array(ww*wh);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const i=y*ww+x, ph=(x*cw + y*sw)/lambda + Wf[i];
+    const t=ph - Math.floor(ph), prof = t < 1-lee ? t/(1-lee) : (1-t)/lee;
+    H[i] = prof*lambda*0.16*crest*(0.55 + 0.6*Af[i]) + swell*unit*0.10*Df[i] + (grain(x/ww,y/wh)-0.5)*0.6;
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.08, shadow:0.75, ao:0.25, ambient:0.38 });
+  return paintLit(w,h,div,ww,wh, i => { const k=L.light[i], s=L.spec[i]*0.4;
+    return [clamp255(sand.r*k*1.05 + sun.r*s), clamp255(sand.g*k*1.05 + sun.g*s), clamp255(sand.b*k*1.05 + sun.b*s)]; });
+}
+
+/**
+ * Kintsugi — glazed ceramic broken and mended with gold. Cracks follow the
+ * edges of an organic, warped cell network (not every edge breaks), each
+ * filled with a raised seam of gold. The glaze takes a glossy highlight; the
+ * gold a bright metallic one, coloured by the gold itself.
+ * SEAM WIDTH · FRACTURES · GLOSS
+ */
+export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const gloss=Math.max(0,Math.min(1, form==null ? 0.7 : form));
+  const glaze=parseHex(tint1||'#E8E1D3'), gold=parseHex(tint2||'#D4AF37');
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const cells=Math.max(3, Math.round(5*Math.sqrt(amt))), cs=unit/cells;
+  const gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, pts=new Float32Array(gx*gy*2), keep=new Float32Array(gx*gy);
+  for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ const k=j*gx+i; pts[k*2]=(i-1+0.15+Math.random()*0.7)*cs; pts[k*2+1]=(j-1+0.15+Math.random()*0.7)*cs; keep[k]=Math.random(); }
+  const warp=fbmSampler(3, 3), jag=fbmSampler(22, 2), glazeN=fbmSampler(8, 2);
+  const seam=Math.max(0.8, unit*0.0026*zoom);
+  const H=new Float32Array(ww*wh), G=new Float32Array(ww*wh);
+  // a broad warp bends the cracks; a fine one makes them jagged, as broken ceramic is
+  const st=Math.max(2, Math.round(unit/200));
+  const WX=smoothField(ww,wh,st,(u,v)=>(warp(u,v)-0.5)*cs*0.55 + (jag(u,v)-0.5)*cs*0.16), WY=smoothField(ww,wh,st,(u,v)=>(warp(u+0.5,v+0.3)-0.5)*cs*0.55 + (jag(u+0.3,v+0.7)-0.5)*cs*0.16);
+  const GZ=smoothField(ww,wh,st*2,(u,v)=>glazeN(u,v));
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const u=x/ww, v=y/wh, px=x + WX[y*ww+x], py=y + WY[y*ww+x];
+    const ci=Math.floor(px/cs)+1, cj=Math.floor(py/cs)+1;
+    let d1=1e9, d2=1e9, k1=0, k2=0;
+    for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){
+      const i2=ci+di, j2=cj+dj; if(i2<0||j2<0||i2>=gx||j2>=gy) continue;
+      const k=j2*gx+i2, d=Math.hypot(px-pts[k*2], py-pts[k*2+1]);
+      if(d<d1){ d2=d1; k2=k1; d1=d; k1=k; } else if(d<d2){ d2=d; k2=k; }
+    }
+    // only some edges crack: a pair of cells breaks apart if its shared hash says so
+    const broken = ((keep[k1] + keep[k2]) % 1) < 0.72;
+    const e=(d2-d1)*0.5, g = broken ? Math.max(0, 1 - e/seam) : 0;
+    G[y*ww+x]=g;
+    H[y*ww+x]=(GZ[y*ww+x]-0.5)*1.2 + Math.sqrt(g)*seam*0.9;        // the seam stands proud of the glaze
+  }
+  // glazed pottery glows: more fill light than raw stone or sand gets
+  const L=lightHeights(H, ww, wh, { light, relief:1.2, gloss:0.35 + gloss*0.6, shadow:0.5, ao:0.3, ambient:0.66 });
+  return paintLit(w,h,div,ww,wh, i => {
+    const k=L.light[i], s=L.spec[i], g=Math.min(1, G[i]*1.6);
+    const gc=[gold.r*(0.35+0.75*k) + 255*s*1.2, gold.g*(0.35+0.75*k) + 235*s*1.2, gold.b*(0.35+0.75*k) + 170*s*1.0];
+    const cc=[glaze.r*k*1.12 + 255*s*gloss, glaze.g*k*1.12 + 255*s*gloss, glaze.b*k*1.12 + 255*s*gloss];
+    return [clamp255(cc[0]*(1-g) + gc[0]*g), clamp255(cc[1]*(1-g) + gc[1]*g), clamp255(cc[2]*(1-g) + gc[2]*g)];
+  });
+}
+
+/**
+ * Moss on Stone — rough stone, and moss where moss grows: in the crevices and
+ * on the flatter tops, as soft raised clumps with a fibrous, matte surface.
+ * The stone takes the light and casts shadow; DAMPNESS darkens and glosses
+ * the stone and deepens the moss.  STONE SCALE · MOSS · DAMPNESS
+ */
+export function genMoss(w,h,amt,zoom,light,tint1,tint2,form){
+  amt=(amt==null?0.45:amt); zoom=(zoom==null?1:zoom);
+  const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form));
+  const stone=parseHex(tint1||'#8A8579'), moss=parseHex(tint2||'#5F7E34');
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const rock=fbmSampler(2.2/zoom, 5), ridge=fbmSampler(5/zoom, 3), growth=fbmSampler(4, 3), fibre=fbmSampler(48, 2);
+  const H=new Float32Array(ww*wh), M=new Float32Array(ww*wh), base=new Float32Array(ww*wh);
+  const st=Math.max(2, Math.round(unit/220));
+  base.set(smoothField(ww,wh,st,(u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
+    return (rock(u,v)*0.75 + r*0.35)*unit*0.06; }));
+  const GR=smoothField(ww,wh,st*2,(u,v)=>growth(u,v));
+  // moss gathers where the stone dips below its neighbourhood, and where it is flat
+  const at=(x,y)=>base[Math.min(wh-1,Math.max(0,y))*ww+Math.min(ww-1,Math.max(0,x))];
+  const R=Math.max(2, Math.round(unit*0.02));
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const i=y*ww+x, hollow=(at(x-R,y)+at(x+R,y)+at(x,y-R)+at(x,y+R))/4 - base[i];
+    const slope=Math.hypot(at(x+1,y)-at(x-1,y), at(x,y+1)-at(x,y-1));
+    const want=GR[i] + hollow*0.12 - slope*0.08 + (amt - 0.5)*0.9;
+    const m=Math.max(0, Math.min(1, (want - 0.42)*5));
+    M[i]=m;
+    H[i]=base[i] + m*(1.5 + 2.2*fibre(x/ww,y/wh));              // soft raised clumps, fibrous on top
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
+  const sd=1 - damp*0.35, mg=1 + damp*0.25;
+  return paintLit(w,h,div,ww,wh, i => {
+    const k=L.light[i], m=M[i], s=L.spec[i]*(1-m);               // moss is matte; only wet stone shines
+    const sc=[stone.r*sd*k + 255*s, stone.g*sd*k + 255*s, stone.b*sd*k + 255*s];
+    const mc=[moss.r*k*0.95, moss.g*k*mg, moss.b*k*0.9];
+    return [clamp255(sc[0]*(1-m) + mc[0]*m), clamp255(sc[1]*(1-m) + mc[1]*m), clamp255(sc[2]*(1-m) + mc[2]*m)];
+  });
 }

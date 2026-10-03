@@ -17,6 +17,18 @@
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from 'fs';
 import { createHash } from 'crypto';
 
+// ---- release names: Jupiter's named moons, by average distance from the
+// barycentre. `node build.mjs --next` moves release.js on to the next one.
+// The list ends where Ruby's does; extend it (in order) before it runs out.
+const JUPITER = ['Amalthea', 'Thebe', 'Io', 'Europa', 'Ganymede', 'Callisto', 'Themisto', 'Leda', 'Ersa', 'Himalia', 'Pandia', 'Lysithea', 'Elara', 'Dia', 'Carpo', 'Valetudo', 'Euporie'];
+if(process.argv.includes('--next')){
+  const cur = /RELEASE = '([^']+)'/.exec(readFileSync('release.js', 'utf8'))[1].split('–')[1];
+  const i = JUPITER.indexOf(cur);
+  if(i < 0 || i + 1 >= JUPITER.length){ console.error(`No moon after ${cur} in the list: extend JUPITER in build.mjs.`); process.exit(1); }
+  writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = 'Jupiter–${JUPITER[i + 1]}'`));
+  console.log(`release: Jupiter–${cur} → Jupiter–${JUPITER[i + 1]}`);
+}
+
 const ORDER = [
   // Every module comes after everything it imports. The bundle is one flat
   // scope, so a module placed before its dependency can read a const that is
@@ -37,6 +49,7 @@ const ORDER = [
   'texTouch.js',          // 🜚 generators
   'textureGenerators.js', // texture tables, cache and dispatch
   'fonts.js',             // typefaces fetched on first use
+  'release.js',           // the release's name (§Build)
   'glyphs.js',            // drawn symbols inside canvas text
   'pmlVars.js',           // §Variables, resolved before PML
   'canvasRenderer.js',    // parsed lines into pixels
@@ -67,7 +80,7 @@ function flatten(src, filename) {
 const css = readFileSync('poetrypress.css', 'utf8');
 let js = ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n');
 // §Build: which build this is — its date and a short hash of the code
-js = js.replace("'__BUILD_STAMP__'", JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ') + ' · ' +
+js = js.replace("'__BUILD_STAMP__'", JSON.stringify(new Date().toISOString().slice(0, 10) + ' · ' +
   createHash('sha256').update(js).digest('hex').slice(0, 7)));
 
 let html = readFileSync('index.html', 'utf8');

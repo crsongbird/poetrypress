@@ -121,6 +121,10 @@ export const UI_STRINGS = {
   'label.theme':                               "Theme",
 
   // ---- options ----
+  'option.dunes':                            "Dune Ripples",
+  'option.kintsugi':                         "Kintsugi",
+  'option.moss':                             "Moss on Stone",
+  'option.rain_on_glass':                    "Rain on Glass",
   'label.fx1_type':                          "Effect 1",
   'label.fx1_color':                         "Color",
   'label.fx1_angle':                         "Angle",
@@ -184,7 +188,7 @@ export const UI_STRINGS = {
   'option.still_rain':                         "Harsh Rain",
   'option.silverpoint_hatch':                  "Silverpoint Hatch",
   'option.sigil_scatter':                      "Sigil Scatter",
-  'option.enochian_noise':                     "Enochian Noise",
+  'option.binary_pattern':                     "Binary Pattern",
   'option.summoning_circles':                  "Transmutation Circles",
   'option.rorschach_test':                     "Rorschach Test",
   'option.fractured_glaze':                    "Fractured Glaze",
@@ -196,7 +200,6 @@ export const UI_STRINGS = {
   'option.fold_ghost':                         "Fold Ghost",
   'option.cup_ring':                           "Cup Ring",
   'option.poured_wax':                         "Poured Wax",
-  'option.raked_substrate':                    "Zen Garden",
   'option.overlay':                            "Overlay",
   'option.color_burn':                         "Color Burn",
   'option.color_dodge':                        "Color Dodge",

@@ -32,11 +32,11 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { withSeed, withScale, scaleNow, blendFamily, pixelPass, CPU } from './texCore.js';
+import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
-import { genLinenTooth, genColdPress, genFoxing, genFoldGhost, genCupRing, genPouredWax, genWhorl, genWater } from './texTouch.js';
+import { genLinenTooth, genColdPress, genFoxing, genFoldGhost, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -51,7 +51,9 @@ export const TEXTURE_PARAMS = {
   clouds:        [{key:'zoom',  label:'Lift',            min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Drag',            min:0,  max:200, def:60,  unit:'%'}],
   bokeh:         [{key:'zoom',  label:'Focal Plane',     min:25, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Orb Count',       min:20, max:260, def:100, unit:'%', base:67}],
+                  {key:'amt',   label:'Orb Count',       min:20, max:260, def:100, unit:'%', base:67},
+                  // a camera's aperture: round, then 7, 6 and 5 blades, then a heart
+                  {key:'form',  label:'Bokeh Shape',     min:0,  max:100, def:0,   unit:'', ticks:[0,25,50,75,100]}],
   astral:        [{key:'stars', label:'Star Density',    min:10, max:300, def:100, unit:'%'},
                   {key:'fog',   label:'Nebula Density',  min:0,  max:260, def:100, unit:'%'},
                   // 0 is deep space; up the scale, twinkle, colour fringes, airglow
@@ -69,11 +71,16 @@ export const TEXTURE_PARAMS = {
   flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
                   {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:18},
                   // the third, unusual knob: which flower. 50 is the lotus
-                  {key:'form',  label:'Form',            min:0,  max:100, def:50,  unit:''}],
+                  // ticks at the seven species: bud, cherry, lily, lotus, daisy, rosette, hydrangea
+                  {key:'form',  label:'Form',            min:0,  max:100, def:50,  unit:'', ticks:[0,25,38,50,65,82,100]}],
   brushstrokes:  [{key:'zoom',  label:'Stroke Width',    min:60, max:380, def:100, unit:'%'},
                   {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111}],
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
+  glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Rain',            min:20, max:300, def:100, unit:'%'},
+                  // a fine mist of tiny droplets between the drops
+                  {key:'form',  label:'Condensation',    min:0,  max:100, def:30,  unit:''}],
   rainstreaks:   [{key:'zoom',  label:'Rain Zoom',       min:100,max:500, def:100, unit:'%'},
                   {key:'angle', label:'Slant',           min:-45,max:45,  def:0,   unit:'°'}],
   sigils:        [{key:'zoom',  label:'Sigil Zoom',      min:100,max:500, def:100, unit:'%'},
@@ -90,9 +97,9 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26}],
   linen:         [{key:'zoom',  label:'Weave Scale',     min:50, max:400, def:100, unit:'%'},
                   // stitching → slubs → buttons → rivets
-                  {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:''},
+                  {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:'', ticks:[15,42,68,95]},
                   // silk → twill → linen → canvas → burlap
-                  {key:'form',  label:'Weave',           min:0,  max:100, def:50,  unit:''}],
+                  {key:'form',  label:'Weave',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
   coldpress:     [{key:'zoom',  label:'Tooth Scale',     min:75, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Tooth Depth',     min:20, max:300, def:100, unit:'%'}],
   foxing:        [{key:'zoom',  label:'Bloom Size',      min:40, max:400, def:100, unit:'%'},
@@ -103,8 +110,15 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2}],
   wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3}],
-  whorl:         [{key:'zoom',  label:'Grain',           min:50, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Stones',          min:1,  max:8,   def:3,   unit:''}],
+  dunes:         [{key:'zoom',  label:'Ripple Size',     min:40, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Wind',            min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''}],
+  kintsugi:      [{key:'zoom',  label:'Seam Width',      min:50, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Fractures',       min:20, max:400, def:100, unit:'%'},
+                  {key:'form',  label:'Gloss',           min:0,  max:100, def:70,  unit:''}],
+  moss:          [{key:'zoom',  label:'Stone Scale',     min:40, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
+                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
@@ -116,15 +130,15 @@ export const TEXTURE_PARAMS = {
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
                   {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'}],
   aurora:        [{key:'zoom',  label:'Curtain Height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
-                  {key:'amt',   label:'Ribbon Count',    min:20, max:900, def:100, unit:'%', base:9, absUnit:''}],
+                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''}],
   hatch:         [{key:'angle', label:'Hatch Angle',     min:-90,max:90,  def:35,  unit:'°'},
-                  {key:'amt',   label:'Line Density',    min:25, max:400, def:100, unit:'%'},
+                  {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
                   // fresh cool grey to warm tarnished brown
                   {key:'form',  label:'Age',             min:0,  max:100, def:30,  unit:''}],
   cards:         [{key:'amt',   label:'Fragment Count',  min:20, max:400, def:100, unit:'%', base:23},
                   {key:'angle', label:'Angular Scatter', min:0,  max:90,  def:35,  unit:'°'}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Irregularity',    min:0,  max:240, def:100, unit:'%'}],
+                  {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
 };
 
 /**
@@ -183,7 +197,9 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   halftone:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:true, tints:2, genericTint:true,
+  glassrain:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -215,8 +231,12 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
   wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
-  whorl:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
-                   light:true, tints:2, tintLabels:['Sand Hue','Light Hue'], tintDefaults:['#D6C7A8','#FFF3DC'] },
+  dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
+                   light:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'] },
+  kintsugi:      { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
+                   light:true, tints:2, tintLabels:['Glaze Hue','Gold Hue'], tintDefaults:['#E8E1D3','#D4AF37'] },
+  moss:          { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
+                   light:true, tints:2, tintLabels:['Stone Hue','Moss Hue'], tintDefaults:['#8A8579','#5F7E34'] },
 };
 
 
@@ -276,7 +296,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'crackedglaze'){
     result = genCrackedGlaze(w,h,amt,zoom);
   } else if(type === 'bokeh'){
-    result = genBokeh(w,h,amt,zoom);
+    result = genBokeh(w,h,amt,zoom,form);
   } else if(type === 'embers'){
     result = genEmbers(w,h,accent1,accent2,amt,zoom);
   } else if(type === 'tessellate'){
@@ -289,8 +309,10 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genSnow(w,h,amt,zoom);
   } else if(type === 'magicparticles'){
     result = genMagicParticles(w,h,accent1,accent2,amt,zoom);
+  } else if(type === 'glassrain'){
+    result = genGlassRain(w,h,amt,zoom,light,form);
   } else if(type === 'rainstreaks'){
-    result = genRainStreaks(w,h,amt,angle,zoom,light);
+    result = genRainStreaks(w,h,amt,angle,zoom);
   } else if(type === 'halftone'){
     result = genHalftone(w,h,amt,zoom);
   } else if(type === 'brushstrokes'){
@@ -311,8 +333,12 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genCupRing(w,h,amt,zoom,light,tint1);
   } else if(type === 'wax'){
     result = genPouredWax(w,h,amt,zoom,light,tint1);
-  } else if(type === 'whorl'){
-    result = genWhorl(w,h,amt,zoom,light,tint1,tint2);
+  } else if(type === 'dunes'){
+    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form);
+  } else if(type === 'kintsugi'){
+    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form);
+  } else if(type === 'moss'){
+    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'landscape'){
     result = genLandscape(w,h,amt,zoom);
   } else if(type === 'cityscape'){
@@ -375,10 +401,15 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * Options are NAMED: with thirteen positional arguments, a tint twice landed
  * in the light slot unnoticed.
  */
+// the Zen Garden was retired: looks saved with it open as Dune Ripples
+const RETIRED = { whorl: 'dunes' };
 export function getTextureCanvas(type, w, h, opts = {}){
+  type = RETIRED[type] || type;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
+  // how low the light is, 0–100 (100: the horizon, as it always was)
+  const lightTilt = (opts.lightTilt >= 0 && opts.lightTilt <= 100) ? Math.round(opts.lightTilt) : 100;
   const defs = paramsFor(type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
@@ -387,7 +418,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
 
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (scale === 1 ? '' : `_x${scale}`)
+            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '');
@@ -401,6 +432,8 @@ export function getTextureCanvas(type, w, h, opts = {}){
     // generators produce more marks than is useful.
     if(def.key === 'zoom') zoom = Math.max(0.25, val/100);
     else if(def.key === 'form') form = Math.max(0, Math.min(1, val/100));
+    // a count read exactly (amt is floored at 2%, which made 0 stones become 2)
+    else if(def.key === 'stones') amt = Math.max(0, Math.round(val))/100;
     else if(def.key === 'angle') angle = val;
     else amt = Math.max(0.02, val/100);
   };
@@ -420,7 +453,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withScale(scale, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form)));
+  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

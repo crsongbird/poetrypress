@@ -84,6 +84,18 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
   const greenHue=Math.max(85, Math.min(160, (hueOf(A)+180)%360));
   const SEPAL=fromHSL(greenHue, 0.42, 0.36), SEPAL_TIP=fromHSL(greenHue, 0.38, 0.55);
   const WHITE_TIP=o=>mix(o,WHITE,0.9);
+  // Ruby's rule for where Petal Hue fades, by how light it is: a LIGHT colour
+  // to white; a MIDTONE to a nearby, lighter, more saturated version of
+  // itself; a DARK colour to a saturated near-black of its own hue.
+  const toHSL=o=>{ const r=o.r/255, g=o.g/255, b=o.b/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2;
+    if(mx===mn) return {h:0,s:0,l}; const d=mx-mn, s2=l>0.5 ? d/(2-mx-mn) : d/(mx+mn);
+    const h=(mx===r ? (g-b)/d + (g<b?6:0) : mx===g ? (b-r)/d + 2 : (r-g)/d + 4)/6; return {h:h*360,s:s2,l}; };
+  const tipOf=o=>{
+    if(fadeRule==='light') return mix(o,WHITE,0.9);
+    const c=toHSL(o);
+    return fadeRule==='mid' ? fromHSL(c.h, Math.min(1, c.s + 0.25), Math.min(0.88, c.l + 0.2))
+                            : fromHSL(c.h, Math.min(1, Math.max(0.6, c.s + 0.3)), 0.07);
+  };
 
   // The pond: a few very soft, very wide bands of light lying flat. Not
   // waves, not ripples — just the sense of a still surface.
@@ -120,12 +132,22 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
     const [x1,y1]=at(0.18,1.0), [x2,y2]=at(0.72+round*0.12,0.92+round*0.18), [tx,ty]=at(1,0);
     const [x3,y3]=at(0.72+round*0.12,-(0.92+round*0.18)), [x4,y4]=at(0.18,-1.0);
     // coloured at its base, fading to its tip — the water lily's blush
+    const shape=()=>{ ctx.beginPath(); ctx.moveTo(cx,cy); ctx.bezierCurveTo(x1,y1,x2,y2,tx,ty); ctx.bezierCurveTo(x3,y3,x4,y4,cx,cy); ctx.closePath(); };
     const g=ctx.createLinearGradient(cx,cy,tx,ty);
     g.addColorStop(0,css(base,alpha)); g.addColorStop(0.3,css(base,alpha)); g.addColorStop(1,css(tip,alpha));
-    ctx.fillStyle=g;
-    ctx.beginPath(); ctx.moveTo(cx,cy);
-    ctx.bezierCurveTo(x1,y1,x2,y2,tx,ty); ctx.bezierCurveTo(x3,y3,x4,y4,cx,cy); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=css(mix(base,{r:0,g:0,b:0},0.35),alpha*0.35); ctx.lineWidth=Math.max(cpx(0.5),len*0.012); ctx.stroke();
+    ctx.fillStyle=g; shape(); ctx.fill();
+    // the fold: a crease down the petal's centre. The half turned away from
+    // the light (from the upper left) falls into gentle shade; the crease
+    // catches a thin highlight on its lit side.
+    const away = (px*0.707 + py*0.707) > 0 ? 1 : -1;
+    ctx.save(); shape(); ctx.clip();
+    const [h0x,h0y]=at(0,0), [h1x,h1y]=at(1.05,0), [h2x,h2y]=at(1.05,away*1.6), [h3x,h3y]=at(0,away*1.6);
+    ctx.fillStyle=`rgba(0,0,0,${0.13*alpha})`; ctx.beginPath(); ctx.moveTo(h0x,h0y); ctx.lineTo(h1x,h1y); ctx.lineTo(h2x,h2y); ctx.lineTo(h3x,h3y); ctx.closePath(); ctx.fill();
+    const [c0x,c0y]=at(0.12,-away*0.035), [c1x,c1y]=at(0.86,-away*0.02);
+    ctx.strokeStyle=`rgba(255,255,255,${0.32*alpha})`; ctx.lineWidth=Math.max(cpx(0.5),len*0.014);
+    ctx.beginPath(); ctx.moveTo(c0x,c0y); ctx.lineTo(c1x,c1y); ctx.stroke();
+    ctx.restore();
+    shape(); ctx.strokeStyle=css(mix(base,{r:0,g:0,b:0},0.35),alpha*0.35); ctx.lineWidth=Math.max(cpx(0.5),len*0.012); ctx.stroke();
   };
 
   // one flower of form F, centred at (cx, cy) with radius R
@@ -145,7 +167,7 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
         const len=R*F.len*scale*(0.92+Math.random()*0.16), wide=R*F.wide*scale*(0.9+Math.random()*0.2);
         const ox=cx, oy=fan ? baseY : cy;
         const sepal = ri===0 && Math.random()<F.sepals;
-        const pb=sepal ? SEPAL : vary(b2,0.04), pt=sepal ? SEPAL_TIP : WHITE_TIP(pb);
+        const pb=sepal ? SEPAL : vary(b2,0.04), pt=sepal ? SEPAL_TIP : tipOf(pb);
         if(F.notch>0.05){
           // a notched tip: two lobes, slightly apart
           const d=F.notch*0.13;
@@ -251,11 +273,9 @@ export function genRainStreaks(w,h,amt,angle,zoom,light){
   fctx.fillStyle='#808080'; fctx.fillRect(0,0,w,h);
   const unit=Math.min(w,h), a=angle*Math.PI/180, sa=Math.sin(a), ca=Math.cos(a);
   const {lx,ly}=lightVec(light);
-  // Rain in DEPTH, seen through a pane of glass. Far back: soft, wide sheets
-  // of rain. Middle: slanted streaks, motion-blurred, wide enough to read at
-  // any size. On the glass: beaded drops — dark refracted cores, rims lit from
-  // the light, a glint — and the trails of water they left running down.
-  // SLANT tilts the falling rain; drops on glass always run straight down.
+  // Rain in DEPTH. Far back: soft, wide sheets of rain. Nearer: slanted
+  // streaks, motion-blurred, wide enough to read at any size. SLANT tilts it.
+  // (The drops on glass became their own texture: Rain on Glass, texTouch.js.)
 
   // far: sheets
   for(let i=0;i<9;i++){
@@ -278,31 +298,6 @@ export function genRainStreaks(w,h,amt,angle,zoom,light){
     g.addColorStop(0,`rgba(${t|0},${t|0},${t|0},0)`); g.addColorStop(0.5,`rgba(${t|0},${t|0},${t|0},${al})`); g.addColorStop(1,`rgba(${t|0},${t|0},${t|0},0)`);
     fctx.strokeStyle=g; fctx.lineWidth=cpx(2.4+Math.random()*3.6);
     fctx.beginPath(); fctx.moveTo(x,y); fctx.lineTo(x+dx,y+dy); fctx.stroke();
-  }
-  // near: drops on the glass, with their trails
-  const drops=Math.round((30+Math.random()*16)*amt);
-  for(let i=0;i<drops;i++){
-    const r=unit*(0.005+Math.pow(Math.random(),2)*0.017)*zoom, x=Math.random()*w, y=Math.random()*h;
-    if(Math.random()<0.45){
-      // the trail it left: a thin wandering run of water above it
-      const tl=r*(6+Math.random()*16); fctx.lineWidth=r*0.55; fctx.strokeStyle='rgba(60,60,60,0.28)';
-      fctx.beginPath(); fctx.moveTo(x,y);
-      for(let k=1;k<=10;k++){ fctx.lineTo(x+Math.sin(k*1.7+i)*r*0.35, y-tl*k/10); } fctx.stroke();
-      fctx.strokeStyle='rgba(235,235,235,0.18)'; fctx.lineWidth=r*0.22;
-      fctx.beginPath(); fctx.moveTo(x-lx*r*0.15,y);
-      for(let k=1;k<=10;k++){ fctx.lineTo(x-lx*r*0.15+Math.sin(k*1.7+i)*r*0.35, y-tl*k/10); } fctx.stroke();
-    }
-    const ry=r*(1.05+Math.random()*0.25);                       // drops hang a little long
-    const core=fctx.createRadialGradient(x+lx*r*0.25,y+ly*r*0.25,r*0.1,x,y,r*1.05);
-    core.addColorStop(0,'rgba(40,40,40,0.55)'); core.addColorStop(0.75,'rgba(70,70,70,0.35)'); core.addColorStop(1,'rgba(70,70,70,0)');
-    fctx.fillStyle=core; fctx.beginPath(); fctx.ellipse(x,y,r,ry,0,0,Math.PI*2); fctx.fill();
-    // the rim lit on the side AWAY from the light: light passes through and
-    // gathers on the far edge
-    fctx.strokeStyle='rgba(240,240,240,0.55)'; fctx.lineWidth=Math.max(cpx(1),r*0.16);
-    const la=Math.atan2(ly,lx);
-    fctx.beginPath(); fctx.ellipse(x,y,r*0.86,ry*0.86,0,la-1.1,la+1.1); fctx.stroke();
-    fctx.fillStyle='rgba(255,255,255,0.8)';
-    fctx.beginPath(); fctx.arc(x-lx*r*0.42,y-ly*r*0.42,Math.max(cpx(0.8),r*0.16),0,Math.PI*2); fctx.fill();
   }
   return full;
 }
@@ -550,12 +545,15 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
       for(let xx=x+gap; xx<x+bw-cw-gap*0.3; xx+=cw+gap)
         if(Math.random()<density){ ctx.globalAlpha=0.55+Math.random()*0.45; ctx.fillStyle=rgb(win); ctx.fillRect(xx,yy,cw,ch); }
   };
-  // a contiguous row of buildings: no gaps, each type with its own silhouette
+  // a downtown: buildings rise toward one point along the skyline
+  const peakX=w*(0.2+Math.random()*0.6), peakW=w*(0.18+Math.random()*0.22);
+  // a contiguous row of buildings: no gaps, each type with its own silhouette;
+  // returns its tallest building, so the Needle can stay shorter than its layer
   const row=(scale, tone, alpha, density, types)=>{
-    let x=-unit*0.02;
+    let x=-unit*0.02, tallest=0;
     while(x<w){
       const type=types[Math.floor(Math.random()*types.length)];
-      let bw=unit*(0.035+Math.random()*0.06)*scale, bh=H*scale*(0.25+Math.random()*0.75);
+      let bw=unit*(0.035+Math.random()*0.06)*scale, bh=H*scale*(0.25+Math.random()*0.75)*(0.55+0.85*Math.exp(-(((x-peakX)/peakW)**2)));
       if(type==='block'||type==='warehouse') { bw*=1.8; bh*=0.45; }
       if(type==='house'){ bw=unit*0.022*scale; bh=unit*0.02*scale; }
       const top=ground-bh;
@@ -579,22 +577,45 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
       if(type==='spire'){ ctx.fillRect(x+bw/2-unit*0.0015, top-bh*0.18, unit*0.003, bh*0.18);
         ctx.beginPath(); ctx.moveTo(x+bw*0.2,top); ctx.lineTo(x+bw/2,top-bh*0.1); ctx.lineTo(x+bw*0.8,top); ctx.fill(); }
       if(density>0 && type!=='warehouse') windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1));
+      if(type!=='house') tallest=Math.max(tallest, bh);
       x+=bw;                                              // flush: no gaps
     }
+    return tallest;
   };
 
   const types = scene==='fields' ? ['tower','block','setback'] : ['tower','tower','setback','spire','block','dome'];
-  row(scene==='fields'?0.55:0.85, 72, 0.55, 0, types);            // far skyline, unlit
-  row(scene==='fields'?0.7:1, 30, 0.96, 0.22*amt, types);        // near skyline, lit
-
-  if(hasNeedle){
-    // the Space Needle, to its real proportions: three legs pinched to a waist
-    // a third of the way up, flaring out to hold the saucer at ~0.87 of its
-    // height, a spire above
-    const nx=w*(0.25+Math.random()*0.5), NH=H*1.55, base=ground;
-    const y=f=>base-NH*f, spread=NH*0.11, waist=NH*0.035, top=NH*0.075;
-    // the legs are structural: drawn with weight, not as hairlines
-    ctx.globalAlpha=1; ctx.strokeStyle=grey(24); ctx.fillStyle=grey(24); ctx.lineWidth=Math.max(cpx(2),NH*0.012);
+  const f = scene==='fields' ? 0.7 : 1;
+  // four layers, each nearer one darker, larger and more lit
+  const layers=[
+    { scale:0.6*f,  tone:96, alpha:0.32, density:0 },             // distant haze
+    { scale:0.82*f, tone:70, alpha:0.55, density:0.04*amt },      // far
+    { scale:0.95*f, tone:46, alpha:0.82, density:0.12*amt },      // middle
+    { scale:1.05*f, tone:28, alpha:0.97, density:0.22*amt },      // near
+  ];
+  // the Needle stands in one of the layers behind the nearest, in that layer's
+  // tone, and shorter than the layer's tallest building
+  const needleLayer = hasNeedle ? 1 + Math.floor(Math.random()*2) : -1;
+  layers.forEach((L, i) => {
+    const tallest = row(L.scale, L.tone, L.alpha, L.density, types);
+    // beside downtown, not in it — where the nearer buildings are lower, so it
+    // stays findable in whichever layer it stands (as at Seattle's own skyline)
+    if(i === needleLayer){
+      // on the side of downtown with room (a random side could push it off the
+      // edge and get it clamped back into the towers)
+      const side = peakX > w/2 ? -1 : 1, nx = Math.max(w*0.08, Math.min(w*0.92, peakX + side*peakW*(1.4 + Math.random()*0.8)));
+      // tall enough for its saucer to clear the near roofs beside downtown
+      // (they top out near 0.58 of the skyline), shorter than the towers
+      // at least the middle layer's contrast: a far-layer Needle drawn in the
+      // haze's own pale tone vanished into the sky
+      drawNeedle(nx, Math.max(tallest*0.8, H*f*0.68), Math.min(L.tone, 50), Math.max(L.alpha, 0.82));
+    }
+  });
+  // the Space Needle, to its real proportions: three legs pinched to a waist a
+  // third of the way up, flaring out to hold the saucer at ~0.87 of its
+  // height, a spire above
+  function drawNeedle(nx, NH, tone, alpha){
+    const base=ground, y=f=>base-NH*f, spread=NH*0.11, waist=NH*0.035, top=NH*0.075;
+    ctx.globalAlpha=alpha; ctx.strokeStyle=grey(tone); ctx.fillStyle=grey(tone); ctx.lineWidth=Math.max(cpx(1.5),NH*0.012);
     for(const s of [-1,0,1]){
       ctx.beginPath(); ctx.moveTo(nx+s*spread, base);
       ctx.bezierCurveTo(nx+s*waist*1.2, y(0.25), nx+s*waist, y(0.4), nx+s*waist*1.1, y(0.5));
@@ -605,8 +626,9 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
     ctx.beginPath(); ctx.ellipse(nx, y(0.895), NH*0.085, NH*0.022, 0, 0, Math.PI*2); ctx.fill();  // the top house
     ctx.fillRect(nx-NH*0.004, y(1), NH*0.008, NH*0.09);                                           // the spire
     ctx.fillStyle=rgb(win);
+    const dot=Math.max(cpx(1.5), NH*0.006);
     for(let k=0;k<14;k++){ const a=(k/14)*Math.PI*2; if(Math.cos(a)<0) continue;
-      ctx.globalAlpha=0.85; ctx.fillRect(nx+Math.sin(a)*NH*0.1-1, y(0.872)-1, 2.5, 2.5); }
+      ctx.globalAlpha=0.85*alpha; ctx.fillRect(nx+Math.sin(a)*NH*0.1-dot/2, y(0.872)-dot/2, dot, dot); }
   }
 
   if(scene==='water'){

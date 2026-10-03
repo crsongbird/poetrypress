@@ -165,6 +165,7 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
     let b = Math.pow(Math.random(), 3.2);                     // most stars are faint
     b *= 1 + atm*(Math.random() - 0.5)*0.9;                   // twinkle
     b *= 1 - atm*0.7*Math.pow(Math.max(0, y/h), 2.4);         // dimmer toward the horizon
+    b *= 1 - atm*0.4;                                          // and dimmer everywhere through thick air
     if(b <= 0.01) continue;
     const c = colourOf();
     const core = cpx(0.7 + b*2.6) * (1 + atm*0.35);           // seeing blurs a little
@@ -179,18 +180,18 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
     }
     glowAt(x, y, halo, c, Math.min(1, 0.35 + b*0.75));
     glowAt(x, y, core, [Math.min(255, c[0] + 40), Math.min(255, c[1] + 40), Math.min(255, c[2] + 40)], 1);
-    if(b > 0.94){
-      // six diffraction spikes, and the two faint horizontal ones — only the
-      // brightest few, as in a real deep field
-      const len = cpx(16 + b*70)*(1 + atm*0.4);
+    if(b > 0.8){
+      // six diffraction spikes, their length following the star's brightness:
+      // the brightest few long, the next size down short — and turbulent air
+      // (Atmosphere) smears them shorter
+      const len = cpx(3 + 600*Math.pow(b - 0.8, 1.5)) * (1 - atm*0.6);
       fctx.lineCap = 'round';
-      for(let s = 0; s < 8; s++){
-        const a = s < 6 ? (s/6)*Math.PI*2 + Math.PI/2 : (s === 6 ? 0 : Math.PI);
-        const L = s < 6 ? len : len*0.45;
-        const g = fctx.createLinearGradient(x, y, x + Math.cos(a)*L, y + Math.sin(a)*L);
-        g.addColorStop(0, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},0.85)`); g.addColorStop(1, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},0)`);
-        fctx.strokeStyle = g; fctx.lineWidth = cpx(1 + b*1.6);
-        fctx.beginPath(); fctx.moveTo(x, y); fctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); fctx.stroke();
+      for(let s = 0; s < 6; s++){
+        const a = (s/6)*Math.PI*2 + Math.PI/2;
+        const g = fctx.createLinearGradient(x, y, x + Math.cos(a)*len, y + Math.sin(a)*len);
+        g.addColorStop(0, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},0.8)`); g.addColorStop(1, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},0)`);
+        fctx.strokeStyle = g; fctx.lineWidth = cpx(0.6 + (b - 0.8)*5);
+        fctx.beginPath(); fctx.moveTo(x, y); fctx.lineTo(x + Math.cos(a)*len, y + Math.sin(a)*len); fctx.stroke();
       }
     }
   }
@@ -208,7 +209,33 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
   return full;
 }
 
-export function genBokeh(w,h,amt,zoom){
+// An aperture's outline, for bokeh: f runs round (0) → 7 blades (0.25) →
+// 6 (0.5) → 5 (0.75) → a heart (1), easing between neighbours.
+function aperturePath(ctx, x, y, r, f, rot){
+  ctx.beginPath();
+  if(f >= 0.875){                                   // the heart, a novelty filter
+    const k = Math.min(1, (f - 0.875)/0.125), s = r*1.05;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot*0.15);
+    ctx.moveTo(0, s*0.9);
+    ctx.bezierCurveTo(-s*(1.2+0.2*k), s*0.05, -s*0.6, -s*1.05, 0, -s*0.38);
+    ctx.bezierCurveTo(s*0.6, -s*1.05, s*(1.2+0.2*k), s*0.05, 0, s*0.9);
+    ctx.restore(); return;
+  }
+  const seg = Math.min(2, Math.floor(f/0.25)), t = (f - seg*0.25)/0.25;     // between which ticks
+  const blades = [0, 7, 6, 5][seg + 1] || 5, round = seg === 0 ? 1 - t : 0.18*(1 - t) + 0.08;
+  for(let k = 0; k <= 72; k++){
+    const a = (k/72)*Math.PI*2, sector = (Math.PI*2)/blades;
+    const local = ((a - rot) % sector + sector) % sector - sector/2;
+    const poly = Math.cos(sector/2)/Math.cos(local);                 // the polygon's radius at this angle
+    const rr = r*(round + (1 - round)*poly)*(1 - 0.05*(1 - round));
+    const px = x + Math.cos(a)*rr, py = y + Math.sin(a)*rr;
+    k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+}
+export function genBokeh(w,h,amt,zoom,form){
+  // the aperture's shape, and one rotation for every orb (a lens has one aperture)
+  const shape = Math.max(0, Math.min(1, form || 0)), rot = Math.random()*Math.PI*2;
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
@@ -242,7 +269,7 @@ export function genBokeh(w,h,amt,zoom){
     if(r <= speck*1.3){
       // in focus: a sharp speck with a tiny glint
       ctx.globalAlpha = a; ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
-      ctx.beginPath(); ctx.arc(m.x, m.y, r, 0, Math.PI*2); ctx.fill();
+      aperturePath(ctx, m.x, m.y, r, shape, rot); ctx.fill();
     } else {
       // out of focus: a flat disc with a slightly brighter rim — how bokeh
       // actually looks — rather than a soft gaussian blob
@@ -252,7 +279,7 @@ export function genBokeh(w,h,amt,zoom){
       g.addColorStop(0.95, `rgba(${tone},${tone},${tone},${a})`);
       g.addColorStop(1,    `rgba(${tone},${tone},${tone},0)`);
       ctx.globalAlpha = 1; ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(m.x, m.y, r, 0, Math.PI*2); ctx.fill();
+      aperturePath(ctx, m.x, m.y, r, shape, rot); ctx.fill();
     }
   }
   ctx.globalAlpha = 1;
@@ -587,6 +614,7 @@ export function genMoon(w,h,amt,zoom){
   const sctx=small.getContext('2d', CPU);
   const img=sctx.createImageData(ww,wh), d=img.data;
   const cosT=Math.cos(tilt), sinT=Math.sin(tilt);
+  const sstepM=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
   for(let py=0;py<wh;py++){
     for(let px=0;px<ww;px++){
       const idx=(py*ww+px)*4;
@@ -596,7 +624,10 @@ export function genMoon(w,h,amt,zoom){
       let val=128, alpha=255;
       if(r2<=1){
         const edge=Math.sqrt(1-v*v);
-        const lit = facing*u > phase*edge;              // the terminator is an ellipse
+        // the terminator is an ellipse; a soft edge a pixel or two wide instead
+        // of a yes/no test, which stair-stepped
+        const litAmt = sstepM(-0.012, 0.012, facing*u - phase*edge) * sstepM(1, 0.985, Math.sqrt(r2));
+        const lit = litAmt > 0;
         const limb = 1 - Math.sqrt(1-r2);               // darkening toward the rim
         if(!lit){
           // the DARK side is knocked out — transparent, the page shows
@@ -609,21 +640,24 @@ export function genMoon(w,h,amt,zoom){
           // the lit side: noise that warps its own coordinates, twice
           const qx=fbm(u*2.1+1.7, v*2.1+9.2), qy=fbm(u*2.1+8.3, v*2.1+2.8);
           const n=fbm(u*2.4+3.2*qx, v*2.4+3.2*qy);
-          const band=Math.abs(((n*9)%1)-0.5)*2;         // contour lines through it
+          // a gentle tonal ripple through it (hard contour lines here read
+          // as a topographic map)
+          const band=Math.abs(((n*9)%1)-0.5)*2;
           // the lit face GLOWS: luminous overall, the fractal detail held
           // inside the light rather than drawn in shadow, brightest toward the
           // limb the sun is on
           const t = Math.max(0, Math.min(1, (n - 0.28) / 0.44));
-          val = 138 + t*95 + (band<0.2 ? 35 : 0) - limb*18;
+          val = 138 + t*95 + (1 - sstepM(0, 0.45, band))*13 - limb*18;
+          alpha = Math.round(255*litAmt);
         }
       } else {
         // bloom: light spilling past the rim, strongest beside the lit limb,
         // and a soft halo all the way round
         const r = Math.sqrt(r2);
         const side = Math.max(0, Math.min(1, facing*u/r*0.5 + 0.5 - phase*0.35));
-        const bloom = Math.exp(-(r-1)*7) * (0.35 + 0.65*side);
-        const halo = Math.exp(-Math.pow((r-1.22)/0.05, 2)) * 0.35;
-        val = 128 + (bloom + halo) * 70;
+        // the glow hugs the limb (a separate halo ring read as a target)
+        const bloom = Math.exp(-(r-1)*5.5) * (0.35 + 0.65*side);
+        val = 128 + bloom * 70;
         if(val < 129){ val = 0; alpha = 0; }              // beyond the glow: untouched
       }
       d[idx]=d[idx+1]=d[idx+2]=Math.max(0,Math.min(255,val)); d[idx+3]=alpha;

@@ -768,7 +768,9 @@ function pmlVarContext(W, H){
   return {
     surfName: on ? optionText('textureType') : 'None',
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
-    lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value) : 'n/a',
+    // the arrow, and how high the light is when it isn't at the horizon
+    lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value)
+      + (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '') : 'n/a',
     seed,
     params: defs.slice(0, 2).map((d, i) => ({ label: d.label, value: ($(i ? 'texP2Val' : 'texP1Val') || {}).textContent || '' })),
     opacity: Math.round(+($('textureOpacity') && $('textureOpacity').value) || 0),
@@ -879,6 +881,7 @@ export function render(){
     const chosen = $('textureBlend').value;
     const blend = caps.blends.includes(chosen) ? chosen : defaultBlendFor(type);
     const light = caps.light ? (parseFloat($('textureLight').value) || 0) : null;
+    const lightTilt = caps.light && $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
     const tint1 = caps.tints >= 1 ? $('textureTint1Hex').value : null;
     const tint2 = caps.tints >= 2 ? $('textureTint2Hex').value : null;
     const seed = parseInt($('textureSeedValue').value, 10) || 0;
@@ -907,19 +910,19 @@ export function render(){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend, scale: S }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S }), 0, 0);
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, tint1, tint2, blend, scale: S }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S }), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, tint1, tint2, blend, scale: S }), 0, 0);
+      ctx.drawImage(getTextureCanvas(type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S }), 0, 0);
       ctx.restore();
     }
   }

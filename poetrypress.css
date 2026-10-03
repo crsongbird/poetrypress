@@ -1499,3 +1499,53 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
    scrolls (with its scrollbar hidden) when a phone's text size or keyboard
    leaves it short, and Done — last in the picker — scrolled out of sight. */
 #clr-picker #clr-close{ position:sticky; bottom:0; z-index:2; box-shadow:0 -6px 10px var(--bg-panel, #1a1717); }
+
+/* the snap toggle beside an angle slider */
+.snap-btn{ border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:6px;
+  padding:0 6px; margin-left:6px; font-size:14px; line-height:22px; cursor:pointer; }
+.snap-btn[aria-pressed="true"]{ color:var(--accent); border-color:var(--accent); }
+
+/* the light dial: drag from the centre (light overhead) toward where the light
+   comes from; at the rim it is low and raking. Eight ticks snap to 45°. */
+.light-dial-row{ display:flex; align-items:center; gap:10px; }
+.light-dial{ width:132px; height:132px; touch-action:none; cursor:grab; user-select:none; }
+.light-dial svg{ width:100%; height:100%; overflow:visible; }
+/* ☉ at rest — one bold circle, the dot at its heart. Drag the dot and the
+   spike of 🜚 grows out of the rim toward the light, curls and all. */
+.ld-ring{ fill:none; stroke:var(--accent); stroke-width:4.4; }
+.ld-tick{ fill:var(--bg-panel, #1a1717); stroke:var(--accent); stroke-width:1.2; opacity:.75; cursor:pointer; }
+.ld-tick.active{ fill:var(--accent); opacity:1; }
+.ld-handle{ fill:var(--accent); }
+.ld-spike-body{ fill:var(--accent); }
+.ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
+.ld-reset{ border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:18px; width:34px; height:34px; cursor:pointer; }
+
+/* ---------- DESKTOP: a website's shape ----------
+   The logo across the top, the navigation under it, the controls on the left
+   and the image on the right — one panel at a time, as on a phone. */
+body:not(.is-mobile) .app{
+  display:grid; grid-template-columns:460px minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr);
+  grid-template-areas:"header header" "nav nav" "controls stage";
+}
+body:not(.is-mobile) .app-header{ display:flex; grid-area:header; position:static; justify-content:center; gap:14px; }
+body:not(.is-mobile) .app-header-spacer{ position:absolute; left:16px; }
+body:not(.is-mobile) .tabbar{
+  grid-area:nav; display:flex; justify-content:center; gap:2px; padding:0 12px;
+  background:var(--bg-panel); border-bottom:1px solid var(--line);
+}
+body:not(.is-mobile) .tab-btn{
+  display:flex; align-items:center; gap:8px; padding:10px 18px 9px; border:0; border-bottom:2px solid transparent;
+  background:transparent; color:var(--text-dim); font-family:inherit; font-size:14px; letter-spacing:.05em; cursor:pointer;
+}
+body:not(.is-mobile) .tab-btn:hover{ color:var(--text); }
+body:not(.is-mobile) .tab-btn.active{ color:var(--accent); border-bottom-color:var(--accent); }
+body:not(.is-mobile) .tab-ico{ width:20px; height:20px; }
+body:not(.is-mobile) .controls{ grid-area:controls; width:auto; min-width:0; }
+body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; }
+body:not(.is-mobile) .card[data-tab]{ display:none; }
+body:not(.is-mobile) .card[data-tab].tab-active{ display:block; }
+body:not(.is-mobile) #poemCanvas{ max-height:calc(var(--vvh, 100vh) - 150px); max-width:calc(100vw - 540px); }
+body:not(.is-mobile) .drag-handle{ display:none; }
+/* on a desktop, Save image sits at the stage's lower right, across from undo
+   and redo (its old place at the top right now runs under the navigation) */
+body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:24px; bottom:16px; }

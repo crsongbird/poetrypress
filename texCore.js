@@ -111,10 +111,94 @@ export function canonArea(w, h){ return (w * h) / (SCALE * SCALE); }
  *  a preview never costs more than the export to compute). */
 export function canonDiv(d){ return Math.max(1, d * SCALE); }
 
+/**
+ * The light's direction across the page, scaled by how LOW it is: 1 at the
+ * horizon (raking light, the full shading — the only light there used to be),
+ * 0 straight overhead, where nothing casts a slant. Set for one generation by
+ * withLightTilt, as withScale and withSeed are.
+ */
+let LIGHT_TILT = 1;
+export function withLightTilt(t, fn){
+  const prev = LIGHT_TILT;
+  LIGHT_TILT = (t >= 0 && t <= 1) ? t : 1;
+  try { return fn(); }
+  finally { LIGHT_TILT = prev; }
+}
 export function lightVec(light){
   const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
-  return { lx: Math.cos(a), ly: Math.sin(a) };
+  return { lx: Math.cos(a) * LIGHT_TILT, ly: Math.sin(a) * LIGHT_TILT };
 }
+
+// ---------- light, like a game engine ----------
+/**
+ * Lights a HEIGHT field, the way a game engine lights a surface. A texture
+ * describes its surface as heights (in pixels of the grid it is built on);
+ * this returns it lit by the light dial:
+ *   diffuse   the surface's facing toward the light (from the normals)
+ *   specular  a highlight, as sharp as the material is glossy
+ *   shadow    cast across the heights toward the light (soft-edged), longer as
+ *             the light lowers; none when the light is straight overhead
+ *   ao        ambient occlusion: crevices darken
+ * Returns { light, spec } — two Float32Arrays, light already combining
+ * ambient, diffuse, shadow and occlusion (about 0..1.3), spec 0..1.
+ *
+ *   opts.light      the dial's direction (degrees, as lightVec)
+ *   opts.relief     scales the heights (steeper surfaces, deeper shade)
+ *   opts.gloss      0 matte … 1 mirror-like: the highlight's sharpness and strength
+ *   opts.shadow     0..1, how dark cast shadows are
+ *   opts.ao         0..1, how dark crevices are
+ *   opts.ambient    the light everything gets regardless (default 0.35)
+ */
+export function lightHeights(H, ww, wh, opts = {}){
+  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, ambient = 0.35 } = opts;
+  const { lx, ly } = lightVec(light);
+  const tilt = Math.min(1, Math.hypot(lx, ly));
+  // toward the light: lightVec points the way light travels, so reverse it.
+  // Its elevation runs from overhead (tilt 0) down to 12° above the horizon at
+  // the dial's rim — raking, but never so low that open ground goes unlit.
+  const elev = (90 - tilt*78) * Math.PI/180, horiz = Math.cos(elev), dirLen = tilt > 1e-6 ? tilt : 1;
+  const Lx = -lx/dirLen*horiz, Ly = -ly/dirLen*horiz, Lz = Math.sin(elev);
+  const hx = Lx, hy = Ly, hz = Lz + 1, hl = Math.hypot(hx, hy, hz) || 1;   // Blinn's half vector, viewer overhead
+  const shininess = 4 + gloss*120, specK = 0.15 + gloss*0.85;
+  const at = (x, y) => H[Math.min(wh-1, Math.max(0, y))*ww + Math.min(ww-1, Math.max(0, x))];
+  const out = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
+  // occlusion compares each height with its neighbourhood's (a box average)
+  const R = 4, avg = new Float32Array(ww*wh);
+  if(ao > 0){
+    const tmp = new Float32Array(ww*wh);
+    for(let y = 0; y < wh; y++){ let s = 0; for(let x = -R; x <= R; x++) s += at(x, y);
+      for(let x = 0; x < ww; x++){ tmp[y*ww+x] = s/(2*R+1); s += at(x+R+1, y) - at(x-R, y); } }
+    for(let x = 0; x < ww; x++){ let s = 0; for(let y = -R; y <= R; y++) s += tmp[Math.min(wh-1, Math.max(0, y))*ww+x];
+      for(let y = 0; y < wh; y++){ avg[y*ww+x] = s/(2*R+1); s += tmp[Math.min(wh-1, y+R+1)*ww+x] - tmp[Math.max(0, y-R)*ww+x]; } }
+  }
+  const lxy = Math.hypot(Lx, Ly), stepX = lxy > 1e-6 ? Lx/lxy : 0, stepY = lxy > 1e-6 ? Ly/lxy : 0;
+  const rise = lxy > 1e-6 ? Lz/lxy : 1e9;                 // how fast a ray toward the light climbs, per pixel
+  // march as far as the tallest height can throw a shadow at this elevation
+  let hMax = 0, hMin = Infinity; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
+  const steps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x, h0 = H[i]*relief;
+    const gx = (at(x+1, y) - at(x-1, y))*0.5*relief, gy = (at(x, y+1) - at(x, y-1))*0.5*relief;
+    const nl = Math.hypot(gx, gy, 1), nx = -gx/nl, ny = -gy/nl, nz = 1/nl;
+    const diffuse = Math.max(0, nx*Lx + ny*Ly + nz*Lz);
+    // the cast shadow: march toward the light; anything rising above the ray blocks it
+    let lit = 1;
+    if(shadow > 0 && lxy > 0.02 && rise < 1e8){
+      // long traces stride: soft shadows don't need every pixel
+      const stride = Math.max(1, Math.ceil(steps/40));
+      for(let k = stride; k <= steps; k += stride){
+        const over = at(Math.round(x + stepX*k), Math.round(y + stepY*k))*relief - (h0 + rise*k);
+        if(over > 0){ lit = Math.min(lit, Math.max(0, 1 - over*0.6)); if(lit === 0) break; }
+      }
+    }
+    const occl = ao > 0 ? Math.max(0, Math.min(1, (avg[i] - H[i])*relief*0.25)) * ao : 0;
+    out[i] = (ambient + (1 - ambient)*diffuse*(1 - shadow*(1 - lit))) * (1 - occl);
+    const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
+    spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
+  }
+  return { light: out, spec };
+}
+
 
 export function parseHex(hex){
   const m = mixHex(hex || '#808080', hex || '#808080', 0);

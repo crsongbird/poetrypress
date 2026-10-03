@@ -1,36 +1,84 @@
 # Open issues
 
 Production: poetrypress.unfixable.place · development: vellum.unfixable.place
-Done work lives in the changelog and git history, not here.
+Release: see release.js (`node build.mjs --next` to advance). Look before
+judging: `node tools/texture-gallery.mjs --only <names>` (run when asked).
 
-## Next (queued by Ruby)
-- **Zen Garden, rebuilt** as real raked gravel. The seed picks a technique:
-  Mizumon (concentric ripples round rocks) · Sazanamimon (parallel waves) ·
-  Ryūsui (flowing streams) · Aranamimon (stormy crests) · Tachinamimon
-  (zig-zag standing waves) · Seigaiha (interlocking semicircles) · Ichimatsu
-  (checkerboard, lines turning 90°) · Morizuna (sculpted sand piles) ·
-  Kyokusen (deep meandering S-curves) · Uzumaki (spiral vortex).
-- **Fractal Moon, reworked** — it doesn't quite look right yet.
-- **Saturn and Enceladus as rare easter eggs** (like Night City's Space
-  Needle): Emyrs's moon and its planet, turning up now and then.
+## 1 · Light, like a game engine
+`lightHeights` (texCore) is built: a texture gives HEIGHTS; it returns them
+lit by the dial — diffuse, a specular per material, cast shadows (soft,
+longer as the light lowers; none overhead), occlusion in crevices. Dune
+Ripples, Kintsugi, Moss on Stone and Rain on Glass use it. Next: bring the
+other lit textures onto it (Cold Press, Fractured Glaze, Facet Field, Poured
+Wax, Linen, Cup Ring, Sigil relief, Fold Ghost), and add a per-texture
+default light (Facet Field starts overhead). Watch the cost on phones:
+these take ~0.4–0.6 s at preview size and 1.4–2.8 s at export here.
+
+## 2 · Texture plan (Ruby's audit, by group)
+
+**A · great — touch-ups only**
+- Sleep Haze: read as smoke in a dusty room, not water — smoke rings,
+  motes catching light.
+- Pixie Dust: a third knob, Chaos; a little more variety.
+- Waking Grain: a third knob, grain type (silver, film, paper, digital).
+- Metal Leaf: keep. A NEW Touch texture beside it: crystalline leaf, faceted,
+  using the lighting module.
+
+**B · great, plus a third knob and/or the light**
+- Sparkler: ember size also adds chaos; third knob Hue Drift (default low).
+- First Snow: real six-armed flakes (keep the glow); third knob / light TBD.
+- Aurora Veil: the dial as the BLEND direction; third
+  knob Bloom, NOISY bloom (I + α·Blur(Bright(I))·N).
+- Painted Landscape: more landscape patterns and stroke kinds; third knob
+  Wetness.
+- Lotus Pond: light and shading by the dial (lightHeights); a better
+  seed-pod form.
+- Painter's Frustration: third knob Wetness (paint blending).
+- Sigil Scatter: true RELIEF from the light (carved/raised via the lighting
+  module); Glow becomes Chaos (a scratchy, unsteady hand, medium noise).
+- Transmutation Circles: ONE circle; Count → complexity; the dial → where on
+  the page; third knob Organic ↔ Technological, with noisy bloom rising
+  toward the digital end. Possibly a new name.
+- Rorschach Test: revisit with the gallery tool, side by side with Ruby.
+- Fractured Glaze: peeling enamel, not a dry riverbed; lit with shadows;
+  third knob Enameling (bubbling, chipping; 0 = unbroken).
+- Facet Field: light overhead by default, deeper
+  facets revealed by cast shadow; Light Hue = light, Dark Hue = material.
+- Cartomancy: divination cards, not playing cards — custom suits from the
+  app's own glyphs and magical language; more realism and variation; the
+  best home for easter eggs (Saturn, Enceladus, the kitsune).
+- Black Hole: look for uses of the third knob and the dial.
+- Linen: realistic details; details cast shadows.
+- Cold Press: more variation; lit with shadows.
+- Foxing: not a Touch texture (it has no light) — move it, or give it
+  relief. (It represents age spots on old paper.)
+- Fold Ghost: paper folded and crumpled in a pocket — random fold
+  directions, creases lit and shadowed — not irregular tiles.
+- Cup Ring: use the light (a raised dried rim, a sheen).
+- Poured Wax: a simulation — random pour points and volumes from the seed,
+  pooling together; knobs Pool Size / Viscosity / Wetness; waxy specular.
+
+**C · replace or rethink**
+- Fractal Moon: rolled back to Ruby's preferred version and touched up
+  (soft terminator, no target ring, no hard contour lines). Ruby to judge.
+- Scrying Pool: a physically based water surface — the light dial, a
+  Turbulence knob, Haze and Murk (how cloudy and dirty the water is).
+
+## Pinned
+- Saturn and its moons as a rare easter egg in a couple of presets.
 
 ## Later
-- **Split appEvents.js** (~1,900 lines) into modules by area; the app state
-  is already one object, so this is mechanical.
-- **Texture layers**: a base texture under the main one, by making the
-  texture panel a reusable component.
-- **Desktop layout** and a web-design pass.
-- **Form knob for more textures** (Lotus has it).
-- **Alt text on export**: offer the poem's words as alt text when saving.
-- **Ruby's texture audit** (screenshots of every texture and preset).
+- Split appEvents.js (~2,000 lines) into modules.
+- Texture layers (a base texture under the main one).
+- Alt text on export (the poem's words).
+- The light dial for angle-only textures (Harsh Rain's slant, the hatch).
 
 ## Check on a phone
-- The colour picker: Done reachable, the field ring and pointing tail.
-- Undo ☋ / redo ☊; the preview's scale steps (Workbench → Full-size preview).
+- The colour picker's Done; undo / redo; the preview's scale steps.
 
 ## Worth knowing
-- PML is backward compatible: `test/fixtures/pml-golden.json` is never
-  regenerated; font order is frozen (`/f:N` picks by position).
-- Every texture measures in canonical pixels (`cpx`, `canonArea`, `canonDiv`
-  in texCore.js); keep new ones that way and check `tools/scale-audit.mjs`.
-- Blend modes can hide an inset box (Darken shows only a darker box, etc.).
+- PML stays backward compatible: test/fixtures/pml-golden.json is never
+  regenerated; font order is frozen.
+- Textures measure in canonical pixels (cpx, canonArea, canonDiv); check new
+  ones with tools/scale-audit.mjs.
+- Blend modes can hide an inset box (Darken shows only a darker box…).

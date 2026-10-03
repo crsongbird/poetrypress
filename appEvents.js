@@ -387,7 +387,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
     const types = ['clouds','bokeh','astral','magicparticles','embers','snow','grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks','sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate','aurora','hatch','cards',
-      'linen','coldpress','foxing','foldghost','cupring','wax','whorl'];
+      'linen','coldpress','foxing','foldghost','cupring','wax','glassrain','dunes','kintsugi','moss'];
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
@@ -588,6 +588,7 @@ function serializeCurrentSettings(){
     locks: Array.from(state.locks),
     textureBlend: $('textureBlend').value,
     textureLight: $('textureLight').value,
+    textureLightTilt: $('textureLightTilt') ? $('textureLightTilt').value : '100',
     textureTint1: $('textureTint1Hex').value,
     textureTint2: $('textureTint2Hex').value,
     texP1: $('texP1').value,
@@ -620,6 +621,8 @@ function serializeCurrentSettings(){
 }
 
 function restoreSettings(s){
+  // a look saved with the retired Zen Garden opens as Dune Ripples
+  if(s && s.textureType === 'whorl') s = { ...s, textureType: 'dunes' };
   if(s.bg1) setColorField('bgColor1Hex', s.bg1);
   $('bgGradientToggle').checked = !!s.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!s.bgGradient);
@@ -674,7 +677,11 @@ function restoreSettings(s){
   }
   if(Array.isArray(s.locks)) restoreLockState(s.locks);
   if(s.textureBlend) $('textureBlend').value = s.textureBlend;
-  if(s.textureLight !== undefined){ $('textureLight').value = s.textureLight; syncLightPad(); }
+  if(s.textureLight !== undefined || s.textureLightTilt !== undefined){
+    if(s.textureLight !== undefined) $('textureLight').value = s.textureLight;
+    // looks saved before the dial had raking light only: 100
+    if($('textureLightTilt')) $('textureLightTilt').value = s.textureLightTilt !== undefined ? s.textureLightTilt : '100';
+    syncLightPad(); }
   if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
   if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
@@ -927,6 +934,8 @@ function applyPreset(p){
   if(p.fx1Type !== undefined) applyPersisted(Object.fromEntries(Object.keys(EFFECT_SLOT_DEFAULTS).map(k => [k, p[k] !== undefined ? p[k] : EFFECT_SLOT_DEFAULTS[k]])));
   else applyLegacyEffects(p);
   syncAllFxSlots();
+  // the light's height: a preset's own, or raking (the only light presets knew)
+  if($('textureLightTilt')){ $('textureLightTilt').value = p.textureLightTilt !== undefined ? p.textureLightTilt : '100'; syncLightPad(); }
 
   if(p.font){
     const idx = FONTS.findIndex(f=>f.family===p.font);
@@ -1013,20 +1022,26 @@ function detectMobile(){
   return false;
 }
 
-if(detectMobile() && typeof document.querySelectorAll === 'function'){
-  document.body.classList.add('is-mobile');
-
+// ---------- the tabs: one panel at a time, on every device ----------
+// (On a desktop they sit under the logo, website-fashion; on a phone, along
+// the bottom. Everything phone-only — the divider, the keyboard — is below.)
+if(typeof document.querySelectorAll === 'function'){
   const panels = Array.from(document.querySelectorAll('.card[data-tab]'));
   const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
-
   function activateTab(name){
     panels.forEach(p => p.classList.toggle('tab-active', p.dataset.tab === name));
     tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     // a tab change is a context change; start it from the top
     if(typeof window !== 'undefined' && window.scrollTo) window.scrollTo({top:0, behavior:'instant'});
+    const ctl = document.querySelector && document.querySelector('.controls'); if(ctl) ctl.scrollTop = 0;
   }
   tabBtns.forEach(b => b.addEventListener('click', () => activateTab(b.dataset.tab)));
   activateTab('write');
+}
+
+if(detectMobile() && typeof document.querySelectorAll === 'function'){
+  document.body.classList.add('is-mobile');
+
 
   // Keyboard awareness. visualViewport shrinks when the soft keyboard opens,
   // which is the only reliable signal there is -- window.innerHeight does not
@@ -1224,6 +1239,10 @@ function syncTextureParams(useDefaults){
     }
     if(row) row.style.display = '';
     slider.min = def.min; slider.max = def.max;
+    // a knob that is an angle gets 45° ticks and ∡; a knob with its own ticks
+    // (Lotus's species, Linen's weaves, bokeh shapes) gets those and ⊹, which
+    // locks it to the nearest tick; any other knob gets neither
+    setKnobTicks(slider, i, def);
     if(useDefaults || slider.value === '' || +slider.value < def.min || +slider.value > def.max){
       slider.value = def.def;
     }
@@ -1319,25 +1338,56 @@ function followAccents(){
   if(changed) scheduleRender();
 }
 
-// The light pad is a compass, not a slider: eight directions around a centre,
-// which reads the same on a phone as on a desktop and needs no dragging.
+// ---------- the light dial ----------
+// The centre is light from straight overhead; drag outward toward where the
+// light comes FROM. Direction is degrees clockwise from north (as the old pad
+// was, so saved looks keep their light); distance is how LOW the light is:
+// at the rim, raking (100, the old behaviour), at the centre, overhead (0).
+// The arrow points the way the light travels and strengthens as it lowers.
+// Eight ticks on the rim snap to 45°; ⟲ resets.
+const LIGHT_DEFAULT = { deg: 315, tilt: 100 };
 function syncLightPad(){
-  const deg = $('textureLight').value;
-  const pad = $('lightPad');
-  if(!pad || !pad.querySelectorAll) return;
-  pad.querySelectorAll('button').forEach(b=>{
-    b.classList.toggle('active', b.dataset.deg === String(deg));
+  const deg = parseFloat($('textureLight').value) || 0, tilt = $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
+  const k = Math.max(0, Math.min(100, isNaN(tilt) ? 100 : tilt)) / 100, a = deg * Math.PI / 180;
+  const set = (id, attrs) => { const el = $(id); if(el && el.setAttribute) for(const key in attrs) el.setAttribute(key, attrs[key]); };
+  // the dot slides from the heart of ☉ toward the rim
+  set('lightHandle', { cx: (Math.sin(a) * 15 * k).toFixed(2), cy: (-Math.cos(a) * 15 * k).toFixed(2) });
+  // 🜚's spike grows out of the rim the same way: longer and stronger as the light lowers
+  const tip = 26 + 3 + 15 * k;
+  set('lightSpikeBody', { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
+  set('lightSpike', { transform: `rotate(${deg.toFixed(1)})`, opacity: k < 0.04 ? 0 : (0.35 + 0.65 * k).toFixed(2) });
+  const dial = $('lightDial');
+  if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', tilt >= 99 && Math.abs(((deg - +t.dataset.deg + 540) % 360) - 180) < 0.5));
+  if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${Math.round(deg)}°, ${Math.round(tilt)}% low`);
+}
+function setLight(deg, tilt, commit){
+  $('textureLight').value = String(Math.round(((deg % 360) + 360) % 360));
+  if($('textureLightTilt')) $('textureLightTilt').value = String(Math.round(Math.max(0, Math.min(100, tilt))));
+  syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
+}
+if($('lightDial') && $('lightDial').addEventListener){
+  const dial = $('lightDial');
+  const fromPointer = (e, snapTicks) => {
+    const rc = dial.getBoundingClientRect(), x = (e.clientX - rc.left) / rc.width * 100 - 50, y = (e.clientY - rc.top) / rc.height * 100 - 50;
+    let deg = Math.atan2(x, -y) * 180 / Math.PI, tilt = Math.min(1, Math.hypot(x, y) / 30) * 100;   // the rim of ☉ is full
+    // near a tick on the rim, take its exact direction at the horizon
+    if(snapTicks || tilt > 88){ const nearest = Math.round(deg / 45) * 45; if(Math.abs(nearest - deg) < 7){ deg = nearest; if(tilt > 88) tilt = 100; } }
+    setLight(deg, tilt, false);
+  };
+  let dragging = false;
+  dial.addEventListener('pointerdown', e => { dragging = true; if(dial.setPointerCapture) dial.setPointerCapture(e.pointerId); fromPointer(e, e.target && e.target.classList && e.target.classList.contains('ld-tick')); });
+  dial.addEventListener('pointermove', e => { if(dragging) fromPointer(e, false); });
+  const end = () => { if(dragging){ dragging = false; if(typeof commitSoon === 'function') commitSoon(); } };
+  dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
+  // keys: arrows turn it by 15°, page up/down raise and lower it
+  dial.addEventListener('keydown', e => {
+    const deg = parseFloat($('textureLight').value) || 0, tilt = parseFloat(($('textureLightTilt') || {}).value) || 100;
+    const map = { ArrowRight: [15, 0], ArrowDown: [15, 0], ArrowLeft: [-15, 0], ArrowUp: [-15, 0], PageUp: [0, -10], PageDown: [0, 10] };
+    if(map[e.key]){ e.preventDefault(); setLight(deg + map[e.key][0], tilt + map[e.key][1], true); }
   });
 }
-if($('lightPad') && $('lightPad').addEventListener){
-  $('lightPad').addEventListener('click', (e)=>{
-    const btn = e.target && e.target.closest ? e.target.closest('button') : null;
-    if(!btn || !btn.dataset.deg) return;
-    $('textureLight').value = btn.dataset.deg;
-    syncLightPad();
-    scheduleRender();
-  });
-}
+if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true));
+syncLightPad();
 $('textureBlend').addEventListener('change', scheduleRender);
 // choosing a tint yourself stops it following the accents
 bindColorField('textureTint1Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[0] = false; scheduleRender(); });
@@ -1539,6 +1589,58 @@ if($('resetViewBtn') && $('resetViewBtn').addEventListener){
     const cv = $('poemCanvas');
     if(cv && cv.style) cv.style.transform = '';
   });
+}
+
+// ---------- angle sliders: tick marks every 45°, and a snap toggle ----------
+// Every slider marked data-angle gets the shared tick list and, beside it, a
+// small toggle (∡) that snaps it to 15° steps. Texture knobs that are angles
+// join in when their texture is chosen (syncTextureParams).
+function snapToTick(input){
+  const ticks = (input.dataset.ticks || '').split(',').map(Number).filter(n => !isNaN(n));
+  if(!ticks.length) return;
+  const v = parseFloat(input.value);
+  input.value = ticks.reduce((best, t) => Math.abs(t - v) < Math.abs(best - v) ? t : best, ticks[0]);
+}
+function addAngleSnap(input){
+  if(!input || input.dataset == null || input.dataset.snapReady) return;
+  input.dataset.snapReady = '1';
+  if(input.setAttribute) input.setAttribute('list', 'angleTicks');
+  if(!input.parentNode || !document.createElement) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'snap-btn'; b.textContent = '∡'; b.title = 'Snap to 15°';
+  if(b.setAttribute) b.setAttribute('aria-pressed', 'false');
+  b.addEventListener && b.addEventListener('click', () => {
+    const on = b.getAttribute('aria-pressed') !== 'true';
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if(b._ticks && input.dataset.ticks){ input.dataset.snapTicks = on ? '1' : ''; snapToTick(input); }
+    else { input.step = on ? '15' : '1'; if(on) input.value = Math.round(parseFloat(input.value) / 15) * 15; }
+    input.dispatchEvent && input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  // a knob locked to its ticks jumps to the nearest one as it moves
+  input.addEventListener && input.addEventListener('input', () => { if(input.dataset.snapTicks === '1') snapToTick(input); });
+  if(input.parentNode.insertBefore) input.parentNode.insertBefore(b, input.nextSibling);
+  input._snapBtn = b;
+}
+if(document.querySelectorAll) document.querySelectorAll('input[data-angle]').forEach(addAngleSnap);
+
+// texture knobs: angle ticks, their own ticks, or none — set as the texture changes
+function setKnobTicks(slider, i, def){
+  const btn = () => slider._snapBtn;
+  const hideBtn = () => { if(btn() && btn().style){ btn().style.display = 'none'; btn().setAttribute('aria-pressed', 'false'); } };
+  slider.step = '1'; if(slider.dataset) delete slider.dataset.snapTicks;
+  if(def.key === 'angle'){
+    addAngleSnap(slider); if(slider.setAttribute) slider.setAttribute('list', 'angleTicks');
+    if(btn()){ btn().textContent = '∡'; btn().title = 'Snap to 15°'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); }
+  } else if(def.ticks && def.ticks.length){
+    const id = 'texP' + (i + 1) + 'Ticks';
+    let dl = $(id);
+    if(!dl && document.createElement && document.body && document.body.appendChild){ dl = document.createElement('datalist'); dl.id = id; document.body.appendChild(dl); }
+    if(dl && 'innerHTML' in dl) dl.innerHTML = def.ticks.map(t => `<option value="${t}"></option>`).join('');
+    if(slider.setAttribute) slider.setAttribute('list', id);
+    if(slider.dataset) slider.dataset.ticks = def.ticks.join(',');
+    addAngleSnap(slider);                       // the same toggle, set to lock to ticks
+    if(btn()){ btn().textContent = '⊹'; btn().title = 'Lock to the marks'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); btn()._ticks = true; }
+  } else { if(slider.removeAttribute) slider.removeAttribute('list'); hideBtn(); }
 }
 
 // ---------- text effects: three slots (effects.js) ----------

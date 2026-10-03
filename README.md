@@ -153,6 +153,12 @@ Blend Mode: [§SurfBlendMode]  Light: [§LightDir]
 
 ## Development
 
+Releases are named for moons, in order from their planet: `release.js`
+holds the current one (shown by `§Build`); `node build.mjs --next` moves on
+to the next. Shown as `Jupiter–Io` (an en dash: a slash would split a PML segment).
+Jupiter now; Saturn after the final release.
+
+
 `node tools/scale-audit.mjs` scores how each texture holds up drawn at a
 smaller size (needs `npm install @napi-rs/canvas`).
 

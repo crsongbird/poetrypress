@@ -50,9 +50,13 @@
  */
 import { glyphChar, moonChar } from './glyphs.js';
 import { GLYPH_BY_NAME } from './spell.js';
+import { RELEASE } from './release.js';
 
-// stamped with the build's date and hash by build.mjs; 'dev' when unbuilt
-export const BUILD = '__BUILD_STAMP__';
+// The release's name always (release.js), and — when built — the date and a
+// hash of the code. A page served from the source files, unbuilt, still names
+// its release instead of showing the bare placeholder.
+const STAMP = '__BUILD_STAMP__';
+export const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
 const TOKEN = /(\\?)§([A-Za-z]+)(?:!([A-Za-z0-9_-]+)|:(-?\d*\.?\d+))?/g;
