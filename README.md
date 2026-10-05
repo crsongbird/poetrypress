@@ -1,5 +1,8 @@
 # Unfixable Vellum
 
+Working on the code (person or AI agent)? Start with **[AGENTS.md](AGENTS.md)** — commands,
+architecture, invariants, recipes, and the design language.
+
 A single-page art app for visual poetry: a free replacement for paid tools like
 Photoshop, needing no desktop. It works on a phone, in a browser, with nothing
 to install.

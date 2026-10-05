@@ -4,6 +4,11 @@ Production: poetrypress.unfixable.place · development: vellum.unfixable.place
 Release: see release.js (`node build.mjs --next` to advance). Look before
 judging: `node tools/texture-gallery.mjs --only <names>` (run when asked).
 
+## 0 · Performance (decide first)
+See PERFORMANCE-AUDIT.md. A–D are done (invisible; start-up and preset
+switching ~5–8× less blocked). Waiting on Ruby: E–J, after measuring on a
+phone.
+
 ## 1 · Light, like a game engine
 `lightHeights` (texCore) is built: a texture gives HEIGHTS; it returns them
 lit by the dial — diffuse, a specular per material, cast shadows (soft,
@@ -73,6 +78,8 @@ in the worker (the page stays responsive).
 - The light dial for angle-only textures (Harsh Rain's slant, the hatch).
 
 ## Check on a phone
+- Chrome vs Firefox speed, now that the page canvas is a CPU canvas (Chrome
+  was slower); and that the 'two pages at once' ghost never returns.
 - The colour picker's Done; undo / redo; the preview's scale steps.
 - Textures are made in a worker (textureService.js): the page should stay
   responsive while one is made; older Safari (before 16.4) makes them on the

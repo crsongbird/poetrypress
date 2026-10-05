@@ -32,7 +32,7 @@ import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, textureCacheMB }
 import { resolvePmlVariables } from './pmlVars.js';
 import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
-import { installInlineGlyphs } from './glyphs.js';
+import { installInlineGlyphs, clearMeasureCache } from './glyphs.js';
 import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge, STITCH_STYLES } from './stitches.js';
 import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './effects.js';
 import { requestTexture, onTextureReady, textureServiceInfo } from './textureService.js';
@@ -643,9 +643,15 @@ function computeLineWidths(ctx, line, baseSize, fontDef){
 // can look these up instead of remeasuring everything from scratch a second
 // time immediately after this function already measured it once.
 function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing){
-  let size = maxSizePx;
+  // The largest size, on the grid maxSizePx, maxSizePx-2, … (above 8), at
+  // which every line fits — exactly what stepping down 2px at a time from the
+  // top finds, but in ~3 measuring passes instead of dozens. Width grows in
+  // proportion to size and height exactly so, so one measurement at the top
+  // predicts the answer; the grid around the prediction is then checked with
+  // real measurements (down while it doesn't fit, up while the next does,
+  // peeking two further steps up in case rounding made fit non-monotonic).
   const minSize = 8;
-  while(size > minSize){
+  const measureAt = size => {
     let maxLineWidth = 0, totalHeight = 0;
     const widths = new Map();
     for(const line of lines){
@@ -655,8 +661,31 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
       widths.set(line, w);
       if(w.total > maxLineWidth) maxLineWidth = w.total;
     }
-    if(maxLineWidth <= maxWidth && totalHeight <= maxHeight) return { size, widths };
-    size -= 2;
+    return { size, widths, fits: maxLineWidth <= maxWidth && totalHeight <= maxHeight, maxLineWidth, totalHeight };
+  };
+  const onGrid = s => s > minSize && s <= maxSizePx && ((maxSizePx - s) % 2 === 0);
+  const top = measureAt(maxSizePx);
+  if(top.fits || maxSizePx <= minSize){
+    if(top.fits) return { size: top.size, widths: top.widths };
+  } else {
+    // predict, snapped down onto the grid
+    const byW = top.maxLineWidth > 0 ? maxSizePx*maxWidth/top.maxLineWidth : maxSizePx;
+    const byH = top.totalHeight > 0 ? maxSizePx*maxHeight/top.totalHeight : maxSizePx;
+    let s = maxSizePx - 2*Math.max(1, Math.ceil((maxSizePx - Math.min(byW, byH))/2));
+    const tried = new Map([[maxSizePx, top]]);
+    const at = size => { if(!tried.has(size)) tried.set(size, measureAt(size)); return tried.get(size); };
+    // down until it fits
+    while(onGrid(s) && !at(s).fits) s -= 2;
+    if(onGrid(s)){
+      // up while a larger size on the grid fits (peeking two steps past a miss)
+      for(;;){
+        if(onGrid(s + 2) && at(s + 2).fits){ s += 2; continue; }
+        if(onGrid(s + 4) && at(s + 4).fits){ s += 4; continue; }
+        if(onGrid(s + 6) && at(s + 6).fits){ s += 6; continue; }
+        break;
+      }
+      return { size: s, widths: at(s).widths };
+    }
   }
   const widths = new Map();
   for(const line of lines){
@@ -817,6 +846,7 @@ let fitCacheValue = null;
  * poem ran off the canvas until you touched it.
  */
 export function invalidateTextMeasurements(){
+  clearMeasureCache();                 // remembered widths were measured against the old font
   fitCacheKey = null;
   fitCacheValue = null;
   linesCacheKey = null;
@@ -849,6 +879,7 @@ const rpx = n => n * RENDER_SCALE;
 if(typeof window !== 'undefined') window.vellumDebug = {
   setRenderScale: s => setRenderScale(s), renderScale: () => RENDER_SCALE, render: () => render(),
   textures: () => textureServiceInfo(),
+  profile: () => LAST_PROFILE, renderMs: () => LAST_RENDER_MS,
 };
 // §Profile: where the last render's time went, stage by stage
 const clock = () => (typeof performance !== 'undefined' ? performance : Date).now();
@@ -858,11 +889,24 @@ export function render(){
   const S = RENDER_SCALE;
   // a texture from the texture service: scaled to the page, since the one shown
   // while a new one is made may have been made at another preview size
-  const drawTex = t => { if(t) ctx.drawImage(t, 0, 0, W, H); };
+  // A texture that can't be drawn is skipped, never allowed to abort the frame:
+  // a frame abandoned mid-blend left the canvas in that blend, and the next
+  // frame blended over the old one (two pages showing at once).
+  const drawTex = t => { if(!t) return; try { ctx.drawImage(t, 0, 0, W, H); } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
   const lap = name => { const t = clock(); laps.push(`${name} ${Math.round(t - lapAt)}`); lapAt = t; };
   const canvas = $('poemCanvas');
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const W = canvas.width, H = canvas.height;
+  // Every frame starts from a clean slate — nothing a previous frame left set
+  // (a blend, an opacity, a transform, a filter, unbalanced save()s) may leak in.
+  if(typeof ctx.reset === 'function') ctx.reset();
+  else {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    if('filter' in ctx) ctx.filter = 'none';
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+    if(ctx.setLineDash) ctx.setLineDash([]);
+    ctx.clearRect(0, 0, W, H);
+  }
 
   const currentAlign = getActiveRadioValue('alignGroup') || 'left';
   const currentValign = getActiveRadioValue('valignGroup') || 'center';

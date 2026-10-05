@@ -418,6 +418,11 @@ const RETIRED = { whorl: 'dunes' };
 /** A texture's cache key — shared by the page and the texture worker, so a
  *  texture made in the worker files where the page will look for it. */
 export function textureKeyFor(type, w, h, opts = {}){ return describeRequest(type, w, h, opts).key; }
+/** Forgets every cached texture of these types (e.g. the two that draw symbols, when the symbol font arrives). */
+export function clearTexturesOfTypes(types){ for(const k of [...textureCache.keys()]) if(types.some(t => k.startsWith(t + '_'))) textureCache.delete(k); }
+/** Drops every cached texture at least `px` pixels big (after a full-size save,
+ *  so a phone isn't left holding several 38 MB textures it won't reuse soon). */
+export function dropLargeTextures(px){ for(const [k, c] of [...textureCache]) if(c && c.width*c.height >= px) textureCache.delete(k); }
 /** The texture under `key`, if it is cached. */
 export function peekTexture(key){ return textureCache.has(key) ? textureCache.get(key) : null; }
 /** Files a finished texture (a canvas, or an ImageBitmap from the worker). */
@@ -435,7 +440,8 @@ export function storeTexture(key, result){
     const gone = textureCache.get(oldest);
     total -= px(gone);
     textureCache.delete(oldest);
-    if(gone && typeof gone.close === 'function') gone.close();        // an ImageBitmap's memory is freed at once
+    // (never close() it here: the texture service may still be showing it
+    // while a new one is made, and drawing a closed bitmap throws mid-render)
   }
   return result;
 }

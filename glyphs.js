@@ -113,10 +113,28 @@ const TOP = { top: 0, hanging: 0.05, middle: -0.5, alphabetic: -0.8, ideographic
 
 let installed = false;
 /** Wraps a 2D context prototype's text methods so inline glyphs work. */
+const MEASURED = new Map();
+/** Forget remembered text measurements (a font has arrived; they were taken against another). */
+export function clearMeasureCache(){ MEASURED.clear(); }
+
 export function installInlineGlyphs(proto){
   if(installed || !proto || !proto.fillText || typeof Path2D === 'undefined') return false;
   installed = true;
-  const fill = proto.fillText, stroke = proto.strokeText, measure = proto.measureText;
+  const rawMeasure = proto.measureText;
+  // Remembered measurements: the same strings are measured again and again
+  // (every refit, every render). A width depends on the font and the text —
+  // and its bounding boxes on alignment, baseline and direction — so those
+  // are the key. Cleared whenever a font arrives (clearMeasureCache).
+  const measure = function(str){
+    const key = this.font + '\u0001' + this.textAlign + '\u0001' + this.textBaseline + '\u0001' + (this.direction || '') + '\u0001' + str;
+    let m = MEASURED.get(key);
+    if(m === undefined){
+      if(MEASURED.size > 40000) MEASURED.clear();
+      m = rawMeasure.call(this, str); MEASURED.set(key, m);
+    }
+    return m;
+  };
+  const fill = proto.fillText, stroke = proto.strokeText;
   const widthOf = (ctx, str) => {
     const size = fontPx(ctx); let w = 0;
     for(const p of parts(str)) w += p.text ? measure.call(ctx, p.text).width : size * ADVANCE;

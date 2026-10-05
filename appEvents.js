@@ -30,7 +30,7 @@ import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './ef
 import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout, clearTextureCache } from './textureGenerators.js';
+import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes } from './textureGenerators.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
@@ -146,7 +146,11 @@ fontSelect.value = 3;
 $('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i} &nbsp;${f.family}`).join('<br>');
 
 const canvas = $('poemCanvas');
-const ctx = canvas.getContext('2d');
+// A CPU canvas, like every layer and texture drawn into it: in Chrome a GPU
+// page canvas re-uploaded each CPU layer on every frame (slower than Firefox
+// on phones, and heavy on graphics memory). This is the FIRST request for this
+// canvas's context, so its settings stick.
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
 function syncStopFields(count, field3Id, field4Id){
   $(field3Id).style.display = count >= 3 ? 'block' : 'none';
@@ -479,6 +483,8 @@ $('downloadBtn').addEventListener('click', async ()=>{
     canvas.width = pw; canvas.height = ph;
     setRenderScale(pw / (state.page.exportW || pw));
     state.ui.saving = false; btn.textContent = label; btn.disabled = false;
+    // the full-size textures go: a phone shouldn't keep several 38 MB textures it won't reuse soon
+    dropLargeTextures((state.page.exportW || pw)*(state.page.exportH || ph));
     if(document.body && document.body.classList) document.body.classList.remove('saving');
     render();
   }
@@ -780,13 +786,34 @@ $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
 const presetGrid = $('presetGrid');
 const PRESET_COLUMNS = 4;
 
+// Preset tiles paint when they come into view (Rituals may never be opened),
+// one per animation frame so even opening it never freezes the page. Where
+// visibility can't be observed, they paint at once, as before.
+const tileQueue = [];
+let tileFrame = 0;
+function drainTiles(){
+  tileFrame = 0;
+  const job = tileQueue.shift(); if(job) job();
+  if(tileQueue.length) tileFrame = requestAnimationFrame(drainTiles);
+}
+const tileWatch = (typeof IntersectionObserver === 'function' && typeof requestAnimationFrame === 'function')
+  ? new IntersectionObserver(entries => {
+      for(const en of entries) if(en.isIntersecting){ tileWatch.unobserve(en.target); const job = en.target._paint; en.target._paint = null; if(job) tileQueue.push(job); }
+      if(tileQueue.length && !tileFrame) tileFrame = requestAnimationFrame(drainTiles);
+    }, { rootMargin: '200px' })
+  : null;
+function paintWhenSeen(canvasEl, paint){
+  if(!tileWatch){ paint(); return; }
+  canvasEl._paint = paint; tileWatch.observe(canvasEl);
+}
+
 /** One tile: painted snapshot above its name. */
 function presetTile(p, onPick, extraClass){
   const btn = document.createElement('div');
   btn.className = 'preset-btn' + (extraClass ? ' ' + extraClass : '');
   const swatch = document.createElement('canvas');
   swatch.className = 'preset-swatch';
-  paintPresetSwatch(swatch, p, SWATCH.width, SWATCH.height);
+  paintWhenSeen(swatch, () => paintPresetSwatch(swatch, p, SWATCH.width, SWATCH.height));
   const label = document.createElement('span');
   label.className = 'preset-label';
   label.textContent = p.name;
@@ -1944,10 +1971,15 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(remeasureAn
 // a copy generated before the symbol font arrived — it would be empty boxes.
 if(document.fonts && document.fonts.load){
   document.fonts.load('32px "Noto Sans Symbols"', '\u{1F701}')
-    .then(()=>{ clearTextureCache(); scheduleRender(); }).catch(()=>{});
+    .then(()=>{ clearTexturesOfTypes(['summoning', 'cards']); scheduleRender(); }).catch(()=>{});   // only the two that draw symbols
 }
-setTimeout(remeasureAndRender, 300);
-setTimeout(remeasureAndRender, 900);
+// Re-measure when a font actually ARRIVES (the browser says so), coalescing a
+// burst into one — rather than on blind timers that re-fit even when nothing
+// had changed (two full re-fits at every start-up).
+if(document.fonts && document.fonts.addEventListener){
+  let fontTimer = null;
+  document.fonts.addEventListener('loadingdone', () => { clearTimeout(fontTimer); fontTimer = setTimeout(remeasureAndRender, 60); });
+}
 
 // ---------- undo ☋ and redo ☊ ----------
 // History is a stack of LOOK snapshots — the same filtered snapshot a saved
