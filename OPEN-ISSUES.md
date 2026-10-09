@@ -14,8 +14,8 @@ candidates (Dream Bloom's convolution first). J (Linen at preview) waits.
 lit by the dial — diffuse, a specular per material, cast shadows (soft,
 longer as the light lowers; none overhead), occlusion in crevices. Dune
 Ripples, Kintsugi, Moss on Stone and Rain on Glass use it. Next: bring the
-other lit textures onto it (Cold Press, Fractured Glaze, Linen, Sigil
-relief). Facet Field, Cup Ring, Fold Ghost and Poured Wax are on it,
+other lit textures onto it (Fractured Glaze, Linen, Sigil relief). Facet Field, Cup Ring, Fold Ghost, Poured Wax and Cold Press are on it
+(Cold Press is the first to use a normal map: fibres and undulation),
 and it now takes detail NORMAL MAPS and MATERIAL hues (Highlight, Shade);
 next: give textures normal-map detail where heights are awkward (paper
 tooth, weave, crazing), and a per-material gloss where one gloss won't do. and a texture
@@ -55,7 +55,6 @@ in the worker (the page stays responsive).
   best home for easter eggs (Saturn, Enceladus, the kitsune).
 - Black Hole: look for uses of the third knob and the dial.
 - Linen: realistic details; details cast shadows.
-- Cold Press: more variation; lit with shadows.
 - Foxing: not a Touch texture (it has no light) — move it, or give it
   relief. (It represents age spots on old paper.)
 

@@ -154,8 +154,8 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
   const tg = src('textureGenerators.js'), tu = src('tunables.js');
   check('the texture cache is bounded by memory, not only by count',
     /total > CACHE_BUDGET/.test(tg) && /const CACHE_BUDGET = TEXTURES\.cachePixels \* /.test(tg) && /cachePixels: 3072 \* 3072 \* 3/.test(tu));
-  check('Cold Press caps its pits (uncapped, its smallest tooth made millions of calls)',
-    /const MAX_PITS = 16000;/.test(src('texTouch.js')));
+  check('Cold Press is watercolour paper: felt tooth as lit heights, fibres and undulation as a NORMAL MAP, and a Press knob (hot · cold · rough)',
+    /normals:N \}\);/.test(src('texTouch.js')) && /names:\['Hot Press','Cold Press','Rough'\]/.test(src('textureGenerators.js')));
   check('the Sparkler is a fifth of its old count', /canonArea\(w,h\)\/130000 \* amt/.test(src('texWhimsy.js')));
 }
 
@@ -368,7 +368,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 13);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 14);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -553,7 +553,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
     T.TEXTURE_CAPS.tessellate.light === true && T.TEXTURE_CAPS.tessellate.lightTilt === 0 && T.TEXTURE_CAPS.tessellate.tintLabels[1] === 'Material Hue' &&
     /const L = lightHeights\(H, ww, wh, \{ light, relief: 1, gloss: 0\.25, shadow: 0\.7/.test(src('texChaos.js')));
   check('choosing a texture with a light of its own sets the dial to it', /const lt = \(capsFor\(\$\('textureType'\)\.value\) \|\| \{\}\)\.lightTilt;/.test(ev));
-  check('Cup Ring is a dried film, lit: the coffee-ring ridge at the rim', /coffee-ring effect/.test(src('texTouch.js')) && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.55/.test(src('texTouch.js')));
+  check('Cup Ring is a flat, absorbed stain (no relief): a band darkening to a crisp line, pooled to one side, feathered outward, with a Spill knob',
+    /coffee-ring effect/.test(src('texTouch.js')) && /shadow:0, ao:0, ambient:0\.6/.test(src('texTouch.js')) && /wicking runs outward into dry paper/.test(src('texTouch.js')) && T.paramsFor('cupring')[2].label === 'Spill');
 }
 
 // ---- no two pages at once ----
@@ -655,6 +656,13 @@ check('the inset box is painted on its own layer, then blended on as one image (
     /textureTint3: \$\('textureTint3Hex'\)\.value,/.test(ev) && /setColorField\('textureTint4Hex', s\.textureTint4 \|\| '#FFFFFF'\);/.test(ev) && /setColorField\('textureTint3Hex', p\.textureTint3 \|\| '#FFFFFF'\);/.test(ev));
   check('Fold Ghost: folds sit off-centre (offset across the page, along the fold\'s normal), by real folding schemes',
     /px=ww\*\(0\.5 \+ off\*nx\), py=wh\*\(0\.5 \+ off\*ny\)/.test(src('texTouch.js')) && /scheme=Math\.floor\(Math\.random\(\)\*4\)/.test(src('texTouch.js')));
+}
+
+// ---- the lighting loop, faster and exact ----
+{
+  const core = src('texCore.js');
+  check('the shadow trace stops once the ray is above the tallest point (exact: nothing further can block it)', /if\(rayH >= hTop\) break;/.test(core));
+  check('the lighting loop reads neighbours directly and uses sqrt, not hypot', /const nl = Math\.sqrt\(gx\*gx \+ gy\*gy \+ 1\)/.test(core) && !/Math\.hypot\(gx, gy, 1\)/.test(core));
 }
 
 console.log();

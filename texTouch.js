@@ -177,35 +177,53 @@ export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form){
 // The paper says no
 // to the pencil, very softly,
 // ten thousand times.
-export function genColdPress(w,h,amt,zoom,light){
+export function genColdPress(w,h,amt,zoom,light,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const {lx,ly} = lightVec(light);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-
-  // dimples, not grain: each pit gets a lit rim and a shadowed floor, which
-  // is what separates this from Waking Grain's flat contrast noise
-  // At most 16,000 pits: each is several canvas calls, and uncapped the
-  // smallest tooth asked for millions — enough to stall a phone. Past the
-  // cap the tooth grows instead of multiplying.
-  const MAX_PITS = 16000;
-  let r = Math.max(0.8, (Math.max(w,h)/700) * zoom);
-  r = Math.max(r, Math.sqrt((w*h*amt) / (13*MAX_PITS)));
-  const count = Math.min(MAX_PITS, Math.round((w*h)/(r*r*13) * amt));
-  const off = r*0.55;
-  for(let i=0;i<count;i++){
-    const x=Math.random()*w, y=Math.random()*h;
-    const rr = r*(0.6+Math.random()*0.9);
-    ctx.globalAlpha = 0.10+Math.random()*0.14;
-    ctx.fillStyle='rgb(232,232,232)';
-    ctx.beginPath(); ctx.arc(x - lx*off, y - ly*off, rr, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 0.09+Math.random()*0.13;
-    ctx.fillStyle='rgb(40,40,40)';
-    ctx.beginPath(); ctx.arc(x + lx*off, y + ly*off, rr*0.9, 0, Math.PI*2); ctx.fill();
+  const press=Math.max(0,Math.min(1, form==null ? 0.5 : form));
+  // Watercolour paper. Its TOOTH is the felt it was pressed between: rounded
+  // hills and valleys, over a gentle larger undulation — heights, lit by the
+  // dial, so raking light fills the valleys with shadow. Its FIBRES are far
+  // too fine to cast shadows but still catch the light: a detail NORMAL MAP.
+  // PRESS: hot press (smooth, fine) → cold press → rough (big, deep tooth).
+  // TOOTH SCALE · TOOTH DEPTH · PRESS
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  // the felt: cells, each a rounded hill; a second, finer felt over it
+  const cell=Math.max(2.2, unit*(0.006 + 0.012*press)*zoom);
+  const felt=(sc, jit)=>{
+    const gx=Math.ceil(ww/sc)+2, gy=Math.ceil(wh/sc)+2, P=new Float32Array(gx*gy*3);
+    for(let k=0;k<gx*gy;k++){ P[k*3]=Math.random()*jit; P[k*3+1]=Math.random()*jit; P[k*3+2]=0.6+Math.random()*0.8; }
+    // each felt point raises a SOFT hill that adds into its neighbours (shaped
+    // by the nearest point alone, hills met in sharp creases, like cracked mud)
+    return (x,y)=>{ const fx=x/sc, fy=y/sc, ci=Math.floor(fx), cj=Math.floor(fy); let s=0;
+      for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ const i2=ci+di+1, j2=cj+dj+1; if(i2<0||j2<0||i2>=gx||j2>=gy) continue;
+        const k=(j2*gx+i2)*3, px=ci+di+P[k], py=cj+dj+P[k+1], dd=(fx-px)*(fx-px)+(fy-py)*(fy-py);
+        if(dd<1.1){ const q=1-dd/1.1; s+=P[k+2]*q*q*q; } }   // a soft bump, as smooth as a gaussian and far cheaper
+      return s*0.7; };
+  };
+  const coarse=felt(cell, 0.95), fine=felt(cell*0.45, 0.9);
+  const swell=smoothField(ww, wh, Math.max(3, Math.round(cell*3)), (()=>{ const f=fbmSampler(3, 3); return (u,v)=>f(u,v); })());
+  const depth=cell*(0.12 + 0.55*press)*amt;
+  const H=new Float32Array(ww*wh);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){ const k=y*ww+x;
+    H[k]=depth*(coarse(x,y) + 0.4*fine(x,y)); }
+  // (the gentle undulation only SHADES — too gentle to cast shadows — so it
+  // joins the fibres in the normal map, and the shadow tracer marches only as
+  // far as the tooth can throw a shadow)
+  // the fibres: short random strokes, as fine heights turned into normals
+  const F=new Float32Array(ww*wh), nFib=Math.round(ww*wh/(unit*0.8)*(0.6 + 0.6*(1-press)));
+  for(let q=0;q<nFib;q++){
+    const cx=Math.random()*ww, cy=Math.random()*wh, a=Math.random()*Math.PI, len=unit*(0.006+Math.random()*0.02), ca=Math.cos(a), sa=Math.sin(a), hgt=0.5+Math.random()*0.8;
+    for(let s=-len/2; s<=len/2; s+=0.7){ const x=Math.round(cx+ca*s), y=Math.round(cy+sa*s); if(x<1||y<1||x>=ww-1||y>=wh-1) continue;
+      const fade=1-Math.pow(2*s/len,2); F[y*ww+x]+=hgt*fade; F[y*ww+x-1]+=hgt*fade*0.35; F[y*ww+x+1]+=hgt*fade*0.35; F[(y-1)*ww+x]+=hgt*fade*0.35; F[(y+1)*ww+x]+=hgt*fade*0.35; }
   }
-  ctx.globalAlpha=1;
-  return c;
+  const N=new Float32Array(ww*wh*3), fk=0.45, sw=cell*0.9;
+  for(let k=0;k<ww*wh;k++) F[k]=F[k]*fk + swell[k]*sw;            // fibres and undulation, one detail field
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){ const k=y*ww+x;
+    const gx=(F[y*ww+Math.min(ww-1,x+1)]-F[y*ww+Math.max(0,x-1)])*0.5, gy=(F[Math.min(wh-1,y+1)*ww+x]-F[Math.max(0,y-1)*ww+x])*0.5;
+    const l=Math.hypot(gx,gy,1); N[k*3]=-gx/l; N[k*3+1]=-gy/l; N[k*3+2]=1/l; }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.06, shadow:0.55, ao:0.3, ambient:0.45, normals:N });
+  const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, gloss:0.06, shadow:0, ao:0, ambient:0.45 }).spec[0];
+  return paintLit(w,h,div,ww,wh, i => { const v=128 + (L.light[i]/fl - 1)*120 + (L.spec[i]-fs)*60; return [clamp255(v), clamp255(v), clamp255(v)]; });
 }
 
 // Something damp got in
@@ -313,56 +331,101 @@ export function genFoldGhost(w,h,amt,zoom,light,form){
 // Someone set it down
 // mid-sentence and forgot it.
 // The ring is the proof.
-export function genCupRing(w,h,amt,zoom,light,tint,M3){
+export function genCupRing(w,h,amt,zoom,light,tint,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const spill=Math.max(0,Math.min(1, form==null ? 0.35 : form));
   const t = parseHex(tint || '#6B4A2F');
-  // A dried coffee ring, lit. As a drop dries, the liquid flows outward and
-  // carries the coffee to its edge (the coffee-ring effect): the stain gathers
-  // in a slightly wobbly RIDGE at the rim, with only a faint wash inside, a gap
-  // where the cup was lifted and dragged, and sometimes a second, fainter ring.
-  // The dried film is a height field — thickest at the rim — lit by the dial:
-  // the rim catches the light on one side, a soft shadow on the other, and a
-  // gentle sheen. Dry paper stays neutral.
+  // Where a mug of coffee stood on paper. Not a raised rim: dried coffee is
+  // FLAT, and the colour does the work.
+  //  · the mug's foot leaves a BAND; as each drop dries its coffee is carried
+  //    to the edge (the coffee-ring effect), so the band darkens to a crisp
+  //    outer line, with a faint tide line where the liquid last paused;
+  //  · coffee pools on the downhill side — the band is heavy there and thins
+  //    to broken arcs on the other;
+  //  · paper drinks it: absorption mottles the stain, and wicking along the
+  //    fibres feathers the outer edge;
+  //  · a mug is set down twice (an offset, partial ring), and drips leave
+  //    their own little dark-edged rings.
+  // The light gives only a faint sugary sheen where the film is thick.
+  // RING SIZE · RING COUNT · SPILL (drips, and the wash inside the ring)
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
-  const rings=[];
-  const nRings=Math.max(1, Math.round((1+Math.random()*2)*amt));
-  for(let k=0;k<nRings;k++){
-    const R=unit*(0.10+Math.random()*0.10)*zoom;
-    const base={ cx:ww*(0.15+Math.random()*0.7), cy:wh*(0.15+Math.random()*0.7), R, gapAt:Math.random()*Math.PI*2, gapW:0.5+Math.random()*0.9,
-                 w1:Math.random()*6.28, w2:Math.random()*6.28, strength:0.8+Math.random()*0.4 };
-    rings.push(base);
-    if(Math.random()<0.35) rings.push({ ...base, cx:base.cx + R*(Math.random()-0.5)*0.25, cy:base.cy + R*(Math.random()-0.5)*0.25,
-                                        R:R*(0.97+Math.random()*0.06), strength:base.strength*0.35, w1:Math.random()*6.28 });
-  }
-  const D=new Float32Array(ww*wh);                          // stain density, 0..~1
-  for(const g of rings){
-    const pad=g.R*1.15, x0=Math.max(0,Math.floor(g.cx-pad)), x1=Math.min(ww-1,Math.ceil(g.cx+pad)), y0=Math.max(0,Math.floor(g.cy-pad)), y1=Math.min(wh-1,Math.ceil(g.cy+pad));
-    const width=Math.max(0.8, g.R*0.035);
+  const D=new Float32Array(ww*wh);                          // stain density, 0..~1.2
+  const fibre=fbmSampler(70, 2), mottle=fbmSampler(9, 3), feather=fbmSampler(40, 2);
+  const angular=(seed)=>{ const p=[Math.random()*6.28, Math.random()*6.28, Math.random()*6.28];
+    return a => 0.5 + 0.28*Math.sin(a*2+p[0]+seed) + 0.14*Math.sin(a*5+p[1]) + 0.08*Math.sin(a*11+p[2]); };
+  // one dried ring: centre, radius, band width, how heavy, which way it pooled
+  const ring=(cx, cy, R, bw, heavy, pool, partial, fill=0)=>{
+    const wob=angular(Math.random()*6), pad=R+bw*0.5+unit*0.02;
+    const x0=Math.max(0,Math.floor(cx-pad)), x1=Math.min(ww-1,Math.ceil(cx+pad)), y0=Math.max(0,Math.floor(cy-pad)), y1=Math.min(wh-1,Math.ceil(cy+pad));
+    const spanA=Math.random()*6.28, spanW=partial ? 1.2+Math.random()*2.2 : 99;
     for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
-      const dx=x-g.cx, dy=y-g.cy, r=Math.hypot(dx,dy), a=Math.atan2(dy,dx);
-      const Rw=g.R*(1 + 0.012*Math.sin(a*3+g.w1) + 0.008*Math.sin(a*7+g.w2));      // rims are never true circles
-      const gapD=Math.abs(((a-g.gapAt+Math.PI*3)%(Math.PI*2))-Math.PI);
-      const keep=gapD > Math.PI-g.gapW ? 0.12 : 1;
-      const out=r-Rw;
-      // the ridge: sharp outside (the contact line), tailing inward
-      const ridge = out>0 ? Math.exp(-(out*out)/(width*width*0.35)) : Math.exp(-(out*out)/(width*width*2.2));
-      const wash = r<Rw ? 0.08 + 0.06*(r/Rw) : 0;
-      D[y*ww+x]=Math.min(1.2, D[y*ww+x] + (ridge*0.9*keep + wash)*g.strength);
+      const dx=x-cx, dy=y-cy, a=Math.atan2(dy,dx), r0=Math.hypot(dx,dy);
+      // wicking: coffee creeps OUTWARD along the paper's fibres in fine radial
+      // streaks, so the outer edge feathers (sampled in polar coordinates:
+      // many cells around the ring, few across it)
+      const fib=feather((a + Math.PI)/(2*Math.PI)*Math.max(8, R*0.09), r0*0.004 + heavy*7);
+      // (only at the OUTER edge: wicking runs outward into dry paper)
+      const outer=Math.max(0, Math.min(1, (r0 - (R - bw*0.3))/(bw*0.3)));
+      const r=r0 - outer*Math.pow(Math.max(0, fib - 0.35)/0.65, 3)*unit*0.006*(R > unit*0.03 ? 1 : 0.25);
+      const Rw=R*(1 + 0.01*Math.sin(a*3 + pool) + 0.006*Math.sin(a*7 + heavy*9));
+      // heavy on the pooled side, thinning to broken arcs on the other
+      const side=Math.pow(0.5 + 0.5*Math.cos(a - pool), 1.4);
+      // (a drip is too small to pool unevenly: varied by angle, it showed as wedges)
+      let along=R < unit*0.03 ? 1 : Math.max(0, Math.min(1, 0.15 + 0.85*side*1.1 + (wob(a)-0.5)*0.9));
+      if(partial){ const da=Math.abs(((a-spanA+Math.PI*3)%(Math.PI*2))-Math.PI); along*=Math.max(0, Math.min(1, (spanW/2 - da)*3)); }
+      const s=(r - (Rw - bw))/bw;
+      if(along<=0.01 && s>=0) continue;                            // 0 inner edge of the band … 1 the outer line
+      let v=0;
+      if(s>=0 && s<=1){
+        v = 0.32 + 0.6*s*s;                                  // darkening toward the outer edge
+        v += 0.7*Math.exp(-Math.pow((s-0.97)/0.035, 2));      // the crisp contact line
+        v += 0.18*Math.exp(-Math.pow((s-0.04)/0.04, 2));      // the tide line where it last paused
+      } else if(s>1){
+        v = 0.75*Math.exp(-Math.pow((s-1)/0.03, 2));          // the line's own soft outer limit
+      } else if(s<0 && r<Rw-bw){
+        // the wash inside: faint in a ring, eased in from the band; a drip is filled right up to its rim
+        v = (fill || spill*0.10)*(0.6 + 0.8*mottle(x/ww+3.1, y/wh+1.7)) * (fill ? 1 : Math.min(1, -s*4));
+      }
+      const k=y*ww+x;
+      // the band thins around the ring; the wash inside doesn't (varied by angle, it showed as rays)
+      D[k]=Math.min(1.25, D[k] + v*(s<0 ? 1 : along)*heavy*1.55);
+    }
+  };
+  const nPlaced=Math.max(1, Math.round((1+Math.random()*1.4)*amt));
+  for(let k=0;k<nPlaced;k++){
+    const R=unit*(0.11+Math.random()*0.07)*zoom, bw=R*(0.06+Math.random()*0.07);
+    const cx=ww*(0.15+Math.random()*0.7), cy=wh*(0.15+Math.random()*0.7), pool=Math.random()*6.28, heavy=0.75+Math.random()*0.4;
+    ring(cx, cy, R, bw, heavy, pool, false);
+    // set down again, a little off — often only part of it took
+    if(Math.random()<0.45){ const a=Math.random()*6.28, d=R*(0.08+Math.random()*0.3);
+      ring(cx+Math.cos(a)*d, cy+Math.sin(a)*d, R*(0.97+Math.random()*0.05), bw*(0.7+Math.random()*0.5), heavy*(0.35+Math.random()*0.3), pool+(Math.random()-0.5), true); }
+    // drips: small drops near the ring, each drying into its own tiny ring
+    const drips=Math.round(spill*(1+Math.random()*4));
+    for(let q=0;q<drips;q++){
+      const a=Math.random()*6.28, d=R*(1.02+Math.random()*0.45), r=unit*(0.004+Math.random()*0.012)*zoom;
+      ring(cx+Math.cos(a)*d, cy+Math.sin(a)*d, r, r*0.35, heavy*(0.5+Math.random()*0.4), Math.random()*6.28, false, 0.45);
     }
   }
-  // the film's thickness follows the stain: a little ridge at the rim
-  const H=new Float32Array(ww*wh); for(let i=0;i<H.length;i++) H[i]=D[i]*Math.max(0.6, unit*0.0045);
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.55, shadow:0.45, ao:0, ambient:0.4 });
-  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.55, shadow:0, ao:0, ambient:0.4 });
-  const fl=flat.light[0]||1, fs=flat.spec[0];
+  // paper drinks it unevenly: mottle and fibre
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){ const k=y*ww+x; if(D[k]>0) D[k]*=0.72 + 0.4*mottle(x/ww,y/wh) + 0.18*(fibre(x/ww,y/wh)-0.5); }
+  // the faintest film for the light: a broad sheen where it's thick, never
+  // relief — so the film is a SMOOTHED copy of the stain (following the
+  // stain's own banding made the band look embossed)
+  const Hf=smoothField(ww, wh, Math.max(2, Math.round(unit/120)), (u, v) => Math.min(1, D[Math.min(wh-1, Math.round(v*(wh-1)))*ww + Math.min(ww-1, Math.round(u*(ww-1)))]));
+  for(let i=0;i<Hf.length;i++) Hf[i]*=Math.max(0.25, unit*0.0007);
+  const L=lightHeights(Hf, ww, wh, { light, relief:1, gloss:0.7, shadow:0, ao:0, ambient:0.6 });
+  const fs=L.flat ? lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.7, shadow:0, ao:0, ambient:0.6 }).spec[0] : 0;
+  // the stain: translucent, from paper grey toward the hue, deepening past it
+  // (more saturated, darker) where the coffee is thickest
+  const deep=[t.r*0.55, t.g*0.45, t.b*0.38];
   return paintLit(w,h,div,ww,wh, i => {
-    const dn=Math.min(1, D[i]);
-    if(dn<0.004) return [128,128,128];
-    // the stain darkens toward its hue; the light lifts and shades the film
-    const lit=c=>(litK(L,i,0.4,M3,c)/fl - 1)*dn*1.6, sh=(L.spec[i]-fs)*dn*180, S=c=>sh*litS(M3,c);
-    // from paper grey toward the stain's own hue as the film thickens
-    const r=128 + (t.r - 128)*dn*0.9, g2=128 + (t.g - 128)*dn*0.9, b=128 + (t.b - 128)*dn*0.9;
-    return [clamp255(r + r*lit(0) + S(0)), clamp255(g2 + g2*lit(1) + S(1)), clamp255(b + b*lit(2) + S(2))];
+    const dn=D[i];
+    if(dn<0.003) return [128,128,128];
+    const a=Math.min(1, dn), b=Math.max(0, Math.min(1, (dn-0.75)/0.45));
+    const sh=Math.max(0, L.spec[i]-fs)*Math.min(1, dn)*60;       // the sheen
+    const col=c=>{ const base=[t.r,t.g,t.b][c], dp=deep[c];
+      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c); };
+    return [clamp255(col(0)), clamp255(col(1)), clamp255(col(2))];
   });
 }
 

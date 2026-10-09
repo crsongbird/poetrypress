@@ -327,28 +327,37 @@ export function lightHeights(H, ww, wh, opts = {}){
     for(let x = 0; x < ww; x++){ let s = 0; for(let y = -R; y <= R; y++) s += tmp[Math.min(wh-1, Math.max(0, y))*ww+x];
       for(let y = 0; y < wh; y++){ avg[y*ww+x] = s/(2*R+1); s += tmp[Math.min(wh-1, y+R+1)*ww+x] - tmp[Math.max(0, y-R)*ww+x]; } }
   }
-  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-    const i = y*ww + x, h0 = H[i]*relief;
-    let gx = (at(x+1, y) - at(x-1, y))*0.5*relief, gy = (at(x, y+1) - at(x, y-1))*0.5*relief;
-    // a detail normal map adds its slopes to the height's (derivative blending)
-    if(N){ const q = i*3, dz = Math.max(0.05, N[q+2]); gx -= N[q]/dz; gy -= N[q+1]/dz; }
-    const nl = Math.hypot(gx, gy, 1), nx = -gx/nl, ny = -gy/nl, nz = 1/nl;
-    const diffuse = Math.max(0, nx*Lx + ny*Ly + nz*Lz);
-    // the cast shadow: march toward the light; anything rising above the ray blocks it
-    let lit = 1;
-    if(shadow > 0 && lxy > 0.02 && rise < 1e8){
-      // long traces stride: soft shadows don't need every pixel
-      const stride = Math.max(1, Math.ceil(steps/40));
-      for(let k = stride; k <= steps; k += stride){
-        const over = at(Math.round(x + stepX*k), Math.round(y + stepY*k))*relief - (h0 + rise*k);
-        if(over > 0){ lit = Math.min(lit, Math.max(0, 1 - over*0.6)); if(lit === 0) break; }
+  // (neighbours read directly, clamped only at the edges; the shadow trace
+  // stops once the ray has climbed above the tallest point — nothing further
+  // can block it; sqrt for hypot: the same values, far faster)
+  const hTop = hMax*relief, doShadow = shadow > 0 && lxy > 0.02 && rise < 1e8, stride = Math.max(1, Math.ceil(steps/40));
+  for(let y = 0; y < wh; y++){
+    const row = y*ww, rowm = (y > 0 ? y - 1 : 0)*ww, rowp = (y < wh - 1 ? y + 1 : wh - 1)*ww;
+    for(let x = 0; x < ww; x++){
+      const i = row + x, h0 = H[i]*relief, xm = x > 0 ? x - 1 : 0, xp = x < ww - 1 ? x + 1 : ww - 1;
+      let gx = (H[row + xp] - H[row + xm])*0.5*relief, gy = (H[rowp + x] - H[rowm + x])*0.5*relief;
+      // a detail normal map adds its slopes to the height's (derivative blending)
+      if(N){ const q = i*3, dz = Math.max(0.05, N[q+2]); gx -= N[q]/dz; gy -= N[q+1]/dz; }
+      const nl = Math.sqrt(gx*gx + gy*gy + 1), nx = -gx/nl, ny = -gy/nl, nz = 1/nl;
+      const diffuse = Math.max(0, nx*Lx + ny*Ly + nz*Lz);
+      // the cast shadow: march toward the light; anything rising above the ray blocks it
+      let lit = 1;
+      if(doShadow){
+        for(let k = stride; k <= steps; k += stride){
+          const rayH = h0 + rise*k;
+          if(rayH >= hTop) break;
+          let sx = Math.round(x + stepX*k), sy = Math.round(y + stepY*k);
+          sx = sx < 0 ? 0 : sx >= ww ? ww - 1 : sx; sy = sy < 0 ? 0 : sy >= wh ? wh - 1 : sy;
+          const over = H[sy*ww + sx]*relief - rayH;
+          if(over > 0){ lit = Math.min(lit, Math.max(0, 1 - over*0.6)); if(lit === 0) break; }
+        }
       }
+      const occl = ao > 0 ? Math.max(0, Math.min(1, (avg[i] - H[i])*relief*0.25)) * ao : 0;
+      out[i] = (ambient + (1 - ambient)*diffuse*(1 - shadow*(1 - lit))) * (1 - occl);
+      if(components){ dif[i] = diffuse*(1 - shadow*(1 - lit)); occA[i] = occl; }
+      const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
+      spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
     }
-    const occl = ao > 0 ? Math.max(0, Math.min(1, (avg[i] - H[i])*relief*0.25)) * ao : 0;
-    out[i] = (ambient + (1 - ambient)*diffuse*(1 - shadow*(1 - lit))) * (1 - occl);
-    if(components){ dif[i] = diffuse*(1 - shadow*(1 - lit)); occA[i] = occl; }
-    const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
-    spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
   }
   // flat: the light on open, flat ground — what "in shadow" is measured against
   const flat = ambient + (1 - ambient)*Lz;

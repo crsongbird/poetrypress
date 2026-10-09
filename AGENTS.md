@@ -184,6 +184,10 @@ before/after measurements AND an identical-render comparison.
   are normalised to white's brightness. With white hues a texture must draw
   exactly as before (the fingerprints prove it). Caps `material: true` show
   the two pickers (`textureTint3Hex`, `textureTint4Hex`).
+  Heights or normals? Heights for anything that should CAST a shadow (the
+  shadow tracer marches over them); normals for detail that only shades
+  (fibres, gentle undulation) — see Cold Press. Keep a lit texture's height
+  range to what casts shadows: the trace length follows it.
 - **GPU lighting** (`texCore.js`): the WebGL2 shader must stay line-for-line
   the CPU `lightHeights` — change both together, and compare them (the
   worker takes `opts.cpuLight`; they agree to within 1/255 today). Emulated

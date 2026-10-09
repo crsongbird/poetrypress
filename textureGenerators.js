@@ -110,7 +110,9 @@ export const TEXTURE_PARAMS = {
                   // silk → twill → linen → canvas → burlap
                   {key:'form',  label:'Weave',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
   coldpress:     [{key:'zoom',  label:'Tooth Scale',     min:75, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Tooth Depth',     min:20, max:300, def:100, unit:'%'}],
+                  {key:'amt',   label:'Tooth Depth',     min:20, max:300, def:100, unit:'%'},
+                  // how the paper was made: pressed hot and smooth, cold, or left rough
+                  {key:'form',  label:'Press',           min:0,  max:100, def:50,  unit:'', ticks:[0,50,100], names:['Hot Press','Cold Press','Rough']}],
   foxing:        [{key:'zoom',  label:'Bloom Size',      min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Spot Count',      min:20, max:400, def:100, unit:'%', base:7}],
   foldghost:     [{key:'zoom',  label:'Crease Depth',    min:30, max:400, def:100, unit:'%'},
@@ -118,7 +120,9 @@ export const TEXTURE_PARAMS = {
                   // the short, random creases of being pressed in a pocket
                   {key:'form',  label:'Crumple',         min:0,  max:100, def:30,  unit:''}],
   cupring:       [{key:'zoom',  label:'Ring Size',       min:40, max:320, def:100, unit:'%'},
-                  {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2}],
+                  {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
+                  // drips, and the faint wash inside the ring
+                  {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
   wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3},
                   // thin and spreading → thick and lumpy
@@ -340,13 +344,13 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'linen'){
     result = genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'coldpress'){
-    result = genColdPress(w,h,amt,zoom,light);
+    result = genColdPress(w,h,amt,zoom,light,form);
   } else if(type === 'foxing'){
     result = genFoxing(w,h,amt,zoom,light,tint1);
   } else if(type === 'foldghost'){
     result = genFoldGhost(w,h,amt,zoom,light,form);
   } else if(type === 'cupring'){
-    result = genCupRing(w,h,amt,zoom,light,tint1,extra.mat);
+    result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat);
   } else if(type === 'wax'){
     result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat);
   } else if(type === 'dunes'){
