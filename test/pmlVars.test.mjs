@@ -368,7 +368,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 14);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 16);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -387,9 +387,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
 {
   const T = await import('../textureGenerators.js');
   const knob = (t, i) => (T.paramsFor(t)[i] || {}).label;
-  check('Deep Field has Atmosphere; Linen has Details and Weave; Sigils have Glow; Silverpoint has Age',
+  check('Deep Field has Atmosphere; Linen has Details and Weave; Sigils have Chaos; Silverpoint has Age',
     knob('astral', 2) === 'Atmosphere' && knob('linen', 1) === 'Details' && knob('linen', 2) === 'Weave' &&
-    knob('sigils', 2) === 'Glow' && knob('hatch', 2) === 'Age');
+    knob('sigils', 2) === 'Chaos' && knob('hatch', 2) === 'Age');
   check('Linen has its own Fabric and Light hues', T.TEXTURE_CAPS.linen.tintLabels.join('|') === 'Fabric Hue|Light Hue' && !T.TEXTURE_CAPS.linen.genericTint);
   check('Rain on Glass and Sigil Scatter use the light direction (Harsh Rain\'s glass became Rain on Glass)', T.TEXTURE_CAPS.glassrain.light === true && T.TEXTURE_CAPS.sigils.light === true && T.TEXTURE_CAPS.rainstreaks.light === false);
   const wh = src('texWhimsy.js');
@@ -512,7 +512,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('H: one worker per spare core, up to two', /const POOL_SIZE = Math\.max\(1, Math\.min\(2, \(\(typeof navigator !== 'undefined' && navigator\.hardwareConcurrency\) \|\| 2\) - 1\)\);/.test(svc) && /pool = Array\.from\(\{ length: POOL_SIZE \}, spawn\);/.test(svc));
   check('I: a new wish starts at once on a free worker; nothing is killed (a cold worker was measured slower); the picture never steps back', /if\(running\) inflight\.delete\(slot\);/.test(svc) && !/terminate\(\);\s*abandoned/.test(svc) && /if\(id > \(shownSeq\.get\(f\.slot\) \|\| 0\)\)/.test(svc));
   check('the service starts no timers of its own (nothing to keep Node alive)', !/setInterval\(/.test(svc));
-  check('E: Deep Field\'s nebula and Sleep Haze sample their smooth fields on a lattice', /const NEB = smoothField\(workW, workH, 3,/.test(src('texWhimsy.js')) && /const Nf=smoothField\(ww,wh,3,/.test(src('texWhimsy.js')));
+  check('E: Deep Field\'s nebula and Sleep Haze sample their smooth fields on a lattice', /const NEB = smoothField\(workW, workH, 3,/.test(src('texWhimsy.js')) && /const haze=smoothField\(ww,wh,4,/.test(src('texWhimsy.js')));
   check('textures that draw web-font text stay on the page', /const ON_PAGE = new Set\(\['summoning', 'cards'\]\);/.test(svc));
   check('the page and the worker share one cache key', /export function textureKeyFor\(type, w, h, opts = \{\}\)/.test(src('textureGenerators.js')));
   check('the worker block is in the head, before the page script asks for it', /html\.replace\('<\/head>', `<script type="text\/js-worker"/.test(src('build.mjs')));
@@ -671,6 +671,56 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('Fractured Glaze is lit glaze over a body: crazing at two scales, blisters, chips, peeling; an Enameling knob (Unbroken · Bubbled · Chipped · Peeling)',
     T.TEXTURE_CAPS.crackedglaze.light === true && T.paramsFor('crackedglaze')[2].names.join() === 'Unbroken,Bubbled,Chipped,Peeling'
     && /const primary = net\(cs\), secondary = net\(fineCs\);/.test(ch) && /const L = lightHeights\(H, ww, wh, \{ light, relief: 1, gloss: 0\.85/.test(ch));
+}
+
+// ---- the archive: folders listed, permissions set ----
+{
+  const b = src('build.mjs');
+  check('the release zip lists every folder as an entry of its own (simple unzippers show only what is listed)',
+    /const entries = \[\.\.\.dirs, \.\.\.files\]/.test(b) && /end\.writeUInt16LE\(entries\.length, 8\)/.test(b));
+  check('…and records Unix permissions (755 folders, 644 files)', /isDir \? 0o040755 : 0o100644/.test(b));
+}
+
+// ---- Linen's details are lit heights; sparse lighting is exact ----
+{
+  const C = await import('../texCore.js');
+  const ww = 300, wh = 220, H = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const d = Math.hypot(x - 90, y - 70)/22; if(d < 1) H[y*ww + x] = 12*Math.sqrt(1 - d*d); }
+  for(let x = 0; x < ww; x++) for(let y = 150; y < 156; y++) H[y*ww + x] = -1.2;
+  let worst = 0, fewer = true;
+  for(const light of [0, 90, 135, 225, 315]){
+    const o = { light, gloss: 0.7, shadow: 0.7, ao: 0.45, ambient: 0.4 }, A = C.lightHeights(H, ww, wh, o), B = C.lightSparse(H, ww, wh, o, 32);
+    for(let i = 0; i < ww*wh; i++) worst = Math.max(worst, Math.abs(A.light[i] - B.light[i]), Math.abs(A.spec[i] - B.spec[i]));
+    if(B.lit >= B.of) fewer = false;
+  }
+  check('lightSparse lights only the tiles near a detail, and matches lightHeights exactly', worst === 0 && fewer);
+  const t = src('texTouch.js'), lin = t.slice(t.indexOf('export function genLinenTooth('), t.indexOf('\n}\n', t.indexOf('export function genLinenTooth(')));
+  check('Linen: seams, stitching, rivets and buttons are heights lit by the engine (shadows fall across the weave)',
+    /const Ls=lightSparse\(H, ww, wh, \{ light, relief:1, gloss:0\.72, shadow:0\.7/.test(lin) && !/ctx\.(arc|stroke|fill)\(/.test(lin));
+}
+
+// ---- Sigil Scatter: relief from the light; Chaos is the hand ----
+{
+  const t = src('texChaos.js'), sg = t.slice(t.indexOf('export function genSigils('), t.indexOf('\n}\n', t.indexOf('export function genSigils(')));
+  check('Sigil Scatter: dark sigils are CUT (a V-groove), light ones RAISED, lit by the engine',
+    /depthOf\(cut\.getImageData\(0,0,ww,wh\)\.data, -1\);/.test(sg) && /depthOf\(up\.getImageData\(0,0,ww,wh\)\.data, 1\);/.test(sg)
+    && /const L=lightSparse\(H, ww, wh, \{ light, relief:1, gloss:0\.3, shadow:0\.6/.test(sg) && !/translate\(-lx/.test(sg));
+  check('Sigil Scatter: Chaos at 0 is a steady hand (no tremor, no scratches)',
+    /const wander = \(r\*0\.04 \+ nib\*0\.25\)\*Math\.pow\(chaos, 1\.5\);/.test(sg) && /if\(chaos>0\.3 && Math\.random\(\)</.test(sg) && /n=amp>0\?48:16, tr=amp>0\?tremor\(\):null/.test(sg));
+}
+
+// ---- Group A: Pixie Dust's Chaos, Waking Grain's kinds, Crystal Leaf ----
+{
+  const T = await import('../textureGenerators.js');
+  const knobs = t => T.paramsFor(t).map(d => d.label).join('|');
+  check('Pixie Dust has Chaos (trails → scattered → bursts); 50 draws exactly as before (fingerprints)',
+    knobs('magicparticles') === 'Sparkle Size|Sparkle Count|Chaos' && T.paramsFor('magicparticles')[2].def === 50);
+  check('Waking Grain has Grain: Silver, Film (the original, the default), Paper, Digital',
+    knobs('grain') === 'Grain Size|Contrast|Grain' && T.paramsFor('grain')[2].names.join() === 'Silver,Film,Paper,Digital' && T.paramsFor('grain')[2].def === 33);
+  const t = src('texTouch.js'), cl = t.slice(t.indexOf('export function genCrystalLeaf('));
+  check('Crystal Leaf: each grain a tilted facet (a normal map), dendrites and terraces as lit heights',
+    knobs('crystalleaf') === 'Crystal Size|Dendrites|Terraces' && T.TEXTURE_CAPS.crystalleaf.light === true
+    && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.9, shadow:0\.6, ao:0\.35, ambient:0\.3, normals:Nm \}\);/.test(cl));
 }
 
 console.log();

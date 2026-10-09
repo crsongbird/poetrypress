@@ -152,6 +152,12 @@ if(process.argv.includes('--zip')){
   };
   walk('.');
   files.sort();
+  // Every folder gets an entry of its own ("dist/", "test/fixtures/"…), before
+  // its files. Tools that infer folders from paths don't need them, but simpler
+  // unzippers (many phone file managers) show only what is listed — without
+  // them, the archive looked like loose top-level files.
+  const dirs = [...new Set(files.flatMap(f => { const parts = f.split('/').slice(0, -1); return parts.map((_, i) => parts.slice(0, i + 1).join('/') + '/'); }))].sort();
+  const entries = [...dirs, ...files].sort((a, b) => a.localeCompare(b));
 
   // CRC-32, for Node versions without zlib.crc32
   const table = new Uint32Array(256).map((_, n) => { let c = n; for(let k=0;k<8;k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -163,9 +169,10 @@ if(process.argv.includes('--zip')){
   const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
   const parts = [], central = [];
   let offset = 0;
-  for(const path of files){
-    const data = rf(path), packed = zlib.deflateRawSync(data, { level: 9 });
-    const useDeflate = packed.length < data.length;
+  for(const path of entries){
+    const isDir = path.endsWith('/');
+    const data = isDir ? Buffer.alloc(0) : rf(path), packed = isDir ? data : zlib.deflateRawSync(data, { level: 9 });
+    const useDeflate = !isDir && packed.length < data.length;
     const body = useDeflate ? packed : data, name = Buffer.from(path, 'utf8'), crc = crc32(data);
     const local = Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0x0800, 6);
@@ -174,21 +181,25 @@ if(process.argv.includes('--zip')){
     local.writeUInt16LE(name.length, 26); local.writeUInt16LE(0, 28);
     parts.push(local, name, body);
     const cen = Buffer.alloc(46);
-    cen.writeUInt32LE(0x02014b50, 0); cen.writeUInt16LE(20, 4); cen.writeUInt16LE(20, 6); cen.writeUInt16LE(0x0800, 8);
+    // made by Unix (3), with real permissions: 755 folders, 644 files (and the
+    // MS-DOS directory bit on folders, for tools that read only that)
+    cen.writeUInt32LE(0x02014b50, 0); cen.writeUInt16LE((3 << 8) | 20, 4); cen.writeUInt16LE(20, 6); cen.writeUInt16LE(0x0800, 8);
     cen.writeUInt16LE(useDeflate ? 8 : 0, 10); cen.writeUInt16LE(dosTime, 12); cen.writeUInt16LE(dosDate, 14);
     cen.writeUInt32LE(crc, 16); cen.writeUInt32LE(body.length, 20); cen.writeUInt32LE(data.length, 24);
-    cen.writeUInt16LE(name.length, 28); cen.writeUInt32LE(offset, 42);
+    cen.writeUInt16LE(name.length, 28);
+    cen.writeUInt32LE((((isDir ? 0o040755 : 0o100644) << 16) | (isDir ? 0x10 : 0)) >>> 0, 38);
+    cen.writeUInt32LE(offset, 42);
     central.push(cen, name);
     offset += 30 + name.length + body.length;
   }
   const cenBuf = Buffer.concat(central);
   const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
   end.writeUInt32LE(cenBuf.length, 12); end.writeUInt32LE(offset, 16);
   md('release', { recursive: true });
   const stamp = now.toISOString().slice(0, 10);
   const out = `release/unfixable-vellum-${stamp}.zip`;
   const zip = Buffer.concat([...parts, cenBuf, end]);
   wf(out, zip);
-  console.log(`archived ${files.length} files -> ${out} (${(zip.length/1024).toFixed(0)}kb)`);
+  console.log(`archived ${files.length} files in ${dirs.length} folders -> ${out} (${(zip.length/1024).toFixed(0)}kb)`);
 }

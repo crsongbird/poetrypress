@@ -309,7 +309,7 @@ export function lightHeights(H, ww, wh, opts = {}){
   const rise = lxy > 1e-6 ? Lz/lxy : 1e9;                 // how fast a ray toward the light climbs, per pixel
   // march as far as the tallest height can throw a shadow at this elevation
   let hMax = 0, hMin = Infinity; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
-  const steps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
+  const steps = opts.marchSteps || Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);   // (lightSparse passes the whole field's)
   // on the GPU when it's there (the same maths, per pixel, at once)
   if(GPU_LIGHT && ww*wh >= 4096){
     const g = gpuLightHeights(H, ww, wh, { Lx, Ly, Lz, hx, hy, hz, hl, shininess, specK, relief, shadow, ao, ambient, rise,
@@ -362,6 +362,71 @@ export function lightHeights(H, ww, wh, opts = {}){
   // flat: the light on open, flat ground — what "in shadow" is measured against
   const flat = ambient + (1 - ambient)*Lz;
   return components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+}
+
+/**
+ * lightHeights for heights that are mostly FLAT (zero): a few details on a
+ * wide ground — seams, buttons and rivets on cloth. Only the tiles near a
+ * detail are lit, each with a margin as wide as the longest shadow plus the
+ * occlusion box, so nothing outside can reach in; the rest is open flat
+ * ground and gets flat ground's light and highlight without any work.
+ * Returns { light, spec, flat, lit } — `lit` counts the tiles that were lit.
+ */
+export function lightSparse(H, ww, wh, opts = {}, T = 64){
+  const { light = 315, relief = 1 } = opts;
+  const { lx, ly } = lightVec(light), tilt = Math.min(1, Math.hypot(lx, ly));
+  const elev = (90 - tilt*78) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it
+  let hMax = 0, hMin = 0; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
+  const ground = lightHeights(new Float32Array(1), 1, 1, { ...opts, shadow: 0, ao: 0, normals: null });
+  const out = new Float32Array(ww*wh).fill(ground.flat), spec = new Float32Array(ww*wh).fill(ground.spec[0]);
+  // shadows fall AWAY from the light, so only that side needs the shadow's
+  // length; every side needs the occlusion box (and a pixel for the slope)
+  const Ms = tilt > 1e-6 && lxy > 0.02 && (opts.shadow ?? 0.6) > 0 ? Math.min(170, Math.ceil(((hMax - hMin)*relief)/rise) + 3) : 0, m0 = 6;
+  const sX = tilt > 1e-6 ? -lx/tilt : 0, sY = tilt > 1e-6 ? -ly/tilt : 0;        // one step toward the light
+  // a detail's shadow reaches this far from it, each way (left, right, up, down)…
+  const fl = Math.ceil(Math.max(0, sX)*Ms) + m0, fr = Math.ceil(Math.max(0, -sX)*Ms) + m0;
+  const fu = Math.ceil(Math.max(0, sY)*Ms) + m0, fd = Math.ceil(Math.max(0, -sY)*Ms) + m0;
+  const M = Math.max(fl, fr, fu, fd);
+  // every piece marches as the whole field would (the same steps, the same stride)
+  const marchSteps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
+  // where the details are: each tile's box around its non-flat points
+  const tx = Math.ceil(ww/T), ty = Math.ceil(wh/T), box = new Int32Array(tx*ty*4).fill(-1);
+  for(let y = 0; y < wh; y++){ const r = y*ww, b = ((y/T)|0)*tx;
+    for(let x = 0; x < ww; x++) if(H[r + x] !== 0){ const q = (b + ((x/T)|0))*4;
+      if(box[q] < 0){ box[q] = x; box[q+1] = y; box[q+2] = x; box[q+3] = y; }
+      else { if(x < box[q]) box[q] = x; if(x > box[q+2]) box[q+2] = x; box[q+3] = y; } } }
+  // a tile needs lighting if a detail lies within a shadow's reach of it
+  const reach = Math.ceil(M/T), need = new Uint8Array(tx*ty);
+  for(let j = 0; j < ty; j++) for(let i = 0; i < tx; i++){ const q = (j*tx + i)*4; if(box[q] < 0) continue;
+    for(let b = Math.max(0, j - reach); b <= Math.min(ty - 1, j + reach); b++)
+      for(let a = Math.max(0, i - reach); a <= Math.min(tx - 1, i + reach); a++){
+        if(box[q] - fl < (a + 1)*T && box[q+2] + fr >= a*T && box[q+1] - fu < (b + 1)*T && box[q+3] + fd >= b*T) need[b*tx + a] = 1; } }
+  // runs of needed tiles along each row; the same run on the rows below joins
+  // it, so a seam becomes ONE long piece rather than a stack of margins
+  const rects = [], open = new Map();
+  for(let j = 0; j < ty; j++){
+    const seen = new Set();
+    for(let i = 0; i < tx; i++){
+      if(!need[j*tx + i]) continue;
+      let e = i; while(e + 1 < tx && need[j*tx + e + 1]) e++;
+      const key = i + ',' + e, r = open.get(key);
+      if(r && r.j1 === j - 1) r.j1 = j; else { const n = { i, e, j0: j, j1: j }; rects.push(n); open.set(key, n); }
+      seen.add(key); i = e;
+    }
+    for(const k of [...open.keys()]) if(!seen.has(k)) open.delete(k);
+  }
+  let lit = 0;
+  for(const { i, e, j0, j1 } of rects){
+    const x0 = i*T, y0 = j0*T, x1 = Math.min(ww, (e + 1)*T), y1 = Math.min(wh, (j1 + 1)*T);
+    // …and a point needs the heights between it and the light: the mirror image
+    const ex0 = Math.max(0, x0 - fr), ey0 = Math.max(0, y0 - fd), ex1 = Math.min(ww, x1 + fl), ey1 = Math.min(wh, y1 + fu);
+    const ew = ex1 - ex0, eh = ey1 - ey0, E = new Float32Array(ew*eh);
+    for(let y = 0; y < eh; y++) E.set(H.subarray((ey0 + y)*ww + ex0, (ey0 + y)*ww + ex1), y*ew);
+    const L = lightHeights(E, ew, eh, { ...opts, marchSteps }); lit += (e - i + 1)*(j1 - j0 + 1);
+    for(let y = y0; y < y1; y++){ const s = (y - ey0)*ew - ex0, r = y*ww;
+      out.set(L.light.subarray(s + x0, s + x1), r + x0); spec.set(L.spec.subarray(s + x0, s + x1), r + x0); }
+  }
+  return { light: out, spec, flat: ground.flat, lit, of: tx*ty };
 }
 
 

@@ -438,7 +438,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
     const types = ['clouds','bokeh','astral','magicparticles','embers','snow','grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks','sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate','aurora','hatch','cards',
-      'linen','coldpress','foxing','foldghost','cupring','wax','glassrain','dunes','kintsugi','moss'];
+      'linen','coldpress','crystalleaf','foxing','foldghost','cupring','wax','glassrain','dunes','kintsugi','moss'];
     $('textureType').value = types[Math.floor(Math.random()*types.length)];
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;

@@ -199,6 +199,7 @@ export const UI_STRINGS = {
   'option.cartomancy':                         "Cartomancy",
   'option.linen_tooth':                        "Linen Tooth",
   'option.cold_press':                         "Cold Press",
+  'option.crystal_leaf':                       "Crystal Leaf",
   'option.foxing':                             "Foxing",
   'option.fold_ghost':                         "Fold Ghost",
   'option.cup_ring':                           "Cup Ring",

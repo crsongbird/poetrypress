@@ -3,10 +3,10 @@
  *
  * Contact. Relief rather than image, so these take a light direction and
  * blend through soft-light. Linen, cold press, foxing, fold ghost, cup
- * ring, poured wax, raked substrate.
+ * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, smoothField, litK, litS } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS } from './texCore.js';
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
 //   pitch   thread spacing (of the page)   tw     thread width (of the pitch)
@@ -91,86 +91,179 @@ export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form){
     d[k+2]=Math.max(0,Math.min(255, F.b*shade*(1+(Lc.b/255-1)*0.3) + Lc.b*spec));
     d[k+3]=255;
   }
-  sctx.putImageData(img,0,0);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
-  const unit=Math.min(w,h), tone=(o,a)=>`rgba(${o.r|0},${o.g|0},${o.b|0},${a})`;
-  const dark={r:F.r*0.3,g:F.g*0.3,b:F.b*0.3};
+  // ── DETAILS are real things on the cloth: HEIGHTS, lit by the lighting
+  // engine, so a button or a rivet throws its shadow across the weave, a seam
+  // is a ditch beside the raised fold of cloth sewn under it, and stitches
+  // stand proud of the cloth. They are made on the weave's own fine grid and
+  // composited over it; far from a detail, the weave is untouched.
+  const N=ww*wh, H=new Float32Array(N);
+  const cov=new Float32Array(N), alb=new Float32Array(N*3);   // coverage, and the detail's colour (premultiplied)
+  const shine=new Float32Array(N), metal=new Uint8Array(N);  // how much highlight it takes; metal tints it
+  const over=(i,a,c,s,m)=>{ if(a<=0) return; const o=1-a, q=i*3;
+    alb[q]=alb[q]*o+c.r*a; alb[q+1]=alb[q+1]*o+c.g*a; alb[q+2]=alb[q+2]*o+c.b*a;
+    cov[i]=cov[i]*o+a; shine[i]=shine[i]*o+s*a; if(m && a>0.5) metal[i]=1; else if(a>0.5) metal[i]=0; };
+  const clamp01=v=>v<0?0:v>1?1:v, smooth=(a,b,v)=>{ const t=clamp01((v-a)/(b-a)); return t*t*(3-2*t); };
+  const g=unitW;                                  // the grid's own unit (its shorter side)
   // thread for stitching: pale, leaning toward the light's colour
   const thread={r:Math.min(255,F.r*0.45+Lc.r*0.6), g:Math.min(255,F.g*0.45+Lc.g*0.6), b:Math.min(255,F.b*0.45+Lc.b*0.5)};
   // DETAILS live on SEAMS, as on real clothes: stitching runs along them,
-  // rivets are set into them; buttons sit between.
-  // the seam stitch for this cloth, chosen by its seed
+  // rivets are set into them, buttons sit on a placket.
   const SEAM_STITCHES=['running','zigzag','cross','feather','chain','blanket','wave','diamond'];
   const seamStitch=SEAM_STITCHES[Math.floor(Math.random()*SEAM_STITCHES.length)];
   const seams=[]; const ns=2+Math.floor(Math.random()*2);
   for(let k=0;k<ns;k++) seams.push({ vert:Math.random()<0.5, at:(0.14+Math.random()*0.72) });
-  const seamOn = Math.max(dS, dR, dL*0.4);
+  const seamOn = Math.max(dS, dR, dL*0.4, dB*0.6);
+  const bR=g*0.026*zoom;                           // the placket's buttons: one size, as on a real shirt
+  seams.forEach((sm,n)=>{
+    sm.side=Math.random()<0.5?-1:1; sm.ph=Math.random()*6.283;
+    sm.buttons = n===0 && dB>0.02;
+    sm.band = sm.buttons ? bR*2.7 : g*0.022*zoom;   // the cloth folded under: a seam allowance, or a placket
+  });
+  const ditch=Math.max(1.2, g*0.0035*zoom), lam=g*0.016*zoom, tw=Math.max(1.6, cpx(7)*zoom/div);
   for(const sm of seams){
-    const at=sm.at*(sm.vert?w:h), len=sm.vert?h:w, gw=unit*0.012*zoom;
-    const P=(t,o)=> sm.vert ? [at+o, t] : [t, at+o];
-    // the seam pressed into the cloth: a soft groove, a lit ridge beside it
-    if(seamOn>0.02){
-      ctx.lineCap='butt';
-      ctx.strokeStyle=tone(dark,0.22*seamOn); ctx.lineWidth=gw;
-      ctx.beginPath(); ctx.moveTo(...P(0,0)); ctx.lineTo(...P(len,0)); ctx.stroke();
-      const ox=(sm.vert?lx:ly)*gw*0.7;
-      ctx.strokeStyle=`rgba(255,255,255,${0.10*seamOn})`; ctx.lineWidth=gw*0.5;
-      ctx.beginPath(); ctx.moveTo(...P(0,-ox)); ctx.lineTo(...P(len,-ox)); ctx.stroke();
-    }
-    // stitching: raised thread, lit on one side and shadowed on the other;
-    // a second row joins it as the details grow
-    if(dS>0.02 || dR>0.02){
-      const sw=Math.max(dS, dR*0.8), rows=(amt>0.25?2:1), tw=cpx(5)*zoom;
-      for(let r=0;r<rows;r++){
-        const off=(rows===2 ? (r?1:-1)*gw*1.1 : gw*0.9);
-        const [ax,ay]=P(0,off), [bx,by]=P(len,off);
-        // the seam's stitch, chosen by the texture seed (stitches.js), drawn as
-        // raised thread: a shadow, the thread, a highlight
-        const sp={ period:unit*0.02*zoom, amp:unit*0.006*zoom, width:tw, side:(r?-1:1) };
-        drawStitch(ctx, pathFromPoints([[ax-lx*tw*0.45,ay-ly*tw*0.45],[bx-lx*tw*0.45,by-ly*tw*0.45]], false), seamStitch, { ...sp, color:`rgba(0,0,0,${0.35*sw})` });
-        drawStitch(ctx, pathFromPoints([[ax,ay],[bx,by]], false), seamStitch, { ...sp, color:tone(thread,0.95*sw) });
-        drawStitch(ctx, pathFromPoints([[ax+lx*tw*0.18,ay+ly*tw*0.18],[bx+lx*tw*0.18,by+ly*tw*0.18]], false), seamStitch, { ...sp, width:tw*0.35, color:`rgba(255,255,255,${0.3*sw})` });
-      }
-    }
-    // rivets: copper, set into the seam, a ring, a glint, a shadow
-    if(dR>0.02){
-      const step=unit*0.07*zoom, r=unit*0.0085*zoom;
-      for(let t=step*0.6;t<len;t+=step){
-        const [x,y]=P(t,0);
-        ctx.globalAlpha=dR;
-        ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.arc(x-lx*r*0.35,y-ly*r*0.35,r*1.15,0,Math.PI*2); ctx.fill();
-        const g=ctx.createRadialGradient(x+lx*r*0.5,y+ly*r*0.5,r*0.05,x,y,r);
-        g.addColorStop(0,'rgb(255,226,190)'); g.addColorStop(0.3,'rgb(205,128,72)'); g.addColorStop(1,'rgb(96,48,22)');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='rgba(60,28,10,0.6)'; ctx.lineWidth=r*0.14; ctx.beginPath(); ctx.arc(x,y,r*0.62,0,Math.PI*2); ctx.stroke();
-        ctx.globalAlpha=1;
+    if(seamOn<=0.02) break;
+    const atG=sm.at*(sm.vert?ww:wh), len=sm.vert?wh:ww, band=sm.band, pkW=g*0.013*zoom, reachD=band*1.2+pkW*3;
+    // two layers under the fold stand ~a thread's thickness higher; the
+    // seam line itself is pulled down into a ditch; the cloth beside it puckers
+    // in chevrons where the stitching gathers it
+    const fold=1.7*seamOn, dig=1.3*seamOn, pk=0.55*seamOn*(0.5+1.4*dS);
+    const lo=Math.max(0,Math.floor(atG-reachD)), hi=Math.min(sm.vert?ww:wh, Math.ceil(atG+reachD));
+    for(let c=lo;c<hi;c++){
+      const dd=(c-atG)*sm.side, ad=Math.abs(dd);
+      const base = dd>0 ? fold*smooth(0,ditch*2.2,dd)*(1-smooth(band*0.82,band*1.12,dd))
+                        : fold*0.3*smooth(0,ditch*2.2,-dd)*Math.exp(dd/(band*0.5))*(1-smooth(reachD*0.7,reachD,ad));
+      const dip=-dig*Math.exp(-(dd/ditch)*(dd/ditch)), env=Math.exp(-ad/pkW)*(1-smooth(reachD*0.7,reachD,ad));
+      for(let t=0;t<len;t++){
+        const i = sm.vert ? t*ww+c : c*ww+t;
+        const wave=Math.sin(6.2832*(t+0.55*ad)/lam + 1.6*Math.sin(t/(lam*3.7)+sm.ph));
+        H[i]+=base+dip+pk*wave*env*(0.6+0.4*Math.sin(t/(lam*9)+sm.ph*2));
       }
     }
   }
-  // buttons: a bevelled rim, a dished centre, thread through the holes
-  if(dB>0.02){
-    const n=Math.round(3+Math.random()*4);
-    for(let k=0;k<n;k++){
-      const x=Math.random()*w, y=Math.random()*h, r=unit*(0.024+Math.random()*0.014)*zoom;
-      ctx.globalAlpha=dB;
-      const sh=ctx.createRadialGradient(x-lx*r*0.25,y-ly*r*0.25,r*0.6,x-lx*r*0.25,y-ly*r*0.25,r*1.35);
-      sh.addColorStop(0,'rgba(0,0,0,0.5)'); sh.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(x-lx*r*0.25,y-ly*r*0.25,r*1.35,0,Math.PI*2); ctx.fill();
-      const body={r:F.r*0.8+30,g:F.g*0.8+28,b:F.b*0.8+24};
-      const rim=ctx.createLinearGradient(x+lx*r,y+ly*r,x-lx*r,y-ly*r);
-      rim.addColorStop(0,tone({r:Math.min(255,body.r*1.45),g:Math.min(255,body.g*1.45),b:Math.min(255,body.b*1.45)},1)); rim.addColorStop(1,tone({r:body.r*0.55,g:body.g*0.55,b:body.b*0.55},1));
-      ctx.fillStyle=rim; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-      const dish=ctx.createLinearGradient(x-lx*r,y-ly*r,x+lx*r,y+ly*r);       // the centre dips: lit on the far side
-      dish.addColorStop(0,tone({r:Math.min(255,body.r*1.25),g:Math.min(255,body.g*1.25),b:Math.min(255,body.b*1.25)},1)); dish.addColorStop(1,tone({r:body.r*0.75,g:body.g*0.75,b:body.b*0.75},1));
-      ctx.fillStyle=dish; ctx.beginPath(); ctx.arc(x,y,r*0.74,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle=tone(dark,0.9);
-      for(const [hx,hy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ ctx.beginPath(); ctx.arc(x+hx*r*0.24,y+hy*r*0.24,r*0.09,0,Math.PI*2); ctx.fill(); }
-      ctx.strokeStyle=tone(thread,0.95); ctx.lineWidth=r*0.1; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x-r*0.24,y-r*0.24); ctx.lineTo(x+r*0.24,y+r*0.24); ctx.moveTo(x+r*0.24,y-r*0.24); ctx.lineTo(x-r*0.24,y+r*0.24); ctx.stroke();
-      ctx.globalAlpha=1;
+  // stitching: raised thread, drawn by the seam's stitch (stitches.js) as a
+  // mask, then rounded into a thread's profile; a second row joins it as the
+  // details grow (twin-needle topstitching, as on jeans)
+  const sw=Math.max(dS, dR*0.8, dB*0.7);
+  if(seamOn>0.02 && sw>0.02){
+    const mk=document.createElement('canvas'); mk.width=ww; mk.height=wh;
+    const mx=mk.getContext('2d', CPU);
+    for(const sm of seams){
+      const atG=sm.at*(sm.vert?ww:wh), len=sm.vert?wh:ww;
+      const P=(t,o)=> sm.vert ? [atG+o*sm.side, t] : [t, atG+o*sm.side];
+      const offs = sm.buttons ? [sm.band*0.12, sm.band*0.9] : (amt>0.25 ? [sm.band*0.24, sm.band*0.66] : [sm.band*0.36]);
+      offs.forEach((off,r)=>{
+        const sp={ period:g*0.02*zoom, amp:g*0.006*zoom, width:tw, side:(r?-1:1) };
+        drawStitch(mx, pathFromPoints([P(0,off),P(len,off)], false), sm.buttons?'running':seamStitch, { ...sp, color:'#fff' });
+      });
+    }
+    const A=mx.getImageData(0,0,ww,wh).data, m=new Float32Array(N);
+    for(let i=0;i<N;i++) m[i]=A[i*4+3]/255;
+    // round it: two box blurs make the cross-section a thread's soft dome
+    const rb=Math.max(1,Math.round(tw*0.3)), tmp=new Float32Array(N), sm2=new Float32Array(N);
+    for(let pass=0;pass<2;pass++){
+      const src=pass?sm2:m;
+      for(let y=0;y<wh;y++){ let s=0; const r=y*ww; for(let x=-rb;x<=rb;x++) s+=src[r+Math.min(ww-1,Math.max(0,x))];
+        for(let x=0;x<ww;x++){ tmp[r+x]=s/(2*rb+1); s+=src[r+Math.min(ww-1,x+rb+1)]-src[r+Math.max(0,x-rb)]; } }
+      for(let x=0;x<ww;x++){ let s=0; for(let y=-rb;y<=rb;y++) s+=tmp[Math.min(wh-1,Math.max(0,y))*ww+x];
+        for(let y=0;y<wh;y++){ sm2[y*ww+x]=s/(2*rb+1); s+=tmp[Math.min(wh-1,y+rb+1)*ww+x]-tmp[Math.max(0,y-rb)*ww+x]; } }
+    }
+    const thH=tw*0.6*sw, per=tw*0.9;
+    for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+      const i=y*ww+x, a=m[i]; if(a<=0.01) continue;
+      H[i]+=sm2[i]*thH;
+      // the ply's twist: fine diagonal stripes along every thread
+      const tf=0.84+0.16*Math.sin((x+y)*4.443/per);
+      over(i, a*sw, {r:thread.r*tf, g:thread.g*tf, b:thread.b*tf}, 0.25, false);
     }
   }
+  // rivets: copper caps set into the seams, domed, stamped with a ring, the
+  // cloth pulled up around them; tarnished toward the rim
+  if(dR>0.02 && seamOn>0.02){
+    const r=g*0.0095*zoom, rH=r*0.45*dR, step=g*0.075*zoom, R2=r*2.2;
+    for(const sm of seams){
+      if(sm.buttons) continue;
+      const atG=sm.at*(sm.vert?ww:wh), len=sm.vert?wh:ww, tarnish=0.25+Math.random()*0.5;
+      for(let t=step*(0.4+Math.random()*0.3);t<len;t+=step){
+        const cx= sm.vert ? atG+sm.band*0.45*sm.side : t, cy= sm.vert ? t : atG+sm.band*0.45*sm.side;
+        const tn=tarnish*(0.6+Math.random()*0.8);
+        for(let y=Math.max(0,Math.floor(cy-R2));y<Math.min(wh,Math.ceil(cy+R2));y++) for(let x=Math.max(0,Math.floor(cx-R2));x<Math.min(ww,Math.ceil(cx+R2));x++){
+          const i=y*ww+x, rho=Math.hypot(x-cx,y-cy), e=rho/r;
+          if(e<1.02){
+            const dome=rH*(0.55+0.45*Math.sqrt(Math.max(0,1-e*e))) - rH*0.14*Math.exp(-(((e-0.62)/0.07)**2));
+            const a=clamp01(r-rho+0.5); H[i]=H[i]*(1-a)+(H[i]+dome)*a;
+            const rim=e*e*tn, warm=0.78+0.22*(1-e);
+            over(i, a, {r:(190*warm)*(1-rim)+88*rim, g:(112*warm)*(1-rim)+62*rim, b:(60*warm)*(1-rim)+40*rim}, 1, true);
+          } else if(e<2.2){
+            H[i]+= rH*0.22*Math.max(0,1-(e-1)/0.4) - rH*0.1*Math.sin(Math.PI*clamp01((e-1.4)/0.8));
+          }
+        }
+      }
+    }
+  }
+  // buttons, down a placket: a rounded rim, a dished centre, four holes, and
+  // thread through them crossed or in pairs — each the same, as on a shirt.
+  // Their material is chosen by the seed: horn, shell, wood, or dyed to match.
+  if(dB>0.02 && seamOn>0.02){
+    const sm=seams[0], atG=sm.at*(sm.vert?ww:wh), len=sm.vert?wh:ww, step=g*0.15*zoom;
+    const MATS=[ {c:{r:72,g:50,b:34}, s:0.75, grain:'mottle'}, {c:{r:232,g:226,b:214}, s:0.85, grain:'nacre'},
+                 {c:{r:150,g:104,b:64}, s:0.25, grain:'rings'}, {c:{r:Math.min(255,F.r*0.85+26),g:Math.min(255,F.g*0.85+24),b:Math.min(255,F.b*0.85+22)}, s:0.55, grain:'none'} ];
+    const mat=MATS[Math.floor(Math.random()*MATS.length)], crossed=Math.random()<0.5;
+    const bH=bR*0.3*dB, hr=bR*0.085, ho=bR*0.22, thw=bR*0.1;
+    const holes=[[-ho,-ho],[ho,-ho],[-ho,ho],[ho,ho]];
+    const strands = crossed ? [[holes[0],holes[3]],[holes[1],holes[2]]] : [[holes[0],holes[1]],[holes[2],holes[3]]];
+    const segD=(px,py,[ax,ay],[bx,by])=>{ const vx=bx-ax, vy=by-ay, t=clamp01(((px-ax)*vx+(py-ay)*vy)/(vx*vx+vy*vy)); return Math.hypot(px-ax-vx*t, py-ay-vy*t); };
+    for(let t=step*(0.5+Math.random()*0.3);t<len-bR;t+=step){
+      const cx= sm.vert ? atG+sm.band*0.5*sm.side : t, cy= sm.vert ? t : atG+sm.band*0.5*sm.side, rot=Math.random()*0.5;
+      const cs=Math.cos(rot), sn=Math.sin(rot);
+      for(let y=Math.max(0,Math.floor(cy-bR-1));y<Math.min(wh,Math.ceil(cy+bR+1));y++) for(let x=Math.max(0,Math.floor(cx-bR-1));x<Math.min(ww,Math.ceil(cx+bR+1));x++){
+        const i=y*ww+x, dx=x-cx, dy=y-cy, rho=Math.hypot(dx,dy), e=rho/bR;
+        if(e>1.02) continue;
+        const a=clamp01(bR-rho+0.5);
+        let hgt = e>0.8 ? bH*(1-0.5*((e-0.8)/0.2)**2) : e>0.68 ? bH*(0.8+0.2*smooth(0.68,0.8,e)) : bH*(0.8-0.07*(1-(e/0.68)**2));
+        // its own grain
+        let k=1;
+        if(mat.grain==='mottle') k=0.82+0.3*hash(Math.floor(dx*0.18+9)*7.1+Math.floor(dy*0.18+9)*3.3+t)*(0.5+0.5*Math.sin(dx*0.07+dy*0.05+t));
+        else if(mat.grain==='rings') k=0.86+0.14*Math.sin(Math.hypot(dx+bR*0.9,dy*0.6)*0.9);
+        else if(mat.grain==='nacre') k=0.94+0.06*Math.sin(dx*0.21+Math.sin(dy*0.17)*2);
+        let col={r:mat.c.r*k, g:mat.c.g*k, b:mat.c.b*k}, s=mat.s;
+        if(mat.grain==='nacre'){ const ph=dx*0.09+dy*0.13; col={r:col.r*(0.97+0.03*Math.sin(ph)), g:col.g*(0.97+0.03*Math.sin(ph+2.1)), b:col.b*(0.97+0.03*Math.sin(ph+4.2))}; }
+        // holes go down to the cloth; thread fills them and crosses between
+        const ux=dx*cs+dy*sn, uy=-dx*sn+dy*cs;
+        let inHole=0; for(const [hx,hy] of holes) inHole=Math.max(inHole, clamp01(hr-Math.hypot(ux-hx,uy-hy)+0.5));
+        if(inHole>0){ hgt=hgt*(1-inHole)+bH*0.15*inHole; col={r:col.r*(1-inHole*0.75), g:col.g*(1-inHole*0.75), b:col.b*(1-inHole*0.75)}; }
+        let thd=Infinity; for(const s2 of strands) thd=Math.min(thd, segD(ux,uy,s2[0],s2[1]));
+        if(thd<thw*0.6){
+          const q=clamp01(1-thd/(thw*0.6)), ta=clamp01((thw*0.6-thd)+0.5);
+          hgt=Math.max(hgt, bH*0.74+Math.sqrt(q)*thw*0.6);
+          const tf=0.84+0.16*Math.sin((ux+uy)*4.443/(thw*0.9));
+          col={r:col.r*(1-ta)+thread.r*tf*ta, g:col.g*(1-ta)+thread.g*tf*ta, b:col.b*(1-ta)+thread.b*tf*ta}; s=s*(1-ta)+0.25*ta;
+        }
+        H[i]=H[i]*(1-a)+(H[i]+hgt)*a;
+        over(i, a*dB, col, s, false);
+      }
+    }
+  }
+  // light it all: shadows from every proud thing fall across the weave
+  const Ls=lightSparse(H, ww, wh, { light, relief:1, gloss:0.72, shadow:0.7, ao:0.45, ambient:0.4 });
+  const fl=Ls.flat||1, lr=(1+(Lc.r/255-1)*0.3), lg=(1+(Lc.g/255-1)*0.3), lb=(1+(Lc.b/255-1)*0.3);
+  for(let i=0;i<N;i++){
+    const kk=Ls.light[i]/fl, c=cov[i];
+    if(kk===1 && c===0) continue;
+    const k4=i*4, q=i*3, sp=Ls.spec[i]*shine[i];
+    let r=d[k4]*(1-c)*kk, gg=d[k4+1]*(1-c)*kk, b=d[k4+2]*(1-c)*kk;
+    if(c>0){
+      const mk=metal[i]?0.55:1;
+      r+=alb[q]*kk*mk*lr; gg+=alb[q+1]*kk*mk*lg; b+=alb[q+2]*kk*mk*lb;
+      if(sp>0){
+        if(metal[i]){ const ic=1/Math.max(1e-3,c); r+=sp*Math.min(255,alb[q]*ic*1.5); gg+=sp*Math.min(255,alb[q+1]*ic*1.5); b+=sp*Math.min(255,alb[q+2]*ic*1.5); }
+        else { r+=sp*Lc.r*0.8; gg+=sp*Lc.g*0.8; b+=sp*Lc.b*0.8; }
+      }
+    }
+    d[k4]=r>255?255:r; d[k4+1]=gg>255?255:gg; d[k4+2]=b>255?255:b;
+  }
+  sctx.putImageData(img,0,0);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
   return c;
 }
 
@@ -763,4 +856,89 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3){
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     return [clamp255(sc[0]*(1-m) + mc[0]*m), clamp255(sc[1]*(1-m) + mc[1]*m), clamp255(sc[2]*(1-m) + mc[2]*m)];
   });
+}
+
+/**
+ * Crystal Leaf: metal that crystallised as it cooled — the spangle on
+ * galvanised zinc, the stepped hoppers of bismuth. Each GRAIN is one crystal,
+ * and its face is tilted its own way (a normal map): turn the light and the
+ * grains flash and darken one by one, which is what makes spangle look like
+ * spangle. Inside, DENDRITES grow from the nucleus in six feathered arms (zinc
+ * is hexagonal); fine grooves part the grains. TERRACES steps each crystal
+ * down into a hollow centre, as bismuth grows: square spirals of ledges that
+ * catch the light and throw small shadows. Metal Hue colours the metal.
+ */
+export function genCrystalLeaf(w,h,amt,zoom,light,tint,form){
+  amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
+  const terr=Math.max(0,Math.min(1, form==null ? 0 : form)), dend=Math.max(0,Math.min(1,amt));
+  const metal=parseHex(tint||'#C9CED6');
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  // the grains: a jittered lattice of nuclei, each with its own facet tilt and axis
+  const cs=unit*0.09*zoom, gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, G=[];
+  for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){
+    const a=Math.random()*Math.PI*2, tilt=0.08+Math.random()*0.32;
+    G.push({ x:(i-1+0.1+Math.random()*0.8)*cs, y:(j-1+0.1+Math.random()*0.8)*cs, th:Math.random()*Math.PI/3,
+      tx:Math.cos(a)*tilt, ty:Math.sin(a)*tilt, size:0.8+Math.random()*0.5 });
+  }
+  const H=new Float32Array(N), Nm=new Float32Array(N*3);
+  const bw=Math.max(0.8, unit*0.0012), aw=Math.max(0.7, unit*0.0011*zoom), bp=unit*0.008*zoom;   // groove, arm width, branch spacing
+  const step=Math.max(3, unit*0.016*zoom), shH=Math.max(0.8, step*0.22);
+  const S60=Math.sin(Math.PI/3), COT60=1/Math.tan(Math.PI/3);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const ci=Math.floor(x/cs)+1, cj=Math.floor(y/cs)+1;
+    let d1=1e18, d2=1e18, g1=null, g2=null;
+    for(let b=cj-1;b<=cj+1;b++) for(let a=ci-1;a<=ci+1;a++){
+      if(a<0||b<0||a>=gx||b>=gy) continue; const g=G[b*gx+a], dd=(x-g.x)*(x-g.x)+(y-g.y)*(y-g.y);
+      if(dd<d1){ d2=d1; g2=g1; d1=dd; g1=g; } else if(dd<d2){ d2=dd; g2=g; }
+    }
+    // distance to the boundary with the nearest neighbouring grain (the bisector)
+    const sep=g2 ? Math.hypot(g2.x-g1.x, g2.y-g1.y) : 1, edge=g2 ? (d2-d1)/(2*sep) : 1e9;
+    const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=Math.cos(g1.th), s=Math.sin(g1.th);
+    const lu=ux*c+uy*s, lv=-ux*s+uy*c;
+    let hgt=-0.9*Math.exp(-(edge/bw)*(edge/bw));                       // the groove between grains
+    // dendrites: six arms, each feathered with branches at 60°
+    if(dend>0.02){
+      const reach=cs*0.75*g1.size; let f=0;
+      for(let k=0;k<6;k++){
+        const ca=Math.cos(k*Math.PI/3), sa=Math.sin(k*Math.PI/3);
+        const al=lu*ca+lv*sa, ac=-lu*sa+lv*ca;
+        if(al<=0 || al>reach) continue;
+        const fall=1-al/reach;
+        f=Math.max(f, Math.exp(-(ac/aw)*(ac/aw))*fall);
+        // a branch leaves the arm every bp, leaning outward at 60°; shorter toward the tip
+        const aa=Math.abs(ac), bl=(reach-al)*0.45;
+        if(aa<bl){ const ph=(al-aa*COT60)/bp, fr=ph-Math.round(ph); f=Math.max(f, Math.exp(-((fr*bp/(aw*S60))**2))*fall*(1-aa/bl)*0.8); }
+      }
+      hgt+=f*1.2*dend;
+    }
+    // terraces: square ledges stepping down into a hollow centre (bismuth)
+    if(terr>0.02){
+      const r=Math.max(Math.abs(lu),Math.abs(lv))*(1+0.04*Math.sin(Math.atan2(lv,lu)*4)), q=r/step, fl=Math.floor(q), sm=q-fl;
+      hgt+=terr*shH*(fl + Math.max(0,(sm-0.82)/0.18));              // flat treads, a short riser
+    }
+    H[i]=hgt;
+    // the crystal's face is tilted: its normal, shared by the whole grain
+    const nz=1/Math.sqrt(1+g1.tx*g1.tx+g1.ty*g1.ty);
+    Nm[i*3]=g1.tx*nz; Nm[i*3+1]=g1.ty*nz; Nm[i*3+2]=nz;
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.9, shadow:0.6, ao:0.35, ambient:0.3, normals:Nm });
+  const fl=L.flat||1;
+  // metal: little diffuse, a strong highlight in its own colour; luminance kept,
+  // so a mid-grey average leaves the page's tone where it was
+  const lum=Math.max(1, 0.2126*metal.r+0.7152*metal.g+0.0722*metal.b), hr=metal.r/lum, hg=metal.g/lum, hb=metal.b/lum;
+  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
+  const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
+  for(let i=0;i<N;i++){
+    const k=L.light[i]/fl, sp=L.spec[i];
+    const v=128*(0.45+0.55*k)*1 + 150*sp;
+    const q=i*4;
+    d[q]=Math.max(0,Math.min(255, v*(0.55+0.45*hr) + 40*sp*(hr-1)));
+    d[q+1]=Math.max(0,Math.min(255, v*(0.55+0.45*hg) + 40*sp*(hg-1)));
+    d[q+2]=Math.max(0,Math.min(255, v*(0.55+0.45*hb) + 40*sp*(hb-1)));
+    d[q+3]=255;
+  }
+  sctx.putImageData(img,0,0);
+  const out=document.createElement('canvas'); out.width=w; out.height=h;
+  const octx=out.getContext('2d', CPU); octx.imageSmoothingEnabled=true; octx.drawImage(small,0,0,w,h);
+  return out;
 }

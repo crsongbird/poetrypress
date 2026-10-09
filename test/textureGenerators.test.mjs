@@ -18,7 +18,7 @@ const TEXTURE_TYPES = [
   'grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks',
   'sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate',
   'aurora','hatch','cards',
-  'linen','coldpress','foxing','foldghost','cupring','wax','whorl',
+  'linen','coldpress','crystalleaf','foxing','foldghost','cupring','wax','whorl',
 ];
 const SIZES = [[512,512],[3072,3072],[2304,4096],[64,64]];
 

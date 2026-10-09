@@ -132,9 +132,7 @@ export const PRESETS = [
   },
 
   // ---- SHARPNESS ----  off-white against blue-black, silver and gold at the edges
-  // ═══ Chaos ∆ — presets 5–8 ═══
-  // (Ruby's grouping, recorded as she gave it, 2026-10-09; by their textures
-  //  presets 5–8 lean Sharpness and 9–12 lean Chaos — to confirm, see OPEN-ISSUES)
+  // ═══ Sharpness √ — presets 5–8 ═══
   { name: "Daydream",   // surface: Facet Field (∆)
     spell: "🜇🜫🜝🜬☋⚹{{⚻}}[[🜯🜉⛤☊]]",
     bg1: "#E4E0D4",
@@ -190,9 +188,7 @@ export const PRESETS = [
   },
 
   // ---- CHAOS ----  sigils, math-noise, geometry twisting where reality thins
-  // ═══ Sharpness √ — presets 9–12 ═══
-  // (Ruby's grouping, recorded as she gave it, 2026-10-09; by their textures
-  //  presets 5–8 lean Sharpness and 9–12 lean Chaos — to confirm, see OPEN-ISSUES)
+  // ═══ Chaos ∆ — presets 9–12 ═══
   { name: "Desire",   // surface: Sigil Scatter (∆)
     spell: "{{☌🜙☋☍🝆}}[[🜭🜨🜢🜣]]🜟🜛",
     bg1: "#1A0A12", bgGradient: true, bg2: "#3D1228", bgAngle: 115,

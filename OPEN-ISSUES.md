@@ -12,27 +12,19 @@ candidates (Dream Bloom's convolution first). J (Linen at preview) waits.
 ## 1 · Light, like a game engine
 `lightHeights` (texCore) is built: a texture gives HEIGHTS; it returns them
 lit by the dial — diffuse, a specular per material, cast shadows (soft,
-longer as the light lowers; none overhead), occlusion in crevices. Dune
-Ripples, Kintsugi, Moss on Stone and Rain on Glass use it. Next: bring the
-other lit textures onto it (Linen, Sigil relief). Facet Field, Cup Ring, Fold Ghost, Poured Wax, Cold Press and
-Fractured Glaze are on it
-(Cold Press is the first to use a normal map: fibres and undulation),
-and it now takes detail NORMAL MAPS and MATERIAL hues (Highlight, Shade);
-next: give textures normal-map detail where heights are awkward (paper
-tooth, weave, crazing), and a per-material gloss where one gloss won't do. and a texture
-can carry its own default light (Facet Field starts overhead). Watch the cost on phones:
-these take ~0.2–0.6 s at preview size and up to ~2 s at export here,
-in the worker (the page stays responsive).
+longer as the light lowers; none overhead), occlusion in crevices. On it:
+Dune Ripples, Kintsugi, Moss on Stone, Rain on Glass, Facet Field, Cup Ring,
+Fold Ghost, Poured Wax, Cold Press, Fractured Glaze, Linen's details and
+Sigil Scatter's relief. It takes detail NORMAL MAPS (Cold Press: fibres and
+undulation) and MATERIAL hues (Highlight, Shade); `lightSparse` lights only
+the tiles near a detail, for details scattered on flat ground (Linen,
+Sigils). A texture can carry its own default light (Facet Field starts
+overhead). Next: normal-map detail where heights are awkward (weave,
+crazing), and a per-material gloss where one gloss won't do. Watch the cost
+on phones: these take ~0.2–0.6 s at preview size and up to ~2 s at export
+here, in the worker (the page stays responsive).
 
 ## 2 · Texture plan (Ruby's audit, by group)
-
-**A · great — touch-ups only**
-- Sleep Haze: read as smoke in a dusty room, not water — smoke rings,
-  motes catching light.
-- Pixie Dust: a third knob, Chaos; a little more variety.
-- Waking Grain: a third knob, grain type (silver, film, paper, digital).
-- Metal Leaf: keep. A NEW Touch texture beside it: crystalline leaf, faceted,
-  using the lighting module.
 
 **B · great, plus a third knob and/or the light**
 - First Snow: third knob / light TBD (its flakes are crystals now).
@@ -43,8 +35,6 @@ in the worker (the page stays responsive).
 - Lotus Pond: light and shading by the dial (lightHeights); a better
   seed-pod form.
 - Painter's Frustration: third knob Wetness (paint blending).
-- Sigil Scatter: true RELIEF from the light (carved/raised via the lighting
-  module); Glow becomes Chaos (a scratchy, unsteady hand, medium noise).
 - Transmutation Circles: ONE circle; Count → complexity; the dial → where on
   the page; third knob Organic ↔ Technological, with noisy bloom rising
   toward the digital end. Possibly a new name.
@@ -53,7 +43,6 @@ in the worker (the page stays responsive).
   app's own glyphs and magical language; more realism and variation; the
   best home for easter eggs (Saturn, Enceladus, the kitsune).
 - Black Hole: look for uses of the third knob and the dial.
-- Linen: realistic details; details cast shadows.
 - Foxing: not a Touch texture (it has no light) — move it, or give it
   relief. (It represents age spots on old paper.)
 
@@ -101,15 +90,10 @@ in the worker (the page stays responsive).
   ones with tools/scale-audit.mjs.
 - Blend modes can hide an inset box (Darken shows only a darker box…).
 
-## Confirm with Ruby
-- Presets 5–8 are recorded as Chaos and 9–12 as Sharpness, as Ruby gave
-  them; by their textures 5–8 lean Sharpness (Gold Leaf, Lotus Bloom) and
-  9–12 lean Chaos (Desire, Gateway, Hourglass). Which is right?
-
 ## LAST · the preset review (do this at the very end)
 Go through every preset with Ruby, one by one: what it's for, whether it's
 redundant, whether it needs changing. Some are unique enough already, some
 seem redundant. The element of each is recorded in appOptions.js — presets
-1–4 Whimsy ♡, 5–8 Chaos ∆, 9–12 Sharpness √, 13–16 Touch 🜚 (as Ruby gave
-it; see "Confirm with Ruby") — keep it there whatever changes.
+1–4 Whimsy ♡, 5–8 Sharpness √, 9–12 Chaos ∆, 13–16 Touch 🜚 (confirmed by
+Ruby) — keep it there whatever changes.
 

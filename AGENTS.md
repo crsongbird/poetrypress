@@ -203,6 +203,11 @@ before/after measurements AND an identical-render comparison.
   shadow tracer marches over them); normals for detail that only shades
   (fibres, gentle undulation) — see Cold Press. Keep a lit texture's height
   range to what casts shadows: the trace length follows it.
+  SPARSE details on flat ground (seams and buttons on cloth, carved sigils)
+  use `lightSparse(H, …)`: it lights only the tiles a detail's shadow can
+  reach (one-sided margins: shadows fall away from the light) and is exact
+  — it passes the whole field's march (`opts.marchSteps`) to every piece.
+  Open ground gets `flat` light, so far from a detail the texture is untouched.
 - **GPU lighting** (`texCore.js`): the WebGL2 shader must stay line-for-line
   the CPU `lightHeights` — change both together, and compare them (the
   worker takes `opts.cpuLight`; they agree to within 1/255 today). Emulated

@@ -5,91 +5,132 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, parseHex, litK, litS } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, lightSparse, parseHex, litK, litS } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
 // Ink on nothing. Ink.
 export function genSigils(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const glow = Math.max(0, Math.min(1, form==null ? 0.15 : form));
-  const {lx, ly} = lightVec(light);
-  const c = document.createElement('canvas');
-  c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0,0,w,h);
-
+  const chaos = Math.max(0, Math.min(1, form==null ? 0.2 : form));
   // Hand-inscribed with a BROAD NIB: a stroke is thick where it crosses the
   // nib's angle and thin where it runs along it — the thick-and-thin that makes
   // writing look written. Ink pools where a stroke ends and bleeds a little into
-  // the page. The light direction lifts each mark by a hair (extremely subtle);
-  // GLOW wraps the inscriptions in a soft halo.
-  const unit = Math.max(w,h);
+  // the page. Each sigil is also cut INTO the ground (the dark ones, a chisel's
+  // V-groove) or stands RAISED from it (the light ones), and the lighting
+  // engine lights that relief by the dial: a lit wall and a shadowed one in
+  // every cut, a shadow beside every raised stroke.
+  // CHAOS is the hand: steady at 0; above it the hand trembles, the line
+  // wanders, the nib skips into scratches, ink spatters.
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div);
+  const layer=bg=>{ const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh; const x=cv.getContext('2d', CPU); x.fillStyle=bg; x.fillRect(0,0,ww,wh); return [cv,x]; };
+  const [inkC, ink]=layer('#808080'), [cutC, cut]=layer('#000'), [upC, up]=layer('#000');
+  cut.globalCompositeOperation='lighten'; up.globalCompositeOperation='lighten';
+  cut.fillStyle='#fff'; up.fillStyle='#fff';
+  const unit = Math.max(ww,wh);
   const count = Math.max(6, Math.round((38 + Math.random()*26) * amt));
-  // a stroke's centreline, sampled
-  const lineAt = (x1,y1,x2,y2,curve,cx,cy) => { const pts=[];
-    for(let k=0;k<=16;k++){ const t=k/16;
-      if(curve){ const u=1-t; pts.push([u*u*x1+2*u*t*cx+t*t*x2, u*u*y1+2*u*t*cy+t*t*y2]); }
-      else pts.push([x1+(x2-x1)*t, y1+(y2-y1)*t]); }
+  // a tremor: a few sines at medium frequencies, and a finer scratchy jitter
+  const tremor = () => { const f=[2.3+Math.random(), 5.1+Math.random()*2, 11+Math.random()*4, 29+Math.random()*9, 53+Math.random()*13], ph=f.map(()=>Math.random()*6.283), a=[1,0.5,0.22,0.07,0.035];
+    return t => { let s=0; for(let k=0;k<5;k++) s+=a[k]*Math.sin(f[k]*t*6.283+ph[k]); return s; }; };
+  // a stroke's centreline, sampled; a trembling hand pushes it sideways
+  const lineAt = (x1,y1,x2,y2,curve,cx,cy,amp) => { const pts=[], n=amp>0?48:16, tr=amp>0?tremor():null;
+    for(let k=0;k<=n;k++){ const t=k/n; let x, y;
+      if(curve){ const u=1-t; x=u*u*x1+2*u*t*cx+t*t*x2; y=u*u*y1+2*u*t*cy+t*t*y2; }
+      else { x=x1+(x2-x1)*t; y=y1+(y2-y1)*t; }
+      pts.push([x,y]); }
+    if(tr) for(let k=0;k<=n;k++){ const p=pts[k], q=pts[Math.min(n,k+1)], o=pts[Math.max(0,k-1)], dir=Math.atan2(q[1]-o[1], q[0]-o[0]), s=tr(k/n)*amp;
+      p[0]-=Math.sin(dir)*s; p[1]+=Math.cos(dir)*s; }
     return pts; };
   // the inked shape of a stroke: width from the nib's angle, tapering at the
-  // very ends
-  const nibShape = (pts, nib, nibA) => { const L=[], Rr=[];
+  // very ends; an unsteady hand presses unevenly
+  const nibShape = (pts, nib, nibA, press) => { const L=[], Rr=[], pr=press>0?tremor():null;
     for(let k=0;k<pts.length;k++){
       const p=pts[k], q=pts[Math.min(pts.length-1,k+1)], o=pts[Math.max(0,k-1)];
       const dir=Math.atan2(q[1]-o[1], q[0]-o[0]);
       const t=k/(pts.length-1), end=Math.min(1, Math.min(t, 1-t)*7 + 0.35);
-      const half=nib*(0.18 + 0.82*Math.abs(Math.sin(dir - nibA)))*end/2;
+      const half=nib*(0.18 + 0.82*Math.abs(Math.sin(dir - nibA)))*end/2*(pr ? Math.max(0.2, 1+press*pr(t)*0.45) : 1);
       L.push([p[0]-Math.sin(dir)*half, p[1]+Math.cos(dir)*half]); Rr.push([p[0]+Math.sin(dir)*half, p[1]-Math.cos(dir)*half]); }
     // a plain list of points (no Path2D, so the generator runs anywhere)
     return L.concat(Rr.reverse()); };
-  const fillPoly = pts => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  const fillPoly = (ctx, pts) => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
     for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0], pts[k][1]); ctx.closePath(); ctx.fill(); };
+  let nibSum=0;
   for(let i=0;i<count;i++){
-    const cx = Math.random()*w, cy = Math.random()*h;
+    const cx = Math.random()*ww, cy = Math.random()*wh;
     const r = unit*(0.012 + Math.random()*0.038) * zoom;
-    // some sigils are written dark into the ground, some lift light out of it
+    // some sigils are cut dark into the ground, some stand light out of it
     const emerging = Math.random() < 0.62;
     const tone = emerging ? 18 : 226;
     const alpha = 0.40 + Math.random()*0.5;
-    const nib = Math.max(cpx(1.4), unit*0.0032*(0.6+Math.random()*0.8)*zoom);
+    const nib = Math.max(cpx(1.4)/div, unit*0.0032*(0.6+Math.random()*0.8)*zoom); nibSum+=nib;
     const nibA = (35 + (Math.random()-0.5)*20)*Math.PI/180;    // the scribe's hand
     const strokes = 3 + Math.floor(Math.random()*4);
     const rot = Math.random()*Math.PI*2;
-    const marks = [];
+    const wander = (r*0.04 + nib*0.25)*Math.pow(chaos, 1.5);              // how far the hand strays
+    const marks = [], thin = [];                              // full nib strokes; scratches
     for(let s=0;s<strokes;s++){
       const a1 = rot + (s/strokes)*Math.PI*2 + (Math.random()-0.5)*0.9;
       const a2 = a1 + (Math.random()-0.5)*2.4;
-      const r1 = r*(0.15+Math.random()*0.5), r2 = r*(0.55+Math.random()*0.6);
+      const r1 = r*(0.15+Math.random()*0.5), r2 = r*(0.55+Math.random()*0.6)*(1 + chaos*(Math.random()-0.3)*0.4);   // overshoot, or fall short
       const x1=cx+Math.cos(a1)*r1, y1=cy+Math.sin(a1)*r1, x2=cx+Math.cos(a2)*r2, y2=cy+Math.sin(a2)*r2;
-      marks.push(lineAt(x1,y1,x2,y2, Math.random()<0.4, cx, cy));
+      const curve=Math.random()<0.4;
+      if(chaos>0.3 && Math.random()<(chaos-0.2)*0.75){
+        // the nib skips: the stroke comes out as a few thin scratches, side by side
+        const K=2+Math.floor(Math.random()*2);
+        for(let k=0;k<K;k++){
+          const o=(k-(K-1)/2)*nib*0.5 + (Math.random()-0.5)*nib*0.4, a=Math.atan2(y2-y1,x2-x1)+Math.PI/2, ox=Math.cos(a)*o, oy=Math.sin(a)*o;
+          const s0=(Math.random()-0.3)*0.15*chaos, s1=1+(Math.random()-0.5)*0.2*chaos;
+          thin.push(lineAt(x1+(x2-x1)*s0+ox, y1+(y2-y1)*s0+oy, x1+(x2-x1)*s1+ox, y1+(y2-y1)*s1+oy, curve, cx+ox, cy+oy, wander));
+        }
+      } else marks.push(lineAt(x1,y1,x2,y2, curve, cx, cy, wander));
     }
     if(Math.random()<0.45){
-      const rr=r*(0.2+Math.random()*0.45), pts=[];
-      for(let k=0;k<=40;k++){ const t=k/40*Math.PI*2; pts.push([cx+Math.cos(t)*rr, cy+Math.sin(t)*rr]); }
+      const rr=r*(0.2+Math.random()*0.45), pts=[], tr=chaos>0?tremor():null;
+      for(let k=0;k<=40;k++){ const t=k/40*Math.PI*2, q=rr*(1+(tr?tr(k/40)*0.08*chaos:0)); pts.push([cx+Math.cos(t)*q, cy+Math.sin(t)*q]); }
       marks.push(pts);
     }
-    const shapes = marks.map(p => nibShape(p, nib, nibA));
-    // glow: a soft halo of light around the writing
-    if(glow > 0.01){
-      // two passes: a wide soft bloom, then a tighter bright one
-      ctx.save(); ctx.shadowColor=`rgba(245,245,245,${Math.min(1,1.1*glow)})`; ctx.shadowBlur=cpx(14+70*glow);
-      ctx.fillStyle=`rgba(245,245,245,${0.5*glow})`; for(const sh of shapes) fillPoly(sh);
-      ctx.shadowBlur=cpx(5+16*glow); for(const sh of shapes) fillPoly(sh); ctx.restore();
+    const shapes = marks.map(p => nibShape(p, nib, nibA, chaos)).concat(thin.map(p => nibShape(p, nib*0.3, nibA, chaos)));
+    // the relief: cut into the ground, or raised from it
+    for(const sh of shapes) fillPoly(emerging ? cut : up, sh);
+    // bleed, then the ink itself — it sits in the cut, or on the raised stroke
+    ink.save(); ink.shadowColor=`rgba(${tone},${tone},${tone},${alpha*0.5})`; ink.shadowBlur=nib*0.6;
+    ink.fillStyle=`rgba(${tone},${tone},${tone},${alpha*0.8})`; for(const sh of shapes) fillPoly(ink, sh); ink.restore();
+    // ink pools where each stroke ends; a shaky hand spatters
+    ink.fillStyle=`rgba(${tone},${tone},${tone},${Math.min(1,alpha*1.05)})`;
+    for(const p of marks){ const e=p[p.length-1]; ink.beginPath(); ink.arc(e[0],e[1],nib*0.42,0,Math.PI*2); ink.fill(); }
+    if(chaos>0.4) for(let k=Math.round(Math.random()*chaos*5);k>0;k--){
+      const p=(marks[0]||thin[0]), e=p[Math.floor(Math.random()*p.length)], d=nib*(1+Math.random()*5*chaos), a=Math.random()*6.283;
+      ink.beginPath(); ink.arc(e[0]+Math.cos(a)*d, e[1]+Math.sin(a)*d, nib*(0.08+Math.random()*0.22), 0, Math.PI*2); ink.fill();
     }
-    // light: the mark lifted by a hair — a faint shadow away from the light,
-    // a fainter highlight toward it
-    const off = nib*0.35;
-    ctx.fillStyle='rgba(0,0,0,0.07)'; ctx.save(); ctx.translate(-lx*off, -ly*off); for(const sh of shapes) fillPoly(sh); ctx.restore();
-    ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.save(); ctx.translate(lx*off, ly*off); for(const sh of shapes) fillPoly(sh); ctx.restore();
-    // bleed, then the ink itself
-    ctx.save(); ctx.shadowColor=`rgba(${tone},${tone},${tone},${alpha*0.5})`; ctx.shadowBlur=nib*0.6;
-    ctx.fillStyle=`rgba(${tone},${tone},${tone},${alpha})`; for(const sh of shapes) fillPoly(sh); ctx.restore();
-    // ink pools where each stroke ends
-    ctx.fillStyle=`rgba(${tone},${tone},${tone},${Math.min(1,alpha*1.15)})`;
-    for(const p of marks){ const e=p[p.length-1]; ctx.beginPath(); ctx.arc(e[0],e[1],nib*0.42,0,Math.PI*2); ctx.fill(); }
   }
+  // heights from the masks: how far each point lies inside its stroke
+  // (a chamfer distance) — a V-groove for a cut, a rounded ridge for a raise
+  const N=ww*wh, H=new Float32Array(N), D=new Float32Array(N);
+  const nibAvg=nibSum/count, ridge=nibAvg*0.35;
+  const depthOf=(data, sign)=>{
+    for(let i=0;i<N;i++) D[i]=data[i*4]>=128 ? 1e6 : 0;
+    for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){ const i=y*ww+x; if(!D[i]) continue; let v=D[i];
+      if(x>0) v=Math.min(v,D[i-1]+1); if(y>0){ v=Math.min(v,D[i-ww]+1); if(x>0) v=Math.min(v,D[i-ww-1]+1.414); if(x<ww-1) v=Math.min(v,D[i-ww+1]+1.414); } D[i]=v; }
+    for(let y=wh-1;y>=0;y--) for(let x=ww-1;x>=0;x--){ const i=y*ww+x; if(!D[i]) continue; let v=D[i];
+      if(x<ww-1) v=Math.min(v,D[i+1]+1); if(y<wh-1){ v=Math.min(v,D[i+ww]+1); if(x<ww-1) v=Math.min(v,D[i+ww+1]+1.414); if(x>0) v=Math.min(v,D[i+ww-1]+1.414); } D[i]=v; }
+    for(let i=0;i<N;i++){ const m=data[i*4]/255; if(m<=0) continue;
+      const d = D[i]>0 ? D[i]-1+m : m*0.9;                    // the mask's soft edge keeps the walls smooth
+      H[i] += sign<0 ? -d*0.9 : ridge*(1-Math.exp(-d/(nibAvg*0.22))); }
+  };
+  depthOf(cut.getImageData(0,0,ww,wh).data, -1);
+  depthOf(up.getImageData(0,0,ww,wh).data, 1);
+  const L=lightSparse(H, ww, wh, { light, relief:1, gloss:0.3, shadow:0.6, ao:0.5, ambient:0.4 });
+  const sFlat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.3, shadow:0, ao:0, ambient:0.4 }).spec[0];
+  const img=ink.getImageData(0,0,ww,wh), d=img.data, fl=L.flat||1;
+  for(let i=0;i<N;i++){
+    const k=L.light[i]/fl, s=(L.spec[i]-sFlat)*110;
+    if(k===1 && s===0) continue;
+    const q=i*4;
+    d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s));
+  }
+  ink.putImageData(img,0,0);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(inkC,0,0,w,h);
   return c;
 }
 

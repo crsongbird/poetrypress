@@ -5,13 +5,12 @@
  *   texWhimsy.js     ♡  clouds, bokeh, deep field, euphoria dust, burning mana,
  *                       first snow, aurora
  *   texSharpness.js  √  lotus, 90s dots, still rain, painter's frustration,
- *                       silverpoint hatch, metal leaf
+ *                       silverpoint hatch, metal leaf, waking grain
  *   texChaos.js      ∆  sigils, enochian noise, summoning circles, Rorschach,
  *                       fractured glaze, facet field, cartomancy
  *   texTouch.js      🜚  linen, cold press, foxing, fold ghost, cup ring,
  *                       poured wax, raked substrate
  *   texCore.js          noise grids, colour mixing, the seeded random source
- * Waking grain is a plain pixel loop and lives in buildTexture below.
  *
  * What stays here:
  *   TEXTURE_PARAMS    the two named knobs each texture exposes
@@ -34,9 +33,9 @@
 import { TEXTURES } from './tunables.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
-import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape } from './texSharpness.js';
+import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape, genGrain } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
-import { genLinenTooth, genColdPress, genFoxing, genFoldGhost, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater } from './texTouch.js';
+import { genLinenTooth, genColdPress, genFoxing, genFoldGhost, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genCrystalLeaf } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -49,7 +48,9 @@ import { genLinenTooth, genColdPress, genFoxing, genFoldGhost, genCupRing, genPo
  */
 export const TEXTURE_PARAMS = {
   clouds:        [{key:'zoom',  label:'Lift',            min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Drag',            min:0,  max:200, def:60,  unit:'%'}],
+                  {key:'amt',   label:'Drag',            min:0,  max:200, def:60,  unit:'%'},
+                  // a shaft of light from the dial: the smoke in it glows, dust motes catch it
+                  {key:'form',  label:'Dust',            min:0,  max:100, def:35,  unit:''}],
   bokeh:         [{key:'zoom',  label:'Focal Plane',     min:25, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Orb Count',       min:20, max:260, def:100, unit:'%', base:67},
                   // a camera's aperture: round, then 7, 6 and 5 blades, then a heart
@@ -66,7 +67,9 @@ export const TEXTURE_PARAMS = {
                   // 0 is deep space; up the scale, twinkle, colour fringes, airglow
                   {key:'form',  label:'Atmosphere',      min:0,  max:100, def:20,  unit:''}],
   magicparticles:[{key:'zoom',  label:'Sparkle Size',    min:20, max:200, def:100, unit:'%'},
-                  {key:'amt',   label:'Sparkle Count',   min:10, max:400, def:100, unit:'%', base:225}],
+                  {key:'amt',   label:'Sparkle Count',   min:10, max:400, def:100, unit:'%', base:225},
+                  // trails (0) → scattered, as it was (50) → bursts (100)
+                  {key:'form',  label:'Chaos',           min:0,  max:100, def:50,  unit:'', ticks:[0,50,100]}],
   embers:        [{key:'zoom',  label:'Ember Size',      min:60, max:600, def:100, unit:'%'},
                   {key:'amt',   label:'Ember Count',     min:20, max:500, def:100, unit:'%', base:590},
                   // how far each spark's colour may stray from its ember hue
@@ -74,7 +77,10 @@ export const TEXTURE_PARAMS = {
   snow:          [{key:'zoom',  label:'Flake Size',      min:60, max:340, def:100, unit:'%'},
                   {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950}],
   grain:         [{key:'zoom',  label:'Grain Size',      min:100,max:600, def:100, unit:'%'},
-                  {key:'amt',   label:'Contrast',        min:30, max:240, def:100, unit:'%'}],
+                  {key:'amt',   label:'Contrast',        min:30, max:240, def:100, unit:'%'},
+                  // the kind of grain, blended between neighbours; Film is the original
+                  {key:'form',  label:'Grain',           min:0,  max:100, def:33,  unit:'', ticks:[0,33,66,100],
+                   names:['Silver','Film','Paper','Digital']}],
   metalleaf:     [{key:'zoom',  label:'Leaf Size',       min:60, max:360, def:100, unit:'%'},
                   {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165}],
   flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
@@ -94,8 +100,8 @@ export const TEXTURE_PARAMS = {
                   {key:'angle', label:'Slant',           min:-45,max:45,  def:0,   unit:'°'}],
   sigils:        [{key:'zoom',  label:'Sigil Zoom',      min:100,max:500, def:100, unit:'%'},
                   {key:'amt',   label:'Sigil Count',     min:15, max:260, def:100, unit:'%', base:51},
-                  // a soft halo of light around the inscriptions
-                  {key:'form',  label:'Glow',            min:0,  max:100, def:15,  unit:''}],
+                  // the hand: steady → trembling, the nib skipping into scratches
+                  {key:'form',  label:'Chaos',           min:0,  max:100, def:20,  unit:''}],
   mathnoise:     [{key:'zoom',  label:'Glyph Zoom',      min:100,max:500, def:140, unit:'%'},
                   {key:'amt',   label:'Emergence',       min:30, max:240, def:130, unit:'%'}],
   summoning:     [{key:'zoom',  label:'Circle Size',     min:40, max:500, def:100, unit:'%'},
@@ -111,6 +117,11 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:'', ticks:[15,42,68,95]},
                   // silk → twill → linen → canvas → burlap
                   {key:'form',  label:'Weave',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
+  crystalleaf:   [{key:'zoom',  label:'Crystal Size',    min:40, max:300, def:100, unit:'%'},
+                  // feathered six-armed growth inside each grain (zinc spangle)
+                  {key:'amt',   label:'Dendrites',       min:0,  max:100, def:50,  unit:''},
+                  // flat facets → stepped hopper crystals (bismuth)
+                  {key:'form',  label:'Terraces',        min:0,  max:100, def:0,   unit:''}],
   coldpress:     [{key:'zoom',  label:'Tooth Scale',     min:75, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Tooth Depth',     min:20, max:300, def:100, unit:'%'},
                   // how the paper was made: pressed hot and smooth, cold, or left rough
@@ -234,6 +245,8 @@ export const TEXTURE_CAPS = {
   crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
+  crystalleaf:   { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], ground:'grey', light:true, tints:1,
+                   tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
                    tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
   cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
@@ -310,7 +323,7 @@ export function textureCacheMB(){ let px = 0; for(const c of textureCache.values
 
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
-    result = genClouds(w,h,amt,zoom,light);
+    result = genClouds(w,h,amt,zoom,light,form);
   } else if(type === 'flowers'){
     result = genFlowers(w,h,amt,zoom,tint1,tint2,form);
   } else if(type === 'inkbleed'){
@@ -330,7 +343,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'snow'){
     result = genSnow(w,h,amt,zoom);
   } else if(type === 'magicparticles'){
-    result = genMagicParticles(w,h,accent1,accent2,amt,zoom);
+    result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'glassrain'){
     result = genGlassRain(w,h,amt,zoom,light,form);
   } else if(type === 'rainstreaks'){
@@ -381,10 +394,12 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genSummoningCircles(w,h,amt,zoom);
   } else if(type === 'metalleaf'){
     result = genMetalLeaf(w,h,amt,zoom,light,tint1);
+  } else if(type === 'crystalleaf'){
+    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,form);
+  } else if(type === 'grain'){
+    result = genGrain(w,h,amt,zoom,form);
   } else {
     let genW = w, genH = h;
-    // a grain cell is 5 canonical pixels (× zoom), at whatever size is drawn
-    if(type==='grain'){ const gz = 5*zoom*scaleNow(); genW=Math.max(1,Math.round(w/gz)); genH=Math.max(1,Math.round(h/gz)); }
 
     const small = document.createElement('canvas');
     small.width = genW; small.height = genH;
@@ -393,8 +408,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     const d = img.data;
     for(let i=0;i<d.length;i+=4){
       let v;
-      if(type==='grain') v = 128+(Math.random()*2-1)*100*amt;
-      else v = 205+(Math.random()*2-1)*32;
+      v = 205+(Math.random()*2-1)*32;
       d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255;
     }
     sctx.putImageData(img,0,0);

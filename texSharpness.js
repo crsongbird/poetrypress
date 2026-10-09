@@ -2,10 +2,9 @@
  * texSharpness.js — √ Sharpness. Value: off-white against blue-black.
  *
  * Waking; metal at the edges. Lotus, 90s dots, still rain, the painter's
- * frustration, silverpoint hatch, metal leaf. (Waking grain is a pixel
- * loop and lives in buildTexture.)
+ * frustration, silverpoint hatch, metal leaf, waking grain.
  */
-import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx, lightVec } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx, lightVec, scaleNow } from './texCore.js';
 
 // The flower's FORM, as keyframes of a few numbers. The Form knob (0–1)
 // blends continuously between neighbours, so every position in between is a
@@ -696,3 +695,67 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
   return c;
 }
 
+
+/**
+ * Waking Grain. GRAIN SIZE is the cell (5 canonical pixels × zoom, at any
+ * size drawn); CONTRAST how strong it is; GRAIN the kind, blended between
+ * neighbours:
+ *   Silver   black-and-white film: crisp silver grains, clumped
+ *   Film     soft, even dye grain — the original look, drawn exactly as before
+ *   Paper    a sheet's own grain: cloudy formation, short fibres
+ *   Digital  a sensor's noise: square pixels, colour speckle, faint row banding
+ */
+export function genGrain(w,h,amt,zoom,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const f=Math.max(0, Math.min(1, form==null ? 0.33 : form));
+  const STOPS=[0, 0.33, 0.66, 1], KINDS=['silver', 'film', 'paper', 'digital'];
+  let k=0; while(k<2 && f>STOPS[k+1]) k++;
+  const t=(f-STOPS[k])/(STOPS[k+1]-STOPS[k]);
+  const gz=5*zoom*scaleNow(), gw0=Math.max(1,Math.round(w/gz)), gh0=Math.max(1,Math.round(h/gz));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU);
+  const gauss=()=>Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(6.2832*Math.random());
+  // a smooth random field, `cell` grain-cells across, read bilinearly
+  const coarse=(cell, gw=gw0, gh=gh0)=>{ const cw=Math.ceil(gw/cell)+2, ch=Math.ceil(gh/cell)+2, g=new Float32Array(cw*ch);
+    for(let i=0;i<g.length;i++) g[i]=Math.random();
+    return (x,y)=>{ const fx=x/cell, fy=y/cell, i=fx|0, j=fy|0, tx=fx-i, ty=fy-j, q=j*cw+i, sx=tx*tx*(3-2*tx), sy=ty*ty*(3-2*ty);
+      return (g[q]*(1-sx)+g[q+1]*sx)*(1-sy)+(g[q+cw]*(1-sx)+g[q+cw+1]*sx)*sy; }; };
+  const draw=(kind, alpha)=>{
+    // paper's fibres are finer than a grain: it works on a grid twice as fine
+    const fine=kind==='paper'?2:1, gw=gw0*fine, gh=gh0*fine, n=gw*gh;
+    const small=document.createElement('canvas'); small.width=gw; small.height=gh;
+    const sctx=small.getContext('2d', CPU), img=sctx.createImageData(gw,gh), d=img.data;
+    if(kind==='film'){
+      for(let i=0;i<d.length;i+=4){ const v=128+(Math.random()*2-1)*100*amt; d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255; }
+    } else if(kind==='silver'){
+      // each grain is crisp — nearly black or clear — and they gather in clumps
+      const clump=coarse(2.7);
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const s=0.55*Math.random()+0.45*clump(x,y), v=Math.max(-1,Math.min(1,(s-0.5)*3.4));
+        const q=(y*gw+x)*4; d[q]=d[q+1]=d[q+2]=128+v*100*amt; d[q+3]=255; }
+    } else if(kind==='paper'){
+      // formation: the cloudiness of a sheet held to the light; then fibres
+      const m1=coarse(18, gw, gh), m2=coarse(6, gw, gh), F=new Float32Array(n);
+      const fibres=Math.round(n/30);
+      for(let k2=0;k2<fibres;k2++){
+        const x0=Math.random()*gw, y0=Math.random()*gh, len=4+Math.random()*14, a=(Math.random()<0.6 ? (Math.random()-0.5)*0.7 : Math.random()*Math.PI), s=(Math.random()<0.5?-1:1)*(0.12+Math.random()*0.16);
+        for(let u=0;u<len;u+=0.5){ const x=(x0+Math.cos(a)*u)|0, y=(y0+Math.sin(a)*u)|0; if(x>=0&&y>=0&&x<gw&&y<gh) F[y*gw+x]+=s*Math.sin(Math.PI*u/len); }
+      }
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const i=y*gw+x, v=(m1(x,y)-0.5)*1.3+(m2(x,y)-0.5)*0.6+F[i]+(Math.random()-0.5)*0.3;
+        const q=i*4; d[q]=d[q+1]=d[q+2]=128+Math.max(-1.2,Math.min(1.2,v))*85*amt; d[q+3]=255; }
+    } else {
+      // a sensor: noise per photosite, a little of it in each colour alone,
+      // rows that read out a touch differently, a faint fixed column pattern
+      const row=new Float32Array(gh), col=new Float32Array(gw);
+      for(let y=0;y<gh;y++) row[y]=gauss()*0.08; for(let x=0;x<gw;x++) col[x]=gauss()*0.05;
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const base=gauss()*0.42+row[y]+col[x], q=(y*gw+x)*4;
+        for(let ch=0;ch<3;ch++) d[q+ch]=128+Math.max(-1.3,Math.min(1.3,base+gauss()*0.16))*100*amt; d[q+3]=255; }
+    }
+    sctx.putImageData(img,0,0);
+    ctx.globalAlpha=alpha; ctx.imageSmoothingEnabled = kind!=='digital';   // a sensor's pixels stay square
+    ctx.drawImage(small,0,0,w,h); ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true;
+  };
+  if(t<=1e-6) draw(KINDS[k], 1);
+  else if(t>=1-1e-6) draw(KINDS[k+1], 1);
+  else { draw(KINDS[k], 1); draw(KINDS[k+1], t); }
+  return c;
+}

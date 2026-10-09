@@ -6,17 +6,22 @@
  */
 import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv, smoothField } from './texCore.js';
 
-export function genClouds(w,h,amt,zoom,light){
+export function genClouds(w,h,amt,zoom,light,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const {lx,ly}=lightVec(light);
+  const dust=Math.max(0,Math.min(1, form==null ? 0.35 : form));
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
 
-  // A smoky room. Smoke RISES — LIFT stretches it upward into columns that
-  // thin as they climb — and is DRAGGED sideways the higher it goes, the way
-  // a draught pulls at it. The side of each wisp facing the light is lit.
-  // Computed at a quarter of full resolution: smoke is soft by nature.
-  const div=canonDiv(4), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  // Smoke in a dusty room. Haze pools in soft strata under the ceiling; WISPS
+  // rise from a few smouldering sources — a narrow laminar plume that breaks
+  // into curls as it climbs (particles carried by curl noise), thinning as it
+  // goes. LIFT is how far and straight they rise; DRAG is the draught pulling
+  // them sideways, more the higher they get. Now and then a SMOKE RING drifts
+  // up, trailing a wake. DUST is a shaft of light from the dial's direction:
+  // the smoke inside it glows, and motes of dust catch the light.
+  // Computed on a quarter-resolution canonical grid (the same grid at any
+  // size, so the preview is the export scaled down) — smoke is soft by nature.
+  const div=canonDiv(4), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
   const perm=new Uint8Array(512), base=[...Array(256).keys()];
   for(let i=255;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [base[i],base[j]]=[base[j],base[i]]; }
   for(let i=0;i<512;i++) perm[i]=base[i&255];
@@ -27,49 +32,135 @@ export function genClouds(w,h,amt,zoom,light){
     return ((a*(1-u)+b*u)*(1-v)+(c2*(1-u)+d*u)*v)/255; };
   const fbm=(x,y)=>{ let s=0,a=0.5,f=1; for(let o=0;o<4;o++){ s+=vn(x*f,y*f)*a; a*=0.5; f*=2.07; } return s/0.9375; };
   const lift=Math.max(0.4,zoom), drag=amt;
+  const clamp01=v=>v<0?0:v>1?1:v;
+  const gauss=()=>{ const u=Math.random()||1e-9, v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v); };
 
-  // the smoke's smooth fields — its drift (q) and body (n) — on a lattice;
-  // the filaments, which are sharp, are still sampled at every pixel
-  const Qf=smoothField(ww,wh,3,(fu,fv)=>fbm((fu*ww/unit)*1.6+3.1, (fv*wh/unit)*1.6+7.7));
-  const Nf=smoothField(ww,wh,3,(fu,fv)=>{ const u=fu*ww/unit, v=fv*wh/unit, up=1-v/(wh/unit), q=fbm(u*1.6+3.1, v*1.6+7.7);
-    return fbm((u + drag*(0.35*q + 0.55*up*up))*2.6+q*1.4, (v/lift + 0.6*q)*2.6); });
-  const densityAt=(px,py)=>{
-    const u=px/unit, v=py/unit, up=1-v/(wh/unit);            // 0 at the floor, 1 at the ceiling
-    const i=Math.min(wh-1,Math.max(0,py|0))*ww + Math.min(ww-1,Math.max(0,px|0));
-    const q=Qf[i];
-    const ux=u + drag*(0.35*q + 0.55*up*up);                   // dragged, more as it rises
-    const vy=v/lift + 0.6*q;                                    // stretched upward by lift
-    const n=Nf[i];
-    const thin=0.45+0.55*(1-up*0.8);                            // thinning as it climbs
-    // a soft body, plus FILAMENTS: the noise folded at its midpoint gives
-    // sharp crests — the threads that curl off a column of smoke
-    const body=Math.max(0, Math.min(1, (n-0.45)/0.3));
-    const ridge=1-Math.abs(2*fbm(ux*3.4+q*2.1+5.3, vy*3.4)-1);
-    const wisps=Math.pow(ridge, 5);
-    return Math.min(1, body*0.55 + wisps*0.9) * thin;
-  };
+  // 1 · HAZE: soft strata, denser toward the ceiling (more so with more lift)
+  const haze=smoothField(ww,wh,4,(fu,fv)=>{ const u=fu*ww/unit, v=fv*wh/unit, up=1-fv;
+    const q=fbm(u*1.1+3.1, v*1.1+7.7);
+    const s=fbm((u + drag*0.5*up + 0.7*q)*1.3, (v*2.8 + 0.5*q)*1.3);
+    return clamp01((s-0.34)/0.44)*(0.15+0.85*Math.pow(up, 1.4/lift)); });
+
+  // 2 · WISPS: particles carried by curl noise (the curl of a smooth potential
+  // swirls without ever converging, as smoke does). Two potentials, blended per
+  // particle, so neighbouring strands drift apart as they climb.
+  const PA=smoothField(ww,wh,3,(fu,fv)=>fbm(fu*ww/unit*2.2+11.3, fv*wh/unit*2.2+2.9));
+  const PB=smoothField(ww,wh,3,(fu,fv)=>fbm(fu*ww/unit*2.2+41.7, fv*wh/unit*2.2+19.1));
+  const samp=(F,x,y)=>{ x=x<0?0:x>ww-1.001?ww-1.001:x; y=y<0?0:y>wh-1.001?wh-1.001:y;
+    const x0=x|0, y0=y|0, tx=x-x0, ty=y-y0, k=y0*ww+x0;
+    return (F[k]*(1-tx)+F[k+1]*tx)*(1-ty)+(F[k+ww]*(1-tx)+F[k+ww+1]*tx)*ty; };
+  // three layers by age: fresh smoke is crisp, older smoke has diffused —
+  // each layer is softened by its own amount before they are added
+  const WL=[new Float32Array(N), new Float32Array(N), new Float32Array(N)];
+  let W=WL[0];
+  const splat=(x,y,a)=>{ if(!(x>=0 && y>=0 && x<ww-1 && y<wh-1)) return; const x0=x|0, y0=y|0, tx=x-x0, ty=y-y0, k=y0*ww+x0;
+    W[k]+=a*(1-tx)*(1-ty); W[k+1]+=a*tx*(1-ty); W[k+ww]+=a*(1-tx)*ty; W[k+ww+1]+=a*tx*ty; };
+  const e=1.5, gk=unit/(2*e)*0.55, ds=0.8;
+  const curl=(x,y,ph)=>{
+    const gx=(samp(PA,x+e,y)-samp(PA,x-e,y))*(1-ph)+(samp(PB,x+e,y)-samp(PB,x-e,y))*ph;
+    const gy=(samp(PA,x,y+e)-samp(PA,x,y-e))*(1-ph)+(samp(PB,x,y+e)-samp(PB,x,y-e))*ph;
+    return [gy*gk, -gx*gk]; };
+  const sources=3+Math.floor(Math.random()*4);
+  for(let s=0;s<sources;s++){
+    const sx=ww*(0.08+Math.random()*0.84), sy=wh*(0.6+Math.random()*0.45), strength=0.6+Math.random()*0.6;
+    const P=Math.round(150*strength);
+    for(let p=0;p<P;p++){
+      let x=sx+gauss()*unit*0.0025, y=sy+gauss()*unit*0.002;
+      const ph=Math.random(), life=unit*(0.45+Math.random()*0.9)*lift, keep=unit*0.5*lift;
+      for(let t=0;t<life;t+=ds){
+        const up=1-y/wh, age=t/(unit*0.08), turb=Math.min(2.2,age*age);   // laminar at first, then breaking up
+        const [cx,cy]=curl(x,y,ph);
+        const vx=cx*turb + drag*0.5*(0.25+up), vy=cy*turb - lift;
+        // and it diffuses: each strand spreads as it goes (a random walk)
+        const m=Math.hypot(vx,vy)||1, dif=ds*0.4*Math.min(1,age); x+=vx/m*ds+gauss()*dif; y+=vy/m*ds+gauss()*dif;
+        W=WL[t<unit*0.1?0:t<unit*0.3?1:2];
+        splat(x, y, 0.045*strength*Math.exp(-t/keep)*Math.min(1, t/(unit*0.02)));
+        if(y<-2 || x<-ww*0.2 || x>ww*1.2) break;
+      }
+    }
+  }
+  // 3 · SMOKE RINGS: a torus seen from a little below — denser on its near
+  // side, wobbling, frayed by the same curls — with a wake trailing beneath
+  const rings = Math.random()<0.2 ? 0 : 1+Math.floor(Math.random()*2.2);
+  for(let r=0;r<rings;r++){
+    const cx=ww*(0.15+Math.random()*0.7), cy=wh*(0.12+Math.random()*0.55), R=unit*(0.05+Math.random()*0.06);
+    const sq=0.3+Math.random()*0.25, rot=(Math.random()-0.5)*0.5, tube=R*(0.2+Math.random()*0.1), ph=Math.random()*6.283;
+    const cr=Math.cos(rot), sr=Math.sin(rot), n=Math.round(2*Math.PI*R*tube*5); W=WL[1];
+    for(let k=0;k<n;k++){
+      const t=Math.random()*6.2832, wob=1+0.07*Math.sin(3*t+ph)+0.04*Math.sin(5*t+2*ph);
+      const rr=R*wob+gauss()*tube*0.5, X=Math.cos(t)*rr, Y=Math.sin(t)*rr*sq+gauss()*tube*0.35;
+      let x=cx+X*cr-Y*sr, y=cy+X*sr+Y*cr;
+      const [fx,fy]=curl(x,y,0.5); x+=fx*tube*0.12; y+=fy*tube*0.12;
+      splat(x, y, 0.03*(0.7+0.3*Math.sin(t)));
+    }
+    for(let j=0;j<18;j++){                                   // the wake
+      const t=Math.PI*(0.15+Math.random()*0.7), ph2=Math.random();
+      let x=cx+Math.cos(t)*R*cr-Math.sin(t)*R*sq*sr, y=cy+Math.cos(t)*R*sr+Math.sin(t)*R*sq*cr;
+      for(let s=0;s<R*1.8;s+=ds){
+        const [vx0,vy0]=curl(x,y,ph2), vx=vx0*0.8+(cx-x)*0.004, vy=vy0*0.8+lift*0.6, m=Math.hypot(vx,vy)||1;
+        x+=vx/m*ds; y+=vy/m*ds; splat(x, y, 0.035*(1-s/(R*1.8)));
+      }
+    }
+  }
+  // soften each layer: smoke never has a hard edge, and spreads as it ages
+  const boxBlur=(F,R)=>{ const tmp=new Float32Array(N), n=2*R+1;
+    for(let y=0;y<wh;y++){ const r=y*ww; let s=0; for(let x=-R;x<=R;x++) s+=F[r+Math.min(ww-1,Math.max(0,x))];
+      for(let x=0;x<ww;x++){ tmp[r+x]=s/n; s+=F[r+Math.min(ww-1,x+R+1)]-F[r+Math.max(0,x-R)]; } }
+    for(let x=0;x<ww;x++){ let s=0; for(let y=-R;y<=R;y++) s+=tmp[Math.min(wh-1,Math.max(0,y))*ww+x];
+      for(let y=0;y<wh;y++){ F[y*ww+x]=s/n; s+=tmp[Math.min(wh-1,y+R+1)*ww+x]-tmp[Math.max(0,y-R)*ww+x]; } } };
+  const soft=[1, Math.max(1,Math.round(unit*0.003)), Math.max(2,Math.round(unit*0.007))];
+  for(let l=0;l<3;l++){ boxBlur(WL[l], soft[l]); if(l) boxBlur(WL[l], soft[l]); }
+  const Wb=new Float32Array(N); for(let i=0;i<N;i++) Wb[i]=WL[0][i]+WL[1][i]+WL[2][i];
+  const D=new Float32Array(N);
+  for(let i=0;i<N;i++) D[i]=1-Math.exp(-1.7*(haze[i]*0.5 + Wb[i]));
+
+  // 4 · LIGHT: a shaft from the dial's direction, through the room
+  const ang=((light==null?315:light)-90)*Math.PI/180, dx=Math.cos(ang), dy=Math.sin(ang), nx=-dy, ny=dx;
+  const off=(Math.random()-0.5)*0.5, ox=ww/2+nx*off*unit, oy=wh/2+ny*off*unit, bw0=unit*(0.13+Math.random()*0.08);
+  const streak=Math.random()*100;
+  const beamAt=(x,y)=>{ const px=x-ox, py=y-oy, along=px*dx+py*dy, across=Math.abs(px*nx+py*ny);
+    const bw=bw0*(1+0.25*along/unit), q=across/bw;
+    // the shaft has streaks along it, where the dust is thicker
+    return 1/(1+q*q*q*q*q*q) * (0.8+0.2*vn(across/unit*14+streak, along/unit*0.7)); };
+  const B=new Float32Array(N);
+  if(dust>0) for(let y=0;y<wh;y++) for(let x=0;x<ww;x++) B[y*ww+x]=beamAt(x,y);
+  const st=unit*0.012;
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU); const img=sctx.createImageData(ww,wh), d=img.data;
-  const e=2;                                                    // step for the light's slope
-  // the density once per pixel; the light's slope reads it back (bilinear)
-  const D=new Float32Array(ww*wh);
-  for(let py=0;py<wh;py++) for(let px=0;px<ww;px++) D[py*ww+px]=densityAt(px,py);
-  const dAt=(x,y)=>{ x=Math.max(0,Math.min(ww-1.001,x)); y=Math.max(0,Math.min(wh-1.001,y));
-    const x0=x|0, y0=y|0, tx=x-x0, ty=y-y0, k=y0*ww+x0;
-    return (D[k]*(1-tx)+D[k+1]*tx)*(1-ty) + (D[k+ww]*(1-tx)+D[k+ww+1]*tx)*ty; };
-  for(let py=0;py<wh;py++) for(let px=0;px<ww;px++){
-    const s0=D[py*ww+px];
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const i=y*ww+x, s0=D[i];
     let val=128;
-    if(s0>0){
-      // lit where the smoke's surface faces the light
-      const sl=dAt(px-lx*e,py-ly*e);
-      const lit=Math.max(-1,Math.min(1,(s0-sl)*6));
-      val=128 + s0*(95 + lit*45);
+    if(s0>0.002 || B[i]>0.01){
+      // light reaching this point through the smoke between it and the light
+      let tau=0; for(let k=1;k<=8;k++) tau+=samp(D, x-dx*st*k, y-dy*st*k);
+      const T=Math.exp(-0.35*tau);
+      const back=samp(D, x-dx*1.5, y-dy*1.5), rim=clamp01((s0-back)*5)*0.25;
+      const lit=s0*(0.5+0.5*T)*(1+2.4*dust*B[i]) + rim*s0;
+      // brightness rolls off softly instead of clipping where the shaft is full of smoke
+      val=128 + 127*(1-Math.exp(-(118*lit + 48*dust*B[i])/127)) - 22*s0*(1-T);
     }
-    const i4=(py*ww+px)*4; d[i4]=d[i4+1]=d[i4+2]=Math.max(0,Math.min(255,val)); d[i4+3]=255;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=val<0?0:val>255?255:val; d[q+3]=255;
   }
   sctx.putImageData(img,0,0);
   ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
+
+  // 5 · MOTES, at full resolution: dust drifting everywhere, seen only where
+  // the shaft catches it; a few float near the lens, large and out of focus
+  if(dust>0.01){
+    const n=Math.round(canonArea(w,h)/(3072*3072)*3200*dust);
+    for(let k=0;k<n;k++){
+      const x=Math.random()*w, y=Math.random()*h, b=Math.pow(beamAt(x/div, y/div), 1.5), near=Math.random()<0.1, gl=Math.random();
+      if(b<0.03 && Math.random()>0.15) continue;
+      const a=(0.06+0.94*b)*(0.4+0.6*gl);
+      if(near){
+        const r=cpx(6+Math.random()*14), g=ctx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,`rgba(255,255,255,${0.2*a})`); g.addColorStop(0.7,`rgba(255,255,255,${0.14*a})`); g.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      } else {
+        ctx.fillStyle=`rgba(255,255,255,${0.85*a})`; ctx.beginPath(); ctx.arc(x,y,cpx(0.7+Math.random()*1.6),0,Math.PI*2); ctx.fill();
+      }
+    }
+  }
   return c;
 }
 
@@ -578,8 +669,14 @@ export function genSnow(w,h,amt,zoom){
   return full;
 }
 
-export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
+export function genMagicParticles(w,h,accent1,accent2,amt,zoom,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // CHAOS: 0 gathers the dust into the trails a flight leaves behind; 50 (the
+  // default) scatters it, as it always was — drawn exactly as before; up to
+  // 100 it bursts, in sprays of streaking shards, sizes and hues gone wild.
+  const chaos = Math.max(0, Math.min(1, form==null ? 0.5 : form));
+  const order = Math.max(0, 0.5-chaos)*2, wild = Math.max(0, chaos-0.5)*2;
+  let sizeK = 1;                                             // a wild hand makes some motes huge, some tiny
   // Knobs rescaled so 100% on both is the look that works: what used to take
   // Size at 485% and Count at 20% — both slider ends — now sits in the middle,
   // with room either way.
@@ -597,13 +694,15 @@ export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
   const unit = Math.min(w,h);
   const count = Math.round(canonArea(w,h)/42000 * amt);        // 225 at 100% on a 3072 page
 
-  const wisp = (x, y, col) => {
-    const len = unit*(0.04 + Math.random()*0.07)*Z;
+  const wisp = (x, y, col, along) => {
+    const len = unit*(0.04 + Math.random()*0.07)*Z*sizeK;
     let a = Math.random()*Math.PI*2;
+    if(along != null) a = along + (Math.random()-0.5)*0.5;      // on a trail, it follows the flight
     const curl = (Math.random()-0.5)*0.22, curlGrow = (Math.random()-0.5)*0.02;
-    const W = unit*0.0022*Z*(0.6 + Math.random());
+    const W = unit*0.0022*Z*(0.6 + Math.random())*Math.sqrt(sizeK);
     const steps = 26, pts = [];
     let px = x, py = y, k = curl;
+    if(along != null){ k *= 0.35; }                          // calmer on a trail
     for(let s=0;s<=steps;s++){ pts.push([px, py, a]); a += k; k += curlGrow; px += Math.cos(a)*len/steps; py += Math.sin(a)*len/steps; }
     // a filled ribbon, widest at its middle
     const L = [], R = [];
@@ -619,7 +718,7 @@ export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
       ctx.beginPath(); ctx.arc(mx + (Math.random()-0.5)*W*8, my + (Math.random()-0.5)*W*8, W*(0.4+Math.random()*0.7), 0, Math.PI*2); ctx.fill(); }
   };
   const sparkle = (x, y, col) => {
-    const arms = 4 + Math.floor(Math.random()*3), base = unit*0.009*Z*(0.5 + Math.random());
+    const arms = 4 + Math.floor(Math.random()*3), base = unit*0.009*Z*(0.5 + Math.random())*sizeK;
     const rot = Math.random()*Math.PI, longArm = Math.floor(Math.random()*arms);
     // a soft glow behind
     const g = ctx.createRadialGradient(x, y, 0, x, y, base*1.6);
@@ -640,14 +739,59 @@ export function genMagicParticles(w,h,accent1,accent2,amt,zoom){
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, base*0.12, 0, Math.PI*2); ctx.fill();
   };
 
+  // ORDER: the trails — sweeping curves that fade toward their ends
+  const trails = [];
+  if(order > 0){
+    const nt = 2 + Math.floor(Math.random()*3);
+    for(let k=0;k<nt;k++){
+      const p0=[Math.random()*w, Math.random()*h], p1=[Math.random()*w, Math.random()*h], p2=[Math.random()*w, Math.random()*h];
+      const curl=(Math.random()<0.5?-1:1)*(0.5+Math.random()), spread=unit*(0.012+Math.random()*0.02);
+      trails.push({ at:t => { const u=1-t, bx=u*u*p0[0]+2*u*t*p1[0]+t*t*p2[0], by=u*u*p0[1]+2*u*t*p1[1]+t*t*p2[1];
+        // the end of a trail curls round, as a flight turns
+        const e=Math.max(0,(t-0.7)/0.3), r=unit*0.05*e, an=curl*e*Math.PI*2.2;
+        return [bx+Math.cos(an)*r-r, by+Math.sin(an)*r]; }, spread });
+    }
+  }
   for(let i=0;i<count;i++){
-    const x = Math.random()*w, y = Math.random()*h, col = Math.random() < 0.55 ? A : B;
+    let x = Math.random()*w, y = Math.random()*h, along = null;
+    const col = Math.random() < 0.55 ? A : B;
     const roll = Math.random();
-    if(roll < 0.34) wisp(x, y, col);
+    if(order > 0 && Math.random() < order*0.85){
+      const T = trails[Math.floor(Math.random()*trails.length)], t = Math.pow(Math.random(), 0.7);
+      const [tx, ty] = T.at(t), [ux, uy] = T.at(Math.min(1, t+0.01)), sp = T.spread*(1 - 0.5*t);
+      along = Math.atan2(uy-ty, ux-tx);
+      // gathered close along the line, thinning to stragglers
+      const g = Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(6.2832*Math.random());
+      x = tx - Math.sin(along)*g*sp; y = ty + Math.cos(along)*g*sp;
+    }
+    if(wild > 0) sizeK = Math.exp((Math.random()-0.5)*2.4*wild);
+    if(roll < 0.34) wisp(x, y, col, along);
     else if(roll < 0.52) sparkle(x, y, col);
     else {                                                   // loose dust
       ctx.globalAlpha = 0.3 + Math.random()*0.5; ctx.fillStyle = rgb(col, 50);
-      ctx.beginPath(); ctx.arc(x, y, unit*0.0016*Z*(0.4 + Math.random()), 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, unit*0.0016*Z*(0.4 + Math.random())*sizeK, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  // WILD: bursts — dust thrown outward from a point, streaking as it flies,
+  // with a flash at the heart; hues stray toward white and past the accents
+  if(wild > 0){
+    sizeK = 1;
+    const nb = Math.max(1, Math.round(wild*5*Math.sqrt(amt)));
+    for(let b=0;b<nb;b++){
+      const cx = Math.random()*w, cy = Math.random()*h, R = unit*(0.05+Math.random()*0.1)*Math.sqrt(Z/4.85);
+      const n = Math.round((40 + Math.random()*50)*wild);
+      for(let k=0;k<n;k++){
+        const an = Math.random()*Math.PI*2, d = R*Math.pow(Math.random(), 0.6), len = unit*0.008*Z*(0.4+Math.random())*(0.4+d/R);
+        const col = Math.random()<0.5 ? A : B, lift = Math.round(40 + Math.random()*120*wild);
+        const x0 = cx+Math.cos(an)*d, y0 = cy+Math.sin(an)*d, x1 = x0+Math.cos(an)*len, y1 = y0+Math.sin(an)*len;
+        // a streak: thin, brightest at its head
+        const g = ctx.createLinearGradient(x0,y0,x1,y1);
+        g.addColorStop(0, `rgba(${col.r},${col.g},${col.b},0)`); g.addColorStop(1, rgb(col, lift));
+        ctx.globalAlpha = 0.5 + Math.random()*0.5; ctx.strokeStyle = g; ctx.lineCap = 'round';
+        ctx.lineWidth = unit*0.0016*Z*(0.4+Math.random()*0.6);
+        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+      }
+      if(Math.random() < 0.7) sparkle(cx, cy, Math.random()<0.5 ? A : B);
     }
   }
   ctx.globalAlpha = 1;
