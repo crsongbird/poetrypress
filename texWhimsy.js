@@ -6,7 +6,7 @@
  */
 import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv, smoothField } from './texCore.js';
 
-export function genClouds(w,h,amt,zoom,light,form){
+export function genClouds(w,h,amt,zoom,light,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const dust=Math.max(0,Math.min(1, form==null ? 0.35 : form));
   const c=document.createElement('canvas'); c.width=w; c.height=h;
@@ -130,7 +130,7 @@ export function genClouds(w,h,amt,zoom,light,form){
   const sctx=small.getContext('2d', CPU); const img=sctx.createImageData(ww,wh), d=img.data;
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const i=y*ww+x, s0=D[i];
-    let val=128;
+    let val=128, vr=128, vg=128, vb=128;
     if(s0>0.002 || B[i]>0.01){
       // light reaching this point through the smoke between it and the light
       let tau=0; for(let k=1;k<=8;k++) tau+=samp(D, x+dx*st*k, y+dy*st*k);
@@ -139,8 +139,19 @@ export function genClouds(w,h,amt,zoom,light,form){
       const lit=s0*(0.5+0.5*T)*(1+2.4*dust*B[i]) + rim*s0;
       // brightness rolls off softly instead of clipping where the shaft is full of smoke
       val=128 + 127*(1-Math.exp(-(118*lit + 48*dust*B[i])/127)) - 22*s0*(1-T);
+      if(M3){
+        // MATERIAL: the light in the shaft takes the Highlight hue, smoke in its
+        // own shadow the Shade hue; the rest of the smoke stays as it is
+        const own=118*s0*(0.5+0.5*T) + rim*s0*118, all=118*lit + 48*dust*B[i], fb=all>0 ? Math.max(0, (all-own)/all) : 0;
+        const rolled=127*(1-Math.exp(-all/127)), dark=22*s0*(1-T);
+        const ch=c=>128 + rolled*((1-fb) + fb*M3.hi[c]) - dark*Math.max(0, 1 + (1 - M3.sh[c])*0.7);
+        vr=ch(0); vg=ch(1); vb=ch(2);
+      }
     }
-    const q=i*4; d[q]=d[q+1]=d[q+2]=val<0?0:val>255?255:val; d[q+3]=255;
+    const q=i*4;
+    if(M3){ d[q]=vr<0?0:vr>255?255:vr; d[q+1]=vg<0?0:vg>255?255:vg; d[q+2]=vb<0?0:vb>255?255:vb; }
+    else d[q]=d[q+1]=d[q+2]=val<0?0:val>255?255:val;
+    d[q+3]=255;
   }
   sctx.putImageData(img,0,0);
   ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
@@ -148,6 +159,8 @@ export function genClouds(w,h,amt,zoom,light,form){
   // 5 · MOTES, at full resolution: dust drifting everywhere, seen only where
   // the shaft catches it; a few float near the lens, large and out of focus
   if(dust>0.01){
+    // motes catch the shaft's light: its Highlight hue, when there is one
+    const MC = M3 ? (()=>{ const m=Math.max(...M3.hi); return M3.hi.map(v=>Math.round(255*v/m)).join(','); })() : '255,255,255';
     const n=Math.round(canonArea(w,h)/(3072*3072)*3200*dust);
     for(let k=0;k<n;k++){
       const x=Math.random()*w, y=Math.random()*h, b=Math.pow(beamAt(x/div, y/div), 1.5), near=Math.random()<0.1, gl=Math.random();
@@ -155,10 +168,10 @@ export function genClouds(w,h,amt,zoom,light,form){
       const a=(0.06+0.94*b)*(0.4+0.6*gl);
       if(near){
         const r=cpx(6+Math.random()*14), g=ctx.createRadialGradient(x,y,0,x,y,r);
-        g.addColorStop(0,`rgba(255,255,255,${0.2*a})`); g.addColorStop(0.7,`rgba(255,255,255,${0.14*a})`); g.addColorStop(1,'rgba(255,255,255,0)');
+        g.addColorStop(0,`rgba(${MC},${0.2*a})`); g.addColorStop(0.7,`rgba(${MC},${0.14*a})`); g.addColorStop(1,`rgba(${MC},0)`);
         ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
       } else {
-        ctx.fillStyle=`rgba(255,255,255,${0.85*a})`; ctx.beginPath(); ctx.arc(x,y,cpx(0.7+Math.random()*1.6),0,Math.PI*2); ctx.fill();
+        ctx.fillStyle=`rgba(${MC},${0.85*a})`; ctx.beginPath(); ctx.arc(x,y,cpx(0.7+Math.random()*1.6),0,Math.PI*2); ctx.fill();
       }
     }
   }
@@ -628,8 +641,10 @@ export function genEmbers(w,h,accent1,accent2,amt,zoom,form){
 // Flurries: soft round flakes on a transparent canvas (composited with 'lighten' so
 // they always read bright regardless of background) — mostly small/sharp, a few
 // larger and softer, like flakes drifting slightly out of focus.
-export function genSnow(w,h,amt,zoom,light,form){
+export function genSnow(w,h,amt,zoom,light,form,base){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // SNOW HUE: the flakes' colour (white: as they always were)
+  const SC = base ? `${base.r},${base.g},${base.b}` : '255,255,255';
   // WIND blows from where the dial points (here the dial is the wind, not a
   // light) and the flakes fall with it: each streaks along its path while the
   // shutter is open — the nearer and larger, the longer the streak, and the
@@ -662,7 +677,7 @@ export function genSnow(w,h,amt,zoom,light,form){
     size = cpx(size);
 
     if(tiny){
-      fctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      fctx.fillStyle = `rgba(${SC},${alpha})`;
       if(wind > 0){                                             // a speck becomes a short dash
         const L = cpx(1) + cpx(3)*wind;
         fctx.strokeStyle = fctx.fillStyle; fctx.lineWidth = cpx(1); fctx.lineCap = 'round';
@@ -676,25 +691,25 @@ export function genSnow(w,h,amt,zoom,light,form){
       fctx.save(); fctx.translate(x, y); fctx.rotate(Math.atan2(vy, vx)); fctx.scale(1 + streak/size, 1);
       const sg = fctx.createRadialGradient(0,0,0,0,0,size);
       const a2 = alpha/(1 + 0.3*streak/size);                     // the same light spread over a longer path
-      sg.addColorStop(0, `rgba(255,255,255,${a2})`); sg.addColorStop(0.6, `rgba(255,255,255,${a2*0.5})`); sg.addColorStop(1, 'rgba(255,255,255,0)');
+      sg.addColorStop(0, `rgba(${SC},${a2})`); sg.addColorStop(0.6, `rgba(${SC},${a2*0.5})`); sg.addColorStop(1, 'rgba(${SC},0)');
       fctx.fillStyle = sg; fctx.beginPath(); fctx.arc(0,0,size,0,Math.PI*2); fctx.fill(); fctx.restore();
       if(crystal && wind < 0.35){
         objectPath(fctx, 'snowflake', x, y, size*0.72, Math.random()*Math.PI);
-        fctx.strokeStyle = `rgba(255,255,255,${Math.min(1, alpha*1.5)*(1 - wind/0.35)})`; fctx.lineWidth = Math.max(cpx(0.6), size*0.075); fctx.lineCap = 'round'; fctx.stroke();
+        fctx.strokeStyle = `rgba(${SC},${Math.min(1, alpha*1.5)*(1 - wind/0.35)})`; fctx.lineWidth = Math.max(cpx(0.6), size*0.075); fctx.lineCap = 'round'; fctx.stroke();
       }
       continue;
     }
     const grad = fctx.createRadialGradient(x,y,0,x,y,size);
-    grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
-    grad.addColorStop(0.6, `rgba(255,255,255,${alpha*0.5})`);
-    grad.addColorStop(1, `rgba(255,255,255,0)`);
+    grad.addColorStop(0, `rgba(${SC},${alpha})`);
+    grad.addColorStop(0.6, `rgba(${SC},${alpha*0.5})`);
+    grad.addColorStop(1, `rgba(${SC},0)`);
     fctx.fillStyle = grad;
     fctx.beginPath(); fctx.arc(x,y,size,0,Math.PI*2); fctx.fill();
     // the in-focus flakes show their crystal: six arms with side-branches,
     // inside the glow (tiny specks and the large blurred ones don't)
     if(crystal){
       objectPath(fctx, 'snowflake', x, y, size*0.72, Math.random()*Math.PI);
-      fctx.strokeStyle = `rgba(255,255,255,${Math.min(1, alpha*1.5)})`; fctx.lineWidth = Math.max(cpx(0.6), size*0.075); fctx.lineCap = 'round'; fctx.stroke();
+      fctx.strokeStyle = `rgba(${SC},${Math.min(1, alpha*1.5)})`; fctx.lineWidth = Math.max(cpx(0.6), size*0.075); fctx.lineCap = 'round'; fctx.stroke();
     }
   }
   return full;

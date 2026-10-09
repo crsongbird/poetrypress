@@ -49,14 +49,14 @@ check('Aurora Veil has two hues, the hem defaulting to the curtain\'s colour',
 // ---- generic tint: marks only, white is no tint ----
 check('light marks take the light hue and dark marks the dark hue — two tints, not one',
   /export function tintMarks\(src, lightHex, darkHex\)/.test(core) &&
-  /d\[i\] = 128 \+ k \* \(L\.r - 128\)/.test(core) && /d\[i\] = 128 \+ k \* \(D\.r - 128\)/.test(core));
+  /d\[i\] = gr \+ k \* \(L\.r - gr\) \+ cr;/.test(core) && /d\[i\] = gr \+ k \* \(D\.r - gr\) \+ cr;/.test(core));
 check('the lotus is painted in its own colours: petals and heart',
   T.TEXTURE_CAPS.flowers.tintLabels.join('|') === 'Petal Hue|Heart Hue' && !T.TEXTURE_CAPS.flowers.genericTint &&
   T.TEXTURE_CAPS.flowers.blends[0] === 'source-over');
 check('only exactly-mid pixels — the ground — are left alone', /if\(v > 128\)\{[\s\S]*?\} else if\(v < 128\)\{/.test(core));
 const tinted = Object.entries(T.TEXTURE_CAPS).filter(([, c]) => c.genericTint);
 check('white over black is the identity: nothing changes until a hue is chosen',
-  /const tint = !!\(lightHex \|\| darkHex\) && !\(lightIsWhite && darkIsBlack\);/.test(core) && /if\(!tint && !remap\) return src;/.test(core));
+  /const tint = \(!!\(lightHex \|\| darkHex\) && !\(lightIsWhite && darkIsBlack\)\) \|\| !groundIsGrey;/.test(core) && /if\(!tint && !remap\) return src;/.test(core));
 check('generic tints default to white and black',
   tinted.every(([, c]) => c.tints === 2 && c.tintDefaults[0] === '#FFFFFF' && c.tintDefaults[1] === '#000000'));
 check('monochrome textures can be tinted', tinted.length >= 15);
@@ -100,18 +100,11 @@ check('it renders across seeds', threw === null);
 
 // ---- the Scrying Pool ----
 const touch = readFileSync(new URL('../texTouch.js', import.meta.url), 'utf8');
-const sstep = (a,b,x) => { const t = Math.max(0, Math.min(1, (x-a)/(b-a))); return t*t*(3-2*t); };
-const causticAt = d => 1 - sstep(0.30, 0.66, d), murkAt = d => sstep(0.34, 0.70, d);
-check('depth has no dead zone: every depth shows caustics, murk, or both',
-  [...Array(101).keys()].every(i => causticAt(i/100) + murkAt(i/100) > 0.35));
-check('shallow water is all caustics, deep water all murk',
-  causticAt(0.1) === 1 && murkAt(0.1) === 0 && causticAt(0.9) === 0 && murkAt(0.9) === 1);
-check('the generator uses exactly that crossover',
-  /const caustic=1-sstep\(0\.30,0\.66,depth\)/.test(touch) && /const murk=sstep\(0\.34,0\.70,depth\)/.test(touch));
-check('waviness sets the scale of the caustic net', /tile=unit\*0\.3\*zoom/.test(touch));
-check('the net never repeats in a grid: points are bent by waves that share no period',
-  /Math\.sin\(uy\*0\.73\+ph1\)/.test(touch) && !/%TAU/.test(touch));
-check('it computes at a quarter of the EXPORT resolution, at any size', /const div=canonDiv\(4\), ww=Math\.ceil\(w\/div\)/.test(touch));
+// (rebuilt as a physical surface: see pmlVars' Scrying Pool checks)
+check('the pool is a physical surface: travelling waves, refracted rays, glints',
+  /, waves=\[\]/.test(touch) && /const C=new Float32Array\(PN\);/.test(touch) && /const glint=Math\.pow\(nh, 400\)/.test(touch));
+check('wave scale sets the waves\' length, on the export grid at any size',
+  /const lam=Math\.max\(unit\*0\.025, unit\*0\.22\*zoom/.test(touch) && /const div=canonDiv\(2\), ww=Math\.ceil\(w\/div\), wh=Math\.ceil\(h\/div\), unit=Math\.min\(ww,wh\), N=ww\*wh;\n  const la=/.test(touch));
 check('it is neutral by default: the page supplies the colour',
   T.TEXTURE_CAPS.water.tintDefaults[0] === '#FFFFFF' && T.TEXTURE_CAPS.water.blends[0] === 'soft-light');
 let wthrew = null;

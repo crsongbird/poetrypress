@@ -17,14 +17,16 @@ import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx
 //   stamens count, and stamLen their length rib      a pale midrib (day lily)
 //   sepals  share of the outer ring that is green    spiral  rings turn by the golden angle
 //   cluster breaks the bloom into many small florets (hydrangea)
+//   pod     a lotus's seed pod: a flat-topped cone pitted with seed cells,
+//           ringed by its stamens
 const FORMS = [
-  { at:0.00, n:5,  rings:1, len:0.82, wide:0.66, round:1.3, notch:0, spread:0.30, heart:0.05, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0.5, spiral:0, cluster:0 }, // bell bud
-  { at:0.25, n:5,  rings:1, len:0.95, wide:0.62, round:1.6, notch:1, spread:1,    heart:0.07, seeds:0, stamens:26, stamLen:0.46, rib:0, sepals:0,   spiral:0, cluster:0 }, // cherry blossom
-  { at:0.38, n:6,  rings:1, len:1.00, wide:0.30, round:0.1, notch:0, spread:1,    heart:0.06, seeds:0, stamens:6,  stamLen:0.72, rib:1, sepals:0,   spiral:0, cluster:0 }, // day lily
-  { at:0.50, n:11, rings:3, len:1.00, wide:0.44, round:0.55,notch:0, spread:1,    heart:0.20, seeds:0, stamens:44, stamLen:0.26, rib:0, sepals:0.6, spiral:0, cluster:0 }, // lotus
-  { at:0.65, n:26, rings:1, len:1.00, wide:0.12, round:0.4, notch:0, spread:1,    heart:0.36, seeds:1, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:0, cluster:0 }, // daisy / sunflower
-  { at:0.82, n:7,  rings:6, len:0.92, wide:0.52, round:1.8, notch:0, spread:1,    heart:0.05, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:1, cluster:0 }, // rosette
-  { at:1.00, n:4,  rings:1, len:0.90, wide:0.62, round:1.4, notch:0, spread:1,    heart:0.08, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:0, cluster:1 }, // hydrangea
+  { at:0.00, n:5,  rings:1, len:0.82, wide:0.66, round:1.3, notch:0, spread:0.30, heart:0.05, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0.5, spiral:0, cluster:0, pod:0 }, // bell bud
+  { at:0.25, n:5,  rings:1, len:0.95, wide:0.62, round:1.6, notch:1, spread:1,    heart:0.07, seeds:0, stamens:26, stamLen:0.46, rib:0, sepals:0,   spiral:0, cluster:0, pod:0 }, // cherry blossom
+  { at:0.38, n:6,  rings:1, len:1.00, wide:0.30, round:0.1, notch:0, spread:1,    heart:0.06, seeds:0, stamens:6,  stamLen:0.72, rib:1, sepals:0,   spiral:0, cluster:0, pod:0 }, // day lily
+  { at:0.50, n:11, rings:3, len:1.00, wide:0.44, round:0.55,notch:0, spread:1,    heart:0.20, seeds:0, stamens:44, stamLen:0.26, rib:0, sepals:0.6, spiral:0, cluster:0, pod:1 }, // lotus
+  { at:0.65, n:26, rings:1, len:1.00, wide:0.12, round:0.4, notch:0, spread:1,    heart:0.36, seeds:1, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:0, cluster:0, pod:0 }, // daisy / sunflower
+  { at:0.82, n:7,  rings:6, len:0.92, wide:0.52, round:1.8, notch:0, spread:1,    heart:0.05, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:1, cluster:0, pod:0 }, // rosette
+  { at:1.00, n:4,  rings:1, len:0.90, wide:0.62, round:1.4, notch:0, spread:1,    heart:0.08, seeds:0, stamens:0,  stamLen:0.20, rib:0, sepals:0,   spiral:0, cluster:1, pod:0 }, // hydrangea
 ];
 function formAt(f){
   f = Math.max(0, Math.min(1, f));
@@ -38,8 +40,16 @@ function formAt(f){
   return out;
 }
 
-export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
+export function genFlowers(w,h,amt,zoom,tint1,tint2,form,light,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // THE LIGHT comes from where the dial points (upper left by default): each
+  // petal's fold turns its far half into shade, the bloom brightens on its
+  // lit side, every bloom throws its shadow on the water away from the light,
+  // and each ring of petals shades the ring beneath it. A lower light throws
+  // longer shadows (lightVec's length is how low it is).
+  const lv=lightVec(light==null?315:light), tilt=Math.min(1, Math.hypot(lv.lx, lv.ly));
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);   // toward the light
+  const shadowLen=0.08+0.16*tilt;
   const F=formAt(form==null?0.5:form);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);                              // transparent ground
@@ -138,7 +148,7 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
     // the fold: a crease down the petal's centre. The half turned away from
     // the light (from the upper left) falls into gentle shade; the crease
     // catches a thin highlight on its lit side.
-    const away = (px*0.707 + py*0.707) > 0 ? 1 : -1;
+    const away = (-(px*SX + py*SY)) > 0 ? 1 : -1;
     ctx.save(); shape(); ctx.clip();
     const [h0x,h0y]=at(0,0), [h1x,h1y]=at(1.05,0), [h2x,h2y]=at(1.05,away*1.6), [h3x,h3y]=at(0,away*1.6);
     ctx.fillStyle=`rgba(0,0,0,${0.13*alpha})`; ctx.beginPath(); ctx.moveTo(h0x,h0y); ctx.lineTo(h1x,h1y); ctx.lineTo(h2x,h2y); ctx.lineTo(h3x,h3y); ctx.closePath(); ctx.fill();
@@ -160,8 +170,18 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
       const b2=mix(base, mix(base,{r:base.r*0.76,g:base.g*0.5,b:base.b*0.66},0.7), rt);   // deeper inward
       const n=Math.max(3, Math.round(F.n*(1 - ri*0.1)*(0.8+Math.random()*0.2)));
       const off=F.spiral ? ri*2.39996*F.spiral : (ri%2)*0.5/n*Math.PI*2;
+      // this ring shades the ring beneath it: a soft shadow, cast away from the light
+      if(ri>0){
+        const sr=R*F.len*scale*0.95, ox2=(fan?cx:cx)-SX*R*shadowLen*0.6, oy2=(fan?baseY:cy)-SY*R*shadowLen*0.6;
+        const sg=ctx.createRadialGradient(ox2,oy2,sr*0.35,ox2,oy2,sr*1.08);
+        sg.addColorStop(0,'rgba(20,10,20,0.22)'); sg.addColorStop(1,'rgba(20,10,20,0)');
+        ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(ox2,oy2,sr*1.08,0,Math.PI*2); ctx.fill();
+      }
       for(let k=0;k<n;k++){
-        const a = fan ? -Math.PI/2 + ((n>1 ? k/(n-1) : 0.5) - 0.5)*Math.PI*2*F.spread*0.5 + (Math.random()-0.5)*0.08
+        // a bud fans upward across `spread` of the circle; as it opens the fan
+        // widens to the full circle, petals evenly round it (it used to stop at
+        // a half circle, so half-open blooms had every petal pointing up)
+        const a = fan ? -Math.PI/2 + ((k+0.5)/n - 0.5)*Math.PI*2*F.spread + (Math.random()-0.5)*0.08
                       : rot + off + (k/n)*Math.PI*2 + (Math.random()-0.5)*0.12;
         const len=R*F.len*scale*(0.92+Math.random()*0.16), wide=R*F.wide*scale*(0.9+Math.random()*0.2);
         const ox=cx, oy=fan ? baseY : cy;
@@ -180,15 +200,58 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
       }
     }
     // light falling on the bloom from the upper left
-    const lit=ctx.createRadialGradient(cx-R*0.35,cy-R*0.4,R*0.05,cx-R*0.2,cy-R*0.25,R*1.05);
+    const lit=ctx.createRadialGradient(cx+SX/0.7071*R*0.35,cy+SY/0.7071*R*0.4,R*0.05,cx+SX/0.7071*R*0.2,cy+SY/0.7071*R*0.25,R*1.05);
     lit.addColorStop(0,'rgba(255,255,255,0.22)'); lit.addColorStop(1,'rgba(255,255,255,0)');
     ctx.fillStyle=lit; ctx.beginPath(); ctx.arc(cx,cy,R*1.02,0,Math.PI*2); ctx.fill();
     if(fan && F.spread<0.6) return;                              // a closed bud shows no heart
+    const hr=R*F.heart, bright=brightOf(B);
+    const stamens=()=>{
+      ctx.strokeStyle=css(bright,0.95); ctx.lineCap='round';
+      for(let k=0;k<F.stamens;k++){
+        const a=rot+(k/F.stamens)*Math.PI*2+(Math.random()-0.5)*0.08;
+        // around a pod they stand at its rim, not under it
+        const r0=hr*(0.5 + 0.5*F.pod), r1=Math.max(r0*1.05, R*(F.stamLen*(0.9+Math.random()*0.2))*(1 + 0.35*F.pod));
+        ctx.lineWidth=Math.max(cpx(0.6),R*0.012);
+        ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0); ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke();
+        ctx.fillStyle=css(bright); ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1,Math.max(0.6,R*0.013),0,Math.PI*2); ctx.fill();
+      }
+    };
+    // a lotus's pod stands on its stamens: they go down first
+    if(F.pod>0.02) stamens();
     // the heart
-    const hr=R*F.heart;
     const heart=ctx.createRadialGradient(cx,cy,0,cx,cy,hr);
     heart.addColorStop(0,css(mix(B,{r:0,g:0,b:0},0.25))); heart.addColorStop(1,css(B));
     ctx.fillStyle=heart; ctx.beginPath(); ctx.arc(cx,cy,hr,0,Math.PI*2); ctx.fill();
+    if(F.pod>0.02){
+      // THE SEED POD: a flat-topped cone. Its side shows on the side away from
+      // the light, in shade; its top is lit; its rim catches a line of light;
+      // seed cells pit the top in rings, each a hollow lit on its far wall
+      const P=F.pod, sideCol=mix(B,{r:0,g:0,b:0},0.45), topCol=mix(B,{r:255,g:255,b:255},0.12);
+      ctx.fillStyle=css(sideCol,0.9*P); ctx.beginPath(); ctx.arc(cx-SX*hr*0.14, cy-SY*hr*0.14, hr*1.02, 0, Math.PI*2); ctx.fill();
+      const tg=ctx.createLinearGradient(cx+SX*hr, cy+SY*hr, cx-SX*hr, cy-SY*hr);
+      tg.addColorStop(0, css(mix(topCol,{r:255,g:255,b:255},0.25), P)); tg.addColorStop(1, css(mix(topCol,{r:0,g:0,b:0},0.15), P));
+      ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(cx, cy, hr*0.94, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle=css(mix(topCol,{r:255,g:255,b:255},0.5), 0.55*P); ctx.lineWidth=Math.max(cpx(0.6), hr*0.05);
+      ctx.beginPath(); ctx.arc(cx, cy, hr*0.94, la-1.1, la+1.1); ctx.stroke();
+      // seed cells: one at the centre, then rings of 6, 11, 16…
+      const cr=hr*0.12, cells=[[0,0]];
+      for(let ring=1; ring*cr*2.5<hr*0.8; ring++){ const m=1+ring*5, rr=ring*cr*2.5, ph=Math.random()*6.283;
+        for(let k=0;k<m;k++){ const aa=ph+k/m*Math.PI*2; cells.push([Math.cos(aa)*rr, Math.sin(aa)*rr]); } }
+      for(const [ux,uy] of cells){
+        const x=cx+ux, y=cy+uy;
+        ctx.fillStyle=css(mix(B,{r:0,g:0,b:0},0.6), 0.85*P); ctx.beginPath(); ctx.arc(x, y, cr, 0, Math.PI*2); ctx.fill();
+        // the far wall of the hollow is the lit one
+        ctx.strokeStyle=css(mix(topCol,{r:255,g:255,b:255},0.35), 0.6*P); ctx.lineWidth=Math.max(cpx(0.4), cr*0.28);
+        ctx.beginPath(); ctx.arc(x, y, cr*0.8, la+Math.PI-1.0, la+Math.PI+1.0); ctx.stroke();
+        // a seed in most cells, catching the light on its near side
+        if(Math.random()<0.7){ ctx.fillStyle=css(mix(B,{r:60,g:90,b:30},0.35), 0.9*P); ctx.beginPath(); ctx.arc(x-SX*cr*0.12, y-SY*cr*0.12, cr*0.55, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle=`rgba(255,255,255,${0.35*P})`; ctx.beginPath(); ctx.arc(x+SX*cr*0.22, y+SY*cr*0.22, cr*0.18, 0, Math.PI*2); ctx.fill(); }
+        // GLOW: the seeds light up, like lanterns
+        if(GL){ const g3=`${GL.r*255|0},${GL.g*255|0},${GL.b*255|0}`, gr=ctx.createRadialGradient(x,y,0,x,y,cr*2.4);
+          gr.addColorStop(0,`rgba(255,255,255,${0.9*P})`); gr.addColorStop(0.25,`rgba(${g3},${0.9*P})`); gr.addColorStop(1,`rgba(${g3},0)`);
+          ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(x,y,cr*2.4,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+      }
+    }
     // a seeded centre: florets in the golden-angle spiral a sunflower uses
     if(F.seeds>0.05){
       const seeds=Math.round(60+hr*0.6), dark=mix(B,{r:0,g:0,b:0},0.55);
@@ -196,25 +259,21 @@ export function genFlowers(w,h,amt,zoom,tint1,tint2,form){
       for(let k=1;k<seeds;k++){ const rr=hr*0.92*Math.sqrt(k/seeds), aa=k*2.39996;
         ctx.beginPath(); ctx.arc(cx+Math.cos(aa)*rr, cy+Math.sin(aa)*rr, Math.max(0.5,hr*0.045), 0, Math.PI*2); ctx.fill(); }
     }
-    // stamens
-    const bright=brightOf(B);
-    ctx.strokeStyle=css(bright,0.95); ctx.lineCap='round';
-    for(let k=0;k<F.stamens;k++){
-      const a=rot+(k/F.stamens)*Math.PI*2+(Math.random()-0.5)*0.08;
-      const r0=hr*0.5, r1=R*(F.stamLen*(0.9+Math.random()*0.2));
-      ctx.lineWidth=Math.max(cpx(0.6),R*0.012);
-      ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0); ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke();
-      ctx.fillStyle=css(bright); ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1,Math.max(0.6,R*0.013),0,Math.PI*2); ctx.fill();
-    }
+    // stamens (around a pod they are already down)
+    if(F.pod<=0.02) stamens();
+    // GLOW in a flower without a pod: its heart lights up
+    if(GL && F.pod<=0.02){ const gr=ctx.createRadialGradient(cx,cy,0,cx,cy,hr*1.8); gr.addColorStop(0,`rgba(${GL.r*255|0},${GL.g*255|0},${GL.b*255|0},0.8)`); gr.addColorStop(1,`rgba(${GL.r*255|0},${GL.g*255|0},${GL.b*255|0},0)`);
+      ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(cx,cy,hr*1.8,0,Math.PI*2); ctx.fill(); }
   };
 
   for(const {x:cx,y:cy,r:R} of placed){
     const base=vary(A,0.16);
     const tip=fadeOf(base);
     // its shadow on the water
-    const sh=ctx.createRadialGradient(cx+R*0.12,cy+R*0.16,R*0.2,cx+R*0.12,cy+R*0.16,R*1.25);
+    const shx=cx-SX*R*shadowLen*1.4, shy=cy-SY*R*shadowLen*1.4;
+    const sh=ctx.createRadialGradient(shx,shy,R*0.2,shx,shy,R*1.25);
     sh.addColorStop(0,'rgba(10,10,14,0.34)'); sh.addColorStop(1,'rgba(10,10,14,0)');
-    ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(cx+R*0.12,cy+R*0.16,R*1.25,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(shx,shy,R*1.25,0,Math.PI*2); ctx.fill();
     if(F.cluster>0.02){
       // the bloom breaks into florets: one at the start, a dome of many at the end
       const count=Math.round(1+F.cluster*13), fr=R/(1+F.cluster*2.3);

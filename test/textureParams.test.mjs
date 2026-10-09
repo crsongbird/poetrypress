@@ -32,9 +32,9 @@ check('the picker offers 37 textures', textureTypes.length === 37);
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
 // a third knob is always Form; Dream Bloom alone goes on to five (Object Shape, Colour Variation)
-check('every texture declares two params, plus an optional third that must be Form (and Dream Bloom\'s fourth and fifth)',
+check('every texture declares two params, plus an optional third that must be Form (and Dream Bloom\'s and Crystal Leaf\'s fourth and fifth)',
   Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
-    || (t === 'bokeh' && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')));
+    || ((t === 'bokeh' || t === 'crystalleaf' || t === 'water') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')));
 
 const unlabelled = textureTypes.filter(t => paramsFor(t).some(d => !d.label || /value/i.test(d.label)));
 check('every param has a real label, not "value 1"', unlabelled.length === 0);
@@ -83,8 +83,8 @@ if(outOfRange.length) console.log('   offenders:', outOfRange.map(p=>p.name).joi
 // names that were lies
 check('the cracks texture is no longer called non-euclidean', !html.includes('Non-Euclid Cracks'));
 check('the mosaic is no longer called twisting', !html.includes('Twisting Geometry'));
-check('Math Static was replaced, and its successor is Transmutation Circles',
-  !html.includes('Math Static') && html.includes('Transmutation Circles') && !html.includes('>Summoning Circles<'));
+check('Math Static was replaced, and its successor is the Transmutation Circle (one circle now)',
+  !html.includes('Math Static') && html.includes('>Transmutation Circle<') && !html.includes('>Summoning Circles<'));
 
 // ---- every knob must actually do something ----
 // This is the check that was missing when zoom was faked by generating at a

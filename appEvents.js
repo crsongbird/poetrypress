@@ -146,7 +146,7 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
 ];
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
@@ -667,6 +667,7 @@ function serializeCurrentSettings(){
     textureTint2: $('textureTint2Hex').value,
     textureTint3: $('textureTint3Hex').value,
     textureTint4: $('textureTint4Hex').value,
+    textureTint5: $('textureTint5Hex').value,
     texP1: $('texP1').value,
     texP2: $('texP2').value,
     texP3: $('texP3').value,
@@ -766,6 +767,8 @@ function restoreSettings(s){
   // material hues: white (none) unless the look carries them
   setColorField('textureTint3Hex', s.textureTint3 || '#FFFFFF');
   setColorField('textureTint4Hex', s.textureTint4 || '#FFFFFF');
+  // the fifth hue: its role's "none" unless the look carries one
+  setColorField('textureTint5Hex', s.textureTint5 || hue5Default(s.textureType || $('textureType').value));
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
   if(s.texP2 !== undefined) $('texP2').value = s.texP2;
   if(s.texP3 !== undefined) $('texP3').value = s.texP3;
@@ -1109,6 +1112,7 @@ function applyPreset(p){
     if(p.textureTint2){ setColorField('textureTint2Hex', p.textureTint2); state.ui.tintFollows[1] = false; }
     setColorField('textureTint3Hex', p.textureTint3 || '#FFFFFF');
     setColorField('textureTint4Hex', p.textureTint4 || '#FFFFFF');
+    setColorField('textureTint5Hex', p.textureTint5 || hue5Default(p.textureType || $('textureType').value));
     syncLightPad();
     restoreLocked(__locks);
     // a preset changes opacity and seed without anyone touching them
@@ -1436,7 +1440,7 @@ function syncTextureTools(resetToDefaults){
     lightRow.classList.toggle('tool-off', !caps.light);
     // a texture may use the dial for something else, and says so: First Snow's wind
     const lbl = lightRow.querySelector('label');
-    if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = lbl.textContent; lbl.textContent = caps.dial || lbl.dataset.lightName; }
+    if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = labelText(lbl); setLabelText(lbl, caps.dial || lbl.dataset.lightName); }
   }
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
@@ -1445,8 +1449,16 @@ function syncTextureTools(resetToDefaults){
   // material hues, for lit textures that are coloured (not the grey ones that blend)
   ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-off', !caps.material); });
   if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); }
-  if(caps.tints >= 1) $('tint1Label').textContent = (caps.tintLabels||[])[0] || 'Tint';
-  if(caps.tints >= 2) $('tint2Label').textContent = (caps.tintLabels||[])[1] || 'Second tint';
+  // the fifth hue: Glow, Material or Snow Hue, by what the texture has (or none)
+  const r5 = $('tint5Row');
+  if(r5){
+    r5.classList.toggle('tool-off', !caps.hue5);
+    if(caps.hue5){ setLabelText($('tint5Label'), caps.hue5.label); $('tint5Label').title = caps.hue5.why; }
+    if(resetToDefaults || !caps.hue5) setColorField('textureTint5Hex', caps.hue5 ? caps.hue5.def : '#000000');
+  }
+  // (a hue the texture doesn't have says so plainly, not the last texture's name)
+  setLabelText($('tint1Label'), caps.tints >= 1 ? ((caps.tintLabels||[])[0] || 'Tint') : 'Hue');
+  setLabelText($('tint2Label'), caps.tints >= 2 ? ((caps.tintLabels||[])[1] || 'Second tint') : 'Second Hue');
 
   // a texture that takes its colour from the accents starts there
   if(resetToDefaults && caps.tints >= 1){
@@ -1542,6 +1554,20 @@ bindColorField('textureTint1Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tint
 bindColorField('textureTint2Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[1] = false; scheduleRender(); });
 bindColorField('textureTint3Hex', ()=>scheduleRender());
 bindColorField('textureTint4Hex', ()=>scheduleRender());
+bindColorField('textureTint5Hex', ()=>scheduleRender());
+/** A label's own words, leaving what else lives in it (its padlock) alone —
+ *  writing textContent wiped the lock off every hue whose name changes. */
+const textNode = el => (el && el.childNodes && typeof el.childNodes[Symbol.iterator] === 'function') ? [...el.childNodes].find(n => n.nodeType === 3) : null;
+function labelText(el){ const t = textNode(el); return t ? t.nodeValue.trim() : String(el.textContent || '').trim(); }
+function setLabelText(el, text){
+  if(!el) return;
+  if(!el.childNodes || typeof el.childNodes[Symbol.iterator] !== 'function'){ el.textContent = text; return; }   // (a bare stand-in element)
+  const t = textNode(el);
+  if(t) t.nodeValue = text; else el.insertBefore(document.createTextNode(text), el.firstChild);
+}
+/** The fifth hue's "none" for a texture: black for a glow, mid-grey for a
+ *  grey texture's material, white for a base colour. */
+function hue5Default(type){ const h = (capsFor(type) || {}).hue5; return h ? h.def : '#000000'; }
 
 // ---------- locks ----------
 // A locked control survives Randomize and preset changes. Rather than

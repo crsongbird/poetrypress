@@ -214,7 +214,7 @@ export const PRESETS = [
     text1: "#E8FFF6",
     outlineMode: "off",
     font: "Space Mono",
-    texture: true, textureType: "summoning", textureOpacity: 30, texP1: 160, texP2: 90,
+    texture: true, textureType: "summoning", textureOpacity: 30, texP1: 160, texP2: 90, texP3: 75, textureLightTilt: 0,
     accent1: "#3DF5A0", accent2: "#5AC8FF",
     border: true, borderColor: "#3DF5A0", borderThickness: 7, borderOffset: 26,
     borderGradient: true, borderColor2: "#5AC8FF", borderColor3: "#B8FFE4",

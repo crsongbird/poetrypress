@@ -368,7 +368,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 17);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 19);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -649,8 +649,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('the Shade hue colours shadows, not lit faces', Math.abs(C.litK(L, lit, 0.4, M, 2) - L.light[lit]) < 1e-9 && C.litK(L, shaded, 0.4, M, 2) > L.light[shaded]*1.2);
   check('material hues keep their brightness (a deep blue shade does not darken)', Math.abs(0.2126*M.sh[0] + 0.7152*M.sh[1] + 0.0722*M.sh[2] - 1) < 0.02);
   const T = await import('../textureGenerators.js');
-  check('six coloured lit textures take materials; the grey ones that blend do not',
-    ['tessellate', 'cupring', 'wax', 'dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].material === true) && !T.TEXTURE_CAPS.foldghost.material && !T.TEXTURE_CAPS.glassrain.material);
+  check('every texture lit by the engine takes materials (Highlight, Shade) — the grey ones too, now that the tint pass keeps colour',
+    ['tessellate', 'cupring', 'wax', 'dunes', 'kintsugi', 'moss', 'crackedglaze', 'coldpress', 'clouds', 'crystalleaf', 'glassrain', 'foldghost', 'sigils'].every(t => T.TEXTURE_CAPS[t].material === true));
   check('material hues key the cache only when set', T.textureKeyFor('dunes', 64, 64, { tint3: '#FFFFFF' }) === T.textureKeyFor('dunes', 64, 64, {}) && T.textureKeyFor('dunes', 64, 64, { tint4: '#3060FF' }) !== T.textureKeyFor('dunes', 64, 64, {}));
   check('Highlight and Shade are saved, restored (white when absent) and reset by presets',
     /textureTint3: \$\('textureTint3Hex'\)\.value,/.test(ev) && /setColorField\('textureTint4Hex', s\.textureTint4 \|\| '#FFFFFF'\);/.test(ev) && /setColorField\('textureTint3Hex', p\.textureTint3 \|\| '#FFFFFF'\);/.test(ev));
@@ -718,9 +718,11 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('Waking Grain has Grain: Silver, Film (the original, the default), Paper, Digital',
     knobs('grain') === 'Grain Size|Contrast|Grain' && T.paramsFor('grain')[2].names.join() === 'Silver,Film,Paper,Digital' && T.paramsFor('grain')[2].def === 33);
   const t = src('texTouch.js'), cl = t.slice(t.indexOf('export function genCrystalLeaf('));
-  check('Crystal Leaf: each grain a tilted facet (a normal map), dendrites and terraces as lit heights',
-    knobs('crystalleaf') === 'Crystal Size|Dendrites|Terraces' && T.TEXTURE_CAPS.crystalleaf.light === true
+  check('Crystal Leaf: each grain a tilted facet (a normal map), dendrites and terraces as lit heights; Variation and Brushing',
+    knobs('crystalleaf') === 'Crystal Size|Dendrites|Terraces|Variation|Brushing' && T.TEXTURE_CAPS.crystalleaf.light === true && T.TEXTURE_CAPS.crystalleaf.material === true
     && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.9, shadow:0\.6, ao:0\.35, ambient:0\.3, normals:Nm \}\);/.test(cl));
+  check('…its barbs lean back toward the nucleus; terraces carry bismuth\'s thin-film colour; flecks glint and can glow',
+    /const ph=\(al\+aa\*COT60\)\/sp \+ A\.ph/.test(cl) && /film=\[0\.5\+0\.5\*Math\.cos/.test(cl) && /const glint=Math\.pow\(face, 10\)/.test(cl));
 }
 
 // ---- the background randomiser changes the texture the way a person does ----
@@ -741,7 +743,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
     T.paramsFor('snow').map(d => d.label).join('|') === 'Flake Size|Snowfall|Wind' && T.paramsFor('snow')[2].def === 0
     && T.TEXTURE_CAPS.snow.light === true && T.TEXTURE_CAPS.snow.dial === 'Wind Direction');
   check('the dial takes the name a texture gives it, and its own name back otherwise',
-    /lbl\.textContent = caps\.dial \|\| lbl\.dataset\.lightName;/.test(ev));
+    /setLabelText\(lbl, caps\.dial \|\| lbl\.dataset\.lightName\);/.test(ev));
   check('wind blows FROM where the dial points (away from its handle), as light comes from it',
     /vx = -Math\.cos\(a\)\*wind\*1\.6; vy = -Math\.sin\(a\)\*wind\*1\.6 \+ 1;/.test(src('texWhimsy.js')));
 }
@@ -767,6 +769,49 @@ check('the inset box is painted on its own layer, then blended on as one image (
     T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness'
     && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:'].every(k => wh.includes('    ' + k))
     && /const kind=Object\.keys\(BIOMES\)\[Math\.floor\(Math\.random\(\)\*Object\.keys\(BIOMES\)\.length\)\];/.test(wh));
+}
+
+// ---- Lotus Pond: lit by the dial, petals the right way, a seed pod ----
+{
+  const T = await import('../textureGenerators.js'), sh = src('texSharpness.js');
+  check('Lotus Pond takes the light: folds, the bloom\'s lit side, shadows on the water and ring on ring follow the dial',
+    T.TEXTURE_CAPS.flowers.light === true && /const away = \(-\(px\*SX \+ py\*SY\)\) > 0 \? 1 : -1;/.test(sh)
+    && /const shx=cx-SX\*R\*shadowLen\*1\.4/.test(sh) && /this ring shades the ring beneath it/.test(sh));
+  check('a half-open bloom fans its petals evenly round the circle (they all pointed up before)',
+    /\(\(k\+0\.5\)\/n - 0\.5\)\*Math\.PI\*2\*F\.spread/.test(sh));
+  check('the lotus has a seed pod: stamens beneath, a lit flat top, pitted seed cells (and they can glow)',
+    /pod:1 \}, \/\/ lotus/.test(sh) && /if\(F\.pod>0\.02\) stamens\(\);/.test(sh) && /const cr=hr\*0\.12, cells=\[\[0,0\]\];/.test(sh) && T.TEXTURE_CAPS.flowers.hue5.role === 'glow');
+}
+
+// ---- the dial's place; padlocks survive a rename ----
+{
+  const css = src('poetrypress.css'), ev = src('appEvents.js'), html = src('index.html');
+  check('the dial sits centred in its space, its reset button in the corner',
+    /\.light-dial-row\{ display:flex; align-items:center; justify-content:center; position:relative;/.test(css) && /\.ld-reset\{ position:absolute; right:0; bottom:0;/.test(css));
+  check('the spike\'s curls flare outward from the rim', html.includes('d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6'));
+  check('renaming a hue or the dial keeps its padlock (labels change their words, not their children)',
+    !/tint\dLabel'\)\.textContent = /.test(ev) && /function setLabelText\(el, text\)/.test(ev) && !/lbl\.textContent = caps\.dial/.test(ev));
+}
+
+// ---- the Transmutation Circle: one circle, placed by the dial ----
+{
+  const T = await import('../textureGenerators.js'), ch = src('texChaos.js');
+  check('one circle; Complexity; Organic ↔ Tech; the dial is its Position (centred by default)',
+    T.paramsFor('summoning').map(d => d.label).join('|') === 'Circle Size|Complexity|Organic ↔ Tech' && T.TEXTURE_CAPS.summoning.dial === 'Position' && T.TEXTURE_CAPS.summoning.lightTilt === 0
+    && /const cx = w\/2 \+ Math\.cos\(la\)\*tilt\*unit\*0\.3/.test(ch));
+  check('…its noisy bloom rises toward the digital end', /const bloom = Math\.max\(0, \(tech - 0\.45\)\/0\.55\);/.test(ch));
+}
+
+// ---- Black Hole's view and jets; Foxing's cockle; the Scrying Pool rebuilt ----
+{
+  const T = await import('../textureGenerators.js'), ch = src('texChaos.js'), tt = src('texTouch.js');
+  const knobs = t => T.paramsFor(t).map(d => d.label).join('|');
+  check('Black Hole: the dial is the View (edge-on at its rim, face-on at its centre); Jets (0: none)',
+    knobs('blackhole') === 'Chaos|Particles|Jets' && T.TEXTURE_CAPS.blackhole.dial === 'View' && /const tilt=tilt0 \+ \(Math\.PI\/2 - tilt0\)\*\(1-view\);/.test(ch));
+  check('Foxing has relief now: Cockle (0: flat, as before), lit by the dial; its glow is UV fluorescence',
+    knobs('foxing') === 'Bloom Size|Spot Count|Cockle' && T.TEXTURE_CAPS.foxing.light === true && T.TEXTURE_CAPS.foxing.hue5.role === 'glow');
+  check('Scrying Pool: waves → refracted rays gathered on the floor (caustics) → glints; Turbulence, Depth, Haze, Murk',
+    knobs('water') === 'Wave Scale|Turbulence|Depth|Haze|Murk' && /const fx=x\+ox-GX\[i\]\*bend, fy=y\+oy-GY\[i\]\*bend;/.test(tt) && /, bend=floor\*\(1-1\/1\.33\)/.test(tt));
 }
 
 console.log();

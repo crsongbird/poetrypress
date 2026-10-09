@@ -530,7 +530,7 @@ inside of a <~~dead person~~/trans>'s dreams.
               <optgroup label="∆ Chaos">
                 <option value="sigils" data-str="option.sigil_scatter">Sigil Scatter</option>
                 <option value="mathnoise" data-str="option.binary_pattern">Binary Pattern</option>
-                <option value="summoning" data-str="option.summoning_circles">Transmutation Circles</option>
+                <option value="summoning" data-str="option.summoning_circles">Transmutation Circle</option>
                 <option value="inkbleed" data-str="option.rorschach_test">Rorschach Test</option>
                 <option value="crackedglaze" data-str="option.fractured_glaze">Fractured Glaze</option>
                 <option value="tessellate" data-str="option.facet_field">Facet Field</option>
@@ -594,11 +594,11 @@ inside of a <~~dead person~~/trans>'s dreams.
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the centre toward where the light comes from">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
                   <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="-0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
-                  <!-- 🜚: the spike and its two curls grow out of the rim toward the light -->
+                  <!-- 🜚: the spike and its two curls grow out of the rim toward the light; the curls flare outward -->
                   <g class="ld-spike" id="lightSpike" opacity="0">
                     <polygon class="ld-spike-body" id="lightSpikeBody" points="-3.4,-24 3.4,-24 0,-26"></polygon>
-                    <path class="ld-curl" d="M -3.2 -30.5 c -5.4 -1.2 -8.2 4.2 -4.4 6.6 c 2.7 1.5 5.4 -1.1 3.1 -3.6"></path>
-                    <path class="ld-curl" d="M 3.2 -30.5 c 5.4 -1.2 8.2 4.2 4.4 6.6 c -2.7 1.5 -5.4 -1.1 -3.1 -3.6"></path>
+                    <path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path>
+                    <path class="ld-curl" d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path>
                   </g>
                   <!-- ☉: one bold circle; the dot at its heart is the handle -->
                   <circle class="ld-ring" r="26"></circle>
@@ -626,6 +626,10 @@ inside of a <~~dead person~~/trans>'s dreams.
           <div class="field full tool-off" id="tint4Row">
             <label id="tint4Label" data-str="label.shade_hue" title="The color the shadows fill with: the sky's light, bouncing back (white: as it is)">Shade Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
+          </div>
+          <div class="field full tool-off" id="tint5Row">
+            <label id="tint5Label" data-str="label.fifth_hue" title="A coloured texture's GLOW (black: none), or a grey texture's MATERIAL — the colour of the surface itself (mid-grey: none)">Glow Hue</label>
+            <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full">
             <label data-str="label.texture_seed">Texture Seed</label>

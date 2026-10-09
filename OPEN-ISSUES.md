@@ -25,52 +25,26 @@ on phones: these take ~0.2–0.6 s at preview size and up to ~2 s at export
 here, in the worker (the page stays responsive).
 
 ## 2 · Texture plan (Ruby's audit, by group)
-
-**B · great, plus a third knob and/or the light**
-- Lotus Pond: light and shading by the dial (lightHeights); a better
-  seed-pod form.
-- Transmutation Circles: ONE circle; Count → complexity; the dial → where on
-  the page; third knob Organic ↔ Technological, with noisy bloom rising
-  toward the digital end. Possibly a new name.
-- Rorschach Test: revisit with the gallery tool, side by side with Ruby.
 - Cartomancy: divination cards, not playing cards — custom suits from the
   app's own glyphs and magical language; more realism and variation; the
   best home for easter eggs (Saturn, Enceladus, the kitsune).
-- Black Hole: look for uses of the third knob and the dial.
-- Foxing: not a Touch texture (it has no light) — move it, or give it
-  relief. (It represents age spots on old paper.)
-
-**C · replace or rethink**
+- Rorschach Test: revisit with the gallery tool, side by side with Ruby.
 - Fractal Moon: rolled back to Ruby's preferred version and touched up
   (soft terminator, no target ring, no hard contour lines). Ruby to judge.
-- Scrying Pool: a physically based water surface — the light dial, a
-  Turbulence knob, Haze and Murk (how cloudy and dirty the water is).
 
-## 3 · Ruby's notes, 2026-10-09 (after Jupiter–Euporie)
-- **Materials everywhere** (Ruby: "use these features to the fullest extent
-  of the law"). Every texture the light touches gets the full material
-  controls — highlight (specular) colour, shade colour, and where it fits
-  gloss and metallicity. First: Fractured Glaze, Sleep Haze (its lit smoke
-  and its shadowed smoke), Cold Press, Crystal Leaf — then go through every
-  texture, one by one, and use the engine wherever it makes it better.
-- **The light dial as a joystick**: textures that don't use light can use
-  the dial for something else, renamed to say what it does (Aurora: blend
-  direction; Transmutation Circles: where on the page; …). The label comes
-  from the texture's caps (`dial:`). First uses: First Snow's Wind
-  Direction, Aurora Veil's Blend Direction.
-- **Crystal Leaf**: the dendrites are too regular (they read as snowflakes)
-  and grow the wrong way; more variation, perhaps a slider for it. Add a
-  BRUSHED relief running across the light's direction, like brushed steel,
-  and tiny flecks like reflections inside the crystal. Terraces don't quite
-  read as bismuth yet.
-- *Medium:* one more colour value, to balance the hue column (four hues
-  beside the dial and the seed) — wired into the lighting and texture engine
-  where it fits. Ask Ruby what it should be before building it.
-- *Medium:* the dial: centre it in its space, move the reset button to a
-  corner, flip the curl of the reset glyph so it points out, not in.
-- Done in Jupiter–Euporie+1: randomising the background now changes the
-  texture as a person would — the knobs relabel. (It also offered only some
-  textures; now it offers the whole menu. A locked texture keeps its knobs.)
+## 3 · Colour, light and material — the rest of the pass
+Built: every colour has one job (test/colorRoles.test.mjs) — Light, Dark,
+Material (a grey texture's surface), Highlight, Shade, Glow (a coloured
+texture's emitted light); First Snow got a Snow Hue. Every texture lit by
+the engine takes Highlight and Shade. The dial is a joystick where a
+texture has no light: Wind Direction (First Snow), Blend Direction (Aurora),
+Position (Transmutation Circle), View (Black Hole).
+- Still to go through, one by one: Glows for Metal Leaf, Night City
+  (city glow), Deep Field (airglow); the dial for angle-only textures
+  (Harsh Rain's slant, the hatch); gloss/metallicity knobs where one gloss
+  won't do.
+- Crystal Leaf is slow (~2–3 s here at preview size): the grain search looks
+  at 25 neighbours since grains vary in size. Worth a lattice speed-up.
 
 ## Pinned
 - Saturn and its moons as a rare easter egg in a couple of presets.
@@ -90,7 +64,6 @@ here, in the worker (the page stays responsive).
 - Split appEvents.js (~2,000 lines) into modules.
 - Texture layers (a base texture under the main one).
 - Alt text on export (the poem's words).
-- The light dial for angle-only textures (Harsh Rain's slant, the hatch).
 
 ## Check on a phone
 - The occasional blank page: frames now draw into a back buffer and reach

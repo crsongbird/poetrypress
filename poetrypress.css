@@ -1507,7 +1507,8 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 
 /* the light dial: drag from the centre (light overhead) toward where the light
    comes from; at the rim it is low and raking. Eight ticks snap to 45°. */
-.light-dial-row{ display:flex; align-items:center; gap:10px; }
+/* the dial sits centred in its space; its reset button waits in the corner */
+.light-dial-row{ display:flex; align-items:center; justify-content:center; position:relative; min-height:140px; }
 .light-dial{ width:132px; height:132px; touch-action:none; cursor:grab; user-select:none; }
 .light-dial svg{ width:100%; height:100%; overflow:visible; }
 /* ☉ at rest — one bold circle, the dot at its heart. Drag the dot and the
@@ -1518,7 +1519,7 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 .ld-handle{ fill:var(--accent); }
 .ld-spike-body{ fill:var(--accent); }
 .ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
-.ld-reset{ border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:18px; width:34px; height:34px; cursor:pointer; }
+.ld-reset{ position:absolute; right:0; bottom:0; border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:18px; width:34px; height:34px; cursor:pointer; }
 
 /* ---------- DESKTOP: a website's shape ----------
    The logo across the top, the navigation under it, the controls on the left

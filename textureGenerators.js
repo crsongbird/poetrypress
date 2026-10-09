@@ -31,7 +31,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue } from './texCore.js';
+import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape, genGrain } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
@@ -108,8 +108,11 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Chaos',           min:0,  max:100, def:20,  unit:''}],
   mathnoise:     [{key:'zoom',  label:'Glyph Zoom',      min:100,max:500, def:140, unit:'%'},
                   {key:'amt',   label:'Emergence',       min:30, max:240, def:130, unit:'%'}],
-  summoning:     [{key:'zoom',  label:'Circle Size',     min:40, max:500, def:100, unit:'%'},
-                  {key:'amt',   label:'Circle Count',    min:20, max:700, def:100, unit:'%', base:3}],
+  summoning:     [{key:'zoom',  label:'Circle Size',     min:40, max:200, def:100, unit:'%'},
+                  // how many bands, polygrams and planets the one circle is built from
+                  {key:'amt',   label:'Complexity',      min:20, max:300, def:100, unit:'%'},
+                  // drawn by hand, vines and moons (0) → machined, gauges and circuits, glowing (100)
+                  {key:'form',  label:'Organic ↔ Tech',  min:0,  max:100, def:30,  unit:''}],
   inkbleed:      [{key:'zoom',  label:'Blot Scale',      min:60, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'}],
   crackedglaze:  [{key:'zoom',  label:'Fracture Scale',  min:60, max:400, def:100, unit:'%'},
@@ -125,13 +128,19 @@ export const TEXTURE_PARAMS = {
                   // feathered six-armed growth inside each grain (zinc spangle)
                   {key:'amt',   label:'Dendrites',       min:0,  max:100, def:50,  unit:''},
                   // flat facets → stepped hopper crystals (bismuth)
-                  {key:'form',  label:'Terraces',        min:0,  max:100, def:0,   unit:''}],
+                  {key:'form',  label:'Terraces',        min:0,  max:100, def:0,   unit:''},
+                  // orderly as a snowflake (0) → every crystal its own
+                  {key:'shape', label:'Variation',       min:0,  max:100, def:40,  unit:''},
+                  // fine lines brushed across the light, like brushed steel
+                  {key:'hue',   label:'Brushing',        min:0,  max:100, def:0,   unit:''}],
   coldpress:     [{key:'zoom',  label:'Tooth Scale',     min:75, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Tooth Depth',     min:20, max:300, def:100, unit:'%'},
                   // how the paper was made: pressed hot and smooth, cold, or left rough
                   {key:'form',  label:'Press',           min:0,  max:100, def:50,  unit:'', ticks:[0,50,100], names:['Hot Press','Cold Press','Rough']}],
   foxing:        [{key:'zoom',  label:'Bloom Size',      min:40, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Spot Count',      min:20, max:400, def:100, unit:'%', base:7}],
+                  {key:'amt',   label:'Spot Count',      min:20, max:400, def:100, unit:'%', base:7},
+                  // the paper rippled where it was damp, lit by the dial (0: flat, as before)
+                  {key:'form',  label:'Cockle',          min:0,  max:100, def:0,   unit:''}],
   foldghost:     [{key:'zoom',  label:'Crease Depth',    min:30, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Fold Count',      min:25, max:300, def:100, unit:'%', base:3},
                   // the short, random creases of being pressed in a pocket
@@ -160,9 +169,18 @@ export const TEXTURE_PARAMS = {
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Particles',       min:10, max:300, def:100, unit:'%'}],
-  water:         [{key:'zoom',  label:'Waviness',        min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Depth',           min:0,  max:100, def:35,  unit:'%'}],
+                  {key:'amt',   label:'Particles',       min:10, max:300, def:100, unit:'%'},
+                  // twin plasma jets along the spin axis (0: none, as before)
+                  {key:'form',  label:'Jets',            min:0,  max:100, def:0,   unit:''}],
+  water:         [{key:'zoom',  label:'Wave Scale',      min:40, max:250, def:100, unit:'%'},
+                  // long calm swells (0) → short choppy wind waves (100)
+                  {key:'amt',   label:'Turbulence',      min:0,  max:100, def:35,  unit:''},
+                  // shallow: a fine sharp net; deep: it swells, blurs and fades
+                  {key:'form',  label:'Depth',           min:0,  max:100, def:35,  unit:''},
+                  // milky water, scattering the light
+                  {key:'shape', label:'Haze',            min:0,  max:100, def:10,  unit:''},
+                  // dirty water: light absorbed, silt hanging in it
+                  {key:'hue',   label:'Murk',            min:0,  max:100, def:0,   unit:''}],
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
                   {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'}],
   aurora:        [{key:'zoom',  label:'Curtain Height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
@@ -196,7 +214,7 @@ export const TEXTURE_PARAMS = {
  */
 export const TEXTURE_CAPS = {
   // — whimsy —
-  clouds:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  clouds:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   bokeh:         { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -212,10 +230,10 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
-  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:true, dial:'View', tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // water is tinted by the page itself: neutral by default, like all of Touch
-  water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   moon:          { blends:['hard-light','multiply','overlay','soft-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -232,30 +250,30 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
-                   light:false, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
+                   light:true, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
   brushstrokes:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   halftone:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  glassrain:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  glassrain:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — chaos —
-  sigils:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  sigils:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   mathnoise:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Position', lightTilt:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   inkbleed:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
-  crystalleaf:   { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], ground:'grey', light:true, tints:1,
+  crystalleaf:   { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], material:true, ground:'grey', light:true, tints:1,
                    tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
                    tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
@@ -264,11 +282,11 @@ export const TEXTURE_CAPS = {
   // — 🜚 touch — relief, so soft-light leads and light direction applies
   linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], ground:'grey', light:true, tints:2,
                    tintLabels:['Fabric Hue','Light Hue'], tintDefaults:['#808080','#FFFFFF'] },
-  coldpress:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  coldpress:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  foxing:        { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:1,
+  foxing:        { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Spot Hue'], tintDefaults:['#8A6A3C'] },
-  foldghost:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  foldghost:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
@@ -283,6 +301,38 @@ export const TEXTURE_CAPS = {
 };
 
 
+/**
+ * The FIFTH hue (Ruby: a texture that has a base colour gets a GLOW; one that
+ * doesn't gets a MATERIAL colour), and how each is used:
+ *   glow    light the texture gives off, in its own places (kintsugi's gold,
+ *           thick wax, moss tips…) — black: none
+ *   ground  a grey texture's own colour: the surface where it is mid-grey,
+ *           which the Light and Dark hues never touch — mid-grey: none
+ *   base    the colour of a texture that had none (First Snow) — white: none
+ * So every colour has its own job: Light (lighter marks), Dark (darker marks),
+ * Material (the surface between), Highlight (glints), Shade (cast shadow),
+ * Glow (emitted light). See test/colorRoles.test.mjs.
+ */
+const GLOWS = {
+  foxing:      'the spots fluorescing, as foxing does under ultraviolet',
+  flowers:     'lit seeds in the lotus pod, or a glowing heart',
+  tessellate:  'molten light in the seams between facets',
+  wax:         'candlelight in the thick of the wax',
+  kintsugi:    'the gold seams glowing',
+  moss:        'bioluminescent moss tips',
+  dunes:       'afterglow along the crests',
+  cupring:     'a faint glow where the stain dried at its edge',
+  crystalleaf: 'light caught inside the crystal, in flecks',
+  linen:       'luminous thread in the stitching',
+};
+for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
+TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
+for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
+
+// the fifth hue as a generator wants it: glow as 0–1 channels (null: none);
+// a base colour as 0–255 (null: none)
+function glowOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'glow') return null; const c = parseHex(t5); return { r: c.r/255, g: c.g/255, b: c.b/255 }; }
+function baseOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'base') return null; return parseHex(t5); }
 export function capsFor(type){
   return TEXTURE_CAPS[type] || { blends:['overlay','soft-light','multiply','screen'], light:false, tints:0 };
 }
@@ -333,29 +383,29 @@ export function textureCacheMB(){ let px = 0; for(const c of textureCache.values
 
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
-    result = genClouds(w,h,amt,zoom,light,form);
+    result = genClouds(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'flowers'){
-    result = genFlowers(w,h,amt,zoom,tint1,tint2,form);
+    result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h,amt,zoom);
   } else if(type === 'crackedglaze'){
-    result = genCrackedGlaze(w,h,amt,zoom,light,form);
+    result = genCrackedGlaze(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
     result = genEmbers(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'tessellate'){
-    result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat);
+    result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat,extra.glow);
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'snow'){
-    result = genSnow(w,h,amt,zoom,light,form);
+    result = genSnow(w,h,amt,zoom,light,form,extra.base);
   } else if(type === 'magicparticles'){
     result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'glassrain'){
-    result = genGlassRain(w,h,amt,zoom,light,form);
+    result = genGlassRain(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'rainstreaks'){
     result = genRainStreaks(w,h,amt,angle,zoom);
   } else if(type === 'halftone'){
@@ -363,35 +413,35 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'brushstrokes'){
     result = genBrushstrokes(w,h,amt,zoom,form);
   } else if(type === 'sigils'){
-    result = genSigils(w,h,amt,zoom,light,form);
+    result = genSigils(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'mathnoise'){
     result = genMathNoise(w,h,amt,zoom);
   } else if(type === 'linen'){
-    result = genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form);
+    result = genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form,extra.glow);
   } else if(type === 'coldpress'){
-    result = genColdPress(w,h,amt,zoom,light,form);
+    result = genColdPress(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'foxing'){
-    result = genFoxing(w,h,amt,zoom,light,tint1);
+    result = genFoxing(w,h,amt,zoom,light,tint1,form,extra.glow);
   } else if(type === 'foldghost'){
-    result = genFoldGhost(w,h,amt,zoom,light,form);
+    result = genFoldGhost(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'cupring'){
-    result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat);
+    result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'wax'){
-    result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat);
+    result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'dunes'){
-    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
+    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
   } else if(type === 'kintsugi'){
-    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
+    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
+    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
   } else if(type === 'landscape'){
     result = genLandscape(w,h,amt,zoom,form);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
-    result = genBlackHole(w,h,amt,zoom);
+    result = genBlackHole(w,h,amt,zoom,light,form);
   } else if(type === 'water'){
-    result = genWater(w,h,amt,zoom,light);
+    result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.mat);
   } else if(type === 'moon'){
     result = genMoon(w,h,amt,zoom);
   } else if(type === 'aurora'){
@@ -401,11 +451,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'cards'){
     result = genCartomanticDrift(w,h,amt,zoom,angle);
   } else if(type === 'summoning'){
-    result = genSummoningCircles(w,h,amt,zoom);
+    result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
     result = genMetalLeaf(w,h,amt,zoom,light,tint1);
   } else if(type === 'crystalleaf'){
-    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,form);
+    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'grain'){
     result = genGrain(w,h,amt,zoom,form);
   } else {
@@ -491,6 +541,9 @@ function describeRequest(type, w, h, opts){
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
   // material hues (lit textures): only when set — white is "none"
   const t3 = (opts.tint3 && !noMaterialHue(opts.tint3)) ? opts.tint3 : null, t4 = (opts.tint4 && !noMaterialHue(opts.tint4)) ? opts.tint4 : null;
+  // the fifth hue: only when it differs from its role's "none"
+  const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || {}).hue5;
+  const t5 = (h5 && opts.tint5 && opts.tint5.toUpperCase() !== h5.def.toUpperCase()) ? opts.tint5.toUpperCase() : null;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
   // how low the light is, 0–100 (100: the horizon, as it always was)
@@ -509,12 +562,12 @@ function describeRequest(type, w, h, opts){
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
-            + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '');
-  return { type, key, t3, t4, defs, v1, v2, v3, v4, v5, scale, lightTilt };
+            + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '');
+  return { type, key, t3, t4, t5, defs, v1, v2, v3, v4, v5, scale, lightTilt };
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt, t3, t4 } = req;
+  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt, t3, t4, t5 } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -552,7 +605,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, mat: materialOf(t3, t4) }))));
+  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, mat: materialOf(t3, t4), glow: glowOf(type, t5), base: baseOf(type, t5) }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -563,8 +616,9 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // Dream Bloom with Colour Variation colours its own motes; the grey tint pass would erase their hues
   const ownColour = type === 'bokeh' && hueSpread > 0;
   const tintNow = caps.genericTint && !ownColour;
-  if(result && ((tintNow && (tint1 || tint2)) || doRemap))
-    result = pixelPass(result, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null);
+  const ground = (tintNow && caps.hue5 && caps.hue5.role === 'ground') ? t5 : null;
+  if(result && ((tintNow && (tint1 || tint2 || ground)) || doRemap))
+    result = pixelPass(result, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null, ground);
   storeTexture(key, result);
   return result;
 }

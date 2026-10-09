@@ -461,12 +461,19 @@ export function blendFamily(blend){
  * multiply-type blends 128 becomes white, for screen-type blends black, so
  * only the marks act (the Rorschach once blackened the page through burn).
  */
-export function pixelPass(src, lightHex, darkHex, family){
+export function pixelPass(src, lightHex, darkHex, family, groundHex){
   const L = mixHex(lightHex || '#FFFFFF', lightHex || '#FFFFFF', 0);
   const D = mixHex(darkHex || '#000000', darkHex || '#000000', 0);
+  // GROUND: the colour of the surface itself, where it is exactly mid-grey —
+  // the one thing the light and dark hues never touch (a grey texture's
+  // Material Hue; mid-grey is none). Marks lighten toward the light hue and
+  // darken toward the dark hue FROM it.
+  const G = mixHex(groundHex || '#808080', groundHex || '#808080', 0);
+  const groundIsGrey = Math.abs(G.r - 128) <= 1 && Math.abs(G.g - 128) <= 1 && Math.abs(G.b - 128) <= 1;
   const lightIsWhite = L.r >= 250 && L.g >= 250 && L.b >= 250;
   const darkIsBlack = D.r <= 5 && D.g <= 5 && D.b <= 5;
-  const tint = !!(lightHex || darkHex) && !(lightIsWhite && darkIsBlack);
+  const tint = (!!(lightHex || darkHex) && !(lightIsWhite && darkIsBlack)) || !groundIsGrey;
+  const gr = groundIsGrey ? 128 : G.r, gg = groundIsGrey ? 128 : G.g, gb = groundIsGrey ? 128 : G.b;
   const remap = family === 'white' || family === 'black';
   if(!tint && !remap) return src;
   const o = src.getContext('2d', CPU);
@@ -475,13 +482,16 @@ export function pixelPass(src, lightHex, darkHex, family){
   for(let i = 0; i < d.length; i += 4){
     if(tint){
       const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      // a coloured texture (a material's highlight, its shade) keeps its own
+      // colour: only its brightness is tinted (for grey marks this is zero)
+      const cr = d[i] - v, cg = d[i + 1] - v, cb = d[i + 2] - v;
       if(v > 128){
         const k = (v - 128) / 127;
-        d[i] = 128 + k * (L.r - 128); d[i + 1] = 128 + k * (L.g - 128); d[i + 2] = 128 + k * (L.b - 128);
+        d[i] = gr + k * (L.r - gr) + cr; d[i + 1] = gg + k * (L.g - gg) + cg; d[i + 2] = gb + k * (L.b - gb) + cb;
       } else if(v < 128){
         const k = (128 - v) / 128;
-        d[i] = 128 + k * (D.r - 128); d[i + 1] = 128 + k * (D.g - 128); d[i + 2] = 128 + k * (D.b - 128);
-      }
+        d[i] = gr + k * (D.r - gr) + cr; d[i + 1] = gg + k * (D.g - gg) + cg; d[i + 2] = gb + k * (D.b - gb) + cb;
+      } else if(!groundIsGrey){ d[i] = gr + cr; d[i + 1] = gg + cg; d[i + 2] = gb + cb; }
     }
     if(remap){
       for(let c = 0; c < 3; c++){
@@ -526,6 +536,15 @@ const isWhiteHex = h => !h || /^#?(f{3}|f{6})$/i.test(String(h).trim());
 const rgb01 = hex => { const c = parseHex(hex), v = [c.r/255, c.g/255, c.b/255];
   const lum = Math.max(0.05, 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]);
   return v.map(x => Math.min(2.5, x/lum)); };
+/** A GREY lit texture's value in channel c: mid-grey, plus its light (delta,
+ *  relative to open ground: negative in shadow) and its highlight (spec).
+ *  With a material, the SHADE hue colours the shadow (a channel the hue is
+ *  strong in darkens less) and the HIGHLIGHT hue the shine; with none it is
+ *  exactly 128 + delta + spec, as before. */
+export function greyLit(delta, spec, M, c){
+  if(!M) return 128 + delta + spec;
+  return 128 + (delta < 0 ? delta*Math.max(0, 1 + (1 - M.sh[c])*0.7) : delta) + spec*M.hi[c];
+}
 /** The material from the Highlight and Shade hues — null when both are white (nothing to do). */
 export function materialOf(highlight, shade){
   if(isWhiteHex(highlight) && isWhiteHex(shade)) return null;

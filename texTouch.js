@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit } from './texCore.js';
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
 //   pitch   thread spacing (of the page)   tw     thread width (of the pitch)
@@ -28,7 +28,7 @@ function weaveAt(f){
   o.patA=a.pattern; o.patB=b.pattern; o.mix=t;
   return o;
 }
-export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form){
+export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form,GL){
   amt=(amt==null?0.35:amt); zoom=(zoom==null?1:zoom);
   const W=weaveAt(form==null?0.5:form);
   const {lx,ly}=lightVec(light);
@@ -99,6 +99,7 @@ export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form){
   const N=ww*wh, H=new Float32Array(N);
   const cov=new Float32Array(N), alb=new Float32Array(N*3);   // coverage, and the detail's colour (premultiplied)
   const shine=new Float32Array(N), metal=new Uint8Array(N);  // how much highlight it takes; metal tints it
+  const TG=GL ? new Float32Array(N) : null;                   // GLOW: luminous thread in the stitching
   const over=(i,a,c,s,m)=>{ if(a<=0) return; const o=1-a, q=i*3;
     alb[q]=alb[q]*o+c.r*a; alb[q+1]=alb[q+1]*o+c.g*a; alb[q+2]=alb[q+2]*o+c.b*a;
     cov[i]=cov[i]*o+a; shine[i]=shine[i]*o+s*a; if(m && a>0.5) metal[i]=1; else if(a>0.5) metal[i]=0; };
@@ -174,6 +175,7 @@ export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form){
       // the ply's twist: fine diagonal stripes along every thread
       const tf=0.84+0.16*Math.sin((x+y)*4.443/per);
       over(i, a*sw, {r:thread.r*tf, g:thread.g*tf, b:thread.b*tf}, 0.25, false);
+      if(TG) TG[i]=Math.max(TG[i], a*sw);                          // the thread, for the glow
     }
   }
   // rivets: copper caps set into the seams, domed, stamped with a ring, the
@@ -259,6 +261,7 @@ export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form){
         else { r+=sp*Lc.r*0.8; gg+=sp*Lc.g*0.8; b+=sp*Lc.b*0.8; }
       }
     }
+    if(TG && TG[i]>0){ const e=255*TG[i]*0.9; r+=GL.r*e; gg+=GL.g*e; b+=GL.b*e; }
     d[k4]=r>255?255:r; d[k4+1]=gg>255?255:gg; d[k4+2]=b>255?255:b;
   }
   sctx.putImageData(img,0,0);
@@ -270,7 +273,7 @@ export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form){
 // The paper says no
 // to the pencil, very softly,
 // ten thousand times.
-export function genColdPress(w,h,amt,zoom,light,form){
+export function genColdPress(w,h,amt,zoom,light,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const press=Math.max(0,Math.min(1, form==null ? 0.5 : form));
   // Watercolour paper. Its TOOTH is the felt it was pressed between: rounded
@@ -316,14 +319,22 @@ export function genColdPress(w,h,amt,zoom,light,form){
     const l=Math.hypot(gx,gy,1); N[k*3]=-gx/l; N[k*3+1]=-gy/l; N[k*3+2]=1/l; }
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.06, shadow:0.55, ao:0.3, ambient:0.45, normals:N });
   const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, gloss:0.06, shadow:0, ao:0, ambient:0.45 }).spec[0];
-  return paintLit(w,h,div,ww,wh, i => { const v=128 + (L.light[i]/fl - 1)*120 + (L.spec[i]-fs)*60; return [clamp255(v), clamp255(v), clamp255(v)]; });
+  return paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*60;
+    if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
+    return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
 }
 
 // Something damp got in
 // and the paper remembered
 // for forty-odd years.
-export function genFoxing(w,h,amt,zoom,light,tint){
+export function genFoxing(w,h,amt,zoom,light,tint,form,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // Foxing: the brown spots old paper takes where damp got in. COCKLE is the
+  // paper itself, rippled where it was wet and dried unevenly — soft waves
+  // round each damp patch, and a raised tide line at each spot's edge — lit
+  // by the dial (0: flat, as it always was). GLOW is foxing's real trick:
+  // under ultraviolet the spots fluoresce.
+  const cockle=Math.max(0, Math.min(1, form==null ? 0 : form)), SP=[], CL=[];
   const t = parseHex(tint || '#8A6A3C');
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
@@ -338,6 +349,7 @@ export function genFoxing(w,h,amt,zoom,light,tint){
     const cy = h*Math.random();
     const spread = unit*(0.08+Math.random()*0.16)*zoom;
     const spots = 5+Math.floor(Math.random()*9);
+    CL.push({ x:cx, y:cy, r:spread*1.6, ph:Math.random()*6.283 });
     for(let i=0;i<spots;i++){
       const a=Math.random()*Math.PI*2, d=Math.pow(Math.random(),0.7)*spread;
       const x=cx+Math.cos(a)*d, y=cy+Math.sin(a)*d;
@@ -348,7 +360,38 @@ export function genFoxing(w,h,amt,zoom,light,tint){
       g.addColorStop(1,   `rgba(${t.r},${t.g},${t.b},0)`);
       ctx.fillStyle=g;
       ctx.beginPath(); ctx.arc(x,y,rr,0,Math.PI*2); ctx.fill();
+      SP.push({ x, y, r:rr });
     }
+  }
+  if(cockle>0.01){
+    // the paper's relief, on the working grid: ripples round each damp patch
+    // (strongest at its middle distance), a tide line round each spot
+    const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), H=new Float32Array(ww*wh), u=Math.min(ww,wh);
+    for(const k of CL){ const kx=k.x/div, ky=k.y/div, kr=k.r/div, lam=u*0.045*zoom, amp=u*0.012*cockle;   // broad, gentle buckles
+      for(let y=Math.max(0,Math.floor(ky-kr));y<Math.min(wh,Math.ceil(ky+kr));y++) for(let x=Math.max(0,Math.floor(kx-kr));x<Math.min(ww,Math.ceil(kx+kr));x++){
+        const d=Math.hypot(x-kx,y-ky)/kr; if(d>=1) continue;
+        const fall=Math.pow(1-d,1.5);                              // strongest at the heart of the damp
+        // buckles, not rings: two crossed, wandering waves
+        const bx=x/lam, by=y/lam;
+        H[y*ww+x]+=amp*fall*Math.sin(bx*2.1 + 1.6*Math.sin(by*1.3 + k.ph) + k.ph)*Math.sin(by*1.7 + 1.3*Math.sin(bx*0.9 - k.ph)); } }
+    for(const sp of SP){ const sx=sp.x/div, sy=sp.y/div, sr=sp.r/div, R=sr*1.3, tw=Math.max(0.8, sr*0.14);
+      for(let y=Math.max(0,Math.floor(sy-R));y<Math.min(wh,Math.ceil(sy+R));y++) for(let x=Math.max(0,Math.floor(sx-R));x<Math.min(ww,Math.ceil(sx+R));x++){
+        const d=Math.hypot(x-sx,y-sy); H[y*ww+x]+=u*0.0012*cockle*Math.exp(-(((d-sr*0.85)/tw)**2)); } }
+    const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.08, shadow:0.5, ao:0.3, ambient:0.45 });
+    const fl=L.flat||1, sh=document.createElement('canvas'); sh.width=ww; sh.height=wh;
+    const sx=sh.getContext('2d', CPU), img=sx.createImageData(ww,wh), d=img.data;
+    for(let i=0;i<ww*wh;i++){ const v=Math.max(0,Math.min(255, 128 + (L.light[i]/fl-1)*150)), q=i*4; d[q]=d[q+1]=d[q+2]=v; d[q+3]=255; }
+    sx.putImageData(img,0,0);
+    // laid over the paper: mid-grey changes nothing, so only the relief shows
+    ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.imageSmoothingEnabled=true; ctx.drawImage(sh,0,0,w,h); ctx.restore();
+  }
+  if(GL){
+    // under ultraviolet, the spots fluoresce
+    const g3=`${GL.r*255|0},${GL.g*255|0},${GL.b*255|0}`;
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    for(const sp of SP){ const g=ctx.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,sp.r*1.4);
+      g.addColorStop(0,`rgba(${g3},0.55)`); g.addColorStop(1,`rgba(${g3},0)`); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sp.x,sp.y,sp.r*1.4,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
   }
   return c;
 }
@@ -356,7 +399,7 @@ export function genFoxing(w,h,amt,zoom,light,tint){
 // It was folded once
 // to fit an envelope, then
 // opened. It still knows.
-export function genFoldGhost(w,h,amt,zoom,light,form){
+export function genFoldGhost(w,h,amt,zoom,light,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const crumple=Math.max(0,Math.min(1, form==null ? 0.3 : form));
   // Paper that was folded and carried in a pocket, then opened out flat.
@@ -418,13 +461,15 @@ export function genFoldGhost(w,h,amt,zoom,light,form){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.12, shadow:0.45, ao:0.25, ambient:0.45 });
   const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.12, shadow:0, ao:0, ambient:0.45 });
   const fl=flat.light[0]||1, fs=flat.spec[0];
-  return paintLit(w,h,div,ww,wh, i => { const v=128 + (L.light[i]/fl - 1)*165 + (L.spec[i]-fs)*140; return [clamp255(v), clamp255(v), clamp255(v)]; });
+  return paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*165, sp=(L.spec[i]-fs)*140;
+    if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
+    return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
 }
 
 // Someone set it down
 // mid-sentence and forgot it.
 // The ring is the proof.
-export function genCupRing(w,h,amt,zoom,light,tint,form,M3){
+export function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const spill=Math.max(0,Math.min(1, form==null ? 0.35 : form));
   const t = parseHex(tint || '#6B4A2F');
@@ -517,7 +562,8 @@ export function genCupRing(w,h,amt,zoom,light,tint,form,M3){
     const a=Math.min(1, dn), b=Math.max(0, Math.min(1, (dn-0.75)/0.45));
     const sh=Math.max(0, L.spec[i]-fs)*Math.min(1, dn)*60;       // the sheen
     const col=c=>{ const base=[t.r,t.g,t.b][c], dp=deep[c];
-      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c); };
+      // (GLOW: where it dried at its edge, faintly)
+      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*b*a*0.8 : 0); };
     return [clamp255(col(0)), clamp255(col(1)), clamp255(col(2))];
   });
 }
@@ -525,7 +571,7 @@ export function genCupRing(w,h,amt,zoom,light,tint,form,M3){
 // It ran before it
 // set, so the thick edge tells you
 // which way the page leaned.
-export function genPouredWax(w,h,amt,zoom,light,tint,form,M3){
+export function genPouredWax(w,h,amt,zoom,light,tint,form,M3,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const visc=Math.max(0,Math.min(1, form==null ? 0.45 : form));
   const wax=parseHex(tint||'#7A2B2B');
@@ -581,6 +627,8 @@ export function genPouredWax(w,h,amt,zoom,light,tint,form,M3){
     const thin=1 - Math.min(1, H[i]/(thick*0.7));                // translucent where thin
     const glow=1 + 0.45*thin, sp=L.spec[i]*0.9*255;
     const c=[wax.r*glow*K(0) + sp*litS(M3,0), wax.g*glow*K(1) + sp*0.92*litS(M3,1), wax.b*glow*K(2) + sp*0.85*litS(M3,2)];
+    // GLOW: candlelight in the thick of the wax, as if lit from within
+    if(GL){ const e=255*(1-thin)*0.85; c[0]+=GL.r*e; c[1]+=GL.g*e; c[2]+=GL.b*e; }
     const g=128 + (k-1)*90;
     return [clamp255(g*(1-m) + c[0]*m), clamp255(g*(1-m) + c[1]*m), clamp255(g*(1-m) + c[2]*m)];
   });
@@ -594,76 +642,94 @@ function sstepZ(a,b,x){ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*
 // Light through water:
 // shallow, it nets the floor in fire;
 // deep, it only fades.
-export function genWater(w,h,amt,zoom,light){
+/**
+ * Scrying Pool — a water surface, built the way light meets water:
+ *   the SURFACE  a sum of travelling waves (long swells, then shorter wind
+ *                waves as TURBULENCE rises), its slopes the normals
+ *   CAUSTICS     light refracted through every point of the surface (water
+ *                bends it by 1/1.33) lands on the floor somewhere else; where
+ *                the landings crowd together the floor is bright. They are
+ *                gathered ray by ray, so they focus and branch as real ones do
+ *   GLINTS       the sun reflected in the slopes that face it (the dial: where
+ *                the light comes from, and how low)
+ *   DEPTH        how far down the floor is: shallow, the net is fine and sharp;
+ *                deeper it swells and blurs, and the floor fades into the water
+ *   HAZE         milky water: light scattered on its way, softening it all
+ *   MURK         dirty water: light absorbed, and silt hanging in it
+ * Highlight colours the glints; Shade the deep troughs.
+ */
+export function genWater(w,h,amt,zoom,light,form,haze,murk,M3){
   amt=(amt==null?0.35:amt); zoom=(zoom==null?1:zoom);
-  const {lx,ly}=lightVec(light);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-
-  // Computed at a quarter of full resolution and scaled up: caustics are soft
-  // enough that nothing is lost, and it keeps the loop cheap on a phone.
-  const div=canonDiv(4), ww=Math.ceil(w/div), wh=Math.ceil(h/div);
-  const unit=Math.min(ww,wh);
-
-  // Caustics by iterated warping: each point is pushed around by a few
-  // interfering sine fields, and light gathers wherever the pushes agree —
-  // which draws the bright, branching net seen on the floor of a pool. Far
-  // cheaper than a cell search, and truer to how the light actually bends.
-  // WAVINESS sets the scale of the net; the seed picks the moment in time.
-  // Coordinates are offset far from zero (−250): the division inside the loop
-  // is tuned to that range, and near zero the whole net flattens to nothing.
-  const TAU=6.283185307, tile=unit*0.3*zoom;
-  const t0=Math.random()*100;
-  const ITER=5, inten=0.005;
-  const ph1=Math.random()*6.28, ph2=Math.random()*6.28, ph3=Math.random()*6.28, ph4=Math.random()*6.28;
-
-  // DEPTH crosses over with no dead zone: caustics fade out across 0.30–0.66
-  // while murk rises across 0.34–0.70, so the middle always holds some of each.
-  const depth=Math.max(0,Math.min(1,amt));
-  const sstep=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
-  const caustic=1-sstep(0.30,0.66,depth);
-  const murk=sstep(0.34,0.70,depth);
-  const sharp=8-depth*5;                          // deeper water blurs the net
-  // light slanting in shifts where the net falls
-  const sx0=lx*unit*0.04, sy0=ly*unit*0.04;
-
+  const turb=Math.max(0,Math.min(1,amt)), depth=Math.max(0,Math.min(1, form==null ? 0.35 : form));
+  const hz=Math.max(0,Math.min(1, haze==null ? 0.1 : haze)), mk=Math.max(0,Math.min(1, murk==null ? 0 : murk));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);
+  const tilt=Math.min(1, Math.hypot(lightVec(light).lx, lightVec(light).ly));
+  // the surface: waves in a spread of directions around the wind's
+  const wind=Math.random()*Math.PI*2, waves=[];
+  const nw=7+Math.round(turb*7);
+  for(let k=0;k<nw;k++){
+    const f=k/(nw-1);                                            // 0 long swell … 1 short chop
+    const lam=Math.max(unit*0.025, unit*0.22*zoom*Math.pow(0.55, f*(1.5+turb*2)));
+    const dir=wind+(Math.random()-0.5)*(0.6+turb*1.8);
+    waves.push({ kx:Math.cos(dir)*6.283/lam, ky:Math.sin(dir)*6.283/lam, a:lam*(0.03+0.05*turb)*(1-0.4*f), ph:Math.random()*6.283 });
+  }
+  // the floor's light gathers from a little beyond the page's edge too, so
+  // everything is worked on a field with a margin, then cropped
+  const floor=unit*(0.03+depth*0.3), bend=floor*(1-1/1.33);
+  const ox=-SX*tilt*floor*0.35, oy=-SY*tilt*floor*0.35;             // slanting light shifts the net
+  const M=Math.ceil(Math.abs(ox)+Math.abs(oy)+bend*0.8+6), PW=ww+2*M, PH=wh+2*M, PN=PW*PH;
+  const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW, y=v*PH; let s=0;
+    for(const q of waves){ const p=q.kx*x+q.ky*y+q.ph; s+=q.a*(Math.sin(p) + 0.35*turb*Math.sin(2*p+1)); } return s; });
+  // slopes
+  const GX=new Float32Array(PN), GY=new Float32Array(PN);
+  for(let y=0;y<PH;y++) for(let x=0;x<PW;x++){ const i=y*PW+x;
+    GX[i]=(H[y*PW+Math.min(PW-1,x+1)]-H[y*PW+Math.max(0,x-1)])*0.5; GY[i]=(H[Math.min(PH-1,y+1)*PW+x]-H[Math.max(0,y-1)*PW+x])*0.5; }
+  // caustics: refract each surface point down to the floor and count the landings
+  const C=new Float32Array(PN);
+  for(let y=0;y<PH;y++) for(let x=0;x<PW;x++){ const i=y*PW+x;
+    const fx=x+ox-GX[i]*bend, fy=y+oy-GY[i]*bend;
+    if(!(fx>=0 && fy>=0 && fx<PW-1 && fy<PH-1)) continue;
+    const x0=fx|0, y0=fy|0, tx=fx-x0, ty=fy-y0, k=y0*PW+x0;
+    C[k]+=(1-tx)*(1-ty); C[k+1]+=tx*(1-ty); C[k+PW]+=(1-tx)*ty; C[k+PW+1]+=tx*ty; }
+  // deeper water and haze soften the net: a blur that grows with both
+  const blurR=Math.round(1 + depth*depth*unit*0.004 + hz*unit*0.008);
+  const tmp=new Float32Array(PN), cl=(v,n)=>v<0?0:v>=n?n-1:v;
+  for(let pass=0;pass<2;pass++){
+    for(let y=0;y<PH;y++){ const r=y*PW; let s=0; for(let x=-blurR;x<=blurR;x++) s+=C[r+cl(x,PW)];
+      for(let x=0;x<PW;x++){ tmp[r+x]=s/(2*blurR+1); s+=C[r+cl(x+blurR+1,PW)]-C[r+cl(x-blurR,PW)]; } }
+    for(let x=0;x<PW;x++){ let s=0; for(let y=-blurR;y<=blurR;y++) s+=tmp[cl(y,PH)*PW+x];
+      for(let y=0;y<PH;y++){ C[y*PW+x]=s/(2*blurR+1); s+=tmp[cl(y+blurR+1,PH)*PW+x]-tmp[cl(y-blurR,PH)*PW+x]; } }
+  }
+  // glints: Blinn's highlight of the sun in each slope (viewer overhead)
+  const elev=(90-tilt*78)*Math.PI/180, Lx=SX*Math.cos(elev), Ly=SY*Math.sin(elev)*0+SY*Math.cos(elev), Lz=Math.sin(elev);
+  const hx=Lx, hy=Ly, hzv=Lz+1, hl=Math.hypot(hx,hy,hzv);
+  const floorVis=1-0.75*depth, absorb=1-0.6*mk, veil=hz*0.55;
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d', CPU);
-  const img=sctx.createImageData(ww,wh), dd=img.data;
-  for(let py=0;py<wh;py++){
-    for(let px=0;px<ww;px++){
-      // Every term below is periodic in 2π, so left alone the net repeats in a
-      // visible grid. Slow waves at frequencies that share no period (0.73,
-      // 0.41, 0.59, 0.37 of the tile) bend each point first, so no two regions
-      // line up.
-      const ux=(px+sx0)/tile, uy=(py+sy0)/tile;
-      const wx=ux + 0.55*Math.sin(uy*0.73+ph1) + 0.35*Math.sin(ux*0.41+ph2);
-      const wy=uy + 0.55*Math.sin(ux*0.59+ph3) + 0.35*Math.sin(uy*0.37+ph4);
-      const x0=wx*TAU-250, y0=wy*TAU-250;
-      let ix=x0, iy=y0, acc=1;
-      for(let n=0;n<ITER;n++){
-        const t=t0*(1-3.5/(n+1));
-        const nx=x0+Math.cos(t-ix)+Math.sin(t+iy);
-        const ny=y0+Math.sin(t-iy)+Math.cos(t+ix);
-        ix=nx; iy=ny;
-        const a=x0/(Math.sin(ix+t)/inten), b=y0/(Math.cos(iy+t)/inten);
-        acc+=1/Math.sqrt(a*a+b*b);
-      }
-      acc/=ITER;
-      let web=1.17-Math.pow(acc,1.4);
-      web=Math.min(1,Math.pow(Math.abs(web),sharp));
-      // a slow swell under it all: the surface's larger waves, lit from the light
-      const swell=Math.sin(px/tile*1.3+t0)*Math.cos(py/tile*1.07-t0*0.5);
-      let val=128 + web*110*caustic + swell*10;
-      // murk: light is absorbed, the floor disappears into a dark swell
-      val = val*(1-murk*0.55) + (128 - 46*murk + swell*12*murk)*murk*0.55;
-      const i4=(py*ww+px)*4;
-      dd[i4]=dd[i4+1]=dd[i4+2]=Math.max(0,Math.min(255,val)); dd[i4+3]=255;
+  const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
+  for(let i=0;i<N;i++){
+    const P=((i/ww|0)+M)*PW + (i%ww) + M;                           // this pixel in the margined field
+    const nx=-GX[P]*3, ny=-GY[P]*3, nl=Math.hypot(nx,ny,1), nh=Math.max(0,(nx*hx+ny*hy+hzv)/(nl*hl));
+    const glint=Math.pow(nh, 400)*(1-0.6*hz)*(1-0.5*mk);
+    const caus=(C[P]-1)*0.9*floorVis*absorb*(1-veil);
+    const trough=Math.min(0, H[P])/(unit*0.02);                     // the troughs sit a little darker
+    const base=128 + caus*70 + trough*6*(1-veil) - mk*38 + hz*14;
+    const q=i*4;
+    for(let c=0;c<3;c++){
+      const sh = M3 && trough<0 ? trough*6*(M3.sh[c]-1)*0.8 : 0;
+      d[q+c]=Math.max(0,Math.min(255, base + sh + glint*170*(M3 ? M3.hi[c] : 1)));
     }
+    d[q+3]=255;
   }
   sctx.putImageData(img,0,0);
-  ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(small,0,0,w,h);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
+  // silt hanging in murky water: soft specks, some in focus, most not
+  if(mk>0.02){
+    const n=Math.round(canonArea(w,h)/(3072*3072)*1800*mk);
+    for(let k=0;k<n;k++){ const x=Math.random()*w, y=Math.random()*h, near=Math.random()<0.2, r=cpx(near ? 2+Math.random()*5 : 0.6+Math.random()*1.4);
+      ctx.fillStyle=`rgba(40,36,30,${near ? 0.12 : 0.35})`; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); }
+  }
   return c;
 }
 
@@ -677,7 +743,7 @@ export function genWater(w,h,amt,zoom,light){
  * blends like the other grey-ground textures.
  * DROP SIZE · RAIN · CONDENSATION
  */
-export function genGlassRain(w,h,amt,zoom,light,form){
+export function genGlassRain(w,h,amt,zoom,light,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const mist=Math.max(0,Math.min(1, form==null ? 0.3 : form));
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
@@ -718,7 +784,9 @@ export function genGlassRain(w,h,amt,zoom,light,form){
   return paintLit(w,h,div,ww,wh, i => {
     if(H[i] <= 0) return [128,128,128];                     // dry glass: neutral
     const v=128 + (L.light[i]-base)*210 + (L.spec[i]-baseSpec)*240;
-    return [clamp255(v), clamp255(v), clamp255(v*1.01)];
+    if(!M3) return [clamp255(v), clamp255(v), clamp255(v*1.01)];
+    const dl=(L.light[i]-base)*210, sp=(L.spec[i]-baseSpec)*240;      // the drop's shade and its glint, coloured
+    return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2)*1.01)];
   });
 }
 
@@ -749,7 +817,7 @@ const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
  * trough with shadow, overhead light flattens it all to glare.
  * RIPPLE SIZE · WIND (sharper, straighter, more asymmetric ripples) · DUNE HEIGHT
  */
-export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,M3){
+export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
   amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
   const swell=Math.max(0,Math.min(1, form==null ? 0.4 : form));
   const sand=parseHex(tint1||'#D9B98C'), sun=parseHex(tint2||'#FFF1D8');
@@ -761,15 +829,18 @@ export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,M3){
   // wind straightens the ripples (less meander and forking) and raises sharper crests
   const meander=1.35 - 0.85*Math.min(1, amt), crest=0.65 + 0.8*Math.min(1, amt);
   const Wf=smoothField(ww,wh,st,(u,v)=>(3.2*warp(u,v) + 0.9*breakup(u,v))*meander), Af=smoothField(ww,wh,st,(u,v)=>breakup(u+0.37,v+0.11)), Df=smoothField(ww,wh,st*3,(u,v)=>dunes(u,v));
-  const H=new Float32Array(ww*wh);
+  const H=new Float32Array(ww*wh), CR=GL ? new Float32Array(ww*wh) : null;
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const i=y*ww+x, ph=(x*cw + y*sw)/lambda + Wf[i];
     const t=ph - Math.floor(ph), prof = t < 1-lee ? t/(1-lee) : (1-t)/lee;
+    if(CR) CR[i]=prof*prof*prof*prof;                           // the crests, for the glow
     H[i] = prof*lambda*0.16*crest*(0.55 + 0.6*Af[i]) + swell*unit*0.10*Df[i] + (grain(x/ww,y/wh)-0.5)*0.6;
   }
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.08, shadow:0.75, ao:0.25, ambient:0.38 });
   return paintLit(w,h,div,ww,wh, i => { const K=c=>litK(L,i,0.38,M3,c), s=L.spec[i]*0.4, S=c=>s*litS(M3,c);
-    return [clamp255(sand.r*K(0)*1.05 + sun.r*S(0)), clamp255(sand.g*K(1)*1.05 + sun.g*S(1)), clamp255(sand.b*K(2)*1.05 + sun.b*S(2))]; });
+    // GLOW: afterglow along the crests
+    const e=CR ? CR[i]*180 : 0;
+    return [clamp255(sand.r*K(0)*1.05 + sun.r*S(0) + (CR ? GL.r*e : 0)), clamp255(sand.g*K(1)*1.05 + sun.g*S(1) + (CR ? GL.g*e : 0)), clamp255(sand.b*K(2)*1.05 + sun.b*S(2) + (CR ? GL.b*e : 0))]; });
 }
 
 /**
@@ -779,7 +850,7 @@ export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,M3){
  * gold a bright metallic one, coloured by the gold itself.
  * SEAM WIDTH · FRACTURES · GLOSS
  */
-export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3){
+export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const gloss=Math.max(0,Math.min(1, form==null ? 0.7 : form));
   const glaze=parseHex(tint1||'#E8E1D3'), gold=parseHex(tint2||'#D4AF37');
@@ -816,6 +887,8 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3){
     const s0=s*litS(M3,0), s1=s*litS(M3,1), s2=s*litS(M3,2);
     const gc=[gold.r*(0.35+0.75*k0) + 255*s0*1.2, gold.g*(0.35+0.75*k1) + 235*s1*1.2, gold.b*(0.35+0.75*k2) + 170*s2*1.0];
     const cc=[glaze.r*k0*1.12 + 255*s0*gloss, glaze.g*k1*1.12 + 255*s1*gloss, glaze.b*k2*1.12 + 255*s2*gloss];
+    // GLOW: the gold seams give off light, and a little spills onto the glaze beside them
+    if(GL){ const e=255*(g*0.9 + Math.min(1, G[i]*4)*(1-g)*0.25); gc[0]+=GL.r*e; gc[1]+=GL.g*e; gc[2]+=GL.b*e; cc[0]+=GL.r*e; cc[1]+=GL.g*e; cc[2]+=GL.b*e; }
     return [clamp255(cc[0]*(1-g) + gc[0]*g), clamp255(cc[1]*(1-g) + gc[1]*g), clamp255(cc[2]*(1-g) + gc[2]*g)];
   });
 }
@@ -826,7 +899,7 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3){
  * The stone takes the light and casts shadow; DAMPNESS darkens and glosses
  * the stone and deepens the moss.  STONE SCALE · MOSS · DAMPNESS
  */
-export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3){
+export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
   amt=(amt==null?0.45:amt); zoom=(zoom==null?1:zoom);
   const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form));
   const stone=parseHex(tint1||'#8A8579'), moss=parseHex(tint2||'#5F7E34');
@@ -837,6 +910,7 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3){
   base.set(smoothField(ww,wh,st,(u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
     return (rock(u,v)*0.75 + r*0.35)*unit*0.06; }));
   const GR=smoothField(ww,wh,st*2,(u,v)=>growth(u,v));
+  const TIP=GL ? new Float32Array(ww*wh) : null;
   // moss gathers where the stone dips below its neighbourhood, and where it is flat
   const at=(x,y)=>base[Math.min(wh-1,Math.max(0,y))*ww+Math.min(ww-1,Math.max(0,x))];
   const R=Math.max(2, Math.round(unit*0.02));
@@ -846,7 +920,9 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3){
     const want=GR[i] + hollow*0.12 - slope*0.08 + (amt - 0.5)*0.9;
     const m=Math.max(0, Math.min(1, (want - 0.42)*5));
     M[i]=m;
-    H[i]=base[i] + m*(1.5 + 2.2*fibre(x/ww,y/wh));              // soft raised clumps, fibrous on top
+    const fb=fibre(x/ww,y/wh);
+    H[i]=base[i] + m*(1.5 + 2.2*fb);                              // soft raised clumps, fibrous on top
+    if(TIP) TIP[i]=m*Math.max(0, fb-0.45)*1.8;                    // the tips, for the glow
   }
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
   const sd=1 - damp*0.35, mg=1 + damp*0.25;
@@ -854,6 +930,8 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3){
     const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1-m);   // moss is matte; only wet stone shines
     const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
+    // GLOW: bioluminescent moss, brightest at the tips
+    if(TIP){ const e=255*Math.min(1, TIP[i])*0.9; mc[0]+=GL.r*e; mc[1]+=GL.g*e; mc[2]+=GL.b*e; }
     return [clamp255(sc[0]*(1-m) + mc[0]*m), clamp255(sc[1]*(1-m) + mc[1]*m), clamp255(sc[2]*(1-m) + mc[2]*m)];
   });
 }
@@ -863,82 +941,137 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3){
  * galvanised zinc, the stepped hoppers of bismuth. Each GRAIN is one crystal,
  * and its face is tilted its own way (a normal map): turn the light and the
  * grains flash and darken one by one, which is what makes spangle look like
- * spangle. Inside, DENDRITES grow from the nucleus in six feathered arms (zinc
- * is hexagonal); fine grooves part the grains. TERRACES steps each crystal
- * down into a hollow centre, as bismuth grows: square spirals of ledges that
- * catch the light and throw small shadows. Metal Hue colours the metal.
+ * spangle.
+ *   DENDRITES  feathered arms grown from each grain's nucleus; their barbs
+ *              lean back toward it
+ *   TERRACES   steps each crystal down into a hollow, square centre, and
+ *              colours the steps as bismuth's oxide does — a thin film whose
+ *              colour runs gold, magenta, blue, green with its thickness
+ *   VARIATION  how unlike one another the crystals are: arms of different
+ *              lengths, missing, bent, unevenly barbed; grains of every size;
+ *              some with no dendrites at all (0: orderly, like a snowflake)
+ *   BRUSHING   fine lines brushed across the light's direction, like brushed
+ *              steel, catching it along their length
+ * Tiny FLECKS inside the crystal glint when the light finds them. Metal Hue
+ * colours the metal; Highlight and Shade colour its shine and its shadow;
+ * Glow lights the flecks from within.
  */
-export function genCrystalLeaf(w,h,amt,zoom,light,tint,form){
+export function genCrystalLeaf(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
   const terr=Math.max(0,Math.min(1, form==null ? 0 : form)), dend=Math.max(0,Math.min(1,amt));
+  const vr=Math.max(0,Math.min(1, varK==null ? 0.4 : varK)), br=Math.max(0,Math.min(1, brush==null ? 0 : brush));
   const metal=parseHex(tint||'#C9CED6');
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  // the grains: a jittered lattice of nuclei, each with its own facet tilt and axis
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);   // toward the light
+  // the grains: a jittered lattice of nuclei — more jittered, and of more
+  // varied sizes, as Variation rises — each with its own facet tilt and axis
   const cs=unit*0.09*zoom, gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, G=[];
+  const jit=0.8 + 0.2*vr;
   for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){
-    const a=Math.random()*Math.PI*2, tilt=0.08+Math.random()*0.32;
-    G.push({ x:(i-1+0.1+Math.random()*0.8)*cs, y:(j-1+0.1+Math.random()*0.8)*cs, th:Math.random()*Math.PI/3,
-      tx:Math.cos(a)*tilt, ty:Math.sin(a)*tilt, size:0.8+Math.random()*0.5 });
+    const a=Math.random()*Math.PI*2, tilt=0.08+Math.random()*0.32, arms=[];
+    const plain = Math.random() < vr*0.3;                        // some grains grow no dendrites
+    for(let k=0;k<6;k++){
+      const gone = plain || Math.random() < vr*0.35;
+      arms.push({ a: k*Math.PI/3 + (Math.random()-0.5)*vr*0.45,          // not quite every 60°
+                  len: gone ? 0 : 1 - vr*Math.random()*0.75,              // stunted, or full
+                  bend: (Math.random()-0.5)*vr*0.7,                       // a curve along the arm
+                  sp: 1 + (Math.random()-0.5)*vr*0.9, ph: Math.random(),  // barb spacing and phase
+                  sl: 1 - vr*Math.random()*0.6, sr: 1 - vr*Math.random()*0.6 });   // barbs longer on one side
+    }
+    G.push({ x:(i-1+0.5+(Math.random()-0.5)*jit)*cs, y:(j-1+0.5+(Math.random()-0.5)*jit)*cs, th:Math.random()*Math.PI*2,
+      tx:Math.cos(a)*tilt, ty:Math.sin(a)*tilt, size:(0.8+Math.random()*0.5)*(1 + (Math.random()-0.5)*vr*0.8), arms,
+      film: Math.random()*0.5 });
   }
-  const H=new Float32Array(N), Nm=new Float32Array(N*3);
-  const bw=Math.max(0.8, unit*0.0012), aw=Math.max(0.7, unit*0.0011*zoom), bp=unit*0.008*zoom;   // groove, arm width, branch spacing
+  const H=new Float32Array(N), Nm=new Float32Array(N*3), LV=terr>0.02 ? new Float32Array(N) : null, FL=terr>0.02 ? new Float32Array(N) : null;
+  const bw=Math.max(0.8, unit*0.0012), aw=Math.max(0.7, unit*0.0011*zoom), bp=unit*0.008*zoom;   // groove, arm width, barb spacing
   const step=Math.max(3, unit*0.016*zoom), shH=Math.max(0.8, step*0.22);
   const S60=Math.sin(Math.PI/3), COT60=1/Math.tan(Math.PI/3);
+  // brushing: random values per line across the light's direction, smoothed
+  const BL = br>0.01 ? (()=>{ const n=Math.ceil(2*Math.hypot(ww,wh))+6, a=new Float32Array(n); for(let i=0;i<n;i++) a[i]=Math.random(); return a; })() : null;
+  const bOff=Math.hypot(ww,wh)+2;                              // (u runs ±the diagonal)
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const ci=Math.floor(x/cs)+1, cj=Math.floor(y/cs)+1;
     let d1=1e18, d2=1e18, g1=null, g2=null;
-    for(let b=cj-1;b<=cj+1;b++) for(let a=ci-1;a<=ci+1;a++){
-      if(a<0||b<0||a>=gx||b>=gy) continue; const g=G[b*gx+a], dd=(x-g.x)*(x-g.x)+(y-g.y)*(y-g.y);
+    for(let b=cj-2;b<=cj+2;b++) for(let a=ci-2;a<=ci+2;a++){
+      if(a<0||b<0||a>=gx||b>=gy) continue; const g=G[b*gx+a], dd=((x-g.x)*(x-g.x)+(y-g.y)*(y-g.y))/(g.size*g.size);
       if(dd<d1){ d2=d1; g2=g1; d1=dd; g1=g; } else if(dd<d2){ d2=dd; g2=g; }
     }
-    // distance to the boundary with the nearest neighbouring grain (the bisector)
-    const sep=g2 ? Math.hypot(g2.x-g1.x, g2.y-g1.y) : 1, edge=g2 ? (d2-d1)/(2*sep) : 1e9;
+    const e1=Math.sqrt(d1)*g1.size, e2=g2 ? Math.sqrt(d2)*g2.size : 1e9, edge=(e2-e1)*0.5;   // to the boundary, roughly
     const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=Math.cos(g1.th), s=Math.sin(g1.th);
     const lu=ux*c+uy*s, lv=-ux*s+uy*c;
     let hgt=-0.9*Math.exp(-(edge/bw)*(edge/bw));                       // the groove between grains
-    // dendrites: six arms, each feathered with branches at 60°
     if(dend>0.02){
       const reach=cs*0.75*g1.size; let f=0;
-      for(let k=0;k<6;k++){
-        const ca=Math.cos(k*Math.PI/3), sa=Math.sin(k*Math.PI/3);
-        const al=lu*ca+lv*sa, ac=-lu*sa+lv*ca;
-        if(al<=0 || al>reach) continue;
-        const fall=1-al/reach;
+      for(const A of g1.arms){
+        if(A.len<=0) continue;
+        const R=reach*A.len;
+        let ca=Math.cos(A.a), sa=Math.sin(A.a), al=lu*ca+lv*sa;
+        if(al<=0 || al>R) continue;
+        // bend: the arm's direction turns a little as it grows
+        const tb=A.a + A.bend*(al/R); ca=Math.cos(tb); sa=Math.sin(tb);
+        al=lu*ca+lv*sa; const ac=-lu*sa+lv*ca;
+        if(al<=0 || al>R) continue;
+        const fall=1-al/R;
         f=Math.max(f, Math.exp(-(ac/aw)*(ac/aw))*fall);
-        // a branch leaves the arm every bp, leaning outward at 60°; shorter toward the tip
-        const aa=Math.abs(ac), bl=(reach-al)*0.45;
-        if(aa<bl){ const ph=(al-aa*COT60)/bp, fr=ph-Math.round(ph); f=Math.max(f, Math.exp(-((fr*bp/(aw*S60))**2))*fall*(1-aa/bl)*0.8); }
+        // barbs every ~bp, leaning BACK toward the nucleus; shorter toward the tip
+        const aa=Math.abs(ac), bl=(R-al)*0.28*(ac<0 ? A.sl : A.sr), sp=bp*A.sp;
+        if(aa<bl){ const ph=(al+aa*COT60)/sp + A.ph, fr=ph-Math.round(ph); f=Math.max(f, Math.exp(-((fr*sp/(aw*S60))**2))*fall*(1-aa/bl)*0.8); }
       }
-      hgt+=f*1.2*dend;
+      hgt+=f*1.5*dend;
     }
-    // terraces: square ledges stepping down into a hollow centre (bismuth)
-    if(terr>0.02){
+    if(LV){
+      // terraces: square ledges stepping down into a hollow centre (bismuth)
       const r=Math.max(Math.abs(lu),Math.abs(lv))*(1+0.04*Math.sin(Math.atan2(lv,lu)*4)), q=r/step, fl=Math.floor(q), sm=q-fl;
       hgt+=terr*shH*(fl + Math.max(0,(sm-0.82)/0.18));              // flat treads, a short riser
+      LV[i]=fl; FL[i]=g1.film;
     }
     H[i]=hgt;
-    // the crystal's face is tilted: its normal, shared by the whole grain
-    const nz=1/Math.sqrt(1+g1.tx*g1.tx+g1.ty*g1.ty);
-    Nm[i*3]=g1.tx*nz; Nm[i*3+1]=g1.ty*nz; Nm[i*3+2]=nz;
+    // the crystal's face is tilted: its normal, shared by the whole grain;
+    // brushing adds fine slopes across the light's direction
+    let tx=g1.tx, ty=g1.ty;
+    if(BL){ const u=x*SX+y*SY+bOff, u0=Math.floor(u), t=u-u0, v=-x*SY+y*SX;
+      const bv=(BL[u0]*(1-t)+BL[u0+1]*t) - 0.5 + 0.15*Math.sin(v*0.05 + u0);
+      tx+=SX*bv*0.5*br; ty+=SY*bv*0.5*br; }
+    const nz=1/Math.sqrt(1+tx*tx+ty*ty);
+    Nm[i*3]=tx*nz; Nm[i*3+1]=ty*nz; Nm[i*3+2]=nz;
   }
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.9, shadow:0.6, ao:0.35, ambient:0.3, normals:Nm });
   const fl=L.flat||1;
   // metal: little diffuse, a strong highlight in its own colour; luminance kept,
   // so a mid-grey average leaves the page's tone where it was
-  const lum=Math.max(1, 0.2126*metal.r+0.7152*metal.g+0.0722*metal.b), hr=metal.r/lum, hg=metal.g/lum, hb=metal.b/lum;
+  const lum=Math.max(1, 0.2126*metal.r+0.7152*metal.g+0.0722*metal.b), hue=[metal.r/lum, metal.g/lum, metal.b/lum];
+  const iri=Math.pow(terr, 0.8)*0.85;
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
   for(let i=0;i<N;i++){
-    const k=L.light[i]/fl, sp=L.spec[i];
-    const v=128*(0.45+0.55*k)*1 + 150*sp;
-    const q=i*4;
-    d[q]=Math.max(0,Math.min(255, v*(0.55+0.45*hr) + 40*sp*(hr-1)));
-    d[q+1]=Math.max(0,Math.min(255, v*(0.55+0.45*hg) + 40*sp*(hg-1)));
-    d[q+2]=Math.max(0,Math.min(255, v*(0.55+0.45*hb) + 40*sp*(hb-1)));
+    const sp=L.spec[i], q=i*4;
+    // bismuth's oxide: a thin film, its colour set by its thickness — a little
+    // thicker on each step out from the hollow
+    let film=null;
+    if(LV && iri>0){ const t=0.32 + LV[i]*0.085 + FL[i]; film=[0.5+0.5*Math.cos(6.283*(t*1.55)), 0.5+0.5*Math.cos(6.283*(t*1.9+0.1)), 0.5+0.5*Math.cos(6.283*(t*2.25+0.2))]; }
+    for(let c=0;c<3;c++){
+      const k=litK(L,i,0.3,M3,c)/fl;
+      let hc=hue[c]; if(film){ const fn=film[c]/Math.max(0.2,(0.2126*film[0]+0.7152*film[1]+0.0722*film[2])); hc=hc*(1-iri)+Math.min(2.2,fn)*iri; }
+      const v=128*(0.45+0.55*k) + 150*sp*litS(M3,c);
+      // (oxide is saturated: the film's colour weighs more than the metal's own)
+      const sat=film ? 0.55 - 0.3*iri : 0.55;
+      d[q+c]=Math.max(0,Math.min(255, v*(sat+(1-sat)*hc) + 40*sp*(hc-1)));
+    }
     d[q+3]=255;
   }
   sctx.putImageData(img,0,0);
   const out=document.createElement('canvas'); out.width=w; out.height=h;
   const octx=out.getContext('2d', CPU); octx.imageSmoothingEnabled=true; octx.drawImage(small,0,0,w,h);
+  // FLECKS: tiny facets inside the crystal; each glints when it faces the
+  // light, and with a Glow they shine of themselves
+  const nf=Math.round(canonArea(w,h)/(3072*3072)*900*(0.4+vr));
+  const lx=SX, ly=SY;
+  for(let k=0;k<nf;k++){
+    const x=Math.random()*w, y=Math.random()*h, fa=Math.random()*Math.PI*2, face=Math.max(0, Math.cos(fa - Math.atan2(ly,lx)));
+    const glint=Math.pow(face, 10)*(0.5+0.5*Math.random()), r=cpx(0.7+Math.random()*1.2);
+    if(glint>0.05){ octx.fillStyle=`rgba(255,255,255,${Math.min(1, glint)})`; octx.beginPath(); octx.arc(x,y,r,0,Math.PI*2); octx.fill(); }
+    if(GL){ const g=octx.createRadialGradient(x,y,0,x,y,r*4), c3=`${GL.r*255|0},${GL.g*255|0},${GL.b*255|0}`;
+      g.addColorStop(0,`rgba(${c3},0.9)`); g.addColorStop(1,`rgba(${c3},0)`); octx.fillStyle=g; octx.beginPath(); octx.arc(x,y,r*4,0,Math.PI*2); octx.fill(); }
+  }
   return out;
 }

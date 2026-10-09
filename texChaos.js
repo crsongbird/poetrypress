@@ -5,12 +5,12 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, lightSparse, parseHex, litK, litS } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, lightSparse, parseHex, litK, litS, greyLit } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
 // Ink on nothing. Ink.
-export function genSigils(w,h,amt,zoom,light,form){
+export function genSigils(w,h,amt,zoom,light,form,M3){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const chaos = Math.max(0, Math.min(1, form==null ? 0.2 : form));
   // Hand-inscribed with a BROAD NIB: a stroke is thick where it crosses the
@@ -126,7 +126,10 @@ export function genSigils(w,h,amt,zoom,light,form){
     const k=L.light[i]/fl, s=(L.spec[i]-sFlat)*110;
     if(k===1 && s===0) continue;
     const q=i*4;
-    d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s));
+    if(!M3){ d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s)); }
+    else for(let c=0;c<3;c++){                                    // a shadowed wall takes the Shade hue, a glint the Highlight
+      const kc = k<1 ? 1 - (1-k)*Math.max(0, 1 + (1 - M3.sh[c])*0.7) : k;
+      d[q+c]=Math.max(0,Math.min(255,d[q+c]*kc + s*M3.hi[c])); }
   }
   ink.putImageData(img,0,0);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
@@ -191,169 +194,181 @@ export function genMathNoise(w,h,amt,zoom){
 // Circles drawn to hold
 // something that will not be held.
 // Chalk. Then wind. Then chalk.
-export function genSummoningCircles(w,h,amt,zoom){
+export function genSummoningCircles(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const tech = Math.max(0, Math.min(1, form==null ? 0.3 : form)), org = 1 - tech;
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
   ctx.fillStyle = '#808080'; ctx.fillRect(0,0,w,h);
 
-  // Transmutation circles, each assembled from a varied set of parts so no
-  // two read alike: a seal at the heart; rings doubled, dashed or dotted; one
-  // or two bands of real alchemical glyphs; a star polygram or interlocking
-  // polygons; vertex nodes or planet circles on the rim, each with a glyph;
-  // spokes of uneven length; crescent moons at the quarters.
-  // At least one circle on every page is light, so screen-type blends (which
-  // drop dark marks by design) never show an empty page.
+  // ONE transmutation circle, built from the rim inward as a stack of bands.
+  // COMPLEXITY is how many: a bare ring and star at the low end, a crowded
+  // seal of glyph bands, polygrams within polygrams and planets at the high.
+  // THE DIAL places it: at the dial's centre it sits in the middle of the
+  // page; dragged out, it moves that way. ORGANIC ↔ TECHNOLOGICAL is its
+  // making: drawn by hand with vines, leaves and moons at one end; machined
+  // at the other, with gauge ticks, segmented arcs, circuit traces and hex
+  // digits — and a NOISY BLOOM rising toward the digital end, as on a screen.
   const unit = Math.min(w,h);
-  const count = Math.max(1, Math.round((1 + Math.random()*1.6) * amt));
   const pick = arr => arr[Math.floor(Math.random()*arr.length)];
-  const glyph = (x, y, size, rot) => {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-    ctx.font = `${Math.max(6, size)}px ${GLYPH_FONT}`;
+  const weighted = list => { const t = list.reduce((s, [, wt]) => s + wt, 0); let r = Math.random()*t; for(const [v, wt] of list){ r -= wt; if(r <= 0) return v; } return list[0][0]; };
+  const la = ((light==null?315:light)-90)*Math.PI/180, tilt = Math.min(1, Math.hypot(lightVec(light).lx, lightVec(light).ly));
+  const cx = w/2 + Math.cos(la)*tilt*unit*0.3, cy = h/2 + Math.sin(la)*tilt*unit*0.3;
+  const R = unit*0.34*zoom;
+  const rot = Math.random()*Math.PI*2;
+  const lw = Math.max(cpx(1.2), R*(0.007 + 0.004*org));
+  const wobble = org*0.012, wph = Math.random()*6.28;
+  ctx.strokeStyle = ctx.fillStyle = 'rgb(236,236,236)';
+  ctx.globalAlpha = 0.78;
+  ctx.lineCap = tech > 0.5 ? 'butt' : 'round';
+  const HEX = '0123456789ABCDEF';
+  const glyph = (x, y, size, r) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(r);
+    // the machine writes hex where the alchemist writes signs
+    const digital = Math.random() < tech*0.85;
+    ctx.font = digital ? `${Math.max(6, size*0.85)}px monospace` : `${Math.max(6, size)}px ${GLYPH_FONT}`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(pick(GLYPHS), 0, 0); ctx.restore();
+    ctx.fillText(digital ? HEX[Math.floor(Math.random()*16)] + (Math.random()<0.5 ? HEX[Math.floor(Math.random()*16)] : '') : pick(GLYPHS), 0, 0); ctx.restore();
   };
-  // some circles are drawn by hand: their rings wander slowly off true
-  let wobble = 0, wph = 0;
-  const ring = (cx, cy, r, lw, style) => {
-    ctx.lineWidth = lw;
-    if(wobble && style !== 'dotted'){
-      if(style === 'dashed') ctx.setLineDash([lw*6, lw*4]);
-      ctx.beginPath();
-      for(let k=0;k<=72;k++){
-        const a = k/72*Math.PI*2, rr = r*(1 + wobble*(Math.sin(a*3+wph)*0.6 + Math.sin(a*7+wph*1.7)*0.4));
-        k ? ctx.lineTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr) : ctx.moveTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);
-      }
-      ctx.stroke(); ctx.setLineDash([]);
-      return;
-    }
+  const ring = (r, lwx, style) => {
+    ctx.lineWidth = lwx;
     if(style === 'dotted'){
-      const n = Math.max(24, Math.round(r / (lw*3)));
-      for(let k=0;k<n;k++){ const a=k/n*Math.PI*2;
-        ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r, lw*0.9, 0, Math.PI*2); ctx.fill(); }
+      const n = Math.max(24, Math.round(r / (lwx*3)));
+      for(let k=0;k<n;k++){ const a=k/n*Math.PI*2; ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r, lwx*0.9, 0, Math.PI*2); ctx.fill(); }
       return;
     }
-    if(style === 'dashed') ctx.setLineDash([lw*6, lw*4]);
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
-    ctx.setLineDash([]);
-  };
-  const poly = (cx, cy, r, n, rot, step) => {
+    if(style === 'dashed') ctx.setLineDash([lwx*6, lwx*4]);
     ctx.beginPath();
-    for(let k=0, j=0; k<=n; k++, j=(j+step)%n){
-      const a = rot + j/n*Math.PI*2, x = cx+Math.cos(a)*r, y = cy+Math.sin(a)*r;
-      k ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    for(let k=0;k<=96;k++){
+      const a = k/96*Math.PI*2, rr = r*(1 + wobble*(Math.sin(a*3+wph)*0.6 + Math.sin(a*7+wph*1.7)*0.4));
+      k ? ctx.lineTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr) : ctx.moveTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);
     }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  const poly = (r, n, ro, step) => {
+    ctx.beginPath();
+    for(let k=0, j=0; k<=n; k++, j=(j+step)%n){ const a = ro + j/n*Math.PI*2; k ? ctx.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r) : ctx.moveTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r); }
     ctx.stroke();
   };
-  const crescent = (x, y, r, rot) => {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-    ctx.beginPath(); ctx.arc(0, 0, r, Math.PI*0.5, Math.PI*1.5);
-    ctx.bezierCurveTo(-r*0.35, -r*0.6, -r*0.35, r*0.6, 0, r);
-    ctx.fill(); ctx.restore();
+  const crescent = (x, y, r, ro) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ro);
+    ctx.beginPath(); ctx.arc(0, 0, r, Math.PI*0.5, Math.PI*1.5); ctx.bezierCurveTo(-r*0.35, -r*0.6, -r*0.35, r*0.6, 0, r); ctx.fill(); ctx.restore();
   };
-
-  for(let i=0;i<count;i++){
-    const cx = w*(0.12 + Math.random()*0.76), cy = h*(0.12 + Math.random()*0.76);
-    const R = unit*(0.16 + Math.random()*0.18) * zoom;
-    const light = i === 0 || Math.random() < 0.6;
-    const tone = light ? 236 : 20;
-    ctx.strokeStyle = ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
-    ctx.globalAlpha = 0.62 + Math.random()*0.3;
-    const lw = Math.max(1.2, R*(0.008 + Math.random()*0.005));
-    const rot = Math.random()*Math.PI*2;
-    wobble = Math.random() < 0.4 ? 0.006 + Math.random()*0.01 : 0;   // hand-drawn, or true
-    wph = Math.random()*6.28;
-
-    // the outer rings
-    const outer = pick(['double','double','triple','dotted-double']);
-    ring(cx, cy, R, lw*1.6, 'solid');
-    if(outer !== 'solid') ring(cx, cy, R*0.94, lw*0.8, outer === 'dotted-double' ? 'dotted' : 'solid');
-    if(outer === 'triple') ring(cx, cy, R*0.885, lw*0.6, 'dashed');
-    // one or two glyph bands
-    const bands = Math.random() < 0.35 ? 2 : 1;
-    const bandR = [R*0.83, R*0.60];
-    for(let b=0;b<bands;b++){
-      const r = bandR[b], n = 10 + Math.floor(Math.random()*16);
-      ring(cx, cy, r - R*0.065, lw, pick(['solid','solid','dashed']));
-      for(let k=0;k<n;k++){ const a = rot + k/n*Math.PI*2;
-        glyph(cx+Math.cos(a)*(r-R*0.005), cy+Math.sin(a)*(r-R*0.005), R*0.075, a+Math.PI/2); }
-    }
-    const inner = bands === 2 ? R*0.47 : R*0.72;
-    // the geometry
-    const geo = pick(['star','star','hexagram','octagram','triangle']);
-    const n = geo === 'star' ? 5 + Math.floor(Math.random()*5) : geo === 'octagram' ? 4 : 3;
-    ctx.lineWidth = lw*1.15;
-    if(geo === 'star') poly(cx, cy, inner, n, rot, n === 6 ? 1 : (n === 8 ? 3 : 2));
-    if(geo === 'hexagram'){ poly(cx, cy, inner, 3, rot, 1); poly(cx, cy, inner, 3, rot+Math.PI/3, 1); }
-    if(geo === 'octagram'){ poly(cx, cy, inner, 4, rot, 1); poly(cx, cy, inner, 4, rot+Math.PI/4, 1); }
-    if(geo === 'triangle'){ poly(cx, cy, inner, 3, rot, 1); ring(cx, cy, inner*0.5, lw, 'solid'); }
-    const verts = geo === 'hexagram' ? 6 : geo === 'octagram' ? 8 : n;
-    // nodes at the vertices, or planets on the rim — each carrying a glyph
-    const planets = Math.random() < 0.4;
-    const nodeR = planets ? R : inner, nodeSize = R*(planets ? 0.085 : 0.055);
-    for(let k=0;k<verts;k++){
-      const a = rot + k/verts*Math.PI*2, x = cx+Math.cos(a)*nodeR, y = cy+Math.sin(a)*nodeR;
-      ctx.globalAlpha *= 1; ctx.lineWidth = lw;
-      ctx.save(); ctx.fillStyle = '#808080'; ctx.globalAlpha = 1;
-      ctx.beginPath(); ctx.arc(x, y, nodeSize, 0, Math.PI*2); ctx.fill(); ctx.restore();
-      ctx.beginPath(); ctx.arc(x, y, nodeSize, 0, Math.PI*2); ctx.stroke();
-      glyph(x, y, nodeSize*1.2, 0);
-    }
-    // spokes of uneven length from the heart outward
-    if(Math.random() < 0.7){
-      const s = verts*2; ctx.lineWidth = lw*0.7;
-      for(let k=0;k<s;k++){ const a = rot + (k+0.5)/s*Math.PI*2, r1 = inner*(0.3 + Math.random()*0.6);
-        ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*inner*0.22, cy+Math.sin(a)*inner*0.22);
-        ctx.lineTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1); ctx.stroke(); }
-    }
-    // vines: curling tendrils growing along the outer ring, with small leaves
-    if(Math.random() < 0.35){
-      const vines = 2 + Math.floor(Math.random()*3);
-      ctx.lineWidth = lw*0.8;
+  // BANDS, from the rim inward: how many, by complexity; what each is, by
+  // the circle's making
+  const nb = Math.max(1, Math.min(9, Math.round(1 + amt*2.6)));
+  const kinds = [['rings', 3], ['glyphs', 3], ['dots', 1], ['planets', 1.2],
+                 ['vines', 2.2*org], ['moons', 1.2*org], ['ticks', 3*tech], ['segments', 2.6*tech], ['circuit', 2*tech]];
+  let r = R;
+  ring(r, lw*1.7, 'solid');
+  for(let b=0; b<nb && r > R*0.3; b++){
+    const kind = b === 0 && tech > 0.5 ? 'ticks' : weighted(kinds), bw = R*(0.085 + Math.random()*0.04);
+    if(kind === 'rings'){
+      ring(r - bw*0.3, lw*0.8, pick(['solid','solid','dashed', tech > 0.5 ? 'solid' : 'dotted']));
+      if(Math.random() < 0.5) ring(r - bw*0.7, lw*0.6, 'solid');
+    } else if(kind === 'glyphs'){
+      const rr = r - bw*0.5, n = Math.round(rr/(R*0.075)*2.2);
+      for(let k=0;k<n;k++){ const a = rot + k/n*Math.PI*2; glyph(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr, bw*0.62, a+Math.PI/2); }
+      ring(r - bw, lw*0.8, 'solid');
+    } else if(kind === 'dots'){
+      ring(r - bw*0.45, lw*0.7, 'dotted'); ring(r - bw, lw*0.6, 'solid');
+    } else if(kind === 'planets'){
+      const n = pick([4, 5, 6, 7, 8]), rr = r - bw*0.5, ns = bw*0.45;
+      ring(rr, lw*0.7, 'solid');
+      for(let k=0;k<n;k++){ const a = rot + k/n*Math.PI*2, x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
+        ctx.save(); ctx.fillStyle = '#808080'; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(x, y, ns, 0, Math.PI*2); ctx.fill(); ctx.restore();
+        ctx.lineWidth = lw; ctx.beginPath(); ctx.arc(x, y, ns, 0, Math.PI*2); ctx.stroke(); glyph(x, y, ns*1.3, 0); }
+      ring(r - bw, lw*0.6, 'solid');
+    } else if(kind === 'vines'){
+      const rr = r - bw*0.5, vines = 2 + Math.floor(Math.random()*3); ctx.lineWidth = lw*0.8;
       for(let v=0; v<vines; v++){
-        let a = rot + v/vines*Math.PI*2, r = R*1.06;
-        const dir = Math.random()<0.5 ? 1 : -1, span = 0.5 + Math.random()*0.5;
-        ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r);
-        for(let t=0; t<=1; t+=0.04){
-          const aa = a + dir*t*span, rr = r + Math.sin(t*Math.PI*3)*R*0.035;
-          ctx.lineTo(cx+Math.cos(aa)*rr, cy+Math.sin(aa)*rr);
-        }
-        ctx.stroke();
-        for(let l=1; l<5; l++){                              // leaves along it
-          const t = l/5, aa = a + dir*t*span, rr = r + Math.sin(t*Math.PI*3)*R*0.035;
-          const lx = cx+Math.cos(aa)*rr, ly = cy+Math.sin(aa)*rr, la = aa + (l%2 ? 1 : -1)*0.9 + Math.PI/2;
-          ctx.save(); ctx.translate(lx, ly); ctx.rotate(la);
-          ctx.beginPath(); ctx.ellipse(R*0.028, 0, R*0.028, R*0.011, 0, 0, Math.PI*2); ctx.fill();
-          ctx.restore();
-        }
-        // and a curl at its end
-        const ea = a + dir*span, er = r;
+        const a0 = rot + v/vines*Math.PI*2, dir = Math.random()<0.5 ? 1 : -1, span = (Math.PI*2/vines)*0.85;
         ctx.beginPath();
-        for(let k=0;k<=24;k++){ const t=k/24, sr=R*0.035*(1-t), sa=ea + dir*t*Math.PI*2.2;
-          const x=cx+Math.cos(ea)*er + Math.cos(sa)*sr, y=cy+Math.sin(ea)*er + Math.sin(sa)*sr;
-          k ? ctx.lineTo(x,y) : ctx.moveTo(x,y); }
+        for(let t=0; t<=1; t+=0.02){ const aa = a0 + dir*t*span, r2 = rr + Math.sin(t*Math.PI*4)*bw*0.25; t ? ctx.lineTo(cx+Math.cos(aa)*r2, cy+Math.sin(aa)*r2) : ctx.moveTo(cx+Math.cos(aa)*r2, cy+Math.sin(aa)*r2); }
+        ctx.stroke();
+        for(let l=1; l<8; l++){ const t = l/8, aa = a0 + dir*t*span, r2 = rr + Math.sin(t*Math.PI*4)*bw*0.25;
+          ctx.save(); ctx.translate(cx+Math.cos(aa)*r2, cy+Math.sin(aa)*r2); ctx.rotate(aa + (l%2 ? 1 : -1)*0.9 + Math.PI/2);
+          ctx.beginPath(); ctx.ellipse(bw*0.22, 0, bw*0.22, bw*0.08, 0, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+        // a curl at its end
+        const ea = a0 + dir*span; ctx.beginPath();
+        for(let k=0;k<=24;k++){ const t=k/24, sr=bw*0.3*(1-t), sa=ea + dir*t*Math.PI*2.2; const x=cx+Math.cos(ea)*rr + Math.cos(sa)*sr, y=cy+Math.sin(ea)*rr + Math.sin(sa)*sr; k ? ctx.lineTo(x,y) : ctx.moveTo(x,y); }
         ctx.stroke();
       }
+    } else if(kind === 'moons'){
+      const rr = r - bw*0.5, n = pick([4, 4, 8]);
+      for(let k=0;k<n;k++){ const a = rot + k/n*Math.PI*2 + Math.PI/n; crescent(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr, bw*0.35, a); }
+      ring(r - bw, lw*0.6, 'solid');
+    } else if(kind === 'ticks'){
+      // a gauge: minor ticks, every fifth long, every tenth numbered
+      const n = pick([60, 72, 120]), rr = r - bw*0.1; ctx.lineWidth = lw*0.6;
+      for(let k=0;k<n;k++){ const a = rot + k/n*Math.PI*2, L = k%10===0 ? bw*0.7 : k%5===0 ? bw*0.45 : bw*0.22;
+        ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr); ctx.lineTo(cx+Math.cos(a)*(rr-L), cy+Math.sin(a)*(rr-L)); ctx.stroke(); }
+      ring(r - bw, lw*0.6, 'solid');
+    } else if(kind === 'segments'){
+      // a segmented arc, as on a display: uneven runs with gaps between
+      const rr = r - bw*0.5; ctx.lineWidth = bw*0.35; ctx.lineCap = 'butt';
+      let a = rot; const end = rot + Math.PI*2;
+      while(a < end){ const run = Math.min(end - a, 0.1 + Math.random()*0.7); if(Math.random() < 0.8){ ctx.beginPath(); ctx.arc(cx, cy, rr, a, a + run - 0.04); ctx.stroke(); } a += run; }
+      ctx.lineCap = tech > 0.5 ? 'butt' : 'round';
+      ring(r - bw, lw*0.6, 'solid');
+    } else if(kind === 'circuit'){
+      // traces leaving the band at right angles, ending in pads
+      const n = 8 + Math.floor(Math.random()*10), rr = r - bw*0.5; ctx.lineWidth = lw*0.7;
+      ring(rr, lw*0.7, 'solid');
+      for(let k=0;k<n;k++){ const a = rot + (k + Math.random()*0.5)/n*Math.PI*2, out = Math.random() < 0.5 ? 1 : -1;
+        const x0 = cx+Math.cos(a)*rr, y0 = cy+Math.sin(a)*rr, l1 = bw*(0.4+Math.random()*0.8)*out;
+        const x1 = x0 + Math.cos(a)*l1, y1 = y0 + Math.sin(a)*l1, side = (Math.random()<0.5?-1:1)*bw*(0.3+Math.random()*0.6);
+        const x2 = x1 - Math.sin(a)*side, y2 = y1 + Math.cos(a)*side;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x2, y2, lw*1.6, 0, Math.PI*2); ctx.fill(); }
     }
-    // crescent moons at the quarters
-    if(Math.random() < 0.45){
-      for(let k=0;k<4;k++){ const a = rot + k*Math.PI/2 + Math.PI/4;
-        crescent(cx+Math.cos(a)*R*1.09, cy+Math.sin(a)*R*1.09, R*0.05, a); }
-    }
-    // the seal at the heart
-    ring(cx, cy, inner*0.2, lw*1.1, 'solid');
-    const seal = pick(['glyph','glyph','star','dot','spiral']);
-    if(seal === 'glyph') glyph(cx, cy, inner*0.24, 0);
-    if(seal === 'star'){ ctx.lineWidth = lw; poly(cx, cy, inner*0.17, 5, rot, 2); }
-    if(seal === 'dot'){ ctx.beginPath(); ctx.arc(cx, cy, inner*0.06, 0, Math.PI*2); ctx.fill(); }
-    if(seal === 'spiral'){                                    // an organic seal
-      ctx.lineWidth = lw; ctx.beginPath();
-      for(let k=0;k<=60;k++){ const t=k/60, sr=inner*0.17*t, sa=rot + t*Math.PI*5;
-        k ? ctx.lineTo(cx+Math.cos(sa)*sr, cy+Math.sin(sa)*sr) : ctx.moveTo(cx, cy); }
-      ctx.stroke();
-    }
+    r -= bw*(1.05 + Math.random()*0.2);
   }
+  // the geometry within: one polygram, or more, nested and turned
+  const inner = Math.max(R*0.22, r);
+  const npoly = Math.max(1, Math.min(4, Math.round(0.6 + amt*0.9)));
+  ctx.lineWidth = lw*1.15;
+  for(let p=0; p<npoly; p++){
+    const ri = inner*(1 - p*0.22), geo = pick(tech > 0.6 ? ['square','hexagram','octagram','star'] : ['star','star','hexagram','octagram','triangle']);
+    const ro = rot + p*0.37, n = geo === 'star' ? 5 + Math.floor(Math.random()*5) : 0;
+    if(geo === 'star') poly(ri, n, ro, n === 6 ? 1 : (n === 8 ? 3 : 2));
+    if(geo === 'hexagram'){ poly(ri, 3, ro, 1); poly(ri, 3, ro+Math.PI/3, 1); }
+    if(geo === 'octagram'){ poly(ri, 4, ro, 1); poly(ri, 4, ro+Math.PI/4, 1); }
+    if(geo === 'triangle'){ poly(ri, 3, ro, 1); ring(ri*0.5, lw, 'solid'); }
+    if(geo === 'square'){ poly(ri, 4, ro, 1); poly(ri*0.707, 4, ro+Math.PI/4, 1); }
+    if(p < npoly-1) ring(ri*0.78, lw*0.7, 'solid');
+  }
+  // the seal at the heart
+  ring(inner*0.2, lw*1.1, 'solid');
+  const seal = weighted([['glyph', 2], ['star', 1], ['dot', 1], ['spiral', 1.5*org], ['eye', 1.2*tech]]);
+  if(seal === 'glyph') glyph(cx, cy, inner*0.24, 0);
+  if(seal === 'star'){ ctx.lineWidth = lw; poly(inner*0.17, 5, rot, 2); }
+  if(seal === 'dot'){ ctx.beginPath(); ctx.arc(cx, cy, inner*0.06, 0, Math.PI*2); ctx.fill(); }
+  if(seal === 'spiral'){ ctx.lineWidth = lw; ctx.beginPath();
+    for(let k=0;k<=60;k++){ const t=k/60, sr=inner*0.17*t, sa=rot + t*Math.PI*5; k ? ctx.lineTo(cx+Math.cos(sa)*sr, cy+Math.sin(sa)*sr) : ctx.moveTo(cx, cy); }
+    ctx.stroke(); }
+  if(seal === 'eye'){ ctx.lineWidth = lw; const e = inner*0.16;                      // a lens: an iris in an aperture
+    ctx.beginPath(); ctx.arc(cx, cy, e, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy, e*0.45, 0, Math.PI*2); ctx.fill(); }
   ctx.globalAlpha = 1;
+  // NOISY BLOOM toward the digital end: the light lines glow, grainily
+  const bloom = Math.max(0, (tech - 0.45)/0.55);
+  if(bloom > 0.01){
+    const div = canonDiv(4), bw2 = Math.ceil(w/div), bh = Math.ceil(h/div), n = bw2*bh;
+    const sm = document.createElement('canvas'); sm.width = bw2; sm.height = bh;
+    const sx = sm.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, bw2, bh);
+    const img = sx.getImageData(0, 0, bw2, bh), d = img.data, B = new Float32Array(n), tmp = new Float32Array(n);
+    for(let i = 0; i < n; i++) B[i] = Math.max(0, d[i*4] - 140)/115;
+    const Rb = Math.max(2, Math.round(Math.min(bw2, bh)*0.012));
+    for(let pass = 0; pass < 3; pass++){
+      for(let y = 0; y < bh; y++){ const rr = y*bw2; let s = 0; for(let x = -Rb; x <= Rb; x++) s += B[rr + Math.min(bw2-1, Math.max(0, x))];
+        for(let x = 0; x < bw2; x++){ tmp[rr + x] = s/(2*Rb + 1); s += B[rr + Math.min(bw2-1, x+Rb+1)] - B[rr + Math.max(0, x-Rb)]; } }
+      for(let x = 0; x < bw2; x++){ let s = 0; for(let y = -Rb; y <= Rb; y++) s += tmp[Math.min(bh-1, Math.max(0, y))*bw2 + x];
+        for(let y = 0; y < bh; y++){ B[y*bw2 + x] = s/(2*Rb + 1); s += tmp[Math.min(bh-1, y+Rb+1)*bw2 + x] - tmp[Math.max(0, y-Rb)*bw2 + x]; } }
+    }
+    for(let i = 0; i < n; i++){ const v = Math.min(255, B[i]*(0.35 + Math.random()*1.3)*330), q = i*4; d[q] = d[q+1] = d[q+2] = v; d[q+3] = 255; }
+    sx.putImageData(img, 0, 0);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = bloom*0.8; ctx.imageSmoothingEnabled = true; ctx.drawImage(sm, 0, 0, w, h); ctx.restore();
+  }
   return c;
 }
 
@@ -423,7 +438,7 @@ export function genInkBleed(w,h,amt,zoom){
   return c;
 }
 
-export function genCrackedGlaze(w,h,amt,zoom,light,form){
+export function genCrackedGlaze(w,h,amt,zoom,light,form,M3){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const enamel = Math.max(0, Math.min(1, form==null ? 0 : form));
   // Glaze: a glassy layer over a body. As it ages it CRAZES — a network of
@@ -497,8 +512,10 @@ export function genCrackedGlaze(w,h,amt,zoom,light,form){
   for(let k = 0; k < ww*wh; k++){
     // glaze: lit, with its shine; body: matte and a little darker; grime in the cracks
     const lit = (L.light[k]/fl - 1)*110, shine = L.spec[k]*GL[k]*150;
-    const v = 128 + lit + shine - (GL[k] <= 0 ? 22 : 0) - DIRT[k]*55;
-    const q = k*4; dd[q] = dd[q+1] = dd[q+2] = Math.max(0, Math.min(255, v)); dd[q+3] = 255;
+    const off = (GL[k] <= 0 ? 22 : 0) + DIRT[k]*55, q = k*4;
+    if(!M3){ const v = 128 + lit + shine - off; dd[q] = dd[q+1] = dd[q+2] = Math.max(0, Math.min(255, v)); }
+    else for(let c = 0; c < 3; c++) dd[q+c] = Math.max(0, Math.min(255, greyLit(lit, shine, M3, c) - off));
+    dd[q+3] = 255;
   }
   sctx.putImageData(img, 0, 0);
   const full = document.createElement('canvas'); full.width = w; full.height = h;
@@ -506,7 +523,7 @@ export function genCrackedGlaze(w,h,amt,zoom,light,form){
   return full;
 }
 
-export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3){
+export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL){
   amt = (amt==null?0:amt); zoom = (zoom==null?1:zoom);
   // A CARVED surface: triangles sharing their corners (no gaps), each a tilted
   // plane at its own depth — some sunk deeper than their neighbours. Lit by
@@ -552,9 +569,11 @@ export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3){
   const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), dta = img.data;
   for(let i = 0; i < ww*wh; i++){
     const K = c => litK(L, i, 0.4, M3, c)/flat, sp = L.spec[i]*0.6, q = i*4;
-    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0)));
-    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1)));
-    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2)));
+    // GLOW: molten light in the sunken facets, as if lava showed through
+    const e = GL ? 255*Math.pow(Math.min(1, Math.max(0, (-H[i]/(cell*0.3) - 0.4)/0.6)), 1.6) : 0;   // only the deepest
+    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0) + (GL ? GL.r*e : 0)));
+    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1) + (GL ? GL.g*e : 0)));
+    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2) + (GL ? GL.b*e : 0)));
     dta[q+3] = 255;
   }
   sctx.putImageData(img, 0, 0);
@@ -675,8 +694,15 @@ export function genCartomanticDrift(w,h,amt,zoom,angle){
 // Light that came too close
 // goes the long way round the dark —
 // you see its back, bent up.
-export function genBlackHole(w,h,amt,zoom){
+export function genBlackHole(w,h,amt,zoom,light,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // THE DIAL is where we view it from: its direction turns the disc in the
+  // sky; its distance from the centre is how edge-on we see it — at the rim
+  // nearly edge-on (as it always was), at the centre face-on, a ring.
+  // JETS: twin beams of plasma along the spin axis, knotted, the one coming
+  // toward us brighter; foreshortened as the view turns face-on.
+  const jets=Math.max(0, Math.min(1, form==null ? 0 : form));
+  const deg=light==null ? 315 : light, lv=lightVec(deg), view=Math.min(1, Math.hypot(lv.lx, lv.ly));
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
@@ -697,8 +723,9 @@ export function genBlackHole(w,h,amt,zoom){
   const chaos=zoom;
   const cx=w*(0.2+Math.random()*0.6), cy=h*(0.2+Math.random()*0.6);
   const Rsh=unit*(0.055+Math.random()*0.03);            // the shadow
-  const tilt=(8+Math.random()*10)*Math.PI/180;           // near edge-on
-  const spin=(Math.random()-0.5)*0.8;                    // disc near level, a little turned
+  const tilt0=(8+Math.random()*10)*Math.PI/180;          // near edge-on, from the rim of the dial…
+  const tilt=tilt0 + (Math.PI/2 - tilt0)*(1-view);        // …turning face-on toward its centre
+  const spin=(Math.random()-0.5)*0.15 + ((((deg-315+540)%360)+360)%360 - 180)*Math.PI/180;   // the dial's direction turns it (level at its default)
   const dirSign=Math.random()<0.5?1:-1;                  // which side approaches
   const thetaE=Rsh*1.5*Math.sqrt(chaos);                 // Einstein radius
   const cosR=Math.cos(spin), sinR=Math.sin(spin);
@@ -741,7 +768,7 @@ export function genBlackHole(w,h,amt,zoom){
   for(let k=0;k<orbits;k++) orbitsR.push(Rsh*(2.6+Math.pow(Math.random(),1.5)*7*(0.7+0.3*chaos)));
   orbitsR.sort((a,b)=>b-a);
   const flat=Math.sin(tilt);
-  const orbitArc=(r, from, to, lensed, lower)=>{
+  const orbitArc=(r, from, to, lensed, lower, fade=1)=>{
     const heat=Math.pow(Rsh*2.6/r,0.9);
     const v=Math.min(0.35,Math.sqrt(Rsh*2.6/r)*0.35);
     const turb=0.55+Math.random()*0.9*Math.min(1.6,chaos);  // gaps and bright bands
@@ -751,7 +778,7 @@ export function genBlackHole(w,h,amt,zoom){
       const p0=from+(to-from)*k/seg, p1=from+(to-from)*(k+1)/seg;
       const beam=Math.pow(1+dirSign*v*Math.cos((p0+p1)/2),2);
       const tone=Math.min(255,150+105*heat*Math.min(1.5,beam));
-      ctx.globalAlpha=Math.min(0.9,(0.05+0.3*heat)*beam*turb*(0.6+0.25*chaos)*(lensed?(lower?0.35:0.8):1));
+      ctx.globalAlpha=Math.min(0.9,(0.05+0.3*heat)*beam*turb*(0.6+0.25*chaos)*(lensed?(lower?0.35:0.8):1))*fade;
       ctx.strokeStyle=`rgb(${tone|0},${tone|0},${tone|0})`;
       ctx.beginPath();
       for(let q=0;q<=4;q++){
@@ -769,9 +796,27 @@ export function genBlackHole(w,h,amt,zoom){
       ctx.stroke();
     }
   };
+  // the jets: streams along the spin axis (screen: perpendicular to the disc's long axis)
+  const jet=(sign, front)=>{
+    if(jets<=0.01) return;
+    const ax=-sinR*sign, ay=cosR*sign, Lj=unit*(0.18+0.3*jets)*Math.cos(tilt)+Rsh, n=Math.round(260*jets);
+    const bright=(sign===dirSign ? 1 : 0.45);                        // beamed toward us, dimmed away
+    for(let k=0;k<n;k++){
+      const s1=Rsh*1.1 + Math.pow(Math.random(),1.4)*(Lj-Rsh), f=(s1-Rsh)/(Lj-Rsh);
+      const spread=s1*0.05*(1+Math.random()), knot=0.6+0.4*Math.pow(Math.abs(Math.sin(f*Math.PI*5)),3);
+      const off=(Math.random()-0.5)*spread*2, wob=Math.sin(f*9+sign)*spread*0.6;
+      const x=cx+ax*s1-ay*(off+wob), y=cy+ay*s1+ax*(off+wob);
+      ctx.globalAlpha=Math.min(0.9, (0.25+0.5*Math.random())*Math.pow(1-f,1.2)*knot*bright*(front?1:0.6));
+      ctx.fillStyle='rgb(245,245,245)';
+      ctx.beginPath(); ctx.ellipse(x, y, Rsh*(0.03+0.05*(1-f)), Rsh*(0.1+0.25*(1-f)), Math.atan2(ay,ax)+Math.PI/2, 0, Math.PI*2); ctx.fill();
+    }
+  };
+  jet(-dirSign, false);
   // behind: the lensed arch over the top, and the fainter one beneath
-  for(const r of orbitsR) orbitArc(r, 0, Math.PI, true, false);
-  for(const r of orbitsR) orbitArc(r, 0, Math.PI, true, true);
+  // (seen face-on there is no arch: the far half of the disc simply shows)
+  for(const r of orbitsR) orbitArc(r, 0, Math.PI, true, false, view);
+  for(const r of orbitsR) orbitArc(r, 0, Math.PI, true, true, view);
+  if(view<0.999) for(const r of orbitsR) orbitArc(r, Math.PI, Math.PI*2, false, false, 1-view);
   // the shadow, then the photon ring hugging it
   ctx.globalAlpha=1; ctx.fillStyle='rgb(4,4,4)';
   ctx.beginPath(); ctx.arc(cx,cy,Rsh,0,Math.PI*2); ctx.fill();
@@ -779,6 +824,7 @@ export function genBlackHole(w,h,amt,zoom){
   ctx.globalAlpha=0.9; ctx.beginPath(); ctx.arc(cx,cy,Rsh*1.04,0,Math.PI*2); ctx.stroke();
   // in front: the near half of every orbit, crossing over the shadow
   for(const r of orbitsR) orbitArc(r, 0, Math.PI, false, false);
+  jet(dirSign, true);
   ctx.globalAlpha=1;
   return c;
 }

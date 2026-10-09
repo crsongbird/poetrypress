@@ -208,6 +208,17 @@ before/after measurements AND an identical-render comparison.
   reach (one-sided margins: shadows fall away from the light) and is exact
   — it passes the whole field's march (`opts.marchSteps`) to every piece.
   Open ground gets `flat` light, so far from a detail the texture is untouched.
+- **Colour roles** (textureGenerators `hue5`, test/colorRoles.test.mjs):
+  every hue has ONE job — Light / Dark (lighter and darker marks), Material
+  (a grey texture's surface, through `pixelPass`'s ground), Highlight /
+  Shade (glints and cast shadow, `material: true`), Glow (a coloured
+  texture's emitted light, `hue5.role: 'glow'`). Each hue's "none" (white,
+  black, mid-grey) must draw exactly as before. `pixelPass` keeps a mark's
+  own colour, so materials survive the Light/Dark tint.
+- **The dial as a joystick**: `caps.dial` renames it (Wind Direction, View…);
+  rename labels with `setLabelText`, never `textContent` (that wiped the
+  padlocks). Point things FROM the dial's handle: (cos a, sin a) with
+  a = (deg − 90)° points toward it.
 - **GPU lighting** (`texCore.js`): the WebGL2 shader must stay line-for-line
   the CPU `lightHeights` — change both together, and compare them (the
   worker takes `opts.cpuLight`; they agree to within 1/255 today). Emulated
