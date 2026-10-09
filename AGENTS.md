@@ -133,6 +133,19 @@ test to the new intent, never weaken it until it passes.
 
 ---
 
+## The persistence rule (Ruby's standing rule)
+
+ANY control a person can change — a field, slider, colour, toggle, menu —
+must be captured by the look: saved (`serializeCurrentSettings`, usually a
+row in `PERSISTED`), restored (`restoreSettings`), and therefore carried by
+the Workbench JSON, the Grimoire and shared spells (local storage), and
+undo/redo, which are all built on those two functions. Presets that don't set
+it must reset it (a value must never leak from one preset into the next).
+`test/persistenceCoverage.test.mjs` finds every control on the page by itself
+and fails on any that isn't saved and restored; the only exceptions are in its
+EXEMPT list, each with its reason (app preferences, the JSON box, dialogs).
+`test/audit.test.mjs` checks the other direction (every saved key round-trips).
+
 ## Recipes
 
 **Add a texture**
@@ -147,8 +160,10 @@ test to the new intent, never weaken it until it passes.
 4. Run the tests, accept its first fingerprint, check `scale-audit`, and look
    at it (`texture-gallery`) before calling it done.
 
-**Add a setting** — markup, `PERSISTED` row, restore, preset handling, the
-`audit.test.mjs` mutation table, a `strings.js` label. Frame settings reset at
+**Add a setting** — markup, `PERSISTED` row (or explicit save + restore),
+preset handling (reset when a preset doesn't set it), the `audit.test.mjs`
+mutation table, a `strings.js` label. `persistenceCoverage.test.mjs` will
+fail until it is saved and restored. Frame settings reset at
 preset-apply (`FRAME_DEFAULTS`) so one preset never leaks into the next.
 
 **Add PML** — parse in `textParsers.js` (field absent when unused), add it to

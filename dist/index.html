@@ -1608,6 +1608,21 @@ body.saving .download-btn{ animation:savePulse 1s ease-in-out infinite; }
   @keyframes texFade{ 50%{ opacity:.25; } }
 }
 
+/* ---------- the colour picker, kind to thumbs ----------
+   Eighteen swatches in three even rows of six; the first is the colour the
+   field had when the picker opened, ringed so it reads as "back to this". */
+#clr-picker .clr-swatches > div{ display:grid !important; grid-template-columns:repeat(6, 1fr); gap:6px; justify-items:center; padding:0 2px; }
+#clr-picker .clr-swatches button{ margin:0 !important; }
+#clr-picker .clr-swatches > div > button:first-child{ outline:1.5px dashed var(--text-dim); outline-offset:2px; }
+/* on a phone: wider, taller colour area, bigger swatches and handles, and a
+   Done that spans the picker */
+body.is-mobile #clr-picker{ width:min(320px, calc(100vw - 16px)) !important; }
+body.is-mobile #clr-picker .clr-gradient{ height:150px !important; }
+body.is-mobile #clr-picker .clr-swatches button{ width:34px !important; height:34px !important; }
+body.is-mobile #clr-picker .clr-hue div, body.is-mobile #clr-picker .clr-hue input + div{ width:26px !important; height:26px !important; }
+body.is-mobile #clr-picker .clr-marker{ width:20px !important; height:20px !important; }
+body.is-mobile #clr-picker #clr-close{ display:block; width:calc(100% - 20px); margin:10px auto 8px; min-height:42px; font-size:17px; }
+
 </style>
 
 <script type="text/js-worker" id="vellum-texture-worker">
@@ -4739,47 +4754,86 @@ function genInkBleed(w,h,amt,zoom){
   return c;
 }
 
-function genCrackedGlaze(w,h,amt,zoom){
+function genCrackedGlaze(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  // Scale means bigger fragments, i.e. fewer of them — not a lower working
-  // resolution, which only made the cracks look blurred.
-  const workDiv = canonDiv(5);
-  const workW = Math.max(24, Math.round(w/workDiv));
-  const workH = Math.max(24, Math.round(h/workDiv));
-
-  const seedCount = Math.max(4, Math.round(26 * amt / (zoom * zoom)));
-  const seeds = [];
-  for(let i=0;i<seedCount;i++) seeds.push([Math.random()*workW, Math.random()*workH]);
-
-  const crackWidth = 0.045;
-  const small = document.createElement('canvas');
-  small.width=workW; small.height=workH;
-  const sctx = small.getContext('2d', CPU);
-  const img = sctx.createImageData(workW, workH);
-  const d = img.data;
-
-  for(let py=0; py<workH; py++){
-    for(let px=0; px<workW; px++){
-      let d1=Infinity, d2=Infinity;
-      for(const [sx,sy] of seeds){
-        const dx=px-sx, dy=py-sy;
-        const dist = dx*dx+dy*dy;
-        if(dist<d1){ d2=d1; d1=dist; } else if(dist<d2){ d2=dist; }
-      }
-      const r1=Math.sqrt(d1), r2=Math.sqrt(d2);
-      const diff = (r2-r1)/(r2+1e-6);
-      const idx=(py*workW+px)*4;
-      const val = diff < crackWidth ? 55 : 185;
-      d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
+  const enamel = Math.max(0, Math.min(1, form==null ? 0 : form));
+  // Glaze: a glassy layer over a body. As it ages it CRAZES — a network of
+  // fine cracks, big cells split by finer ones, grime settled in them — then
+  // blisters, chips, and at last peels away to the rough, matte body below,
+  // lifting at its broken edges. All of it as heights, lit by the dial: the
+  // glaze stands above the body, cracks are grooves in it, and where it is
+  // gone the drop casts a shadow. Glossy glaze, matte body.
+  // FRACTURE SCALE · CRACK DENSITY · ENAMELING (unbroken → bubbled → chipped → peeling)
+  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh);
+  // cells: as many as before (26 at 100%), sized by scale
+  const nCells = Math.max(4, Math.round(26*amt/(zoom*zoom)));
+  const cs = Math.sqrt(ww*wh/nCells), fineCs = cs*0.42;
+  const net = (size) => {
+    const gx = Math.ceil(ww/size) + 2, gy = Math.ceil(wh/size) + 2, P = new Float32Array(gx*gy*2), id = new Float32Array(gx*gy);
+    for(let k = 0; k < gx*gy; k++){ P[k*2] = 0.1 + Math.random()*0.8; P[k*2+1] = 0.1 + Math.random()*0.8; id[k] = Math.random(); }
+    // returns [edge distance (in px), the nearest cell's id, its centre x, y]
+    return (x, y) => { const fx = x/size + 1, fy = y/size + 1, ci = Math.floor(fx), cj = Math.floor(fy);
+      let d1 = 9, d2 = 9, k1 = 0;
+      for(let dj = -1; dj <= 1; dj++) for(let di = -1; di <= 1; di++){ const i2 = ci + di, j2 = cj + dj; if(i2 < 0 || j2 < 0 || i2 >= gx || j2 >= gy) continue;
+        const k = j2*gx + i2, px = i2 + P[k*2], py = j2 + P[k*2+1], dd = Math.hypot(fx - px, fy - py);
+        if(dd < d1){ d2 = d1; d1 = dd; k1 = k; } else if(dd < d2) d2 = dd; }
+      return [(d2 - d1)*0.5*size, id[k1], ((k1 % gx) + P[k1*2] - 1)*size, (Math.floor(k1/gx) + P[k1*2+1] - 1)*size]; };
+  };
+  const primary = net(cs), secondary = net(fineCs);
+  const warp = makeNoiseGrid(9, 9), warpY = makeNoiseGrid(9, 9), peelField = makeNoiseGrid(6, 6), grit = makeNoiseGrid(64, 64);
+  const t = unit*0.006*Math.sqrt(zoom);                          // the glaze's thickness
+  const H = new Float32Array(ww*wh), GL = new Float32Array(ww*wh), DIRT = new Float32Array(ww*wh);
+  // peeling: whole cells go, in clusters (a cell's chance follows a slow field
+  // at its centre); chips: small bites at the cracks
+  const peelAt = enamel < 0.6 ? 1.1 : 1.05 - (enamel - 0.6)*1.05;
+  const chipAt = enamel < 0.4 ? 1.1 : 1.0 - (enamel - 0.4)*0.9;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const u = x/ww, v = y/wh;
+    const px = x + (sampleNoiseGrid(warp, 9, 9, u*8, v*8) - 0.5)*cs*0.35, py = y + (sampleNoiseGrid(warpY, 9, 9, u*8, v*8) - 0.5)*cs*0.35;
+    const [e1, id1, cx, cy] = primary(px, py), [e2, id2] = secondary(px, py);
+    const k = y*ww + x, rough = (sampleNoiseGrid(grit, 64, 64, u*63, v*63) - 0.5)*t*0.25;
+    // is this cell's glaze gone?
+    const field = sampleNoiseGrid(peelField, 6, 6, Math.max(0, Math.min(1, cx/ww))*5, Math.max(0, Math.min(1, cy/wh))*5);
+    const peeled = field*0.7 + id1*0.45 > peelAt;
+    // a chip: glaze bitten away near a crack
+    const chipped = !peeled && e1 < cs*0.14*(0.4 + id2) && ((id1*7.3 + id2*3.1) % 1) > chipAt;
+    if(peeled || chipped){
+      H[k] = rough; GL[k] = 0;                                    // the body: lower, rough, matte
+    } else {
+      // crazing: grooves at both scales; the glaze lifts a little at a broken edge
+      const g1 = Math.max(0, 1 - e1/(unit*0.0035)), g2 = Math.max(0, 1 - e2/(unit*0.002))*0.6;
+      H[k] = t - t*0.8*Math.max(g1, g2) + rough*0.2;
+      GL[k] = 1 - Math.max(g1, g2)*0.7;
+      DIRT[k] = Math.max(g1, g2*0.8);
     }
   }
-  sctx.putImageData(img,0,0);
-
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d', CPU);
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(small,0,0,w,h);
+  // the lift where glaze meets bare body: a thin lip, raised, along the edge
+  if(enamel > 0.4) for(let y = 1; y < wh - 1; y++) for(let x = 1; x < ww - 1; x++){
+    const k = y*ww + x; if(GL[k] <= 0) continue;
+    if(GL[k-1] <= 0 || GL[k+1] <= 0 || GL[k-ww] <= 0 || GL[k+ww] <= 0) H[k] += t*0.35*(enamel - 0.4)/0.6;
+  }
+  // bubbles: blisters in the glaze, some burst into pinholes
+  const nBub = Math.round(Math.sin(Math.min(1, enamel*1.4)*Math.PI)*ww*wh/(unit*unit)*240);
+  for(let q = 0; q < nBub; q++){
+    const bx = Math.random()*ww, by = Math.random()*wh, r = unit*(0.003 + Math.pow(Math.random(), 1.6)*0.012), burst = Math.random() < 0.3;
+    const x0 = Math.max(0, Math.floor(bx - r)), x1 = Math.min(ww - 1, Math.ceil(bx + r)), y0 = Math.max(0, Math.floor(by - r)), y1 = Math.min(wh - 1, Math.ceil(by + r));
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){ const k = y*ww + x; if(GL[k] <= 0) continue;
+      const q2 = 1 - ((x - bx)**2 + (y - by)**2)/(r*r); if(q2 <= 0) continue;
+      if(burst){ H[k] -= t*0.7*Math.pow(q2, 2); DIRT[k] = Math.max(DIRT[k], q2*0.7); } else H[k] += t*0.9*Math.sqrt(q2); }
+  }
+  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.85, shadow: 0.6, ao: 0.35, ambient: 0.45 });
+  const fl = L.flat || 1;
+  const small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), dd = img.data;
+  for(let k = 0; k < ww*wh; k++){
+    // glaze: lit, with its shine; body: matte and a little darker; grime in the cracks
+    const lit = (L.light[k]/fl - 1)*110, shine = L.spec[k]*GL[k]*150;
+    const v = 128 + lit + shine - (GL[k] <= 0 ? 22 : 0) - DIRT[k]*55;
+    const q = k*4; dd[q] = dd[q+1] = dd[q+2] = Math.max(0, Math.min(255, v)); dd[q+3] = 255;
+  }
+  sctx.putImageData(img, 0, 0);
+  const full = document.createElement('canvas'); full.width = w; full.height = h;
+  const fctx = full.getContext('2d', CPU); fctx.imageSmoothingEnabled = true; fctx.drawImage(small, 0, 0, w, h);
   return full;
 }
 
@@ -5934,7 +5988,9 @@ const TEXTURE_PARAMS = {
   inkbleed:      [{key:'zoom',  label:'Blot Scale',      min:60, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'}],
   crackedglaze:  [{key:'zoom',  label:'Fracture Scale',  min:60, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26}],
+                  {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26},
+                  // how far the glaze has gone: crazed only → blistered → chipped → peeling to the body
+                  {key:'form',  label:'Enameling',       min:0,  max:100, def:0,   unit:'', ticks:[0,33,66,100], names:['Unbroken','Bubbled','Chipped','Peeling']}],
   linen:         [{key:'zoom',  label:'Weave Scale',     min:50, max:400, def:100, unit:'%'},
                   // stitching → slubs → buttons → rivets
                   {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:'', ticks:[15,42,68,95]},
@@ -6060,7 +6116,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   inkbleed:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
@@ -6145,7 +6201,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h,amt,zoom);
   } else if(type === 'crackedglaze'){
-    result = genCrackedGlaze(w,h,amt,zoom);
+    result = genCrackedGlaze(w,h,amt,zoom,light,form);
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
@@ -7808,7 +7864,8 @@ const FONTS = [
 
 const PRESETS = [
   // ---- WHIMSY ----  red/purple/blue gradients, starlight in motion, sleep
-  { name: "Andromeda",
+  // ═══ Whimsy ♡ — presets 1–4 ═══
+  { name: "Andromeda",   // surface: Deep Field (♡)
     spell: "[[🜥]]{{🜭🜊🜕⚺}}🜄🜍☌🜋🜃🜞",
     bg1: "#1A0B2E", bgGradient: true, bg2: "#2D1B69", bgAngle: 135,
     text1: "#F5F0FF",
@@ -7818,7 +7875,7 @@ const PRESETS = [
     accent1: "#D4AF37", accent2: "#9B7FE8",
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 14
   },
-  { name: "Starbloom",
+  { name: "Starbloom",   // surface: Dream Bloom (♡)
     spell: "[[🜉🜁🜌⛤🜚🜪🜺♡]]⚸🝊🝆🜞🜛{{🜎🜗🜂🜋}}",
     bg1: "#050318", bgGradient: true, bg2: "#1B1040", bgAngle: 120,
     text1: "#E8E0FF", textGradient: true, text2: "#A98CFF", textAngle: 45,
@@ -7827,7 +7884,7 @@ const PRESETS = [
     texture: true, textureType: "bokeh", textureOpacity: 26, texP1: 150, texP2: 80,
     accent1: "#C9B8FF", accent2: "#6C5CE7"
   },
-  { name: "Euphoria",
+  { name: "Euphoria",   // surface: Pixie Dust (♡)
     spell: "🝊🜝[[🝆]]{{🜌🜆🜇🜄}}",
     bg1: "#3D0A4E", bgGradient: true, bg2: "#8C1B6B", bgAngle: 45,
     text1: "#FFF0FA",
@@ -7855,7 +7912,7 @@ const PRESETS = [
     cardOpacity: '100',
     cardBlend: 'darken'
   },
-  { name: "Sleepwalk",
+  { name: "Sleepwalk",   // surface: Sleep Haze (♡)
     spell: "🜾[[🜹🜣🜌✡🜦🜺]]{{🜁⚸☊🜮🜘⛧🜖🜅⚻🜶}}",
     bg1: "#0A0E2A", bgGradient: true, bg2: "#16204D", bgAngle: 160,
     text1: "#C8D4FF",
@@ -7866,7 +7923,10 @@ const PRESETS = [
   },
 
   // ---- SHARPNESS ----  off-white against blue-black, silver and gold at the edges
-  { name: "Daydream",
+  // ═══ Chaos ∆ — presets 5–8 ═══
+  // (Ruby's grouping, recorded as she gave it, 2026-10-09; by their textures
+  //  presets 5–8 lean Sharpness and 9–12 lean Chaos — to confirm, see OPEN-ISSUES)
+  { name: "Daydream",   // surface: Facet Field (∆)
     spell: "🜇🜫🜝🜬☋⚹{{⚻}}[[🜯🜉⛤☊]]",
     bg1: "#E4E0D4",
     text1: "#0D1017",
@@ -7877,7 +7937,7 @@ const PRESETS = [
     border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12,
     textureBlend: 'overlay'
   },
-  { name: "December",
+  { name: "December",   // surface: First Snow (♡)
     spell: "{{☋🜫🜄⚸🜥}}🜢🜟🜹🜞[[🜯🜃🜛🜈🜌🝓🜾🜂]]",
     bg1: "#0D1017",
     text1: "#F2F0E9",
@@ -7887,7 +7947,7 @@ const PRESETS = [
     accent1: "#C0C8D4", accent2: "#7E8794",
     border: true, borderColor: "#C0C8D4", borderThickness: 1, borderOffset: 16
   },
-  { name: "Gold Leaf",
+  { name: "Gold Leaf",   // surface: Metal Leaf (√)
     spell: "{{🜚}}🜆🜛[[🜭🜞🜜🜻]]",
     bg1: "#0B0E14",
     text1: "#F5F1E6",
@@ -7898,7 +7958,7 @@ const PRESETS = [
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 10,
     textureBlend: 'screen'
   },
-  { name: "Lotus Bloom",
+  { name: "Lotus Bloom",   // surface: Lotus Pond (√)
     spell: "⚻☊[[🜃🜜🜯🜭🜬🜁♡☥✡🜅]]{{🝆✝🜇🜱🜿}}",
     bg1: "#F7E3D2", bgGradient: true, bg2: "#E8B9A6", bgAngle: 160,
     text1: "#3A2233",
@@ -7921,7 +7981,10 @@ const PRESETS = [
   },
 
   // ---- CHAOS ----  sigils, math-noise, geometry twisting where reality thins
-  { name: "Desire",
+  // ═══ Sharpness √ — presets 9–12 ═══
+  // (Ruby's grouping, recorded as she gave it, 2026-10-09; by their textures
+  //  presets 5–8 lean Sharpness and 9–12 lean Chaos — to confirm, see OPEN-ISSUES)
+  { name: "Desire",   // surface: Sigil Scatter (∆)
     spell: "{{☌🜙☋☍🝆}}[[🜭🜨🜢🜣]]🜟🜛",
     bg1: "#1A0A12", bgGradient: true, bg2: "#3D1228", bgAngle: 115,
     text1: "#F6E3E8",
@@ -7931,7 +7994,7 @@ const PRESETS = [
     accent1: "#E0526F", accent2: "#9B5C86",
     textureBlend: 'screen'
   },
-  { name: "Ashfall",
+  { name: "Ashfall",   // surface: Silverpoint Hatch (√)
     spell: "[[🜁🜩⚻🜺☍⛤🜿🜚⛧🜎🜪🜔🝆🜻]]{{✝🜝}}✡",
     bg1: "#9B9187",
     text1: "#241F1C",
@@ -7940,7 +8003,7 @@ const PRESETS = [
     texture: true, textureType: "hatch", textureOpacity: 30, texP1: 22, texP2: 130,
     accent1: "#57412E", accent2: "#543F4A"
   },
-  { name: "Gateway",
+  { name: "Gateway",   // surface: Transmutation Circles (∆)
     spell: "🜺🜶🜈[[🜣✡⚸]]{{🜍}}",
     bg1: "#041418", bgGradient: true, bg2: "#07242a", bgAngle: 135,
     text1: "#E8FFF6",
@@ -7954,7 +8017,7 @@ const PRESETS = [
     textureBlend: 'screen',
     textureTint1: '#3DF5A0'
   },
-  { name: "Hourglass",
+  { name: "Hourglass",   // surface: Fractured Glaze (∆)
     spell: "🜍🜉🜔🜨🜥✡✝🜟🜄🜆{{🜱🜾🜼⚼⛧}}[[🜈🝊]]",
     bg1: "#1B0A12", bgGradient: true, bg2: "#2E1338", bg3: "#0E1B3A", bgAngle: 200,
     text1: "#FFEFE6",
@@ -7967,7 +8030,8 @@ const PRESETS = [
   // ---- 🜚 TOUCH ----  surface, not hue: what the page is made of and what
   // has happened to it. Neutrals carrying a breath of green or brown, and
   // exactly one permitted colour, in the wax.
-  { name: "Handled",
+  // ═══ Touch 🜚 — presets 13–16 ═══
+  { name: "Handled",   // surface: Linen Tooth (🜚)
     spell: "{{⚸🜝}}⚻♡🜞🜧[[🜃🜙🜉🜔🜿]]",
     bg1: "#E9E2D4",
     text1: "#2B2A26",
@@ -7976,7 +8040,7 @@ const PRESETS = [
     texture: true, textureType: "linen", textureOpacity: 34, texP1: 120, texP2: 42,
     accent1: "#7C7A63", accent2: "#947D5A"
   },
-  { name: "Foxed",
+  { name: "Foxed",   // surface: Foxing (🜚)
     spell: "[[🜬🜔]]🜉{{🜿🜇🜢🜛☍⚺🜙🜘♡🜜🜭🜕☋🜨}}",
     bg1: "#E4D6B8",
     text1: "#3A2E20",
@@ -7986,7 +8050,7 @@ const PRESETS = [
     accent1: "#9A5B33", accent2: "#6E7247",
     border: true, borderColor: "#9A8B6E", borderThickness: 1, borderOffset: 18
   },
-  { name: "Creased",
+  { name: "Creased",   // surface: Fold Ghost (🜚)
     spell: "🝆🝊🜥🜗🜺🜱{{🜾♡☥🜪}}[[✝]]",
     bg1: "#D4D6CF",
     text1: "#1B1D1C",
@@ -7995,7 +8059,7 @@ const PRESETS = [
     texture: true, textureType: "foldghost", textureOpacity: 38, texP1: 110, texP2: 120,
     accent1: "#5A6B62", accent2: "#697983"
   },
-  { name: "Sealed",
+  { name: "Sealed",   // surface: Poured Wax (🜚)
     spell: "{{🜨🜈🜇🜄🜮⚸✝🝆☋🜔🜠🝓🜱}}⚻♡[[✡🜍]]",
     bg1: "#F0E6D2",
     text1: "#241C18",
@@ -11740,47 +11804,86 @@ function genInkBleed(w,h,amt,zoom){
   return c;
 }
 
-function genCrackedGlaze(w,h,amt,zoom){
+function genCrackedGlaze(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  // Scale means bigger fragments, i.e. fewer of them — not a lower working
-  // resolution, which only made the cracks look blurred.
-  const workDiv = canonDiv(5);
-  const workW = Math.max(24, Math.round(w/workDiv));
-  const workH = Math.max(24, Math.round(h/workDiv));
-
-  const seedCount = Math.max(4, Math.round(26 * amt / (zoom * zoom)));
-  const seeds = [];
-  for(let i=0;i<seedCount;i++) seeds.push([Math.random()*workW, Math.random()*workH]);
-
-  const crackWidth = 0.045;
-  const small = document.createElement('canvas');
-  small.width=workW; small.height=workH;
-  const sctx = small.getContext('2d', CPU);
-  const img = sctx.createImageData(workW, workH);
-  const d = img.data;
-
-  for(let py=0; py<workH; py++){
-    for(let px=0; px<workW; px++){
-      let d1=Infinity, d2=Infinity;
-      for(const [sx,sy] of seeds){
-        const dx=px-sx, dy=py-sy;
-        const dist = dx*dx+dy*dy;
-        if(dist<d1){ d2=d1; d1=dist; } else if(dist<d2){ d2=dist; }
-      }
-      const r1=Math.sqrt(d1), r2=Math.sqrt(d2);
-      const diff = (r2-r1)/(r2+1e-6);
-      const idx=(py*workW+px)*4;
-      const val = diff < crackWidth ? 55 : 185;
-      d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
+  const enamel = Math.max(0, Math.min(1, form==null ? 0 : form));
+  // Glaze: a glassy layer over a body. As it ages it CRAZES — a network of
+  // fine cracks, big cells split by finer ones, grime settled in them — then
+  // blisters, chips, and at last peels away to the rough, matte body below,
+  // lifting at its broken edges. All of it as heights, lit by the dial: the
+  // glaze stands above the body, cracks are grooves in it, and where it is
+  // gone the drop casts a shadow. Glossy glaze, matte body.
+  // FRACTURE SCALE · CRACK DENSITY · ENAMELING (unbroken → bubbled → chipped → peeling)
+  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh);
+  // cells: as many as before (26 at 100%), sized by scale
+  const nCells = Math.max(4, Math.round(26*amt/(zoom*zoom)));
+  const cs = Math.sqrt(ww*wh/nCells), fineCs = cs*0.42;
+  const net = (size) => {
+    const gx = Math.ceil(ww/size) + 2, gy = Math.ceil(wh/size) + 2, P = new Float32Array(gx*gy*2), id = new Float32Array(gx*gy);
+    for(let k = 0; k < gx*gy; k++){ P[k*2] = 0.1 + Math.random()*0.8; P[k*2+1] = 0.1 + Math.random()*0.8; id[k] = Math.random(); }
+    // returns [edge distance (in px), the nearest cell's id, its centre x, y]
+    return (x, y) => { const fx = x/size + 1, fy = y/size + 1, ci = Math.floor(fx), cj = Math.floor(fy);
+      let d1 = 9, d2 = 9, k1 = 0;
+      for(let dj = -1; dj <= 1; dj++) for(let di = -1; di <= 1; di++){ const i2 = ci + di, j2 = cj + dj; if(i2 < 0 || j2 < 0 || i2 >= gx || j2 >= gy) continue;
+        const k = j2*gx + i2, px = i2 + P[k*2], py = j2 + P[k*2+1], dd = Math.hypot(fx - px, fy - py);
+        if(dd < d1){ d2 = d1; d1 = dd; k1 = k; } else if(dd < d2) d2 = dd; }
+      return [(d2 - d1)*0.5*size, id[k1], ((k1 % gx) + P[k1*2] - 1)*size, (Math.floor(k1/gx) + P[k1*2+1] - 1)*size]; };
+  };
+  const primary = net(cs), secondary = net(fineCs);
+  const warp = makeNoiseGrid(9, 9), warpY = makeNoiseGrid(9, 9), peelField = makeNoiseGrid(6, 6), grit = makeNoiseGrid(64, 64);
+  const t = unit*0.006*Math.sqrt(zoom);                          // the glaze's thickness
+  const H = new Float32Array(ww*wh), GL = new Float32Array(ww*wh), DIRT = new Float32Array(ww*wh);
+  // peeling: whole cells go, in clusters (a cell's chance follows a slow field
+  // at its centre); chips: small bites at the cracks
+  const peelAt = enamel < 0.6 ? 1.1 : 1.05 - (enamel - 0.6)*1.05;
+  const chipAt = enamel < 0.4 ? 1.1 : 1.0 - (enamel - 0.4)*0.9;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const u = x/ww, v = y/wh;
+    const px = x + (sampleNoiseGrid(warp, 9, 9, u*8, v*8) - 0.5)*cs*0.35, py = y + (sampleNoiseGrid(warpY, 9, 9, u*8, v*8) - 0.5)*cs*0.35;
+    const [e1, id1, cx, cy] = primary(px, py), [e2, id2] = secondary(px, py);
+    const k = y*ww + x, rough = (sampleNoiseGrid(grit, 64, 64, u*63, v*63) - 0.5)*t*0.25;
+    // is this cell's glaze gone?
+    const field = sampleNoiseGrid(peelField, 6, 6, Math.max(0, Math.min(1, cx/ww))*5, Math.max(0, Math.min(1, cy/wh))*5);
+    const peeled = field*0.7 + id1*0.45 > peelAt;
+    // a chip: glaze bitten away near a crack
+    const chipped = !peeled && e1 < cs*0.14*(0.4 + id2) && ((id1*7.3 + id2*3.1) % 1) > chipAt;
+    if(peeled || chipped){
+      H[k] = rough; GL[k] = 0;                                    // the body: lower, rough, matte
+    } else {
+      // crazing: grooves at both scales; the glaze lifts a little at a broken edge
+      const g1 = Math.max(0, 1 - e1/(unit*0.0035)), g2 = Math.max(0, 1 - e2/(unit*0.002))*0.6;
+      H[k] = t - t*0.8*Math.max(g1, g2) + rough*0.2;
+      GL[k] = 1 - Math.max(g1, g2)*0.7;
+      DIRT[k] = Math.max(g1, g2*0.8);
     }
   }
-  sctx.putImageData(img,0,0);
-
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d', CPU);
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(small,0,0,w,h);
+  // the lift where glaze meets bare body: a thin lip, raised, along the edge
+  if(enamel > 0.4) for(let y = 1; y < wh - 1; y++) for(let x = 1; x < ww - 1; x++){
+    const k = y*ww + x; if(GL[k] <= 0) continue;
+    if(GL[k-1] <= 0 || GL[k+1] <= 0 || GL[k-ww] <= 0 || GL[k+ww] <= 0) H[k] += t*0.35*(enamel - 0.4)/0.6;
+  }
+  // bubbles: blisters in the glaze, some burst into pinholes
+  const nBub = Math.round(Math.sin(Math.min(1, enamel*1.4)*Math.PI)*ww*wh/(unit*unit)*240);
+  for(let q = 0; q < nBub; q++){
+    const bx = Math.random()*ww, by = Math.random()*wh, r = unit*(0.003 + Math.pow(Math.random(), 1.6)*0.012), burst = Math.random() < 0.3;
+    const x0 = Math.max(0, Math.floor(bx - r)), x1 = Math.min(ww - 1, Math.ceil(bx + r)), y0 = Math.max(0, Math.floor(by - r)), y1 = Math.min(wh - 1, Math.ceil(by + r));
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){ const k = y*ww + x; if(GL[k] <= 0) continue;
+      const q2 = 1 - ((x - bx)**2 + (y - by)**2)/(r*r); if(q2 <= 0) continue;
+      if(burst){ H[k] -= t*0.7*Math.pow(q2, 2); DIRT[k] = Math.max(DIRT[k], q2*0.7); } else H[k] += t*0.9*Math.sqrt(q2); }
+  }
+  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.85, shadow: 0.6, ao: 0.35, ambient: 0.45 });
+  const fl = L.flat || 1;
+  const small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), dd = img.data;
+  for(let k = 0; k < ww*wh; k++){
+    // glaze: lit, with its shine; body: matte and a little darker; grime in the cracks
+    const lit = (L.light[k]/fl - 1)*110, shine = L.spec[k]*GL[k]*150;
+    const v = 128 + lit + shine - (GL[k] <= 0 ? 22 : 0) - DIRT[k]*55;
+    const q = k*4; dd[q] = dd[q+1] = dd[q+2] = Math.max(0, Math.min(255, v)); dd[q+3] = 255;
+  }
+  sctx.putImageData(img, 0, 0);
+  const full = document.createElement('canvas'); full.width = w; full.height = h;
+  const fctx = full.getContext('2d', CPU); fctx.imageSmoothingEnabled = true; fctx.drawImage(small, 0, 0, w, h);
   return full;
 }
 
@@ -12935,7 +13038,9 @@ const TEXTURE_PARAMS = {
   inkbleed:      [{key:'zoom',  label:'Blot Scale',      min:60, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'}],
   crackedglaze:  [{key:'zoom',  label:'Fracture Scale',  min:60, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26}],
+                  {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26},
+                  // how far the glaze has gone: crazed only → blistered → chipped → peeling to the body
+                  {key:'form',  label:'Enameling',       min:0,  max:100, def:0,   unit:'', ticks:[0,33,66,100], names:['Unbroken','Bubbled','Chipped','Peeling']}],
   linen:         [{key:'zoom',  label:'Weave Scale',     min:50, max:400, def:100, unit:'%'},
                   // stitching → slubs → buttons → rivets
                   {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:'', ticks:[15,42,68,95]},
@@ -13061,7 +13166,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   inkbleed:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
@@ -13146,7 +13251,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h,amt,zoom);
   } else if(type === 'crackedglaze'){
-    result = genCrackedGlaze(w,h,amt,zoom);
+    result = genCrackedGlaze(w,h,amt,zoom,light,form);
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
@@ -13592,7 +13697,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Dia';
+const RELEASE = 'Jupiter–Carpo';
 
 
 /* ==== glyphs.js ==== */
@@ -13834,7 +13939,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-09 · 17c88cb";
+const STAMP = "2026-10-09 · 75fcbf0";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -16609,7 +16714,16 @@ const state = {
 // after it -- INCLUDING the preset grid further down. With it, the failure
 // degrades to "color pickers lose their custom styling/swatches" instead of
 // "the whole app doesn't load".
-function safeColoris(config){
+// 3. Coloris builds its picker when the page finishes loading. Configured
+//    after the page is parsed but BEFORE that moment — which is exactly when
+//    the app's code runs when it's served as modules (the dev site) — it tries
+//    to style a picker that doesn't exist yet, throws, and every setting is
+//    lost: no Done, an alpha slider, the wrong layout; the first swatch update
+//    afterwards then starts it on its defaults. So settings wait in a queue
+//    until the picker exists, and are applied in order.
+const colorisQueue = [];
+let colorisReady = false;
+function callColoris(config){
   if(typeof Coloris !== 'function') return;
   try {
     Coloris(config);
@@ -16617,6 +16731,25 @@ function safeColoris(config){
     console.warn('Coloris call failed, continuing without it:', e);
   }
 }
+function safeColoris(config){
+  if(colorisReady){ callColoris(config); return; }
+  colorisQueue.push(config);
+}
+(function whenPickerExists(tries){
+  if(typeof document === 'undefined' || typeof document.getElementById !== 'function') return;
+  if(typeof Coloris === 'function' && document.getElementById('clr-picker')){
+    colorisReady = true;
+    for(const c of colorisQueue.splice(0)) callColoris(c);
+    return;
+  }
+  // (Coloris is a plain script in the head: if it isn't here once the page
+  // has loaded, it never will be — so nothing waits forever, and in Node,
+  // where there is no Coloris, nothing waits at all)
+  const pageLoaded = document.readyState === 'complete';
+  if(typeof Coloris !== 'function' && (pageLoaded || typeof window === 'undefined' || !window.addEventListener)) return;
+  if(tries > 200) return;
+  setTimeout(() => whenPickerExists(tries + 1), 25);
+})(0);
 
 // Base Coloris config. Must run before any later safeColoris({swatches:...})
 // call (see applyThemePalette below) -- Coloris merges/updates options at
@@ -17415,7 +17548,7 @@ function renderSavedPresets(saved){
 
 function applyThemePalette(colors){
   state.ui.palette = colors;
-  safeColoris({ swatches: colors });
+  safeColoris({ swatches: pickerSwatches(colors[0]) });
 }
 
 // the opening palette comes from the default preset named in tunables.js
@@ -17494,13 +17627,16 @@ if(typeof window !== 'undefined' && window.addEventListener){
 }
 document.addEventListener('scroll', ()=>{ if(state.ui.pickingField) aimPointer(); }, true);
 
-// The 16th swatch: the field's own current value, appended as its picker
-// opens, so you can audition the theme's colours and still get back to what
-// you had. (On phones the picker's position is set by CSS: docked above the
-// keyboard at the bottom right.)
+// The swatches: EIGHTEEN, three even rows of six. First the field's own
+// colour as the picker opens (ringed: tap it to get back to what you had),
+// then the theme's fifteen, then white and black. (On phones the picker's
+// position is set by CSS: docked above the keyboard at the bottom right.)
+function pickerSwatches(original){
+  return [original || '#808080', ...state.ui.palette.slice(0, 15), '#FFFFFF', '#000000'];
+}
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
-    safeColoris({ swatches: [...state.ui.palette, e.target.value] });
+    safeColoris({ swatches: pickerSwatches(e.target.value) });
   }
 });
 

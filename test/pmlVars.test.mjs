@@ -665,6 +665,14 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('the lighting loop reads neighbours directly and uses sqrt, not hypot', /const nl = Math\.sqrt\(gx\*gx \+ gy\*gy \+ 1\)/.test(core) && !/Math\.hypot\(gx, gy, 1\)/.test(core));
 }
 
+// ---- Fractured Glaze: glaze over a body ----
+{
+  const T = await import('../textureGenerators.js'), ch = src('texChaos.js');
+  check('Fractured Glaze is lit glaze over a body: crazing at two scales, blisters, chips, peeling; an Enameling knob (Unbroken · Bubbled · Chipped · Peeling)',
+    T.TEXTURE_CAPS.crackedglaze.light === true && T.paramsFor('crackedglaze')[2].names.join() === 'Unbroken,Bubbled,Chipped,Peeling'
+    && /const primary = net\(cs\), secondary = net\(fineCs\);/.test(ch) && /const L = lightHeights\(H, ww, wh, \{ light, relief: 1, gloss: 0\.85/.test(ch));
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

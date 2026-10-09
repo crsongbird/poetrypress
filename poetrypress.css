@@ -1583,3 +1583,18 @@ body.saving .download-btn{ animation:savePulse 1s ease-in-out infinite; }
   body.tex-busy .canvas-wrap::after, body.saving .canvas-wrap::after{ animation:texFade 1.6s ease-in-out infinite; background-size:100% 100%; }
   @keyframes texFade{ 50%{ opacity:.25; } }
 }
+
+/* ---------- the colour picker, kind to thumbs ----------
+   Eighteen swatches in three even rows of six; the first is the colour the
+   field had when the picker opened, ringed so it reads as "back to this". */
+#clr-picker .clr-swatches > div{ display:grid !important; grid-template-columns:repeat(6, 1fr); gap:6px; justify-items:center; padding:0 2px; }
+#clr-picker .clr-swatches button{ margin:0 !important; }
+#clr-picker .clr-swatches > div > button:first-child{ outline:1.5px dashed var(--text-dim); outline-offset:2px; }
+/* on a phone: wider, taller colour area, bigger swatches and handles, and a
+   Done that spans the picker */
+body.is-mobile #clr-picker{ width:min(320px, calc(100vw - 16px)) !important; }
+body.is-mobile #clr-picker .clr-gradient{ height:150px !important; }
+body.is-mobile #clr-picker .clr-swatches button{ width:34px !important; height:34px !important; }
+body.is-mobile #clr-picker .clr-hue div, body.is-mobile #clr-picker .clr-hue input + div{ width:26px !important; height:26px !important; }
+body.is-mobile #clr-picker .clr-marker{ width:20px !important; height:20px !important; }
+body.is-mobile #clr-picker #clr-close{ display:block; width:calc(100% - 20px); margin:10px auto 8px; min-height:42px; font-size:17px; }

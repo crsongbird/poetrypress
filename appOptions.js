@@ -73,7 +73,8 @@ export const FONTS = [
 
 export const PRESETS = [
   // ---- WHIMSY ----  red/purple/blue gradients, starlight in motion, sleep
-  { name: "Andromeda",
+  // ═══ Whimsy ♡ — presets 1–4 ═══
+  { name: "Andromeda",   // surface: Deep Field (♡)
     spell: "[[🜥]]{{🜭🜊🜕⚺}}🜄🜍☌🜋🜃🜞",
     bg1: "#1A0B2E", bgGradient: true, bg2: "#2D1B69", bgAngle: 135,
     text1: "#F5F0FF",
@@ -83,7 +84,7 @@ export const PRESETS = [
     accent1: "#D4AF37", accent2: "#9B7FE8",
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 14
   },
-  { name: "Starbloom",
+  { name: "Starbloom",   // surface: Dream Bloom (♡)
     spell: "[[🜉🜁🜌⛤🜚🜪🜺♡]]⚸🝊🝆🜞🜛{{🜎🜗🜂🜋}}",
     bg1: "#050318", bgGradient: true, bg2: "#1B1040", bgAngle: 120,
     text1: "#E8E0FF", textGradient: true, text2: "#A98CFF", textAngle: 45,
@@ -92,7 +93,7 @@ export const PRESETS = [
     texture: true, textureType: "bokeh", textureOpacity: 26, texP1: 150, texP2: 80,
     accent1: "#C9B8FF", accent2: "#6C5CE7"
   },
-  { name: "Euphoria",
+  { name: "Euphoria",   // surface: Pixie Dust (♡)
     spell: "🝊🜝[[🝆]]{{🜌🜆🜇🜄}}",
     bg1: "#3D0A4E", bgGradient: true, bg2: "#8C1B6B", bgAngle: 45,
     text1: "#FFF0FA",
@@ -120,7 +121,7 @@ export const PRESETS = [
     cardOpacity: '100',
     cardBlend: 'darken'
   },
-  { name: "Sleepwalk",
+  { name: "Sleepwalk",   // surface: Sleep Haze (♡)
     spell: "🜾[[🜹🜣🜌✡🜦🜺]]{{🜁⚸☊🜮🜘⛧🜖🜅⚻🜶}}",
     bg1: "#0A0E2A", bgGradient: true, bg2: "#16204D", bgAngle: 160,
     text1: "#C8D4FF",
@@ -131,7 +132,10 @@ export const PRESETS = [
   },
 
   // ---- SHARPNESS ----  off-white against blue-black, silver and gold at the edges
-  { name: "Daydream",
+  // ═══ Chaos ∆ — presets 5–8 ═══
+  // (Ruby's grouping, recorded as she gave it, 2026-10-09; by their textures
+  //  presets 5–8 lean Sharpness and 9–12 lean Chaos — to confirm, see OPEN-ISSUES)
+  { name: "Daydream",   // surface: Facet Field (∆)
     spell: "🜇🜫🜝🜬☋⚹{{⚻}}[[🜯🜉⛤☊]]",
     bg1: "#E4E0D4",
     text1: "#0D1017",
@@ -142,7 +146,7 @@ export const PRESETS = [
     border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12,
     textureBlend: 'overlay'
   },
-  { name: "December",
+  { name: "December",   // surface: First Snow (♡)
     spell: "{{☋🜫🜄⚸🜥}}🜢🜟🜹🜞[[🜯🜃🜛🜈🜌🝓🜾🜂]]",
     bg1: "#0D1017",
     text1: "#F2F0E9",
@@ -152,7 +156,7 @@ export const PRESETS = [
     accent1: "#C0C8D4", accent2: "#7E8794",
     border: true, borderColor: "#C0C8D4", borderThickness: 1, borderOffset: 16
   },
-  { name: "Gold Leaf",
+  { name: "Gold Leaf",   // surface: Metal Leaf (√)
     spell: "{{🜚}}🜆🜛[[🜭🜞🜜🜻]]",
     bg1: "#0B0E14",
     text1: "#F5F1E6",
@@ -163,7 +167,7 @@ export const PRESETS = [
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 10,
     textureBlend: 'screen'
   },
-  { name: "Lotus Bloom",
+  { name: "Lotus Bloom",   // surface: Lotus Pond (√)
     spell: "⚻☊[[🜃🜜🜯🜭🜬🜁♡☥✡🜅]]{{🝆✝🜇🜱🜿}}",
     bg1: "#F7E3D2", bgGradient: true, bg2: "#E8B9A6", bgAngle: 160,
     text1: "#3A2233",
@@ -186,7 +190,10 @@ export const PRESETS = [
   },
 
   // ---- CHAOS ----  sigils, math-noise, geometry twisting where reality thins
-  { name: "Desire",
+  // ═══ Sharpness √ — presets 9–12 ═══
+  // (Ruby's grouping, recorded as she gave it, 2026-10-09; by their textures
+  //  presets 5–8 lean Sharpness and 9–12 lean Chaos — to confirm, see OPEN-ISSUES)
+  { name: "Desire",   // surface: Sigil Scatter (∆)
     spell: "{{☌🜙☋☍🝆}}[[🜭🜨🜢🜣]]🜟🜛",
     bg1: "#1A0A12", bgGradient: true, bg2: "#3D1228", bgAngle: 115,
     text1: "#F6E3E8",
@@ -196,7 +203,7 @@ export const PRESETS = [
     accent1: "#E0526F", accent2: "#9B5C86",
     textureBlend: 'screen'
   },
-  { name: "Ashfall",
+  { name: "Ashfall",   // surface: Silverpoint Hatch (√)
     spell: "[[🜁🜩⚻🜺☍⛤🜿🜚⛧🜎🜪🜔🝆🜻]]{{✝🜝}}✡",
     bg1: "#9B9187",
     text1: "#241F1C",
@@ -205,7 +212,7 @@ export const PRESETS = [
     texture: true, textureType: "hatch", textureOpacity: 30, texP1: 22, texP2: 130,
     accent1: "#57412E", accent2: "#543F4A"
   },
-  { name: "Gateway",
+  { name: "Gateway",   // surface: Transmutation Circles (∆)
     spell: "🜺🜶🜈[[🜣✡⚸]]{{🜍}}",
     bg1: "#041418", bgGradient: true, bg2: "#07242a", bgAngle: 135,
     text1: "#E8FFF6",
@@ -219,7 +226,7 @@ export const PRESETS = [
     textureBlend: 'screen',
     textureTint1: '#3DF5A0'
   },
-  { name: "Hourglass",
+  { name: "Hourglass",   // surface: Fractured Glaze (∆)
     spell: "🜍🜉🜔🜨🜥✡✝🜟🜄🜆{{🜱🜾🜼⚼⛧}}[[🜈🝊]]",
     bg1: "#1B0A12", bgGradient: true, bg2: "#2E1338", bg3: "#0E1B3A", bgAngle: 200,
     text1: "#FFEFE6",
@@ -232,7 +239,8 @@ export const PRESETS = [
   // ---- 🜚 TOUCH ----  surface, not hue: what the page is made of and what
   // has happened to it. Neutrals carrying a breath of green or brown, and
   // exactly one permitted colour, in the wax.
-  { name: "Handled",
+  // ═══ Touch 🜚 — presets 13–16 ═══
+  { name: "Handled",   // surface: Linen Tooth (🜚)
     spell: "{{⚸🜝}}⚻♡🜞🜧[[🜃🜙🜉🜔🜿]]",
     bg1: "#E9E2D4",
     text1: "#2B2A26",
@@ -241,7 +249,7 @@ export const PRESETS = [
     texture: true, textureType: "linen", textureOpacity: 34, texP1: 120, texP2: 42,
     accent1: "#7C7A63", accent2: "#947D5A"
   },
-  { name: "Foxed",
+  { name: "Foxed",   // surface: Foxing (🜚)
     spell: "[[🜬🜔]]🜉{{🜿🜇🜢🜛☍⚺🜙🜘♡🜜🜭🜕☋🜨}}",
     bg1: "#E4D6B8",
     text1: "#3A2E20",
@@ -251,7 +259,7 @@ export const PRESETS = [
     accent1: "#9A5B33", accent2: "#6E7247",
     border: true, borderColor: "#9A8B6E", borderThickness: 1, borderOffset: 18
   },
-  { name: "Creased",
+  { name: "Creased",   // surface: Fold Ghost (🜚)
     spell: "🝆🝊🜥🜗🜺🜱{{🜾♡☥🜪}}[[✝]]",
     bg1: "#D4D6CF",
     text1: "#1B1D1C",
@@ -260,7 +268,7 @@ export const PRESETS = [
     texture: true, textureType: "foldghost", textureOpacity: 38, texP1: 110, texP2: 120,
     accent1: "#5A6B62", accent2: "#697983"
   },
-  { name: "Sealed",
+  { name: "Sealed",   // surface: Poured Wax (🜚)
     spell: "{{🜨🜈🜇🜄🜮⚸✝🝆☋🜔🜠🝓🜱}}⚻♡[[✡🜍]]",
     bg1: "#F0E6D2",
     text1: "#241C18",

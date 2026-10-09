@@ -14,7 +14,8 @@ candidates (Dream Bloom's convolution first). J (Linen at preview) waits.
 lit by the dial — diffuse, a specular per material, cast shadows (soft,
 longer as the light lowers; none overhead), occlusion in crevices. Dune
 Ripples, Kintsugi, Moss on Stone and Rain on Glass use it. Next: bring the
-other lit textures onto it (Fractured Glaze, Linen, Sigil relief). Facet Field, Cup Ring, Fold Ghost, Poured Wax and Cold Press are on it
+other lit textures onto it (Linen, Sigil relief). Facet Field, Cup Ring, Fold Ghost, Poured Wax, Cold Press and
+Fractured Glaze are on it
 (Cold Press is the first to use a normal map: fibres and undulation),
 and it now takes detail NORMAL MAPS and MATERIAL hues (Highlight, Shade);
 next: give textures normal-map detail where heights are awkward (paper
@@ -48,8 +49,6 @@ in the worker (the page stays responsive).
   the page; third knob Organic ↔ Technological, with noisy bloom rising
   toward the digital end. Possibly a new name.
 - Rorschach Test: revisit with the gallery tool, side by side with Ruby.
-- Fractured Glaze: peeling enamel, not a dry riverbed; lit with shadows;
-  third knob Enameling (bubbling, chipping; 0 = unbroken).
 - Cartomancy: divination cards, not playing cards — custom suits from the
   app's own glyphs and magical language; more realism and variation; the
   best home for easter eggs (Saturn, Enceladus, the kitsune).
@@ -101,3 +100,16 @@ in the worker (the page stays responsive).
 - Textures measure in canonical pixels (cpx, canonArea, canonDiv); check new
   ones with tools/scale-audit.mjs.
 - Blend modes can hide an inset box (Darken shows only a darker box…).
+
+## Confirm with Ruby
+- Presets 5–8 are recorded as Chaos and 9–12 as Sharpness, as Ruby gave
+  them; by their textures 5–8 lean Sharpness (Gold Leaf, Lotus Bloom) and
+  9–12 lean Chaos (Desire, Gateway, Hourglass). Which is right?
+
+## LAST · the preset review (do this at the very end)
+Go through every preset with Ruby, one by one: what it's for, whether it's
+redundant, whether it needs changing. Some are unique enough already, some
+seem redundant. The element of each is recorded in appOptions.js — presets
+1–4 Whimsy ♡, 5–8 Chaos ∆, 9–12 Sharpness √, 13–16 Touch 🜚 (as Ruby gave
+it; see "Confirm with Ruby") — keep it there whatever changes.
+

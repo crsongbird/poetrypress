@@ -24,7 +24,8 @@ const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 // boot default (Midnight Page) should have applied a 15-color palette
 const bootCall = global.Coloris.lastCall;
 check('Coloris got a swatches config at boot', bootCall && Array.isArray(bootCall.swatches));
-check('boot palette has exactly 15 colors', bootCall.swatches.length === 15);
+// 18 swatches, three even rows of six: [the field's colour, the theme's 15, white, black]
+check('boot swatches are exactly 18 (three even rows of six)', bootCall.swatches.length === 18);
 check('every boot palette color is a valid hex string', bootCall.swatches.every(c => HEX_RE.test(c)));
 
 // clicking a different preset should change the palette
@@ -36,7 +37,7 @@ otherBtn.dispatchEvent({ type: 'click' });
 const afterPresetClick = global.Coloris.lastCall;
 check('applying a different preset produces a different palette',
   JSON.stringify(afterPresetClick.swatches) !== JSON.stringify(bootCall.swatches));
-check('new palette is still exactly 15 colors', afterPresetClick.swatches.length === 15);
+check('after a preset, still exactly 18 swatches', afterPresetClick.swatches.length === 18);
 
 // simulate a color picker opening on a specific field -- should append that
 // field's current value as a 16th swatch
@@ -45,9 +46,9 @@ textColorField.value = '#ff00ff';
 const fakeOpenEvent = { type: 'open', target: { value: '#ff00ff', matches: (sel) => sel === '[data-coloris]' } };
 global.document.dispatchEvent(fakeOpenEvent);
 const afterOpen = global.Coloris.lastCall;
-check('picker open appends a 16th swatch', afterOpen.swatches.length === 16);
-check('16th swatch is the field\'s live value', afterOpen.swatches[15] === '#ff00ff');
-check('first 15 are still the current theme palette', JSON.stringify(afterOpen.swatches.slice(0,15)) === JSON.stringify(afterPresetClick.swatches));
+check('picker open keeps 18 swatches', afterOpen.swatches.length === 18);
+check('the FIRST swatch is the field\'s live value (tap it to get back)', afterOpen.swatches[0] === '#ff00ff');
+check('then the theme\'s 15, then white and black', JSON.stringify(afterOpen.swatches.slice(1,16)) === JSON.stringify(afterPresetClick.swatches.slice(1,16)) && afterOpen.swatches[16] === '#FFFFFF' && afterOpen.swatches[17] === '#000000');
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

@@ -103,7 +103,9 @@ export const TEXTURE_PARAMS = {
   inkbleed:      [{key:'zoom',  label:'Blot Scale',      min:60, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'}],
   crackedglaze:  [{key:'zoom',  label:'Fracture Scale',  min:60, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26}],
+                  {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26},
+                  // how far the glaze has gone: crazed only → blistered → chipped → peeling to the body
+                  {key:'form',  label:'Enameling',       min:0,  max:100, def:0,   unit:'', ticks:[0,33,66,100], names:['Unbroken','Bubbled','Chipped','Peeling']}],
   linen:         [{key:'zoom',  label:'Weave Scale',     min:50, max:400, def:100, unit:'%'},
                   // stitching → slubs → buttons → rivets
                   {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:'', ticks:[15,42,68,95]},
@@ -229,7 +231,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   inkbleed:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
@@ -314,7 +316,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h,amt,zoom);
   } else if(type === 'crackedglaze'){
-    result = genCrackedGlaze(w,h,amt,zoom);
+    result = genCrackedGlaze(w,h,amt,zoom,light,form);
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){

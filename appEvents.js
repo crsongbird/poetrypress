@@ -79,7 +79,16 @@ const state = {
 // after it -- INCLUDING the preset grid further down. With it, the failure
 // degrades to "color pickers lose their custom styling/swatches" instead of
 // "the whole app doesn't load".
-function safeColoris(config){
+// 3. Coloris builds its picker when the page finishes loading. Configured
+//    after the page is parsed but BEFORE that moment — which is exactly when
+//    the app's code runs when it's served as modules (the dev site) — it tries
+//    to style a picker that doesn't exist yet, throws, and every setting is
+//    lost: no Done, an alpha slider, the wrong layout; the first swatch update
+//    afterwards then starts it on its defaults. So settings wait in a queue
+//    until the picker exists, and are applied in order.
+const colorisQueue = [];
+let colorisReady = false;
+function callColoris(config){
   if(typeof Coloris !== 'function') return;
   try {
     Coloris(config);
@@ -87,6 +96,25 @@ function safeColoris(config){
     console.warn('Coloris call failed, continuing without it:', e);
   }
 }
+function safeColoris(config){
+  if(colorisReady){ callColoris(config); return; }
+  colorisQueue.push(config);
+}
+(function whenPickerExists(tries){
+  if(typeof document === 'undefined' || typeof document.getElementById !== 'function') return;
+  if(typeof Coloris === 'function' && document.getElementById('clr-picker')){
+    colorisReady = true;
+    for(const c of colorisQueue.splice(0)) callColoris(c);
+    return;
+  }
+  // (Coloris is a plain script in the head: if it isn't here once the page
+  // has loaded, it never will be — so nothing waits forever, and in Node,
+  // where there is no Coloris, nothing waits at all)
+  const pageLoaded = document.readyState === 'complete';
+  if(typeof Coloris !== 'function' && (pageLoaded || typeof window === 'undefined' || !window.addEventListener)) return;
+  if(tries > 200) return;
+  setTimeout(() => whenPickerExists(tries + 1), 25);
+})(0);
 
 // Base Coloris config. Must run before any later safeColoris({swatches:...})
 // call (see applyThemePalette below) -- Coloris merges/updates options at
@@ -885,7 +913,7 @@ function renderSavedPresets(saved){
 
 function applyThemePalette(colors){
   state.ui.palette = colors;
-  safeColoris({ swatches: colors });
+  safeColoris({ swatches: pickerSwatches(colors[0]) });
 }
 
 // the opening palette comes from the default preset named in tunables.js
@@ -964,13 +992,16 @@ if(typeof window !== 'undefined' && window.addEventListener){
 }
 document.addEventListener('scroll', ()=>{ if(state.ui.pickingField) aimPointer(); }, true);
 
-// The 16th swatch: the field's own current value, appended as its picker
-// opens, so you can audition the theme's colours and still get back to what
-// you had. (On phones the picker's position is set by CSS: docked above the
-// keyboard at the bottom right.)
+// The swatches: EIGHTEEN, three even rows of six. First the field's own
+// colour as the picker opens (ringed: tap it to get back to what you had),
+// then the theme's fifteen, then white and black. (On phones the picker's
+// position is set by CSS: docked above the keyboard at the bottom right.)
+function pickerSwatches(original){
+  return [original || '#808080', ...state.ui.palette.slice(0, 15), '#FFFFFF', '#000000'];
+}
 document.addEventListener('open', (e)=>{
   if(e.target && e.target.matches && e.target.matches('[data-coloris]')){
-    safeColoris({ swatches: [...state.ui.palette, e.target.value] });
+    safeColoris({ swatches: pickerSwatches(e.target.value) });
   }
 });
 

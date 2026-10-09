@@ -382,47 +382,86 @@ export function genInkBleed(w,h,amt,zoom){
   return c;
 }
 
-export function genCrackedGlaze(w,h,amt,zoom){
+export function genCrackedGlaze(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  // Scale means bigger fragments, i.e. fewer of them — not a lower working
-  // resolution, which only made the cracks look blurred.
-  const workDiv = canonDiv(5);
-  const workW = Math.max(24, Math.round(w/workDiv));
-  const workH = Math.max(24, Math.round(h/workDiv));
-
-  const seedCount = Math.max(4, Math.round(26 * amt / (zoom * zoom)));
-  const seeds = [];
-  for(let i=0;i<seedCount;i++) seeds.push([Math.random()*workW, Math.random()*workH]);
-
-  const crackWidth = 0.045;
-  const small = document.createElement('canvas');
-  small.width=workW; small.height=workH;
-  const sctx = small.getContext('2d', CPU);
-  const img = sctx.createImageData(workW, workH);
-  const d = img.data;
-
-  for(let py=0; py<workH; py++){
-    for(let px=0; px<workW; px++){
-      let d1=Infinity, d2=Infinity;
-      for(const [sx,sy] of seeds){
-        const dx=px-sx, dy=py-sy;
-        const dist = dx*dx+dy*dy;
-        if(dist<d1){ d2=d1; d1=dist; } else if(dist<d2){ d2=dist; }
-      }
-      const r1=Math.sqrt(d1), r2=Math.sqrt(d2);
-      const diff = (r2-r1)/(r2+1e-6);
-      const idx=(py*workW+px)*4;
-      const val = diff < crackWidth ? 55 : 185;
-      d[idx]=val; d[idx+1]=val; d[idx+2]=val; d[idx+3]=255;
+  const enamel = Math.max(0, Math.min(1, form==null ? 0 : form));
+  // Glaze: a glassy layer over a body. As it ages it CRAZES — a network of
+  // fine cracks, big cells split by finer ones, grime settled in them — then
+  // blisters, chips, and at last peels away to the rough, matte body below,
+  // lifting at its broken edges. All of it as heights, lit by the dial: the
+  // glaze stands above the body, cracks are grooves in it, and where it is
+  // gone the drop casts a shadow. Glossy glaze, matte body.
+  // FRACTURE SCALE · CRACK DENSITY · ENAMELING (unbroken → bubbled → chipped → peeling)
+  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh);
+  // cells: as many as before (26 at 100%), sized by scale
+  const nCells = Math.max(4, Math.round(26*amt/(zoom*zoom)));
+  const cs = Math.sqrt(ww*wh/nCells), fineCs = cs*0.42;
+  const net = (size) => {
+    const gx = Math.ceil(ww/size) + 2, gy = Math.ceil(wh/size) + 2, P = new Float32Array(gx*gy*2), id = new Float32Array(gx*gy);
+    for(let k = 0; k < gx*gy; k++){ P[k*2] = 0.1 + Math.random()*0.8; P[k*2+1] = 0.1 + Math.random()*0.8; id[k] = Math.random(); }
+    // returns [edge distance (in px), the nearest cell's id, its centre x, y]
+    return (x, y) => { const fx = x/size + 1, fy = y/size + 1, ci = Math.floor(fx), cj = Math.floor(fy);
+      let d1 = 9, d2 = 9, k1 = 0;
+      for(let dj = -1; dj <= 1; dj++) for(let di = -1; di <= 1; di++){ const i2 = ci + di, j2 = cj + dj; if(i2 < 0 || j2 < 0 || i2 >= gx || j2 >= gy) continue;
+        const k = j2*gx + i2, px = i2 + P[k*2], py = j2 + P[k*2+1], dd = Math.hypot(fx - px, fy - py);
+        if(dd < d1){ d2 = d1; d1 = dd; k1 = k; } else if(dd < d2) d2 = dd; }
+      return [(d2 - d1)*0.5*size, id[k1], ((k1 % gx) + P[k1*2] - 1)*size, (Math.floor(k1/gx) + P[k1*2+1] - 1)*size]; };
+  };
+  const primary = net(cs), secondary = net(fineCs);
+  const warp = makeNoiseGrid(9, 9), warpY = makeNoiseGrid(9, 9), peelField = makeNoiseGrid(6, 6), grit = makeNoiseGrid(64, 64);
+  const t = unit*0.006*Math.sqrt(zoom);                          // the glaze's thickness
+  const H = new Float32Array(ww*wh), GL = new Float32Array(ww*wh), DIRT = new Float32Array(ww*wh);
+  // peeling: whole cells go, in clusters (a cell's chance follows a slow field
+  // at its centre); chips: small bites at the cracks
+  const peelAt = enamel < 0.6 ? 1.1 : 1.05 - (enamel - 0.6)*1.05;
+  const chipAt = enamel < 0.4 ? 1.1 : 1.0 - (enamel - 0.4)*0.9;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const u = x/ww, v = y/wh;
+    const px = x + (sampleNoiseGrid(warp, 9, 9, u*8, v*8) - 0.5)*cs*0.35, py = y + (sampleNoiseGrid(warpY, 9, 9, u*8, v*8) - 0.5)*cs*0.35;
+    const [e1, id1, cx, cy] = primary(px, py), [e2, id2] = secondary(px, py);
+    const k = y*ww + x, rough = (sampleNoiseGrid(grit, 64, 64, u*63, v*63) - 0.5)*t*0.25;
+    // is this cell's glaze gone?
+    const field = sampleNoiseGrid(peelField, 6, 6, Math.max(0, Math.min(1, cx/ww))*5, Math.max(0, Math.min(1, cy/wh))*5);
+    const peeled = field*0.7 + id1*0.45 > peelAt;
+    // a chip: glaze bitten away near a crack
+    const chipped = !peeled && e1 < cs*0.14*(0.4 + id2) && ((id1*7.3 + id2*3.1) % 1) > chipAt;
+    if(peeled || chipped){
+      H[k] = rough; GL[k] = 0;                                    // the body: lower, rough, matte
+    } else {
+      // crazing: grooves at both scales; the glaze lifts a little at a broken edge
+      const g1 = Math.max(0, 1 - e1/(unit*0.0035)), g2 = Math.max(0, 1 - e2/(unit*0.002))*0.6;
+      H[k] = t - t*0.8*Math.max(g1, g2) + rough*0.2;
+      GL[k] = 1 - Math.max(g1, g2)*0.7;
+      DIRT[k] = Math.max(g1, g2*0.8);
     }
   }
-  sctx.putImageData(img,0,0);
-
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d', CPU);
-  fctx.imageSmoothingEnabled = true;
-  fctx.drawImage(small,0,0,w,h);
+  // the lift where glaze meets bare body: a thin lip, raised, along the edge
+  if(enamel > 0.4) for(let y = 1; y < wh - 1; y++) for(let x = 1; x < ww - 1; x++){
+    const k = y*ww + x; if(GL[k] <= 0) continue;
+    if(GL[k-1] <= 0 || GL[k+1] <= 0 || GL[k-ww] <= 0 || GL[k+ww] <= 0) H[k] += t*0.35*(enamel - 0.4)/0.6;
+  }
+  // bubbles: blisters in the glaze, some burst into pinholes
+  const nBub = Math.round(Math.sin(Math.min(1, enamel*1.4)*Math.PI)*ww*wh/(unit*unit)*240);
+  for(let q = 0; q < nBub; q++){
+    const bx = Math.random()*ww, by = Math.random()*wh, r = unit*(0.003 + Math.pow(Math.random(), 1.6)*0.012), burst = Math.random() < 0.3;
+    const x0 = Math.max(0, Math.floor(bx - r)), x1 = Math.min(ww - 1, Math.ceil(bx + r)), y0 = Math.max(0, Math.floor(by - r)), y1 = Math.min(wh - 1, Math.ceil(by + r));
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){ const k = y*ww + x; if(GL[k] <= 0) continue;
+      const q2 = 1 - ((x - bx)**2 + (y - by)**2)/(r*r); if(q2 <= 0) continue;
+      if(burst){ H[k] -= t*0.7*Math.pow(q2, 2); DIRT[k] = Math.max(DIRT[k], q2*0.7); } else H[k] += t*0.9*Math.sqrt(q2); }
+  }
+  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.85, shadow: 0.6, ao: 0.35, ambient: 0.45 });
+  const fl = L.flat || 1;
+  const small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), dd = img.data;
+  for(let k = 0; k < ww*wh; k++){
+    // glaze: lit, with its shine; body: matte and a little darker; grime in the cracks
+    const lit = (L.light[k]/fl - 1)*110, shine = L.spec[k]*GL[k]*150;
+    const v = 128 + lit + shine - (GL[k] <= 0 ? 22 : 0) - DIRT[k]*55;
+    const q = k*4; dd[q] = dd[q+1] = dd[q+2] = Math.max(0, Math.min(255, v)); dd[q+3] = 255;
+  }
+  sctx.putImageData(img, 0, 0);
+  const full = document.createElement('canvas'); full.width = w; full.height = h;
+  const fctx = full.getContext('2d', CPU); fctx.imageSmoothingEnabled = true; fctx.drawImage(small, 0, 0, w, h);
   return full;
 }
 
