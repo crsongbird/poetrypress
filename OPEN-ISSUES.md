@@ -27,14 +27,8 @@ here, in the worker (the page stays responsive).
 ## 2 · Texture plan (Ruby's audit, by group)
 
 **B · great, plus a third knob and/or the light**
-- First Snow: third knob / light TBD (its flakes are crystals now).
-- Aurora Veil: the dial as the BLEND direction; third
-  knob Bloom, NOISY bloom (I + α·Blur(Bright(I))·N).
-- Painted Landscape: more landscape patterns and stroke kinds; third knob
-  Wetness.
 - Lotus Pond: light and shading by the dial (lightHeights); a better
   seed-pod form.
-- Painter's Frustration: third knob Wetness (paint blending).
 - Transmutation Circles: ONE circle; Count → complexity; the dial → where on
   the page; third knob Organic ↔ Technological, with noisy bloom rising
   toward the digital end. Possibly a new name.
@@ -52,8 +46,43 @@ here, in the worker (the page stays responsive).
 - Scrying Pool: a physically based water surface — the light dial, a
   Turbulence knob, Haze and Murk (how cloudy and dirty the water is).
 
+## 3 · Ruby's notes, 2026-10-09 (after Jupiter–Euporie)
+- **Materials everywhere** (Ruby: "use these features to the fullest extent
+  of the law"). Every texture the light touches gets the full material
+  controls — highlight (specular) colour, shade colour, and where it fits
+  gloss and metallicity. First: Fractured Glaze, Sleep Haze (its lit smoke
+  and its shadowed smoke), Cold Press, Crystal Leaf — then go through every
+  texture, one by one, and use the engine wherever it makes it better.
+- **The light dial as a joystick**: textures that don't use light can use
+  the dial for something else, renamed to say what it does (Aurora: blend
+  direction; Transmutation Circles: where on the page; …). The label comes
+  from the texture's caps (`dial:`). First uses: First Snow's Wind
+  Direction, Aurora Veil's Blend Direction.
+- **Crystal Leaf**: the dendrites are too regular (they read as snowflakes)
+  and grow the wrong way; more variation, perhaps a slider for it. Add a
+  BRUSHED relief running across the light's direction, like brushed steel,
+  and tiny flecks like reflections inside the crystal. Terraces don't quite
+  read as bismuth yet.
+- *Medium:* one more colour value, to balance the hue column (four hues
+  beside the dial and the seed) — wired into the lighting and texture engine
+  where it fits. Ask Ruby what it should be before building it.
+- *Medium:* the dial: centre it in its space, move the reset button to a
+  corner, flip the curl of the reset glyph so it points out, not in.
+- Done in Jupiter–Euporie+1: randomising the background now changes the
+  texture as a person would — the knobs relabel. (It also offered only some
+  textures; now it offers the whole menu. A locked texture keeps its knobs.)
+
 ## Pinned
 - Saturn and its moons as a rare easter egg in a couple of presets.
+- *Low:* WORD seeds, like RimWorld's. A seed is a phrase that evaluates to
+  a number ("Enceladus's quiet lantern", "ember turning", "hollow tide");
+  numbers still work, and every number has its own phrase, so old seeds
+  keep their exact textures. Phrase patterns: "noun verb-ing", "proper
+  noun's adjective noun", "adjective noun", and others. Word bank: named
+  planets, moons and stars, esoteric and magical words, space concepts,
+  every word of every haiku in the app, the code's own variable names.
+  Decided: pinned for later — the number ↔ phrase mapping must be exactly
+  reversible before it ships, and it touches save/load/share.
 
 ## Later
 - Dream Bloom as the basis for a new texture (its five knobs — focal plane,

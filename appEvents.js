@@ -437,9 +437,14 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureToggle').checked = texOn;
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
-    const types = ['clouds','bokeh','astral','magicparticles','embers','snow','grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks','sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate','aurora','hatch','cards',
-      'linen','coldpress','crystalleaf','foxing','foldghost','cupring','wax','glassrain','dunes','kintsugi','moss'];
-    $('textureType').value = types[Math.floor(Math.random()*types.length)];
+    // any texture the menu offers; then the same change a person makes, so
+    // the knobs relabel, the hue pickers follow and the light resets
+    // (a locked texture stays, and keeps its knobs as they are)
+    if(!state.locks.has('textureType')){
+      const types = [...$('textureType').options].map(o => o.value);
+      $('textureType').value = types[Math.floor(Math.random()*types.length)];
+      $('textureType').dispatchEvent(new Event('change', { bubbles: true }));
+    }
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
     paintMoons();
@@ -1427,7 +1432,12 @@ function syncTextureTools(resetToDefaults){
   sel.value = (!resetToDefaults && caps.blends.includes(previous)) ? previous : caps.blends[0];
 
   const lightRow = $('lightRow');
-  if(lightRow) lightRow.classList.toggle('tool-off', !caps.light);
+  if(lightRow){
+    lightRow.classList.toggle('tool-off', !caps.light);
+    // a texture may use the dial for something else, and says so: First Snow's wind
+    const lbl = lightRow.querySelector('label');
+    if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = lbl.textContent; lbl.textContent = caps.dial || lbl.dataset.lightName; }
+  }
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
   if(t1) t1.classList.toggle('tool-off', caps.tints < 1);
@@ -1612,6 +1622,9 @@ function restoreLocked(snap){
   for(const id in snap){
     const n = $(id);
     if(!n) continue;
+    // unchanged: nothing to restore, and no change to announce (a texture
+    // "changed" to itself would reset its knobs to their defaults)
+    if((n.type === 'checkbox' ? n.checked : n.value) === snap[id]) continue;
     if(n.type === 'checkbox') n.checked = snap[id];
     else n.value = snap[id];
     // value readouts and swatches listen for these; writing .value alone

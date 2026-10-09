@@ -2882,11 +2882,12 @@ function genClouds(w,h,amt,zoom,light,form){
   for(let i=0;i<N;i++) D[i]=1-Math.exp(-1.7*(haze[i]*0.5 + Wb[i]));
 
   // 4 · LIGHT: a shaft from the dial's direction, through the room
+  // (dx, dy) points toward the light, as the dial's handle does
   const ang=((light==null?315:light)-90)*Math.PI/180, dx=Math.cos(ang), dy=Math.sin(ang), nx=-dy, ny=dx;
   const off=(Math.random()-0.5)*0.5, ox=ww/2+nx*off*unit, oy=wh/2+ny*off*unit, bw0=unit*(0.13+Math.random()*0.08);
   const streak=Math.random()*100;
   const beamAt=(x,y)=>{ const px=x-ox, py=y-oy, along=px*dx+py*dy, across=Math.abs(px*nx+py*ny);
-    const bw=bw0*(1+0.25*along/unit), q=across/bw;
+    const bw=bw0*(1-0.25*along/unit), q=across/bw;                // wider as it travels from the light
     // the shaft has streaks along it, where the dust is thicker
     return 1/(1+q*q*q*q*q*q) * (0.8+0.2*vn(across/unit*14+streak, along/unit*0.7)); };
   const B=new Float32Array(N);
@@ -2899,9 +2900,9 @@ function genClouds(w,h,amt,zoom,light,form){
     let val=128;
     if(s0>0.002 || B[i]>0.01){
       // light reaching this point through the smoke between it and the light
-      let tau=0; for(let k=1;k<=8;k++) tau+=samp(D, x-dx*st*k, y-dy*st*k);
+      let tau=0; for(let k=1;k<=8;k++) tau+=samp(D, x+dx*st*k, y+dy*st*k);
       const T=Math.exp(-0.35*tau);
-      const back=samp(D, x-dx*1.5, y-dy*1.5), rim=clamp01((s0-back)*5)*0.25;
+      const toward=samp(D, x+dx*1.5, y+dy*1.5), rim=clamp01((s0-toward)*5)*0.25;   // the edge that faces the light
       const lit=s0*(0.5+0.5*T)*(1+2.4*dust*B[i]) + rim*s0;
       // brightness rolls off softly instead of clipping where the shaft is full of smoke
       val=128 + 127*(1-Math.exp(-(118*lit + 48*dust*B[i])/127)) - 22*s0*(1-T);
@@ -3394,8 +3395,20 @@ function genEmbers(w,h,accent1,accent2,amt,zoom,form){
 // Flurries: soft round flakes on a transparent canvas (composited with 'lighten' so
 // they always read bright regardless of background) — mostly small/sharp, a few
 // larger and softer, like flakes drifting slightly out of focus.
-function genSnow(w,h,amt,zoom){
+function genSnow(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // WIND blows from where the dial points (here the dial is the wind, not a
+  // light) and the flakes fall with it: each streaks along its path while the
+  // shutter is open — the nearer and larger, the longer the streak, and the
+  // less of its crystal survives. At 0 the air is still, drawn exactly as before.
+  const wind = Math.max(0, Math.min(1, form==null ? 0 : form));
+  let vx = 0, vy = 1;
+  if(wind > 0){
+    const a = ((light==null ? 315 : light) - 90) * Math.PI/180;   // (cos a, sin a) points toward the dial's handle: where it blows FROM
+    vx = -Math.cos(a)*wind*1.6; vy = -Math.sin(a)*wind*1.6 + 1;      // carried by the wind, and still falling
+    const m = Math.hypot(vx, vy) || 1; vx /= m; vy /= m;
+  }
+  const streakAt = (size) => wind > 0 ? size*wind*(0.9 + size/cpx(7)) : 0;   // snow is slow: short streaks
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
   const fctx = full.getContext('2d', CPU);
@@ -3417,7 +3430,25 @@ function genSnow(w,h,amt,zoom){
 
     if(tiny){
       fctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      fctx.fillRect(x,y,cpx(1),cpx(1));
+      if(wind > 0){                                             // a speck becomes a short dash
+        const L = cpx(1) + cpx(3)*wind;
+        fctx.strokeStyle = fctx.fillStyle; fctx.lineWidth = cpx(1); fctx.lineCap = 'round';
+        fctx.beginPath(); fctx.moveTo(x, y); fctx.lineTo(x + vx*L, y + vy*L); fctx.stroke();
+      } else fctx.fillRect(x,y,cpx(1),cpx(1));
+      continue;
+    }
+    const streak = streakAt(size);
+    if(streak > 0){
+      // the flake smeared along its path: a soft glow stretched into a streak
+      fctx.save(); fctx.translate(x, y); fctx.rotate(Math.atan2(vy, vx)); fctx.scale(1 + streak/size, 1);
+      const sg = fctx.createRadialGradient(0,0,0,0,0,size);
+      const a2 = alpha/(1 + 0.3*streak/size);                     // the same light spread over a longer path
+      sg.addColorStop(0, `rgba(255,255,255,${a2})`); sg.addColorStop(0.6, `rgba(255,255,255,${a2*0.5})`); sg.addColorStop(1, 'rgba(255,255,255,0)');
+      fctx.fillStyle = sg; fctx.beginPath(); fctx.arc(0,0,size,0,Math.PI*2); fctx.fill(); fctx.restore();
+      if(crystal && wind < 0.35){
+        objectPath(fctx, 'snowflake', x, y, size*0.72, Math.random()*Math.PI);
+        fctx.strokeStyle = `rgba(255,255,255,${Math.min(1, alpha*1.5)*(1 - wind/0.35)})`; fctx.lineWidth = Math.max(cpx(0.6), size*0.075); fctx.lineCap = 'round'; fctx.stroke();
+      }
       continue;
     }
     const grad = fctx.createRadialGradient(x,y,0,x,y,size);
@@ -3568,15 +3599,22 @@ function genMagicParticles(w,h,accent1,accent2,amt,zoom,form){
 // Light hung in sheets —
 // no particle, no edge, just
 // the sky leaning down.
-function genAuroraVeil(w,h,amt,zoom,light,tint,tint2){
+function genAuroraVeil(w,h,amt,zoom,light,tint,tint2,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const bloom = Math.max(0, Math.min(1, form==null ? 0 : form));
   const glow = tint ? parseHex(tint) : null;
   // the hem's colour; the same as the curtain's by default, which draws
   // exactly the single-colour veil
   const hem = tint2 ? parseHex(tint2) : glow;
+  // two hues BLEND across the whole veil, from the side the dial points to
+  // toward the other (here the dial is the blend's direction, not a light);
+  // each bright curtain is drawn as light alone, then coloured by that blend
+  const twoHues = !!(glow && hem && (glow.r !== hem.r || glow.g !== hem.g || glow.b !== hem.b));
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
+  let veil = null, vctx = null;
+  if(twoHues){ veil = document.createElement('canvas'); veil.width = w; veil.height = h; vctx = veil.getContext('2d', CPU); }
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -3602,46 +3640,82 @@ function genAuroraVeil(w,h,amt,zoom,light,tint,tint2){
     const mid = (glow && hem && bright)
       ? `${Math.round(glow.r+(hem.r-glow.r)*0.45)},${Math.round(glow.g+(hem.g-glow.g)*0.45)},${Math.round(glow.b+(hem.b-glow.b)*0.45)}` : rgb;
     const low = (glow && hem && bright) ? `${hem.r},${hem.g},${hem.b}` : rgb;
-    const fall = ctx.createLinearGradient(0, 0, 0, drop);
-    fall.addColorStop(0,    `rgba(${rgb},${bright?0.62:0.45})`);
-    fall.addColorStop(0.45, `rgba(${mid},${bright?0.30:0.22})`);
-    fall.addColorStop(1,    `rgba(${low},0)`);
+    // with two hues, a bright curtain goes to the veil layer as white light
+    const lay = (twoHues && bright) ? vctx : ctx;
+    const fall = lay.createLinearGradient(0, 0, 0, drop);
+    const W3 = '255,255,255', inVeil = lay === vctx;
+    fall.addColorStop(0,    `rgba(${inVeil ? W3 : rgb},${bright?0.62:0.45})`);
+    fall.addColorStop(0.45, `rgba(${inVeil ? W3 : mid},${bright?0.30:0.22})`);
+    fall.addColorStop(1,    `rgba(${inVeil ? W3 : low},0)`);
 
     // the fold: a wavy quad traced down one side and back up the other
     const steps = 26;
-    ctx.beginPath();
+    lay.beginPath();
     for(let sIdx=0; sIdx<=steps; sIdx++){
       const t = sIdx/steps, y = t*drop;
       const sway = Math.sin(phase + t*3.0)*wob + Math.sin(phase*1.7 + t*7.1)*wob*0.28;
       const halfW = width*(1 - t*0.25);
       const x = baseX + sway - halfW;
-      if(sIdx===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if(sIdx===0) lay.moveTo(x, y); else lay.lineTo(x, y);
     }
     for(let sIdx=steps; sIdx>=0; sIdx--){
       const t = sIdx/steps, y = t*drop;
       const sway = Math.sin(phase + t*3.0)*wob + Math.sin(phase*1.7 + t*7.1)*wob*0.28;
       const halfW = width*(1 - t*0.25);
-      ctx.lineTo(baseX + sway + halfW, y);
+      lay.lineTo(baseX + sway + halfW, y);
     }
-    ctx.closePath();
-    ctx.fillStyle = fall;
-    ctx.globalAlpha = 0.9;
-    ctx.fill();
+    lay.closePath();
+    lay.fillStyle = fall;
+    lay.globalAlpha = 0.9;
+    lay.fill();
 
     // a brighter seam along the leading edge, the way a curtain catches light
-    ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = `rgba(${rgb},0.5)`;
-    ctx.lineWidth = Math.max(cpx(0.8), w*0.0022);
-    ctx.beginPath();
+    lay.globalAlpha = 0.5;
+    lay.strokeStyle = `rgba(${inVeil ? W3 : rgb},0.5)`;
+    lay.lineWidth = Math.max(cpx(0.8), w*0.0022);
+    lay.beginPath();
     for(let sIdx=0; sIdx<=steps; sIdx++){
       const t = sIdx/steps, y = t*drop;
       const sway = Math.sin(phase + t*3.0)*wob + Math.sin(phase*1.7 + t*7.1)*wob*0.28;
       const x = baseX + sway - width*(1 - t*0.25)*0.55;
-      if(sIdx===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if(sIdx===0) lay.moveTo(x, y); else lay.lineTo(x, y);
     }
-    ctx.stroke();
+    lay.stroke();
   }
   ctx.globalAlpha = 1;
+  if(twoHues){
+    vctx.globalAlpha = 1;
+    // the blend, across the page from the dial's side to the far one
+    const a = ((light==null ? 315 : light) - 90) * Math.PI/180, R = Math.hypot(w, h)/2, ux = Math.cos(a)*R, uy = Math.sin(a)*R;
+    const g = vctx.createLinearGradient(w/2 + ux, h/2 + uy, w/2 - ux, h/2 - uy);
+    g.addColorStop(0, `rgb(${glow.r},${glow.g},${glow.b})`);
+    g.addColorStop(0.45, `rgb(${Math.round(glow.r+(hem.r-glow.r)*0.45)},${Math.round(glow.g+(hem.g-glow.g)*0.45)},${Math.round(glow.b+(hem.b-glow.b)*0.45)})`);
+    g.addColorStop(1, `rgb(${hem.r},${hem.g},${hem.b})`);
+    vctx.globalCompositeOperation = 'source-in'; vctx.fillStyle = g; vctx.fillRect(0, 0, w, h);
+    ctx.drawImage(veil, 0, 0);
+  }
+  // BLOOM, and a noisy one: the bright light spills into a soft glow that
+  // is itself grainy, as on film — I + α·Blur(Bright(I))·N
+  if(bloom > 0.01){
+    const div = canonDiv(4), bw = Math.ceil(w/div), bh = Math.ceil(h/div), n = bw*bh;
+    const sm = document.createElement('canvas'); sm.width = bw; sm.height = bh;
+    const sx = sm.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, bw, bh);
+    const img = sx.getImageData(0, 0, bw, bh), d = img.data, B = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+    for(let i = 0; i < n; i++){ const q = i*4, l = d[q]*0.2126 + d[q+1]*0.7152 + d[q+2]*0.0722, k = Math.max(0, (l - 140)/115);
+      B[0][i] = d[q]*k; B[1][i] = d[q+1]*k; B[2][i] = d[q+2]*k; }
+    const R = Math.max(2, Math.round(Math.min(bw, bh)*0.02*(0.6 + bloom))), tmp = new Float32Array(n);
+    for(const F of B) for(let pass = 0; pass < 3; pass++){
+      for(let y = 0; y < bh; y++){ const r = y*bw; let s = 0; for(let x = -R; x <= R; x++) s += F[r + Math.min(bw-1, Math.max(0, x))];
+        for(let x = 0; x < bw; x++){ tmp[r + x] = s/(2*R + 1); s += F[r + Math.min(bw-1, x+R+1)] - F[r + Math.max(0, x-R)]; } }
+      for(let x = 0; x < bw; x++){ let s = 0; for(let y = -R; y <= R; y++) s += tmp[Math.min(bh-1, Math.max(0, y))*bw + x];
+        for(let y = 0; y < bh; y++){ F[y*bw + x] = s/(2*R + 1); s += tmp[Math.min(bh-1, y+R+1)*bw + x] - tmp[Math.max(0, y-R)*bw + x]; } }
+    }
+    for(let i = 0; i < n; i++){ const q = i*4, N = 0.35 + Math.random()*1.3;   // the grain in the glow
+      d[q] = Math.min(255, B[0][i]*N*2.2); d[q+1] = Math.min(255, B[1][i]*N*2.2); d[q+2] = Math.min(255, B[2][i]*N*2.2); d[q+3] = 255; }
+    sx.putImageData(img, 0, 0);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = bloom; ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(sm, 0, 0, w, h); ctx.restore();
+  }
   return c;
 }
 
@@ -3767,8 +3841,12 @@ function genMoon(w,h,amt,zoom){
 // Ridge behind ridge behind ridge,
 // each one paler than the last —
 // distance, made of air.
-function genLandscape(w,h,amt,zoom){
+function genLandscape(w,h,amt,zoom,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // WETNESS: 0 is the dry, worked painting; wetter, it becomes watercolour —
+  // edges bleed into each other and, very wet, the paint blooms (backruns:
+  // pale patches with a dark, frilled rim where wet met drying paint)
+  const wet=Math.max(0, Math.min(1, form==null ? 0 : form));
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
   const unit=Math.min(w,h);
@@ -3786,8 +3864,18 @@ function genLandscape(w,h,amt,zoom){
     jungle:   { bands:[6,9],  decay:0.42, sharp:false, amp:0.06, bump:0.9, dab:'leaf',  horizon:0.42 },
     plains:   { bands:[2,4],  decay:0.12, sharp:false, amp:0.018,bump:0,   dab:'long',  horizon:0.62 },
     mountain: { bands:[6,9],  decay:0.36, sharp:true,  amp:0.15, bump:0,   dab:'rock',  horizon:0.38, wave:1.1 },
+    // mesas: broad flat tops and steep walls, banded with long strokes
+    mesa:     { bands:[3,5],  decay:0.2,  sharp:false, amp:0.09, bump:0,   dab:'long',  horizon:0.5,  wave:0.9, mesa:true },
+    // forest: rolling ground stippled with dabs, trees standing on every crest
+    forest:   { bands:[4,6],  decay:0.28, sharp:false, amp:0.06, bump:0,   dab:'dot',   horizon:0.48, trees:true },
+    // tundra: low, pale, nearly flat, swept with short horizontal strokes
+    tundra:   { bands:[2,4],  decay:0.15, sharp:false, amp:0.025,bump:0,   dab:'snow',  horizon:0.58, pale:true },
+    // a mountain lake: the far range, and still water holding its reflection
+    lake:     { bands:[3,5],  decay:0.34, sharp:true,  amp:0.12, bump:0,   dab:'rock',  horizon:0.36, wave:1.1, lake:true },
+    // a coast: headlands on one side, the sea opening out on the other
+    coast:    { bands:[2,4],  decay:0.3,  sharp:false, amp:0.08, bump:0,   dab:'grass', horizon:0.46, sea:true },
   };
-  const kind=Object.keys(BIOMES)[Math.floor(Math.random()*5)];
+  const kind=Object.keys(BIOMES)[Math.floor(Math.random()*Object.keys(BIOMES).length)];
   const B=BIOMES[kind];
   const bands=Math.max(2, Math.round((B.bands[0]+Math.random()*(B.bands[1]-B.bands[0]))*amt));
   const horizon=h*(B.horizon+(Math.random()-0.5)*0.08);
@@ -3812,21 +3900,51 @@ function genLandscape(w,h,amt,zoom){
     for(let o=0;o<5;o++){
       const n=Math.sin(x*f*6.283+seed*(o+1))*0.6 + Math.sin(x*f*2.1*6.283+seed*1.7*(o+1))*0.4;
       // mountains fold finer octaves into points; everything else stays rounded
-      y+=(B.sharp && o>0 ? Math.abs(n)*2-1 : n)*a;
+      // a mesa's base octave is squashed flat at top and bottom: plateaus with walls
+      const m=(B.mesa && o===0) ? Math.max(-1, Math.min(1, n*3)) : n;
+      y+=(B.sharp && o>0 ? Math.abs(m)*2-1 : m)*a;
       a*=decay; f*=2.1;
     }
     if(bump) y-=Math.abs(Math.sin(x/(unit*0.018*zoom)+seed))*amp*0.35*bump;   // canopy lumps
     return y;
   };
 
+  const coastAt = B.sea ? { x: w*(0.3+Math.random()*0.35), side: Math.random()<0.5 ? 1 : -1 } : null;
+  // water: flat, lighter than the land, laid with short level strokes; it
+  // holds the reflection of `prof` (the band behind it), broken by ripples
+  const water=(top, prof, tone)=>{
+    ctx.globalAlpha=0.95; ctx.fillStyle='rgb(150,150,150)'; ctx.fillRect(0, top, w, h-top);
+    if(prof){
+      ctx.globalAlpha=0.32; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
+      ctx.beginPath(); ctx.moveTo(-20, top); prof.forEach(([x,y])=>ctx.lineTo(x, top+(top-Math.min(top,y))*0.9)); ctx.lineTo(w+20, top); ctx.closePath(); ctx.fill();
+    }
+    const n=Math.round(w/(unit*0.012));
+    for(let k=0;k<n;k++){
+      const y=top+Math.pow(Math.random(),1.6)*(h-top), x=Math.random()*w, len=unit*(0.02+Math.random()*0.05)*(0.5+(y-top)/(h-top));
+      const tn=150+(Math.random()-0.5)*60;
+      ctx.globalAlpha=0.35; ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`; ctx.lineWidth=unit*0.002*(1+(y-top)/(h-top)*2);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+len, y); ctx.stroke();
+    }
+  };
+  if(B.sea) water(horizon, null, 0);
+  let lakeTop=null;
   for(let i=0;i<bands;i++){
     const t=bands===1?1:i/(bands-1);                    // 0 far .. 1 near
-    const base=horizon+(h-horizon)*Math.pow(t,1.35)*0.92;
-    const amp=unit*B.amp*(0.35+t*0.9);
-    const tone=Math.round(178-t*140);                   // pale far, dark near
+    let base=horizon+(h-horizon)*Math.pow(t,1.35)*0.92;
+    let amp=unit*B.amp*(0.35+t*0.9);
+    // in front of a lake, the near shore sits low, so the water shows
+    if(lakeTop!=null){ const lk=Math.floor((bands-1)/2), u=(i-lk)/Math.max(1, bands-1-lk); base=lakeTop+(h-lakeTop)*(0.5+0.45*u); amp*=0.45; }
+    const tone=B.pale ? Math.round(205-t*95) : Math.round(178-t*140);   // pale far, dark near
     const seed=Math.random()*100;
     const prof=[];
-    for(let x=-20;x<=w+20;x+=Math.max(2,w/400)) prof.push([x, base+ridge(x,seed,amp,B.decay,B.bump)]);
+    // on a coast, every band is land on one side only: past the cliff it
+    // drops into the sea
+    // each nearer headland reaches a little further out, its cliff its own
+    const cliff = B.sea ? { x: coastAt.x + coastAt.side*(unit*0.1*t + (Math.random()-0.5)*unit*0.07), side: coastAt.side, fall: unit*(0.02+Math.random()*0.06) } : null;
+    for(let x=-20;x<=w+20;x+=Math.max(2,w/400)){
+      let y=base+ridge(x,seed,amp,B.decay,B.bump);
+      if(cliff){ const d=(x-cliff.x)*cliff.side, k=Math.max(0, Math.min(1, d/cliff.fall)); y+= k*k*(h+40-y); }
+      prof.push([x, y]); }
     // lay the band in
     ctx.globalAlpha=0.92; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
     ctx.beginPath(); ctx.moveTo(-20,h); prof.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.lineTo(w+20,h); ctx.closePath(); ctx.fill();
@@ -3855,11 +3973,13 @@ function genLandscape(w,h,amt,zoom){
       const depthInto=Math.pow(Math.random(),1.5)*unit*(0.03+t*0.16);
       const x=x0+(Math.random()-0.5)*unit*0.01, y=y0+depthInto+unit*0.004;
       const tn=Math.max(0,Math.min(255,tone+(Math.random()-0.5)*(30+t*44)));
-      const len=unit*(B.dab==='long'?0.07:B.dab==='rock'?0.035:0.04)*(0.6+t*0.8)*(0.7+Math.random()*0.6)*zoom;
+      const len=unit*(B.dab==='long'?0.07:B.dab==='rock'?0.035:B.dab==='dot'?0.008:B.dab==='snow'?0.05:0.04)*(0.6+t*0.8)*(0.7+Math.random()*0.6)*zoom;
       const wide=unit*(0.007+t*0.013)*(0.7+Math.random()*0.6);
       const ang=B.dab==='grass'?slope-0.35+(Math.random()-0.5)*0.4
               : B.dab==='leaf'?slope+(Math.random()-0.5)*1.1
               : B.dab==='rock'?slope+(Math.random()-0.5)*0.9
+              : B.dab==='dot'?Math.random()*6.283
+              : B.dab==='snow'?(Math.random()-0.5)*0.08
               : slope+(Math.random()-0.5)*0.18;
       const ex=x+Math.cos(ang)*len, ey=y+Math.sin(ang)*len;
       ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`;
@@ -3874,6 +3994,52 @@ function genLandscape(w,h,amt,zoom){
     // a soft haze where each band meets the air behind it
     ctx.globalAlpha=0.12*(1-t); ctx.strokeStyle='rgb(200,200,200)'; ctx.lineWidth=unit*0.01;
     ctx.beginPath(); prof.forEach(([x,y],j)=>j?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.stroke();
+    // trees on the crest: firs (stacked tiers) and broadleaf (a round crown on a trunk)
+    if(B.trees && t>0.15){
+      const n=Math.round(w/(unit*0.03)*(0.4+t)), tt=Math.max(0, tone-25);
+      ctx.fillStyle=`rgb(${tt},${tt},${tt})`; ctx.strokeStyle=ctx.fillStyle;
+      for(let k=0;k<n;k++){
+        const [x,y]=prof[Math.floor(Math.random()*prof.length)], th=unit*(0.02+0.05*t)*(0.6+Math.random()*0.8)*zoom;
+        ctx.globalAlpha=0.8;
+        if(Math.random()<0.7){
+          ctx.beginPath();
+          for(let tier=0;tier<3;tier++){ const ty=y-th*(0.25+tier*0.28), tw=th*(0.32-tier*0.08);
+            ctx.moveTo(x-tw, ty+th*0.22); ctx.lineTo(x, ty-th*0.22); ctx.lineTo(x+tw, ty+th*0.22); }
+          ctx.fill();
+        } else {
+          ctx.lineWidth=th*0.08; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y-th*0.5); ctx.stroke();
+          ctx.beginPath(); ctx.arc(x, y-th*0.68, th*0.3, 0, Math.PI*2); ctx.fill();
+        }
+      }
+    }
+    // the lake lies in front of the far range
+    if(B.lake && i===Math.floor((bands-1)/2)){
+      let top=0; for(const [,y] of prof) top=Math.max(top, y);
+      lakeTop=Math.min(h*0.8, top);
+      water(lakeTop, prof, tone);
+    }
+  }
+  // WET: watercolour blooms, then the whole painting bleeds softly
+  if(wet>0.5){
+    const n=Math.round((wet-0.5)*8*(0.5+Math.random()));
+    for(let k=0;k<n;k++){
+      const x=Math.random()*w, y=horizon+Math.random()*(h-horizon), r=unit*(0.03+Math.random()*0.07);
+      // a cauliflower outline: lobes of every size, never a circle
+      const ph=[Math.random()*6, Math.random()*6, Math.random()*6, Math.random()*6], pts=[];
+      for(let a=0;a<=96;a++){ const an=a/96*Math.PI*2;
+        const rr=r*(1+0.22*Math.sin(an*3+ph[0])+0.12*Math.abs(Math.sin(an*7+ph[1]))+0.07*Math.abs(Math.sin(an*13+ph[2]))+0.04*Math.sin(an*29+ph[3]));
+        pts.push([x+Math.cos(an)*rr, y+Math.sin(an)*rr*0.8]); }
+      const path=()=>{ ctx.beginPath(); pts.forEach(([px,py],j)=>j?ctx.lineTo(px,py):ctx.moveTo(px,py)); ctx.closePath(); };
+      ctx.globalAlpha=0.1; ctx.fillStyle='rgb(205,205,205)'; path(); ctx.fill();
+      // the frilled rim, darker, where the wet edge stopped in drying paint
+      ctx.globalAlpha=0.22; ctx.strokeStyle='rgb(80,80,80)'; ctx.lineWidth=unit*0.0018; path(); ctx.stroke();
+    }
+  }
+  if(wet>0.01){
+    const k=Math.max(4, Math.round(12 - wet*6)), sw=Math.max(1, Math.round(w/k)), sh=Math.max(1, Math.round(h/k));
+    const soft=document.createElement('canvas'); soft.width=sw; soft.height=sh;
+    const sx=soft.getContext('2d', CPU); sx.imageSmoothingEnabled=true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled=true; ctx.globalAlpha=0.7*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
   }
   ctx.globalAlpha=1;
   return c;
@@ -4183,8 +4349,12 @@ function genRainStreaks(w,h,amt,angle,zoom,light){
   return full;
 }
 
-function genBrushstrokes(w,h,amt,zoom){
+function genBrushstrokes(w,h,amt,zoom,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
+  // thinner (strokes mix where they cross), the bristle marks level out,
+  // edges bleed softly into what's under them, and heavy strokes run in drips.
+  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
   ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
@@ -4244,7 +4414,7 @@ function genBrushstrokes(w,h,amt,zoom){
       left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
       right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
     ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
-    ctx.globalAlpha = kind === 'accent' ? 0.9 : 0.78;
+    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
     ctx.beginPath();
     left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
     for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
@@ -4269,7 +4439,25 @@ function genBrushstrokes(w,h,amt,zoom){
         const x = p.x + p.nx*off, y = p.y + p.ny*off;
         on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
       }
-      ctx.globalAlpha = 0.5; if(on) ctx.stroke();
+      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
+    }
+    // wet paint runs: drips fall from the body's lower edge, thinning, each
+    // ending in a bead
+    if(wet > 0.25){
+      const drips = Math.floor(Math.random()*(1 + wet*5));
+      for(let d=0; d<drips; d++){
+        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
+        if(!a || !b) continue;
+        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
+        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
+        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
+        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
+        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
+      }
     }
 
     // 3. droplets flung off the end of an angry stroke
@@ -4286,6 +4474,13 @@ function genBrushstrokes(w,h,amt,zoom){
     }
   }
   ctx.globalAlpha = 1;
+  // wet edges bleed: a soft copy of the whole painting laid over it
+  if(wet > 0.01){
+    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
+    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
+    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
+  }
   return c;
 }
 
@@ -6452,7 +6647,9 @@ const TEXTURE_PARAMS = {
                   // how far each spark's colour may stray from its ember hue
                   {key:'form',  label:'Hue Drift',       min:0,  max:100, def:10,  unit:''}],
   snow:          [{key:'zoom',  label:'Flake Size',      min:60, max:340, def:100, unit:'%'},
-                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950}],
+                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950},
+                  // still air at 0; the dial says where the wind blows from
+                  {key:'form',  label:'Wind',            min:0,  max:100, def:0,   unit:''}],
   grain:         [{key:'zoom',  label:'Grain Size',      min:100,max:600, def:100, unit:'%'},
                   {key:'amt',   label:'Contrast',        min:30, max:240, def:100, unit:'%'},
                   // the kind of grain, blended between neighbours; Film is the original
@@ -6466,7 +6663,9 @@ const TEXTURE_PARAMS = {
                   // ticks at the seven species: bud, cherry, lily, lotus, daisy, rosette, hydrangea
                   {key:'form',  label:'Form',            min:0,  max:100, def:50,  unit:'', ticks:[0,25,38,50,65,82,100]}],
   brushstrokes:  [{key:'zoom',  label:'Stroke Width',    min:60, max:380, def:100, unit:'%'},
-                  {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111}],
+                  {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111},
+                  // dry (as before) → wet: mixing, levelled bristles, bleeding edges, drips
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
   glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
@@ -6527,7 +6726,9 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
                   {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
-                  {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'}],
+                  {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
+                  // dry, worked paint (as before) → watercolour: bleeding edges, blooms
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -6537,7 +6738,9 @@ const TEXTURE_PARAMS = {
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
                   {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'}],
   aurora:        [{key:'zoom',  label:'Curtain Height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
-                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''}],
+                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''},
+                  // a noisy glow spilling from the brightest light (0: none, as before)
+                  {key:'form',  label:'Bloom',           min:0,  max:100, def:0,   unit:''}],
   hatch:         [{key:'angle', label:'Hatch Angle',     min:-90,max:90,  def:35,  unit:'°'},
                   {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
                   // fresh cool grey to warm tarnished brown
@@ -6575,7 +6778,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Sparkle Hue','Glow Hue'], tintDefaults:['accent1','accent2'] },
   embers:        { blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
-  snow:          { blends:['lighten','screen','overlay','soft-light'],  light:false, tints:0 },
+  // the dial is the WIND here, not a light (dial: its name for this texture)
+  snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
   landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
@@ -6590,7 +6794,8 @@ const TEXTURE_CAPS = {
   // Remapped for every blend EXCEPT screen: its grey ground under screen
   // lightens the page a little, and that is part of how the favourite looks.
   aurora:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'],
-                   ground:'grey', keepGround:['screen'], light:false, tints:2,
+                   // the dial is the direction the two hues blend in, not a light
+                   ground:'grey', keepGround:['screen'], light:true, dial:'Blend Direction', tints:2,
                    tintLabels:['Curtain Hue','Hem Hue'], tintDefaults:['accent1','accent1'] },
   // — sharpness —
   grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
@@ -6718,7 +6923,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'snow'){
-    result = genSnow(w,h,amt,zoom);
+    result = genSnow(w,h,amt,zoom,light,form);
   } else if(type === 'magicparticles'){
     result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'glassrain'){
@@ -6728,7 +6933,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'halftone'){
     result = genHalftone(w,h,amt,zoom);
   } else if(type === 'brushstrokes'){
-    result = genBrushstrokes(w,h,amt,zoom);
+    result = genBrushstrokes(w,h,amt,zoom,form);
   } else if(type === 'sigils'){
     result = genSigils(w,h,amt,zoom,light,form);
   } else if(type === 'mathnoise'){
@@ -6752,7 +6957,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moss'){
     result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom);
+    result = genLandscape(w,h,amt,zoom,form);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
@@ -6762,7 +6967,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moon'){
     result = genMoon(w,h,amt,zoom);
   } else if(type === 'aurora'){
-    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2);
+    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){
     result = genSilverpointHatch(w,h,amt,zoom,angle,form);
   } else if(type === 'cards'){
@@ -10436,11 +10641,12 @@ function genClouds(w,h,amt,zoom,light,form){
   for(let i=0;i<N;i++) D[i]=1-Math.exp(-1.7*(haze[i]*0.5 + Wb[i]));
 
   // 4 · LIGHT: a shaft from the dial's direction, through the room
+  // (dx, dy) points toward the light, as the dial's handle does
   const ang=((light==null?315:light)-90)*Math.PI/180, dx=Math.cos(ang), dy=Math.sin(ang), nx=-dy, ny=dx;
   const off=(Math.random()-0.5)*0.5, ox=ww/2+nx*off*unit, oy=wh/2+ny*off*unit, bw0=unit*(0.13+Math.random()*0.08);
   const streak=Math.random()*100;
   const beamAt=(x,y)=>{ const px=x-ox, py=y-oy, along=px*dx+py*dy, across=Math.abs(px*nx+py*ny);
-    const bw=bw0*(1+0.25*along/unit), q=across/bw;
+    const bw=bw0*(1-0.25*along/unit), q=across/bw;                // wider as it travels from the light
     // the shaft has streaks along it, where the dust is thicker
     return 1/(1+q*q*q*q*q*q) * (0.8+0.2*vn(across/unit*14+streak, along/unit*0.7)); };
   const B=new Float32Array(N);
@@ -10453,9 +10659,9 @@ function genClouds(w,h,amt,zoom,light,form){
     let val=128;
     if(s0>0.002 || B[i]>0.01){
       // light reaching this point through the smoke between it and the light
-      let tau=0; for(let k=1;k<=8;k++) tau+=samp(D, x-dx*st*k, y-dy*st*k);
+      let tau=0; for(let k=1;k<=8;k++) tau+=samp(D, x+dx*st*k, y+dy*st*k);
       const T=Math.exp(-0.35*tau);
-      const back=samp(D, x-dx*1.5, y-dy*1.5), rim=clamp01((s0-back)*5)*0.25;
+      const toward=samp(D, x+dx*1.5, y+dy*1.5), rim=clamp01((s0-toward)*5)*0.25;   // the edge that faces the light
       const lit=s0*(0.5+0.5*T)*(1+2.4*dust*B[i]) + rim*s0;
       // brightness rolls off softly instead of clipping where the shaft is full of smoke
       val=128 + 127*(1-Math.exp(-(118*lit + 48*dust*B[i])/127)) - 22*s0*(1-T);
@@ -10948,8 +11154,20 @@ function genEmbers(w,h,accent1,accent2,amt,zoom,form){
 // Flurries: soft round flakes on a transparent canvas (composited with 'lighten' so
 // they always read bright regardless of background) — mostly small/sharp, a few
 // larger and softer, like flakes drifting slightly out of focus.
-function genSnow(w,h,amt,zoom){
+function genSnow(w,h,amt,zoom,light,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // WIND blows from where the dial points (here the dial is the wind, not a
+  // light) and the flakes fall with it: each streaks along its path while the
+  // shutter is open — the nearer and larger, the longer the streak, and the
+  // less of its crystal survives. At 0 the air is still, drawn exactly as before.
+  const wind = Math.max(0, Math.min(1, form==null ? 0 : form));
+  let vx = 0, vy = 1;
+  if(wind > 0){
+    const a = ((light==null ? 315 : light) - 90) * Math.PI/180;   // (cos a, sin a) points toward the dial's handle: where it blows FROM
+    vx = -Math.cos(a)*wind*1.6; vy = -Math.sin(a)*wind*1.6 + 1;      // carried by the wind, and still falling
+    const m = Math.hypot(vx, vy) || 1; vx /= m; vy /= m;
+  }
+  const streakAt = (size) => wind > 0 ? size*wind*(0.9 + size/cpx(7)) : 0;   // snow is slow: short streaks
   const full = document.createElement('canvas');
   full.width=w; full.height=h;
   const fctx = full.getContext('2d', CPU);
@@ -10971,7 +11189,25 @@ function genSnow(w,h,amt,zoom){
 
     if(tiny){
       fctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      fctx.fillRect(x,y,cpx(1),cpx(1));
+      if(wind > 0){                                             // a speck becomes a short dash
+        const L = cpx(1) + cpx(3)*wind;
+        fctx.strokeStyle = fctx.fillStyle; fctx.lineWidth = cpx(1); fctx.lineCap = 'round';
+        fctx.beginPath(); fctx.moveTo(x, y); fctx.lineTo(x + vx*L, y + vy*L); fctx.stroke();
+      } else fctx.fillRect(x,y,cpx(1),cpx(1));
+      continue;
+    }
+    const streak = streakAt(size);
+    if(streak > 0){
+      // the flake smeared along its path: a soft glow stretched into a streak
+      fctx.save(); fctx.translate(x, y); fctx.rotate(Math.atan2(vy, vx)); fctx.scale(1 + streak/size, 1);
+      const sg = fctx.createRadialGradient(0,0,0,0,0,size);
+      const a2 = alpha/(1 + 0.3*streak/size);                     // the same light spread over a longer path
+      sg.addColorStop(0, `rgba(255,255,255,${a2})`); sg.addColorStop(0.6, `rgba(255,255,255,${a2*0.5})`); sg.addColorStop(1, 'rgba(255,255,255,0)');
+      fctx.fillStyle = sg; fctx.beginPath(); fctx.arc(0,0,size,0,Math.PI*2); fctx.fill(); fctx.restore();
+      if(crystal && wind < 0.35){
+        objectPath(fctx, 'snowflake', x, y, size*0.72, Math.random()*Math.PI);
+        fctx.strokeStyle = `rgba(255,255,255,${Math.min(1, alpha*1.5)*(1 - wind/0.35)})`; fctx.lineWidth = Math.max(cpx(0.6), size*0.075); fctx.lineCap = 'round'; fctx.stroke();
+      }
       continue;
     }
     const grad = fctx.createRadialGradient(x,y,0,x,y,size);
@@ -11122,15 +11358,22 @@ function genMagicParticles(w,h,accent1,accent2,amt,zoom,form){
 // Light hung in sheets —
 // no particle, no edge, just
 // the sky leaning down.
-function genAuroraVeil(w,h,amt,zoom,light,tint,tint2){
+function genAuroraVeil(w,h,amt,zoom,light,tint,tint2,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const bloom = Math.max(0, Math.min(1, form==null ? 0 : form));
   const glow = tint ? parseHex(tint) : null;
   // the hem's colour; the same as the curtain's by default, which draws
   // exactly the single-colour veil
   const hem = tint2 ? parseHex(tint2) : glow;
+  // two hues BLEND across the whole veil, from the side the dial points to
+  // toward the other (here the dial is the blend's direction, not a light);
+  // each bright curtain is drawn as light alone, then coloured by that blend
+  const twoHues = !!(glow && hem && (glow.r !== hem.r || glow.g !== hem.g || glow.b !== hem.b));
   const c = document.createElement('canvas');
   c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
+  let veil = null, vctx = null;
+  if(twoHues){ veil = document.createElement('canvas'); veil.width = w; veil.height = h; vctx = veil.getContext('2d', CPU); }
   ctx.fillStyle = '#808080';
   ctx.fillRect(0,0,w,h);
 
@@ -11156,46 +11399,82 @@ function genAuroraVeil(w,h,amt,zoom,light,tint,tint2){
     const mid = (glow && hem && bright)
       ? `${Math.round(glow.r+(hem.r-glow.r)*0.45)},${Math.round(glow.g+(hem.g-glow.g)*0.45)},${Math.round(glow.b+(hem.b-glow.b)*0.45)}` : rgb;
     const low = (glow && hem && bright) ? `${hem.r},${hem.g},${hem.b}` : rgb;
-    const fall = ctx.createLinearGradient(0, 0, 0, drop);
-    fall.addColorStop(0,    `rgba(${rgb},${bright?0.62:0.45})`);
-    fall.addColorStop(0.45, `rgba(${mid},${bright?0.30:0.22})`);
-    fall.addColorStop(1,    `rgba(${low},0)`);
+    // with two hues, a bright curtain goes to the veil layer as white light
+    const lay = (twoHues && bright) ? vctx : ctx;
+    const fall = lay.createLinearGradient(0, 0, 0, drop);
+    const W3 = '255,255,255', inVeil = lay === vctx;
+    fall.addColorStop(0,    `rgba(${inVeil ? W3 : rgb},${bright?0.62:0.45})`);
+    fall.addColorStop(0.45, `rgba(${inVeil ? W3 : mid},${bright?0.30:0.22})`);
+    fall.addColorStop(1,    `rgba(${inVeil ? W3 : low},0)`);
 
     // the fold: a wavy quad traced down one side and back up the other
     const steps = 26;
-    ctx.beginPath();
+    lay.beginPath();
     for(let sIdx=0; sIdx<=steps; sIdx++){
       const t = sIdx/steps, y = t*drop;
       const sway = Math.sin(phase + t*3.0)*wob + Math.sin(phase*1.7 + t*7.1)*wob*0.28;
       const halfW = width*(1 - t*0.25);
       const x = baseX + sway - halfW;
-      if(sIdx===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if(sIdx===0) lay.moveTo(x, y); else lay.lineTo(x, y);
     }
     for(let sIdx=steps; sIdx>=0; sIdx--){
       const t = sIdx/steps, y = t*drop;
       const sway = Math.sin(phase + t*3.0)*wob + Math.sin(phase*1.7 + t*7.1)*wob*0.28;
       const halfW = width*(1 - t*0.25);
-      ctx.lineTo(baseX + sway + halfW, y);
+      lay.lineTo(baseX + sway + halfW, y);
     }
-    ctx.closePath();
-    ctx.fillStyle = fall;
-    ctx.globalAlpha = 0.9;
-    ctx.fill();
+    lay.closePath();
+    lay.fillStyle = fall;
+    lay.globalAlpha = 0.9;
+    lay.fill();
 
     // a brighter seam along the leading edge, the way a curtain catches light
-    ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = `rgba(${rgb},0.5)`;
-    ctx.lineWidth = Math.max(cpx(0.8), w*0.0022);
-    ctx.beginPath();
+    lay.globalAlpha = 0.5;
+    lay.strokeStyle = `rgba(${inVeil ? W3 : rgb},0.5)`;
+    lay.lineWidth = Math.max(cpx(0.8), w*0.0022);
+    lay.beginPath();
     for(let sIdx=0; sIdx<=steps; sIdx++){
       const t = sIdx/steps, y = t*drop;
       const sway = Math.sin(phase + t*3.0)*wob + Math.sin(phase*1.7 + t*7.1)*wob*0.28;
       const x = baseX + sway - width*(1 - t*0.25)*0.55;
-      if(sIdx===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if(sIdx===0) lay.moveTo(x, y); else lay.lineTo(x, y);
     }
-    ctx.stroke();
+    lay.stroke();
   }
   ctx.globalAlpha = 1;
+  if(twoHues){
+    vctx.globalAlpha = 1;
+    // the blend, across the page from the dial's side to the far one
+    const a = ((light==null ? 315 : light) - 90) * Math.PI/180, R = Math.hypot(w, h)/2, ux = Math.cos(a)*R, uy = Math.sin(a)*R;
+    const g = vctx.createLinearGradient(w/2 + ux, h/2 + uy, w/2 - ux, h/2 - uy);
+    g.addColorStop(0, `rgb(${glow.r},${glow.g},${glow.b})`);
+    g.addColorStop(0.45, `rgb(${Math.round(glow.r+(hem.r-glow.r)*0.45)},${Math.round(glow.g+(hem.g-glow.g)*0.45)},${Math.round(glow.b+(hem.b-glow.b)*0.45)})`);
+    g.addColorStop(1, `rgb(${hem.r},${hem.g},${hem.b})`);
+    vctx.globalCompositeOperation = 'source-in'; vctx.fillStyle = g; vctx.fillRect(0, 0, w, h);
+    ctx.drawImage(veil, 0, 0);
+  }
+  // BLOOM, and a noisy one: the bright light spills into a soft glow that
+  // is itself grainy, as on film — I + α·Blur(Bright(I))·N
+  if(bloom > 0.01){
+    const div = canonDiv(4), bw = Math.ceil(w/div), bh = Math.ceil(h/div), n = bw*bh;
+    const sm = document.createElement('canvas'); sm.width = bw; sm.height = bh;
+    const sx = sm.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, bw, bh);
+    const img = sx.getImageData(0, 0, bw, bh), d = img.data, B = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+    for(let i = 0; i < n; i++){ const q = i*4, l = d[q]*0.2126 + d[q+1]*0.7152 + d[q+2]*0.0722, k = Math.max(0, (l - 140)/115);
+      B[0][i] = d[q]*k; B[1][i] = d[q+1]*k; B[2][i] = d[q+2]*k; }
+    const R = Math.max(2, Math.round(Math.min(bw, bh)*0.02*(0.6 + bloom))), tmp = new Float32Array(n);
+    for(const F of B) for(let pass = 0; pass < 3; pass++){
+      for(let y = 0; y < bh; y++){ const r = y*bw; let s = 0; for(let x = -R; x <= R; x++) s += F[r + Math.min(bw-1, Math.max(0, x))];
+        for(let x = 0; x < bw; x++){ tmp[r + x] = s/(2*R + 1); s += F[r + Math.min(bw-1, x+R+1)] - F[r + Math.max(0, x-R)]; } }
+      for(let x = 0; x < bw; x++){ let s = 0; for(let y = -R; y <= R; y++) s += tmp[Math.min(bh-1, Math.max(0, y))*bw + x];
+        for(let y = 0; y < bh; y++){ F[y*bw + x] = s/(2*R + 1); s += tmp[Math.min(bh-1, y+R+1)*bw + x] - tmp[Math.max(0, y-R)*bw + x]; } }
+    }
+    for(let i = 0; i < n; i++){ const q = i*4, N = 0.35 + Math.random()*1.3;   // the grain in the glow
+      d[q] = Math.min(255, B[0][i]*N*2.2); d[q+1] = Math.min(255, B[1][i]*N*2.2); d[q+2] = Math.min(255, B[2][i]*N*2.2); d[q+3] = 255; }
+    sx.putImageData(img, 0, 0);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = bloom; ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(sm, 0, 0, w, h); ctx.restore();
+  }
   return c;
 }
 
@@ -11321,8 +11600,12 @@ function genMoon(w,h,amt,zoom){
 // Ridge behind ridge behind ridge,
 // each one paler than the last —
 // distance, made of air.
-function genLandscape(w,h,amt,zoom){
+function genLandscape(w,h,amt,zoom,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // WETNESS: 0 is the dry, worked painting; wetter, it becomes watercolour —
+  // edges bleed into each other and, very wet, the paint blooms (backruns:
+  // pale patches with a dark, frilled rim where wet met drying paint)
+  const wet=Math.max(0, Math.min(1, form==null ? 0 : form));
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
   const unit=Math.min(w,h);
@@ -11340,8 +11623,18 @@ function genLandscape(w,h,amt,zoom){
     jungle:   { bands:[6,9],  decay:0.42, sharp:false, amp:0.06, bump:0.9, dab:'leaf',  horizon:0.42 },
     plains:   { bands:[2,4],  decay:0.12, sharp:false, amp:0.018,bump:0,   dab:'long',  horizon:0.62 },
     mountain: { bands:[6,9],  decay:0.36, sharp:true,  amp:0.15, bump:0,   dab:'rock',  horizon:0.38, wave:1.1 },
+    // mesas: broad flat tops and steep walls, banded with long strokes
+    mesa:     { bands:[3,5],  decay:0.2,  sharp:false, amp:0.09, bump:0,   dab:'long',  horizon:0.5,  wave:0.9, mesa:true },
+    // forest: rolling ground stippled with dabs, trees standing on every crest
+    forest:   { bands:[4,6],  decay:0.28, sharp:false, amp:0.06, bump:0,   dab:'dot',   horizon:0.48, trees:true },
+    // tundra: low, pale, nearly flat, swept with short horizontal strokes
+    tundra:   { bands:[2,4],  decay:0.15, sharp:false, amp:0.025,bump:0,   dab:'snow',  horizon:0.58, pale:true },
+    // a mountain lake: the far range, and still water holding its reflection
+    lake:     { bands:[3,5],  decay:0.34, sharp:true,  amp:0.12, bump:0,   dab:'rock',  horizon:0.36, wave:1.1, lake:true },
+    // a coast: headlands on one side, the sea opening out on the other
+    coast:    { bands:[2,4],  decay:0.3,  sharp:false, amp:0.08, bump:0,   dab:'grass', horizon:0.46, sea:true },
   };
-  const kind=Object.keys(BIOMES)[Math.floor(Math.random()*5)];
+  const kind=Object.keys(BIOMES)[Math.floor(Math.random()*Object.keys(BIOMES).length)];
   const B=BIOMES[kind];
   const bands=Math.max(2, Math.round((B.bands[0]+Math.random()*(B.bands[1]-B.bands[0]))*amt));
   const horizon=h*(B.horizon+(Math.random()-0.5)*0.08);
@@ -11366,21 +11659,51 @@ function genLandscape(w,h,amt,zoom){
     for(let o=0;o<5;o++){
       const n=Math.sin(x*f*6.283+seed*(o+1))*0.6 + Math.sin(x*f*2.1*6.283+seed*1.7*(o+1))*0.4;
       // mountains fold finer octaves into points; everything else stays rounded
-      y+=(B.sharp && o>0 ? Math.abs(n)*2-1 : n)*a;
+      // a mesa's base octave is squashed flat at top and bottom: plateaus with walls
+      const m=(B.mesa && o===0) ? Math.max(-1, Math.min(1, n*3)) : n;
+      y+=(B.sharp && o>0 ? Math.abs(m)*2-1 : m)*a;
       a*=decay; f*=2.1;
     }
     if(bump) y-=Math.abs(Math.sin(x/(unit*0.018*zoom)+seed))*amp*0.35*bump;   // canopy lumps
     return y;
   };
 
+  const coastAt = B.sea ? { x: w*(0.3+Math.random()*0.35), side: Math.random()<0.5 ? 1 : -1 } : null;
+  // water: flat, lighter than the land, laid with short level strokes; it
+  // holds the reflection of `prof` (the band behind it), broken by ripples
+  const water=(top, prof, tone)=>{
+    ctx.globalAlpha=0.95; ctx.fillStyle='rgb(150,150,150)'; ctx.fillRect(0, top, w, h-top);
+    if(prof){
+      ctx.globalAlpha=0.32; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
+      ctx.beginPath(); ctx.moveTo(-20, top); prof.forEach(([x,y])=>ctx.lineTo(x, top+(top-Math.min(top,y))*0.9)); ctx.lineTo(w+20, top); ctx.closePath(); ctx.fill();
+    }
+    const n=Math.round(w/(unit*0.012));
+    for(let k=0;k<n;k++){
+      const y=top+Math.pow(Math.random(),1.6)*(h-top), x=Math.random()*w, len=unit*(0.02+Math.random()*0.05)*(0.5+(y-top)/(h-top));
+      const tn=150+(Math.random()-0.5)*60;
+      ctx.globalAlpha=0.35; ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`; ctx.lineWidth=unit*0.002*(1+(y-top)/(h-top)*2);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+len, y); ctx.stroke();
+    }
+  };
+  if(B.sea) water(horizon, null, 0);
+  let lakeTop=null;
   for(let i=0;i<bands;i++){
     const t=bands===1?1:i/(bands-1);                    // 0 far .. 1 near
-    const base=horizon+(h-horizon)*Math.pow(t,1.35)*0.92;
-    const amp=unit*B.amp*(0.35+t*0.9);
-    const tone=Math.round(178-t*140);                   // pale far, dark near
+    let base=horizon+(h-horizon)*Math.pow(t,1.35)*0.92;
+    let amp=unit*B.amp*(0.35+t*0.9);
+    // in front of a lake, the near shore sits low, so the water shows
+    if(lakeTop!=null){ const lk=Math.floor((bands-1)/2), u=(i-lk)/Math.max(1, bands-1-lk); base=lakeTop+(h-lakeTop)*(0.5+0.45*u); amp*=0.45; }
+    const tone=B.pale ? Math.round(205-t*95) : Math.round(178-t*140);   // pale far, dark near
     const seed=Math.random()*100;
     const prof=[];
-    for(let x=-20;x<=w+20;x+=Math.max(2,w/400)) prof.push([x, base+ridge(x,seed,amp,B.decay,B.bump)]);
+    // on a coast, every band is land on one side only: past the cliff it
+    // drops into the sea
+    // each nearer headland reaches a little further out, its cliff its own
+    const cliff = B.sea ? { x: coastAt.x + coastAt.side*(unit*0.1*t + (Math.random()-0.5)*unit*0.07), side: coastAt.side, fall: unit*(0.02+Math.random()*0.06) } : null;
+    for(let x=-20;x<=w+20;x+=Math.max(2,w/400)){
+      let y=base+ridge(x,seed,amp,B.decay,B.bump);
+      if(cliff){ const d=(x-cliff.x)*cliff.side, k=Math.max(0, Math.min(1, d/cliff.fall)); y+= k*k*(h+40-y); }
+      prof.push([x, y]); }
     // lay the band in
     ctx.globalAlpha=0.92; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
     ctx.beginPath(); ctx.moveTo(-20,h); prof.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.lineTo(w+20,h); ctx.closePath(); ctx.fill();
@@ -11409,11 +11732,13 @@ function genLandscape(w,h,amt,zoom){
       const depthInto=Math.pow(Math.random(),1.5)*unit*(0.03+t*0.16);
       const x=x0+(Math.random()-0.5)*unit*0.01, y=y0+depthInto+unit*0.004;
       const tn=Math.max(0,Math.min(255,tone+(Math.random()-0.5)*(30+t*44)));
-      const len=unit*(B.dab==='long'?0.07:B.dab==='rock'?0.035:0.04)*(0.6+t*0.8)*(0.7+Math.random()*0.6)*zoom;
+      const len=unit*(B.dab==='long'?0.07:B.dab==='rock'?0.035:B.dab==='dot'?0.008:B.dab==='snow'?0.05:0.04)*(0.6+t*0.8)*(0.7+Math.random()*0.6)*zoom;
       const wide=unit*(0.007+t*0.013)*(0.7+Math.random()*0.6);
       const ang=B.dab==='grass'?slope-0.35+(Math.random()-0.5)*0.4
               : B.dab==='leaf'?slope+(Math.random()-0.5)*1.1
               : B.dab==='rock'?slope+(Math.random()-0.5)*0.9
+              : B.dab==='dot'?Math.random()*6.283
+              : B.dab==='snow'?(Math.random()-0.5)*0.08
               : slope+(Math.random()-0.5)*0.18;
       const ex=x+Math.cos(ang)*len, ey=y+Math.sin(ang)*len;
       ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`;
@@ -11428,6 +11753,52 @@ function genLandscape(w,h,amt,zoom){
     // a soft haze where each band meets the air behind it
     ctx.globalAlpha=0.12*(1-t); ctx.strokeStyle='rgb(200,200,200)'; ctx.lineWidth=unit*0.01;
     ctx.beginPath(); prof.forEach(([x,y],j)=>j?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.stroke();
+    // trees on the crest: firs (stacked tiers) and broadleaf (a round crown on a trunk)
+    if(B.trees && t>0.15){
+      const n=Math.round(w/(unit*0.03)*(0.4+t)), tt=Math.max(0, tone-25);
+      ctx.fillStyle=`rgb(${tt},${tt},${tt})`; ctx.strokeStyle=ctx.fillStyle;
+      for(let k=0;k<n;k++){
+        const [x,y]=prof[Math.floor(Math.random()*prof.length)], th=unit*(0.02+0.05*t)*(0.6+Math.random()*0.8)*zoom;
+        ctx.globalAlpha=0.8;
+        if(Math.random()<0.7){
+          ctx.beginPath();
+          for(let tier=0;tier<3;tier++){ const ty=y-th*(0.25+tier*0.28), tw=th*(0.32-tier*0.08);
+            ctx.moveTo(x-tw, ty+th*0.22); ctx.lineTo(x, ty-th*0.22); ctx.lineTo(x+tw, ty+th*0.22); }
+          ctx.fill();
+        } else {
+          ctx.lineWidth=th*0.08; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y-th*0.5); ctx.stroke();
+          ctx.beginPath(); ctx.arc(x, y-th*0.68, th*0.3, 0, Math.PI*2); ctx.fill();
+        }
+      }
+    }
+    // the lake lies in front of the far range
+    if(B.lake && i===Math.floor((bands-1)/2)){
+      let top=0; for(const [,y] of prof) top=Math.max(top, y);
+      lakeTop=Math.min(h*0.8, top);
+      water(lakeTop, prof, tone);
+    }
+  }
+  // WET: watercolour blooms, then the whole painting bleeds softly
+  if(wet>0.5){
+    const n=Math.round((wet-0.5)*8*(0.5+Math.random()));
+    for(let k=0;k<n;k++){
+      const x=Math.random()*w, y=horizon+Math.random()*(h-horizon), r=unit*(0.03+Math.random()*0.07);
+      // a cauliflower outline: lobes of every size, never a circle
+      const ph=[Math.random()*6, Math.random()*6, Math.random()*6, Math.random()*6], pts=[];
+      for(let a=0;a<=96;a++){ const an=a/96*Math.PI*2;
+        const rr=r*(1+0.22*Math.sin(an*3+ph[0])+0.12*Math.abs(Math.sin(an*7+ph[1]))+0.07*Math.abs(Math.sin(an*13+ph[2]))+0.04*Math.sin(an*29+ph[3]));
+        pts.push([x+Math.cos(an)*rr, y+Math.sin(an)*rr*0.8]); }
+      const path=()=>{ ctx.beginPath(); pts.forEach(([px,py],j)=>j?ctx.lineTo(px,py):ctx.moveTo(px,py)); ctx.closePath(); };
+      ctx.globalAlpha=0.1; ctx.fillStyle='rgb(205,205,205)'; path(); ctx.fill();
+      // the frilled rim, darker, where the wet edge stopped in drying paint
+      ctx.globalAlpha=0.22; ctx.strokeStyle='rgb(80,80,80)'; ctx.lineWidth=unit*0.0018; path(); ctx.stroke();
+    }
+  }
+  if(wet>0.01){
+    const k=Math.max(4, Math.round(12 - wet*6)), sw=Math.max(1, Math.round(w/k)), sh=Math.max(1, Math.round(h/k));
+    const soft=document.createElement('canvas'); soft.width=sw; soft.height=sh;
+    const sx=soft.getContext('2d', CPU); sx.imageSmoothingEnabled=true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled=true; ctx.globalAlpha=0.7*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
   }
   ctx.globalAlpha=1;
   return c;
@@ -11737,8 +12108,12 @@ function genRainStreaks(w,h,amt,angle,zoom,light){
   return full;
 }
 
-function genBrushstrokes(w,h,amt,zoom){
+function genBrushstrokes(w,h,amt,zoom,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
+  // thinner (strokes mix where they cross), the bristle marks level out,
+  // edges bleed softly into what's under them, and heavy strokes run in drips.
+  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
   ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
@@ -11798,7 +12173,7 @@ function genBrushstrokes(w,h,amt,zoom){
       left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
       right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
     ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
-    ctx.globalAlpha = kind === 'accent' ? 0.9 : 0.78;
+    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
     ctx.beginPath();
     left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
     for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
@@ -11823,7 +12198,25 @@ function genBrushstrokes(w,h,amt,zoom){
         const x = p.x + p.nx*off, y = p.y + p.ny*off;
         on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
       }
-      ctx.globalAlpha = 0.5; if(on) ctx.stroke();
+      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
+    }
+    // wet paint runs: drips fall from the body's lower edge, thinning, each
+    // ending in a bead
+    if(wet > 0.25){
+      const drips = Math.floor(Math.random()*(1 + wet*5));
+      for(let d=0; d<drips; d++){
+        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
+        if(!a || !b) continue;
+        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
+        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
+        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
+        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
+        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
+      }
     }
 
     // 3. droplets flung off the end of an angry stroke
@@ -11840,6 +12233,13 @@ function genBrushstrokes(w,h,amt,zoom){
     }
   }
   ctx.globalAlpha = 1;
+  // wet edges bleed: a soft copy of the whole painting laid over it
+  if(wet > 0.01){
+    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
+    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
+    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
+  }
   return c;
 }
 
@@ -14006,7 +14406,9 @@ const TEXTURE_PARAMS = {
                   // how far each spark's colour may stray from its ember hue
                   {key:'form',  label:'Hue Drift',       min:0,  max:100, def:10,  unit:''}],
   snow:          [{key:'zoom',  label:'Flake Size',      min:60, max:340, def:100, unit:'%'},
-                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950}],
+                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950},
+                  // still air at 0; the dial says where the wind blows from
+                  {key:'form',  label:'Wind',            min:0,  max:100, def:0,   unit:''}],
   grain:         [{key:'zoom',  label:'Grain Size',      min:100,max:600, def:100, unit:'%'},
                   {key:'amt',   label:'Contrast',        min:30, max:240, def:100, unit:'%'},
                   // the kind of grain, blended between neighbours; Film is the original
@@ -14020,7 +14422,9 @@ const TEXTURE_PARAMS = {
                   // ticks at the seven species: bud, cherry, lily, lotus, daisy, rosette, hydrangea
                   {key:'form',  label:'Form',            min:0,  max:100, def:50,  unit:'', ticks:[0,25,38,50,65,82,100]}],
   brushstrokes:  [{key:'zoom',  label:'Stroke Width',    min:60, max:380, def:100, unit:'%'},
-                  {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111}],
+                  {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111},
+                  // dry (as before) → wet: mixing, levelled bristles, bleeding edges, drips
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
   glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
@@ -14081,7 +14485,9 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
                   {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
-                  {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'}],
+                  {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
+                  // dry, worked paint (as before) → watercolour: bleeding edges, blooms
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -14091,7 +14497,9 @@ const TEXTURE_PARAMS = {
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
                   {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'}],
   aurora:        [{key:'zoom',  label:'Curtain Height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
-                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''}],
+                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''},
+                  // a noisy glow spilling from the brightest light (0: none, as before)
+                  {key:'form',  label:'Bloom',           min:0,  max:100, def:0,   unit:''}],
   hatch:         [{key:'angle', label:'Hatch Angle',     min:-90,max:90,  def:35,  unit:'°'},
                   {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
                   // fresh cool grey to warm tarnished brown
@@ -14129,7 +14537,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Sparkle Hue','Glow Hue'], tintDefaults:['accent1','accent2'] },
   embers:        { blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
-  snow:          { blends:['lighten','screen','overlay','soft-light'],  light:false, tints:0 },
+  // the dial is the WIND here, not a light (dial: its name for this texture)
+  snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
   landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
@@ -14144,7 +14553,8 @@ const TEXTURE_CAPS = {
   // Remapped for every blend EXCEPT screen: its grey ground under screen
   // lightens the page a little, and that is part of how the favourite looks.
   aurora:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'],
-                   ground:'grey', keepGround:['screen'], light:false, tints:2,
+                   // the dial is the direction the two hues blend in, not a light
+                   ground:'grey', keepGround:['screen'], light:true, dial:'Blend Direction', tints:2,
                    tintLabels:['Curtain Hue','Hem Hue'], tintDefaults:['accent1','accent1'] },
   // — sharpness —
   grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
@@ -14272,7 +14682,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'snow'){
-    result = genSnow(w,h,amt,zoom);
+    result = genSnow(w,h,amt,zoom,light,form);
   } else if(type === 'magicparticles'){
     result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'glassrain'){
@@ -14282,7 +14692,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'halftone'){
     result = genHalftone(w,h,amt,zoom);
   } else if(type === 'brushstrokes'){
-    result = genBrushstrokes(w,h,amt,zoom);
+    result = genBrushstrokes(w,h,amt,zoom,form);
   } else if(type === 'sigils'){
     result = genSigils(w,h,amt,zoom,light,form);
   } else if(type === 'mathnoise'){
@@ -14306,7 +14716,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moss'){
     result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom);
+    result = genLandscape(w,h,amt,zoom,form);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
@@ -14316,7 +14726,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moon'){
     result = genMoon(w,h,amt,zoom);
   } else if(type === 'aurora'){
-    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2);
+    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){
     result = genSilverpointHatch(w,h,amt,zoom,angle,form);
   } else if(type === 'cards'){
@@ -14707,7 +15117,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Euporie';
+const RELEASE = 'Jupiter–Orthosie';
 
 
 /* ==== glyphs.js ==== */
@@ -14949,7 +15359,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-09 · 9ad7d1a";
+const STAMP = "2026-10-09 · d561c9d";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -15843,7 +16253,8 @@ function pmlVarContext(W, H){
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
     // the arrow, and how high the light is when it isn't at the horizon
     lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value)
-      + (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '') : 'n/a',
+      + (caps.dial ? ' (' + caps.dial.split(' ')[0].toLowerCase() + ')'
+        : (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '')) : 'n/a',
     seed,
     // every knob the texture has, by its own label and readout (up to five)
     params: defs.map((d, i) => ({ label: d.label, value: ($('texP' + (i + 1) + 'Val') || {}).textContent || '' })),
@@ -18082,9 +18493,14 @@ $('randomBgBtn').addEventListener('click', ()=>{
   $('textureToggle').checked = texOn;
   $('textureBlock').classList.toggle('open', texOn);
   if(texOn){
-    const types = ['clouds','bokeh','astral','magicparticles','embers','snow','grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks','sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate','aurora','hatch','cards',
-      'linen','coldpress','crystalleaf','foxing','foldghost','cupring','wax','glassrain','dunes','kintsugi','moss'];
-    $('textureType').value = types[Math.floor(Math.random()*types.length)];
+    // any texture the menu offers; then the same change a person makes, so
+    // the knobs relabel, the hue pickers follow and the light resets
+    // (a locked texture stays, and keeps its knobs as they are)
+    if(!state.locks.has('textureType')){
+      const types = [...$('textureType').options].map(o => o.value);
+      $('textureType').value = types[Math.floor(Math.random()*types.length)];
+      $('textureType').dispatchEvent(new Event('change', { bubbles: true }));
+    }
     const op = Math.floor(Math.random()*22)+4;
     $('textureOpacity').value = op;
     paintMoons();
@@ -19072,7 +19488,12 @@ function syncTextureTools(resetToDefaults){
   sel.value = (!resetToDefaults && caps.blends.includes(previous)) ? previous : caps.blends[0];
 
   const lightRow = $('lightRow');
-  if(lightRow) lightRow.classList.toggle('tool-off', !caps.light);
+  if(lightRow){
+    lightRow.classList.toggle('tool-off', !caps.light);
+    // a texture may use the dial for something else, and says so: First Snow's wind
+    const lbl = lightRow.querySelector('label');
+    if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = lbl.textContent; lbl.textContent = caps.dial || lbl.dataset.lightName; }
+  }
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
   if(t1) t1.classList.toggle('tool-off', caps.tints < 1);
@@ -19257,6 +19678,9 @@ function restoreLocked(snap){
   for(const id in snap){
     const n = $(id);
     if(!n) continue;
+    // unchanged: nothing to restore, and no change to announce (a texture
+    // "changed" to itself would reset its knobs to their defaults)
+    if((n.type === 'checkbox' ? n.checked : n.value) === snap[id]) continue;
     if(n.type === 'checkbox') n.checked = snap[id];
     else n.value = snap[id];
     // value readouts and swatches listen for these; writing .value alone

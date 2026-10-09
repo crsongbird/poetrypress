@@ -75,7 +75,9 @@ export const TEXTURE_PARAMS = {
                   // how far each spark's colour may stray from its ember hue
                   {key:'form',  label:'Hue Drift',       min:0,  max:100, def:10,  unit:''}],
   snow:          [{key:'zoom',  label:'Flake Size',      min:60, max:340, def:100, unit:'%'},
-                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950}],
+                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950},
+                  // still air at 0; the dial says where the wind blows from
+                  {key:'form',  label:'Wind',            min:0,  max:100, def:0,   unit:''}],
   grain:         [{key:'zoom',  label:'Grain Size',      min:100,max:600, def:100, unit:'%'},
                   {key:'amt',   label:'Contrast',        min:30, max:240, def:100, unit:'%'},
                   // the kind of grain, blended between neighbours; Film is the original
@@ -89,7 +91,9 @@ export const TEXTURE_PARAMS = {
                   // ticks at the seven species: bud, cherry, lily, lotus, daisy, rosette, hydrangea
                   {key:'form',  label:'Form',            min:0,  max:100, def:50,  unit:'', ticks:[0,25,38,50,65,82,100]}],
   brushstrokes:  [{key:'zoom',  label:'Stroke Width',    min:60, max:380, def:100, unit:'%'},
-                  {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111}],
+                  {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111},
+                  // dry (as before) → wet: mixing, levelled bristles, bleeding edges, drips
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
   glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
@@ -150,7 +154,9 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
                   {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
-                  {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'}],
+                  {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
+                  // dry, worked paint (as before) → watercolour: bleeding edges, blooms
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -160,7 +166,9 @@ export const TEXTURE_PARAMS = {
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
                   {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'}],
   aurora:        [{key:'zoom',  label:'Curtain Height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
-                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''}],
+                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''},
+                  // a noisy glow spilling from the brightest light (0: none, as before)
+                  {key:'form',  label:'Bloom',           min:0,  max:100, def:0,   unit:''}],
   hatch:         [{key:'angle', label:'Hatch Angle',     min:-90,max:90,  def:35,  unit:'°'},
                   {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
                   // fresh cool grey to warm tarnished brown
@@ -198,7 +206,8 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Sparkle Hue','Glow Hue'], tintDefaults:['accent1','accent2'] },
   embers:        { blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
-  snow:          { blends:['lighten','screen','overlay','soft-light'],  light:false, tints:0 },
+  // the dial is the WIND here, not a light (dial: its name for this texture)
+  snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
   landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
@@ -213,7 +222,8 @@ export const TEXTURE_CAPS = {
   // Remapped for every blend EXCEPT screen: its grey ground under screen
   // lightens the page a little, and that is part of how the favourite looks.
   aurora:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'],
-                   ground:'grey', keepGround:['screen'], light:false, tints:2,
+                   // the dial is the direction the two hues blend in, not a light
+                   ground:'grey', keepGround:['screen'], light:true, dial:'Blend Direction', tints:2,
                    tintLabels:['Curtain Hue','Hem Hue'], tintDefaults:['accent1','accent1'] },
   // — sharpness —
   grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
@@ -341,7 +351,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'snow'){
-    result = genSnow(w,h,amt,zoom);
+    result = genSnow(w,h,amt,zoom,light,form);
   } else if(type === 'magicparticles'){
     result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'glassrain'){
@@ -351,7 +361,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'halftone'){
     result = genHalftone(w,h,amt,zoom);
   } else if(type === 'brushstrokes'){
-    result = genBrushstrokes(w,h,amt,zoom);
+    result = genBrushstrokes(w,h,amt,zoom,form);
   } else if(type === 'sigils'){
     result = genSigils(w,h,amt,zoom,light,form);
   } else if(type === 'mathnoise'){
@@ -375,7 +385,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moss'){
     result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom);
+    result = genLandscape(w,h,amt,zoom,form);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
@@ -385,7 +395,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moon'){
     result = genMoon(w,h,amt,zoom);
   } else if(type === 'aurora'){
-    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2);
+    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){
     result = genSilverpointHatch(w,h,amt,zoom,angle,form);
   } else if(type === 'cards'){

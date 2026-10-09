@@ -301,8 +301,12 @@ export function genRainStreaks(w,h,amt,angle,zoom,light){
   return full;
 }
 
-export function genBrushstrokes(w,h,amt,zoom){
+export function genBrushstrokes(w,h,amt,zoom,form){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
+  // thinner (strokes mix where they cross), the bristle marks level out,
+  // edges bleed softly into what's under them, and heavy strokes run in drips.
+  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d', CPU);
   ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
@@ -362,7 +366,7 @@ export function genBrushstrokes(w,h,amt,zoom){
       left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
       right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
     ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
-    ctx.globalAlpha = kind === 'accent' ? 0.9 : 0.78;
+    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
     ctx.beginPath();
     left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
     for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
@@ -387,7 +391,25 @@ export function genBrushstrokes(w,h,amt,zoom){
         const x = p.x + p.nx*off, y = p.y + p.ny*off;
         on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
       }
-      ctx.globalAlpha = 0.5; if(on) ctx.stroke();
+      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
+    }
+    // wet paint runs: drips fall from the body's lower edge, thinning, each
+    // ending in a bead
+    if(wet > 0.25){
+      const drips = Math.floor(Math.random()*(1 + wet*5));
+      for(let d=0; d<drips; d++){
+        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
+        if(!a || !b) continue;
+        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
+        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
+        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
+        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
+        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
+      }
     }
 
     // 3. droplets flung off the end of an angry stroke
@@ -404,6 +426,13 @@ export function genBrushstrokes(w,h,amt,zoom){
     }
   }
   ctx.globalAlpha = 1;
+  // wet edges bleed: a soft copy of the whole painting laid over it
+  if(wet > 0.01){
+    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
+    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
+    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
+  }
   return c;
 }
 

@@ -368,7 +368,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 16);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 17);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -721,6 +721,52 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('Crystal Leaf: each grain a tilted facet (a normal map), dendrites and terraces as lit heights',
     knobs('crystalleaf') === 'Crystal Size|Dendrites|Terraces' && T.TEXTURE_CAPS.crystalleaf.light === true
     && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.9, shadow:0\.6, ao:0\.35, ambient:0\.3, normals:Nm \}\);/.test(cl));
+}
+
+// ---- the background randomiser changes the texture the way a person does ----
+{
+  const ev = src('appEvents.js');
+  check('randomising picks from the menu itself and fires a real change (the knobs relabel)',
+    /const types = \[\.\.\.\$\('textureType'\)\.options\]\.map\(o => o\.value\);/.test(ev)
+    && /\$\('textureType'\)\.dispatchEvent\(new Event\('change', \{ bubbles: true \}\)\);/.test(ev)
+    && /if\(!state\.locks\.has\('textureType'\)\)\{/.test(ev));
+  check('restoring a lock that did not change announces nothing (a locked texture keeps its knobs)',
+    /if\(\(n\.type === 'checkbox' \? n\.checked : n\.value\) === snap\[id\]\) continue;/.test(ev));
+}
+
+// ---- the dial as a joystick: First Snow's wind ----
+{
+  const T = await import('../textureGenerators.js'), ev = src('appEvents.js');
+  check('First Snow has Wind (0, still air, is the default and draws as before); the dial is its Wind Direction',
+    T.paramsFor('snow').map(d => d.label).join('|') === 'Flake Size|Snowfall|Wind' && T.paramsFor('snow')[2].def === 0
+    && T.TEXTURE_CAPS.snow.light === true && T.TEXTURE_CAPS.snow.dial === 'Wind Direction');
+  check('the dial takes the name a texture gives it, and its own name back otherwise',
+    /lbl\.textContent = caps\.dial \|\| lbl\.dataset\.lightName;/.test(ev));
+  check('wind blows FROM where the dial points (away from its handle), as light comes from it',
+    /vx = -Math\.cos\(a\)\*wind\*1\.6; vy = -Math\.sin\(a\)\*wind\*1\.6 \+ 1;/.test(src('texWhimsy.js')));
+}
+
+// ---- Aurora Veil: the dial blends its hues; Bloom is noisy ----
+{
+  const T = await import('../textureGenerators.js'), wh = src('texWhimsy.js');
+  check('Aurora Veil has Bloom (0, none, by default); the dial is its Blend Direction',
+    T.paramsFor('aurora').map(d => d.label).join('|') === 'Curtain Height|Ribbon Count|Bloom' && T.TEXTURE_CAPS.aurora.dial === 'Blend Direction');
+  check('…two hues blend across the veil from the dial\'s side; one hue draws exactly as before',
+    /const twoHues = !!\(glow && hem && \(glow\.r !== hem\.r/.test(wh) && /vctx\.globalCompositeOperation = 'source-in';/.test(wh));
+  check('…its bloom is I + α·Blur(Bright(I))·N: the bright part, blurred, made grainy, added',
+    /k = Math\.max\(0, \(l - 140\)\/115\)/.test(wh) && /N = 0\.35 \+ Math\.random\(\)\*1\.3;/.test(wh) && /ctx\.globalCompositeOperation = 'lighter'; ctx\.globalAlpha = bloom;/.test(wh));
+}
+
+// ---- Wetness: Painter's Frustration and Painted Landscape; new countries ----
+{
+  const T = await import('../textureGenerators.js'), wh = src('texWhimsy.js'), sh = src('texSharpness.js');
+  check('Painter\'s Frustration has Wetness (0, dry, draws exactly as before): thinner paint, drips, bleeding edges',
+    T.paramsFor('brushstrokes').map(d => d.label).join('|') === 'Stroke Width|Stroke Count|Wetness' && T.paramsFor('brushstrokes')[2].def === 0
+    && /if\(wet > 0\.25\)\{/.test(sh) && /ctx\.globalAlpha = 0\.65\*wet;/.test(sh));
+  check('Painted Landscape has Wetness (watercolour blooms) and five more countries: mesa, forest, tundra, lake, coast',
+    T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness'
+    && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:'].every(k => wh.includes('    ' + k))
+    && /const kind=Object\.keys\(BIOMES\)\[Math\.floor\(Math\.random\(\)\*Object\.keys\(BIOMES\)\.length\)\];/.test(wh));
 }
 
 console.log();

@@ -809,7 +809,8 @@ function pmlVarContext(W, H){
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
     // the arrow, and how high the light is when it isn't at the horizon
     lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value)
-      + (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '') : 'n/a',
+      + (caps.dial ? ' (' + caps.dial.split(' ')[0].toLowerCase() + ')'
+        : (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '')) : 'n/a',
     seed,
     // every knob the texture has, by its own label and readout (up to five)
     params: defs.map((d, i) => ({ label: d.label, value: ($('texP' + (i + 1) + 'Val') || {}).textContent || '' })),
