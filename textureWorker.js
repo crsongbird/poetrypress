@@ -11,6 +11,7 @@
  * the source files it runs as a module worker.
  */
 import { getTextureCanvas, clearTextureCache } from './textureGenerators.js';
+import { setGpuLight } from './texCore.js';
 
 // the generators make canvases with document.createElement; here, OffscreenCanvas
 if(typeof document === 'undefined') globalThis.document = { createElement: () => new OffscreenCanvas(1, 1) };
@@ -18,6 +19,8 @@ if(typeof document === 'undefined') globalThis.document = { createElement: () =>
 self.onmessage = (e) => {
   const { id, type, w, h, opts } = e.data;
   try {
+    // cpuLight: light on the CPU even where the GPU is there (to compare, or as a fallback)
+    setGpuLight(!(opts && opts.cpuLight));
     const canvas = getTextureCanvas(type, w, h, opts);
     clearTextureCache();                         // the page caches; a transferred canvas is emptied
     const bitmap = canvas.transferToImageBitmap();

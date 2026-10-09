@@ -28,7 +28,7 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, textureCacheMB } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, textureCacheMB, dropLargeTextures } from './textureGenerators.js';
 import { resolvePmlVariables } from './pmlVars.js';
 import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
@@ -219,11 +219,18 @@ function measureSegWidth(ctx, fontDef, seg, size, trackingOverridePercent, small
 // glyphs, not shape-based). To "colorize" one: draw it once to a transparent
 // offscreen canvas, then flat-fill with 'source-atop' so the new color only
 // lands where the glyph itself has any alpha — a silhouette tint.
+// Tinted glyphs, remembered: the same glyph, font, colour and size is the
+// same image, and building one per glyph per render was a third of a render.
+// (A gradient fill is a new object each render, so those aren't remembered.)
+// CPU canvases, like the page they're drawn into — no copy back from the GPU.
+const TINTED = new Map();
 function tintedEmojiCanvas(ch, font, fillStyle, size){
+  const key = typeof fillStyle === 'string' ? ch + '\u0001' + font + '\u0001' + fillStyle + '\u0001' + size : null;
+  if(key && TINTED.has(key)) return TINTED.get(key);
   const dim = Math.ceil(size*2);
   const off = document.createElement('canvas');
   off.width = dim; off.height = dim;
-  const octx = off.getContext('2d');
+  const octx = off.getContext('2d', { willReadFrequently: true });
   octx.font = font;
   octx.textBaseline = 'top';
   octx.textAlign = 'left';
@@ -232,6 +239,7 @@ function tintedEmojiCanvas(ch, font, fillStyle, size){
   octx.globalCompositeOperation = 'source-atop';
   octx.fillStyle = fillStyle;
   octx.fillRect(0,0,dim,dim);
+  if(key){ if(TINTED.size > 400) TINTED.clear(); TINTED.set(key, off); }
   return off;
 }
 
@@ -847,19 +855,30 @@ let fitCacheValue = null;
  */
 export function invalidateTextMeasurements(){
   clearMeasureCache();                 // remembered widths were measured against the old font
+  TINTED.clear();                      // and the tinted glyphs were drawn in it
   fitCacheKey = null;
   fitCacheValue = null;
+  fitCacheLines = null;
   linesCacheKey = null;
   linesCacheValue = null;
 }
-function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing){
-  // linesCacheKey stands in for "did the parsed content change" -- it changes
-  // exactly when `lines` itself would be a new array, so it's a cheap valid
-  // proxy without needing to hash the (possibly large) lines structure itself.
-  const key = [linesCacheKey, fontDef.family, fontDef.weight, maxWidth, maxHeight, maxSizePx, spacing].join('|');
-  if(key === fitCacheKey) return fitCacheValue;
+let fitCacheLines = null;
+function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing, shapeKey){
+  // The key is the layout's SHAPE (shapeKey: the text with live numbers —
+  // §RenderMs, §Profile, §CacheMB — by their shape, not their digits), so a
+  // stat ticking over doesn't refit a page whose layout hasn't changed. With
+  // no live numbers in the poem it is exactly linesCacheKey, as before.
+  const key = [shapeKey != null ? shapeKey : linesCacheKey, fontDef.family, fontDef.weight, maxWidth, maxHeight, maxSizePx, spacing].join('|');
+  if(key === fitCacheKey){
+    if(fitCacheLines === lines) return fitCacheValue;
+    // the same layout with live numbers changed: keep the size, measure these lines once
+    const widths = new Map();
+    for(const line of lines) if(!line.isBlank) widths.set(line, computeLineWidths(ctx, line, fitCacheValue.size, fontDef));
+    fitCacheValue = { size: fitCacheValue.size, widths }; fitCacheLines = lines;
+    return fitCacheValue;
+  }
   fitCacheValue = fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing);
-  fitCacheKey = key;
+  fitCacheKey = key; fitCacheLines = lines;
   return fitCacheValue;
 }
 
@@ -883,7 +902,7 @@ if(typeof window !== 'undefined') window.vellumDebug = {
 };
 // §Profile: where the last render's time went, stage by stage
 const clock = () => (typeof performance !== 'undefined' ? performance : Date).now();
-export function render(){
+function renderInto(canvas){
   const renderStart = clock();
   const laps = []; let lapAt = renderStart;
   const S = RENDER_SCALE;
@@ -894,7 +913,6 @@ export function render(){
   // frame blended over the old one (two pages showing at once).
   const drawTex = t => { if(!t) return; try { ctx.drawImage(t, 0, 0, W, H); } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
   const lap = name => { const t = clock(); laps.push(`${name} ${Math.round(t - lapAt)}`); lapAt = t; };
-  const canvas = $('poemCanvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const W = canvas.width, H = canvas.height;
   // Every frame starts from a clean slate — nothing a previous frame left set
@@ -1157,7 +1175,11 @@ export function render(){
   // §Variables resolve first, to plain text and PML, before the parser sees
   // the poem; the resolved text keys the line cache, so a changed value
   // re-lays the poem
-  const rawText = resolvePmlVariables($('poemText').value, pmlVarContext(W, H));
+  const varCtx = pmlVarContext(W, H);
+  const rawText = resolvePmlVariables($('poemText').value, varCtx);
+  // the same text with live numbers by their shape (digits as 0): the fit's key
+  const shapeOf = v => String(v).replace(/\d/g, '0');
+  const shapeText = resolvePmlVariables($('poemText').value, { ...varCtx, renderMs: shapeOf(varCtx.renderMs), profile: shapeOf(varCtx.profile), cacheMB: shapeOf(varCtx.cacheMB) });
   const lines = getCachedLines(rawText, accent1On, accent2On);
 
   const fontDef = FONTS[$('fontFamily').value];
@@ -1174,14 +1196,19 @@ export function render(){
   // Text keeps clear of the frame: with a border or box on, the margins grow
   // to the frame's inner edge plus breathing room, instead of a fixed share of
   // the page that a wide offset or thick border would overrun.
+  // TEXT MARGINS scales the room that is a matter of taste — the page-share
+  // margins and the breathing room inside a frame — never the frame itself,
+  // so text can come close to a border but not cross it. 100% is as it was.
+  const marginK = Math.max(0.2, Math.min(1.5, (parseFloat(($('textMargin') || {}).value) || 100)/100));
   const frameOn = $('borderToggle').checked || ($('cardToggle') && $('cardToggle').checked);
-  const frameEdge = frameOn ? bOffset + bThick + Math.min(W, H)*0.04 : 0;
-  const paddingX = Math.max(W*0.09, frameEdge);
-  const paddingY = Math.max(H*0.07, frameEdge);
+  const frameEdge = frameOn ? bOffset + bThick + Math.min(W, H)*0.04*marginK : 0;
+  const paddingX = Math.max(W*0.09*marginK, frameEdge);
+  const paddingY = Math.max(H*0.07*marginK, frameEdge);
   const maxWidth = W - paddingX*2;
   const maxHeight = H - paddingY*2;
 
-  const { size: baseSize, widths: fitWidths } = getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing);
+  const shapeKey = (linesCacheKey && linesCacheKey.startsWith(rawText)) ? shapeText + linesCacheKey.slice(rawText.length) : null;
+  const { size: baseSize, widths: fitWidths } = getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing, shapeKey);
   const totalHeight = blockHeight(lines, baseSize, lineSpacing);
 
   let startY;
@@ -1436,6 +1463,44 @@ export function render(){
   LAST_RENDER_MS = clock() - renderStart;
   LAST_PROFILE = laps.join(' · ') + ' ms';
 }
+
+// ---------- the back buffer: a frame reaches the page only when it is whole ----------
+// Each frame is drawn into a hidden canvas and copied to the page at the end.
+// If drawing fails part-way — on an older phone, most often a canvas that
+// can't be allocated when memory is short — the page keeps its last good
+// picture instead of going blank, the big caches are let go, and the frame is
+// tried once more. (Where there is no OffscreenCanvas — Node's tests, old
+// Safari — frames are drawn on the page directly, as before.)
+let BACK = null, retrying = false, failures = 0;
+export function render(){
+  const page = $('poemCanvas');
+  if(typeof OffscreenCanvas !== 'function'){ renderInto(page); return; }
+  try {
+    if(!BACK || BACK.width !== page.width || BACK.height !== page.height){
+      BACK = null;                                   // free the old one before making the new
+      BACK = new OffscreenCanvas(page.width, page.height);
+    }
+    const bctx = BACK.getContext('2d', { willReadFrequently: true });
+    if(!bctx || (bctx.isContextLost && bctx.isContextLost())){ BACK = null; throw new Error('back buffer lost'); }
+    renderInto(BACK);
+    const v = page.getContext('2d', { willReadFrequently: true });
+    v.setTransform(1, 0, 0, 1, 0, 0); v.globalAlpha = 1; v.globalCompositeOperation = 'copy';
+    v.drawImage(BACK, 0, 0);
+    v.globalCompositeOperation = 'source-over';
+    failures = 0;
+  } catch(err){
+    failures++;
+    if(typeof console !== 'undefined') console.warn('frame failed, keeping the last one:', err && err.message);
+    // let memory go: the back buffer, remembered glyphs, the larger textures
+    BACK = null; TINTED.clear(); dropLargeTextures(Math.max(1, page.width*page.height));
+    if(!retrying && failures <= 3){
+      retrying = true;
+      setTimeout(() => { retrying = false; scheduleRender(); }, 250*failures);
+    }
+  }
+}
+/** The canvas was lost and restored, or the tab came back: start the back buffer afresh. */
+export function resetBackBuffer(){ BACK = null; failures = 0; }
 
 // Most controls call this instead of render() directly. requestAnimationFrame
 // naturally caps how often a render can actually happen to the display's own

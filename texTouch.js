@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, smoothField } from './texCore.js';
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
 //   pitch   thread spacing (of the page)   tw     thread width (of the pitch)
@@ -245,77 +245,60 @@ export function genFoxing(w,h,amt,zoom,light,tint){
 // It was folded once
 // to fit an envelope, then
 // opened. It still knows.
-export function genFoldGhost(w,h,amt,zoom,light){
+export function genFoldGhost(w,h,amt,zoom,light,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const {lx,ly}=lightVec(light);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-
-  // Paper that lived in a pocket. A crease seen close is never one line: it
-  // is several irregular ones running together at slightly different depths,
-  // widths and opacities, which the eye reads as a single fold. So each fold
-  // is built from a few near-parallel curves — a straight run whose control
-  // points are nudged a little perpendicular, alternating sides, then copied
-  // and nudged again.
-  const folds = Math.max(1, Math.round((2 + Math.random()*2) * amt));
-  const soft = Math.max(1.2, (Math.max(w,h)/260) * zoom);
-
-  for(let f=0; f<folds; f++){
-    const vertical = Math.random() < 0.5;
-    const at = (vertical ? w : h) * (0.16 + Math.random()*0.68);
-    const strands = 3 + Math.floor(Math.random()*3);
-    const nodes = 7 + Math.floor(Math.random()*5);
-
-    for(let s=0; s<strands; s++){
-      // each strand sits a few pixels off the last and has its own weight
-      const lateral = (s - (strands-1)/2) * soft * (0.9 + Math.random()*0.8);
-      const depth = 0.3 + Math.random()*0.7;
-      const lit = s % 2 === 0;
-      const tone = lit ? 238 : 30;
-
-      // node positions along the run, each pushed slightly off the straight
-      // line, alternating sides so the crease wanders without drifting
-      const pts = [];
-      for(let n=0; n<=nodes; n++){
-        const u = n/nodes;
-        const sway = (n % 2 ? 1 : -1) * soft * (0.25 + Math.random()*0.85);
-        const a = at + lateral + sway + (lx*(lit?-1:1) + ly*(lit?-1:1)) * soft * 0.35;
-        pts.push(vertical ? [a, u*h] : [u*w, a]);
-      }
-
-      ctx.globalAlpha = (lit ? 0.16 : 0.14) * depth;
-      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`;
-      ctx.lineWidth = Math.max(cpx(0.5), soft * (0.35 + depth*0.8));
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(pts[0][0], pts[0][1]);
-      // through the nodes as a smooth curve: midpoints as anchors, the nodes
-      // themselves as control points
-      for(let n=1; n<pts.length-1; n++){
-        const mx = (pts[n][0] + pts[n+1][0]) / 2;
-        const my = (pts[n][1] + pts[n+1][1]) / 2;
-        ctx.quadraticCurveTo(pts[n][0], pts[n][1], mx, my);
-      }
-      ctx.lineTo(pts[pts.length-1][0], pts[pts.length-1][1]);
-      ctx.stroke();
-    }
-
-    // the broad soft shading either side of the fold, where the sheet lifts
-    const g = vertical
-      ? ctx.createLinearGradient(at - soft*5, 0, at + soft*5, 0)
-      : ctx.createLinearGradient(0, at - soft*5, 0, at + soft*5);
-    g.addColorStop(0,    'rgba(20,20,20,0)');
-    g.addColorStop(0.42, 'rgba(20,20,20,0.10)');
-    g.addColorStop(0.55, 'rgba(240,240,240,0.12)');
-    g.addColorStop(1,    'rgba(240,240,240,0)');
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = g;
-    if(vertical) ctx.fillRect(at - soft*5, 0, soft*10, h);
-    else ctx.fillRect(0, at - soft*5, w, soft*10);
+  const crumple=Math.max(0,Math.min(1, form==null ? 0.3 : form));
+  // Paper that was folded and carried in a pocket, then opened out flat.
+  // A few long FOLDS cross the whole sheet — the first near the middle, the
+  // next across it, as a sheet is halved and halved again — each a ridge or
+  // a valley, with the paper tilting away on either side of it, so one side
+  // catches the light and the other falls into shade. CRUMPLE adds the short,
+  // random creases of being pressed in a pocket. Built as heights, lit by
+  // lightHeights. CREASE DEPTH · FOLD COUNT · CRUMPLE
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const H=new Float32Array(ww*wh);
+  const depth=unit*0.004*zoom;
+  // the long folds: a line through (px,py) at angle a; mountain or valley
+  const nFolds=Math.max(1, Math.round(3*amt));
+  const folds=[];
+  let a0=Math.random()<0.5 ? 0 : Math.PI/2;
+  for(let k=0;k<nFolds;k++){
+    const a = k===0 ? a0 + (Math.random()-0.5)*0.12
+            : k===1 ? a0 + Math.PI/2 + (Math.random()-0.5)*0.15
+            : Math.random()*Math.PI;
+    const off = k<2 ? (Math.random()-0.5)*0.12 : (Math.random()-0.5)*0.8;
+    folds.push({ nx:-Math.sin(a), ny:Math.cos(a), c:(0.5+off*Math.cos(a))*ww*(-Math.sin(a)) + (0.5+off*Math.sin(a))*wh*Math.cos(a),
+                 s: Math.random()<0.5 ? 1 : -1, d: depth*(k<2 ? 1 : 0.5+Math.random()*0.5), reach: unit*(0.06+Math.random()*0.06) });
   }
-  ctx.globalAlpha = 1;
-  return c;
+  // the crumples: short creases whose ends fade into the sheet
+  const nCrum=Math.round(70*crumple*Math.max(0.4, amt));
+  const crum=[];
+  for(let k=0;k<nCrum;k++){
+    const a=Math.random()*Math.PI, L=unit*(0.05+Math.random()*0.22), x=Math.random()*ww, y=Math.random()*wh;
+    crum.push({ x, y, dx:Math.cos(a), dy:Math.sin(a), L, s:Math.random()<0.5?1:-1, d:depth*(0.25+Math.random()*0.45), reach:unit*(0.012+Math.random()*0.02) });
+  }
+  const fibre=fbmSampler(60, 2);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    let hv=(fibre(x/ww,y/wh)-0.5)*0.35;                         // the paper's own grain
+    for(const f of folds){
+      const dd=Math.abs(x*f.nx + y*f.ny - f.c);
+      // a sharp crease, and the sheet tilting away from it on both sides
+      hv += f.s*f.d*(Math.max(0, 1 - dd/(f.reach*0.08))*1.2 - Math.min(dd, f.reach)/f.reach);
+    }
+    for(const c of crum){
+      const rx=x-c.x, ry=y-c.y, along=rx*c.dx + ry*c.dy;
+      if(along < -c.L || along > c.L) continue;
+      const across=Math.abs(-rx*c.dy + ry*c.dx);
+      if(across > c.reach) continue;
+      const fade=1 - Math.pow(along/c.L, 2);                    // the ends ease into the sheet
+      hv += c.s*c.d*fade*(1 - across/c.reach);
+    }
+    H[y*ww+x]=hv;
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.12, shadow:0.45, ao:0.25, ambient:0.45 });
+  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.12, shadow:0, ao:0, ambient:0.45 });
+  const fl=flat.light[0]||1, fs=flat.spec[0];
+  return paintLit(w,h,div,ww,wh, i => { const v=128 + (L.light[i]/fl - 1)*165 + (L.spec[i]-fs)*140; return [clamp255(v), clamp255(v), clamp255(v)]; });
 }
 
 // Someone set it down
@@ -377,65 +360,64 @@ export function genCupRing(w,h,amt,zoom,light,tint){
 // It ran before it
 // set, so the thick edge tells you
 // which way the page leaned.
-export function genPouredWax(w,h,amt,zoom,light,tint){
+export function genPouredWax(w,h,amt,zoom,light,tint,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const {lx,ly}=lightVec(light);
-  const t = parseHex(tint || '#7A2B2B');
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-
-  // Real wax is not a pill. It pools unevenly, runs one way before it sets,
-  // throws drips off its edge, and its surface holds the ripples it cooled in.
-  // One outline shape, built from a few overlapping waves around the circle,
-  // is reused shrunk for each ripple, so the ripples follow the pool's shape.
-  const unit=Math.min(w,h);
-  const pools=Math.max(1, Math.round((2+Math.random()*2)*amt));
-  for(let i=0;i<pools;i++){
-    const cx=w*(0.12+Math.random()*0.76), cy=h*(0.12+Math.random()*0.76);
-    const R=unit*(0.06+Math.random()*0.06)*zoom;
-    const runA=Math.random()*Math.PI*2;
-    const waves=[[2,Math.random()*6,0.10],[3,Math.random()*6,0.08],[5,Math.random()*6,0.05],[9,Math.random()*6,0.025]];
-    const shape=a => {
-      let r=1 + Math.cos(a-runA)*0.30;                        // it ran this way
-      for(const [f,ph,amp] of waves) r += Math.sin(a*f+ph)*amp;
-      return r;
-    };
-    const outline=(scale, dx=0, dy=0) => {
-      ctx.beginPath();
-      for(let k=0;k<=96;k++){
-        const a=(k/96)*Math.PI*2, r=R*scale*shape(a);
-        const x=cx+dx+Math.cos(a)*r, y=cy+dy+Math.sin(a)*r;
-        k?ctx.lineTo(x,y):ctx.moveTo(x,y);
-      }
-      ctx.closePath();
-    };
-    // drips thrown off the running edge
-    ctx.fillStyle=`rgb(${t.r},${t.g},${t.b})`;
-    for(let d=0; d<3+Math.floor(Math.random()*4); d++){
-      const a=runA+(Math.random()-0.5)*1.4, dist=R*(1.25+Math.random()*0.6)*shape(a);
-      ctx.globalAlpha=0.55;
-      ctx.beginPath(); ctx.arc(cx+Math.cos(a)*dist, cy+Math.sin(a)*dist, R*(0.05+Math.random()*0.09), 0, Math.PI*2); ctx.fill();
-    }
-    // the pool
-    outline(1); ctx.globalAlpha=0.66; ctx.fill();
-    // cooling ripples: the same outline, shrinking, each a faint lit/shaded line
-    const ripples=4+Math.floor(Math.random()*4);
-    for(let r=1;r<=ripples;r++){
-      const sc=1 - r/(ripples+1.2);
-      for(const [shift,col,al] of [[-1,'rgba(255,255,255,0.5)',0.35],[1,'rgba(0,0,0,0.5)',0.28]]){
-        outline(sc, lx*shift*R*0.02, ly*shift*R*0.02);
-        ctx.globalAlpha=al; ctx.strokeStyle=col; ctx.lineWidth=Math.max(cpx(0.6),R*0.018); ctx.stroke();
-      }
-    }
-    // the domed sheen and the raised rim
-    const g=ctx.createRadialGradient(cx-lx*R*0.35,cy-ly*R*0.35,R*0.05,cx,cy,R*1.1);
-    g.addColorStop(0,'rgba(255,255,255,0.22)'); g.addColorStop(0.55,'rgba(255,255,255,0.03)'); g.addColorStop(1,'rgba(0,0,0,0.22)');
-    outline(1); ctx.globalAlpha=0.9; ctx.fillStyle=g; ctx.fill();
-    ctx.globalAlpha=0.4; ctx.lineWidth=Math.max(cpx(0.8),R*0.05); ctx.strokeStyle='rgba(20,10,10,0.8)'; ctx.stroke();
+  const visc=Math.max(0,Math.min(1, form==null ? 0.45 : form));
+  const wax=parseHex(tint||'#7A2B2B');
+  // Sealing wax poured and left to set. Pour points and volumes come from the
+  // seed; each pour spreads into a pool, and pools that meet MERGE into one
+  // surface (a metaball field: the wax is wherever the summed pours reach a
+  // threshold). The top is flat, the edge a rounded meniscus. Thin wax at the edges glows a little — it is
+  // translucent. Lit by lightHeights with a satin sheen.
+  // POOL SIZE · POOL COUNT · VISCOSITY (thin and spreading → thick and lumpy)
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const n=Math.max(1, Math.round(3*amt));
+  const spread=1.2 - 0.45*visc;                                  // thin wax runs wide
+  const thick=unit*(0.004 + 0.009*visc);                         // and thick wax stands taller
+  const pours=[];
+  for(let k=0;k<n;k++){
+    const V=0.4 + Math.random()*0.9;
+    const R=unit*0.12*zoom*spread*Math.sqrt(V);
+    const cx=ww*(0.1+Math.random()*0.8), cy=wh*(0.1+Math.random()*0.8);
+    pours.push({ cx, cy, R, V, ph1:Math.random()*6.28, ph2:Math.random()*6.28, lobes:3+Math.floor(Math.random()*3) });
+    // a pour runs on in a lobe or two: smaller blobs nudged downhill from it
+    const runs=Math.floor(Math.random()*3*(1-visc*0.6));
+    for(let r=0;r<runs;r++){ const a=Math.random()*6.28, d=R*(0.6+Math.random()*0.5);
+      pours.push({ cx:cx+Math.cos(a)*d, cy:cy+Math.sin(a)*d, R:R*(0.35+Math.random()*0.3), V:V*0.5, ph1:Math.random()*6.28, ph2:Math.random()*6.28, lobes:3, run:true }); }
   }
-  ctx.globalAlpha=1;
-  return c;
+  const lump=fbmSampler(5, 3);
+  const F=new Float32Array(ww*wh);
+  for(const p of pours){
+    const reach=p.R*1.6, x0=Math.max(0,Math.floor(p.cx-reach)), x1=Math.min(ww-1,Math.ceil(p.cx+reach)), y0=Math.max(0,Math.floor(p.cy-reach)), y1=Math.min(wh-1,Math.ceil(p.cy+reach));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      const dx=x-p.cx, dy=y-p.cy, a=Math.atan2(dy,dx);
+      const Rw=p.R*(1 + 0.12*Math.sin(a*p.lobes + p.ph1) + 0.06*Math.sin(a*7 + p.ph2));   // never a true circle
+      const q=(dx*dx + dy*dy)/(Rw*Rw*2.2);
+      if(q < 1) F[y*ww+x] += p.V*(1-q)*(1-q);
+    }
+  }
+  const T0=0.16, T1=0.16 + 0.10 + 0.25*visc;                     // the meniscus: wider when thick
+  const H=new Float32Array(ww*wh), M=new Float32Array(ww*wh);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const i=y*ww+x, f=F[i];
+    if(f <= T0) continue;
+    const t=Math.min(1,(f-T0)/(T1-T0)), m=t*t*(3-2*t);
+    M[i]=Math.min(1,(f-T0)/0.025);                               // coverage, antialiased at the edge
+    // flat top, rounded edge; thick wax is lumpy, and rises a little where poured
+    H[i]=thick*(m + visc*0.35*(lump(x/ww,y/wh)-0.5) + 0.25*Math.max(0, f - T1*1.6));
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.62, shadow:0.45, ao:0.2, ambient:0.42 });
+  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.62, shadow:0, ao:0, ambient:0.42 });
+  const fl=flat.light[0]||1, fs=flat.spec[0];
+  return paintLit(w,h,div,ww,wh, i => {
+    const k=L.light[i]/fl, m=M[i];
+    if(m<=0){ const v=128 + (k - 1)*90; return [clamp255(v), clamp255(v), clamp255(v)]; }   // the paper, with the wax's shadow on it
+    const thin=1 - Math.min(1, H[i]/(thick*0.7));                // translucent where thin
+    const glow=1 + 0.45*thin, sp=L.spec[i]*0.9*255;
+    const c=[wax.r*glow*k + sp, wax.g*glow*k + sp*0.92, wax.b*glow*k + sp*0.85];
+    const g=128 + (k-1)*90;
+    return [clamp255(g*(1-m) + c[0]*m), clamp255(g*(1-m) + c[1]*m), clamp255(g*(1-m) + c[2]*m)];
+  });
 }
 
 // Never the whole print —
@@ -581,18 +563,6 @@ function fbmSampler(cells, octaves){
   for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
   const norm = grids.reduce((s, o) => s + o.amp, 0);
   return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
-}
-// A smooth field sampled on a coarse lattice every `step` pixels and blended
-// between: broad shapes (stone, swells, where moss grows) change over dozens
-// of pixels, so sampling noise at every pixel was most of the cost.
-function smoothField(ww, wh, step, fn){
-  const cw = Math.ceil(ww/step) + 2, ch = Math.ceil(wh/step) + 2, g = new Float32Array(cw*ch);
-  for(let j = 0; j < ch; j++) for(let i = 0; i < cw; i++) g[j*cw + i] = fn(Math.min(1, i*step/ww), Math.min(1, j*step/wh));
-  const out = new Float32Array(ww*wh);
-  for(let y = 0; y < wh; y++){ const fy = y/step, j = Math.floor(fy), ty = fy - j;
-    for(let x = 0; x < ww; x++){ const fx = x/step, i = Math.floor(fx), tx = fx - i, k = j*cw + i;
-      out[y*ww + x] = (g[k]*(1-tx) + g[k+1]*tx)*(1-ty) + (g[k+cw]*(1-tx) + g[k+cw+1]*tx)*ty; } }
-  return out;
 }
 // a lit surface, coloured per pixel and laid on the page
 function paintLit(w, h, div, ww, wh, colour){

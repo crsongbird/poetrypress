@@ -114,11 +114,15 @@ export const TEXTURE_PARAMS = {
   foxing:        [{key:'zoom',  label:'Bloom Size',      min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Spot Count',      min:20, max:400, def:100, unit:'%', base:7}],
   foldghost:     [{key:'zoom',  label:'Crease Depth',    min:30, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Fold Count',      min:25, max:300, def:100, unit:'%', base:3}],
+                  {key:'amt',   label:'Fold Count',      min:25, max:300, def:100, unit:'%', base:3},
+                  // the short, random creases of being pressed in a pocket
+                  {key:'form',  label:'Crumple',         min:0,  max:100, def:30,  unit:''}],
   cupring:       [{key:'zoom',  label:'Ring Size',       min:40, max:320, def:100, unit:'%'},
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2}],
   wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3}],
+                  {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3},
+                  // thin and spreading → thick and lumpy
+                  {key:'form',  label:'Viscosity',       min:0,  max:100, def:45,  unit:''}],
   dunes:         [{key:'zoom',  label:'Ripple Size',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Wind',            min:0,  max:100, def:50,  unit:''},
                   {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''}],
@@ -340,11 +344,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'foxing'){
     result = genFoxing(w,h,amt,zoom,light,tint1);
   } else if(type === 'foldghost'){
-    result = genFoldGhost(w,h,amt,zoom,light);
+    result = genFoldGhost(w,h,amt,zoom,light,form);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1);
   } else if(type === 'wax'){
-    result = genPouredWax(w,h,amt,zoom,light,tint1);
+    result = genPouredWax(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'dunes'){
     result = genDunes(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'kintsugi'){
@@ -425,6 +429,12 @@ export function clearTexturesOfTypes(types){ for(const k of [...textureCache.key
 export function dropLargeTextures(px){ for(const [k, c] of [...textureCache]) if(c && c.width*c.height >= px) textureCache.delete(k); }
 /** The texture under `key`, if it is cached. */
 export function peekTexture(key){ return textureCache.has(key) ? textureCache.get(key) : null; }
+// The cache's budget follows the device's memory (navigator.deviceMemory, in
+// GB, rounded down: a 4–6 GB phone reports 4): a third of the full budget
+// at 2 GB or less, two thirds at 4, all of it at 8. Where it isn't reported
+// (Firefox, Safari, Node), the full budget, as before.
+const DEVICE_GB = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 0;
+const CACHE_BUDGET = TEXTURES.cachePixels * (!DEVICE_GB || DEVICE_GB >= 8 ? 1 : DEVICE_GB >= 4 ? 2/3 : 1/3);
 /** Files a finished texture (a canvas, or an ImageBitmap from the worker). */
 export function storeTexture(key, result){
   // Bounded by MEMORY, not just count: one full page is 3072×3072 pixels,
@@ -435,7 +445,7 @@ export function storeTexture(key, result){
   textureCache.set(key, result);
   let total = 0;
   for(const c of textureCache.values()) total += px(c);
-  while(textureCache.size > 1 && (total > TEXTURES.cachePixels || textureCache.size > TEXTURE_CACHE_MAX_ENTRIES)){
+  while(textureCache.size > 1 && (total > CACHE_BUDGET || textureCache.size > TEXTURE_CACHE_MAX_ENTRIES)){
     const oldest = textureCache.keys().next().value;
     const gone = textureCache.get(oldest);
     total -= px(gone);

@@ -173,6 +173,15 @@ checks the grid around it, and widths are remembered (cleared when a font
 arrives) — keep any new text layout on that path. Prove a speed-up with the
 before/after measurements AND an identical-render comparison.
 
+- **GPU lighting** (`texCore.js`): the WebGL2 shader must stay line-for-line
+  the CPU `lightHeights` — change both together, and compare them (the
+  worker takes `opts.cpuLight`; they agree to within 1/255 today). Emulated
+  WebGL steps aside. Node always runs the CPU path, so fingerprints test it.
+- **Measure on the right machine.** This sandbox has one core and no GPU:
+  parallel workers and shaders can't show their gains here, and timing
+  harnesses lie easily (renders are scheduled a frame later). Count events
+  rather than infer them from idle states.
+
 ## Pitfalls we hit (so you don't)
 
 - `amt` is floored at 2%; a knob that must reach 0 needs its own key (`stones`).
@@ -189,6 +198,11 @@ before/after measurements AND an identical-render comparison.
   `render()` now resets the context first; keep it that way, and never let a
   draw call abort a frame. Never `close()` a cached ImageBitmap — the texture
   service may still be showing it.
+- **Blank pages on phones**: `render()` draws into a back buffer
+  (`renderInto(BACK)`) and copies it to the page only when the frame is whole;
+  a failed frame keeps the last picture, frees caches and retries. Don't draw
+  to `#poemCanvas` from inside `renderInto`. The baseline phone is a Moto G
+  Stylus 5G (2022) — mid-range, 2022.
 - The page canvas is a CPU canvas (`willReadFrequently`), like every layer
   drawn into it; a GPU page canvas re-uploads CPU layers every frame (Chrome).
 - Blend modes can hide an inset box (Darken only shows a darker box…).

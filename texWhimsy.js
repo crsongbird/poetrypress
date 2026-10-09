@@ -4,7 +4,7 @@
  * Sleep; starlight advancing or receding. Clouds, bokeh, the deep field,
  * euphoria dust, burning mana, first snow, aurora.
  */
-import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv, smoothField } from './texCore.js';
 
 export function genClouds(w,h,amt,zoom,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
@@ -28,12 +28,18 @@ export function genClouds(w,h,amt,zoom,light){
   const fbm=(x,y)=>{ let s=0,a=0.5,f=1; for(let o=0;o<4;o++){ s+=vn(x*f,y*f)*a; a*=0.5; f*=2.07; } return s/0.9375; };
   const lift=Math.max(0.4,zoom), drag=amt;
 
-  const density=(px,py)=>{
+  // the smoke's smooth fields — its drift (q) and body (n) — on a lattice;
+  // the filaments, which are sharp, are still sampled at every pixel
+  const Qf=smoothField(ww,wh,3,(fu,fv)=>fbm((fu*ww/unit)*1.6+3.1, (fv*wh/unit)*1.6+7.7));
+  const Nf=smoothField(ww,wh,3,(fu,fv)=>{ const u=fu*ww/unit, v=fv*wh/unit, up=1-v/(wh/unit), q=fbm(u*1.6+3.1, v*1.6+7.7);
+    return fbm((u + drag*(0.35*q + 0.55*up*up))*2.6+q*1.4, (v/lift + 0.6*q)*2.6); });
+  const densityAt=(px,py)=>{
     const u=px/unit, v=py/unit, up=1-v/(wh/unit);            // 0 at the floor, 1 at the ceiling
-    const q=fbm(u*1.6+3.1, v*1.6+7.7);
+    const i=Math.min(wh-1,Math.max(0,py|0))*ww + Math.min(ww-1,Math.max(0,px|0));
+    const q=Qf[i];
     const ux=u + drag*(0.35*q + 0.55*up*up);                   // dragged, more as it rises
     const vy=v/lift + 0.6*q;                                    // stretched upward by lift
-    const n=fbm(ux*2.6+q*1.4, vy*2.6);
+    const n=Nf[i];
     const thin=0.45+0.55*(1-up*0.8);                            // thinning as it climbs
     // a soft body, plus FILAMENTS: the noise folded at its midpoint gives
     // sharp crests — the threads that curl off a column of smoke
@@ -45,12 +51,18 @@ export function genClouds(w,h,amt,zoom,light){
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU); const img=sctx.createImageData(ww,wh), d=img.data;
   const e=2;                                                    // step for the light's slope
+  // the density once per pixel; the light's slope reads it back (bilinear)
+  const D=new Float32Array(ww*wh);
+  for(let py=0;py<wh;py++) for(let px=0;px<ww;px++) D[py*ww+px]=densityAt(px,py);
+  const dAt=(x,y)=>{ x=Math.max(0,Math.min(ww-1.001,x)); y=Math.max(0,Math.min(wh-1.001,y));
+    const x0=x|0, y0=y|0, tx=x-x0, ty=y-y0, k=y0*ww+x0;
+    return (D[k]*(1-tx)+D[k+1]*tx)*(1-ty) + (D[k+ww]*(1-tx)+D[k+ww+1]*tx)*ty; };
   for(let py=0;py<wh;py++) for(let px=0;px<ww;px++){
-    const s0=density(px,py);
+    const s0=D[py*ww+px];
     let val=128;
     if(s0>0){
       // lit where the smoke's surface faces the light
-      const sl=density(px-lx*e,py-ly*e);
+      const sl=dAt(px-lx*e,py-ly*e);
       const lit=Math.max(-1,Math.min(1,(s0-sl)*6));
       val=128 + s0*(95 + lit*45);
     }
@@ -103,13 +115,16 @@ export function genAstralFog(w,h,amt,zoom,light,tint,form){
   const workW = Math.max(24, Math.round(w/workDiv)), workH = Math.max(24, Math.round(h/workDiv));
   const small = document.createElement('canvas'); small.width = workW; small.height = workH;
   const sctx = small.getContext('2d', CPU), img = sctx.createImageData(workW, workH), d = img.data;
-  for(let py = 0; py < workH; py++) for(let px = 0; px < workW; px++){
-    const u = px/workW, v = py/workH;
-    // clouds follow the matter, lit from within where the clusters are — the
-    // stars illuminate the gas around them — with fine wisps through it
+  // clouds follow the matter, lit from within where the clusters are — the
+  // stars illuminate the gas around them — with fine wisps through it. All of
+  // it is smooth, so it is sampled on a lattice and blended (smoothField).
+  const NEB = smoothField(workW, workH, 3, (u, v) => {
     const dens = M.density(u, v), glow = M.clusterAt(u, v);
     const wisp = 0.75 + 0.5*M.noise(u*3.3 + 7.1, v*3.3 + 2.9);
-    const density = Math.min(1, Math.pow(dens, 1.25)*wisp + 0.35*Math.min(1, glow)*dens);
+    return Math.min(1, Math.pow(dens, 1.25)*wisp + 0.35*Math.min(1, glow)*dens);
+  });
+  for(let py = 0; py < workH; py++) for(let px = 0; px < workW; px++){
+    const density = NEB[py*workW + px];
     const val = 128 + (75 - 128 + density*150) * amt;
     const i = (py*workW + px)*4;
     if(neb){

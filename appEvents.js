@@ -24,12 +24,12 @@
  * Exports nothing: it is the entry point, and nothing imports from it.
  */
 
-import { texturesSettled } from './textureService.js';
+import { texturesSettled, setDrafting } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale } from './canvasRenderer.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes } from './textureGenerators.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
@@ -151,6 +151,15 @@ const canvas = $('poemCanvas');
 // on phones, and heavy on graphics memory). This is the FIRST request for this
 // canvas's context, so its settings stick.
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
+// Android Chrome may throw a canvas's pixels away (memory pressure, a tab left
+// in the background). When it gives them back, or the tab returns, draw again.
+if(canvas && canvas.addEventListener){
+  canvas.addEventListener('contextlost', e => { if(e && e.preventDefault) e.preventDefault(); });
+  canvas.addEventListener('contextrestored', () => { resetBackBuffer(); scheduleRender(); });
+}
+if(typeof document.addEventListener === 'function'){
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible'){ resetBackBuffer(); scheduleRender(); } });
+}
 
 function syncStopFields(count, field3Id, field4Id){
   $(field3Id).style.display = count >= 3 ? 'block' : 'none';
@@ -351,6 +360,9 @@ $('poemText').addEventListener('input', ()=>{
   state.ui.poemTimer = setTimeout(scheduleRender, 150);
 });
 
+// Text Margins: how much room the text keeps from the page edges and the frame
+// (100% is the layout as it always was; lower lets the poem grow)
+$('textMargin').addEventListener('input', ()=>{ $('textMarginVal').textContent = $('textMargin').value + '%'; scheduleRender(); });
 $('lineSpacing').addEventListener('input', ()=>{
   const spacing = Math.pow(2, parseFloat($('lineSpacing').value) || 0);
   $('lineSpacingVal').textContent = spacing.toFixed(2)+'x';
@@ -475,6 +487,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
   const pw = canvas.width, ph = canvas.height;
   try {
     canvas.width = state.page.exportW || pw; canvas.height = state.page.exportH || ph;
+    setDrafting(false); clearTimeout(draftTimer);
     setRenderScale(1); render();
     await texturesSettled();
     render();
@@ -600,6 +613,7 @@ function serializeCurrentSettings(){
     font: FONTS[fontSelect.value].family,
     maxSize: parseFloat($('maxSize').value),
     lineSpacing: parseFloat($('lineSpacing').value),
+    textMargin: parseFloat($('textMargin').value),
 
     accent1: $('accent1Toggle').checked ? $('accent1ColorHex').value : undefined,
     accent2: $('accent2Toggle').checked ? $('accent2ColorHex').value : undefined,
@@ -676,6 +690,7 @@ function restoreSettings(s){
 
   if(s.font){ const idx = FONTS.findIndex(f=>f.family===s.font); if(idx>=0) fontSelect.value = idx; }
   if(s.maxSize!==undefined) $('maxSize').value = s.maxSize;
+  if(s.textMargin!==undefined){ $('textMargin').value = s.textMargin; $('textMarginVal').textContent = s.textMargin + '%'; }
   if(s.lineSpacing!==undefined){ $('lineSpacing').value=s.lineSpacing; $('lineSpacingVal').textContent = Math.pow(2, s.lineSpacing).toFixed(2)+'x'; }
 
   $('accent1Toggle').checked = !!s.accent1;
@@ -1316,8 +1331,17 @@ function syncTextureParams(useDefaults){
   });
 }
 
+// While a texture knob (or the light) is being dragged, slow textures are
+// drafted at half resolution; a quarter-second after it stops, they sharpen.
+let draftTimer = null;
+function draftWhileDragging(){
+  setDrafting(true);
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(() => setDrafting(false), 250);
+}
 ['texP1','texP2','texP3','texP4','texP5'].forEach(id=>{
   $(id).addEventListener('input', ()=>{
+    draftWhileDragging();
     const defs = paramsFor($('textureType').value);
     const i = +id.slice(4) - 1;
     if(defs[i]) $(id+'Val').textContent = paramReadout(defs[i], +$(id).value);
@@ -1433,6 +1457,7 @@ function syncLightPad(){
   if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${Math.round(deg)}°, ${Math.round(tilt)}% low`);
 }
 function setLight(deg, tilt, commit){
+  if(!commit) draftWhileDragging();
   $('textureLight').value = String(Math.round(((deg % 360) + 360) % 360));
   if($('textureLightTilt')) $('textureLightTilt').value = String(Math.round(Math.max(0, Math.min(100, tilt))));
   syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();

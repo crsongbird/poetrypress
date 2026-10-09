@@ -80,6 +80,7 @@ export const UI_STRINGS = {
   'label.inscription_hue':                      "Inscription Hue",
   'label.maximum_size_px':                     "Maximum Size (px)",
   'label.breathing_room':                      "Breathing Room",
+  'label.text_margins':                        "Text Margins",
   'label.radial_gradient_text':                "Radial Gradient Text?",
   'label.aura_stops':                          "Aura Stops",
   'label.inscription_hue_2':                    "Inscription Hue 2",

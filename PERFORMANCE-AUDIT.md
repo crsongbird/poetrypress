@@ -156,19 +156,36 @@ shapes) match the previous release pixel for pixel. Measured (Chrome, phone):
 | Switching presets: longest / blocked | 561 / 1,289 ms | 102 / 152 ms |
 | Dragging text size: longest / blocked | 111 / 392 ms | 62 / 62 ms |
 
+## Done: E–I (Jupiter–Pandia)
+- **E** · Deep Field's nebula 423 → 108 ms, Sleep Haze 456 → 197 ms (smooth
+  fields on a lattice; checked by eye — indistinguishable). Scrying Pool's
+  caustics are sharp lines a lattice would smear: left for its rebuild.
+- **F** · while a knob or the light is dragged, slow textures (over 250 ms)
+  are drafted at half resolution and drawn scaled up: a 2 s drag of Moss on
+  Stone showed 4 drafts instead of at most 1; it sharpens after you stop.
+- **G** · `lightHeights` has a WebGL2 fragment-shader path in the workers.
+  It matches the CPU to within 1/255 on all six lit textures. Software-
+  emulated WebGL (no GPU; it measured ~2× SLOWER than the CPU) steps aside.
+  Real-GPU speed is unmeasured here — the next phone test will tell.
+- **H** · one worker per spare core, up to two.
+- **I** · a new wish starts at once on a free worker; stale work finishes
+  alongside and shows only if nothing newer has. Killing stale work was tried
+  and measured SLOWER (a fresh worker runs cold, unoptimised code) — so
+  nothing is killed.
+- Also: tinted glyphs are remembered (a third of each render), and live
+  numbers in the poem (§RenderMs, §Profile, §CacheMB) no longer refit the
+  page — a render during a Dream Bloom drag fell from 335 to 238 ms here.
+
+## Next on the GPU (candidates)
+Dream Bloom's convolution (splatting the aperture is what GPUs do best);
+noise fields (nebula, smoke, water, moss); `pixelPass` tint/remap; the border
+bloom and glow blurs. Keep results on the GPU end to end where possible —
+reading back to the CPU stalls it.
+
 ## 3 · Decisions for Ruby
 
 1. ~~A–D~~ — done.
-2. **E (lattice for three textures):** fingerprints move slightly; I'd check
-   each by eye in the gallery. *Recommended: yes.*
-3. **F (softer lit previews)** — speed now, at the cost of a preview that is
-   slightly softer than the saved image? *Recommended: yes, but only while a
-   knob is being dragged — then sharpen to today's preview when it stops.*
-4. **G (GPU lighting):** worth a dedicated project later? *Recommended: not
-   yet — do A–F, measure on your phone, then decide.*
-5. **H (more workers):** *Recommended: two workers, later, if Deep Field and
-   preset tiles still queue.*
-6. **I (abandon stale work while dragging):** *Recommended: yes, with F.*
+2–6. ~~E, F, G, H, I~~ — done.
 7. **Chrome on your phone:** the page canvas became a CPU canvas last
    release (Chrome re-uploaded every layer to the GPU each frame). Please
    compare Chrome and Firefox again before we decide anything GPU-related.

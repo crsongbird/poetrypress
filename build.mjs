@@ -20,7 +20,17 @@ import { createHash } from 'crypto';
 // ---- release names: Jupiter's named moons, by average distance from the
 // barycentre. `node build.mjs --next` moves release.js on to the next one.
 // The list ends where Ruby's does; extend it (in order) before it runs out.
-const JUPITER = ['Amalthea', 'Thebe', 'Io', 'Europa', 'Ganymede', 'Callisto', 'Themisto', 'Leda', 'Ersa', 'Himalia', 'Pandia', 'Lysithea', 'Elara', 'Dia', 'Carpo', 'Valetudo', 'Euporie'];
+// Jupiter's NAMED moons by mean distance (semi-major axis), from NASA's Jovian
+// Satellite Fact Sheet (nssdc.gsfc.nasa.gov, updated Dec 2023); unnamed S/…
+// moons skipped. (Ersa and Himalia shipped in that order; by the table Himalia
+// is a hair closer — 11,461,000 km against 11,483,000 — but shipped names stay.)
+// Kale and Isonoe tie at 23,217,000 km and keep NASA's order.
+const JUPITER = ['Amalthea', 'Thebe', 'Io', 'Europa', 'Ganymede', 'Callisto', 'Themisto', 'Leda', 'Ersa', 'Himalia',
+  'Pandia', 'Lysithea', 'Elara', 'Dia', 'Carpo', 'Valetudo', 'Euporie',
+  'Orthosie', 'Euanthe', 'Thyone', 'Mneme', 'Harpalyke', 'Hermippe', 'Praxidike', 'Thelxinoe', 'Eupheme', 'Helike',
+  'Iocaste', 'Ananke', 'Philophrosyne', 'Eurydome', 'Arche', 'Autonoe', 'Pasithee', 'Herse', 'Chaldene', 'Kale',
+  'Isonoe', 'Aitne', 'Erinome', 'Taygete', 'Carme', 'Sponde', 'Kalyke', 'Pasiphae', 'Eukelade', 'Eirene',
+  'Megaclite', 'Sinope', 'Hegemone', 'Aoede', 'Kallichore', 'Callirrhoe', 'Cyllene', 'Kore'];   // then Saturn's
 if(process.argv.includes('--next')){
   const cur = /RELEASE = '([^']+)'/.exec(readFileSync('release.js', 'utf8'))[1].split('–')[1];
   const i = JUPITER.indexOf(cur);

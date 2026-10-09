@@ -5,17 +5,17 @@ Release: see release.js (`node build.mjs --next` to advance). Look before
 judging: `node tools/texture-gallery.mjs --only <names>` (run when asked).
 
 ## 0 · Performance (decide first)
-See PERFORMANCE-AUDIT.md. A–D are done (invisible; start-up and preset
-switching ~5–8× less blocked). Waiting on Ruby: E–J, after measuring on a
-phone.
+See PERFORMANCE-AUDIT.md. A–I are done. Next: measure on Ruby's phone
+(Chrome and Firefox; is lighting on the GPU there?), then the next GPU
+candidates (Dream Bloom's convolution first). J (Linen at preview) waits.
 
 ## 1 · Light, like a game engine
 `lightHeights` (texCore) is built: a texture gives HEIGHTS; it returns them
 lit by the dial — diffuse, a specular per material, cast shadows (soft,
 longer as the light lowers; none overhead), occlusion in crevices. Dune
 Ripples, Kintsugi, Moss on Stone and Rain on Glass use it. Next: bring the
-other lit textures onto it (Cold Press, Fractured Glaze, Poured Wax, Linen,
-Sigil relief, Fold Ghost). Facet Field and Cup Ring are on it, and a texture
+other lit textures onto it (Cold Press, Fractured Glaze, Linen, Sigil
+relief). Facet Field, Cup Ring, Fold Ghost and Poured Wax are on it, and a texture
 can carry its own default light (Facet Field starts overhead). Watch the cost on phones:
 these take ~0.2–0.6 s at preview size and up to ~2 s at export here,
 in the worker (the page stays responsive).
@@ -55,10 +55,6 @@ in the worker (the page stays responsive).
 - Cold Press: more variation; lit with shadows.
 - Foxing: not a Touch texture (it has no light) — move it, or give it
   relief. (It represents age spots on old paper.)
-- Fold Ghost: paper folded and crumpled in a pocket — random fold
-  directions, creases lit and shadowed — not irregular tiles.
-- Poured Wax: a simulation — random pour points and volumes from the seed,
-  pooling together; knobs Pool Size / Viscosity / Wetness; waxy specular.
 
 **C · replace or rethink**
 - Fractal Moon: rolled back to Ruby's preferred version and touched up
@@ -78,6 +74,9 @@ in the worker (the page stays responsive).
 - The light dial for angle-only textures (Harsh Rain's slant, the hatch).
 
 ## Check on a phone
+- The occasional blank page: frames now draw into a back buffer and reach
+  the page only when whole; a failed frame keeps the last picture and
+  retries. Does it still happen on the Moto G Stylus (2022)?
 - Chrome vs Firefox speed, now that the page canvas is a CPU canvas (Chrome
   was slower); and that the 'two pages at once' ghost never returns.
 - The colour picker's Done; undo / redo; the preview's scale steps.

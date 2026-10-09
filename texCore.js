@@ -129,6 +129,119 @@ export function lightVec(light){
   return { lx: Math.cos(a) * LIGHT_TILT, ly: Math.sin(a) * LIGHT_TILT };
 }
 
+// ---------- the same lighting on the GPU (WebGL2) ----------
+// One fragment shader per pixel: the normal, diffuse, Blinn's highlight, the
+// cast-shadow march and the occlusion box — line for line what lightHeights
+// does on the CPU. Heights go up as a float texture; light and highlight come
+// back packed 16 bits each. Where WebGL2 isn't there (Node, a browser that
+// declines it) the CPU path runs as before.
+const LIGHT_FRAG = `#version 300 es
+precision highp float; precision highp int;
+uniform highp sampler2D uH;
+uniform ivec2 uSize; uniform vec3 uL, uHalf;
+uniform float uRelief, uShine, uSpecK, uShadow, uAO, uAmbient, uRise, uStepX, uStepY;
+uniform int uSteps, uStride, uDoShadow, uR;
+out vec4 o;
+float at(ivec2 p){ p = clamp(p, ivec2(0), uSize - 1); return texelFetch(uH, p, 0).r; }
+void main(){
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  float h0 = at(p)*uRelief;
+  float gx = (at(p + ivec2(1,0)) - at(p - ivec2(1,0)))*0.5*uRelief;
+  float gy = (at(p + ivec2(0,1)) - at(p - ivec2(0,1)))*0.5*uRelief;
+  float nl = sqrt(gx*gx + gy*gy + 1.0);
+  vec3 n = vec3(-gx/nl, -gy/nl, 1.0/nl);
+  float diffuse = max(0.0, dot(n, uL));
+  float lit = 1.0;
+  if(uDoShadow == 1){
+    for(int k = uStride; k <= uSteps; k += uStride){
+      ivec2 q = ivec2(floor(vec2(p) + vec2(uStepX, uStepY)*float(k) + 0.5));
+      float over = at(q)*uRelief - (h0 + uRise*float(k));
+      if(over > 0.0){ lit = min(lit, max(0.0, 1.0 - over*0.6)); if(lit == 0.0) break; }
+    }
+  }
+  float occl = 0.0;
+  if(uAO > 0.0){
+    float s = 0.0;
+    for(int dy = -uR; dy <= uR; dy++) for(int dx = -uR; dx <= uR; dx++) s += at(p + ivec2(dx, dy));
+    float avg = s/float((2*uR + 1)*(2*uR + 1));
+    occl = clamp((avg - at(p))*uRelief*0.25, 0.0, 1.0)*uAO;
+  }
+  float light = (uAmbient + (1.0 - uAmbient)*diffuse*(1.0 - uShadow*(1.0 - lit)))*(1.0 - occl);
+  float nh = max(0.0, dot(n, uHalf));
+  float spec = pow(nh, uShine)*uSpecK*(0.35 + 0.65*lit);
+  float a = clamp(light*0.5, 0.0, 1.0)*65535.0, b = clamp(spec, 0.0, 1.0)*65535.0;
+  float ah = floor(a/256.0), bh = floor(b/256.0);
+  o = vec4(ah/255.0, (a - ah*256.0)/255.0, bh/255.0, (b - bh*256.0)/255.0);
+}`;
+let GPU = undefined;             // undefined: not tried yet; null: not available
+/** Lighting on the GPU may be switched off (tools, or to compare with the CPU). */
+export let GPU_LIGHT = true;
+export function setGpuLight(on){ GPU_LIGHT = !!on; }
+/** What lit this texture: 'gpu', or 'cpu' (no WebGL2, an emulator, or switched off). */
+export function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }
+function gpu(){
+  if(GPU !== undefined) return GPU;
+  GPU = null;
+  try {
+    if(typeof OffscreenCanvas !== 'function') return null;
+    const cv = new OffscreenCanvas(1, 1);
+    const gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
+    if(!gl) return null;
+    // WebGL emulated in software (no GPU, or a blocklisted driver) is SLOWER
+    // than the CPU path — measured at about twice its time — so step aside
+    // when the renderer says it's an emulator.
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    if(/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+      if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, `#version 300 es
+in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, LIGHT_FRAG));
+    gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+    const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = n => gl.getUniformLocation(prog, n);
+    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR'].map(n => [n, U(n)])) };
+  } catch(e){ GPU = null; }
+  return GPU;
+}
+function gpuLightHeights(H, ww, wh, P){
+  const G = gpu(); if(!G) return null;
+  const { gl, u } = G;
+  try {
+    G.cv.width = ww; G.cv.height = wh;
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE); if(ww > maxTex || wh > maxTex) return null;
+    gl.useProgram(G.prog); gl.bindVertexArray(G.vao);
+    const hTex = gl.createTexture(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, ww, wh, 0, gl.RED, gl.FLOAT, H);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const outTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, outTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, ww, wh, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outTex, 0);
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('framebuffer');
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hTex); gl.uniform1i(u.uH, 0);
+    gl.uniform2i(u.uSize, ww, wh); gl.uniform3f(u.uL, P.Lx, P.Ly, P.Lz); gl.uniform3f(u.uHalf, P.hx/P.hl, P.hy/P.hl, P.hz/P.hl);
+    gl.uniform1f(u.uRelief, P.relief); gl.uniform1f(u.uShine, P.shininess); gl.uniform1f(u.uSpecK, P.specK);
+    gl.uniform1f(u.uShadow, P.shadow); gl.uniform1f(u.uAO, P.ao); gl.uniform1f(u.uAmbient, P.ambient);
+    gl.uniform1f(u.uRise, P.rise); gl.uniform1f(u.uStepX, P.stepX); gl.uniform1f(u.uStepY, P.stepY);
+    gl.uniform1i(u.uSteps, P.steps); gl.uniform1i(u.uStride, P.stride); gl.uniform1i(u.uDoShadow, P.doShadow ? 1 : 0); gl.uniform1i(u.uR, P.R);
+    gl.viewport(0, 0, ww, wh); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    const px = new Uint8Array(ww*wh*4); gl.readPixels(0, 0, ww, wh, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex);
+    const light = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
+    for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ light[i] = (px[q]*256 + px[q+1])/65535*2; spec[i] = (px[q+2]*256 + px[q+3])/65535; }
+    return { light, spec };
+  } catch(e){ GPU = null; return null; }
+}
+
 // ---------- light, like a game engine ----------
 /**
  * Lights a HEIGHT field, the way a game engine lights a surface. A texture
@@ -161,6 +274,17 @@ export function lightHeights(H, ww, wh, opts = {}){
   const hx = Lx, hy = Ly, hz = Lz + 1, hl = Math.hypot(hx, hy, hz) || 1;   // Blinn's half vector, viewer overhead
   const shininess = 4 + gloss*120, specK = 0.15 + gloss*0.85;
   const at = (x, y) => H[Math.min(wh-1, Math.max(0, y))*ww + Math.min(ww-1, Math.max(0, x))];
+  const lxy = Math.hypot(Lx, Ly), stepX = lxy > 1e-6 ? Lx/lxy : 0, stepY = lxy > 1e-6 ? Ly/lxy : 0;
+  const rise = lxy > 1e-6 ? Lz/lxy : 1e9;                 // how fast a ray toward the light climbs, per pixel
+  // march as far as the tallest height can throw a shadow at this elevation
+  let hMax = 0, hMin = Infinity; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
+  const steps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
+  // on the GPU when it's there (the same maths, per pixel, at once)
+  if(GPU_LIGHT && ww*wh >= 4096){
+    const g = gpuLightHeights(H, ww, wh, { Lx, Ly, Lz, hx, hy, hz, hl, shininess, specK, relief, shadow, ao, ambient, rise,
+      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4 });
+    if(g) return g;
+  }
   const out = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
   // occlusion compares each height with its neighbourhood's (a box average)
   const R = 4, avg = new Float32Array(ww*wh);
@@ -171,11 +295,6 @@ export function lightHeights(H, ww, wh, opts = {}){
     for(let x = 0; x < ww; x++){ let s = 0; for(let y = -R; y <= R; y++) s += tmp[Math.min(wh-1, Math.max(0, y))*ww+x];
       for(let y = 0; y < wh; y++){ avg[y*ww+x] = s/(2*R+1); s += tmp[Math.min(wh-1, y+R+1)*ww+x] - tmp[Math.max(0, y-R)*ww+x]; } }
   }
-  const lxy = Math.hypot(Lx, Ly), stepX = lxy > 1e-6 ? Lx/lxy : 0, stepY = lxy > 1e-6 ? Ly/lxy : 0;
-  const rise = lxy > 1e-6 ? Lz/lxy : 1e9;                 // how fast a ray toward the light climbs, per pixel
-  // march as far as the tallest height can throw a shadow at this elevation
-  let hMax = 0, hMin = Infinity; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
-  const steps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const i = y*ww + x, h0 = H[i]*relief;
     const gx = (at(x+1, y) - at(x-1, y))*0.5*relief, gy = (at(x, y+1) - at(x, y-1))*0.5*relief;
@@ -269,3 +388,18 @@ export function pixelPass(src, lightHex, darkHex, family){
 export function tintMarks(src, lightHex, darkHex){ return pixelPass(src, lightHex, darkHex, null); }
 /** The remap alone. */
 export function remapNeutral(src, family){ return family === 'mid' ? src : pixelPass(src, null, null, family); }
+
+// A smooth field sampled on a coarse lattice every `step` pixels and blended
+// between: broad shapes (stone, swells, moss, a nebula, smoke's body) change
+// over dozens of pixels, so sampling noise at every pixel was most of the cost.
+// fn(u, v) takes the field's 0..1 coordinates.
+export function smoothField(ww, wh, step, fn){
+  const cw = Math.ceil(ww/step) + 2, ch = Math.ceil(wh/step) + 2, g = new Float32Array(cw*ch);
+  for(let j = 0; j < ch; j++) for(let i = 0; i < cw; i++) g[j*cw + i] = fn(Math.min(1, i*step/ww), Math.min(1, j*step/wh));
+  const out = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ const fy = y/step, j = Math.floor(fy), ty = fy - j;
+    for(let x = 0; x < ww; x++){ const fx = x/step, i = Math.floor(fx), tx = fx - i, k = j*cw + i;
+      out[y*ww + x] = (g[k]*(1-tx) + g[k+1]*tx)*(1-ty) + (g[k+cw]*(1-tx) + g[k+cw+1]*tx)*ty; } }
+  return out;
+}
+
