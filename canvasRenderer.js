@@ -767,6 +767,7 @@ function resolveRhymeColor(letter, accent1Color, accent2Color){
 // survives across render() calls -- that's the whole point.)
 // inline glyphs on every canvas (idempotent: glyphs.js also installs itself)
 if(typeof CanvasRenderingContext2D !== 'undefined') installInlineGlyphs(CanvasRenderingContext2D.prototype);
+if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs(OffscreenCanvasRenderingContext2D.prototype);
 
 /** The page's effect stack, from the three effect slots in the UI. */
 function pageEffectStack(){
@@ -953,6 +954,9 @@ function renderInto(canvas){
     const lightTilt = caps.light && $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
     const tint1 = caps.tints >= 1 ? $('textureTint1Hex').value : null;
     const tint2 = caps.tints >= 2 ? $('textureTint2Hex').value : null;
+    // material hues (white = none), for the coloured lit textures
+    const tint3 = caps.material ? ($('textureTint3Hex') || {}).value || null : null;
+    const tint4 = caps.material ? ($('textureTint4Hex') || {}).value || null : null;
     const seed = parseInt($('textureSeedValue').value, 10) || 0;
 
     const tp1 = parseFloat($('texP1').value);
@@ -983,19 +987,19 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, blend, scale: S, p4, p5 }));
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, blend, scale: S, p4, p5 }));
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, blend, scale: S, p4, p5 }));
       ctx.restore();
     }
   }

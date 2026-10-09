@@ -5,7 +5,7 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, parseHex } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, parseHex, litK, litS } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -426,7 +426,7 @@ export function genCrackedGlaze(w,h,amt,zoom){
   return full;
 }
 
-export function genTessellate(w,h,amt,zoom,light,tint1,tint2){
+export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3){
   amt = (amt==null?0:amt); zoom = (zoom==null?1:zoom);
   // A CARVED surface: triangles sharing their corners (no gaps), each a tilted
   // plane at its own depth — some sunk deeper than their neighbours. Lit by
@@ -471,10 +471,10 @@ export function genTessellate(w,h,amt,zoom,light,tint1,tint2){
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), dta = img.data;
   for(let i = 0; i < ww*wh; i++){
-    const k = L.light[i]/flat, sp = L.spec[i]*0.6, q = i*4;
-    dta[q]   = Math.max(0, Math.min(255, mat.r*k*(lightCol.r/255) + lightCol.r*sp));
-    dta[q+1] = Math.max(0, Math.min(255, mat.g*k*(lightCol.g/255) + lightCol.g*sp));
-    dta[q+2] = Math.max(0, Math.min(255, mat.b*k*(lightCol.b/255) + lightCol.b*sp));
+    const K = c => litK(L, i, 0.4, M3, c)/flat, sp = L.spec[i]*0.6, q = i*4;
+    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0)));
+    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1)));
+    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2)));
     dta[q+3] = 255;
   }
   sctx.putImageData(img, 0, 0);

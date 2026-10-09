@@ -118,7 +118,7 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
 ];
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
@@ -632,6 +632,8 @@ function serializeCurrentSettings(){
     textureLightTilt: $('textureLightTilt') ? $('textureLightTilt').value : '100',
     textureTint1: $('textureTint1Hex').value,
     textureTint2: $('textureTint2Hex').value,
+    textureTint3: $('textureTint3Hex').value,
+    textureTint4: $('textureTint4Hex').value,
     texP1: $('texP1').value,
     texP2: $('texP2').value,
     texP3: $('texP3').value,
@@ -728,6 +730,9 @@ function restoreSettings(s){
     syncLightPad(); }
   if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
   if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
+  // material hues: white (none) unless the look carries them
+  setColorField('textureTint3Hex', s.textureTint3 || '#FFFFFF');
+  setColorField('textureTint4Hex', s.textureTint4 || '#FFFFFF');
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
   if(s.texP2 !== undefined) $('texP2').value = s.texP2;
   if(s.texP3 !== undefined) $('texP3').value = s.texP3;
@@ -1066,6 +1071,8 @@ function applyPreset(p){
     // following the accents, so changing an accent later won't replace it
     if(p.textureTint1){ setColorField('textureTint1Hex', p.textureTint1); state.ui.tintFollows[0] = false; }
     if(p.textureTint2){ setColorField('textureTint2Hex', p.textureTint2); state.ui.tintFollows[1] = false; }
+    setColorField('textureTint3Hex', p.textureTint3 || '#FFFFFF');
+    setColorField('textureTint4Hex', p.textureTint4 || '#FFFFFF');
     syncLightPad();
     restoreLocked(__locks);
     // a preset changes opacity and seed without anyone touching them
@@ -1394,6 +1401,9 @@ function syncTextureTools(resetToDefaults){
   const t1 = $('tint1Row'), t2 = $('tint2Row');
   if(t1) t1.classList.toggle('tool-off', caps.tints < 1);
   if(t2) t2.classList.toggle('tool-off', caps.tints < 2);
+  // material hues, for lit textures that are coloured (not the grey ones that blend)
+  ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-off', !caps.material); });
+  if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); }
   if(caps.tints >= 1) $('tint1Label').textContent = (caps.tintLabels||[])[0] || 'Tint';
   if(caps.tints >= 2) $('tint2Label').textContent = (caps.tintLabels||[])[1] || 'Second tint';
 
@@ -1489,6 +1499,8 @@ $('textureBlend').addEventListener('change', scheduleRender);
 // choosing a tint yourself stops it following the accents
 bindColorField('textureTint1Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[0] = false; scheduleRender(); });
 bindColorField('textureTint2Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[1] = false; scheduleRender(); });
+bindColorField('textureTint3Hex', ()=>scheduleRender());
+bindColorField('textureTint4Hex', ()=>scheduleRender());
 
 // ---------- locks ----------
 // A locked control survives Randomize and preset changes. Rather than

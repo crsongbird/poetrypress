@@ -26,11 +26,17 @@
  *   import { installCanvasMock } from './canvasMock.mjs';
  *   installCanvasMock();
  *   const { getTextureCanvas } = await import('../textureGenerators.js');
- *   const canvas = getTextureCanvas('alienSurface', 512, 512, null, null, false, 12345);
+ *   const canvas = getTextureCanvas('alienSurface', 512, 512, { seed: 12345 });
  */
 
 export function makeMockContext(w, h){
-  const stats = { arcs: 0, strokes: 0, fills: 0, gradientStops: 0, imageDataWrites: 0 };
+  const stats = { arcs: 0, strokes: 0, fills: 0, gradientStops: 0, imageDataWrites: 0,
+                // geometry, not just call counts -- lets a test prove that a size
+                // knob changed what was drawn rather than merely how often
+                radiusSum: 0, pathLen: 0, rectArea: 0,
+                // pixel and direction signals, so a knob that changes tone or
+                // angle rather than size is still detectable
+                pixelSum: 0, pixelVar: 0, pathDx: 0, rotSum: 0, rotSigned: 0 };
   const ctx = {
     canvas: { width: w, height: h },
     globalAlpha: 1,
@@ -40,20 +46,42 @@ export function makeMockContext(w, h){
     _stats: stats,
     save(){}, restore(){}, beginPath(){}, closePath(){},
     translate(x,y){ assertFinite('translate', x, y); },
-    rotate(angle){ assertFinite('rotate', angle); },
-    moveTo(x,y){ assertFinite('moveTo', x, y); },
-    lineTo(x,y){ assertFinite('lineTo', x, y); },
+    rotate(angle){ assertFinite('rotate', angle); stats.rotSum += Math.abs(angle); stats.rotSigned += angle; },
+    moveTo(x,y){ assertFinite('moveTo', x, y); ctx._lastX = x; ctx._lastY = y; },
+    lineTo(x,y){
+      assertFinite('lineTo', x, y);
+      if(ctx._lastX != null){
+        stats.pathLen += Math.hypot(x-ctx._lastX, y-ctx._lastY);
+        stats.pathDx += Math.abs(x-ctx._lastX);
+      }
+      ctx._lastX = x; ctx._lastY = y;
+    },
     quadraticCurveTo(cx,cy,x,y){ assertFinite('quadraticCurveTo', cx,cy,x,y); },
+    bezierCurveTo(c1x,c1y,c2x,c2y,x,y){
+      assertFinite('bezierCurveTo', c1x,c1y,c2x,c2y,x,y);
+      if(ctx._lastX != null){
+        stats.pathLen += Math.hypot(x-ctx._lastX, y-ctx._lastY);
+        stats.pathDx += Math.abs(x-ctx._lastX);
+      }
+      ctx._lastX = x; ctx._lastY = y;
+    },
+    ellipse(cx,cy,rx,ry,rot){ stats.arcs++; stats.radiusSum += (rx+ry)/2; assertFinite('ellipse', cx,cy,rx,ry,rot); },
+    scale(sx,sy){ assertFinite('scale', sx, sy); },
     arc(cx,cy,r){
       stats.arcs++;
+      stats.radiusSum += r;
       assertFinite('arc', cx, cy, r);
       if(r < 0) throw new Error('arc() got a negative radius: '+r);
     },
     fill(){ stats.fills++; },
     stroke(){ stats.strokes++; },
-    fillRect(x,y,rw,rh){ assertFinite('fillRect', x, y, rw, rh); },
+    arcTo(x1,y1,x2,y2,r){ assertFinite('arcTo', x1, y1, x2, y2, r); stats.pathLen += Math.abs(r); },
+    rect(x,y,rw,rh){ assertFinite('rect', x, y, rw, rh); stats.pathLen += 2*(Math.abs(rw)+Math.abs(rh)); },
+    fillRect(x,y,rw,rh){ assertFinite('fillRect', x, y, rw, rh); stats.rectArea += Math.abs(rw*rh); },
     strokeRect(x,y,rw,rh){ assertFinite('strokeRect', x, y, rw, rh); },
-    fillText(){}, strokeText(){}, drawImage(){}, measureText(str){ return { width: (str||'').length*10 }; },
+    // text calls are counted, so a test can tell an effect actually drew
+    fillText(){ stats.fillText = (stats.fillText || 0) + 1; }, strokeText(){ stats.strokeText = (stats.strokeText || 0) + 1; }, drawImage(){}, measureText(str){ return { width: (str||'').length*10 }; },
+    setTransform(){}, setLineDash(){}, getLineDash(){ return []; }, clip(){}, clearRect(){},
     createLinearGradient(x0,y0,x1,y1){
       assertFinite('createLinearGradient', x0,y0,x1,y1);
       return mockGradient(stats);
@@ -72,6 +100,12 @@ export function makeMockContext(w, h){
     },
     putImageData(imgData){
       stats.imageDataWrites++;
+      // pixelSum sees overall tone; pixelVar sees TEXTURE — how much each
+      // sampled pixel differs from the previous one — so a knob that changes
+      // pattern but not average brightness (a finer rake, more fractal
+      // octaves) still registers
+      for(let i=0;i<imgData.data.length;i+=64){ stats.pixelSum += imgData.data[i];
+        if(i >= 64) stats.pixelVar += Math.abs(imgData.data[i] - imgData.data[i-64]); }
       for(let i=0;i<imgData.data.length;i++){
         if(!Number.isFinite(imgData.data[i])) throw new Error('putImageData: non-finite pixel value at index '+i);
       }
@@ -112,8 +146,20 @@ export function makeMockCanvas(){
 /** Installs `global.document.createElement('canvas')` so any module that
  * creates offscreen canvases (which is how every texture generator works)
  * can run under plain Node with no browser and no native canvas package. */
+/** Every canvas created since the last reset, with its dimensions. Several
+ * textures do their real work on an internal downscaled canvas, so the
+ * returned canvas's own draw stats say nothing about them -- but the size of
+ * that internal canvas does. */
+export const createdCanvases = [];
+export function resetCreatedCanvases(){ createdCanvases.length = 0; }
+
 export function installCanvasMock(){
   global.document = {
-    createElement: (tag) => tag === 'canvas' ? makeMockCanvas() : {},
+    createElement: (tag) => {
+      if(tag !== 'canvas') return {};
+      const c = makeMockCanvas();
+      createdCanvases.push(c);
+      return c;
+    },
   };
 }

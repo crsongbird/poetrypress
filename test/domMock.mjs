@@ -399,7 +399,13 @@ function makeFakeElement(id, defaults = {}){
     innerHTML: '',
     textContent: '',
     dataset: {},
-    style: {},
+    // real browsers have setProperty on style and set/getAttribute on every
+    // element; code that uses them should not have to guard against the mock
+    style: { setProperty(k, v){ this[k] = v; }, getPropertyValue(k){ return this[k] || ''; } },
+    _attrs: {},
+    setAttribute(k, v){ this._attrs[k] = String(v); },
+    getAttribute(k){ return k in this._attrs ? this._attrs[k] : null; },
+    removeAttribute(k){ delete this._attrs[k]; },
     classList: makeClassList(),
     children,
     addEventListener(type, fn){ (listeners[type] = listeners[type] || []).push(fn); },
@@ -460,6 +466,14 @@ export function installDomMock(makeMockContext, makeMockCanvas){
     global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
   }
 
+  // Coloris is a real third-party global, loaded via CDN in the browser --
+  // not something this app defines. Records the last config passed in, so
+  // tests can assert the theme palette actually got applied.
+  global.Coloris = function(config){
+    global.Coloris.lastCall = config;
+  };
+
+  const documentListeners = {};
   global.document = {
     getElementById(id){
       if(!registry[id]) registry[id] = makeFakeElement(id); // anything not explicitly listed still works generically
@@ -467,7 +481,89 @@ export function installDomMock(makeMockContext, makeMockCanvas){
     },
     createElement(tag){ return tag === 'canvas' ? makeMockCanvas() : makeFakeElement(null, {tag}); },
     fonts: { load: () => Promise.resolve(), ready: Promise.resolve() },
+    addEventListener(type, fn){ (documentListeners[type] = documentListeners[type] || []).push(fn); },
+    dispatchEvent(evt){ (documentListeners[evt.type] || []).forEach(fn => fn(evt)); return true; },
   };
 
   return registry;
+}
+
+/**
+ * installMobileEnv() — makes the mock look like a phone, so the mobile
+ * branch in appEvents.js actually executes under test instead of being
+ * skipped silently. Call BEFORE importing appEvents.js.
+ *
+ * The tab panels and buttons are read out of the real index.html rather
+ * than hardcoded, so this can't drift from the markup the way a
+ * hand-maintained fixture would.
+ */
+import { readFileSync } from 'fs';
+
+export function installMobileEnv(registry){
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  const mk = (tab, isBtn) => {
+    const classes = new Set(isBtn ? ['tab-btn'] : ['card']);
+    return {
+      dataset: { tab },
+      classList: {
+        add: c => classes.add(c),
+        remove: c => classes.delete(c),
+        contains: c => classes.has(c),
+        toggle: (c, force) => {
+          if(force === undefined) classes.has(c) ? classes.delete(c) : classes.add(c);
+          else if(force) classes.add(c); else classes.delete(c);
+          return classes.has(c);
+        },
+      },
+      _listeners: {},
+      addEventListener(t, fn){ (this._listeners[t] = this._listeners[t] || []).push(fn); },
+      dispatchEvent(e){ (this._listeners[e.type] || []).forEach(fn => fn(e)); return true; },
+    };
+  };
+
+  const panels = [...html.matchAll(/class="card" data-tab="(\w+)"/g)].map(m => mk(m[1], false));
+  const buttons = [...html.matchAll(/class="tab-btn[^"]*" data-tab="(\w+)"/g)].map(m => mk(m[1], true));
+
+  // Node 22 defines its own read-only `navigator`, so this has to be
+  // redefined rather than assigned.
+  Object.defineProperty(global, 'navigator', {
+    value: { userAgentData: { mobile: true }, userAgent: 'Mozilla/5.0 (Linux; Android 13)', maxTouchPoints: 5 },
+    configurable: true, writable: true,
+  });
+  global.window = global.window || {};
+  global.window.innerHeight = 800;
+  global.window.scrollTo = () => {};
+  // 800 tall layout viewport, but a bottom URL bar means only 670 is visible --
+  // the exact condition that broke the vh-based sizing on a real phone.
+  const vvListeners = [];
+  global.window.visualViewport = {
+    height: 670, offsetTop: 0,
+    addEventListener(t, fn){ vvListeners.push(fn); },
+    removeEventListener(){},
+    _fire(){ vvListeners.forEach(fn => fn()); },
+  };
+
+  const bodyClasses = new Set();
+  global.document.body = {
+    classList: {
+      add: c => bodyClasses.add(c),
+      contains: c => bodyClasses.has(c),
+      toggle: (c, force) => { force ? bodyClasses.add(c) : bodyClasses.delete(c); return bodyClasses.has(c); },
+      remove: c => bodyClasses.delete(c),
+    },
+  };
+  const cssVars = {};
+  global.document.documentElement = {
+    style: { setProperty(k,v){ cssVars[k] = v; }, getPropertyValue(k){ return cssVars[k]; } },
+  };
+  global.document.activeElement = null;
+  global.__cssVars = cssVars;
+  global.document.querySelectorAll = (sel) => {
+    if(sel === '.card[data-tab]') return panels;
+    if(sel === '.tab-btn') return buttons;
+    return [];
+  };
+
+  return { panels, buttons, bodyClasses };
 }

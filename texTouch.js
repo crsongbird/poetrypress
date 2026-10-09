@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, smoothField } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, smoothField, litK, litS } from './texCore.js';
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
 //   pitch   thread spacing (of the page)   tw     thread width (of the pitch)
@@ -259,17 +259,26 @@ export function genFoldGhost(w,h,amt,zoom,light,form){
   const H=new Float32Array(ww*wh);
   const depth=unit*0.004*zoom;
   // the long folds: a line through (px,py) at angle a; mountain or valley
+  // HOW it was folded, chosen by the seed: in half and half again; in thirds,
+  // like a letter; a letter then halved; or halved with a corner turned
+  // down. Folded by hand, so every fold sits off-centre and a little askew.
+  // (Each fold's offset moves it ACROSS the page — along its normal. An
+  // offset along the fold's own length, as before, moved nothing, which is
+  // why every fold used to cross the centre.)
   const nFolds=Math.max(1, Math.round(3*amt));
-  const folds=[];
-  let a0=Math.random()<0.5 ? 0 : Math.PI/2;
-  for(let k=0;k<nFolds;k++){
-    const a = k===0 ? a0 + (Math.random()-0.5)*0.12
-            : k===1 ? a0 + Math.PI/2 + (Math.random()-0.5)*0.15
-            : Math.random()*Math.PI;
-    const off = k<2 ? (Math.random()-0.5)*0.12 : (Math.random()-0.5)*0.8;
-    folds.push({ nx:-Math.sin(a), ny:Math.cos(a), c:(0.5+off*Math.cos(a))*ww*(-Math.sin(a)) + (0.5+off*Math.sin(a))*wh*Math.cos(a),
-                 s: Math.random()<0.5 ? 1 : -1, d: depth*(k<2 ? 1 : 0.5+Math.random()*0.5), reach: unit*(0.06+Math.random()*0.06) });
-  }
+  const a0=Math.random()<0.5 ? 0 : Math.PI/2, scheme=Math.floor(Math.random()*4);
+  const askew=()=>(Math.random()-0.5)*0.14, hand=s=>(Math.random()-0.5)*s, side=()=>Math.random()<0.5 ? 1 : -1;
+  const plan=[];                                                // [angle, offset (share of the page), strength]
+  if(scheme===0) plan.push([a0+askew(), hand(0.24), 1], [a0+Math.PI/2+askew(), hand(0.24), 1]);
+  else if(scheme===1) plan.push([a0+askew(), -1/6+hand(0.08), 1], [a0+askew()*0.6, 1/6+hand(0.08), 1]);
+  else if(scheme===2) plan.push([a0+askew(), -1/6+hand(0.08), 1], [a0+askew()*0.6, 1/6+hand(0.08), 1], [a0+Math.PI/2+askew(), hand(0.2), 0.8]);
+  else plan.push([a0+askew(), hand(0.26), 1], [a0+side()*Math.PI/4+askew(), side()*(0.3+Math.random()*0.12), 0.8]);
+  while(plan.length < nFolds) plan.push([Math.random()*Math.PI, hand(0.8), 0.5+Math.random()*0.5]);
+  plan.splice(nFolds);
+  const folds=plan.map(([a, off, str]) => {
+    const nx=-Math.sin(a), ny=Math.cos(a), px=ww*(0.5 + off*nx), py=wh*(0.5 + off*ny);
+    return { nx, ny, c: nx*px + ny*py, s: side(), d: depth*str, reach: unit*(0.06+Math.random()*0.06) };
+  });
   // the crumples: short creases whose ends fade into the sheet
   const nCrum=Math.round(70*crumple*Math.max(0.4, amt));
   const crum=[];
@@ -304,7 +313,7 @@ export function genFoldGhost(w,h,amt,zoom,light,form){
 // Someone set it down
 // mid-sentence and forgot it.
 // The ring is the proof.
-export function genCupRing(w,h,amt,zoom,light,tint){
+export function genCupRing(w,h,amt,zoom,light,tint,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const t = parseHex(tint || '#6B4A2F');
   // A dried coffee ring, lit. As a drop dries, the liquid flows outward and
@@ -350,17 +359,17 @@ export function genCupRing(w,h,amt,zoom,light,tint){
     const dn=Math.min(1, D[i]);
     if(dn<0.004) return [128,128,128];
     // the stain darkens toward its hue; the light lifts and shades the film
-    const lit=(L.light[i]/fl - 1)*dn*1.6, sh=(L.spec[i]-fs)*dn*180;
+    const lit=c=>(litK(L,i,0.4,M3,c)/fl - 1)*dn*1.6, sh=(L.spec[i]-fs)*dn*180, S=c=>sh*litS(M3,c);
     // from paper grey toward the stain's own hue as the film thickens
     const r=128 + (t.r - 128)*dn*0.9, g2=128 + (t.g - 128)*dn*0.9, b=128 + (t.b - 128)*dn*0.9;
-    return [clamp255(r + r*lit + sh), clamp255(g2 + g2*lit + sh), clamp255(b + b*lit + sh)];
+    return [clamp255(r + r*lit(0) + S(0)), clamp255(g2 + g2*lit(1) + S(1)), clamp255(b + b*lit(2) + S(2))];
   });
 }
 
 // It ran before it
 // set, so the thick edge tells you
 // which way the page leaned.
-export function genPouredWax(w,h,amt,zoom,light,tint,form){
+export function genPouredWax(w,h,amt,zoom,light,tint,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const visc=Math.max(0,Math.min(1, form==null ? 0.45 : form));
   const wax=parseHex(tint||'#7A2B2B');
@@ -411,10 +420,11 @@ export function genPouredWax(w,h,amt,zoom,light,tint,form){
   const fl=flat.light[0]||1, fs=flat.spec[0];
   return paintLit(w,h,div,ww,wh, i => {
     const k=L.light[i]/fl, m=M[i];
-    if(m<=0){ const v=128 + (k - 1)*90; return [clamp255(v), clamp255(v), clamp255(v)]; }   // the paper, with the wax's shadow on it
+    if(m<=0){ const v=128 + (k - 1)*90; return [clamp255(v), clamp255(v), clamp255(v)]; }   // the paper, with the wax's shadow on it (neutral: it blends)
+    const K=c=>litK(L,i,0.42,M3,c)/fl;
     const thin=1 - Math.min(1, H[i]/(thick*0.7));                // translucent where thin
     const glow=1 + 0.45*thin, sp=L.spec[i]*0.9*255;
-    const c=[wax.r*glow*k + sp, wax.g*glow*k + sp*0.92, wax.b*glow*k + sp*0.85];
+    const c=[wax.r*glow*K(0) + sp*litS(M3,0), wax.g*glow*K(1) + sp*0.92*litS(M3,1), wax.b*glow*K(2) + sp*0.85*litS(M3,2)];
     const g=128 + (k-1)*90;
     return [clamp255(g*(1-m) + c[0]*m), clamp255(g*(1-m) + c[1]*m), clamp255(g*(1-m) + c[2]*m)];
   });
@@ -583,7 +593,7 @@ const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
  * trough with shadow, overhead light flattens it all to glare.
  * RIPPLE SIZE · WIND (sharper, straighter, more asymmetric ripples) · DUNE HEIGHT
  */
-export function genDunes(w,h,amt,zoom,light,tint1,tint2,form){
+export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,M3){
   amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
   const swell=Math.max(0,Math.min(1, form==null ? 0.4 : form));
   const sand=parseHex(tint1||'#D9B98C'), sun=parseHex(tint2||'#FFF1D8');
@@ -602,8 +612,8 @@ export function genDunes(w,h,amt,zoom,light,tint1,tint2,form){
     H[i] = prof*lambda*0.16*crest*(0.55 + 0.6*Af[i]) + swell*unit*0.10*Df[i] + (grain(x/ww,y/wh)-0.5)*0.6;
   }
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.08, shadow:0.75, ao:0.25, ambient:0.38 });
-  return paintLit(w,h,div,ww,wh, i => { const k=L.light[i], s=L.spec[i]*0.4;
-    return [clamp255(sand.r*k*1.05 + sun.r*s), clamp255(sand.g*k*1.05 + sun.g*s), clamp255(sand.b*k*1.05 + sun.b*s)]; });
+  return paintLit(w,h,div,ww,wh, i => { const K=c=>litK(L,i,0.38,M3,c), s=L.spec[i]*0.4, S=c=>s*litS(M3,c);
+    return [clamp255(sand.r*K(0)*1.05 + sun.r*S(0)), clamp255(sand.g*K(1)*1.05 + sun.g*S(1)), clamp255(sand.b*K(2)*1.05 + sun.b*S(2))]; });
 }
 
 /**
@@ -613,7 +623,7 @@ export function genDunes(w,h,amt,zoom,light,tint1,tint2,form){
  * gold a bright metallic one, coloured by the gold itself.
  * SEAM WIDTH · FRACTURES · GLOSS
  */
-export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form){
+export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const gloss=Math.max(0,Math.min(1, form==null ? 0.7 : form));
   const glaze=parseHex(tint1||'#E8E1D3'), gold=parseHex(tint2||'#D4AF37');
@@ -646,9 +656,10 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form){
   // glazed pottery glows: more fill light than raw stone or sand gets
   const L=lightHeights(H, ww, wh, { light, relief:1.2, gloss:0.35 + gloss*0.6, shadow:0.5, ao:0.3, ambient:0.66 });
   return paintLit(w,h,div,ww,wh, i => {
-    const k=L.light[i], s=L.spec[i], g=Math.min(1, G[i]*1.6);
-    const gc=[gold.r*(0.35+0.75*k) + 255*s*1.2, gold.g*(0.35+0.75*k) + 235*s*1.2, gold.b*(0.35+0.75*k) + 170*s*1.0];
-    const cc=[glaze.r*k*1.12 + 255*s*gloss, glaze.g*k*1.12 + 255*s*gloss, glaze.b*k*1.12 + 255*s*gloss];
+    const k0=litK(L,i,0.66,M3,0), k1=litK(L,i,0.66,M3,1), k2=litK(L,i,0.66,M3,2), s=L.spec[i], g=Math.min(1, G[i]*1.6);
+    const s0=s*litS(M3,0), s1=s*litS(M3,1), s2=s*litS(M3,2);
+    const gc=[gold.r*(0.35+0.75*k0) + 255*s0*1.2, gold.g*(0.35+0.75*k1) + 235*s1*1.2, gold.b*(0.35+0.75*k2) + 170*s2*1.0];
+    const cc=[glaze.r*k0*1.12 + 255*s0*gloss, glaze.g*k1*1.12 + 255*s1*gloss, glaze.b*k2*1.12 + 255*s2*gloss];
     return [clamp255(cc[0]*(1-g) + gc[0]*g), clamp255(cc[1]*(1-g) + gc[1]*g), clamp255(cc[2]*(1-g) + gc[2]*g)];
   });
 }
@@ -659,7 +670,7 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form){
  * The stone takes the light and casts shadow; DAMPNESS darkens and glosses
  * the stone and deepens the moss.  STONE SCALE · MOSS · DAMPNESS
  */
-export function genMoss(w,h,amt,zoom,light,tint1,tint2,form){
+export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3){
   amt=(amt==null?0.45:amt); zoom=(zoom==null?1:zoom);
   const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form));
   const stone=parseHex(tint1||'#8A8579'), moss=parseHex(tint2||'#5F7E34');
@@ -684,9 +695,9 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
   const sd=1 - damp*0.35, mg=1 + damp*0.25;
   return paintLit(w,h,div,ww,wh, i => {
-    const k=L.light[i], m=M[i], s=L.spec[i]*(1-m);               // moss is matte; only wet stone shines
-    const sc=[stone.r*sd*k + 255*s, stone.g*sd*k + 255*s, stone.b*sd*k + 255*s];
-    const mc=[moss.r*k*0.95, moss.g*k*mg, moss.b*k*0.9];
+    const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1-m);   // moss is matte; only wet stone shines
+    const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
+    const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     return [clamp255(sc[0]*(1-m) + mc[0]*m), clamp255(sc[1]*(1-m) + mc[1]*m), clamp255(sc[2]*(1-m) + mc[2]*m)];
   });
 }

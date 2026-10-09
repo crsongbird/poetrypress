@@ -20,7 +20,7 @@ const T = await import(new URL('../textureGenerators.js', import.meta.url));
 const GEN = 1536, VIEW = 300;       // generate large, view small — counts depend on real size
 async function tile(o){
   const caps = T.capsFor(o.type), blend = o.blend || caps.blends[0];
-  const tex = T.getTextureCanvas(o.type, GEN, GEN, { accent1: o.a1||'#d9a6b3', accent2: o.a2||'#9B7FE8', seed: o.seed||4242, p1: o.p1, p2: o.p2, light: o.light||315, tint1: o.tint1||null, blend });
+  const tex = T.getTextureCanvas(o.type, GEN, GEN, { accent1: o.a1||'#d9a6b3', accent2: o.a2||'#9B7FE8', seed: o.seed||4242, p1: o.p1, p2: o.p2, p3: o.p3, p4: o.p4, p5: o.p5, light: o.light||315, tint1: o.tint1||null, blend });
   const page = createCanvas(GEN, GEN), c = page.getContext('2d');
   c.fillStyle = o.bg || '#1d1a1a'; c.fillRect(0,0,GEN,GEN);
   c.globalCompositeOperation = blend; c.globalAlpha = o.opacity ?? 0.8; c.drawImage(tex,0,0);

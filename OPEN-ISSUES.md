@@ -15,7 +15,10 @@ lit by the dial — diffuse, a specular per material, cast shadows (soft,
 longer as the light lowers; none overhead), occlusion in crevices. Dune
 Ripples, Kintsugi, Moss on Stone and Rain on Glass use it. Next: bring the
 other lit textures onto it (Cold Press, Fractured Glaze, Linen, Sigil
-relief). Facet Field, Cup Ring, Fold Ghost and Poured Wax are on it, and a texture
+relief). Facet Field, Cup Ring, Fold Ghost and Poured Wax are on it,
+and it now takes detail NORMAL MAPS and MATERIAL hues (Highlight, Shade);
+next: give textures normal-map detail where heights are awkward (paper
+tooth, weave, crazing), and a per-material gloss where one gloss won't do. and a texture
 can carry its own default light (Facet Field starts overhead). Watch the cost on phones:
 these take ~0.2–0.6 s at preview size and up to ~2 s at export here,
 in the worker (the page stays responsive).
@@ -77,6 +80,7 @@ in the worker (the page stays responsive).
 - The occasional blank page: frames now draw into a back buffer and reach
   the page only when whole; a failed frame keeps the last picture and
   retries. Does it still happen on the Moto G Stylus (2022)?
+- The material pickers (Highlight Hue, Shade Hue) under a lit texture's hues.
 - Chrome vs Firefox speed, now that the page canvas is a CPU canvas (Chrome
   was slower); and that the 'two pages at once' ghost never returns.
 - The colour picker's Done; undo / redo; the preview's scale steps.

@@ -32,7 +32,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU } from './texCore.js';
+import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
@@ -228,7 +228,7 @@ export const TEXTURE_CAPS = {
   crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
-  tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, lightTilt:0, tints:2,
+  tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
                    tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
   cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -241,16 +241,16 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Spot Hue'], tintDefaults:['#8A6A3C'] },
   foldghost:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1,
+  cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
-  wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1,
+  wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
-                   light:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'] },
+                   light:true, material:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'] },
   kintsugi:      { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
-                   light:true, tints:2, tintLabels:['Glaze Hue','Gold Hue'], tintDefaults:['#E8E1D3','#D4AF37'] },
+                   light:true, material:true, tints:2, tintLabels:['Glaze Hue','Gold Hue'], tintDefaults:['#E8E1D3','#D4AF37'] },
   moss:          { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
-                   light:true, tints:2, tintLabels:['Stone Hue','Moss Hue'], tintDefaults:['#8A8579','#5F7E34'] },
+                   light:true, material:true, tints:2, tintLabels:['Stone Hue','Moss Hue'], tintDefaults:['#8A8579','#5F7E34'] },
 };
 
 
@@ -316,7 +316,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'embers'){
     result = genEmbers(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'tessellate'){
-    result = genTessellate(w,h,amt,zoom,light,tint1,tint2);
+    result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat);
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
@@ -346,15 +346,15 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'foldghost'){
     result = genFoldGhost(w,h,amt,zoom,light,form);
   } else if(type === 'cupring'){
-    result = genCupRing(w,h,amt,zoom,light,tint1);
+    result = genCupRing(w,h,amt,zoom,light,tint1,extra.mat);
   } else if(type === 'wax'){
-    result = genPouredWax(w,h,amt,zoom,light,tint1,form);
+    result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat);
   } else if(type === 'dunes'){
-    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form);
+    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
   } else if(type === 'kintsugi'){
-    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form);
+    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form);
+    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat);
   } else if(type === 'landscape'){
     result = genLandscape(w,h,amt,zoom);
   } else if(type === 'cityscape'){
@@ -459,6 +459,8 @@ export function storeTexture(key, result){
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
+  // material hues (lit textures): only when set — white is "none"
+  const t3 = (opts.tint3 && !noMaterialHue(opts.tint3)) ? opts.tint3 : null, t4 = (opts.tint4 && !noMaterialHue(opts.tint4)) ? opts.tint4 : null;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
   // how low the light is, 0–100 (100: the horizon, as it always was)
@@ -476,12 +478,13 @@ function describeRequest(type, w, h, opts){
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
-            + (blend ? `_b${blendFamily(blend)}` : '');
-  return { type, key, defs, v1, v2, v3, v4, v5, scale, lightTilt };
+            + (blend ? `_b${blendFamily(blend)}` : '')
+            + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '');
+  return { type, key, t3, t4, defs, v1, v2, v3, v4, v5, scale, lightTilt };
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt } = req;
+  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt, t3, t4 } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -519,7 +522,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread }))));
+  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, mat: materialOf(t3, t4) }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

@@ -23,7 +23,9 @@ function check(label, cond){
   else console.log('ok:', label);
 }
 
-const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+// the page's own script: the texture worker's embedded copy of the generators is a separate script
+const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8')
+  .replace(/<script type="text\/js-worker" id="vellum-texture-worker">[\s\S]*?<\/script>/, '');
 
 // the bundled script is the last <script> block with no src attribute
 const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
@@ -54,7 +56,9 @@ check('bundle populates the font dropdown', registry['fontFamily'] && registry['
 {
   const { readFileSync: rf } = await import('fs');
   const buildSrc = rf(new URL('../build.mjs', import.meta.url), 'utf8');
-  const mods = [...buildSrc.matchAll(/^\s*'([\w]+\.js)',/gm)].map(m => m[1]);
+  // the PAGE's module list only (the texture worker has a list of its own)
+  const pageList = buildSrc.slice(buildSrc.indexOf('const ORDER = ['), buildSrc.indexOf('];', buildSrc.indexOf('const ORDER = [')));
+  const mods = [...pageList.matchAll(/^\s*'([\w]+\.js)',/gm)].map(m => m[1]);
   const owner = new Map(), clashes = [];
   for(const f of mods){
     const src = rf(new URL('../' + f, import.meta.url), 'utf8');
@@ -73,7 +77,9 @@ check('bundle populates the font dropdown', registry['fontFamily'] && registry['
 {
   const { readFileSync: rf } = await import('fs');
   const buildSrc = rf(new URL('../build.mjs', import.meta.url), 'utf8');
-  const order = [...buildSrc.matchAll(/^\s*'([\w]+\.js)',/gm)].map(m => m[1]);
+  // the PAGE's module list only (the texture worker has a list of its own)
+  const orderBlock = buildSrc.slice(buildSrc.indexOf('const ORDER = ['), buildSrc.indexOf('];', buildSrc.indexOf('const ORDER = [')));
+  const order = [...orderBlock.matchAll(/^\s*'([\w]+\.js)',/gm)].map(m => m[1]);
   const pos = new Map(order.map((f, i) => [f, i]));
   const late = [];
   for(const f of order){
@@ -86,9 +92,21 @@ check('bundle populates the font dropdown', registry['fontFamily'] && registry['
   check('every module is bundled after the modules it imports', late.length === 0);
   if(late.length) console.log('   ' + late.join('\n   '));
   const onDisk = rf(new URL('../build.mjs', import.meta.url), 'utf8') && (await import('fs')).readdirSync(new URL('..', import.meta.url)).filter(f => /^[\w]+\.js$/.test(f));
-  const unbundled = onDisk.filter(f => !pos.has(f));
+  // textureWorker.js is bundled into the texture worker, not the page
+  const unbundled = onDisk.filter(f => !pos.has(f) && f !== 'textureWorker.js');
   check('every module on disk is in the bundle', unbundled.length === 0);
   if(unbundled.length) console.log('   not bundled:', unbundled.join(', '));
+}
+
+// ---- the texture worker ----
+{
+  const html2 = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+  const m = html2.match(/<script type="text\/js-worker" id="vellum-texture-worker">\n([\s\S]*?)\n<\/script>/);
+  check('the built page carries the texture worker, inert until the service starts it', !!m);
+  let parses = false; try { new Function(m ? m[1] : 'x x'); parses = true; } catch(e){}
+  check('the embedded worker code parses on its own', parses);
+  check('the worker ends with its own message handler', !!m && /self\.onmessage = \(e\) =>/.test(m[1]));
+  check('the page bundle never uses import.meta (a plain script, where it would not parse)', !/import\.meta/.test(html2.replace(m ? m[0] : '', '')));
 }
 
 console.log();

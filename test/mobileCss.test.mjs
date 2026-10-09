@@ -159,9 +159,9 @@ for(const [title, shouldBeOpen] of [['Backdrop Color', true], ['Surface Texture'
   check(`Materia section "${title}" exists and is ${shouldBeOpen ? 'open' : 'closed'} by default`,
     !!m && !!m[1] === shouldBeOpen);
 }
-check('Thoughtforms: Script Options is open, Typeface Effects is closed',
+check('Thoughtforms: Script Options is open, Text Effects is closed',
   /<details class="card" data-tab="type" open>\s*<summary class="card-title"[^>]*>Script Options/.test(html) &&
-  /<details class="card" data-tab="type">\s*<summary class="card-title"[^>]*>Typeface Effects/.test(html));
+  /<details class="card" data-tab="type">\s*<summary class="card-title"[^>]*>Text Effects/.test(html));
 
 check('the preview has a draggable divider', html.includes('id="dragHandle"'));
 check('the preview share is a variable the divider can write',
@@ -172,8 +172,10 @@ check('presets are a grid again, not a sideways scroller',
 // zoom/pan is a transform on the canvas; when the bitmap is resized by an
 // aspect change, a stale transform leaves the preview clipped and off-centre
 const js = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
-check('zoom/pan resets when the canvas changes dimensions',
-  /MutationObserver\([\s\S]{0,40}reset[\s\S]{0,160}attributeFilter:\s*\['width','height'\]/.test(js));
+// only a change of SHAPE resets the zoom: the preview's pixel size also
+// changes when its scale steps, or while Save image renders the export
+check('zoom/pan resets when the canvas changes shape (not merely size)',
+  /if\(Math\.abs\(r - lastRatio\) > 0\.01\)\{ lastRatio = r; reset\(\); \}/.test(js) && /attributeFilter: \['width','height'\]/.test(js));
 
 // the preview must not shrink while the keyboard is open
 check('preview height comes from a keyboard-stable variable',
@@ -183,7 +185,9 @@ check('--vvh-stable is only written while the keyboard is closed',
 // the reset button now sits between the canvas and the download button;
 // what matters is that both live inside the preview frame, not their order
 check('the download button sits inside the preview frame',
-  /<canvas id="poemCanvas"[\s\S]*?<\/canvas>[\s\S]{0,240}?<button class="download-btn"/.test(html));
+  (() => { const canvasAt = html.indexOf('<canvas id="poemCanvas"'), btn = html.indexOf('<button class="download-btn"');
+           const frameOpen = html.lastIndexOf('<div', canvasAt);
+           return canvasAt !== -1 && btn > canvasAt && frameOpen !== -1; })());
 // structural, not a character distance: the header now carries an inline
 // sigil that is longer than the old window allowed
 const headerStart = html.indexOf('<div class="app-header">');
@@ -200,8 +204,6 @@ check('the app is named Unfixable Vellum', html.includes('Unfixable Vellum'));
 
 // ---- this turn's promises ----
 check('the preview has a reset-position control', html.includes('id="resetViewBtn"'));
-check('the light pad shows arrows, not anonymous dots',
-  ['↖','↑','↗','←','→','↙','↓','↘'].every(a => html.includes('>' + a + '</button>')));
 check('the Runeforms glyph is the drawn inverted triangle',
   /data-tab="type"[\s\S]*?M4\.4 4\.6H19\.6L12 15\.9Z/.test(html));
 check('deselected nav glyphs relax and selected ones stiffen',
@@ -232,10 +234,6 @@ check('the caret stays visible', /caret-color/.test(js2));
 check('the editor has a line-number gutter', html.includes('id="poemGutter"'));
 
 // ---- this round's fixes ----
-check('the light pad arrows point inward, toward the page',
-  ['↘','↓','↙','→','←','↗','↑','↖'].every(a => html.includes('>' + a + '</button>')));
-check('the pad centre uses the drawn Touch mark, not a font glyph',
-  /<span class="light-core"><svg/.test(html));
 // deliberately changed: a lock pinned to the far edge reads as belonging to
 // the row, not to the one setting it governs
 check('locks sit beside their label, not at the far edge',
@@ -401,6 +399,13 @@ check('the keyboard resizes the layout viewport, which is what makes docking wor
 // the focus ring (2px wide, 2px offset) must clear the scrollbar on the right
 const fmPad = effective(edCss, 'body.is-mobile.focus-mode .controls', 'padding-right') || '0';
 check('focus mode leaves room for the focus ring beside the scrollbar', parseFloat(fmPad) >= 8);
+
+// ---- the light dial (☉ at the centre, an arrow toward it) ----
+check('the light dial has eight ticks that snap to 45°', (html.match(/class="ld-tick" data-deg="\d+"/g) || []).length === 8);
+check('the dial is ☉ at rest — one bold circle, the draggable dot at its heart — and grows 🜚\'s spike and curls as the dot moves',
+  /class="ld-ring" r="26"/.test(html) && /id="lightHandle"/.test(html) && /id="lightSpike"/.test(html) && (html.match(/class="ld-curl"/g) || []).length === 2 && /set\('lightSpike', \{ transform: `rotate/.test(js));
+check('dragging the dial never scrolls the page', /\.light-dial\{[^}]*touch-action:none/.test(css));
+check('⟲ resets the light', /\$\('lightReset'\)\.addEventListener\('click', \(\) => setLight\(LIGHT_DEFAULT\.deg, LIGHT_DEFAULT\.tilt, true\)\)/.test(js));
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

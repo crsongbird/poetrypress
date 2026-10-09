@@ -48,6 +48,7 @@ const skip = new Set([
                        // storing the index would break whenever FONTS changes
   'grimoireList',      // a picker over saved records, not a setting
   'advancedJson',      // the settings pane itself; capturing it would nest
+  'fullPreview',       // a developer's comparison switch, not part of a look
   'uiTheme',           // how YOU like the app to look, not part of a saved
                        // page — its own localStorage key, asserted below
 ]);
@@ -84,14 +85,14 @@ check('lock buttons are tracked so their state can be shown', /lockButtons/.test
 
 // TDZ guard: the serializer runs during boot, so anything it reads must be
 // declared above it. This broke twice.
-const lockDecl = ev.indexOf('const locked = new Set()');
+const lockDecl = ev.indexOf('const state = {');
 const serPos = ev.indexOf('function serializeCurrentSettings');
-check('lock state is declared before the serializer that reads it',
+check('the app state (locks included) is declared before the serializer that reads it',
   lockDecl !== -1 && lockDecl < serPos);
 
 // page size, in both of its forms
 check('the chosen aspect survives save/load',
-  /aspect: currentAspect/.test(serialize) && /s\.aspect/.test(restore));
+  /aspect: state\.page\.aspect/.test(serialize) && /s\.aspect/.test(restore));
 check('a custom resolution survives save/load',
   /customW:/.test(serialize) && /customH:/.test(serialize) &&
   /s\.customW/.test(restore) && /s\.customH/.test(restore));
@@ -127,8 +128,8 @@ check('no control is persisted both by hand and by the table',
 const norm = v => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v) ? v.toLowerCase()
                : v == null ? v : String(v);
 const vals = { borderGradientToggle:true, borderColor2Hex:'#112233', borderBloom:'73',
-  vignetteCx:'12', typeEffect:'bloom', typeEffectAngle:'212', typeEffectColorHex:'#abcdef',
-  typeEffectGrain:'33' };
+  vignetteCx:'12', fx1Type:'glow', fx1Angle:'212', fx1Color:'#abcdef',
+  fx2K2:'33' };
 for(const [id, v] of Object.entries(vals)){
   if(typeof v === 'boolean') registry[id].checked = v; else registry[id].value = v;
 }
@@ -147,7 +148,7 @@ const lost = Object.keys(saved).filter(k =>
 check('everything saved comes back after a load', lost.length === 0);
 if(lost.length) console.log('   lost:', lost.map(k => k + ' ' + JSON.stringify(saved[k]) + '->' + JSON.stringify(again[k])).join(', '));
 check('the table fields specifically survive',
-  saved.typeEffect === 'bloom' && again.typeEffect === 'bloom' && again.borderGradientToggle === true);
+  saved.fx1Type === 'glow' && again.fx1Type === 'glow' && again.borderGradientToggle === true);
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

@@ -140,7 +140,8 @@ precision highp float; precision highp int;
 uniform highp sampler2D uH;
 uniform ivec2 uSize; uniform vec3 uL, uHalf;
 uniform float uRelief, uShine, uSpecK, uShadow, uAO, uAmbient, uRise, uStepX, uStepY;
-uniform int uSteps, uStride, uDoShadow, uR;
+uniform int uSteps, uStride, uDoShadow, uR, uHasN, uMode;
+uniform highp sampler2D uN;
 out vec4 o;
 float at(ivec2 p){ p = clamp(p, ivec2(0), uSize - 1); return texelFetch(uH, p, 0).r; }
 void main(){
@@ -148,6 +149,7 @@ void main(){
   float h0 = at(p)*uRelief;
   float gx = (at(p + ivec2(1,0)) - at(p - ivec2(1,0)))*0.5*uRelief;
   float gy = (at(p + ivec2(0,1)) - at(p - ivec2(0,1)))*0.5*uRelief;
+  if(uHasN == 1){ vec3 dn = texelFetch(uN, p, 0).xyz; float dz = max(dn.z, 0.05); gx -= dn.x/dz; gy -= dn.y/dz; }
   float nl = sqrt(gx*gx + gy*gy + 1.0);
   vec3 n = vec3(-gx/nl, -gy/nl, 1.0/nl);
   float diffuse = max(0.0, dot(n, uL));
@@ -169,7 +171,9 @@ void main(){
   float light = (uAmbient + (1.0 - uAmbient)*diffuse*(1.0 - uShadow*(1.0 - lit)))*(1.0 - occl);
   float nh = max(0.0, dot(n, uHalf));
   float spec = pow(nh, uShine)*uSpecK*(0.35 + 0.65*lit);
-  float a = clamp(light*0.5, 0.0, 1.0)*65535.0, b = clamp(spec, 0.0, 1.0)*65535.0;
+  float dsh = diffuse*(1.0 - uShadow*(1.0 - lit));
+  float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
+  float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
   float ah = floor(a/256.0), bh = floor(b/256.0);
   o = vec4(ah/255.0, (a - ah*256.0)/255.0, bh/255.0, (b - bh*256.0)/255.0);
 }`;
@@ -177,6 +181,9 @@ let GPU = undefined;             // undefined: not tried yet; null: not availabl
 /** Lighting on the GPU may be switched off (tools, or to compare with the CPU). */
 export let GPU_LIGHT = true;
 export function setGpuLight(on){ GPU_LIGHT = !!on; }
+// for tests only: allow software-emulated WebGL (normally refused: it is slower than the CPU)
+let GPU_SOFT_OK = false;
+export function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; } }
 /** What lit this texture: 'gpu', or 'cpu' (no WebGL2, an emulator, or switched off). */
 export function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }
 function gpu(){
@@ -192,7 +199,7 @@ function gpu(){
     // when the renderer says it's an emulator.
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
     const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    if(/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
+    if(!GPU_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
     const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
       if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
     const prog = gl.createProgram();
@@ -206,7 +213,7 @@ in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
     const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = n => gl.getUniformLocation(prog, n);
-    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR'].map(n => [n, U(n)])) };
+    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode'].map(n => [n, U(n)])) };
   } catch(e){ GPU = null; }
   return GPU;
 }
@@ -233,12 +240,27 @@ function gpuLightHeights(H, ww, wh, P){
     gl.uniform1f(u.uShadow, P.shadow); gl.uniform1f(u.uAO, P.ao); gl.uniform1f(u.uAmbient, P.ambient);
     gl.uniform1f(u.uRise, P.rise); gl.uniform1f(u.uStepX, P.stepX); gl.uniform1f(u.uStepY, P.stepY);
     gl.uniform1i(u.uSteps, P.steps); gl.uniform1i(u.uStride, P.stride); gl.uniform1i(u.uDoShadow, P.doShadow ? 1 : 0); gl.uniform1i(u.uR, P.R);
-    gl.viewport(0, 0, ww, wh); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    const px = new Uint8Array(ww*wh*4); gl.readPixels(0, 0, ww, wh, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex);
+    // a detail normal map, if given, on its own texture unit
+    let nTex = null;
+    if(P.N){
+      nTex = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, nTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB32F, ww, wh, 0, gl.RGB, gl.FLOAT, P.N);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.uniform1i(u.uN, 1); gl.uniform1i(u.uHasN, 1);
+    } else { gl.uniform1i(u.uN, 0); gl.uniform1i(u.uHasN, 0); }
+    gl.viewport(0, 0, ww, wh);
+    // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion
+    const read = mode => { gl.uniform1i(u.uMode, mode); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      const px = new Uint8Array(ww*wh*4); gl.readPixels(0, 0, ww, wh, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
+    const px = read(0), px1 = P.comp ? read(1) : null;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex); if(nTex) gl.deleteTexture(nTex);
     const light = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
     for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ light[i] = (px[q]*256 + px[q+1])/65535*2; spec[i] = (px[q+2]*256 + px[q+3])/65535; }
-    return { light, spec };
+    if(!px1) return { light, spec };
+    const diffuse = new Float32Array(ww*wh), occl = new Float32Array(ww*wh);
+    for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ diffuse[i] = (px1[q]*256 + px1[q+1])/65535; occl[i] = (px1[q+2]*256 + px1[q+3])/65535; }
+    return { light, spec, diffuse, occl };
   } catch(e){ GPU = null; return null; }
 }
 
@@ -261,9 +283,18 @@ function gpuLightHeights(H, ww, wh, P){
  *   opts.shadow     0..1, how dark cast shadows are
  *   opts.ao         0..1, how dark crevices are
  *   opts.ambient    the light everything gets regardless (default 0.35)
+ *   opts.normals    a DETAIL NORMAL MAP (Float32Array, x y z per pixel): its
+ *                   slopes add to the heights' (derivative blending), so fine
+ *                   detail can be given as normals while the heights still
+ *                   cast the shadows and darken the crevices
+ *   opts.components also return { diffuse, occl } separately (for materials
+ *                   that need the ambient and direct light apart)
+ * Always returned: `flat`, the light open flat ground gets (for materials:
+ * what counts as "in shadow" — see materialOf / litK / litS).
  */
 export function lightHeights(H, ww, wh, opts = {}){
-  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, ambient = 0.35 } = opts;
+  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, ambient = 0.35, normals = null, components = false } = opts;
+  const N = normals && normals.length >= ww*wh*3 ? normals : null;
   const { lx, ly } = lightVec(light);
   const tilt = Math.min(1, Math.hypot(lx, ly));
   // toward the light: lightVec points the way light travels, so reverse it.
@@ -282,10 +313,11 @@ export function lightHeights(H, ww, wh, opts = {}){
   // on the GPU when it's there (the same maths, per pixel, at once)
   if(GPU_LIGHT && ww*wh >= 4096){
     const g = gpuLightHeights(H, ww, wh, { Lx, Ly, Lz, hx, hy, hz, hl, shininess, specK, relief, shadow, ao, ambient, rise,
-      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4 });
-    if(g) return g;
+      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, comp: components });
+    if(g){ g.flat = ambient + (1 - ambient)*Lz; return g; }
   }
   const out = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
+  const dif = components ? new Float32Array(ww*wh) : null, occA = components ? new Float32Array(ww*wh) : null;
   // occlusion compares each height with its neighbourhood's (a box average)
   const R = 4, avg = new Float32Array(ww*wh);
   if(ao > 0){
@@ -297,7 +329,9 @@ export function lightHeights(H, ww, wh, opts = {}){
   }
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const i = y*ww + x, h0 = H[i]*relief;
-    const gx = (at(x+1, y) - at(x-1, y))*0.5*relief, gy = (at(x, y+1) - at(x, y-1))*0.5*relief;
+    let gx = (at(x+1, y) - at(x-1, y))*0.5*relief, gy = (at(x, y+1) - at(x, y-1))*0.5*relief;
+    // a detail normal map adds its slopes to the height's (derivative blending)
+    if(N){ const q = i*3, dz = Math.max(0.05, N[q+2]); gx -= N[q]/dz; gy -= N[q+1]/dz; }
     const nl = Math.hypot(gx, gy, 1), nx = -gx/nl, ny = -gy/nl, nz = 1/nl;
     const diffuse = Math.max(0, nx*Lx + ny*Ly + nz*Lz);
     // the cast shadow: march toward the light; anything rising above the ray blocks it
@@ -312,10 +346,13 @@ export function lightHeights(H, ww, wh, opts = {}){
     }
     const occl = ao > 0 ? Math.max(0, Math.min(1, (avg[i] - H[i])*relief*0.25)) * ao : 0;
     out[i] = (ambient + (1 - ambient)*diffuse*(1 - shadow*(1 - lit))) * (1 - occl);
+    if(components){ dif[i] = diffuse*(1 - shadow*(1 - lit)); occA[i] = occl; }
     const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
     spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
   }
-  return { light: out, spec };
+  // flat: the light on open, flat ground — what "in shadow" is measured against
+  const flat = ambient + (1 - ambient)*Lz;
+  return components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
 }
 
 
@@ -403,3 +440,36 @@ export function smoothField(ww, wh, step, fn){
   return out;
 }
 
+// ---------- materials ----------
+// A lit surface's colour, channel by channel:
+//   albedo × (shade·ambient + (1 − ambient)·diffuse) × (1 − occlusion)  +  highlight × specular
+// SHADE is the colour the shadows fill with (the sky's light, bouncing);
+// HIGHLIGHT the colour of the shine. White for both is the plain lighting, so
+// a texture with no material colours set draws exactly as before.
+const isWhiteHex = h => !h || /^#?(f{3}|f{6})$/i.test(String(h).trim());
+// a hue at the brightness of white: the colour cast without darkening (a deep
+// blue Shade Hue turns the shadows blue, not the whole surface grey)
+const rgb01 = hex => { const c = parseHex(hex), v = [c.r/255, c.g/255, c.b/255];
+  const lum = Math.max(0.05, 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]);
+  return v.map(x => Math.min(2.5, x/lum)); };
+/** The material from the Highlight and Shade hues — null when both are white (nothing to do). */
+export function materialOf(highlight, shade){
+  if(isWhiteHex(highlight) && isWhiteHex(shade)) return null;
+  return { hi: isWhiteHex(highlight) ? [1, 1, 1] : rgb01(highlight), sh: isWhiteHex(shade) ? [1, 1, 1] : rgb01(shade) };
+}
+/** The light reaching pixel i in channel c (0 r, 1 g, 2 b). With no material,
+ *  lightHeights' own `light`. With one, the SHADE hue colours what is in
+ *  shadow — darker than open, flat ground (L.flat): cast shadows, crevices,
+ *  slopes turned away — the more, the deeper the shadow; lit faces keep their
+ *  own colour. (`ambient` is kept for callers; the shadow depth comes from L.) */
+export function litK(L, i, ambient, M, c){
+  const k = L.light[i];
+  if(!M) return k;
+  // a shadow half as bright as open ground takes the shade hue fully
+  const deep = Math.max(0, Math.min(1, 2*(L.flat - k)/L.flat));
+  return k*(1 + (M.sh[c] - 1)*deep);
+}
+/** The highlight's colour in channel c (1 with no material). */
+export function litS(M, c){ return M ? M.hi[c] : 1; }
+/** Whether a highlight/shade hue counts as unset (white). */
+export function noMaterialHue(h){ return isWhiteHex(h); }

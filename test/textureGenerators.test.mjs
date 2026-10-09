@@ -14,10 +14,11 @@ installCanvasMock();
 const { getTextureCanvas } = await import('../textureGenerators.js');
 
 const TEXTURE_TYPES = [
-  'grain','paper','noise','waterspots','canvas','clouds','flowers','astral',
-  'inkbleed','crackedglaze','bokeh','embers','tessellate','snow','leaves',
-  'magicparticles','rainstreaks','leather','halftone','brushstrokes',
-  'alienSurface','habitableSurface',
+  'clouds','bokeh','astral','magicparticles','embers','snow',
+  'grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks',
+  'sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate',
+  'aurora','hatch','cards',
+  'linen','coldpress','foxing','foldghost','cupring','wax','whorl',
 ];
 const SIZES = [[512,512],[3072,3072],[2304,4096],[64,64]];
 
@@ -28,7 +29,7 @@ for(const type of TEXTURE_TYPES){
     const [w,h] = SIZES[total % SIZES.length];
     total++;
     try{
-      const canvas = getTextureCanvas(type, w, h, '#c9a876', '#7a8ca3', false, seed);
+      const canvas = getTextureCanvas(type, w, h, { accent1: '#c9a876', accent2: '#7a8ca3', seed });
       if(!canvas || canvas.width !== w || canvas.height !== h){
         throw new Error('unexpected canvas dimensions');
       }
@@ -42,8 +43,8 @@ console.log(`${total} generation calls across ${TEXTURE_TYPES.length} texture ty
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 
 // determinism check
-const s1 = getTextureCanvas('alienSurface', 400, 400, null, null, false, 424242);
-const s2 = getTextureCanvas('alienSurface', 400, 400, null, null, false, 424242);
+const s1 = getTextureCanvas('sigils', 400, 400, { seed: 424242 });
+const s2 = getTextureCanvas('sigils', 400, 400, { seed: 424242 });
 console.log('Determinism (same seed, same dims):', s1.getContext('2d')._stats.arcs === s2.getContext('2d')._stats.arcs ? 'PASS' : 'FAIL');
 
 // --- cache eviction check ---
@@ -52,7 +53,7 @@ console.log('Determinism (same seed, same dims):', s1.getContext('2d')._stats.ar
 let evictionThrew = null;
 try {
   for(let i=0;i<80;i++){
-    getTextureCanvas('grain', 100+i, 100+i, null, null, false, i);
+    getTextureCanvas('grain', 100+i, 100+i, { seed: i });
   }
 } catch(e){ evictionThrew = e; }
 console.log('80 distinct textures past the cache cap:', evictionThrew ? 'FAILED ('+evictionThrew.message+')' : 'PASS (no throw)');

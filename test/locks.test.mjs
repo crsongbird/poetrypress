@@ -23,7 +23,8 @@ const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
 
 // --- the ordering that broke it ---
-const fin = (ev.match(/\} finally \{[\s\S]*?\n  \}/) || [''])[0];
+// applyPreset's own finally block (Save image has one too, earlier in the file)
+const fin = (ev.slice(ev.indexOf('function applyPreset(')).match(/\} finally \{[\s\S]*?\n  \}/) || [''])[0];
 const syncPos = fin.indexOf('syncTextureTools');
 const restorePos = fin.indexOf('restoreLocked');
 check('applyPreset syncs before it restores locks',

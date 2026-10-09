@@ -23,13 +23,14 @@ const border = (cr.match(/if\(\$\('borderToggle'\)\.checked\)\{[\s\S]*?\n  \}/) 
 const vig = (cr.match(/if\(\$\('vignetteToggle'\)\.checked\)\{[\s\S]*?\n  \}/) || [''])[0];
 
 // ---- borders ----
-check('a border can be a radial gradient', /createRadialGradient/.test(border));
-check('the gradient takes multiple stops', /stops\.forEach/.test(border));
+check('a border gradient is linear, along its angle (45° is corner to corner)', /const ga = \(parseFloat\(\(\$\('borderGradientAngle'\)/.test(border) && /createLinearGradient\(W\/2 - Math\.cos\(ga\)/.test(border));
 // match real usage, not the comment explaining why it is not used
+// widening strokes on the bloom's own layer — never shadowBlur, which smears
+// one way and clips at the canvas edge, where a border lives
 check('bloom is drawn as widening passes, not shadowBlur',
-  /globalCompositeOperation = 'lighter'/.test(border) && !/ctx\.shadowBlur\s*=/.test(border));
+  /lx\.lineWidth = bThick \* \(1 \+ i \* EFFECTS\.bloomSpread \* bloom\)/.test(border) && !/\.shadowBlur\s*=/.test(border));
 // the constant moved into tunables.js; what matters is that it still divides
-check('bloom fades with each pass', /\(bloom \* EFFECTS\.bloomAlpha\) \/ i/.test(border));
+check('bloom fades with each pass', /\(bloom \* EFFECTS\.bloomAlpha \* 1\.6\) \/ i/.test(border));
 const { EFFECTS } = await import('../tunables.js');
 check('the bloom tunables are sane',
   EFFECTS.bloomPasses >= 1 && EFFECTS.bloomAlpha > 0 && EFFECTS.bloomAlpha < 1);
@@ -56,7 +57,7 @@ for(const key of ['borderGradientToggle','borderColor2','borderColor3','borderBl
 check('Seal Seed is gone from the markup', !html.includes('textureSeedLock'));
 check('nothing still reads it', !ev.includes('textureSeedLock'));
 check('the seed field\'s lock does that job now',
-  /locked\.has\('textureSeedValue'\)/.test(ev));
+  /state\.locks\.has\('textureSeedValue'\)/.test(ev));
 
 // ---- presets ----
 const gate = PRESETS.find(p => p.name === 'Gateway');
@@ -90,8 +91,10 @@ const deep = t => (css.match(new RegExp('\\[data-theme="' + t + '"\\]\\{[^}]*--b
 // Rosé: Faded Rosewood, deepened for contrast at Ruby's request — the ground
 // darker than the palette's 161414, the steps above it darkened less
 check('Rosé is Faded Rosewood, deepened', lum(deep('rose')) < lum('#161414'));
-check('Rosé\'s pinks are more saturated than before',
-  /\[data-theme="rose"\]\{[^}]*--accent:#e79cb1/.test(css));
+// later reddened a touch at Ruby's request (on desktop it read as candy):
+// the hue moved ~2° toward red, the saturation kept
+check('Rosé\'s pinks are more saturated than before, and a little redder',
+  /\[data-theme="rose"\]\{[^}]*--accent:#e2899f/.test(css) && /\[data-theme="rose"\]\{[^}]*--ui-selected:#ff6b92/.test(css));
 check('in every theme the selected tab has its own, more saturated colour',
   ['rose','aether','fathom','vellum'].every(t => new RegExp('\\[data-theme="' + t + '"\\]\\{[^}]*--ui-selected:#').test(css)) &&
   /\.tab-btn\.active svg\{ color:var\(--ui-selected/.test(css));

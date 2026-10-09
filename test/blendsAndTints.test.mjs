@@ -32,7 +32,9 @@ check('the remap is the one the code uses',
 // ---- every grey-ground texture offers all nine, first is its default ----
 const greys = Object.entries(T.TEXTURE_CAPS).filter(([, c]) => c.ground === 'grey');
 check('most textures are marked as grey-ground', greys.length >= 20);
-check('every grey-ground texture offers all nine blends', greys.every(([, c]) => c.blends.length === 9));
+const NINE = ['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'];
+// all nine standard blends, at least — a coloured texture may add Normal
+check('every grey-ground texture offers all nine blends', greys.every(([, c]) => NINE.every(b => c.blends.includes(b))));
 check('the Rorschach is ink on paper: multiply by default', T.TEXTURE_CAPS.inkbleed.blends[0] === 'multiply');
 // Aurora Veil: every blend is remapped EXCEPT screen, its default, so the
 // favourite's look is untouched (verified pixel-identical when this was added)
@@ -54,7 +56,7 @@ check('the lotus is painted in its own colours: petals and heart',
 check('only exactly-mid pixels — the ground — are left alone', /if\(v > 128\)\{[\s\S]*?\} else if\(v < 128\)\{/.test(core));
 const tinted = Object.entries(T.TEXTURE_CAPS).filter(([, c]) => c.genericTint);
 check('white over black is the identity: nothing changes until a hue is chosen',
-  /if\(lightIsWhite && darkIsBlack\) return src;/.test(core));
+  /const tint = !!\(lightHex \|\| darkHex\) && !\(lightIsWhite && darkIsBlack\);/.test(core) && /if\(!tint && !remap\) return src;/.test(core));
 check('generic tints default to white and black',
   tinted.every(([, c]) => c.tints === 2 && c.tintDefaults[0] === '#FFFFFF' && c.tintDefaults[1] === '#000000'));
 check('monochrome textures can be tinted', tinted.length >= 15);
@@ -72,9 +74,9 @@ check('Sleep Haze is smoke: lift, drag, and lit from the light',
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 check('changing an accent re-derives tints that come from it',
   /bindColorField\('accent1ColorHex', \(\)=>\{ followAccents\(\)/.test(ev));
-check('a locked tint is left alone', /locked\.has\(ids\[i\]\)\) continue;/.test(ev));
-check('a hand-picked tint stops following', /if\(!tintBySystem\) tintFollows\[0\] = false/.test(ev));
-check('the app writing a tint is not mistaken for a person', /tintBySystem = true;\s*setColorField/.test(ev));
+check('a locked tint is left alone', /state\.locks\.has\(ids\[i\]\)\) continue;/.test(ev));
+check('a hand-picked tint stops following', /if\(!state\.ui\.tintBySystem\) state\.ui\.tintFollows\[0\] = false/.test(ev));
+check('the app writing a tint is not mistaken for a person', /state\.ui\.tintBySystem = true;\s*setColorField/.test(ev));
 
 // ---- string table ----
 const strs = readFileSync(new URL('../strings.js', import.meta.url), 'utf8');
@@ -107,7 +109,7 @@ check('the generator uses exactly that crossover',
 check('waviness sets the scale of the caustic net', /tile=unit\*0\.3\*zoom/.test(touch));
 check('the net never repeats in a grid: points are bent by waves that share no period',
   /Math\.sin\(uy\*0\.73\+ph1\)/.test(touch) && !/%TAU/.test(touch));
-check('it computes at a quarter of full resolution', /const div=4, ww=Math\.ceil\(w\/div\)/.test(touch));
+check('it computes at a quarter of the EXPORT resolution, at any size', /const div=canonDiv\(4\), ww=Math\.ceil\(w\/div\)/.test(touch));
 check('it is neutral by default: the page supplies the colour',
   T.TEXTURE_CAPS.water.tintDefaults[0] === '#FFFFFF' && T.TEXTURE_CAPS.water.blends[0] === 'soft-light');
 let wthrew = null;

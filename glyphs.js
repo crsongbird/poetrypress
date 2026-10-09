@@ -111,15 +111,17 @@ function parts(str){
 // where the top of an em box sits for each baseline, as a fraction of size
 const TOP = { top: 0, hanging: 0.05, middle: -0.5, alphabetic: -0.8, ideographic: -0.9, bottom: -1 };
 
-let installed = false;
+// each kind of 2D context has its own prototype: the page canvas's, and an
+// OffscreenCanvas's (the back buffer frames are drawn into) — both need the hook
+const installed = new WeakSet();
 /** Wraps a 2D context prototype's text methods so inline glyphs work. */
 const MEASURED = new Map();
 /** Forget remembered text measurements (a font has arrived; they were taken against another). */
 export function clearMeasureCache(){ MEASURED.clear(); }
 
 export function installInlineGlyphs(proto){
-  if(installed || !proto || !proto.fillText || typeof Path2D === 'undefined') return false;
-  installed = true;
+  if(!proto || installed.has(proto) || !proto.fillText || typeof Path2D === 'undefined') return false;
+  installed.add(proto);
   const rawMeasure = proto.measureText;
   // Remembered measurements: the same strings are measured again and again
   // (every refit, every render). A width depends on the font and the text —
@@ -171,5 +173,8 @@ export function installInlineGlyphs(proto){
   return true;
 }
 
-// in a browser, install at load; in tests there is no canvas prototype
+// in a browser, install at load — on the page canvas AND on OffscreenCanvas,
+// which the renderer's back buffer is (without it, every inline glyph drew as
+// the font's missing-character box); in tests there is no canvas prototype
 if(typeof CanvasRenderingContext2D !== 'undefined') installInlineGlyphs(CanvasRenderingContext2D.prototype);
+if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs(OffscreenCanvasRenderingContext2D.prototype);

@@ -173,6 +173,17 @@ checks the grid around it, and widths are remembered (cleared when a font
 arrives) — keep any new text layout on that path. Prove a speed-up with the
 before/after measurements AND an identical-render comparison.
 
+- **The lighting engine** (`lightHeights`, texCore) takes a HEIGHT field
+  (bump mapping: normals by finite differences; heights also cast the shadows
+  and darken crevices) and optionally a detail NORMAL MAP (`opts.normals`,
+  x y z per pixel, blended by adding slopes). `opts.components` returns
+  diffuse and occlusion apart; `L.flat` is open flat ground's light.
+  MATERIALS: `materialOf(highlight, shade)` (null when both white),
+  `litK(L, i, ambient, M, c)` / `litS(M, c)` per channel — the Shade hue
+  colours what's darker than flat ground, the Highlight hue the shine; hues
+  are normalised to white's brightness. With white hues a texture must draw
+  exactly as before (the fingerprints prove it). Caps `material: true` show
+  the two pickers (`textureTint3Hex`, `textureTint4Hex`).
 - **GPU lighting** (`texCore.js`): the WebGL2 shader must stay line-for-line
   the CPU `lightHeights` — change both together, and compare them (the
   worker takes `opts.cpuLight`; they agree to within 1/255 today). Emulated
@@ -198,6 +209,9 @@ before/after measurements AND an identical-render comparison.
   `render()` now resets the context first; keep it that way, and never let a
   draw call abort a frame. Never `close()` a cached ImageBitmap — the texture
   service may still be showing it.
+- **Every 2D context prototype gets the inline-glyph hook** (`glyphs.js`):
+  the page canvas AND OffscreenCanvas (the back buffer). Missing one draws
+  every inline glyph as the font's missing-character box.
 - **Blank pages on phones**: `render()` draws into a back buffer
   (`renderInto(BACK)`) and copies it to the page only when the frame is whole;
   a failed frame keeps the last picture, frees caches and retries. Don't draw

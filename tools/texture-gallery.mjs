@@ -28,7 +28,7 @@ const types = ONLY ? ONLY.split(',') : Object.keys(T.TEXTURE_PARAMS);
 for(const type of types){
   const defs = T.paramsFor(type), caps = T.capsFor(type);
   const knob = i => defs[i] ? defs[i][KNOBS] : null;
-  const opts = { accent1: '#d9a6b3', accent2: '#9B7FE8', seed: SEED, p1: knob(0), p2: knob(1), p3: knob(2), light: 315, blend: caps.blends[0] };
+  const opts = { accent1: '#d9a6b3', accent2: '#9B7FE8', seed: SEED, p1: knob(0), p2: knob(1), p3: knob(2), p4: knob(3), p5: knob(4), light: 315, blend: caps.blends[0] };
   const layers = type === 'astral'
     ? [['astral_fog', { ...opts, p1: knob(1), p3: knob(2) }, 'overlay'], ['astral_stars', { ...opts, p1: knob(0), p3: knob(2) }, 'screen']]
     : [[type, opts, caps.blends[0]]];

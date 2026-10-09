@@ -69,8 +69,11 @@ check('text without glyphs goes straight to the original', calls.length === 1 &&
 // ---- only the poem is resolved ----
 const cr = src('canvasRenderer.js');
 check('the renderer resolves the poem, before parsing it',
-  /const rawText = resolvePmlVariables\(\$\('poemText'\)\.value, pmlVarContext\(W, H\)\);/.test(cr));
-check('nothing else is resolved', (cr.match(/resolvePmlVariables\(/g) || []).length === 1);
+  /const varCtx = pmlVarContext\(W, H\);\s*const rawText = resolvePmlVariables\(\$\('poemText'\)\.value, varCtx\);/.test(cr));
+// the poem is resolved twice: once to draw, once with live numbers by their
+// shape (the fit's key) — but nothing other than the poem is ever resolved
+check('nothing but the poem is resolved', (cr.match(/resolvePmlVariables\(/g) || []).length === 2 &&
+  (cr.match(/resolvePmlVariables\(\$\('poemText'\)\.value, /g) || []).length === 2);
 check('the glyph modules are bundled before the renderer',
   (b => b.indexOf("'glyphs.js'") < b.indexOf("'canvasRenderer.js'") && b.indexOf("'pmlVars.js'") < b.indexOf("'canvasRenderer.js'"))(src('build.mjs')));
 
@@ -97,13 +100,15 @@ check('closing the picker clears the ring and the tail', /markPicking\(t, false\
     const code = src(f);
     for(const m of code.matchAll(/getTextureCanvas\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g)){
       if(/^type, w, h, opts/.test(m[1])) continue;                  // the definition
+      // handing a whole options object on (the texture service) is the safe form
+      if(/,\s*(\w+\.)*opts\s*$/.test(m[1])) continue;
       const parts = m[1].split(',');
       if(parts.length > 3 && !/\{/.test(m[1])) positional.push(f);
     }
   }
   check('no call passes texture options by position (a tint twice landed in the light slot)', positional.length === 0);
   check('the Deep Field stars receive their tint as a tint',
-    /getTextureCanvas\('astral_stars', W, H, \{[^}]*\btint1\b[^}]*\}\)/.test(cr));
+    /requestTexture\('stars', 'astral_stars', W, H, \{[^}]*\btint1\b[^}]*\}\)/.test(cr));
   check('the dead invert path is gone', !/invertTextureCanvas|invert \? '_inv'/.test(src('textureGenerators.js') + src('texCore.js')));
 }
 
@@ -148,10 +153,508 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
 {
   const tg = src('textureGenerators.js'), tu = src('tunables.js');
   check('the texture cache is bounded by memory, not only by count',
-    /total > TEXTURES\.cachePixels/.test(tg) && /cachePixels: 3072 \* 3072 \* 3/.test(tu));
+    /total > CACHE_BUDGET/.test(tg) && /const CACHE_BUDGET = TEXTURES\.cachePixels \* /.test(tg) && /cachePixels: 3072 \* 3072 \* 3/.test(tu));
   check('Cold Press caps its pits (uncapped, its smallest tooth made millions of calls)',
     /const MAX_PITS = 16000;/.test(src('texTouch.js')));
-  check('the Sparkler is a fifth of its old count', /\(w\*h\)\/130000 \* amt/.test(src('texWhimsy.js')));
+  check('the Sparkler is a fifth of its old count', /canonArea\(w,h\)\/130000 \* amt/.test(src('texWhimsy.js')));
+}
+
+// ---- texture canvases stay off the GPU (Chrome crashed phone GPUs) ----
+{
+  const mods = ['texCore.js','texWhimsy.js','texSharpness.js','texChaos.js','texTouch.js','textureGenerators.js'];
+  const bare = mods.filter(f => /\.getContext\('2d'\)/.test(src(f)));
+  check('every texture canvas is created with willReadFrequently (kept in memory, not on the GPU)',
+    bare.length === 0 && /export const CPU = \{ willReadFrequently: true \};/.test(src('texCore.js')));
+  if(bare.length) console.log('   bare getContext in:', bare.join(', '));
+}
+
+// ---- Chrome: texture canvases stay off the GPU ----
+{
+  const files = ['texCore.js','texWhimsy.js','texSharpness.js','texChaos.js','texTouch.js','textureGenerators.js'];
+  const bare = files.filter(f => /\.getContext\('2d'\)/.test(src(f)));
+  check('every texture canvas is created with willReadFrequently (pixel reads on a GPU canvas crashed Chrome on phones)',
+    bare.length === 0 && /export const CPU = \{ willReadFrequently: true \};/.test(src('texCore.js')));
+  if(bare.length) console.log('   bare getContext in:', bare.join(', '));
+}
+
+// ---- the lotus ----
+{
+  const sh = src('texSharpness.js');
+  check('light blooms only: no separate dark kind', !/const dark=Math\.random\(\)/.test(sh));
+  check('the fade rule is chosen once, from the Petal Hue, so variation cannot flip a bloom dark',
+    /const fadeRule = L\(A\)>0\.6/.test(sh));
+  check('blooms vary visibly — about 11° of hue — but stay the same flower', /2\*\(11\/360\)/.test(sh));
+}
+
+// ---- every preset is readable ----
+{
+  const { PRESETS } = await import('../appOptions.js');
+  const lum = h => { const n = parseInt(h.replace('#','').slice(0,6), 16);
+    return [n>>16, (n>>8)&255, n&255].map(v => { v /= 255; return v <= 0.03928 ? v/12.92 : ((v+0.055)/1.055)**2.4; })
+      .reduce((a, v, i) => a + v*[0.2126, 0.7152, 0.0722][i], 0); };
+  const cr = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05)/(y + 0.05); };
+  const low = [];
+  // With an inset box, the text sits on the BOX blended over the page, not on
+  // the page: for a Normal box that is the page mixed toward the box colour by
+  // its opacity. (Other box blends fall back to the page, the stricter case.)
+  const mixHex = (a, b, t) => { const A = parseInt(a.slice(1,7),16), B = parseInt(b.slice(1,7),16);
+    const ch = s => Math.round(((A>>s)&255) + (((B>>s)&255) - ((A>>s)&255))*t);
+    return '#' + [16,8,0].map(ch).map(v => v.toString(16).padStart(2,'0')).join(''); };
+  for(const p of PRESETS){
+    let bgs = [p.bg1, p.bg2, p.bg3, p.bg4].filter(Boolean);
+    if(p.cardToggle && (p.cardBlend || 'source-over') === 'source-over'){
+      const o = (parseFloat(p.cardOpacity ?? 70) || 0)/100, box = p.cardColor1 || '#FFF6EE';
+      bgs = bgs.map(b => mixHex(b, box, o));
+    }
+    for(const k of ['text1','text2','text3','text4','accent1','accent2']){
+      if(!p[k]) continue;
+      const worst = Math.min(...bgs.map(b => cr(p[k], b)));
+      if(worst < 3) low.push(`${p.name} ${k} ${worst.toFixed(1)}:1`);
+    }
+  }
+  // 3:1 is the WCAG minimum for large text, which poem text is — against
+  // the WORST stop of the background gradient, accents included
+  check('every preset\'s text and accents reach 3:1 against what is actually behind them (box or page)', low.length === 0);
+  if(low.length) console.log('   ' + low.join('\n   '));
+}
+
+// ---- the lotus is a flower ----
+{
+  const sh = src('texSharpness.js'), tg = src('textureGenerators.js');
+  check('green sepals: the complement of the petals, pulled into the greens',
+    /const greenHue=Math\.max\(85, Math\.min\(160, \(hueOf\(A\)\+180\)%360\)\)/.test(sh) && /ri===0 && Math\.random\(\)<F\.sepals/.test(sh));
+  check('petals that are not sepals fade by the lightness rule (tipOf), sepals keep their green', /pt=sepal \? SEPAL_TIP : tipOf\(pb\)/.test(src('texSharpness.js')));
+  check('ring counts vary up to 20% under the maximum', /F\.n\*\(1 - ri\*0\.1\)\*\(0\.8\+Math\.random\(\)\*0\.2\)/.test(sh));
+  check('blooms are 20–100% of the largest', /maxR\*\(0\.2\+Math\.pow\(Math\.random\(\),1\.6\)\*0\.8\)/.test(sh));
+  check('the Bloom Count readout matches what is drawn, at any canvas size (18 per 100%)',
+    /Math\.round\(18\*amt\)/.test(sh) && /label:'Bloom Count',[^}]*base:18/.test(tg));
+}
+
+// ---- the frame: gradients, the inset box, the border ----
+{
+  const html = src('index.html');
+  check('non-text gradients come in three shapes: linear, radial, rectangular',
+    /id="bgGradientType"[\s\S]*?value="radial"[\s\S]*?value="rect"/.test(html) && /spec\.type === 'radial'/.test(cr) && /spec\.type === 'rect'/.test(cr));
+  check('the inset box is drawn after the texture and vignette, before the text',
+    cr.indexOf("$('cardToggle').checked") > cr.indexOf("$('textureToggle').checked") &&
+    cr.indexOf("$('cardToggle').checked") > cr.indexOf('createRadialGradient(vcx') &&
+    cr.indexOf("$('cardToggle').checked") < cr.indexOf('drawTextRun(ctx, part.segments'));
+  check('the border strokes the box: they share one path, corners included', /const framePath = \(\) => \{ ctx\.beginPath\(\); roundRectPath\(ctx, inset, inset/.test(cr));
+  check('the bloom glows in the border colour (normal blending, not additive light)',
+    /lx\.strokeStyle = stroke;/.test(cr) && !/globalCompositeOperation = 'lighter';\s*ctx\.lineWidth/.test(cr));
+  check('grain works inside the bloom layer only: specks thin it or light it, never the page',
+    /lx\.globalCompositeOperation = 'destination-out';/.test(cr) && /lx\.globalCompositeOperation = 'source-atop';/.test(cr));
+  check('the border itself is drawn on the page after the bloom layer (solid, or a stitch)',
+    cr.indexOf('ctx.drawImage(L, 0, 0, W, H);') < cr.indexOf("if(stitch === 'solid'){ framePath(); ctx.stroke(); }"));
+  check('the bloom layer is half resolution and reused, not a fresh page-sized canvas each render',
+    /let BLOOM_LAYER = null;/.test(cr) && /bloomLayer\(Math\.ceil\(W\/2\), Math\.ceil\(H\/2\)\)/.test(cr));
+  check('grain is stable between renders (seeded tiles, made once)', /let GRAIN_TILES = null;/.test(cr));
+  check('thickness, offset and roundedness are sliders',
+    ['borderThickness','borderOffset','borderRadius'].every(id => new RegExp('type="range" id="' + id + '"').test(html)));
+  check('every opacity slider shows the moon', ['textureOpacity','cardOpacity'].every(id => new RegExp('id="' + id + '"[^>]*data-moon').test(html)));
+  check('presets reset the box and frame to defaults first, so nothing leaks between them', /applyPersisted\(\{ \.\.\.FRAME_DEFAULTS/.test(ev));
+  check('the inset box opens by the class the stylesheet keys on', /\$\('cardBlock'\)\.classList\.toggle\('open'/.test(ev));
+  check('the inset box stands on its own, not inside the border section',
+    html.indexOf('id="cardToggle"') > html.indexOf('id="borderBlock"') && html.indexOf('id="cardToggle"') > html.indexOf('id="borderOffset"'));
+  check('border gradient hues only show when the border gradient is on', /show\('borderColor2Field', bgrad\)/.test(ev));
+}
+
+// ---- this round: rules, the credit, fonts, the Form knob, SpellName ----
+{
+  const P = await import('../textParsers.js');
+  const r = t => P.parseRule(t, true, true);
+  check('--- is a rule, and [---] {---} take the accents',
+    r('---').color === null && r('[---]').color === 'accent1' && r('{---}').color === 'accent2');
+  check('<---/50%/c> sets width and alignment; the \\ form works too',
+    r('<---/50%/c>').width === 0.5 && r('<---/50%/c>').align === 'c' && r('<---\\25%\\r>').width === 0.25 && r('<---\\25%\\r>').align === 'r');
+  check('a rule can take its own colour', r('<---/#:ff00aa>').customColor === '#ff00aa');
+  check('--- with words after it, or four dashes, stays text', r('--- text') === null && r('----') === null);
+  check('a rule is a blank line that carries it (layout treats it as a blank line)',
+    P.buildLines('a\n---\nb', true, true)[1].isBlank === true && !!P.buildLines('a\n---\nb', true, true)[1].rule);
+
+  check('the credit is written in the page ink, with PML colours, not a computed tone',
+    !/watermarkColor/.test(cr) && /const creditLine = username \? \(buildLines\(username, true, true\)\[0\] \|\| \{\}\) : \{\};/.test(cr));
+  check('the border gradient is linear, with its own angle', /createLinearGradient\(W\/2 - Math\.cos\(ga\)\*half/.test(cr));
+
+  const { FONTS } = await import('../appOptions.js');
+  const FROZEN = ['Bodoni Moda','Cormorant Garamond','Crimson Pro','EB Garamond','Literata','Playfair Display','Merriweather',
+    'Courier Prime','Space Mono','JetBrains Mono','Cinzel','Oswald','Architects Daughter','Caveat','Shadows Into Light','Inter',
+    'Poppins','Nunito','Roboto','Work Sans','Josefin Sans','Unica One'];
+  check('the first 22 fonts keep their positions (PML /f:N selects by position)',
+    FROZEN.every((f, i) => FONTS[i].family === f));
+  check('33 fonts, each labelled "Style · Family"', FONTS.length === 33 && FONTS.every(f => / · /.test(f.label)));
+
+  const T = await import('../textureGenerators.js');
+  check('the lotus declares a Form knob, centred on the lotus', T.paramsFor('flowers')[2].key === 'form' && T.paramsFor('flowers')[2].def === 50);
+  check('Form keys the texture cache, so each flower is cached apart', /\(v3 == null \? '' : `_f\$\{v3\}`\)/.test(src('textureGenerators.js')));
+  check('Form is saved and restored with the look', /texP3: \$\('texP3'\)\.value,/.test(ev) && /if\(s\.texP3 !== undefined\)/.test(ev));
+  check('Form (and knobs four and five) hide for textures without them', /\[0,1,2,3,4\]\.forEach\(i=>\{/.test(ev) && /if\(row\) row\.style\.display = 'none';/.test(ev));
+  check('Form spans the flowers: bud, cherry, day lily, lotus, daisy, rosette, hydrangea',
+    (src('texSharpness.js').match(/\{ at:[01]\.\d\d,/g) || []).length === 7);
+
+  check('§SpellName names the look last applied', R('§SpellName') === 'Unnamed Look' &&
+    resolvePmlVariables('§SpellName', { spellName: 'Lotus Bloom' }) === 'Lotus Bloom');
+  check('the debug block names every knob — the third and beyond too (no "Hidden Value")',
+    (() => { const t = resolvePmlVariables('§SurfParamsA', { params: [{ label: 'Focal Plane', value: '70%' }, { label: 'Orb Count', value: '67' }, { label: 'Aperture', value: 'Round' }, { label: 'Object Shape', value: 'Flower' }, { label: 'Color Variation', value: '120°' }], opacity: 50 });
+      return t.includes('Object Shape: [Flower]') && t.includes('Color Variation: [120°]') && !t.includes('Hidden Value'); })() &&
+    /params: defs\.map\(\(d, i\) =>/.test(cr));
+  check('the texture tools span the whole panel on phones', /\.subblock\.open > \.tool-row\{ grid-column:1\/-1; \}/.test(css));
+}
+
+// ---- this round: state, undo, pixel pass, fonts, variables, pacing ----
+{
+  check('the app state lives in one object, declared before anything reads it',
+    /const state = \{\s*page: \{ align:/.test(ev) && ev.indexOf('const state = {') < ev.indexOf('function serializeCurrentSettings'));
+  check('no stray module-level state is left behind',
+    !/^let (currentAlign|currentValign|currentAspect|bgStopCount|textStopCount|pickingField|currentThemePalette)\b/m.test(ev));
+  check('undo and redo step through look snapshots (never the poem, locks or name)',
+    /function lookSnapshot\(\)\{ return JSON\.stringify\(stripToLook\(serializeCurrentSettings\(\)\)\); \}/.test(ev));
+  check('restoring a step is not itself recorded as a change', /if\(h\.restoring\) return;/.test(ev));
+  check('the undo buttons are ☋ and ☊', /id="undoBtn"[^>]*>☋</.test(src('index.html')) && /id="redoBtn"[^>]*>☊</.test(src('index.html')));
+  const core = src('texCore.js'), tg = src('textureGenerators.js');
+  check('tint and blend remap are one pass, in place (no copies)',
+    /export function pixelPass\(/.test(core) && !/document\.createElement\('canvas'\)[\s\S]{0,400}export function tintMarks/.test(core) &&
+    /result = pixelPass\(/.test(tg));
+  check('fonts are fetched on first use, and the page redraws when one lands',
+    /ensureFonts\(used, \(\) => \{ invalidateTextMeasurements\(\); scheduleRender\(\); \}\)/.test(cr) && !/FONTS\.forEach\(f=>\{\s*const combos/.test(ev));
+  check('at most 24 renders a second', /const MIN_RENDER_GAP = 1000 \/ 24;/.test(cr));
+  check('erosion draws on one shared scratch canvas', (cr.match(/scratchCanvas\(/g) || []).length >= 2);
+  check('§RenderMs, §CacheMB, §Fonts and §Build resolve',
+    resolvePmlVariables('§RenderMs|§CacheMB|§Fonts', { renderMs: 42, cacheMB: '37.7', fonts: 3 }) === '42|37.7|3' &&
+    typeof resolvePmlVariables('§Build', {}) === 'string');
+  check('the border gradient has an angle, shown only with the gradient', /show\('borderAngleField', bgrad\)/.test(ev));
+}
+
+// ---- the credit, the picker, the profile ----
+{
+  const P = await import('../textParsers.js');
+  const plain = P.buildLines('@ruby', true, true)[0];
+  check('a plain name has segments, not parts — and the credit reads both shapes',
+    !plain.parts && plain.segments && /creditLine\.parts \|\| \(creditLine\.segments \? \[\{ segments: creditLine\.segments \}\] : \[\]\)/.test(cr));
+  check('the picker\'s Done stays reachable, pinned to its bottom edge', /#clr-picker #clr-close\{ position:sticky; bottom:0;/.test(css));
+  check('§Profile reports the last render by stage', resolvePmlVariables('§Profile', { profile: 'text 4 ms' }) === 'text 4 ms' &&
+    ["lap('backdrop+texture')", "lap('frame')", "lap('text')", "lap('marks')"].every(s => cr.includes(s)));
+}
+
+// ---- the box takes the texture's route onto the page ----
+check('the inset box is painted on its own layer, then blended on as one image (not filled through a clip while blending)',
+  /const L = cardLayer\(Math\.ceil\(W\/2\), Math\.ceil\(H\/2\)\)/.test(cr) && /ctx\.globalCompositeOperation = \$\('cardBlend'\)\.value \|\| 'source-over';\s*ctx\.imageSmoothingEnabled = true;\s*ctx\.drawImage\(L, 0, 0, W, H\);/.test(cr));
+
+// ---- the canonical-pixel scale S (step 1: plumbing, no visible change) ----
+{
+  const C = await import('../texCore.js');
+  check('S is 1 unless set, and withScale restores it afterwards',
+    C.scaleNow() === 1 && C.withScale(0.25, () => C.scaleNow()) === 0.25 && C.scaleNow() === 1);
+  check('cpx converts canonical pixels at the current scale', C.cpx(12) === 12 && C.withScale(0.5, () => C.cpx(12)) === 6);
+  check('an invalid scale falls back to 1', C.withScale(0, () => C.scaleNow()) === 1 && C.withScale(NaN, () => C.scaleNow()) === 1);
+  const tg = src('textureGenerators.js');
+  check('textures generate inside withScale, and the cache key only changes when S is not 1',
+    /withScale\(scale, \(\) => withLightTilt\(lightTilt\/100, \(\) => withSeed\(seed,/.test(tg) && /\(scale === 1 \? '' : `_x\$\{scale\}`\)/.test(tg));
+  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5)? \}/g) || []).length === 5);
+  check('the render scale is 1 today (the preview is the export size)', /let RENDER_SCALE = 1;/.test(cr));
+  check('§Scale reports it', resolvePmlVariables('§Scale', { scale: 1 }) === '1' && resolvePmlVariables('§Scale', { scale: 1/3 }) === '0.333');
+}
+
+// ---- canonical pixels, step 3: generators converted ----
+{
+  const C = await import('../texCore.js');
+  check('canonArea is the pixel area at S = 1, and the export area at any S',
+    C.canonArea(300, 200) === 60000 && C.withScale(0.5, () => C.canonArea(150, 100)) === 60000);
+  check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never finer than 1)',
+    C.canonDiv(4) === 4 && C.withScale(1/3, () => Math.abs(C.canonDiv(4) - 4/3) < 1e-12) && C.withScale(0.1, () => C.canonDiv(4)) === 1);
+  const gens = ['texWhimsy.js','texSharpness.js','texChaos.js','texTouch.js'].map(f => src(f)).join('\n');
+  check('no generator counts by raw pixel area any more (a small canvas drew fewer sparkles)',
+    !/Math\.round\(\(w\*h\)\/\d+/.test(gens));
+  check('no line width has a fixed-pixel floor any more',
+    !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
+  check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 13);
+  check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
+    /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
+}
+
+// ---- canonical pixels, step 4: the renderer ----
+{
+  check('your pixel settings are canonical: border, and effect widths and distances',
+    /const bThick = Math\.max\(rpx\(1\), \(parseFloat\(\$\('borderThickness'\)\.value\) \|\| 1\) \* S\);/.test(cr) &&
+    /ctx\.lineWidth = rpx\(e\.k1\)\*2;/.test(cr) && /along\(e, rpx\(e\.k2\)\)/.test(cr));
+  check('no fixed-pixel floors remain in the renderer', !/Math\.max\((0\.\d+|1|1\.5), (unit|size|baseSize|bThick)/.test(cr));
+  check('the border grain tile scales with S, and is untouched at 1', /if\(S !== 1 && pt && pt\.setTransform/.test(cr));
+  check('a debug hook can set the render scale from outside', /window\.vellumDebug = \{\s*setRenderScale:/.test(cr));
+}
+
+// ---- the five redesigns ----
+{
+  const T = await import('../textureGenerators.js');
+  const knob = (t, i) => (T.paramsFor(t)[i] || {}).label;
+  check('Deep Field has Atmosphere; Linen has Details and Weave; Sigils have Glow; Silverpoint has Age',
+    knob('astral', 2) === 'Atmosphere' && knob('linen', 1) === 'Details' && knob('linen', 2) === 'Weave' &&
+    knob('sigils', 2) === 'Glow' && knob('hatch', 2) === 'Age');
+  check('Linen has its own Fabric and Light hues', T.TEXTURE_CAPS.linen.tintLabels.join('|') === 'Fabric Hue|Light Hue' && !T.TEXTURE_CAPS.linen.genericTint);
+  check('Rain on Glass and Sigil Scatter use the light direction (Harsh Rain\'s glass became Rain on Glass)', T.TEXTURE_CAPS.glassrain.light === true && T.TEXTURE_CAPS.sigils.light === true && T.TEXTURE_CAPS.rainstreaks.light === false);
+  const wh = src('texWhimsy.js');
+  check('the nebula and the stars rebuild one matter map, first, from the seed',
+    /const M = buildMatterMap\(\);\s+\/\/ FIRST: the same map the stars use/.test(wh) && /const M = buildMatterMap\(\);\s+\/\/ FIRST: the same map the nebula uses/.test(wh));
+  check('the Deep Field layers take their Atmosphere through p3, and it keys their cache',
+    /p1: p2, p3, tint1: tint2/.test(cr) && /seed, p1, p3, tint1, scale: S/.test(cr) && /defs\.length === 0 && p3 != null \? p3 : null/.test(src('textureGenerators.js')));
+}
+
+// ---- the preview at screen size ----
+{
+  check('the export size is kept apart from the preview canvas', /state\.page\.exportW = w; state\.page\.exportH = h;/.test(ev));
+  check('the preview scale is one of a few fixed steps, at least as large as it is shown',
+    /const S_STEPS = \[1\/4, 1\/3, 1\/2, 2\/3, 1\];/.test(ev) && /const need = shownW \* dpr \* Math\.max\(1, state\.ui\.zoom\) \/ state\.page\.exportW;/.test(ev));
+  check('Save image renders the full export, then returns to the preview',
+    /canvas\.width = state\.page\.exportW \|\| pw;[\s\S]{0,120}setRenderScale\(1\); render\(\);\s*await texturesSettled\(\);\s*render\(\);\s*link\.href = canvas\.toDataURL/.test(ev));
+  check('the export size is recorded at launch (the markup sets it)', /if\(!state\.page\.exportW\)\{ state\.page\.exportW = canvas\.width;/.test(ev));
+  check('a pinch re-renders sharp enough for its magnification', /state\.ui\.zoom = scale; applyPreviewScaleSoon\(\);/.test(ev));
+  check('§Canvas reports the export size, not the preview', /canvas: Math\.round\(W \/ RENDER_SCALE\) \+ '×' \+ Math\.round\(H \/ RENDER_SCALE\)/.test(cr));
+  {
+    const O = await import('../appOptions.js');
+    const asHost = h => { globalThis.location = { hostname: h }; const r = O.isProductionHost(); delete globalThis.location; return r; };
+    check('every build opens on the template for now; at launch, OPEN_ON_POEM lets production open on a poem',
+      /if\(!\(OPEN_ON_POEM && isProductionHost\(\)\)\)\{ \$\('poemText'\)\.value = DEV_TEMPLATE;/.test(ev) && O.OPEN_ON_POEM === false &&
+      asHost('poetrypress.unfixable.place') === true && asHost('vellum.unfixable.place') === false);
+  }
+  const P = await import('../textParsers.js');
+  check('rules take scale:N and the words left / center / right', P.parseRule('<---/scale:50/center>', true, true).width === 0.5 && P.parseRule('<---/scale:50/center>', true, true).align === 'c');
+  check('§UVIcon draws the sigil', R('§UVIcon') === R('§Glyph!sigil'));
+}
+
+// ---- stitches, effects, the preview's hysteresis ----
+{
+  const St = await import('../stitches.js'), P = await import('../textParsers.js');
+  check('sixty-plus stitches from the chart (and a few of our own), drawn by one function along any path',
+    St.STITCH_STYLES.length >= 60 && ['greek','satinscallop','rope','moons','tails','rubies','saturn','enceladus'].every(k => St.STITCH_STYLES.includes(k)) && typeof St.drawStitch === 'function');
+  const path = St.pathFromPoints([[0, 0], [100, 0]], false);
+  check('a path measures its length, and its normal points down for a left-to-right line',
+    path.len === 100 && path.point(50, 10)[1] === 10 && path.point(50, 10)[0] === 50);
+  const ring = St.pathFromPoints(St.roundRectPoints(0, 0, 100, 60, 10), true);
+  check('a rounded rectangle is a closed path, its normal pointing inward', ring.closed && ring.point(30, 5)[1] > 0);
+  check('rules take a stitch and a side', P.parseRule('<---/vine/up/60%>', true, true).style === 'vine' && P.parseRule('<---/vine/up/60%>', true, true).side === -1);
+  check('the border can be stitched, pointing in or out', /drawStitch\(ctx, pathFromPoints\(framePoints\(\), true\), stitch, \{ \.\.\.stitchSpec, color: stroke \}\);/.test(cr) && /\$\('borderStitchOut'\)/.test(cr));
+  check('the inset box follows a stitched border\'s inner edge', /const edge = stitchInnerEdge\(pathFromPoints\(framePoints\(\), true\), stitchStyle, stitchSpec\);/.test(cr));
+  const edge = St.stitchInnerEdge(St.pathFromPoints(St.roundRectPoints(0, 0, 200, 200, 0), true), 'scallop', { period: 20, amp: 8, width: 2, side: 1 });
+  check('a scallop\'s inner edge is scalloped: it moves in and out along the border', (() => { const ys = edge.slice(0, 20).map(p => p[1]); return Math.max(...ys) - Math.min(...ys) > 4; })());
+  check('rules take a motif size and a thread weight', P.parseRule('<---/wave/size:150/weight:200>', true, true).size === 150 && P.parseRule('<---/wave/size:150/weight:200>', true, true).weight === 200);
+  check('the border menu and the help list fill themselves from the library', /bs\.innerHTML = STITCH_STYLES\.map/.test(ev) && /sl\.innerHTML = STITCH_STYLES\.map/.test(ev));
+  check('§TypeEffect lists the whole effect stack, compressed', /typeEffect: describeStack\(pageEffectStack\(\)/.test(cr) &&
+    (await import('../effects.js')).describeStack([(await import('../effects.js')).makeEffect('glow', '#fd0', 40, 70)]) === 'glow 40% 70% #fd0');
+  check('the help covers rules, code and variables', ['<h4>Rules</h4>','<h4>Code</h4>','<h4>Variables</h4>'].every(h => src('index.html').includes(h)));
+  check('linen picks its seam stitch from the seed', /const seamStitch=SEAM_STITCHES\[Math\.floor\(Math\.random\(\)\*SEAM_STITCHES\.length\)\];/.test(src('texTouch.js')));
+  check('letter-by-letter lines draw every effect first, then every glyph', /\/\/ pass 1: effects and outlines, under the whole run/.test(cr) && /charSeed = seed0;/.test(cr));
+  check('the sigil draws a silhouette during effect passes', /g\.name === 'sigil' && !ctx\.__vellumEffectPass/.test(src('glyphs.js')));
+  check('layout changes never step the preview scale down', /setTimeout\(\(\) => applyPreviewScale\(false\), 150\)/.test(ev) && /if\(!allowDown && !state\.ui\.fullPreview && S < current - 1e-6\) S = current;/.test(ev));
+}
+
+// ---- the light's height, release names, the round's textures ----
+{
+  const C = await import('../texCore.js');
+  const full = C.lightVec(90), half = C.withLightTilt(0.5, () => C.lightVec(90)), over = C.withLightTilt(0, () => C.lightVec(90));
+  check('the light is raking by default, softer as it rises, flat overhead', Math.abs(full.lx - 1) < 1e-9 && Math.abs(half.lx - 0.5) < 1e-9 && over.lx === 0);
+  check('the light\'s height keys the texture cache only when it is not the horizon', /\(lightTilt === 100 \? '' : `_t\$\{lightTilt\}`\)/.test(src('textureGenerators.js')));
+  const P = await import('../pmlVars.js');
+  check('§Build names the release, even unbuilt', /^Jupiter–\w+/.test(P.BUILD));
+  {
+    // the whole stamp survives inside a segment with directives (a slash in it
+    // was read as a directive, leaving only "Jupiter")
+    const T = await import('../textParsers.js');
+    const line = T.buildLines(P.resolvePmlVariables('<[\\<§Build\\>]/right/basis:140>', {}), true, true)[0];
+    const text = (line.parts || [{ segments: line.segments }]).flatMap(p => p.segments).map(s => s.text).join('');
+    check('the build stamp prints whole inside a segment', text.includes('Jupiter–Io') || /Jupiter–\w+/.test(text));
+  }
+  check('build.mjs --next walks Jupiter\'s moons in order', /const JUPITER = \['Amalthea', 'Thebe', 'Io', 'Europa', 'Ganymede', 'Callisto'/.test(src('build.mjs')));
+  check('the Needle stands in a back layer, beside downtown, shorter than the towers',
+    /const needleLayer = hasNeedle \? 1 \+ Math\.floor\(Math\.random\(\)\*2\) : -1;/.test(src('texSharpness.js')) && /Math\.max\(tallest\*0\.8, H\*f\*0\.68\)/.test(src('texSharpness.js')));
+  check('the moon is Ruby\'s preferred version, touched up: a soft terminator, no target ring, no hard contour lines',
+    /const litAmt = sstepM\(-0\.012, 0\.012, facing\*u - phase\*edge\)/.test(src('texWhimsy.js')) && !/r-1\.22/.test(src('texWhimsy.js')) && !/band<0\.2 \? 35 : 0/.test(src('texWhimsy.js')));
+  check('gradient centres can leave the page and the radius reach 300%', /id="bgRadialX" min="-50" max="150"/.test(src('index.html')) && /id="bgRadialR" min="5" max="300"/.test(src('index.html')));
+  check('angle sliders have 45° ticks and a 15° snap', /<datalist id="angleTicks">/.test(src('index.html')) && /input\.step = on \? '15' : '1';/.test(ev));
+}
+
+// ---- this round: ticks, apertures, spikes, the desktop ----
+{
+  const T = await import('../textureGenerators.js');
+  check('Lotus Form, Linen Weave and Details, and Bokeh Shape carry ticks', ['flowers', 'linen', 'bokeh'].every(t => T.paramsFor(t).some(d => d.ticks && d.ticks.length)));
+  check('a ticked knob gets ⊹, which locks it to the nearest tick', /btn\(\)\.textContent = '⊹'/.test(ev) && /function snapToTick\(input\)/.test(ev));
+  check('Aurora Veil reaches 162 ribbons', T.paramsFor('aurora')[1].max * T.paramsFor('aurora')[1].base / 100 === 162);
+  check('Facet Field starts regular', T.paramsFor('tessellate')[1].def === 0);
+  check('Deep Field has six spikes, their length following brightness', /for\(let s = 0; s < 6; s\+\+\)/.test(src('texWhimsy.js')) && /cpx\(3 \+ 600\*Math\.pow\(b - 0\.8, 1\.5\)\)/.test(src('texWhimsy.js')));
+  check('the tabs run on every device; on a desktop they sit under the logo', /\/\/ ---------- the tabs: one panel at a time, on every device ----------/.test(ev) && /body:not\(\.is-mobile\) \.app\{[\s\S]*?grid-template-areas:"header header" "nav nav" "controls stage";/.test(src('poetrypress.css')));
+  check('a texture gallery tool exists, for looking rather than testing', /BACKS = \[\['dark'/.test(src('tools/texture-gallery.mjs')));
+}
+
+// ---- light like a game engine; the Zen Garden's successors; this round ----
+{
+  const C = await import('../texCore.js');
+  const ww = 64, wh = 64, H = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const d = Math.hypot(x - 32, y - 32); H[y*ww + x] = d < 12 ? Math.sqrt(144 - d*d) : 0; }
+  const L = C.lightHeights(H, ww, wh, { light: 90 }), at = (r, x, y) => r.light[y*ww + x];
+  check('lightHeights: the side facing the light is lit, the far side shaded', at(L, 23, 32) > at(L, 41, 32) + 0.3);
+  check('lightHeights: a dome casts a shadow away from the light', at(L, 50, 32) < at(L, 5, 5) - 0.05);
+  const O = C.withLightTilt(0, () => C.lightHeights(H, ww, wh, { light: 90 }));
+  check('lightHeights: light from straight overhead casts no shadow', at(O, 50, 32) > 0.95);
+  check('lightHeights: a glossy surface takes a highlight', Math.max(...C.lightHeights(H, ww, wh, { light: 90, gloss: 0.9 }).spec) > 0.3);
+  const T = await import('../textureGenerators.js');
+  check('Dune Ripples, Kintsugi and Moss on Stone are lit textures, each with three knobs',
+    ['dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].light === true && T.paramsFor(t).length === 3));
+  check('a look saved with the retired Zen Garden opens as Dune Ripples', /const RETIRED = \{ whorl: 'dunes' \};/.test(src('textureGenerators.js')) && /textureType === 'whorl'\) s = \{ \.\.\.s, textureType: 'dunes' \}/.test(ev));
+  check('Rain on Glass is built from lit heights', /const L=lightHeights\(H, ww, wh, \{ light, relief:1\.6, gloss:0\.95/.test(src('texTouch.js')));
+  check('Lotus petals fade by Ruby\'s rule (light → white, mid → brighter and more saturated, dark → saturated near-black) and fold', /const tipOf=o=>/.test(src('texSharpness.js')) && /the fold: a crease down the petal's centre/.test(src('texSharpness.js')));
+  check('Enochian Noise is Binary Pattern now', />Binary Pattern</.test(src('index.html')) && !/Enochian Noise/.test(src('index.html')));
+}
+
+// ---- threads, the desktop menu ----
+{
+  const svc = src('textureService.js');
+  check('textures are made in a worker; the slot keeps its last texture meanwhile', /return prev && prev\.type === type \? prev\.tex : null;/.test(svc));
+  check('requests coalesce: only the latest wish per slot waits', /wanted\.set\(slot, \{ key, type, w, h, opts \}\); pump\(\);/.test(svc));
+  check('H: one worker per spare core, up to two', /const POOL_SIZE = Math\.max\(1, Math\.min\(2, \(\(typeof navigator !== 'undefined' && navigator\.hardwareConcurrency\) \|\| 2\) - 1\)\);/.test(svc) && /pool = Array\.from\(\{ length: POOL_SIZE \}, spawn\);/.test(svc));
+  check('I: a new wish starts at once on a free worker; nothing is killed (a cold worker was measured slower); the picture never steps back', /if\(running\) inflight\.delete\(slot\);/.test(svc) && !/terminate\(\);\s*abandoned/.test(svc) && /if\(id > \(shownSeq\.get\(f\.slot\) \|\| 0\)\)/.test(svc));
+  check('the service starts no timers of its own (nothing to keep Node alive)', !/setInterval\(/.test(svc));
+  check('E: Deep Field\'s nebula and Sleep Haze sample their smooth fields on a lattice', /const NEB = smoothField\(workW, workH, 3,/.test(src('texWhimsy.js')) && /const Nf=smoothField\(ww,wh,3,/.test(src('texWhimsy.js')));
+  check('textures that draw web-font text stay on the page', /const ON_PAGE = new Set\(\['summoning', 'cards'\]\);/.test(svc));
+  check('the page and the worker share one cache key', /export function textureKeyFor\(type, w, h, opts = \{\}\)/.test(src('textureGenerators.js')));
+  check('the worker block is in the head, before the page script asks for it', /html\.replace\('<\/head>', `<script type="text\/js-worker"/.test(src('build.mjs')));
+  check('the first real measurement may always step the preview down', /if\(!state\.ui\.previewMeasured\)\{ state\.ui\.previewMeasured = true; allowDown = true; \}/.test(ev));
+  check('on a desktop, Esoterica opens as a drawer and closes back to the panel before', /if\(name === 'more' && current === 'more'\) name = before;/.test(ev));
+  check('the tabs explain themselves', ['Write text in markup', 'Aspect ratio and presets', 'Fonts and text effects', 'Backgrounds, textures and borders', 'Advanced options'].every(t => src('index.html').includes(`title="${t}"`)));
+}
+
+// ---- Dream Bloom's objects and colours; the working shimmer; snow; sparks ----
+{
+  const T = await import('../textureGenerators.js');
+  const d = T.paramsFor('bokeh');
+  check('Dream Bloom has five knobs: size, count, aperture, object shape, color variation', d.map(k => k.key).join(',') === 'zoom,amt,form,shape,hue');
+  check('Object Shape reads as names and has a die', T.paramReadout(d[3], 29) === 'Leaf' && d[3].dice === true);
+  check('with Colour Variation, Dream Bloom keeps its own hues (the grey tint pass is skipped)', /const ownColour = type === 'bokeh' && hueSpread > 0;/.test(src('textureGenerators.js')));
+  check('knobs four and five reach the cache key', /\(v4 == null \? '' : `_k\$\{v4\}`\)/.test(src('textureGenerators.js')));
+  check('a busy worker shows a shimmer (after a moment, so fast textures don\'t flicker it)', /busyTimer = setTimeout\(\(\) => document\.body\.classList\.add\('tex-busy'\), 180\)/.test(src('textureService.js')) && /body\.tex-busy \.canvas-wrap::after/.test(src('poetrypress.css')));
+  check('saving shows it too, and the button pulses', /document\.body\.classList\.add\('saving'\)/.test(ev) && /body\.saving \.download-btn\{ animation:savePulse/.test(src('poetrypress.css')));
+  check('First Snow\'s in-focus flakes are crystals', /objectPath\(fctx, 'snowflake'/.test(src('texWhimsy.js')));
+  check('Sparkler has Hue Drift, and bigger embers burn more chaotically', T.paramsFor('embers')[2].label === 'Hue Drift' && /const chaos = Math\.max\(0, \(zoom \|\| 1\) - 1\)\*0\.55;/.test(src('texWhimsy.js')));
+}
+
+// ---- Dream Bloom's lens ----
+{
+  const w = src('texWhimsy.js');
+  check('Dream Bloom\'s blur is a thin lens: the circle of confusion from A·f·|S2−S1|/(S2·(S1−f))', /0\.5\*A\*F\*Math\.abs\(S2 - S1\)\/\(S2\*\(S1 - F\)\)\*pxPerMm/.test(w));
+  check('blur is the object convolved with the aperture, sampled from the aperture\'s own outline', /insidePolygon\(outline, jx, jy\)/.test(w) && /const outline = apertureOutline\(0, 0, 1, shape, rot\);/.test(w));
+  check('light is conserved and clips like a sensor (glints far brighter than white; surfaces about white)', /I: obj === 'dot' \? 1\.5 \+ 180\*Math\.pow/.test(w) && /ctx\.globalCompositeOperation = 'lighter';/.test(w));
+  check('spherical aberration and cat\'s-eye vignetting (gentle: the clip shifts at most about half a disc)', /const sa = behind \? 0\.7 : -0\.6;/.test(w) && /m\.x \+ ox\*cat\*coc, m\.y \+ oy\*cat\*coc/.test(w) && !/ox\*cat\*coc\*2/.test(w));
+  check('each blurred shape is made once and shared by matching motes', /function blurShape\(ratioB, spinB, behind\)/.test(w) && /if\(shapes\.has\(key\)\) return shapes\.get\(key\);/.test(w));
+  check('a blurred shape has room for the object\'s full reach, so nothing is cut at an edge', /size = Math\.ceil\(2\*\(rk\*1\.3 \+ ck\) \+ 8\)/.test(w));
+}
+
+// ---- more textures on the lighting module ----
+{
+  const T = await import('../textureGenerators.js');
+  check('Facet Field is a carved, lit surface that starts lit from overhead (Light Hue = light, Material Hue = material)',
+    T.TEXTURE_CAPS.tessellate.light === true && T.TEXTURE_CAPS.tessellate.lightTilt === 0 && T.TEXTURE_CAPS.tessellate.tintLabels[1] === 'Material Hue' &&
+    /const L = lightHeights\(H, ww, wh, \{ light, relief: 1, gloss: 0\.25, shadow: 0\.7/.test(src('texChaos.js')));
+  check('choosing a texture with a light of its own sets the dial to it', /const lt = \(capsFor\(\$\('textureType'\)\.value\) \|\| \{\}\)\.lightTilt;/.test(ev));
+  check('Cup Ring is a dried film, lit: the coffee-ring ridge at the rim', /coffee-ring effect/.test(src('texTouch.js')) && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.55/.test(src('texTouch.js')));
+}
+
+// ---- no two pages at once ----
+{
+  check('every frame starts from a clean slate (ctx.reset, or a full manual reset)', /if\(typeof ctx\.reset === 'function'\) ctx\.reset\(\);/.test(cr) && /ctx\.globalCompositeOperation = 'source-over';\s*if\('filter' in ctx\)/.test(cr));
+  check('a texture that cannot be drawn is skipped, never allowed to abort the frame', /try \{ ctx\.drawImage\(t, 0, 0, W, H\); \} catch\(err\)/.test(cr));
+  check('the cache never closes a bitmap (the service may still be showing it)', !/gone\.close\(\)/.test(src('textureGenerators.js')));
+  check('the page canvas is a CPU canvas, like its layers (first request sets it)', /const ctx = canvas\.getContext\('2d', \{ willReadFrequently: true \}\);/.test(ev));
+  check('after a full-size save, the full-size textures leave the cache', /dropLargeTextures\(\(state\.page\.exportW \|\| pw\)\*\(state\.page\.exportH \|\| ph\)\);/.test(ev));
+}
+
+// ---- performance A–D (each must leave every image identical) ----
+{
+  check('A: text fits from a predicted size, checked on the same grid as before (not dozens of passes)', /predict, snapped down onto the grid/.test(cr) && /peeking two further steps up/.test(cr));
+  const gl = src('glyphs.js');
+  check('B: text measurements are remembered, keyed by font, alignment, baseline, direction and text', /const MEASURED = new Map\(\);/.test(gl) && /this\.font \+ '\\u0001' \+ this\.textAlign/.test(gl));
+  check('B: and forgotten whenever a font arrives', /clearMeasureCache\(\);\s+\/\/ remembered widths were measured against the old font/.test(cr));
+  check('C: no blind start-up refits; refit when a font actually arrives', !/setTimeout\(remeasureAndRender, (300|900)\)/.test(ev) && /addEventListener\('loadingdone'/.test(ev));
+  check('C: the symbol font clears only the textures that draw symbols', /clearTexturesOfTypes\(\['summoning', 'cards'\]\)/.test(ev));
+  check('D: preset tiles paint when seen, one per frame', /paintWhenSeen\(swatch, \(\) => paintPresetSwatch/.test(ev) && /tileFrame = requestAnimationFrame\(drainTiles\)/.test(ev));
+}
+
+// ---- the Dream Bloom drag ----
+{
+  check('tinted glyphs are remembered (by glyph, font, colour, size), as CPU canvases', /const TINTED = new Map\(\);/.test(cr) && /octx = off\.getContext\('2d', \{ willReadFrequently: true \}\);/.test(cr));
+  check('live numbers don\'t refit the page: the fit keys on the text\'s shape', /const shapeOf = v => String\(v\)\.replace\(\/\\d\/g, '0'\);/.test(cr) && /keep the size, measure these lines once/.test(cr));
+}
+
+// ---- F and G ----
+{
+  const core = src('texCore.js'), svc = src('textureService.js');
+  check('F: slow textures are drafted at half resolution while a knob or the light is dragged, never while saving', /if\(drafting && \(genMs\.get\(type\) \|\| 0\) > DRAFT_OVER_MS/.test(svc) && /function draftWhileDragging\(\)/.test(ev) && /setDrafting\(false\); clearTimeout\(draftTimer\);\s*setRenderScale\(1\); render\(\);/.test(ev));
+  check('G: lighting has a WebGL2 fragment-shader path, tried before any CPU-only work', /const LIGHT_FRAG = `#version 300 es/.test(core) && core.indexOf('if(GPU_LIGHT && ww*wh >= 4096)') < core.indexOf('const R = 4, avg = new Float32Array(ww*wh);'));
+  check('G: software-emulated WebGL steps aside for the CPU (it measured slower)', /if\(!GPU_SOFT_OK && \/swiftshader\|llvmpipe\|softpipe\|software\|basic render\/i\.test\(renderer\)\) return null;/.test(core));
+  check('G: the worker can be told to light on the CPU (to compare, or as a fallback)', /setGpuLight\(!\(opts && opts\.cpuLight\)\);/.test(src('textureWorker.js')));
+  const C = await import('../texCore.js');
+  check('G: in Node there is no WebGL2, so lighting runs on the CPU, exactly as before', C.lightBackend() === 'cpu');
+}
+
+// ---- Text Margins ----
+{
+  check('Text Margins scales the page margins and breathing room, never the frame (100% = as before)',
+    /const marginK = Math\.max\(0\.2, Math\.min\(1\.5,/.test(cr) && /bOffset \+ bThick \+ Math\.min\(W, H\)\*0\.04\*marginK/.test(cr) && /W\*0\.09\*marginK/.test(cr)
+    && /id="textMargin" min="20" max="150" step="5" value="100"/.test(src('index.html')));
+  check('Text Margins is saved and restored with a look', /textMargin: parseFloat\(\$\('textMargin'\)\.value\),/.test(ev) && /if\(s\.textMargin!==undefined\)/.test(ev));
+}
+
+// ---- no more blank pages ----
+{
+  const svc = src('textureService.js');
+  check('frames are drawn into a back buffer and reach the page only when whole', /function renderInto\(canvas\)/.test(cr) && /renderInto\(BACK\);[\s\S]{0,200}v\.drawImage\(BACK, 0, 0\);/.test(cr));
+  check('a failed frame keeps the last good picture, lets memory go, and retries (a few times)', /dropLargeTextures\(Math\.max\(1, page\.width\*page\.height\)\);/.test(cr) && /failures <= 3/.test(cr));
+  check('a restored canvas, or a tab coming back, redraws', /addEventListener\('contextrestored'/.test(ev) && /visibilityState === 'visible'\)\{ resetBackBuffer\(\); scheduleRender\(\); \}/.test(ev));
+  check('the texture cache follows the device\'s memory', /navigator\.deviceMemory/.test(src('textureGenerators.js')));
+  check('a crashed worker is replaced and its job retried; only repeated crashes fall back to the page', /if\(crashes > MAX_CRASHES\)/.test(svc) && /if\(i >= 0\) pool\[i\] = spawn\(\);/.test(svc));
+  check('Node (no OffscreenCanvas) still draws on the page directly', /if\(typeof OffscreenCanvas !== 'function'\)\{ renderInto\(page\); return; \}/.test(cr));
+}
+
+// ---- Fold Ghost and Poured Wax, lit ----
+{
+  const T = await import('../textureGenerators.js'), tt = src('texTouch.js');
+  check('Fold Ghost is folded paper: long folds and crumples as heights, lit; a Crumple knob', T.paramsFor('foldghost')[2].label === 'Crumple' && /carried in a pocket/.test(tt));
+  check('Poured Wax pools merge (a metaball field), lit with a satin sheen; a Viscosity knob', T.paramsFor('wax')[2].label === 'Viscosity' && /pools that meet MERGE into one/.test(tt) && /gloss:0\.62/.test(tt));
+}
+
+// ---- inline glyphs on every canvas; materials; normal maps; folds ----
+{
+  // the hook must reach EVERY 2D context prototype — the back buffer is an
+  // OffscreenCanvas, and without it every inline glyph drew as a missing box
+  const G = await import('../glyphs.js');
+  if(typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class { moveTo(){} lineTo(){} bezierCurveTo(){} quadraticCurveTo(){} arc(){} closePath(){} rect(){} ellipse(){} addPath(){} };
+  const fake = () => ({ fillText(){}, strokeText(){}, measureText(){ return { width: 1 }; } });
+  const pageProto = fake(), offscreenProto = fake();
+  check('inline glyphs hook every kind of 2D context (page and OffscreenCanvas), each once',
+    G.installInlineGlyphs(pageProto) === true && G.installInlineGlyphs(offscreenProto) === true && G.installInlineGlyphs(pageProto) === false);
+  check('…and glyphs.js and the renderer install it on OffscreenCanvas too',
+    /installInlineGlyphs\(OffscreenCanvasRenderingContext2D\.prototype\)/.test(src('glyphs.js')) && /installInlineGlyphs\(OffscreenCanvasRenderingContext2D\.prototype\)/.test(cr));
+
+  const C = await import('../texCore.js');
+  const ww = 48, wh = 48, flatH = new Float32Array(ww*wh), N = new Float32Array(ww*wh*3);
+  // a normal map tilting every pixel east; on the dial, 270° light comes FROM the east (90° from the west)
+  for(let i = 0; i < ww*wh; i++){ const t = 0.6, l = Math.hypot(t, 0, 1); N[i*3] = t/l; N[i*3+1] = 0; N[i*3+2] = 1/l; }
+  const plain = C.lightHeights(flatH, ww, wh, { light: 270 }), toward = C.lightHeights(flatH, ww, wh, { light: 270, normals: N }), away = C.lightHeights(flatH, ww, wh, { light: 90, normals: N });
+  check('normal maps: tilted toward the light is brighter than flat, tilted away is darker', toward.light[24*ww + 24] > plain.light[24*ww + 24] + 0.05 && away.light[24*ww + 24] < plain.light[24*ww + 24] - 0.05);
+  const H = new Float32Array(ww*wh); for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const d = Math.hypot(x - 24, y - 24); H[y*ww + x] = d < 10 ? Math.sqrt(100 - d*d) : 0; }
+  const L = C.lightHeights(H, ww, wh, { light: 90, ambient: 0.4, components: true });
+  let worst = 0; for(let i = 0; i < ww*wh; i++) worst = Math.max(worst, Math.abs(L.light[i] - (0.4 + 0.6*L.diffuse[i])*(1 - L.occl[i])));
+  check('components recombine to the same light (ambient + (1−ambient)·diffuse, occluded)', worst < 1e-5);
+  check('white Highlight and Shade are no material at all (looks stay exactly as they were)', C.materialOf('#FFFFFF', '#ffffff') === null && C.materialOf(null, undefined) === null);
+  const M = C.materialOf('#FFFFFF', '#3060FF');
+  const lit = L.light.indexOf(Math.max(...L.light)), shaded = L.light.indexOf(Math.min(...L.light));
+  check('the Shade hue colours shadows, not lit faces', Math.abs(C.litK(L, lit, 0.4, M, 2) - L.light[lit]) < 1e-9 && C.litK(L, shaded, 0.4, M, 2) > L.light[shaded]*1.2);
+  check('material hues keep their brightness (a deep blue shade does not darken)', Math.abs(0.2126*M.sh[0] + 0.7152*M.sh[1] + 0.0722*M.sh[2] - 1) < 0.02);
+  const T = await import('../textureGenerators.js');
+  check('six coloured lit textures take materials; the grey ones that blend do not',
+    ['tessellate', 'cupring', 'wax', 'dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].material === true) && !T.TEXTURE_CAPS.foldghost.material && !T.TEXTURE_CAPS.glassrain.material);
+  check('material hues key the cache only when set', T.textureKeyFor('dunes', 64, 64, { tint3: '#FFFFFF' }) === T.textureKeyFor('dunes', 64, 64, {}) && T.textureKeyFor('dunes', 64, 64, { tint4: '#3060FF' }) !== T.textureKeyFor('dunes', 64, 64, {}));
+  check('Highlight and Shade are saved, restored (white when absent) and reset by presets',
+    /textureTint3: \$\('textureTint3Hex'\)\.value,/.test(ev) && /setColorField\('textureTint4Hex', s\.textureTint4 \|\| '#FFFFFF'\);/.test(ev) && /setColorField\('textureTint3Hex', p\.textureTint3 \|\| '#FFFFFF'\);/.test(ev));
+  check('Fold Ghost: folds sit off-centre (offset across the page, along the fold\'s normal), by real folding schemes',
+    /px=ww\*\(0\.5 \+ off\*nx\), py=wh\*\(0\.5 \+ off\*ny\)/.test(src('texTouch.js')) && /scheme=Math\.floor\(Math\.random\(\)\*4\)/.test(src('texTouch.js')));
 }
 
 console.log();

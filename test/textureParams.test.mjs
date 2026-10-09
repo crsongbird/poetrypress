@@ -27,12 +27,14 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 33 textures', textureTypes.length === 33);
+check('the picker offers 36 textures', textureTypes.length === 36);
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
-check('every texture declares exactly two params', missing.length === 0);
-if(missing.length) console.log('   missing:', missing.join(', '));
+// a third knob is always Form; Dream Bloom alone goes on to five (Object Shape, Colour Variation)
+check('every texture declares two params, plus an optional third that must be Form (and Dream Bloom\'s fourth and fifth)',
+  Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
+    || (t === 'bokeh' && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')));
 
 const unlabelled = textureTypes.filter(t => paramsFor(t).some(d => !d.label || /value/i.test(d.label)));
 check('every param has a real label, not "value 1"', unlabelled.length === 0);
@@ -114,8 +116,12 @@ function probe(type, v1, v2){
 }
 function movesWith(type, i){
   const d = TEXTURE_PARAMS[type];
-  const lo = i === 0 ? probe(type, d[0].min, d[1].def) : probe(type, d[0].def, d[1].min);
-  const hi = i === 0 ? probe(type, d[0].max, d[1].def) : probe(type, d[0].def, d[1].max);
+  // an ANGLE knob's two ends are the same orientation (lines have no
+  // direction: -90° is +90°), so for angles compare one end with the middle
+  const span = k => d[k].key === 'angle' ? [d[k].min, (d[k].min + d[k].max) / 2] : [d[k].min, d[k].max];
+  const [a0, a1] = span(i);
+  const lo = i === 0 ? probe(type, a0, d[1].def) : probe(type, d[0].def, a0);
+  const hi = i === 0 ? probe(type, a1, d[1].def) : probe(type, d[0].def, a1);
   return Math.abs(hi.geo - lo.geo) > Math.max(0.25, lo.geo * 0.002) || lo.dims !== hi.dims;
 }
 // 'astral' is a composite assembled in canvasRenderer from astral_fog and
@@ -154,12 +160,11 @@ for(const cv of M.createdCanvases) inkArea += cv.getContext('2d')._stats.radiusS
 check('the Rorschach covers only a small part of the card', inkArea < 800 * 2);
 
 // ---- hatching must actually cross ----
-// A single set of parallel lines is rain, not hatching.
-M.resetCreatedCanvases();
-getTextureCanvas('hatch', 800, 800, { seed: 3, p1: 35, p2: 100 });
-let hatchRot = 0;
-for(const cv of M.createdCanvases) hatchRot += cv.getContext('2d')._stats.rotSum;
-check('the hatch lays down more than one direction', hatchRot > Math.abs(35*Math.PI/180) * 1.8);
+// A single set of parallel lines is rain, not hatching. Silverpoint hatches in
+// patches that follow a form, and crosses a second layer in the deepest shadow.
+check('the hatch crosses a second layer in the deepest shadow',
+  /const layers = t>0\.62 \? 2 : 1;/.test(readFileSync(new URL('../texSharpness.js', import.meta.url), 'utf8')) &&
+  /const la=a\+l\*0\.95/.test(readFileSync(new URL('../texSharpness.js', import.meta.url), 'utf8')));
 
 // ---- aurora must paint something ----
 M.resetCreatedCanvases();

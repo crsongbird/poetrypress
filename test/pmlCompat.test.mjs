@@ -56,10 +56,11 @@ check('an effect can sit alongside an outline',
 
 // ---- one list, owned by the parser ----
 const cr = readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8');
-const ui = [...html.matchAll(/<select id="typeEffect">([\s\S]*?)<\/select>/g)][0][1];
-const uiNames = [...ui.matchAll(/value="(\w+)"/g)].map(m => m[1]);
-check('the picker offers exactly the effects PML accepts',
-  uiNames.length === TYPE_EFFECT_NAMES.length && uiNames.every(n => TYPE_EFFECT_NAMES.includes(n)));
+// every typeface effect PML has ever accepted still means something: it
+// translates into the effect stack (or, for the old underlines, an underline)
+const E = await import('../effects.js');
+check('every old /effect name still translates (effects.js)',
+  TYPE_EFFECT_NAMES.filter(n => n !== 'none').every(n => { const L = E.legacyTypeEffect(n, 60, '#000', 45, 100, 30); return !!(L.fx || L.under); }));
 
 // ---- fields must survive the rebuild ----
 // buildLines copies each part into a fresh object field by field; a field a

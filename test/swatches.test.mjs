@@ -41,7 +41,8 @@ check('it honours the preset\'s blend, or the texture\'s default',
   /const blend = p\.textureBlend && caps\.blends\.includes\(p\.textureBlend\) \? p\.textureBlend : caps\.blends\[0\]/.test(paint) &&
   /globalCompositeOperation = blend/.test(paint));
 check('it honours the texture opacity', /textureOpacity/.test(paint));
-check('it draws the border when the preset has one', /strokeRect\(/.test(paint));
+check('it draws the border when the preset has one', /if\(p\.border && p\.borderColor\)\{[\s\S]*?frame\(\); c\.stroke\(\);/.test(paint));
+check('it draws the inset box when the preset has one, rounded when the frame is', /if\(p\.cardToggle\)\{[\s\S]*?c\.fill\(\);/.test(paint) && /p\.borderRounded \?/.test(paint));
 check('it draws the glyphs', /spellToPML\(p\.spell\)/.test(paint));
 check('glyphs use the preset\'s own accents',
   /sg\.color === 'accent1' \? \(p\.accent1/.test(paint));
@@ -75,7 +76,7 @@ check('the swatch is painted from the tunable size',
   /paintPresetSwatch\(swatch, p, SWATCH\.width, SWATCH\.height\)/.test(ev));
 check('that size still matches the box\'s aspect',
   Math.abs((SWATCH.width / SWATCH.height) - (208 / 48)) < 0.6);
-check('the border is inset by a full stroke width', /const inset = c\.lineWidth;/.test(paint));
+check('the frame is inset past its stroke, so no edge falls off the tile', /const inset = bw \* 1\.6;/.test(paint));
 check('the glyphs are centred both ways',
   /textBaseline = 'middle'/.test(paint) && /\(w - total\) \/ 2/.test(paint) && /const y = h \/ 2/.test(paint));
 
