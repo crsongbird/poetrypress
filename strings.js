@@ -174,7 +174,7 @@ export const UI_STRINGS = {
   'label.base_opacity':                      "Base Opacity",
   'label.base_blend':                        "Base Blend",
   'hint.athanor':                            "A surface texture node editor: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.",
-  'button.forgeOpenBtn':                     "Open the Athanor",
+  'button.forgeOpenBtn':                     "🜉 Open the Athanor",
   'label.glass_strength':                    "Strength",
   'label.glass_scale':                       "Scale",
   'label.box_link':                          "⛓ Shape Linked to Border",

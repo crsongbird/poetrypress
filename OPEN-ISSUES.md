@@ -47,21 +47,17 @@ Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter, Brushstrokes
   per-material gloss where one won't do.
 
 ## 2 · Ruby to judge (this round)
-- The node editor is THE ATHANOR again, subtitled "Surface texture node
-  editor". Looks saved while it was the Crucible open with it (retireLook,
-  RETIRED). Stages 4–5: a VERSION per graph (v2: each node's own randomness),
-  node results KEPT between edits, a WORK BUDGET (coarser past it; 64 nodes at
-  most), five STARTER graphs ("Start from…": Marble, Leaded Window, Lit
-  Terrain, Woven Waves, Reaction Bloom), three new parts (Posterize, Tile &
-  Rotate, Edge Detect).
-- Text effects (glow above all) are ~20× faster.
-- The last three approved textures: Stained Glass (√; shards → rose window,
-  lead lit by the dial, glass lit from behind), Suminagashi (♡; Jaffer's
-  marbling maths, rings swept by the breath), Watercolour Wash (🜚; Hobbs's
-  layered polygons, edge darkening, granulation, a graded wash).
-- Prior art for node editors is in Ruby's doc (Material Maker, Substance,
-  Blender groups, TextureLab, NodeToy, the TSL editor; Drawflow vs Rete vs
-  LiteGraph).
+- THE FOUR READINGS: under Surface Variant, 🜂 🜄 🜁 🜃 — every texture's Fire,
+  Water, Wind and Earth (Runology's Primal Archetypes, their Chroma red, blue,
+  green, yellow). One is the texture's default (underlined); the other three
+  are new looks, each chosen by rendering and looking (textureElements.js,
+  144 of them, with a name each). A button sets knobs, hues, blend and light
+  like ⚄ Randomize: locked controls keep their values, so readings mix.
+- 🜉 (Creation, the Cosmological Archetype) is the Athanor's glyph.
+- First Snow no longer fails when its Wind is turned up (a colour written as
+  a plain string, not a template).
+- From the last round (still to judge): the Athanor's stages 4–5, faster text
+  effects, Stained Glass, Suminagashi, Watercolour Wash.
 
 ## 3 · Colour, light and material — the rest of the pass
 Every colour has one job (test/colorRoles.test.mjs). Unused hues are now
@@ -85,7 +81,11 @@ a random angle.
 - The Athanor's GPU passes (blur, warp, light inside a graph) — the light
   already uses the GPU where texCore's does.
 - Then: generate and revisit the PRESETS (Ruby: once the open items are done)
-  — Turing Skin, Hoarfrost and the ten newest textures have none yet.
+  — Turing Skin, Hoarfrost and the ten newest textures have none yet. The
+  four readings are a good quarry for them.
+- From Symbology (the project's other chat): murmur.js, its soft sound engine
+  (Ruby: maybe); Runology's vocabulary beyond the four elements (Accent Runes,
+  the Chroma, Archetype names) for names, seeds or glyphs.
 
 ## Later
 - Dream Bloom as the basis for a new texture (its five knobs make a rich engine).
@@ -147,5 +147,8 @@ a random angle.
   old version makes: add a version.
 - Text effects never blur with ctx.filter: use softText (a shadow of off-page
   letters, carried through the transform).
+- THE FOUR READINGS (textureElements.js): a new texture needs all four (the
+  test says so), its default marked by `def`. Check a new reading by
+  rendering it; keep its knobs inside the texture's ranges.
 - Texture layers: the base layer is drawn first, in its own slot ('base'),
   with the main seed ^ 0x5bd1e995; presets turn it off (FRAME_DEFAULTS).

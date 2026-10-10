@@ -708,7 +708,7 @@ export function genSnow(w,h,amt,zoom,light,form,base){
       fctx.save(); fctx.translate(x, y); fctx.rotate(Math.atan2(vy, vx)); fctx.scale(1 + streak/size, 1);
       const sg = fctx.createRadialGradient(0,0,0,0,0,size);
       const a2 = alpha/(1 + 0.3*streak/size);                     // the same light spread over a longer path
-      sg.addColorStop(0, `rgba(${SC},${a2})`); sg.addColorStop(0.6, `rgba(${SC},${a2*0.5})`); sg.addColorStop(1, 'rgba(${SC},0)');
+      sg.addColorStop(0, `rgba(${SC},${a2})`); sg.addColorStop(0.6, `rgba(${SC},${a2*0.5})`); sg.addColorStop(1, `rgba(${SC},0)`);
       fctx.fillStyle = sg; fctx.beginPath(); fctx.arc(0,0,size,0,Math.PI*2); fctx.fill(); fctx.restore();
       if(crystal && wind < 0.35){
         objectPath(fctx, 'snowflake', x, y, size*0.72, Math.random()*Math.PI);

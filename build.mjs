@@ -61,6 +61,7 @@ const ORDER = [
   'texTouch.js',          // 🜚 generators
   'athanor.js',           // the Athanor's evaluator: a node graph made into a texture
   'textureGenerators.js',
+  'textureElements.js',
   'textureService.js',     // textures made in a worker, so the page stays responsive // texture tables, cache and dispatch
   'fonts.js',             // typefaces fetched on first use
   'release.js',           // the release's name (§Build)

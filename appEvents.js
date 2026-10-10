@@ -29,6 +29,7 @@ import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { openForge, closeForge, describeForge } from './forge.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
+import { elementsFor } from './textureElements.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
@@ -66,7 +67,7 @@ import { applyStrings, fill, PICKER } from './strings.js';
  */
 const state = {
   page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
-  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false },
+  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null },
   locks: new Set(),
   // undo/redo: look snapshots (see the history section)
   history: { stack: [], index: -1, restoring: false, timer: null },
@@ -1977,6 +1978,57 @@ function withLocksPreserved(fn){
 
 $('textureType').addEventListener('change', ()=>{ syncTextureTools(true); scheduleRender(); });
 syncTextureTools(true);
+
+// ---------- the four readings of a surface (🜂 🜄 🜁 🜃) ----------
+// textureElements.js: each texture's Fire, Water, Wind and Earth — one of
+// them its default. A button sets what that reading names (knobs, hues, blend,
+// light) the way ⚄ Randomize does: a LOCKED control keeps its value, so
+// readings can be mixed (lock the hues of one, apply another's knobs).
+function paintElements(){
+  const list = elementsFor($('textureType').value), on = state.ui.element;
+  const row = $('elementRow'); if(!row || !row.querySelectorAll) return;
+  row.querySelectorAll('.el-btn').forEach(b => {
+    const v = list.find(e => e.el === b.dataset.el);
+    b.disabled = !v; if(!v) return;
+    b.title = `${v.glyph} ${v.element}: ${v.name}${v.isDefault ? ' (the default)' : ''}`;
+    b.setAttribute('aria-label', `${v.element}: ${v.name}`);
+    b.classList.toggle('is-default', !!v.isDefault);
+    b.classList.toggle('on', on === v.el);
+  });
+  const name = $('elementName'); if(!name) return;
+  const v = list.find(e => e.el === on);
+  name.textContent = '';
+  if(v){ const b = document.createElement('b'); b.textContent = v.name; name.appendChild(b); name.appendChild(document.createTextNode(` · ${v.element}${v.isDefault ? ', the default' : ''}`)); }
+}
+function applyElement(id){
+  const type = $('textureType').value, v = elementsFor(type).find(e => e.el === id);
+  if(!v) return;
+  const caps = capsFor(type), defs = paramsFor(type);
+  const fire = el => { if(el && el.dispatchEvent){ el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); } };
+  withLocksPreserved(() => {
+    if(v.isDefault){
+      // the texture as it always was: its knobs, hues, blend and light
+      syncTextureParams(true); syncTextureTools(true);
+      if(!state.locks.has('textureLight')) setLight(LIGHT_DEFAULT.deg, caps.lightTilt != null ? caps.lightTilt : LIGHT_DEFAULT.tilt, false);
+      return;
+    }
+    (v.k || []).forEach((x, i) => { const d = defs[i], el = $('texP' + (i + 1)); if(!d || !el) return;
+      el.value = String(Math.max(d.min, Math.min(d.max, x))); fire(el); });
+    (v.t || []).slice(0, caps.tints || 0).forEach((hex, i) => { setColorField('textureTint' + (i + 1) + 'Hex', hex); state.ui.tintFollows[i] = false; });
+    if(v.t5 && caps.hue5) setColorField('textureTint5Hex', v.t5);
+    if(v.blend && caps.blends.includes(v.blend)){ $('textureBlend').value = v.blend; fire($('textureBlend')); }
+    if(v.light && caps.light && !state.locks.has('textureLight')) setLight(v.light[0], v.light[1], false);
+  });
+  state.ui.element = id;
+  paintElements(); scheduleRender();
+  if(typeof commitSoon === 'function') commitSoon();
+}
+if($('elementRow') && $('elementRow').addEventListener){
+  $('elementRow').addEventListener('click', e => { const b = e.target.closest && e.target.closest('.el-btn'); if(b && !b.disabled) applyElement(b.dataset.el); });
+}
+// a new texture: no reading applied yet (its default is what it shows)
+$('textureType').addEventListener('change', () => { state.ui.element = null; paintElements(); });
+paintElements();
 syncLightPad();
 installLocks();
 
