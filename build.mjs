@@ -78,7 +78,7 @@ const ORDER = [
 // a scope; exports become plain declarations.
 function flatten(src, filename) {
   const withoutImports = src.replace(/^import\s*\{[^}]*\}\s*from\s*'\.\/[\w.-]+';\s*$/gm, '');
-  const withoutExports = withoutImports.replace(/^export\s+(function|const|let|var|class)\b/gm, '$1');
+  const withoutExports = withoutImports.replace(/^export\s+(async\s+function|function|const|let|var|class)\b/gm, '$1');
   const leftover = withoutExports.match(/^\s*(import|export)\b.*$/gm);
   if (leftover) {
     throw new Error(

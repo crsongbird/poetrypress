@@ -214,7 +214,7 @@ check('focus mode hides every panel except the one kept',
 check('focus mode collapses the bar to a single Return',
   /\.focus-mode \.tab-btn:not\(\[data-tab="more"\]\)\{[^}]*display:none/.test(mobile));
 check('presets are four across on mobile',
-  /\.preset-grid\{[^}]*grid-template-columns:repeat\(4,1fr\)/.test(mobile));
+  /\.preset-grid\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(mobile));
 check('the symbol font is loaded for the glyph spells',
   html.includes('Noto+Sans+Symbols+2'));
 

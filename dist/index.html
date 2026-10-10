@@ -17,9 +17,11 @@
 <title>Unfixable Vellum</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Literata:ital,wght@0,400;0,600;1,400;1,600&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Oswald:wght@400;500;600&family=Unica+One:wght@400&family=Shadows+Into+Light:wght@400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600&family=Architects+Daughter:wght@400&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Inter:ital,wght@0,400;0,600;1,400;1,600&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:ital,wght@0,400;0,600;1,400;1,600&family=UnifrakturMaguntia&family=Pinyon+Script&family=IM+Fell+English:ital@0;1&family=Special+Elite&family=Uncial+Antiqua&family=Poiret+One&family=Zilla+Slab:ital,wght@0,500;0,700;1,500&family=Almendra:ital,wght@0,400;0,700;1,400&family=VT323&family=Rye&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Oswald:wght@400;500;600&family=Unica+One:wght@400&family=Shadows+Into+Light:wght@400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600&family=Architects+Daughter:wght@400&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Inter:ital,wght@0,400;0,600;1,400;1,600&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:ital,wght@0,400;0,600;1,400;1,600&family=UnifrakturMaguntia&family=Pinyon+Script&family=IM+Fell+English:ital@0;1&family=Special+Elite&family=Uncial+Antiqua&family=Poiret+One&family=Zilla+Slab:ital,wght@0,500;0,700;1,500&family=Almendra:ital,wght@0,400;0,700;1,400&family=VT323&family=Rye&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.css"/>
 <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.js"></script>
+<!-- pan and zoom on the desktop preview (timmywil/panzoom, MIT): wheel at the cursor, drag, double-click to fit -->
+<script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -35,11 +37,17 @@
   --rose:#b98a8a;
 }
 
+/* The UI's faces (Ruby): FRAUNCES at full softness for the app title, card
+   headings, the big buttons and sheet names; LITERATA for everything else
+   (it runs a little wider — the small sizes step down to make room);
+   Courier Prime for code. */
+:root{ --ui-display:'Fraunces', 'Playfair Display', serif; --ui-soft:"SOFT" 100, "WONK" 0; --ui-text:'Literata', 'EB Garamond', serif; --ui-code:'Courier Prime', monospace; }
+
 *{box-sizing:border-box;}
 
 body{
   margin:0;
-  font-family:'EB Garamond', serif;
+  font-family:var(--ui-text);
   background:var(--bg-deep);
   color:var(--text-main);
   height:100vh;
@@ -63,7 +71,7 @@ body{
 .controls::-webkit-scrollbar{width:8px;}
 .controls::-webkit-scrollbar-thumb{background:var(--line); border-radius:2px;}
 
-.app-title{ font-family:'Playfair Display', serif; font-size:22px; letter-spacing:0.03em; margin:0 0 2px 0; }
+.app-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:22px; letter-spacing:0.03em; margin:0 0 2px 0; }
 .kofi-link{
   display:inline-block; font-size:12px; color:var(--accent); text-decoration:none;
   margin:0 0 11px 0; border-bottom:1px dotted var(--accent-dim);
@@ -78,10 +86,10 @@ body{
 }
 
 .card-title{
-  font-family:'Playfair Display', serif;
-  font-size:11.5px;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft);
+  font-size:12.5px;
   text-transform:uppercase;
-  letter-spacing:0.16em;
+  letter-spacing:0.1em;
   color:var(--accent);
   margin:0 0 7px 0; padding-bottom:3px; border-bottom:1px solid transparent; border-image:linear-gradient(90deg, var(--accent-dim), color-mix(in srgb, var(--accent-2) 70%, transparent) 38%, transparent 82%) 1; }
 
@@ -110,7 +118,7 @@ textarea{
   resize:vertical;
   white-space:pre;
   line-height:1.5;
-  font-family:'Courier Prime', monospace;
+  font-family:var(--ui-code);
   font-size:13px;
 }
 
@@ -140,28 +148,28 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
 .radio-btn{
   flex:1 1 28%; text-align:center; padding:5px 0;
   border:1px solid var(--line); border-radius:2px;
-  font-size:12px; color:var(--text-dim); cursor:pointer;
+  font-size:12.5px; color:var(--text-dim); cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
 .radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
 
 button.ghost{
   width:100%; padding:5px 0; border-radius:2px;
   border:1px solid var(--accent-dim); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent); color:var(--accent);
-  font-family:'EB Garamond', serif; font-size:13px; letter-spacing:0.04em;
+  font-family:var(--ui-text); font-size:13px; letter-spacing:0.04em;
   cursor:pointer; transition:all .12s ease; margin-top:1px; box-shadow:inset 0 1px 0 var(--hi); }
 button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent))}
 
-.hint{font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.45;}
+.hint{font-size:12.5px; color:var(--text-dim); margin-top:5px; line-height:1.45;}
 .hint code{ background:var(--bg-panel-2); padding:1px 4px; border-radius:2px; color:var(--rose); }
 
-.preset-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+.preset-grid{ display:grid; grid-template-columns:repeat(4,minmax(80px,1fr)); gap:4px; }
 .preset-btn{
   border:1px solid var(--line); border-radius:2px; overflow:hidden;
   cursor:pointer; background:var(--bg-panel-2); padding:0;
   transition:transform .12s ease, border-color .12s ease; box-shadow:0 1px 0 var(--well); }
 .preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); box-shadow:0 4px 10px -4px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 40%, transparent); }
 
-.preset-label{ display:block; font-size:8.5px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
+.preset-label{ display:block; font-size:11px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
 
 /* ---------- RIGHT RENDER PANE ---------- */
 .stage{
@@ -171,7 +179,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
   position:relative}
 .canvas-wrap{
   box-shadow:0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
-  border-radius:2px; overflow:hidden; line-height:0;
+  border-radius:0; overflow:hidden; line-height:0;
 }
 #poemCanvas{ display:block; max-height:calc(100vh - 40px); max-width:94vw; height:auto; width:auto; box-shadow:0 14px 30px -18px var(--lo), 0 0 0 1px color-mix(in srgb, var(--text-main) 6%, transparent); }
 
@@ -180,7 +188,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
   padding:9px 20px; border-radius:2px;
   border:2px solid #1a1610;
   background:var(--accent); color:#1a1610;
-  font-family:'Playfair Display', serif; font-size:14px; letter-spacing:0.03em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:14px; letter-spacing:0.03em;
   cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;
   box-shadow:0 8px 24px -6px rgba(0,0,0,0.65);
 }
@@ -190,7 +198,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
 .app-header{
   display:none;
   padding:10px 14px; background:var(--bg-panel); border-bottom:1px solid var(--line);
-  font-family:'Playfair Display', serif; font-size:17px; letter-spacing:0.02em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; letter-spacing:0.02em;
   position:sticky; top:0; z-index:70;
 }
 
@@ -217,12 +225,12 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
      the compact feel. */
   label{ font-size:14px; }
   select, textarea, input[type="text"], input[type="number"]{ font-size:16px; }
-  .card-title{ font-size:13.5px; }
+  .card-title{ font-size:14px; }
   .hint{ font-size:13px; }
   button.ghost{ font-size:15px; }
   .radio-btn{ font-size:14px; }
   .check-row label{ font-size:15px; }
-  .preset-label{ font-size:10.5px; }
+  .preset-label{ font-size:11px; }
 }
 
 /* ============================================================
@@ -353,7 +361,7 @@ body.is-mobile #poemText {
 }
 
 
-body.is-mobile .card-title { font-size: clamp(10px, 2.6vw, 12px); margin-bottom: 6px; }
+body.is-mobile .card-title { font-size: clamp(11px, 2.9vw, 13px); letter-spacing:.09em; margin-bottom: 6px; }
 
 body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 
@@ -362,11 +370,11 @@ body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 body.is-mobile input[type="text"],
 body.is-mobile input[type="number"],
 body.is-mobile select,
-body.is-mobile textarea { font-size: clamp(14px, 3.5vw, 16px); }
+body.is-mobile textarea { font-size: 16px; }   /* 16px: a phone never zooms in on a tapped field */
 
 /* the picker must clear the tab bar and the download button */
 body.is-mobile #clr-picker { }
-body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(11px, 2.9vw, 13px); }
+body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(12px, 3vw, 13px); }
 
 
 /* drawn tab icons — one stroke weight, one grid, so they read as a set */
@@ -474,7 +482,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .btn-row > button{ flex:1 1 0; min-width:84px; }
 .btn-major, .btn-danger{
   padding:8px 12px; border-radius:2px; cursor:pointer;
-  font-family:'Playfair Display', serif; font-size:13px; letter-spacing:0.03em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; letter-spacing:0.03em;
   border:2px solid var(--accent); background:var(--accent); color:var(--on-accent, #1a1610);
   transition:opacity .12s ease;
 }
@@ -511,7 +519,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
   box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
 }
 .modal-title{
-  margin:0 0 6px; font-family:'Playfair Display', serif;
+  margin:0 0 6px; font-family:var(--ui-display); font-variation-settings:var(--ui-soft);
   font-size:15px; letter-spacing:0.05em; color:var(--accent);
 }
 .modal-body{ margin:0 0 10px; font-size:12.5px; color:var(--text-dim); line-height:1.55; }
@@ -610,8 +618,8 @@ body.is-mobile .check-row{ margin:2px 0; }
 body.is-mobile .app-header{ padding:3px 6px; }
 body.is-mobile .app-header-title{ letter-spacing:0.02em; }
 
-body.is-mobile .preset-grid{ grid-template-columns:repeat(4,1fr); gap:5px; }
-body.is-mobile .preset-label{ font-size:clamp(8px,2.1vw,10px); }
+body.is-mobile .preset-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; }
+body.is-mobile .preset-label{ font-size:11px; }
 
 /* ---------- FOCUS MODE ----------
    Entered when the poem field takes focus on a phone. Chrome hides its own
@@ -1380,7 +1388,7 @@ body.is-mobile #clr-picker{
   background:var(--accent) !important;
   color:var(--on-accent, #161414) !important;
   border:0 !important; border-radius:2px;
-  font-family:'Playfair Display', serif; letter-spacing:.03em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); letter-spacing:.03em;
   padding:6px 14px; cursor:pointer;
 }
 #clr-picker .clr-hue, #clr-picker .clr-gradient{ border-radius:2px; }
@@ -1726,6 +1734,13 @@ body:not(.is-mobile) .tab-btn.active{ background:linear-gradient(180deg, var(--a
 /* the disclosure marks in the second accent */
 summary.card-title::marker, summary.card-title::-webkit-details-marker{ color:var(--accent-2); }
 body.is-mobile summary.card-title::after, .subcard > summary::after{ color:var(--accent-2); opacity:.8; }
+
+/* the big buttons speak in the display face too */
+body:not(.is-mobile) .tab-btn{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); }
+
+/* the desktop preview, zoomed in: a hand to drag it by */
+body:not(.is-mobile) .canvas-wrap.zoomed #poemCanvas{ cursor:grab; }
+body:not(.is-mobile) .canvas-wrap.zoomed #poemCanvas:active{ cursor:grabbing; }
 
 </style>
 
@@ -2416,6 +2431,19 @@ function withScale(s, fn){
   finally { SCALE = prev; }
 }
 /** The scale the current generation runs at. */
+/**
+ * A WEIGHTED choice: traits that are common, uncommon or rare (as Fidenza and
+ * other long-form generative art choose them), rather than a flat coin-flip.
+ * table: [[value, weight], …]. r: the roll, 0..1 — by default one draw of the
+ * seeded random (so a choice costs the same one draw a coin-flip did, and
+ * seeds keep their other features); pass an earlier draw to reuse it.
+ */
+function pickWeighted(table, r = Math.random()){
+  let total = 0; for(const [, wt] of table) total += wt;
+  let x = r*total;
+  for(const [v, wt] of table){ if(x < wt) return v; x -= wt; }
+  return table[table.length - 1][0];
+}
 function scaleNow(){ return SCALE; }
 /** n canonical pixels, in pixels of the canvas being drawn. */
 function cpx(n){ return n * SCALE; }
@@ -2712,7 +2740,7 @@ function lightHeights(H, ww, wh, opts = {}){
 function lightSparse(H, ww, wh, opts = {}, T = 64){
   const { light = 315, relief = 1 } = opts;
   const { lx, ly } = lightVec(light), tilt = Math.min(1, Math.hypot(lx, ly));
-  const elev = (90 - tilt*78) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it
+  const elev = (90 - tilt*78 - lightLow()*8) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it (sunk light too: longer shadows, wider margins)
   let hMax = 0, hMin = 0; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
   const ground = lightHeights(new Float32Array(1), 1, 1, { ...opts, shadow: 0, ao: 0, normals: null });
   const out = new Float32Array(ww*wh).fill(ground.flat), spec = new Float32Array(ww*wh).fill(ground.spec[0]);
@@ -3234,7 +3262,7 @@ function genAstralFog(w,h,amt,zoom,light,tint,form){
   return full;
 }
 
-function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
+function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL){
   amt = (amt==null?1:amt);
   const M = buildMatterMap();                 // FIRST: the same map the nebula uses
   const atm = Math.max(0, Math.min(1, form==null ? 0.2 : form));
@@ -3304,10 +3332,27 @@ function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
       }
     }
   }
+  // AIRGLOW in the Glow Hue: the night sky's own faint light, from the high
+  // atmosphere, rippled by gravity waves into slow bands across the whole
+  // sky (black: none — then only the Atmosphere's green glow, as before)
+  const AG = (GL && GL.r + GL.g + GL.b > 0.004) ? [GL.r*255|0, GL.g*255|0, GL.b*255|0] : null;
+  if(AG){
+    const bw = Math.max(32, Math.round(w/canonDiv(8))), bh = Math.max(32, Math.round(h/canonDiv(8)));
+    const bc = document.createElement('canvas'); bc.width = bw; bc.height = bh;
+    const bx = bc.getContext('2d', CPU), bi = bx.createImageData(bw, bh), bd = bi.data;
+    for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
+      // fine, nearly parallel ripples, gently bent; a broad patchiness over them
+      const u = x/bw, v = y/bh, warp = M.noise(u*0.9 + 4.2, v*0.9 + 8.7);
+      const band = Math.pow(0.5 + 0.5*Math.sin((v*11 + u*2.2 + warp*1.1)*Math.PI), 2)*(0.35 + 0.65*M.noise(u*1.6 + 1.3, v*1.6 + 5.9));
+      const k = (y*bw + x)*4; bd[k] = AG[0]; bd[k+1] = AG[1]; bd[k+2] = AG[2]; bd[k+3] = Math.round(255*0.16*band*(0.5 + 0.5*v));
+    }
+    bx.putImageData(bi, 0, 0);
+    fctx.save(); fctx.imageSmoothingEnabled = true; fctx.globalCompositeOperation = 'destination-over'; fctx.drawImage(bc, 0, 0, w, h); fctx.restore();
+  }
   if(atm > 0.02){
     // airglow low in the sky; past halfway, the warm wash of distant towns
-    const g = fctx.createLinearGradient(0, h, 0, h*0.5);
-    g.addColorStop(0, `rgba(110,255,170,${0.13*atm})`); g.addColorStop(1, 'rgba(110,255,170,0)');
+    const g = fctx.createLinearGradient(0, h, 0, h*0.5), ag = AG ? AG.join(',') : '110,255,170';
+    g.addColorStop(0, `rgba(${ag},${0.13*atm})`); g.addColorStop(1, `rgba(${ag},0)`);
     fctx.fillStyle = g; fctx.fillRect(0, h*0.5, w, h*0.5);
     if(atm > 0.5){
       const p = (atm - 0.5)*2, g2 = fctx.createLinearGradient(0, h, 0, h*0.78);
@@ -4129,14 +4174,32 @@ function genMoon(w,h,amt,zoom,form,night){
       if(br>0.55){ ctx.globalAlpha=a*0.5; ctx.strokeStyle='rgb(245,245,245)'; ctx.lineWidth=cpx(0.8);      // the brightest twinkle
         ctx.beginPath(); ctx.moveTo(x-rad*5,y); ctx.lineTo(x+rad*5,y); ctx.moveTo(x,y-rad*5); ctx.lineTo(x,y+rad*5); ctx.stroke(); }
     }
-    // a falling star, on some nights
-    if(shootP<0.45){
-      const x0=w*(0.1+Math.random()*0.8), y0=h*(0.05+Math.random()*0.4), ang=Math.PI*(0.15+Math.random()*0.25)*(Math.random()<0.5?1:-1)+Math.PI/2, len=unit*(0.12+Math.random()*0.15);
-      const x1=x0+Math.cos(ang)*len, y1=y0+Math.sin(ang)*len*0.6, g=ctx.createLinearGradient(x0,y0,x1,y1);
-      g.addColorStop(0,'rgba(245,245,245,0)'); g.addColorStop(1,`rgba(250,250,250,${0.85*nightK})`);
-      ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=cpx(2.2); ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-      ctx.fillStyle=`rgba(255,255,255,${0.9*nightK})`; ctx.beginPath(); ctx.arc(x1,y1,cpx(2.6),0,Math.PI*2); ctx.fill();
+    // a falling star, on some nights — weighted, not a coin-flip: most nights
+    // none, often one, now and then a FIREBALL (bright, long, green at the
+    // head), rarely a PAIR from the same radiant. (The roll is the seed's own
+    // shootP, as before: nights that had a star still have one.)
+    const star=pickWeighted([['one',38],['fireball',5],['pair',2],['none',55]], shootP);
+    if(star!=='none'){
+      let x0=w*(0.1+Math.random()*0.8), y0=h*(0.05+Math.random()*0.4), ang=Math.PI*(0.15+Math.random()*0.25)*(Math.random()<0.5?1:-1)+Math.PI/2, len=unit*(0.12+Math.random()*0.15);
+      // seen whole: never behind the moon (mirrored to the other side of the
+      // sky if it would be), and never running off the page
+      const reach=(star==='fireball' ? 1.6 : 1)*len, crosses=(xa,ya,a)=>{ for(let k=0;k<=12;k++){ const t=k/12, x=xa+Math.cos(a)*reach*t, y=ya+Math.sin(a)*reach*0.6*t; if(Math.hypot(x-cx,y-cy)<R*1.2) return true; } return false; };
+      if(crosses(x0,y0,ang)){ x0=w-x0; ang=Math.PI-ang; }
+      const fit=L=>{ const ex=x0+Math.cos(ang)*L, ey=y0+Math.sin(ang)*L*0.6; return ex>w*0.03 && ex<w*0.97 && ey>h*0.03 && ey<h*0.97; };
+      for(let k=0;k<8 && !fit(reach*(1-k*0.1));k++) len*=0.9;
+      const streak=(xa,ya,L,width,head,headRGB)=>{
+        const x1=xa+Math.cos(ang)*L, y1=ya+Math.sin(ang)*L*0.6, g=ctx.createLinearGradient(xa,ya,x1,y1);
+        g.addColorStop(0,'rgba(245,245,245,0)'); g.addColorStop(1,`rgba(250,250,250,${0.85*nightK})`);
+        ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=width; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(xa,ya); ctx.lineTo(x1,y1); ctx.stroke();
+        if(star==='fireball'){ const gl=ctx.createRadialGradient(x1,y1,0,x1,y1,head*5); gl.addColorStop(0,`rgba(${headRGB},${0.45*nightK})`); gl.addColorStop(1,`rgba(${headRGB},0)`);
+          ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(x1,y1,head*5,0,Math.PI*2); ctx.fill(); }
+        ctx.fillStyle=`rgba(${headRGB},${0.9*nightK})`; ctx.beginPath(); ctx.arc(x1,y1,head,0,Math.PI*2); ctx.fill();
+      };
+      if(star==='one') streak(x0,y0,len,cpx(2.2),cpx(2.6),'255,255,255');
+      else if(star==='fireball') streak(x0,y0,len*1.6,cpx(4.2),cpx(4.4),'226,255,236');
+      else { const off=unit*(0.035+Math.random()*0.03), nx=-Math.sin(ang), ny=Math.cos(ang)*0.6;
+        streak(x0,y0,len,cpx(2.2),cpx(2.6),'255,255,255'); streak(x0+nx*off+Math.cos(ang)*len*0.25, y0+ny*off+Math.sin(ang)*len*0.15, len*0.7,cpx(1.8),cpx(2.1),'255,255,255'); }
     }
     ctx.globalAlpha=1;
   }
@@ -5055,7 +5118,7 @@ function genMetalLeaf(w,h,amt,zoom,light,tint,form,sheenK,glitterK){
 // Most windows are dark.
 // The few that are lit are why
 // the city looks awake.
-function genCityscape(w,h,amt,zoom,tint1,tint2){
+function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   // the seed's FIRST draw decides the Needle, so which seeds show it is
   // predictable: withSeed(seed, () => Math.random() < 0.1)
@@ -5137,6 +5200,14 @@ function genCityscape(w,h,amt,zoom,tint1,tint2){
   // the Needle stands in one of the layers behind the nearest, in that layer's
   // tone, and shorter than the layer's tallest building
   const needleLayer = hasNeedle ? 1 + Math.floor(Math.random()*2) : -1;
+  // CITY GLOW (the Glow Hue): the sky above the lights, lit from below — the
+  // skyglow over every city at night — strongest at the skyline, fading
+  // upward; the buildings stand dark against it. Screened, so black is none.
+  if(GL && GL.r + GL.g + GL.b > 0.004){
+    const up = Math.max(1, ground - unit*0.6), g = ctx.createLinearGradient(0, ground, 0, up), c = (a) => `rgba(${GL.r*255|0},${GL.g*255|0},${GL.b*255|0},${a})`;
+    g.addColorStop(0, c(0.85)); g.addColorStop(0.25, c(0.5)); g.addColorStop(0.6, c(0.16)); g.addColorStop(1, c(0));
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g; ctx.fillRect(0, up, w, ground - up); ctx.restore();
+  }
   layers.forEach((L, i) => {
     const tallest = row(L.scale, L.tone, L.alpha, L.density, types);
     // beside downtown, not in it — where the nearer buildings are lower, so it
@@ -6020,7 +6091,8 @@ function genCartomanticDrift(w,h,amt,zoom,angle,light){
     ['V','The Grimoire','book'],['VI','The Lotus','lotus'],['VII','The Dial','dial'],['VIII','Kintsugi','bowl'],['IX','The Scrying Pool','pool'],
     ['X','The Wheel of Seeds','wheel'],['XIII','The Black Hole','hole'],['XIV','Transmutation','circle'],['XV','The Crystal','crystal'],
     ['XVII','The Star','star'],['XVIII','The Moon','moon'],['XIX','The Sun','sun'],['XXI','The World','world']];
-  const RARE=[['✦','Saturn','saturn'],['✦','Enceladus','enceladus'],['✦','The Kitsune','kitsune']];
+  // the rare cards are not equally rare: Saturn 3 : Enceladus 2 : the Kitsune 1
+  const RARE=[[['✦','Saturn','saturn'],3],[['✦','Enceladus','enceladus'],2],[['✦','The Kitsune','kitsune'],1]];
   const roundCard=(W,H,r)=>{ ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
     ctx.lineTo(W/2,H/2-r); ctx.arc(W/2-r,H/2-r,r,0,Math.PI/2); ctx.lineTo(-W/2+r,H/2); ctx.arc(-W/2+r,H/2-r,r,Math.PI/2,Math.PI);
     ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath(); };
@@ -6103,7 +6175,7 @@ function genCartomanticDrift(w,h,amt,zoom,angle,light){
       emblem('sigil', W*0.3); for(let e=0;e<4;e++){ const a=e*Math.PI/2-Math.PI/2; element(Math.cos(a)*W*0.42*1.0, Math.sin(a)*H*0.36, W*0.06, e); }
     } else if(roll<0.55 || rare){
       // a MAJOR card: its numeral, its emblem, its name in a banner
-      const card=rare ? RARE[Math.floor(Math.random()*RARE.length)] : ARCANA[Math.floor(Math.random()*ARCANA.length)];
+      const card=rare ? pickWeighted(RARE) : ARCANA[Math.floor(Math.random()*ARCANA.length)];
       ctx.font=`${W*0.11}px Georgia, "Times New Roman", serif`; ctx.fillText(card[0], 0, -fh/2+W*0.13);
       ctx.save(); ctx.translate(0, -H*0.04); ctx.lineWidth=Math.max(cpx(0.8), W*0.016);
       if(rare){ ctx.globalAlpha=0.35; ctx.beginPath(); for(let k=0;k<24;k++){ const a=k/24*Math.PI*2; ctx.moveTo(Math.cos(a)*W*0.36,Math.sin(a)*W*0.36); ctx.lineTo(Math.cos(a)*W*0.42,Math.sin(a)*W*0.42); } ctx.stroke(); ctx.globalAlpha=1; }
@@ -7392,6 +7464,13 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
       tx:Math.cos(a)*tilt, ty:Math.sin(a)*tilt, size:(0.8+Math.random()*0.5)*(1 + (Math.random()-0.5)*vr*0.8), arms,
       film: Math.random()*0.5 });
   }
+  // (cosines once per grain and arm, not once per pixel — same numbers, much less work)
+  for(const g of G){ g.c=Math.cos(g.th); g.s=Math.sin(g.th); for(const A of g.arms){ A.ca=Math.cos(A.a); A.sa=Math.sin(A.a); } }
+  // each cell's 5×5 neighbourhood, gathered once (the pixels in a cell all search the same grains)
+  const NB=new Array(gx*gy);
+  for(let cj=0;cj<gy;cj++) for(let ci=0;ci<gx;ci++){ const L=[];
+    for(let b=cj-2;b<=cj+2;b++) for(let a=ci-2;a<=ci+2;a++){ if(a<0||b<0||a>=gx||b>=gy) continue; L.push(G[b*gx+a]); }
+    NB[cj*gx+ci]=L; }
   const H=new Float32Array(N), Nm=new Float32Array(N*3), LV=terr>0.02 ? new Float32Array(N) : null, FL=terr>0.02 ? new Float32Array(N) : null;
   const bw=Math.max(0.8, unit*0.0012), aw=Math.max(0.7, unit*0.0011*zoom), bp=unit*0.008*zoom;   // groove, arm width, barb spacing
   const step=Math.max(3, unit*0.016*zoom), shH=Math.max(0.8, step*0.22);
@@ -7402,12 +7481,13 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const ci=Math.floor(x/cs)+1, cj=Math.floor(y/cs)+1;
     let d1=1e18, d2=1e18, g1=null, g2=null;
-    for(let b=cj-2;b<=cj+2;b++) for(let a=ci-2;a<=ci+2;a++){
-      if(a<0||b<0||a>=gx||b>=gy) continue; const g=G[b*gx+a], dd=((x-g.x)*(x-g.x)+(y-g.y)*(y-g.y))/(g.size*g.size);
+    const nb=NB[Math.min(gy-1,cj)*gx+Math.min(gx-1,ci)];
+    for(let q=0;q<nb.length;q++){
+      const g=nb[q], dd=((x-g.x)*(x-g.x)+(y-g.y)*(y-g.y))/(g.size*g.size);
       if(dd<d1){ d2=d1; g2=g1; d1=dd; g1=g; } else if(dd<d2){ d2=dd; g2=g; }
     }
     const e1=Math.sqrt(d1)*g1.size, e2=g2 ? Math.sqrt(d2)*g2.size : 1e9, edge=(e2-e1)*0.5;   // to the boundary, roughly
-    const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=Math.cos(g1.th), s=Math.sin(g1.th);
+    const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=g1.c, s=g1.s;
     const lu=ux*c+uy*s, lv=-ux*s+uy*c;
     let hgt=-0.9*Math.exp(-(edge/bw)*(edge/bw));                       // the groove between grains
     if(dend>0.02){
@@ -7415,7 +7495,7 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
       for(const A of g1.arms){
         if(A.len<=0) continue;
         const R=reach*A.len;
-        let ca=Math.cos(A.a), sa=Math.sin(A.a), al=lu*ca+lv*sa;
+        let ca=A.ca, sa=A.sa, al=lu*ca+lv*sa;
         if(al<=0 || al>R) continue;
         // bend: the arm's direction turns a little as it grows
         const tb=A.a + A.bend*(al/R); ca=Math.cos(tb); sa=Math.sin(tb);
@@ -7769,6 +7849,92 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
   return out;
 }
 
+// What the fire kept
+// it gave back as weather: grey
+// leaves of a letter.
+/**
+ * Burnt Letter — the ash a burnt page leaves, as it lies (after photographs of
+ * paper ash, and the burn/dissolve shaders games use for a charring edge):
+ *   FLAKES   curled sheets, many small and a few large (a power law); each
+ *            charred black at its heart and burnt through to pale ash at its
+ *            rim, crazed into a fine grid of cracks (the fibres and ruled
+ *            lines of the page it was), the palest eaten into lace
+ *   CURL     each flake lifts at its ends like a drying leaf, so the dial
+ *            lights one side, shades the other and throws a soft shadow
+ *   SOOT     fine dust, and a faint smudge where each flake came to rest
+ *   EMBERS   some flakes still alight along their edge (Ember Hue)
+ * FLAKE SIZE · ASHFALL · CHAR (pale ash → black char) · EMBERS
+ */
+function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,M3){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const charK=Math.max(0,Math.min(1, form==null?0.55:form)), emb=Math.max(0,Math.min(1, embers==null?0.2:embers));
+  const ash=parseHex(tintAsh||'#D6D0C6'), em=parseHex(tintEmber||'#FF5A1E');
+  const ASH=[ash.r, ash.g, ash.b], CHAR=[ash.r*0.1+8, ash.g*0.09+6, ash.b*0.08+5];   // char: the ash's own warm black
+  const EM=[em.r, em.g, em.b], HOT=[255, Math.min(255, em.g*0.6+150), Math.min(255, em.b*0.4+110)];
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const A=new Float32Array(N), C=new Float32Array(N), H=new Float32Array(N), E=new Float32Array(N), S=new Float32Array(N);
+  const jag=fbmSampler(18, 3), lace=fbmSampler(7, 3), dust=fbmSampler(5, 2), crack=fbmSampler(3, 2);
+  const n=Math.max(4, Math.round(canonArea(w,h)/(3072*3072)*46*amt));
+  const sm=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
+  for(let f=0; f<n; f++){
+    // size: many small, a few large
+    const R=unit*0.028*zoom*(0.35 + 2.2*Math.pow(Math.random(), 2.6)), e=0.55+Math.random()*0.45, th=Math.random()*Math.PI;
+    const cx=Math.random()*ww, cy=Math.random()*wh, co=Math.cos(th), si=Math.sin(th);
+    const m=Math.max(0, Math.min(1, charK + (Math.random()-0.5)*0.7));        // this flake's char
+    const curl=0.3+Math.random()*0.9, lit=Math.random()<emb, ox=Math.random()*9, oy=Math.random()*9;
+    const harm=[2,3,5].map(k=>({ k, a:(0.05+Math.random()*0.1)/k*2, p:Math.random()*6.28 }));
+    const q=0.08 + Math.min(0.3, R/unit*2), cell=unit*0.013*Math.sqrt(zoom)*(0.8+Math.random()*0.4), cwk=0.045;
+    // the rim, by angle (once per flake: the noise is costly per pixel)
+    const NA=256, RIM=new Float32Array(NA), FIRE=new Float32Array(NA);
+    for(let j=0;j<NA;j++){ const a=j/(NA-1)*2*Math.PI-Math.PI; let Rw=1+(jag(ox+Math.cos(a)*q, oy+Math.sin(a)*q)-0.5)*0.42;
+      for(const hm of harm) Rw+=hm.a*Math.sin(a*hm.k+hm.p);
+      RIM[j]=Math.max(0.3, Rw); FIRE[j]=sm(0.35, 0.7, jag(ox+Math.cos(a)*q*2.5, oy+Math.sin(a)*q*2.5)); }
+    const pad=R*1.6, x0=Math.max(0,Math.floor(cx-pad)), x1=Math.min(ww-1,Math.ceil(cx+pad)), y0=Math.max(0,Math.floor(cy-pad)), y1=Math.min(wh-1,Math.ceil(cy+pad));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      const dx=x-cx, dy=y-cy, u=(dx*co+dy*si)/R, v=(-dx*si+dy*co)/(R*e), r=Math.hypot(u,v);
+      if(r>1.7) continue;
+      const a=Math.atan2(v,u), Rw=RIM[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))];
+      const s=r/Rw, k=y*ww+x;
+      const fire=lit ? FIRE[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))] : 0;
+      if(s>=1){ if(s<1.6 && A[k]<0.5) S[k]=Math.min(1, S[k]+0.16*(0.3+m)*Math.pow(1-(s-1)/0.6, 2));
+        if(fire>0 && s<1.3) E[k]=Math.max(E[k], 0.3*fire*Math.exp(-(((s-1)/0.1)**2)));   // its heat, spilling on the page
+        continue; }
+      // crazing: the page's fibres and lines, a grid broken here and there
+      const lx=(dx*co+dy*si)/cell, ly=(-dx*si+dy*co)/(cell*1.6);
+      const wx=lx+(crack(ox+u*0.3, oy+v*0.3)-0.5)*1.4, wy=ly+(crack(oy+u*0.3, ox+v*0.3)-0.5)*1.4;
+      const fu=Math.abs(wx-Math.round(wx)), fv=Math.abs(wy-Math.round(wy));
+      const brk=lace(ox+u*0.9+x*0.002, oy+v*0.9+y*0.002);
+      const crk=(fv<cwk && brk>0.38) || (fu<cwk*0.8 && brk>0.62);
+      if(crk && s<0.93) continue;
+      // the palest ash is eaten into lace
+      if(lace(ox+u*0.5, oy+v*0.5) > 0.78 - (1-m)*0.18 && s>0.25) continue;
+      const t=m*(1-0.8*sm(0.5, 0.98, s));                 // black heart → pale rim
+      const hh=unit*0.0015 + curl*u*u*R*0.11 + brk*unit*0.0012;
+      const edge=Math.min(1, (1-s)*R*0.8);
+      H[k]=(A[k]>0.5 ? H[k]*0.5 : 0) + hh;
+      C[k]=t; A[k]=Math.max(A[k], edge);
+      if(lit){ E[k]=Math.max(E[k], Math.exp(-(((s-0.93)/0.07)**2))*fire); }
+      else E[k]*=1-edge;
+    }
+  }
+  // soot: fine dust, thicker in drifts
+  const specks=Math.round(N*0.004*amt);
+  for(let i=0;i<specks;i++){ const x=Math.floor(Math.random()*ww), y=Math.floor(Math.random()*wh), k=y*ww+x;
+    if(Math.random() < dust(x/ww, y/wh)*1.6-0.2) S[k]=Math.min(1, S[k]+0.35+Math.random()*0.5); }
+  const L=lightSparse(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.55, ao:0.3, ambient:0.45 });   // flakes on open ground: only their tiles
+  return paintLit(w,h,div,ww,wh, i => {
+    const k=litK(L, i, 0.45, null, 0)/L.flat, a=A[i], t=C[i], s=S[i], sheen=L.spec[i]*t*70;   // char has a dull silver sheen
+    const out=[0,0,0];
+    for(let c=0;c<3;c++){
+      const ground=128*(1-s*0.55)*Math.min(1.1, k);
+      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c);
+      const e=E[i], glow=e>0 ? (EM[c]+(HOT[c]-EM[c])*e*e)*e : 0;
+      out[c]=clamp255(ground+(flake-ground)*a + glow*1.1);
+    }
+    return out;
+  });
+}
+
 
 /* ==== textureGenerators.js ==== */
 /**
@@ -7939,6 +8105,12 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
                   // drips, and the faint wash inside the ring
                   {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
+  ash:           [{key:'zoom',  label:'Flake Size',      min:40, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Ashfall',         min:20, max:400, def:100, unit:'%'},
+                  // pale ash, burnt through (0) → black char, barely burnt (100)
+                  {key:'form',  label:'Char',            min:0,  max:100, def:55,  unit:''},
+                  // how many flakes are still alight along their edge
+                  {key:'shape', label:'Embers',          min:0,  max:100, def:20,  unit:''}],
   wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3},
                   // thin and spreading → thick and lumpy
@@ -8101,6 +8273,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
+  ash:           { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2,
+                   tintLabels:['Ash Hue','Ember Hue'], tintDefaults:['#D6D0C6','#FF5A1E'] },
   wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
@@ -8136,6 +8310,8 @@ const GLOWS = {
   dunes:       'afterglow along the crests',
   cupring:     'a faint glow where the stain dried at its edge',
   spangle:     'light caught in the metal\'s flecks',
+  cityscape:   'city glow: the sky above the lights, lit from below',
+  astral:      'airglow: the sky\'s own faint light, in slow waves',
   linen:       'luminous thread in the stitching',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
@@ -8145,13 +8321,13 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
 // the fifth hue as a generator wants it: glow as 0–1 channels (null: none);
 // a base colour as 0–255 (null: none)
-function glowOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'glow') return null; const c = parseHex(t5); return { r: c.r/255, g: c.g/255, b: c.b/255 }; }
+function glowOf(type, t5){ const h = (TEXTURE_CAPS[type] || (type === 'astral_stars' ? TEXTURE_CAPS.astral : {})).hue5; if(!t5 || !h || h.role !== 'glow') return null; const c = parseHex(t5); return { r: c.r/255, g: c.g/255, b: c.b/255 }; }
 function baseOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'base') return null; return parseHex(t5); }
 function capsFor(type){
   return TEXTURE_CAPS[type] || { blends:['overlay','soft-light','multiply','screen'], light:false, tints:0 };
@@ -8219,7 +8395,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
-    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form);
+    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow);
   } else if(type === 'snow'){
     result = genSnow(w,h,amt,zoom,light,form,extra.base);
   } else if(type === 'magicparticles'){
@@ -8244,6 +8420,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
+  } else if(type === 'ash'){
+    result = genBurntLetter(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat);
   } else if(type === 'wax'){
     result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'dunes'){
@@ -8255,7 +8433,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'landscape'){
     result = genLandscape(w,h,amt,zoom,form,extra.tilt);
   } else if(type === 'cityscape'){
-    result = genCityscape(w,h,amt,zoom,tint1,tint2);
+    result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
     result = genBlackHole(w,h,amt,zoom,light,form);
   } else if(type === 'water'){
@@ -8366,7 +8544,8 @@ function describeRequest(type, w, h, opts){
   // the sixth: DIFFUSE, the light's own colour (white: none)
   const t6 = (o6 && !noMaterialHue(o6) && (TEXTURE_CAPS[RETIRED[type] || type] || {}).diffuse) ? o6 : null;
   // the fifth hue: only when it differs from its role's "none"
-  const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || {}).hue5;
+  // (Deep Field's star layer carries its airglow: the composite's own hue)
+  const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || (type === 'astral_stars' ? TEXTURE_CAPS.astral : {})).hue5;
   const o5 = h5 ? resolveAlpha(opts.tint5, h5.def) : null;
   const t5 = (h5 && o5 && o5.toUpperCase() !== h5.def.toUpperCase()) ? o5.toUpperCase() : null;
   // the page's own colours, for a texture that shows the world behind the glass
@@ -9015,6 +9194,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="crystal" data-str="option.crystal_leaf">Crystal Leaf</option>
                 <option value="oldpaper" data-str="option.old_paper">Old Paper</option>
                 <option value="cupring" data-str="option.cup_ring">Cup Ring</option>
+                <option value="ash" data-str="option.burnt_letter">Burnt Letter</option>
                 <option value="wax" data-str="option.poured_wax">Poured Wax</option>
                 <option value="dunes" data-str="option.dunes">Dune Ripples</option>
                 <option value="kintsugi" data-str="option.kintsugi">Kintsugi</option>
@@ -9714,6 +9894,7 @@ const UI_STRINGS = {
   'option.metal_spangle':                      "Metal Spangle",
   'option.old_paper':                          "Old Paper",
   'option.cup_ring':                           "Cup Ring",
+  'option.burnt_letter':                       "Burnt Letter",
   'option.poured_wax':                         "Poured Wax",
   'option.overlay':                            "Overlay",
   'option.color_burn':                         "Color Burn",
@@ -9734,6 +9915,13 @@ const DIALOGS = {
     title: 'Share \u201C{name}\u201D',
     bodyCopied: 'The link is copied. Anyone who opens it can add this spell to their own Esoterica — only this one, not your whole list.',
     bodyManual: 'Copy this link. Anyone who opens it can add this spell to their own Esoterica — only this one, not your whole list.',
+    confirm: 'Done',
+  },
+  shareLook: {
+    name: 'A Shared Look',
+    title: 'Share this look',
+    bodyCopied: 'The link is copied. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
+    bodyManual: 'Copy this link. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
     confirm: 'Done',
   },
   receiveSpell: {
@@ -10103,7 +10291,7 @@ const PRESETS = [
   },
 { name: "Insomnia",   // surface: Night City (√)
     bg1: "#070B14", bgGradient: true, bg2: "#142036", bgAngle: 180, text1: "#F2EEE6", outlineMode: "off", font: "Inter",
-    texture: true, textureType: "cityscape", textureOpacity: 78,
+    texture: true, textureType: "cityscape", textureOpacity: 78, textureTint5: "#D9772E",   // the city glow
     accent1: "#FFD58A", accent2: "#6FA7D8",
     spell: "{{🜕🜣🜚⛤🜪⚸🜧}}⛧☥🜼[[✡🜾☊]]",
     cardToggle: true, cardColor1: '#0A0F1C', cardOpacity: '62', cardBlend: 'darken',
@@ -10126,14 +10314,17 @@ const PRESETS = [
     accent1: "#E0526F", accent2: "#9B5C86",
     textureBlend: 'screen'
   },
-{ name: "Ashfall",   // surface: Silverpoint Hatch (√)
+{ name: "Ashfall",   // surface: Burnt Letter (🜚) — what a burnt letter leaves, a few flakes still alight
     spell: "[[🜁🜩⚻🜺☍⛤🜿🜚⛧🜎🜪🜔🝆🜻]]{{✝🜝}}✡",
-    bg1: "#9B9187",
-    text1: "#241F1C",
+    bg1: "#2A2523", bgGradient: true, bg2: "#4B4039", bgAngle: 160,
+    text1: "#ECE4D8",
     outlineMode: "off",
     font: "EB Garamond",
-    texture: true, textureType: "hatch", textureOpacity: 30, texP1: 22, texP2: 130,
-    accent1: "#57412E", accent2: "#543F4A"
+    texture: true, textureType: "ash", textureOpacity: 70, texP1: 90, texP2: 85, texP3: 65, texP4: 35,
+    textureBlend: 'hard-light', textureLight: 240, textureLightTilt: 115,
+    textureTint1: '#D6D0C6', textureTint2: '#FF6A2A',
+    accent1: "#E07A3F", accent2: "#ADA299",
+    vignette: true, vignetteBlend: "multiply", vignetteIntensity: 30
   },
 { name: "Gateway",   // surface: Transmutation Circles (∆)
     spell: "🜺🜶🜈[[🜣✡⚸]]{{🜍}}",
@@ -11714,6 +11905,19 @@ function withScale(s, fn){
   finally { SCALE = prev; }
 }
 /** The scale the current generation runs at. */
+/**
+ * A WEIGHTED choice: traits that are common, uncommon or rare (as Fidenza and
+ * other long-form generative art choose them), rather than a flat coin-flip.
+ * table: [[value, weight], …]. r: the roll, 0..1 — by default one draw of the
+ * seeded random (so a choice costs the same one draw a coin-flip did, and
+ * seeds keep their other features); pass an earlier draw to reuse it.
+ */
+function pickWeighted(table, r = Math.random()){
+  let total = 0; for(const [, wt] of table) total += wt;
+  let x = r*total;
+  for(const [v, wt] of table){ if(x < wt) return v; x -= wt; }
+  return table[table.length - 1][0];
+}
 function scaleNow(){ return SCALE; }
 /** n canonical pixels, in pixels of the canvas being drawn. */
 function cpx(n){ return n * SCALE; }
@@ -12010,7 +12214,7 @@ function lightHeights(H, ww, wh, opts = {}){
 function lightSparse(H, ww, wh, opts = {}, T = 64){
   const { light = 315, relief = 1 } = opts;
   const { lx, ly } = lightVec(light), tilt = Math.min(1, Math.hypot(lx, ly));
-  const elev = (90 - tilt*78) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it
+  const elev = (90 - tilt*78 - lightLow()*8) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it (sunk light too: longer shadows, wider margins)
   let hMax = 0, hMin = 0; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
   const ground = lightHeights(new Float32Array(1), 1, 1, { ...opts, shadow: 0, ao: 0, normals: null });
   const out = new Float32Array(ww*wh).fill(ground.flat), spec = new Float32Array(ww*wh).fill(ground.spec[0]);
@@ -12532,7 +12736,7 @@ function genAstralFog(w,h,amt,zoom,light,tint,form){
   return full;
 }
 
-function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
+function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL){
   amt = (amt==null?1:amt);
   const M = buildMatterMap();                 // FIRST: the same map the nebula uses
   const atm = Math.max(0, Math.min(1, form==null ? 0.2 : form));
@@ -12602,10 +12806,27 @@ function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
       }
     }
   }
+  // AIRGLOW in the Glow Hue: the night sky's own faint light, from the high
+  // atmosphere, rippled by gravity waves into slow bands across the whole
+  // sky (black: none — then only the Atmosphere's green glow, as before)
+  const AG = (GL && GL.r + GL.g + GL.b > 0.004) ? [GL.r*255|0, GL.g*255|0, GL.b*255|0] : null;
+  if(AG){
+    const bw = Math.max(32, Math.round(w/canonDiv(8))), bh = Math.max(32, Math.round(h/canonDiv(8)));
+    const bc = document.createElement('canvas'); bc.width = bw; bc.height = bh;
+    const bx = bc.getContext('2d', CPU), bi = bx.createImageData(bw, bh), bd = bi.data;
+    for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
+      // fine, nearly parallel ripples, gently bent; a broad patchiness over them
+      const u = x/bw, v = y/bh, warp = M.noise(u*0.9 + 4.2, v*0.9 + 8.7);
+      const band = Math.pow(0.5 + 0.5*Math.sin((v*11 + u*2.2 + warp*1.1)*Math.PI), 2)*(0.35 + 0.65*M.noise(u*1.6 + 1.3, v*1.6 + 5.9));
+      const k = (y*bw + x)*4; bd[k] = AG[0]; bd[k+1] = AG[1]; bd[k+2] = AG[2]; bd[k+3] = Math.round(255*0.16*band*(0.5 + 0.5*v));
+    }
+    bx.putImageData(bi, 0, 0);
+    fctx.save(); fctx.imageSmoothingEnabled = true; fctx.globalCompositeOperation = 'destination-over'; fctx.drawImage(bc, 0, 0, w, h); fctx.restore();
+  }
   if(atm > 0.02){
     // airglow low in the sky; past halfway, the warm wash of distant towns
-    const g = fctx.createLinearGradient(0, h, 0, h*0.5);
-    g.addColorStop(0, `rgba(110,255,170,${0.13*atm})`); g.addColorStop(1, 'rgba(110,255,170,0)');
+    const g = fctx.createLinearGradient(0, h, 0, h*0.5), ag = AG ? AG.join(',') : '110,255,170';
+    g.addColorStop(0, `rgba(${ag},${0.13*atm})`); g.addColorStop(1, `rgba(${ag},0)`);
     fctx.fillStyle = g; fctx.fillRect(0, h*0.5, w, h*0.5);
     if(atm > 0.5){
       const p = (atm - 0.5)*2, g2 = fctx.createLinearGradient(0, h, 0, h*0.78);
@@ -13427,14 +13648,32 @@ function genMoon(w,h,amt,zoom,form,night){
       if(br>0.55){ ctx.globalAlpha=a*0.5; ctx.strokeStyle='rgb(245,245,245)'; ctx.lineWidth=cpx(0.8);      // the brightest twinkle
         ctx.beginPath(); ctx.moveTo(x-rad*5,y); ctx.lineTo(x+rad*5,y); ctx.moveTo(x,y-rad*5); ctx.lineTo(x,y+rad*5); ctx.stroke(); }
     }
-    // a falling star, on some nights
-    if(shootP<0.45){
-      const x0=w*(0.1+Math.random()*0.8), y0=h*(0.05+Math.random()*0.4), ang=Math.PI*(0.15+Math.random()*0.25)*(Math.random()<0.5?1:-1)+Math.PI/2, len=unit*(0.12+Math.random()*0.15);
-      const x1=x0+Math.cos(ang)*len, y1=y0+Math.sin(ang)*len*0.6, g=ctx.createLinearGradient(x0,y0,x1,y1);
-      g.addColorStop(0,'rgba(245,245,245,0)'); g.addColorStop(1,`rgba(250,250,250,${0.85*nightK})`);
-      ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=cpx(2.2); ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-      ctx.fillStyle=`rgba(255,255,255,${0.9*nightK})`; ctx.beginPath(); ctx.arc(x1,y1,cpx(2.6),0,Math.PI*2); ctx.fill();
+    // a falling star, on some nights — weighted, not a coin-flip: most nights
+    // none, often one, now and then a FIREBALL (bright, long, green at the
+    // head), rarely a PAIR from the same radiant. (The roll is the seed's own
+    // shootP, as before: nights that had a star still have one.)
+    const star=pickWeighted([['one',38],['fireball',5],['pair',2],['none',55]], shootP);
+    if(star!=='none'){
+      let x0=w*(0.1+Math.random()*0.8), y0=h*(0.05+Math.random()*0.4), ang=Math.PI*(0.15+Math.random()*0.25)*(Math.random()<0.5?1:-1)+Math.PI/2, len=unit*(0.12+Math.random()*0.15);
+      // seen whole: never behind the moon (mirrored to the other side of the
+      // sky if it would be), and never running off the page
+      const reach=(star==='fireball' ? 1.6 : 1)*len, crosses=(xa,ya,a)=>{ for(let k=0;k<=12;k++){ const t=k/12, x=xa+Math.cos(a)*reach*t, y=ya+Math.sin(a)*reach*0.6*t; if(Math.hypot(x-cx,y-cy)<R*1.2) return true; } return false; };
+      if(crosses(x0,y0,ang)){ x0=w-x0; ang=Math.PI-ang; }
+      const fit=L=>{ const ex=x0+Math.cos(ang)*L, ey=y0+Math.sin(ang)*L*0.6; return ex>w*0.03 && ex<w*0.97 && ey>h*0.03 && ey<h*0.97; };
+      for(let k=0;k<8 && !fit(reach*(1-k*0.1));k++) len*=0.9;
+      const streak=(xa,ya,L,width,head,headRGB)=>{
+        const x1=xa+Math.cos(ang)*L, y1=ya+Math.sin(ang)*L*0.6, g=ctx.createLinearGradient(xa,ya,x1,y1);
+        g.addColorStop(0,'rgba(245,245,245,0)'); g.addColorStop(1,`rgba(250,250,250,${0.85*nightK})`);
+        ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=width; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(xa,ya); ctx.lineTo(x1,y1); ctx.stroke();
+        if(star==='fireball'){ const gl=ctx.createRadialGradient(x1,y1,0,x1,y1,head*5); gl.addColorStop(0,`rgba(${headRGB},${0.45*nightK})`); gl.addColorStop(1,`rgba(${headRGB},0)`);
+          ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(x1,y1,head*5,0,Math.PI*2); ctx.fill(); }
+        ctx.fillStyle=`rgba(${headRGB},${0.9*nightK})`; ctx.beginPath(); ctx.arc(x1,y1,head,0,Math.PI*2); ctx.fill();
+      };
+      if(star==='one') streak(x0,y0,len,cpx(2.2),cpx(2.6),'255,255,255');
+      else if(star==='fireball') streak(x0,y0,len*1.6,cpx(4.2),cpx(4.4),'226,255,236');
+      else { const off=unit*(0.035+Math.random()*0.03), nx=-Math.sin(ang), ny=Math.cos(ang)*0.6;
+        streak(x0,y0,len,cpx(2.2),cpx(2.6),'255,255,255'); streak(x0+nx*off+Math.cos(ang)*len*0.25, y0+ny*off+Math.sin(ang)*len*0.15, len*0.7,cpx(1.8),cpx(2.1),'255,255,255'); }
     }
     ctx.globalAlpha=1;
   }
@@ -14353,7 +14592,7 @@ function genMetalLeaf(w,h,amt,zoom,light,tint,form,sheenK,glitterK){
 // Most windows are dark.
 // The few that are lit are why
 // the city looks awake.
-function genCityscape(w,h,amt,zoom,tint1,tint2){
+function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   // the seed's FIRST draw decides the Needle, so which seeds show it is
   // predictable: withSeed(seed, () => Math.random() < 0.1)
@@ -14435,6 +14674,14 @@ function genCityscape(w,h,amt,zoom,tint1,tint2){
   // the Needle stands in one of the layers behind the nearest, in that layer's
   // tone, and shorter than the layer's tallest building
   const needleLayer = hasNeedle ? 1 + Math.floor(Math.random()*2) : -1;
+  // CITY GLOW (the Glow Hue): the sky above the lights, lit from below — the
+  // skyglow over every city at night — strongest at the skyline, fading
+  // upward; the buildings stand dark against it. Screened, so black is none.
+  if(GL && GL.r + GL.g + GL.b > 0.004){
+    const up = Math.max(1, ground - unit*0.6), g = ctx.createLinearGradient(0, ground, 0, up), c = (a) => `rgba(${GL.r*255|0},${GL.g*255|0},${GL.b*255|0},${a})`;
+    g.addColorStop(0, c(0.85)); g.addColorStop(0.25, c(0.5)); g.addColorStop(0.6, c(0.16)); g.addColorStop(1, c(0));
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g; ctx.fillRect(0, up, w, ground - up); ctx.restore();
+  }
   layers.forEach((L, i) => {
     const tallest = row(L.scale, L.tone, L.alpha, L.density, types);
     // beside downtown, not in it — where the nearer buildings are lower, so it
@@ -15318,7 +15565,8 @@ function genCartomanticDrift(w,h,amt,zoom,angle,light){
     ['V','The Grimoire','book'],['VI','The Lotus','lotus'],['VII','The Dial','dial'],['VIII','Kintsugi','bowl'],['IX','The Scrying Pool','pool'],
     ['X','The Wheel of Seeds','wheel'],['XIII','The Black Hole','hole'],['XIV','Transmutation','circle'],['XV','The Crystal','crystal'],
     ['XVII','The Star','star'],['XVIII','The Moon','moon'],['XIX','The Sun','sun'],['XXI','The World','world']];
-  const RARE=[['✦','Saturn','saturn'],['✦','Enceladus','enceladus'],['✦','The Kitsune','kitsune']];
+  // the rare cards are not equally rare: Saturn 3 : Enceladus 2 : the Kitsune 1
+  const RARE=[[['✦','Saturn','saturn'],3],[['✦','Enceladus','enceladus'],2],[['✦','The Kitsune','kitsune'],1]];
   const roundCard=(W,H,r)=>{ ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
     ctx.lineTo(W/2,H/2-r); ctx.arc(W/2-r,H/2-r,r,0,Math.PI/2); ctx.lineTo(-W/2+r,H/2); ctx.arc(-W/2+r,H/2-r,r,Math.PI/2,Math.PI);
     ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath(); };
@@ -15401,7 +15649,7 @@ function genCartomanticDrift(w,h,amt,zoom,angle,light){
       emblem('sigil', W*0.3); for(let e=0;e<4;e++){ const a=e*Math.PI/2-Math.PI/2; element(Math.cos(a)*W*0.42*1.0, Math.sin(a)*H*0.36, W*0.06, e); }
     } else if(roll<0.55 || rare){
       // a MAJOR card: its numeral, its emblem, its name in a banner
-      const card=rare ? RARE[Math.floor(Math.random()*RARE.length)] : ARCANA[Math.floor(Math.random()*ARCANA.length)];
+      const card=rare ? pickWeighted(RARE) : ARCANA[Math.floor(Math.random()*ARCANA.length)];
       ctx.font=`${W*0.11}px Georgia, "Times New Roman", serif`; ctx.fillText(card[0], 0, -fh/2+W*0.13);
       ctx.save(); ctx.translate(0, -H*0.04); ctx.lineWidth=Math.max(cpx(0.8), W*0.016);
       if(rare){ ctx.globalAlpha=0.35; ctx.beginPath(); for(let k=0;k<24;k++){ const a=k/24*Math.PI*2; ctx.moveTo(Math.cos(a)*W*0.36,Math.sin(a)*W*0.36); ctx.lineTo(Math.cos(a)*W*0.42,Math.sin(a)*W*0.42); } ctx.stroke(); ctx.globalAlpha=1; }
@@ -16690,6 +16938,13 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
       tx:Math.cos(a)*tilt, ty:Math.sin(a)*tilt, size:(0.8+Math.random()*0.5)*(1 + (Math.random()-0.5)*vr*0.8), arms,
       film: Math.random()*0.5 });
   }
+  // (cosines once per grain and arm, not once per pixel — same numbers, much less work)
+  for(const g of G){ g.c=Math.cos(g.th); g.s=Math.sin(g.th); for(const A of g.arms){ A.ca=Math.cos(A.a); A.sa=Math.sin(A.a); } }
+  // each cell's 5×5 neighbourhood, gathered once (the pixels in a cell all search the same grains)
+  const NB=new Array(gx*gy);
+  for(let cj=0;cj<gy;cj++) for(let ci=0;ci<gx;ci++){ const L=[];
+    for(let b=cj-2;b<=cj+2;b++) for(let a=ci-2;a<=ci+2;a++){ if(a<0||b<0||a>=gx||b>=gy) continue; L.push(G[b*gx+a]); }
+    NB[cj*gx+ci]=L; }
   const H=new Float32Array(N), Nm=new Float32Array(N*3), LV=terr>0.02 ? new Float32Array(N) : null, FL=terr>0.02 ? new Float32Array(N) : null;
   const bw=Math.max(0.8, unit*0.0012), aw=Math.max(0.7, unit*0.0011*zoom), bp=unit*0.008*zoom;   // groove, arm width, barb spacing
   const step=Math.max(3, unit*0.016*zoom), shH=Math.max(0.8, step*0.22);
@@ -16700,12 +16955,13 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const ci=Math.floor(x/cs)+1, cj=Math.floor(y/cs)+1;
     let d1=1e18, d2=1e18, g1=null, g2=null;
-    for(let b=cj-2;b<=cj+2;b++) for(let a=ci-2;a<=ci+2;a++){
-      if(a<0||b<0||a>=gx||b>=gy) continue; const g=G[b*gx+a], dd=((x-g.x)*(x-g.x)+(y-g.y)*(y-g.y))/(g.size*g.size);
+    const nb=NB[Math.min(gy-1,cj)*gx+Math.min(gx-1,ci)];
+    for(let q=0;q<nb.length;q++){
+      const g=nb[q], dd=((x-g.x)*(x-g.x)+(y-g.y)*(y-g.y))/(g.size*g.size);
       if(dd<d1){ d2=d1; g2=g1; d1=dd; g1=g; } else if(dd<d2){ d2=dd; g2=g; }
     }
     const e1=Math.sqrt(d1)*g1.size, e2=g2 ? Math.sqrt(d2)*g2.size : 1e9, edge=(e2-e1)*0.5;   // to the boundary, roughly
-    const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=Math.cos(g1.th), s=Math.sin(g1.th);
+    const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=g1.c, s=g1.s;
     const lu=ux*c+uy*s, lv=-ux*s+uy*c;
     let hgt=-0.9*Math.exp(-(edge/bw)*(edge/bw));                       // the groove between grains
     if(dend>0.02){
@@ -16713,7 +16969,7 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
       for(const A of g1.arms){
         if(A.len<=0) continue;
         const R=reach*A.len;
-        let ca=Math.cos(A.a), sa=Math.sin(A.a), al=lu*ca+lv*sa;
+        let ca=A.ca, sa=A.sa, al=lu*ca+lv*sa;
         if(al<=0 || al>R) continue;
         // bend: the arm's direction turns a little as it grows
         const tb=A.a + A.bend*(al/R); ca=Math.cos(tb); sa=Math.sin(tb);
@@ -17067,6 +17323,92 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
   return out;
 }
 
+// What the fire kept
+// it gave back as weather: grey
+// leaves of a letter.
+/**
+ * Burnt Letter — the ash a burnt page leaves, as it lies (after photographs of
+ * paper ash, and the burn/dissolve shaders games use for a charring edge):
+ *   FLAKES   curled sheets, many small and a few large (a power law); each
+ *            charred black at its heart and burnt through to pale ash at its
+ *            rim, crazed into a fine grid of cracks (the fibres and ruled
+ *            lines of the page it was), the palest eaten into lace
+ *   CURL     each flake lifts at its ends like a drying leaf, so the dial
+ *            lights one side, shades the other and throws a soft shadow
+ *   SOOT     fine dust, and a faint smudge where each flake came to rest
+ *   EMBERS   some flakes still alight along their edge (Ember Hue)
+ * FLAKE SIZE · ASHFALL · CHAR (pale ash → black char) · EMBERS
+ */
+function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,M3){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const charK=Math.max(0,Math.min(1, form==null?0.55:form)), emb=Math.max(0,Math.min(1, embers==null?0.2:embers));
+  const ash=parseHex(tintAsh||'#D6D0C6'), em=parseHex(tintEmber||'#FF5A1E');
+  const ASH=[ash.r, ash.g, ash.b], CHAR=[ash.r*0.1+8, ash.g*0.09+6, ash.b*0.08+5];   // char: the ash's own warm black
+  const EM=[em.r, em.g, em.b], HOT=[255, Math.min(255, em.g*0.6+150), Math.min(255, em.b*0.4+110)];
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const A=new Float32Array(N), C=new Float32Array(N), H=new Float32Array(N), E=new Float32Array(N), S=new Float32Array(N);
+  const jag=fbmSampler(18, 3), lace=fbmSampler(7, 3), dust=fbmSampler(5, 2), crack=fbmSampler(3, 2);
+  const n=Math.max(4, Math.round(canonArea(w,h)/(3072*3072)*46*amt));
+  const sm=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
+  for(let f=0; f<n; f++){
+    // size: many small, a few large
+    const R=unit*0.028*zoom*(0.35 + 2.2*Math.pow(Math.random(), 2.6)), e=0.55+Math.random()*0.45, th=Math.random()*Math.PI;
+    const cx=Math.random()*ww, cy=Math.random()*wh, co=Math.cos(th), si=Math.sin(th);
+    const m=Math.max(0, Math.min(1, charK + (Math.random()-0.5)*0.7));        // this flake's char
+    const curl=0.3+Math.random()*0.9, lit=Math.random()<emb, ox=Math.random()*9, oy=Math.random()*9;
+    const harm=[2,3,5].map(k=>({ k, a:(0.05+Math.random()*0.1)/k*2, p:Math.random()*6.28 }));
+    const q=0.08 + Math.min(0.3, R/unit*2), cell=unit*0.013*Math.sqrt(zoom)*(0.8+Math.random()*0.4), cwk=0.045;
+    // the rim, by angle (once per flake: the noise is costly per pixel)
+    const NA=256, RIM=new Float32Array(NA), FIRE=new Float32Array(NA);
+    for(let j=0;j<NA;j++){ const a=j/(NA-1)*2*Math.PI-Math.PI; let Rw=1+(jag(ox+Math.cos(a)*q, oy+Math.sin(a)*q)-0.5)*0.42;
+      for(const hm of harm) Rw+=hm.a*Math.sin(a*hm.k+hm.p);
+      RIM[j]=Math.max(0.3, Rw); FIRE[j]=sm(0.35, 0.7, jag(ox+Math.cos(a)*q*2.5, oy+Math.sin(a)*q*2.5)); }
+    const pad=R*1.6, x0=Math.max(0,Math.floor(cx-pad)), x1=Math.min(ww-1,Math.ceil(cx+pad)), y0=Math.max(0,Math.floor(cy-pad)), y1=Math.min(wh-1,Math.ceil(cy+pad));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      const dx=x-cx, dy=y-cy, u=(dx*co+dy*si)/R, v=(-dx*si+dy*co)/(R*e), r=Math.hypot(u,v);
+      if(r>1.7) continue;
+      const a=Math.atan2(v,u), Rw=RIM[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))];
+      const s=r/Rw, k=y*ww+x;
+      const fire=lit ? FIRE[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))] : 0;
+      if(s>=1){ if(s<1.6 && A[k]<0.5) S[k]=Math.min(1, S[k]+0.16*(0.3+m)*Math.pow(1-(s-1)/0.6, 2));
+        if(fire>0 && s<1.3) E[k]=Math.max(E[k], 0.3*fire*Math.exp(-(((s-1)/0.1)**2)));   // its heat, spilling on the page
+        continue; }
+      // crazing: the page's fibres and lines, a grid broken here and there
+      const lx=(dx*co+dy*si)/cell, ly=(-dx*si+dy*co)/(cell*1.6);
+      const wx=lx+(crack(ox+u*0.3, oy+v*0.3)-0.5)*1.4, wy=ly+(crack(oy+u*0.3, ox+v*0.3)-0.5)*1.4;
+      const fu=Math.abs(wx-Math.round(wx)), fv=Math.abs(wy-Math.round(wy));
+      const brk=lace(ox+u*0.9+x*0.002, oy+v*0.9+y*0.002);
+      const crk=(fv<cwk && brk>0.38) || (fu<cwk*0.8 && brk>0.62);
+      if(crk && s<0.93) continue;
+      // the palest ash is eaten into lace
+      if(lace(ox+u*0.5, oy+v*0.5) > 0.78 - (1-m)*0.18 && s>0.25) continue;
+      const t=m*(1-0.8*sm(0.5, 0.98, s));                 // black heart → pale rim
+      const hh=unit*0.0015 + curl*u*u*R*0.11 + brk*unit*0.0012;
+      const edge=Math.min(1, (1-s)*R*0.8);
+      H[k]=(A[k]>0.5 ? H[k]*0.5 : 0) + hh;
+      C[k]=t; A[k]=Math.max(A[k], edge);
+      if(lit){ E[k]=Math.max(E[k], Math.exp(-(((s-0.93)/0.07)**2))*fire); }
+      else E[k]*=1-edge;
+    }
+  }
+  // soot: fine dust, thicker in drifts
+  const specks=Math.round(N*0.004*amt);
+  for(let i=0;i<specks;i++){ const x=Math.floor(Math.random()*ww), y=Math.floor(Math.random()*wh), k=y*ww+x;
+    if(Math.random() < dust(x/ww, y/wh)*1.6-0.2) S[k]=Math.min(1, S[k]+0.35+Math.random()*0.5); }
+  const L=lightSparse(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.55, ao:0.3, ambient:0.45 });   // flakes on open ground: only their tiles
+  return paintLit(w,h,div,ww,wh, i => {
+    const k=litK(L, i, 0.45, null, 0)/L.flat, a=A[i], t=C[i], s=S[i], sheen=L.spec[i]*t*70;   // char has a dull silver sheen
+    const out=[0,0,0];
+    for(let c=0;c<3;c++){
+      const ground=128*(1-s*0.55)*Math.min(1.1, k);
+      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c);
+      const e=E[i], glow=e>0 ? (EM[c]+(HOT[c]-EM[c])*e*e)*e : 0;
+      out[c]=clamp255(ground+(flake-ground)*a + glow*1.1);
+    }
+    return out;
+  });
+}
+
 
 /* ==== textureGenerators.js ==== */
 /**
@@ -17237,6 +17579,12 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
                   // drips, and the faint wash inside the ring
                   {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
+  ash:           [{key:'zoom',  label:'Flake Size',      min:40, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Ashfall',         min:20, max:400, def:100, unit:'%'},
+                  // pale ash, burnt through (0) → black char, barely burnt (100)
+                  {key:'form',  label:'Char',            min:0,  max:100, def:55,  unit:''},
+                  // how many flakes are still alight along their edge
+                  {key:'shape', label:'Embers',          min:0,  max:100, def:20,  unit:''}],
   wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3},
                   // thin and spreading → thick and lumpy
@@ -17399,6 +17747,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
+  ash:           { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2,
+                   tintLabels:['Ash Hue','Ember Hue'], tintDefaults:['#D6D0C6','#FF5A1E'] },
   wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
@@ -17434,6 +17784,8 @@ const GLOWS = {
   dunes:       'afterglow along the crests',
   cupring:     'a faint glow where the stain dried at its edge',
   spangle:     'light caught in the metal\'s flecks',
+  cityscape:   'city glow: the sky above the lights, lit from below',
+  astral:      'airglow: the sky\'s own faint light, in slow waves',
   linen:       'luminous thread in the stitching',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
@@ -17443,13 +17795,13 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
 // the fifth hue as a generator wants it: glow as 0–1 channels (null: none);
 // a base colour as 0–255 (null: none)
-function glowOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'glow') return null; const c = parseHex(t5); return { r: c.r/255, g: c.g/255, b: c.b/255 }; }
+function glowOf(type, t5){ const h = (TEXTURE_CAPS[type] || (type === 'astral_stars' ? TEXTURE_CAPS.astral : {})).hue5; if(!t5 || !h || h.role !== 'glow') return null; const c = parseHex(t5); return { r: c.r/255, g: c.g/255, b: c.b/255 }; }
 function baseOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'base') return null; return parseHex(t5); }
 function capsFor(type){
   return TEXTURE_CAPS[type] || { blends:['overlay','soft-light','multiply','screen'], light:false, tints:0 };
@@ -17517,7 +17869,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
-    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form);
+    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow);
   } else if(type === 'snow'){
     result = genSnow(w,h,amt,zoom,light,form,extra.base);
   } else if(type === 'magicparticles'){
@@ -17542,6 +17894,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
+  } else if(type === 'ash'){
+    result = genBurntLetter(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat);
   } else if(type === 'wax'){
     result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'dunes'){
@@ -17553,7 +17907,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'landscape'){
     result = genLandscape(w,h,amt,zoom,form,extra.tilt);
   } else if(type === 'cityscape'){
-    result = genCityscape(w,h,amt,zoom,tint1,tint2);
+    result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
     result = genBlackHole(w,h,amt,zoom,light,form);
   } else if(type === 'water'){
@@ -17664,7 +18018,8 @@ function describeRequest(type, w, h, opts){
   // the sixth: DIFFUSE, the light's own colour (white: none)
   const t6 = (o6 && !noMaterialHue(o6) && (TEXTURE_CAPS[RETIRED[type] || type] || {}).diffuse) ? o6 : null;
   // the fifth hue: only when it differs from its role's "none"
-  const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || {}).hue5;
+  // (Deep Field's star layer carries its airglow: the composite's own hue)
+  const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || (type === 'astral_stars' ? TEXTURE_CAPS.astral : {})).hue5;
   const o5 = h5 ? resolveAlpha(opts.tint5, h5.def) : null;
   const t5 = (h5 && o5 && o5.toUpperCase() !== h5.def.toUpperCase()) ? o5.toUpperCase() : null;
   // the page's own colours, for a texture that shows the world behind the glass
@@ -17973,7 +18328,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Harpalyke';
+const RELEASE = 'Jupiter–Hermippe';
 
 
 /* ==== glyphs.js ==== */
@@ -18216,7 +18571,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-10 · 894d8d4";
+const STAMP = "2026-10-10 · 2ff4e71";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -18234,6 +18589,9 @@ const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
 function resolvePmlVariables(text, ctx){
   if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1)) return text;
   const one = (name, param, num) => {
+    // with the surface off, its own readouts have nothing to say: the line
+    // that carries one goes (Ruby: 'Uses Surface: None' hides them)
+    if(ctx.surfOff && SURF_ONLY.has(name)) return LINE_DROP;
     switch(name){
       case 'SurfName':      return ctx.surfName;
       case 'SurfBlendMode': return ctx.blendName;
@@ -18303,6 +18661,9 @@ function resolvePmlVariables(text, ctx){
       return v == null ? m : String(v);
     });
   }
+  // a surface readout with the surface off: its whole line goes
+  if(out.indexOf(LINE_DROP) !== -1)
+    out = out.split('\n').filter(line => line.indexOf(LINE_DROP) === -1).join('\n');
   // a variable that broke into rows: each row its own line, carrying the
   // marker its line began with (## heading, -# small…)
   if(out.indexOf(ROW_BREAK) !== -1)
@@ -18314,6 +18675,8 @@ function resolvePmlVariables(text, ctx){
   return out;
 }
 const ROW_BREAK = '\u0001';
+const LINE_DROP = '\u0002';
+const SURF_ONLY = new Set(['SurfParamsA', 'SurfParamsB', 'SurfBlendMode', 'LightDir', 'SeedPhrase', 'TextureSeed']);
 
 
 /* ==== canvasRenderer.js ==== */
@@ -19129,6 +19492,7 @@ function pmlVarContext(W, H){
   if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(el.value)) hues.push({ label: caps.hue5.label, hex: el.value }); }   // (fully transparent is none)
   return {
     surfName: on ? optionText('textureType') : 'None',
+    surfOff: !on,                                   // the surface's own lines step aside
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
     // the arrow, and how high the light is when it isn't at the horizon
     lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value)
@@ -19311,7 +19675,7 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('stars', 'astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, scale: S }));
+      drawTex(requestTexture('stars', 'astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, tint5, scale: S }));   // (tint5: the airglow's own colour)
       ctx.restore();
     } else if(type === 'inkbleed'){
       ctx.save();
@@ -20536,6 +20900,36 @@ function decodeSpell(code){
   } catch(e){ return null; }
 }
 
+// Shorter links: the same JSON DEFLATEd first, with the browser's own
+// CompressionStream (no library), then base64url — about a third of the
+// length. A leading '~' (never in base64url) marks it; old codes still read.
+const b64url = bytes => { let bin = ''; for(const b of bytes) bin += String.fromCharCode(b); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64url = code => { const b64 = String(code).trim().replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(b64 + '==='.slice((b64.length + 3) % 4)), c => c.charCodeAt(0)); };
+const canDeflate = () => typeof CompressionStream === 'function' && typeof DecompressionStream === 'function' && typeof Response === 'function' && typeof Blob === 'function';
+async function encodeSpellShort(rec){
+  if(!canDeflate()) return encodeSpell(rec);
+  const json = JSON.stringify({ name: rec.name, spell: rec.spell, settings: rec.settings, savedAt: rec.savedAt });
+  const buf = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();
+  return '~' + b64url(new Uint8Array(buf));
+}
+async function decodeSpellAny(code){
+  const c = String(code || '').trim();
+  if(c[0] !== '~') return decodeSpell(c);
+  if(!canDeflate()) return null;
+  try {
+    const text = await new Response(new Blob([unb64url(c.slice(1))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    const rec = JSON.parse(text);
+    return isValidSpell(rec) ? rec : null;
+  } catch(e){ return null; }
+}
+/** readImport, for short (deflated) share links and codes too. */
+async function readImportAny(raw){
+  const text = String(raw || '').trim(), at = text.indexOf(SHARE_PREFIX);
+  const code = at !== -1 ? text.slice(at + SHARE_PREFIX.length).split(/[\s&]/)[0] : (/^~[A-Za-z0-9_-]{16,}$/.test(text) ? text : null);
+  if(code && code[0] === '~'){ const r = await decodeSpellAny(code); return r ? [r] : null; }
+  return readImport(raw);
+}
+
 /**
  * Whatever was pasted, as a list of records: a JSON list, a single JSON
  * record, a share link, or a bare share code. Returns null if none of those.
@@ -20666,7 +21060,7 @@ function createVault(deps){
     if(empty) empty.style.display = spells.length ? 'none' : '';
     setDisabled('spellApplyBtn', !selectedSpell);
     setDisabled('spellDeleteBtn', !selectedSpell);
-    setDisabled('spellShareBtn', !selectedSpell);
+    setDisabled('spellShareBtn', false);   // with no spell chosen, it shares the look on the page
     setDisabled('spellCreateBtn', !spellIsDirty());
   }
 
@@ -20843,7 +21237,7 @@ function createVault(deps){
     });
     if(!raw) return;
     // a list, a single record, a share link or a bare share code all work
-    const parsed = readImport(raw);
+    const parsed = await readImportAny(raw);
     if(!parsed){
       await prompt({ title:'Could not read that', body:'That is not a spell list, a spell, or a share link, so nothing was imported.', confirmLabel:'OK' });
       return;
@@ -20873,18 +21267,20 @@ function createVault(deps){
 
   bind('poemSaveBtn', savePoem);
   async function shareSpell(){
-    const rec = spells.find(sp => sp.id === selectedSpell);
-    if(!rec) return;
+    // a chosen spell, or — with none chosen — the look on the page right now
+    // (no need to save it first)
+    const chosen = spells.find(sp => sp.id === selectedSpell);
+    const rec = chosen || { name: DIALOGS.shareLook.name, spell: generateSpell(), settings: getSettings(), savedAt: stamp() };
     // A link only works from the live site. Opened as a local file there is
     // no address worth sharing, so the link points at the public app.
     const here = (typeof location !== 'undefined' && location.protocol === 'https:')
       ? location.origin + location.pathname : SHARE_HOME;
-    const link = here + SHARE_PREFIX + encodeSpell(rec);
+    const link = here + SHARE_PREFIX + await encodeSpellShort(rec);
     let copied = false;
     try { await navigator.clipboard.writeText(link); copied = true; } catch(e){ /* shown below instead */ }
     await prompt({
-      title: fill(DIALOGS.shareSpell.title, rec.name),
-      body: copied ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareSpell.bodyManual,
+      title: chosen ? fill(DIALOGS.shareSpell.title, rec.name) : DIALOGS.shareLook.title,
+      body: copied ? (chosen ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareLook.bodyCopied) : (chosen ? DIALOGS.shareSpell.bodyManual : DIALOGS.shareLook.bodyManual),
       input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm,
     });
   }
@@ -20892,7 +21288,7 @@ function createVault(deps){
   /** Opened from a share link: offer to add the spell it carries. */
   async function receiveShared(){
     if(typeof location === 'undefined' || !String(location.hash).startsWith(SHARE_PREFIX)) return;
-    const rec = decodeSpell(location.hash.slice(SHARE_PREFIX.length));
+    const rec = await decodeSpellAny(location.hash.slice(SHARE_PREFIX.length));
     // clear the link either way, so a reload does not ask again
     try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
     if(!rec){
@@ -21873,11 +22269,54 @@ function presetTile(p, onPick, extraClass){
 { let at = 0;
   for(const g of (PRESET_GROUPS || [{ name: '', count: PRESETS.length }])){
     if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = g.name; presetGrid.appendChild(hd); }
-    PRESETS.slice(at, at + g.count).forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+    PRESETS.slice(at, at + g.count).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
     at += g.count;
   }
-  PRESETS.slice(at).forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+  PRESETS.slice(at).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
 }
+
+// ---- hover previews (desktop) ----
+// Resting the pointer on a preset tile shows it on the page; moving off the
+// grid puts your own look back exactly; a click keeps it. A preview is never
+// a step of undo history and never a change you made (Canva and Figma try a
+// style on hover the same way). Only where a real pointer hovers.
+const HOVER_DELAY = 380;
+const hover = { base: null, timer: 0, on: null };   // (the preview in progress: your look, kept to put back)
+const canHover = () => !detectMobile() && typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+function hoverPreview(tile, p){
+  if(!tile || !tile.addEventListener) return tile;
+  tile.addEventListener('mouseenter', () => {
+    if(!canHover()) return;
+    clearTimeout(hover.timer);
+    hover.timer = setTimeout(() => {
+      if(hover.on === p) return;
+      if(!hover.base) hover.base = { look: serializeCurrentSettings(), palette: state.ui.palette, name: document.body && document.body.dataset ? document.body.dataset.lookName : '' };
+      hover.on = p; state.history.restoring = true;
+      try { applyPreset(p); } finally { state.history.restoring = false; }
+      clearTimeout(state.history.timer);
+    }, HOVER_DELAY);
+  });
+  return tile;
+}
+function endHoverPreview(){
+  clearTimeout(hover.timer);
+  if(!hover.base) return;
+  const b = hover.base; hover.base = null; hover.on = null;
+  state.history.restoring = true;
+  try { restoreSettings(b.look); if(b.palette) applyThemePalette(b.palette); if(document.body && document.body.dataset) document.body.dataset.lookName = b.name || ''; }
+  finally { state.history.restoring = false; }
+  clearTimeout(state.history.timer);
+  scheduleRender();
+}
+// a click keeps the preset (the preview simply becomes the look), as one step of history
+function pickPreset(p){
+  clearTimeout(hover.timer);
+  const showing = hover.on === p;
+  hover.base = null; hover.on = null;
+  if(showing) commitSoon();          // already on the page, its seed and all: keep exactly what was shown
+  else applyPreset(p);
+}
+if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
 // Saved spells join the same grid rather than living only in Esoterica.
 // Everything from the divider down is rebuilt whenever the saved set changes,
@@ -22404,6 +22843,42 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
   }
 }
 
+// ---- the desktop preview: pan and zoom ----
+// Panzoom (timmywil/panzoom, the established library) rather than our own:
+// the wheel zooms toward the cursor, a drag pans once zoomed in, a double-
+// click (or ⟲) fits it again. Transform-only, like the phone's pinch: the
+// image itself is never touched. When the zoom settles, the preview redraws
+// sharp enough for it (state.ui.zoom, as the pinch does). Without the library
+// (offline before it was ever cached) the preview simply doesn't zoom.
+let desktopPanzoom = null;
+if(!detectMobile() && typeof Panzoom === 'function' && typeof document.querySelector === 'function'){
+  const wrap = document.querySelector('.canvas-wrap'), cv = $('poemCanvas');
+  if(wrap && cv && wrap.addEventListener){
+    try{
+      const pz = desktopPanzoom = Panzoom(cv, { minScale: 1, maxScale: 8, step: 0.25, panOnlyWhenZoomed: true, cursor: 'default', animate: true, duration: 160 });
+      let settle = null;
+      const zoomSettled = () => { clearTimeout(settle); settle = setTimeout(() => {
+        const z = pz.getScale(); if(Math.abs(z - (state.ui.zoom || 1)) < 0.01) return;
+        const down = z < (state.ui.zoom || 1); state.ui.zoom = z; applyPreviewScale(down && z <= 1.01); }, 200); };
+      // never pan the picture off its frame: at least a quarter of it stays in view
+      const bound = () => { const z = pz.getScale(), p = pz.getPan();
+        if(z <= 1.01){ if(p.x || p.y) pz.pan(0, 0, { animate: false, force: true }); return; }
+        const lim = (cv.offsetWidth || 0)*0.5*(1 - 0.5/z)/1, limY = (cv.offsetHeight || 0)*0.5*(1 - 0.5/z);
+        const x = Math.max(-lim, Math.min(lim, p.x)), y = Math.max(-limY, Math.min(limY, p.y));
+        if(x !== p.x || y !== p.y) pz.pan(x, y, { animate: false, force: true }); };
+      wrap.addEventListener('wheel', (e) => { if(e.target && e.target.closest && e.target.closest('button')) return; pz.zoomWithWheel(e); bound(); zoomSettled(); }, { passive: false });
+      cv.addEventListener('panzoomchange', () => { wrap.classList.toggle('zoomed', pz.getScale() > 1.01); });
+      cv.addEventListener('panzoomend', () => { bound(); zoomSettled(); });
+      cv.addEventListener('dblclick', () => { pz.reset(); zoomSettled(); });
+      if(typeof MutationObserver === 'function'){
+        let lastRatio = cv.width / cv.height;
+        new MutationObserver(() => { const r = cv.width / cv.height;
+          if(Math.abs(r - lastRatio) > 0.01){ lastRatio = r; pz.reset({ animate: false }); zoomSettled(); } }).observe(cv, { attributes: true, attributeFilter: ['width','height'] });
+      }
+    } catch(e){ desktopPanzoom = null; }
+  }
+}
+
 // ---------- texture parameters ----------
 // Each texture declares two knobs (see TEXTURE_PARAMS). The sliders relabel
 // and re-range themselves when the texture changes, so a control never says
@@ -22843,7 +23318,8 @@ if($('resetViewBtn') && $('resetViewBtn').addEventListener){
     const root2 = document.documentElement;
     if(root2 && root2.style) root2.style.setProperty('--preview-frac', '0.30');
     const cv = $('poemCanvas');
-    if(cv && cv.style) cv.style.transform = '';
+    if(desktopPanzoom){ desktopPanzoom.reset(); if(state.ui.zoom !== 1){ state.ui.zoom = 1; setTimeout(() => applyPreviewScale(true), 200); } }
+    else if(cv && cv.style) cv.style.transform = '';
   });
 }
 
@@ -23220,7 +23696,7 @@ function paintHistoryButtons(){
 }
 function commitHistory(){
   const h = state.history;
-  if(h.restoring) return;
+  if(h.restoring || hover.base) return;                      // (a hover preview is not a change)
   const snap = lookSnapshot();
   if(h.stack[h.index] === snap) return;                      // nothing actually changed
   h.stack = h.stack.slice(0, h.index + 1);                   // a new change drops the redo branch

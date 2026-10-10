@@ -9,7 +9,7 @@
  * Run: node test/vault.test.mjs
  */
 import { validateSpell } from '../spell.js';
-import { formatPoemEntry, poemTime, encodeSpell, decodeSpell, readImport, SHARE_PREFIX } from '../vault.js';
+import { formatPoemEntry, poemTime, encodeSpell, decodeSpell, readImport, SHARE_PREFIX, encodeSpellShort, decodeSpellAny, readImportAny } from '../vault.js';
 import { PRESETS as SHARE_PRESETS } from '../appOptions.js';
 import {
   SPELL_KEY, POEM_KEY, readStore, writeStore,
@@ -225,6 +225,14 @@ check('a record with no glyphs at all is still accepted',
   const shared = JSON.parse(new TextDecoder().decode(Uint8Array.from(
     atob(code.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((code.length + 3) % 4)), c => c.charCodeAt(0))));
   check('only the one spell travels — no list, no ids', !Array.isArray(shared) && !('id' in shared));
+  // shorter links: deflated (the browser's CompressionStream), marked '~'
+  const big = { ...rec, settings: { ...rec.settings, ...Object.fromEntries(Array.from({ length: 120 }, (_, i) => ['field' + i, i % 3 ? '#A0B0C0' : 'hard-light'])) } };
+  const short = await encodeSpellShort(big), long = encodeSpell(big);
+  check('a short code is URL-safe, marked ~, and well under the old length', /^~[A-Za-z0-9_-]+$/.test(short) && short.length < long.length*0.5);
+  check('…and the spell survives it exactly', JSON.stringify(await decodeSpellAny(short)) === JSON.stringify(big));
+  check('old (uncompressed) codes still read', JSON.stringify(await decodeSpellAny(long)) === JSON.stringify(big));
+  check('a short link imports, as a link or a bare code', (await readImportAny('https://poetrypress.unfixable.place/' + SHARE_PREFIX + short))[0].name === rec.name && (await readImportAny(short))[0].name === rec.name);
+  check('a cut-short short code is refused', (await decodeSpellAny(short.slice(0, -12))) === null);
 }
 
 console.log();

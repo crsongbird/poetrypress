@@ -697,7 +697,7 @@ export function genMetalLeaf(w,h,amt,zoom,light,tint,form,sheenK,glitterK){
 // Most windows are dark.
 // The few that are lit are why
 // the city looks awake.
-export function genCityscape(w,h,amt,zoom,tint1,tint2){
+export function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   // the seed's FIRST draw decides the Needle, so which seeds show it is
   // predictable: withSeed(seed, () => Math.random() < 0.1)
@@ -779,6 +779,14 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2){
   // the Needle stands in one of the layers behind the nearest, in that layer's
   // tone, and shorter than the layer's tallest building
   const needleLayer = hasNeedle ? 1 + Math.floor(Math.random()*2) : -1;
+  // CITY GLOW (the Glow Hue): the sky above the lights, lit from below — the
+  // skyglow over every city at night — strongest at the skyline, fading
+  // upward; the buildings stand dark against it. Screened, so black is none.
+  if(GL && GL.r + GL.g + GL.b > 0.004){
+    const up = Math.max(1, ground - unit*0.6), g = ctx.createLinearGradient(0, ground, 0, up), c = (a) => `rgba(${GL.r*255|0},${GL.g*255|0},${GL.b*255|0},${a})`;
+    g.addColorStop(0, c(0.85)); g.addColorStop(0.25, c(0.5)); g.addColorStop(0.6, c(0.16)); g.addColorStop(1, c(0));
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g; ctx.fillRect(0, up, w, ground - up); ctx.restore();
+  }
   layers.forEach((L, i) => {
     const tallest = row(L.scale, L.tone, L.alpha, L.density, types);
     // beside downtown, not in it — where the nearer buildings are lower, so it

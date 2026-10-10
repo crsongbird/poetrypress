@@ -4,7 +4,7 @@
  * Sleep; starlight advancing or receding. Clouds, bokeh, the deep field,
  * euphoria dust, burning mana, first snow, aurora.
  */
-import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv, smoothField } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv, smoothField, pickWeighted } from './texCore.js';
 
 export function genClouds(w,h,amt,zoom,light,form,M3){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
@@ -245,7 +245,7 @@ export function genAstralFog(w,h,amt,zoom,light,tint,form){
   return full;
 }
 
-export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
+export function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL){
   amt = (amt==null?1:amt);
   const M = buildMatterMap();                 // FIRST: the same map the nebula uses
   const atm = Math.max(0, Math.min(1, form==null ? 0.2 : form));
@@ -315,10 +315,27 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form){
       }
     }
   }
+  // AIRGLOW in the Glow Hue: the night sky's own faint light, from the high
+  // atmosphere, rippled by gravity waves into slow bands across the whole
+  // sky (black: none — then only the Atmosphere's green glow, as before)
+  const AG = (GL && GL.r + GL.g + GL.b > 0.004) ? [GL.r*255|0, GL.g*255|0, GL.b*255|0] : null;
+  if(AG){
+    const bw = Math.max(32, Math.round(w/canonDiv(8))), bh = Math.max(32, Math.round(h/canonDiv(8)));
+    const bc = document.createElement('canvas'); bc.width = bw; bc.height = bh;
+    const bx = bc.getContext('2d', CPU), bi = bx.createImageData(bw, bh), bd = bi.data;
+    for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
+      // fine, nearly parallel ripples, gently bent; a broad patchiness over them
+      const u = x/bw, v = y/bh, warp = M.noise(u*0.9 + 4.2, v*0.9 + 8.7);
+      const band = Math.pow(0.5 + 0.5*Math.sin((v*11 + u*2.2 + warp*1.1)*Math.PI), 2)*(0.35 + 0.65*M.noise(u*1.6 + 1.3, v*1.6 + 5.9));
+      const k = (y*bw + x)*4; bd[k] = AG[0]; bd[k+1] = AG[1]; bd[k+2] = AG[2]; bd[k+3] = Math.round(255*0.16*band*(0.5 + 0.5*v));
+    }
+    bx.putImageData(bi, 0, 0);
+    fctx.save(); fctx.imageSmoothingEnabled = true; fctx.globalCompositeOperation = 'destination-over'; fctx.drawImage(bc, 0, 0, w, h); fctx.restore();
+  }
   if(atm > 0.02){
     // airglow low in the sky; past halfway, the warm wash of distant towns
-    const g = fctx.createLinearGradient(0, h, 0, h*0.5);
-    g.addColorStop(0, `rgba(110,255,170,${0.13*atm})`); g.addColorStop(1, 'rgba(110,255,170,0)');
+    const g = fctx.createLinearGradient(0, h, 0, h*0.5), ag = AG ? AG.join(',') : '110,255,170';
+    g.addColorStop(0, `rgba(${ag},${0.13*atm})`); g.addColorStop(1, `rgba(${ag},0)`);
     fctx.fillStyle = g; fctx.fillRect(0, h*0.5, w, h*0.5);
     if(atm > 0.5){
       const p = (atm - 0.5)*2, g2 = fctx.createLinearGradient(0, h, 0, h*0.78);
@@ -1140,14 +1157,32 @@ export function genMoon(w,h,amt,zoom,form,night){
       if(br>0.55){ ctx.globalAlpha=a*0.5; ctx.strokeStyle='rgb(245,245,245)'; ctx.lineWidth=cpx(0.8);      // the brightest twinkle
         ctx.beginPath(); ctx.moveTo(x-rad*5,y); ctx.lineTo(x+rad*5,y); ctx.moveTo(x,y-rad*5); ctx.lineTo(x,y+rad*5); ctx.stroke(); }
     }
-    // a falling star, on some nights
-    if(shootP<0.45){
-      const x0=w*(0.1+Math.random()*0.8), y0=h*(0.05+Math.random()*0.4), ang=Math.PI*(0.15+Math.random()*0.25)*(Math.random()<0.5?1:-1)+Math.PI/2, len=unit*(0.12+Math.random()*0.15);
-      const x1=x0+Math.cos(ang)*len, y1=y0+Math.sin(ang)*len*0.6, g=ctx.createLinearGradient(x0,y0,x1,y1);
-      g.addColorStop(0,'rgba(245,245,245,0)'); g.addColorStop(1,`rgba(250,250,250,${0.85*nightK})`);
-      ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=cpx(2.2); ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-      ctx.fillStyle=`rgba(255,255,255,${0.9*nightK})`; ctx.beginPath(); ctx.arc(x1,y1,cpx(2.6),0,Math.PI*2); ctx.fill();
+    // a falling star, on some nights — weighted, not a coin-flip: most nights
+    // none, often one, now and then a FIREBALL (bright, long, green at the
+    // head), rarely a PAIR from the same radiant. (The roll is the seed's own
+    // shootP, as before: nights that had a star still have one.)
+    const star=pickWeighted([['one',38],['fireball',5],['pair',2],['none',55]], shootP);
+    if(star!=='none'){
+      let x0=w*(0.1+Math.random()*0.8), y0=h*(0.05+Math.random()*0.4), ang=Math.PI*(0.15+Math.random()*0.25)*(Math.random()<0.5?1:-1)+Math.PI/2, len=unit*(0.12+Math.random()*0.15);
+      // seen whole: never behind the moon (mirrored to the other side of the
+      // sky if it would be), and never running off the page
+      const reach=(star==='fireball' ? 1.6 : 1)*len, crosses=(xa,ya,a)=>{ for(let k=0;k<=12;k++){ const t=k/12, x=xa+Math.cos(a)*reach*t, y=ya+Math.sin(a)*reach*0.6*t; if(Math.hypot(x-cx,y-cy)<R*1.2) return true; } return false; };
+      if(crosses(x0,y0,ang)){ x0=w-x0; ang=Math.PI-ang; }
+      const fit=L=>{ const ex=x0+Math.cos(ang)*L, ey=y0+Math.sin(ang)*L*0.6; return ex>w*0.03 && ex<w*0.97 && ey>h*0.03 && ey<h*0.97; };
+      for(let k=0;k<8 && !fit(reach*(1-k*0.1));k++) len*=0.9;
+      const streak=(xa,ya,L,width,head,headRGB)=>{
+        const x1=xa+Math.cos(ang)*L, y1=ya+Math.sin(ang)*L*0.6, g=ctx.createLinearGradient(xa,ya,x1,y1);
+        g.addColorStop(0,'rgba(245,245,245,0)'); g.addColorStop(1,`rgba(250,250,250,${0.85*nightK})`);
+        ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=width; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(xa,ya); ctx.lineTo(x1,y1); ctx.stroke();
+        if(star==='fireball'){ const gl=ctx.createRadialGradient(x1,y1,0,x1,y1,head*5); gl.addColorStop(0,`rgba(${headRGB},${0.45*nightK})`); gl.addColorStop(1,`rgba(${headRGB},0)`);
+          ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(x1,y1,head*5,0,Math.PI*2); ctx.fill(); }
+        ctx.fillStyle=`rgba(${headRGB},${0.9*nightK})`; ctx.beginPath(); ctx.arc(x1,y1,head,0,Math.PI*2); ctx.fill();
+      };
+      if(star==='one') streak(x0,y0,len,cpx(2.2),cpx(2.6),'255,255,255');
+      else if(star==='fireball') streak(x0,y0,len*1.6,cpx(4.2),cpx(4.4),'226,255,236');
+      else { const off=unit*(0.035+Math.random()*0.03), nx=-Math.sin(ang), ny=Math.cos(ang)*0.6;
+        streak(x0,y0,len,cpx(2.2),cpx(2.6),'255,255,255'); streak(x0+nx*off+Math.cos(ang)*len*0.25, y0+ny*off+Math.sin(ang)*len*0.15, len*0.7,cpx(1.8),cpx(2.1),'255,255,255'); }
     }
     ctx.globalAlpha=1;
   }

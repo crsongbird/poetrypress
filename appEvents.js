@@ -932,11 +932,54 @@ function presetTile(p, onPick, extraClass){
 { let at = 0;
   for(const g of (PRESET_GROUPS || [{ name: '', count: PRESETS.length }])){
     if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = g.name; presetGrid.appendChild(hd); }
-    PRESETS.slice(at, at + g.count).forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+    PRESETS.slice(at, at + g.count).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
     at += g.count;
   }
-  PRESETS.slice(at).forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+  PRESETS.slice(at).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
 }
+
+// ---- hover previews (desktop) ----
+// Resting the pointer on a preset tile shows it on the page; moving off the
+// grid puts your own look back exactly; a click keeps it. A preview is never
+// a step of undo history and never a change you made (Canva and Figma try a
+// style on hover the same way). Only where a real pointer hovers.
+const HOVER_DELAY = 380;
+const hover = { base: null, timer: 0, on: null };   // (the preview in progress: your look, kept to put back)
+const canHover = () => !detectMobile() && typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+function hoverPreview(tile, p){
+  if(!tile || !tile.addEventListener) return tile;
+  tile.addEventListener('mouseenter', () => {
+    if(!canHover()) return;
+    clearTimeout(hover.timer);
+    hover.timer = setTimeout(() => {
+      if(hover.on === p) return;
+      if(!hover.base) hover.base = { look: serializeCurrentSettings(), palette: state.ui.palette, name: document.body && document.body.dataset ? document.body.dataset.lookName : '' };
+      hover.on = p; state.history.restoring = true;
+      try { applyPreset(p); } finally { state.history.restoring = false; }
+      clearTimeout(state.history.timer);
+    }, HOVER_DELAY);
+  });
+  return tile;
+}
+function endHoverPreview(){
+  clearTimeout(hover.timer);
+  if(!hover.base) return;
+  const b = hover.base; hover.base = null; hover.on = null;
+  state.history.restoring = true;
+  try { restoreSettings(b.look); if(b.palette) applyThemePalette(b.palette); if(document.body && document.body.dataset) document.body.dataset.lookName = b.name || ''; }
+  finally { state.history.restoring = false; }
+  clearTimeout(state.history.timer);
+  scheduleRender();
+}
+// a click keeps the preset (the preview simply becomes the look), as one step of history
+function pickPreset(p){
+  clearTimeout(hover.timer);
+  const showing = hover.on === p;
+  hover.base = null; hover.on = null;
+  if(showing) commitSoon();          // already on the page, its seed and all: keep exactly what was shown
+  else applyPreset(p);
+}
+if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
 // Saved spells join the same grid rather than living only in Esoterica.
 // Everything from the divider down is rebuilt whenever the saved set changes,
@@ -1463,6 +1506,42 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
   }
 }
 
+// ---- the desktop preview: pan and zoom ----
+// Panzoom (timmywil/panzoom, the established library) rather than our own:
+// the wheel zooms toward the cursor, a drag pans once zoomed in, a double-
+// click (or ⟲) fits it again. Transform-only, like the phone's pinch: the
+// image itself is never touched. When the zoom settles, the preview redraws
+// sharp enough for it (state.ui.zoom, as the pinch does). Without the library
+// (offline before it was ever cached) the preview simply doesn't zoom.
+let desktopPanzoom = null;
+if(!detectMobile() && typeof Panzoom === 'function' && typeof document.querySelector === 'function'){
+  const wrap = document.querySelector('.canvas-wrap'), cv = $('poemCanvas');
+  if(wrap && cv && wrap.addEventListener){
+    try{
+      const pz = desktopPanzoom = Panzoom(cv, { minScale: 1, maxScale: 8, step: 0.25, panOnlyWhenZoomed: true, cursor: 'default', animate: true, duration: 160 });
+      let settle = null;
+      const zoomSettled = () => { clearTimeout(settle); settle = setTimeout(() => {
+        const z = pz.getScale(); if(Math.abs(z - (state.ui.zoom || 1)) < 0.01) return;
+        const down = z < (state.ui.zoom || 1); state.ui.zoom = z; applyPreviewScale(down && z <= 1.01); }, 200); };
+      // never pan the picture off its frame: at least a quarter of it stays in view
+      const bound = () => { const z = pz.getScale(), p = pz.getPan();
+        if(z <= 1.01){ if(p.x || p.y) pz.pan(0, 0, { animate: false, force: true }); return; }
+        const lim = (cv.offsetWidth || 0)*0.5*(1 - 0.5/z)/1, limY = (cv.offsetHeight || 0)*0.5*(1 - 0.5/z);
+        const x = Math.max(-lim, Math.min(lim, p.x)), y = Math.max(-limY, Math.min(limY, p.y));
+        if(x !== p.x || y !== p.y) pz.pan(x, y, { animate: false, force: true }); };
+      wrap.addEventListener('wheel', (e) => { if(e.target && e.target.closest && e.target.closest('button')) return; pz.zoomWithWheel(e); bound(); zoomSettled(); }, { passive: false });
+      cv.addEventListener('panzoomchange', () => { wrap.classList.toggle('zoomed', pz.getScale() > 1.01); });
+      cv.addEventListener('panzoomend', () => { bound(); zoomSettled(); });
+      cv.addEventListener('dblclick', () => { pz.reset(); zoomSettled(); });
+      if(typeof MutationObserver === 'function'){
+        let lastRatio = cv.width / cv.height;
+        new MutationObserver(() => { const r = cv.width / cv.height;
+          if(Math.abs(r - lastRatio) > 0.01){ lastRatio = r; pz.reset({ animate: false }); zoomSettled(); } }).observe(cv, { attributes: true, attributeFilter: ['width','height'] });
+      }
+    } catch(e){ desktopPanzoom = null; }
+  }
+}
+
 // ---------- texture parameters ----------
 // Each texture declares two knobs (see TEXTURE_PARAMS). The sliders relabel
 // and re-range themselves when the texture changes, so a control never says
@@ -1902,7 +1981,8 @@ if($('resetViewBtn') && $('resetViewBtn').addEventListener){
     const root2 = document.documentElement;
     if(root2 && root2.style) root2.style.setProperty('--preview-frac', '0.30');
     const cv = $('poemCanvas');
-    if(cv && cv.style) cv.style.transform = '';
+    if(desktopPanzoom){ desktopPanzoom.reset(); if(state.ui.zoom !== 1){ state.ui.zoom = 1; setTimeout(() => applyPreviewScale(true), 200); } }
+    else if(cv && cv.style) cv.style.transform = '';
   });
 }
 
@@ -2279,7 +2359,7 @@ function paintHistoryButtons(){
 }
 function commitHistory(){
   const h = state.history;
-  if(h.restoring) return;
+  if(h.restoring || hover.base) return;                      // (a hover preview is not a change)
   const snap = lookSnapshot();
   if(h.stack[h.index] === snap) return;                      // nothing actually changed
   h.stack = h.stack.slice(0, h.index + 1);                   // a new change drops the redo branch

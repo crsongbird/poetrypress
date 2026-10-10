@@ -1077,6 +1077,13 @@ export function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
       tx:Math.cos(a)*tilt, ty:Math.sin(a)*tilt, size:(0.8+Math.random()*0.5)*(1 + (Math.random()-0.5)*vr*0.8), arms,
       film: Math.random()*0.5 });
   }
+  // (cosines once per grain and arm, not once per pixel — same numbers, much less work)
+  for(const g of G){ g.c=Math.cos(g.th); g.s=Math.sin(g.th); for(const A of g.arms){ A.ca=Math.cos(A.a); A.sa=Math.sin(A.a); } }
+  // each cell's 5×5 neighbourhood, gathered once (the pixels in a cell all search the same grains)
+  const NB=new Array(gx*gy);
+  for(let cj=0;cj<gy;cj++) for(let ci=0;ci<gx;ci++){ const L=[];
+    for(let b=cj-2;b<=cj+2;b++) for(let a=ci-2;a<=ci+2;a++){ if(a<0||b<0||a>=gx||b>=gy) continue; L.push(G[b*gx+a]); }
+    NB[cj*gx+ci]=L; }
   const H=new Float32Array(N), Nm=new Float32Array(N*3), LV=terr>0.02 ? new Float32Array(N) : null, FL=terr>0.02 ? new Float32Array(N) : null;
   const bw=Math.max(0.8, unit*0.0012), aw=Math.max(0.7, unit*0.0011*zoom), bp=unit*0.008*zoom;   // groove, arm width, barb spacing
   const step=Math.max(3, unit*0.016*zoom), shH=Math.max(0.8, step*0.22);
@@ -1087,12 +1094,13 @@ export function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const ci=Math.floor(x/cs)+1, cj=Math.floor(y/cs)+1;
     let d1=1e18, d2=1e18, g1=null, g2=null;
-    for(let b=cj-2;b<=cj+2;b++) for(let a=ci-2;a<=ci+2;a++){
-      if(a<0||b<0||a>=gx||b>=gy) continue; const g=G[b*gx+a], dd=((x-g.x)*(x-g.x)+(y-g.y)*(y-g.y))/(g.size*g.size);
+    const nb=NB[Math.min(gy-1,cj)*gx+Math.min(gx-1,ci)];
+    for(let q=0;q<nb.length;q++){
+      const g=nb[q], dd=((x-g.x)*(x-g.x)+(y-g.y)*(y-g.y))/(g.size*g.size);
       if(dd<d1){ d2=d1; g2=g1; d1=dd; g1=g; } else if(dd<d2){ d2=dd; g2=g; }
     }
     const e1=Math.sqrt(d1)*g1.size, e2=g2 ? Math.sqrt(d2)*g2.size : 1e9, edge=(e2-e1)*0.5;   // to the boundary, roughly
-    const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=Math.cos(g1.th), s=Math.sin(g1.th);
+    const i=y*ww+x, ux=x-g1.x, uy=y-g1.y, c=g1.c, s=g1.s;
     const lu=ux*c+uy*s, lv=-ux*s+uy*c;
     let hgt=-0.9*Math.exp(-(edge/bw)*(edge/bw));                       // the groove between grains
     if(dend>0.02){
@@ -1100,7 +1108,7 @@ export function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
       for(const A of g1.arms){
         if(A.len<=0) continue;
         const R=reach*A.len;
-        let ca=Math.cos(A.a), sa=Math.sin(A.a), al=lu*ca+lv*sa;
+        let ca=A.ca, sa=A.sa, al=lu*ca+lv*sa;
         if(al<=0 || al>R) continue;
         // bend: the arm's direction turns a little as it grows
         const tb=A.a + A.bend*(al/R); ca=Math.cos(tb); sa=Math.sin(tb);
@@ -1452,4 +1460,90 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
       ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(x-SX*r*0.4, y-SY*r*0.4, r*0.28, 0, Math.PI*2); ctx.fill(); }
   }
   return out;
+}
+
+// What the fire kept
+// it gave back as weather: grey
+// leaves of a letter.
+/**
+ * Burnt Letter — the ash a burnt page leaves, as it lies (after photographs of
+ * paper ash, and the burn/dissolve shaders games use for a charring edge):
+ *   FLAKES   curled sheets, many small and a few large (a power law); each
+ *            charred black at its heart and burnt through to pale ash at its
+ *            rim, crazed into a fine grid of cracks (the fibres and ruled
+ *            lines of the page it was), the palest eaten into lace
+ *   CURL     each flake lifts at its ends like a drying leaf, so the dial
+ *            lights one side, shades the other and throws a soft shadow
+ *   SOOT     fine dust, and a faint smudge where each flake came to rest
+ *   EMBERS   some flakes still alight along their edge (Ember Hue)
+ * FLAKE SIZE · ASHFALL · CHAR (pale ash → black char) · EMBERS
+ */
+export function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,M3){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const charK=Math.max(0,Math.min(1, form==null?0.55:form)), emb=Math.max(0,Math.min(1, embers==null?0.2:embers));
+  const ash=parseHex(tintAsh||'#D6D0C6'), em=parseHex(tintEmber||'#FF5A1E');
+  const ASH=[ash.r, ash.g, ash.b], CHAR=[ash.r*0.1+8, ash.g*0.09+6, ash.b*0.08+5];   // char: the ash's own warm black
+  const EM=[em.r, em.g, em.b], HOT=[255, Math.min(255, em.g*0.6+150), Math.min(255, em.b*0.4+110)];
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const A=new Float32Array(N), C=new Float32Array(N), H=new Float32Array(N), E=new Float32Array(N), S=new Float32Array(N);
+  const jag=fbmSampler(18, 3), lace=fbmSampler(7, 3), dust=fbmSampler(5, 2), crack=fbmSampler(3, 2);
+  const n=Math.max(4, Math.round(canonArea(w,h)/(3072*3072)*46*amt));
+  const sm=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
+  for(let f=0; f<n; f++){
+    // size: many small, a few large
+    const R=unit*0.028*zoom*(0.35 + 2.2*Math.pow(Math.random(), 2.6)), e=0.55+Math.random()*0.45, th=Math.random()*Math.PI;
+    const cx=Math.random()*ww, cy=Math.random()*wh, co=Math.cos(th), si=Math.sin(th);
+    const m=Math.max(0, Math.min(1, charK + (Math.random()-0.5)*0.7));        // this flake's char
+    const curl=0.3+Math.random()*0.9, lit=Math.random()<emb, ox=Math.random()*9, oy=Math.random()*9;
+    const harm=[2,3,5].map(k=>({ k, a:(0.05+Math.random()*0.1)/k*2, p:Math.random()*6.28 }));
+    const q=0.08 + Math.min(0.3, R/unit*2), cell=unit*0.013*Math.sqrt(zoom)*(0.8+Math.random()*0.4), cwk=0.045;
+    // the rim, by angle (once per flake: the noise is costly per pixel)
+    const NA=256, RIM=new Float32Array(NA), FIRE=new Float32Array(NA);
+    for(let j=0;j<NA;j++){ const a=j/(NA-1)*2*Math.PI-Math.PI; let Rw=1+(jag(ox+Math.cos(a)*q, oy+Math.sin(a)*q)-0.5)*0.42;
+      for(const hm of harm) Rw+=hm.a*Math.sin(a*hm.k+hm.p);
+      RIM[j]=Math.max(0.3, Rw); FIRE[j]=sm(0.35, 0.7, jag(ox+Math.cos(a)*q*2.5, oy+Math.sin(a)*q*2.5)); }
+    const pad=R*1.6, x0=Math.max(0,Math.floor(cx-pad)), x1=Math.min(ww-1,Math.ceil(cx+pad)), y0=Math.max(0,Math.floor(cy-pad)), y1=Math.min(wh-1,Math.ceil(cy+pad));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      const dx=x-cx, dy=y-cy, u=(dx*co+dy*si)/R, v=(-dx*si+dy*co)/(R*e), r=Math.hypot(u,v);
+      if(r>1.7) continue;
+      const a=Math.atan2(v,u), Rw=RIM[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))];
+      const s=r/Rw, k=y*ww+x;
+      const fire=lit ? FIRE[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))] : 0;
+      if(s>=1){ if(s<1.6 && A[k]<0.5) S[k]=Math.min(1, S[k]+0.16*(0.3+m)*Math.pow(1-(s-1)/0.6, 2));
+        if(fire>0 && s<1.3) E[k]=Math.max(E[k], 0.3*fire*Math.exp(-(((s-1)/0.1)**2)));   // its heat, spilling on the page
+        continue; }
+      // crazing: the page's fibres and lines, a grid broken here and there
+      const lx=(dx*co+dy*si)/cell, ly=(-dx*si+dy*co)/(cell*1.6);
+      const wx=lx+(crack(ox+u*0.3, oy+v*0.3)-0.5)*1.4, wy=ly+(crack(oy+u*0.3, ox+v*0.3)-0.5)*1.4;
+      const fu=Math.abs(wx-Math.round(wx)), fv=Math.abs(wy-Math.round(wy));
+      const brk=lace(ox+u*0.9+x*0.002, oy+v*0.9+y*0.002);
+      const crk=(fv<cwk && brk>0.38) || (fu<cwk*0.8 && brk>0.62);
+      if(crk && s<0.93) continue;
+      // the palest ash is eaten into lace
+      if(lace(ox+u*0.5, oy+v*0.5) > 0.78 - (1-m)*0.18 && s>0.25) continue;
+      const t=m*(1-0.8*sm(0.5, 0.98, s));                 // black heart → pale rim
+      const hh=unit*0.0015 + curl*u*u*R*0.11 + brk*unit*0.0012;
+      const edge=Math.min(1, (1-s)*R*0.8);
+      H[k]=(A[k]>0.5 ? H[k]*0.5 : 0) + hh;
+      C[k]=t; A[k]=Math.max(A[k], edge);
+      if(lit){ E[k]=Math.max(E[k], Math.exp(-(((s-0.93)/0.07)**2))*fire); }
+      else E[k]*=1-edge;
+    }
+  }
+  // soot: fine dust, thicker in drifts
+  const specks=Math.round(N*0.004*amt);
+  for(let i=0;i<specks;i++){ const x=Math.floor(Math.random()*ww), y=Math.floor(Math.random()*wh), k=y*ww+x;
+    if(Math.random() < dust(x/ww, y/wh)*1.6-0.2) S[k]=Math.min(1, S[k]+0.35+Math.random()*0.5); }
+  const L=lightSparse(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.55, ao:0.3, ambient:0.45 });   // flakes on open ground: only their tiles
+  return paintLit(w,h,div,ww,wh, i => {
+    const k=litK(L, i, 0.45, null, 0)/L.flat, a=A[i], t=C[i], s=S[i], sheen=L.spec[i]*t*70;   // char has a dull silver sheen
+    const out=[0,0,0];
+    for(let c=0;c<3;c++){
+      const ground=128*(1-s*0.55)*Math.min(1.1, k);
+      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c);
+      const e=E[i], glow=e>0 ? (EM[c]+(HOT[c]-EM[c])*e*e)*e : 0;
+      out[c]=clamp255(ground+(flake-ground)*a + glow*1.1);
+    }
+    return out;
+  });
 }

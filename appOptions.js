@@ -252,7 +252,7 @@ export const PRESETS = [
   },
 { name: "Insomnia",   // surface: Night City (√)
     bg1: "#070B14", bgGradient: true, bg2: "#142036", bgAngle: 180, text1: "#F2EEE6", outlineMode: "off", font: "Inter",
-    texture: true, textureType: "cityscape", textureOpacity: 78,
+    texture: true, textureType: "cityscape", textureOpacity: 78, textureTint5: "#D9772E",   // the city glow
     accent1: "#FFD58A", accent2: "#6FA7D8",
     spell: "{{🜕🜣🜚⛤🜪⚸🜧}}⛧☥🜼[[✡🜾☊]]",
     cardToggle: true, cardColor1: '#0A0F1C', cardOpacity: '62', cardBlend: 'darken',
@@ -275,14 +275,17 @@ export const PRESETS = [
     accent1: "#E0526F", accent2: "#9B5C86",
     textureBlend: 'screen'
   },
-{ name: "Ashfall",   // surface: Silverpoint Hatch (√)
+{ name: "Ashfall",   // surface: Burnt Letter (🜚) — what a burnt letter leaves, a few flakes still alight
     spell: "[[🜁🜩⚻🜺☍⛤🜿🜚⛧🜎🜪🜔🝆🜻]]{{✝🜝}}✡",
-    bg1: "#9B9187",
-    text1: "#241F1C",
+    bg1: "#2A2523", bgGradient: true, bg2: "#4B4039", bgAngle: 160,
+    text1: "#ECE4D8",
     outlineMode: "off",
     font: "EB Garamond",
-    texture: true, textureType: "hatch", textureOpacity: 30, texP1: 22, texP2: 130,
-    accent1: "#57412E", accent2: "#543F4A"
+    texture: true, textureType: "ash", textureOpacity: 70, texP1: 90, texP2: 85, texP3: 65, texP4: 35,
+    textureBlend: 'hard-light', textureLight: 240, textureLightTilt: 115,
+    textureTint1: '#D6D0C6', textureTint2: '#FF6A2A',
+    accent1: "#E07A3F", accent2: "#ADA299",
+    vignette: true, vignetteBlend: "multiply", vignetteIntensity: 30
   },
 { name: "Gateway",   // surface: Transmutation Circles (∆)
     spell: "🜺🜶🜈[[🜣✡⚸]]{{🜍}}",

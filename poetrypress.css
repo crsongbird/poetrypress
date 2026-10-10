@@ -11,11 +11,17 @@
   --rose:#b98a8a;
 }
 
+/* The UI's faces (Ruby): FRAUNCES at full softness for the app title, card
+   headings, the big buttons and sheet names; LITERATA for everything else
+   (it runs a little wider — the small sizes step down to make room);
+   Courier Prime for code. */
+:root{ --ui-display:'Fraunces', 'Playfair Display', serif; --ui-soft:"SOFT" 100, "WONK" 0; --ui-text:'Literata', 'EB Garamond', serif; --ui-code:'Courier Prime', monospace; }
+
 *{box-sizing:border-box;}
 
 body{
   margin:0;
-  font-family:'EB Garamond', serif;
+  font-family:var(--ui-text);
   background:var(--bg-deep);
   color:var(--text-main);
   height:100vh;
@@ -39,7 +45,7 @@ body{
 .controls::-webkit-scrollbar{width:8px;}
 .controls::-webkit-scrollbar-thumb{background:var(--line); border-radius:2px;}
 
-.app-title{ font-family:'Playfair Display', serif; font-size:22px; letter-spacing:0.03em; margin:0 0 2px 0; }
+.app-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:22px; letter-spacing:0.03em; margin:0 0 2px 0; }
 .kofi-link{
   display:inline-block; font-size:12px; color:var(--accent); text-decoration:none;
   margin:0 0 11px 0; border-bottom:1px dotted var(--accent-dim);
@@ -54,10 +60,10 @@ body{
 }
 
 .card-title{
-  font-family:'Playfair Display', serif;
-  font-size:11.5px;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft);
+  font-size:12.5px;
   text-transform:uppercase;
-  letter-spacing:0.16em;
+  letter-spacing:0.1em;
   color:var(--accent);
   margin:0 0 7px 0; padding-bottom:3px; border-bottom:1px solid transparent; border-image:linear-gradient(90deg, var(--accent-dim), color-mix(in srgb, var(--accent-2) 70%, transparent) 38%, transparent 82%) 1; }
 
@@ -86,7 +92,7 @@ textarea{
   resize:vertical;
   white-space:pre;
   line-height:1.5;
-  font-family:'Courier Prime', monospace;
+  font-family:var(--ui-code);
   font-size:13px;
 }
 
@@ -116,28 +122,28 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
 .radio-btn{
   flex:1 1 28%; text-align:center; padding:5px 0;
   border:1px solid var(--line); border-radius:2px;
-  font-size:12px; color:var(--text-dim); cursor:pointer;
+  font-size:12.5px; color:var(--text-dim); cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
 .radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
 
 button.ghost{
   width:100%; padding:5px 0; border-radius:2px;
   border:1px solid var(--accent-dim); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent); color:var(--accent);
-  font-family:'EB Garamond', serif; font-size:13px; letter-spacing:0.04em;
+  font-family:var(--ui-text); font-size:13px; letter-spacing:0.04em;
   cursor:pointer; transition:all .12s ease; margin-top:1px; box-shadow:inset 0 1px 0 var(--hi); }
 button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent))}
 
-.hint{font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.45;}
+.hint{font-size:12.5px; color:var(--text-dim); margin-top:5px; line-height:1.45;}
 .hint code{ background:var(--bg-panel-2); padding:1px 4px; border-radius:2px; color:var(--rose); }
 
-.preset-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+.preset-grid{ display:grid; grid-template-columns:repeat(4,minmax(80px,1fr)); gap:4px; }
 .preset-btn{
   border:1px solid var(--line); border-radius:2px; overflow:hidden;
   cursor:pointer; background:var(--bg-panel-2); padding:0;
   transition:transform .12s ease, border-color .12s ease; box-shadow:0 1px 0 var(--well); }
 .preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); box-shadow:0 4px 10px -4px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 40%, transparent); }
 
-.preset-label{ display:block; font-size:8.5px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
+.preset-label{ display:block; font-size:11px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
 
 /* ---------- RIGHT RENDER PANE ---------- */
 .stage{
@@ -147,7 +153,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
   position:relative}
 .canvas-wrap{
   box-shadow:0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
-  border-radius:2px; overflow:hidden; line-height:0;
+  border-radius:0; overflow:hidden; line-height:0;
 }
 #poemCanvas{ display:block; max-height:calc(100vh - 40px); max-width:94vw; height:auto; width:auto; box-shadow:0 14px 30px -18px var(--lo), 0 0 0 1px color-mix(in srgb, var(--text-main) 6%, transparent); }
 
@@ -156,7 +162,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
   padding:9px 20px; border-radius:2px;
   border:2px solid #1a1610;
   background:var(--accent); color:#1a1610;
-  font-family:'Playfair Display', serif; font-size:14px; letter-spacing:0.03em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:14px; letter-spacing:0.03em;
   cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;
   box-shadow:0 8px 24px -6px rgba(0,0,0,0.65);
 }
@@ -166,7 +172,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
 .app-header{
   display:none;
   padding:10px 14px; background:var(--bg-panel); border-bottom:1px solid var(--line);
-  font-family:'Playfair Display', serif; font-size:17px; letter-spacing:0.02em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; letter-spacing:0.02em;
   position:sticky; top:0; z-index:70;
 }
 
@@ -193,12 +199,12 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
      the compact feel. */
   label{ font-size:14px; }
   select, textarea, input[type="text"], input[type="number"]{ font-size:16px; }
-  .card-title{ font-size:13.5px; }
+  .card-title{ font-size:14px; }
   .hint{ font-size:13px; }
   button.ghost{ font-size:15px; }
   .radio-btn{ font-size:14px; }
   .check-row label{ font-size:15px; }
-  .preset-label{ font-size:10.5px; }
+  .preset-label{ font-size:11px; }
 }
 
 /* ============================================================
@@ -329,7 +335,7 @@ body.is-mobile #poemText {
 }
 
 
-body.is-mobile .card-title { font-size: clamp(10px, 2.6vw, 12px); margin-bottom: 6px; }
+body.is-mobile .card-title { font-size: clamp(11px, 2.9vw, 13px); letter-spacing:.09em; margin-bottom: 6px; }
 
 body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 
@@ -338,11 +344,11 @@ body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 body.is-mobile input[type="text"],
 body.is-mobile input[type="number"],
 body.is-mobile select,
-body.is-mobile textarea { font-size: clamp(14px, 3.5vw, 16px); }
+body.is-mobile textarea { font-size: 16px; }   /* 16px: a phone never zooms in on a tapped field */
 
 /* the picker must clear the tab bar and the download button */
 body.is-mobile #clr-picker { }
-body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(11px, 2.9vw, 13px); }
+body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(12px, 3vw, 13px); }
 
 
 /* drawn tab icons — one stroke weight, one grid, so they read as a set */
@@ -450,7 +456,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .btn-row > button{ flex:1 1 0; min-width:84px; }
 .btn-major, .btn-danger{
   padding:8px 12px; border-radius:2px; cursor:pointer;
-  font-family:'Playfair Display', serif; font-size:13px; letter-spacing:0.03em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; letter-spacing:0.03em;
   border:2px solid var(--accent); background:var(--accent); color:var(--on-accent, #1a1610);
   transition:opacity .12s ease;
 }
@@ -487,7 +493,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
   box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
 }
 .modal-title{
-  margin:0 0 6px; font-family:'Playfair Display', serif;
+  margin:0 0 6px; font-family:var(--ui-display); font-variation-settings:var(--ui-soft);
   font-size:15px; letter-spacing:0.05em; color:var(--accent);
 }
 .modal-body{ margin:0 0 10px; font-size:12.5px; color:var(--text-dim); line-height:1.55; }
@@ -586,8 +592,8 @@ body.is-mobile .check-row{ margin:2px 0; }
 body.is-mobile .app-header{ padding:3px 6px; }
 body.is-mobile .app-header-title{ letter-spacing:0.02em; }
 
-body.is-mobile .preset-grid{ grid-template-columns:repeat(4,1fr); gap:5px; }
-body.is-mobile .preset-label{ font-size:clamp(8px,2.1vw,10px); }
+body.is-mobile .preset-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; }
+body.is-mobile .preset-label{ font-size:11px; }
 
 /* ---------- FOCUS MODE ----------
    Entered when the poem field takes focus on a phone. Chrome hides its own
@@ -1356,7 +1362,7 @@ body.is-mobile #clr-picker{
   background:var(--accent) !important;
   color:var(--on-accent, #161414) !important;
   border:0 !important; border-radius:2px;
-  font-family:'Playfair Display', serif; letter-spacing:.03em;
+  font-family:var(--ui-display); font-variation-settings:var(--ui-soft); letter-spacing:.03em;
   padding:6px 14px; cursor:pointer;
 }
 #clr-picker .clr-hue, #clr-picker .clr-gradient{ border-radius:2px; }
@@ -1702,3 +1708,10 @@ body:not(.is-mobile) .tab-btn.active{ background:linear-gradient(180deg, var(--a
 /* the disclosure marks in the second accent */
 summary.card-title::marker, summary.card-title::-webkit-details-marker{ color:var(--accent-2); }
 body.is-mobile summary.card-title::after, .subcard > summary::after{ color:var(--accent-2); opacity:.8; }
+
+/* the big buttons speak in the display face too */
+body:not(.is-mobile) .tab-btn{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); }
+
+/* the desktop preview, zoomed in: a hand to drag it by */
+body:not(.is-mobile) .canvas-wrap.zoomed #poemCanvas{ cursor:grab; }
+body:not(.is-mobile) .canvas-wrap.zoomed #poemCanvas:active{ cursor:grabbing; }

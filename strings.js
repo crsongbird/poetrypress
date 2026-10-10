@@ -205,6 +205,7 @@ export const UI_STRINGS = {
   'option.metal_spangle':                      "Metal Spangle",
   'option.old_paper':                          "Old Paper",
   'option.cup_ring':                           "Cup Ring",
+  'option.burnt_letter':                       "Burnt Letter",
   'option.poured_wax':                         "Poured Wax",
   'option.overlay':                            "Overlay",
   'option.color_burn':                         "Color Burn",
@@ -225,6 +226,13 @@ export const DIALOGS = {
     title: 'Share \u201C{name}\u201D',
     bodyCopied: 'The link is copied. Anyone who opens it can add this spell to their own Esoterica — only this one, not your whole list.',
     bodyManual: 'Copy this link. Anyone who opens it can add this spell to their own Esoterica — only this one, not your whole list.',
+    confirm: 'Done',
+  },
+  shareLook: {
+    name: 'A Shared Look',
+    title: 'Share this look',
+    bodyCopied: 'The link is copied. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
+    bodyManual: 'Copy this link. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
     confirm: 'Done',
   },
   receiveSpell: {

@@ -74,6 +74,9 @@ export const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
 export function resolvePmlVariables(text, ctx){
   if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1)) return text;
   const one = (name, param, num) => {
+    // with the surface off, its own readouts have nothing to say: the line
+    // that carries one goes (Ruby: 'Uses Surface: None' hides them)
+    if(ctx.surfOff && SURF_ONLY.has(name)) return LINE_DROP;
     switch(name){
       case 'SurfName':      return ctx.surfName;
       case 'SurfBlendMode': return ctx.blendName;
@@ -143,6 +146,9 @@ export function resolvePmlVariables(text, ctx){
       return v == null ? m : String(v);
     });
   }
+  // a surface readout with the surface off: its whole line goes
+  if(out.indexOf(LINE_DROP) !== -1)
+    out = out.split('\n').filter(line => line.indexOf(LINE_DROP) === -1).join('\n');
   // a variable that broke into rows: each row its own line, carrying the
   // marker its line began with (## heading, -# small…)
   if(out.indexOf(ROW_BREAK) !== -1)
@@ -154,3 +160,5 @@ export function resolvePmlVariables(text, ctx){
   return out;
 }
 const ROW_BREAK = '\u0001';
+const LINE_DROP = '\u0002';
+const SURF_ONLY = new Set(['SurfParamsA', 'SurfParamsB', 'SurfBlendMode', 'LightDir', 'SeedPhrase', 'TextureSeed']);

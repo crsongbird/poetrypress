@@ -35,7 +35,7 @@ import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, C
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape, genGrain } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
-import { genLinenTooth, genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf } from './texTouch.js';
+import { genLinenTooth, genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -167,6 +167,12 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
                   // drips, and the faint wash inside the ring
                   {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
+  ash:           [{key:'zoom',  label:'Flake Size',      min:40, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Ashfall',         min:20, max:400, def:100, unit:'%'},
+                  // pale ash, burnt through (0) → black char, barely burnt (100)
+                  {key:'form',  label:'Char',            min:0,  max:100, def:55,  unit:''},
+                  // how many flakes are still alight along their edge
+                  {key:'shape', label:'Embers',          min:0,  max:100, def:20,  unit:''}],
   wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3},
                   // thin and spreading → thick and lumpy
@@ -329,6 +335,8 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
+  ash:           { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2,
+                   tintLabels:['Ash Hue','Ember Hue'], tintDefaults:['#D6D0C6','#FF5A1E'] },
   wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
@@ -364,6 +372,8 @@ const GLOWS = {
   dunes:       'afterglow along the crests',
   cupring:     'a faint glow where the stain dried at its edge',
   spangle:     'light caught in the metal\'s flecks',
+  cityscape:   'city glow: the sky above the lights, lit from below',
+  astral:      'airglow: the sky\'s own faint light, in slow waves',
   linen:       'luminous thread in the stitching',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
@@ -373,13 +383,13 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
 // the fifth hue as a generator wants it: glow as 0–1 channels (null: none);
 // a base colour as 0–255 (null: none)
-function glowOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'glow') return null; const c = parseHex(t5); return { r: c.r/255, g: c.g/255, b: c.b/255 }; }
+function glowOf(type, t5){ const h = (TEXTURE_CAPS[type] || (type === 'astral_stars' ? TEXTURE_CAPS.astral : {})).hue5; if(!t5 || !h || h.role !== 'glow') return null; const c = parseHex(t5); return { r: c.r/255, g: c.g/255, b: c.b/255 }; }
 function baseOf(type, t5){ const h = (TEXTURE_CAPS[type] || {}).hue5; if(!t5 || !h || h.role !== 'base') return null; return parseHex(t5); }
 export function capsFor(type){
   return TEXTURE_CAPS[type] || { blends:['overlay','soft-light','multiply','screen'], light:false, tints:0 };
@@ -447,7 +457,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
-    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form);
+    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow);
   } else if(type === 'snow'){
     result = genSnow(w,h,amt,zoom,light,form,extra.base);
   } else if(type === 'magicparticles'){
@@ -472,6 +482,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
+  } else if(type === 'ash'){
+    result = genBurntLetter(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat);
   } else if(type === 'wax'){
     result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'dunes'){
@@ -483,7 +495,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'landscape'){
     result = genLandscape(w,h,amt,zoom,form,extra.tilt);
   } else if(type === 'cityscape'){
-    result = genCityscape(w,h,amt,zoom,tint1,tint2);
+    result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
     result = genBlackHole(w,h,amt,zoom,light,form);
   } else if(type === 'water'){
@@ -594,7 +606,8 @@ function describeRequest(type, w, h, opts){
   // the sixth: DIFFUSE, the light's own colour (white: none)
   const t6 = (o6 && !noMaterialHue(o6) && (TEXTURE_CAPS[RETIRED[type] || type] || {}).diffuse) ? o6 : null;
   // the fifth hue: only when it differs from its role's "none"
-  const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || {}).hue5;
+  // (Deep Field's star layer carries its airglow: the composite's own hue)
+  const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || (type === 'astral_stars' ? TEXTURE_CAPS.astral : {})).hue5;
   const o5 = h5 ? resolveAlpha(opts.tint5, h5.def) : null;
   const t5 = (h5 && o5 && o5.toUpperCase() !== h5.def.toUpperCase()) ? o5.toUpperCase() : null;
   // the page's own colours, for a texture that shows the world behind the glass

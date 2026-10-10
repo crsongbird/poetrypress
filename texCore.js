@@ -96,6 +96,19 @@ export function withScale(s, fn){
   finally { SCALE = prev; }
 }
 /** The scale the current generation runs at. */
+/**
+ * A WEIGHTED choice: traits that are common, uncommon or rare (as Fidenza and
+ * other long-form generative art choose them), rather than a flat coin-flip.
+ * table: [[value, weight], …]. r: the roll, 0..1 — by default one draw of the
+ * seeded random (so a choice costs the same one draw a coin-flip did, and
+ * seeds keep their other features); pass an earlier draw to reuse it.
+ */
+export function pickWeighted(table, r = Math.random()){
+  let total = 0; for(const [, wt] of table) total += wt;
+  let x = r*total;
+  for(const [v, wt] of table){ if(x < wt) return v; x -= wt; }
+  return table[table.length - 1][0];
+}
 export function scaleNow(){ return SCALE; }
 /** n canonical pixels, in pixels of the canvas being drawn. */
 export function cpx(n){ return n * SCALE; }
@@ -392,7 +405,7 @@ export function lightHeights(H, ww, wh, opts = {}){
 export function lightSparse(H, ww, wh, opts = {}, T = 64){
   const { light = 315, relief = 1 } = opts;
   const { lx, ly } = lightVec(light), tilt = Math.min(1, Math.hypot(lx, ly));
-  const elev = (90 - tilt*78) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it
+  const elev = (90 - tilt*78 - lightLow()*8) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it (sunk light too: longer shadows, wider margins)
   let hMax = 0, hMin = 0; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
   const ground = lightHeights(new Float32Array(1), 1, 1, { ...opts, shadow: 0, ao: 0, normals: null });
   const out = new Float32Array(ww*wh).fill(ground.flat), spec = new Float32Array(ww*wh).fill(ground.spec[0]);

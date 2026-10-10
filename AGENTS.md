@@ -367,3 +367,13 @@ background) don't belong in it.
 - `OPEN-ISSUES.md` holds open items only, kept short: when something is
   finished, delete it rather than editing it into a history.
 - Hand-editable text lives in `strings.js`; hand-editable numbers in `tunables.js`.
+
+## This round's pitfalls
+- build.mjs flattens `export async function` too (it used to stop at
+  `export function`); a module statement that survives flattening fails the build.
+- Weighted choices: texCore `pickWeighted`; pass an existing roll to keep a
+  seed's other draws where they were (the falling star reuses `shootP`).
+- A glow (hue5 role 'glow') is black by default and must be a no-op when
+  black — screen it, or skip when the colour sums to ~0.
+- Deep Field is two requests (astral_fog, astral_stars); its Glow Hue rides
+  on astral_stars (describeRequest and glowOf map it to astral's caps).

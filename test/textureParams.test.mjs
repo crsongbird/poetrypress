@@ -27,7 +27,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 37 textures', textureTypes.length === 37);
+check('the picker offers 38 textures', textureTypes.length === 38);
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -38,7 +38,7 @@ check('every texture declares two params, plus an optional third that must be Fo
     // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
     || (t === 'water' && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
     || ((t === 'dunes' || t === 'moss' || t === 'landscape') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
-    || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')));
+    || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')));
 
 const unlabelled = textureTypes.filter(t => paramsFor(t).some(d => !d.label || /value/i.test(d.label)));
 check('every param has a real label, not "value 1"', unlabelled.length === 0);

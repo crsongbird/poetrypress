@@ -12,15 +12,16 @@ See PERFORMANCE-AUDIT.md. A–I are done. Next: measure on Ruby's phone
 candidates (Dream Bloom's convolution first). J (Linen at preview) waits.
 New heavier ones to watch on a phone: Black Hole (~0.6 s preview, ~2 s
 export), tilted Dune Ripples (~1.4 s export at the default tilt, ~2.6 s at
-full), Scrying Pool (~1 s preview).
+full), Scrying Pool (~1 s preview), Burnt Letter (~0.6 s preview, ~1.2 s
+export). Metal Spangle is ~35% faster (same pixels).
 
 ## 1 · Light, like a game engine
 `lightHeights` (texCore) lights HEIGHTS by the dial — diffuse, specular per
 material, cast shadows, occlusion; NORMAL MAPS and MATERIAL hues; `lightSparse`
 for scattered details. On it now: Dune Ripples, Kintsugi, Moss on Stone, Rain
 on Glass, Facet Field, Cup Ring, Old Paper, Poured Wax, Cold Press, Fractured
-Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter and Brushstrokes
-(impasto); Scattered Polygons' Sheen tilts each flake to the dial. Cartomancy lays its cards under the dial
+Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter, Brushstrokes
+(impasto) and Burnt Letter; Scattered Polygons' Sheen tilts each flake to the dial. Cartomancy lays its cards under the dial
 (shadows, curl, gilt edges). Past the dial's rim these sink the light toward
 4° (long raking shadows); the rest keep the rim.
 - The camera TILT is on Dune Ripples, Scrying Pool, Moss on Stone (texCore
@@ -29,28 +30,25 @@ Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter and Brushstrokes
 - Next: normal-map detail where heights are awkward (weave, crazing);
   per-material gloss where one won't do.
 
-## 2 · Ruby to judge (rebuilt this round, from her notes and the prior art)
-- Crystal Leaf: a druse of six-faced quartz points, each face lit, striated,
-  edge-worn, with a thin-film sheen; the refracted layer behind; fire and
-  phantoms. (The old metal look is Metal Spangle.)
-- Scrying Pool: a PLACE by the seed — koi pond, pebbled stream, wishing well —
-  things at their depths, refracted and fading; shadows on the floor; Tilt.
-- Dune Ripples: transverse, barchanoid or linear dunes; ripples only where
-  the wind works; heavy grains in the troughs; Tilt (default 40).
-- Brushstrokes (impasto) and Cartomancy (the Vellum deck: elemental suits,
-  an arcana, Saturn / Enceladus / the Kitsune as rare cards).
-- Scattered Polygons: the original Metal Leaf, restored exactly (its gilding
-  rebuild is gone); Shape, Sheen and Glitter at 0 draw the original.
-- The presets: four Simple first, then eight per element, under headings;
-  Ruby's Dusk Letter (now the default) and Event Horizon applied exactly as
-  she made them; boxes and blends where a texture needs them (Homebound,
-  Insomnia, Stillwater, Omen, Nocturne, Homesick, Mirage, Lucid, Projection);
-  the literal names renamed.
-- The themes: each an element (Rose = Whimsy, Aether = Sharpness, Fathom =
-  Chaos, Vellum = Touch) with a complementary second accent, slight depth,
-  square corners.
-- The seed: last in the tools, one line, a hair-thin scroller; what is typed
-  (words or a number) stays, and is saved with its number.
+## 2 · Ruby to judge (this round)
+- Fonts: Fraunces (full softness) for the title, card headings, tabs and big
+  buttons; Literata for the rest; Courier Prime for code. Hints, chips and
+  buttons 12.5px, tile names 11px, inputs 16px on phones. (There was no 76px
+  tile: tiles were already ~95–105px; four per row now never fall below 80px.)
+- Burnt Letter (new, 🜚): the ash a burnt page leaves — curled flakes charred
+  black to pale rims, crazed along the page's lines, some still alight
+  (Embers, Ember Hue). Ashfall is built on it now (hatch stays Dusk Letter's).
+- The report: with the surface off, its knob, hue, light and seed lines go.
+- Desktop: pan and zoom the preview (Panzoom): wheel at the cursor, drag once
+  zoomed, double-click or ⟲ to fit; it redraws sharp for the zoom.
+- Hover a preset (desktop) to try it on the page; off the grid, your look
+  comes back exactly; a click keeps it. Never an undo step.
+- Share: with no spell chosen, Share sends the look on the page now; links
+  are deflated (about half as long). Old links still open.
+- Weighted traits: the falling star (one, a fireball, a pair, or none) kept
+  in view; the rare cards Saturn 3 : Enceladus 2 : the Kitsune 1.
+- Glows: Night City's city glow (Insomnia has it), Deep Field's airglow in
+  fine waves (both the Glow Hue; black is none).
 
 ## 3 · Colour, light and material — the rest of the pass
 Every colour has one job (test/colorRoles.test.mjs). Unused hues are now
@@ -58,19 +56,12 @@ HIDDEN, like unused sliders. The dial is a joystick where a texture has no
 light (Wind, Blend Direction, Position — now to the very corners — View),
 with a centre mark and ◎ centre button, a halfway ring that catches, and ⚄
 a random angle.
-- Still to go: Glows for Night City (city glow) and Deep Field (airglow);
-  the dial for angle-only textures (Harsh Rain's slant, the hatch).
-- Metal Spangle is slow (~2–3 s at preview): its grain search looks at 25
-  neighbours. Worth a lattice speed-up.
+- Still to go: the dial for angle-only textures (Harsh Rain's slant, the
+  hatch) — waiting on Ruby (see the open questions).
 
 ## Pinned
-- Desktop: PAN AND ZOOM the preview — wheel zooms at the cursor, pinch on
-  touch, bounded panning, a fit button (panzoom, Figma). (The Esoterica
-  drawer, the faded sidebar and the resizable sidebar are built.)
-- Weighted rare traits per seed (Fidenza's weighted choices) instead of flat
-  coin-flips: the falling star, the rare cards.
-- Share a look as a link (state in the URL hash), beside the spell code.
-- Hover previews on presets (desktop).
+- (Built this round: pan and zoom, weighted traits, share the look as a
+  link, hover previews.) Next candidates are in the brainstorm in Ruby's doc.
 
 ## Later
 - Dream Bloom as the basis for a new texture (its five knobs make a rich engine).
@@ -84,6 +75,7 @@ a random angle.
 - The dial's three buttons and the seed's phrase box in the narrow column.
 - Chrome vs Firefox speed; the 'two pages at once' ghost never returns.
 - Textures are made in a worker: the page stays responsive while one is made.
+- The new fonts' sizes in the narrow column (ANDROMEDA just fits at 360px).
 
 ## Worth knowing
 - WORD SEEDS (seedWords.js): every 32-bit seed has exactly one phrase and
@@ -102,3 +94,9 @@ a random angle.
 - Textures measure in canonical pixels (cpx, canonArea, canonDiv); check new
   ones with tools/scale-audit.mjs.
 - Blend modes can hide an inset box (Darken shows only a darker box…).
+- WEIGHTED traits: texCore `pickWeighted([[value, weight], …], roll)` — one
+  draw, like the coin-flip it replaces, so seeds keep their other features.
+- The report drops a line whose surface variable has nothing to say
+  (pmlVars LINE_DROP, ctx.surfOff).
+- Panzoom and Coloris load from jsdelivr at exact versions; the app must
+  work without either (offline before first cache).

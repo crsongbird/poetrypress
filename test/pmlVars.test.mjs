@@ -309,7 +309,10 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
     !/^let (currentAlign|currentValign|currentAspect|bgStopCount|textStopCount|pickingField|currentThemePalette)\b/m.test(ev));
   check('undo and redo step through look snapshots (never the poem, locks or name)',
     /function lookSnapshot\(\)\{ return JSON\.stringify\(stripToLook\(serializeCurrentSettings\(\)\)\); \}/.test(ev));
-  check('restoring a step is not itself recorded as a change', /if\(h\.restoring\) return;/.test(ev));
+  check('restoring a step is not itself recorded as a change (nor is a hover preview)', /if\(h\.restoring \|\| hover\.base\) return;/.test(ev));
+  check('hover previews (desktop): a preset shows on the page after a pause, your look comes back off the grid, a click keeps exactly what was shown',
+    /const canHover = \(\) => !detectMobile\(\) && typeof matchMedia === 'function' && matchMedia\('\(hover: hover\) and \(pointer: fine\)'\)\.matches;/.test(ev)
+    && /presetGrid\.addEventListener\('mouseleave', endHoverPreview\)/.test(ev) && /if\(showing\) commitSoon\(\);/.test(ev) && /try \{ restoreSettings\(b\.look\);/.test(ev));
   check('the undo buttons are ☋ and ☊', /id="undoBtn"[^>]*>☋</.test(src('index.html')) && /id="redoBtn"[^>]*>☊</.test(src('index.html')));
   const core = src('texCore.js'), tg = src('textureGenerators.js');
   check('tint and blend remap are one pass, in place (no copies)',
@@ -368,7 +371,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 25);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 28);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -396,7 +399,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('the nebula and the stars rebuild one matter map, first, from the seed',
     /const M = buildMatterMap\(\);\s+\/\/ FIRST: the same map the stars use/.test(wh) && /const M = buildMatterMap\(\);\s+\/\/ FIRST: the same map the nebula uses/.test(wh));
   check('the Deep Field layers take their Atmosphere through p3, and it keys their cache',
-    /p1: p2, p3, tint1: tint2/.test(cr) && /seed, p1, p3, tint1, scale: S/.test(cr) && /defs\.length === 0 && p3 != null \? p3 : null/.test(src('textureGenerators.js')));
+    /p1: p2, p3, tint1: tint2/.test(cr) && /seed, p1, p3, tint1, tint5, scale: S/.test(cr) && /defs\.length === 0 && p3 != null \? p3 : null/.test(src('textureGenerators.js')));
 }
 
 // ---- the preview at screen size ----
@@ -859,7 +862,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
       && /data-str="option\.metal_leaf">Scattered Polygons</.test(src('index.html')));
     check('Cartomancy is a divination deck: elemental suits drawn as paths, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune); shadows, curl and gilt edges by the dial',
       T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Card Count|Scatter'
-      && /const RARE=\[\['✦','Saturn','saturn'\],\['✦','Enceladus','enceladus'\],\['✦','The Kitsune','kitsune'\]\];/.test(ch3) && /const tearClip=\(\)=>/.test(ch3));
+      && /const RARE=\[\[\['✦','Saturn','saturn'\],3\],\[\['✦','Enceladus','enceladus'\],2\],\[\['✦','The Kitsune','kitsune'\],1\]\];/.test(ch3) && /pickWeighted\(RARE\)/.test(ch3) && /const tearClip=\(\)=>/.test(ch3));
     check('unused hues are HIDDEN, not greyed; the report lays hues out in rows (≤3 one line; 4 → 2×2; 5 → 3+2; 6 → 3+3)',
       /classList\.toggle\('tool-hidden', !caps\.material\)/.test(src('appEvents.js')) && /\.field\.tool-hidden/.test(src('poetrypress.css'))
       && resolvePmlVariables('§SurfParamsB', { hues: [1,2,3,4,5].map(i => ({ label: 'H'+i, hex: '#00000'+i })) }).split('\n').length === 2
@@ -904,6 +907,24 @@ check('the inset box is painted on its own layer, then blended on as one image (
     && T.textureKeyFor('glassrain', 64, 64, { env: '#112233' }) !== T.textureKeyFor('glassrain', 64, 64, { env: '#445566' }));
   check('…each drop is a lens: the outdoors turned over, red and blue bent apart, a dark rim, the sky in its Fresnel edge',
     /THE OUTDOORS behind the glass, made from the page's own colours/.test(tt) && /envAt\(u\+gx\*K\*0\.96, v\+gy\*K\*0\.96, 0\)/.test(tt) && /fres=Math\.min\(1, Math\.pow\(tilt\*2, 3\)\)\*0\.45/.test(tt));
+}
+
+{
+  const C = await import('../texCore.js');
+  const picks = {}; for(let i = 0; i < 6000; i++){ const v = C.pickWeighted([['a', 3], ['b', 2], ['c', 1]], i/6000); picks[v] = (picks[v] || 0) + 1; }
+  check('weighted traits (pickWeighted): common, uncommon, rare, in proportion — one roll, like the coin-flip it replaces',
+    picks.a === 3000 && picks.b === 2000 && picks.c === 1000 && C.pickWeighted([['x', 1]], 0.999) === 'x');
+  check('glows: Night City\'s city glow over the skyline, Deep Field\'s airglow in fine waves (both the Glow Hue, black: none)',
+    /CITY GLOW \(the Glow Hue\)/.test(src('texSharpness.js')) && /AIRGLOW in the Glow Hue/.test(src('texWhimsy.js'))
+    && /genCityscape\(w,h,amt,zoom,tint1,tint2,extra\.glow\)/.test(src('textureGenerators.js')) && /genAstralStars\(w,h,accent1,accent2,amt,zoom,form,extra\.glow\)/.test(src('textureGenerators.js')));
+  check('…the falling star is weighted (one, a fireball, a pair, or none) on the seed\'s own roll',
+    /pickWeighted\(\[\['one',38\],\['fireball',5\],\['pair',2\],\['none',55\]\], shootP\)/.test(src('texWhimsy.js')));
+}
+{
+  const off = { ...ctx, surfName: 'None', surfOff: true };
+  const t = 'Uses Surface: "[§SurfName]"\n<§SurfParamsA/scale:90>\nBlend Mode: [§SurfBlendMode]  Light: [§LightDir]\n§SurfParamsB\n-# Seed: [§SeedPhrase] · §TextureSeed\nAfter';
+  check('with the surface off, its readout lines step aside (Uses Surface: None stays; knobs, hues, light and seed go)',
+    resolvePmlVariables(t, off) === 'Uses Surface: "[None]"\nAfter' && R(t).split('\n').length >= 6);
 }
 
 console.log();

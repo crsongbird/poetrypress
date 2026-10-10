@@ -812,6 +812,7 @@ function pmlVarContext(W, H){
   if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(el.value)) hues.push({ label: caps.hue5.label, hex: el.value }); }   // (fully transparent is none)
   return {
     surfName: on ? optionText('textureType') : 'None',
+    surfOff: !on,                                   // the surface's own lines step aside
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
     // the arrow, and how high the light is when it isn't at the horizon
     lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value)
@@ -994,7 +995,7 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('stars', 'astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, scale: S }));
+      drawTex(requestTexture('stars', 'astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, tint5, scale: S }));   // (tint5: the airglow's own colour)
       ctx.restore();
     } else if(type === 'inkbleed'){
       ctx.save();

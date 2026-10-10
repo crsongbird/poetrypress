@@ -5,7 +5,7 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, greyLit } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, greyLit, pickWeighted } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -714,7 +714,8 @@ export function genCartomanticDrift(w,h,amt,zoom,angle,light){
     ['V','The Grimoire','book'],['VI','The Lotus','lotus'],['VII','The Dial','dial'],['VIII','Kintsugi','bowl'],['IX','The Scrying Pool','pool'],
     ['X','The Wheel of Seeds','wheel'],['XIII','The Black Hole','hole'],['XIV','Transmutation','circle'],['XV','The Crystal','crystal'],
     ['XVII','The Star','star'],['XVIII','The Moon','moon'],['XIX','The Sun','sun'],['XXI','The World','world']];
-  const RARE=[['✦','Saturn','saturn'],['✦','Enceladus','enceladus'],['✦','The Kitsune','kitsune']];
+  // the rare cards are not equally rare: Saturn 3 : Enceladus 2 : the Kitsune 1
+  const RARE=[[['✦','Saturn','saturn'],3],[['✦','Enceladus','enceladus'],2],[['✦','The Kitsune','kitsune'],1]];
   const roundCard=(W,H,r)=>{ ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
     ctx.lineTo(W/2,H/2-r); ctx.arc(W/2-r,H/2-r,r,0,Math.PI/2); ctx.lineTo(-W/2+r,H/2); ctx.arc(-W/2+r,H/2-r,r,Math.PI/2,Math.PI);
     ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath(); };
@@ -797,7 +798,7 @@ export function genCartomanticDrift(w,h,amt,zoom,angle,light){
       emblem('sigil', W*0.3); for(let e=0;e<4;e++){ const a=e*Math.PI/2-Math.PI/2; element(Math.cos(a)*W*0.42*1.0, Math.sin(a)*H*0.36, W*0.06, e); }
     } else if(roll<0.55 || rare){
       // a MAJOR card: its numeral, its emblem, its name in a banner
-      const card=rare ? RARE[Math.floor(Math.random()*RARE.length)] : ARCANA[Math.floor(Math.random()*ARCANA.length)];
+      const card=rare ? pickWeighted(RARE) : ARCANA[Math.floor(Math.random()*ARCANA.length)];
       ctx.font=`${W*0.11}px Georgia, "Times New Roman", serif`; ctx.fillText(card[0], 0, -fh/2+W*0.13);
       ctx.save(); ctx.translate(0, -H*0.04); ctx.lineWidth=Math.max(cpx(0.8), W*0.016);
       if(rare){ ctx.globalAlpha=0.35; ctx.beginPath(); for(let k=0;k<24;k++){ const a=k/24*Math.PI*2; ctx.moveTo(Math.cos(a)*W*0.36,Math.sin(a)*W*0.36); ctx.lineTo(Math.cos(a)*W*0.42,Math.sin(a)*W*0.42); } ctx.stroke(); ctx.globalAlpha=1; }

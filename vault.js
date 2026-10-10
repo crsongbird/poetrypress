@@ -145,6 +145,36 @@ export function decodeSpell(code){
   } catch(e){ return null; }
 }
 
+// Shorter links: the same JSON DEFLATEd first, with the browser's own
+// CompressionStream (no library), then base64url — about a third of the
+// length. A leading '~' (never in base64url) marks it; old codes still read.
+const b64url = bytes => { let bin = ''; for(const b of bytes) bin += String.fromCharCode(b); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64url = code => { const b64 = String(code).trim().replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(b64 + '==='.slice((b64.length + 3) % 4)), c => c.charCodeAt(0)); };
+const canDeflate = () => typeof CompressionStream === 'function' && typeof DecompressionStream === 'function' && typeof Response === 'function' && typeof Blob === 'function';
+export async function encodeSpellShort(rec){
+  if(!canDeflate()) return encodeSpell(rec);
+  const json = JSON.stringify({ name: rec.name, spell: rec.spell, settings: rec.settings, savedAt: rec.savedAt });
+  const buf = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();
+  return '~' + b64url(new Uint8Array(buf));
+}
+export async function decodeSpellAny(code){
+  const c = String(code || '').trim();
+  if(c[0] !== '~') return decodeSpell(c);
+  if(!canDeflate()) return null;
+  try {
+    const text = await new Response(new Blob([unb64url(c.slice(1))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    const rec = JSON.parse(text);
+    return isValidSpell(rec) ? rec : null;
+  } catch(e){ return null; }
+}
+/** readImport, for short (deflated) share links and codes too. */
+export async function readImportAny(raw){
+  const text = String(raw || '').trim(), at = text.indexOf(SHARE_PREFIX);
+  const code = at !== -1 ? text.slice(at + SHARE_PREFIX.length).split(/[\s&]/)[0] : (/^~[A-Za-z0-9_-]{16,}$/.test(text) ? text : null);
+  if(code && code[0] === '~'){ const r = await decodeSpellAny(code); return r ? [r] : null; }
+  return readImport(raw);
+}
+
 /**
  * Whatever was pasted, as a list of records: a JSON list, a single JSON
  * record, a share link, or a bare share code. Returns null if none of those.
@@ -275,7 +305,7 @@ export function createVault(deps){
     if(empty) empty.style.display = spells.length ? 'none' : '';
     setDisabled('spellApplyBtn', !selectedSpell);
     setDisabled('spellDeleteBtn', !selectedSpell);
-    setDisabled('spellShareBtn', !selectedSpell);
+    setDisabled('spellShareBtn', false);   // with no spell chosen, it shares the look on the page
     setDisabled('spellCreateBtn', !spellIsDirty());
   }
 
@@ -452,7 +482,7 @@ export function createVault(deps){
     });
     if(!raw) return;
     // a list, a single record, a share link or a bare share code all work
-    const parsed = readImport(raw);
+    const parsed = await readImportAny(raw);
     if(!parsed){
       await prompt({ title:'Could not read that', body:'That is not a spell list, a spell, or a share link, so nothing was imported.', confirmLabel:'OK' });
       return;
@@ -482,18 +512,20 @@ export function createVault(deps){
 
   bind('poemSaveBtn', savePoem);
   async function shareSpell(){
-    const rec = spells.find(sp => sp.id === selectedSpell);
-    if(!rec) return;
+    // a chosen spell, or — with none chosen — the look on the page right now
+    // (no need to save it first)
+    const chosen = spells.find(sp => sp.id === selectedSpell);
+    const rec = chosen || { name: DIALOGS.shareLook.name, spell: generateSpell(), settings: getSettings(), savedAt: stamp() };
     // A link only works from the live site. Opened as a local file there is
     // no address worth sharing, so the link points at the public app.
     const here = (typeof location !== 'undefined' && location.protocol === 'https:')
       ? location.origin + location.pathname : SHARE_HOME;
-    const link = here + SHARE_PREFIX + encodeSpell(rec);
+    const link = here + SHARE_PREFIX + await encodeSpellShort(rec);
     let copied = false;
     try { await navigator.clipboard.writeText(link); copied = true; } catch(e){ /* shown below instead */ }
     await prompt({
-      title: fill(DIALOGS.shareSpell.title, rec.name),
-      body: copied ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareSpell.bodyManual,
+      title: chosen ? fill(DIALOGS.shareSpell.title, rec.name) : DIALOGS.shareLook.title,
+      body: copied ? (chosen ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareLook.bodyCopied) : (chosen ? DIALOGS.shareSpell.bodyManual : DIALOGS.shareLook.bodyManual),
       input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm,
     });
   }
@@ -501,7 +533,7 @@ export function createVault(deps){
   /** Opened from a share link: offer to add the spell it carries. */
   async function receiveShared(){
     if(typeof location === 'undefined' || !String(location.hash).startsWith(SHARE_PREFIX)) return;
-    const rec = decodeSpell(location.hash.slice(SHARE_PREFIX.length));
+    const rec = await decodeSpellAny(location.hash.slice(SHARE_PREFIX.length));
     // clear the link either way, so a reload does not ask again
     try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
     if(!rec){
