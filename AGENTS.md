@@ -377,3 +377,15 @@ background) don't belong in it.
   black — screen it, or skip when the colour sums to ~0.
 - Deep Field is two requests (astral_fog, astral_stars); its Glow Hue rides
   on astral_stars (describeRequest and glowOf map it to astral's caps).
+- Glass for the inset box (boxFx.js) works on the page's own canvas: it reads
+  ctx.canvas for the box's rectangle, so it must run after the backdrop,
+  texture and vignette and before the text.
+- A texture whose option value is also used elsewhere in the markup (the
+  box's Frosted Glass is value="frost") is counted once (tests use a Set).
+- Stitches are retired by ALIAS, never deleted outright (old poems parse them).
+- A generator must not draw Math.random once PER PIXEL before its main
+  features (the count changes with the size, so a preview and its export get
+  different features): hash the canonical position instead (see Burnt
+  Letter's piles), or make per-pixel randomness the last thing drawn.
+- Counts and sizes are canonical (canonArea, cpx, or fractions of the working
+  grid's unit) — never "per pixel of this canvas".

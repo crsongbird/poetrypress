@@ -27,7 +27,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 38 textures', textureTypes.length === 38);
+check('the picker offers 44 textures, and the Crucible\'s own', new Set(textureTypes).size === 45 && textureTypes.includes('crucible'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -38,7 +38,9 @@ check('every texture declares two params, plus an optional third that must be Fo
     // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
     || (t === 'water' && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
     || ((t === 'dunes' || t === 'moss' || t === 'landscape') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
-    || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')));
+    || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash' || t === 'turing' || t === 'frost') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')
+    // the Crucible: six plain knobs, named on the page from its graph's Knob nodes
+    || (t === 'crucible' && d.length === 6 && d.every((p, i) => p.key === 'k' + (i + 1)))));
 
 const unlabelled = textureTypes.filter(t => paramsFor(t).some(d => !d.label || /value/i.test(d.label)));
 check('every param has a real label, not "value 1"', unlabelled.length === 0);
@@ -133,7 +135,7 @@ function movesWith(type, i){
 // 'astral' is a composite assembled in canvasRenderer from astral_fog and
 // astral_stars; probing the composite name directly is meaningless, so its
 // two halves are checked instead.
-const probeTypes = Object.keys(TEXTURE_PARAMS).filter(t => t !== 'astral');
+const probeTypes = Object.keys(TEXTURE_PARAMS).filter(t => t !== 'astral' && t !== 'crucible');   // (the Crucible's knobs are whatever its graph makes them)
 const deadFirst  = probeTypes.filter(t => !movesWith(t, 0));
 const deadSecond = probeTypes.filter(t => !movesWith(t, 1));
 check('every texture\'s FIRST knob changes the output', deadFirst.length === 0);

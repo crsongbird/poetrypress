@@ -12,8 +12,19 @@ See PERFORMANCE-AUDIT.md. A–I are done. Next: measure on Ruby's phone
 candidates (Dream Bloom's convolution first). J (Linen at preview) waits.
 New heavier ones to watch on a phone: Black Hole (~0.6 s preview, ~2 s
 export), tilted Dune Ripples (~1.4 s export at the default tilt, ~2.6 s at
-full), Scrying Pool (~1 s preview), Burnt Letter (~0.6 s preview, ~1.2 s
-export). Metal Spangle is ~35% faster (same pixels).
+full), Scrying Pool (~1 s preview), Burnt Letter (~1.1 s preview, ~2.6 s
+export, with its piles), Turing Skin (~1.2 s at any size: its own grid),
+Hoarfrost (~0.9 s preview, ~1.5 s export), Rain on Glass (~0.8 s, ~1.4 s),
+Guilloché (~0.5 s, ~1.1 s), Chladni Sand (~0.7 s, ~1.2 s), Contour Map
+(~0.9 s, ~2.1 s), Flow-Field Ink (~0.1 s). A Crucible surface costs what its
+parts cost (a Vellum Texture node costs that texture).
+- Scale audit (tools/scale-audit.mjs; preview vs export): Flow-Field and
+  Turing Skin fine, Contour close; Chladni, Guilloché, Burnt Letter and
+  Hoarfrost differ in fine detail (sub-pixel lines and grains at preview
+  size); Rain on Glass's simulation drifts between sizes (tiny float
+  differences grow in a chaotic sim) — same character, different drops.
+The inset box's glass runs on the GPU when there is one (boxFx.js) — check
+its speed on the phone, and that 'glass' reads gpu there.
 
 ## 1 · Light, like a game engine
 `lightHeights` (texCore) lights HEIGHTS by the dial — diffuse, specular per
@@ -31,24 +42,18 @@ Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter, Brushstrokes
   per-material gloss where one won't do.
 
 ## 2 · Ruby to judge (this round)
-- Fonts: Fraunces (full softness) for the title, card headings, tabs and big
-  buttons; Literata for the rest; Courier Prime for code. Hints, chips and
-  buttons 12.5px, tile names 11px, inputs 16px on phones. (There was no 76px
-  tile: tiles were already ~95–105px; four per row now never fall below 80px.)
-- Burnt Letter (new, 🜚): the ash a burnt page leaves — curled flakes charred
-  black to pale rims, crazed along the page's lines, some still alight
-  (Embers, Ember Hue). Ashfall is built on it now (hatch stays Dusk Letter's).
-- The report: with the surface off, its knob, hue, light and seed lines go.
-- Desktop: pan and zoom the preview (Panzoom): wheel at the cursor, drag once
-  zoomed, double-click or ⟲ to fit; it redraws sharp for the zoom.
-- Hover a preset (desktop) to try it on the page; off the grid, your look
-  comes back exactly; a click keeps it. Never an undo step.
-- Share: with no spell chosen, Share sends the look on the page now; links
-  are deflated (about half as long). Old links still open.
-- Weighted traits: the falling star (one, a fireball, a pair, or none) kept
-  in view; the rare cards Saturn 3 : Enceladus 2 : the Kitsune 1.
-- Glows: Night City's city glow (Insomnia has it), Deep Field's airglow in
-  fine waves (both the Glow Hue; black is none).
+- The node editor is THE CRUCIBLE now (the alchemist's vessel; "a forge for
+  new surfaces" beneath the name) — and it MAKES TEXTURES: every part
+  evaluates (crucible.js, in the worker); its Surface is offered at the bottom
+  of Surface Variant ("The Crucible: <its name>"); Knob nodes become the
+  sliders, Hue nodes the hues; a thumbnail in its bar; "Use as Surface".
+- TEXTURE LAYERS: a base texture beneath the main one (Surface card): its own
+  variant, two knobs, opacity and blend; the seed turned so it never echoes.
+- Four approved textures: Guilloché (√, woven rosettes round spirograph
+  hearts, engraved), Chladni Sand (∆, sand on a ringing plate's still lines),
+  Contour Map (🜚, contour lines with index lines and hillshade), Flow-Field
+  Ink (♡, non-crossing strokes; the dial sets the current).
+- Preset tiles keep the plain box (Ruby: plain rectangle and colour).
 
 ## 3 · Colour, light and material — the rest of the pass
 Every colour has one job (test/colorRoles.test.mjs). Unused hues are now
@@ -60,14 +65,20 @@ a random angle.
   hatch) — waiting on Ruby (see the open questions).
 
 ## Pinned
-- (Built this round: pan and zoom, weighted traits, share the look as a
-  link, hover previews.) Next candidates are in the brainstorm in Ruby's doc.
+- The approved textures still to make: Suminagashi, Watercolour Wash,
+  Stained Glass.
+- THE CRUCIBLE, stages 4–5 (Ruby's doc): GPU passes inside a graph,
+  per-node caching between edits, more parts; a version per graph, a work
+  budget, starter graphs as presets.
+- Then: generate and revisit the PRESETS (Ruby: once the open items are done)
+  — Turing Skin, Hoarfrost and the new textures have none yet.
 
 ## Later
 - Dream Bloom as the basis for a new texture (its five knobs make a rich engine).
-- Split appEvents.js (~2,200 lines) into modules.
-- Texture layers (a base texture under the main one).
-- Alt text on export (the poem's words); PDF export for print.
+- Split appEvents.js (~2,500 lines) into modules.
+- Alt text on export (the poem's words).
+- Preset tiles draw the inset box as a plain rectangle (not its stitch shape
+  or glass) — cheap to add if wanted.
 
 ## Check on a phone
 - The occasional blank page (Moto G Stylus 2022): frames draw into a back
@@ -76,6 +87,10 @@ a random angle.
 - Chrome vs Firefox speed; the 'two pages at once' ghost never returns.
 - Textures are made in a worker: the page stays responsive while one is made.
 - The new fonts' sizes in the narrow column (ANDROMEDA just fits at 360px).
+- Panzoom's pinch on the preview (toward the fingers), double-tap to fit.
+- The Crucible on a phone: the palette below, tap a part to add it; a
+  Crucible surface's speed on the phone.
+- The box's glass speed; the 58-font picker's groups.
 
 ## Worth knowing
 - WORD SEEDS (seedWords.js): every 32-bit seed has exactly one phrase and
@@ -98,5 +113,19 @@ a random angle.
   draw, like the coin-flip it replaces, so seeds keep their other features.
 - The report drops a line whose surface variable has nothing to say
   (pmlVars LINE_DROP, ctx.surfOff).
-- Panzoom and Coloris load from jsdelivr at exact versions; the app must
-  work without either (offline before first cache).
+- Panzoom and Coloris load from jsdelivr at exact versions (Drawflow too,
+  only when the Crucible opens); the app must work without them.
+- STITCHES: STITCH_STYLES is the menu; STITCH_ALIASES maps the retired to
+  their relatives; parse with STITCH_NAMES, draw through stitchOf(). Every
+  kept motif has an `edge` (its silhouette) — a new motif needs one too.
+- LINKED CONTROLS: `data-link="<id>"` + `data-link-switch="<checkbox>"` mirror
+  two controls both ways while the switch is on (the box ⛓ border).
+- The box's glass and GPU blends: boxFx.js; `?softgl` in the address lets a
+  machine without a GPU test the GPU path (body[data-glass] says which ran).
+- The Crucible's graph is Drawflow's export JSON in #forgeGraph (PERSISTED,
+  but not an undo step), saved WITHOUT node faces (forge.js redraws them from
+  FORGE_NODES on load). crucible.js evaluates it; type 'crucible' in the
+  texture tables has six plain knobs (k1–k6) — the page relabels them from the
+  graph (applyCrucibleGraph), and the cache key carries crucibleHash(graph).
+- Texture layers: the base layer is drawn first, in its own slot ('base'),
+  with the main seed ^ 0x5bd1e995; presets turn it off (FRAME_DEFAULTS).

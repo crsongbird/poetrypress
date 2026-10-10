@@ -26,11 +26,14 @@
 
 import { texturesSettled, setDrafting } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
+import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
+import { openForge, closeForge, describeForge } from './forge.js';
+import { crucibleKnobs, crucibleHues, crucibleName } from './crucible.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
-import { $, FONTS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
+import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes } from './textureGenerators.js';
+import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
@@ -46,6 +49,8 @@ import { applyStrings, fill, PICKER } from './strings.js';
 // the border's stitch menu and the help's stitch list, from the library itself
 { const bs = $('borderStitch');
   if(bs && 'innerHTML' in bs) bs.innerHTML = STITCH_STYLES.map(k => `<option value="${k}">${STITCH_LABELS[k]}</option>`).join('');
+  const cs = $('cardStitch');   // the inset box cuts its edge with the same stitches
+  if(cs && 'innerHTML' in cs) cs.innerHTML = STITCH_STYLES.map(k => `<option value="${k}">${STITCH_LABELS[k]}</option>`).join('');
   const sl = $('stitchList');
   if(sl && 'innerHTML' in sl) sl.innerHTML = STITCH_STYLES.map(k => `<code>${k}</code>`).join(' '); }
 
@@ -169,11 +174,18 @@ const LOCK_GLYPH =
 const lockButtons = new Map();
 
 const fontSelect = $('fontFamily');
-FONTS.forEach((f,i)=>{
-  const opt = document.createElement('option');
-  opt.value = i; opt.textContent = f.label;
-  fontSelect.appendChild(opt);
-});
+// grouped (Serif, Sans, … Pixel & Game); each option keeps its /f:N index as
+// its value, so the order of the groups never changes a poem
+{
+  const optFor = i => { const opt = document.createElement('option'); opt.value = i; opt.textContent = FONTS[i].label; return opt; };
+  const placed = new Set();
+  for(const [name, families] of (FONT_GROUPS || [])){
+    const g = document.createElement('optgroup'); g.label = name; let n = 0;
+    families.forEach(fam => { const i = FONTS.findIndex(f => f.family === fam); if(i >= 0 && !placed.has(i)){ placed.add(i); g.appendChild(optFor(i)); n++; } });
+    if(n) fontSelect.appendChild(g);
+  }
+  FONTS.forEach((f, i) => { if(!placed.has(i)) fontSelect.appendChild(optFor(i)); });   // (any not yet grouped)
+}
 fontSelect.value = 3;
 
 $('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i} &nbsp;${f.family}`).join('<br>');
@@ -257,6 +269,49 @@ toggleSubblock('borderToggle','borderBlock');
 toggleSubblock('accent1Toggle','accent1Block');
 toggleSubblock('accent2Toggle','accent2Block');
 toggleSubblock('textureToggle','textureBlock');
+toggleSubblock('baseToggle','baseBlock');
+
+// ---------- TEXTURE LAYERS: a base texture under the main one ----------
+// Its own variant, two of its knobs, an opacity and a blend; the light, the
+// seed (turned, so it never echoes the main one) and the variant's own
+// default hues come from the page.
+{
+  const bt = $('baseType'), main = $('textureType');
+  if(bt && main && main.children && typeof document.createElement === 'function'){
+    for(const g of Array.from(main.children)){
+      if(!g.label || g.id === 'crucibleGroup') continue;
+      const og = document.createElement('optgroup'); og.label = g.label;
+      for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'crucible') continue;
+        const op = document.createElement('option'); op.value = o.value; op.textContent = o.textContent; og.appendChild(op); }
+      bt.appendChild(og);
+    }
+    if(!bt.value) bt.value = 'grain';
+  }
+  const bb = $('baseBlend');
+  if(bb && 'innerHTML' in bb) bb.innerHTML = [['overlay','Overlay'],['soft-light','Soft Light'],['hard-light','Hard Light'],['multiply','Multiply'],['screen','Screen'],
+    ['darken','Darken'],['lighten','Lighten'],['color-dodge','Color Dodge'],['color-burn','Color Burn'],['source-over','Normal'],['difference','Difference'],['exclusion','Exclusion']]
+    .map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+}
+/** The base layer's two knobs, named and ranged for its variant. */
+function syncBaseParams(useDefaults){
+  const defs = paramsFor(($('baseType') || {}).value || 'grain');
+  [1, 2].forEach(i => {
+    const d = defs[i - 1], f = $('baseP' + i + 'Field'), el = $('baseP' + i), lab = $('baseP' + i + 'Label'), out = $('baseP' + i + 'Val');
+    if(f && f.style) f.style.display = d ? '' : 'none';
+    if(!d || !el) return;
+    el.min = d.min; el.max = d.max; if(useDefaults) el.value = d.def;
+    if(lab) lab.textContent = d.label;
+    if(out) out.textContent = paramReadout(d, +el.value);
+  });
+}
+function syncBaseUi(){
+  if($('baseBlock') && $('baseToggle')) $('baseBlock').classList.toggle('open', $('baseToggle').checked);
+  syncBaseParams(false);
+}
+if($('baseType') && $('baseType').addEventListener) $('baseType').addEventListener('change', () => { syncBaseParams(true); scheduleRender(); });
+for(const id of ['baseP1', 'baseP2', 'baseOpacity', 'baseBlend']){ const el = $(id); if(!el || !el.addEventListener) continue;
+  const on = () => { syncBaseParams(false); paintMoons(); scheduleRender(); }; el.addEventListener('input', on); el.addEventListener('change', on); }
+syncBaseParams(true);
 toggleSubblock('vignetteToggle','vignetteBlock');
 $('vignetteBlend').addEventListener('change', scheduleRender);
 $('vignetteIntensity').addEventListener('input', ()=>{ $('vignetteIntensityVal').textContent=$('vignetteIntensity').value+'%'; scheduleRender(); });
@@ -480,6 +535,7 @@ $('randomBgBtn').addEventListener('click', ()=>{
     $('borderThickness').value = Math.floor(Math.random()*6)+1;
     $('borderOffset').value = Math.floor(Math.random()*40);
   }
+  syncLinkedBox();
 
   scheduleRender();
   });
@@ -593,6 +649,23 @@ const PERSISTED = [
   ['cardGradientAngle',    'cardGradientAngle',    'text', '°'],
   ['cardOpacity',          'cardOpacity',          'text'],
   ['cardBlend',            'cardBlend',            'text'],
+  ['cardLink',             'cardLink',             'check'],
+  ['cardOffset',           'cardOffset',           'text', 'px'],
+  ['cardThickness',        'cardThickness',        'text', 'px'],
+  ['cardRounded',          'cardRounded',          'check'],
+  ['cardRadius',           'cardRadius',           'text', 'px'],
+  ['cardStitch',           'cardStitch',           'text'],
+  ['cardStitchOut',        'cardStitchOut',        'check'],
+  ['cardFx',               'cardFx',               'text'],
+  ['cardFxAmount',         'cardFxAmount',         'text', ''],
+  ['cardFxScale',          'cardFxScale',          'text', ''],
+  ['forgeGraph',           'forgeGraph',           'text'],      // the Crucible's graph (Drawflow's JSON)
+  ['baseToggle',           'baseToggle',           'check'],     // texture layers: the base beneath
+  ['baseType',             'baseType',             'text'],
+  ['baseP1',               'baseP1',               'text'],
+  ['baseP2',               'baseP2',               'text'],
+  ['baseOpacity',          'baseOpacity',          'text'],
+  ['baseBlend',            'baseBlend',            'text'],
   ['borderBlend',          'borderBlend',          'text'],
   ['borderGradientAngle',  'borderGradientAngle',  'text', '°'],
   ['borderStitch',         'borderStitch',         'text'],
@@ -745,6 +818,10 @@ function retireLook(s){
 }
 function restoreSettings(s){
   s = retireLook(s);
+  // the look's Crucible graph first: a Crucible surface's sliders are named from it
+  if(s.forgeGraph !== undefined && $('forgeGraph')){ $('forgeGraph').value = s.forgeGraph; if(typeof applyCrucibleGraph === 'function') applyCrucibleGraph(false); }
+  // and the base layer's variant, so its knobs take their own ranges before their values
+  if(s.baseType && $('baseType')){ $('baseType').value = s.baseType; syncBaseParams(false); }
   if(s.bg1) setColorField('bgColor1Hex', s.bg1);
   $('bgGradientToggle').checked = !!s.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!s.bgGradient);
@@ -790,9 +867,11 @@ function restoreSettings(s){
   // values, or they would be clamped against the previous texture's range
   syncTextureParams(true);
   syncTextureTools(true);
-  // the mechanical controls, from the PERSISTED table
-  applyPersisted(s);
+  // the mechanical controls, from the PERSISTED table (a look saved before the
+  // box had its own shape takes the border's: linked)
+  applyPersisted(s.cardLink === undefined ? { ...s, cardLink: true } : s);
   if(typeof refreshReadouts === 'function'){ refreshReadouts(); syncFrameVisibility(); }
+  syncBaseUi();
   if(s.spell !== undefined) $('activeSpell').value = s.spell;
   if(s.highlight !== undefined && $('highlightToggle')){
     $('highlightToggle').checked = !!s.highlight;
@@ -832,6 +911,7 @@ function restoreSettings(s){
   if(s.borderColor) setColorField('borderColorHex', s.borderColor);
   if(s.borderThickness!==undefined) $('borderThickness').value = s.borderThickness;
   if(s.borderOffset!==undefined) $('borderOffset').value = s.borderOffset;
+  if(s.cardLink === undefined) syncLinkedBox();   // (a linked look saved its mirrored values already)
 
   $('vignetteToggle').checked = !!s.vignette;
   $('vignetteBlock').classList.toggle('open', !!s.vignette);
@@ -1206,7 +1286,8 @@ function applyPreset(p){
     if(document.body && document.body.dataset) document.body.dataset.lookName = p.name || '';
     // the frame and box: defaults, then whatever this preset specifies
     applyPersisted({ ...FRAME_DEFAULTS, ...Object.fromEntries(Object.keys(FRAME_DEFAULTS).filter(k => p[k] !== undefined).map(k => [k, p[k]])) });
-    refreshReadouts(); syncFrameVisibility();
+    syncLinkedBox();
+    refreshReadouts(); syncFrameVisibility(); syncBaseUi();
     const pcaps = capsFor($('textureType').value);
     if(p.textureBlend && pcaps.blends.includes(p.textureBlend)) $('textureBlend').value = p.textureBlend;
     // a preset's own tint is a choice, like a hand-picked one: it stops
@@ -1443,10 +1524,12 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
 
   // ---- pinch to zoom, drag to pan ----
   // Transform-only: the canvas bitmap is untouched, so the downloaded image
-  // is never affected by how it is being inspected.
+  // is never affected by how it is being inspected. With Panzoom loaded (the
+  // usual case) the phone uses it too — it pinches toward the fingers — and
+  // this hand-made pinch is only the fallback when the library isn't there.
   const wrap = typeof document.querySelector === 'function' ? document.querySelector('.canvas-wrap') : null;
   const cv = $('poemCanvas');
-  if(wrap && cv && wrap.addEventListener){
+  if(wrap && cv && wrap.addEventListener && typeof Panzoom !== 'function'){
     let scale = 1, tx = 0, ty = 0;
     let pinchStart = 0, scaleStart = 1, panX = 0, panY = 0, mode = null;
     const apply = () => { cv.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'; };
@@ -1506,19 +1589,20 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
   }
 }
 
-// ---- the desktop preview: pan and zoom ----
+// ---- the preview: pan and zoom (desktop and phone) ----
 // Panzoom (timmywil/panzoom, the established library) rather than our own:
-// the wheel zooms toward the cursor, a drag pans once zoomed in, a double-
-// click (or ⟲) fits it again. Transform-only, like the phone's pinch: the
-// image itself is never touched. When the zoom settles, the preview redraws
-// sharp enough for it (state.ui.zoom, as the pinch does). Without the library
-// (offline before it was ever cached) the preview simply doesn't zoom.
-let desktopPanzoom = null;
-if(!detectMobile() && typeof Panzoom === 'function' && typeof document.querySelector === 'function'){
-  const wrap = document.querySelector('.canvas-wrap'), cv = $('poemCanvas');
+// on a desktop the wheel zooms toward the cursor; on a phone two fingers
+// pinch toward where they are; a drag pans once zoomed in; a double-click or
+// double-tap (or ⟲) fits it again. Transform-only: the image itself is never
+// touched. When the zoom settles, the preview redraws sharp enough for it
+// (state.ui.zoom). Without the library (offline before it was ever cached) a
+// phone falls back to its own pinch and a desktop simply doesn't zoom.
+let previewPanzoom = null;
+if(typeof Panzoom === 'function' && typeof document.querySelector === 'function'){
+  const wrap = document.querySelector('.canvas-wrap'), cv = $('poemCanvas'), phone = detectMobile();
   if(wrap && cv && wrap.addEventListener){
     try{
-      const pz = desktopPanzoom = Panzoom(cv, { minScale: 1, maxScale: 8, step: 0.25, panOnlyWhenZoomed: true, cursor: 'default', animate: true, duration: 160 });
+      const pz = previewPanzoom = Panzoom(cv, { minScale: 1, maxScale: phone ? 6 : 8, step: 0.25, panOnlyWhenZoomed: true, cursor: 'default', animate: true, duration: 160, touchAction: 'none' });
       let settle = null;
       const zoomSettled = () => { clearTimeout(settle); settle = setTimeout(() => {
         const z = pz.getScale(); if(Math.abs(z - (state.ui.zoom || 1)) < 0.01) return;
@@ -1533,12 +1617,19 @@ if(!detectMobile() && typeof Panzoom === 'function' && typeof document.querySele
       cv.addEventListener('panzoomchange', () => { wrap.classList.toggle('zoomed', pz.getScale() > 1.01); });
       cv.addEventListener('panzoomend', () => { bound(); zoomSettled(); });
       cv.addEventListener('dblclick', () => { pz.reset(); zoomSettled(); });
+      if(phone){
+        // double-tap fits it again; and touching the preview never pulls focus
+        // out of the poem (the buttons inside it still work)
+        let lastTap = 0;
+        wrap.addEventListener('touchend', (e) => { if(e.touches && e.touches.length) return; const now = Date.now(); if(now - lastTap < 320){ pz.reset(); zoomSettled(); } lastTap = now; }, { passive: true });
+        wrap.addEventListener('pointerdown', (e) => { if(!(e.target && e.target.closest && e.target.closest('button'))) e.preventDefault(); });
+      }
       if(typeof MutationObserver === 'function'){
         let lastRatio = cv.width / cv.height;
         new MutationObserver(() => { const r = cv.width / cv.height;
           if(Math.abs(r - lastRatio) > 0.01){ lastRatio = r; pz.reset({ animate: false }); zoomSettled(); } }).observe(cv, { attributes: true, attributeFilter: ['width','height'] });
       }
-    } catch(e){ desktopPanzoom = null; }
+    } catch(e){ previewPanzoom = null; }
   }
 }
 
@@ -1981,7 +2072,7 @@ if($('resetViewBtn') && $('resetViewBtn').addEventListener){
     const root2 = document.documentElement;
     if(root2 && root2.style) root2.style.setProperty('--preview-frac', '0.30');
     const cv = $('poemCanvas');
-    if(desktopPanzoom){ desktopPanzoom.reset(); if(state.ui.zoom !== 1){ state.ui.zoom = 1; setTimeout(() => applyPreviewScale(true), 200); } }
+    if(previewPanzoom){ previewPanzoom.reset(); if(state.ui.zoom !== 1){ state.ui.zoom = 1; setTimeout(() => applyPreviewScale(true), 200); } }
     else if(cv && cv.style) cv.style.transform = '';
   });
 }
@@ -2118,7 +2209,7 @@ applyStrings(document);
 }
 // ---------- frame and box controls: readouts, visibility, moons ----------
 const RANGE_UNITS = { borderGradientAngle:'°', bgRadialX:'%', bgRadialY:'%', bgRadialR:'%', borderThickness:'px', borderOffset:'px',
-  borderGrain:'%', borderRadius:'px', cardGradientAngle:'°' };
+  borderGrain:'%', borderRadius:'px', cardGradientAngle:'°', cardOffset:'px', cardThickness:'px', cardRadius:'px', cardFxAmount:'', cardFxScale:'' };
 function refreshReadouts(){
   for(const [id, unit] of Object.entries(RANGE_UNITS)){ const el = $(id), out = $(id + 'Val'); if(el && out) out.textContent = el.value + unit; }
   paintMoons();
@@ -2138,9 +2229,16 @@ function syncFrameVisibility(){
   show('borderColor2Field', bgrad); show('borderColor3Field', bgrad); show('borderAngleField', bgrad);
   for(const id of ['cardColor2Field','cardTypeField']) show(id, grad);
   show('cardAngleField', grad && $('cardGradientType').value === 'linear');
+  show('cardRadiusField', $('cardRounded') && $('cardRounded').checked);
+  // the glass's knobs only with glass, and the second named for what it moves
+  const glass = ($('cardFx') && $('cardFx').value) || 'none';
+  show('cardFxAmountField', glass !== 'none'); show('cardFxScaleField', glass !== 'none' && glass !== 'lens');
+  const scaleName = { frost: 'Grit', reeded: 'Flute Width', pixel: 'Cell Size', emboss: 'Depth', prism: 'Split' }[glass];
+  if($('cardFxScaleLabel') && scaleName) $('cardFxScaleLabel').textContent = scaleName;
 }
 for(const id of [...Object.keys(RANGE_UNITS), 'bgGradientType', 'borderRounded', 'borderGradientToggle', 'cardToggle', 'cardGradientToggle',
-                 'cardGradientType', 'cardOpacity', 'cardBlend', 'borderBlend', 'borderBloomBlend', 'borderStitch', 'borderStitchOut']){
+                 'cardGradientType', 'cardOpacity', 'cardBlend', 'borderBlend', 'borderBloomBlend', 'borderStitch', 'borderStitchOut',
+                 'cardLink', 'cardRounded', 'cardStitch', 'cardStitchOut', 'cardFx']){
   const el = $(id); if(!el || !el.addEventListener) continue;
   const on = ()=>{ refreshReadouts(); syncFrameVisibility(); scheduleRender(); };
   el.addEventListener('input', on); el.addEventListener('change', on);
@@ -2148,13 +2246,92 @@ for(const id of [...Object.keys(RANGE_UNITS), 'bgGradientType', 'borderRounded',
 bindColorField('cardColor1Hex', scheduleRender);
 bindColorField('cardColor2Hex', scheduleRender);
 
+// For testing the glass on a machine without a GPU (?softgl): allow software
+// WebGL, which the app otherwise declines (it is slower than the CPU path).
+if(typeof location !== 'undefined' && /[?&]softgl\b/.test(location.search || '')) setBoxFxSoftware(true);
+if(typeof document !== 'undefined' && document.body && document.body.dataset) document.body.dataset.glass = 'pending';
+// (which way the glass runs here — 'gpu' or 'cpu' — for the curious, on the body)
+setTimeout(() => { try { if(document.body && document.body.dataset) document.body.dataset.glass = boxFxBackend(); } catch(e){} }, 0);
+
+// ---------- THE CRUCIBLE (forge.js) ----------
+// A node editor for new surfaces, over the page; its graph lives in the hidden
+// #forgeGraph field (saved, loaded and shared with the look).
+function paintForgeSummary(){ if($('forgeSummary')) $('forgeSummary').textContent = describeForge(($('forgeGraph') || {}).value); }
+/** The Crucible's surface, as the page offers it: its Knob nodes become the
+ *  texture's sliders (named, ranged, defaulted), its Hue nodes its hues, its
+ *  Surface's name the option at the bottom of Surface Variant. (The worker
+ *  keeps six plain knobs; only the page's labels change.) */
+function applyCrucibleGraph(redraw = true){
+  const g = ($('forgeGraph') || {}).value || '';
+  const knobs = crucibleKnobs(g), hues = crucibleHues(g), name = crucibleName(g);
+  const top = knobs.reduce((m, k) => Math.max(m, k.slot), 0);
+  TEXTURE_PARAMS.crucible = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
+    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '' }; });
+  const caps = TEXTURE_CAPS.crucible;
+  if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
+    caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue')); }
+  if($('crucibleOption')) $('crucibleOption').textContent = name ? 'The Crucible: ' + name : 'The Crucible (empty)';
+  if(redraw && $('textureType') && $('textureType').value === 'crucible'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
+}
+/** A small picture of what the graph makes, for the Crucible's bar. */
+function previewCrucible(json, cv){
+  const n = 96, k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
+  const tex = getTextureCanvas('crucible', n, n, { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072,
+    light: parseFloat(($('textureLight') || {}).value) || 315, tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value,
+    p1: k('texP1', 50), p2: k('texP2', 50), p3: k('texP3', 50), p4: k('texP4', 50), p5: k('texP5', 50), p6: k('texP6', 50) });
+  const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height);
+}
+const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'crucible'), stitches: STITCH_STYLES,
+  onSave: () => { paintForgeSummary(); applyCrucibleGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
+  preview: previewCrucible,
+  // "Use as Surface": the Crucible's texture on the page
+  use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
+    t.value = 'crucible'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
+if($('forgeOpenBtn') && $('forgeOpenBtn').addEventListener) $('forgeOpenBtn').addEventListener('click', () => openForge(forgeDeps()));
+if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => { closeForge(forgeDeps()); paintForgeSummary(); });
+setTimeout(() => { paintForgeSummary(); applyCrucibleGraph(true); }, 0);
+
+// ---------- LINKED CONTROLS ----------
+// A control marked data-link="<other id>" mirrors that control, both ways,
+// while its switch (data-link-switch, a checkbox) is on. The inset box's
+// shape is linked to the border's this way (Ruby: duplicate the values, and
+// have one change the other); any pair of controls can be linked the same.
+let linking = false;
+function linkCopy(from, to){
+  if(!from || !to) return;
+  if(to.type === 'checkbox') to.checked = from.checked; else to.value = from.value;
+}
+const linkedEls = typeof document.querySelectorAll === 'function' ? Array.from(document.querySelectorAll('[data-link]')) : [];
+for(const el of linkedEls){
+  if(!el.addEventListener) continue;
+  for(const type of ['input', 'change']) el.addEventListener(type, () => {
+    if(linking) return;
+    const sw = $(el.dataset.linkSwitch); if(sw && !sw.checked) return;
+    const other = $(el.dataset.link); if(!other) return;
+    linking = true;
+    try { linkCopy(el, other); if(typeof Event === 'function') other.dispatchEvent(new Event(type, { bubbles: true })); }
+    finally { linking = false; }
+  });
+}
+/** The box's shape and the border's, brought together (the border's wins),
+ *  while they are linked: after a load, a preset or Randomize, and the moment
+ *  the link is switched back on. */
+const BOX_LINKS = [['cardOffset','borderOffset'], ['cardThickness','borderThickness'], ['cardRounded','borderRounded'],
+  ['cardRadius','borderRadius'], ['cardStitch','borderStitch'], ['cardStitchOut','borderStitchOut']];
+function syncLinkedBox(){
+  if(!$('cardLink') || !$('cardLink').checked) return;
+  for(const [box, border] of BOX_LINKS) linkCopy($(border), $(box));
+  if(typeof refreshReadouts === 'function'){ refreshReadouts(); syncFrameVisibility(); }
+}
+if($('cardLink') && $('cardLink').addEventListener) $('cardLink').addEventListener('change', () => { syncLinkedBox(); scheduleRender(); });
+
 /** Settings a preset doesn't mention start from these, so one preset's box
  *  or rounded frame never leaks into the next. */
 const FRAME_DEFAULTS = { bgGradientType:'linear', bgRadialX:'50', bgRadialY:'50', bgRadialR:'75', borderGrain:'0',
   borderRounded:false, borderRadius:'60', cardToggle:false, cardColor1:'#FFF6EE', cardGradientToggle:false,
   cardColor2:'#F2E2EA', cardGradientType:'linear', cardGradientAngle:'90', cardOpacity:'70', cardBlend:'source-over',
   borderBlend:'source-over', borderBloomBlend:'source-over', borderGradientAngle:'45',
-  borderStitch:'solid', borderStitchOut:false };
+  borderStitch:'solid', borderStitchOut:false, cardLink:true, cardFx:'none', cardFxAmount:'50', cardFxScale:'50', baseToggle:false };
 
 // Every opacity READOUT (any slider marked data-moon) is a moon that waxes with the value — new at 0%, full
 // at 100% — in place of a percentage. (It was once drawn on the slider's
@@ -2356,6 +2533,56 @@ function paintHistoryButtons(){
   const h = state.history;
   if($('undoBtn')) $('undoBtn').disabled = h.index <= 0;
   if($('redoBtn')) $('redoBtn').disabled = h.index >= h.stack.length - 1;
+  paintFilmstrip();
+}
+
+// ---------- the history FILMSTRIP ----------
+// The last eight looks in history, as small frames inside the preview; the
+// one you're on is lit; a click goes straight back (or forward) to it — as a
+// step of undo, so nothing is lost. 🎞 (or H) shows and hides it; whether it
+// shows is remembered per browser (it is part of the app, not of a look).
+const FILM_MAX = 8, filmCache = new Map();
+function filmFrameFor(snap){
+  let c = filmCache.get(snap);
+  if(!c){
+    c = document.createElement('canvas');
+    try { paintPresetSwatch(c, JSON.parse(snap), 144, 80); } catch(e){ /* a frame that can't paint stays blank */ }
+    filmCache.set(snap, c);
+    if(filmCache.size > 40) filmCache.delete(filmCache.keys().next().value);
+  }
+  return c;
+}
+function paintFilmstrip(){
+  const fs = $('filmstrip'), wrap = fs && fs.parentElement;
+  if(!fs || typeof document.createElement !== 'function' || !(wrap && wrap.classList && wrap.classList.contains('film-open'))) return;
+  const h = state.history, from = Math.max(0, h.stack.length - FILM_MAX);
+  fs.innerHTML = '';
+  for(let i = from; i < h.stack.length; i++){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'film-frame' + (i === h.index ? ' current' : '');
+    b.title = i === h.index ? 'Now' : i < h.index ? (h.index - i) + ' back' : (i - h.index) + ' ahead';
+    const src = filmFrameFor(h.stack[i]), c = document.createElement('canvas');
+    c.width = src.width || 144; c.height = src.height || 80;
+    try { c.getContext('2d').drawImage(src, 0, 0); } catch(e){}
+    b.appendChild(c);
+    b.addEventListener('click', () => stepHistory(i - state.history.index));
+    fs.appendChild(b);
+  }
+  if(fs.scrollLeft !== undefined) fs.scrollLeft = 1e6;     // the newest in view
+}
+function setFilmstrip(open){
+  const wrap = $('filmstrip') && $('filmstrip').parentElement;
+  if(!wrap || !wrap.classList) return;
+  wrap.classList.toggle('film-open', !!open);
+  try { localStorage.setItem('uv.filmstrip.v1', open ? '1' : '0'); } catch(e){}
+  paintFilmstrip();
+}
+{
+  let open = !detectMobile();                               // on by default on a desktop
+  try { const v = localStorage.getItem('uv.filmstrip.v1'); if(v !== null) open = v === '1'; } catch(e){}
+  setTimeout(() => setFilmstrip(open), 0);
+  if($('filmBtn') && $('filmBtn').addEventListener) $('filmBtn').addEventListener('click', () => {
+    const wrap = $('filmstrip').parentElement; setFilmstrip(!(wrap.classList && wrap.classList.contains('film-open'))); });
 }
 function commitHistory(){
   const h = state.history;
@@ -2381,7 +2608,7 @@ if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepHistory(-1));
 if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepHistory(1));
 // any change in the controls — typed, dragged, picked, or a button that
 // rewrites many at once (presets, randomize, spells) — records a step
-const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson']);
+const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson', 'forgeGraph']);   // (the Crucible keeps its own edits)
 for(const type of ['input', 'change']){
   document.addEventListener(type, (e)=>{
     const t = e.target;
@@ -2393,14 +2620,41 @@ document.addEventListener('click', (e)=>{
   const t = e.target && e.target.closest ? e.target.closest('button, .preset-btn, .radio-btn') : null;
   if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn') commitSoon();
 }, true);
-// Ctrl+Z / Ctrl+Shift+Z (and Ctrl+Y), except while typing in a field
+// KEYS (the ? sheet lists them): Ctrl+Z / Ctrl+Shift+Z (and Ctrl+Y), Ctrl+S,
+// and single keys — none of them while typing in a field
+function showShortcuts(on){ const s = $('shortcutSheet'); if(s) s.hidden = !on; }
+if($('shortcutBtn') && $('shortcutBtn').addEventListener) $('shortcutBtn').addEventListener('click', () => showShortcuts(true));
+if($('shortcutSheet') && $('shortcutSheet').addEventListener) $('shortcutSheet').addEventListener('click', (e) => { if(e.target === $('shortcutSheet')) showShortcuts(false); });
+const clickId = id => { const b = $(id); if(b && typeof b.click === 'function') b.click(); };
 document.addEventListener('keydown', (e)=>{
-  if(!(e.ctrlKey || e.metaKey)) return;
-  const tag = (document.activeElement && document.activeElement.tagName) || '';
-  if(tag === 'TEXTAREA' || tag === 'INPUT') return;
+  const ae = document.activeElement, tag = (ae && ae.tagName) || '';
+  if(tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || (ae && ae.isContentEditable)) return;
   const k = (e.key || '').toLowerCase();
-  if(k === 'z'){ e.preventDefault(); stepHistory(e.shiftKey ? 1 : -1); }
-  else if(k === 'y'){ e.preventDefault(); stepHistory(1); }
+  if(e.ctrlKey || e.metaKey){
+    if(k === 'z'){ e.preventDefault(); stepHistory(e.shiftKey ? 1 : -1); }
+    else if(k === 'y'){ e.preventDefault(); stepHistory(1); }
+    else if(k === 's'){ e.preventDefault(); clickId('downloadBtn'); }
+    return;
+  }
+  if(e.altKey) return;
+  const sheetOpen = $('shortcutSheet') && !$('shortcutSheet').hidden;
+  if(e.key === 'Escape'){ if(sheetOpen) showShortcuts(false); return; }
+  if(e.key === '?'){ e.preventDefault(); showShortcuts(!sheetOpen); return; }
+  if(sheetOpen) return;
+  if(k === 'r') clickId('textureSeedReroll');
+  else if(k === 'b') clickId('randomBgBtn');
+  else if(k === 'f') clickId('randomFontBtn');
+  else if(k === 'h'){ const wrap = $('filmstrip') && $('filmstrip').parentElement; if(wrap && wrap.classList) setFilmstrip(!wrap.classList.contains('film-open')); }
+  else if(k === '0') clickId('resetViewBtn');
+  else if(/^[1-5]$/.test(k)){ const tabs = document.querySelectorAll ? document.querySelectorAll('.tab-btn') : []; const t = tabs[+k - 1]; if(t && t.click) t.click(); }
+  else if(k === '[' || k === ']'){
+    // step through the presets in their order, from the one on the page
+    const name = (document.body && document.body.dataset && document.body.dataset.lookName) || '';
+    const at = PRESETS.findIndex(p => p.name === name), next = PRESETS[((at < 0 ? -1 : at) + (k === ']' ? 1 : -1) + PRESETS.length) % PRESETS.length];
+    if(next){ pickPreset(next); commitSoon(); }
+  }
+  else return;
+  e.preventDefault();
 });
 
 // Full-size preview: renders the preview at the export's own size, for

@@ -114,7 +114,7 @@ check('a browser with storage switched off still themes',
 
 // ---- the table is wired into both directions ----
 check('the table is spread into the serializer', /\.\.\.collectPersisted\(\)/.test(serialize));
-check('the table is applied by the restorer', /applyPersisted\(s\)/.test(restore));
+check('the table is applied by the restorer', /applyPersisted\(s\.cardLink === undefined \? \{ \.\.\.s, cardLink: true \} : s\)/.test(restore));
 check('the table is declared above the serializer (it runs at boot)',
   ev.indexOf('const PERSISTED = [') < ev.indexOf('function serializeCurrentSettings'));
 check('no key appears twice in the table', new Set(tableKeys).size === tableKeys.length);

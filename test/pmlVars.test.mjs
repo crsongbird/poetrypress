@@ -282,7 +282,14 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
     'Poppins','Nunito','Roboto','Work Sans','Josefin Sans','Unica One'];
   check('the first 22 fonts keep their positions (PML /f:N selects by position)',
     FROZEN.every((f, i) => FONTS[i].family === f));
-  check('33 fonts, each labelled "Style · Family"', FONTS.length === 33 && FONTS.every(f => / · /.test(f.label)));
+  check('58 fonts, each labelled "Style · Family"', FONTS.length === 58 && FONTS.every(f => / · /.test(f.label)));
+  const { FONT_GROUPS } = await import('../appOptions.js');
+  const grouped = FONT_GROUPS.flatMap(g => g[1]);
+  check('every font sits in exactly one picker group (Serif … Pixel & Game), and every group name is real',
+    FONTS.every(f => grouped.filter(n => n === f.family).length === 1) && grouped.every(n => FONTS.some(f => f.family === n)));
+  const html = src('index.html');
+  check('every page font is requested from Google Fonts (the pixel ones too)',
+    FONTS.every(f => html.includes('family=' + f.family.replace(/ /g, '+'))));
 
   const T = await import('../textureGenerators.js');
   check('the lotus declares a Form knob, centred on the lotus', T.paramsFor('flowers')[2].key === 'form' && T.paramsFor('flowers')[2].def === 50);
@@ -341,7 +348,7 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
 
 // ---- the box takes the texture's route onto the page ----
 check('the inset box is painted on its own layer, then blended on as one image (not filled through a clip while blending)',
-  /const L = cardLayer\(Math\.ceil\(W\/2\), Math\.ceil\(H\/2\)\)/.test(cr) && /ctx\.globalCompositeOperation = \$\('cardBlend'\)\.value \|\| 'source-over';\s*ctx\.imageSmoothingEnabled = true;\s*ctx\.drawImage\(L, 0, 0, W, H\);/.test(cr));
+  /const L = cardLayer\(Math\.ceil\(W\/2\), Math\.ceil\(H\/2\)\)/.test(cr) && /ctx\.globalCompositeOperation = BOX_GPU_BLENDS\.includes\(cardBlendMode\) \? 'source-over' : cardBlendMode;\s*ctx\.imageSmoothingEnabled = true;\s*ctx\.drawImage\(L, 0, 0, W, H\);/.test(cr));
 
 // ---- the canonical-pixel scale S (step 1: plumbing, no visible change) ----
 {
@@ -353,7 +360,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const tg = src('textureGenerators.js');
   check('textures generate inside withScale, and the cache key only changes when S is not 1',
     /withScale\(scale, \(\) => withLightTilt\(lightTilt\/100, \(\) => withSeed\(seed,/.test(tg) && /\(scale === 1 \? '' : `_x\$\{scale\}`\)/.test(tg));
-  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5, p6)? \}/g) || []).length === 5);
+  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5, p6)?(, graph)? \}/g) || []).length === 6);
   check('the render scale is 1 today (the preview is the export size)', /let RENDER_SCALE = 1;/.test(cr));
   check('§Scale reports it', resolvePmlVariables('§Scale', { scale: 1 }) === '1' && resolvePmlVariables('§Scale', { scale: 1/3 }) === '0.333');
 }
@@ -371,7 +378,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 28);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 32);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -427,8 +434,15 @@ check('the inset box is painted on its own layer, then blended on as one image (
 // ---- stitches, effects, the preview's hysteresis ----
 {
   const St = await import('../stitches.js'), P = await import('../textParsers.js');
-  check('sixty-plus stitches from the chart (and a few of our own), drawn by one function along any path',
-    St.STITCH_STYLES.length >= 60 && ['greek','satinscallop','rope','moons','tails','rubies','saturn','enceladus'].every(k => St.STITCH_STYLES.includes(k)) && typeof St.drawStitch === 'function');
+  check('forty-odd stitches worth choosing (the redundant and weak retired), drawn by one function along any path',
+    St.STITCH_STYLES.length >= 40 && St.STITCH_STYLES.length <= 46 && ['greek','scallop','rope','moons','tails','rubies','saturn','enceladus','checker'].every(k => St.STITCH_STYLES.includes(k)) && typeof St.drawStitch === 'function');
+  check('…a retired stitch still parses and draws, as its nearest kept relative (old poems and looks)',
+    ['running','satinscallop','pearls','openhearts','diamond'].every(k => St.STITCH_NAMES.includes(k) && St.STITCH_STYLES.includes(St.stitchOf(k)))
+    && P.parseRule('<---/satinscallop>', true, true).style === 'satinscallop' && St.stitchOf('satinscallop') === 'scallop');
+  check('EVERY kept stitch shapes an inset box: each has its own edge (beads bite, scallops scallop)',
+    St.STITCH_STYLES.every(k => { const e = St.stitchInnerEdge(St.pathFromPoints(St.roundRectPoints(0, 0, 300, 200, 0), true), k, { period: 20, amp: 8, width: 2, side: 1 });
+      return e.length > 50; }) && (() => { const e = St.stitchInnerEdge(St.pathFromPoints(St.roundRectPoints(0, 0, 300, 300, 0), true), 'beads', { period: 30, amp: 10, width: 2, side: 1 });
+      const ys = e.slice(0, 40).map(p => p[1]); return Math.max(...ys) - Math.min(...ys) > 4; })());
   const path = St.pathFromPoints([[0, 0], [100, 0]], false);
   check('a path measures its length, and its normal points down for a left-to-right line',
     path.len === 100 && path.point(50, 10)[1] === 10 && path.point(50, 10)[0] === 50);
@@ -436,7 +450,15 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('a rounded rectangle is a closed path, its normal pointing inward', ring.closed && ring.point(30, 5)[1] > 0);
   check('rules take a stitch and a side', P.parseRule('<---/vine/up/60%>', true, true).style === 'vine' && P.parseRule('<---/vine/up/60%>', true, true).side === -1);
   check('the border can be stitched, pointing in or out', /drawStitch\(ctx, pathFromPoints\(framePoints\(\), true\), stitch, \{ \.\.\.stitchSpec, color: stroke \}\);/.test(cr) && /\$\('borderStitchOut'\)/.test(cr));
-  check('the inset box follows a stitched border\'s inner edge', /const edge = stitchInnerEdge\(pathFromPoints\(framePoints\(\), true\), stitchStyle, stitchSpec\);/.test(cr));
+  check('the inset box has its own shape (offset, thickness, corners, stitch), cut by its stitch\'s edge',
+    /const edge = cStitch !== 'solid' \? stitchInnerEdge\(pathFromPoints\(roundRectPoints\(cInset, cInset, W - cInset\*2, H - cInset\*2, cCorner\), true\), cStitch, cSpec\) : null;/.test(cr));
+  check('…linked to the border\'s by default: data-link pairs mirror both ways while ⛓ is on; old looks take the border\'s',
+    /const linkedEls = typeof document\.querySelectorAll === 'function' \? Array\.from\(document\.querySelectorAll\('\[data-link\]'\)\) : \[\];/.test(ev)
+    && ['cardOffset','cardThickness','cardRounded','cardRadius','cardStitch','cardStitchOut'].every(id => new RegExp('id="' + id + '"[^>]*data-link="').test(src('index.html')))
+    && /if\(s\.cardLink === undefined\) syncLinkedBox\(\);/.test(ev));
+  check('glass (boxFx.js): frosted, lens, reeded, mosaic, emboss, prism — the GPU first, the CPU when it must; and the blends a canvas can\'t do',
+    /const g = boxGlass\(ctx\.canvas, boxR, glassMode,/.test(cr) && /boxBlend\(ctx\.canvas, boxR, L,/.test(cr)
+    && /return bfxRunGpu\(passes, crop, null, ww, wh\) \|\| bfxRunCpu\(mode, crop, P\);/.test(src('boxFx.js')));
   const edge = St.stitchInnerEdge(St.pathFromPoints(St.roundRectPoints(0, 0, 200, 200, 0), true), 'scallop', { period: 20, amp: 8, width: 2, side: 1 });
   check('a scallop\'s inner edge is scalloped: it moves in and out along the border', (() => { const ys = edge.slice(0, 20).map(p => p[1]); return Math.max(...ys) - Math.min(...ys) > 4; })());
   check('rules take a motif size and a thread weight', P.parseRule('<---/wave/size:150/weight:200>', true, true).size === 150 && P.parseRule('<---/wave/size:150/weight:200>', true, true).weight === 200);
@@ -600,7 +622,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
 // ---- Text Margins ----
 {
   check('Text Margins scales the page margins and breathing room, never the frame (100% = as before)',
-    /const marginK = Math\.max\(0\.2, Math\.min\(1\.5,/.test(cr) && /bOffset \+ bThick \+ Math\.min\(W, H\)\*0\.04\*marginK/.test(cr) && /W\*0\.09\*marginK/.test(cr)
+    /const marginK = Math\.max\(0\.2, Math\.min\(1\.5,/.test(cr) && /frameIn \+ Math\.min\(W, H\)\*0\.04\*marginK/.test(cr) && /W\*0\.09\*marginK/.test(cr)
     && /id="textMargin" min="20" max="150" step="5" value="100"/.test(src('index.html')));
   check('Text Margins is saved and restored with a look', /textMargin: parseFloat\(\$\('textMargin'\)\.value\),/.test(ev) && /if\(s\.textMargin!==undefined\)/.test(ev));
 }

@@ -35,6 +35,7 @@ import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs, clearMeasureCache } from './glyphs.js';
 import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge, STITCH_STYLES } from './stitches.js';
+import { boxGlass, boxBlend, BOX_GPU_BLENDS } from './boxFx.js';
 import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './effects.js';
 import { requestTexture, onTextureReady, textureServiceInfo } from './textureService.js';
 import { ensureFonts, fontsRequested } from './fonts.js';
@@ -950,6 +951,27 @@ function renderInto(canvas){
     ctx.fillRect(0,0,W,H);
   }
 
+  // TEXTURE LAYERS: the base texture first, beneath the main one — its own
+  // variant, two knobs, opacity and blend; the page's light; the seed turned
+  // (so it never echoes the main texture); the variant's own default hues
+  if($('textureToggle').checked && $('baseToggle') && $('baseToggle').checked){
+    const bt = ($('baseType') || {}).value;
+    if(bt && bt !== 'astral' && bt !== 'crucible' && paramsFor(bt).length){
+      const bcaps = capsFor(bt), a1 = $('accent1ColorHex').value, a2 = $('accent2ColorHex').value;
+      const td = (bcaps.tintDefaults || []).map(c => c === 'accent1' ? a1 : c === 'accent2' ? a2 : c);
+      const chosen = ($('baseBlend') || {}).value || 'overlay';
+      const bnum = id => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? null : v; };
+      const bSeed = ((parseInt($('textureSeedValue').value, 10) || 0) ^ 0x5bd1e995) >>> 0;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(100, bnum('baseOpacity') ?? 50))/100;
+      ctx.globalCompositeOperation = chosen;
+      drawTex(requestTexture('base', bt, W, H, { accent1: a1, accent2: a2, seed: bSeed, p1: bnum('baseP1'), p2: bnum('baseP2'),
+        light: bcaps.light ? (parseFloat($('textureLight').value) || 0) : null, lightTilt: bcaps.light && $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100,
+        tint1: bcaps.tints >= 1 ? td[0] || null : null, tint2: bcaps.tints >= 2 ? td[1] || null : null, blend: bcaps.blends.includes(chosen) ? chosen : bcaps.blends[0], scale: S }));
+      ctx.restore();
+    }
+  }
+
   if($('textureToggle').checked){
     const type = $('textureType').value;
     const opacity = Math.max(0, parseFloat($('textureOpacity').value) || 0) / 100;
@@ -1013,7 +1035,9 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6 }));
+      // (a Crucible surface carries its graph: the worker makes it from that)
+      const graph = type === 'crucible' ? (($('forgeGraph') || {}).value || '') : undefined;
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph }));
       ctx.restore();
     }
   }
@@ -1075,14 +1099,46 @@ function renderInto(canvas){
   const inset = bOffset + bThick/2;
   const frameCorner = ($('borderRounded') && $('borderRounded').checked) ? Math.max(0, parseFloat($('borderRadius').value) || 0) * S : 0;
   const framePath = () => { ctx.beginPath(); roundRectPath(ctx, inset, inset, W - inset*2, H - inset*2, frameCorner); };
-  // The border's stitch, worked out once: the border draws it, and the inset
-  // box follows its inner edge — a scalloped border makes a scalloped box.
-  const stitchStyle = ($('borderToggle').checked && ($('borderStitch') || {}).value) || 'solid';
+  // The border's stitch, worked out once (the border draws it)
   const stitchSpec = { period: Math.max(rpx(6), bThick*6 + Math.min(W, H)*0.012), amp: Math.max(rpx(3), bThick*2 + Math.min(W, H)*0.004),
     width: bThick, side: ($('borderStitchOut') && $('borderStitchOut').checked) ? -1 : 1 };
   const framePoints = () => roundRectPoints(inset, inset, W - inset*2, H - inset*2, frameCorner);
 
-  if($('cardToggle') && $('cardToggle').checked){
+  // THE INSET BOX has a shape of its own — offset, thickness, corners and a
+  // stitch — linked to the border's by default (Inset Box card): the stitch
+  // CUTS the box (stitches.js: every motif's silhouette), so a scalloped
+  // border makes a scalloped box, beads bite it, and with the border off the
+  // box still keeps the shape. Old looks, without these, take the border's.
+  const cNum = (id, d) => { const el = $(id), v = el ? parseFloat(el.value) : NaN; return isNaN(v) ? d : v; };
+  const cThick = Math.max(rpx(1), cNum('cardThickness', parseFloat($('borderThickness').value) || 1) * S);
+  const cOffset = Math.max(0, cNum('cardOffset', parseFloat($('borderOffset').value) || 0)) * S;
+  const cInset = cOffset + cThick/2;
+  const cRounded = $('cardRounded') ? $('cardRounded').checked : !!($('borderRounded') && $('borderRounded').checked);
+  const cCorner = cRounded ? Math.max(0, cNum('cardRadius', parseFloat(($('borderRadius') || {}).value) || 0)) * S : 0;
+  const cStitch = ($('cardStitch') && $('cardStitch').value) || 'solid';
+  const cSpec = { period: Math.max(rpx(6), cThick*6 + Math.min(W, H)*0.012), amp: Math.max(rpx(3), cThick*2 + Math.min(W, H)*0.004),
+    width: cThick, side: ($('cardStitchOut') && $('cardStitchOut').checked) ? -1 : 1 };
+  const cardOn = !!($('cardToggle') && $('cardToggle').checked);
+
+  if(cardOn){
+    const edge = cStitch !== 'solid' ? stitchInnerEdge(pathFromPoints(roundRectPoints(cInset, cInset, W - cInset*2, H - cInset*2, cCorner), true), cStitch, cSpec) : null;
+    const cardShape = (c) => { c.beginPath();
+      if(edge){ edge.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.closePath(); }
+      else roundRectPath(c, cInset, cInset, W - cInset*2, H - cInset*2, cCorner); };
+    // the box's rectangle on the page (the glass and the GPU blends work on it)
+    let bx0 = cInset, by0 = cInset, bx1 = W - cInset, by1 = H - cInset;
+    if(edge){ bx0 = by0 = Infinity; bx1 = by1 = -Infinity; for(const p of edge){ bx0 = Math.min(bx0, p[0]); by0 = Math.min(by0, p[1]); bx1 = Math.max(bx1, p[0]); by1 = Math.max(by1, p[1]); } }
+    bx0 = Math.max(0, Math.floor(bx0)); by0 = Math.max(0, Math.floor(by0)); bx1 = Math.min(W, Math.ceil(bx1)); by1 = Math.min(H, Math.ceil(by1));
+    const boxR = { x: bx0, y: by0, w: Math.max(0, bx1 - bx0), h: Math.max(0, by1 - by0) };
+
+    // GLASS first: what lies behind the box, seen through it (boxFx.js — the
+    // GPU when there is one), inside the box's shape
+    const glassMode = ($('cardFx') && $('cardFx').value) || 'none';
+    if(glassMode !== 'none' && boxR.w > 2 && boxR.h > 2){
+      const g = boxGlass(ctx.canvas, boxR, glassMode, cNum('cardFxAmount', 50)/100, cNum('cardFxScale', 50)/100, S, 7);
+      if(g){ ctx.save(); cardShape(ctx); ctx.clip(); ctx.imageSmoothingEnabled = true; ctx.drawImage(g, boxR.x, boxR.y, boxR.w, boxR.h); ctx.restore(); }
+    }
+
     // The box is painted on its OWN layer first, then placed on the page with
     // its blend — the same route textures take. Filling it straight through a
     // rounded clip while blending (Hard Light, Darken…) made phone GPUs copy
@@ -1093,22 +1149,26 @@ function renderInto(canvas){
     lx.setTransform(1, 0, 0, 1, 0, 0); lx.clearRect(0, 0, L.width, L.height);
     lx.save();
     lx.setTransform(0.5, 0, 0, 0.5, 0, 0);
-    lx.beginPath();
-    if(stitchStyle !== 'solid'){
-      // inside a stitched border, the box stops at the stitch's inner edge
-      const edge = stitchInnerEdge(pathFromPoints(framePoints(), true), stitchStyle, stitchSpec);
-      edge.forEach((p, i) => i ? lx.lineTo(p[0], p[1]) : lx.moveTo(p[0], p[1])); lx.closePath();
-    } else roundRectPath(lx, inset, inset, W - inset*2, H - inset*2, frameCorner);
+    cardShape(lx);
     lx.clip();
     const c1 = $('cardColor1Hex').value;
-    if($('cardGradientToggle').checked) paintGradient(lx, inset, inset, W - inset*2, H - inset*2, gradientSpec('card'), [c1, $('cardColor2Hex').value]);
-    else { lx.fillStyle = c1; lx.fillRect(inset, inset, W - inset*2, H - inset*2); }
+    if($('cardGradientToggle').checked) paintGradient(lx, boxR.x, boxR.y, boxR.w, boxR.h, gradientSpec('card'), [c1, $('cardColor2Hex').value]);
+    else { lx.fillStyle = c1; lx.fillRect(0, 0, W, H); }
     lx.restore();
+    const cardAlpha = Math.max(0, Math.min(100, parseFloat($('cardOpacity').value) || 0)) / 100;
+    const cardBlendMode = $('cardBlend').value || 'source-over';
+    // the blends a canvas can't do (Vivid Light, Linear Light…) are mixed per
+    // pixel, on the GPU when it can
+    const mixed = BOX_GPU_BLENDS.includes(cardBlendMode) && boxR.w > 2 && boxR.h > 2
+      ? boxBlend(ctx.canvas, boxR, L, { x: boxR.x/2, y: boxR.y/2, w: boxR.w/2, h: boxR.h/2 }, cardBlendMode, cardAlpha) : null;
     ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(100, parseFloat($('cardOpacity').value) || 0)) / 100;
-    ctx.globalCompositeOperation = $('cardBlend').value || 'source-over';
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(L, 0, 0, W, H);
+    if(mixed){ cardShape(ctx); ctx.clip(); ctx.imageSmoothingEnabled = true; ctx.drawImage(mixed, boxR.x, boxR.y, boxR.w, boxR.h); }
+    else {
+      ctx.globalAlpha = cardAlpha;
+      ctx.globalCompositeOperation = BOX_GPU_BLENDS.includes(cardBlendMode) ? 'source-over' : cardBlendMode;
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(L, 0, 0, W, H);
+    }
     ctx.restore();
   }
 
@@ -1218,8 +1278,10 @@ function renderInto(canvas){
   // margins and the breathing room inside a frame — never the frame itself,
   // so text can come close to a border but not cross it. 100% is as it was.
   const marginK = Math.max(0.2, Math.min(1.5, (parseFloat(($('textMargin') || {}).value) || 100)/100));
-  const frameOn = $('borderToggle').checked || ($('cardToggle') && $('cardToggle').checked);
-  const frameEdge = frameOn ? bOffset + bThick + Math.min(W, H)*0.04*marginK : 0;
+  const frameOn = $('borderToggle').checked || cardOn;
+  // the innermost of the border and the box (each has its own offset now)
+  const frameIn = Math.max($('borderToggle').checked ? bOffset + bThick : 0, cardOn ? cOffset + cThick : 0);
+  const frameEdge = frameOn ? frameIn + Math.min(W, H)*0.04*marginK : 0;
   const paddingX = Math.max(W*0.09*marginK, frameEdge);
   const paddingY = Math.max(H*0.07*marginK, frameEdge);
   const maxWidth = W - paddingX*2;

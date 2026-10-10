@@ -1,4 +1,4 @@
-import { STITCH_STYLES } from './stitches.js';
+import { STITCH_NAMES } from './stitches.js';
 import { parseFxList, parseUnder } from './effects.js';
 /**
  * textParsers.js — the poem-text markup language: escaping, inline styles
@@ -303,7 +303,7 @@ function parseSegmentDirective(dirStr, part){
   // the effect stack, new form: /fx:outline(#fff,4)+glow(#fd0,40,70) (effects.js)
   if(lower.startsWith('fx:')){ part.customFx = parseFxList(d.slice(3)); return; }
   // an underline, drawn by the stitch library: /under:wave or /under:vine,#c33,150
-  if(lower === 'under' || lower.startsWith('under:')){ part.under = parseUnder(lower === 'under' ? 'solid' : d.slice(6), STITCH_STYLES); return; }
+  if(lower === 'under' || lower.startsWith('under:')){ part.under = parseUnder(lower === 'under' ? 'solid' : d.slice(6), STITCH_NAMES); return; }
   if(lower==='effect' || lower.startsWith('effect:')){
     const bits = lower==='effect' ? [] : d.slice(7).split(',');
     const name = (bits[0] || 'halo').trim().toLowerCase();
@@ -403,7 +403,7 @@ export function parseRule(t, accent1On, accent2On){
     else if(/^scale:\d+(\.\d+)?$/.test(dl)) rule.width = Math.max(0.02, Math.min(1, parseFloat(dl.slice(6))/100));
     // a stitch from stitches.js — wave, zigzag, scallop, vine, hearts… — and
     // which side it points to: in/down (the default) or out/up
-    else if(STITCH_STYLES.includes(dl)) rule.style = dl;
+    else if(STITCH_NAMES.includes(dl)) rule.style = dl;
     else if(/^size:\d+(\.\d+)?$/.test(dl)) rule.size = Math.max(10, Math.min(500, parseFloat(dl.slice(5))));
     else if(/^weight:\d+(\.\d+)?$/.test(dl)) rule.weight = Math.max(10, Math.min(800, parseFloat(dl.slice(7))));
     else if(dl === 'in' || dl === 'down') rule.side = 1;

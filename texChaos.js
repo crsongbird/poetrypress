@@ -1006,3 +1006,139 @@ export function genBlackHole(w,h,amt,zoom,light,form){
   ctx.putImageData(img,0,0);
   return c;
 }
+
+// Two chemicals, one feeding,
+// one eating — and out of nothing
+// the leopard's spots.
+/**
+ * Turing Skin — a reaction–diffusion system (Gray–Scott, as Karl Sims's
+ * tutorial lays it out): two chemicals spread at different rates, one
+ * feeding on the other, and from a few random seeds patterns grow as they do
+ * on skins and shells. PATTERN walks the feed/kill map: spots that divide,
+ * coral, a maze, worms, holes. GROWTH is how long it has had to grow (low:
+ * colonies still spreading from their seeds; high: the whole page). The sim
+ * runs on its own grid, the same at any page size (so a preview is the
+ * export, smaller), wraps at the edges, and is drawn smooth and crisp, as
+ * raised skin, lit by the dial.
+ * PATTERN SCALE · GROWTH · PATTERN · RELIEF
+ */
+export function genTuringSkin(w,h,amt,zoom,light,form,relief,M3){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const growth=Math.max(0.1, Math.min(1, amt)), rel=Math.max(0, Math.min(1, relief==null ? 0.5 : relief));
+  // the feed/kill map, walked by PATTERN: spots → coral → maze → worms → holes
+  const FK=[[0.0367,0.0649],[0.0545,0.062],[0.029,0.057],[0.078,0.061],[0.039,0.058]];
+  const t=Math.max(0, Math.min(1, form==null ? 0.25 : form))*(FK.length-1), i0=Math.min(FK.length-2, Math.floor(t)), fr=t-i0;
+  const Fd=FK[i0][0]+(FK[i0+1][0]-FK[i0][0])*fr, Kd=FK[i0][1]+(FK[i0+1][1]-FK[i0][1])*fr;
+  // the grid: its own size, whatever the page's
+  const G=Math.max(48, Math.min(160, Math.round(110/zoom))), short=Math.min(w,h);
+  const gx=Math.max(16, Math.round(G*w/short)), gy=Math.max(16, Math.round(G*h/short)), n=gx*gy;
+  let A=new Float32Array(n).fill(1), B=new Float32Array(n), A2=new Float32Array(n), B2=new Float32Array(n);
+  // seeds: small patches, a few of them large
+  const seeds=6 + Math.floor(Math.random()*10);
+  for(let s=0;s<seeds;s++){ const cx=Math.floor(Math.random()*gx), cy=Math.floor(Math.random()*gy), r=1 + Math.floor(Math.random()*3);
+    for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++){ const k=((cy+y+gy)%gy)*gx + ((cx+x+gx)%gx); B[k]=1; A[k]=0.5; } }
+  for(let k=0;k<n;k++) if(Math.random()<0.002) B[k]=0.5;     // a few stray specks
+  // (a budget of cell-updates, so a fine pattern on a wide page stays quick)
+  const iters=Math.min(Math.round(900 + 5100*growth), Math.round(55e6/n));
+  for(let it=0;it<iters;it++){
+    for(let y=0;y<gy;y++){
+      const yu=((y-1+gy)%gy)*gx, yc=y*gx, yd=((y+1)%gy)*gx;
+      for(let x=0;x<gx;x++){
+        const xl=x===0 ? gx-1 : x-1, xr=x===gx-1 ? 0 : x+1, k=yc+x;
+        const a=A[k], b=B[k];
+        const la=0.2*(A[yu+x]+A[yd+x]+A[yc+xl]+A[yc+xr]) + 0.05*(A[yu+xl]+A[yu+xr]+A[yd+xl]+A[yd+xr]) - a;
+        const lb=0.2*(B[yu+x]+B[yd+x]+B[yc+xl]+B[yc+xr]) + 0.05*(B[yu+xl]+B[yu+xr]+B[yd+xl]+B[yd+xr]) - b;
+        const abb=a*b*b;
+        A2[k]=a + (1.0*la - abb + Fd*(1-a));
+        B2[k]=b + (0.5*lb + abb - (Kd+Fd)*b);
+      }
+    }
+    let tmp=A; A=A2; A2=tmp; tmp=B; B=B2; B2=tmp;
+  }
+  // drawn at the page's working size: B sampled smoothly (bicubic, wrapping),
+  // then given a crisp edge
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), N=ww*wh, unit=Math.min(ww,wh);
+  const at=(x,y)=>B[((y%gy+gy)%gy)*gx + ((x%gx+gx)%gx)];
+  const cub=(p0,p1,p2,p3,t2)=>p1 + 0.5*t2*(p2-p0 + t2*(2*p0-5*p1+4*p2-p3 + t2*(3*(p1-p2)+p3-p0)));
+  let bmin=Infinity, bmax=-Infinity; for(let k=0;k<n;k++){ if(B[k]<bmin) bmin=B[k]; if(B[k]>bmax) bmax=B[k]; }
+  const mid=bmin + (bmax-bmin)*0.45, soft=Math.max(0.01, (bmax-bmin)*0.12);
+  const S=new Float32Array(N), Hh=new Float32Array(N);
+  for(let y=0;y<wh;y++){
+    const fy=(y+0.5)/wh*gy-0.5, y1=Math.floor(fy), ty=fy-y1;
+    for(let x=0;x<ww;x++){
+      const fx=(x+0.5)/ww*gx-0.5, x1=Math.floor(fx), tx=fx-x1;
+      const row=j=>cub(at(x1-1,y1+j), at(x1,y1+j), at(x1+1,y1+j), at(x1+2,y1+j), tx);
+      const v=cub(row(-1), row(0), row(1), row(2), ty);
+      const s=Math.max(0, Math.min(1, (v-mid)/soft*0.5 + 0.5)), sm2=s*s*(3-2*s), i=y*ww+x;
+      S[i]=sm2; Hh[i]=sm2*unit*0.006*(0.3 + 1.7*rel);
+    }
+  }
+  const L=lightHeights(Hh, ww, wh, { light, relief:1, gloss:0.35, shadow:0.45, ao:0.4, ambient:0.45 });
+  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
+  const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
+  for(let i=0;i<N;i++){
+    // the pattern lighter than the skin between; light and shade on top
+    const base=128 + (S[i]-0.5)*96;
+    for(let c=0;c<3;c++){ const v=base*litK(L, i, 0.45, M3, c)/L.flat + L.spec[i]*120*litS(M3, c); d[i*4+c]=v<0?0:v>255?255:v; }
+    d[i*4+3]=255;
+  }
+  sctx.putImageData(img,0,0);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
+  return c;
+}
+
+// Draw a bow along the edge:
+// the sand runs from what is moving
+// to where nothing moves.
+/**
+ * Chladni Sand — sand on a plate set ringing by a bow (Chladni, 1787): the
+ * sand runs off what moves and gathers on the NODAL LINES, where nothing
+ * does. The plate's pattern is the standing wave of a square plate (as Paul
+ * Bourke writes it): cos(nπx)cos(mπy) − cos(mπx)cos(nπy), the seed choosing
+ * the mode (n, m) and blending a neighbour into it. Each grain is a lit speck
+ * with its own small shadow from the dial; a few stray grains still roam.
+ * GRAIN SIZE · SAND · MODE (simple, a few lines → complex, many)
+ */
+export function genChladni(w,h,amt,zoom,light,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const modeK=Math.max(0,Math.min(1, form==null?0.4:form));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
+  const unit=Math.min(w,h), aspX=w/unit, aspY=h/unit;
+  // the mode: higher MODE, higher n and m
+  const lo=1 + Math.round(modeK*6), n=lo + Math.floor(Math.random()*3), m=Math.max(1, n + 1 + Math.floor(Math.random()*(2 + modeK*4)));
+  const n2=n + (Math.random()<0.5 ? 1 : 2), m2=m + 1, mix=0.15 + Math.random()*0.35, ph=Math.random()*0.4;
+  const plate=(u,v)=>{ const X=u*aspX, Y=v*aspY, P=Math.PI;
+    const a=Math.cos(n*P*X)*Math.cos(m*P*Y) - Math.cos(m*P*X)*Math.cos(n*P*Y);
+    const b=Math.cos(n2*P*X + ph)*Math.cos(m2*P*Y) - Math.cos(m2*P*X)*Math.cos(n2*P*Y + ph);
+    return a*(1-mix) + b*mix; };
+  // sand gathers where the plate is still: density from |amplitude|, thin lines
+  const lineW=0.045 + 0.035*(1-modeK);
+  const count=Math.round(canonArea(w,h)/(3072*3072)*420000*amt);
+  const lv=lightVec(light==null?315:light), lm=Math.hypot(lv.lx,lv.ly)||1, sdx=lv.lx/lm, sdy=lv.ly/lm;
+  // grains are SPLATTED, not drawn one by one: each adds its area (canonical,
+  // so a preview holds the same sand as the export) to the pixels it covers,
+  // and its shadow, a little away from the light, to a shadow layer
+  const N=w*h, SAND=new Float32Array(N), SH=new Float32Array(N), BR=new Float32Array(N);
+  const shOff=cpx(1.2), splat=(arr, x, y, a)=>{ const x0=Math.floor(x), y0=Math.floor(y), fx=x-x0, fy=y-y0;
+    if(x0<0||y0<0||x0>=w-1||y0>=h-1) return;
+    const i=y0*w+x0; arr[i]+=a*(1-fx)*(1-fy); arr[i+1]+=a*fx*(1-fy); arr[i+w]+=a*(1-fx)*fy; arr[i+w+1]+=a*fx*fy; };
+  for(let k=0, tries=0; k<count && tries<count*14; tries++){
+    const u=Math.random(), v=Math.random(), am=plate(u,v), p=Math.exp(-(am/lineW)*(am/lineW));
+    if(Math.random() >= p*0.98 + 0.01) continue;
+    k++;
+    const r=cpx((0.55 + Math.random()*0.9)*zoom), area=Math.PI*r*r, x=u*w, y=v*h, t=Math.random();
+    // a big grain covers several pixels: spread it over its footprint
+    if(r > 1.2){ const R=Math.ceil(r); for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){ if(dx*dx+dy*dy>r*r) continue; splat(SAND, x+dx, y+dy, 1); splat(BR, x+dx, y+dy, t + (-(dx*sdx+dy*sdy)/r)*0.35); splat(SH, x+dx+sdx*shOff, y+dy+sdy*shOff, 1); } }
+    else { splat(SAND, x, y, area); splat(BR, x, y, area*t); splat(SH, x+sdx*shOff, y+sdy*shOff, area); }
+  }
+  const img=ctx.createImageData(w,h), d=img.data;
+  for(let i=0;i<N;i++){
+    const sd=Math.min(1, SAND[i]), sh=Math.min(1, SH[i])*(1-sd), br=SAND[i] > 0 ? BR[i]/SAND[i] : 0;
+    const sand=200 + br*45, v=128*(1 - sh*0.45) + (sand - 128)*sd;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  return c;
+}

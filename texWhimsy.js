@@ -1400,3 +1400,72 @@ export function genLandscape(w,h,amt,zoom,form,tilt){
   ctx.globalAlpha=1;
   return c;
 }
+
+// Lay a comb through water
+// and every tooth leaves a line
+// that will not cross another.
+/**
+ * Flow-Field Ink — long pen strokes that follow a smooth field without ever
+ * crossing (after Tyler Hobbs's essay on flow fields): the field's angle comes
+ * from layered noise, turned toward the dial's direction (FLOW); each stroke
+ * starts somewhere, walks the field, and stops where it would come too close
+ * to another, so the page fills with even, river-like lines. Some strokes in
+ * the second ink; widths vary a little, and each stroke tapers at its ends.
+ * SCALE · LINES · TURBULENCE
+ */
+export function genFlowField(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const turb=Math.max(0,Math.min(1, form==null?0.5:form));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU);
+  const unit=Math.min(w,h);
+  // the field: the dial's direction (the flow), bent by noise as TURBULENCE rises
+  const lv=lightVec(light==null?0:light), base=Math.hypot(lv.lx,lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
+  const g1=makeNoiseGrid(6,6), g2=makeNoiseGrid(13,13);
+  const fieldAt=(x,y)=>{ const u=x/unit/zoom, v=y/unit/zoom;
+    return base + (sampleNoiseGrid(g1,6,6,u*2.2,v*2.2)*0.75 + sampleNoiseGrid(g2,13,13,u*5,v*5)*0.25 - 0.5)*Math.PI*2.6*turb; };
+  // spacing: how close two strokes may run (canonical, so the preview matches)
+  const sep=cpx(54)*zoom/Math.max(0.3, amt), step=Math.max(0.6, cpx(4)), cell=sep*0.5;
+  const gw=Math.ceil(w/cell)+1, gh=Math.ceil(h/cell)+1, grid=new Array(gw*gh);
+  const near=(x,y,own)=>{ const cx=Math.floor(x/cell), cy=Math.floor(y/cell);
+    for(let j=cy-2;j<=cy+2;j++) for(let i=cx-2;i<=cx+2;i++){ if(i<0||j<0||i>=gw||j>=gh) continue; const L=grid[j*gw+i]; if(!L) continue;
+      for(const p of L){ if(p[2]===own && p[3] > -1) continue; const dx=p[0]-x, dy=p[1]-y; if(dx*dx+dy*dy < sep*sep) return true; } }
+    return false; };
+  const add=(x,y,own)=>{ const k=Math.floor(y/cell)*gw + Math.floor(x/cell); (grid[k] || (grid[k]=[])).push([x,y,own,0]); };
+  const ink1=tint1 || '#2B2A3A', ink2=tint2 || '#7A4A6A';
+  const tries=Math.round(canonArea(w,h)/(3072*3072)*1400*Math.min(3, amt));
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  let strokeId=0;
+  for(let t=0;t<tries;t++){
+    const sx=Math.random()*w, sy=Math.random()*h;
+    if(near(sx,sy,-1)) continue;
+    const id=strokeId++, pts=[[sx,sy]];
+    // walk both ways from the seed point
+    for(const dir of [1,-1]){
+      let x=sx, y=sy;
+      for(let s=0;s<900;s++){
+        const a=fieldAt(x,y); const nx=x + Math.cos(a)*step*dir, ny=y + Math.sin(a)*step*dir;
+        if(nx<-sep||ny<-sep||nx>w+sep||ny>h+sep) break;
+        // too close to ANOTHER stroke (its own recent points don't count)
+        const cx=Math.floor(nx/cell), cy=Math.floor(ny/cell); let hit=false;
+        for(let j=cy-2;j<=cy+2 && !hit;j++) for(let i=cx-2;i<=cx+2 && !hit;i++){ if(i<0||j<0||i>=gw||j>=gh) continue; const L=grid[j*gw+i]; if(!L) continue;
+          for(const p of L){ if(p[2]===id) continue; const dx=p[0]-nx, dy=p[1]-ny; if(dx*dx+dy*dy < sep*sep*0.55){ hit=true; break; } } }
+        if(hit) break;
+        x=nx; y=ny; if(dir>0) pts.push([x,y]); else pts.unshift([x,y]);
+      }
+    }
+    if(pts.length < 12) continue;
+    for(const p of pts) if(p[0]>=0&&p[1]>=0&&p[0]<w&&p[1]<h) add(p[0],p[1],id);
+    // the stroke: one ink or the other, its width a little its own, tapering at both ends
+    const wd=cpx(9 + Math.random()*9)*zoom*Math.min(1.3, 0.55 + 0.45/Math.max(0.4, amt)), col=Math.random()<0.18 ? ink2 : ink1;
+    ctx.strokeStyle=col; ctx.globalAlpha=0.82 + Math.random()*0.15;
+    const n=pts.length, seg=Math.max(4, Math.floor(n/14));
+    for(let a=0;a<n-1;a+=seg){
+      const b=Math.min(n-1, a+seg), m=(a+b)/2/(n-1), taper=Math.min(1, Math.sin(m*Math.PI)*1.6);
+      ctx.lineWidth=Math.max(cpx(0.4), wd*(0.35 + 0.65*taper));
+      ctx.beginPath(); ctx.moveTo(pts[a][0], pts[a][1]); for(let q=a+1;q<=b;q++) ctx.lineTo(pts[q][0], pts[q][1]); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha=1;
+  return c;
+}

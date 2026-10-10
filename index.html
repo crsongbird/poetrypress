@@ -23,6 +23,8 @@
 <!-- pan and zoom on the desktop preview (timmywil/panzoom, MIT): wheel at the cursor, drag, double-click to fit -->
 <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
+<!-- the second set of page fonts (pixel and arcade among them) -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Pixelify+Sans:wght@400..700&family=Share+Tech+Mono&family=Orbitron:wght@400..900&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&family=Space+Grotesk:wght@300..700&family=DM+Serif+Display:ital@0;1&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Spectral:ital,wght@0,400;0,700;1,400;1,700&family=Marcellus&family=Great+Vibes&family=Permanent+Marker&family=Tangerine:wght@400;700&family=Stardos+Stencil:wght@400;700&family=Monoton&family=Abril+Fatface&family=Comfortaa:wght@300..700&family=Bungee&family=Pirata+One&family=Raleway:ital,wght@0,100..900;1,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Amatic+SC:wght@400;700&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="poetrypress.css">
 
 </head>
@@ -33,6 +35,7 @@
   <div class="app-header">
     <span class="app-header-spacer header-moon" id="headerMoon"></span>
     <strong class="app-header-title">Unfixable Vellum <svg class="vellum-sigil" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1.9 21.9 12 12 22.1 2.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 7.1 16.9 12 12 16.9 7.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 4.4V19.6" stroke="#6FA8FF" opacity="0.88"/><path d="M11.95 1.73 21.42 12.48 11.35 22.10 2.63 11.45Z" stroke="#C9A0FF" opacity="0.88"/><path d="M12.07 7.25 16.29 11.84 12.27 16.84 7.40 11.55Z" stroke="#C9A0FF" opacity="0.88"/><path d="M11.65 3.89V19.61" stroke="#C9A0FF" opacity="0.88"/><path d="M12.66 2.04 22.33 11.82 12.38 21.48 1.77 12.27Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.35 6.98 16.26 11.64 11.55 16.56 7.58 11.53Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.60 4.99V18.91" stroke="#9B7FE8" opacity="0.88"/><path d="M11.78 1.89 21.04 11.86 12.73 21.40 2.27 11.32Z" stroke="#E0526F" opacity="0.88"/><path d="M12.14 7.81 16.37 11.11 11.25 16.97 6.23 11.25Z" stroke="#E0526F" opacity="0.88"/><path d="M11.99 5.16V19.46" stroke="#E0526F" opacity="0.88"/><circle cx="12" cy="12" r="1.35" fill="#E0526F" stroke="none"/></svg></strong>
+    <button class="shortcut-btn" id="shortcutBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
     <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="kofi-link">support (Ko-fi)</a>
   </div>
 
@@ -518,6 +521,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="aurora" data-str="option.aurora_veil">Aurora Veil</option>
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
                 <option value="landscape" data-str="option.landscape">Painted Landscape</option>
+                <option value="flowfield" data-str="option.flow_field">Flow-Field Ink</option>
               </optgroup>
               <optgroup label="√ Sharpness">
                 <option value="grain" data-str="option.waking_grain">Waking Grain</option>
@@ -528,6 +532,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="rainstreaks" data-str="option.still_rain">Harsh Rain</option>
                 <option value="hatch" data-str="option.silverpoint_hatch">Silverpoint Hatch</option>
                 <option value="cityscape" data-str="option.cityscape">Night City</option>
+                <option value="guilloche" data-str="option.guilloche">Guilloché</option>
               </optgroup>
               <optgroup label="∆ Chaos">
                 <option value="sigils" data-str="option.sigil_scatter">Sigil Scatter</option>
@@ -538,6 +543,8 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="tessellate" data-str="option.facet_field">Facet Field</option>
                 <option value="cards" data-str="option.cartomancy">Cartomancy</option>
                 <option value="blackhole" data-str="option.blackhole">Black Hole</option>
+                <option value="turing" data-str="option.turing_skin">Turing Skin</option>
+                <option value="chladni" data-str="option.chladni">Chladni Sand</option>
               </optgroup>
               <optgroup label="🜚 Touch">
                 <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
@@ -553,6 +560,11 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="moss" data-str="option.moss">Moss on Stone</option>
                 <option value="water" data-str="option.scrying_pool">Scrying Pool</option>
                 <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
+                <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
+                <option value="contour" data-str="option.contour">Contour Map</option>
+              </optgroup>
+              <optgroup label="⚗ The Crucible" id="crucibleGroup">
+                <option value="crucible" id="crucibleOption">From the Crucible</option>
               </optgroup>
             </select>
           </div>
@@ -666,6 +678,36 @@ inside of a <~~dead person~~/trans>'s dreams.
             </div>
           </div>
           </div>
+          <!-- TEXTURE LAYERS: a second texture under the main one -->
+          <div class="check-row full">
+            <input type="checkbox" id="baseToggle">
+            <label for="baseToggle" data-str="label.base_layer">Base Layer (a texture beneath)?</label>
+          </div>
+          <div class="subblock full" id="baseBlock">
+            <div class="field full">
+              <label data-str="label.base_variant">Base Variant</label>
+              <select id="baseType"></select>
+            </div>
+            <div class="field full" id="baseP1Field">
+              <label id="baseP1Label">—</label>
+              <input type="range" id="baseP1" min="0" max="100" value="100">
+              <span class="range-val" id="baseP1Val"></span>
+            </div>
+            <div class="field full" id="baseP2Field">
+              <label id="baseP2Label">—</label>
+              <input type="range" id="baseP2" min="0" max="100" value="100">
+              <span class="range-val" id="baseP2Val"></span>
+            </div>
+            <div class="field full">
+              <label data-str="label.base_opacity">Base Opacity</label>
+              <input type="range" id="baseOpacity" min="0" max="100" value="50" data-moon>
+              <span class="range-val" id="baseOpacityVal"></span>
+            </div>
+            <div class="field full">
+              <label data-str="label.base_blend">Base Blend</label>
+              <select id="baseBlend"></select>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -709,10 +751,10 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
           <div class="field">
             <label data-str="label.border_stitch">Border Stitch</label>
-            <select id="borderStitch"><option value="solid">Solid</option></select>
+            <select id="borderStitch" data-link="cardStitch" data-link-switch="cardLink"><option value="solid">Solid</option></select>
           </div>
           <div class="check-row">
-            <input type="checkbox" id="borderStitchOut">
+            <input type="checkbox" id="borderStitchOut" data-link="cardStitchOut" data-link-switch="cardLink">
             <label for="borderStitchOut" data-str="label.border_stitch_out">Points Outward?</label>
           </div>
           <div class="field">
@@ -725,12 +767,12 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
           <div class="field full">
             <label data-str="label.thickness">Thickness</label>
-            <input type="range" id="borderThickness" min="1" max="40" value="2">
+            <input type="range" id="borderThickness" data-link="cardThickness" data-link-switch="cardLink" min="1" max="40" value="2">
             <span class="range-val" id="borderThicknessVal">2px</span>
           </div>
           <div class="field full">
             <label data-str="label.offset">Offset</label>
-            <input type="range" id="borderOffset" min="0" max="400" value="14">
+            <input type="range" id="borderOffset" data-link="cardOffset" data-link-switch="cardLink" min="0" max="400" value="14">
             <span class="range-val" id="borderOffsetVal">14px</span>
           </div>
           <div class="field full">
@@ -739,15 +781,21 @@ inside of a <~~dead person~~/trans>'s dreams.
             <span class="range-val" id="borderGrainVal">0%</span>
           </div>
           <div class="check-row full">
-            <input type="checkbox" id="borderRounded">
+            <input type="checkbox" id="borderRounded" data-link="cardRounded" data-link-switch="cardLink">
             <label for="borderRounded" data-str="label.rounded_corners">Rounded Corners?</label>
           </div>
           <div class="field full" id="borderRadiusField">
             <label data-str="label.roundedness">Roundedness</label>
-            <input type="range" id="borderRadius" min="0" max="400" value="60">
+            <input type="range" id="borderRadius" data-link="cardRadius" data-link-switch="cardLink" min="0" max="400" value="60">
             <span class="range-val" id="borderRadiusVal">60px</span>
           </div>
         </div>
+      </div>
+    </details>
+
+    <details class="card" data-tab="page" id="insetPanel">
+      <summary class="card-title" data-str="card.inset_box">Inset Box</summary>
+      <div class="card-grid">
         <div class="check-row full">
           <input type="checkbox" id="cardToggle">
           <label for="cardToggle" data-str="label.inset_box">Inset Box?</label>
@@ -791,12 +839,72 @@ inside of a <~~dead person~~/trans>'s dreams.
               <option value="soft-light">Soft Light</option><option value="hard-light">Hard Light</option>
               <option value="darken">Darken</option><option value="lighten">Lighten</option>
               <option value="color-dodge">Color Dodge</option><option value="color-burn">Color Burn</option>
+              <option value="lighter">Linear Dodge</option><option value="difference">Difference</option>
+              <option value="exclusion">Exclusion</option><option value="hue">Hue</option>
+              <option value="saturation">Saturation</option><option value="color">Color</option>
+              <option value="luminosity">Luminosity</option>
+              <option value="vivid-light">Vivid Light ⚡</option><option value="linear-light">Linear Light ⚡</option>
+              <option value="pin-light">Pin Light ⚡</option><option value="linear-burn">Linear Burn ⚡</option>
+              <option value="subtract">Subtract ⚡</option><option value="divide">Divide ⚡</option>
             </select>
           </div>
+          <div class="field full">
+            <label data-str="label.box_glass">Glass</label>
+            <select id="cardFx">
+              <option value="none" data-str="option.glass_none">None</option>
+              <option value="frost" data-str="option.glass_frost">Frosted Glass</option>
+              <option value="lens" data-str="option.glass_lens">Lens</option>
+              <option value="reeded" data-str="option.glass_reeded">Reeded Glass</option>
+              <option value="pixel" data-str="option.glass_pixel">Pixel Mosaic</option>
+              <option value="emboss" data-str="option.glass_emboss">Emboss</option>
+              <option value="prism" data-str="option.glass_prism">Prism</option>
+            </select>
+          </div>
+          <div class="field full" id="cardFxAmountField">
+            <label data-str="label.glass_strength">Strength</label>
+            <input type="range" id="cardFxAmount" min="0" max="100" value="50">
+            <span class="range-val" id="cardFxAmountVal">50</span>
+          </div>
+          <div class="field full" id="cardFxScaleField">
+            <label id="cardFxScaleLabel" data-str="label.glass_scale">Scale</label>
+            <input type="range" id="cardFxScale" min="0" max="100" value="50">
+            <span class="range-val" id="cardFxScaleVal">50</span>
+          </div>
+          <div class="check-row full link-row">
+            <input type="checkbox" id="cardLink" checked>
+            <label for="cardLink" data-str="label.box_link">⛓ Shape Linked to Border</label>
+          </div>
+          <div class="field full">
+            <label data-str="label.box_offset">Offset</label>
+            <input type="range" id="cardOffset" min="0" max="400" value="14" data-link="borderOffset" data-link-switch="cardLink">
+            <span class="range-val" id="cardOffsetVal">14px</span>
+          </div>
+          <div class="field full">
+            <label data-str="label.box_thickness">Thickness</label>
+            <input type="range" id="cardThickness" min="1" max="40" value="2" data-link="borderThickness" data-link-switch="cardLink">
+            <span class="range-val" id="cardThicknessVal">2px</span>
+          </div>
+          <div class="field">
+            <label data-str="label.box_stitch">Edge Stitch</label>
+            <select id="cardStitch" data-link="borderStitch" data-link-switch="cardLink"><option value="solid">Solid</option></select>
+          </div>
+          <div class="check-row">
+            <input type="checkbox" id="cardStitchOut" data-link="borderStitchOut" data-link-switch="cardLink">
+            <label for="cardStitchOut" data-str="label.box_stitch_out">Points Outward?</label>
+          </div>
+          <div class="check-row full">
+            <input type="checkbox" id="cardRounded" data-link="borderRounded" data-link-switch="cardLink">
+            <label for="cardRounded" data-str="label.box_rounded">Rounded Corners?</label>
+          </div>
+          <div class="field full" id="cardRadiusField">
+            <label data-str="label.box_roundedness">Roundedness</label>
+            <input type="range" id="cardRadius" min="0" max="400" value="60" data-link="borderRadius" data-link-switch="cardLink">
+            <span class="range-val" id="cardRadiusVal">60px</span>
+          </div>
         </div>
-
       </div>
     </details>
+
 
     <details class="card" data-tab="page">
       <summary class="card-title" data-str="card.vignette_options">Vignette Options</summary>
@@ -903,6 +1011,16 @@ inside of a <~~dead person~~/trans>'s dreams.
       </div>
     </details>
 
+    <details class="card" data-tab="more" id="forgePanel">
+      <summary class="card-title" data-str="card.crucible">The Crucible</summary>
+      <div class="card-grid">
+        <p class="hint full" data-str="hint.crucible">A forge for new surfaces: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Crucible); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
+        <input type="hidden" id="forgeGraph" value="">
+        <p class="hint full forge-summary" id="forgeSummary"></p>
+        <button class="btn-major full" id="forgeOpenBtn" type="button" data-str="button.forgeOpenBtn">Open the Crucible</button>
+      </div>
+    </details>
+
     <details class="card" data-tab="more" id="advancedPanel">
       <summary class="card-title" style="cursor:pointer;" data-str="card.workbench">Workbench</summary>
       <div class="card-grid" style="margin-top:8px;">
@@ -927,10 +1045,50 @@ inside of a <~~dead person~~/trans>'s dreams.
       <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position" data-str="button.resetViewBtn">⟲</button>
       <button class="reset-view-btn history-btn" id="undoBtn" type="button" title="Undo" aria-label="Undo">☋</button>
       <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo" aria-label="Redo">☊</button>
+      <button class="reset-view-btn" id="filmBtn" type="button" title="History filmstrip" aria-label="History filmstrip">🎞</button>
+      <div class="filmstrip" id="filmstrip" aria-label="History: click a frame to go back to it"></div>
       <button class="download-btn" id="downloadBtn" data-str="button.downloadBtn">Save image</button>
     </div>
   </div>
   <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
+  <div class="forge-veil" id="forgeVeil" hidden>
+    <div class="forge-bar">
+      <span class="forge-title">The Crucible <small class="forge-sub">a forge for new surfaces</small></span>
+      <span class="forge-status" id="forgeStatus"></span>
+      <canvas class="forge-thumb" id="forgeThumb" width="96" height="96" title="What it makes"></canvas>
+      <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use as Surface</button>
+      <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out">−</button>
+      <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in">+</button>
+      <button type="button" class="ghost" id="forgeClear">Clear</button>
+      <button type="button" class="btn-major" id="forgeCloseBtn">Done</button>
+    </div>
+    <div class="forge-body">
+      <div class="forge-palette" id="forgePalette"></div>
+      <div class="forge-canvas" id="forgeCanvas"></div>
+    </div>
+  </div>
+  <div class="sheet-veil" id="shortcutSheet" hidden>
+    <div class="sheet" role="dialog" aria-label="Keyboard shortcuts">
+      <div class="sheet-title">Keyboard Shortcuts</div>
+      <dl class="keys">
+        <dt><kbd>?</kbd></dt><dd>This sheet</dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd>Undo</dd>
+        <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd> · <kbd>Ctrl</kbd> <kbd>Y</kbd></dt><dd>Redo</dd>
+        <dt><kbd>Ctrl</kbd> <kbd>S</kbd></dt><dd>Save image</dd>
+        <dt><kbd>R</kbd></dt><dd>Reroll the texture seed</dd>
+        <dt><kbd>B</kbd></dt><dd>Summon a new backdrop</dd>
+        <dt><kbd>F</kbd></dt><dd>A random font</dd>
+        <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>The previous / next preset</dd>
+        <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Inscription · Rituals · Thoughtforms · Materia · Esoterica</dd>
+        <dt><kbd>H</kbd></dt><dd>Show or hide the history filmstrip</dd>
+        <dt><kbd>0</kbd></dt><dd>Fit the preview</dd>
+        <dt>Wheel · drag · double-click</dt><dd>Zoom toward the cursor · pan · fit (the preview)</dd>
+        <dt><kbd>←</kbd><kbd>→</kbd> <kbd>PgUp</kbd><kbd>PgDn</kbd></dt><dd>Turn and raise the light dial (when it has focus)</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close this sheet</dd>
+      </dl>
+      <p class="hint">Keys work whenever you aren't typing in a field.</p>
+    </div>
+  </div>
 
   <nav class="tabbar" id="tabBar">
     <button class="tab-btn active" data-tab="write" type="button" title="Write text in markup" data-str="tab.inscription"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z" stroke="currentColor" opacity="1.0"/><path d="M6.14 4.42A2.5 2.5 0 0 1 9.26 6.83V9.43h6.17V6.57A2.5 2.5 0 1 1 17.95 9.61H14.90v6.42h2.32A2.5 2.5 0 1 1 15.51 18.00V14.65H8.85v2.32A2.5 2.5 0 1 1 6.70 14.96H8.98V8.88H6.69A2.5 2.5 0 0 1 6.87 4.77Z" stroke="currentColor" opacity="0.72"/><path d="M6.75 4.61A2.5 2.5 0 0 1 9.23 6.79V9.26h5.95V7.22A2.5 2.5 0 1 1 17.88 8.87H14.72v5.41h3.10A2.5 2.5 0 1 1 15.11 18.02V14.94H8.94v2.89A2.5 2.5 0 1 1 6.27 15.57H9.42V9.64H6.32A2.5 2.5 0 0 1 6.50 3.78Z" stroke="currentColor" opacity="0.56"/><path d="M6.72 3.44A2.5 2.5 0 0 1 8.61 6.65V9.37h6.67V6.22A2.5 2.5 0 1 1 17.40 9.11H15.71v5.63h2.48A2.5 2.5 0 1 1 14.78 17.77V14.93H8.42v2.92A2.5 2.5 0 1 1 7.11 14.64H8.15V9.90H7.13A2.5 2.5 0 0 1 6.84 3.44Z" stroke="currentColor" opacity="0.4"/></svg></span>Inscription</button>

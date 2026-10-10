@@ -70,6 +70,42 @@ export const FONTS = [
   { label:"Pixel · VT323", family:"VT323", weight:"400", noItalic:true },
   { label:"Woodtype · Rye", family:"Rye", weight:"400", noItalic:true },
   { label:"Ornate Capitals · Cinzel Decorative", family:"Cinzel Decorative", weight:"400", noItalic:true },
+  // ---- the second set: gaps filled, alternatives, and the arcade ----
+  { label:"Soft Serif · Fraunces", family:"Fraunces", weight:"500" },
+  { label:"Pixel · Press Start 2P", family:"Press Start 2P", weight:"400", noItalic:true },
+  { label:"Pixel · Silkscreen", family:"Silkscreen", weight:"400", noItalic:true },
+  { label:"Pixel · Pixelify Sans", family:"Pixelify Sans", weight:"400", noItalic:true },
+  { label:"Terminal · Share Tech Mono", family:"Share Tech Mono", weight:"400", noItalic:true },
+  { label:"Sci-Fi · Orbitron", family:"Orbitron", weight:"500", noItalic:true },
+  { label:"Humanist · Source Sans 3", family:"Source Sans 3", weight:"400" },
+  { label:"Grotesque · Space Grotesk", family:"Space Grotesk", weight:"400", noItalic:true },
+  { label:"Display Serif · DM Serif Display", family:"DM Serif Display", weight:"400" },
+  { label:"Transitional · Libre Baskerville", family:"Libre Baskerville", weight:"400" },
+  { label:"Book · Spectral", family:"Spectral", weight:"400" },
+  { label:"Inscription · Marcellus", family:"Marcellus", weight:"400", noItalic:true },
+  { label:"Script · Great Vibes", family:"Great Vibes", weight:"400", noItalic:true },
+  { label:"Marker · Permanent Marker", family:"Permanent Marker", weight:"400", noItalic:true },
+  { label:"Calligraphy · Tangerine", family:"Tangerine", weight:"700", noItalic:true },
+  { label:"Stencil · Stardos Stencil", family:"Stardos Stencil", weight:"400", noItalic:true },
+  { label:"Neon · Monoton", family:"Monoton", weight:"400", noItalic:true },
+  { label:"Fat Face · Abril Fatface", family:"Abril Fatface", weight:"400", noItalic:true },
+  { label:"Rounded · Comfortaa", family:"Comfortaa", weight:"400", noItalic:true },
+  { label:"Signage · Bungee", family:"Bungee", weight:"400", noItalic:true },
+  { label:"Blackletter · Pirata One", family:"Pirata One", weight:"400", noItalic:true },
+  { label:"Hairline · Raleway", family:"Raleway", weight:"300" },
+  { label:"Mono · IBM Plex Mono", family:"IBM Plex Mono", weight:"400" },
+  { label:"Hand-lettered · Amatic SC", family:"Amatic SC", weight:"700", noItalic:true },
+  { label:"Universal · Noto Serif", family:"Noto Serif", weight:"400" },   // Latin, Greek, Cyrillic, Vietnamese
+];
+
+// The picker groups the fonts (its options keep their /f:N positions)
+export const FONT_GROUPS = [
+  ['Serif', ['Bodoni Moda','Cormorant Garamond','Crimson Pro','EB Garamond','Literata','Playfair Display','Merriweather','Zilla Slab','Fraunces','DM Serif Display','Libre Baskerville','Spectral','Noto Serif']],
+  ['Sans', ['Inter','Roboto','Work Sans','Source Sans 3','Space Grotesk','Poppins','Josefin Sans','Nunito','Comfortaa','Raleway','Oswald']],
+  ['Mono & Typewriter', ['Courier Prime','Special Elite','Space Mono','JetBrains Mono','IBM Plex Mono','Share Tech Mono']],
+  ['Hand & Script', ['Architects Daughter','Caveat','Shadows Into Light','Amatic SC','Permanent Marker','Pinyon Script','Great Vibes','Tangerine']],
+  ['Display & Historic', ['Cinzel','Cinzel Decorative','Marcellus','IM Fell English','Uncial Antiqua','Almendra','UnifrakturMaguntia','Pirata One','Poiret One','Abril Fatface','Rye','Stardos Stencil','Bungee','Monoton','Unica One','Orbitron']],
+  ['Pixel & Game', ['VT323','Press Start 2P','Silkscreen','Pixelify Sans']],
 ];
 
 export const PRESETS = [
@@ -281,7 +317,7 @@ export const PRESETS = [
     text1: "#ECE4D8",
     outlineMode: "off",
     font: "EB Garamond",
-    texture: true, textureType: "ash", textureOpacity: 70, texP1: 90, texP2: 85, texP3: 65, texP4: 35,
+    texture: true, textureType: "ash", textureOpacity: 78, texP1: 115, texP2: 150, texP3: 65, texP4: 35,
     textureBlend: 'hard-light', textureLight: 240, textureLightTilt: 115,
     textureTint1: '#D6D0C6', textureTint2: '#FF6A2A',
     accent1: "#E07A3F", accent2: "#ADA299",

@@ -78,18 +78,13 @@ const MOTIFS = {
   // lines
   solid:     { draw: M => M.trace(() => 0), edge: () => 0 },
   dashed:    { draw: M => M.each(s => { M.poly([M.at(s, 0), M.at(s + M.P*0.6, 0)]); M.ctx.stroke(); }), edge: () => 0 },
-  running:   { draw: M => { M.ctx.lineWidth = M.W*1.25; M.each(s => { M.poly([M.at(s + M.P*0.2, 0), M.at(s + M.P*0.62, 0)]); M.ctx.stroke(); }); }, edge: () => 0 },
   double:    { draw: M => { M.ctx.lineWidth = M.W*0.8; M.trace(() => -M.A*0.3); M.trace(() => M.A*0.3); }, edge: (s, M) => M.A*0.3 },
   dotted:    { draw: M => { for(let s = 0; s <= M.len; s += M.W*3.2) M.dot(M.at(s, 0), M.W*0.7); }, edge: () => 0 },
-  triple:    { draw: M => { M.ctx.lineWidth = M.W*0.6; for(const v of [-M.A*0.35, 0, M.A*0.35]) M.trace(() => v); }, edge: (s, M) => M.A*0.35 },
-  dotdash:   { draw: M => M.each(s => { M.poly([M.at(s, 0), M.at(s + M.P*0.45, 0)]); M.ctx.stroke(); M.dot(M.at(s + M.P*0.72, 0), M.W*0.9); }), edge: () => 0 },
   // waves and zigzags
   wave:      { draw: M => M.trace(s => M.A*sinw(s, M.P)), edge: (s, M) => M.A*sinw(s, M.P) },
   serpent:   { draw: M => M.trace(s => M.A*1.2*sinw(s, M.P*2)), edge: (s, M) => M.A*1.2*sinw(s, M.P*2) },
   zigzag:    { draw: M => M.trace(s => M.A*tri(s, M.P)), edge: (s, M) => M.A*tri(s, M.P) },
   ricrac:    { draw: M => { M.ctx.lineWidth = M.W*1.8; M.trace(s => M.A*Math.sign(sinw(s, M.P))*Math.pow(Math.abs(sinw(s, M.P)), 0.5)); }, edge: (s, M) => M.A*Math.sign(sinw(s, M.P))*Math.pow(Math.abs(sinw(s, M.P)), 0.5) },
-  lightning: { draw: M => { const pts = []; for(let s = 0; s <= M.len; s += M.P/3){ const k = Math.round(s/(M.P/3)); pts.push(M.at(s, (k%3 === 0 ? 1 : k%3 === 1 ? -0.4 : 0.55)*M.A*(k%2 ? -1 : 1))); } M.poly(pts, M.closed); M.ctx.stroke(); } },
-  stepzig:   { draw: M => { for(let s = 0; s < M.len; s += M.P/6) M.dot(M.at(s, M.A*tri(s, M.P)), M.W*0.75); }, edge: (s, M) => M.A*tri(s, M.P) },
   square:    { draw: M => { const pts = []; M.each(s => { pts.push(M.at(s, -M.A), M.at(s + M.P*0.5, -M.A), M.at(s + M.P*0.5, M.A), M.at(s + M.P, M.A)); }); M.poly(pts, M.closed); M.ctx.stroke(); },
                edge: (s, M) => (((s / M.P) % 1) < 0.5 ? -M.A : M.A) },
   greek:     { draw: M => { // a continuous meander: every repeat turns a square spiral and runs on
@@ -98,29 +93,17 @@ const MOTIFS = {
                  M.poly(pts, false); M.ctx.stroke(); }, edge: (s, M) => M.A },
   // scallops and arches
   scallop:   { draw: M => M.trace(s => M.A*Math.abs(Math.sin((s/M.P)*Math.PI))), edge: (s, M) => M.A*Math.abs(Math.sin((s/M.P)*Math.PI)) },
-  satinscallop: { draw: M => M.each(s => { const pts = []; for(let k = 0; k <= 12; k++) pts.push(M.at(s + M.P*k/12, M.A*Math.sin(Math.PI*k/12)));
-                   M.poly(pts, true); M.fillShaded(M.at(s + M.P*0.5, M.A*0.5), M.P*0.6); }), edge: (s, M) => M.A*Math.abs(Math.sin((s/M.P)*Math.PI)) },
-  arches:    { draw: M => M.each(s => { const pts = []; for(let k = 0; k <= 10; k++) pts.push(M.at(s + M.P*0.1 + M.P*0.8*k/10, M.A*Math.sin(Math.PI*k/10)));
-                   M.poly(pts, false); M.ctx.stroke(); }) },
   // edging
   blanket:   { draw: M => { M.trace(() => 0); M.each(s => { M.poly([M.at(s, 0), M.at(s, M.A*1.6)]); M.ctx.stroke(); }); } },
-  comb:      { draw: M => { M.trace(() => 0); for(let s = 0; s < M.len; s += M.P/4){ M.poly([M.at(s, 0), M.at(s, M.A*0.8)]); M.ctx.stroke(); } } },
   fringe:    { draw: M => { M.ctx.lineWidth = M.W*0.7; for(let s = 0; s < M.len; s += M.P/6){ M.poly([M.at(s, 0), M.at(s, M.A*(1.4 + 0.5*Math.sin(s*1.7)))]); M.ctx.stroke(); } } },
   ladder:    { draw: M => { M.trace(() => -M.A*0.6); M.trace(() => M.A*0.6); M.each(s => { M.poly([M.at(s, -M.A*0.6), M.at(s, M.A*0.6)]); M.ctx.stroke(); }); }, edge: (s, M) => M.A*0.6 },
-  boxx:      { draw: M => { M.trace(() => -M.A*0.7); M.trace(() => M.A*0.7);
-                 M.each(s => { M.poly([M.at(s, -M.A*0.7), M.at(s, M.A*0.7)]); M.ctx.stroke(); M.poly([M.at(s, -M.A*0.7), M.at(s + M.P, M.A*0.7)]); M.ctx.stroke(); M.poly([M.at(s, M.A*0.7), M.at(s + M.P, -M.A*0.7)]); M.ctx.stroke(); }); }, edge: (s, M) => M.A*0.7 },
   lattice:   { draw: M => { M.ctx.lineWidth = M.W*0.6; M.trace(() => -M.A); M.trace(() => M.A);
                  for(let s = -M.P; s < M.len; s += M.P/2){ M.poly([M.at(s, -M.A), M.at(s + M.P, M.A)]); M.ctx.stroke(); M.poly([M.at(s, M.A), M.at(s + M.P, -M.A)]); M.ctx.stroke(); } }, edge: (s, M) => M.A },
   cross:     { draw: M => M.each(s => { M.poly([M.at(s + M.P*0.15, -M.A), M.at(s + M.P*0.85, M.A)]); M.ctx.stroke(); M.poly([M.at(s + M.P*0.15, M.A), M.at(s + M.P*0.85, -M.A)]); M.ctx.stroke(); }) },
-  crossbar:  { draw: M => M.each(s => { MOTIFS.cross.draw({ ...M, each: f => f(s, 0) }); M.poly([M.at(s + M.P*0.15, -M.A), M.at(s + M.P*0.85, -M.A)]); M.ctx.stroke(); M.poly([M.at(s + M.P*0.15, M.A), M.at(s + M.P*0.85, M.A)]); M.ctx.stroke(); }) },
   // plants and arrows
-  feather:   { draw: M => M.each((s, k) => { const v = (k%2 ? M.A : -M.A); M.poly([M.at(s, 0), M.at(s + M.P*0.5, v), M.at(s + M.P, 0)]); M.ctx.stroke(); M.poly([M.at(s + M.P*0.5, v), M.at(s + M.P*0.75, v*1.5)]); M.ctx.stroke(); }) },
-  fern:      { draw: M => { M.trace(() => 0); M.each(s => { M.poly([M.at(s + M.P*0.5, 0), M.at(s + M.P*0.15, -M.A)]); M.ctx.stroke(); M.poly([M.at(s + M.P*0.5, 0), M.at(s + M.P*0.15, M.A)]); M.ctx.stroke(); }); } },
   herringbone: { draw: M => M.each(s => { M.poly([M.at(s, -M.A), M.at(s + M.P*0.75, M.A)]); M.ctx.stroke(); M.poly([M.at(s + M.P*0.5, M.A), M.at(s + M.P*1.25, -M.A)]); M.ctx.stroke(); }) },
-  fishbone:  { draw: M => { M.trace(() => 0); M.each(s => { M.poly([M.at(s + M.P*0.2, -M.A), M.at(s + M.P*0.6, 0), M.at(s + M.P*0.2, M.A)]); M.ctx.stroke(); }); } },
   wheat:     { draw: M => { M.trace(() => 0); M.each(s => { for(const v of [-1, 1]) M.leaf(M.at(s + M.P*0.35, v*M.A*0.15), M.at(s + M.P*0.85, v*M.A*0.9), M.A*0.32); }); } },
   chevron:   { draw: M => M.each(s => { M.poly([M.at(s + M.P*0.2, -M.A), M.at(s + M.P*0.6, 0), M.at(s + M.P*0.2, M.A)]); M.ctx.stroke(); }) },
-  arrows:    { draw: M => M.each(s => { M.poly([M.at(s + M.P*0.5, -M.A*0.2), M.at(s + M.P*0.5, M.A)]); M.ctx.stroke(); M.poly([M.at(s + M.P*0.3, M.A*0.55), M.at(s + M.P*0.5, M.A), M.at(s + M.P*0.7, M.A*0.55)]); M.ctx.stroke(); }) },
   // loops, chains, rope
   chain:     { draw: M => M.each(s => { const c = M.at(s + M.P*0.5, 0); M.ctx.beginPath(); M.ctx.ellipse(c[0], c[1], M.P*0.55, M.A*0.65, M.ang(s + M.P*0.5), 0, Math.PI*2); M.ctx.stroke(); }), edge: (s, M) => M.A*0.65 },
   loops:     { draw: M => { const pts = []; for(let s = 0; s <= M.len; s += M.P/16){ const t = (s/M.P)*Math.PI*2; pts.push(M.at(s - Math.sin(t)*M.P*0.32, M.A*Math.cos(t)*0.9)); } M.poly(pts, M.closed); M.ctx.stroke(); }, edge: (s, M) => M.A*0.9 },
@@ -133,22 +116,13 @@ const MOTIFS = {
                    M.ctx.strokeStyle = shade(M.c, 0.25); M.ctx.lineWidth = M.W*1.1; M.ctx.stroke(); }
                  M.ctx.strokeStyle = M.c; M.ctx.lineWidth = M.W; }, edge: (s, M) => M.A*0.85 },
   circles:   { draw: M => M.each(s => { const c = M.at(s + M.P*0.5, 0); M.ctx.beginPath(); M.ctx.arc(c[0], c[1], Math.min(M.P*0.5, M.A), 0, Math.PI*2); M.ctx.stroke(); }) },
-  eyelets:   { draw: M => M.each(s => { const c = M.at(s + M.P*0.5, 0), r = Math.min(M.P*0.36, M.A*0.8); M.ctx.beginPath(); M.ctx.arc(c[0], c[1], r, 0, Math.PI*2); M.ctx.stroke(); M.dot(c, r*0.35); }) },
   // filled, and shaded like the real thing
   beads:     { draw: M => M.each(s => { const c = M.at(s + M.P*0.5, 0); M.ball(c[0], c[1], Math.min(M.P*0.3, M.A*0.75), M.c); }) },
-  pearls:    { draw: M => M.each((s, k) => { const c = M.at(s + M.P*0.5, 0); M.ball(c[0], c[1], Math.min(M.P*0.3, M.A*0.75)*(k%2 ? 0.6 : 1), M.c); }) },
-  diamond:   { draw: M => M.each(s => { M.poly([M.at(s + M.P*0.08, 0), M.at(s + M.P*0.5, M.A), M.at(s + M.P*0.92, 0), M.at(s + M.P*0.5, -M.A)], true); M.ctx.stroke(); }) },
   satindiamond: { draw: M => M.each(s => { M.poly([M.at(s + M.P*0.06, 0), M.at(s + M.P*0.5, M.A), M.at(s + M.P*0.94, 0), M.at(s + M.P*0.5, -M.A)], true); M.fillShaded(M.at(s + M.P*0.5, 0), M.A); }) },
   hearts:    { draw: M => M.each(s => M.heart(s + M.P*0.5, true)) },
-  openhearts:{ draw: M => M.each(s => M.heart(s + M.P*0.5, false)) },
-  clubs:     { draw: M => M.each(s => { const r = Math.min(M.P*0.16, M.A*0.36);
-                 for(const [du, dv] of [[0, -0.9], [0.9, 0], [0, 0.9], [-0.9, 0]]){ const c = M.at(s + M.P*0.5 + du*r, dv*r); M.ball(c[0], c[1], r, M.c); } }) },
-  plus:      { draw: M => M.each(s => { M.poly([M.at(s + M.P*0.5, -M.A), M.at(s + M.P*0.5, M.A)]); M.ctx.stroke(); M.poly([M.at(s + M.P*0.2, 0), M.at(s + M.P*0.8, 0)]); M.ctx.stroke(); }) },
   // stars, moons, snow
   stars:     { draw: M => M.each(s => M.star(M.at(s + M.P*0.5, 0), Math.min(M.P*0.36, M.A), 5, 0.45)) },
   sparkle:   { draw: M => M.each(s => M.star(M.at(s + M.P*0.5, 0), Math.min(M.P*0.4, M.A*1.1), 4, 0.22)) },
-  asterisk:  { draw: M => M.each(s => { const c = M.at(s + M.P*0.5, 0), r = Math.min(M.P*0.36, M.A);
-                 for(let k = 0; k < 3; k++){ const a = M.ang(s) + k*Math.PI/3; M.poly([[c[0] - Math.cos(a)*r, c[1] - Math.sin(a)*r], [c[0] + Math.cos(a)*r, c[1] + Math.sin(a)*r]]); M.ctx.stroke(); } }) },
   starline:  { draw: M => { M.ctx.lineWidth = M.W*0.6; M.trace(() => 0); M.ctx.lineWidth = M.W; M.each((s, k) => { if(k%2 === 0) M.star(M.at(s + M.P*0.5, 0), Math.min(M.P*0.4, M.A), 4, 0.3); }); } },
   moons:     { draw: M => M.each((s, k) => { // phases wax and wane along the line
                  const c = M.at(s + M.P*0.5, 0), r = Math.min(M.P*0.32, M.A*0.8), ph = ((k*0.125) % 1);
@@ -158,9 +132,6 @@ const MOTIFS = {
                    M.poly([c, e]); M.ctx.stroke(); const m = [c[0] + Math.cos(a)*r*0.6, c[1] + Math.sin(a)*r*0.6];
                    for(const d of [-0.6, 0.6]) { M.poly([m, [m[0] + Math.cos(a + d)*r*0.3, m[1] + Math.sin(a + d)*r*0.3]]); M.ctx.stroke(); } } }) },
   // flowers and leaves
-  flowers:   { draw: M => M.each(s => { const c = M.at(s + M.P*0.5, 0), r = Math.min(M.P*0.2, M.A*0.45);
-                 for(let k = 0; k < 5; k++){ const a = k*Math.PI*2/5 + M.ang(s); M.ball(c[0] + Math.cos(a)*r, c[1] + Math.sin(a)*r, r*0.75, M.c); }
-                 M.ball(c[0], c[1], r*0.55, shade(M.c, 0.5)); }) },
   daisy:     { draw: M => M.each(s => { const c = M.at(s + M.P*0.5, 0), r = Math.min(M.P*0.42, M.A);
                  for(let k = 0; k < 8; k++){ const a = k*Math.PI/4; M.leaf([c[0] + Math.cos(a)*r*0.2, c[1] + Math.sin(a)*r*0.2], [c[0] + Math.cos(a)*r, c[1] + Math.sin(a)*r], r*0.16); }
                  M.ball(c[0], c[1], r*0.22, shade(M.c, 0.55)); }) },
@@ -207,11 +178,63 @@ const MOTIFS = {
                  for(const d of [-0.3, 0, 0.3]){ M.poly([[c[0] + d*r, c[1] + r*0.9], [c[0] + d*r*1.6, c[1] + r*1.9]]); M.ctx.stroke(); }
                  M.ctx.strokeStyle = M.c; M.ctx.lineWidth = M.W; }) },
 };
+// Every motif SHAPES an inset box (Ruby): its edge is the motif's own
+// silhouette on its side, so the box is cut by it — bitten by beads, stars and
+// hearts pointing in; given their bumps pointing out; and with the border on,
+// the motif sits exactly in its bite. (Repeats measured as a fraction of P.)
+const frac = (s, P) => ((s / P) % 1 + 1) % 1;
+const roundBump = (s, M, c, r) => { const d = (frac(s, M.P) - c)*M.P; return Math.abs(d) < r ? Math.sqrt(r*r - d*d) : 0; };
+const ovalBump = (s, M, c, hw, h) => { const d = (frac(s, M.P) - c)*M.P; return Math.abs(d) < hw ? h*Math.sqrt(1 - (d/hw)*(d/hw)) : 0; };
+const tentBump = (s, M, a, b, h) => { const t = frac(s, M.P); if(t <= a || t >= b) return 0; return h*(1 - Math.abs(t - (a + b)/2)/((b - a)/2)); };
+const EDGES = {
+  blanket:     (s, M) => { const d = frac(s, M.P)*M.P; return (d < M.W*1.3 || M.P - d < M.W*1.3) ? M.A*1.6 : 0; },
+  fringe:      (s, M) => M.A*1.4,
+  cross:       (s, M) => { const t = frac(s, M.P); return t > 0.15 && t < 0.85 ? M.A*Math.abs(t - 0.5)/0.35 : 0; },
+  herringbone: (s, M) => M.A*(0.6 + 0.4*sinw(s - M.P*0.375, M.P)),
+  wheat:       (s, M) => tentBump(s, M, 0.3, 0.95, M.A*0.95),
+  chevron:     (s, M) => { const t = frac(s, M.P); return t > 0.2 && t < 0.6 ? M.A*(0.6 - t)/0.4 : 0; },
+  circles:     (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.5, M.A) + M.W*0.5),
+  beads:       (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.3, M.A*0.75)),
+  satindiamond:(s, M) => tentBump(s, M, 0.06, 0.94, M.A),
+  hearts:      (s, M) => ovalBump(s, M, 0.5, Math.min(M.P*0.3, M.A*0.75)*1.15, Math.min(M.P*0.3, M.A*0.75)*1.15),
+  stars:       (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.36, M.A)*0.85),
+  sparkle:     (s, M) => tentBump(s, M, 0.5 - Math.min(M.P*0.4, M.A*1.1)*0.45/M.P, 0.5 + Math.min(M.P*0.4, M.A*1.1)*0.45/M.P, Math.min(M.P*0.4, M.A*1.1)),
+  starline:    (s, M) => Math.floor(((s % (2*M.P)) + 2*M.P) % (2*M.P) / M.P) === 0 ? tentBump(s, M, 0.5 - Math.min(M.P*0.4, M.A)*0.4/M.P, 0.5 + Math.min(M.P*0.4, M.A)*0.4/M.P, Math.min(M.P*0.4, M.A)) : 0,
+  moons:       (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.32, M.A*0.8) + M.W*0.5),
+  snowflakes:  (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.4, M.A)*0.9),
+  daisy:       (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.42, M.A)),
+  vine:        (s, M) => M.A*0.45*sinw(s, M.P),
+  pine:        (s, M) => tentBump(s, M, 0.15, 0.85, M.A*1.3),
+  pennants:    (s, M) => tentBump(s, M, 0.08, 0.92, M.A*1.3),
+  scroll:      (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.45, M.A*1.1)),
+  tails:       (s, M) => ovalBump(s, M, 0.5, M.A*1.0, M.A*1.5),
+  rubies:      (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.36, M.A*0.85)),
+  saturn:      (s, M) => { const r = Math.min(M.P*0.22, M.A*0.6); return Math.max(roundBump(s, M, 0.5, r), ovalBump(s, M, 0.5, r*2.1, r*0.55)); },
+  enceladus:   (s, M) => roundBump(s, M, 0.5, Math.min(M.P*0.3, M.A*0.7)),
+  dotted:      (s, M) => 0,
+  chain:       (s, M) => ovalBump(s, M, 0.5, M.P*0.55, M.A*0.65),
+  loops:       (s, M) => M.A*0.55 + roundBump(s, M, 0.5, Math.min(M.P*0.45, M.A*0.5))*0.7,
+  rope:        (s, M) => M.A*0.85*(0.7 + 0.3*Math.abs(Math.cos(Math.PI*frac(s, M.P*0.45)))),
+  leaves:      (s, M) => ovalBump(s, M, 0.5, M.P*0.4, M.A*0.55),
+  checker:     (s, M) => Math.floor(((s % (2*M.P)) + 2*M.P) % (2*M.P) / M.P) ? M.A : 0,
+};
+for(const [k, f] of Object.entries(EDGES)) if(MOTIFS[k]) MOTIFS[k].edge = f;
+/** The border menu: the stitches worth choosing (Ruby: the redundant and the
+ *  weak were retired). */
 export const STITCH_STYLES = Object.keys(MOTIFS);
+/** Retired stitches, each drawn as its nearest kept relative, so an old poem's
+ *  rule or a saved look still draws (and still parses). */
+export const STITCH_ALIASES = { running:'dashed', triple:'double', dotdash:'dashed', lightning:'zigzag', stepzig:'zigzag',
+  satinscallop:'scallop', arches:'scallop', comb:'blanket', boxx:'lattice', crossbar:'cross', feather:'herringbone', fern:'wheat',
+  fishbone:'chevron', arrows:'chevron', eyelets:'circles', pearls:'beads', diamond:'satindiamond', openhearts:'hearts',
+  clubs:'beads', plus:'sparkle', asterisk:'snowflakes', flowers:'daisy' };
+/** Every name PML and saved looks may use: the kept ones and the retired. */
+export const STITCH_NAMES = STITCH_STYLES.concat(Object.keys(STITCH_ALIASES));
+/** A stitch name as it is drawn now (a retired one becomes its relative). */
+export function stitchOf(style){ return MOTIFS[style] ? style : (STITCH_ALIASES[style] || 'solid'); }
 /** Display names for menus: the PML name, made readable. */
-const NICE = { double:'Double Line', dotted:'Dotted', dotdash:'Dot-Dash', ricrac:'Ric-Rac', stepzig:'Step Zigzag', square:'Crenellation', greek:'Greek Key',
-  satinscallop:'Satin Scallop', boxx:'Boxed X', crossbar:'Barred Cross', satindiamond:'Satin Diamond', openhearts:'Open Hearts',
-  starline:'Star Thread', tails:'Seven Tails', enceladus:'Enceladus' };
+const NICE = { double:'Double Line', dotted:'Dotted', ricrac:'Ric-Rac', square:'Crenellation', greek:'Greek Key',
+  satindiamond:'Diamonds', starline:'Star Thread', tails:'Seven Tails', enceladus:'Enceladus' };
 export const STITCH_LABELS = Object.fromEntries(STITCH_STYLES.map(k => [k, NICE[k] || k[0].toUpperCase() + k.slice(1)]));
 
 function kit(ctx, path, opts){
@@ -259,7 +282,7 @@ function kit(ctx, path, opts){
  * so the pattern meets itself without a seam.
  */
 export function drawStitch(ctx, path, style, opts){
-  const motif = MOTIFS[style] || MOTIFS.solid;
+  const motif = MOTIFS[stitchOf(style)];
   ctx.save();
   ctx.strokeStyle = opts.color; ctx.fillStyle = opts.color;
   ctx.lineWidth = opts.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -273,13 +296,13 @@ export function drawStitch(ctx, path, style, opts){
  * give their own shape; the rest keep the box clear of their full reach.
  */
 export function stitchInnerEdge(path, style, opts){
-  const motif = MOTIFS[style] || MOTIFS.solid;
+  const motif = MOTIFS[stitchOf(style)];
   const M = kit(null, path, opts), side = opts.side || 1;
-  const n = Math.max(60, Math.ceil(path.len / (M.P/14))), pts = [];
+  const n = Math.max(60, Math.ceil(path.len / (M.P/24))), pts = [];   // fine enough for a bead's bite
   for(let k = 0; k < n; k++){
     const s = (k/n)*path.len;
     // the motif's own edge, on its side; otherwise clear of its reach inward
-    const v = motif.edge ? motif.edge(s, M)*side : (side > 0 ? opts.amp*1.15 : opts.width*0.5);
+    const v = motif.edge ? motif.edge(s, M)*side : (side > 0 ? opts.amp*1.15 : opts.width*0.5);   // (every kept motif has its edge)
     pts.push(path.point(s + (opts.phase || 0), v));
   }
   return pts;

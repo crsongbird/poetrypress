@@ -109,7 +109,7 @@ export function genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form,GL){
   const thread={r:Math.min(255,F.r*0.45+Lc.r*0.6), g:Math.min(255,F.g*0.45+Lc.g*0.6), b:Math.min(255,F.b*0.45+Lc.b*0.5)};
   // DETAILS live on SEAMS, as on real clothes: stitching runs along them,
   // rivets are set into them, buttons sit on a placket.
-  const SEAM_STITCHES=['running','zigzag','cross','feather','chain','blanket','wave','diamond'];
+  const SEAM_STITCHES=['dashed','zigzag','cross','herringbone','chain','blanket','wave','satindiamond'];
   const seamStitch=SEAM_STITCHES[Math.floor(Math.random()*SEAM_STITCHES.length)];
   const seams=[]; const ns=2+Math.floor(Math.random()*2);
   for(let k=0;k<ns;k++) seams.push({ vert:Math.random()<0.5, at:(0.14+Math.random()*0.72) });
@@ -691,10 +691,11 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3){
 /**
  * Drops on a window, built as HEIGHTS and lit by lightHeights — so each one is
  * a real little dome: shaded away from the light, a highlight where the
- * dial's light catches it, darker at its steep rim. Outlines wobble; sizes
- * run from mist to fat runners (many tiny, few large); runners leave a thin
- * wet ridge and a trail of droplets. Dry glass stays neutral grey, so it
- * blends like the other grey-ground textures.
+ * dial's light catches it, darker at its steep rim. The drops are SIMULATED:
+ * heavy ones slide, wander, sweep up droplets, merge, shed beaded trails and
+ * wipe the fog clean; then they are drawn as metaballs, so touching drops
+ * lump together and runners are pulled long. Dry glass stays neutral grey, so
+ * it blends like the other grey-ground textures.
  * DROP SIZE · RAIN · CONDENSATION
  */
 export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
@@ -702,36 +703,104 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
   const mist=Math.max(0,Math.min(1, form==null ? 0.3 : form));
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
   const H=new Float32Array(N);
-  // a drop: a wobbly dome, a little heavier at the bottom; heights combine by max
-  const drop=(cx, cy, r)=>{
-    const ph1=Math.random()*6.28, ph2=Math.random()*6.28, sag=1 + Math.min(0.35, r/(unit*0.05))*0.35;
-    const x0=Math.max(0,Math.floor(cx-r*1.3)), x1=Math.min(ww-1,Math.ceil(cx+r*1.3)), y0=Math.max(0,Math.floor(cy-r*1.3)), y1=Math.min(wh-1,Math.ceil(cy+r*1.5*sag));
+  // RAIN ON A WINDOW, as the rain itself works it (after Lucas Bebber's
+  // RainEffect, Codrops 2015, and photographs of panes): drops sit where they
+  // land until they are heavy enough to slide; a sliding drop wanders, sweeps
+  // up the droplets in its way (growing as it goes), merges with any drop it
+  // meets, sheds a beaded trail of droplets behind it, and wipes the fog and
+  // the fine droplets clean along its path. The drops are then drawn as
+  // METABALLS, so neighbours touching run together into lumps and necks, and
+  // a moving drop is pulled long, heavy at its head.
+  const sm=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
+  // the sim's own grid of who is near whom (rebuilt each step)
+  const CELL=Math.max(4, unit*0.03*zoom);
+  const D=[];                     // drops: x, y, r, vx, vy, crit (how heavy before it slides), alive
+  const ST=[];                    // the fine static droplets a runner sweeps up
+  const nBig=Math.round((90+Math.random()*40)*amt);
+  for(let k=0;k<nBig;k++){
+    const r=unit*(0.003 + 0.04*Math.pow(Math.random(), 3))*zoom;
+    D.push({ x:Math.random()*ww, y:Math.random()*wh*1.05 - wh*0.05, r, vx:(Math.random()-0.5)*0.6, vy:0, crit:unit*0.024*zoom*(0.7+Math.random()*0.8), wob:Math.random()*6.28, alive:true, moved:0, stuck:false });
+  }
+  const nSmall=Math.round(nBig*7);
+  for(let k=0;k<nSmall;k++) ST.push({ x:Math.random()*ww, y:Math.random()*wh, r:unit*(0.0012 + 0.0042*Math.pow(Math.random(), 2))*zoom, alive:true });
+  const PATHS=[];                 // the wiped paths: [x0,y0,x1,y1,width]
+  const TRAIL=[];                 // droplets shed behind a runner
+  const grid=new Map(), key=(cx,cy)=>cx*100003+cy;
+  const gridOf=(arr)=>{ grid.clear(); arr.forEach((o,i)=>{ if(!o.alive) return; const k=key(Math.floor(o.x/CELL), Math.floor(o.y/CELL)); let g=grid.get(k); if(!g){ g=[]; grid.set(k,g); } g.push(i); }); };
+  const near=(x,y,rad,fn)=>{ const c0=Math.floor((x-rad)/CELL), c1=Math.floor((x+rad)/CELL), r0=Math.floor((y-rad)/CELL), r1=Math.floor((y+rad)/CELL);
+    for(let cy=r0;cy<=r1;cy++) for(let cx=c0;cx<=c1;cx++){ const g=grid.get(key(cx,cy)); if(g) for(const i of g) fn(i); } };
+  const STEPS=180;
+  // the fine droplets on their own grid (they never move)
+  const sgrid=new Map(); ST.forEach((o,i)=>{ const k=key(Math.floor(o.x/CELL), Math.floor(o.y/CELL)); let g=sgrid.get(k); if(!g){ g=[]; sgrid.set(k,g); } g.push(i); });
+  const nearS=(x,y,rad,fn)=>{ const c0=Math.floor((x-rad)/CELL), c1=Math.floor((x+rad)/CELL), r0=Math.floor((y-rad)/CELL), r1=Math.floor((y+rad)/CELL);
+    for(let cy=r0;cy<=r1;cy++) for(let cx=c0;cx<=c1;cx++){ const g=sgrid.get(key(cx,cy)); if(g) for(const i of g) fn(i); } };
+  for(let step=0;step<STEPS;step++){
+    gridOf(D);
+    for(let i=0;i<D.length;i++){
+      const d=D[i]; if(!d.alive) continue;
+      // heavy enough to slide? A runner slows as it sheds (and stops below
+      // its weight), and now and then catches on the glass and holds there
+      if(!d.stuck && d.r>d.crit*(d.vy>0 ? 0.8 : 1)){ d.vy=Math.min(unit*0.0075, d.vy + unit*0.0006*(d.r/d.crit)); if(Math.random()<0.006) d.stuck=true; }
+      else d.vy*=0.5;
+      if(d.vy<unit*0.00008){ d.vy=0; continue; }
+      // it wanders: a sideways drift that keeps its heading a while
+      d.vx = d.vx*0.9 + (Math.random()-0.5)*unit*0.0032;
+      if(Math.random()<0.02) d.vx += (Math.random()-0.5)*unit*0.01;     // a kink, where it met a speck
+      const ox=d.x, oy=d.y;
+      d.x += d.vx; d.y += d.vy; d.moved += d.vy;
+      PATHS.push([ox, oy, d.x, d.y, d.r*0.85]);
+      // it sheds a droplet behind it now and then, and grows a little lighter
+      if(d.moved > d.r*(0.7 + Math.random()*1.4)){ d.moved=0;
+        const rt=d.r*(0.12 + Math.random()*0.22); TRAIL.push({ x:ox + (Math.random()-0.5)*d.r*0.4, y:oy - d.r*0.5, r:rt });
+        d.r=Math.sqrt(Math.max(d.r*d.r*0.5, d.r*d.r - rt*rt*1.4)); }
+      // it sweeps up the fine droplets in its way…
+      nearS(d.x, d.y, d.r*1.2, j=>{ const s2=ST[j]; if(!s2.alive) return; if(Math.hypot(s2.x-d.x, s2.y-d.y) < d.r + s2.r){ s2.alive=false; d.r=Math.sqrt(d.r*d.r + s2.r*s2.r*0.8); } });
+      // …and runs into other drops: the two become one, where the larger was
+      near(d.x, d.y, d.r*2.4, j=>{ if(j===i) return; const e=D[j]; if(!e.alive) return;
+        if(Math.hypot(e.x-d.x, e.y-d.y) < (d.r + e.r)*0.82){
+          const big=d.r>=e.r ? d : e, sml=big===d ? e : d, m1=big.r*big.r, m2=sml.r*sml.r;
+          big.x=(big.x*m1 + sml.x*m2)/(m1+m2); big.y=(big.y*m1 + sml.y*m2)/(m1+m2);
+          big.r=Math.sqrt(m1+m2); big.vy=Math.max(big.vy, sml.vy); big.stuck=false; sml.alive=false; } });
+      if(d.y - d.r > wh*1.02) d.alive=false;              // off the bottom of the pane
+    }
+  }
+  // the wiped paths, as a mask (a runner leaves the glass wet and clear)
+  const WIPE=new Uint8Array(N);
+  for(const [x0,y0,x1,y1,wd] of PATHS){
+    const L2=Math.hypot(x1-x0, y1-y0), n=Math.max(1, Math.ceil(L2)), rad=wd*0.5;
+    for(let k=0;k<=n;k++){ const cx=x0+(x1-x0)*k/n, cy=y0+(y1-y0)*k/n;
+      const xa=Math.max(0,Math.floor(cx-rad)), xb=Math.min(ww-1,Math.ceil(cx+rad)), ya=Math.max(0,Math.floor(cy-rad)), yb=Math.min(wh-1,Math.ceil(cy+rad));
+      for(let y=ya;y<=yb;y++) for(let x=xa;x<=xb;x++) if((x-cx)*(x-cx)+(y-cy)*(y-cy) <= rad*rad) WIPE[y*ww+x]=1; }
+  }
+  // METABALLS: each drop a field that reaches past its rim, so drops close
+  // together join; the surface is where the field passes its threshold, and
+  // its height grows with the local drop's size. A sliding drop is pulled
+  // long (more so the faster), its head heavy, its tail thin.
+  const F=new Float32Array(N), FR=new Float32Array(N), REACH=1.55, T=Math.pow(1 - 1/(REACH*REACH), 3);
+  const blob=(cx, cy, r, vy, ph)=>{
+    const stretch=1 + Math.min(0.9, vy/(r*0.55+1e-6)*0.9);       // moving: longer
+    const x0=Math.max(0,Math.floor(cx-r*REACH*1.1)), x1=Math.min(ww-1,Math.ceil(cx+r*REACH*1.1));
+    const y0=Math.max(0,Math.floor(cy-r*REACH*stretch*1.2)), y1=Math.min(wh-1,Math.ceil(cy+r*REACH*1.15));
     for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
-      const dx=x-cx, dy=(y-cy)/((y-cy) > 0 ? sag : 1), a=Math.atan2(dy,dx);
-      const edge=r*(1 + 0.09*Math.sin(a*3+ph1) + 0.05*Math.sin(a*5+ph2));
-      const q=Math.hypot(dx,dy)/edge; if(q>=1) continue;
-      const hgt=r*0.5*Math.pow(1-q*q, 0.55), i=y*ww+x;
-      if(hgt>H[i]) H[i]=hgt;
+      const dx=x-cx, dyr=y-cy;
+      // above the centre (the tail) it reaches further when sliding; below, a heavier, rounder head
+      const dy=dyr<0 ? dyr/stretch : dyr/(1 + 0.12*Math.min(1, r/(unit*0.02)));
+      const a=Math.atan2(dy,dx), wob=1 + 0.07*Math.sin(a*3+ph) + 0.04*Math.sin(a*5+ph*1.7);
+      const q=Math.hypot(dx,dy)/(r*REACH*wob); if(q>=1) continue;
+      const g=Math.pow(1-q*q, 3), i=y*ww+x; F[i]+=g; FR[i]+=g*r;
     }
   };
-  // condensation: a mist of the smallest droplets
+  for(const d of D) if(d.alive) blob(d.x, d.y, d.r, d.vy, d.wob);
+  for(const t of TRAIL) blob(t.x, t.y, t.r, 0, t.x*0.37);
+  for(const o of ST) if(o.alive) blob(o.x, o.y, o.r, 0, o.y*0.29);
+  for(let i=0;i<N;i++){ const f=F[i]; if(f<=T) continue; const rl=FR[i]/f; H[i]=rl*0.5*Math.pow(Math.min(1,(f-T)/(1-T)), 0.55); }
+  // condensation: a mist of the very smallest droplets — gone where a runner wiped the glass
   const fine=Math.round(canonArea(w,h)/1800*mist/(div*div));
-  for(let k=0;k<fine;k++) drop(Math.random()*ww, Math.random()*wh, Math.max(0.6, unit*(0.0012+Math.random()*0.0025)));
-  // drops, from many tiny to a few large; some run, leaving a cleared wet trail
-  const TRAILS=[];
-  const n=Math.round((90+Math.random()*40)*amt);
-  for(let k=0;k<n;k++){
-    const r=unit*(0.003 + 0.042*Math.pow(Math.random(), 3))*zoom, x=Math.random()*ww, y=Math.random()*wh;
-    if(r > unit*0.012 && Math.random()<0.5){
-      const len=r*(5+Math.random()*14), wob=Math.random()*6.28;
-      TRAILS.push({ x, y, len, wob, r });
-      for(let t=0;t<len;t+=Math.max(0.7, r*0.15)){
-        const tx=x+Math.sin(t/(r*4)+wob)*r*0.18, ty=y-t, rr=r*0.16*(1 - t/len*0.5);   // a trail wanders slowly, not in a zigzag
-        drop(tx, ty, Math.max(0.6, rr));
-        if(Math.random()<0.03) drop(tx + (Math.random()-0.5)*r*0.5, ty, r*(0.12+Math.random()*0.18));
-      }
-    }
-    drop(x, y, Math.max(0.6, r));
+  for(let k=0;k<fine;k++){
+    const cx=Math.random()*ww, cy=Math.random()*wh, r=Math.max(0.6, unit*(0.0012+Math.random()*0.0025));
+    const ci=Math.min(wh-1,Math.floor(cy))*ww+Math.min(ww-1,Math.floor(cx)); if(WIPE[ci]) continue;
+    const x0=Math.max(0,Math.floor(cx-r)), x1=Math.min(ww-1,Math.ceil(cx+r)), y0=Math.max(0,Math.floor(cy-r)), y1=Math.min(wh-1,Math.ceil(cy+r));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const q=Math.hypot(x-cx,y-cy)/r; if(q>=1) continue; const hgt=r*0.5*Math.pow(1-q*q,0.55), i=y*ww+x; if(hgt>H[i]) H[i]=hgt; }
   }
   // THE OUTDOORS behind the glass, made from the page's own colours: a sky
   // (its first colours, lightened), a horizon, a dark band of land with a
@@ -771,7 +840,7 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
     const i=y*ww+x, q=i*4, hv=H[i];
     if(hv<=0){
       // dry glass: clear, or fogged by condensation
-      d[q]=fog.r; d[q+1]=fog.g; d[q+2]=fog.b; d[q+3]=Math.round(255*mist*0.28); continue;
+      d[q]=fog.r; d[q+1]=fog.g; d[q+2]=fog.b; d[q+3]=WIPE[i] ? 0 : Math.round(255*mist*0.28); continue;
     }
     const gx=(H[y*ww+Math.min(ww-1,x+1)]-H[y*ww+Math.max(0,x-1)])*0.5, gy=(H[Math.min(wh-1,y+1)*ww+x]-H[Math.max(0,y-1)*ww+x])*0.5;
     // a drop sees wide: whatever its height on the glass it looks out at
@@ -797,16 +866,7 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
   }
   // runners clear the fog where they went: a wet, clear trail
   sctx.putImageData(img,0,0);
-  if(mist>0.02){
-    sctx.save(); sctx.globalCompositeOperation='destination-out';
-    for(const t of TRAILS){ sctx.strokeStyle='rgba(0,0,0,0.9)'; sctx.lineWidth=t.r*0.9; sctx.lineCap='round'; sctx.beginPath();
-      for(let s=0;s<t.len;s+=Math.max(1,t.r*0.3)){ const tx=t.x+Math.sin(s/(t.r*4)+t.wob)*t.r*0.18, ty=t.y-s; s?sctx.lineTo(tx,ty):sctx.moveTo(tx,ty); } sctx.stroke(); }
-    sctx.restore();
-    // (and the drops sitting on those trails are drawn again over them)
-    const img2=sctx.getImageData(0,0,ww,wh), d2=img2.data;
-    for(let i=0;i<N;i++) if(H[i]>0){ const q=i*4; d2[q]=d[q]; d2[q+1]=d[q+1]; d2[q+2]=d[q+2]; d2[q+3]=d[q+3]; }
-    sctx.putImageData(img2,0,0);
-  }
+  // (the runners' paths were wiped clear of fog: see WIPE, in the dry-glass branch above)
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
   return c;
@@ -1475,6 +1535,7 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
  *   CURL     each flake lifts at its ends like a drying leaf, so the dial
  *            lights one side, shades the other and throws a soft shadow
  *   SOOT     fine dust, and a faint smudge where each flake came to rest
+ *   PILES    soft mounds of powder where it fell thickest, flakes gathered on them
  *   EMBERS   some flakes still alight along their edge (Ember Hue)
  * FLAKE SIZE · ASHFALL · CHAR (pale ash → black char) · EMBERS
  */
@@ -1487,12 +1548,43 @@ export function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
   const A=new Float32Array(N), C=new Float32Array(N), H=new Float32Array(N), E=new Float32Array(N), S=new Float32Array(N);
   const jag=fbmSampler(18, 3), lace=fbmSampler(7, 3), dust=fbmSampler(5, 2), crack=fbmSampler(3, 2);
-  const n=Math.max(4, Math.round(canonArea(w,h)/(3072*3072)*46*amt));
+  const n=Math.max(6, Math.round(canonArea(w,h)/(3072*3072)*110*amt));
   const sm=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
+  // PILES: where the ash came down thickest it heaps — a soft mound of grey
+  // powder, speckled with black crumbs, its foot feathering out into loose
+  // grains; lit, so it throws a shadow. Flakes gather on and around them.
+  const P=new Float32Array(N), PT=new Float32Array(N), grit=fbmSampler(48, 2), PILES=[];
+  const nP=Math.max(2, Math.round((2 + Math.random()*2.2)*Math.sqrt(amt)));
+  for(let p=0;p<nP;p++){
+    const Rp=unit*(0.08 + Math.random()*0.12)*zoom, pcx=Math.random()*ww, pcy=Math.random()*wh, hp=Rp*(0.22 + Math.random()*0.14), pox=Math.random()*9, poy=Math.random()*9;
+    PILES.push({ x:pcx, y:pcy, R:Rp });
+    const NA=128, PR=new Float32Array(NA);
+    const lobes=[2,3,4,5].map(k2=>({ k:k2, a:0.05+Math.random()*0.08, p:Math.random()*6.28 }));
+    for(let j=0;j<NA;j++){ const a=j/(NA-1)*2*Math.PI-Math.PI; let v=0.9; for(const L2 of lobes) v+=L2.a*Math.sin(a*L2.k+L2.p); PR[j]=v; }   // a lobed heap, no spikes
+    const pad=Rp*1.5, x0=Math.max(0,Math.floor(pcx-pad)), x1=Math.min(ww-1,Math.ceil(pcx+pad)), y0=Math.max(0,Math.floor(pcy-pad)), y1=Math.min(wh-1,Math.ceil(pcy+pad));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+      const dx=x-pcx, dy=y-pcy, a=Math.atan2(dy,dx), r=Math.hypot(dx,dy)/(Rp*PR[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))]);
+      if(r>=1.25) continue;
+      const k=y*ww+x, g=grit(x/ww, y/wh), body=r<1 ? Math.pow(1-r*r, 1.6) : 0;
+      // the foot: loose grains, thinning out past the mound's edge
+      // (grain by position, not by draw: the same at any size, and the seed's other draws stay put)
+      const hx=Math.floor(x*div*0.5), hy=Math.floor(y*div*0.5), hr=((Math.imul(hx*374761393 + hy*668265263 + p*1013904223, 1274126177) >>> 0) % 10007)/10007, hr2=((Math.imul(hy*2654435761 + hx*40503 + p*97, 2246822519) >>> 0) % 9973)/9973;
+      const cov=r<0.9 ? 1 : (hr < sm(1.25, 0.88, r)*(0.6 + 0.6*g) ? 1 : 0);
+      if(cov<=P[k]) continue;
+      P[k]=cov; H[k]=Math.max(H[k], hp*body*(0.85 + 0.3*g));
+      PT[k]=Math.max(0, Math.min(1, 0.06 + charK*0.22 + (g-0.5)*0.8 + (hr2-0.5)*0.4 + (hr2<0.06 ? 0.6 : 0)));   // powdery, speckled, crumbs of char
+    }
+  }
+  const PH=H.slice();               // the piles' own heights (flakes settle on them)
   for(let f=0; f<n; f++){
-    // size: many small, a few large
-    const R=unit*0.028*zoom*(0.35 + 2.2*Math.pow(Math.random(), 2.6)), e=0.55+Math.random()*0.45, th=Math.random()*Math.PI;
-    const cx=Math.random()*ww, cy=Math.random()*wh, co=Math.cos(th), si=Math.sin(th);
+    // size: many small, some large (a few very large), as ash falls
+    const big=Math.random();
+    const R=unit*0.028*zoom*(big<0.15 ? 1.4 + Math.random()*1.3 : 0.28 + 1.1*Math.pow(Math.random(), 1.6)), e=0.55+Math.random()*0.45, th=Math.random()*Math.PI;
+    // nearly half gather on and around the piles
+    let cx=Math.random()*ww, cy=Math.random()*wh;
+    if(PILES.length && Math.random()<0.3){ const pl=PILES[Math.floor(Math.random()*PILES.length)], ga=Math.random()*6.28, gr=pl.R*1.1*Math.sqrt(-2*Math.log(1-Math.random()*0.999))*0.6;
+      cx=pl.x + Math.cos(ga)*gr; cy=pl.y + Math.sin(ga)*gr; }
+    const co=Math.cos(th), si=Math.sin(th);
     const m=Math.max(0, Math.min(1, charK + (Math.random()-0.5)*0.7));        // this flake's char
     const curl=0.3+Math.random()*0.9, lit=Math.random()<emb, ox=Math.random()*9, oy=Math.random()*9;
     const harm=[2,3,5].map(k=>({ k, a:(0.05+Math.random()*0.1)/k*2, p:Math.random()*6.28 }));
@@ -1502,6 +1594,9 @@ export function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,
     for(let j=0;j<NA;j++){ const a=j/(NA-1)*2*Math.PI-Math.PI; let Rw=1+(jag(ox+Math.cos(a)*q, oy+Math.sin(a)*q)-0.5)*0.42;
       for(const hm of harm) Rw+=hm.a*Math.sin(a*hm.k+hm.p);
       RIM[j]=Math.max(0.3, Rw); FIRE[j]=sm(0.35, 0.7, jag(ox+Math.cos(a)*q*2.5, oy+Math.sin(a)*q*2.5)); }
+    // a smoothed rim for the shading inside (the jagged one cut fan-shaped rays into it)
+    const RIMS=new Float32Array(NA);
+    for(let j=0;j<NA;j++){ let t=0; for(let d=-12;d<=12;d++) t+=RIM[(j+d+NA)%NA]; RIMS[j]=t/25; }
     const pad=R*1.6, x0=Math.max(0,Math.floor(cx-pad)), x1=Math.min(ww-1,Math.ceil(cx+pad)), y0=Math.max(0,Math.floor(cy-pad)), y1=Math.min(wh-1,Math.ceil(cy+pad));
     for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
       const dx=x-cx, dy=y-cy, u=(dx*co+dy*si)/R, v=(-dx*si+dy*co)/(R*e), r=Math.hypot(u,v);
@@ -1521,17 +1616,18 @@ export function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,
       if(crk && s<0.93) continue;
       // the palest ash is eaten into lace
       if(lace(ox+u*0.5, oy+v*0.5) > 0.78 - (1-m)*0.18 && s>0.25) continue;
-      const t=m*(1-0.8*sm(0.5, 0.98, s));                 // black heart → pale rim
+      const sIn=r/RIMS[Math.round((a+Math.PI)/(2*Math.PI)*(NA-1))];
+      const t=m*(1-0.8*sm(0.5, 0.98, Math.min(s, sIn*0.98)));   // black heart → pale rim
       const hh=unit*0.0015 + curl*u*u*R*0.11 + brk*unit*0.0012;
       const edge=Math.min(1, (1-s)*R*0.8);
-      H[k]=(A[k]>0.5 ? H[k]*0.5 : 0) + hh;
+      H[k]=(A[k]>0.5 ? Math.max(PH[k], H[k]*0.5) : PH[k]) + hh;     // on another flake, or on a pile
       C[k]=t; A[k]=Math.max(A[k], edge);
       if(lit){ E[k]=Math.max(E[k], Math.exp(-(((s-0.93)/0.07)**2))*fire); }
       else E[k]*=1-edge;
     }
   }
   // soot: fine dust, thicker in drifts
-  const specks=Math.round(N*0.004*amt);
+  const specks=Math.round(canonArea(w,h)/(div*div)*0.004*amt*(div*div)/4);   // (a canonical count: the same dust at any size)
   for(let i=0;i<specks;i++){ const x=Math.floor(Math.random()*ww), y=Math.floor(Math.random()*wh), k=y*ww+x;
     if(Math.random() < dust(x/ww, y/wh)*1.6-0.2) S[k]=Math.min(1, S[k]+0.35+Math.random()*0.5); }
   const L=lightSparse(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.55, ao:0.3, ambient:0.45 });   // flakes on open ground: only their tiles
@@ -1539,10 +1635,176 @@ export function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,
     const k=litK(L, i, 0.45, null, 0)/L.flat, a=A[i], t=C[i], s=S[i], sheen=L.spec[i]*t*70;   // char has a dull silver sheen
     const out=[0,0,0];
     for(let c=0;c<3;c++){
-      const ground=128*(1-s*0.55)*Math.min(1.1, k);
+      let ground=128*(1-s*0.55)*Math.min(1.1, k);
+      // the powder of a pile: pale ash speckled toward char, lit as a mound
+      if(P[i]>0){ const powder=(ASH[c]*0.88 + (CHAR[c]-ASH[c]*0.88)*PT[i])*litK(L, i, 0.45, M3, c)/L.flat; ground += (powder-ground)*P[i]; }
       const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c);
       const e=E[i], glow=e>0 ? (EM[c]+(HOT[c]-EM[c])*e*e)*e : 0;
       out[c]=clamp255(ground+(flake-ground)*a + glow*1.1);
+    }
+    return out;
+  });
+}
+
+// Overnight the window
+// grew a garden out of breath —
+// ferns that never were.
+/**
+ * Hoarfrost — frost ferns across a pane, grown the way branching things grow
+ * toward the room they have (space colonisation, after Runions et al.'s
+ * venation and tree models; the look after diffusion-limited growth, as Paul
+ * Bourke draws it): seeds along the frame and a few specks in the open; each
+ * crystal keeps its own hexagonal axes, so its branches turn by sixties;
+ * trunks thicken with what they carry; twigs feather into needles at 60°. A
+ * matte rime gathers toward the edges. Lit by the dial: ice glints.
+ * CRYSTAL SIZE · FROST · FEATHERING · RIME
+ */
+export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const feather=Math.max(0,Math.min(1, form==null?0.55:form)), rm=Math.max(0,Math.min(1, rime==null?0.3:rime));
+  const ice=parseHex(tint||'#EAF4FF'), ICE=[ice.r, ice.g, ice.b];
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const step=unit*0.0055*zoom, Ri=unit*0.085*zoom, Kr=unit*0.013*zoom;
+  const edgeD=(x,y)=>Math.min(x, ww-x, y, wh-y)/unit;            // 0 at the frame
+  const patch=fbmSampler(4, 2);
+  // the room to grow into: denser toward the frame, in drifts
+  const area=(ww*wh)/(unit*unit), nA=Math.round(2200*Math.min(2.5, amt)*area/(zoom*zoom)*0.6 + 300);
+  const AT=[];
+  for(let tries=0; AT.length<nA && tries<nA*12; tries++){
+    const x=Math.random()*ww, y=Math.random()*wh;
+    const p=(0.12 + 0.88*Math.exp(-edgeD(x,y)/(0.12 + 0.25*Math.min(1.5, amt))))*(0.4 + 0.9*patch(x/ww, y/wh));
+    if(Math.random()<p) AT.push({ x, y, alive:true });
+  }
+  // the seeds: along the frame (pointing in) and a few specks in the open
+  const NODES=[];   // x, y, dx, dy, parent, axis (the crystal's own rotation)
+  const addNode=(x,y,dx,dy,parent,axis)=>{ NODES.push({ x, y, dx, dy, parent, axis, kids:0 }); return NODES.length-1; };
+  const nEdge=Math.round(8 + 10*Math.min(2, amt)), nIn=Math.round(2 + 4*Math.min(2, amt)*Math.random());
+  for(let s=0;s<nEdge;s++){
+    const side=Math.floor(Math.random()*4), t=Math.random();
+    const [x,y,dx,dy]= side===0 ? [t*ww, 0.5, 0, 1] : side===1 ? [ww-0.5, t*wh, -1, 0] : side===2 ? [t*ww, wh-0.5, 0, -1] : [0.5, t*wh, 1, 0];
+    addNode(x, y, dx, dy, -1, Math.random()*Math.PI/3);
+  }
+  for(let s=0;s<nIn;s++){ const a=Math.random()*6.28; addNode(Math.random()*ww, Math.random()*wh, Math.cos(a), Math.sin(a), -1, Math.random()*Math.PI/3); }
+  // a grid of nodes, so each attractor finds its nearest quickly
+  const CELL=Ri, gcol=Math.ceil(ww/CELL)+1, grow=Math.ceil(wh/CELL)+1, NG=Array.from({ length: gcol*grow }, () => []);
+  const cellOf=(x,y)=>Math.max(0,Math.min(grow-1,Math.floor(y/CELL)))*gcol + Math.max(0,Math.min(gcol-1,Math.floor(x/CELL)));
+  NODES.forEach((nd,i)=>NG[cellOf(nd.x,nd.y)].push(i));
+  const SUMX=[], SUMY=[], CNT=[];
+  for(let it=0; it<420; it++){
+    SUMX.length=SUMY.length=CNT.length=0;
+    let any=false;
+    for(const a of AT){ if(!a.alive) continue;
+      const cx=Math.floor(a.x/CELL), cy=Math.floor(a.y/CELL); let best=-1, bd=Ri*Ri;
+      for(let yy=cy-1;yy<=cy+1;yy++) for(let xx=cx-1;xx<=cx+1;xx++){ if(xx<0||yy<0||xx>=gcol||yy>=grow) continue;
+        for(const i of NG[yy*gcol+xx]){ const nd=NODES[i], dd=(nd.x-a.x)**2+(nd.y-a.y)**2; if(dd<bd){ bd=dd; best=i; } } }
+      if(best<0) continue;
+      const nd=NODES[best], l=Math.sqrt(bd)||1;
+      SUMX[best]=(SUMX[best]||0)+(a.x-nd.x)/l; SUMY[best]=(SUMY[best]||0)+(a.y-nd.y)/l; CNT[best]=(CNT[best]||0)+1; any=true;
+    }
+    if(!any) break;
+    const born=[];
+    for(let i=0;i<SUMX.length;i++){ if(!CNT[i]) continue;
+      const nd=NODES[i]; let dx=SUMX[i]/CNT[i]*0.6 + nd.dx*0.4, dy=SUMY[i]/CNT[i]*0.6 + nd.dy*0.4; const l=Math.hypot(dx,dy)||1; dx/=l; dy/=l;
+      // ice turns by sixties: pulled toward the nearest of its crystal's six axes
+      const a=Math.atan2(dy,dx), k=Math.round((a-nd.axis)/(Math.PI/3)), sa=nd.axis + k*Math.PI/3;
+      const wob=(Math.random()-0.5)*0.22;
+      const fx=Math.cos(sa+wob)*0.58 + dx*0.42, fy=Math.sin(sa+wob)*0.58 + dy*0.42, fl=Math.hypot(fx,fy)||1;
+      const nx=nd.x + fx/fl*step, ny=nd.y + fy/fl*step;
+      if(nx<0||ny<0||nx>=ww||ny>=wh) continue;
+      born.push(addNode(nx, ny, fx/fl, fy/fl, i, nd.axis));
+    }
+    for(const j of born){ const nd=NODES[j]; NG[cellOf(nd.x,nd.y)].push(j);
+      // what it reached is used up
+      for(const a of AT) if(a.alive && Math.abs(a.x-nd.x)<Kr && Math.abs(a.y-nd.y)<Kr && (a.x-nd.x)**2+(a.y-nd.y)**2<Kr*Kr) a.alive=false; }
+    if(!born.length) break;
+  }
+  // trunks carry their branches: thickness from what grows beyond them
+  for(let i=NODES.length-1;i>=0;i--){ const p=NODES[i].parent; if(p>=0) NODES[p].kids+=NODES[i].kids+1; }
+  // drawn as heights: the ferns (white on black), then read back
+  const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh;
+  const cx2=cv.getContext('2d', CPU); cx2.fillStyle='#000'; cx2.fillRect(0,0,ww,wh);
+  cx2.lineCap='round'; cx2.strokeStyle='#fff';
+  const tw=Math.max(0.35, unit*0.0011*zoom);
+  for(let i=0;i<NODES.length;i++){ const nd=NODES[i]; if(nd.parent<0) continue; const p=NODES[nd.parent];
+    cx2.globalAlpha=Math.min(1, 0.6 + 0.08*Math.log(1+nd.kids));
+    cx2.lineWidth=tw*Math.pow(1+nd.kids, 0.2); cx2.beginPath(); cx2.moveTo(p.x,p.y); cx2.lineTo(nd.x,nd.y); cx2.stroke();
+    // FEATHERS: every stem is a frond — needles at sixty degrees on both
+    // sides, longest where the stem is old, each with a few barbs of its own
+    if(Math.random()<0.35 + 0.6*feather){
+      const ln=step*(1.2 + 4.2*feather)*(0.45 + 0.55*Math.random())*Math.min(1.6, 0.55 + 0.12*Math.log(2 + nd.kids));
+      const base=Math.atan2(nd.dy, nd.dx);
+      for(const sgn of [-1, 1]){ if(Math.random()<0.15) continue; const a=base + sgn*Math.PI/3, ex=nd.x+Math.cos(a)*ln, ey=nd.y+Math.sin(a)*ln;
+        cx2.globalAlpha=0.6; cx2.lineWidth=tw*0.6; cx2.beginPath(); cx2.moveTo(nd.x,nd.y); cx2.lineTo(ex, ey); cx2.stroke();
+        if(feather>0.4 && ln>step*2){ for(let b=0.35;b<0.95;b+=0.3){ const bx=nd.x+Math.cos(a)*ln*b, by=nd.y+Math.sin(a)*ln*b, bl=ln*0.28*(1-b);
+          for(const s2 of [-1, 1]){ const a2=a + s2*Math.PI/3; cx2.globalAlpha=0.45; cx2.lineWidth=tw*0.45; cx2.beginPath(); cx2.moveTo(bx,by); cx2.lineTo(bx+Math.cos(a2)*bl, by+Math.sin(a2)*bl); cx2.stroke(); } } }
+      }
+    }
+  }
+  // the rime: a fine matte of crystals, thickest toward the frame
+  const nR=Math.round((ww*wh)/(unit*unit)*1536*1536*0.05*rm*0.25);   // (counted against the pane, not its pixels: the same rime at any size)
+  cx2.fillStyle='#fff';
+  for(let k=0;k<nR;k++){ const x=Math.random()*ww, y=Math.random()*wh; if(Math.random() > Math.exp(-edgeD(x,y)/0.1)*1.2) continue;
+    const rs=unit/1536; cx2.globalAlpha=0.25+Math.random()*0.5; cx2.fillRect(x, y, (0.6+Math.random()*1.4)*rs*1.5, (0.6+Math.random()*1.4)*rs*1.5); }
+  cx2.globalAlpha=1;
+  const px=cx2.getImageData(0,0,ww,wh).data, H=new Float32Array(N), Cv=new Float32Array(N);
+  for(let i=0;i<N;i++){ const v=px[i*4]/255; Cv[i]=v; H[i]=v*unit*0.0035; }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.85, shadow:0.25, ao:0.2, ambient:0.6 });
+  const fs=L.flat ? lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.85, shadow:0, ao:0, ambient:0.6 }).spec[0] : 0;
+  return paintLit(w,h,div,ww,wh, i => {
+    const cov=Cv[i], sp=Math.max(0, L.spec[i]-fs)*cov*255*1.4;
+    const out=[0,0,0];
+    for(let c=0;c<3;c++){
+      const lit=ICE[c]*litK(L, i, 0.6, M3, c)/L.flat;
+      out[c]=clamp255(128 + (lit-128)*cov + sp*litS(M3, c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*cov*0.35 : 0));
+    }
+    return out;
+  });
+}
+
+// Every line a promise
+// kept at one height all the way
+// round the hill and home.
+/**
+ * Contour Map — a survey of an imagined land: a terrain of layered noise,
+ * drawn as CONTOUR LINES (after the marching-squares maps d3-contour makes;
+ * here each line is found per pixel from how far the height is from its
+ * level, measured against the slope, so lines stay one width on steep and
+ * gentle ground alike), every fifth an index line, heavier; with HILLSHADE
+ * beneath — the land lit by the dial, as relief maps are.
+ * TERRAIN SCALE · CONTOUR INTERVAL · HILLSHADE
+ */
+export function genContourMap(w,h,amt,zoom,light,form,M3){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const shade=Math.max(0,Math.min(1, form==null?0.45:form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  // the land: ridges and valleys (ridged noise for crests, broad noise for the masses)
+  const broad=fbmSampler(3, 4), ridge=fbmSampler(5, 3), warp=fbmSampler(3, 2);
+  const sc=1/zoom, H=new Float32Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const u=x/unit*sc, v=y/unit*sc, wu=u + (warp(u*0.5, v*0.5)-0.5)*0.6, wv=v + (warp(v*0.5+3.1, u*0.5+1.7)-0.5)*0.6;
+    const r=1 - Math.abs(ridge(wu*0.6, wv*0.6)*2 - 1);
+    H[y*ww+x]=0.78*broad(wu*0.45, wv*0.45) + 0.22*r*r*r;     // broad masses, a few sharper crests
+  }
+  let hmin=Infinity, hmax=-Infinity; for(let i=0;i<N;i++){ if(H[i]<hmin) hmin=H[i]; if(H[i]>hmax) hmax=H[i]; }
+  for(let i=0;i<N;i++) H[i]=(H[i]-hmin)/Math.max(1e-6, hmax-hmin);
+  // the interval: how many levels from the lowest ground to the highest
+  const levels=Math.max(5, Math.round(20*amt)), lw=Math.max(0.5, unit*0.0011), lwIdx=lw*2.1;
+  const LN=new Float32Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const i=y*ww+x, v=H[i]*levels;
+    const gx=(H[y*ww+Math.min(ww-1,x+1)] - H[y*ww+Math.max(0,x-1)])*0.5*levels, gy=(H[Math.min(wh-1,y+1)*ww+x] - H[Math.max(0,y-1)*ww+x])*0.5*levels;
+    const g=Math.max(1e-4, Math.hypot(gx, gy)), f=v - Math.floor(v), dist=Math.min(f, 1-f)/g;     // in pixels, to the nearest level
+    const k=Math.round(v), idx=k % 5 === 0, half=(idx ? lwIdx : lw)*0.5;
+    LN[i]=Math.max(0, Math.min(1, half + 0.5 - dist))*(idx ? 1 : 0.8);
+  }
+  // hillshade: the land lit by the dial (its heights scaled to the map's size)
+  const HH=new Float32Array(N); for(let i=0;i<N;i++) HH[i]=H[i]*unit*0.06;
+  const L=lightHeights(HH, ww, wh, { light, relief:1, gloss:0.05, shadow:0.35, ao:0.15, ambient:0.45 });
+  return paintLit(w,h,div,ww,wh, i => {
+    const k=L.light[i]/L.flat, out=[0,0,0];
+    for(let c=0;c<3;c++){
+      const hill=128 + (128*litK(L, i, 0.45, M3, c)/L.flat - 128)*shade;
+      out[c]=clamp255(hill - LN[i]*(hill - 34)*0.9);
     }
     return out;
   });

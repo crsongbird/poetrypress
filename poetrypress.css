@@ -1715,3 +1715,70 @@ body:not(.is-mobile) .tab-btn{ font-family:var(--ui-display); font-variation-set
 /* the desktop preview, zoomed in: a hand to drag it by */
 body:not(.is-mobile) .canvas-wrap.zoomed #poemCanvas{ cursor:grab; }
 body:not(.is-mobile) .canvas-wrap.zoomed #poemCanvas:active{ cursor:grabbing; }
+
+/* the history filmstrip: the last eight looks, inside the preview, above its buttons */
+#filmBtn{ left:130px; }
+body.is-mobile #filmBtn{ left:154px; }
+.filmstrip{ position:absolute; left:7px; right:7px; bottom:40px; z-index:44; display:none; gap:4px; overflow-x:auto; scrollbar-width:none; line-height:0; }
+.filmstrip::-webkit-scrollbar{ display:none; }
+.canvas-wrap.film-open .filmstrip{ display:flex; }
+body.is-mobile .filmstrip{ bottom:46px; }
+.film-frame{ flex:0 0 auto; padding:0; border:1px solid rgba(190,196,208,0.35); border-radius:0; background:rgba(18,20,26,0.55); cursor:pointer; opacity:0.72; }
+.film-frame:hover{ opacity:1; }
+.film-frame.current{ border-color:var(--accent); opacity:1; box-shadow:0 0 0 1px var(--accent); }
+.film-frame canvas{ display:block; width:72px; height:40px; }
+body.is-mobile .film-frame canvas{ width:60px; height:34px; }
+.canvas-wrap.film-open #filmBtn{ opacity:1; color:var(--accent); }
+
+/* the shortcut sheet (desktop): ? opens it */
+.shortcut-btn{ margin-right:10px; border:1px solid var(--border, rgba(255,255,255,0.2)); border-radius:0; background:transparent; color:inherit; font:inherit; font-size:12.5px; padding:2px 8px; cursor:pointer; opacity:0.6; }
+.shortcut-btn:hover{ opacity:1; }
+body.is-mobile .shortcut-btn{ display:none; }
+.sheet-veil{ position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; }
+.sheet-veil[hidden]{ display:none; }
+.sheet{ background:var(--bg-panel, #17141c); color:var(--text-main, #eee); border:1px solid var(--accent); border-radius:0; padding:16px 20px; max-width:min(560px, 92vw); max-height:calc(var(--vvh, 100vh) * 0.86); overflow:auto; box-shadow:0 18px 50px -20px rgba(0,0,0,0.8); }
+.sheet-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:18px; letter-spacing:0.04em; margin-bottom:10px; color:var(--accent); }
+.keys{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:13px; }
+.keys dt{ white-space:nowrap; opacity:0.9; }
+.keys dd{ margin:0; opacity:0.85; }
+kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; border-radius:0; padding:0 5px; opacity:0.85; }
+
+/* THE ATHANOR: the node editor, over the whole app */
+.forge-veil{ position:fixed; inset:0; z-index:180; background:var(--bg-main, #0f0d14); display:flex; flex-direction:column; }
+.forge-veil[hidden]{ display:none; }
+.forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--line); background:var(--bg-panel); }
+.forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
+.forge-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; color:var(--accent); letter-spacing:0.03em; white-space:nowrap; }
+.forge-status{ flex:1; font-size:12.5px; opacity:0.75; padding-left:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.forge-body{ flex:1; display:flex; min-height:0; }
+.forge-palette{ width:170px; overflow-y:auto; border-right:1px solid var(--line); padding:6px; background:var(--bg-panel); }
+body.is-mobile .forge-body{ flex-direction:column-reverse; }
+body.is-mobile .forge-palette{ width:auto; height:30%; border-right:none; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; align-content:flex-start; gap:4px; }
+.forge-cat{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); margin:8px 0 4px; width:100%; }
+.forge-part{ display:block; width:100%; text-align:left; border:1px solid var(--line); border-radius:0; background:var(--bg-panel-2); color:inherit; font:inherit; font-size:12.5px; padding:4px 7px; margin-bottom:3px; cursor:grab; }
+body.is-mobile .forge-part{ width:auto; display:inline-block; }
+.forge-part:hover{ border-color:var(--accent); }
+.forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; background:
+  linear-gradient(var(--line) 1px, transparent 1px) 0 0/24px 24px, linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/24px 24px; }
+.forge-canvas .drawflow .drawflow-node{ border-radius:0; background:var(--bg-panel-2); border:1px solid var(--line); color:var(--text-main); width:180px; padding:6px 8px; font-size:12.5px; box-shadow:0 8px 20px -12px rgba(0,0,0,0.7); }
+.forge-canvas .drawflow .drawflow-node.selected{ border-color:var(--accent); background:var(--bg-panel-2); }
+.forge-canvas .drawflow .drawflow-node .input, .forge-canvas .drawflow .drawflow-node .output{ border-radius:0; width:12px; height:12px; background:var(--bg-panel); border:1px solid var(--accent); }
+.forge-canvas .drawflow .connection .main-path{ stroke:var(--accent); stroke-width:2px; }
+.forge-node-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; margin-bottom:3px; }
+.forge-ports{ display:flex; flex-wrap:wrap; gap:4px; font-family:var(--ui-code); font-size:10.5px; opacity:0.7; }
+.forge-ports.out{ justify-content:flex-end; }
+.forge-ports.in span::before{ content:'▸ '; } .forge-ports.out span::after{ content:' ▸'; }
+.forge-param{ display:grid; grid-template-columns:62px 1fr; gap:4px; align-items:center; margin-top:3px; font-size:11px; }
+.forge-param input, .forge-param select{ width:100%; min-width:0; font-size:11px; border-radius:0; }
+body.forge-open{ overflow:hidden; }
+.forge-summary{ opacity:0.8; }
+
+.forge-sub{ font-family:var(--ui-text); font-variation-settings:normal; font-size:12px; color:var(--text-main); opacity:0.6; letter-spacing:0; margin-left:6px; }
+body.is-mobile .forge-sub{ display:none; }
+
+.forge-thumb{ width:40px; height:40px; border:1px solid var(--line); background:#808080; flex:0 0 auto; image-rendering:auto; }
+body.is-mobile .forge-thumb{ width:32px; height:32px; }
+/* the Crucible's bar on a phone: it wraps, so Done is always in reach */
+body.is-mobile .forge-bar{ flex-wrap:wrap; row-gap:4px; }
+body.is-mobile .forge-status{ flex-basis:100%; order:9; padding-left:0; }
+body.is-mobile .forge-bar button{ padding:4px 9px; }

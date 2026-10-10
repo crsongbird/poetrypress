@@ -952,3 +952,88 @@ export function genGrain(w,h,amt,zoom,form){
   else { draw(KINDS[k], 1); draw(KINDS[k+1], t); }
   return c;
 }
+
+// A lathe once turned
+// for a whole afternoon so
+// no one could copy it.
+/**
+ * Guilloché — the engraved rosettes of banknotes and watch dials, after the
+ * rose engine and the geometric lathe: a field of fine interlaced waves, and
+ * rosettes laid over it, each many copies of one wavy loop, turned a little
+ * each time, so the lines weave into lace. Cut into the plate: drawn as fine
+ * grooves and lit by the dial (light on one wall, shade on the other).
+ * ROSETTE SIZE · LINE DENSITY · LOBES
+ */
+export function genGuilloche(w,h,amt,zoom,light,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const lobeK=Math.max(0,Math.min(1, form==null?0.5:form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh;
+  const x=cv.getContext('2d', CPU); x.fillStyle='#000'; x.fillRect(0,0,ww,wh);
+  x.strokeStyle='#fff'; x.lineCap='round'; x.lineJoin='round';
+  const lw=Math.max(0.55, unit*0.0011);
+  // THE FIELD: interlaced waves across the plate, two families half a period apart
+  const lam=unit*(0.07+0.05*Math.random())*zoom, amp=lam*(0.18+0.12*Math.random()), gap=unit*0.0065/Math.max(0.3, amt)*zoom;
+  const tilt=(Math.random()-0.5)*0.4, ct=Math.cos(tilt), st=Math.sin(tilt);
+  x.globalAlpha=0.55; x.lineWidth=lw*0.85;
+  for(let fam=0; fam<2; fam++){
+    for(let y0=-unit*0.5; y0<wh+unit*0.5; y0+=gap){
+      x.beginPath();
+      for(let px=-unit*0.3; px<=ww+unit*0.3; px+=Math.max(1, lam/24)){
+        const yy=y0 + amp*Math.sin(px/lam*Math.PI*2 + fam*Math.PI + y0/(gap*9));
+        const X=px*ct - (yy-wh/2)*st + 0, Y=wh/2 + px*st + (yy-wh/2)*ct;
+        if(px===-unit*0.3) x.moveTo(X,Y); else x.lineTo(X,Y);
+      }
+      x.stroke();
+    }
+  }
+  // THE ROSETTES: copies of one lobed loop, each turned a little
+  const nR=1 + Math.floor(Math.random()*3);
+  for(let k=0;k<nR;k++){
+    const R=unit*(0.16+0.16*Math.random())*zoom, cx=ww*(0.15+0.7*Math.random()), cy=wh*(0.15+0.7*Math.random());
+    const lobes=Math.round(5 + lobeK*19 + Math.random()*4), lobes2=Math.round(lobes*(1.5+Math.random())), a1=0.17+0.14*Math.random(), a2=0.04+0.05*Math.random()*lobeK;
+    const copies=Math.round((24 + 40*Math.min(2, amt))*(0.7+Math.random()*0.5)), inner=0.42+0.12*Math.random();
+    // a clear ring under each rosette, so it reads over the field
+    x.globalAlpha=1; x.fillStyle='#000'; x.beginPath(); x.arc(cx, cy, R*(1+a1+a2)*1.03, 0, Math.PI*2); x.fill();
+    // the outer band: one lobed loop, its phase stepped round a whole cycle copy
+    // by copy, so the loops cross and weave into a mesh
+    x.globalAlpha=0.9; x.lineWidth=lw;
+    const steps=Math.max(360, lobes*36);
+    for(let j=0;j<copies;j++){
+      const ph=j/copies*Math.PI*2;
+      x.beginPath();
+      for(let s2=0;s2<=steps;s2++){ const t=s2/steps*Math.PI*2;
+        const r=R*(1 + a1*Math.sin(lobes*t + ph) + a2*Math.sin(lobes2*t - ph*2));
+        const X=cx + Math.cos(t)*r, Y=cy + Math.sin(t)*r; if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
+      x.stroke();
+    }
+    // the heart: a spirograph (hypotrochoid) that closes on itself, turned a few times
+    const Rr=R*inner*(1 - a1*0.5), m=[2,3,5,7][Math.floor(Math.random()*4)], nT=Math.max(m+1, Math.round(lobes*0.6)), rr=Rr*m/nT, dd=rr*(0.65+0.3*Math.random());
+    const turns=Math.max(3, Math.round(6 + 10*Math.min(2, amt)*0.5));
+    x.globalAlpha=0.8; x.lineWidth=lw*0.9;
+    for(let j=0;j<turns;j++){
+      const rot=j/turns*Math.PI*2/nT; x.beginPath();
+      const st2=Math.max(600, nT*m*20);
+      for(let s2=0;s2<=st2;s2++){ const t=s2/st2*Math.PI*2*m;
+        const X0=(Rr-rr)*Math.cos(t) + dd*Math.cos((Rr-rr)/rr*t), Y0=(Rr-rr)*Math.sin(t) - dd*Math.sin((Rr-rr)/rr*t);
+        const X=cx + X0*Math.cos(rot) - Y0*Math.sin(rot), Y=cy + X0*Math.sin(rot) + Y0*Math.cos(rot); if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
+      x.stroke();
+    }
+  }
+  x.globalAlpha=1;
+  // engraved: the lines are GROOVES (heights below the plate), lit by the dial
+  const px=x.getImageData(0,0,ww,wh).data, H=new Float32Array(N), C=new Float32Array(N);
+  for(let i=0;i<N;i++){ const v=px[i*4]/255; C[i]=v; H[i]=-v*unit*0.0025; }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.6, shadow:0.3, ao:0.4, ambient:0.5 });
+  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
+  const sx=small.getContext('2d', CPU), im=sx.createImageData(ww,wh), d=im.data;
+  for(let i=0;i<N;i++){
+    // the plate mid-grey; a groove darker, its lit wall catching the light
+    const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+  }
+  sx.putImageData(im,0,0);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const cx2=c.getContext('2d', CPU); cx2.imageSmoothingEnabled=true; cx2.drawImage(small,0,0,w,h);
+  return c;
+}

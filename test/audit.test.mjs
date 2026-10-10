@@ -70,13 +70,18 @@ const ENUM = {
   borderBlend: v => v === 'screen' ? 'overlay' : 'screen',
   borderBloomBlend: v => v === 'color-dodge' ? 'soft-light' : 'color-dodge',
   borderStitch: v => v === 'vine' ? 'hearts' : 'vine',
+  cardStitch: v => v === 'beads' ? 'stars' : 'beads',
+  cardFx: v => v === 'frost' ? 'lens' : 'frost',
+  baseType: v => v === 'linen' ? 'grain' : 'linen',
+  baseBlend: v => v === 'multiply' ? 'screen' : 'multiply',
+  forgeGraph: v => v === '{"drawflow":{"Home":{"data":{}}},"audit":1}' ? '{"drawflow":{"Home":{"data":{}}},"audit":2}' : '{"drawflow":{"Home":{"data":{}}},"audit":1}',
   fx1Type: v => v === 'glow' ? 'outline' : 'glow', fx2Type: v => v === 'bevel' ? 'chromatic' : 'bevel', fx3Type: v => v === 'erosion' ? 'shadow' : 'erosion',
   underAll: v => v === 'wave' ? 'double' : 'wave',
 };
 const SLIDERS = { borderBloom:'42', vignetteAperture:'41', vignetteCx:'12', vignetteCy:'88',
   vignetteNoise:'9', typeEffectStrength:'67', typeEffectAngle:'212', typeEffectDistance:'140',
   typeEffectGrain:'33', bgRadialX:'23', bgRadialY:'71', bgRadialR:'111', borderGrain:'37',
-  borderRadius:'144', cardGradientAngle:'217', cardOpacity:'58', borderGradientAngle:'123',
+  borderRadius:'144', cardRadius:'153', cardFxAmount:'37', cardFxScale:'71', baseOpacity:'61', baseP1:'83', baseP2:'77', cardGradientAngle:'217', cardOpacity:'58', borderGradientAngle:'123',
   textureLightTilt:'63', texP4:'43', texP5:'77', texP6:'31', fx1K1:'23', fx1K2:'61', fx1Angle:'137', fx2K1:'17', fx2K2:'44', fx2Angle:'211', fx3K1:'29', fx3K2:'53', fx3Angle:'301' };
 let hexN = 0;
 const freshHex = () => '#' + (0x1a2b3c + (++hexN) * 0x050709).toString(16).slice(-6);
