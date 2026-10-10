@@ -91,6 +91,7 @@ let colorisReady = false;
 function callColoris(config){
   if(typeof Coloris !== 'function') return;
   try {
+    if(config.instance){ const { instance, ...rest } = config; if(typeof Coloris.setInstance === 'function') Coloris.setInstance(instance, rest); return; }
     Coloris(config);
   } catch(e){
     console.warn('Coloris call failed, continuing without it:', e);
@@ -137,6 +138,9 @@ safeColoris({
   closeLabel: PICKER.done,
   focusInput: !COARSE_POINTER,
 });
+// the lighting hues keep an ALPHA slider: how much of the colour to use, so
+// each effect is optional (a glow at 0% alpha is no glow at all)
+safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex', alpha: true, format: 'hex' });
 
 // ---------- lock state ----------
 // The lock set itself lives in `state.locks` (top of the file). This is the
@@ -146,7 +150,7 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
 ];
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
@@ -309,8 +313,25 @@ function applyPreviewScale(allowDown = true){
   if(!allowDown && !state.ui.fullPreview && S < current - 1e-6) S = current;
   const w = Math.max(1, Math.round(state.page.exportW * S)), h = Math.max(1, Math.round(state.page.exportH * S));
   if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+  // never SHOWN larger than the image it previews: a small custom size is
+  // shown at its own size (in the screen's real pixels), not blown up to fill
+  // the box
+  capPreviewDisplay();
   setRenderScale(w / state.page.exportW);
   scheduleRender();
+}
+function capPreviewDisplay(){
+  if(!canvas || !canvas.style || !state.page.exportW) return;
+  const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+  const capW = state.page.exportW / dpr, capH = state.page.exportH / dpr;
+  // let the layout size it first; only where that is LARGER than the image's
+  // own pixels does the cap take over (it is then the tighter limit anyway)
+  canvas.style.maxWidth = ''; canvas.style.maxHeight = '';
+  const settle = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (f => f());
+  settle(() => {
+    const shown = canvas.clientWidth || 0;
+    if(shown > capW + 0.5){ canvas.style.maxWidth = capW.toFixed(1) + 'px'; canvas.style.maxHeight = capH.toFixed(1) + 'px'; }
+  });
 }
 let previewScaleTimer = null;
 // layout changes (resize, the divider, the keyboard) never step the scale down
@@ -668,6 +689,7 @@ function serializeCurrentSettings(){
     textureTint3: $('textureTint3Hex').value,
     textureTint4: $('textureTint4Hex').value,
     textureTint5: $('textureTint5Hex').value,
+    textureTint6: $('textureTint6Hex').value,
     texP1: $('texP1').value,
     texP2: $('texP2').value,
     texP3: $('texP3').value,
@@ -699,9 +721,26 @@ function serializeCurrentSettings(){
   };
 }
 
+/** A look made with a texture that has since been retired, as its successor.
+ *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
+ *  Paper — their knobs translated so the look stays close to what it was. */
+function retireLook(s){
+  if(!s) return s;
+  if(s.textureType === 'whorl') return { ...s, textureType: 'dunes' };
+  if(s.textureType === 'crystalleaf') return { ...s, textureType: 'spangle' };   // same knobs, same metal look
+  // Rorschach's hues were Light/Dark (white, black); now they are Ink and Accent
+  if(s.textureType === 'inkbleed' && /^#?FFFFFF$/i.test(s.textureTint1 || '') && /^#?000000$/i.test(s.textureTint2 || ''))
+    return { ...s, textureTint1: '#141414', textureTint2: '#B0283A' };
+  const n = (v, d) => (v === undefined || v === null || v === '' || isNaN(+v)) ? d : +v;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
+  if(s.textureType === 'foxing')      // Bloom Size, Spot Count, Cockle → Scale, (no folds), Age, Crinkle
+    return { ...s, textureType: 'oldpaper', texP1: n(s.texP1, 100), texP2: 0, texP3: clamp(20 + (n(s.texP2, 100) - 100)*0.08, 10, 60), texP4: clamp(n(s.texP3, 10), 0, 100) };
+  if(s.textureType === 'foldghost')   // Crease Depth, Fold Count, Crumple → Scale, Folds, (clean), Crinkle
+    return { ...s, textureType: 'oldpaper', texP1: n(s.texP1, 100), texP2: clamp(n(s.texP2, 100)*0.35, 5, 100), texP3: 5, texP4: clamp(n(s.texP3, 30), 0, 100) };
+  return s;
+}
 function restoreSettings(s){
-  // a look saved with the retired Zen Garden opens as Dune Ripples
-  if(s && s.textureType === 'whorl') s = { ...s, textureType: 'dunes' };
+  s = retireLook(s);
   if(s.bg1) setColorField('bgColor1Hex', s.bg1);
   $('bgGradientToggle').checked = !!s.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!s.bgGradient);
@@ -769,6 +808,7 @@ function restoreSettings(s){
   setColorField('textureTint4Hex', s.textureTint4 || '#FFFFFF');
   // the fifth hue: its role's "none" unless the look carries one
   setColorField('textureTint5Hex', s.textureTint5 || hue5Default(s.textureType || $('textureType').value));
+  setColorField('textureTint6Hex', s.textureTint6 || '#FFFFFF');
   if(s.texP1 !== undefined) $('texP1').value = s.texP1;
   if(s.texP2 !== undefined) $('texP2').value = s.texP2;
   if(s.texP3 !== undefined) $('texP3').value = s.texP3;
@@ -1113,6 +1153,7 @@ function applyPreset(p){
     setColorField('textureTint3Hex', p.textureTint3 || '#FFFFFF');
     setColorField('textureTint4Hex', p.textureTint4 || '#FFFFFF');
     setColorField('textureTint5Hex', p.textureTint5 || hue5Default(p.textureType || $('textureType').value));
+    setColorField('textureTint6Hex', p.textureTint6 || '#FFFFFF');
     syncLightPad();
     restoreLocked(__locks);
     // a preset changes opacity and seed without anyone touching them
@@ -1145,25 +1186,63 @@ if(typeof document.querySelectorAll === 'function'){
   const panels = Array.from(document.querySelectorAll('.card[data-tab]'));
   const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
   let current = 'write', before = 'write';
+  // On a desktop, Esoterica's cards live in a drawer of their own on the
+  // right, so the panel on the left can stay open (faded) beside them. They
+  // move there the first time it opens; on a phone they never leave.
+  const desktopNow = () => !(document.body && document.body.classList && document.body.classList.contains('is-mobile'))
+    && typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 900px)').matches;
+  let drawer = null;
+  const placeEsoterica = () => {
+    const ctl = document.querySelector && document.querySelector('.controls'), app = document.querySelector && document.querySelector('.app');
+    if(!ctl || !app || typeof document.createElement !== 'function') return;
+    const more = panels.filter(p => p.dataset.tab === 'more');
+    if(desktopNow()){
+      if(!drawer){ drawer = document.createElement('aside'); drawer.className = 'eso-drawer'; drawer.id = 'esoDrawer'; app.appendChild(drawer); }
+      more.forEach(p => { if(p.parentNode !== drawer) drawer.appendChild(p); });
+    } else if(drawer) more.forEach(p => { if(p.parentNode !== ctl) ctl.appendChild(p); });   // a narrowed window: back in the panel
+  };
   function activateTab(name){
     // Esoterica is the options menu: on a desktop it opens as a drawer, and
     // choosing it again closes it, back to whatever was open before
     if(name === 'more' && current === 'more') name = before;
     if(name !== current){ before = current; current = name; }
+    const desk = desktopNow();
+    if(name === 'more') placeEsoterica();
     if(document.body && document.body.classList){
       document.body.classList.toggle('more-open', name === 'more');
       const bar = document.getElementById && document.getElementById('tabBar');
       if(name === 'more' && bar && bar.getBoundingClientRect && document.documentElement.style)
         document.documentElement.style.setProperty('--desk-top', Math.round(bar.getBoundingClientRect().bottom) + 'px');
     }
-    panels.forEach(p => p.classList.toggle('tab-active', p.dataset.tab === name));
+    // (on a desktop the panel that was open stays open beside the drawer)
+    panels.forEach(p => p.classList.toggle('tab-active', p.dataset.tab === name || (desk && name === 'more' && p.dataset.tab === before)));
     tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     // a tab change is a context change; start it from the top
     if(typeof window !== 'undefined' && window.scrollTo) window.scrollTo({top:0, behavior:'instant'});
-    const ctl = document.querySelector && document.querySelector('.controls'); if(ctl) ctl.scrollTop = 0;
+    const ctl = document.querySelector && document.querySelector('.controls'); if(ctl && name !== 'more') ctl.scrollTop = 0;
+    if(drawer && name === 'more') drawer.scrollTop = 0;
   }
   tabBtns.forEach(b => b.addEventListener('click', () => activateTab(b.dataset.tab)));
   activateTab('write');
+  // THE SIDEBAR'S WIDTH: its right edge drags (desktop); remembered in this
+  // browser — it is how the person likes the room, not part of a look
+  const app = document.querySelector && document.querySelector('.app');
+  if(app && typeof document.createElement === 'function' && document.documentElement && document.documentElement.style){
+    const root = document.documentElement, KEY = 'pp.sideWidth';
+    const clampW = (v) => Math.max(320, Math.min(Math.max(320, (window.innerWidth || 1200) - 420), Math.round(v)));
+    const setW = (v) => root.style.setProperty('--side-w', clampW(v) + 'px');
+    try { const saved = +localStorage.getItem(KEY); if(saved) setW(saved); } catch(e){}
+    const grip = document.createElement('div'); grip.className = 'side-resize'; grip.title = 'Drag to resize · double-click to reset';
+    grip.setAttribute('role', 'separator'); grip.setAttribute('aria-orientation', 'vertical');
+    app.appendChild(grip);
+    let dragging = false;
+    grip.addEventListener('pointerdown', (e) => { dragging = true; document.body.classList.add('side-dragging'); try { grip.setPointerCapture(e.pointerId); } catch(_){} e.preventDefault(); });
+    grip.addEventListener('pointermove', (e) => { if(dragging) setW(e.clientX); });
+    const end = () => { if(!dragging) return; dragging = false; document.body.classList.remove('side-dragging');
+      try { localStorage.setItem(KEY, String(parseInt(getComputedStyle(root).getPropertyValue('--side-w')) || 460)); } catch(_){} };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+    grip.addEventListener('dblclick', () => { root.style.removeProperty('--side-w'); try { localStorage.removeItem(KEY); } catch(_){} });
+  }
 }
 
 if(detectMobile() && typeof document.querySelectorAll === 'function'){
@@ -1448,7 +1527,9 @@ function syncTextureTools(resetToDefaults){
   if(t2) t2.classList.toggle('tool-off', caps.tints < 2);
   // material hues, for lit textures that are coloured (not the grey ones that blend)
   ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-off', !caps.material); });
-  if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); }
+  if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); setColorField('textureTint6Hex', '#FFFFFF'); }
+  // DIFFUSE, the light's own colour, where nothing else already says it
+  const r6 = $('tint6Row'); if(r6) r6.classList.toggle('tool-off', !caps.diffuse);
   // the fifth hue: Glow, Material or Snow Hue, by what the texture has (or none)
   const r5 = $('tint5Row');
   if(r5){
@@ -1555,6 +1636,7 @@ bindColorField('textureTint2Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tint
 bindColorField('textureTint3Hex', ()=>scheduleRender());
 bindColorField('textureTint4Hex', ()=>scheduleRender());
 bindColorField('textureTint5Hex', ()=>scheduleRender());
+bindColorField('textureTint6Hex', ()=>scheduleRender());
 /** A label's own words, leaving what else lives in it (its padlock) alone —
  *  writing textContent wiped the lock off every hue whose name changes. */
 const textNode = el => (el && el.childNodes && typeof el.childNodes[Symbol.iterator] === 'function') ? [...el.childNodes].find(n => n.nodeType === 3) : null;

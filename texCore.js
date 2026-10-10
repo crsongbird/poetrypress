@@ -546,9 +546,20 @@ export function greyLit(delta, spec, M, c){
   return 128 + (delta < 0 ? delta*Math.max(0, 1 + (1 - M.sh[c])*0.7) : delta) + spec*M.hi[c];
 }
 /** The material from the Highlight and Shade hues — null when both are white (nothing to do). */
-export function materialOf(highlight, shade){
-  if(isWhiteHex(highlight) && isWhiteHex(shade)) return null;
-  return { hi: isWhiteHex(highlight) ? [1, 1, 1] : rgb01(highlight), sh: isWhiteHex(shade) ? [1, 1, 1] : rgb01(shade) };
+export function materialOf(highlight, shade, diffuse){
+  if(isWhiteHex(highlight) && isWhiteHex(shade) && isWhiteHex(diffuse)) return null;
+  return { hi: isWhiteHex(highlight) ? [1, 1, 1] : rgb01(highlight), sh: isWhiteHex(shade) ? [1, 1, 1] : rgb01(shade),
+           di: isWhiteHex(diffuse) ? null : rgb01(diffuse) };
+}
+/** A picker's #RRGGBBAA as the plain colour it amounts to: its alpha is how
+ *  much of it to use, mixed toward that hue's "none" (white for Specular,
+ *  Shadow and Diffuse, black for Glow…). A plain #RRGGBB passes unchanged. */
+export function resolveAlpha(hex, noneHex){
+  if(!hex || typeof hex !== 'string') return hex;
+  const h = hex.replace('#', '');
+  if(h.length !== 8) return hex;
+  const a = parseInt(h.slice(6, 8), 16)/255, c = mixHex('#' + h.slice(0, 6), noneHex, 1 - a);
+  return '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 /** The light reaching pixel i in channel c (0 r, 1 g, 2 b). With no material,
  *  lightHeights' own `light`. With one, the SHADE hue colours what is in
@@ -560,7 +571,9 @@ export function litK(L, i, ambient, M, c){
   if(!M) return k;
   // a shadow half as bright as open ground takes the shade hue fully
   const deep = Math.max(0, Math.min(1, 2*(L.flat - k)/L.flat));
-  return k*(1 + (M.sh[c] - 1)*deep);
+  // DIFFUSE: the light's own colour, on what it reaches (lit faces: not the shadow)
+  const di = M.di ? 1 + (M.di[c] - 1)*Math.min(1, k/L.flat)*(1 - deep) : 1;
+  return k*(1 + (M.sh[c] - 1)*deep)*di;
 }
 /** The highlight's colour in channel c (1 with no material). */
 export function litS(M, c){ return M ? M.hi[c] : 1; }

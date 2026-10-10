@@ -1521,14 +1521,25 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 .ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
 .ld-reset{ position:absolute; right:0; bottom:0; border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:18px; width:34px; height:34px; cursor:pointer; }
 
+/* the sidebar's drag edge exists only in the desktop layout */
+.side-resize{ display:none; }
+
 /* ---------- DESKTOP: a website's shape ----------
    The logo across the top, the navigation under it, the controls on the left
    and the image on the right — one panel at a time, as on a phone. */
 @media (min-width: 900px){
   body:not(.is-mobile) .app{
-  display:grid; grid-template-columns:460px minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr);
+  display:grid; grid-template-columns:var(--side-w, 460px) minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr);
   grid-template-areas:"header header" "nav nav" "controls stage";
 }
+  /* the sidebar's width is the person's: drag its edge (double-click: back to 460) */
+  body:not(.is-mobile) .controls{ min-width:0; width:auto; }
+  body:not(.is-mobile) .side-resize{
+    display:block; grid-area:controls; justify-self:end; align-self:stretch; width:8px; margin-right:-4px; z-index:20; cursor:col-resize;
+    background:transparent; transition:background .15s; touch-action:none;
+  }
+  body:not(.is-mobile) .side-resize:hover, body.side-dragging .side-resize{ background:color-mix(in srgb, var(--accent) 45%, transparent); }
+  body.side-dragging{ cursor:col-resize; user-select:none; }
   body:not(.is-mobile) .app-header{ display:flex; grid-area:header; position:static; justify-content:center; gap:14px; }
   body:not(.is-mobile) .app-header-spacer{ position:absolute; left:16px; }
   body:not(.is-mobile) .tabbar{
@@ -1545,22 +1556,29 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
   body:not(.is-mobile) .tab-btn.active{ color:var(--on-accent, #111); background:var(--accent); border-color:var(--accent); }
   /* Esoterica — the options — sits at the far right and opens as a drawer */
   body:not(.is-mobile) .tab-btn[data-tab="more"]{ margin-inline-start:auto; }
-  body.more-open:not(.is-mobile) .app{ grid-template-areas:"header header" "nav nav" "stage stage"; }
-  body.more-open:not(.is-mobile) .controls{
-    position:fixed; top:var(--desk-top, 92px); right:0; bottom:0; width:460px; z-index:60;
-    background:var(--bg-deep); border-left:1px solid var(--line); box-shadow:-14px 0 34px rgba(0,0,0,.55);
+  /* Esoterica opens as its own drawer on the right; the panel on the left
+     stays where it was, faded back toward the page (Ruby), and the image
+     takes the space between them */
+  body.more-open:not(.is-mobile) .app{
+    grid-template-columns:var(--side-w, 460px) minmax(0,1fr) 440px;
+    grid-template-areas:"header header header" "nav nav nav" "controls stage drawer";
+  }
+  body:not(.is-mobile) .eso-drawer{ display:none; }
+  body.more-open:not(.is-mobile) .eso-drawer{
+    display:block; grid-area:drawer; min-height:0; overflow-y:auto; padding:13px 13px 36px 13px;
+    background:var(--bg-deep); border-left:1px solid var(--line); box-shadow:-14px 0 34px rgba(0,0,0,.45);
     animation:drawerIn .22s ease-out;
   }
-  @keyframes drawerIn{ from{ transform:translateX(100%); } to{ transform:none; } }
-  /* the image centres in the space the drawer leaves */
-  body.more-open:not(.is-mobile) .stage{ padding-right:460px; }
-  body.more-open:not(.is-mobile) #poemCanvas{ max-width:calc(100vw - 520px); }
+  @keyframes drawerIn{ from{ transform:translateX(40px); opacity:0; } to{ transform:none; opacity:1; } }
+  body.more-open:not(.is-mobile) .controls{ opacity:.42; filter:saturate(.55); transition:opacity .2s, filter .2s; }
+  body.more-open:not(.is-mobile) .controls:hover, body.more-open:not(.is-mobile) .controls:focus-within{ opacity:.9; filter:none; }
+  body.more-open:not(.is-mobile) #poemCanvas{ max-width:calc(100vw - var(--side-w, 460px) - 500px); }
   body:not(.is-mobile) .tab-ico{ width:20px; height:20px; }
   body:not(.is-mobile) .controls{ grid-area:controls; width:auto; min-width:0; }
   body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; }
   body:not(.is-mobile) .card[data-tab]{ display:none; }
   body:not(.is-mobile) .card[data-tab].tab-active{ display:block; }
-  body:not(.is-mobile) #poemCanvas{ max-height:calc(var(--vvh, 100vh) - 150px); max-width:calc(100vw - 540px); }
+  body:not(.is-mobile) #poemCanvas{ max-height:calc(var(--vvh, 100vh) - 150px); max-width:calc(100vw - var(--side-w, 460px) - 80px); }
   body:not(.is-mobile) .drag-handle{ display:none; }
 }
 /* on a desktop, Save image sits at the stage's lower right, across from undo
@@ -1599,3 +1617,16 @@ body.is-mobile #clr-picker .clr-swatches button{ width:34px !important; height:3
 body.is-mobile #clr-picker .clr-hue div, body.is-mobile #clr-picker .clr-hue input + div{ width:26px !important; height:26px !important; }
 body.is-mobile #clr-picker .clr-marker{ width:20px !important; height:20px !important; }
 body.is-mobile #clr-picker #clr-close{ display:block; width:calc(100% - 20px); margin:10px auto 8px; min-height:42px; font-size:17px; }
+
+/* ---------- the texture tools: two equal halves ----------
+   The dial, and the seed beneath it, on the left; every hue stacked on the
+   right. Ruby: the two halves roughly 50/50, the seed under the dial. */
+body.is-mobile .tool-row{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 4; }
+body.is-mobile .tool-row > #seedRow{ grid-column:1; grid-row:5; padding-right:12px; padding-left:0; border-left:none; }
+/* one rule between the halves: the hues' own left edge (no second one beside it) */
+body.is-mobile .tool-row > #lightRow{ border-right:none; }
+body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }
+body.is-mobile .tool-row .light-dial{ margin:0 auto; }
+/* (the hue fields' left rule is not for the seed, which sits under the dial) */
+body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padding-left:0; }

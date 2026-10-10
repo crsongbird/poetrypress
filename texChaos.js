@@ -372,73 +372,133 @@ export function genSummoningCircles(w,h,amt,zoom,light,form){
   return c;
 }
 
-// Craters "knock out" whatever's beneath them (erase via destination-out
-// using a soft-edged radial alpha mask, then draw fresh shading into that now-
-// clean area) rather than just blending over it — this is what keeps a crater
-// reading as a crisp bowl+rim rather than a muddy blend with the noise under it.
-export function genInkBleed(w,h,amt,zoom){
+// Fold the wet card, press,
+// open it: something you have met
+// before you were born.
+export function genInkBleed(w,h,amt,zoom,form,colour,tint1,tint2){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const c = document.createElement('canvas');
-  c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0,0,w,h);
-
-  // The previous attempt drew opaque black lobes across most of the half and,
-  // composited through color-burn, turned the whole card black. A real card is
-  // mostly EMPTY paper: one compact figure near the fold, then nothing.
-  const half = document.createElement('canvas');
-  half.width = Math.max(1, Math.ceil(w/2)); half.height = h;
-  const hx = half.getContext('2d', CPU);
-  const HW = half.width;
-  const unit = Math.min(w,h);
-
-  const blots = 2 + Math.floor(Math.random()*2);
-  for(let b=0;b<blots;b++){
-    const cy = h*(0.26 + (b/Math.max(1,blots-1||1))*0.46 + (Math.random()-0.5)*0.05);
-    // the figure stays close to the crease and covers a modest span
-    const reach = HW * (0.30 + Math.random()*0.26) * zoom;
-    const lobes = 5 + Math.floor(Math.random()*4);
-
-    for(let l=0;l<lobes;l++){
-      const t = l/lobes;
-      const dist = Math.pow(Math.random(), 1.8) * reach;
-      const px = HW - dist;
-      const py = cy + (Math.random()-0.5) * unit * 0.10;
-      const rr = unit * (0.028 + Math.random()*0.052) * zoom * (1 - t*0.4) * amt;
-      hx.globalAlpha = 0.85;
-      hx.fillStyle = '#0a0a0a';
-      hx.beginPath();
-      if(hx.ellipse) hx.ellipse(px, py, rr*(0.75+Math.random()*0.6), rr, Math.random()*Math.PI, 0, Math.PI*2);
-      else hx.arc(px, py, rr, 0, Math.PI*2);
-      hx.fill();
-    }
-
-    // a few fine flecks thrown clear of the main mass
-    const flecks = Math.round(14 * amt);
-    for(let f=0;f<flecks;f++){
-      const dist = Math.pow(Math.random(), 0.7) * reach * 1.9;
-      const px = HW - dist;
-      const py = cy + (Math.random()-0.5) * unit * 0.20;
-      hx.globalAlpha = 0.30 + Math.random()*0.45;
-      hx.fillStyle = '#101010';
-      hx.beginPath();
-      hx.arc(px, py, unit*(0.0010 + Math.random()*0.0035)*zoom, 0, Math.PI*2);
-      hx.fill();
+  // A Rorschach card, after Hermann Rorschach's ten plates: ink dropped on
+  // paper, the card folded and pressed, opened. Every seed is a different card:
+  //   THE FIGURE  a bat spread across the fold; a pair facing each other over
+  //               a gap; a column standing on the fold; scattered islands; a
+  //               pelvis with a white void at its heart
+  //   THE PRESS   mirrored, but never perfectly: each side slips a little
+  //   WET INK     (Wetness) dry is crisp and solid; wet, the pigment gathers
+  //               at the blot's rim as it dries (the coffee ring) and the
+  //               middle goes pale and mottled, the edge wicks into the
+  //               paper's fibres, the ink runs down in drips, splatters fly
+  //   COLOUR      0 is black ink alone (plates I, IV–VII); higher, red joins it
+  //               (II, III), and at the top whole pastel figures (VIII–X):
+  //               Ink Hue and Accent Hue, the others turned from the accent
+  // Paper is left clear (transparent): only ink is drawn, and ink darkens
+  // what it lies on, as it would.
+  const wet = Math.max(0, Math.min(1, form==null ? 0.5 : form)), col = Math.max(0, Math.min(1, colour==null ? 0.35 : colour));
+  const INK = parseHex(tint1 || '#141414'), ACC = parseHex(tint2 || '#B0283A');
+  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh), N = ww*wh;
+  const fold = ww/2 + (Math.random()-0.5)*ww*0.04;
+  // the palette: ink, the accent, and pastels turned from it
+  const toHsl=(c)=>{ const r=c.r/255,g=c.g/255,b=c.b/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2; let hh=0,ss=0;
+    if(mx!==mn){ const d=mx-mn; ss=l>0.5?d/(2-mx-mn):d/(mx+mn); hh=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4; hh/=6; } return [hh,ss,l]; };
+  const fromHsl=(hh,ss,l)=>{ const f=(n)=>{ const k=(n+hh*12)%12, a=ss*Math.min(l,1-l); return 255*(l-a*Math.max(-1,Math.min(k-3,9-k,1))); }; return { r:f(0), g:f(8), b:f(4) }; };
+  const [ah, as2, al] = toHsl(ACC);
+  const pastel = (k) => fromHsl((ah + k*0.21 + Math.random()*0.05)%1, Math.min(0.75, as2*0.8+0.2), Math.min(0.72, al*0.6+0.3));
+  // the figure
+  const KINDS = ['bat', 'pair', 'column', 'islands', 'pelvis'];
+  const kind = KINDS[Math.floor(Math.random()*KINDS.length)];
+  const S = unit*zoom, L = [];                                  // lobes: x from the fold, y, radii, weight, layer
+  const lobe = (x, y, rx, ry, wgt, layer) => L.push({ x, y, rx: rx*S, ry: ry*S, w: wgt, layer });
+  const midY = wh*(0.46 + (Math.random()-0.5)*0.1), sp = 0.75 + 0.5*amt;
+  // which layers are coloured: the seed decides, Colour sets how far it may go
+  const roll = Math.random(), polyOK = col > 0.66 && roll < (col-0.66)*2.4 + 0.25, redOK = col > 0.2 && roll < col*1.4;
+  const layerCol = [INK]; if(redOK || polyOK) layerCol.push(ACC);
+  if(polyOK){ layerCol[0] = pastel(1); for(let k=2;k<5;k++) layerCol.push(pastel(k)); }
+  const lay = () => layerCol.length > 1 && Math.random() < (polyOK ? 0.85 : 0.3) ? 1 + Math.floor(Math.random()*(layerCol.length-1)) : 0;
+  if(kind === 'bat'){
+    lobe(0, midY, 0.07, 0.13, 1.2, 0); lobe(0, midY - S*0.12, 0.035, 0.05, 0.9, 0);
+    const wings = 4 + Math.floor(Math.random()*3);
+    for(let k=0;k<wings;k++){ const t=(k+1)/wings; lobe(S*(0.06+0.3*t*sp), midY - S*(0.05+0.12*Math.sin(t*Math.PI)*(0.5+Math.random())), 0.06+0.05*(1-t), 0.05+0.04*Math.random(), 0.9, k>wings-2 ? lay() : 0); }
+  } else if(kind === 'pair'){
+    const gap = S*(0.05+Math.random()*0.04);
+    for(const k of [0,1,2,3,4]){ const ty=midY - S*0.22 + k*S*0.11; lobe(gap + S*(0.07+0.05*Math.sin(k*1.3)), ty, 0.05+0.02*Math.random(), 0.06, 1, k===0 ? lay() : 0); }
+    lobe(gap*0.4, midY - S*0.02, 0.05, 0.015, 0.8, 0);         // the reaching arms, nearly touching
+    lobe(0, midY + S*0.2, 0.045, 0.04, 0.9, lay());             // something between them, below
+  } else if(kind === 'column'){
+    for(let k=0;k<6;k++){ lobe(S*0.01*Math.random(), midY - S*0.28 + k*S*0.11, 0.04+0.03*Math.random(), 0.07, 1.1, 0); }
+    for(let k=0;k<3;k++){ lobe(S*(0.08+0.08*Math.random()*sp), midY - S*0.2 + k*S*0.18, 0.05, 0.03, 0.85, lay()); }
+  } else if(kind === 'islands'){
+    const n = 5 + Math.floor(Math.random()*3);
+    for(let k=0;k<n;k++){ lobe(S*(0.02+Math.random()*0.26*sp), wh*(0.15+0.7*k/(n-1)) + (Math.random()-0.5)*S*0.05, 0.04+0.04*Math.random(), 0.03+0.04*Math.random(), 1, k%layerCol.length); }
+  } else {                                                      // pelvis: a mass with a white void at its heart
+    for(let k=0;k<8;k++){ const a2=k/8*Math.PI*2; lobe(S*0.04 + Math.abs(Math.cos(a2))*S*0.12*sp, midY + Math.sin(a2)*S*0.15, 0.06, 0.05, 1, k===2 ? lay() : 0); }
+    lobe(0, midY, 0.04, 0.06, -2.2, 0);                          // the void
+    lobe(S*0.18*sp, midY + S*0.22, 0.05, 0.04, 0.9, lay());
+  }
+  // intricacy: small satellite lobes round the big ones (tendrils, fingers),
+  // and a few white holes punched through the mass
+  const big = L.filter(l => l.w > 0).slice();
+  for(let k=0;k<10+Math.round(8*amt);k++){ const l = big[Math.floor(Math.random()*big.length)], a2 = Math.random()*Math.PI*2, f = 0.8 + Math.random()*0.6;
+    L.push({ x: Math.max(0, l.x + Math.cos(a2)*l.rx*f), y: l.y + Math.sin(a2)*l.ry*f, rx: l.rx*(0.15+Math.random()*0.25), ry: l.ry*(0.15+Math.random()*0.35), w: 0.7, layer: l.layer }); }
+  for(let k=0;k<2+Math.floor(Math.random()*3);k++){ const l = big[Math.floor(Math.random()*big.length)];
+    L.push({ x: l.x + (Math.random()-0.5)*l.rx*0.6, y: l.y + (Math.random()-0.5)*l.ry*0.6, rx: l.rx*0.18, ry: l.ry*0.22, w: -1.6, layer: l.layer }); }
+  // drips: runs down from a few lobes' undersides
+  const drips = [];
+  if(wet > 0.4){ const nd = Math.round((wet-0.4)*7); for(let k=0;k<nd;k++){ const l = L[Math.floor(Math.random()*L.length)]; if(l.w < 0) continue;
+    drips.push({ x: l.x + (Math.random()-0.5)*l.rx, y: l.y + l.ry*0.8, len: S*(0.04+Math.random()*0.18)*wet, wd: S*(0.004+Math.random()*0.005), layer: l.layer }); } }
+  const warpA = makeNoiseGrid(14,14), warpB = makeNoiseGrid(14,14), fib = makeNoiseGrid(96,96), mot = makeNoiseGrid(12,12), gran = makeNoiseGrid(80,80), slip = makeNoiseGrid(6,6);
+  const nl = layerCol.length, TR = new Float32Array(N*3).fill(1);
+  const ew = 0.02 + wet*0.07;
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const side = x < fold ? 0 : 1, k = y*ww + x;
+    // the press: each side slips a little, differently
+    const sl = (sampleNoiseGrid(slip,6,6, y/wh*5 + side*3, side*2.5) - 0.5)*unit*0.02;
+    let dx = Math.abs(x - fold) + sl, yy = y;
+    // organic edges: the field's coordinates warped by noise
+    const u = (dx/unit)*6 + side*0.37, v = (y/unit)*6;
+    const wa = (sampleNoiseGrid(warpA,14,14,u*1.7,v*1.7)-0.5)*unit*(0.05+0.03*wet), wb = (sampleNoiseGrid(warpB,14,14,u*1.7,v*1.7)-0.5)*unit*0.05;
+    dx += wa; yy += wb;
+    // wicking: fine fibres along the paper's grain, the wetter the further
+    const fibre = (sampleNoiseGrid(fib,96,96, x/ww*95, y/wh*30) - 0.5)*wet*0.35;
+    // blooms (broad, soft) and pigment granulating in the paper's tooth (fine, faint)
+    const mott = sampleNoiseGrid(mot,12,12, x/ww*11, y/wh*11)*0.8 + sampleNoiseGrid(gran,80,80, x/ww*79, y/wh*79)*0.2;
+    for(let li=0; li<nl; li++){
+      let D = 0;
+      for(const l of L){ if(l.layer !== li && l.w > 0) continue; const ax = (dx - l.x)/l.rx, ay = (yy - l.y)/l.ry; const q = ax*ax + ay*ay; if(q < 9) D += l.w*Math.exp(-q); }
+      for(const d of drips){ if(d.layer !== li) continue; const t = (yy - d.y)/d.len; if(t < -0.1 || t > 1.08) continue;
+        const wd = d.wd*(1 - 0.5*Math.max(0,t)) + (t > 0.92 ? d.wd*1.2 : 0), ax = (dx - d.x)/wd; D += 0.9*Math.exp(-ax*ax)*(t > 1 ? Math.exp(-(((t-1)/0.04)**2)) : 1); }
+      if(D < 0.2) continue;
+      const cover = Math.max(0, Math.min(1, (D + fibre - (0.5 - ew))/(2*ew)));
+      if(cover <= 0) continue;
+      // inside: dry ink is solid; wet ink pools at the rim and goes pale and mottled within
+      const depth = Math.max(0, Math.min(1, (D - 0.5)/0.7)), rim = Math.exp(-depth*9);
+      const dens = (0.93 - wet*0.45*(1-rim) + wet*0.07*rim)*(1 - wet*0.6*(mott-0.5));
+      const op = Math.min(1, cover*dens), C = layerCol[li];
+      // ink is subtractive: each layer filters the light the paper sends back
+      TR[k*3]   *= 1 - op*(1 - C.r/255); TR[k*3+1] *= 1 - op*(1 - C.g/255); TR[k*3+2] *= 1 - op*(1 - C.b/255);
     }
   }
-
-  ctx.globalAlpha = 1;
-  ctx.drawImage(half, 0, 0);
-  ctx.save();
-  ctx.translate(w, 0);
-  ctx.scale(-1, 1);
-  ctx.drawImage(half, 0, 0);
-  ctx.restore();
+  const small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), d = img.data;
+  for(let k=0;k<N;k++){
+    const r = TR[k*3], g = TR[k*3+1], b = TR[k*3+2], a = 1 - Math.min(r, g, b), q = k*4;
+    if(a < 0.003){ d[q+3] = 0; continue; }
+    // the ink that, laid over white paper, leaves exactly this
+    d[q] = Math.max(0, 255*(r - (1-a))/a); d[q+1] = Math.max(0, 255*(g - (1-a))/a); d[q+2] = Math.max(0, 255*(b - (1-a))/a); d[q+3] = 255*a;
+  }
+  sctx.putImageData(img, 0, 0);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, 0, 0, w, h);
+  // splatter thrown clear, mirrored (a wet card spits), and the fold's crease
+  const nfl = Math.round((6 + 30*wet)*amt), F = div;
+  for(let k=0;k<nfl;k++){ const l = L[Math.floor(Math.random()*L.length)]; if(l.w < 0) continue;
+    const ang = Math.random()*Math.PI*2, dist = (1.1 + Math.random()*1.6)*Math.max(l.rx, l.ry), r0 = cpx(1.5 + Math.random()*Math.random()*9)*Math.sqrt(zoom);   // bigger blots throw bigger drops
+    const fx = (l.x + Math.cos(ang)*dist)*F, fy = (l.y + Math.sin(ang)*dist)*F, C = layerCol[l.layer] || INK;
+    ctx.fillStyle = `rgba(${C.r|0},${C.g|0},${C.b|0},${0.55 + Math.random()*0.4})`;
+    for(const sx2 of [fold*F - fx, fold*F + fx + (Math.random()-0.5)*cpx(6)]){ ctx.beginPath(); ctx.arc(sx2, fy, r0, 0, Math.PI*2); ctx.fill(); } }
+  ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = cpx(1.5); ctx.beginPath(); ctx.moveTo(fold*F, 0); ctx.lineTo(fold*F, h); ctx.stroke();
   return c;
 }
 
-export function genCrackedGlaze(w,h,amt,zoom,light,form,M3){
+export function genCrackedGlaze(w,h,amt,zoom,light,form,tint1,tint2,M3,GLW){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const enamel = Math.max(0, Math.min(1, form==null ? 0 : form));
   // Glaze: a glassy layer over a body. As it ages it CRAZES — a network of
@@ -448,6 +508,14 @@ export function genCrackedGlaze(w,h,amt,zoom,light,form,M3){
   // glaze stands above the body, cracks are grooves in it, and where it is
   // gone the drop casts a shadow. Glossy glaze, matte body.
   // FRACTURE SCALE · CRACK DENSITY · ENAMELING (unbroken → bubbled → chipped → peeling)
+  // Coloured as a game engine would: GLAZE and BASE (the clay body, bare in
+  // chips, peels and crack bottoms) are the albedos; DIFFUSE is the light's
+  // colour, SPECULAR the glaze's shine, SHADOW what fills the shade. The glaze
+  // is PAINTED: brushed on, so it is thicker in streaks and pools, thinner
+  // where it breaks over a high spot (and the body shows through), its hue
+  // wandering a little — all by the seed. Where it peels, its edge CURLS up.
+  // GLOW: uranium glaze, fluorescing.
+  const GZ = parseHex(tint1 || '#A9B4B0'), BS = parseHex(tint2 || '#7A6A5E');
   const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh);
   // cells: as many as before (26 at 100%), sized by scale
   const nCells = Math.max(4, Math.round(26*amt/(zoom*zoom)));
@@ -491,10 +559,30 @@ export function genCrackedGlaze(w,h,amt,zoom,light,form,M3){
       DIRT[k] = Math.max(g1, g2*0.8);
     }
   }
-  // the lift where glaze meets bare body: a thin lip, raised, along the edge
-  if(enamel > 0.4) for(let y = 1; y < wh - 1; y++) for(let x = 1; x < ww - 1; x++){
-    const k = y*ww + x; if(GL[k] <= 0) continue;
-    if(GL[k-1] <= 0 || GL[k+1] <= 0 || GL[k-ww] <= 0 || GL[k+ww] <= 0) H[k] += t*0.35*(enamel - 0.4)/0.6;
+  // PAINTED: brush streaks along one direction, runs down the page, slow pools
+  const ba = Math.random()*Math.PI, bc = Math.cos(ba), bs = Math.sin(ba);
+  const strk = makeNoiseGrid(48, 48), runs = makeNoiseGrid(64, 16), pool = makeNoiseGrid(7, 7), hueN = makeNoiseGrid(5, 5);
+  const THK = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const u = x/ww, v = y/wh, al = u*bc + v*bs, ac = -u*bs + v*bc;
+    const streak = sampleNoiseGrid(strk, 48, 48, al*3, ac*40), run = sampleNoiseGrid(runs, 64, 16, u*63, v*4), pl = sampleNoiseGrid(pool, 7, 7, u*6, v*6);
+    const k = y*ww + x;
+    THK[k] = Math.max(0, Math.min(1, 0.5 + (streak - 0.5)*0.55 + (run - 0.5)*0.3 + (pl - 0.5)*0.6));
+    if(GL[k] > 0) H[k] += t*0.35*(THK[k] - 0.5);
+  }
+  // the CURL: where the glaze has peeled, its edge rolls up off the body — a
+  // raised, rounded lip a little way in from the break (its shadow falls on
+  // the body), by how far the glaze has gone
+  if(enamel > 0.35){
+    const R = Math.max(2, unit*0.012), D = new Float32Array(ww*wh);
+    for(let k = 0; k < ww*wh; k++) D[k] = GL[k] > 0 ? 1e6 : 0;
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const k = y*ww + x; if(!D[k]) continue; let m = D[k];
+      if(x > 0) m = Math.min(m, D[k-1] + 1); if(y > 0){ m = Math.min(m, D[k-ww] + 1); if(x > 0) m = Math.min(m, D[k-ww-1] + 1.414); if(x < ww-1) m = Math.min(m, D[k-ww+1] + 1.414); } D[k] = m; }
+    for(let y = wh-1; y >= 0; y--) for(let x = ww-1; x >= 0; x--){ const k = y*ww + x; if(!D[k]) continue; let m = D[k];
+      if(x < ww-1) m = Math.min(m, D[k+1] + 1); if(y < wh-1){ m = Math.min(m, D[k+ww] + 1); if(x < ww-1) m = Math.min(m, D[k+ww+1] + 1.414); if(x > 0) m = Math.min(m, D[k+ww-1] + 1.414); } D[k] = m; }
+    const lift = Math.min(1, (enamel - 0.35)/0.45);
+    for(let k = 0; k < ww*wh; k++){ if(GL[k] <= 0 || D[k] > R) continue;
+      const q = D[k]/R; H[k] += t*1.6*lift*Math.sin(Math.PI*Math.min(1, q*1.15))*(1 - q*0.4); DIRT[k] *= 0.5; }
   }
   // bubbles: blisters in the glaze, some burst into pinholes
   const nBub = Math.round(Math.sin(Math.min(1, enamel*1.4)*Math.PI)*ww*wh/(unit*unit)*240);
@@ -507,14 +595,26 @@ export function genCrackedGlaze(w,h,amt,zoom,light,form,M3){
   }
   const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.85, shadow: 0.6, ao: 0.35, ambient: 0.45 });
   const fl = L.flat || 1;
+  // the glaze's own wandering colour: a second hue, a little round the wheel
+  const lumG = 0.299*GZ.r + 0.587*GZ.g + 0.114*GZ.b, sh2 = (Math.random() - 0.5)*0.5;
+  const G2 = { r: GZ.r + (GZ.g - GZ.r)*sh2, g: GZ.g + (GZ.b - GZ.g)*sh2, b: GZ.b + (GZ.r - GZ.b)*sh2 };
+  const grain2 = makeNoiseGrid(80, 80);
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sctx = small.getContext('2d', CPU), img = sctx.createImageData(ww, wh), dd = img.data;
-  for(let k = 0; k < ww*wh; k++){
-    // glaze: lit, with its shine; body: matte and a little darker; grime in the cracks
-    const lit = (L.light[k]/fl - 1)*110, shine = L.spec[k]*GL[k]*150;
-    const off = (GL[k] <= 0 ? 22 : 0) + DIRT[k]*55, q = k*4;
-    if(!M3){ const v = 128 + lit + shine - off; dd[q] = dd[q+1] = dd[q+2] = Math.max(0, Math.min(255, v)); }
-    else for(let c = 0; c < 3; c++) dd[q+c] = Math.max(0, Math.min(255, greyLit(lit, shine, M3, c) - off));
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const k = y*ww + x, q = k*4, g = GL[k], th = THK[k];
+    const hv = sampleNoiseGrid(hueN, 5, 5, x/ww*4, y/wh*4), gr = 0.85 + 0.3*sampleNoiseGrid(grain2, 80, 80, x/ww*79, y/wh*79);
+    const sp = L.spec[k]*g*0.75;
+    for(let c = 0; c < 3; c++){
+      const gz = [GZ.r, GZ.g, GZ.b][c]*(1 - hv) + [G2.r, G2.g, G2.b][c]*hv, bs2 = [BS.r, BS.g, BS.b][c];
+      // thick glaze pools deeper; thin glaze breaks, and the body shows through
+      const glaze = gz*(1.12 - 0.3*th), thin = Math.max(0, 0.45 - th)*1.2;
+      const alb = g > 0 ? glaze*(1 - thin) + bs2*thin : bs2*gr;
+      const k_c = litK(L, k, 0.45, M3, c)/fl;
+      let v = alb*k_c*(1 - DIRT[k]*0.55) + 255*sp*litS(M3, c);
+      if(GLW && g > 0) v += 255*[GLW.r, GLW.g, GLW.b][c]*(0.4 + 0.6*th)*0.55;
+      dd[q+c] = v < 0 ? 0 : v > 255 ? 255 : v;
+    }
     dd[q+3] = 255;
   }
   sctx.putImageData(img, 0, 0);
@@ -696,135 +796,175 @@ export function genCartomanticDrift(w,h,amt,zoom,angle){
 // you see its back, bent up.
 export function genBlackHole(w,h,amt,zoom,light,form){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  // THE DIAL is where we view it from: its direction turns the disc in the
-  // sky; its distance from the centre is how edge-on we see it — at the rim
-  // nearly edge-on (as it always was), at the centre face-on, a ring.
-  // JETS: twin beams of plasma along the spin axis, knotted, the one coming
-  // toward us brighter; foreshortened as the view turns face-on.
-  const jets=Math.max(0, Math.min(1, form==null ? 0 : form));
+  // A black hole RAY-TRACED, after Luminet (1979), Riazuelo's and Interstellar's
+  // renderers (James et al. 2015) and Antonelli's "Starless": every working
+  // pixel sends a ray back from the eye, bent by the hole's gravity
+  // (Schwarzschild: a = −1.5·h²·r̂/r⁴, units of the horizon radius), and
+  // whatever it meets is what we see there:
+  //   the disc     gas swirling in to the last stable orbit (3 radii): hot and
+  //                bright inside, its filaments sheared into spirals by the
+  //                faster inner orbit, dark lanes of dust across them; the
+  //                side coming toward us beamed brighter (Doppler, δ³), the
+  //                light from deep in the well dimmed (gravitational redshift).
+  //                Its far side shows bent up over the shadow and down beneath
+  //                it — not drawn there: the rays really go round
+  //   photon ring  rays that orbit once or more before escaping: a thin bright
+  //                ring hugging the shadow
+  //   the shadow   rays that fall in
+  //   the sky      rays that escape land on stars and nebula behind: lensed
+  //                into arcs, an Einstein ring, a second image inside
+  //   jets         plasma along the spin axis, helical, knotted, the one coming
+  //                toward us brighter; lensed like everything else
+  //   bloom        the brightest gas glows, scattering light around it
+  // THE DIAL is where we view it from: its direction turns it in the sky; its
+  // distance from the centre is how edge-on — at the rim nearly edge-on, at
+  // the centre face-on. CHAOS: the lensing's reach (how far behind it the sky
+  // lies), the disc's size and turbulence, the bloom. PARTICLES: the stars
+  // and the nebula's gas and dust. JETS: their length and brightness.
+  const jets=Math.max(0, Math.min(1, form==null ? 0 : form)), chaos=zoom;
   const deg=light==null ? 315 : light, lv=lightVec(deg), view=Math.min(1, Math.hypot(lv.lx, lv.ly));
+  const unit=Math.min(w,h), cx=w*(0.2+Math.random()*0.6), cy=h*(0.2+Math.random()*0.6);
+  const Rsh=unit*(0.055+Math.random()*0.03), S=Rsh/2.6;            // the shadow; pixels per horizon radius
+  const tilt0=(8+Math.random()*10)*Math.PI/180, elev=tilt0 + (Math.PI/2 - tilt0)*(1-view);
+  const spin=(Math.random()-0.5)*0.15 + ((((deg-315+540)%360)+360)%360 - 180)*Math.PI/180;
+  const dirSign=Math.random()<0.5?1:-1, cosR=Math.cos(spin), sinR=Math.sin(spin);
+  // the camera, far off along c, the disc in the plane y = 0
+  const ce=Math.cos(elev), se=Math.sin(elev), Cy=se, Cz=ce, Uy=ce, Uz=-se, D=70;
+  const Dsky=8+14*chaos;                                          // how far behind the sky lies: the lensing's reach
+  const rIn=3, rOut=8+4*Math.min(2.5, chaos), Lj=(6+16*jets)*Math.max(0.2, ce)+ (1-ce)*4;
+  // the disc's gas: noise wrapped round the orbit, wound into spirals
+  const GW=40, GH=24, gas=makeNoiseGrid(GW,GH), gas2=makeNoiseGrid(GW,GH), dust=makeNoiseGrid(GW/2,GH/2);   // sampled at whole multiples of a turn, so they close round the orbit
+  const twist=0.25+Math.random()*0.2, turb=Math.min(1, 0.45+0.3*chaos), ph0=Math.random()*GW;
+  const prof=(r)=>Math.pow(rIn/r,1.5)*Math.sqrt(Math.max(0,1-Math.sqrt(rIn/r)));
+  let pmax=0; for(let r=rIn;r<rIn*3;r+=0.05) pmax=Math.max(pmax,prof(r));
+  const jph=Math.random()*6.28;
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), N=ww*wh;
+  const EM=new Float32Array(N), TR=new Float32Array(N), BX=new Float32Array(N), BY=new Float32Array(N), CAP=new Float32Array(N);
+  const jw0=0.22, jwk=0.06, jetK=60+120*jets, jetOn=jets>0.01;
+  // one ray, back from the working pixel (i, j)
+  const trace=(i, j)=>{
+    const k=j*ww+i, X=(i+0.5)*div-cx, Y=(j+0.5)*div-cy;
+    const sx=( X*cosR + Y*sinR)/S, sy=(-X*sinR + Y*cosR)/S;          // un-turned, in horizon radii
+    let px=sx, py=Cy*D - Uy*sy, pz=Cz*D - Uz*sy, vx=0, vy=-Cy, vz=-Cz;
+    const hx=py*vz-pz*vy, hy=pz*vx-px*vz, hz=px*vy-py*vx, h2=hx*hx+hy*hy+hz*hz, K=-1.5*h2;
+    let em=0, T=1, cap=0, steps=0, rmin=1e9, half=0;
+    // leapfrog (kick–drift–kick): second order, so the sky's lensing doesn't
+    // band into rings from step-size error
+    while(steps++<600){
+      const r2=px*px+py*py+pz*pz, r=Math.sqrt(r2);
+      if(r<1.02){ cap=1; break; }
+      if(r<rmin) rmin=r;
+      const f=K/(r2*r2*r);
+      if(half){ vx+=f*px*half; vy+=f*py*half; vz+=f*pz*half; }      // finish the last step's kick
+      if(r>D+5 && (px*vx+py*vy+pz*vz)>0) break;
+      // steps in proportion to the distance far out (log steps), finer near the photon sphere
+      let dt=r<8 ? 0.03*r*r : 0.24*r;
+      const ay=py<0?-py:py;
+      let jw=0;
+      if(jetOn && ay>1 && ay<Lj+2){ jw=jw0+jwk*ay; const rho2=px*px+pz*pz; if(rho2<16*jw*jw && dt>jw*0.5) dt=jw*0.5; }
+      const y0=py; half=dt*0.5;
+      vx+=f*px*half; vy+=f*py*half; vz+=f*pz*half;
+      const ox=px, oz=pz; px+=vx*dt; py+=vy*dt; pz+=vz*dt;
+      // JETS: glowing plasma, a helix round the axis, knotted, fading with height
+      if(jw>0){ const hh=py<0?-py:py;
+        if(hh>1 && hh<Lj){ const hel=0.18*Math.sqrt(hh), a2=hh*0.9+jph+(py>0?0:3.1), ex=px-hel*Math.cos(a2), ez=pz-hel*Math.sin(a2), rho2=ex*ex+ez*ez;
+          if(rho2<9*jw*jw){
+            const fall=Math.pow(1-hh/Lj,1.3), sk=Math.sin(hh*0.75+jph), knot=0.45+0.55*sk*sk*sk*sk;
+            const toward=(py>0)===(Cy>0) ? 1 : 0.4;                      // beamed toward us
+            em+=T*Math.exp(-rho2/(jw*jw))*fall*knot*toward*dt*Math.sqrt(vx*vx+vy*vy+vz*vz)*jetK; } } }
+      // THE DISC: where the ray crosses its plane
+      if((y0>0)!==(py>0)){
+        const t=y0/(y0-py), qx=ox+(px-ox)*t, qz=oz+(pz-oz)*t, rr=Math.sqrt(qx*qx+qz*qz);
+        if(rr>rIn*0.92 && rr<rOut*1.15){
+          const edge=Math.min(1, (rr-rIn*0.92)/(rIn*0.25))*Math.min(1, (rOut*1.15-rr)/(rOut*0.35));
+          const phi=Math.atan2(qz,qx), lr=Math.log(rr);
+          const u=((phi/(2*Math.PI))+twist*lr*dirSign)*GW+ph0, vv=lr*GH/1.2;
+          // gas: long filaments wound into spirals (stretched along the orbit), finer streaks on them
+          const g1=sampleNoiseGrid(gas,GW,GH,u,vv*1.6), g2=sampleNoiseGrid(gas2,GW,GH,u*2,vv*3);
+          const filament=0.55+turb*(g1*0.9+g2*0.25-0.58);
+          const lane=Math.max(0, sampleNoiseGrid(dust,GW/2,GH/2,u*0.5,vv*1.1)-0.62)/0.38;   // dust: dark, opaque
+          // Doppler: the gas's orbit against the ray (toward the eye is −v)
+          const vk=Math.sqrt(0.5/Math.max(1.05,rr-1)), bx=-qz/rr*vk*dirSign, bz=qx/rr*vk*dirSign, vl=Math.sqrt(vx*vx+vy*vy+vz*vz);
+          const cosT=-(bx*vx+bz*vz)/(vl*vk), gam=1/Math.sqrt(1-vk*vk), dop=1/(gam*(1-vk*cosT)), red=Math.sqrt(1-1/rr);
+          const I=prof(rr)/pmax*Math.pow(dop*red, 2.2)*Math.max(0, filament)*1.6;
+          const alpha=Math.min(0.97, edge*(0.55+0.4*Math.min(1,filament*1.5)+0.6*lane));
+          const tone=128+150*Math.min(1.6, I)*(1-0.85*lane) - 90*lane*(1-Math.min(1,I));
+          em+=T*alpha*tone; T*=1-alpha;
+          if(T<0.01) break;
+        }
+      }
+    }
+    // the photon ring: rays that skimmed the photon sphere, a thin glow
+    const pr=(rmin-1.5)/0.06; em+=T*100*Math.exp(-pr*pr);
+    EM[k]=em; TR[k]=T; CAP[k]=cap;
+    // where an escaped ray lands on the sky behind (the sky plane, Dsky back)
+    if(!cap){ const back=-(vy*Cy+vz*Cz), along=(py*Cy+pz*Cz);
+      let bxs, bys;
+      if(back>0.15){ const tt=(along+Dsky)/back; const qy=py+vy*tt, qz=pz+vz*tt; bxs=px+vx*tt; bys=-(qy*Uy+qz*Uz); }
+      else { bxs=vx*400; bys=-(vy*Uy+vz*Uz)*400; }                    // bent right round: anywhere far
+      BX[k]=cx+(bxs*cosR - bys*sinR)*S; BY[k]=cy+(bxs*sinR + bys*cosR)*S; }
+  };
+  // ADAPTIVE: trace every other pixel; between them, trace again only where
+  // the picture changes (the disc, the rings, the jets, the shadow's edge) —
+  // the smooth, gently lensed sky is filled in between
+  const done=new Uint8Array(N);
+  for(let j=0;j<wh;j+=2) for(let i=0;i<ww;i+=2){ trace(i,j); done[j*ww+i]=1; }
+  const close=(a, b)=>CAP[a]===CAP[b] && Math.abs(EM[a]-EM[b])<6 && Math.abs(TR[a]-TR[b])<0.04 && (CAP[a] || (Math.abs(BX[a]-BX[b])<div*3 && Math.abs(BY[a]-BY[b])<div*3));
+  const fill=(k, a, b)=>{ EM[k]=(EM[a]+EM[b])/2; TR[k]=(TR[a]+TR[b])/2; CAP[k]=CAP[a]; BX[k]=(BX[a]+BX[b])/2; BY[k]=(BY[a]+BY[b])/2; done[k]=1; };
+  // rows of traced points: fill or trace the pixels between them
+  for(let j=0;j<wh;j+=2) for(let i=1;i<ww;i+=2){ const k=j*ww+i, a=k-1, b=k+1;
+    if(i+1<ww && close(a,b)) fill(k,a,b); else trace(i,j); done[k]=1; }
+  // the rows between
+  for(let j=1;j<wh;j+=2) for(let i=0;i<ww;i++){ const k=j*ww+i, a=k-ww, b=k+ww;
+    if(j+1<wh && close(a,b)) fill(k,a,b); else trace(i,j); done[k]=1; }
+  // BLOOM: the brightest gas glows
+  const bl=new Float32Array(N); for(let k=0;k<N;k++) bl[k]=Math.max(0, EM[k]-190);
+  const blur=(A,R)=>{ const tmp=new Float32Array(N);
+    for(let j=0;j<wh;j++){ let acc=0; for(let i=-R;i<ww+R;i++){ if(i+R<ww) acc+=A[j*ww+i+R]; if(i-R-1>=0) acc-=A[j*ww+i-R-1]; if(i>=0&&i<ww) tmp[j*ww+i]=acc/(2*R+1); } }
+    for(let i=0;i<ww;i++){ let acc=0; for(let j=-R;j<wh+R;j++){ if(j+R<wh) acc+=tmp[(j+R)*ww+i]; if(j-R-1>=0) acc-=tmp[(j-R-1)*ww+i]; if(j>=0&&j<wh) A[j*ww+i]=acc/(2*R+1); } } };
+  const BR=Math.max(1, Math.round(Rsh*0.25/div)); for(let p=0;p<3;p++) blur(bl, BR);
+  const BR2=Math.max(1, Math.round(Rsh*1.2/div)), wide=Float32Array.from(bl); for(let p=0;p<2;p++) blur(wide, BR2);
+  // THE SKY, sampled through the lens at full resolution so the stars stay sharp
+  const nebA=makeNoiseGrid(32,32), nebB=makeNoiseGrid(64,64), dustA=makeNoiseGrid(48,48);
+  const neb=Math.min(1.5, 0.5+0.5*amt), cs=cpx(22), pStar=Math.min(0.85, 0.22*amt);
+  const hash=(a,b,s2)=>{ let x=Math.imul(a,374761393)^Math.imul(b,668265263)^Math.imul(s2,2246822519); x=Math.imul(x^(x>>>13),1274126177); return ((x^(x>>>16))>>>0)/4294967296; };
+  const seed=(Math.random()*1e9)|0, U2=unit;
+  // the nebula is soft: worked out on the working grid, through the lens
+  const SKY=new Float32Array(N);
+  for(let k=0;k<N;k++){
+    if(CAP[k]){ SKY[k]=4; continue; }
+    const bx=BX[k], by=BY[k], nx=bx/U2, ny=by/U2, gasv=sampleNoiseGrid(nebA,32,32,nx*5,ny*5)*0.65+sampleNoiseGrid(nebB,64,64,nx*17,ny*17)*0.35;
+    const dl=sampleNoiseGrid(dustA,48,48,nx*9+3,ny*9+7), lit=1+0.6*Math.exp(-(((bx-cx)**2+(by-cy)**2)/((Rsh*5)**2)));
+    SKY[k]=128 + neb*(Math.max(0,gasv-0.5)*50*lit - Math.max(0,dl-0.55)*90);
+  }
+  // all that is not sky, in one buffer: the gas and jets in front, and the bloom
+  const FR=new Float32Array(N), bk=0.9*Math.min(1.4,chaos), wk=0.5*Math.min(1.4,chaos);
+  for(let k=0;k<N;k++) FR[k]=EM[k]+bl[k]*bk+wide[k]*wk;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-
-  // A black hole, drawn as a gravity simulation rather than a picture of one.
-  //   the disc      debris on Keplerian orbits (faster close in), tilted nearly
-  //                 edge-on; the side coming toward us is brighter (relativistic
-  //                 beaming, roughly (1 + v·cosφ)³)
-  //   lensing       the far side of the disc is bent up and over the shadow into
-  //                 an arch; background particles near the hole are pushed out
-  //                 into arcs, with faint second images inside
-  //   photon ring   a thin bright ring hugging the shadow
-  //   depth         every particle has a distance: nearer is larger and brighter
-  // CHAOS (the size knob) is how violent it is: the reach of the lensing, the
-  // disc's brightness and turbulence, the glow of radiation. The second knob is
-  // how many particles fill the field.
-  const unit=Math.min(w,h);
-  const chaos=zoom;
-  const cx=w*(0.2+Math.random()*0.6), cy=h*(0.2+Math.random()*0.6);
-  const Rsh=unit*(0.055+Math.random()*0.03);            // the shadow
-  const tilt0=(8+Math.random()*10)*Math.PI/180;          // near edge-on, from the rim of the dial…
-  const tilt=tilt0 + (Math.PI/2 - tilt0)*(1-view);        // …turning face-on toward its centre
-  const spin=(Math.random()-0.5)*0.15 + ((((deg-315+540)%360)+360)%360 - 180)*Math.PI/180;   // the dial's direction turns it (level at its default)
-  const dirSign=Math.random()<0.5?1:-1;                  // which side approaches
-  const thetaE=Rsh*1.5*Math.sqrt(chaos);                 // Einstein radius
-  const cosR=Math.cos(spin), sinR=Math.sin(spin);
-  const toScreen=(x,y)=>[cx + x*cosR - y*sinR, cy + x*sinR + y*cosR];
-  const dot=(x,y,r,tone,a)=>{ ctx.globalAlpha=a; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); };
-
-  // radiation: a broad soft glow, stronger with chaos
-  const glow=ctx.createRadialGradient(cx,cy,Rsh,cx,cy,Rsh*(6+chaos*4));
-  glow.addColorStop(0,`rgba(245,245,245,${Math.min(0.5,0.16*chaos)})`); glow.addColorStop(1,'rgba(245,245,245,0)');
-  ctx.globalAlpha=1; ctx.fillStyle=glow; ctx.fillRect(0,0,w,h);
-
-  // the field: particles in depth, lensed where they pass near the hole
-  const nField=Math.round(canonArea(w,h)/5200*amt);
-  for(let i=0;i<nField;i++){
-    const z=Math.random();                               // 0 near .. 1 far
-    let x=Math.random()*w, y=Math.random()*h;
-    const dx=x-cx, dy=y-cy, b=Math.hypot(dx,dy)||1;
-    const size=unit*0.0009*(0.4+1.6*(1-z)), tone=170+Math.round(80*(1-z)), a=0.35+0.55*(1-z);
-    // primary image, pushed outward: b' = (b + sqrt(b² + 4θE²)) / 2
-    const b1=(b+Math.sqrt(b*b+4*thetaE*thetaE))/2;
-    const stretch=Math.min(4, b1/b);
-    // one rotated ellipse, not save/translate/rotate/restore: fewer calls
-    ctx.globalAlpha=a; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
-    ctx.beginPath();
-    ctx.ellipse(cx+dx/b*b1, cy+dy/b*b1, size*Math.min(3,stretch), size, Math.atan2(dy,dx)+Math.PI/2, 0, Math.PI*2);
-    ctx.fill();
-    // the faint second image, on the far side, inside the arch
-    if(b<thetaE*3.5){
-      const b2=(b-Math.sqrt(b*b+4*thetaE*thetaE))/2;      // negative: opposite side
-      if(Math.abs(b2)>Rsh*1.02) dot(cx+dx/b*b2, cy+dy/b*b2, size*0.7, tone, a*0.35);
+  const ctx=c.getContext('2d', CPU), img=ctx.createImageData(w,h), d=img.data;
+  // the stars: sharp, at full resolution, through the lens
+  for(let y=0;y<h;y++){
+    const fy=Math.min(wh-1.001, Math.max(0, y/div-0.5)), j0=fy|0, ty=fy-j0;
+    for(let x=0;x<w;x++){
+      const fx=Math.min(ww-1.001, Math.max(0, x/div-0.5)), i0=fx|0, tx=fx-i0, k=j0*ww+i0, k1=k+1, k2=k+ww, k3=k2+1;
+      const w00=(1-tx)*(1-ty), w10=tx*(1-ty), w01=(1-tx)*ty, w11=tx*ty;
+      const T=TR[k]*w00+TR[k1]*w10+TR[k2]*w01+TR[k3]*w11;
+      let sky=SKY[k]*w00+SKY[k1]*w10+SKY[k2]*w01+SKY[k3]*w11;
+      if(T>0.02 && !(CAP[k]&&CAP[k1]&&CAP[k2]&&CAP[k3])){
+        // the landing point, from the uncaptured corners
+        let bx=0, by=0, ws=0;
+        if(!CAP[k]){ bx+=BX[k]*w00; by+=BY[k]*w00; ws+=w00; } if(!CAP[k1]){ bx+=BX[k1]*w10; by+=BY[k1]*w10; ws+=w10; }
+        if(!CAP[k2]){ bx+=BX[k2]*w01; by+=BY[k2]*w01; ws+=w01; } if(!CAP[k3]){ bx+=BX[k3]*w11; by+=BY[k3]*w11; ws+=w11; }
+        bx/=ws; by/=ws;
+        const ix=Math.floor(bx/cs), iy=Math.floor(by/cs);
+        if(hash(ix,iy,seed)<pStar){ const sxp=(ix+0.25+0.5*hash(ix,iy,seed+1))*cs, syp=(iy+0.25+0.5*hash(ix,iy,seed+2))*cs;
+          const near=hash(ix,iy,seed+3), rr=cs*(0.03+0.14*near*near*near), dd2=(bx-sxp)**2+(by-syp)**2;
+          if(dd2<rr*rr*9) sky+=ws*(60+120*near)*Math.exp(-dd2/(rr*rr)); }
+      }
+      const val=FR[k]*w00+FR[k1]*w10+FR[k2]*w01+FR[k3]*w11+T*sky;
+      const q=(y*w+x)*4, o=val<0?0:val>255?255:val; d[q]=d[q+1]=d[q+2]=o; d[q+3]=255;
     }
   }
-
-  // the disc, drawn as orbits of glowing gas: many thin ellipses. Each orbit
-  // is split into segments so the approaching side can be brighter along it.
-  const orbits=Math.round(60*Math.min(2,0.5+amt*0.6));
-  const orbitsR=[];
-  // more chaos, more energy: the bright disc reaches further out
-  for(let k=0;k<orbits;k++) orbitsR.push(Rsh*(2.6+Math.pow(Math.random(),1.5)*7*(0.7+0.3*chaos)));
-  orbitsR.sort((a,b)=>b-a);
-  const flat=Math.sin(tilt);
-  const orbitArc=(r, from, to, lensed, lower, fade=1)=>{
-    const heat=Math.pow(Rsh*2.6/r,0.9);
-    const v=Math.min(0.35,Math.sqrt(Rsh*2.6/r)*0.35);
-    const turb=0.55+Math.random()*0.9*Math.min(1.6,chaos);  // gaps and bright bands
-    const seg=20;
-    ctx.lineWidth=Math.max(cpx(0.6),Rsh*(0.03+0.05*heat));
-    for(let k=0;k<seg;k++){
-      const p0=from+(to-from)*k/seg, p1=from+(to-from)*(k+1)/seg;
-      const beam=Math.pow(1+dirSign*v*Math.cos((p0+p1)/2),2);
-      const tone=Math.min(255,150+105*heat*Math.min(1.5,beam));
-      ctx.globalAlpha=Math.min(0.9,(0.05+0.3*heat)*beam*turb*(0.6+0.25*chaos)*(lensed?(lower?0.35:0.8):1))*fade;
-      ctx.strokeStyle=`rgb(${tone|0},${tone|0},${tone|0})`;
-      ctx.beginPath();
-      for(let q=0;q<=4;q++){
-        const ph=p0+(p1-p0)*q/4;
-        let x,y;
-        if(!lensed){ [x,y]=toScreen(Math.cos(ph)*r, Math.sin(ph)*r*flat); }
-        else {
-          // the far disc, bent around the shadow: over the top, and fainter
-          // underneath — its radius grows slowly with the orbit's
-          const ra=Rsh*1.1+(r-Rsh*2.6)*0.18;
-          [x,y]=toScreen(Math.cos(ph)*ra*1.03, (lower?1:-1)*Math.abs(Math.sin(ph))*ra);
-        }
-        q?ctx.lineTo(x,y):ctx.moveTo(x,y);
-      }
-      ctx.stroke();
-    }
-  };
-  // the jets: streams along the spin axis (screen: perpendicular to the disc's long axis)
-  const jet=(sign, front)=>{
-    if(jets<=0.01) return;
-    const ax=-sinR*sign, ay=cosR*sign, Lj=unit*(0.18+0.3*jets)*Math.cos(tilt)+Rsh, n=Math.round(260*jets);
-    const bright=(sign===dirSign ? 1 : 0.45);                        // beamed toward us, dimmed away
-    for(let k=0;k<n;k++){
-      const s1=Rsh*1.1 + Math.pow(Math.random(),1.4)*(Lj-Rsh), f=(s1-Rsh)/(Lj-Rsh);
-      const spread=s1*0.05*(1+Math.random()), knot=0.6+0.4*Math.pow(Math.abs(Math.sin(f*Math.PI*5)),3);
-      const off=(Math.random()-0.5)*spread*2, wob=Math.sin(f*9+sign)*spread*0.6;
-      const x=cx+ax*s1-ay*(off+wob), y=cy+ay*s1+ax*(off+wob);
-      ctx.globalAlpha=Math.min(0.9, (0.25+0.5*Math.random())*Math.pow(1-f,1.2)*knot*bright*(front?1:0.6));
-      ctx.fillStyle='rgb(245,245,245)';
-      ctx.beginPath(); ctx.ellipse(x, y, Rsh*(0.03+0.05*(1-f)), Rsh*(0.1+0.25*(1-f)), Math.atan2(ay,ax)+Math.PI/2, 0, Math.PI*2); ctx.fill();
-    }
-  };
-  jet(-dirSign, false);
-  // behind: the lensed arch over the top, and the fainter one beneath
-  // (seen face-on there is no arch: the far half of the disc simply shows)
-  for(const r of orbitsR) orbitArc(r, 0, Math.PI, true, false, view);
-  for(const r of orbitsR) orbitArc(r, 0, Math.PI, true, true, view);
-  if(view<0.999) for(const r of orbitsR) orbitArc(r, Math.PI, Math.PI*2, false, false, 1-view);
-  // the shadow, then the photon ring hugging it
-  ctx.globalAlpha=1; ctx.fillStyle='rgb(4,4,4)';
-  ctx.beginPath(); ctx.arc(cx,cy,Rsh,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='rgb(252,252,252)'; ctx.lineWidth=Math.max(cpx(1),Rsh*0.04);
-  ctx.globalAlpha=0.9; ctx.beginPath(); ctx.arc(cx,cy,Rsh*1.04,0,Math.PI*2); ctx.stroke();
-  // in front: the near half of every orbit, crossing over the shadow
-  for(const r of orbitsR) orbitArc(r, 0, Math.PI, false, false);
-  jet(dirSign, true);
-  ctx.globalAlpha=1;
+  ctx.putImageData(img,0,0);
   return c;
 }

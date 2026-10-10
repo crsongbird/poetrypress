@@ -327,144 +327,10 @@ export function genColdPress(w,h,amt,zoom,light,form,M3){
 // Something damp got in
 // and the paper remembered
 // for forty-odd years.
-export function genFoxing(w,h,amt,zoom,light,tint,form,GL){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  // Foxing: the brown spots old paper takes where damp got in. COCKLE is the
-  // paper itself, rippled where it was wet and dried unevenly — soft waves
-  // round each damp patch, and a raised tide line at each spot's edge — lit
-  // by the dial (0: flat, as it always was). GLOW is foxing's real trick:
-  // under ultraviolet the spots fluoresce.
-  const cockle=Math.max(0, Math.min(1, form==null ? 0 : form)), SP=[], CL=[];
-  const t = parseHex(tint || '#8A6A3C');
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-
-  const unit=Math.min(w,h);
-  const clusters = Math.max(2, Math.round((5+Math.random()*4)*amt));
-  for(let k=0;k<clusters;k++){
-    // damp enters at the edges, so clusters favour the margins
-    const edge = Math.random();
-    const cx = edge<0.5 ? w*(Math.random()*0.28) : w*(0.72+Math.random()*0.28);
-    const cy = h*Math.random();
-    const spread = unit*(0.08+Math.random()*0.16)*zoom;
-    const spots = 5+Math.floor(Math.random()*9);
-    CL.push({ x:cx, y:cy, r:spread*1.6, ph:Math.random()*6.283 });
-    for(let i=0;i<spots;i++){
-      const a=Math.random()*Math.PI*2, d=Math.pow(Math.random(),0.7)*spread;
-      const x=cx+Math.cos(a)*d, y=cy+Math.sin(a)*d;
-      const rr=unit*(0.004+Math.random()*0.016)*zoom;
-      const g=ctx.createRadialGradient(x,y,0,x,y,rr);
-      g.addColorStop(0,   `rgba(${t.r},${t.g},${t.b},0.55)`);
-      g.addColorStop(0.55,`rgba(${t.r},${t.g},${t.b},0.26)`);
-      g.addColorStop(1,   `rgba(${t.r},${t.g},${t.b},0)`);
-      ctx.fillStyle=g;
-      ctx.beginPath(); ctx.arc(x,y,rr,0,Math.PI*2); ctx.fill();
-      SP.push({ x, y, r:rr });
-    }
-  }
-  if(cockle>0.01){
-    // the paper's relief, on the working grid: ripples round each damp patch
-    // (strongest at its middle distance), a tide line round each spot
-    const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), H=new Float32Array(ww*wh), u=Math.min(ww,wh);
-    for(const k of CL){ const kx=k.x/div, ky=k.y/div, kr=k.r/div, lam=u*0.045*zoom, amp=u*0.012*cockle;   // broad, gentle buckles
-      for(let y=Math.max(0,Math.floor(ky-kr));y<Math.min(wh,Math.ceil(ky+kr));y++) for(let x=Math.max(0,Math.floor(kx-kr));x<Math.min(ww,Math.ceil(kx+kr));x++){
-        const d=Math.hypot(x-kx,y-ky)/kr; if(d>=1) continue;
-        const fall=Math.pow(1-d,1.5);                              // strongest at the heart of the damp
-        // buckles, not rings: two crossed, wandering waves
-        const bx=x/lam, by=y/lam;
-        H[y*ww+x]+=amp*fall*Math.sin(bx*2.1 + 1.6*Math.sin(by*1.3 + k.ph) + k.ph)*Math.sin(by*1.7 + 1.3*Math.sin(bx*0.9 - k.ph)); } }
-    for(const sp of SP){ const sx=sp.x/div, sy=sp.y/div, sr=sp.r/div, R=sr*1.3, tw=Math.max(0.8, sr*0.14);
-      for(let y=Math.max(0,Math.floor(sy-R));y<Math.min(wh,Math.ceil(sy+R));y++) for(let x=Math.max(0,Math.floor(sx-R));x<Math.min(ww,Math.ceil(sx+R));x++){
-        const d=Math.hypot(x-sx,y-sy); H[y*ww+x]+=u*0.0012*cockle*Math.exp(-(((d-sr*0.85)/tw)**2)); } }
-    const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.08, shadow:0.5, ao:0.3, ambient:0.45 });
-    const fl=L.flat||1, sh=document.createElement('canvas'); sh.width=ww; sh.height=wh;
-    const sx=sh.getContext('2d', CPU), img=sx.createImageData(ww,wh), d=img.data;
-    for(let i=0;i<ww*wh;i++){ const v=Math.max(0,Math.min(255, 128 + (L.light[i]/fl-1)*150)), q=i*4; d[q]=d[q+1]=d[q+2]=v; d[q+3]=255; }
-    sx.putImageData(img,0,0);
-    // laid over the paper: mid-grey changes nothing, so only the relief shows
-    ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.imageSmoothingEnabled=true; ctx.drawImage(sh,0,0,w,h); ctx.restore();
-  }
-  if(GL){
-    // under ultraviolet, the spots fluoresce
-    const g3=`${GL.r*255|0},${GL.g*255|0},${GL.b*255|0}`;
-    ctx.save(); ctx.globalCompositeOperation='lighter';
-    for(const sp of SP){ const g=ctx.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,sp.r*1.4);
-      g.addColorStop(0,`rgba(${g3},0.55)`); g.addColorStop(1,`rgba(${g3},0)`); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sp.x,sp.y,sp.r*1.4,0,Math.PI*2); ctx.fill(); }
-    ctx.restore();
-  }
-  return c;
-}
 
 // It was folded once
 // to fit an envelope, then
 // opened. It still knows.
-export function genFoldGhost(w,h,amt,zoom,light,form,M3){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const crumple=Math.max(0,Math.min(1, form==null ? 0.3 : form));
-  // Paper that was folded and carried in a pocket, then opened out flat.
-  // A few long FOLDS cross the whole sheet — the first near the middle, the
-  // next across it, as a sheet is halved and halved again — each a ridge or
-  // a valley, with the paper tilting away on either side of it, so one side
-  // catches the light and the other falls into shade. CRUMPLE adds the short,
-  // random creases of being pressed in a pocket. Built as heights, lit by
-  // lightHeights. CREASE DEPTH · FOLD COUNT · CRUMPLE
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
-  const H=new Float32Array(ww*wh);
-  const depth=unit*0.004*zoom;
-  // the long folds: a line through (px,py) at angle a; mountain or valley
-  // HOW it was folded, chosen by the seed: in half and half again; in thirds,
-  // like a letter; a letter then halved; or halved with a corner turned
-  // down. Folded by hand, so every fold sits off-centre and a little askew.
-  // (Each fold's offset moves it ACROSS the page — along its normal. An
-  // offset along the fold's own length, as before, moved nothing, which is
-  // why every fold used to cross the centre.)
-  const nFolds=Math.max(1, Math.round(3*amt));
-  const a0=Math.random()<0.5 ? 0 : Math.PI/2, scheme=Math.floor(Math.random()*4);
-  const askew=()=>(Math.random()-0.5)*0.14, hand=s=>(Math.random()-0.5)*s, side=()=>Math.random()<0.5 ? 1 : -1;
-  const plan=[];                                                // [angle, offset (share of the page), strength]
-  if(scheme===0) plan.push([a0+askew(), hand(0.24), 1], [a0+Math.PI/2+askew(), hand(0.24), 1]);
-  else if(scheme===1) plan.push([a0+askew(), -1/6+hand(0.08), 1], [a0+askew()*0.6, 1/6+hand(0.08), 1]);
-  else if(scheme===2) plan.push([a0+askew(), -1/6+hand(0.08), 1], [a0+askew()*0.6, 1/6+hand(0.08), 1], [a0+Math.PI/2+askew(), hand(0.2), 0.8]);
-  else plan.push([a0+askew(), hand(0.26), 1], [a0+side()*Math.PI/4+askew(), side()*(0.3+Math.random()*0.12), 0.8]);
-  while(plan.length < nFolds) plan.push([Math.random()*Math.PI, hand(0.8), 0.5+Math.random()*0.5]);
-  plan.splice(nFolds);
-  const folds=plan.map(([a, off, str]) => {
-    const nx=-Math.sin(a), ny=Math.cos(a), px=ww*(0.5 + off*nx), py=wh*(0.5 + off*ny);
-    return { nx, ny, c: nx*px + ny*py, s: side(), d: depth*str, reach: unit*(0.06+Math.random()*0.06) };
-  });
-  // the crumples: short creases whose ends fade into the sheet
-  const nCrum=Math.round(70*crumple*Math.max(0.4, amt));
-  const crum=[];
-  for(let k=0;k<nCrum;k++){
-    const a=Math.random()*Math.PI, L=unit*(0.05+Math.random()*0.22), x=Math.random()*ww, y=Math.random()*wh;
-    crum.push({ x, y, dx:Math.cos(a), dy:Math.sin(a), L, s:Math.random()<0.5?1:-1, d:depth*(0.25+Math.random()*0.45), reach:unit*(0.012+Math.random()*0.02) });
-  }
-  const fibre=fbmSampler(60, 2);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    let hv=(fibre(x/ww,y/wh)-0.5)*0.35;                         // the paper's own grain
-    for(const f of folds){
-      const dd=Math.abs(x*f.nx + y*f.ny - f.c);
-      // a sharp crease, and the sheet tilting away from it on both sides
-      hv += f.s*f.d*(Math.max(0, 1 - dd/(f.reach*0.08))*1.2 - Math.min(dd, f.reach)/f.reach);
-    }
-    for(const c of crum){
-      const rx=x-c.x, ry=y-c.y, along=rx*c.dx + ry*c.dy;
-      if(along < -c.L || along > c.L) continue;
-      const across=Math.abs(-rx*c.dy + ry*c.dx);
-      if(across > c.reach) continue;
-      const fade=1 - Math.pow(along/c.L, 2);                    // the ends ease into the sheet
-      hv += c.s*c.d*fade*(1 - across/c.reach);
-    }
-    H[y*ww+x]=hv;
-  }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.12, shadow:0.45, ao:0.25, ambient:0.45 });
-  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.12, shadow:0, ao:0, ambient:0.45 });
-  const fl=flat.light[0]||1, fs=flat.spec[0];
-  return paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*165, sp=(L.spec[i]-fs)*140;
-    if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
-    return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
-}
 
 // Someone set it down
 // mid-sentence and forgot it.
@@ -743,11 +609,11 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,M3){
  * blends like the other grey-ground textures.
  * DROP SIZE · RAIN · CONDENSATION
  */
-export function genGlassRain(w,h,amt,zoom,light,form,M3){
+export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const mist=Math.max(0,Math.min(1, form==null ? 0.3 : form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
-  const H=new Float32Array(ww*wh);
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const H=new Float32Array(N);
   // a drop: a wobbly dome, a little heavier at the bottom; heights combine by max
   const drop=(cx, cy, r)=>{
     const ph1=Math.random()*6.28, ph2=Math.random()*6.28, sag=1 + Math.min(0.35, r/(unit*0.05))*0.35;
@@ -763,31 +629,99 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3){
   // condensation: a mist of the smallest droplets
   const fine=Math.round(canonArea(w,h)/1800*mist/(div*div));
   for(let k=0;k<fine;k++) drop(Math.random()*ww, Math.random()*wh, Math.max(0.6, unit*(0.0012+Math.random()*0.0025)));
-  // drops, from many tiny to a few large
+  // drops, from many tiny to a few large; some run, leaving a cleared wet trail
+  const TRAILS=[];
   const n=Math.round((90+Math.random()*40)*amt);
   for(let k=0;k<n;k++){
     const r=unit*(0.003 + 0.042*Math.pow(Math.random(), 3))*zoom, x=Math.random()*ww, y=Math.random()*wh;
     if(r > unit*0.012 && Math.random()<0.5){
-      // a runner: a thin wet ridge above it, droplets left along the way
       const len=r*(5+Math.random()*14), wob=Math.random()*6.28;
+      TRAILS.push({ x, y, len, wob, r });
       for(let t=0;t<len;t+=Math.max(0.7, r*0.15)){
-        const tx=x+Math.sin(t*0.08+wob)*r*0.3, ty=y-t, rr=r*0.16*(1 - t/len*0.5);
+        const tx=x+Math.sin(t/(r*4)+wob)*r*0.18, ty=y-t, rr=r*0.16*(1 - t/len*0.5);   // a trail wanders slowly, not in a zigzag
         drop(tx, ty, Math.max(0.6, rr));
         if(Math.random()<0.03) drop(tx + (Math.random()-0.5)*r*0.5, ty, r*(0.12+Math.random()*0.18));
       }
     }
     drop(x, y, Math.max(0.6, r));
   }
+  // THE OUTDOORS behind the glass, made from the page's own colours: a sky
+  // (its first colours, lightened), a horizon, a dark band of land with a
+  // vague skyline — trees or roofs — and a few far lights; all of it far out
+  // of focus. Every drop is a tiny lens and shows it UPSIDE-DOWN.
+  const cols=(env && env.length ? env : ['#6A7C96','#2A3140']).map(c=>parseHex(c));
+  const mixc=(a,b,t)=>({ r:a.r+(b.r-a.r)*t, g:a.g+(b.g-a.g)*t, b:a.b+(b.b-a.b)*t });
+  const EW=96, EH=96, E=new Float32Array(EW*EH*3), horizon=0.5+Math.random()*0.15;
+  const sky0=mixc(cols[0], {r:255,g:255,b:255}, 0.3), sky1=mixc(cols[Math.min(1,cols.length-1)], {r:255,g:255,b:255}, 0.12);
+  const land=mixc(cols[cols.length-1], {r:0,g:0,b:0}, 0.35);
+  const ph=[Math.random()*6,Math.random()*6,Math.random()*6], city=Math.random()<0.5;
+  for(let y=0;y<EH;y++) for(let x=0;x<EW;x++){
+    const u=x/EW, v=y/EH;
+    // the skyline: rolling trees, or blocky roofs
+    const sk = city ? 0.06*(Math.floor(Math.abs(Math.sin(u*9+ph[0]))*4)/4) + 0.02*Math.sin(u*31+ph[1])
+                    : 0.05*(0.5+0.5*Math.sin(u*7+ph[0])) + 0.025*Math.sin(u*23+ph[1]) + 0.012*Math.sin(u*61+ph[2]);
+    let c = v < horizon - sk ? mixc(sky0, sky1, v/(horizon)) : mixc(land, mixc(land,{r:0,g:0,b:0},0.4), (v-horizon)/(1-horizon));
+    const k=(y*EW+x)*3; E[k]=c.r; E[k+1]=c.g; E[k+2]=c.b;
+  }
+  // far lights along the horizon
+  const nl=city ? 18 : 6;
+  for(let q=0;q<nl;q++){ const lx=Math.floor(Math.random()*EW), ly=Math.floor((horizon - Math.random()*0.04)*EH), lc=mixc(cols[q%cols.length], {r:255,g:240,b:200}, 0.6);
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const xx=lx+dx, yy=ly+dy; if(xx<0||yy<0||xx>=EW||yy>=EH) continue; const k=(yy*EW+xx)*3; E[k]=lc.r; E[k+1]=lc.g; E[k+2]=lc.b; } }
+  // softened a little: a drop focuses the scene, but only so well
+  const tmp=new Float32Array(EW*EH*3), R=1;
+  for(let pass=0;pass<2;pass++){
+    for(let y=0;y<EH;y++) for(let x=0;x<EW;x++) for(let ch=0;ch<3;ch++){ let s=0,n2=0; for(let d=-R;d<=R;d++){ const xx=Math.min(EW-1,Math.max(0,x+d)); s+=E[(y*EW+xx)*3+ch]; n2++; } tmp[(y*EW+x)*3+ch]=s/n2; }
+    for(let y=0;y<EH;y++) for(let x=0;x<EW;x++) for(let ch=0;ch<3;ch++){ let s=0,n2=0; for(let d=-R;d<=R;d++){ const yy=Math.min(EH-1,Math.max(0,y+d)); s+=tmp[(yy*EW+x)*3+ch]; n2++; } E[(y*EW+x)*3+ch]=s/n2; }
+  }
+  const envAt=(u,v,ch)=>{ u=Math.max(0,Math.min(0.999,u))*(EW-1); v=Math.max(0,Math.min(0.999,v))*(EH-1); const x0=u|0, y0=v|0, tx=u-x0, ty=v-y0, k=(y0*EW+x0)*3+ch;
+    return (E[k]*(1-tx)+E[k+3]*tx)*(1-ty) + (E[k+EW*3]*(1-tx)+E[k+EW*3+3]*tx)*ty; };
   const L=lightHeights(H, ww, wh, { light, relief:1.6, gloss:0.95, shadow:0.25, ao:0, ambient:0.55 });
-  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1.6, gloss:0.95, shadow:0, ao:0, ambient:0.55 });
-  const base=flat.light[0], baseSpec=flat.spec[0];
-  return paintLit(w,h,div,ww,wh, i => {
-    if(H[i] <= 0) return [128,128,128];                     // dry glass: neutral
-    const v=128 + (L.light[i]-base)*210 + (L.spec[i]-baseSpec)*240;
-    if(!M3) return [clamp255(v), clamp255(v), clamp255(v*1.01)];
-    const dl=(L.light[i]-base)*210, sp=(L.spec[i]-baseSpec)*240;      // the drop's shade and its glint, coloured
-    return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2)*1.01)];
-  });
+  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
+  const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
+  const fog={r:236,g:238,b:240};
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const i=y*ww+x, q=i*4, hv=H[i];
+    if(hv<=0){
+      // dry glass: clear, or fogged by condensation
+      d[q]=fog.r; d[q+1]=fog.g; d[q+2]=fog.b; d[q+3]=Math.round(255*mist*0.28); continue;
+    }
+    const gx=(H[y*ww+Math.min(ww-1,x+1)]-H[y*ww+Math.max(0,x-1)])*0.5, gy=(H[Math.min(wh-1,y+1)*ww+x]-H[Math.max(0,y-1)*ww+x])*0.5;
+    // a drop sees wide: whatever its height on the glass it looks out at
+    // much the same view, mostly sky — then turns it over
+    const nz=1/Math.sqrt(1+gx*gx+gy*gy), u=x/ww, v=0.3 + 0.3*(y/wh);
+    // refraction: the lens turns the view over; red, green and blue bend a
+    // little differently (chromatic aberration at the rims)
+    const K=0.45;
+    const rr=envAt(u+gx*K*0.96, v+gy*K*0.96, 0), gg=envAt(u+gx*K, v+gy*K, 1), bb=envAt(u+gx*K*1.05, v+gy*K*1.05, 2);
+    // the rim: light bends out of the drop there, so it reads dark; and the
+    // sky reflects in it (Fresnel)
+    // (a tiny droplet is too small to show a dark rim: it scales with the drop)
+    const size=Math.min(1, hv/(unit*0.004));
+    const tilt=1-nz, rim=Math.min(1, Math.pow(tilt*2.2, 2))*size, fres=Math.min(1, Math.pow(tilt*2, 3))*0.45;
+    const sp=L.spec[i]*255*1.2;
+    const sky=[envAt(u,0.05,0), envAt(u,0.05,1), envAt(u,0.05,2)], ref=[rr,gg,bb];
+    for(let c=0;c<3;c++){
+      const sh=M3 ? M3.sh[c] : 1;
+      let val=ref[c]*(1-rim*0.6*(2-sh)) + sky[c]*fres + sp*(M3 ? M3.hi[c] : 1);
+      d[q+c]=val<0?0:val>255?255:val;
+    }
+    d[q+3]=Math.round(255*Math.min(1, hv/0.6));
+  }
+  // runners clear the fog where they went: a wet, clear trail
+  sctx.putImageData(img,0,0);
+  if(mist>0.02){
+    sctx.save(); sctx.globalCompositeOperation='destination-out';
+    for(const t of TRAILS){ sctx.strokeStyle='rgba(0,0,0,0.9)'; sctx.lineWidth=t.r*0.9; sctx.lineCap='round'; sctx.beginPath();
+      for(let s=0;s<t.len;s+=Math.max(1,t.r*0.3)){ const tx=t.x+Math.sin(s/(t.r*4)+t.wob)*t.r*0.18, ty=t.y-s; s?sctx.lineTo(tx,ty):sctx.moveTo(tx,ty); } sctx.stroke(); }
+    sctx.restore();
+    // (and the drops sitting on those trails are drawn again over them)
+    const img2=sctx.getImageData(0,0,ww,wh), d2=img2.data;
+    for(let i=0;i<N;i++) if(H[i]>0){ const q=i*4; d2[q]=d[q]; d2[q+1]=d[q+1]; d2[q+2]=d[q+2]; d2[q+3]=d[q+3]; }
+    sctx.putImageData(img2,0,0);
+  }
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
+  return c;
 }
 
 // ---------- textures lit by lightHeights (texCore): a surface, then its light ----------
@@ -880,8 +814,22 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
     G[y*ww+x]=g;
     H[y*ww+x]=(GZ[y*ww+x]-0.5)*1.2 + Math.sqrt(g)*seam*0.9;        // the seam stands proud of the glaze
   }
+  // THE VESSEL: we look at the outside of a curved pot, not a flat plane — its
+  // wall turns away toward the sides (a cylinder, upright or lying, or the
+  // shoulder of a round bowl, by the seed). Given as normals, not heights:
+  // the curve shades and catches its long highlight without casting shadows
+  // across the whole page.
+  const shape=Math.random(), across=Math.random()<0.5, Rv=Math.max(ww,wh)*(0.5+Math.random()*0.3);
+  const vcx=ww*(0.3+Math.random()*0.4), vcy=wh*(0.3+Math.random()*0.4), CN=new Float32Array(ww*wh*3);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    let sx=0, sy=0;
+    if(shape<0.65){ const d=((across ? y-vcy : x-vcx))/Rv; if(across) sy=d; else sx=d; }     // a cylinder
+    else { sx=(x-vcx)/Rv; sy=(y-vcy)/Rv; }                                                   // a bowl's shoulder
+    const m=Math.hypot(sx,sy), lim=0.92; if(m>lim){ sx*=lim/m; sy*=lim/m; }
+    const k=(y*ww+x)*3; CN[k]=sx; CN[k+1]=sy; CN[k+2]=Math.sqrt(Math.max(0.01, 1-sx*sx-sy*sy));
+  }
   // glazed pottery glows: more fill light than raw stone or sand gets
-  const L=lightHeights(H, ww, wh, { light, relief:1.2, gloss:0.35 + gloss*0.6, shadow:0.5, ao:0.3, ambient:0.66 });
+  const L=lightHeights(H, ww, wh, { light, relief:1.2, gloss:0.35 + gloss*0.6, shadow:0.5, ao:0.3, ambient:0.66, normals:CN });
   return paintLit(w,h,div,ww,wh, i => {
     const k0=litK(L,i,0.66,M3,0), k1=litK(L,i,0.66,M3,1), k2=litK(L,i,0.66,M3,2), s=L.spec[i], g=Math.min(1, G[i]*1.6);
     const s0=s*litS(M3,0), s1=s*litS(M3,1), s2=s*litS(M3,2);
@@ -937,7 +885,7 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
 }
 
 /**
- * Crystal Leaf: metal that crystallised as it cooled — the spangle on
+ * Metal Spangle (once Crystal Leaf): metal that crystallised as it cooled — the spangle on
  * galvanised zinc, the stepped hoppers of bismuth. Each GRAIN is one crystal,
  * and its face is tilted its own way (a normal map): turn the light and the
  * grains flash and darken one by one, which is what makes spangle look like
@@ -950,13 +898,13 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
  *   VARIATION  how unlike one another the crystals are: arms of different
  *              lengths, missing, bent, unevenly barbed; grains of every size;
  *              some with no dendrites at all (0: orderly, like a snowflake)
- *   BRUSHING   fine lines brushed across the light's direction, like brushed
- *              steel, catching it along their length
+ *   BRUSHING   fine lines brushed across the light, like brushed steel — face
+ *              by face, each grain's lines turned with its own tilt
  * Tiny FLECKS inside the crystal glint when the light finds them. Metal Hue
  * colours the metal; Highlight and Shade colour its shine and its shadow;
  * Glow lights the flecks from within.
  */
-export function genCrystalLeaf(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
+export function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
   const terr=Math.max(0,Math.min(1, form==null ? 0 : form)), dend=Math.max(0,Math.min(1,amt));
   const vr=Math.max(0,Math.min(1, varK==null ? 0.4 : varK)), br=Math.max(0,Math.min(1, brush==null ? 0 : brush));
@@ -1029,9 +977,13 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
     // the crystal's face is tilted: its normal, shared by the whole grain;
     // brushing adds fine slopes across the light's direction
     let tx=g1.tx, ty=g1.ty;
-    if(BL){ const u=x*SX+y*SY+bOff, u0=Math.floor(u), t=u-u0, v=-x*SY+y*SX;
+    if(BL){
+      // brushed FACE BY FACE: each grain's lines run across the light as that
+      // face meets it (the light's direction, turned by the face's own tilt)
+      let dX=SX+2.2*g1.tx, dY=SY+2.2*g1.ty; const dl=Math.hypot(dX,dY)||1; dX/=dl; dY/=dl;
+      const n=BL.length-2, u=((x*dX+y*dY+bOff+g1.film*977)%n+n)%n, u0=Math.floor(u), t=u-u0, v=-x*dY+y*dX;
       const bv=(BL[u0]*(1-t)+BL[u0+1]*t) - 0.5 + 0.15*Math.sin(v*0.05 + u0);
-      tx+=SX*bv*0.5*br; ty+=SY*bv*0.5*br; }
+      tx+=dX*bv*0.5*br; ty+=dY*bv*0.5*br; }
     const nz=1/Math.sqrt(1+tx*tx+ty*ty);
     Nm[i*3]=tx*nz; Nm[i*3+1]=ty*nz; Nm[i*3+2]=nz;
   }
@@ -1072,6 +1024,270 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
     if(glint>0.05){ octx.fillStyle=`rgba(255,255,255,${Math.min(1, glint)})`; octx.beginPath(); octx.arc(x,y,r,0,Math.PI*2); octx.fill(); }
     if(GL){ const g=octx.createRadialGradient(x,y,0,x,y,r*4), c3=`${GL.r*255|0},${GL.g*255|0},${GL.b*255|0}`;
       g.addColorStop(0,`rgba(${c3},0.9)`); g.addColorStop(1,`rgba(${c3},0)`); octx.fillStyle=g; octx.beginPath(); octx.arc(x,y,r*4,0,Math.PI*2); octx.fill(); }
+  }
+  return out;
+}
+
+/**
+ * Old Paper — what time and handling do to a sheet (Foxing and Fold Ghost,
+ * merged). Subtle by default; everything grows with its knob.
+ *   FOLDS    a few long folds across the sheet, as it was folded to be
+ *            carried (halves, a letter's thirds, a turned-down corner…); at
+ *            the top of the range the folds give way and TEAR in from the edge
+ *   AGE      0 is a clean sheet. Then it yellows from the edges, FOXING
+ *            spots gather in clusters at the margins, MILDEW blooms in fuzzy
+ *            colonies, and at the very end it has been near a flame: SCORCH
+ *            at an edge, charred black, and a burn hole or two
+ *   CRINKLE  the gentle unevenness of paper that was once damp, and the
+ *            small creases of a pocket
+ * Folds and crinkle are heights, lit by the dial. Age Hue colours the
+ * yellowing and the foxing, Mould Hue the mildew; Specular and Shadow the
+ * paper's sheen and its shade; GLOW makes the spots fluoresce, as foxing
+ * does under ultraviolet.
+ */
+export function genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,crinkle,M3,GL){
+  amt=(amt==null?0.35:amt); zoom=(zoom==null?1:zoom);
+  const folds=Math.max(0,Math.min(1,amt)), age=Math.max(0,Math.min(1, form==null ? 0.3 : form)), crk=Math.max(0,Math.min(1, crinkle==null ? 0.25 : crinkle));
+  const AGEC=parseHex(tint1||'#8A6A3C'), MOLD=parseHex(tint2||'#5F6A4E');
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const H=new Float32Array(N), depth=unit*0.0035*zoom;
+  // FOLDS: how it was folded, chosen by the seed (as Fold Ghost did)
+  const nFolds=folds<0.04 ? 0 : Math.max(1, Math.round(1 + folds*5));
+  const a0=Math.random()<0.5 ? 0 : Math.PI/2, scheme=Math.floor(Math.random()*4);
+  const askew=()=>(Math.random()-0.5)*0.14, hand=s=>(Math.random()-0.5)*s, side=()=>Math.random()<0.5 ? 1 : -1;
+  const plan=[];
+  if(scheme===0) plan.push([a0+askew(), hand(0.24), 1], [a0+Math.PI/2+askew(), hand(0.24), 1]);
+  else if(scheme===1) plan.push([a0+askew(), -1/6+hand(0.08), 1], [a0+askew()*0.6, 1/6+hand(0.08), 1]);
+  else if(scheme===2) plan.push([a0+askew(), -1/6+hand(0.08), 1], [a0+askew()*0.6, 1/6+hand(0.08), 1], [a0+Math.PI/2+askew(), hand(0.2), 0.8]);
+  else plan.push([a0+askew(), hand(0.26), 1], [a0+side()*Math.PI/4+askew(), side()*(0.3+Math.random()*0.12), 0.8]);
+  while(plan.length < nFolds) plan.push([Math.random()*Math.PI, hand(0.8), 0.5+Math.random()*0.5]);
+  plan.splice(nFolds);
+  const fd=depth*(0.4+folds*0.9);
+  const FL=plan.map(([a, off, str]) => { const nx=-Math.sin(a), ny=Math.cos(a), px=ww*(0.5 + off*nx), py=wh*(0.5 + off*ny);
+    return { a, nx, ny, px, py, c: nx*px + ny*py, s: side(), d: fd*str, reach: unit*(0.06+Math.random()*0.06) }; });
+  // CRINKLE: pocket creases, short and fading at their ends, and broad soft buckles
+  const nCrum=Math.round(60*Math.pow(crk, 1.6));                // few at the default: a gentle sheet
+  const crum=[];
+  for(let k=0;k<nCrum;k++){ const a=Math.random()*Math.PI, L=unit*(0.05+Math.random()*0.2);
+    crum.push({ x:Math.random()*ww, y:Math.random()*wh, dx:Math.cos(a), dy:Math.sin(a), L, s:Math.random()<0.5?1:-1, d:depth*(0.2+Math.random()*0.35), reach:unit*(0.012+Math.random()*0.02) }); }
+  const fibre=fbmSampler(60, 2), buckle=fbmSampler(3, 2);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    let hv=(fibre(x/ww,y/wh)-0.5)*0.3 + (buckle(x/ww,y/wh)-0.5)*unit*0.03*crk;
+    for(const f of FL){ const dd=Math.abs(x*f.nx + y*f.ny - f.c); hv += f.s*f.d*(Math.max(0, 1 - dd/(f.reach*0.08))*1.2 - Math.min(dd, f.reach)/f.reach); }
+    for(const c of crum){ const rx=x-c.x, ry=y-c.y, along=rx*c.dx + ry*c.dy; if(along < -c.L || along > c.L) continue;
+      const across=Math.abs(-rx*c.dy + ry*c.dx); if(across > c.reach) continue; hv += c.s*c.d*(1 - Math.pow(along/c.L, 2))*(1 - across/c.reach); }
+    H[y*ww+x]=hv;
+  }
+  // TEARS: at the top of the Folds range, a fold gives way from the page's edge
+  const TEARS=[];
+  const nTear=folds>0.75 ? Math.max(1, Math.round((folds-0.75)*8)) : 0;
+  for(let t=0;t<nTear && FL.length;t++){
+    const f=FL[t%FL.length], dir=[Math.cos(f.a), Math.sin(f.a)];
+    // walk the fold line out to the page's edge; tear in from there
+    let sx=f.px, sy=f.py, sgn=Math.random()<0.5?1:-1; for(let k=0;k<4000;k++){ const nx2=sx+dir[0]*sgn, ny2=sy+dir[1]*sgn; if(nx2<0||ny2<0||nx2>=ww||ny2>=wh) break; sx=nx2; sy=ny2; }
+    const len=unit*(0.1+Math.random()*0.2), pts=[[sx,sy]];
+    let x=sx, y=sy, ang=Math.atan2(-dir[1]*sgn, -dir[0]*sgn);
+    for(let s=0;s<len;s+=unit*0.006){ ang+=(Math.random()-0.5)*0.5; x+=Math.cos(ang)*unit*0.006; y+=Math.sin(ang)*unit*0.006; pts.push([x,y]); }
+    TEARS.push(pts);
+    // the two sides of a tear no longer meet: one lifts a little
+    for(let i=1;i<pts.length;i++){ const [px,py]=pts[i], wdt=unit*0.006*(1 - i/pts.length);
+      for(let yy=Math.max(0,Math.floor(py-wdt*3));yy<Math.min(wh,Math.ceil(py+wdt*3));yy++) for(let xx=Math.max(0,Math.floor(px-wdt*3));xx<Math.min(ww,Math.ceil(px+wdt*3));xx++){
+        const d=Math.hypot(xx-px,yy-py); if(d<wdt*3) H[yy*ww+xx]+=depth*1.2*(1-d/(wdt*3))*(((xx-px)*Math.sin(ang)-(yy-py)*Math.cos(ang))>0 ? 1 : -0.5); } }
+  }
+  // lit, gently: paper is matte
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.1, shadow:0.4, ao:0.2, ambient:0.5 });
+  const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.1, shadow:0, ao:0, ambient:0.5 }).spec[0];
+  const c=paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*90;
+    if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
+    return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
+  const ctx=c.getContext('2d', CPU), U=Math.min(w,h), rgba=(o,a)=>`rgba(${o.r|0},${o.g|0},${o.b|0},${a})`;
+  // marks are laid on a mid-grey ground that blends away, so to show on a
+  // pale page they must sit well below it: the hues, deepened
+  const deepen=(o,k)=>({ r:o.r*k, g:o.g*k, b:o.b*k });
+  const SPOT=deepen(AGEC, 0.55), MOLDD=deepen(MOLD, 0.6), TONE=deepen(AGEC, 0.8);
+  // AGE 1 · yellowing, from the edges in, unevenly (tide marks where it was damp)
+  if(age>0.02){
+    const g=ctx.createRadialGradient(w/2,h/2,U*0.25,w/2,h/2,Math.hypot(w,h)*0.6);
+    g.addColorStop(0, rgba(TONE,0)); g.addColorStop(1, rgba(TONE, Math.min(0.55, age*0.5)));
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    for(let k=0;k<Math.round(age*4);k++){ const x=Math.random()*w, y=Math.random()*h, r=U*(0.1+Math.random()*0.2);
+      ctx.strokeStyle=rgba(TONE, 0.18*age); ctx.lineWidth=cpx(2); ctx.beginPath();
+      for(let a=0;a<=48;a++){ const an=a/48*Math.PI*2, rr=r*(1+0.15*Math.sin(an*3+k)+0.08*Math.sin(an*7+k*2)); a?ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr):ctx.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr); }
+      ctx.stroke(); }
+  }
+  // AGE 2 · foxing: rusty spots, in clusters, favouring the margins
+  const SPOTS=[];
+  const clusters=age<0.08 ? 0 : Math.round(2 + age*9);
+  for(let k=0;k<clusters;k++){
+    const edge=Math.random(), cx=edge<0.5 ? w*(Math.random()*0.28) : w*(0.72+Math.random()*0.28), cy=h*Math.random();
+    const spread=U*(0.06+Math.random()*0.14)*zoom, n=4+Math.floor(Math.random()*9*Math.min(1, age*1.6));
+    for(let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, d=Math.pow(Math.random(),0.7)*spread, x=cx+Math.cos(a)*d, y=cy+Math.sin(a)*d, rr=U*(0.003+Math.random()*0.012)*zoom;
+      const gg=ctx.createRadialGradient(x,y,0,x,y,rr); const al=Math.min(1, 0.25 + age*0.45);
+      gg.addColorStop(0, rgba(SPOT, 0.75*al)); gg.addColorStop(0.55, rgba(SPOT, 0.38*al)); gg.addColorStop(1, rgba(SPOT, 0));
+      ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(x,y,rr,0,Math.PI*2); ctx.fill(); SPOTS.push({x,y,r:rr}); }
+  }
+  // AGE 3 · mildew: fuzzy colonies — a soft blotch, a darker frayed rim, spores around it
+  if(age>0.45){
+    const n=Math.round((age-0.45)/0.55*12*(0.6+Math.random()*0.8));
+    for(let k=0;k<n;k++){
+      const x=Math.random()*w, y=Math.random()*h, r=U*(0.012+Math.random()*0.045)*zoom, al=0.3+0.4*(age-0.45)/0.55;
+      const g=ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0, rgba(MOLDD, al*0.7)); g.addColorStop(0.75, rgba(MOLDD, al*0.45)); g.addColorStop(1, rgba(MOLDD, 0));
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=rgba({r:MOLD.r*0.6,g:MOLD.g*0.6,b:MOLD.b*0.6}, al*0.6); ctx.lineWidth=cpx(1.2); ctx.beginPath();
+      for(let a=0;a<=72;a++){ const an=a/72*Math.PI*2, rr=r*0.8*(1+0.12*Math.sin(an*5+k)+0.1*(Math.random()-0.5)); a?ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr):ctx.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr); }
+      ctx.stroke();
+      ctx.fillStyle=rgba({r:MOLD.r*0.7,g:MOLD.g*0.7,b:MOLD.b*0.7}, al*0.8);
+      for(let s=0;s<40;s++){ const a=Math.random()*Math.PI*2, d=r*(0.5+Math.random()*1.3); ctx.beginPath(); ctx.arc(x+Math.cos(a)*d, y+Math.sin(a)*d, cpx(0.6+Math.random()*1.4), 0, Math.PI*2); ctx.fill(); }
+    }
+  }
+  // AGE 4 · near a flame: scorch at an edge (charred, then browned), a burn hole
+  if(age>0.8){
+    const nb=1+Math.floor((age-0.8)*10);
+    for(let b=0;b<nb;b++){
+      const hole=b>0 && Math.random()<0.5, e=Math.floor(Math.random()*4);
+      const x=hole ? w*(0.2+Math.random()*0.6) : (e===0 ? Math.random()*w : e===1 ? w : e===2 ? Math.random()*w : 0);
+      const y=hole ? h*(0.2+Math.random()*0.6) : (e===0 ? 0 : e===1 ? Math.random()*h : e===2 ? h : Math.random()*h);
+      const R=U*(hole ? 0.025+Math.random()*0.03 : 0.07+Math.random()*0.12), ph=[Math.random()*6,Math.random()*6,Math.random()*6];
+      // a burn's edge wanders in long lobes, not spikes
+      const edgeAt=an=>R*(1+0.22*Math.sin(an*2+ph[0])+0.1*Math.sin(an*5+ph[1])+0.035*Math.sin(an*11+ph[2]));
+      const ring=(k)=>{ ctx.beginPath(); for(let a=0;a<=96;a++){ const an=a/96*Math.PI*2, rr=edgeAt(an)*k; a?ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr):ctx.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr); } ctx.closePath(); };
+      // browned paper around it, then the char
+      for(let k=1.6;k>1.0;k-=0.1){ ring(k); ctx.fillStyle=`rgba(110,62,26,${0.08})`; ctx.fill(); }
+      ring(1.0); ctx.fillStyle='rgba(40,22,12,0.85)'; ctx.fill();
+      ring(0.88); ctx.fillStyle=hole ? 'rgba(8,6,5,0.95)' : 'rgba(14,10,8,0.95)'; ctx.fill();
+      // a glowing ember line at the char's edge, faint
+      ring(0.98); ctx.strokeStyle='rgba(150,70,20,0.35)'; ctx.lineWidth=cpx(1.5); ctx.stroke();
+    }
+  }
+  // TEARS: the gap (the dark under the paper) and the torn fibres at its lip
+  for(const pts of TEARS){
+    for(let i=1;i<pts.length;i++){ const t=1-i/pts.length;
+      ctx.strokeStyle=`rgba(20,16,12,${0.85})`; ctx.lineWidth=Math.max(cpx(0.8), U*0.006*t); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0]*div, pts[i-1][1]*div); ctx.lineTo(pts[i][0]*div, pts[i][1]*div); ctx.stroke();
+      ctx.strokeStyle='rgba(250,246,236,0.5)'; ctx.lineWidth=Math.max(cpx(0.6), U*0.002);
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0]*div+cpx(2), pts[i-1][1]*div+cpx(2)); ctx.lineTo(pts[i][0]*div+cpx(2)+(Math.random()-0.5)*cpx(2), pts[i][1]*div+cpx(2)); ctx.stroke(); }
+  }
+  // GLOW: the spots fluoresce, as foxing does under ultraviolet
+  if(GL){
+    const g3=`${GL.r*255|0},${GL.g*255|0},${GL.b*255|0}`;
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    for(const sp of SPOTS){ const g=ctx.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,sp.r*1.4);
+      g.addColorStop(0,`rgba(${g3},0.55)`); g.addColorStop(1,`rgba(${g3},0)`); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sp.x,sp.y,sp.r*1.4,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+  }
+  return c;
+}
+
+/**
+ * Crystal Leaf — looking INTO a crystal, close up: quartz, amethyst, a
+ * geode's heart. Light enters through the facets and bounces inside:
+ *   FACETS     a few large cut faces, flat, each tilted its own way; light
+ *              comes in at the edge turned toward it and fades as it goes
+ *              deeper, so every face is a gradient, bright edge to dark
+ *   DEPTH      a second set of faces behind the first, seen THROUGH it —
+ *              shifted by each front face's tilt (refraction) — whose edges
+ *              show as soft internal reflections
+ *   FIRE       light caught inside: bright planes where it meets an
+ *              internal face at a grazing angle and flashes, split into its
+ *              colours (dispersion) as it goes
+ *   CLARITY    clear and deep at 100; milky, veiled, at 0
+ *   PHANTOMS   ghost crystals inside: the outlines of the faces it had as it
+ *              grew, two or three nested in some of the faces
+ *   INCLUSIONS rutile needles and tiny bubbles caught in the stone
+ * Crystal Hue colours the stone, Inclusion Hue the needles; Specular,
+ * Shadow and Diffuse light it; Glow lights the fire from within.
+ * (Brushed metal, terraces and flecks — the old Crystal Leaf — live on as
+ * Metal Spangle.)
+ */
+export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,M3,GL){
+  amt=(amt==null?0.7:amt); zoom=(zoom==null?1:zoom);
+  const clarity=Math.max(0,Math.min(1,amt)), fire=Math.max(0,Math.min(1, form==null ? 0.5 : form));
+  const ph=Math.max(0,Math.min(1, phantoms==null ? 0.3 : phantoms)), inc=Math.max(0,Math.min(1, inclusions==null ? 0.2 : inclusions));
+  const CR=parseHex(tint1||'#B9A6D8'), IN=parseHex(tint2||'#D9A441');
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);
+  // a set of faces: centres on a jittered lattice, each a tilted plane
+  const faces=(cs)=>{ const gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, F=[];
+    for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ const a=Math.random()*Math.PI*2, t=0.2+Math.random()*0.5;
+      F.push({ x:(i-1+0.1+Math.random()*0.8)*cs, y:(j-1+0.1+Math.random()*0.8)*cs, tx:Math.cos(a)*t, ty:Math.sin(a)*t,
+               tone:Math.random(), ghost:Math.random()<0.45 }); }
+    return { cs, gx, gy, F }; };
+  const near=(S,x,y)=>{ const ci=Math.floor(x/S.cs)+1, cj=Math.floor(y/S.cs)+1; let d1=1e18, d2=1e18, f1=null, f2=null;
+    for(let b=cj-1;b<=cj+1;b++) for(let a=ci-1;a<=ci+1;a++){ if(a<0||b<0||a>=S.gx||b>=S.gy) continue; const f=S.F[b*S.gx+a], dd=(x-f.x)**2+(y-f.y)**2;
+      if(dd<d1){ d2=d1; f2=f1; d1=dd; f1=f; } else if(dd<d2){ d2=dd; f2=f; } }
+    const edge=f2 ? (d2-d1)/(2*Math.hypot(f2.x-f1.x, f2.y-f1.y)) : 1e9; return { f:f1, g:f2, edge }; };
+  const FRONT=faces(unit*0.42*zoom), BACK=faces(unit*0.27*zoom);
+  // FIRE: internal planes through the stone; grazing light flashes most
+  const np=Math.round(3+fire*12), P=[];
+  for(let k=0;k<np;k++){ const a=Math.random()*Math.PI, nx=-Math.sin(a), ny=Math.cos(a), px=Math.random()*ww, py=Math.random()*wh;
+    const meet=Math.abs(nx*SX+ny*SY), flash=(0.25+0.75*Math.pow(1-meet, 2))*(0.15+0.85*Math.random()**1.5);
+    P.push({ nx, ny, c:nx*px+ny*py, wd:unit*(0.004+Math.random()*0.018), flash, ax:Math.cos(a), ay:Math.sin(a), mid:px*Math.cos(a)+py*Math.sin(a), len:unit*(0.15+Math.random()*0.5) }); }
+  const veil=makeNoiseGrid(8,8), feathers=makeNoiseGrid(40,40);
+  const NM=new Float32Array(N*3), H=new Float32Array(N), V=new Float32Array(N*3);
+  const spec=(t)=>[ Math.max(0, Math.min(1, 1.5-Math.abs(t*4-3))), Math.max(0, Math.min(1, 1.5-Math.abs(t*4-2))), Math.max(0, Math.min(1, 1.5-Math.abs(t*4-1))) ];
+  const sharp=Math.max(1, unit*0.0025), REFR=unit*0.12;
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const i=y*ww+x, A=near(FRONT,x,y), f=A.f;
+    const nz=1/Math.sqrt(1+f.tx*f.tx+f.ty*f.ty); NM[i*3]=f.tx*nz; NM[i*3+1]=f.ty*nz; NM[i*3+2]=nz;
+    H[i]=Math.max(0, 1-A.edge/sharp)*sharp;                         // a hairline ridge where two faces meet
+    // light enters at the face's lit edge and fades inward: how far is this
+    // point from the centre, measured toward the light?
+    const toward=((x-f.x)*SX+(y-f.y)*SY)/(FRONT.cs*0.6);            // −1 far side … +1 the lit side
+    const admit=0.35+0.65*Math.max(0, -(f.tx*SX+f.ty*SY)/0.7);     // a face turned toward the light admits more
+    let v=0.1+0.08*f.tone + admit*0.5*Math.max(0, Math.min(1, 0.5-toward*0.5));
+    // DEPTH: the faces behind, refracted by this face's tilt
+    const B=near(BACK, x+f.tx*REFR, y+f.ty*REFR);
+    v+=0.08*B.f.tone + 0.35*Math.exp(-B.edge/(unit*0.004))*clarity*(0.5+0.5*admit);
+    // the front edge itself: a thin bright line, light leaking out of the cut
+    v+=0.5*Math.exp(-A.edge/(unit*0.0018));
+    // PHANTOMS: two or three nested outlines of the face it once had
+    if(ph>0.02 && f.ghost){ const st=FRONT.cs*0.07, k=A.edge/st;
+      if(k>0.6 && k<3.6){ const q=k-Math.floor(k); v+=Math.exp(-(((Math.min(q, 1-q))*st/(unit*0.0016))**2))*ph*0.4; } }
+    let r=v, g=v, bl=v;
+    for(const p of P){ const d=x*p.nx+y*p.ny-p.c; if(Math.abs(d)>p.wd*7) continue;
+      const along=x*p.ax+y*p.ay-p.mid; if(Math.abs(along)>p.len) continue;
+      const fade=Math.sin(Math.PI*0.5*(1-Math.abs(along)/p.len)), str=p.flash*fade*(0.3+0.7*fire);
+      const core=Math.exp(-((d/p.wd)**2))*str*0.75, halo=Math.exp(-((d/(p.wd*5))**2))*str*0.12;  // the flash, and light scattered round it
+      const sp=spec(Math.max(0,Math.min(1, 0.5+d/(p.wd*2.5)*0.5))), dsp=0.3+0.7*fire;
+      r+=halo+core*((1-dsp)+dsp*sp[0]*1.5); g+=halo+core*((1-dsp)+dsp*sp[1]*1.5); bl+=halo+core*((1-dsp)+dsp*sp[2]*1.5);
+      if(GL){ r+=(core+halo*2)*GL.r; g+=(core+halo*2)*GL.g; bl+=(core+halo*2)*GL.b; } }
+    // CLARITY: a milky veil, feathered
+    const cloud=(1-clarity)*(0.35+0.65*sampleNoiseGrid(veil,8,8,x/ww*7,y/wh*7))*(0.7+0.3*sampleNoiseGrid(feathers,40,40,x/ww*39,y/wh*39));
+    r=r*(1-cloud*0.55)+cloud*0.6; g=g*(1-cloud*0.55)+cloud*0.6; bl=bl*(1-cloud*0.55)+cloud*0.6;
+    V[i*3]=r; V[i*3+1]=g; V[i*3+2]=bl;
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.95, shadow:0.15, ao:0.05, ambient:0.6, normals:NM });
+  const fl=L.flat||1, lum=Math.max(1, 0.2126*CR.r+0.7152*CR.g+0.0722*CR.b), hue=[CR.r/lum, CR.g/lum, CR.b/lum];
+  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
+  const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
+  for(let i=0;i<N;i++){
+    const q=i*4, sp=L.spec[i];
+    for(let c=0;c<3;c++){
+      // deep (dark) stone carries the hue fully; the bright fire, less
+      const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], tint=hue[c]**(1.2-Math.min(1, inside));
+      const val=255*inside*tint*(0.75+0.25*k) + 220*sp*litS(M3,c);
+      d[q+c]=val<0?0:val>255?255:val;
+    }
+    d[q+3]=255;
+  }
+  sctx.putImageData(img,0,0);
+  const out=document.createElement('canvas'); out.width=w; out.height=h;
+  const ctx=out.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
+  // INCLUSIONS: rutile needles — fine, straight, golden, in sprays — and bubbles
+  if(inc>0.02){
+    const U=Math.min(w,h), sprays=Math.round(1+inc*5);
+    ctx.lineCap='round';
+    for(let s2=0;s2<sprays;s2++){ const cx=Math.random()*w, cy=Math.random()*h, a0=Math.random()*Math.PI, n=Math.round(4+inc*22);
+      for(let k=0;k<n;k++){ const a=a0+(Math.random()-0.5)*0.5, L2=U*(0.05+Math.random()*0.2), ox=cx+(Math.random()-0.5)*U*0.15, oy=cy+(Math.random()-0.5)*U*0.15;
+        ctx.strokeStyle=`rgba(${IN.r},${IN.g},${IN.b},${0.55+Math.random()*0.4})`; ctx.lineWidth=cpx(2.5+Math.random()*3);
+        ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+Math.cos(a)*L2, oy+Math.sin(a)*L2); ctx.stroke();
+        const gl=Math.pow(Math.abs(Math.sin(a-la)), 4);              // a needle across the light glints
+        if(gl>0.2){ ctx.strokeStyle=`rgba(255,250,230,${0.6*gl})`; ctx.lineWidth=cpx(1.5);
+          ctx.beginPath(); ctx.moveTo(ox+Math.cos(a)*L2*0.35, oy+Math.sin(a)*L2*0.35); ctx.lineTo(ox+Math.cos(a)*L2*0.55, oy+Math.sin(a)*L2*0.55); ctx.stroke(); } } }
+    const nb=Math.round(inc*160);
+    for(let k=0;k<nb;k++){ const x=Math.random()*w, y=Math.random()*h, r=cpx(4+Math.random()*Math.random()*22);
+      ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=cpx(2.2); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(x-SX*r*0.4, y-SY*r*0.4, r*0.28, 0, Math.PI*2); ctx.fill(); }
   }
   return out;
 }

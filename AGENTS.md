@@ -113,7 +113,11 @@ test to the new intent, never weaken it until it passes.
 - **Font order is frozen** (`/f:N` picks by position): append only.
 - **Saved keys are frozen.** `PERSISTED` key names and value types never
   change once shipped; old looks translate forward (see `applyLegacyEffects`,
-  `RETIRED`, the light-tilt default).
+  `RETIRED`, the light-tilt default). A texture whose LOOK is replaced gets a
+  NEW id and the old id is retired to whatever kept the old look: Crystal
+  Leaf's metal is `spangle` (Metal Spangle), the new crystal is `crystal`,
+  and `crystalleaf` → `spangle` in both `RETIRED` and `retireLook`. Never
+  reuse an id for a different picture: saves carry no version.
 - **Textures change only on purpose.** `test/fixtures/texture-fingerprints.json`
   is updated with `--update` only for the textures you meant to change —
   check the "changed textures" list first.
@@ -231,6 +235,15 @@ before/after measurements AND an identical-render comparison.
 ## Pitfalls we hit (so you don't)
 
 - `amt` is floored at 2%; a knob that must reach 0 needs its own key (`stones`).
+- `-x**2` is a SyntaxError in JS; write `-(x**2)`. It has bitten five
+  textures. `node --check` does not always catch it in a module: render.
+- The canvas mock's pixel sum is RGB: black ink sums to ~0, so a knob that
+  only changes black pixels looks "inert" (Rorschach) — make some drawn mark
+  respond to it too, or the probe can't see it.
+- Ray-traced textures (Black Hole) trace every OTHER working pixel and only
+  trace the in-between ones where neighbours differ; the sky is sampled at
+  full size through the lens map so stars stay sharp. Lensing shears stars
+  tangentially far from the hole — that is physics, not a bug.
 - A canvas mock in Node backs the tests: it has no `Path2D`, no
   `isPointInPath`, and only counts what it counts — if a knob "has no
   effect", check whether the probe can see it before changing the texture.

@@ -14,8 +14,8 @@ candidates (Dream Bloom's convolution first). J (Linen at preview) waits.
 lit by the dial — diffuse, a specular per material, cast shadows (soft,
 longer as the light lowers; none overhead), occlusion in crevices. On it:
 Dune Ripples, Kintsugi, Moss on Stone, Rain on Glass, Facet Field, Cup Ring,
-Fold Ghost, Poured Wax, Cold Press, Fractured Glaze, Linen's details and
-Sigil Scatter's relief. It takes detail NORMAL MAPS (Cold Press: fibres and
+Old Paper, Poured Wax, Cold Press, Fractured Glaze, Crystal Leaf, Metal
+Spangle, Linen's details and Sigil Scatter's relief. It takes detail NORMAL MAPS (Cold Press: fibres and
 undulation) and MATERIAL hues (Highlight, Shade); `lightSparse` lights only
 the tiles near a detail, for details scattered on flat ground (Linen,
 Sigils). A texture can carry its own default light (Facet Field starts
@@ -28,9 +28,14 @@ here, in the worker (the page stays responsive).
 - Cartomancy: divination cards, not playing cards — custom suits from the
   app's own glyphs and magical language; more realism and variation; the
   best home for easter eggs (Saturn, Enceladus, the kitsune).
-- Rorschach Test: revisit with the gallery tool, side by side with Ruby.
-- Fractal Moon: rolled back to Ruby's preferred version and touched up
-  (soft terminator, no target ring, no hard contour lines). Ruby to judge.
+- Ruby to judge (rebuilt from her notes): Crystal Leaf (now looking INTO a
+  crystal — facets, a refracted layer behind, fire with dispersion, phantoms,
+  rutile; its old brushed-metal look lives on as Metal Spangle, and old
+  Crystal Leaf saves open there); Black Hole (ray-traced: Schwarzschild
+  bending, the disc's gas and dust, Doppler beaming, lensed jets and sky —
+  ~0.6 s at preview, ~2 s at export, in the worker); Fractal Moon (Clouds,
+  Night Sky, earthshine, halo, falling stars); Rorschach (a different card
+  each seed, Wetness, Color: black → black and red → pastel plates).
 
 ## 3 · Colour, light and material — the rest of the pass
 Built: every colour has one job (test/colorRoles.test.mjs) — Light, Dark,
@@ -43,10 +48,18 @@ Position (Transmutation Circle), View (Black Hole).
   (city glow), Deep Field (airglow); the dial for angle-only textures
   (Harsh Rain's slant, the hatch); gloss/metallicity knobs where one gloss
   won't do.
-- Crystal Leaf is slow (~2–3 s here at preview size): the grain search looks
-  at 25 neighbours since grains vary in size. Worth a lattice speed-up.
+- Metal Spangle (the old Crystal Leaf) is slow (~2–3 s here at preview
+  size): the grain search looks at 25 neighbours since grains vary in size.
+  Worth a lattice speed-up.
 
 ## Pinned
+- Desktop: PAN AND ZOOM the preview (wheel / pinch to zoom, drag to pan,
+  a button back to fit). Built so far: Esoterica opens in its own drawer
+  with the left panel still open, faded; the left sidebar resizes by
+  dragging its edge (remembered; double-click resets) and the image fits the
+  space between. The preview "zooming out on every aspect click" didn't
+  reproduce here (1440×900 and 1280×720 at 2×, every ratio, back and forth:
+  the same size each time) — asked Ruby for her window size and steps.
 - Saturn and its moons as a rare easter egg in a couple of presets.
 - *Low:* WORD seeds, like RimWorld's. A seed is a phrase that evaluates to
   a number ("Enceladus's quiet lantern", "ember turning", "hollow tide");

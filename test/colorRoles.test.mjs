@@ -29,7 +29,7 @@ check('a texture with a base colour of its own gets a GLOW, never a second mater
 check('a texture with no colour at all (First Snow) gets a BASE colour, white by default',
   T.TEXTURE_CAPS.snow.hue5.role === 'base' && T.TEXTURE_CAPS.snow.hue5.def === '#FFFFFF');
 check('no texture names two hues alike',
-  caps.every(([, c]) => { const names = [...(c.tintLabels || []).slice(0, c.tints), ...(c.material ? ['Highlight Hue', 'Shade Hue'] : []), ...(c.hue5 ? [c.hue5.label] : [])];
+  caps.every(([, c]) => { const names = [...(c.tintLabels || []).slice(0, c.tints), ...(c.material ? ['Specular Hue', 'Shadow Hue'] : []), ...(c.diffuse ? ['Diffuse Hue'] : []), ...(c.hue5 ? [c.hue5.label] : [])];
     return new Set(names).size === names.length; }));
 check('a texture that already emits light in its own hues gets no Glow (it would repeat them)',
   ['magicparticles', 'embers', 'aurora'].every(t => !T.TEXTURE_CAPS[t].hue5));
@@ -47,6 +47,17 @@ check('…and marks between move from it toward light and dark', gnd[12] > 192 &
 const coloured = run([[220,160,160,255]], '#E0E0FF', '#000000', null, null), plain = run([[180,180,180,255]], '#E0E0FF', '#000000', null, null);
 check('a coloured mark (a material\'s highlight) keeps its own colour through the tint pass',
   coloured[0] - plain[0] === 40 && coloured[1] - plain[1] === -20 && coloured[2] - plain[2] === -20);
+
+// --- every effect is optional: a lighting hue's alpha is how much of it to use
+check('alpha 0 is none, alpha 100% is the colour, half-way is half-way',
+  C.resolveAlpha('#FF000000', '#000000') === '#000000' && C.resolveAlpha('#FF0000FF', '#000000') === '#FF0000' && C.resolveAlpha('#FF000080', '#FFFFFF') === '#FF7F7F' && C.resolveAlpha('#123456', '#FFFFFF') === '#123456');
+check('a glow at 0% alpha keys the cache exactly like no glow',
+  T.textureKeyFor('kintsugi', 64, 64, { tint5: '#FFB04000' }) === T.textureKeyFor('kintsugi', 64, 64, {}));
+check('DIFFUSE (the light\'s own colour) only where nothing else says it: not beside a Sun or Light hue, not on grey textures',
+  caps.filter(([, c]) => c.diffuse).every(([, c]) => !c.genericTint && !(c.tintLabels || []).some(l => /^(Sun|Light) Hue$/.test(l))) && T.TEXTURE_CAPS.kintsugi.diffuse);
+const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
+check('the Specular, Shadow, Glow and Diffuse pickers keep their alpha slider',
+  ev.includes("safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex', alpha: true, format: 'hex' });"));
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

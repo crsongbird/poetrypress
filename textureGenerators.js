@@ -8,7 +8,7 @@
  *                       silverpoint hatch, metal leaf, waking grain
  *   texChaos.js      ∆  sigils, enochian noise, summoning circles, Rorschach,
  *                       fractured glaze, facet field, cartomancy
- *   texTouch.js      🜚  linen, cold press, foxing, fold ghost, cup ring,
+ *   texTouch.js      🜚  linen, cold press, old paper, cup ring,
  *                       poured wax, raked substrate
  *   texCore.js          noise grids, colour mixing, the seeded random source
  *
@@ -31,11 +31,11 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex } from './texCore.js';
+import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape, genGrain } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole } from './texChaos.js';
-import { genLinenTooth, genColdPress, genFoxing, genFoldGhost, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genCrystalLeaf } from './texTouch.js';
+import { genLinenTooth, genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -114,7 +114,11 @@ export const TEXTURE_PARAMS = {
                   // drawn by hand, vines and moons (0) → machined, gauges and circuits, glowing (100)
                   {key:'form',  label:'Organic ↔ Tech',  min:0,  max:100, def:30,  unit:''}],
   inkbleed:      [{key:'zoom',  label:'Blot Scale',      min:60, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'}],
+                  {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'},
+                  // crisp and solid (0) → wet: pooled rims, pale mottled middles, wicking, drips, splatter
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:50,  unit:''},
+                  // black ink alone (0) → red joins it → whole pastel figures (100); the seed decides within it
+                  {key:'shape', label:'Color',           min:0,  max:100, def:35,  unit:''}],
   crackedglaze:  [{key:'zoom',  label:'Fracture Scale',  min:60, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26},
                   // how far the glaze has gone: crazed only → blistered → chipped → peeling to the body
@@ -124,7 +128,23 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:'', ticks:[15,42,68,95]},
                   // silk → twill → linen → canvas → burlap
                   {key:'form',  label:'Weave',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
-  crystalleaf:   [{key:'zoom',  label:'Crystal Size',    min:40, max:300, def:100, unit:'%'},
+  oldpaper:      [{key:'zoom',  label:'Scale',           min:40, max:400, def:100, unit:'%'},
+                  // folds across the sheet; past three-quarters they tear
+                  {key:'amt',   label:'Folds',           min:0,  max:100, def:35,  unit:''},
+                  // clean → yellowed → foxed → mildewed → scorched
+                  {key:'form',  label:'Age',             min:0,  max:100, def:30,  unit:'', ticks:[0,30,60,90], names:['Clean','Foxed','Mildewed','Scorched']},
+                  // the gentle unevenness of once-damp paper, and pocket creases
+                  {key:'shape', label:'Crinkle',         min:0,  max:100, def:25,  unit:''}],
+  crystal:   [{key:'zoom',  label:'Facet Size',      min:40, max:300, def:100, unit:'%'},
+                  // milky and veiled (0) → clear and deep (100)
+                  {key:'amt',   label:'Clarity',         min:0,  max:100, def:70,  unit:''},
+                  // light caught inside: flashing internal planes, split into colours
+                  {key:'form',  label:'Fire',            min:0,  max:100, def:50,  unit:''},
+                  // ghost crystals inside, the faces it had as it grew
+                  {key:'shape', label:'Phantoms',        min:0,  max:100, def:30,  unit:''},
+                  // rutile needles and tiny bubbles
+                  {key:'hue',   label:'Inclusions',      min:0,  max:100, def:20,  unit:''}],
+  spangle:       [{key:'zoom',  label:'Crystal Size',    min:40, max:300, def:100, unit:'%'},
                   // feathered six-armed growth inside each grain (zinc spangle)
                   {key:'amt',   label:'Dendrites',       min:0,  max:100, def:50,  unit:''},
                   // flat facets → stepped hopper crystals (bismuth)
@@ -137,14 +157,6 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Tooth Depth',     min:20, max:300, def:100, unit:'%'},
                   // how the paper was made: pressed hot and smooth, cold, or left rough
                   {key:'form',  label:'Press',           min:0,  max:100, def:50,  unit:'', ticks:[0,50,100], names:['Hot Press','Cold Press','Rough']}],
-  foxing:        [{key:'zoom',  label:'Bloom Size',      min:40, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Spot Count',      min:20, max:400, def:100, unit:'%', base:7},
-                  // the paper rippled where it was damp, lit by the dial (0: flat, as before)
-                  {key:'form',  label:'Cockle',          min:0,  max:100, def:0,   unit:''}],
-  foldghost:     [{key:'zoom',  label:'Crease Depth',    min:30, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Fold Count',      min:25, max:300, def:100, unit:'%', base:3},
-                  // the short, random creases of being pressed in a pocket
-                  {key:'form',  label:'Crumple',         min:0,  max:100, def:30,  unit:''}],
   cupring:       [{key:'zoom',  label:'Ring Size',       min:40, max:320, def:100, unit:'%'},
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
                   // drips, and the faint wash inside the ring
@@ -182,7 +194,11 @@ export const TEXTURE_PARAMS = {
                   // dirty water: light absorbed, silt hanging in it
                   {key:'hue',   label:'Murk',            min:0,  max:100, def:0,   unit:''}],
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
-                  {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'}],
+                  {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'},
+                  // banks drifting in front of the moon and stars, silver-lined, a halo in their veils (0: none)
+                  {key:'form',  label:'Clouds',          min:0,  max:100, def:30,  unit:''},
+                  // the night around it: stars, the Milky Way, earthshine on the dark side (0: the page, as before)
+                  {key:'shape', label:'Night Sky',       min:0,  max:100, def:70,  unit:''}],
   aurora:        [{key:'zoom',  label:'Curtain Height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
                   {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''},
                   // a noisy glow spilling from the brightest light (0: none, as before)
@@ -255,8 +271,9 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   halftone:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  glassrain:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // glass in front of the page: transparent, the drops showing the outdoors
+  // made from the page's own colours (pageEnv), so Normal is its default
+  glassrain:     { blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
   rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
@@ -268,12 +285,20 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Position', lightTilt:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  inkbleed:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  crackedglaze:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // ink on clear paper (genInkBleed): its own colours, Ink and Accent
+  inkbleed:      { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','hard-light'], light:false, tints:2,
+                   tintLabels:['Ink Hue','Accent Hue'], tintDefaults:['#141414','#B0283A'] },
+  // a painted glaze over a clay body, coloured as a game engine would (see genCrackedGlaze)
+  crackedglaze:  { blends:['overlay','soft-light','hard-light','source-over','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, light:true, tints:2,
+                   tintLabels:['Glaze Hue','Base Hue'], tintDefaults:['#A9B4B0','#7A6A5E'] },
   // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
-  crystalleaf:   { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], material:true, ground:'grey', light:true, tints:1,
+  // Old Paper: Foxing and Fold Ghost, merged (see genOldPaper)
+  oldpaper:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2,
+                   tintLabels:['Age Hue','Mould Hue'], tintDefaults:['#8A6A3C','#5F6A4E'] },
+  // looking into a crystal (genCrystalLeaf): its own colours, lit
+  crystal:   { blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
+                   tintLabels:['Crystal Hue','Inclusion Hue'], tintDefaults:['#B9A6D8','#D9A441'] },
+  spangle:       { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], material:true, ground:'grey', light:true, tints:1,
                    tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
                    tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
@@ -283,10 +308,6 @@ export const TEXTURE_CAPS = {
   linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], ground:'grey', light:true, tints:2,
                    tintLabels:['Fabric Hue','Light Hue'], tintDefaults:['#808080','#FFFFFF'] },
   coldpress:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  foxing:        { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:1,
-                   tintLabels:['Spot Hue'], tintDefaults:['#8A6A3C'] },
-  foldghost:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
@@ -314,7 +335,9 @@ export const TEXTURE_CAPS = {
  * Glow (emitted light). See test/colorRoles.test.mjs.
  */
 const GLOWS = {
-  foxing:      'the spots fluorescing, as foxing does under ultraviolet',
+  crystal: 'the fire inside the crystal, lit from within',
+  crackedglaze:'uranium glaze, fluorescing',
+  oldpaper:    'the foxing spots fluorescing, as they do under ultraviolet',
   flowers:     'lit seeds in the lotus pod, or a glowing heart',
   tessellate:  'molten light in the seams between facets',
   wax:         'candlelight in the thick of the wax',
@@ -322,10 +345,14 @@ const GLOWS = {
   moss:        'bioluminescent moss tips',
   dunes:       'afterglow along the crests',
   cupring:     'a faint glow where the stain dried at its edge',
-  crystalleaf: 'light caught inside the crystal, in flecks',
+  spangle:     'light caught in the metal\'s flecks',
   linen:       'luminous thread in the stitching',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
+// DIFFUSE (the light's own colour) where nothing else already says it: not
+// where a texture has its own Sun or Light hue, and not on grey textures
+// (their Light hue colours the lit marks)
+for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -387,9 +414,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'flowers'){
     result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
   } else if(type === 'inkbleed'){
-    result = genInkBleed(w,h,amt,zoom);
+    result = genInkBleed(w,h,amt,zoom,form,extra.shape/100,tint1,tint2);
   } else if(type === 'crackedglaze'){
-    result = genCrackedGlaze(w,h,amt,zoom,light,form,extra.mat);
+    result = genCrackedGlaze(w,h,amt,zoom,light,form,tint1,tint2,extra.mat,extra.glow);
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
@@ -405,7 +432,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'magicparticles'){
     result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
   } else if(type === 'glassrain'){
-    result = genGlassRain(w,h,amt,zoom,light,form,extra.mat);
+    result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
   } else if(type === 'rainstreaks'){
     result = genRainStreaks(w,h,amt,angle,zoom);
   } else if(type === 'halftone'){
@@ -420,10 +447,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form,extra.glow);
   } else if(type === 'coldpress'){
     result = genColdPress(w,h,amt,zoom,light,form,extra.mat);
-  } else if(type === 'foxing'){
-    result = genFoxing(w,h,amt,zoom,light,tint1,form,extra.glow);
-  } else if(type === 'foldghost'){
-    result = genFoldGhost(w,h,amt,zoom,light,form,extra.mat);
+  } else if(type === 'oldpaper'){
+    result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'wax'){
@@ -443,7 +468,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'water'){
     result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.mat);
   } else if(type === 'moon'){
-    result = genMoon(w,h,amt,zoom);
+    result = genMoon(w,h,amt,zoom,form,extra.shape/100);
   } else if(type === 'aurora'){
     result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){
@@ -454,8 +479,10 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
     result = genMetalLeaf(w,h,amt,zoom,light,tint1);
-  } else if(type === 'crystalleaf'){
-    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+  } else if(type === 'crystal'){
+    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+  } else if(type === 'spangle'){
+    result = genSpangle(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'grain'){
     result = genGrain(w,h,amt,zoom,form);
   } else {
@@ -498,7 +525,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * in the light slot unnoticed.
  */
 // the Zen Garden was retired: looks saved with it open as Dune Ripples
-const RETIRED = { whorl: 'dunes' };
+const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
 /** A texture's cache key — shared by the page and the texture worker, so a
  *  texture made in the worker files where the page will look for it. */
 export function textureKeyFor(type, w, h, opts = {}){ return describeRequest(type, w, h, opts).key; }
@@ -540,10 +567,17 @@ function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
   // material hues (lit textures): only when set — white is "none"
-  const t3 = (opts.tint3 && !noMaterialHue(opts.tint3)) ? opts.tint3 : null, t4 = (opts.tint4 && !noMaterialHue(opts.tint4)) ? opts.tint4 : null;
+  // (a picker's alpha is how much of its colour to use: resolved here, once)
+  const o3 = resolveAlpha(opts.tint3, '#FFFFFF'), o4 = resolveAlpha(opts.tint4, '#FFFFFF'), o6 = resolveAlpha(opts.tint6, '#FFFFFF');
+  const t3 = (o3 && !noMaterialHue(o3)) ? o3 : null, t4 = (o4 && !noMaterialHue(o4)) ? o4 : null;
+  // the sixth: DIFFUSE, the light's own colour (white: none)
+  const t6 = (o6 && !noMaterialHue(o6) && (TEXTURE_CAPS[RETIRED[type] || type] || {}).diffuse) ? o6 : null;
   // the fifth hue: only when it differs from its role's "none"
   const h5 = (TEXTURE_CAPS[RETIRED[type] || type] || {}).hue5;
-  const t5 = (h5 && opts.tint5 && opts.tint5.toUpperCase() !== h5.def.toUpperCase()) ? opts.tint5.toUpperCase() : null;
+  const o5 = h5 ? resolveAlpha(opts.tint5, h5.def) : null;
+  const t5 = (h5 && o5 && o5.toUpperCase() !== h5.def.toUpperCase()) ? o5.toUpperCase() : null;
+  // the page's own colours, for a texture that shows the world behind the glass
+  const env = ((TEXTURE_CAPS[RETIRED[type] || type] || {}).pageEnv && opts.env) ? String(opts.env).toUpperCase() : null;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
   // how low the light is, 0–100 (100: the horizon, as it always was)
@@ -562,12 +596,13 @@ function describeRequest(type, w, h, opts){
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
-            + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '');
-  return { type, key, t3, t4, t5, defs, v1, v2, v3, v4, v5, scale, lightTilt };
+            + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
+            + (env ? `_e${env}` : '');
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, scale, lightTilt };
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt, t3, t4, t5 } = req;
+  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt, t3, t4, t5, t6, env } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -605,7 +640,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, mat: materialOf(t3, t4), glow: glowOf(type, t5), base: baseOf(type, t5) }))));
+  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

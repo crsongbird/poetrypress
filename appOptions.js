@@ -245,23 +245,23 @@ export const PRESETS = [
     texture: true, textureType: "linen", textureOpacity: 34, texP1: 120, texP2: 42,
     accent1: "#7C7A63", accent2: "#947D5A"
   },
-  { name: "Foxed",   // surface: Foxing (🜚)
+  { name: "Foxed",   // surface: Old Paper — foxed (🜚)
     spell: "[[🜬🜔]]🜉{{🜿🜇🜢🜛☍⚺🜙🜘♡🜜🜭🜕☋🜨}}",
     bg1: "#E4D6B8",
     text1: "#3A2E20",
     outlineMode: "off",
     font: "EB Garamond",
-    texture: true, textureType: "foxing", textureOpacity: 42, texP1: 120, texP2: 130,
+    texture: true, textureType: "oldpaper", textureOpacity: 42, texP1: 120, texP2: 0, texP3: 32, texP4: 12,
     accent1: "#9A5B33", accent2: "#6E7247",
     border: true, borderColor: "#9A8B6E", borderThickness: 1, borderOffset: 18
   },
-  { name: "Creased",   // surface: Fold Ghost (🜚)
+  { name: "Creased",   // surface: Old Paper — creased (🜚)
     spell: "🝆🝊🜥🜗🜺🜱{{🜾♡☥🜪}}[[✝]]",
     bg1: "#D4D6CF",
     text1: "#1B1D1C",
     outlineMode: "off",
     font: "Work Sans",
-    texture: true, textureType: "foldghost", textureOpacity: 38, texP1: 110, texP2: 120,
+    texture: true, textureType: "oldpaper", textureOpacity: 38, texP1: 110, texP2: 42, texP3: 5, texP4: 30, textureBlend: 'soft-light',
     accent1: "#5A6B62", accent2: "#697983"
   },
   { name: "Sealed",   // surface: Poured Wax (🜚)

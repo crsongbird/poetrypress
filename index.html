@@ -540,9 +540,9 @@ inside of a <~~dead person~~/trans>'s dreams.
               <optgroup label="🜚 Touch">
                 <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
                 <option value="coldpress" data-str="option.cold_press">Cold Press</option>
-                <option value="crystalleaf" data-str="option.crystal_leaf">Crystal Leaf</option>
-                <option value="foxing" data-str="option.foxing">Foxing</option>
-                <option value="foldghost" data-str="option.fold_ghost">Fold Ghost</option>
+                <option value="spangle" data-str="option.metal_spangle">Metal Spangle</option>
+                <option value="crystal" data-str="option.crystal_leaf">Crystal Leaf</option>
+                <option value="oldpaper" data-str="option.old_paper">Old Paper</option>
                 <option value="cupring" data-str="option.cup_ring">Cup Ring</option>
                 <option value="wax" data-str="option.poured_wax">Poured Wax</option>
                 <option value="dunes" data-str="option.dunes">Dune Ripples</option>
@@ -620,18 +620,22 @@ inside of a <~~dead person~~/trans>'s dreams.
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
           <div class="field full tool-off" id="tint3Row">
-            <label id="tint3Label" data-str="label.highlight_hue" title="The color of the shine where the light catches the surface (white: as it is)">Highlight Hue</label>
+            <label id="tint3Label" data-str="label.highlight_hue" title="SPECULAR: the colour of the shine where the light catches the surface (white: as it is; its alpha is how much)">Specular Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-off" id="tint4Row">
-            <label id="tint4Label" data-str="label.shade_hue" title="The color the shadows fill with: the sky's light, bouncing back (white: as it is)">Shade Hue</label>
+            <label id="tint4Label" data-str="label.shade_hue" title="SHADOW: the colour the shadows fill with — the sky's light, bouncing back (white: as it is; its alpha is how much)">Shadow Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
+          </div>
+          <div class="field full tool-off" id="tint6Row">
+            <label id="tint6Label" data-str="label.diffuse_hue" title="DIFFUSE: the colour of the light itself, on everything it reaches (white: as it is; its alpha is how much)">Diffuse Hue</label>
+            <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-off" id="tint5Row">
             <label id="tint5Label" data-str="label.fifth_hue" title="A coloured texture's GLOW (black: none), or a grey texture's MATERIAL — the colour of the surface itself (mid-grey: none)">Glow Hue</label>
             <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
-          <div class="field full">
+          <div class="field full" id="seedRow">
             <label data-str="label.texture_seed">Texture Seed</label>
             <div class="row">
               <div class="field"><input type="number" id="textureSeedValue" value="12345" step="1"></div>

@@ -368,7 +368,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 19);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 21);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -498,7 +498,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const T = await import('../textureGenerators.js');
   check('Dune Ripples, Kintsugi and Moss on Stone are lit textures, each with three knobs',
     ['dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].light === true && T.paramsFor(t).length === 3));
-  check('a look saved with the retired Zen Garden opens as Dune Ripples', /const RETIRED = \{ whorl: 'dunes' \};/.test(src('textureGenerators.js')) && /textureType === 'whorl'\) s = \{ \.\.\.s, textureType: 'dunes' \}/.test(ev));
+  check('a look saved with the retired Zen Garden opens as Dune Ripples', /const RETIRED = \{ whorl: 'dunes'/.test(src('textureGenerators.js')) && /if\(s\.textureType === 'whorl'\) return \{ \.\.\.s, textureType: 'dunes' \};/.test(ev) && /s = retireLook\(s\);/.test(ev));
   check('Rain on Glass is built from lit heights', /const L=lightHeights\(H, ww, wh, \{ light, relief:1\.6, gloss:0\.95/.test(src('texTouch.js')));
   check('Lotus petals fade by Ruby\'s rule (light → white, mid → brighter and more saturated, dark → saturated near-black) and fold', /const tipOf=o=>/.test(src('texSharpness.js')) && /the fold: a crease down the petal's centre/.test(src('texSharpness.js')));
   check('Enochian Noise is Binary Pattern now', />Binary Pattern</.test(src('index.html')) && !/Enochian Noise/.test(src('index.html')));
@@ -616,7 +616,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
 // ---- Fold Ghost and Poured Wax, lit ----
 {
   const T = await import('../textureGenerators.js'), tt = src('texTouch.js');
-  check('Fold Ghost is folded paper: long folds and crumples as heights, lit; a Crumple knob', T.paramsFor('foldghost')[2].label === 'Crumple' && /carried in a pocket/.test(tt));
+  check('Old Paper is folded paper: long folds and crinkle as heights, lit; Folds, Age and Crinkle knobs',
+    T.paramsFor('oldpaper').map(d => d.label).join('|') === 'Scale|Folds|Age|Crinkle' && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.1, shadow:0\.4/.test(tt));
   check('Poured Wax pools merge (a metaball field), lit with a satin sheen; a Viscosity knob', T.paramsFor('wax')[2].label === 'Viscosity' && /pools that meet MERGE into one/.test(tt) && /gloss:0\.62/.test(tt));
 }
 
@@ -650,11 +651,11 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('material hues keep their brightness (a deep blue shade does not darken)', Math.abs(0.2126*M.sh[0] + 0.7152*M.sh[1] + 0.0722*M.sh[2] - 1) < 0.02);
   const T = await import('../textureGenerators.js');
   check('every texture lit by the engine takes materials (Highlight, Shade) — the grey ones too, now that the tint pass keeps colour',
-    ['tessellate', 'cupring', 'wax', 'dunes', 'kintsugi', 'moss', 'crackedglaze', 'coldpress', 'clouds', 'crystalleaf', 'glassrain', 'foldghost', 'sigils'].every(t => T.TEXTURE_CAPS[t].material === true));
+    ['tessellate', 'cupring', 'wax', 'dunes', 'kintsugi', 'moss', 'crackedglaze', 'coldpress', 'clouds', 'crystal', 'spangle', 'glassrain', 'oldpaper', 'sigils'].every(t => T.TEXTURE_CAPS[t].material === true));
   check('material hues key the cache only when set', T.textureKeyFor('dunes', 64, 64, { tint3: '#FFFFFF' }) === T.textureKeyFor('dunes', 64, 64, {}) && T.textureKeyFor('dunes', 64, 64, { tint4: '#3060FF' }) !== T.textureKeyFor('dunes', 64, 64, {}));
   check('Highlight and Shade are saved, restored (white when absent) and reset by presets',
     /textureTint3: \$\('textureTint3Hex'\)\.value,/.test(ev) && /setColorField\('textureTint4Hex', s\.textureTint4 \|\| '#FFFFFF'\);/.test(ev) && /setColorField\('textureTint3Hex', p\.textureTint3 \|\| '#FFFFFF'\);/.test(ev));
-  check('Fold Ghost: folds sit off-centre (offset across the page, along the fold\'s normal), by real folding schemes',
+  check('Old Paper: folds sit off-centre (offset across the page, along the fold\'s normal), by real folding schemes',
     /px=ww\*\(0\.5 \+ off\*nx\), py=wh\*\(0\.5 \+ off\*ny\)/.test(src('texTouch.js')) && /scheme=Math\.floor\(Math\.random\(\)\*4\)/.test(src('texTouch.js')));
 }
 
@@ -717,12 +718,17 @@ check('the inset box is painted on its own layer, then blended on as one image (
     knobs('magicparticles') === 'Sparkle Size|Sparkle Count|Chaos' && T.paramsFor('magicparticles')[2].def === 50);
   check('Waking Grain has Grain: Silver, Film (the original, the default), Paper, Digital',
     knobs('grain') === 'Grain Size|Contrast|Grain' && T.paramsFor('grain')[2].names.join() === 'Silver,Film,Paper,Digital' && T.paramsFor('grain')[2].def === 33);
-  const t = src('texTouch.js'), cl = t.slice(t.indexOf('export function genCrystalLeaf('));
-  check('Crystal Leaf: each grain a tilted facet (a normal map), dendrites and terraces as lit heights; Variation and Brushing',
-    knobs('crystalleaf') === 'Crystal Size|Dendrites|Terraces|Variation|Brushing' && T.TEXTURE_CAPS.crystalleaf.light === true && T.TEXTURE_CAPS.crystalleaf.material === true
+  const t = src('texTouch.js'), cl = t.slice(t.indexOf('export function genSpangle('), t.indexOf('export function genCrystalLeaf('));
+  check('Metal Spangle (the old Crystal Leaf): each grain a tilted facet (a normal map), dendrites and terraces as lit heights; Variation and Brushing',
+    knobs('spangle') === 'Crystal Size|Dendrites|Terraces|Variation|Brushing' && T.TEXTURE_CAPS.spangle.light === true && T.TEXTURE_CAPS.spangle.material === true
     && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.9, shadow:0\.6, ao:0\.35, ambient:0\.3, normals:Nm \}\);/.test(cl));
   check('…its barbs lean back toward the nucleus; terraces carry bismuth\'s thin-film colour; flecks glint and can glow',
-    /const ph=\(al\+aa\*COT60\)\/sp \+ A\.ph/.test(cl) && /film=\[0\.5\+0\.5\*Math\.cos/.test(cl) && /const glint=Math\.pow\(face, 10\)/.test(cl));
+    /const ph=\(al\+aa\*COT60\)\/sp \+ A\.ph/.test(cl) && /film=\[0\.5\+0\.5\*Math\.cos/.test(cl) && /const glint=Math\.pow\(face, 10\)/.test(cl)
+    && /dX=SX\+2\.2\*g1\.tx, dY=SY\+2\.2\*g1\.ty/.test(cl));   // brushed across the light, per face
+  const xl = t.slice(t.indexOf('export function genCrystalLeaf('));
+  check('Crystal Leaf looks INTO a crystal: large faces lit from one edge, a refracted layer behind, fire with dispersion; Clarity, Fire, Phantoms, Inclusions',
+    knobs('crystal') === 'Facet Size|Clarity|Fire|Phantoms|Inclusions' && T.TEXTURE_CAPS.crystal.diffuse === true
+    && /const B=near\(BACK, x\+f\.tx\*REFR, y\+f\.ty\*REFR\);/.test(xl) && /dsp=0\.3\+0\.7\*fire/.test(xl) && /rutile needles/.test(xl));
 }
 
 // ---- the background randomiser changes the texture the way a person does ----
@@ -807,11 +813,68 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const T = await import('../textureGenerators.js'), ch = src('texChaos.js'), tt = src('texTouch.js');
   const knobs = t => T.paramsFor(t).map(d => d.label).join('|');
   check('Black Hole: the dial is the View (edge-on at its rim, face-on at its centre); Jets (0: none)',
-    knobs('blackhole') === 'Chaos|Particles|Jets' && T.TEXTURE_CAPS.blackhole.dial === 'View' && /const tilt=tilt0 \+ \(Math\.PI\/2 - tilt0\)\*\(1-view\);/.test(ch));
-  check('Foxing has relief now: Cockle (0: flat, as before), lit by the dial; its glow is UV fluorescence',
-    knobs('foxing') === 'Bloom Size|Spot Count|Cockle' && T.TEXTURE_CAPS.foxing.light === true && T.TEXTURE_CAPS.foxing.hue5.role === 'glow');
+    knobs('blackhole') === 'Chaos|Particles|Jets' && T.TEXTURE_CAPS.blackhole.dial === 'View' && /elev=tilt0 \+ \(Math\.PI\/2 - tilt0\)\*\(1-view\);/.test(ch));
+  check('Black Hole is ray-traced: Schwarzschild bending (leapfrog), the disc met where rays cross it (Doppler, redshift, dust), lensed jets, the sky through the lens',
+    /const hx=py\*vz-pz\*vy, hy=pz\*vx-px\*vz, hz=px\*vy-py\*vx, h2=hx\*hx\+hy\*hy\+hz\*hz, K=-1\.5\*h2;/.test(ch)
+    && /dop=1\/\(gam\*\(1-vk\*cosT\)\), red=Math\.sqrt\(1-1\/rr\)/.test(ch) && /if\(\(y0>0\)!==\(py>0\)\)\{/.test(ch)
+    && /const toward=\(py>0\)===\(Cy>0\) \? 1 : 0\.4;/.test(ch) && /BX\[k\]=cx\+\(bxs\*cosR - bys\*sinR\)\*S;/.test(ch)
+    && /ADAPTIVE: trace every other pixel/.test(ch));
+  {
+    const wm = src('texWhimsy.js'), mo = wm.slice(wm.indexOf('export function genMoon('));
+    check('Fractal Moon at night: earthshine hides the stars behind the dark side, clouds pass in front (silver-lined, a halo in their veils), its own draws after the moon\'s',
+      /const ashen = 128 - nightK\*38/.test(mo) && /val=\(tone\*a2 \+ val\*ua\*\(1-a2\)\)\/Math\.max\(0\.001, A\)/.test(mo)
+      && /const halo=Math\.exp\(-\(\(\(r-haloR\)/.test(mo) && mo.indexOf('moonDraws()') < mo.indexOf('const wind=') && /a falling star, on some nights/.test(mo));
+  }
+  {
+    const ch2 = src('texChaos.js'), ib = ch2.slice(ch2.indexOf('export function genInkBleed('), ch2.indexOf('export function genCrackedGlaze('));
+    check('Rorschach is a different card every seed (bat, pair, column, islands, pelvis), pressed imperfectly; Wetness pools the rim and runs; Colour from black ink to pastel plates',
+      T.paramsFor('inkbleed').map(d => d.label).join('|') === 'Blot Scale|Spread|Wetness|Color' && T.TEXTURE_CAPS.inkbleed.tintLabels.join() === 'Ink Hue,Accent Hue' && !T.TEXTURE_CAPS.inkbleed.genericTint
+      && /const KINDS = \['bat', 'pair', 'column', 'islands', 'pelvis'\];/.test(ib) && /rim = Math\.exp\(-depth\*9\)/.test(ib) && /drips\.push/.test(ib)
+      && /TR\[k\*3\]   \*= 1 - op\*\(1 - C\.r\/255\)/.test(ib));
+    check('…an old Rorschach look (white and black hues) opens with ink and accent',
+      /if\(s\.textureType === 'inkbleed' && \/\^#\?FFFFFF\$\/i\.test\(s\.textureTint1/.test(src('appEvents.js')));
+  }
+  {
+    const ev2 = src('appEvents.js'), css2 = src('poetrypress.css');
+    check('desktop: Esoterica opens in its own drawer; the panel on the left stays open, faded toward the page',
+      /drawer = document\.createElement\('aside'\); drawer\.className = 'eso-drawer';/.test(ev2)
+      && /p\.dataset\.tab === name \|\| \(desk && name === 'more' && p\.dataset\.tab === before\)/.test(ev2)
+      && /body\.more-open:not\(\.is-mobile\) \.controls\{ opacity:\.42;/.test(css2) && /"controls stage drawer"/.test(css2));
+    check('desktop: the left sidebar resizes by its edge (remembered in this browser, double-click resets); the image fits between',
+      /grip\.className = 'side-resize'/.test(ev2) && /localStorage\.setItem\(KEY/.test(ev2) && /grid-template-columns:var\(--side-w, 460px\) minmax\(0,1fr\);/.test(css2)
+      && /max-width:calc\(100vw - var\(--side-w, 460px\) - 80px\)/.test(css2) && /^\.side-resize\{ display:none; \}/m.test(css2));
+  }
+  check('Foxing and Fold Ghost are one texture, Old Paper: Age runs foxed → mildewed → scorched; Folds tear at the top; its glow is UV fluorescence',
+    T.paramsFor('oldpaper')[2].names.join() === 'Clean,Foxed,Mildewed,Scorched' && T.TEXTURE_CAPS.oldpaper.light === true && T.TEXTURE_CAPS.oldpaper.hue5.role === 'glow'
+    && /const nTear=folds>0\.75/.test(tt) && /if\(age>0\.8\)\{/.test(tt) && /if\(age>0\.45\)\{/.test(tt));
+  check('…and old looks made with either open as Old Paper, their knobs translated',
+    /if\(s\.textureType === 'foxing'\)/.test(src('appEvents.js')) && /if\(s\.textureType === 'foldghost'\)/.test(src('appEvents.js')) && /RETIRED = \{ whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle' \}/.test(src('textureGenerators.js')));
+  check('a look saved with the old Crystal Leaf opens as Metal Spangle (its knobs carry over unchanged)',
+    /if\(s\.textureType === 'crystalleaf'\) return \{ \.\.\.s, textureType: 'spangle' \};/.test(src('appEvents.js')));
   check('Scrying Pool: waves → refracted rays gathered on the floor (caustics) → glints; Turbulence, Depth, Haze, Murk',
     knobs('water') === 'Wave Scale|Turbulence|Depth|Haze|Murk' && /const fx=x\+ox-GX\[i\]\*bend, fy=y\+oy-GY\[i\]\*bend;/.test(tt) && /, bend=floor\*\(1-1\/1\.33\)/.test(tt));
+}
+
+// ---- Fractured Glaze as a game engine colours it; Kintsugi's vessel ----
+{
+  const T = await import('../textureGenerators.js'), ch = src('texChaos.js'), tt = src('texTouch.js');
+  check('Fractured Glaze: Glaze and Base albedos, with Diffuse, Specular and Shadow (and a uranium Glow)',
+    T.TEXTURE_CAPS.crackedglaze.tintLabels.join('|') === 'Glaze Hue|Base Hue' && !T.TEXTURE_CAPS.crackedglaze.genericTint
+    && T.TEXTURE_CAPS.crackedglaze.material && T.TEXTURE_CAPS.crackedglaze.diffuse && T.TEXTURE_CAPS.crackedglaze.hue5.role === 'glow');
+  check('…painted by the seed (streaks, runs, pools; thin glaze breaks to the body) and curling where it peels',
+    /const THK = new Float32Array\(ww\*wh\);/.test(ch) && /thin = Math\.max\(0, 0\.45 - th\)\*1\.2/.test(ch) && /the CURL: where the glaze has peeled/.test(ch));
+  check('Kintsugi is the outside of a curved vessel (normals), not a flat plane',
+    /THE VESSEL: we look at the outside of a curved pot/.test(tt) && /ambient:0\.66, normals:CN \}\);/.test(tt));
+}
+
+// ---- Rain on Glass: the outdoors, from the page's own colours ----
+{
+  const T = await import('../textureGenerators.js'), tt = src('texTouch.js'), cr = src('canvasRenderer.js');
+  check('Rain on Glass is glass in front of the page (transparent, Normal by default) and asks for the page\'s colours',
+    T.TEXTURE_CAPS.glassrain.pageEnv === true && T.TEXTURE_CAPS.glassrain.blends[0] === 'source-over' && /const env = caps\.pageEnv \?/.test(cr)
+    && T.textureKeyFor('glassrain', 64, 64, { env: '#112233' }) !== T.textureKeyFor('glassrain', 64, 64, { env: '#445566' }));
+  check('…each drop is a lens: the outdoors turned over, red and blue bent apart, a dark rim, the sky in its Fresnel edge',
+    /THE OUTDOORS behind the glass, made from the page's own colours/.test(tt) && /envAt\(u\+gx\*K\*0\.96, v\+gy\*K\*0\.96, 0\)/.test(tt) && /fres=Math\.min\(1, Math\.pow\(tilt\*2, 3\)\)\*0\.45/.test(tt));
 }
 
 console.log();

@@ -86,7 +86,7 @@ check('the string table stores no HTML entities (text nodes do not decode them)'
   !/"[^"]*&(amp|lt|gt|quot|#\d+);[^"]*"/.test(strs));
 
 // ---- the moon ----
-check('the Fractal Moon exists and has two knobs', T.paramsFor('moon').length === 2);
+check('the Fractal Moon exists: Moon Size, Fractal Depth, Clouds, Night Sky', T.paramsFor('moon').map(d => d.label).join('|') === 'Moon Size|Fractal Depth|Clouds|Night Sky');
 check('its phase avoids new and full, so the organic side always shows',
   /const phase = \(Math\.random\(\)\*2 - 1\)\*0\.72;/.test(whimsy));
 // the seed button must read the SAME draws the moon is drawn from

@@ -805,8 +805,9 @@ function pmlVarContext(W, H){
     if(el) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Second Hue' : 'Hue'), hex: el.value });
   }
   // the material hues and the fifth, when they are in use (not their "none")
-  if(caps.material) [['textureTint3Hex', 'Highlight Hue'], ['textureTint4Hex', 'Shade Hue']].forEach(([id, label]) => {
+  if(caps.material) [['textureTint3Hex', 'Specular Hue'], ['textureTint4Hex', 'Shadow Hue']].forEach(([id, label]) => {
     const el = $(id); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label, hex: el.value }); });
+  if(caps.diffuse){ const el = $('textureTint6Hex'); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label: 'Diffuse Hue', hex: el.value }); }
   if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase()) hues.push({ label: caps.hue5.label, hex: el.value }); }
   return {
     surfName: on ? optionText('textureType') : 'None',
@@ -964,6 +965,9 @@ function renderInto(canvas){
     const tint4 = caps.material ? ($('textureTint4Hex') || {}).value || null : null;
     // the fifth hue (glow, material or base), where the texture has one
     const tint5 = caps.hue5 ? ($('textureTint5Hex') || {}).value || null : null;
+    const tint6 = caps.diffuse ? ($('textureTint6Hex') || {}).value || null : null;
+    // the page's own colours, for Rain on Glass's outdoors
+    const env = caps.pageEnv ? ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount) : [bg1]).join(',') : undefined;
     const seed = parseInt($('textureSeedValue').value, 10) || 0;
 
     const tp1 = parseFloat($('texP1').value);
@@ -994,19 +998,19 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5 }));
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5 }));
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5 }));
       ctx.restore();
     }
   }

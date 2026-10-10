@@ -994,8 +994,17 @@ export function moonForSeed(seed){
 // A moon, and on its dark side
 // something grows that has no name —
 // the lit side stays calm.
-export function genMoon(w,h,amt,zoom){
+export function genMoon(w,h,amt,zoom,form,night){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // CLOUDS: drifting banks lit by the moon — they pass IN FRONT of it and of
+  // the stars (occlusion), silver-lined where they edge its light, and in
+  // their thin veils a halo rings the moon (ice in the cloud). 0: none.
+  // NIGHT SKY: the night around it — darkening toward the zenith, a dusty
+  // band of the Milky Way, stars, sometimes a falling one; and the dark side
+  // of the moon is no longer a hole: earthshine, the light of the Earth on
+  // it, faint, with the fractal just visible in it, hiding the stars behind.
+  // 0: the page shows through, as before.
+  const clouds=Math.max(0, Math.min(1, form==null ? 0 : form)), nightK=Math.max(0, Math.min(1, night==null ? 0 : night));
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
@@ -1024,64 +1033,125 @@ export function genMoon(w,h,amt,zoom){
   // Fractal Depth adds octaves: more of them is finer, stranger detail
   const octaves=Math.max(2, Math.min(9, Math.round(2 + amt*4)));
   const fbm=(x,y)=>{ let s=0,a=0.5,f=1,n=0; for(let o=0;o<octaves;o++){ s+=vnoise(x*f,y*f)*a; n+=a; a*=0.5; f*=2.03; } return s/n; };
+  const fbm4=(x,y)=>{ let s=0,a=0.5,f=1,n=0; for(let o=0;o<5;o++){ s+=vnoise(x*f,y*f)*a; n+=a; a*=0.55; f*=2.07; } return s/n; };
+  // (drawn after the moon's own draws, so a seed's moon is the moon it was)
+  const wind=(Math.random()-0.5)*0.5, cloudOff=Math.random()*200, mwA=Math.random()*Math.PI, mwOff=(Math.random()-0.5)*0.6;
+  const shootP=Math.random(), haloR=2.1+Math.random()*0.5;
 
   // built at a third of the page's resolution and scaled up, like the clouds
   const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div);
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU);
   const img=sctx.createImageData(ww,wh), d=img.data;
+  // the sky behind, on its own layer, so the stars can go between
+  const skyC=document.createElement('canvas'); skyC.width=ww; skyC.height=wh;
+  const kctx=skyC.getContext('2d', CPU), kimg=kctx.createImageData(ww,wh), kd=kimg.data;
   const cosT=Math.cos(tilt), sinT=Math.sin(tilt);
   const sstepM=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
+  const mwx=Math.cos(mwA), mwy=Math.sin(mwA);
+  const CL=new Float32Array(ww*wh);                      // cloud cover, kept for the stars
   for(let py=0;py<wh;py++){
     for(let px=0;px<ww;px++){
       const idx=(py*ww+px)*4;
       const X=(px*div-cx)/R, Y=(py*div-cy)/R;
       const u=X*cosT - Y*sinT, v=X*sinT + Y*cosT;
-      const r2=u*u+v*v;
+      const r2=u*u+v*v, r=Math.sqrt(r2);
       let val=128, alpha=255;
+      // THE NIGHT: darker toward the top, the Milky Way a pale dusty band
+      if(nightK>0){
+        const sx=px*div/unit, sy=py*div/unit;
+        const across=(sx-0.5*w/unit)*mwy-(sy-0.5*h/unit)*mwx-mwOff, band=Math.exp(-((across/0.16)**2));
+        const dust=fbm4(sx*6+40, sy*6+11), lane=Math.max(0, fbm4(sx*14+3, sy*14+70)-0.5);
+        let sky=128 - nightK*(48 + 30*(1 - py/wh));
+        sky+=nightK*band*(dust*80 - 12 - lane*90*band);
+        const sv=Math.max(0,Math.min(255,sky)); kd[idx]=kd[idx+1]=kd[idx+2]=sv; kd[idx+3]=255;
+      }
       if(r2<=1){
         const edge=Math.sqrt(1-v*v);
         // the terminator is an ellipse; a soft edge a pixel or two wide instead
         // of a yes/no test, which stair-stepped
-        const litAmt = sstepM(-0.012, 0.012, facing*u - phase*edge) * sstepM(1, 0.985, Math.sqrt(r2));
-        const lit = litAmt > 0;
+        const litAmt = sstepM(-0.012, 0.012, facing*u - phase*edge) * sstepM(1, 0.985, r);
         const limb = 1 - Math.sqrt(1-r2);               // darkening toward the rim
-        if(!lit){
-          // the DARK side is knocked out — transparent, the page shows
-          // through — so the visible shape IS the phase, as with the real
-          // moon, and matches the glyph on the seed button. (With the lit
-          // side knocked out instead, a waxing crescent showed as everything
-          // except the crescent, which read as backwards.)
+        // the lit side: noise that warps its own coordinates, twice
+        const qx=fbm(u*2.1+1.7, v*2.1+9.2), qy=fbm(u*2.1+8.3, v*2.1+2.8);
+        const n=fbm(u*2.4+3.2*qx, v*2.4+3.2*qy);
+        if(litAmt<=0 && nightK<=0){
+          // with no night, the DARK side is knocked out — the page shows
+          // through — so the visible shape IS the phase, matching the glyph
+          // on the seed button
           alpha = 0; val = 0;
         } else {
-          // the lit side: noise that warps its own coordinates, twice
-          const qx=fbm(u*2.1+1.7, v*2.1+9.2), qy=fbm(u*2.1+8.3, v*2.1+2.8);
-          const n=fbm(u*2.4+3.2*qx, v*2.4+3.2*qy);
           // a gentle tonal ripple through it (hard contour lines here read
-          // as a topographic map)
+          // as a topographic map); the lit face GLOWS, its fractal held in the light
           const band=Math.abs(((n*9)%1)-0.5)*2;
-          // the lit face GLOWS: luminous overall, the fractal detail held
-          // inside the light rather than drawn in shadow, brightest toward the
-          // limb the sun is on
           const t = Math.max(0, Math.min(1, (n - 0.28) / 0.44));
-          val = 138 + t*95 + (1 - sstepM(0, 0.45, band))*13 - limb*18;
-          alpha = Math.round(255*litAmt);
+          const litV = 138 + t*95 + (1 - sstepM(0, 0.45, band))*13 - limb*18;
+          // EARTHSHINE: the dark side, faintly lit, the fractal just showing
+          const ashen = 128 - nightK*38 + t*26*nightK - limb*8;
+          val = litV*litAmt + ashen*(1-litAmt);
+          alpha = nightK>0 ? Math.round(255*sstepM(1, 0.985, r)) : Math.round(255*litAmt);
         }
       } else {
         // bloom: light spilling past the rim, strongest beside the lit limb,
         // and a soft halo all the way round
-        const r = Math.sqrt(r2);
         const side = Math.max(0, Math.min(1, facing*u/r*0.5 + 0.5 - phase*0.35));
         // the glow hugs the limb (a separate halo ring read as a target)
         const bloom = Math.exp(-(r-1)*5.5) * (0.35 + 0.65*side);
-        val = 128 + bloom * 70;
-        if(val < 129){ val = 0; alpha = 0; }              // beyond the glow: untouched
+        if(nightK>0){ val = 128 + bloom*70; alpha = Math.round(255*Math.min(1, bloom*1.6)); }
+        else { val = 128 + bloom * 70; if(val < 129){ val = 0; alpha = 0; } }  // beyond the glow: untouched
+      }
+      // CLOUDS, in front of everything: banks stretched by the wind, their
+      // thin edges lit by the moon, a halo in the thin veils round it
+      if(clouds>0){
+        const sx=px*div/unit, sy=py*div/unit, wx=sx+wind*sy;
+        const cv=fbm4(wx*2.2+cloudOff, sy*5.5) * 0.75 + fbm4(wx*7+cloudOff*2, sy*14)*0.25;
+        const cover=sstepM(0.6-clouds*0.32, 0.86-clouds*0.2, cv), ci=py*ww+px;
+        CL[ci]=cover;
+        if(cover>0.002){
+          // billows: lit on the side toward the moon, shadowed away from it
+          const bil=fbm4(wx*11+cloudOff, sy*22+5)-0.5, lx=-(X)/(r||1), ly=-(Y)/(r||1);
+          // the bank's broad shape (two smooth octaves), and which way its slope faces
+          const big=(x2,y2)=>vnoise(x2*2.2+cloudOff, y2*5.5)*0.65+vnoise(x2*4.5+cloudOff, y2*11)*0.35;
+          const b0=big(wx,sy), gx=big(wx+0.02,sy)-b0, gy=big(wx,sy+0.02)-b0;
+          const facing2=Math.max(-1, Math.min(1, -(gx*lx+gy*ly)*14));
+          const near=Math.exp(-Math.max(0, r-1)*1.3), thin=cover*(1-cover)*4;    // the thin edges catch the light
+          const halo=Math.exp(-(((r-haloR)/0.07)**2))*(0.3+thin)*0.8 + Math.exp(-(((r-haloR*1.03)/0.05)**2))*(0.3+thin)*0.3;
+          const tone=128 - nightK*44 + bil*26 + near*(18 + 70*thin + 22*facing2) + halo*45 + (1-near)*6*facing2;
+          const a2=Math.min(1, cover*(0.45+0.55*cover)*1.15);
+          // over the moon (dimmed through it); the sky is its own layer beneath
+          const ua=alpha/255, A=1-(1-ua)*(1-a2);
+          val=(tone*a2 + val*ua*(1-a2))/Math.max(0.001, A); alpha=Math.round(255*A);
+        }
       }
       d[idx]=d[idx+1]=d[idx+2]=Math.max(0,Math.min(255,val)); d[idx+3]=alpha;
     }
   }
-  sctx.putImageData(img,0,0);
   ctx.imageSmoothingEnabled=true;
+  if(nightK>0){
+    kctx.putImageData(kimg,0,0); ctx.drawImage(skyC,0,0,w,h);
+    // STARS: sharp, at full size; dimmed by cloud (the moon's layer covers those behind it)
+    const n=Math.round(canonArea(w,h)/4200*(0.4+nightK));
+    for(let k=0;k<n;k++){
+      const x=Math.random()*w, y=Math.random()*h, m=Math.random(), br=Math.pow(m, 3);
+      const cov=CL[Math.min(wh-1,(y/div)|0)*ww+Math.min(ww-1,(x/div)|0)]||0, ok=1-cov*0.95;
+      if(ok<0.05) continue;
+      const rad=cpx(1+br*3), a=Math.min(1,(0.5+0.5*br)*ok*(0.4+0.6*nightK));
+      ctx.globalAlpha=a; ctx.fillStyle='rgb(245,245,245)'; ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2); ctx.fill();
+      if(br>0.55){ ctx.globalAlpha=a*0.5; ctx.strokeStyle='rgb(245,245,245)'; ctx.lineWidth=cpx(0.8);      // the brightest twinkle
+        ctx.beginPath(); ctx.moveTo(x-rad*5,y); ctx.lineTo(x+rad*5,y); ctx.moveTo(x,y-rad*5); ctx.lineTo(x,y+rad*5); ctx.stroke(); }
+    }
+    // a falling star, on some nights
+    if(shootP<0.45){
+      const x0=w*(0.1+Math.random()*0.8), y0=h*(0.05+Math.random()*0.4), ang=Math.PI*(0.15+Math.random()*0.25)*(Math.random()<0.5?1:-1)+Math.PI/2, len=unit*(0.12+Math.random()*0.15);
+      const x1=x0+Math.cos(ang)*len, y1=y0+Math.sin(ang)*len*0.6, g=ctx.createLinearGradient(x0,y0,x1,y1);
+      g.addColorStop(0,'rgba(245,245,245,0)'); g.addColorStop(1,`rgba(250,250,250,${0.85*nightK})`);
+      ctx.globalAlpha=1; ctx.strokeStyle=g; ctx.lineWidth=cpx(2.2); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+      ctx.fillStyle=`rgba(255,255,255,${0.9*nightK})`; ctx.beginPath(); ctx.arc(x1,y1,cpx(2.6),0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+  sctx.putImageData(img,0,0);
   ctx.drawImage(small,0,0,w,h);
   return c;
 }
