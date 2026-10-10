@@ -362,7 +362,27 @@ function drawEffects(ctx, str, x, y, size, fill, fx){
   finally { ctx.__vellumEffectPass = false; }
 }
 const along = (e, d) => { const a = (e.angle || 0) * Math.PI/180; return [Math.cos(a)*d, Math.sin(a)*d]; };
-const blurred = (ctx, r) => { if(r > 0.3 && 'filter' in ctx) ctx.filter = `blur(${r.toFixed(1)}px)`; };
+/**
+ * The letters, softened by r (a standard deviation, in the page's pixels), in
+ * one colour. Drawn as a canvas SHADOW of letters set far off the page: a
+ * shadow's blur works on the glyphs' own coverage mask, which browsers do
+ * quickly (on the GPU where there is one), where ctx.filter = blur() blurs a
+ * whole layer per call — measured ~100× slower (1.3 s against 10 ms for 24
+ * glowing words), and per LETTER when a run is tracked or jittered. The shadow
+ * sits exactly where filter's blur did (mean difference 1/255). Shadows work in
+ * the device's pixels, so the offset and blur are carried through the current
+ * transform (rotated letters, scaled glyphs).
+ */
+function softText(ctx, str, x, y, r, colour){
+  if(!(r > 0.3) || typeof ctx.getTransform !== 'function'){ ctx.fillStyle = colour; ctx.fillText(str, x, y); return; }
+  const m = ctx.getTransform(), sc = Math.hypot(m.a, m.b) || 1;
+  const K = ((ctx.canvas ? ctx.canvas.width + ctx.canvas.height : 8192) * 2 + r * 8) / sc;   // far enough off that only the shadow lands
+  ctx.save();
+  ctx.fillStyle = '#000'; ctx.shadowColor = colour; ctx.shadowBlur = 2 * r * sc;
+  ctx.shadowOffsetX = m.a * K; ctx.shadowOffsetY = m.b * K;
+  ctx.fillText(str, x - K, y);
+  ctx.restore();
+}
 const EFFECT_DRAW = {
   outline(ctx, str, x, y, size, fill, e){
     ctx.globalAlpha = e.k2/100; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
@@ -370,7 +390,7 @@ const EFFECT_DRAW = {
   },
   shadow(ctx, str, x, y, size, fill, e){
     const [dx, dy] = along(e, rpx(e.k2));
-    blurred(ctx, rpx(e.k1)/2); ctx.fillStyle = e.color; ctx.fillText(str, x + dx, y + dy);
+    softText(ctx, str, x + dx, y + dy, rpx(e.k1)/2, e.color);
   },
   longshadow(ctx, str, x, y, size, fill, e){
     const L = size*0.7*e.k1/100, step = Math.max(rpx(1), size*0.025), n = Math.max(1, Math.ceil(L/step));
@@ -378,9 +398,9 @@ const EFFECT_DRAW = {
     for(let i = n; i >= 1; i--){ ctx.globalAlpha = (e.k2/100)*(1 - (i - 1)/n*0.85); ctx.fillText(str, x + ux*step*i, y + uy*step*i); }
   },
   glow(ctx, str, x, y, size, fill, e){
-    const r = Math.max(rpx(1), size*0.45*e.k1/100); ctx.fillStyle = e.color;
-    ctx.globalAlpha = e.k2/100; blurred(ctx, r); ctx.fillText(str, x, y);
-    blurred(ctx, r*0.4); ctx.fillText(str, x, y);                       // a tighter, brighter core
+    const r = Math.max(rpx(1), size*0.45*e.k1/100);
+    ctx.globalAlpha = e.k2/100; softText(ctx, str, x, y, r, e.color);
+    softText(ctx, str, x, y, r*0.4, e.color);                           // a tighter, brighter core
   },
   letterpress(ctx, str, x, y, size, fill, e){
     // pressed INTO the page: a light edge on the side away from the light, a shadow toward it
@@ -391,9 +411,8 @@ const EFFECT_DRAW = {
   bevel(ctx, str, x, y, size, fill, e){
     // raised OUT of the page: lit toward the light, shadowed away, softened like a rounded edge
     const d = Math.max(rpx(1), size*0.06*e.k1/100), [dx, dy] = along(e, d), a = e.k2/100;
-    blurred(ctx, d*0.35);
-    ctx.globalAlpha = a*0.75; ctx.fillStyle = '#000000'; ctx.fillText(str, x + dx, y + dy);
-    ctx.globalAlpha = a*0.9;  ctx.fillStyle = '#ffffff'; ctx.fillText(str, x - dx, y - dy);
+    ctx.globalAlpha = a*0.75; softText(ctx, str, x + dx, y + dy, d*0.35, '#000000');
+    ctx.globalAlpha = a*0.9;  softText(ctx, str, x - dx, y - dy, d*0.35, '#ffffff');
   },
   chromatic(ctx, str, x, y, size, fill, e){
     // a true colour split, visible on light and dark pages alike
@@ -453,12 +472,13 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
   const rand = seededRand(hashText(str, px, py));
   o.globalCompositeOperation = 'destination-out';
   const bites = Math.round((off.width * off.height) / 70 * k);
+  o.beginPath();                       // every bite in ONE path, one fill (the same union, far fewer calls)
   for(let i = 0; i < bites; i++){
     const r = size * (0.008 + rand() * 0.03) * (0.6 + k);
-    o.beginPath();
-    o.arc(rand() * off.width, rand() * off.height, r, 0, Math.PI * 2);
-    o.fill();
+    const bx = rand() * off.width, by = rand() * off.height;
+    o.moveTo(bx + r, by); o.arc(bx, by, r, 0, Math.PI * 2);
   }
+  o.fill();
   ctx.drawImage(off, px - pad, py - pad);
 }
 
@@ -956,7 +976,7 @@ function renderInto(canvas){
   // (so it never echoes the main texture); the variant's own default hues
   if($('textureToggle').checked && $('baseToggle') && $('baseToggle').checked){
     const bt = ($('baseType') || {}).value;
-    if(bt && bt !== 'astral' && bt !== 'crucible' && paramsFor(bt).length){
+    if(bt && bt !== 'astral' && bt !== 'athanor' && paramsFor(bt).length){
       const bcaps = capsFor(bt), a1 = $('accent1ColorHex').value, a2 = $('accent2ColorHex').value;
       const td = (bcaps.tintDefaults || []).map(c => c === 'accent1' ? a1 : c === 'accent2' ? a2 : c);
       const chosen = ($('baseBlend') || {}).value || 'overlay';
@@ -1035,8 +1055,8 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      // (a Crucible surface carries its graph: the worker makes it from that)
-      const graph = type === 'crucible' ? (($('forgeGraph') || {}).value || '') : undefined;
+      // (a Athanor surface carries its graph: the worker makes it from that)
+      const graph = type === 'athanor' ? (($('forgeGraph') || {}).value || '') : undefined;
       drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph }));
       ctx.restore();
     }

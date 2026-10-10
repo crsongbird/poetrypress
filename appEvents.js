@@ -28,7 +28,7 @@ import { texturesSettled, setDrafting } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { openForge, closeForge, describeForge } from './forge.js';
-import { crucibleKnobs, crucibleHues, crucibleName } from './crucible.js';
+import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
@@ -279,9 +279,9 @@ toggleSubblock('baseToggle','baseBlock');
   const bt = $('baseType'), main = $('textureType');
   if(bt && main && main.children && typeof document.createElement === 'function'){
     for(const g of Array.from(main.children)){
-      if(!g.label || g.id === 'crucibleGroup') continue;
+      if(!g.label || g.id === 'athanorGroup') continue;
       const og = document.createElement('optgroup'); og.label = g.label;
-      for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'crucible') continue;
+      for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'athanor') continue;
         const op = document.createElement('option'); op.value = o.value; op.textContent = o.textContent; og.appendChild(op); }
       bt.appendChild(og);
     }
@@ -659,7 +659,7 @@ const PERSISTED = [
   ['cardFx',               'cardFx',               'text'],
   ['cardFxAmount',         'cardFxAmount',         'text', ''],
   ['cardFxScale',          'cardFxScale',          'text', ''],
-  ['forgeGraph',           'forgeGraph',           'text'],      // the Crucible's graph (Drawflow's JSON)
+  ['forgeGraph',           'forgeGraph',           'text'],      // the Athanor's graph (Drawflow's JSON)
   ['baseToggle',           'baseToggle',           'check'],     // texture layers: the base beneath
   ['baseType',             'baseType',             'text'],
   ['baseP1',               'baseP1',               'text'],
@@ -804,6 +804,7 @@ function serializeCurrentSettings(){
 function retireLook(s){
   if(!s) return s;
   if(s.textureType === 'whorl') return { ...s, textureType: 'dunes' };
+  if(s.textureType === 'crucible') return { ...s, textureType: 'athanor' };   // the node editor's surface, briefly named the Crucible
   if(s.textureType === 'crystalleaf') return { ...s, textureType: 'spangle' };   // same knobs, same metal look
   // Rorschach's hues were Light/Dark (white, black); now they are Ink and Accent
   if(s.textureType === 'inkbleed' && /^#?FFFFFF$/i.test(s.textureTint1 || '') && /^#?000000$/i.test(s.textureTint2 || ''))
@@ -818,8 +819,8 @@ function retireLook(s){
 }
 function restoreSettings(s){
   s = retireLook(s);
-  // the look's Crucible graph first: a Crucible surface's sliders are named from it
-  if(s.forgeGraph !== undefined && $('forgeGraph')){ $('forgeGraph').value = s.forgeGraph; if(typeof applyCrucibleGraph === 'function') applyCrucibleGraph(false); }
+  // the look's Athanor graph first: a Athanor surface's sliders are named from it
+  if(s.forgeGraph !== undefined && $('forgeGraph')){ $('forgeGraph').value = s.forgeGraph; if(typeof applyAthanorGraph === 'function') applyAthanorGraph(false); }
   // and the base layer's variant, so its knobs take their own ranges before their values
   if(s.baseType && $('baseType')){ $('baseType').value = s.baseType; syncBaseParams(false); }
   if(s.bg1) setColorField('bgColor1Hex', s.bg1);
@@ -2253,43 +2254,43 @@ if(typeof document !== 'undefined' && document.body && document.body.dataset) do
 // (which way the glass runs here — 'gpu' or 'cpu' — for the curious, on the body)
 setTimeout(() => { try { if(document.body && document.body.dataset) document.body.dataset.glass = boxFxBackend(); } catch(e){} }, 0);
 
-// ---------- THE CRUCIBLE (forge.js) ----------
+// ---------- THE ATHANOR (forge.js) ----------
 // A node editor for new surfaces, over the page; its graph lives in the hidden
 // #forgeGraph field (saved, loaded and shared with the look).
 function paintForgeSummary(){ if($('forgeSummary')) $('forgeSummary').textContent = describeForge(($('forgeGraph') || {}).value); }
-/** The Crucible's surface, as the page offers it: its Knob nodes become the
+/** The Athanor's surface, as the page offers it: its Knob nodes become the
  *  texture's sliders (named, ranged, defaulted), its Hue nodes its hues, its
  *  Surface's name the option at the bottom of Surface Variant. (The worker
  *  keeps six plain knobs; only the page's labels change.) */
-function applyCrucibleGraph(redraw = true){
+function applyAthanorGraph(redraw = true){
   const g = ($('forgeGraph') || {}).value || '';
-  const knobs = crucibleKnobs(g), hues = crucibleHues(g), name = crucibleName(g);
+  const knobs = athanorKnobs(g), hues = athanorHues(g), name = athanorName(g);
   const top = knobs.reduce((m, k) => Math.max(m, k.slot), 0);
-  TEXTURE_PARAMS.crucible = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
+  TEXTURE_PARAMS.athanor = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
     return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '' }; });
-  const caps = TEXTURE_CAPS.crucible;
+  const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
     caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue')); }
-  if($('crucibleOption')) $('crucibleOption').textContent = name ? 'The Crucible: ' + name : 'The Crucible (empty)';
-  if(redraw && $('textureType') && $('textureType').value === 'crucible'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
+  if($('athanorOption')) $('athanorOption').textContent = name ? 'The Athanor: ' + name : 'The Athanor (empty)';
+  if(redraw && $('textureType') && $('textureType').value === 'athanor'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
 }
-/** A small picture of what the graph makes, for the Crucible's bar. */
-function previewCrucible(json, cv){
+/** A small picture of what the graph makes, for the Athanor's bar. */
+function previewAthanor(json, cv){
   const n = 96, k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
-  const tex = getTextureCanvas('crucible', n, n, { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072,
+  const tex = getTextureCanvas('athanor', n, n, { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072,
     light: parseFloat(($('textureLight') || {}).value) || 315, tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value,
     p1: k('texP1', 50), p2: k('texP2', 50), p3: k('texP3', 50), p4: k('texP4', 50), p5: k('texP5', 50), p6: k('texP6', 50) });
   const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height);
 }
-const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'crucible'), stitches: STITCH_STYLES,
-  onSave: () => { paintForgeSummary(); applyCrucibleGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
-  preview: previewCrucible,
-  // "Use as Surface": the Crucible's texture on the page
+const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+  onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
+  preview: previewAthanor,
+  // "Use as Surface": the Athanor's texture on the page
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
-    t.value = 'crucible'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
+    t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
 if($('forgeOpenBtn') && $('forgeOpenBtn').addEventListener) $('forgeOpenBtn').addEventListener('click', () => openForge(forgeDeps()));
 if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => { closeForge(forgeDeps()); paintForgeSummary(); });
-setTimeout(() => { paintForgeSummary(); applyCrucibleGraph(true); }, 0);
+setTimeout(() => { paintForgeSummary(); applyAthanorGraph(true); }, 0);
 
 // ---------- LINKED CONTROLS ----------
 // A control marked data-link="<other id>" mirrors that control, both ways,
@@ -2608,7 +2609,7 @@ if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepHistory(-1));
 if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepHistory(1));
 // any change in the controls — typed, dragged, picked, or a button that
 // rewrites many at once (presets, randomize, spells) — records a step
-const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson', 'forgeGraph']);   // (the Crucible keeps its own edits)
+const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson', 'forgeGraph']);   // (the Athanor keeps its own edits)
 for(const type of ['input', 'change']){
   document.addEventListener(type, (e)=>{
     const t = e.target;

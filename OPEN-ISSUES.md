@@ -16,13 +16,18 @@ full), Scrying Pool (~1 s preview), Burnt Letter (~1.1 s preview, ~2.6 s
 export, with its piles), Turing Skin (~1.2 s at any size: its own grid),
 Hoarfrost (~0.9 s preview, ~1.5 s export), Rain on Glass (~0.8 s, ~1.4 s),
 Guilloché (~0.5 s, ~1.1 s), Chladni Sand (~0.7 s, ~1.2 s), Contour Map
-(~0.9 s, ~2.1 s), Flow-Field Ink (~0.1 s). A Crucible surface costs what its
-parts cost (a Vellum Texture node costs that texture).
+(~0.9 s, ~2.1 s), Flow-Field Ink (~0.1 s), Stained Glass (~0.8 s, ~1.4 s),
+Suminagashi (~0.8 s, ~1.4 s), Watercolour Wash (~0.4 s, ~1.2 s) — CPU light;
+less where the light runs on the GPU. An Athanor surface costs what its parts
+cost (a Vellum Texture node costs that texture), within its work budget.
+- TEXT EFFECTS are fast now: glow, shadow and bevel blur as canvas shadows of
+  off-page letters (canvasRenderer `softText`), not ctx.filter — glow went from
+  ~200 ms a frame to ~10 ms (three stacked: ~350 → ~17 ms); measured with the
+  canvas flushed. Check the feel on Ruby's phone, Chrome and Firefox.
 - Scale audit (tools/scale-audit.mjs; preview vs export): Flow-Field and
   Turing Skin fine, Contour close; Chladni, Guilloché, Burnt Letter and
-  Hoarfrost differ in fine detail (sub-pixel lines and grains at preview
-  size); Rain on Glass's simulation drifts between sizes (tiny float
-  differences grow in a chaotic sim) — same character, different drops.
+  Hoarfrost are softer at preview size (Ruby: soft is fine); Stained Glass,
+  Suminagashi and Watercolour Wash fine.
 The inset box's glass runs on the GPU when there is one (boxFx.js) — check
 its speed on the phone, and that 'glass' reads gpu there.
 
@@ -42,18 +47,21 @@ Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter, Brushstrokes
   per-material gloss where one won't do.
 
 ## 2 · Ruby to judge (this round)
-- The node editor is THE CRUCIBLE now (the alchemist's vessel; "a forge for
-  new surfaces" beneath the name) — and it MAKES TEXTURES: every part
-  evaluates (crucible.js, in the worker); its Surface is offered at the bottom
-  of Surface Variant ("The Crucible: <its name>"); Knob nodes become the
-  sliders, Hue nodes the hues; a thumbnail in its bar; "Use as Surface".
-- TEXTURE LAYERS: a base texture beneath the main one (Surface card): its own
-  variant, two knobs, opacity and blend; the seed turned so it never echoes.
-- Four approved textures: Guilloché (√, woven rosettes round spirograph
-  hearts, engraved), Chladni Sand (∆, sand on a ringing plate's still lines),
-  Contour Map (🜚, contour lines with index lines and hillshade), Flow-Field
-  Ink (♡, non-crossing strokes; the dial sets the current).
-- Preset tiles keep the plain box (Ruby: plain rectangle and colour).
+- The node editor is THE ATHANOR again, subtitled "Surface texture node
+  editor". Looks saved while it was the Crucible open with it (retireLook,
+  RETIRED). Stages 4–5: a VERSION per graph (v2: each node's own randomness),
+  node results KEPT between edits, a WORK BUDGET (coarser past it; 64 nodes at
+  most), five STARTER graphs ("Start from…": Marble, Leaded Window, Lit
+  Terrain, Woven Waves, Reaction Bloom), three new parts (Posterize, Tile &
+  Rotate, Edge Detect).
+- Text effects (glow above all) are ~20× faster.
+- The last three approved textures: Stained Glass (√; shards → rose window,
+  lead lit by the dial, glass lit from behind), Suminagashi (♡; Jaffer's
+  marbling maths, rings swept by the breath), Watercolour Wash (🜚; Hobbs's
+  layered polygons, edge darkening, granulation, a graded wash).
+- Prior art for node editors is in Ruby's doc (Material Maker, Substance,
+  Blender groups, TextureLab, NodeToy, the TSL editor; Drawflow vs Rete vs
+  LiteGraph).
 
 ## 3 · Colour, light and material — the rest of the pass
 Every colour has one job (test/colorRoles.test.mjs). Unused hues are now
@@ -65,13 +73,19 @@ a random angle.
   hatch) — waiting on Ruby (see the open questions).
 
 ## Pinned
-- The approved textures still to make: Suminagashi, Watercolour Wash,
-  Stained Glass.
-- THE CRUCIBLE, stages 4–5 (Ruby's doc): GPU passes inside a graph,
-  per-node caching between edits, more parts; a version per graph, a work
-  budget, starter graphs as presets.
+- Rain on Glass: make the preview's drops the export's (Ruby: acceptable for
+  now, but needed). The simulation is chaotic, so tiny size differences grow:
+  run it on the canonical grid at every size (as Turing Skin does) and scale
+  the result — about half a run, mostly checking the look still holds.
+- TEMPLATES in the Athanor (Ruby): open an existing texture as a graph of its
+  parts. Each texture must first be written as a chain of shared steps
+  (noise → warp → levels → light); Material Maker's "make editable" and
+  Blender's groups are the model; Drawflow's modules can hold the inner graph.
+  First: Clouds, Cold Press, Contour Map, Flow-Field Ink.
+- The Athanor's GPU passes (blur, warp, light inside a graph) — the light
+  already uses the GPU where texCore's does.
 - Then: generate and revisit the PRESETS (Ruby: once the open items are done)
-  — Turing Skin, Hoarfrost and the new textures have none yet.
+  — Turing Skin, Hoarfrost and the ten newest textures have none yet.
 
 ## Later
 - Dream Bloom as the basis for a new texture (its five knobs make a rich engine).
@@ -88,8 +102,8 @@ a random angle.
 - Textures are made in a worker: the page stays responsive while one is made.
 - The new fonts' sizes in the narrow column (ANDROMEDA just fits at 360px).
 - Panzoom's pinch on the preview (toward the fingers), double-tap to fit.
-- The Crucible on a phone: the palette below, tap a part to add it; a
-  Crucible surface's speed on the phone.
+- The Athanor on a phone: the palette below, tap a part to add it; a
+  Athanor surface's speed on the phone.
 - The box's glass speed; the 58-font picker's groups.
 
 ## Worth knowing
@@ -114,7 +128,7 @@ a random angle.
 - The report drops a line whose surface variable has nothing to say
   (pmlVars LINE_DROP, ctx.surfOff).
 - Panzoom and Coloris load from jsdelivr at exact versions (Drawflow too,
-  only when the Crucible opens); the app must work without them.
+  only when the Athanor opens); the app must work without them.
 - STITCHES: STITCH_STYLES is the menu; STITCH_ALIASES maps the retired to
   their relatives; parse with STITCH_NAMES, draw through stitchOf(). Every
   kept motif has an `edge` (its silhouette) — a new motif needs one too.
@@ -122,10 +136,16 @@ a random angle.
   two controls both ways while the switch is on (the box ⛓ border).
 - The box's glass and GPU blends: boxFx.js; `?softgl` in the address lets a
   machine without a GPU test the GPU path (body[data-glass] says which ran).
-- The Crucible's graph is Drawflow's export JSON in #forgeGraph (PERSISTED,
+- The Athanor's graph is Drawflow's export JSON in #forgeGraph (PERSISTED,
   but not an undo step), saved WITHOUT node faces (forge.js redraws them from
-  FORGE_NODES on load). crucible.js evaluates it; type 'crucible' in the
+  FORGE_NODES on load). athanor.js evaluates it; type 'athanor' in the
   texture tables has six plain knobs (k1–k6) — the page relabels them from the
-  graph (applyCrucibleGraph), and the cache key carries crucibleHash(graph).
+  graph (applyAthanorGraph), and the cache key carries athanorHash(graph).
+- The Athanor's graphs carry `v` (athanor.js ATHANOR_VERSION). v1 drew all
+  nodes' randomness from one stream; v2 seeds each node from (seed, id), which
+  is what makes the kept results (ATHANOR_KEPT) safe. Never change what an
+  old version makes: add a version.
+- Text effects never blur with ctx.filter: use softText (a shadow of off-page
+  letters, carried through the transform).
 - Texture layers: the base layer is drawn first, in its own slot ('base'),
   with the main seed ^ 0x5bd1e995; presets turn it off (FRAME_DEFAULTS).

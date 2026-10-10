@@ -31,12 +31,12 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { evalCrucible, crucibleHash } from './crucible.js';
+import { evalAthanor, athanorHash, athanorBudget } from './athanor.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape, genFlowField } from './texWhimsy.js';
 import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape, genGrain, genGuilloche } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
-import { genLinenTooth, genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap } from './texTouch.js';
+import { genLinenTooth, genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genStainedGlass, genSuminagashi, genWatercolour } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -168,10 +168,10 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
                   // drips, and the faint wash inside the ring
                   {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
-  // THE CRUCIBLE: a surface made in the node editor. Its knobs are the
+  // THE ATHANOR: a surface made in the node editor. Its knobs are the
   // graph's Knob nodes (the page relabels them from the graph; here, six
   // plain ones, so a request always has its values)
-  crucible:      [1,2,3,4,5,6].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
+  athanor:      [1,2,3,4,5,6].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
   guilloche:     [{key:'zoom',  label:'Rosette Size',    min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Line Density',    min:30, max:200, def:100, unit:'%'},
                   // how many lobes each rosette turns: a few broad petals → a fine crown
@@ -184,6 +184,18 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Contour Interval',min:30, max:250, def:100, unit:'%'},
                   // the land lit beneath its lines: none (lines only) → strong relief
                   {key:'form',  label:'Hillshade',       min:0,  max:100, def:45,  unit:''}],
+  stainedglass:  [{key:'zoom',  label:'Pane Size',       min:50, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Leading',         min:30, max:250, def:100, unit:'%'},
+                  // the panes' arrangement: shards → a calm tiling → (past half) a rose window
+                  {key:'form',  label:'Order',           min:0,  max:100, def:25,  unit:''}],
+  suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
+                  // still concentric rings → swept by breath and fan
+                  {key:'form',  label:'Breath',          min:0,  max:100, def:40,  unit:''}],
+  watercolour:   [{key:'zoom',  label:'Wash Size',       min:40, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Pigment',         min:30, max:250, def:100, unit:'%'},
+                  // dry, hard rims → wet, soft and spreading
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:50,  unit:''}],
   flowfield:     [{key:'zoom',  label:'Scale',           min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Lines',           min:30, max:300, def:100, unit:'%'},
                   // the field: a steady current (0) → eddies and swirls
@@ -368,7 +380,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
-  crucible:      { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','darken','lighten','color-dodge','color-burn','difference','exclusion'],
+  athanor:      { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','darken','lighten','color-dodge','color-burn','difference','exclusion'],
                    light:true, tints:2, tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#F2E6D8','#2A2230'] },
   guilloche:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -376,6 +388,12 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   contour:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
+                   tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
+  suminagashi:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Breath Direction', tints:2,
+                   tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['#1C1C26','#2C4C8E'] },
+  watercolour:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Wash Direction', tints:2,
+                   tintLabels:['Pigment Hue','Second Pigment Hue'], tintDefaults:['accent1','accent2'] },
   flowfield:     { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','screen','lighten'], light:true, dial:'Flow Direction', tints:2,
                    tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['accent1','accent2'] },
   turing:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
@@ -431,7 +449,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -530,14 +548,20 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
-  } else if(type === 'crucible'){
-    result = genCrucible(w,h,light,tint1,tint2,extra);
+  } else if(type === 'athanor'){
+    result = genAthanor(w,h,light,tint1,tint2,extra);
   } else if(type === 'guilloche'){
     result = genGuilloche(w,h,amt,zoom,light,form);
   } else if(type === 'chladni'){
     result = genChladni(w,h,amt,zoom,light,form);
   } else if(type === 'contour'){
     result = genContourMap(w,h,amt,zoom,light,form,extra.mat);
+  } else if(type === 'stainedglass'){
+    result = genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2);
+  } else if(type === 'suminagashi'){
+    result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
+  } else if(type === 'watercolour'){
+    result = genWatercolour(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'flowfield'){
     result = genFlowField(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'turing'){
@@ -620,7 +644,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * in the light slot unnoticed.
  */
 // the Zen Garden was retired: looks saved with it open as Dune Ripples
-const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
+const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle', crucible: 'athanor' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
 /** A texture's cache key — shared by the page and the texture worker, so a
  *  texture made in the worker files where the page will look for it. */
 export function textureKeyFor(type, w, h, opts = {}){ return describeRequest(type, w, h, opts).key; }
@@ -698,15 +722,17 @@ function describeRequest(type, w, h, opts){
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
-            + (type === 'crucible' ? `_c${crucibleHash(opts.graph)}` : '');
+            + (type === 'athanor' ? `_c${athanorHash(opts.graph)}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
-// A Crucible surface: its graph evaluated (crucible.js) on the working grid,
+// A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
 // usual way. No graph, or no Surface in it: a flat mid-grey (nothing shows).
-function genCrucible(w, h, light, tint1, tint2, extra){
-  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
-  const img = evalCrucible(extra.graph || '', ww, wh,
+function genAthanor(w, h, light, tint1, tint2, extra){
+  // the work budget: a heavy graph is made on a coarser grid; too many nodes, not at all
+  const B = athanorBudget(extra.graph || '');
+  const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow() },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;

@@ -389,3 +389,10 @@ background) don't belong in it.
   Letter's piles), or make per-pixel randomness the last thing drawn.
 - Counts and sizes are canonical (canonArea, cpx, or fractions of the working
   grid's unit) — never "per pixel of this canvas".
+- Text effects never blur with ctx.filter (a whole layer per call, ~100×
+  slower than a shadow, and per LETTER when a run is tracked): use softText in
+  canvasRenderer, a shadow of letters set off the page. Measure canvas work
+  with the canvas FLUSHED (getImageData of one pixel): draws are deferred, and
+  a timer around them alone reads ~1 ms whatever they cost.
+- The Athanor's graphs carry a version (`v`). Never change what an old
+  version makes; add a version instead (athanor.js ATHANOR_VERSION).

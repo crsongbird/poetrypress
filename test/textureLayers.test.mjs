@@ -21,7 +21,7 @@ check('a preset turns the base layer off (it never leaks from one look to the ne
 check('drawn beneath the main texture, with a turned seed and the variant\'s own hues',
   cr.indexOf("requestTexture('base', bt, W, H,") > 0 && cr.indexOf("requestTexture('base', bt, W, H,") < cr.indexOf("const type = $('textureType').value;")
   && /\^ 0x5bd1e995\) >>> 0/.test(cr) && /c === 'accent1' \? a1 : c === 'accent2' \? a2 : c/.test(cr));
-check('the base offers every variant but the composites (Deep Field, the Crucible)', /if\(o\.value === 'astral' \|\| o\.value === 'crucible'\) continue;/.test(ev));
+check('the base offers every variant but the composites (Deep Field, the Athanor)', /if\(o\.value === 'astral' \|\| o\.value === 'athanor'\) continue;/.test(ev));
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

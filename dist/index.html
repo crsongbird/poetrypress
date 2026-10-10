@@ -1806,10 +1806,13 @@ body.is-mobile .forge-sub{ display:none; }
 
 .forge-thumb{ width:40px; height:40px; border:1px solid var(--line); background:#808080; flex:0 0 auto; image-rendering:auto; }
 body.is-mobile .forge-thumb{ width:32px; height:32px; }
-/* the Crucible's bar on a phone: it wraps, so Done is always in reach */
+/* the Athanor's bar on a phone: it wraps, so Done is always in reach */
 body.is-mobile .forge-bar{ flex-wrap:wrap; row-gap:4px; }
 body.is-mobile .forge-status{ flex-basis:100%; order:9; padding-left:0; }
 body.is-mobile .forge-bar button{ padding:4px 9px; }
+/* the Athanor's starters: a small menu in its bar */
+.forge-starter{ max-width:150px; flex:0 1 auto; padding:4px 6px; }
+body.is-mobile .forge-starter{ max-width:120px; }
 
 </style>
 
@@ -8579,10 +8582,252 @@ function genContourMap(w,h,amt,zoom,light,form,M3){
   });
 }
 
-
-/* ==== crucible.js ==== */
 /**
- * crucible.js — THE CRUCIBLE's evaluator: a graph from the node editor
+ * Stained Glass — panes of coloured glass held in lead came, lit from behind.
+ * The panes are a Voronoi tiling (each pixel belongs to its nearest seed; the
+ * lead runs where two seeds are equally near, its width measured EXACTLY from
+ * the bisector, so every came is even). ORDER moves the seeds from irregular
+ * shards (a cathedral window's fragments) through a calmer tiling to a ROSE
+ * WINDOW: rings of panes around the page's centre, coloured ring by ring so the
+ * symmetry reads. The lead is a rounded relief lit by the dial; the glass is
+ * lit from BEHIND (brighter toward the dial's sun), with its own streaks,
+ * bubbles and a faint surface sheen, as antique glass has.
+ */
+function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const order=Math.max(0,Math.min(1, form==null?0.25:form));
+  // (a coarser grid than most: the came stays several cells wide, and the light costs a third)
+  const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const sep=unit*0.1*zoom;
+  // the seeds: shards (jittered grid) or a rose (rings about the centre)
+  const S=[];           // [x, y, ring, index-in-ring]
+  if(order < 0.5){
+    const jit=0.5 - order*0.7;
+    for(let gy=-1; gy<=Math.ceil(wh/sep)+1; gy++) for(let gx=-1; gx<=Math.ceil(ww/sep)+1; gx++){
+      const ox=(gy%2 ? 0.5 : 0)*order*1.6;             // calmer: rows offset like bricks
+      S.push([(gx + 0.5 + ox + (Math.random()*2-1)*jit)*sep, (gy + 0.5 + (Math.random()*2-1)*jit)*sep, -1, 0]);
+    }
+  } else {
+    const cx=ww/2, cy=wh/2, sym=Math.random()<0.5 ? 6 : 8, jit=(1-order)*0.6*sep, K=Math.ceil(Math.hypot(ww,wh)/2/sep) + 1;
+    S.push([cx, cy, 0, 0]);
+    for(let k=1;k<=K;k++){ const n=sym*k, off=(k%2)*0.5;
+      for(let j=0;j<n;j++){ const a=(j + off)/n*Math.PI*2, r=k*sep;
+        S.push([cx + Math.cos(a)*r + (Math.random()*2-1)*jit, cy + Math.sin(a)*r + (Math.random()*2-1)*jit, k, j]); } }
+  }
+  // the palette: the two hues, and what a glazier would set beside them
+  const t1=tint1 || '#2148A8', t2=tint2 || '#A8182C';
+  const hx=c => { const p=parseHex(c); return [p.r, p.g, p.b]; };
+  const mixA=(a,b,t)=>a.map((v,i)=>v + (b[i]-v)*t);
+  const A=hx(t1), B=hx(t2), AMBER=[214,152,40], GREEN=[46,122,62], PALE=[232,224,196];
+  const PAL=[A, A, mixA(A,[0,0,0],0.35), B, B, mixA(B,AMBER,0.5), AMBER, GREEN, mixA(A,PALE,0.6), PALE];
+  const pane=S.map(s => {
+    const col = s[2] >= 0
+      ? PAL[(s[2]*3 + (s[3] % 2)*5) % PAL.length]                 // rose: ring by ring, alternating
+      : PAL[Math.floor(Math.random()*PAL.length)];
+    const sh=0.82 + Math.random()*0.3, ang=Math.random()*Math.PI;
+    const bub=[]; const nb=Math.random()<0.6 ? Math.floor(Math.random()*4) : 0;
+    for(let b=0;b<nb;b++) bub.push([s[0] + (Math.random()*2-1)*sep*0.3, s[1] + (Math.random()*2-1)*sep*0.3, sep*(0.012 + Math.random()*0.025)]);
+    return { col, sh, cs:Math.cos(ang), sn:Math.sin(ang), bub };
+  });
+  // the seeds in buckets, for the nearest-seed search
+  // (a seed is never far from a pixel it owns: one ring of buckets is enough)
+  const bs=sep*1.15, bw=Math.ceil(ww/bs)+4, bh=Math.ceil(wh/bs)+4, B2=new Array(bw*bh);
+  S.forEach((s,i)=>{ const bx=Math.floor(s[0]/bs)+2, by=Math.floor(s[1]/bs)+2; if(bx<0||by<0||bx>=bw||by>=bh) return; (B2[by*bw+bx] || (B2[by*bw+bx]=[])).push(i); });
+  const lw=Math.max(0.6, unit*0.0065*amt);                         // the came's half-width
+  const streak=fbmSampler(4, 3), tooth=fbmSampler(18, 2);
+  const OWN=new Int32Array(N), E=new Float32Array(N), H=new Float32Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const bx=Math.floor(x/bs)+2, by=Math.floor(y/bs)+2;
+    let best=-1, bd=Infinity;
+    for(let j=by-1;j<=by+1;j++) for(let i=bx-1;i<=bx+1;i++){ if(i<0||j<0||i>=bw||j>=bh) continue; const L=B2[j*bw+i]; if(!L) continue;
+      for(const k of L){ const dx=S[k][0]-x, dy=S[k][1]-y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=k; } } }
+    // the distance to the nearest bisector: the lead's centre line
+    let e=Infinity; const s1=S[best];
+    for(let j=by-1;j<=by+1;j++) for(let i=bx-1;i<=bx+1;i++){ if(i<0||j<0||i>=bw||j>=bh) continue; const L=B2[j*bw+i]; if(!L) continue;
+      for(const k of L){ if(k===best) continue; const s2=S[k], gx=s2[0]-s1[0], gy=s2[1]-s1[1], gl=Math.hypot(gx,gy)||1;
+        const dd=((x-s1[0])*gx + (y-s1[1])*gy)/gl, ed=gl/2 - dd; if(ed<e) e=ed; } }
+    const p=y*ww+x; OWN[p]=best; E[p]=e;
+    const u=x/unit, v=y/unit;
+    if(e < lw){ const q=e/lw; H[p]=lw*1.6*Math.sqrt(Math.max(0, 1 - q*q)) + lw*0.6; }   // rounded came
+    else H[p]=(tooth(u*2, v*2) - 0.5)*lw*0.35;                                      // the glass's ripple
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.5, ao:0.35, ambient:0.4 });
+  // the sun behind the window: brighter toward the dial
+  const lv=lightVec(light==null?315:light), sunX=ww/2 - lv.lx*ww*0.45, sunY=wh/2 - lv.ly*wh*0.45, diag=Math.hypot(ww,wh);
+  return paintLit(w,h,div,ww,wh, i => {
+    const x=i%ww, y=(i/ww)|0, e=E[i];
+    if(e < lw){
+      // lead: dull grey metal, lit by the dial
+      const k=L.light[i]/L.flat, sp=L.spec[i];
+      const g=34 + 46*k + 150*sp;
+      // the glass glows into the edge of the came a little
+      return [clamp255(g), clamp255(g), clamp255(g*1.04)];
+    }
+    const P=pane[OWN[i]], u=x/unit, v=y/unit;
+    const back=0.72 + 0.5*Math.max(0, 1 - Math.hypot(x-sunX, y-sunY)/diag*1.4);
+    const along=u*P.cs + v*P.sn, across=-u*P.sn + v*P.cs;
+    const st=0.86 + 0.28*streak(along*0.6 + OWN[i]*0.37, across*7);
+    let edge=Math.min(1, (e-lw)/(lw*2.5)); edge=0.72 + 0.28*edge;            // darker against the lead (thicker glass)
+    let b=P.sh*back*st*edge;
+    for(const q of P.bub){ const d=Math.hypot(x-q[0], y-q[1]); if(d < q[2]) b*=1.12 + 0.2*(d/q[2]); }
+    const sheen=L.spec[i]*90;
+    return [clamp255(P.col[0]*b + sheen), clamp255(P.col[1]*b + sheen), clamp255(P.col[2]*b + sheen)];
+  });
+}
+
+/**
+ * Suminagashi — "floating ink": rings of ink and clear water dropped in turn
+ * on still water, then moved by a breath or a fan and lifted onto paper.
+ * Modelled as Aubrey Jaffer's mathematical marbling: a drop of radius r at C
+ * pushes every point P out to C + (P−C)·√(1 + r²/|P−C|²) (area is kept), and a
+ * stroke along a line moves points parallel to it by z·u^d (d, the distance
+ * from the line). Both are exactly invertible, so each pixel is traced
+ * BACKWARD through every drop and stroke until it lands inside the drop it
+ * came from — ink, the second ink, or water. Drops alternate between a few
+ * centres, so each new ring pushes on the others. The dial is the breath's
+ * direction; BREATH how far it moves the rings.
+ */
+function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const breath=Math.max(0,Math.min(1, form==null?0.4:form));
+  const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const aspX=ww/unit, aspY=wh/unit;
+  // the drops (in page units: the short side is 1)
+  const nC=Math.max(2, Math.round((2 + Math.random()*2)*aspX*aspY)), centres=[];
+  for(let c=0;c<nC;c++) centres.push([0.1*aspX + Math.random()*aspX*0.8, 0.1*aspY + Math.random()*aspY*0.8, 0]);
+  // enough drops that the rings, pushed outward, cover the sheet
+  const r0=0.085*zoom, rounds=Math.round((10 + 12*amt)/Math.max(0.5, zoom)), OPS=[];
+  for(let k=0;k<rounds;k++) for(const C of centres){
+    const ink = C[2]++ % 2 === 0;                 // ink, water, ink, water…
+    const kind = !ink ? 0 : (Math.random() < 0.22 ? 2 : 1);
+    OPS.push({ t:0, cx:C[0] + (Math.random()-0.5)*r0*0.2, cy:C[1] + (Math.random()-0.5)*r0*0.2, r:r0*(0.7 + Math.random()*0.5)*(ink ? 0.75 : 1), kind, dens:0.42 + Math.random()*0.45 });
+  }
+  // the breath: strokes along the dial's direction (and a few eddies)
+  const lv=lightVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
+  const nS=Math.round(2 + breath*5);
+  for(let s=0;s<nS;s++){
+    const a=ang + (Math.random()-0.5)*0.7, mx=Math.cos(a), my=Math.sin(a);
+    OPS.push({ t:1, bx:Math.random()*aspX, by:Math.random()*aspY, mx, my, z:breath*(0.06 + Math.random()*0.12)*(Math.random()<0.5?1:-1), c:Math.LN2/(0.05 + Math.random()*0.12) });   // (c: 1/e-folding, so u^d is one exp)
+  }
+  const nE=Math.round(breath*3.5);
+  for(let s=0;s<nE;s++) OPS.push({ t:2, cx:Math.random()*aspX, cy:Math.random()*aspY, s:(Math.random()<0.5?1:-1)*breath*(1.2 + Math.random()*1.6), sig:0.08 + Math.random()*0.14 });
+  const ink1=parseHex(tint1 || '#1C1C26'), ink2=parseHex(tint2 || '#2C4C8E');
+  const grain=fbmSampler(24, 2), bleed=fbmSampler(6, 3);
+  const D=new Float32Array(N), K=new Uint8Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    let px=x/unit, py=y/unit;
+    // a hair of bleed: the ink's edges are soft, never ruled
+    px+=(bleed(px, py)-0.5)*0.004; py+=(bleed(py+5.3, px+2.1)-0.5)*0.004;
+    let hit=null, tt=0;
+    for(let o=OPS.length-1;o>=0;o--){
+      const op=OPS[o];
+      if(op.t===0){
+        const dx=px-op.cx, dy=py-op.cy, d2=dx*dx+dy*dy, r2=op.r*op.r;
+        if(d2 < r2){ hit=op; tt=Math.sqrt(d2/r2); break; }
+        const f=Math.sqrt(1 - r2/d2); px=op.cx + dx*f; py=op.cy + dy*f;
+      } else if(op.t===1){
+        const d=Math.abs((px-op.bx)*(-op.my) + (py-op.by)*op.mx), m=op.z*Math.exp(-d*op.c);
+        px-=op.mx*m; py-=op.my*m;
+      } else {
+        const dx=px-op.cx, dy=py-op.cy, th=-op.s*Math.exp(-(dx*dx+dy*dy)/(op.sig*op.sig)), cs=Math.cos(th), sn=Math.sin(th);
+        px=op.cx + dx*cs - dy*sn; py=op.cy + dx*sn + dy*cs;
+      }
+    }
+    const i=y*ww+x;
+    if(hit && hit.kind){
+      // ink pools at a ring's edges (both: the drop's rim, and where water pushed into it)
+      const pool=Math.max(Math.pow(tt, 8), Math.pow(1-tt, 14));
+      D[i]=hit.dens*(0.88 + 0.16*pool)*(0.92 + 0.16*grain(x/unit*3, y/unit*3)); K[i]=hit.kind;
+    }
+  }
+  return paintLit(w,h,div,ww,wh, i => {
+    if(!K[i]) return [255,255,255];
+    const c=K[i]===2 ? ink2 : ink1, d=D[i];
+    return [clamp255(255 + (c.r-255)*d), clamp255(255 + (c.g-255)*d), clamp255(255 + (c.b-255)*d)];
+  });
+}
+
+/**
+ * Watercolour Wash — pigment laid in washes, after Tyler Hobbs's method: a
+ * blob is a polygon deformed by recursive midpoint displacement, then drawn
+ * forty times over at a few percent opacity, each copy deformed again, so the
+ * edges go soft and uneven where the copies disagree. On top of that, what
+ * watercolour does on paper (Curtis et al., "Computer-Generated Watercolor"):
+ * EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in
+ * the paper's tooth) and a GRADED WASH (it runs downhill — the dial). The two
+ * pigments mix subtractively where they overlap. WETNESS softens and spreads
+ * the edges; dry washes keep hard, dark rims.
+ */
+function genWatercolour(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const wet=Math.max(0,Math.min(1, form==null?0.5:form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const gauss=()=>{ let u=0, v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const deform=(poly, depth, vs)=>{
+    let P=poly;
+    for(let d=0; d<depth; d++){
+      const Q=[];
+      for(let i=0;i<P.length;i++){
+        const a=P[i], b=P[(i+1)%P.length], len=Math.hypot(b[0]-a[0], b[1]-a[1]);
+        Q.push(a);
+        Q.push([(a[0]+b[0])/2 + gauss()*len*a[2]*vs, (a[1]+b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]);
+      }
+      P=Q;
+    }
+    return P;
+  };
+  const layers=[document.createElement('canvas'), document.createElement('canvas')];
+  const lx=layers.map(c=>{ c.width=ww; c.height=wh; const x=c.getContext('2d', CPU); x.fillStyle='#000'; return x; });
+  const nB=Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
+  const LAY=Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha=Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
+  for(let b=0;b<nB;b++){
+    // the first is a broad, pale ground wash; the rest are passages laid over it
+    const ground=b===0, cx=ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy=ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
+    const R=unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k=Math.random()<0.62 ? 0 : 1;
+    const sides=10, base=[], sq=0.7 + Math.random()*0.3;
+    for(let s=0;s<sides;s++){ const a=s/sides*Math.PI*2, rr=R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
+    const shape=deform(base, 3, 0.2);
+    const ctx=lx[k]; ctx.globalAlpha=ground ? alpha*0.45 : alpha;
+    for(let l=0;l<LAY;l++){
+      const P=deform(shape, 3, 0.07 + wet*0.2);
+      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill();
+    }
+  }
+  const Dk=lx.map(ctx=>{ const d=ctx.getImageData(0,0,ww,wh).data, D=new Float32Array(N); for(let i=0;i<N;i++) D[i]=d[i*4+3]/255; return D; });
+  // a box blur, for the edge: pigment drifts to where the wash thins out
+  const blurF=(S, r)=>{ const T=new Float32Array(N), O=new Float32Array(N), n=2*r+1;
+    for(let y=0;y<wh;y++){ let s=0; for(let x=-r;x<=r;x++) s+=S[y*ww+Math.min(ww-1,Math.max(0,x))];
+      for(let x=0;x<ww;x++){ T[y*ww+x]=s/n; s+=S[y*ww+Math.min(ww-1,x+r+1)] - S[y*ww+Math.max(0,x-r)]; } }
+    for(let x=0;x<ww;x++){ let s=0; for(let y=-r;y<=r;y++) s+=T[Math.min(wh-1,Math.max(0,y))*ww+x];
+      for(let y=0;y<wh;y++){ O[y*ww+x]=s/n; s+=T[Math.min(wh-1,y+r+1)*ww+x] - T[Math.max(0,y-r)*ww+x]; } }
+    return O; };
+  const er=Math.max(1, Math.round(unit*(0.006 + wet*0.012)));
+  const blurred=Dk.map(D=>blurF(blurF(D, er), er));
+  const tooth=fbmSampler(28, 2), bloom=fbmSampler(5, 3);
+  const lv=lightVec(light==null?0:light), lm=Math.hypot(lv.lx,lv.ly), gx=lm>1e-3?lv.lx/lm:0, gy=lm>1e-3?lv.ly/lm:0, run=Math.min(1, lm);
+  const cols=[parseHex(tint1 || '#2E5C8A'), parseHex(tint2 || '#B0465A')];
+  const rim=1.1*(1 - wet*0.6), gran=0.12 + 0.12*(1-wet);
+  return paintLit(w,h,div,ww,wh, i => {
+    const x=i%ww, y=(i/ww)|0, u=x/unit, v=y/unit;
+    const grade=1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);      // downhill holds more pigment
+    const t=tooth(u*1.5, v*1.5), bl=bloom(u, v);
+    let r=255, g=255, b=255;
+    for(let k=0;k<2;k++){
+      let d=Dk[k][i]; if(d < 0.004) continue;
+      d+=Math.max(0, d - blurred[k][i])*rim*2.2;                              // the darker drying edge
+      d*=grade*(1 + gran*(t - 0.5)*2)*(0.62 + 0.76*bl*bl);                       // granulation, and an uneven load
+      d=Math.max(0, Math.min(1, d*1.1));
+      const c=cols[k];
+      r*=1 - d*(1 - c.r/255); g*=1 - d*(1 - c.g/255); b*=1 - d*(1 - c.b/255);
+    }
+    return [clamp255(r), clamp255(g), clamp255(b)];
+  });
+}
+
+
+/* ==== athanor.js ==== */
+/**
+ * athanor.js — THE ATHANOR's evaluator: a graph from the node editor
  * (forge.js; Drawflow's export JSON) made into a texture.
  *
  * The model is Material Maker's and Substance Designer's: each node is a
@@ -8602,15 +8847,48 @@ function genContourMap(w,h,amt,zoom,light,form,M3){
  */
 
 
+/**
+ * A graph's VERSION, so an old graph keeps making what it made. Version 1
+ * drew every node's randomness from one stream, in the order the graph was
+ * walked; from version 2 each node has its own (from the seed and its id), so
+ * a node makes the same field whatever else changes — which is what lets a
+ * node's result be kept between edits (below). A new graph is always the
+ * newest version; one loaded keeps its own.
+ */
+const ATHANOR_VERSION = 2;
+function athanorVersion(graph){
+  try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
+  catch(e){ return 1; }
+}
+/**
+ * The work budget: no graph may freeze a phone. Each part costs about as many
+ * passes over the page as it makes (a blur four, the light engine fourteen,
+ * another texture forty…). Past the budget the graph is made on a coarser
+ * grid (up to three times coarser; it is soft, never stuck); past the node
+ * limit it is not made at all, and the editor says why.
+ */
+const ATHANOR_LIMITS = { nodes: 64, cost: 160 };
+const ATHANOR_COST = { noise: d => Math.max(1, +d.octaves || 3), cells: () => 9, turing: () => 60, texture: () => 40, stitch: () => 8,
+  blur: () => 4, warp: () => 1.5, mix: () => 1.5, light: () => 14, tint: () => 1.5, ramp: () => 2, blend: () => 3, page: () => 3,
+  transform: () => 1.5, edges: () => 2 };
+function athanorBudget(graph){
+  const nodes = Object.values(athanorNodes(graph));
+  let cost = 0;
+  for(const n of nodes){ const f = ATHANOR_COST[n.name]; cost += f ? f(n.data || {}) : 1;
+    if(n.name === 'surface' && ((n.inputs || {}).input_2 || {}).connections && n.inputs.input_2.connections.length) cost += 14; }
+  const tooMany = nodes.length > ATHANOR_LIMITS.nodes;
+  return { nodes: nodes.length, cost: Math.round(cost), tooMany, scale: tooMany ? 1 : Math.min(3, Math.max(1, Math.sqrt(cost/ATHANOR_LIMITS.cost))) };
+}
+
 /** The graph's nodes, by id ({} if it can't be read). */
-function crucibleNodes(graph){
+function athanorNodes(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return ((g.drawflow || {}).Home || {}).data || {}; }
   catch(e){ return {}; }
 }
 /** The sliders a graph offers: its Knob nodes, by slot (1–6). */
-function crucibleKnobs(graph){
+function athanorKnobs(graph){
   const out = [];
-  for(const n of Object.values(crucibleNodes(graph))){
+  for(const n of Object.values(athanorNodes(graph))){
     if(n.name !== 'knob') continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
     if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
@@ -8618,9 +8896,9 @@ function crucibleKnobs(graph){
   return out.sort((a, b) => a.slot - b.slot);
 }
 /** The hues a graph uses: its Hue nodes, by slot (1–2). */
-function crucibleHues(graph){
+function athanorHues(graph){
   const out = [];
-  for(const n of Object.values(crucibleNodes(graph))){
+  for(const n of Object.values(athanorNodes(graph))){
     if(n.name !== 'hue') continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
     if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
@@ -8628,14 +8906,14 @@ function crucibleHues(graph){
   return out.sort((a, b) => a.slot - b.slot);
 }
 /** The Surface node's name (what the texture is called in the list). */
-function crucibleName(graph){
-  const s = Object.values(crucibleNodes(graph)).find(n => n.name === 'surface');
+function athanorName(graph){
+  const s = Object.values(athanorNodes(graph)).find(n => n.name === 'surface');
   return s ? String((s.data || {}).name || 'My Surface').slice(0, 32) : '';
 }
 /** A short hash of the graph, for the texture cache (positions don't count). */
-function crucibleHash(graph){
-  const nodes = crucibleNodes(graph);
-  const sig = JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
+function athanorHash(graph){
+  const nodes = athanorNodes(graph);
+  const sig = athanorVersion(graph) + JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
     return [id, n.name, n.data, Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
   let h = 2166136261; for(let i = 0; i < sig.length; i++){ h ^= sig.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36);
@@ -8660,10 +8938,43 @@ const CR_BLEND = {
  * there is no Surface to show. ctx: { knobs: [six 0..100], tints: [hex, hex],
  * light (degrees), seed, scale }. deps.texture(type, w, h, opts) → a canvas.
  */
-function evalCrucible(graph, ww, wh, ctx, deps = {}){
-  const nodes = crucibleNodes(graph);
+// ---- each node's result, kept between edits (version 2 graphs) ----
+// Keyed by the node's whole upstream (its parts, settings and wiring, not
+// where it sits), the grid, and what the page gives (seed, knobs, hues, dial):
+// change one node and only it and what lies downstream are made again. A few
+// dozen MB at most, the least recently used let go first.
+const ATHANOR_KEPT = new Map(); let athanorKeptBytes = 0, athanorHits = 0;
+const ATHANOR_KEEP_BYTES = 48*1024*1024;
+const keptSize = outs => (outs || []).reduce((s, v) => s + (v instanceof Float32Array ? v.length*4 : v && v.r ? v.r.length*12 : 8), 0);
+function athanorKeep(key, outs){
+  if(ATHANOR_KEPT.has(key)) return;
+  const b = keptSize(outs); if(b > ATHANOR_KEEP_BYTES/4) return;
+  ATHANOR_KEPT.set(key, { outs, b }); athanorKeptBytes += b;
+  for(const [k, v] of ATHANOR_KEPT){ if(athanorKeptBytes <= ATHANOR_KEEP_BYTES) break; ATHANOR_KEPT.delete(k); athanorKeptBytes -= v.b; }
+}
+/** What is kept (for the tests and the debug view). */
+function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits }; }
+function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }
+const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+
+function evalAthanor(graph, ww, wh, ctx, deps = {}){
+  const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface) return null;
+  const v2 = athanorVersion(graph) >= 2;
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale]);
+  // a node's upstream, as a signature (loops cut)
+  const sigs = new Map(), sigBusy = new Set();
+  const sigOf = id => {
+    if(sigs.has(id)) return sigs.get(id);
+    if(sigBusy.has(id)) return 'loop';
+    const n = nodes[id]; if(!n) return '-';
+    sigBusy.add(id);
+    const ins = Object.keys(n.inputs || {}).sort().map(k => k + '<' + ((n.inputs[k].connections || []).map(c => sigOf(String(c.node)) + '.' + c.input).join(',')));
+    sigBusy.delete(id);
+    const s = n.name + JSON.stringify(n.data || {}) + '[' + ins.join(';') + ']#' + id;
+    sigs.set(id, s); return s;
+  };
   const N = ww*wh, unit = Math.min(ww, wh);
   const memo = new Map(), busy = new Set();
   const flat = v => new Float32Array(N).fill(v);
@@ -8690,7 +9001,14 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    try { out = RUN(n); } catch(e){ out = null; }
+    const key = v2 ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig : null;
+    const kept = key && ATHANOR_KEPT.get(key);
+    if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
+    else {
+      // version 2: the node's own randomness, from the seed and its id
+      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
+      if(key && out) athanorKeep(key, out);
+    }
     busy.delete(id); memo.set(id, out);
     return out;
   };
@@ -8761,7 +9079,7 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
       case 'turing': case 'texture': {
         if(!deps.texture) return null;
         const type = n.name === 'turing' ? 'turing' : String(P(n, 'type', 'linen'));
-        if(type === 'crucible') return null;              // never itself
+        if(type === 'athanor') return null;              // never itself
         const opts = n.name === 'turing'
           ? { p1: num(n, 'scale', 100), p2: 80, p3: ['spots', 'coral', 'maze', 'worms', 'holes'].indexOf(P(n, 'pattern', 'coral'))*25, p4: 0 }
           : { p1: num(n, 'p1', 100), p2: num(n, 'p2', 100), p3: num(n, 'p3', 50) };
@@ -8810,6 +9128,35 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
         if(ia == null && ib == null) return null;
         const A = asImage(ia ?? 0), B = asImage(ib ?? 0), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
         for(let i = 0; i < N; i++){ const k = t ? t[i] : tp; o.r[i] = A.r[i] + (B.r[i] - A.r[i])*k; o.g[i] = A.g[i] + (B.g[i] - A.g[i])*k; o.b[i] = A.b[i] + (B.b[i] - A.b[i])*k; }
+        return [o];
+      }
+      case 'posterize': {
+        const f = asField(input(n, 1)); if(!f) return null;
+        const k = Math.max(2, Math.min(16, Math.round(num(n, 'steps', 5)))), o = new Float32Array(N);
+        for(let i = 0; i < N; i++) o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1);
+        return [o];
+      }
+      case 'transform': {
+        // tiled and turned about the page's centre (it repeats past its edges)
+        const f = asField(input(n, 1)); if(!f) return null;
+        const sc = Math.max(0.25, num(n, 'scale', 100)/100), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an), o = new Float32Array(N);
+        const cx = ww/2, cy = wh/2;
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+          const dx = (x - cx)/sc, dy = (y - cy)/sc;
+          let sx = Math.round(cx + dx*ca + dy*sa), sy = Math.round(cy - dx*sa + dy*ca);
+          sx = ((sx % ww) + ww) % ww; sy = ((sy % wh) + wh) % wh; o[y*ww + x] = f[sy*ww + sx];
+        }
+        return [o];
+      }
+      case 'edges': {
+        // Sobel: where the field changes fastest
+        const f = asField(input(n, 1)); if(!f) return null;
+        const k = num(n, 'strength', 50)/50*unit/96, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+          const gx = at(x+1,y-1) + 2*at(x+1,y) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x-1,y) - at(x-1,y+1);
+          const gy = at(x-1,y+1) + 2*at(x,y+1) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x,y-1) - at(x+1,y-1);
+          o[y*ww + x] = Math.min(1, Math.hypot(gx, gy)*k/8);
+        }
         return [o];
       }
       case 'invert': { const v = input(n, 1); if(v == null) return null;
@@ -8861,6 +9208,52 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
   };
   const res = evalNode(String(surface.id));
   return res && res[0] ? asImage(res[0]) : null;
+}
+
+// ---- starter graphs: a few to begin from (Material Maker's and Blender's
+// way: a working graph to take apart, rather than an empty page) ----
+// each: nodes [type, data, x, y] and wires [from, output, to, input] (1-based)
+const ATHANOR_STARTERS = {
+  marble: { label: 'Marble', nodes: [
+      ['noise', { scale: 14, octaves: 6 }, 40, 60], ['knob', { slot: '1', name: 'Turbulence', def: 85 }, 40, 260],
+      ['math', { op: 'multiply' }, 280, 120], ['waves', { freq: 4, angle: 30 }, 500, 120], ['levels', { lo: 0, hi: 100, gamma: 78 }, 720, 120],
+      ['hue', { slot: '1', name: 'Stone Hue' }, 720, 320], ['hue', { slot: '2', name: 'Vein Hue' }, 720, 440],
+      ['ramp', { mid: 70 }, 960, 160], ['surface', { name: 'Marble', ground: 'colour' }, 1200, 160]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
+  leaded: { label: 'Leaded Window', nodes: [
+      ['cells', { scale: 70, jitter: 85 }, 40, 80], ['knob', { slot: '1', name: 'Leading', def: 60 }, 40, 300], ['math', { op: 'multiply' }, 280, 60],
+      ['threshold', { at: 45, soft: 8 }, 500, 40], ['invert', {}, 720, 40],
+      ['hue', { slot: '1', name: 'Glass Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Glass Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 540, 260], ['blend', { mode: 'multiply', opacity: 100 }, 940, 140], ['surface', { name: 'Leaded Window', ground: 'colour' }, 1180, 140]],
+    wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 3, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1], [5, 1, 9, 2], [9, 1, 10, 1], [4, 1, 10, 2]] },
+  terrain: { label: 'Lit Terrain', nodes: [
+      ['noise', { scale: 18, octaves: 6 }, 40, 80], ['knob', { slot: '1', name: 'Relief', def: 60 }, 40, 280], ['math', { op: 'multiply' }, 280, 220],
+      ['hue', { slot: '1', name: 'High Hue' }, 280, 20], ['hue', { slot: '2', name: 'Low Hue' }, 280, 120],
+      ['ramp', { mid: 45 }, 520, 60], ['surface', { name: 'Lit Terrain', ground: 'colour' }, 760, 120]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [1, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1], [3, 1, 7, 2]] },
+  woven: { label: 'Woven Waves', nodes: [
+      ['waves', { freq: 14, angle: 0 }, 40, 40], ['waves', { freq: 14, angle: 90 }, 40, 220], ['math', { op: 'max' }, 280, 120],
+      ['knob', { slot: '1', name: 'Thread', def: 80 }, 280, 300], ['math', { op: 'multiply' }, 500, 160],
+      ['levels', { lo: 20, hi: 100, gamma: 50 }, 720, 120], ['tint', {}, 940, 120], ['surface', { name: 'Woven Waves', ground: 'colour' }, 1160, 120]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1], [6, 1, 7, 1], [7, 1, 8, 1], [6, 1, 8, 2]] },
+  bloom: { label: 'Reaction Bloom', nodes: [
+      ['turing', { pattern: 'coral', scale: 100 }, 40, 80], ['blur', { radius: 10 }, 300, 160], ['knob', { slot: '1', name: 'Bloom', def: 40 }, 300, 300],
+      ['mix', { t: 50 }, 520, 80],
+      ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
+      ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
+    wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
+};
+/** A starter as a graph (Drawflow's export form, without node faces). */
+function athanorStarter(name){
+  const S = ATHANOR_STARTERS[name]; if(!S) return null;
+  const data = {};
+  S.nodes.forEach(([type, d, x, y], i) => { const id = i + 1;
+    data[id] = { id, name: type, data: { ...d }, class: '', html: '', typenode: false, inputs: {}, outputs: {}, pos_x: x, pos_y: y }; });
+  for(const [a, o, b, j] of S.wires){
+    ((data[b].inputs['input_' + j] ||= { connections: [] }).connections).push({ node: String(a), input: 'output_' + o });
+    ((data[a].outputs['output_' + o] ||= { connections: [] }).connections).push({ node: String(b), output: 'input_' + j });
+  }
+  return { v: ATHANOR_VERSION, drawflow: { Home: { data } } };
 }
 
 
@@ -9034,10 +9427,10 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
                   // drips, and the faint wash inside the ring
                   {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
-  // THE CRUCIBLE: a surface made in the node editor. Its knobs are the
+  // THE ATHANOR: a surface made in the node editor. Its knobs are the
   // graph's Knob nodes (the page relabels them from the graph; here, six
   // plain ones, so a request always has its values)
-  crucible:      [1,2,3,4,5,6].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
+  athanor:      [1,2,3,4,5,6].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
   guilloche:     [{key:'zoom',  label:'Rosette Size',    min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Line Density',    min:30, max:200, def:100, unit:'%'},
                   // how many lobes each rosette turns: a few broad petals → a fine crown
@@ -9050,6 +9443,18 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Contour Interval',min:30, max:250, def:100, unit:'%'},
                   // the land lit beneath its lines: none (lines only) → strong relief
                   {key:'form',  label:'Hillshade',       min:0,  max:100, def:45,  unit:''}],
+  stainedglass:  [{key:'zoom',  label:'Pane Size',       min:50, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Leading',         min:30, max:250, def:100, unit:'%'},
+                  // the panes' arrangement: shards → a calm tiling → (past half) a rose window
+                  {key:'form',  label:'Order',           min:0,  max:100, def:25,  unit:''}],
+  suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
+                  // still concentric rings → swept by breath and fan
+                  {key:'form',  label:'Breath',          min:0,  max:100, def:40,  unit:''}],
+  watercolour:   [{key:'zoom',  label:'Wash Size',       min:40, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Pigment',         min:30, max:250, def:100, unit:'%'},
+                  // dry, hard rims → wet, soft and spreading
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:50,  unit:''}],
   flowfield:     [{key:'zoom',  label:'Scale',           min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Lines',           min:30, max:300, def:100, unit:'%'},
                   // the field: a steady current (0) → eddies and swirls
@@ -9234,7 +9639,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
-  crucible:      { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','darken','lighten','color-dodge','color-burn','difference','exclusion'],
+  athanor:      { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','darken','lighten','color-dodge','color-burn','difference','exclusion'],
                    light:true, tints:2, tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#F2E6D8','#2A2230'] },
   guilloche:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -9242,6 +9647,12 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   contour:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
+                   tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
+  suminagashi:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Breath Direction', tints:2,
+                   tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['#1C1C26','#2C4C8E'] },
+  watercolour:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Wash Direction', tints:2,
+                   tintLabels:['Pigment Hue','Second Pigment Hue'], tintDefaults:['accent1','accent2'] },
   flowfield:     { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','screen','lighten'], light:true, dial:'Flow Direction', tints:2,
                    tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['accent1','accent2'] },
   turing:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
@@ -9297,7 +9708,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -9396,14 +9807,20 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
-  } else if(type === 'crucible'){
-    result = genCrucible(w,h,light,tint1,tint2,extra);
+  } else if(type === 'athanor'){
+    result = genAthanor(w,h,light,tint1,tint2,extra);
   } else if(type === 'guilloche'){
     result = genGuilloche(w,h,amt,zoom,light,form);
   } else if(type === 'chladni'){
     result = genChladni(w,h,amt,zoom,light,form);
   } else if(type === 'contour'){
     result = genContourMap(w,h,amt,zoom,light,form,extra.mat);
+  } else if(type === 'stainedglass'){
+    result = genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2);
+  } else if(type === 'suminagashi'){
+    result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
+  } else if(type === 'watercolour'){
+    result = genWatercolour(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'flowfield'){
     result = genFlowField(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'turing'){
@@ -9486,7 +9903,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * in the light slot unnoticed.
  */
 // the Zen Garden was retired: looks saved with it open as Dune Ripples
-const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
+const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle', crucible: 'athanor' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
 /** A texture's cache key — shared by the page and the texture worker, so a
  *  texture made in the worker files where the page will look for it. */
 function textureKeyFor(type, w, h, opts = {}){ return describeRequest(type, w, h, opts).key; }
@@ -9564,15 +9981,17 @@ function describeRequest(type, w, h, opts){
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
-            + (type === 'crucible' ? `_c${crucibleHash(opts.graph)}` : '');
+            + (type === 'athanor' ? `_c${athanorHash(opts.graph)}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
-// A Crucible surface: its graph evaluated (crucible.js) on the working grid,
+// A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
 // usual way. No graph, or no Surface in it: a flat mid-grey (nothing shows).
-function genCrucible(w, h, light, tint1, tint2, extra){
-  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
-  const img = evalCrucible(extra.graph || '', ww, wh,
+function genAthanor(w, h, light, tint1, tint2, extra){
+  // the work budget: a heavy graph is made on a coarser grid; too many nodes, not at all
+  const B = athanorBudget(extra.graph || '');
+  const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow() },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -10180,6 +10599,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
                 <option value="landscape" data-str="option.landscape">Painted Landscape</option>
                 <option value="flowfield" data-str="option.flow_field">Flow-Field Ink</option>
+                <option value="suminagashi" data-str="option.suminagashi">Suminagashi</option>
               </optgroup>
               <optgroup label="√ Sharpness">
                 <option value="grain" data-str="option.waking_grain">Waking Grain</option>
@@ -10191,6 +10611,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="hatch" data-str="option.silverpoint_hatch">Silverpoint Hatch</option>
                 <option value="cityscape" data-str="option.cityscape">Night City</option>
                 <option value="guilloche" data-str="option.guilloche">Guilloché</option>
+                <option value="stainedglass" data-str="option.stained_glass">Stained Glass</option>
               </optgroup>
               <optgroup label="∆ Chaos">
                 <option value="sigils" data-str="option.sigil_scatter">Sigil Scatter</option>
@@ -10220,9 +10641,10 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
                 <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
                 <option value="contour" data-str="option.contour">Contour Map</option>
+                <option value="watercolour" data-str="option.watercolour">Watercolour Wash</option>
               </optgroup>
-              <optgroup label="⚗ The Crucible" id="crucibleGroup">
-                <option value="crucible" id="crucibleOption">From the Crucible</option>
+              <optgroup label="⚗ The Athanor" id="athanorGroup">
+                <option value="athanor" id="athanorOption">From the Athanor</option>
               </optgroup>
             </select>
           </div>
@@ -10670,12 +11092,12 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
     <details class="card" data-tab="more" id="forgePanel">
-      <summary class="card-title" data-str="card.crucible">The Crucible</summary>
+      <summary class="card-title" data-str="card.athanor">The Athanor</summary>
       <div class="card-grid">
-        <p class="hint full" data-str="hint.crucible">A forge for new surfaces: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Crucible); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
+        <p class="hint full" data-str="hint.athanor">A surface texture node editor: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
         <input type="hidden" id="forgeGraph" value="">
         <p class="hint full forge-summary" id="forgeSummary"></p>
-        <button class="btn-major full" id="forgeOpenBtn" type="button" data-str="button.forgeOpenBtn">Open the Crucible</button>
+        <button class="btn-major full" id="forgeOpenBtn" type="button" data-str="button.forgeOpenBtn">Open the Athanor</button>
       </div>
     </details>
 
@@ -10711,9 +11133,10 @@ inside of a <~~dead person~~/trans>'s dreams.
   <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
   <div class="forge-veil" id="forgeVeil" hidden>
     <div class="forge-bar">
-      <span class="forge-title">The Crucible <small class="forge-sub">a forge for new surfaces</small></span>
+      <span class="forge-title">The Athanor <small class="forge-sub">Surface texture node editor</small></span>
       <span class="forge-status" id="forgeStatus"></span>
       <canvas class="forge-thumb" id="forgeThumb" width="96" height="96" title="What it makes"></canvas>
+      <select id="forgeStarter" class="forge-starter" title="Begin from a working graph"></select>
       <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use as Surface</button>
       <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out">−</button>
       <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in">+</button>
@@ -10891,7 +11314,7 @@ const UI_STRINGS = {
   'card.surface_texture':                  "Surface Texture",
   'card.border_options':                   "Border Options",
   'card.inset_box':                       "Inset Box",
-  'card.crucible':                         "The Crucible",
+  'card.athanor':                         "The Athanor",
   'card.vignette_options':                 "Vignette Options",
   'card.appearance':                       "Appearance",
   'card.spellcrafting':                    "Spellcrafting",
@@ -11030,8 +11453,8 @@ const UI_STRINGS = {
   'label.base_variant':                      "Base Variant",
   'label.base_opacity':                      "Base Opacity",
   'label.base_blend':                        "Base Blend",
-  'hint.crucible':                            "A forge for new surfaces: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Crucible); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.",
-  'button.forgeOpenBtn':                     "Open the Crucible",
+  'hint.athanor':                            "A surface texture node editor: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.",
+  'button.forgeOpenBtn':                     "Open the Athanor",
   'label.glass_strength':                    "Strength",
   'label.glass_scale':                       "Scale",
   'label.box_link':                          "⛓ Shape Linked to Border",
@@ -11094,6 +11517,9 @@ const UI_STRINGS = {
   'option.guilloche':                          "Guilloché",
   'option.chladni':                            "Chladni Sand",
   'option.contour':                            "Contour Map",
+  'option.stained_glass':                      "Stained Glass",
+  'option.suminagashi':                        "Suminagashi",
+  'option.watercolour':                        "Watercolour Wash",
   'option.poured_wax':                         "Poured Wax",
   'option.overlay':                            "Overlay",
   'option.color_burn':                         "Color Burn",
@@ -19476,10 +19902,252 @@ function genContourMap(w,h,amt,zoom,light,form,M3){
   });
 }
 
-
-/* ==== crucible.js ==== */
 /**
- * crucible.js — THE CRUCIBLE's evaluator: a graph from the node editor
+ * Stained Glass — panes of coloured glass held in lead came, lit from behind.
+ * The panes are a Voronoi tiling (each pixel belongs to its nearest seed; the
+ * lead runs where two seeds are equally near, its width measured EXACTLY from
+ * the bisector, so every came is even). ORDER moves the seeds from irregular
+ * shards (a cathedral window's fragments) through a calmer tiling to a ROSE
+ * WINDOW: rings of panes around the page's centre, coloured ring by ring so the
+ * symmetry reads. The lead is a rounded relief lit by the dial; the glass is
+ * lit from BEHIND (brighter toward the dial's sun), with its own streaks,
+ * bubbles and a faint surface sheen, as antique glass has.
+ */
+function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const order=Math.max(0,Math.min(1, form==null?0.25:form));
+  // (a coarser grid than most: the came stays several cells wide, and the light costs a third)
+  const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const sep=unit*0.1*zoom;
+  // the seeds: shards (jittered grid) or a rose (rings about the centre)
+  const S=[];           // [x, y, ring, index-in-ring]
+  if(order < 0.5){
+    const jit=0.5 - order*0.7;
+    for(let gy=-1; gy<=Math.ceil(wh/sep)+1; gy++) for(let gx=-1; gx<=Math.ceil(ww/sep)+1; gx++){
+      const ox=(gy%2 ? 0.5 : 0)*order*1.6;             // calmer: rows offset like bricks
+      S.push([(gx + 0.5 + ox + (Math.random()*2-1)*jit)*sep, (gy + 0.5 + (Math.random()*2-1)*jit)*sep, -1, 0]);
+    }
+  } else {
+    const cx=ww/2, cy=wh/2, sym=Math.random()<0.5 ? 6 : 8, jit=(1-order)*0.6*sep, K=Math.ceil(Math.hypot(ww,wh)/2/sep) + 1;
+    S.push([cx, cy, 0, 0]);
+    for(let k=1;k<=K;k++){ const n=sym*k, off=(k%2)*0.5;
+      for(let j=0;j<n;j++){ const a=(j + off)/n*Math.PI*2, r=k*sep;
+        S.push([cx + Math.cos(a)*r + (Math.random()*2-1)*jit, cy + Math.sin(a)*r + (Math.random()*2-1)*jit, k, j]); } }
+  }
+  // the palette: the two hues, and what a glazier would set beside them
+  const t1=tint1 || '#2148A8', t2=tint2 || '#A8182C';
+  const hx=c => { const p=parseHex(c); return [p.r, p.g, p.b]; };
+  const mixA=(a,b,t)=>a.map((v,i)=>v + (b[i]-v)*t);
+  const A=hx(t1), B=hx(t2), AMBER=[214,152,40], GREEN=[46,122,62], PALE=[232,224,196];
+  const PAL=[A, A, mixA(A,[0,0,0],0.35), B, B, mixA(B,AMBER,0.5), AMBER, GREEN, mixA(A,PALE,0.6), PALE];
+  const pane=S.map(s => {
+    const col = s[2] >= 0
+      ? PAL[(s[2]*3 + (s[3] % 2)*5) % PAL.length]                 // rose: ring by ring, alternating
+      : PAL[Math.floor(Math.random()*PAL.length)];
+    const sh=0.82 + Math.random()*0.3, ang=Math.random()*Math.PI;
+    const bub=[]; const nb=Math.random()<0.6 ? Math.floor(Math.random()*4) : 0;
+    for(let b=0;b<nb;b++) bub.push([s[0] + (Math.random()*2-1)*sep*0.3, s[1] + (Math.random()*2-1)*sep*0.3, sep*(0.012 + Math.random()*0.025)]);
+    return { col, sh, cs:Math.cos(ang), sn:Math.sin(ang), bub };
+  });
+  // the seeds in buckets, for the nearest-seed search
+  // (a seed is never far from a pixel it owns: one ring of buckets is enough)
+  const bs=sep*1.15, bw=Math.ceil(ww/bs)+4, bh=Math.ceil(wh/bs)+4, B2=new Array(bw*bh);
+  S.forEach((s,i)=>{ const bx=Math.floor(s[0]/bs)+2, by=Math.floor(s[1]/bs)+2; if(bx<0||by<0||bx>=bw||by>=bh) return; (B2[by*bw+bx] || (B2[by*bw+bx]=[])).push(i); });
+  const lw=Math.max(0.6, unit*0.0065*amt);                         // the came's half-width
+  const streak=fbmSampler(4, 3), tooth=fbmSampler(18, 2);
+  const OWN=new Int32Array(N), E=new Float32Array(N), H=new Float32Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const bx=Math.floor(x/bs)+2, by=Math.floor(y/bs)+2;
+    let best=-1, bd=Infinity;
+    for(let j=by-1;j<=by+1;j++) for(let i=bx-1;i<=bx+1;i++){ if(i<0||j<0||i>=bw||j>=bh) continue; const L=B2[j*bw+i]; if(!L) continue;
+      for(const k of L){ const dx=S[k][0]-x, dy=S[k][1]-y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=k; } } }
+    // the distance to the nearest bisector: the lead's centre line
+    let e=Infinity; const s1=S[best];
+    for(let j=by-1;j<=by+1;j++) for(let i=bx-1;i<=bx+1;i++){ if(i<0||j<0||i>=bw||j>=bh) continue; const L=B2[j*bw+i]; if(!L) continue;
+      for(const k of L){ if(k===best) continue; const s2=S[k], gx=s2[0]-s1[0], gy=s2[1]-s1[1], gl=Math.hypot(gx,gy)||1;
+        const dd=((x-s1[0])*gx + (y-s1[1])*gy)/gl, ed=gl/2 - dd; if(ed<e) e=ed; } }
+    const p=y*ww+x; OWN[p]=best; E[p]=e;
+    const u=x/unit, v=y/unit;
+    if(e < lw){ const q=e/lw; H[p]=lw*1.6*Math.sqrt(Math.max(0, 1 - q*q)) + lw*0.6; }   // rounded came
+    else H[p]=(tooth(u*2, v*2) - 0.5)*lw*0.35;                                      // the glass's ripple
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.5, ao:0.35, ambient:0.4 });
+  // the sun behind the window: brighter toward the dial
+  const lv=lightVec(light==null?315:light), sunX=ww/2 - lv.lx*ww*0.45, sunY=wh/2 - lv.ly*wh*0.45, diag=Math.hypot(ww,wh);
+  return paintLit(w,h,div,ww,wh, i => {
+    const x=i%ww, y=(i/ww)|0, e=E[i];
+    if(e < lw){
+      // lead: dull grey metal, lit by the dial
+      const k=L.light[i]/L.flat, sp=L.spec[i];
+      const g=34 + 46*k + 150*sp;
+      // the glass glows into the edge of the came a little
+      return [clamp255(g), clamp255(g), clamp255(g*1.04)];
+    }
+    const P=pane[OWN[i]], u=x/unit, v=y/unit;
+    const back=0.72 + 0.5*Math.max(0, 1 - Math.hypot(x-sunX, y-sunY)/diag*1.4);
+    const along=u*P.cs + v*P.sn, across=-u*P.sn + v*P.cs;
+    const st=0.86 + 0.28*streak(along*0.6 + OWN[i]*0.37, across*7);
+    let edge=Math.min(1, (e-lw)/(lw*2.5)); edge=0.72 + 0.28*edge;            // darker against the lead (thicker glass)
+    let b=P.sh*back*st*edge;
+    for(const q of P.bub){ const d=Math.hypot(x-q[0], y-q[1]); if(d < q[2]) b*=1.12 + 0.2*(d/q[2]); }
+    const sheen=L.spec[i]*90;
+    return [clamp255(P.col[0]*b + sheen), clamp255(P.col[1]*b + sheen), clamp255(P.col[2]*b + sheen)];
+  });
+}
+
+/**
+ * Suminagashi — "floating ink": rings of ink and clear water dropped in turn
+ * on still water, then moved by a breath or a fan and lifted onto paper.
+ * Modelled as Aubrey Jaffer's mathematical marbling: a drop of radius r at C
+ * pushes every point P out to C + (P−C)·√(1 + r²/|P−C|²) (area is kept), and a
+ * stroke along a line moves points parallel to it by z·u^d (d, the distance
+ * from the line). Both are exactly invertible, so each pixel is traced
+ * BACKWARD through every drop and stroke until it lands inside the drop it
+ * came from — ink, the second ink, or water. Drops alternate between a few
+ * centres, so each new ring pushes on the others. The dial is the breath's
+ * direction; BREATH how far it moves the rings.
+ */
+function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const breath=Math.max(0,Math.min(1, form==null?0.4:form));
+  const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const aspX=ww/unit, aspY=wh/unit;
+  // the drops (in page units: the short side is 1)
+  const nC=Math.max(2, Math.round((2 + Math.random()*2)*aspX*aspY)), centres=[];
+  for(let c=0;c<nC;c++) centres.push([0.1*aspX + Math.random()*aspX*0.8, 0.1*aspY + Math.random()*aspY*0.8, 0]);
+  // enough drops that the rings, pushed outward, cover the sheet
+  const r0=0.085*zoom, rounds=Math.round((10 + 12*amt)/Math.max(0.5, zoom)), OPS=[];
+  for(let k=0;k<rounds;k++) for(const C of centres){
+    const ink = C[2]++ % 2 === 0;                 // ink, water, ink, water…
+    const kind = !ink ? 0 : (Math.random() < 0.22 ? 2 : 1);
+    OPS.push({ t:0, cx:C[0] + (Math.random()-0.5)*r0*0.2, cy:C[1] + (Math.random()-0.5)*r0*0.2, r:r0*(0.7 + Math.random()*0.5)*(ink ? 0.75 : 1), kind, dens:0.42 + Math.random()*0.45 });
+  }
+  // the breath: strokes along the dial's direction (and a few eddies)
+  const lv=lightVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
+  const nS=Math.round(2 + breath*5);
+  for(let s=0;s<nS;s++){
+    const a=ang + (Math.random()-0.5)*0.7, mx=Math.cos(a), my=Math.sin(a);
+    OPS.push({ t:1, bx:Math.random()*aspX, by:Math.random()*aspY, mx, my, z:breath*(0.06 + Math.random()*0.12)*(Math.random()<0.5?1:-1), c:Math.LN2/(0.05 + Math.random()*0.12) });   // (c: 1/e-folding, so u^d is one exp)
+  }
+  const nE=Math.round(breath*3.5);
+  for(let s=0;s<nE;s++) OPS.push({ t:2, cx:Math.random()*aspX, cy:Math.random()*aspY, s:(Math.random()<0.5?1:-1)*breath*(1.2 + Math.random()*1.6), sig:0.08 + Math.random()*0.14 });
+  const ink1=parseHex(tint1 || '#1C1C26'), ink2=parseHex(tint2 || '#2C4C8E');
+  const grain=fbmSampler(24, 2), bleed=fbmSampler(6, 3);
+  const D=new Float32Array(N), K=new Uint8Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    let px=x/unit, py=y/unit;
+    // a hair of bleed: the ink's edges are soft, never ruled
+    px+=(bleed(px, py)-0.5)*0.004; py+=(bleed(py+5.3, px+2.1)-0.5)*0.004;
+    let hit=null, tt=0;
+    for(let o=OPS.length-1;o>=0;o--){
+      const op=OPS[o];
+      if(op.t===0){
+        const dx=px-op.cx, dy=py-op.cy, d2=dx*dx+dy*dy, r2=op.r*op.r;
+        if(d2 < r2){ hit=op; tt=Math.sqrt(d2/r2); break; }
+        const f=Math.sqrt(1 - r2/d2); px=op.cx + dx*f; py=op.cy + dy*f;
+      } else if(op.t===1){
+        const d=Math.abs((px-op.bx)*(-op.my) + (py-op.by)*op.mx), m=op.z*Math.exp(-d*op.c);
+        px-=op.mx*m; py-=op.my*m;
+      } else {
+        const dx=px-op.cx, dy=py-op.cy, th=-op.s*Math.exp(-(dx*dx+dy*dy)/(op.sig*op.sig)), cs=Math.cos(th), sn=Math.sin(th);
+        px=op.cx + dx*cs - dy*sn; py=op.cy + dx*sn + dy*cs;
+      }
+    }
+    const i=y*ww+x;
+    if(hit && hit.kind){
+      // ink pools at a ring's edges (both: the drop's rim, and where water pushed into it)
+      const pool=Math.max(Math.pow(tt, 8), Math.pow(1-tt, 14));
+      D[i]=hit.dens*(0.88 + 0.16*pool)*(0.92 + 0.16*grain(x/unit*3, y/unit*3)); K[i]=hit.kind;
+    }
+  }
+  return paintLit(w,h,div,ww,wh, i => {
+    if(!K[i]) return [255,255,255];
+    const c=K[i]===2 ? ink2 : ink1, d=D[i];
+    return [clamp255(255 + (c.r-255)*d), clamp255(255 + (c.g-255)*d), clamp255(255 + (c.b-255)*d)];
+  });
+}
+
+/**
+ * Watercolour Wash — pigment laid in washes, after Tyler Hobbs's method: a
+ * blob is a polygon deformed by recursive midpoint displacement, then drawn
+ * forty times over at a few percent opacity, each copy deformed again, so the
+ * edges go soft and uneven where the copies disagree. On top of that, what
+ * watercolour does on paper (Curtis et al., "Computer-Generated Watercolor"):
+ * EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in
+ * the paper's tooth) and a GRADED WASH (it runs downhill — the dial). The two
+ * pigments mix subtractively where they overlap. WETNESS softens and spreads
+ * the edges; dry washes keep hard, dark rims.
+ */
+function genWatercolour(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const wet=Math.max(0,Math.min(1, form==null?0.5:form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const gauss=()=>{ let u=0, v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const deform=(poly, depth, vs)=>{
+    let P=poly;
+    for(let d=0; d<depth; d++){
+      const Q=[];
+      for(let i=0;i<P.length;i++){
+        const a=P[i], b=P[(i+1)%P.length], len=Math.hypot(b[0]-a[0], b[1]-a[1]);
+        Q.push(a);
+        Q.push([(a[0]+b[0])/2 + gauss()*len*a[2]*vs, (a[1]+b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]);
+      }
+      P=Q;
+    }
+    return P;
+  };
+  const layers=[document.createElement('canvas'), document.createElement('canvas')];
+  const lx=layers.map(c=>{ c.width=ww; c.height=wh; const x=c.getContext('2d', CPU); x.fillStyle='#000'; return x; });
+  const nB=Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
+  const LAY=Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha=Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
+  for(let b=0;b<nB;b++){
+    // the first is a broad, pale ground wash; the rest are passages laid over it
+    const ground=b===0, cx=ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy=ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
+    const R=unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k=Math.random()<0.62 ? 0 : 1;
+    const sides=10, base=[], sq=0.7 + Math.random()*0.3;
+    for(let s=0;s<sides;s++){ const a=s/sides*Math.PI*2, rr=R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
+    const shape=deform(base, 3, 0.2);
+    const ctx=lx[k]; ctx.globalAlpha=ground ? alpha*0.45 : alpha;
+    for(let l=0;l<LAY;l++){
+      const P=deform(shape, 3, 0.07 + wet*0.2);
+      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill();
+    }
+  }
+  const Dk=lx.map(ctx=>{ const d=ctx.getImageData(0,0,ww,wh).data, D=new Float32Array(N); for(let i=0;i<N;i++) D[i]=d[i*4+3]/255; return D; });
+  // a box blur, for the edge: pigment drifts to where the wash thins out
+  const blurF=(S, r)=>{ const T=new Float32Array(N), O=new Float32Array(N), n=2*r+1;
+    for(let y=0;y<wh;y++){ let s=0; for(let x=-r;x<=r;x++) s+=S[y*ww+Math.min(ww-1,Math.max(0,x))];
+      for(let x=0;x<ww;x++){ T[y*ww+x]=s/n; s+=S[y*ww+Math.min(ww-1,x+r+1)] - S[y*ww+Math.max(0,x-r)]; } }
+    for(let x=0;x<ww;x++){ let s=0; for(let y=-r;y<=r;y++) s+=T[Math.min(wh-1,Math.max(0,y))*ww+x];
+      for(let y=0;y<wh;y++){ O[y*ww+x]=s/n; s+=T[Math.min(wh-1,y+r+1)*ww+x] - T[Math.max(0,y-r)*ww+x]; } }
+    return O; };
+  const er=Math.max(1, Math.round(unit*(0.006 + wet*0.012)));
+  const blurred=Dk.map(D=>blurF(blurF(D, er), er));
+  const tooth=fbmSampler(28, 2), bloom=fbmSampler(5, 3);
+  const lv=lightVec(light==null?0:light), lm=Math.hypot(lv.lx,lv.ly), gx=lm>1e-3?lv.lx/lm:0, gy=lm>1e-3?lv.ly/lm:0, run=Math.min(1, lm);
+  const cols=[parseHex(tint1 || '#2E5C8A'), parseHex(tint2 || '#B0465A')];
+  const rim=1.1*(1 - wet*0.6), gran=0.12 + 0.12*(1-wet);
+  return paintLit(w,h,div,ww,wh, i => {
+    const x=i%ww, y=(i/ww)|0, u=x/unit, v=y/unit;
+    const grade=1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);      // downhill holds more pigment
+    const t=tooth(u*1.5, v*1.5), bl=bloom(u, v);
+    let r=255, g=255, b=255;
+    for(let k=0;k<2;k++){
+      let d=Dk[k][i]; if(d < 0.004) continue;
+      d+=Math.max(0, d - blurred[k][i])*rim*2.2;                              // the darker drying edge
+      d*=grade*(1 + gran*(t - 0.5)*2)*(0.62 + 0.76*bl*bl);                       // granulation, and an uneven load
+      d=Math.max(0, Math.min(1, d*1.1));
+      const c=cols[k];
+      r*=1 - d*(1 - c.r/255); g*=1 - d*(1 - c.g/255); b*=1 - d*(1 - c.b/255);
+    }
+    return [clamp255(r), clamp255(g), clamp255(b)];
+  });
+}
+
+
+/* ==== athanor.js ==== */
+/**
+ * athanor.js — THE ATHANOR's evaluator: a graph from the node editor
  * (forge.js; Drawflow's export JSON) made into a texture.
  *
  * The model is Material Maker's and Substance Designer's: each node is a
@@ -19499,15 +20167,48 @@ function genContourMap(w,h,amt,zoom,light,form,M3){
  */
 
 
+/**
+ * A graph's VERSION, so an old graph keeps making what it made. Version 1
+ * drew every node's randomness from one stream, in the order the graph was
+ * walked; from version 2 each node has its own (from the seed and its id), so
+ * a node makes the same field whatever else changes — which is what lets a
+ * node's result be kept between edits (below). A new graph is always the
+ * newest version; one loaded keeps its own.
+ */
+const ATHANOR_VERSION = 2;
+function athanorVersion(graph){
+  try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
+  catch(e){ return 1; }
+}
+/**
+ * The work budget: no graph may freeze a phone. Each part costs about as many
+ * passes over the page as it makes (a blur four, the light engine fourteen,
+ * another texture forty…). Past the budget the graph is made on a coarser
+ * grid (up to three times coarser; it is soft, never stuck); past the node
+ * limit it is not made at all, and the editor says why.
+ */
+const ATHANOR_LIMITS = { nodes: 64, cost: 160 };
+const ATHANOR_COST = { noise: d => Math.max(1, +d.octaves || 3), cells: () => 9, turing: () => 60, texture: () => 40, stitch: () => 8,
+  blur: () => 4, warp: () => 1.5, mix: () => 1.5, light: () => 14, tint: () => 1.5, ramp: () => 2, blend: () => 3, page: () => 3,
+  transform: () => 1.5, edges: () => 2 };
+function athanorBudget(graph){
+  const nodes = Object.values(athanorNodes(graph));
+  let cost = 0;
+  for(const n of nodes){ const f = ATHANOR_COST[n.name]; cost += f ? f(n.data || {}) : 1;
+    if(n.name === 'surface' && ((n.inputs || {}).input_2 || {}).connections && n.inputs.input_2.connections.length) cost += 14; }
+  const tooMany = nodes.length > ATHANOR_LIMITS.nodes;
+  return { nodes: nodes.length, cost: Math.round(cost), tooMany, scale: tooMany ? 1 : Math.min(3, Math.max(1, Math.sqrt(cost/ATHANOR_LIMITS.cost))) };
+}
+
 /** The graph's nodes, by id ({} if it can't be read). */
-function crucibleNodes(graph){
+function athanorNodes(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return ((g.drawflow || {}).Home || {}).data || {}; }
   catch(e){ return {}; }
 }
 /** The sliders a graph offers: its Knob nodes, by slot (1–6). */
-function crucibleKnobs(graph){
+function athanorKnobs(graph){
   const out = [];
-  for(const n of Object.values(crucibleNodes(graph))){
+  for(const n of Object.values(athanorNodes(graph))){
     if(n.name !== 'knob') continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
     if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
@@ -19515,9 +20216,9 @@ function crucibleKnobs(graph){
   return out.sort((a, b) => a.slot - b.slot);
 }
 /** The hues a graph uses: its Hue nodes, by slot (1–2). */
-function crucibleHues(graph){
+function athanorHues(graph){
   const out = [];
-  for(const n of Object.values(crucibleNodes(graph))){
+  for(const n of Object.values(athanorNodes(graph))){
     if(n.name !== 'hue') continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
     if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
@@ -19525,14 +20226,14 @@ function crucibleHues(graph){
   return out.sort((a, b) => a.slot - b.slot);
 }
 /** The Surface node's name (what the texture is called in the list). */
-function crucibleName(graph){
-  const s = Object.values(crucibleNodes(graph)).find(n => n.name === 'surface');
+function athanorName(graph){
+  const s = Object.values(athanorNodes(graph)).find(n => n.name === 'surface');
   return s ? String((s.data || {}).name || 'My Surface').slice(0, 32) : '';
 }
 /** A short hash of the graph, for the texture cache (positions don't count). */
-function crucibleHash(graph){
-  const nodes = crucibleNodes(graph);
-  const sig = JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
+function athanorHash(graph){
+  const nodes = athanorNodes(graph);
+  const sig = athanorVersion(graph) + JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
     return [id, n.name, n.data, Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
   let h = 2166136261; for(let i = 0; i < sig.length; i++){ h ^= sig.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36);
@@ -19557,10 +20258,43 @@ const CR_BLEND = {
  * there is no Surface to show. ctx: { knobs: [six 0..100], tints: [hex, hex],
  * light (degrees), seed, scale }. deps.texture(type, w, h, opts) → a canvas.
  */
-function evalCrucible(graph, ww, wh, ctx, deps = {}){
-  const nodes = crucibleNodes(graph);
+// ---- each node's result, kept between edits (version 2 graphs) ----
+// Keyed by the node's whole upstream (its parts, settings and wiring, not
+// where it sits), the grid, and what the page gives (seed, knobs, hues, dial):
+// change one node and only it and what lies downstream are made again. A few
+// dozen MB at most, the least recently used let go first.
+const ATHANOR_KEPT = new Map(); let athanorKeptBytes = 0, athanorHits = 0;
+const ATHANOR_KEEP_BYTES = 48*1024*1024;
+const keptSize = outs => (outs || []).reduce((s, v) => s + (v instanceof Float32Array ? v.length*4 : v && v.r ? v.r.length*12 : 8), 0);
+function athanorKeep(key, outs){
+  if(ATHANOR_KEPT.has(key)) return;
+  const b = keptSize(outs); if(b > ATHANOR_KEEP_BYTES/4) return;
+  ATHANOR_KEPT.set(key, { outs, b }); athanorKeptBytes += b;
+  for(const [k, v] of ATHANOR_KEPT){ if(athanorKeptBytes <= ATHANOR_KEEP_BYTES) break; ATHANOR_KEPT.delete(k); athanorKeptBytes -= v.b; }
+}
+/** What is kept (for the tests and the debug view). */
+function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits }; }
+function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }
+const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+
+function evalAthanor(graph, ww, wh, ctx, deps = {}){
+  const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface) return null;
+  const v2 = athanorVersion(graph) >= 2;
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale]);
+  // a node's upstream, as a signature (loops cut)
+  const sigs = new Map(), sigBusy = new Set();
+  const sigOf = id => {
+    if(sigs.has(id)) return sigs.get(id);
+    if(sigBusy.has(id)) return 'loop';
+    const n = nodes[id]; if(!n) return '-';
+    sigBusy.add(id);
+    const ins = Object.keys(n.inputs || {}).sort().map(k => k + '<' + ((n.inputs[k].connections || []).map(c => sigOf(String(c.node)) + '.' + c.input).join(',')));
+    sigBusy.delete(id);
+    const s = n.name + JSON.stringify(n.data || {}) + '[' + ins.join(';') + ']#' + id;
+    sigs.set(id, s); return s;
+  };
   const N = ww*wh, unit = Math.min(ww, wh);
   const memo = new Map(), busy = new Set();
   const flat = v => new Float32Array(N).fill(v);
@@ -19587,7 +20321,14 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    try { out = RUN(n); } catch(e){ out = null; }
+    const key = v2 ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig : null;
+    const kept = key && ATHANOR_KEPT.get(key);
+    if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
+    else {
+      // version 2: the node's own randomness, from the seed and its id
+      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
+      if(key && out) athanorKeep(key, out);
+    }
     busy.delete(id); memo.set(id, out);
     return out;
   };
@@ -19658,7 +20399,7 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
       case 'turing': case 'texture': {
         if(!deps.texture) return null;
         const type = n.name === 'turing' ? 'turing' : String(P(n, 'type', 'linen'));
-        if(type === 'crucible') return null;              // never itself
+        if(type === 'athanor') return null;              // never itself
         const opts = n.name === 'turing'
           ? { p1: num(n, 'scale', 100), p2: 80, p3: ['spots', 'coral', 'maze', 'worms', 'holes'].indexOf(P(n, 'pattern', 'coral'))*25, p4: 0 }
           : { p1: num(n, 'p1', 100), p2: num(n, 'p2', 100), p3: num(n, 'p3', 50) };
@@ -19707,6 +20448,35 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
         if(ia == null && ib == null) return null;
         const A = asImage(ia ?? 0), B = asImage(ib ?? 0), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
         for(let i = 0; i < N; i++){ const k = t ? t[i] : tp; o.r[i] = A.r[i] + (B.r[i] - A.r[i])*k; o.g[i] = A.g[i] + (B.g[i] - A.g[i])*k; o.b[i] = A.b[i] + (B.b[i] - A.b[i])*k; }
+        return [o];
+      }
+      case 'posterize': {
+        const f = asField(input(n, 1)); if(!f) return null;
+        const k = Math.max(2, Math.min(16, Math.round(num(n, 'steps', 5)))), o = new Float32Array(N);
+        for(let i = 0; i < N; i++) o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1);
+        return [o];
+      }
+      case 'transform': {
+        // tiled and turned about the page's centre (it repeats past its edges)
+        const f = asField(input(n, 1)); if(!f) return null;
+        const sc = Math.max(0.25, num(n, 'scale', 100)/100), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an), o = new Float32Array(N);
+        const cx = ww/2, cy = wh/2;
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+          const dx = (x - cx)/sc, dy = (y - cy)/sc;
+          let sx = Math.round(cx + dx*ca + dy*sa), sy = Math.round(cy - dx*sa + dy*ca);
+          sx = ((sx % ww) + ww) % ww; sy = ((sy % wh) + wh) % wh; o[y*ww + x] = f[sy*ww + sx];
+        }
+        return [o];
+      }
+      case 'edges': {
+        // Sobel: where the field changes fastest
+        const f = asField(input(n, 1)); if(!f) return null;
+        const k = num(n, 'strength', 50)/50*unit/96, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+          const gx = at(x+1,y-1) + 2*at(x+1,y) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x-1,y) - at(x-1,y+1);
+          const gy = at(x-1,y+1) + 2*at(x,y+1) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x,y-1) - at(x+1,y-1);
+          o[y*ww + x] = Math.min(1, Math.hypot(gx, gy)*k/8);
+        }
         return [o];
       }
       case 'invert': { const v = input(n, 1); if(v == null) return null;
@@ -19758,6 +20528,52 @@ function evalCrucible(graph, ww, wh, ctx, deps = {}){
   };
   const res = evalNode(String(surface.id));
   return res && res[0] ? asImage(res[0]) : null;
+}
+
+// ---- starter graphs: a few to begin from (Material Maker's and Blender's
+// way: a working graph to take apart, rather than an empty page) ----
+// each: nodes [type, data, x, y] and wires [from, output, to, input] (1-based)
+const ATHANOR_STARTERS = {
+  marble: { label: 'Marble', nodes: [
+      ['noise', { scale: 14, octaves: 6 }, 40, 60], ['knob', { slot: '1', name: 'Turbulence', def: 85 }, 40, 260],
+      ['math', { op: 'multiply' }, 280, 120], ['waves', { freq: 4, angle: 30 }, 500, 120], ['levels', { lo: 0, hi: 100, gamma: 78 }, 720, 120],
+      ['hue', { slot: '1', name: 'Stone Hue' }, 720, 320], ['hue', { slot: '2', name: 'Vein Hue' }, 720, 440],
+      ['ramp', { mid: 70 }, 960, 160], ['surface', { name: 'Marble', ground: 'colour' }, 1200, 160]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
+  leaded: { label: 'Leaded Window', nodes: [
+      ['cells', { scale: 70, jitter: 85 }, 40, 80], ['knob', { slot: '1', name: 'Leading', def: 60 }, 40, 300], ['math', { op: 'multiply' }, 280, 60],
+      ['threshold', { at: 45, soft: 8 }, 500, 40], ['invert', {}, 720, 40],
+      ['hue', { slot: '1', name: 'Glass Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Glass Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 540, 260], ['blend', { mode: 'multiply', opacity: 100 }, 940, 140], ['surface', { name: 'Leaded Window', ground: 'colour' }, 1180, 140]],
+    wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 3, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1], [5, 1, 9, 2], [9, 1, 10, 1], [4, 1, 10, 2]] },
+  terrain: { label: 'Lit Terrain', nodes: [
+      ['noise', { scale: 18, octaves: 6 }, 40, 80], ['knob', { slot: '1', name: 'Relief', def: 60 }, 40, 280], ['math', { op: 'multiply' }, 280, 220],
+      ['hue', { slot: '1', name: 'High Hue' }, 280, 20], ['hue', { slot: '2', name: 'Low Hue' }, 280, 120],
+      ['ramp', { mid: 45 }, 520, 60], ['surface', { name: 'Lit Terrain', ground: 'colour' }, 760, 120]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [1, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1], [3, 1, 7, 2]] },
+  woven: { label: 'Woven Waves', nodes: [
+      ['waves', { freq: 14, angle: 0 }, 40, 40], ['waves', { freq: 14, angle: 90 }, 40, 220], ['math', { op: 'max' }, 280, 120],
+      ['knob', { slot: '1', name: 'Thread', def: 80 }, 280, 300], ['math', { op: 'multiply' }, 500, 160],
+      ['levels', { lo: 20, hi: 100, gamma: 50 }, 720, 120], ['tint', {}, 940, 120], ['surface', { name: 'Woven Waves', ground: 'colour' }, 1160, 120]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1], [6, 1, 7, 1], [7, 1, 8, 1], [6, 1, 8, 2]] },
+  bloom: { label: 'Reaction Bloom', nodes: [
+      ['turing', { pattern: 'coral', scale: 100 }, 40, 80], ['blur', { radius: 10 }, 300, 160], ['knob', { slot: '1', name: 'Bloom', def: 40 }, 300, 300],
+      ['mix', { t: 50 }, 520, 80],
+      ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
+      ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
+    wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
+};
+/** A starter as a graph (Drawflow's export form, without node faces). */
+function athanorStarter(name){
+  const S = ATHANOR_STARTERS[name]; if(!S) return null;
+  const data = {};
+  S.nodes.forEach(([type, d, x, y], i) => { const id = i + 1;
+    data[id] = { id, name: type, data: { ...d }, class: '', html: '', typenode: false, inputs: {}, outputs: {}, pos_x: x, pos_y: y }; });
+  for(const [a, o, b, j] of S.wires){
+    ((data[b].inputs['input_' + j] ||= { connections: [] }).connections).push({ node: String(a), input: 'output_' + o });
+    ((data[a].outputs['output_' + o] ||= { connections: [] }).connections).push({ node: String(b), output: 'input_' + j });
+  }
+  return { v: ATHANOR_VERSION, drawflow: { Home: { data } } };
 }
 
 
@@ -19931,10 +20747,10 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
                   // drips, and the faint wash inside the ring
                   {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
-  // THE CRUCIBLE: a surface made in the node editor. Its knobs are the
+  // THE ATHANOR: a surface made in the node editor. Its knobs are the
   // graph's Knob nodes (the page relabels them from the graph; here, six
   // plain ones, so a request always has its values)
-  crucible:      [1,2,3,4,5,6].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
+  athanor:      [1,2,3,4,5,6].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
   guilloche:     [{key:'zoom',  label:'Rosette Size',    min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Line Density',    min:30, max:200, def:100, unit:'%'},
                   // how many lobes each rosette turns: a few broad petals → a fine crown
@@ -19947,6 +20763,18 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Contour Interval',min:30, max:250, def:100, unit:'%'},
                   // the land lit beneath its lines: none (lines only) → strong relief
                   {key:'form',  label:'Hillshade',       min:0,  max:100, def:45,  unit:''}],
+  stainedglass:  [{key:'zoom',  label:'Pane Size',       min:50, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Leading',         min:30, max:250, def:100, unit:'%'},
+                  // the panes' arrangement: shards → a calm tiling → (past half) a rose window
+                  {key:'form',  label:'Order',           min:0,  max:100, def:25,  unit:''}],
+  suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
+                  // still concentric rings → swept by breath and fan
+                  {key:'form',  label:'Breath',          min:0,  max:100, def:40,  unit:''}],
+  watercolour:   [{key:'zoom',  label:'Wash Size',       min:40, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Pigment',         min:30, max:250, def:100, unit:'%'},
+                  // dry, hard rims → wet, soft and spreading
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:50,  unit:''}],
   flowfield:     [{key:'zoom',  label:'Scale',           min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Lines',           min:30, max:300, def:100, unit:'%'},
                   // the field: a steady current (0) → eddies and swirls
@@ -20131,7 +20959,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
-  crucible:      { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','darken','lighten','color-dodge','color-burn','difference','exclusion'],
+  athanor:      { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','darken','lighten','color-dodge','color-burn','difference','exclusion'],
                    light:true, tints:2, tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#F2E6D8','#2A2230'] },
   guilloche:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -20139,6 +20967,12 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   contour:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
+                   tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
+  suminagashi:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Breath Direction', tints:2,
+                   tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['#1C1C26','#2C4C8E'] },
+  watercolour:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Wash Direction', tints:2,
+                   tintLabels:['Pigment Hue','Second Pigment Hue'], tintDefaults:['accent1','accent2'] },
   flowfield:     { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','screen','lighten'], light:true, dial:'Flow Direction', tints:2,
                    tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['accent1','accent2'] },
   turing:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
@@ -20194,7 +21028,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -20293,14 +21127,20 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'cupring'){
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
-  } else if(type === 'crucible'){
-    result = genCrucible(w,h,light,tint1,tint2,extra);
+  } else if(type === 'athanor'){
+    result = genAthanor(w,h,light,tint1,tint2,extra);
   } else if(type === 'guilloche'){
     result = genGuilloche(w,h,amt,zoom,light,form);
   } else if(type === 'chladni'){
     result = genChladni(w,h,amt,zoom,light,form);
   } else if(type === 'contour'){
     result = genContourMap(w,h,amt,zoom,light,form,extra.mat);
+  } else if(type === 'stainedglass'){
+    result = genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2);
+  } else if(type === 'suminagashi'){
+    result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
+  } else if(type === 'watercolour'){
+    result = genWatercolour(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'flowfield'){
     result = genFlowField(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'turing'){
@@ -20383,7 +21223,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * in the light slot unnoticed.
  */
 // the Zen Garden was retired: looks saved with it open as Dune Ripples
-const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
+const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle', crucible: 'athanor' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
 /** A texture's cache key — shared by the page and the texture worker, so a
  *  texture made in the worker files where the page will look for it. */
 function textureKeyFor(type, w, h, opts = {}){ return describeRequest(type, w, h, opts).key; }
@@ -20461,15 +21301,17 @@ function describeRequest(type, w, h, opts){
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
-            + (type === 'crucible' ? `_c${crucibleHash(opts.graph)}` : '');
+            + (type === 'athanor' ? `_c${athanorHash(opts.graph)}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
-// A Crucible surface: its graph evaluated (crucible.js) on the working grid,
+// A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
 // usual way. No graph, or no Surface in it: a flat mid-grey (nothing shows).
-function genCrucible(w, h, light, tint1, tint2, extra){
-  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
-  const img = evalCrucible(extra.graph || '', ww, wh,
+function genAthanor(w, h, light, tint1, tint2, extra){
+  // the work budget: a heavy graph is made on a coarser grid; too many nodes, not at all
+  const B = athanorBudget(extra.graph || '');
+  const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow() },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -20763,7 +21605,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Thelxinoe';
+const RELEASE = 'Jupiter–Eupheme';
 
 
 /* ==== glyphs.js ==== */
@@ -20842,7 +21684,7 @@ function drawGlyph(ctx, code, x, top, size, colour){
   ctx.scale(s, s);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.lineWidth = 1.7;
-  ctx.shadowBlur = ctx.shadowBlur / s;       // keep any shadow the effect set in page pixels
+  // (a shadow an effect set stays as set: shadows ignore the transform)
   if(g.moon !== undefined){
     ctx.strokeStyle = colour; ctx.fillStyle = colour;
     ctx.beginPath(); ctx.arc(12, 12, 9.2, 0, Math.PI * 2); ctx.stroke();
@@ -21006,7 +21848,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-10 · a6f05fb";
+const STAMP = "2026-10-10 · 8b5599d";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -21477,7 +22319,27 @@ function drawEffects(ctx, str, x, y, size, fill, fx){
   finally { ctx.__vellumEffectPass = false; }
 }
 const along = (e, d) => { const a = (e.angle || 0) * Math.PI/180; return [Math.cos(a)*d, Math.sin(a)*d]; };
-const blurred = (ctx, r) => { if(r > 0.3 && 'filter' in ctx) ctx.filter = `blur(${r.toFixed(1)}px)`; };
+/**
+ * The letters, softened by r (a standard deviation, in the page's pixels), in
+ * one colour. Drawn as a canvas SHADOW of letters set far off the page: a
+ * shadow's blur works on the glyphs' own coverage mask, which browsers do
+ * quickly (on the GPU where there is one), where ctx.filter = blur() blurs a
+ * whole layer per call — measured ~100× slower (1.3 s against 10 ms for 24
+ * glowing words), and per LETTER when a run is tracked or jittered. The shadow
+ * sits exactly where filter's blur did (mean difference 1/255). Shadows work in
+ * the device's pixels, so the offset and blur are carried through the current
+ * transform (rotated letters, scaled glyphs).
+ */
+function softText(ctx, str, x, y, r, colour){
+  if(!(r > 0.3) || typeof ctx.getTransform !== 'function'){ ctx.fillStyle = colour; ctx.fillText(str, x, y); return; }
+  const m = ctx.getTransform(), sc = Math.hypot(m.a, m.b) || 1;
+  const K = ((ctx.canvas ? ctx.canvas.width + ctx.canvas.height : 8192) * 2 + r * 8) / sc;   // far enough off that only the shadow lands
+  ctx.save();
+  ctx.fillStyle = '#000'; ctx.shadowColor = colour; ctx.shadowBlur = 2 * r * sc;
+  ctx.shadowOffsetX = m.a * K; ctx.shadowOffsetY = m.b * K;
+  ctx.fillText(str, x - K, y);
+  ctx.restore();
+}
 const EFFECT_DRAW = {
   outline(ctx, str, x, y, size, fill, e){
     ctx.globalAlpha = e.k2/100; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
@@ -21485,7 +22347,7 @@ const EFFECT_DRAW = {
   },
   shadow(ctx, str, x, y, size, fill, e){
     const [dx, dy] = along(e, rpx(e.k2));
-    blurred(ctx, rpx(e.k1)/2); ctx.fillStyle = e.color; ctx.fillText(str, x + dx, y + dy);
+    softText(ctx, str, x + dx, y + dy, rpx(e.k1)/2, e.color);
   },
   longshadow(ctx, str, x, y, size, fill, e){
     const L = size*0.7*e.k1/100, step = Math.max(rpx(1), size*0.025), n = Math.max(1, Math.ceil(L/step));
@@ -21493,9 +22355,9 @@ const EFFECT_DRAW = {
     for(let i = n; i >= 1; i--){ ctx.globalAlpha = (e.k2/100)*(1 - (i - 1)/n*0.85); ctx.fillText(str, x + ux*step*i, y + uy*step*i); }
   },
   glow(ctx, str, x, y, size, fill, e){
-    const r = Math.max(rpx(1), size*0.45*e.k1/100); ctx.fillStyle = e.color;
-    ctx.globalAlpha = e.k2/100; blurred(ctx, r); ctx.fillText(str, x, y);
-    blurred(ctx, r*0.4); ctx.fillText(str, x, y);                       // a tighter, brighter core
+    const r = Math.max(rpx(1), size*0.45*e.k1/100);
+    ctx.globalAlpha = e.k2/100; softText(ctx, str, x, y, r, e.color);
+    softText(ctx, str, x, y, r*0.4, e.color);                           // a tighter, brighter core
   },
   letterpress(ctx, str, x, y, size, fill, e){
     // pressed INTO the page: a light edge on the side away from the light, a shadow toward it
@@ -21506,9 +22368,8 @@ const EFFECT_DRAW = {
   bevel(ctx, str, x, y, size, fill, e){
     // raised OUT of the page: lit toward the light, shadowed away, softened like a rounded edge
     const d = Math.max(rpx(1), size*0.06*e.k1/100), [dx, dy] = along(e, d), a = e.k2/100;
-    blurred(ctx, d*0.35);
-    ctx.globalAlpha = a*0.75; ctx.fillStyle = '#000000'; ctx.fillText(str, x + dx, y + dy);
-    ctx.globalAlpha = a*0.9;  ctx.fillStyle = '#ffffff'; ctx.fillText(str, x - dx, y - dy);
+    ctx.globalAlpha = a*0.75; softText(ctx, str, x + dx, y + dy, d*0.35, '#000000');
+    ctx.globalAlpha = a*0.9;  softText(ctx, str, x - dx, y - dy, d*0.35, '#ffffff');
   },
   chromatic(ctx, str, x, y, size, fill, e){
     // a true colour split, visible on light and dark pages alike
@@ -21568,12 +22429,13 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
   const rand = seededRand(hashText(str, px, py));
   o.globalCompositeOperation = 'destination-out';
   const bites = Math.round((off.width * off.height) / 70 * k);
+  o.beginPath();                       // every bite in ONE path, one fill (the same union, far fewer calls)
   for(let i = 0; i < bites; i++){
     const r = size * (0.008 + rand() * 0.03) * (0.6 + k);
-    o.beginPath();
-    o.arc(rand() * off.width, rand() * off.height, r, 0, Math.PI * 2);
-    o.fill();
+    const bx = rand() * off.width, by = rand() * off.height;
+    o.moveTo(bx + r, by); o.arc(bx, by, r, 0, Math.PI * 2);
   }
+  o.fill();
   ctx.drawImage(off, px - pad, py - pad);
 }
 
@@ -22071,7 +22933,7 @@ function renderInto(canvas){
   // (so it never echoes the main texture); the variant's own default hues
   if($('textureToggle').checked && $('baseToggle') && $('baseToggle').checked){
     const bt = ($('baseType') || {}).value;
-    if(bt && bt !== 'astral' && bt !== 'crucible' && paramsFor(bt).length){
+    if(bt && bt !== 'astral' && bt !== 'athanor' && paramsFor(bt).length){
       const bcaps = capsFor(bt), a1 = $('accent1ColorHex').value, a2 = $('accent2ColorHex').value;
       const td = (bcaps.tintDefaults || []).map(c => c === 'accent1' ? a1 : c === 'accent2' ? a2 : c);
       const chosen = ($('baseBlend') || {}).value || 'overlay';
@@ -22150,8 +23012,8 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      // (a Crucible surface carries its graph: the worker makes it from that)
-      const graph = type === 'crucible' ? (($('forgeGraph') || {}).value || '') : undefined;
+      // (a Athanor surface carries its graph: the worker makes it from that)
+      const graph = type === 'athanor' ? (($('forgeGraph') || {}).value || '') : undefined;
       drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph }));
       ctx.restore();
     }
@@ -23834,15 +24696,15 @@ function createVault(deps){
 
 /* ==== forge.js ==== */
 /**
- * forge.js — THE CRUCIBLE (the alchemist's vessel; in plain words, a forge for
- * new surfaces): a node editor for making new surfaces out of the
+ * forge.js — THE ATHANOR (the alchemist's furnace; beneath the name, "Surface
+ * texture node editor"): a node editor for making new surfaces out of the
  * pieces Vellum already has (generators, noises, the light engine, stitches,
  * blends, hues, the six knobs, the dial, the seed). The graph is made into a
- * texture by crucible.js (in the texture worker); it shows as "The Crucible"
+ * texture by athanor.js (in the texture worker); it shows as "The Athanor"
  * at the bottom of Surface Variant.
  *
  * Built on Drawflow (jerosoler/Drawflow, MIT): vanilla JS, touch-friendly,
- * small — loaded only when the Crucible is first opened. Its graph (Drawflow's
+ * small — loaded only when the Athanor is first opened. Its graph (Drawflow's
  * own export JSON) is kept in the hidden #forgeGraph field, so it is saved,
  * loaded, shared and shown in the JSON like every other setting.
  *
@@ -23882,6 +24744,9 @@ const FORGE_NODES = {
   math:     { cat: 'Shape', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [FORGE_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract'])] },
   mix:      { cat: 'Shape', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [FORGE_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
+  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [FORGE_R('steps', 'Steps', 5, 2, 16)] },
+  transform:{ cat: 'Shape', label: 'Tile & Rotate', ins: ['field'], outs: ['field'], params: [FORGE_R('scale', 'Scale', 100, 25, 400), FORGE_R('angle', 'Angle', 0, 0, 360)] },
+  edges:    { cat: 'Shape', label: 'Edge Detect', ins: ['field'], outs: ['edges'], params: [FORGE_R('strength', 'Strength', 50)] },
   // light and colour
   light:    { cat: 'Light & Colour', label: 'Light (heights)', ins: ['height', 'dial'], outs: ['light', 'highlight'], params: [FORGE_R('relief', 'Relief', 50), FORGE_R('gloss', 'Gloss', 30), FORGE_R('shadow', 'Shadow', 60)] },
   tint:     { cat: 'Light & Colour', label: 'Tint', ins: ['field', 'light hue', 'dark hue'], outs: ['image'], params: [] },
@@ -23916,10 +24781,13 @@ function describeForge(json){
   try {
     const g = typeof json === 'string' ? JSON.parse(json || '{}') : json;
     const nodes = Object.values(((g.drawflow || {}).Home || {}).data || {});
-    if(!nodes.length) return 'Empty — open the Crucible to begin.';
+    if(!nodes.length) return 'Empty — open the Athanor to begin.';
     let wires = 0; for(const n of nodes) for(const o of Object.values(n.outputs || {})) wires += (o.connections || []).length;
     const out = nodes.find(n => n.name === 'surface');
-    return `${nodes.length} node${nodes.length === 1 ? '' : 's'}, ${wires} wire${wires === 1 ? '' : 's'}` + (out ? ` → “${(out.data || {}).name || 'Surface'}”` : ' (no Surface yet)');
+    // the work budget (athanor.js): say when a graph is drawn coarser, or not at all
+    const B = athanorBudget(g);
+    const load = B.tooMany ? ` — too many nodes (${ATHANOR_LIMITS.nodes} at most): not drawn` : B.scale > 1.05 ? ' — heavy: drawn at reduced detail' : '';
+    return `${nodes.length} node${nodes.length === 1 ? '' : 's'}, ${wires} wire${wires === 1 ? '' : 's'}` + (out ? ` → “${(out.data || {}).name || 'Surface'}”` : ' (no Surface yet)') + load;
   } catch(e){ return 'The saved graph could not be read.'; }
 }
 
@@ -23940,7 +24808,7 @@ function loadDrawflow(){
 }
 
 /**
- * Opens the Crucible over the page. deps: { $, textures: [ids], stitches: [ids], onSave(json) }.
+ * Opens the Athanor over the page. deps: { $, textures: [ids], stitches: [ids], onSave(json) }.
  * The graph is read from and written back to deps.$('forgeGraph').
  */
 async function openForge(deps){
@@ -23960,8 +24828,16 @@ async function openForge(deps){
     const thumb = json => { clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgeThumb'); if(c && deps.preview) try { deps.preview(json, c); } catch(e){} }, 250); };
     // saved without each node's face (it is drawn again from the parts list on
     // load): a graph stays small, and an old graph gets the newest controls
-    const slim = () => { const g = ed.export(); for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})) n.html = ''; return g; };
-    const faces = g => { for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})){ if(FORGE_NODES[n.name]){ n.html = forgeNodeHtml(n.name, lists); n.class = n.class || 'forge-' + FORGE_NODES[n.name].cat.toLowerCase().replace(/[^a-z]+/g, '-'); } } return g; };
+    // (and with its VERSION: a graph loaded keeps its own, a new one is the newest — athanor.js)
+    const slim = () => { const g = ed.export(); for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})) n.html = ''; g.v = openForge.version || ATHANOR_VERSION; return g; };
+    const faces = g => { openForge.version = athanorVersion(g);
+      for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})){ const P = FORGE_NODES[n.name]; if(!P) continue;
+        n.html = forgeNodeHtml(n.name, lists); n.class = n.class || 'forge-' + P.cat.toLowerCase().replace(/[^a-z]+/g, '-');
+        // every port the part has, wired or not (a starter, or a part that gained one, lists only its wires)
+        n.inputs = n.inputs || {}; n.outputs = n.outputs || {};
+        P.ins.forEach((_, j) => { n.inputs['input_' + (j + 1)] = n.inputs['input_' + (j + 1)] || { connections: [] }; });
+        P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; }); }
+      return g; };
     openForge.faces = faces;
     const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status) status.textContent = describeForge(json); thumb(json); };
     for(const ev of ['nodeCreated', 'nodeRemoved', 'connectionCreated', 'connectionRemoved', 'nodeMoved', 'nodeDataChanged']) ed.on(ev, save);
@@ -23987,9 +24863,20 @@ async function openForge(deps){
     // the saved graph, or a first one: a Surface waiting for something to show
     let saved = null; try { saved = JSON.parse(($('forgeGraph') || {}).value || 'null'); } catch(e){}
     if(saved && saved.drawflow) ed.import(faces(saved));
-    else { add('noise', 40, 60); add('surface', 420, 90); }
+    else { openForge.version = ATHANOR_VERSION; add('noise', 40, 60); add('surface', 420, 90); }
     openForge.save = save; openForge.add = add;
-    if($('forgeClear')) $('forgeClear').addEventListener('click', () => { ed.clear(); save(); });
+    if($('forgeClear')) $('forgeClear').addEventListener('click', () => { ed.clear(); openForge.version = ATHANOR_VERSION; save(); });
+    // the starters: a working graph to take apart (replacing this one, if it is more than a start)
+    const st = $('forgeStarter');
+    if(st){
+      st.innerHTML = '<option value="">Start from…</option>' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('');
+      st.addEventListener('change', () => {
+        const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
+        const n = Object.keys(((ed.export().drawflow || {}).Home || {}).data || {}).length;
+        if(n > 2 && typeof confirm === 'function' && !confirm(`Replace this graph with “${ATHANOR_STARTERS[k].label}”?`)) return;
+        ed.clear(); ed.import(faces(g)); save();
+      });
+    }
     if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
     if($('forgeZoomIn')) $('forgeZoomIn').addEventListener('click', () => ed.zoom_in());
     if($('forgeZoomOut')) $('forgeZoomOut').addEventListener('click', () => ed.zoom_out());
@@ -24289,9 +25176,9 @@ toggleSubblock('baseToggle','baseBlock');
   const bt = $('baseType'), main = $('textureType');
   if(bt && main && main.children && typeof document.createElement === 'function'){
     for(const g of Array.from(main.children)){
-      if(!g.label || g.id === 'crucibleGroup') continue;
+      if(!g.label || g.id === 'athanorGroup') continue;
       const og = document.createElement('optgroup'); og.label = g.label;
-      for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'crucible') continue;
+      for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'athanor') continue;
         const op = document.createElement('option'); op.value = o.value; op.textContent = o.textContent; og.appendChild(op); }
       bt.appendChild(og);
     }
@@ -24669,7 +25556,7 @@ const PERSISTED = [
   ['cardFx',               'cardFx',               'text'],
   ['cardFxAmount',         'cardFxAmount',         'text', ''],
   ['cardFxScale',          'cardFxScale',          'text', ''],
-  ['forgeGraph',           'forgeGraph',           'text'],      // the Crucible's graph (Drawflow's JSON)
+  ['forgeGraph',           'forgeGraph',           'text'],      // the Athanor's graph (Drawflow's JSON)
   ['baseToggle',           'baseToggle',           'check'],     // texture layers: the base beneath
   ['baseType',             'baseType',             'text'],
   ['baseP1',               'baseP1',               'text'],
@@ -24814,6 +25701,7 @@ function serializeCurrentSettings(){
 function retireLook(s){
   if(!s) return s;
   if(s.textureType === 'whorl') return { ...s, textureType: 'dunes' };
+  if(s.textureType === 'crucible') return { ...s, textureType: 'athanor' };   // the node editor's surface, briefly named the Crucible
   if(s.textureType === 'crystalleaf') return { ...s, textureType: 'spangle' };   // same knobs, same metal look
   // Rorschach's hues were Light/Dark (white, black); now they are Ink and Accent
   if(s.textureType === 'inkbleed' && /^#?FFFFFF$/i.test(s.textureTint1 || '') && /^#?000000$/i.test(s.textureTint2 || ''))
@@ -24828,8 +25716,8 @@ function retireLook(s){
 }
 function restoreSettings(s){
   s = retireLook(s);
-  // the look's Crucible graph first: a Crucible surface's sliders are named from it
-  if(s.forgeGraph !== undefined && $('forgeGraph')){ $('forgeGraph').value = s.forgeGraph; if(typeof applyCrucibleGraph === 'function') applyCrucibleGraph(false); }
+  // the look's Athanor graph first: a Athanor surface's sliders are named from it
+  if(s.forgeGraph !== undefined && $('forgeGraph')){ $('forgeGraph').value = s.forgeGraph; if(typeof applyAthanorGraph === 'function') applyAthanorGraph(false); }
   // and the base layer's variant, so its knobs take their own ranges before their values
   if(s.baseType && $('baseType')){ $('baseType').value = s.baseType; syncBaseParams(false); }
   if(s.bg1) setColorField('bgColor1Hex', s.bg1);
@@ -26263,43 +27151,43 @@ if(typeof document !== 'undefined' && document.body && document.body.dataset) do
 // (which way the glass runs here — 'gpu' or 'cpu' — for the curious, on the body)
 setTimeout(() => { try { if(document.body && document.body.dataset) document.body.dataset.glass = boxFxBackend(); } catch(e){} }, 0);
 
-// ---------- THE CRUCIBLE (forge.js) ----------
+// ---------- THE ATHANOR (forge.js) ----------
 // A node editor for new surfaces, over the page; its graph lives in the hidden
 // #forgeGraph field (saved, loaded and shared with the look).
 function paintForgeSummary(){ if($('forgeSummary')) $('forgeSummary').textContent = describeForge(($('forgeGraph') || {}).value); }
-/** The Crucible's surface, as the page offers it: its Knob nodes become the
+/** The Athanor's surface, as the page offers it: its Knob nodes become the
  *  texture's sliders (named, ranged, defaulted), its Hue nodes its hues, its
  *  Surface's name the option at the bottom of Surface Variant. (The worker
  *  keeps six plain knobs; only the page's labels change.) */
-function applyCrucibleGraph(redraw = true){
+function applyAthanorGraph(redraw = true){
   const g = ($('forgeGraph') || {}).value || '';
-  const knobs = crucibleKnobs(g), hues = crucibleHues(g), name = crucibleName(g);
+  const knobs = athanorKnobs(g), hues = athanorHues(g), name = athanorName(g);
   const top = knobs.reduce((m, k) => Math.max(m, k.slot), 0);
-  TEXTURE_PARAMS.crucible = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
+  TEXTURE_PARAMS.athanor = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
     return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '' }; });
-  const caps = TEXTURE_CAPS.crucible;
+  const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
     caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue')); }
-  if($('crucibleOption')) $('crucibleOption').textContent = name ? 'The Crucible: ' + name : 'The Crucible (empty)';
-  if(redraw && $('textureType') && $('textureType').value === 'crucible'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
+  if($('athanorOption')) $('athanorOption').textContent = name ? 'The Athanor: ' + name : 'The Athanor (empty)';
+  if(redraw && $('textureType') && $('textureType').value === 'athanor'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
 }
-/** A small picture of what the graph makes, for the Crucible's bar. */
-function previewCrucible(json, cv){
+/** A small picture of what the graph makes, for the Athanor's bar. */
+function previewAthanor(json, cv){
   const n = 96, k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
-  const tex = getTextureCanvas('crucible', n, n, { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072,
+  const tex = getTextureCanvas('athanor', n, n, { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072,
     light: parseFloat(($('textureLight') || {}).value) || 315, tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value,
     p1: k('texP1', 50), p2: k('texP2', 50), p3: k('texP3', 50), p4: k('texP4', 50), p5: k('texP5', 50), p6: k('texP6', 50) });
   const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height);
 }
-const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'crucible'), stitches: STITCH_STYLES,
-  onSave: () => { paintForgeSummary(); applyCrucibleGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
-  preview: previewCrucible,
-  // "Use as Surface": the Crucible's texture on the page
+const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+  onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
+  preview: previewAthanor,
+  // "Use as Surface": the Athanor's texture on the page
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
-    t.value = 'crucible'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
+    t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
 if($('forgeOpenBtn') && $('forgeOpenBtn').addEventListener) $('forgeOpenBtn').addEventListener('click', () => openForge(forgeDeps()));
 if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => { closeForge(forgeDeps()); paintForgeSummary(); });
-setTimeout(() => { paintForgeSummary(); applyCrucibleGraph(true); }, 0);
+setTimeout(() => { paintForgeSummary(); applyAthanorGraph(true); }, 0);
 
 // ---------- LINKED CONTROLS ----------
 // A control marked data-link="<other id>" mirrors that control, both ways,
@@ -26618,7 +27506,7 @@ if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepHistory(-1));
 if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepHistory(1));
 // any change in the controls — typed, dragged, picked, or a button that
 // rewrites many at once (presets, randomize, spells) — records a step
-const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson', 'forgeGraph']);   // (the Crucible keeps its own edits)
+const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson', 'forgeGraph']);   // (the Athanor keeps its own edits)
 for(const type of ['input', 'change']){
   document.addEventListener(type, (e)=>{
     const t = e.target;

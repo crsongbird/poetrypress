@@ -48,6 +48,7 @@ const skip = new Set([
   'fontFamily',        // captured as `font` by family NAME, asserted below —
                        // storing the index would break whenever FONTS changes
   'grimoireList',      // a picker over saved records, not a setting
+  'forgeStarter',      // a one-shot menu: loads a starter into forgeGraph (which is saved)
   'advancedJson',      // the settings pane itself; capturing it would nest
   'fullPreview',       // a developer's comparison switch, not part of a look
   'uiTheme',           // how YOU like the app to look, not part of a saved

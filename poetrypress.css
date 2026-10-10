@@ -1778,7 +1778,10 @@ body.is-mobile .forge-sub{ display:none; }
 
 .forge-thumb{ width:40px; height:40px; border:1px solid var(--line); background:#808080; flex:0 0 auto; image-rendering:auto; }
 body.is-mobile .forge-thumb{ width:32px; height:32px; }
-/* the Crucible's bar on a phone: it wraps, so Done is always in reach */
+/* the Athanor's bar on a phone: it wraps, so Done is always in reach */
 body.is-mobile .forge-bar{ flex-wrap:wrap; row-gap:4px; }
 body.is-mobile .forge-status{ flex-basis:100%; order:9; padding-left:0; }
 body.is-mobile .forge-bar button{ padding:4px 9px; }
+/* the Athanor's starters: a small menu in its bar */
+.forge-starter{ max-width:150px; flex:0 1 auto; padding:4px 6px; }
+body.is-mobile .forge-starter{ max-width:120px; }

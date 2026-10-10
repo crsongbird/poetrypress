@@ -378,7 +378,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 32);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 35);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -465,6 +465,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('the border menu and the help list fill themselves from the library', /bs\.innerHTML = STITCH_STYLES\.map/.test(ev) && /sl\.innerHTML = STITCH_STYLES\.map/.test(ev));
   check('§TypeEffect lists the whole effect stack, compressed', /typeEffect: describeStack\(pageEffectStack\(\)/.test(cr) &&
     (await import('../effects.js')).describeStack([(await import('../effects.js')).makeEffect('glow', '#fd0', 40, 70)]) === 'glow 40% 70% #fd0');
+  check('soft text effects (glow, shadow, bevel) blur as canvas SHADOWS of off-page letters, never ctx.filter (~100× slower, per letter when tracked)',
+    /function softText\(ctx, str, x, y, r, colour\)\{/.test(cr) && /ctx\.shadowOffsetX = m\.a \* K; ctx\.shadowOffsetY = m\.b \* K;/.test(cr)
+    && !/blurred\(ctx/.test(cr) && /softText\(ctx, str, x, y, r\*0\.4, e\.color\)/.test(cr));
   check('the help covers rules, code and variables', ['<h4>Rules</h4>','<h4>Code</h4>','<h4>Variables</h4>'].every(h => src('index.html').includes(h)));
   check('linen picks its seam stitch from the seed', /const seamStitch=SEAM_STITCHES\[Math\.floor\(Math\.random\(\)\*SEAM_STITCHES\.length\)\];/.test(src('texTouch.js')));
   check('letter-by-letter lines draw every effect first, then every glyph', /\/\/ pass 1: effects and outlines, under the whole run/.test(cr) && /charSeed = seed0;/.test(cr));
@@ -894,7 +897,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
     T.paramsFor('oldpaper')[2].names.join() === 'Clean,Foxed,Mildewed,Scorched' && T.TEXTURE_CAPS.oldpaper.light === true && T.TEXTURE_CAPS.oldpaper.hue5.role === 'glow'
     && /const nTear=folds>0\.75/.test(tt) && /if\(age>0\.8\)\{/.test(tt) && /if\(age>0\.45\)\{/.test(tt));
   check('…and old looks made with either open as Old Paper, their knobs translated',
-    /if\(s\.textureType === 'foxing'\)/.test(src('appEvents.js')) && /if\(s\.textureType === 'foldghost'\)/.test(src('appEvents.js')) && /RETIRED = \{ whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle' \}/.test(src('textureGenerators.js')));
+    /if\(s\.textureType === 'foxing'\)/.test(src('appEvents.js')) && /if\(s\.textureType === 'foldghost'\)/.test(src('appEvents.js')) && /RETIRED = \{ whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle', crucible: 'athanor' \}/.test(src('textureGenerators.js')));
+  check('a look made while the node editor was named the Crucible opens with the Athanor', /if\(s\.textureType === 'crucible'\) return \{ \.\.\.s, textureType: 'athanor' \};/.test(src('appEvents.js')));
   check('a look saved with the old Crystal Leaf opens as Metal Spangle (its knobs carry over unchanged)',
     /if\(s\.textureType === 'crystalleaf'\) return \{ \.\.\.s, textureType: 'spangle' \};/.test(src('appEvents.js')));
   check('Scrying Pool: waves → refracted rays gathered on the floor (caustics) → glints; Turbulence, Depth, Haze, Murk',

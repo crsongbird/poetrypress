@@ -1809,3 +1809,245 @@ export function genContourMap(w,h,amt,zoom,light,form,M3){
     return out;
   });
 }
+
+/**
+ * Stained Glass — panes of coloured glass held in lead came, lit from behind.
+ * The panes are a Voronoi tiling (each pixel belongs to its nearest seed; the
+ * lead runs where two seeds are equally near, its width measured EXACTLY from
+ * the bisector, so every came is even). ORDER moves the seeds from irregular
+ * shards (a cathedral window's fragments) through a calmer tiling to a ROSE
+ * WINDOW: rings of panes around the page's centre, coloured ring by ring so the
+ * symmetry reads. The lead is a rounded relief lit by the dial; the glass is
+ * lit from BEHIND (brighter toward the dial's sun), with its own streaks,
+ * bubbles and a faint surface sheen, as antique glass has.
+ */
+export function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const order=Math.max(0,Math.min(1, form==null?0.25:form));
+  // (a coarser grid than most: the came stays several cells wide, and the light costs a third)
+  const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const sep=unit*0.1*zoom;
+  // the seeds: shards (jittered grid) or a rose (rings about the centre)
+  const S=[];           // [x, y, ring, index-in-ring]
+  if(order < 0.5){
+    const jit=0.5 - order*0.7;
+    for(let gy=-1; gy<=Math.ceil(wh/sep)+1; gy++) for(let gx=-1; gx<=Math.ceil(ww/sep)+1; gx++){
+      const ox=(gy%2 ? 0.5 : 0)*order*1.6;             // calmer: rows offset like bricks
+      S.push([(gx + 0.5 + ox + (Math.random()*2-1)*jit)*sep, (gy + 0.5 + (Math.random()*2-1)*jit)*sep, -1, 0]);
+    }
+  } else {
+    const cx=ww/2, cy=wh/2, sym=Math.random()<0.5 ? 6 : 8, jit=(1-order)*0.6*sep, K=Math.ceil(Math.hypot(ww,wh)/2/sep) + 1;
+    S.push([cx, cy, 0, 0]);
+    for(let k=1;k<=K;k++){ const n=sym*k, off=(k%2)*0.5;
+      for(let j=0;j<n;j++){ const a=(j + off)/n*Math.PI*2, r=k*sep;
+        S.push([cx + Math.cos(a)*r + (Math.random()*2-1)*jit, cy + Math.sin(a)*r + (Math.random()*2-1)*jit, k, j]); } }
+  }
+  // the palette: the two hues, and what a glazier would set beside them
+  const t1=tint1 || '#2148A8', t2=tint2 || '#A8182C';
+  const hx=c => { const p=parseHex(c); return [p.r, p.g, p.b]; };
+  const mixA=(a,b,t)=>a.map((v,i)=>v + (b[i]-v)*t);
+  const A=hx(t1), B=hx(t2), AMBER=[214,152,40], GREEN=[46,122,62], PALE=[232,224,196];
+  const PAL=[A, A, mixA(A,[0,0,0],0.35), B, B, mixA(B,AMBER,0.5), AMBER, GREEN, mixA(A,PALE,0.6), PALE];
+  const pane=S.map(s => {
+    const col = s[2] >= 0
+      ? PAL[(s[2]*3 + (s[3] % 2)*5) % PAL.length]                 // rose: ring by ring, alternating
+      : PAL[Math.floor(Math.random()*PAL.length)];
+    const sh=0.82 + Math.random()*0.3, ang=Math.random()*Math.PI;
+    const bub=[]; const nb=Math.random()<0.6 ? Math.floor(Math.random()*4) : 0;
+    for(let b=0;b<nb;b++) bub.push([s[0] + (Math.random()*2-1)*sep*0.3, s[1] + (Math.random()*2-1)*sep*0.3, sep*(0.012 + Math.random()*0.025)]);
+    return { col, sh, cs:Math.cos(ang), sn:Math.sin(ang), bub };
+  });
+  // the seeds in buckets, for the nearest-seed search
+  // (a seed is never far from a pixel it owns: one ring of buckets is enough)
+  const bs=sep*1.15, bw=Math.ceil(ww/bs)+4, bh=Math.ceil(wh/bs)+4, B2=new Array(bw*bh);
+  S.forEach((s,i)=>{ const bx=Math.floor(s[0]/bs)+2, by=Math.floor(s[1]/bs)+2; if(bx<0||by<0||bx>=bw||by>=bh) return; (B2[by*bw+bx] || (B2[by*bw+bx]=[])).push(i); });
+  const lw=Math.max(0.6, unit*0.0065*amt);                         // the came's half-width
+  const streak=fbmSampler(4, 3), tooth=fbmSampler(18, 2);
+  const OWN=new Int32Array(N), E=new Float32Array(N), H=new Float32Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    const bx=Math.floor(x/bs)+2, by=Math.floor(y/bs)+2;
+    let best=-1, bd=Infinity;
+    for(let j=by-1;j<=by+1;j++) for(let i=bx-1;i<=bx+1;i++){ if(i<0||j<0||i>=bw||j>=bh) continue; const L=B2[j*bw+i]; if(!L) continue;
+      for(const k of L){ const dx=S[k][0]-x, dy=S[k][1]-y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=k; } } }
+    // the distance to the nearest bisector: the lead's centre line
+    let e=Infinity; const s1=S[best];
+    for(let j=by-1;j<=by+1;j++) for(let i=bx-1;i<=bx+1;i++){ if(i<0||j<0||i>=bw||j>=bh) continue; const L=B2[j*bw+i]; if(!L) continue;
+      for(const k of L){ if(k===best) continue; const s2=S[k], gx=s2[0]-s1[0], gy=s2[1]-s1[1], gl=Math.hypot(gx,gy)||1;
+        const dd=((x-s1[0])*gx + (y-s1[1])*gy)/gl, ed=gl/2 - dd; if(ed<e) e=ed; } }
+    const p=y*ww+x; OWN[p]=best; E[p]=e;
+    const u=x/unit, v=y/unit;
+    if(e < lw){ const q=e/lw; H[p]=lw*1.6*Math.sqrt(Math.max(0, 1 - q*q)) + lw*0.6; }   // rounded came
+    else H[p]=(tooth(u*2, v*2) - 0.5)*lw*0.35;                                      // the glass's ripple
+  }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.5, ao:0.35, ambient:0.4 });
+  // the sun behind the window: brighter toward the dial
+  const lv=lightVec(light==null?315:light), sunX=ww/2 - lv.lx*ww*0.45, sunY=wh/2 - lv.ly*wh*0.45, diag=Math.hypot(ww,wh);
+  return paintLit(w,h,div,ww,wh, i => {
+    const x=i%ww, y=(i/ww)|0, e=E[i];
+    if(e < lw){
+      // lead: dull grey metal, lit by the dial
+      const k=L.light[i]/L.flat, sp=L.spec[i];
+      const g=34 + 46*k + 150*sp;
+      // the glass glows into the edge of the came a little
+      return [clamp255(g), clamp255(g), clamp255(g*1.04)];
+    }
+    const P=pane[OWN[i]], u=x/unit, v=y/unit;
+    const back=0.72 + 0.5*Math.max(0, 1 - Math.hypot(x-sunX, y-sunY)/diag*1.4);
+    const along=u*P.cs + v*P.sn, across=-u*P.sn + v*P.cs;
+    const st=0.86 + 0.28*streak(along*0.6 + OWN[i]*0.37, across*7);
+    let edge=Math.min(1, (e-lw)/(lw*2.5)); edge=0.72 + 0.28*edge;            // darker against the lead (thicker glass)
+    let b=P.sh*back*st*edge;
+    for(const q of P.bub){ const d=Math.hypot(x-q[0], y-q[1]); if(d < q[2]) b*=1.12 + 0.2*(d/q[2]); }
+    const sheen=L.spec[i]*90;
+    return [clamp255(P.col[0]*b + sheen), clamp255(P.col[1]*b + sheen), clamp255(P.col[2]*b + sheen)];
+  });
+}
+
+/**
+ * Suminagashi — "floating ink": rings of ink and clear water dropped in turn
+ * on still water, then moved by a breath or a fan and lifted onto paper.
+ * Modelled as Aubrey Jaffer's mathematical marbling: a drop of radius r at C
+ * pushes every point P out to C + (P−C)·√(1 + r²/|P−C|²) (area is kept), and a
+ * stroke along a line moves points parallel to it by z·u^d (d, the distance
+ * from the line). Both are exactly invertible, so each pixel is traced
+ * BACKWARD through every drop and stroke until it lands inside the drop it
+ * came from — ink, the second ink, or water. Drops alternate between a few
+ * centres, so each new ring pushes on the others. The dial is the breath's
+ * direction; BREATH how far it moves the rings.
+ */
+export function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const breath=Math.max(0,Math.min(1, form==null?0.4:form));
+  const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const aspX=ww/unit, aspY=wh/unit;
+  // the drops (in page units: the short side is 1)
+  const nC=Math.max(2, Math.round((2 + Math.random()*2)*aspX*aspY)), centres=[];
+  for(let c=0;c<nC;c++) centres.push([0.1*aspX + Math.random()*aspX*0.8, 0.1*aspY + Math.random()*aspY*0.8, 0]);
+  // enough drops that the rings, pushed outward, cover the sheet
+  const r0=0.085*zoom, rounds=Math.round((10 + 12*amt)/Math.max(0.5, zoom)), OPS=[];
+  for(let k=0;k<rounds;k++) for(const C of centres){
+    const ink = C[2]++ % 2 === 0;                 // ink, water, ink, water…
+    const kind = !ink ? 0 : (Math.random() < 0.22 ? 2 : 1);
+    OPS.push({ t:0, cx:C[0] + (Math.random()-0.5)*r0*0.2, cy:C[1] + (Math.random()-0.5)*r0*0.2, r:r0*(0.7 + Math.random()*0.5)*(ink ? 0.75 : 1), kind, dens:0.42 + Math.random()*0.45 });
+  }
+  // the breath: strokes along the dial's direction (and a few eddies)
+  const lv=lightVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
+  const nS=Math.round(2 + breath*5);
+  for(let s=0;s<nS;s++){
+    const a=ang + (Math.random()-0.5)*0.7, mx=Math.cos(a), my=Math.sin(a);
+    OPS.push({ t:1, bx:Math.random()*aspX, by:Math.random()*aspY, mx, my, z:breath*(0.06 + Math.random()*0.12)*(Math.random()<0.5?1:-1), c:Math.LN2/(0.05 + Math.random()*0.12) });   // (c: 1/e-folding, so u^d is one exp)
+  }
+  const nE=Math.round(breath*3.5);
+  for(let s=0;s<nE;s++) OPS.push({ t:2, cx:Math.random()*aspX, cy:Math.random()*aspY, s:(Math.random()<0.5?1:-1)*breath*(1.2 + Math.random()*1.6), sig:0.08 + Math.random()*0.14 });
+  const ink1=parseHex(tint1 || '#1C1C26'), ink2=parseHex(tint2 || '#2C4C8E');
+  const grain=fbmSampler(24, 2), bleed=fbmSampler(6, 3);
+  const D=new Float32Array(N), K=new Uint8Array(N);
+  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
+    let px=x/unit, py=y/unit;
+    // a hair of bleed: the ink's edges are soft, never ruled
+    px+=(bleed(px, py)-0.5)*0.004; py+=(bleed(py+5.3, px+2.1)-0.5)*0.004;
+    let hit=null, tt=0;
+    for(let o=OPS.length-1;o>=0;o--){
+      const op=OPS[o];
+      if(op.t===0){
+        const dx=px-op.cx, dy=py-op.cy, d2=dx*dx+dy*dy, r2=op.r*op.r;
+        if(d2 < r2){ hit=op; tt=Math.sqrt(d2/r2); break; }
+        const f=Math.sqrt(1 - r2/d2); px=op.cx + dx*f; py=op.cy + dy*f;
+      } else if(op.t===1){
+        const d=Math.abs((px-op.bx)*(-op.my) + (py-op.by)*op.mx), m=op.z*Math.exp(-d*op.c);
+        px-=op.mx*m; py-=op.my*m;
+      } else {
+        const dx=px-op.cx, dy=py-op.cy, th=-op.s*Math.exp(-(dx*dx+dy*dy)/(op.sig*op.sig)), cs=Math.cos(th), sn=Math.sin(th);
+        px=op.cx + dx*cs - dy*sn; py=op.cy + dx*sn + dy*cs;
+      }
+    }
+    const i=y*ww+x;
+    if(hit && hit.kind){
+      // ink pools at a ring's edges (both: the drop's rim, and where water pushed into it)
+      const pool=Math.max(Math.pow(tt, 8), Math.pow(1-tt, 14));
+      D[i]=hit.dens*(0.88 + 0.16*pool)*(0.92 + 0.16*grain(x/unit*3, y/unit*3)); K[i]=hit.kind;
+    }
+  }
+  return paintLit(w,h,div,ww,wh, i => {
+    if(!K[i]) return [255,255,255];
+    const c=K[i]===2 ? ink2 : ink1, d=D[i];
+    return [clamp255(255 + (c.r-255)*d), clamp255(255 + (c.g-255)*d), clamp255(255 + (c.b-255)*d)];
+  });
+}
+
+/**
+ * Watercolour Wash — pigment laid in washes, after Tyler Hobbs's method: a
+ * blob is a polygon deformed by recursive midpoint displacement, then drawn
+ * forty times over at a few percent opacity, each copy deformed again, so the
+ * edges go soft and uneven where the copies disagree. On top of that, what
+ * watercolour does on paper (Curtis et al., "Computer-Generated Watercolor"):
+ * EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in
+ * the paper's tooth) and a GRADED WASH (it runs downhill — the dial). The two
+ * pigments mix subtractively where they overlap. WETNESS softens and spreads
+ * the edges; dry washes keep hard, dark rims.
+ */
+export function genWatercolour(w,h,amt,zoom,light,form,tint1,tint2){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const wet=Math.max(0,Math.min(1, form==null?0.5:form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const gauss=()=>{ let u=0, v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const deform=(poly, depth, vs)=>{
+    let P=poly;
+    for(let d=0; d<depth; d++){
+      const Q=[];
+      for(let i=0;i<P.length;i++){
+        const a=P[i], b=P[(i+1)%P.length], len=Math.hypot(b[0]-a[0], b[1]-a[1]);
+        Q.push(a);
+        Q.push([(a[0]+b[0])/2 + gauss()*len*a[2]*vs, (a[1]+b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]);
+      }
+      P=Q;
+    }
+    return P;
+  };
+  const layers=[document.createElement('canvas'), document.createElement('canvas')];
+  const lx=layers.map(c=>{ c.width=ww; c.height=wh; const x=c.getContext('2d', CPU); x.fillStyle='#000'; return x; });
+  const nB=Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
+  const LAY=Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha=Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
+  for(let b=0;b<nB;b++){
+    // the first is a broad, pale ground wash; the rest are passages laid over it
+    const ground=b===0, cx=ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy=ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
+    const R=unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k=Math.random()<0.62 ? 0 : 1;
+    const sides=10, base=[], sq=0.7 + Math.random()*0.3;
+    for(let s=0;s<sides;s++){ const a=s/sides*Math.PI*2, rr=R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
+    const shape=deform(base, 3, 0.2);
+    const ctx=lx[k]; ctx.globalAlpha=ground ? alpha*0.45 : alpha;
+    for(let l=0;l<LAY;l++){
+      const P=deform(shape, 3, 0.07 + wet*0.2);
+      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill();
+    }
+  }
+  const Dk=lx.map(ctx=>{ const d=ctx.getImageData(0,0,ww,wh).data, D=new Float32Array(N); for(let i=0;i<N;i++) D[i]=d[i*4+3]/255; return D; });
+  // a box blur, for the edge: pigment drifts to where the wash thins out
+  const blurF=(S, r)=>{ const T=new Float32Array(N), O=new Float32Array(N), n=2*r+1;
+    for(let y=0;y<wh;y++){ let s=0; for(let x=-r;x<=r;x++) s+=S[y*ww+Math.min(ww-1,Math.max(0,x))];
+      for(let x=0;x<ww;x++){ T[y*ww+x]=s/n; s+=S[y*ww+Math.min(ww-1,x+r+1)] - S[y*ww+Math.max(0,x-r)]; } }
+    for(let x=0;x<ww;x++){ let s=0; for(let y=-r;y<=r;y++) s+=T[Math.min(wh-1,Math.max(0,y))*ww+x];
+      for(let y=0;y<wh;y++){ O[y*ww+x]=s/n; s+=T[Math.min(wh-1,y+r+1)*ww+x] - T[Math.max(0,y-r)*ww+x]; } }
+    return O; };
+  const er=Math.max(1, Math.round(unit*(0.006 + wet*0.012)));
+  const blurred=Dk.map(D=>blurF(blurF(D, er), er));
+  const tooth=fbmSampler(28, 2), bloom=fbmSampler(5, 3);
+  const lv=lightVec(light==null?0:light), lm=Math.hypot(lv.lx,lv.ly), gx=lm>1e-3?lv.lx/lm:0, gy=lm>1e-3?lv.ly/lm:0, run=Math.min(1, lm);
+  const cols=[parseHex(tint1 || '#2E5C8A'), parseHex(tint2 || '#B0465A')];
+  const rim=1.1*(1 - wet*0.6), gran=0.12 + 0.12*(1-wet);
+  return paintLit(w,h,div,ww,wh, i => {
+    const x=i%ww, y=(i/ww)|0, u=x/unit, v=y/unit;
+    const grade=1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);      // downhill holds more pigment
+    const t=tooth(u*1.5, v*1.5), bl=bloom(u, v);
+    let r=255, g=255, b=255;
+    for(let k=0;k<2;k++){
+      let d=Dk[k][i]; if(d < 0.004) continue;
+      d+=Math.max(0, d - blurred[k][i])*rim*2.2;                              // the darker drying edge
+      d*=grade*(1 + gran*(t - 0.5)*2)*(0.62 + 0.76*bl*bl);                       // granulation, and an uneven load
+      d=Math.max(0, Math.min(1, d*1.1));
+      const c=cols[k];
+      r*=1 - d*(1 - c.r/255); g*=1 - d*(1 - c.g/255); b*=1 - d*(1 - c.b/255);
+    }
+    return [clamp255(r), clamp255(g), clamp255(b)];
+  });
+}

@@ -74,7 +74,7 @@ function drawGlyph(ctx, code, x, top, size, colour){
   ctx.scale(s, s);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.lineWidth = 1.7;
-  ctx.shadowBlur = ctx.shadowBlur / s;       // keep any shadow the effect set in page pixels
+  // (a shadow an effect set stays as set: shadows ignore the transform)
   if(g.moon !== undefined){
     ctx.strokeStyle = colour; ctx.fillStyle = colour;
     ctx.beginPath(); ctx.arc(12, 12, 9.2, 0, Math.PI * 2); ctx.stroke();

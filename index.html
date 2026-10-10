@@ -522,6 +522,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
                 <option value="landscape" data-str="option.landscape">Painted Landscape</option>
                 <option value="flowfield" data-str="option.flow_field">Flow-Field Ink</option>
+                <option value="suminagashi" data-str="option.suminagashi">Suminagashi</option>
               </optgroup>
               <optgroup label="√ Sharpness">
                 <option value="grain" data-str="option.waking_grain">Waking Grain</option>
@@ -533,6 +534,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="hatch" data-str="option.silverpoint_hatch">Silverpoint Hatch</option>
                 <option value="cityscape" data-str="option.cityscape">Night City</option>
                 <option value="guilloche" data-str="option.guilloche">Guilloché</option>
+                <option value="stainedglass" data-str="option.stained_glass">Stained Glass</option>
               </optgroup>
               <optgroup label="∆ Chaos">
                 <option value="sigils" data-str="option.sigil_scatter">Sigil Scatter</option>
@@ -562,9 +564,10 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
                 <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
                 <option value="contour" data-str="option.contour">Contour Map</option>
+                <option value="watercolour" data-str="option.watercolour">Watercolour Wash</option>
               </optgroup>
-              <optgroup label="⚗ The Crucible" id="crucibleGroup">
-                <option value="crucible" id="crucibleOption">From the Crucible</option>
+              <optgroup label="⚗ The Athanor" id="athanorGroup">
+                <option value="athanor" id="athanorOption">From the Athanor</option>
               </optgroup>
             </select>
           </div>
@@ -1012,12 +1015,12 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
     <details class="card" data-tab="more" id="forgePanel">
-      <summary class="card-title" data-str="card.crucible">The Crucible</summary>
+      <summary class="card-title" data-str="card.athanor">The Athanor</summary>
       <div class="card-grid">
-        <p class="hint full" data-str="hint.crucible">A forge for new surfaces: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Crucible); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
+        <p class="hint full" data-str="hint.athanor">A surface texture node editor: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
         <input type="hidden" id="forgeGraph" value="">
         <p class="hint full forge-summary" id="forgeSummary"></p>
-        <button class="btn-major full" id="forgeOpenBtn" type="button" data-str="button.forgeOpenBtn">Open the Crucible</button>
+        <button class="btn-major full" id="forgeOpenBtn" type="button" data-str="button.forgeOpenBtn">Open the Athanor</button>
       </div>
     </details>
 
@@ -1053,9 +1056,10 @@ inside of a <~~dead person~~/trans>'s dreams.
   <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
   <div class="forge-veil" id="forgeVeil" hidden>
     <div class="forge-bar">
-      <span class="forge-title">The Crucible <small class="forge-sub">a forge for new surfaces</small></span>
+      <span class="forge-title">The Athanor <small class="forge-sub">Surface texture node editor</small></span>
       <span class="forge-status" id="forgeStatus"></span>
       <canvas class="forge-thumb" id="forgeThumb" width="96" height="96" title="What it makes"></canvas>
+      <select id="forgeStarter" class="forge-starter" title="Begin from a working graph"></select>
       <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use as Surface</button>
       <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out">−</button>
       <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in">+</button>

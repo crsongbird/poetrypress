@@ -1,18 +1,19 @@
 /**
- * forge.js — THE CRUCIBLE (the alchemist's vessel; in plain words, a forge for
- * new surfaces): a node editor for making new surfaces out of the
+ * forge.js — THE ATHANOR (the alchemist's furnace; beneath the name, "Surface
+ * texture node editor"): a node editor for making new surfaces out of the
  * pieces Vellum already has (generators, noises, the light engine, stitches,
  * blends, hues, the six knobs, the dial, the seed). The graph is made into a
- * texture by crucible.js (in the texture worker); it shows as "The Crucible"
+ * texture by athanor.js (in the texture worker); it shows as "The Athanor"
  * at the bottom of Surface Variant.
  *
  * Built on Drawflow (jerosoler/Drawflow, MIT): vanilla JS, touch-friendly,
- * small — loaded only when the Crucible is first opened. Its graph (Drawflow's
+ * small — loaded only when the Athanor is first opened. Its graph (Drawflow's
  * own export JSON) is kept in the hidden #forgeGraph field, so it is saved,
  * loaded, shared and shown in the JSON like every other setting.
  *
  * No imports of app state: the page hands in what it needs (deps).
  */
+import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter } from './athanor.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
@@ -47,6 +48,9 @@ export const FORGE_NODES = {
   math:     { cat: 'Shape', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [FORGE_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract'])] },
   mix:      { cat: 'Shape', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [FORGE_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
+  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [FORGE_R('steps', 'Steps', 5, 2, 16)] },
+  transform:{ cat: 'Shape', label: 'Tile & Rotate', ins: ['field'], outs: ['field'], params: [FORGE_R('scale', 'Scale', 100, 25, 400), FORGE_R('angle', 'Angle', 0, 0, 360)] },
+  edges:    { cat: 'Shape', label: 'Edge Detect', ins: ['field'], outs: ['edges'], params: [FORGE_R('strength', 'Strength', 50)] },
   // light and colour
   light:    { cat: 'Light & Colour', label: 'Light (heights)', ins: ['height', 'dial'], outs: ['light', 'highlight'], params: [FORGE_R('relief', 'Relief', 50), FORGE_R('gloss', 'Gloss', 30), FORGE_R('shadow', 'Shadow', 60)] },
   tint:     { cat: 'Light & Colour', label: 'Tint', ins: ['field', 'light hue', 'dark hue'], outs: ['image'], params: [] },
@@ -81,10 +85,13 @@ export function describeForge(json){
   try {
     const g = typeof json === 'string' ? JSON.parse(json || '{}') : json;
     const nodes = Object.values(((g.drawflow || {}).Home || {}).data || {});
-    if(!nodes.length) return 'Empty — open the Crucible to begin.';
+    if(!nodes.length) return 'Empty — open the Athanor to begin.';
     let wires = 0; for(const n of nodes) for(const o of Object.values(n.outputs || {})) wires += (o.connections || []).length;
     const out = nodes.find(n => n.name === 'surface');
-    return `${nodes.length} node${nodes.length === 1 ? '' : 's'}, ${wires} wire${wires === 1 ? '' : 's'}` + (out ? ` → “${(out.data || {}).name || 'Surface'}”` : ' (no Surface yet)');
+    // the work budget (athanor.js): say when a graph is drawn coarser, or not at all
+    const B = athanorBudget(g);
+    const load = B.tooMany ? ` — too many nodes (${ATHANOR_LIMITS.nodes} at most): not drawn` : B.scale > 1.05 ? ' — heavy: drawn at reduced detail' : '';
+    return `${nodes.length} node${nodes.length === 1 ? '' : 's'}, ${wires} wire${wires === 1 ? '' : 's'}` + (out ? ` → “${(out.data || {}).name || 'Surface'}”` : ' (no Surface yet)') + load;
   } catch(e){ return 'The saved graph could not be read.'; }
 }
 
@@ -105,7 +112,7 @@ function loadDrawflow(){
 }
 
 /**
- * Opens the Crucible over the page. deps: { $, textures: [ids], stitches: [ids], onSave(json) }.
+ * Opens the Athanor over the page. deps: { $, textures: [ids], stitches: [ids], onSave(json) }.
  * The graph is read from and written back to deps.$('forgeGraph').
  */
 export async function openForge(deps){
@@ -125,8 +132,16 @@ export async function openForge(deps){
     const thumb = json => { clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgeThumb'); if(c && deps.preview) try { deps.preview(json, c); } catch(e){} }, 250); };
     // saved without each node's face (it is drawn again from the parts list on
     // load): a graph stays small, and an old graph gets the newest controls
-    const slim = () => { const g = ed.export(); for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})) n.html = ''; return g; };
-    const faces = g => { for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})){ if(FORGE_NODES[n.name]){ n.html = forgeNodeHtml(n.name, lists); n.class = n.class || 'forge-' + FORGE_NODES[n.name].cat.toLowerCase().replace(/[^a-z]+/g, '-'); } } return g; };
+    // (and with its VERSION: a graph loaded keeps its own, a new one is the newest — athanor.js)
+    const slim = () => { const g = ed.export(); for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})) n.html = ''; g.v = openForge.version || ATHANOR_VERSION; return g; };
+    const faces = g => { openForge.version = athanorVersion(g);
+      for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})){ const P = FORGE_NODES[n.name]; if(!P) continue;
+        n.html = forgeNodeHtml(n.name, lists); n.class = n.class || 'forge-' + P.cat.toLowerCase().replace(/[^a-z]+/g, '-');
+        // every port the part has, wired or not (a starter, or a part that gained one, lists only its wires)
+        n.inputs = n.inputs || {}; n.outputs = n.outputs || {};
+        P.ins.forEach((_, j) => { n.inputs['input_' + (j + 1)] = n.inputs['input_' + (j + 1)] || { connections: [] }; });
+        P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; }); }
+      return g; };
     openForge.faces = faces;
     const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status) status.textContent = describeForge(json); thumb(json); };
     for(const ev of ['nodeCreated', 'nodeRemoved', 'connectionCreated', 'connectionRemoved', 'nodeMoved', 'nodeDataChanged']) ed.on(ev, save);
@@ -152,9 +167,20 @@ export async function openForge(deps){
     // the saved graph, or a first one: a Surface waiting for something to show
     let saved = null; try { saved = JSON.parse(($('forgeGraph') || {}).value || 'null'); } catch(e){}
     if(saved && saved.drawflow) ed.import(faces(saved));
-    else { add('noise', 40, 60); add('surface', 420, 90); }
+    else { openForge.version = ATHANOR_VERSION; add('noise', 40, 60); add('surface', 420, 90); }
     openForge.save = save; openForge.add = add;
-    if($('forgeClear')) $('forgeClear').addEventListener('click', () => { ed.clear(); save(); });
+    if($('forgeClear')) $('forgeClear').addEventListener('click', () => { ed.clear(); openForge.version = ATHANOR_VERSION; save(); });
+    // the starters: a working graph to take apart (replacing this one, if it is more than a start)
+    const st = $('forgeStarter');
+    if(st){
+      st.innerHTML = '<option value="">Start from…</option>' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('');
+      st.addEventListener('change', () => {
+        const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
+        const n = Object.keys(((ed.export().drawflow || {}).Home || {}).data || {}).length;
+        if(n > 2 && typeof confirm === 'function' && !confirm(`Replace this graph with “${ATHANOR_STARTERS[k].label}”?`)) return;
+        ed.clear(); ed.import(faces(g)); save();
+      });
+    }
     if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
     if($('forgeZoomIn')) $('forgeZoomIn').addEventListener('click', () => ed.zoom_in());
     if($('forgeZoomOut')) $('forgeZoomOut').addEventListener('click', () => ed.zoom_out());

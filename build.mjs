@@ -59,7 +59,7 @@ const ORDER = [
   'texSharpness.js',      // √ generators
   'texChaos.js',          // ∆ generators
   'texTouch.js',          // 🜚 generators
-  'crucible.js',           // the Crucible's evaluator: a node graph made into a texture
+  'athanor.js',           // the Athanor's evaluator: a node graph made into a texture
   'textureGenerators.js',
   'textureService.js',     // textures made in a worker, so the page stays responsive // texture tables, cache and dispatch
   'fonts.js',             // typefaces fetched on first use
@@ -73,7 +73,7 @@ const ORDER = [
   'theme.js',             // UI theme selection
   'editor.js',            // PML highlighting
   'vault.js',             // Spellcrafting and the Grimoire
-  'forge.js',             // the Crucible: a node editor for new surfaces (scaffold)
+  'forge.js',             // the Athanor: a node editor for new surfaces (scaffold)
   'appEvents.js',         // entry point, needs everything
 ];
 
@@ -112,7 +112,7 @@ html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'crucible.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');
