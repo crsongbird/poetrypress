@@ -83,28 +83,26 @@ body{
   text-transform:uppercase;
   letter-spacing:0.16em;
   color:var(--accent);
-  margin:0 0 7px 0;
-}
+  margin:0 0 7px 0; padding-bottom:3px; border-bottom:1px solid transparent; border-image:linear-gradient(90deg, var(--accent-dim), color-mix(in srgb, var(--accent-2) 70%, transparent) 38%, transparent 82%) 1; }
 
 .card-grid{ display:grid; grid-template-columns:1fr 1fr; }
 .card-grid > .full{ grid-column:1/-1; }
 .card-grid > .check-row{ grid-column:1/-1; margin-bottom:1px; }
 .card-grid > .subblock{ grid-column:1/-1; }
 
-label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:3px; letter-spacing:0.02em; }
+label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:3px; letter-spacing:0.02em}
 .field{margin:0;}
 
 select, textarea, input[type="text"], input[type="number"]{
   width:100%;
-  background:var(--bg-panel-2);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
   border:1px solid var(--line);
   color:var(--text-main);
   border-radius:2px;
   padding:5px 6px;
   font-family:inherit;
   font-size:14px;
-  outline:none;
-}
+  outline:none; box-shadow:inset 0 1px 2px var(--well); }
 select:focus, textarea:focus, input:focus{ border-color:var(--accent-dim); }
 
 textarea{
@@ -127,10 +125,10 @@ textarea{
 .hex-input{width:100%;}
 
 .check-row{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
-.check-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+.check-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
 .check-row label{ margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }
 
-.subblock{ display:none; border-left:2px solid var(--line); padding:1px 0 1px 7px; margin:1px 0 2px 2px; }
+.subblock{ display:none; border-left:none; padding:1px 0 1px 7px; margin:1px 0 2px 2px; box-shadow:inset 2px 0 0 color-mix(in srgb, var(--accent-dim) 55%, transparent); }
 .subblock.open{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
 .subblock.open > .full{ grid-column:1/-1; }
 
@@ -143,17 +141,15 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
   flex:1 1 28%; text-align:center; padding:5px 0;
   border:1px solid var(--line); border-radius:2px;
   font-size:12px; color:var(--text-dim); cursor:pointer;
-  background:var(--bg-panel-2); transition:all .12s ease;
-}
-.radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:rgba(201,168,118,0.08); }
+  background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
+.radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
 
 button.ghost{
   width:100%; padding:5px 0; border-radius:2px;
-  border:1px solid var(--accent-dim); background:transparent; color:var(--accent);
+  border:1px solid var(--accent-dim); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent); color:var(--accent);
   font-family:'EB Garamond', serif; font-size:13px; letter-spacing:0.04em;
-  cursor:pointer; transition:all .12s ease; margin-top:1px;
-}
-button.ghost:hover{ background:rgba(201,168,118,0.1); }
+  cursor:pointer; transition:all .12s ease; margin-top:1px; box-shadow:inset 0 1px 0 var(--hi); }
+button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent))}
 
 .hint{font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.45;}
 .hint code{ background:var(--bg-panel-2); padding:1px 4px; border-radius:2px; color:var(--rose); }
@@ -162,23 +158,22 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 .preset-btn{
   border:1px solid var(--line); border-radius:2px; overflow:hidden;
   cursor:pointer; background:var(--bg-panel-2); padding:0;
-  transition:transform .12s ease, border-color .12s ease;
-}
-.preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); }
+  transition:transform .12s ease, border-color .12s ease; box-shadow:0 1px 0 var(--well); }
+.preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); box-shadow:0 4px 10px -4px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 40%, transparent); }
 
 .preset-label{ display:block; font-size:8.5px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
 
 /* ---------- RIGHT RENDER PANE ---------- */
 .stage{
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
-  background: radial-gradient(circle at 50% 0%, rgba(201,168,118,0.05), transparent 55%), var(--bg-deep);
-  position:relative;
-}
+  background:radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 55%),
+                   radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--accent-2) 6%, transparent), transparent 60%), var(--bg-deep);
+  position:relative}
 .canvas-wrap{
   box-shadow:0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
   border-radius:2px; overflow:hidden; line-height:0;
 }
-#poemCanvas{ display:block; max-height:calc(100vh - 40px); max-width:94vw; height:auto; width:auto; }
+#poemCanvas{ display:block; max-height:calc(100vh - 40px); max-width:94vw; height:auto; width:auto; box-shadow:0 14px 30px -18px var(--lo), 0 0 0 1px color-mix(in srgb, var(--text-main) 6%, transparent); }
 
 .download-btn{
   position:fixed; top:18px; right:22px; z-index:50;
@@ -439,7 +434,7 @@ body.is-mobile .drag-handle{ height:11px; }
 /* tighter bar */
 body.is-mobile .tabbar{ padding:0 2px; }
 body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
-:root{ --tabbar-h: 50px; }
+:root{ --tabbar-h: 50px; --accent-2:#a98fe8; --hi:rgba(255,255,255,.04); --lo:rgba(0,0,0,.5); --well:rgba(0,0,0,.35); }
 
 /* ---------- PML help ---------- */
 .pml-help h4{
@@ -567,11 +562,18 @@ body.is-mobile .light-pad{ gap:4px; }
 /* a disabled tool must look inert, not merely quiet */
 .field.tool-off{ opacity:.34; pointer-events:none; }
 /* the seed, in words (the number small beneath it) */
-#textureSeedWords, body.is-mobile #textureSeedWords{ width:100%; resize:none; font:inherit; font-size:.86em; line-height:1.22; font-style:italic; padding:6px 8px;
-  height:calc(3.7em + 14px) !important; min-height:0 !important; max-height:none; white-space:normal !important; overflow-wrap:anywhere; overflow:hidden;
-  background:var(--bg-input, var(--bg-panel-2)); color:var(--text-main); border:1px solid var(--line); border-radius:6px; box-sizing:border-box; }
-#seedRow .row{ align-items:flex-start; }
-#seedRow .seed-moon{ align-self:flex-start; height:auto; }
+/* one line, the whole width; when the words run past it, a hair-thin
+   scroller of the theme's own colour along the field's foot (no native bar) */
+.seed-field{ position:relative; width:100%; }
+#textureSeedWords{ width:100%; font-style:italic; white-space:nowrap; overflow-x:auto; scrollbar-width:none; box-sizing:border-box; }
+#textureSeedWords::-webkit-scrollbar{ display:none; }
+.seed-scroll{ position:absolute; left:1px; right:1px; bottom:1px; height:2px; display:none; touch-action:none; cursor:ew-resize; }
+.seed-scroll.on{ display:block; }
+.seed-scroll .seed-thumb{ position:absolute; top:0; bottom:0; background:var(--accent); opacity:.75; }
+.seed-scroll:hover, .seed-scroll.dragging{ height:4px; }
+#seedRow .row{ align-items:center; }
+/* the seed is always the LAST thing in the tools, across their whole width */
+.tool-row > #seedRow, body.is-mobile .tool-row > #seedRow{ grid-column:1 / -1 !important; grid-row:auto !important; order:99; padding-left:0; padding-right:0; border-left:none; }
 .seed-number{ display:block; font-size:.75em; color:var(--text-dim); margin-top:2px; font-variant-numeric:tabular-nums; }
 /* a hue the texture doesn't use is not shown at all, like an unused slider */
 .field.tool-hidden, body.is-mobile .tool-row > .field.tool-hidden{ display:none !important; }
@@ -1198,7 +1200,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#161313;
   --line:#33292b;
   --text-main:#E5D3D5;
-  --text-dim:#a3979a;         /* 6C5E5F lifted: as body text it would fail contrast */
+  --text-dim:#b4a7aa;         /* 6C5E5F lifted: as body text it would fail contrast */
   --accent:#e2899f;           /* a little redder: rose, not candy */
   --accent-dim:#c26c82;
   --rose:#C68892;
@@ -1206,7 +1208,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --on-accent:#161414;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
   --ui-selected:#ff6b92;      /* redder with the accent, still fully saturated */
-}
+; --accent-2:#9cc4ad; --hi:rgba(255,236,240,.045); }
 
 /* Aether — the original. */
 :root[data-theme="aether"]{
@@ -1216,15 +1218,14 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#1b1824;
   --line:#2c283a;
   --text-main:#e9e4f2;
-  --text-dim:#9a92ae;
+  --text-dim:#aba3be;
   --accent:#c9a876;
   --accent-dim:#8a7657;
   --rose:#b98a8a;
   --ui-violet:#C9B8FF;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><g fill='white' opacity='0.5'><circle cx='12' cy='20' r='1'/><circle cx='58' cy='9' r='.8'/><circle cx='77' cy='52' r='1.1'/><circle cx='33' cy='66' r='.9'/><circle cx='68' cy='80' r='.7'/></g></svg>");
   --on-accent:#1a1610;
-  --ui-selected:#a97cff;
-}
+  --ui-selected:#a97cff; --accent-2:#a98fe8; --hi:rgba(240,230,255,.05); }
 
 /* Fathom — deep water. */
 :root[data-theme="fathom"]{
@@ -1234,15 +1235,14 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#101923;
   --line:#22303f;
   --text-main:#dfe8f2;
-  --text-dim:#8397aa;
+  --text-dim:#97abbe;
   --accent:#6fc2b6;
   --accent-dim:#4c8a82;
   --rose:#a98a9a;
   --ui-violet:#7FB5D4;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><g stroke='white' stroke-width='1' fill='none' opacity='0.5'><path d='M0 30 Q35 20 70 30 T140 30'/><path d='M0 78 Q35 68 70 78 T140 78'/><path d='M0 124 Q35 114 70 124 T140 124'/></g></svg>");
   --on-accent:#06201c;
-  --ui-selected:#3fc4ff;
-}
+  --ui-selected:#3fc4ff; --accent-2:#e8956d; --hi:rgba(220,240,255,.045); }
 
 /* Vellum — light. It exists. */
 :root[data-theme="vellum"]{
@@ -1252,15 +1252,14 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#e7ddd0;
   --line:#c2b2a1;
   --text-main:#2b2620;
-  --text-dim:#6b5e58;
+  --text-dim:#5c504a;
   --accent:#74506a;
   --accent-dim:#a58799;
   --rose:#a4646a;
   --ui-violet:#6C5AA6;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='p'><feTurbulence baseFrequency='0.7' numOctaves='2'/></filter><rect width='100' height='100' filter='url(%23p)' opacity='0.5'/></svg>");
   --on-accent:#fbf4ee;
-  --ui-selected:#8f2f6c;
-}
+  --ui-selected:#8f2f6c; --accent-2:#5f7448; --hi:rgba(255,255,255,.55); --lo:rgba(90,66,40,.22); --well:rgba(90,66,40,.14); }
 
 /* the theme's surface, faint, behind everything */
 body::before{
@@ -1280,7 +1279,7 @@ body.is-mobile .tab-btn svg{ color:color-mix(in srgb, var(--ui-violet) 72%, var(
 body.is-mobile .tab-btn.active svg{ }
 
 /* ---------- a little less padding throughout ---------- */
-.card{ padding:9px 10px; }
+.card{ padding:9px 10px; background:linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 86%, var(--text-main) 3%), var(--bg-card) 42%); box-shadow:inset 0 1px 0 var(--hi), 0 1px 0 color-mix(in srgb, var(--lo) 50%, transparent), 0 10px 18px -16px var(--lo); position:relative; }
 .card-grid{ gap:7px; }
 body.is-mobile .card{ padding:7px 8px; margin-bottom:7px; }
 body.is-mobile .card-grid{ gap:5px; }
@@ -1297,8 +1296,7 @@ body.is-mobile .tabbar{
   background:linear-gradient(180deg,
     color-mix(in srgb, var(--bg-panel) 94%, transparent),
     color-mix(in srgb, var(--bg-deep) 96%, transparent));
-  border-top:1px solid var(--line);
-}
+  border-top:1px solid var(--line); box-shadow:0 -1px 0 var(--hi), 0 -8px 16px -12px var(--lo); }
 body.is-mobile .tab-btn{ color:color-mix(in srgb, var(--text-dim) 78%, transparent); }
 body.is-mobile .tab-btn.active{ }
 body.is-mobile .app-header{
@@ -1451,7 +1449,7 @@ body.is-mobile #clr-picker{
    ============================================================ */
 
 /* the selected tab is the most saturated thing on screen, in every theme */
-body.is-mobile .tab-btn.active svg{ color:var(--ui-selected, var(--ui-violet)); }
+body.is-mobile .tab-btn.active svg{ color:var(--ui-selected, var(--ui-violet)); filter:drop-shadow(0 0 4px color-mix(in srgb, var(--accent-2) 45%, transparent)); }
 body.is-mobile .tab-btn.active{ color:var(--ui-selected, var(--text-main)); }
 
 /* padding: none above the controls (the drag handle already separates them),
@@ -1552,8 +1550,8 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 .ld-handle{ fill:var(--accent); }
 .ld-spike-body{ fill:var(--accent); }
 .ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
-.ld-btn{ position:absolute; border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; }
-.ld-btn:hover{ color:var(--text-main); border-color:var(--accent-dim); }
+.ld-btn{ position:absolute; border:1px solid var(--border, #444); background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 85%, var(--text-main) 5%), var(--bg-panel-2)); color:var(--text-dim); border-radius:8px; font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; box-shadow:inset 0 1px 0 var(--hi), 0 1px 2px var(--well); }
+.ld-btn:hover{ color:var(--accent-2); border-color:var(--accent-2)}
 .ld-reset{ right:0; bottom:0; }
 .ld-centre-btn{ left:0; bottom:0; }
 .ld-random{ right:0; top:0; }
@@ -1676,8 +1674,58 @@ body.is-mobile .tool-row .light-dial{ margin:0 auto; }
 body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padding-left:0; }
 
 /* the preset grid's group headings (Simple, Whimsy, Sharpness, Chaos, Touch) */
-.preset-group-head{ grid-column:1 / -1; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:10px 0 2px; opacity:.85; }
+.preset-group-head{ grid-column:1 / -1; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); margin:10px 0 2px; opacity:.85; display:flex; align-items:center; gap:6px; }
 .preset-group-head:first-child{ margin-top:0; }
+
+/* ============================================================
+   POLISH — each theme is an element (Ruby):
+     Rose = Whimsy ♡ · Aether = Sharpness √ · Fathom = Chaos ∆ · Vellum = Touch 🜚
+   Every theme gains a COMPLEMENTARY second accent (--accent-2), so it is no
+   longer one hue on grey; surfaces get a slight depth (a hairline of light
+   on top, a soft shadow below, a gentle top-to-bottom gradient); text is
+   a step more legible. Square corners on everything; the spacing stays
+   compact; nothing flashy.
+   ============================================================ */   /* rosewood, and sage across the wheel */   /* gold, and the violet it always had: sharp */  /* deep water, and coral: chaos in the shallows */   /* paper and plum, and moss */
+
+/* square, everywhere (circles stay circles: they have no corners) */
+.card, details.card, summary, button, .radio-btn, .preset-btn, .tab-btn, .ld-btn, .seed-moon, .snap-btn,
+select, textarea, input[type="text"], input[type="number"], .subblock, .eso-drawer, .hint code,
+.clr-field button, .clr-picker, .clr-swatches button, .download-btn, .modal, .modal-box, .toast,
+body:not(.is-mobile) .tab-btn, .preset-group-head{ border-radius:0 !important; }
+
+/* surfaces: a little depth */
+
+/* fields sit a hair below the surface; focus is the second accent */
+:root[data-theme="vellum"] select, :root[data-theme="vellum"] textarea, :root[data-theme="vellum"] input[type="text"], :root[data-theme="vellum"] input[type="number"]{
+  background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 92%, #5a4128 8%), var(--bg-panel-2) 55%);
+}
+select:focus, textarea:focus, input[type="text"]:focus, input[type="number"]:focus{
+  border-color:var(--accent-2); box-shadow:inset 0 1px 2px var(--well), 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent);
+}
+
+/* choices: the chosen one lit from within, both accents */
+.radio-btn:hover{ color:var(--text-main); border-color:color-mix(in srgb, var(--accent-dim) 60%, var(--line)); }
+
+/* the sub-blocks hang from a rule that fades from one accent into the other */
+
+/* presets: tiles that lift, group heads in the second accent */
+.preset-group-head::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg, color-mix(in srgb, var(--accent-2) 45%, transparent), transparent); }
+
+/* the navigation: the chosen tab glows faintly in both accents */
+body:not(.is-mobile) .tab-btn{ box-shadow:inset 0 1px 0 var(--hi); }
+body:not(.is-mobile) .tab-btn.active{ background:linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 82%, var(--accent-2))); box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px -3px color-mix(in srgb, var(--accent) 60%, transparent); }
+.app-title, .app-header h1{ text-shadow:0 1px 0 var(--lo); }
+
+/* the stage: a faint pool of the second accent behind the image */
+
+/* small marks of the second accent: the locks when open, the knob readouts */
+.range-val, .angle-val{ color:color-mix(in srgb, var(--accent-2) 55%, var(--text-dim)); }
+/* each card carries a thin edge that runs from one accent into the other */
+.card::before{ content:""; position:absolute; left:-1px; top:-1px; bottom:-1px; width:2px; pointer-events:none;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 75%, transparent), color-mix(in srgb, var(--accent-2) 55%, transparent) 70%, transparent); opacity:.8; }
+/* the disclosure marks in the second accent */
+summary.card-title::marker, summary.card-title::-webkit-details-marker{ color:var(--accent-2); }
+body.is-mobile summary.card-title::after, .subcard > summary::after{ color:var(--accent-2); opacity:.8; }
 
 </style>
 
@@ -1699,7 +1747,7 @@ body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padd
 /** What the app opens with. Must match a preset's `name` exactly; an unknown
  *  name falls back to the first preset rather than failing. */
 const DEFAULTS = {
-  preset: 'Lotus Bloom',
+  preset: 'Dusk Letter',
 };
 
 /** The preview pane and the divider that sizes it. */
@@ -2923,6 +2971,20 @@ function obliqueRender(F, H, RGB, opts = {}){
   }
   return out;
 }
+/** A smooth field over a camera frame's ground patch (obliqueFrame), sampled
+ *  in PAGE units — u = 0..1 across the page as seen straight down — so a
+ *  texture's features keep their size however large the tilted patch is.
+ *  Bilinear between samples every `step` cells. */
+function fieldOn(F, step, fn){
+  const GW = F.GW, GH = F.GH, ww = F.ww, wh = F.wh, ox = F.flat ? 0 : F.gcx - ww/2, oz = F.flat ? 0 : F.gcz - wh/2;
+  const cw = Math.ceil(GW/step) + 2, ch = Math.ceil(GH/step) + 2, g = new Float32Array(cw*ch);
+  for(let j = 0; j < ch; j++) for(let i = 0; i < cw; i++) g[j*cw + i] = fn((i*step - ox)/ww, (j*step - oz)/wh);
+  const out = new Float32Array(GW*GH);
+  for(let y = 0; y < GH; y++){ const fy = y/step, j = Math.floor(fy), ty = fy - j;
+    for(let x = 0; x < GW; x++){ const fx = x/step, i = Math.floor(fx), tx = fx - i, k = j*cw + i;
+      out[y*GW + x] = (g[k]*(1-tx) + g[k+1]*tx)*(1-ty) + (g[k+cw]*(1-tx) + g[k+cw+1]*tx)*ty; } }
+  return out;
+}
 
 
 /* ==== texWhimsy.js ==== */
@@ -4086,8 +4148,11 @@ function genMoon(w,h,amt,zoom,form,night){
 // Ridge behind ridge behind ridge,
 // each one paler than the last —
 // distance, made of air.
-function genLandscape(w,h,amt,zoom,form){
+function genLandscape(w,h,amt,zoom,form,tilt){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // TILT: the camera's pitch — 0 as it always was; tipped down from higher, the
+  // horizon rises, the near ground grows (perspective) and the ridges flatten
+  const pitch=Math.max(0, Math.min(1, tilt || 0));
   // WETNESS: 0 is the dry, worked painting; wetter, it becomes watercolour —
   // edges bleed into each other and, very wet, the paint blooms (backruns:
   // pale patches with a dark, frilled rim where wet met drying paint)
@@ -4123,7 +4188,7 @@ function genLandscape(w,h,amt,zoom,form){
   const kind=Object.keys(BIOMES)[Math.floor(Math.random()*Object.keys(BIOMES).length)];
   const B=BIOMES[kind];
   const bands=Math.max(2, Math.round((B.bands[0]+Math.random()*(B.bands[1]-B.bands[0]))*amt));
-  const horizon=h*(B.horizon+(Math.random()-0.5)*0.08);
+  const horizon=Math.max(h*0.08, h*(B.horizon+(Math.random()-0.5)*0.08) - pitch*h*0.3);
 
   // the sky: a soft wash, and a few long smears of cloud
   const sky=ctx.createLinearGradient(0,0,0,horizon);
@@ -4175,8 +4240,8 @@ function genLandscape(w,h,amt,zoom,form){
   let lakeTop=null;
   for(let i=0;i<bands;i++){
     const t=bands===1?1:i/(bands-1);                    // 0 far .. 1 near
-    let base=horizon+(h-horizon)*Math.pow(t,1.35)*0.92;
-    let amp=unit*B.amp*(0.35+t*0.9);
+    let base=horizon+(h-horizon)*Math.pow(t,1.35+pitch*0.9)*0.92;
+    let amp=unit*B.amp*(0.35+t*0.9)*(1-0.4*pitch);
     // in front of a lake, the near shore sits low, so the water shows
     if(lakeTop!=null){ const lk=Math.floor((bands-1)/2), u=(i-lk)/Math.max(1, bands-1-lk); base=lakeTop+(h-lakeTop)*(0.5+0.45*u); amp*=0.45; }
     const tone=B.pale ? Math.round(205-t*95) : Math.round(178-t*140);   // pale far, dark near
@@ -4884,80 +4949,108 @@ function genSilverpointHatch(w,h,amt,zoom,angle,form){
 // it forgets it was ever
 // heavier than light.
 /**
- * Metal Leaf — gilding, as a gilder lays it: square sheets of leaf in
- * overlapping rows, each a little askew, crinkled where it was pressed down,
- * torn at its edges, split here and there to show the ground beneath. Lit by
- * the dial (lightHeights): metal's highlight takes the metal's own colour, so
- * the crinkles flash as the light moves, and every overlap is a fine ridge.
- * LEAF SIZE · COVERAGE (gaps and tears → laid edge to edge)
+ * Scattered Polygons (the original Metal Leaf) — flakes of leaf, like metal
+ * shavings: translucent polygons in the leaf's colour, each its own
+ * brightness, a dark seam where one overlaps the next. The blend modes stack
+ * them. At 0 on the three knobs below it draws EXACTLY as it always has
+ * (flat; their extra randomness is only drawn when a knob is above 0):
+ *   SHAPE    0: the original five-to-eight-sided flakes; higher, more of
+ *            them become shards, slivers, squares of leaf and curled shavings
+ *   SHEEN    0: flat; higher, each flake tilts to the dial's light — brighter
+ *            or darker by how it faces it, a soft band of reflection across it
+ *            (light caught inside the metal) and a highlight on its near edge
+ *   GLITTER  soft, speckled, noisy highlights scattered over the flakes
+ * LEAF SIZE · COVERAGE · SHAPE · SHEEN · GLITTER
  */
-function genMetalLeaf(w,h,amt,zoom,light,tint){
+function genMetalLeaf(w,h,amt,zoom,light,tint,form,sheenK,glitterK){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const shapeV = Math.max(0, Math.min(1, form || 0)), sheen = Math.max(0, Math.min(1, sheenK || 0)), glitter = Math.max(0, Math.min(1, glitterK || 0));
   const leaf = parseHex(tint || '#D9B45B');
-  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh), N = ww*wh;
-  const S = unit*0.16*zoom, cover = Math.min(1, 0.45 + 0.35*amt);
-  // the sheets, row by row (each overlaps the one before it), askew, some missing
-  const sheets = [];
-  for(let y = -S*0.5; y < wh + S*0.5; y += S*0.9){
-    const shift = (Math.random() - 0.5)*S*0.5;
-    for(let x = -S*0.5 + shift; x < ww + S*0.5; x += S*0.9){
-      if(Math.random() > cover) continue;
-      const a = (Math.random() - 0.5)*0.14, wa = Math.random()*Math.PI;
-      const ta = Math.random()*Math.PI*2, tm = Math.random()*0.45;
-      sheets.push({ x: x + (Math.random() - 0.5)*S*0.12, y: y + (Math.random() - 0.5)*S*0.12, ca: Math.cos(a), sa: Math.sin(a),
-        wx: Math.cos(wa), wy: Math.sin(wa), lift: (Math.random() - 0.5)*0.25, ph: Math.random()*50, tx: Math.cos(ta)*tm, ty: Math.sin(ta)*tm });
+  const c = document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0,0,w,h);
+  const lv = lightVec(light == null ? 315 : light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm;   // toward the light
+  // a tone of the leaf: k > 1 lifts it toward white (keeping its hue), k < 1 darkens it
+  const tone = (k, a) => { const f = v => Math.round(k > 1 ? v + (255 - v)*Math.min(1, k - 1) : v*k); return `rgba(${f(leaf.r)},${f(leaf.g)},${f(leaf.b)},${a})`; };
+
+  const unit = Math.max(w,h);
+  const flakes = Math.max(10, Math.round((120 + Math.random()*90) * amt));
+
+  for(let i=0;i<flakes;i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const r = unit*(0.015 + Math.random()*0.055) * zoom;
+    const sides = 5 + Math.floor(Math.random()*4);
+    const rot = Math.random()*Math.PI*2;
+
+    const pts = [];
+    for(let s=0;s<sides;s++){
+      const a = rot + (s/sides)*Math.PI*2;
+      const rr = r*(0.55 + Math.random()*0.7);
+      pts.push([cx+Math.cos(a)*rr, cy+Math.sin(a)*rr]);
+    }
+    // SHAPE: some flakes become other things (only drawn when the knob is up)
+    let curl = null;
+    if(shapeV > 0 && Math.random() < shapeV){
+      const kind = Math.random(), ca = Math.cos(rot), sa = Math.sin(rot), P = (u, v) => [cx + u*ca - v*sa, cy + u*sa + v*ca];
+      pts.length = 0;
+      if(kind < 0.3){ const n = 3 + Math.floor(Math.random()*2); for(let s=0;s<n;s++){ const a = (s/n)*Math.PI*2 + (Math.random()-0.5)*0.9; pts.push(P(Math.cos(a)*r*(1.3 + Math.random()*0.5), Math.sin(a)*r*0.45)); } }   // a shard
+      else if(kind < 0.55){ const L = r*(1.8 + Math.random()*1.4), t = r*(0.08 + Math.random()*0.12); pts.push(P(-L, -t*0.5), P(L*0.9, -t), P(L, t*0.3), P(-L*0.95, t)); }   // a sliver
+      else if(kind < 0.8){ const sq = r*(0.8 + Math.random()*0.3); for(const [u, v] of [[-1,-1],[1,-1],[1,1],[-1,1]]) pts.push(P(u*sq*(1 + (Math.random()-0.5)*0.12), v*sq*(1 + (Math.random()-0.5)*0.12))); }   // a square of leaf
+      else { curl = { R: r*(0.9 + Math.random()*0.8), a0: rot, sweep: Math.PI*(0.6 + Math.random()*0.9), wd: r*(0.15 + Math.random()*0.2) }; }   // a curled shaving
+    }
+
+    ctx.beginPath();
+    if(curl){ const { R, a0, sweep, wd } = curl; ctx.arc(cx, cy, R, a0, a0 + sweep); ctx.arc(cx, cy, Math.max(1, R - wd), a0 + sweep, a0, true); }
+    else { ctx.moveTo(pts[0][0], pts[0][1]); for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]); }
+    ctx.closePath();
+
+    // each flake keeps its own brightness, carried in the leaf's colour
+    let lift = (178 + Math.floor(Math.random()*66)) / 210;
+    const alpha = 0.16 + Math.random()*0.4;
+    // SHEEN: the flake's tilt to the light
+    let facing = 0;
+    if(sheen > 0){ const ta = Math.random()*Math.PI*2, tm = 0.3 + Math.random()*0.7; facing = (Math.cos(ta)*TX + Math.sin(ta)*TY)*tm; if(facing < 0) lift *= 1 + sheen*0.55*facing; }
+    ctx.globalAlpha = alpha;
+    if(facing > 0){ const m = sheen*0.5*facing, ch = v => Math.round(Math.min(255, v*lift) + (255 - Math.min(255, v*lift))*m);   // turned to the light: toward white, not a hue
+      ctx.fillStyle = `rgb(${ch(leaf.r)},${ch(leaf.g)},${ch(leaf.b)})`; }
+    else ctx.fillStyle = `rgb(${Math.min(255, Math.round(leaf.r*lift))},${Math.min(255, Math.round(leaf.g*lift))},${Math.min(255, Math.round(leaf.b*lift))})`;
+    ctx.fill();
+    if(sheen > 0){
+      ctx.save(); ctx.clip();
+      // light caught inside the metal: a soft band across the flake, along the light
+      const L = r*1.4, band = ctx.createLinearGradient(cx + TX*L, cy + TY*L, cx - TX*L, cy - TY*L), off = 0.3 + 0.4*Math.random();
+      band.addColorStop(0, tone(1.5, 0)); band.addColorStop(Math.max(0, off - 0.18), tone(1.5, 0)); band.addColorStop(off, tone(1.7, 0.55*sheen*(0.5 + 0.5*Math.max(0, facing))));
+      band.addColorStop(Math.min(1, off + 0.18), tone(1.5, 0)); band.addColorStop(1, tone(0.5, 0.25*sheen));
+      ctx.globalAlpha = Math.min(1, alpha*1.6); ctx.fillStyle = band; ctx.fillRect(cx - L*1.5, cy - L*1.5, L*3, L*3);
+      // a highlight where its near edge meets the light
+      if(facing > 0){ const hx = cx + TX*r*0.55, hy = cy + TY*r*0.55, sp = ctx.createRadialGradient(hx, hy, 0, hx, hy, r*0.7);
+        sp.addColorStop(0, `rgba(255,252,240,${(0.7*sheen*facing*facing).toFixed(3)})`); sp.addColorStop(1, 'rgba(255,252,240,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = sp; ctx.fillRect(hx - r, hy - r, r*2, r*2); }
+      ctx.restore();
+    }
+
+    // the seam where one leaf overlaps the next
+    ctx.globalAlpha = 0.10 + Math.random()*0.25;
+    ctx.strokeStyle = 'rgb(48,48,48)';
+    ctx.lineWidth = Math.max(cpx(0.5), unit*0.0009);
+    ctx.stroke();
+
+    // GLITTER: soft speckled highlights over the flake, noisy
+    if(glitter > 0){
+      const n = Math.round(glitter*(4 + r*r/(unit*unit)*9000));
+      ctx.save(); ctx.clip();
+      for(let k=0;k<n;k++){ const gx = cx + (Math.random() - 0.5)*r*2, gy = cy + (Math.random() - 0.5)*r*2, gr = cpx(0.6 + Math.random()*Math.random()*3.2);
+        const gl = Math.random()**3*(0.35 + 0.65*Math.max(0, 0.5 + facing));
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr*2.4); g.addColorStop(0, `rgba(255,250,235,${(gl*0.9).toFixed(3)})`); g.addColorStop(1, 'rgba(255,250,235,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(gx - gr*2.4, gy - gr*2.4, gr*4.8, gr*4.8); }
+      ctx.restore();
     }
   }
-  const tear = makeNoiseGrid(48, 48), crk = makeNoiseGrid(96, 96), split = makeNoiseGrid(20, 20);
-  const H = new Float32Array(N), TOP = new Int32Array(N).fill(-1), SEAM = new Float32Array(N), SHADE = new Float32Array(N);
-  const cs = S*1.4, gx = Math.ceil(ww/cs) + 3, gy = Math.ceil(wh/cs) + 3, bins = Array.from({ length: gx*gy }, () => []);
-  sheets.forEach((s2, k) => { const bi = Math.floor(s2.x/cs) + 1, bj = Math.floor(s2.y/cs) + 1;
-    for(let j = bj - 1; j <= bj + 1; j++) for(let i = bi - 1; i <= bi + 1; i++) if(i >= 0 && j >= 0 && i < gx && j < gy) bins[j*gx + i].push(k); });
-  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-    const i = y*ww + x, list = bins[(Math.floor(y/cs) + 1)*gx + Math.floor(x/cs) + 1] || [];
-    let top = -1, under = 0, edgeD = 1e9;
-    for(const k of list){ const s2 = sheets[k], dx = x - s2.x, dy = y - s2.y, u = dx*s2.ca + dy*s2.sa, v = -dx*s2.sa + dy*s2.ca;
-      // a torn edge: the square's border wanders
-      const rag = (sampleNoiseGrid(tear, 48, 48, x/ww*47 + k*3.1, y/wh*47) - 0.5)*S*0.08;
-      const e = Math.min(S/2 - Math.abs(u), S/2 - Math.abs(v)) + rag;
-      if(e > 0){ if(top >= 0) under++; if(k > top){ top = k; edgeD = e; } } }
-    // splits: the leaf parts here and there, showing the ground
-    if(top >= 0 && sampleNoiseGrid(split, 20, 20, x/ww*19, y/wh*19) > 0.5 + 0.5*cover && sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) > 0.72) top = -1;
-    TOP[i] = top;
-    if(top < 0){ H[i] = 0; continue; }
-    const s2 = sheets[top];
-    // crinkles: fine wrinkles, mostly one way per sheet (how it was pressed)
-    const cu = x*s2.wx + y*s2.wy, cv2 = -x*s2.wy + y*s2.wx;
-    const wr = Math.sin(cu*0.45/Math.max(0.5, unit*0.004) + s2.ph + 2.4*sampleNoiseGrid(crk, 96, 96, cv2/ww*30, cu/ww*8))*0.5
-             + (sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) - 0.5)*0.9;
-    H[i] = unit*0.004*(1 + under*0.6) + wr*unit*0.0012 + s2.lift*unit*0.002;
-    SEAM[i] = Math.exp(-edgeD/(unit*0.0025))*(under > 0 ? 1 : 0.6);
-    SHADE[i] = s2.lift;
-  }
-  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.92, shadow: 0.45, ao: 0.35, ambient: 0.3 });
-  // metal MIRRORS: its brightness is what its surface faces — each sheet's own slight tilt and every crinkle's slope
-  const lv = lightVec(light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm, gs = 1/Math.max(0.5, unit*0.0012);
-  const fl = L.flat || 1, small = document.createElement('canvas'); small.width = ww; small.height = wh;
-  const sx = small.getContext('2d', CPU), img = sx.createImageData(ww, wh), d = img.data;
-  for(let i = 0; i < N; i++){
-    const q = i*4, k = litK(L, i, 0.3, null, 0)/fl;
-    if(TOP[i] < 0){ const g = 128*Math.min(1.05, 0.75 + 0.25*k); d[q] = d[q+1] = d[q+2] = g; d[q+3] = 255; continue; }   // the ground, in the leaf's shade
-    // metal: a darker body, and a highlight IN the metal's colour (a little whiter at its peak)
-    const s2 = sheets[TOP[i]], x = i % ww, y = (i/ww)|0;
-    const gX = (H[y*ww + Math.min(ww-1, x+1)] - H[y*ww + Math.max(0, x-1)])*0.5*gs, gY = (H[Math.min(wh-1, y+1)*ww + x] - H[Math.max(0, y-1)*ww + x])*0.5*gs;
-    const env = Math.max(0, Math.min(1.25, 0.6 + 1.0*((s2.tx - gX*0.35)*TX + (s2.ty - gY*0.35)*TY)));
-    const sp = Math.min(1, L.spec[i] + Math.max(0, env - 0.95)*1.5), body = (0.3 + 0.62*env)*(0.65 + 0.35*k) - SEAM[i]*0.25;
-    d[q]   = clampByteMl(leaf.r*body + leaf.r*sp*1.6 + 255*sp*sp*0.5);
-    d[q+1] = clampByteMl(leaf.g*body + leaf.g*sp*1.6 + 255*sp*sp*0.5);
-    d[q+2] = clampByteMl(leaf.b*body + leaf.b*sp*1.6 + 255*sp*sp*0.5);
-    d[q+3] = 255;
-  }
-  sx.putImageData(img, 0, 0);
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const ctx = c.getContext('2d', CPU); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, 0, 0, w, h);
+  ctx.globalAlpha = 1;
   return c;
 }
-const clampByteMl = v => v < 0 ? 0 : v > 255 ? 255 : v;
 
 // Most windows are dark.
 // The few that are lit are why
@@ -7210,41 +7303,47 @@ function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
  * The stone takes the light and casts shadow; DAMPNESS darkens and glosses
  * the stone and deepens the moss.  STONE SCALE · MOSS · DAMPNESS
  */
-function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
+function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
   amt=(amt==null?0.45:amt); zoom=(zoom==null?1:zoom);
-  const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form));
+  const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form)), tl=Math.max(0, Math.min(1, tilt || 0));
   const stone=parseHex(tint1||'#8A8579'), moss=parseHex(tint2||'#5F7E34');
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  // TILT: the camera (texCore obliqueFrame): 0 straight down, as it always was
+  const div=tl > 0.001 ? canonDiv(3) : canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.07), GW=F.GW, GH=F.GH, N=GW*GH;
+  const ox=F.flat ? 0 : F.gcx - ww/2, oz=F.flat ? 0 : F.gcz - wh/2;
   const rock=fbmSampler(2.2/zoom, 5), ridge=fbmSampler(5/zoom, 3), growth=fbmSampler(4, 3), fibre=fbmSampler(48, 2);
-  const H=new Float32Array(ww*wh), M=new Float32Array(ww*wh), base=new Float32Array(ww*wh);
+  const H=new Float32Array(N), M=new Float32Array(N);
   const st=Math.max(2, Math.round(unit/220));
-  base.set(smoothField(ww,wh,st,(u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
-    return (rock(u,v)*0.75 + r*0.35)*unit*0.06; }));
-  const GR=smoothField(ww,wh,st*2,(u,v)=>growth(u,v));
-  const TIP=GL ? new Float32Array(ww*wh) : null;
+  const base=fieldOn(F, st, (u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
+    return (rock(u,v)*0.75 + r*0.35)*unit*0.06; });
+  const GR=fieldOn(F, st*2, (u,v)=>growth(u,v));
+  const TIP=GL ? new Float32Array(N) : null;
   // moss gathers where the stone dips below its neighbourhood, and where it is flat
-  const at=(x,y)=>base[Math.min(wh-1,Math.max(0,y))*ww+Math.min(ww-1,Math.max(0,x))];
+  const at=(x,y)=>base[Math.min(GH-1,Math.max(0,y))*GW+Math.min(GW-1,Math.max(0,x))];
   const R=Math.max(2, Math.round(unit*0.02));
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, hollow=(at(x-R,y)+at(x+R,y)+at(x,y-R)+at(x,y+R))/4 - base[i];
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){
+    const i=y*GW+x, hollow=(at(x-R,y)+at(x+R,y)+at(x,y-R)+at(x,y+R))/4 - base[i];
     const slope=Math.hypot(at(x+1,y)-at(x-1,y), at(x,y+1)-at(x,y-1));
     const want=GR[i] + hollow*0.12 - slope*0.08 + (amt - 0.5)*0.9;
     const m=Math.max(0, Math.min(1, (want - 0.42)*5));
     M[i]=m;
-    const fb=fibre(x/ww,y/wh);
+    const fb=fibre((x-ox)/ww,(y-oz)/wh);
     H[i]=base[i] + m*(1.5 + 2.2*fb);                              // soft raised clumps, fibrous on top
     if(TIP) TIP[i]=m*Math.max(0, fb-0.45)*1.8;                    // the tips, for the glow
   }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
-  const sd=1 - damp*0.35, mg=1 + damp*0.25;
-  return paintLit(w,h,div,ww,wh, i => {
+  const L=lightHeights(H, GW, GH, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
+  const sd=1 - damp*0.35, mg=1 + damp*0.25, RGB=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
     const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1-m);   // moss is matte; only wet stone shines
     const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     // GLOW: bioluminescent moss, brightest at the tips
     if(TIP){ const e=255*Math.min(1, TIP[i])*0.9; mc[0]+=GL.r*e; mc[1]+=GL.g*e; mc[2]+=GL.b*e; }
-    return [clamp255(sc[0]*(1-m) + mc[0]*m), clamp255(sc[1]*(1-m) + mc[1]*m), clamp255(sc[2]*(1-m) + mc[2]*m)];
-  });
+    RGB[i*3]=clamp255(sc[0]*(1-m) + mc[0]*m); RGB[i*3+1]=clamp255(sc[1]*(1-m) + mc[1]*m); RGB[i*3+2]=clamp255(sc[2]*(1-m) + mc[2]*m);
+  }
+  // tipped: the far stone recedes into a damp grey-green haze
+  const OUT=F.flat ? RGB : obliqueRender(F, H, RGB, { fog:[stone.r*0.55+moss.r*0.2+60, stone.g*0.55+moss.g*0.2+62, stone.b*0.55+moss.b*0.2+60], fogK: 0.25 + 0.35*tl });
+  return paintLit(w,h,div,ww,wh, i => [OUT[i*3], OUT[i*3+1], OUT[i*3+2]]);
 }
 
 /**
@@ -7757,7 +7856,13 @@ const TEXTURE_PARAMS = {
                   {key:'form',  label:'Grain',           min:0,  max:100, def:33,  unit:'', ticks:[0,33,66,100],
                    names:['Silver','Film','Paper','Digital']}],
   metalleaf:     [{key:'zoom',  label:'Leaf Size',       min:60, max:360, def:100, unit:'%'},
-                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165}],
+                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165},
+                  // the original flakes (0) → shards, slivers, squares of leaf, curled shavings
+                  {key:'form',  label:'Shape',           min:0,  max:100, def:0,   unit:''},
+                  // flat, as it always was (0) → each flake tilting to the dial's light, a band of reflection inside
+                  {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
+                  // soft speckled, noisy highlights over the flakes (0: none)
+                  {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
   flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
                   {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:18},
                   // the third, unusual knob: which flower. 50 is the lotus
@@ -7848,11 +7953,15 @@ const TEXTURE_PARAMS = {
                   {key:'form',  label:'Gloss',           min:0,  max:100, def:70,  unit:''}],
   moss:          [{key:'zoom',  label:'Stone Scale',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
-                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
+                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''},
+                  // the camera: straight down (0) → tipped, the far stone in haze
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:30,  unit:''}],
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
-                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
+                  // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -7940,8 +8049,8 @@ const TEXTURE_CAPS = {
   // — sharpness —
   grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  // gilding, lit: square sheets, crinkled, the highlight in the metal's colour (genMetalLeaf)
-  metalleaf:     { blends:['overlay','source-over','soft-light','hard-light','color-dodge','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
+  // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
+  metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
@@ -8036,7 +8145,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'metalleaf', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -8142,9 +8251,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'kintsugi'){
     result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
+    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom,form);
+    result = genLandscape(w,h,amt,zoom,form,extra.tilt);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
@@ -8162,7 +8271,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'summoning'){
     result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
-    result = genMetalLeaf(w,h,amt,zoom,light,tint1);
+    result = genMetalLeaf(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100);
   } else if(type === 'crystal'){
     result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'spangle'){
@@ -8881,7 +8990,7 @@ inside of a <~~dead person~~/trans>'s dreams.
               </optgroup>
               <optgroup label="√ Sharpness">
                 <option value="grain" data-str="option.waking_grain">Waking Grain</option>
-                <option value="metalleaf" data-str="option.metal_leaf">Metal Leaf</option>
+                <option value="metalleaf" data-str="option.metal_leaf">Scattered Polygons</option>
                 <option value="flowers" data-str="option.lotus_pond">Lotus Pond</option>
                 <option value="brushstrokes" data-str="option.painter_s_frustration">Painter's Frustration</option>
                 <option value="halftone" data-str="option.90s_dots">Retro Dots</option>
@@ -9014,7 +9123,10 @@ inside of a <~~dead person~~/trans>'s dreams.
             <div class="row">
               <div class="field">
                 <!-- the seed is a NUMBER (saved, shared, locked as one), shown as its PHRASE: type either, or any words -->
-                <textarea id="textureSeedWords" rows="2" spellcheck="false" autocomplete="off" aria-label="Texture seed: a phrase, a number, or any words"></textarea>
+                <div class="seed-field">
+                  <input type="text" id="textureSeedWords" spellcheck="false" autocomplete="off" aria-label="Texture seed: a phrase, a number, or any words">
+                  <div class="seed-scroll" id="textureSeedScroll" aria-hidden="true"><div class="seed-thumb"></div></div>
+                </div>
                 <input type="number" id="textureSeedValue" value="12345" step="1" hidden>
                 <span class="seed-number" id="textureSeedNumber"></span>
               </div>
@@ -9316,7 +9428,7 @@ inside of a <~~dead person~~/trans>'s dreams.
 /** What the app opens with. Must match a preset's `name` exactly; an unknown
  *  name falls back to the first preset rather than failing. */
 const DEFAULTS = {
-  preset: 'Lotus Bloom',
+  preset: 'Dusk Letter',
 };
 
 /** The preview pane and the divider that sizes it. */
@@ -9583,7 +9695,7 @@ const UI_STRINGS = {
   'option.first_snow':                         "First Snow",
   'option.aurora_veil':                        "Aurora Veil",
   'option.waking_grain':                       "Waking Grain",
-  'option.metal_leaf':                         "Metal Leaf",
+  'option.metal_leaf':                         "Scattered Polygons",
   'option.lotus_pond':                         "Lotus Pond",
   'option.painter_s_frustration':              "Painter's Frustration",
   'option.90s_dots':                           "Retro Dots",
@@ -9829,11 +9941,9 @@ const PRESETS = [
     accent1: "#2C6461", accent2: "#3F516E",
     spell: "🜍🜟✡🜞🜛[[🜥🜾🜈⚹☥🜙]]{{☍🜇🜪🜯🜌🜊}}"
   },
-{ name: "Dusk Letter",   // simple: a twilight gradient, a book face
-    bg1: "#2A1F33", bgGradient: true, bg2: "#402B47", bgAngle: 150, text1: "#F5E6D6", outlineMode: "off", font: "Cormorant Garamond", texture: false,
-    accent1: "#E3A87C", accent2: "#B79AD6",
-    spell: "⛧[[⚼]]{{🜠🜋🜝☍✡}}"
-  },
+  { name: "Dusk Letter", full: true,   // Ruby's own: a twilight page, hatch in hard light, a soft vignette — the default
+    spell: "[[🜊🜘🜉]]{{🜃🜦🜚🜼🜧}}⚻🜪⚼",
+    bg1: "#2A1F33", bgGradient: true, bg2: "#402B47", bgAngle: 150, text1: "#F5E6D6", textGradient: false, text2: "#A98CFF", textAngle: 45, font: "Cormorant Garamond", maxSize: 120, lineSpacing: 0, textMargin: 85, accent1: "#E3A87C", accent2: "#B79AD6", texture: true, textureType: "hatch", bgGradientType: "linear", bgRadialX: "50", bgRadialY: "50", bgRadialR: "75", borderGrain: "55", borderRounded: true, borderRadius: "43", cardToggle: false, cardColor1: "#7a418d", cardGradientToggle: true, cardColor2: "#ffd4ea", cardGradientType: "radial", cardGradientAngle: "199", cardOpacity: "28", cardBlend: "overlay", borderBlend: "source-over", borderGradientAngle: "225", borderStitch: "solid", borderStitchOut: true, borderBloomBlend: "source-over", borderGradientToggle: false, borderColor2: "#7A418D", borderColor3: "#DADA95", borderBloom: "0", vignetteAperture: "35", vignetteCx: "50", vignetteCy: "50", vignetteNoise: "0", fx1Type: "none", fx1Color: "#FFFFFF", fx1K1: "40", fx1K2: "70", fx1Angle: "45", fx2Type: "none", fx2Color: "#FFFFFF", fx2K1: "40", fx2K2: "70", fx2Angle: "45", fx3Type: "none", fx3Color: "#FFFFFF", fx3K1: "40", fx3K2: "70", fx3Angle: "45", underAll: "", textureBlend: "hard-light", textureLight: "315", textureLightTilt: "100", textureTint1: "#E7B48F", textureTint2: "#4d4d8ddd", textureTint3: "#FFFFFF", textureTint4: "#FFFFFF", textureTint5: "#00000000", textureTint6: "#FFFFFF", texP1: "64", texP2: "400", texP3: "49", texP4: "30", texP5: "20", texP6: "35", textureOpacity: 53, textureSeed: 792826347, border: false, borderColor: "#DAB995", borderThickness: 3, borderOffset: 55, vignette: true, vignetteBlend: "overlay", vignetteIntensity: 19, align: "left", valign: "center", usernameCorner: "bottom-left" },
   // ═══ Whimsy ♡ — presets 5–12 ═══
 { name: "Andromeda",   // surface: Deep Field (♡)
     spell: "[[🜥]]{{🜭🜊🜕⚺}}🜄🜍☌🜋🜃🜞",
@@ -9891,29 +10001,35 @@ const PRESETS = [
     texture: true, textureType: "clouds", textureOpacity: 22, texP1: 180, texP2: 90,
     accent1: "#8FA8FF", accent2: "#5C6CE7"
   },
-{ name: "Borealis",   // surface: Aurora Veil (♡)
+{ name: "Solstice",   // surface: Aurora Veil (♡)
     bg1: "#061821", bgGradient: true, bg2: "#0C2E3A", bgAngle: 175, text1: "#EAFBF4", outlineMode: "off", font: "Josefin Sans",
     texture: true, textureType: "aurora", textureOpacity: 70, texP1: 120, texP2: 100, texP3: 30,
     accent1: "#6FF0C1", accent2: "#A99BF5",
-    spell: "[[🜹🜊🜣☋🜠⚺🜺🜍⚼🜥⛧]]{{🜮🜖🜫}}🜆🜙🜎"
+    spell: "[[🜹🜊🜣☋🜠⚺🜺🜍⚼🜥⛧]]{{🜮🜖🜫}}🜆🜙🜎",
+    vignette: true, vignetteBlend: 'overlay', vignetteIntensity: 25,
+    fx1Type: 'glow', fx1Color: '#6FF0C1', fx1K1: '25', fx1K2: '30'
   },
-{ name: "Moonrise",   // surface: Fractal Moon (♡) — night sky, clouds, earthshine
+{ name: "Nocturne",   // surface: Fractal Moon (♡) — night sky, clouds, earthshine
     bg1: "#0B1026", bgGradient: true, bg2: "#1B2147", bgAngle: 200, text1: "#F1ECDD", outlineMode: "off", font: "IM Fell English",
     texture: true, textureType: "moon", textureOpacity: 62, texP1: 85, texP2: 110, texP3: 35, texP4: 80,
     accent1: "#E8D8A8", accent2: "#8DA2D6",
-    spell: "🜱[[🝓🜞]]{{🜢☥🜫🜛}}"
+    spell: "🜱[[🝓🜞]]{{🜢☥🜫🜛}}",
+    cardToggle: true, cardColor1: '#141A38', cardOpacity: '50', cardBlend: 'darken',
+    vignette: true, vignetteBlend: 'color-burn', vignetteIntensity: 22
   },
-{ name: "Emberlight",   // surface: Ember Drift (♡)
+{ name: "Kindling",   // surface: Ember Drift (♡)
     bg1: "#160A06", bgGradient: true, bg2: "#3A140A", bgAngle: 160, text1: "#FFEBD6", outlineMode: "off", font: "Uncial Antiqua",
     texture: true, textureType: "embers", textureOpacity: 72,
     accent1: "#FF9A4D", accent2: "#FFD27A",
-    spell: "{{🜟🜣🝓🜃}}[[☊🜨🜾🜞🜻🜯]]✡♡🜹☌🜝⚻🜔"
+    spell: "{{🜟🜣🝓🜃}}[[☊🜨🜾🜞🜻🜯]]✡♡🜹☌🜝⚻🜔",
+    vignette: true, vignetteBlend: 'color-burn', vignetteIntensity: 20
   },
-{ name: "Far Country",   // surface: Painted Landscape (♡)
+{ name: "Homesick",   // surface: Painted Landscape (♡)
     bg1: "#ECE6D6", bgGradient: true, bg2: "#CFD9DB", bgAngle: 180, text1: "#2A2E33", outlineMode: "off", font: "Crimson Pro",
     texture: true, textureType: "landscape", textureOpacity: 42, texP3: 35,
     accent1: "#5E6E4C", accent2: "#7A5E44",
-    spell: "⚝[[⚸🜺⚻🜮🜇]]{{🜛}}"
+    spell: "⚝[[⚸🜺⚻🜮🜇]]{{🜛}}",
+    cardToggle: true, cardColor1: '#F4EFE4', cardOpacity: '60', cardBlend: 'lighten'
   },
   // ═══ Sharpness √ — presets 13–20 ═══
 { name: "Daydream",   // surface: Facet Field (∆)
@@ -9937,16 +10053,16 @@ const PRESETS = [
     accent1: "#C0C8D4", accent2: "#7E8794",
     border: true, borderColor: "#C0C8D4", borderThickness: 1, borderOffset: 16
   },
-{ name: "Gold Leaf",   // surface: Metal Leaf (√)
+{ name: "Gold Leaf",   // surface: Scattered Polygons (√)
     spell: "{{🜚}}🜆🜛[[🜭🜞🜜🜻]]",
-    bg1: "#2A1712", bgGradient: true, bg2: "#3E1D16", bgAngle: 150,
+    bg1: "#0B0E14",
     text1: "#F5F1E6",
     outlineMode: "off",
     font: "Playfair Display",
-    texture: true, textureType: "metalleaf", textureOpacity: 55, texP1: 140, texP2: 150,
+    texture: true, textureType: "metalleaf", textureOpacity: 70, texP1: 140, texP2: 120, texP3: 0, texP4: 0, texP5: 0,
     accent1: "#D4AF37", accent2: "#8C6D1F",
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 10,
-    textureBlend: 'hard-light'
+    textureBlend: 'screen'
   },
 { name: "Lotus Bloom",   // surface: Lotus Pond (√)
     spell: "⚻☊[[🜃🜜🜯🜭🜬🜁♡☥✡🜅]]{{🝆✝🜇🜱🜿}}",
@@ -9969,26 +10085,31 @@ const PRESETS = [
     cardColor2: '#FFD4B2',
     cardGradientType: 'radial'
   },
-{ name: "Impasto",   // surface: Brushstrokes (√) — thick paint, lit
+{ name: "Fervor",   // surface: Brushstrokes (√) — thick paint, lit
     bg1: "#E8DCC8", text1: "#241D17", outlineMode: "off", font: "Merriweather",
     texture: true, textureType: "brushstrokes", textureOpacity: 75, texP3: 30, textureBlend: 'hard-light',
     textureTint1: '#F4E7C8', textureTint2: '#6B3E2A',
     accent1: "#8A3B2B", accent2: "#3E5A6B",
-    spell: "[[🜮]]⛤⚝🜾🜱🜃{{☋🜛⛧🜥🜋✡🜕🜼☥🜪🜁}}"
+    spell: "[[🜮]]⛤⚝🜾🜱🜃{{☋🜛⛧🜥🜋✡🜕🜼☥🜪🜁}}",
+    vignette: true, vignetteBlend: 'color-burn', vignetteIntensity: 18,
+    fx1Type: 'doublestrike', fx1K1: '12', fx1K2: '35', fx1Angle: '20'
   },
-{ name: "Newsprint",   // surface: Halftone Press (√)
+{ name: "Rumor",   // surface: Halftone Press (√)
     bg1: "#EDEAE3", text1: "#161616", outlineMode: "off", font: "Oswald",
     texture: true, textureType: "halftone", textureOpacity: 28, textureBlend: 'multiply',
     accent1: "#B3271F", accent2: "#1F3E66",
-    spell: "[[🜶🜞]]{{🜉🜔🜛}}🜯🜠"
+    spell: "[[🜶🜞]]{{🜉🜔🜛}}🜯🜠",
+    fx1Type: 'erosion', fx1K1: '35', fx1K2: '40'
   },
-{ name: "Night City",   // surface: Night City (√)
+{ name: "Insomnia",   // surface: Night City (√)
     bg1: "#070B14", bgGradient: true, bg2: "#142036", bgAngle: 180, text1: "#F2EEE6", outlineMode: "off", font: "Inter",
     texture: true, textureType: "cityscape", textureOpacity: 78,
     accent1: "#FFD58A", accent2: "#6FA7D8",
-    spell: "{{🜕🜣🜚⛤🜪⚸🜧}}⛧☥🜼[[✡🜾☊]]"
+    spell: "{{🜕🜣🜚⛤🜪⚸🜧}}⛧☥🜼[[✡🜾☊]]",
+    cardToggle: true, cardColor1: '#0A0F1C', cardOpacity: '62', cardBlend: 'darken',
+    fx1Type: 'glow', fx1Color: '#FFD58A', fx1K1: '18', fx1K2: '22'
   },
-{ name: "Downpour",   // surface: Harsh Rain (√)
+{ name: "Petrichor",   // surface: Harsh Rain (√)
     bg1: "#1A222B", bgGradient: true, bg2: "#2C3A45", bgAngle: 170, text1: "#E6EDF2", outlineMode: "off", font: "JetBrains Mono",
     texture: true, textureType: "rainstreaks", textureOpacity: 38,
     accent1: "#9FC2D9", accent2: "#7F9FB6",
@@ -10038,30 +10159,31 @@ const PRESETS = [
     accent1: "#FF6B6B", accent2: "#6FA8FF",
     borderBloom: 0
   },
-{ name: "Inkblot",   // surface: Rorschach Test (∆) — black and red, wet
+{ name: "Projection",   // surface: Rorschach Test (∆) — black and red, wet
     bg1: "#F1EDE4", text1: "#1B1A19", outlineMode: "off", font: "Courier Prime",
     texture: true, textureType: "inkbleed", textureOpacity: 50, texP1: 80, texP3: 55, texP4: 45, textureBlend: 'multiply',
     accent1: "#A3242F", accent2: "#2E2B29",
-    spell: "♡{{⛤🜼🜇🜖🜜🜘}}[[🜦🝊🜍🜈]]"
+    spell: "♡{{⛤🜼🜇🜖🜜🜘}}[[🜦🝊🜍🜈]]",
+    cardToggle: true, cardColor1: '#F1EDE4', cardOpacity: '60', cardBlend: 'lighten'
   },
-{ name: "Event Horizon",   // surface: Black Hole (∆) — ray-traced, with jets
-    bg1: "#050407", bgGradient: true, bg2: "#120A18", bgAngle: 135, text1: "#F6EEE2", outlineMode: "off", font: "Nunito",
-    texture: true, textureType: "blackhole", textureOpacity: 75, texP3: 55,
-    textureTint1: '#FFD9A8', textureTint2: '#000000',
-    accent1: "#FFB35C", accent2: "#A48CFF",
-    spell: "{{🜖🝆}}⚻🜯[[🜩]]"
-  },
-{ name: "The Reading",   // surface: Cartomancy (∆) — the Vellum deck
+  { name: "Event Horizon", full: true,   // Ruby's own: the black hole behind a darkening navy box, outlined words
+    spell: "{{☌🜨}}[[🜯🜦⚼🜩🜘]]🜞♡☊🜫",
+    bg1: "#050407", bgGradient: true, bg2: "#120A18", bgAngle: 135, text1: "#F6EEE2", textGradient: false, text2: "#A98CFF", textAngle: 45, font: "Poiret One", maxSize: 120, lineSpacing: -0.08, textMargin: 75, accent1: "#FFB35C", accent2: "#A48CFF", texture: true, textureType: "blackhole", bgGradientType: "linear", bgRadialX: "50", bgRadialY: "50", bgRadialR: "75", borderGrain: "0", borderRounded: true, borderRadius: "23", cardToggle: true, cardColor1: "#000077", cardGradientToggle: false, cardColor2: "#F2E2EA", cardGradientType: "linear", cardGradientAngle: "90", cardOpacity: "55", cardBlend: "darken", borderBlend: "source-over", borderGradientAngle: "45", borderStitch: "solid", borderStitchOut: false, borderBloomBlend: "source-over", borderGradientToggle: false, borderColor2: "#7A418D", borderColor3: "#DADA95", borderBloom: "44", vignetteAperture: "35", vignetteCx: "50", vignetteCy: "50", vignetteNoise: "0", fx1Type: "outline", fx1Color: "#d8c3a4", fx1K1: "5", fx1K2: "25", fx1Angle: "45", fx2Type: "none", fx2Color: "#FFFFFF", fx2K1: "40", fx2K2: "70", fx2Angle: "45", fx3Type: "none", fx3Color: "#FFFFFF", fx3K1: "40", fx3K2: "70", fx3Angle: "45", underAll: "", textureBlend: "hard-light", textureLight: "301", textureLightTilt: "100", textureTint1: "#FFD9A8", textureTint2: "#000000", textureTint3: "#FFFFFF", textureTint4: "#FFFFFF", textureTint5: "#808080", textureTint6: "#FFFFFF", texP1: "175", texP2: "174", texP3: "69", texP4: "30", texP5: "20", texP6: "35", textureOpacity: 100, textureSeed: 1546719081, border: true, borderColor: "#DAB995", borderThickness: 3, borderOffset: 150, vignette: false, vignetteBlend: "overlay", vignetteIntensity: 19, align: "left", valign: "center", usernameCorner: "bottom-left" },
+{ name: "Omen",   // surface: Cartomancy (∆) — the Vellum deck
     bg1: "#2A1A2E", bgGradient: true, bg2: "#3F2340", bgAngle: 140, text1: "#F7EBDD", outlineMode: "off", font: "Almendra",
     texture: true, textureType: "cards", textureOpacity: 40,
     accent1: "#E8C27A", accent2: "#D592AE",
-    spell: "⚸🝓🜔{{☌🜄🜼}}[[🜢⚺🜺🜥⚻🜗🜻]]"
+    spell: "⚸🝓🜔{{☌🜄🜼}}[[🜢⚺🜺🜥⚻🜗🜻]]",
+    cardToggle: true, cardColor1: '#6E4466', cardGradientToggle: true, cardColor2: '#2A1A2E', cardGradientType: 'radial', cardOpacity: '55', cardBlend: 'multiply',
+    border: true, borderColor: '#E8C27A', borderThickness: 2, borderOffset: 40,
+    fx1Type: 'bevel', fx1K1: '25', fx1K2: '40', fx1Angle: '315'
   },
-{ name: "Static",   // surface: Math Static (∆)
+{ name: "Signal",   // surface: Math Static (∆)
     bg1: "#0E0F12", text1: "#E8E8E8", outlineMode: "off", font: "VT323",
     texture: true, textureType: "mathnoise", textureOpacity: 32,
     accent1: "#7CFFB2", accent2: "#FF5FA2",
-    spell: "🜝🜣[[🜆⛤🜥✡]]{{🜄}}"
+    spell: "🜝🜣[[🜆⛤🜥✡]]{{🜄}}",
+    fx1Type: 'chromatic', fx1K1: '22', fx1K2: '55', fx1Angle: '0'
   },
   // ═══ Touch 🜚 — presets 29–36 ═══
 { name: "Handled",   // surface: Linen Tooth (🜚)
@@ -10092,36 +10214,44 @@ const PRESETS = [
     texture: true, textureType: "wax", textureOpacity: 46, texP1: 110, texP2: 90,
     accent1: "#7A2B2B", accent2: "#5C6B4A"
   },
-{ name: "Golden Repair",   // surface: Kintsugi (🜚) — a curved vessel, mended
+{ name: "Mended",   // surface: Kintsugi (🜚) — a curved vessel, mended
     bg1: "#E7E1D6", text1: "#262321", outlineMode: "off", font: "Zilla Slab",
     texture: true, textureType: "kintsugi", textureOpacity: 70,
     accent1: "#8C6A1E", accent2: "#56616B",
-    spell: "[[🜖✡🜄🜣☊]]{{🜆☌🜜🜘}}☍🜋🜧🜥🜞☥🜠🜈"
+    spell: "[[🜖✡🜄🜣☊]]{{🜆☌🜜🜘}}☍🜋🜧🜥🜞☥🜠🜈",
+    fx1Type: 'letterpress', fx1K1: '30', fx1K2: '45', fx1Angle: '315'
   },
-{ name: "Scrying",   // surface: Scrying Pool (🜚) — koi, pads, stones, tilted
+{ name: "Stillwater",   // surface: Scrying Pool (🜚) — koi, pads, stones, tilted
     bg1: "#0E2A30", bgGradient: true, bg2: "#164046", bgAngle: 170, text1: "#E8FBF8", outlineMode: "off", font: "Poppins",
     texture: true, textureType: "water", textureOpacity: 62, textureBlend: 'overlay',
     textureTint1: '#BFF5EE', textureTint2: '#04161A',
     accent1: "#7FE0D2", accent2: "#E8C46A",
-    spell: "{{☊⛧🜍}}🜕[[🜿🜭⚼]]"
+    spell: "{{☊⛧🜍}}🜕[[🜿🜭⚼]]",
+    cardToggle: true, cardColor1: '#0B2024', cardGradientToggle: true, cardColor2: '#164046', cardGradientType: 'radial', cardOpacity: '50', cardBlend: 'multiply'
   },
-{ name: "Dune Sea",   // surface: Dune Ripples (🜚) — dunes to the haze
+{ name: "Mirage",   // surface: Dune Ripples (🜚) — dunes to the haze
     bg1: "#E9D2AE", text1: "#3A2618", outlineMode: "off", font: "Playfair Display",
     texture: true, textureType: "dunes", textureOpacity: 78, texP4: 55,
     accent1: "#7E3F1E", accent2: "#4A5A66",
-    spell: "[[🜌🜧🜜🜁]]{{🜶🝓🜮🜉🜛✡⚹🜬}}🜟"
+    spell: "[[🜌🜧🜜🜁]]{{🜶🝓🜮🜉🜛✡⚹🜬}}🜟",
+    cardToggle: true, cardColor1: '#FFF3DD', cardGradientToggle: true, cardColor2: '#F2D7B0', cardGradientType: 'radial', cardOpacity: '55', cardBlend: 'soft-light',
+    fx1Type: 'letterpress', fx1K1: '30', fx1K2: '50', fx1Angle: '315'
   },
-{ name: "Geode",   // surface: Crystal Leaf (🜚) — amethyst points, fire inside
+{ name: "Lucid",   // surface: Crystal Leaf (🜚) — amethyst points, fire inside
     bg1: "#1B1226", bgGradient: true, bg2: "#2C1A3D", bgAngle: 135, text1: "#F4ECFF", outlineMode: "off", font: "Cinzel Decorative",
     texture: true, textureType: "crystal", textureOpacity: 55, texP1: 80, texP3: 65,
     accent1: "#C9A6FF", accent2: "#E8C46A",
-    spell: "{{🜌🜗}}[[🜨🜆✡🜺]]☌"
+    spell: "{{🜌🜗}}[[🜨🜆✡🜺]]☌",
+    cardToggle: true, cardColor1: '#1B1226', cardOpacity: '45', cardBlend: 'darken',
+    fx1Type: 'glow', fx1Color: '#C9A6FF', fx1K1: '20', fx1K2: '25'
   },
-{ name: "Rain Window",   // surface: Rain on Glass (🜚) — the outdoors behind it
+{ name: "Homebound",   // surface: Rain on Glass (🜚) — the outdoors behind it
     bg1: "#6A7C96", bgGradient: true, bg2: "#2A3140", bgAngle: 180, text1: "#F2F4F7", outlineMode: "off", font: "Work Sans",
     texture: true, textureType: "glassrain", textureOpacity: 88,
     accent1: "#FFD9A0", accent2: "#EEF3FA",
-    spell: "{{⛧🜌🜫🜂🜾🜕🜁🜮🜻🜍}}🜄[[🜗🜪]]"
+    spell: "{{⛧🜌🜫🜂🜾🜕🜁🜮🜻🜍}}🜄[[🜗🜪]]",
+    cardToggle: true, cardColor1: '#3A4558', cardGradientToggle: true, cardColor2: '#6B7C96', cardGradientType: 'radial', cardOpacity: '80', cardBlend: 'multiply',
+    fx1Type: 'shadow', fx1Color: '#0B1018', fx1K1: '18', fx1K2: '6', fx1Angle: '90'
   },
 ];
 /** The preset grid's groups, in order (headers in the grid; the presets
@@ -12139,6 +12269,20 @@ function obliqueRender(F, H, RGB, opts = {}){
   }
   return out;
 }
+/** A smooth field over a camera frame's ground patch (obliqueFrame), sampled
+ *  in PAGE units — u = 0..1 across the page as seen straight down — so a
+ *  texture's features keep their size however large the tilted patch is.
+ *  Bilinear between samples every `step` cells. */
+function fieldOn(F, step, fn){
+  const GW = F.GW, GH = F.GH, ww = F.ww, wh = F.wh, ox = F.flat ? 0 : F.gcx - ww/2, oz = F.flat ? 0 : F.gcz - wh/2;
+  const cw = Math.ceil(GW/step) + 2, ch = Math.ceil(GH/step) + 2, g = new Float32Array(cw*ch);
+  for(let j = 0; j < ch; j++) for(let i = 0; i < cw; i++) g[j*cw + i] = fn((i*step - ox)/ww, (j*step - oz)/wh);
+  const out = new Float32Array(GW*GH);
+  for(let y = 0; y < GH; y++){ const fy = y/step, j = Math.floor(fy), ty = fy - j;
+    for(let x = 0; x < GW; x++){ const fx = x/step, i = Math.floor(fx), tx = fx - i, k = j*cw + i;
+      out[y*GW + x] = (g[k]*(1-tx) + g[k+1]*tx)*(1-ty) + (g[k+cw]*(1-tx) + g[k+cw+1]*tx)*ty; } }
+  return out;
+}
 
 
 /* ==== texWhimsy.js ==== */
@@ -13302,8 +13446,11 @@ function genMoon(w,h,amt,zoom,form,night){
 // Ridge behind ridge behind ridge,
 // each one paler than the last —
 // distance, made of air.
-function genLandscape(w,h,amt,zoom,form){
+function genLandscape(w,h,amt,zoom,form,tilt){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // TILT: the camera's pitch — 0 as it always was; tipped down from higher, the
+  // horizon rises, the near ground grows (perspective) and the ridges flatten
+  const pitch=Math.max(0, Math.min(1, tilt || 0));
   // WETNESS: 0 is the dry, worked painting; wetter, it becomes watercolour —
   // edges bleed into each other and, very wet, the paint blooms (backruns:
   // pale patches with a dark, frilled rim where wet met drying paint)
@@ -13339,7 +13486,7 @@ function genLandscape(w,h,amt,zoom,form){
   const kind=Object.keys(BIOMES)[Math.floor(Math.random()*Object.keys(BIOMES).length)];
   const B=BIOMES[kind];
   const bands=Math.max(2, Math.round((B.bands[0]+Math.random()*(B.bands[1]-B.bands[0]))*amt));
-  const horizon=h*(B.horizon+(Math.random()-0.5)*0.08);
+  const horizon=Math.max(h*0.08, h*(B.horizon+(Math.random()-0.5)*0.08) - pitch*h*0.3);
 
   // the sky: a soft wash, and a few long smears of cloud
   const sky=ctx.createLinearGradient(0,0,0,horizon);
@@ -13391,8 +13538,8 @@ function genLandscape(w,h,amt,zoom,form){
   let lakeTop=null;
   for(let i=0;i<bands;i++){
     const t=bands===1?1:i/(bands-1);                    // 0 far .. 1 near
-    let base=horizon+(h-horizon)*Math.pow(t,1.35)*0.92;
-    let amp=unit*B.amp*(0.35+t*0.9);
+    let base=horizon+(h-horizon)*Math.pow(t,1.35+pitch*0.9)*0.92;
+    let amp=unit*B.amp*(0.35+t*0.9)*(1-0.4*pitch);
     // in front of a lake, the near shore sits low, so the water shows
     if(lakeTop!=null){ const lk=Math.floor((bands-1)/2), u=(i-lk)/Math.max(1, bands-1-lk); base=lakeTop+(h-lakeTop)*(0.5+0.45*u); amp*=0.45; }
     const tone=B.pale ? Math.round(205-t*95) : Math.round(178-t*140);   // pale far, dark near
@@ -14100,80 +14247,108 @@ function genSilverpointHatch(w,h,amt,zoom,angle,form){
 // it forgets it was ever
 // heavier than light.
 /**
- * Metal Leaf — gilding, as a gilder lays it: square sheets of leaf in
- * overlapping rows, each a little askew, crinkled where it was pressed down,
- * torn at its edges, split here and there to show the ground beneath. Lit by
- * the dial (lightHeights): metal's highlight takes the metal's own colour, so
- * the crinkles flash as the light moves, and every overlap is a fine ridge.
- * LEAF SIZE · COVERAGE (gaps and tears → laid edge to edge)
+ * Scattered Polygons (the original Metal Leaf) — flakes of leaf, like metal
+ * shavings: translucent polygons in the leaf's colour, each its own
+ * brightness, a dark seam where one overlaps the next. The blend modes stack
+ * them. At 0 on the three knobs below it draws EXACTLY as it always has
+ * (flat; their extra randomness is only drawn when a knob is above 0):
+ *   SHAPE    0: the original five-to-eight-sided flakes; higher, more of
+ *            them become shards, slivers, squares of leaf and curled shavings
+ *   SHEEN    0: flat; higher, each flake tilts to the dial's light — brighter
+ *            or darker by how it faces it, a soft band of reflection across it
+ *            (light caught inside the metal) and a highlight on its near edge
+ *   GLITTER  soft, speckled, noisy highlights scattered over the flakes
+ * LEAF SIZE · COVERAGE · SHAPE · SHEEN · GLITTER
  */
-function genMetalLeaf(w,h,amt,zoom,light,tint){
+function genMetalLeaf(w,h,amt,zoom,light,tint,form,sheenK,glitterK){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const shapeV = Math.max(0, Math.min(1, form || 0)), sheen = Math.max(0, Math.min(1, sheenK || 0)), glitter = Math.max(0, Math.min(1, glitterK || 0));
   const leaf = parseHex(tint || '#D9B45B');
-  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh), N = ww*wh;
-  const S = unit*0.16*zoom, cover = Math.min(1, 0.45 + 0.35*amt);
-  // the sheets, row by row (each overlaps the one before it), askew, some missing
-  const sheets = [];
-  for(let y = -S*0.5; y < wh + S*0.5; y += S*0.9){
-    const shift = (Math.random() - 0.5)*S*0.5;
-    for(let x = -S*0.5 + shift; x < ww + S*0.5; x += S*0.9){
-      if(Math.random() > cover) continue;
-      const a = (Math.random() - 0.5)*0.14, wa = Math.random()*Math.PI;
-      const ta = Math.random()*Math.PI*2, tm = Math.random()*0.45;
-      sheets.push({ x: x + (Math.random() - 0.5)*S*0.12, y: y + (Math.random() - 0.5)*S*0.12, ca: Math.cos(a), sa: Math.sin(a),
-        wx: Math.cos(wa), wy: Math.sin(wa), lift: (Math.random() - 0.5)*0.25, ph: Math.random()*50, tx: Math.cos(ta)*tm, ty: Math.sin(ta)*tm });
+  const c = document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0,0,w,h);
+  const lv = lightVec(light == null ? 315 : light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm;   // toward the light
+  // a tone of the leaf: k > 1 lifts it toward white (keeping its hue), k < 1 darkens it
+  const tone = (k, a) => { const f = v => Math.round(k > 1 ? v + (255 - v)*Math.min(1, k - 1) : v*k); return `rgba(${f(leaf.r)},${f(leaf.g)},${f(leaf.b)},${a})`; };
+
+  const unit = Math.max(w,h);
+  const flakes = Math.max(10, Math.round((120 + Math.random()*90) * amt));
+
+  for(let i=0;i<flakes;i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const r = unit*(0.015 + Math.random()*0.055) * zoom;
+    const sides = 5 + Math.floor(Math.random()*4);
+    const rot = Math.random()*Math.PI*2;
+
+    const pts = [];
+    for(let s=0;s<sides;s++){
+      const a = rot + (s/sides)*Math.PI*2;
+      const rr = r*(0.55 + Math.random()*0.7);
+      pts.push([cx+Math.cos(a)*rr, cy+Math.sin(a)*rr]);
+    }
+    // SHAPE: some flakes become other things (only drawn when the knob is up)
+    let curl = null;
+    if(shapeV > 0 && Math.random() < shapeV){
+      const kind = Math.random(), ca = Math.cos(rot), sa = Math.sin(rot), P = (u, v) => [cx + u*ca - v*sa, cy + u*sa + v*ca];
+      pts.length = 0;
+      if(kind < 0.3){ const n = 3 + Math.floor(Math.random()*2); for(let s=0;s<n;s++){ const a = (s/n)*Math.PI*2 + (Math.random()-0.5)*0.9; pts.push(P(Math.cos(a)*r*(1.3 + Math.random()*0.5), Math.sin(a)*r*0.45)); } }   // a shard
+      else if(kind < 0.55){ const L = r*(1.8 + Math.random()*1.4), t = r*(0.08 + Math.random()*0.12); pts.push(P(-L, -t*0.5), P(L*0.9, -t), P(L, t*0.3), P(-L*0.95, t)); }   // a sliver
+      else if(kind < 0.8){ const sq = r*(0.8 + Math.random()*0.3); for(const [u, v] of [[-1,-1],[1,-1],[1,1],[-1,1]]) pts.push(P(u*sq*(1 + (Math.random()-0.5)*0.12), v*sq*(1 + (Math.random()-0.5)*0.12))); }   // a square of leaf
+      else { curl = { R: r*(0.9 + Math.random()*0.8), a0: rot, sweep: Math.PI*(0.6 + Math.random()*0.9), wd: r*(0.15 + Math.random()*0.2) }; }   // a curled shaving
+    }
+
+    ctx.beginPath();
+    if(curl){ const { R, a0, sweep, wd } = curl; ctx.arc(cx, cy, R, a0, a0 + sweep); ctx.arc(cx, cy, Math.max(1, R - wd), a0 + sweep, a0, true); }
+    else { ctx.moveTo(pts[0][0], pts[0][1]); for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]); }
+    ctx.closePath();
+
+    // each flake keeps its own brightness, carried in the leaf's colour
+    let lift = (178 + Math.floor(Math.random()*66)) / 210;
+    const alpha = 0.16 + Math.random()*0.4;
+    // SHEEN: the flake's tilt to the light
+    let facing = 0;
+    if(sheen > 0){ const ta = Math.random()*Math.PI*2, tm = 0.3 + Math.random()*0.7; facing = (Math.cos(ta)*TX + Math.sin(ta)*TY)*tm; if(facing < 0) lift *= 1 + sheen*0.55*facing; }
+    ctx.globalAlpha = alpha;
+    if(facing > 0){ const m = sheen*0.5*facing, ch = v => Math.round(Math.min(255, v*lift) + (255 - Math.min(255, v*lift))*m);   // turned to the light: toward white, not a hue
+      ctx.fillStyle = `rgb(${ch(leaf.r)},${ch(leaf.g)},${ch(leaf.b)})`; }
+    else ctx.fillStyle = `rgb(${Math.min(255, Math.round(leaf.r*lift))},${Math.min(255, Math.round(leaf.g*lift))},${Math.min(255, Math.round(leaf.b*lift))})`;
+    ctx.fill();
+    if(sheen > 0){
+      ctx.save(); ctx.clip();
+      // light caught inside the metal: a soft band across the flake, along the light
+      const L = r*1.4, band = ctx.createLinearGradient(cx + TX*L, cy + TY*L, cx - TX*L, cy - TY*L), off = 0.3 + 0.4*Math.random();
+      band.addColorStop(0, tone(1.5, 0)); band.addColorStop(Math.max(0, off - 0.18), tone(1.5, 0)); band.addColorStop(off, tone(1.7, 0.55*sheen*(0.5 + 0.5*Math.max(0, facing))));
+      band.addColorStop(Math.min(1, off + 0.18), tone(1.5, 0)); band.addColorStop(1, tone(0.5, 0.25*sheen));
+      ctx.globalAlpha = Math.min(1, alpha*1.6); ctx.fillStyle = band; ctx.fillRect(cx - L*1.5, cy - L*1.5, L*3, L*3);
+      // a highlight where its near edge meets the light
+      if(facing > 0){ const hx = cx + TX*r*0.55, hy = cy + TY*r*0.55, sp = ctx.createRadialGradient(hx, hy, 0, hx, hy, r*0.7);
+        sp.addColorStop(0, `rgba(255,252,240,${(0.7*sheen*facing*facing).toFixed(3)})`); sp.addColorStop(1, 'rgba(255,252,240,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = sp; ctx.fillRect(hx - r, hy - r, r*2, r*2); }
+      ctx.restore();
+    }
+
+    // the seam where one leaf overlaps the next
+    ctx.globalAlpha = 0.10 + Math.random()*0.25;
+    ctx.strokeStyle = 'rgb(48,48,48)';
+    ctx.lineWidth = Math.max(cpx(0.5), unit*0.0009);
+    ctx.stroke();
+
+    // GLITTER: soft speckled highlights over the flake, noisy
+    if(glitter > 0){
+      const n = Math.round(glitter*(4 + r*r/(unit*unit)*9000));
+      ctx.save(); ctx.clip();
+      for(let k=0;k<n;k++){ const gx = cx + (Math.random() - 0.5)*r*2, gy = cy + (Math.random() - 0.5)*r*2, gr = cpx(0.6 + Math.random()*Math.random()*3.2);
+        const gl = Math.random()**3*(0.35 + 0.65*Math.max(0, 0.5 + facing));
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr*2.4); g.addColorStop(0, `rgba(255,250,235,${(gl*0.9).toFixed(3)})`); g.addColorStop(1, 'rgba(255,250,235,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(gx - gr*2.4, gy - gr*2.4, gr*4.8, gr*4.8); }
+      ctx.restore();
     }
   }
-  const tear = makeNoiseGrid(48, 48), crk = makeNoiseGrid(96, 96), split = makeNoiseGrid(20, 20);
-  const H = new Float32Array(N), TOP = new Int32Array(N).fill(-1), SEAM = new Float32Array(N), SHADE = new Float32Array(N);
-  const cs = S*1.4, gx = Math.ceil(ww/cs) + 3, gy = Math.ceil(wh/cs) + 3, bins = Array.from({ length: gx*gy }, () => []);
-  sheets.forEach((s2, k) => { const bi = Math.floor(s2.x/cs) + 1, bj = Math.floor(s2.y/cs) + 1;
-    for(let j = bj - 1; j <= bj + 1; j++) for(let i = bi - 1; i <= bi + 1; i++) if(i >= 0 && j >= 0 && i < gx && j < gy) bins[j*gx + i].push(k); });
-  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-    const i = y*ww + x, list = bins[(Math.floor(y/cs) + 1)*gx + Math.floor(x/cs) + 1] || [];
-    let top = -1, under = 0, edgeD = 1e9;
-    for(const k of list){ const s2 = sheets[k], dx = x - s2.x, dy = y - s2.y, u = dx*s2.ca + dy*s2.sa, v = -dx*s2.sa + dy*s2.ca;
-      // a torn edge: the square's border wanders
-      const rag = (sampleNoiseGrid(tear, 48, 48, x/ww*47 + k*3.1, y/wh*47) - 0.5)*S*0.08;
-      const e = Math.min(S/2 - Math.abs(u), S/2 - Math.abs(v)) + rag;
-      if(e > 0){ if(top >= 0) under++; if(k > top){ top = k; edgeD = e; } } }
-    // splits: the leaf parts here and there, showing the ground
-    if(top >= 0 && sampleNoiseGrid(split, 20, 20, x/ww*19, y/wh*19) > 0.5 + 0.5*cover && sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) > 0.72) top = -1;
-    TOP[i] = top;
-    if(top < 0){ H[i] = 0; continue; }
-    const s2 = sheets[top];
-    // crinkles: fine wrinkles, mostly one way per sheet (how it was pressed)
-    const cu = x*s2.wx + y*s2.wy, cv2 = -x*s2.wy + y*s2.wx;
-    const wr = Math.sin(cu*0.45/Math.max(0.5, unit*0.004) + s2.ph + 2.4*sampleNoiseGrid(crk, 96, 96, cv2/ww*30, cu/ww*8))*0.5
-             + (sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) - 0.5)*0.9;
-    H[i] = unit*0.004*(1 + under*0.6) + wr*unit*0.0012 + s2.lift*unit*0.002;
-    SEAM[i] = Math.exp(-edgeD/(unit*0.0025))*(under > 0 ? 1 : 0.6);
-    SHADE[i] = s2.lift;
-  }
-  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.92, shadow: 0.45, ao: 0.35, ambient: 0.3 });
-  // metal MIRRORS: its brightness is what its surface faces — each sheet's own slight tilt and every crinkle's slope
-  const lv = lightVec(light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm, gs = 1/Math.max(0.5, unit*0.0012);
-  const fl = L.flat || 1, small = document.createElement('canvas'); small.width = ww; small.height = wh;
-  const sx = small.getContext('2d', CPU), img = sx.createImageData(ww, wh), d = img.data;
-  for(let i = 0; i < N; i++){
-    const q = i*4, k = litK(L, i, 0.3, null, 0)/fl;
-    if(TOP[i] < 0){ const g = 128*Math.min(1.05, 0.75 + 0.25*k); d[q] = d[q+1] = d[q+2] = g; d[q+3] = 255; continue; }   // the ground, in the leaf's shade
-    // metal: a darker body, and a highlight IN the metal's colour (a little whiter at its peak)
-    const s2 = sheets[TOP[i]], x = i % ww, y = (i/ww)|0;
-    const gX = (H[y*ww + Math.min(ww-1, x+1)] - H[y*ww + Math.max(0, x-1)])*0.5*gs, gY = (H[Math.min(wh-1, y+1)*ww + x] - H[Math.max(0, y-1)*ww + x])*0.5*gs;
-    const env = Math.max(0, Math.min(1.25, 0.6 + 1.0*((s2.tx - gX*0.35)*TX + (s2.ty - gY*0.35)*TY)));
-    const sp = Math.min(1, L.spec[i] + Math.max(0, env - 0.95)*1.5), body = (0.3 + 0.62*env)*(0.65 + 0.35*k) - SEAM[i]*0.25;
-    d[q]   = clampByteMl(leaf.r*body + leaf.r*sp*1.6 + 255*sp*sp*0.5);
-    d[q+1] = clampByteMl(leaf.g*body + leaf.g*sp*1.6 + 255*sp*sp*0.5);
-    d[q+2] = clampByteMl(leaf.b*body + leaf.b*sp*1.6 + 255*sp*sp*0.5);
-    d[q+3] = 255;
-  }
-  sx.putImageData(img, 0, 0);
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const ctx = c.getContext('2d', CPU); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, 0, 0, w, h);
+  ctx.globalAlpha = 1;
   return c;
 }
-const clampByteMl = v => v < 0 ? 0 : v > 255 ? 255 : v;
 
 // Most windows are dark.
 // The few that are lit are why
@@ -16426,41 +16601,47 @@ function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
  * The stone takes the light and casts shadow; DAMPNESS darkens and glosses
  * the stone and deepens the moss.  STONE SCALE · MOSS · DAMPNESS
  */
-function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
+function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
   amt=(amt==null?0.45:amt); zoom=(zoom==null?1:zoom);
-  const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form));
+  const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form)), tl=Math.max(0, Math.min(1, tilt || 0));
   const stone=parseHex(tint1||'#8A8579'), moss=parseHex(tint2||'#5F7E34');
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  // TILT: the camera (texCore obliqueFrame): 0 straight down, as it always was
+  const div=tl > 0.001 ? canonDiv(3) : canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.07), GW=F.GW, GH=F.GH, N=GW*GH;
+  const ox=F.flat ? 0 : F.gcx - ww/2, oz=F.flat ? 0 : F.gcz - wh/2;
   const rock=fbmSampler(2.2/zoom, 5), ridge=fbmSampler(5/zoom, 3), growth=fbmSampler(4, 3), fibre=fbmSampler(48, 2);
-  const H=new Float32Array(ww*wh), M=new Float32Array(ww*wh), base=new Float32Array(ww*wh);
+  const H=new Float32Array(N), M=new Float32Array(N);
   const st=Math.max(2, Math.round(unit/220));
-  base.set(smoothField(ww,wh,st,(u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
-    return (rock(u,v)*0.75 + r*0.35)*unit*0.06; }));
-  const GR=smoothField(ww,wh,st*2,(u,v)=>growth(u,v));
-  const TIP=GL ? new Float32Array(ww*wh) : null;
+  const base=fieldOn(F, st, (u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
+    return (rock(u,v)*0.75 + r*0.35)*unit*0.06; });
+  const GR=fieldOn(F, st*2, (u,v)=>growth(u,v));
+  const TIP=GL ? new Float32Array(N) : null;
   // moss gathers where the stone dips below its neighbourhood, and where it is flat
-  const at=(x,y)=>base[Math.min(wh-1,Math.max(0,y))*ww+Math.min(ww-1,Math.max(0,x))];
+  const at=(x,y)=>base[Math.min(GH-1,Math.max(0,y))*GW+Math.min(GW-1,Math.max(0,x))];
   const R=Math.max(2, Math.round(unit*0.02));
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, hollow=(at(x-R,y)+at(x+R,y)+at(x,y-R)+at(x,y+R))/4 - base[i];
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){
+    const i=y*GW+x, hollow=(at(x-R,y)+at(x+R,y)+at(x,y-R)+at(x,y+R))/4 - base[i];
     const slope=Math.hypot(at(x+1,y)-at(x-1,y), at(x,y+1)-at(x,y-1));
     const want=GR[i] + hollow*0.12 - slope*0.08 + (amt - 0.5)*0.9;
     const m=Math.max(0, Math.min(1, (want - 0.42)*5));
     M[i]=m;
-    const fb=fibre(x/ww,y/wh);
+    const fb=fibre((x-ox)/ww,(y-oz)/wh);
     H[i]=base[i] + m*(1.5 + 2.2*fb);                              // soft raised clumps, fibrous on top
     if(TIP) TIP[i]=m*Math.max(0, fb-0.45)*1.8;                    // the tips, for the glow
   }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
-  const sd=1 - damp*0.35, mg=1 + damp*0.25;
-  return paintLit(w,h,div,ww,wh, i => {
+  const L=lightHeights(H, GW, GH, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
+  const sd=1 - damp*0.35, mg=1 + damp*0.25, RGB=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
     const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1-m);   // moss is matte; only wet stone shines
     const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     // GLOW: bioluminescent moss, brightest at the tips
     if(TIP){ const e=255*Math.min(1, TIP[i])*0.9; mc[0]+=GL.r*e; mc[1]+=GL.g*e; mc[2]+=GL.b*e; }
-    return [clamp255(sc[0]*(1-m) + mc[0]*m), clamp255(sc[1]*(1-m) + mc[1]*m), clamp255(sc[2]*(1-m) + mc[2]*m)];
-  });
+    RGB[i*3]=clamp255(sc[0]*(1-m) + mc[0]*m); RGB[i*3+1]=clamp255(sc[1]*(1-m) + mc[1]*m); RGB[i*3+2]=clamp255(sc[2]*(1-m) + mc[2]*m);
+  }
+  // tipped: the far stone recedes into a damp grey-green haze
+  const OUT=F.flat ? RGB : obliqueRender(F, H, RGB, { fog:[stone.r*0.55+moss.r*0.2+60, stone.g*0.55+moss.g*0.2+62, stone.b*0.55+moss.b*0.2+60], fogK: 0.25 + 0.35*tl });
+  return paintLit(w,h,div,ww,wh, i => [OUT[i*3], OUT[i*3+1], OUT[i*3+2]]);
 }
 
 /**
@@ -16973,7 +17154,13 @@ const TEXTURE_PARAMS = {
                   {key:'form',  label:'Grain',           min:0,  max:100, def:33,  unit:'', ticks:[0,33,66,100],
                    names:['Silver','Film','Paper','Digital']}],
   metalleaf:     [{key:'zoom',  label:'Leaf Size',       min:60, max:360, def:100, unit:'%'},
-                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165}],
+                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165},
+                  // the original flakes (0) → shards, slivers, squares of leaf, curled shavings
+                  {key:'form',  label:'Shape',           min:0,  max:100, def:0,   unit:''},
+                  // flat, as it always was (0) → each flake tilting to the dial's light, a band of reflection inside
+                  {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
+                  // soft speckled, noisy highlights over the flakes (0: none)
+                  {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
   flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
                   {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:18},
                   // the third, unusual knob: which flower. 50 is the lotus
@@ -17064,11 +17251,15 @@ const TEXTURE_PARAMS = {
                   {key:'form',  label:'Gloss',           min:0,  max:100, def:70,  unit:''}],
   moss:          [{key:'zoom',  label:'Stone Scale',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
-                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
+                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''},
+                  // the camera: straight down (0) → tipped, the far stone in haze
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:30,  unit:''}],
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
-                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
+                  // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -17156,8 +17347,8 @@ const TEXTURE_CAPS = {
   // — sharpness —
   grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  // gilding, lit: square sheets, crinkled, the highlight in the metal's colour (genMetalLeaf)
-  metalleaf:     { blends:['overlay','source-over','soft-light','hard-light','color-dodge','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
+  // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
+  metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
@@ -17252,7 +17443,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'metalleaf', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -17358,9 +17549,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'kintsugi'){
     result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
+    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom,form);
+    result = genLandscape(w,h,amt,zoom,form,extra.tilt);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
@@ -17378,7 +17569,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'summoning'){
     result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
-    result = genMetalLeaf(w,h,amt,zoom,light,tint1);
+    result = genMetalLeaf(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100);
   } else if(type === 'crystal'){
     result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'spangle'){
@@ -17782,7 +17973,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Mneme';
+const RELEASE = 'Jupiter–Harpalyke';
 
 
 /* ==== glyphs.js ==== */
@@ -18025,7 +18216,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-10 · ded0ad6";
+const STAMP = "2026-10-10 · 894d8d4";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -18935,7 +19126,7 @@ function pmlVarContext(W, H){
   if(caps.material) [['textureTint3Hex', 'Specular Hue'], ['textureTint4Hex', 'Shadow Hue']].forEach(([id, label]) => {
     const el = $(id); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label, hex: el.value }); });
   if(caps.diffuse){ const el = $('textureTint6Hex'); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label: 'Diffuse Hue', hex: el.value }); }
-  if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase()) hues.push({ label: caps.hue5.label, hex: el.value }); }
+  if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(el.value)) hues.push({ label: caps.hue5.label, hex: el.value }); }   // (fully transparent is none)
   return {
     surfName: on ? optionText('textureType') : 'None',
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
@@ -21447,6 +21638,8 @@ function serializeCurrentSettings(){
     texP4: $('texP4').value,
     texP5: $('texP5').value,
     texP6: $('texP6').value,
+    // the seed as it was typed or shown (any words; the number below is what draws)
+    textureSeedWords: ($('textureSeedWords') || {}).value || '',
     textureOpacity: parseFloat($('textureOpacity').value),
     textureSeed: parseInt($('textureSeedValue').value, 10),
 
@@ -21570,6 +21763,10 @@ function restoreSettings(s){
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
+  // the words go back only if they are still this seed's (else its phrase is shown)
+  { const box = $('textureSeedWords'), n = parseInt($('textureSeedValue').value, 10) || 0;
+    if(box){ if(typeof s.textureSeedWords === 'string' && s.textureSeedWords && seedFromText(s.textureSeedWords) === n){ box.value = s.textureSeedWords; if(box.dataset) box.dataset.seed = String(n); }
+      else syncSeedWords(true); } }
 
   $('borderToggle').checked = !!s.border;
   $('borderBlock').classList.toggle('open', !!s.border);
@@ -21815,6 +22012,8 @@ document.addEventListener('open', (e)=>{
 });
 
 function applyPreset(p){
+  // a FULL preset is a whole saved look (as a spell is saved), applied exactly
+  if(p.full) return applyFullPreset(p);
   // a locked control is put back exactly as it was once the preset lands
   const __locks = snapshotLocked();
   try {
@@ -21921,6 +22120,24 @@ function applyPreset(p){
     // a preset changes opacity and seed without anyone touching them
     paintMoons();
     paintSeedMoon();
+  }
+}
+
+/** A preset that is a whole look, made in the app and kept exactly: every
+ *  setting it has is restored as a saved spell's would be — except the page
+ *  size, which a preset never changes. Its own spell names it. */
+function applyFullPreset(p){
+  const __locks = snapshotLocked();
+  try {
+    applyThemePalette(deriveThemePalette(p));
+    const s = { ...p }; for(const k of ['name', 'full', 'aspect', 'customSize', 'customW', 'customH']) delete s[k];
+    restoreSettings(s);
+    $('activeSpell').value = p.spell || '';
+    if(document.body && document.body.dataset) document.body.dataset.lookName = p.name || '';
+    scheduleRender();
+  } finally {
+    restoreLocked(__locks);
+    paintMoons(); paintSeedMoon();
   }
 }
 
@@ -22834,6 +23051,7 @@ function syncSeedWords(force){
   const n = parseInt(num.value, 10) || 0;
   if(force || (typeof document !== 'undefined' && document.activeElement !== box)){ if(force || box.dataset == null || box.dataset.seed !== String(n)){ box.value = seedPhrase(n); if(box.dataset) box.dataset.seed = String(n); } }
   const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
+  if(state.ui.seedFit) requestAnimationFrame(state.ui.seedFit);
 }
 if($('textureSeedWords') && $('textureSeedWords').addEventListener){
   const box = $('textureSeedWords');
@@ -22843,9 +23061,22 @@ if($('textureSeedWords') && $('textureSeedWords').addEventListener){
     $('textureSeedValue').dispatchEvent(new Event('input', { bubbles: true }));
     const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
   });
-  // Enter finishes (a seed is one line); a number typed becomes its phrase
+  // Enter finishes; whatever was typed (a number, a phrase, any words) stays as typed, with its number
   box.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); box.blur(); } });
-  box.addEventListener('blur', () => { if(/^\s*-?\d+\s*$/.test(box.value)) syncSeedWords(true); if(typeof commitSoon === 'function') commitSoon(); });
+  box.addEventListener('blur', () => { if(typeof commitSoon === 'function') commitSoon(); });
+  // the hair-thin scroller, for words longer than the field
+  const bar = $('textureSeedScroll'), thumb = bar && bar.querySelector ? bar.querySelector('.seed-thumb') : null;
+  const fit = () => { if(!bar || !thumb) return; const sw = box.scrollWidth, cw = box.clientWidth, over = sw > cw + 1;
+    bar.classList.toggle('on', over); if(!over) return;
+    const wPct = cw/sw*100, lPct = box.scrollLeft/(sw - cw)*(100 - wPct); thumb.style.width = wPct + '%'; thumb.style.left = lPct + '%'; };
+  ['input', 'scroll', 'keyup', 'click', 'select', 'focus', 'blur'].forEach(ev => box.addEventListener(ev, () => requestAnimationFrame(fit)));
+  if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', fit);
+  if(bar && bar.addEventListener){ let drag = false;
+    const go = e => { const rc = bar.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - rc.left)/rc.width)); box.scrollLeft = f*(box.scrollWidth - box.clientWidth); fit(); };
+    bar.addEventListener('pointerdown', e => { drag = true; bar.classList.add('dragging'); try { bar.setPointerCapture(e.pointerId); } catch(_){} go(e); e.preventDefault(); });
+    bar.addEventListener('pointermove', e => { if(drag) go(e); });
+    const stop = () => { drag = false; bar.classList.remove('dragging'); }; bar.addEventListener('pointerup', stop); bar.addEventListener('pointercancel', stop); }
+  state.ui.seedFit = fit;
   // anything else that sets the number (rerolls, presets, loads, undo) shows here
   let lastSeen = null;
   setInterval(() => { const v = $('textureSeedValue').value; if(v !== lastSeen){ lastSeen = v; syncSeedWords(false); } }, 200);

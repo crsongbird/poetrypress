@@ -519,7 +519,7 @@ inside of a <~~dead person~~/trans>'s dreams.
               </optgroup>
               <optgroup label="√ Sharpness">
                 <option value="grain" data-str="option.waking_grain">Waking Grain</option>
-                <option value="metalleaf" data-str="option.metal_leaf">Metal Leaf</option>
+                <option value="metalleaf" data-str="option.metal_leaf">Scattered Polygons</option>
                 <option value="flowers" data-str="option.lotus_pond">Lotus Pond</option>
                 <option value="brushstrokes" data-str="option.painter_s_frustration">Painter's Frustration</option>
                 <option value="halftone" data-str="option.90s_dots">Retro Dots</option>
@@ -652,7 +652,10 @@ inside of a <~~dead person~~/trans>'s dreams.
             <div class="row">
               <div class="field">
                 <!-- the seed is a NUMBER (saved, shared, locked as one), shown as its PHRASE: type either, or any words -->
-                <textarea id="textureSeedWords" rows="2" spellcheck="false" autocomplete="off" aria-label="Texture seed: a phrase, a number, or any words"></textarea>
+                <div class="seed-field">
+                  <input type="text" id="textureSeedWords" spellcheck="false" autocomplete="off" aria-label="Texture seed: a phrase, a number, or any words">
+                  <div class="seed-scroll" id="textureSeedScroll" aria-hidden="true"><div class="seed-thumb"></div></div>
+                </div>
                 <input type="number" id="textureSeedValue" value="12345" step="1" hidden>
                 <span class="seed-number" id="textureSeedNumber"></span>
               </div>

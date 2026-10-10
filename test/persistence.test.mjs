@@ -144,7 +144,7 @@ registry['advancedLoadBtn'].dispatchEvent({ type: 'click' });
 registry['advancedRefreshBtn'].dispatchEvent({ type: 'click' });
 const again = JSON.parse(registry['advancedJson'].value);
 const lost = Object.keys(saved).filter(k =>
-  !['customW','customH','textureSeed'].includes(k) && norm(saved[k]) !== norm(again[k]) &&
+  !['customW','customH','textureSeed','textureSeedWords'].includes(k) && norm(saved[k]) !== norm(again[k]) &&
   JSON.stringify(saved[k]) !== JSON.stringify(again[k]));
 check('everything saved comes back after a load', lost.length === 0);
 if(lost.length) console.log('   lost:', lost.map(k => k + ' ' + JSON.stringify(saved[k]) + '->' + JSON.stringify(again[k])).join(', '));

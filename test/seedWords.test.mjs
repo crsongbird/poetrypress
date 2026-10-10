@@ -36,6 +36,12 @@ check('a negative number shows the phrase of the seed the textures actually use 
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 check('the seed field shows the phrase; the number stays the saved value (and shows small beneath)',
   html.includes('id="textureSeedWords"') && /id="textureSeedValue"[^>]*hidden/.test(html) && /const n = seedFromText\(box\.value\);/.test(ev));
+check('what was typed is kept: saved with the look, and restored when it is still that seed\'s (a typed number stays a number)',
+  /textureSeedWords: \(\$\('textureSeedWords'\) \|\| \{\}\)\.value \|\| '',/.test(ev) && /seedFromText\(s\.textureSeedWords\) === n\)\{ box\.value = s\.textureSeedWords;/.test(ev)
+  && !/if\(\/\^\\s\*-\?\\d\+\\s\*\$\/\.test\(box\.value\)\) syncSeedWords\(true\)/.test(ev));
+check('one line, the whole width, last in the tools; a hair-thin themed scroller when the words overflow (no native bar)',
+  /<input type="text" id="textureSeedWords"/.test(html) && html.includes('id="textureSeedScroll"')
+  && /\.tool-row > #seedRow, body\.is-mobile \.tool-row > #seedRow\{ grid-column:1 \/ -1 !important;/.test(readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8')));
 check('the report can print it: §SeedPhrase', /case 'SeedPhrase':/.test(readFileSync(new URL('../pmlVars.js', import.meta.url), 'utf8')));
 
 console.log();

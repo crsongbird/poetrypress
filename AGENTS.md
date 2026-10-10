@@ -348,6 +348,14 @@ background) don't belong in it.
 
 ## Working with Ruby
 
+- **Use what has been done already** (Ruby): before building a technique,
+  look up the prior art — a published method, an established library, a known
+  shader — and adopt it; reinvent only for a good reason, and say what it is.
+  The recommendations doc (Claude Docs, "Unfixable Vellum — Prior Art &
+  Recommendations") is the list so far.
+- **Don't replace what Ruby loves; add beside it.** A texture she liked keeps
+  its exact look at its defaults (Scattered Polygons: new knobs at 0 draw the
+  original); a new idea becomes a knob or a new texture.
 - **Do the work** rather than talking about it; attention is finite.
 - **Find the cause** instead of guessing twice. Screenshots are evidence —
   read them closely. Prove a fix (render it, measure it), don't assume it.

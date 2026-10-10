@@ -13,7 +13,7 @@
 /** What the app opens with. Must match a preset's `name` exactly; an unknown
  *  name falls back to the first preset rather than failing. */
 export const DEFAULTS = {
-  preset: 'Lotus Bloom',
+  preset: 'Dusk Letter',
 };
 
 /** The preview pane and the divider that sizes it. */

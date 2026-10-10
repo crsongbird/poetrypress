@@ -809,7 +809,7 @@ function pmlVarContext(W, H){
   if(caps.material) [['textureTint3Hex', 'Specular Hue'], ['textureTint4Hex', 'Shadow Hue']].forEach(([id, label]) => {
     const el = $(id); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label, hex: el.value }); });
   if(caps.diffuse){ const el = $('textureTint6Hex'); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label: 'Diffuse Hue', hex: el.value }); }
-  if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase()) hues.push({ label: caps.hue5.label, hex: el.value }); }
+  if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(el.value)) hues.push({ label: caps.hue5.label, hex: el.value }); }   // (fully transparent is none)
   return {
     surfName: on ? optionText('textureType') : 'None',
     blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),

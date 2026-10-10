@@ -697,6 +697,8 @@ function serializeCurrentSettings(){
     texP4: $('texP4').value,
     texP5: $('texP5').value,
     texP6: $('texP6').value,
+    // the seed as it was typed or shown (any words; the number below is what draws)
+    textureSeedWords: ($('textureSeedWords') || {}).value || '',
     textureOpacity: parseFloat($('textureOpacity').value),
     textureSeed: parseInt($('textureSeedValue').value, 10),
 
@@ -820,6 +822,10 @@ function restoreSettings(s){
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
+  // the words go back only if they are still this seed's (else its phrase is shown)
+  { const box = $('textureSeedWords'), n = parseInt($('textureSeedValue').value, 10) || 0;
+    if(box){ if(typeof s.textureSeedWords === 'string' && s.textureSeedWords && seedFromText(s.textureSeedWords) === n){ box.value = s.textureSeedWords; if(box.dataset) box.dataset.seed = String(n); }
+      else syncSeedWords(true); } }
 
   $('borderToggle').checked = !!s.border;
   $('borderBlock').classList.toggle('open', !!s.border);
@@ -1065,6 +1071,8 @@ document.addEventListener('open', (e)=>{
 });
 
 function applyPreset(p){
+  // a FULL preset is a whole saved look (as a spell is saved), applied exactly
+  if(p.full) return applyFullPreset(p);
   // a locked control is put back exactly as it was once the preset lands
   const __locks = snapshotLocked();
   try {
@@ -1171,6 +1179,24 @@ function applyPreset(p){
     // a preset changes opacity and seed without anyone touching them
     paintMoons();
     paintSeedMoon();
+  }
+}
+
+/** A preset that is a whole look, made in the app and kept exactly: every
+ *  setting it has is restored as a saved spell's would be — except the page
+ *  size, which a preset never changes. Its own spell names it. */
+function applyFullPreset(p){
+  const __locks = snapshotLocked();
+  try {
+    applyThemePalette(deriveThemePalette(p));
+    const s = { ...p }; for(const k of ['name', 'full', 'aspect', 'customSize', 'customW', 'customH']) delete s[k];
+    restoreSettings(s);
+    $('activeSpell').value = p.spell || '';
+    if(document.body && document.body.dataset) document.body.dataset.lookName = p.name || '';
+    scheduleRender();
+  } finally {
+    restoreLocked(__locks);
+    paintMoons(); paintSeedMoon();
   }
 }
 
@@ -2084,6 +2110,7 @@ function syncSeedWords(force){
   const n = parseInt(num.value, 10) || 0;
   if(force || (typeof document !== 'undefined' && document.activeElement !== box)){ if(force || box.dataset == null || box.dataset.seed !== String(n)){ box.value = seedPhrase(n); if(box.dataset) box.dataset.seed = String(n); } }
   const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
+  if(state.ui.seedFit) requestAnimationFrame(state.ui.seedFit);
 }
 if($('textureSeedWords') && $('textureSeedWords').addEventListener){
   const box = $('textureSeedWords');
@@ -2093,9 +2120,22 @@ if($('textureSeedWords') && $('textureSeedWords').addEventListener){
     $('textureSeedValue').dispatchEvent(new Event('input', { bubbles: true }));
     const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
   });
-  // Enter finishes (a seed is one line); a number typed becomes its phrase
+  // Enter finishes; whatever was typed (a number, a phrase, any words) stays as typed, with its number
   box.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); box.blur(); } });
-  box.addEventListener('blur', () => { if(/^\s*-?\d+\s*$/.test(box.value)) syncSeedWords(true); if(typeof commitSoon === 'function') commitSoon(); });
+  box.addEventListener('blur', () => { if(typeof commitSoon === 'function') commitSoon(); });
+  // the hair-thin scroller, for words longer than the field
+  const bar = $('textureSeedScroll'), thumb = bar && bar.querySelector ? bar.querySelector('.seed-thumb') : null;
+  const fit = () => { if(!bar || !thumb) return; const sw = box.scrollWidth, cw = box.clientWidth, over = sw > cw + 1;
+    bar.classList.toggle('on', over); if(!over) return;
+    const wPct = cw/sw*100, lPct = box.scrollLeft/(sw - cw)*(100 - wPct); thumb.style.width = wPct + '%'; thumb.style.left = lPct + '%'; };
+  ['input', 'scroll', 'keyup', 'click', 'select', 'focus', 'blur'].forEach(ev => box.addEventListener(ev, () => requestAnimationFrame(fit)));
+  if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', fit);
+  if(bar && bar.addEventListener){ let drag = false;
+    const go = e => { const rc = bar.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - rc.left)/rc.width)); box.scrollLeft = f*(box.scrollWidth - box.clientWidth); fit(); };
+    bar.addEventListener('pointerdown', e => { drag = true; bar.classList.add('dragging'); try { bar.setPointerCapture(e.pointerId); } catch(_){} go(e); e.preventDefault(); });
+    bar.addEventListener('pointermove', e => { if(drag) go(e); });
+    const stop = () => { drag = false; bar.classList.remove('dragging'); }; bar.addEventListener('pointerup', stop); bar.addEventListener('pointercancel', stop); }
+  state.ui.seedFit = fit;
   // anything else that sets the number (rerolls, presets, loads, undo) shows here
   let lastSeen = null;
   setInterval(() => { const v = $('textureSeedValue').value; if(v !== lastSeen){ lastSeen = v; syncSeedWords(false); } }, 200);

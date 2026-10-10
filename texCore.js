@@ -651,3 +651,17 @@ export function obliqueRender(F, H, RGB, opts = {}){
   }
   return out;
 }
+/** A smooth field over a camera frame's ground patch (obliqueFrame), sampled
+ *  in PAGE units — u = 0..1 across the page as seen straight down — so a
+ *  texture's features keep their size however large the tilted patch is.
+ *  Bilinear between samples every `step` cells. */
+export function fieldOn(F, step, fn){
+  const GW = F.GW, GH = F.GH, ww = F.ww, wh = F.wh, ox = F.flat ? 0 : F.gcx - ww/2, oz = F.flat ? 0 : F.gcz - wh/2;
+  const cw = Math.ceil(GW/step) + 2, ch = Math.ceil(GH/step) + 2, g = new Float32Array(cw*ch);
+  for(let j = 0; j < ch; j++) for(let i = 0; i < cw; i++) g[j*cw + i] = fn((i*step - ox)/ww, (j*step - oz)/wh);
+  const out = new Float32Array(GW*GH);
+  for(let y = 0; y < GH; y++){ const fy = y/step, j = Math.floor(fy), ty = fy - j;
+    for(let x = 0; x < GW; x++){ const fx = x/step, i = Math.floor(fx), tx = fx - i, k = j*cw + i;
+      out[y*GW + x] = (g[k]*(1-tx) + g[k+1]*tx)*(1-ty) + (g[k+cw]*(1-tx) + g[k+cw+1]*tx)*ty; } }
+  return out;
+}

@@ -186,7 +186,7 @@ export const UI_STRINGS = {
   'option.first_snow':                         "First Snow",
   'option.aurora_veil':                        "Aurora Veil",
   'option.waking_grain':                       "Waking Grain",
-  'option.metal_leaf':                         "Metal Leaf",
+  'option.metal_leaf':                         "Scattered Polygons",
   'option.lotus_pond':                         "Lotus Pond",
   'option.painter_s_frustration':              "Painter's Frustration",
   'option.90s_dots':                           "Retro Dots",

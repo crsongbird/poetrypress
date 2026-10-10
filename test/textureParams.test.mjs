@@ -34,10 +34,10 @@ const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
 // a third knob is always Form; Dream Bloom alone goes on to five (Object Shape, Colour Variation)
 check('every texture declares two params, plus an optional third that must be Form (and Dream Bloom\'s and Crystal Leaf\'s fourth and fifth)',
   Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
-    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
+    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
     // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
     || (t === 'water' && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
-    || (t === 'dunes' && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
+    || ((t === 'dunes' || t === 'moss' || t === 'landscape') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
     || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')));
 
 const unlabelled = textureTypes.filter(t => paramsFor(t).some(d => !d.label || /value/i.test(d.label)));
@@ -69,10 +69,11 @@ check('both zoom levels still fill the requested size',
   flat.width === 600 && deep.width === 600 && deep.height === 600);
 
 // presets
-const presetTex = PRESETS.map(p => p.textureType).filter(Boolean);
-// (Foxed and Creased share Old Paper since Foxing and Fold Ghost merged — for the preset review)
-check('every preset uses a distinct texture (Old Paper may serve two)', new Set(presetTex).size === presetTex.length - (presetTex.filter(t => t === 'oldpaper').length > 1 ? presetTex.filter(t => t === 'oldpaper').length - 1 : 0));
-const orphans = presetTex.filter(t => !textureTypes.includes(t));
+const presetTex = PRESETS.filter(p => !p.full).map(p => p.textureType).filter(Boolean);
+// (a FULL preset is a look Ruby made in the app — Dusk Letter, Event Horizon —
+//  and may use a texture another preset uses; the rest are each their own)
+check('every preset uses a distinct texture (Ruby\'s own full looks excepted)', new Set(presetTex).size === presetTex.length);
+const orphans = PRESETS.map(p => p.textureType).filter(t => t && !textureTypes.includes(t));
 check('no preset points at a texture that is not in the picker', orphans.length === 0);
 if(orphans.length) console.log('   orphans:', orphans.join(', '));
 

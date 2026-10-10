@@ -19,13 +19,15 @@ full), Scrying Pool (~1 s preview).
 material, cast shadows, occlusion; NORMAL MAPS and MATERIAL hues; `lightSparse`
 for scattered details. On it now: Dune Ripples, Kintsugi, Moss on Stone, Rain
 on Glass, Facet Field, Cup Ring, Old Paper, Poured Wax, Cold Press, Fractured
-Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter, Brushstrokes
-(impasto) and Metal Leaf (gilding). Cartomancy lays its cards under the dial
+Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter and Brushstrokes
+(impasto); Scattered Polygons' Sheen tilts each flake to the dial. Cartomancy lays its cards under the dial
 (shadows, curl, gilt edges). Past the dial's rim these sink the light toward
 4° (long raking shadows); the rest keep the rim.
-- Next: Moss on Stone and Painted Landscape could take the camera TILT
-  (`obliqueFrame` / `obliqueRender`, texCore); normal-map detail where heights
-  are awkward (weave, crazing); per-material gloss where one won't do.
+- The camera TILT is on Dune Ripples, Scrying Pool, Moss on Stone (texCore
+  `obliqueFrame` / `obliqueRender` / `fieldOn`) and, as the camera's pitch,
+  Painted Landscape.
+- Next: normal-map detail where heights are awkward (weave, crazing);
+  per-material gloss where one won't do.
 
 ## 2 · Ruby to judge (rebuilt this round, from her notes and the prior art)
 - Crystal Leaf: a druse of six-faced quartz points, each face lit, striated,
@@ -35,15 +37,20 @@ Glaze, Crystal Leaf, Metal Spangle, Linen, Sigil Scatter, Brushstrokes
   things at their depths, refracted and fading; shadows on the floor; Tilt.
 - Dune Ripples: transverse, barchanoid or linear dunes; ripples only where
   the wind works; heavy grains in the troughs; Tilt (default 40).
-- Brushstrokes (impasto), Metal Leaf (gilding), Cartomancy (the Vellum deck:
-  elemental suits, an arcana, Saturn / Enceladus / the Kitsune as rare cards).
-- The 36 presets: four Simple first (Plainsong, Inkwell, Sea Glass, Dusk
-  Letter), then eight each of Whimsy, Sharpness, Chaos, Touch, under headings.
-  Andromeda, Euphoria, Lotus Bloom, Gateway and Sealed are untouched. Gold
-  Leaf was retuned for the new Metal Leaf; Creased was replaced (it repeated
-  Old Paper).
-- Word seeds: the field shows the phrase, the number small beneath; typed
-  words that aren't a phrase stay as typed (hashed, one way).
+- Brushstrokes (impasto) and Cartomancy (the Vellum deck: elemental suits,
+  an arcana, Saturn / Enceladus / the Kitsune as rare cards).
+- Scattered Polygons: the original Metal Leaf, restored exactly (its gilding
+  rebuild is gone); Shape, Sheen and Glitter at 0 draw the original.
+- The presets: four Simple first, then eight per element, under headings;
+  Ruby's Dusk Letter (now the default) and Event Horizon applied exactly as
+  she made them; boxes and blends where a texture needs them (Homebound,
+  Insomnia, Stillwater, Omen, Nocturne, Homesick, Mirage, Lucid, Projection);
+  the literal names renamed.
+- The themes: each an element (Rose = Whimsy, Aether = Sharpness, Fathom =
+  Chaos, Vellum = Touch) with a complementary second accent, slight depth,
+  square corners.
+- The seed: last in the tools, one line, a hair-thin scroller; what is typed
+  (words or a number) stays, and is saved with its number.
 
 ## 3 · Colour, light and material — the rest of the pass
 Every colour has one job (test/colorRoles.test.mjs). Unused hues are now
@@ -81,7 +88,9 @@ a random angle.
 ## Worth knowing
 - WORD SEEDS (seedWords.js): every 32-bit seed has exactly one phrase and
   back; the banks and their order are FROZEN (test/seedWords.test.mjs anchors
-  phrases). Saves still hold the number.
+  phrases). Saves hold the number, and (textureSeedWords) whatever was typed.
+- FULL presets (`full: true`) are whole saved looks, applied by
+  restoreSettings except the page size.
 - The camera tilt (texCore `obliqueFrame`/`obliqueRender`): build the ground
   on the frame's patch (larger than the page), light it from above, then
   render; tilt 0 returns `flat` and the texture is exactly its top-down self.

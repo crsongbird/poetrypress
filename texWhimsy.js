@@ -1159,8 +1159,11 @@ export function genMoon(w,h,amt,zoom,form,night){
 // Ridge behind ridge behind ridge,
 // each one paler than the last —
 // distance, made of air.
-export function genLandscape(w,h,amt,zoom,form){
+export function genLandscape(w,h,amt,zoom,form,tilt){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  // TILT: the camera's pitch — 0 as it always was; tipped down from higher, the
+  // horizon rises, the near ground grows (perspective) and the ridges flatten
+  const pitch=Math.max(0, Math.min(1, tilt || 0));
   // WETNESS: 0 is the dry, worked painting; wetter, it becomes watercolour —
   // edges bleed into each other and, very wet, the paint blooms (backruns:
   // pale patches with a dark, frilled rim where wet met drying paint)
@@ -1196,7 +1199,7 @@ export function genLandscape(w,h,amt,zoom,form){
   const kind=Object.keys(BIOMES)[Math.floor(Math.random()*Object.keys(BIOMES).length)];
   const B=BIOMES[kind];
   const bands=Math.max(2, Math.round((B.bands[0]+Math.random()*(B.bands[1]-B.bands[0]))*amt));
-  const horizon=h*(B.horizon+(Math.random()-0.5)*0.08);
+  const horizon=Math.max(h*0.08, h*(B.horizon+(Math.random()-0.5)*0.08) - pitch*h*0.3);
 
   // the sky: a soft wash, and a few long smears of cloud
   const sky=ctx.createLinearGradient(0,0,0,horizon);
@@ -1248,8 +1251,8 @@ export function genLandscape(w,h,amt,zoom,form){
   let lakeTop=null;
   for(let i=0;i<bands;i++){
     const t=bands===1?1:i/(bands-1);                    // 0 far .. 1 near
-    let base=horizon+(h-horizon)*Math.pow(t,1.35)*0.92;
-    let amp=unit*B.amp*(0.35+t*0.9);
+    let base=horizon+(h-horizon)*Math.pow(t,1.35+pitch*0.9)*0.92;
+    let amp=unit*B.amp*(0.35+t*0.9)*(1-0.4*pitch);
     // in front of a lake, the near shore sits low, so the water shows
     if(lakeTop!=null){ const lk=Math.floor((bands-1)/2), u=(i-lk)/Math.max(1, bands-1-lk); base=lakeTop+(h-lakeTop)*(0.5+0.45*u); amp*=0.45; }
     const tone=B.pale ? Math.round(205-t*95) : Math.round(178-t*140);   // pale far, dark near

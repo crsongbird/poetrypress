@@ -497,7 +497,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('lightHeights: a glossy surface takes a highlight', Math.max(...C.lightHeights(H, ww, wh, { light: 90, gloss: 0.9 }).spec) > 0.3);
   const T = await import('../textureGenerators.js');
   check('Dune Ripples, Kintsugi and Moss on Stone are lit textures (Dune Ripples with a camera Tilt as well)',
-    ['dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].light === true && T.paramsFor(t).length >= 3) && T.paramsFor('dunes')[3].key === 'tilt');
+    ['dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].light === true && T.paramsFor(t).length >= 3) && T.paramsFor('dunes')[3].key === 'tilt' && T.paramsFor('moss')[3].key === 'tilt' && T.paramsFor('landscape')[3].key === 'tilt' && T.paramsFor('landscape')[3].def === 0);
   check('a look saved with the retired Zen Garden opens as Dune Ripples', /const RETIRED = \{ whorl: 'dunes'/.test(src('textureGenerators.js')) && /if\(s\.textureType === 'whorl'\) return \{ \.\.\.s, textureType: 'dunes' \};/.test(ev) && /s = retireLook\(s\);/.test(ev));
   check('Rain on Glass is built from lit heights', /const L=lightHeights\(H, ww, wh, \{ light, relief:1\.6, gloss:0\.95/.test(src('texTouch.js')));
   check('Lotus petals fade by Ruby\'s rule (light → white, mid → brighter and more saturated, dark → saturated near-black) and fold', /const tipOf=o=>/.test(src('texSharpness.js')) && /the fold: a crease down the petal's centre/.test(src('texSharpness.js')));
@@ -772,7 +772,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
     T.paramsFor('brushstrokes').map(d => d.label).join('|') === 'Stroke Width|Stroke Count|Wetness' && T.paramsFor('brushstrokes')[2].def === 0
     && /if\(wet > 0\.25\)\{/.test(sh) && /ctx\.globalAlpha = 0\.65\*wet;/.test(sh));
   check('Painted Landscape has Wetness (watercolour blooms) and five more countries: mesa, forest, tundra, lake, coast',
-    T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness'
+    T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness|Tilt'
     && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:'].every(k => wh.includes('    ' + k))
     && /const kind=Object\.keys\(BIOMES\)\[Math\.floor\(Math\.random\(\)\*Object\.keys\(BIOMES\)\.length\)\];/.test(wh));
 }
@@ -853,8 +853,10 @@ check('the inset box is painted on its own layer, then blended on as one image (
     const sh = src('texSharpness.js'), ch3 = src('texChaos.js'), T2 = await import('../textureGenerators.js');
     check('Brushstrokes are impasto: each stroke lays down thickness (body, piled edges, bristle ridges), lit by the dial and laid over the paint',
       T2.TEXTURE_CAPS.brushstrokes.light === true && /const L = lightHeights\(H, hw, hh, \{ light, relief:1, gloss:0\.25 \+ 0\.6\*wet/.test(sh) && /hx\.globalAlpha = 0\.16\*\(1 - 0\.5\*wet\); hx\.lineWidth = W\*0\.1;/.test(sh));
-    check('Metal Leaf is gilding: square sheets in overlapping rows, crinkled and torn, the highlight in the metal\'s colour, each sheet mirroring by its own tilt',
-      T2.TEXTURE_CAPS.metalleaf.light === true && /const env = Math\.max\(0, Math\.min\(1\.25, 0\.6 \+ 1\.0\*/.test(sh) && /the sheets, row by row/.test(sh));
+    check('Scattered Polygons is the original Metal Leaf, restored: flat flakes at 0 (their extra randomness only drawn above 0); Shape, Sheen (by the dial), Glitter',
+      T2.paramsFor('metalleaf').map(d => d.label).join('|') === 'Leaf Size|Coverage|Shape|Sheen|Glitter' && T2.paramsFor('metalleaf').slice(2).every(d => d.def === 0)
+      && /if\(shapeV > 0 && Math\.random\(\) < shapeV\)\{/.test(sh) && /if\(sheen > 0\)\{ const ta = Math\.random\(\)/.test(sh) && /const flakes = Math\.max\(10, Math\.round\(\(120 \+ Math\.random\(\)\*90\) \* amt\)\);/.test(sh)
+      && /data-str="option\.metal_leaf">Scattered Polygons</.test(src('index.html')));
     check('Cartomancy is a divination deck: elemental suits drawn as paths, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune); shadows, curl and gilt edges by the dial',
       T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Card Count|Scatter'
       && /const RARE=\[\['✦','Saturn','saturn'\],\['✦','Enceladus','enceladus'\],\['✦','The Kitsune','kitsune'\]\];/.test(ch3) && /const tearClip=\(\)=>/.test(ch3));

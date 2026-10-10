@@ -591,80 +591,108 @@ export function genSilverpointHatch(w,h,amt,zoom,angle,form){
 // it forgets it was ever
 // heavier than light.
 /**
- * Metal Leaf — gilding, as a gilder lays it: square sheets of leaf in
- * overlapping rows, each a little askew, crinkled where it was pressed down,
- * torn at its edges, split here and there to show the ground beneath. Lit by
- * the dial (lightHeights): metal's highlight takes the metal's own colour, so
- * the crinkles flash as the light moves, and every overlap is a fine ridge.
- * LEAF SIZE · COVERAGE (gaps and tears → laid edge to edge)
+ * Scattered Polygons (the original Metal Leaf) — flakes of leaf, like metal
+ * shavings: translucent polygons in the leaf's colour, each its own
+ * brightness, a dark seam where one overlaps the next. The blend modes stack
+ * them. At 0 on the three knobs below it draws EXACTLY as it always has
+ * (flat; their extra randomness is only drawn when a knob is above 0):
+ *   SHAPE    0: the original five-to-eight-sided flakes; higher, more of
+ *            them become shards, slivers, squares of leaf and curled shavings
+ *   SHEEN    0: flat; higher, each flake tilts to the dial's light — brighter
+ *            or darker by how it faces it, a soft band of reflection across it
+ *            (light caught inside the metal) and a highlight on its near edge
+ *   GLITTER  soft, speckled, noisy highlights scattered over the flakes
+ * LEAF SIZE · COVERAGE · SHAPE · SHEEN · GLITTER
  */
-export function genMetalLeaf(w,h,amt,zoom,light,tint){
+export function genMetalLeaf(w,h,amt,zoom,light,tint,form,sheenK,glitterK){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  const shapeV = Math.max(0, Math.min(1, form || 0)), sheen = Math.max(0, Math.min(1, sheenK || 0)), glitter = Math.max(0, Math.min(1, glitterK || 0));
   const leaf = parseHex(tint || '#D9B45B');
-  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh), N = ww*wh;
-  const S = unit*0.16*zoom, cover = Math.min(1, 0.45 + 0.35*amt);
-  // the sheets, row by row (each overlaps the one before it), askew, some missing
-  const sheets = [];
-  for(let y = -S*0.5; y < wh + S*0.5; y += S*0.9){
-    const shift = (Math.random() - 0.5)*S*0.5;
-    for(let x = -S*0.5 + shift; x < ww + S*0.5; x += S*0.9){
-      if(Math.random() > cover) continue;
-      const a = (Math.random() - 0.5)*0.14, wa = Math.random()*Math.PI;
-      const ta = Math.random()*Math.PI*2, tm = Math.random()*0.45;
-      sheets.push({ x: x + (Math.random() - 0.5)*S*0.12, y: y + (Math.random() - 0.5)*S*0.12, ca: Math.cos(a), sa: Math.sin(a),
-        wx: Math.cos(wa), wy: Math.sin(wa), lift: (Math.random() - 0.5)*0.25, ph: Math.random()*50, tx: Math.cos(ta)*tm, ty: Math.sin(ta)*tm });
+  const c = document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0,0,w,h);
+  const lv = lightVec(light == null ? 315 : light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm;   // toward the light
+  // a tone of the leaf: k > 1 lifts it toward white (keeping its hue), k < 1 darkens it
+  const tone = (k, a) => { const f = v => Math.round(k > 1 ? v + (255 - v)*Math.min(1, k - 1) : v*k); return `rgba(${f(leaf.r)},${f(leaf.g)},${f(leaf.b)},${a})`; };
+
+  const unit = Math.max(w,h);
+  const flakes = Math.max(10, Math.round((120 + Math.random()*90) * amt));
+
+  for(let i=0;i<flakes;i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const r = unit*(0.015 + Math.random()*0.055) * zoom;
+    const sides = 5 + Math.floor(Math.random()*4);
+    const rot = Math.random()*Math.PI*2;
+
+    const pts = [];
+    for(let s=0;s<sides;s++){
+      const a = rot + (s/sides)*Math.PI*2;
+      const rr = r*(0.55 + Math.random()*0.7);
+      pts.push([cx+Math.cos(a)*rr, cy+Math.sin(a)*rr]);
+    }
+    // SHAPE: some flakes become other things (only drawn when the knob is up)
+    let curl = null;
+    if(shapeV > 0 && Math.random() < shapeV){
+      const kind = Math.random(), ca = Math.cos(rot), sa = Math.sin(rot), P = (u, v) => [cx + u*ca - v*sa, cy + u*sa + v*ca];
+      pts.length = 0;
+      if(kind < 0.3){ const n = 3 + Math.floor(Math.random()*2); for(let s=0;s<n;s++){ const a = (s/n)*Math.PI*2 + (Math.random()-0.5)*0.9; pts.push(P(Math.cos(a)*r*(1.3 + Math.random()*0.5), Math.sin(a)*r*0.45)); } }   // a shard
+      else if(kind < 0.55){ const L = r*(1.8 + Math.random()*1.4), t = r*(0.08 + Math.random()*0.12); pts.push(P(-L, -t*0.5), P(L*0.9, -t), P(L, t*0.3), P(-L*0.95, t)); }   // a sliver
+      else if(kind < 0.8){ const sq = r*(0.8 + Math.random()*0.3); for(const [u, v] of [[-1,-1],[1,-1],[1,1],[-1,1]]) pts.push(P(u*sq*(1 + (Math.random()-0.5)*0.12), v*sq*(1 + (Math.random()-0.5)*0.12))); }   // a square of leaf
+      else { curl = { R: r*(0.9 + Math.random()*0.8), a0: rot, sweep: Math.PI*(0.6 + Math.random()*0.9), wd: r*(0.15 + Math.random()*0.2) }; }   // a curled shaving
+    }
+
+    ctx.beginPath();
+    if(curl){ const { R, a0, sweep, wd } = curl; ctx.arc(cx, cy, R, a0, a0 + sweep); ctx.arc(cx, cy, Math.max(1, R - wd), a0 + sweep, a0, true); }
+    else { ctx.moveTo(pts[0][0], pts[0][1]); for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]); }
+    ctx.closePath();
+
+    // each flake keeps its own brightness, carried in the leaf's colour
+    let lift = (178 + Math.floor(Math.random()*66)) / 210;
+    const alpha = 0.16 + Math.random()*0.4;
+    // SHEEN: the flake's tilt to the light
+    let facing = 0;
+    if(sheen > 0){ const ta = Math.random()*Math.PI*2, tm = 0.3 + Math.random()*0.7; facing = (Math.cos(ta)*TX + Math.sin(ta)*TY)*tm; if(facing < 0) lift *= 1 + sheen*0.55*facing; }
+    ctx.globalAlpha = alpha;
+    if(facing > 0){ const m = sheen*0.5*facing, ch = v => Math.round(Math.min(255, v*lift) + (255 - Math.min(255, v*lift))*m);   // turned to the light: toward white, not a hue
+      ctx.fillStyle = `rgb(${ch(leaf.r)},${ch(leaf.g)},${ch(leaf.b)})`; }
+    else ctx.fillStyle = `rgb(${Math.min(255, Math.round(leaf.r*lift))},${Math.min(255, Math.round(leaf.g*lift))},${Math.min(255, Math.round(leaf.b*lift))})`;
+    ctx.fill();
+    if(sheen > 0){
+      ctx.save(); ctx.clip();
+      // light caught inside the metal: a soft band across the flake, along the light
+      const L = r*1.4, band = ctx.createLinearGradient(cx + TX*L, cy + TY*L, cx - TX*L, cy - TY*L), off = 0.3 + 0.4*Math.random();
+      band.addColorStop(0, tone(1.5, 0)); band.addColorStop(Math.max(0, off - 0.18), tone(1.5, 0)); band.addColorStop(off, tone(1.7, 0.55*sheen*(0.5 + 0.5*Math.max(0, facing))));
+      band.addColorStop(Math.min(1, off + 0.18), tone(1.5, 0)); band.addColorStop(1, tone(0.5, 0.25*sheen));
+      ctx.globalAlpha = Math.min(1, alpha*1.6); ctx.fillStyle = band; ctx.fillRect(cx - L*1.5, cy - L*1.5, L*3, L*3);
+      // a highlight where its near edge meets the light
+      if(facing > 0){ const hx = cx + TX*r*0.55, hy = cy + TY*r*0.55, sp = ctx.createRadialGradient(hx, hy, 0, hx, hy, r*0.7);
+        sp.addColorStop(0, `rgba(255,252,240,${(0.7*sheen*facing*facing).toFixed(3)})`); sp.addColorStop(1, 'rgba(255,252,240,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = sp; ctx.fillRect(hx - r, hy - r, r*2, r*2); }
+      ctx.restore();
+    }
+
+    // the seam where one leaf overlaps the next
+    ctx.globalAlpha = 0.10 + Math.random()*0.25;
+    ctx.strokeStyle = 'rgb(48,48,48)';
+    ctx.lineWidth = Math.max(cpx(0.5), unit*0.0009);
+    ctx.stroke();
+
+    // GLITTER: soft speckled highlights over the flake, noisy
+    if(glitter > 0){
+      const n = Math.round(glitter*(4 + r*r/(unit*unit)*9000));
+      ctx.save(); ctx.clip();
+      for(let k=0;k<n;k++){ const gx = cx + (Math.random() - 0.5)*r*2, gy = cy + (Math.random() - 0.5)*r*2, gr = cpx(0.6 + Math.random()*Math.random()*3.2);
+        const gl = Math.random()**3*(0.35 + 0.65*Math.max(0, 0.5 + facing));
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr*2.4); g.addColorStop(0, `rgba(255,250,235,${(gl*0.9).toFixed(3)})`); g.addColorStop(1, 'rgba(255,250,235,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(gx - gr*2.4, gy - gr*2.4, gr*4.8, gr*4.8); }
+      ctx.restore();
     }
   }
-  const tear = makeNoiseGrid(48, 48), crk = makeNoiseGrid(96, 96), split = makeNoiseGrid(20, 20);
-  const H = new Float32Array(N), TOP = new Int32Array(N).fill(-1), SEAM = new Float32Array(N), SHADE = new Float32Array(N);
-  const cs = S*1.4, gx = Math.ceil(ww/cs) + 3, gy = Math.ceil(wh/cs) + 3, bins = Array.from({ length: gx*gy }, () => []);
-  sheets.forEach((s2, k) => { const bi = Math.floor(s2.x/cs) + 1, bj = Math.floor(s2.y/cs) + 1;
-    for(let j = bj - 1; j <= bj + 1; j++) for(let i = bi - 1; i <= bi + 1; i++) if(i >= 0 && j >= 0 && i < gx && j < gy) bins[j*gx + i].push(k); });
-  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-    const i = y*ww + x, list = bins[(Math.floor(y/cs) + 1)*gx + Math.floor(x/cs) + 1] || [];
-    let top = -1, under = 0, edgeD = 1e9;
-    for(const k of list){ const s2 = sheets[k], dx = x - s2.x, dy = y - s2.y, u = dx*s2.ca + dy*s2.sa, v = -dx*s2.sa + dy*s2.ca;
-      // a torn edge: the square's border wanders
-      const rag = (sampleNoiseGrid(tear, 48, 48, x/ww*47 + k*3.1, y/wh*47) - 0.5)*S*0.08;
-      const e = Math.min(S/2 - Math.abs(u), S/2 - Math.abs(v)) + rag;
-      if(e > 0){ if(top >= 0) under++; if(k > top){ top = k; edgeD = e; } } }
-    // splits: the leaf parts here and there, showing the ground
-    if(top >= 0 && sampleNoiseGrid(split, 20, 20, x/ww*19, y/wh*19) > 0.5 + 0.5*cover && sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) > 0.72) top = -1;
-    TOP[i] = top;
-    if(top < 0){ H[i] = 0; continue; }
-    const s2 = sheets[top];
-    // crinkles: fine wrinkles, mostly one way per sheet (how it was pressed)
-    const cu = x*s2.wx + y*s2.wy, cv2 = -x*s2.wy + y*s2.wx;
-    const wr = Math.sin(cu*0.45/Math.max(0.5, unit*0.004) + s2.ph + 2.4*sampleNoiseGrid(crk, 96, 96, cv2/ww*30, cu/ww*8))*0.5
-             + (sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) - 0.5)*0.9;
-    H[i] = unit*0.004*(1 + under*0.6) + wr*unit*0.0012 + s2.lift*unit*0.002;
-    SEAM[i] = Math.exp(-edgeD/(unit*0.0025))*(under > 0 ? 1 : 0.6);
-    SHADE[i] = s2.lift;
-  }
-  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.92, shadow: 0.45, ao: 0.35, ambient: 0.3 });
-  // metal MIRRORS: its brightness is what its surface faces — each sheet's own slight tilt and every crinkle's slope
-  const lv = lightVec(light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm, gs = 1/Math.max(0.5, unit*0.0012);
-  const fl = L.flat || 1, small = document.createElement('canvas'); small.width = ww; small.height = wh;
-  const sx = small.getContext('2d', CPU), img = sx.createImageData(ww, wh), d = img.data;
-  for(let i = 0; i < N; i++){
-    const q = i*4, k = litK(L, i, 0.3, null, 0)/fl;
-    if(TOP[i] < 0){ const g = 128*Math.min(1.05, 0.75 + 0.25*k); d[q] = d[q+1] = d[q+2] = g; d[q+3] = 255; continue; }   // the ground, in the leaf's shade
-    // metal: a darker body, and a highlight IN the metal's colour (a little whiter at its peak)
-    const s2 = sheets[TOP[i]], x = i % ww, y = (i/ww)|0;
-    const gX = (H[y*ww + Math.min(ww-1, x+1)] - H[y*ww + Math.max(0, x-1)])*0.5*gs, gY = (H[Math.min(wh-1, y+1)*ww + x] - H[Math.max(0, y-1)*ww + x])*0.5*gs;
-    const env = Math.max(0, Math.min(1.25, 0.6 + 1.0*((s2.tx - gX*0.35)*TX + (s2.ty - gY*0.35)*TY)));
-    const sp = Math.min(1, L.spec[i] + Math.max(0, env - 0.95)*1.5), body = (0.3 + 0.62*env)*(0.65 + 0.35*k) - SEAM[i]*0.25;
-    d[q]   = clampByteMl(leaf.r*body + leaf.r*sp*1.6 + 255*sp*sp*0.5);
-    d[q+1] = clampByteMl(leaf.g*body + leaf.g*sp*1.6 + 255*sp*sp*0.5);
-    d[q+2] = clampByteMl(leaf.b*body + leaf.b*sp*1.6 + 255*sp*sp*0.5);
-    d[q+3] = 255;
-  }
-  sx.putImageData(img, 0, 0);
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const ctx = c.getContext('2d', CPU); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, 0, 0, w, h);
+  ctx.globalAlpha = 1;
   return c;
 }
-const clampByteMl = v => v < 0 ? 0 : v > 255 ? 255 : v;
 
 // Most windows are dark.
 // The few that are lit are why

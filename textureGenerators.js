@@ -84,7 +84,13 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Grain',           min:0,  max:100, def:33,  unit:'', ticks:[0,33,66,100],
                    names:['Silver','Film','Paper','Digital']}],
   metalleaf:     [{key:'zoom',  label:'Leaf Size',       min:60, max:360, def:100, unit:'%'},
-                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165}],
+                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165},
+                  // the original flakes (0) → shards, slivers, squares of leaf, curled shavings
+                  {key:'form',  label:'Shape',           min:0,  max:100, def:0,   unit:''},
+                  // flat, as it always was (0) → each flake tilting to the dial's light, a band of reflection inside
+                  {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
+                  // soft speckled, noisy highlights over the flakes (0: none)
+                  {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
   flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
                   {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:18},
                   // the third, unusual knob: which flower. 50 is the lotus
@@ -175,11 +181,15 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Gloss',           min:0,  max:100, def:70,  unit:''}],
   moss:          [{key:'zoom',  label:'Stone Scale',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
-                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
+                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''},
+                  // the camera: straight down (0) → tipped, the far stone in haze
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:30,  unit:''}],
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
-                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
+                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
+                  // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -267,8 +277,8 @@ export const TEXTURE_CAPS = {
   // — sharpness —
   grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  // gilding, lit: square sheets, crinkled, the highlight in the metal's colour (genMetalLeaf)
-  metalleaf:     { blends:['overlay','source-over','soft-light','hard-light','color-dodge','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
+  // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
+  metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
@@ -363,7 +373,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'metalleaf', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -469,9 +479,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'kintsugi'){
     result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
+    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom,form);
+    result = genLandscape(w,h,amt,zoom,form,extra.tilt);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2);
   } else if(type === 'blackhole'){
@@ -489,7 +499,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'summoning'){
     result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
-    result = genMetalLeaf(w,h,amt,zoom,light,tint1);
+    result = genMetalLeaf(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100);
   } else if(type === 'crystal'){
     result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'spangle'){

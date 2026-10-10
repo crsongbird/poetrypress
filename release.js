@@ -11,4 +11,4 @@
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-export const RELEASE = 'Jupiter–Mneme';
+export const RELEASE = 'Jupiter–Harpalyke';

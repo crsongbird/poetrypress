@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn } from './texCore.js';
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
 //   pitch   thread spacing (of the page)   tw     thread width (of the pitch)
@@ -988,41 +988,47 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
  * The stone takes the light and casts shadow; DAMPNESS darkens and glosses
  * the stone and deepens the moss.  STONE SCALE · MOSS · DAMPNESS
  */
-export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
+export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
   amt=(amt==null?0.45:amt); zoom=(zoom==null?1:zoom);
-  const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form));
+  const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form)), tl=Math.max(0, Math.min(1, tilt || 0));
   const stone=parseHex(tint1||'#8A8579'), moss=parseHex(tint2||'#5F7E34');
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  // TILT: the camera (texCore obliqueFrame): 0 straight down, as it always was
+  const div=tl > 0.001 ? canonDiv(3) : canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.07), GW=F.GW, GH=F.GH, N=GW*GH;
+  const ox=F.flat ? 0 : F.gcx - ww/2, oz=F.flat ? 0 : F.gcz - wh/2;
   const rock=fbmSampler(2.2/zoom, 5), ridge=fbmSampler(5/zoom, 3), growth=fbmSampler(4, 3), fibre=fbmSampler(48, 2);
-  const H=new Float32Array(ww*wh), M=new Float32Array(ww*wh), base=new Float32Array(ww*wh);
+  const H=new Float32Array(N), M=new Float32Array(N);
   const st=Math.max(2, Math.round(unit/220));
-  base.set(smoothField(ww,wh,st,(u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
-    return (rock(u,v)*0.75 + r*0.35)*unit*0.06; }));
-  const GR=smoothField(ww,wh,st*2,(u,v)=>growth(u,v));
-  const TIP=GL ? new Float32Array(ww*wh) : null;
+  const base=fieldOn(F, st, (u,v)=>{ const r=1-Math.abs(ridge(u,v)*2-1);   // ridged: fractured, angular stone
+    return (rock(u,v)*0.75 + r*0.35)*unit*0.06; });
+  const GR=fieldOn(F, st*2, (u,v)=>growth(u,v));
+  const TIP=GL ? new Float32Array(N) : null;
   // moss gathers where the stone dips below its neighbourhood, and where it is flat
-  const at=(x,y)=>base[Math.min(wh-1,Math.max(0,y))*ww+Math.min(ww-1,Math.max(0,x))];
+  const at=(x,y)=>base[Math.min(GH-1,Math.max(0,y))*GW+Math.min(GW-1,Math.max(0,x))];
   const R=Math.max(2, Math.round(unit*0.02));
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, hollow=(at(x-R,y)+at(x+R,y)+at(x,y-R)+at(x,y+R))/4 - base[i];
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){
+    const i=y*GW+x, hollow=(at(x-R,y)+at(x+R,y)+at(x,y-R)+at(x,y+R))/4 - base[i];
     const slope=Math.hypot(at(x+1,y)-at(x-1,y), at(x,y+1)-at(x,y-1));
     const want=GR[i] + hollow*0.12 - slope*0.08 + (amt - 0.5)*0.9;
     const m=Math.max(0, Math.min(1, (want - 0.42)*5));
     M[i]=m;
-    const fb=fibre(x/ww,y/wh);
+    const fb=fibre((x-ox)/ww,(y-oz)/wh);
     H[i]=base[i] + m*(1.5 + 2.2*fb);                              // soft raised clumps, fibrous on top
     if(TIP) TIP[i]=m*Math.max(0, fb-0.45)*1.8;                    // the tips, for the glow
   }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
-  const sd=1 - damp*0.35, mg=1 + damp*0.25;
-  return paintLit(w,h,div,ww,wh, i => {
+  const L=lightHeights(H, GW, GH, { light, relief:1, gloss:0.15 + damp*0.55, shadow:0.7, ao:0.45, ambient:0.36 });
+  const sd=1 - damp*0.35, mg=1 + damp*0.25, RGB=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
     const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1-m);   // moss is matte; only wet stone shines
     const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     // GLOW: bioluminescent moss, brightest at the tips
     if(TIP){ const e=255*Math.min(1, TIP[i])*0.9; mc[0]+=GL.r*e; mc[1]+=GL.g*e; mc[2]+=GL.b*e; }
-    return [clamp255(sc[0]*(1-m) + mc[0]*m), clamp255(sc[1]*(1-m) + mc[1]*m), clamp255(sc[2]*(1-m) + mc[2]*m)];
-  });
+    RGB[i*3]=clamp255(sc[0]*(1-m) + mc[0]*m); RGB[i*3+1]=clamp255(sc[1]*(1-m) + mc[1]*m); RGB[i*3+2]=clamp255(sc[2]*(1-m) + mc[2]*m);
+  }
+  // tipped: the far stone recedes into a damp grey-green haze
+  const OUT=F.flat ? RGB : obliqueRender(F, H, RGB, { fog:[stone.r*0.55+moss.r*0.2+60, stone.g*0.55+moss.g*0.2+62, stone.b*0.55+moss.b*0.2+60], fogK: 0.25 + 0.35*tl });
+  return paintLit(w,h,div,ww,wh, i => [OUT[i*3], OUT[i*3+1], OUT[i*3+2]]);
 }
 
 /**

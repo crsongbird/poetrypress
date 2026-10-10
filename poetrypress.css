@@ -59,28 +59,26 @@ body{
   text-transform:uppercase;
   letter-spacing:0.16em;
   color:var(--accent);
-  margin:0 0 7px 0;
-}
+  margin:0 0 7px 0; padding-bottom:3px; border-bottom:1px solid transparent; border-image:linear-gradient(90deg, var(--accent-dim), color-mix(in srgb, var(--accent-2) 70%, transparent) 38%, transparent 82%) 1; }
 
 .card-grid{ display:grid; grid-template-columns:1fr 1fr; }
 .card-grid > .full{ grid-column:1/-1; }
 .card-grid > .check-row{ grid-column:1/-1; margin-bottom:1px; }
 .card-grid > .subblock{ grid-column:1/-1; }
 
-label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:3px; letter-spacing:0.02em; }
+label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:3px; letter-spacing:0.02em}
 .field{margin:0;}
 
 select, textarea, input[type="text"], input[type="number"]{
   width:100%;
-  background:var(--bg-panel-2);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
   border:1px solid var(--line);
   color:var(--text-main);
   border-radius:2px;
   padding:5px 6px;
   font-family:inherit;
   font-size:14px;
-  outline:none;
-}
+  outline:none; box-shadow:inset 0 1px 2px var(--well); }
 select:focus, textarea:focus, input:focus{ border-color:var(--accent-dim); }
 
 textarea{
@@ -103,10 +101,10 @@ textarea{
 .hex-input{width:100%;}
 
 .check-row{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
-.check-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+.check-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
 .check-row label{ margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }
 
-.subblock{ display:none; border-left:2px solid var(--line); padding:1px 0 1px 7px; margin:1px 0 2px 2px; }
+.subblock{ display:none; border-left:none; padding:1px 0 1px 7px; margin:1px 0 2px 2px; box-shadow:inset 2px 0 0 color-mix(in srgb, var(--accent-dim) 55%, transparent); }
 .subblock.open{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
 .subblock.open > .full{ grid-column:1/-1; }
 
@@ -119,17 +117,15 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
   flex:1 1 28%; text-align:center; padding:5px 0;
   border:1px solid var(--line); border-radius:2px;
   font-size:12px; color:var(--text-dim); cursor:pointer;
-  background:var(--bg-panel-2); transition:all .12s ease;
-}
-.radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:rgba(201,168,118,0.08); }
+  background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
+.radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
 
 button.ghost{
   width:100%; padding:5px 0; border-radius:2px;
-  border:1px solid var(--accent-dim); background:transparent; color:var(--accent);
+  border:1px solid var(--accent-dim); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent); color:var(--accent);
   font-family:'EB Garamond', serif; font-size:13px; letter-spacing:0.04em;
-  cursor:pointer; transition:all .12s ease; margin-top:1px;
-}
-button.ghost:hover{ background:rgba(201,168,118,0.1); }
+  cursor:pointer; transition:all .12s ease; margin-top:1px; box-shadow:inset 0 1px 0 var(--hi); }
+button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent))}
 
 .hint{font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.45;}
 .hint code{ background:var(--bg-panel-2); padding:1px 4px; border-radius:2px; color:var(--rose); }
@@ -138,23 +134,22 @@ button.ghost:hover{ background:rgba(201,168,118,0.1); }
 .preset-btn{
   border:1px solid var(--line); border-radius:2px; overflow:hidden;
   cursor:pointer; background:var(--bg-panel-2); padding:0;
-  transition:transform .12s ease, border-color .12s ease;
-}
-.preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); }
+  transition:transform .12s ease, border-color .12s ease; box-shadow:0 1px 0 var(--well); }
+.preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); box-shadow:0 4px 10px -4px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 40%, transparent); }
 
 .preset-label{ display:block; font-size:8.5px; padding:2px 1px 3px; color:var(--text-dim); letter-spacing:0.01em; text-transform:uppercase; text-align:center; }
 
 /* ---------- RIGHT RENDER PANE ---------- */
 .stage{
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
-  background: radial-gradient(circle at 50% 0%, rgba(201,168,118,0.05), transparent 55%), var(--bg-deep);
-  position:relative;
-}
+  background:radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 55%),
+                   radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--accent-2) 6%, transparent), transparent 60%), var(--bg-deep);
+  position:relative}
 .canvas-wrap{
   box-shadow:0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
   border-radius:2px; overflow:hidden; line-height:0;
 }
-#poemCanvas{ display:block; max-height:calc(100vh - 40px); max-width:94vw; height:auto; width:auto; }
+#poemCanvas{ display:block; max-height:calc(100vh - 40px); max-width:94vw; height:auto; width:auto; box-shadow:0 14px 30px -18px var(--lo), 0 0 0 1px color-mix(in srgb, var(--text-main) 6%, transparent); }
 
 .download-btn{
   position:fixed; top:18px; right:22px; z-index:50;
@@ -415,7 +410,7 @@ body.is-mobile .drag-handle{ height:11px; }
 /* tighter bar */
 body.is-mobile .tabbar{ padding:0 2px; }
 body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
-:root{ --tabbar-h: 50px; }
+:root{ --tabbar-h: 50px; --accent-2:#a98fe8; --hi:rgba(255,255,255,.04); --lo:rgba(0,0,0,.5); --well:rgba(0,0,0,.35); }
 
 /* ---------- PML help ---------- */
 .pml-help h4{
@@ -543,11 +538,18 @@ body.is-mobile .light-pad{ gap:4px; }
 /* a disabled tool must look inert, not merely quiet */
 .field.tool-off{ opacity:.34; pointer-events:none; }
 /* the seed, in words (the number small beneath it) */
-#textureSeedWords, body.is-mobile #textureSeedWords{ width:100%; resize:none; font:inherit; font-size:.86em; line-height:1.22; font-style:italic; padding:6px 8px;
-  height:calc(3.7em + 14px) !important; min-height:0 !important; max-height:none; white-space:normal !important; overflow-wrap:anywhere; overflow:hidden;
-  background:var(--bg-input, var(--bg-panel-2)); color:var(--text-main); border:1px solid var(--line); border-radius:6px; box-sizing:border-box; }
-#seedRow .row{ align-items:flex-start; }
-#seedRow .seed-moon{ align-self:flex-start; height:auto; }
+/* one line, the whole width; when the words run past it, a hair-thin
+   scroller of the theme's own colour along the field's foot (no native bar) */
+.seed-field{ position:relative; width:100%; }
+#textureSeedWords{ width:100%; font-style:italic; white-space:nowrap; overflow-x:auto; scrollbar-width:none; box-sizing:border-box; }
+#textureSeedWords::-webkit-scrollbar{ display:none; }
+.seed-scroll{ position:absolute; left:1px; right:1px; bottom:1px; height:2px; display:none; touch-action:none; cursor:ew-resize; }
+.seed-scroll.on{ display:block; }
+.seed-scroll .seed-thumb{ position:absolute; top:0; bottom:0; background:var(--accent); opacity:.75; }
+.seed-scroll:hover, .seed-scroll.dragging{ height:4px; }
+#seedRow .row{ align-items:center; }
+/* the seed is always the LAST thing in the tools, across their whole width */
+.tool-row > #seedRow, body.is-mobile .tool-row > #seedRow{ grid-column:1 / -1 !important; grid-row:auto !important; order:99; padding-left:0; padding-right:0; border-left:none; }
 .seed-number{ display:block; font-size:.75em; color:var(--text-dim); margin-top:2px; font-variant-numeric:tabular-nums; }
 /* a hue the texture doesn't use is not shown at all, like an unused slider */
 .field.tool-hidden, body.is-mobile .tool-row > .field.tool-hidden{ display:none !important; }
@@ -1174,7 +1176,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#161313;
   --line:#33292b;
   --text-main:#E5D3D5;
-  --text-dim:#a3979a;         /* 6C5E5F lifted: as body text it would fail contrast */
+  --text-dim:#b4a7aa;         /* 6C5E5F lifted: as body text it would fail contrast */
   --accent:#e2899f;           /* a little redder: rose, not candy */
   --accent-dim:#c26c82;
   --rose:#C68892;
@@ -1182,7 +1184,7 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --on-accent:#161414;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
   --ui-selected:#ff6b92;      /* redder with the accent, still fully saturated */
-}
+; --accent-2:#9cc4ad; --hi:rgba(255,236,240,.045); }
 
 /* Aether — the original. */
 :root[data-theme="aether"]{
@@ -1192,15 +1194,14 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#1b1824;
   --line:#2c283a;
   --text-main:#e9e4f2;
-  --text-dim:#9a92ae;
+  --text-dim:#aba3be;
   --accent:#c9a876;
   --accent-dim:#8a7657;
   --rose:#b98a8a;
   --ui-violet:#C9B8FF;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><g fill='white' opacity='0.5'><circle cx='12' cy='20' r='1'/><circle cx='58' cy='9' r='.8'/><circle cx='77' cy='52' r='1.1'/><circle cx='33' cy='66' r='.9'/><circle cx='68' cy='80' r='.7'/></g></svg>");
   --on-accent:#1a1610;
-  --ui-selected:#a97cff;
-}
+  --ui-selected:#a97cff; --accent-2:#a98fe8; --hi:rgba(240,230,255,.05); }
 
 /* Fathom — deep water. */
 :root[data-theme="fathom"]{
@@ -1210,15 +1211,14 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#101923;
   --line:#22303f;
   --text-main:#dfe8f2;
-  --text-dim:#8397aa;
+  --text-dim:#97abbe;
   --accent:#6fc2b6;
   --accent-dim:#4c8a82;
   --rose:#a98a9a;
   --ui-violet:#7FB5D4;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><g stroke='white' stroke-width='1' fill='none' opacity='0.5'><path d='M0 30 Q35 20 70 30 T140 30'/><path d='M0 78 Q35 68 70 78 T140 78'/><path d='M0 124 Q35 114 70 124 T140 124'/></g></svg>");
   --on-accent:#06201c;
-  --ui-selected:#3fc4ff;
-}
+  --ui-selected:#3fc4ff; --accent-2:#e8956d; --hi:rgba(220,240,255,.045); }
 
 /* Vellum — light. It exists. */
 :root[data-theme="vellum"]{
@@ -1228,15 +1228,14 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
   --bg-card:#e7ddd0;
   --line:#c2b2a1;
   --text-main:#2b2620;
-  --text-dim:#6b5e58;
+  --text-dim:#5c504a;
   --accent:#74506a;
   --accent-dim:#a58799;
   --rose:#a4646a;
   --ui-violet:#6C5AA6;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='p'><feTurbulence baseFrequency='0.7' numOctaves='2'/></filter><rect width='100' height='100' filter='url(%23p)' opacity='0.5'/></svg>");
   --on-accent:#fbf4ee;
-  --ui-selected:#8f2f6c;
-}
+  --ui-selected:#8f2f6c; --accent-2:#5f7448; --hi:rgba(255,255,255,.55); --lo:rgba(90,66,40,.22); --well:rgba(90,66,40,.14); }
 
 /* the theme's surface, faint, behind everything */
 body::before{
@@ -1256,7 +1255,7 @@ body.is-mobile .tab-btn svg{ color:color-mix(in srgb, var(--ui-violet) 72%, var(
 body.is-mobile .tab-btn.active svg{ }
 
 /* ---------- a little less padding throughout ---------- */
-.card{ padding:9px 10px; }
+.card{ padding:9px 10px; background:linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 86%, var(--text-main) 3%), var(--bg-card) 42%); box-shadow:inset 0 1px 0 var(--hi), 0 1px 0 color-mix(in srgb, var(--lo) 50%, transparent), 0 10px 18px -16px var(--lo); position:relative; }
 .card-grid{ gap:7px; }
 body.is-mobile .card{ padding:7px 8px; margin-bottom:7px; }
 body.is-mobile .card-grid{ gap:5px; }
@@ -1273,8 +1272,7 @@ body.is-mobile .tabbar{
   background:linear-gradient(180deg,
     color-mix(in srgb, var(--bg-panel) 94%, transparent),
     color-mix(in srgb, var(--bg-deep) 96%, transparent));
-  border-top:1px solid var(--line);
-}
+  border-top:1px solid var(--line); box-shadow:0 -1px 0 var(--hi), 0 -8px 16px -12px var(--lo); }
 body.is-mobile .tab-btn{ color:color-mix(in srgb, var(--text-dim) 78%, transparent); }
 body.is-mobile .tab-btn.active{ }
 body.is-mobile .app-header{
@@ -1427,7 +1425,7 @@ body.is-mobile #clr-picker{
    ============================================================ */
 
 /* the selected tab is the most saturated thing on screen, in every theme */
-body.is-mobile .tab-btn.active svg{ color:var(--ui-selected, var(--ui-violet)); }
+body.is-mobile .tab-btn.active svg{ color:var(--ui-selected, var(--ui-violet)); filter:drop-shadow(0 0 4px color-mix(in srgb, var(--accent-2) 45%, transparent)); }
 body.is-mobile .tab-btn.active{ color:var(--ui-selected, var(--text-main)); }
 
 /* padding: none above the controls (the drag handle already separates them),
@@ -1528,8 +1526,8 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 .ld-handle{ fill:var(--accent); }
 .ld-spike-body{ fill:var(--accent); }
 .ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
-.ld-btn{ position:absolute; border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; }
-.ld-btn:hover{ color:var(--text-main); border-color:var(--accent-dim); }
+.ld-btn{ position:absolute; border:1px solid var(--border, #444); background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 85%, var(--text-main) 5%), var(--bg-panel-2)); color:var(--text-dim); border-radius:8px; font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; box-shadow:inset 0 1px 0 var(--hi), 0 1px 2px var(--well); }
+.ld-btn:hover{ color:var(--accent-2); border-color:var(--accent-2)}
 .ld-reset{ right:0; bottom:0; }
 .ld-centre-btn{ left:0; bottom:0; }
 .ld-random{ right:0; top:0; }
@@ -1652,5 +1650,55 @@ body.is-mobile .tool-row .light-dial{ margin:0 auto; }
 body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padding-left:0; }
 
 /* the preset grid's group headings (Simple, Whimsy, Sharpness, Chaos, Touch) */
-.preset-group-head{ grid-column:1 / -1; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:10px 0 2px; opacity:.85; }
+.preset-group-head{ grid-column:1 / -1; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); margin:10px 0 2px; opacity:.85; display:flex; align-items:center; gap:6px; }
 .preset-group-head:first-child{ margin-top:0; }
+
+/* ============================================================
+   POLISH — each theme is an element (Ruby):
+     Rose = Whimsy ♡ · Aether = Sharpness √ · Fathom = Chaos ∆ · Vellum = Touch 🜚
+   Every theme gains a COMPLEMENTARY second accent (--accent-2), so it is no
+   longer one hue on grey; surfaces get a slight depth (a hairline of light
+   on top, a soft shadow below, a gentle top-to-bottom gradient); text is
+   a step more legible. Square corners on everything; the spacing stays
+   compact; nothing flashy.
+   ============================================================ */   /* rosewood, and sage across the wheel */   /* gold, and the violet it always had: sharp */  /* deep water, and coral: chaos in the shallows */   /* paper and plum, and moss */
+
+/* square, everywhere (circles stay circles: they have no corners) */
+.card, details.card, summary, button, .radio-btn, .preset-btn, .tab-btn, .ld-btn, .seed-moon, .snap-btn,
+select, textarea, input[type="text"], input[type="number"], .subblock, .eso-drawer, .hint code,
+.clr-field button, .clr-picker, .clr-swatches button, .download-btn, .modal, .modal-box, .toast,
+body:not(.is-mobile) .tab-btn, .preset-group-head{ border-radius:0 !important; }
+
+/* surfaces: a little depth */
+
+/* fields sit a hair below the surface; focus is the second accent */
+:root[data-theme="vellum"] select, :root[data-theme="vellum"] textarea, :root[data-theme="vellum"] input[type="text"], :root[data-theme="vellum"] input[type="number"]{
+  background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 92%, #5a4128 8%), var(--bg-panel-2) 55%);
+}
+select:focus, textarea:focus, input[type="text"]:focus, input[type="number"]:focus{
+  border-color:var(--accent-2); box-shadow:inset 0 1px 2px var(--well), 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent);
+}
+
+/* choices: the chosen one lit from within, both accents */
+.radio-btn:hover{ color:var(--text-main); border-color:color-mix(in srgb, var(--accent-dim) 60%, var(--line)); }
+
+/* the sub-blocks hang from a rule that fades from one accent into the other */
+
+/* presets: tiles that lift, group heads in the second accent */
+.preset-group-head::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg, color-mix(in srgb, var(--accent-2) 45%, transparent), transparent); }
+
+/* the navigation: the chosen tab glows faintly in both accents */
+body:not(.is-mobile) .tab-btn{ box-shadow:inset 0 1px 0 var(--hi); }
+body:not(.is-mobile) .tab-btn.active{ background:linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 82%, var(--accent-2))); box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px -3px color-mix(in srgb, var(--accent) 60%, transparent); }
+.app-title, .app-header h1{ text-shadow:0 1px 0 var(--lo); }
+
+/* the stage: a faint pool of the second accent behind the image */
+
+/* small marks of the second accent: the locks when open, the knob readouts */
+.range-val, .angle-val{ color:color-mix(in srgb, var(--accent-2) 55%, var(--text-dim)); }
+/* each card carries a thin edge that runs from one accent into the other */
+.card::before{ content:""; position:absolute; left:-1px; top:-1px; bottom:-1px; width:2px; pointer-events:none;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 75%, transparent), color-mix(in srgb, var(--accent-2) 55%, transparent) 70%, transparent); opacity:.8; }
+/* the disclosure marks in the second accent */
+summary.card-title::marker, summary.card-title::-webkit-details-marker{ color:var(--accent-2); }
+body.is-mobile summary.card-title::after, .subcard > summary::after{ color:var(--accent-2); opacity:.8; }
