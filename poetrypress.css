@@ -542,6 +542,15 @@ body.is-mobile .light-pad{ gap:4px; }
 
 /* a disabled tool must look inert, not merely quiet */
 .field.tool-off{ opacity:.34; pointer-events:none; }
+/* the seed, in words (the number small beneath it) */
+#textureSeedWords, body.is-mobile #textureSeedWords{ width:100%; resize:none; font:inherit; font-size:.86em; line-height:1.22; font-style:italic; padding:6px 8px;
+  height:calc(3.7em + 14px) !important; min-height:0 !important; max-height:none; white-space:normal !important; overflow-wrap:anywhere; overflow:hidden;
+  background:var(--bg-input, var(--bg-panel-2)); color:var(--text-main); border:1px solid var(--line); border-radius:6px; box-sizing:border-box; }
+#seedRow .row{ align-items:flex-start; }
+#seedRow .seed-moon{ align-self:flex-start; height:auto; }
+.seed-number{ display:block; font-size:.75em; color:var(--text-dim); margin-top:2px; font-variant-numeric:tabular-nums; }
+/* a hue the texture doesn't use is not shown at all, like an unused slider */
+.field.tool-hidden, body.is-mobile .tool-row > .field.tool-hidden{ display:none !important; }
 .field.tool-off label::after{ content:" — n/a"; font-size:.85em; opacity:.8; }
 
 /* ---------- locks ---------- */
@@ -1519,7 +1528,18 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 .ld-handle{ fill:var(--accent); }
 .ld-spike-body{ fill:var(--accent); }
 .ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
-.ld-reset{ position:absolute; right:0; bottom:0; border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:18px; width:34px; height:34px; cursor:pointer; }
+.ld-btn{ position:absolute; border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:8px; font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; }
+.ld-btn:hover{ color:var(--text-main); border-color:var(--accent-dim); }
+.ld-reset{ right:0; bottom:0; }
+.ld-centre-btn{ left:0; bottom:0; }
+.ld-random{ right:0; top:0; }
+/* the centre: a tiny faded dot; halfway: a tiny faded ring; past the rim: a
+   dashed ring that shows only where the light can sink lower */
+.ld-centre{ fill:var(--text-dim); opacity:.35; pointer-events:none; }
+.ld-half{ fill:none; stroke:var(--text-dim); stroke-width:.8; opacity:.35; pointer-events:none; }
+.ld-low{ fill:none; stroke:var(--accent); stroke-width:.9; stroke-dasharray:1.6 2.2; opacity:0; pointer-events:none; }
+.light-dial.low-ok .ld-low{ opacity:.45; }
+.light-dial.past-rim .ld-handle{ fill:var(--rose, var(--accent)); }
 
 /* the sidebar's drag edge exists only in the desktop layout */
 .side-resize{ display:none; }
@@ -1630,3 +1650,7 @@ body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }
 body.is-mobile .tool-row .light-dial{ margin:0 auto; }
 /* (the hue fields' left rule is not for the seed, which sits under the dial) */
 body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padding-left:0; }
+
+/* the preset grid's group headings (Simple, Whimsy, Sharpness, Chaos, Touch) */
+.preset-group-head{ grid-column:1 / -1; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:10px 0 2px; opacity:.85; }
+.preset-group-head:first-child{ margin-top:0; }

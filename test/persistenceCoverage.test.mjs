@@ -25,6 +25,7 @@ const EXEMPT = {
   fullPreview:  'a view preference (the preview at full size), not part of an image',
   advancedJson: 'the Workbench JSON box IS the saved look',
   modalInput:   'the text field of a dialog',
+  textureSeedWords: 'the seed shown as its phrase: a view of textureSeedValue, which is saved and restored (seedWords.js turns each into the other exactly)',
 };
 
 const ids = [...html.matchAll(/<(input|select|textarea)\b[^>]*\bid="([^"]+)"[^>]*>/g)].map(m => m[2]);

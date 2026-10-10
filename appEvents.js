@@ -27,10 +27,11 @@
 import { texturesSettled, setDrafting } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
-import { $, FONTS, PRESETS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
+import { $, FONTS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes } from './textureGenerators.js';
+import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
@@ -150,7 +151,7 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','texP6','textureSeedValue',
 ];
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
@@ -695,6 +696,7 @@ function serializeCurrentSettings(){
     texP3: $('texP3').value,
     texP4: $('texP4').value,
     texP5: $('texP5').value,
+    texP6: $('texP6').value,
     textureOpacity: parseFloat($('textureOpacity').value),
     textureSeed: parseInt($('textureSeedValue').value, 10),
 
@@ -814,6 +816,7 @@ function restoreSettings(s){
   if(s.texP3 !== undefined) $('texP3').value = s.texP3;
   if(s.texP4 !== undefined) $('texP4').value = s.texP4;
   if(s.texP5 !== undefined) $('texP5').value = s.texP5;
+  if(s.texP6 !== undefined) $('texP6').value = s.texP6;
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
@@ -919,7 +922,15 @@ function presetTile(p, onPick, extraClass){
   return btn;
 }
 
-PRESETS.forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+// the built-in looks, each group under its own heading (Simple first)
+{ let at = 0;
+  for(const g of (PRESET_GROUPS || [{ name: '', count: PRESETS.length }])){
+    if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = g.name; presetGrid.appendChild(hd); }
+    PRESETS.slice(at, at + g.count).forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+    at += g.count;
+  }
+  PRESETS.slice(at).forEach(p => presetGrid.appendChild(presetTile(p, ()=>applyPreset(p))));
+}
 
 // Saved spells join the same grid rather than living only in Esoterica.
 // Everything from the divider down is rebuilt whenever the saved set changes,
@@ -1111,6 +1122,7 @@ function applyPreset(p){
   if(p.texP3 !== undefined) $('texP3').value = p.texP3;
   if(p.texP4 !== undefined) $('texP4').value = p.texP4;
   if(p.texP5 !== undefined) $('texP5').value = p.texP5;
+  if(p.texP6 !== undefined) $('texP6').value = p.texP6;
   syncTextureParams(false);
   if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintMoons(); }
 
@@ -1432,8 +1444,9 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
 function syncTextureParams(useDefaults){
   const defs = paramsFor($('textureType').value);
   // two knobs for every texture, a third (Form) for many, up to five for the
-  // richest (Dream Bloom); a knob a texture doesn't have is hidden
-  [0,1,2,3,4].forEach(i=>{
+  // richest (Dream Bloom), six where a camera tilts (Scrying Pool); a knob a
+  // texture doesn't have is hidden
+  [0,1,2,3,4,5].forEach(i=>{
     const def = defs[i];
     const row = $('texP'+(i+1)).parentElement;
     const slider = $('texP'+(i+1));
@@ -1465,7 +1478,7 @@ function draftWhileDragging(){
   clearTimeout(draftTimer);
   draftTimer = setTimeout(() => setDrafting(false), 250);
 }
-['texP1','texP2','texP3','texP4','texP5'].forEach(id=>{
+['texP1','texP2','texP3','texP4','texP5','texP6'].forEach(id=>{
   $(id).addEventListener('input', ()=>{
     draftWhileDragging();
     const defs = paramsFor($('textureType').value);
@@ -1517,23 +1530,27 @@ function syncTextureTools(resetToDefaults){
   const lightRow = $('lightRow');
   if(lightRow){
     lightRow.classList.toggle('tool-off', !caps.light);
+    const dl = $('lightDial'); if(dl && dl.classList) dl.classList.toggle('low-ok', !!caps.lowLight);
+    const lt = $('textureLightTilt'); if(lt && !caps.lowLight && +lt.value > 100){ lt.value = '100'; syncLightPad(); }
     // a texture may use the dial for something else, and says so: First Snow's wind
     const lbl = lightRow.querySelector('label');
     if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = labelText(lbl); setLabelText(lbl, caps.dial || lbl.dataset.lightName); }
   }
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
-  if(t1) t1.classList.toggle('tool-off', caps.tints < 1);
-  if(t2) t2.classList.toggle('tool-off', caps.tints < 2);
+  // a hue the texture doesn't use is HIDDEN, as an unused slider is (Ruby)
+  ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
+  if(t1) t1.classList.toggle('tool-hidden', caps.tints < 1);
+  if(t2) t2.classList.toggle('tool-hidden', caps.tints < 2);
   // material hues, for lit textures that are coloured (not the grey ones that blend)
-  ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-off', !caps.material); });
+  ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-hidden', !caps.material); });
   if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); setColorField('textureTint6Hex', '#FFFFFF'); }
   // DIFFUSE, the light's own colour, where nothing else already says it
-  const r6 = $('tint6Row'); if(r6) r6.classList.toggle('tool-off', !caps.diffuse);
+  const r6 = $('tint6Row'); if(r6) r6.classList.toggle('tool-hidden', !caps.diffuse);
   // the fifth hue: Glow, Material or Snow Hue, by what the texture has (or none)
   const r5 = $('tint5Row');
   if(r5){
-    r5.classList.toggle('tool-off', !caps.hue5);
+    r5.classList.toggle('tool-hidden', !caps.hue5);
     if(caps.hue5){ setLabelText($('tint5Label'), caps.hue5.label); $('tint5Label').title = caps.hue5.why; }
     if(resetToDefaults || !caps.hue5) setColorField('textureTint5Hex', caps.hue5 ? caps.hue5.def : '#000000');
   }
@@ -1588,7 +1605,7 @@ function followAccents(){
 const LIGHT_DEFAULT = { deg: 315, tilt: 100 };
 function syncLightPad(){
   const deg = parseFloat($('textureLight').value) || 0, tilt = $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
-  const k = Math.max(0, Math.min(100, isNaN(tilt) ? 100 : tilt)) / 100, a = deg * Math.PI / 180;
+  const k = Math.max(0, Math.min(130, isNaN(tilt) ? 100 : tilt)) / 100, a = deg * Math.PI / 180;
   const set = (id, attrs) => { const el = $(id); if(el && el.setAttribute) for(const key in attrs) el.setAttribute(key, attrs[key]); };
   // the dot slides from the heart of ☉ toward the rim
   set('lightHandle', { cx: (Math.sin(a) * 15 * k).toFixed(2), cy: (-Math.cos(a) * 15 * k).toFixed(2) });
@@ -1599,20 +1616,24 @@ function syncLightPad(){
   const dial = $('lightDial');
   if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', tilt >= 99 && Math.abs(((deg - +t.dataset.deg + 540) % 360) - 180) < 0.5));
   if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${Math.round(deg)}°, ${Math.round(tilt)}% low`);
+  if(dial && dial.classList) dial.classList.toggle('past-rim', tilt > 100);
 }
 function setLight(deg, tilt, commit){
   if(!commit) draftWhileDragging();
   $('textureLight').value = String(Math.round(((deg % 360) + 360) % 360));
-  if($('textureLightTilt')) $('textureLightTilt').value = String(Math.round(Math.max(0, Math.min(100, tilt))));
+  if($('textureLightTilt')) $('textureLightTilt').value = String(Math.round(Math.max(0, Math.min(dialMax(), tilt))));
   syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
 }
 if($('lightDial') && $('lightDial').addEventListener){
   const dial = $('lightDial');
   const fromPointer = (e, snapTicks) => {
     const rc = dial.getBoundingClientRect(), x = (e.clientX - rc.left) / rc.width * 100 - 50, y = (e.clientY - rc.top) / rc.height * 100 - 50;
-    let deg = Math.atan2(x, -y) * 180 / Math.PI, tilt = Math.min(1, Math.hypot(x, y) / 30) * 100;   // the rim of ☉ is full
+    // the rim of ☉ is 100; an engine-lit texture lets it be pulled further out (to 130: lower light)
+    let deg = Math.atan2(x, -y) * 180 / Math.PI, tilt = Math.min(dialMax(), Math.hypot(x, y) / 30 * 100);
     // near a tick on the rim, take its exact direction at the horizon
-    if(snapTicks || tilt > 88){ const nearest = Math.round(deg / 45) * 45; if(Math.abs(nearest - deg) < 7){ deg = nearest; if(tilt > 88) tilt = 100; } }
+    if(snapTicks || tilt > 88){ const nearest = Math.round(deg / 45) * 45; if(Math.abs(nearest - deg) < 7){ deg = nearest; if(tilt > 88 && tilt < 108) tilt = 100; } }
+    // the halfway ring catches lightly
+    if(Math.abs(tilt - 50) < 4) tilt = 50;
     setLight(deg, tilt, false);
   };
   let dragging = false;
@@ -1628,6 +1649,13 @@ if($('lightDial') && $('lightDial').addEventListener){
   });
 }
 if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true));
+// ◎ to the centre (overhead / the middle of the page), keeping the angle; ⚄ a
+// random angle, keeping the distance. Neither is sticky.
+if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => setLight(parseFloat($('textureLight').value) || 0, 0, true));
+if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEventListener('click', () => {
+  const t = parseFloat(($('textureLightTilt') || {}).value); setLight(Math.random()*360, isNaN(t) ? 100 : t, true); });
+/** How far the dial reaches: past its rim (130) only for engine-lit textures. */
+function dialMax(){ const t = $('textureType'); return (t && (capsFor(t.value) || {}).lowLight) ? 130 : 100; }
 syncLightPad();
 $('textureBlend').addEventListener('change', scheduleRender);
 // choosing a tint yourself stops it following the accents
@@ -2045,6 +2073,33 @@ function paintSeedMoon(){
   const p = moonForSeed(parseInt($('textureSeedValue').value, 10) || 0);
   b.innerHTML = moonGlyph(p, { size: 20 });
   b.title = 'Reroll · ' + phaseName(p);
+}
+// ---------- word seeds ----------
+// The seed field shows the seed's PHRASE (seedWords.js); the number itself
+// stays in #textureSeedValue (what saves, shares and locks hold). Typing a
+// phrase, a number or any words at all sets the number; whatever else sets
+// it (a reroll, a preset, a load, undo) shows its phrase here.
+function syncSeedWords(force){
+  const box = $('textureSeedWords'), num = $('textureSeedValue'); if(!box || !num) return;
+  const n = parseInt(num.value, 10) || 0;
+  if(force || (typeof document !== 'undefined' && document.activeElement !== box)){ if(force || box.dataset == null || box.dataset.seed !== String(n)){ box.value = seedPhrase(n); if(box.dataset) box.dataset.seed = String(n); } }
+  const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
+}
+if($('textureSeedWords') && $('textureSeedWords').addEventListener){
+  const box = $('textureSeedWords');
+  box.addEventListener('input', () => {
+    const n = seedFromText(box.value);
+    $('textureSeedValue').value = String(n); if(box.dataset) box.dataset.seed = String(n);
+    $('textureSeedValue').dispatchEvent(new Event('input', { bubbles: true }));
+    const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
+  });
+  // Enter finishes (a seed is one line); a number typed becomes its phrase
+  box.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); box.blur(); } });
+  box.addEventListener('blur', () => { if(/^\s*-?\d+\s*$/.test(box.value)) syncSeedWords(true); if(typeof commitSoon === 'function') commitSoon(); });
+  // anything else that sets the number (rerolls, presets, loads, undo) shows here
+  let lastSeen = null;
+  setInterval(() => { const v = $('textureSeedValue').value; if(v !== lastSeen){ lastSeen = v; syncSeedWords(false); } }, 200);
+  syncSeedWords(true);
 }
 if($('textureOpacity').addEventListener){
   $('textureOpacity').addEventListener('input', paintMoons);

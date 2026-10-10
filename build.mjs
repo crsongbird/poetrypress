@@ -52,6 +52,7 @@ const ORDER = [
   'textParsers.js',       // PML
   'spell.js',             // glyph spells
   'moon.js',              // moon phase and its glyph
+  'seedWords.js',         // word seeds: every number a phrase, and back
   'texCore.js',           // noise, colour mixing, seeded random
   'texWhimsy.js',         // ♡ generators
   'texSharpness.js',      // √ generators

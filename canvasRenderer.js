@@ -30,6 +30,7 @@ import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
 import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, textureCacheMB, dropLargeTextures } from './textureGenerators.js';
 import { resolvePmlVariables } from './pmlVars.js';
+import { seedPhrase } from './seedWords.js';
 import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs, clearMeasureCache } from './glyphs.js';
@@ -817,6 +818,7 @@ function pmlVarContext(W, H){
       + (caps.dial ? ' (' + caps.dial.split(' ')[0].toLowerCase() + ')'
         : (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '')) : 'n/a',
     seed,
+    seedPhrase: seedPhrase(seed),
     // every knob the texture has, by its own label and readout (up to five)
     params: defs.map((d, i) => ({ label: d.label, value: ($('texP' + (i + 1) + 'Val') || {}).textContent || '' })),
     opacity: Math.round(+($('textureOpacity') && $('textureOpacity').value) || 0),
@@ -979,7 +981,7 @@ function renderInto(canvas){
     // knobs four and five, for the textures that have them (Dream Bloom)
     const knob = id => { const el = $(id), f = el && el.parentElement; const v = el ? parseFloat(el.value) : NaN;
       return (isNaN(v) || (f && f.style && f.style.display === 'none')) ? null : v; };
-    const p4 = knob('texP4'), p5 = knob('texP5');
+    const p4 = knob('texP4'), p5 = knob('texP5'), p6 = knob('texP6');
 
     if(type === 'astral'){
       ctx.save();
@@ -998,19 +1000,19 @@ function renderInto(canvas){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6 }));
       ctx.restore();
     } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6 }));
       ctx.restore();
     } else {
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5 }));
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6 }));
       ctx.restore();
     }
   }

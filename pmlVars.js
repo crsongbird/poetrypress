@@ -20,6 +20,7 @@
  *   §SurfParamsB        the texture's hues, each drawn in its own colour, as PML
  *   §LightDir           the light's direction as an arrow, or n/a
  *   §TextureSeed        the seed
+ *   §SeedPhrase         the seed as words ("Enceladus's quiet lantern, turning")
  *   §MoonPhase!tonight  tonight's real moon
  *   §MoonPhase!seed     the moon the Fractal Moon draws for this seed
  *   §MoonPhase!opacity  the texture opacity, as a moon
@@ -78,14 +79,21 @@ export function resolvePmlVariables(text, ctx){
       case 'SurfBlendMode': return ctx.blendName;
       case 'LightDir':      return ctx.lightArrow;
       case 'TextureSeed':   return String(ctx.seed);
+      case 'SeedPhrase':    return ctx.seedPhrase || String(ctx.seed);
       case 'SurfParamsA':
         // every knob by its own label (Form, Weave, Aperture… — no more "Hidden Value")
         return [...(ctx.params || []).map(p => `${p.label}: [${p.value}]`),
                 `Opacity: [${ctx.opacity}%] {§MoonPhase!opacity}`].join('  ');
-      case 'SurfParamsB':
-        return (ctx.hues || []).length
-          ? ctx.hues.map(h => `${h.label}: <${h.hex}/#:${h.hex.replace('#', '')}>`).join('  ')
-          : 'no hues';
+      case 'SurfParamsB': {
+        const hs = (ctx.hues || []).map(h => `${h.label}: <${h.hex}/#:${h.hex.replace('#', '')}>`);
+        if(!hs.length) return 'no hues';
+        // a grid, so a long list never runs off the line (Ruby): up to three
+        // on one line; four are 2×2, five 3+2, six 3+3, more in threes. Rows
+        // break with ROW_BREAK; each new row repeats the line's own marker.
+        const cols = hs.length <= 3 ? hs.length : hs.length <= 6 ? Math.ceil(hs.length/2) : 3, rows = [];
+        for(let i = 0; i < hs.length; i += cols) rows.push(hs.slice(i, i + cols).join('  '));
+        return rows.join(ROW_BREAK);
+      }
       case 'MoonPhase': {
         if(num !== undefined) return moonChar(phaseFromSigned(parseFloat(num)));
         if(param === 'tonight') return moonChar(ctx.moonTonight);
@@ -135,5 +143,14 @@ export function resolvePmlVariables(text, ctx){
       return v == null ? m : String(v);
     });
   }
+  // a variable that broke into rows: each row its own line, carrying the
+  // marker its line began with (## heading, -# small…)
+  if(out.indexOf(ROW_BREAK) !== -1)
+    out = out.split('\n').map(line => {
+      if(line.indexOf(ROW_BREAK) === -1) return line;
+      const lead = (line.match(/^\s*(?:#{1,6}|-#|>)\s+/) || [''])[0];
+      return line.split(ROW_BREAK).join('\n' + lead);
+    }).join('\n');
   return out;
 }
+const ROW_BREAK = '\u0001';

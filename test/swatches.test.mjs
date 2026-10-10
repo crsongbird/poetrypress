@@ -23,7 +23,7 @@ const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 const vault = readFileSync(new URL('../vault.js', import.meta.url), 'utf8');
 
-check('every preset button was built', registry['presetGrid'].children.length === PRESETS.length);
+check('every preset button was built (and a heading for each group)', registry['presetGrid'].children.length === PRESETS.length + (await import('../appOptions.js')).PRESET_GROUPS.length);
 
 // the swatch must be a canvas, not a div with a background
 check('swatches are painted, not CSS gradients',

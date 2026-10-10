@@ -120,13 +120,29 @@ export function canonDiv(d){ return Math.max(1, d * SCALE); }
 let LIGHT_TILT = 1;
 export function withLightTilt(t, fn){
   const prev = LIGHT_TILT;
-  LIGHT_TILT = (t >= 0 && t <= 1) ? t : 1;
+  // up to 1.3: past the rim, for the engine-lit textures, the light sinks
+  // lower than the rim's 12° (see lightLow); everything else sees at most 1
+  LIGHT_TILT = (t >= 0 && t <= 1.3) ? t : 1;
   try { return fn(); }
   finally { LIGHT_TILT = prev; }
 }
 export function lightVec(light){
   const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
-  return { lx: Math.cos(a) * LIGHT_TILT, ly: Math.sin(a) * LIGHT_TILT };
+  const T = Math.min(1, LIGHT_TILT);
+  return { lx: Math.cos(a) * T, ly: Math.sin(a) * T };
+}
+/** How far past the dial's rim the light was pulled (0..1): only the lighting
+ *  engine reads it, sinking the light from 12° toward 4° above the horizon —
+ *  long, raking shadows. Textures that shade themselves never see it. */
+export function lightLow(){ return Math.max(0, Math.min(1, (LIGHT_TILT - 1) / 0.3)); }
+/** The dial as a PLACE on the page, for textures that use it as a position:
+ *  the round dial stretched onto the square page, so its rim at 45° reaches
+ *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
+export function dialSquare(light){
+  const { lx, ly } = lightVec(light), k = Math.hypot(lx, ly);
+  if(k < 1e-6) return { u: 0, v: 0 };
+  const dx = lx / k, dy = ly / k, m = Math.max(Math.abs(dx), Math.abs(dy));
+  return { u: dx / m * k, v: dy / m * k };
 }
 
 // ---------- the same lighting on the GPU (WebGL2) ----------
@@ -300,7 +316,8 @@ export function lightHeights(H, ww, wh, opts = {}){
   // toward the light: lightVec points the way light travels, so reverse it.
   // Its elevation runs from overhead (tilt 0) down to 12° above the horizon at
   // the dial's rim — raking, but never so low that open ground goes unlit.
-  const elev = (90 - tilt*78) * Math.PI/180, horiz = Math.cos(elev), dirLen = tilt > 1e-6 ? tilt : 1;
+  // (pulled past the rim, it sinks on toward 4°: raking light, long shadows)
+  const elev = (90 - tilt*78 - lightLow()*8) * Math.PI/180, horiz = Math.cos(elev), dirLen = tilt > 1e-6 ? tilt : 1;
   const Lx = -lx/dirLen*horiz, Ly = -ly/dirLen*horiz, Lz = Math.sin(elev);
   const hx = Lx, hy = Ly, hz = Lz + 1, hl = Math.hypot(hx, hy, hz) || 1;   // Blinn's half vector, viewer overhead
   const shininess = 4 + gloss*120, specK = 0.15 + gloss*0.85;
@@ -579,3 +596,58 @@ export function litK(L, i, ambient, M, c){
 export function litS(M, c){ return M ? M.hi[c] : 1; }
 /** Whether a highlight/shade hue counts as unset (white). */
 export function noMaterialHue(h){ return isWhiteHex(h); }
+
+// ---------- the camera, tilted (height-field textures) ----------
+// After Inigo Quilez's terrain marching: a texture builds its ground as
+// HEIGHTS over a patch, lights it from above as always, and then — tilted —
+// is seen through a pinhole camera pitched down toward it: each pixel's ray
+// marches across the heights until it meets them, and the farther ground
+// fades into haze (aerial perspective). TILT 0 is straight down: exactly the
+// flat texture it always was (the frame is the page, and nothing is marched).
+//   obliqueFrame(ww, wh, tilt, hRange) — the ground patch to build: GW×GH
+//     cells (larger than the page when tilted), and where the view's centre
+//     falls on it
+//   obliqueRender(F, H, RGB, opts) — the page's pixels (RGB, 0..255) as the
+//     camera sees them; opts.fog = [r, g, b], opts.fogK (0..1)
+export function obliqueFrame(ww, wh, tilt, hRange){
+  const t = Math.max(0, Math.min(1, tilt || 0));
+  if(t < 0.001) return { flat: true, GW: ww, GH: wh, ww, wh };
+  const p = (90 - 50*t)*Math.PI/180, sp = Math.sin(p), cp = Math.cos(p), D = 1.5*Math.max(ww, wh);   // near enough that the far ground is smaller
+  const hit = (x, y) => { const dy = -D*sp - cp*(y - wh/2), dz = -D*cp + sp*(y - wh/2), tt = (D*sp)/(-dy);
+    return [(x - ww/2)*tt, D*cp + dz*tt]; };
+  const cs = [hit(0, 0), hit(ww, 0), hit(0, wh), hit(ww, wh)];
+  const minX = Math.min(...cs.map(c => c[0])), maxX = Math.max(...cs.map(c => c[0]));
+  const minZ = Math.min(...cs.map(c => c[1])), maxZ = Math.max(...cs.map(c => c[1]));
+  // heights move where a ray meets the ground: room for that on every side
+  const graze = Math.max(0.2, Math.tan(p - Math.atan(wh/2/D))), m = Math.ceil((hRange || 0)/graze) + 3;
+  const GW = Math.ceil(maxX - minX) + 2*m, GH = Math.ceil(maxZ - minZ) + 2*m;
+  return { flat: false, ww, wh, GW, GH, gcx: -minX + m, gcz: -minZ + m, p, sp, cp, D };
+}
+export function obliqueRender(F, H, RGB, opts = {}){
+  const { ww, wh, GW, GH, gcx, gcz, sp, cp, D } = F, N = ww*wh, out = new Float32Array(N*3);
+  let hMin = Infinity, hMax = -Infinity; for(let i = 0; i < H.length; i++){ if(H[i] < hMin) hMin = H[i]; if(H[i] > hMax) hMax = H[i]; }
+  const fog = opts.fog || [200, 200, 200], fogK = opts.fogK == null ? 0.35 : opts.fogK;
+  const Cx = gcx, Cy = D*sp, Cz = gcz + D*cp;
+  const at = (A, x, z) => { const fx = Math.max(0, Math.min(GW - 1.001, x)), fz = Math.max(0, Math.min(GH - 1.001, z)), i = fx|0, j = fz|0, tx = fx - i, tz = fz - j, k = j*GW + i;
+    return (A[k]*(1-tx) + A[k+1]*tx)*(1-tz) + (A[k+GW]*(1-tx) + A[k+GW+1]*tx)*tz; };
+  const atC = (x, z, c) => { const fx = Math.max(0, Math.min(GW - 1.001, x)), fz = Math.max(0, Math.min(GH - 1.001, z)), i = fx|0, j = fz|0, tx = fx - i, tz = fz - j, k = (j*GW + i)*3 + c;
+    return (RGB[k]*(1-tx) + RGB[k+3]*tx)*(1-tz) + (RGB[k+GW*3]*(1-tx) + RGB[k+GW*3+3]*tx)*tz; };
+  // the haze runs from the nearest ground to the farthest
+  const tNear = (Cy - hMax)/(D*sp + cp*wh/2), tFar = (Cy - hMin)/Math.max(1e-3, D*sp - cp*wh/2);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const dx = x - ww/2, dy = -D*sp - cp*(y - wh/2), dz = -D*cp + sp*(y - wh/2);
+    const hs = Math.hypot(dx, dz), dt = 1.4/Math.max(1e-6, hs);
+    let t = (Cy - hMax)/(-dy), tEnd = (Cy - hMin)/(-dy), prevD = null, prevT = t, hitT = tEnd;
+    // (the last step lands exactly on the lowest level, where every ray has met the ground)
+    for(;;){
+      const px = Cx + dx*t, pz = Cz + dz*t, d = (Cy + dy*t) - at(H, px, pz);
+      if(d <= 0){ hitT = prevD == null ? t : prevT + (t - prevT)*prevD/(prevD - d); break; }
+      if(t >= tEnd) break;
+      prevD = d; prevT = t; t = Math.min(tEnd, t + dt);
+    }
+    const px = Cx + dx*hitT, pz = Cz + dz*hitT, k = (y*ww + x)*3;
+    const f = fogK*Math.max(0, Math.min(1, (hitT - tNear)/Math.max(1e-6, tFar - tNear)))**1.5;
+    for(let c = 0; c < 3; c++) out[k + c] = atC(px, pz, c)*(1 - f) + fog[c]*f;
+  }
+  return out;
+}

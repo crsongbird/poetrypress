@@ -578,6 +578,11 @@ inside of a <~~dead person~~/trans>'s dreams.
             <input type="range" id="texP5" min="0" max="100" value="0">
             <span class="range-val" id="texP5Val"></span>
           </div>
+          <div class="field full" id="texP6Field" style="display:none">
+            <label id="texP6Label">Knob 6</label>
+            <input type="range" id="texP6" min="0" max="100" value="0">
+            <span class="range-val" id="texP6Val"></span>
+          </div>
           <div class="field full">
             <label data-str="label.opacity">Opacity</label>
             <input type="range" id="textureOpacity" min="0" max="100" value="60" data-moon>
@@ -602,10 +607,17 @@ inside of a <~~dead person~~/trans>'s dreams.
                   </g>
                   <!-- ☉: one bold circle; the dot at its heart is the handle -->
                   <circle class="ld-ring" r="26"></circle>
+                  <!-- past the rim (engine-lit textures only): the light sinks lower -->
+                  <circle class="ld-low" r="19.5"></circle>
+                  <!-- the halfway mark (it catches lightly) and the centre -->
+                  <circle class="ld-half" r="7.5"></circle>
+                  <circle class="ld-centre" r="1.4"></circle>
                   <circle class="ld-handle" id="lightHandle" r="5.6" cx="0" cy="0"></circle>
                 </svg>
               </div>
-              <button type="button" class="ld-reset" id="lightReset" title="Reset the light" aria-label="Reset the light">⟲</button>
+              <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset" aria-label="Reset the dial">⟲</button>
+              <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="To the centre" aria-label="Move the dial to its centre">◎</button>
+              <button type="button" class="ld-btn ld-random" id="lightRandom" title="A random angle" aria-label="Turn the dial to a random angle">⚄</button>
             </div>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
@@ -619,26 +631,31 @@ inside of a <~~dead person~~/trans>'s dreams.
             <label id="tint2Label" data-str="label.second_tint">Second Tint</label>
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
-          <div class="field full tool-off" id="tint3Row">
+          <div class="field full tool-hidden" id="tint3Row">
             <label id="tint3Label" data-str="label.highlight_hue" title="SPECULAR: the colour of the shine where the light catches the surface (white: as it is; its alpha is how much)">Specular Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
           </div>
-          <div class="field full tool-off" id="tint4Row">
+          <div class="field full tool-hidden" id="tint4Row">
             <label id="tint4Label" data-str="label.shade_hue" title="SHADOW: the colour the shadows fill with — the sky's light, bouncing back (white: as it is; its alpha is how much)">Shadow Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
           </div>
-          <div class="field full tool-off" id="tint6Row">
+          <div class="field full tool-hidden" id="tint6Row">
             <label id="tint6Label" data-str="label.diffuse_hue" title="DIFFUSE: the colour of the light itself, on everything it reaches (white: as it is; its alpha is how much)">Diffuse Hue</label>
             <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
           </div>
-          <div class="field full tool-off" id="tint5Row">
+          <div class="field full tool-hidden" id="tint5Row">
             <label id="tint5Label" data-str="label.fifth_hue" title="A coloured texture's GLOW (black: none), or a grey texture's MATERIAL — the colour of the surface itself (mid-grey: none)">Glow Hue</label>
             <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full" id="seedRow">
             <label data-str="label.texture_seed">Texture Seed</label>
             <div class="row">
-              <div class="field"><input type="number" id="textureSeedValue" value="12345" step="1"></div>
+              <div class="field">
+                <!-- the seed is a NUMBER (saved, shared, locked as one), shown as its PHRASE: type either, or any words -->
+                <textarea id="textureSeedWords" rows="2" spellcheck="false" autocomplete="off" aria-label="Texture seed: a phrase, a number, or any words"></textarea>
+                <input type="number" id="textureSeedValue" value="12345" step="1" hidden>
+                <span class="seed-number" id="textureSeedNumber"></span>
+              </div>
               <button class="ghost seed-moon" id="textureSeedReroll" type="button" aria-label="Reroll the seed"></button>
             </div>
           </div>

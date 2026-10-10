@@ -25,7 +25,7 @@ check('body gets the is-mobile class', bodyClasses.has('is-mobile'));
 // (Esoterica gained the Appearance card)
 check('every card was found as a tab panel', panels.length === 14);
 check('all five tab buttons were found', buttons.length === 5);
-check('preset grid still populated on mobile', registry['presetGrid'].children.length === 16);
+check('preset grid still populated on mobile', registry['presetGrid'].children.length === 41);
 
 // Write is the landing tab
 const writePanels = panels.filter(p => p.dataset.tab === 'write');

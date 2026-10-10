@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender } from './texCore.js';
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
 //   pitch   thread spacing (of the page)   tw     thread width (of the pitch)
@@ -509,28 +509,29 @@ function sstepZ(a,b,x){ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*
 // shallow, it nets the floor in fire;
 // deep, it only fades.
 /**
- * Scrying Pool — a water surface, built the way light meets water:
- *   the SURFACE  a sum of travelling waves (long swells, then shorter wind
- *                waves as TURBULENCE rises), its slopes the normals
- *   CAUSTICS     light refracted through every point of the surface (water
- *                bends it by 1/1.33) lands on the floor somewhere else; where
- *                the landings crowd together the floor is bright. They are
- *                gathered ray by ray, so they focus and branch as real ones do
- *   GLINTS       the sun reflected in the slopes that face it (the dial: where
- *                the light comes from, and how low)
- *   DEPTH        how far down the floor is: shallow, the net is fine and sharp;
- *                deeper it swells and blurs, and the floor fades into the water
- *   HAZE         milky water: light scattered on its way, softening it all
- *   MURK         dirty water: light absorbed, and silt hanging in it
- * Highlight colours the glints; Shade the deep troughs.
+ * Scrying Pool — looking down into still water, after Evan Wallace's WebGL
+ * Water: the surface's waves bend the light into a net of caustics on the
+ * floor, and bend the view of everything below. The pool is a PLACE, by the
+ * seed: a KOI POND (koi, pale and dark, at different depths; lily pads on the
+ * surface), a PEBBLED STREAM (a floor of stones, darting minnows, weed), or a
+ * WISHING WELL (coins on the floor, a lone fish, a fallen leaf).
+ *   depth   everything below is refracted by the waves — more the deeper it
+ *           lies — softens, and fades toward the water's own tone
+ *   light   the caustics play over the floor and over the fishes' backs;
+ *           fish and leaves cast soft shadows on the floor, offset with the
+ *           light (the dial); the surface glints
+ *   TILT    the camera: straight down at 0; tipped, the far water mirrors
+ *           the sky (Fresnel) and the pool recedes into haze
+ * WAVE SCALE · TURBULENCE · DEPTH · HAZE · MURK · TILT
  */
-export function genWater(w,h,amt,zoom,light,form,haze,murk,M3){
+export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3){
   amt=(amt==null?0.35:amt); zoom=(zoom==null?1:zoom);
   const turb=Math.max(0,Math.min(1,amt)), depth=Math.max(0,Math.min(1, form==null ? 0.35 : form));
   const hz=Math.max(0,Math.min(1, haze==null ? 0.1 : haze)), mk=Math.max(0,Math.min(1, murk==null ? 0 : murk));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const tl=Math.max(0,Math.min(1, tilt==null ? 0 : tilt));
+  const div=tl > 0.001 ? canonDiv(3) : canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
   const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);
-  const tilt=Math.min(1, Math.hypot(lightVec(light).lx, lightVec(light).ly));
+  const ltilt=Math.min(1, Math.hypot(lightVec(light).lx, lightVec(light).ly));
   // the surface: waves in a spread of directions around the wind's
   const wind=Math.random()*Math.PI*2, waves=[];
   const nw=7+Math.round(turb*7);
@@ -540,14 +541,14 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,M3){
     const dir=wind+(Math.random()-0.5)*(0.6+turb*1.8);
     waves.push({ kx:Math.cos(dir)*6.283/lam, ky:Math.sin(dir)*6.283/lam, a:lam*(0.03+0.05*turb)*(1-0.4*f), ph:Math.random()*6.283 });
   }
-  // the floor's light gathers from a little beyond the page's edge too, so
-  // everything is worked on a field with a margin, then cropped
+  const KINDS=['koi','stream','well'], kind=KINDS[Math.floor(Math.random()*KINDS.length)];
+  // the patch the camera sees (the page itself, looking straight down)
+  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.01), DW=F.GW, DH=F.GH;
   const floor=unit*(0.03+depth*0.3), bend=floor*(1-1/1.33);
-  const ox=-SX*tilt*floor*0.35, oy=-SY*tilt*floor*0.35;             // slanting light shifts the net
-  const M=Math.ceil(Math.abs(ox)+Math.abs(oy)+bend*0.8+6), PW=ww+2*M, PH=wh+2*M, PN=PW*PH;
+  const ox=-SX*ltilt*floor*0.35, oy=-SY*ltilt*floor*0.35;          // slanting light shifts the net
+  const M=Math.ceil(Math.abs(ox)+Math.abs(oy)+bend*0.8+6), PW=DW+2*M, PH=DH+2*M, PN=PW*PH;
   const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW, y=v*PH; let s=0;
     for(const q of waves){ const p=q.kx*x+q.ky*y+q.ph; s+=q.a*(Math.sin(p) + 0.35*turb*Math.sin(2*p+1)); } return s; });
-  // slopes
   const GX=new Float32Array(PN), GY=new Float32Array(PN);
   for(let y=0;y<PH;y++) for(let x=0;x<PW;x++){ const i=y*PW+x;
     GX[i]=(H[y*PW+Math.min(PW-1,x+1)]-H[y*PW+Math.max(0,x-1)])*0.5; GY[i]=(H[Math.min(PH-1,y+1)*PW+x]-H[Math.max(0,y-1)*PW+x])*0.5; }
@@ -558,35 +559,122 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,M3){
     if(!(fx>=0 && fy>=0 && fx<PW-1 && fy<PH-1)) continue;
     const x0=fx|0, y0=fy|0, tx=fx-x0, ty=fy-y0, k=y0*PW+x0;
     C[k]+=(1-tx)*(1-ty); C[k+1]+=tx*(1-ty); C[k+PW]+=(1-tx)*ty; C[k+PW+1]+=tx*ty; }
+  const cl=(v,n)=>v<0?0:v>=n?n-1:v;
+  const boxBlur=(A, R, passes)=>{ if(R<1) return; const tmp=new Float32Array(PN);
+    for(let pass=0;pass<passes;pass++){
+      for(let y=0;y<PH;y++){ const r=y*PW; let s=0; for(let x=-R;x<=R;x++) s+=A[r+cl(x,PW)];
+        for(let x=0;x<PW;x++){ tmp[r+x]=s/(2*R+1); s+=A[r+cl(x+R+1,PW)]-A[r+cl(x-R,PW)]; } }
+      for(let x=0;x<PW;x++){ let s=0; for(let y=-R;y<=R;y++) s+=tmp[cl(y,PH)*PW+x];
+        for(let y=0;y<PH;y++){ A[y*PW+x]=s/(2*R+1); s+=tmp[cl(y+R+1,PH)*PW+x]-tmp[cl(y-R,PH)*PW+x]; } } } };
   // deeper water and haze soften the net: a blur that grows with both
-  const blurR=Math.round(1 + depth*depth*unit*0.004 + hz*unit*0.008);
-  const tmp=new Float32Array(PN), cl=(v,n)=>v<0?0:v>=n?n-1:v;
-  for(let pass=0;pass<2;pass++){
-    for(let y=0;y<PH;y++){ const r=y*PW; let s=0; for(let x=-blurR;x<=blurR;x++) s+=C[r+cl(x,PW)];
-      for(let x=0;x<PW;x++){ tmp[r+x]=s/(2*blurR+1); s+=C[r+cl(x+blurR+1,PW)]-C[r+cl(x-blurR,PW)]; } }
-    for(let x=0;x<PW;x++){ let s=0; for(let y=-blurR;y<=blurR;y++) s+=tmp[cl(y,PH)*PW+x];
-      for(let y=0;y<PH;y++){ C[y*PW+x]=s/(2*blurR+1); s+=tmp[cl(y+blurR+1,PH)*PW+x]-tmp[cl(y-blurR,PH)*PW+x]; } }
+  boxBlur(C, Math.round(1 + depth*depth*unit*0.004 + hz*unit*0.008), 2);
+
+  // ---- WHAT LIVES THERE, at its depth (z: 0 the surface … 1 the floor) ----
+  const area=(DW*DH)/(ww*wh);                                     // a bigger patch holds more
+  const FL=new Float32Array(PN), FA=new Float32Array(PN);         // the floor's own relief shading, and its albedo shift
+  const OB=new Float32Array(PN), OT=new Float32Array(PN), OZ=new Float32Array(PN).fill(1);   // a swimmer: cover, tone, depth
+  const LF=new Float32Array(PN), LT=new Float32Array(PN);         // the surface: leaves, pads
+  const SH=new Float32Array(PN);                                  // shadows on the floor
+  const ellipse=(cx, cy, rx, ry, ang, fn)=>{ const R=Math.max(rx,ry)+2, ca=Math.cos(ang), sa=Math.sin(ang);
+    for(let y=Math.max(0,Math.floor(cy-R)); y<=Math.min(PH-1,Math.ceil(cy+R)); y++) for(let x=Math.max(0,Math.floor(cx-R)); x<=Math.min(PW-1,Math.ceil(cx+R)); x++){
+      const dx=x-cx, dy=y-cy, u=(dx*ca+dy*sa)/rx, v=(-dx*sa+dy*ca)/ry; fn(y*PW+x, u, v, u*u+v*v); } };
+  const shadowAt=(cx, cy, z)=>{ const off=(1-z)*floor*(0.3+0.9*ltilt); return [cx+SX*off, cy+SY*off]; };
+  // stones on the floor: lit domes, each its own tone
+  const stoneN=Math.round((kind==='stream' ? 70 : kind==='well' ? 26 : 14)*area);
+  for(let k=0;k<stoneN;k++){
+    const r=unit*(kind==='stream' ? 0.025+Math.random()*0.05 : 0.02+Math.random()*0.035), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, tone=(Math.random()-0.5)*0.5;
+    ellipse(x, y, r*(1+Math.random()*0.5), r, ang, (i,u,v,q)=>{ if(q>=1) { if(q<1.5) FL[i]=Math.min(FL[i], -0.35*(1.5-q)); return; }
+      const nz=Math.sqrt(1-q), nx=u, ny=v, ca=Math.cos(ang), sa=Math.sin(ang), wx=nx*ca-ny*sa, wy=nx*sa+ny*ca;
+      FL[i]=Math.max(FL[i], (-(wx*SX+wy*SY)*0.8 + nz*0.4) - 0.2); FA[i]=tone; });
   }
+  // coins in the well: small bright discs, a few on their edge
+  if(kind==='well'){ const n=Math.round((18+Math.random()*16)*area);
+    for(let k=0;k<n;k++){ const r=unit*(0.02+Math.random()*0.012), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, squash=0.35+Math.random()*0.65;
+      ellipse(x, y, r, r*squash, ang, (i,u,v,q)=>{ if(q>=1) return; const rim=q>0.72 ? 0.5 : 0; FL[i]=0.9 - rim + Math.sin(u*9)*0.08; FA[i]=0.55; }); } }
+  // weed: strands rising from the floor, swaying
+  if(kind!=='well'){ const n=Math.round((kind==='stream' ? 10 : 5)*area);
+    for(let k=0;k<n;k++){ let x=Math.random()*PW, y=Math.random()*PH; const len=unit*(0.12+Math.random()*0.25), ph=Math.random()*6.28, ang=Math.random()*Math.PI*2, wdt=unit*0.006;
+      for(let t=0;t<1;t+=0.01){ const px=x+Math.cos(ang)*len*t + Math.sin(t*6+ph)*unit*0.02*t, py=y+Math.sin(ang)*len*t + Math.cos(t*5+ph)*unit*0.02*t, z=1-t*0.55;
+        ellipse(px, py, wdt*(1.2-t), wdt*(1.2-t), 0, (i,u,v,q)=>{ if(q<1 && z<OZ[i]+0.02){ OB[i]=Math.max(OB[i], 0.75*(1-q)); OT[i]=0.55; OZ[i]=z; } }); } } }
+  // fish: tapered bodies with a forked tail, curved as they swim
+  const fishN=Math.round((kind==='koi' ? 5+Math.random()*4 : kind==='stream' ? 10+Math.random()*10 : 1)*area);
+  for(let k=0;k<fishN;k++){
+    const Lf=unit*(kind==='koi' ? 0.11+Math.random()*0.07 : kind==='stream' ? 0.03+Math.random()*0.02 : 0.08), Wf=Lf*0.2;
+    const x=Math.random()*PW, y=Math.random()*PH, hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
+    const z=0.15+Math.random()*0.6, tone=kind==='koi' ? (Math.random()<0.55 ? 1.85 : Math.random()<0.5 ? 0.3 : 1.45) : 0.32;
+    const pat=Math.random()*6.28, ca=Math.cos(hd), sa=Math.sin(hd), R=Lf*0.8;
+    const [sxx, syy]=shadowAt(x, y, z);
+    for(let yy=Math.max(0,Math.floor(Math.min(y,syy)-R)); yy<=Math.min(PH-1,Math.ceil(Math.max(y,syy)+R)); yy++) for(let xx=Math.max(0,Math.floor(Math.min(x,sxx)-R)); xx<=Math.min(PW-1,Math.ceil(Math.max(x,sxx)+R)); xx++){
+      const body=(px, py)=>{ const dx=px, dy=py, u=(dx*ca+dy*sa)/Lf, v0=(-dx*sa+dy*ca)/Lf;
+        const v=v0 - bendF*Math.sin((u+0.5)*Math.PI)*0.12;            // the swimming curve
+        if(u>-0.5 && u<0.5){ const half=0.2*Math.pow(Math.sin((u+0.5)*Math.PI), 0.75)*(u<0 ? 0.75+0.25*(u+0.5)*2 : 1); return Math.abs(v)<half ? 1-Math.pow(Math.abs(v)/half, 4) : 0; }
+        if(u<=-0.5 && u>-0.78){ const s=(-0.5-u)/0.28, half=0.04+s*0.16; return (Math.abs(v)<half && Math.abs(v)>s*0.07) ? 0.85 : 0; }   // the forked tail
+        return 0; };
+      const i=yy*PW+xx, b=body(xx-x, yy-y);
+      if(b>0 && z<OZ[i]+0.02){ OB[i]=Math.max(OB[i], b); OZ[i]=Math.min(OZ[i], z);
+        // koi: patches of colour along the back
+        OT[i]=kind==='koi' && tone>1 ? tone - 0.9*Math.max(0, Math.sin((xx*ca+yy*sa)/Lf*7+pat)) * (tone>1.4 ? 1 : 0.4) : tone; }
+      const sb=body(xx-sxx, yy-syy); if(sb>0) SH[i]=Math.max(SH[i], sb*0.75*(1-z*0.4));
+    }
+  }
+  // the surface: lily pads (a notched round) or a fallen leaf; sharp shadows on the floor below
+  const leafN=kind==='koi' ? Math.round((2+Math.random()*4)*area) : Math.round((Math.random()<0.6 ? 1 : 0)*area + (kind==='stream' ? 1 : 0));
+  for(let k=0;k<leafN;k++){
+    const pad=kind==='koi', r=unit*(pad ? 0.05+Math.random()*0.05 : 0.025+Math.random()*0.02), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI*2, tone=pad ? 1.05+Math.random()*0.3 : 0.55+Math.random()*0.7;
+    const [sxx, syy]=shadowAt(x, y, 0);
+    const shapeF=(u,v,q)=>{ if(pad){ const a=Math.atan2(v,u); return q<1 && !(Math.abs(a)<0.22 && q>0.02); }
+      return Math.abs(v) < 0.42*Math.pow(Math.max(0, 1-u*u), 0.9); };
+    ellipse(x, y, r, pad ? r : r*0.9, ang, (i,u,v,q)=>{ if(shapeF(u,v,q)){ LF[i]=1; LT[i]=tone*(1 - (pad ? 0.12*Math.abs(Math.sin(Math.atan2(v,u)*9)) : 0.25*Math.exp(-((v/0.04)**2)))); } });
+    ellipse(sxx, syy, r, pad ? r : r*0.9, ang, (i,u,v,q)=>{ if(shapeF(u,v,q)) SH[i]=Math.max(SH[i], 0.85); });
+  }
+  // the floor's things soften with depth; swimmers by their own depth; shadows by their distance
+  boxBlur(SH, Math.round(1 + floor*0.06), 2);
+  const fb=Math.round(depth*unit*0.004 + hz*unit*0.004); if(fb>0){ boxBlur(FL, fb, 1); boxBlur(FA, fb, 1); }
+  boxBlur(OB, Math.max(1, Math.round(hz*unit*0.004 + depth*unit*0.002)), 1);
+
   // glints: Blinn's highlight of the sun in each slope (viewer overhead)
-  const elev=(90-tilt*78)*Math.PI/180, Lx=SX*Math.cos(elev), Ly=SY*Math.sin(elev)*0+SY*Math.cos(elev), Lz=Math.sin(elev);
+  const elev=(90-ltilt*78)*Math.PI/180, Lx=SX*Math.cos(elev), Ly=SY*Math.cos(elev), Lz=Math.sin(elev);
   const hx=Lx, hy=Ly, hzv=Lz+1, hl=Math.hypot(hx,hy,hzv);
-  const floorVis=1-0.75*depth, absorb=1-0.6*mk, veil=hz*0.55;
+  const floorVis=1-0.75*depth, absorb=1-0.6*mk, veil=hz*0.55, waterTone=128 - mk*38 + hz*14;
+  const DN=DW*DH, RGB=new Float32Array(DN*3), HS=new Float32Array(DN);
+  const samp=(A, fx, fy)=>{ fx=Math.max(0,Math.min(PW-1.001,fx)); fy=Math.max(0,Math.min(PH-1.001,fy)); const x0=fx|0, y0=fy|0, tx=fx-x0, ty=fy-y0, k=y0*PW+x0;
+    return (A[k]*(1-tx)+A[k+1]*tx)*(1-ty)+(A[k+PW]*(1-tx)+A[k+PW+1]*tx)*ty; };
+  for(let i=0;i<DN;i++){
+    const X=(i%DW)+M, Y=((i/DW)|0)+M, P=Y*PW+X;
+    HS[i]=H[P];
+    const nx=-GX[P]*3, ny=-GY[P]*3, nl=Math.hypot(nx,ny,1), nh=Math.max(0,(nx*hx+ny*hy+hzv)/(nl*hl));
+    const glint=Math.pow(nh, 400)*(1-0.6*hz)*(1-0.5*mk)*0.85;
+    // the floor, seen through the waves: refracted by the full depth
+    const fx=X-GX[P]*bend*1.6, fy=Y-GY[P]*bend*1.6;
+    const caus=(samp(C,fx,fy)-1)*0.9*floorVis*absorb*(1-veil), sh=samp(SH,fx,fy)*floorVis*absorb;
+    const trough=Math.min(0, H[P])/(unit*0.02);
+    let v=128 - 16*depth + (caus*52)*(1-0.85*sh) - sh*40 + trough*6*(1-veil) + (samp(FL,fx,fy)*78 + samp(FA,fx,fy)*48)*floorVis*absorb*(1-veil) - mk*38 + hz*14;
+    // a swimmer above the floor: refracted by ITS depth, fading toward the water's tone the deeper it is
+    const z=samp(OZ,X,Y), zx=X-GX[P]*bend*1.6*z, zy=Y-GY[P]*bend*1.6*z, ob=samp(OB,zx,zy);
+    if(ob>0.01){ const ot=samp(OT,zx,zy), fade=Math.min(0.8, z*depth*0.7 + mk*0.5*z + veil*0.4);
+      const sv=(128*ot + caus*30*(1-z)) * (1-fade) + waterTone*fade; v=v*(1-ob) + sv*ob; }
+    // the surface: leaves and pads, lit, unbent, over everything; no glint through them
+    const lf=samp(LF,X,Y); let g=glint;
+    if(lf>0.01){ const shade=0.9 + 0.2*(-(GX[P]*SX + GY[P]*SY))*3; v=v*(1-lf) + 128*samp(LT,X,Y)*shade*lf; g*=1-lf*0.7; }
+    for(let c=0;c<3;c++){
+      const shd = M3 && trough<0 ? trough*6*(M3.sh[c]-1)*0.8 : 0;
+      RGB[i*3+c]=clamp255(v + shd + g*170*(M3 ? M3.hi[c] : 1));
+    }
+  }
+  let OUT=RGB;
+  if(!F.flat){
+    // tipped: the far water mirrors the sky (Fresnel), then recedes into haze
+    const sky=Math.min(255, 128 + 52 + hz*20);
+    OUT=obliqueRender(F, HS, RGB, { fog:[sky, sky, sky], fogK: 0.2 + 0.25*tl });
+    for(let y=0;y<wh;y++){
+      const dy=-F.D*F.sp - F.cp*(y - wh/2), dz=-F.D*F.cp + F.sp*(y - wh/2), cosT=-dy/Math.hypot(dy, dz);
+      const fr=Math.min(0.75, 0.04 + 1.2*Math.pow(1 - cosT, 2.2));
+      for(let x=0;x<ww;x++){ const k=(y*ww+x)*3; for(let c=0;c<3;c++) OUT[k+c]=OUT[k+c]*(1-fr) + sky*fr; }
+    }
+  }
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
-  for(let i=0;i<N;i++){
-    const P=((i/ww|0)+M)*PW + (i%ww) + M;                           // this pixel in the margined field
-    const nx=-GX[P]*3, ny=-GY[P]*3, nl=Math.hypot(nx,ny,1), nh=Math.max(0,(nx*hx+ny*hy+hzv)/(nl*hl));
-    const glint=Math.pow(nh, 400)*(1-0.6*hz)*(1-0.5*mk);
-    const caus=(C[P]-1)*0.9*floorVis*absorb*(1-veil);
-    const trough=Math.min(0, H[P])/(unit*0.02);                     // the troughs sit a little darker
-    const base=128 + caus*70 + trough*6*(1-veil) - mk*38 + hz*14;
-    const q=i*4;
-    for(let c=0;c<3;c++){
-      const sh = M3 && trough<0 ? trough*6*(M3.sh[c]-1)*0.8 : 0;
-      d[q+c]=Math.max(0,Math.min(255, base + sh + glint*170*(M3 ? M3.hi[c] : 1)));
-    }
-    d[q+3]=255;
-  }
+  for(let i=0;i<ww*wh;i++){ const q=i*4; d[q]=OUT[i*3]; d[q+1]=OUT[i*3+1]; d[q+2]=OUT[i*3+2]; d[q+3]=255; }
   sctx.putImageData(img,0,0);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
@@ -745,36 +833,89 @@ function paintLit(w, h, div, ww, wh, colour){
 const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
 
 /**
- * Dune Ripples — wind-blown sand. Ripples run across the wind with a gentle
- * windward slope and a steep lee face, bending and forking as the wind does,
- * over broad dune swells. The light dial is the sun: low light fills every
- * trough with shadow, overhead light flattens it all to glare.
- * RIPPLE SIZE · WIND (sharper, straighter, more asymmetric ripples) · DUNE HEIGHT
+ * Dune Ripples — a field of wind-blown sand, after the way deserts are
+ * simulated (Beneš & Roa: sand hops downwind, slides down faces steeper than
+ * its angle of repose, and lies still in the wind's shadow behind a crest):
+ *   DUNES      by the seed: TRANSVERSE ridges across the wind; BARCHANOID
+ *              ridges broken into crescents; or LINEAR (seif) dunes running
+ *              WITH the wind, sharp-crested and sinuous. Each has a long,
+ *              gentle windward slope and a steep slip face; between them,
+ *              smooth hollows
+ *   RIPPLES    only where the wind works: thick on windward slopes, gone from
+ *              the slip faces (avalanching sand is smooth) and faint in the
+ *              lee; heavier, darker grains settle in their troughs
+ *   THE SUN    the dial, as always — pulled past the rim it sinks lower still
+ *   TILT       the camera: 0 looks straight down (a flat texture); higher, it
+ *              tips toward the horizon and the far dunes fade into haze
+ * RIPPLE SIZE · WIND (sharper, straighter ripples) · DUNE HEIGHT · TILT
  */
-export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
+export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
   amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
-  const swell=Math.max(0,Math.min(1, form==null ? 0.4 : form));
+  const swell=Math.max(0,Math.min(1, form==null ? 0.4 : form)), tl=Math.max(0, Math.min(1, tilt==null ? 0 : tilt));
   const sand=parseHex(tint1||'#D9B98C'), sun=parseHex(tint2||'#FFF1D8');
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
+  // tilted, a coarser working grid: the view is hazier, and the patch bigger
+  const div=tl > 0.001 ? canonDiv(3) : canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
   const lambda=Math.max(3, unit*0.032*zoom), wind=Math.random()*Math.PI, cw=Math.cos(wind), sw=Math.sin(wind);
-  const warp=fbmSampler(2, 3), breakup=fbmSampler(6, 2), dunes=fbmSampler(1.4, 3), grain=fbmSampler(40, 1);
-  const lee=0.34 - 0.22*Math.min(1, amt);                     // the steep face's share of each ripple
+  const KINDS=['transverse','barchanoid','linear'], kind=KINDS[Math.floor(Math.random()*KINDS.length)];
+  const L0=unit*(0.42+Math.random()*0.25), duneH=swell*unit*0.16;
+  const F=obliqueFrame(ww, wh, tl*0.85, duneH*1.2 + lambda*0.3), GW=F.GW, GH=F.GH, N=GW*GH;
+  // fields sampled in PAGE units (u = x/ww), so features keep their size however big the patch
+  const ox=F.flat ? 0 : F.gcx - ww/2, oz=F.flat ? 0 : F.gcz - wh/2;
+  const fs=(n, oct) => { const f=fbmSampler(n, oct); return (x, y) => f((x - ox)/ww + 3, (y - oz)/wh + 3); };
+  const warp=fs(2, 3), breakup=fs(6, 2), big=fs(1.2, 3), along=fs(3.5, 2), grainN=fs(40, 1), duneW=fs(0.9, 2);
+  const lee=0.34 - 0.22*Math.min(1, amt), meander=1.35 - 0.85*Math.min(1, amt), crest=0.55 + 0.7*Math.min(1, amt);
   const st=Math.max(2, Math.round(lambda/3));
-  // wind straightens the ripples (less meander and forking) and raises sharper crests
-  const meander=1.35 - 0.85*Math.min(1, amt), crest=0.65 + 0.8*Math.min(1, amt);
-  const Wf=smoothField(ww,wh,st,(u,v)=>(3.2*warp(u,v) + 0.9*breakup(u,v))*meander), Af=smoothField(ww,wh,st,(u,v)=>breakup(u+0.37,v+0.11)), Df=smoothField(ww,wh,st*3,(u,v)=>dunes(u,v));
-  const H=new Float32Array(ww*wh), CR=GL ? new Float32Array(ww*wh) : null;
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, ph=(x*cw + y*sw)/lambda + Wf[i];
-    const t=ph - Math.floor(ph), prof = t < 1-lee ? t/(1-lee) : (1-t)/lee;
-    if(CR) CR[i]=prof*prof*prof*prof;                           // the crests, for the glow
-    H[i] = prof*lambda*0.16*crest*(0.55 + 0.6*Af[i]) + swell*unit*0.10*Df[i] + (grain(x/ww,y/wh)-0.5)*0.6;
+  const gridF=(step, fn) => { const cw2=Math.ceil(GW/step)+2, ch=Math.ceil(GH/step)+2, g=new Float32Array(cw2*ch);
+    for(let j=0;j<ch;j++) for(let i=0;i<cw2;i++) g[j*cw2+i]=fn(i*step, j*step);
+    const out=new Float32Array(N);
+    for(let y=0;y<GH;y++){ const fy=y/step, j=Math.floor(fy), ty=fy-j; for(let x=0;x<GW;x++){ const fx=x/step, i=Math.floor(fx), tx=fx-i, k=j*cw2+i;
+      out[y*GW+x]=(g[k]*(1-tx)+g[k+1]*tx)*(1-ty)+(g[k+cw2]*(1-tx)+g[k+cw2+1]*tx)*ty; } }
+    return out; };
+  const Wf=gridF(st, (x,y)=>(3.2*warp(x,y) + 0.9*breakup(x,y))*meander), Af=gridF(st, (x,y)=>breakup(x+37,y+11));
+  // (the dune-scale fields finely sampled: coarse cells showed as facets in the light)
+  const Bw=gridF(2, (x,y)=>(big(x,y)-0.5)*2.2), Al=gridF(2, (x,y)=>along(x,y)), Dv=gridF(3, (x,y)=>duneW(x,y));
+  const H=new Float32Array(N), RIP=new Float32Array(N), CR=GL ? new Float32Array(N) : null, TR=new Float32Array(N);
+  const soft=(e)=>e*e*(3-2*e);
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){
+    const i=y*GW+x;
+    // THE DUNE: position across (transverse, barchanoid) or along (linear) the wind
+    const acr=(x*cw + y*sw), alo=(-x*sw + y*cw);
+    let D=0, windward=1, shadow=0;
+    if(kind==='linear'){
+      const ph=alo/(L0*0.8) + Bw[i]*0.8 + 0.3*Math.sin(acr/(L0*1.6)), t=ph-Math.floor(ph);
+      const s2=1-Math.abs(t*2-1); D=Math.pow(s2, 1.6);               // symmetric, sharp-crested
+      windward=0.7; shadow=0;
+    } else {
+      const ph=acr/L0 + Bw[i], t=ph-Math.floor(ph), lf=0.22;
+      if(t < 1-lf){ const e=t/(1-lf); D=1-(1-e)*(1-e); windward=1; shadow=0; }                     // the long windward slope, convex
+      else { const e=(1-t)/lf; D=soft(e); windward=0.12; shadow=1-e; }                                  // the slip face, at the angle of repose
+      // the wind's shadow: the first stretch of the next slope lies calm
+      if(t < 0.18) shadow=Math.max(shadow, 1 - t/0.18);
+      if(kind==='barchanoid') D*=Math.max(0, Math.min(1, (Al[i]-0.28)*2.6));                       // ridges broken into crescents
+    }
+    D*=0.55 + 0.9*Dv[i];
+    // RIPPLES where the wind works
+    const rph=(x*cw + y*sw)/lambda + Wf[i], rt=rph-Math.floor(rph);
+    const prof = rt < 1-lee ? rt/(1-lee) : (1-rt)/lee, sprof=soft(prof);
+    const rip = windward*(1 - 0.85*shadow)*(0.5 + 0.6*Af[i]);
+    RIP[i]=rip; TR[i]=(1-sprof)*rip;                                 // troughs, where the heavy grains settle
+    if(CR) CR[i]=Math.pow(sprof, 4)*rip;
+    H[i] = D*duneH + sprof*lambda*0.1*crest*rip + (grainN(x,y)-0.5)*0.4;
   }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.08, shadow:0.75, ao:0.25, ambient:0.38 });
-  return paintLit(w,h,div,ww,wh, i => { const K=c=>litK(L,i,0.38,M3,c), s=L.spec[i]*0.4, S=c=>s*litS(M3,c);
-    // GLOW: afterglow along the crests
-    const e=CR ? CR[i]*180 : 0;
-    return [clamp255(sand.r*K(0)*1.05 + sun.r*S(0) + (CR ? GL.r*e : 0)), clamp255(sand.g*K(1)*1.05 + sun.g*S(1) + (CR ? GL.g*e : 0)), clamp255(sand.b*K(2)*1.05 + sun.b*S(2) + (CR ? GL.b*e : 0))]; });
+  const L=lightHeights(H, GW, GH, { light, relief:1, gloss:0.08, shadow:0.7, ao:0.2, ambient:0.42 });
+  const RGB=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const s=L.spec[i]*0.35, tone=1.05 - 0.09*TR[i], e=CR ? CR[i]*180 : 0;
+    for(let c=0;c<3;c++){ const sc=c===0?sand.r:c===1?sand.g:sand.b, uc=c===0?sun.r:c===1?sun.g:sun.b, gc=GL ? (c===0?GL.r:c===1?GL.g:GL.b) : 0;
+      RGB[i*3+c]=clamp255(sc*litK(L,i,0.42,M3,c)*tone + uc*s*litS(M3,c) + gc*e); }
+  }
+  let OUT=RGB;
+  if(!F.flat){
+    // the haze: the sand's colour washed toward the sun's
+    const fog=[sand.r*0.45+sun.r*0.55, sand.g*0.45+sun.g*0.55, sand.b*0.45+sun.b*0.55];
+    OUT=obliqueRender(F, H, RGB, { fog, fogK: 0.3 + 0.4*tl });
+  }
+  return paintLit(w,h,div,ww,wh, i => [OUT[i*3], OUT[i*3+1], OUT[i*3+2]]);
 }
 
 /**
@@ -1210,7 +1351,8 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
   const faces=(cs)=>{ const gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, F=[];
     for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ const a=Math.random()*Math.PI*2, t=0.2+Math.random()*0.5;
       F.push({ x:(i-1+0.1+Math.random()*0.8)*cs, y:(j-1+0.1+Math.random()*0.8)*cs, tx:Math.cos(a)*t, ty:Math.sin(a)*t,
-               tone:Math.random(), ghost:Math.random()<0.45 }); }
+               tone:Math.random(), ghost:Math.random()<0.45,
+               rot:Math.random()*Math.PI/3, slope:0.45+Math.random()*0.5, h:Math.random()*cs*0.4, film:Math.random(), stri:0.4+Math.random()*1.2 }); }
     return { cs, gx, gy, F }; };
   const near=(S,x,y)=>{ const ci=Math.floor(x/S.cs)+1, cj=Math.floor(y/S.cs)+1; let d1=1e18, d2=1e18, f1=null, f2=null;
     for(let b=cj-1;b<=cj+1;b++) for(let a=ci-1;a<=ci+1;a++){ if(a<0||b<0||a>=S.gx||b>=S.gy) continue; const f=S.F[b*S.gx+a], dd=(x-f.x)**2+(y-f.y)**2;
@@ -1225,25 +1367,39 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
   const veil=makeNoiseGrid(8,8), feathers=makeNoiseGrid(40,40);
   const NM=new Float32Array(N*3), H=new Float32Array(N), V=new Float32Array(N*3);
   const spec=(t)=>[ Math.max(0, Math.min(1, 1.5-Math.abs(t*4-3))), Math.max(0, Math.min(1, 1.5-Math.abs(t*4-2))), Math.max(0, Math.min(1, 1.5-Math.abs(t*4-1))) ];
-  const sharp=Math.max(1, unit*0.0025), REFR=unit*0.12;
+  const REFR=unit*0.12, TAU=Math.PI*2;
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const i=y*ww+x, A=near(FRONT,x,y), f=A.f;
-    const nz=1/Math.sqrt(1+f.tx*f.tx+f.ty*f.ty); NM[i*3]=f.tx*nz; NM[i*3+1]=f.ty*nz; NM[i*3+2]=nz;
-    H[i]=Math.max(0, 1-A.edge/sharp)*sharp;                         // a hairline ridge where two faces meet
-    // light enters at the face's lit edge and fades inward: how far is this
-    // point from the centre, measured toward the light?
-    const toward=((x-f.x)*SX+(y-f.y)*SY)/(FRONT.cs*0.6);            // −1 far side … +1 the lit side
-    const admit=0.35+0.65*Math.max(0, -(f.tx*SX+f.ty*SY)/0.7);     // a face turned toward the light admits more
-    let v=0.1+0.08*f.tone + admit*0.5*Math.max(0, Math.min(1, 0.5-toward*0.5));
-    // DEPTH: the faces behind, refracted by this face's tilt
-    const B=near(BACK, x+f.tx*REFR, y+f.ty*REFR);
-    v+=0.08*B.f.tone + 0.35*Math.exp(-B.edge/(unit*0.004))*clarity*(0.5+0.5*admit);
-    // the front edge itself: a thin bright line, light leaking out of the cut
-    v+=0.5*Math.exp(-A.edge/(unit*0.0018));
-    // PHANTOMS: two or three nested outlines of the face it once had
-    if(ph>0.02 && f.ghost){ const st=FRONT.cs*0.07, k=A.edge/st;
+    // EACH CRYSTAL A POINT: a six-sided pyramid seen from above (a geode's
+    // druse, quartz points) — six triangular faces round its apex, each lit
+    // on its own; where neighbours meet, a valley
+    const dx=x-f.x, dy=y-f.y, rr=Math.hypot(dx,dy), R=FRONT.cs*0.62;
+    const ang=((Math.atan2(dy,dx)-f.rot)%TAU+TAU)%TAU, sec=Math.floor(ang/(Math.PI/3)), fr=ang/(Math.PI/3)-sec;
+    const mid=(sec+0.5)*Math.PI/3+f.rot, mx=Math.cos(mid), my=Math.sin(mid), along=dx*mx+dy*my;   // along: the hexagonal distance from the apex
+    // growth striations across each face (quartz's horizontal lines), as a ripple in its slope
+    const stri=Math.sin(along/Math.max(1, unit*0.004)+f.film*6)*0.05*f.stri;
+    const sl=f.slope*(1+stri), nz=1/Math.sqrt(1+sl*sl);
+    NM[i*3]=mx*sl*nz; NM[i*3+1]=my*sl*nz; NM[i*3+2]=nz;
+    H[i]=(f.h - f.slope*along)*0.35;                                // for the shadows one point throws on the next
+    // light enters through a face turned toward it, and fades as it goes in
+    const admit=0.3+0.7*Math.max(0, -(mx*SX+my*SY));
+    let v=0.08+0.08*f.tone + admit*0.42*Math.max(0, 1-along/R*0.8);
+    // inner glow pooling toward the heart of each point (masked away from its rim, as a Fresnel term would)
+    v+=0.22*clarity*Math.exp(-((rr/(R*0.55))**2));
+    // DEPTH: crystals behind, seen through the face it is on — bent by that face's tilt, and fading
+    const B=near(BACK, x+mx*f.slope*REFR, y+my*f.slope*REFR);
+    v+=0.07*B.f.tone + 0.3*Math.exp(-B.edge/(unit*0.004))*clarity*(0.4+0.6*admit);
+    // the ridges between faces, and the apex: crisp, worn bright (edge highlights)
+    const ridge=rr*Math.sin(Math.min(fr, 1-fr)*Math.PI/3);
+    v+=0.55*Math.exp(-ridge/(unit*0.0016))*Math.min(1, rr/(unit*0.01)) + 0.35*Math.exp(-A.edge/(unit*0.0016));
+    // PHANTOMS: smaller points it once was, nested inside it — hexagons
+    if(ph>0.02 && f.ghost){ const st=R*0.22, k=along/st;
       if(k>0.6 && k<3.6){ const q=k-Math.floor(k); v+=Math.exp(-(((Math.min(q, 1-q))*st/(unit*0.0016))**2))*ph*0.4; } }
-    let r=v, g=v, bl=v;
+    // a thin-film sheen on the faces: faint bands of colour (iridescence)
+    const film=Math.sin(along/R*9 + f.film*9);
+    let r0=v, g0=v, b0=v;
+    if(fire>0.05){ const sp=spec(0.5+0.5*film), k2=0.06*fire*admit; r0+=sp[0]*k2; g0+=sp[1]*k2; b0+=sp[2]*k2; }
+    let r=r0, g=g0, bl=b0;
     for(const p of P){ const d=x*p.nx+y*p.ny-p.c; if(Math.abs(d)>p.wd*7) continue;
       const along=x*p.ax+y*p.ay-p.mid; if(Math.abs(along)>p.len) continue;
       const fade=Math.sin(Math.PI*0.5*(1-Math.abs(along)/p.len)), str=p.flash*fade*(0.3+0.7*fire);
@@ -1256,7 +1412,7 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     r=r*(1-cloud*0.55)+cloud*0.6; g=g*(1-cloud*0.55)+cloud*0.6; bl=bl*(1-cloud*0.55)+cloud*0.6;
     V[i*3]=r; V[i*3+1]=g; V[i*3+2]=bl;
   }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.95, shadow:0.15, ao:0.05, ambient:0.6, normals:NM });
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.95, shadow:0.45, ao:0.25, ambient:0.5, normals:NM });
   const fl=L.flat||1, lum=Math.max(1, 0.2126*CR.r+0.7152*CR.g+0.0722*CR.b), hue=[CR.r/lum, CR.g/lum, CR.b/lum];
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
@@ -1265,7 +1421,7 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     for(let c=0;c<3;c++){
       // deep (dark) stone carries the hue fully; the bright fire, less
       const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], tint=hue[c]**(1.2-Math.min(1, inside));
-      const val=255*inside*tint*(0.75+0.25*k) + 220*sp*litS(M3,c);
+      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c);
       d[q+c]=val<0?0:val>255?255:val;
     }
     d[q+3]=255;

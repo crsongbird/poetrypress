@@ -4,7 +4,7 @@
  * Waking; metal at the edges. Lotus, 90s dots, still rain, the painter's
  * frustration, silverpoint hatch, metal leaf, waking grain.
  */
-import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx, lightVec, scaleNow } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx, lightVec, scaleNow, canonDiv, lightHeights, litK } from './texCore.js';
 
 // The flower's FORM, as keyframes of a few numbers. The Form knob (0–1)
 // blends continuously between neighbours, so every position in between is a
@@ -360,8 +360,20 @@ export function genRainStreaks(w,h,amt,angle,zoom,light){
   return full;
 }
 
-export function genBrushstrokes(w,h,amt,zoom,form){
+export function genBrushstrokes(w,h,amt,zoom,form,light){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // IMPASTO: every stroke also lays down paint THICKNESS on a height map —
+  // the body thick, ridges where the paint piles up at its edges, raised
+  // bristle lines, drips and droplets — and the dial's light rakes across it
+  // (lightHeights): ridges catch the light and throw small shadows, the
+  // ground beside a heavy stroke falls into its shade. Wet paint is flatter
+  // and glossier.
+  const hdiv = canonDiv(2), hw = Math.ceil(w/hdiv), hh = Math.ceil(h/hdiv);
+  const hcv = document.createElement('canvas'); hcv.width = hw; hcv.height = hh;
+  const hx = hcv.getContext('2d', CPU); hx.fillStyle = '#000'; hx.fillRect(0, 0, hw, hh);
+  if(hx.setTransform) hx.setTransform(1/hdiv, 0, 0, 1/hdiv, 0, 0);
+  hx.globalCompositeOperation = 'lighter'; hx.fillStyle = '#fff'; hx.strokeStyle = '#fff'; hx.lineCap = 'round'; hx.lineJoin = 'round';
+  const trace = (g, P) => { g.beginPath(); P.forEach(([x,y],i)=> i ? g.lineTo(x,y) : g.moveTo(x,y)); };
   // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
   // thinner (strokes mix where they cross), the bristle marks level out,
   // edges bleed softly into what's under them, and heavy strokes run in drips.
@@ -430,6 +442,10 @@ export function genBrushstrokes(w,h,amt,zoom,form){
     left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
     for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
     ctx.closePath(); ctx.fill();
+    // its thickness: the body, and the ridge where the paint piled at its edges
+    { const P = left.concat(right.slice().reverse());
+      hx.globalAlpha = 0.32*(1 - 0.4*wet); trace(hx, P); hx.closePath(); hx.fill();
+      hx.globalAlpha = 0.16*(1 - 0.5*wet); hx.lineWidth = W*0.1; trace(hx, P); hx.closePath(); hx.stroke(); }
 
     // 2. bristles: striations inside the body, then fraying past the dry point
     const bristles = 14 + Math.floor(Math.random()*14);
@@ -451,7 +467,12 @@ export function genBrushstrokes(w,h,amt,zoom,form){
         on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
       }
       ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
+      // the bristle's raised line in the paint (redrawn on the height map: same path, stroked again)
     }
+    { const nb = 10 + Math.floor(Math.random()*8);
+      for(let b=0;b<nb;b++){ const f = (b/(nb-1))*2 - 1; hx.globalAlpha = 0.09*(1 - 0.7*wet); hx.lineWidth = Math.max(cpx(0.6), W*0.03);
+        const P = []; for(const p of pts){ if(p.t > dry*1.15) break; const off = f*width(p.t)/2*0.9; P.push([p.x + p.nx*off, p.y + p.ny*off]); }
+        if(P.length > 1){ trace(hx, P); hx.stroke(); } } }
     // wet paint runs: drips fall from the body's lower edge, thinning, each
     // ending in a bead
     if(wet > 0.25){
@@ -468,6 +489,8 @@ export function genBrushstrokes(w,h,amt,zoom,form){
         for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
         ctx.closePath(); ctx.fill();
         ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
+        hx.globalAlpha = 0.3; hx.beginPath(); hx.arc(sx + sway, sy + len, dw*0.6, 0, Math.PI*2); hx.fill();
+        hx.globalAlpha = 0.18; hx.lineWidth = dw*0.8; hx.beginPath(); hx.moveTo(sx, sy); hx.lineTo(sx + sway, sy + len); hx.stroke();
       }
     }
 
@@ -480,8 +503,10 @@ export function genBrushstrokes(w,h,amt,zoom,form){
       const dotR = W*(0.03 + Math.random()*0.06);
       ctx.globalAlpha = 0.7;
       ctx.beginPath();
-      ctx.arc(tip.x + dx/dl*r + (Math.random()-0.5)*W*0.5, tip.y + dy/dl*r + (Math.random()-0.5)*W*0.5, dotR, 0, Math.PI*2);
+      const ddx = tip.x + dx/dl*r + (Math.random()-0.5)*W*0.5, ddy = tip.y + dy/dl*r + (Math.random()-0.5)*W*0.5;
+      ctx.arc(ddx, ddy, dotR, 0, Math.PI*2);
       ctx.fill();
+      hx.globalAlpha = 0.35; hx.beginPath(); hx.arc(ddx, ddy, dotR, 0, Math.PI*2); hx.fill();
     }
   }
   ctx.globalAlpha = 1;
@@ -491,6 +516,20 @@ export function genBrushstrokes(w,h,amt,zoom,form){
     const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
     const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
     ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
+  }
+  // THE LIGHT across the paint: thickness → heights → lit, laid over the
+  // painting (overlay: mid-grey changes nothing; brighter lifts, darker sinks)
+  const td = hx.getImageData ? hx.getImageData(0, 0, hw, hh).data : null;
+  if(td){
+    const N = hw*hh, H = new Float32Array(N), relief = Math.min(hw, hh)*0.026*(1 - 0.55*wet);
+    for(let i=0;i<N;i++) H[i] = td[i*4]/255*relief;
+    const L = lightHeights(H, hw, hh, { light, relief:1, gloss:0.25 + 0.6*wet, shadow:0.55, ao:0.3, ambient:0.45 });
+    const fl = L.flat || 1, lc = document.createElement('canvas'); lc.width = hw; lc.height = hh;
+    const lx = lc.getContext('2d', CPU), img = lx.createImageData(hw, hh), d = img.data;
+    for(let i=0;i<N;i++){ const k = litK(L, i, 0.45, null, 0)/fl, v = 128 + (k - 1)*125 + L.spec[i]*190*(0.4 + 0.6*wet);
+      const q = i*4, o = v < 0 ? 0 : v > 255 ? 255 : v; d[q] = d[q+1] = d[q+2] = o; d[q+3] = 255; }
+    lx.putImageData(img, 0, 0);
+    ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = 0.9; ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, w, h); ctx.restore();
   }
   return c;
 }
@@ -551,51 +590,81 @@ export function genSilverpointHatch(w,h,amt,zoom,angle,form){
 // Gold beaten so thin
 // it forgets it was ever
 // heavier than light.
+/**
+ * Metal Leaf — gilding, as a gilder lays it: square sheets of leaf in
+ * overlapping rows, each a little askew, crinkled where it was pressed down,
+ * torn at its edges, split here and there to show the ground beneath. Lit by
+ * the dial (lightHeights): metal's highlight takes the metal's own colour, so
+ * the crinkles flash as the light moves, and every overlap is a fine ridge.
+ * LEAF SIZE · COVERAGE (gaps and tears → laid edge to edge)
+ */
 export function genMetalLeaf(w,h,amt,zoom,light,tint){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
   const leaf = parseHex(tint || '#D9B45B');
-  const c = document.createElement('canvas');
-  c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0,0,w,h);
-
-  const unit = Math.max(w,h);
-  const flakes = Math.max(10, Math.round((120 + Math.random()*90) * amt));
-
-  for(let i=0;i<flakes;i++){
-    const cx = Math.random()*w, cy = Math.random()*h;
-    const r = unit*(0.015 + Math.random()*0.055) * zoom;
-    const sides = 5 + Math.floor(Math.random()*4);
-    const rot = Math.random()*Math.PI*2;
-
-    const pts = [];
-    for(let s=0;s<sides;s++){
-      const a = rot + (s/sides)*Math.PI*2;
-      const rr = r*(0.55 + Math.random()*0.7);
-      pts.push([cx+Math.cos(a)*rr, cy+Math.sin(a)*rr]);
+  const div = canonDiv(2), ww = Math.ceil(w/div), wh = Math.ceil(h/div), unit = Math.min(ww, wh), N = ww*wh;
+  const S = unit*0.16*zoom, cover = Math.min(1, 0.45 + 0.35*amt);
+  // the sheets, row by row (each overlaps the one before it), askew, some missing
+  const sheets = [];
+  for(let y = -S*0.5; y < wh + S*0.5; y += S*0.9){
+    const shift = (Math.random() - 0.5)*S*0.5;
+    for(let x = -S*0.5 + shift; x < ww + S*0.5; x += S*0.9){
+      if(Math.random() > cover) continue;
+      const a = (Math.random() - 0.5)*0.14, wa = Math.random()*Math.PI;
+      const ta = Math.random()*Math.PI*2, tm = Math.random()*0.45;
+      sheets.push({ x: x + (Math.random() - 0.5)*S*0.12, y: y + (Math.random() - 0.5)*S*0.12, ca: Math.cos(a), sa: Math.sin(a),
+        wx: Math.cos(wa), wy: Math.sin(wa), lift: (Math.random() - 0.5)*0.25, ph: Math.random()*50, tx: Math.cos(ta)*tm, ty: Math.sin(ta)*tm });
     }
-
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0], pts[0][1]);
-    for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]);
-    ctx.closePath();
-
-    // each flake keeps its own brightness, carried in the leaf's colour
-    const lift = (178 + Math.floor(Math.random()*66)) / 210;
-    ctx.globalAlpha = 0.16 + Math.random()*0.4;
-    ctx.fillStyle = `rgb(${Math.min(255, Math.round(leaf.r*lift))},${Math.min(255, Math.round(leaf.g*lift))},${Math.min(255, Math.round(leaf.b*lift))})`;
-    ctx.fill();
-
-    // the seam where one leaf overlaps the next
-    ctx.globalAlpha = 0.10 + Math.random()*0.25;
-    ctx.strokeStyle = 'rgb(48,48,48)';
-    ctx.lineWidth = Math.max(cpx(0.5), unit*0.0009);
-    ctx.stroke();
   }
-  ctx.globalAlpha = 1;
+  const tear = makeNoiseGrid(48, 48), crk = makeNoiseGrid(96, 96), split = makeNoiseGrid(20, 20);
+  const H = new Float32Array(N), TOP = new Int32Array(N).fill(-1), SEAM = new Float32Array(N), SHADE = new Float32Array(N);
+  const cs = S*1.4, gx = Math.ceil(ww/cs) + 3, gy = Math.ceil(wh/cs) + 3, bins = Array.from({ length: gx*gy }, () => []);
+  sheets.forEach((s2, k) => { const bi = Math.floor(s2.x/cs) + 1, bj = Math.floor(s2.y/cs) + 1;
+    for(let j = bj - 1; j <= bj + 1; j++) for(let i = bi - 1; i <= bi + 1; i++) if(i >= 0 && j >= 0 && i < gx && j < gy) bins[j*gx + i].push(k); });
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x, list = bins[(Math.floor(y/cs) + 1)*gx + Math.floor(x/cs) + 1] || [];
+    let top = -1, under = 0, edgeD = 1e9;
+    for(const k of list){ const s2 = sheets[k], dx = x - s2.x, dy = y - s2.y, u = dx*s2.ca + dy*s2.sa, v = -dx*s2.sa + dy*s2.ca;
+      // a torn edge: the square's border wanders
+      const rag = (sampleNoiseGrid(tear, 48, 48, x/ww*47 + k*3.1, y/wh*47) - 0.5)*S*0.08;
+      const e = Math.min(S/2 - Math.abs(u), S/2 - Math.abs(v)) + rag;
+      if(e > 0){ if(top >= 0) under++; if(k > top){ top = k; edgeD = e; } } }
+    // splits: the leaf parts here and there, showing the ground
+    if(top >= 0 && sampleNoiseGrid(split, 20, 20, x/ww*19, y/wh*19) > 0.5 + 0.5*cover && sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) > 0.72) top = -1;
+    TOP[i] = top;
+    if(top < 0){ H[i] = 0; continue; }
+    const s2 = sheets[top];
+    // crinkles: fine wrinkles, mostly one way per sheet (how it was pressed)
+    const cu = x*s2.wx + y*s2.wy, cv2 = -x*s2.wy + y*s2.wx;
+    const wr = Math.sin(cu*0.45/Math.max(0.5, unit*0.004) + s2.ph + 2.4*sampleNoiseGrid(crk, 96, 96, cv2/ww*30, cu/ww*8))*0.5
+             + (sampleNoiseGrid(crk, 96, 96, x/ww*95, y/wh*95) - 0.5)*0.9;
+    H[i] = unit*0.004*(1 + under*0.6) + wr*unit*0.0012 + s2.lift*unit*0.002;
+    SEAM[i] = Math.exp(-edgeD/(unit*0.0025))*(under > 0 ? 1 : 0.6);
+    SHADE[i] = s2.lift;
+  }
+  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.92, shadow: 0.45, ao: 0.35, ambient: 0.3 });
+  // metal MIRRORS: its brightness is what its surface faces — each sheet's own slight tilt and every crinkle's slope
+  const lv = lightVec(light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm, gs = 1/Math.max(0.5, unit*0.0012);
+  const fl = L.flat || 1, small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sx = small.getContext('2d', CPU), img = sx.createImageData(ww, wh), d = img.data;
+  for(let i = 0; i < N; i++){
+    const q = i*4, k = litK(L, i, 0.3, null, 0)/fl;
+    if(TOP[i] < 0){ const g = 128*Math.min(1.05, 0.75 + 0.25*k); d[q] = d[q+1] = d[q+2] = g; d[q+3] = 255; continue; }   // the ground, in the leaf's shade
+    // metal: a darker body, and a highlight IN the metal's colour (a little whiter at its peak)
+    const s2 = sheets[TOP[i]], x = i % ww, y = (i/ww)|0;
+    const gX = (H[y*ww + Math.min(ww-1, x+1)] - H[y*ww + Math.max(0, x-1)])*0.5*gs, gY = (H[Math.min(wh-1, y+1)*ww + x] - H[Math.max(0, y-1)*ww + x])*0.5*gs;
+    const env = Math.max(0, Math.min(1.25, 0.6 + 1.0*((s2.tx - gX*0.35)*TX + (s2.ty - gY*0.35)*TY)));
+    const sp = Math.min(1, L.spec[i] + Math.max(0, env - 0.95)*1.5), body = (0.3 + 0.62*env)*(0.65 + 0.35*k) - SEAM[i]*0.25;
+    d[q]   = clampByteMl(leaf.r*body + leaf.r*sp*1.6 + 255*sp*sp*0.5);
+    d[q+1] = clampByteMl(leaf.g*body + leaf.g*sp*1.6 + 255*sp*sp*0.5);
+    d[q+2] = clampByteMl(leaf.b*body + leaf.b*sp*1.6 + 255*sp*sp*0.5);
+    d[q+3] = 255;
+  }
+  sx.putImageData(img, 0, 0);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, 0, 0, w, h);
   return c;
 }
+const clampByteMl = v => v < 0 ? 0 : v > 255 ? 255 : v;
 
 // Most windows are dark.
 // The few that are lit are why

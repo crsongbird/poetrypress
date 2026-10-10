@@ -111,6 +111,11 @@ test to the new intent, never weaken it until it passes.
 - **Every styling field a segment can set** must be listed in
   `resolvePartStyle`'s early-return guard, or it is silently ignored.
 - **Font order is frozen** (`/f:N` picks by position): append only.
+- **Word-seed banks are frozen** (seedWords.js): every phrase anyone has seen
+  depends on the banks' words and order. Never edit, reorder or append.
+- **Presets the person called perfect** (Andromeda, Euphoria, Lotus Bloom,
+  Gateway, Sealed) are copied verbatim; the grid's groups live in
+  PRESET_GROUPS, not on the presets.
 - **Saved keys are frozen.** `PERSISTED` key names and value types never
   change once shipped; old looks translate forward (see `applyLegacyEffects`,
   `RETIRED`, the light-tilt default). A texture whose LOOK is replaced gets a
@@ -235,6 +240,12 @@ before/after measurements AND an identical-render comparison.
 ## Pitfalls we hit (so you don't)
 
 - `amt` is floored at 2%; a knob that must reach 0 needs its own key (`stones`).
+- build.mjs flattens every module into ONE scope: two modules declaring the
+  same top-level name (a `clamp255` helper, say) break the bundle. Name
+  helpers per module.
+- A sixth knob exists (texP6, key `tilt`): a camera's Tilt. New knob keys must
+  be wired through describeRequest (cache key), readParam, the extra object,
+  appEvents (persist, restore, presets, listeners) and test/audit.test.mjs.
 - `-x**2` is a SyntaxError in JS; write `-(x**2)`. It has bitten five
   textures. `node --check` does not always catch it in a module: render.
 - The canvas mock's pixel sum is RGB: black ink sums to ~0, so a knob that

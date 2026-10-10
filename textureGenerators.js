@@ -167,7 +167,9 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Viscosity',       min:0,  max:100, def:45,  unit:''}],
   dunes:         [{key:'zoom',  label:'Ripple Size',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Wind',            min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''}],
+                  {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''},
+                  // the camera: straight down (0, a flat texture) → tipped toward the horizon, the far dunes hazy
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:40,  unit:''}],
   kintsugi:      [{key:'zoom',  label:'Seam Width',      min:50, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Fractures',       min:20, max:400, def:100, unit:'%'},
                   {key:'form',  label:'Gloss',           min:0,  max:100, def:70,  unit:''}],
@@ -192,7 +194,9 @@ export const TEXTURE_PARAMS = {
                   // milky water, scattering the light
                   {key:'shape', label:'Haze',            min:0,  max:100, def:10,  unit:''},
                   // dirty water: light absorbed, silt hanging in it
-                  {key:'hue',   label:'Murk',            min:0,  max:100, def:0,   unit:''}],
+                  {key:'hue',   label:'Murk',            min:0,  max:100, def:0,   unit:''},
+                  // the camera: straight down (0) → tipped toward the far bank; the far water mirrors the sky
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:35,  unit:''}],
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
                   {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'},
                   // banks drifting in front of the moon and stars, silver-lined, a halo in their veils (0: none)
@@ -207,8 +211,9 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
                   // fresh cool grey to warm tarnished brown
                   {key:'form',  label:'Age',             min:0,  max:100, def:30,  unit:''}],
-  cards:         [{key:'amt',   label:'Fragment Count',  min:20, max:400, def:100, unit:'%', base:23},
-                  {key:'angle', label:'Angular Scatter', min:0,  max:90,  def:35,  unit:'°'}],
+  cards:         [{key:'amt',   label:'Card Count',      min:20, max:400, def:100, unit:'%', base:16},
+                  // dealt in neat rows (0) → drifting, turned, reversed, some torn (90)
+                  {key:'angle', label:'Scatter',         min:0,  max:90,  def:35,  unit:'°'}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
 };
@@ -262,12 +267,14 @@ export const TEXTURE_CAPS = {
   // — sharpness —
   grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:false, tints:1,
+  // gilding, lit: square sheets, crinkled, the highlight in the metal's colour (genMetalLeaf)
+  metalleaf:     { blends:['overlay','source-over','soft-light','hard-light','color-dodge','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
                    light:true, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
-  brushstrokes:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  // impasto: the paint's thickness lit by the dial (genBrushstrokes)
+  brushstrokes:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   halftone:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -302,7 +309,8 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
                    tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
-  cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  // a divination deck on a table, lit by the dial (shadows, curl, gilt edges)
+  cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — 🜚 touch — relief, so soft-light leads and light direction applies
   linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], ground:'grey', light:true, tints:2,
@@ -353,6 +361,9 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 // where a texture has its own Sun or Light hue, and not on grey textures
 // (their Light hue colours the lit marks)
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
+// lit by the engine (lightHeights / lightSparse): the dial may be pulled past
+// its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
+for(const t of ['brushstrokes', 'metalleaf', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -438,7 +449,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'halftone'){
     result = genHalftone(w,h,amt,zoom);
   } else if(type === 'brushstrokes'){
-    result = genBrushstrokes(w,h,amt,zoom,form);
+    result = genBrushstrokes(w,h,amt,zoom,form,light);
   } else if(type === 'sigils'){
     result = genSigils(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'mathnoise'){
@@ -454,7 +465,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'wax'){
     result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'dunes'){
-    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
+    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
   } else if(type === 'kintsugi'){
     result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
   } else if(type === 'moss'){
@@ -466,7 +477,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'blackhole'){
     result = genBlackHole(w,h,amt,zoom,light,form);
   } else if(type === 'water'){
-    result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.mat);
+    result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.tilt,extra.mat);
   } else if(type === 'moon'){
     result = genMoon(w,h,amt,zoom,form,extra.shape/100);
   } else if(type === 'aurora'){
@@ -474,7 +485,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'hatch'){
     result = genSilverpointHatch(w,h,amt,zoom,angle,form);
   } else if(type === 'cards'){
-    result = genCartomanticDrift(w,h,amt,zoom,angle);
+    result = genCartomanticDrift(w,h,amt,zoom,angle,light);
   } else if(type === 'summoning'){
     result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
@@ -581,7 +592,9 @@ function describeRequest(type, w, h, opts){
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
   // how low the light is, 0–100 (100: the horizon, as it always was)
-  const lightTilt = (opts.lightTilt >= 0 && opts.lightTilt <= 100) ? Math.round(opts.lightTilt) : 100;
+  // up to 130 for the engine-lit textures (past the dial's rim: lower light); 100 for the rest
+  const tiltMax = (TEXTURE_CAPS[RETIRED[type] || type] || {}).lowLight ? 130 : 100;
+  const lightTilt = (opts.lightTilt >= 0) ? Math.round(Math.min(tiltMax, opts.lightTilt)) : 100;
   const defs = paramsFor(type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
@@ -589,25 +602,27 @@ function describeRequest(type, w, h, opts){
   const v3 = defs[2] ? ((p3 == null) ? defs[2].def : p3) : (defs.length === 0 && p3 != null ? p3 : null);
   // knobs four and five (Dream Bloom)
   const v4 = defs[3] ? ((opts.p4 == null) ? defs[3].def : opts.p4) : null, v5 = defs[4] ? ((opts.p5 == null) ? defs[4].def : opts.p5) : null;
+  // a sixth: a camera's Tilt (Scrying Pool)
+  const v6 = defs[5] ? ((opts.p6 == null) ? defs[5].def : opts.p6) : null;
 
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
+            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '');
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, scale, lightTilt };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, scale, lightTilt, t3, t4, t5, t6, env } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt, t3, t4, t5, t6, env } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
 
-  let zoom = 1, amt = 1, angle = 0, form = 0.5, shape = 0, hueSpread = 0;
+  let zoom = 1, amt = 1, angle = 0, form = 0.5, shape = 0, hueSpread = 0, camTilt = 0;
   const readParam = (def, val) => {
     if(!def) return;
     // below 100% must shrink things too — clamping at 1 made the whole
@@ -620,6 +635,8 @@ export function getTextureCanvas(type, w, h, opts = {}){
     else if(def.key === 'angle') angle = val;
     else if(def.key === 'shape') shape = val;
     else if(def.key === 'hue') hueSpread = val;
+    // the camera's tilt, for textures seen at an angle (0: straight down)
+    else if(def.key === 'tilt') camTilt = Math.max(0, Math.min(1, val/100));
     else amt = Math.max(0.02, val/100);
   };
   readParam(defs[0], v1);
@@ -627,6 +644,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   if(defs[2]) readParam(defs[2], v3);
   if(defs[3]) readParam(defs[3], v4);
   if(defs[4]) readParam(defs[4], v5);
+  if(defs[5]) readParam(defs[5], v6);
   // sub-textures of a composite (astral_fog / astral_stars) declare no params
   // of their own; the caller passes their amount through p1
   if(defs.length === 0 && p1 != null) amt = Math.max(0.02, p1/100);
@@ -640,7 +658,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null }))));
+  let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

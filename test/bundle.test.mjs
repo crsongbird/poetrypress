@@ -44,7 +44,7 @@ check('bundled script executes without throwing', threw === null);
 if(threw) console.log('  threw:', threw.message);
 
 const presetGrid = registry['presetGrid'];
-check('bundle populates the preset grid', presetGrid && presetGrid.children.length === 16);
+check('bundle populates the preset grid (36 looks under 5 headings)', presetGrid && presetGrid.children.length === 41);
 if(presetGrid) console.log(`  preset grid has ${presetGrid.children.length} buttons`);
 check('bundle populates the font dropdown', registry['fontFamily'] && registry['fontFamily'].children.length > 0);
 

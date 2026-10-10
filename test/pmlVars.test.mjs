@@ -288,7 +288,7 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
   check('the lotus declares a Form knob, centred on the lotus', T.paramsFor('flowers')[2].key === 'form' && T.paramsFor('flowers')[2].def === 50);
   check('Form keys the texture cache, so each flower is cached apart', /\(v3 == null \? '' : `_f\$\{v3\}`\)/.test(src('textureGenerators.js')));
   check('Form is saved and restored with the look', /texP3: \$\('texP3'\)\.value,/.test(ev) && /if\(s\.texP3 !== undefined\)/.test(ev));
-  check('Form (and knobs four and five) hide for textures without them', /\[0,1,2,3,4\]\.forEach\(i=>\{/.test(ev) && /if\(row\) row\.style\.display = 'none';/.test(ev));
+  check('Form (and knobs four to six) hide for textures without them', /\[0,1,2,3,4,5\]\.forEach\(i=>\{/.test(ev) && /if\(row\) row\.style\.display = 'none';/.test(ev));
   check('Form spans the flowers: bud, cherry, day lily, lotus, daisy, rosette, hydrangea',
     (src('texSharpness.js').match(/\{ at:[01]\.\d\d,/g) || []).length === 7);
 
@@ -350,7 +350,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const tg = src('textureGenerators.js');
   check('textures generate inside withScale, and the cache key only changes when S is not 1',
     /withScale\(scale, \(\) => withLightTilt\(lightTilt\/100, \(\) => withSeed\(seed,/.test(tg) && /\(scale === 1 \? '' : `_x\$\{scale\}`\)/.test(tg));
-  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5)? \}/g) || []).length === 5);
+  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5, p6)? \}/g) || []).length === 5);
   check('the render scale is 1 today (the preview is the export size)', /let RENDER_SCALE = 1;/.test(cr));
   check('§Scale reports it', resolvePmlVariables('§Scale', { scale: 1 }) === '1' && resolvePmlVariables('§Scale', { scale: 1/3 }) === '0.333');
 }
@@ -368,7 +368,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 21);
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 25);
   check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
     /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
 }
@@ -496,8 +496,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('lightHeights: light from straight overhead casts no shadow', at(O, 50, 32) > 0.95);
   check('lightHeights: a glossy surface takes a highlight', Math.max(...C.lightHeights(H, ww, wh, { light: 90, gloss: 0.9 }).spec) > 0.3);
   const T = await import('../textureGenerators.js');
-  check('Dune Ripples, Kintsugi and Moss on Stone are lit textures, each with three knobs',
-    ['dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].light === true && T.paramsFor(t).length === 3));
+  check('Dune Ripples, Kintsugi and Moss on Stone are lit textures (Dune Ripples with a camera Tilt as well)',
+    ['dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].light === true && T.paramsFor(t).length >= 3) && T.paramsFor('dunes')[3].key === 'tilt');
   check('a look saved with the retired Zen Garden opens as Dune Ripples', /const RETIRED = \{ whorl: 'dunes'/.test(src('textureGenerators.js')) && /if\(s\.textureType === 'whorl'\) return \{ \.\.\.s, textureType: 'dunes' \};/.test(ev) && /s = retireLook\(s\);/.test(ev));
   check('Rain on Glass is built from lit heights', /const L=lightHeights\(H, ww, wh, \{ light, relief:1\.6, gloss:0\.95/.test(src('texTouch.js')));
   check('Lotus petals fade by Ruby\'s rule (light → white, mid → brighter and more saturated, dark → saturated near-black) and fold', /const tipOf=o=>/.test(src('texSharpness.js')) && /the fold: a crease down the petal's centre/.test(src('texSharpness.js')));
@@ -726,9 +726,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
     /const ph=\(al\+aa\*COT60\)\/sp \+ A\.ph/.test(cl) && /film=\[0\.5\+0\.5\*Math\.cos/.test(cl) && /const glint=Math\.pow\(face, 10\)/.test(cl)
     && /dX=SX\+2\.2\*g1\.tx, dY=SY\+2\.2\*g1\.ty/.test(cl));   // brushed across the light, per face
   const xl = t.slice(t.indexOf('export function genCrystalLeaf('));
-  check('Crystal Leaf looks INTO a crystal: large faces lit from one edge, a refracted layer behind, fire with dispersion; Clarity, Fire, Phantoms, Inclusions',
+  check('Crystal Leaf: a druse of six-faced points (each face lit, striated, edge-worn), a refracted layer behind, fire with dispersion; Clarity, Fire, Phantoms, Inclusions',
     knobs('crystal') === 'Facet Size|Clarity|Fire|Phantoms|Inclusions' && T.TEXTURE_CAPS.crystal.diffuse === true
-    && /const B=near\(BACK, x\+f\.tx\*REFR, y\+f\.ty\*REFR\);/.test(xl) && /dsp=0\.3\+0\.7\*fire/.test(xl) && /rutile needles/.test(xl));
+    && /const B=near\(BACK, x\+mx\*f\.slope\*REFR, y\+my\*f\.slope\*REFR\);/.test(xl) && /EACH CRYSTAL A POINT: a six-sided pyramid/.test(xl) && /dsp=0\.3\+0\.7\*fire/.test(xl) && /rutile needles/.test(xl));
 }
 
 // ---- the background randomiser changes the texture the way a person does ----
@@ -792,8 +792,13 @@ check('the inset box is painted on its own layer, then blended on as one image (
 // ---- the dial's place; padlocks survive a rename ----
 {
   const css = src('poetrypress.css'), ev = src('appEvents.js'), html = src('index.html');
-  check('the dial sits centred in its space, its reset button in the corner',
-    /\.light-dial-row\{ display:flex; align-items:center; justify-content:center; position:relative;/.test(css) && /\.ld-reset\{ position:absolute; right:0; bottom:0;/.test(css));
+  check('the dial sits centred in its space: reset in one corner, centre and a random angle in others',
+    /\.light-dial-row\{ display:flex; align-items:center; justify-content:center; position:relative;/.test(css) && /\.ld-reset\{ right:0; bottom:0; \}/.test(css)
+    && /\.ld-centre-btn\{ left:0; bottom:0; \}/.test(css) && /\.ld-random\{ right:0; top:0; \}/.test(css) && html.includes('id="lightCentre"') && html.includes('id="lightRandom"'));
+  check('a faint centre dot and halfway ring; the halfway ring catches lightly; past the rim only for engine-lit textures (lower light, to 4°)',
+    html.includes('class="ld-centre"') && html.includes('class="ld-half"') && /if\(Math\.abs\(tilt - 50\) < 4\) tilt = 50;/.test(ev)
+    && /return \(t && \(capsFor\(t\.value\) \|\| \{\}\)\.lowLight\) \? 130 : 100;/.test(ev) && /lightLow\(\)\*8/.test(src('texCore.js'))
+    && (await import('../textureGenerators.js')).TEXTURE_CAPS.dunes.lowLight === true);
   check('the spike\'s curls flare outward from the rim', html.includes('d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6'));
   check('renaming a hue or the dial keeps its padlock (labels change their words, not their children)',
     !/tint\dLabel'\)\.textContent = /.test(ev) && /function setLabelText\(el, text\)/.test(ev) && !/lbl\.textContent = caps\.dial/.test(ev));
@@ -804,7 +809,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const T = await import('../textureGenerators.js'), ch = src('texChaos.js');
   check('one circle; Complexity; Organic ↔ Tech; the dial is its Position (centred by default)',
     T.paramsFor('summoning').map(d => d.label).join('|') === 'Circle Size|Complexity|Organic ↔ Tech' && T.TEXTURE_CAPS.summoning.dial === 'Position' && T.TEXTURE_CAPS.summoning.lightTilt === 0
-    && /const cx = w\/2 \+ Math\.cos\(la\)\*tilt\*unit\*0\.3/.test(ch));
+    && /const sq = dialSquare\(light\), cx = w\/2 \+ sq\.u\*w\/2, cy = h\/2 \+ sq\.v\*h\/2;/.test(ch));
   check('…its noisy bloom rises toward the digital end', /const bloom = Math\.max\(0, \(tech - 0\.45\)\/0\.55\);/.test(ch));
 }
 
@@ -844,6 +849,20 @@ check('the inset box is painted on its own layer, then blended on as one image (
       /grip\.className = 'side-resize'/.test(ev2) && /localStorage\.setItem\(KEY/.test(ev2) && /grid-template-columns:var\(--side-w, 460px\) minmax\(0,1fr\);/.test(css2)
       && /max-width:calc\(100vw - var\(--side-w, 460px\) - 80px\)/.test(css2) && /^\.side-resize\{ display:none; \}/m.test(css2));
   }
+  {
+    const sh = src('texSharpness.js'), ch3 = src('texChaos.js'), T2 = await import('../textureGenerators.js');
+    check('Brushstrokes are impasto: each stroke lays down thickness (body, piled edges, bristle ridges), lit by the dial and laid over the paint',
+      T2.TEXTURE_CAPS.brushstrokes.light === true && /const L = lightHeights\(H, hw, hh, \{ light, relief:1, gloss:0\.25 \+ 0\.6\*wet/.test(sh) && /hx\.globalAlpha = 0\.16\*\(1 - 0\.5\*wet\); hx\.lineWidth = W\*0\.1;/.test(sh));
+    check('Metal Leaf is gilding: square sheets in overlapping rows, crinkled and torn, the highlight in the metal\'s colour, each sheet mirroring by its own tilt',
+      T2.TEXTURE_CAPS.metalleaf.light === true && /const env = Math\.max\(0, Math\.min\(1\.25, 0\.6 \+ 1\.0\*/.test(sh) && /the sheets, row by row/.test(sh));
+    check('Cartomancy is a divination deck: elemental suits drawn as paths, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune); shadows, curl and gilt edges by the dial',
+      T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Card Count|Scatter'
+      && /const RARE=\[\['✦','Saturn','saturn'\],\['✦','Enceladus','enceladus'\],\['✦','The Kitsune','kitsune'\]\];/.test(ch3) && /const tearClip=\(\)=>/.test(ch3));
+    check('unused hues are HIDDEN, not greyed; the report lays hues out in rows (≤3 one line; 4 → 2×2; 5 → 3+2; 6 → 3+3)',
+      /classList\.toggle\('tool-hidden', !caps\.material\)/.test(src('appEvents.js')) && /\.field\.tool-hidden/.test(src('poetrypress.css'))
+      && resolvePmlVariables('§SurfParamsB', { hues: [1,2,3,4,5].map(i => ({ label: 'H'+i, hex: '#00000'+i })) }).split('\n').length === 2
+      && resolvePmlVariables('-# §SurfParamsB', { hues: [1,2,3,4].map(i => ({ label: 'H'+i, hex: '#00000'+i })) }).split('\n')[1].startsWith('-# '));
+  }
   check('Foxing and Fold Ghost are one texture, Old Paper: Age runs foxed → mildewed → scorched; Folds tear at the top; its glow is UV fluorescence',
     T.paramsFor('oldpaper')[2].names.join() === 'Clean,Foxed,Mildewed,Scorched' && T.TEXTURE_CAPS.oldpaper.light === true && T.TEXTURE_CAPS.oldpaper.hue5.role === 'glow'
     && /const nTear=folds>0\.75/.test(tt) && /if\(age>0\.8\)\{/.test(tt) && /if\(age>0\.45\)\{/.test(tt));
@@ -852,7 +871,15 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('a look saved with the old Crystal Leaf opens as Metal Spangle (its knobs carry over unchanged)',
     /if\(s\.textureType === 'crystalleaf'\) return \{ \.\.\.s, textureType: 'spangle' \};/.test(src('appEvents.js')));
   check('Scrying Pool: waves → refracted rays gathered on the floor (caustics) → glints; Turbulence, Depth, Haze, Murk',
-    knobs('water') === 'Wave Scale|Turbulence|Depth|Haze|Murk' && /const fx=x\+ox-GX\[i\]\*bend, fy=y\+oy-GY\[i\]\*bend;/.test(tt) && /, bend=floor\*\(1-1\/1\.33\)/.test(tt));
+    knobs('water') === 'Wave Scale|Turbulence|Depth|Haze|Murk|Tilt' && /const fx=x\+ox-GX\[i\]\*bend, fy=y\+oy-GY\[i\]\*bend;/.test(tt) && /, bend=floor\*\(1-1\/1\.33\)/.test(tt));
+  check('…a PLACE by the seed (koi pond, pebbled stream, wishing well): things at their depths, refracted by it, fading; shadows offset with the light; tipped, the far water mirrors the sky',
+    /const KINDS=\['koi','stream','well'\]/.test(tt) && /const z=samp\(OZ,X,Y\), zx=X-GX\[P\]\*bend\*1\.6\*z/.test(tt) && /const shadowAt=\(cx, cy, z\)=>/.test(tt)
+    && /OUT=obliqueRender\(F, HS, RGB/.test(tt) && /const fr=Math\.min\(0\.75, 0\.04 \+ 1\.2\*Math\.pow\(1 - cosT, 2\.2\)\);/.test(tt));
+  check('a camera can tilt (after Quilez): the ground built larger, lit from above, each pixel\'s ray marched to the terrain, haze by distance; tilt 0 is the flat texture exactly',
+    /export function obliqueFrame\(ww, wh, tilt, hRange\)\{/.test(src('texCore.js')) && /if\(t < 0\.001\) return \{ flat: true, GW: ww, GH: wh, ww, wh \};/.test(src('texCore.js'))
+    && /if\(t >= tEnd\) break;/.test(src('texCore.js')));
+  check('Dune Ripples: transverse, barchanoid or linear dunes; ripples only where the wind works (none on slip faces, faint in the lee); heavy grains in the troughs',
+    /const KINDS=\['transverse','barchanoid','linear'\]/.test(tt) && /const rip = windward\*\(1 - 0\.85\*shadow\)/.test(tt) && /tone=1\.05 - 0\.09\*TR\[i\]/.test(tt));
 }
 
 // ---- Fractured Glaze as a game engine colours it; Kintsugi's vessel ----

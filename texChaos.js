@@ -5,7 +5,7 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, lightHeights, lightSparse, parseHex, litK, litS, greyLit } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, greyLit } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -212,8 +212,9 @@ export function genSummoningCircles(w,h,amt,zoom,light,form){
   const unit = Math.min(w,h);
   const pick = arr => arr[Math.floor(Math.random()*arr.length)];
   const weighted = list => { const t = list.reduce((s, [, wt]) => s + wt, 0); let r = Math.random()*t; for(const [v, wt] of list){ r -= wt; if(r <= 0) return v; } return list[0][0]; };
-  const la = ((light==null?315:light)-90)*Math.PI/180, tilt = Math.min(1, Math.hypot(lightVec(light).lx, lightVec(light).ly));
-  const cx = w/2 + Math.cos(la)*tilt*unit*0.3, cy = h/2 + Math.sin(la)*tilt*unit*0.3;
+  // THE DIAL places it: the whole page, the rim at 45° reaching the very
+  // corner (a circle centred there still shows a quarter of itself)
+  const sq = dialSquare(light), cx = w/2 + sq.u*w/2, cy = h/2 + sq.v*h/2;
   const R = unit*0.34*zoom;
   const rot = Math.random()*Math.PI*2;
   const lw = Math.max(cpx(1.2), R*(0.007 + 0.004*org));
@@ -685,106 +686,142 @@ export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL){
 // The deck was dealt once,
 // then swept up in a hurry.
 // Corners still showing.
-export function genCartomanticDrift(w,h,amt,zoom,angle){
+export function genCartomanticDrift(w,h,amt,zoom,angle,light){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const scatter=((angle==null?35:angle)*Math.PI)/180;
+  const scat=Math.max(0, Math.min(1, (angle==null?35:angle)/90)), scatter=scat*Math.PI/2;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
   ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-
-  // A reading dealt onto the page and half swept away: real cards — rounded
-  // corners, corner indices, pips in their places, a few tarot trumps and a few
-  // face-down backs — each torn along a ragged line so only part survives,
-  // lying at wrong angles and faded where they were rubbed.
-  const unit=Math.min(w,h);
-  const n=Math.max(3, Math.round(23*amt*(0.8+Math.random()*0.4)));
-  const INK=24, PAPER=232;
-  const suitPath=(x,y,s,suit)=>{
-    ctx.beginPath();
-    if(suit==='diamond'){ ctx.moveTo(x,y-s); ctx.lineTo(x+s*0.72,y); ctx.lineTo(x,y+s); ctx.lineTo(x-s*0.72,y); ctx.closePath(); }
-    else if(suit==='heart'){
-      ctx.moveTo(x,y+s*0.9);
-      ctx.bezierCurveTo(x-s*1.4,y-s*0.1,x-s*0.6,y-s*1.1,x,y-s*0.35);
-      ctx.bezierCurveTo(x+s*0.6,y-s*1.1,x+s*1.4,y-s*0.1,x,y+s*0.9); ctx.closePath();
-    } else if(suit==='spade'){
-      ctx.moveTo(x,y-s*0.95);
-      ctx.bezierCurveTo(x+s*1.4,y+s*0.05,x+s*0.6,y+s*0.95,x,y+s*0.35);
-      ctx.bezierCurveTo(x-s*0.6,y+s*0.95,x-s*1.4,y+s*0.05,x,y-s*0.95); ctx.closePath();
-      ctx.moveTo(x,y+s*0.3); ctx.lineTo(x+s*0.32,y+s*1.0); ctx.lineTo(x-s*0.32,y+s*1.0); ctx.closePath();
-    } else {                                           // club
-      for(const [dx,dy] of [[0,-0.45],[-0.48,0.12],[0.48,0.12]]){ ctx.moveTo(x+dx*s+s*0.42,y+dy*s); ctx.arc(x+dx*s,y+dy*s,s*0.42,0,Math.PI*2); }
-      ctx.moveTo(x,y+s*0.1); ctx.lineTo(x+s*0.3,y+s*1.0); ctx.lineTo(x-s*0.3,y+s*1.0); ctx.closePath();
+  // A DIVINATION DECK of Vellum's own — not playing cards. Its suits are the
+  // four elements, drawn as the alchemists drew them (fire △, water ▽, air
+  // and earth barred); its major arcana are named for the app's world (The
+  // Familiar, The Seed, The Scrying Pool, The Black Hole…) and, rarely, a
+  // card that is an easter egg: SATURN, ENCELADUS, THE KITSUNE of seven tails.
+  // The cards lie on the table under the dial's light: each casts a shadow,
+  // curls a little (lighter toward the light), its gilt edge catching it on
+  // the near side. SCATTER: at 0 they are dealt in neat rows; higher, they
+  // drift, turn, some reversed, some torn where they were swept up.
+  const unit=Math.min(w,h), lv=lightVec(light==null?315:light), lm=Math.hypot(lv.lx,lv.ly)||1, LX=lv.lx/lm, LY=lv.ly/lm;
+  const n=Math.max(3, Math.round(16*amt*(0.85+Math.random()*0.3)));
+  const INK=24, PAPER=228;
+  const g=(v,a=1)=>`rgba(${v|0},${v|0},${v|0},${a})`;
+  // the elements, as paths: fire △, water ▽, air △ barred, earth ▽ barred
+  const element=(x,y,s,e)=>{ const up=(e===0||e===2); ctx.beginPath();
+    if(up){ ctx.moveTo(x,y-s); ctx.lineTo(x+s*0.9,y+s*0.6); ctx.lineTo(x-s*0.9,y+s*0.6); } else { ctx.moveTo(x,y+s); ctx.lineTo(x+s*0.9,y-s*0.6); ctx.lineTo(x-s*0.9,y-s*0.6); }
+    ctx.closePath(); if(e>=2){ const by=up ? y+s*0.05 : y-s*0.05; ctx.moveTo(x-s*0.85,by); ctx.lineTo(x+s*0.85,by); } ctx.stroke(); };
+  const SUITN=['Fire','Water','Air','Earth'];
+  const ARCANA=[['0','The Familiar','bird'],['I','The Witch','fox'],['II','The Vellum','sigil'],['III','The Seed','seed'],['IV','The Spell','eye'],
+    ['V','The Grimoire','book'],['VI','The Lotus','lotus'],['VII','The Dial','dial'],['VIII','Kintsugi','bowl'],['IX','The Scrying Pool','pool'],
+    ['X','The Wheel of Seeds','wheel'],['XIII','The Black Hole','hole'],['XIV','Transmutation','circle'],['XV','The Crystal','crystal'],
+    ['XVII','The Star','star'],['XVIII','The Moon','moon'],['XIX','The Sun','sun'],['XXI','The World','world']];
+  const RARE=[['✦','Saturn','saturn'],['✦','Enceladus','enceladus'],['✦','The Kitsune','kitsune']];
+  const roundCard=(W,H,r)=>{ ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
+    ctx.lineTo(W/2,H/2-r); ctx.arc(W/2-r,H/2-r,r,0,Math.PI/2); ctx.lineTo(-W/2+r,H/2); ctx.arc(-W/2+r,H/2-r,r,Math.PI/2,Math.PI);
+    ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath(); };
+  // the emblems, simply drawn in ink
+  const emblem=(kind,s)=>{ ctx.beginPath();
+    const ray=(n2,r0,r1)=>{ for(let k=0;k<n2;k++){ const a=k/n2*Math.PI*2; ctx.moveTo(Math.cos(a)*r0,Math.sin(a)*r0); ctx.lineTo(Math.cos(a)*r1,Math.sin(a)*r1); } };
+    switch(kind){
+      case 'sun': ctx.arc(0,0,s*0.38,0,Math.PI*2); ray(16,s*0.48,s*0.78); break;
+      case 'moon': ctx.arc(0,0,s*0.55,Math.PI*0.35,Math.PI*1.65); ctx.arc(s*0.2,0,s*0.45,Math.PI*1.5,Math.PI*0.5,true); break;
+      case 'star': for(let k=0;k<16;k++){ const a=-Math.PI/2+k*Math.PI/8, r=k%2 ? s*0.22 : (k%4 ? s*0.5 : s*0.8); k?ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r):ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r); } ctx.closePath(); break;
+      case 'eye': ctx.moveTo(-s*0.7,0); ctx.quadraticCurveTo(0,-s*0.55,s*0.7,0); ctx.quadraticCurveTo(0,s*0.55,-s*0.7,0); ctx.moveTo(s*0.2,0); ctx.arc(0,0,s*0.2,0,Math.PI*2); break;
+      case 'lotus': for(let k=-2;k<=2;k++){ ctx.moveTo(0,s*0.4); ctx.quadraticCurveTo(k*s*0.32-s*0.12,-s*0.1+Math.abs(k)*s*0.12,k*s*0.3,-s*0.55+Math.abs(k)*s*0.2); ctx.quadraticCurveTo(k*s*0.32+s*0.12,-s*0.1+Math.abs(k)*s*0.12,0,s*0.4); } break;
+      case 'seed': ctx.ellipse(0,s*0.15,s*0.18,s*0.28,0,0,Math.PI*2); ctx.moveTo(0,-s*0.13); ctx.quadraticCurveTo(s*0.25,-s*0.5,s*0.05,-s*0.75); ctx.moveTo(0,-s*0.35); ctx.quadraticCurveTo(-s*0.3,-s*0.45,-s*0.35,-s*0.6); break;
+      case 'book': ctx.moveTo(0,-s*0.35); ctx.quadraticCurveTo(-s*0.35,-s*0.5,-s*0.7,-s*0.35); ctx.lineTo(-s*0.7,s*0.4); ctx.quadraticCurveTo(-s*0.35,s*0.25,0,s*0.4); ctx.quadraticCurveTo(s*0.35,s*0.25,s*0.7,s*0.4); ctx.lineTo(s*0.7,-s*0.35); ctx.quadraticCurveTo(s*0.35,-s*0.5,0,-s*0.35); ctx.lineTo(0,s*0.4); break;
+      case 'dial': ctx.arc(0,0,s*0.45,0,Math.PI*2); ctx.moveTo(s*0.08,0); ctx.arc(0,0,s*0.08,0,Math.PI*2); ctx.moveTo(0,-s*0.5); ctx.lineTo(0,-s*0.82); ray(8,s*0.58,s*0.64); break;
+      case 'bowl': ctx.moveTo(-s*0.6,-s*0.15); ctx.quadraticCurveTo(0,s*0.75,s*0.6,-s*0.15); ctx.closePath(); ctx.moveTo(-s*0.25,-s*0.1); ctx.lineTo(-s*0.05,s*0.15); ctx.lineTo(s*0.1,s*0.02); ctx.lineTo(s*0.3,s*0.3); break;
+      case 'pool': ctx.ellipse(0,0,s*0.65,s*0.28,0,0,Math.PI*2); ctx.moveTo(s*0.4,0); ctx.ellipse(0,0,s*0.4,s*0.16,0,0,Math.PI*2); ctx.moveTo(-s*0.2,-s*0.02); ctx.quadraticCurveTo(0,-s*0.12,s*0.2,-s*0.02); break;
+      case 'wheel': ctx.arc(0,0,s*0.55,0,Math.PI*2); ctx.moveTo(s*0.15,0); ctx.arc(0,0,s*0.15,0,Math.PI*2); ray(8,s*0.15,s*0.55); break;
+      case 'hole': ctx.ellipse(0,0,s*0.8,s*0.22,-0.15,0,Math.PI*2); ctx.moveTo(s*0.3,0); ctx.arc(0,0,s*0.3,0,Math.PI*2); break;
+      case 'circle': ctx.arc(0,0,s*0.6,0,Math.PI*2); for(let k=0;k<3;k++){ const a=-Math.PI/2+k*Math.PI*2/3, b2=-Math.PI/2+(k+1)*Math.PI*2/3; ctx.moveTo(Math.cos(a)*s*0.6,Math.sin(a)*s*0.6); ctx.lineTo(Math.cos(b2)*s*0.6,Math.sin(b2)*s*0.6); } break;
+      case 'crystal': ctx.moveTo(0,-s*0.8); ctx.lineTo(s*0.3,-s*0.45); ctx.lineTo(s*0.3,s*0.55); ctx.lineTo(0,s*0.75); ctx.lineTo(-s*0.3,s*0.55); ctx.lineTo(-s*0.3,-s*0.45); ctx.closePath(); ctx.moveTo(0,-s*0.8); ctx.lineTo(0,s*0.75); break;
+      case 'world': ctx.ellipse(0,0,s*0.42,s*0.62,0,0,Math.PI*2); ctx.moveTo(s*0.1,0); ctx.arc(0,0,s*0.1,0,Math.PI*2); break;
+      case 'sigil': ctx.moveTo(0,-s*0.7); ctx.lineTo(s*0.6,0); ctx.lineTo(0,s*0.7); ctx.lineTo(-s*0.6,0); ctx.closePath(); ctx.moveTo(0,-s*0.35); ctx.lineTo(s*0.3,0); ctx.lineTo(0,s*0.35); ctx.lineTo(-s*0.3,0); ctx.closePath(); break;
+      case 'bird': ctx.moveTo(-s*0.6,-s*0.1); ctx.quadraticCurveTo(-s*0.2,-s*0.6,0,-s*0.05); ctx.quadraticCurveTo(s*0.2,-s*0.6,s*0.6,-s*0.1); ctx.moveTo(0,-s*0.05); ctx.lineTo(0,s*0.35); break;
+      case 'fox': ctx.moveTo(-s*0.45,-s*0.55); ctx.lineTo(-s*0.2,-s*0.15); ctx.lineTo(s*0.2,-s*0.15); ctx.lineTo(s*0.45,-s*0.55); ctx.lineTo(s*0.4,s*0.05); ctx.lineTo(0,s*0.5); ctx.lineTo(-s*0.4,s*0.05); ctx.closePath(); break;
+      // the easter eggs
+      case 'saturn': ctx.arc(0,0,s*0.3,0,Math.PI*2); ctx.moveTo(s*0.8,0); ctx.ellipse(0,0,s*0.8,s*0.2,-0.35,0,Math.PI*2); ctx.moveTo(s*0.65,0); ctx.ellipse(0,0,s*0.62,s*0.15,-0.35,0,Math.PI*2); break;
+      case 'enceladus': ctx.arc(0,s*0.2,s*0.4,0,Math.PI*2); for(let k=-2;k<=2;k++){ ctx.moveTo(k*s*0.08,s*0.6); ctx.lineTo(k*s*0.22,s*0.95); } for(let k=0;k<4;k++){ ctx.moveTo(-s*0.25+k*s*0.15,s*0.05); ctx.lineTo(-s*0.15+k*s*0.15,s*0.35); } break;
+      case 'kitsune': for(let k=0;k<7;k++){ const a=-Math.PI*0.9+k*Math.PI*0.8/6; ctx.moveTo(0,s*0.3); ctx.quadraticCurveTo(Math.cos(a)*s*0.4,s*0.3+Math.sin(a)*s*0.4,Math.cos(a)*s*0.8,s*0.1+Math.sin(a)*s*0.7); }
+        ctx.moveTo(-s*0.18,s*0.05); ctx.lineTo(-s*0.1,-s*0.25); ctx.lineTo(0,-s*0.05); ctx.lineTo(s*0.1,-s*0.25); ctx.lineTo(s*0.18,s*0.05); ctx.lineTo(0,s*0.3); ctx.closePath(); break;
     }
-    ctx.fill();
-  };
-  const roundCard=(W,H,r)=>{
-    ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
-    ctx.lineTo(W/2,H/2-r); ctx.arc(W/2-r,H/2-r,r,0,Math.PI/2); ctx.lineTo(-W/2+r,H/2);
-    ctx.arc(-W/2+r,H/2-r,r,Math.PI/2,Math.PI); ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath();
-  };
-  const SUITS=['heart','diamond','spade','club'], RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-  const TRUMPS=['XVII','XVIII','XIX','XIII','XV','X','XXI','0'];
-  // pip layouts in card units (-1..1), by count
-  const PIPS={1:[[0,0]],2:[[0,-0.6],[0,0.6]],3:[[0,-0.6],[0,0],[0,0.6]],4:[[-0.4,-0.6],[0.4,-0.6],[-0.4,0.6],[0.4,0.6]],
-    5:[[-0.4,-0.6],[0.4,-0.6],[0,0],[-0.4,0.6],[0.4,0.6]],6:[[-0.4,-0.6],[0.4,-0.6],[-0.4,0],[0.4,0],[-0.4,0.6],[0.4,0.6]],
-    7:[[-0.4,-0.6],[0.4,-0.6],[0,-0.3],[-0.4,0],[0.4,0],[-0.4,0.6],[0.4,0.6]],
-    8:[[-0.4,-0.6],[0.4,-0.6],[0,-0.3],[-0.4,0],[0.4,0],[0,0.3],[-0.4,0.6],[0.4,0.6]]};
-
+    ctx.stroke(); };
+  // where they lie: neat rows at 0 Scatter, drifting as it grows
+  const W0=unit*(0.15+Math.random()*0.03)*(0.8+0.4*Math.sqrt(1/Math.max(0.3,amt))), cols=Math.max(1, Math.round(w/(W0*1.25)));
   for(let i=0;i<n;i++){
-    const W=unit*(0.10+Math.random()*0.07), H=W*1.4, r=W*0.07;
-    const cx=Math.random()*w, cy=Math.random()*h;
-    const rot=(Math.random()-0.5)*2*scatter + (Math.random()<0.5?0:Math.PI/2)*(scatter>0.6?1:0);
+    const W=W0*(0.94+Math.random()*0.12), H=W*1.7, r=W*0.06;
+    const gxp=((i%cols)+0.5)/cols*w, gyp=(Math.floor(i/cols)+0.5)*H*1.12 + (H*0.1);
+    const cx=gxp*(1-scat) + Math.random()*w*scat, cy=(gyp % (h + H*0.5))*(1-scat) + Math.random()*h*scat;
+    const reversed=Math.random()<0.15+0.2*scat;
+    const rot=(Math.random()-0.5)*2*scatter*0.9 + (reversed ? Math.PI : 0);
+    // which card: a back, a major, a minor — and rarely, an easter egg
+    const roll=Math.random(), rare=Math.random()<0.05;
+    // THE SHADOW on the table, thrown away from the light
+    const sh=W*0.06;
+    // torn, now and then, where they were swept up (only once they drift); the shadow is torn the same
+    let tearPath=null;
+    if(scat>0.35 && Math.random()<scat*0.45){
+      const ta=Math.random()*Math.PI*2, off=(Math.random()-0.1)*W*0.45, tx=Math.cos(ta), ty=Math.sin(ta), far=W*3, px=-ty, py=tx, pts=[];
+      for(let k=-12;k<=12;k++){ const along=(k/12)*far, jag=(Math.random()-0.5)*W*0.08; pts.push([tx*(off+jag)+px*along, ty*(off+jag)+py*along]); }
+      pts.push([px*far - tx*far, py*far - ty*far], [-px*far - tx*far, -py*far - ty*far]); tearPath=pts;
+    }
+    const tearClip=()=>{ if(!tearPath) return; ctx.beginPath(); tearPath.forEach(([x,y],k)=> k?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.closePath(); ctx.clip(); };
+    ctx.save(); ctx.translate(cx + LX*sh, cy + LY*sh); ctx.rotate(rot); tearClip();
+    ctx.globalAlpha=0.35; ctx.fillStyle=g(30);
+    if('filter' in ctx){ ctx.filter=`blur(${Math.max(1, W*0.03).toFixed(1)}px)`; }
+    roundCard(W*1.01,H*1.01,r); ctx.fill(); if('filter' in ctx) ctx.filter='none';
+    ctx.restore();
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
-    // torn: keep only the side of a ragged line through the card
-    const ta=Math.random()*Math.PI*2, off=(Math.random()-0.2)*W*0.5;
-    const tx=Math.cos(ta), ty=Math.sin(ta);
-    ctx.beginPath();
-    const far=W*3; const px=-ty, py=tx;
-    let first=true;
-    for(let k=-12;k<=12;k++){
-      const along=(k/12)*far, jag=(Math.random()-0.5)*W*0.09;
-      const x=tx*(off+jag)+px*along, y=ty*(off+jag)+py*along;
-      first?ctx.moveTo(x,y):ctx.lineTo(x,y); first=false;
+    tearClip();
+    // the card: paper, curling a little — lighter on the side toward the light
+    const lrx=-(LX*Math.cos(rot)+LY*Math.sin(rot)), lry=-(-LX*Math.sin(rot)+LY*Math.cos(rot));
+    const cg=ctx.createLinearGradient(lrx*W*0.6, lry*H*0.6, -lrx*W*0.6, -lry*H*0.6);
+    cg.addColorStop(0, g(PAPER+18)); cg.addColorStop(1, g(PAPER-22));
+    roundCard(W,H,r); ctx.globalAlpha=1; ctx.fillStyle=cg; ctx.fill();
+    // the gilt edge: bright where it faces the light, dark where it turns away
+    const eg=ctx.createLinearGradient(lrx*W*0.5, lry*H*0.5, -lrx*W*0.5, -lry*H*0.5);
+    eg.addColorStop(0, g(250)); eg.addColorStop(0.5, g(170)); eg.addColorStop(1, g(95));
+    ctx.strokeStyle=eg; ctx.lineWidth=Math.max(cpx(1), W*0.022); ctx.stroke();
+    ctx.strokeStyle=g(INK); ctx.fillStyle=g(INK); ctx.lineWidth=Math.max(cpx(0.7), W*0.01); ctx.lineCap='round'; ctx.lineJoin='round';
+    // the frame: a double rule, and small diamonds in the corners
+    const fw=W*0.84, fh=H*0.88; ctx.strokeRect(-fw/2,-fh/2,fw,fh); ctx.strokeRect(-fw/2+W*0.03,-fh/2+W*0.03,fw-W*0.06,fh-W*0.06);
+    for(const [sx2,sy2] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const x=sx2*(fw/2-W*0.015), y=sy2*(fh/2-W*0.015); ctx.beginPath(); ctx.moveTo(x,y-W*0.03); ctx.lineTo(x+W*0.03,y); ctx.lineTo(x,y+W*0.03); ctx.lineTo(x-W*0.03,y); ctx.closePath(); ctx.fill(); }
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(roll<0.14 && !rare){
+      // the BACK: a mandala of the four elements round the Vellum's diamond
+      ctx.save(); ctx.beginPath(); ctx.rect(-fw/2+W*0.04,-fh/2+W*0.04,fw-W*0.08,fh-W*0.08); ctx.clip();
+      for(let k=-6;k<=6;k++){ ctx.beginPath(); ctx.moveTo(k*W*0.12-H,-H); ctx.lineTo(k*W*0.12+H,H); ctx.moveTo(k*W*0.12+H,-H); ctx.lineTo(k*W*0.12-H,H); ctx.globalAlpha=0.35; ctx.stroke(); }
+      ctx.globalAlpha=1; ctx.restore();
+      ctx.fillStyle=g(PAPER); ctx.beginPath(); ctx.arc(0,0,W*0.3,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle=g(INK);
+      emblem('sigil', W*0.3); for(let e=0;e<4;e++){ const a=e*Math.PI/2-Math.PI/2; element(Math.cos(a)*W*0.42*1.0, Math.sin(a)*H*0.36, W*0.06, e); }
+    } else if(roll<0.55 || rare){
+      // a MAJOR card: its numeral, its emblem, its name in a banner
+      const card=rare ? RARE[Math.floor(Math.random()*RARE.length)] : ARCANA[Math.floor(Math.random()*ARCANA.length)];
+      ctx.font=`${W*0.11}px Georgia, "Times New Roman", serif`; ctx.fillText(card[0], 0, -fh/2+W*0.13);
+      ctx.save(); ctx.translate(0, -H*0.04); ctx.lineWidth=Math.max(cpx(0.8), W*0.016);
+      if(rare){ ctx.globalAlpha=0.35; ctx.beginPath(); for(let k=0;k<24;k++){ const a=k/24*Math.PI*2; ctx.moveTo(Math.cos(a)*W*0.36,Math.sin(a)*W*0.36); ctx.lineTo(Math.cos(a)*W*0.42,Math.sin(a)*W*0.42); } ctx.stroke(); ctx.globalAlpha=1; }
+      emblem(card[2], W*0.32); ctx.restore();
+      ctx.strokeRect(-fw/2+W*0.07, fh/2-W*0.24, fw-W*0.14, W*0.14);
+      ctx.font=`${W*0.075}px Georgia, "Times New Roman", serif`; ctx.fillText(card[1].toUpperCase(), 0, fh/2-W*0.17);
+    } else {
+      // a MINOR card: its element, as pips, and its rank
+      const e=Math.floor(Math.random()*4), rank=1+Math.floor(Math.random()*10), court=Math.random()<0.25;
+      const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X'], COURT=['Page','Knight','Queen','King'];
+      ctx.font=`${W*0.1}px Georgia, "Times New Roman", serif`;
+      ctx.fillText(court ? '' : ROM[rank-1], 0, -fh/2+W*0.13);
+      if(court){ const ci=Math.floor(Math.random()*4); element(0, -H*0.06, W*0.22, e); ctx.beginPath(); ctx.arc(0,-H*0.06,W*0.32,0,Math.PI*2); ctx.stroke();
+        ctx.font=`${W*0.075}px Georgia, "Times New Roman", serif`; ctx.fillText((COURT[ci]+' of '+SUITN[e]).toUpperCase(), 0, fh/2-W*0.17); ctx.strokeRect(-fw/2+W*0.07, fh/2-W*0.24, fw-W*0.14, W*0.14); }
+      else { const PIPS={1:[[0,0]],2:[[0,-0.5],[0,0.5]],3:[[0,-0.55],[0,0],[0,0.55]],4:[[-0.45,-0.5],[0.45,-0.5],[-0.45,0.5],[0.45,0.5]],5:[[-0.45,-0.5],[0.45,-0.5],[0,0],[-0.45,0.5],[0.45,0.5]],
+          6:[[-0.45,-0.55],[0.45,-0.55],[-0.45,0],[0.45,0],[-0.45,0.55],[0.45,0.55]],7:[[-0.45,-0.55],[0.45,-0.55],[0,-0.27],[-0.45,0],[0.45,0],[-0.45,0.55],[0.45,0.55]],
+          8:[[-0.45,-0.55],[0.45,-0.55],[0,-0.27],[-0.45,0],[0.45,0],[0,0.27],[-0.45,0.55],[0.45,0.55]],9:[[-0.45,-0.6],[0.45,-0.6],[-0.45,-0.2],[0.45,-0.2],[0,0],[-0.45,0.2],[0.45,0.2],[-0.45,0.6],[0.45,0.6]],
+          10:[[-0.45,-0.6],[0.45,-0.6],[0,-0.4],[-0.45,-0.2],[0.45,-0.2],[-0.45,0.2],[0.45,0.2],[0,0.4],[-0.45,0.6],[0.45,0.6]]};
+        for(const [u,v] of PIPS[rank]) element(u*fw*0.38, v*fh*0.38, W*(rank===1 ? 0.2 : 0.07), e);
+        ctx.font=`${W*0.075}px Georgia, "Times New Roman", serif`; ctx.fillText(SUITN[e].toUpperCase(), 0, fh/2-W*0.1); }
     }
-    ctx.lineTo(px*far - tx*far, py*far - ty*far); ctx.lineTo(-px*far - tx*far, -py*far - ty*far); ctx.closePath();
-    ctx.clip();
-    const fade=0.35+Math.random()*0.5;               // rubbed away, some more than others
-    roundCard(W,H,r); ctx.globalAlpha=fade*0.55; ctx.fillStyle=`rgb(${PAPER},${PAPER},${PAPER})`; ctx.fill();
-    ctx.globalAlpha=fade; ctx.strokeStyle=`rgb(${INK},${INK},${INK})`; ctx.lineWidth=Math.max(cpx(0.8),W*0.012); ctx.stroke();
-    ctx.fillStyle=`rgb(${INK},${INK},${INK})`;
-    const kind=Math.random();
-    if(kind<0.18){                                   // face down: a lattice back
-      ctx.save(); roundCard(W*0.84,H*0.88,r*0.7); ctx.clip();
-      ctx.lineWidth=Math.max(cpx(0.5),W*0.008); ctx.beginPath();
-      for(let k=-10;k<=10;k++){ const o=k*W*0.1; ctx.moveTo(o-H,-H); ctx.lineTo(o+H,H); ctx.moveTo(o+H,-H); ctx.lineTo(o-H,H); }
-      ctx.stroke(); ctx.restore(); roundCard(W*0.84,H*0.88,r*0.7); ctx.stroke();
-    } else if(kind<0.36){                            // a tarot trump
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.font=`${W*0.16}px Georgia, "Times New Roman", serif`;
-      ctx.fillText(TRUMPS[Math.floor(Math.random()*TRUMPS.length)],0,-H*0.36);
-      const em=Math.floor(Math.random()*3);
-      ctx.lineWidth=Math.max(cpx(0.8),W*0.014); ctx.beginPath();
-      if(em===0){ ctx.arc(0,0,W*0.16,0,Math.PI*2); for(let k=0;k<12;k++){ const a=k/12*Math.PI*2; ctx.moveTo(Math.cos(a)*W*0.2,Math.sin(a)*W*0.2); ctx.lineTo(Math.cos(a)*W*0.3,Math.sin(a)*W*0.3); } ctx.stroke(); }
-      else if(em===1){ ctx.arc(0,0,W*0.2,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='destination-out'; ctx.beginPath(); ctx.arc(W*0.09,-W*0.04,W*0.18,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'; }
-      else { for(let k=0;k<5;k++){ const a=-Math.PI/2+k*4*Math.PI/5; k?ctx.lineTo(Math.cos(a)*W*0.24,Math.sin(a)*W*0.24):ctx.moveTo(Math.cos(a)*W*0.24,Math.sin(a)*W*0.24); } ctx.closePath(); ctx.stroke(); }
-      ctx.strokeRect(-W*0.4,H*0.3,W*0.8,H*0.1);
-    } else {                                         // a playing card
-      const suit=SUITS[Math.floor(Math.random()*4)], ri=Math.floor(Math.random()*RANKS.length), rank=RANKS[ri];
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      for(const flip of [1,-1]){                     // the index, top-left and bottom-right
-        ctx.save(); ctx.rotate(flip<0?Math.PI:0);
-        ctx.font=`bold ${W*0.15}px Georgia, "Times New Roman", serif`;
-        ctx.fillText(rank,-W*0.36,-H*0.4);
-        suitPath(-W*0.36,-H*0.29,W*0.05,suit); ctx.restore();
-      }
-      const count=ri===0?1:(ri<9?ri+1:0);
-      if(count && PIPS[Math.min(count,8)]){
-        for(const [u,v] of PIPS[Math.min(count,8)]) suitPath(u*W*0.3,v*H*0.34,W*(count===1?0.16:0.075),suit);
-      } else if(!count){                             // a court card: a framed figure, simply
-        ctx.lineWidth=Math.max(cpx(0.8),W*0.012); ctx.strokeRect(-W*0.3,-H*0.32,W*0.6,H*0.64);
-        suitPath(0,0,W*0.12,suit);
-      }
-    }
+    // rubbed: some cards are older than others
+    const wear=Math.random()*0.35*(0.5+scat);
+    if(wear>0.05){ roundCard(W,H,r); ctx.globalAlpha=wear; ctx.fillStyle=g(PAPER-10); ctx.fill(); }
     ctx.restore();
   }
   ctx.globalAlpha=1;

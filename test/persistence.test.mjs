@@ -44,6 +44,7 @@ const skip = new Set([
   'poemText',          // the poem is saved by the Grimoire, not by settings
   'highlightToggle',   // checked separately below
   'textureSeedLock',   // derived from the seed field
+  'textureSeedWords',  // the seed's phrase: a VIEW of textureSeedValue, which is saved
   'fontFamily',        // captured as `font` by family NAME, asserted below —
                        // storing the index would break whenever FONTS changes
   'grimoireList',      // a picker over saved records, not a setting

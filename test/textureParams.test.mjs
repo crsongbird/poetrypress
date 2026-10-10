@@ -34,7 +34,10 @@ const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
 // a third knob is always Form; Dream Bloom alone goes on to five (Object Shape, Colour Variation)
 check('every texture declares two params, plus an optional third that must be Form (and Dream Bloom\'s and Crystal Leaf\'s fourth and fifth)',
   Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
-    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'water') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
+    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
+    // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
+    || (t === 'water' && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
+    || (t === 'dunes' && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
     || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')));
 
 const unlabelled = textureTypes.filter(t => paramsFor(t).some(d => !d.label || /value/i.test(d.label)));

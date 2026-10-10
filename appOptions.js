@@ -6,9 +6,10 @@
  *              and (for Cinzel/Unica One) a noItalic flag. Index position
  *              matters: the Segmentation Operator's f:N directive and each
  *              preset's `font` field both resolve against this array.
- *   PRESETS  — the 12 built-in Elements: four Whimsy, four Sharpness,
- *              four Chaos, in that order (the grid reads left to right,
- *              so the order is the grouping). Each entry is grouped into
+ *   PRESETS  — 36 built-in looks: four Simple ones first (light to read
+ *              and quick to draw), then eight each of Whimsy, Sharpness,
+ *              Chaos and Touch (PRESET_GROUPS heads each group in the
+ *              grid; the order is the grouping). Each entry is grouped into
  *              background / text / effects / font / texture / accents /
  *              border fields (only the fields that preset actually uses —
  *              most presets omit most of these). Order matters: it fills
@@ -72,9 +73,30 @@ export const FONTS = [
 ];
 
 export const PRESETS = [
-  // ---- WHIMSY ----  red/purple/blue gradients, starlight in motion, sleep
-  // ═══ Whimsy ♡ — presets 1–4 ═══
-  { name: "Andromeda",   // surface: Deep Field (♡)
+  // ═══ Simple — four quiet ones, light to read and quick to draw — presets 1–4 ═══
+{ name: "Plainsong",   // simple: no texture, no frame — ink on bone paper
+    bg1: "#F3EEE4", text1: "#1F1D1A", outlineMode: "off", font: "EB Garamond", texture: false,
+    accent1: "#7A5F3E", accent2: "#4F5E52",
+    spell: "[[🝓🜹]]{{🜻⛤🜚☍🜄⛧⚸🜎}}🜶🜧🜅🜱🜦🜾🜥"
+  },
+{ name: "Inkwell",   // simple: light words on a dark page, nothing else
+    bg1: "#121418", text1: "#ECE6DA", outlineMode: "off", font: "Literata", texture: false,
+    accent1: "#C9A86B", accent2: "#8FA3B5",
+    spell: "[[🜙✡]]🜻🜦🜅☥🜧☌{{🜥🜼⚝}}"
+  },
+{ name: "Sea Glass",   // simple: a soft gradient and a whisper of grain
+    bg1: "#DDEBE7", bgGradient: true, bg2: "#C5DCDF", bgAngle: 160, text1: "#1D3A3E", outlineMode: "off", font: "Work Sans",
+    texture: true, textureType: "grain", textureOpacity: 16, texP1: 100, texP2: 60,
+    accent1: "#2C6461", accent2: "#3F516E",
+    spell: "🜍🜟✡🜞🜛[[🜥🜾🜈⚹☥🜙]]{{☍🜇🜪🜯🜌🜊}}"
+  },
+{ name: "Dusk Letter",   // simple: a twilight gradient, a book face
+    bg1: "#2A1F33", bgGradient: true, bg2: "#402B47", bgAngle: 150, text1: "#F5E6D6", outlineMode: "off", font: "Cormorant Garamond", texture: false,
+    accent1: "#E3A87C", accent2: "#B79AD6",
+    spell: "⛧[[⚼]]{{🜠🜋🜝☍✡}}"
+  },
+  // ═══ Whimsy ♡ — presets 5–12 ═══
+{ name: "Andromeda",   // surface: Deep Field (♡)
     spell: "[[🜥]]{{🜭🜊🜕⚺}}🜄🜍☌🜋🜃🜞",
     bg1: "#1A0B2E", bgGradient: true, bg2: "#2D1B69", bgAngle: 135,
     text1: "#F5F0FF",
@@ -84,7 +106,7 @@ export const PRESETS = [
     accent1: "#D4AF37", accent2: "#9B7FE8",
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 14
   },
-  { name: "Starbloom",   // surface: Dream Bloom (♡)
+{ name: "Starbloom",   // surface: Dream Bloom (♡)
     spell: "[[🜉🜁🜌⛤🜚🜪🜺♡]]⚸🝊🝆🜞🜛{{🜎🜗🜂🜋}}",
     bg1: "#050318", bgGradient: true, bg2: "#1B1040", bgAngle: 120,
     text1: "#E8E0FF", textGradient: true, text2: "#A98CFF", textAngle: 45,
@@ -93,7 +115,7 @@ export const PRESETS = [
     texture: true, textureType: "bokeh", textureOpacity: 26, texP1: 150, texP2: 80,
     accent1: "#C9B8FF", accent2: "#6C5CE7"
   },
-  { name: "Euphoria",   // surface: Pixie Dust (♡)
+{ name: "Euphoria",   // surface: Pixie Dust (♡)
     spell: "🝊🜝[[🝆]]{{🜌🜆🜇🜄}}",
     bg1: "#3D0A4E", bgGradient: true, bg2: "#8C1B6B", bgAngle: 45,
     text1: "#FFF0FA",
@@ -121,7 +143,7 @@ export const PRESETS = [
     cardOpacity: '100',
     cardBlend: 'darken'
   },
-  { name: "Sleepwalk",   // surface: Sleep Haze (♡)
+{ name: "Sleepwalk",   // surface: Sleep Haze (♡)
     spell: "🜾[[🜹🜣🜌✡🜦🜺]]{{🜁⚸☊🜮🜘⛧🜖🜅⚻🜶}}",
     bg1: "#0A0E2A", bgGradient: true, bg2: "#16204D", bgAngle: 160,
     text1: "#C8D4FF",
@@ -130,10 +152,32 @@ export const PRESETS = [
     texture: true, textureType: "clouds", textureOpacity: 22, texP1: 180, texP2: 90,
     accent1: "#8FA8FF", accent2: "#5C6CE7"
   },
-
-  // ---- SHARPNESS ----  off-white against blue-black, silver and gold at the edges
-  // ═══ Sharpness √ — presets 5–8 ═══
-  { name: "Daydream",   // surface: Facet Field (∆)
+{ name: "Borealis",   // surface: Aurora Veil (♡)
+    bg1: "#061821", bgGradient: true, bg2: "#0C2E3A", bgAngle: 175, text1: "#EAFBF4", outlineMode: "off", font: "Josefin Sans",
+    texture: true, textureType: "aurora", textureOpacity: 70, texP1: 120, texP2: 100, texP3: 30,
+    accent1: "#6FF0C1", accent2: "#A99BF5",
+    spell: "[[🜹🜊🜣☋🜠⚺🜺🜍⚼🜥⛧]]{{🜮🜖🜫}}🜆🜙🜎"
+  },
+{ name: "Moonrise",   // surface: Fractal Moon (♡) — night sky, clouds, earthshine
+    bg1: "#0B1026", bgGradient: true, bg2: "#1B2147", bgAngle: 200, text1: "#F1ECDD", outlineMode: "off", font: "IM Fell English",
+    texture: true, textureType: "moon", textureOpacity: 62, texP1: 85, texP2: 110, texP3: 35, texP4: 80,
+    accent1: "#E8D8A8", accent2: "#8DA2D6",
+    spell: "🜱[[🝓🜞]]{{🜢☥🜫🜛}}"
+  },
+{ name: "Emberlight",   // surface: Ember Drift (♡)
+    bg1: "#160A06", bgGradient: true, bg2: "#3A140A", bgAngle: 160, text1: "#FFEBD6", outlineMode: "off", font: "Uncial Antiqua",
+    texture: true, textureType: "embers", textureOpacity: 72,
+    accent1: "#FF9A4D", accent2: "#FFD27A",
+    spell: "{{🜟🜣🝓🜃}}[[☊🜨🜾🜞🜻🜯]]✡♡🜹☌🜝⚻🜔"
+  },
+{ name: "Far Country",   // surface: Painted Landscape (♡)
+    bg1: "#ECE6D6", bgGradient: true, bg2: "#CFD9DB", bgAngle: 180, text1: "#2A2E33", outlineMode: "off", font: "Crimson Pro",
+    texture: true, textureType: "landscape", textureOpacity: 42, texP3: 35,
+    accent1: "#5E6E4C", accent2: "#7A5E44",
+    spell: "⚝[[⚸🜺⚻🜮🜇]]{{🜛}}"
+  },
+  // ═══ Sharpness √ — presets 13–20 ═══
+{ name: "Daydream",   // surface: Facet Field (∆)
     spell: "🜇🜫🜝🜬☋⚹{{⚻}}[[🜯🜉⛤☊]]",
     bg1: "#E4E0D4",
     text1: "#0D1017",
@@ -144,7 +188,7 @@ export const PRESETS = [
     border: true, borderColor: "#9AA3B0", borderThickness: 2, borderOffset: 12,
     textureBlend: 'overlay'
   },
-  { name: "December",   // surface: First Snow (♡)
+{ name: "December",   // surface: First Snow (♡)
     spell: "{{☋🜫🜄⚸🜥}}🜢🜟🜹🜞[[🜯🜃🜛🜈🜌🝓🜾🜂]]",
     bg1: "#0D1017",
     text1: "#F2F0E9",
@@ -154,18 +198,18 @@ export const PRESETS = [
     accent1: "#C0C8D4", accent2: "#7E8794",
     border: true, borderColor: "#C0C8D4", borderThickness: 1, borderOffset: 16
   },
-  { name: "Gold Leaf",   // surface: Metal Leaf (√)
+{ name: "Gold Leaf",   // surface: Metal Leaf (√)
     spell: "{{🜚}}🜆🜛[[🜭🜞🜜🜻]]",
-    bg1: "#0B0E14",
+    bg1: "#2A1712", bgGradient: true, bg2: "#3E1D16", bgAngle: 150,
     text1: "#F5F1E6",
     outlineMode: "off",
     font: "Playfair Display",
-    texture: true, textureType: "metalleaf", textureOpacity: 70, texP1: 140, texP2: 120,
+    texture: true, textureType: "metalleaf", textureOpacity: 55, texP1: 140, texP2: 150,
     accent1: "#D4AF37", accent2: "#8C6D1F",
     border: true, borderColor: "#D4AF37", borderThickness: 2, borderOffset: 10,
-    textureBlend: 'screen'
+    textureBlend: 'hard-light'
   },
-  { name: "Lotus Bloom",   // surface: Lotus Pond (√)
+{ name: "Lotus Bloom",   // surface: Lotus Pond (√)
     spell: "⚻☊[[🜃🜜🜯🜭🜬🜁♡☥✡🜅]]{{🝆✝🜇🜱🜿}}",
     bg1: "#F7E3D2", bgGradient: true, bg2: "#E8B9A6", bgAngle: 160,
     text1: "#3A2233",
@@ -186,10 +230,33 @@ export const PRESETS = [
     cardColor2: '#FFD4B2',
     cardGradientType: 'radial'
   },
-
-  // ---- CHAOS ----  sigils, math-noise, geometry twisting where reality thins
-  // ═══ Chaos ∆ — presets 9–12 ═══
-  { name: "Desire",   // surface: Sigil Scatter (∆)
+{ name: "Impasto",   // surface: Brushstrokes (√) — thick paint, lit
+    bg1: "#E8DCC8", text1: "#241D17", outlineMode: "off", font: "Merriweather",
+    texture: true, textureType: "brushstrokes", textureOpacity: 75, texP3: 30, textureBlend: 'hard-light',
+    textureTint1: '#F4E7C8', textureTint2: '#6B3E2A',
+    accent1: "#8A3B2B", accent2: "#3E5A6B",
+    spell: "[[🜮]]⛤⚝🜾🜱🜃{{☋🜛⛧🜥🜋✡🜕🜼☥🜪🜁}}"
+  },
+{ name: "Newsprint",   // surface: Halftone Press (√)
+    bg1: "#EDEAE3", text1: "#161616", outlineMode: "off", font: "Oswald",
+    texture: true, textureType: "halftone", textureOpacity: 28, textureBlend: 'multiply',
+    accent1: "#B3271F", accent2: "#1F3E66",
+    spell: "[[🜶🜞]]{{🜉🜔🜛}}🜯🜠"
+  },
+{ name: "Night City",   // surface: Night City (√)
+    bg1: "#070B14", bgGradient: true, bg2: "#142036", bgAngle: 180, text1: "#F2EEE6", outlineMode: "off", font: "Inter",
+    texture: true, textureType: "cityscape", textureOpacity: 78,
+    accent1: "#FFD58A", accent2: "#6FA7D8",
+    spell: "{{🜕🜣🜚⛤🜪⚸🜧}}⛧☥🜼[[✡🜾☊]]"
+  },
+{ name: "Downpour",   // surface: Harsh Rain (√)
+    bg1: "#1A222B", bgGradient: true, bg2: "#2C3A45", bgAngle: 170, text1: "#E6EDF2", outlineMode: "off", font: "JetBrains Mono",
+    texture: true, textureType: "rainstreaks", textureOpacity: 38,
+    accent1: "#9FC2D9", accent2: "#7F9FB6",
+    spell: "☥[[🜍🜾🜝]]{{🜕}}"
+  },
+  // ═══ Chaos ∆ — presets 21–28 ═══
+{ name: "Desire",   // surface: Sigil Scatter (∆)
     spell: "{{☌🜙☋☍🝆}}[[🜭🜨🜢🜣]]🜟🜛",
     bg1: "#1A0A12", bgGradient: true, bg2: "#3D1228", bgAngle: 115,
     text1: "#F6E3E8",
@@ -199,7 +266,7 @@ export const PRESETS = [
     accent1: "#E0526F", accent2: "#9B5C86",
     textureBlend: 'screen'
   },
-  { name: "Ashfall",   // surface: Silverpoint Hatch (√)
+{ name: "Ashfall",   // surface: Silverpoint Hatch (√)
     spell: "[[🜁🜩⚻🜺☍⛤🜿🜚⛧🜎🜪🜔🝆🜻]]{{✝🜝}}✡",
     bg1: "#9B9187",
     text1: "#241F1C",
@@ -208,7 +275,7 @@ export const PRESETS = [
     texture: true, textureType: "hatch", textureOpacity: 30, texP1: 22, texP2: 130,
     accent1: "#57412E", accent2: "#543F4A"
   },
-  { name: "Gateway",   // surface: Transmutation Circles (∆)
+{ name: "Gateway",   // surface: Transmutation Circles (∆)
     spell: "🜺🜶🜈[[🜣✡⚸]]{{🜍}}",
     bg1: "#041418", bgGradient: true, bg2: "#07242a", bgAngle: 135,
     text1: "#E8FFF6",
@@ -222,7 +289,7 @@ export const PRESETS = [
     textureBlend: 'screen',
     textureTint1: '#3DF5A0'
   },
-  { name: "Hourglass",   // surface: Fractured Glaze (∆)
+{ name: "Hourglass",   // surface: Fractured Glaze (∆)
     spell: "🜍🜉🜔🜨🜥✡✝🜟🜄🜆{{🜱🜾🜼⚼⛧}}[[🜈🝊]]",
     bg1: "#1B0A12", bgGradient: true, bg2: "#2E1338", bg3: "#0E1B3A", bgAngle: 200,
     text1: "#FFEFE6",
@@ -232,11 +299,33 @@ export const PRESETS = [
     accent1: "#FF6B6B", accent2: "#6FA8FF",
     borderBloom: 0
   },
-  // ---- 🜚 TOUCH ----  surface, not hue: what the page is made of and what
-  // has happened to it. Neutrals carrying a breath of green or brown, and
-  // exactly one permitted colour, in the wax.
-  // ═══ Touch 🜚 — presets 13–16 ═══
-  { name: "Handled",   // surface: Linen Tooth (🜚)
+{ name: "Inkblot",   // surface: Rorschach Test (∆) — black and red, wet
+    bg1: "#F1EDE4", text1: "#1B1A19", outlineMode: "off", font: "Courier Prime",
+    texture: true, textureType: "inkbleed", textureOpacity: 50, texP1: 80, texP3: 55, texP4: 45, textureBlend: 'multiply',
+    accent1: "#A3242F", accent2: "#2E2B29",
+    spell: "♡{{⛤🜼🜇🜖🜜🜘}}[[🜦🝊🜍🜈]]"
+  },
+{ name: "Event Horizon",   // surface: Black Hole (∆) — ray-traced, with jets
+    bg1: "#050407", bgGradient: true, bg2: "#120A18", bgAngle: 135, text1: "#F6EEE2", outlineMode: "off", font: "Nunito",
+    texture: true, textureType: "blackhole", textureOpacity: 75, texP3: 55,
+    textureTint1: '#FFD9A8', textureTint2: '#000000',
+    accent1: "#FFB35C", accent2: "#A48CFF",
+    spell: "{{🜖🝆}}⚻🜯[[🜩]]"
+  },
+{ name: "The Reading",   // surface: Cartomancy (∆) — the Vellum deck
+    bg1: "#2A1A2E", bgGradient: true, bg2: "#3F2340", bgAngle: 140, text1: "#F7EBDD", outlineMode: "off", font: "Almendra",
+    texture: true, textureType: "cards", textureOpacity: 40,
+    accent1: "#E8C27A", accent2: "#D592AE",
+    spell: "⚸🝓🜔{{☌🜄🜼}}[[🜢⚺🜺🜥⚻🜗🜻]]"
+  },
+{ name: "Static",   // surface: Math Static (∆)
+    bg1: "#0E0F12", text1: "#E8E8E8", outlineMode: "off", font: "VT323",
+    texture: true, textureType: "mathnoise", textureOpacity: 32,
+    accent1: "#7CFFB2", accent2: "#FF5FA2",
+    spell: "🜝🜣[[🜆⛤🜥✡]]{{🜄}}"
+  },
+  // ═══ Touch 🜚 — presets 29–36 ═══
+{ name: "Handled",   // surface: Linen Tooth (🜚)
     spell: "{{⚸🜝}}⚻♡🜞🜧[[🜃🜙🜉🜔🜿]]",
     bg1: "#E9E2D4",
     text1: "#2B2A26",
@@ -245,7 +334,7 @@ export const PRESETS = [
     texture: true, textureType: "linen", textureOpacity: 34, texP1: 120, texP2: 42,
     accent1: "#7C7A63", accent2: "#947D5A"
   },
-  { name: "Foxed",   // surface: Old Paper — foxed (🜚)
+{ name: "Foxed",   // surface: Old Paper — foxed (🜚)
     spell: "[[🜬🜔]]🜉{{🜿🜇🜢🜛☍⚺🜙🜘♡🜜🜭🜕☋🜨}}",
     bg1: "#E4D6B8",
     text1: "#3A2E20",
@@ -255,16 +344,7 @@ export const PRESETS = [
     accent1: "#9A5B33", accent2: "#6E7247",
     border: true, borderColor: "#9A8B6E", borderThickness: 1, borderOffset: 18
   },
-  { name: "Creased",   // surface: Old Paper — creased (🜚)
-    spell: "🝆🝊🜥🜗🜺🜱{{🜾♡☥🜪}}[[✝]]",
-    bg1: "#D4D6CF",
-    text1: "#1B1D1C",
-    outlineMode: "off",
-    font: "Work Sans",
-    texture: true, textureType: "oldpaper", textureOpacity: 38, texP1: 110, texP2: 42, texP3: 5, texP4: 30, textureBlend: 'soft-light',
-    accent1: "#5A6B62", accent2: "#697983"
-  },
-  { name: "Sealed",   // surface: Poured Wax (🜚)
+{ name: "Sealed",   // surface: Poured Wax (🜚)
     spell: "{{🜨🜈🜇🜄🜮⚸✝🝆☋🜔🜠🝓🜱}}⚻♡[[✡🜍]]",
     bg1: "#F0E6D2",
     text1: "#241C18",
@@ -273,6 +353,47 @@ export const PRESETS = [
     texture: true, textureType: "wax", textureOpacity: 46, texP1: 110, texP2: 90,
     accent1: "#7A2B2B", accent2: "#5C6B4A"
   },
+{ name: "Golden Repair",   // surface: Kintsugi (🜚) — a curved vessel, mended
+    bg1: "#E7E1D6", text1: "#262321", outlineMode: "off", font: "Zilla Slab",
+    texture: true, textureType: "kintsugi", textureOpacity: 70,
+    accent1: "#8C6A1E", accent2: "#56616B",
+    spell: "[[🜖✡🜄🜣☊]]{{🜆☌🜜🜘}}☍🜋🜧🜥🜞☥🜠🜈"
+  },
+{ name: "Scrying",   // surface: Scrying Pool (🜚) — koi, pads, stones, tilted
+    bg1: "#0E2A30", bgGradient: true, bg2: "#164046", bgAngle: 170, text1: "#E8FBF8", outlineMode: "off", font: "Poppins",
+    texture: true, textureType: "water", textureOpacity: 62, textureBlend: 'overlay',
+    textureTint1: '#BFF5EE', textureTint2: '#04161A',
+    accent1: "#7FE0D2", accent2: "#E8C46A",
+    spell: "{{☊⛧🜍}}🜕[[🜿🜭⚼]]"
+  },
+{ name: "Dune Sea",   // surface: Dune Ripples (🜚) — dunes to the haze
+    bg1: "#E9D2AE", text1: "#3A2618", outlineMode: "off", font: "Playfair Display",
+    texture: true, textureType: "dunes", textureOpacity: 78, texP4: 55,
+    accent1: "#7E3F1E", accent2: "#4A5A66",
+    spell: "[[🜌🜧🜜🜁]]{{🜶🝓🜮🜉🜛✡⚹🜬}}🜟"
+  },
+{ name: "Geode",   // surface: Crystal Leaf (🜚) — amethyst points, fire inside
+    bg1: "#1B1226", bgGradient: true, bg2: "#2C1A3D", bgAngle: 135, text1: "#F4ECFF", outlineMode: "off", font: "Cinzel Decorative",
+    texture: true, textureType: "crystal", textureOpacity: 55, texP1: 80, texP3: 65,
+    accent1: "#C9A6FF", accent2: "#E8C46A",
+    spell: "{{🜌🜗}}[[🜨🜆✡🜺]]☌"
+  },
+{ name: "Rain Window",   // surface: Rain on Glass (🜚) — the outdoors behind it
+    bg1: "#6A7C96", bgGradient: true, bg2: "#2A3140", bgAngle: 180, text1: "#F2F4F7", outlineMode: "off", font: "Work Sans",
+    texture: true, textureType: "glassrain", textureOpacity: 88,
+    accent1: "#FFD9A0", accent2: "#EEF3FA",
+    spell: "{{⛧🜌🜫🜂🜾🜕🜁🜮🜻🜍}}🜄[[🜗🜪]]"
+  },
+];
+/** The preset grid's groups, in order (headers in the grid; the presets
+ *  themselves carry no group field, so the five Ruby called perfect stay
+ *  exactly as they are). */
+export const PRESET_GROUPS = [
+  { name: 'Simple', count: 4 },
+  { name: 'Whimsy ♡', count: 8 },
+  { name: 'Sharpness √', count: 8 },
+  { name: 'Chaos ∆', count: 8 },
+  { name: 'Touch 🜚', count: 8 },
 ];
 
 /**
@@ -312,7 +433,7 @@ export function getActiveRadioValue(containerId){
  * §Variables — and a calling card for the poet behind the press. At launch,
  * set OPEN_ON_POEM to true and production will open on a poem instead.
  */
-export const DEV_TEMPLATE = "## <\u00a7UVIcon Unfixable Vellum/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90>\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7TextureSeed]  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
+export const DEV_TEMPLATE = "## <\u00a7UVIcon Unfixable Vellum/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90>\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7SeedPhrase] \u00b7 \u00a7TextureSeed  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
 export const OPEN_ON_POEM = false;
 /** Production is poetrypress.*; anything else — vellum, a local file — is development. */
 export const isProductionHost = () => typeof location !== 'undefined' && /^poetrypress\./i.test(location.hostname || '');
