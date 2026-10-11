@@ -16,7 +16,7 @@ export const DEFAULT_THEME = 'rose';
 const RENAMED = { cinder: 'rose' };
 
 /** The ground colour of each theme, for the OS title bar. */
-const THEME_CHROME = { rose:'#120f0f', aether:'#100e16', fathom:'#070d14', vellum:'#d8cec0' };
+const THEME_CHROME = { rose:'#131116', aether:'#100e16', fathom:'#070d14', vellum:'#d8cec0' };
 
 /** Themes on a light ground (every other is dark). */
 export const LIGHT_THEMES = ['vellum'];

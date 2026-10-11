@@ -1,6 +1,6 @@
 {
-  "name": "Unfixable Vellum",
-  "short_name": "Vellum",
+  "name": "PoetryPress",
+  "short_name": "PoetryPress",
   "description": "Turn poems into images.",
   "start_url": "./",
   "scope": "./",

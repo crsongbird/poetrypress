@@ -68,9 +68,9 @@ from the source files (unbuilt) — everything must work both ways.
 | `texWhimsy.js` · `texSharpness.js` · `texChaos.js` · `texTouch.js` | generators, one file per element |
 | `textureService.js` · `textureWorker.js` | textures made off the main thread |
 | `textureElements.js` | each texture's four readings (🜂 🜄 🜁 🜃), one its default |
-| `steps.js` · `stepsTouch.js` · `stepsChaos.js` | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains |
+| `steps.js` · `stepsTouch.js` · `stepsChaos.js` · `stepsWhimsy.js` | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains (Touch: weave, cloth, panes, glass, flakes · Chaos: crazing, brushwork, glaze · Whimsy: smoke, light shaft, dust motes, painted sky, painted ridges, watercolour wash) |
 | `cartomancy.js` | Cartomancy: a card game in progress, and its parts — table, card, coin, the deal by a game's rules — also the Athanor's Table, Deal and Coins steps (CARD_STEPS) |
-| `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze); each an Athanor template |
+| `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape); each an Athanor template with its TEACH |
 | `athanor.js` · `forge.js` | the Athanor: graph walker, cache and budget (in the worker) · node editor UI (Drawflow) |
 | `boxFx.js` | the inset box's glass and GPU blends |
 | `runology.js` | Ruby's Runes of Power: Archetypes, Accent Runes, Chroma (its words in the seed banks, its glyphs among the spell glyphs) |
@@ -185,6 +185,40 @@ left, wired into ⚙ ports, the Surface on the right (layoutAthanor). Before
 writing a new part, look for one to reuse or generalise; a part made for one
 texture is a debt. Aim between too general (a noise) and too specific (one
 picture): a part someone would reach for twice.
+
+THE LONG HORIZON (Ruby): every texture, eventually, loadable in the Athanor,
+viewable there as a graph of parts, mixable with parts of other textures,
+and kept and shared as a person's own — Filter Forge, ComfyUI and Blender's
+way. Old textures are not to be avoided because the work is large; each is
+taken apart when it is touched, and the library of parts grows.
+
+A texture drawn in web fonts or needing full size (Cartomancy) is still a
+chain: its parts PAINT (step.paint: a canvas at full size, as well as RUN on
+the grid), and the texture is made by a CANVAS PASS (chain.canvas →
+evalAthanor with ctx.canvas). Every chain and starter carries TEACH: a few
+lines the Athanor shows when it is opened.
+
+THE STEPS' KIT (texCore.js): kitCanvas, kitPicture (whatever came in, as a
+canvas to draw on), kitField (as a grey field on a grid), kitFieldCanvas,
+kitImage. A part that paints takes either a canvas (a canvas pass) or
+fields (the grid) through these, so one part serves both. A part may work on
+its own grid inside a canvas pass (Smoke and the Light Shaft: six canonical
+pixels to a cell; whimGrid) and hand on a small canvas; the next part scales
+it. SEED CHOICES shared between parts (the landscape's country, time and sun)
+come from seedChoice(ctx.seed, name), never a part's own random stream, so
+two parts agree.
+- SLEEP HAZE (chains 'clouds', canvas): Smoke (density) → Light Shaft (a Dial
+  port; out: the lit picture and the beam) → Dust Motes (a picture and a
+  beam). The material hues (ctx.mat) colour the shaft and the motes.
+- SCATTERED POLYGONS (chains 'metalleaf', canvas): Flakes over any base, in
+  the Leaf Hue; at 0 on Shape/Sheen/Glitter exactly the original flakes.
+- STAINED GLASS (chains 'stainedglass', on the grid at div 3): Panes (lead,
+  edge in came-widths/8, pane number, palette slot) → Glass (lit behind and
+  in front; a pane's look comes from its number: mulberry32, so the same pane
+  is the same glass; the dome turns outward along −∇edge).
+- PAINTED LANDSCAPE (chains 'landscape', canvas): Painted Sky → Painted Ridges
+  (over any sky; none wired: its plain wash) → Watercolour Wash (any picture).
+  landScene(seed, {country, time, tilt}) is the shared scene.
 
 The texture MENU grows by the same thinking: groups by how a surface is made
 and what it is for (index.html #textureType), each alphabetical. Add a group
@@ -478,9 +512,16 @@ before/after measurements AND an identical-render comparison.
   is drawn with its own shadow (canvas shadows: their offset is never turned
   with the drawing, so it is the page's own light vector). Suits: the page's
   accents (passed raw in extra.accents) and the texture's two hues; the
-  texture is colour-ground. Drawn on the page (web fonts), never a chain; the
-  same parts are steps (Table, Deal, Coins) and the Card Table starter wires them.
-- LANDSCAPE COLOR (texWhimsy genLandscape): paint(tone, colour) keeps the grey
+  texture is colour-ground. It is a CHAIN (chains.js 'cards': Knobs, two
+  Accent nodes, two Hues → Table → Deal → Surface; selects left at 'seed' are
+  the seed's to choose: crtChooseTable / crtChooseDeal), made on the page (web
+  fonts) by a canvas pass. No duplicate starter: "Start from… → Cartomancy".
+- WIRING BY MENU (forge.js): hold a part or a port → "Wire from it…" / "Wire
+  into it…" → a bar (#forgePending) says what is being wired → tap or hold
+  the other part (a tap is a pointer down and up in place: a phone's tap
+  never arrives as a click) → its ports, same kind first → connect (an input
+  takes one wire: a new one replaces it). Escape or Cancel stops.
+- LANDSCAPE COLOR (stepsWhimsy landPalette): paint(tone, colour) keeps the grey
   painting's VALUE and sets only its hue (atValue), so Color 0 is exactly the
   grey of before and any Color holds together; a landscape in colour skips
   the grey tint pass and the blend remap (ownColour), as Dream Bloom's

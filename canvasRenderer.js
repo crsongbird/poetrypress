@@ -1098,7 +1098,7 @@ function renderInto(canvas){
       ctx.globalCompositeOperation = blend;
       // (a Athanor surface carries its graph: the worker makes it from that)
       const graph = type === 'athanor' ? (($('forgeGraph') || {}).value || '') : undefined;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph }));
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph, ...(graph ? { accent1: $('accent1ColorHex').value, accent2: $('accent2ColorHex').value } : {}) }));
       ctx.restore();
     }
   }

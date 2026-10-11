@@ -17,6 +17,9 @@
  * template teaches by its wiring. A wired value sets a param across the
  * param's own range, so each step's range matches the slider it answers to.
  * Knob defaults are the sliders' defaults as a share of their ranges.
+ *   canvas  (optional) made by a CANVAS PASS on the page, at full size (its
+ *           parts paint: athanor.js) — Cartomancy, whose faces are lettered
+ *   teach   what it shows, in a few lines (the Athanor says it on opening)
  */
 import { weaveGridDiv } from './stepsTouch.js';
 import { paramPort } from './steps.js';
@@ -24,7 +27,7 @@ import { paramPort } from './steps.js';
 export const TEXTURE_CHAINS = {
   // √ Harsh Rain: far sheets, then near streaks drawn over them; the dial is
   // where the rain comes from, Gusts swings it about that
-  rainstreaks: { label: 'Harsh Rain', div: 2, nodes: [
+  rainstreaks: { label: 'Harsh Rain', div: 2, teach: 'The Light Dial says where the rain comes from. Far Sheets first, then near Streaks drawn over them. The Knobs are the texture\u2019s own sliders (Rain Zoom, Gusts), wired into the \u2699 settings they drive.', nodes: [
       ['knob', { slot: '1', name: 'Rain Zoom', def: 0 }, 40, 300],                 // 1
       ['knob', { slot: '2', name: 'Gusts', def: 0 }, 40, 170],                     // 2
       ['dial', {}, 40, 40],                                                        // 3
@@ -35,7 +38,7 @@ export const TEXTURE_CHAINS = {
       [1, 1, 5, paramPort('streaks', 'length')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // √ Silverpoint Hatch: soft forms say where the drawing is dark; hatching
   // gathers there, along the dial; the ink tarnishes with Age
-  hatch: { label: 'Silverpoint Hatch', div: 2, nodes: [
+  hatch: { label: 'Silverpoint Hatch', div: 2, teach: 'Soft Forms say where the drawing is dark; Hatching gathers there, along the dial. Two Colours mixed by Age are the ink, tarnishing; a Colour Ramp lays the ink on a grey ground.', nodes: [
       ['knob', { slot: '1', name: 'Cross-Hatching', def: 38 }, 40, 180],          // 1
       ['knob', { slot: '2', name: 'Line Density', def: 13 }, 40, 300],            // 2
       ['knob', { slot: '3', name: 'Age', def: 30 }, 320, 560],                    // 3
@@ -54,7 +57,7 @@ export const TEXTURE_CHAINS = {
   // 🜚 Linen: the weave (a normal map, lit by the dial) → the cloth coloured
   // and its details laid on as heights, lit. Its grid keeps the threads at
   // least three pixels apart, and no finer (a preview no longer pays the export's price)
-  linen: { label: 'Linen Tooth', grid: (w, h, S, k) => weaveGridDiv(w, h, S, (50 + (k[0] ?? 14.3)*3.5)/100), nodes: [
+  linen: { label: 'Linen Tooth', teach: 'Weave makes the threads (and a map of their heights); Cloth colours them between two Hues and lays on the details, lit by the dial. The Knobs are the texture\u2019s sliders.', grid: (w, h, S, k) => weaveGridDiv(w, h, S, (50 + (k[0] ?? 14.3)*3.5)/100), nodes: [
       ['knob', { slot: '1', name: 'Weave Scale', def: 14 }, 40, 40],              // 1
       ['knob', { slot: '2', name: 'Details', def: 42 }, 40, 300],                 // 2
       ['knob', { slot: '3', name: 'Weave', def: 50 }, 40, 170],                   // 3
@@ -67,7 +70,7 @@ export const TEXTURE_CHAINS = {
       [4, 1, 7, 1], [4, 2, 7, 2], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ∆ Fractured Glaze: the crazing (heights, glaze, grime, the finest cracks)
   // and the brushwork (how thick it was painted) → the glaze lit and coloured
-  crackedglaze: { label: 'Fractured Glaze', div: 2, nodes: [
+  crackedglaze: { label: 'Fractured Glaze', div: 2, teach: 'Crazing makes four maps (heights, the glaze, its grime, the finest cracks); Brushwork says how thickly it was painted; Glaze lights and colours them between two Hues.', nodes: [
       ['knob', { slot: '1', name: 'Fracture Scale', def: 12 }, 40, 40],           // 1
       ['knob', { slot: '2', name: 'Crack Density', def: 10 }, 40, 170],           // 2
       ['knob', { slot: '3', name: 'Enameling', def: 0 }, 40, 300],                // 3
@@ -79,4 +82,73 @@ export const TEXTURE_CHAINS = {
       ['surface', { name: 'Fractured Glaze', ground: 'colour' }, 900, 220]],      // 9
     wires: [[1, 1, 4, paramPort('crazing', 'scale')], [2, 1, 4, paramPort('crazing', 'density')], [3, 1, 4, paramPort('crazing', 'age')], [1, 1, 8, paramPort('glaze', 'scale')],
       [4, 1, 8, 1], [4, 2, 8, 2], [4, 3, 8, 3], [4, 4, 8, 4], [5, 1, 8, 5], [6, 1, 8, 6], [7, 1, 8, 7], [8, 1, 9, 1]] },
+  // 🜍 Cartomancy: a Table under a lamp, and a game Dealt onto it. The seed
+  // picks the game, the table, the cards and the coin (each 'seed' setting:
+  // choose one instead to fix it). Its four suits are the page's two Accents
+  // and the texture's two Hues. Drawn on the page at full size (a canvas pass).
+  cards: { label: 'Cartomancy', canvas: true, teach: 'A Table under a lamp, and a game Dealt onto it. Each setting left at \u201cseed\u201d is the seed\u2019s to choose (the game, the table, the cards, the coin); choose one to fix it. The four suits are the page\u2019s two Accents and the texture\u2019s two Hues. The Knobs are its sliders: Cards in Play, Scatter, Stakes.', nodes: [
+      ['knob', { slot: '1', name: 'Cards in Play', def: 29 }, 40, 40],            // 1  (100 of 20–300)
+      ['knob', { slot: '2', name: 'Scatter', def: 22 }, 40, 140],                 // 2  (20 of 0–90)
+      ['knob', { slot: '3', name: 'Stakes', def: 50 }, 40, 240],                  // 3
+      ['accent', { slot: '1', name: 'First Suit' }, 40, 340],                     // 4
+      ['accent', { slot: '2', name: 'Second Suit' }, 40, 420],                    // 5
+      ['hue', { slot: '1', name: 'Third Suit Hue' }, 40, 500],                    // 6
+      ['hue', { slot: '2', name: 'Fourth Suit Hue' }, 40, 580],                   // 7
+      ['table', { mat: 'seed', lamp: 50 }, 320, 40],                              // 8
+      ['deal', { game: 'seed', stock: 'seed', gilt: 'seed', suits: 'seed', coinage: 'seed', count: 100, size: 100, scatter: 20, stakes: 50 }, 600, 120],   // 9
+      ['surface', { name: 'Cartomancy', ground: 'colour' }, 880, 160]],           // 10
+    wires: [[8, 1, 9, 1], [4, 1, 9, 2], [5, 1, 9, 3], [6, 1, 9, 4], [7, 1, 9, 5],
+      [1, 1, 9, paramPort('deal', 'count')], [2, 1, 9, paramPort('deal', 'scatter')], [3, 1, 9, paramPort('deal', 'stakes')], [9, 1, 10, 1]] },
+  // ♡ Sleep Haze: smoke rising in a dusty room, a shaft of light through it
+  // from the dial's way, dust catching the light. Drawn by a canvas pass (the
+  // smoke on its own soft grid, the motes at full size).
+  clouds: { label: 'Sleep Haze', canvas: true, teach: 'Smoke makes a density: haze in strata and wisps rising (Lift, Drag). A Light Shaft from the Light Dial shines through any density \u2014 the smoke in it glows, and its second output is the beam itself. Dust Motes drift everywhere but show only where the beam catches them. Try the Shaft on a Value Noise instead of the Smoke.', nodes: [
+      ['knob', { slot: '1', name: 'Lift', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Drag', def: 30 }, 40, 140],                    // 2  (60 of 0–200)
+      ['knob', { slot: '3', name: 'Dust', def: 35 }, 40, 240],                    // 3
+      ['dial', {}, 40, 340],                                                      // 4
+      ['smoke', { lift: 100, drag: 60 }, 320, 40],                                // 5
+      ['shaft', { dust: 35 }, 600, 120],                                          // 6
+      ['motes', { dust: 35 }, 880, 160],                                          // 7
+      ['surface', { name: 'Sleep Haze', ground: 'grey' }, 1160, 180]],            // 8
+    wires: [[1, 1, 5, paramPort('smoke', 'lift')], [2, 1, 5, paramPort('smoke', 'drag')], [5, 1, 6, 1], [4, 1, 6, 2], [3, 1, 6, paramPort('shaft', 'dust')],
+      [6, 1, 7, 1], [6, 2, 7, 2], [3, 1, 7, paramPort('motes', 'dust')], [7, 1, 8, 1]] },
+  // √ Scattered Polygons: flakes of leaf over a grey ground, in the leaf's hue
+  metalleaf: { label: 'Scattered Polygons', canvas: true, teach: 'Flakes lays translucent polygons of leaf over whatever comes into its base (here, nothing: a grey ground), in the Leaf Hue. Shape makes them convex polygons of every kind; Sheen tilts each to the dial\u2019s light; Glitter speckles them. Its mask says where they lie, to Mix them onto another picture.', nodes: [
+      ['knob', { slot: '1', name: 'Leaf Size', def: 13 }, 40, 40],                // 1  (100 of 60–360)
+      ['knob', { slot: '2', name: 'Coverage', def: 33 }, 40, 140],                // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Shape', def: 0 }, 40, 240],                    // 3
+      ['knob', { slot: '4', name: 'Sheen', def: 0 }, 40, 340],                    // 4
+      ['knob', { slot: '5', name: 'Glitter', def: 0 }, 40, 440],                  // 5
+      ['hue', { slot: '1', name: 'Leaf Hue' }, 40, 540],                          // 6
+      ['flakes', { size: 100, coverage: 100, shape: 0, sheen: 0, glitter: 0 }, 340, 160],   // 7
+      ['surface', { name: 'Scattered Polygons', ground: 'grey' }, 640, 200]],     // 8
+    wires: [[1, 1, 7, paramPort('flakes', 'size')], [2, 1, 7, paramPort('flakes', 'coverage')], [3, 1, 7, paramPort('flakes', 'shape')], [4, 1, 7, paramPort('flakes', 'sheen')],
+      [5, 1, 7, paramPort('flakes', 'glitter')], [6, 1, 7, 2], [7, 1, 8, 1]] },
+  // 🜚 Stained Glass: the window's panes (four kinds), then the glass lit from behind and in front
+  stainedglass: { label: 'Stained Glass', div: 3, teach: 'Panes lays out the window \u2014 random shards, a patterned lattice, a rose window or a grid, by Shape \u2014 and hands on four maps: the lead, the distance from it, each pane\u2019s own number and its colour slot. Glass lights them: from behind toward the dial\u2019s sun, and from the front, each pane domed and leaning, flashing where it faces the light. Try Glass on Cells instead of Panes.', nodes: [
+      ['knob', { slot: '1', name: 'Pane Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Leading', def: 32 }, 40, 140],                 // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Shape', def: 25 }, 40, 240],                   // 3
+      ['hue', { slot: '1', name: 'Glass Hue' }, 40, 340],                         // 4
+      ['hue', { slot: '2', name: 'Second Glass Hue' }, 40, 440],                  // 5
+      ['panes', { size: 100, leading: 100, shape: 25 }, 320, 60],                 // 6
+      ['glass', { relief: 100 }, 600, 140],                                       // 7
+      ['surface', { name: 'Stained Glass', ground: 'colour' }, 880, 180]],        // 8
+    wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
+      [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
+  // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  landscape: { label: 'Painted Landscape', canvas: true, teach: 'Painted Sky lays the time of day, its sun or moon and painted clouds; Painted Ridges paints the seed\u2019s country over whatever sky comes in, band behind band; a Watercolour Wash bleeds it (Wetness). One Knob can drive two parts: Distance, Tilt and Color reach both the sky and the ridges, so they agree.', nodes: [
+      ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
+      ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
+      ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3
+      ['knob', { slot: '4', name: 'Tilt', def: 0 }, 40, 340],                     // 4
+      ['knob', { slot: '5', name: 'Color', def: 0 }, 40, 440],                    // 5
+      ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 0 }, 320, 40],                                  // 6
+      ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 0 }, 600, 120],            // 7
+      ['wash', { wet: 0 }, 880, 160],                                             // 8
+      ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1160, 180]],     // 9
+    wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
+      [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
+      [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 9, 1]] },
 };

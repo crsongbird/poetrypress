@@ -200,7 +200,7 @@ check('the Ko-fi link lives in the header now',
   !/class="app-title"/.test(html));
 check('the header carries the Vellum sigil, not an emoji diamond',
   html.slice(headerStart, headerEnd).includes('class="vellum-sigil"') && !html.includes('Vellum ♦️'));
-check('the app is named Unfixable Vellum', html.includes('Unfixable Vellum'));
+check('the app is named PoetryPress (Unfixable Vellum inside)', html.includes('<title>PoetryPress</title>') && html.includes('PoetryPress <svg'));
 
 // ---- this turn's promises ----
 check('the preview has a reset-position control', html.includes('id="resetViewBtn"'));

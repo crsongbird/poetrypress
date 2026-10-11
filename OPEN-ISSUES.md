@@ -6,7 +6,74 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Pasithee)
+## 1 · Ruby to judge (new in Jupiter–Kale)
+- THE FOUR, BUILT IN THE ATHANOR (each texture is now made from its graph,
+  and "Start from…" opens it, with a note on what it teaches):
+  - SLEEP HAZE: Smoke (Lift, Drag) → Light Shaft (the Light Dial wired in;
+    it shines through ANY density — try it on a Value Noise) → Dust Motes
+    (seen only where the beam catches them).
+  - SCATTERED POLYGONS: Flakes, in the Leaf Hue, over any picture (its base
+    port), with a mask to Mix it elsewhere. Shape, Sheen, Glitter as before.
+  - STAINED GLASS: Panes (the four kinds of window; out: the lead, the
+    distance from it, each pane's number, its colour slot) → Glass (lit from
+    behind and the front). Glass lights any tiling: try it on Cells. The
+    domes and bubbles are drawn a new way (from the panes' maps), so the
+    flashes and bubbles fall a little differently; say if it lost anything.
+  - PAINTED LANDSCAPE: Painted Sky → Painted Ridges (over any sky) →
+    Watercolour Wash (over any picture). Distance, Tilt and Color are each
+    one Knob wired to both the sky and the ridges, so they agree; the seed
+    chooses the country, the time of day and the sun for both (each has a
+    menu to fix it). The wash's blooms can now fall anywhere in the lower
+    two-thirds (they kept below the horizon before).
+  - The same seed draws a different picture than before for these four
+    (each part has its own stream of chance now) — the looks are the same.
+- New parts for anyone's graphs: Smoke, Light Shaft, Dust Motes, Painted
+  Sky, Painted Ridges, Watercolour Wash, Panes, Glass, Flakes.
+
+## 1a · Still to judge from Jupiter–Chaldene
+- WIRING ON A PHONE, without dragging: hold a part (or one of its ports) →
+  "Wire from it…" (or "Wire into it…", or "Wire this to…" on a port) → a bar
+  at the top says what is being wired → tap (or hold) the part it goes to →
+  a list of its ports, each in its colour, those that carry the same kind
+  first ("converted" on the others, "replaces its wire" where one is) → done.
+  Cancel, or Escape, stops. A setting's menu has "Wire something into it…".
+- WHAT A GRAPH TEACHES: opening a starter or a texture from "Start from…"
+  shows a note over the grid — what it does, which knobs to try, how to read
+  it (left to right, each part shows what it makes). The ? help has a short
+  primer (five lines). Woven Waves now shows its two Hues wired in (it used
+  the page's hues invisibly before) — that was the incomplete-looking one I
+  could find; say which others looked unfinished.
+- CARTOMANCY IS IN THE ATHANOR: "Start from… → Cartomancy" opens the texture
+  itself — three Knobs (Cards in Play, Scatter, Stakes), the page's two
+  Accents and the two Hues wired into a Table and a Deal. Its menus (game,
+  table, stock, edge, suits, coinage) start at "seed" (the seed chooses);
+  choose one to fix it. The texture on the page is made from this very graph.
+  The Card Table starter is gone (it was the duplicate).
+- A new input part, ACCENT (the page's accent colours), beside Hue.
+
+## 1b · Still to judge from Jupiter–Herse
+- PoetryPress again wherever a person reads it (title, header, home-screen
+  name, the alt text, README); Unfixable Vellum stays inside the code.
+- ROSÉ: the green is a pale blue now (#a3c6e3), the grounds a cooler
+  plum-charcoal so pink and blue sit together.
+- The headings no longer push the sections narrower on Firefox (the floated
+  eye and lock now stay inside their heading). Not checkable here — Firefox
+  isn't in the workshop; Chromium measures every section full width.
+- The WORKING LINE has no box behind it: plain italic words, a soft halo of
+  the page's own dark round them.
+- ALT TEXT, in Ruby's words: "The text is typeset in Playfair Display, a
+  Didone font, in cream and gold, with a Letterpress effect. It is set against
+  a deep brown backdrop shaded to near-black." and "The surface texture is
+  Cartomancy (the High Stakes reading, Fire): …".
+- CARTOMANCY: shadows are swept from what casts them (a card's tight and
+  thin, a coin's close, a stack's as long as it is tall) so none floats loose;
+  coins are toned metal (silver goes gold or blue with handling), turned on a
+  lathe, beaded, scratched, with a glint; every card its own paper (lighter,
+  darker, warmer, cooler), grain, foxing on old ones, rubbed corners, a sheen
+  where its bow meets the light and a glint on its lit edge; the edges are half
+  as thick.
+
+### Still to judge from Jupiter–Pasithee
 - ALT TEXT in three parts under headings: "--- Image text ---" (the poem, its
   lines and stanza breaks kept), "--- Image credit ---" (By <the credit>.),
   "--- Description ---". The poem gives way first when it is long.
@@ -33,30 +100,6 @@ Recommendations".
   much. The four suits are the two accents and the texture's two hues. Every
   card and coin casts its shadow from the dial; coins are struck, domed and
   rimmed, stacks banded.
-- …and its PARTS are in the Athanor: Table, Deal (four suit ports) and Coins,
-  and a Card Table starter wired from them (a Knob on the Scatter).
-- SCATTERED POLYGONS: Shape now makes convex polygons of every kind —
-  triangles to decagons, even or uneven, drawn out long toward the top. At 0
-  the original flakes, unchanged (some of those are slightly concave: say if 0
-  should be convex too).
-- STAINED GLASS: Shape (was Order) runs random shards (0–30) → a patterned
-  lattice (diamond quarries, hexagons or bricks, its colours in rhythm) → a
-  rose window (55–80) → an ordered grid of squares. The glass catches the
-  light from the front: each pane gently domed, a flash where it faces the
-  light, a rolling sheen, a bright rim against the lead on the lit side.
-  (Looks saved with Order above 30 now show the new kinds.)
-- PAINTED LANDSCAPE: COLOR (new, 0 as before) paints it — dawn, day, golden
-  hour, dusk or moonlight; far ridges lean to the sky's colour; strokes in
-  broken colour, warm toward the sun, cool turned away; the grey painting's
-  values kept. Painted clouds (heaped cumulus with lit tops and flat shadowed
-  bases, stratus, cirrus), a sun or a moon, its path on water, snow on far
-  peaks, two new countries (fields, a volcano with its plume). High Plains
-  (🜁) shows it in colour.
-- SLEEP HAZE about twice as fast (~640 → ~300 ms): the slow "basic noise" one,
-  I think? If Ruby meant another, say which. (Cold Press is the next slowest:
-  its lighting, ~0.8 s; it is quicker where the GPU lights it.)
-
-### Still to judge from Jupiter–Arche
 - LOCKS: every slider and menu in the making tabs can lock. Each section's
   heading has a MASTER LOCK (locks everything beneath; tap again to unlock
   all; half-closed when only some are), and so does each sub-section's row.
@@ -120,7 +163,6 @@ Recommendations".
 
 
 ## 2 · Waiting on Ruby
-- The name: "PoetryPress" for people, Unfixable Vellum inside — say when.
 - SOUNDS — the instrument itself, when Ruby wants it back:
   - a STRING instrument, something unusual (plucked string by physical model;
     ideas: an Aeolian harp, strings sounded by wind; sympathetic strings that
@@ -129,10 +171,6 @@ Recommendations".
     recorded straight into a composition) instead of typing degrees
   - Ruby's design from the Murmur Studio goes into murmur.js MURMUR_DESIGN.
 - The PRESETS pass — "not yet" (the lore words are ready for it).
-- Scattered Polygons at Shape 0: the original flakes are sometimes a little
-  concave. Keep them as they were, or make 0 convex too?
-- "The basic noise texture is slow": Sleep Haze was taken to be it (now ~2×
-  faster). If it was another, which?
 - Harsh Rain and Silverpoint Hatch cost ~0.1–0.3 s as chains (were ~0.05 s).
   Fine, or keep a fast path?
 
@@ -160,8 +198,20 @@ Recommendations".
     tool, with a voice.
 
 ## 4 · Next (no input needed)
-- More textures as chains, as each is touched (AGENTS.md: "Rebuild a texture
-  as a chain").
+- EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon: loadable, viewable
+  as a graph, mixable, kept and shared as one's own). 9 of 47 are chains:
+  Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy,
+  Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape. Still to
+  take apart (each when touched, or in passes): Dream Bloom, Deep Field,
+  Euphoria Dust, Burning Mana, First Snow, Film Grain, Lotus Pond, Painter's
+  Frustration, Halftone, Rain on Glass, Sigil Scatter, Machine Glyphs,
+  Transmutation Circles, Ink Blot, Old Paper, Crystal Leaf, Spangle, Cold
+  Press, Cup Ring, Guilloche, Chladni, Contour Map, Suminagashi, Watercolour,
+  Flow-Field Ink, Turing Skin, Hoarfrost, Burnt Letter, Poured Wax, Dunes,
+  Kintsugi, Moss, City at Night, Black Hole, Scrying Pool, Moon, Aurora,
+  Tessellate. Likely shared parts first: a Scatter of marks (snow, embers,
+  dust, sparkles), a Light-heights engine part (most 🜚 Touch textures), a
+  Marbling part (Suminagashi, Ink Blot).
 - The Athanor on a phone, still: haptics on a long press, an accessibility
   pass.
 - In the Athanor, a grey chain (Harsh Rain, Silverpoint Hatch) shows grey: the

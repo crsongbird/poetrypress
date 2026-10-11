@@ -720,3 +720,51 @@ export function fieldOn(F, step, fn){
       out[y*GW + x] = (g[k]*(1-tx) + g[k+1]*tx)*(1-ty) + (g[k+cw]*(1-tx) + g[k+cw+1]*tx)*ty; } }
   return out;
 }
+
+// ---------- THE STEPS' KIT: pictures between parts, on the grid or in a canvas pass ----------
+// On the Athanor's grid a part is handed FIELDS (Float32Array, ww·wh) and
+// IMAGES ({ r, g, b } fields); in a CANVAS PASS (athanor.js ctx.canvas: a
+// texture drawn at full size) it is handed CANVASES, of any size. These read
+// either as what a part wants.
+export const isCanvasLike = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
+/** A canvas for a part to draw on: [canvas, its 2D context]. */
+export function kitCanvas(w, h){ const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return [c, c.getContext('2d', CPU)]; }
+/** What came in on a port, as a w×h canvas to draw on (fields and images are on the gw×gh grid); nothing: a flat grey (or `fill`). */
+export function kitPicture(v, w, h, gw = w, gh = h, fill = 'rgb(128,128,128)'){
+  const [c, x] = kitCanvas(w, h);
+  if(isCanvasLike(v)){ x.imageSmoothingEnabled = true; x.drawImage(v, 0, 0, w, h); return [c, x]; }
+  const img = v instanceof Float32Array ? { r: v, g: v, b: v } : (v && v.r instanceof Float32Array) ? v : null;
+  if(img && img.r.length === gw*gh){ const [s, sx] = kitCanvas(gw, gh), im = sx.createImageData(gw, gh), d = im.data;
+    for(let i = 0, q = 0; i < gw*gh; i++, q += 4){ d[q] = img.r[i]*255; d[q+1] = img.g[i]*255; d[q+2] = img.b[i]*255; d[q+3] = 255; }
+    sx.putImageData(im, 0, 0); x.imageSmoothingEnabled = true; x.drawImage(s, 0, 0, w, h); return [c, x]; }
+  if(Array.isArray(v)){ x.fillStyle = `rgb(${v.map(q => Math.round(q*255)).join(',')})`; x.fillRect(0, 0, w, h); return [c, x]; }
+  if(typeof v === 'number'){ const g = Math.round(Math.max(0, Math.min(1, v))*255); x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(0, 0, w, h); return [c, x]; }
+  x.fillStyle = fill; x.fillRect(0, 0, w, h); return [c, x];
+}
+/** What came in, as a grey field on a gw×gh grid (a canvas sampled to it; a field or image already on it, as it is); nothing: null. */
+export function kitField(v, gw, gh){
+  if(v == null) return null;
+  const N = gw*gh;
+  if(v instanceof Float32Array) return v.length === N ? v : null;
+  if(v.r instanceof Float32Array){ if(v.r.length !== N) return null; const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*v.r[i] + 0.587*v.g[i] + 0.114*v.b[i]; return f; }
+  if(typeof v === 'number') return new Float32Array(N).fill(v);
+  if(Array.isArray(v)) return new Float32Array(N).fill(0.299*v[0] + 0.587*v[1] + 0.114*v[2]);
+  if(isCanvasLike(v)){ const [c, x] = kitCanvas(gw, gh); x.imageSmoothingEnabled = true; x.drawImage(v, 0, 0, gw, gh);
+    const d = x.getImageData(0, 0, gw, gh).data, f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255; return f; }
+  return null;
+}
+/** A field (0..1) or { r, g, b } on a gw×gh grid, as a canvas of that size. */
+export function kitFieldCanvas(f, gw, gh){
+  const [c, x] = kitCanvas(gw, gh), im = x.createImageData(gw, gh), d = im.data, img = f instanceof Float32Array ? { r: f, g: f, b: f } : f;
+  for(let i = 0, q = 0; i < gw*gh; i++, q += 4){ d[q] = img.r[i]*255; d[q+1] = img.g[i]*255; d[q+2] = img.b[i]*255; d[q+3] = 255; }
+  x.putImageData(im, 0, 0); return c;
+}
+/** A canvas read back as { r, g, b } fields on a gw×gh grid. */
+export function kitImage(cv, gw, gh){
+  const [c, x] = kitCanvas(gw, gh); x.imageSmoothingEnabled = true; x.drawImage(cv, 0, 0, gw, gh);
+  const d = x.getImageData(0, 0, gw, gh).data, N = gw*gh, r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N);
+  for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
+  return { r, g, b };
+}
+/** A choice the SEED makes, the same in every part that asks it (not the part's own random stream): from list, by the seed and a name. */
+export function seedChoice(seed, salt){ let h = 2166136261 ^ (seed >>> 0); for(let i = 0; i < salt.length; i++){ h ^= salt.charCodeAt(i); h = Math.imul(h, 16777619); } return mulberry32(h >>> 0); }

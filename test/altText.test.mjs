@@ -42,13 +42,14 @@ check('three parts under headings: the poem (its lines and stanza break kept), t
   alt.startsWith('--- Image text ---\nsomewhere in the dirt\nthere\'s a fire you can plant\n\nso plunge your hands inside\n\n--- Image credit ---\nBy @unfixable.place.\n\n--- Description ---\nAn image created'));
 check('no credit, no credit heading', !A.describeLook(look).includes('Image credit') && A.describeLook(look).startsWith('--- Image text ---'));
 check('then plain English: the tool, the typeface and colours, the background, the surface as it looks, its reading, its settings, the frame',
-  alt.includes('An image created with Unfixable Vellum (PoetryPress), an open source art tool.') && alt.includes('set in Cormorant Garamond, in cream, with a soft glow')
-  && alt.includes('Dream Bloom (its Lantern Festival reading, Fire): soft, out-of-focus orbs of light, strongly glowing over the page')
+  alt.includes('An image created with PoetryPress, an open source art tool.') && alt.includes('The text is typeset in Cormorant Garamond, in cream, with a Glow effect.') && alt.includes('It is set against a very dark plum backdrop shaded to near-black.')
+  && alt.includes('The surface texture is Dream Bloom (the Lantern Festival reading, Fire): soft, out-of-focus orbs of light, strongly glowing over the page')
+  && A.describeLook({ ...look, font: 'Didone · Playfair Display', effects: ['letterpress'] }).includes('typeset in Playfair Display, a Didone font, in cream, with a Letterpress effect.')
   && /focal plane low, orb count low/.test(alt) && alt.includes('a scallop border in pink') && alt.includes('darkened edges'));
 check('colours are named as a person would ("very dark plum", "tan", "near-black")', A.colourName('#2A1E2E') === 'very dark plum' && A.colourName('#C9A876') === 'tan' && A.colourName('#000000') === 'near-black');
 const longLook = { ...look, poem: Array.from({ length: 400 }, (_, i) => 'a line of a long poem, number ' + i) };
 const longAlt = A.describeLook(longLook);
-check('never more than 1500 characters: a long poem gives way (at a word) before the description does', longAlt.length <= 1500 && longAlt.includes('An image created with Unfixable Vellum') && /…\n\n--- Description ---\nAn image/.test(longAlt) && A.describeLook({ ...longLook, credit: 'Ruby' }).includes('--- Image credit ---\nBy Ruby.'));
+check('never more than 1500 characters: a long poem gives way (at a word) before the description does', longAlt.length <= 1500 && longAlt.includes('An image created with PoetryPress') && /…\n\n--- Description ---\nAn image/.test(longAlt) && A.describeLook({ ...longLook, credit: 'Ruby' }).includes('--- Image credit ---\nBy Ruby.'));
 check('every texture in the picker is described', Object.keys((await import('../textureElements.js')).TEXTURE_ELEMENTS).every(t => A.TEXTURE_LOOKS[t]));
 
 console.log();

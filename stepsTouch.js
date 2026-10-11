@@ -1,6 +1,7 @@
 /**
  * stepsTouch.js — steps for 🜚 Touch surfaces (part of the steps library:
- * steps.js gathers them). Linen is made of these:
+ * steps.js gathers them). Linen is made of the first two; Stained Glass of
+ * PANES → GLASS; Scattered Polygons of FLAKES (below the weave):
  *
  *   weave   a woven cloth as a NORMAL MAP, lit by the dial: its shade and
  *           its sheen (silk → twill → linen → canvas → burlap)
@@ -11,7 +12,7 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, lightBasis, lightSparse } from './texCore.js';
+import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture } from './texCore.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -307,3 +308,240 @@ export const TOUCH_STEPS = {
       return [o];
     } },
 };
+
+// ======================= STAINED GLASS: panes → glass =======================
+/**
+ * THE PANES of a window, as a Voronoi tiling on a ww×wh grid: each point
+ * belongs to its nearest seed, the lead runs where two are equally near (its
+ * width measured from the bisector, so every came is even). SHAPE runs
+ * through four kinds of window: RANDOM shards (0–30) → a PATTERNED lattice
+ * (diamond quarries, hexagons or bricks, its colours in rhythm) → a ROSE
+ * window (55–80, ring by ring) → an ORDERED grid of squares.
+ * Out: lead (the came's rounded profile, 0..1, on the lead only), edge (the
+ * distance from the lead's centre, 1 at eight came-widths), pane (each
+ * pane's own number, 0..1) and palette (which of the glazier's ten colours).
+ */
+export function paneLayout(ww, wh, zoom, amt, order){
+  const unit = Math.min(ww, wh), N = ww*wh, sep = unit*0.1*zoom;
+  const kind = order < 0.3 ? 'random' : order < 0.55 ? 'pattern' : order < 0.8 ? 'rose' : 'grid';
+  // the seeds: [x, y, ring, index-in-ring] — ring -1 a random pane, -2 a patterned one (index: its colour slot)
+  const S = [];
+  if(kind === 'random'){
+    const jit = 0.5 - order*0.7;
+    for(let gy = -1; gy <= Math.ceil(wh/sep) + 1; gy++) for(let gx = -1; gx <= Math.ceil(ww/sep) + 1; gx++){
+      const ox = (gy % 2 ? 0.5 : 0)*order*1.6;             // calmer: rows offset like bricks
+      S.push([(gx + 0.5 + ox + (Math.random()*2 - 1)*jit)*sep, (gy + 0.5 + (Math.random()*2 - 1)*jit)*sep, -1, 0]);
+    }
+  } else if(kind === 'pattern'){
+    // a lattice, chosen by the seed; a hair of irregularity as the knob nears the random end (old glass is never perfect)
+    const lat = Math.floor(Math.random()*3), jit = sep*0.04*(1 - (order - 0.3)/0.25), cyc = 2 + Math.floor(Math.random()*2);
+    const R = Math.ceil(Math.hypot(ww, wh)/sep) + 2;
+    for(let gy = -2; gy <= R; gy++) for(let gx = -2; gx <= R; gx++){
+      let x, y;
+      if(lat === 0){ x = (gx + 0.5*(gy & 1))*sep*1.15; y = gy*sep*0.58; }                      // diamond quarries
+      else if(lat === 1){ x = (gx + 0.5*(gy & 1))*sep; y = gy*sep*0.866; }                      // hexagons
+      else { x = (gx + 0.5*(gy & 1))*sep*1.4; y = gy*sep*0.6; }                                // bricks (long panes)
+      if(x < -sep*2 || y < -sep*2 || x > ww + sep*2 || y > wh + sep*2) continue;
+      S.push([x + (Math.random()*2 - 1)*jit, y + (Math.random()*2 - 1)*jit, -2, ((gx % cyc) + cyc + (gy % cyc)*(cyc - 1) + 9*cyc) % (cyc*2)]);
+    }
+  } else if(kind === 'grid'){
+    const g = sep*0.9;
+    for(let gy = -1; gy <= Math.ceil(wh/g) + 1; gy++) for(let gx = -1; gx <= Math.ceil(ww/g) + 1; gx++)
+      S.push([(gx + 0.5)*g, (gy + 0.5)*g, -2, (gx + 2*gy + 100) % 4]);
+  } else {
+    const cx = ww/2, cy = wh/2, sym = Math.random() < 0.5 ? 6 : 8, jit = (1 - order)*0.6*sep, K = Math.ceil(Math.hypot(ww, wh)/2/sep) + 1;
+    S.push([cx, cy, 0, 0]);
+    for(let k = 1; k <= K; k++){ const n = sym*k, off = (k % 2)*0.5;
+      for(let j = 0; j < n; j++){ const a = (j + off)/n*Math.PI*2, r = k*sep;
+        S.push([cx + Math.cos(a)*r + (Math.random()*2 - 1)*jit, cy + Math.sin(a)*r + (Math.random()*2 - 1)*jit, k, j]); } }
+  }
+  // each pane's colour slot of the glazier's ten (a patterned window repeats a few, in its rhythm), and its own number
+  const RHY = [0, 3, 8, 6, 4, 9].slice(0, 4 + Math.floor(Math.random()*2));
+  const slot = S.map(s => s[2] >= 0 ? (s[2]*3 + (s[3] % 2)*5) % 10 : s[2] === -2 ? RHY[s[3] % RHY.length] : Math.floor(Math.random()*10));
+  const own = S.map(() => Math.random());
+  // the seeds in buckets, for the nearest-seed search (one ring of buckets is enough)
+  const bs = sep*1.15, bw = Math.ceil(ww/bs) + 4, bh = Math.ceil(wh/bs) + 4, B2 = new Array(bw*bh);
+  S.forEach((s, i) => { const bx = Math.floor(s[0]/bs) + 2, by = Math.floor(s[1]/bs) + 2; if(bx < 0 || by < 0 || bx >= bw || by >= bh) return; (B2[by*bw + bx] || (B2[by*bw + bx] = [])).push(i); });
+  const lw = Math.max(0.6, unit*0.0065*amt);                         // the came's half-width
+  const lead = new Float32Array(N), edge = new Float32Array(N), pane = new Float32Array(N), pal = new Float32Array(N);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const bx = Math.floor(x/bs) + 2, by = Math.floor(y/bs) + 2;
+    let best = -1, bd = Infinity;
+    for(let j = by - 1; j <= by + 1; j++) for(let i = bx - 1; i <= bx + 1; i++){ if(i < 0 || j < 0 || i >= bw || j >= bh) continue; const L = B2[j*bw + i]; if(!L) continue;
+      for(const k of L){ const dx = S[k][0] - x, dy = S[k][1] - y, d = dx*dx + dy*dy; if(d < bd){ bd = d; best = k; } } }
+    // the distance to the nearest bisector: the lead's centre line
+    let e = Infinity; const s1 = S[best];
+    for(let j = by - 1; j <= by + 1; j++) for(let i = bx - 1; i <= bx + 1; i++){ if(i < 0 || j < 0 || i >= bw || j >= bh) continue; const L = B2[j*bw + i]; if(!L) continue;
+      for(const k of L){ if(k === best) continue; const s2 = S[k], gx = s2[0] - s1[0], gy = s2[1] - s1[1], gl = Math.hypot(gx, gy) || 1;
+        const dd = ((x - s1[0])*gx + (y - s1[1])*gy)/gl, ed = gl/2 - dd; if(ed < e) e = ed; } }
+    const p = y*ww + x, q = e/lw;
+    lead[p] = q < 1 ? Math.sqrt(Math.max(0, 1 - q*q)) : 0; edge[p] = Math.min(1, e/(lw*8)); pane[p] = own[best]; pal[p] = (slot[best] + 0.5)/10;
+  }
+  return { lead, edge, pane, pal };
+}
+/**
+ * GLASS: panes lit — from BEHIND (brighter toward the dial's sun, streaked and
+ * bubbled, darker against the lead where the glass is thick) and from the
+ * FRONT (each pane gently domed and set at its own slight lean, so it flashes
+ * where it faces the light, a sheen rolls across it, and a bright rim
+ * catches where it meets the came on the lit side). The came itself: dull
+ * metal in relief, lit by the dial. Colours: the two hues and what a glazier
+ * sets beside them (amber, green, pale).
+ */
+export function litGlass(F, ww, wh, colA, colB, light, relief){
+  const { lead, edge, pane, pal } = F, unit = Math.min(ww, wh), N = ww*wh, lwPx = Math.max(0.6, unit*0.0065)*relief;
+  const mixA = (a, b, t) => a.map((v, i) => v + (b[i] - v)*t), A = colA, Bc = colB, AMBER = [214, 152, 40], GREEN = [46, 122, 62], PALE = [232, 224, 196];
+  const PAL = [A, A, mixA(A, [0, 0, 0], 0.35), Bc, Bc, mixA(Bc, AMBER, 0.5), AMBER, GREEN, mixA(A, PALE, 0.6), PALE];
+  const fbm = (cells, oct) => { const gs = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; gs.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
+    const nm = gs.reduce((s, o) => s + o.a, 0); return (u, v) => { let s = 0; for(const o of gs) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.a; return s/nm; }; };
+  const streak = fbm(4, 3), tooth = fbm(18, 2);
+  // the came's relief and the glass's ripple, lit by the dial
+  const H = new Float32Array(N);
+  for(let i = 0; i < N; i++){ const x = i % ww, y = (i/ww) | 0; H[i] = lead[i] > 0 ? lwPx*(1.6*lead[i] + 0.6) : (tooth(x/unit*2, y/unit*2) - 0.5)*lwPx*0.35; }
+  const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.45, shadow: 0.5, ao: 0.35, ambient: 0.4 });
+  // the sun behind the window: brighter toward the dial
+  const lv = lightVec(light == null ? 315 : light), sunX = ww/2 - lv.lx*ww*0.45, sunY = wh/2 - lv.ly*wh*0.45, diag = Math.hypot(ww, wh);
+  // the light on the FRONT of the glass: toward the dial, raking as the dial's handle nears the rim; Blinn's half vector, the viewer overhead
+  const tl = Math.min(1, Math.hypot(lv.lx, lv.ly)), el = (90 - tl*70)*Math.PI/180, lm2 = tl > 1e-6 ? tl : 1;
+  const FX = -lv.lx/lm2*Math.cos(el), FY = -lv.ly/lm2*Math.cos(el), FZ = Math.sin(el), HL = Math.hypot(FX, FY, FZ + 1) || 1, HX = FX/HL, HY = FY/HL, HZ = (FZ + 1)/HL;
+  // each pane's own: its brightness, the run of its streaks, its lean (from its number: the same pane, the same glass)
+  const panes = new Map(), paneOf = p => { let P = panes.get(p); if(P) return P; const R = mulberry32((p*2147483647) >>> 0);
+    const sh = 0.82 + R()*0.3, ang = R()*Math.PI, ta = R()*Math.PI*2, tm = 0.04 + R()*0.22;
+    P = { sh, cs: Math.cos(ang), sn: Math.sin(ang), nx: Math.cos(ta)*tm, ny: Math.sin(ta)*tm, nz: Math.sqrt(1 - tm*tm), k: (p*997) % 1 }; panes.set(p, P); return P; };
+  const bub = unit*0.022, hashB = (cx, cy, k) => { const s = Math.sin(cx*127.1 + cy*311.7 + k*74.7)*43758.5453; return s - Math.floor(s); };
+  const r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N), clamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  for(let i = 0; i < N; i++){
+    const x = i % ww, y = (i/ww) | 0, er = edge[i]*8;                  // the distance from the lead, in came-widths
+    if(lead[i] > 0){
+      // lead: dull grey metal, lit by the dial
+      const gv = (34 + 46*L.light[i]/L.flat + 150*L.spec[i])/255; r[i] = clamp(gv); g[i] = clamp(gv); b[i] = clamp(gv*1.04); continue;
+    }
+    const P = paneOf(pane[i]), u = x/unit, v = y/unit, col = PAL[Math.min(9, Math.floor(pal[i]*10))];
+    const back = 0.72 + 0.5*Math.max(0, 1 - Math.hypot(x - sunX, y - sunY)/diag*1.4);
+    const along = u*P.cs + v*P.sn, across = -u*P.sn + v*P.cs;
+    const st = 0.86 + 0.28*streak(along*0.6 + P.k*37, across*7);
+    let bk = P.sh*back*st*(0.72 + 0.28*Math.min(1, (er - 1)/2.5));       // darker against the lead (thicker glass)
+    // a bubble now and then, held in the glass
+    if(er > 2.5){ const cx = Math.floor(x/bub), cy = Math.floor(y/bub), hb = hashB(cx, cy, P.k);
+      if(hb < 0.022){ const bx = (cx + 0.5)*bub, by = (cy + 0.5)*bub, rr = bub*(0.12 + hb*8), d = Math.hypot(x - bx, y - by); if(d < rr) bk *= 1.12 + 0.2*(d/rr); } }
+    // the FRONT: the pane's lean and its dome (its normal turning outward toward the lead), rippled
+    const gx = edge[i + (x < ww - 1 ? 1 : 0)] - edge[i - (x > 0 ? 1 : 0)], gy = edge[i + (y < wh - 1 ? ww : 0)] - edge[i - (y > 0 ? ww : 0)], gl = Math.hypot(gx, gy) || 1;
+    const dome = (1 - edge[i])*0.35, qx = P.nx - gx/gl*dome, qy = P.ny - gy/gl*dome, ql = Math.hypot(qx, qy, P.nz) || 1;
+    const rip = (L.spec[i] - 0.02)*0.6, nh = Math.max(0, (qx*HX + qy*HY + P.nz*HZ)/ql + rip);
+    const flash = Math.pow(nh, 60)*230, roll = Math.pow(nh, 8)*30;
+    let rim = 0; if(er < 2.2){ const face = -(gx*FX + gy*FY)/gl; if(face > 0) rim = face*(1 - (er - 1)/1.2)*70; }
+    const sheen = L.spec[i]*70 + flash + roll + Math.max(0, rim);
+    r[i] = clamp((col[0]*bk + sheen)/255); g[i] = clamp((col[1]*bk + sheen)/255); b[i] = clamp((col[2]*bk + sheen)/255);
+  }
+  return { r, g, b };
+}
+
+// ======================= SCATTERED POLYGONS: flakes =======================
+/**
+ * FLAKES of leaf over whatever is on the canvas: translucent polygons in the
+ * leaf's colour, each its own brightness, a dark seam where one overlaps the
+ * next. At 0 on the last three knobs they are drawn EXACTLY as they always
+ * were:  SHAPE   0: five-to-eight-sided flakes; higher, more of them convex
+ *                polygons of every kind (3–10 sides, even or uneven), drawn
+ *                out long toward the top
+ *        SHEEN   each flake tilting to the dial's light: brighter or darker,
+ *                a band of reflection inside it, a highlight on its near edge
+ *        GLITTER soft, speckled, noisy highlights over the flakes
+ * o: { amt (coverage), zoom (size), shape, sheen, glitter, leaf: {r,g,b}, light, px }
+ */
+export function drawFlakes(ctx, w, h, o){
+  const amt = o.amt ?? 1, zoom = o.zoom ?? 1, px = o.px || cpx, leaf = o.leaf;
+  const shapeV = Math.max(0, Math.min(1, o.shape || 0)), sheen = Math.max(0, Math.min(1, o.sheen || 0)), glitter = Math.max(0, Math.min(1, o.glitter || 0));
+  const lv = lightVec(o.light == null ? 315 : o.light), lm = Math.hypot(lv.lx, lv.ly) || 1, TX = -lv.lx/lm, TY = -lv.ly/lm;   // toward the light
+  // a tone of the leaf: k > 1 lifts it toward white (keeping its hue), k < 1 darkens it
+  const tone = (k, a) => { const f = v => Math.round(k > 1 ? v + (255 - v)*Math.min(1, k - 1) : v*k); return `rgba(${f(leaf.r)},${f(leaf.g)},${f(leaf.b)},${a})`; };
+  const unit = Math.max(w, h);
+  const flakes = Math.max(10, Math.round((120 + Math.random()*90)*amt));
+  for(let i = 0; i < flakes; i++){
+    const cx = Math.random()*w, cy = Math.random()*h;
+    const r = unit*(0.015 + Math.random()*0.055)*zoom;
+    const sides = 5 + Math.floor(Math.random()*4);
+    const rot = Math.random()*Math.PI*2;
+    const pts = [];
+    for(let s = 0; s < sides; s++){ const a = rot + (s/sides)*Math.PI*2, rr = r*(0.55 + Math.random()*0.7); pts.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr]); }
+    // SHAPE (only drawn when the knob is up): CONVEX polygons, their corners on an ellipse in order, so none folds in on itself
+    if(shapeV > 0 && Math.random() < shapeV){
+      const stretch = 1 + Math.random()*shapeV*shapeV*2.6;                            // up to ~3.6 : 1 at the top
+      // 3 … 10 sides, most often few (a many-sided one drawn long reads as an oval, so long ones keep to six)
+      const n = Math.min(stretch > 1.8 ? 6 : 10, 3 + Math.floor(Math.pow(Math.random(), 1.4)*(3 + shapeV*5.99)));
+      const even = Math.random() < 0.35 + 0.3*(1 - shapeV);                           // some are regular, the rest uneven
+      const ca = Math.cos(rot), sa = Math.sin(rot), a = r*Math.sqrt(stretch)*(0.8 + Math.random()*0.4), b = r/Math.sqrt(stretch)*(0.8 + Math.random()*0.4);
+      const ang = [];
+      for(let s = 0; s < n; s++) ang.push((s + (even ? 0 : (Math.random() - 0.5)*0.85))/n*Math.PI*2);
+      ang.sort((p, q) => p - q);
+      pts.length = 0;
+      for(const t of ang){ const u = Math.cos(t)*a, v = Math.sin(t)*b; pts.push([cx + u*ca - v*sa, cy + u*sa + v*ca]); }
+    }
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for(let s = 1; s < pts.length; s++) ctx.lineTo(pts[s][0], pts[s][1]); ctx.closePath();
+    // each flake keeps its own brightness, carried in the leaf's colour
+    let lift = (178 + Math.floor(Math.random()*66))/210;
+    const alpha = 0.16 + Math.random()*0.4;
+    // SHEEN: the flake's tilt to the light
+    let facing = 0;
+    if(sheen > 0){ const ta = Math.random()*Math.PI*2, tm = 0.3 + Math.random()*0.7; facing = (Math.cos(ta)*TX + Math.sin(ta)*TY)*tm; if(facing < 0) lift *= 1 + sheen*0.55*facing; }
+    ctx.globalAlpha = alpha;
+    if(facing > 0){ const m = sheen*0.5*facing, ch = v => Math.round(Math.min(255, v*lift) + (255 - Math.min(255, v*lift))*m);   // turned to the light: toward white, not a hue
+      ctx.fillStyle = `rgb(${ch(leaf.r)},${ch(leaf.g)},${ch(leaf.b)})`; }
+    else ctx.fillStyle = `rgb(${Math.min(255, Math.round(leaf.r*lift))},${Math.min(255, Math.round(leaf.g*lift))},${Math.min(255, Math.round(leaf.b*lift))})`;
+    ctx.fill();
+    if(sheen > 0){
+      ctx.save(); ctx.clip();
+      // light caught inside the metal: a soft band across the flake, along the light
+      const Lb = r*1.4, band = ctx.createLinearGradient(cx + TX*Lb, cy + TY*Lb, cx - TX*Lb, cy - TY*Lb), off = 0.3 + 0.4*Math.random();
+      band.addColorStop(0, tone(1.5, 0)); band.addColorStop(Math.max(0, off - 0.18), tone(1.5, 0)); band.addColorStop(off, tone(1.7, 0.55*sheen*(0.5 + 0.5*Math.max(0, facing))));
+      band.addColorStop(Math.min(1, off + 0.18), tone(1.5, 0)); band.addColorStop(1, tone(0.5, 0.25*sheen));
+      ctx.globalAlpha = Math.min(1, alpha*1.6); ctx.fillStyle = band; ctx.fillRect(cx - Lb*1.5, cy - Lb*1.5, Lb*3, Lb*3);
+      // a highlight where its near edge meets the light
+      if(facing > 0){ const hx = cx + TX*r*0.55, hy = cy + TY*r*0.55, sp = ctx.createRadialGradient(hx, hy, 0, hx, hy, r*0.7);
+        sp.addColorStop(0, `rgba(255,252,240,${(0.7*sheen*facing*facing).toFixed(3)})`); sp.addColorStop(1, 'rgba(255,252,240,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = sp; ctx.fillRect(hx - r, hy - r, r*2, r*2); }
+      ctx.restore();
+    }
+    // the seam where one leaf overlaps the next
+    ctx.globalAlpha = 0.10 + Math.random()*0.25;
+    ctx.strokeStyle = 'rgb(48,48,48)';
+    ctx.lineWidth = Math.max(px(0.5), unit*0.0009);
+    ctx.stroke();
+    // GLITTER: soft speckled highlights over the flake, noisy
+    if(glitter > 0){
+      const n = Math.round(glitter*(4 + r*r/(unit*unit)*9000));
+      ctx.save(); ctx.clip();
+      for(let k = 0; k < n; k++){ const gx = cx + (Math.random() - 0.5)*r*2, gy = cy + (Math.random() - 0.5)*r*2, gr = px(0.6 + Math.random()*Math.random()*3.2);
+        const gl = Math.random()**3*(0.35 + 0.65*Math.max(0, 0.5 + facing));
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr*2.4); g.addColorStop(0, `rgba(255,250,235,${(gl*0.9).toFixed(3)})`); g.addColorStop(1, 'rgba(255,250,235,0)');
+        ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(gx - gr*2.4, gy - gr*2.4, gr*4.8, gr*4.8); }
+      ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+const touchRGB = (v, def) => { if(Array.isArray(v)) return v.map(q => Math.round(q*255)); const p = parseHex(def); return [p.r, p.g, p.b]; };
+Object.assign(TOUCH_STEPS, {
+  panes: { cat: 'Noise', label: 'Panes', ins: [], outs: ['lead', 'edge', 'pane', 'palette'],
+    params: [TOUCH_R('size', 'Pane Size', 100, 50, 250), TOUCH_R('leading', 'Leading', 100, 30, 250), TOUCH_R('shape', 'Shape', 25)], cost: () => 10,
+    run(E, n){ const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100, E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)));
+      return [L.lead, L.edge, L.pane, L.pal]; } },
+  glass: { cat: 'Light & Colour', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue'],
+    outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('relief', 'Lead Relief', 100, 25, 300)], cost: () => 16,
+    run(E, n){ const { ww, wh, N, input, asField, ctx } = E;
+      const f = j => asField(input(n, j)) || new Float32Array(N);
+      return [litGlass({ lead: f(1), edge: (asField(input(n, 2)) || new Float32Array(N).fill(1)), pane: f(3), pal: f(4) }, ww, wh,
+        touchRGB(input(n, 5), '#2148A8'), touchRGB(input(n, 6), '#A8182C'), ctx.light, E.num(n, 'relief', 100)/100)]; } },
+  flakes: { cat: 'Marks', label: 'Flakes', ins: ['base', 'leaf hue'], outs: ['image', 'mask'], io: { ins: ['image', 'colour'], outs: ['image', 'field'] },
+    params: [TOUCH_R('size', 'Leaf Size', 100, 60, 360), TOUCH_R('coverage', 'Coverage', 100, 20, 260), TOUCH_R('shape', 'Shape', 0), TOUCH_R('sheen', 'Sheen', 0), TOUCH_R('glitter', 'Glitter', 0)], cost: () => 4,
+    opts(E, n){ const c = touchRGB(E.input(n, 2), '#E0B38D');
+      return { amt: E.num(n, 'coverage', 100)/100, zoom: Math.max(0.25, E.num(n, 'size', 100)/100), shape: E.num(n, 'shape', 0)/100, sheen: E.num(n, 'sheen', 0)/100,
+        glitter: E.num(n, 'glitter', 0)/100, leaf: { r: c[0], g: c[1], b: c[2] }, light: E.ctx.light, px: E.canvasPass ? cpx : E.px }; },
+    paint(E, n){ const [c, x] = kitPicture(E.input(n, 1), E.ww, E.wh); drawFlakes(x, E.ww, E.wh, this.opts(E, n)); return [c, null]; },
+    run(E, n){ const [c, x] = kitPicture(E.input(n, 1), E.ww, E.wh), before = E.lum(E.readCanvas(c));
+      drawFlakes(x, E.ww, E.wh, this.opts(E, n)); const im = E.readCanvas(c), after = E.lum(im), m = new Float32Array(E.N);
+      for(let i = 0; i < E.N; i++) m[i] = Math.min(1, Math.abs(after[i] - before[i])*6);
+      return [im, m]; } },
+});

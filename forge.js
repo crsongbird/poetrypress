@@ -134,6 +134,11 @@ export function forgeShelfWrite(list){
  *    in its own colour
  *  - a wire is cut by tapping it (✂ appears where it was tapped), from its
  *    menu, or with Delete
+ *  - WIRING WITHOUT DRAGGING (Ruby: drawing wires on a phone is hard): hold a
+ *    part (or a port) → "Wire from it…" (or "…into it"); a bar says what is
+ *    being wired; then tap or hold the other part and choose its port from a
+ *    list, each in its colour, the ones that carry the same kind first
+ *  - a starter or a texture opened from "Start from…" says what it teaches
  */
 export async function openForge(deps){
   const { $ } = deps;
@@ -314,6 +319,7 @@ export async function openForge(deps){
     document.addEventListener('keydown', e => {
       if(veil.hidden) return;
       if(e.key === 'Escape' && menu && !menu.hidden){ e.preventDefault(); closeMenu(); return; }
+      if(e.key === 'Escape' && pending){ e.preventDefault(); stopWire(); return; }
       if(!(e.key === 'Delete' || e.key === 'Backspace')) return;
       const t = e.target; if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
       if(ed.connection_selected){ e.preventDefault(); e.stopImmediatePropagation(); cutWire(wireOf(ed.connection_selected.parentElement)); return; }
@@ -362,12 +368,71 @@ export async function openForge(deps){
     const N_ = id => FORGE_NODES[(nodeOf(id) || {}).name] || null;
     const wireDesc = w => { const a = N_(w.outId), b = N_(w.inId); const oi = +w.output.slice(7) - 1, ii = +w.input.slice(6) - 1;
       return { label: `${labelOf(w.outId)} → ${labelOf(w.inId)}`, hint: `${(a && a.outs[oi]) || ''} into ${(b && b.ins[ii]) || ''}`, colour: `var(--t-${(a && a.outTypes[oi]) || 'field'})`, glyph: '〰' }; };
+    // ---- WIRING BY MENU: choose one end, then the other (no dragging) ----
+    let pending = null;                                        // { from: 'out' | 'in', id, port: 'output_k' | 'input_k' }
+    const pendBar = (() => { let el = $('forgePending'); if(!el && body){ el = document.createElement('div'); el.id = 'forgePending'; el.className = 'forge-pending'; el.hidden = true; el.setAttribute('role', 'status'); body.appendChild(el); } return el; })();
+    const portInfo = (id, side, j) => { const N = N_(id); return N ? { name: side === 'out' ? N.outs[j] : N.ins[j], t: (side === 'out' ? N.outTypes[j] : N.inTypes[j]) || 'field' } : { name: '?', t: 'field' }; };
+    const showPending = () => { if(!pendBar) return;
+      if(!pending){ pendBar.hidden = true; pendBar.innerHTML = ''; return; }
+      const j = +pending.port.replace(/\D+/g, '') - 1, P = portInfo(pending.id, pending.from, j);
+      pendBar.innerHTML = `<i style="background:var(--t-${P.t})"></i><span>${pending.from === 'out'
+        ? `Wiring from ${forgeEsc(labelOf(pending.id))}\u2019s <b>${forgeEsc(P.name)}</b>: tap or hold the part it goes into.`
+        : `Wiring into ${forgeEsc(labelOf(pending.id))}\u2019s <b>${forgeEsc(P.name)}</b>: tap or hold the part it comes from.`}</span><button type="button" class="forge-pending-x">Cancel</button>`;
+      pendBar.hidden = false; };
+    const startWire = (from, id, port) => { pending = { from, id: String(id), port }; showPending(); area.classList.add('wiring'); hideCut(); };
+    const stopWire = () => { pending = null; showPending(); area.classList.remove('wiring'); };
+    F.stopWire = stopWire; F.startWire = startWire; F.pending = () => pending;
+    if(pendBar) pendBar.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-pending-x')) stopWire(); });
+    // an input takes one wire: a new one replaces what was there
+    const connect = (outId, output, inId, input) => {
+      const n = nodeOf(inId); if(!n) return;
+      for(const c of [...(((n.inputs || {})[input] || {}).connections || [])]) ed.removeSingleConnection(c.node, inId, c.input, input);
+      ed.addConnection(outId, inId, output, input); stopWire();
+    };
+    // the other end: the ports of the part chosen, those carrying the same kind first (others are converted on the way)
+    const connectMenu = id => {
+      if(!pending) return null;
+      const N = N_(id), n = nodeOf(id); if(!N || !n) return null;
+      if(String(id) === pending.id) return { title: 'That is the same part', hint: 'Choose another part to wire to.', items: [{ glyph: '✕', label: 'Stop wiring', act: stopWire }] };
+      const j0 = +pending.port.replace(/\D+/g, '') - 1, from = portInfo(pending.id, pending.from, j0);
+      const side = pending.from === 'out' ? 'in' : 'out', list = (side === 'in' ? N.ins : N.outs).map((name, j) => {
+        const t = (side === 'in' ? N.inTypes[j] : N.outTypes[j]) || 'field', key = (side === 'in' ? 'input_' : 'output_') + (j + 1);
+        const wired = side === 'in' && ((((n.inputs || {})[key] || {}).connections || []).length > 0);
+        return { j, t, key, same: t === from.t, glyph: side === 'in' ? (j >= N.dataIns ? '⚙' : '▸') : '◂', label: String(name).replace(/^⚙\s*/, ''), colour: `var(--t-${t})`,
+          hint: (FORGE_TYPE_NAMES[t] || '') + (t === from.t ? '' : ' (converted)') + (wired ? ' — replaces its wire' : ''),
+          act: () => side === 'in' ? connect(pending.id, pending.port, String(id), key) : connect(String(id), key, pending.id, pending.port) }; });
+      if(!list.length) return { title: labelOf(id), hint: side === 'in' ? 'It takes nothing in.' : 'It gives nothing out.', items: [{ glyph: '✕', label: 'Stop wiring', act: stopWire }] };
+      list.sort((a, b) => (b.same - a.same) || (a.j - b.j));
+      return { title: side === 'in' ? `Into ${labelOf(id)}…` : `From ${labelOf(id)}…`, hint: `${from.name}: ${FORGE_TYPE_NAMES[from.t]}`, items: [...list, { sep: true }, { glyph: '✕', label: 'Stop wiring', act: stopWire }] };
+    };
+    // "Wire from it…" / "Wire into it…": straight away when there is one port, else a list of them
+    const wireStart = (id, side) => { const N = N_(id); if(!N) return null; const names = side === 'out' ? N.outs : N.ins;
+      const go = j => startWire(side, id, (side === 'out' ? 'output_' : 'input_') + (j + 1));
+      if(names.length === 1) return { act: () => go(0) };
+      return { sub: () => ({ title: side === 'out' ? `Wire from ${labelOf(id)}: which?` : `Wire into ${labelOf(id)}: which?`, items: names.map((name, j) => { const t = (side === 'out' ? N.outTypes[j] : N.inTypes[j]) || 'field';
+        return { glyph: side === 'out' ? '◂' : (j >= N.dataIns ? '⚙' : '▸'), label: String(name).replace(/^⚙\s*/, ''), hint: FORGE_TYPE_NAMES[t], colour: `var(--t-${t})`, act: () => go(j) }; }) }) }; };
+    // while wiring, a TAP on another part chooses it (a pointer that goes down and up in place:
+    // a phone's tap never reaches the grid as a click; a hold is answered by the menu instead)
+    let tapAt = null;
+    area.addEventListener('pointerdown', e => { tapAt = pending ? { x: e.clientX, y: e.clientY, t: Date.now() } : null; }, true);
+    area.addEventListener('pointerup', e => {
+      const t0 = tapAt; tapAt = null; if(!pending || !t0 || answered) return;
+      if(Math.hypot(e.clientX - t0.x, e.clientY - t0.y) > 10 || Date.now() - t0.t > 500) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY), nodeEl = el && el.closest && el.closest('.drawflow-node'); if(!nodeEl) return;
+      if(el.closest('input, select, textarea')) return;
+      const id = nodeEl.id.slice(5); if(id === pending.id) return;
+      e.preventDefault(); const x = e.clientX, y = e.clientY; setTimeout(() => openMenu(x, y, connectMenu(id)), 0);
+    }, true);
     // ---- menus for each kind of thing ----
     const wireMenu = w => { const d = wireDesc(w); return { title: 'A wire', hint: d.label + ' (' + d.hint + ')', items: [
       { glyph: '✂', label: 'Cut this wire', act: () => cutWire(w) }] }; };
     const nodeMenu = id => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
+      const from = N.outs.length ? wireStart(id, 'out') : null, into = N.ins.length ? wireStart(id, 'in') : null;
       return { title: labelOf(id), hint: N.cat, items: [
+        ...(from ? [{ glyph: '⟿', label: 'Wire from it…', hint: N.outs.length === 1 ? N.outs[0] : 'choose which', ...from }] : []),
+        ...(into ? [{ glyph: '⟾', label: 'Wire into it…', hint: 'choose which', ...into }] : []),
+        ...(from || into ? [{ sep: true }] : []),
         { glyph: '⌖', label: isPinned(id) ? 'Let it move again' : 'Pin it in place', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
         { glyph: '⧉', label: 'Make a copy', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
         { glyph: '↺', label: 'Every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
@@ -379,6 +444,8 @@ export async function openForge(deps){
       const key = (side === 'in' ? 'input_' : 'output_') + (j + 1), p = (side === 'in' ? n.inputs : n.outputs)[key] || { connections: [] }, cnt = (p.connections || []).length;
       const name = side === 'in' ? N.ins[j] : N.outs[j], t = side === 'in' ? N.inTypes[j] : N.outTypes[j];
       return { title: `${labelOf(id)}: ${name}`, hint: `${side === 'in' ? 'Takes' : 'Gives'} ${FORGE_TYPE_NAMES[t] || ''}`, items: [
+        side === 'out' ? { glyph: '⟿', label: 'Wire this to…', hint: 'then tap the part it goes into', act: () => startWire('out', id, key) }
+          : { glyph: '⟾', label: cnt ? 'Wire something else into this…' : 'Wire something into this…', hint: 'then tap the part it comes from', act: () => startWire('in', id, key) },
         { glyph: '✂', label: cnt ? (cnt === 1 ? 'Cut its wire' : `Cut its ${cnt} wires`) : 'Nothing wired here', disabled: !cnt, act: () => {
           for(const c of [...p.connections]) side === 'in' ? ed.removeSingleConnection(c.node, id, c.input, key) : ed.removeSingleConnection(id, c.node, key, c.output); } }] }; };
     const paramMenu = (id, key) => {
@@ -404,6 +471,7 @@ export async function openForge(deps){
             [1, 2, 3, 4, 5, 6].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
           items.push({ glyph: '☼', label: 'Bind to the light dial', hint: 'its direction', act: () => bindTo('dial', curRange && curRange.split(',')) });
           if(port){
+            items.push({ glyph: '⟾', label: 'Wire something into it…', hint: 'then tap the part it comes from', act: () => startWire('in', id, 'input_' + port) });
             items.push({ glyph: '☽', label: 'Wire a Knob into it', hint: 'a page slider, shown as a node', act: () => wireIn(id, key, port, 'knob') });
             items.push({ glyph: '☼', label: 'Wire the Light Dial into it', act: () => wireIn(id, key, port, 'dial') });
           }
@@ -470,6 +538,9 @@ export async function openForge(deps){
       if(touch){ ed.drag = false; ed.editor_selected = false; if(ed.connection){ ed.connection = false; if(ed.connection_ele){ ed.connection_ele.remove(); ed.connection_ele = null; } } }
       hideCut();
       const all = thingsNear(x, y, touch ? 18 : 5);
+      // while wiring: the part held is the other end
+      if(pending){ const t = all.find(q => q.id && q.id !== pending.id);
+        openMenu(x, y, t ? connectMenu(t.id) : { title: 'Wiring', hint: 'Tap or hold the part to wire to.', items: [{ glyph: '✕', label: 'Stop wiring', act: stopWire }] }); return; }
       const own = all.length > 1 && all[0].kind !== 'node' ? all.filter(t => !(t.kind === 'node' && t.id === all[0].id)) : all;
       if(!own.length){ openMenu(x, y, canvasMenu(x, y)); return; }
       if(own.length === 1){ const m = menuFor(own[0], x, y); if(m && own[0].kind !== 'node' && own[0].id){ m.items.push({ sep: true }, { glyph: '◇', label: `The ${labelOf(own[0].id)} node`, sub: () => nodeMenu(own[0].id) }); } openMenu(x, y, m); return; }
@@ -530,19 +601,26 @@ export async function openForge(deps){
       load(JSON.parse(F.opened)); sound('graphLoad'); setTimeout(fitView, 30);
     });
     // open a graph (a starter, a template, a kept surface) in place of this one — asking first if this one has changed
-    const openGraph = async (g, label) => {
+    const openGraph = async (g, label, teach) => {
       if(count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid now is set aside. (Revert brings back the graph as it was when the Athanor opened.)', confirmLabel: 'Replace', danger: true })) return false;
-      load(g); sound('graphLoad'); setTimeout(fitView, 30); return true;
+      stopWire(); load(g); sound('graphLoad'); setTimeout(fitView, 30); showNote(label, teach); return true;
     };
+    // WHAT A GRAPH TEACHES: a note over the grid when a starter or a texture is opened
+    const note = (() => { let el = $('forgeNote'); if(!el && body){ el = document.createElement('div'); el.id = 'forgeNote'; el.className = 'forge-note'; el.hidden = true; body.appendChild(el); } return el; })();
+    const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; return; }
+      note.innerHTML = `<b>${forgeEsc(label)}</b><p>${forgeEsc(teach)}</p><p class="forge-note-how">Read it left to right: each part shows what it makes; every wire carries it on. Hold a part to see what it can do.</p><button type="button" class="forge-note-x" aria-label="Close">✕</button>`;
+      note.hidden = false; };
+    F.showNote = showNote;
+    if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) note.hidden = true; });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
     const st = $('forgeStarter');
     if(st){
       st.innerHTML = '<option value="">Start from…</option>'
         + '<optgroup label="Starters">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
-        + '<optgroup label="Vellum’s textures">' + Object.entries(TEXTURE_CHAINS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>';
+        + '<optgroup label="PoetryPress textures">' + Object.entries(TEXTURE_CHAINS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>';
       st.addEventListener('change', async () => {
         const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
-        await openGraph(g, (ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]).label);
+        const S = ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]; await openGraph(g, S.label, S.teach);
       });
     }
     // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----
@@ -633,5 +711,6 @@ export async function openForge(deps){
 export function closeForge(deps){
   const veil = deps.$('forgeVeil'); if(veil){ veil.hidden = true; veil.classList.remove('parts-open'); }
   if(openForge.closeMenu) openForge.closeMenu();
+  if(openForge.stopWire) openForge.stopWire();
   if(document.body && document.body.classList) document.body.classList.remove('forge-open');
 }

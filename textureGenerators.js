@@ -34,11 +34,10 @@ import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
-import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape, genFlowField } from './texWhimsy.js';
-import { genFlowers, genHalftone, genBrushstrokes, genMetalLeaf, genCityscape, genGrain, genGuilloche } from './texSharpness.js';
-import { genCartomancy } from './cartomancy.js';
+import { genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genFlowField } from './texWhimsy.js';
+import { genFlowers, genHalftone, genBrushstrokes, genCityscape, genGrain, genGuilloche } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
-import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genStainedGlass, genSuminagashi, genWatercolour } from './texTouch.js';
+import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genSuminagashi, genWatercolour } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -519,7 +518,7 @@ export function textureCacheMB(){ let px = 0; for(const c of textureCache.values
 
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
-    result = genClouds(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'flowers'){
     result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
   } else if(type === 'inkbleed'){
@@ -571,7 +570,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'contour'){
     result = genContourMap(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'stainedglass'){
-    result = genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
   } else if(type === 'suminagashi'){
     result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'watercolour'){
@@ -593,7 +592,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moss'){
     result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom,form,extra.tilt,extra.hueSpread/100);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // painted sky → painted ridges → wash (chains.js)
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
@@ -607,12 +606,12 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'hatch'){
     result = genChain(type, w, h, light, extra);
   } else if(type === 'cards'){
-    // the four suits: the page's two accents, the texture's two hues
-    result = genCartomancy(w,h,amt,angle,form,light,[(extra.accents || [])[0] || '#B0303A', (extra.accents || [])[1] || '#C9A33A', tint1 || '#3E7D4F', tint2 || '#2E5FA8'],(extra.lightTilt ?? 100)/100);
+    // a chain (chains.js 'cards'), drawn by a canvas pass: the four suits the page's two accents, the texture's two hues
+    result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'summoning'){
     result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
-    result = genMetalLeaf(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // flakes (chains.js)
   } else if(type === 'crystal'){
     result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'spangle'){
@@ -729,7 +728,9 @@ function describeRequest(type, w, h, opts){
   // a sixth: a camera's Tilt (Scrying Pool)
   const v6 = defs[5] ? ((opts.p6 == null) ? defs[5].def : opts.p6) : null;
 
-  const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars');
+  // (Cartomancy's first two suits are the accents; an Athanor graph with an Accent node reads them too)
+  const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards'
+    || ((type === 'athanor' || type === 'athanorsteps') && /"name":\s*"accent"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''))));
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
@@ -748,7 +749,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const B = athanorBudget(extra.graph || '');
   const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow() },
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -772,7 +773,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -794,8 +795,15 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   const defs = paramsFor(type), knobs = (extra.knobs || []).map((v, i) => { const d = defs[i]; if(!d || v == null) return 50;
     return Math.max(0, Math.min(100, (v - d.min)/Math.max(1e-6, d.max - d.min)*100)); });
   // its grid: canonical cells (chain.div), or its own rule (chain.grid: Linen keeps its threads ≥3 px apart)
-  const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const td = (TEXTURE_CAPS[type] || {}).tintDefaults || [];
+  if(chain.canvas){
+    // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
+    const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+    if(out) return out;
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
+  }
+  const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });

@@ -20,6 +20,13 @@
  * What each node DOES is its step's (steps.js, shared with the textures
  * rebuilt as chains: chains.js); this file walks the graph, keeps results,
  * keeps the budget, and resolves bound params ('@k2', '@dial').
+ *
+ * A CANVAS PASS (ctx.canvas): a graph whose parts can PAINT (draw on a canvas
+ * at full size, as Cartomancy's Table and Deal do) is made that way on the
+ * page — pictures travel as canvases, numbers and colours as ever, and the
+ * Surface hands back the canvas it is given. Used for a texture lettered in
+ * web fonts, which must be drawn at full size; the same graph on the
+ * Athanor's grid runs each part's RUN instead.
  */
 import { lightHeights, parseHex, withSeed, cpx, scaleNow } from './texCore.js';
 import { STEPS, stepRange, paramPort } from './steps.js';
@@ -135,7 +142,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
   const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -199,7 +206,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig : null;
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig : null;
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -249,8 +256,11 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     for(let i = 0; i < N; i++) o[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
     return o;
   };
-  const E = { ww, wh, N, unit, ctx, deps, input, num, P, field, flat, asField, asImage, asColour, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea };
-  const RUN = n => { const step = STEPS[n.name]; return step ? step.run(E, n) : null; };
+  const E = { ww, wh, N, unit, ctx, deps, input, num, P, field, flat, asField, asImage, asColour, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
+  const RUN = n => { const step = STEPS[n.name]; if(!step) return null;
+    // a canvas pass: a part that paints, paints; the Surface hands on what it is given
+    if(ctx.canvas){ if(step.paint) return step.paint(E, n); if(n.name === 'surface') return [input(n, 1)]; }
+    return step.run(E, n); };
   if(ctx.all){
     // every node's first output, as a picture (the step previews)
     const out = new Map();
@@ -259,49 +269,44 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     return out;
   }
   const res = evalNode(String(surface.id));
+  if(ctx.canvas) return res && res[0] && typeof res[0].getContext === 'function' ? res[0] : null;
   return res && res[0] ? asImage(res[0]) : null;
 }
 
 // ---- starter graphs: a few to begin from (Material Maker's and Blender's
 // way: a working graph to take apart, rather than an empty page) ----
 // each: nodes [type, data, x, y] and wires [from, output, to, input] (1-based)
+// TEACH: what each shows, in a few lines (the Athanor shows it when the graph is opened)
 export const ATHANOR_STARTERS = {
-  agate: { label: 'Agate', nodes: [
+  agate: { label: 'Agate', teach: 'Value Noise, turned up by a Knob (Turbulence), bends a set of Waves into bands; Levels sharpens them; a Colour Ramp paints them between your two Hues. Try: the Knob, the Waves\u2019 Frequency, the Ramp\u2019s Middle.', nodes: [
       ['noise', { scale: 14, octaves: 6 }, 40, 60], ['knob', { slot: '1', name: 'Turbulence', def: 85 }, 40, 260],
       ['math', { op: 'multiply' }, 280, 120], ['waves', { freq: 4, angle: 30 }, 500, 120], ['levels', { lo: 0, hi: 100, gamma: 78 }, 720, 120],
       ['hue', { slot: '1', name: 'Stone Hue' }, 720, 320], ['hue', { slot: '2', name: 'Vein Hue' }, 720, 440],
       ['ramp', { mid: 70 }, 960, 160], ['surface', { name: 'Agate', ground: 'colour' }, 1200, 160]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
-  leaded: { label: 'Leaded Window', nodes: [
+  leaded: { label: 'Leaded Window', teach: 'Cells give three maps: distance, edges and an id for each cell. The edges, through Threshold and Invert, are the lead; the ids, through a Colour Ramp, the glass. Blend lays the lead over the glass, and the lead\u2019s mask is the Surface\u2019s height, so the dial lights it raised.', nodes: [
       ['cells', { scale: 70, jitter: 85 }, 40, 80], ['knob', { slot: '1', name: 'Leading', def: 60 }, 40, 300], ['math', { op: 'multiply' }, 280, 60],
       ['threshold', { at: 45, soft: 8 }, 500, 40], ['invert', {}, 720, 40],
       ['hue', { slot: '1', name: 'Glass Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Glass Hue' }, 300, 420],
       ['ramp', { mid: 50 }, 540, 260], ['blend', { mode: 'multiply', opacity: 100 }, 940, 140], ['surface', { name: 'Leaded Window', ground: 'colour' }, 1180, 140]],
     wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 3, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1], [5, 1, 9, 2], [9, 1, 10, 1], [4, 1, 10, 2]] },
-  terrain: { label: 'Lit Terrain', nodes: [
+  terrain: { label: 'Lit Terrain', teach: 'One Value Noise used twice: coloured by a Colour Ramp between two Hues, and as the HEIGHT a Surface lights with the dial (a Knob sets how high). Turn the light dial and watch the hills.', nodes: [
       ['noise', { scale: 18, octaves: 6 }, 40, 80], ['knob', { slot: '1', name: 'Relief', def: 60 }, 40, 280], ['math', { op: 'multiply' }, 280, 220],
       ['hue', { slot: '1', name: 'High Hue' }, 280, 20], ['hue', { slot: '2', name: 'Low Hue' }, 280, 120],
       ['ramp', { mid: 45 }, 520, 60], ['surface', { name: 'Lit Terrain', ground: 'colour' }, 760, 120]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [1, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1], [3, 1, 7, 2]] },
-  woven: { label: 'Woven Waves', nodes: [
+  woven: { label: 'Woven Waves', teach: 'Two Waves crossed (Math: max) make threads; a Knob thins them, Levels hardens them, Tint colours them between two Hues. The threads are also the height, so the dial lights the weave.', nodes: [
       ['waves', { freq: 14, angle: 0 }, 40, 40], ['waves', { freq: 14, angle: 90 }, 40, 220], ['math', { op: 'max' }, 280, 120],
       ['knob', { slot: '1', name: 'Thread', def: 80 }, 280, 300], ['math', { op: 'multiply' }, 500, 160],
-      ['levels', { lo: 20, hi: 100, gamma: 50 }, 720, 120], ['tint', {}, 940, 120], ['surface', { name: 'Woven Waves', ground: 'colour' }, 1160, 120]],
-    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1], [6, 1, 7, 1], [7, 1, 8, 1], [6, 1, 8, 2]] },
-  bloom: { label: 'Reaction Bloom', nodes: [
+      ['levels', { lo: 20, hi: 100, gamma: 50 }, 720, 120], ['tint', {}, 940, 120], ['surface', { name: 'Woven Waves', ground: 'colour' }, 1160, 120],
+      ['hue', { slot: '1', name: 'Thread Hue' }, 720, 300], ['hue', { slot: '2', name: 'Shadow Hue' }, 720, 420]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1], [6, 1, 7, 1], [9, 1, 7, 2], [10, 1, 7, 3], [7, 1, 8, 1], [6, 1, 8, 2]] },
+  bloom: { label: 'Reaction Bloom', teach: 'Reaction\u2013Diffusion grows spots and coral; a Blur of it, mixed back in by a Knob (Bloom), softens it; a Colour Ramp paints it between two Hues, and the Mix is the height.', nodes: [
       ['turing', { pattern: 'coral', scale: 100 }, 40, 80], ['blur', { radius: 10 }, 300, 160], ['knob', { slot: '1', name: 'Bloom', def: 40 }, 300, 300],
       ['mix', { t: 50 }, 520, 80],
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
-  // Cartomancy's own parts (cartomancy.js): a Table, a Deal laid on it by its mask, the suits' four colours, a Knob on the Scatter
-  cardtable: { label: 'Card Table', nodes: [
-      ['table', { mat: 'baize', lamp: 50 }, 40, 40],
-      ['colour', { hex: '#B0303A' }, 40, 300], ['colour', { hex: '#C9A33A' }, 40, 380], ['hue', { slot: '1', name: 'Third Suit' }, 40, 460], ['hue', { slot: '2', name: 'Fourth Suit' }, 40, 560],
-      ['knob', { slot: '1', name: 'Scatter', def: 25 }, 40, 660],
-      ['deal', { game: 'trick', stock: 'ivory', gilt: 'gold', count: 100, size: 100, scatter: 25, stakes: 60 }, 300, 300],
-      ['mix', { t: 100 }, 560, 120], ['surface', { name: 'Card Table', ground: 'colour' }, 800, 120]],
-    wires: [[2, 1, 7, 1], [3, 1, 7, 2], [4, 1, 7, 3], [5, 1, 7, 4], [6, 1, 7, 7], [1, 1, 8, 1], [7, 1, 8, 2], [7, 2, 8, 3], [8, 1, 9, 1], [1, 2, 9, 2]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

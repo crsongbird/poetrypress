@@ -22,8 +22,11 @@
  * so one step serves a texture's slider directly (athanor.js resolves them).
  *
  * Families of steps live beside this file and are gathered here: stepsTouch.js
- * (weave, cloth — Linen), stepsChaos.js (crazing, brushwork, glaze — Fractured
- * Glaze).
+ * (weave, cloth — Linen; panes, glass — Stained Glass; flakes — Scattered
+ * Polygons), stepsChaos.js (crazing, brushwork, glaze — Fractured Glaze),
+ * stepsWhimsy.js (smoke, light shaft, dust motes — Sleep Haze; painted sky,
+ * painted ridges, watercolour wash — Painted Landscape), cartomancy.js (table,
+ * deal, coins).
  *
  * MARKS steps (streaks, hatching) draw strokes on a canvas the size of the
  * working grid and read it back as a field — the generators' own way of
@@ -32,6 +35,7 @@
 import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField } from './texCore.js';
 import { drawStitch, pathFromPoints, roundRectPoints } from './stitches.js';
 import { TOUCH_STEPS } from './stepsTouch.js';
+import { WHIMSY_STEPS } from './stepsWhimsy.js';
 import { CHAOS_STEPS } from './stepsChaos.js';
 import { CARD_STEPS } from './cartomancy.js';
 
@@ -91,6 +95,8 @@ const STEP_PARTS = {
   surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour'])] },
   // newer parts (the chains' own)
   colour:   { cat: 'Inputs', label: 'Colour', ins: [], outs: ['colour'], params: [['hex', 'Colour', 'text', '#808080']] },
+  // the page's own two accent colours (Cartomancy's first two suits)
+  accent:   { cat: 'Inputs', label: 'Accent', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Accent', ['1', '2']), ['name', 'Name', 'text', 'Accent']] },
   forms:    { cat: 'Noise', label: 'Soft Forms', ins: [], outs: ['tone'], params: [STEP_R('count', 'Forms', 5, 1, 12), STEP_R('size', 'Size', 50), STEP_R('noise', 'Noise', 50)] },
   streaks:  { cat: 'Marks', label: 'Streaks', ins: ['base'], outs: ['field'], params: [STEP_SEL('kind', 'Kind', ['streaks', 'sheets']), STEP_R('angle', 'From', 0, 0, 360),
               STEP_R('spread', 'Gusts', 0, 0, 40), STEP_R('length', 'Length', 100, 100, 500), STEP_R('count', 'Count', 100, 0, 400), STEP_R('light', 'Light Share', 75), STEP_R('strength', 'Strength', 50)] },
@@ -316,6 +322,9 @@ const STEP_RUN = {
   colour(E, n){ const { P, hexCol } = E;
     return [hexCol(String(P(n, 'hex', '#808080')))];
   },
+  accent(E, n){ const { ctx, P, hexCol } = E, k = (parseInt(P(n, 'slot', '1'), 10) || 1) - 1;
+    return [hexCol((ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k] || '#808080')];
+  },
   // a few large soft shapes and a little noise: where a drawing is dark
   forms(E, n){ const { ww, wh, unit, num } = E;
     const k = Math.max(1, Math.round(num(n, 'count', 5))), sz = num(n, 'size', 50)/50, nz = num(n, 'noise', 50)/100;
@@ -437,7 +446,7 @@ Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5 });
  */
 export const VALUE_TYPES = ['field', 'image', 'colour', 'value'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
@@ -455,7 +464,7 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS };
 export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);

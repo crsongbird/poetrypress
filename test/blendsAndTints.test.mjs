@@ -69,8 +69,10 @@ const whimsy = readFileSync(new URL('../texWhimsy.js', import.meta.url), 'utf8')
 check('Sleep Haze is smoke: lift, drag, dust, and lit from the light',
   T.paramsFor('clouds').map(d => d.label).join('|') === 'Lift|Drag|Dust' && T.TEXTURE_CAPS.clouds.light === true);
 check('…its wisps are particles carried by curl noise, softened as they age; rings drift up; motes catch the shaft',
-  /const \[AX,AY\]=curlField\(PA\), \[BX,BY\]=curlField\(PB\);/.test(whimsy) && /W=WL\[t<unit\*0\.1\?0:t<unit\*0\.3\?1:2\];/.test(whimsy)
-  && /const rings = Math\.random\(\)<0\.2 \? 0/.test(whimsy) && /b=Math\.pow\(beamAt\(x\/div, y\/div\), 1\.5\)/.test(whimsy));
+  // (Sleep Haze is a chain now: smoke → light shaft → dust motes, stepsWhimsy.js)
+  (() => { const sw = readFileSync(new URL('../stepsWhimsy.js', import.meta.url), 'utf8');
+    return /const \[AX, AY\] = curlField\(PA\), \[BX, BY\] = curlField\(PB\);/.test(sw) && /W = WL\[t < unit\*0\.1 \? 0 : t < unit\*0\.3 \? 1 : 2\];/.test(sw)
+      && /const rings = Math\.random\(\) < 0\.2 \? 0/.test(sw) && /b = Math\.pow\(beam \? beam\(x, y\) : 0\.25, 1\.5\)/.test(sw); })());
 
 // ---- accents are followed until a tint is chosen or locked ----
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');

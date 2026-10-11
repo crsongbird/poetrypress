@@ -16,6 +16,8 @@
  * Everything here is plain data in, words out (no page access), so the
  * page gathers the facts (appEvents lookForAltText) and this writes them.
  */
+import { EFFECT_DEFS } from './effects.js';
+
 export const ALT_MAX = 1500;
 
 /** What each surface looks like, in a phrase (an image description, not a name). */
@@ -29,7 +31,7 @@ export const TEXTURE_LOOKS = {
   cityscape: 'a city skyline at night, its windows lit, over water', guilloche: 'engraved rosettes, like those on a banknote',
   stainedglass: 'panes of stained glass held in lead', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
-  crackedglaze: 'cracked and crazed ceramic glaze', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table: hands, a spread or a trick, and sometimes coins',
+  crackedglaze: 'cracked and crazed ceramic glaze', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, and sometimes coins)',
   blackhole: 'a black hole ringed by a bright, swirling disc', turing: 'organic spots and stripes, like animal skin or coral',
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolour paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
@@ -44,6 +46,9 @@ const BLEND_WORDS = {
   'overlay': 'worked into the page', 'soft-light': 'softly worked into the page', 'hard-light': 'pressed into the page',
   'luminosity': 'laid over the page', 'color': 'tinting the page',
 };
+// the text effects by the names the app gives them ("with a Letterpress effect")
+const EFFECT_NAMES = { outline: 'Outline', shadow: 'Drop Shadow', longshadow: 'Long Shadow', glow: 'Glow', letterpress: 'Letterpress', bevel: 'Bevel',
+  chromatic: 'Chromatic Split', doublestrike: 'Double Strike', erosion: 'Erosion', bloom: 'Bloom', halo: 'Halo' };
 const EFFECT_WORDS = { outline: 'an outline', shadow: 'a drop shadow', longshadow: 'a long cast shadow', glow: 'a soft glow', letterpress: 'a letterpress impression',
   bevel: 'a raised bevel', chromatic: 'a red and blue colour split', doublestrike: 'a double strike', erosion: 'worn, eroded edges' };
 
@@ -106,21 +111,24 @@ export function lightFrom(deg, tilt){
  */
 export function describeLook(L){
   const s = [];
-  s.push('An image created with Unfixable Vellum (PoetryPress), an open source art tool.');
+  s.push('An image created with PoetryPress, an open source art tool.');
   // the words
   const tc = unique((L.textColours || []).map(colourName)), fx = unique((L.effects || []).map(e => EFFECT_WORDS[e]));
   const bg = unique((L.background || []).map(colourName));
-  let t = 'The poem is set in ' + (L.font || 'a serif typeface');
+  // "The text is typeset in Playfair Display, a Didone font, in …, with a Letterpress effect." (Ruby's words)
+  const [fam, kind] = (() => { const f = String(L.font || '').split(' · '); return f.length > 1 ? [f.slice(1).join(' · '), f[0]] : [f[0] || '', ''] })();
+  let t = 'The text is typeset in ' + (fam || 'a serif typeface') + (kind ? `, ${/^[AEIOU]/i.test(kind) ? 'an' : 'a'} ${kind} font` : '');
   if(tc.length) t += ', in ' + andList(tc);
-  if(fx.length) t += ', with ' + andList(fx);
-  if(bg.length) t += ', on a ' + (bg.length > 1 ? bg[0] + ' background shading to ' + andList(bg.slice(1)) : bg[0] + ' background');
+  const fxN = unique((L.effects || []).map(e => EFFECT_NAMES[e]).filter(Boolean));
+  if(fxN.length) t += `, with ${fxN.length > 1 ? andList(fxN) + ' effects' : (/^[AEIOU]/i.test(fxN[0]) ? 'an ' : 'a ') + fxN[0] + ' effect'}`;
   s.push(t + '.');
+  if(bg.length) s.push(`It is set against ${/^[aeiou]/i.test(bg[0]) ? 'an' : 'a'} ${bg[0]} backdrop${bg.length > 1 ? ' shaded to ' + andList(bg.slice(1)) : ''}.`);
   // the surface
   const S = L.surface;
   if(S){
     const what = TEXTURE_LOOKS[S.type] || 'a texture';
     const strength = S.opacity < 35 ? 'faintly ' : S.opacity > 80 ? 'strongly ' : '';
-    let u = `Its surface is ${S.name}${S.reading ? ` (its ${S.reading} reading${S.element ? ', ' + S.element : ''})` : ''}: ${what}, ${strength}${BLEND_WORDS[S.blend] || 'laid over the page'}`;
+    let u = `The surface texture is ${S.name}${S.reading ? ` (the ${S.reading} reading${S.element ? ', ' + S.element : ''})` : ''}: ${what}, ${strength}${BLEND_WORDS[S.blend] || 'laid over the page'}`;
     const hc = unique((S.hues || []).map(colourName)).filter(n => n !== 'white' && n !== 'near-black');
     if(hc.length) u += ', in ' + andList(hc);
     if(S.light) u += ', lit ' + lightFrom(S.light.deg, S.light.tilt);

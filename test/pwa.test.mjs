@@ -15,7 +15,7 @@ const pngSize = p => { const b = readFileSync(at(p)); return [b.readUInt32BE(16)
 
 // ---- manifest ----
 const m = JSON.parse(read('pwa/manifest.webmanifest'));
-check('the manifest names the app', m.name === 'Unfixable Vellum' && !!m.short_name);
+check('the manifest names the app', m.name === 'PoetryPress' && !!m.short_name);
 check('it opens as a standalone app', m.display === 'standalone');
 check('start_url and scope are relative, so any host works', m.start_url === './' && m.scope === './');
 check('it has 192 and 512 icons', ['192x192', '512x512'].every(sz => m.icons.some(i => i.sizes === sz && i.purpose === 'any')));
@@ -34,7 +34,7 @@ check('the page has an apple touch icon', /rel="apple-touch-icon"/.test(html) &&
 check('the favicon is the Vellum sigil, not the old butterfly',
   /<link rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml;base64,/.test(html) &&
   Buffer.from(html.match(/<link rel="icon"[^>]*base64,([^"]+)"/)[1], 'base64').toString().includes('#E0526F'));
-check('the title is current', /<title>Unfixable Vellum<\/title>/.test(html));
+check('the title is current', /<title>PoetryPress<\/title>/.test(html));
 
 // ---- registration ----
 const pwa = read('pwa.js');

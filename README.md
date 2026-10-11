@@ -1,6 +1,6 @@
-# Unfixable Vellum
+# PoetryPress
 
-*PoetryPress* — a press for poems, in a browser.
+A press for poems, in a browser. (Inside, in its code, it is Unfixable Vellum.)
 
 Write the words. Choose a typeface, a ground, a surface for them to lie on.
 Save the page as an image, with its words inside it.

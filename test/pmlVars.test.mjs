@@ -360,7 +360,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const tg = src('textureGenerators.js');
   check('textures generate inside withScale, and the cache key only changes when S is not 1',
     /withScale\(scale, \(\) => withLightTilt\(lightTilt\/100, \(\) => withSeed\(seed,/.test(tg) && /\(scale === 1 \? '' : `_x\$\{scale\}`\)/.test(tg));
-  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5, p6)?(, graph)? \}/g) || []).length === 6);
+  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5, p6)?(, graph(, \.\.\.\(graph \? \{ accent1: \$\('accent1ColorHex'\)\.value, accent2: \$\('accent2ColorHex'\)\.value \} : \{\}\))?)? \}/g) || []).length === 6);
   check('the render scale is 1 today (the preview is the export size)', /let RENDER_SCALE = 1;/.test(cr));
   check('§Scale reports it', resolvePmlVariables('§Scale', { scale: 1 }) === '1' && resolvePmlVariables('§Scale', { scale: 1/3 }) === '0.333');
 }
@@ -379,7 +379,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   // (Fractured Glaze is a chain now: its grid is the chain's, canonDiv(2) in textureGenerators.js genChain)
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 34 && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js')));
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 32 && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js'))
+    && /const \[gw, gh\] = whimGrid\(E, 6\)/.test(src('stepsWhimsy.js')) && /E\.canvasPass \? \[Math\.ceil\(E\.ww\/canonDiv\(d\)\)/.test(src('stepsWhimsy.js')));
   {
     // Linen's grid: threads at least ~3 px apart; never finer than the export's grid, never coarser than the canvas
     const { weaveGridDiv } = await import('../stepsTouch.js');
@@ -548,7 +549,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('H: one worker per spare core, up to two', /const POOL_SIZE = Math\.max\(1, Math\.min\(2, \(\(typeof navigator !== 'undefined' && navigator\.hardwareConcurrency\) \|\| 2\) - 1\)\);/.test(svc) && /pool = Array\.from\(\{ length: POOL_SIZE \}, spawn\);/.test(svc));
   check('I: a new wish starts at once on a free worker; nothing is killed (a cold worker was measured slower); the picture never steps back', /if\(running\) inflight\.delete\(slot\);/.test(svc) && !/terminate\(\);\s*abandoned/.test(svc) && /if\(id > \(shownSeq\.get\(f\.slot\) \|\| 0\)\)/.test(svc));
   check('the service starts no timers of its own (nothing to keep Node alive)', !/setInterval\(/.test(svc));
-  check('E: Deep Field\'s nebula and Sleep Haze sample their smooth fields on a lattice', /const NEB = smoothField\(workW, workH, 3,/.test(src('texWhimsy.js')) && /const haze=smoothField\(ww,wh,4,/.test(src('texWhimsy.js')));
+  check('E: Deep Field\'s nebula and Sleep Haze sample their smooth fields on a lattice', /const NEB = smoothField\(workW, workH, 3,/.test(src('texWhimsy.js')) && /const haze = smoothField\(ww, wh, 4,/.test(src('stepsWhimsy.js')));
   check('textures that draw web-font text stay on the page', /const ON_PAGE = new Set\(\['summoning', 'cards'\]\);/.test(svc));
   check('the page and the worker share one cache key', /export function textureKeyFor\(type, w, h, opts = \{\}\)/.test(src('textureGenerators.js')));
   check('the worker block is in the head, before the page script asks for it', /html\.replace\('<\/head>', `<script type="text\/js-worker"/.test(src('build.mjs')));
@@ -742,7 +743,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   }
   check('lightSparse lights only the tiles near a detail, and matches lightHeights exactly', worst === 0 && fewer);
   // (Linen is a chain of steps: its details are the Cloth step, stepsTouch.js)
-  const t = src('stepsTouch.js'), lin = t.slice(t.indexOf('  cloth: {'));
+  const t = src('stepsTouch.js'), lin = t.slice(t.indexOf('  cloth: {'), t.indexOf('// ======================= STAINED GLASS'));
   check('Linen: seams, stitching, rivets and buttons are heights lit by the engine (shadows fall across the weave)',
     /const Ls = lightSparse\(H, ww, wh, \{ light, relief: 1, gloss: 0\.72, shadow: 0\.7/.test(lin) && !/\b(ctx|g)\.(arc|stroke|fill)\(/.test(lin));
 }
@@ -820,8 +821,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
     && /if\(wet > 0\.25\)\{/.test(sh) && /ctx\.globalAlpha = 0\.65\*wet;/.test(sh));
   check('Painted Landscape has Wetness (watercolour blooms), twelve countries (fields and a volcano the newest), and Color: a time of day, aerial perspective, broken colour; painted clouds',
     T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness|Tilt|Color'
-    && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:', 'fields:', 'volcano:'].every(k => wh.includes('    ' + k))
-    && /const TIMES=\{/.test(wh) && /const ckind = pick\(\['cumulus','cumulus','stratus','cirrus','mixed'\]\);/.test(wh) && /const atValue=/.test(wh));
+    && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:', 'fields:', 'volcano:'].every(k => src('stepsWhimsy.js').includes('  ' + k))
+    && /export const LAND_TIMES = \{/.test(src('stepsWhimsy.js')) && /pick\(\['cumulus', 'cumulus', 'stratus', 'cirrus', 'mixed'\]\)/.test(src('stepsWhimsy.js')) && /const atValue = /.test(src('stepsWhimsy.js')));
 }
 
 // ---- Lotus Pond: lit by the dial, petals the right way, a seed pod ----
@@ -902,7 +903,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
       T2.TEXTURE_CAPS.brushstrokes.light === true && /const L = lightHeights\(H, hw, hh, \{ light, relief:1, gloss:0\.25 \+ 0\.6\*wet/.test(sh) && /hx\.globalAlpha = 0\.16\*\(1 - 0\.5\*wet\); hx\.lineWidth = W\*0\.1;/.test(sh));
     check('Scattered Polygons is the original Metal Leaf, restored: flat flakes at 0 (their extra randomness only drawn above 0); Shape, Sheen (by the dial), Glitter',
       T2.paramsFor('metalleaf').map(d => d.label).join('|') === 'Leaf Size|Coverage|Shape|Sheen|Glitter' && T2.paramsFor('metalleaf').slice(2).every(d => d.def === 0)
-      && /if\(shapeV > 0 && Math\.random\(\) < shapeV\)\{/.test(sh) && /if\(sheen > 0\)\{ const ta = Math\.random\(\)/.test(sh) && /const flakes = Math\.max\(10, Math\.round\(\(120 \+ Math\.random\(\)\*90\) \* amt\)\);/.test(sh)
+      && /if\(shapeV > 0 && Math\.random\(\) < shapeV\)\{/.test(src('stepsTouch.js')) && /if\(sheen > 0\)\{ const ta = Math\.random\(\)/.test(src('stepsTouch.js')) && /const flakes = Math\.max\(10, Math\.round\(\(120 \+ Math\.random\(\)\*90\)\*amt\)\);/.test(src('stepsTouch.js'))
       && /data-str="option\.metal_leaf">Scattered Polygons</.test(src('index.html')));
     check('Cartomancy is a game in progress (cartomancy.js): elemental suits, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune); Cards in Play, Scatter, Stakes',
       T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Cards in Play|Scatter|Stakes'

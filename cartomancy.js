@@ -11,7 +11,8 @@
  *   crtCoin(ctx, x, y, r, coin, look)    one coin of an invented coinage
  *   crtStack(ctx, x, y, r, n, coin, look) a stack of them
  *   crtDeal(game, w, h, opts)            WHERE everything lies, by the game's rules
- *   genCartomancy(...)                   the texture: table, then the deal, lit
+ *   crtChooseTable / crtChooseDeal       what the seed picks (or what was asked for)
+ *   crtPaintDeal(ctx, w, h, opts)        the deal drawn, lit, on whatever is there
  *   CARD_STEPS                           Table, Deal and Coins for the Athanor
  *
  * Its suits are the four elements as the alchemists drew them (fire △, water
@@ -20,9 +21,11 @@
  * Seed, The Scrying Pool…), and rarely an easter egg: Saturn, Enceladus, the
  * Kitsune of seven tails.
  *
- * Drawn at full size on the page (its faces are lettered in web fonts), so it
- * is never a chain; the Athanor's Table, Deal and Coins are the same parts
- * drawn on its grid.
+ * THE TEXTURE IS A CHAIN (chains.js 'cards'): Knobs, the page's Accents and
+ * the texture's Hues wired into a Table and a Deal laid on it — opened in the
+ * Athanor like any other. On the page it is drawn at full size by the same
+ * steps' PAINT (a canvas pass: athanor.js, ctx.canvas), since its faces are
+ * lettered in web fonts; on the Athanor's grid by their RUN.
  */
 import { CPU, cpx, lightVec, parseHex, pickWeighted } from './texCore.js';
 import { GLYPH_FONT } from './spell.js';
@@ -161,7 +164,7 @@ export function crtTable(ctx, w, h, mat, light, opts = {}){
 /** The light as the parts see it: which way shadows fall (sx, sy per unit of height) and toward the light (tx, ty). */
 export function crtLight(light, tilt){
   const lv = lightVec(light == null ? 315 : light), m = Math.hypot(lv.lx, lv.ly), T = Math.min(1, m), dx = m ? lv.lx/m : 0, dy = m ? lv.ly/m : 1;
-  const len = 0.35 + 2.4*T*(tilt == null ? 1 : Math.min(1.3, tilt));
+  const len = 0.3 + 1.5*T*(tilt == null ? 1 : Math.min(1.2, tilt));          // (≤ ~2.1: a shadow stays attached to what casts it)
   return { sx: dx*len, sy: dy*len, tx: -dx, ty: -dy };
 }
 
@@ -171,29 +174,58 @@ function crtRound(ctx, W, H, r){ ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.l
   ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath(); }
 
 /**
+ * A CAST SHADOW that stays attached: the caster's footprint swept from where it
+ * stands to where the light throws it, filled once (no doubling), softened by a
+ * canvas shadow drawn from far off-canvas (so only the soft shadow lands).
+ * shape(ctx, ox, oy) adds the footprint, offset by (ox, oy), to the path.
+ */
+export function crtShadow(ctx, shape, dx, dy, blur, alpha, steps = 6){
+  // (a shadow's offset is never transformed, so the path is moved off-canvas in the canvas's own frame)
+  const FAR = 40000; ctx.save();
+  if(ctx.getTransform){ const m = ctx.getTransform(); ctx.setTransform(m.a, m.b, m.c, m.d, m.e - FAR, m.f); } else ctx.translate(-FAR, 0);
+  ctx.beginPath();
+  for(let k = 0; k <= steps; k++) shape(ctx, steps ? dx*k/steps : dx, steps ? dy*k/steps : dy);
+  ctx.shadowColor = `rgba(0,0,0,${alpha})`; ctx.shadowBlur = Math.max(0.5, blur); ctx.shadowOffsetX = FAR; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = '#000'; ctx.fill('nonzero'); ctx.restore();
+}
+/** A small, seeded variety for each card or coin: no two quite alike. */
+function crtVary(){ const R = Math.random; return { tone: (R() - 0.5)*0.09, warm: (R() - 0.5)*0.08, age: R(), spec: 0.6 + R()*0.8, phase: R()*6.28, bow: (R() - 0.5)*0.6, wear: R() }; }
+
+/**
  * ONE CARD at the origin (translate and rotate first). face: { back } or
  * { major: [numeral, name, emblem], rare } or { suit: 0–3, rank: 1–10 | 'Page'… }.
  * look: { stock, gilt, suitCols: [4 colours], L: crtLight, rot, lift (height above the table, for its shadow) }.
  */
 export function crtCard(ctx, W, H, face, look){
   const S = CARD_STOCKS[look.stock] || CARD_STOCKS.ivory, gilt = GILT[look.gilt], r = W*0.06, L = look.L || crtLight(315, 1);
-  const paper = S.paper, ink = S.ink, cols = (look.suitCols || []).map(crtRGB);
-  // its shadow on whatever lies beneath (thrown away from the light, longer the higher it lies)
-  // (a canvas shadow's offset is never turned with the drawing: the page's own direction is the right one)
-  const lift = W*(0.035 + (look.lift || 0)), rot = look.rot || 0;
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = Math.max(1, W*0.06);
-  ctx.shadowOffsetX = L.sx*lift; ctx.shadowOffsetY = L.sy*lift;
-  crtRound(ctx, W, H, r); ctx.fillStyle = crtCss(paper); ctx.fill(); ctx.restore();
+  const V = crtVary(), dark = S.paper[0] < 100;
+  // this card's own paper: a little lighter or darker, warmer or cooler than its neighbours
+  const paper = crtMix(crtMix(S.paper, V.tone > 0 ? [255,255,255] : [0,0,0], Math.abs(V.tone)), V.warm > 0 ? [236, 206, 150] : [196, 206, 222], Math.abs(V.warm)*(dark ? 0.4 : 1));
+  const ink = S.ink, cols = (look.suitCols || []).map(crtRGB);
+  // its shadow on whatever lies beneath: a card is thin, so a tight contact shadow and a soft one thrown
+  // a little away from the light (further the higher it lies). A canvas shadow's offset is never turned
+  // with the drawing, so it is worked in the page's own frame.
+  const lift = W*(0.008 + (look.lift || 0)), rot = look.rot || 0, co = Math.cos(rot), si = Math.sin(rot);
+  const toLocal = (px, py) => [px*co + py*si, -px*si + py*co];
+  { const [dx, dy] = toLocal(L.sx*lift, L.sy*lift);
+    crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); crtRound(c, W, H, r); c.restore(); }, 0, 0, W*0.012, 0.42, 0);
+    crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); crtRound(c, W, H, r); c.restore(); }, dx, dy, W*0.04, 0.26, 4); }
+  crtRound(ctx, W, H, r); ctx.fillStyle = crtCss(paper); ctx.fill();
   // the stock: lighter toward the light (a card is never quite flat), a sheen if it is lacquered
   const tx = L.tx*Math.cos(rot) + L.ty*Math.sin(rot), ty = -L.tx*Math.sin(rot) + L.ty*Math.cos(rot);
   const cg = ctx.createLinearGradient(tx*W*0.6, ty*H*0.6, -tx*W*0.6, -ty*H*0.6);
   cg.addColorStop(0, crtCss(crtMix(paper, [255,255,255], 0.12))); cg.addColorStop(1, crtCss(crtMix(paper, [0,0,0], 0.12)));
   crtRound(ctx, W, H, r); ctx.fillStyle = cg; ctx.fill();
-  if(S.gloss > 0.3){ const sh = ctx.createLinearGradient(-W/2, -H/2, W/2, H/2); sh.addColorStop(0.35, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, `rgba(255,255,255,${S.gloss*0.25})`); sh.addColorStop(0.65, 'rgba(255,255,255,0)'); ctx.fillStyle = sh; crtRound(ctx, W, H, r); ctx.fill(); }
   // the edge: gilt bright where it faces the light, dark where it turns away (or the paper's own edge)
   const edge = gilt || crtMix(paper, [0,0,0], 0.3), eg = ctx.createLinearGradient(tx*W*0.5, ty*H*0.5, -tx*W*0.5, -ty*H*0.5);
   eg.addColorStop(0, crtCss(crtMix(edge, [255,255,255], 0.45))); eg.addColorStop(0.5, crtCss(edge)); eg.addColorStop(1, crtCss(crtMix(edge, [0,0,0], 0.45)));
-  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(1), W*(gilt ? 0.024 : 0.012)); crtRound(ctx, W, H, r); ctx.stroke();
+  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); crtRound(ctx, W, H, r); ctx.stroke();
+  ctx.save(); crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }); ctx.restore();
+  crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark);
+}
+
+/** What is printed on a card (its back, or its face) — ink only, on the paper already laid. */
+function crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }){
   ctx.strokeStyle = crtCss(ink); ctx.fillStyle = crtCss(ink); ctx.lineWidth = Math.max(cpx(0.7), W*0.01); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const fw = W*0.84, fh = H*0.88;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -246,39 +278,106 @@ export function crtCard(ctx, W, H, face, look){
   }
 }
 
+/**
+ * The card's SURFACE over its print: the paper's grain and age, rubbed corners,
+ * and its SPECULAR layer — a broad sheen where the bowed card faces the light
+ * (each card bowed and turned its own way, so each catches it differently) and
+ * a glint on its light-facing edge. Matte stocks sheen faintly, lacquer brightly.
+ */
+function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark){
+  const R = Math.random;
+  ctx.save(); crtRound(ctx, W, H, r); ctx.clip();
+  // grain: fine fibres and flecks of the stock
+  const n = Math.round(26 + V.age*30);
+  for(let k = 0; k < n; k++){ const d = R() < 0.5; ctx.fillStyle = d ? 'rgba(60,40,20,0.07)' : 'rgba(255,255,255,0.08)';
+    ctx.fillRect((R() - 0.5)*W, (R() - 0.5)*H, W*(0.004 + R()*0.012), W*(0.002 + R()*0.004)); }
+  // age: foxing on an old card, a toned margin
+  if(!dark && V.age > 0.6){ for(let k = 0; k < 3 + Math.floor(V.age*5); k++){ const x = (R() - 0.5)*W*0.9, y = (R() - 0.5)*H*0.9, q = W*(0.01 + R()*0.03), g = ctx.createRadialGradient(x, y, 0, x, y, q);
+      g.addColorStop(0, 'rgba(150,100,50,0.16)'); g.addColorStop(1, 'rgba(150,100,50,0)'); ctx.fillStyle = g; ctx.fillRect(x - q, y - q, q*2, q*2); }
+    ctx.strokeStyle = 'rgba(150,110,60,0.12)'; ctx.lineWidth = W*0.05; crtRound(ctx, W, H, r); ctx.stroke(); }
+  // wear: a corner or two rubbed pale (dark stocks show it most)
+  if(V.wear > 0.45) for(const [cx, cy] of [[-1,-1],[1,-1],[-1,1],[1,1]]) if(R() < 0.45){ const x = cx*W/2, y = cy*H/2, q = W*(0.08 + R()*0.08), g = ctx.createRadialGradient(x, y, 0, x, y, q);
+    g.addColorStop(0, `rgba(255,255,255,${dark ? 0.22 : 0.18})`); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(x - q, y - q, q*2, q*2); }
+  // the SHEEN: a soft band across the card, where its bow turns it to the light
+  const gl = Math.max(0.13, S.gloss)*V.spec, along = 0.5 + 0.32*Math.sin(V.phase);
+  const ax = -ty, ay = tx, bx = tx + ax*V.bow, by = ty + ay*V.bow, m = Math.hypot(bx, by) || 1;
+  const ux = bx/m*Math.hypot(W, H)*0.5, uy = by/m*Math.hypot(W, H)*0.5;
+  const sh = ctx.createLinearGradient(ux, uy, -ux, -uy), wdt = 0.1 + 0.12*(1 - S.gloss);
+  sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(Math.max(0.01, along - wdt), 'rgba(255,255,255,0)');
+  sh.addColorStop(along, `rgba(255,252,244,${Math.min(0.5, gl*0.7)})`); sh.addColorStop(Math.min(0.99, along + wdt), 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = sh; ctx.fillRect(-W, -H, W*2, H*2);
+  // a hot spot on glossy stock, toward the light
+  if(S.gloss > 0.12){ const x = tx*W*0.3, y = ty*H*0.3, q = W*(0.25 + 0.2*V.spec), g = ctx.createRadialGradient(x, y, 0, x, y, q);
+    g.addColorStop(0, `rgba(255,255,255,${S.gloss*0.35*V.spec})`); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(x - q, y - q, q*2, q*2); }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.restore();
+  // the glint: the edge facing the light catches it
+  ctx.save(); const eg = ctx.createLinearGradient(tx*W*0.5, ty*H*0.5, 0, 0);
+  eg.addColorStop(0, `rgba(255,255,255,${0.25 + gl*0.5})`); eg.addColorStop(0.35, 'rgba(255,255,255,0)');
+  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.5), W*0.006); crtRound(ctx, W*0.995, H*0.997, r); ctx.stroke(); ctx.restore();
+}
+
 /** ONE COIN: a struck disc of metal, its face lit from the dial, its rim catching the light; heads or tails. */
 export function crtCoin(ctx, x, y, r, coin, look){
-  const M = crtRGB(COIN_METALS[coin.metal] || COIN_METALS.gold), L = look.L || crtLight(315, 1), lift = r*(0.25 + (look.lift || 0));
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = Math.max(1, r*0.35); ctx.shadowOffsetX = L.sx*lift; ctx.shadowOffsetY = L.sy*lift;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = crtCss(M); ctx.fill(); ctx.restore();
-  // the face: a shallow dome, bright toward the light
+  const V = crtVary(), L = look.L || crtLight(315, 1), lift = r*(0.06 + (look.lift || 0)), R = Math.random;
+  // the metal, toned by its handling: silver goes gold or blue, gold reddens, copper browns
+  const TONES = { silver: [[186, 160, 110], [110, 124, 150]], gold: [[196, 128, 70], [150, 140, 90]], copper: [[110, 70, 50], [96, 120, 100]], bronze: [[110, 90, 60], [90, 116, 96]], iron: [[120, 90, 70], [70, 74, 80]] };
+  const base = crtRGB(COIN_METALS[coin.metal] || COIN_METALS.gold), tone = (TONES[coin.metal] || TONES.gold)[V.phase < 3.14 ? 0 : 1];
+  const M = crtMix(crtMix(base, tone, V.age*0.4), [0,0,0], 0.1 + V.wear*0.1);
+  // its shadow, close against it (a coin is thin), and its edge, seen on the side away from the light
+  if(!look.noShadow){ const dx = L.sx*lift, dy = L.sy*lift;
+    crtShadow(ctx, (c, ox, oy) => { c.moveTo(x + ox + r, y + oy); c.arc(x + ox, y + oy, r, 0, Math.PI*2); }, dx, dy, r*0.16, 0.5, 3);
+    crtShadow(ctx, (c, ox, oy) => { c.moveTo(x + ox + r, y + oy); c.arc(x + ox, y + oy, r, 0, Math.PI*2); }, dx*2.2, dy*2.2, r*0.5, 0.18, 3); }
+  ctx.beginPath(); ctx.arc(x + L.sx*r*0.035, y + L.sy*r*0.035, r, 0, Math.PI*2); ctx.fillStyle = crtCss(crtMix(M, [0,0,0], 0.55)); ctx.fill();
+  // the field: a shallow dome, bright toward the light, never white
   const hx = x + L.tx*r*0.45, hy = y + L.ty*r*0.45, g = ctx.createRadialGradient(hx, hy, r*0.05, x, y, r*1.05);
-  g.addColorStop(0, crtCss(crtMix(M, [255,255,255], 0.55))); g.addColorStop(0.55, crtCss(M)); g.addColorStop(1, crtCss(crtMix(M, [0,0,0], 0.45)));
+  g.addColorStop(0, crtCss(crtMix(M, [255,255,255], 0.3))); g.addColorStop(0.5, crtCss(M)); g.addColorStop(1, crtCss(crtMix(M, [0,0,0], 0.5)));
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-  // the rim: a raised ring, lit on the side toward the light
-  const rg = ctx.createLinearGradient(x + L.tx*r, y + L.ty*r, x - L.tx*r, y - L.ty*r);
-  rg.addColorStop(0, crtCss(crtMix(M, [255,255,255], 0.6))); rg.addColorStop(1, crtCss(crtMix(M, [0,0,0], 0.55)));
-  ctx.strokeStyle = rg; ctx.lineWidth = Math.max(cpx(0.8), r*0.14); ctx.beginPath(); ctx.arc(x, y, r*0.9, 0, Math.PI*2); ctx.stroke();
-  // the mark, struck into it: the coinage's sign (heads) or its value (tails)
-  ctx.save(); ctx.translate(x, y); ctx.rotate(coin.turn || 0); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const struck = coin.tails ? String(coin.value || 1) : coin.mark;
-  ctx.font = coin.tails ? `bold ${r*0.9}px ${CRT_SERIF}` : `${r*1.05}px ${GLYPH_FONT}`;
-  ctx.fillStyle = crtCss(crtMix(M, [0,0,0], 0.5), 0.75); ctx.fillText(struck, -L.tx*r*0.04, -L.ty*r*0.04);
-  ctx.fillStyle = crtCss(crtMix(M, [255,255,255], 0.5), 0.6); ctx.fillText(struck, L.tx*r*0.04, L.ty*r*0.04);
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.clip();
+  // the lathe's rings in the field, and the scratches and specks of its handling
+  ctx.lineWidth = Math.max(cpx(0.3), r*0.012);
+  for(let k = 3; k < 15; k++){ ctx.strokeStyle = k % 2 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'; ctx.beginPath(); ctx.arc(x, y, r*k/16, 0, Math.PI*2); ctx.stroke(); }
+  for(let k = 0; k < 4 + Math.floor(V.wear*10); k++){ const a = R()*6.28, q = r*(0.15 + R()*0.6), sx0 = x + (R() - 0.5)*r*1.4, sy0 = y + (R() - 0.5)*r*1.4;
+    ctx.strokeStyle = R() < 0.5 ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx0 + Math.cos(a)*q, sy0 + Math.sin(a)*q); ctx.stroke(); }
+  for(let k = 0; k < 10; k++){ ctx.fillStyle = `rgba(${R() < 0.5 ? '40,30,20' : '255,255,255'},0.14)`; ctx.fillRect(x + (R() - 0.5)*r*1.6, y + (R() - 0.5)*r*1.6, r*0.04, r*0.04); }
   ctx.restore();
+  // the rim: a raised ring, lit on the side toward the light, and its beads inside it
+  const rg = ctx.createLinearGradient(x + L.tx*r, y + L.ty*r, x - L.tx*r, y - L.ty*r);
+  rg.addColorStop(0, crtCss(crtMix(M, [255,255,255], 0.45))); rg.addColorStop(0.5, crtCss(M)); rg.addColorStop(1, crtCss(crtMix(M, [0,0,0], 0.55)));
+  ctx.strokeStyle = rg; ctx.lineWidth = Math.max(cpx(0.8), r*0.13); ctx.beginPath(); ctx.arc(x, y, r*0.91, 0, Math.PI*2); ctx.stroke();
+  const beads = Math.max(12, Math.round(r*0.9)), br = r*0.035;
+  for(let k = 0; k < beads; k++){ const a = k/beads*Math.PI*2, bx = x + Math.cos(a)*r*0.76, by = y + Math.sin(a)*r*0.76, lit = Math.cos(a)*L.tx + Math.sin(a)*L.ty;
+    ctx.fillStyle = crtCss(crtMix(M, lit > 0 ? [255,255,255] : [0,0,0], Math.abs(lit)*0.4 + 0.05)); ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.fill(); }
+  // the mark, struck into it: the coinage's sign (heads) or its value (tails) — its walls dark away from the light, lit toward it
+  ctx.save(); ctx.translate(x, y); ctx.rotate(coin.turn || 0); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const struck = coin.tails ? String(coin.value || 1) : coin.mark, [lx, ly] = [L.tx*Math.cos(-(coin.turn || 0)) - L.ty*Math.sin(-(coin.turn || 0)), L.tx*Math.sin(-(coin.turn || 0)) + L.ty*Math.cos(-(coin.turn || 0))];
+  ctx.font = coin.tails ? `bold ${r*0.85}px ${CRT_SERIF}` : `${r*1.0}px ${GLYPH_FONT}`;
+  ctx.fillStyle = crtCss(crtMix(M, [0,0,0], 0.62), 0.85); ctx.fillText(struck, -lx*r*0.06, -ly*r*0.06);
+  ctx.fillStyle = crtCss(crtMix(M, [255,255,255], 0.42), 0.8); ctx.fillText(struck, lx*r*0.05, ly*r*0.05);
+  ctx.fillStyle = crtCss(M); ctx.fillText(struck, 0, 0);
+  ctx.restore();
+  // the SPECULAR: a hard glint where the dome faces the light, and a soft sheen around it
+  ctx.save(); ctx.globalCompositeOperation = 'screen';
+  const sx1 = x + L.tx*r*0.42, sy1 = y + L.ty*r*0.42, sg = ctx.createRadialGradient(sx1, sy1, 0, sx1, sy1, r*0.55);
+  sg.addColorStop(0, 'rgba(255,250,236,0.55)'); sg.addColorStop(0.18, 'rgba(255,250,236,0.22)'); sg.addColorStop(1, 'rgba(255,250,236,0)');
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); ctx.restore();
 }
 /** A STACK of coins: their edges banded, the top one struck, the stack's shadow longer for its height. */
 export function crtStack(ctx, x, y, r, n, coin, look){
   const M = crtRGB(COIN_METALS[coin.metal] || COIN_METALS.gold), L = look.L || crtLight(315, 1), t = r*0.16;
+  // the column's shadow, swept from its foot along the light (as long as the column is tall), so it never comes loose
+  const reach = n*t*0.5, ell = (c, ox, oy) => { c.moveTo(x + ox + r, y + oy); c.ellipse(x + ox, y + oy, r, r*0.42, 0, 0, Math.PI*2); };
+  crtShadow(ctx, ell, L.sx*r*0.05, L.sy*r*0.05, r*0.15, 0.5, 2);
+  crtShadow(ctx, ell, L.sx*reach, L.sy*reach, r*0.35, 0.3, Math.max(4, n));
   for(let k = 0; k < n; k++){
     const yy = y - k*t, dx = (Math.random() - 0.5)*r*0.08;
-    ctx.save(); if(k === 0){ ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = r*0.4; ctx.shadowOffsetX = L.sx*(r*0.12 + n*t*0.45); ctx.shadowOffsetY = L.sy*(r*0.12 + n*t*0.45); }
+    ctx.save();
     const side = ctx.createLinearGradient(x - r, 0, x + r, 0); side.addColorStop(0, crtCss(crtMix(M, [0,0,0], L.tx < 0 ? 0.1 : 0.5))); side.addColorStop(0.5, crtCss(M)); side.addColorStop(1, crtCss(crtMix(M, [0,0,0], L.tx > 0 ? 0.1 : 0.5)));
     ctx.fillStyle = side; ctx.beginPath(); ctx.ellipse(x + dx, yy, r, r*0.42, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
     ctx.strokeStyle = crtCss(crtMix(M, [0,0,0], 0.5), 0.6); ctx.lineWidth = Math.max(cpx(0.5), r*0.03); ctx.beginPath(); ctx.ellipse(x + dx, yy, r, r*0.42, 0, 0, Math.PI); ctx.stroke();
   }
   // the top coin, seen from above at a slant (its face squashed to the stack's ellipse)
-  ctx.save(); ctx.translate(x, y - (n - 1)*t); ctx.scale(1, 0.42); crtCoin(ctx, 0, -t*0.6/0.42, r, coin, { L: { ...L, sx: 0, sy: 0 } }); ctx.restore();
+  ctx.save(); ctx.translate(x, y - (n - 1)*t); ctx.scale(1, 0.42); crtCoin(ctx, 0, -t*0.6/0.42, r, coin, { L: { ...L, sx: 0, sy: 0 }, noShadow: true }); ctx.restore();
 }
 
 /**
@@ -356,33 +455,35 @@ export function crtDeal(game, w, h, opts){
   return out;
 }
 
-/**
- * THE TEXTURE: a game in progress. CARD COUNT how many are in play, SCATTER
- * how tidy the table is (0 dealt square → swept about), STAKES how likely and
- * how much money is on it. The seed chooses the game, the players, the suits
- * in the deck, the table, the cards' stock and edge, and the coinage.
- * suitCols: the four suits' colours (the page's two accents, the texture's two hues).
- */
-export function genCartomancy(w, h, amt, angle, stakes, light, suitCols, tilt){
-  amt = amt == null ? 1 : amt;
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const ctx = c.getContext('2d', CPU);
-  const unit = Math.min(w, h), scat = Math.max(0, Math.min(1, (angle == null ? 35 : angle)/90));
-  const game = crtPick(Object.keys(CARD_GAMES)), table = crtPick(Object.keys(TABLE_MATERIALS)), stock = crtPick(Object.keys(CARD_STOCKS)), gilt = crtPick(Object.keys(GILT));
-  const coinage = crtPick(COINAGES);
+// ---- WHAT THE SEED PICKS ('seed'), or what was asked for ----
+const crtOr = (v, list) => (v && v !== 'seed' && list.includes(v)) ? v : crtPick(list);
+export function crtChooseTable(mat){ return crtOr(mat, Object.keys(TABLE_MATERIALS)); }
+/** The game, the cards' stock and edge, the coinage, the suits in the deck. */
+export function crtChooseDeal(o = {}){
+  const game = crtOr(o.game, Object.keys(CARD_GAMES)), stock = crtOr(o.stock, Object.keys(CARD_STOCKS)), gilt = crtOr(o.gilt, Object.keys(GILT));
+  const coinage = COINAGES.find(c => c.name === o.coinage) || crtPick(COINAGES);
   // which suits are in this deck (a game is played with two, three or all four)
   const all = [0, 1, 2, 3].sort(() => Math.random() - 0.5), suits = all.slice(0, 2 + Math.floor(Math.random()*3)).sort();
-  crtTable(ctx, w, h, table, light);
-  const L = crtLight(light, tilt), cw = unit*0.11*(0.85 + 0.3/Math.sqrt(Math.max(0.3, amt)));
-  const items = crtDeal(game, w, h, { cw, count: amt, scatter: scat, stakes: stakes == null ? 0.5 : stakes, suits, coinage });
-  const look = { stock, gilt, suitCols, L };
+  const k = parseInt(o.suits, 10);
+  return { game, stock, gilt, coinage, suits: k >= 2 && k <= 4 ? all.slice(0, k).sort() : suits };
+}
+/**
+ * THE DEAL DRAWN on whatever the canvas holds (a table). o: { game, stock,
+ * gilt, coinage, suits, count (0.2–3), scatter (0–1), stakes (0–1), size (1:
+ * as the texture), suitCols: [4], light, tilt }. CARDS IN PLAY: more cards,
+ * a little smaller. Returns what lies where (for a mask).
+ */
+export function crtPaintDeal(x, w, h, o){
+  const unit = Math.min(w, h), count = Math.max(0.2, o.count ?? 1), cw = unit*0.11*(o.size ?? 1)*(0.85 + 0.3/Math.sqrt(Math.max(0.3, count)));
+  const items = crtDeal(o.game, w, h, { cw, count, scatter: o.scatter ?? 0.22, stakes: o.stakes ?? 0.5, suits: o.suits, coinage: o.coinage });
+  const look = { stock: o.stock, gilt: o.gilt, suitCols: o.suitCols, L: crtLight(o.light, o.tilt) };
   for(const it of items){
-    if(it.kind === 'card'){ const k = it.cw || cw; ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot); crtCard(ctx, k, k*1.7, it.face, { ...look, rot: it.rot, lift: it.lift }); ctx.restore(); }
-    else if(it.kind === 'coin') crtCoin(ctx, it.x, it.y, it.r, it.coin, look);
-    else crtStack(ctx, it.x, it.y, it.r, it.n, it.coin, look);
+    if(it.kind === 'card'){ const k = it.cw || cw; x.save(); x.translate(it.x, it.y); x.rotate(it.rot); crtCard(x, k, k*1.7, it.face, { ...look, rot: it.rot, lift: it.lift }); x.restore(); }
+    else if(it.kind === 'coin') crtCoin(x, it.x, it.y, it.r, it.coin, look);
+    else crtStack(x, it.x, it.y, it.r, it.n, it.coin, look);
   }
-  ctx.globalAlpha = 1; ctx.shadowColor = 'transparent';
-  return c;
+  x.globalAlpha = 1; x.shadowColor = 'transparent';
+  return { items, cw };
 }
 
 /**
@@ -394,26 +495,39 @@ const CRT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def
 const CRT_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 function crtStepCanvas(E){ const c = document.createElement('canvas'); c.width = E.ww; c.height = E.wh; return [c, c.getContext('2d', CPU)]; }
 function crtMask(E, draw){ const [m, mx] = crtStepCanvas(E); mx.fillStyle = '#000'; mx.fillRect(0, 0, E.ww, E.wh); mx.save(); draw(mx); mx.restore(); return E.lum(E.readCanvas(m)); }
+const CRT_SUIT_DEFAULTS = ['#B0303A', '#C9A33A', '#3E7D4F', '#2E5FA8'];      // the texture's own: two accents, two hues
+const crtIsCanvas = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
+/** The picture a step was handed, as a canvas to draw on (a canvas pass hands a canvas; the grid, fields). */
+function crtGround(E, v, grey = 128){
+  const [c, x] = crtStepCanvas(E);
+  if(crtIsCanvas(v)) x.drawImage(v, 0, 0, E.ww, E.wh);
+  else if(v && v.r instanceof Float32Array){ const im = x.createImageData(E.ww, E.wh), d = im.data;
+    for(let i = 0, q = 0; i < E.ww*E.wh; i++, q += 4){ d[q] = v.r[i]*255; d[q+1] = v.g[i]*255; d[q+2] = v.b[i]*255; d[q+3] = 255; } x.putImageData(im, 0, 0); }
+  else { x.fillStyle = `rgb(${grey},${grey},${grey})`; x.fillRect(0, 0, E.ww, E.wh); }
+  return [c, x];
+}
+function crtDealOpts(E, n){
+  const { ctx, P, num, input } = E;
+  const cols = [2, 3, 4, 5].map((j, i) => { const v = input(n, j); return Array.isArray(v) ? v.map(q => q*255) : crtRGB(CRT_SUIT_DEFAULTS[i]); });
+  return { ...crtChooseDeal({ game: String(P(n, 'game', 'seed')), stock: String(P(n, 'stock', 'seed')), gilt: String(P(n, 'gilt', 'seed')), coinage: String(P(n, 'coinage', 'seed')), suits: String(P(n, 'suits', 'seed')) }),
+    count: num(n, 'count', 100)/100, size: num(n, 'size', 100)/100, scatter: num(n, 'scatter', 20)/90, stakes: num(n, 'stakes', 50)/100,
+    suitCols: cols, light: ctx.light, tilt: (ctx.lightTilt ?? 100)/100 };
+}
 export const CARD_STEPS = {
   table: { cat: 'Textures', label: 'Table', ins: [], outs: ['image', 'grey'], io: { outs: ['image', 'field'] },
-    params: [CRT_SEL('mat', 'Material', Object.keys(TABLE_MATERIALS)), CRT_R('lamp', 'Lamp', 50)], cost: () => 6,
-    run(E, n){ const { ww, wh, ctx, P, num, readCanvas, lum } = E; const [c, x] = crtStepCanvas(E);
-      crtTable(x, ww, wh, String(P(n, 'mat', 'baize')), ctx.light, { vignette: num(n, 'lamp', 50)/100 }); const im = readCanvas(c); return [im, lum(im)]; } },
-  deal: { cat: 'Marks', label: 'Deal (Cards)', ins: ['fire hue', 'water hue', 'air hue', 'earth hue'], outs: ['image', 'mask'], io: { ins: ['colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
-    params: [CRT_SEL('game', 'Game', Object.keys(CARD_GAMES)), CRT_SEL('stock', 'Card Stock', Object.keys(CARD_STOCKS)), CRT_SEL('gilt', 'Edge', Object.keys(GILT)),
-      CRT_R('count', 'Cards', 100, 20, 300), CRT_R('size', 'Card Size', 100, 50, 200), CRT_R('scatter', 'Scatter', 30), CRT_R('stakes', 'Stakes', 0)], cost: () => 8,
-    run(E, n){ const { ww, wh, unit, ctx, P, num, input, readCanvas } = E;
-      const hex = v => Array.isArray(v) ? v.map(q => q*255) : null;
-      const cols = [1, 2, 3, 4].map((j, i) => hex(input(n, j)) || crtRGB(['#C0392B', '#2E5FA8', '#C9A33A', '#3E7D4F'][i]));
-      const cw = unit*0.11*num(n, 'size', 100)/100, game = String(P(n, 'game', 'reading'));
-      const items = crtDeal(game, ww, wh, { cw, count: num(n, 'count', 100)/100, scatter: num(n, 'scatter', 30)/100, stakes: num(n, 'stakes', 0)/100, suits: [0, 1, 2, 3], coinage: COINAGES[0] });
-      const look = { stock: String(P(n, 'stock', 'ivory')), gilt: String(P(n, 'gilt', 'gold')), suitCols: cols, L: crtLight(ctx.light, (ctx.lightTilt ?? 100)/100) };
-      const draw = (x, maskOnly) => { for(const it of items){ if(it.kind === 'card'){ const k = it.cw || cw; x.save(); x.translate(it.x, it.y); x.rotate(it.rot);
-        if(maskOnly){ x.fillStyle = '#fff'; x.fillRect(-k/2, -k*0.85, k, k*1.7); } else crtCard(x, k, k*1.7, it.face, { ...look, rot: it.rot, lift: it.lift }); x.restore(); }
-        else if(maskOnly){ x.fillStyle = '#fff'; x.beginPath(); x.arc(it.x, it.y, it.r, 0, Math.PI*2); x.fill(); }
-        else if(it.kind === 'coin') crtCoin(x, it.x, it.y, it.r, it.coin, look); else crtStack(x, it.x, it.y, it.r, it.n, it.coin, look); } };
-      const [c, x] = crtStepCanvas(E); x.fillStyle = '#808080'; x.fillRect(0, 0, ww, wh); draw(x, false);
-      return [readCanvas(c), crtMask(E, mx => draw(mx, true))]; } },
+    params: [CRT_SEL('mat', 'Material', ['seed', ...Object.keys(TABLE_MATERIALS)]), CRT_R('lamp', 'Lamp', 50)], cost: () => 6,
+    paint(E, n){ const { ww, wh, ctx, P, num } = E; const [c, x] = crtStepCanvas(E);
+      crtTable(x, ww, wh, crtChooseTable(String(P(n, 'mat', 'seed'))), ctx.light, { vignette: num(n, 'lamp', 50)/100 }); return [c, null]; },
+    run(E, n){ const im = E.readCanvas(this.paint(E, n)[0]); return [im, E.lum(im)]; } },
+  deal: { cat: 'Marks', label: 'Deal (Cards)', ins: ['table', 'fire hue', 'water hue', 'air hue', 'earth hue'], outs: ['image', 'mask'], io: { ins: ['image', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
+    params: [CRT_SEL('game', 'Game', ['seed', ...Object.keys(CARD_GAMES)]), CRT_SEL('stock', 'Card Stock', ['seed', ...Object.keys(CARD_STOCKS)]), CRT_SEL('gilt', 'Edge', ['seed', ...Object.keys(GILT)]),
+      CRT_SEL('suits', 'Suits', ['seed', '2', '3', '4']), CRT_SEL('coinage', 'Coinage', ['seed', ...COINAGES.map(c => c.name)]),
+      CRT_R('count', 'Cards in Play', 100, 20, 300), CRT_R('size', 'Card Size', 100, 50, 200), CRT_R('scatter', 'Scatter', 20, 0, 90), CRT_R('stakes', 'Stakes', 50)], cost: () => 8,
+    // the cards laid on what comes in (a Table), lit by the dial
+    paint(E, n){ const [c, x] = crtGround(E, E.input(n, 1)); const o = crtDealOpts(E, n); const d = crtPaintDeal(x, E.ww, E.wh, o); return [c, null, d]; },
+    run(E, n){ const [c, , d] = this.paint(E, n);
+      return [E.readCanvas(c), crtMask(E, mx => { mx.fillStyle = '#fff'; for(const it of d.items){ if(it.kind === 'card'){ const k = it.cw || d.cw; mx.save(); mx.translate(it.x, it.y); mx.rotate(it.rot); mx.fillRect(-k/2, -k*0.85, k, k*1.7); mx.restore(); }
+        else { mx.beginPath(); mx.arc(it.x, it.y, it.r, 0, Math.PI*2); mx.fill(); } } })]; } },
   coins: { cat: 'Marks', label: 'Coins', ins: [], outs: ['image', 'mask'], io: { outs: ['image', 'field'] },
     params: [CRT_SEL('metal', 'Metal', Object.keys(COIN_METALS)), CRT_R('count', 'Coins', 30, 1, 200), CRT_R('size', 'Size', 100, 30, 300), CRT_R('stacks', 'Stacked', 30)], cost: () => 4,
     run(E, n){ const { ww, wh, unit, ctx, P, num, readCanvas } = E;
