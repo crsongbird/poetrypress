@@ -26,7 +26,11 @@ will stay free.
 - The Athanor 🜉, a node editor for making surface textures of your own from
   the app's own parts — five starter graphs, and Vellum's own textures that
   are rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth,
-  Fractured Glaze) open as templates to take apart
+  Fractured Glaze) open as templates to take apart, wired the way they work.
+  Wires are coloured by what they carry (field, image, colour, value); any
+  setting with a ⚙ port can be driven by a wire; a big preview, and a preview
+  of every step (made off the page's thread, switchable). It asks before
+  throwing work away, and refuses a graph that would break the page
 - A base texture under the main one; an inset box with frosted glass and GPU blends
 - Multi-stop gradients for the background and the text
 - Typeface effects: letterpress, long shadow, bevel, erosion, bloom and more
@@ -40,9 +44,16 @@ will stay free.
   (IPTC Alt Text, XMP): the poem's words, then a plain description of the look
   — typeface, colours, the surface and its settings, the frame — up to 1500
   characters
-- Word seeds: every seed is a phrase and back ("The phase of Creation,
-  turbulent and shedding"); the words include Ruby's Runology
-- Soft interface sounds, off by default (Esoterica → Appearance → Sounds)
+- Word seeds: every seed is a phrase and back ("Mercury kindled the lantern at
+  dusk"), in sixteen sentence shapes; the words include Ruby's Runology and
+  Symbology's alchemical names. Only the phrase is shown; type a phrase, a
+  number or any words
+- The spell code in the corner can be hidden (Write → Show Spell Code?)
+- Quiet interface sounds in D minor (aeolian), off by default (Esoterica →
+  Appearance → Sounds): mostly silent, they mark long work finishing, the
+  Athanor's wiring, and the app asking "are you sure?"
+- Asks before Randomize, a preset or a load replaces a lot of unsaved work;
+  refuses (and rolls back) a look or graph that would break the page
 - Dark-mode add-ons (Dark Reader and its kin) leave it alone: it is already dark
 
 ## The four elements

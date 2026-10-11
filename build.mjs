@@ -51,6 +51,7 @@ const ORDER = [
   'boxFx.js',              // the inset box as glass (GPU), and the blends a canvas can't do
   'effects.js',            // the text effect stack: definitions, PML, old forms
   'textParsers.js',       // PML
+  'symbolLore.js',        // the symbols and their names (from Symbology)
   'spell.js',             // glyph spells
   'moon.js',              // moon phase and its glyph
   'seedWords.js',         // word seeds: every number a phrase, and back
@@ -120,7 +121,7 @@ html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
 // The texture worker: the generator modules flattened again, with the worker's
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
-const WORKER_ORDER = ['tunables.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
+const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
                       'texChaos.js', 'texTouch.js', 'stepsTouch.js', 'stepsChaos.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture

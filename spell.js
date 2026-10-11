@@ -23,12 +23,13 @@
  */
 
 import { SPELLS } from './tunables.js';
+import { LORE_GLYPHS } from './symbolLore.js';
 
 /** The only glyphs considered safe to render. Noto Sans Symbols covers the
  *  alchemical ones and Symbols 2 the rest of the first block; Runology's
  *  glyphs from other scripts have their own Noto faces (Math, Runic, Music,
  *  Canadian Aboriginal, Cherokee). All are loaded, each only when needed. */
-export const GLYPHS = [
+const GLYPHS_BASE = [
   "🜁","🜂","🜃","🜄","🜅","🜆","🜇","🜈","🜉","🜊","🜋","🜌","🜍","🜎",
   "🜔","🜕","🜖","🜗","🜘","🜙","🜚","🜛","🜜","🜝","🜞","🜟","🜠","🜢",
   "🜣","🜥","🜦","🜧","🜨","🜩","🜪","🜫","🜬","🜭","🜮","🜯","🜱",
@@ -41,6 +42,10 @@ export const GLYPHS = [
   "🜳","🝢","🝰","🝧","ᕕ","⎐","𝀶","ᘓ","ᘒ","Ᏹ","ᛯ",
   "⯢","⯠","⯤","⯚","⯦","⯗","⯔","⯡","⯘","⯣","⯙","⯧",
 ];
+// …and the rest of the lore (symbolLore.js, from Symbology): the further
+// alchemy (vessels, processes, hours), the heavens (planets, asteroids, the
+// comet), the occult aspects and the Elder Futhark — each once
+export const GLYPHS = GLYPHS_BASE.concat(LORE_GLYPHS.filter(g => !GLYPHS_BASE.includes(g)));
 
 export const SPELL_PRIMES = SPELLS.primes;
 

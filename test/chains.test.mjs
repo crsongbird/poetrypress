@@ -13,7 +13,7 @@ let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
-const { STEPS, stepRange } = await import('../steps.js');
+const { STEPS, stepRange, paramPort } = await import('../steps.js');
 const { TEXTURE_CHAINS } = await import('../chains.js');
 const F = await import('../forge.js');
 const A = await import('../athanor.js');
@@ -26,11 +26,13 @@ check('the steps carry their own cost (the budget reads it)', Object.values(STEP
 check('new steps for the chains: Colour, Soft Forms, Streaks, Hatching (Marks)', ['colour', 'forms', 'streaks', 'hatching'].every(k => STEPS[k]) && STEPS.streaks.cat === 'Marks');
 
 // the chains
-const BIND = /^@(k[1-6]|dial|tilt)(\[\s*-?[\d.]+\s*,\s*-?[\d.]+\s*\])?$/;
 for(const [type, ch] of Object.entries(TEXTURE_CHAINS)){
   const okNodes = ch.nodes.every(([s]) => STEPS[s]), okWires = ch.wires.every(([a, o, b, j]) => ch.nodes[a-1] && ch.nodes[b-1] && o <= STEPS[ch.nodes[a-1][0]].outs.length && j <= STEPS[ch.nodes[b-1][0]].ins.length);
   const binds = ch.nodes.flatMap(([, d]) => Object.values(d).filter(v => typeof v === 'string' && v[0] === '@'));
-  check(`${ch.label}: its steps exist, its wires fit their ports, its bindings read`, okNodes && okWires && binds.length > 0 && binds.every(b => BIND.test(b)));
+  // it TEACHES by its wiring: every Knob and Dial is wired, into a ⚙ port (a param), nothing hidden in a binding
+  const inputsWired = ch.nodes.every(([s], i) => !['knob', 'dial'].includes(s) || ch.wires.some(([a]) => a === i + 1))
+    && ch.wires.some(([a, , b, j]) => j > STEPS[ch.nodes[b-1][0]].dataIns);
+  check(`${ch.label}: its steps exist, its wires fit their ports, and its sliders and dial are WIRED to the params they drive`, okNodes && okWires && binds.length === 0 && inputsWired);
   const g = A.athanorStarter(type);
   check(`${ch.label}: opens as an Athanor template (Start from… → Vellum's textures), named, with its sliders`,
     g && A.athanorName(g) === ch.label && A.athanorKnobs(g).length >= 2);
@@ -38,6 +40,23 @@ for(const [type, ch] of Object.entries(TEXTURE_CHAINS)){
 check('the Athanor\'s menu lists Vellum\'s textures as templates', /Vellum’s textures/.test(src('forge.js')) && /TEXTURE_CHAINS/.test(src('forge.js')));
 check('a bound param shows as written in its node (editable text)', F.forgeNodeHtml('streaks', {}, { angle: '@dial' }).includes('value="@dial"') && F.forgeNodeHtml('streaks', {}, { angle: '@dial' }).includes('forge-bound'));
 check('a bound param with no range of its own reads its step\'s range', JSON.stringify(stepRange('hatching', 'cross')) === '[0,100]');
+check('every range param of a working step has a ⚙ port after the step\'s own (Filter Forge: every slider takes a wire); inputs and the Surface have none',
+  Object.values(STEPS).every(s => s.ins.length === s.dataIns + s.paramPorts.length && s.inTypes.length === s.ins.length && s.outTypes.length === s.outs.length)
+  && STEPS.streaks.paramPorts.includes('angle') && STEPS.knob.paramPorts.length === 0 && STEPS.surface.paramPorts.length === 0);
+{
+  // a wired value drives its param across the param's range, and every param stays inside its range
+  const nodes = { 1: { id: 1, name: 'knob', data: { slot: '1', def: 50 }, inputs: {}, outputs: {} },
+    2: { id: 2, name: 'levels', data: { lo: 0, hi: 100, gamma: 50 }, inputs: { input_1: { connections: [{ node: '3', input: 'output_1' }] } }, outputs: {} },
+    3: { id: 3, name: 'gradient', data: { shape: 'linear', angle: 0 }, inputs: {}, outputs: {} },
+    4: { id: 4, name: 'surface', data: {}, inputs: { input_1: { connections: [{ node: '2', input: 'output_1' }] } }, outputs: {} } };
+  const g = k => ({ v: 2, drawflow: { Home: { data: k } } });
+  const lo = n => { const img = A.evalAthanor(g(n), 16, 16, { knobs: [100, 0, 0, 0, 0, 0], light: 0, seed: 1 }); return img.r[15]; };
+  const plain = lo(nodes);
+  const wired = JSON.parse(JSON.stringify(nodes)); wired[2].inputs['input_' + paramPort('levels', 'lo')] = { connections: [{ node: '1', input: 'output_1' }] };
+  const crazy = JSON.parse(JSON.stringify(nodes)); crazy[2].data.lo = 1e9;
+  check('a Knob wired to a ⚙ port sets that param (Levels\' Low at 100: everything below it black)', plain > 0 && lo(wired) === 0);
+  check('a param set far outside its range is held inside it (a graph from anywhere can\'t ask for a billion of anything)', lo(crazy) === lo(wired));
+}
 
 // as textures (the real canvas, if it is here)
 let canvasOK = false;

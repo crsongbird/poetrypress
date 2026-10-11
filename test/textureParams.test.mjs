@@ -174,7 +174,7 @@ check('the Rorschach covers only a small part of the card', inkArea < 800 * 2);
 check('the hatch crosses a second layer in the deepest shadow (Cross-Hatching: the darkest third by default)',
   /const layers = cross > 0 && t > 1 - cross \? 2 : 1;/.test(readFileSync(new URL('../steps.js', import.meta.url), 'utf8')) &&
   /const la = a \+ l\*ca2/.test(readFileSync(new URL('../steps.js', import.meta.url), 'utf8')) &&
-  /cross: '@k1'/.test(readFileSync(new URL('../chains.js', import.meta.url), 'utf8')));
+  /\[1, 1, 5, paramPort\('hatching', 'cross'\)\]/.test(readFileSync(new URL('../chains.js', import.meta.url), 'utf8')));
 
 // ---- aurora must paint something ----
 M.resetCreatedCanvases();

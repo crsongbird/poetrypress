@@ -64,6 +64,7 @@ from the source files (unbuilt) — everything must work both ways.
 | `boxFx.js` | the inset box's glass and GPU blends |
 | `runology.js` | Ruby's Runes of Power: Archetypes, Accent Runes, Chroma (its words in the seed banks, its glyphs among the spell glyphs) |
 | `altText.js` · `jpegMeta.js` | the saved image's alt text: the poem, then the look in words (≤1500) · written into the JPEG (XMP) |
+| `symbolLore.js` | Symbology's glyphs with names and families (spell glyphs, circles, cards) |
 | `murmur.js` | soft interface sounds (Symbology's engine, Vellum's sounds); off until turned on |
 | `appOptions.js` | fonts, presets, aspects, defaults, the opening template |
 | `strings.js` · `tunables.js` | hand-editable text · hand-editable numbers |
@@ -343,7 +344,14 @@ before/after measurements AND an identical-render comparison.
 ## Systems worth knowing
 - WORD SEEDS (seedWords.js): every 32-bit seed has exactly one phrase and
   back; the banks and their order are FROZEN (test/seedWords.test.mjs anchors
-  phrases). Saves hold the number, and (textureSeedWords) whatever was typed.
+  phrases — the last re-cut was Ruby's, for variety). The top 4 bits of
+  mix(n) pick one of 16 sentence SHAPES (SW_SHAPES), the 16th split into six
+  small ones (SW_SMALL) so every shape spends exactly its bits. Verbs are
+  'base' or 'base|past|participle' (swForms makes the tenses); time phrases
+  never end in -ing. Parsing is a backtracking match, kept only if the number
+  regenerates the same text. Internal names are sw/SW_ (the bundle is one
+  scope). Saves hold the number, and (textureSeedWords) whatever was typed;
+  the page shows only the phrase (the number is its tooltip).
 - FULL presets (`full: true`) are whole saved looks, applied by
   restoreSettings except the page size.
 - The camera tilt (texCore `obliqueFrame`/`obliqueRender`): build the ground
@@ -401,13 +409,54 @@ before/after measurements AND an identical-render comparison.
   bound params. Node results are kept (ATHANOR_KEPT): a hue change on a chain
   texture reuses its structure. The chain's ctx carries tints, material hues
   (mat) and glow; the cache signature must include anything a step reads.
+- ASKING AND REFUSING (appEvents.js): `askSure({title, body, confirmLabel,
+  danger})` — the app's own modal (never confirm()), the soft no; `hardNo(title,
+  body)` — an alert in the modal-hard style; `toast(text)` — a quiet line,
+  also what window errors become. state.ui.edits counts commits since the last
+  fresh start (markFresh); past GUARD_EDITS (6), the GUARDED buttons (random
+  font, random backdrop, apply spell, load JSON) and presets ask first. Every
+  look that comes from outside (JSON, a spell, a saved tile) goes through
+  safeRestore: checkLook (≤ LOOK_MAX_JSON, the Athanor graph through
+  validateGraph), then restoreSettings, rolled back whole on a throw.
+- THE ATHANOR'S SAFETY (athanor.js validateGraph): ≤ ATHANOR_MAX_JSON
+  (256 KB) and ≤ 64 nodes (twice that is refused outright, not trimmed);
+  unknown steps, bad wires and out-of-range params are reported and fixed.
+  forge.js asks (askSure) before Clear, Revert, Start from…, and deleting a
+  node, whenever the grid has anything on it and F.dirty.
+- THE ATHANOR'S FACE (forge.js, poetrypress.css "forge"): a fixed night
+  palette, not the theme. Ports and wires are coloured by TYPE
+  (FORGE_TYPE_COLOURS: field lilac, image pink, colour gold, value cyan,
+  dashed), node headers by CATEGORY (FORGE_CAT_COLOURS). PARAM PORTS (steps.js
+  paramPort, the ⚙ diamonds) are Filter Forge's idea: a wire into a param maps
+  a value (a number, a field's mean, a colour's luminance) across the param's
+  range; every param is clamped. layoutAthanor lays starters and templates out
+  in columns. STEP PREVIEWS are one sheet made in the worker (texture type
+  'athanorsteps', athanorSheetLayout), switchable (#forgeSteps, localStorage
+  uv.forge.steps — a working preference, not part of a look).
+- SYMBOL LORE (symbolLore.js): Symbology's glyphs with their names and
+  families (LORE). Its single-code-point glyphs are among the spell glyphs;
+  PLANETS and ZODIAC feed Transmutation Circles; Cartomancy's lore cards draw
+  their emblem as text (`glyph:X`, GLYPH_FONT).
+- THE SPELL CODE (canvasRenderer, #spellMark): hideable; part of the look
+  (spells, shares and JSON keep it); presets leave it as it is.
 - LOOK_VERSION (appEvents.js): saved in every look; a look older than a
   slider's new job is translated in retireLook (format 2: the dial took Harsh
   Rain's slant and the Hatch's angle).
-- SOUNDS (murmur.js): one key (D dorian), three instruments with one job each
-  (glass: the interface; pad: the ground; bell: arrivals). Off by default; its
-  switch and volume are in localStorage (uv.sound.on, uv.sound.volume), never
-  in a look — exempt in the persistence tests.
+- SOUNDS (murmur.js, design v2): a SOUND DESIGN is data (MURMUR_DESIGN): a
+  scale (D aeolian, an octave down), room, warmth, humanize; instruments (a
+  body of real partials, shaped — glass, bell, pad, tick, tine, thud);
+  compositions (events in scale degrees, so always in key); and a MAP from
+  each UI function (MURMUR_FUNCTIONS) to a composition or null (silent). Most
+  are silent: sounds are for long work finishing, complicated actions, and
+  asking. `confirm` is the SOFT NO (a falling pad, every askSure dialog);
+  `hardNo` (two knocks) is for what would break the app; `blocked` (one
+  dull knock) is a disabled control. The Athanor has its own: open/close,
+  blipUp/blipDown (nodes), plugIn/plugOut (wires), lit (a graph loaded). The app plays UI functions (`murmur.play('saveImage')`,
+  `data-sound="athanorOpen"`), never notes. Ruby shapes it in the Murmur Studio
+  (tools/murmur-studio.html, made from murmur.js by tools/make-murmur-studio.mjs;
+  the tests check it is current) and pastes the design back into
+  MURMUR_DESIGN. Off by default; its switch and volume are in localStorage
+  (uv.sound.on, uv.sound.volume), never in a look.
 
 ## Design language
 

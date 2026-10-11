@@ -22,6 +22,7 @@ const html = src('index.html'), ev = src('appEvents.js'), vault = src('vault.js'
 // controls that are deliberately NOT part of a look — each with its reason
 const EXEMPT = {
   uiTheme:      'the app\'s own theme: a preference saved on its own, not part of an image',
+  forgeSteps:   'the Athanor\'s step previews on or off: a working preference of this browser (localStorage), not part of an image',
   soundToggle:  'interface sounds on or off (murmur.js): this browser\'s preference, kept in localStorage, not part of an image',
   soundVolume:  'interface sound volume: this browser\'s preference, kept in localStorage, not part of an image',
   fullPreview:  'a view preference (the preview at full size), not part of an image',
@@ -57,9 +58,9 @@ check('no exemption names a control that no longer exists', Object.keys(EXEMPT).
 
 // everything built on save/restore uses them — so covering them covers all of it
 check('the Workbench JSON shows serializeCurrentSettings() and loads with restoreSettings()',
-  /\$\('advancedJson'\)\.value = JSON\.stringify\(serializeCurrentSettings\(\), null, 2\);/.test(ev) && /restoreSettings\(obj\);/.test(ev));
+  /\$\('advancedJson'\)\.value = JSON\.stringify\(serializeCurrentSettings\(\), null, 2\);/.test(ev) && /safeRestore\(obj, 'This JSON'\);/.test(ev) && /try \{ restoreSettings\(c\.look\); \}/.test(ev));
 check('the Grimoire and shared spells save serializeCurrentSettings() and restore with restoreSettings()',
-  /return stripToLook\(serializeCurrentSettings\(\)\);/.test(ev) && /applySettings: \(settings, name\)=>\{ restoreSettings\(stripToLook\(settings\)\);/.test(ev));
+  /return stripToLook\(serializeCurrentSettings\(\)\);/.test(ev) && /applySettings: \(settings, name\)=>\{ if\(!safeRestore\(stripToLook\(settings\), 'This spell'\)\) return;/.test(ev));
 check('undo and redo step through restoreSettings()', /restoreSettings\(JSON\.parse\(h\.stack\[to\]\)\);/.test(ev));
 // a spell carries the whole look: only the poem, locks, highlighting and credit stay behind
 check('a spell drops only the poem, locks, highlighting and credit — nothing else',

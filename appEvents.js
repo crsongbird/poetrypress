@@ -24,11 +24,11 @@
  * Exports nothing: it is the entry point, and nothing imports from it.
  */
 
-import { texturesSettled, setDrafting } from './textureService.js';
+import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { openForge, closeForge, describeForge } from './forge.js';
-import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
+import { athanorKnobs, athanorHues, athanorName, athanorNodes, validateGraph } from './athanor.js';
 import { elementsFor } from './textureElements.js';
 import { withAltText } from './jpegMeta.js';
 import { describeLook } from './altText.js';
@@ -37,7 +37,7 @@ import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './ef
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas } from './textureGenerators.js';
+import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
@@ -72,7 +72,7 @@ const murmur = createMurmur({ enabled: false });
  */
 const state = {
   page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
-  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null },
+  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
   locks: new Set(),
   // undo/redo: look snapshots (see the history section)
   history: { stack: [], index: -1, restoring: false, timer: null },
@@ -465,6 +465,7 @@ $('textureSeedReroll').addEventListener('click', ()=>{
   $(id).addEventListener('input', scheduleRender);
 });
 $('usernameCorner').addEventListener('change', scheduleRender);
+$('spellMark').addEventListener('change', scheduleRender);
 
 $('poemText').addEventListener('input', ()=>{
   clearTimeout(state.ui.poemTimer);
@@ -654,7 +655,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
     render();
   }
   link.click();
-  murmur.play('seal');
+  murmur.play('saveImage');
 });
 
 // ---------- settings: save and restore (the Workbench JSON, spells) ----------
@@ -839,6 +840,7 @@ function serializeCurrentSettings(){
 
     username: $('usernameField').value,
     usernameCorner: $('usernameCorner').value,
+    spellMark: $('spellMark').checked,   // the spell code in the corner: part of the look, so spells and shared links keep it
 
     poemText: $('poemText').value,
   };
@@ -990,6 +992,7 @@ function restoreSettings(s){
 
   if(s.username!==undefined) $('usernameField').value = s.username;
   if(s.usernameCorner) $('usernameCorner').value = s.usernameCorner;
+  if(s.spellMark !== undefined) $('spellMark').checked = !!s.spellMark;
   if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
   scheduleRender();
@@ -1014,12 +1017,10 @@ $('advancedCopyBtn').addEventListener('click', async ()=>{
   setTimeout(()=>{ btn.textContent = original; }, 1400);
 });
 $('advancedLoadBtn').addEventListener('click', ()=>{
-  try{
-    const obj = JSON.parse($('advancedJson').value);
-    restoreSettings(obj);
-  } catch(e){
-    alert("That JSON couldn't be parsed — check for a stray comma or missing bracket.");
-  }
+  let obj;
+  try { obj = JSON.parse($('advancedJson').value); }
+  catch(e){ hardNo('That isn’t readable JSON', 'Check for a stray comma or a missing bracket. Nothing was changed.'); return; }
+  safeRestore(obj, 'This JSON');
 });
 // populate once on load so there's something to see/copy immediately
 $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
@@ -1109,13 +1110,15 @@ function endHoverPreview(){
   scheduleRender();
 }
 // a click keeps the preset (the preview simply becomes the look), as one step of history
-function pickPreset(p){
+async function pickPreset(p){
   clearTimeout(hover.timer);
+  if(needsGuard() && !await guardWork('Apply this preset', `“${p.name}”`)){ endHoverPreview(); return; }
+  markFresh();
   const showing = hover.on === p;
   hover.base = null; hover.on = null;
   if(showing) commitSoon();          // already on the page, its seed and all: keep exactly what was shown
   else applyPreset(p);
-  murmur.play('arrive');
+  murmur.play('preset');
 }
 if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
@@ -1139,7 +1142,7 @@ function renderSavedPresets(saved){
     const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
     presetGrid.appendChild(presetTile(shot, ()=>{
       // the same filter as applying from Esoterica — a spell is a look
-      restoreSettings(stripToLook(Object.assign({}, rec.settings, { spell: rec.spell })));
+      safeRestore(stripToLook(Object.assign({}, rec.settings, { spell: rec.spell })), 'This spell');
       if(document.body && document.body.dataset) document.body.dataset.lookName = rec.name || '';
       scheduleRender();
     }, 'preset-custom'));
@@ -1990,7 +1993,7 @@ function installLocks(){
     };
     btn.addEventListener('click', ()=>{
       if(state.locks.has(id)) state.locks.delete(id); else state.locks.add(id);
-      murmur.play(state.locks.has(id) ? 'keep' : 'toggle');
+      murmur.play(state.locks.has(id) ? 'lock' : 'unlock');
       paint();
     });
     btn._paint = paint;
@@ -2087,7 +2090,7 @@ function applyElement(id){
   if(typeof commitSoon === 'function') commitSoon();
 }
 if($('elementRow') && $('elementRow').addEventListener){
-  $('elementRow').addEventListener('click', e => { const b = e.target.closest && e.target.closest('.el-btn'); if(b && !b.disabled){ applyElement(b.dataset.el); murmur.play('element', { family: b.dataset.el }); } });
+  $('elementRow').addEventListener('click', e => { const b = e.target.closest && e.target.closest('.el-btn'); if(b && !b.disabled){ applyElement(b.dataset.el); murmur.play('reading' + b.dataset.el.charAt(0).toUpperCase() + b.dataset.el.slice(1)); } });
 }
 // a new texture: no reading applied yet (its default is what it shows)
 $('textureType').addEventListener('change', () => { state.ui.element = null; paintElements(); });
@@ -2389,17 +2392,42 @@ function applyAthanorGraph(redraw = true){
   if($('athanorOption')) $('athanorOption').textContent = name ? 'The Athanor: ' + name : 'The Athanor (empty)';
   if(redraw && $('textureType') && $('textureType').value === 'athanor'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
 }
-/** A small picture of what the graph makes, for the Athanor's bar. */
+/** What the Athanor's pictures are made with: the page's seed, dial and hues;
+ *  the sliders' values when the Athanor is the Surface, else the graph's own defaults. */
+function athanorOpts(json, n){
+  const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
+  const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
+  return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
+    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6) };
+}
+/** A texture made in the worker, handed to `done` when it is ready (the newest wish per slot wins). */
+const workerWish = new Map();
+function whenTexture(slot, type, w, h, opts, done){
+  const key = textureKeyFor(type, w, h, opts); workerWish.set(slot, key);
+  const tryNow = () => { if(workerWish.get(slot) !== key) return true; const t = peekTexture(key); if(!t) return false; done(t); return true; };
+  requestTexture(slot, type, w, h, opts);
+  if(tryNow()) return;
+  const off = onTextureReady(() => { if(tryNow()) off(); });
+  setTimeout(off, 20000);
+}
+/** The Athanor's large preview: what the graph makes, made off the page's thread. */
 function previewAthanor(json, cv){
-  const n = 96, k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
-  const tex = getTextureCanvas('athanor', n, n, { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072,
-    light: k('textureLight', 315), tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value,
-    p1: k('texP1', 50), p2: k('texP2', 50), p3: k('texP3', 50), p4: k('texP4', 50), p5: k('texP5', 50), p6: k('texP6', 50) });
-  const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height);
+  const n = cv.width || 320;
+  whenTexture('athanorPreview', 'athanor', n, n, athanorOpts(json, n), tex => {
+    const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height); });
+}
+/** The STEP PREVIEWS: every node's own result, as one sheet of tiles made in the worker. */
+function athanorStepSheet(json, paint){
+  const ids = Object.keys(athanorNodes(json)).sort((a, b) => +a - +b); if(!ids.length) return;
+  const T = 64, { cols, rows } = athanorSheetLayout(ids.length);
+  whenTexture('athanorSteps', 'athanorsteps', cols*T, rows*T, athanorOpts(json, T), sheet => paint(sheet, ids, T, cols));
 }
 const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
-  preview: previewAthanor,
+  preview: previewAthanor, steps: athanorStepSheet,
+  ask: o => askSure(o), sound: fn => murmur.play(fn),
+  validate: json => validateGraph(json),
+  warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
   // "Use as Surface": the Athanor's texture on the page
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
     t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
@@ -2482,7 +2510,7 @@ function syncSeedWords(force){
   const box = $('textureSeedWords'), num = $('textureSeedValue'); if(!box || !num) return;
   const n = parseInt(num.value, 10) || 0;
   if(force || (typeof document !== 'undefined' && document.activeElement !== box)){ if(force || box.dataset == null || box.dataset.seed !== String(n)){ box.value = seedPhrase(n); if(box.dataset) box.dataset.seed = String(n); } }
-  const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
+  if('title' in box) box.title = '№ ' + n;   // the number is only a tooltip now; the phrase is the seed
   if(state.ui.seedFit) requestAnimationFrame(state.ui.seedFit);
 }
 if($('textureSeedWords') && $('textureSeedWords').addEventListener){
@@ -2491,7 +2519,7 @@ if($('textureSeedWords') && $('textureSeedWords').addEventListener){
     const n = seedFromText(box.value);
     $('textureSeedValue').value = String(n); if(box.dataset) box.dataset.seed = String(n);
     $('textureSeedValue').dispatchEvent(new Event('input', { bubbles: true }));
-    const tag = $('textureSeedNumber'); if(tag) tag.textContent = '№ ' + n;
+    box.title = '№ ' + n;
   });
   // Enter finishes; whatever was typed (a number, a phrase, any words) stays as typed, with its number
   box.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); box.blur(); } });
@@ -2541,11 +2569,11 @@ const SOUND_ON = 'uv.sound.on', SOUND_VOL = 'uv.sound.volume';
   if(box){ box.checked = on; if(box.addEventListener) box.addEventListener('change', () => {
     murmur.setEnabled(box.checked); try { localStorage.setItem(SOUND_ON, box.checked ? '1' : '0'); } catch(e){}
     if(range) range.disabled = !box.checked;
-    if(box.checked) setTimeout(() => murmur.play('arrive'), 60); }); }
+    if(box.checked) setTimeout(() => murmur.play('soundOn'), 60); }); }
   if(range){ range.value = String(Math.round(vol * 100)); range.disabled = !on;
     if(range.addEventListener){
       range.addEventListener('input', () => { murmur.setVolume(+range.value / 100); try { localStorage.setItem(SOUND_VOL, String(+range.value / 100)); } catch(e){} });
-      range.addEventListener('change', () => murmur.play('tap')); } }
+      range.addEventListener('change', () => murmur.play('soundOn')); } }
   if(document.addEventListener) murmur.bind(document);
 }
 
@@ -2571,20 +2599,120 @@ function modalPrompt(opts){
     input.setAttribute('rows', String(opts.rows || 1));
     ok.textContent = opts.confirmLabel || 'OK';
     cancel.textContent = opts.cancelLabel || 'Cancel';
+    cancel.hidden = !!opts.alert;                       // a plain notice: one button
+    const box = veil.querySelector('.modal'); if(box && box.classList) box.classList.toggle('modal-hard', !!opts.hard);
     ok.className = opts.danger ? 'btn-danger' : 'btn-major';
     veil.hidden = false;
 
     const finish = (val)=>{
-      veil.hidden = true;
+      veil.hidden = true; cancel.hidden = false;
+      document.removeEventListener('keydown', onKey, true);
       ok.removeEventListener('click', onOk);
       cancel.removeEventListener('click', onCancel);
       resolve(val);
     };
     const onOk = ()=> finish(wantsInput ? input.value : true);
     const onCancel = ()=> finish(null);
+    // Escape cancels, Enter confirms (outside a text box); the safe choice has the focus
+    const onKey = e => { if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); finish(opts.alert ? true : null); }
+      else if(e.key === 'Enter' && !wantsInput){ e.preventDefault(); e.stopPropagation(); onOk(); } };
+    document.addEventListener('keydown', onKey, true);
     ok.addEventListener('click', onOk);
     cancel.addEventListener('click', onCancel);
+    setTimeout(() => { try { (wantsInput ? input : (opts.danger && !opts.alert ? cancel : ok)).focus(); } catch(e){} }, 0);
   });
+}
+
+// ---------- asking first, and saying no ----------
+// ARE YOU SURE (the soft no): a question before something that would undo work.
+async function askSure({ title, body, confirmLabel = 'Go ahead', danger = true }){
+  murmur.play('confirm');
+  return (await modalPrompt({ title, body, confirmLabel, cancelLabel: 'Keep my work', danger })) === true;
+}
+// THE HARD NO: something that would break the page, refused, and said why.
+function hardNo(title, body){
+  murmur.play('hardNo');
+  return modalPrompt({ title, body, confirmLabel: 'Understood', alert: true, hard: true });
+}
+// a quiet note at the foot of the page (errors that were caught, things cleaned up)
+let toastTimer = 0;
+function toast(text){
+  let t = document.getElementById && document.getElementById('toast');
+  if(!t && document.createElement && document.body){ t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  if(!t) return;
+  t.textContent = text; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5200);
+}
+// WORK SINCE A FRESH START: settled changes counted since the last preset,
+// spell, load or summon; past a handful, those ask before replacing them
+const GUARD_EDITS = 6;
+const needsGuard = () => (state.ui.edits || 0) >= GUARD_EDITS;
+function markFresh(){ state.ui.edits = -1; }          // (the action's own history step brings it to 0)
+async function guardWork(label, what){
+  if(!needsGuard()) return true;
+  return askSure({ title: `${label}?`, body: `You've made ${state.ui.edits} changes since the last fresh start. ${what} replaces them; Undo can still bring them back.`, confirmLabel: label });
+}
+// buttons that replace the look ask first (a click from the keyboard too); after, the count starts again
+const GUARDED = { randomFontBtn: ['Summon a new typeface', 'A new typeface'], randomBgBtn: ['Summon a new backdrop', 'A new backdrop'],
+  spellApplyBtn: ['Invoke this spell', 'The spell'], advancedLoadBtn: ['Load this JSON', 'The JSON'] };
+let guardPass = null;
+if(document.addEventListener) document.addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest(Object.keys(GUARDED).map(id => '#' + id).join(',')) : null;
+  if(!b) return;
+  if(guardPass === b){ guardPass = null; markFresh(); return; }
+  // what would be refused anyway is refused first, not asked about
+  if(b.id === 'advancedLoadBtn'){ try { JSON.parse($('advancedJson').value); } catch(_){ return; } }
+  if(!needsGuard()){ markFresh(); return; }
+  e.preventDefault(); e.stopImmediatePropagation();
+  const [label, what] = GUARDED[b.id];
+  guardWork(label, what).then(ok => { if(ok){ guardPass = b; b.click(); } });
+}, true);
+// a control that is switched off answers with a dull, hollow knock
+if(document.addEventListener) document.addEventListener('pointerdown', e => {
+  const t = e.target && e.target.closest ? e.target.closest('button:disabled, input:disabled, select:disabled, .tool-off, [aria-disabled="true"]') : null;
+  if(t) murmur.play('blocked');
+}, true);
+// errors are caught, said quietly, and never take the page down with them
+let lastErr = 0;
+if(typeof window !== 'undefined' && window.addEventListener){
+  const caught = msg => { const now = Date.now(); if(now - lastErr < 4000) return; lastErr = now;
+    toast('Something went wrong (' + String(msg || 'unknown').slice(0, 90) + '). Your work is safe.'); };
+  window.addEventListener('error', e => caught(e && (e.message || (e.error && e.error.message))));
+  window.addEventListener('unhandledrejection', e => caught(e && e.reason && (e.reason.message || e.reason)));
+}
+
+/**
+ * A LOOK FROM ANYWHERE (the Workbench JSON, a shared link, an imported
+ * spell) is checked before it touches the page: an object, not huge, its
+ * Athanor graph cleaned (validateGraph); if restoring it fails anyway, the
+ * look as it was comes back. Returns whether it was applied.
+ */
+const LOOK_MAX_JSON = 512*1024;
+function checkLook(obj, what = 'This look'){
+  if(!obj || typeof obj !== 'object' || Array.isArray(obj)) return { ok: false, why: `${what} isn't a Vellum look (it should be an object of settings).` };
+  let size = 0; try { size = JSON.stringify(obj).length; } catch(e){ return { ok: false, why: `${what} can't be read.` }; }
+  if(size > LOOK_MAX_JSON) return { ok: false, why: `${what} is ${Math.round(size/1024)} KB; a look is at most ${LOOK_MAX_JSON/1024} KB.` };
+  const look = { ...obj }, notes = [];
+  if(look.forgeGraph !== undefined && look.forgeGraph !== ''){
+    const v = validateGraph(look.forgeGraph);
+    if(!v.ok){ notes.push('its Athanor graph was set aside (' + v.problems.join('; ') + ')'); delete look.forgeGraph; }
+    else if(v.problems.length){ look.forgeGraph = JSON.stringify(v.graph); notes.push('its Athanor graph was cleaned (' + v.problems.slice(0, 2).join('; ') + ')'); }
+  }
+  for(const [k, v] of Object.entries(look)) if(typeof v === 'string' && v.length > 20000 && k !== 'forgeGraph'){ delete look[k]; notes.push(`${k} was too long and was left out`); }
+  return { ok: true, look, notes };
+}
+function safeRestore(obj, what = 'This look'){
+  const c = checkLook(obj, what);
+  if(!c.ok){ hardNo('That can’t be loaded', c.why + ' Nothing was changed.'); return false; }
+  const before = serializeCurrentSettings();
+  try { restoreSettings(c.look); }
+  catch(e){
+    try { restoreSettings(before); } catch(_){}
+    hardNo('That look broke on loading', `Vellum put your look back as it was. (${String(e && e.message || e).slice(0, 120)})`);
+    return false;
+  }
+  if(c.notes.length) toast(what + ' loaded; ' + c.notes.join('; ') + '.');
+  scheduleRender();
+  return true;
 }
 
 // A spell is the look, never the words -- the poem belongs to the Grimoire.
@@ -2595,7 +2723,7 @@ function settingsForSpell(){
 const vault = createVault({
   $,
   getSettings: settingsForSpell,
-  applySettings: (settings, name)=>{ restoreSettings(stripToLook(settings));
+  applySettings: (settings, name)=>{ if(!safeRestore(stripToLook(settings), 'This spell')) return;
     if(name && document.body && document.body.dataset) document.body.dataset.lookName = name;
     scheduleRender(); },
   getText: ()=> $('poemText').value,
@@ -2728,12 +2856,13 @@ function commitHistory(){
   h.stack.push(snap);
   if(h.stack.length > HISTORY_MAX) h.stack.shift();
   h.index = h.stack.length - 1;
+  state.ui.edits = (state.ui.edits || 0) + 1;
   paintHistoryButtons();
 }
 function commitSoon(){ clearTimeout(state.history.timer); state.history.timer = setTimeout(commitHistory, 450); }
 function stepHistory(dir){
   const h = state.history, to = h.index + dir;
-  if(to < 0 || to >= h.stack.length){ murmur.play('error'); return; }
+  if(to < 0 || to >= h.stack.length){ murmur.play('nothingToUndo'); return; }
   murmur.play(dir < 0 ? 'undo' : 'redo');
   clearTimeout(h.timer);
   h.index = to; h.restoring = true;

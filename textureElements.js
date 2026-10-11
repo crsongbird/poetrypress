@@ -142,7 +142,7 @@ export const TEXTURE_ELEMENTS = {
   summoning: { def: 'wind', wind: { name: 'Transmutation Circle' },
     fire:  { name: 'Fire Seal',     k: [140, 260, 60], t: ['#FFB25B', '#5A0C04'] },
     water: { name: 'Lunar Circle',  k: [180, 120, 15], t: ['#BFE8FF', '#0C2440'] },
-    earth: { name: 'Machine Glyph', k: [110, 200, 95], t: ['#F2D58A', '#2E2410'] } },
+    earth: { name: 'Hermetic Seal', k: [110, 200, 95], t: ['#F2D58A', '#2E2410'] } },
   inkbleed: { def: 'water', water: { name: 'Rorschach Test' },
     fire:  { name: 'Bloodbloom', k: [160, 200, 60, 60], t: ['#3A0606', '#E0301E'] },
     wind:  { name: 'Moth Wing',  k: [120, 120, 20, 50], t: ['#3A4A3A', '#9FBF8A'] },
@@ -240,9 +240,9 @@ export const TEXTURE_ELEMENTS = {
 
   // ---- 🜉 The Athanor: its knobs mean whatever the graph makes them ----
   athanor: { def: 'earth', earth: { name: 'As Made' },
-    fire:  { name: 'Kindled', k: [85, 85, 85, 85, 85, 85], t: ['#FFD08A', '#5A0E08'] },
-    water: { name: 'Stilled', k: [25, 40, 25, 40, 25, 40], t: ['#CFF0FF', '#0A2440'] },
-    wind:  { name: 'Aired',   k: [60, 15, 60, 15, 60, 15], t: ['#F0FFF4', '#2E4A3A'] } },
+    fire:  { name: 'Calcined', k: [85, 85, 85, 85, 85, 85], t: ['#FFD08A', '#5A0E08'] },
+    water: { name: 'Dissolved', k: [25, 40, 25, 40, 25, 40], t: ['#CFF0FF', '#0A2440'] },
+    wind:  { name: 'Sublimed',   k: [60, 15, 60, 15, 60, 15], t: ['#F0FFF4', '#2E4A3A'] } },
 };
 
 /** A texture's four readings, in button order (🜂 🜄 🜁 🜃): each its

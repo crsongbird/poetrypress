@@ -1,0 +1,369 @@
+<title>Murmur Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Literata:opsz,wght@7..72,400;7..72,600&family=Courier+Prime&family=Noto+Sans+Symbols&display=swap">
+<style>
+/* Layout: Vellum's dress (deep plum, rose, square corners, compact). One column:
+   the whole sound, what plays when, the compositions, the instruments, then the
+   design to send back. Single dark theme, as Vellum itself is. */
+:root{
+  color-scheme: dark;
+  --bg:#130e15; --panel:#1b1420; --raise:#251c2b; --well:#0f0b11; --line:#3a2c41; --fg:#efe7f3; --muted:#a697ac;
+  --rose:#e6a0b6; --rose-ink:#2a1420; --gold:#d9b45d; --violet:#a796e0; --quiet:#6e6175;
+  --display:'Fraunces', Georgia, 'Times New Roman', serif;
+  --body:'Literata', Georgia, 'Times New Roman', serif;
+  --mono:'Courier Prime', 'Courier New', ui-monospace, monospace;
+  --sym:'Noto Sans Symbols', 'Segoe UI Symbol', 'Apple Symbols', sans-serif;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:14px;line-height:1.45;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:14px}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(26px,5vw,36px);line-height:1.1;margin:0;text-wrap:balance}
+h1 .glyph{font-family:var(--sym);color:var(--rose);font-weight:400;margin-right:.25em}
+h2{font-family:var(--display);font-weight:600;font-size:19px;margin:0}
+.lede{margin:6px 0 0;color:var(--muted);max-width:68ch}
+.panel{background:var(--panel);border:1px solid var(--line);padding:14px;display:grid;gap:12px;min-width:0}
+.head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;justify-content:space-between}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--rose)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.btn{background:var(--raise);border:1px solid var(--line);padding:6px 11px}
+.btn:hover{border-color:var(--rose)}
+.btn:disabled{opacity:.35;cursor:default;border-color:var(--line)}
+.btn.major{background:var(--rose);color:var(--rose-ink);border-color:var(--rose);font-weight:600}
+.btn.small{padding:3px 8px;font-size:13px}
+.btn.play{padding:3px 9px;font-family:var(--sym)}
+.btn.warn{border-color:var(--gold);color:var(--gold)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=text],input[type=number],textarea{background:var(--well);border:1px solid var(--line);padding:4px 6px;min-width:0}
+input[type=range]{accent-color:var(--rose);min-width:0}
+.mono{font-family:var(--mono)}
+
+/* the whole sound */
+.scales{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.scale{background:var(--raise);border:1px solid var(--line);padding:7px 8px;text-align:left;display:grid;gap:2px}
+.scale b{font-family:var(--display);font-weight:600;font-size:15px}
+.scale .notes{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.scale[aria-pressed="true"]{border-color:var(--rose);box-shadow:inset 0 0 0 1px var(--rose)}
+.scale[aria-pressed="true"] .notes{color:var(--fg)}
+.knobs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 14px}
+.knob{display:grid;gap:2px;font-size:13px}
+.knob span{display:flex;justify-content:space-between;color:var(--muted)}
+.knob output{font-family:var(--mono);color:var(--fg)}
+.say{font-size:13px;color:var(--muted);margin:0}
+
+/* what plays when */
+.fgroups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
+.fgroup h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 4px;font-weight:600}
+.frow{display:grid;grid-template-columns:minmax(0,1fr) 150px auto;gap:6px;align-items:center;padding:4px 0;border-top:1px solid var(--line)}
+.frow b{font-weight:600;display:block}
+.frow small{color:var(--muted);font-size:12px}
+.frow select.silent{color:var(--quiet)}
+
+/* compositions */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:stretch;border:1px solid var(--line);background:var(--raise)}
+.chip button{background:none;border:0;padding:4px 9px}
+.chip .p{font-family:var(--sym);color:var(--rose);border-left:1px solid var(--line)}
+.chip[aria-current="true"]{border-color:var(--rose);box-shadow:inset 0 0 0 1px var(--rose)}
+.chip .unused{color:var(--quiet)}
+.editor{display:grid;gap:10px;border:1px solid var(--line);background:var(--well);padding:12px}
+.ehead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.ehead input{font-family:var(--display);font-size:18px;font-weight:600;background:transparent;border-color:transparent;border-bottom-color:var(--line);width:100%}
+.used{font-size:13px;color:var(--muted)}
+.events{display:grid;gap:8px}
+.ev{display:grid;grid-template-columns:110px 112px minmax(110px,1fr) 92px 74px 74px 120px 74px auto;gap:6px;align-items:end;background:var(--panel);border:1px solid var(--line);padding:8px}
+.ev label{display:grid;gap:2px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:0}
+.ev label > *{text-transform:none;letter-spacing:0;font-size:13px;color:var(--fg);width:100%}
+.ev .names{grid-column:1 / -1;font-family:var(--mono);font-size:12px;color:var(--gold);min-height:1.2em}
+.ev .x{align-self:center}
+.legend{display:flex;flex-wrap:wrap;gap:4px;font-family:var(--mono);font-size:12px}
+.legend span{border:1px solid var(--line);padding:1px 5px;color:var(--muted)}
+.legend b{color:var(--fg);font-weight:400}
+
+/* instruments */
+.insts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.inst{background:var(--raise);border:1px solid var(--line);padding:9px;display:grid;gap:6px;align-content:start}
+.inst h3{margin:0;font-family:var(--display);font-weight:600;font-size:16px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.inst .knob{font-size:12px}
+
+/* the spectrum */
+.scope{border:1px solid var(--line);background:var(--well);height:110px}
+.scope canvas{display:block;width:100%;height:100%}
+.played{font-family:var(--mono);font-size:13px;min-height:1.4em;overflow-wrap:anywhere;margin:0}
+.played .dim{color:var(--muted)}
+
+/* send it back */
+textarea{width:100%;min-height:96px;font-family:var(--mono);font-size:12px;resize:vertical}
+
+@media (max-width:900px){
+  .scales{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .knobs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fgroups{grid-template-columns:1fr}
+  .insts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ev{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ev .x{grid-column:3;justify-self:end}
+}
+@media (max-width:480px){
+  .scales{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .insts{grid-template-columns:1fr}
+  .frow{grid-template-columns:minmax(0,1fr) 120px auto}
+  .ev{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ev .x{grid-column:2}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="glyph" aria-hidden="true">🜉</span>Murmur Studio</h1>
+    <p class="lede">Vellum's interface sounds, on the engine the app itself uses. Choose which UI functions make a sound and which composition each one plays, edit the compositions note by note, and shape the five instruments. Everything saves in this browser. When it sounds right, copy the design at the bottom and paste it into the chat.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="hWhole">
+    <div class="head"><h2 id="hWhole">The whole sound</h2><span class="hint">Home is D. Every note comes from the scale.</span></div>
+    <div class="scales" id="scales"></div>
+    <p class="say" id="scaleSay"></p>
+    <div class="knobs">
+      <label class="knob" for="gOct"><span>Home <output id="gOctV"></output></span><select id="gOct"><option value="-1">D2 · low</option><option value="0">D3 · as first shipped</option><option value="1">D4 · high</option></select></label>
+      <label class="knob" for="gRoom"><span>Room <output id="gRoomV"></output></span><input type="range" id="gRoom" min="0" max="100"></label>
+      <label class="knob" for="gWarm"><span>Warmth <output id="gWarmV"></output></span><input type="range" id="gWarm" min="0" max="100"></label>
+      <label class="knob" for="gHum"><span>Humanize <output id="gHumV"></output></span><input type="range" id="gHum" min="0" max="100"></label>
+      <label class="knob" for="gVol"><span>Volume <output id="gVolV"></output></span><input type="range" id="gVol" min="0" max="100"></label>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="hWhen">
+    <div class="head"><h2 id="hWhen">What plays when</h2>
+      <div class="row"><span class="hint" id="silentCount"></span><button class="btn major" id="session" type="button">Play a little session</button></div></div>
+    <div class="fgroups" id="fgroups"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hComp">
+    <div class="head"><h2 id="hComp">Compositions</h2>
+      <div class="row"><button class="btn small" id="cNew" type="button">New</button><button class="btn small" id="cDup" type="button">Duplicate</button><button class="btn small" id="cDel" type="button">Delete</button></div></div>
+    <div class="chips" id="chips"></div>
+    <div class="editor" id="editor"></div>
+    <div><p class="label">Degrees in this scale</p><div class="legend" id="legend"></div>
+      <p class="hint">Write degrees with spaces: <span class="mono">0</span> is home, <span class="mono">7</span> the octave above, <span class="mono">2</span> the third, <span class="mono">4</span> the fifth, <span class="mono">-3</span> below home. A chord builds its shape on the first degree. "One by index" plays one degree per tab.</p></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hInst">
+    <div class="head"><h2 id="hInst">Instruments</h2><span class="hint">Each is the partials of a real thing, shaped. Brightness scales the upper partials; shimmer is their slow beating.</span></div>
+    <div class="insts" id="insts"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hScope">
+    <div class="head"><h2 id="hScope">What's sounding</h2><span class="hint">40 Hz – 4 kHz; the A of each octave marked.</span></div>
+    <div class="scope"><canvas id="scope" aria-label="Live spectrum"></canvas></div>
+    <p class="played" id="played"><span class="dim">Play anything; its notes appear here.</span></p>
+  </section>
+
+  <section class="panel" aria-labelledby="hSend">
+    <div class="head"><h2 id="hSend">Send it back</h2><div class="row"><button class="btn major" id="copy" type="button">Copy the design</button><button class="btn" id="reset" type="button">Reset to Vellum's defaults</button></div></div>
+    <textarea id="out" readonly aria-label="The design, as JSON"></textarea>
+    <details><summary class="hint">Load a design</summary>
+      <div class="row" style="margin-top:8px"><textarea id="in" aria-label="Paste a design here" placeholder="Paste a design here"></textarea><button class="btn" id="load" type="button">Load it</button><span class="hint" id="loadMsg"></span></div>
+    </details>
+  </section>
+</div>
+
+<script>
+/*MURMUR*/
+// ---------------------------------------------------------------------------
+// The studio
+// ---------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const KEY = 'murmur.studio.v2';
+const clone = o => JSON.parse(JSON.stringify(o));
+let Dz = clone(MURMUR_DESIGN), vol = 60, current = 'tab';
+try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if(v && v.design){ Dz = normalizeDesign(v.design); vol = v.vol ?? 60; current = v.current || current; } } catch(e){}
+Dz = normalizeDesign(Dz); if(!Dz.compositions[current]) current = Object.keys(Dz.compositions)[0];
+const mur = createMurmur({ volume: vol/100, enabled: true, design: Dz });
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify({ design: Dz, vol, current })); } catch(e){} };
+function changed(rerender){ mur.setDesign(Dz); persist(); writeOut(); if(rerender) rerender.forEach(f => f()); }
+const playComp = (id, opts) => { if(!mur.context) mur.setEnabled(true); show(mur.playComposition(id, opts)); };
+
+// ---- the whole sound ----
+function renderScales(){
+  $('scales').innerHTML = Object.entries(MURMUR_SCALES).map(([k, s]) => {
+    const notes = [0, 1, 2, 3, 4, 5, 6].map(d => M_PC[(degreeMidi({ ...Dz, scale:k }, d) % 12 + 12) % 12]).filter((n, i, a) => a.indexOf(n) === i).join(' ');
+    return `<button class="scale" type="button" data-scale="${k}" aria-pressed="${Dz.scale === k}"><b>${esc(s.name)}</b><span class="notes">${notes}</span></button>`; }).join('');
+  $('scaleSay').textContent = MURMUR_SCALES[Dz.scale].say;
+}
+function syncGlobals(){
+  $('gOct').value = String(Dz.octave); $('gOctV').textContent = noteName(degreeMidi(Dz, 0));
+  for(const [id, k] of [['gRoom','room'],['gWarm','warmth'],['gHum','humanize']]){ $(id).value = Dz[k]; $(id + 'V').textContent = Dz[k]; }
+  $('gVol').value = vol; $('gVolV').textContent = vol;
+}
+$('scales').addEventListener('click', e => { const b = e.target.closest('.scale'); if(!b) return; Dz.scale = b.dataset.scale; changed([renderScales, renderLegend, renderEditor]); playComp(current, { index: 0 }); });
+$('gOct').addEventListener('change', () => { Dz.octave = +$('gOct').value; changed([syncGlobals, renderLegend, renderEditor]); playComp(current); });
+for(const [id, k] of [['gRoom','room'],['gWarm','warmth'],['gHum','humanize']]){
+  $(id).addEventListener('input', () => { Dz[k] = +$(id).value; $(id + 'V').textContent = Dz[k]; changed(); });
+  $(id).addEventListener('change', () => playComp(current));
+}
+$('gVol').addEventListener('input', () => { vol = +$('gVol').value; $('gVolV').textContent = vol; mur.setVolume(vol/100); persist(); });
+
+// ---- what plays when ----
+function compOptions(sel){ return `<option value="">— Silent —</option>` + Object.entries(Dz.compositions).map(([k, c]) => `<option value="${esc(k)}"${k === sel ? ' selected' : ''}>${esc(c.name || k)}</option>`).join(''); }
+function renderFunctions(){
+  const groups = [...new Set(MURMUR_FUNCTIONS.map(f => f.group))];
+  $('fgroups').innerHTML = groups.map(g => `<div class="fgroup"><h3>${esc(g)}</h3>` + MURMUR_FUNCTIONS.filter(f => f.group === g).map(f => {
+    const v = Dz.map[f.id] || '';
+    return `<div class="frow"><div><b>${esc(f.label)}</b><small>${esc(f.where)}</small></div><select data-fn="${f.id}" class="${v ? '' : 'silent'}" aria-label="Sound for ${esc(f.label)}">${compOptions(v)}</select><button class="btn play" type="button" data-try="${f.id}" aria-label="Play ${esc(f.label)}"${v ? '' : ' disabled'}>▶</button></div>`; }).join('') + `</div>`).join('');
+  const silent = MURMUR_FUNCTIONS.filter(f => !Dz.map[f.id]).length;
+  $('silentCount').textContent = `${MURMUR_FUNCTIONS.length - silent} with a sound · ${silent} silent`;
+}
+let tabI = 0;
+$('fgroups').addEventListener('change', e => { const s = e.target.closest('select[data-fn]'); if(!s) return; Dz.map[s.dataset.fn] = s.value || null; changed([renderFunctions, renderChips, renderEditor]); if(s.value) playComp(s.value, { index: 0 }); });
+$('fgroups').addEventListener('click', e => { const b = e.target.closest('[data-try]'); if(!b) return; const fn = b.dataset.try, id = Dz.map[fn]; if(!id) return;
+  playComp(id, { index: fn === 'tab' ? (tabI = (tabI + 1) % 5) : 0 }); });
+
+// ---- compositions ----
+const usedBy = id => MURMUR_FUNCTIONS.filter(f => Dz.map[f.id] === id).map(f => f.label);
+function renderChips(){
+  $('chips').innerHTML = Object.entries(Dz.compositions).map(([k, c]) => `<span class="chip" aria-current="${k === current}"><button type="button" data-pick="${esc(k)}" class="${usedBy(k).length ? '' : 'unused'}">${esc(c.name || k)}</button><button type="button" class="p" data-hear="${esc(k)}" aria-label="Play ${esc(c.name || k)}">▶</button></span>`).join('');
+}
+const KINDS = [['note', 'One note'], ['together', 'Together'], ['arp', 'One by one'], ['chord', 'Chord'], ['index', 'One by index']];
+function namesFor(ev){ return renderComposition({ ...Dz, compositions: { x: { events: [ev] } } }, 'x', { index: 0 }).map(n => noteName(n.midi)).join(' ') || '—'; }
+function renderEditor(){
+  const C = Dz.compositions[current];
+  if(!C){ $('editor').innerHTML = '<p class="hint">No composition chosen.</p>'; return; }
+  const used = usedBy(current);
+  $('editor').innerHTML = `<div class="ehead"><input type="text" id="cName" value="${esc(C.name || current)}" aria-label="Composition name"><div class="row"><button class="btn major" type="button" id="cPlay">▶ Play</button></div></div>
+    <p class="used">${used.length ? 'Played by: ' + used.map(esc).join(', ') : 'Not played by any UI function yet.'}</p>
+    <div class="events">${C.events.map((e, i) => `
+      <div class="ev" data-i="${i}">
+        <label>Instrument<select data-k="inst">${Object.entries(Dz.instruments).map(([k, I]) => `<option value="${k}"${k === e.inst ? ' selected' : ''}>${esc(I.name || k)}</option>`).join('')}</select></label>
+        <label>How<select data-k="kind">${KINDS.map(([k, n]) => `<option value="${k}"${k === e.kind ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label>Degrees<input type="text" class="mono" data-k="notes" value="${esc((e.notes || []).join(' '))}" inputmode="numeric"></label>
+        <label>Shape<select data-k="shape"${e.kind === 'chord' ? '' : ' disabled'}>${Object.keys(MURMUR_SHAPES).map(s => `<option${s === (e.shape || 'triad') ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
+        <label>Starts ms<input type="number" data-k="at" value="${Math.round((e.at || 0)*1000)}" min="0" max="3000" step="10"></label>
+        <label>Spacing ms<input type="number" data-k="gap" value="${Math.round((e.gap || 0)*1000)}" min="0" max="1000" step="5"></label>
+        <label>Level ${Math.round((e.level ?? 0.4)*100)}<input type="range" data-k="level" min="0" max="100" value="${Math.round((e.level ?? 0.4)*100)}"></label>
+        <label>Order<select data-k="dir"><option value="up"${e.dir !== 'down' ? ' selected' : ''}>Up</option><option value="down"${e.dir === 'down' ? ' selected' : ''}>Down</option></select></label>
+        <button class="btn small x" type="button" data-del="${i}" aria-label="Remove this sound">✕</button>
+        <div class="names">${esc(namesFor(e))}</div>
+      </div>`).join('')}</div>
+    <div class="row"><button class="btn small" type="button" id="evAdd">Add a sound</button><span class="hint">Starts: when it begins after the press. Spacing: between notes (or the strum of a chord).</span></div>`;
+}
+function renderLegend(){
+  $('legend').innerHTML = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 9, 11, 14].map(d => `<span>${d} <b>${noteName(degreeMidi(Dz, d))}</b></span>`).join('');
+}
+$('chips').addEventListener('click', e => {
+  const p = e.target.closest('[data-pick]'), h = e.target.closest('[data-hear]');
+  if(p){ current = p.dataset.pick; persist(); renderChips(); renderEditor(); playComp(current, { index: 0 }); }
+  if(h) playComp(h.dataset.hear, { index: 0 });
+});
+$('editor').addEventListener('click', e => {
+  const C = Dz.compositions[current]; if(!C) return;
+  if(e.target.closest('#cPlay')) return playComp(current, { index: 0 });
+  if(e.target.closest('#evAdd')){ C.events.push({ inst:'glass', kind:'note', notes:[7], shape:'triad', at:0, gap:0.06, level:0.4 }); changed([renderEditor]); return; }
+  const d = e.target.closest('[data-del]'); if(d){ C.events.splice(+d.dataset.del, 1); changed([renderEditor]); playComp(current); }
+});
+function setField(t, live){
+  const row = t.closest('.ev'), C = Dz.compositions[current]; if(!row || !C) return;
+  const ev = C.events[+row.dataset.i], k = t.dataset.k;
+  if(k === 'notes') ev.notes = t.value.split(/[\s,]+/).map(Number).filter(Number.isFinite);
+  else if(k === 'at' || k === 'gap') ev[k] = Math.max(0, (+t.value || 0)/1000);
+  else if(k === 'level'){ ev.level = +t.value/100; t.parentElement.firstChild.textContent = 'Level ' + t.value; }
+  else ev[k] = t.value;
+  row.querySelector('.names').textContent = namesFor(ev);
+  if(k === 'kind') row.querySelector('[data-k="shape"]').disabled = t.value !== 'chord';
+  changed();
+  if(!live) playComp(current, { index: 0 });
+}
+$('editor').addEventListener('input', e => { const t = e.target; if(t.id === 'cName'){ Dz.compositions[current].name = t.value; changed(); return; } if(t.dataset.k === 'level' || t.dataset.k === 'notes') setField(t, true); });
+$('editor').addEventListener('change', e => { const t = e.target; if(t.id === 'cName'){ renderChips(); renderFunctions(); return; } if(t.dataset.k) setField(t, false); });
+const freshId = base => { let i = 1, id = base; while(Dz.compositions[id]) id = base + (++i); return id; };
+$('cNew').addEventListener('click', () => { const id = freshId('mine'); Dz.compositions[id] = { name: 'New composition', events: [{ inst:'glass', kind:'note', notes:[7], at:0, gap:0.06, level:0.4 }] }; current = id; changed([renderChips, renderEditor, renderFunctions]); });
+$('cDup').addEventListener('click', () => { const C = Dz.compositions[current]; if(!C) return; const id = freshId(current + 'Copy'); Dz.compositions[id] = { ...clone(C), name: (C.name || current) + ' (copy)' }; current = id; changed([renderChips, renderEditor, renderFunctions]); });
+let delArmed = false;
+$('cDel').addEventListener('click', () => {
+  if(!Dz.compositions[current]) return;
+  if(!delArmed){ delArmed = true; $('cDel').textContent = 'Delete it?'; $('cDel').classList.add('warn'); setTimeout(() => { delArmed = false; $('cDel').textContent = 'Delete'; $('cDel').classList.remove('warn'); }, 2500); return; }
+  delete Dz.compositions[current]; for(const k of Object.keys(Dz.map)) if(Dz.map[k] === current) Dz.map[k] = null;
+  current = Object.keys(Dz.compositions)[0]; delArmed = false; $('cDel').textContent = 'Delete'; $('cDel').classList.remove('warn');
+  changed([renderChips, renderEditor, renderFunctions]);
+});
+
+// ---- instruments ----
+const IK = [['level', 'Level', 0, 100, 100, ''], ['attack', 'Attack', 1, 400, 1000, ' ms'], ['decay', 'Decay', 40, 5000, 1000, ' ms'], ['sustain', 'Sustain', 0, 100, 100, ''],
+  ['bright', 'Brightness', 0, 100, 100, ''], ['shimmer', 'Shimmer', 0, 100, 100, ''], ['drop', 'Pitch drop', 0, 100, 100, '']];
+function renderInsts(){
+  $('insts').innerHTML = Object.entries(Dz.instruments).map(([k, I]) => `<div class="inst" data-inst="${k}">
+    <h3>${esc(I.name || k)}<span class="row"><button class="btn play" type="button" data-hear-i="note" aria-label="Play a note">▶</button><button class="btn small" type="button" data-hear-i="chord">Chord</button></span></h3>
+    <label class="knob">Body<select data-ik="body">${Object.entries(MURMUR_BODIES).map(([b, B]) => `<option value="${b}"${b === I.body ? ' selected' : ''}>${esc(B.name)}</option>`).join('')}</select></label>
+    <label class="knob">Octave<select data-ik="octave">${[-1, 0, 1].map(o => `<option value="${o}"${o === +I.octave ? ' selected' : ''}>${o > 0 ? '+1' : o}</option>`).join('')}</select></label>
+    ${IK.map(([key, label, min, max, mul, unit]) => `<label class="knob"><span>${label} <output>${Math.round((I[key] || 0)*mul)}${unit}</output></span><input type="range" data-ik="${key}" data-mul="${mul}" data-unit="${unit}" min="${min}" max="${max}" value="${Math.round((I[key] || 0)*mul)}"></label>`).join('')}
+  </div>`).join('');
+}
+$('insts').addEventListener('input', e => { const t = e.target, card = t.closest('[data-inst]'); if(!card || !t.dataset.ik || t.type !== 'range') return;
+  Dz.instruments[card.dataset.inst][t.dataset.ik] = +t.value/+t.dataset.mul; t.parentElement.querySelector('output').textContent = t.value + t.dataset.unit; changed(); });
+$('insts').addEventListener('change', e => { const t = e.target, card = t.closest('[data-inst]'); if(!card || !t.dataset.ik) return;
+  if(t.tagName === 'SELECT') Dz.instruments[card.dataset.inst][t.dataset.ik] = t.dataset.ik === 'octave' ? +t.value : t.value;
+  changed([renderEditor, renderLegend]); if(!mur.context) mur.setEnabled(true); show(mur.playInstrument(card.dataset.inst, 'note')); });
+$('insts').addEventListener('click', e => { const b = e.target.closest('[data-hear-i]'); if(!b) return; if(!mur.context) mur.setEnabled(true); show(mur.playInstrument(b.closest('[data-inst]').dataset.inst, b.dataset.hearI)); });
+
+// ---- a little session: the app in miniature, by the map ----
+let timers = [];
+$('session').addEventListener('click', () => {
+  timers.forEach(clearTimeout); timers = [];
+  const seq = [['tab', 0, 1], ['checkbox', 600], ['lock', 1100], ['select', 1600], ['summonType', 2100], ['readingFire', 3300], ['preset', 4400], ['undo', 5800], ['athanorOpen', 6500], ['athanorClose', 8200], ['spellCreate', 9200], ['saveImage', 10600]];
+  for(const [fn, t, index] of seq) timers.push(setTimeout(() => { const id = Dz.map[fn]; if(id) playComp(id, { index: index || 0 }); }, t));
+});
+
+// ---- send it back ----
+function writeOut(){ $('out').value = JSON.stringify(Dz); }
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('out').value); $('copy').textContent = 'Copied'; }
+  catch(e){ $('out').focus(); $('out').select(); $('copy').textContent = 'Selected: copy it'; }
+  setTimeout(() => { $('copy').textContent = 'Copy the design'; }, 1800);
+});
+let resetArmed = false;
+$('reset').addEventListener('click', () => {
+  if(!resetArmed){ resetArmed = true; $('reset').textContent = 'Reset everything?'; $('reset').classList.add('warn'); setTimeout(() => { resetArmed = false; $('reset').textContent = "Reset to Vellum's defaults"; $('reset').classList.remove('warn'); }, 2500); return; }
+  resetArmed = false; $('reset').textContent = "Reset to Vellum's defaults"; $('reset').classList.remove('warn');
+  Dz = normalizeDesign(clone(MURMUR_DESIGN)); current = 'tab'; changed([renderAll]);
+});
+$('load').addEventListener('click', () => {
+  try { const d = JSON.parse($('in').value); Dz = normalizeDesign(d.design || d); current = Object.keys(Dz.compositions)[0]; changed([renderAll]); $('loadMsg').textContent = 'Loaded.'; }
+  catch(e){ $('loadMsg').textContent = 'That isn’t a design: paste the whole text copied from this page.'; }
+});
+
+// ---- the spectrum and the notes ----
+const cv = $('scope'), cx = cv.getContext('2d');
+let marks = [], until = 0, running = false;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const F0 = 40, F1 = 4000, xOf = (f, w) => Math.log(f/F0)/Math.log(F1/F0)*w;
+function show(list){
+  if(!list || !list.length) return;
+  const seen = new Set(), ns = list.slice().sort((a, b) => a.midi - b.midi).filter(n => !seen.has(n.midi) && seen.add(n.midi));
+  marks = ns.map(n => ({ f: 440*Math.pow(2, (n.midi - 69)/12), n: noteName(n.midi) }));
+  $('played').innerHTML = ns.map(n => `${noteName(n.midi)}<span class="dim">·${esc((Dz.instruments[n.inst] || {}).name || n.inst)}</span>`).join('  ');
+  until = performance.now() + 4000; if(!running){ running = true; requestAnimationFrame(loop); }
+}
+function size(){ const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = Math.max(1, r.width*d); cv.height = Math.max(1, r.height*d); cx.setTransform(d, 0, 0, d, 0, 0); }
+function draw(data){
+  const d = window.devicePixelRatio || 1, w = cv.width/d, h = cv.height/d;
+  cx.clearRect(0, 0, w, h); cx.font = '11px "Courier Prime", monospace';
+  cx.strokeStyle = css('--line'); cx.fillStyle = css('--muted'); cx.lineWidth = 1; cx.textBaseline = 'bottom';
+  for(const [f, n] of [[55,'A1'],[110,'A2'],[220,'A3'],[440,'A4'],[880,'A5'],[1760,'A6'],[3520,'A7']]){ const x = Math.round(xOf(f, w)) + 0.5; cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, h - 14); cx.stroke(); cx.fillText(n, x + 3, h - 1); }
+  const an = mur.analyser;
+  if(data && an){ const sr = mur.context.sampleRate, bins = an.frequencyBinCount;
+    cx.beginPath(); cx.moveTo(0, h - 16);
+    for(let x = 0; x <= w; x++){ const f = F0*Math.pow(F1/F0, x/w), b = Math.min(bins - 1, Math.round(f/(sr/2)*bins)); cx.lineTo(x, h - 16 - data[b]/255*(h - 28)); }
+    cx.lineTo(w, h - 16); cx.closePath(); cx.fillStyle = css('--rose') + '55'; cx.fill(); cx.strokeStyle = css('--rose'); cx.stroke(); }
+  cx.fillStyle = css('--gold'); cx.strokeStyle = css('--gold'); cx.textBaseline = 'top';
+  marks.forEach((m, i) => { const x = Math.round(xOf(m.f, w)) + 0.5; cx.globalAlpha = 0.45; cx.beginPath(); cx.moveTo(x, 13 + (i % 2)*12); cx.lineTo(x, h - 16); cx.stroke(); cx.globalAlpha = 1; cx.fillText(m.n, x + 3, 1 + (i % 2)*12); });
+}
+function loop(){ const an = mur.analyser; if(!an){ running = false; draw(null); return; }
+  const data = new Uint8Array(an.frequencyBinCount); an.getByteFrequencyData(data); draw(data);
+  if(performance.now() < until) requestAnimationFrame(loop); else { running = false; draw(null); } }
+window.addEventListener('resize', () => { size(); draw(null); });
+
+function renderAll(){ renderScales(); syncGlobals(); renderFunctions(); renderChips(); renderEditor(); renderLegend(); renderInsts(); writeOut(); }
+renderAll(); size(); draw(null);
+</script>

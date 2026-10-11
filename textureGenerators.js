@@ -556,6 +556,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
   } else if(type === 'athanor'){
     result = genAthanor(w,h,light,tint1,tint2,extra);
+  } else if(type === 'athanorsteps'){
+    result = genAthanorSteps(w,h,light,tint1,tint2,extra);
   } else if(type === 'guilloche'){
     result = genGuilloche(w,h,amt,zoom,light,form);
   } else if(type === 'chladni'){
@@ -710,7 +712,7 @@ function describeRequest(type, w, h, opts){
   // up to 130 for the engine-lit textures (past the dial's rim: lower light); 100 for the rest
   const tiltMax = (TEXTURE_CAPS[RETIRED[type] || type] || {}).lowLight ? 130 : 100;
   const lightTilt = (opts.lightTilt >= 0) ? Math.round(Math.min(tiltMax, opts.lightTilt)) : 100;
-  const defs = paramsFor(type);
+  const defs = paramsFor(type === 'athanorsteps' ? 'athanor' : type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
   // a composite's sub-layers (astral_fog / astral_stars) take their Form via p3
@@ -728,7 +730,7 @@ function describeRequest(type, w, h, opts){
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
-            + (type === 'athanor' ? `_c${athanorHash(opts.graph)}` : '');
+            + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
@@ -751,6 +753,28 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   sx.putImageData(im, 0, 0);
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  return c;
+}
+// The Athanor's STEP PREVIEWS: every node's first output, small, as tiles of
+// one sheet (in the order of the nodes' ids, filling rows of ⌈√n⌉) — made in
+// the texture worker like any texture, so the editor stays responsive.
+export function athanorSheetLayout(n){ const cols = Math.max(1, Math.ceil(Math.sqrt(n))); return { cols, rows: Math.max(1, Math.ceil(n/cols)) }; }
+function genAthanorSteps(w, h, light, tint1, tint2, extra){
+  const ids = Object.keys(((((typeof extra.graph === 'string' ? (() => { try { return JSON.parse(extra.graph); } catch(e){ return {}; } })() : extra.graph) || {}).drawflow || {}).Home || {}).data || {});
+  const { cols } = athanorSheetLayout(ids.length), t = Math.max(8, Math.floor(w/cols));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
+  if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true },
+    { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
+  const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
+  const tx = tile.getContext('2d', CPU);
+  [...all.keys()].forEach((id, i) => {
+    const img = all.get(id); if(!img) return;
+    const im = tx.createImageData(t, t), d = im.data;
+    for(let k = 0, q = 0; k < t*t; k++, q += 4){ d[q] = Math.max(0, Math.min(255, img.r[k]*255)); d[q+1] = Math.max(0, Math.min(255, img.g[k]*255)); d[q+2] = Math.max(0, Math.min(255, img.b[k]*255)); d[q+3] = 255; }
+    tx.putImageData(im, 0, 0); cx.drawImage(tile, (i % cols)*t, Math.floor(i/cols)*t);
+  });
   return c;
 }
 // A texture rebuilt as a chain of steps (chains.js): its graph evaluated on

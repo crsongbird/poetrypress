@@ -92,9 +92,12 @@ const STEP_PARTS = {
   colour:   { cat: 'Inputs', label: 'Colour', ins: [], outs: ['colour'], params: [['hex', 'Colour', 'text', '#808080']] },
   forms:    { cat: 'Noise', label: 'Soft Forms', ins: [], outs: ['tone'], params: [STEP_R('count', 'Forms', 5, 1, 12), STEP_R('size', 'Size', 50), STEP_R('noise', 'Noise', 50)] },
   streaks:  { cat: 'Marks', label: 'Streaks', ins: ['base'], outs: ['field'], params: [STEP_SEL('kind', 'Kind', ['streaks', 'sheets']), STEP_R('angle', 'From', 0, 0, 360),
-              STEP_R('spread', 'Gusts', 0, 0, 60), STEP_R('length', 'Length', 100, 25, 500), STEP_R('count', 'Count', 100, 0, 400), STEP_R('light', 'Light Share', 75), STEP_R('strength', 'Strength', 50)] },
+              STEP_R('spread', 'Gusts', 0, 0, 40), STEP_R('length', 'Length', 100, 100, 500), STEP_R('count', 'Count', 100, 0, 400), STEP_R('light', 'Light Share', 75), STEP_R('strength', 'Strength', 50)] },
   hatching: { cat: 'Marks', label: 'Hatching', ins: ['tone'], outs: ['ink'], params: [STEP_R('angle', 'Direction', 125, 0, 360), STEP_R('density', 'Density', 100, 10, 700),
               STEP_R('size', 'Patch Size', 100, 25, 400), STEP_R('cross', 'Cross-Hatching', 38), STEP_R('crossAngle', 'Cross Angle', 54, 10, 90), STEP_R('weight', 'Weight', 50)] },
+  // the way Filter Forge folds a picture: mirror it round the centre, or wrap it into rings
+  kaleidoscope: { cat: 'Shape', label: 'Kaleidoscope', ins: ['field'], outs: ['field'], params: [STEP_R('folds', 'Folds', 6, 2, 16), STEP_R('turn', 'Turn', 0, 0, 360), STEP_R('zoom', 'Zoom', 100, 25, 400)] },
+  polar:    { cat: 'Shape', label: 'Polar Wrap', ins: ['field'], outs: ['field'], params: [STEP_R('rings', 'Rings', 100, 25, 400), STEP_R('turn', 'Turn', 0, 0, 360)] },
 };
 const STEP_COST = {
   noise: d => Math.max(1, +d.octaves || 3),
@@ -399,11 +402,71 @@ const STEP_RUN = {
   },
 };
 
+Object.assign(STEP_RUN, {
+  // fold the picture into N mirrored wedges about the centre (a kaleidoscope)
+  kaleidoscope(E, n){ const { ww, wh, N, input, num, asField } = E;
+    const f = asField(input(n, 1)); if(!f) return null;
+    const k = Math.max(2, Math.round(num(n, 'folds', 6))), wedge = Math.PI*2/k, turn = num(n, 'turn', 0)*Math.PI/180, z = Math.max(0.25, num(n, 'zoom', 100)/100);
+    const cx = ww/2, cy = wh/2, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy)/z; let a = Math.atan2(dy, dx) - turn;
+      a = ((a % wedge) + wedge) % wedge; if(a > wedge/2) a = wedge - a;            // mirrored inside each wedge
+      const sx = Math.round(cx + Math.cos(a + turn)*r), sy = Math.round(cy + Math.sin(a + turn)*r);
+      o[y*ww + x] = f[Math.min(wh - 1, Math.max(0, sy))*ww + Math.min(ww - 1, Math.max(0, sx))];
+    }
+    return [o];
+  },
+  // the picture wrapped round the centre: its left edge the middle, its rows rings
+  polar(E, n){ const { ww, wh, N, unit, input, num, asField } = E;
+    const f = asField(input(n, 1)); if(!f) return null;
+    const rings = Math.max(0.25, num(n, 'rings', 100)/100), turn = num(n, 'turn', 0)/360, cx = ww/2, cy = wh/2, R = unit*0.5, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      const dx = x - cx, dy = y - cy, u = (((Math.atan2(dy, dx)/(Math.PI*2) + 0.5 + turn) % 1) + 1) % 1, v = (Math.hypot(dx, dy)/R*rings) % 1;
+      o[y*ww + x] = f[Math.min(wh - 1, Math.floor(v*wh))*ww + Math.min(ww - 1, Math.floor(u*ww))];
+    }
+    return [o];
+  },
+});
+Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5 });
+
+/**
+ * What travels on each port: field (a grey map), image (colour), colour (one
+ * colour), value (one number). The editor colours ports and wires by these;
+ * the evaluator converts between them wherever a port asks (athanor.js).
+ */
+export const VALUE_TYPES = ['field', 'image', 'colour', 'value'];
+const STEP_IO = {
+  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
+  mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
+  tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
+  blend: { ins: ['image', 'image', 'field'], outs: ['image'] }, surface: { ins: ['image', 'field'] },
+  cloth: { ins: ['field', 'field', 'colour', 'colour'], outs: ['image'] },
+  glaze: { ins: ['field', 'field', 'field', 'field', 'field', 'colour', 'colour'], outs: ['image'] },
+};
+// FILTER FORGE'S LESSON: every slider can take a wire. A step's range params
+// each get an input port after its own (⚙ Name); a value wired there sets the
+// param across its range (0 → its min, 1 → its max), so a Knob or the Dial
+// can drive any of them — and a template shows its wiring instead of hiding it.
+const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
+
 /** Every step: the part, its cost and what it does. */
-export const STEPS = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
+const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
   ...TOUCH_STEPS, ...CHAOS_STEPS };
+export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
+  const io = STEP_IO[k] || {};
+  const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
+  return [k, { ...s,
+    dataIns: s.ins.length,
+    ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
+    inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),
+    outTypes: s.outs.map((_, i) => (io.outs || [])[i] || 'field'),
+    paramPorts }];
+}));
+/** The input port (1-based) that drives a param, or 0 if it has none. */
+export function paramPort(name, key){ const s = STEPS[name]; if(!s) return 0; const i = s.paramPorts.indexOf(key); return i < 0 ? 0 : s.dataIns + i + 1; }
 /** A param's range (for a bound param with no range of its own), or null. */
 export function stepRange(name, key){
   const p = ((STEPS[name] || {}).params || []).find(q => q[0] === key);

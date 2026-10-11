@@ -1,0 +1,714 @@
+<title>Murmur Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Literata:opsz,wght@7..72,400;7..72,600&family=Courier+Prime&family=Noto+Sans+Symbols&display=swap">
+<style>
+/* Layout: Vellum's dress (deep plum, rose, square corners, compact). One column:
+   the whole sound, what plays when, the compositions, the instruments, then the
+   design to send back. Single dark theme, as Vellum itself is. */
+:root{
+  color-scheme: dark;
+  --bg:#130e15; --panel:#1b1420; --raise:#251c2b; --well:#0f0b11; --line:#3a2c41; --fg:#efe7f3; --muted:#a697ac;
+  --rose:#e6a0b6; --rose-ink:#2a1420; --gold:#d9b45d; --violet:#a796e0; --quiet:#6e6175;
+  --display:'Fraunces', Georgia, 'Times New Roman', serif;
+  --body:'Literata', Georgia, 'Times New Roman', serif;
+  --mono:'Courier Prime', 'Courier New', ui-monospace, monospace;
+  --sym:'Noto Sans Symbols', 'Segoe UI Symbol', 'Apple Symbols', sans-serif;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:14px;line-height:1.45;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:14px}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(26px,5vw,36px);line-height:1.1;margin:0;text-wrap:balance}
+h1 .glyph{font-family:var(--sym);color:var(--rose);font-weight:400;margin-right:.25em}
+h2{font-family:var(--display);font-weight:600;font-size:19px;margin:0}
+.lede{margin:6px 0 0;color:var(--muted);max-width:68ch}
+.panel{background:var(--panel);border:1px solid var(--line);padding:14px;display:grid;gap:12px;min-width:0}
+.head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;justify-content:space-between}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--rose)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.btn{background:var(--raise);border:1px solid var(--line);padding:6px 11px}
+.btn:hover{border-color:var(--rose)}
+.btn:disabled{opacity:.35;cursor:default;border-color:var(--line)}
+.btn.major{background:var(--rose);color:var(--rose-ink);border-color:var(--rose);font-weight:600}
+.btn.small{padding:3px 8px;font-size:13px}
+.btn.play{padding:3px 9px;font-family:var(--sym)}
+.btn.warn{border-color:var(--gold);color:var(--gold)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=text],input[type=number],textarea{background:var(--well);border:1px solid var(--line);padding:4px 6px;min-width:0}
+input[type=range]{accent-color:var(--rose);min-width:0}
+.mono{font-family:var(--mono)}
+
+/* the whole sound */
+.scales{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.scale{background:var(--raise);border:1px solid var(--line);padding:7px 8px;text-align:left;display:grid;gap:2px}
+.scale b{font-family:var(--display);font-weight:600;font-size:15px}
+.scale .notes{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.scale[aria-pressed="true"]{border-color:var(--rose);box-shadow:inset 0 0 0 1px var(--rose)}
+.scale[aria-pressed="true"] .notes{color:var(--fg)}
+.knobs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 14px}
+.knob{display:grid;gap:2px;font-size:13px}
+.knob span{display:flex;justify-content:space-between;color:var(--muted)}
+.knob output{font-family:var(--mono);color:var(--fg)}
+.say{font-size:13px;color:var(--muted);margin:0}
+
+/* what plays when */
+.fgroups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
+.fgroup h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 4px;font-weight:600}
+.frow{display:grid;grid-template-columns:minmax(0,1fr) 150px auto;gap:6px;align-items:center;padding:4px 0;border-top:1px solid var(--line)}
+.frow b{font-weight:600;display:block}
+.frow small{color:var(--muted);font-size:12px}
+.frow select.silent{color:var(--quiet)}
+
+/* compositions */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:stretch;border:1px solid var(--line);background:var(--raise)}
+.chip button{background:none;border:0;padding:4px 9px}
+.chip .p{font-family:var(--sym);color:var(--rose);border-left:1px solid var(--line)}
+.chip[aria-current="true"]{border-color:var(--rose);box-shadow:inset 0 0 0 1px var(--rose)}
+.chip .unused{color:var(--quiet)}
+.editor{display:grid;gap:10px;border:1px solid var(--line);background:var(--well);padding:12px}
+.ehead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.ehead input{font-family:var(--display);font-size:18px;font-weight:600;background:transparent;border-color:transparent;border-bottom-color:var(--line);width:100%}
+.used{font-size:13px;color:var(--muted)}
+.events{display:grid;gap:8px}
+.ev{display:grid;grid-template-columns:110px 112px minmax(110px,1fr) 92px 74px 74px 120px 74px auto;gap:6px;align-items:end;background:var(--panel);border:1px solid var(--line);padding:8px}
+.ev label{display:grid;gap:2px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:0}
+.ev label > *{text-transform:none;letter-spacing:0;font-size:13px;color:var(--fg);width:100%}
+.ev .names{grid-column:1 / -1;font-family:var(--mono);font-size:12px;color:var(--gold);min-height:1.2em}
+.ev .x{align-self:center}
+.legend{display:flex;flex-wrap:wrap;gap:4px;font-family:var(--mono);font-size:12px}
+.legend span{border:1px solid var(--line);padding:1px 5px;color:var(--muted)}
+.legend b{color:var(--fg);font-weight:400}
+
+/* instruments */
+.insts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.inst{background:var(--raise);border:1px solid var(--line);padding:9px;display:grid;gap:6px;align-content:start}
+.inst h3{margin:0;font-family:var(--display);font-weight:600;font-size:16px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.inst .knob{font-size:12px}
+
+/* the spectrum */
+.scope{border:1px solid var(--line);background:var(--well);height:110px}
+.scope canvas{display:block;width:100%;height:100%}
+.played{font-family:var(--mono);font-size:13px;min-height:1.4em;overflow-wrap:anywhere;margin:0}
+.played .dim{color:var(--muted)}
+
+/* send it back */
+textarea{width:100%;min-height:96px;font-family:var(--mono);font-size:12px;resize:vertical}
+
+@media (max-width:900px){
+  .scales{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .knobs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fgroups{grid-template-columns:1fr}
+  .insts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ev{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ev .x{grid-column:3;justify-self:end}
+}
+@media (max-width:480px){
+  .scales{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .insts{grid-template-columns:1fr}
+  .frow{grid-template-columns:minmax(0,1fr) 120px auto}
+  .ev{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ev .x{grid-column:2}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="glyph" aria-hidden="true">🜉</span>Murmur Studio</h1>
+    <p class="lede">Vellum's interface sounds, on the engine the app itself uses. Choose which UI functions make a sound and which composition each one plays, edit the compositions note by note, and shape the five instruments. Everything saves in this browser. When it sounds right, copy the design at the bottom and paste it into the chat.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="hWhole">
+    <div class="head"><h2 id="hWhole">The whole sound</h2><span class="hint">Home is D. Every note comes from the scale.</span></div>
+    <div class="scales" id="scales"></div>
+    <p class="say" id="scaleSay"></p>
+    <div class="knobs">
+      <label class="knob" for="gOct"><span>Home <output id="gOctV"></output></span><select id="gOct"><option value="-1">D2 · low</option><option value="0">D3 · as first shipped</option><option value="1">D4 · high</option></select></label>
+      <label class="knob" for="gRoom"><span>Room <output id="gRoomV"></output></span><input type="range" id="gRoom" min="0" max="100"></label>
+      <label class="knob" for="gWarm"><span>Warmth <output id="gWarmV"></output></span><input type="range" id="gWarm" min="0" max="100"></label>
+      <label class="knob" for="gHum"><span>Humanize <output id="gHumV"></output></span><input type="range" id="gHum" min="0" max="100"></label>
+      <label class="knob" for="gVol"><span>Volume <output id="gVolV"></output></span><input type="range" id="gVol" min="0" max="100"></label>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="hWhen">
+    <div class="head"><h2 id="hWhen">What plays when</h2>
+      <div class="row"><span class="hint" id="silentCount"></span><button class="btn major" id="session" type="button">Play a little session</button></div></div>
+    <div class="fgroups" id="fgroups"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hComp">
+    <div class="head"><h2 id="hComp">Compositions</h2>
+      <div class="row"><button class="btn small" id="cNew" type="button">New</button><button class="btn small" id="cDup" type="button">Duplicate</button><button class="btn small" id="cDel" type="button">Delete</button></div></div>
+    <div class="chips" id="chips"></div>
+    <div class="editor" id="editor"></div>
+    <div><p class="label">Degrees in this scale</p><div class="legend" id="legend"></div>
+      <p class="hint">Write degrees with spaces: <span class="mono">0</span> is home, <span class="mono">7</span> the octave above, <span class="mono">2</span> the third, <span class="mono">4</span> the fifth, <span class="mono">-3</span> below home. A chord builds its shape on the first degree. "One by index" plays one degree per tab.</p></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hInst">
+    <div class="head"><h2 id="hInst">Instruments</h2><span class="hint">Each is the partials of a real thing, shaped. Brightness scales the upper partials; shimmer is their slow beating.</span></div>
+    <div class="insts" id="insts"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hScope">
+    <div class="head"><h2 id="hScope">What's sounding</h2><span class="hint">40 Hz – 4 kHz; the A of each octave marked.</span></div>
+    <div class="scope"><canvas id="scope" aria-label="Live spectrum"></canvas></div>
+    <p class="played" id="played"><span class="dim">Play anything; its notes appear here.</span></p>
+  </section>
+
+  <section class="panel" aria-labelledby="hSend">
+    <div class="head"><h2 id="hSend">Send it back</h2><div class="row"><button class="btn major" id="copy" type="button">Copy the design</button><button class="btn" id="reset" type="button">Reset to Vellum's defaults</button></div></div>
+    <textarea id="out" readonly aria-label="The design, as JSON"></textarea>
+    <details><summary class="hint">Load a design</summary>
+      <div class="row" style="margin-top:8px"><textarea id="in" aria-label="Paste a design here" placeholder="Paste a design here"></textarea><button class="btn" id="load" type="button">Load it</button><span class="hint" id="loadMsg"></span></div>
+    </details>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   murmur.js — soft interface sounds, synthesized from a SOUND DESIGN.
+   OFF until it is turned on (Esoterica → Appearance → Sounds); its switch
+   and volume are the person's own, kept in this browser, never in a look.
+
+   Everything the sounds are is DATA (MURMUR_DESIGN, below), so it can be
+   shaped by ear in the Murmur Studio and pasted back here:
+     scale        the notes everything is drawn from (home is D)
+     octave       where home sits (−1: D2, 0: D3)
+     room         a little air around the sounds (0–100)
+     warmth       gentle saturation (0–100; 0 is clean)
+     humanize     small drifts in time and level (0–100; never in pitch)
+     instruments  five voices: a body (its partials), level, attack, decay,
+                  sustain, brightness, shimmer, octave, pitch drop
+     compositions named little phrases, each a list of events:
+                  { inst, kind: note | together | arp | chord | index,
+                    notes: [scale degrees], shape (chords), at, gap, level, dir }
+                  degrees: 0 is home, 7 the octave above, 2 the third, 4 the fifth
+     map          which composition each UI function plays (null: silent)
+
+   The same notes every time: nothing is chosen at random but a little
+   timing and level (humanize). Pitches stay inside the scale, and between
+   55 and 1100 Hz. A sound repeated within 40 ms plays once; at most 24
+   voices; a soft limiter on the sum.
+
+     const murmur = createMurmur({ volume: 0.4, enabled: false });
+     murmur.play('saveImage'); murmur.play('tab', { index: 2 });
+     murmur.bind(document);      // [data-sound="<ui function>"], <details>, <select>s, checkboxes
+   ============================================================ */
+
+/* the scales: seven steps from D (a pentatonic SNAPS each step to its own notes) */
+const MURMUR_SCALES = {
+  aeolian:   { name: 'Aeolian',          steps: [0, 2, 3, 5, 7, 8, 10], say: 'Natural minor: wistful, warm.' },
+  dorian:    { name: 'Dorian',           steps: [0, 2, 3, 5, 7, 9, 10], say: 'Minor with a bright sixth: folk-like.' },
+  phrygian:  { name: 'Phrygian',         steps: [0, 1, 3, 5, 7, 8, 10], say: 'Minor with a flat second: dark, ritual.' },
+  ionian:    { name: 'Major',            steps: [0, 2, 4, 5, 7, 9, 11], say: 'Plain major: open, sunny.' },
+  minorPent: { name: 'Minor pentatonic', steps: [0, 2, 3, 5, 7, 8, 10], snap: [0, 3, 5, 7, 10], say: 'Five notes, no half steps: nothing can clash.' },
+  majorPent: { name: 'Major pentatonic', steps: [0, 2, 4, 5, 7, 9, 11], snap: [0, 2, 4, 7, 9], say: 'Five notes, bright and calm: chimes.' },
+};
+/* chord shapes, in DEGREES of the scale (so a chord is always in key) */
+const MURMUR_SHAPES = { triad: [0, 2, 4], sus2: [0, 1, 4], sus4: [0, 3, 4], add9: [0, 2, 4, 8], fifth: [0, 4, 7], octave: [0, 7], sixth: [0, 2, 5] };
+/* bodies: the partials of real things — [ratio, amount, share of the decay] */
+const MURMUR_BODIES = {
+  bell:  { name: 'Tuned bell',  parts: [[0.5, 0.30, 1.5], [1, 0.60, 1], [1.19, 0.28, 0.75], [1.5, 0.15, 0.6], [2, 0.40, 0.5], [2.66, 0.09, 0.3], [4.05, 0.035, 0.18]] },
+  glass: { name: 'Struck glass', parts: [[1, 1, 1], [2.32, 0.06, 0.6], [4.25, 0.015, 0.35]] },
+  pad:   { name: 'Soft breath',  parts: [[1, 0.62, 1], [2, 0.14, 1], [3, 0.05, 1], [4, 0.018, 1]] },
+  bar:   { name: 'Wooden bar',   parts: [[1, 1, 1], [3.99, 0.12, 0.35], [10.0, 0.02, 0.15]] },
+  tine:  { name: 'Music-box tine', parts: [[1, 1, 1], [6.27, 0.05, 0.3], [17.55, 0.008, 0.1]] },
+  sine:  { name: 'Pure tone',    parts: [[1, 1, 1]] },
+};
+/* the UI functions that can have a sound, as Vellum names them */
+const MURMUR_FUNCTIONS = [
+  { id: 'tab',            group: 'Moving around', label: 'Change tab',             where: 'The five tabs (each its own note)' },
+  { id: 'cardOpen',       group: 'Moving around', label: 'Open a card',            where: 'A folded section' },
+  { id: 'cardFold',       group: 'Moving around', label: 'Fold a card',            where: 'A folded section' },
+  { id: 'checkbox',       group: 'Settings',      label: 'Tick a checkbox',        where: 'Any checkbox' },
+  { id: 'select',         group: 'Settings',      label: 'Choose from a menu',     where: 'Any drop-down' },
+  { id: 'lock',           group: 'Settings',      label: 'Lock a setting',         where: 'The padlock beside a control' },
+  { id: 'unlock',         group: 'Settings',      label: 'Unlock a setting',       where: 'The padlock beside a control' },
+  { id: 'dialRandom',     group: 'Settings',      label: 'Random light angle',     where: 'The dial’s ⚄' },
+  { id: 'soundOn',        group: 'Settings',      label: 'Turn sounds on',         where: 'Appearance → Sounds' },
+  { id: 'preset',         group: 'Looks',         label: 'Apply a preset',         where: 'Rituals' },
+  { id: 'reroll',         group: 'Looks',         label: 'Reroll the seed',        where: 'The moon beside the seed' },
+  { id: 'summonType',     group: 'Looks',         label: 'Summon a typeface',      where: 'Inscription' },
+  { id: 'summonBackdrop', group: 'Looks',         label: 'Summon a backdrop',      where: 'Materia' },
+  { id: 'readingFire',    group: 'Looks',         label: '🜂 Fire reading',        where: 'Under Surface Variant' },
+  { id: 'readingWater',   group: 'Looks',         label: '🜄 Water reading',       where: 'Under Surface Variant' },
+  { id: 'readingWind',    group: 'Looks',         label: '🜁 Wind reading',        where: 'Under Surface Variant' },
+  { id: 'readingEarth',   group: 'Looks',         label: '🜃 Earth reading',       where: 'Under Surface Variant' },
+  { id: 'spellCreate',    group: 'Keeping',       label: 'Create a spell',         where: 'Spellcrafting' },
+  { id: 'spellApply',     group: 'Keeping',       label: 'Invoke a spell',         where: 'Spellcrafting' },
+  { id: 'spellShare',     group: 'Keeping',       label: 'Share a spell',          where: 'Spellcrafting' },
+  { id: 'spellDissolve',  group: 'Keeping',       label: 'Dissolve a spell',       where: 'Spellcrafting' },
+  { id: 'poemRecord',     group: 'Keeping',       label: 'Record a poem',          where: 'The Grimoire' },
+  { id: 'saveImage',      group: 'Keeping',       label: 'Save image',             where: 'The Save image button' },
+  { id: 'athanorOpen',    group: 'The Athanor',   label: 'Open the Athanor',       where: 'Esoterica' },
+  { id: 'athanorClose',   group: 'The Athanor',   label: 'Close the Athanor',      where: 'Its Done button' },
+  { id: 'nodeAdd',        group: 'The Athanor',   label: 'Add a node',             where: 'The palette' },
+  { id: 'nodeRemove',     group: 'The Athanor',   label: 'Remove a node',          where: 'Delete, or its ✕' },
+  { id: 'wireConnect',    group: 'The Athanor',   label: 'Connect a wire',         where: 'Port to port' },
+  { id: 'wireDisconnect', group: 'The Athanor',   label: 'Cut a wire',             where: 'A wire’s ✕' },
+  { id: 'graphLoad',      group: 'The Athanor',   label: 'Load a graph',           where: 'Start from…, Revert' },
+  { id: 'confirm',        group: 'Asking',        label: 'Are you sure?',          where: 'Before something undoes your work' },
+  { id: 'hardNo',         group: 'Asking',        label: 'That can’t be done',     where: 'Something that would break the page, refused' },
+  { id: 'blocked',        group: 'Asking',        label: 'A switched-off control', where: 'Pressing what is off' },
+  { id: 'undo',           group: 'History',       label: 'Undo',                   where: '↶ or Ctrl+Z' },
+  { id: 'redo',           group: 'History',       label: 'Redo',                   where: '↷ or Ctrl+Shift+Z' },
+  { id: 'nothingToUndo',  group: 'History',       label: 'Nothing left to undo',   where: '↶ at the start' },
+];
+
+/* Vellum's sounds: very plain, in one minor key (Aeolian, home D2), and few.
+   They mark what takes a while, what changes a lot, and what needs you:
+   saving, a look arriving, keeping, the Athanor's machinery, a question
+   (the SOFT NO), a refusal (the HARD NO), a switched-off control (a hollow
+   knock). Most settings are silent. */
+const MURMUR_DESIGN = {
+  v: 2, scale: 'aeolian', octave: -1, room: 18, warmth: 10, humanize: 15,
+  instruments: {
+    glass: { name: 'Glass', body: 'glass', level: 0.5,  attack: 0.014, decay: 0.6,  sustain: 0,   bright: 0.35, shimmer: 0.2,  octave: 0, drop: 0 },
+    bell:  { name: 'Bell',  body: 'bell',  level: 0.16, attack: 0.006, decay: 2.2,  sustain: 0,   bright: 0.25, shimmer: 0.2,  octave: 0, drop: 0 },
+    pad:   { name: 'Pad',   body: 'pad',   level: 0.5,  attack: 0.16,  decay: 1.0,  sustain: 0.7, bright: 0.3,  shimmer: 0.3,  octave: 0, drop: 0 },
+    tick:  { name: 'Tick',  body: 'bar',   level: 0.35, attack: 0.003, decay: 0.09, sustain: 0,   bright: 0.2,  shimmer: 0,    octave: 1, drop: 0.3 },
+    tine:  { name: 'Tine',  body: 'tine',  level: 0.38, attack: 0.004, decay: 1.0,  sustain: 0,   bright: 0.3,  shimmer: 0.12, octave: 0, drop: 0 },
+    thud:  { name: 'Knock', body: 'bar',   level: 0.6,  attack: 0.002, decay: 0.08, sustain: 0,   bright: 0.02, shimmer: 0,    octave: 0, drop: 0.6 },
+  },
+  compositions: {
+    tick:     { name: 'Tick', events: [{ inst: 'tick', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.5 }] },
+    // the SOFT NO (Ruby's): a breath that steps down a half-step and stops — the question before undoing work
+    confirm:  { name: 'A soft no', events: [{ inst: 'pad', kind: 'arp', notes: [2, 1], at: 0, gap: 0.12, level: 0.35 }] },
+    // the HARD NO: two knocks, and the ground falls to home — final
+    hardNo:   { name: 'A hard no', events: [
+      { inst: 'thud', kind: 'arp', notes: [0, 0], at: 0, gap: 0.16, level: 0.8 },
+      { inst: 'pad', kind: 'arp', notes: [1, 0], at: 0.04, gap: 0.16, level: 0.45 }] },
+    blocked:  { name: 'A hollow knock', events: [{ inst: 'thud', kind: 'note', notes: [0], at: 0, gap: 0, level: 0.55 }] },
+    done:     { name: 'Done', events: [
+      { inst: 'tine', kind: 'arp', notes: [4, 7], at: 0, gap: 0.1, level: 0.45 },
+      { inst: 'bell', kind: 'note', notes: [14], at: 0.18, gap: 0, level: 0.5 }] },
+    arrive:   { name: 'A look arrives', events: [
+      { inst: 'pad', kind: 'chord', notes: [0], shape: 'fifth', at: 0, gap: 0.02, level: 0.4 },
+      { inst: 'tine', kind: 'note', notes: [9], at: 0.06, gap: 0, level: 0.35 }] },
+    keep:     { name: 'Kept', events: [{ inst: 'tine', kind: 'arp', notes: [7, 9, 11], at: 0, gap: 0.08, level: 0.4 }] },
+    summon:   { name: 'Summoned', events: [{ inst: 'glass', kind: 'arp', notes: [11, 9], at: 0, gap: 0.05, level: 0.3 }] },
+    // the Athanor: a little machine, and a little spell
+    open:     { name: 'The Athanor opens', events: [
+      { inst: 'tick', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.4 },
+      { inst: 'glass', kind: 'arp', notes: [4, 7, 11], at: 0.04, gap: 0.06, level: 0.32 },
+      { inst: 'pad', kind: 'note', notes: [0], at: 0.12, gap: 0, level: 0.3 }] },
+    close:    { name: 'The Athanor closes', events: [
+      { inst: 'glass', kind: 'arp', notes: [11, 7, 4], at: 0, gap: 0.06, level: 0.28 },
+      { inst: 'tick', kind: 'note', notes: [0], at: 0.2, gap: 0, level: 0.4 }] },
+    blipUp:   { name: 'Blip', events: [{ inst: 'tick', kind: 'note', notes: [11], at: 0, gap: 0, level: 0.35 }] },
+    blipDown: { name: 'Low blip', events: [{ inst: 'tick', kind: 'note', notes: [4], at: 0, gap: 0, level: 0.3 }] },
+    plugIn:   { name: 'Plugged in', events: [{ inst: 'glass', kind: 'arp', notes: [9, 11], at: 0, gap: 0.03, level: 0.25 }] },
+    plugOut:  { name: 'Unplugged', events: [{ inst: 'glass', kind: 'arp', notes: [11, 9], at: 0, gap: 0.03, level: 0.2 }] },
+    lit:      { name: 'A graph lit', events: [{ inst: 'tine', kind: 'arp', notes: [0, 4, 7], at: 0, gap: 0.07, level: 0.35 }] },
+    tab:      { name: 'Tab note', events: [{ inst: 'glass', kind: 'index', notes: [7, 9, 11, 12, 14], at: 0, gap: 0, level: 0.35 }] },
+    fire:     { name: 'Fire', events: [{ inst: 'tine', kind: 'note', notes: [9], at: 0, gap: 0, level: 0.35 }] },
+    water:    { name: 'Water', events: [{ inst: 'tine', kind: 'note', notes: [11], at: 0, gap: 0, level: 0.35 }] },
+    wind:     { name: 'Wind', events: [{ inst: 'tine', kind: 'note', notes: [13], at: 0, gap: 0, level: 0.35 }] },
+    earth:    { name: 'Earth', events: [{ inst: 'tine', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.35 }] },
+  },
+  map: {
+    tab: null, cardOpen: null, cardFold: null, checkbox: null, select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
+    preset: 'arrive', reroll: null, summonType: 'summon', summonBackdrop: 'summon',
+    readingFire: null, readingWater: null, readingWind: null, readingEarth: null,
+    spellCreate: 'keep', spellApply: 'arrive', spellShare: null, spellDissolve: null, poemRecord: 'keep', saveImage: 'done',
+    athanorOpen: 'open', athanorClose: 'close', nodeAdd: 'blipUp', nodeRemove: 'blipDown', wireConnect: 'plugIn', wireDisconnect: 'plugOut', graphLoad: 'lit',
+    confirm: 'confirm', hardNo: 'hardNo', blocked: 'blocked',
+    undo: null, redo: null, nothingToUndo: 'blocked',
+  },
+};
+
+const M_LOW_HZ = 55, M_HIGH_HZ = 1100, M_PEAK = 0.06, M_MAX_VOICES = 24, M_REPEAT_MS = 40;
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const murmurClamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const M_PC = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+/** A MIDI note's name ("D2", "B♭3"). */
+const noteName = m => M_PC[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+
+/** A design made whole: anything missing taken from the defaults (old or hand-edited designs still play). */
+function normalizeDesign(d){
+  const D = MURMUR_DESIGN, x = (d && typeof d === 'object') ? d : {};
+  const insts = {};
+  for(const k of Object.keys(D.instruments)) insts[k] = { ...D.instruments[k], ...((x.instruments || {})[k] || {}) };
+  return {
+    v: 1, scale: MURMUR_SCALES[x.scale] ? x.scale : D.scale,
+    octave: Number.isFinite(+x.octave) ? murmurClamp(Math.round(+x.octave), -1, 1) : D.octave,
+    room: Number.isFinite(+x.room) ? murmurClamp(+x.room, 0, 100) : D.room,
+    warmth: Number.isFinite(+x.warmth) ? murmurClamp(+x.warmth, 0, 100) : D.warmth,
+    humanize: Number.isFinite(+x.humanize) ? murmurClamp(+x.humanize, 0, 100) : D.humanize,
+    instruments: insts,
+    compositions: x.compositions && typeof x.compositions === 'object' ? x.compositions : D.compositions,
+    map: { ...D.map, ...(x.map || {}) },
+  };
+}
+
+/** A scale degree (0 home, 7 the octave above) as a MIDI note, for this design. */
+function degreeMidi(design, d, instOctave = 0){
+  const S = MURMUR_SCALES[design.scale] || MURMUR_SCALES.aeolian, base = 50 + 12*((design.octave || 0) + (instOctave || 0));
+  let s = S.steps[((d % 7) + 7) % 7];
+  if(S.snap){ let best = S.snap[0], bd = 99; for(const p of S.snap){ const dd = Math.abs(p - s); if(dd < bd || (dd === bd && p < best)){ bd = dd; best = p; } } s = best; }
+  return base + 12*Math.floor(d / 7) + s;
+}
+
+/**
+ * A composition as the notes it plays — pure (no sound): [{ midi, inst, at, level }].
+ * opts.index picks the note of an 'index' event (the tabs).
+ */
+function renderComposition(design, id, opts = {}){
+  const D = normalizeDesign(design), C = D.compositions[id];
+  if(!C || !Array.isArray(C.events)) return [];
+  const out = [];
+  const push = (inst, d, at, level) => {
+    const I = D.instruments[inst]; if(!I) return;
+    let m = degreeMidi(D, d, I.octave);
+    while(mtof(m) < M_LOW_HZ) m += 12;
+    while(mtof(m) > M_HIGH_HZ) m -= 12;
+    out.push({ midi: m, inst, at: Math.max(0, at), level: murmurClamp(level, 0, 1) });
+  };
+  for(const e of C.events){
+    const notes = (Array.isArray(e.notes) ? e.notes : String(e.notes || '').split(/[\s,]+/)).map(Number).filter(Number.isFinite);
+    if(!notes.length) continue;
+    const at = +e.at || 0, gap = +e.gap || 0, level = Number.isFinite(+e.level) ? +e.level : 0.4;
+    if(e.kind === 'index'){ push(e.inst, notes[((opts.index || 0) % notes.length + notes.length) % notes.length], at, level); continue; }
+    let seq = e.kind === 'chord' ? (MURMUR_SHAPES[e.shape] || MURMUR_SHAPES.triad).map(x => notes[0] + x) : e.kind === 'note' ? [notes[0]] : notes.slice();
+    if(e.dir === 'down') seq = seq.reverse();
+    const lone = e.kind === 'arp';
+    seq.forEach((d, i) => push(e.inst, d, at + i*gap, lone ? level*(1 - i*0.06) : level/Math.sqrt(seq.length)));
+  }
+  return out;
+}
+
+function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } = {}){
+  let ctx = null, voices = 0, nodes = null;
+  let vol = murmurClamp(volume, 0, 1), on = !!enabled, D = normalizeDesign(design);
+  const lastTime = new Map(), listeners = new Set();
+  const hasWindow = typeof window !== 'undefined';
+
+  function ensure(){
+    if(ctx) return ctx;
+    const AC = hasWindow && (window.AudioContext || window.webkitAudioContext);
+    if(!AC) return null;
+    ctx = new AC();
+    // voices → warmth → low-pass → (dry + room) → limiter → master → analyser → out
+    const warm = ctx.createWaveShaper(); warm.oversample = '2x';
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 0.4;
+    const dry = ctx.createGain(), wet = ctx.createGain(), room = ctx.createConvolver();
+    room.buffer = roomImpulse(ctx, 1.8);
+    const limit = ctx.createDynamicsCompressor();
+    limit.threshold.value = -24; limit.knee.value = 18; limit.ratio.value = 6; limit.attack.value = 0.004; limit.release.value = 0.3;
+    const master = ctx.createGain(); master.gain.value = vol * 0.9;
+    const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
+    warm.connect(lp); lp.connect(dry); lp.connect(room); room.connect(wet);
+    dry.connect(limit); wet.connect(limit); limit.connect(master); master.connect(analyser); analyser.connect(ctx.destination);
+    nodes = { warm, dry, wet, master, analyser };
+    applyMix();
+    return ctx;
+  }
+  function applyMix(){
+    if(!nodes) return;
+    nodes.warm.curve = softCurve(0.2 + D.warmth/100*1.4);
+    nodes.wet.gain.value = D.room/100*0.45; nodes.dry.gain.value = 1 - D.room/100*0.25;
+  }
+  // nothing is made until it is on and the page has been touched
+  const wake = () => { if(!on) return; const c = ensure(); if(c && c.state === 'suspended') c.resume(); };
+  if(hasWindow && window.addEventListener) ['pointerdown', 'keydown', 'touchstart'].forEach(t => window.addEventListener(t, wake, { capture: true, passive: true }));
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  /* one voice: the instrument's body, shaped by its settings */
+  function voice(n){
+    const I = D.instruments[n.inst], B = I && MURMUR_BODIES[I.body]; if(!B || !ctx || voices >= M_MAX_VOICES) return;
+    const h = D.humanize/100;
+    const f = mtof(n.midi) * Math.pow(2, rand(-3, 3)*h/1200);
+    const t0 = ctx.currentTime + 0.02 + n.at + rand(0, 0.012)*h;
+    const L = M_PEAK * n.level * I.level * (1 + rand(-0.1, 0.06)*h);
+    if(L <= 0) return;
+    const bus = ctx.createGain(); bus.connect(nodes.warm);
+    const atk = Math.max(0.003, +I.attack || 0.01), dec = Math.max(0.04, +I.decay || 0.5), sus = murmurClamp(+I.sustain || 0, 0, 1), hold = sus > 0 ? dec*0.35 : 0;
+    let end = t0;
+    for(const [r, a0, share] of B.parts){
+      const pf = f*r; if(pf > 6000) continue;
+      const a = r > 1 ? a0*(I.bright ?? 0.5)*2 : a0; if(a < 0.002) continue;
+      const g = ctx.createGain(); g.connect(bus);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(L*a, t0 + atk);
+      let tt = t0 + atk;
+      if(hold){ g.gain.linearRampToValueAtTime(L*a*sus, tt + hold); tt += hold; }
+      const d = dec*share; g.gain.exponentialRampToValueAtTime(0.0001, tt + d);
+      const stop = tt + d + 0.05; end = Math.max(end, stop);
+      const o = ctx.createOscillator(); o.type = 'sine';
+      // a struck thing starts a hair sharp and settles (drop)
+      if(I.drop > 0){ o.frequency.setValueAtTime(pf*(1 + I.drop*0.03), t0); o.frequency.exponentialRampToValueAtTime(pf, t0 + 0.03); } else o.frequency.value = pf;
+      o.connect(g); o.start(t0); o.stop(stop);
+      // SHIMMER: a near-pair a fraction of a hertz apart (a body never perfectly round) — it beats, slowly
+      if(I.shimmer > 0){ const g2 = ctx.createGain(); g2.gain.value = I.shimmer*0.25; g2.connect(g);
+        const o2 = ctx.createOscillator(); o2.frequency.value = pf + rand(0.3, 0.9)*(0.7 + r*0.15); o2.connect(g2); o2.start(t0); o2.stop(stop); }
+    }
+    voices++;
+    setTimeout(() => { voices--; try { bus.disconnect(); } catch(e){} }, Math.max(0, (end - ctx.currentTime)*1000 + 150));
+  }
+  function playNotes(list){
+    const c = ensure(); if(!c) return list;
+    // a context that is still waking (the first touch) plays as soon as it is up
+    if(c.state !== 'running'){ if(c.resume) c.resume().then(() => list.forEach(voice)).catch(() => {}); }
+    else list.forEach(voice);
+    listeners.forEach(fn => { try { fn(list); } catch(e){} });
+    return list;
+  }
+
+  /** A UI function's sound (its composition in the map; silent if none). */
+  function play(fn, opts = {}){
+    if(!on || vol <= 0) return [];
+    const id = D.map[fn]; if(!id) return [];
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if(now - (lastTime.get(fn) || 0) < M_REPEAT_MS) return [];
+    lastTime.set(fn, now);
+    return playNotes(renderComposition(D, id, opts));
+  }
+
+  /* opt-in wiring: [data-sound="<ui function>"] on anything clickable, <details>
+     folding (cardOpen / cardFold), <select>s (select) and checkboxes (checkbox).
+     Anything marked data-sound-off stays silent. */
+  function bind(root = document, { attr = 'data-sound' } = {}){
+    const quiet = el => el && el.closest && el.closest(`[${attr}-off]`);
+    const onClick = e => { const el = e.target.closest && e.target.closest(`[${attr}]`); if(el && root.contains(el) && !quiet(el)) play(el.getAttribute(attr)); };
+    const onToggle = e => { if(e.target.tagName === 'DETAILS' && !quiet(e.target)) play(e.target.open ? 'cardOpen' : 'cardFold'); };
+    const onChange = e => { const t = e.target; if(quiet(t)) return;
+      if(t.tagName === 'SELECT') play('select'); else if(t.type === 'checkbox') play('checkbox'); };
+    root.addEventListener('click', onClick);
+    root.addEventListener('toggle', onToggle, true);
+    root.addEventListener('change', onChange);
+    return () => { root.removeEventListener('click', onClick); root.removeEventListener('toggle', onToggle, true); root.removeEventListener('change', onChange); };
+  }
+
+  return {
+    play, bind,
+    // the studio's: a composition or one instrument, heard whatever the map says
+    playComposition(id, opts = {}){ return playNotes(renderComposition(D, id, opts)); },
+    playInstrument(inst, kind = 'note'){ const list = kind === 'chord'
+      ? renderComposition({ ...D, compositions: { t: { events: [{ inst, kind: 'chord', notes: [0], shape: 'triad', gap: 0.04, level: 0.6 }] } } }, 't')
+      : renderComposition({ ...D, compositions: { t: { events: [{ inst, kind: 'note', notes: [7], level: 0.7 }] } } }, 't'); return playNotes(list); },
+    setDesign(d){ D = normalizeDesign(d); applyMix(); },
+    get design(){ return D; },
+    onNotes(fn){ listeners.add(fn); return () => listeners.delete(fn); },
+    get analyser(){ return nodes ? nodes.analyser : null; },
+    get context(){ return ctx; },
+    setVolume(v){ vol = murmurClamp(+v, 0, 1); if(nodes && ctx) nodes.master.gain.setTargetAtTime(vol * 0.9, ctx.currentTime, 0.05); },
+    setEnabled(v){ on = !!v; if(on) wake(); },
+    get volume(){ return vol; },
+    get enabled(){ return on; },
+  };
+}
+
+/* tanh, normalised: warmth at the top, nothing that buzzes */
+function softCurve(k){
+  const n = 1024, c = new Float32Array(n), norm = Math.tanh(k);
+  for(let i = 0; i < n; i++){ const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(k * x) / norm; }
+  return c;
+}
+/* a small room: soft noise, dying away (mono) */
+function roomImpulse(ctx, seconds){
+  const n = Math.round(ctx.sampleRate*seconds), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+  let lp = 0;
+  for(let i = 0; i < n; i++){ const t = i/n; lp = lp*0.6 + (Math.random()*2 - 1)*0.4; d[i] = lp*Math.pow(1 - t, 3)*(i < ctx.sampleRate*0.012 ? i/(ctx.sampleRate*0.012) : 1); }
+  return b;
+}
+
+// ---------------------------------------------------------------------------
+// The studio
+// ---------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const KEY = 'murmur.studio.v2';
+const clone = o => JSON.parse(JSON.stringify(o));
+let Dz = clone(MURMUR_DESIGN), vol = 60, current = 'tab';
+try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if(v && v.design){ Dz = normalizeDesign(v.design); vol = v.vol ?? 60; current = v.current || current; } } catch(e){}
+Dz = normalizeDesign(Dz); if(!Dz.compositions[current]) current = Object.keys(Dz.compositions)[0];
+const mur = createMurmur({ volume: vol/100, enabled: true, design: Dz });
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify({ design: Dz, vol, current })); } catch(e){} };
+function changed(rerender){ mur.setDesign(Dz); persist(); writeOut(); if(rerender) rerender.forEach(f => f()); }
+const playComp = (id, opts) => { if(!mur.context) mur.setEnabled(true); show(mur.playComposition(id, opts)); };
+
+// ---- the whole sound ----
+function renderScales(){
+  $('scales').innerHTML = Object.entries(MURMUR_SCALES).map(([k, s]) => {
+    const notes = [0, 1, 2, 3, 4, 5, 6].map(d => M_PC[(degreeMidi({ ...Dz, scale:k }, d) % 12 + 12) % 12]).filter((n, i, a) => a.indexOf(n) === i).join(' ');
+    return `<button class="scale" type="button" data-scale="${k}" aria-pressed="${Dz.scale === k}"><b>${esc(s.name)}</b><span class="notes">${notes}</span></button>`; }).join('');
+  $('scaleSay').textContent = MURMUR_SCALES[Dz.scale].say;
+}
+function syncGlobals(){
+  $('gOct').value = String(Dz.octave); $('gOctV').textContent = noteName(degreeMidi(Dz, 0));
+  for(const [id, k] of [['gRoom','room'],['gWarm','warmth'],['gHum','humanize']]){ $(id).value = Dz[k]; $(id + 'V').textContent = Dz[k]; }
+  $('gVol').value = vol; $('gVolV').textContent = vol;
+}
+$('scales').addEventListener('click', e => { const b = e.target.closest('.scale'); if(!b) return; Dz.scale = b.dataset.scale; changed([renderScales, renderLegend, renderEditor]); playComp(current, { index: 0 }); });
+$('gOct').addEventListener('change', () => { Dz.octave = +$('gOct').value; changed([syncGlobals, renderLegend, renderEditor]); playComp(current); });
+for(const [id, k] of [['gRoom','room'],['gWarm','warmth'],['gHum','humanize']]){
+  $(id).addEventListener('input', () => { Dz[k] = +$(id).value; $(id + 'V').textContent = Dz[k]; changed(); });
+  $(id).addEventListener('change', () => playComp(current));
+}
+$('gVol').addEventListener('input', () => { vol = +$('gVol').value; $('gVolV').textContent = vol; mur.setVolume(vol/100); persist(); });
+
+// ---- what plays when ----
+function compOptions(sel){ return `<option value="">— Silent —</option>` + Object.entries(Dz.compositions).map(([k, c]) => `<option value="${esc(k)}"${k === sel ? ' selected' : ''}>${esc(c.name || k)}</option>`).join(''); }
+function renderFunctions(){
+  const groups = [...new Set(MURMUR_FUNCTIONS.map(f => f.group))];
+  $('fgroups').innerHTML = groups.map(g => `<div class="fgroup"><h3>${esc(g)}</h3>` + MURMUR_FUNCTIONS.filter(f => f.group === g).map(f => {
+    const v = Dz.map[f.id] || '';
+    return `<div class="frow"><div><b>${esc(f.label)}</b><small>${esc(f.where)}</small></div><select data-fn="${f.id}" class="${v ? '' : 'silent'}" aria-label="Sound for ${esc(f.label)}">${compOptions(v)}</select><button class="btn play" type="button" data-try="${f.id}" aria-label="Play ${esc(f.label)}"${v ? '' : ' disabled'}>▶</button></div>`; }).join('') + `</div>`).join('');
+  const silent = MURMUR_FUNCTIONS.filter(f => !Dz.map[f.id]).length;
+  $('silentCount').textContent = `${MURMUR_FUNCTIONS.length - silent} with a sound · ${silent} silent`;
+}
+let tabI = 0;
+$('fgroups').addEventListener('change', e => { const s = e.target.closest('select[data-fn]'); if(!s) return; Dz.map[s.dataset.fn] = s.value || null; changed([renderFunctions, renderChips, renderEditor]); if(s.value) playComp(s.value, { index: 0 }); });
+$('fgroups').addEventListener('click', e => { const b = e.target.closest('[data-try]'); if(!b) return; const fn = b.dataset.try, id = Dz.map[fn]; if(!id) return;
+  playComp(id, { index: fn === 'tab' ? (tabI = (tabI + 1) % 5) : 0 }); });
+
+// ---- compositions ----
+const usedBy = id => MURMUR_FUNCTIONS.filter(f => Dz.map[f.id] === id).map(f => f.label);
+function renderChips(){
+  $('chips').innerHTML = Object.entries(Dz.compositions).map(([k, c]) => `<span class="chip" aria-current="${k === current}"><button type="button" data-pick="${esc(k)}" class="${usedBy(k).length ? '' : 'unused'}">${esc(c.name || k)}</button><button type="button" class="p" data-hear="${esc(k)}" aria-label="Play ${esc(c.name || k)}">▶</button></span>`).join('');
+}
+const KINDS = [['note', 'One note'], ['together', 'Together'], ['arp', 'One by one'], ['chord', 'Chord'], ['index', 'One by index']];
+function namesFor(ev){ return renderComposition({ ...Dz, compositions: { x: { events: [ev] } } }, 'x', { index: 0 }).map(n => noteName(n.midi)).join(' ') || '—'; }
+function renderEditor(){
+  const C = Dz.compositions[current];
+  if(!C){ $('editor').innerHTML = '<p class="hint">No composition chosen.</p>'; return; }
+  const used = usedBy(current);
+  $('editor').innerHTML = `<div class="ehead"><input type="text" id="cName" value="${esc(C.name || current)}" aria-label="Composition name"><div class="row"><button class="btn major" type="button" id="cPlay">▶ Play</button></div></div>
+    <p class="used">${used.length ? 'Played by: ' + used.map(esc).join(', ') : 'Not played by any UI function yet.'}</p>
+    <div class="events">${C.events.map((e, i) => `
+      <div class="ev" data-i="${i}">
+        <label>Instrument<select data-k="inst">${Object.entries(Dz.instruments).map(([k, I]) => `<option value="${k}"${k === e.inst ? ' selected' : ''}>${esc(I.name || k)}</option>`).join('')}</select></label>
+        <label>How<select data-k="kind">${KINDS.map(([k, n]) => `<option value="${k}"${k === e.kind ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label>Degrees<input type="text" class="mono" data-k="notes" value="${esc((e.notes || []).join(' '))}" inputmode="numeric"></label>
+        <label>Shape<select data-k="shape"${e.kind === 'chord' ? '' : ' disabled'}>${Object.keys(MURMUR_SHAPES).map(s => `<option${s === (e.shape || 'triad') ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
+        <label>Starts ms<input type="number" data-k="at" value="${Math.round((e.at || 0)*1000)}" min="0" max="3000" step="10"></label>
+        <label>Spacing ms<input type="number" data-k="gap" value="${Math.round((e.gap || 0)*1000)}" min="0" max="1000" step="5"></label>
+        <label>Level ${Math.round((e.level ?? 0.4)*100)}<input type="range" data-k="level" min="0" max="100" value="${Math.round((e.level ?? 0.4)*100)}"></label>
+        <label>Order<select data-k="dir"><option value="up"${e.dir !== 'down' ? ' selected' : ''}>Up</option><option value="down"${e.dir === 'down' ? ' selected' : ''}>Down</option></select></label>
+        <button class="btn small x" type="button" data-del="${i}" aria-label="Remove this sound">✕</button>
+        <div class="names">${esc(namesFor(e))}</div>
+      </div>`).join('')}</div>
+    <div class="row"><button class="btn small" type="button" id="evAdd">Add a sound</button><span class="hint">Starts: when it begins after the press. Spacing: between notes (or the strum of a chord).</span></div>`;
+}
+function renderLegend(){
+  $('legend').innerHTML = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 9, 11, 14].map(d => `<span>${d} <b>${noteName(degreeMidi(Dz, d))}</b></span>`).join('');
+}
+$('chips').addEventListener('click', e => {
+  const p = e.target.closest('[data-pick]'), h = e.target.closest('[data-hear]');
+  if(p){ current = p.dataset.pick; persist(); renderChips(); renderEditor(); playComp(current, { index: 0 }); }
+  if(h) playComp(h.dataset.hear, { index: 0 });
+});
+$('editor').addEventListener('click', e => {
+  const C = Dz.compositions[current]; if(!C) return;
+  if(e.target.closest('#cPlay')) return playComp(current, { index: 0 });
+  if(e.target.closest('#evAdd')){ C.events.push({ inst:'glass', kind:'note', notes:[7], shape:'triad', at:0, gap:0.06, level:0.4 }); changed([renderEditor]); return; }
+  const d = e.target.closest('[data-del]'); if(d){ C.events.splice(+d.dataset.del, 1); changed([renderEditor]); playComp(current); }
+});
+function setField(t, live){
+  const row = t.closest('.ev'), C = Dz.compositions[current]; if(!row || !C) return;
+  const ev = C.events[+row.dataset.i], k = t.dataset.k;
+  if(k === 'notes') ev.notes = t.value.split(/[\s,]+/).map(Number).filter(Number.isFinite);
+  else if(k === 'at' || k === 'gap') ev[k] = Math.max(0, (+t.value || 0)/1000);
+  else if(k === 'level'){ ev.level = +t.value/100; t.parentElement.firstChild.textContent = 'Level ' + t.value; }
+  else ev[k] = t.value;
+  row.querySelector('.names').textContent = namesFor(ev);
+  if(k === 'kind') row.querySelector('[data-k="shape"]').disabled = t.value !== 'chord';
+  changed();
+  if(!live) playComp(current, { index: 0 });
+}
+$('editor').addEventListener('input', e => { const t = e.target; if(t.id === 'cName'){ Dz.compositions[current].name = t.value; changed(); return; } if(t.dataset.k === 'level' || t.dataset.k === 'notes') setField(t, true); });
+$('editor').addEventListener('change', e => { const t = e.target; if(t.id === 'cName'){ renderChips(); renderFunctions(); return; } if(t.dataset.k) setField(t, false); });
+const freshId = base => { let i = 1, id = base; while(Dz.compositions[id]) id = base + (++i); return id; };
+$('cNew').addEventListener('click', () => { const id = freshId('mine'); Dz.compositions[id] = { name: 'New composition', events: [{ inst:'glass', kind:'note', notes:[7], at:0, gap:0.06, level:0.4 }] }; current = id; changed([renderChips, renderEditor, renderFunctions]); });
+$('cDup').addEventListener('click', () => { const C = Dz.compositions[current]; if(!C) return; const id = freshId(current + 'Copy'); Dz.compositions[id] = { ...clone(C), name: (C.name || current) + ' (copy)' }; current = id; changed([renderChips, renderEditor, renderFunctions]); });
+let delArmed = false;
+$('cDel').addEventListener('click', () => {
+  if(!Dz.compositions[current]) return;
+  if(!delArmed){ delArmed = true; $('cDel').textContent = 'Delete it?'; $('cDel').classList.add('warn'); setTimeout(() => { delArmed = false; $('cDel').textContent = 'Delete'; $('cDel').classList.remove('warn'); }, 2500); return; }
+  delete Dz.compositions[current]; for(const k of Object.keys(Dz.map)) if(Dz.map[k] === current) Dz.map[k] = null;
+  current = Object.keys(Dz.compositions)[0]; delArmed = false; $('cDel').textContent = 'Delete'; $('cDel').classList.remove('warn');
+  changed([renderChips, renderEditor, renderFunctions]);
+});
+
+// ---- instruments ----
+const IK = [['level', 'Level', 0, 100, 100, ''], ['attack', 'Attack', 1, 400, 1000, ' ms'], ['decay', 'Decay', 40, 5000, 1000, ' ms'], ['sustain', 'Sustain', 0, 100, 100, ''],
+  ['bright', 'Brightness', 0, 100, 100, ''], ['shimmer', 'Shimmer', 0, 100, 100, ''], ['drop', 'Pitch drop', 0, 100, 100, '']];
+function renderInsts(){
+  $('insts').innerHTML = Object.entries(Dz.instruments).map(([k, I]) => `<div class="inst" data-inst="${k}">
+    <h3>${esc(I.name || k)}<span class="row"><button class="btn play" type="button" data-hear-i="note" aria-label="Play a note">▶</button><button class="btn small" type="button" data-hear-i="chord">Chord</button></span></h3>
+    <label class="knob">Body<select data-ik="body">${Object.entries(MURMUR_BODIES).map(([b, B]) => `<option value="${b}"${b === I.body ? ' selected' : ''}>${esc(B.name)}</option>`).join('')}</select></label>
+    <label class="knob">Octave<select data-ik="octave">${[-1, 0, 1].map(o => `<option value="${o}"${o === +I.octave ? ' selected' : ''}>${o > 0 ? '+1' : o}</option>`).join('')}</select></label>
+    ${IK.map(([key, label, min, max, mul, unit]) => `<label class="knob"><span>${label} <output>${Math.round((I[key] || 0)*mul)}${unit}</output></span><input type="range" data-ik="${key}" data-mul="${mul}" data-unit="${unit}" min="${min}" max="${max}" value="${Math.round((I[key] || 0)*mul)}"></label>`).join('')}
+  </div>`).join('');
+}
+$('insts').addEventListener('input', e => { const t = e.target, card = t.closest('[data-inst]'); if(!card || !t.dataset.ik || t.type !== 'range') return;
+  Dz.instruments[card.dataset.inst][t.dataset.ik] = +t.value/+t.dataset.mul; t.parentElement.querySelector('output').textContent = t.value + t.dataset.unit; changed(); });
+$('insts').addEventListener('change', e => { const t = e.target, card = t.closest('[data-inst]'); if(!card || !t.dataset.ik) return;
+  if(t.tagName === 'SELECT') Dz.instruments[card.dataset.inst][t.dataset.ik] = t.dataset.ik === 'octave' ? +t.value : t.value;
+  changed([renderEditor, renderLegend]); if(!mur.context) mur.setEnabled(true); show(mur.playInstrument(card.dataset.inst, 'note')); });
+$('insts').addEventListener('click', e => { const b = e.target.closest('[data-hear-i]'); if(!b) return; if(!mur.context) mur.setEnabled(true); show(mur.playInstrument(b.closest('[data-inst]').dataset.inst, b.dataset.hearI)); });
+
+// ---- a little session: the app in miniature, by the map ----
+let timers = [];
+$('session').addEventListener('click', () => {
+  timers.forEach(clearTimeout); timers = [];
+  const seq = [['tab', 0, 1], ['checkbox', 600], ['lock', 1100], ['select', 1600], ['summonType', 2100], ['readingFire', 3300], ['preset', 4400], ['undo', 5800], ['athanorOpen', 6500], ['athanorClose', 8200], ['spellCreate', 9200], ['saveImage', 10600]];
+  for(const [fn, t, index] of seq) timers.push(setTimeout(() => { const id = Dz.map[fn]; if(id) playComp(id, { index: index || 0 }); }, t));
+});
+
+// ---- send it back ----
+function writeOut(){ $('out').value = JSON.stringify(Dz); }
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('out').value); $('copy').textContent = 'Copied'; }
+  catch(e){ $('out').focus(); $('out').select(); $('copy').textContent = 'Selected: copy it'; }
+  setTimeout(() => { $('copy').textContent = 'Copy the design'; }, 1800);
+});
+let resetArmed = false;
+$('reset').addEventListener('click', () => {
+  if(!resetArmed){ resetArmed = true; $('reset').textContent = 'Reset everything?'; $('reset').classList.add('warn'); setTimeout(() => { resetArmed = false; $('reset').textContent = "Reset to Vellum's defaults"; $('reset').classList.remove('warn'); }, 2500); return; }
+  resetArmed = false; $('reset').textContent = "Reset to Vellum's defaults"; $('reset').classList.remove('warn');
+  Dz = normalizeDesign(clone(MURMUR_DESIGN)); current = 'tab'; changed([renderAll]);
+});
+$('load').addEventListener('click', () => {
+  try { const d = JSON.parse($('in').value); Dz = normalizeDesign(d.design || d); current = Object.keys(Dz.compositions)[0]; changed([renderAll]); $('loadMsg').textContent = 'Loaded.'; }
+  catch(e){ $('loadMsg').textContent = 'That isn’t a design: paste the whole text copied from this page.'; }
+});
+
+// ---- the spectrum and the notes ----
+const cv = $('scope'), cx = cv.getContext('2d');
+let marks = [], until = 0, running = false;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const F0 = 40, F1 = 4000, xOf = (f, w) => Math.log(f/F0)/Math.log(F1/F0)*w;
+function show(list){
+  if(!list || !list.length) return;
+  const seen = new Set(), ns = list.slice().sort((a, b) => a.midi - b.midi).filter(n => !seen.has(n.midi) && seen.add(n.midi));
+  marks = ns.map(n => ({ f: 440*Math.pow(2, (n.midi - 69)/12), n: noteName(n.midi) }));
+  $('played').innerHTML = ns.map(n => `${noteName(n.midi)}<span class="dim">·${esc((Dz.instruments[n.inst] || {}).name || n.inst)}</span>`).join('  ');
+  until = performance.now() + 4000; if(!running){ running = true; requestAnimationFrame(loop); }
+}
+function size(){ const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = Math.max(1, r.width*d); cv.height = Math.max(1, r.height*d); cx.setTransform(d, 0, 0, d, 0, 0); }
+function draw(data){
+  const d = window.devicePixelRatio || 1, w = cv.width/d, h = cv.height/d;
+  cx.clearRect(0, 0, w, h); cx.font = '11px "Courier Prime", monospace';
+  cx.strokeStyle = css('--line'); cx.fillStyle = css('--muted'); cx.lineWidth = 1; cx.textBaseline = 'bottom';
+  for(const [f, n] of [[55,'A1'],[110,'A2'],[220,'A3'],[440,'A4'],[880,'A5'],[1760,'A6'],[3520,'A7']]){ const x = Math.round(xOf(f, w)) + 0.5; cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, h - 14); cx.stroke(); cx.fillText(n, x + 3, h - 1); }
+  const an = mur.analyser;
+  if(data && an){ const sr = mur.context.sampleRate, bins = an.frequencyBinCount;
+    cx.beginPath(); cx.moveTo(0, h - 16);
+    for(let x = 0; x <= w; x++){ const f = F0*Math.pow(F1/F0, x/w), b = Math.min(bins - 1, Math.round(f/(sr/2)*bins)); cx.lineTo(x, h - 16 - data[b]/255*(h - 28)); }
+    cx.lineTo(w, h - 16); cx.closePath(); cx.fillStyle = css('--rose') + '55'; cx.fill(); cx.strokeStyle = css('--rose'); cx.stroke(); }
+  cx.fillStyle = css('--gold'); cx.strokeStyle = css('--gold'); cx.textBaseline = 'top';
+  marks.forEach((m, i) => { const x = Math.round(xOf(m.f, w)) + 0.5; cx.globalAlpha = 0.45; cx.beginPath(); cx.moveTo(x, 13 + (i % 2)*12); cx.lineTo(x, h - 16); cx.stroke(); cx.globalAlpha = 1; cx.fillText(m.n, x + 3, 1 + (i % 2)*12); });
+}
+function loop(){ const an = mur.analyser; if(!an){ running = false; draw(null); return; }
+  const data = new Uint8Array(an.frequencyBinCount); an.getByteFrequencyData(data); draw(data);
+  if(performance.now() < until) requestAnimationFrame(loop); else { running = false; draw(null); } }
+window.addEventListener('resize', () => { size(); draw(null); });
+
+function renderAll(){ renderScales(); syncGlobals(); renderFunctions(); renderChips(); renderEditor(); renderLegend(); renderInsts(); writeOut(); }
+renderAll(); size(); draw(null);
+</script>

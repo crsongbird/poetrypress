@@ -1535,7 +1535,9 @@ function renderInto(canvas){
   const activeSpell = (storedSpell && validateSpell(storedSpell).ok)
     ? storedSpell
     : spellForSeed(seedForSpell);
-  const spellSegs = buildLines(spellToPML(activeSpell), true, true)[0].segments;
+  // the author may hide the spell code (Write → Show Spell Code?); spells and shared looks carry the choice
+  const showSpell = !$('spellMark') || $('spellMark').checked !== false;
+  const spellSegs = showSpell ? buildLines(spellToPML(activeSpell), true, true)[0].segments : [];
   ctx.save();
   const spellSize = Math.round(((W + H)/2)*MARKS.scale);
   ctx.globalAlpha = 0.95;

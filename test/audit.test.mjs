@@ -151,12 +151,12 @@ const src = (await import('fs')).readFileSync(new URL('../appEvents.js', import.
 check('spells are saved through the look filter', /getSettings:\s*settingsForSpell/.test(src) &&
   /function settingsForSpell\(\)\{\s*return stripToLook\(serializeCurrentSettings\(\)\)/.test(src));
 check('spells are applied through the look filter',
-  /applySettings:[^\n]*restoreSettings\(stripToLook\(/.test(src) && /import \{ createVault, stripToLook \} from '\.\/vault\.js'/.test(src));
+  /applySettings:[^\n]*safeRestore\(stripToLook\(/.test(src) && /function safeRestore\(obj, what = 'This look'\)\{[\s\S]*?try \{ restoreSettings\(c\.look\); \}/.test(src) && /import \{ createVault, stripToLook \} from '\.\/vault\.js'/.test(src));
 check('saved-spell tiles in the Rituals grid use the same filter',
-  /restoreSettings\(stripToLook\(Object\.assign\(\{\}, rec\.settings/.test(src));
+  /safeRestore\(stripToLook\(Object\.assign\(\{\}, rec\.settings/.test(src));
 // behaviour: a spell carrying someone else's identity and UI state
 const { stripToLook, NOT_PART_OF_A_LOOK } = await import('../vault.js');
-const foreign = { ...back, username: '@theirs', highlight: false,
+const foreign = { ...back, username: '@theirs', highlight: false, spellMark: false,
                   locks: ['textureType'], poemText: 'their poem', bg1: '#0d0e0f' };
 const look = stripToLook(foreign);
 for(const k of ['poemText', 'locks', 'highlight', 'username'])
@@ -164,6 +164,9 @@ for(const k of ['poemText', 'locks', 'highlight', 'username'])
 check('everything that IS the look is kept',
   Object.keys(back).filter(k => !NOT_PART_OF_A_LOOK.includes(k)).every(k => k in look) && look.bg1 === '#0d0e0f');
 check('filtering does not mutate the original', foreign.username === '@theirs');
+check('the spell code can be hidden: saved, restored, kept by a spell (it is part of the look), and the renderer draws no glyphs when it is off',
+  'spellMark' in back && look.spellMark === false &&
+  /const spellSegs = showSpell \? buildLines/.test((await import('fs')).readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8')));
 
 // ---------- pass 5: export and import keep every field ----------
 const vaultMod = await import('../vault.js');

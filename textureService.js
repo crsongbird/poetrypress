@@ -40,7 +40,9 @@ let drafting = false;
 export function setDrafting(on){ if(drafting === on) return; drafting = on; if(!on) onReady(); }
 const lastGood = new Map();      // slot → { type, tex } shown while a new one is made
 const waiters = [];
-let onReady = () => {};
+// everyone who wants to know a texture arrived (the renderer; the Athanor's previews)
+const readyFns = new Set();
+const onReady = () => { for(const fn of readyFns) try { fn(); } catch(e){} };
 
 // A subtle sign the worker is busy: body.tex-busy, shown only when the work
 // takes longer than a moment, so fast textures don't flicker it.
@@ -53,7 +55,7 @@ function busy(on){
 }
 
 /** Called whenever a texture arrives from the worker (the renderer redraws). */
-export function onTextureReady(fn){ onReady = fn; }
+export function onTextureReady(fn){ readyFns.add(fn); return () => readyFns.delete(fn); }
 
 function spawn(){
   const w = workerSrc

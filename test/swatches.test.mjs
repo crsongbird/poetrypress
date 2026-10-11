@@ -87,7 +87,7 @@ check('saved presets are appended, never replacing the built-ins',
 check('the row is completed with blanks', /preset-empty/.test(savedFn));
 check('blanks are hidden from assistive tech', /aria-hidden/.test(savedFn));
 check('a saved preset applies its own look and spell, through the look filter',
-  /restoreSettings\(stripToLook\(Object\.assign\(\{\}, rec\.settings, \{ spell: rec\.spell \}\)\)\)/.test(savedFn));
+  /safeRestore\(stripToLook\(Object\.assign\(\{\}, rec\.settings, \{ spell: rec\.spell \}\)\), 'This spell'\)/.test(savedFn));
 check('tiles are built by one shared helper', /function presetTile/.test(ev));
 
 console.log();

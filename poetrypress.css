@@ -489,7 +489,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
      Android, which is the same trap the layout hit earlier */
   max-height:calc(var(--vvh, 100vh) * 0.8); overflow:auto;
   background:var(--bg-deep); border:1px solid var(--line);
-  border-radius:4px; padding:16px;
+  border-radius:0; padding:16px;
   box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
 }
 .modal-title{
@@ -553,10 +553,11 @@ body.is-mobile .light-pad{ gap:4px; }
 .seed-scroll.on{ display:block; }
 .seed-scroll .seed-thumb{ position:absolute; top:0; bottom:0; background:var(--accent); opacity:.75; }
 .seed-scroll:hover, .seed-scroll.dragging{ height:4px; }
-#seedRow .row{ align-items:center; }
+#seedRow .row{ align-items:stretch; }
+#seedRow .row > .field{ display:flex; flex-direction:column; justify-content:center; margin:0; }
+#seedRow .row > #textureSeedReroll{ align-self:stretch; height:auto; }
 /* the seed is always the LAST thing in the tools, across their whole width */
 .tool-row > #seedRow, body.is-mobile .tool-row > #seedRow{ grid-column:1 / -1 !important; grid-row:auto !important; order:99; padding-left:0; padding-right:0; border-left:none; }
-.seed-number{ display:block; font-size:.75em; color:var(--text-dim); margin-top:2px; font-variant-numeric:tabular-nums; }
 /* a hue the texture doesn't use is not shown at all, like an unused slider */
 .field.tool-hidden, body.is-mobile .tool-row > .field.tool-hidden{ display:none !important; }
 .field.tool-off label::after{ content:" — n/a"; font-size:.85em; opacity:.8; }
@@ -1743,48 +1744,103 @@ body.is-mobile .shortcut-btn{ display:none; }
 .keys dd{ margin:0; opacity:0.85; }
 kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; border-radius:0; padding:0 5px; opacity:0.85; }
 
-/* THE ATHANOR: the node editor, over the whole app */
-.forge-veil{ position:fixed; inset:0; z-index:180; background:var(--bg-main, #0f0d14); display:flex; flex-direction:column; }
+/* THE ATHANOR: the node editor, over the whole app. Inside it the theme
+   matters little: a fixed night ground, and COLOUR carries the meaning —
+   each part's category tints its title (--cat, set per node), each port and
+   wire wears the colour of what it carries (data-t: field · image · colour ·
+   value; forge.js FORGE_TYPE_COLOURS). Square corners, as everywhere. */
+.forge-veil{ --fg-ground:#100d14; --fg-panel:#19151f; --fg-node:#211b29; --fg-line:#3b3146; --fg-text:#efe8f4; --fg-dim:#a99db2;
+  --t-field:#CFC8DD; --t-image:#EE7FF5; --t-colour:#F4C44E; --t-value:#54D3EA;
+  position:fixed; inset:0; z-index:180; background:var(--fg-ground); color:var(--fg-text); display:flex; flex-direction:column; }
 .forge-veil[hidden]{ display:none; }
-.forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--line); background:var(--bg-panel); }
+.forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--fg-line); background:var(--fg-panel); }
 .forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
-.forge-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; color:var(--accent); letter-spacing:0.03em; white-space:nowrap; }
-.forge-status{ flex:1; font-size:12.5px; opacity:0.75; padding-left:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.forge-spacer{ flex:1; }
+.forge-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; color:#E9C46A; letter-spacing:0.03em; white-space:nowrap; }
+.forge-sub{ font-family:var(--ui-text); font-variation-settings:normal; font-size:12px; color:var(--fg-text); opacity:0.6; letter-spacing:0; margin-left:6px; }
+.forge-starter{ max-width:170px; flex:0 1 auto; padding:4px 6px; }
 .forge-body{ flex:1; display:flex; min-height:0; }
-.forge-palette{ width:170px; overflow-y:auto; border-right:1px solid var(--line); padding:6px; background:var(--bg-panel); }
-body.is-mobile .forge-body{ flex-direction:column-reverse; }
-body.is-mobile .forge-palette{ width:auto; height:30%; border-right:none; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; align-content:flex-start; gap:4px; }
-.forge-cat{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); margin:8px 0 4px; width:100%; }
-.forge-part{ display:block; width:100%; text-align:left; border:1px solid var(--line); border-radius:0; background:var(--bg-panel-2); color:inherit; font:inherit; font-size:12.5px; padding:4px 7px; margin-bottom:3px; cursor:grab; }
-body.is-mobile .forge-part{ width:auto; display:inline-block; }
-.forge-part:hover{ border-color:var(--accent); }
+/* the palette: categories that fold, each in its own colour */
+.forge-palette{ width:176px; overflow-y:auto; border-right:1px solid var(--fg-line); padding:6px; background:var(--fg-panel); }
+.forge-cat{ margin:0 0 6px; }
+.forge-cat > summary{ cursor:pointer; list-style:none; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--cat); padding:3px 0; }
+.forge-cat > summary::-webkit-details-marker{ display:none; }
+.forge-cat > summary::after{ content:' ▾'; opacity:0.6; } .forge-cat:not([open]) > summary::after{ content:' ▸'; }
+.forge-part{ display:block; width:100%; text-align:left; border:1px solid var(--fg-line); border-left:3px solid var(--cat); border-radius:0; background:var(--fg-node); color:var(--fg-text); font:inherit; font-size:12.5px; padding:4px 7px; margin-bottom:3px; cursor:grab; }
+.forge-part:hover{ border-color:var(--cat); }
+/* the grid */
 .forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; background:
-  linear-gradient(var(--line) 1px, transparent 1px) 0 0/24px 24px, linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/24px 24px; }
-.forge-canvas .drawflow .drawflow-node{ border-radius:0; background:var(--bg-panel-2); border:1px solid var(--line); color:var(--text-main); width:180px; padding:6px 8px; font-size:12.5px; box-shadow:0 8px 20px -12px rgba(0,0,0,0.7); }
-.forge-canvas .drawflow .drawflow-node.selected{ border-color:var(--accent); background:var(--bg-panel-2); }
-.forge-canvas .drawflow .drawflow-node .input, .forge-canvas .drawflow .drawflow-node .output{ border-radius:0; width:12px; height:12px; background:var(--bg-panel); border:1px solid var(--accent); }
-.forge-canvas .drawflow .connection .main-path{ stroke:var(--accent); stroke-width:2px; }
-.forge-node-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; margin-bottom:3px; }
-.forge-ports{ display:flex; flex-wrap:wrap; gap:4px; font-family:var(--ui-code); font-size:10.5px; opacity:0.7; }
-.forge-ports.out{ justify-content:flex-end; }
-.forge-ports.in span::before{ content:'▸ '; } .forge-ports.out span::after{ content:' ▸'; }
-.forge-param{ display:grid; grid-template-columns:62px 1fr; gap:4px; align-items:center; margin-top:3px; font-size:11px; }
-.forge-param input, .forge-param select{ width:100%; min-width:0; font-size:11px; border-radius:0; }
+  radial-gradient(circle, #2b2433 1px, transparent 1.5px) 0 0/24px 24px, var(--fg-ground); }
+.forge-canvas .drawflow .drawflow-node{ display:block; border-radius:0; background:var(--fg-node); border:1px solid var(--fg-line); border-top:3px solid var(--cat, #888); color:var(--fg-text);
+  width:200px; padding:0 0 4px; font-size:12px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.9); min-height:0; }
+.forge-canvas .drawflow .drawflow-node.selected{ border-color:var(--cat, #E9C46A); box-shadow:0 0 0 1px var(--cat, #E9C46A), 0 10px 24px -14px rgba(0,0,0,0.9); background:var(--fg-node); }
+.forge-node-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; height:26px; line-height:26px; padding:0 8px; color:var(--cat);
+  background:color-mix(in srgb, var(--cat, #888) 14%, transparent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.forge-node-glyph{ font-family:'Noto Sans Symbols', 'Noto Sans Symbols 2', 'Segoe UI Symbol', sans-serif; margin-right:6px; opacity:0.85; }
+/* ROWS that line up with the ports: each 22px, the dots 12px with 10px between */
+.forge-rows{ padding:4px 10px 0; }
+.forge-row{ height:22px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.forge-row.extra{ height:auto; min-height:22px; }
+.fp-in, .fp-out{ font-family:var(--ui-code); font-size:10.5px; color:var(--fg-dim); white-space:nowrap; }
+.fp-in::before{ content:'▸ '; color:var(--tc); } .fp-out::after{ content:' ▸'; color:var(--tc); }
+[data-t="field"]{ --tc:var(--t-field); } [data-t="image"]{ --tc:var(--t-image); } [data-t="colour"]{ --tc:var(--t-colour); } [data-t="value"]{ --tc:var(--t-value); }
+.forge-param{ flex:1; display:grid; grid-template-columns:64px 1fr 30px; gap:4px; align-items:center; font-size:11px; color:var(--fg-dim); min-width:0; }
+.forge-row.extra .forge-param{ grid-template-columns:64px 1fr; }
+.forge-param input, .forge-param select{ width:100%; min-width:0; font-size:11px; border-radius:0; accent-color:var(--cat); }
+.forge-param output{ font-family:var(--ui-code); font-size:10px; text-align:right; color:var(--fg-text); }
+.forge-param.wired{ color:var(--t-value); } .forge-param.wired input{ opacity:0.3; pointer-events:none; } .forge-param.wired output{ color:var(--t-value); }
+.forge-param.wired span::before{ content:'⚙ '; }
+.forge-canvas .drawflow .drawflow-node .inputs, .forge-canvas .drawflow .drawflow-node .outputs{ position:absolute; top:35px; width:auto; }
+.forge-canvas .drawflow .drawflow-node .inputs{ left:-7px; } .forge-canvas .drawflow .drawflow-node .outputs{ right:-7px; }
+.forge-canvas .drawflow .drawflow-node .input, .forge-canvas .drawflow .drawflow-node .output{ display:block; position:relative; left:0; top:0; margin:0 0 10px; border-radius:0;
+  width:12px; height:12px; background:var(--tc, var(--t-field)); border:1px solid var(--fg-ground); }
+.forge-canvas .drawflow .drawflow-node .input.pp{ width:10px; height:10px; margin:1px 1px 11px; transform:rotate(45deg); }
+.forge-canvas .drawflow .drawflow-node .input:hover, .forge-canvas .drawflow .drawflow-node .output:hover{ box-shadow:0 0 0 2px var(--tc); }
+.forge-canvas .drawflow .connection .main-path{ stroke:var(--t-field); stroke-width:2.5px; }
+.forge-canvas .drawflow svg.connection[data-t="field"] .main-path{ stroke:var(--t-field); }
+.forge-canvas .drawflow svg.connection[data-t="image"] .main-path{ stroke:var(--t-image); }
+.forge-canvas .drawflow svg.connection[data-t="colour"] .main-path{ stroke:var(--t-colour); }
+.forge-canvas .drawflow svg.connection[data-t="value"] .main-path{ stroke:var(--t-value); stroke-dasharray:6 4; }
+.forge-canvas .drawflow .connection .main-path.selected, .forge-canvas .drawflow .connection .main-path:hover{ stroke-width:4px; filter:brightness(1.25); }
+.forge-canvas .drawflow-delete{ border-radius:0; background:#2a1420; color:#E6A0B6; border:1px solid #E6A0B6; }
+/* each node's own result, at its foot (Step previews on) */
+.forge-node-preview{ display:none; width:calc(100% - 20px); height:auto; aspect-ratio:1; margin:6px 10px 2px; background:#808080; image-rendering:auto; }
+.forge-canvas.steps-on .forge-node-preview{ display:block; }
+.forge-canvas .drawflow .drawflow-node.forge-output .forge-node-preview, .forge-canvas .drawflow .drawflow-node.forge-inputs .forge-node-preview{ display:none; }
+/* the side: what it makes, large */
+.forge-side{ width:300px; flex:0 0 auto; overflow-y:auto; border-left:1px solid var(--fg-line); background:var(--fg-panel); padding:10px; display:flex; flex-direction:column; gap:8px; }
+.forge-preview{ width:100%; height:auto; aspect-ratio:1; border:1px solid var(--fg-line); background:#808080; }
+.forge-status{ margin:0; font-size:12.5px; color:var(--fg-dim); }
+.forge-check{ display:flex; align-items:baseline; gap:6px; font-size:12.5px; cursor:pointer; } .forge-check small{ color:var(--fg-dim); }
+.forge-fold > summary{ cursor:pointer; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:#E9C46A; }
+.forge-legend{ display:grid; gap:4px; font-size:12px; margin-top:6px; }
+.forge-legend i{ display:inline-block; width:12px; height:12px; margin-right:8px; vertical-align:-1px; } .forge-legend i.pp{ width:9px; height:9px; transform:rotate(45deg); margin:0 9px 0 2px; }
+.forge-help{ font-size:12.5px; line-height:1.5; color:var(--fg-dim); margin:6px 0 0; }
 body.forge-open{ overflow:hidden; }
 .forge-summary{ opacity:0.8; }
-
-.forge-sub{ font-family:var(--ui-text); font-variation-settings:normal; font-size:12px; color:var(--text-main); opacity:0.6; letter-spacing:0; margin-left:6px; }
+/* on a phone: the grid first, the preview and the palette beneath it; the bar wraps so Done is always in reach */
+body.is-mobile .forge-body{ flex-direction:column; }
+body.is-mobile .forge-canvas{ flex:1 1 55%; }
+body.is-mobile .forge-side{ width:auto; flex:0 0 auto; max-height:34%; border-left:none; border-top:1px solid var(--fg-line); flex-direction:row; flex-wrap:wrap; }
+body.is-mobile .forge-preview{ width:96px; }
+body.is-mobile .forge-palette{ width:auto; max-height:24%; border-right:none; border-top:1px solid var(--fg-line); }
+body.is-mobile .forge-part{ width:auto; display:inline-block; }
 body.is-mobile .forge-sub{ display:none; }
-
-.forge-thumb{ width:40px; height:40px; border:1px solid var(--line); background:#808080; flex:0 0 auto; image-rendering:auto; }
-body.is-mobile .forge-thumb{ width:32px; height:32px; }
-/* the Athanor's bar on a phone: it wraps, so Done is always in reach */
 body.is-mobile .forge-bar{ flex-wrap:wrap; row-gap:4px; }
-body.is-mobile .forge-status{ flex-basis:100%; order:9; padding-left:0; }
 body.is-mobile .forge-bar button{ padding:4px 9px; }
-/* the Athanor's starters: a small menu in its bar */
-.forge-starter{ max-width:150px; flex:0 1 auto; padding:4px 6px; }
-body.is-mobile .forge-starter{ max-width:120px; }
+body.is-mobile .forge-starter{ max-width:130px; }
+/* …and the same on any narrow window (a phone held in a desktop browser, a split screen) */
+@media (max-width: 760px){
+  .forge-body{ flex-direction:column; }
+  .forge-canvas{ flex:1 1 55%; }
+  .forge-side{ width:auto; flex:0 0 auto; max-height:34%; border-left:none; border-top:1px solid var(--fg-line); flex-direction:row; flex-wrap:wrap; }
+  .forge-preview{ width:96px; }
+  .forge-palette{ width:auto; max-height:24%; border-right:none; border-top:1px solid var(--fg-line); }
+  .forge-part{ width:auto; display:inline-block; }
+  .forge-sub{ display:none; }
+  .forge-bar{ flex-wrap:wrap; row-gap:4px; }
+  .forge-bar button{ padding:4px 9px; }
+}
 /* the four readings of a surface (🜂 🜄 🜁 🜃, textureElements.js): square,
    compact, the glyphs in the symbol font; the texture's default is underlined,
    the one last applied is lit */
@@ -1799,3 +1855,9 @@ body.is-mobile .forge-starter{ max-width:120px; }
 /* already dark (Dark Reader and its kin read this, with <meta name="darkreader-lock">): Vellum alone is light */
 :root{ color-scheme:dark; }
 :root[data-theme="vellum"]{ color-scheme:light; }
+/* the HARD NO: the same dialog, its edge the colour of a refusal */
+.modal.modal-hard{ border-color:#d06a6a; box-shadow:inset 0 3px 0 #d06a6a; }
+/* a quiet note at the foot of the page (errors caught, things cleaned up) */
+.toast{ position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:220; max-width:min(560px, calc(100vw - 32px));
+  background:var(--bg-panel); color:var(--text-main); border:1px solid var(--accent); border-radius:0; padding:8px 12px; font-size:13px; box-shadow:0 10px 30px -12px rgba(0,0,0,0.7); }
+.toast[hidden]{ display:none; }

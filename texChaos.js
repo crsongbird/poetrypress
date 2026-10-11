@@ -5,6 +5,7 @@
  * Rorschach, fractured glaze, facet field, cartomancy.
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
+import { PLANETS, ZODIAC } from './symbolLore.js';
 import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, greyLit, pickWeighted } from './texCore.js';
 
 // A sigil is drawn, then gone —
@@ -223,13 +224,13 @@ export function genSummoningCircles(w,h,amt,zoom,light,form){
   ctx.globalAlpha = 0.78;
   ctx.lineCap = tech > 0.5 ? 'butt' : 'round';
   const HEX = '0123456789ABCDEF';
-  const glyph = (x, y, size, r) => {
+  const glyph = (x, y, size, r, which) => {
     ctx.save(); ctx.translate(x, y); ctx.rotate(r);
     // the machine writes hex where the alchemist writes signs
-    const digital = Math.random() < tech*0.85;
+    const digital = !which && Math.random() < tech*0.85;
     ctx.font = digital ? `${Math.max(6, size*0.85)}px monospace` : `${Math.max(6, size)}px ${GLYPH_FONT}`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(digital ? HEX[Math.floor(Math.random()*16)] + (Math.random()<0.5 ? HEX[Math.floor(Math.random()*16)] : '') : pick(GLYPHS), 0, 0); ctx.restore();
+    ctx.fillText(digital ? HEX[Math.floor(Math.random()*16)] + (Math.random()<0.5 ? HEX[Math.floor(Math.random()*16)] : '') : (which || pick(GLYPHS)), 0, 0); ctx.restore();
   };
   const ring = (r, lwx, style) => {
     ctx.lineWidth = lwx;
@@ -258,7 +259,7 @@ export function genSummoningCircles(w,h,amt,zoom,light,form){
   // BANDS, from the rim inward: how many, by complexity; what each is, by
   // the circle's making
   const nb = Math.max(1, Math.min(9, Math.round(1 + amt*2.6)));
-  const kinds = [['rings', 3], ['glyphs', 3], ['dots', 1], ['planets', 1.2],
+  const kinds = [['rings', 3], ['glyphs', 3], ['dots', 1], ['planets', 1.2], ['zodiac', 0.9],
                  ['vines', 2.2*org], ['moons', 1.2*org], ['ticks', 3*tech], ['segments', 2.6*tech], ['circuit', 2*tech]];
   let r = R;
   ring(r, lw*1.7, 'solid');
@@ -278,8 +279,16 @@ export function genSummoningCircles(w,h,amt,zoom,light,form){
       ring(rr, lw*0.7, 'solid');
       for(let k=0;k<n;k++){ const a = rot + k/n*Math.PI*2, x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
         ctx.save(); ctx.fillStyle = '#808080'; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(x, y, ns, 0, Math.PI*2); ctx.fill(); ctx.restore();
-        ctx.lineWidth = lw; ctx.beginPath(); ctx.arc(x, y, ns, 0, Math.PI*2); ctx.stroke(); glyph(x, y, ns*1.3, 0); }
+        // the planets themselves, in the Chaldean order (Saturn, Jupiter, Mars, the Sun, Venus, Mercury, the Moon)
+        ctx.lineWidth = lw; ctx.beginPath(); ctx.arc(x, y, ns, 0, Math.PI*2); ctx.stroke(); glyph(x, y, ns*1.3, 0, PLANETS[k % PLANETS.length]); }
       ring(r - bw, lw*0.6, 'solid');
+    } else if(kind === 'zodiac'){
+      // THE TWELVE, in their order round the circle, each in its own house
+      const rr = r - bw*0.5, z0 = Math.floor(Math.random()*12);
+      ring(r - bw*0.05, lw*0.6, 'solid'); ring(r - bw, lw*0.6, 'solid');
+      for(let k=0;k<12;k++){ const a = rot + k/12*Math.PI*2, a2 = a + Math.PI/12;
+        ctx.lineWidth = lw*0.6; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*(r - bw*0.05), cy+Math.sin(a)*(r - bw*0.05)); ctx.lineTo(cx+Math.cos(a)*(r - bw), cy+Math.sin(a)*(r - bw)); ctx.stroke();
+        glyph(cx+Math.cos(a2)*rr, cy+Math.sin(a2)*rr, bw*0.58, a2+Math.PI/2, ZODIAC[(z0 + k) % 12]); }
     } else if(kind === 'vines'){
       const rr = r - bw*0.5, vines = 2 + Math.floor(Math.random()*3); ctx.lineWidth = lw*0.8;
       for(let v=0; v<vines; v++){
@@ -591,14 +600,19 @@ export function genCartomanticDrift(w,h,amt,zoom,angle,light){
   const ARCANA=[['0','The Familiar','bird'],['I','The Witch','fox'],['II','The Vellum','sigil'],['III','The Seed','seed'],['IV','The Spell','eye'],
     ['V','The Grimoire','book'],['VI','The Lotus','lotus'],['VII','The Dial','dial'],['VIII','Kintsugi','bowl'],['IX','The Scrying Pool','pool'],
     ['X','The Wheel of Seeds','wheel'],['XIII','The Black Hole','hole'],['XIV','Transmutation','circle'],['XV','The Crystal','crystal'],
-    ['XVII','The Star','star'],['XVIII','The Moon','moon'],['XIX','The Sun','sun'],['XXI','The World','world']];
+    ['XVII','The Star','star'],['XVIII','The Moon','moon'],['XIX','The Sun','sun'],['XXI','The World','world'],
+    // the lore's own (symbolLore.js): an emblem that is a sign, drawn in the symbol font
+    ['XI','The Alembic','glyph:🝪'],['XII','Caput Mortuum','glyph:🝎'],['XVI','The Crucible','glyph:🝥'],['XX','The Comet','glyph:☄'],
+    ['XXII','Lilith','glyph:⚸'],['XXIII','The Caduceus','glyph:🝐'],['XXIV','Sedna','glyph:⯲'],['XXV','Quintessence','glyph:🜚']];
   // the rare cards are not equally rare: Saturn 3 : Enceladus 2 : the Kitsune 1
   const RARE=[[['✦','Saturn','saturn'],3],[['✦','Enceladus','enceladus'],2],[['✦','The Kitsune','kitsune'],1]];
   const roundCard=(W,H,r)=>{ ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
     ctx.lineTo(W/2,H/2-r); ctx.arc(W/2-r,H/2-r,r,0,Math.PI/2); ctx.lineTo(-W/2+r,H/2); ctx.arc(-W/2+r,H/2-r,r,Math.PI/2,Math.PI);
     ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath(); };
   // the emblems, simply drawn in ink
-  const emblem=(kind,s)=>{ ctx.beginPath();
+  const emblem=(kind,s)=>{
+    if(kind.startsWith('glyph:')){ ctx.save(); ctx.font=`${s*1.5}px ${GLYPH_FONT}`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(kind.slice(6), 0, s*0.05); ctx.restore(); return; }
+    ctx.beginPath();
     const ray=(n2,r0,r1)=>{ for(let k=0;k<n2;k++){ const a=k/n2*Math.PI*2; ctx.moveTo(Math.cos(a)*r0,Math.sin(a)*r0); ctx.lineTo(Math.cos(a)*r1,Math.sin(a)*r1); } };
     switch(kind){
       case 'sun': ctx.arc(0,0,s*0.38,0,Math.PI*2); ray(16,s*0.48,s*0.78); break;

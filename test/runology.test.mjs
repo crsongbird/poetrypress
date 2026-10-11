@@ -24,7 +24,7 @@ check('🜉 is Creation, the Athanor\'s glyph', R.runeOf('🜉').name === 'Creat
 // its words and glyphs, where the app already uses such things
 {
   const S = await import('../seedWords.js'), SP = await import('../spell.js');
-  check('its words are in the seed phrases (an Archetype names a seed: "The phase of Creation…")', S.seedPhrase(1527554733).includes('Creation'));
+  check('its words are in the seed phrases (an Archetype names a seed: "No wood that strayed toward Creation")', S.seedPhrase(66).includes('Creation'));
   check('its glyphs are spell glyphs (so spells and the Transmutation Circle draw them)',
     [...R.ARCHETYPES, ...R.ACCENTS].every(r => SP.GLYPHS.includes(r.glyph)));
   check('no rune of its own for a seed, nor for a built-in look (Ruby: not that)',

@@ -72,6 +72,7 @@ export const UI_STRINGS = {
   'label.script_highlighting':                 "Script Highlighting",
   'label.witch_artificer':                     "Witch / Artificer",
   'label.corner':                              "Corner",
+  'label.spell_mark':                          "Show Spell Code?",
   'label.aspect_ratio':                        "Aspect Ratio",
   'label.custom_resolution':                   "Custom Resolution",
   'label.width':                               "Width",

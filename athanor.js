@@ -22,7 +22,7 @@
  * keeps the budget, and resolves bound params ('@k2', '@dial').
  */
 import { lightHeights, parseHex, withSeed, cpx, scaleNow } from './texCore.js';
-import { STEPS, stepRange } from './steps.js';
+import { STEPS, stepRange, paramPort } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 
 /**
@@ -128,7 +128,7 @@ const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h 
 export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
-  if(!surface) return null;
+  if(!surface && !ctx.all) return null;
   const v2 = athanorVersion(graph) >= 2;
   const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null]);
   // a node's upstream, as a signature (loops cut)
@@ -164,7 +164,20 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const t = Math.max(0, Math.min(100, +((ctx.knobs || [])[+m[1].slice(1) - 1] ?? 50)))/100, R = r || stepRange(n.name, k) || [0, 100];
     return R[0] + (R[1] - R[0])*t;
   };
-  const num = (n, k, d) => { let v = P(n, k, d); if(typeof v === 'string' && v[0] === '@') v = bound(n, k, v, d); v = parseFloat(v); return isNaN(v) ? d : v; };
+  // a param: WIRED (a value on its ⚙ port, across the param's range), BOUND ('@k2'), or as set;
+  // always kept inside its range — a graph from anywhere can't ask a step for a billion marks
+  const num = (n, k, d) => {
+    const R = stepRange(n.name, k), port = paramPort(n.name, k);
+    let v;
+    if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
+      const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : null;
+      if(t != null && R) v = R[0] + (R[1] - R[0])*Math.max(0, Math.min(1, t));
+    }
+    if(v === undefined){ v = P(n, k, d); if(typeof v === 'string' && v[0] === '@') v = bound(n, k, v, d); v = parseFloat(v); }
+    if(isNaN(v) || !isFinite(v)) return d;
+    return R ? Math.max(R[0], Math.min(R[1], v)) : v;
+  };
+  const mean = f => { let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; };
   // the value arriving at a node's j-th input (1-based), or undefined
   const input = (n, j) => {
     const c = ((n.inputs || {})['input_' + j] || {}).connections || [];
@@ -230,6 +243,13 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   };
   const E = { ww, wh, N, unit, ctx, deps, input, num, P, field, flat, asField, asImage, asColour, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea };
   const RUN = n => { const step = STEPS[n.name]; return step ? step.run(E, n) : null; };
+  if(ctx.all){
+    // every node's first output, as a picture (the step previews)
+    const out = new Map();
+    for(const id of Object.keys(nodes).sort((a, b) => +a - +b)){ const r = evalNode(id); const v = r && r[0];
+      out.set(id, v == null ? null : typeof v === 'number' ? asImage(v) : asImage(v)); }
+    return out;
+  }
   const res = evalNode(String(surface.id));
   return res && res[0] ? asImage(res[0]) : null;
 }
@@ -277,5 +297,82 @@ export function athanorStarter(name){
     ((data[b].inputs['input_' + j] ||= { connections: [] }).connections).push({ node: String(a), input: 'output_' + o });
     ((data[a].outputs['output_' + o] ||= { connections: [] }).connections).push({ node: String(b), output: 'input_' + j });
   }
+  layoutAthanor(data);
   return { v: ATHANOR_VERSION, drawflow: { Home: { data } } };
+}
+/**
+ * Lays a graph out to read left to right: each node in the column of its
+ * longest path from an input, stacked down the column with room for its
+ * rows and its step preview (the editor's node faces: forge.js). Used for
+ * the starters and templates, so they never overlap.
+ */
+export const ATHANOR_NODE = { w: 200, colGap: 44, title: 26, row: 22, extra: 26, preview: 190, pad: 18, gap: 28 };
+export function athanorNodeHeight(name){
+  const S = STEPS[name]; if(!S) return 120;
+  const rows = Math.max(S.ins.length, S.outs.length), extras = S.params.length - S.paramPorts.length;
+  const preview = (S.cat === 'Inputs' || S.cat === 'Output') ? 0 : ATHANOR_NODE.preview;
+  return ATHANOR_NODE.title + rows*ATHANOR_NODE.row + extras*ATHANOR_NODE.extra + preview + ATHANOR_NODE.pad;
+}
+export function layoutAthanor(data){
+  const ids = Object.keys(data), depth = {}, busy = new Set();
+  const d = id => { if(depth[id] !== undefined) return depth[id]; if(busy.has(id)) return 0; busy.add(id);
+    let m = 0; for(const p of Object.values(data[id].inputs || {})) for(const c of p.connections || []) if(data[c.node]) m = Math.max(m, d(String(c.node)) + 1);
+    busy.delete(id); return depth[id] = m; };
+  ids.forEach(d);
+  const cols = {};
+  // within a column, nodes in the order of the first node they feed (wires cross less)
+  const feedsY = id => { let best = Infinity; for(const p of Object.values(data[id].outputs || {})) for(const c of p.connections || []) best = Math.min(best, +c.node); return best; };
+  ids.sort((a, b) => (depth[a] - depth[b]) || (feedsY(a) - feedsY(b)) || (+a - +b)).forEach(id => (cols[depth[id]] ||= []).push(id));
+  for(const [c, list] of Object.entries(cols)){
+    let y = 30;
+    for(const id of list){ data[id].pos_x = 30 + +c*(ATHANOR_NODE.w + ATHANOR_NODE.colGap); data[id].pos_y = y; y += athanorNodeHeight(data[id].name) + ATHANOR_NODE.gap; }
+  }
+  return data;
+}
+
+/**
+ * A graph from anywhere (a pasted look, an old save, a hand-edited JSON),
+ * checked before it is used: known parts only, plain settings, wires between
+ * real ports, within the limits. Returns { ok, graph, problems } — the graph
+ * cleaned (what can be kept is kept), or ok:false when nothing safe remains.
+ */
+export const ATHANOR_MAX_JSON = 256*1024;
+export function validateGraph(json){
+  const problems = [];
+  if(json == null || json === '') return { ok: true, graph: null, problems };
+  const text = typeof json === 'string' ? json : (() => { try { return JSON.stringify(json); } catch(e){ return ''; } })();
+  if(text.length > ATHANOR_MAX_JSON) return { ok: false, graph: null, problems: [`the graph is too large (${Math.round(text.length/1024)} KB; at most ${ATHANOR_MAX_JSON/1024} KB)`] };
+  let g; try { g = JSON.parse(text); } catch(e){ return { ok: false, graph: null, problems: ['the graph is not readable JSON'] }; }
+  const data = (((g || {}).drawflow || {}).Home || {}).data;
+  if(!data || typeof data !== 'object' || Array.isArray(data)) return { ok: false, graph: null, problems: ['it is not an Athanor graph'] };
+  const ids = Object.keys(data);
+  if(ids.length > ATHANOR_LIMITS.nodes*2) return { ok: false, graph: null, problems: [`it has ${ids.length} nodes (at most ${ATHANOR_LIMITS.nodes})`] };
+  const clean = {};
+  for(const id of ids){
+    const n = data[id];
+    if(!n || typeof n !== 'object' || !STEPS[n.name]){ problems.push(`an unknown part (${String(n && n.name).slice(0, 24)}) was left out`); continue; }
+    const d = {};
+    for(const [k, v] of Object.entries(n.data || {})){
+      if(typeof v === 'number' && isFinite(v)) d[k] = v;
+      else if(typeof v === 'string' && v.length <= 64) d[k] = v;
+      else if(typeof v === 'boolean') d[k] = v;
+      else problems.push(`a setting of ${n.name} was not plain and was left out`);
+    }
+    clean[id] = { id: isFinite(+n.id) ? +n.id : +id, name: n.name, data: d, class: String(n.class || '').slice(0, 64), html: '', typenode: false,
+      inputs: {}, outputs: {}, pos_x: isFinite(+n.pos_x) ? +n.pos_x : 0, pos_y: isFinite(+n.pos_y) ? +n.pos_y : 0, _in: n.inputs, _out: n.outputs };
+  }
+  // wires only between parts that exist, on ports they have
+  for(const n of Object.values(clean)){
+    const S = STEPS[n.name];
+    for(const [k, v] of Object.entries(n._in || {})){ const j = parseInt(String(k).replace('input_', ''), 10); if(!(j >= 1 && j <= S.ins.length)) continue;
+      n.inputs['input_' + j] = { connections: ((v || {}).connections || []).filter(c => c && clean[String(c.node)] && /^output_\d+$/.test(c.input || '')
+        && parseInt(c.input.slice(7), 10) <= STEPS[clean[String(c.node)].name].outs.length).map(c => ({ node: String(c.node), input: c.input })) }; }
+    for(const [k, v] of Object.entries(n._out || {})){ const j = parseInt(String(k).replace('output_', ''), 10); if(!(j >= 1 && j <= S.outs.length)) continue;
+      n.outputs['output_' + j] = { connections: ((v || {}).connections || []).filter(c => c && clean[String(c.node)] && /^input_\d+$/.test(c.output || '')
+        && parseInt(c.output.slice(6), 10) <= STEPS[clean[String(c.node)].name].ins.length).map(c => ({ node: String(c.node), output: c.output })) }; }
+    delete n._in; delete n._out;
+  }
+  const out = { v: Math.max(1, parseInt(g.v, 10) || 1), drawflow: { Home: { data: clean } } };
+  if(Object.keys(clean).length > ATHANOR_LIMITS.nodes) problems.push(`it has more than ${ATHANOR_LIMITS.nodes} nodes, so it will not be drawn`);
+  return { ok: true, graph: out, problems };
 }
