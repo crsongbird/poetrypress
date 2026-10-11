@@ -377,10 +377,16 @@ check('the inset box is painted on its own layer, then blended on as one image (
     !/Math\.round\(\(w\*h\)\/\d+/.test(gens));
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
+  // (Fractured Glaze is a chain now: its grid is the chain's, canonDiv(2) in textureGenerators.js genChain)
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 35);
-  check('linen works on the export grid at any size (its threads are finer than a preview pixel)',
-    /const div=2\*scaleNow\(\), ww=Math\.ceil\(w\/div\)/.test(src('texTouch.js')));
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 34 && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js')));
+  {
+    // Linen's grid: threads at least ~3 px apart; never finer than the export's grid, never coarser than the canvas
+    const { weaveGridDiv } = await import('../stepsTouch.js');
+    check('linen keeps its threads at least 3 px apart: the export grid when it must, the canvas when it can (a preview no longer pays the export\'s price)',
+      weaveGridDiv(1536, 2048, 1, 1) === 2 && weaveGridDiv(512, 683, 1/3, 1) > 0.9 && weaveGridDiv(512, 683, 1/3, 1) <= 1 && Math.abs(weaveGridDiv(512, 683, 1/3, 0.5) - 2/3) < 1e-9
+      && /grid: \(w, h, S, k\) => weaveGridDiv/.test(src('chains.js')));
+  }
 }
 
 // ---- canonical pixels, step 4: the renderer ----
@@ -401,7 +407,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
     knob('astral', 2) === 'Atmosphere' && knob('linen', 1) === 'Details' && knob('linen', 2) === 'Weave' &&
     knob('sigils', 2) === 'Chaos' && knob('hatch', 2) === 'Age');
   check('Linen has its own Fabric and Light hues', T.TEXTURE_CAPS.linen.tintLabels.join('|') === 'Fabric Hue|Light Hue' && !T.TEXTURE_CAPS.linen.genericTint);
-  check('Rain on Glass and Sigil Scatter use the light direction (Harsh Rain\'s glass became Rain on Glass)', T.TEXTURE_CAPS.glassrain.light === true && T.TEXTURE_CAPS.sigils.light === true && T.TEXTURE_CAPS.rainstreaks.light === false);
+  check('Rain on Glass and Sigil Scatter use the light direction; Harsh Rain uses the dial as where the rain comes from', T.TEXTURE_CAPS.glassrain.light === true && T.TEXTURE_CAPS.sigils.light === true && T.TEXTURE_CAPS.rainstreaks.light === true && T.TEXTURE_CAPS.rainstreaks.dial === 'Rain Direction');
   const wh = src('texWhimsy.js');
   check('the nebula and the stars rebuild one matter map, first, from the seed',
     /const M = buildMatterMap\(\);\s+\/\/ FIRST: the same map the stars use/.test(wh) && /const M = buildMatterMap\(\);\s+\/\/ FIRST: the same map the nebula uses/.test(wh));
@@ -415,7 +421,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('the preview scale is one of a few fixed steps, at least as large as it is shown',
     /const S_STEPS = \[1\/4, 1\/3, 1\/2, 2\/3, 1\];/.test(ev) && /const need = shownW \* dpr \* Math\.max\(1, state\.ui\.zoom\) \/ state\.page\.exportW;/.test(ev));
   check('Save image renders the full export, then returns to the preview',
-    /canvas\.width = state\.page\.exportW \|\| pw;[\s\S]{0,120}setRenderScale\(1\); render\(\);\s*await texturesSettled\(\);\s*render\(\);\s*link\.href = canvas\.toDataURL/.test(ev));
+    /canvas\.width = state\.page\.exportW \|\| pw;[\s\S]{0,120}setRenderScale\(1\); render\(\);\s*await texturesSettled\(\);\s*render\(\);\s*(?:\/\/[^\n]*\n\s*)?link\.href = withAltText\(canvas\.toDataURL/.test(ev));
   check('the export size is recorded at launch (the markup sets it)', /if\(!state\.page\.exportW\)\{ state\.page\.exportW = canvas\.width;/.test(ev));
   check('a pinch re-renders sharp enough for its magnification', /state\.ui\.zoom = scale; applyPreviewScaleSoon\(\);/.test(ev));
   check('§Canvas reports the export size, not the preview', /canvas: Math\.round\(W \/ RENDER_SCALE\) \+ '×' \+ Math\.round\(H \/ RENDER_SCALE\)/.test(cr));
@@ -469,7 +475,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
     /function softText\(ctx, str, x, y, r, colour\)\{/.test(cr) && /ctx\.shadowOffsetX = m\.a \* K; ctx\.shadowOffsetY = m\.b \* K;/.test(cr)
     && !/blurred\(ctx/.test(cr) && /softText\(ctx, str, x, y, r\*0\.4, e\.color\)/.test(cr));
   check('the help covers rules, code and variables', ['<h4>Rules</h4>','<h4>Code</h4>','<h4>Variables</h4>'].every(h => src('index.html').includes(h)));
-  check('linen picks its seam stitch from the seed', /const seamStitch=SEAM_STITCHES\[Math\.floor\(Math\.random\(\)\*SEAM_STITCHES\.length\)\];/.test(src('texTouch.js')));
+  check('linen picks its seam stitch from the seed', /const seamStitch = SEAM_STITCHES\[Math\.floor\(Math\.random\(\)\*SEAM_STITCHES\.length\)\];/.test(src('stepsTouch.js')));
   check('letter-by-letter lines draw every effect first, then every glyph', /\/\/ pass 1: effects and outlines, under the whole run/.test(cr) && /charSeed = seed0;/.test(cr));
   check('the sigil draws a silhouette during effect passes', /g\.name === 'sigil' && !ctx\.__vellumEffectPass/.test(src('glyphs.js')));
   check('layout changes never step the preview scale down', /setTimeout\(\(\) => applyPreviewScale\(false\), 150\)/.test(ev) && /if\(!allowDown && !state\.ui\.fullPreview && S < current - 1e-6\) S = current;/.test(ev));
@@ -527,6 +533,8 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('Dune Ripples, Kintsugi and Moss on Stone are lit textures (Dune Ripples with a camera Tilt as well)',
     ['dunes', 'kintsugi', 'moss'].every(t => T.TEXTURE_CAPS[t].light === true && T.paramsFor(t).length >= 3) && T.paramsFor('dunes')[3].key === 'tilt' && T.paramsFor('moss')[3].key === 'tilt' && T.paramsFor('landscape')[3].key === 'tilt' && T.paramsFor('landscape')[3].def === 0);
   check('a look saved with the retired Zen Garden opens as Dune Ripples', /const RETIRED = \{ whorl: 'dunes'/.test(src('textureGenerators.js')) && /if\(s\.textureType === 'whorl'\) return \{ \.\.\.s, textureType: 'dunes' \};/.test(ev) && /s = retireLook\(s\);/.test(ev));
+  check('Rain on Glass simulates at ONE size (the export\'s grid) and scales the result: the preview\'s drops are the export\'s',
+    /const S0=scaleNow\(\), sw=w\/S0\/2, sh=h\/S0\/2, su=Math\.min\(sw,sh\), f2g=ww\/sw;/.test(src('texTouch.js')) && /const fine=Math\.round\(canonArea\(w,h\)\/1800\*mist\/4\);/.test(src('texTouch.js')));
   check('Rain on Glass is built from lit heights', /const L=lightHeights\(H, ww, wh, \{ light, relief:1\.6, gloss:0\.95/.test(src('texTouch.js')));
   check('Lotus petals fade by Ruby\'s rule (light → white, mid → brighter and more saturated, dark → saturated near-black) and fold', /const tipOf=o=>/.test(src('texSharpness.js')) && /the fold: a crease down the petal's centre/.test(src('texSharpness.js')));
   check('Enochian Noise is Binary Pattern now', />Binary Pattern</.test(src('index.html')) && !/Enochian Noise/.test(src('index.html')));
@@ -580,7 +588,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('Facet Field is a carved, lit surface that starts lit from overhead (Light Hue = light, Material Hue = material)',
     T.TEXTURE_CAPS.tessellate.light === true && T.TEXTURE_CAPS.tessellate.lightTilt === 0 && T.TEXTURE_CAPS.tessellate.tintLabels[1] === 'Material Hue' &&
     /const L = lightHeights\(H, ww, wh, \{ light, relief: 1, gloss: 0\.25, shadow: 0\.7/.test(src('texChaos.js')));
-  check('choosing a texture with a light of its own sets the dial to it', /const lt = \(capsFor\(\$\('textureType'\)\.value\) \|\| \{\}\)\.lightTilt;/.test(ev));
+  check('choosing a texture with a light of its own sets the dial to it', /const lt = \(capsFor\(\$\('textureType'\)\.value\) \|\| \{\}\)\.lightTilt, ld = /.test(ev) && /if\(ld != null && !state\.locks\.has\('textureLight'\)\)/.test(ev));
   check('Cup Ring is a flat, absorbed stain (no relief): a band darkening to a crisp line, pooled to one side, feathered outward, with a Spill knob',
     /coffee-ring effect/.test(src('texTouch.js')) && /shadow:0, ao:0, ambient:0\.6/.test(src('texTouch.js')) && /wicking runs outward into dry paper/.test(src('texTouch.js')) && T.paramsFor('cupring')[2].label === 'Spill');
 }
@@ -672,6 +680,13 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const L = C.lightHeights(H, ww, wh, { light: 90, ambient: 0.4, components: true });
   let worst = 0; for(let i = 0; i < ww*wh; i++) worst = Math.max(worst, Math.abs(L.light[i] - (0.4 + 0.6*L.diffuse[i])*(1 - L.occl[i])));
   check('components recombine to the same light (ambient + (1−ambient)·diffuse, occluded)', worst < 1e-5);
+  { const GMm = new Float32Array(ww*wh).fill(1), GMz = new Float32Array(ww*wh);
+    const shiny = C.lightHeights(H, ww, wh, { light: 90, glossMap: GMm }), matte = C.lightHeights(H, ww, wh, { light: 90, glossMap: GMz });
+    const peak = A => A.reduce((m, v) => Math.max(m, v), 0), area = A => A.filter(v => v > 0.05).length;
+    check('a gloss map gives each pixel its own gloss: mirror-glossy is tight and bright, matte broad and dim',
+      peak(shiny.spec) > peak(matte.spec) && area(shiny.spec) < area(matte.spec)); }
+  { const B = C.lightBasis(315), up = C.shadeNormal(B, 0, 0, 1, 0.5);
+    check('lightBasis + shadeNormal: flat ground gets what the engine gives it', Math.abs(up.diffuse - B.flat) < 1e-9); }
   check('white Highlight and Shade are no material at all (looks stay exactly as they were)', C.materialOf('#FFFFFF', '#ffffff') === null && C.materialOf(null, undefined) === null);
   const M = C.materialOf('#FFFFFF', '#3060FF');
   const lit = L.light.indexOf(Math.max(...L.light)), shaded = L.light.indexOf(Math.min(...L.light));
@@ -696,10 +711,13 @@ check('the inset box is painted on its own layer, then blended on as one image (
 
 // ---- Fractured Glaze: glaze over a body ----
 {
-  const T = await import('../textureGenerators.js'), ch = src('texChaos.js');
+  // (a chain of steps now: crazing, brushwork, glaze — stepsChaos.js)
+  const T = await import('../textureGenerators.js'), ch = src('stepsChaos.js');
   check('Fractured Glaze is lit glaze over a body: crazing at two scales, blisters, chips, peeling; an Enameling knob (Unbroken · Bubbled · Chipped · Peeling)',
     T.TEXTURE_CAPS.crackedglaze.light === true && T.paramsFor('crackedglaze')[2].names.join() === 'Unbroken,Bubbled,Chipped,Peeling'
-    && /const primary = net\(cs\), secondary = net\(fineCs\);/.test(ch) && /const L = lightHeights\(H, ww, wh, \{ light, relief: 1, gloss: 0\.85/.test(ch));
+    && /const primary = crackNet\(ww, wh, cs\), secondary = crackNet\(ww, wh, fineCs\), crackle = crackNet\(ww, wh, cs\*0\.17\);/.test(ch) && /const L = lightHeights\(H, ww, wh, \{ light: ctx\.light \?\? 315, relief: 1, gloss,/.test(ch));
+  check('…its finer crazing is a NORMAL MAP (too fine for heights), and it has a gloss per pixel: glaze glassy, cracks duller, bare body matte',
+    /FN\[k\] = fine;/.test(ch) && /normals: NM, glossMap: GM \}\);/.test(ch) && /GM\[k\] = 0\.06 \+ 0\.84\*GL\[k\];/.test(ch));
 }
 
 // ---- the archive: folders listed, permissions set ----
@@ -723,9 +741,10 @@ check('the inset box is painted on its own layer, then blended on as one image (
     if(B.lit >= B.of) fewer = false;
   }
   check('lightSparse lights only the tiles near a detail, and matches lightHeights exactly', worst === 0 && fewer);
-  const t = src('texTouch.js'), lin = t.slice(t.indexOf('export function genLinenTooth('), t.indexOf('\n}\n', t.indexOf('export function genLinenTooth(')));
+  // (Linen is a chain of steps: its details are the Cloth step, stepsTouch.js)
+  const t = src('stepsTouch.js'), lin = t.slice(t.indexOf('  cloth: {'));
   check('Linen: seams, stitching, rivets and buttons are heights lit by the engine (shadows fall across the weave)',
-    /const Ls=lightSparse\(H, ww, wh, \{ light, relief:1, gloss:0\.72, shadow:0\.7/.test(lin) && !/ctx\.(arc|stroke|fill)\(/.test(lin));
+    /const Ls = lightSparse\(H, ww, wh, \{ light, relief: 1, gloss: 0\.72, shadow: 0\.7/.test(lin) && !/\b(ctx|g)\.(arc|stroke|fill)\(/.test(lin));
 }
 
 // ---- Sigil Scatter: relief from the light; Chaos is the hand ----
@@ -859,7 +878,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
       && /const halo=Math\.exp\(-\(\(\(r-haloR\)/.test(mo) && mo.indexOf('moonDraws()') < mo.indexOf('const wind=') && /a falling star, on some nights/.test(mo));
   }
   {
-    const ch2 = src('texChaos.js'), ib = ch2.slice(ch2.indexOf('export function genInkBleed('), ch2.indexOf('export function genCrackedGlaze('));
+    const ch2 = src('texChaos.js'), ib = ch2.slice(ch2.indexOf('export function genInkBleed('), ch2.indexOf('export function genTessellate('));
     check('Rorschach is a different card every seed (bat, pair, column, islands, pelvis), pressed imperfectly; Wetness pools the rim and runs; Colour from black ink to pastel plates',
       T.paramsFor('inkbleed').map(d => d.label).join('|') === 'Blot Scale|Spread|Wetness|Color' && T.TEXTURE_CAPS.inkbleed.tintLabels.join() === 'Ink Hue,Accent Hue' && !T.TEXTURE_CAPS.inkbleed.genericTint
       && /const KINDS = \['bat', 'pair', 'column', 'islands', 'pelvis'\];/.test(ib) && /rim = Math\.exp\(-depth\*9\)/.test(ib) && /drips\.push/.test(ib)
@@ -915,14 +934,18 @@ check('the inset box is painted on its own layer, then blended on as one image (
 
 // ---- Fractured Glaze as a game engine colours it; Kintsugi's vessel ----
 {
-  const T = await import('../textureGenerators.js'), ch = src('texChaos.js'), tt = src('texTouch.js');
+  const T = await import('../textureGenerators.js'), ch = src('stepsChaos.js'), tt = src('texTouch.js'), st = src('stepsTouch.js');
   check('Fractured Glaze: Glaze and Base albedos, with Diffuse, Specular and Shadow (and a uranium Glow)',
     T.TEXTURE_CAPS.crackedglaze.tintLabels.join('|') === 'Glaze Hue|Base Hue' && !T.TEXTURE_CAPS.crackedglaze.genericTint
     && T.TEXTURE_CAPS.crackedglaze.material && T.TEXTURE_CAPS.crackedglaze.diffuse && T.TEXTURE_CAPS.crackedglaze.hue5.role === 'glow');
   check('…painted by the seed (streaks, runs, pools; thin glaze breaks to the body) and curling where it peels',
-    /const THK = new Float32Array\(ww\*wh\);/.test(ch) && /thin = Math\.max\(0, 0\.45 - th\)\*1\.2/.test(ch) && /the CURL: where the glaze has peeled/.test(ch));
+    /brushwork: \{/.test(ch) && /thin = Math\.max\(0, 0\.45 - th\)\*1\.2/.test(ch) && /the CURL: where the glaze has peeled/.test(ch));
   check('Kintsugi is the outside of a curved vessel (normals), not a flat plane',
-    /THE VESSEL: we look at the outside of a curved pot/.test(tt) && /ambient:0\.66, normals:CN \}\);/.test(tt));
+    /THE VESSEL: we look at the outside of a curved pot/.test(tt) && /ambient:0\.66, normals:CN, glossMap:GM \}\);/.test(tt));
+  check('…its gold is always polished metal, whatever the glaze\'s Gloss (a gloss map); moss stays matte beside damp stone',
+    /GM\[i\]=gz\*\(1-g\) \+ 0\.93\*g;/.test(tt) && /glossMap:GMs \}\);/.test(tt));
+  check('the weave is a normal map shaded by the engine\'s light (its elevation and highlight), not a light of its own',
+    /const LB = lightBasis\(ctx\.light \?\? 315\)/.test(st) && /shadeNormal, inlined/.test(st) && /const diff = Math\.max\(0, nx\*Lx \+ ny\*Ly \+ nz\*Lz\)/.test(st));
 }
 
 // ---- Rain on Glass: the outdoors, from the page's own colours ----

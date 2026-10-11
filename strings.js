@@ -126,6 +126,9 @@ export const UI_STRINGS = {
   'label.centre_y':                            "Center Y",
   'label.grit':                                "Grit",
   'label.theme':                               "Theme",
+  'label.soundToggle':                         "Sounds",
+  'label.soundVolume':                         "Sound Volume",
+  'hint.sounds':                               "Soft chimes as you work, in one key. Off by default; kept in this browser only.",
 
   // ---- options ----
   'option.dunes':                            "Dune Ripples",

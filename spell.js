@@ -24,9 +24,10 @@
 
 import { SPELLS } from './tunables.js';
 
-/** The only glyphs considered safe to render. Noto Sans Symbols covers 66 of
- *  these and Symbols 2 the last; both are loaded. (For a long time only
- *  Symbols 2 was, and spells relied on the system having the other.) */
+/** The only glyphs considered safe to render. Noto Sans Symbols covers the
+ *  alchemical ones and Symbols 2 the rest of the first block; Runology's
+ *  glyphs from other scripts have their own Noto faces (Math, Runic, Music,
+ *  Canadian Aboriginal, Cherokee). All are loaded, each only when needed. */
 export const GLYPHS = [
   "🜁","🜂","🜃","🜄","🜅","🜆","🜇","🜈","🜉","🜊","🜋","🜌","🜍","🜎",
   "🜔","🜕","🜖","🜗","🜘","🜙","🜚","🜛","🜜","🜝","🜞","🜟","🜠","🜢",
@@ -35,6 +36,10 @@ export const GLYPHS = [
   "☊","☋","☌","☍",
   "⚸","⚻","⚹","⚺","⚼",
   "⛤","⛧","⚝","✡","✝","☥","🝆","🝊","🝓","♡",
+  // Runology (runology.js): the Archetypes not already above, and the twelve
+  // Accent Runes — each in a font the glyph stack loads (GLYPH_FONT)
+  "🜳","🝢","🝰","🝧","ᕕ","⎐","𝀶","ᘓ","ᘒ","Ᏹ","ᛯ",
+  "⯢","⯠","⯤","⯚","⯦","⯗","⯔","⯡","⯘","⯣","⯙","⯧",
 ];
 
 export const SPELL_PRIMES = SPELLS.primes;
@@ -198,4 +203,7 @@ export const GLYPH_BY_NAME = {
   'wax': '🝊', 'lodestone': '🝓', 'white-heart-suit': '♡',
 };
 
-export const GLYPH_FONT = '"Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif';
+// (then Runology's glyphs that live outside it: ⎐ Math, ᛯ Runic, 𝀶 Music,
+//  ᕕ ᘓ ᘒ Canadian Aboriginal, Ᏹ Cherokee — runology.js; each is fetched only
+//  when a glyph needs it, by its unicode-range)
+export const GLYPH_FONT = '"Noto Sans Symbols", "Noto Sans Symbols 2", "Noto Sans Math", "Noto Sans Runic", "Noto Music", "Noto Sans Canadian Aboriginal", "Noto Sans Cherokee", "Segoe UI Symbol", sans-serif';

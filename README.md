@@ -17,9 +17,17 @@ will stay free.
 
 ## Features
 
-- 16 presets, fully editable, each with its own glyph spell
-- 33 procedural background textures in four elements, each with two knobs,
-  nine blend modes and its own hues
+- 36 presets, fully editable, each with its own glyph spell
+- 47 procedural surface textures in four elements, each with its own knobs,
+  blend modes, hues and light — most of them lit like a game engine (heights,
+  normal maps, materials, cast shadows) by a light dial
+- Four readings of every texture — 🜂 Fire, 🜄 Water, 🜁 Wind, 🜃 Earth — one
+  its default, three known-good variations; they respect your locks, so they mix
+- The Athanor 🜉, a node editor for making surface textures of your own from
+  the app's own parts — five starter graphs, and Vellum's own textures that
+  are rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth,
+  Fractured Glaze) open as templates to take apart
+- A base texture under the main one; an inset box with frosted glass and GPU blends
 - Multi-stop gradients for the background and the text
 - Typeface effects: letterpress, long shadow, bevel, erosion, bloom and more
 - PML, a small markup language for poems — including §variables that report
@@ -28,7 +36,14 @@ will stay free.
 - Save looks (Spellcrafting) and poems (the Grimoire, dated by moon phase);
   share a single look as a link
 - Installable as an app, and works offline once visited (over https)
-- Export full-quality JPG, named from your first line
+- Export full-quality JPG, named from your first line, with ALT TEXT inside it
+  (IPTC Alt Text, XMP): the poem's words, then a plain description of the look
+  — typeface, colours, the surface and its settings, the frame — up to 1500
+  characters
+- Word seeds: every seed is a phrase and back ("The phase of Creation,
+  turbulent and shedding"); the words include Ruby's Runology
+- Soft interface sounds, off by default (Esoterica → Appearance → Sounds)
+- Dark-mode add-ons (Dark Reader and its kin) leave it alone: it is already dark
 
 ## The four elements
 
@@ -141,6 +156,8 @@ written; `\§` writes a literal §.
 | `§Glyph!input` `ritual` `thoughtform` `materia` `esoterica` `touch` `return` `sigil` | the app's drawn glyphs, inline |
 | `§Glyph!whimsy` `sharpness` `chaos` | ♡ √ ∆ |
 | `§Spell` · `§SpellName` · `§Font` · `§Canvas` · `§TypeEffect` · `§Today` | the look's spell and its name, the typeface, the page size, the effect, the date |
+| `§SpellRunes` · `§Rune!name` | Runology: the spell's Archetypes by name (Wind · Fire · Aether); any Archetype or Accent's glyph (§Rune!astral → 🝊) |
+| `§Reading` | the surface's reading, when one of its four was applied (🜂 Smoulder) |
 | `§RenderMs` · `§Profile` · `§CacheMB` · `§Fonts` · `§Build` | render time, and by stage; texture memory; fonts fetched; which build |
 
 A texture test page:
@@ -196,11 +213,16 @@ default preset; `appOptions.js` fonts, presets, aspect ratios and size limits.
 | `tunables.js` · `strings.js` | hand-editable numbers · text |
 | `appOptions.js` | typefaces, presets, aspect ratios |
 | `textParsers.js` | PML parser |
-| `spell.js` | glyph spells |
+| `spell.js` · `runology.js` | glyph spells · the Runes of Power (Archetypes, Accents, Chroma) |
 | `moon.js` | moon phase and moon glyphs |
 | `texCore.js` | noise, colour mixing, seeded random, blend neutrals, tints |
 | `texWhimsy.js` `texSharpness.js` `texChaos.js` `texTouch.js` | texture generators, by element |
-| `textureGenerators.js` | texture tables, cache and dispatch |
+| `textureGenerators.js` · `textureElements.js` | texture tables, cache and dispatch · each texture's four readings |
+| `steps.js` · `stepsTouch.js` · `stepsChaos.js` · `chains.js` | the steps surfaces are made of · textures rebuilt as chains of them |
+| `athanor.js` · `forge.js` | the Athanor's evaluator · its node editor (Drawflow) |
+| `boxFx.js` · `effects.js` · `stitches.js` | the inset box's glass · text effects · stitches |
+| `altText.js` · `jpegMeta.js` | the saved image's alt text, in words · written into the JPEG |
+| `murmur.js` | interface sounds |
 | `canvasRenderer.js` | rendering |
 | `palette.js` · `swatches.js` · `theme.js` | picker suggestions · preset tiles · UI theme |
 | `editor.js` | syntax highlighting |
@@ -209,7 +231,7 @@ default preset; `appOptions.js` fonts, presets, aspect ratios and size limits.
 | `appEvents.js` | UI wiring, entry point |
 | `tools/` | icon generator, texture previewer |
 | `glyphs.js` · `pmlVars.js` | drawn glyphs inside text · §variables |
-| `test/` | 30 suites, no dependencies |
+| `test/` | 39 suites, no dependencies |
 
 See [OPEN-ISSUES.md](./OPEN-ISSUES.md) for known gaps and constraints.
 

@@ -16,34 +16,38 @@
  *   mixing   an invertible scramble (an odd multiply, an xorshift), so
  *            neighbouring numbers get unrelated phrases
  *
- * THE BANKS AND THEIR ORDER ARE FROZEN: changing either changes every
- * phrase ever shown. Append nowhere, reorder nothing.
+ * THE BANKS' SIZES AND ORDER ARE FIXED: changing a word changes the phrase of
+ * every seed that used it (never the seed, nor its texture). Ruby changed
+ * them once, on purpose (Jupiter–Iocaste → Runology): the Archetypes are
+ * among the names (the lantern of Quintessence), the Accent Runes among the
+ * nouns, the Chroma among the colours, and a few of their verbs. Append
+ * nowhere, reorder nothing; a word swapped stays in its slot.
  */
 export const ADJ = [
   "quiet", "hollow", "silver", "gilded", "ashen", "amber", "velvet", "wandering", "sleeping", "waking",
-  "drowned", "burning", "frozen", "gentle", "feral", "tender", "bitter", "sweet", "distant", "nearer",
+  "drowned", "burning", "frozen", "gentle", "feral", "tender", "bitter", "sweet", "distant", "primal",
   "hidden", "secret", "open", "broken", "mended", "unfixable", "patient", "restless", "lucid", "dreaming",
   "fading", "rising", "falling", "shining", "dim", "pale", "dark", "bright", "golden", "copper", "iron",
-  "glass", "paper", "woven", "folded", "torn", "stitched", "painted", "inked", "faint", "loud", "soft",
-  "sharp", "blunt", "slow", "swift", "still", "wild", "lonely", "twin", "first", "last", "lost", "found",
+  "glass", "paper", "woven", "folded", "torn", "stitched", "painted", "inked", "faint", "sapient", "soft",
+  "sharp", "cosmological", "slow", "swift", "still", "wild", "lonely", "twin", "first", "last", "lost", "found",
   "new", "old", "ancient", "young", "ageless", "spectral", "ghostly", "hallowed", "holy", "profane", "sacred",
   "strange", "familiar", "foreign", "kind", "cruel", "honest", "crooked", "straight", "curved", "spiral",
   "round", "hexed", "charmed", "cursed", "blessed", "feathered", "furred", "scaled", "thorned", "blooming",
   "wilted", "salted", "sweetened", "smoky", "misty", "foggy", "rainy", "snowy", "windy", "stormy", "sunlit",
   "moonlit", "starlit", "dusky", "dawning", "midnight", "vernal", "autumnal", "wintry", "summer", "hungry",
-  "sated", "thirsty", "weary", "tireless", "brave", "shy", "bold", "humble", "proud", "gracious", "graceful",
-  "clumsy", "nimble", "small", "vast", "tiny", "endless", "brief", "long", "deep", "shallow", "high", "low",
-  "northern", "southern", "eastern", "western", "violet", "indigo", "azure", "cobalt", "teal", "jade",
+  "magnetic", "empowered", "weary", "tireless", "brave", "shy", "bold", "humble", "proud", "gracious", "graceful",
+  "precise", "nimble", "small", "vast", "tiny", "endless", "short", "long", "deep", "shallow", "high", "low",
+  "red", "green", "blue", "yellow", "violet", "indigo", "azure", "cobalt", "teal", "jade",
   "emerald", "verdant", "mossy", "rosy", "crimson", "scarlet", "vermilion", "ruby", "garnet", "coral",
   "peach", "ivory", "pearl", "opal", "onyx", "obsidian", "ebon", "sable", "umber", "ochre", "sepia", "russet",
   "tawny", "bronze", "brass", "pewter", "leaden", "mercurial", "sulfurous", "saline", "vitreous", "crystal",
   "liquid", "molten", "vapor", "hazy", "clouded", "clear", "cloudless", "veiled", "bare", "robed", "crowned",
-  "hooded", "masked", "silent", "humming", "singing", "whispering", "howling", "purring", "weeping",
+  "black", "masked", "silent", "humming", "singing", "whispering", "howling", "purring", "weeping",
   "laughing", "smiling", "grieving", "hopeful", "wistful", "mournful", "joyful", "gleeful", "fierce", "calm",
   "serene", "placid", "turbulent", "chaotic", "orderly", "whimsical", "mythic", "fabled", "storied",
-  "nameless", "named", "countless", "measured", "unbound", "bound", "tethered", "untethered", "orbiting",
+  "nameless", "purple", "pink", "brown", "unbound", "bound", "tethered", "untethered", "orbiting",
   "lunar", "solar", "stellar", "astral", "cosmic", "planetary", "nebular", "radiant", "luminous", "glowing",
-  "gleaming", "glinting", "shimmering", "flickering", "guttering", "kindled", "smoldering", "cinder",
+  "gleaming", "glinting", "shimmering", "flickering", "white", "kindled", "smoldering", "cinder",
   "candlelit", "twilit", "gloaming", "eclipsed", "waxing", "waning", "gibbous", "crescent", "full",
 ];
 export const NOUN = [
@@ -53,22 +57,22 @@ export const NOUN = [
   "threshold", "gate", "key", "lock", "chain", "thread", "needle", "loom", "spindle", "shuttle", "weave",
   "knot", "braid", "ribbon", "veil", "shroud", "cloak", "hood", "crown", "ring", "halo", "aura", "lotus",
   "petal", "thorn", "rose", "lily", "iris", "violet", "fern", "moss", "lichen", "root", "branch", "leaf",
-  "bough", "blossom", "bud", "seedpod", "acorn", "pine", "cedar", "willow", "birch", "oak", "ash", "rowan",
-  "hazel", "yew", "elder", "river", "stream", "brook", "creek", "lake", "sea", "ocean", "wave", "current",
+  "bough", "blossom", "bud", "bolt", "acorn", "pine", "cedar", "willow", "birch", "oak", "ash", "rowan",
+  "hazel", "yew", "elder", "river", "stream", "lance", "arrow", "lake", "sea", "ocean", "wave", "current",
   "eddy", "whirlpool", "fountain", "spring", "rain", "storm", "thunder", "lightning", "cloud", "mist", "fog",
   "frost", "snow", "hail", "ice", "glacier", "mountain", "hill", "valley", "canyon", "cave", "grotto",
-  "hollow", "meadow", "field", "garden", "orchard", "grove", "forest", "wood", "thicket", "hedge", "wall",
-  "tower", "spire", "steeple", "bell", "chime", "song", "hymn", "chant", "whisper", "echo", "silence",
+  "hollow", "meadow", "field", "garden", "orchard", "grove", "forest", "wood", "beam", "blast", "wall",
+  "tower", "spire", "volley", "bell", "chime", "song", "hymn", "chant", "whisper", "echo", "silence",
   "shadow", "shade", "light", "flame", "fire", "smoke", "cinder", "coal", "candle", "wick", "torch", "beacon",
   "lighthouse", "harbor", "shore", "island", "reef", "shell", "pearl", "coral", "salt", "sulfur", "mercury",
   "gold", "silver", "copper", "iron", "glass", "prism", "crystal", "geode", "quartz", "amethyst", "opal",
   "garnet", "jade", "amber", "obsidian", "onyx", "marble", "stone", "pebble", "sand", "dune", "desert",
   "oasis", "compass", "map", "atlas", "chart", "clock", "dawn", "dusk", "noon", "midnight", "eclipse",
   "equinox", "solstice", "season", "winter", "summer", "autumn", "harvest", "feast", "fox", "kitsune",
-  "familiar", "witch", "raven", "crow", "owl", "moth", "butterfly", "beetle", "spider", "bee", "wren",
+  "familiar", "witch", "raven", "crow", "owl", "moth", "butterfly", "accent", "spider", "bee", "wren",
   "robin", "sparrow", "heron", "crane", "swan", "dove", "hare", "stag", "wolf", "serpent", "dragon", "wyrm",
-  "phoenix", "koi", "carp", "minnow", "eel", "otter", "seal", "whale", "cat", "hound", "horse", "bird",
-  "feather", "wing", "claw", "tail", "paw", "scale", "fang", "heart", "hand", "eye", "mouth", "breath",
+  "phoenix", "koi", "archetype", "phase", "shimmer", "otter", "seal", "whale", "cat", "chroma", "horse", "bird",
+  "feather", "wing", "claw", "tail", "runist", "scale", "fang", "heart", "hand", "eye", "mouth", "breath",
   "bone", "blood", "skin", "hair", "voice",
 ];
 export const VERB = [
@@ -79,27 +83,27 @@ export const VERB = [
   "rippling", "scrying", "seeking", "finding", "losing", "keeping", "guarding", "watching", "waiting",
   "wandering", "roaming", "flying", "soaring", "diving", "swimming", "floating", "sinking", "drowning",
   "breathing", "remembering", "forgetting", "naming", "calling", "answering", "listening", "echoing",
-  "orbiting", "circling", "spiraling", "tumbling", "rolling", "crawling", "creeping", "climbing", "reaching",
+  "orbiting", "circling", "spiraling", "tumbling", "rolling", "empowering", "phasing", "climbing", "reaching",
   "holding", "releasing", "opening", "closing", "unlocking", "binding", "loosening", "tying", "untying",
   "knotting", "braiding", "casting", "conjuring", "summoning", "banishing", "charming", "hexing", "warding",
-  "blessing", "praying", "chanting", "counting", "measuring", "mapping", "charting", "writing", "inking",
+  "blessing", "praying", "chanting", "blasting", "measuring", "mapping", "charting", "writing", "inking",
   "reading", "sketching", "painting", "gilding", "glazing", "firing", "shattering", "scattering", "gathering",
   "harvesting", "sowing", "rooting", "branching", "nesting", "hatching", "molting", "shedding", "returning",
   "departing", "arriving", "leaving", "staying", "becoming", "waning", "waxing", "beckoning", "lingering",
-  "kneeling", "resting", "shimmering",
+  "beaming", "resting", "shimmering",
 ];
 export const NAME = [
   "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Ceres", "Eris",
-  "Haumea", "Makemake", "Sedna", "Io", "Europa", "Ganymede", "Callisto", "Thyone", "Euanthe", "Mimas",
+  "Haumea", "Makemake", "Sedna", "Io", "Europa", "Ganymede", "Callisto", "Fire", "Wind", "Mimas",
   "Enceladus", "Tethys", "Dione", "Rhea", "Titan", "Hyperion", "Iapetus", "Phoebe", "Janus", "Epimetheus",
-  "Pandora", "Prometheus", "Atlas", "Pan", "Daphnis", "Helene", "Calypso", "Miranda", "Ariel", "Umbriel",
-  "Titania", "Oberon", "Puck", "Triton", "Nereid", "Proteus", "Larissa", "Galatea", "Despina", "Charon",
-  "Nix", "Hydra", "Kerberos", "Styx", "Phobos", "Deimos", "Luna", "Sirius", "Vega", "Rigel", "Betelgeuse",
+  "Pandora", "Prometheus", "Atlas", "Pan", "Water", "Amber", "Calypso", "Miranda", "Ariel", "Umbriel",
+  "Titania", "Oberon", "Puck", "Triton", "Nereid", "Proteus", "Vitrum", "Galatea", "Sound", "Charon",
+  "Nix", "Hydra", "Radio", "Styx", "Phobos", "Deimos", "Luna", "Sirius", "Vega", "Rigel", "Betelgeuse",
   "Altair", "Deneb", "Arcturus", "Capella", "Aldebaran", "Spica", "Antares", "Polaris", "Canopus", "Procyon",
-  "Achernar", "Fomalhaut", "Regulus", "Castor", "Pollux", "Mira", "Algol", "Bellatrix", "Mintaka", "Alnilam",
-  "Alnitak", "Electra", "Maia", "Merope", "Taygeta", "Alcyone", "Celaeno", "Sterope", "Andromeda",
-  "Cassiopeia", "Orion", "Lyra", "Cygnus", "Draco", "Hydrus", "Carina", "Vela", "Puppis", "Centaurus",
-  "Corvus", "Crater", "Aquila", "Pegasus", "Perseus", "Auriga", "Gemini", "Hesperus", "Eos", "Selene", "Nyx",
+  "Contract", "Time", "Regulus", "Castor", "Pollux", "Mira", "Quintessence", "Destruction", "Astral", "Planar",
+  "Creation", "Electra", "Maia", "Merope", "Taygeta", "Alcyone", "Celaeno", "Sterope", "Andromeda",
+  "Cassiopeia", "Orion", "Lyra", "Cygnus", "Draco", "Order", "Dyna", "Aether", "Chaos", "Materia",
+  "Death", "Life", "Aquila", "Pegasus", "Perseus", "Sovereign", "Gemini", "Hesperus", "Eos", "Selene", "Nyx",
   "Hecate", "Thoth", "Isis", "Osiris", "Brigid", "Morrigan", "Freya", "Frigg", "Odin", "Loki", "Ishtar",
   "Inanna", "Astarte", "Lilith", "Ostara", "Yule",
 ];

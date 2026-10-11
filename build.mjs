@@ -59,12 +59,20 @@ const ORDER = [
   'texSharpness.js',      // √ generators
   'texChaos.js',          // ∆ generators
   'texTouch.js',          // 🜚 generators
+  'stepsTouch.js',        // steps for 🜚 surfaces: weave, cloth (Linen)
+  'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze)
+  'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
+  'chains.js',            // textures rebuilt as chains of steps (and the Athanor's templates)
   'athanor.js',           // the Athanor's evaluator: a node graph made into a texture
   'textureGenerators.js',
-  'textureElements.js',
+  'textureElements.js',  // each texture's four readings: 🜂 🜄 🜁 🜃
+  'runology.js',          // the Runes of Power: Archetypes, Accents, Chroma
   'textureService.js',     // textures made in a worker, so the page stays responsive // texture tables, cache and dispatch
   'fonts.js',             // typefaces fetched on first use
   'release.js',           // the release's name (§Build)
+  'altText.js',           // the saved image's alt text, in words
+  'jpegMeta.js',          // ...carried inside the JPEG (XMP)
+  'murmur.js',            // soft interface sounds (off until turned on)
   'glyphs.js',            // drawn symbols inside canvas text
   'pmlVars.js',           // §Variables, resolved before PML
   'canvasRenderer.js',    // parsed lines into pixels
@@ -113,7 +121,7 @@ html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'stepsTouch.js', 'stepsChaos.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');

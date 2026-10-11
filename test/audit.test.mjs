@@ -98,7 +98,7 @@ function mutate(key, v){
 // Keys derived from others, and so legitimately not independent:
 //   customW/customH are mirrored from the chosen aspect while Custom is off
 //   customSize is exercised in its own pass below (it overrides aspect)
-const DERIVED = new Set(['customW', 'customH', 'customSize', 'textureSeedWords']);   // (the seed's words follow the seed: seedWords.test checks they survive)
+const DERIVED = new Set(['customW', 'customH', 'customSize', 'textureSeedWords', 'lookVersion']);   // (lookVersion: the format a look was saved in, written fresh each save)   // (the seed's words follow the seed: seedWords.test checks they survive)
 
 // ---------- pass 1: every key ----------
 const base = save();

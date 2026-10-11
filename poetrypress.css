@@ -1796,3 +1796,6 @@ body.is-mobile .forge-starter{ max-width:120px; }
 .el-btn.on{ color:var(--accent-2); border-color:var(--accent-2); background:color-mix(in srgb, var(--accent-2) 12%, var(--bg-panel-2)); }
 .el-name{ margin-left:6px; font-size:13px; color:var(--text-dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 120px; }
 .el-name b{ color:var(--text-main); font-weight:600; }
+/* already dark (Dark Reader and its kin read this, with <meta name="darkreader-lock">): Vellum alone is light */
+:root{ color-scheme:dark; }
+:root[data-theme="vellum"]{ color-scheme:light; }

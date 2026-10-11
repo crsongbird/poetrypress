@@ -812,7 +812,8 @@ const optionText = id => {
 const ARROWS = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
 function lightArrow(deg){
   // the direction the light TRAVELS, as the light pad draws it
-  const a = ((+deg || 315) - 90) * Math.PI / 180;
+  // (0 is a direction — straight down from above — not 'unset')
+  const d = deg === '' || deg == null || !isFinite(+deg) ? 315 : +deg, a = (d - 90) * Math.PI / 180;
   const ang = Math.atan2(-Math.sin(a), -Math.cos(a));
   return ARROWS[((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
 }
@@ -841,6 +842,8 @@ function pmlVarContext(W, H){
         : (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '')) : 'n/a',
     seed,
     seedPhrase: seedPhrase(seed),
+    // the reading (🜂 🜄 🜁 🜃) last applied to this surface, if any (appEvents marks it on its row)
+    reading: on && $('elementRow') && $('elementRow').dataset ? ($('elementRow').dataset.applied || '') : '',
     // every knob the texture has, by its own label and readout (up to five)
     params: defs.map((d, i) => ({ label: d.label, value: ($('texP' + (i + 1) + 'Val') || {}).textContent || '' })),
     opacity: Math.round(+($('textureOpacity') && $('textureOpacity').value) || 0),

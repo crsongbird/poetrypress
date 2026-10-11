@@ -14,59 +14,27 @@
  * No imports of app state: the page hands in what it needs (deps).
  */
 import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter } from './athanor.js';
+import { STEPS, STEP_BLENDS, STEP_CATEGORIES } from './steps.js';
+import { TEXTURE_CHAINS } from './chains.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
 
-// ---- the parts: every node a primitive Vellum already has ----
-// ports: in/out names (Drawflow numbers them; the names are drawn on the node)
-// params: [key, label, kind, default, extra] — kind: range (min,max), select (options), hue
-const FORGE_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
-const FORGE_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
-export const FORGE_BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'darken', 'lighten', 'color-dodge', 'color-burn',
-  'difference', 'exclusion', 'vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
-export const FORGE_NODES = {
-  // inputs: what the finished texture offers on the page
-  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [FORGE_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], FORGE_R('def', 'Default', 50)] },
-  hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [FORGE_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
-  dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
-  seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
-  page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
-  // makers
-  noise:    { cat: 'Noise', label: 'Value Noise', ins: ['seed'], outs: ['field'], params: [FORGE_R('scale', 'Scale', 40, 1, 200), FORGE_R('octaves', 'Octaves', 3, 1, 6)] },
-  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id'], params: [FORGE_R('scale', 'Scale', 30, 2, 200), FORGE_R('jitter', 'Jitter', 80)] },
-  waves:    { cat: 'Noise', label: 'Waves', ins: ['warp'], outs: ['field'], params: [FORGE_R('freq', 'Frequency', 12, 1, 120), FORGE_R('angle', 'Angle', 0, 0, 360)] },
-  gradient: { cat: 'Noise', label: 'Gradient', ins: [], outs: ['field'], params: [FORGE_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular']), FORGE_R('angle', 'Angle', 90, 0, 360)] },
-  turing:   { cat: 'Noise', label: 'Reaction–Diffusion', ins: ['seed'], outs: ['field'], params: [FORGE_SEL('pattern', 'Pattern', ['spots', 'coral', 'maze', 'worms', 'holes']), FORGE_R('scale', 'Scale', 100, 50, 250)] },
-  texture:  { cat: 'Textures', label: 'Vellum Texture', ins: ['seed'], outs: ['image', 'grey'], params: [['type', 'Texture', 'texture', 'linen'], FORGE_R('p1', 'Knob 1', 100, 0, 400), FORGE_R('p2', 'Knob 2', 100, 0, 400), FORGE_R('p3', 'Knob 3', 50)] },
-  stitch:   { cat: 'Textures', label: 'Stitch Border', ins: [], outs: ['mask'], params: [['style', 'Stitch', 'stitch', 'scallop'], FORGE_R('offset', 'Offset', 14, 0, 400), FORGE_R('size', 'Size', 4, 1, 40)] },
-  // shaping
-  levels:   { cat: 'Shape', label: 'Levels', ins: ['field'], outs: ['field'], params: [FORGE_R('lo', 'Low', 0), FORGE_R('hi', 'High', 100), FORGE_R('gamma', 'Gamma', 50)] },
-  threshold:{ cat: 'Shape', label: 'Threshold', ins: ['field'], outs: ['mask'], params: [FORGE_R('at', 'At', 50), FORGE_R('soft', 'Softness', 10)] },
-  blur:     { cat: 'Shape', label: 'Blur', ins: ['field'], outs: ['field'], params: [FORGE_R('radius', 'Radius', 8, 0, 100)] },
-  warp:     { cat: 'Shape', label: 'Warp', ins: ['field', 'by'], outs: ['field'], params: [FORGE_R('amount', 'Amount', 20)] },
-  math:     { cat: 'Shape', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [FORGE_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract'])] },
-  mix:      { cat: 'Shape', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [FORGE_R('t', 'Amount', 50)] },
-  invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
-  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [FORGE_R('steps', 'Steps', 5, 2, 16)] },
-  transform:{ cat: 'Shape', label: 'Tile & Rotate', ins: ['field'], outs: ['field'], params: [FORGE_R('scale', 'Scale', 100, 25, 400), FORGE_R('angle', 'Angle', 0, 0, 360)] },
-  edges:    { cat: 'Shape', label: 'Edge Detect', ins: ['field'], outs: ['edges'], params: [FORGE_R('strength', 'Strength', 50)] },
-  // light and colour
-  light:    { cat: 'Light & Colour', label: 'Light (heights)', ins: ['height', 'dial'], outs: ['light', 'highlight'], params: [FORGE_R('relief', 'Relief', 50), FORGE_R('gloss', 'Gloss', 30), FORGE_R('shadow', 'Shadow', 60)] },
-  tint:     { cat: 'Light & Colour', label: 'Tint', ins: ['field', 'light hue', 'dark hue'], outs: ['image'], params: [] },
-  ramp:     { cat: 'Light & Colour', label: 'Colour Ramp', ins: ['field', 'colour a', 'colour b'], outs: ['image'], params: [FORGE_R('mid', 'Middle', 50)] },
-  blend:    { cat: 'Light & Colour', label: 'Blend', ins: ['base', 'layer', 'mask'], outs: ['image'], params: [FORGE_SEL('mode', 'Mode', FORGE_BLENDS), FORGE_R('opacity', 'Opacity', 100)] },
-  // the end
-  surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], FORGE_SEL('ground', 'Ground', ['grey', 'colour'])] },
-};
-export const FORGE_CATEGORIES = ['Inputs', 'Noise', 'Textures', 'Shape', 'Light & Colour', 'Output'];
+// ---- the parts: every node a step of steps.js (shared with the textures
+// rebuilt as chains) — ports, params and category as the editor shows them
+export const FORGE_BLENDS = STEP_BLENDS;
+export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, ins: s.ins, outs: s.outs, params: s.params }]));
+export const FORGE_CATEGORIES = STEP_CATEGORIES;
 
 // ---- a node's face: its params as small controls bound with df-* ----
 const forgeEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-export function forgeNodeHtml(type, lists = {}){
+export function forgeNodeHtml(type, lists = {}, data = {}){
   const N = FORGE_NODES[type]; if(!N) return '';
   const ports = (names, cls) => names.length ? `<div class="forge-ports ${cls}">${names.map(n => `<span>${forgeEsc(n)}</span>`).join('')}</div>` : '';
   const ctl = ([key, label, kind, def, x]) => {
+    // a param bound to a slider or the dial ('@k2', '@dial'): shown as written, and editable
+    const v = data[key];
+    if(typeof v === 'string' && v[0] === '@') return `<label class="forge-param forge-bound" title="Bound: @k1–@k6 a slider, @dial the dial; [lo,hi] its range"><span>${forgeEsc(label)}</span><input type="text" df-${key} value="${forgeEsc(v)}"></label>`;
     if(kind === 'range') return `<label class="forge-param"><span>${forgeEsc(label)}</span><input type="range" df-${key} min="${x.min}" max="${x.max}" value="${def}"></label>`;
     if(kind === 'select') return `<label class="forge-param"><span>${forgeEsc(label)}</span><select df-${key}>${x.options.map(o => `<option value="${forgeEsc(o)}">${forgeEsc(o)}</option>`).join('')}</select></label>`;
     if(kind === 'texture' || kind === 'stitch'){ const opts = (kind === 'texture' ? lists.textures : lists.stitches) || [def];
@@ -125,7 +93,8 @@ export async function openForge(deps){
   if(!ok){ if(status) status.textContent = 'The node editor could not be loaded (offline?). Try again when connected.'; return; }
   if(!openForge.editor){
     const ed = openForge.editor = new Drawflow(area);
-    ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.3; ed.zoom_max = 1.8;
+    // zoom in small steps (Drawflow's 0.1 a wheel-notch is far too quick on a trackpad or a pinch)
+    ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.3; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
     ed.start();
     const lists = { textures: deps.textures || [], stitches: deps.stitches || [] };
     let thumbT = 0;
@@ -136,7 +105,7 @@ export async function openForge(deps){
     const slim = () => { const g = ed.export(); for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})) n.html = ''; g.v = openForge.version || ATHANOR_VERSION; return g; };
     const faces = g => { openForge.version = athanorVersion(g);
       for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})){ const P = FORGE_NODES[n.name]; if(!P) continue;
-        n.html = forgeNodeHtml(n.name, lists); n.class = n.class || 'forge-' + P.cat.toLowerCase().replace(/[^a-z]+/g, '-');
+        n.html = forgeNodeHtml(n.name, lists, n.data || {}); n.class = n.class || 'forge-' + P.cat.toLowerCase().replace(/[^a-z]+/g, '-');
         // every port the part has, wired or not (a starter, or a part that gained one, lists only its wires)
         n.inputs = n.inputs || {}; n.outputs = n.outputs || {};
         P.ins.forEach((_, j) => { n.inputs['input_' + (j + 1)] = n.inputs['input_' + (j + 1)] || { connections: [] }; });
@@ -173,11 +142,14 @@ export async function openForge(deps){
     // the starters: a working graph to take apart (replacing this one, if it is more than a start)
     const st = $('forgeStarter');
     if(st){
-      st.innerHTML = '<option value="">Start from…</option>' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('');
+      // the starters, and Vellum's own textures as their chains of steps (chains.js)
+      st.innerHTML = '<option value="">Start from…</option>'
+        + '<optgroup label="Starters">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
+        + '<optgroup label="Vellum’s textures">' + Object.entries(TEXTURE_CHAINS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>';
       st.addEventListener('change', () => {
         const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
         const n = Object.keys(((ed.export().drawflow || {}).Home || {}).data || {}).length;
-        if(n > 2 && typeof confirm === 'function' && !confirm(`Replace this graph with “${ATHANOR_STARTERS[k].label}”?`)) return;
+        if(n > 2 && typeof confirm === 'function' && !confirm(`Replace this graph with “${(ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]).label}”?`)) return;
         ed.clear(); ed.import(faces(g)); save();
       });
     }

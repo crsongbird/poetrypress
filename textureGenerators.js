@@ -31,12 +31,13 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { evalAthanor, athanorHash, athanorBudget } from './athanor.js';
+import { evalAthanor, athanorHash, athanorBudget, athanorStarter } from './athanor.js';
+import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape, genFlowField } from './texWhimsy.js';
-import { genFlowers, genHalftone, genRainStreaks, genBrushstrokes, genSilverpointHatch, genMetalLeaf, genCityscape, genGrain, genGuilloche } from './texSharpness.js';
-import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genCrackedGlaze, genTessellate, genCartomanticDrift, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
-import { genLinenTooth, genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genStainedGlass, genSuminagashi, genWatercolour } from './texTouch.js';
+import { genFlowers, genHalftone, genBrushstrokes, genMetalLeaf, genCityscape, genGrain, genGuilloche } from './texSharpness.js';
+import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genCartomanticDrift, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
+import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genStainedGlass, genSuminagashi, genWatercolour } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -107,8 +108,10 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Rain',            min:20, max:300, def:100, unit:'%'},
                   // a fine mist of tiny droplets between the drops
                   {key:'form',  label:'Condensation',    min:0,  max:100, def:30,  unit:''}],
+  // the dial says where the rain comes from (it was the Slant slider)
   rainstreaks:   [{key:'zoom',  label:'Rain Zoom',       min:100,max:500, def:100, unit:'%'},
-                  {key:'angle', label:'Slant',           min:-45,max:45,  def:0,   unit:'°'}],
+                  // still air (0, as it was) → gusts swinging the rain about the dial's way, page-wide
+                  {key:'gusts', label:'Gusts',           min:0,  max:100, def:0,   unit:''}],
   sigils:        [{key:'zoom',  label:'Sigil Zoom',      min:100,max:500, def:100, unit:'%'},
                   {key:'amt',   label:'Sigil Count',     min:15, max:260, def:100, unit:'%', base:51},
                   // the hand: steady → trembling, the nib skipping into scratches
@@ -268,7 +271,8 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''},
                   // a noisy glow spilling from the brightest light (0: none, as before)
                   {key:'form',  label:'Bloom',           min:0,  max:100, def:0,   unit:''}],
-  hatch:         [{key:'angle', label:'Hatch Angle',     min:-90,max:90,  def:35,  unit:'°'},
+  // the dial says which way the strokes run (it was the Hatch Angle slider)
+  hatch:         [{key:'cross', label:'Cross-Hatching',  min:0,  max:100, def:38,  unit:''},  // none → the darkest third (as it was) → everywhere
                   {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
                   // fresh cool grey to warm tarnished brown
                   {key:'form',  label:'Age',             min:0,  max:100, def:30,  unit:''}],
@@ -342,9 +346,11 @@ export const TEXTURE_CAPS = {
   // glass in front of the page: transparent, the drops showing the outdoors
   // made from the page's own colours (pageEnv), so Normal is its default
   glassrain:     { blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
-  rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:false, tints:2, genericTint:true,
+  // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
+  rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:true, dial:'Rain Direction', lightDeg:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  // the dial is the way the strokes run (125°: the old 35° hatching)
+  hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Hatch Direction', lightDeg:125, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — chaos —
   sigils:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
@@ -513,7 +519,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'inkbleed'){
     result = genInkBleed(w,h,amt,zoom,form,extra.shape/100,tint1,tint2);
   } else if(type === 'crackedglaze'){
-    result = genCrackedGlaze(w,h,amt,zoom,light,form,tint1,tint2,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
@@ -531,7 +537,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'glassrain'){
     result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
   } else if(type === 'rainstreaks'){
-    result = genRainStreaks(w,h,amt,angle,zoom);
+    result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genHalftone(w,h,amt,zoom);
   } else if(type === 'brushstrokes'){
@@ -541,7 +547,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'mathnoise'){
     result = genMathNoise(w,h,amt,zoom);
   } else if(type === 'linen'){
-    result = genLinenTooth(w,h,amt,zoom,light,tint1,tint2,form,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'coldpress'){
     result = genColdPress(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'oldpaper'){
@@ -591,7 +597,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'aurora'){
     result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){
-    result = genSilverpointHatch(w,h,amt,zoom,angle,form);
+    result = genChain(type, w, h, light, extra);
   } else if(type === 'cards'){
     result = genCartomanticDrift(w,h,amt,zoom,angle,light);
   } else if(type === 'summoning'){
@@ -743,6 +749,34 @@ function genAthanor(w, h, light, tint1, tint2, extra){
     d[q+3] = 255;
   }
   sx.putImageData(im, 0, 0);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  return c;
+}
+// A texture rebuilt as a chain of steps (chains.js): its graph evaluated on
+// its own grid, its sliders read across their own ranges (the graph's bound
+// params, '@k2[10,700]', read the slider's own value back).
+const chainGraphs = new Map();
+function genChain(type, w, h, light, extra, tint1, tint2){
+  const chain = TEXTURE_CHAINS[type];
+  if(!chainGraphs.has(type)) chainGraphs.set(type, athanorStarter(type));
+  const defs = paramsFor(type), knobs = (extra.knobs || []).map((v, i) => { const d = defs[i]; if(!d || v == null) return 50;
+    return Math.max(0, Math.min(100, (v - d.min)/Math.max(1e-6, d.max - d.min)*100)); });
+  // its grid: canonical cells (chain.div), or its own rule (chain.grid: Linen keeps its threads ≥3 px apart)
+  const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const td = (TEXTURE_CAPS[type] || {}).tintDefaults || [];
+  const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
+      mat: extra.mat || null, glow: extra.glow || null },
+    { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+  const small = document.createElement('canvas'); small.width = ww; small.height = wh;
+  const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
+  for(let i = 0, q = 0; i < ww*wh; i++, q += 4){
+    if(img){ d[q] = Math.max(0, Math.min(255, img.r[i]*255)); d[q+1] = Math.max(0, Math.min(255, img.g[i]*255)); d[q+2] = Math.max(0, Math.min(255, img.b[i]*255)); }
+    else { d[q] = d[q+1] = d[q+2] = 128; }
+    d[q+3] = 255;
+  }
+  sx.putImageData(im, 0, 0);
+  if(ww === w && wh === h) return small;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
   return c;

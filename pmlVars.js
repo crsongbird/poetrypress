@@ -32,6 +32,12 @@
  *                       Unicode name: fire water air earth gold salt sulfur
  *                       black-moon-lilith … (see GLYPH_BY_NAME in spell.js)
  *   §Spell              the current look's glyph spell
+ *   §SpellRunes         that spell read in Runology: its Archetypes by name
+ *                       ("Wind · Aether"), or nothing (runology.js)
+ *   §Rune!name          any Archetype or Accent Rune by name: §Rune!astral,
+ *                       §Rune!lance, §Rune!quintessence
+ *   §Reading            the surface's reading, when one of its four was
+ *                       applied (🜂 Smoulder), else nothing
  *   §SpellName          the name of the preset or saved spell last applied
  *   §Font               the typeface
  *   §Canvas             the page size, e.g. 3072×3072
@@ -51,6 +57,7 @@
  */
 import { glyphChar, moonChar } from './glyphs.js';
 import { GLYPH_BY_NAME } from './spell.js';
+import { readSpell, RUNE_BY_NAME } from './runology.js';
 import { RELEASE } from './release.js';
 
 // The release's name always (release.js), and — when built — the date and a
@@ -83,6 +90,7 @@ export function resolvePmlVariables(text, ctx){
       case 'LightDir':      return ctx.lightArrow;
       case 'TextureSeed':   return String(ctx.seed);
       case 'SeedPhrase':    return ctx.seedPhrase || String(ctx.seed);
+      case 'Reading':       return ctx.reading || '';
       case 'SurfParamsA':
         // every knob by its own label (Form, Weave, Aperture… — no more "Hidden Value")
         return [...(ctx.params || []).map(p => `${p.label}: [${p.value}]`),
@@ -110,9 +118,11 @@ export function resolvePmlVariables(text, ctx){
         const k = param.toLowerCase();
         // the app's drawn glyphs first, then the element marks, then every
         // spell glyph by its Unicode name
-        return glyphChar(k) || (k !== 'touch' && ELEMENTS[k]) || GLYPH_BY_NAME[k] || null;
+        return glyphChar(k) || (k !== 'touch' && ELEMENTS[k]) || GLYPH_BY_NAME[k] || RUNE_BY_NAME[k] || null;
       }
       case 'Spell':      return ctx.spell || '';
+      case 'SpellRunes': { const r = readSpell(ctx.spell); return r.length ? '(' + r.join(' · ') + ')' : ''; }
+      case 'Rune':       return param ? (RUNE_BY_NAME[param.toLowerCase()] || null) : null;
       case 'SpellName':  return ctx.spellName || 'Unnamed Look';
       case 'Font':       return ctx.font;
       case 'Canvas':     return ctx.canvas;

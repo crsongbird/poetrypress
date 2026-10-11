@@ -322,43 +322,7 @@ export function genHalftone(w,h,amt,zoom){
   return full;
 }
 
-// Downpour: diagonal falling streaks — a distinct linear-gradient-stroke pattern,
-// not the static blob stains that Water Spots uses.
-export function genRainStreaks(w,h,amt,angle,zoom,light){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom); angle=angle||0;
-  const full=document.createElement('canvas'); full.width=w; full.height=h;
-  const fctx=full.getContext('2d', CPU);
-  fctx.fillStyle='#808080'; fctx.fillRect(0,0,w,h);
-  const unit=Math.min(w,h), a=angle*Math.PI/180, sa=Math.sin(a), ca=Math.cos(a);
-  const {lx,ly}=lightVec(light);
-  // Rain in DEPTH. Far back: soft, wide sheets of rain. Nearer: slanted
-  // streaks, motion-blurred, wide enough to read at any size. SLANT tilts it.
-  // (The drops on glass became their own texture: Rain on Glass, texTouch.js.)
-
-  // far: sheets
-  for(let i=0;i<9;i++){
-    const x=Math.random()*w*1.4-w*0.2, bw=unit*(0.05+Math.random()*0.13), len=Math.max(w,h)*1.6;
-    const g=fctx.createLinearGradient(x-bw,0,x+bw,0);
-    const t=Math.random()<0.6?230:60, al=0.05+Math.random()*0.07;
-    g.addColorStop(0,`rgba(${t},${t},${t},0)`); g.addColorStop(0.5,`rgba(${t},${t},${t},${al})`); g.addColorStop(1,`rgba(${t},${t},${t},0)`);
-    fctx.save(); fctx.translate(x,h/2); fctx.rotate(-a); fctx.translate(-x,-h/2);
-    fctx.fillStyle=g; fctx.fillRect(x-bw,h/2-len/2,bw*2,len); fctx.restore();
-  }
-  // middle: streaks, each fading at both ends (motion blur)
-  const count=Math.round(canonArea(w,h)/7600*amt);
-  fctx.lineCap='round';
-  for(let i=0;i<count;i++){
-    const len=(Math.random()*0.09+0.04)*Math.max(w,h)*zoom;
-    const x=Math.random()*(w+len)-len*0.5, y=Math.random()*(h+len)-len;
-    const dx=sa*len, dy=ca*len;
-    const t=Math.random()<0.75?(205+Math.random()*45):(40+Math.random()*30), al=0.22+Math.random()*0.3;
-    const g=fctx.createLinearGradient(x,y,x+dx,y+dy);
-    g.addColorStop(0,`rgba(${t|0},${t|0},${t|0},0)`); g.addColorStop(0.5,`rgba(${t|0},${t|0},${t|0},${al})`); g.addColorStop(1,`rgba(${t|0},${t|0},${t|0},0)`);
-    fctx.strokeStyle=g; fctx.lineWidth=cpx(2.4+Math.random()*3.6);
-    fctx.beginPath(); fctx.moveTo(x,y); fctx.lineTo(x+dx,y+dy); fctx.stroke();
-  }
-  return full;
-}
+// (Harsh Rain is a chain of steps now: chains.js, steps.js 'streaks')
 
 export function genBrushstrokes(w,h,amt,zoom,form,light){
   amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
@@ -534,58 +498,7 @@ export function genBrushstrokes(w,h,amt,zoom,form,light){
   return c;
 }
 
-// The plate is scratched
-// in one direction, always.
-// Patience, then a line.
-export function genSilverpointHatch(w,h,amt,zoom,angle,form){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom); angle=(angle==null?35:angle);
-  const age = Math.max(0, Math.min(1, form==null ? 0.3 : form));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-  const unit=Math.min(w,h), base=angle*Math.PI/180;
-  // A silverpoint DRAWING of something unseen. A few large soft shapes make a
-  // form — its tone says where the drawing is dark — and the hatching gathers
-  // there: patches of short strokes, parallel, tapered at both ends, slightly
-  // curved, heavier where the stylus pressed; in the deepest shadow a second
-  // layer crosses at an angle. AGE: silverpoint tarnishes, fresh cool grey
-  // turning warm brown over the years.
-  const blobs=[]; for(let i=0;i<5;i++) blobs.push({x:Math.random(), y:Math.random(), r:0.18+Math.random()*0.28, s:0.5+Math.random()*0.6});
-  const noise=makeNoiseGrid(6,6);
-  const tone=(u,v)=>{ let t=0; for(const b of blobs){ const q=((u-b.x)**2+(v-b.y)**2)/(b.r*b.r); t+=b.s*Math.exp(-q*1.6); }
-    return Math.max(0, Math.min(1, t*0.75 + (sampleNoiseGrid(noise,6,6,u*5,v*5)-0.5)*0.5)); };
-  // dark enough to read through overlay: only marks well below mid-grey darken a page
-  const fresh=[44,48,58], tarnish=[92,50,20];
-  const ink=fresh.map((f,i)=>f+(tarnish[i]-f)*age);
-  // one tapered, gently curved stroke, as a filled shape
-  const stroke=(x,y,a,len,wd,bend,alpha)=>{
-    const ca=Math.cos(a), sa=Math.sin(a), nx=-sa, ny=ca, L=[], R=[];
-    for(let k=0;k<=10;k++){ const t=k/10, along=(t-0.5)*len, off=Math.sin(t*Math.PI)*bend;
-      const px=x+ca*along+nx*off, py=y+sa*along+ny*off, half=wd*Math.pow(Math.sin(t*Math.PI),0.7)/2;
-      L.push([px+nx*half,py+ny*half]); R.push([px-nx*half,py-ny*half]); }
-    ctx.fillStyle=`rgba(${ink[0]|0},${ink[1]|0},${ink[2]|0},${alpha})`;
-    ctx.beginPath(); ctx.moveTo(L[0][0],L[0][1]); for(const p of L) ctx.lineTo(p[0],p[1]);
-    for(let k=R.length-1;k>=0;k--) ctx.lineTo(R[k][0],R[k][1]); ctx.closePath(); ctx.fill(); };
-  const patches=Math.round(150*amt);
-  for(let i=0;i<patches;i++){
-    // patches land where the form is dark
-    let u, v, t, tries=0;
-    do { u=Math.random(); v=Math.random(); t=tone(u,v); tries++; } while(tries<6 && Math.random()>0.15+0.85*t);
-    const px=u*w, py=v*h, size=unit*(0.045+Math.random()*0.06)*zoom;
-    const a=base+(sampleNoiseGrid(noise,6,6,u*5+2,v*5+2)-0.5)*0.7;
-    const layers = t>0.62 ? 2 : 1;                       // the deepest shadow cross-hatched
-    for(let l=0;l<layers;l++){
-      const la=a+l*0.95, n=Math.round(7+t*12), gap=size/n;
-      for(let k=0;k<n;k++){
-        const off=(k-(n-1)/2)*gap, len=size*(0.55+Math.random()*0.45)*Math.sqrt(1-Math.min(0.9,(off/size*1.6)**2));
-        const sx=px-Math.sin(la)*off+(Math.random()-0.5)*gap*0.4, sy=py+Math.cos(la)*off+(Math.random()-0.5)*gap*0.4;
-        const press=0.6+Math.random()*0.4;
-        stroke(sx,sy,la+(Math.random()-0.5)*0.06,len,cpx(2.6+t*3)*press,len*(Math.random()-0.5)*0.08,(0.5+t*0.45)*press);
-      }
-    }
-  }
-  return c;
-}
+// (Silverpoint Hatch is a chain of steps now: chains.js, steps.js 'forms' and 'hatching')
 
 // Gold beaten so thin
 // it forgets it was ever

@@ -42,6 +42,7 @@ check('found a realistic number of stateful controls', stateIds.length > 25);
 
 const skip = new Set([
   'poemText',          // the poem is saved by the Grimoire, not by settings
+  'soundToggle', 'soundVolume',   // interface sounds: a browser preference (localStorage), not a look
   'highlightToggle',   // checked separately below
   'textureSeedLock',   // derived from the seed field
   'textureSeedWords',  // the seed's phrase: a VIEW of textureSeedValue, which is saved

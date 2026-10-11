@@ -22,6 +22,8 @@ const html = src('index.html'), ev = src('appEvents.js'), vault = src('vault.js'
 // controls that are deliberately NOT part of a look — each with its reason
 const EXEMPT = {
   uiTheme:      'the app\'s own theme: a preference saved on its own, not part of an image',
+  soundToggle:  'interface sounds on or off (murmur.js): this browser\'s preference, kept in localStorage, not part of an image',
+  soundVolume:  'interface sound volume: this browser\'s preference, kept in localStorage, not part of an image',
   fullPreview:  'a view preference (the preview at full size), not part of an image',
   advancedJson: 'the Workbench JSON box IS the saved look',
   modalInput:   'the text field of a dialog',

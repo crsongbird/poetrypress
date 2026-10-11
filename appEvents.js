@@ -30,9 +30,12 @@ import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { openForge, closeForge, describeForge } from './forge.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { elementsFor } from './textureElements.js';
+import { withAltText } from './jpegMeta.js';
+import { describeLook } from './altText.js';
+import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
-import { applyEscapes, tokenizeInline } from './textParsers.js';
+import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
@@ -46,6 +49,8 @@ import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
 import { applyStrings, fill, PICKER } from './strings.js';
+// soft interface sounds (murmur.js); made here so every handler below can use it
+const murmur = createMurmur({ enabled: false });
 
 // the border's stitch menu and the help's stitch list, from the library itself
 { const bs = $('borderStitch');
@@ -584,6 +589,40 @@ function generateFilenameBase(){
   return slug || 'poem';
 }
 
+/** The saved image's alt text (altText.js): the poem's words — read as the
+ *  page reads them, by PML's own parser, its markup, §variables and rules
+ *  gone — then what the page looks like, from the controls as they stand. */
+function poemAltText(){
+  const v = id => ($(id) || {}).value, on = id => !!($(id) && $(id).checked);
+  const text = id => { const e = $(id); const o = e && e.selectedOptions && e.selectedOptions[0]; return o ? o.textContent.replace(/\s*\(default\)\s*$/i, '').trim() : ''; };
+  const a1 = on('accent1Toggle'), a2 = on('accent2Toggle');
+  const raw = String(v('poemText') || '').replace(/§[A-Za-z]+(?:![A-Za-z0-9_-]+|:-?\d*\.?\d+)?/g, '');
+  let poem = [];
+  try {
+    poem = buildLines(raw, a1, a2).map(l => l.isBlank ? '' : (l.parts || [{ segments: l.segments || [] }])
+      .map(p => (p.segments || []).map(s => s.text || '').join('')).join(' ').replace(/[\uE100-\uE23F]/g, '').replace(/\s+/g, ' ').trim());
+  } catch(e){ poem = raw.split('\n'); }
+  const type = v('textureType'), caps = capsFor(type) || {}, defs = paramsFor(type) || [];
+  const row = $('elementRow'), applied = row && row.dataset && row.dataset.applied;
+  const reading = applied ? elementsFor(type).find(e => e.el === state.ui.element) : null;
+  return describeLook({
+    poem,
+    font: text('fontFamily'),
+    textColours: [v('textColorHex'), on('textGradientToggle') ? v('textColor2Hex') : null, a1 ? v('accent1ColorHex') : null, a2 ? v('accent2ColorHex') : null],
+    effects: ['fx1Type', 'fx2Type', 'fx3Type'].map(v).filter(t => t && t !== 'none'),
+    background: [v('bgColor1Hex'), on('bgGradientToggle') ? v('bgColor2Hex') : null],
+    surface: on('textureToggle') ? {
+      type, name: text('textureType'), reading: reading && !reading.isDefault ? reading.name : null, element: reading ? reading.element : null,
+      opacity: +v('textureOpacity') || 0, blend: v('textureBlend'),
+      knobs: defs.map((d, i) => ({ label: d.label, value: +v('texP' + (i + 1)), min: d.min, max: d.max })),
+      hues: [v('textureTint1Hex'), v('textureTint2Hex')].slice(0, caps.tints || 0),
+      light: caps.light && !caps.dial ? { deg: +v('textureLight') || 0, tilt: +v('textureLightTilt') } : null,
+    } : null,
+    base: on('baseToggle') ? { name: text('baseType') } : null,
+    border: on('borderToggle') ? { colour: v('borderColorHex'), stitch: text('borderStitch').toLowerCase() } : null,
+    box: on('cardToggle'), vignette: on('vignetteToggle'),
+  });
+}
 $('downloadBtn').addEventListener('click', async ()=>{
   if(state.ui.saving) return;
   const base = generateFilenameBase();
@@ -603,7 +642,8 @@ $('downloadBtn').addEventListener('click', async ()=>{
     setRenderScale(1); render();
     await texturesSettled();
     render();
-    link.href = canvas.toDataURL('image/jpeg', 1.0);
+    // the poem's words go inside the file as its alt text (jpegMeta.js)
+    link.href = withAltText(canvas.toDataURL('image/jpeg', 1.0), poemAltText());
   } finally {
     canvas.width = pw; canvas.height = ph;
     setRenderScale(pw / (state.page.exportW || pw));
@@ -614,6 +654,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
     render();
   }
   link.click();
+  murmur.play('seal');
 });
 
 // ---------- settings: save and restore (the Workbench JSON, spells) ----------
@@ -723,8 +764,12 @@ function applyPersisted(s){
   }
 }
 
+// a look's FORMAT: 2 since the dial took over Harsh Rain's slant and Silverpoint
+// Hatch's angle (their sliders took new jobs); older looks are translated on load
+const LOOK_VERSION = 2;
 function serializeCurrentSettings(){
   return {
+    lookVersion: LOOK_VERSION,
     bg1: $('bgColor1Hex').value,
     bgGradient: $('bgGradientToggle').checked,
     bg2: $('bgColor2Hex').value,
@@ -812,6 +857,16 @@ function retireLook(s){
     return { ...s, textureTint1: '#141414', textureTint2: '#B0283A' };
   const n = (v, d) => (v === undefined || v === null || v === '' || isNaN(+v)) ? d : +v;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
+  // before format 2 the dial did nothing on Harsh Rain and Silverpoint Hatch:
+  // their Slant and Hatch Angle sliders become the dial's direction, and the
+  // sliders' new jobs start where the old look was (no gusts; the old cross-hatching)
+  if(!(+s.lookVersion >= 2)){
+    const deg = v => String(Math.round(((v % 360) + 360) % 360));
+    if(s.textureType === 'rainstreaks') s = { ...s, textureLight: deg(-n(s.texP2, 0)), textureLightTilt: '100', ...(s.texP2 !== undefined ? { texP2: '0' } : {}) };
+    if(s.textureType === 'hatch') s = { ...s, textureLight: deg(n(s.texP1, 35) + 90), textureLightTilt: '100', ...(s.texP1 !== undefined ? { texP1: '38' } : {}) };
+    if(s.baseType === 'rainstreaks' && s.baseP2 !== undefined) s = { ...s, baseP2: '0' };
+    if(s.baseType === 'hatch' && s.baseP1 !== undefined) s = { ...s, baseP1: '38' };
+  }
   if(s.textureType === 'foxing')      // Bloom Size, Spot Count, Cockle → Scale, (no folds), Age, Crinkle
     return { ...s, textureType: 'oldpaper', texP1: n(s.texP1, 100), texP2: 0, texP3: clamp(20 + (n(s.texP2, 100) - 100)*0.08, 10, 60), texP4: clamp(n(s.texP3, 10), 0, 100) };
   if(s.textureType === 'foldghost')   // Crease Depth, Fold Count, Crumple → Scale, Folds, (clean), Crinkle
@@ -1060,6 +1115,7 @@ function pickPreset(p){
   hover.base = null; hover.on = null;
   if(showing) commitSoon();          // already on the page, its seed and all: keep exactly what was shown
   else applyPreset(p);
+  murmur.play('arrive');
 }
 if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
@@ -1231,6 +1287,9 @@ function applyPreset(p){
   syncAllFxSlots();
   // the light's height: a preset's own, or raking (the only light presets knew)
   if($('textureLightTilt')){ $('textureLightTilt').value = p.textureLightTilt !== undefined ? p.textureLightTilt : '100'; syncLightPad(); }
+  // and its direction: a preset's own, or where its texture's dial starts (Harsh Rain: straight down)
+  { const ld = p.textureLight !== undefined ? p.textureLight : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
+    if(ld != null){ $('textureLight').value = String(ld); syncLightPad(); } }
 
   if(p.font){
     const idx = FONTS.findIndex(f=>f.family===p.font);
@@ -1386,7 +1445,7 @@ if(typeof document.querySelectorAll === 'function'){
     const ctl = document.querySelector && document.querySelector('.controls'); if(ctl && name !== 'more') ctl.scrollTop = 0;
     if(drawer && name === 'more') drawer.scrollTop = 0;
   }
-  tabBtns.forEach(b => b.addEventListener('click', () => activateTab(b.dataset.tab)));
+  tabBtns.forEach((b, i) => b.addEventListener('click', () => { if(!b.classList.contains('active')) murmur.play('tab', { index: i }); activateTab(b.dataset.tab); }));
   activateTab('write');
   // THE SIDEBAR'S WIDTH: its right edge drags (desktop); remembered in this
   // browser — it is how the person likes the room, not part of a look
@@ -1689,8 +1748,10 @@ $('textureType').addEventListener('change', ()=>{
   syncTextureParams(true);
   // a texture with a light of its own starts there when chosen (Facet Field:
   // overhead); saved looks and presets keep theirs, as they don't come through here
-  const lt = (capsFor($('textureType').value) || {}).lightTilt;
+  const lt = (capsFor($('textureType').value) || {}).lightTilt, ld = (capsFor($('textureType').value) || {}).lightDeg;
   if(lt != null && $('textureLightTilt')){ $('textureLightTilt').value = String(lt); syncLightPad(); }
+  // …and one that uses the dial for a direction starts at its own (Harsh Rain: straight down)
+  if(ld != null && !state.locks.has('textureLight')){ $('textureLight').value = String(ld); if($('textureLightTilt')) $('textureLightTilt').value = '100'; syncLightPad(); }
   scheduleRender();
 });
 syncTextureParams(true);
@@ -1929,6 +1990,7 @@ function installLocks(){
     };
     btn.addEventListener('click', ()=>{
       if(state.locks.has(id)) state.locks.delete(id); else state.locks.add(id);
+      murmur.play(state.locks.has(id) ? 'keep' : 'toggle');
       paint();
     });
     btn._paint = paint;
@@ -1995,8 +2057,9 @@ function paintElements(){
     b.classList.toggle('is-default', !!v.isDefault);
     b.classList.toggle('on', on === v.el);
   });
-  const name = $('elementName'); if(!name) return;
   const v = list.find(e => e.el === on);
+  if(row.dataset) row.dataset.applied = v ? `${v.glyph} ${v.name}` : '';      // (§Reading in a poem)
+  const name = $('elementName'); if(!name) return;
   name.textContent = '';
   if(v){ const b = document.createElement('b'); b.textContent = v.name; name.appendChild(b); name.appendChild(document.createTextNode(` · ${v.element}${v.isDefault ? ', the default' : ''}`)); }
 }
@@ -2009,7 +2072,7 @@ function applyElement(id){
     if(v.isDefault){
       // the texture as it always was: its knobs, hues, blend and light
       syncTextureParams(true); syncTextureTools(true);
-      if(!state.locks.has('textureLight')) setLight(LIGHT_DEFAULT.deg, caps.lightTilt != null ? caps.lightTilt : LIGHT_DEFAULT.tilt, false);
+      if(!state.locks.has('textureLight')) setLight(caps.lightDeg != null ? caps.lightDeg : LIGHT_DEFAULT.deg, caps.lightTilt != null ? caps.lightTilt : LIGHT_DEFAULT.tilt, false);
       return;
     }
     (v.k || []).forEach((x, i) => { const d = defs[i], el = $('texP' + (i + 1)); if(!d || !el) return;
@@ -2024,7 +2087,7 @@ function applyElement(id){
   if(typeof commitSoon === 'function') commitSoon();
 }
 if($('elementRow') && $('elementRow').addEventListener){
-  $('elementRow').addEventListener('click', e => { const b = e.target.closest && e.target.closest('.el-btn'); if(b && !b.disabled) applyElement(b.dataset.el); });
+  $('elementRow').addEventListener('click', e => { const b = e.target.closest && e.target.closest('.el-btn'); if(b && !b.disabled){ applyElement(b.dataset.el); murmur.play('element', { family: b.dataset.el }); } });
 }
 // a new texture: no reading applied yet (its default is what it shows)
 $('textureType').addEventListener('change', () => { state.ui.element = null; paintElements(); });
@@ -2330,7 +2393,7 @@ function applyAthanorGraph(redraw = true){
 function previewAthanor(json, cv){
   const n = 96, k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const tex = getTextureCanvas('athanor', n, n, { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072,
-    light: parseFloat(($('textureLight') || {}).value) || 315, tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value,
+    light: k('textureLight', 315), tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value,
     p1: k('texP1', 50), p2: k('texP2', 50), p3: k('texP3', 50), p4: k('texP4', 50), p5: k('texP5', 50), p6: k('texP6', 50) });
   const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height);
 }
@@ -2466,6 +2529,25 @@ if($('uiTheme') && $('uiTheme').addEventListener){
   $('uiTheme').addEventListener('change', ()=> applyTheme($('uiTheme').value));
 }
 applyTheme(savedTheme());
+
+// ---------- sounds ----------  (see murmur.js) — off until turned on; the
+// switch and volume belong to this browser, not to a look
+const SOUND_ON = 'uv.sound.on', SOUND_VOL = 'uv.sound.volume';
+{
+  let on = false, vol = 0.4;
+  try { on = localStorage.getItem(SOUND_ON) === '1'; const v = parseFloat(localStorage.getItem(SOUND_VOL)); if(isFinite(v)) vol = Math.min(1, Math.max(0, v)); } catch(e){}
+  murmur.setEnabled(on); murmur.setVolume(vol);
+  const box = $('soundToggle'), range = $('soundVolume');
+  if(box){ box.checked = on; if(box.addEventListener) box.addEventListener('change', () => {
+    murmur.setEnabled(box.checked); try { localStorage.setItem(SOUND_ON, box.checked ? '1' : '0'); } catch(e){}
+    if(range) range.disabled = !box.checked;
+    if(box.checked) setTimeout(() => murmur.play('arrive'), 60); }); }
+  if(range){ range.value = String(Math.round(vol * 100)); range.disabled = !on;
+    if(range.addEventListener){
+      range.addEventListener('input', () => { murmur.setVolume(+range.value / 100); try { localStorage.setItem(SOUND_VOL, String(+range.value / 100)); } catch(e){} });
+      range.addEventListener('change', () => murmur.play('tap')); } }
+  if(document.addEventListener) murmur.bind(document);
+}
 
 // installable, and usable offline once visited (on https only)
 registerServiceWorker();
@@ -2651,7 +2733,8 @@ function commitHistory(){
 function commitSoon(){ clearTimeout(state.history.timer); state.history.timer = setTimeout(commitHistory, 450); }
 function stepHistory(dir){
   const h = state.history, to = h.index + dir;
-  if(to < 0 || to >= h.stack.length) return;
+  if(to < 0 || to >= h.stack.length){ murmur.play('error'); return; }
+  murmur.play(dir < 0 ? 'undo' : 'redo');
   clearTimeout(h.timer);
   h.index = to; h.restoring = true;
   try { restoreSettings(JSON.parse(h.stack[to])); } finally { h.restoring = false; }

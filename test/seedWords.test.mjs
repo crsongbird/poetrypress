@@ -21,10 +21,18 @@ for(const n of sample){ const p = S.seedPhrase(n); if(S.phraseSeed(p) !== (n >>>
 check('every number reads back from its own phrase, exactly (50,000 numbers across all 32 bits)', bad === 0);
 check('…and different numbers get different phrases', seen.size === new Set(sample.map(n => n >>> 0)).size);
 
-check('phrases are anchored (frozen): 0, 12345 and 1527554733 keep their words',
+check('phrases are anchored: 0, 12345 and 1527554733 keep their words (since Runology joined the banks)',
   S.seedPhrase(0) === "Mercury's quiet lantern, turning"
-  && S.seedPhrase(12345) === 'The breath of Mintaka, honest and closing'
-  && S.seedPhrase(1527554733) === 'The minnow of Alnitak, turbulent and shedding');
+  && S.seedPhrase(12345) === 'The breath of Astral, honest and closing'
+  && S.seedPhrase(1527554733) === 'The phase of Creation, turbulent and shedding');
+{
+  const R = await import('../runology.js');
+  const has = (bank, w) => bank.some(b => b.toLowerCase() === w.toLowerCase());
+  check('Runology\'s words are in the banks: every Archetype among the names, every Accent among the nouns, the Chroma among the colours',
+    R.ARCHETYPES.every(a => has(S.NAME, a.name)) && R.ACCENTS.every(a => has(S.NOUN, a.name) || has(S.ADJ, a.name) || has(S.ADJ, a.name + 'ed'))
+    && ['red', 'green', 'blue', 'yellow', 'purple', 'pink', 'brown', 'white', 'black', 'amber'].every(c => has(S.ADJ, c))
+    && ['primal', 'sapient', 'cosmological'].every(t => has(S.ADJ, t)) && has(S.NOUN, 'shimmer') && has(S.NOUN, 'runist'));
+}
 
 check('a phrase reads back however it is typed (case, spaces, a full stop, curly apostrophes)',
   S.phraseSeed("  mercury’s QUIET   lantern, turning. ") === 0);

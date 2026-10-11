@@ -10,6 +10,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#161414">
+<!-- already dark: dark-mode add-ons (Dark Reader and its kin) leave it alone;
+     the colour scheme follows the theme (theme.js), light only for Vellum -->
+<meta name="darkreader-lock">
+<meta name="color-scheme" content="dark">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Vellum">
@@ -22,7 +26,7 @@
 <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.js"></script>
 <!-- pan and zoom on the desktop preview (timmywil/panzoom, MIT): wheel at the cursor, drag, double-click to fit -->
 <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols&family=Noto+Sans+Symbols+2&family=Noto+Sans+Math&family=Noto+Sans+Runic&family=Noto+Music&family=Noto+Sans+Canadian+Aboriginal&family=Noto+Sans+Cherokee&display=swap" rel="stylesheet">
 <!-- the second set of page fonts (pixel and arcade among them) -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Pixelify+Sans:wght@400..700&family=Share+Tech+Mono&family=Orbitron:wght@400..900&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&family=Space+Grotesk:wght@300..700&family=DM+Serif+Display:ital@0;1&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Spectral:ital,wght@0,400;0,700;1,400;1,700&family=Marcellus&family=Great+Vibes&family=Permanent+Marker&family=Tangerine:wght@400;700&family=Stardos+Stencil:wght@400;700&family=Monoton&family=Abril+Fatface&family=Comfortaa:wght@300..700&family=Bungee&family=Pirata+One&family=Raleway:ital,wght@0,100..900;1,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Amatic+SC:wght@400;700&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="poetrypress.css">
@@ -335,7 +339,7 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
         </div>
 
-        <button class="ghost full" id="randomFontBtn" data-str="button.randomFontBtn">⟳ Summon New Typeface</button>
+        <button class="ghost full" id="randomFontBtn" data-sound="conjure" data-str="button.randomFontBtn">⟳ Summon New Typeface</button>
       </div>
     </details>
 
@@ -496,7 +500,7 @@ inside of a <~~dead person~~/trans>'s dreams.
             <span class="range-val" id="bgRadialRVal">75%</span>
           </div>
         </div>
-        <button class="ghost full" id="randomBgBtn" data-str="button.randomBgBtn">⟳ Summon New Backdrop</button>
+        <button class="ghost full" id="randomBgBtn" data-sound="conjure" data-str="button.randomBgBtn">⟳ Summon New Backdrop</button>
       </div>
     </details>
 
@@ -644,7 +648,7 @@ inside of a <~~dead person~~/trans>'s dreams.
               </div>
               <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset" aria-label="Reset the dial">⟲</button>
               <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="To the centre" aria-label="Move the dial to its centre">◎</button>
-              <button type="button" class="ld-btn ld-random" id="lightRandom" title="A random angle" aria-label="Turn the dial to a random angle">⚄</button>
+              <button type="button" class="ld-btn ld-random" id="lightRandom" data-sound="tap" title="A random angle" aria-label="Turn the dial to a random angle">⚄</button>
             </div>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
@@ -686,7 +690,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 <input type="number" id="textureSeedValue" value="12345" step="1" hidden>
                 <span class="seed-number" id="textureSeedNumber"></span>
               </div>
-              <button class="ghost seed-moon" id="textureSeedReroll" type="button" aria-label="Reroll the seed"></button>
+              <button class="ghost seed-moon" id="textureSeedReroll" data-sound="conjure" type="button" aria-label="Reroll the seed"></button>
             </div>
           </div>
           </div>
@@ -979,6 +983,15 @@ inside of a <~~dead person~~/trans>'s dreams.
         </select>
       </div>
       <p class="hint theme-note" id="themeNote"></p>
+      <div class="check-row">
+        <input type="checkbox" id="soundToggle">
+        <label for="soundToggle" data-str="label.soundToggle">Sounds</label>
+      </div>
+      <div class="field full">
+        <label for="soundVolume" data-str="label.soundVolume">Sound Volume</label>
+        <input type="range" id="soundVolume" min="0" max="100" step="1" value="40">
+      </div>
+      <p class="hint" data-str="hint.sounds">Soft chimes as you work, in one key. Off by default; kept in this browser only.</p>
     </div>
     <details class="card" data-tab="more" id="spellPanel" open>
       <summary class="card-title" data-str="card.spellcrafting">Spellcrafting</summary>
@@ -986,10 +999,10 @@ inside of a <~~dead person~~/trans>'s dreams.
         <div class="spell-wheel" id="spellWheel"></div>
         <p class="hint" id="spellEmpty" style="margin:5px 0 0;" data-str="hint.create_saves_the_current_look_as_a">Create saves the current look as a spell you can bring back later.</p>
         <div class="btn-row">
-          <button class="btn-major" id="spellCreateBtn" type="button" disabled data-str="button.spellCreateBtn">Create</button>
-          <button class="btn-major" id="spellApplyBtn" type="button" disabled data-str="button.spellApplyBtn">Invoke</button>
-          <button class="ghost" id="spellShareBtn" type="button" disabled data-str="button.spellShareBtn">Share</button>
-          <button class="btn-danger" id="spellDeleteBtn" type="button" disabled data-str="button.spellDeleteBtn">Dissolve</button>
+          <button class="btn-major" id="spellCreateBtn" data-sound="keep" type="button" disabled data-str="button.spellCreateBtn">Create</button>
+          <button class="btn-major" id="spellApplyBtn" data-sound="arrive" type="button" disabled data-str="button.spellApplyBtn">Invoke</button>
+          <button class="ghost" id="spellShareBtn" data-sound="tap" type="button" disabled data-str="button.spellShareBtn">Share</button>
+          <button class="btn-danger" id="spellDeleteBtn" data-sound="close" type="button" disabled data-str="button.spellDeleteBtn">Dissolve</button>
         </div>
         <details class="subcard">
           <summary>Advanced</summary>
@@ -1009,7 +1022,7 @@ inside of a <~~dead person~~/trans>'s dreams.
         </div>
         <p class="hint" id="grimoireEmpty" style="margin:5px 0 0;" data-str="hint.the_grimoire_is_empty_record_a_poe">The Grimoire is empty. Record a poem to keep it.</p>
         <div class="btn-row">
-          <button class="btn-major" id="poemSaveBtn" type="button" disabled data-str="button.poemSaveBtn">Record</button>
+          <button class="btn-major" id="poemSaveBtn" data-sound="keep" type="button" disabled data-str="button.poemSaveBtn">Record</button>
           <button class="btn-major" id="poemApplyBtn" type="button" disabled data-str="button.poemApplyBtn">Invoke</button>
           <button class="btn-danger" id="poemDeleteBtn" type="button" disabled data-str="button.poemDeleteBtn">Dissolve</button>
         </div>
@@ -1029,7 +1042,7 @@ inside of a <~~dead person~~/trans>'s dreams.
         <p class="hint full" data-str="hint.athanor">A surface texture node editor: wire Vellum's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
         <input type="hidden" id="forgeGraph" value="">
         <p class="hint full forge-summary" id="forgeSummary"></p>
-        <button class="btn-major full" id="forgeOpenBtn" type="button" data-str="button.forgeOpenBtn">🜉 Open the Athanor</button>
+        <button class="btn-major full" id="forgeOpenBtn" data-sound="open" type="button" data-str="button.forgeOpenBtn">🜉 Open the Athanor</button>
       </div>
     </details>
 
@@ -1073,7 +1086,7 @@ inside of a <~~dead person~~/trans>'s dreams.
       <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out">−</button>
       <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in">+</button>
       <button type="button" class="ghost" id="forgeClear">Clear</button>
-      <button type="button" class="btn-major" id="forgeCloseBtn">Done</button>
+      <button type="button" class="btn-major" id="forgeCloseBtn" data-sound="close">Done</button>
     </div>
     <div class="forge-body">
       <div class="forge-palette" id="forgePalette"></div>

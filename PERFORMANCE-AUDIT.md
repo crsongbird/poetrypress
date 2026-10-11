@@ -139,10 +139,12 @@ and/or show a quick half-resolution version first, then the full preview.
 - **Gain:** perceived — the newest position appears sooner. **Cons:**
   restarting costs ~50–100 ms; the quick version flickers in.
 
-### J · Linen at preview
-Linen computes on the export grid even for the preview (its threads alias
-otherwise). Options: supersample only the thread pattern, or accept
-softer threads in the preview (as F).
+### J · Linen at preview — *done (Jupiter, the chains release)*
+Linen's grid now keeps its threads at least ~3 px apart and no finer: the
+canvas's own grid for a preview, the export's when the weave is fine. Its
+thread edges are a pixel soft (no stair-steps), so the coarser preview does
+not alias. With an integer hash (no Math.sin in the loop), tabled curves and
+half the work at a weave keyframe: preview 2.9 s → 0.6 s, export 2.9 s → 1.75 s.
 
 ---
 
@@ -181,6 +183,33 @@ Dream Bloom's convolution (splatting the aperture is what GPUs do best);
 noise fields (nebula, smoke, water, moss); `pixelPass` tint/remap; the border
 bloom and glow blurs. Keep results on the GPU end to end where possible —
 reading back to the CPU stalls it.
+
+## Texture timings (Jupiter series, measured in node with CPU light)
+
+Preview (768 px) · export (3072 px). Less where the light runs on the GPU.
+
+| Texture | Preview | Export |
+|---|---|---|
+| Linen Tooth | ~0.6 s (was 2.9) | ~1.75 s (was 2.9) — a chain of steps; threads ≥3 px |
+| Fractured Glaze | ~0.7 s (was 1.5) | ~2.4 s (was 6.5) — a chain; its crack nets allocate nothing per pixel |
+| Harsh Rain · Silverpoint Hatch | ~0.08 s · ~0.12 s | ~0.24 s · ~0.28 s — chains on a half grid (were ~0.05 s as plain canvas drawing) |
+| Contour Map | ~0.9 s | ~2.1 s |
+| Burnt Letter | ~1.1 s | ~2.6 s |
+| Black Hole | ~0.6 s | ~2 s |
+| Dune Ripples (tilted) | — | ~1.4 s default, ~2.6 s full tilt |
+| Turing Skin | ~1.2 s | ~1.2 s (its own grid) |
+| Hoarfrost | ~0.9 s | ~1.5 s |
+| Rain on Glass | ~0.8 s | ~1.4 s (one simulation at every size) |
+| Stained Glass · Suminagashi | ~0.8 s | ~1.4 s |
+| Chladni Sand | ~0.7 s | ~1.2 s |
+| Guilloché | ~0.5 s | ~1.1 s |
+| Watercolour Wash | ~0.4 s | ~1.2 s |
+| Flow-Field Ink | ~0.1 s | — |
+
+An Athanor surface costs what its parts cost, inside its work budget.
+
+Text effects: glow, shadow and bevel blur as canvas shadows (`softText`), not
+`ctx.filter` — glow ~200 → ~10 ms a frame, three stacked ~350 → ~17 ms.
 
 ## 3 · Decisions for Ruby
 

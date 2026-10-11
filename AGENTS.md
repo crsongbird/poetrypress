@@ -57,6 +57,14 @@ from the source files (unbuilt) — everything must work both ways.
 | `texCore.js` | shared texture maths: seeded RNG, noise, `pixelPass`, canonical pixels, `lightHeights` |
 | `texWhimsy.js` · `texSharpness.js` · `texChaos.js` · `texTouch.js` | generators, one file per element |
 | `textureService.js` · `textureWorker.js` | textures made off the main thread |
+| `textureElements.js` | each texture's four readings (🜂 🜄 🜁 🜃), one its default |
+| `steps.js` · `stepsTouch.js` · `stepsChaos.js` | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains |
+| `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze); each an Athanor template |
+| `athanor.js` · `forge.js` | the Athanor: graph walker, cache and budget (in the worker) · node editor UI (Drawflow) |
+| `boxFx.js` | the inset box's glass and GPU blends |
+| `runology.js` | Ruby's Runes of Power: Archetypes, Accent Runes, Chroma (its words in the seed banks, its glyphs among the spell glyphs) |
+| `altText.js` · `jpegMeta.js` | the saved image's alt text: the poem, then the look in words (≤1500) · written into the JPEG (XMP) |
+| `murmur.js` | soft interface sounds (Symbology's engine, Vellum's sounds); off until turned on |
 | `appOptions.js` | fonts, presets, aspects, defaults, the opening template |
 | `strings.js` · `tunables.js` | hand-editable text · hand-editable numbers |
 | `spell.js` · `vault.js` | glyph spells; saving, sharing and the Grimoire |
@@ -156,6 +164,22 @@ EXEMPT list, each with its reason (app preferences, the JSON box, dialogs).
 `test/audit.test.mjs` checks the other direction (every saved key round-trips).
 
 ## Recipes
+
+**Rebuild a texture as a chain** (Ruby: every texture we touch is rebuilt
+this way — a long refactor, one texture at a time)
+1. Find (or write) its STEPS in the library: `steps.js` for general ones,
+   a family file (`stepsTouch.js`, `stepsChaos.js`, …) for a surface's own.
+   A step is `{ cat, label, ins, outs, params, cost, run(E, n) }`; it reads
+   params through `E.num` (so they may be BOUND: `'@k2[10,700]'`, `'@dial'`),
+   draws marks with `E.marks`, sizes in canonical pixels with `E.px`.
+2. Add the chain to `chains.js`: nodes, wires, Knob nodes as the sliders'
+   legend, `div` (or `grid`) for its working grid. Bind each slider to the
+   step params it drives, across the slider's own range.
+3. In `textureGenerators.js`, dispatch the type to `genChain`; delete the old
+   generator (keep its haiku, beside the step that inherited it).
+4. If a slider's job changed, bump `LOOK_VERSION` (appEvents.js) and
+   translate older looks in `retireLook`; update the four readings.
+5. Render it (the readings sheet), time it, accept new fingerprints.
 
 **Add a texture**
 1. Write `genX(w,h,amt,zoom,…)` in the element's file. Measure in canonical
@@ -283,6 +307,107 @@ before/after measurements AND an identical-render comparison.
   unless a tint is given.
 
 ---
+- build.mjs flattens `export async function` too (it used to stop at
+  `export function`); a module statement that survives flattening fails the build.
+- Weighted choices: texCore `pickWeighted`; pass an existing roll to keep a
+  seed's other draws where they were (the falling star reuses `shootP`).
+- A glow (hue5 role 'glow') is black by default and must be a no-op when
+  black — screen it, or skip when the colour sums to ~0.
+- Deep Field is two requests (astral_fog, astral_stars); its Glow Hue rides
+  on astral_stars (describeRequest and glowOf map it to astral's caps).
+- Glass for the inset box (boxFx.js) works on the page's own canvas: it reads
+  ctx.canvas for the box's rectangle, so it must run after the backdrop,
+  texture and vignette and before the text.
+- A texture whose option value is also used elsewhere in the markup (the
+  box's Frosted Glass is value="frost") is counted once (tests use a Set).
+- Stitches are retired by ALIAS, never deleted outright (old poems parse them).
+- A generator must not draw Math.random once PER PIXEL before its main
+  features (the count changes with the size, so a preview and its export get
+  different features): hash the canonical position instead (see Burnt
+  Letter's piles), or make per-pixel randomness the last thing drawn.
+- Counts and sizes are canonical (canonArea, cpx, or fractions of the working
+  grid's unit) — never "per pixel of this canvas".
+- Text effects never blur with ctx.filter (a whole layer per call, ~100×
+  slower than a shadow, and per LETTER when a run is tracked): use softText in
+  canvasRenderer, a shadow of letters set off the page. Measure canvas work
+  with the canvas FLUSHED (getImageData of one pixel): draws are deferred, and
+  a timer around them alone reads ~1 ms whatever they cost.
+- The Athanor's graphs carry a version (`v`). Never change what an old
+  version makes; add a version instead (athanor.js ATHANOR_VERSION).
+- Rain on Glass simulates on the EXPORT's grid at every size, then scales: a
+  chaotic sim fed sizes that differ by a fraction drifts apart.
+- Detail too fine for heights is a NORMAL MAP (Cold Press fibres, Linen's
+  weave, the glaze's fine crazing); a surface of two materials takes a
+  `glossMap` (Kintsugi's gold, Moss beside stone, glaze beside bare body).
+
+## Systems worth knowing
+- WORD SEEDS (seedWords.js): every 32-bit seed has exactly one phrase and
+  back; the banks and their order are FROZEN (test/seedWords.test.mjs anchors
+  phrases). Saves hold the number, and (textureSeedWords) whatever was typed.
+- FULL presets (`full: true`) are whole saved looks, applied by
+  restoreSettings except the page size.
+- The camera tilt (texCore `obliqueFrame`/`obliqueRender`): build the ground
+  on the frame's patch (larger than the page), light it from above, then
+  render; tilt 0 returns `flat` and the texture is exactly its top-down self.
+- Dream Bloom is a thin-lens camera (50 mm f/1.8): blur is a real convolution.
+- Textures are made off the page's thread (textureWorker.js). Textures that
+  draw text in web fonts (Transmutation Circles, Cartomancy) stay on the page.
+- PML stays backward compatible: test/fixtures/pml-golden.json is never
+  regenerated; font order is frozen.
+- Textures measure in canonical pixels (cpx, canonArea, canonDiv); check new
+  ones with tools/scale-audit.mjs.
+- Blend modes can hide an inset box (Darken shows only a darker box…).
+- WEIGHTED traits: texCore `pickWeighted([[value, weight], …], roll)` — one
+  draw, like the coin-flip it replaces, so seeds keep their other features.
+- The report drops a line whose surface variable has nothing to say
+  (pmlVars LINE_DROP, ctx.surfOff).
+- Panzoom and Coloris load from jsdelivr at exact versions (Drawflow too,
+  only when the Athanor opens); the app must work without them.
+- STITCHES: STITCH_STYLES is the menu; STITCH_ALIASES maps the retired to
+  their relatives; parse with STITCH_NAMES, draw through stitchOf(). Every
+  kept motif has an `edge` (its silhouette) — a new motif needs one too.
+- LINKED CONTROLS: `data-link="<id>"` + `data-link-switch="<checkbox>"` mirror
+  two controls both ways while the switch is on (the box ⛓ border).
+- The box's glass and GPU blends: boxFx.js; `?softgl` in the address lets a
+  machine without a GPU test the GPU path (body[data-glass] says which ran).
+- The Athanor's graph is Drawflow's export JSON in #forgeGraph (PERSISTED,
+  but not an undo step), saved WITHOUT node faces (forge.js redraws them from
+  FORGE_NODES on load). athanor.js evaluates it; type 'athanor' in the
+  texture tables has six plain knobs (k1–k6) — the page relabels them from the
+  graph (applyAthanorGraph), and the cache key carries athanorHash(graph).
+- The Athanor's graphs carry `v` (athanor.js ATHANOR_VERSION). v1 drew all
+  nodes' randomness from one stream; v2 seeds each node from (seed, id), which
+  is what makes the kept results (ATHANOR_KEPT) safe. Never change what an
+  old version makes: add a version.
+- Text effects never blur with ctx.filter: use softText (a shadow of off-page
+  letters, carried through the transform).
+- THE FOUR READINGS (textureElements.js): a new texture needs all four (the
+  test says so), its default marked by `def`. Check a new reading by
+  rendering it; keep its knobs inside the texture's ranges.
+- Texture layers: the base layer is drawn first, in its own slot ('base'),
+  with the main seed ^ 0x5bd1e995; presets turn it off (FRAME_DEFAULTS).
+- RUNOLOGY (runology.js): Ruby's Runes of Power — Archetypes, Accent Runes,
+  Chroma — as Symbology carries them. Its WORDS are in the seed banks, its
+  GLYPHS among the spell glyphs (Ruby: no rune of its own for a seed or a
+  look). §Rune!name, §SpellRunes. 'Chrysm' and 'Pandorans' are words Ruby set
+  aside: Vitrum and Runists instead.
+- ALT TEXT (altText.js → jpegMeta.js): the poem without markup, then the look
+  in plain English (typeface, colours named, surface and its settings in
+  words, frame), clipped to 1500 — the poem gives way first. Written into the
+  JPEG as XMP (IPTC AltTextAccessibility and dc:description).
+- STEPS AND CHAINS (steps.js, chains.js): one library of operations for the
+  Athanor and the textures. A texture in TEXTURE_CHAINS is made by evaluating
+  its chain (genChain → evalAthanor) on its own grid, its sliders read through
+  bound params. Node results are kept (ATHANOR_KEPT): a hue change on a chain
+  texture reuses its structure. The chain's ctx carries tints, material hues
+  (mat) and glow; the cache signature must include anything a step reads.
+- LOOK_VERSION (appEvents.js): saved in every look; a look older than a
+  slider's new job is translated in retireLook (format 2: the dial took Harsh
+  Rain's slant and the Hatch's angle).
+- SOUNDS (murmur.js): one key (D dorian), three instruments with one job each
+  (glass: the interface; pad: the ground; bell: arrivals). Off by default; its
+  switch and volume are in localStorage (uv.sound.on, uv.sound.volume), never
+  in a look — exempt in the persistence tests.
 
 ## Design language
 
@@ -368,31 +493,3 @@ background) don't belong in it.
   finished, delete it rather than editing it into a history.
 - Hand-editable text lives in `strings.js`; hand-editable numbers in `tunables.js`.
 
-## This round's pitfalls
-- build.mjs flattens `export async function` too (it used to stop at
-  `export function`); a module statement that survives flattening fails the build.
-- Weighted choices: texCore `pickWeighted`; pass an existing roll to keep a
-  seed's other draws where they were (the falling star reuses `shootP`).
-- A glow (hue5 role 'glow') is black by default and must be a no-op when
-  black — screen it, or skip when the colour sums to ~0.
-- Deep Field is two requests (astral_fog, astral_stars); its Glow Hue rides
-  on astral_stars (describeRequest and glowOf map it to astral's caps).
-- Glass for the inset box (boxFx.js) works on the page's own canvas: it reads
-  ctx.canvas for the box's rectangle, so it must run after the backdrop,
-  texture and vignette and before the text.
-- A texture whose option value is also used elsewhere in the markup (the
-  box's Frosted Glass is value="frost") is counted once (tests use a Set).
-- Stitches are retired by ALIAS, never deleted outright (old poems parse them).
-- A generator must not draw Math.random once PER PIXEL before its main
-  features (the count changes with the size, so a preview and its export get
-  different features): hash the canonical position instead (see Burnt
-  Letter's piles), or make per-pixel randomness the last thing drawn.
-- Counts and sizes are canonical (canonArea, cpx, or fractions of the working
-  grid's unit) — never "per pixel of this canvas".
-- Text effects never blur with ctx.filter (a whole layer per call, ~100×
-  slower than a shadow, and per LETTER when a run is tracked): use softText in
-  canvasRenderer, a shadow of letters set off the page. Measure canvas work
-  with the canvas FLUSHED (getImageData of one pixel): draws are deferred, and
-  a timer around them alone reads ~1 ms whatever they cost.
-- The Athanor's graphs carry a version (`v`). Never change what an old
-  version makes; add a version instead (athanor.js ATHANOR_VERSION).

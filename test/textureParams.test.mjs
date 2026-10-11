@@ -170,9 +170,11 @@ check('the Rorschach covers only a small part of the card', inkArea < 800 * 2);
 // ---- hatching must actually cross ----
 // A single set of parallel lines is rain, not hatching. Silverpoint hatches in
 // patches that follow a form, and crosses a second layer in the deepest shadow.
-check('the hatch crosses a second layer in the deepest shadow',
-  /const layers = t>0\.62 \? 2 : 1;/.test(readFileSync(new URL('../texSharpness.js', import.meta.url), 'utf8')) &&
-  /const la=a\+l\*0\.95/.test(readFileSync(new URL('../texSharpness.js', import.meta.url), 'utf8')));
+// (Silverpoint Hatch is a chain of steps now: its Hatching step, chains.js)
+check('the hatch crosses a second layer in the deepest shadow (Cross-Hatching: the darkest third by default)',
+  /const layers = cross > 0 && t > 1 - cross \? 2 : 1;/.test(readFileSync(new URL('../steps.js', import.meta.url), 'utf8')) &&
+  /const la = a \+ l\*ca2/.test(readFileSync(new URL('../steps.js', import.meta.url), 'utf8')) &&
+  /cross: '@k1'/.test(readFileSync(new URL('../chains.js', import.meta.url), 'utf8')));
 
 // ---- aurora must paint something ----
 M.resetCreatedCanvases();

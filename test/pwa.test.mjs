@@ -59,6 +59,12 @@ const icons = read('tools/icons.py');
 check('icons are generated, not hand-pasted', /def build\(root\)/.test(icons));
 check('glyph jitter uses a stable seed', /zlib\.crc32/.test(icons) && !/seed=hash\(/.test(icons));
 check('arc flags are never jittered', /if cmd in 'Aa':/.test(icons));
+{
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8'), th = readFileSync(new URL('../theme.js', import.meta.url), 'utf8'), css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
+  check('dark-mode add-ons (Dark Reader and its kin) are told the app is already dark: darkreader-lock, and a color-scheme that follows the theme',
+    html.includes('<meta name="darkreader-lock">') && html.includes('<meta name="color-scheme" content="dark">')
+    && /setColorScheme\(LIGHT_THEMES\.includes\(theme\) \? 'light' : 'dark'\);/.test(th) && /:root\{ color-scheme:dark; \}/.test(css) && /:root\[data-theme="vellum"\]\{ color-scheme:light; \}/.test(css));
+}
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

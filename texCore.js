@@ -169,8 +169,9 @@ precision highp float; precision highp int;
 uniform highp sampler2D uH;
 uniform ivec2 uSize; uniform vec3 uL, uHalf;
 uniform float uRelief, uShine, uSpecK, uShadow, uAO, uAmbient, uRise, uStepX, uStepY;
-uniform int uSteps, uStride, uDoShadow, uR, uHasN, uMode;
+uniform int uSteps, uStride, uDoShadow, uR, uHasN, uMode, uHasG;
 uniform highp sampler2D uN;
+uniform highp sampler2D uG;
 out vec4 o;
 float at(ivec2 p){ p = clamp(p, ivec2(0), uSize - 1); return texelFetch(uH, p, 0).r; }
 void main(){
@@ -199,7 +200,9 @@ void main(){
   }
   float light = (uAmbient + (1.0 - uAmbient)*diffuse*(1.0 - uShadow*(1.0 - lit)))*(1.0 - occl);
   float nh = max(0.0, dot(n, uHalf));
-  float spec = pow(nh, uShine)*uSpecK*(0.35 + 0.65*lit);
+  float shine = uShine, specK = uSpecK;
+  if(uHasG == 1){ float g = texelFetch(uG, p, 0).r; shine = 4.0 + g*120.0; specK = 0.15 + g*0.85; }
+  float spec = pow(nh, shine)*specK*(0.35 + 0.65*lit);
   float dsh = diffuse*(1.0 - uShadow*(1.0 - lit));
   float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
   float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
@@ -242,7 +245,7 @@ in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
     const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = n => gl.getUniformLocation(prog, n);
-    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode'].map(n => [n, U(n)])) };
+    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG'].map(n => [n, U(n)])) };
   } catch(e){ GPU = null; }
   return GPU;
 }
@@ -278,12 +281,21 @@ function gpuLightHeights(H, ww, wh, P){
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.uniform1i(u.uN, 1); gl.uniform1i(u.uHasN, 1);
     } else { gl.uniform1i(u.uN, 0); gl.uniform1i(u.uHasN, 0); }
+    // a GLOSS MAP (one gloss per pixel: lacquer beside bare clay) on a third
+    let gTex = null;
+    if(P.G){
+      gTex = gl.createTexture(); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, gTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, ww, wh, 0, gl.RED, gl.FLOAT, P.G);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.uniform1i(u.uG, 2); gl.uniform1i(u.uHasG, 1);
+    } else { gl.uniform1i(u.uG, 0); gl.uniform1i(u.uHasG, 0); }
     gl.viewport(0, 0, ww, wh);
     // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion
     const read = mode => { gl.uniform1i(u.uMode, mode); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       const px = new Uint8Array(ww*wh*4); gl.readPixels(0, 0, ww, wh, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
     const px = read(0), px1 = P.comp ? read(1) : null;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex); if(nTex) gl.deleteTexture(nTex);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex); if(nTex) gl.deleteTexture(nTex); if(gTex) gl.deleteTexture(gTex);
     const light = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
     for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ light[i] = (px[q]*256 + px[q+1])/65535*2; spec[i] = (px[q+2]*256 + px[q+3])/65535; }
     if(!px1) return { light, spec };
@@ -316,6 +328,10 @@ function gpuLightHeights(H, ww, wh, P){
  *                   slopes add to the heights' (derivative blending), so fine
  *                   detail can be given as normals while the heights still
  *                   cast the shadows and darken the crevices
+ *   opts.glossMap   a GLOSS per pixel (Float32Array, 0 matte … 1 mirror), for
+ *                   a surface of more than one material — lacquer beside bare
+ *                   clay, gold seams in a glaze, wet stone among dry; where it
+ *                   is given, it replaces opts.gloss
  *   opts.components also return { diffuse, occl } separately (for materials
  *                   that need the ambient and direct light apart)
  * Always returned: `flat`, the light open flat ground gets (for materials:
@@ -324,6 +340,7 @@ function gpuLightHeights(H, ww, wh, P){
 export function lightHeights(H, ww, wh, opts = {}){
   const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, ambient = 0.35, normals = null, components = false } = opts;
   const N = normals && normals.length >= ww*wh*3 ? normals : null;
+  const GM = opts.glossMap && opts.glossMap.length >= ww*wh ? opts.glossMap : null;
   const { lx, ly } = lightVec(light);
   const tilt = Math.min(1, Math.hypot(lx, ly));
   // toward the light: lightVec points the way light travels, so reverse it.
@@ -343,7 +360,7 @@ export function lightHeights(H, ww, wh, opts = {}){
   // on the GPU when it's there (the same maths, per pixel, at once)
   if(GPU_LIGHT && ww*wh >= 4096){
     const g = gpuLightHeights(H, ww, wh, { Lx, Ly, Lz, hx, hy, hz, hl, shininess, specK, relief, shadow, ao, ambient, rise,
-      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, comp: components });
+      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, G: GM, comp: components });
     if(g){ g.flat = ambient + (1 - ambient)*Lz; return g; }
   }
   const out = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
@@ -386,12 +403,37 @@ export function lightHeights(H, ww, wh, opts = {}){
       out[i] = (ambient + (1 - ambient)*diffuse*(1 - shadow*(1 - lit))) * (1 - occl);
       if(components){ dif[i] = diffuse*(1 - shadow*(1 - lit)); occA[i] = occl; }
       const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
-      spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
+      if(GM){ const g = GM[i]; spec[i] = Math.pow(nh, 4 + g*120)*(0.15 + g*0.85)*(0.35 + 0.65*lit); }
+      else spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
     }
   }
   // flat: the light on open, flat ground — what "in shadow" is measured against
   const flat = ambient + (1 - ambient)*Lz;
   return components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+}
+
+/**
+ * The light as lightHeights sees it — toward the light (L), Blinn's half
+ * vector (Hv), and what open flat ground gets (flat) — for detail too fine to
+ * be heights (a weave's threads, a glaze's finest crazing): such detail is a
+ * NORMAL per pixel, shaded with shadeNormal by the same light, the same
+ * elevation (raking past the rim) and the same highlight as the engine's.
+ */
+export function lightBasis(light){
+  const { lx, ly } = lightVec(light);
+  const tilt = Math.min(1, Math.hypot(lx, ly));
+  const elev = (90 - tilt*78 - lightLow()*8) * Math.PI/180, horiz = Math.cos(elev), dirLen = tilt > 1e-6 ? tilt : 1;
+  const Lx = -lx/dirLen*horiz, Ly = -ly/dirLen*horiz, Lz = Math.sin(elev);
+  const hx = Lx, hy = Ly, hz = Lz + 1, hl = Math.hypot(hx, hy, hz) || 1;
+  return { Lx, Ly, Lz, Hx: hx/hl, Hy: hy/hl, Hz: hz/hl, flat: Lz };
+}
+/** A surface normal (need not be unit length) lit by a lightBasis: its
+ *  diffuse (0..1) and its highlight at this gloss (0 matte … 1 mirror). */
+export function shadeNormal(B, nx, ny, nz, gloss){
+  const l = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1; nx /= l; ny /= l; nz /= l;
+  const diffuse = Math.max(0, nx*B.Lx + ny*B.Ly + nz*B.Lz);
+  const nh = Math.max(0, nx*B.Hx + ny*B.Hy + nz*B.Hz);
+  return { diffuse, spec: Math.pow(nh, 4 + gloss*120)*(0.15 + gloss*0.85) };
 }
 
 /**
@@ -407,7 +449,7 @@ export function lightSparse(H, ww, wh, opts = {}, T = 64){
   const { lx, ly } = lightVec(light), tilt = Math.min(1, Math.hypot(lx, ly));
   const elev = (90 - tilt*78 - lightLow()*8) * Math.PI/180, lxy = Math.cos(elev), rise = lxy > 1e-6 && tilt > 1e-6 ? Math.sin(elev)/lxy : 1e9;   // as lightHeights has it (sunk light too: longer shadows, wider margins)
   let hMax = 0, hMin = 0; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
-  const ground = lightHeights(new Float32Array(1), 1, 1, { ...opts, shadow: 0, ao: 0, normals: null });
+  const ground = lightHeights(new Float32Array(1), 1, 1, { ...opts, shadow: 0, ao: 0, normals: null, glossMap: null });
   const out = new Float32Array(ww*wh).fill(ground.flat), spec = new Float32Array(ww*wh).fill(ground.spec[0]);
   // shadows fall AWAY from the light, so only that side needs the shadow's
   // length; every side needs the occlusion box (and a pixel for the slope)
