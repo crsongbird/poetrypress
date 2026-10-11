@@ -27,7 +27,7 @@
 import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
-import { openForge, closeForge, describeForge } from './forge.js';
+import { forgeShelf, openForge, closeForge, describeForge } from './forge.js';
 import { athanorKnobs, athanorHues, athanorName, athanorNodes, validateGraph } from './athanor.js';
 import { elementsFor } from './textureElements.js';
 import { withAltText } from './jpegMeta.js';
@@ -36,7 +36,7 @@ import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer } from './canvasRenderer.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
@@ -44,7 +44,7 @@ import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
 import { moonPhase, moonGlyph, moonGlyphURI, phaseName } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
-import { paintPresetSwatch } from './swatches.js';
+import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from './swatches.js';
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
@@ -164,6 +164,14 @@ const LOCKABLE = [
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
   'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','texP6','textureSeedValue',
 ];
+// …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
+// found in the markup, so a new one is lockable the day it is added
+if(typeof document.querySelectorAll === 'function'){
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'forgeStarter']);
+  for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
+      + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
+    if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
+}
 // A padlock in the same scratchy hand as the tab glyphs — the shackle swings
 // open when unlocked, which reads at a glance without colour.
 const LOCK_GLYPH =
@@ -228,16 +236,37 @@ function setColorField(hexId, hex){
 }
 function randHex(){ return '#'+Math.floor(Math.random()*0xFFFFFF).toString(16).padStart(6,'0'); }
 
+// every switch → section pair and angle → readout pair, so refreshUi() can
+// put each view right after anything sets values directly (a load, undo, a preset)
+const SUBBLOCKS = [], ANGLES = [];
 function toggleSubblock(checkboxId, blockId){
   const box = $(checkboxId), block = $(blockId);
   const sync = ()=>{ block.classList.toggle('open', box.checked); scheduleRender(); };
   box.addEventListener('change', sync);
+  SUBBLOCKS.push([box, block]);
   sync();
 }
 
 function bindAngle(rangeId, labelId){
   const r = $(rangeId), l = $(labelId);
   r.addEventListener('input', ()=>{ l.textContent = r.value+'°'; scheduleRender(); });
+  ANGLES.push([r, l]);
+}
+
+/**
+ * THE ONE REFRESH: every view of a value made to match the value — sections
+ * open as their switches say, readouts, moons, the dial, the readings, locks
+ * and master locks, the seed's words. Cheap, and safe to run any time; run
+ * after anything that writes values without firing their events (Ruby: "UI
+ * elements not updating when certain elements are refreshed").
+ */
+function refreshUi(){
+  for(const [box, block] of SUBBLOCKS) if(box && block && block.classList) block.classList.toggle('open', !!box.checked);
+  for(const [r, l] of ANGLES) if(r && l) l.textContent = r.value + '°';
+  const run = fn => { try { if(typeof fn === 'function') fn(); } catch(e){} };
+  run(refreshReadouts); run(syncFrameVisibility); run(syncBaseUi); run(paintMoons); run(paintSeedMoon); run(syncLightPad);
+  run(paintElements); run(() => { for(const [, b] of lockButtons) if(b._paint) b._paint(); }); run(paintMasterLocks);
+  run(() => syncSeedWords(false));
 }
 
 function bindRadioGroup(containerId, onSelect){
@@ -502,49 +531,56 @@ $('randomFontBtn').addEventListener('click', ()=>{
   scheduleRender();
   });
 });
+// NEW BACKDROP: only the backdrop's own colours (every stop in use) and the
+// gradient's angle — nothing else on the page changes (Ruby). The colours are
+// a small scheme around one hue (near, split or across the wheel), dark under
+// light text and pale under dark text, so the words stay readable.
+function backdropColours(n){
+  const t = hexToRgbObj($('textColorHex').value || '#EEEEEE'), lum = (0.2126*t.r + 0.7152*t.g + 0.0722*t.b)/255;
+  const dark = lum > 0.5, h0 = Math.random()*360, scheme = Math.floor(Math.random()*4);
+  const hueAt = i => scheme === 0 ? h0 + (i - (n - 1)/2)*18                       // near: neighbours
+                   : scheme === 1 ? h0 + (i % 2 ? 150 : 0) + i*8                  // split across the wheel
+                   : scheme === 2 ? h0 + i*120                                    // three apart
+                   : h0;                                                          // one hue, light to dark
+  const out = [];
+  for(let i = 0; i < n; i++){
+    const s = 0.25 + Math.random()*0.45, step = n > 1 ? i/(n - 1) : 0;
+    const l = dark ? 0.06 + Math.random()*0.10 + (scheme === 3 ? step*0.16 : Math.random()*0.08)
+                   : 0.80 + Math.random()*0.08 + (scheme === 3 ? -step*0.14 : Math.random()*0.06);
+    out.push(hslHex(((hueAt(i) % 360) + 360) % 360, s, Math.max(0.03, Math.min(0.96, l))));
+  }
+  return out;
+}
+function hslHex(h, s, l){
+  const f = k => { const a = s*Math.min(l, 1 - l), kk = (k + h/30) % 12; return l - a*Math.max(-1, Math.min(kk - 3, 9 - kk, 1)); };
+  return '#' + [f(0), f(8), f(4)].map(v => Math.round(v*255).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function hexToRgbObj(hex){ const n = parseInt(String(hex).replace('#', '').slice(0, 6), 16) || 0; return { r: n >> 16, g: (n >> 8) & 255, b: n & 255 }; }
 $('randomBgBtn').addEventListener('click', ()=>{
   // locked controls are restored after the randomiser runs
   withLocksPreserved(()=>{
-  maybeRerollSeed();
-  setColorField('bgColor1Hex', randHex());
-
-  const bgGradOn = Math.random() < 0.7;
-  $('bgGradientToggle').checked = bgGradOn;
-  $('bgGradientBlock').classList.toggle('open', bgGradOn);
-  if(bgGradOn){
-    setColorField('bgColor2Hex', randHex());
-    $('bgGradientAngle').value = Math.floor(Math.random()*360);
-    $('bgGradientAngleVal').textContent = $('bgGradientAngle').value+'°';
-  }
-
-  const texOn = Math.random() < 0.5;
-  $('textureToggle').checked = texOn;
-  $('textureBlock').classList.toggle('open', texOn);
-  if(texOn){
-    // any texture the menu offers; then the same change a person makes, so
-    // the knobs relabel, the hue pickers follow and the light resets
-    // (a locked texture stays, and keeps its knobs as they are)
+    const grad = $('bgGradientToggle').checked, n = grad ? (state.page.bgStops || 2) : 1;
+    const cols = backdropColours(n);
+    ['bgColor1Hex', 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex'].slice(0, n).forEach((id, i) => setColorField(id, cols[i]));
+    if(grad && $('bgGradientAngle')){ $('bgGradientAngle').value = Math.floor(Math.random()*360); if($('bgGradientAngleVal')) $('bgGradientAngleVal').textContent = $('bgGradientAngle').value + '°'; }
+    scheduleRender();
+  });
+});
+// RANDOM SURFACE: a texture from the menu, one of its four readings (known-good
+// settings, which respect locks), and a new seed — nothing else on the page
+if($('randomSurfaceBtn') && $('randomSurfaceBtn').addEventListener) $('randomSurfaceBtn').addEventListener('click', ()=>{
+  withLocksPreserved(()=>{
+    if(!$('textureToggle').checked){ $('textureToggle').checked = true; $('textureToggle').dispatchEvent(new Event('change', { bubbles: true })); }
     if(!state.locks.has('textureType')){
-      const types = [...$('textureType').options].map(o => o.value);
+      const graph = (($('forgeGraph') || {}).value || '').length > 40;
+      const types = [...$('textureType').options].map(o => o.value).filter(v => v && (v !== 'athanor' || graph) && v !== $('textureType').value);
       $('textureType').value = types[Math.floor(Math.random()*types.length)];
       $('textureType').dispatchEvent(new Event('change', { bubbles: true }));
     }
-    const op = Math.floor(Math.random()*22)+4;
-    $('textureOpacity').value = op;
-    paintMoons();
-  }
-
-  const borderOn = Math.random() < 0.4;
-  $('borderToggle').checked = borderOn;
-  $('borderBlock').classList.toggle('open', borderOn);
-  if(borderOn){
-    setColorField('borderColorHex', randHex());
-    $('borderThickness').value = Math.floor(Math.random()*6)+1;
-    $('borderOffset').value = Math.floor(Math.random()*40);
-  }
-  syncLinkedBox();
-
-  scheduleRender();
+    const els = ['fire', 'water', 'wind', 'earth'];
+    if(typeof applyElement === 'function') applyElement(els[Math.floor(Math.random()*4)]);
+    maybeRerollSeed();
+    scheduleRender();
   });
 });
 function plainTextFromLine(rawContent, accent1On, accent2On){
@@ -597,7 +633,9 @@ function poemAltText(){
   const v = id => ($(id) || {}).value, on = id => !!($(id) && $(id).checked);
   const text = id => { const e = $(id); const o = e && e.selectedOptions && e.selectedOptions[0]; return o ? o.textContent.replace(/\s*\(default\)\s*$/i, '').trim() : ''; };
   const a1 = on('accent1Toggle'), a2 = on('accent2Toggle');
-  const raw = String(v('poemText') || '').replace(/§[A-Za-z]+(?:![A-Za-z0-9_-]+|:-?\d*\.?\d+)?/g, '');
+  // the poem as the page shows it: §Variables filled in (a report reads as its values); any left are dropped
+  const filled = typeof resolvedPoemText === 'function' ? resolvedPoemText() : null;
+  const raw = String(filled != null ? filled : (v('poemText') || '')).replace(/§[A-Za-z]+(?:![A-Za-z0-9_-]+|:-?\d*\.?\d+)?/g, '');
   let poem = [];
   try {
     poem = buildLines(raw, a1, a2).map(l => l.isBlank ? '' : (l.parts || [{ segments: l.segments || [] }])
@@ -622,6 +660,9 @@ function poemAltText(){
     base: on('baseToggle') ? { name: text('baseType') } : null,
     border: on('borderToggle') ? { colour: v('borderColorHex'), stitch: text('borderStitch').toLowerCase() } : null,
     box: on('cardToggle'), vignette: on('vignetteToggle'),
+    // the credit, as words (any PML colour markup is only colour)
+    credit: (() => { const u = String(v('usernameField') || '').trim(); if(!u) return '';
+      try { const ln = buildLines(u, true, true)[0] || {}; return (ln.parts || [{ segments: ln.segments || [] }]).map(p => (p.segments || []).map(s => s.text || '').join('')).join(' ').replace(/\s+/g, ' ').trim(); } catch(e){ return u; } })(),
   });
 }
 $('downloadBtn').addEventListener('click', async ()=>{
@@ -634,7 +675,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
   // full-size textures are made in the texture worker, so the page stays
   // responsive; the first render asks for them, the second draws them.
   const btn = $('downloadBtn'), label = btn.textContent;
-  state.ui.saving = true; btn.textContent = 'Saving…'; btn.disabled = true;
+  state.ui.saving = true; btn.textContent = 'Saving…'; btn.disabled = true; if(typeof setWorking === 'function') setWorking('saving');
   if(document.body && document.body.classList) document.body.classList.add('saving');
   const pw = canvas.width, ph = canvas.height;
   try {
@@ -644,11 +685,12 @@ $('downloadBtn').addEventListener('click', async ()=>{
     await texturesSettled();
     render();
     // the poem's words go inside the file as its alt text (jpegMeta.js)
-    link.href = withAltText(canvas.toDataURL('image/jpeg', 1.0), poemAltText());
+    state.ui.lastAlt = poemAltText();
+    link.href = withAltText(canvas.toDataURL('image/jpeg', 1.0), state.ui.lastAlt);
   } finally {
     canvas.width = pw; canvas.height = ph;
     setRenderScale(pw / (state.page.exportW || pw));
-    state.ui.saving = false; btn.textContent = label; btn.disabled = false;
+    state.ui.saving = false; btn.textContent = label; btn.disabled = false; setWorking(null);
     // the full-size textures go: a phone shouldn't keep several 38 MB textures it won't reuse soon
     dropLargeTextures((state.page.exportW || pw)*(state.page.exportH || ph));
     if(document.body && document.body.classList) document.body.classList.remove('saving');
@@ -656,7 +698,18 @@ $('downloadBtn').addEventListener('click', async ()=>{
   }
   link.click();
   murmur.play('saveImage');
+  // Bluesky (and most places) don't read alt text from inside the file: it is
+  // offered for pasting too — copied at once where the browser allows, a button otherwise
+  offerAltText(state.ui.lastAlt);
 });
+async function offerAltText(alt){
+  if(!alt) return;
+  let copied = false;
+  try { if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(alt); copied = true; } } catch(e){}
+  toast(copied ? 'Saved. Its alt text is copied, ready to paste where you post it.' : 'Saved, with its alt text inside.', copied ? null : { label: 'Copy alt text', act: async () => {
+    try { await navigator.clipboard.writeText(alt); toast('Alt text copied.'); }
+    catch(e){ modalPrompt({ title: 'The alt text', body: 'Copy it from here.', input: true, defaultValue: alt, rows: 6, confirmLabel: 'Done', alert: true }); } } });
+}
 
 // ---------- settings: save and restore (the Workbench JSON, spells) ----------
 /**
@@ -678,6 +731,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
  */
 const PERSISTED = [
   ['bgGradientType',       'bgGradientType',       'text'],
+  ['textGradientType',     'textGradientType',     'text'],     // the text gradient's shape (linear, mirrored, radial, sweep)
   ['bgRadialX',            'bgRadialX',            'text', '%'],
   ['bgRadialY',            'bgRadialY',            'text', '%'],
   ['bgRadialR',            'bgRadialR',            'text', '%'],
@@ -1000,6 +1054,7 @@ function restoreSettings(s){
   scheduleRender();
   paintMoons();
   paintSeedMoon();
+  refreshUi();
 }
 
 $('advancedRefreshBtn').addEventListener('click', ()=>{
@@ -1881,7 +1936,15 @@ function syncLightPad(){
   if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', tilt >= 99 && Math.abs(((deg - +t.dataset.deg + 540) % 360) - 180) < 0.5));
   if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${Math.round(deg)}°, ${Math.round(tilt)}% low`);
   if(dial && dial.classList) dial.classList.toggle('past-rim', tilt > 100);
+  // its numbers, beneath (not while one is being typed)
+  const di = $('lightDegIn'), ti = $('lightTiltIn'), ae = typeof document !== 'undefined' ? document.activeElement : null;
+  if(di && ae !== di) di.value = String(Math.round(deg)); if(ti && ae !== ti){ ti.value = String(Math.round(isNaN(tilt) ? 100 : tilt)); ti.max = String(dialMax()); }
 }
+// typing the dial's numbers turns it exactly
+for(const id of ['lightDegIn', 'lightTiltIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
+  const deg = parseFloat($('lightDegIn').value), tilt = parseFloat($('lightTiltIn').value);
+  setLight(isNaN(deg) ? (parseFloat($('textureLight').value) || 0) : deg, isNaN(tilt) ? (parseFloat(($('textureLightTilt') || {}).value) || 100) : tilt, true);
+});
 function setLight(deg, tilt, commit){
   if(!commit) draftWhileDragging();
   $('textureLight').value = String(Math.round(((deg % 360) + 360) % 360));
@@ -1996,7 +2059,7 @@ function installLocks(){
     btn.addEventListener('click', ()=>{
       if(state.locks.has(id)) state.locks.delete(id); else state.locks.add(id);
       murmur.play(state.locks.has(id) ? 'lock' : 'unlock');
-      paint();
+      paint(); paintMasterLocks();
     });
     btn._paint = paint;
     lockButtons.set(id, btn);
@@ -2009,6 +2072,66 @@ function restoreLockState(ids){
   state.locks.clear();
   for(const id of ids) if(LOCKABLE.includes(id)) state.locks.add(id);
   for(const [, btn] of lockButtons) if(btn._paint) btn._paint();
+  paintMasterLocks();
+}
+
+// ---------- MASTER LOCKS and EYES, in the headings ----------
+// Every section's heading has a master lock: it locks (or, when all are
+// locked, unlocks) every lockable control beneath it — a card, or a sub-section
+// within one. Half-closed when only some are locked. The checkboxes that
+// switched a section on are EYES now (open: shown); a card's own eye sits in
+// its heading, beside its lock, far enough from the fold not to be hit by it.
+const masterLocks = [];
+function lockablesIn(root){ return LOCKABLE.filter(id => { const el = $(id); return el && root.contains && root.contains(el); }); }
+function paintMasterLocks(){
+  for(const m of masterLocks){
+    const ids = lockablesIn(m.root), n = ids.filter(id => state.locks.has(id)).length;
+    m.btn.classList.toggle('locked', ids.length > 0 && n === ids.length); m.btn.classList.toggle('partial', n > 0 && n < ids.length);
+    m.btn.title = n === ids.length && n ? 'All locked here — tap to unlock them all' : n ? `${n} of ${ids.length} locked here — tap to lock them all` : 'Lock everything here';
+    m.btn.setAttribute('aria-pressed', n === ids.length && n ? 'true' : n ? 'mixed' : 'false');
+  }
+}
+function headTools(head){
+  let t = head.querySelector(':scope > .head-tools');
+  if(!t){ t = document.createElement('span'); t.className = 'head-tools'; head.insertBefore(t, head.firstChild); }
+  return t;
+}
+function addMasterLock(root, head){
+  if(!root || !head || !lockablesIn(root).length) return;
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'lock-btn master-lock'; btn.innerHTML = LOCK_GLYPH;
+  btn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
+    const ids = lockablesIn(root), all = ids.every(id => state.locks.has(id));
+    for(const id of ids) all ? state.locks.delete(id) : state.locks.add(id);
+    murmur.play(all ? 'unlock' : 'lock');
+    for(const [, b] of lockButtons) if(b._paint) b._paint();
+    paintMasterLocks();
+  });
+  headTools(head).appendChild(btn); masterLocks.push({ root, btn });
+}
+// the switches that show a whole card, moved into its heading as an eye
+const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the border', cardToggle: 'Show the inset box', vignetteToggle: 'Show the vignette' };
+// the switches inside a card, eyes where they are
+const EYES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle', 'spellMark'];
+function installHeadings(){
+  if(typeof document.querySelectorAll !== 'function') return;
+  for(const [id, title] of Object.entries(CARD_EYES)){
+    const box = $(id), card = box && box.closest && box.closest('details.card'), head = card && card.querySelector(':scope > summary');
+    if(!head) continue;
+    const row = box.closest('.check-row');
+    box.classList.add('eye'); box.title = title; box.setAttribute('aria-label', title);
+    // a click on the eye shows or hides; it never opens or folds the section
+    box.addEventListener('click', e => { e.stopPropagation(); const was = card.open; setTimeout(() => { if(card.open !== was) card.open = was; }, 0); });
+    headTools(head).appendChild(box);
+    if(row) row.hidden = true;
+  }
+  for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
+  for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')) addMasterLock(card, card.querySelector(':scope > summary'));
+  // a sub-section's lock sits in the row that switches it on (its eye and name)
+  for(const sub of document.querySelectorAll('.subblock[id]')){
+    const prev = sub.previousElementSibling; if(prev && prev.classList && prev.classList.contains('check-row') && !prev.hidden) addMasterLock(sub, prev);
+  }
+  paintMasterLocks();
 }
 
 function snapshotLocked(){
@@ -2038,6 +2161,9 @@ function restoreLocked(snap){
 }
 /** Runs a change, then puts every locked control back the way it was. */
 function withLocksPreserved(fn){
+  try { return withLocksPreservedInner(fn); } finally { if(typeof refreshUi === 'function') refreshUi(); }
+}
+function withLocksPreservedInner(fn){
   const snap = snapshotLocked();
   fn();
   restoreLocked(snap);
@@ -2099,6 +2225,7 @@ $('textureType').addEventListener('change', () => { state.ui.element = null; pai
 paintElements();
 syncLightPad();
 installLocks();
+installHeadings();
 
 // ---------- PML editor ----------
 // The mirror carries the colour; the textarea keeps the caret, the selection
@@ -2339,8 +2466,11 @@ function refreshReadouts(){
 function syncFrameVisibility(){
   const show = (id, on) => { const el = $(id); if(el && el.style) el.style.display = on ? '' : 'none'; };
   const bgType = ($('bgGradientType') || {}).value || 'linear';
-  show('bgAngleField', bgType === 'linear');
-  for(const id of ['bgCenterXField','bgCenterYField','bgRadiusField']) show(id, bgType !== 'linear');
+  // the angle where a gradient has a direction; the centre where it has one; the radius for rings and boxes
+  show('bgAngleField', ['linear', 'mirror', 'conic'].includes(bgType));
+  for(const id of ['bgCenterXField','bgCenterYField']) show(id, ['radial', 'rect', 'conic'].includes(bgType));
+  show('bgRadiusField', bgType === 'radial' || bgType === 'rect');
+  show('textAngleField', ((($('textGradientType') || {}).value) || 'linear') !== 'radial');
   show('borderRadiusField', $('borderRounded') && $('borderRounded').checked);
   // sections open with the class the stylesheet keys on (.subblock.open);
   // setting display directly loses to that rule
@@ -2349,7 +2479,7 @@ function syncFrameVisibility(){
   const bgrad = $('borderGradientToggle') && $('borderGradientToggle').checked;
   show('borderColor2Field', bgrad); show('borderColor3Field', bgrad); show('borderAngleField', bgrad);
   for(const id of ['cardColor2Field','cardTypeField']) show(id, grad);
-  show('cardAngleField', grad && $('cardGradientType').value === 'linear');
+  show('cardAngleField', grad && ['linear', 'mirror', 'conic'].includes($('cardGradientType').value));
   show('cardRadiusField', $('cardRounded') && $('cardRounded').checked);
   // the glass's knobs only with glass, and the second named for what it moves
   const glass = ($('cardFx') && $('cardFx').value) || 'none';
@@ -2357,7 +2487,7 @@ function syncFrameVisibility(){
   const scaleName = { frost: 'Grit', reeded: 'Flute Width', pixel: 'Cell Size', emboss: 'Depth', prism: 'Split' }[glass];
   if($('cardFxScaleLabel') && scaleName) $('cardFxScaleLabel').textContent = scaleName;
 }
-for(const id of [...Object.keys(RANGE_UNITS), 'bgGradientType', 'borderRounded', 'borderGradientToggle', 'cardToggle', 'cardGradientToggle',
+for(const id of [...Object.keys(RANGE_UNITS), 'bgGradientType', 'textGradientType', 'borderRounded', 'borderGradientToggle', 'cardToggle', 'cardGradientToggle',
                  'cardGradientType', 'cardOpacity', 'cardBlend', 'borderBlend', 'borderBloomBlend', 'borderStitch', 'borderStitchOut',
                  'cardLink', 'cardRounded', 'cardStitch', 'cardStitchOut', 'cardFx']){
   const el = $(id); if(!el || !el.addEventListener) continue;
@@ -2424,6 +2554,23 @@ function athanorStepSheet(json, paint){
   const T = 64, { cols, rows } = athanorSheetLayout(ids.length);
   whenTexture('athanorSteps', 'athanorsteps', cols*T, rows*T, athanorOpts(json, T), sheet => paint(sheet, ids, T, cols));
 }
+// KEPT SURFACES in the texture menu (🜉 Yours): each by name, after "From the
+// Athanor". Choosing one puts its graph in the Athanor and shows it — the
+// menu's value is then 'athanor', so a look saves exactly as before.
+function paintShelfOptions(){
+  const g = $('athanorGroup'); if(!g || typeof document.createElement !== 'function' || !g.querySelectorAll) return;
+  g.querySelectorAll('option.kept').forEach(o => o.remove());
+  forgeShelf().forEach((rec, i) => { const o = document.createElement('option'); o.value = 'kept:' + i; o.className = 'kept'; o.textContent = rec.name; g.appendChild(o); });
+}
+if(document.addEventListener) for(const ev of ['input', 'change']) document.addEventListener(ev, e => {
+  const t = e.target; if(!t || t.id !== 'textureType' || !String(t.value).startsWith('kept:')) return;
+  const rec = forgeShelf()[+t.value.slice(5)];
+  const v = rec ? validateGraph(rec.graph) : { ok: false, problems: ['it is no longer on the shelf'] };
+  if(!v.ok){ t.value = 'athanor'; hardNo('That kept surface can’t be used', v.problems.join('; ') + '.'); return; }
+  $('forgeGraph').value = JSON.stringify(v.graph); t.value = 'athanor';
+  applyAthanorGraph(true); paintForgeSummary();
+}, true);
+setTimeout(paintShelfOptions, 0);
 const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
@@ -2474,7 +2621,7 @@ if($('cardLink') && $('cardLink').addEventListener) $('cardLink').addEventListen
 
 /** Settings a preset doesn't mention start from these, so one preset's box
  *  or rounded frame never leaks into the next. */
-const FRAME_DEFAULTS = { bgGradientType:'linear', bgRadialX:'50', bgRadialY:'50', bgRadialR:'75', borderGrain:'0',
+const FRAME_DEFAULTS = { bgGradientType:'linear', textGradientType:'linear', bgRadialX:'50', bgRadialY:'50', bgRadialR:'75', borderGrain:'0',
   borderRounded:false, borderRadius:'60', cardToggle:false, cardColor1:'#FFF6EE', cardGradientToggle:false,
   cardColor2:'#F2E2EA', cardGradientType:'linear', cardGradientAngle:'90', cardOpacity:'70', cardBlend:'source-over',
   borderBlend:'source-over', borderBloomBlend:'source-over', borderGradientAngle:'45',
@@ -2639,11 +2786,15 @@ function hardNo(title, body){
 }
 // a quiet note at the foot of the page (errors that were caught, things cleaned up)
 let toastTimer = 0;
-function toast(text){
+function toast(text, action){
   let t = document.getElementById && document.getElementById('toast');
   if(!t && document.createElement && document.body){ t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
   if(!t) return;
-  t.textContent = text; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5200);
+  t.textContent = text; t.hidden = false; clearTimeout(toastTimer);
+  // a toast may carry one action (Copy alt text): it then stays a little longer
+  if(action && document.createElement){ const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-act'; b.textContent = action.label;
+    b.addEventListener('click', () => { t.hidden = true; action.act(); }); t.appendChild(document.createTextNode(' ')); t.appendChild(b); }
+  toastTimer = setTimeout(() => { t.hidden = true; }, action ? 9000 : 5200);
 }
 // WORK SINCE A FRESH START: settled changes counted since the last preset,
 // spell, load or summon; past a handful, those ask before replacing them
@@ -2655,7 +2806,7 @@ async function guardWork(label, what){
   return askSure({ title: `${label}?`, body: `You've made ${state.ui.edits} changes since the last fresh start. ${what} replaces them; Undo can still bring them back.`, confirmLabel: label });
 }
 // buttons that replace the look ask first (a click from the keyboard too); after, the count starts again
-const GUARDED = { randomFontBtn: ['Summon a new typeface', 'A new typeface'], randomBgBtn: ['Summon a new backdrop', 'A new backdrop'],
+const GUARDED = { randomFontBtn: ['Summon a new typeface', 'A new typeface'], randomBgBtn: ['Summon a new backdrop', 'A new backdrop'], randomSurfaceBtn: ['Summon a new surface', 'A new surface'],
   spellApplyBtn: ['Invoke this spell', 'The spell'], advancedLoadBtn: ['Load this JSON', 'The JSON'] };
 let guardPass = null;
 if(document.addEventListener) document.addEventListener('click', e => {
@@ -2871,7 +3022,7 @@ function stepHistory(dir){
   clearTimeout(h.timer);
   h.index = to; h.restoring = true;
   try { restoreSettings(JSON.parse(h.stack[to])); } finally { h.restoring = false; }
-  scheduleRender(); paintHistoryButtons();
+  refreshUi(); scheduleRender(); paintHistoryButtons();
 }
 if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepHistory(-1));
 if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepHistory(1));
@@ -2934,3 +3085,48 @@ if(typeof ResizeObserver === 'function' && document.querySelector && document.qu
   new ResizeObserver(applyPreviewScaleSoon).observe(document.querySelector('.canvas-wrap'));
 // the look the page opened on is the first step of history
 commitHistory();
+
+// ---------- WHAT'S WORKING ----------
+// While something slow is being made, a quiet line over the image says what —
+// each true to what is actually happening, put the way a workshop would
+// ("Convolving the bokeh" is literally what Dream Bloom does). It waits a
+// moment before it shows (fast work never flickers it) and stays a moment
+// once shown; it and the shimmer above it keep moving even while the page
+// itself is busy (they run on the compositor).
+const WORKING_WORDS = {
+  bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
+  clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',
+  aurora: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',
+  suminagashi: 'Floating the ink', grain: 'Developing the grain', metalleaf: 'Laying the leaf', flowers: 'Opening the lotuses',
+  brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
+  cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', sigils: 'Inscribing the sigils',
+  mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze',
+  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', turing: 'Letting the reaction diffuse',
+  chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
+  crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
+  wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',
+  water: 'Stilling the pool', glassrain: 'Beading the glass', frost: 'Growing the frost', contour: 'Surveying the contours',
+  watercolour: 'Wetting the wash', athanor: 'Stoking the athanor', athanorsteps: 'Showing each step', saving: 'Pressing the page at full size',
+};
+const workingLine = $('workingLine');
+let workShowT = 0, workHideT = 0, workShownAt = 0;
+function setWorking(what){
+  if(!workingLine || !workingLine.classList) return;
+  clearTimeout(workShowT); clearTimeout(workHideT);
+  if(what){
+    const words = WORKING_WORDS[what] || 'Making the surface';
+    workShowT = setTimeout(() => { workingLine.textContent = words + '…'; workingLine.classList.add('on'); workShownAt = Date.now(); }, 400);
+  } else {
+    const stay = Math.max(0, 700 - (Date.now() - workShownAt));
+    workHideT = setTimeout(() => workingLine.classList.remove('on'), workingLine.classList.contains('on') ? stay : 0);
+  }
+}
+if(document.addEventListener) document.addEventListener('vellum-working', e => setWorking(e && e.detail && e.detail.what));
+
+// tiles take their textures from the cache or the worker, never made here (swatches.js)
+setSwatchTextureSource((type, w, h, opts) => {
+  const hit = peekTexture(textureKeyFor(type, w, h, opts)); if(hit) return hit;
+  requestTexture('swatch:' + textureKeyFor(type, w, h, opts), type, w, h, opts);
+  return peekTexture(textureKeyFor(type, w, h, opts)) || null;
+});
+onTextureReady(() => swatchTexturesArrived());

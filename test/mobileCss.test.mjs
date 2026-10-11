@@ -150,9 +150,9 @@ check('tabs use the new names',
   ['Inscription','Rituals','Thoughtforms','Materia','Esoterica'].every(n => html.includes('>' + n + '</button>')));
 
 check('Form & Bearing now lives on the Aspects tab',
-  /<div class="card" data-tab="style">\s*<p class="card-title"[^>]*>\s*Form &amp; Bearing/.test(html));
+  /<details class="card" data-tab="style" open>\s*<summary class="card-title"[^>]*>\s*Form &amp; Bearing/.test(html));
 check('Form & Bearing sits above Known Rituals',
-  html.indexOf('Form &amp; Bearing') < html.indexOf('>  Known Rituals</p>'));
+  html.indexOf('Form &amp; Bearing') < html.indexOf('>  Known Rituals</summary>'));
 
 for(const [title, shouldBeOpen] of [['Backdrop Color', true], ['Surface Texture', true], ['Border Options', false], ['Vignette Options', false]]){
   const m = html.match(new RegExp('<details class="card" data-tab="page"( open)?>\\s*<summary class="card-title"[^>]*>' + title + '</summary>'));

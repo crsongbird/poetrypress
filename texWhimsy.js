@@ -21,7 +21,7 @@ export function genClouds(w,h,amt,zoom,light,form,M3){
   // the smoke inside it glows, and motes of dust catch the light.
   // Computed on a quarter-resolution canonical grid (the same grid at any
   // size, so the preview is the export scaled down) — smoke is soft by nature.
-  const div=canonDiv(4), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const div=canonDiv(6), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
   const perm=new Uint8Array(512), base=[...Array(256).keys()];
   for(let i=255;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [base[i],base[j]]=[base[j],base[i]]; }
   for(let i=0;i<512;i++) perm[i]=base[i&255];
@@ -33,7 +33,8 @@ export function genClouds(w,h,amt,zoom,light,form,M3){
   const fbm=(x,y)=>{ let s=0,a=0.5,f=1; for(let o=0;o<4;o++){ s+=vn(x*f,y*f)*a; a*=0.5; f*=2.07; } return s/0.9375; };
   const lift=Math.max(0.4,zoom), drag=amt;
   const clamp01=v=>v<0?0:v>1?1:v;
-  const gauss=()=>{ const u=Math.random()||1e-9, v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v); };
+  // near enough a normal for drifting smoke (the sum of three uniforms), at a fraction of Box–Muller's cost
+  const gauss=()=>(Math.random()+Math.random()+Math.random()-1.5)*2;
 
   // 1 · HAZE: soft strata, denser toward the ceiling (more so with more lift)
   const haze=smoothField(ww,wh,4,(fu,fv)=>{ const u=fu*ww/unit, v=fv*wh/unit, up=1-fv;
@@ -55,11 +56,21 @@ export function genClouds(w,h,amt,zoom,light,form,M3){
   let W=WL[0];
   const splat=(x,y,a)=>{ if(!(x>=0 && y>=0 && x<ww-1 && y<wh-1)) return; const x0=x|0, y0=y|0, tx=x-x0, ty=y-y0, k=y0*ww+x0;
     W[k]+=a*(1-tx)*(1-ty); W[k+1]+=a*tx*(1-ty); W[k+ww]+=a*(1-tx)*ty; W[k+ww+1]+=a*tx*ty; };
-  const e=1.5, gk=unit/(2*e)*0.55, ds=0.8;
+  const e=1.5, gk=unit/(2*e)*0.55, ds=1.2;
+  // the curl of each potential, worked out ONCE on the grid (central
+  // differences of the same bilinear field), then read with one bilinear look
+  // per component — a strand's step costs four reads, not eight
+  const curlField=F=>{ const CX=new Float32Array(N), CY=new Float32Array(N);
+    for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){ const k=y*ww+x;
+      CX[k]=(samp(F,x,y+e)-samp(F,x,y-e))*gk; CY[k]=-(samp(F,x+e,y)-samp(F,x-e,y))*gk; }
+    return [CX,CY]; };
+  const [AX,AY]=curlField(PA), [BX,BY]=curlField(PB);
   const curl=(x,y,ph)=>{
-    const gx=(samp(PA,x+e,y)-samp(PA,x-e,y))*(1-ph)+(samp(PB,x+e,y)-samp(PB,x-e,y))*ph;
-    const gy=(samp(PA,x,y+e)-samp(PA,x,y-e))*(1-ph)+(samp(PB,x,y+e)-samp(PB,x,y-e))*ph;
-    return [gy*gk, -gx*gk]; };
+    x=x<0?0:x>ww-1.001?ww-1.001:x; y=y<0?0:y>wh-1.001?wh-1.001:y;
+    const x0=x|0, y0=y|0, tx=x-x0, ty=y-y0, k=y0*ww+x0, a00=(1-tx)*(1-ty), a10=tx*(1-ty), a01=(1-tx)*ty, a11=tx*ty;
+    const ax=AX[k]*a00+AX[k+1]*a10+AX[k+ww]*a01+AX[k+ww+1]*a11, ay=AY[k]*a00+AY[k+1]*a10+AY[k+ww]*a01+AY[k+ww+1]*a11;
+    const bx=BX[k]*a00+BX[k+1]*a10+BX[k+ww]*a01+BX[k+ww+1]*a11, by=BY[k]*a00+BY[k+1]*a10+BY[k+ww]*a01+BY[k+ww+1]*a11;
+    return [ax*(1-ph)+bx*ph, ay*(1-ph)+by*ph]; };
   const sources=3+Math.floor(Math.random()*4);
   for(let s=0;s<sources;s++){
     const sx=ww*(0.08+Math.random()*0.84), sy=wh*(0.6+Math.random()*0.45), strength=0.6+Math.random()*0.6;
@@ -72,9 +83,9 @@ export function genClouds(w,h,amt,zoom,light,form,M3){
         const [cx,cy]=curl(x,y,ph);
         const vx=cx*turb + drag*0.5*(0.25+up), vy=cy*turb - lift;
         // and it diffuses: each strand spreads as it goes (a random walk)
-        const m=Math.hypot(vx,vy)||1, dif=ds*0.4*Math.min(1,age); x+=vx/m*ds+gauss()*dif; y+=vy/m*ds+gauss()*dif;
+        const m=Math.hypot(vx,vy)||1, dif=ds*0.33*Math.min(1,age); x+=vx/m*ds+gauss()*dif; y+=vy/m*ds+gauss()*dif;
         W=WL[t<unit*0.1?0:t<unit*0.3?1:2];
-        splat(x, y, 0.045*strength*Math.exp(-t/keep)*Math.min(1, t/(unit*0.02)));
+        splat(x, y, 0.0675*strength*Math.exp(-t/keep)*Math.min(1, t/(unit*0.02)));
         if(y<-2 || x<-ww*0.2 || x>ww*1.2) break;
       }
     }
@@ -98,7 +109,7 @@ export function genClouds(w,h,amt,zoom,light,form,M3){
       let x=cx+Math.cos(t)*R*cr-Math.sin(t)*R*sq*sr, y=cy+Math.cos(t)*R*sr+Math.sin(t)*R*sq*cr;
       for(let s=0;s<R*1.8;s+=ds){
         const [vx0,vy0]=curl(x,y,ph2), vx=vx0*0.8+(cx-x)*0.004, vy=vy0*0.8+lift*0.6, m=Math.hypot(vx,vy)||1;
-        x+=vx/m*ds; y+=vy/m*ds; splat(x, y, 0.035*(1-s/(R*1.8)));
+        x+=vx/m*ds; y+=vy/m*ds; splat(x, y, 0.0525*(1-s/(R*1.8)));
       }
     }
   }
@@ -1194,68 +1205,121 @@ export function genMoon(w,h,amt,zoom,form,night){
 // Ridge behind ridge behind ridge,
 // each one paler than the last —
 // distance, made of air.
-export function genLandscape(w,h,amt,zoom,form,tilt){
+/**
+ * Painted Landscape — a different country every seed, painted. The biome sets
+ * the ground's character; each band is laid in, then worked over with brush
+ * strokes that follow the slope. Far bands are paler and flatter (air softens
+ * distance), near ones darker and rougher. DISTANCE scales the features,
+ * RIDGES the bands, WETNESS turns it to watercolour, TILT tips the camera down.
+ * COLOUR (0: grey, tinted by the hues as it always was) paints it in colour:
+ *   a TIME OF DAY (dawn, day, golden hour, dusk, moonlight) sets the sky, the
+ *   light's warmth and the shadows' coolness; the far bands lean toward the
+ *   sky's colour (aerial perspective); the strokes are BROKEN COLOUR — each a
+ *   little different in hue, warmer where a slope faces the sun, cooler where
+ *   it turns away — with every value kept where the grey painting has it, so
+ *   the picture holds together as a painter's would.
+ * The sky has PAINTED CLOUDS: heaped cumulus (lit tops, shadowed flat bases),
+ * long stratus bands or thin cirrus, and a sun or a moon with its glow.
+ */
+export function genLandscape(w,h,amt,zoom,form,tilt,colour){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  // TILT: the camera's pitch — 0 as it always was; tipped down from higher, the
-  // horizon rises, the near ground grows (perspective) and the ridges flatten
   const pitch=Math.max(0, Math.min(1, tilt || 0));
-  // WETNESS: 0 is the dry, worked painting; wetter, it becomes watercolour —
-  // edges bleed into each other and, very wet, the paint blooms (backruns:
-  // pale patches with a dark, frilled rim where wet met drying paint)
   const wet=Math.max(0, Math.min(1, form==null ? 0 : form));
+  const CK=Math.max(0, Math.min(1, colour || 0));
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU);
   const unit=Math.min(w,h);
-
-  // A painted landscape, a different country every seed. The biome sets the
-  // ground's character; each band is laid in, then worked over with short
-  // brush dabs that follow the slope, their tone varying dab to dab. Far
-  // bands are paler and flatter (air softens distance), near ones darker and
-  // rougher. DISTANCE scales the features; RIDGES sets how many bands.
   const BIOMES={
-    // decay: how much each finer octave keeps — low is smooth, high is busy.
-    // sharp: crests that come to a point (only mountains have those)
-    desert:   { bands:[3,5],  decay:0.18, sharp:false, amp:0.05, bump:0,   dab:'long',  horizon:0.55 },
-    grass:    { bands:[4,6],  decay:0.3,  sharp:false, amp:0.07, bump:0,   dab:'grass', horizon:0.5  },
-    jungle:   { bands:[6,9],  decay:0.42, sharp:false, amp:0.06, bump:0.9, dab:'leaf',  horizon:0.42 },
-    plains:   { bands:[2,4],  decay:0.12, sharp:false, amp:0.018,bump:0,   dab:'long',  horizon:0.62 },
-    mountain: { bands:[6,9],  decay:0.36, sharp:true,  amp:0.15, bump:0,   dab:'rock',  horizon:0.38, wave:1.1 },
-    // mesas: broad flat tops and steep walls, banded with long strokes
-    mesa:     { bands:[3,5],  decay:0.2,  sharp:false, amp:0.09, bump:0,   dab:'long',  horizon:0.5,  wave:0.9, mesa:true },
-    // forest: rolling ground stippled with dabs, trees standing on every crest
-    forest:   { bands:[4,6],  decay:0.28, sharp:false, amp:0.06, bump:0,   dab:'dot',   horizon:0.48, trees:true },
-    // tundra: low, pale, nearly flat, swept with short horizontal strokes
-    tundra:   { bands:[2,4],  decay:0.15, sharp:false, amp:0.025,bump:0,   dab:'snow',  horizon:0.58, pale:true },
-    // a mountain lake: the far range, and still water holding its reflection
-    lake:     { bands:[3,5],  decay:0.34, sharp:true,  amp:0.12, bump:0,   dab:'rock',  horizon:0.36, wave:1.1, lake:true },
-    // a coast: headlands on one side, the sea opening out on the other
-    coast:    { bands:[2,4],  decay:0.3,  sharp:false, amp:0.08, bump:0,   dab:'grass', horizon:0.46, sea:true },
+    // decay: how much each finer octave keeps — low is smooth, high is busy. sharp: crests that come to a point
+    desert:   { bands:[3,5],  decay:0.18, sharp:false, amp:0.05, bump:0,   dab:'long',  horizon:0.55, pal:[[196,150,92],[214,176,118],[170,112,70],[226,196,150]] },
+    grass:    { bands:[4,6],  decay:0.3,  sharp:false, amp:0.07, bump:0,   dab:'grass', horizon:0.5,  pal:[[96,134,64],[150,160,70],[70,110,72],[176,170,96]] },
+    jungle:   { bands:[6,9],  decay:0.42, sharp:false, amp:0.06, bump:0.9, dab:'leaf',  horizon:0.42, pal:[[34,96,64],[60,128,70],[26,78,70],[104,140,60]] },
+    plains:   { bands:[2,4],  decay:0.12, sharp:false, amp:0.018,bump:0,   dab:'long',  horizon:0.62, pal:[[196,176,104],[170,160,90],[210,190,130],[140,150,84]] },
+    mountain: { bands:[6,9],  decay:0.36, sharp:true,  amp:0.15, bump:0,   dab:'rock',  horizon:0.38, wave:1.1, snow:true, pal:[[110,112,128],[130,120,118],[92,98,116],[150,140,130]] },
+    mesa:     { bands:[3,5],  decay:0.2,  sharp:false, amp:0.09, bump:0,   dab:'long',  horizon:0.5,  wave:0.9, mesa:true, pal:[[176,90,58],[200,120,70],[150,70,52],[214,160,110]] },
+    forest:   { bands:[4,6],  decay:0.28, sharp:false, amp:0.06, bump:0,   dab:'dot',   horizon:0.48, trees:true, pal:[[46,90,56],[70,108,60],[36,72,62],[96,120,64]] },
+    tundra:   { bands:[2,4],  decay:0.15, sharp:false, amp:0.025,bump:0,   dab:'snow',  horizon:0.58, pale:true, pal:[[200,206,214],[176,186,196],[220,222,226],[160,170,170]] },
+    lake:     { bands:[3,5],  decay:0.34, sharp:true,  amp:0.12, bump:0,   dab:'rock',  horizon:0.36, wave:1.1, lake:true, snow:true, pal:[[96,110,124],[120,124,120],[80,96,110],[70,100,80]] },
+    coast:    { bands:[2,4],  decay:0.3,  sharp:false, amp:0.08, bump:0,   dab:'grass', horizon:0.46, sea:true, pal:[[120,140,80],[180,170,120],[96,120,80],[200,186,140]] },
+    // fields: rolling hills sewn into a patchwork of strips that follow the ground
+    fields:   { bands:[4,6],  decay:0.22, sharp:false, amp:0.06, bump:0,   dab:'field', horizon:0.46, pal:[[150,170,70],[200,180,90],[110,140,60],[180,140,80],[130,160,90]] },
+    // a volcano: one great cone on the skyline, its plume leaning on the wind
+    volcano:  { bands:[3,5],  decay:0.24, sharp:false, amp:0.06, bump:0,   dab:'rock',  horizon:0.5,  cone:true, pal:[[80,70,72],[110,92,84],[60,58,64],[130,110,90]] },
   };
-  const kind=Object.keys(BIOMES)[Math.floor(Math.random()*Object.keys(BIOMES).length)];
+  const kinds=Object.keys(BIOMES);
+  // (the first ten keep their old odds' order; the two new countries are rarer)
+  const kind = Math.random() < 0.84 ? kinds[Math.floor(Math.random()*10)] : kinds[10 + Math.floor(Math.random()*2)];
   const B=BIOMES[kind];
   const bands=Math.max(2, Math.round((B.bands[0]+Math.random()*(B.bands[1]-B.bands[0]))*amt));
   const horizon=Math.max(h*0.08, h*(B.horizon+(Math.random()-0.5)*0.08) - pitch*h*0.3);
 
-  // the sky: a soft wash, and a few long smears of cloud
+  // ---- COLOUR: the time of day, and how a grey value becomes a painted colour ----
+  const TIMES={
+    dawn:   { skyTop:[120,140,190], skyLow:[240,190,170], light:[255,214,180], shadow:[110,110,170], sun:[255,236,210], k:0.95 },
+    day:    { skyTop:[90,140,210],  skyLow:[200,220,236], light:[255,248,226], shadow:[96,120,170],  sun:[255,252,236], k:1.05 },
+    golden: { skyTop:[110,130,180], skyLow:[250,200,120], light:[255,200,120], shadow:[90,80,150],   sun:[255,224,160], k:1.0 },
+    dusk:   { skyTop:[50,50,110],   skyLow:[220,120,110], light:[240,150,120], shadow:[70,60,120],   sun:[255,170,120], k:0.82 },
+    night:  { skyTop:[14,22,48],    skyLow:[50,66,104],   light:[180,200,240], shadow:[30,40,80],    sun:[230,236,250], k:0.62, moon:true },
+  };
+  const tkeys=Object.keys(TIMES), TM=TIMES[tkeys[Math.floor(Math.random()*tkeys.length)]];
+  const sunX=w*(0.12+Math.random()*0.76), sunY=horizon*(0.25+Math.random()*0.5), sunSide=sunX<w/2?-1:1;
+  const lum=c=>0.299*c[0]+0.587*c[1]+0.114*c[2];
+  const mixC=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+  // a colour at the value `tone` (0–255): the hue kept, the lightness set — past white it pales toward white, as paint does
+  const atValue=(col,tone)=>{ const L=Math.max(1,lum(col)), f=tone/L; let r=[col[0]*f,col[1]*f,col[2]*f];
+    const over=Math.max(r[0],r[1],r[2])-255; if(over>0){ const t=Math.min(1, over/255); r=mixC(r.map(v=>Math.min(255,v)),[255,255,255],t); } return r; };
+  const css=col=>`rgb(${Math.max(0,Math.min(255,col[0]|0))},${Math.max(0,Math.min(255,col[1]|0))},${Math.max(0,Math.min(255,col[2]|0))})`;
+  // the grey painting's value `tone`, painted in `col` as far as COLOUR asks (at 0, exactly the grey of before)
+  const paint=(tone,col)=>{ if(CK<=0 || !col) return `rgb(${tone|0},${tone|0},${tone|0})`;
+    const v=Math.max(0,Math.min(255, tone*(1+(TM.k-1)*CK))); return css(mixC([tone,tone,tone], atValue(col, v), CK)); };
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const jitHue=(col,amtJ)=>[col[0]*(1+(Math.random()-0.5)*amtJ), col[1]*(1+(Math.random()-0.5)*amtJ), col[2]*(1+(Math.random()-0.5)*amtJ)];
+
+  // ---- the sky: a soft wash ----
   const sky=ctx.createLinearGradient(0,0,0,horizon);
-  sky.addColorStop(0,'rgb(150,150,150)'); sky.addColorStop(1,'rgb(132,132,132)');
+  sky.addColorStop(0, paint(150, TM.skyTop)); sky.addColorStop(1, paint(132, TM.skyLow));
   ctx.fillStyle=sky; ctx.fillRect(0,0,w,h);
-  for(let s=0;s<5;s++){
-    const y=horizon*(0.15+Math.random()*0.7), x=Math.random()*w, len=w*(0.2+Math.random()*0.4);
-    for(let d=0;d<40;d++){
-      ctx.globalAlpha=0.05; ctx.fillStyle='rgb(200,200,200)';
-      ctx.beginPath(); ctx.ellipse(x+(Math.random()-0.5)*len, y+(Math.random()-0.5)*unit*0.02,
-        unit*0.05*zoom, unit*0.008, 0, 0, Math.PI*2); ctx.fill();
+  // the sun (or the moon) and its glow, laid in before the clouds so they pass over it
+  { const R=unit*(TM.moon?0.035:0.05)*(0.8+Math.random()*0.4), gl=ctx.createRadialGradient(sunX,sunY,R*0.5,sunX,sunY,R*6);
+    gl.addColorStop(0, paint(190, TM.sun).replace('rgb','rgba').replace(')',',0.45)')); gl.addColorStop(1, paint(150, TM.skyLow).replace('rgb','rgba').replace(')',',0)'));
+    ctx.globalAlpha=1; ctx.fillStyle=gl; ctx.fillRect(sunX-R*6, sunY-R*6, R*12, R*12);
+    ctx.globalAlpha=0.85; ctx.fillStyle=paint(212, TM.sun); ctx.beginPath(); ctx.arc(sunX, sunY, R, 0, Math.PI*2); ctx.fill(); }
+  // ---- PAINTED CLOUDS: heaped cumulus, long stratus or thin cirrus, by the seed ----
+  const ckind = pick(['cumulus','cumulus','stratus','cirrus','mixed']);
+  const cloudLit=TM.light, cloudShade=mixC(TM.shadow, TM.skyTop, 0.4);
+  const cumulus=(cx,cy,cw)=>{
+    const n=Math.round(26+Math.random()*30), baseY=cy+cw*0.12;
+    for(let k=0;k<n;k++){
+      // dabs heaped in a dome: bigger in the middle, the top built up, the base flat
+      const u=(Math.random()*2-1), rr=cw*(0.12+Math.random()*0.16)*(1-Math.abs(u)*0.45);
+      const x=cx+u*cw*0.55, top=Math.sqrt(Math.max(0, 1-u*u)), y=baseY - rr*0.4 - Math.random()*cw*0.32*top;
+      const up=Math.max(0, Math.min(1, (baseY-y)/(cw*0.4)));        // 0 at the base, 1 at the crown
+      const tone=158 + up*50 + (Math.random()-0.5)*10;
+      ctx.globalAlpha=0.35+Math.random()*0.25; ctx.fillStyle=paint(tone, mixC(cloudShade, cloudLit, up));
+      ctx.beginPath(); ctx.ellipse(x, Math.min(y, baseY-rr*0.35), rr, rr*0.82, 0, 0, Math.PI*2); ctx.fill();
     }
-  }
+    // the flat, shadowed base: a few long strokes along it
+    ctx.globalAlpha=0.3; ctx.fillStyle=paint(150, cloudShade);
+    for(let k=0;k<4;k++){ ctx.beginPath(); ctx.ellipse(cx+(Math.random()-0.5)*cw*0.3, baseY-cw*0.02*k, cw*(0.45-k*0.06), cw*0.035, 0, 0, Math.PI*2); ctx.fill(); }
+  };
+  const stratus=(cy)=>{ const n=Math.round(10+Math.random()*10);
+    for(let k=0;k<n;k++){ const x=Math.random()*w, len=w*(0.15+Math.random()*0.35), th=unit*(0.006+Math.random()*0.014), y=cy+(Math.random()-0.5)*unit*0.05;
+      const lit=Math.random(); ctx.globalAlpha=0.16+Math.random()*0.16; ctx.fillStyle=paint(170+lit*30, mixC(cloudShade, cloudLit, lit));
+      ctx.beginPath(); ctx.ellipse(x, y, len/2, th, (Math.random()-0.5)*0.03, 0, Math.PI*2); ctx.fill(); } };
+  const cirrus=()=>{ const n=Math.round(8+Math.random()*10); ctx.lineCap='round';
+    for(let k=0;k<n;k++){ const x=Math.random()*w, y=horizon*(0.08+Math.random()*0.5), len=unit*(0.08+Math.random()*0.2), bend=(Math.random()-0.5)*len*0.5, ang=(Math.random()-0.5)*0.4;
+      for(let p=0;p<3;p++){ ctx.globalAlpha=0.12+Math.random()*0.1; ctx.strokeStyle=paint(196, cloudLit); ctx.lineWidth=unit*(0.002+Math.random()*0.004);
+        const ox=x+p*unit*0.004, oy=y+p*unit*0.006; ctx.beginPath(); ctx.moveTo(ox, oy);
+        ctx.quadraticCurveTo(ox+Math.cos(ang)*len/2, oy+Math.sin(ang)*len/2+bend*0.3, ox+Math.cos(ang)*len, oy+Math.sin(ang)*len+bend); ctx.stroke(); } } };
+  if(ckind==='cumulus' || ckind==='mixed'){ const n=1+Math.floor(Math.random()*4); for(let k=0;k<n;k++) cumulus(Math.random()*w, horizon*(0.2+Math.random()*0.55), unit*(0.12+Math.random()*0.16)*zoom); }
+  if(ckind==='stratus' || ckind==='mixed') for(let k=0;k<2;k++) stratus(horizon*(0.2+Math.random()*0.65));
+  if(ckind==='cirrus') cirrus();
 
   const ridge=(x, seed, amp, decay, bump)=>{
-    // mountains are broad masses: a long base wavelength, so peaks are wide
-    // for their height (a short one made every range a row of spires)
+    // mountains are broad masses: a long base wavelength, so peaks are wide for their height
     let y=0, a=amp, f=1/(unit*(B.wave||0.4)*zoom);
     for(let o=0;o<5;o++){
       const n=Math.sin(x*f*6.283+seed*(o+1))*0.6 + Math.sin(x*f*2.1*6.283+seed*1.7*(o+1))*0.4;
-      // mountains fold finer octaves into points; everything else stays rounded
       // a mesa's base octave is squashed flat at top and bottom: plateaus with walls
       const m=(B.mesa && o===0) ? Math.max(-1, Math.min(1, n*3)) : n;
       y+=(B.sharp && o>0 ? Math.abs(m)*2-1 : m)*a;
@@ -1264,21 +1328,26 @@ export function genLandscape(w,h,amt,zoom,form,tilt){
     if(bump) y-=Math.abs(Math.sin(x/(unit*0.018*zoom)+seed))*amp*0.35*bump;   // canopy lumps
     return y;
   };
+  // the volcano's cone stands in the middle distance
+  const cone = B.cone ? { x: w*(0.25+Math.random()*0.5), hgt: unit*(0.22+Math.random()*0.12)*zoom, half: unit*(0.32+Math.random()*0.15)*zoom, band: Math.floor((bands-1)*0.35) } : null;
 
   const coastAt = B.sea ? { x: w*(0.3+Math.random()*0.35), side: Math.random()<0.5 ? 1 : -1 } : null;
-  // water: flat, lighter than the land, laid with short level strokes; it
-  // holds the reflection of `prof` (the band behind it), broken by ripples
-  const water=(top, prof, tone)=>{
-    ctx.globalAlpha=0.95; ctx.fillStyle='rgb(150,150,150)'; ctx.fillRect(0, top, w, h-top);
+  const waterCol=mixC(TM.skyLow, [40,90,130], 0.55);
+  // water: flat, lighter than the land, laid with short level strokes; it holds the reflection of the band behind it
+  const water=(top, prof, tone, col)=>{
+    ctx.globalAlpha=0.95; ctx.fillStyle=paint(150, waterCol); ctx.fillRect(0, top, w, h-top);
     if(prof){
-      ctx.globalAlpha=0.32; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
+      ctx.globalAlpha=0.32; ctx.fillStyle=paint(tone, col);
       ctx.beginPath(); ctx.moveTo(-20, top); prof.forEach(([x,y])=>ctx.lineTo(x, top+(top-Math.min(top,y))*0.9)); ctx.lineTo(w+20, top); ctx.closePath(); ctx.fill();
     }
+    // the sun's path on the water
+    if(CK>0 && sunY<top){ ctx.globalAlpha=0.25*CK; ctx.fillStyle=paint(200, TM.sun); for(let k=0;k<26;k++){ const y=top+Math.pow(Math.random(),1.3)*(h-top);
+      ctx.fillRect(sunX+(Math.random()-0.5)*unit*0.06*(1+(y-top)/(h-top)*2), y, unit*(0.01+Math.random()*0.03), unit*0.0025); } }
     const n=Math.round(w/(unit*0.012));
     for(let k=0;k<n;k++){
       const y=top+Math.pow(Math.random(),1.6)*(h-top), x=Math.random()*w, len=unit*(0.02+Math.random()*0.05)*(0.5+(y-top)/(h-top));
       const tn=150+(Math.random()-0.5)*60;
-      ctx.globalAlpha=0.35; ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`; ctx.lineWidth=unit*0.002*(1+(y-top)/(h-top)*2);
+      ctx.globalAlpha=0.35; ctx.strokeStyle=paint(tn, jitHue(waterCol, 0.25)); ctx.lineWidth=unit*0.002*(1+(y-top)/(h-top)*2);
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+len, y); ctx.stroke();
     }
   };
@@ -1288,40 +1357,39 @@ export function genLandscape(w,h,amt,zoom,form,tilt){
     const t=bands===1?1:i/(bands-1);                    // 0 far .. 1 near
     let base=horizon+(h-horizon)*Math.pow(t,1.35+pitch*0.9)*0.92;
     let amp=unit*B.amp*(0.35+t*0.9)*(1-0.4*pitch);
-    // in front of a lake, the near shore sits low, so the water shows
     if(lakeTop!=null){ const lk=Math.floor((bands-1)/2), u=(i-lk)/Math.max(1, bands-1-lk); base=lakeTop+(h-lakeTop)*(0.5+0.45*u); amp*=0.45; }
     const tone=B.pale ? Math.round(205-t*95) : Math.round(178-t*140);   // pale far, dark near
+    // this band's colour: the biome's, leaning toward the sky's with distance (air between)
+    const own=B.pal[i % B.pal.length], bandCol=mixC(own, TM.skyLow, (1-t)*0.6);
     const seed=Math.random()*100;
     const prof=[];
-    // on a coast, every band is land on one side only: past the cliff it
-    // drops into the sea
-    // each nearer headland reaches a little further out, its cliff its own
     const cliff = B.sea ? { x: coastAt.x + coastAt.side*(unit*0.1*t + (Math.random()-0.5)*unit*0.07), side: coastAt.side, fall: unit*(0.02+Math.random()*0.06) } : null;
     for(let x=-20;x<=w+20;x+=Math.max(2,w/400)){
       let y=base+ridge(x,seed,amp,B.decay,B.bump);
       if(cliff){ const d=(x-cliff.x)*cliff.side, k=Math.max(0, Math.min(1, d/cliff.fall)); y+= k*k*(h+40-y); }
+      if(cone && i===cone.band){ const d=Math.abs(x-cone.x)/cone.half; if(d<1){ const peak=base-cone.hgt*(1-Math.pow(d,0.85)); y=Math.min(y, d<0.08 ? base-cone.hgt*0.93 : peak); } }
       prof.push([x, y]); }
     // lay the band in
-    ctx.globalAlpha=0.92; ctx.fillStyle=`rgb(${tone},${tone},${tone})`;
+    ctx.globalAlpha=0.92; ctx.fillStyle=paint(tone, bandCol);
     ctx.beginPath(); ctx.moveTo(-20,h); prof.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.lineTo(w+20,h); ctx.closePath(); ctx.fill();
     // a brushed edge, not a cut one: the crest painted over a few times, loosely
     for(let pass=0;pass<3;pass++){
       const jit=unit*0.004*(pass+1);
-      ctx.globalAlpha=0.22; ctx.strokeStyle=`rgb(${tone},${tone},${tone})`; ctx.lineWidth=unit*0.006*(1+pass);
+      ctx.globalAlpha=0.22; ctx.strokeStyle=paint(tone, bandCol); ctx.lineWidth=unit*0.006*(1+pass);
       ctx.beginPath();
-      // the wobble wanders SLOWLY along the crest; jittering each point on its
-      // own made a fringe of hairs
       const ph1=Math.random()*6.28, ph2=Math.random()*6.28;
       prof.forEach(([x,y],j)=>{
         const yy=y+(Math.sin(x/(unit*0.05)+ph1)*0.6+Math.sin(x/(unit*0.017)+ph2)*0.4)*jit;
         j?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
       ctx.stroke();
     }
-    // work it over with BRUSH strokes: few, broad and flat-ended, laid along
-    // the ground, each a slightly different tone. (Hundreds of hair-thin
-    // strokes read as fur, not paint.) Each stroke is two overlapping
-    // passes, the second narrower and offset, so it has a loaded edge.
-    const strokes=Math.round(w/(unit*0.016)*(0.5+t)*(B.dab==='leaf'?1.4:1));
+    // snow on the high crests (the far mountains), painted where the light can find it
+    if(B.snow && t<0.7){ ctx.globalAlpha=0.5*(1-t); ctx.fillStyle=paint(Math.min(240, tone+60), mixC([240,244,250], TM.light, 0.3));
+      let top=Infinity; for(const [,y] of prof) top=Math.min(top, y); const line=top+amp*0.5;
+      ctx.beginPath(); let on=false; prof.forEach(([x,y])=>{ if(y<line){ if(!on){ ctx.moveTo(x, line); on=true; } ctx.lineTo(x, y); } else if(on){ ctx.lineTo(x, line); on=false; } }); if(on) ctx.lineTo(prof[prof.length-1][0], line); ctx.fill(); }
+    // work it over with BRUSH strokes: broad and flat-ended, laid along the ground, each a little different —
+    // in colour, BROKEN COLOUR: a hue from the biome's palette, warmer facing the sun, cooler turned away
+    const strokes=Math.round(w/(unit*0.016)*(0.5+t)*(B.dab==='leaf'?1.4:1)*(B.dab==='field'?0.6:1));
     ctx.lineCap='butt';
     for(let d=0;d<strokes;d++){
       const k=Math.floor(Math.random()*(prof.length-1)), [x0,y0]=prof[k], [x1,y1]=prof[k+1];
@@ -1329,31 +1397,39 @@ export function genLandscape(w,h,amt,zoom,form,tilt){
       const depthInto=Math.pow(Math.random(),1.5)*unit*(0.03+t*0.16);
       const x=x0+(Math.random()-0.5)*unit*0.01, y=y0+depthInto+unit*0.004;
       const tn=Math.max(0,Math.min(255,tone+(Math.random()-0.5)*(30+t*44)));
-      const len=unit*(B.dab==='long'?0.07:B.dab==='rock'?0.035:B.dab==='dot'?0.008:B.dab==='snow'?0.05:0.04)*(0.6+t*0.8)*(0.7+Math.random()*0.6)*zoom;
-      const wide=unit*(0.007+t*0.013)*(0.7+Math.random()*0.6);
+      const len=unit*(B.dab==='long'?0.07:B.dab==='rock'?0.035:B.dab==='dot'?0.008:B.dab==='snow'?0.05:B.dab==='field'?0.12:0.04)*(0.6+t*0.8)*(0.7+Math.random()*0.6)*zoom;
+      const wide=unit*(0.007+t*0.013)*(0.7+Math.random()*0.6)*(B.dab==='field'?1.4:1);
       const ang=B.dab==='grass'?slope-0.35+(Math.random()-0.5)*0.4
               : B.dab==='leaf'?slope+(Math.random()-0.5)*1.1
               : B.dab==='rock'?slope+(Math.random()-0.5)*0.9
               : B.dab==='dot'?Math.random()*6.283
               : B.dab==='snow'?(Math.random()-0.5)*0.08
+              : B.dab==='field'?slope+(Math.random()-0.5)*0.05
               : slope+(Math.random()-0.5)*0.18;
       const ex=x+Math.cos(ang)*len, ey=y+Math.sin(ang)*len;
-      ctx.strokeStyle=`rgb(${tn|0},${tn|0},${tn|0})`;
-      ctx.globalAlpha=0.2+Math.random()*0.18; ctx.lineWidth=wide;
+      const face=Math.max(-1, Math.min(1, -Math.sin(slope)*sunSide*3));          // toward the sun (+) or away (−)
+      const hue=jitHue(mixC(pick(B.pal), TM.skyLow, (1-t)*0.5), 0.22);
+      const strokeCol=face>0 ? mixC(hue, TM.light, face*0.35) : mixC(hue, TM.shadow, -face*0.35);
+      ctx.strokeStyle=paint(tn, strokeCol);
+      ctx.globalAlpha=(0.2+Math.random()*0.18)*(B.dab==='field'?1.6:1); ctx.lineWidth=wide;
       ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo((x+ex)/2, (y+ey)/2 - wide*0.4, ex, ey); ctx.stroke();
       const tn2=Math.max(0,Math.min(255,tn+(Math.random()<0.5?-18:18)));
-      ctx.strokeStyle=`rgb(${tn2|0},${tn2|0},${tn2|0})`;
+      ctx.strokeStyle=paint(tn2, jitHue(strokeCol, 0.15));
       ctx.globalAlpha=0.22; ctx.lineWidth=wide*0.45;
       ctx.beginPath(); ctx.moveTo(x+wide*0.2,y-wide*0.18); ctx.lineTo(ex-wide*0.4,ey-wide*0.18); ctx.stroke();
     }
     ctx.lineCap='round';
     // a soft haze where each band meets the air behind it
-    ctx.globalAlpha=0.12*(1-t); ctx.strokeStyle='rgb(200,200,200)'; ctx.lineWidth=unit*0.01;
+    ctx.globalAlpha=0.12*(1-t); ctx.strokeStyle=paint(200, TM.skyLow); ctx.lineWidth=unit*0.01;
     ctx.beginPath(); prof.forEach(([x,y],j)=>j?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.stroke();
+    // the volcano's plume, leaning on the wind
+    if(cone && i===cone.band){ const tx=cone.x, ty=base-cone.hgt*0.93, lean=(Math.random()<0.5?-1:1)*unit*0.25;
+      for(let k=0;k<70;k++){ const q=k/70, px=tx+lean*q*q+(Math.random()-0.5)*unit*0.03*(1+q*3), py=ty-unit*0.35*q, r=unit*(0.012+q*0.05);
+        ctx.globalAlpha=0.1*(1-q*0.6); ctx.fillStyle=paint(120+q*60, mixC([90,84,86], TM.skyLow, q*0.6)); ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2); ctx.fill(); } }
     // trees on the crest: firs (stacked tiers) and broadleaf (a round crown on a trunk)
     if(B.trees && t>0.15){
       const n=Math.round(w/(unit*0.03)*(0.4+t)), tt=Math.max(0, tone-25);
-      ctx.fillStyle=`rgb(${tt},${tt},${tt})`; ctx.strokeStyle=ctx.fillStyle;
+      ctx.fillStyle=paint(tt, mixC([30,70,50], TM.shadow, 0.25)); ctx.strokeStyle=ctx.fillStyle;
       for(let k=0;k<n;k++){
         const [x,y]=prof[Math.floor(Math.random()*prof.length)], th=unit*(0.02+0.05*t)*(0.6+Math.random()*0.8)*zoom;
         ctx.globalAlpha=0.8;
@@ -1372,7 +1448,7 @@ export function genLandscape(w,h,amt,zoom,form,tilt){
     if(B.lake && i===Math.floor((bands-1)/2)){
       let top=0; for(const [,y] of prof) top=Math.max(top, y);
       lakeTop=Math.min(h*0.8, top);
-      water(lakeTop, prof, tone);
+      water(lakeTop, prof, tone, bandCol);
     }
   }
   // WET: watercolour blooms, then the whole painting bleeds softly
@@ -1380,14 +1456,12 @@ export function genLandscape(w,h,amt,zoom,form,tilt){
     const n=Math.round((wet-0.5)*8*(0.5+Math.random()));
     for(let k=0;k<n;k++){
       const x=Math.random()*w, y=horizon+Math.random()*(h-horizon), r=unit*(0.03+Math.random()*0.07);
-      // a cauliflower outline: lobes of every size, never a circle
       const ph=[Math.random()*6, Math.random()*6, Math.random()*6, Math.random()*6], pts=[];
       for(let a=0;a<=96;a++){ const an=a/96*Math.PI*2;
         const rr=r*(1+0.22*Math.sin(an*3+ph[0])+0.12*Math.abs(Math.sin(an*7+ph[1]))+0.07*Math.abs(Math.sin(an*13+ph[2]))+0.04*Math.sin(an*29+ph[3]));
         pts.push([x+Math.cos(an)*rr, y+Math.sin(an)*rr*0.8]); }
       const path=()=>{ ctx.beginPath(); pts.forEach(([px,py],j)=>j?ctx.lineTo(px,py):ctx.moveTo(px,py)); ctx.closePath(); };
       ctx.globalAlpha=0.1; ctx.fillStyle='rgb(205,205,205)'; path(); ctx.fill();
-      // the frilled rim, darker, where the wet edge stopped in drying paint
       ctx.globalAlpha=0.22; ctx.strokeStyle='rgb(80,80,80)'; ctx.lineWidth=unit*0.0018; path(); ctx.stroke();
     }
   }

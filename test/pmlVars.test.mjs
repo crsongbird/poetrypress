@@ -70,10 +70,10 @@ check('text without glyphs goes straight to the original', calls.length === 1 &&
 const cr = src('canvasRenderer.js');
 check('the renderer resolves the poem, before parsing it',
   /const varCtx = pmlVarContext\(W, H\);\s*const rawText = resolvePmlVariables\(\$\('poemText'\)\.value, varCtx\);/.test(cr));
-// the poem is resolved twice: once to draw, once with live numbers by their
-// shape (the fit's key) — but nothing other than the poem is ever resolved
-check('nothing but the poem is resolved', (cr.match(/resolvePmlVariables\(/g) || []).length === 2 &&
-  (cr.match(/resolvePmlVariables\(\$\('poemText'\)\.value, /g) || []).length === 2);
+// the poem is resolved three times: once to draw, once with live numbers by their
+// shape (the fit's key), once for the alt text — but nothing other than the poem is ever resolved
+check('nothing but the poem is resolved', (cr.match(/resolvePmlVariables\(/g) || []).length === 3 &&
+  (cr.match(/resolvePmlVariables\(\$\('poemText'\)\.value, /g) || []).length === 3);
 check('the glyph modules are bundled before the renderer',
   (b => b.indexOf("'glyphs.js'") < b.indexOf("'canvasRenderer.js'") && b.indexOf("'pmlVars.js'") < b.indexOf("'canvasRenderer.js'"))(src('build.mjs')));
 
@@ -421,7 +421,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('the preview scale is one of a few fixed steps, at least as large as it is shown',
     /const S_STEPS = \[1\/4, 1\/3, 1\/2, 2\/3, 1\];/.test(ev) && /const need = shownW \* dpr \* Math\.max\(1, state\.ui\.zoom\) \/ state\.page\.exportW;/.test(ev));
   check('Save image renders the full export, then returns to the preview',
-    /canvas\.width = state\.page\.exportW \|\| pw;[\s\S]{0,120}setRenderScale\(1\); render\(\);\s*await texturesSettled\(\);\s*render\(\);\s*(?:\/\/[^\n]*\n\s*)?link\.href = withAltText\(canvas\.toDataURL/.test(ev));
+    /canvas\.width = state\.page\.exportW \|\| pw;[\s\S]{0,120}setRenderScale\(1\); render\(\);\s*await texturesSettled\(\);\s*render\(\);\s*(?:\/\/[^\n]*\n\s*)?(?:state\.ui\.lastAlt = poemAltText\(\);\s*)?link\.href = withAltText\(canvas\.toDataURL/.test(ev));
   check('the export size is recorded at launch (the markup sets it)', /if\(!state\.page\.exportW\)\{ state\.page\.exportW = canvas\.width;/.test(ev));
   check('a pinch re-renders sharp enough for its magnification', /state\.ui\.zoom = scale; applyPreviewScaleSoon\(\);/.test(ev));
   check('§Canvas reports the export size, not the preview', /canvas: Math\.round\(W \/ RENDER_SCALE\) \+ '×' \+ Math\.round\(H \/ RENDER_SCALE\)/.test(cr));
@@ -563,9 +563,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const d = T.paramsFor('bokeh');
   check('Dream Bloom has five knobs: size, count, aperture, object shape, color variation', d.map(k => k.key).join(',') === 'zoom,amt,form,shape,hue');
   check('Object Shape reads as names and has a die', T.paramReadout(d[3], 29) === 'Leaf' && d[3].dice === true);
-  check('with Colour Variation, Dream Bloom keeps its own hues (the grey tint pass is skipped)', /const ownColour = type === 'bokeh' && hueSpread > 0;/.test(src('textureGenerators.js')));
+  check('with Colour Variation, Dream Bloom keeps its own hues (the grey tint pass is skipped)', /const ownColour = \(type === 'bokeh' \|\| type === 'landscape'\) && hueSpread > 0;/.test(src('textureGenerators.js')));
   check('knobs four and five reach the cache key', /\(v4 == null \? '' : `_k\$\{v4\}`\)/.test(src('textureGenerators.js')));
-  check('a busy worker shows a shimmer (after a moment, so fast textures don\'t flicker it)', /busyTimer = setTimeout\(\(\) => document\.body\.classList\.add\('tex-busy'\), 180\)/.test(src('textureService.js')) && /body\.tex-busy \.canvas-wrap::after/.test(src('poetrypress.css')));
+  check('a busy worker shows a shimmer (after a moment, so fast textures don\'t flicker it)', /busyTimer = setTimeout\(\(\) => document\.body\.classList\.add\('tex-busy'\), 180\)/.test(src('textureService.js')) && /body\.tex-busy \.work-bar/.test(src('poetrypress.css')));
   check('saving shows it too, and the button pulses', /document\.body\.classList\.add\('saving'\)/.test(ev) && /body\.saving \.download-btn\{ animation:savePulse/.test(src('poetrypress.css')));
   check('First Snow\'s in-focus flakes are crystals', /objectPath\(fctx, 'snowflake'/.test(src('texWhimsy.js')));
   check('Sparkler has Hue Drift, and bigger embers burn more chaotically', T.paramsFor('embers')[2].label === 'Hue Drift' && /const chaos = Math\.max\(0, \(zoom \|\| 1\) - 1\)\*0\.55;/.test(src('texWhimsy.js')));
@@ -782,7 +782,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
 {
   const ev = src('appEvents.js');
   check('randomising picks from the menu itself and fires a real change (the knobs relabel)',
-    /const types = \[\.\.\.\$\('textureType'\)\.options\]\.map\(o => o\.value\);/.test(ev)
+    /const types = \[\.\.\.\$\('textureType'\)\.options\]\.map\(o => o\.value\)/.test(ev)
     && /\$\('textureType'\)\.dispatchEvent\(new Event\('change', \{ bubbles: true \}\)\);/.test(ev)
     && /if\(!state\.locks\.has\('textureType'\)\)\{/.test(ev));
   check('restoring a lock that did not change announces nothing (a locked texture keeps its knobs)',
@@ -818,10 +818,10 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('Painter\'s Frustration has Wetness (0, dry, draws exactly as before): thinner paint, drips, bleeding edges',
     T.paramsFor('brushstrokes').map(d => d.label).join('|') === 'Stroke Width|Stroke Count|Wetness' && T.paramsFor('brushstrokes')[2].def === 0
     && /if\(wet > 0\.25\)\{/.test(sh) && /ctx\.globalAlpha = 0\.65\*wet;/.test(sh));
-  check('Painted Landscape has Wetness (watercolour blooms) and five more countries: mesa, forest, tundra, lake, coast',
-    T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness|Tilt'
-    && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:'].every(k => wh.includes('    ' + k))
-    && /const kind=Object\.keys\(BIOMES\)\[Math\.floor\(Math\.random\(\)\*Object\.keys\(BIOMES\)\.length\)\];/.test(wh));
+  check('Painted Landscape has Wetness (watercolour blooms), twelve countries (fields and a volcano the newest), and Color: a time of day, aerial perspective, broken colour; painted clouds',
+    T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness|Tilt|Color'
+    && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:', 'fields:', 'volcano:'].every(k => wh.includes('    ' + k))
+    && /const TIMES=\{/.test(wh) && /const ckind = pick\(\['cumulus','cumulus','stratus','cirrus','mixed'\]\);/.test(wh) && /const atValue=/.test(wh));
 }
 
 // ---- Lotus Pond: lit by the dial, petals the right way, a seed pod ----
@@ -904,9 +904,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
       T2.paramsFor('metalleaf').map(d => d.label).join('|') === 'Leaf Size|Coverage|Shape|Sheen|Glitter' && T2.paramsFor('metalleaf').slice(2).every(d => d.def === 0)
       && /if\(shapeV > 0 && Math\.random\(\) < shapeV\)\{/.test(sh) && /if\(sheen > 0\)\{ const ta = Math\.random\(\)/.test(sh) && /const flakes = Math\.max\(10, Math\.round\(\(120 \+ Math\.random\(\)\*90\) \* amt\)\);/.test(sh)
       && /data-str="option\.metal_leaf">Scattered Polygons</.test(src('index.html')));
-    check('Cartomancy is a divination deck: elemental suits drawn as paths, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune); shadows, curl and gilt edges by the dial',
-      T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Card Count|Scatter'
-      && /const RARE=\[\[\['✦','Saturn','saturn'\],3\],\[\['✦','Enceladus','enceladus'\],2\],\[\['✦','The Kitsune','kitsune'\],1\]\];/.test(ch3) && /pickWeighted\(RARE\)/.test(ch3) && /const tearClip=\(\)=>/.test(ch3));
+    check('Cartomancy is a game in progress (cartomancy.js): elemental suits, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune); Cards in Play, Scatter, Stakes',
+      T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Cards in Play|Scatter|Stakes'
+      && /export const CRT_RARE = \[\[\['✦','Saturn','saturn'\],3\],\[\['✦','Enceladus','enceladus'\],2\],\[\['✦','The Kitsune','kitsune'\],1\]\];/.test(src('cartomancy.js')) && /pickWeighted\(CRT_RARE\)/.test(src('cartomancy.js')));
     check('unused hues are HIDDEN, not greyed; the report lays hues out in rows (≤3 one line; 4 → 2×2; 5 → 3+2; 6 → 3+3)',
       /classList\.toggle\('tool-hidden', !caps\.material\)/.test(src('appEvents.js')) && /\.field\.tool-hidden/.test(src('poetrypress.css'))
       && resolvePmlVariables('§SurfParamsB', { hues: [1,2,3,4,5].map(i => ({ label: 'H'+i, hex: '#00000'+i })) }).split('\n').length === 2

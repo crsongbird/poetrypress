@@ -69,7 +69,7 @@ const whimsy = readFileSync(new URL('../texWhimsy.js', import.meta.url), 'utf8')
 check('Sleep Haze is smoke: lift, drag, dust, and lit from the light',
   T.paramsFor('clouds').map(d => d.label).join('|') === 'Lift|Drag|Dust' && T.TEXTURE_CAPS.clouds.light === true);
 check('…its wisps are particles carried by curl noise, softened as they age; rings drift up; motes catch the shaft',
-  /return \[gy\*gk, -gx\*gk\]; \};/.test(whimsy) && /W=WL\[t<unit\*0\.1\?0:t<unit\*0\.3\?1:2\];/.test(whimsy)
+  /const \[AX,AY\]=curlField\(PA\), \[BX,BY\]=curlField\(PB\);/.test(whimsy) && /W=WL\[t<unit\*0\.1\?0:t<unit\*0\.3\?1:2\];/.test(whimsy)
   && /const rings = Math\.random\(\)<0\.2 \? 0/.test(whimsy) && /b=Math\.pow\(beamAt\(x\/div, y\/div\), 1\.5\)/.test(whimsy));
 
 // ---- accents are followed until a tint is chosen or locked ----

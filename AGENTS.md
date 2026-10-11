@@ -35,9 +35,19 @@ node tools/texture-gallery.mjs --only a,b      # render textures on four backgro
 node tools/scale-audit.mjs [--knobs min|max]   # does a texture look the same drawn small?
 python tools/page-audit.py                     # the same for whole pages, every preset (needs Playwright)
 node tools/look.mjs '<json>' out.png <cols>    # quick look at specific texture settings
+python3 tools/icons.py                         # redraw the nav glyphs, the sigil and the app icons
 ```
 
-Deploy: upload the whole `dist/` folder. The site may also be served straight
+Releases are named for moons, in order from their planet (release.js, shown by
+`§Build`; `Jupiter–Io`: an en dash, as a slash would split a PML segment).
+Jupiter now; Saturn after the final release. Don't trust `node --check`
+here: with no package.json declaring modules it passes broken files that
+contain `export`; `sh check.sh` parses for real. The README is for people,
+not builders: brief, with room left for discovery (Ruby) — technical matter
+lives here, the markup in PML.md.
+
+Deploy: upload the whole `dist/` folder (the page, `sw.js`, `manifest.webmanifest`, `icons/` — the
+service worker must be its own file, or the app won't install or work offline). The site may also be served straight
 from the source files (unbuilt) — everything must work both ways.
 
 ---
@@ -59,6 +69,7 @@ from the source files (unbuilt) — everything must work both ways.
 | `textureService.js` · `textureWorker.js` | textures made off the main thread |
 | `textureElements.js` | each texture's four readings (🜂 🜄 🜁 🜃), one its default |
 | `steps.js` · `stepsTouch.js` · `stepsChaos.js` | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains |
+| `cartomancy.js` | Cartomancy: a card game in progress, and its parts — table, card, coin, the deal by a game's rules — also the Athanor's Table, Deal and Coins steps (CARD_STEPS) |
 | `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze); each an Athanor template |
 | `athanor.js` · `forge.js` | the Athanor: graph walker, cache and budget (in the worker) · node editor UI (Drawflow) |
 | `boxFx.js` | the inset box's glass and GPU blends |
@@ -163,6 +174,21 @@ it must reset it (a value must never leak from one preset into the next).
 and fails on any that isn't saved and restored; the only exceptions are in its
 EXEMPT list, each with its reason (app preferences, the JSON box, dialogs).
 `test/audit.test.mjs` checks the other direction (every saved key round-trips).
+
+## The componentizing rule (Ruby's standing rule)
+
+Every texture touched is taken apart as it is touched: its working parts
+become STEPS (steps.js and its siblings), general enough for the Athanor and
+for other textures, and the texture becomes a CHAIN of them (chains.js) with
+a canonical wiring a person can read — inputs (Knobs, the Dial, Hues) on the
+left, wired into ⚙ ports, the Surface on the right (layoutAthanor). Before
+writing a new part, look for one to reuse or generalise; a part made for one
+texture is a debt. Aim between too general (a noise) and too specific (one
+picture): a part someone would reach for twice.
+
+The texture MENU grows by the same thinking: groups by how a surface is made
+and what it is for (index.html #textureType), each alphabetical. Add a group
+when a kind of surface appears, but never one with fewer than three in it.
 
 ## Recipes
 
@@ -445,10 +471,42 @@ before/after measurements AND an identical-render comparison.
   fitView (the grid scales about its middle: see the maths there). KEPT
   surfaces: localStorage uv.forge.kept.v1 (forgeShelf), each validated on
   opening and on import. Drawflow's own ✕ is hidden; the menus replace it.
+- CARTOMANCY (cartomancy.js): the seed picks a GAME (reading, trick, patience,
+  wager, pairs), its players, the suits in the deck (2–4), the TABLE material,
+  the card STOCK and edge, and the COINAGE; STAKES is how likely and how much
+  money lies on it. crtDeal returns what lies where (a list), then each thing
+  is drawn with its own shadow (canvas shadows: their offset is never turned
+  with the drawing, so it is the page's own light vector). Suits: the page's
+  accents (passed raw in extra.accents) and the texture's two hues; the
+  texture is colour-ground. Drawn on the page (web fonts), never a chain; the
+  same parts are steps (Table, Deal, Coins) and the Card Table starter wires them.
+- LANDSCAPE COLOR (texWhimsy genLandscape): paint(tone, colour) keeps the grey
+  painting's VALUE and sets only its hue (atValue), so Color 0 is exactly the
+  grey of before and any Color holds together; a landscape in colour skips
+  the grey tint pass and the blend remap (ownColour), as Dream Bloom's
+  coloured motes do.
 - SYMBOL LORE (symbolLore.js): Symbology's glyphs with their names and
   families (LORE). Its single-code-point glyphs are among the spell glyphs;
   PLANETS and ZODIAC feed Transmutation Circles; Cartomancy's lore cards draw
   their emblem as text (`glyph:X`, GLYPH_FONT).
+- LOCKS (appEvents LOCKABLE): the listed ids plus every slider and menu in the
+  making tabs, found in the markup at boot. MASTER LOCKS (addMasterLock) sit
+  in each card's heading and in each sub-section's switch row; EYES are the
+  old enable checkboxes (class "eye"), a card's own moved into its heading
+  (CARD_EYES). Both live in .head-tools, which never folds its section.
+- refreshUi() (appEvents): THE refresh — every view of a value made to match
+  it. Called at the end of restoreSettings, undo/redo and every
+  withLocksPreserved (presets, randomisers, readings). A new view of a value
+  registers there (or in SUBBLOCKS / ANGLES).
+- WHAT'S WORKING: textureService announces each job ('vellum-working'); the
+  page shows WORKING_WORDS[type] after 400 ms. The shimmer (.work-bar i) moves
+  by transform, so it runs while the main thread is busy. A texture made on
+  the page (ON_PAGE, or no worker) is made after two frames, so the line has
+  painted; Save image still waits for it (texturesSettled).
+- TILES (swatches.js) never make textures on the page: the page sets
+  setSwatchTextureSource (cache, else the worker) and repaints waiting tiles
+  when textures arrive. (A Turing Skin used to freeze the page for a second
+  every time the history filmstrip repainted.)
 - THE SPELL CODE (canvasRenderer, #spellMark): hideable; part of the look
   (spells, shares and JSON keep it); presets leave it as it is.
 - LOOK_VERSION (appEvents.js): saved in every look; a look older than a

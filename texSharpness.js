@@ -510,7 +510,8 @@ export function genBrushstrokes(w,h,amt,zoom,form,light){
  * them. At 0 on the three knobs below it draws EXACTLY as it always has
  * (flat; their extra randomness is only drawn when a knob is above 0):
  *   SHAPE    0: the original five-to-eight-sided flakes; higher, more of
- *            them become shards, slivers, squares of leaf and curled shavings
+ *            them become convex polygons of every kind (3–12 sides, even or
+ *            uneven), drawn out longer toward the top — never concave
  *   SHEEN    0: flat; higher, each flake tilts to the dial's light — brighter
  *            or darker by how it faces it, a soft band of reflection across it
  *            (light caught inside the metal) and a highlight on its near edge
@@ -545,17 +546,23 @@ export function genMetalLeaf(w,h,amt,zoom,light,tint,form,sheenK,glitterK){
       const rr = r*(0.55 + Math.random()*0.7);
       pts.push([cx+Math.cos(a)*rr, cy+Math.sin(a)*rr]);
     }
-    // SHAPE: some flakes become other things (only drawn when the knob is up)
+    // SHAPE (only drawn when the knob is up): more and more flakes become
+    // CONVEX polygons of every kind — three sides to a dozen, even or uneven,
+    // and, toward the top of the knob, drawn out long. Their corners lie on an
+    // ellipse in order around it, so a flake can never fold in on itself.
     let curl = null;
     if(shapeV > 0 && Math.random() < shapeV){
-      const kind = Math.random(), ca = Math.cos(rot), sa = Math.sin(rot), P = (u, v) => [cx + u*ca - v*sa, cy + u*sa + v*ca];
+      const stretch = 1 + Math.random()*shapeV*shapeV*2.6;                            // up to ~3.6 : 1 at the top
+      // 3 … 10 sides, most often few (a many-sided one drawn long reads as an oval, so long ones keep to six)
+      const n = Math.min(stretch > 1.8 ? 6 : 10, 3 + Math.floor(Math.pow(Math.random(), 1.4)*(3 + shapeV*5.99)));
+      const even = Math.random() < 0.35 + 0.3*(1 - shapeV);                           // some are regular, the rest uneven
+      const ca = Math.cos(rot), sa = Math.sin(rot), a = r*Math.sqrt(stretch)*(0.8 + Math.random()*0.4), b = r/Math.sqrt(stretch)*(0.8 + Math.random()*0.4);
+      const ang = [];
+      for(let s=0;s<n;s++) ang.push((s + (even ? 0 : (Math.random() - 0.5)*0.85))/n*Math.PI*2);
+      ang.sort((p, q) => p - q);
       pts.length = 0;
-      if(kind < 0.3){ const n = 3 + Math.floor(Math.random()*2); for(let s=0;s<n;s++){ const a = (s/n)*Math.PI*2 + (Math.random()-0.5)*0.9; pts.push(P(Math.cos(a)*r*(1.3 + Math.random()*0.5), Math.sin(a)*r*0.45)); } }   // a shard
-      else if(kind < 0.55){ const L = r*(1.8 + Math.random()*1.4), t = r*(0.08 + Math.random()*0.12); pts.push(P(-L, -t*0.5), P(L*0.9, -t), P(L, t*0.3), P(-L*0.95, t)); }   // a sliver
-      else if(kind < 0.8){ const sq = r*(0.8 + Math.random()*0.3); for(const [u, v] of [[-1,-1],[1,-1],[1,1],[-1,1]]) pts.push(P(u*sq*(1 + (Math.random()-0.5)*0.12), v*sq*(1 + (Math.random()-0.5)*0.12))); }   // a square of leaf
-      else { curl = { R: r*(0.9 + Math.random()*0.8), a0: rot, sweep: Math.PI*(0.6 + Math.random()*0.9), wd: r*(0.15 + Math.random()*0.2) }; }   // a curled shaving
+      for(const t of ang){ const u = Math.cos(t)*a, v = Math.sin(t)*b; pts.push([cx + u*ca - v*sa, cy + u*sa + v*ca]); }
     }
-
     ctx.beginPath();
     if(curl){ const { R, a0, sweep, wd } = curl; ctx.arc(cx, cy, R, a0, a0 + sweep); ctx.arc(cx, cy, Math.max(1, R - wd), a0 + sweep, a0, true); }
     else { ctx.moveTo(pts[0][0], pts[0][1]); for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]); }

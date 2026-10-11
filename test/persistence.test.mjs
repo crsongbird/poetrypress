@@ -46,6 +46,7 @@ const skip = new Set([
   'highlightToggle',   // checked separately below
   'textureSeedLock',   // derived from the seed field
   'textureSeedWords',  // the seed's phrase: a VIEW of textureSeedValue, which is saved
+  'lightDegIn', 'lightTiltIn',   // the dial's numbers: VIEWS of textureLight and textureLightTilt, which are saved
   'fontFamily',        // captured as `font` by family NAME, asserted below —
                        // storing the index would break whenever FONTS changes
   'grimoireList',      // a picker over saved records, not a setting

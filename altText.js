@@ -1,10 +1,14 @@
 /**
  * altText.js — the saved image's ALT TEXT, written to be useful to someone
- * who cannot see it: the poem's own words first (no markup), then a few
- * plain English sentences on what the picture looks like — the typeface and
- * its colour, the background, the surface texture (what it is, how strong,
- * which colours, and its settings in words), the frame. At most 1500
- * characters: a long poem gives way before the description does.
+ * who cannot see it, in three parts under headings a screen reader announces:
+ *   --- Image text ---     the poem's own words (no markup), its lines and
+ *                          stanza breaks kept
+ *   --- Image credit ---   By <the credit field's name>.
+ *   --- Description ---    plain English sentences on what the picture looks
+ *                          like — the typeface and its colour, the background,
+ *                          the surface (what it is, how strong, which colours,
+ *                          its settings in words), the frame
+ * At most 1500 characters: a long poem gives way before anything else does.
  *
  *   describeLook(look) → the whole alt text      (look: see LookFacts below)
  *   colourName(hex)    → "deep plum", "pale gold", "near-black"…
@@ -25,7 +29,7 @@ export const TEXTURE_LOOKS = {
   cityscape: 'a city skyline at night, its windows lit, over water', guilloche: 'engraved rosettes, like those on a banknote',
   stainedglass: 'panes of stained glass held in lead', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
-  crackedglaze: 'cracked and crazed ceramic glaze', tessellate: 'a field of faceted triangles', cards: 'scattered tarot cards',
+  crackedglaze: 'cracked and crazed ceramic glaze', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table: hands, a spread or a trick, and sometimes coins',
   blackhole: 'a black hole ringed by a bright, swirling disc', turing: 'organic spots and stripes, like animal skin or coral',
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolour paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
@@ -96,7 +100,8 @@ export function lightFrom(deg, tilt){
  *   poem: [plain lines], font, textColours: [hex], effects: [type],
  *   background: [hex], surface: null | { type, name, reading, element, opacity, blend,
  *     knobs: [{label, value, min, max}], hues: [hex], light: null | {deg, tilt} },
- *   base: null | { name }, border: null | { colour, stitch }, box: bool, vignette: bool
+ *   base: null | { name }, border: null | { colour, stitch }, box: bool, vignette: bool,
+ *   credit: the credit field, as plain text ('' for none)
  * }
  */
 export function describeLook(L){
@@ -130,9 +135,19 @@ export function describeLook(L){
   if(L.vignette) frame.push('darkened edges');
   if(frame.length) s.push('The page has ' + andList(frame) + '.');
   const desc = s.join(' ');
-  // the poem first; it gives way (cut at a line, then a word) before the description does
-  const poem = (L.poem || []).map(x => String(x).trim()).filter(Boolean).join('\n');
-  const room = ALT_MAX - desc.length - 2;
+  // THREE PARTS, each under its heading (Ruby's form), so a screen reader
+  // announces what it is about to read:
+  //   --- Image text ---      the poem: its lines and its stanza breaks kept
+  //   --- Image credit ---    By <the name in the credit field>.
+  //   --- Description ---     the look, in sentences
+  // The poem gives way first (cut at a line, then a word), never the credit or the description.
+  const H_TEXT = '--- Image text ---', H_CREDIT = '--- Image credit ---', H_DESC = '--- Description ---';
+  const credit = String(L.credit || '').trim();
+  const tail = (credit ? `\n\n${H_CREDIT}\n${/^by\b/i.test(credit) ? credit : 'By ' + credit}${/[.!?]$/.test(credit) ? '' : '.'}` : '') + `\n\n${H_DESC}\n${desc}`;
+  // the poem as written: each line its own, a blank line between stanzas (never two)
+  const lines = (L.poem || []).map(x => String(x).replace(/\s+$/, '').trim());
+  const poem = lines.join('\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+|\n+$/g, '');
+  const room = ALT_MAX - tail.length - H_TEXT.length - 2;
   let words = poem;
   if(words.length > room){
     words = room > 1 ? words.slice(0, Math.max(0, room - 1)) : '';
@@ -140,5 +155,6 @@ export function describeLook(L){
     if(cut > room*0.6) words = words.slice(0, cut);
     words = words ? words.trimEnd() + '…' : '';
   }
-  return (words ? words + '\n\n' + desc : desc).slice(0, ALT_MAX);
+  const out = (words ? `${H_TEXT}\n${words}` : '') + tail;
+  return out.replace(/^\n+/, '').slice(0, ALT_MAX);
 }

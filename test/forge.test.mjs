@@ -97,8 +97,8 @@ check('under Esoterica, with its own card and a full-screen editor', /<details c
     && F.describeForge(big).includes('too many nodes') && F.describeForge(heavy).includes('reduced detail')
     && /const B = athanorBudget\(extra\.graph \|\| ''\);/.test(readFileSync(new URL('../textureGenerators.js', import.meta.url), 'utf8')));
   const starters = Object.keys(C.ATHANOR_STARTERS);
-  check('five starter graphs, each a working surface (evaluated here; the Reaction–Diffusion one needs the page\'s textures)',
-    starters.length === 5 && starters.filter(k => k !== 'bloom').every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
+  check('six starter graphs, each a working surface (evaluated here; the Reaction–Diffusion one needs the page\'s textures, the Card Table its fonts)',
+    starters.length === 6 && starters.filter(k => k !== 'bloom' && k !== 'cardtable').every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
       return gr.v === 2 && im && im.r.some(v => v > 0.02) && C.athanorName(gr) === C.ATHANOR_STARTERS[k].label; }));
   check('…offered from the editor\'s bar, with every part\'s ports filled in on load', html.includes('id="forgeStarter"')
     && /P\.ins\.forEach\(\(_, j\) => \{ n\.inputs\['input_' \+ \(j \+ 1\)\]/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')));

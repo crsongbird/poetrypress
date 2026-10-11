@@ -294,6 +294,14 @@ export const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
+  // Cartomancy's own parts (cartomancy.js): a Table, a Deal laid on it by its mask, the suits' four colours, a Knob on the Scatter
+  cardtable: { label: 'Card Table', nodes: [
+      ['table', { mat: 'baize', lamp: 50 }, 40, 40],
+      ['colour', { hex: '#B0303A' }, 40, 300], ['colour', { hex: '#C9A33A' }, 40, 380], ['hue', { slot: '1', name: 'Third Suit' }, 40, 460], ['hue', { slot: '2', name: 'Fourth Suit' }, 40, 560],
+      ['knob', { slot: '1', name: 'Scatter', def: 25 }, 40, 660],
+      ['deal', { game: 'trick', stock: 'ivory', gilt: 'gold', count: 100, size: 100, scatter: 25, stakes: 60 }, 300, 300],
+      ['mix', { t: 100 }, 560, 120], ['surface', { name: 'Card Table', ground: 'colour' }, 800, 120]],
+    wires: [[2, 1, 7, 1], [3, 1, 7, 2], [4, 1, 7, 3], [5, 1, 7, 4], [6, 1, 7, 7], [1, 1, 8, 1], [7, 1, 8, 2], [7, 2, 8, 3], [8, 1, 9, 1], [1, 2, 9, 2]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

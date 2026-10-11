@@ -1577,12 +1577,19 @@ export function genContourMap(w,h,amt,zoom,light,form,M3){
  * Stained Glass — panes of coloured glass held in lead came, lit from behind.
  * The panes are a Voronoi tiling (each pixel belongs to its nearest seed; the
  * lead runs where two seeds are equally near, its width measured EXACTLY from
- * the bisector, so every came is even). ORDER moves the seeds from irregular
- * shards (a cathedral window's fragments) through a calmer tiling to a ROSE
- * WINDOW: rings of panes around the page's centre, coloured ring by ring so the
- * symmetry reads. The lead is a rounded relief lit by the dial; the glass is
- * lit from BEHIND (brighter toward the dial's sun), with its own streaks,
- * bubbles and a faint surface sheen, as antique glass has.
+ * the bisector, so every came is even). SHAPE runs through four kinds of
+ * window (Ruby's four):
+ *   RANDOM     0–30   irregular shards, a cathedral window's fragments (as it was)
+ *   PATTERNED  30–55  a repeating lattice — diamond quarries, hexagons or
+ *                     bricks — its colours repeating too
+ *   SHAPED     55–80  a ROSE WINDOW: rings of panes about the centre, coloured
+ *                     ring by ring so the symmetry reads
+ *   ORDERED    80–100 a strict grid of square panes, colours in a set rhythm
+ * The lead is a rounded relief lit by the dial. The glass is lit from BEHIND
+ * (brighter toward the dial's sun), with its streaks and bubbles; and from the
+ * FRONT it is glass: each pane set at its own slight tilt, so the panes facing
+ * the light flash a specular highlight, a broad sheen rolls across them, and a
+ * bright rim catches where the glass meets the came on the lit side.
  */
 export function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
@@ -1590,14 +1597,31 @@ export function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
   // (a coarser grid than most: the came stays several cells wide, and the light costs a third)
   const div=canonDiv(3), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
   const sep=unit*0.1*zoom;
-  // the seeds: shards (jittered grid) or a rose (rings about the centre)
-  const S=[];           // [x, y, ring, index-in-ring]
-  if(order < 0.5){
+  const kind = order < 0.3 ? 'random' : order < 0.55 ? 'pattern' : order < 0.8 ? 'rose' : 'grid';
+  // the seeds: [x, y, ring, index-in-ring] — ring -1 a random pane, -2 a patterned one (index: its colour slot)
+  const S=[];
+  if(kind === 'random'){
     const jit=0.5 - order*0.7;
     for(let gy=-1; gy<=Math.ceil(wh/sep)+1; gy++) for(let gx=-1; gx<=Math.ceil(ww/sep)+1; gx++){
       const ox=(gy%2 ? 0.5 : 0)*order*1.6;             // calmer: rows offset like bricks
       S.push([(gx + 0.5 + ox + (Math.random()*2-1)*jit)*sep, (gy + 0.5 + (Math.random()*2-1)*jit)*sep, -1, 0]);
     }
+  } else if(kind === 'pattern'){
+    // a lattice, chosen by the seed; a hair of irregularity as the knob nears the random end (old glass is never perfect)
+    const lat=Math.floor(Math.random()*3), jit=sep*0.04*(1 - (order - 0.3)/0.25), cyc=2 + Math.floor(Math.random()*2);
+    const R=Math.ceil(Math.hypot(ww,wh)/sep) + 2;
+    for(let gy=-2; gy<=R; gy++) for(let gx=-2; gx<=R; gx++){
+      let x, y;
+      if(lat === 0){ x=(gx + 0.5*(gy & 1))*sep*1.15; y=gy*sep*0.58; }                      // diamond quarries
+      else if(lat === 1){ x=(gx + 0.5*(gy & 1))*sep; y=gy*sep*0.866; }                      // hexagons
+      else { x=(gx + 0.5*(gy & 1))*sep*1.4; y=gy*sep*0.6; }                                // bricks (long panes)
+      if(x < -sep*2 || y < -sep*2 || x > ww + sep*2 || y > wh + sep*2) continue;
+      S.push([x + (Math.random()*2-1)*jit, y + (Math.random()*2-1)*jit, -2, ((gx % cyc) + cyc + (gy % cyc)*(cyc - 1) + 9*cyc) % (cyc*2)]);
+    }
+  } else if(kind === 'grid'){
+    const g=sep*0.9;
+    for(let gy=-1; gy<=Math.ceil(wh/g)+1; gy++) for(let gx=-1; gx<=Math.ceil(ww/g)+1; gx++)
+      S.push([(gx + 0.5)*g, (gy + 0.5)*g, -2, (gx + 2*gy + 100) % 4]);
   } else {
     const cx=ww/2, cy=wh/2, sym=Math.random()<0.5 ? 6 : 8, jit=(1-order)*0.6*sep, K=Math.ceil(Math.hypot(ww,wh)/2/sep) + 1;
     S.push([cx, cy, 0, 0]);
@@ -1611,14 +1635,19 @@ export function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
   const mixA=(a,b,t)=>a.map((v,i)=>v + (b[i]-v)*t);
   const A=hx(t1), B=hx(t2), AMBER=[214,152,40], GREEN=[46,122,62], PALE=[232,224,196];
   const PAL=[A, A, mixA(A,[0,0,0],0.35), B, B, mixA(B,AMBER,0.5), AMBER, GREEN, mixA(A,PALE,0.6), PALE];
+  // a patterned window repeats a few colours from the palette, in its rhythm
+  const RHY=[PAL[0], PAL[3], PAL[8], PAL[6], PAL[4], PAL[9]].slice(0, 4 + Math.floor(Math.random()*2));
   const pane=S.map(s => {
     const col = s[2] >= 0
       ? PAL[(s[2]*3 + (s[3] % 2)*5) % PAL.length]                 // rose: ring by ring, alternating
+      : s[2] === -2 ? RHY[s[3] % RHY.length]                      // a lattice: its colours in rhythm
       : PAL[Math.floor(Math.random()*PAL.length)];
     const sh=0.82 + Math.random()*0.3, ang=Math.random()*Math.PI;
     const bub=[]; const nb=Math.random()<0.6 ? Math.floor(Math.random()*4) : 0;
     for(let b=0;b<nb;b++) bub.push([s[0] + (Math.random()*2-1)*sep*0.3, s[1] + (Math.random()*2-1)*sep*0.3, sep*(0.012 + Math.random()*0.025)]);
-    return { col, sh, cs:Math.cos(ang), sn:Math.sin(ang), bub };
+    // each pane leans a little in the came (no window is flat): its own normal, for the front's highlights
+    const ta=Math.random()*Math.PI*2, tm=0.04 + Math.random()*0.22, nx=Math.cos(ta)*tm, ny=Math.sin(ta)*tm, nz=Math.sqrt(1 - tm*tm);
+    return { col, sh, cs:Math.cos(ang), sn:Math.sin(ang), bub, nx, ny, nz };
   });
   // the seeds in buckets, for the nearest-seed search
   // (a seed is never far from a pixel it owns: one ring of buckets is enough)
@@ -1645,6 +1674,9 @@ export function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.45, shadow:0.5, ao:0.35, ambient:0.4 });
   // the sun behind the window: brighter toward the dial
   const lv=lightVec(light==null?315:light), sunX=ww/2 - lv.lx*ww*0.45, sunY=wh/2 - lv.ly*wh*0.45, diag=Math.hypot(ww,wh);
+  // the light on the FRONT of the glass: toward the dial, raking as the dial's handle nears the rim; Blinn's half vector, the viewer overhead
+  const tl=Math.min(1, Math.hypot(lv.lx, lv.ly)), el=(90 - tl*70)*Math.PI/180, lm2=tl > 1e-6 ? tl : 1;
+  const FX=-lv.lx/lm2*Math.cos(el), FY=-lv.ly/lm2*Math.cos(el), FZ=Math.sin(el), HL=Math.hypot(FX, FY, FZ + 1) || 1, HX=FX/HL, HY=FY/HL, HZ=(FZ + 1)/HL;
   return paintLit(w,h,div,ww,wh, i => {
     const x=i%ww, y=(i/ww)|0, e=E[i];
     if(e < lw){
@@ -1661,7 +1693,15 @@ export function genStainedGlass(w,h,amt,zoom,light,form,tint1,tint2){
     let edge=Math.min(1, (e-lw)/(lw*2.5)); edge=0.72 + 0.28*edge;            // darker against the lead (thicker glass)
     let b=P.sh*back*st*edge;
     for(const q of P.bub){ const d=Math.hypot(x-q[0], y-q[1]); if(d < q[2]) b*=1.12 + 0.2*(d/q[2]); }
-    const sheen=L.spec[i]*90;
+    // the FRONT: the pane's own lean, rippled by the glass, against the light — a sharp flash where it faces
+    // the light, a broad sheen rolling across it, and a bright rim where it meets the lead on the lit side
+    // (and each pane is gently domed, as blown glass is: its normal turns across it, so the flash is a spot, not the whole pane)
+    const sd=S[OWN[i]], qx=P.nx + (x - sd[0])/sep*0.7, qy=P.ny + (y - sd[1])/sep*0.7, ql=Math.hypot(qx, qy, P.nz) || 1;
+    const rip=(L.spec[i] - 0.02)*0.6, nh=Math.max(0, (qx*HX + qy*HY + P.nz*HZ)/ql + rip);
+    const flash=Math.pow(nh, 60)*230, roll=Math.pow(nh, 8)*30;
+    let rim=0; if(e < lw*2.2){ const gx=(E[i + (x < ww - 1 ? 1 : 0)] - E[i - (x > 0 ? 1 : 0)]), gy=(E[i + (y < wh - 1 ? ww : 0)] - E[i - (y > 0 ? ww : 0)]);
+      const gl=Math.hypot(gx, gy) || 1, face=-(gx*FX + gy*FY)/gl; if(face > 0) rim=face*(1 - (e - lw)/(lw*1.2))*70; }
+    const sheen=L.spec[i]*70 + flash + roll + Math.max(0, rim);
     return [clamp255(P.col[0]*b + sheen), clamp255(P.col[1]*b + sheen), clamp255(P.col[2]*b + sheen)];
   });
 }

@@ -48,6 +48,7 @@ const ENUM = {
   textureBlend: () => capsFor(NEW_TEXTURE).blends[1],     // valid for the new texture, not its default
   typeEffect: v => v === 'bevel' ? 'bloom' : 'bevel',
   vignetteBlend: v => v === 'color-burn' ? 'lighten' : 'color-burn',
+  textGradientType: v => v === 'mirror' ? 'radial' : 'mirror',
   usernameCorner: v => v === 'top-right' ? 'top-left' : 'top-right',
   align: v => v === 'right' ? 'center' : 'right',
   valign: v => v === 'bottom' ? 'top' : 'bottom',

@@ -36,7 +36,8 @@ import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genClouds, genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genLandscape, genFlowField } from './texWhimsy.js';
 import { genFlowers, genHalftone, genBrushstrokes, genMetalLeaf, genCityscape, genGrain, genGuilloche } from './texSharpness.js';
-import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genCartomanticDrift, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
+import { genCartomancy } from './cartomancy.js';
+import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
 import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genStainedGlass, genSuminagashi, genWatercolour } from './texTouch.js';
 
 /**
@@ -87,7 +88,7 @@ export const TEXTURE_PARAMS = {
                    names:['Silver','Film','Paper','Digital']}],
   metalleaf:     [{key:'zoom',  label:'Leaf Size',       min:60, max:360, def:100, unit:'%'},
                   {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165},
-                  // the original flakes (0) → shards, slivers, squares of leaf, curled shavings
+                  // the original flakes (0) → convex polygons of every kind, drawn out long at the top
                   {key:'form',  label:'Shape',           min:0,  max:100, def:0,   unit:''},
                   // flat, as it always was (0) → each flake tilting to the dial's light, a band of reflection inside
                   {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
@@ -189,8 +190,8 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Hillshade',       min:0,  max:100, def:45,  unit:''}],
   stainedglass:  [{key:'zoom',  label:'Pane Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Leading',         min:30, max:250, def:100, unit:'%'},
-                  // the panes' arrangement: shards → a calm tiling → (past half) a rose window
-                  {key:'form',  label:'Order',           min:0,  max:100, def:25,  unit:''}],
+                  // the window's kind: random shards (0–30) → a patterned lattice → a rose window (55–80) → an ordered grid (80+)
+                  {key:'form',  label:'Shape',           min:0,  max:100, def:25,  unit:''}],
   suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
                   // still concentric rings → swept by breath and fan
@@ -243,7 +244,9 @@ export const TEXTURE_PARAMS = {
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
                   {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
                   // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
-                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''}],
+                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''},
+                  // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
+                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -276,9 +279,11 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
                   // fresh cool grey to warm tarnished brown
                   {key:'form',  label:'Age',             min:0,  max:100, def:30,  unit:''}],
-  cards:         [{key:'amt',   label:'Card Count',      min:20, max:400, def:100, unit:'%', base:16},
-                  // dealt in neat rows (0) → drifting, turned, reversed, some torn (90)
-                  {key:'angle', label:'Scatter',         min:0,  max:90,  def:35,  unit:'°'}],
+  cards:         [{key:'amt',   label:'Cards in Play',   min:20, max:300, def:100, unit:'%', base:16},
+                  // dealt square (0) → the table swept about (90)
+                  {key:'angle', label:'Scatter',         min:0,  max:90,  def:20,  unit:'°'},
+                  // whether there is money on the table, and how much: none (0) → high stakes
+                  {key:'form',  label:'Stakes',          min:0,  max:100, def:50,  unit:''}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
 };
@@ -377,8 +382,9 @@ export const TEXTURE_CAPS = {
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
                    tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
   // a divination deck on a table, lit by the dial (shadows, curl, gilt edges)
-  cards:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // a game in its own colours: the four suits are the page's two accents and these two hues (cartomancy.js)
+  cards:         { blends:['source-over','overlay','soft-light','hard-light','multiply','luminosity','screen','color'], ground:'colour', light:true, tints:2,
+                   tintLabels:['Third Suit Hue','Fourth Suit Hue'], tintDefaults:['#3E7D4F','#2E5FA8'] },
   // — 🜚 touch — relief, so soft-light leads and light direction applies
   linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], ground:'grey', light:true, tints:2,
                    tintLabels:['Fabric Hue','Light Hue'], tintDefaults:['#808080','#FFFFFF'] },
@@ -587,7 +593,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'moss'){
     result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
   } else if(type === 'landscape'){
-    result = genLandscape(w,h,amt,zoom,form,extra.tilt);
+    result = genLandscape(w,h,amt,zoom,form,extra.tilt,extra.hueSpread/100);
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
@@ -601,7 +607,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'hatch'){
     result = genChain(type, w, h, light, extra);
   } else if(type === 'cards'){
-    result = genCartomanticDrift(w,h,amt,zoom,angle,light);
+    // the four suits: the page's two accents, the texture's two hues
+    result = genCartomancy(w,h,amt,angle,form,light,[(extra.accents || [])[0] || '#B0303A', (extra.accents || [])[1] || '#C9A33A', tint1 || '#3E7D4F', tint2 || '#2E5FA8'],(extra.lightTilt ?? 100)/100);
   } else if(type === 'summoning'){
     result = genSummoningCircles(w,h,amt,zoom,light,form);
   } else if(type === 'metalleaf'){
@@ -849,16 +856,17 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, seed, lightTilt }))));
+    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, seed, lightTilt, accents: [accent1, accent2] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
   // leaves the grey ground alone; white means no tint at all.
   const caps = capsFor(type);
   // tint and blend remap together, in one pass over the texture itself
-  const doRemap = caps.ground === 'grey' && blend && !(caps.keepGround || []).includes(blend);
+  // (a texture painted in its own colour keeps them: Dream Bloom's coloured motes, a Painted Landscape in colour)
+  const doRemap = caps.ground === 'grey' && blend && !(caps.keepGround || []).includes(blend) && !(type === 'landscape' && hueSpread > 0);
   // Dream Bloom with Colour Variation colours its own motes; the grey tint pass would erase their hues
-  const ownColour = type === 'bokeh' && hueSpread > 0;
+  const ownColour = (type === 'bokeh' || type === 'landscape') && hueSpread > 0;
   const tintNow = caps.genericTint && !ownColour;
   const ground = (tintNow && caps.hue5 && caps.hue5.role === 'ground') ? t5 : null;
   if(result && ((tintNow && (tint1 || tint2 || ground)) || doRemap))

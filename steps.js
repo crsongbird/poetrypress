@@ -33,6 +33,7 @@ import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField } from './texCore
 import { drawStitch, pathFromPoints, roundRectPoints } from './stitches.js';
 import { TOUCH_STEPS } from './stepsTouch.js';
 import { CHAOS_STEPS } from './stepsChaos.js';
+import { CARD_STEPS } from './cartomancy.js';
 
 const STEP_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const STEP_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
@@ -454,9 +455,9 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS };
 export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
-  const io = STEP_IO[k] || {};
+  const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
   return [k, { ...s,
     dataIns: s.ins.length,

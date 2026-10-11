@@ -185,8 +185,8 @@ inside of a <~~dead person~~/trans>'s dreams.
       </div>
     </details>
 
-    <div class="card" data-tab="style">
-      <p class="card-title" data-str="card.form_amp_bearing">  Form &amp; Bearing</p>
+    <details class="card" data-tab="style" open>
+      <summary class="card-title" data-str="card.form_amp_bearing">  Form &amp; Bearing</summary>
       <div class="card-grid">
         <div class="field full">
           <label data-str="label.aspect_ratio">Aspect Ratio</label>
@@ -233,12 +233,12 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
         </div>
       </div>
-    </div>
+    </details>
 
-    <div class="card" data-tab="style">
-      <p class="card-title" data-str="card.known_rituals">  Known Rituals</p>
+    <details class="card" data-tab="style" open>
+      <summary class="card-title" data-str="card.known_rituals">  Known Rituals</summary>
       <div class="preset-grid" id="presetGrid"></div>
-    </div>
+    </details>
 
 
 
@@ -310,7 +310,16 @@ inside of a <~~dead person~~/trans>'s dreams.
             </div>
           </div>
           <div class="field">
-            <label data-str="label.radial_gradient_angle">Radial Gradient Angle</label>
+            <label for="textGradientType" data-str="label.text_gradient_shape">Gradient Shape</label>
+            <select id="textGradientType">
+              <option value="linear" data-str="option.text_linear">Linear</option>
+              <option value="mirror" data-str="option.text_mirrored">Mirrored</option>
+              <option value="radial" data-str="option.text_radial">Radial</option>
+              <option value="conic" data-str="option.text_sweep">Sweep</option>
+            </select>
+          </div>
+          <div class="field" id="textAngleField">
+            <label data-str="label.radial_gradient_angle">Gradient Angle</label>
             <div class="angle-wrap">
               <input type="range" id="textGradientAngle" list="angleTicks" data-angle min="0" max="360" value="45">
               <span class="angle-val" id="textGradientAngleVal">45°</span>
@@ -480,6 +489,8 @@ inside of a <~~dead person~~/trans>'s dreams.
               <option value="linear" data-str="option.linear">Linear</option>
               <option value="radial" data-str="option.radial">Radial</option>
               <option value="rect" data-str="option.rectangular">Rectangular</option>
+              <option value="conic" data-str="option.sweep">Sweep</option>
+              <option value="mirror" data-str="option.mirrored">Mirrored</option>
             </select>
           </div>
           <div class="field" id="bgAngleField">
@@ -520,66 +531,76 @@ inside of a <~~dead person~~/trans>'s dreams.
           <div class="field full">
             <label data-str="label.surface_variant">Surface Variant</label>
             <select id="textureType">
-              <optgroup label="♡ Whimsy">
+              <!-- grouped by how a surface is made and what it is for (each group alphabetical; the four elements are the presets' language) -->
+              <optgroup label="◌ Grounds">
+                <option value="coldpress" data-str="option.cold_press">Cold Press</option>
+                <option value="oldpaper" data-str="option.old_paper">Old Paper</option>
                 <option value="clouds" data-str="option.sleep_haze">Sleep Haze</option>
+                <option value="grain" data-str="option.waking_grain">Waking Grain</option>
+              </optgroup>
+              <optgroup label="✧ Light &amp; Particles">
                 <option value="bokeh" data-str="option.dream_bloom">Dream Bloom</option>
-                <option value="astral" data-str="option.deep_field">Deep Field</option>
+                <option value="snow" data-str="option.first_snow">First Snow</option>
+                <option value="rainstreaks" data-str="option.still_rain">Harsh Rain</option>
                 <option value="magicparticles" data-str="option.euphoria_dust">Pixie Dust</option>
                 <option value="embers" data-str="option.burning_mana">Sparkler</option>
-                <option value="snow" data-str="option.first_snow">First Snow</option>
+              </optgroup>
+              <optgroup label="☾ The Heavens">
                 <option value="aurora" data-str="option.aurora_veil">Aurora Veil</option>
-                <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
-                <option value="landscape" data-str="option.landscape">Painted Landscape</option>
-                <option value="flowfield" data-str="option.flow_field">Flow-Field Ink</option>
-                <option value="suminagashi" data-str="option.suminagashi">Suminagashi</option>
-              </optgroup>
-              <optgroup label="√ Sharpness">
-                <option value="grain" data-str="option.waking_grain">Waking Grain</option>
-                <option value="metalleaf" data-str="option.metal_leaf">Scattered Polygons</option>
-                <option value="flowers" data-str="option.lotus_pond">Lotus Pond</option>
-                <option value="brushstrokes" data-str="option.painter_s_frustration">Painter's Frustration</option>
-                <option value="halftone" data-str="option.90s_dots">Retro Dots</option>
-                <option value="rainstreaks" data-str="option.still_rain">Harsh Rain</option>
-                <option value="hatch" data-str="option.silverpoint_hatch">Silverpoint Hatch</option>
-                <option value="cityscape" data-str="option.cityscape">Night City</option>
-                <option value="guilloche" data-str="option.guilloche">Guilloché</option>
-                <option value="stainedglass" data-str="option.stained_glass">Stained Glass</option>
-              </optgroup>
-              <optgroup label="∆ Chaos">
-                <option value="sigils" data-str="option.sigil_scatter">Sigil Scatter</option>
-                <option value="mathnoise" data-str="option.binary_pattern">Binary Pattern</option>
-                <option value="summoning" data-str="option.summoning_circles">Transmutation Circle</option>
-                <option value="inkbleed" data-str="option.rorschach_test">Rorschach Test</option>
-                <option value="crackedglaze" data-str="option.fractured_glaze">Fractured Glaze</option>
-                <option value="tessellate" data-str="option.facet_field">Facet Field</option>
-                <option value="cards" data-str="option.cartomancy">Cartomancy</option>
                 <option value="blackhole" data-str="option.blackhole">Black Hole</option>
-                <option value="turing" data-str="option.turing_skin">Turing Skin</option>
-                <option value="chladni" data-str="option.chladni">Chladni Sand</option>
+                <option value="astral" data-str="option.deep_field">Deep Field</option>
+                <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
               </optgroup>
-              <optgroup label="🜚 Touch">
-                <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
-                <option value="coldpress" data-str="option.cold_press">Cold Press</option>
-                <option value="spangle" data-str="option.metal_spangle">Metal Spangle</option>
-                <option value="crystal" data-str="option.crystal_leaf">Crystal Leaf</option>
-                <option value="oldpaper" data-str="option.old_paper">Old Paper</option>
-                <option value="cupring" data-str="option.cup_ring">Cup Ring</option>
-                <option value="ash" data-str="option.burnt_letter">Burnt Letter</option>
-                <option value="wax" data-str="option.poured_wax">Poured Wax</option>
-                <option value="dunes" data-str="option.dunes">Dune Ripples</option>
-                <option value="kintsugi" data-str="option.kintsugi">Kintsugi</option>
-                <option value="moss" data-str="option.moss">Moss on Stone</option>
-                <option value="water" data-str="option.scrying_pool">Scrying Pool</option>
-                <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
-                <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
+              <optgroup label="⛰ Places">
                 <option value="contour" data-str="option.contour">Contour Map</option>
+                <option value="dunes" data-str="option.dunes">Dune Ripples</option>
+                <option value="flowers" data-str="option.lotus_pond">Lotus Pond</option>
+                <option value="moss" data-str="option.moss">Moss on Stone</option>
+                <option value="cityscape" data-str="option.cityscape">Night City</option>
+                <option value="landscape" data-str="option.landscape">Painted Landscape</option>
+                <option value="water" data-str="option.scrying_pool">Scrying Pool</option>
+              </optgroup>
+              <optgroup label="〰 Ink &amp; Paint">
+                <option value="flowfield" data-str="option.flow_field">Flow-Field Ink</option>
+                <option value="brushstrokes" data-str="option.painter_s_frustration">Painter's Frustration</option>
+                <option value="inkbleed" data-str="option.rorschach_test">Rorschach Test</option>
+                <option value="hatch" data-str="option.silverpoint_hatch">Silverpoint Hatch</option>
+                <option value="suminagashi" data-str="option.suminagashi">Suminagashi</option>
                 <option value="watercolour" data-str="option.watercolour">Watercolour Wash</option>
               </optgroup>
-              <optgroup label="🜉 The Athanor" id="athanorGroup">
+              <optgroup label="✋ Materials">
+                <option value="ash" data-str="option.burnt_letter">Burnt Letter</option>
+                <option value="crystal" data-str="option.crystal_leaf">Crystal Leaf</option>
+                <option value="cupring" data-str="option.cup_ring">Cup Ring</option>
+                <option value="crackedglaze" data-str="option.fractured_glaze">Fractured Glaze</option>
+                <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
+                <option value="kintsugi" data-str="option.kintsugi">Kintsugi</option>
+                <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
+                <option value="spangle" data-str="option.metal_spangle">Metal Spangle</option>
+                <option value="wax" data-str="option.poured_wax">Poured Wax</option>
+                <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
+                <option value="metalleaf" data-str="option.metal_leaf">Scattered Polygons</option>
+              </optgroup>
+              <optgroup label="◇ Pattern &amp; Geometry">
+                <option value="mathnoise" data-str="option.binary_pattern">Binary Pattern</option>
+                <option value="chladni" data-str="option.chladni">Chladni Sand</option>
+                <option value="tessellate" data-str="option.facet_field">Facet Field</option>
+                <option value="guilloche" data-str="option.guilloche">Guilloché</option>
+                <option value="halftone" data-str="option.90s_dots">Retro Dots</option>
+                <option value="stainedglass" data-str="option.stained_glass">Stained Glass</option>
+                <option value="turing" data-str="option.turing_skin">Turing Skin</option>
+              </optgroup>
+              <optgroup label="🜍 Signs &amp; Symbols">
+                <option value="cards" data-str="option.cartomancy">Cartomancy</option>
+                <option value="sigils" data-str="option.sigil_scatter">Sigil Scatter</option>
+                <option value="summoning" data-str="option.summoning_circles">Transmutation Circle</option>
+              </optgroup>
+              <optgroup label="🜉 Yours" id="athanorGroup">
                 <option value="athanor" id="athanorOption">From the Athanor</option>
               </optgroup>
             </select>
           </div>
+          <button class="ghost full" id="randomSurfaceBtn" data-sound="summonBackdrop" type="button" data-str="button.randomSurfaceBtn">⟳ Summon New Surface</button>
           <div class="field full element-field">
             <div class="element-row" id="elementRow" role="group" aria-label="Four readings of this surface">
               <button type="button" class="el-btn" data-el="fire"  aria-label="Fire">🜂</button>
@@ -654,6 +675,11 @@ inside of a <~~dead person~~/trans>'s dreams.
               <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset" aria-label="Reset the dial">⟲</button>
               <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="To the centre" aria-label="Move the dial to its centre">◎</button>
               <button type="button" class="ld-btn ld-random" id="lightRandom" data-sound="dialRandom" title="A random angle" aria-label="Turn the dial to a random angle">⚄</button>
+            </div>
+            <!-- the dial's two numbers, shown and typed: its angle, and how far out it reaches (100 the rim; past it, lower) -->
+            <div class="ld-values">
+              <label>Angle <input type="number" id="lightDegIn" min="0" max="359" step="1" inputmode="numeric">°</label>
+              <label>Reach <input type="number" id="lightTiltIn" min="0" max="130" step="1" inputmode="numeric">%</label>
             </div>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
@@ -839,6 +865,8 @@ inside of a <~~dead person~~/trans>'s dreams.
               <option value="linear" data-str="option.box_linear">Linear</option>
               <option value="radial" data-str="option.box_radial">Radial</option>
               <option value="rect" data-str="option.box_rectangular">Rectangular</option>
+              <option value="conic" data-str="option.box_sweep">Sweep</option>
+              <option value="mirror" data-str="option.box_mirrored">Mirrored</option>
             </select>
           </div>
           <div class="field full" id="cardAngleField">
@@ -975,8 +1003,8 @@ inside of a <~~dead person~~/trans>'s dreams.
             </div>
     </details>
 
-    <div class="card" data-tab="more">
-      <p class="card-title" data-str="card.appearance">  Appearance</p>
+    <details class="card" data-tab="more">
+      <summary class="card-title" data-str="card.appearance">Interface</summary>
       <div class="field full">
         <label for="uiTheme" data-str="label.theme">Theme</label>
         <select id="uiTheme">
@@ -987,16 +1015,13 @@ inside of a <~~dead person~~/trans>'s dreams.
         </select>
       </div>
       <p class="hint theme-note" id="themeNote"></p>
-      <div class="check-row">
-        <input type="checkbox" id="soundToggle">
-        <label for="soundToggle" data-str="label.soundToggle">Sounds</label>
+      <!-- sound: on or off, and how loud; nothing more to read -->
+      <div class="sound-row">
+        <input type="checkbox" id="soundToggle" class="switch">
+        <label for="soundToggle" data-str="label.soundToggle">Sound</label>
+        <input type="range" id="soundVolume" min="0" max="100" step="1" value="40" aria-label="Sound volume" title="Volume">
       </div>
-      <div class="field full">
-        <label for="soundVolume" data-str="label.soundVolume">Sound Volume</label>
-        <input type="range" id="soundVolume" min="0" max="100" step="1" value="40">
-      </div>
-      <p class="hint" data-str="hint.sounds">Soft chimes as you work, in one key. Off by default; kept in this browser only.</p>
-    </div>
+    </details>
     <details class="card" data-tab="more" id="spellPanel" open>
       <summary class="card-title" data-str="card.spellcrafting">Spellcrafting</summary>
       <div style="margin-top:6px;">
@@ -1071,6 +1096,8 @@ inside of a <~~dead person~~/trans>'s dreams.
   <div class="stage">
     <div class="canvas-wrap">
       <canvas id="poemCanvas" width="3072" height="3072"></canvas>
+      <div class="work-bar" aria-hidden="true"><i></i></div>
+      <p class="working-line" id="workingLine" aria-live="polite"></p>
       <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position" data-str="button.resetViewBtn">⟲</button>
       <button class="reset-view-btn history-btn" id="undoBtn" type="button" title="Undo" aria-label="Undo">☋</button>
       <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo" aria-label="Redo">☊</button>

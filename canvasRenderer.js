@@ -70,7 +70,18 @@ function collectGradientColors(color1, color2Id, color3Id, color4Id, stopCount){
   return colors;
 }
 
-function makeGradient(ctx, w, h, angleDeg, colors){
+function makeGradient(ctx, w, h, angleDeg, colors, shape){
+  // the text's shapes: LINEAR (as ever), MIRRORED (there and back), RADIAL
+  // (from the middle of the page out), SWEEP (turning about the middle)
+  if(shape === 'radial'){
+    const g = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w, h)*0.62);
+    colors.forEach((c, i) => g.addColorStop(colors.length > 1 ? i/(colors.length-1) : 0, c)); return g;
+  }
+  if(shape === 'conic' && typeof ctx.createConicGradient === 'function'){
+    const g = ctx.createConicGradient((angleDeg - 90)*Math.PI/180, w/2, h/2), ring = colors.concat([colors[0]]);
+    ring.forEach((c, i) => g.addColorStop(i/(ring.length-1), c)); return g;
+  }
+  if(shape === 'mirror') colors = colors.concat(colors.slice(0, -1).reverse());
   const rad = angleDeg * Math.PI/180;
   const cx = w/2, cy = h/2;
   const len = Math.sqrt(w*w+h*h)/2;
@@ -90,6 +101,8 @@ function makeGradient(ctx, w, h, angleDeg, colors){
  *           to a radius (r, as a share of its longer side)
  *   rect    concentric boxes from that centre — a framed glow, and the basis
  *           for vignettes that follow the page's shape
+ *   conic   SWEEP: the colours turn about the centre from the angle
+ *   mirror  linear, there and back again
  * The caller sets any clip (rounded corners) beforehand.
  */
 function hexRgb(h){ const n = parseInt(String(h).replace('#','').slice(0,6), 16); return [n>>16, (n>>8)&255, n&255]; }
@@ -116,10 +129,30 @@ function paintGradient(ctx, x, y, w, h, spec, colors){
     }
     sx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = true; ctx.drawImage(small, x, y, w, h);
+  } else if(spec.type === 'conic'){
+    // SWEEP: the colours turn about the centre, from the angle, and close the circle
+    const cx = x + w*spec.cx, cy = y + h*spec.cy, rad = ((spec.angle || 0) - 90) * Math.PI/180, ring = stops.concat([stops[0]]);
+    if(typeof ctx.createConicGradient === 'function'){
+      const g = ctx.createConicGradient(rad, cx, cy);
+      ring.forEach((c, i) => g.addColorStop(i/(ring.length-1), c));
+      ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    } else {
+      const S = 128, small = document.createElement('canvas'); small.width = S; small.height = S;
+      const sx = small.getContext('2d'), img = sx.createImageData(S, S), d = img.data, rgb = ring.map(hexRgb), n = rgb.length - 1;
+      for(let py = 0; py < S; py++) for(let px = 0; px < S; px++){
+        const u = (px + 0.5)/S*w + x - cx, v = (py + 0.5)/S*h + y - cy;
+        let t = ((Math.atan2(v, u) - rad)/(2*Math.PI)) % 1; if(t < 0) t += 1; t *= n;
+        const k = Math.min(n - 1, Math.floor(t)), f = t - k, a = rgb[k], b = rgb[k+1] || a, i = (py*S + px)*4;
+        d[i] = a[0] + (b[0]-a[0])*f; d[i+1] = a[1] + (b[1]-a[1])*f; d[i+2] = a[2] + (b[2]-a[2])*f; d[i+3] = 255;
+      }
+      sx.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, x, y, w, h);
+    }
   } else {
+    // LINEAR along the angle; MIRRORED runs the colours there and back again
     const rad = (spec.angle || 0) * Math.PI/180, cx = x + w/2, cy = y + h/2, len = Math.hypot(w, h)/2;
     const g = ctx.createLinearGradient(cx - Math.cos(rad)*len, cy - Math.sin(rad)*len, cx + Math.cos(rad)*len, cy + Math.sin(rad)*len);
-    stops.forEach((c, i) => g.addColorStop(i/(stops.length-1), c));
+    const run = spec.type === 'mirror' ? stops.concat(stops.slice(0, -1).reverse()) : stops;
+    run.forEach((c, i) => g.addColorStop(i/(run.length-1), c));
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
   }
 }
@@ -817,6 +850,11 @@ function lightArrow(deg){
   const ang = Math.atan2(-Math.sin(a), -Math.cos(a));
   return ARROWS[((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
 }
+/** The poem with its §Variables filled in, as the page shows them (the alt text reads this). */
+export function resolvedPoemText(){
+  const cv = $('poemCanvas'), W = (cv && cv.width) || 3072, H = (cv && cv.height) || 3072;
+  try { return $('poemText') ? resolvePmlVariables($('poemText').value, pmlVarContext(W, H)) : null; } catch(e){ return null; }
+}
 function pmlVarContext(W, H){
   const on = !$('textureToggle') || $('textureToggle').checked;
   const type = $('textureType') ? $('textureType').value : '';
@@ -1048,7 +1086,7 @@ function renderInto(canvas){
       ctx.globalCompositeOperation = blend;
       drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6 }));
       ctx.restore();
-    } else if(type === 'embers' || type === 'magicparticles' || type === 'snow'){
+    } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
       ctx.save();
       ctx.globalAlpha = opacity;
       ctx.globalCompositeOperation = blend;
@@ -1323,7 +1361,7 @@ function renderInto(canvas){
   let baseFillStyle;
   if($('textGradientToggle').checked){
     const textColors = collectGradientColors($('textColorHex').value, 'textColor2Hex', 'textColor3Hex', 'textColor4Hex', textStopCount);
-    baseFillStyle = makeGradient(ctx, W, H, parseFloat($('textGradientAngle').value), textColors);
+    baseFillStyle = makeGradient(ctx, W, H, parseFloat($('textGradientAngle').value), textColors, ($('textGradientType') || {}).value || 'linear');
   } else {
     baseFillStyle = $('textColorHex').value;
   }

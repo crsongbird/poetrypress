@@ -38,6 +38,7 @@ const genMs = new Map();         // type → how long its last generation took
 let drafting = false;
 /** On while a knob is being dragged; off sharpens the preview. */
 export function setDrafting(on){ if(drafting === on) return; drafting = on; if(!on) onReady(); }
+const pagePending = new Map();   // slot → a texture to be made on the page, after the next paint
 const lastGood = new Map();      // slot → { type, tex } shown while a new one is made
 const waiters = [];
 // everyone who wants to know a texture arrived (the renderer; the Athanor's previews)
@@ -47,11 +48,17 @@ const onReady = () => { for(const fn of readyFns) try { fn(); } catch(e){} };
 // A subtle sign the worker is busy: body.tex-busy, shown only when the work
 // takes longer than a moment, so fast textures don't flicker it.
 let busyTimer = null;
-function busy(on){
+function busy(on, what){
   if(typeof document === 'undefined' || !document.body || !document.body.classList) return;
   clearTimeout(busyTimer);
   if(on) busyTimer = setTimeout(() => document.body.classList.add('tex-busy'), 180);
   else document.body.classList.remove('tex-busy');
+  announce(on ? what : null);
+}
+// WHAT is being made, for the page's "what's working" line (appEvents listens)
+function announce(what){
+  if(typeof document === 'undefined' || typeof document.dispatchEvent !== 'function' || typeof CustomEvent !== 'function') return;
+  try { document.dispatchEvent(new CustomEvent('vellum-working', { detail: { what: what || null } })); } catch(e){}
 }
 
 /** Called whenever a texture arrives from the worker (the renderer redraws). */
@@ -106,8 +113,24 @@ export function requestTexture(slot, type, w, h, opts){
   const hit = peekTexture(key);
   if(hit){ wanted.delete(slot); lastGood.set(slot, { type, tex: hit }); return hit; }
   if(ON_PAGE.has(type) || !boot()){
-    const tex = getTextureCanvas(type, w, h, opts);
-    lastGood.set(slot, { type, tex }); return tex;
+    // made on the page: not at once, but after the page has painted its
+    // "working" line and shimmer (which then keep moving: they run off the
+    // main thread) — a final render (Save image) and Node's tests still wait for it here
+    const canDefer = typeof requestAnimationFrame === 'function' && !(opts && opts.final);
+    if(!canDefer){ const tex = getTextureCanvas(type, w, h, opts); lastGood.set(slot, { type, tex }); return tex; }
+    if(!pagePending.has(slot) || pagePending.get(slot).key !== key){
+      const job = { key, type, w, h, opts };
+      pagePending.set(slot, job); busy(true, type);
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+        if(pagePending.get(slot) !== job) return;
+        let tex = null; try { tex = getTextureCanvas(type, w, h, opts); } catch(e){}
+        pagePending.delete(slot);
+        if(tex){ storeTexture(key, tex); lastGood.set(slot, { type, tex }); onReady(); }
+        settle();
+      }, 0)));
+    }
+    const prev = lastGood.get(slot);
+    return prev && prev.type === type ? prev.tex : null;
   }
   const busyJob = inflight.get(slot);
   if(!(busyJob && busyJob.key === key)){ wanted.set(slot, { key, type, w, h, opts }); pump(); }
@@ -134,7 +157,7 @@ function pump(){
     const id = nextId++;
     const f = { id, slot, key: job.key, type: job.type, job, worker, started: now() };
     worker.job = f; inflight.set(slot, f);
-    busy(true);
+    busy(true, job.type);
     worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts });
   }
 }
@@ -169,6 +192,6 @@ export function textureServiceInfo(){ return { worker: !!pool, workers: pool ? p
 
 /** Resolves once every requested texture has arrived (Save image waits on this). */
 export function texturesSettled(){
-  return (inflight.size === 0 && wanted.size === 0) ? Promise.resolve() : new Promise(r => waiters.push(r));
+  return (inflight.size === 0 && wanted.size === 0 && pagePending.size === 0) ? Promise.resolve() : new Promise(r => waiters.push(r));
 }
-function settle(){ if(inflight.size === 0 && wanted.size === 0){ busy(false); while(waiters.length) waiters.shift()(); } }
+function settle(){ if(inflight.size === 0 && wanted.size === 0 && pagePending.size === 0){ busy(false); while(waiters.length) waiters.shift()(); } }

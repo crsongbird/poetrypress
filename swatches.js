@@ -6,6 +6,21 @@
  * rendered full and scaled down, so sixteen tiles cost about one repaint.
  */
 import { capsFor, getTextureCanvas } from './textureGenerators.js';
+
+// WHERE A SWATCH'S TEXTURE COMES FROM. By default it is made here, at once
+// (Node's tests; the old way). The page hands in a source that only ever
+// returns a texture already made — and asks the worker for the rest — so a
+// tile (a preset, a history frame) never holds the page up making one (a
+// Turing Skin froze the page for a second each time the filmstrip repainted).
+// A tile painted without its texture is painted again when it arrives.
+let swatchSource = null;
+const swatchWaiting = new Map();          // canvas → [p, w, h]
+export function setSwatchTextureSource(fn){ swatchSource = fn; }
+export function swatchTexturesArrived(){
+  if(!swatchWaiting.size) return;
+  const again = [...swatchWaiting]; swatchWaiting.clear();
+  for(const [canvas, args] of again) if(canvas.isConnected !== false) paintPresetSwatch(canvas, ...args);
+}
 import { buildLines } from './textParsers.js';
 import { spellToPML } from './spell.js';
 import { SWATCH } from './tunables.js';
@@ -41,7 +56,9 @@ export function paintPresetSwatch(canvas, p, w, h){
       const caps = capsFor(p.textureType);
       const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
       const blend = p.textureBlend && caps.blends.includes(p.textureBlend) ? p.textureBlend : caps.blends[0];
-      const tex = getTextureCanvas(type, w, h, { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, light: 315, tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, blend });
+      const opts = { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, light: 315, tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, blend };
+      const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
+      if(!tex && swatchSource) swatchWaiting.set(canvas, [p, w, h]); else swatchWaiting.delete(canvas);
       if(tex){
         c.save();
         c.globalCompositeOperation = blend || 'overlay';

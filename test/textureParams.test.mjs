@@ -37,7 +37,9 @@ check('every texture declares two params, plus an optional third that must be Fo
     || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
     // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
     || (t === 'water' && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
-    || ((t === 'dunes' || t === 'moss' || t === 'landscape') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
+    || ((t === 'dunes' || t === 'moss') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
+    // (Painted Landscape: Tilt, then Color — grey as it was, or painted in colour)
+    || (t === 'landscape' && d.length === 5 && d[2].key === 'form' && d[3].key === 'tilt' && d[4].key === 'hue')
     || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash' || t === 'turing' || t === 'frost') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')
     // the Athanor: six plain knobs, named on the page from its graph's Knob nodes
     || (t === 'athanor' && d.length === 6 && d.every((p, i) => p.key === 'k' + (i + 1)))));

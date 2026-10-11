@@ -560,7 +560,7 @@ body.is-mobile .light-pad{ gap:4px; }
 .tool-row > #seedRow, body.is-mobile .tool-row > #seedRow{ grid-column:1 / -1 !important; grid-row:auto !important; order:99; padding-left:0; padding-right:0; border-left:none; }
 /* a hue the texture doesn't use is not shown at all, like an unused slider */
 .field.tool-hidden, body.is-mobile .tool-row > .field.tool-hidden{ display:none !important; }
-.field.tool-off label::after{ content:" — n/a"; font-size:.85em; opacity:.8; }
+.field.tool-off > label::after{ content:" — n/a"; font-size:.85em; opacity:.8; }
 
 /* ---------- locks ---------- */
 .lock-btn{
@@ -1617,18 +1617,24 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 /* ---------- working: a shimmer along the top of the image while a texture
    is made in the worker, or while Save image renders the full size ---------- */
 .canvas-wrap{ position:relative; }
-body.tex-busy .canvas-wrap::after, body.saving .canvas-wrap::after{
-  content:''; position:absolute; left:0; right:0; top:0; height:3px; pointer-events:none; z-index:5;
+/* (its sweep moves by TRANSFORM, which the compositor runs on its own: it
+   keeps going even while the page's own thread is busy making something) */
+.work-bar{ position:absolute; left:0; right:0; top:0; height:3px; overflow:hidden; pointer-events:none; z-index:5; display:none; }
+body.tex-busy .work-bar, body.saving .work-bar{ display:block; }
+.work-bar i{ position:absolute; left:0; top:0; width:40%; height:100%; opacity:.85;
   background:linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
-  background-size:40% 100%; background-repeat:no-repeat; opacity:.85;
-  animation:texShimmer 1.15s linear infinite;
-}
-@keyframes texShimmer{ from{ background-position:-40% 0; } to{ background-position:140% 0; } }
+  animation:texShimmer 1.15s linear infinite; will-change:transform; }
+@keyframes texShimmer{ from{ transform:translateX(-100%); } to{ transform:translateX(250%); } }
+/* the "what's working" line: quiet, slow to come, slow to go */
+.working-line{ position:absolute; left:10px; top:8px; z-index:5; margin:0; padding:2px 8px; pointer-events:none;
+  font-family:var(--ui-text); font-style:italic; font-size:12px; color:var(--text-main); background:color-mix(in srgb, var(--bg-deep) 72%, transparent);
+  opacity:0; transition:opacity .45s ease; }
+.working-line.on{ opacity:.85; }
 body.saving .download-btn{ animation:savePulse 1s ease-in-out infinite; }
 @keyframes savePulse{ 50%{ opacity:.6; } }
 /* people who asked for less motion get a gentle fade instead of a sweep */
 @media (prefers-reduced-motion: reduce){
-  body.tex-busy .canvas-wrap::after, body.saving .canvas-wrap::after{ animation:texFade 1.6s ease-in-out infinite; background-size:100% 100%; }
+  .work-bar i{ animation:texFade 1.6s ease-in-out infinite; width:100%; transform:none; }
   @keyframes texFade{ 50%{ opacity:.25; } }
 }
 
@@ -1911,6 +1917,36 @@ body.is-mobile .forge-menu-item{ padding:11px 14px; font-size:14px; }
 .toast{ position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:220; max-width:min(560px, calc(100vw - 32px));
   background:var(--bg-panel); color:var(--text-main); border:1px solid var(--accent); border-radius:0; padding:8px 12px; font-size:13px; box-shadow:0 10px 30px -12px rgba(0,0,0,0.7); }
 .toast[hidden]{ display:none; }
+.toast-act{ width:auto; margin:0 0 0 8px; padding:2px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); font:inherit; font-size:12.5px; cursor:pointer; }
 
 /* while a phone's keyboard is up, the Write tab shows only what is being written */
 body.keyboard-open .spell-mark-row{ display:none; }
+
+/* the light dial's numbers, typed or read */
+.ld-values{ display:flex; gap:14px; margin-top:6px; font-size:12px; color:var(--text-dim); }
+.ld-values label{ display:flex; align-items:center; gap:4px; margin:0; font-size:12px; }
+.ld-values input{ width:4.2em; padding:2px 4px; font-family:var(--ui-code); font-size:12px; }
+body.is-mobile .ld-values input{ font-size:16px; width:4.4em; }
+
+/* sound: a switch and its volume, on one line */
+.sound-row{ display:flex; align-items:center; gap:10px; margin-top:8px; }
+.sound-row label{ margin:0; }
+.sound-row input[type=range]{ flex:1; min-width:0; }
+input.switch{ appearance:none; -webkit-appearance:none; width:34px; height:18px; margin:0; border:1px solid var(--line); background:var(--bg-card); position:relative; cursor:pointer; flex:0 0 auto; }
+input.switch::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--text-dim); transition:left .15s; }
+input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{ left:18px; background:var(--accent); }
+
+/* ---------- the headings' tools: a section's EYE (shown or not) and its MASTER LOCK ----------
+   at the heading's far end, spaced well apart and away from the fold itself */
+.head-tools{ float:right; display:inline-flex; align-items:center; gap:16px; margin-left:18px; margin-right:2px; text-transform:none; letter-spacing:0; }
+.check-row .head-tools{ float:none; order:9; flex:1 1 auto; justify-content:flex-end; padding-left:12px; }
+.master-lock{ width:24px; height:24px; padding:2px; }
+.master-lock.partial{ color:var(--accent-dim); }
+.master-lock.partial .lk-shackle{ transform:translate(1.5px,-0.8px) rotate(-8deg); }
+input[type="checkbox"].eye, .check-row input[type="checkbox"].eye{ appearance:none; -webkit-appearance:none; width:26px; height:24px; margin:0; padding:0; border:0; cursor:pointer; flex:0 0 auto; vertical-align:middle;
+  background-color:var(--text-dim); -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M2.8 10.4c2.4 3.1 5.5 4.7 9.2 4.7s6.8-1.6 9.2-4.7'/><path d='M6.6 13.7 5.2 16.1M12 15.1v2.8M17.4 13.7l1.4 2.4'/></svg>") center/22px no-repeat; mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M2.8 10.4c2.4 3.1 5.5 4.7 9.2 4.7s6.8-1.6 9.2-4.7'/><path d='M6.6 13.7 5.2 16.1M12 15.1v2.8M17.4 13.7l1.4 2.4'/></svg>") center/22px no-repeat; box-shadow:none; }
+input[type="checkbox"].eye:checked, .check-row input[type="checkbox"].eye:checked{ background-color:var(--accent); -webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 12s3.5-6.2 9.5-6.2 9.5 6.2 9.5 6.2-3.5 6.2-9.5 6.2S2.5 12 2.5 12z'/><circle cx='12' cy='12' r='2.9'/><circle cx='12' cy='12' r='0.6' fill='black'/></svg>"); mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 12s3.5-6.2 9.5-6.2 9.5 6.2 9.5 6.2-3.5 6.2-9.5 6.2S2.5 12 2.5 12z'/><circle cx='12' cy='12' r='2.9'/><circle cx='12' cy='12' r='0.6' fill='black'/></svg>"); }
+input.eye:focus-visible{ outline:1px dotted var(--accent); outline-offset:2px; }
+body.is-mobile .head-tools{ gap:20px; }
+body.is-mobile input[type="checkbox"].eye, body.is-mobile .check-row input[type="checkbox"].eye{ width:30px; height:28px; } body.is-mobile .master-lock{ width:28px; height:28px; }
+.check-row[hidden]{ display:none !important; }

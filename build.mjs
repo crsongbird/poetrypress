@@ -60,6 +60,7 @@ const ORDER = [
   'texSharpness.js',      // √ generators
   'texChaos.js',          // ∆ generators
   'texTouch.js',          // 🜚 generators
+  'cartomancy.js',        // a card game on a table: its parts (table, cards, coins, the deal) and the texture
   'stepsTouch.js',        // steps for 🜚 surfaces: weave, cloth (Linen)
   'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze)
   'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
@@ -122,7 +123,7 @@ html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'stepsTouch.js', 'stepsChaos.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'cartomancy.js', 'stepsTouch.js', 'stepsChaos.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');
@@ -148,7 +149,8 @@ console.log(`flattened ${ORDER.length} modules into one page — upload the whol
 
 // ---- optional: the whole project as one archive, for moving it to GitHub ----
 // node build.mjs --zip
-// Writes release/unfixable-vellum-YYYY-MM-DD.zip: every source, test, tool,
+// Writes release/unfixable-vellum-<moon>-YYYY-MM-DD.zip (the moon in the name, so
+// two releases made the same day never share a file name): every source, test, tool,
 // doc and the built dist/, with its folders intact. No dependencies — the zip
 // is written by hand with Node's own deflate. Only on request: it isn't
 // needed to build or test, and archiving every build would be wasted work.
@@ -212,7 +214,8 @@ if(process.argv.includes('--zip')){
   end.writeUInt32LE(cenBuf.length, 12); end.writeUInt32LE(offset, 16);
   md('release', { recursive: true });
   const stamp = now.toISOString().slice(0, 10);
-  const out = `release/unfixable-vellum-${stamp}.zip`;
+  const moon = ((/RELEASE = '[^–']*–([^']+)'/.exec(rf('release.js', 'utf8')) || [])[1] || 'release').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const out = `release/unfixable-vellum-${moon}-${stamp}.zip`;
   const zip = Buffer.concat([...parts, cenBuf, end]);
   wf(out, zip);
   console.log(`archived ${files.length} files in ${dirs.length} folders -> ${out} (${(zip.length/1024).toFixed(0)}kb)`);
