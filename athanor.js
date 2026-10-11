@@ -93,10 +93,15 @@ export function athanorName(graph){
   return s ? String((s.data || {}).name || 'My Surface').slice(0, 32) : '';
 }
 /** A short hash of the graph, for the texture cache (positions don't count). */
+/** A node's settings that change what it makes: not '_pin' and its kin (the editor's own marks). */
+export function athanorWork(data){
+  const o = {}; for(const k of Object.keys(data || {})) if(k[0] !== '_') o[k] = data[k];
+  return o;
+}
 export function athanorHash(graph){
   const nodes = athanorNodes(graph);
   const sig = athanorVersion(graph) + JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
-    return [id, n.name, n.data, Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
+    return [id, n.name, athanorWork(n.data), Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
   let h = 2166136261; for(let i = 0; i < sig.length; i++){ h ^= sig.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36);
 }
@@ -140,7 +145,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     sigBusy.add(id);
     const ins = Object.keys(n.inputs || {}).sort().map(k => k + '<' + ((n.inputs[k].connections || []).map(c => sigOf(String(c.node)) + '.' + c.input).join(',')));
     sigBusy.delete(id);
-    const s = n.name + JSON.stringify(n.data || {}) + '[' + ins.join(';') + ']#' + id;
+    const s = n.name + JSON.stringify(athanorWork(n.data)) + '[' + ins.join(';') + ']#' + id;
     sigs.set(id, s); return s;
   };
   const N = ww*wh, unit = Math.min(ww, wh);
@@ -171,7 +176,10 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     let v;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
       const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : null;
-      if(t != null && R) v = R[0] + (R[1] - R[0])*Math.max(0, Math.min(1, t));
+      // a wired param sweeps its whole range, or the part of it set by hand ('~key': 'lo,hi')
+      const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
+      const W = own && R ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
+      if(t != null && W) v = W[0] + (W[1] - W[0])*Math.max(0, Math.min(1, t));
     }
     if(v === undefined){ v = P(n, k, d); if(typeof v === 'string' && v[0] === '@') v = bound(n, k, v, d); v = parseFloat(v); }
     if(isNaN(v) || !isFinite(v)) return d;

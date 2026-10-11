@@ -22,6 +22,25 @@ check('a graph is described in a few words', F.describeForge('{}').startsWith('E
 check('the graph is saved with the look (PERSISTED forgeGraph, a hidden field), but editing it is not an undo step',
   /\['forgeGraph',\s+'forgeGraph',\s+'text'\]/.test(ev) && html.includes('<input type="hidden" id="forgeGraph"') && /NOT_A_LOOK = new Set\(\[[^\]]*'forgeGraph'/.test(ev));
 check('Drawflow loads only when the Athanor opens, from the CDN at an exact version', /drawflow@\d+\.\d+\.\d+\/dist\/drawflow\.min\.js/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')) && !/drawflow/.test(html.split('</head>')[0]));
+{
+  const fsrc = readFileSync(new URL('../forge.js', import.meta.url), 'utf8'), css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
+  check('a node moves only by its title bar, and not at all when pinned (its lock); elsewhere a drag pans the grid',
+    /ed\.draggable_inputs = false/.test(fsrc) && /if\(t\.closest\('\.forge-node-title'\)\)\{ if\(isPinned/.test(fsrc) && /ed\.editor_selected = true/.test(fsrc)
+    && F.forgeNodeHtml('noise', { lock: '<svg></svg>' }).includes('data-act="pin"') && F.forgeNodeHtml('noise', {}).includes('data-act="menu"'));
+  check('a wire is cut by tapping it (✂ where it was tapped), from its menu, or with Delete; every wire has a wide invisible twin to tap',
+    html.includes('id="forgeCut"') && /ed\.on\('connectionSelected'/.test(fsrc) && /forge-hit/.test(fsrc) && /if\(ed\.connection_selected\)\{ e\.preventDefault\(\)/.test(fsrc));
+  check('a long press or a right-click opens what a thing can do; several things under the finger ask "Which did you mean?"',
+    html.includes('id="forgeMenu"') && /Which did you mean\?/.test(fsrc) && /area\.addEventListener\('contextmenu'/.test(fsrc) && /setTimeout\(\(\) => \{ if\(answered \|\| !pressAt\) return;/.test(fsrc));
+  check('a setting can be bound to a slider or the dial, given a range, or have a Knob wired into it — from its menu',
+    /Bind to a page slider/.test(fsrc) && /Set its range…/.test(fsrc) && /Set the range the wire sweeps…/.test(fsrc) && /Wire a Knob into it/.test(fsrc));
+  check('the view: everything in sight (⌖), and tidying into columns (pinned nodes stay)', html.includes('id="forgeFit"') && /const fitView = \(\) =>/.test(fsrc) && /layoutAthanor\(data\); for\(const \[id, p\] of Object\.entries\(pins\)\)/.test(fsrc));
+  check('kept surfaces: a shelf in this browser, opened again, saved as a file and brought in (each checked)',
+    F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /deps\.validate \? deps\.validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeKeptBtn"'));
+  check('the Athanor wears the app\'s theme; only the wires and ports keep the colours of what they carry',
+    /\.forge-veil\{ --fg-ground:var\(--bg-deep\); --fg-panel:var\(--bg-panel\)/.test(css) && /:root\[data-theme="vellum"\] \.forge-veil\{ --t-field/.test(css));
+  check('on a phone: the parts are a drawer that scrolls with one finger (no dragging from it), the preview a small dock bottom right',
+    html.includes('id="forgePartsBtn"') && /finePointer \? ' draggable="true"' : ''/.test(fsrc) && /\.forge-palette\{[^}]*touch-action:pan-y/.test(css) && html.includes('id="forgeDock"'));
+}
 check('under Esoterica, with its own card and a full-screen editor', /<details class="card" data-tab="more" id="forgePanel">/.test(html) && html.includes('id="forgeVeil"'));
 
 // ---- the evaluator (athanor.js): a graph made into a picture ----

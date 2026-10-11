@@ -423,16 +423,28 @@ before/after measurements AND an identical-render comparison.
   unknown steps, bad wires and out-of-range params are reported and fixed.
   forge.js asks (askSure) before Clear, Revert, Start from…, and deleting a
   node, whenever the grid has anything on it and F.dirty.
-- THE ATHANOR'S FACE (forge.js, poetrypress.css "forge"): a fixed night
-  palette, not the theme. Ports and wires are coloured by TYPE
-  (FORGE_TYPE_COLOURS: field lilac, image pink, colour gold, value cyan,
-  dashed), node headers by CATEGORY (FORGE_CAT_COLOURS). PARAM PORTS (steps.js
-  paramPort, the ⚙ diamonds) are Filter Forge's idea: a wire into a param maps
-  a value (a number, a field's mean, a colour's luminance) across the param's
-  range; every param is clamped. layoutAthanor lays starters and templates out
-  in columns. STEP PREVIEWS are one sheet made in the worker (texture type
-  'athanorsteps', athanorSheetLayout), switchable (#forgeSteps, localStorage
-  uv.forge.steps — a working preference, not part of a look).
+- THE ATHANOR'S FACE (forge.js, poetrypress.css "forge"): the app's theme
+  (--fg-* map to --bg-deep, --bg-panel, --bg-card, --line, --text-*, --accent);
+  only ports and wires keep fixed colours by TYPE (FORGE_TYPE_COLOURS: field,
+  image, colour, value — deeper on the light Vellum theme), node titles are
+  marked by CATEGORY (FORGE_CAT_COLOURS). PARAM PORTS (steps.js paramPort,
+  the ⚙ diamonds) are Filter Forge's idea: a wire into a param maps a value
+  (a number, a field's mean, a colour's luminance) across the param's range —
+  or across '~key' ('lo,hi', set from the param's menu); every param is
+  clamped. Data keys starting with '_' (`_pin`) are the editor's own marks:
+  athanorWork() leaves them out of every cache key. STEP PREVIEWS are one
+  sheet made in the worker ('athanorsteps'), switchable (#forgeSteps,
+  localStorage uv.forge.steps).
+- THE ATHANOR'S HANDLING (forge.js openForge): a node moves only by its title
+  (clickEnd: ed.drag off elsewhere, ed.editor_selected on, so the grid pans);
+  a long press (a timer, or the browser's contextmenu — one per press) or a
+  right-click opens THE MENU for the thing under it; thingsNear() samples a
+  ring of points (18 px on touch) and asks "Which did you mean?" when two or
+  more things are there. Each wire has an invisible wide twin (.forge-hit,
+  class "main-path" so Drawflow selects it) kept in step by paintWires. ⌖ is
+  fitView (the grid scales about its middle: see the maths there). KEPT
+  surfaces: localStorage uv.forge.kept.v1 (forgeShelf), each validated on
+  opening and on import. Drawflow's own ✕ is hidden; the menus replace it.
 - SYMBOL LORE (symbolLore.js): Symbology's glyphs with their names and
   families (LORE). Its single-code-point glyphs are among the spell glyphs;
   PLANETS and ZODIAC feed Transmutation Circles; Cartomancy's lore cards draw

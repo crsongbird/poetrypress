@@ -790,6 +790,10 @@ label.group-split{ border-left:1px solid var(--line); padding-left:10px; }
 /* a name is one line; only the JSON panes need height */
 .modal-input{ min-height:0; }
 .modal-input[rows="1"]{ height:2.5em; resize:none; overflow:hidden; }
+/* a long link (a share) wraps anywhere and scrolls inside a short box: the
+   dialog never grows with it (Firefox on a phone grew it until it crashed) */
+.modal-input:not([rows="1"]){ white-space:pre-wrap; word-break:break-all; overflow-wrap:anywhere; max-height:min(9em, calc(var(--vvh, 100vh) * 0.3)); overflow-y:auto; overflow-x:hidden; resize:none; box-sizing:border-box; max-width:100%; }
+.modal{ min-width:0; } .modal *{ min-width:0; }
 
 
 /* ---------- editor scrolling: one scroller, no sync ----------
@@ -1776,39 +1780,53 @@ body.is-mobile .shortcut-btn{ display:none; }
 .keys dd{ margin:0; opacity:0.85; }
 kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; border-radius:0; padding:0 5px; opacity:0.85; }
 
-/* THE ATHANOR: the node editor, over the whole app. Inside it the theme
-   matters little: a fixed night ground, and COLOUR carries the meaning —
-   each part's category tints its title (--cat, set per node), each port and
-   wire wears the colour of what it carries (data-t: field · image · colour ·
-   value; forge.js FORGE_TYPE_COLOURS). Square corners, as everywhere. */
-.forge-veil{ --fg-ground:#100d14; --fg-panel:#19151f; --fg-node:#211b29; --fg-line:#3b3146; --fg-text:#efe8f4; --fg-dim:#a99db2;
+/* THE ATHANOR: the node editor, over the whole app, in the app's own theme
+   (its grounds, panels, lines and accent). COLOUR carries the meaning on the
+   grid: each part's category marks its title (--cat, set per node), each port
+   and wire wears the colour of what it carries (data-t: field · image ·
+   colour · value; forge.js FORGE_TYPE_COLOURS). Square corners, as everywhere. */
+.forge-veil{ --fg-ground:var(--bg-deep); --fg-panel:var(--bg-panel); --fg-node:var(--bg-card); --fg-line:var(--line); --fg-text:var(--text-main); --fg-dim:var(--text-dim); --fg-accent:var(--accent);
   --t-field:#CFC8DD; --t-image:#EE7FF5; --t-colour:#F4C44E; --t-value:#54D3EA;
   position:fixed; inset:0; z-index:180; background:var(--fg-ground); color:var(--fg-text); display:flex; flex-direction:column; }
+/* on the light theme the wire colours deepen, so they still read on paper */
+:root[data-theme="vellum"] .forge-veil{ --t-field:#6E6584; --t-image:#B23BB8; --t-colour:#A87A06; --t-value:#12809A; }
 .forge-veil[hidden]{ display:none; }
 .forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--fg-line); background:var(--fg-panel); }
 .forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
+.forge-zoom{ display:inline-flex; gap:0; } .forge-zoom button{ padding:4px 9px; min-width:30px; } .forge-zoom button + button{ border-left:none; }
 .forge-spacer{ flex:1; }
-.forge-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; color:#E9C46A; letter-spacing:0.03em; white-space:nowrap; }
+.forge-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; color:var(--fg-accent); letter-spacing:0.03em; white-space:nowrap; }
 .forge-sub{ font-family:var(--ui-text); font-variation-settings:normal; font-size:12px; color:var(--fg-text); opacity:0.6; letter-spacing:0; margin-left:6px; }
 .forge-starter{ max-width:170px; flex:0 1 auto; padding:4px 6px; }
-.forge-body{ flex:1; display:flex; min-height:0; }
-/* the palette: categories that fold, each in its own colour */
-.forge-palette{ width:176px; overflow-y:auto; border-right:1px solid var(--fg-line); padding:6px; background:var(--fg-panel); }
+.forge-parts-btn{ display:none; }
+.forge-body{ flex:1; display:flex; min-height:0; position:relative; }
+/* the palette: categories that fold, each marked in its own colour */
+.forge-palette{ width:176px; overflow-y:auto; border-right:1px solid var(--fg-line); padding:6px; background:var(--fg-panel); touch-action:pan-y; overscroll-behavior:contain; }
 .forge-cat{ margin:0 0 6px; }
-.forge-cat > summary{ cursor:pointer; list-style:none; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--cat); padding:3px 0; }
+.forge-cat > summary{ cursor:pointer; list-style:none; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-text); padding:3px 0; }
+.forge-cat > summary > span{ color:var(--cat); }
 .forge-cat > summary::-webkit-details-marker{ display:none; }
 .forge-cat > summary::after{ content:' ▾'; opacity:0.6; } .forge-cat:not([open]) > summary::after{ content:' ▸'; }
-.forge-part{ display:block; width:100%; text-align:left; border:1px solid var(--fg-line); border-left:3px solid var(--cat); border-radius:0; background:var(--fg-node); color:var(--fg-text); font:inherit; font-size:12.5px; padding:4px 7px; margin-bottom:3px; cursor:grab; }
+.forge-part{ display:block; width:100%; text-align:left; border:1px solid var(--fg-line); border-left:3px solid var(--cat); border-radius:0; background:var(--fg-node); color:var(--fg-text); font:inherit; font-size:12.5px; padding:4px 7px; margin-bottom:3px; cursor:pointer; }
+.forge-part[draggable="true"]{ cursor:grab; }
 .forge-part:hover{ border-color:var(--cat); }
 /* the grid */
-.forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; background:
-  radial-gradient(circle, #2b2433 1px, transparent 1.5px) 0 0/24px 24px, var(--fg-ground); }
+.forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; -webkit-touch-callout:none; background:
+  radial-gradient(circle, color-mix(in srgb, var(--fg-text) 16%, transparent) 1px, transparent 1.5px) 0 0/24px 24px, var(--fg-ground); }
 .forge-canvas .drawflow .drawflow-node{ display:block; border-radius:0; background:var(--fg-node); border:1px solid var(--fg-line); border-top:3px solid var(--cat, #888); color:var(--fg-text);
-  width:200px; padding:0 0 4px; font-size:12px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.9); min-height:0; }
-.forge-canvas .drawflow .drawflow-node.selected{ border-color:var(--cat, #E9C46A); box-shadow:0 0 0 1px var(--cat, #E9C46A), 0 10px 24px -14px rgba(0,0,0,0.9); background:var(--fg-node); }
-.forge-node-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; height:26px; line-height:26px; padding:0 8px; color:var(--cat);
-  background:color-mix(in srgb, var(--cat, #888) 14%, transparent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.forge-node-glyph{ font-family:'Noto Sans Symbols', 'Noto Sans Symbols 2', 'Segoe UI Symbol', sans-serif; margin-right:6px; opacity:0.85; }
+  width:200px; padding:0 0 4px; font-size:12px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.7); min-height:0; }
+.forge-canvas .drawflow .drawflow-node.selected{ border-color:var(--cat, var(--fg-accent)); box-shadow:0 0 0 1px var(--cat, var(--fg-accent)), 0 10px 24px -14px rgba(0,0,0,0.7); background:var(--fg-node); }
+/* the title bar is the handle: it alone moves a node (a pinned node not at all) */
+.forge-node-title{ display:flex; align-items:center; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; height:26px; padding:0 2px 0 8px; color:var(--fg-text);
+  background:color-mix(in srgb, var(--cat, #888) 16%, transparent); white-space:nowrap; cursor:grab; touch-action:none; }
+.drawflow-node.pinned .forge-node-title{ cursor:default; background:color-mix(in srgb, var(--cat, #888) 8%, transparent); }
+.forge-node-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.forge-node-glyph{ font-family:'Noto Sans Symbols', 'Noto Sans Symbols 2', 'Segoe UI Symbol', sans-serif; margin-right:6px; color:var(--cat); }
+.forge-node-btn{ flex:0 0 auto; width:24px; height:24px; padding:3px; margin:0; border:0; background:transparent; color:var(--fg-dim); cursor:pointer; font:14px/1 var(--ui-text); }
+.forge-node-btn:hover{ color:var(--fg-text); }
+.forge-node-btn svg{ position:static !important; overflow:hidden !important; width:100% !important; height:100% !important; display:block; }
+.forge-pin .lk-shackle{ transform:translate(3px,-1.6px) rotate(-16deg); transform-origin:12px 10px; }
+.forge-pin.locked{ color:var(--cat, var(--fg-accent)); } .forge-pin.locked .lk-shackle{ transform:none; }
 /* ROWS that line up with the ports: each 22px, the dots 12px with 10px between */
 .forge-rows{ padding:4px 10px 0; }
 .forge-row{ height:22px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
@@ -1819,9 +1837,10 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-param{ flex:1; display:grid; grid-template-columns:64px 1fr 30px; gap:4px; align-items:center; font-size:11px; color:var(--fg-dim); min-width:0; }
 .forge-row.extra .forge-param{ grid-template-columns:64px 1fr; }
 .forge-param input, .forge-param select{ width:100%; min-width:0; font-size:11px; border-radius:0; accent-color:var(--cat); }
-.forge-param output{ font-family:var(--ui-code); font-size:10px; text-align:right; color:var(--fg-text); }
+.forge-param output{ font-family:var(--ui-code); font-size:10px; text-align:right; color:var(--fg-text); white-space:nowrap; }
 .forge-param.wired{ color:var(--t-value); } .forge-param.wired input{ opacity:0.3; pointer-events:none; } .forge-param.wired output{ color:var(--t-value); }
 .forge-param.wired span::before{ content:'⚙ '; }
+.forge-bound input{ color:var(--t-value); font-family:var(--ui-code); }
 .forge-canvas .drawflow .drawflow-node .inputs, .forge-canvas .drawflow .drawflow-node .outputs{ position:absolute; top:35px; width:auto; }
 .forge-canvas .drawflow .drawflow-node .inputs{ left:-7px; } .forge-canvas .drawflow .drawflow-node .outputs{ right:-7px; }
 .forge-canvas .drawflow .drawflow-node .input, .forge-canvas .drawflow .drawflow-node .output{ display:block; position:relative; left:0; top:0; margin:0 0 10px; border-radius:0;
@@ -1833,46 +1852,77 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas .drawflow svg.connection[data-t="image"] .main-path{ stroke:var(--t-image); }
 .forge-canvas .drawflow svg.connection[data-t="colour"] .main-path{ stroke:var(--t-colour); }
 .forge-canvas .drawflow svg.connection[data-t="value"] .main-path{ stroke:var(--t-value); stroke-dasharray:6 4; }
-.forge-canvas .drawflow .connection .main-path.selected, .forge-canvas .drawflow .connection .main-path:hover{ stroke-width:4px; filter:brightness(1.25); }
-.forge-canvas .drawflow-delete{ border-radius:0; background:#2a1420; color:#E6A0B6; border:1px solid #E6A0B6; }
+/* each wire's wide twin: invisible, easy to tap (forge.js paintWires) */
+.forge-canvas .drawflow svg.connection .main-path.forge-hit{ stroke:transparent !important; stroke-width:18px; stroke-dasharray:none; pointer-events:stroke; cursor:pointer; }
+.forge-canvas .drawflow .connection .main-path.selected:not(.forge-hit), .forge-canvas .drawflow svg.connection:hover .main-path:not(.forge-hit){ stroke-width:4.5px; filter:brightness(1.2); }
+.forge-canvas .drawflow-delete{ display:none; }
+/* ✂: where a wire was tapped */
+.forge-cut{ position:absolute; z-index:6; width:auto; margin:0; padding:4px 10px; border-radius:0; border:1px solid var(--fg-accent); background:var(--fg-panel); color:var(--fg-accent); font-size:13px; box-shadow:0 8px 20px -10px rgba(0,0,0,.8); }
+.forge-cut[hidden]{ display:none; }
 /* each node's own result, at its foot (Step previews on) */
 .forge-node-preview{ display:none; width:calc(100% - 20px); height:auto; aspect-ratio:1; margin:6px 10px 2px; background:#808080; image-rendering:auto; }
 .forge-canvas.steps-on .forge-node-preview{ display:block; }
 .forge-canvas .drawflow .drawflow-node.forge-output .forge-node-preview, .forge-canvas .drawflow .drawflow-node.forge-inputs .forge-node-preview{ display:none; }
-/* the side: what it makes, large */
-.forge-side{ width:300px; flex:0 0 auto; overflow-y:auto; border-left:1px solid var(--fg-line); background:var(--fg-panel); padding:10px; display:flex; flex-direction:column; gap:8px; }
-.forge-preview{ width:100%; height:auto; aspect-ratio:1; border:1px solid var(--fg-line); background:#808080; }
-.forge-status{ margin:0; font-size:12.5px; color:var(--fg-dim); }
-.forge-check{ display:flex; align-items:baseline; gap:6px; font-size:12.5px; cursor:pointer; } .forge-check small{ color:var(--fg-dim); }
-.forge-fold > summary{ cursor:pointer; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:#E9C46A; }
-.forge-legend{ display:grid; gap:4px; font-size:12px; margin-top:6px; }
-.forge-legend i{ display:inline-block; width:12px; height:12px; margin-right:8px; vertical-align:-1px; } .forge-legend i.pp{ width:9px; height:9px; transform:rotate(45deg); margin:0 9px 0 2px; }
-.forge-help{ font-size:12.5px; line-height:1.5; color:var(--fg-dim); margin:6px 0 0; }
+/* THE DOCK: what it makes, bottom right over the grid — no wider than its preview */
+.forge-dock{ --pv:232px; position:absolute; right:10px; bottom:10px; z-index:5; width:var(--pv); background:var(--fg-panel); border:1px solid var(--fg-line); padding:6px; box-shadow:0 14px 30px -16px rgba(0,0,0,.85); }
+.forge-dock.big{ --pv:min(460px, calc(100vw - 40px), calc(var(--vvh, 100vh) - 180px)); }
+.forge-preview{ display:block; width:100%; height:auto; aspect-ratio:1; border:1px solid var(--fg-line); background:#808080; cursor:zoom-in; }
+.forge-dock.big .forge-preview{ cursor:zoom-out; }
+.forge-dock-row{ display:flex; align-items:center; gap:6px; margin-top:5px; }
+.forge-status{ flex:1; min-width:0; margin:0; font-size:11px; color:var(--fg-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.forge-check{ display:flex; align-items:center; gap:4px; font-size:11.5px; cursor:pointer; white-space:nowrap; } .forge-check input{ margin:0; }
+.forge-help-btn{ width:22px; height:22px; padding:0; margin:0; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-dim); font-size:12px; cursor:pointer; }
+.forge-help-btn[aria-expanded="true"]{ color:var(--fg-accent); border-color:var(--fg-accent); }
+.forge-help-pop{ margin-top:6px; border-top:1px solid var(--fg-line); padding-top:6px; }
+.forge-help-pop[hidden]{ display:none; }
+.forge-legend{ display:grid; grid-template-columns:1fr 1fr; gap:3px 8px; font-size:11px; }
+.forge-legend span:last-child{ grid-column:1 / -1; }
+.forge-legend i{ display:inline-block; width:10px; height:10px; margin-right:6px; vertical-align:-1px; } .forge-legend i.pp{ width:8px; height:8px; transform:rotate(45deg); margin:0 7px 0 2px; }
+.forge-help{ font-size:11.5px; line-height:1.45; color:var(--fg-dim); margin:6px 0 0; }
+/* THE MENU: what a thing can do (a long press, a right-click, a node's ⋯) */
+.forge-menu{ position:absolute; z-index:20; min-width:220px; max-width:min(320px, calc(100vw - 16px)); max-height:calc(var(--vvh, 100vh) * 0.7); overflow:auto; overscroll-behavior:contain;
+  background:var(--fg-panel); border:1px solid var(--fg-accent); box-shadow:0 18px 44px -18px rgba(0,0,0,.9); padding:4px 0 6px; }
+.forge-menu[hidden]{ display:none; }
+.forge-menu-head{ display:flex; align-items:center; gap:6px; padding:4px 6px 4px 10px; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13.5px; color:var(--fg-accent); }
+.forge-menu-head span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.forge-menu-head button{ width:28px; height:28px; padding:0; margin:0; border:0; background:transparent; color:var(--fg-dim); font-size:16px; cursor:pointer; }
+.forge-menu-hint{ margin:0 10px 4px; font-size:11.5px; color:var(--fg-dim); }
+.forge-menu hr{ border:0; border-top:1px solid var(--fg-line); margin:4px 0; }
+.forge-menu-item{ display:flex; align-items:baseline; gap:8px; width:100%; margin:0; padding:8px 12px; border:0; border-left:3px solid var(--mc, transparent); background:transparent; color:var(--fg-text); text-align:left; font:inherit; font-size:13px; cursor:pointer; }
+.forge-menu-item:hover, .forge-menu-item:focus-visible{ background:color-mix(in srgb, var(--fg-accent) 12%, transparent); outline:none; }
+.forge-menu-item[disabled]{ opacity:0.45; cursor:default; }
+.forge-menu-item.danger{ color:#e08a8a; }
+.forge-menu-item .mi-glyph{ width:16px; flex:0 0 16px; text-align:center; color:var(--mc, var(--fg-dim)); font-family:'Noto Sans Symbols', 'Noto Sans Symbols 2', 'Segoe UI Symbol', var(--ui-text); }
+.forge-menu-item .mi-label{ flex:1; min-width:0; }
+.forge-menu-item small{ color:var(--fg-dim); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%; }
+.forge-menu-item.has-sub .mi-label::after{ content:' ›'; color:var(--fg-dim); }
 body.forge-open{ overflow:hidden; }
 .forge-summary{ opacity:0.8; }
-/* on a phone: the grid first, the preview and the palette beneath it; the bar wraps so Done is always in reach */
-body.is-mobile .forge-body{ flex-direction:column; }
-body.is-mobile .forge-canvas{ flex:1 1 55%; }
-body.is-mobile .forge-side{ width:auto; flex:0 0 auto; max-height:34%; border-left:none; border-top:1px solid var(--fg-line); flex-direction:row; flex-wrap:wrap; }
-body.is-mobile .forge-preview{ width:96px; }
-body.is-mobile .forge-palette{ width:auto; max-height:24%; border-right:none; border-top:1px solid var(--fg-line); }
-body.is-mobile .forge-part{ width:auto; display:inline-block; }
-body.is-mobile .forge-sub{ display:none; }
-body.is-mobile .forge-bar{ flex-wrap:wrap; row-gap:4px; }
-body.is-mobile .forge-bar button{ padding:4px 9px; }
-body.is-mobile .forge-starter{ max-width:130px; }
-/* …and the same on any narrow window (a phone held in a desktop browser, a split screen) */
+/* on a phone (or any narrow window): the grid has the whole screen; the parts
+   are a drawer (＋ Parts), the menu a sheet from the bottom, the bar compact */
 @media (max-width: 760px){
-  .forge-body{ flex-direction:column; }
-  .forge-canvas{ flex:1 1 55%; }
-  .forge-side{ width:auto; flex:0 0 auto; max-height:34%; border-left:none; border-top:1px solid var(--fg-line); flex-direction:row; flex-wrap:wrap; }
-  .forge-preview{ width:96px; }
-  .forge-palette{ width:auto; max-height:24%; border-right:none; border-top:1px solid var(--fg-line); }
-  .forge-part{ width:auto; display:inline-block; }
   .forge-sub{ display:none; }
-  .forge-bar{ flex-wrap:wrap; row-gap:4px; }
-  .forge-bar button{ padding:4px 9px; }
+  .forge-title{ font-size:15px; }
+  .forge-bar{ flex-wrap:wrap; row-gap:4px; padding:5px 6px; gap:4px; }
+  .forge-bar button{ padding:4px 8px; }
+  .forge-starter{ max-width:118px; }
+  .forge-parts-btn{ display:inline-block; }
+  .forge-palette{ position:absolute; left:0; top:0; bottom:0; z-index:8; width:min(250px, 78vw); display:none; box-shadow:12px 0 30px -18px rgba(0,0,0,.9); }
+  .forge-veil.parts-open .forge-palette{ display:block; }
+  .forge-veil.parts-open .forge-parts-btn{ color:var(--fg-accent); border-color:var(--fg-accent); }
+  .forge-part{ padding:7px 8px; font-size:13px; }
+  .forge-dock{ --pv:132px; right:6px; bottom:6px; padding:4px; }
+  .forge-dock .forge-check{ font-size:0; gap:0; } .forge-dock .forge-check input{ width:18px; height:18px; }
+  .forge-menu{ position:fixed; left:0 !important; right:0; top:auto !important; bottom:0; max-width:none; width:auto; max-height:calc(var(--vvh, 100vh) * 0.6); border-left:0; border-right:0; border-bottom:0; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .forge-menu-item{ padding:11px 14px; font-size:14px; }
 }
+body.is-mobile .forge-sub{ display:none; }
+body.is-mobile .forge-parts-btn{ display:inline-block; }
+body.is-mobile .forge-palette{ position:absolute; left:0; top:0; bottom:0; z-index:8; width:min(250px, 78vw); display:none; box-shadow:12px 0 30px -18px rgba(0,0,0,.9); }
+body.is-mobile .forge-veil.parts-open .forge-palette{ display:block; }
+body.is-mobile .forge-dock{ --pv:132px; right:6px; bottom:6px; padding:4px; }
+body.is-mobile .forge-menu{ position:fixed; left:0 !important; right:0; top:auto !important; bottom:0; max-width:none; width:auto; max-height:calc(var(--vvh, 100vh) * 0.6); border-left:0; border-right:0; border-bottom:0; }
+body.is-mobile .forge-menu-item{ padding:11px 14px; font-size:14px; }
 /* the four readings of a surface (🜂 🜄 🜁 🜃, textureElements.js): square,
    compact, the glyphs in the symbol font; the texture's default is underlined,
    the one last applied is lit */
@@ -1893,6 +1943,9 @@ body.is-mobile .forge-starter{ max-width:130px; }
 .toast{ position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:220; max-width:min(560px, calc(100vw - 32px));
   background:var(--bg-panel); color:var(--text-main); border:1px solid var(--accent); border-radius:0; padding:8px 12px; font-size:13px; box-shadow:0 10px 30px -12px rgba(0,0,0,0.7); }
 .toast[hidden]{ display:none; }
+
+/* while a phone's keyboard is up, the Write tab shows only what is being written */
+body.keyboard-open .spell-mark-row{ display:none; }
 
 </style>
 
@@ -9883,10 +9936,15 @@ function athanorName(graph){
   return s ? String((s.data || {}).name || 'My Surface').slice(0, 32) : '';
 }
 /** A short hash of the graph, for the texture cache (positions don't count). */
+/** A node's settings that change what it makes: not '_pin' and its kin (the editor's own marks). */
+function athanorWork(data){
+  const o = {}; for(const k of Object.keys(data || {})) if(k[0] !== '_') o[k] = data[k];
+  return o;
+}
 function athanorHash(graph){
   const nodes = athanorNodes(graph);
   const sig = athanorVersion(graph) + JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
-    return [id, n.name, n.data, Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
+    return [id, n.name, athanorWork(n.data), Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
   let h = 2166136261; for(let i = 0; i < sig.length; i++){ h ^= sig.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36);
 }
@@ -9930,7 +9988,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     sigBusy.add(id);
     const ins = Object.keys(n.inputs || {}).sort().map(k => k + '<' + ((n.inputs[k].connections || []).map(c => sigOf(String(c.node)) + '.' + c.input).join(',')));
     sigBusy.delete(id);
-    const s = n.name + JSON.stringify(n.data || {}) + '[' + ins.join(';') + ']#' + id;
+    const s = n.name + JSON.stringify(athanorWork(n.data)) + '[' + ins.join(';') + ']#' + id;
     sigs.set(id, s); return s;
   };
   const N = ww*wh, unit = Math.min(ww, wh);
@@ -9961,7 +10019,10 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     let v;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
       const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : null;
-      if(t != null && R) v = R[0] + (R[1] - R[0])*Math.max(0, Math.min(1, t));
+      // a wired param sweeps its whole range, or the part of it set by hand ('~key': 'lo,hi')
+      const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
+      const W = own && R ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
+      if(t != null && W) v = W[0] + (W[1] - W[0])*Math.max(0, Math.min(1, t));
     }
     if(v === undefined){ v = P(n, k, d); if(typeof v === 'string' && v[0] === '@') v = bound(n, k, v, d); v = parseFloat(v); }
     if(isNaN(v) || !isFinite(v)) return d;
@@ -11136,7 +11197,7 @@ inside of a <~~dead person~~/trans>'s dreams.
         </div>
       </div>
       <!-- the spell code, diagonally opposite the credit: part of the look (spells and shares keep it) -->
-      <div class="check-row" style="margin-top:6px;">
+      <div class="check-row spell-mark-row" style="margin-top:6px;">
         <input type="checkbox" id="spellMark" checked>
         <label for="spellMark" data-str="label.spell_mark" title="The spell code in the corner opposite the credit">Show Spell Code?</label>
       </div>
@@ -12125,27 +12186,39 @@ inside of a <~~dead person~~/trans>'s dreams.
   <div class="forge-veil" id="forgeVeil" hidden>
     <div class="forge-bar">
       <span class="forge-title"><span class="forge-glyph" aria-hidden="true">🜉</span> The Athanor <small class="forge-sub">Surface texture node editor</small></span>
+      <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid">＋ Parts</button>
       <span class="forge-spacer"></span>
       <select id="forgeStarter" class="forge-starter" title="Begin from a working graph, or one of Vellum's own textures"></select>
+      <button type="button" class="ghost" id="forgeKeptBtn" title="Keep this surface by name, or open one kept">Kept</button>
       <button type="button" class="ghost" id="forgeRevert" title="Back to the graph as it was when the Athanor opened">Revert</button>
       <button type="button" class="ghost" id="forgeClear">Clear</button>
-      <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
-      <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
-      <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use as Surface</button>
+      <span class="forge-zoom">
+        <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
+        <button type="button" class="ghost" id="forgeFit" title="Everything in view" aria-label="Everything in view">⌖</button>
+        <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
+      </span>
+      <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use</button>
       <button type="button" class="btn-major" id="forgeCloseBtn" data-sound="athanorClose">Done</button>
     </div>
     <div class="forge-body">
       <div class="forge-palette" id="forgePalette"></div>
       <div class="forge-canvas" id="forgeCanvas"></div>
-      <aside class="forge-side" aria-label="What it makes">
-        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes"></canvas>
-        <p class="forge-status" id="forgeStatus"></p>
-        <label class="forge-check"><input type="checkbox" id="forgeSteps"> Step previews <small>(each node shows what it makes)</small></label>
-        <details class="forge-fold" open><summary>Wire colours</summary><div class="forge-legend" id="forgeLegend"></div></details>
-        <details class="forge-fold"><summary>How it works</summary>
-          <p class="forge-help">Every node is one step. Wires carry a grey map, a picture, one colour or one number; their colours say which. Any slider with a ⚙ beside it takes a wire: a Knob or the Light Dial there moves it across its range. The Surface is what the page shows, its second input the heights the light falls on. Start from one of Vellum's own textures to see how it is made.</p></details>
+      <!-- what it makes: bottom right, over the grid; as small as it can be around the preview -->
+      <aside class="forge-dock" id="forgeDock" aria-label="What it makes">
+        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes (tap: larger)"></canvas>
+        <div class="forge-dock-row">
+          <span class="forge-status" id="forgeStatus"></span>
+          <label class="forge-check" title="Each node shows what it makes"><input type="checkbox" id="forgeSteps"> Steps</label>
+          <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeHelp" title="How it works">?</button>
+        </div>
+        <div class="forge-help-pop" id="forgeHelp" hidden>
+          <div class="forge-legend" id="forgeLegend"></div>
+          <p class="forge-help">Wires wear the colour of what they carry. A ⚙ setting takes a wire. Hold anything — or right-click it — to see what it can do.</p>
+        </div>
       </aside>
+      <button type="button" class="forge-cut" id="forgeCut" hidden title="Cut this wire">✂ Cut</button>
     </div>
+    <div class="forge-menu" id="forgeMenu" role="menu" hidden></div>
   </div>
   <div class="sheet-veil" id="shortcutSheet" hidden>
     <div class="sheet" role="dialog" aria-label="Keyboard shortcuts">
@@ -12547,7 +12620,8 @@ const DIALOGS = {
   },
   shareLook: {
     name: 'A Shared Look',
-    title: 'Share this look',
+    title: 'Name this look to share it',
+    nameFirst: 'It travels under this name, and is kept among your spells.',
     bodyCopied: 'The link is copied. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
     bodyManual: 'Copy this link. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
     confirm: 'Done',
@@ -22257,10 +22331,15 @@ function athanorName(graph){
   return s ? String((s.data || {}).name || 'My Surface').slice(0, 32) : '';
 }
 /** A short hash of the graph, for the texture cache (positions don't count). */
+/** A node's settings that change what it makes: not '_pin' and its kin (the editor's own marks). */
+function athanorWork(data){
+  const o = {}; for(const k of Object.keys(data || {})) if(k[0] !== '_') o[k] = data[k];
+  return o;
+}
 function athanorHash(graph){
   const nodes = athanorNodes(graph);
   const sig = athanorVersion(graph) + JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
-    return [id, n.name, n.data, Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
+    return [id, n.name, athanorWork(n.data), Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
   let h = 2166136261; for(let i = 0; i < sig.length; i++){ h ^= sig.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36);
 }
@@ -22304,7 +22383,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     sigBusy.add(id);
     const ins = Object.keys(n.inputs || {}).sort().map(k => k + '<' + ((n.inputs[k].connections || []).map(c => sigOf(String(c.node)) + '.' + c.input).join(',')));
     sigBusy.delete(id);
-    const s = n.name + JSON.stringify(n.data || {}) + '[' + ins.join(';') + ']#' + id;
+    const s = n.name + JSON.stringify(athanorWork(n.data)) + '[' + ins.join(';') + ']#' + id;
     sigs.set(id, s); return s;
   };
   const N = ww*wh, unit = Math.min(ww, wh);
@@ -22335,7 +22414,10 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     let v;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
       const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : null;
-      if(t != null && R) v = R[0] + (R[1] - R[0])*Math.max(0, Math.min(1, t));
+      // a wired param sweeps its whole range, or the part of it set by hand ('~key': 'lo,hi')
+      const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
+      const W = own && R ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
+      if(t != null && W) v = W[0] + (W[1] - W[0])*Math.max(0, Math.min(1, t));
     }
     if(v === undefined){ v = P(n, k, d); if(typeof v === 'string' && v[0] === '@') v = bound(n, k, v, d); v = parseFloat(v); }
     if(isNaN(v) || !isFinite(v)) return d;
@@ -23974,7 +24056,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Philophrosyne';
+const RELEASE = 'Jupiter–Eurydome';
 
 
 /* ==== altText.js ==== */
@@ -24775,7 +24857,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-11 · 55ad80f";
+const STAMP = "2026-10-11 · b059cb8";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -27303,6 +27385,7 @@ function stripToLook(settings){
 
 function createVault(deps){
   const { $, getSettings, applySettings, getText, setText, onChange, prompt } = deps;
+  const setName = typeof deps.setName === 'function' ? deps.setName : () => {};   // the page's look takes the spell's name
 
   let spells = readStore(SPELL_KEY).filter(isValidSpell);
   let poems  = readStore(POEM_KEY).filter(isValidPoem);
@@ -27425,39 +27508,43 @@ function createVault(deps){
   }
 
   // ---- spells ----
-  async function createSpell(){
+  // returns the record kept, or null (asked from Share too: a look is named before it travels)
+  async function createSpell(opts = {}){
     const name = await prompt({
-      title: DIALOGS.spellCreate.title,
-      body: DIALOGS.spellCreate.body,
+      title: opts.title || DIALOGS.spellCreate.title,
+      body: opts.body || DIALOGS.spellCreate.body,
       input: true,
       defaultValue: 'Spell ' + (spells.length + 1),
       confirmLabel: DIALOGS.spellCreate.confirm, cancelLabel: DIALOGS.spellCreate.cancel,
     });
-    if(!name) return;
-    const clean = String(name).trim();
-    if(!clean) return;
+    if(!name) return null;
+    const clean = String(name).trim().slice(0, 80);
+    if(!clean) return null;
     const existing = spells.findIndex(s => spellKeyOf(s) === clean.toLowerCase());
     // The glyphs are generated ONCE, here, and stored. They identify this
     // record; deriving them later would let them change under the user.
     // An existing record keeps the glyphs it was created with.
     const prior = existing >= 0 ? spells[existing] : null;
     const glyphs = (prior && validateSpell(prior.spell || '').ok) ? prior.spell : generateSpell();
-    const record = { name: clean, spell: glyphs, settings: getSettings(), savedAt: stamp(), savedTs: Date.now() };
+    // the look carries its own name, so wherever it goes (a share, a JSON, a tile) it is called this
+    const record = { name: clean, spell: glyphs, settings: { ...getSettings(), lookName: clean }, savedAt: stamp(), savedTs: Date.now() };
     if(existing >= 0){
       const ok = await prompt({
         title: DIALOGS.overwrite.title,
         body: fill(DIALOGS.overwrite.body, clean),
         confirmLabel: DIALOGS.overwrite.confirm,
       });
-      if(!ok) return;
+      if(!ok) return null;
       spells[existing] = record;
     } else {
       spells.push(record);
     }
-    if(!persistSpells()) return;
+    if(!persistSpells()) return null;
     selectedSpell = clean;
+    setName(clean);
     appliedSpellSnapshot = settingsJson();
     refresh();
+    return record;
   }
 
   function applySpell(){
@@ -27576,10 +27663,12 @@ function createVault(deps){
 
   bind('poemSaveBtn', savePoem);
   async function shareSpell(){
-    // a chosen spell, or — with none chosen — the look on the page right now
-    // (no need to save it first)
-    const chosen = spells.find(sp => sp.id === selectedSpell);
-    const rec = chosen || { name: DIALOGS.shareLook.name, spell: generateSpell(), settings: getSettings(), savedAt: stamp() };
+    // a chosen spell; with none chosen, the look on the page is NAMED and kept
+    // first (Ruby: a look travels under its own name, never "A Shared Look")
+    const chosen = spells.find(sp => sp.name === selectedSpell);
+    const rec = chosen || await createSpell({ title: DIALOGS.shareLook.title, body: DIALOGS.shareLook.nameFirst });
+    if(!rec) return;
+    if(rec.settings && !rec.settings.lookName) rec.settings = { ...rec.settings, lookName: rec.name };
     // A link only works from the live site. Opened as a local file there is
     // no address worth sharing, so the link points at the public app.
     const here = (typeof location !== 'undefined' && location.protocol === 'https:')
@@ -27588,8 +27677,8 @@ function createVault(deps){
     let copied = false;
     try { await navigator.clipboard.writeText(link); copied = true; } catch(e){ /* shown below instead */ }
     await prompt({
-      title: chosen ? fill(DIALOGS.shareSpell.title, rec.name) : DIALOGS.shareLook.title,
-      body: copied ? (chosen ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareLook.bodyCopied) : (chosen ? DIALOGS.shareSpell.bodyManual : DIALOGS.shareLook.bodyManual),
+      title: fill(DIALOGS.shareSpell.title, rec.name),
+      body: copied ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareSpell.bodyManual,
       input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm,
     });
   }
@@ -27609,7 +27698,7 @@ function createVault(deps){
     if(!ok) return;
     const result = mergeRecords(spells, [rec], spellKeyOf, isValidSpell);
     spells = result.merged; persistSpells();
-    selectedSpell = (spells.find(sp => spellKeyOf(sp) === spellKeyOf(rec)) || {}).id || null;
+    selectedSpell = (spells.find(sp => spellKeyOf(sp) === spellKeyOf(rec)) || {}).name || null;
     refresh();
   }
 
@@ -27702,7 +27791,10 @@ function forgeNodeHtml(type, lists = {}, data = {}){
     return `<label class="forge-param" data-p="${key}"><span>${forgeEsc(label)}</span><input type="text" df-${key} value="${forgeEsc(def)}"></label>`;
   };
   const rows = Math.max(N.ins.length, N.outs.length), byKey = Object.fromEntries(N.params.map(p => [p[0], p]));
-  let html = `<div class="forge-node-title"><span class="forge-node-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[N.cat] || ''}</span>${forgeEsc(N.label)}</div><div class="forge-rows">`;
+  // the title bar is the handle (a node moves only by it), with a pin and a menu at its end
+  let html = `<div class="forge-node-title"><span class="forge-node-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[N.cat] || ''}</span><span class="forge-node-name">${forgeEsc(N.label)}</span>`
+    + `<button type="button" class="forge-node-btn forge-pin" data-act="pin" title="Pin in place" aria-label="Pin in place">${lists.lock || '⌖'}</button>`
+    + `<button type="button" class="forge-node-btn" data-act="menu" title="What it can do" aria-label="What it can do">⋯</button></div><div class="forge-rows">`;
   for(let i = 0; i < rows; i++){
     const left = i < N.dataIns ? `<span class="fp-in" data-t="${N.inTypes[i]}">${forgeEsc(N.ins[i])}</span>` : i < N.ins.length ? ctl(byKey[N.paramPorts[i - N.dataIns]]) : '<span></span>';
     const right = i < N.outs.length ? `<span class="fp-out" data-t="${N.outTypes[i]}">${forgeEsc(N.outs[i])}</span>` : '';
@@ -27748,10 +27840,35 @@ function loadDrawflow(){
 }
 
 /**
+ * THE SHELF: surfaces kept by name in this browser (localStorage), to open
+ * again, export as a file, or bring in from one. A kept surface is the same
+ * graph JSON a look carries in forgeGraph.
+ */
+const FORGE_SHELF_KEY = 'uv.forge.kept.v1';
+function forgeShelf(){
+  try { const a = JSON.parse(localStorage.getItem(FORGE_SHELF_KEY) || '[]'); return Array.isArray(a) ? a.filter(r => r && typeof r.name === 'string' && typeof r.graph === 'string') : []; }
+  catch(e){ return []; }
+}
+function forgeShelfWrite(list){
+  try { localStorage.setItem(FORGE_SHELF_KEY, JSON.stringify(list)); return true; } catch(e){ return false; }
+}
+
+/**
  * Opens the Athanor over the page. deps: { $, textures: [ids], stitches: [ids],
  * onSave(json), preview(json, canvas), steps(json, paint), use(), ask(opts) →
- * Promise<bool>, sound(name), validate(json) → { ok, graph, problems } }.
+ * Promise<bool>, prompt(opts) → Promise<string|null>, sound(name),
+ * validate(json) → { ok, graph, problems }, warn(problems), lock (an icon) }.
  * The graph is read from and written back to deps.$('forgeGraph').
+ *
+ * HOW IT IS HANDLED (Ruby: precise pokes are not a thing on a phone):
+ *  - a node moves only by its title bar, unless pinned (the lock in its bar);
+ *    a drag anywhere else on the grid — on a node's body too — pans the view
+ *  - a long press (or a right-click, or a node's ⋯) opens a menu of what the
+ *    thing under the finger can do. When several things are under it (two
+ *    wires, a port by a slider) it first asks which was meant, each named and
+ *    in its own colour
+ *  - a wire is cut by tapping it (✂ appears where it was tapped), from its
+ *    menu, or with Delete
  */
 async function openForge(deps){
   const { $ } = deps;
@@ -27765,26 +27882,41 @@ async function openForge(deps){
   F.deps = deps;
   const sound = name => { if(F.quiet || !deps.sound) return; try { deps.sound(name); } catch(e){} };
   const ask = o => deps.ask ? deps.ask(o) : Promise.resolve(true);
+  const promptFor = o => deps.prompt ? deps.prompt(o) : Promise.resolve(null);
   if(!F.editor){
     const ed = F.editor = new Drawflow(area);
     // zoom in small steps (Drawflow's 0.1 a wheel-notch is far too quick on a trackpad or a pinch)
     ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.3; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
+    ed.draggable_inputs = false;                         // a slider slides; it never drags its node
     ed.start();
-    const lists = { textures: deps.textures || [], stitches: deps.stitches || [] };
+    const lists = { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' };
     const nodesOf = () => ((ed.export().drawflow || {}).Home || {}).data || {};
+    const rawNodes = () => ((ed.drawflow.drawflow || {})[ed.module] || {}).data || {};
+    const nodeOf = id => rawNodes()[id];
+    const labelOf = id => { const n = nodeOf(id); return n ? ((FORGE_NODES[n.name] || {}).label || n.name) : '?'; };
+    const isPinned = id => { const n = nodeOf(id); return !!(n && n.data && n.data._pin); };
     // ---- colour: ports and wires by what travels on them; rows show which params a wire drives ----
     const paintNode = id => {
       const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && FORGE_NODES[n.name]; if(!el || !N) return;
       el.style.setProperty('--cat', FORGE_CAT_COLOURS[N.cat] || '#999');
+      el.classList.toggle('pinned', !!(n.data && n.data._pin));
+      const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? 'Pinned — tap to let it move' : 'Pin in place'; }
       el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns); d.title = (N.ins[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.inTypes[j]] || ''); });
       el.querySelectorAll('.outputs .output').forEach((d, j) => { d.dataset.t = N.outTypes[j] || 'field'; d.title = (N.outs[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.outTypes[j]] || ''); });
-      N.paramPorts.forEach((key, j) => { const wired = ((n.inputs['input_' + (N.dataIns + j + 1)] || {}).connections || []).length > 0;
-        const row = el.querySelector(`.forge-param[data-p="${key}"]`); if(row) row.classList.toggle('wired', wired); });
       el.querySelectorAll('.forge-param output').forEach(o => { const inp = o.parentElement.querySelector('input'); if(inp) o.textContent = inp.value; });
+      N.paramPorts.forEach((key, j) => { const wired = ((n.inputs['input_' + (N.dataIns + j + 1)] || {}).connections || []).length > 0;
+        const row = el.querySelector(`.forge-param[data-p="${key}"]`); if(!row) return; row.classList.toggle('wired', wired);
+        const own = n.data && n.data['~' + key], o = row.querySelector('output');
+        if(o && wired) o.textContent = own ? String(own).replace(/\s*,\s*/, '–') : 'all'; });
     };
+    // every wire: its colour (what it carries), and a wide, invisible twin that is easy to tap
     const paintWires = () => area.querySelectorAll('svg.connection').forEach(svg => {
       const c = svg.getAttribute('class') || '', a = /node_out_node-(\d+)/.exec(c), o = /output_(\d+)/.exec(c); if(!a || !o) return;
       const n = ed.getNodeFromId(a[1]), N = n && FORGE_NODES[n.name]; svg.dataset.t = (N && N.outTypes[+o[1] - 1]) || 'field';
+      const vis = svg.children[0]; if(!vis) return;
+      let hit = svg.querySelector('.forge-hit');
+      if(!hit){ hit = document.createElementNS('http://www.w3.org/2000/svg', 'path'); hit.setAttribute('class', 'main-path forge-hit'); svg.appendChild(hit); }
+      hit.setAttribute('d', vis.getAttribute('d') || '');
     });
     const paintAll = () => { Object.keys(nodesOf()).forEach(paintNode); paintWires(); };
     F.paintAll = paintAll;
@@ -27811,38 +27943,78 @@ async function openForge(deps){
         P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; }); }
       return g; };
     F.faces = faces;
-    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status) status.textContent = describeForge(json); previews(); };
+    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); };
     F.save = save;
     // what has changed since the graph was opened or loaded (the guards ask only then)
     const touched = () => { F.dirty = true; };
     ed.on('nodeCreated', id => { paintNode(id); save(); touched(); sound('nodeAdd'); });
     ed.on('nodeRemoved', () => { save(); touched(); sound('nodeRemove'); });
     ed.on('connectionCreated', c => { paintNode(c.input_id); paintWires(); save(); touched(); sound('wireConnect'); });
-    ed.on('connectionRemoved', c => { paintNode(c.input_id); save(); touched(); sound('wireDisconnect'); });
-    ed.on('nodeMoved', () => save());
+    ed.on('connectionRemoved', c => { paintNode(c.input_id); save(); touched(); sound('wireDisconnect'); hideCut(); });
+    ed.on('nodeMoved', () => { paintWires(); save(); });
     ed.on('nodeDataChanged', () => { save(); touched(); });
     ed.on('import', () => setTimeout(paintAll, 0));
-    const load = g => { F.quiet = true; ed.clear(); ed.import(faces(g)); F.quiet = false; paintAll(); save(); F.dirty = false; };
+    const load = (g, keepDirty) => { const was = F.dirty; F.quiet = true; ed.clear(); ed.import(faces(g)); F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; };
     F.load = load;
-    const add = (type, x, y) => {
-      const N = FORGE_NODES[type]; if(!N) return;
+    // a node's face drawn again from its data (a param bound or unbound changes its control)
+    const reface = id => {
+      const n = nodeOf(id), box = area.querySelector('#node-' + id + ' .drawflow_content_node'); if(!n || !box) return;
+      n.html = forgeNodeHtml(n.name, lists, n.data || {}); box.innerHTML = n.html;
+      for(const [k, v] of Object.entries(n.data || {})) box.querySelectorAll('[df-' + CSS.escape(k) + ']').forEach(el => { el.value = v; });
+      paintNode(id);
+    };
+    // change a node's settings (undefined removes one): its face, the save, the previews
+    const setData = (id, patch) => {
+      const n = nodeOf(id); if(!n) return;
+      const d = Object.assign({}, n.data || {}, patch); for(const k of Object.keys(patch)) if(patch[k] === undefined) delete d[k];
+      n.data = d; reface(id); save(); touched();
+    };
+    const add = (type, x, y, data) => {
+      const N = FORGE_NODES[type]; if(!N) return null;
       const rect = area.getBoundingClientRect(), z = ed.zoom || 1;
       // tapped in from the palette: near the middle, each a little further along (never stacked)
       const k = (F.placed = (F.placed || 0) + 1) % 9, cols = rect.width > 700 ? 3 : 1;
       const px = x !== undefined ? x : (rect.width/2 - ed.canvas_x)/z - 300*(cols > 1 ? 1 : 0.3) + (k % cols)*230 + Math.floor(k/cols)*14,
             py = y !== undefined ? y : (rect.height/2 - ed.canvas_y)/z - 160 + Math.floor(k/cols)*150 + (k % cols)*10 - (cols > 1 ? 0 : 200);
-      ed.addNode(type, N.ins.length, N.outs.length, px, py, forgeCatClass(N.cat), forgeNodeData(type), forgeNodeHtml(type, lists));
+      return ed.addNode(type, N.ins.length, N.outs.length, px, py, forgeCatClass(N.cat), Object.assign(forgeNodeData(type), data || {}), forgeNodeHtml(type, lists, data || {}));
     };
-    // ---- the palette: categories that fold; tap to add in the middle, or drag onto the canvas ----
+    // a point on the screen, as a place on the grid (the grid scales about its middle)
+    const toGrid = (cx, cy) => {
+      const r = area.getBoundingClientRect(), z = ed.zoom || 1, mx = r.width/2, my = r.height/2;
+      return { x: (cx - r.left - ed.canvas_x - mx)/z + mx, y: (cy - r.top - ed.canvas_y - my)/z + my };
+    };
+    // ---- the palette: categories that fold; tap to add in the middle, or drag onto the canvas (with a mouse) ----
+    const finePointer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
     if(palette){
       palette.innerHTML = FORGE_CATEGORIES.map(cat => `<details class="forge-cat" open style="--cat:${FORGE_CAT_COLOURS[cat]}"><summary><span aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(cat)}</summary>` +
-        Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).map(([type, n]) => `<button type="button" class="forge-part" draggable="true" data-type="${type}">${forgeEsc(n.label)}</button>`).join('') + `</details>`).join('');
-      palette.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.forge-part'); if(b) add(b.dataset.type); });
+        Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}">${forgeEsc(n.label)}</button>`).join('') + `</details>`).join('');
+      palette.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.forge-part'); if(b){ add(b.dataset.type); setParts(false); } });
       palette.addEventListener('dragstart', e => { const b = e.target.closest && e.target.closest('.forge-part'); if(b && e.dataTransfer) e.dataTransfer.setData('text/forge', b.dataset.type); });
     }
+    // on a phone the parts are a drawer (＋ Parts), so the grid has the whole screen
+    const partsBtn = $('forgePartsBtn');
+    const setParts = open => { if(!partsBtn) return; veil.classList.toggle('parts-open', open); partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+    if(partsBtn) partsBtn.addEventListener('click', () => setParts(!veil.classList.contains('parts-open')));
     area.addEventListener('dragover', e => e.preventDefault());
     area.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer && e.dataTransfer.getData('text/forge'); if(!type) return;
-      const rect = area.getBoundingClientRect(), z = ed.zoom || 1; add(type, (e.clientX - rect.left - ed.canvas_x)/z, (e.clientY - rect.top - ed.canvas_y)/z); });
+      const p = toGrid(e.clientX, e.clientY); add(type, p.x, p.y); });
+    // ---- moving: a node only by its title bar (and not when pinned); anywhere else, the grid pans ----
+    ed.on('clickEnd', e => {
+      const t = e && e.target; if(!t || !t.closest) return;
+      const nodeEl = t.closest('.drawflow-node'); if(!nodeEl) return;
+      if(t.closest('.forge-node-btn')){ ed.drag = false; return; }
+      if(t.closest('.forge-node-title')){ if(isPinned(nodeEl.id.slice(5))) ed.drag = false; return; }
+      ed.drag = false;
+      if(!t.closest('input, select, textarea, button, .input, .output, output')) ed.editor_selected = true;
+    });
+    // the title bar's pin and menu
+    area.addEventListener('click', e => {
+      const b = e.target.closest && e.target.closest('.forge-node-btn'); if(!b) return;
+      const nodeEl = b.closest('.drawflow-node'); if(!nodeEl) return; const id = nodeEl.id.slice(5);
+      e.preventDefault(); e.stopPropagation();
+      if(b.dataset.act === 'pin'){ setData(id, { _pin: isPinned(id) ? undefined : true }); }
+      else { const r = b.getBoundingClientRect(); openMenu(r.left, r.bottom, nodeMenu(id)); }
+    });
     // ---- the guards: deleting work asks first (a node that carries settings or wires, once anything has changed) ----
     const carries = id => { const n = ed.getNodeFromId(id); if(!n) return false; const N = FORGE_NODES[n.name];
       const wired = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].some(p => (p.connections || []).length);
@@ -27850,14 +28022,36 @@ async function openForge(deps){
       return wired || changed; };
     const removeAsked = async id => {
       if(F.dirty && carries(id)){
-        const n = ed.getNodeFromId(id), label = (FORGE_NODES[n.name] || {}).label || n.name;
+        const label = labelOf(id);
         if(!await ask({ title: `Remove the ${label}?`, body: 'Its settings and its wires go with it.', confirmLabel: 'Remove', danger: true })) return;
       }
       ed.removeNodeId('node-' + id);
     };
+    // ---- wires: tap one and ✂ appears where it was tapped ----
+    const cut = $('forgeCut'), body = area.parentElement;
+    let lastPt = { x: 0, y: 0 };
+    area.addEventListener('pointerdown', e => { lastPt = { x: e.clientX, y: e.clientY }; }, true);
+    function hideCut(){ if(cut) cut.hidden = true; area.querySelectorAll('svg.connection .main-path.selected').forEach(p => p.classList.remove('selected')); }
+    const wireOf = svg => { const c = svg.getAttribute('class') || '';
+      const i = /node_in_node-(\d+)/.exec(c), o = /node_out_node-(\d+)/.exec(c), oc = /\b(output_\d+)\b/.exec(c), ic = /\b(input_\d+)\b/.exec(c);
+      return i && o && oc && ic ? { inId: i[1], outId: o[1], output: oc[1], input: ic[1] } : null; };
+    const cutWire = w => { if(w) ed.removeSingleConnection(w.outId, w.inId, w.output, w.input); hideCut(); };
+    ed.on('connectionSelected', () => {
+      const p = ed.connection_selected; if(!p || !cut || !body) return;
+      p.parentElement.querySelectorAll('.main-path').forEach(x => x.classList.add('selected'));
+      const r = body.getBoundingClientRect();
+      cut.style.left = Math.round(lastPt.x - r.left + 10) + 'px'; cut.style.top = Math.round(lastPt.y - r.top - 38) + 'px'; cut.hidden = false;
+      F.cutWire = wireOf(p.parentElement);
+    });
+    ed.on('connectionUnselected', hideCut);
+    ed.on('nodeSelected', hideCut);
+    if(cut) cut.addEventListener('click', () => { cutWire(F.cutWire); });
     document.addEventListener('keydown', e => {
-      if(veil.hidden || !(e.key === 'Delete' || e.key === 'Backspace')) return;
+      if(veil.hidden) return;
+      if(e.key === 'Escape' && menu && !menu.hidden){ e.preventDefault(); closeMenu(); return; }
+      if(!(e.key === 'Delete' || e.key === 'Backspace')) return;
       const t = e.target; if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if(ed.connection_selected){ e.preventDefault(); e.stopImmediatePropagation(); cutWire(wireOf(ed.connection_selected.parentElement)); return; }
       if(ed.node_selected){ e.preventDefault(); e.stopImmediatePropagation(); removeAsked(String(ed.node_selected.id).replace('node-', '')); }
     }, true);
     for(const evName of ['mousedown', 'touchstart']) area.addEventListener(evName, e => {
@@ -27865,6 +28059,200 @@ async function openForge(deps){
       const nodeEl = d.closest('.drawflow-node'); if(!nodeEl) return;            // a wire's ✕: let it go
       e.preventDefault(); e.stopImmediatePropagation(); removeAsked(nodeEl.id.replace('node-', ''));
     }, true);
+
+    // ---- THE MENU: what the thing under a long press (or a right-click) can do ----
+    const menu = $('forgeMenu');
+    let menuStack = [];
+    const closeMenu = () => { if(menu){ menu.hidden = true; menu.innerHTML = ''; } menuStack = []; };
+    F.closeMenu = closeMenu;
+    const drawMenu = () => {
+      const m = menuStack[menuStack.length - 1]; if(!m || !menu) return;
+      menu.innerHTML = `<div class="forge-menu-head">${menuStack.length > 1 ? '<button type="button" class="forge-menu-back" aria-label="Back">‹</button>' : ''}<span>${forgeEsc(m.title)}</span>`
+        + `<button type="button" class="forge-menu-x" aria-label="Close">✕</button></div>`
+        + (m.hint ? `<p class="forge-menu-hint">${forgeEsc(m.hint)}</p>` : '')
+        + m.items.map((it, i) => it.sep ? '<hr>' : `<button type="button" class="forge-menu-item${it.danger ? ' danger' : ''}${it.sub ? ' has-sub' : ''}" data-i="${i}"${it.disabled ? ' disabled' : ''}`
+          + `${it.colour ? ` style="--mc:${it.colour}"` : ''}><span class="mi-glyph" aria-hidden="true">${forgeEsc(it.glyph || '')}</span><span class="mi-label">${forgeEsc(it.label)}</span>`
+          + `${it.hint ? `<small>${forgeEsc(it.hint)}</small>` : ''}</button>`).join('');
+      const first = menu.querySelector('.forge-menu-item:not([disabled])'); if(first && finePointer) first.focus();
+    };
+    const openMenu = (x, y, m) => {
+      if(!menu || !m) return; menuStack = [m]; menu.hidden = false; drawMenu();
+      // beside the finger on a desk; a sheet from the bottom on a phone (CSS)
+      const r = veil.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
+      menu.style.left = Math.max(6, Math.min(r.width - w - 6, x - r.left + 4)) + 'px';
+      menu.style.top = Math.max(6, Math.min(r.height - h - 6, y - r.top + 4)) + 'px';
+    };
+    if(menu){
+      menu.addEventListener('click', e => {
+        const b = e.target.closest && e.target.closest('button'); if(!b) return;
+        if(b.classList.contains('forge-menu-x')){ closeMenu(); return; }
+        if(b.classList.contains('forge-menu-back')){ menuStack.pop(); drawMenu(); return; }
+        const it = (menuStack[menuStack.length - 1] || { items: [] }).items[+b.dataset.i]; if(!it || it.disabled) return;
+        if(it.sub){ menuStack.push(typeof it.sub === 'function' ? it.sub() : it.sub); drawMenu(); return; }
+        closeMenu(); if(it.act) it.act();
+      });
+      document.addEventListener('pointerdown', e => { if(!menu.hidden && !menu.contains(e.target)) closeMenu(); }, true);
+    }
+    // what each thing is called in a menu, and its colour
+    const N_ = id => FORGE_NODES[(nodeOf(id) || {}).name] || null;
+    const wireDesc = w => { const a = N_(w.outId), b = N_(w.inId); const oi = +w.output.slice(7) - 1, ii = +w.input.slice(6) - 1;
+      return { label: `${labelOf(w.outId)} → ${labelOf(w.inId)}`, hint: `${(a && a.outs[oi]) || ''} into ${(b && b.ins[ii]) || ''}`, colour: `var(--t-${(a && a.outTypes[oi]) || 'field'})`, glyph: '〰' }; };
+    // ---- menus for each kind of thing ----
+    const wireMenu = w => { const d = wireDesc(w); return { title: 'A wire', hint: d.label + ' (' + d.hint + ')', items: [
+      { glyph: '✂', label: 'Cut this wire', act: () => cutWire(w) }] }; };
+    const nodeMenu = id => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
+      const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
+      return { title: labelOf(id), hint: N.cat, items: [
+        { glyph: '⌖', label: isPinned(id) ? 'Let it move again' : 'Pin it in place', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
+        { glyph: '⧉', label: 'Make a copy', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
+        { glyph: '↺', label: 'Every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
+            for(const k of Object.keys(n.data || {})) if(k[0] !== '_') patch[k] = undefined; Object.assign(patch, d); setData(id, patch); } },
+        { glyph: '✂', label: wires ? `Cut its ${wires} wire${wires === 1 ? '' : 's'}` : 'No wires to cut', disabled: !wires, act: () => { ed.removeConnectionNodeId('node-' + id); paintNode(id); save(); touched(); } },
+        { sep: true },
+        { glyph: '✕', label: 'Remove it', danger: true, act: () => removeAsked(id) }] }; };
+    const portMenu = (id, side, j) => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
+      const key = (side === 'in' ? 'input_' : 'output_') + (j + 1), p = (side === 'in' ? n.inputs : n.outputs)[key] || { connections: [] }, cnt = (p.connections || []).length;
+      const name = side === 'in' ? N.ins[j] : N.outs[j], t = side === 'in' ? N.inTypes[j] : N.outTypes[j];
+      return { title: `${labelOf(id)}: ${name}`, hint: `${side === 'in' ? 'Takes' : 'Gives'} ${FORGE_TYPE_NAMES[t] || ''}`, items: [
+        { glyph: '✂', label: cnt ? (cnt === 1 ? 'Cut its wire' : `Cut its ${cnt} wires`) : 'Nothing wired here', disabled: !cnt, act: () => {
+          for(const c of [...p.connections]) side === 'in' ? ed.removeSingleConnection(c.node, id, c.input, key) : ed.removeSingleConnection(id, c.node, key, c.output); } }] }; };
+    const paramMenu = (id, key) => {
+      const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
+      const P = N.params.find(p => p[0] === key); if(!P) return null;
+      const [, label, kind, def, x] = P, v = (n.data || {})[key], bound = typeof v === 'string' && v[0] === '@';
+      const port = N.paramPorts.indexOf(key) >= 0 ? N.dataIns + N.paramPorts.indexOf(key) + 1 : 0;
+      const wired = port && (((n.inputs || {})['input_' + port] || {}).connections || []).length > 0;
+      const items = [];
+      if(kind === 'range'){
+        const lo = x.min, hi = x.max;
+        if(wired){
+          items.push({ glyph: '↔', label: 'Set the range the wire sweeps…', hint: n.data['~' + key] ? String(n.data['~' + key]).replace(',', ' to ') : `all of it: ${lo} to ${hi}`, act: async () => {
+            const r = await promptFor({ title: `${label}: the range a wire sweeps`, body: `Two numbers between ${lo} and ${hi}: where it is at the wire's least, and at its most. (They can run backwards.)`, input: true, defaultValue: String(n.data['~' + key] || `${lo}, ${hi}`), confirmLabel: 'Set' });
+            const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return; const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
+            setData(id, { ['~' + key]: (a === lo && b === hi) ? undefined : `${a},${b}` }); } });
+          if(n.data['~' + key]) items.push({ glyph: '⟷', label: 'Sweep the whole range again', act: () => setData(id, { ['~' + key]: undefined }) });
+          items.push({ glyph: '✂', label: 'Cut the wire into it', act: () => { const p = n.inputs['input_' + port]; for(const c of [...(p.connections || [])]) ed.removeSingleConnection(c.node, id, c.input, 'input_' + port); } });
+        } else {
+          const bindTo = (src, range) => setData(id, { [key]: '@' + src + (range ? `[${range[0]},${range[1]}]` : '') });
+          const curRange = bound ? (/\[([^\]]+)\]/.exec(v) || [])[1] : null;
+          items.push({ glyph: '◐', label: 'Bind to a page slider', hint: 'one of the six under Surface', sub: () => ({ title: `${label}: bind to a slider`, hint: 'The slider moves it across its range.', items:
+            [1, 2, 3, 4, 5, 6].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
+          items.push({ glyph: '☼', label: 'Bind to the light dial', hint: 'its direction', act: () => bindTo('dial', curRange && curRange.split(',')) });
+          if(port){
+            items.push({ glyph: '☽', label: 'Wire a Knob into it', hint: 'a page slider, shown as a node', act: () => wireIn(id, key, port, 'knob') });
+            items.push({ glyph: '☼', label: 'Wire the Light Dial into it', act: () => wireIn(id, key, port, 'dial') });
+          }
+          if(bound){
+            items.push({ glyph: '↔', label: 'Set its range…', hint: curRange ? curRange.replace(',', ' to ') : `all of it: ${lo} to ${hi}`, act: async () => {
+              const r = await promptFor({ title: `${label}: its range`, body: `Two numbers: where it is with the slider (or the dial) at its least, and at its most. Between ${lo} and ${hi}.`, input: true, defaultValue: curRange || `${lo}, ${hi}`, confirmLabel: 'Set' });
+              const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return;
+              const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
+              setData(id, { [key]: v.replace(/\[.*$/, '') + `[${a},${b}]` }); } });
+            items.push({ glyph: '⊘', label: 'Unbind (a plain number again)', act: () => setData(id, { [key]: def }) });
+          }
+        }
+      }
+      items.push({ glyph: '↺', label: `Back to its default (${def})`, act: () => setData(id, { [key]: def }) });
+      return { title: `${label}`, hint: `on ${labelOf(id)}` + (wired ? ' — driven by a wire' : bound ? ` — bound: ${v}` : ''), items };
+    };
+    // a Knob (or the Light Dial) set beside a node and wired into one of its ⚙ ports
+    const wireIn = (id, key, port, kind) => {
+      const n = nodeOf(id); if(!n) return;
+      const P = (N_(id).params.find(p => p[0] === key) || []), x = P[4] || { min: 0, max: 100 };
+      const cur = parseFloat(n.data[key]); const at = isFinite(cur) ? Math.round((cur - x.min)/((x.max - x.min) || 1)*100) : 50;
+      const used = new Set(Object.values(rawNodes()).filter(m => m.name === 'knob').map(m => String((m.data || {}).slot || '1')));
+      const slot = ['1', '2', '3', '4', '5', '6'].find(s => !used.has(s)) || '1';
+      const nid = add(kind, n.pos_x - 250, n.pos_y + 10 + (port - 1)*22, kind === 'knob' ? { slot, name: P[1] || 'Amount', def: Math.max(0, Math.min(100, at)) } : {});
+      if(nid != null) ed.addConnection(nid, id, 'output_1', 'input_' + port);
+    };
+    const canvasMenu = (cx, cy) => { const g = toGrid(cx, cy); return { title: 'The grid', items: [
+      { glyph: '＋', label: 'Add a part here', sub: () => ({ title: 'Add a part here', items: FORGE_CATEGORIES.map(cat => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: cat, colour: FORGE_CAT_COLOURS[cat],
+        sub: () => ({ title: cat, items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: FORGE_CAT_COLOURS[cat], act: () => add(type, g.x, g.y) })) }) })) }) },
+      { glyph: '⌖', label: 'Everything in view', act: () => fitView() },
+      { glyph: '▦', label: 'Tidy into columns', hint: 'pinned nodes stay put', act: () => tidy() }] }; };
+    // ---- what is under a point: the things there, nearest first ----
+    const thingAt = el => {
+      if(!el || !area.contains(el)) return null;
+      if(el.classList && el.classList.contains('main-path')){ const w = wireOf(el.parentElement); return w ? { kind: 'wire', key: 'w' + w.outId + w.output + w.inId + w.input, w } : null; }
+      const nodeEl = el.closest && el.closest('.drawflow-node'); if(!nodeEl) return null; const id = nodeEl.id.slice(5);
+      const port = el.closest('.input, .output');
+      if(port){ const side = port.classList.contains('input') ? 'in' : 'out'; const j = [...port.parentElement.children].indexOf(port);
+        const N = N_(id); if(side === 'in' && N && j >= N.dataIns){ return { kind: 'param', key: 'p' + id + N.paramPorts[j - N.dataIns], id, p: N.paramPorts[j - N.dataIns] }; }
+        return { kind: 'port', key: 'o' + id + side + j, id, side, j }; }
+      const row = el.closest('.forge-param'); if(row) return { kind: 'param', key: 'p' + id + row.dataset.p, id, p: row.dataset.p };
+      return { kind: 'node', key: 'n' + id, id };
+    };
+    const thingsNear = (x, y, r) => {
+      const found = new Map(), pts = [[0, 0]];
+      if(r) for(let a = 0; a < 8; a++) pts.push([Math.cos(a*Math.PI/4)*r, Math.sin(a*Math.PI/4)*r]);
+      for(const [dx, dy] of pts){ const d = Math.hypot(dx, dy);
+        for(const el of document.elementsFromPoint(x + dx, y + dy)){ const t = thingAt(el); if(!t) continue;
+          if(!found.has(t.key) || found.get(t.key).d > d) found.set(t.key, { ...t, d }); break; } }
+      const rank = { param: 0, port: 1, wire: 2, node: 3 };
+      return [...found.values()].sort((a, b) => (a.d - b.d) || (rank[a.kind] - rank[b.kind]));
+    };
+    const menuFor = (t, x, y) => t.kind === 'wire' ? wireMenu(t.w) : t.kind === 'node' ? nodeMenu(t.id) : t.kind === 'port' ? portMenu(t.id, t.side, t.j) : t.kind === 'param' ? paramMenu(t.id, t.p) : canvasMenu(x, y);
+    const describe = t => {
+      if(t.kind === 'wire') return wireDesc(t.w);
+      const N = N_(t.id), colour = N ? FORGE_CAT_COLOURS[N.cat] : '';
+      if(t.kind === 'node') return { glyph: N ? FORGE_CAT_GLYPHS[N.cat] : '', label: `The ${labelOf(t.id)} node`, hint: 'move, pin, copy, remove', colour };
+      if(t.kind === 'param'){ const P = N.params.find(p => p[0] === t.p) || []; return { glyph: '⚙', label: P[1] || t.p, hint: `a setting on ${labelOf(t.id)}`, colour: 'var(--t-value)' }; }
+      const name = t.side === 'in' ? N.ins[t.j] : N.outs[t.j], ty = t.side === 'in' ? N.inTypes[t.j] : N.outTypes[t.j];
+      return { glyph: t.side === 'in' ? '▸' : '◂', label: `${labelOf(t.id)}'s ${name}`, hint: `${t.side === 'in' ? 'takes' : 'gives'} ${FORGE_TYPE_NAMES[ty]}`, colour: `var(--t-${ty})` };
+    };
+    // a long press: one thing → its menu; several close together → which did you mean?
+    const menuAt = (x, y, touch) => {
+      if(touch){ ed.drag = false; ed.editor_selected = false; if(ed.connection){ ed.connection = false; if(ed.connection_ele){ ed.connection_ele.remove(); ed.connection_ele = null; } } }
+      hideCut();
+      const all = thingsNear(x, y, touch ? 18 : 5);
+      const own = all.length > 1 && all[0].kind !== 'node' ? all.filter(t => !(t.kind === 'node' && t.id === all[0].id)) : all;
+      if(!own.length){ openMenu(x, y, canvasMenu(x, y)); return; }
+      if(own.length === 1){ const m = menuFor(own[0], x, y); if(m && own[0].kind !== 'node' && own[0].id){ m.items.push({ sep: true }, { glyph: '◇', label: `The ${labelOf(own[0].id)} node`, sub: () => nodeMenu(own[0].id) }); } openMenu(x, y, m); return; }
+      openMenu(x, y, { title: 'Which did you mean?', hint: 'Several things are under your finger.', items: own.slice(0, 6).map(t => ({ ...describe(t), sub: () => menuFor(t, x, y) })) });
+    };
+    F.menuAt = menuAt;
+    // right-click, or a phone's own long press (it sends a contextmenu); a timer for the browsers that don't
+    // one menu per press: whichever comes first (the timer, or the browser's own contextmenu) answers it
+    let pressT = 0, pressAt = null, answered = false;
+    area.addEventListener('contextmenu', e => {
+      if(e.target.closest && e.target.closest('input[type=text], textarea')) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if(answered) return;
+      answered = true; clearTimeout(pressT); menuAt(e.clientX, e.clientY, F.lastTouch);
+    }, true);
+    area.addEventListener('pointerdown', e => {
+      answered = false;
+      F.lastTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+      if(!F.lastTouch || (e.target.closest && e.target.closest('input, select, textarea'))) return;
+      pressAt = { x: e.clientX, y: e.clientY }; clearTimeout(pressT);
+      pressT = setTimeout(() => { if(answered || !pressAt) return; answered = true; menuAt(pressAt.x, pressAt.y, true); }, 560);
+    }, true);
+    area.addEventListener('pointermove', e => { if(pressAt && Math.hypot(e.clientX - pressAt.x, e.clientY - pressAt.y) > 10) clearTimeout(pressT); }, true);
+    for(const ev of ['pointerup', 'pointercancel']) area.addEventListener(ev, () => { clearTimeout(pressT); pressAt = null; }, true);
+    // ---- the view: everything in sight, and tidying ----
+    const fitView = () => {
+      const els = [...area.querySelectorAll('.drawflow-node')]; const r = area.getBoundingClientRect(); if(!r.width) return;
+      if(!els.length){ ed.zoom = 1; ed.zoom_last_value = 1; ed.canvas_x = 0; ed.canvas_y = 0; }
+      else {
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for(const el of els){ const x = parseFloat(el.style.left) || 0, y = parseFloat(el.style.top) || 0; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x + el.offsetWidth); y1 = Math.max(y1, y + el.offsetHeight); }
+        const dock = $('forgeDock'), dw = dock && !dock.hidden ? dock.offsetWidth + 16 : 0, pad = 24;
+        const W = r.width - dw, H = r.height, z = Math.max(ed.zoom_min, Math.min(1, (W - pad*2)/(x1 - x0), (H - pad*2)/(y1 - y0)));
+        const mx = r.width/2, my = r.height/2;
+        ed.zoom = z; ed.zoom_last_value = z;
+        // the grid scales about its middle: place the nodes' corner at (pad, pad), centred in what is left
+        const fx = pad + Math.max(0, (W - pad*2 - (x1 - x0)*z)/2), fy = pad + Math.max(0, (H - pad*2 - (y1 - y0)*z)/2);
+        ed.canvas_x = fx - mx - (x0 - mx)*z; ed.canvas_y = fy - my - (y0 - my)*z;
+      }
+      ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
+    };
+    F.fitView = fitView;
+    const tidy = () => {
+      const g = slim(), data = g.drawflow.Home.data, pins = {};
+      for(const [id, n] of Object.entries(data)) if(n.data && n.data._pin) pins[id] = [n.pos_x, n.pos_y];
+      layoutAthanor(data); for(const [id, p] of Object.entries(pins)){ data[id].pos_x = p[0]; data[id].pos_y = p[1]; }
+      load(g, true); touched(); setTimeout(fitView, 30);
+    };
     // ---- the bar ----
     const count = () => Object.keys(nodesOf()).length;
     if($('forgeClear')) $('forgeClear').addEventListener('click', async () => {
@@ -27874,8 +28262,13 @@ async function openForge(deps){
     if($('forgeRevert')) $('forgeRevert').addEventListener('click', async () => {
       if(!F.opened) return;
       if(F.dirty && !await ask({ title: 'Go back to how it was?', body: 'Everything changed since the Athanor opened is undone.', confirmLabel: 'Revert', danger: true })) return;
-      load(JSON.parse(F.opened)); sound('graphLoad');
+      load(JSON.parse(F.opened)); sound('graphLoad'); setTimeout(fitView, 30);
     });
+    // open a graph (a starter, a template, a kept surface) in place of this one — asking first if this one has changed
+    const openGraph = async (g, label) => {
+      if(count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid now is set aside. (Revert brings back the graph as it was when the Athanor opened.)', confirmLabel: 'Replace', danger: true })) return false;
+      load(g); sound('graphLoad'); setTimeout(fitView, 30); return true;
+    };
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
     const st = $('forgeStarter');
     if(st){
@@ -27884,23 +28277,80 @@ async function openForge(deps){
         + '<optgroup label="Vellum’s textures">' + Object.entries(TEXTURE_CHAINS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>';
       st.addEventListener('change', async () => {
         const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
-        const label = (ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]).label;
-        if(count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid now is set aside. (Revert brings back the graph as it was when the Athanor opened.)', confirmLabel: 'Replace', danger: true })) return;
-        load(g); sound('graphLoad');
+        await openGraph(g, (ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]).label);
       });
     }
+    // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----
+    const surfaceName = () => { const s = Object.values(rawNodes()).find(n => n.name === 'surface'); return ((s && s.data && s.data.name) || 'My Surface').trim(); };
+    const keep = async () => {
+      if(!count()){ if(deps.warn) deps.warn(['there is nothing on the grid to keep']); return; }
+      const name = await promptFor({ title: 'Keep this surface?', body: 'Give it a name. It stays on this browser’s shelf, to open again.', input: true, defaultValue: surfaceName(), confirmLabel: 'Keep' });
+      const clean = String(name || '').trim().slice(0, 60); if(!clean) return;
+      const list = forgeShelf(), at = list.findIndex(r => r.name.toLowerCase() === clean.toLowerCase());
+      if(at >= 0 && !await ask({ title: `Replace the kept “${list[at].name}”?`, body: 'A surface on the shelf already has that name.', confirmLabel: 'Replace', danger: true })) return;
+      const rec = { name: clean, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() };
+      if(at >= 0) list[at] = rec; else list.push(rec);
+      if(!forgeShelfWrite(list)){ if(deps.warn) deps.warn(['this browser would not keep it (storage is full or blocked)']); return; }
+      sound('nodeAdd'); if(deps.onShelf) deps.onShelf();
+    };
+    const openKept = async rec => {
+      const v = deps.validate ? deps.validate(rec.graph) : { ok: true, graph: JSON.parse(rec.graph), problems: [] };
+      if(!v.ok){ if(deps.refuse) deps.refuse('That kept surface can’t be opened', v.problems.join('; ') + '. Nothing was changed.'); return; }
+      if(v.problems.length && deps.warn) deps.warn(v.problems);
+      await openGraph(v.graph, rec.name);
+    };
+    const dropKept = async rec => {
+      if(!await ask({ title: `Take “${rec.name}” off the shelf?`, body: 'It is gone from this browser. (Looks that use it keep their own copy.)', confirmLabel: 'Take it off', danger: true })) return;
+      forgeShelfWrite(forgeShelf().filter(r => r.name !== rec.name)); if(deps.onShelf) deps.onShelf();
+    };
+    const exportShelf = () => {
+      const blob = new Blob([JSON.stringify({ kind: 'unfixable-vellum-surfaces', surfaces: forgeShelf() }, null, 1)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'vellum-surfaces.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    };
+    const importShelf = () => {
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json,.json';
+      inp.addEventListener('change', async () => {
+        const f = inp.files && inp.files[0]; if(!f) return;
+        if(f.size > 4*1024*1024){ if(deps.refuse) deps.refuse('That file is too large', 'A shelf file is at most 4 MB. Nothing was changed.'); return; }
+        let data; try { data = JSON.parse(await f.text()); } catch(e){ if(deps.refuse) deps.refuse('That isn’t readable JSON', 'Nothing was changed.'); return; }
+        const incoming = Array.isArray(data) ? data : (data && Array.isArray(data.surfaces) ? data.surfaces : []);
+        const list = forgeShelf(); let added = 0, bad = 0;
+        for(const r of incoming){ if(!r || typeof r.name !== 'string' || typeof r.graph !== 'string'){ bad++; continue; }
+          const v = deps.validate ? deps.validate(r.graph) : { ok: true, graph: JSON.parse(r.graph) }; if(!v.ok){ bad++; continue; }
+          const rec = { name: r.name.trim().slice(0, 60) || 'Surface', graph: JSON.stringify(v.graph), savedAt: r.savedAt || new Date().toISOString() };
+          const at = list.findIndex(x => x.name.toLowerCase() === rec.name.toLowerCase()); if(at >= 0) list[at] = rec; else list.push(rec); added++; }
+        forgeShelfWrite(list); if(deps.onShelf) deps.onShelf();
+        if(deps.warn) deps.warn([`${added} surface${added === 1 ? '' : 's'} put on the shelf` + (bad ? `, ${bad} left out (unreadable)` : '')]);
+      });
+      inp.click();
+    };
+    const shelfMenu = () => { const list = forgeShelf(); return { title: 'Kept surfaces', hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet.', items: [
+      { glyph: '✚', label: 'Keep this surface…', act: keep },
+      ...(list.length ? [{ sep: true }] : []),
+      ...list.slice().reverse().map(rec => ({ glyph: '🜉', label: rec.name, hint: String(rec.savedAt || '').slice(0, 10), sub: () => ({ title: rec.name, items: [
+        { glyph: '⇩', label: 'Open it', act: () => openKept(rec) },
+        { glyph: '✕', label: 'Take it off the shelf', danger: true, act: () => dropKept(rec) }] }) })),
+      { sep: true },
+      { glyph: '⇪', label: 'Save the shelf as a file', disabled: !list.length, act: exportShelf },
+      { glyph: '⇣', label: 'Bring surfaces in from a file…', act: importShelf }] }; };
+    if($('forgeKeptBtn')) $('forgeKeptBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, shelfMenu()); });
     if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
     if($('forgeZoomIn')) $('forgeZoomIn').addEventListener('click', () => ed.zoom_in());
     if($('forgeZoomOut')) $('forgeZoomOut').addEventListener('click', () => ed.zoom_out());
+    if($('forgeFit')) $('forgeFit').addEventListener('click', () => fitView());
     // the step previews: each node shows what it makes (worked out in the texture worker); off while you work, if you like
     const sp = $('forgeSteps');
     if(sp){ try { sp.checked = localStorage.getItem('uv.forge.steps') !== '0'; } catch(e){ sp.checked = true; }
       area.classList.toggle('steps-on', sp.checked);
       sp.addEventListener('change', () => { area.classList.toggle('steps-on', sp.checked); try { localStorage.setItem('uv.forge.steps', sp.checked ? '1' : '0'); } catch(e){} previews(); }); }
-    // the legend: what each colour carries
+    // the preview: tap for large, tap again for small
+    const pv = $('forgePreview'); if(pv) pv.addEventListener('click', () => { const d = $('forgeDock'); if(d) d.classList.toggle('big'); });
+    // the help: what each colour carries, and the few things worth knowing
+    const hb = $('forgeHelpBtn'), hp = $('forgeHelp');
+    if(hb && hp) hb.addEventListener('click', () => { hp.hidden = !hp.hidden; hb.setAttribute('aria-expanded', hp.hidden ? 'false' : 'true'); });
     const lg = $('forgeLegend');
-    if(lg) lg.innerHTML = Object.entries(FORGE_TYPE_COLOURS).map(([t, c]) => `<span><i style="background:${c}"></i>${forgeEsc(FORGE_TYPE_NAMES[t])}</span>`).join('')
-      + `<span><i class="pp" style="background:${FORGE_TYPE_COLOURS.value}"></i>⚙ a slider taking a wire</span>`;
+    if(lg) lg.innerHTML = Object.entries(FORGE_TYPE_COLOURS).map(([t]) => `<span><i style="background:var(--t-${t})"></i>${forgeEsc(FORGE_TYPE_NAMES[t])}</span>`).join('')
+      + `<span><i class="pp" style="background:var(--t-value)"></i>⚙ a setting that takes a wire</span>`;
   }
   // the graph saved with the look (checked first: a graph from anywhere can't break the page), or a first one
   const ed = F.editor;
@@ -27909,13 +28359,15 @@ async function openForge(deps){
     if(v.ok) saved = v.graph; if(v.problems && v.problems.length && deps.warn) deps.warn(v.problems); }
   if(saved && saved.drawflow) F.load(saved);
   else { F.quiet = true; ed.clear(); F.version = ATHANOR_VERSION; F.quiet = false;
-    const add = (type, x, y) => { const N = FORGE_NODES[type]; ed.addNode(type, N.ins.length, N.outs.length, x, y, forgeCatClass(N.cat), forgeNodeData(type), forgeNodeHtml(type, { textures: deps.textures || [], stitches: deps.stitches || [] })); };
+    const add = (type, x, y) => { const N = FORGE_NODES[type]; ed.addNode(type, N.ins.length, N.outs.length, x, y, forgeCatClass(N.cat), forgeNodeData(type), forgeNodeHtml(type, { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' })); };
     F.quiet = true; add('noise', 40, 60); add('surface', 420, 90); F.quiet = false; F.paintAll(); F.save(); }
   F.opened = JSON.stringify(ed.export());
   F.dirty = false;
+  setTimeout(() => { if(F.fitView) F.fitView(); }, 40);
 }
 function closeForge(deps){
-  const veil = deps.$('forgeVeil'); if(veil) veil.hidden = true;
+  const veil = deps.$('forgeVeil'); if(veil){ veil.hidden = true; veil.classList.remove('parts-open'); }
+  if(openForge.closeMenu) openForge.closeMenu();
   if(document.body && document.body.classList) document.body.classList.remove('forge-open');
 }
 
@@ -28763,6 +29215,7 @@ function serializeCurrentSettings(){
 
     username: $('usernameField').value,
     usernameCorner: $('usernameCorner').value,
+    lookName: (document.body && document.body.dataset && document.body.dataset.lookName) || '',   // the look's name (a preset's, a spell's): spells, shares and JSON carry it
     spellMark: $('spellMark').checked,   // the spell code in the corner: part of the look, so spells and shared links keep it
 
     poemText: $('poemText').value,
@@ -28915,6 +29368,7 @@ function restoreSettings(s){
 
   if(s.username!==undefined) $('usernameField').value = s.username;
   if(s.usernameCorner) $('usernameCorner').value = s.usernameCorner;
+  if(typeof s.lookName === 'string' && document.body && document.body.dataset) document.body.dataset.lookName = s.lookName.slice(0, 80);
   if(s.spellMark !== undefined) $('spellMark').checked = !!s.spellMark;
   if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
@@ -30348,7 +30802,8 @@ function athanorStepSheet(json, paint){
 const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
-  ask: o => askSure(o), sound: fn => murmur.play(fn),
+  ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH,
+  onShelf: () => { if(typeof paintShelfOptions === 'function') paintShelfOptions(); },
   validate: json => validateGraph(json),
   warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
   // "Use as Surface": the Athanor's texture on the page
@@ -30646,6 +31101,7 @@ function settingsForSpell(){
 const vault = createVault({
   $,
   getSettings: settingsForSpell,
+  setName: name => { if(document.body && document.body.dataset) document.body.dataset.lookName = name; scheduleRender(); },
   applySettings: (settings, name)=>{ if(!safeRestore(stripToLook(settings), 'This spell')) return;
     if(name && document.body && document.body.dataset) document.body.dataset.lookName = name;
     scheduleRender(); },

@@ -94,7 +94,7 @@ inside of a <~~dead person~~/trans>'s dreams.
         </div>
       </div>
       <!-- the spell code, diagonally opposite the credit: part of the look (spells and shares keep it) -->
-      <div class="check-row" style="margin-top:6px;">
+      <div class="check-row spell-mark-row" style="margin-top:6px;">
         <input type="checkbox" id="spellMark" checked>
         <label for="spellMark" data-str="label.spell_mark" title="The spell code in the corner opposite the credit">Show Spell Code?</label>
       </div>
@@ -1083,27 +1083,39 @@ inside of a <~~dead person~~/trans>'s dreams.
   <div class="forge-veil" id="forgeVeil" hidden>
     <div class="forge-bar">
       <span class="forge-title"><span class="forge-glyph" aria-hidden="true">🜉</span> The Athanor <small class="forge-sub">Surface texture node editor</small></span>
+      <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid">＋ Parts</button>
       <span class="forge-spacer"></span>
       <select id="forgeStarter" class="forge-starter" title="Begin from a working graph, or one of Vellum's own textures"></select>
+      <button type="button" class="ghost" id="forgeKeptBtn" title="Keep this surface by name, or open one kept">Kept</button>
       <button type="button" class="ghost" id="forgeRevert" title="Back to the graph as it was when the Athanor opened">Revert</button>
       <button type="button" class="ghost" id="forgeClear">Clear</button>
-      <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
-      <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
-      <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use as Surface</button>
+      <span class="forge-zoom">
+        <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
+        <button type="button" class="ghost" id="forgeFit" title="Everything in view" aria-label="Everything in view">⌖</button>
+        <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
+      </span>
+      <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use</button>
       <button type="button" class="btn-major" id="forgeCloseBtn" data-sound="athanorClose">Done</button>
     </div>
     <div class="forge-body">
       <div class="forge-palette" id="forgePalette"></div>
       <div class="forge-canvas" id="forgeCanvas"></div>
-      <aside class="forge-side" aria-label="What it makes">
-        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes"></canvas>
-        <p class="forge-status" id="forgeStatus"></p>
-        <label class="forge-check"><input type="checkbox" id="forgeSteps"> Step previews <small>(each node shows what it makes)</small></label>
-        <details class="forge-fold" open><summary>Wire colours</summary><div class="forge-legend" id="forgeLegend"></div></details>
-        <details class="forge-fold"><summary>How it works</summary>
-          <p class="forge-help">Every node is one step. Wires carry a grey map, a picture, one colour or one number; their colours say which. Any slider with a ⚙ beside it takes a wire: a Knob or the Light Dial there moves it across its range. The Surface is what the page shows, its second input the heights the light falls on. Start from one of Vellum's own textures to see how it is made.</p></details>
+      <!-- what it makes: bottom right, over the grid; as small as it can be around the preview -->
+      <aside class="forge-dock" id="forgeDock" aria-label="What it makes">
+        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes (tap: larger)"></canvas>
+        <div class="forge-dock-row">
+          <span class="forge-status" id="forgeStatus"></span>
+          <label class="forge-check" title="Each node shows what it makes"><input type="checkbox" id="forgeSteps"> Steps</label>
+          <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeHelp" title="How it works">?</button>
+        </div>
+        <div class="forge-help-pop" id="forgeHelp" hidden>
+          <div class="forge-legend" id="forgeLegend"></div>
+          <p class="forge-help">Wires wear the colour of what they carry. A ⚙ setting takes a wire. Hold anything — or right-click it — to see what it can do.</p>
+        </div>
       </aside>
+      <button type="button" class="forge-cut" id="forgeCut" hidden title="Cut this wire">✂ Cut</button>
     </div>
+    <div class="forge-menu" id="forgeMenu" role="menu" hidden></div>
   </div>
   <div class="sheet-veil" id="shortcutSheet" hidden>
     <div class="sheet" role="dialog" aria-label="Keyboard shortcuts">

@@ -840,6 +840,7 @@ function serializeCurrentSettings(){
 
     username: $('usernameField').value,
     usernameCorner: $('usernameCorner').value,
+    lookName: (document.body && document.body.dataset && document.body.dataset.lookName) || '',   // the look's name (a preset's, a spell's): spells, shares and JSON carry it
     spellMark: $('spellMark').checked,   // the spell code in the corner: part of the look, so spells and shared links keep it
 
     poemText: $('poemText').value,
@@ -992,6 +993,7 @@ function restoreSettings(s){
 
   if(s.username!==undefined) $('usernameField').value = s.username;
   if(s.usernameCorner) $('usernameCorner').value = s.usernameCorner;
+  if(typeof s.lookName === 'string' && document.body && document.body.dataset) document.body.dataset.lookName = s.lookName.slice(0, 80);
   if(s.spellMark !== undefined) $('spellMark').checked = !!s.spellMark;
   if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
@@ -2425,7 +2427,8 @@ function athanorStepSheet(json, paint){
 const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
-  ask: o => askSure(o), sound: fn => murmur.play(fn),
+  ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH,
+  onShelf: () => { if(typeof paintShelfOptions === 'function') paintShelfOptions(); },
   validate: json => validateGraph(json),
   warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
   // "Use as Surface": the Athanor's texture on the page
@@ -2723,6 +2726,7 @@ function settingsForSpell(){
 const vault = createVault({
   $,
   getSettings: settingsForSpell,
+  setName: name => { if(document.body && document.body.dataset) document.body.dataset.lookName = name; scheduleRender(); },
   applySettings: (settings, name)=>{ if(!safeRestore(stripToLook(settings), 'This spell')) return;
     if(name && document.body && document.body.dataset) document.body.dataset.lookName = name;
     scheduleRender(); },

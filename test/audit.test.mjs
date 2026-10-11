@@ -64,6 +64,7 @@ const ENUM = {
   textureOpacity: v => Math.min(99, (+v || 0) + 3),
   poemText: () => '## Audit\nline one~A\n<two/effect:halo,40>',
   username: () => '@audit',
+  lookName: v => v === 'Audit Look' ? 'Other Look' : 'Audit Look',
   bgGradientType: v => v === 'radial' ? 'rect' : 'radial',
   cardGradientType: v => v === 'rect' ? 'radial' : 'rect',
   cardBlend: v => v === 'multiply' ? 'screen' : 'multiply',

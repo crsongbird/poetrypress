@@ -239,6 +239,7 @@ export function stripToLook(settings){
 
 export function createVault(deps){
   const { $, getSettings, applySettings, getText, setText, onChange, prompt } = deps;
+  const setName = typeof deps.setName === 'function' ? deps.setName : () => {};   // the page's look takes the spell's name
 
   let spells = readStore(SPELL_KEY).filter(isValidSpell);
   let poems  = readStore(POEM_KEY).filter(isValidPoem);
@@ -361,39 +362,43 @@ export function createVault(deps){
   }
 
   // ---- spells ----
-  async function createSpell(){
+  // returns the record kept, or null (asked from Share too: a look is named before it travels)
+  async function createSpell(opts = {}){
     const name = await prompt({
-      title: DIALOGS.spellCreate.title,
-      body: DIALOGS.spellCreate.body,
+      title: opts.title || DIALOGS.spellCreate.title,
+      body: opts.body || DIALOGS.spellCreate.body,
       input: true,
       defaultValue: 'Spell ' + (spells.length + 1),
       confirmLabel: DIALOGS.spellCreate.confirm, cancelLabel: DIALOGS.spellCreate.cancel,
     });
-    if(!name) return;
-    const clean = String(name).trim();
-    if(!clean) return;
+    if(!name) return null;
+    const clean = String(name).trim().slice(0, 80);
+    if(!clean) return null;
     const existing = spells.findIndex(s => spellKeyOf(s) === clean.toLowerCase());
     // The glyphs are generated ONCE, here, and stored. They identify this
     // record; deriving them later would let them change under the user.
     // An existing record keeps the glyphs it was created with.
     const prior = existing >= 0 ? spells[existing] : null;
     const glyphs = (prior && validateSpell(prior.spell || '').ok) ? prior.spell : generateSpell();
-    const record = { name: clean, spell: glyphs, settings: getSettings(), savedAt: stamp(), savedTs: Date.now() };
+    // the look carries its own name, so wherever it goes (a share, a JSON, a tile) it is called this
+    const record = { name: clean, spell: glyphs, settings: { ...getSettings(), lookName: clean }, savedAt: stamp(), savedTs: Date.now() };
     if(existing >= 0){
       const ok = await prompt({
         title: DIALOGS.overwrite.title,
         body: fill(DIALOGS.overwrite.body, clean),
         confirmLabel: DIALOGS.overwrite.confirm,
       });
-      if(!ok) return;
+      if(!ok) return null;
       spells[existing] = record;
     } else {
       spells.push(record);
     }
-    if(!persistSpells()) return;
+    if(!persistSpells()) return null;
     selectedSpell = clean;
+    setName(clean);
     appliedSpellSnapshot = settingsJson();
     refresh();
+    return record;
   }
 
   function applySpell(){
@@ -512,10 +517,12 @@ export function createVault(deps){
 
   bind('poemSaveBtn', savePoem);
   async function shareSpell(){
-    // a chosen spell, or — with none chosen — the look on the page right now
-    // (no need to save it first)
-    const chosen = spells.find(sp => sp.id === selectedSpell);
-    const rec = chosen || { name: DIALOGS.shareLook.name, spell: generateSpell(), settings: getSettings(), savedAt: stamp() };
+    // a chosen spell; with none chosen, the look on the page is NAMED and kept
+    // first (Ruby: a look travels under its own name, never "A Shared Look")
+    const chosen = spells.find(sp => sp.name === selectedSpell);
+    const rec = chosen || await createSpell({ title: DIALOGS.shareLook.title, body: DIALOGS.shareLook.nameFirst });
+    if(!rec) return;
+    if(rec.settings && !rec.settings.lookName) rec.settings = { ...rec.settings, lookName: rec.name };
     // A link only works from the live site. Opened as a local file there is
     // no address worth sharing, so the link points at the public app.
     const here = (typeof location !== 'undefined' && location.protocol === 'https:')
@@ -524,8 +531,8 @@ export function createVault(deps){
     let copied = false;
     try { await navigator.clipboard.writeText(link); copied = true; } catch(e){ /* shown below instead */ }
     await prompt({
-      title: chosen ? fill(DIALOGS.shareSpell.title, rec.name) : DIALOGS.shareLook.title,
-      body: copied ? (chosen ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareLook.bodyCopied) : (chosen ? DIALOGS.shareSpell.bodyManual : DIALOGS.shareLook.bodyManual),
+      title: fill(DIALOGS.shareSpell.title, rec.name),
+      body: copied ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareSpell.bodyManual,
       input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm,
     });
   }
@@ -545,7 +552,7 @@ export function createVault(deps){
     if(!ok) return;
     const result = mergeRecords(spells, [rec], spellKeyOf, isValidSpell);
     spells = result.merged; persistSpells();
-    selectedSpell = (spells.find(sp => spellKeyOf(sp) === spellKeyOf(rec)) || {}).id || null;
+    selectedSpell = (spells.find(sp => spellKeyOf(sp) === spellKeyOf(rec)) || {}).name || null;
     refresh();
   }
 

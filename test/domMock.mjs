@@ -483,6 +483,9 @@ export function installDomMock(makeMockContext, makeMockCanvas){
     fonts: { load: () => Promise.resolve(), ready: Promise.resolve() },
     addEventListener(type, fn){ (documentListeners[type] = documentListeners[type] || []).push(fn); },
     dispatchEvent(evt){ (documentListeners[evt.type] || []).forEach(fn => fn(evt)); return true; },
+    // a body with a dataset: the look's name lives there (data-look-name), as on the page
+    body: { dataset: {}, classList: (() => { const c = new Set(); return { add: x => c.add(x), remove: x => c.delete(x), contains: x => c.has(x),
+      toggle: (x, f) => { (f === undefined ? !c.has(x) : f) ? c.add(x) : c.delete(x); return c.has(x); } }; })() },
   };
 
   return registry;
@@ -552,6 +555,7 @@ export function installMobileEnv(registry){
       toggle: (c, force) => { force ? bodyClasses.add(c) : bodyClasses.delete(c); return bodyClasses.has(c); },
       remove: c => bodyClasses.delete(c),
     },
+    dataset: {},          // the look's name lives here (data-look-name), as on the page
   };
   const cssVars = {};
   global.document.documentElement = {

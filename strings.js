@@ -268,7 +268,8 @@ export const DIALOGS = {
   },
   shareLook: {
     name: 'A Shared Look',
-    title: 'Share this look',
+    title: 'Name this look to share it',
+    nameFirst: 'It travels under this name, and is kept among your spells.',
     bodyCopied: 'The link is copied. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
     bodyManual: 'Copy this link. Anyone who opens it can add the look on your page now to their own Esoterica — no need to save it first.',
     confirm: 'Done',
