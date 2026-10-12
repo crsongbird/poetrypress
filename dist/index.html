@@ -2032,6 +2032,7 @@ summary.card-title, .card-title{ overflow:hidden; }
 /* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ⋯ (Kept, Help, Revert,
    Clear), Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
 .forge-more-btn{ display:none; }
+.forge-bar .forge-hist{ padding:4px 9px; font-size:15px; } .forge-bar .forge-hist:disabled{ opacity:.3; }
 @media (max-width: 760px){
   .forge-bar{ flex-wrap:nowrap; gap:4px; padding:4px 6px; }
   .forge-bar button, .forge-bar .forge-starter{ font-size:13px; padding:5px 9px; min-height:32px; }
@@ -10028,6 +10029,7 @@ Object.assign(TOUCH_STEPS, {
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
 
+
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const whimClamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -10643,7 +10645,24 @@ const whimArea = E => E.canvasPass ? canonArea(E.ww, E.wh) : E.carea;
 const whimDial = (E, v) => typeof v === 'number' ? v*360 : (E.ctx.light ?? 315);
 const LAND_COUNTRIES = ['seed', ...Object.keys(LAND_BIOMES)], LAND_TIMESEL = ['seed', ...Object.keys(LAND_TIMES)];
 const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'country', 'seed')), time: String(E.P(n, 'time', 'seed')), tilt: E.num(n, 'tilt', 0)/100 });
+// PARTICLES: three ways light hangs in the air, each the painter of a texture that used to be its own
+// (texWhimsy: genSnow, genEmbers, genMagicParticles) — flakes (First Snow), sparks (Burning Mana) and
+// motes (Euphoria Dust) — drawn over any picture, in any colours, the wind from any direction
+const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  particles: { cat: 'Marks', label: 'Particles', ins: ['over', 'color a', 'color b', 'wind from'], outs: ['image'], io: { ins: ['image', 'colour', 'colour', 'value'], outs: ['image'] },
+    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Scatter', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, kind = String(E.P(n, 'kind', 'flakes')), amt = Math.max(0.02, E.num(n, 'amount', 100)/100), zoom = Math.max(0.2, E.num(n, 'size', 100)/100), form = E.num(n, 'form', 50)/100;
+      const ca = E.input(n, 2), cb = E.input(n, 3), dv = E.input(n, 4), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      // the texture's own seed (+ Scatter), not the part's: so First Snow, Burning Mana and Euphoria Dust fall exactly as they always did
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'scatter', 0))*7919) >>> 0;
+      return withSeed(seed, () => { let c;
+      if(kind === 'sparks') c = genEmbers(w, h, Array.isArray(ca) ? whimHex(ca) : '#E0526F', Array.isArray(cb) ? whimHex(cb) : '#9B7FE8', amt, zoom, form);
+      else if(kind === 'motes') c = genMagicParticles(w, h, Array.isArray(ca) ? whimHex(ca) : '#E0526F', Array.isArray(cb) ? whimHex(cb) : '#9B7FE8', amt, zoom, form);
+      else c = genSnow(w, h, amt, zoom, light, form, Array.isArray(ca) ? { r: Math.round(ca[0]*255), g: Math.round(ca[1]*255), b: Math.round(ca[2]*255) } : (E.ctx.base || null));
+      const over = E.input(n, 1); if(over == null) return [c];
+      const [pc, px] = kitPicture(over, w, h); px.drawImage(c, 0, 0); return [pc]; }); },
+    run(E, n){ const [c] = this.paint(E, n); return [E.readCanvas(c)]; } },
   smoke: { cat: 'Noise', label: 'Smoke', ins: [], outs: ['density'], params: [WHIM_R('lift', 'Lift', 100, 40, 250), WHIM_R('drag', 'Drag', 60, 0, 200)], cost: () => 24,
     density(E, n, gw, gh){ return smokeField(gw, gh, E.num(n, 'lift', 100)/100, E.num(n, 'drag', 60)/100); },
     paint(E, n){ const [gw, gh] = whimGrid(E, 6); return [kitFieldCanvas(this.density(E, n, gw, gh), gw, gh)]; },
@@ -11504,6 +11523,7 @@ const STEP_DOCS = {
   glaze: 'Lights and colors crazed glaze from its maps.',
   material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
   oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
+  particles: 'Light hanging in the air, drawn over whatever comes in (or on nothing): Kind is snowflakes (First Snow), sparks falling in arcs (Burning Mana) or glittering motes (Euphoria Dust). The two color ports color them; the last setting is the wind for flakes, how far a spark\'s hue strays, or how wildly motes scatter. Wire the Light Dial into Wind From to blow the snow. Two Particles parts fall alike: give one a different Scatter.',
   strokes: 'A few fast, loaded swipes of gray paint (Painter\'s Frustration): each a body with bristle marks, fraying at the tail, flinging droplets. Wetness makes the paint mix, bleed and drip. Its second output is the paint\'s thickness, for a Light Engine.',
   screen: 'Prints a tone as a screen of dots, the way newspapers and comics do: a dot in every cell, as big as the tone is bright there. Wire a picture through Invert first to screen it dark-for-big. Screen Angle turns the grid.',
   grain: 'Film grain: Kind slides from silver (crisp grains in clumps) through film and paper (its cloudy formation and fibres) to a digital sensor (noise in each color, rows and columns). A color picture centered on gray: blend it over anything.',
@@ -12075,6 +12095,31 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // ♡ First Snow, Burning Mana and Euphoria Dust: one Particles part each, of its own kind
+  snow: { label: 'First Snow', canvas: true, teach: 'This is First Snow. One part makes it: Particles, set to flakes. The Light Dial goes into Wind From, so the wind blows from where the dial points, and the Wind knob says how hard. The flakes are colored by the Snow Hue (or anything wired into Color A). Try: turn the dial with Wind up, then set Kind to sparks.', nodes: [
+      ['knob', { slot: '1', name: 'Flake Size', def: 14 }, 40, 40],                // 1  (100 of 60–340)
+      ['knob', { slot: '2', name: 'Snowfall', def: 33 }, 40, 140],                 // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Wind', def: 0 }, 40, 240],                      // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['particles', { kind: 'flakes', amount: 100, '~amount': '20,260', size: 100, '~size': '60,340', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'First Snow', ground: 'grey' }, 600, 120]],              // 6
+    wires: [[1, 1, 5, paramPort('particles', 'size')], [2, 1, 5, paramPort('particles', 'amount')], [3, 1, 5, paramPort('particles', 'form')], [4, 1, 5, 4], [5, 1, 6, 1]] },
+  embers: { label: 'Burning Mana', canvas: true, teach: 'This is Burning Mana. One part makes it: Particles, set to sparks, each flung out and bent down by gravity, white-hot at the head. The two Hues color the sparks (they follow the page\'s accents until you set them). Hue Drift lets each spark\'s color stray. Try: wire a Texture into Over to rain sparks on it.', nodes: [
+      ['knob', { slot: '1', name: 'Ember Size', def: 7 }, 40, 40],                 // 1  (100 of 60–600)
+      ['knob', { slot: '2', name: 'Ember Count', def: 17 }, 40, 140],              // 2  (100 of 20–500)
+      ['knob', { slot: '3', name: 'Hue Drift', def: 10 }, 40, 240],                // 3
+      ['hue', { slot: '1', name: 'Ember Hue' }, 40, 340], ['hue', { slot: '2', name: 'Spark Hue' }, 40, 420],   // 4, 5
+      ['particles', { kind: 'sparks', amount: 100, '~amount': '20,500', size: 100, '~size': '60,600', form: 10, '~form': '0,100' }, 320, 100],   // 6
+      ['surface', { name: 'Burning Mana', ground: 'grey' }, 600, 120]],            // 7
+    wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+  magicparticles: { label: 'Euphoria Dust', canvas: true, teach: 'This is Euphoria Dust. One part makes it: Particles, set to motes. The two Hues color them (they follow the page\'s accents until you set them). Chaos gathers the dust into trails at 0, scatters it at 50 and bursts it at 100. Try: set Chaos to 0, then 100.', nodes: [
+      ['knob', { slot: '1', name: 'Sparkle Size', def: 44 }, 40, 40],              // 1  (100 of 20–200)
+      ['knob', { slot: '2', name: 'Sparkle Count', def: 23 }, 40, 140],            // 2  (100 of 10–400)
+      ['knob', { slot: '3', name: 'Chaos', def: 50 }, 40, 240],                    // 3
+      ['hue', { slot: '1', name: 'Sparkle Hue' }, 40, 340], ['hue', { slot: '2', name: 'Glow Hue' }, 40, 420],   // 4, 5
+      ['particles', { kind: 'motes', amount: 100, '~amount': '10,400', size: 100, '~size': '20,200', form: 50, '~form': '0,100' }, 320, 100],   // 6
+      ['surface', { name: 'Euphoria Dust', ground: 'grey' }, 600, 120]],           // 7
+    wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
   // √ Halftone: a soft Value Noise for the tone, printed as a Halftone Screen of dots.
   halftone: { label: 'Halftone', canvas: true, teach: 'This is Halftone. A Value Noise with one octave makes a soft, slow tone; Halftone Screen prints it as dots, each as big as the tone is bright there. Dot Scale is the screen\'s cell size and Dot Weight how heavy the dots print. Try: wire another texture into the Halftone Screen\'s tone, or turn its Screen Angle.', nodes: [
       ['knob', { slot: '1', name: 'Dot Scale', def: 14 }, 40, 40],                 // 1  (100 of 50–400)
@@ -12270,7 +12315,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
   const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -12438,6 +12483,11 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
+  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. It is a tutorial in putting parts together: each part does one job and hands it to the next. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
+      ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
+      ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
+      ['material', { relief: 22, '~relief': '0,45', gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
+    wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -13066,7 +13116,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
-    result = genEmbers(w,h,accent1,accent2,amt,zoom,form);
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
     result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat,extra.glow);
   } else if(type === 'astral_fog'){
@@ -13074,9 +13124,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow);
   } else if(type === 'snow'){
-    result = genSnow(w,h,amt,zoom,light,form,extra.base);
+    result = genChain(type, w, h, light, extra);           // Particles (flakes), blown by the dial (chains.js)
   } else if(type === 'magicparticles'){
-    result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (motes) (chains.js)
   } else if(type === 'glassrain'){
     result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
   } else if(type === 'rainstreaks'){
@@ -13337,7 +13387,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
@@ -14568,6 +14618,8 @@ Have fun!</textarea>
       <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid">＋ Parts</button>
       <span class="forge-spacer"></span>
       <select id="forgeStarter" class="forge-starter" title="Begin from a working graph, or one of the app's own textures"></select>
+      <button type="button" class="ghost forge-hist" id="forgeUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
+      <button type="button" class="ghost forge-hist" id="forgeRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
       <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: Kept, Help, Revert, Clear" title="Kept, Help, Revert, Clear">⋯</button>
       <button type="button" class="ghost forge-wide" id="forgeKeptBtn" title="Keep this surface by name, or open one kept">Kept</button>
       <button type="button" class="ghost forge-wide" id="forgeDocBtn" aria-expanded="false" aria-controls="forgeDoc" title="How the Athanor works">Help</button>
@@ -24614,6 +24666,7 @@ Object.assign(TOUCH_STEPS, {
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
 
+
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const whimClamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -25229,7 +25282,24 @@ const whimArea = E => E.canvasPass ? canonArea(E.ww, E.wh) : E.carea;
 const whimDial = (E, v) => typeof v === 'number' ? v*360 : (E.ctx.light ?? 315);
 const LAND_COUNTRIES = ['seed', ...Object.keys(LAND_BIOMES)], LAND_TIMESEL = ['seed', ...Object.keys(LAND_TIMES)];
 const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'country', 'seed')), time: String(E.P(n, 'time', 'seed')), tilt: E.num(n, 'tilt', 0)/100 });
+// PARTICLES: three ways light hangs in the air, each the painter of a texture that used to be its own
+// (texWhimsy: genSnow, genEmbers, genMagicParticles) — flakes (First Snow), sparks (Burning Mana) and
+// motes (Euphoria Dust) — drawn over any picture, in any colours, the wind from any direction
+const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  particles: { cat: 'Marks', label: 'Particles', ins: ['over', 'color a', 'color b', 'wind from'], outs: ['image'], io: { ins: ['image', 'colour', 'colour', 'value'], outs: ['image'] },
+    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Scatter', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, kind = String(E.P(n, 'kind', 'flakes')), amt = Math.max(0.02, E.num(n, 'amount', 100)/100), zoom = Math.max(0.2, E.num(n, 'size', 100)/100), form = E.num(n, 'form', 50)/100;
+      const ca = E.input(n, 2), cb = E.input(n, 3), dv = E.input(n, 4), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      // the texture's own seed (+ Scatter), not the part's: so First Snow, Burning Mana and Euphoria Dust fall exactly as they always did
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'scatter', 0))*7919) >>> 0;
+      return withSeed(seed, () => { let c;
+      if(kind === 'sparks') c = genEmbers(w, h, Array.isArray(ca) ? whimHex(ca) : '#E0526F', Array.isArray(cb) ? whimHex(cb) : '#9B7FE8', amt, zoom, form);
+      else if(kind === 'motes') c = genMagicParticles(w, h, Array.isArray(ca) ? whimHex(ca) : '#E0526F', Array.isArray(cb) ? whimHex(cb) : '#9B7FE8', amt, zoom, form);
+      else c = genSnow(w, h, amt, zoom, light, form, Array.isArray(ca) ? { r: Math.round(ca[0]*255), g: Math.round(ca[1]*255), b: Math.round(ca[2]*255) } : (E.ctx.base || null));
+      const over = E.input(n, 1); if(over == null) return [c];
+      const [pc, px] = kitPicture(over, w, h); px.drawImage(c, 0, 0); return [pc]; }); },
+    run(E, n){ const [c] = this.paint(E, n); return [E.readCanvas(c)]; } },
   smoke: { cat: 'Noise', label: 'Smoke', ins: [], outs: ['density'], params: [WHIM_R('lift', 'Lift', 100, 40, 250), WHIM_R('drag', 'Drag', 60, 0, 200)], cost: () => 24,
     density(E, n, gw, gh){ return smokeField(gw, gh, E.num(n, 'lift', 100)/100, E.num(n, 'drag', 60)/100); },
     paint(E, n){ const [gw, gh] = whimGrid(E, 6); return [kitFieldCanvas(this.density(E, n, gw, gh), gw, gh)]; },
@@ -26090,6 +26160,7 @@ const STEP_DOCS = {
   glaze: 'Lights and colors crazed glaze from its maps.',
   material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
   oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
+  particles: 'Light hanging in the air, drawn over whatever comes in (or on nothing): Kind is snowflakes (First Snow), sparks falling in arcs (Burning Mana) or glittering motes (Euphoria Dust). The two color ports color them; the last setting is the wind for flakes, how far a spark\'s hue strays, or how wildly motes scatter. Wire the Light Dial into Wind From to blow the snow. Two Particles parts fall alike: give one a different Scatter.',
   strokes: 'A few fast, loaded swipes of gray paint (Painter\'s Frustration): each a body with bristle marks, fraying at the tail, flinging droplets. Wetness makes the paint mix, bleed and drip. Its second output is the paint\'s thickness, for a Light Engine.',
   screen: 'Prints a tone as a screen of dots, the way newspapers and comics do: a dot in every cell, as big as the tone is bright there. Wire a picture through Invert first to screen it dark-for-big. Screen Angle turns the grid.',
   grain: 'Film grain: Kind slides from silver (crisp grains in clumps) through film and paper (its cloudy formation and fibres) to a digital sensor (noise in each color, rows and columns). A color picture centered on gray: blend it over anything.',
@@ -26661,6 +26732,31 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // ♡ First Snow, Burning Mana and Euphoria Dust: one Particles part each, of its own kind
+  snow: { label: 'First Snow', canvas: true, teach: 'This is First Snow. One part makes it: Particles, set to flakes. The Light Dial goes into Wind From, so the wind blows from where the dial points, and the Wind knob says how hard. The flakes are colored by the Snow Hue (or anything wired into Color A). Try: turn the dial with Wind up, then set Kind to sparks.', nodes: [
+      ['knob', { slot: '1', name: 'Flake Size', def: 14 }, 40, 40],                // 1  (100 of 60–340)
+      ['knob', { slot: '2', name: 'Snowfall', def: 33 }, 40, 140],                 // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Wind', def: 0 }, 40, 240],                      // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['particles', { kind: 'flakes', amount: 100, '~amount': '20,260', size: 100, '~size': '60,340', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'First Snow', ground: 'grey' }, 600, 120]],              // 6
+    wires: [[1, 1, 5, paramPort('particles', 'size')], [2, 1, 5, paramPort('particles', 'amount')], [3, 1, 5, paramPort('particles', 'form')], [4, 1, 5, 4], [5, 1, 6, 1]] },
+  embers: { label: 'Burning Mana', canvas: true, teach: 'This is Burning Mana. One part makes it: Particles, set to sparks, each flung out and bent down by gravity, white-hot at the head. The two Hues color the sparks (they follow the page\'s accents until you set them). Hue Drift lets each spark\'s color stray. Try: wire a Texture into Over to rain sparks on it.', nodes: [
+      ['knob', { slot: '1', name: 'Ember Size', def: 7 }, 40, 40],                 // 1  (100 of 60–600)
+      ['knob', { slot: '2', name: 'Ember Count', def: 17 }, 40, 140],              // 2  (100 of 20–500)
+      ['knob', { slot: '3', name: 'Hue Drift', def: 10 }, 40, 240],                // 3
+      ['hue', { slot: '1', name: 'Ember Hue' }, 40, 340], ['hue', { slot: '2', name: 'Spark Hue' }, 40, 420],   // 4, 5
+      ['particles', { kind: 'sparks', amount: 100, '~amount': '20,500', size: 100, '~size': '60,600', form: 10, '~form': '0,100' }, 320, 100],   // 6
+      ['surface', { name: 'Burning Mana', ground: 'grey' }, 600, 120]],            // 7
+    wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+  magicparticles: { label: 'Euphoria Dust', canvas: true, teach: 'This is Euphoria Dust. One part makes it: Particles, set to motes. The two Hues color them (they follow the page\'s accents until you set them). Chaos gathers the dust into trails at 0, scatters it at 50 and bursts it at 100. Try: set Chaos to 0, then 100.', nodes: [
+      ['knob', { slot: '1', name: 'Sparkle Size', def: 44 }, 40, 40],              // 1  (100 of 20–200)
+      ['knob', { slot: '2', name: 'Sparkle Count', def: 23 }, 40, 140],            // 2  (100 of 10–400)
+      ['knob', { slot: '3', name: 'Chaos', def: 50 }, 40, 240],                    // 3
+      ['hue', { slot: '1', name: 'Sparkle Hue' }, 40, 340], ['hue', { slot: '2', name: 'Glow Hue' }, 40, 420],   // 4, 5
+      ['particles', { kind: 'motes', amount: 100, '~amount': '10,400', size: 100, '~size': '20,200', form: 50, '~form': '0,100' }, 320, 100],   // 6
+      ['surface', { name: 'Euphoria Dust', ground: 'grey' }, 600, 120]],           // 7
+    wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
   // √ Halftone: a soft Value Noise for the tone, printed as a Halftone Screen of dots.
   halftone: { label: 'Halftone', canvas: true, teach: 'This is Halftone. A Value Noise with one octave makes a soft, slow tone; Halftone Screen prints it as dots, each as big as the tone is bright there. Dot Scale is the screen\'s cell size and Dot Weight how heavy the dots print. Try: wire another texture into the Halftone Screen\'s tone, or turn its Screen Angle.', nodes: [
       ['knob', { slot: '1', name: 'Dot Scale', def: 14 }, 40, 40],                 // 1  (100 of 50–400)
@@ -26856,7 +26952,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
   const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -27024,6 +27120,11 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
+  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. It is a tutorial in putting parts together: each part does one job and hands it to the next. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
+      ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
+      ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
+      ['material', { relief: 22, '~relief': '0,45', gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
+    wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -27652,7 +27753,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
-    result = genEmbers(w,h,accent1,accent2,amt,zoom,form);
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
     result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat,extra.glow);
   } else if(type === 'astral_fog'){
@@ -27660,9 +27761,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow);
   } else if(type === 'snow'){
-    result = genSnow(w,h,amt,zoom,light,form,extra.base);
+    result = genChain(type, w, h, light, extra);           // Particles (flakes), blown by the dial (chains.js)
   } else if(type === 'magicparticles'){
-    result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (motes) (chains.js)
   } else if(type === 'glassrain'){
     result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
   } else if(type === 'rainstreaks'){
@@ -27923,7 +28024,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
@@ -28593,7 +28694,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Kalyke';
+const RELEASE = 'Jupiter–Pasiphae';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-12';
 
@@ -29419,7 +29520,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-12 · df2ad20";
+const STAMP = "2026-10-12 · 580c85b";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -32500,7 +32601,7 @@ function forgeHelpHtml(){
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
     + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
     + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
-    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part by its title bar to move it; drag anywhere else to move the view; use the wheel or − ⌖ + to zoom. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
+    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view; use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
     + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Kept</b> keeps the graph on this browser's shelf by name, opens kept graphs, and saves the shelf to a file (or brings graphs in from one) to share them. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
     + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
     + sec('parts', 'Every part', parts);
@@ -32650,8 +32751,20 @@ async function openForge(deps){
         P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; }); }
       return g; };
     F.faces = faces;
-    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); };
+    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
     F.save = save;
+    // ---- UNDO AND REDO (Ruby): every change to the graph is a step back — a part added, moved,
+    // removed, a wire, a setting, a whole graph opened. ↶ ↷ in the bar; Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or
+    // Ctrl+Y. (A burst of changes, a slider dragged, settles into one step.)
+    const hist = F.hist || (F.hist = { stack: [], at: -1, timer: 0, applying: false });
+    const paintHist = () => { const u = $('forgeUndo'), r = $('forgeRedo'); if(u) u.disabled = hist.at <= 0; if(r) r.disabled = hist.at >= hist.stack.length - 1; };
+    const pushNow = () => { const j = JSON.stringify(slim()); if(hist.stack[hist.at] === j) return;
+      hist.stack = hist.stack.slice(0, hist.at + 1); hist.stack.push(j); if(hist.stack.length > 100) hist.stack.shift(); hist.at = hist.stack.length - 1; paintHist(); };
+    function snapshot(){ if(hist.applying || F.quiet) return; clearTimeout(hist.timer); hist.timer = setTimeout(pushNow, 300); }
+    const stepHist = d => { clearTimeout(hist.timer); pushNow(); const to = hist.at + d;
+      if(to < 0 || to >= hist.stack.length){ sound('nothingToUndo'); return; }
+      hist.at = to; hist.applying = true; try { load(JSON.parse(hist.stack[to]), true); F.dirty = true; } finally { hist.applying = false; } paintHist(); sound(d < 0 ? 'undo' : 'redo'); };
+    F.undo = () => stepHist(-1); F.redo = () => stepHist(1); F.pushHist = pushNow; F.paintHist = paintHist;
     // what has changed since the graph was opened or loaded (the guards ask only then)
     const touched = () => { F.dirty = true; };
     ed.on('nodeCreated', id => { paintNode(id); save(); touched(); sound('nodeAdd'); });
@@ -32661,10 +32774,17 @@ async function openForge(deps){
     ed.on('nodeMoved', () => { paintWires(); save(); });
     ed.on('nodeDataChanged', () => { save(); touched(); });
     ed.on('import', () => setTimeout(paintAll, 0));
+    // EVERY WIRE REDRAWN from where its ports are now: a wire is drawn once, when it is made, and a
+    // part whose face changes size afterwards (its fonts arriving, its rows redrawn, the editor opened
+    // again later) left its wires pointing at where the ports used to be (Ruby's screenshot)
+    const redrawWires = () => { try { for(const id of Object.keys(rawNodes())) ed.updateConnectionNodes('node-' + id); paintWires(); } catch(e){} };
+    const redrawSoon = () => { redrawWires(); requestAnimationFrame(() => { redrawWires(); setTimeout(redrawWires, 250); }); };
+    F.redrawWires = redrawSoon;
+    if(document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { if(!veil.hidden) redrawSoon(); });
     const load = (g, keepDirty) => { const was = F.dirty; F.quiet = true; ed.clear(); ed.import(faces(g));
       // (a graph from anywhere, without a Surface: it gets one)
       if(!Object.values(rawNodes()).some(n => n.name === 'surface')) add('surface', 900, 120);
-      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; };
+      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; redrawSoon(); };
     F.load = load;
     // a node's face drawn again from its data (a param bound or unbound changes its control)
     const reface = id => {
@@ -32718,11 +32838,16 @@ async function openForge(deps){
     area.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer && e.dataTransfer.getData('text/forge'); if(!type) return;
       const p = toGrid(e.clientX, e.clientY); add(type, p.x, p.y); });
     // ---- moving: a node only by its title bar (and not when pinned); anywhere else, the grid pans ----
+    let ptrKind = 'mouse';
+    area.addEventListener('pointerdown', e => { ptrKind = e.pointerType || 'mouse'; }, true);
     ed.on('clickEnd', e => {
       const t = e && e.target; if(!t || !t.closest) return;
       const nodeEl = t.closest('.drawflow-node'); if(!nodeEl) return;
       if(t.closest('.forge-node-btn')){ ed.drag = false; return; }
       if(t.closest('.forge-node-title')){ if(isPinned(nodeEl.id.slice(5))) ed.drag = false; return; }
+      // WITH A MOUSE a part moves from anywhere on it but its controls and ports (Ruby: dragging only by the
+      // title felt like it worked when it liked); on a touch screen only its title moves it, so a finger can pan
+      if(ptrKind === 'mouse' && !isPinned(nodeEl.id.slice(5)) && !t.closest('input, select, textarea, button, .input, .output, output, label')) return;
       ed.drag = false;
       if(!t.closest('input, select, textarea, button, .input, .output, output')) ed.editor_selected = true;
     });
@@ -32776,8 +32901,16 @@ async function openForge(deps){
       if(veil.hidden) return;
       if(e.key === 'Escape' && menu && !menu.hidden){ e.preventDefault(); closeMenu(); return; }
       if(e.key === 'Escape' && pending){ e.preventDefault(); stopWire(); return; }
+      const t = e.target, typing = t && ((t.tagName === 'INPUT' && t.type !== 'range') || t.tagName === 'TEXTAREA' || t.isContentEditable), mod = e.ctrlKey || e.metaKey, k = (e.key || '').toLowerCase();
+      // THE KEYS other editors have: undo, redo, copy a part, fit the view
+      if(mod && k === 'z' && !typing){ e.preventDefault(); e.stopImmediatePropagation(); e.shiftKey ? stepHist(1) : stepHist(-1); return; }
+      if(mod && k === 'y' && !typing){ e.preventDefault(); e.stopImmediatePropagation(); stepHist(1); return; }
+      if(mod && k === 'd' && !typing && ed.node_selected){ e.preventDefault(); e.stopImmediatePropagation(); const id = String(ed.node_selected.id).replace('node-', ''), n = nodeOf(id);
+        if(!n) return; if(n.name === 'surface'){ sound('blocked'); if(deps.warn) deps.warn(['a graph has one Surface']); return; }
+        const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); return; }
+      if(!mod && !e.altKey && k === 'f' && !typing && !(t && t.tagName === 'SELECT')){ e.preventDefault(); fitView(); return; }
       if(!(e.key === 'Delete' || e.key === 'Backspace')) return;
-      const t = e.target; if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
       if(ed.connection_selected){ e.preventDefault(); e.stopImmediatePropagation(); cutWire(wireOf(ed.connection_selected.parentElement)); return; }
       if(ed.node_selected){ e.preventDefault(); e.stopImmediatePropagation(); removeAsked(String(ed.node_selected.id).replace('node-', '')); }
     }, true);
@@ -33047,7 +33180,9 @@ async function openForge(deps){
       if(e.target.closest && e.target.closest('input, select, textarea, .forge-menu')) return;
       e.preventDefault(); e.stopImmediatePropagation();
       const r = area.getBoundingClientRect(), mx = r.width/2, my = r.height/2, sx = e.clientX - r.left, sy = e.clientY - r.top, z0 = ed.zoom || 1;
-      const z = Math.max(ed.zoom_min, Math.min(ed.zoom_max, z0*Math.exp(-Math.max(-60, Math.min(60, e.deltaY))*0.0022)));
+      // a mouse wheel in Firefox counts LINES (3 a notch), a trackpad pixels: lines and pages become pixels
+      const dy = e.deltaY*(e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+      const z = Math.max(ed.zoom_min, Math.min(ed.zoom_max, z0*Math.exp(-Math.max(-60, Math.min(60, dy))*0.0022)));
       const px = (sx - ed.canvas_x - mx)/z0 + mx, py = (sy - ed.canvas_y - my)/z0 + my;
       ed.zoom = z; ed.zoom_last_value = z; ed.canvas_x = sx - mx - (px - mx)*z; ed.canvas_y = sy - my - (py - my)*z;
       ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
@@ -33158,6 +33293,8 @@ async function openForge(deps){
       { glyph: '⇣', label: 'Bring surfaces in from a file…', act: importShelf }] }; };
     if($('forgeKeptBtn')) $('forgeKeptBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, shelfMenu()); });
     if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
+    if($('forgeUndo')) $('forgeUndo').addEventListener('click', () => stepHist(-1));
+    if($('forgeRedo')) $('forgeRedo').addEventListener('click', () => stepHist(1));
     if($('forgeZoomIn')) $('forgeZoomIn').addEventListener('click', () => ed.zoom_in());
     if($('forgeZoomOut')) $('forgeZoomOut').addEventListener('click', () => ed.zoom_out());
     if($('forgeFit')) $('forgeFit').addEventListener('click', () => fitView());
@@ -33195,7 +33332,8 @@ async function openForge(deps){
     F.quiet = true; add('noise', 40, 60); add('surface', 420, 90); F.quiet = false; F.paintAll(); F.save(); }
   F.opened = JSON.stringify(ed.export());
   F.dirty = false;
-  setTimeout(() => { if(F.fitView) F.fitView(); }, 40);
+  if(F.pushHist){ F.pushHist(); F.paintHist(); }           // the graph as it opened is the first step back
+  setTimeout(() => { if(F.fitView) F.fitView(); if(F.redrawWires) F.redrawWires(); }, 40);
 }
 function closeForge(deps){
   const veil = deps.$('forgeVeil'); if(veil){ veil.hidden = true; veil.classList.remove('parts-open'); }

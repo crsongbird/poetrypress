@@ -72,7 +72,7 @@ from the source files (unbuilt) — everything must work both ways.
 | `steps.js` · `stepsTouch.js` · `stepsChaos.js` · `stepsWhimsy.js` · `stepsLight.js` · `stepsSharpness.js` (Halftone Screen, Film Grain) | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains (Touch: weave, cloth, panes, glass, flakes · Chaos: crazing, brushwork, glaze · Whimsy: smoke, light shaft, dust motes, painted sky, painted ridges, watercolour wash · Light: ANGRY STROKES (Painter's Frustration), the LIGHT ENGINE as a part (material: picture + heights + gloss map + shade/highlight/light hues, lit by the dial through lightHeights; a canvas pass lights on a ≤1.2M-point grid and composes at full size), OIL PAINT (any picture → strokes along its forms, stopping at edges, Hertzmann 1998, plus the paint's heights), CANVAS WEAVE) |
 | `cartomancyTable.js` | what else is on Cartomancy's table (TABLE_OBJECTS: candle, cup, glass, crystal ball… each with its layer, weight, size, variety and painter), where clutter goes (crtTableObjects), counters (crtToken) and card damage (crtDamageFor, crtCardPath, crtDamage). Bundled BEFORE cartomancy.js and imports nothing from it: cartomancy.js hands it its drawing kit (CRT_KIT) when it loads |
 | `cartomancy.js` | Cartomancy: a card game in progress, and its parts — table, card, coin, the deal by a game's rules — also the Athanor's Table, Deal, Table Objects and Coins steps (CARD_STEPS) |
-| `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape); each an Athanor template with its TEACH |
+| `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape, Painter's Frustration, Halftone, Film Grain, First Snow, Burning Mana, Euphoria Dust); each an Athanor template with its TEACH |
 | `athanor.js` · `forge.js` | the Athanor: graph walker, cache and budget (in the worker) · node editor UI (Drawflow) |
 | `boxFx.js` | the inset box's glass and GPU blends |
 | `runology.js` | Ruby's Runes of Power: Archetypes, Accent Runes, Chroma (its words in the seed banks, its glyphs among the spell glyphs) |
@@ -229,6 +229,12 @@ two parts agree.
   edge in came-widths/8, pane number, palette slot) → Glass (lit behind and
   in front; a pane's look comes from its number: mulberry32, so the same pane
   is the same glass; the dome turns outward along −∇edge).
+- PARTICLES (stepsWhimsy 'particles', canvas): flakes / sparks / motes, the
+  old painters (texWhimsy genSnow, genEmbers, genMagicParticles). It draws
+  under withSeed(ctx.seed + Scatter·7919), NOT the node's own seed, so
+  First Snow, Burning Mana and Euphoria Dust (Euphoria: a perfect preset)
+  stay pixel-identical. A texture converted from a generator that drew
+  straight from Math.random keeps its look the same way.
 - PAINTED LANDSCAPE (chains 'landscape', canvas): Painted Sky → Painted Ridges
   (over any sky; none wired: its plain wash) → Watercolour Wash (any picture).
   landScene(seed, {country, time, tilt}) is the shared scene.

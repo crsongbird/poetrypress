@@ -34,7 +34,7 @@ import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
-import { genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genFlowField } from './texWhimsy.js';
+import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil, genMoon, genFlowField } from './texWhimsy.js';
 import { genFlowers, genCityscape, genGuilloche } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
 import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genSuminagashi, genWatercolour } from './texTouch.js';
@@ -534,7 +534,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'bokeh'){
     result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
   } else if(type === 'embers'){
-    result = genEmbers(w,h,accent1,accent2,amt,zoom,form);
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
     result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat,extra.glow);
   } else if(type === 'astral_fog'){
@@ -542,9 +542,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow);
   } else if(type === 'snow'){
-    result = genSnow(w,h,amt,zoom,light,form,extra.base);
+    result = genChain(type, w, h, light, extra);           // Particles (flakes), blown by the dial (chains.js)
   } else if(type === 'magicparticles'){
-    result = genMagicParticles(w,h,accent1,accent2,amt,zoom,form);
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (motes) (chains.js)
   } else if(type === 'glassrain'){
     result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
   } else if(type === 'rainstreaks'){
@@ -805,7 +805,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }

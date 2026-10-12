@@ -6,63 +6,22 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Kalyke)
-- THE DICE: a die (⚄) beside every section's lock rolls only that section —
-  the Backdrop, Surface and Typeface as their Summon buttons do, the rest
-  each slider, menu and color within reason. The lock beside it keeps the
-  section through any roll. On the Surface, Shift-click or a long press on
-  the die rolls only the seed (the same texture, a new pattern).
-- PAINTER'S FRUSTRATION is a chain: Angry Strokes (the paint and its
-  thickness) → a little Canvas Weave → the Light Engine → the Surface (the
-  oil-on-canvas module before its output, as in Painted Landscape). Wetness
-  also flattens and glosses the paint.
-- HALFTONE (Value Noise → Halftone Screen) and FILM GRAIN (one part) are
-  chains. Halftone Screen screens any tone, at an angle; Film Grain works over
-  anything.
-- The Oil on Canvas starter is gone: the module lives inside textures now.
-- Fixed in the Athanor: a part without its own painting code (Mix, Levels…)
-  could not read a picture made by one that has it, at full size on the page.
-
-## 1a · Ruby to judge (from Jupiter–Sponde)
-- THE LIGHT ENGINE is a part: picture + heights lit by the dial, with relief,
-  gloss (or a gloss map), shine, shadow, occlusion, ambient, and the shade,
-  highlight and light hues. OIL PAINT repaints any picture in strokes along
-  its forms, with the paint's heights; CANVAS WEAVE is the cloth. A new
-  starter, Oil on Canvas, puts them together.
-- PAINTED LANDSCAPE is oil on canvas the dial lights: a sixth slider,
-  Impasto (0 is the old flat painting).
-- THE ATHANOR: parts wear the color of what they make (as their dots and
-  wires do); a tapped part comes to the front; the wheel zooms toward the
-  pointer and zooms out further; larger type in the parts; on a phone the
-  bar is one row (⋯ holds Kept, Help, Revert, Clear; the zoom buttons are
-  gone); the teaching note sits beside the parts list, dims the grid, and
-  closes with a click anywhere. Its old Esoterica card is gone.
-- PRESETS: built-ins alphabetical in each heading; ＋ Save this look at the
-  end of Custom Presets.
-- CARTOMANCY'S WEAR has far more range: at the top nearly every card is
-  marked, many two or three times.
-
-## 1b · Ruby to judge (from Jupiter–Carme)
-- INLINE CODE works again. The crash was mine: the code's backdrop read a
-  color as the wrong shape, so every frame with `code` in it failed and the
-  preview kept its last good picture. Not Firefox only. A test now holds it.
-- THE PREVIEW (desktop): the viewer is the whole right pane, whatever the
-  page's shape; the picture fits inside it, so the aspect ratio changes the
-  picture, never the viewer. The buttons (fit, undo, redo, filmstrip, Save
-  image) sit in a strip along the pane's foot, off the picture. A zoom
-  (Ctrl or ⌘ + wheel) fills the whole pane. The phone is unchanged.
-- PRESETS: Built-In Presets (was Known Rituals) and a new card under it,
-  Custom Presets: your saved looks, alphabetical, in as many rows as they
-  need. The saved looks in Esoterica → Spellcrafting are alphabetical too,
-  and wrap into rows instead of scrolling sideways.
-- THE OPENING PAGE is Ruby's "WTF is PoetryPress?", in 9:16 (now the
-  default shape). A first visit also finds the Instrument Panel (the old
-  opening page) in the Grimoire, dated the release, and one plain example
-  look in Custom Presets ("Example · Linen Page": warm paper, dark ink,
-  Alegreya, a little linen). Each is added once; deleted, it stays deleted.
-- ROSÉ is the plum-charcoal again (Ruby: it grew on her, on OLED most).
-- THE BUILD keeps one archive: `node build.mjs --zip` deletes the old ones
-  in release/ first.
+## 1 · Ruby to judge (new in Jupiter–Pasiphae)
+- THE ATHANOR'S HANDS: with a mouse a part drags from anywhere on it (not
+  only its title), except its fields and ports. The wheel zooms on Firefox
+  too: it counted wheel steps as pixels, so each step barely moved. Wires
+  are redrawn whenever the Athanor opens or its fonts arrive (the stray
+  wires in the screenshot came from wires drawn while the panel was hidden:
+  the graph itself was always intact).
+- UNDO and REDO in the Athanor (↶ ↷ in its bar; Ctrl/⌘+Z, Shift+Ctrl+Z or
+  Ctrl+Y), 100 steps, for every move, wire and setting. Ctrl+D duplicates a
+  part, F fits the view, Delete removes what's selected (asking first, as
+  before). Copying the Surface is refused with a knock.
+- THE OIL ON CANVAS STARTER is back (Start from… → Oil on Canvas): any
+  texture → Oil Paint → a little Canvas Weave → the Light Engine.
+- PARTICLES is a part: flakes, sparks or motes, over any picture, in any two
+  colors, blown by the dial. First Snow, Burning Mana and Euphoria Dust are
+  now chains of it, and draw exactly as before (Euphoria is unchanged).
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
@@ -73,8 +32,7 @@ Recommendations".
 - PAINTED LANDSCAPE: more variety in the water and land textures.
 - REROLLING: the dice are in (Kalyke); tell me what still sticks.
 - THE ATHANOR: textures inside a graph sometimes need swapping to show
-  (not reproduced yet: which texture, and what showed?). Check the zoom no
-  longer locks (Sponde: the wheel zooms toward the pointer, farther out).
+  (not reproduced yet: which texture, and what showed?).
 - OIL PAINT loses small things (distant trees) at Impasto 50; a finer pass
   where the picture has small detail.
 
@@ -120,18 +78,18 @@ Recommendations".
 
 ## 4 · Next (no input needed)
 - EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon: loadable, viewable
-  as a graph, mixable, kept and shared as one's own). 12 of 47 are chains:
+  as a graph, mixable, kept and shared as one's own). 15 of 47 are chains:
   Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy,
   Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape, Painter's
-  Frustration, Halftone, Film Grain. Still to take apart (each when touched,
-  or in passes): Dream Bloom, Deep Field, Euphoria Dust, Burning Mana, First
-  Snow, Lotus Pond, Rain on Glass, Sigil Scatter, Machine Glyphs,
+  Frustration, Halftone, Film Grain, First Snow, Burning Mana, Euphoria Dust.
+  Still to take apart (each when touched, or in passes): Dream Bloom, Deep
+  Field, Lotus Pond, Rain on Glass, Sigil Scatter, Machine Glyphs,
   Transmutation Circles, Ink Blot, Old Paper, Crystal Leaf, Spangle, Cold
   Press, Cup Ring, Guilloche, Chladni, Contour Map, Suminagashi, Watercolour,
   Flow-Field Ink, Turing Skin, Hoarfrost, Burnt Letter, Poured Wax, Dunes,
   Kintsugi, Moss, City at Night, Black Hole, Scrying Pool, Moon, Aurora,
-  Tessellate. Likely shared parts first: a Scatter of marks (snow, embers,
-  dust, sparkles), the Light Engine part (done, Sponde: most 🜚 Touch textures
+  Tessellate. Likely shared parts first: the Particles part (done, Pasiphae:
+  Deep Field's stars and Dream Bloom's motes may join it), the Light Engine part (done, Sponde: most 🜚 Touch textures
   can end in it now), a
   Marbling part (Suminagashi, Ink Blot).
 - The Athanor on a phone, still: haptics on a long press, an accessibility

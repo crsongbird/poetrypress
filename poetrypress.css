@@ -1999,6 +1999,7 @@ summary.card-title, .card-title{ overflow:hidden; }
 /* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ⋯ (Kept, Help, Revert,
    Clear), Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
 .forge-more-btn{ display:none; }
+.forge-bar .forge-hist{ padding:4px 9px; font-size:15px; } .forge-bar .forge-hist:disabled{ opacity:.3; }
 @media (max-width: 760px){
   .forge-bar{ flex-wrap:nowrap; gap:4px; padding:4px 6px; }
   .forge-bar button, .forge-bar .forge-starter{ font-size:13px; padding:5px 9px; min-height:32px; }

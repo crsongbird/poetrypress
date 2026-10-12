@@ -4,6 +4,27 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Pasiphae (2026-10-12)
+
+- The Athanor is easier to handle with a mouse:
+  - A part drags from anywhere on it, not only its title (its fields and
+    ports still work as before).
+  - The scroll wheel zooms on Firefox. Firefox reports wheel steps in lines,
+    which were being read as pixels, so each step barely moved.
+- Fixed: wires sometimes pointed to the wrong places when the Athanor was
+  opened again later. They had been drawn while the panel was hidden; they
+  are now redrawn on every opening and when the fonts arrive. The graph
+  itself was never damaged.
+- Undo and redo in the Athanor: ↶ and ↷ in its bar, or Ctrl/⌘+Z and
+  Shift+Ctrl+Z (or Ctrl+Y), 100 steps deep. Ctrl+D duplicates a part, F fits
+  the view, and Delete removes the selection (asking first, as always).
+- The Oil on Canvas starter is back: any texture, painted in oil on a little
+  canvas weave and lit by the Light Engine. It shows how parts fit together.
+- New part, Particles: snowflakes, sparks or glittering motes, drawn over any
+  picture in any two colors, with the wind taken from the dial. First Snow,
+  Burning Mana and Euphoria Dust are now built from it, and draw exactly as
+  they did.
+
 ## Jupiter–Kalyke (2026-10-12)
 
 - Dice: a die (⚄) now sits beside the lock in every section's heading, and

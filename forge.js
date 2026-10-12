@@ -123,7 +123,7 @@ export function forgeHelpHtml(){
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
     + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
     + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
-    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part by its title bar to move it; drag anywhere else to move the view; use the wheel or − ⌖ + to zoom. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
+    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view; use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
     + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Kept</b> keeps the graph on this browser's shelf by name, opens kept graphs, and saves the shelf to a file (or brings graphs in from one) to share them. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
     + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
     + sec('parts', 'Every part', parts);
@@ -273,8 +273,20 @@ export async function openForge(deps){
         P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; }); }
       return g; };
     F.faces = faces;
-    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); };
+    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
     F.save = save;
+    // ---- UNDO AND REDO (Ruby): every change to the graph is a step back — a part added, moved,
+    // removed, a wire, a setting, a whole graph opened. ↶ ↷ in the bar; Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or
+    // Ctrl+Y. (A burst of changes, a slider dragged, settles into one step.)
+    const hist = F.hist || (F.hist = { stack: [], at: -1, timer: 0, applying: false });
+    const paintHist = () => { const u = $('forgeUndo'), r = $('forgeRedo'); if(u) u.disabled = hist.at <= 0; if(r) r.disabled = hist.at >= hist.stack.length - 1; };
+    const pushNow = () => { const j = JSON.stringify(slim()); if(hist.stack[hist.at] === j) return;
+      hist.stack = hist.stack.slice(0, hist.at + 1); hist.stack.push(j); if(hist.stack.length > 100) hist.stack.shift(); hist.at = hist.stack.length - 1; paintHist(); };
+    function snapshot(){ if(hist.applying || F.quiet) return; clearTimeout(hist.timer); hist.timer = setTimeout(pushNow, 300); }
+    const stepHist = d => { clearTimeout(hist.timer); pushNow(); const to = hist.at + d;
+      if(to < 0 || to >= hist.stack.length){ sound('nothingToUndo'); return; }
+      hist.at = to; hist.applying = true; try { load(JSON.parse(hist.stack[to]), true); F.dirty = true; } finally { hist.applying = false; } paintHist(); sound(d < 0 ? 'undo' : 'redo'); };
+    F.undo = () => stepHist(-1); F.redo = () => stepHist(1); F.pushHist = pushNow; F.paintHist = paintHist;
     // what has changed since the graph was opened or loaded (the guards ask only then)
     const touched = () => { F.dirty = true; };
     ed.on('nodeCreated', id => { paintNode(id); save(); touched(); sound('nodeAdd'); });
@@ -284,10 +296,17 @@ export async function openForge(deps){
     ed.on('nodeMoved', () => { paintWires(); save(); });
     ed.on('nodeDataChanged', () => { save(); touched(); });
     ed.on('import', () => setTimeout(paintAll, 0));
+    // EVERY WIRE REDRAWN from where its ports are now: a wire is drawn once, when it is made, and a
+    // part whose face changes size afterwards (its fonts arriving, its rows redrawn, the editor opened
+    // again later) left its wires pointing at where the ports used to be (Ruby's screenshot)
+    const redrawWires = () => { try { for(const id of Object.keys(rawNodes())) ed.updateConnectionNodes('node-' + id); paintWires(); } catch(e){} };
+    const redrawSoon = () => { redrawWires(); requestAnimationFrame(() => { redrawWires(); setTimeout(redrawWires, 250); }); };
+    F.redrawWires = redrawSoon;
+    if(document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { if(!veil.hidden) redrawSoon(); });
     const load = (g, keepDirty) => { const was = F.dirty; F.quiet = true; ed.clear(); ed.import(faces(g));
       // (a graph from anywhere, without a Surface: it gets one)
       if(!Object.values(rawNodes()).some(n => n.name === 'surface')) add('surface', 900, 120);
-      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; };
+      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; redrawSoon(); };
     F.load = load;
     // a node's face drawn again from its data (a param bound or unbound changes its control)
     const reface = id => {
@@ -341,11 +360,16 @@ export async function openForge(deps){
     area.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer && e.dataTransfer.getData('text/forge'); if(!type) return;
       const p = toGrid(e.clientX, e.clientY); add(type, p.x, p.y); });
     // ---- moving: a node only by its title bar (and not when pinned); anywhere else, the grid pans ----
+    let ptrKind = 'mouse';
+    area.addEventListener('pointerdown', e => { ptrKind = e.pointerType || 'mouse'; }, true);
     ed.on('clickEnd', e => {
       const t = e && e.target; if(!t || !t.closest) return;
       const nodeEl = t.closest('.drawflow-node'); if(!nodeEl) return;
       if(t.closest('.forge-node-btn')){ ed.drag = false; return; }
       if(t.closest('.forge-node-title')){ if(isPinned(nodeEl.id.slice(5))) ed.drag = false; return; }
+      // WITH A MOUSE a part moves from anywhere on it but its controls and ports (Ruby: dragging only by the
+      // title felt like it worked when it liked); on a touch screen only its title moves it, so a finger can pan
+      if(ptrKind === 'mouse' && !isPinned(nodeEl.id.slice(5)) && !t.closest('input, select, textarea, button, .input, .output, output, label')) return;
       ed.drag = false;
       if(!t.closest('input, select, textarea, button, .input, .output, output')) ed.editor_selected = true;
     });
@@ -399,8 +423,16 @@ export async function openForge(deps){
       if(veil.hidden) return;
       if(e.key === 'Escape' && menu && !menu.hidden){ e.preventDefault(); closeMenu(); return; }
       if(e.key === 'Escape' && pending){ e.preventDefault(); stopWire(); return; }
+      const t = e.target, typing = t && ((t.tagName === 'INPUT' && t.type !== 'range') || t.tagName === 'TEXTAREA' || t.isContentEditable), mod = e.ctrlKey || e.metaKey, k = (e.key || '').toLowerCase();
+      // THE KEYS other editors have: undo, redo, copy a part, fit the view
+      if(mod && k === 'z' && !typing){ e.preventDefault(); e.stopImmediatePropagation(); e.shiftKey ? stepHist(1) : stepHist(-1); return; }
+      if(mod && k === 'y' && !typing){ e.preventDefault(); e.stopImmediatePropagation(); stepHist(1); return; }
+      if(mod && k === 'd' && !typing && ed.node_selected){ e.preventDefault(); e.stopImmediatePropagation(); const id = String(ed.node_selected.id).replace('node-', ''), n = nodeOf(id);
+        if(!n) return; if(n.name === 'surface'){ sound('blocked'); if(deps.warn) deps.warn(['a graph has one Surface']); return; }
+        const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); return; }
+      if(!mod && !e.altKey && k === 'f' && !typing && !(t && t.tagName === 'SELECT')){ e.preventDefault(); fitView(); return; }
       if(!(e.key === 'Delete' || e.key === 'Backspace')) return;
-      const t = e.target; if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
       if(ed.connection_selected){ e.preventDefault(); e.stopImmediatePropagation(); cutWire(wireOf(ed.connection_selected.parentElement)); return; }
       if(ed.node_selected){ e.preventDefault(); e.stopImmediatePropagation(); removeAsked(String(ed.node_selected.id).replace('node-', '')); }
     }, true);
@@ -670,7 +702,9 @@ export async function openForge(deps){
       if(e.target.closest && e.target.closest('input, select, textarea, .forge-menu')) return;
       e.preventDefault(); e.stopImmediatePropagation();
       const r = area.getBoundingClientRect(), mx = r.width/2, my = r.height/2, sx = e.clientX - r.left, sy = e.clientY - r.top, z0 = ed.zoom || 1;
-      const z = Math.max(ed.zoom_min, Math.min(ed.zoom_max, z0*Math.exp(-Math.max(-60, Math.min(60, e.deltaY))*0.0022)));
+      // a mouse wheel in Firefox counts LINES (3 a notch), a trackpad pixels: lines and pages become pixels
+      const dy = e.deltaY*(e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+      const z = Math.max(ed.zoom_min, Math.min(ed.zoom_max, z0*Math.exp(-Math.max(-60, Math.min(60, dy))*0.0022)));
       const px = (sx - ed.canvas_x - mx)/z0 + mx, py = (sy - ed.canvas_y - my)/z0 + my;
       ed.zoom = z; ed.zoom_last_value = z; ed.canvas_x = sx - mx - (px - mx)*z; ed.canvas_y = sy - my - (py - my)*z;
       ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
@@ -781,6 +815,8 @@ export async function openForge(deps){
       { glyph: '⇣', label: 'Bring surfaces in from a file…', act: importShelf }] }; };
     if($('forgeKeptBtn')) $('forgeKeptBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, shelfMenu()); });
     if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
+    if($('forgeUndo')) $('forgeUndo').addEventListener('click', () => stepHist(-1));
+    if($('forgeRedo')) $('forgeRedo').addEventListener('click', () => stepHist(1));
     if($('forgeZoomIn')) $('forgeZoomIn').addEventListener('click', () => ed.zoom_in());
     if($('forgeZoomOut')) $('forgeZoomOut').addEventListener('click', () => ed.zoom_out());
     if($('forgeFit')) $('forgeFit').addEventListener('click', () => fitView());
@@ -818,7 +854,8 @@ export async function openForge(deps){
     F.quiet = true; add('noise', 40, 60); add('surface', 420, 90); F.quiet = false; F.paintAll(); F.save(); }
   F.opened = JSON.stringify(ed.export());
   F.dirty = false;
-  setTimeout(() => { if(F.fitView) F.fitView(); }, 40);
+  if(F.pushHist){ F.pushHist(); F.paintHist(); }           // the graph as it opened is the first step back
+  setTimeout(() => { if(F.fitView) F.fitView(); if(F.redrawWires) F.redrawWires(); }, 40);
 }
 export function closeForge(deps){
   const veil = deps.$('forgeVeil'); if(veil){ veil.hidden = true; veil.classList.remove('parts-open'); }

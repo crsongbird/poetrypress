@@ -26,7 +26,8 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice } from './texCore.js';
+import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed } from './texCore.js';
+import { genEmbers, genSnow, genMagicParticles } from './texWhimsy.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
@@ -643,7 +644,24 @@ const whimArea = E => E.canvasPass ? canonArea(E.ww, E.wh) : E.carea;
 const whimDial = (E, v) => typeof v === 'number' ? v*360 : (E.ctx.light ?? 315);
 const LAND_COUNTRIES = ['seed', ...Object.keys(LAND_BIOMES)], LAND_TIMESEL = ['seed', ...Object.keys(LAND_TIMES)];
 const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'country', 'seed')), time: String(E.P(n, 'time', 'seed')), tilt: E.num(n, 'tilt', 0)/100 });
+// PARTICLES: three ways light hangs in the air, each the painter of a texture that used to be its own
+// (texWhimsy: genSnow, genEmbers, genMagicParticles) — flakes (First Snow), sparks (Burning Mana) and
+// motes (Euphoria Dust) — drawn over any picture, in any colours, the wind from any direction
+const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 export const WHIMSY_STEPS = {
+  particles: { cat: 'Marks', label: 'Particles', ins: ['over', 'color a', 'color b', 'wind from'], outs: ['image'], io: { ins: ['image', 'colour', 'colour', 'value'], outs: ['image'] },
+    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Scatter', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, kind = String(E.P(n, 'kind', 'flakes')), amt = Math.max(0.02, E.num(n, 'amount', 100)/100), zoom = Math.max(0.2, E.num(n, 'size', 100)/100), form = E.num(n, 'form', 50)/100;
+      const ca = E.input(n, 2), cb = E.input(n, 3), dv = E.input(n, 4), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      // the texture's own seed (+ Scatter), not the part's: so First Snow, Burning Mana and Euphoria Dust fall exactly as they always did
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'scatter', 0))*7919) >>> 0;
+      return withSeed(seed, () => { let c;
+      if(kind === 'sparks') c = genEmbers(w, h, Array.isArray(ca) ? whimHex(ca) : '#E0526F', Array.isArray(cb) ? whimHex(cb) : '#9B7FE8', amt, zoom, form);
+      else if(kind === 'motes') c = genMagicParticles(w, h, Array.isArray(ca) ? whimHex(ca) : '#E0526F', Array.isArray(cb) ? whimHex(cb) : '#9B7FE8', amt, zoom, form);
+      else c = genSnow(w, h, amt, zoom, light, form, Array.isArray(ca) ? { r: Math.round(ca[0]*255), g: Math.round(ca[1]*255), b: Math.round(ca[2]*255) } : (E.ctx.base || null));
+      const over = E.input(n, 1); if(over == null) return [c];
+      const [pc, px] = kitPicture(over, w, h); px.drawImage(c, 0, 0); return [pc]; }); },
+    run(E, n){ const [c] = this.paint(E, n); return [E.readCanvas(c)]; } },
   smoke: { cat: 'Noise', label: 'Smoke', ins: [], outs: ['density'], params: [WHIM_R('lift', 'Lift', 100, 40, 250), WHIM_R('drag', 'Drag', 60, 0, 200)], cost: () => 24,
     density(E, n, gw, gh){ return smokeField(gw, gh, E.num(n, 'lift', 100)/100, E.num(n, 'drag', 60)/100); },
     paint(E, n){ const [gw, gh] = whimGrid(E, 6); return [kitFieldCanvas(this.density(E, n, gw, gh), gw, gh)]; },
