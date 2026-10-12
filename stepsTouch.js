@@ -540,32 +540,39 @@ export function paneLayout(ww, wh, zoom, amt, order, more = {}){
   S.forEach((s, i) => { const bx = Math.floor(s[0]/bs) + 2, by = Math.floor(s[1]/bs) + 2; if(bx < 0 || by < 0 || bx >= bw || by >= bh) return; (B2[by*bw + bx] || (B2[by*bw + bx] = [])).push(i); });
   const lw = Math.max(0.6, unit*0.0065*amt);                         // the came's half-width
   const lead = new Float32Array(N), edge = new Float32Array(N), pane = new Float32Array(N), pal = new Float32Array(N), win = new Float32Array(N).fill(1);
-  // THE WINDOW'S SHAPE: none (the whole page is glass), a LANCET (a tall pointed arch), or a ROUND window; outside it, stone,
-  // and a came along its edge. frameD(x, y): how far inside the outline, in pixels (< 0: outside)
+  // THE WINDOW'S SHAPE (Ruby: arches made OF the glass, not set in stone): none (the whole page is glass), a LANCET
+  // (a tall pointed arch), a ROUND window, or an ARCADE of three lancets. The outline is itself leading — a heavier
+  // came — and the glass beyond it carries on as a border in its own colours. frameD(x, y): how far inside, in pixels.
   const frame = more.frame || 0, mg = unit*0.07;
-  const frameD = frame === 1 ? (x, y) => {
-      const L = mg, Rr = ww - mg, top = mg, bot = wh - mg, half = (Rr - L)/2, rad = (Rr - L)*0.86;
-      const spring = top + Math.sqrt(Math.max(0, rad*rad - (rad - half)**2));   // where the arch's two arcs leave the sides
+  const lancet = (L, Rr, top, bot) => (x, y) => {
+      const half = (Rr - L)/2, rad = (Rr - L)*0.86, spring = top + Math.sqrt(Math.max(0, rad*rad - (rad - half)**2));   // where the arch's two arcs leave the sides
       let d = Math.min(x - L, Rr - x, bot - y);
       if(y < spring){ const dl = rad - Math.hypot(x - (L + rad), y - spring), dr = rad - Math.hypot(x - (Rr - rad), y - spring); d = Math.min(d, dl, dr); }
-      return d; }
-    : frame === 2 ? (x, y) => Math.min(ww, wh)/2 - mg - Math.hypot(x - ww/2, y - wh/2) : null;
+      return d; };
+  const arc3 = (() => { const gap = unit*0.05, wd = (ww - mg*2 - gap*2)/3, A = [0, 1, 2].map(k => lancet(mg + k*(wd + gap), mg + k*(wd + gap) + wd, mg + (k === 1 ? 0 : wh*0.08), wh - mg));
+    return (x, y) => Math.max(A[0](x, y), A[1](x, y), A[2](x, y)); })();
+  const frameD = frame === 1 ? lancet(mg, ww - mg, mg, wh - mg) : frame === 2 ? (x, y) => Math.min(ww, wh)/2 - mg - Math.hypot(x - ww/2, y - wh/2) : frame === 3 ? arc3 : null;
+  const joint = new Float32Array(N);
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const bx = Math.floor(x/bs) + 2, by = Math.floor(y/bs) + 2;
     let best = -1, bd = Infinity;
     for(let j = by - 1; j <= by + 1; j++) for(let i = bx - 1; i <= bx + 1; i++){ if(i < 0 || j < 0 || i >= bw || j >= bh) continue; const L = B2[j*bw + i]; if(!L) continue;
       for(const k of L){ const dx = S[k][0] - x, dy = S[k][1] - y, d = dx*dx + dy*dy; if(d < bd){ bd = d; best = k; } } }
-    // the distance to the nearest bisector: the lead's centre line
-    let e = Infinity; const s1 = S[best];
+    // the distance to the nearest bisector: the lead's centre line (and to the next nearest: where two meet, a joint)
+    let e = Infinity, e2 = Infinity; const s1 = S[best];
     for(let j = by - 1; j <= by + 1; j++) for(let i = bx - 1; i <= bx + 1; i++){ if(i < 0 || j < 0 || i >= bw || j >= bh) continue; const L = B2[j*bw + i]; if(!L) continue;
       for(const k of L){ if(k === best) continue; const s2 = S[k], gx = s2[0] - s1[0], gy = s2[1] - s1[1], gl = Math.hypot(gx, gy) || 1;
-        const dd = ((x - s1[0])*gx + (y - s1[1])*gy)/gl, ed = gl/2 - dd; if(ed < e) e = ed; } }
+        const dd = ((x - s1[0])*gx + (y - s1[1])*gy)/gl, ed = gl/2 - dd; if(ed < e){ e2 = e; e = ed; } else if(ed < e2) e2 = ed; } }
     const p = y*ww + x;
-    if(frameD){ const fd = frameD(x, y); if(fd < -lw){ win[p] = 0; continue; } if(Math.abs(fd) < e) e = Math.abs(fd); }
-    const q = e/lw;
-    lead[p] = q < 1 ? Math.sqrt(Math.max(0, 1 - q*q)) : 0; edge[p] = Math.min(1, e/(lw*8)); pane[p] = own[best]; pal[p] = (slot[best] + 0.5)/10;
+    let own2 = own[best], lwHere = lw;
+    if(frameD){ const fd = frameD(x, y), af = Math.abs(fd);
+      if(fd < 0){ win[p] = 0; own2 = (own2 + 0.5) % 1; }                    // beyond the outline: the border's glass, its own pane
+      if(af/1.8 < e){ e2 = e; e = af/1.8; lwHere = lw; } else if(af/1.8 < e2) e2 = af/1.8; }   // the outline: a came 1.8× as broad
+    const q = e/lwHere;
+    lead[p] = q < 1 ? Math.sqrt(Math.max(0, 1 - q*q)) : 0; edge[p] = Math.min(1, e/(lw*8)); pane[p] = own2; pal[p] = (slot[best] + 0.5)/10;
+    joint[p] = lead[p] > 0 ? Math.max(0, 1 - e2/(lw*2.4)) : 0;
   }
-  return { lead, edge, pane, pal, win };
+  return { lead, edge, pane, pal, win, joint };
 }
 /**
  * GLASS: panes lit — from BEHIND (brighter toward the dial's sun, streaked and
@@ -596,7 +603,10 @@ export function litGlass(F, ww, wh, colA, colB, light, relief, more = {}){
       const mm = 0.5 + (m - 0.5)*1.35; for(let c = 0; c < 3; c++) a[c] = Math.max(18, Math.min(255, (mm + (a[c]/a[3] - m)*1.9)*255*1.05)); } }
   // the came's relief and the glass's ripple, lit by the dial
   const H = new Float32Array(N);
-  for(let i = 0; i < N; i++){ const x = i % ww, y = (i/ww) | 0; H[i] = lead[i] > 0 ? lwPx*(1.6*lead[i] + 0.6) : (tooth(x/unit*2, y/unit*2) - 0.5)*lwPx*0.35; }
+  // (a came is an H in section: a FLAT face with its edges rounded over, not a pipe; a soldered joint sits a little proud)
+  const JT = F.joint || null;
+  for(let i = 0; i < N; i++){ const x = i % ww, y = (i/ww) | 0;
+    H[i] = lead[i] > 0 ? lwPx*(1.1*Math.min(1, lead[i]*2.6) + 0.5 + (JT ? JT[i]*0.55 : 0)) : (tooth(x/unit*2, y/unit*2) - 0.5)*lwPx*0.35; }
   const L = lightHeights(H, ww, wh, { light, relief: 1, gloss: 0.45, shadow: 0.5, ao: 0.35, ambient: 0.4 });
   // the sun behind the window: brighter toward the dial
   const lv = lightVec(light == null ? 315 : light), sunX = ww/2 - lv.lx*ww*0.45, sunY = wh/2 - lv.ly*wh*0.45, diag = Math.hypot(ww, wh);
@@ -611,14 +621,14 @@ export function litGlass(F, ww, wh, colA, colB, light, relief, more = {}){
   const r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N), clamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
   for(let i = 0; i < N; i++){
     const x = i % ww, y = (i/ww) | 0, er = edge[i]*8;                  // the distance from the lead, in came-widths
-    if(win && win[i] < 0.5){
-      // outside the window: the stone it is set in, lit by the dial
-      const sv = (42 + 30*L.light[i]/L.flat)*(0.85 + 0.3*tooth(x/unit*6, y/unit*6))/255; r[i] = clamp(sv*1.05); g[i] = clamp(sv); b[i] = clamp(sv*0.92); continue; }
     if(lead[i] > 0){
-      // lead: dull grey metal, lit by the dial
-      const gv = (34 + 46*L.light[i]/L.flat + 150*L.spec[i])/255; r[i] = clamp(gv); g[i] = clamp(gv); b[i] = clamp(gv*1.04); continue;
+      // lead: dark, patinated, satin (it takes a soft sheen, not a mirror's); a joint's solder brighter, tin-grey
+      const pat = 0.85 + 0.3*tooth(x/unit*9, y/unit*9), jt = JT ? JT[i] : 0;
+      const gv = ((26 + 30*L.light[i]/L.flat)*pat + 48*L.spec[i] + jt*(30 + 70*L.spec[i]))/255; r[i] = clamp(gv*0.98); g[i] = clamp(gv); b[i] = clamp(gv*1.03); continue;
     }
     const P = paneOf(pane[i]), u = x/unit, v = y/unit; let col = PAL[Math.min(9, Math.floor(pal[i]*10))];
+    // beyond a window's outline: the border's glass — the second hue deepened, amber and a clear pale, by turns
+    if(win && win[i] < 0.5){ const b3 = Math.floor(pane[i]*3); col = b3 === 0 ? mixA(Bc, [0, 0, 0], 0.45) : b3 === 1 ? mixA(AMBER, Bc, 0.3) : mixA(PALE, Bc, 0.25); }
     if(paneCol){ const sc = paneCol.get(pane[i]); if(sc) col = [0, 1, 2].map(c => col[c] + (sc[c] - col[c])*sceneK); }
     const back = 0.72 + 0.5*Math.max(0, 1 - Math.hypot(x - sunX, y - sunY)/diag*1.4);
     const along = u*P.cs + v*P.sn, across = -u*P.sn + v*P.cs;
@@ -733,17 +743,17 @@ export function drawFlakes(ctx, w, h, o){
 
 const touchRGB = (v, def) => { if(Array.isArray(v)) return v.map(q => Math.round(q*255)); const p = parseHex(def); return [p.r, p.g, p.b]; };
 Object.assign(TOUCH_STEPS, {
-  panes: { cat: 'Noise', label: 'Panes', ins: [], outs: ['lead', 'edge', 'pane', 'palette', 'window'],
-    params: [TOUCH_R('size', 'Pane Size', 100, 50, 250), TOUCH_R('leading', 'Leading', 100, 30, 250), TOUCH_R('shape', 'Shape', 25), TOUCH_R('variety', 'Size Variety', 0), TOUCH_R('frame', 'Window: None · Lancet · Round', 0)], cost: () => 10,
-    run(E, n){ const fr = E.num(n, 'frame', 0), more = { variety: E.num(n, 'variety', 0)/100, frame: fr < 33 ? 0 : fr < 67 ? 1 : 2 };
+  panes: { cat: 'Noise', label: 'Panes', ins: [], outs: ['lead', 'edge', 'pane', 'palette', 'window', 'joints'],
+    params: [TOUCH_R('size', 'Pane Size', 100, 50, 250), TOUCH_R('leading', 'Leading', 100, 30, 250), TOUCH_R('shape', 'Shape', 25), TOUCH_R('variety', 'Size Variety', 0), TOUCH_R('frame', 'Window: None · Lancet · Arcade · Round', 0)], cost: () => 10,
+    run(E, n){ const fr = E.num(n, 'frame', 0), more = { variety: E.num(n, 'variety', 0)/100, frame: fr < 30 ? 0 : fr < 55 ? 1 : fr < 80 ? 3 : 2 };   // (Round stays at the top, where it was)
       const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100, E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)), more);
-      return [L.lead, L.edge, L.pane, L.pal, L.win]; } },
-  glass: { cat: 'Light & Color', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue', 'window', 'scene'],
-    outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour', 'field', 'image'], outs: ['image'] },
+      return [L.lead, L.edge, L.pane, L.pal, L.win, L.joint]; } },
+  glass: { cat: 'Light & Color', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue', 'window', 'scene', 'joints'],
+    outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour', 'field', 'image', 'field'], outs: ['image'] },
     params: [TOUCH_R('relief', 'Lead Relief', 100, 25, 300), TOUCH_R('scene', 'Scene', 0), TOUCH_R('texture', 'Cathedral · Hammered · Seedy · Opal', 0), TOUCH_R('reflect', 'Reflectance', 100, 0, 250)], cost: () => 16,
     run(E, n){ const { ww, wh, N, input, asField, ctx } = E;
       const f = j => asField(input(n, j)) || new Float32Array(N);
-      return [litGlass({ lead: f(1), edge: (asField(input(n, 2)) || new Float32Array(N).fill(1)), pane: f(3), pal: f(4), win: asField(input(n, 7)) }, ww, wh,
+      return [litGlass({ lead: f(1), edge: (asField(input(n, 2)) || new Float32Array(N).fill(1)), pane: f(3), pal: f(4), win: asField(input(n, 7)), joint: asField(input(n, 9)) }, ww, wh,
         touchRGB(input(n, 5), '#2148A8'), touchRGB(input(n, 6), '#A8182C'), ctx.light, E.num(n, 'relief', 100)/100,
         { scene: E.num(n, 'scene', 0) > 0 && input(n, 8) != null ? E.asImage(input(n, 8)) : null, sceneK: E.num(n, 'scene', 0)/100,   // (the scene is only made when it is wanted)
           texture: E.num(n, 'texture', 0)/100, reflect: E.num(n, 'reflect', 100)/100 })]; } },

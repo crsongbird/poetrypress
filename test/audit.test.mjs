@@ -100,7 +100,7 @@ function mutate(key, v){
 // Keys derived from others, and so legitimately not independent:
 //   customW/customH are mirrored from the chosen aspect while Custom is off
 //   customSize is exercised in its own pass below (it overrides aspect)
-const DERIVED = new Set(['customW', 'customH', 'customSize', 'textureSeedWords', 'lookVersion']);   // (lookVersion: the format a look was saved in, written fresh each save)   // (the seed's words follow the seed: seedWords.test checks they survive)
+const DERIVED = new Set(['customW', 'customH', 'customSize', 'aspect', 'textureSeedWords', 'lookVersion']);   // (aspect: a loaded look never changes the page's shape — Ruby; pass 2)   // (lookVersion: the format a look was saved in, written fresh each save)   // (the seed's words follow the seed: seedWords.test checks they survive)
 
 // ---------- pass 1: every key ----------
 const base = save();
@@ -126,18 +126,15 @@ for(const k of lost) console.log(`   ${k}: set ${JSON.stringify(changed[k])} -> 
 const invented = Object.keys(back).filter(k => !(k in base));
 check('loading does not invent keys that saving never produced', invented.length === 0);
 
-// ---------- pass 2: the page size, in its custom form ----------
-load({ ...back, customSize: true, customW: '1234', customH: '2345' });
-const custom = save();
-check('a custom resolution survives', custom.customSize === true &&
-  norm(custom.customW) === '1234' && norm(custom.customH) === '2345' && custom.aspect === 'custom');
-check('an out-of-range custom size is clamped, not trusted',
-  (()=>{ load({ ...back, customSize: true, customW: '99999', customH: '5' });
-         const c = save(); return +c.customW === 4096 && +c.customH === 256; })());
-load({ ...back, customSize: false, aspect: '4:3' });
-const wide = save();
-check('switching back to a named aspect restores it and its size',
-  wide.aspect === '4:3' && +wide.customW === ASPECTS['4:3'][0] && +wide.customH === ASPECTS['4:3'][1]);
+// ---------- pass 2: the page's shape is the person's (Ruby): a loaded look never changes it ----------
+{ const before = save();
+  load({ ...back, customSize: true, customW: '1234', customH: '2345' });
+  const a = save();
+  load({ ...back, customSize: false, aspect: before.aspect === '4:3' ? '1:1' : '4:3' });
+  const b = save();
+  check('loading a look never changes the aspect ratio or a custom size, even when the look saved one',
+    a.aspect === before.aspect && b.aspect === before.aspect && norm(a.customW) === norm(before.customW) && norm(b.customH) === norm(before.customH));
+  check('the shape is still saved with a look (so an old reader can see it), only not applied on loading', typeof before.aspect === 'string' && 'customW' in before); }
 
 // ---------- pass 3: four-stop gradients ----------
 load({ ...back, bgGradient: true, bg3: '#303132', bg4: '#404142',
@@ -153,7 +150,7 @@ const src = (await import('fs')).readFileSync(new URL('../appEvents.js', import.
 check('spells are saved through the look filter', /getSettings:\s*settingsForSpell/.test(src) &&
   /function settingsForSpell\(\)\{\s*return stripToLook\(serializeCurrentSettings\(\)\)/.test(src));
 check('spells are applied through the look filter',
-  /applySettings:[^\n]*safeRestore\(stripToLook\(/.test(src) && /function safeRestore\(obj, what = 'This look'\)\{[\s\S]*?try \{ restoreSettings\(c\.look\); \}/.test(src) && /import \{ createVault, stripToLook \} from '\.\/vault\.js'/.test(src));
+  /applySettings:[^\n]*safeRestore\(stripToLook\(/.test(src) && /function safeRestore\(obj, what = 'This look'\)\{[\s\S]*?const look = \{ \.\.\.c\.look \};[\s\S]*?try \{ restoreSettings\(look\); \}/.test(src) && /import \{ createVault, stripToLook \} from '\.\/vault\.js'/.test(src));
 check('saved-spell tiles in the Rituals grid use the same filter',
   /safeRestore\(stripToLook\(Object\.assign\(\{\}, rec\.settings/.test(src));
 // behaviour: a spell carrying someone else's identity and UI state

@@ -194,7 +194,7 @@ export const TEXTURE_PARAMS = {
                   // the palette's colors (0, as before) → a painted landscape behind the glass, each pane its color there (Tiffany's windows)
                   {key:'shape', label:'Scene',           min:0,  max:100, def:0,   unit:''},
                   {key:'hue',   label:'Glass Texture',   min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Cathedral','Hammered','Seedy','Opalescent']},
-                  {key:'tilt',  label:'Window',          min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Whole Page','Lancet Arch','Round Window']}],
+                  {key:'tilt',  label:'Window',          min:0,  max:100, def:0,   unit:'', ticks:[0,42,68,100], names:['Whole Page','Lancet Arch','Arcade','Round Window']}],
   suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
                   // still concentric rings → swept by breath and fan
@@ -306,17 +306,50 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Curtains',        min:1,  max:5,   def:2,   unit:''},
                   // oxygen's red, high up: rare and strong (100) → none (0)
                   {key:'shape', label:'Red Sky',         min:0,  max:100, def:30,  unit:''},
-                  {key:'hue',   label:'Stars',           min:20, max:300, def:100, unit:'%'}],
+                  {key:'hue',   label:'Stars',           min:20, max:300, def:100, unit:'%'},
+                  // where the curtains hang: low on the page (0) → high (100)
+                  {key:'tilt',  label:'Horizon',         min:0,  max:100, def:50,  unit:''}],
+  // 🜚 Fractured Glaze, the second (chains.js 'crackle'): Spreading Cracks → Glaze
+  crackle:       [{key:'zoom',  label:'Crack Scale',     min:50, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Cracks',          min:20, max:400, def:100, unit:'%'},
+                  // everywhere at once (0) → bursting from one point of impact, where the dial points (100)
+                  {key:'form',  label:'From One Point',  min:0,  max:100, def:30,  unit:''},
+                  {key:'shape', label:'Wander',          min:0,  max:100, def:40,  unit:''},
+                  {key:'hue',   label:'Chipping',        min:0,  max:100, def:0,   unit:''}],
+  // 🝆 Veins of Light (chains.js 'veins')
+  veins:         [{key:'zoom',  label:'Material',        min:0,  max:100, def:10,  unit:'', ticks:[10,30,50,70,90], names:['Strata','Pebbles','Sand','Fibres','Skin']},
+                  {key:'amt',   label:'Reach',           min:0,  max:100, def:60,  unit:''},
+                  {key:'form',  label:'Branching',       min:0,  max:100, def:50,  unit:''},
+                  {key:'shape', label:'Glow',            min:0,  max:100, def:70,  unit:''},
+                  {key:'hue',   label:'Scale',           min:40, max:300, def:100, unit:'%'},
+                  // the roots slid across the dial's side of the page (the dial says which side they grow from)
+                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
+  // ⎐ Knotwork (chains.js 'knotwork')
+  knotwork:      [{key:'zoom',  label:'Size',            min:40, max:300, def:100, unit:'%'},
+                  {key:'amt',   label:'Strands',         min:3,  max:24,  def:6,   unit:''},
+                  // a plain plait (0) → a knot full of turns (100)
+                  {key:'form',  label:'Breaks',          min:0,  max:100, def:45,  unit:''},
+                  {key:'shape', label:'Shape',           min:0,  max:100, def:0,   unit:'', ticks:[0,17,34,50,67,84], names:['Circle','Square','Diamond','Cross','Quatrefoil','Whole Page']},
+                  {key:'hue',   label:'Ribbon Width',    min:20, max:90,  def:55,  unit:''},
+                  // slid along the dial's line (the dial also lights it)
+                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
   // 🜉 GENERATIVE: processes simulated, laid on a material, lit (stepsGenerative.js; chains.js)
   lichtenberg:   [{key:'zoom',  label:'Reach',           min:0,  max:100, def:50,  unit:''},
                   // bushy (high) → one thin strike (low)
                   {key:'amt',   label:'Branching',       min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Poles',           min:1,  max:3,   def:2,   unit:'', ticks:[1,2,3], names:['One Strike','Two Poles','Three Poles']},
-                  {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Charred Wood','Embers','Acrylic']}],
+                  {key:'form',  label:'Poles',           min:1,  max:2,   def:2,   unit:'', ticks:[1,2], names:['One Strike','Two Poles']},
+                  {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Charred Wood','Embers','Acrylic']},
+                  // close in, so the branches run off the page's edges
+                  {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},
+                  // the figure slid along the dial's line (the dial turns it)
+                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
   growth:        [{key:'zoom',  label:'Growth',          min:0,  max:100, def:55,  unit:''},
                   {key:'amt',   label:'Fold Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'form',  label:'Seeds',           min:1,  max:7,   def:1,   unit:''},
-                  {key:'shape', label:'Relief',          min:0,  max:100, def:50,  unit:''}],
+                  {key:'shape', label:'Relief',          min:0,  max:100, def:50,  unit:''},
+                  {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},
+                  // slid along the sun's line (the dial turns it)
+                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
   // 🜛 BASICS: quiet grounds, each a chain of two or three parts (chains.js); every slider a plain 0–100
   plainnoise:    [{key:'zoom',  label:'Scale',           min:0,  max:100, def:30,  unit:''},
                   {key:'amt',   label:'Detail',          min:0,  max:100, def:50,  unit:''},
@@ -359,6 +392,12 @@ export const TEXTURE_PARAMS = {
  * silently ignored.
  */
 export const TEXTURE_CAPS = {
+  veins:         { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','lighten','luminosity'], light:true, dial:'Grow From & Light', material:true, tints:2,
+                   tintLabels:['Material Hue','Glow Hue'], tintDefaults:['#B8A48C','#4FE3FF'] },
+  crackle:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], light:true, material:true, dial:'Impact & Light', tints:2,
+                   tintLabels:['Glaze Hue','Body Hue'], tintDefaults:['#A9B4B0','#7A6A5E'] },
+  knotwork:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2, genericTint:true,
+                   tintLabels:['Ribbon Hue','Outline Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // light on black, screened over the page (as Deep Field is); the dial is the field lines: the rays lean and the hem arcs
   aurorasky:     { blends:['screen','lighten','color-dodge','overlay','soft-light','hard-light','source-over'], light:true, dial:'Field Lines', tints:0 },
   // the dial: where the strike enters, and the light on the burn
@@ -516,6 +555,7 @@ export const TEXTURE_CAPS = {
 const GLOWS = {
   crystal: 'the fire inside the crystal, lit from within',
   crackedglaze:'uranium glaze, fluorescing',
+  crackle:     'uranium glaze, fluorescing',
   oldpaper:    'the foxing spots fluorescing, as they do under ultraviolet',
   flowers:     'lit seeds in the lotus pod, or a glowing heart',
   tessellate:  'molten light in the seams between facets',
@@ -534,10 +574,10 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 // DIFFUSE (the light's own colour) where nothing else already says it: not
 // where a texture has its own Sun or Light hue, and not on grey textures
 // (their Light hue colours the lit marks)
-for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
+for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -622,6 +662,12 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'veins'){
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Matrix → Tendrils (space colonization) → Light Engine → glow (chains.js)
+  } else if(type === 'crackle'){
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Spreading Cracks → Glaze (chains.js)
+  } else if(type === 'knotwork'){
+    result = genChain(type, w, h, light, extra);           // Knotwork → Blur → Light Engine (chains.js)
   } else if(type === 'aurorasky'){
     result = genChain(type, w, h, light, extra);           // Starfield → Aurora Curtains (chains.js)
   } else if(type === 'lichtenberg' || type === 'growth'){

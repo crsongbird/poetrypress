@@ -202,7 +202,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 7, paramPort('flakes', 'size')], [2, 1, 7, paramPort('flakes', 'coverage')], [3, 1, 7, paramPort('flakes', 'shape')], [4, 1, 7, paramPort('flakes', 'sheen')],
       [5, 1, 7, paramPort('flakes', 'glitter')], [6, 1, 7, 2], [7, 1, 8, 1]] },
   // 🜚 Stained Glass: the window's panes (four kinds), then the glass lit from behind and in front
-  stainedglass: { label: 'Stained Glass', div: 3, teach: 'This is Stained Glass. Panes lays out the window (random shards, a lattice, a rose window or a grid, chosen by Shape; Size Variety mixes big panes with small; Window sets it in a pointed lancet arch or a round window, with stone around it) and hands on its maps: the lead, the distance from it, a number for each pane, each pane\'s color slot, and where the window is. Glass lights them from behind, toward the dial\'s sun, and from the front. Its Texture runs from smooth cathedral glass through hammered and seedy to milky opalescent glass. Scene colors each pane from a picture behind it, as Tiffany\'s landscape windows were made: here a Painted Sky with Painted Ridges. Try: raise Scene, or wire any texture into Glass\'s Scene.', nodes: [
+  stainedglass: { label: 'Stained Glass', div: 3, teach: 'This is Stained Glass. Panes lays out the window (random shards, a lattice, a rose window or a grid, chosen by Shape; Size Variety mixes big panes with small; Window draws a pointed lancet arch, a round window or an arcade of three lancets in heavier lead, with a border of glass in its own colors beyond) and hands on its maps: the lead, the distance from it, a number for each pane, each pane\'s color slot, where the window is, and the joints where cames meet. Glass lights them from behind, toward the dial\'s sun, and from the front; its lead is flat, dark and soldered at the joints. Its Texture runs from smooth cathedral glass through hammered and seedy to milky opalescent glass. Scene colors each pane from a picture behind it, as Tiffany\'s landscape windows were made: here a Painted Sky with Painted Ridges. Try: raise Scene, or wire any texture into Glass\'s Scene.', nodes: [
       ['knob', { slot: '1', name: 'Pane Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
       ['knob', { slot: '2', name: 'Leading', def: 32 }, 40, 140],                 // 2  (100 of 30–250)
       ['knob', { slot: '3', name: 'Shape', def: 25 }, 40, 240],                   // 3
@@ -218,7 +218,7 @@ export const TEXTURE_CHAINS = {
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 100 }, 320, 700]],   // 13
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [6, 5, 7, 7], [7, 1, 8, 1],
-      [9, 1, 7, paramPort('glass', 'scene')], [10, 1, 7, paramPort('glass', 'texture')], [11, 1, 6, paramPort('panes', 'frame')], [12, 1, 13, 1], [13, 1, 7, 8],
+      [9, 1, 7, paramPort('glass', 'scene')], [10, 1, 7, paramPort('glass', 'texture')], [11, 1, 6, paramPort('panes', 'frame')], [12, 1, 13, 1], [13, 1, 7, 8], [6, 6, 7, 9],
       [9, 1, 6, paramPort('panes', 'variety')]] },   // (Scene also sets Size Variety: a scene wants small panes for its detail)
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
   // 🝊 Aurora: Deep Field's stars, then curtains of rays over them
@@ -230,25 +230,78 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '5', name: 'Stars', def: 29 }, 40, 440],                    // 5  (100 of 20–300)
       ['dial', {}, 40, 540],                                                       // 6
       ['starfield', { amount: 100, '~amount': '20,300', atmosphere: 30 }, 320, 360],   // 7
-      ['curtains', { curtains: 2, '~curtains': '1,5', rays: 100, '~rays': '20,250', height: 100, '~height': '40,180', red: 30, '~red': '0,100', fringe: 50, glow: 100 }, 600, 160],   // 8
-      ['surface', { name: 'Aurora', ground: 'colour' }, 880, 200]],                // 9
+      ['curtains', { curtains: 2, '~curtains': '1,5', rays: 100, '~rays': '20,250', height: 100, '~height': '40,180', red: 30, '~red': '0,100', fringe: 50, glow: 100, horizon: 50, '~horizon': '0,100' }, 600, 160],   // 8
+      ['surface', { name: 'Aurora', ground: 'colour' }, 880, 200],                 // 9
+      ['knob', { slot: '6', name: 'Horizon', def: 50 }, 40, 620]],                 // 10
     wires: [[1, 1, 8, paramPort('curtains', 'height')], [2, 1, 8, paramPort('curtains', 'rays')], [3, 1, 8, paramPort('curtains', 'curtains')], [4, 1, 8, paramPort('curtains', 'red')],
-      [5, 1, 7, paramPort('starfield', 'amount')], [6, 1, 8, 2], [7, 1, 8, 1], [8, 1, 9, 1]] },
+      [5, 1, 7, paramPort('starfield', 'amount')], [6, 1, 8, 2], [7, 1, 8, 1], [8, 1, 9, 1], [10, 1, 8, paramPort('curtains', 'horizon')]] },
+  // 🜚 Fractured Glaze (the second): cracks that SPREAD — Tarbell's Substrate — lit as glaze by the dial
+  crackle: { label: 'Fractured Glaze', div: 2, teach: 'This is Fractured Glaze. Spreading Cracks lets cracks run across the glaze: each runs until it meets another, and then a new one starts from a crack already there, at right angles, so the first are long and each after shorter, as real crackle is. From One Point makes the first cracks burst from where the dial points, like an impact. It hands Glaze four maps: heights, where the glaze is, grime in the cracks and the finest cracks; Brushwork says how thick the glaze was painted. Glaze lights it all with your two Hues. Try: Chipping up, or From One Point at 100.', nodes: [
+      ['knob', { slot: '1', name: 'Crack Scale', def: 20 }, 40, 40],              // 1  (100 of 50–300)
+      ['knob', { slot: '2', name: 'Cracks', def: 21 }, 40, 130],                  // 2  (100 of 20–400)
+      ['knob', { slot: '3', name: 'From One Point', def: 30 }, 40, 220],          // 3
+      ['knob', { slot: '4', name: 'Wander', def: 40 }, 40, 310],                  // 4
+      ['knob', { slot: '5', name: 'Chipping', def: 0 }, 40, 400],                 // 5
+      ['dial', {}, 40, 490],                                                      // 6
+      ['cracks', { scale: 100, '~scale': '50,300', count: 100, '~count': '20,400', spread: 30, '~spread': '0,100', wander: 40, '~wander': '0,100', age: 0, '~age': '0,100' }, 320, 60],   // 7
+      ['brushwork', { streaks: 55, runs: 30, pools: 60 }, 320, 380],              // 8
+      ['hue', { slot: '1', name: 'Glaze Hue' }, 320, 500], ['hue', { slot: '2', name: 'Body Hue' }, 320, 600],   // 9, 10
+      ['glaze', { scale: 100, gloss: 85, grime: 40 }, 620, 160],                  // 11
+      ['surface', { name: 'Fractured Glaze', ground: 'colour' }, 900, 220]],      // 12
+    wires: [[1, 1, 7, paramPort('cracks', 'scale')], [2, 1, 7, paramPort('cracks', 'count')], [3, 1, 7, paramPort('cracks', 'spread')], [4, 1, 7, paramPort('cracks', 'wander')], [5, 1, 7, paramPort('cracks', 'age')],
+      [6, 1, 7, 1], [1, 1, 11, paramPort('glaze', 'scale')], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
+  // 🝆 Veins of Light: a network grown (space colonization) through a material's ways, glowing inside it
+  veins: { label: 'Veins of Light', div: 2, teach: 'This is Veins of Light: glowing wires grown through stone, sand, fibre or skin. Matrix makes the material (Material picks it) and says where something could creep through it: the seams between rock layers, the gaps between pebbles, the creases in skin. Tendrils grows a network from the dial\'s side of the page through those ways: each tip reaches toward the nearest open space and branches where it must (space colonization, the way leaf veins and tree crowns are modelled). Tint colors the material in your Material Hue; the wires are cut into its heights (Math), the Light Engine lights it, and Blend screens the Glow Hue in where the network runs. Try: Material at Pebbles, then turn the dial.', nodes: [
+      ['knob', { slot: '1', name: 'Material', def: 10 }, 40, 40],                  // 1
+      ['knob', { slot: '2', name: 'Reach', def: 60 }, 40, 130],                    // 2
+      ['knob', { slot: '3', name: 'Branching', def: 50 }, 40, 220],                // 3
+      ['knob', { slot: '4', name: 'Glow', def: 70 }, 40, 310],                     // 4
+      ['knob', { slot: '5', name: 'Scale', def: 23 }, 40, 400],                    // 5  (100 of 40–300)
+      ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 490],                    // 6
+      ['dial', {}, 40, 580],                                                       // 7
+      ['hue', { slot: '1', name: 'Material Hue' }, 40, 660], ['hue', { slot: '2', name: 'Glow Hue' }, 40, 740],   // 8, 9
+      ['matrix', { kind: 10, '~kind': '0,100', scale: 100, '~scale': '40,300', angle: 0 }, 300, 60],   // 10
+      ['tendrils', { amount: 60, '~amount': '0,100', branching: 50, '~branching': '0,100', roots: 2, inner: 0, slide: 0, '~slide': '-100,100', zoom: 100, '~zoom': '40,300', width: 100 }, 300, 320],   // 11
+      ['colour', { hex: '#17120F' }, 300, 560],                                    // 12 (the material's dark)
+      ['tint', {}, 560, 60],                                                       // 13
+      ['math', { op: 'subtract' }, 560, 240],                                      // 14 (the wires cut into it)
+      ['material', { relief: 45, gloss: 30, shine: 25, shadow: 55, occlusion: 45, ambient: 35 }, 800, 120],   // 15
+      ['blend', { mode: 'screen', opacity: 70, '~opacity': '0,100' }, 1040, 200],  // 16
+      ['surface', { name: 'Veins of Light', ground: 'colour' }, 1280, 220]],       // 17
+    wires: [[1, 1, 10, paramPort('matrix', 'kind')], [5, 1, 10, paramPort('matrix', 'scale')], [5, 1, 11, paramPort('tendrils', 'zoom')], [2, 1, 11, paramPort('tendrils', 'amount')], [3, 1, 11, paramPort('tendrils', 'branching')],
+      [6, 1, 11, paramPort('tendrils', 'slide')], [7, 1, 11, 2], [10, 3, 11, 1], [10, 1, 13, 1], [8, 1, 13, 2], [12, 1, 13, 3], [10, 2, 14, 1], [11, 1, 14, 2],
+      [13, 1, 15, 1], [14, 1, 15, 2], [15, 1, 16, 1], [9, 1, 16, 2], [11, 2, 16, 3], [4, 1, 16, paramPort('blend', 'opacity')], [16, 1, 17, 1]] },
+  // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
+  knotwork: { label: 'Knotwork', div: 2, teach: 'This is Knotwork, the interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
+      ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Strands', def: 14 }, 40, 130],                  // 2  (6 of 3–24)
+      ['knob', { slot: '3', name: 'Breaks', def: 45 }, 40, 220],                   // 3
+      ['knob', { slot: '4', name: 'Shape', def: 0 }, 40, 310],                     // 4
+      ['knob', { slot: '5', name: 'Ribbon Width', def: 50 }, 40, 400],             // 5  (55 of 20–90)
+      ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 490],                    // 6
+      ['dial', {}, 40, 580],                                                       // 7
+      ['knotwork', { size: 100, '~size': '40,300', cells: 6, '~cells': '3,24', breaks: 45, '~breaks': '0,100', shape: 0, '~shape': '0,100', width: 55, '~width': '20,90', offset: 0, '~offset': '-100,100' }, 320, 160],   // 8
+      ['blur', { radius: 5 }, 600, 260],                                           // 9
+      ['material', { relief: 30, gloss: 45, shine: 40, shadow: 60, occlusion: 45, ambient: 40 }, 840, 180],   // 10
+      ['surface', { name: 'Knotwork', ground: 'grey' }, 1080, 200]],               // 11
+    wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
+      [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
-  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'This is Lichtenberg Figures: the branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
+  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'This is Lichtenberg Figures: the branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Zoom brings it close; Slide moves it along the dial\'s line. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
       ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                     // 1
       ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 140],                // 2
-      ['knob', { slot: '3', name: 'Poles', def: 50 }, 40, 240],                    // 3  (2 of 1–3)
+      ['knob', { slot: '3', name: 'Poles', def: 100 }, 40, 240],                   // 3  (2 of 1–2)
       ['knob', { slot: '4', name: 'Material', def: 0 }, 40, 340],                  // 4
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Wood Hue' }, 40, 520], ['hue', { slot: '2', name: 'Grain Hue' }, 40, 600],   // 6, 7
       ['wood', { rings: 40, figure: 50 }, 300, 520],                               // 8
-      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,3', grain: 30, width: 100 }, 300, 120],   // 9
+      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,2', grain: 30, width: 100, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100' }, 300, 120],   // 9
       ['burn', { material: 0, '~material': '0,100', scorch: 50, depth: 55 }, 580, 300],   // 10
       ['material', { relief: 35, gloss: 30, shine: 25, shadow: 55, occlusion: 40, ambient: 40 }, 840, 300],   // 11
-      ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 1100, 320]],  // 12
+      ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 1100, 320],   // 12
+      ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 680], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 760]],   // 13 (100 of 50–400), 14
     wires: [[1, 1, 9, paramPort('discharge', 'reach')], [2, 1, 9, paramPort('discharge', 'branching')], [3, 1, 9, paramPort('discharge', 'poles')], [4, 1, 10, paramPort('burn', 'material')],
-      [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1]] },
+      [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1], [13, 1, 9, paramPort('discharge', 'zoom')], [14, 1, 9, paramPort('discharge', 'offset')]] },
   // 🜉 Ruffled Growth: a Growing Line, its body raised and lit
   growth: { label: 'Ruffled Growth', div: 2, teach: 'This is Ruffled Growth: differential growth. Growing Line starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
       ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
@@ -256,15 +309,16 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '3', name: 'Seeds', def: 0 }, 40, 240],                     // 3  (1 of 1–7)
       ['knob', { slot: '4', name: 'Relief', def: 50 }, 40, 340],                   // 4
       ['dial', {}, 40, 440],                                                       // 5
-      ['growline', { growth: 55, '~growth': '0,100', fold: 100, '~fold': '50,250', seeds: 1, '~seeds': '1,7', photo: 40 }, 300, 120],   // 6
+      ['growline', { growth: 55, '~growth': '0,100', fold: 100, '~fold': '50,250', seeds: 1, '~seeds': '1,7', photo: 40, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100' }, 300, 120],   // 6
       ['number', { value: 40 }, 300, 380], ['number', { value: 74 }, 300, 460],   // 7, 8 (the ground, the body)
       ['mix', { t: 50 }, 560, 300],                                                // 9
       ['number', { value: 18 }, 560, 460],                                         // 10 (the line's crease)
       ['mix', { t: 50 }, 780, 300],                                                // 11
       ['material', { relief: 40, '~relief': '0,90', gloss: 35, shine: 30, shadow: 55, occlusion: 45, ambient: 40 }, 1000, 200],   // 12
-      ['surface', { name: 'Ruffled Growth', ground: 'grey' }, 1240, 220]],         // 13
+      ['surface', { name: 'Ruffled Growth', ground: 'grey' }, 1240, 220],          // 13
+      ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 540], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 620]],   // 14 (100 of 50–400), 15
     wires: [[1, 1, 6, paramPort('growline', 'growth')], [2, 1, 6, paramPort('growline', 'fold')], [3, 1, 6, paramPort('growline', 'seeds')], [4, 1, 12, paramPort('material', 'relief')],
-      [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1]] },
+      [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1], [14, 1, 6, paramPort('growline', 'zoom')], [15, 1, 6, paramPort('growline', 'offset')]] },
   // 🜚 Poured Wax (Ruby: waxier, and a slider from wax to a fluid's spatter): Pours → Meniscus → colour → Light Engine
   wax: { label: 'Poured Wax', div: 2, teach: 'This is Poured Wax. Pours makes the pools (pools that touch merge); Splatter flings drops away from where the dial points, so it becomes a spatter of paint or ink. Meniscus gives the pools a flat top and a rounded edge. The wax is lighter where it is thin (Hue & Saturation brightens it, Mix lays it in by Thin), and the Light Engine lights it with Translucency, the way light sinks into wax and comes back out. The Glow Hue is screened in where the wax is thick, as if a candle were inside it. Try: Splatter 80 and Viscosity 0 for spilt ink, Sheen 100 for wet paint.', nodes: [
       ['knob', { slot: '1', name: 'Pool Size', def: 17 }, 40, 40],                 // 1  (100 of 40–400)

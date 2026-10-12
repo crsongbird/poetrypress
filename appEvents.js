@@ -1143,21 +1143,8 @@ function presetTile(p, onPick, extraClass){
 const HOVER_DELAY = 380;
 const hover = { base: null, timer: 0, on: null };   // (the preview in progress: your look, kept to put back)
 const canHover = () => !detectMobile() && typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
-function hoverPreview(tile, p){
-  if(!tile || !tile.addEventListener) return tile;
-  tile.addEventListener('mouseenter', () => {
-    if(!canHover()) return;
-    clearTimeout(hover.timer);
-    hover.timer = setTimeout(() => {
-      if(hover.on === p) return;
-      if(!hover.base) hover.base = { look: serializeCurrentSettings(), palette: state.ui.palette, name: document.body && document.body.dataset ? document.body.dataset.lookName : '' };
-      hover.on = p; state.history.restoring = true;
-      try { applyPreset(p); } finally { state.history.restoring = false; }
-      clearTimeout(state.history.timer);
-    }, HOVER_DELAY);
-  });
-  return tile;
-}
+// (Ruby: retired — some surfaces took seconds to try on, and it wasn't needed. A tile is applied by a click.)
+function hoverPreview(tile){ return tile; }
 function endHoverPreview(){
   clearTimeout(hover.timer);
   if(!hover.base) return;
@@ -2989,7 +2976,10 @@ function safeRestore(obj, what = 'This look'){
   const c = checkLook(obj, what);
   if(!c.ok){ hardNo('That can’t be loaded', c.why + ' Nothing was changed.'); return false; }
   const before = serializeCurrentSettings();
-  try { restoreSettings(c.look); }
+  // THE PAGE'S SHAPE IS THE PERSON'S (Ruby): once an aspect ratio is chosen it stays until they choose another;
+  // a look loaded from anywhere (JSON, a spell, the Grimoire, a saved tile) never changes it, even if it saved one
+  const look = { ...c.look }; for(const k of ['aspect', 'customSize', 'customW', 'customH']) delete look[k];
+  try { restoreSettings(look); }
   catch(e){
     try { restoreSettings(before); } catch(_){}
     hardNo('That look broke on loading', `Vellum put your look back as it was. (${String(e && e.message || e).slice(0, 120)})`);
@@ -3246,7 +3236,7 @@ commitHistory();
 // once shown; it and the shimmer above it keep moving even while the page
 // itself is busy (they run on the compositor).
 const WORKING_WORDS = {
-  lichtenberg: 'Striking the arc', growth: 'Growing the line',
+  veins: 'Growing the veins', knotwork: 'Plaiting the knot', lichtenberg: 'Striking the arc', growth: 'Growing the line',
   plainnoise: 'Stirring the noise', stripes: 'Ruling the stripes', polka: 'Spotting the dots', checker: 'Laying the squares', softgradient: 'Grading the light', cells: 'Growing the cells',
   bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
   clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',
@@ -3254,7 +3244,7 @@ const WORKING_WORDS = {
   suminagashi: 'Floating the ink', grain: 'Developing the grain', metalleaf: 'Laying the leaf', flowers: 'Opening the lotuses',
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', sigils: 'Inscribing the sigils',
-  mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze',
+  mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
   tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',

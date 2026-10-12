@@ -60,7 +60,7 @@ check('no exemption names a control that no longer exists', Object.keys(EXEMPT).
 
 // everything built on save/restore uses them — so covering them covers all of it
 check('the Workbench JSON shows serializeCurrentSettings() and loads with restoreSettings()',
-  /\$\('advancedJson'\)\.value = JSON\.stringify\(serializeCurrentSettings\(\), null, 2\);/.test(ev) && /safeRestore\(obj, 'This JSON'\);/.test(ev) && /try \{ restoreSettings\(c\.look\); \}/.test(ev));
+  /\$\('advancedJson'\)\.value = JSON\.stringify\(serializeCurrentSettings\(\), null, 2\);/.test(ev) && /safeRestore\(obj, 'This JSON'\);/.test(ev) && /try \{ restoreSettings\(look\); \}/.test(ev));
 check('the Grimoire and shared spells save serializeCurrentSettings() and restore with restoreSettings()',
   /return stripToLook\(serializeCurrentSettings\(\)\);/.test(ev) && /applySettings: \(settings, name\)=>\{ if\(!safeRestore\(stripToLook\(settings\), 'This spell'\)\) return;/.test(ev));
 check('undo and redo step through restoreSettings()', /restoreSettings\(JSON\.parse\(h\.stack\[to\]\)\);/.test(ev));

@@ -39,63 +39,81 @@ const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0
 const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
 
 // ---------------- DISCHARGE ----------------
-// The figure on a lattice G cells along the page's short side. Poles sit at the page's rim toward the dial (one),
-// across from each other (two), or a triangle (three). Returns segments [x0, y0, x1, y1, current] in page units (short side 1).
+// The figure, grown in its own frame on a lattice G cells along the page's short side (finer as it is zoomed, so a
+// close view keeps its twigs). One pole: a strike branching out from where it entered. Two poles (as in every real
+// figure between two electrodes): each grows toward the other's pull until they MEET — always, so there is a path
+// between them, as lightning has — and the channel between them carries all the current. o.zoom, o.ax/ay (the axis,
+// from the dial), o.offset (the figure slid along it). Returns segments [x0, y0, x1, y1, current] in page units.
 function genLichtenberg(aspX, aspY, o){
-  const G = 240, h = 1/G, gx = Math.round(G*aspX), gy = Math.round(G*aspY);
-  const poles = Math.max(1, Math.min(3, o.poles)), eta = o.eta, target = o.count;
-  // the poles: toward the dial and round from it
-  const cx = aspX/2, cy = aspY/2, rad = Math.min(aspX, aspY)*0.46, P = [];
-  for(let k = 0; k < poles; k++){ const a = Math.atan2(o.dy, o.dx) + k*Math.PI*2/poles;
-    const R = poles === 1 ? rad*0.15 : rad;                 // one pole: a strike near the middle, toward the dial
-    P.push([Math.round((cx + Math.cos(a)*R)/h), Math.round((cy + Math.sin(a)*R)/h)]); }
+  // grown at zoom 1 (the page and a margin), on a lattice finer as it will be magnified; then ZOOMED about its middle
+  const zoom = Math.max(0.5, o.zoom || 1), G = Math.round(240*Math.min(1.8, Math.sqrt(Math.max(1, zoom)))), h = 1/G;
+  const viewW = aspX, viewH = aspY, mg = 0.12, gx = Math.round((viewW + mg*2)/h), gy = Math.round((viewH + mg*2)/h);
+  const poles = Math.max(1, Math.min(2, Math.round(o.poles))), eta = o.eta, target = o.count;
+  const ax = o.dx, ay = o.dy, cxP = viewW/2, cyP = viewH/2;
+  const toL = (x, y) => [Math.round((x + mg)/h), Math.round((y + mg)/h)];
+  const half = Math.min(viewW, viewH)*0.42, P = [];
+  if(poles === 1) P.push(toL(cxP - ax*half*0.25, cyP - ay*half*0.25));
+  else { P.push(toL(cxP - ax*half, cyP - ay*half)); P.push(toL(cxP + ax*half, cyP + ay*half)); }
+  for(const p of P){ p[0] = Math.min(gx - 2, Math.max(1, p[0])); p[1] = Math.min(gy - 2, Math.max(1, p[1])); }
   // charges (lattice points with a jitter, so the channel isn't drawn on graph paper), per tree
-  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], occ = new Uint8Array(gx*gy);
+  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], CS = [], occ = new Int32Array(gx*gy).fill(-1);
   const cand = new Map();   // lattice index → { s: [sum per tree], t: tree, p: parent }
   const R1 = 0.5;
-  const addCharge = (ix, iy, t, p) => {
+  const addCharge = (ix, iy, t, p, s0) => {
     const id = X.length; X.push(ix); Y.push(iy); JX.push((Math.random() - 0.5)*0.7); JY.push((Math.random() - 0.5)*0.7); par.push(p); tree.push(t);
-    occ[iy*gx + ix] = 1; cand.delete(iy*gx + ix);
-    // every candidate feels the new charge (Kim et al.: the potential of a point charge, 1 − R1/r, summed)
+    CS.push(s0 || new Float64Array(poles));
+    occ[iy*gx + ix] = id; cand.delete(iy*gx + ix);
+    // every candidate, and every charge, feels the new charge (Kim et al.: a point charge's potential, 1 − R1/r, summed)
     for(const c of cand.values()){ const dx = c.x - ix, dy = c.y - iy, r = Math.sqrt(dx*dx + dy*dy); c.s[t] += 1 - R1/Math.max(R1, r); }
-    // its free neighbours become candidates (their potential from every charge so far)
+    for(let q = 0; q < id; q++){ const dx = X[q] - ix, dy = Y[q] - iy, r = Math.sqrt(dx*dx + dy*dy); CS[q][t] += 1 - R1/Math.max(R1, r); }
+    // its free neighbours become candidates, their potential the charge's own a cell away (its own field there: 1 − R1/1)
     for(let j = -1; j <= 1; j++) for(let i = -1; i <= 1; i++){ if(!i && !j) continue; const x = ix + i, y = iy + j;
-      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x]) continue; const k = y*gx + x; if(cand.has(k)) continue;
-      const s = new Float64Array(poles); for(let q = 0; q < X.length; q++){ const dx = x - X[q], dy = y - Y[q], r = Math.sqrt(dx*dx + dy*dy); s[tree[q]] += 1 - R1/Math.max(R1, r); }
+      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x] >= 0) continue; const k = y*gx + x; if(cand.has(k)) continue;
+      const s = Float64Array.from(CS[id]); s[t] += 1 - R1/Math.hypot(i, j);
       cand.set(k, { x, y, s, t, p: id }); }
     return id;
   };
   const count = new Array(poles).fill(0);
-  P.forEach((p, t) => { addCharge(Math.min(gx - 2, Math.max(1, p[0])), Math.min(gy - 2, Math.max(1, p[1])), t, -1); count[t]++; });
+  P.forEach((p, t) => { addCharge(p[0], p[1], t, -1); count[t]++; });
   // grain: growth along it is easier (wood burns along its fibres)
-  const ga = o.grain, gcx = 1, gcy = 0;
-  let turn = 0;
-  for(let step = poles; step < target; step++){
+  const ga = o.grain;
+  let turn = 0, joined = null;
+  const cap = target*4;
+  for(let step = poles; step < cap; step++){
+    if(step >= target && (poles === 1 || joined)) break;
     const t = turn; turn = (turn + 1) % poles;
-    // the candidates of this tree: its own potential (high at the tips, far from the channel already burnt) and,
-    // with more than one pole, the pull of the nearest other pole (the opposite charge) — each normalised, then
-    // blended, then raised to the power η
+    // until they meet, the other pole pulls harder the longer it takes
+    const pull = poles > 1 && !joined ? Math.min(0.95, 0.62 + 0.33*Math.max(0, step - target*0.6)/target) : 0;
     const list = []; let lo = Infinity, hi = -Infinity, alo = Infinity, ahi = -Infinity;
     for(const c of cand.values()){ if(c.t !== t) continue;
       const phi = c.s[t]/Math.max(1, count[t]); let att = 0;
-      if(poles > 1){ let dm = Infinity; for(let q = 0; q < poles; q++) if(q !== t){ const d2 = Math.hypot(c.x - P[q][0], c.y - P[q][1]); if(d2 < dm) dm = d2; } att = -dm; }
+      if(pull > 0){ const q = 1 - t; att = -Math.hypot(c.x - P[q][0], c.y - P[q][1]); }
       list.push([c, phi, att]); if(phi < lo) lo = phi; if(phi > hi) hi = phi; if(att < alo) alo = att; if(att > ahi) ahi = att; }
-    if(!list.length) break;
-    let tot = 0; const w = new Float64Array(list.length), pull = poles > 1 ? 0.62 : 0;
+    if(!list.length) continue;
+    let tot = 0; const w = new Float64Array(list.length);
     for(let i = 0; i < list.length; i++){ const c = list[i][0], pn = (1 - pull)*(list[i][1] - lo)/Math.max(1e-9, hi - lo) + pull*(list[i][2] - alo)/Math.max(1e-9, ahi - alo);
-      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs((dx*gcx + dy*gcy)/m); }
-      w[i] = Math.pow(pn, eta)*g; tot += w[i]; }
+      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs(dx/m); }
+      w[i] = Math.pow(pn, eta + (pull > 0.8 ? 2 : 0))*g; tot += w[i]; }
     let r = Math.random()*tot, pick = list.length - 1; for(let i = 0; i < list.length; i++){ r -= w[i]; if(r <= 0){ pick = i; break; } }
-    const c = list[pick][0]; addCharge(c.x, c.y, t, c.p); count[t]++;
+    const c = list[pick][0], id = addCharge(c.x, c.y, t, c.p, c.s); count[t]++;
+    // THE MEETING: a new step beside the other tree joins the two (the arc closes)
+    if(poles > 1 && !joined){
+      for(let j = -1; j <= 1 && !joined; j++) for(let i = -1; i <= 1 && !joined; i++){ const k = (c.y + j)*gx + (c.x + i), q = k >= 0 && k < occ.length ? occ[k] : -1;
+        if(q >= 0 && tree[q] !== t) joined = [id, q]; }
+    }
   }
-  // the current through each step: everything that grew beyond it
+  // the current through each step: everything that grew beyond it; the channel between the poles carries it all
   const n = X.length, desc = new Float64Array(n).fill(1);
   for(let i = n - 1; i >= 0; i--) if(par[i] >= 0) desc[par[i]] += desc[i];
+  if(joined){ const main = n*0.5; for(const e of joined){ for(let k = e; k >= 0; k = par[k]) desc[k] = Math.max(desc[k], main); } }
+  // into the page: zoomed about the figure's middle, then slid along the dial's line
+  const sx = viewW/2 + ax*o.offset*viewW*0.45, sy = viewH/2 + ay*o.offset*viewH*0.45;
+  const pageX = (ix, jx) => sx + ((ix + jx)*h - mg - cxP)*zoom, pageY = (iy, jy) => sy + ((iy + jy)*h - mg - cyP)*zoom;
   const segs = [];
   for(let i = 0; i < n; i++){ const p = par[i]; if(p < 0) continue;
-    segs.push([(X[p] + JX[p])*h, (Y[p] + JY[p])*h, (X[i] + JX[i])*h, (Y[i] + JY[i])*h, desc[i]]); }
-  // where two trees met, the burn ran hardest: join their closest tips
-  return { segs, n };
+    segs.push([pageX(X[p], JX[p]), pageY(Y[p], JY[p]), pageX(X[i], JX[i]), pageY(Y[i], JY[i]), desc[i]]); }
+  if(joined){ const [a, b] = joined; segs.push([pageX(X[a], JX[a]), pageY(Y[a], JY[a]), pageX(X[b], JX[b]), pageY(Y[b], JY[b]), n*0.5]); }
+  return { segs, n, scale: 1/zoom };
 }
 
 // ---------------- WOOD ----------------
@@ -162,16 +180,212 @@ function genGrowth(aspX, aspY, o){
   return { loops, iters };
 }
 
+// ---------------- KNOTWORK ----------------
+// Celtic knotwork by Cromwell's method ("Celtic knotwork: mathematical art", 1993) as Mercat draws it: a PLAIT of
+// diagonal strands crossing at the points of a lattice, over and under in turn; then BREAKS — barriers at some
+// crossings that turn the two strands back instead of crossing them — make the knot. A crossing's over-strand is
+// fixed by its column, so every strand alternates over, under, over along its whole length. The panel's outline
+// (a circle, square, diamond, cross, quatrefoil, or the whole page) is itself a set of breaks: a crossing on the
+// edge turns its strands back inside. Interior breaks are mirrored four ways, so the knot reads as a sigil.
+// Returns pieces: { a: [x,y], b: [x,y], c: [x,y] (the crossing), kind: 'over' | 'under' | 'turn' | 'pass' } in lattice units.
+function genKnot(o){
+  // CROMWELL'S GRID: square cells (the panel is a set of them), crossings at the midpoints of their edges; the strands
+  // run diagonally between a cell's edge midpoints. In doubled coordinates a cell's centre is (odd, odd) and a
+  // crossing is (even, odd) on an upright edge or (odd, even) on a level one.
+  const n = Math.max(2, Math.round(o.cells)), shape = o.shape;
+  const inShape = (u, v) => { const a = Math.abs(u), b = Math.abs(v);
+    if(shape === 0) return u*u + v*v <= 1.0;                                    // circle
+    if(shape === 1) return a <= 0.9 && b <= 0.9;                                // square
+    if(shape === 2) return a + b <= 1.1;                                        // diamond
+    if(shape === 3) return (a <= 0.34 && b <= 1) || (b <= 0.34 && a <= 1);      // cross
+    if(shape === 4){ const q = 0.46; return Math.hypot(a - q, v) <= 0.5 || Math.hypot(u, b - q) <= 0.5 || (a <= 0.42 && b <= 0.42); }   // quatrefoil
+    return a <= o.aspX && b <= o.aspY;                                          // the whole page
+  };
+  const R = n*2, span = shape === 5 ? Math.ceil(n*Math.max(o.aspX, o.aspY)) + 1 : n + 1;
+  const cells = new Set(), ck = (x, y) => x + ',' + y;
+  for(let b = -span; b < span; b++) for(let a = -span; a < span; a++){ const x = 2*a + 1, y = 2*b + 1; if(inShape(x/R, y/R)) cells.add(ck(x, y)); }
+  const cell = (x, y) => cells.has(ck(x, y));
+  const hsh = (a, b, k) => { const t = Math.sin(a*127.1 + b*311.7 + k*74.7 + o.salt*13.37)*43758.5453; return t - Math.floor(t); };
+  // the ends: NE (+1,-1) NW (-1,-1) SE (+1,+1) SW (-1,+1), each half way to the next crossing
+  const pieces = [], seen = new Set();
+  const end = (c, dx, dy) => [c[0] + dx*0.5, c[1] + dy*0.5];
+  for(const k of cells){ const [cx, cy] = k.split(',').map(Number);
+    for(const [ex, ey] of [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]]){
+      const kk = ck(ex, ey); if(seen.has(kk)) continue; seen.add(kk);
+      const upright = (ex & 1) === 0, c = [ex, ey];
+      const A = upright ? cell(ex - 1, ey) : cell(ex, ey - 1), B = upright ? cell(ex + 1, ey) : cell(ex, ey + 1);
+      const NE = end(c, 1, -1), NW = end(c, -1, -1), SE = end(c, 1, 1), SW = end(c, -1, 1);
+      // A on the left (upright edge) or above (level edge); a break ALONG the edge bounces each side back on itself
+      const along = (A && !B) || (B && !A) ? true : null;
+      let brk = along ? 'along' : null;
+      if(!brk){ const ax = Math.abs(ex), ay = Math.abs(ey), r = hsh(Math.min(ax, ay), Math.max(ax, ay), 1);
+        if(r < o.breaks*0.5) brk = hsh(ax, ay, 2) < 0.5 ? 'along' : 'across'; }
+      if(!brk){
+        // a crossing: which strand is over follows the edge's kind, so every strand alternates along its length
+        const first = !upright;
+        pieces.push({ a: NE, b: SW, c, kind: first ? 'over' : 'under' }, { a: NW, b: SE, c, kind: first ? 'under' : 'over' });
+        continue; }
+      const alongPairs = upright ? [[NW, SW, A], [NE, SE, B]] : [[NW, NE, A], [SW, SE, B]];
+      const acrossPairs = upright ? [[NW, NE, true], [SW, SE, true]] : [[NW, SW, true], [NE, SE, true]];
+      for(const [p, q, live] of (brk === 'along' ? alongPairs : acrossPairs)) if(live) pieces.push({ a: p, b: q, c, kind: 'turn' });
+    }
+  }
+  // (in cell units: halve, so a cell is one unit)
+  for(const pc of pieces) for(const k of ['a', 'b', 'c']) pc[k] = [pc[k][0]/2, pc[k][1]/2];
+  return pieces;
+}
+// Draws the pieces as ribbons: unders first, each over cut out of what's beneath it by a gap, then the overs.
+// x: a context; T(p) → canvas [x, y]; s: one lattice unit in pixels; wd: the ribbon's width; fill / edge: its colours.
+function genDrawKnot(x, pieces, T, s, wd, edge, fill, gap){
+  const curve = pc => { const A = T(pc.a), B = T(pc.b), C = T(pc.c);
+    x.beginPath(); x.moveTo(A[0], A[1]);
+    if(pc.kind === 'turn'){ const k = 0.9; x.bezierCurveTo(A[0] + (C[0] - A[0])*k, A[1] + (C[1] - A[1])*k, B[0] + (C[0] - B[0])*k, B[1] + (C[1] - B[1])*k, B[0], B[1]); }
+    else { x.lineTo(C[0], C[1]); x.lineTo(B[0], B[1]); } };
+  const rib = pc => { curve(pc); x.strokeStyle = edge; x.lineWidth = wd; x.stroke(); curve(pc); x.strokeStyle = fill; x.lineWidth = wd*0.62; x.stroke(); };
+  x.lineCap = 'butt'; x.lineJoin = 'round';
+  for(const pc of pieces) if(pc.kind !== 'over') rib(pc);
+  for(const pc of pieces) if(pc.kind === 'over'){ curve(pc); x.strokeStyle = gap; x.lineWidth = wd*1.55; x.stroke(); }
+  // (the gap cleared the unders' ribbons where they pass beneath: draw them again outside it, then the over on top)
+  for(const pc of pieces) if(pc.kind === 'over') rib(pc);
+  x.lineCap = 'round';
+  // the turns and passes again over any gap that clipped them
+  for(const pc of pieces) if(pc.kind === 'turn' || pc.kind === 'pass') rib(pc);
+}
+
+// ---------------- MATRIX: the stuff a network grows through ----------------
+// Five materials as a picture (a grey to tint), heights, and where something can creep through (its ways):
+//   0 rock STRATA (bands of sediment; the ways are the bedding planes between them) · 1 PEBBLES (rounded stones; the
+//   ways, the gaps between) · 2 SAND (fine grains in ripples; anywhere) · 3 FIBRES (a bundle, combed one way; between
+//   the strands) · 4 SKIN (pores and creases; along the creases).
+function genMatrix(ww, wh, unit, o){
+  const N = ww*wh, kind = o.kind, z = o.zoom, pic = new Float32Array(N), H = new Float32Array(N), W = new Float32Array(N);
+  const n1 = makeNoiseGrid(7, 7), n2 = makeNoiseGrid(31, 31), n3 = makeNoiseGrid(90, 90);
+  const S = (g, c, u, v) => sampleNoiseGrid(g, c, c, u*(c - 1), v*(c - 1));
+  // pebbles: jittered points, the nearest two (Worley)
+  const cs = unit*0.06*z, gx = Math.ceil(ww/cs) + 2, gy = Math.ceil(wh/cs) + 2, P = new Float32Array(gx*gy*3);
+  for(let i = 0; i < gx*gy; i++){ P[i*3] = 0.15 + Math.random()*0.7; P[i*3+1] = 0.15 + Math.random()*0.7; P[i*3+2] = Math.random(); }
+  const ca = Math.cos(o.angle), sa = Math.sin(o.angle);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x, u = x/unit/z, v = y/unit/z, au = (u*ca + v*sa), av = (-u*sa + v*ca);
+    let p = 0.5, h = 0.5, w = 0;
+    if(kind === 0){ // strata: bands bent by slow noise; each band its own tone; a dark seam where bands meet
+      const b = av*7 + (S(n1, 7, u*0.25, v*0.25) - 0.5)*1.6 + (S(n2, 31, u*0.4, v*0.4) - 0.5)*0.25, f = b - Math.floor(b), band = Math.floor(b);
+      const tone = 0.35 + 0.4*((Math.sin(band*12.9898)*43758.5453) % 1 + 1) % 1;
+      const seam = Math.exp(-Math.pow(Math.min(f, 1 - f)*14, 2));
+      p = tone*(0.88 + 0.24*S(n3, 90, u*0.5, v*0.5)) - seam*0.18; h = 0.5 + tone*0.12 - seam*0.25 + (S(n3, 90, u*0.5, v*0.5) - 0.5)*0.06; w = seam; }
+    else if(kind === 1){ // pebbles
+      const fx = x/cs + 1, fy = y/cs + 1, ci = Math.floor(fx), cj = Math.floor(fy); let d1 = 9, d2 = 9, t = 0;
+      for(let dj = -1; dj <= 1; dj++) for(let di = -1; di <= 1; di++){ const a = ci + di, b2 = cj + dj; if(a < 0 || b2 < 0 || a >= gx || b2 >= gy) continue; const k = b2*gx + a, dx = fx - a - P[k*3], dy = fy - b2 - P[k*3+1], d = Math.sqrt(dx*dx + dy*dy);
+        if(d < d1){ d2 = d1; d1 = d; t = P[k*3+2]; } else if(d < d2) d2 = d; }
+      const edge = d2 - d1, dome = Math.min(1, edge*3.2);
+      p = (0.3 + 0.45*t)*(0.85 + 0.3*S(n3, 90, u, v))*(0.55 + 0.45*dome) ; h = Math.sqrt(dome)*0.8 + 0.1; w = Math.max(0, 1 - edge*7); }
+    else if(kind === 2){ // sand
+      const g = S(n3, 90, u*1.8, v*1.8), rip = Math.sin((av + (S(n1, 7, u*0.3, v*0.3) - 0.5)*0.6)*48)*0.5 + 0.5;
+      p = 0.45 + (g - 0.5)*0.5 + rip*0.08; h = 0.5 + rip*0.12 + (g - 0.5)*0.1; w = 0.55 + 0.45*(1 - rip); }
+    else if(kind === 3){ // fibres: noise stretched along the comb
+      const f = S(n3, 90, au*0.08, av*1.8), f2 = S(n2, 31, au*0.05, av*0.9);
+      p = 0.35 + f*0.45 + (f2 - 0.5)*0.2; h = 0.35 + f*0.5; w = Math.max(0, 1 - f*2.2); }
+    else { // skin: pores, and creases where two noises' bands meet
+      const c1 = Math.abs(S(n1, 7, u*0.6, v*0.6)*2 - 1), c2 = Math.abs(S(n2, 31, u*0.35, v*0.35)*2 - 1), crease = Math.exp(-c1*c1*120) + 0.6*Math.exp(-c2*c2*200);
+      const pore = S(n3, 90, u*1.2, v*1.2); p = 0.62 - crease*0.16 - Math.max(0, pore - 0.72)*0.8; h = 0.6 - crease*0.25 - Math.max(0, pore - 0.72)*0.6; w = Math.min(1, crease); }
+    pic[i] = Math.max(0, Math.min(1, p)); H[i] = Math.max(0, Math.min(1, h)); W[i] = Math.max(0, Math.min(1, w));
+  }
+  return [pic, H, W];
+}
+// ---------------- TENDRILS: a network grown through it ----------------
+// SPACE COLONIZATION (Runions, Fuhrer, Lane, Mech & Prusinkiewicz, "Modeling trees with a space colonization
+// algorithm", 2007; and leaf venation, 2005): points of attraction are scattered where the matrix lets something
+// through; from a root, every node grows one step toward the average of the points that have it as their nearest
+// (within reach), and a point is used up when a node arrives. So the network branches where it must and fills
+// the space it was given. Its thickness follows how much it feeds (Murray's law: r³ adds at a branch).
+function genTendrils(ww, wh, unit, W, o){
+  const step = unit*0.006*o.zoom, reach = step*(10 + 22*o.branching), kill = step*2.2;
+  const nA = Math.round(1800*o.amount*(ww*wh)/(unit*unit)/(o.zoom*o.zoom)), AX = [], AY = [];
+  for(let t = 0; AX.length < nA && t < nA*30; t++){ const x = Math.random()*ww, y = Math.random()*wh, w = W[(y|0)*ww + (x|0)];
+    if(Math.random() < 0.08 + 0.92*w*w) { AX.push(x); AY.push(y); } }
+  // the roots: from the page's edge toward the dial's handle, or from a point (Slide moves it)
+  const NX = [], NY = [], PAR = [];
+  const rx = ww/2 - o.dx*ww*(0.5 - 0.5*o.inner) + o.dy*o.slide*ww*0.4, ry = wh/2 - o.dy*wh*(0.5 - 0.5*o.inner) - o.dx*o.slide*wh*0.4;
+  const roots = Math.max(1, Math.round(o.roots));
+  for(let r = 0; r < roots; r++){ NX.push(Math.min(ww - 1, Math.max(0, rx + (r - (roots - 1)/2)*o.dy*unit*0.18))); NY.push(Math.min(wh - 1, Math.max(0, ry - (r - (roots - 1)/2)*o.dx*unit*0.18))); PAR.push(-1); }
+  const alive = new Uint8Array(AX.length).fill(1);
+  const cell = reach, gw = Math.ceil(ww/cell) + 1, gh = Math.ceil(wh/cell) + 1;
+  for(let it = 0; it < 420; it++){
+    // the nodes in buckets
+    const head = new Int32Array(gw*gh).fill(-1), next = new Int32Array(NX.length);
+    for(let k = 0; k < NX.length; k++){ const c = Math.min(gh - 1, NY[k]/cell|0)*gw + Math.min(gw - 1, NX[k]/cell|0); next[k] = head[c]; head[c] = k; }
+    const sx = new Float64Array(NX.length), sy = new Float64Array(NX.length), cnt = new Int32Array(NX.length); let any = false;
+    for(let a = 0; a < AX.length; a++){ if(!alive[a]) continue;
+      const ci = AX[a]/cell|0, cj = AY[a]/cell|0; let best = -1, bd = reach*reach;
+      for(let j = cj - 1; j <= cj + 1; j++){ if(j < 0 || j >= gh) continue; for(let i = ci - 1; i <= ci + 1; i++){ if(i < 0 || i >= gw) continue;
+        for(let k = head[j*gw + i]; k >= 0; k = next[k]){ const dx = AX[a] - NX[k], dy = AY[a] - NY[k], d = dx*dx + dy*dy; if(d < bd){ bd = d; best = k; } } } }
+      if(best < 0) continue;
+      if(bd < kill*kill){ alive[a] = 0; continue; }
+      const d = Math.sqrt(bd); sx[best] += (AX[a] - NX[best])/d; sy[best] += (AY[a] - NY[best])/d; cnt[best]++; any = true; }
+    if(!any) break;
+    const n0 = NX.length;
+    for(let k = 0; k < n0; k++){ if(!cnt[k]) continue; let dx = sx[k], dy = sy[k]; const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+      // and it keeps to the ways: of the way toward the points and two a little either side, the one most open ahead
+      let best = -1, bx = dx, by = dy;
+      for(const t of [0, -0.55, 0.55]){ const c = Math.cos(t), sn = Math.sin(t), ex = dx*c - dy*sn, ey = dx*sn + dy*c, qx = NX[k] + ex*step*2, qy = NY[k] + ey*step*2;
+        const w = qx < 0 || qy < 0 || qx >= ww || qy >= wh ? 0 : W[(qy|0)*ww + (qx|0)], sc = w*o.keep + (t === 0 ? 0.35 : 0);
+        if(sc > best){ best = sc; bx = ex; by = ey; } }
+      NX.push(NX[k] + bx*step); NY.push(NY[k] + by*step); PAR.push(k); }
+    if(NX.length > 30000) break;
+  }
+  // the flow through each node (everything beyond it), for its thickness
+  const n = NX.length, flow = new Float64Array(n).fill(1);
+  for(let k = n - 1; k >= 0; k--) if(PAR[k] >= 0) flow[PAR[k]] += flow[k];
+  return { NX, NY, PAR, flow };
+}
+
 export const GEN_STEPS = {
+  matrix: { cat: 'Textures', label: 'Matrix', ins: [], outs: ['picture', 'height', 'ways'], io: { outs: ['field', 'field', 'field'] },
+    params: [GEN_R('kind', 'Strata · Pebbles · Sand · Fibres · Skin', 25), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('angle', 'Angle', 0, 0, 180), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    run(E, n){ const k = Math.min(4, Math.floor(E.num(n, 'kind', 25)/100*5));
+      return withSeed(genSeed(E, n), () => genMatrix(E.ww, E.wh, E.unit, { kind: k, zoom: E.num(n, 'scale', 100)/100, angle: E.num(n, 'angle', 0)*Math.PI/180 })); } },
+  tendrils: { cat: 'Marks', label: 'Tendrils', ins: ['ways', 'grow from'], outs: ['wires', 'glow'], io: { ins: ['field', 'value'], outs: ['field', 'field'] },
+    params: [GEN_R('amount', 'Reach', 60), GEN_R('branching', 'Branching', 50), GEN_R('roots', 'Roots', 2, 1, 6), GEN_R('inner', 'Start Inside', 0), GEN_R('slide', 'Slide', 0, -100, 100),
+      GEN_R('zoom', 'Scale', 100, 40, 300), GEN_R('width', 'Wire Width', 100, 30, 300), GEN_R('keep', 'Keep to the Ways', 60), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 14,
+    run(E, n){ const { ww, wh, unit, N, num } = E, dial = genDial(E, n, 2), Wv = E.asField(E.input(n, 1)) || new Float32Array(N).fill(0.6);
+      const o = { amount: num(n, 'amount', 60)/100 + 0.05, branching: num(n, 'branching', 50)/100, roots: num(n, 'roots', 2), inner: num(n, 'inner', 0)/100, slide: num(n, 'slide', 0)/100,
+        zoom: num(n, 'zoom', 100)/100, dx: dial.x, dy: dial.y, keep: num(n, 'keep', 60)/100 };
+      const T = withSeed(genSeed(E, n), () => genTendrils(ww, wh, unit, Wv, o));
+      const [c, x] = kitCanvas(ww, wh); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.strokeStyle = '#fff'; x.lineCap = 'round';
+      const wk = num(n, 'width', 100)/100;
+      for(let k = 0; k < T.NX.length; k++){ const p = T.PAR[k]; if(p < 0) continue;
+        x.lineWidth = Math.max(E.px(0.9), E.px(1.1)*wk*o.zoom*Math.cbrt(T.flow[k])); x.beginPath(); x.moveTo(T.NX[p], T.NY[p]); x.lineTo(T.NX[k], T.NY[k]); x.stroke(); }
+      const wires = E.asField(E.readCanvas(c)), g1 = E.boxBlur(wires, unit*0.004), g2 = E.boxBlur(wires, unit*0.016), glow = new Float32Array(N);
+      for(let i = 0; i < N; i++) glow[i] = Math.min(1, wires[i]*0.8 + g1[i]*1.2 + g2[i]*1.1);
+      return [wires, glow]; } },
+  knotwork: { cat: 'Marks', label: 'Knotwork', ins: ['slide toward'], outs: ['picture', 'height'], io: { ins: ['value'], outs: ['image', 'field'] },
+    params: [GEN_R('size', 'Size', 100, 40, 300), GEN_R('cells', 'Strands', 8, 3, 24), GEN_R('breaks', 'Breaks', 45), GEN_R('shape', 'Circle · Square · Diamond · Cross · Quatrefoil · Page', 0),
+      GEN_R('width', 'Ribbon Width', 55, 20, 90), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), dial = genDial(E, n, 1), sh = E.num(n, 'shape', 0);
+      const o = { cells: E.num(n, 'cells', 8), breaks: E.num(n, 'breaks', 45)/100, shape: Math.min(5, Math.floor(sh/100*6)), salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
+        aspX: w/unit, aspY: h/unit };
+      const pieces = genKnot(o), size = E.num(n, 'size', 100)/100, off = E.num(n, 'offset', 0)/100;
+      // the panel: its radius a share of the page, zoomed by Size; slid along the dial's line
+      const s = unit*0.44*size/Math.max(2, Math.round(o.cells))*2, cx = w/2 + dial.x*off*w*0.42, cy = h/2 + dial.y*off*h*0.42;
+      const T = p => [cx + p[0]*s/2, cy + p[1]*s/2], wd = s*0.5*0.707*E.num(n, 'width', 55)/100*1.3;
+      const [pc, px] = kitCanvas(w, h), [hc, hx] = kitCanvas(w, h);
+      px.fillStyle = 'rgb(128,128,128)'; px.fillRect(0, 0, w, h); hx.fillStyle = '#000'; hx.fillRect(0, 0, w, h);
+      genDrawKnot(px, pieces, T, s, wd, 'rgb(28,26,24)', 'rgb(232,226,214)', 'rgb(128,128,128)');
+      // heights: the ribbon raised, its edges rounded down, the under-strand lower where it passes beneath
+      genDrawKnot(hx, pieces, T, s, wd, 'rgb(150,150,150)', 'rgb(235,235,235)', '#000');
+      return [pc, hc]; },
+    run(E, n){ const [pc, hc] = this.paint(E, n); return [E.readCanvas(pc), E.asField(E.readCanvas(hc))]; } },
   discharge: { cat: 'Marks', label: 'Discharge', ins: ['strike from'], outs: ['channels'], io: { ins: ['value'], outs: ['field'] },
-    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
-    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1);
-      const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)), grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y };
+    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 2), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
+      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100;
+      const o = { count: Math.round((700 + 8000*num(n, 'reach', 50)/100)*Math.min(2.6, Math.max(1, zoom)**0.85)), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
+        grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));
       const [c, x] = kitCanvas(ww, wh); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.strokeStyle = '#fff'; x.lineCap = 'round';
       const wk = num(n, 'width', 100)/100;
       // thick where the most current ran; the twigs fade as well as thin
-      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9), E.px(1.6)*wk*Math.pow(cur, 0.34));
+      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9), E.px(1.6)*wk*Math.pow(cur, 0.34)*Math.pow(zoom, 0.25));
         x.globalAlpha = Math.min(1, 0.35 + Math.pow(cur, 0.5)*0.22); x.lineWidth = w;
         x.beginPath(); x.moveTo(x0*unit, y0*unit); x.lineTo(x1*unit, y1*unit); x.stroke(); }
       return [E.asField(E.readCanvas(c))]; } },
@@ -206,19 +420,23 @@ export const GEN_STEPS = {
       }
       return [out, H]; } },
   growline: { cat: 'Marks', label: 'Growing Line', ins: ['sun'], outs: ['line', 'body', 'relief'], io: { ins: ['value'], outs: ['field', 'field', 'field'] },
-    params: [GEN_R('growth', 'Growth', 55), GEN_R('fold', 'Fold Size', 100, 50, 250), GEN_R('seeds', 'Seeds', 1, 1, 7), GEN_R('photo', 'Toward the Sun', 40), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 14,
-    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1);
+    params: [GEN_R('growth', 'Growth', 55), GEN_R('fold', 'Fold Size', 100, 50, 250), GEN_R('seeds', 'Seeds', 1, 1, 7), GEN_R('photo', 'Toward the Sun', 40),
+      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 14,
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, off = num(n, 'offset', 0)/100;
       const o = { growth: num(n, 'growth', 55)/100, fold: num(n, 'fold', 100)/100, seeds: num(n, 'seeds', 1), photo: num(n, 'photo', 40)/100, sun: { x: dial.x, y: dial.y } };
       const { loops } = withSeed(genSeed(E, n), () => genGrowth(ww/unit, wh/unit, o));
+      // into the page: zoomed about the page's middle, then slid along the dial's line (the sun's)
+      const cx = ww/unit/2, cy = wh/unit/2, sx = cx + dial.x*off*cx*0.9, sy = cy + dial.y*off*cy*0.9;
+      for(const L of loops) for(const p of L){ p[0] = sx + (p[0] - cx)*zoom; p[1] = sy + (p[1] - cy)*zoom; }
       const [lc, lx] = kitCanvas(ww, wh), [bc, bx] = kitCanvas(ww, wh);
       bx.fillStyle = '#000'; bx.fillRect(0, 0, ww, wh); lx.fillStyle = '#000'; lx.fillRect(0, 0, ww, wh);
       // the body: every loop filled (even–odd, so a loop grown round another leaves a ring)
       bx.fillStyle = '#fff'; bx.beginPath(); for(const L of loops){ L.forEach((p, i) => i ? bx.lineTo(p[0]*unit, p[1]*unit) : bx.moveTo(p[0]*unit, p[1]*unit)); bx.closePath(); } bx.fill('evenodd');
-      lx.strokeStyle = '#fff'; lx.lineJoin = 'round'; lx.lineWidth = Math.max(1, E.px(3.2)*o.fold);
+      lx.strokeStyle = '#fff'; lx.lineJoin = 'round'; lx.lineWidth = Math.max(1, E.px(3.2)*o.fold*zoom);
       lx.beginPath(); for(const L of loops){ L.forEach((p, i) => i ? lx.lineTo(p[0]*unit, p[1]*unit) : lx.moveTo(p[0]*unit, p[1]*unit)); lx.closePath(); } lx.stroke();
       const line = E.asField(E.readCanvas(lc)), body = E.asField(E.readCanvas(bc));
       // relief: the body rounded at its edges, a groove along the line
-      const soft = E.boxBlur(body, unit*0.0045*o.fold), rel = new Float32Array(E.N);
+      const soft = E.boxBlur(body, unit*0.0045*o.fold*zoom), rel = new Float32Array(E.N);
       for(let i = 0; i < E.N; i++) rel[i] = genClamp(soft[i]*0.9 - line[i]*0.25 + 0.05);
       return [line, body, rel]; } },
 };

@@ -6,21 +6,19 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Eirene)
-- LAYOUT by shape: 2:3 or taller is the phone layout; squarer is the desktop at any width.
-- PRESET GROUPS as Ruby named them (+ Nature, Materials & Craft, Grown & Generated). Gone: Riverbed,
-  Gingham, Ruled, First Frost. Reworked: Sea Glass, Sunroom, Sundress, Hush, Signal, Rose Window. New:
-  Struck, Coral, Leopard, Borealis. The Basics are the Athanor's only.
-- GENERATIVE, first two (QA together, as Ruby offered): Lichtenberg Figures (dielectric breakdown, Kim et al.
-  2007; wood / embers / acrylic), Ruffled Growth (differential growth). Next candidates from the research:
-  knotwork by Cromwell's grid (sigils that interlace), substrate cracks on glaze, Physarum veins as
-  embroidery on linen, hyphae growing through paper.
-- AURORA (new, a sky) and SILK RIBBONS (the old Aurora Veil, renamed).
-- POURED WAX → spatter: Splatter, Height, Sheen; translucency in the Light Engine. Sealed uses the
-  new waxier look (same knobs): check it still feels right.
-- STAINED GLASS: Scene, Glass Texture, Window.
-- CRYSTAL LEAF: ~25% faster to make, hue changes ~10× faster. The rest of its cost is the light
-  (lightHeights at 9M points); the GPU path should take it on a real machine.
+## 1 · Ruby to judge (new in Jupiter–Megaclite)
+- KNOTWORK (Cromwell's grid; strands, breaks, shape, width, slide) — Interlace wears it.
+- FRACTURED GLAZE → cracks spreading (Tarbell's Substrate: cracks stop at cracks, branch at right angles;
+  From One Point aims an impact with the dial). Old crazed glaze kept hidden for old looks. Hourglass wears it.
+- VEINS OF LIGHT: space-colonization growth through strata / pebbles / sand / fibers / skin, steered into
+  the material's gaps — Circuitry wears it.
+- POSITIONING: Zoom + Slide on Lichtenberg and Ruffled Growth; Horizon on Aurora; Slide on Veins and Knotwork.
+- LICHTENBERG: one or two poles only; two always join; Zoom reaches the edges.
+- STAINED GLASS: arches of glass (Lancet · Arcade · Round), heavier outline came, border glass, no stone;
+  flat dark lead with solder joints.
+- ASPECT is locked to the person's choice; hover previews gone; 12 new presets (every group a multiple of 4);
+  spells in Runology's runes only.
+- Still open from before: Ruffled Growth, Aurora, Poured Wax/Sealed, the regrouped presets.
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the

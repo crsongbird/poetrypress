@@ -4,6 +4,40 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Megaclite (2026-10-12)
+
+- New textures:
+  - Knotwork: interlaced ribbons that go over and under, built on Cromwell's
+    grid the way Celtic knots are drawn. Choose the strands, the breaks, the
+    outline's shape and the ribbon's width. It is carved and lit by the dial.
+  - Fractured Glaze is now cracks spreading across a glaze: each crack runs
+    until it meets another and new ones branch off at right angles. From One
+    Point starts them at an impact set by the dial. Cracks are carved and lit;
+    Chipping flakes the glaze at the edges. The old crazed glaze stays
+    available for old looks.
+  - Veins of Light: glowing wires, tiny machines or colored fibers growing
+    through rock layers, pebbles, sand, fibers or skin. The growth follows the
+    material's gaps and lights the surface around it.
+- You can place what you see: Lichtenberg Figures and Ruffled Growth gain Zoom
+  and Slide, Aurora gains Horizon, and Veins and Knotwork have Slide. The dial
+  sets the direction.
+- Lichtenberg Figures: always one pole or two. Two poles always meet with one
+  joined channel between them. Zoom carries the figure to the page's edges.
+- Stained Glass: Window now draws arches out of the glass itself, in a lancet,
+  an arcade of three or a round window. The outline is heavier lead, and the
+  border glass beyond it has its own colors. The stone is gone. The lead is
+  flat, dark and satin, with soldered joints, no longer a silver pipe.
+- New default poem.
+- The page's aspect ratio stays as you set it. Loading a look, spell or JSON
+  never changes it.
+- Removed the preset previews on mouse-over (desktop).
+- Twelve new presets, so every preset group fills whole rows of four:
+  Aftertaste, Margins, Night Swim, Afterglow, Rimed, Monsoon, Tidepool,
+  Circuitry, Undergrowth, Windward, Highlands and Interlace. Hourglass now
+  wears the new cracked glaze.
+- Spell codes are written only in Runology's runes (its Archetypes and
+  Accents). Every preset has a new spell, and old spells still load.
+
 ## Jupiter–Eirene (2026-10-12)
 
 - Layout: the phone layout now follows the window's shape, not its width. Any

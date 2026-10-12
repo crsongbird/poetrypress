@@ -317,9 +317,8 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
   check('undo and redo step through look snapshots (never the poem, locks or name)',
     /function lookSnapshot\(\)\{ return JSON\.stringify\(stripToLook\(serializeCurrentSettings\(\)\)\); \}/.test(ev));
   check('restoring a step is not itself recorded as a change (nor is a hover preview)', /if\(h\.restoring \|\| hover\.base\) return;/.test(ev));
-  check('hover previews (desktop): a preset shows on the page after a pause, your look comes back off the grid, a click keeps exactly what was shown',
-    /const canHover = \(\) => !detectMobile\(\) && typeof matchMedia === 'function' && matchMedia\('\(hover: hover\) and \(pointer: fine\)'\)\.matches;/.test(ev)
-    && /presetGrid\.addEventListener\('mouseleave', endHoverPreview\)/.test(ev) && /if\(showing\) commitSoon\(\);/.test(ev) && /try \{ restoreSettings\(b\.look\);/.test(ev));
+  check('no hover previews (Ruby: retired, some surfaces were slow to try on): a preset tile is applied by a click only',
+    /function hoverPreview\(tile\)\{ return tile; \}/.test(ev) && !/addEventListener\('mouseenter', \(\) => \{\n    if\(!canHover\(\)\)/.test(ev));
   check('the undo buttons are ☋ and ☊', /id="undoBtn"[^>]*>☋</.test(src('index.html')) && /id="redoBtn"[^>]*>☊</.test(src('index.html')));
   const core = src('texCore.js'), tg = src('textureGenerators.js');
   check('tint and blend remap are one pass, in place (no copies)',

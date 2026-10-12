@@ -222,6 +222,8 @@ export const UI_STRINGS = {
   'option.first_snow':                         "First Snow",
   'option.aurora_veil':                        "Silk Ribbons",   // (was Aurora Veil: it looks like combed silk, not a sky; the id stays 'aurora')
   'option.aurora':                             "Aurora",
+  'option.veins_of_light':                     "Veins of Light",
+  'option.knotwork':                           "Knotwork",
   'option.lichtenberg':                        "Lichtenberg Figures",
   'option.ruffled_growth':                     "Ruffled Growth",
   'option.cells':                              "Cells",
@@ -242,6 +244,7 @@ export const UI_STRINGS = {
   'option.summoning_circles':                  "Transmutation Circle",
   'option.rorschach_test':                     "Rorschach Test",
   'option.fractured_glaze':                    "Fractured Glaze",
+  'option.crazed_glaze':                       "Crazed Glaze",
   'option.facet_field':                        "Facet Field",
   'option.cartomancy':                         "Cartomancy",
   'option.linen_tooth':                        "Linen Tooth",

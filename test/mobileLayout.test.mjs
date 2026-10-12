@@ -25,7 +25,7 @@ check('body gets the is-mobile class', bodyClasses.has('is-mobile'));
 // (Esoterica gained the Appearance card; the Athanor's card went, it opens from the top bar; Materia the Inset Box; Rituals Custom Presets)
 check('every card was found as a tab panel', panels.length === 16);
 check('all five tab buttons were found', buttons.length === 5);
-check('preset grid still populated on mobile (48 looks under 10 headings)', registry['presetGrid'].children.length === 58);
+check('preset grid still populated on mobile (60 looks under 10 headings)', registry['presetGrid'].children.length === 70);
 
 // Write is the landing tab
 const writePanels = panels.filter(p => p.dataset.tab === 'write');

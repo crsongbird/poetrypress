@@ -46,6 +46,11 @@ const GLYPHS_BASE = [
 // alchemy (vessels, processes, hours), the heavens (planets, asteroids, the
 // comet), the occult aspects and the Elder Futhark — each once
 export const GLYPHS = GLYPHS_BASE.concat(LORE_GLYPHS.filter(g => !GLYPHS_BASE.includes(g)));
+/** THE PANDORAN RUNES (Ruby): new spells are written ONLY in these — Runology's twenty-three Archetypes and twelve
+ *  Accent Runes, as Symbology carries them (runology.js has their names). Older spells, in the alchemical glyphs
+ *  above, still read and validate. */
+export const PANDORAN_RUNES = ["🜂","🜁","🜄","🜃","ᕕ","⎐","𝀶","🜳","🝓","🝢","ᘓ","ᘒ","🝆","🜛","Ᏹ","🜞","ᛯ","🝰","🝊","🜥","🜉","🝧","🜚",
+  "⯢","⯠","⯤","⯚","⯦","⯗","⯔","⯡","⯘","⯣","⯙","⯧"];
 
 export const SPELL_PRIMES = SPELLS.primes;
 
@@ -73,7 +78,7 @@ export function generateSpell(rand){
   const total = SPELL_PRIMES[Math.floor(r() * SPELL_PRIMES.length)];
 
   // drawn WITHOUT replacement: no glyph repeats inside one spell
-  const picked = shuffled(GLYPHS, r).slice(0, total);
+  const picked = shuffled(PANDORAN_RUNES, r).slice(0, total);
 
   // two cuts give three non-empty segments
   const cuts = [];

@@ -725,8 +725,8 @@ function whimAurora(x, w, h, o, px){
   };
   x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
   for(let c = 0; c < curtains; c++){
-    // the hem: a line across the sky, folded (sums of slow waves), lower curtains brighter and nearer
-    const y0 = h*(0.38 + 0.38*(curtains === 1 ? 0.5 : c/(curtains - 1)))*(0.85 + R()*0.3), amp = unit*(0.06 + R()*0.11), ph = [R()*6.3, R()*6.3, R()*6.3], fr = [1.2 + R()*1.6, 3 + R()*3, 7 + R()*6];
+    // the hem: a line across the sky, folded (sums of slow waves), lower curtains brighter and nearer; Horizon lowers or raises them all
+    const y0 = h*(0.38 + 0.38*(curtains === 1 ? 0.5 : c/(curtains - 1)))*(0.85 + R()*0.3) + (o.horizon - 0.5)*h*0.7, amp = unit*(0.06 + R()*0.11), ph = [R()*6.3, R()*6.3, R()*6.3], fr = [1.2 + R()*1.6, 3 + R()*3, 7 + R()*6];
     const arc = o.arc*unit*0.25, bright = (0.55 + 0.45*R())*(1 - c*0.12);
     const hemY = X => y0 + Math.sin(X/unit*fr[0] + ph[0])*amp + Math.sin(X/unit*fr[1] + ph[1])*amp*0.35 + Math.sin(X/unit*fr[2] + ph[2])*amp*0.12 + arc*Math.pow((X/w - 0.5)*2, 2);
     // the curtain's light comes and goes along it: bright knots, dim gaps (rays crowd in bundles)
@@ -769,10 +769,10 @@ export const WHIMSY_STEPS = {
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   curtains: { cat: 'Marks', label: 'Aurora Curtains', ins: ['over', 'field from'], outs: ['image'], io: { ins: ['image', 'value'], outs: ['image'] },
     params: [WHIM_R('curtains', 'Curtains', 2, 1, 5), WHIM_R('rays', 'Rays', 100, 20, 250), WHIM_R('height', 'Height', 100, 40, 180), WHIM_R('red', 'Red Sky', 30),
-      WHIM_R('fringe', 'Pink Hem', 50), WHIM_R('glow', 'Brightness', 100, 20, 250), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+      WHIM_R('fringe', 'Pink Hem', 50), WHIM_R('glow', 'Brightness', 100, 20, 250), WHIM_R('horizon', 'Horizon', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 2), deg = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0), a = (deg - 90)*Math.PI/180;
       const o = { curtains: E.num(n, 'curtains', 2), rays: E.num(n, 'rays', 100)/100, height: E.num(n, 'height', 100)/100, red: E.num(n, 'red', 30)/100,
-        fringe: E.num(n, 'fringe', 50)/100, glow: E.num(n, 'glow', 100)/100, lean: Math.cos(a)*0.35, arc: Math.sin(a)*0.5 };
+        fringe: E.num(n, 'fringe', 50)/100, glow: E.num(n, 'glow', 100)/100, lean: Math.cos(a)*0.35, arc: Math.sin(a)*0.5, horizon: E.num(n, 'horizon', 50)/100 };
       const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h);
       withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 4441) >>> 0, () => whimAurora(x, w, h, o, E.px));
       return [pc]; },

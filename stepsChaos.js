@@ -14,7 +14,7 @@
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
-import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed, kitCanvas } from './texCore.js';
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -85,7 +85,76 @@ function chaosTuring(ww, wh, growth, zoom, form){
   return S;
 }
 
+// The glaze lets go
+// along a line, and the line
+// lets go of a line.
+// SPREADING CRACKS (Jared Tarbell's "Substrate", 2003, laid on a glaze): a crack runs straight, curving a little,
+// until it meets another crack or the edge; then a new one starts from a point on a crack already there, at right
+// angles to it. So the first cracks are long and cross the piece, and each later one is shorter, closing smaller
+// cells — the hierarchy real crackle has. SPREAD: 0, they start anywhere (craquelure); toward 100, the first ones
+// burst from one point of impact, where the dial points. Returns { segs: [x0,y0,x1,y1,gen] } on a w×h grid.
+function chaosCracks(w, h, o){
+  const unit = Math.min(w, h), N = w*h, A = new Float32Array(N).fill(NaN), ID = new Int32Array(N).fill(-1), marked = [];
+  const ix = (x, y) => (y|0)*w + (x|0);
+  const segs = [], active = [], maxCracks = Math.round(o.count);
+  let made = 0;
+  const start = (x, y, a, gen) => { if(made >= maxCracks) return; made++; active.push({ id: made, x, y, a, gen, sx: x, sy: y, curve: (Math.random() - 0.5)*o.wander*0.012, steps: 0 }); };
+  // the first cracks: from the impact (Spread), the rest anywhere
+  const px = w/2 + o.dx*w*0.38, py = h/2 + o.dy*h*0.38, nRad = Math.round(o.spread*12), nFree = Math.max(2, Math.round((1 - o.spread)*8));
+  for(let k = 0; k < nRad; k++){ const a = k/nRad*Math.PI*2 + Math.random()*0.4; start(px + Math.cos(a)*2, py + Math.sin(a)*2, a, 0); }
+  for(let k = 0; k < nFree; k++) start(Math.random()*w, Math.random()*h, Math.random()*Math.PI*2, 0);
+  const step = 0.6;
+  while(active.length){
+    const c = active.shift(); let alive = true, run = 0; const pts = [c.x, c.y];
+    while(alive){
+      c.a += c.curve + (Math.random() - 0.5)*o.wander*0.03; const nx = c.x + Math.cos(c.a)*step, ny = c.y + Math.sin(c.a)*step;
+      if(nx < 0 || ny < 0 || nx >= w || ny >= h){ alive = false; break; }
+      const k = ix(nx, ny);
+      // another crack here (its cell, or one beside it — a thin line crossed on the diagonal is still met): stop on it
+      if(run > 2){ let hit = false; const X0 = nx|0, Y0 = ny|0;
+        for(let dy = -1; dy <= 1 && !hit; dy++) for(let dx = -1; dx <= 1 && !hit; dx++){ if(dx && dy) continue; const xx = X0 + dx, yy = Y0 + dy; if(xx < 0 || yy < 0 || xx >= w || yy >= h) continue; const q = ID[yy*w + xx]; if(q >= 0 && q !== c.id) hit = true; }
+        if(hit){ c.x = nx; c.y = ny; alive = false; break; } }
+      c.x = nx; c.y = ny; run++; if(run % 6 === 0) pts.push(c.x, c.y);
+      if(ID[k] < 0){ ID[k] = c.id; A[k] = c.a; marked.push(k); }
+    }
+    pts.push(c.x, c.y);
+    if(run > 1) for(let q = 0; q + 3 < pts.length; q += 2) segs.push([pts[q], pts[q+1], pts[q+2], pts[q+3], c.gen]);   // (the path as it ran: a chord would cut across the cracks it curved round)
+    // and a new crack from a point on one already there, at right angles to it (two, while the piece is young)
+    for(let t = 0; t < 2; t++){ if(made >= maxCracks || !marked.length) break;
+      const k = marked[Math.floor(Math.random()*marked.length)], x = k % w + 0.5, y = (k/w | 0) + 0.5;
+      const a = A[k] + (Math.random() < 0.5 ? 1 : -1)*(Math.PI/2 + (Math.random() - 0.5)*0.25*o.wander);
+      start(x + Math.cos(a)*1.2, y + Math.sin(a)*1.2, a, Math.min(6, c.gen + 1)); }
+  }
+  return { segs };
+}
+
 export const CHAOS_STEPS = {
+  cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
+    params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 10,
+    run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
+      const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;
+      const area = (ww/unit)*(wh/unit), o = { count: 240*area*num(n, 'count', 100)/100/(zoom*zoom), spread: num(n, 'spread', 30)/100, wander: num(n, 'wander', 40)/100, dx: Math.cos(da), dy: Math.sin(da) };
+      const seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => {
+        const { segs } = chaosCracks(ww, wh, o), age = num(n, 'age', 0)/100;
+        // the cracks drawn: the first wide and deep, each generation after finer
+        const [cc, cx] = kitCanvas(ww, wh), [fc, fx] = kitCanvas(ww, wh), [kc, kx] = kitCanvas(ww, wh);
+        for(const x of [cx, fx, kx]){ x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.lineCap = 'round'; }
+        cx.strokeStyle = '#fff'; fx.strokeStyle = '#fff';
+        for(const [x0, y0, x1, y1, g] of segs){ const wd = Math.max(E.px(1.1), E.px(4.2)*Math.sqrt(zoom)*Math.pow(0.7, g));
+          const t = g >= 3 ? fx : cx; t.lineWidth = g >= 3 ? Math.max(E.px(0.9), wd) : wd; t.beginPath(); t.moveTo(x0, y0); t.lineTo(x1, y1); t.stroke(); }
+        // chips: flakes of glaze gone where cracks meet (Chipping), each an uneven polygon
+        if(age > 0){ kx.fillStyle = '#fff'; const nC = Math.round(o.count*age*0.5);
+          for(let k = 0; k < nC; k++){ const s = segs[Math.floor(Math.random()*segs.length)], t = Math.random() < 0.6 ? 1 : Math.random(), x = s[0] + (s[2] - s[0])*t, y = s[1] + (s[3] - s[1])*t, r = E.px(6 + Math.random()*26)*Math.sqrt(zoom)*(0.5 + age);
+            kx.beginPath(); const m = 6 + Math.floor(Math.random()*4); for(let q = 0; q < m; q++){ const a = q/m*Math.PI*2, rr = r*(0.5 + Math.random()*0.7); q ? kx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr) : kx.moveTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr); } kx.closePath(); kx.fill(); } }
+        const CR = E.asField(E.readCanvas(cc)), FN = E.asField(E.readCanvas(fc)), CH = E.asField(E.readCanvas(kc));
+        // each cell of glaze a little domed (lower toward its cracks); grime settles in and beside the cracks
+        const near = E.boxBlur(CR, unit*0.012*Math.sqrt(zoom)), lip = E.boxBlur(CR, unit*0.002);
+        const H = new Float32Array(N), GL = new Float32Array(N), DIRT = new Float32Array(N);
+        for(let i = 0; i < N; i++){ const c = Math.max(CR[i], FN[i]*0.6), ch = CH[i];
+          H[i] = Math.max(0, 1 - c*0.85 - near[i]*0.35 - ch*0.45); GL[i] = Math.min(1 - c*0.6, 1 - ch);
+          DIRT[i] = Math.min(1, lip[i]*1.6 + c*0.8); }
+        return [H, GL, DIRT, FN]; }); } },
   grayscott: { cat: 'Noise', label: 'Turing Pattern', ins: [], outs: ['pattern'],
     params: [CHAOS_R('pattern', 'Pattern', 25), CHAOS_R('growth', 'Growth', 80, 20, 100), CHAOS_R('scale', 'Scale', 100, 50, 250), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 30,
     run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;

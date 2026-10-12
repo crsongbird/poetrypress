@@ -143,6 +143,7 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
 check('THE DICE: a die beside every section\'s lock rolls only that section (the Summon buttons where a section has one; locked controls stay); Shift or a long press on the Surface\'s die rolls only the seed',
   /function rollSection\(root\)\{/.test(src('appEvents.js')) && /addDie\(card, card\.querySelector\(':scope > summary'\)\); addMasterLock\(card/.test(src('appEvents.js'))
   && /const seedOnly = surface && \(e\.shiftKey \|\| held\)/.test(src('appEvents.js')) && /withLocksPreserved\(\(\) => \{\n    for\(const id of lockablesIn\(root\)\)/.test(src('appEvents.js')) && /\.die-btn\{/.test(src('poetrypress.css')));
+check('a loaded look never changes the page\'s aspect ratio (Ruby: it stays as chosen until another is picked)', /const look = \{ \.\.\.c\.look \}; for\(const k of \['aspect', 'customSize', 'customW', 'customH'\]\) delete look\[k\];/.test(ev));
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

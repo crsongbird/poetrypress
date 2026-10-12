@@ -459,6 +459,24 @@ before/after measurements AND an identical-render comparison.
   `glossMap` (Kintsugi's gold, Moss beside stone, glaze beside bare body).
 
 ## Systems worth knowing
+- KNOTWORK (stepsGenerative genKnot): Cromwell's construction — cells at odd
+  doubled coordinates, crossings at edge midpoints; boundary edges and hashed
+  symmetric breaks become turns; crossings alternate over/under by edge kind.
+- CRACKLE (stepsChaos chaosCracks, chain 'crackle'): Tarbell's Substrate on an
+  ID grid — a crack stops at another's cell or its 4-neighbours (no diagonal
+  slips); polylines, not chords. The old crazed glaze is 'crackedglaze', hidden.
+- VEINS (chain 'veins'): Matrix (strata, pebbles, sand, fibres, skin; its
+  'ways' map) → Tendrils (Runions' space colonization, steered by Keep into
+  the ways; width ∝ cbrt(flow)).
+- POSITIONING: generated textures take Zoom and Slide (along the dial's axis);
+  Lichtenberg grows at zoom 1 and is transformed after (poles stay on the lattice).
+- STAINED GLASS's Window: None · Lancet · Arcade · Round (Round kept at the top
+  of the slider). Outside the outline is border GLASS (pane ids offset), never
+  stone; the outline is a came 1.8× broad; Panes hands on a joints field.
+- THE PAGE SHAPE is the person's: safeRestore drops aspect/customSize/customW/
+  customH from every look loaded from outside. Spells: PANDORAN_RUNES only
+  (spell.js); old spells still validate. Preset groups are multiples of four;
+  two presets may share a texture only in different blends.
 - WORD SEEDS (seedWords.js): every 32-bit seed has exactly one phrase and
   back; the banks and their order are FROZEN (test/seedWords.test.mjs anchors
   phrases — the last re-cut was Ruby's, for variety). The top 4 bits of
@@ -654,7 +672,7 @@ one. Each owns a different visual channel, so they combine without competing.
   element that requires another person to have been there. Touch textures
   read as relief and take the light.
 - **Equal weight**: no element is smaller because it is quieter. Today:
-  9 · 8 · 8 · 11 textures, and the six Basics (🜛), which take whichever
+  the element counts in textureElements.js, and the six Basics (🜛), which take whichever
   element their four readings give them.
 - **Presets** are grouped as Ruby named them (PRESET_GROUPS: Basic Scenes,
   Paper & Stationery, Skies & Stars, Weather & Water, Particle Systems,
