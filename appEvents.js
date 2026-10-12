@@ -2198,6 +2198,46 @@ function addMasterLock(root, head){
   });
   headTools(head).appendChild(btn); masterLocks.push({ root, btn });
 }
+// ---------- THE DICE (Ruby): a die beside every section's lock rerolls only that section ----------
+// The backdrop, the surface and the typeface roll as their Summon buttons do (known-good schemes);
+// any other section rolls each of its sliders, menus and colours within reason. Locked controls stay
+// (the lock beside the die keeps the whole section). On the Surface, Shift-click or a long press
+// rolls only the seed: the same texture, a new pattern (the seed keeps its own lock too).
+const DIE_SUMMONS = { randomBgBtn: 1, randomSurfaceBtn: 1, randomFontBtn: 1 };
+function rollSection(root){
+  const own = Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
+  if(own){ own.click(); return true; }        // (it plays its own sound)
+  withLocksPreserved(() => {
+    for(const id of lockablesIn(root)){
+      const el = $(id); if(!el || el.disabled || state.locks.has(id) || id === 'textureSeedValue' || (el.closest && el.closest('.tool-hidden'))) continue;
+      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1, v = lo + (0.1 + Math.random()*0.8)*(hi - lo);
+        el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
+      else if(el.tagName === 'SELECT'){ const opts = [...el.options].filter(o => !o.disabled && o.value !== ''); if(opts.length > 1){ el.value = opts[Math.floor(Math.random()*opts.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+      else if(/Hex$/.test(id)){ const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
+        setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, Math.max(0.08, Math.min(0.92, l + (Math.random() - 0.5)*0.2)))); }
+    }
+    scheduleRender();
+  });
+}
+function addDie(root, head){
+  if(!root || !head || !lockablesIn(root).length) return;
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'die-btn'; btn.textContent = '⚄';
+  const surface = !!($('randomSurfaceBtn') && root.contains && root.contains($('randomSurfaceBtn')));
+  btn.title = surface ? 'Roll this section (Shift-click or hold: only a new seed)' : 'Roll this section (locked controls stay)';
+  btn.setAttribute('aria-label', btn.title);
+  let held = false, timer = 0;
+  btn.addEventListener('pointerdown', () => { held = false; clearTimeout(timer); timer = setTimeout(() => { held = true; }, 500); });
+  btn.addEventListener('pointerup', () => clearTimeout(timer));
+  btn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
+    const seedOnly = surface && (e.shiftKey || held); held = false;
+    if(seedOnly){ maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); return; }
+    if(!rollSection(root)) murmur.play('reroll');
+  });
+  // (a long press must not open the phone's context menu)
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  headTools(head).appendChild(btn);
+}
 // the switches that show a whole card, moved into its heading as an eye
 const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the border', cardToggle: 'Show the inset box', vignetteToggle: 'Show the vignette' };
 // the switches inside a card, eyes where they are
@@ -2215,7 +2255,7 @@ function installHeadings(){
     if(row) row.hidden = true;
   }
   for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
-  for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')) addMasterLock(card, card.querySelector(':scope > summary'));
+  for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')){ addDie(card, card.querySelector(':scope > summary')); addMasterLock(card, card.querySelector(':scope > summary')); }
   // a sub-section's lock sits in the row that switches it on (its eye and name)
   for(const sub of document.querySelectorAll('.subblock[id]')){
     const prev = sub.previousElementSibling; if(prev && prev.classList && prev.classList.contains('check-row') && !prev.hidden) addMasterLock(sub, prev);

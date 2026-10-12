@@ -160,9 +160,12 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const flat = v => new Float32Array(N).fill(v);
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
   const isImg = v => v && typeof v === 'object' && v.r instanceof Float32Array;
+  // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
+  // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
+  const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
   const asField = (v, d = 0) => v == null ? null : typeof v === 'number' ? flat(v) : v instanceof Float32Array ? v
-    : isImg(v) ? lum(v) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
-  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v }
+    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
+  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v)
     : Array.isArray(v) ? { r: flat(v[0]), g: flat(v[1]), b: flat(v[2]) } : typeof v === 'number' ? { r: flat(v), g: flat(v), b: flat(v) } : null;
   const asColour = (v, d) => Array.isArray(v) ? v : v == null ? d : d;
   const hexCol = hex => { const c = parseHex(hex || '#808080'); return [c.r/255, c.g/255, c.b/255]; };
@@ -307,11 +310,6 @@ export const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
-  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
-      ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
-      ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
-      ['material', { relief: 55, gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
-    wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

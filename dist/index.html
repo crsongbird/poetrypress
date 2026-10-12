@@ -1988,6 +1988,11 @@ input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{
 /* ---------- the headings' tools: a section's EYE (shown or not) and its MASTER LOCK ----------
    at the heading's far end, spaced well apart and away from the fold itself */
 .head-tools{ float:right; display:inline-flex; align-items:center; gap:16px; margin-left:18px; margin-right:2px; text-transform:none; letter-spacing:0; }
+/* the die beside a section's lock: rolls only that section (appEvents.js rollSection) */
+.die-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:16px/1 var(--ui-text); opacity:.55; cursor:pointer; }
+.die-btn:hover, .die-btn:focus-visible{ opacity:1; color:var(--accent); }
+.die-btn:active{ transform:rotate(90deg); transition:transform .12s; }
+body.is-mobile .die-btn{ font-size:19px; }
 .check-row .head-tools{ float:none; order:9; flex:1 1 auto; justify-content:flex-end; padding-left:12px; }
 .master-lock{ width:24px; height:24px; padding:2px; }
 .master-lock.partial{ color:var(--accent-dim); }
@@ -5184,210 +5189,11 @@ function genFlowers(w,h,amt,zoom,tint1,tint2,form,light,GL){
 // Dotwork: a regular dot grid (classic print halftone) where each dot's radius is
 // modulated by a coarse noise field — genuinely geometric (fixed grid spacing)
 // but with organic size variation, distinct from Squares' flat-shaded triangles.
-function genHalftone(w,h,amt,zoom){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d', CPU);
-  fctx.fillStyle = 'rgb(205,205,205)';
-  fctx.fillRect(0,0,w,h);
-
-  const fieldGW = 10, fieldGH = Math.max(2, Math.round(10*(h/w)));
-  const field = makeNoiseGrid(fieldGW, fieldGH);
-
-  const cell = (Math.max(w,h)/48) * zoom;
-  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
-  fctx.fillStyle = 'rgb(60,60,60)';
-  for(let ry=0; ry<rows; ry++){
-    for(let rx=0; rx<cols; rx++){
-      const cx = rx*cell+cell/2, cy = ry*cell+cell/2;
-      const nx = (rx/cols)*(fieldGW-1), ny = (ry/rows)*(fieldGH-1);
-      const v = sampleNoiseGrid(field, fieldGW, fieldGH, nx, ny);
-      const r = v*cell*0.48*amt;
-      if(r < 0.6) continue;
-      fctx.beginPath();
-      fctx.arc(cx, cy, r, 0, Math.PI*2);
-      fctx.fill();
-    }
-  }
-  return full;
-}
+// (Halftone is a chain now: Value Noise → stepsSharpness.js 'screen' → Surface; chains.js 'halftone')
 
 // (Harsh Rain is a chain of steps now: chains.js, steps.js 'streaks')
 
-function genBrushstrokes(w,h,amt,zoom,form,light){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  // IMPASTO: every stroke also lays down paint THICKNESS on a height map —
-  // the body thick, ridges where the paint piles up at its edges, raised
-  // bristle lines, drips and droplets — and the dial's light rakes across it
-  // (lightHeights): ridges catch the light and throw small shadows, the
-  // ground beside a heavy stroke falls into its shade. Wet paint is flatter
-  // and glossier.
-  const hdiv = canonDiv(2), hw = Math.ceil(w/hdiv), hh = Math.ceil(h/hdiv);
-  const hcv = document.createElement('canvas'); hcv.width = hw; hcv.height = hh;
-  const hx = hcv.getContext('2d', CPU); hx.fillStyle = '#000'; hx.fillRect(0, 0, hw, hh);
-  if(hx.setTransform) hx.setTransform(1/hdiv, 0, 0, 1/hdiv, 0, 0);
-  hx.globalCompositeOperation = 'lighter'; hx.fillStyle = '#fff'; hx.strokeStyle = '#fff'; hx.lineCap = 'round'; hx.lineJoin = 'round';
-  const trace = (g, P) => { g.beginPath(); P.forEach(([x,y],i)=> i ? g.lineTo(x,y) : g.moveTo(x,y)); };
-  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
-  // thinner (strokes mix where they cross), the bristle marks level out,
-  // edges bleed softly into what's under them, and heavy strokes run in drips.
-  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
-  const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
-
-  // Angry paint. Each stroke is a BODY of paint first — an opaque ribbon laid
-  // along a fast, curving swish, blotted where the loaded brush lands — with
-  // bristle striations running inside it. Only at the tail, where the paint
-  // runs out, does it fray into separate dry streaks, and a few droplets are
-  // flung off the end. Dark paint goes down first as an underlayer, light
-  // paint is dragged across it, and a few dark accents come last; the bodies
-  // are slightly translucent, so where strokes cross the paints mix.
-  const unit = Math.min(w,h);
-  const n = Math.max(3, Math.round((6 + Math.random()*4) * amt));
-  const plan = [];
-  for(let i=0;i<n;i++) plan.push(i < n*0.4 ? 'dark' : 'light');
-  for(let i=0;i<Math.max(1, Math.round(n*0.2));i++) plan.push('accent');
-
-  for(const kind of plan){
-    const tone = kind === 'light' ? 214 + Math.random()*26 : 18 + Math.random()*26;
-    const W = unit*(kind === 'accent' ? 0.028 : 0.05 + Math.random()*0.06) * zoom;
-    const L = unit*(0.38 + Math.random()*0.5) * (kind === 'accent' ? 0.7 : 1);
-    // the swish: a cubic whose handles pull hard to one side
-    const a0 = Math.random()*Math.PI*2, bendDir = Math.random()<0.5 ? 1 : -1;
-    const x0 = Math.random()*w, y0 = Math.random()*h;
-    const x3 = x0 + Math.cos(a0)*L, y3 = y0 + Math.sin(a0)*L;
-    // not every swipe is the same arc: a near-straight slash, an S, or a hook
-    const gesture = Math.random();
-    const k = L*(0.12 + Math.random()*0.4)*bendDir;
-    const k2 = gesture < 0.3 ? k*0.15 : gesture < 0.65 ? -k*0.9 : k*1.3;
-    const nx = -Math.sin(a0), ny = Math.cos(a0);
-    const x1 = x0 + Math.cos(a0)*L*0.3 + nx*k,  y1 = y0 + Math.sin(a0)*L*0.3 + ny*k;
-    const x2 = x0 + Math.cos(a0)*L*0.7 + nx*k2, y2 = y0 + Math.sin(a0)*L*0.7 + ny*k2;
-    const at = t => { const u=1-t;
-      return [u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3,
-              u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3]; };
-    const N = 90, pts = [];
-    for(let s=0;s<=N;s++){
-      const t = s/N, [px,py] = at(t), [qx,qy] = at(Math.min(1, t+0.01));
-      const len = Math.hypot(qx-px, qy-py) || 1;
-      pts.push({ t, x:px, y:py, nx:-(qy-py)/len, ny:(qx-px)/len });
-    }
-    // pressure: a blot on landing, full through the sweep, lifting at the end
-    const dry = 0.55 + Math.random()*0.2;
-    // pressure swings hard: loaded and wide on landing, pressing to a peak,
-    // then lifting — never the even width of a tube
-    const peak = 0.12 + Math.random()*0.2;
-    const width = t => W * (t < peak ? 0.75 + 0.55*(t/peak) : 1.3 - 0.75*((t-peak)/(1-peak)))
-                         * (t > dry ? Math.pow(1 - (t-dry)/(1-dry), 0.7) : 1);
-    // ragged edges that wander slowly, so the outline is torn, not smooth
-    const ph1 = Math.random()*6, ph2 = Math.random()*6, ph3 = Math.random()*6;
-    const edge = (t, side) => 1 + 0.16*Math.sin(t*9 + (side ? ph1 : ph2)) + 0.07*Math.sin(t*31 + ph3) + (Math.random()-0.5)*0.06;
-
-    // 1. the body, up to where it runs dry
-    const left = [], right = [];
-    for(const p of pts){ if(p.t > dry) break;
-      const hw = width(p.t)/2;
-      left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
-      right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
-    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
-    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
-    ctx.beginPath();
-    left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
-    for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
-    ctx.closePath(); ctx.fill();
-    // its thickness: the body, and the ridge where the paint piled at its edges
-    { const P = left.concat(right.slice().reverse());
-      hx.globalAlpha = 0.32*(1 - 0.4*wet); trace(hx, P); hx.closePath(); hx.fill();
-      hx.globalAlpha = 0.16*(1 - 0.5*wet); hx.lineWidth = W*0.1; trace(hx, P); hx.closePath(); hx.stroke(); }
-
-    // 2. bristles: striations inside the body, then fraying past the dry point
-    const bristles = 14 + Math.floor(Math.random()*14);
-    for(let b=0;b<bristles;b++){
-      const f = (b/(bristles-1))*2 - 1;
-      const shade = tone + (Math.random()-0.5)*110;          // visible striations
-      const end = dry + (1-dry)*(0.3 + Math.random()*0.7);   // some give out early
-      ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0})`;
-      ctx.lineWidth = Math.max(cpx(0.6), W*0.035*(0.6+Math.random()));
-      ctx.lineCap = 'round';
-      ctx.beginPath(); let on = false;
-      for(const p of pts){
-        if(p.t > end) break;
-        const inTail = p.t > dry;
-        if(inTail && Math.random() < (p.t-dry)*2.2){ if(on){ ctx.stroke(); ctx.beginPath(); on=false; } continue; }
-        const spread = inTail ? 1 + (p.t-dry)*1.8 : 1;      // the tail fans open
-        const off = f * width(p.t)/2 * 0.92 * spread;
-        const x = p.x + p.nx*off, y = p.y + p.ny*off;
-        on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
-      }
-      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
-      // the bristle's raised line in the paint (redrawn on the height map: same path, stroked again)
-    }
-    { const nb = 10 + Math.floor(Math.random()*8);
-      for(let b=0;b<nb;b++){ const f = (b/(nb-1))*2 - 1; hx.globalAlpha = 0.09*(1 - 0.7*wet); hx.lineWidth = Math.max(cpx(0.6), W*0.03);
-        const P = []; for(const p of pts){ if(p.t > dry*1.15) break; const off = f*width(p.t)/2*0.9; P.push([p.x + p.nx*off, p.y + p.ny*off]); }
-        if(P.length > 1){ trace(hx, P); hx.stroke(); } } }
-    // wet paint runs: drips fall from the body's lower edge, thinning, each
-    // ending in a bead
-    if(wet > 0.25){
-      const drips = Math.floor(Math.random()*(1 + wet*5));
-      for(let d=0; d<drips; d++){
-        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
-        if(!a || !b) continue;
-        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
-        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
-        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
-        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
-        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
-        ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
-        hx.globalAlpha = 0.3; hx.beginPath(); hx.arc(sx + sway, sy + len, dw*0.6, 0, Math.PI*2); hx.fill();
-        hx.globalAlpha = 0.18; hx.lineWidth = dw*0.8; hx.beginPath(); hx.moveTo(sx, sy); hx.lineTo(sx + sway, sy + len); hx.stroke();
-      }
-    }
-
-    // 3. droplets flung off the end of an angry stroke
-    const tip = pts[pts.length-1], dx = tip.x - pts[pts.length-6].x, dy = tip.y - pts[pts.length-6].y;
-    const dl = Math.hypot(dx,dy) || 1;
-    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
-    for(let d=0; d<Math.floor(Math.random()*6); d++){
-      const r = W*(0.2 + Math.random()*1.4);
-      const dotR = W*(0.03 + Math.random()*0.06);
-      ctx.globalAlpha = 0.7;
-      ctx.beginPath();
-      const ddx = tip.x + dx/dl*r + (Math.random()-0.5)*W*0.5, ddy = tip.y + dy/dl*r + (Math.random()-0.5)*W*0.5;
-      ctx.arc(ddx, ddy, dotR, 0, Math.PI*2);
-      ctx.fill();
-      hx.globalAlpha = 0.35; hx.beginPath(); hx.arc(ddx, ddy, dotR, 0, Math.PI*2); hx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
-  // wet edges bleed: a soft copy of the whole painting laid over it
-  if(wet > 0.01){
-    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
-    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
-    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
-    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
-  }
-  // THE LIGHT across the paint: thickness → heights → lit, laid over the
-  // painting (overlay: mid-grey changes nothing; brighter lifts, darker sinks)
-  const td = hx.getImageData ? hx.getImageData(0, 0, hw, hh).data : null;
-  if(td){
-    const N = hw*hh, H = new Float32Array(N), relief = Math.min(hw, hh)*0.026*(1 - 0.55*wet);
-    for(let i=0;i<N;i++) H[i] = td[i*4]/255*relief;
-    const L = lightHeights(H, hw, hh, { light, relief:1, gloss:0.25 + 0.6*wet, shadow:0.55, ao:0.3, ambient:0.45 });
-    const fl = L.flat || 1, lc = document.createElement('canvas'); lc.width = hw; lc.height = hh;
-    const lx = lc.getContext('2d', CPU), img = lx.createImageData(hw, hh), d = img.data;
-    for(let i=0;i<N;i++){ const k = litK(L, i, 0.45, null, 0)/fl, v = 128 + (k - 1)*125 + L.spec[i]*190*(0.4 + 0.6*wet);
-      const q = i*4, o = v < 0 ? 0 : v > 255 ? 255 : v; d[q] = d[q+1] = d[q+2] = o; d[q+3] = 255; }
-    lx.putImageData(img, 0, 0);
-    ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = 0.9; ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, w, h); ctx.restore();
-  }
-  return c;
-}
+// (Painter's Frustration is a chain of steps now: stepsLight.js paintAngryStrokes → canvas weave → Light Engine; chains.js 'brushstrokes')
 
 // (Silverpoint Hatch is a chain of steps now: chains.js, steps.js 'forms' and 'hatching')
 
@@ -5600,60 +5406,7 @@ function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
  *   Paper    a sheet's own grain: cloudy formation, short fibres
  *   Digital  a sensor's noise: square pixels, colour speckle, faint row banding
  */
-function genGrain(w,h,amt,zoom,form){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const f=Math.max(0, Math.min(1, form==null ? 0.33 : form));
-  const STOPS=[0, 0.33, 0.66, 1], KINDS=['silver', 'film', 'paper', 'digital'];
-  let k=0; while(k<2 && f>STOPS[k+1]) k++;
-  const t=(f-STOPS[k])/(STOPS[k+1]-STOPS[k]);
-  const gz=5*zoom*scaleNow(), gw0=Math.max(1,Math.round(w/gz)), gh0=Math.max(1,Math.round(h/gz));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  const gauss=()=>Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(6.2832*Math.random());
-  // a smooth random field, `cell` grain-cells across, read bilinearly
-  const coarse=(cell, gw=gw0, gh=gh0)=>{ const cw=Math.ceil(gw/cell)+2, ch=Math.ceil(gh/cell)+2, g=new Float32Array(cw*ch);
-    for(let i=0;i<g.length;i++) g[i]=Math.random();
-    return (x,y)=>{ const fx=x/cell, fy=y/cell, i=fx|0, j=fy|0, tx=fx-i, ty=fy-j, q=j*cw+i, sx=tx*tx*(3-2*tx), sy=ty*ty*(3-2*ty);
-      return (g[q]*(1-sx)+g[q+1]*sx)*(1-sy)+(g[q+cw]*(1-sx)+g[q+cw+1]*sx)*sy; }; };
-  const draw=(kind, alpha)=>{
-    // paper's fibres are finer than a grain: it works on a grid twice as fine
-    const fine=kind==='paper'?2:1, gw=gw0*fine, gh=gh0*fine, n=gw*gh;
-    const small=document.createElement('canvas'); small.width=gw; small.height=gh;
-    const sctx=small.getContext('2d', CPU), img=sctx.createImageData(gw,gh), d=img.data;
-    if(kind==='film'){
-      for(let i=0;i<d.length;i+=4){ const v=128+(Math.random()*2-1)*100*amt; d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255; }
-    } else if(kind==='silver'){
-      // each grain is crisp — nearly black or clear — and they gather in clumps
-      const clump=coarse(2.7);
-      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const s=0.55*Math.random()+0.45*clump(x,y), v=Math.max(-1,Math.min(1,(s-0.5)*3.4));
-        const q=(y*gw+x)*4; d[q]=d[q+1]=d[q+2]=128+v*100*amt; d[q+3]=255; }
-    } else if(kind==='paper'){
-      // formation: the cloudiness of a sheet held to the light; then fibres
-      const m1=coarse(18, gw, gh), m2=coarse(6, gw, gh), F=new Float32Array(n);
-      const fibres=Math.round(n/30);
-      for(let k2=0;k2<fibres;k2++){
-        const x0=Math.random()*gw, y0=Math.random()*gh, len=4+Math.random()*14, a=(Math.random()<0.6 ? (Math.random()-0.5)*0.7 : Math.random()*Math.PI), s=(Math.random()<0.5?-1:1)*(0.12+Math.random()*0.16);
-        for(let u=0;u<len;u+=0.5){ const x=(x0+Math.cos(a)*u)|0, y=(y0+Math.sin(a)*u)|0; if(x>=0&&y>=0&&x<gw&&y<gh) F[y*gw+x]+=s*Math.sin(Math.PI*u/len); }
-      }
-      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const i=y*gw+x, v=(m1(x,y)-0.5)*1.3+(m2(x,y)-0.5)*0.6+F[i]+(Math.random()-0.5)*0.3;
-        const q=i*4; d[q]=d[q+1]=d[q+2]=128+Math.max(-1.2,Math.min(1.2,v))*85*amt; d[q+3]=255; }
-    } else {
-      // a sensor: noise per photosite, a little of it in each colour alone,
-      // rows that read out a touch differently, a faint fixed column pattern
-      const row=new Float32Array(gh), col=new Float32Array(gw);
-      for(let y=0;y<gh;y++) row[y]=gauss()*0.08; for(let x=0;x<gw;x++) col[x]=gauss()*0.05;
-      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const base=gauss()*0.42+row[y]+col[x], q=(y*gw+x)*4;
-        for(let ch=0;ch<3;ch++) d[q+ch]=128+Math.max(-1.3,Math.min(1.3,base+gauss()*0.16))*100*amt; d[q+3]=255; }
-    }
-    sctx.putImageData(img,0,0);
-    ctx.globalAlpha=alpha; ctx.imageSmoothingEnabled = kind!=='digital';   // a sensor's pixels stay square
-    ctx.drawImage(small,0,0,w,h); ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true;
-  };
-  if(t<=1e-6) draw(KINDS[k], 1);
-  else if(t>=1-1e-6) draw(KINDS[k+1], 1);
-  else { draw(KINDS[k], 1); draw(KINDS[k+1], t); }
-  return c;
-}
+// (Film Grain is a chain now: stepsSharpness.js 'grain' → Surface; chains.js 'grain')
 
 // A lathe once turned
 // for a whole afternoon so
@@ -11120,6 +10873,7 @@ const CHAOS_STEPS = {
  *             a stroke's edges and ends. Wire both into a Light Engine and the
  *             dial lights the impasto.
  *   canvasweave CANVAS: the cloth under a painting, as heights (a plain weave).
+ *   strokes   ANGRY STROKES: Painter's Frustration's swipes of paint and their impasto heights.
  *
  * Each paints at full size in a canvas pass (the page's own textures) and runs
  * on the Athanor's grid otherwise; the same code does both.
@@ -11149,7 +10903,7 @@ function ltK(k, M, c){
  * S: the shine }, from the dial (deg) and the part's settings.
  */
 function ltLight(H, gw, gh, deg, o, glossMap){
-  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.012;
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
   const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
@@ -11238,7 +10992,9 @@ const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, '
 
 /** A plain-weave canvas as heights, on a w×h grid (thread every `pitch` px). */
 function weaveField(w, h, pitch){
-  const f = new Float32Array(w*h), p = Math.max(2, pitch);
+  // threads finer than ~3 px can't be drawn, only aliased (a moiré): too fine to see is drawn as flat cloth
+  if(pitch < 3) return new Float32Array(w*h).fill(0.5);
+  const f = new Float32Array(w*h), p = pitch;
   for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
     const u = x/p, v = y/p, cu = Math.floor(u), cv = Math.floor(v), over = (cu + cv) & 1;
     const fu = u - cu, fv = v - cv, a = Math.sin(fu*Math.PI), b = Math.sin(fv*Math.PI);
@@ -11246,6 +11002,167 @@ function weaveField(w, h, pitch){
   }
   return f;
 }
+
+// ---- ANGRY STROKES (Painter's Frustration): a few fast, loaded swipes of grey paint, each a body with
+// bristle striations, fraying at its tail, flung droplets; wet paint mixing, bleeding and running ----
+function paintAngryStrokes(w,h,amt,zoom,form){
+  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // IMPASTO: every stroke also lays down paint THICKNESS on a height map —
+  // the body thick, ridges where the paint piles up at its edges, raised
+  // bristle lines, drips and droplets. Returns [the painting, its heights];
+  // the Light Engine lights them (chains.js 'brushstrokes').
+  const hdiv = canonDiv(2), hw = Math.ceil(w/hdiv), hh = Math.ceil(h/hdiv);
+  const hcv = document.createElement('canvas'); hcv.width = hw; hcv.height = hh;
+  const hx = hcv.getContext('2d', CPU); hx.fillStyle = '#000'; hx.fillRect(0, 0, hw, hh);
+  if(hx.setTransform) hx.setTransform(1/hdiv, 0, 0, 1/hdiv, 0, 0);
+  hx.globalCompositeOperation = 'lighter'; hx.fillStyle = '#fff'; hx.strokeStyle = '#fff'; hx.lineCap = 'round'; hx.lineJoin = 'round';
+  const trace = (g, P) => { g.beginPath(); P.forEach(([x,y],i)=> i ? g.lineTo(x,y) : g.moveTo(x,y)); };
+  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
+  // thinner (strokes mix where they cross), the bristle marks level out,
+  // edges bleed softly into what's under them, and heavy strokes run in drips.
+  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
+
+  // Angry paint. Each stroke is a BODY of paint first — an opaque ribbon laid
+  // along a fast, curving swish, blotted where the loaded brush lands — with
+  // bristle striations running inside it. Only at the tail, where the paint
+  // runs out, does it fray into separate dry streaks, and a few droplets are
+  // flung off the end. Dark paint goes down first as an underlayer, light
+  // paint is dragged across it, and a few dark accents come last; the bodies
+  // are slightly translucent, so where strokes cross the paints mix.
+  const unit = Math.min(w,h);
+  const n = Math.max(3, Math.round((6 + Math.random()*4) * amt));
+  const plan = [];
+  for(let i=0;i<n;i++) plan.push(i < n*0.4 ? 'dark' : 'light');
+  for(let i=0;i<Math.max(1, Math.round(n*0.2));i++) plan.push('accent');
+
+  for(const kind of plan){
+    const tone = kind === 'light' ? 214 + Math.random()*26 : 18 + Math.random()*26;
+    const W = unit*(kind === 'accent' ? 0.028 : 0.05 + Math.random()*0.06) * zoom;
+    const L = unit*(0.38 + Math.random()*0.5) * (kind === 'accent' ? 0.7 : 1);
+    // the swish: a cubic whose handles pull hard to one side
+    const a0 = Math.random()*Math.PI*2, bendDir = Math.random()<0.5 ? 1 : -1;
+    const x0 = Math.random()*w, y0 = Math.random()*h;
+    const x3 = x0 + Math.cos(a0)*L, y3 = y0 + Math.sin(a0)*L;
+    // not every swipe is the same arc: a near-straight slash, an S, or a hook
+    const gesture = Math.random();
+    const k = L*(0.12 + Math.random()*0.4)*bendDir;
+    const k2 = gesture < 0.3 ? k*0.15 : gesture < 0.65 ? -k*0.9 : k*1.3;
+    const nx = -Math.sin(a0), ny = Math.cos(a0);
+    const x1 = x0 + Math.cos(a0)*L*0.3 + nx*k,  y1 = y0 + Math.sin(a0)*L*0.3 + ny*k;
+    const x2 = x0 + Math.cos(a0)*L*0.7 + nx*k2, y2 = y0 + Math.sin(a0)*L*0.7 + ny*k2;
+    const at = t => { const u=1-t;
+      return [u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3,
+              u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3]; };
+    const N = 90, pts = [];
+    for(let s=0;s<=N;s++){
+      const t = s/N, [px,py] = at(t), [qx,qy] = at(Math.min(1, t+0.01));
+      const len = Math.hypot(qx-px, qy-py) || 1;
+      pts.push({ t, x:px, y:py, nx:-(qy-py)/len, ny:(qx-px)/len });
+    }
+    // pressure: a blot on landing, full through the sweep, lifting at the end
+    const dry = 0.55 + Math.random()*0.2;
+    // pressure swings hard: loaded and wide on landing, pressing to a peak,
+    // then lifting — never the even width of a tube
+    const peak = 0.12 + Math.random()*0.2;
+    const width = t => W * (t < peak ? 0.75 + 0.55*(t/peak) : 1.3 - 0.75*((t-peak)/(1-peak)))
+                         * (t > dry ? Math.pow(1 - (t-dry)/(1-dry), 0.7) : 1);
+    // ragged edges that wander slowly, so the outline is torn, not smooth
+    const ph1 = Math.random()*6, ph2 = Math.random()*6, ph3 = Math.random()*6;
+    const edge = (t, side) => 1 + 0.16*Math.sin(t*9 + (side ? ph1 : ph2)) + 0.07*Math.sin(t*31 + ph3) + (Math.random()-0.5)*0.06;
+
+    // 1. the body, up to where it runs dry
+    const left = [], right = [];
+    for(const p of pts){ if(p.t > dry) break;
+      const hw = width(p.t)/2;
+      left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
+      right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
+    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
+    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
+    ctx.beginPath();
+    left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+    for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
+    ctx.closePath(); ctx.fill();
+    // its thickness: the body, and the ridge where the paint piled at its edges
+    { const P = left.concat(right.slice().reverse());
+      hx.globalAlpha = 0.32*(1 - 0.4*wet); trace(hx, P); hx.closePath(); hx.fill();
+      hx.globalAlpha = 0.16*(1 - 0.5*wet); hx.lineWidth = W*0.1; trace(hx, P); hx.closePath(); hx.stroke(); }
+
+    // 2. bristles: striations inside the body, then fraying past the dry point
+    const bristles = 14 + Math.floor(Math.random()*14);
+    for(let b=0;b<bristles;b++){
+      const f = (b/(bristles-1))*2 - 1;
+      const shade = tone + (Math.random()-0.5)*110;          // visible striations
+      const end = dry + (1-dry)*(0.3 + Math.random()*0.7);   // some give out early
+      ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0})`;
+      ctx.lineWidth = Math.max(cpx(0.6), W*0.035*(0.6+Math.random()));
+      ctx.lineCap = 'round';
+      ctx.beginPath(); let on = false;
+      for(const p of pts){
+        if(p.t > end) break;
+        const inTail = p.t > dry;
+        if(inTail && Math.random() < (p.t-dry)*2.2){ if(on){ ctx.stroke(); ctx.beginPath(); on=false; } continue; }
+        const spread = inTail ? 1 + (p.t-dry)*1.8 : 1;      // the tail fans open
+        const off = f * width(p.t)/2 * 0.92 * spread;
+        const x = p.x + p.nx*off, y = p.y + p.ny*off;
+        on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
+      }
+      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
+      // the bristle's raised line in the paint (redrawn on the height map: same path, stroked again)
+    }
+    { const nb = 10 + Math.floor(Math.random()*8);
+      for(let b=0;b<nb;b++){ const f = (b/(nb-1))*2 - 1; hx.globalAlpha = 0.09*(1 - 0.7*wet); hx.lineWidth = Math.max(cpx(0.6), W*0.03);
+        const P = []; for(const p of pts){ if(p.t > dry*1.15) break; const off = f*width(p.t)/2*0.9; P.push([p.x + p.nx*off, p.y + p.ny*off]); }
+        if(P.length > 1){ trace(hx, P); hx.stroke(); } } }
+    // wet paint runs: drips fall from the body's lower edge, thinning, each
+    // ending in a bead
+    if(wet > 0.25){
+      const drips = Math.floor(Math.random()*(1 + wet*5));
+      for(let d=0; d<drips; d++){
+        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
+        if(!a || !b) continue;
+        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
+        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
+        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
+        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
+        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
+        hx.globalAlpha = 0.3; hx.beginPath(); hx.arc(sx + sway, sy + len, dw*0.6, 0, Math.PI*2); hx.fill();
+        hx.globalAlpha = 0.18; hx.lineWidth = dw*0.8; hx.beginPath(); hx.moveTo(sx, sy); hx.lineTo(sx + sway, sy + len); hx.stroke();
+      }
+    }
+
+    // 3. droplets flung off the end of an angry stroke
+    const tip = pts[pts.length-1], dx = tip.x - pts[pts.length-6].x, dy = tip.y - pts[pts.length-6].y;
+    const dl = Math.hypot(dx,dy) || 1;
+    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
+    for(let d=0; d<Math.floor(Math.random()*6); d++){
+      const r = W*(0.2 + Math.random()*1.4);
+      const dotR = W*(0.03 + Math.random()*0.06);
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      const ddx = tip.x + dx/dl*r + (Math.random()-0.5)*W*0.5, ddy = tip.y + dy/dl*r + (Math.random()-0.5)*W*0.5;
+      ctx.arc(ddx, ddy, dotR, 0, Math.PI*2);
+      ctx.fill();
+      hx.globalAlpha = 0.35; hx.beginPath(); hx.arc(ddx, ddy, dotR, 0, Math.PI*2); hx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  // wet edges bleed: a soft copy of the whole painting laid over it
+  if(wet > 0.01){
+    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
+    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
+    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
+  }
+  return [c, hcv];
+}
+
 
 const LIGHT_STEPS = {
   material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
@@ -11286,8 +11203,116 @@ const LIGHT_STEPS = {
     paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
     run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
       return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
+  strokes: { cat: 'Marks', label: 'Angry Strokes', ins: [], outs: ['painting', 'heights'], io: { outs: ['image', 'field'] },
+    params: [LT_R('width', 'Stroke Width', 100, 60, 380), LT_R('count', 'Stroke Count', 100, 20, 260), LT_R('wet', 'Wetness', 0)], cost: () => 6,
+    paint(E, n){ return paintAngryStrokes(E.ww, E.wh, E.num(n, 'count', 100)/100, E.num(n, 'width', 100)/100, E.num(n, 'wet', 0)/100); },
+    run(E, n){ const [c, hc] = this.paint(E, n); return [kitImage(c, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
   canvasweave: { cat: 'Noise', label: 'Canvas Weave', ins: [], outs: ['heights'], params: [LT_R('pitch', 'Thread Size', 100, 30, 400)], cost: () => 2,
     run(E, n){ return [weaveField(E.ww, E.wh, cpx(2.2)*E.num(n, 'pitch', 100)/100/(E.ctx.div > 0 ? E.ctx.div : 1))]; } },
+};
+
+
+/* ==== stepsSharpness.js ==== */
+/**
+ * stepsSharpness.js — steps for √ SHARPNESS surfaces, each a part that works on
+ * anything (the componentizing rule: every texture's techniques loadable,
+ * viewable and mixable in the Athanor).
+ *
+ *   screen   HALFTONE SCREEN: any tone printed as a screen of dots — a dot at
+ *            each cell, its size the tone there — at an angle, as print does.
+ *            (Halftone: Value Noise → Halftone Screen → Surface.)
+ *   grain    FILM GRAIN: silver halide (crisp, clumped), film, paper (its
+ *            formation and fibres) or a digital sensor (per-channel noise,
+ *            rows and columns), blended between neighbours by Kind.
+ */
+
+const SH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+
+/** Dots on a w×h canvas: a cell every max(w,h)/48·scale, each dot's radius the tone there (0..1 field on w×h). */
+function paintScreen(w, h, tone, weight, scale, angleDeg){
+  const [c, x] = kitCanvas(w, h);
+  x.fillStyle = 'rgb(205,205,205)'; x.fillRect(0, 0, w, h);
+  const cell = Math.max(w, h)/48*scale, a = angleDeg*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+  // the screen's grid, turned by its angle, covering the whole page
+  const reach = Math.hypot(w, h)/2, n = Math.ceil(reach/cell) + 1, cx0 = w/2, cy0 = h/2;
+  x.fillStyle = 'rgb(60,60,60)';
+  for(let j = -n; j <= n; j++) for(let i = -n; i <= n; i++){
+    const u = (i + 0.5)*cell, v = (j + 0.5)*cell, px = cx0 + u*ca - v*sa, py = cy0 + u*sa + v*ca;
+    if(px < -cell || py < -cell || px > w + cell || py > h + cell) continue;
+    const t = tone[Math.min(h - 1, Math.max(0, py|0))*w + Math.min(w - 1, Math.max(0, px|0))];
+    const r = t*cell*0.48*weight; if(r < 0.6) continue;
+    x.beginPath(); x.arc(px, py, r, 0, Math.PI*2); x.fill();
+  }
+  return c;
+}
+
+// ---- FILM GRAIN (as it was: texSharpness genGrain) ----
+function paintGrain(w,h,amt,zoom,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const f=Math.max(0, Math.min(1, form==null ? 0.33 : form));
+  const STOPS=[0, 0.33, 0.66, 1], KINDS=['silver', 'film', 'paper', 'digital'];
+  let k=0; while(k<2 && f>STOPS[k+1]) k++;
+  const t=(f-STOPS[k])/(STOPS[k+1]-STOPS[k]);
+  const gz=5*zoom*scaleNow(), gw0=Math.max(1,Math.round(w/gz)), gh0=Math.max(1,Math.round(h/gz));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU);
+  const gauss=()=>Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(6.2832*Math.random());
+  // a smooth random field, `cell` grain-cells across, read bilinearly
+  const coarse=(cell, gw=gw0, gh=gh0)=>{ const cw=Math.ceil(gw/cell)+2, ch=Math.ceil(gh/cell)+2, g=new Float32Array(cw*ch);
+    for(let i=0;i<g.length;i++) g[i]=Math.random();
+    return (x,y)=>{ const fx=x/cell, fy=y/cell, i=fx|0, j=fy|0, tx=fx-i, ty=fy-j, q=j*cw+i, sx=tx*tx*(3-2*tx), sy=ty*ty*(3-2*ty);
+      return (g[q]*(1-sx)+g[q+1]*sx)*(1-sy)+(g[q+cw]*(1-sx)+g[q+cw+1]*sx)*sy; }; };
+  const draw=(kind, alpha)=>{
+    // paper's fibres are finer than a grain: it works on a grid twice as fine
+    const fine=kind==='paper'?2:1, gw=gw0*fine, gh=gh0*fine, n=gw*gh;
+    const small=document.createElement('canvas'); small.width=gw; small.height=gh;
+    const sctx=small.getContext('2d', CPU), img=sctx.createImageData(gw,gh), d=img.data;
+    if(kind==='film'){
+      for(let i=0;i<d.length;i+=4){ const v=128+(Math.random()*2-1)*100*amt; d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255; }
+    } else if(kind==='silver'){
+      // each grain is crisp — nearly black or clear — and they gather in clumps
+      const clump=coarse(2.7);
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const s=0.55*Math.random()+0.45*clump(x,y), v=Math.max(-1,Math.min(1,(s-0.5)*3.4));
+        const q=(y*gw+x)*4; d[q]=d[q+1]=d[q+2]=128+v*100*amt; d[q+3]=255; }
+    } else if(kind==='paper'){
+      // formation: the cloudiness of a sheet held to the light; then fibres
+      const m1=coarse(18, gw, gh), m2=coarse(6, gw, gh), F=new Float32Array(n);
+      const fibres=Math.round(n/30);
+      for(let k2=0;k2<fibres;k2++){
+        const x0=Math.random()*gw, y0=Math.random()*gh, len=4+Math.random()*14, a=(Math.random()<0.6 ? (Math.random()-0.5)*0.7 : Math.random()*Math.PI), s=(Math.random()<0.5?-1:1)*(0.12+Math.random()*0.16);
+        for(let u=0;u<len;u+=0.5){ const x=(x0+Math.cos(a)*u)|0, y=(y0+Math.sin(a)*u)|0; if(x>=0&&y>=0&&x<gw&&y<gh) F[y*gw+x]+=s*Math.sin(Math.PI*u/len); }
+      }
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const i=y*gw+x, v=(m1(x,y)-0.5)*1.3+(m2(x,y)-0.5)*0.6+F[i]+(Math.random()-0.5)*0.3;
+        const q=i*4; d[q]=d[q+1]=d[q+2]=128+Math.max(-1.2,Math.min(1.2,v))*85*amt; d[q+3]=255; }
+    } else {
+      // a sensor: noise per photosite, a little of it in each colour alone,
+      // rows that read out a touch differently, a faint fixed column pattern
+      const row=new Float32Array(gh), col=new Float32Array(gw);
+      for(let y=0;y<gh;y++) row[y]=gauss()*0.08; for(let x=0;x<gw;x++) col[x]=gauss()*0.05;
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const base=gauss()*0.42+row[y]+col[x], q=(y*gw+x)*4;
+        for(let ch=0;ch<3;ch++) d[q+ch]=128+Math.max(-1.3,Math.min(1.3,base+gauss()*0.16))*100*amt; d[q+3]=255; }
+    }
+    sctx.putImageData(img,0,0);
+    ctx.globalAlpha=alpha; ctx.imageSmoothingEnabled = kind!=='digital';   // a sensor's pixels stay square
+    ctx.drawImage(small,0,0,w,h); ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true;
+  };
+  if(t<=1e-6) draw(KINDS[k], 1);
+  else if(t>=1-1e-6) draw(KINDS[k+1], 1);
+  else { draw(KINDS[k], 1); draw(KINDS[k+1], t); }
+  return c;
+}
+
+
+const SHARP_STEPS = {
+  screen: { cat: 'Marks', label: 'Halftone Screen', ins: ['tone'], outs: ['dots'], io: { ins: ['field'], outs: ['field'] },
+    params: [SH_R('scale', 'Dot Scale', 100, 50, 400), SH_R('weight', 'Dot Weight', 100, 30, 240), SH_R('angle', 'Screen Angle', 0, 0, 90)], cost: () => 3,
+    paint(E, n){ const tone = kitField(E.input(n, 1) ?? 0.5, E.ww, E.wh) || new Float32Array(E.ww*E.wh).fill(0.5);
+      return [paintScreen(E.ww, E.wh, tone, E.num(n, 'weight', 100)/100, E.num(n, 'scale', 100)/100, E.num(n, 'angle', 0))]; },
+    run(E, n){ return [kitField(this.paint(E, n)[0], E.ww, E.wh)]; } },
+  grain: { cat: 'Noise', label: 'Film Grain', ins: [], outs: ['grain'], io: { outs: ['image'] },
+    params: [SH_R('size', 'Grain Size', 100, 100, 600), SH_R('contrast', 'Contrast', 100, 30, 240), SH_R('kind', 'Kind', 33)], cost: () => 3,
+    paint(E, n){ return [paintGrain(E.ww, E.wh, E.num(n, 'contrast', 100)/100, E.num(n, 'size', 100)/100, E.num(n, 'kind', 33)/100)]; },
+    run(E, n){ return [kitImage(this.paint(E, n)[0], E.ww, E.wh)]; } },
 };
 
 
@@ -11326,6 +11351,7 @@ const LIGHT_STEPS = {
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
+
 
 
 
@@ -11478,6 +11504,9 @@ const STEP_DOCS = {
   glaze: 'Lights and colors crazed glaze from its maps.',
   material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
   oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
+  strokes: 'A few fast, loaded swipes of gray paint (Painter\'s Frustration): each a body with bristle marks, fraying at the tail, flinging droplets. Wetness makes the paint mix, bleed and drip. Its second output is the paint\'s thickness, for a Light Engine.',
+  screen: 'Prints a tone as a screen of dots, the way newspapers and comics do: a dot in every cell, as big as the tone is bright there. Wire a picture through Invert first to screen it dark-for-big. Screen Angle turns the grid.',
+  grain: 'Film grain: Kind slides from silver (crisp grains in clumps) through film and paper (its cloudy formation and fibres) to a digital sensor (noise in each color, rows and columns). A color picture centered on gray: blend it over anything.',
   canvasweave: 'The cloth under a painting, as heights: a plain weave. Mix it into a painting\'s heights to let the canvas show through thin paint.',
   shaft: 'A shaft of light from the dial through any density (smoke, noise): the density glows inside it. Its second output is the beam itself.',
   surface: 'The end of every graph. What reaches Image is the texture; a gray map in Height is lit by the dial. A graph has exactly one.',
@@ -11883,7 +11912,7 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
@@ -12046,6 +12075,37 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // √ Halftone: a soft Value Noise for the tone, printed as a Halftone Screen of dots.
+  halftone: { label: 'Halftone', canvas: true, teach: 'This is Halftone. A Value Noise with one octave makes a soft, slow tone; Halftone Screen prints it as dots, each as big as the tone is bright there. Dot Scale is the screen\'s cell size and Dot Weight how heavy the dots print. Try: wire another texture into the Halftone Screen\'s tone, or turn its Screen Angle.', nodes: [
+      ['knob', { slot: '1', name: 'Dot Scale', def: 14 }, 40, 40],                 // 1  (100 of 50–400)
+      ['knob', { slot: '2', name: 'Dot Weight', def: 33 }, 40, 140],               // 2  (100 of 30–240)
+      ['noise', { scale: 10, octaves: 1 }, 320, 40],                               // 3
+      ['screen', { scale: 100, weight: 100, angle: 0 }, 600, 80],                  // 4
+      ['surface', { name: 'Halftone', ground: 'grey' }, 880, 100]],                // 5
+    wires: [[1, 1, 4, paramPort('screen', 'scale')], [2, 1, 4, paramPort('screen', 'weight')], [3, 1, 4, 1], [4, 1, 5, 1]] },
+  // √ Film Grain: one part, its Kind sliding from silver to digital
+  grain: { label: 'Film Grain', canvas: true, teach: 'This is Film Grain. One part makes it: Film Grain, whose Kind slides from silver halide through film and paper to a digital sensor, blending neighbours in between. The Knobs are the texture\'s sliders: Grain Size, Contrast and Grain (the Kind). Try: set Kind to 66 for paper, then blend the grain over another texture with Blend.', nodes: [
+      ['knob', { slot: '1', name: 'Grain Size', def: 0 }, 40, 40],                 // 1  (100 of 100–600)
+      ['knob', { slot: '2', name: 'Contrast', def: 33 }, 40, 140],                 // 2  (100 of 30–240)
+      ['knob', { slot: '3', name: 'Grain', def: 33 }, 40, 240],                    // 3
+      ['grain', { size: 100, contrast: 100, kind: 33 }, 320, 80],                  // 4
+      ['surface', { name: 'Film Grain', ground: 'grey' }, 600, 100]],              // 5
+    wires: [[1, 1, 4, paramPort('grain', 'size')], [2, 1, 4, paramPort('grain', 'contrast')], [3, 1, 4, paramPort('grain', 'kind')], [4, 1, 5, 1]] },
+  // √ Painter's Frustration: Angry Strokes lays the paint and its thickness; a little Canvas Weave
+  // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
+  // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
+  brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'This is Painter\'s Frustration. Angry Strokes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [
+      ['knob', { slot: '1', name: 'Stroke Width', def: 13 }, 40, 40],              // 1  (100 of 60–380)
+      ['knob', { slot: '2', name: 'Stroke Count', def: 33 }, 40, 140],             // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                   // 3
+      ['strokes', { width: 100, count: 100, wet: 0 }, 320, 60],                    // 4
+      ['canvasweave', { pitch: 100 }, 320, 320],                                   // 5
+      ['mix', { t: 4 }, 600, 220],                                                 // 6
+      ['material', { relief: 87, '~relief': '87,39', gloss: 25, '~gloss': '25,85', shine: 22, '~shine': '22,65', shadow: 55, occlusion: 30, ambient: 45 }, 860, 80],   // 7
+      ['surface', { name: "Painter's Frustration", ground: 'grey' }, 1120, 120]],  // 8
+    wires: [[1, 1, 4, paramPort('strokes', 'width')], [2, 1, 4, paramPort('strokes', 'count')], [3, 1, 4, paramPort('strokes', 'wet')],
+      [3, 1, 7, paramPort('material', 'relief')], [3, 1, 7, paramPort('material', 'gloss')], [3, 1, 7, paramPort('material', 'shine')],
+      [4, 1, 7, 1], [4, 2, 6, 1], [5, 1, 6, 2], [6, 1, 7, 2], [7, 1, 8, 1]] },
   landscape: { label: 'Painted Landscape', canvas: true, teach: 'This is Painted Landscape. Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Wash bleeds the painting (Wetness). Oil Paint repaints it in brushstrokes with the paint\'s heights, and the Light Engine lights those by the dial; the Impasto knob drives both (0: no strokes, as it used to be). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
@@ -12057,7 +12117,7 @@ const TEXTURE_CHAINS = {
       ['wash', { wet: 0 }, 880, 160],                                             // 8
       ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
       ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
-      ['material', { relief: 50, gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
+      ['material', { relief: 20, '~relief': '0,40', gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
       ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
     wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
@@ -12228,9 +12288,12 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const flat = v => new Float32Array(N).fill(v);
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
   const isImg = v => v && typeof v === 'object' && v.r instanceof Float32Array;
+  // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
+  // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
+  const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
   const asField = (v, d = 0) => v == null ? null : typeof v === 'number' ? flat(v) : v instanceof Float32Array ? v
-    : isImg(v) ? lum(v) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
-  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v }
+    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
+  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v)
     : Array.isArray(v) ? { r: flat(v[0]), g: flat(v[1]), b: flat(v[2]) } : typeof v === 'number' ? { r: flat(v), g: flat(v), b: flat(v) } : null;
   const asColour = (v, d) => Array.isArray(v) ? v : v == null ? d : d;
   const hexCol = hex => { const c = parseHex(hex || '#808080'); return [c.r/255, c.g/255, c.b/255]; };
@@ -12375,11 +12438,6 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
-  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
-      ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
-      ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
-      ['material', { relief: 55, gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
-    wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -13024,9 +13082,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'rainstreaks'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
-    result = genHalftone(w,h,amt,zoom);
+    result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
   } else if(type === 'brushstrokes'){
-    result = genBrushstrokes(w,h,amt,zoom,form,light);
+    result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
     result = genSigils(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'mathnoise'){
@@ -13097,7 +13155,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'spangle'){
     result = genSpangle(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'grain'){
-    result = genGrain(w,h,amt,zoom,form);
+    result = genChain(type, w, h, light, extra);           // Film Grain (chains.js)
   } else {
     let genW = w, genH = h;
 
@@ -19717,210 +19775,11 @@ function genFlowers(w,h,amt,zoom,tint1,tint2,form,light,GL){
 // Dotwork: a regular dot grid (classic print halftone) where each dot's radius is
 // modulated by a coarse noise field — genuinely geometric (fixed grid spacing)
 // but with organic size variation, distinct from Squares' flat-shaded triangles.
-function genHalftone(w,h,amt,zoom){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const full = document.createElement('canvas');
-  full.width=w; full.height=h;
-  const fctx = full.getContext('2d', CPU);
-  fctx.fillStyle = 'rgb(205,205,205)';
-  fctx.fillRect(0,0,w,h);
-
-  const fieldGW = 10, fieldGH = Math.max(2, Math.round(10*(h/w)));
-  const field = makeNoiseGrid(fieldGW, fieldGH);
-
-  const cell = (Math.max(w,h)/48) * zoom;
-  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
-  fctx.fillStyle = 'rgb(60,60,60)';
-  for(let ry=0; ry<rows; ry++){
-    for(let rx=0; rx<cols; rx++){
-      const cx = rx*cell+cell/2, cy = ry*cell+cell/2;
-      const nx = (rx/cols)*(fieldGW-1), ny = (ry/rows)*(fieldGH-1);
-      const v = sampleNoiseGrid(field, fieldGW, fieldGH, nx, ny);
-      const r = v*cell*0.48*amt;
-      if(r < 0.6) continue;
-      fctx.beginPath();
-      fctx.arc(cx, cy, r, 0, Math.PI*2);
-      fctx.fill();
-    }
-  }
-  return full;
-}
+// (Halftone is a chain now: Value Noise → stepsSharpness.js 'screen' → Surface; chains.js 'halftone')
 
 // (Harsh Rain is a chain of steps now: chains.js, steps.js 'streaks')
 
-function genBrushstrokes(w,h,amt,zoom,form,light){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  // IMPASTO: every stroke also lays down paint THICKNESS on a height map —
-  // the body thick, ridges where the paint piles up at its edges, raised
-  // bristle lines, drips and droplets — and the dial's light rakes across it
-  // (lightHeights): ridges catch the light and throw small shadows, the
-  // ground beside a heavy stroke falls into its shade. Wet paint is flatter
-  // and glossier.
-  const hdiv = canonDiv(2), hw = Math.ceil(w/hdiv), hh = Math.ceil(h/hdiv);
-  const hcv = document.createElement('canvas'); hcv.width = hw; hcv.height = hh;
-  const hx = hcv.getContext('2d', CPU); hx.fillStyle = '#000'; hx.fillRect(0, 0, hw, hh);
-  if(hx.setTransform) hx.setTransform(1/hdiv, 0, 0, 1/hdiv, 0, 0);
-  hx.globalCompositeOperation = 'lighter'; hx.fillStyle = '#fff'; hx.strokeStyle = '#fff'; hx.lineCap = 'round'; hx.lineJoin = 'round';
-  const trace = (g, P) => { g.beginPath(); P.forEach(([x,y],i)=> i ? g.lineTo(x,y) : g.moveTo(x,y)); };
-  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
-  // thinner (strokes mix where they cross), the bristle marks level out,
-  // edges bleed softly into what's under them, and heavy strokes run in drips.
-  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
-  const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
-
-  // Angry paint. Each stroke is a BODY of paint first — an opaque ribbon laid
-  // along a fast, curving swish, blotted where the loaded brush lands — with
-  // bristle striations running inside it. Only at the tail, where the paint
-  // runs out, does it fray into separate dry streaks, and a few droplets are
-  // flung off the end. Dark paint goes down first as an underlayer, light
-  // paint is dragged across it, and a few dark accents come last; the bodies
-  // are slightly translucent, so where strokes cross the paints mix.
-  const unit = Math.min(w,h);
-  const n = Math.max(3, Math.round((6 + Math.random()*4) * amt));
-  const plan = [];
-  for(let i=0;i<n;i++) plan.push(i < n*0.4 ? 'dark' : 'light');
-  for(let i=0;i<Math.max(1, Math.round(n*0.2));i++) plan.push('accent');
-
-  for(const kind of plan){
-    const tone = kind === 'light' ? 214 + Math.random()*26 : 18 + Math.random()*26;
-    const W = unit*(kind === 'accent' ? 0.028 : 0.05 + Math.random()*0.06) * zoom;
-    const L = unit*(0.38 + Math.random()*0.5) * (kind === 'accent' ? 0.7 : 1);
-    // the swish: a cubic whose handles pull hard to one side
-    const a0 = Math.random()*Math.PI*2, bendDir = Math.random()<0.5 ? 1 : -1;
-    const x0 = Math.random()*w, y0 = Math.random()*h;
-    const x3 = x0 + Math.cos(a0)*L, y3 = y0 + Math.sin(a0)*L;
-    // not every swipe is the same arc: a near-straight slash, an S, or a hook
-    const gesture = Math.random();
-    const k = L*(0.12 + Math.random()*0.4)*bendDir;
-    const k2 = gesture < 0.3 ? k*0.15 : gesture < 0.65 ? -k*0.9 : k*1.3;
-    const nx = -Math.sin(a0), ny = Math.cos(a0);
-    const x1 = x0 + Math.cos(a0)*L*0.3 + nx*k,  y1 = y0 + Math.sin(a0)*L*0.3 + ny*k;
-    const x2 = x0 + Math.cos(a0)*L*0.7 + nx*k2, y2 = y0 + Math.sin(a0)*L*0.7 + ny*k2;
-    const at = t => { const u=1-t;
-      return [u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3,
-              u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3]; };
-    const N = 90, pts = [];
-    for(let s=0;s<=N;s++){
-      const t = s/N, [px,py] = at(t), [qx,qy] = at(Math.min(1, t+0.01));
-      const len = Math.hypot(qx-px, qy-py) || 1;
-      pts.push({ t, x:px, y:py, nx:-(qy-py)/len, ny:(qx-px)/len });
-    }
-    // pressure: a blot on landing, full through the sweep, lifting at the end
-    const dry = 0.55 + Math.random()*0.2;
-    // pressure swings hard: loaded and wide on landing, pressing to a peak,
-    // then lifting — never the even width of a tube
-    const peak = 0.12 + Math.random()*0.2;
-    const width = t => W * (t < peak ? 0.75 + 0.55*(t/peak) : 1.3 - 0.75*((t-peak)/(1-peak)))
-                         * (t > dry ? Math.pow(1 - (t-dry)/(1-dry), 0.7) : 1);
-    // ragged edges that wander slowly, so the outline is torn, not smooth
-    const ph1 = Math.random()*6, ph2 = Math.random()*6, ph3 = Math.random()*6;
-    const edge = (t, side) => 1 + 0.16*Math.sin(t*9 + (side ? ph1 : ph2)) + 0.07*Math.sin(t*31 + ph3) + (Math.random()-0.5)*0.06;
-
-    // 1. the body, up to where it runs dry
-    const left = [], right = [];
-    for(const p of pts){ if(p.t > dry) break;
-      const hw = width(p.t)/2;
-      left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
-      right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
-    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
-    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
-    ctx.beginPath();
-    left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
-    for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
-    ctx.closePath(); ctx.fill();
-    // its thickness: the body, and the ridge where the paint piled at its edges
-    { const P = left.concat(right.slice().reverse());
-      hx.globalAlpha = 0.32*(1 - 0.4*wet); trace(hx, P); hx.closePath(); hx.fill();
-      hx.globalAlpha = 0.16*(1 - 0.5*wet); hx.lineWidth = W*0.1; trace(hx, P); hx.closePath(); hx.stroke(); }
-
-    // 2. bristles: striations inside the body, then fraying past the dry point
-    const bristles = 14 + Math.floor(Math.random()*14);
-    for(let b=0;b<bristles;b++){
-      const f = (b/(bristles-1))*2 - 1;
-      const shade = tone + (Math.random()-0.5)*110;          // visible striations
-      const end = dry + (1-dry)*(0.3 + Math.random()*0.7);   // some give out early
-      ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0})`;
-      ctx.lineWidth = Math.max(cpx(0.6), W*0.035*(0.6+Math.random()));
-      ctx.lineCap = 'round';
-      ctx.beginPath(); let on = false;
-      for(const p of pts){
-        if(p.t > end) break;
-        const inTail = p.t > dry;
-        if(inTail && Math.random() < (p.t-dry)*2.2){ if(on){ ctx.stroke(); ctx.beginPath(); on=false; } continue; }
-        const spread = inTail ? 1 + (p.t-dry)*1.8 : 1;      // the tail fans open
-        const off = f * width(p.t)/2 * 0.92 * spread;
-        const x = p.x + p.nx*off, y = p.y + p.ny*off;
-        on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
-      }
-      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
-      // the bristle's raised line in the paint (redrawn on the height map: same path, stroked again)
-    }
-    { const nb = 10 + Math.floor(Math.random()*8);
-      for(let b=0;b<nb;b++){ const f = (b/(nb-1))*2 - 1; hx.globalAlpha = 0.09*(1 - 0.7*wet); hx.lineWidth = Math.max(cpx(0.6), W*0.03);
-        const P = []; for(const p of pts){ if(p.t > dry*1.15) break; const off = f*width(p.t)/2*0.9; P.push([p.x + p.nx*off, p.y + p.ny*off]); }
-        if(P.length > 1){ trace(hx, P); hx.stroke(); } } }
-    // wet paint runs: drips fall from the body's lower edge, thinning, each
-    // ending in a bead
-    if(wet > 0.25){
-      const drips = Math.floor(Math.random()*(1 + wet*5));
-      for(let d=0; d<drips; d++){
-        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
-        if(!a || !b) continue;
-        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
-        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
-        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
-        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
-        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
-        ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
-        hx.globalAlpha = 0.3; hx.beginPath(); hx.arc(sx + sway, sy + len, dw*0.6, 0, Math.PI*2); hx.fill();
-        hx.globalAlpha = 0.18; hx.lineWidth = dw*0.8; hx.beginPath(); hx.moveTo(sx, sy); hx.lineTo(sx + sway, sy + len); hx.stroke();
-      }
-    }
-
-    // 3. droplets flung off the end of an angry stroke
-    const tip = pts[pts.length-1], dx = tip.x - pts[pts.length-6].x, dy = tip.y - pts[pts.length-6].y;
-    const dl = Math.hypot(dx,dy) || 1;
-    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
-    for(let d=0; d<Math.floor(Math.random()*6); d++){
-      const r = W*(0.2 + Math.random()*1.4);
-      const dotR = W*(0.03 + Math.random()*0.06);
-      ctx.globalAlpha = 0.7;
-      ctx.beginPath();
-      const ddx = tip.x + dx/dl*r + (Math.random()-0.5)*W*0.5, ddy = tip.y + dy/dl*r + (Math.random()-0.5)*W*0.5;
-      ctx.arc(ddx, ddy, dotR, 0, Math.PI*2);
-      ctx.fill();
-      hx.globalAlpha = 0.35; hx.beginPath(); hx.arc(ddx, ddy, dotR, 0, Math.PI*2); hx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
-  // wet edges bleed: a soft copy of the whole painting laid over it
-  if(wet > 0.01){
-    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
-    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
-    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
-    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
-  }
-  // THE LIGHT across the paint: thickness → heights → lit, laid over the
-  // painting (overlay: mid-grey changes nothing; brighter lifts, darker sinks)
-  const td = hx.getImageData ? hx.getImageData(0, 0, hw, hh).data : null;
-  if(td){
-    const N = hw*hh, H = new Float32Array(N), relief = Math.min(hw, hh)*0.026*(1 - 0.55*wet);
-    for(let i=0;i<N;i++) H[i] = td[i*4]/255*relief;
-    const L = lightHeights(H, hw, hh, { light, relief:1, gloss:0.25 + 0.6*wet, shadow:0.55, ao:0.3, ambient:0.45 });
-    const fl = L.flat || 1, lc = document.createElement('canvas'); lc.width = hw; lc.height = hh;
-    const lx = lc.getContext('2d', CPU), img = lx.createImageData(hw, hh), d = img.data;
-    for(let i=0;i<N;i++){ const k = litK(L, i, 0.45, null, 0)/fl, v = 128 + (k - 1)*125 + L.spec[i]*190*(0.4 + 0.6*wet);
-      const q = i*4, o = v < 0 ? 0 : v > 255 ? 255 : v; d[q] = d[q+1] = d[q+2] = o; d[q+3] = 255; }
-    lx.putImageData(img, 0, 0);
-    ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = 0.9; ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, w, h); ctx.restore();
-  }
-  return c;
-}
+// (Painter's Frustration is a chain of steps now: stepsLight.js paintAngryStrokes → canvas weave → Light Engine; chains.js 'brushstrokes')
 
 // (Silverpoint Hatch is a chain of steps now: chains.js, steps.js 'forms' and 'hatching')
 
@@ -20133,60 +19992,7 @@ function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
  *   Paper    a sheet's own grain: cloudy formation, short fibres
  *   Digital  a sensor's noise: square pixels, colour speckle, faint row banding
  */
-function genGrain(w,h,amt,zoom,form){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const f=Math.max(0, Math.min(1, form==null ? 0.33 : form));
-  const STOPS=[0, 0.33, 0.66, 1], KINDS=['silver', 'film', 'paper', 'digital'];
-  let k=0; while(k<2 && f>STOPS[k+1]) k++;
-  const t=(f-STOPS[k])/(STOPS[k+1]-STOPS[k]);
-  const gz=5*zoom*scaleNow(), gw0=Math.max(1,Math.round(w/gz)), gh0=Math.max(1,Math.round(h/gz));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  const gauss=()=>Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(6.2832*Math.random());
-  // a smooth random field, `cell` grain-cells across, read bilinearly
-  const coarse=(cell, gw=gw0, gh=gh0)=>{ const cw=Math.ceil(gw/cell)+2, ch=Math.ceil(gh/cell)+2, g=new Float32Array(cw*ch);
-    for(let i=0;i<g.length;i++) g[i]=Math.random();
-    return (x,y)=>{ const fx=x/cell, fy=y/cell, i=fx|0, j=fy|0, tx=fx-i, ty=fy-j, q=j*cw+i, sx=tx*tx*(3-2*tx), sy=ty*ty*(3-2*ty);
-      return (g[q]*(1-sx)+g[q+1]*sx)*(1-sy)+(g[q+cw]*(1-sx)+g[q+cw+1]*sx)*sy; }; };
-  const draw=(kind, alpha)=>{
-    // paper's fibres are finer than a grain: it works on a grid twice as fine
-    const fine=kind==='paper'?2:1, gw=gw0*fine, gh=gh0*fine, n=gw*gh;
-    const small=document.createElement('canvas'); small.width=gw; small.height=gh;
-    const sctx=small.getContext('2d', CPU), img=sctx.createImageData(gw,gh), d=img.data;
-    if(kind==='film'){
-      for(let i=0;i<d.length;i+=4){ const v=128+(Math.random()*2-1)*100*amt; d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255; }
-    } else if(kind==='silver'){
-      // each grain is crisp — nearly black or clear — and they gather in clumps
-      const clump=coarse(2.7);
-      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const s=0.55*Math.random()+0.45*clump(x,y), v=Math.max(-1,Math.min(1,(s-0.5)*3.4));
-        const q=(y*gw+x)*4; d[q]=d[q+1]=d[q+2]=128+v*100*amt; d[q+3]=255; }
-    } else if(kind==='paper'){
-      // formation: the cloudiness of a sheet held to the light; then fibres
-      const m1=coarse(18, gw, gh), m2=coarse(6, gw, gh), F=new Float32Array(n);
-      const fibres=Math.round(n/30);
-      for(let k2=0;k2<fibres;k2++){
-        const x0=Math.random()*gw, y0=Math.random()*gh, len=4+Math.random()*14, a=(Math.random()<0.6 ? (Math.random()-0.5)*0.7 : Math.random()*Math.PI), s=(Math.random()<0.5?-1:1)*(0.12+Math.random()*0.16);
-        for(let u=0;u<len;u+=0.5){ const x=(x0+Math.cos(a)*u)|0, y=(y0+Math.sin(a)*u)|0; if(x>=0&&y>=0&&x<gw&&y<gh) F[y*gw+x]+=s*Math.sin(Math.PI*u/len); }
-      }
-      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const i=y*gw+x, v=(m1(x,y)-0.5)*1.3+(m2(x,y)-0.5)*0.6+F[i]+(Math.random()-0.5)*0.3;
-        const q=i*4; d[q]=d[q+1]=d[q+2]=128+Math.max(-1.2,Math.min(1.2,v))*85*amt; d[q+3]=255; }
-    } else {
-      // a sensor: noise per photosite, a little of it in each colour alone,
-      // rows that read out a touch differently, a faint fixed column pattern
-      const row=new Float32Array(gh), col=new Float32Array(gw);
-      for(let y=0;y<gh;y++) row[y]=gauss()*0.08; for(let x=0;x<gw;x++) col[x]=gauss()*0.05;
-      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const base=gauss()*0.42+row[y]+col[x], q=(y*gw+x)*4;
-        for(let ch=0;ch<3;ch++) d[q+ch]=128+Math.max(-1.3,Math.min(1.3,base+gauss()*0.16))*100*amt; d[q+3]=255; }
-    }
-    sctx.putImageData(img,0,0);
-    ctx.globalAlpha=alpha; ctx.imageSmoothingEnabled = kind!=='digital';   // a sensor's pixels stay square
-    ctx.drawImage(small,0,0,w,h); ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true;
-  };
-  if(t<=1e-6) draw(KINDS[k], 1);
-  else if(t>=1-1e-6) draw(KINDS[k+1], 1);
-  else { draw(KINDS[k], 1); draw(KINDS[k+1], t); }
-  return c;
-}
+// (Film Grain is a chain now: stepsSharpness.js 'grain' → Surface; chains.js 'grain')
 
 // A lathe once turned
 // for a whole afternoon so
@@ -25653,6 +25459,7 @@ const CHAOS_STEPS = {
  *             a stroke's edges and ends. Wire both into a Light Engine and the
  *             dial lights the impasto.
  *   canvasweave CANVAS: the cloth under a painting, as heights (a plain weave).
+ *   strokes   ANGRY STROKES: Painter's Frustration's swipes of paint and their impasto heights.
  *
  * Each paints at full size in a canvas pass (the page's own textures) and runs
  * on the Athanor's grid otherwise; the same code does both.
@@ -25682,7 +25489,7 @@ function ltK(k, M, c){
  * S: the shine }, from the dial (deg) and the part's settings.
  */
 function ltLight(H, gw, gh, deg, o, glossMap){
-  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.012;
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
   const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
@@ -25771,7 +25578,9 @@ const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, '
 
 /** A plain-weave canvas as heights, on a w×h grid (thread every `pitch` px). */
 function weaveField(w, h, pitch){
-  const f = new Float32Array(w*h), p = Math.max(2, pitch);
+  // threads finer than ~3 px can't be drawn, only aliased (a moiré): too fine to see is drawn as flat cloth
+  if(pitch < 3) return new Float32Array(w*h).fill(0.5);
+  const f = new Float32Array(w*h), p = pitch;
   for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
     const u = x/p, v = y/p, cu = Math.floor(u), cv = Math.floor(v), over = (cu + cv) & 1;
     const fu = u - cu, fv = v - cv, a = Math.sin(fu*Math.PI), b = Math.sin(fv*Math.PI);
@@ -25779,6 +25588,167 @@ function weaveField(w, h, pitch){
   }
   return f;
 }
+
+// ---- ANGRY STROKES (Painter's Frustration): a few fast, loaded swipes of grey paint, each a body with
+// bristle striations, fraying at its tail, flung droplets; wet paint mixing, bleeding and running ----
+function paintAngryStrokes(w,h,amt,zoom,form){
+  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // IMPASTO: every stroke also lays down paint THICKNESS on a height map —
+  // the body thick, ridges where the paint piles up at its edges, raised
+  // bristle lines, drips and droplets. Returns [the painting, its heights];
+  // the Light Engine lights them (chains.js 'brushstrokes').
+  const hdiv = canonDiv(2), hw = Math.ceil(w/hdiv), hh = Math.ceil(h/hdiv);
+  const hcv = document.createElement('canvas'); hcv.width = hw; hcv.height = hh;
+  const hx = hcv.getContext('2d', CPU); hx.fillStyle = '#000'; hx.fillRect(0, 0, hw, hh);
+  if(hx.setTransform) hx.setTransform(1/hdiv, 0, 0, 1/hdiv, 0, 0);
+  hx.globalCompositeOperation = 'lighter'; hx.fillStyle = '#fff'; hx.strokeStyle = '#fff'; hx.lineCap = 'round'; hx.lineJoin = 'round';
+  const trace = (g, P) => { g.beginPath(); P.forEach(([x,y],i)=> i ? g.lineTo(x,y) : g.moveTo(x,y)); };
+  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
+  // thinner (strokes mix where they cross), the bristle marks level out,
+  // edges bleed softly into what's under them, and heavy strokes run in drips.
+  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
+
+  // Angry paint. Each stroke is a BODY of paint first — an opaque ribbon laid
+  // along a fast, curving swish, blotted where the loaded brush lands — with
+  // bristle striations running inside it. Only at the tail, where the paint
+  // runs out, does it fray into separate dry streaks, and a few droplets are
+  // flung off the end. Dark paint goes down first as an underlayer, light
+  // paint is dragged across it, and a few dark accents come last; the bodies
+  // are slightly translucent, so where strokes cross the paints mix.
+  const unit = Math.min(w,h);
+  const n = Math.max(3, Math.round((6 + Math.random()*4) * amt));
+  const plan = [];
+  for(let i=0;i<n;i++) plan.push(i < n*0.4 ? 'dark' : 'light');
+  for(let i=0;i<Math.max(1, Math.round(n*0.2));i++) plan.push('accent');
+
+  for(const kind of plan){
+    const tone = kind === 'light' ? 214 + Math.random()*26 : 18 + Math.random()*26;
+    const W = unit*(kind === 'accent' ? 0.028 : 0.05 + Math.random()*0.06) * zoom;
+    const L = unit*(0.38 + Math.random()*0.5) * (kind === 'accent' ? 0.7 : 1);
+    // the swish: a cubic whose handles pull hard to one side
+    const a0 = Math.random()*Math.PI*2, bendDir = Math.random()<0.5 ? 1 : -1;
+    const x0 = Math.random()*w, y0 = Math.random()*h;
+    const x3 = x0 + Math.cos(a0)*L, y3 = y0 + Math.sin(a0)*L;
+    // not every swipe is the same arc: a near-straight slash, an S, or a hook
+    const gesture = Math.random();
+    const k = L*(0.12 + Math.random()*0.4)*bendDir;
+    const k2 = gesture < 0.3 ? k*0.15 : gesture < 0.65 ? -k*0.9 : k*1.3;
+    const nx = -Math.sin(a0), ny = Math.cos(a0);
+    const x1 = x0 + Math.cos(a0)*L*0.3 + nx*k,  y1 = y0 + Math.sin(a0)*L*0.3 + ny*k;
+    const x2 = x0 + Math.cos(a0)*L*0.7 + nx*k2, y2 = y0 + Math.sin(a0)*L*0.7 + ny*k2;
+    const at = t => { const u=1-t;
+      return [u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3,
+              u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3]; };
+    const N = 90, pts = [];
+    for(let s=0;s<=N;s++){
+      const t = s/N, [px,py] = at(t), [qx,qy] = at(Math.min(1, t+0.01));
+      const len = Math.hypot(qx-px, qy-py) || 1;
+      pts.push({ t, x:px, y:py, nx:-(qy-py)/len, ny:(qx-px)/len });
+    }
+    // pressure: a blot on landing, full through the sweep, lifting at the end
+    const dry = 0.55 + Math.random()*0.2;
+    // pressure swings hard: loaded and wide on landing, pressing to a peak,
+    // then lifting — never the even width of a tube
+    const peak = 0.12 + Math.random()*0.2;
+    const width = t => W * (t < peak ? 0.75 + 0.55*(t/peak) : 1.3 - 0.75*((t-peak)/(1-peak)))
+                         * (t > dry ? Math.pow(1 - (t-dry)/(1-dry), 0.7) : 1);
+    // ragged edges that wander slowly, so the outline is torn, not smooth
+    const ph1 = Math.random()*6, ph2 = Math.random()*6, ph3 = Math.random()*6;
+    const edge = (t, side) => 1 + 0.16*Math.sin(t*9 + (side ? ph1 : ph2)) + 0.07*Math.sin(t*31 + ph3) + (Math.random()-0.5)*0.06;
+
+    // 1. the body, up to where it runs dry
+    const left = [], right = [];
+    for(const p of pts){ if(p.t > dry) break;
+      const hw = width(p.t)/2;
+      left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
+      right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
+    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
+    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
+    ctx.beginPath();
+    left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+    for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
+    ctx.closePath(); ctx.fill();
+    // its thickness: the body, and the ridge where the paint piled at its edges
+    { const P = left.concat(right.slice().reverse());
+      hx.globalAlpha = 0.32*(1 - 0.4*wet); trace(hx, P); hx.closePath(); hx.fill();
+      hx.globalAlpha = 0.16*(1 - 0.5*wet); hx.lineWidth = W*0.1; trace(hx, P); hx.closePath(); hx.stroke(); }
+
+    // 2. bristles: striations inside the body, then fraying past the dry point
+    const bristles = 14 + Math.floor(Math.random()*14);
+    for(let b=0;b<bristles;b++){
+      const f = (b/(bristles-1))*2 - 1;
+      const shade = tone + (Math.random()-0.5)*110;          // visible striations
+      const end = dry + (1-dry)*(0.3 + Math.random()*0.7);   // some give out early
+      ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0})`;
+      ctx.lineWidth = Math.max(cpx(0.6), W*0.035*(0.6+Math.random()));
+      ctx.lineCap = 'round';
+      ctx.beginPath(); let on = false;
+      for(const p of pts){
+        if(p.t > end) break;
+        const inTail = p.t > dry;
+        if(inTail && Math.random() < (p.t-dry)*2.2){ if(on){ ctx.stroke(); ctx.beginPath(); on=false; } continue; }
+        const spread = inTail ? 1 + (p.t-dry)*1.8 : 1;      // the tail fans open
+        const off = f * width(p.t)/2 * 0.92 * spread;
+        const x = p.x + p.nx*off, y = p.y + p.ny*off;
+        on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
+      }
+      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
+      // the bristle's raised line in the paint (redrawn on the height map: same path, stroked again)
+    }
+    { const nb = 10 + Math.floor(Math.random()*8);
+      for(let b=0;b<nb;b++){ const f = (b/(nb-1))*2 - 1; hx.globalAlpha = 0.09*(1 - 0.7*wet); hx.lineWidth = Math.max(cpx(0.6), W*0.03);
+        const P = []; for(const p of pts){ if(p.t > dry*1.15) break; const off = f*width(p.t)/2*0.9; P.push([p.x + p.nx*off, p.y + p.ny*off]); }
+        if(P.length > 1){ trace(hx, P); hx.stroke(); } } }
+    // wet paint runs: drips fall from the body's lower edge, thinning, each
+    // ending in a bead
+    if(wet > 0.25){
+      const drips = Math.floor(Math.random()*(1 + wet*5));
+      for(let d=0; d<drips; d++){
+        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
+        if(!a || !b) continue;
+        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
+        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
+        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
+        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
+        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
+        hx.globalAlpha = 0.3; hx.beginPath(); hx.arc(sx + sway, sy + len, dw*0.6, 0, Math.PI*2); hx.fill();
+        hx.globalAlpha = 0.18; hx.lineWidth = dw*0.8; hx.beginPath(); hx.moveTo(sx, sy); hx.lineTo(sx + sway, sy + len); hx.stroke();
+      }
+    }
+
+    // 3. droplets flung off the end of an angry stroke
+    const tip = pts[pts.length-1], dx = tip.x - pts[pts.length-6].x, dy = tip.y - pts[pts.length-6].y;
+    const dl = Math.hypot(dx,dy) || 1;
+    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
+    for(let d=0; d<Math.floor(Math.random()*6); d++){
+      const r = W*(0.2 + Math.random()*1.4);
+      const dotR = W*(0.03 + Math.random()*0.06);
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      const ddx = tip.x + dx/dl*r + (Math.random()-0.5)*W*0.5, ddy = tip.y + dy/dl*r + (Math.random()-0.5)*W*0.5;
+      ctx.arc(ddx, ddy, dotR, 0, Math.PI*2);
+      ctx.fill();
+      hx.globalAlpha = 0.35; hx.beginPath(); hx.arc(ddx, ddy, dotR, 0, Math.PI*2); hx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  // wet edges bleed: a soft copy of the whole painting laid over it
+  if(wet > 0.01){
+    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
+    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
+    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
+  }
+  return [c, hcv];
+}
+
 
 const LIGHT_STEPS = {
   material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
@@ -25819,8 +25789,116 @@ const LIGHT_STEPS = {
     paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
     run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
       return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
+  strokes: { cat: 'Marks', label: 'Angry Strokes', ins: [], outs: ['painting', 'heights'], io: { outs: ['image', 'field'] },
+    params: [LT_R('width', 'Stroke Width', 100, 60, 380), LT_R('count', 'Stroke Count', 100, 20, 260), LT_R('wet', 'Wetness', 0)], cost: () => 6,
+    paint(E, n){ return paintAngryStrokes(E.ww, E.wh, E.num(n, 'count', 100)/100, E.num(n, 'width', 100)/100, E.num(n, 'wet', 0)/100); },
+    run(E, n){ const [c, hc] = this.paint(E, n); return [kitImage(c, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
   canvasweave: { cat: 'Noise', label: 'Canvas Weave', ins: [], outs: ['heights'], params: [LT_R('pitch', 'Thread Size', 100, 30, 400)], cost: () => 2,
     run(E, n){ return [weaveField(E.ww, E.wh, cpx(2.2)*E.num(n, 'pitch', 100)/100/(E.ctx.div > 0 ? E.ctx.div : 1))]; } },
+};
+
+
+/* ==== stepsSharpness.js ==== */
+/**
+ * stepsSharpness.js — steps for √ SHARPNESS surfaces, each a part that works on
+ * anything (the componentizing rule: every texture's techniques loadable,
+ * viewable and mixable in the Athanor).
+ *
+ *   screen   HALFTONE SCREEN: any tone printed as a screen of dots — a dot at
+ *            each cell, its size the tone there — at an angle, as print does.
+ *            (Halftone: Value Noise → Halftone Screen → Surface.)
+ *   grain    FILM GRAIN: silver halide (crisp, clumped), film, paper (its
+ *            formation and fibres) or a digital sensor (per-channel noise,
+ *            rows and columns), blended between neighbours by Kind.
+ */
+
+const SH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+
+/** Dots on a w×h canvas: a cell every max(w,h)/48·scale, each dot's radius the tone there (0..1 field on w×h). */
+function paintScreen(w, h, tone, weight, scale, angleDeg){
+  const [c, x] = kitCanvas(w, h);
+  x.fillStyle = 'rgb(205,205,205)'; x.fillRect(0, 0, w, h);
+  const cell = Math.max(w, h)/48*scale, a = angleDeg*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+  // the screen's grid, turned by its angle, covering the whole page
+  const reach = Math.hypot(w, h)/2, n = Math.ceil(reach/cell) + 1, cx0 = w/2, cy0 = h/2;
+  x.fillStyle = 'rgb(60,60,60)';
+  for(let j = -n; j <= n; j++) for(let i = -n; i <= n; i++){
+    const u = (i + 0.5)*cell, v = (j + 0.5)*cell, px = cx0 + u*ca - v*sa, py = cy0 + u*sa + v*ca;
+    if(px < -cell || py < -cell || px > w + cell || py > h + cell) continue;
+    const t = tone[Math.min(h - 1, Math.max(0, py|0))*w + Math.min(w - 1, Math.max(0, px|0))];
+    const r = t*cell*0.48*weight; if(r < 0.6) continue;
+    x.beginPath(); x.arc(px, py, r, 0, Math.PI*2); x.fill();
+  }
+  return c;
+}
+
+// ---- FILM GRAIN (as it was: texSharpness genGrain) ----
+function paintGrain(w,h,amt,zoom,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const f=Math.max(0, Math.min(1, form==null ? 0.33 : form));
+  const STOPS=[0, 0.33, 0.66, 1], KINDS=['silver', 'film', 'paper', 'digital'];
+  let k=0; while(k<2 && f>STOPS[k+1]) k++;
+  const t=(f-STOPS[k])/(STOPS[k+1]-STOPS[k]);
+  const gz=5*zoom*scaleNow(), gw0=Math.max(1,Math.round(w/gz)), gh0=Math.max(1,Math.round(h/gz));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU);
+  const gauss=()=>Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(6.2832*Math.random());
+  // a smooth random field, `cell` grain-cells across, read bilinearly
+  const coarse=(cell, gw=gw0, gh=gh0)=>{ const cw=Math.ceil(gw/cell)+2, ch=Math.ceil(gh/cell)+2, g=new Float32Array(cw*ch);
+    for(let i=0;i<g.length;i++) g[i]=Math.random();
+    return (x,y)=>{ const fx=x/cell, fy=y/cell, i=fx|0, j=fy|0, tx=fx-i, ty=fy-j, q=j*cw+i, sx=tx*tx*(3-2*tx), sy=ty*ty*(3-2*ty);
+      return (g[q]*(1-sx)+g[q+1]*sx)*(1-sy)+(g[q+cw]*(1-sx)+g[q+cw+1]*sx)*sy; }; };
+  const draw=(kind, alpha)=>{
+    // paper's fibres are finer than a grain: it works on a grid twice as fine
+    const fine=kind==='paper'?2:1, gw=gw0*fine, gh=gh0*fine, n=gw*gh;
+    const small=document.createElement('canvas'); small.width=gw; small.height=gh;
+    const sctx=small.getContext('2d', CPU), img=sctx.createImageData(gw,gh), d=img.data;
+    if(kind==='film'){
+      for(let i=0;i<d.length;i+=4){ const v=128+(Math.random()*2-1)*100*amt; d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=255; }
+    } else if(kind==='silver'){
+      // each grain is crisp — nearly black or clear — and they gather in clumps
+      const clump=coarse(2.7);
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const s=0.55*Math.random()+0.45*clump(x,y), v=Math.max(-1,Math.min(1,(s-0.5)*3.4));
+        const q=(y*gw+x)*4; d[q]=d[q+1]=d[q+2]=128+v*100*amt; d[q+3]=255; }
+    } else if(kind==='paper'){
+      // formation: the cloudiness of a sheet held to the light; then fibres
+      const m1=coarse(18, gw, gh), m2=coarse(6, gw, gh), F=new Float32Array(n);
+      const fibres=Math.round(n/30);
+      for(let k2=0;k2<fibres;k2++){
+        const x0=Math.random()*gw, y0=Math.random()*gh, len=4+Math.random()*14, a=(Math.random()<0.6 ? (Math.random()-0.5)*0.7 : Math.random()*Math.PI), s=(Math.random()<0.5?-1:1)*(0.12+Math.random()*0.16);
+        for(let u=0;u<len;u+=0.5){ const x=(x0+Math.cos(a)*u)|0, y=(y0+Math.sin(a)*u)|0; if(x>=0&&y>=0&&x<gw&&y<gh) F[y*gw+x]+=s*Math.sin(Math.PI*u/len); }
+      }
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const i=y*gw+x, v=(m1(x,y)-0.5)*1.3+(m2(x,y)-0.5)*0.6+F[i]+(Math.random()-0.5)*0.3;
+        const q=i*4; d[q]=d[q+1]=d[q+2]=128+Math.max(-1.2,Math.min(1.2,v))*85*amt; d[q+3]=255; }
+    } else {
+      // a sensor: noise per photosite, a little of it in each colour alone,
+      // rows that read out a touch differently, a faint fixed column pattern
+      const row=new Float32Array(gh), col=new Float32Array(gw);
+      for(let y=0;y<gh;y++) row[y]=gauss()*0.08; for(let x=0;x<gw;x++) col[x]=gauss()*0.05;
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){ const base=gauss()*0.42+row[y]+col[x], q=(y*gw+x)*4;
+        for(let ch=0;ch<3;ch++) d[q+ch]=128+Math.max(-1.3,Math.min(1.3,base+gauss()*0.16))*100*amt; d[q+3]=255; }
+    }
+    sctx.putImageData(img,0,0);
+    ctx.globalAlpha=alpha; ctx.imageSmoothingEnabled = kind!=='digital';   // a sensor's pixels stay square
+    ctx.drawImage(small,0,0,w,h); ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true;
+  };
+  if(t<=1e-6) draw(KINDS[k], 1);
+  else if(t>=1-1e-6) draw(KINDS[k+1], 1);
+  else { draw(KINDS[k], 1); draw(KINDS[k+1], t); }
+  return c;
+}
+
+
+const SHARP_STEPS = {
+  screen: { cat: 'Marks', label: 'Halftone Screen', ins: ['tone'], outs: ['dots'], io: { ins: ['field'], outs: ['field'] },
+    params: [SH_R('scale', 'Dot Scale', 100, 50, 400), SH_R('weight', 'Dot Weight', 100, 30, 240), SH_R('angle', 'Screen Angle', 0, 0, 90)], cost: () => 3,
+    paint(E, n){ const tone = kitField(E.input(n, 1) ?? 0.5, E.ww, E.wh) || new Float32Array(E.ww*E.wh).fill(0.5);
+      return [paintScreen(E.ww, E.wh, tone, E.num(n, 'weight', 100)/100, E.num(n, 'scale', 100)/100, E.num(n, 'angle', 0))]; },
+    run(E, n){ return [kitField(this.paint(E, n)[0], E.ww, E.wh)]; } },
+  grain: { cat: 'Noise', label: 'Film Grain', ins: [], outs: ['grain'], io: { outs: ['image'] },
+    params: [SH_R('size', 'Grain Size', 100, 100, 600), SH_R('contrast', 'Contrast', 100, 30, 240), SH_R('kind', 'Kind', 33)], cost: () => 3,
+    paint(E, n){ return [paintGrain(E.ww, E.wh, E.num(n, 'contrast', 100)/100, E.num(n, 'size', 100)/100, E.num(n, 'kind', 33)/100)]; },
+    run(E, n){ return [kitImage(this.paint(E, n)[0], E.ww, E.wh)]; } },
 };
 
 
@@ -25859,6 +25937,7 @@ const LIGHT_STEPS = {
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
+
 
 
 
@@ -26011,6 +26090,9 @@ const STEP_DOCS = {
   glaze: 'Lights and colors crazed glaze from its maps.',
   material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
   oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
+  strokes: 'A few fast, loaded swipes of gray paint (Painter\'s Frustration): each a body with bristle marks, fraying at the tail, flinging droplets. Wetness makes the paint mix, bleed and drip. Its second output is the paint\'s thickness, for a Light Engine.',
+  screen: 'Prints a tone as a screen of dots, the way newspapers and comics do: a dot in every cell, as big as the tone is bright there. Wire a picture through Invert first to screen it dark-for-big. Screen Angle turns the grid.',
+  grain: 'Film grain: Kind slides from silver (crisp grains in clumps) through film and paper (its cloudy formation and fibres) to a digital sensor (noise in each color, rows and columns). A color picture centered on gray: blend it over anything.',
   canvasweave: 'The cloth under a painting, as heights: a plain weave. Mix it into a painting\'s heights to let the canvas show through thin paint.',
   shaft: 'A shaft of light from the dial through any density (smoke, noise): the density glows inside it. Its second output is the beam itself.',
   surface: 'The end of every graph. What reaches Image is the texture; a gray map in Height is lit by the dial. A graph has exactly one.',
@@ -26416,7 +26498,7 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
@@ -26579,6 +26661,37 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // √ Halftone: a soft Value Noise for the tone, printed as a Halftone Screen of dots.
+  halftone: { label: 'Halftone', canvas: true, teach: 'This is Halftone. A Value Noise with one octave makes a soft, slow tone; Halftone Screen prints it as dots, each as big as the tone is bright there. Dot Scale is the screen\'s cell size and Dot Weight how heavy the dots print. Try: wire another texture into the Halftone Screen\'s tone, or turn its Screen Angle.', nodes: [
+      ['knob', { slot: '1', name: 'Dot Scale', def: 14 }, 40, 40],                 // 1  (100 of 50–400)
+      ['knob', { slot: '2', name: 'Dot Weight', def: 33 }, 40, 140],               // 2  (100 of 30–240)
+      ['noise', { scale: 10, octaves: 1 }, 320, 40],                               // 3
+      ['screen', { scale: 100, weight: 100, angle: 0 }, 600, 80],                  // 4
+      ['surface', { name: 'Halftone', ground: 'grey' }, 880, 100]],                // 5
+    wires: [[1, 1, 4, paramPort('screen', 'scale')], [2, 1, 4, paramPort('screen', 'weight')], [3, 1, 4, 1], [4, 1, 5, 1]] },
+  // √ Film Grain: one part, its Kind sliding from silver to digital
+  grain: { label: 'Film Grain', canvas: true, teach: 'This is Film Grain. One part makes it: Film Grain, whose Kind slides from silver halide through film and paper to a digital sensor, blending neighbours in between. The Knobs are the texture\'s sliders: Grain Size, Contrast and Grain (the Kind). Try: set Kind to 66 for paper, then blend the grain over another texture with Blend.', nodes: [
+      ['knob', { slot: '1', name: 'Grain Size', def: 0 }, 40, 40],                 // 1  (100 of 100–600)
+      ['knob', { slot: '2', name: 'Contrast', def: 33 }, 40, 140],                 // 2  (100 of 30–240)
+      ['knob', { slot: '3', name: 'Grain', def: 33 }, 40, 240],                    // 3
+      ['grain', { size: 100, contrast: 100, kind: 33 }, 320, 80],                  // 4
+      ['surface', { name: 'Film Grain', ground: 'grey' }, 600, 100]],              // 5
+    wires: [[1, 1, 4, paramPort('grain', 'size')], [2, 1, 4, paramPort('grain', 'contrast')], [3, 1, 4, paramPort('grain', 'kind')], [4, 1, 5, 1]] },
+  // √ Painter's Frustration: Angry Strokes lays the paint and its thickness; a little Canvas Weave
+  // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
+  // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
+  brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'This is Painter\'s Frustration. Angry Strokes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [
+      ['knob', { slot: '1', name: 'Stroke Width', def: 13 }, 40, 40],              // 1  (100 of 60–380)
+      ['knob', { slot: '2', name: 'Stroke Count', def: 33 }, 40, 140],             // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                   // 3
+      ['strokes', { width: 100, count: 100, wet: 0 }, 320, 60],                    // 4
+      ['canvasweave', { pitch: 100 }, 320, 320],                                   // 5
+      ['mix', { t: 4 }, 600, 220],                                                 // 6
+      ['material', { relief: 87, '~relief': '87,39', gloss: 25, '~gloss': '25,85', shine: 22, '~shine': '22,65', shadow: 55, occlusion: 30, ambient: 45 }, 860, 80],   // 7
+      ['surface', { name: "Painter's Frustration", ground: 'grey' }, 1120, 120]],  // 8
+    wires: [[1, 1, 4, paramPort('strokes', 'width')], [2, 1, 4, paramPort('strokes', 'count')], [3, 1, 4, paramPort('strokes', 'wet')],
+      [3, 1, 7, paramPort('material', 'relief')], [3, 1, 7, paramPort('material', 'gloss')], [3, 1, 7, paramPort('material', 'shine')],
+      [4, 1, 7, 1], [4, 2, 6, 1], [5, 1, 6, 2], [6, 1, 7, 2], [7, 1, 8, 1]] },
   landscape: { label: 'Painted Landscape', canvas: true, teach: 'This is Painted Landscape. Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Wash bleeds the painting (Wetness). Oil Paint repaints it in brushstrokes with the paint\'s heights, and the Light Engine lights those by the dial; the Impasto knob drives both (0: no strokes, as it used to be). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
@@ -26590,7 +26703,7 @@ const TEXTURE_CHAINS = {
       ['wash', { wet: 0 }, 880, 160],                                             // 8
       ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
       ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
-      ['material', { relief: 50, gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
+      ['material', { relief: 20, '~relief': '0,40', gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
       ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
     wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
@@ -26761,9 +26874,12 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const flat = v => new Float32Array(N).fill(v);
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
   const isImg = v => v && typeof v === 'object' && v.r instanceof Float32Array;
+  // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
+  // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
+  const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
   const asField = (v, d = 0) => v == null ? null : typeof v === 'number' ? flat(v) : v instanceof Float32Array ? v
-    : isImg(v) ? lum(v) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
-  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v }
+    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
+  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v)
     : Array.isArray(v) ? { r: flat(v[0]), g: flat(v[1]), b: flat(v[2]) } : typeof v === 'number' ? { r: flat(v), g: flat(v), b: flat(v) } : null;
   const asColour = (v, d) => Array.isArray(v) ? v : v == null ? d : d;
   const hexCol = hex => { const c = parseHex(hex || '#808080'); return [c.r/255, c.g/255, c.b/255]; };
@@ -26908,11 +27024,6 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
-  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
-      ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
-      ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
-      ['material', { relief: 55, gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
-    wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -27557,9 +27668,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'rainstreaks'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
-    result = genHalftone(w,h,amt,zoom);
+    result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
   } else if(type === 'brushstrokes'){
-    result = genBrushstrokes(w,h,amt,zoom,form,light);
+    result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
     result = genSigils(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'mathnoise'){
@@ -27630,7 +27741,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'spangle'){
     result = genSpangle(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'grain'){
-    result = genGrain(w,h,amt,zoom,form);
+    result = genChain(type, w, h, light, extra);           // Film Grain (chains.js)
   } else {
     let genW = w, genH = h;
 
@@ -28482,7 +28593,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Sponde';
+const RELEASE = 'Jupiter–Kalyke';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-12';
 
@@ -29308,7 +29419,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-12 · e9c6dab";
+const STAMP = "2026-10-12 · df2ad20";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -35295,6 +35406,46 @@ function addMasterLock(root, head){
   });
   headTools(head).appendChild(btn); masterLocks.push({ root, btn });
 }
+// ---------- THE DICE (Ruby): a die beside every section's lock rerolls only that section ----------
+// The backdrop, the surface and the typeface roll as their Summon buttons do (known-good schemes);
+// any other section rolls each of its sliders, menus and colours within reason. Locked controls stay
+// (the lock beside the die keeps the whole section). On the Surface, Shift-click or a long press
+// rolls only the seed: the same texture, a new pattern (the seed keeps its own lock too).
+const DIE_SUMMONS = { randomBgBtn: 1, randomSurfaceBtn: 1, randomFontBtn: 1 };
+function rollSection(root){
+  const own = Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
+  if(own){ own.click(); return true; }        // (it plays its own sound)
+  withLocksPreserved(() => {
+    for(const id of lockablesIn(root)){
+      const el = $(id); if(!el || el.disabled || state.locks.has(id) || id === 'textureSeedValue' || (el.closest && el.closest('.tool-hidden'))) continue;
+      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1, v = lo + (0.1 + Math.random()*0.8)*(hi - lo);
+        el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
+      else if(el.tagName === 'SELECT'){ const opts = [...el.options].filter(o => !o.disabled && o.value !== ''); if(opts.length > 1){ el.value = opts[Math.floor(Math.random()*opts.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+      else if(/Hex$/.test(id)){ const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
+        setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, Math.max(0.08, Math.min(0.92, l + (Math.random() - 0.5)*0.2)))); }
+    }
+    scheduleRender();
+  });
+}
+function addDie(root, head){
+  if(!root || !head || !lockablesIn(root).length) return;
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'die-btn'; btn.textContent = '⚄';
+  const surface = !!($('randomSurfaceBtn') && root.contains && root.contains($('randomSurfaceBtn')));
+  btn.title = surface ? 'Roll this section (Shift-click or hold: only a new seed)' : 'Roll this section (locked controls stay)';
+  btn.setAttribute('aria-label', btn.title);
+  let held = false, timer = 0;
+  btn.addEventListener('pointerdown', () => { held = false; clearTimeout(timer); timer = setTimeout(() => { held = true; }, 500); });
+  btn.addEventListener('pointerup', () => clearTimeout(timer));
+  btn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
+    const seedOnly = surface && (e.shiftKey || held); held = false;
+    if(seedOnly){ maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); return; }
+    if(!rollSection(root)) murmur.play('reroll');
+  });
+  // (a long press must not open the phone's context menu)
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  headTools(head).appendChild(btn);
+}
 // the switches that show a whole card, moved into its heading as an eye
 const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the border', cardToggle: 'Show the inset box', vignetteToggle: 'Show the vignette' };
 // the switches inside a card, eyes where they are
@@ -35312,7 +35463,7 @@ function installHeadings(){
     if(row) row.hidden = true;
   }
   for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
-  for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')) addMasterLock(card, card.querySelector(':scope > summary'));
+  for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')){ addDie(card, card.querySelector(':scope > summary')); addMasterLock(card, card.querySelector(':scope > summary')); }
   // a sub-section's lock sits in the row that switches it on (its eye and name)
   for(const sub of document.querySelectorAll('.subblock[id]')){
     const prev = sub.previousElementSibling; if(prev && prev.classList && prev.classList.contains('check-row') && !prev.hidden) addMasterLock(sub, prev);

@@ -19,11 +19,12 @@
  *             a stroke's edges and ends. Wire both into a Light Engine and the
  *             dial lights the impasto.
  *   canvasweave CANVAS: the cloth under a painting, as heights (a plain weave).
+ *   strokes   ANGRY STROKES: Painter's Frustration's swipes of paint and their impasto heights.
  *
  * Each paints at full size in a canvas pass (the page's own textures) and runs
  * on the Athanor's grid otherwise; the same code does both.
  */
-import { cpx, lightHeights, kitCanvas, kitPicture, kitField, kitFieldCanvas, kitImage, isCanvasLike } from './texCore.js';
+import { cpx, canonDiv, lightHeights, kitCanvas, kitPicture, kitField, kitFieldCanvas, kitImage, isCanvasLike, CPU } from './texCore.js';
 
 const LT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const ltClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -49,7 +50,7 @@ function ltK(k, M, c){
  * S: the shine }, from the dial (deg) and the part's settings.
  */
 function ltLight(H, gw, gh, deg, o, glossMap){
-  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.012;
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
   const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
@@ -138,7 +139,9 @@ const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, '
 
 /** A plain-weave canvas as heights, on a w×h grid (thread every `pitch` px). */
 function weaveField(w, h, pitch){
-  const f = new Float32Array(w*h), p = Math.max(2, pitch);
+  // threads finer than ~3 px can't be drawn, only aliased (a moiré): too fine to see is drawn as flat cloth
+  if(pitch < 3) return new Float32Array(w*h).fill(0.5);
+  const f = new Float32Array(w*h), p = pitch;
   for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
     const u = x/p, v = y/p, cu = Math.floor(u), cv = Math.floor(v), over = (cu + cv) & 1;
     const fu = u - cu, fv = v - cv, a = Math.sin(fu*Math.PI), b = Math.sin(fv*Math.PI);
@@ -146,6 +149,167 @@ function weaveField(w, h, pitch){
   }
   return f;
 }
+
+// ---- ANGRY STROKES (Painter's Frustration): a few fast, loaded swipes of grey paint, each a body with
+// bristle striations, fraying at its tail, flung droplets; wet paint mixing, bleeding and running ----
+function paintAngryStrokes(w,h,amt,zoom,form){
+  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
+  // IMPASTO: every stroke also lays down paint THICKNESS on a height map —
+  // the body thick, ridges where the paint piles up at its edges, raised
+  // bristle lines, drips and droplets. Returns [the painting, its heights];
+  // the Light Engine lights them (chains.js 'brushstrokes').
+  const hdiv = canonDiv(2), hw = Math.ceil(w/hdiv), hh = Math.ceil(h/hdiv);
+  const hcv = document.createElement('canvas'); hcv.width = hw; hcv.height = hh;
+  const hx = hcv.getContext('2d', CPU); hx.fillStyle = '#000'; hx.fillRect(0, 0, hw, hh);
+  if(hx.setTransform) hx.setTransform(1/hdiv, 0, 0, 1/hdiv, 0, 0);
+  hx.globalCompositeOperation = 'lighter'; hx.fillStyle = '#fff'; hx.strokeStyle = '#fff'; hx.lineCap = 'round'; hx.lineJoin = 'round';
+  const trace = (g, P) => { g.beginPath(); P.forEach(([x,y],i)=> i ? g.lineTo(x,y) : g.moveTo(x,y)); };
+  // WETNESS: 0 is dry paint, drawn exactly as before. Wetter, the paint is
+  // thinner (strokes mix where they cross), the bristle marks level out,
+  // edges bleed softly into what's under them, and heavy strokes run in drips.
+  const wet = Math.max(0, Math.min(1, form==null ? 0 : form));
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle='rgb(128,128,128)'; ctx.fillRect(0,0,w,h);
+
+  // Angry paint. Each stroke is a BODY of paint first — an opaque ribbon laid
+  // along a fast, curving swish, blotted where the loaded brush lands — with
+  // bristle striations running inside it. Only at the tail, where the paint
+  // runs out, does it fray into separate dry streaks, and a few droplets are
+  // flung off the end. Dark paint goes down first as an underlayer, light
+  // paint is dragged across it, and a few dark accents come last; the bodies
+  // are slightly translucent, so where strokes cross the paints mix.
+  const unit = Math.min(w,h);
+  const n = Math.max(3, Math.round((6 + Math.random()*4) * amt));
+  const plan = [];
+  for(let i=0;i<n;i++) plan.push(i < n*0.4 ? 'dark' : 'light');
+  for(let i=0;i<Math.max(1, Math.round(n*0.2));i++) plan.push('accent');
+
+  for(const kind of plan){
+    const tone = kind === 'light' ? 214 + Math.random()*26 : 18 + Math.random()*26;
+    const W = unit*(kind === 'accent' ? 0.028 : 0.05 + Math.random()*0.06) * zoom;
+    const L = unit*(0.38 + Math.random()*0.5) * (kind === 'accent' ? 0.7 : 1);
+    // the swish: a cubic whose handles pull hard to one side
+    const a0 = Math.random()*Math.PI*2, bendDir = Math.random()<0.5 ? 1 : -1;
+    const x0 = Math.random()*w, y0 = Math.random()*h;
+    const x3 = x0 + Math.cos(a0)*L, y3 = y0 + Math.sin(a0)*L;
+    // not every swipe is the same arc: a near-straight slash, an S, or a hook
+    const gesture = Math.random();
+    const k = L*(0.12 + Math.random()*0.4)*bendDir;
+    const k2 = gesture < 0.3 ? k*0.15 : gesture < 0.65 ? -k*0.9 : k*1.3;
+    const nx = -Math.sin(a0), ny = Math.cos(a0);
+    const x1 = x0 + Math.cos(a0)*L*0.3 + nx*k,  y1 = y0 + Math.sin(a0)*L*0.3 + ny*k;
+    const x2 = x0 + Math.cos(a0)*L*0.7 + nx*k2, y2 = y0 + Math.sin(a0)*L*0.7 + ny*k2;
+    const at = t => { const u=1-t;
+      return [u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3,
+              u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3]; };
+    const N = 90, pts = [];
+    for(let s=0;s<=N;s++){
+      const t = s/N, [px,py] = at(t), [qx,qy] = at(Math.min(1, t+0.01));
+      const len = Math.hypot(qx-px, qy-py) || 1;
+      pts.push({ t, x:px, y:py, nx:-(qy-py)/len, ny:(qx-px)/len });
+    }
+    // pressure: a blot on landing, full through the sweep, lifting at the end
+    const dry = 0.55 + Math.random()*0.2;
+    // pressure swings hard: loaded and wide on landing, pressing to a peak,
+    // then lifting — never the even width of a tube
+    const peak = 0.12 + Math.random()*0.2;
+    const width = t => W * (t < peak ? 0.75 + 0.55*(t/peak) : 1.3 - 0.75*((t-peak)/(1-peak)))
+                         * (t > dry ? Math.pow(1 - (t-dry)/(1-dry), 0.7) : 1);
+    // ragged edges that wander slowly, so the outline is torn, not smooth
+    const ph1 = Math.random()*6, ph2 = Math.random()*6, ph3 = Math.random()*6;
+    const edge = (t, side) => 1 + 0.16*Math.sin(t*9 + (side ? ph1 : ph2)) + 0.07*Math.sin(t*31 + ph3) + (Math.random()-0.5)*0.06;
+
+    // 1. the body, up to where it runs dry
+    const left = [], right = [];
+    for(const p of pts){ if(p.t > dry) break;
+      const hw = width(p.t)/2;
+      left.push([p.x + p.nx*hw*edge(p.t,1), p.y + p.ny*hw*edge(p.t,1)]);
+      right.push([p.x - p.nx*hw*edge(p.t,0), p.y - p.ny*hw*edge(p.t,0)]); }
+    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
+    ctx.globalAlpha = (kind === 'accent' ? 0.9 : 0.78) * (1 - 0.35*wet);
+    ctx.beginPath();
+    left.forEach(([x,y],i)=> i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+    for(let i=right.length-1;i>=0;i--) ctx.lineTo(right[i][0], right[i][1]);
+    ctx.closePath(); ctx.fill();
+    // its thickness: the body, and the ridge where the paint piled at its edges
+    { const P = left.concat(right.slice().reverse());
+      hx.globalAlpha = 0.32*(1 - 0.4*wet); trace(hx, P); hx.closePath(); hx.fill();
+      hx.globalAlpha = 0.16*(1 - 0.5*wet); hx.lineWidth = W*0.1; trace(hx, P); hx.closePath(); hx.stroke(); }
+
+    // 2. bristles: striations inside the body, then fraying past the dry point
+    const bristles = 14 + Math.floor(Math.random()*14);
+    for(let b=0;b<bristles;b++){
+      const f = (b/(bristles-1))*2 - 1;
+      const shade = tone + (Math.random()-0.5)*110;          // visible striations
+      const end = dry + (1-dry)*(0.3 + Math.random()*0.7);   // some give out early
+      ctx.strokeStyle = `rgb(${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0},${Math.max(0,Math.min(255,shade))|0})`;
+      ctx.lineWidth = Math.max(cpx(0.6), W*0.035*(0.6+Math.random()));
+      ctx.lineCap = 'round';
+      ctx.beginPath(); let on = false;
+      for(const p of pts){
+        if(p.t > end) break;
+        const inTail = p.t > dry;
+        if(inTail && Math.random() < (p.t-dry)*2.2){ if(on){ ctx.stroke(); ctx.beginPath(); on=false; } continue; }
+        const spread = inTail ? 1 + (p.t-dry)*1.8 : 1;      // the tail fans open
+        const off = f * width(p.t)/2 * 0.92 * spread;
+        const x = p.x + p.nx*off, y = p.y + p.ny*off;
+        on ? ctx.lineTo(x,y) : (ctx.moveTo(x,y), on = true);
+      }
+      ctx.globalAlpha = 0.5*(1 - 0.75*wet); if(on) ctx.stroke();
+      // the bristle's raised line in the paint (redrawn on the height map: same path, stroked again)
+    }
+    { const nb = 10 + Math.floor(Math.random()*8);
+      for(let b=0;b<nb;b++){ const f = (b/(nb-1))*2 - 1; hx.globalAlpha = 0.09*(1 - 0.7*wet); hx.lineWidth = Math.max(cpx(0.6), W*0.03);
+        const P = []; for(const p of pts){ if(p.t > dry*1.15) break; const off = f*width(p.t)/2*0.9; P.push([p.x + p.nx*off, p.y + p.ny*off]); }
+        if(P.length > 1){ trace(hx, P); hx.stroke(); } } }
+    // wet paint runs: drips fall from the body's lower edge, thinning, each
+    // ending in a bead
+    if(wet > 0.25){
+      const drips = Math.floor(Math.random()*(1 + wet*5));
+      for(let d=0; d<drips; d++){
+        const i = Math.floor(Math.random()*Math.max(1, left.length)), a = left[i], b = right[i];
+        if(!a || !b) continue;
+        const [sx, sy] = a[1] > b[1] ? a : b;                  // the lower edge
+        const len = W*(0.6 + Math.random()*3.2)*wet, dw = W*(0.05 + Math.random()*0.08);
+        ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`; ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        const steps = 14, sway = (Math.random()-0.5)*W*0.2;
+        for(let s=0; s<=steps; s++){ const t = s/steps; ctx.lineTo(sx + sway*t*t - dw*(1 - 0.5*t)/2, sy + len*t); }
+        for(let s=steps; s>=0; s--){ const t = s/steps; ctx.lineTo(sx + sway*t*t + dw*(1 - 0.5*t)/2, sy + len*t); }
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx + sway, sy + len, dw*0.55, 0, Math.PI*2); ctx.fill();
+        hx.globalAlpha = 0.3; hx.beginPath(); hx.arc(sx + sway, sy + len, dw*0.6, 0, Math.PI*2); hx.fill();
+        hx.globalAlpha = 0.18; hx.lineWidth = dw*0.8; hx.beginPath(); hx.moveTo(sx, sy); hx.lineTo(sx + sway, sy + len); hx.stroke();
+      }
+    }
+
+    // 3. droplets flung off the end of an angry stroke
+    const tip = pts[pts.length-1], dx = tip.x - pts[pts.length-6].x, dy = tip.y - pts[pts.length-6].y;
+    const dl = Math.hypot(dx,dy) || 1;
+    ctx.fillStyle = `rgb(${tone|0},${tone|0},${tone|0})`;
+    for(let d=0; d<Math.floor(Math.random()*6); d++){
+      const r = W*(0.2 + Math.random()*1.4);
+      const dotR = W*(0.03 + Math.random()*0.06);
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      const ddx = tip.x + dx/dl*r + (Math.random()-0.5)*W*0.5, ddy = tip.y + dy/dl*r + (Math.random()-0.5)*W*0.5;
+      ctx.arc(ddx, ddy, dotR, 0, Math.PI*2);
+      ctx.fill();
+      hx.globalAlpha = 0.35; hx.beginPath(); hx.arc(ddx, ddy, dotR, 0, Math.PI*2); hx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  // wet edges bleed: a soft copy of the whole painting laid over it
+  if(wet > 0.01){
+    const k = Math.max(4, Math.round(10 - wet*4)), sw = Math.max(1, Math.round(w/k)), sh = Math.max(1, Math.round(h/k));
+    const soft = document.createElement('canvas'); soft.width = sw; soft.height = sh;
+    const sx = soft.getContext('2d', CPU); sx.imageSmoothingEnabled = true; sx.drawImage(c, 0, 0, sw, sh);
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.65*wet; ctx.drawImage(soft, 0, 0, w, h); ctx.restore();
+  }
+  return [c, hcv];
+}
+
 
 export const LIGHT_STEPS = {
   material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
@@ -186,6 +350,10 @@ export const LIGHT_STEPS = {
     paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
     run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
       return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
+  strokes: { cat: 'Marks', label: 'Angry Strokes', ins: [], outs: ['painting', 'heights'], io: { outs: ['image', 'field'] },
+    params: [LT_R('width', 'Stroke Width', 100, 60, 380), LT_R('count', 'Stroke Count', 100, 20, 260), LT_R('wet', 'Wetness', 0)], cost: () => 6,
+    paint(E, n){ return paintAngryStrokes(E.ww, E.wh, E.num(n, 'count', 100)/100, E.num(n, 'width', 100)/100, E.num(n, 'wet', 0)/100); },
+    run(E, n){ const [c, hc] = this.paint(E, n); return [kitImage(c, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
   canvasweave: { cat: 'Noise', label: 'Canvas Weave', ins: [], outs: ['heights'], params: [LT_R('pitch', 'Thread Size', 100, 30, 400)], cost: () => 2,
     run(E, n){ return [weaveField(E.ww, E.wh, cpx(2.2)*E.num(n, 'pitch', 100)/100/(E.ctx.div > 0 ? E.ctx.div : 1))]; } },
 };

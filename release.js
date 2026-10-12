@@ -11,6 +11,6 @@
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-export const RELEASE = 'Jupiter–Sponde';
+export const RELEASE = 'Jupiter–Kalyke';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 export const RELEASE_DATE = '2026-10-12';

@@ -379,7 +379,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
   // (Fractured Glaze is a chain now: its grid is the chain's, canonDiv(2) in textureGenerators.js genChain)
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 32 && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js'))
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 31 && /const hdiv = canonDiv\(2\)/.test(src('stepsLight.js')) && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js'))
     && /const \[gw, gh\] = whimGrid\(E, 6\)/.test(src('stepsWhimsy.js')) && /E\.canvasPass \? \[Math\.ceil\(E\.ww\/canonDiv\(d\)\)/.test(src('stepsWhimsy.js')));
   {
     // Linen's grid: threads at least ~3 px apart; never finer than the export's grid, never coarser than the canvas
@@ -820,7 +820,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const T = await import('../textureGenerators.js'), wh = src('texWhimsy.js'), sh = src('texSharpness.js');
   check('Painter\'s Frustration has Wetness (0, dry, draws exactly as before): thinner paint, drips, bleeding edges',
     T.paramsFor('brushstrokes').map(d => d.label).join('|') === 'Stroke Width|Stroke Count|Wetness' && T.paramsFor('brushstrokes')[2].def === 0
-    && /if\(wet > 0\.25\)\{/.test(sh) && /ctx\.globalAlpha = 0\.65\*wet;/.test(sh));
+    && /if\(wet > 0\.25\)\{/.test(src('stepsLight.js')) && /ctx\.globalAlpha = 0\.65\*wet;/.test(src('stepsLight.js')));
   check('Painted Landscape has Wetness (watercolour blooms), twelve countries (fields and a volcano the newest), and Color: a time of day, aerial perspective, broken colour; painted clouds',
     T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness|Tilt|Color|Impasto'
     && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:', 'fields:', 'volcano:'].every(k => src('stepsWhimsy.js').includes('  ' + k))
@@ -901,8 +901,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
   }
   {
     const sh = src('texSharpness.js'), ch3 = src('texChaos.js'), T2 = await import('../textureGenerators.js');
-    check('Brushstrokes are impasto: each stroke lays down thickness (body, piled edges, bristle ridges), lit by the dial and laid over the paint',
-      T2.TEXTURE_CAPS.brushstrokes.light === true && /const L = lightHeights\(H, hw, hh, \{ light, relief:1, gloss:0\.25 \+ 0\.6\*wet/.test(sh) && /hx\.globalAlpha = 0\.16\*\(1 - 0\.5\*wet\); hx\.lineWidth = W\*0\.1;/.test(sh));
+    check('Brushstrokes are impasto: each stroke lays down thickness (body, piled edges, bristle ridges); a chain lights it (Angry Strokes → canvas weave → Light Engine; Wetness flattens and glosses)',
+      T2.TEXTURE_CAPS.brushstrokes.light === true && /hx\.globalAlpha = 0\.16\*\(1 - 0\.5\*wet\); hx\.lineWidth = W\*0\.1;/.test(src('stepsLight.js'))
+      && /\['material', \{ relief: 87, '~relief': '87,39', gloss: 25, '~gloss': '25,85'/.test(src('chains.js')) && !/export function genBrushstrokes/.test(sh));
     check('Scattered Polygons is the original Metal Leaf, restored: flat flakes at 0 (their extra randomness only drawn above 0); Shape, Sheen (by the dial), Glitter',
       T2.paramsFor('metalleaf').map(d => d.label).join('|') === 'Leaf Size|Coverage|Shape|Sheen|Glitter' && T2.paramsFor('metalleaf').slice(2).every(d => d.def === 0)
       && /if\(shapeV > 0 && Math\.random\(\) < shapeV\)\{/.test(src('stepsTouch.js')) && /if\(sheen > 0\)\{ const ta = Math\.random\(\)/.test(src('stepsTouch.js')) && /const flakes = Math\.max\(10, Math\.round\(\(120 \+ Math\.random\(\)\*90\)\*amt\)\);/.test(src('stepsTouch.js'))

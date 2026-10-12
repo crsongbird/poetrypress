@@ -141,6 +141,37 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // √ Halftone: a soft Value Noise for the tone, printed as a Halftone Screen of dots.
+  halftone: { label: 'Halftone', canvas: true, teach: 'This is Halftone. A Value Noise with one octave makes a soft, slow tone; Halftone Screen prints it as dots, each as big as the tone is bright there. Dot Scale is the screen\'s cell size and Dot Weight how heavy the dots print. Try: wire another texture into the Halftone Screen\'s tone, or turn its Screen Angle.', nodes: [
+      ['knob', { slot: '1', name: 'Dot Scale', def: 14 }, 40, 40],                 // 1  (100 of 50–400)
+      ['knob', { slot: '2', name: 'Dot Weight', def: 33 }, 40, 140],               // 2  (100 of 30–240)
+      ['noise', { scale: 10, octaves: 1 }, 320, 40],                               // 3
+      ['screen', { scale: 100, weight: 100, angle: 0 }, 600, 80],                  // 4
+      ['surface', { name: 'Halftone', ground: 'grey' }, 880, 100]],                // 5
+    wires: [[1, 1, 4, paramPort('screen', 'scale')], [2, 1, 4, paramPort('screen', 'weight')], [3, 1, 4, 1], [4, 1, 5, 1]] },
+  // √ Film Grain: one part, its Kind sliding from silver to digital
+  grain: { label: 'Film Grain', canvas: true, teach: 'This is Film Grain. One part makes it: Film Grain, whose Kind slides from silver halide through film and paper to a digital sensor, blending neighbours in between. The Knobs are the texture\'s sliders: Grain Size, Contrast and Grain (the Kind). Try: set Kind to 66 for paper, then blend the grain over another texture with Blend.', nodes: [
+      ['knob', { slot: '1', name: 'Grain Size', def: 0 }, 40, 40],                 // 1  (100 of 100–600)
+      ['knob', { slot: '2', name: 'Contrast', def: 33 }, 40, 140],                 // 2  (100 of 30–240)
+      ['knob', { slot: '3', name: 'Grain', def: 33 }, 40, 240],                    // 3
+      ['grain', { size: 100, contrast: 100, kind: 33 }, 320, 80],                  // 4
+      ['surface', { name: 'Film Grain', ground: 'grey' }, 600, 100]],              // 5
+    wires: [[1, 1, 4, paramPort('grain', 'size')], [2, 1, 4, paramPort('grain', 'contrast')], [3, 1, 4, paramPort('grain', 'kind')], [4, 1, 5, 1]] },
+  // √ Painter's Frustration: Angry Strokes lays the paint and its thickness; a little Canvas Weave
+  // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
+  // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
+  brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'This is Painter\'s Frustration. Angry Strokes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [
+      ['knob', { slot: '1', name: 'Stroke Width', def: 13 }, 40, 40],              // 1  (100 of 60–380)
+      ['knob', { slot: '2', name: 'Stroke Count', def: 33 }, 40, 140],             // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                   // 3
+      ['strokes', { width: 100, count: 100, wet: 0 }, 320, 60],                    // 4
+      ['canvasweave', { pitch: 100 }, 320, 320],                                   // 5
+      ['mix', { t: 4 }, 600, 220],                                                 // 6
+      ['material', { relief: 87, '~relief': '87,39', gloss: 25, '~gloss': '25,85', shine: 22, '~shine': '22,65', shadow: 55, occlusion: 30, ambient: 45 }, 860, 80],   // 7
+      ['surface', { name: "Painter's Frustration", ground: 'grey' }, 1120, 120]],  // 8
+    wires: [[1, 1, 4, paramPort('strokes', 'width')], [2, 1, 4, paramPort('strokes', 'count')], [3, 1, 4, paramPort('strokes', 'wet')],
+      [3, 1, 7, paramPort('material', 'relief')], [3, 1, 7, paramPort('material', 'gloss')], [3, 1, 7, paramPort('material', 'shine')],
+      [4, 1, 7, 1], [4, 2, 6, 1], [5, 1, 6, 2], [6, 1, 7, 2], [7, 1, 8, 1]] },
   landscape: { label: 'Painted Landscape', canvas: true, teach: 'This is Painted Landscape. Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Wash bleeds the painting (Wetness). Oil Paint repaints it in brushstrokes with the paint\'s heights, and the Light Engine lights those by the dial; the Impasto knob drives both (0: no strokes, as it used to be). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
@@ -152,7 +183,7 @@ export const TEXTURE_CHAINS = {
       ['wash', { wet: 0 }, 880, 160],                                             // 8
       ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
       ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
-      ['material', { relief: 50, gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
+      ['material', { relief: 20, '~relief': '0,40', gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
       ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
     wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],

@@ -35,7 +35,7 @@ import { evalAthanor, athanorHash, athanorBudget, athanorStarter } from './athan
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genAstralFog, genAstralStars, genBokeh, genEmbers, genSnow, genMagicParticles, genAuroraVeil, genMoon, genFlowField } from './texWhimsy.js';
-import { genFlowers, genHalftone, genBrushstrokes, genCityscape, genGrain, genGuilloche } from './texSharpness.js';
+import { genFlowers, genCityscape, genGuilloche } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
 import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genSuminagashi, genWatercolour } from './texTouch.js';
 
@@ -550,9 +550,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'rainstreaks'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
-    result = genHalftone(w,h,amt,zoom);
+    result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
   } else if(type === 'brushstrokes'){
-    result = genBrushstrokes(w,h,amt,zoom,form,light);
+    result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
     result = genSigils(w,h,amt,zoom,light,form,extra.mat);
   } else if(type === 'mathnoise'){
@@ -623,7 +623,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'spangle'){
     result = genSpangle(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
   } else if(type === 'grain'){
-    result = genGrain(w,h,amt,zoom,form);
+    result = genChain(type, w, h, light, extra);           // Film Grain (chains.js)
   } else {
     let genW = w, genH = h;
 

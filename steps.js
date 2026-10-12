@@ -37,6 +37,7 @@ import { drawStitch, pathFromPoints, roundRectPoints } from './stitches.js';
 import { TOUCH_STEPS } from './stepsTouch.js';
 import { WHIMSY_STEPS } from './stepsWhimsy.js';
 import { LIGHT_STEPS } from './stepsLight.js';
+import { SHARP_STEPS } from './stepsSharpness.js';
 import { CHAOS_STEPS } from './stepsChaos.js';
 import { CARD_STEPS } from './cartomancy.js';
 
@@ -185,6 +186,9 @@ export const STEP_DOCS = {
   glaze: 'Lights and colors crazed glaze from its maps.',
   material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
   oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
+  strokes: 'A few fast, loaded swipes of gray paint (Painter\'s Frustration): each a body with bristle marks, fraying at the tail, flinging droplets. Wetness makes the paint mix, bleed and drip. Its second output is the paint\'s thickness, for a Light Engine.',
+  screen: 'Prints a tone as a screen of dots, the way newspapers and comics do: a dot in every cell, as big as the tone is bright there. Wire a picture through Invert first to screen it dark-for-big. Screen Angle turns the grid.',
+  grain: 'Film grain: Kind slides from silver (crisp grains in clumps) through film and paper (its cloudy formation and fibres) to a digital sensor (noise in each color, rows and columns). A color picture centered on gray: blend it over anything.',
   canvasweave: 'The cloth under a painting, as heights: a plain weave. Mix it into a painting\'s heights to let the canvas show through thin paint.',
   shaft: 'A shaft of light from the dial through any density (smoke, noise): the density glows inside it. Its second output is the beam itself.',
   surface: 'The end of every graph. What reaches Image is the texture; a gray map in Height is lit by the dial. A graph has exactly one.',
@@ -590,7 +594,7 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS };
 export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);

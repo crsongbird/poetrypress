@@ -6,7 +6,24 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Sponde)
+## 1 · Ruby to judge (new in Jupiter–Kalyke)
+- THE DICE: a die (⚄) beside every section's lock rolls only that section —
+  the Backdrop, Surface and Typeface as their Summon buttons do, the rest
+  each slider, menu and color within reason. The lock beside it keeps the
+  section through any roll. On the Surface, Shift-click or a long press on
+  the die rolls only the seed (the same texture, a new pattern).
+- PAINTER'S FRUSTRATION is a chain: Angry Strokes (the paint and its
+  thickness) → a little Canvas Weave → the Light Engine → the Surface (the
+  oil-on-canvas module before its output, as in Painted Landscape). Wetness
+  also flattens and glosses the paint.
+- HALFTONE (Value Noise → Halftone Screen) and FILM GRAIN (one part) are
+  chains. Halftone Screen screens any tone, at an angle; Film Grain works over
+  anything.
+- The Oil on Canvas starter is gone: the module lives inside textures now.
+- Fixed in the Athanor: a part without its own painting code (Mix, Levels…)
+  could not read a picture made by one that has it, at full size on the page.
+
+## 1a · Ruby to judge (from Jupiter–Sponde)
 - THE LIGHT ENGINE is a part: picture + heights lit by the dial, with relief,
   gloss (or a gloss map), shine, shadow, occlusion, ambient, and the shade,
   highlight and light hues. OIL PAINT repaints any picture in strokes along
@@ -25,7 +42,7 @@ Recommendations".
 - CARTOMANCY'S WEAR has far more range: at the top nearly every card is
   marked, many two or three times.
 
-## 1a · Ruby to judge (from Jupiter–Carme)
+## 1b · Ruby to judge (from Jupiter–Carme)
 - INLINE CODE works again. The crash was mine: the code's backdrop read a
   color as the wrong shape, so every frame with `code` in it failed and the
   preview kept its last good picture. Not Firefox only. A test now holds it.
@@ -47,21 +64,19 @@ Recommendations".
 - THE BUILD keeps one archive: `node build.mjs --zip` deletes the old ones
   in release/ first.
 
-## 1b · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
+## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
   everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,
   marks — all fictional, as if through a window onto a world like ours but
   with its own lore and rules.
 - PAINTED LANDSCAPE: more variety in the water and land textures.
+- REROLLING: the dice are in (Kalyke); tell me what still sticks.
 - THE ATHANOR: textures inside a graph sometimes need swapping to show
   (not reproduced yet: which texture, and what showed?). Check the zoom no
   longer locks (Sponde: the wheel zooms toward the pointer, farther out).
 - OIL PAINT loses small things (distant trees) at Impasto 50; a finer pass
   where the picture has small detail.
-- REROLLING: some elements stay unexpectedly when rerolling; Ruby wants
-  toggles to reset or reroll individual elements and states, for mixing
-  and matching (a proposal went with the Sponde release: per-section dice and keep-locks; waiting on Ruby's pick).
 
 ## 2 · Waiting on Ruby
 - SOUNDS — the instrument itself, when Ruby wants it back:
@@ -105,18 +120,19 @@ Recommendations".
 
 ## 4 · Next (no input needed)
 - EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon: loadable, viewable
-  as a graph, mixable, kept and shared as one's own). 9 of 47 are chains:
+  as a graph, mixable, kept and shared as one's own). 12 of 47 are chains:
   Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy,
-  Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape. Still to
-  take apart (each when touched, or in passes): Dream Bloom, Deep Field,
-  Euphoria Dust, Burning Mana, First Snow, Film Grain, Lotus Pond, Painter's
-  Frustration, Halftone, Rain on Glass, Sigil Scatter, Machine Glyphs,
+  Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape, Painter's
+  Frustration, Halftone, Film Grain. Still to take apart (each when touched,
+  or in passes): Dream Bloom, Deep Field, Euphoria Dust, Burning Mana, First
+  Snow, Lotus Pond, Rain on Glass, Sigil Scatter, Machine Glyphs,
   Transmutation Circles, Ink Blot, Old Paper, Crystal Leaf, Spangle, Cold
   Press, Cup Ring, Guilloche, Chladni, Contour Map, Suminagashi, Watercolour,
   Flow-Field Ink, Turing Skin, Hoarfrost, Burnt Letter, Poured Wax, Dunes,
   Kintsugi, Moss, City at Night, Black Hole, Scrying Pool, Moon, Aurora,
   Tessellate. Likely shared parts first: a Scatter of marks (snow, embers,
-  dust, sparkles), a Light-heights engine part (most 🜚 Touch textures), a
+  dust, sparkles), the Light Engine part (done, Sponde: most 🜚 Touch textures
+  can end in it now), a
   Marbling part (Suminagashi, Ink Blot).
 - The Athanor on a phone, still: haptics on a long press, an accessibility
   pass.

@@ -4,6 +4,29 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Kalyke (2026-10-12)
+
+- Dice: a die (⚄) now sits beside the lock in every section's heading, and
+  rolls only that section.
+  - Backdrop, Surface and Typeface roll the way their Summon buttons do.
+  - Every other section rolls each of its sliders, menus and colors within
+    reason.
+  - Locked controls stay put, and the lock beside the die keeps the whole
+    section through any roll.
+  - On the Surface, Shift-click or a long press on the die rolls only the
+    seed: the same texture with a new pattern.
+- Painter's Frustration is now built from Athanor parts: Angry Strokes (the
+  paint and its thickness), a little Canvas Weave, then the Light Engine
+  before the output. That is the same oil-on-canvas module as Painted
+  Landscape. Wetness also flattens the paint and makes it glossier.
+- Halftone and Film Grain are built from Athanor parts too. Halftone Screen
+  can print any tone as dots at an angle; Film Grain can go over anything.
+- The Oil on Canvas starter is gone; its parts now live inside the textures
+  that use them.
+- Fixed: on the page, a part without its own drawing code (Mix, Levels and
+  the like) could not read a picture made by a part that has it. This is what
+  had kept Painter's Frustration from being lit.
+
 ## Jupiter–Sponde (2026-10-12)
 
 - The Athanor has the app's lighting engine as a part, the Light Engine. Wire

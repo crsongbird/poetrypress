@@ -1955,6 +1955,11 @@ input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{
 /* ---------- the headings' tools: a section's EYE (shown or not) and its MASTER LOCK ----------
    at the heading's far end, spaced well apart and away from the fold itself */
 .head-tools{ float:right; display:inline-flex; align-items:center; gap:16px; margin-left:18px; margin-right:2px; text-transform:none; letter-spacing:0; }
+/* the die beside a section's lock: rolls only that section (appEvents.js rollSection) */
+.die-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:16px/1 var(--ui-text); opacity:.55; cursor:pointer; }
+.die-btn:hover, .die-btn:focus-visible{ opacity:1; color:var(--accent); }
+.die-btn:active{ transform:rotate(90deg); transition:transform .12s; }
+body.is-mobile .die-btn{ font-size:19px; }
 .check-row .head-tools{ float:none; order:9; flex:1 1 auto; justify-content:flex-end; padding-left:12px; }
 .master-lock{ width:24px; height:24px; padding:2px; }
 .master-lock.partial{ color:var(--accent-dim); }
