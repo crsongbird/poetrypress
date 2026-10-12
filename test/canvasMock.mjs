@@ -36,7 +36,7 @@ export function makeMockContext(w, h){
                 radiusSum: 0, pathLen: 0, rectArea: 0,
                 // pixel and direction signals, so a knob that changes tone or
                 // angle rather than size is still detectable
-                pixelSum: 0, pixelVar: 0, pathDx: 0, rotSum: 0, rotSigned: 0 };
+                pixelSum: 0, pixelVar: 0, pixelHash: 0, pathDx: 0, rotSum: 0, rotSigned: 0 };
   const ctx = {
     canvas: { width: w, height: h },
     globalAlpha: 1,
@@ -105,7 +105,9 @@ export function makeMockContext(w, h){
       // pattern but not average brightness (a finer rake, more fractal
       // octaves) still registers
       for(let i=0;i<imgData.data.length;i+=64){ stats.pixelSum += imgData.data[i];
-        if(i >= 64) stats.pixelVar += Math.abs(imgData.data[i] - imgData.data[i-64]); }
+        if(i >= 64) stats.pixelVar += Math.abs(imgData.data[i] - imgData.data[i-64]);
+        // and WHERE the tones are: a ramp turned upside down has the same sum and variation, not the same hash
+        stats.pixelHash = (Math.imul(stats.pixelHash ^ imgData.data[i], 16777619) + i) >>> 0; }
       for(let i=0;i<imgData.data.length;i++){
         if(!Number.isFinite(imgData.data[i])) throw new Error('putImageData: non-finite pixel value at index '+i);
       }

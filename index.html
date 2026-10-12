@@ -567,6 +567,14 @@ Have fun!</textarea>
             <label data-str="label.surface_variant">Surface Variant</label>
             <select id="textureType">
               <!-- grouped by what a surface IS (each group alphabetical); each group's glyph a Runology Archetype that means it (appOptions.js TEXTURE_GROUPS) -->
+              <optgroup label="🜛 Basics">
+                <option value="cells" data-str="option.cells">Cells</option>
+                <option value="checker" data-str="option.checkerboard">Checkerboard</option>
+                <option value="softgradient" data-str="option.gradient">Gradient</option>
+                <option value="plainnoise" data-str="option.plain_noise">Plain Noise</option>
+                <option value="polka" data-str="option.polka_dots">Polka Dots</option>
+                <option value="stripes" data-str="option.stripes">Stripes</option>
+              </optgroup>
               <optgroup label="🜃 Paper &amp; Grounds">
                 <option value="coldpress" data-str="option.cold_press">Cold Press</option>
                 <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
@@ -1160,7 +1168,7 @@ Have fun!</textarea>
     </div>
     <div class="forge-body">
       <div class="forge-palette" id="forgePalette"></div>
-      <div class="forge-canvas" id="forgeCanvas"></div>
+      <div class="parent-drawflow forge-canvas" id="forgeCanvas"></div>
       <!-- what it makes: bottom right, over the grid; as small as it can be around the preview -->
       <aside class="forge-dock" id="forgeDock" aria-label="What it makes">
         <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes (tap: larger)"></canvas>

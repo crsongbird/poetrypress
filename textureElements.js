@@ -38,6 +38,31 @@ export const PRIMAL_ELEMENTS = [
 ];
 
 export const TEXTURE_ELEMENTS = {
+  // 🜛 the Basics
+  plainnoise: { def: 'wind', wind: { name: 'Plain Noise' },
+    fire:  { name: 'Smoulder',  k: [55, 80, 60], t: ['#FFC27A', '#3A0C06'], blend: 'overlay' },
+    water: { name: 'Fog Bank',  k: [12, 30, 10], t: ['#DCEBFA', '#1E2E44'], blend: 'soft-light' },
+    earth: { name: 'Sandstone', k: [80, 100, 45], t: ['#F0D9A8', '#5A3A1E'], blend: 'multiply' } },
+  stripes: { def: 'earth', earth: { name: 'Stripes' },
+    fire:  { name: 'Candy Stripe',  k: [12, 50, 6, 25],  t: ['#FFF2EC', '#C8283A'], blend: 'multiply' },
+    water: { name: 'Sailor Stripe', k: [8, 60, 4, 50],   t: ['#F4F8FF', '#1F3F8A'], blend: 'multiply' },
+    wind:  { name: 'Pinstripe',     k: [30, 92, 12, 0],  t: ['#F2F6EE', '#3E5A44'], blend: 'overlay' } },
+  polka: { def: 'wind', wind: { name: 'Polka Dots' },
+    fire:  { name: 'Cherry Dots',  k: [65, 55, 0],  t: ['#FFF4EE', '#C21E32'], blend: 'multiply' },
+    water: { name: 'Bubbles',      k: [40, 35, 85], t: ['#EAF6FF', '#2C6FA8'], blend: 'overlay' },
+    earth: { name: 'Mustard Seed', k: [15, 30, 40], t: ['#F7E9C0', '#8A6414'], blend: 'multiply' } },
+  checker: { def: 'earth', earth: { name: 'Checkerboard' },
+    fire:  { name: 'Gingham',        k: [30, 30, 0],   t: ['#FFF6F2', '#D2444A'], blend: 'multiply' },
+    water: { name: 'Tilework',       k: [15, 4, 50],   t: ['#F2F8FC', '#2A5C8C'], blend: 'multiply' },
+    wind:  { name: 'Garden Trellis', k: [35, 16, 50],  t: ['#EEF6E6', '#3F6A3A'], blend: 'overlay' } },
+  softgradient: { def: 'water', water: { name: 'Gradient' },
+    fire:  { name: 'Sunset Glow',  k: [90, 100, 70], t: ['#FFD08A', '#5A1020'], blend: 'soft-light' },
+    wind:  { name: 'Morning Haze', k: [270, 30, 30], t: ['#F2FAEE', '#2E4A3A'], blend: 'soft-light' },
+    earth: { name: 'Lamplight',    k: [90, 85, 40],  t: ['#FFE2A8', '#1E1408'], blend: 'overlay' } },
+  cells: { def: 'earth', earth: { name: 'Cells' },
+    fire:  { name: 'Lava Crust', k: [50, 30, 100, 70], t: ['#FFB25A', '#2A0604'], blend: 'hard-light', light: [300, 100] },
+    water: { name: 'Sea Sponge', k: [20, 10, 0, 60],   t: ['#CFE8FF', '#0E2A44'], blend: 'overlay',    light: [330, 100] },
+    wind:  { name: 'Leaf Veins', k: [15, 0, 85, 25],   t: ['#E6F4D8', '#24401E'], blend: 'soft-light', light: [315, 100] } },
   // ---- ♡ Whimsy ----
   clouds: { def: 'wind', wind: { name: 'Sleep Haze' },
     // the haze lit from below, coals under smoke

@@ -4,6 +4,40 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Eukelade (2026-10-12)
+
+- Fixed: panning the Athanor's grid often did nothing, or started selecting
+  text. Wherever the grid had been panned or zoomed away from, a press landed
+  on the panel behind it, which the graph editor didn't treat as the grid.
+  Now it pans from anywhere empty. The middle mouse button, or Space held,
+  pans from anywhere, over parts too.
+- Fixed: some graphs opened in the Athanor with only their first few parts
+  (Painter's Frustration, Painted Landscape, Oil on Canvas). A part whose
+  wire sweeps only part of a setting's range stopped the graph loading
+  partway.
+- New texture group, Basics, first in the menu: Cells, Checkerboard,
+  Gradient, Plain Noise, Polka Dots and Stripes. They are quiet grounds that
+  leave room for a poem, and each is only two or three Athanor parts, so they
+  are also the easiest graphs to open and learn from. Cells takes the light.
+  Each has four readings.
+- Presets are now grouped by what you might be looking for: Quiet Pages,
+  Bright & Playful, Night & Stars, Glow & Glitter, Weather & Water, Places,
+  Paper & Keepsakes, Bold & Graphic, and Ritual & Omen.
+- Twelve new presets: Hush, Ruled, Gingham, Sundress, Sunroom, Postcard,
+  Riverbed, Fernlight, Wayfinder, First Frost, Marbled and Rose Window.
+- New Athanor parts:
+  - Terrain: an imagined land's heights.
+  - Contour Lines: the contour lines of any gray map.
+  - Turing Pattern: spots, coral, mazes, worms or holes that grow by
+    themselves.
+  - Flow Lines: evenly spaced ink lines along a current, which any gray map
+    can bend.
+  - Washes: the shapes of two watercolor pigments.
+  - Pigment: lays any gray map on a picture as watercolor.
+- Contour Map, Turing Skin, Flow-Field Ink and Watercolor Wash are now built
+  from those parts and look as they did; Flow-Field Ink draws exactly as
+  before.
+
 ## Jupiter–Pasiphae (2026-10-12)
 
 - The Athanor is easier to handle with a mouse:

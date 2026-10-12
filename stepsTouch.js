@@ -12,7 +12,7 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture } from './texCore.js';
+import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, fbmSampler, withSeed } from './texCore.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -46,7 +46,110 @@ export function weaveGridDiv(w, h, S, zoom){
   return Math.max(fine, Math.min(coarse, Math.min(w, h)*WEAVES[0].pitch*zoom/3.2));
 }
 
+// WATERCOLOR, in two parts (Watercolor Wash, texTouch genWatercolour until now). WASHES lays the pigment's
+// shapes after Tyler Hobbs's method: a polygon deformed by recursive midpoint displacement, drawn forty times
+// over at a few percent, each copy deformed again — two layers, one per pigment, as densities 0..1.
+function touchWashes(ww, wh, amt, zoom, wet){
+  const unit = Math.min(ww, wh), N = ww*wh;
+  const gauss = () => { let u = 0, v = 0; while(!u) u = Math.random(); while(!v) v = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const deform = (poly, depth, vs) => { let P = poly;
+    for(let d = 0; d < depth; d++){ const Q = [];
+      for(let i = 0; i < P.length; i++){ const a = P[i], b = P[(i + 1) % P.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        Q.push(a); Q.push([(a[0] + b[0])/2 + gauss()*len*a[2]*vs, (a[1] + b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]); }
+      P = Q; }
+    return P; };
+  const layers = [document.createElement('canvas'), document.createElement('canvas')];
+  const lx = layers.map(c => { c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; return x; });
+  const nB = Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
+  const LAY = Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha = Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
+  for(let b = 0; b < nB; b++){
+    // the first is a broad, pale ground wash; the rest are passages laid over it
+    const ground = b === 0, cx = ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy = ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
+    const R = unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k = Math.random() < 0.62 ? 0 : 1;
+    const sides = 10, base = [], sq = 0.7 + Math.random()*0.3;
+    for(let s = 0; s < sides; s++){ const a = s/sides*Math.PI*2, rr = R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
+    const shape = deform(base, 3, 0.2), ctx = lx[k]; ctx.globalAlpha = ground ? alpha*0.45 : alpha;
+    for(let l = 0; l < LAY; l++){ const P = deform(shape, 3, 0.07 + wet*0.2);
+      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i = 1; i < P.length; i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill(); }
+  }
+  return lx.map(ctx => { const d = ctx.getImageData(0, 0, ww, wh).data, D = new Float32Array(N); for(let i = 0; i < N; i++) D[i] = d[i*4 + 3]/255; return D; });
+}
+// PIGMENT lays any density (a gray map) on a picture as watercolor does on paper (Curtis et al., "Computer-Generated
+// Watercolor"): EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in the paper's tooth), an
+// uneven load, and a GRADED WASH (it runs downhill: the dial). It mixes subtractively with what is under it.
+function touchPigment(D, img, ww, wh, col, wet, light){
+  const unit = Math.min(ww, wh), N = ww*wh;
+  const blurF = (S, r) => { const T = new Float32Array(N), O = new Float32Array(N), n = 2*r + 1;
+    for(let y = 0; y < wh; y++){ let s = 0; for(let x = -r; x <= r; x++) s += S[y*ww + Math.min(ww - 1, Math.max(0, x))];
+      for(let x = 0; x < ww; x++){ T[y*ww + x] = s/n; s += S[y*ww + Math.min(ww - 1, x + r + 1)] - S[y*ww + Math.max(0, x - r)]; } }
+    for(let x = 0; x < ww; x++){ let s = 0; for(let y = -r; y <= r; y++) s += T[Math.min(wh - 1, Math.max(0, y))*ww + x];
+      for(let y = 0; y < wh; y++){ O[y*ww + x] = s/n; s += T[Math.min(wh - 1, y + r + 1)*ww + x] - T[Math.max(0, y - r)*ww + x]; } }
+    return O; };
+  const er = Math.max(1, Math.round(unit*(0.006 + wet*0.012))), blurred = blurF(blurF(D, er), er);
+  const tooth = fbmSampler(28, 2), bloom = fbmSampler(5, 3);
+  const lv = lightVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
+  const rim = 1.1*(1 - wet*0.6), gran = 0.12 + 0.12*(1 - wet), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+  for(let i = 0; i < N; i++){
+    const x = i % ww, y = (i/ww) | 0, u = x/unit, v = y/unit;
+    let r = img.r[i], g = img.g[i], b = img.b[i], d = D[i];
+    if(d >= 0.004){
+      const grade = 1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);        // downhill holds more pigment
+      d += Math.max(0, d - blurred[i])*rim*2.2;                                   // the darker drying edge
+      d *= grade*(1 + gran*(tooth(u*1.5, v*1.5) - 0.5)*2)*(0.62 + 0.76*bloom(u, v)**2);   // granulation, and an uneven load
+      d = Math.max(0, Math.min(1, d*1.1));
+      r *= 1 - d*(1 - col[0]); g *= 1 - d*(1 - col[1]); b *= 1 - d*(1 - col[2]);
+    }
+    out.r[i] = r; out.g[i] = g; out.b[i] = b;
+  }
+  return out;
+}
+
 export const TOUCH_STEPS = {
+  washes: { cat: 'Marks', label: 'Washes', ins: [], outs: ['first', 'second'],
+    params: [TOUCH_R('amount', 'Pigment', 100, 30, 250), TOUCH_R('size', 'Wash Size', 100, 40, 250), TOUCH_R('wet', 'Wetness', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => touchWashes(ww, wh, num(n, 'amount', 100)/100, num(n, 'size', 100)/100, num(n, 'wet', 50)/100)); } },
+  pigment: { cat: 'Light & Color', label: 'Pigment', ins: ['paper', 'density', 'color', 'runs to'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'value'], outs: ['image'] },
+    params: [TOUCH_R('wet', 'Wetness', 50)], cost: () => 4,
+    run(E, n){ const { ww, wh, input, num, asField, asImage, ctx } = E, D = asField(input(n, 2)); if(!D) return null;
+      const img = asImage(input(n, 1) ?? 1), c = input(n, 3), col = Array.isArray(c) ? c : [0.18, 0.36, 0.54], dv = input(n, 4);
+      return [touchPigment(D, img, ww, wh, col, num(n, 'wet', 50)/100, typeof dv === 'number' ? dv*360 : (ctx.light ?? 0))]; } },
+  // TERRAIN: Contour Map's land — broad masses and a few sharp crests, warped — as heights 0..1.
+  // Drawn from the texture's own seed (+ Variant), so the map shows the land it always did.
+  terrain: { cat: 'Noise', label: 'Terrain', ins: [], outs: ['height'],
+    params: [TOUCH_R('scale', 'Scale', 100, 40, 300), TOUCH_R('crests', 'Crests', 22), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 3,
+    run(E, n){ const { ww, wh, N, unit, num, ctx } = E;
+      const sc = 100/Math.max(1, num(n, 'scale', 100)), cr = num(n, 'crests', 22)/100, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => {
+        const broad = fbmSampler(3, 4), ridge = fbmSampler(5, 3), warp = fbmSampler(3, 2), H = new Float32Array(N);
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+          const u = x/unit*sc, v = y/unit*sc, wu = u + (warp(u*0.5, v*0.5) - 0.5)*0.6, wv = v + (warp(v*0.5 + 3.1, u*0.5 + 1.7) - 0.5)*0.6;
+          const r = 1 - Math.abs(ridge(wu*0.6, wv*0.6)*2 - 1);
+          H[y*ww + x] = (1 - cr)*broad(wu*0.45, wv*0.45) + cr*r*r*r;
+        }
+        let lo = Infinity, hi = -Infinity; for(let i = 0; i < N; i++){ if(H[i] < lo) lo = H[i]; if(H[i] > hi) hi = H[i]; }
+        for(let i = 0; i < N; i++) H[i] = (H[i] - lo)/Math.max(1e-6, hi - lo);
+        return [H]; }); } },
+  // Every line a promise
+  // kept at one height all the way
+  // round the hill and home.
+  // CONTOUR LINES: the isolines of any gray map (d3-contour's maps, found per pixel: how far the value is from its
+  // level, against the slope, so a line keeps one width on steep and gentle ground); every Nth an index line, heavier
+  contours: { cat: 'Marks', label: 'Contour Lines', ins: ['height'], outs: ['lines'],
+    params: [TOUCH_R('levels', 'Levels', 20, 3, 60), TOUCH_R('weight', 'Line Weight', 100, 25, 400), TOUCH_R('index', 'Index Every', 5, 0, 10), TOUCH_R('strength', 'Strength', 90)], cost: () => 2,
+    run(E, n){ const { ww, wh, N, unit, num, input, asField } = E, H = asField(input(n, 1)); if(!H) return null;
+      // a line finer than half a cell is drawn half a cell wide but fainter, so a small preview keeps the export's weight
+      const levels = Math.max(3, Math.round(num(n, 'levels', 20))), lw0 = unit*0.0011*num(n, 'weight', 100)/100, lw = Math.max(0.5, lw0), lwIdx = Math.max(0.5, lw0*2.1);
+      const fade = Math.min(1, lw0/0.5), fadeIdx = Math.min(1, lw0*2.1/0.5);
+      const every = Math.round(num(n, 'index', 5)), st = num(n, 'strength', 90)/100, LN = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+        const i = y*ww + x, v = H[i]*levels;
+        const gx = (H[y*ww + Math.min(ww - 1, x + 1)] - H[y*ww + Math.max(0, x - 1)])*0.5*levels, gy = (H[Math.min(wh - 1, y + 1)*ww + x] - H[Math.max(0, y - 1)*ww + x])*0.5*levels;
+        const g = Math.max(1e-4, Math.hypot(gx, gy)), f = v - Math.floor(v), dist = Math.min(f, 1 - f)/g;
+        const k = Math.round(v), idx = every > 0 && k % every === 0, half = (idx ? lwIdx : lw)*0.5;
+        LN[i] = Math.max(0, Math.min(1, half + 0.5 - dist))*(idx ? fadeIdx : 0.8*fade)*st;
+      }
+      return [LN]; } },
   weave: { cat: 'Textures', label: 'Weave', ins: [], outs: ['shade', 'sheen'],
     params: [TOUCH_R('weave', 'Weave', 50), TOUCH_R('scale', 'Scale', 100, 50, 400)], cost: () => 6,
     // The weave is a NORMAL MAP (threads are far too fine to be heights that

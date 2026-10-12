@@ -6,22 +6,28 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Pasiphae)
-- THE ATHANOR'S HANDS: with a mouse a part drags from anywhere on it (not
-  only its title), except its fields and ports. The wheel zooms on Firefox
-  too: it counted wheel steps as pixels, so each step barely moved. Wires
-  are redrawn whenever the Athanor opens or its fonts arrive (the stray
-  wires in the screenshot came from wires drawn while the panel was hidden:
-  the graph itself was always intact).
-- UNDO and REDO in the Athanor (↶ ↷ in its bar; Ctrl/⌘+Z, Shift+Ctrl+Z or
-  Ctrl+Y), 100 steps, for every move, wire and setting. Ctrl+D duplicates a
-  part, F fits the view, Delete removes what's selected (asking first, as
-  before). Copying the Surface is refused with a knock.
-- THE OIL ON CANVAS STARTER is back (Start from… → Oil on Canvas): any
-  texture → Oil Paint → a little Canvas Weave → the Light Engine.
-- PARTICLES is a part: flakes, sparks or motes, over any picture, in any two
-  colors, blown by the dial. First Snow, Burning Mana and Euphoria Dust are
-  now chains of it, and draw exactly as before (Euphoria is unchanged).
+## 1 · Ruby to judge (new in Jupiter–Eukelade)
+- PANNING THE ATHANOR: fixed. Drawflow pans only when the pressed element's
+  FIRST class is its own; ours put forge-canvas first, so wherever the sheet
+  had been panned or zoomed away from, a press did nothing and the browser
+  selected text (the drag-ghost). Also: the middle button, or Space held,
+  pans from anywhere, over parts too.
+- GRAPHS WITH RANGES LOAD WHOLE: a part whose wire sweeps part of a range
+  ('~relief') made the graph editor throw as it loaded, so Painter's
+  Frustration, Painted Landscape, Oil on Canvas and the new chains opened
+  with only their first few parts. Fixed.
+- THE BASICS (🜛, first in the texture menu): Cells (lit), Checkerboard,
+  Gradient, Plain Noise, Polka Dots, Stripes. Each two or three parts, each
+  with four readings, each a lesson in the Athanor (Start from…).
+- PRESETS by what a person is after: Quiet Pages, Bright & Playful, Night &
+  Stars, Glow & Glitter, Weather & Water, Places, Paper & Keepsakes, Bold &
+  Graphic, Ritual & Omen. Twelve new: Hush, Ruled, Gingham, Sundress,
+  Sunroom, Postcard, Riverbed, Fernlight, Wayfinder, First Frost, Marbled,
+  Rose Window (the Basics, and surfaces that had no preset).
+- NEW PARTS: Terrain, Contour Lines, Turing Pattern, Flow Lines (with an
+  Angle Map input), Washes, Pigment. Contour Map, Turing Skin, Flow-Field
+  Ink and Watercolor Wash are chains of them (Flow-Field Ink draws exactly as
+  before; the others look the same by eye).
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
@@ -31,10 +37,16 @@ Recommendations".
   with its own lore and rules.
 - PAINTED LANDSCAPE: more variety in the water and land textures.
 - REROLLING: the dice are in (Kalyke); tell me what still sticks.
-- THE ATHANOR: textures inside a graph sometimes need swapping to show
-  (not reproduced yet: which texture, and what showed?).
+- THE ATHANOR: textures inside a graph sometimes needed swapping to show.
+  Likely found (Eukelade): a graph with a wire's range set ('~key') threw
+  as it loaded, so only its first parts appeared. Tell me if it happens again.
 - OIL PAINT loses small things (distant trees) at Impasto 50; a finer pass
   where the picture has small detail.
+
+## 1d · Found this pass
+- CONTOUR MAP at a quarter-size preview differs from its export more than
+  most (scale-audit 26%, was 31%: the hillshade's shadows at that grid). Not
+  new; worth a look when the Terrain is next touched.
 
 ## 2 · Waiting on Ruby
 - SOUNDS — the instrument itself, when Ruby wants it back:
@@ -78,18 +90,21 @@ Recommendations".
 
 ## 4 · Next (no input needed)
 - EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon: loadable, viewable
-  as a graph, mixable, kept and shared as one's own). 15 of 47 are chains:
-  Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy,
-  Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape, Painter's
-  Frustration, Halftone, Film Grain, First Snow, Burning Mana, Euphoria Dust.
-  Still to take apart (each when touched, or in passes): Dream Bloom, Deep
-  Field, Lotus Pond, Rain on Glass, Sigil Scatter, Machine Glyphs,
+  as a graph, mixable, kept and shared as one's own). 25 of 53 are chains:
+  the six Basics, Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured
+  Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted
+  Landscape, Painter's Frustration, Halftone, Film Grain, First Snow, Burning
+  Mana, Euphoria Dust, Contour Map, Flow-Field Ink, Turing Skin, Watercolor
+  Wash. Still to take apart (each when touched, or in passes): Dream Bloom,
+  Deep Field, Lotus Pond, Rain on Glass, Sigil Scatter, Machine Glyphs,
   Transmutation Circles, Ink Blot, Old Paper, Crystal Leaf, Spangle, Cold
-  Press, Cup Ring, Guilloche, Chladni, Contour Map, Suminagashi, Watercolour,
-  Flow-Field Ink, Turing Skin, Hoarfrost, Burnt Letter, Poured Wax, Dunes,
+  Press, Cup Ring, Guilloche, Chladni, Suminagashi, Hoarfrost, Burnt
+  Letter, Poured Wax, Dunes,
   Kintsugi, Moss, City at Night, Black Hole, Scrying Pool, Moon, Aurora,
   Tessellate. Likely shared parts first: the Particles part (done, Pasiphae:
-  Deep Field's stars and Dream Bloom's motes may join it), the Light Engine part (done, Sponde: most 🜚 Touch textures
+  Deep Field's stars and Dream Bloom's motes may join it), Terrain (done,
+  Eukelade: Dunes, Moss and the landscape's ridges may stand on it), Pigment
+  (done: Suminagashi's inks could be laid by it), the Light Engine part (done, Sponde: most 🜚 Touch textures
   can end in it now), a
   Marbling part (Suminagashi, Ink Blot).
 - The Athanor on a phone, still: haptics on a long press, an accessibility

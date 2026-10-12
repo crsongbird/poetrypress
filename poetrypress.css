@@ -1803,7 +1803,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-part[draggable="true"]{ cursor:grab; }
 .forge-part:hover{ border-color:var(--cat); }
 /* the grid */
-.forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; -webkit-touch-callout:none; background:
+.forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; background:
   radial-gradient(circle, color-mix(in srgb, var(--fg-text) 16%, transparent) 1px, transparent 1.5px) 0 0/24px 24px, var(--fg-ground); }
 .forge-canvas .drawflow .drawflow-node{ display:block; border-radius:0; background:var(--fg-node); border:1px solid var(--fg-line); border-top:3px solid var(--cat, #888); color:var(--fg-text);
   width:216px; padding:0 0 4px; font-size:13px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.7); min-height:0; }
@@ -1848,6 +1848,8 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas .drawflow svg.connection .main-path.forge-hit{ stroke:transparent !important; stroke-width:18px; stroke-dasharray:none; pointer-events:stroke; cursor:pointer; }
 .forge-canvas .drawflow .connection .main-path.selected:not(.forge-hit), .forge-canvas .drawflow svg.connection:hover .main-path:not(.forge-hit){ stroke-width:4.5px; filter:brightness(1.2); }
 .forge-canvas .drawflow-delete{ display:none; }
+.forge-canvas input, .forge-canvas textarea{ -webkit-user-select:text; user-select:text; }
+.forge-canvas.panning, .forge-canvas.panning *{ cursor:grabbing !important; }
 /* ✂: where a wire was tapped */
 .forge-cut{ position:absolute; z-index:6; width:auto; margin:0; padding:4px 10px; border-radius:0; border:1px solid var(--fg-accent); background:var(--fg-panel); color:var(--fg-accent); font-size:13px; box-shadow:0 8px 20px -10px rgba(0,0,0,.8); }
 .forge-cut[hidden]{ display:none; }

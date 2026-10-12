@@ -6,10 +6,9 @@
  *              and (for Cinzel/Unica One) a noItalic flag. Index position
  *              matters: the Segmentation Operator's f:N directive and each
  *              preset's `font` field both resolve against this array.
- *   PRESETS  — 36 built-in looks: four Simple ones first (light to read
- *              and quick to draw), then eight each of Whimsy, Sharpness,
- *              Chaos and Touch (PRESET_GROUPS heads each group in the
- *              grid; the order is the grouping). Each entry is grouped into
+ *   PRESETS  — 48 built-in looks. Their order no longer groups them:
+ *              PRESET_GROUPS does, by what a person is looking for (Quiet
+ *              Pages, Night & Stars, Places…). Each entry is grouped into
  *              background / text / effects / font / texture / accents /
  *              border fields (only the fields that preset actually uses —
  *              most presets omit most of these). Order matters: it fills
@@ -445,16 +444,112 @@ export const PRESETS = [
     cardToggle: true, cardColor1: '#3A4558', cardGradientToggle: true, cardColor2: '#6B7C96', cardGradientType: 'radial', cardOpacity: '80', cardBlend: 'multiply',
     fx1Type: 'shadow', fx1Color: '#0B1018', fx1K1: '18', fx1K2: '6', fx1Angle: '90'
   },
+  // ═══ Twelve more (Jupiter–Eukelade): the Basics, and surfaces that had no preset ═══
+{ name: "Hush",   // surface: Plain Noise (🜛) — a page barely clouded
+    bg1: "#E9E5DD", bgGradient: true, bg2: "#DCD6CB", bgAngle: 170, text1: "#2A2724", outlineMode: "off", font: "Spectral",
+    texture: true, textureType: "plainnoise", textureOpacity: 30, texP1: 22, texP2: 50, texP3: 15, textureBlend: 'soft-light',
+    textureTint1: '#FFFFFF', textureTint2: '#6E655A',
+    accent1: "#7A6A56", accent2: "#5F6B6E",
+    spell: "[[⯔🜳🝠🝒]]🜐🝟🜝🜁ᛠ{{⚼ᚠ}}"
+  },
+{ name: "Ruled",   // surface: Stripes (🜛) — a notebook's blue rules
+    bg1: "#F7F4EC", text1: "#1E2A3A", outlineMode: "off", font: "Caveat", maxSize: 140,
+    texture: true, textureType: "stripes", textureOpacity: 42, texP1: 30, texP2: 98, texP3: 2, texP4: 50, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#485A72',   // (under Multiply a dark hue shows twice as light)
+    accent1: "#C8484A", accent2: "#5F86B4",
+    spell: "{{Ᏹ🝯}}♡🝪☉🜟[[🝔⚻ᛊ🝜🝏]]"
+  },
+{ name: "Gingham",   // surface: Checkerboard (🜛) — a picnic cloth
+    bg1: "#FBF6EF", text1: "#3A1C1E", outlineMode: "off", font: "Fraunces",
+    texture: true, textureType: "checker", textureOpacity: 22, texP1: 32, texP2: 25, texP3: 0, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#6C292D',
+    accent1: "#D9525A", accent2: "#5E8C5A",
+    spell: "[[✡ᛖ🝅🝓🝚⚷⚺🝔]]🝱⯚{{🝪}}"
+  },
+{ name: "Sundress",   // surface: Polka Dots (🜛) — pink, with a little scatter
+    bg1: "#FFE8E2", text1: "#4A1630", outlineMode: "off", font: "Comfortaa",
+    texture: true, textureType: "polka", textureOpacity: 40, texP1: 58, texP2: 42, texP3: 12, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#774858',
+    accent1: "#C24A68", accent2: "#3F8A78",
+    spell: "{{🜌☉ᛉ}}[[🝊🜶]]⯢⯓ᛚ🜇⯰⛤"
+  },
+{ name: "Sunroom",   // surface: Gradient (🜛) — warm light pooling in the middle
+    bg1: "#FFF3DE", bgGradient: true, bg2: "#FFE0BD", bgAngle: 160, text1: "#4A2C14", outlineMode: "off", font: "Raleway",
+    texture: true, textureType: "softgradient", textureOpacity: 70, texP1: 90, texP2: 100, texP3: 62, textureBlend: 'soft-light',
+    textureTint1: '#FFF8E0', textureTint2: '#D97F45',
+    accent1: "#B0601E", accent2: "#5A7A40",
+    spell: "{{ᛠ}}[[🜝]]ᛞᚢ♅✝🜮🝛🝂🜿🜌"
+  },
+{ name: "Postcard",   // surface: Watercolor Wash — a sky in blue and apricot
+    bg1: "#FAF6EE", text1: "#24303C", outlineMode: "off", font: "Architects Daughter",
+    texture: true, textureType: "watercolour", textureOpacity: 62, textureBlend: 'multiply',
+    textureTint1: '#7FB2D0', textureTint2: '#EFA683',
+    accent1: "#4F86A8", accent2: "#C06A44",
+    spell: "♡[[⛤🜅🝋🝐🝔🝧🜔⚹⯗]]{{🜐}}",
+    border: true, borderColor: "#FFFFFF", borderThickness: 18, borderOffset: 0
+  },
+{ name: "Riverbed",   // surface: Cells (🜛) — pebbles lit from the upper left
+    bg1: "#6C6A60", bgGradient: true, bg2: "#4C5753", bgAngle: 160, text1: "#F5F2EA", outlineMode: "off", font: "Marcellus",
+    texture: true, textureType: "cells", textureOpacity: 72, texP1: 45, texP2: 15, texP3: 15, texP4: 65, textureBlend: 'overlay', textureLight: '315',
+    textureTint1: '#ECE6D6', textureTint2: '#18201E',
+    accent1: "#E8DCB4", accent2: "#B8D6CE",
+    spell: "{{ᛃ🝔⯰⯘⯗ᛯ♅}}[[♡⯲]]☊🜏",
+    cardToggle: true, cardColor1: '#252B29', cardOpacity: '55', cardBlend: 'multiply'
+  },
+{ name: "Fernlight",   // surface: Moss on Stone — green in a cool wood
+    bg1: "#1D281D", bgGradient: true, bg2: "#2F3F27", bgAngle: 150, text1: "#EEF3E2", outlineMode: "off", font: "Alegreya",
+    texture: true, textureType: "moss", textureOpacity: 58, textureBlend: 'source-over',
+    accent1: "#9CC07A", accent2: "#C9B27A",
+    spell: "ᛇ🜟{{🝪⯛⚻ᕕ}}[[🝂ᛗ⚷🝣🝃]]",
+    cardToggle: true, cardColor1: '#162016', cardOpacity: '50', cardBlend: 'darken'
+  },
+{ name: "Wayfinder",   // surface: Contour Map — a survey sheet in sepia and sage
+    bg1: "#EEE7D3", text1: "#2E2A1E", outlineMode: "off", font: "Source Sans 3",
+    texture: true, textureType: "contour", textureOpacity: 55, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#45351D',
+    accent1: "#8A6A3A", accent2: "#4E7A6A",
+    spell: "🜹🜳⯦[[ᛯᚦ🜞🜙]]{{ᛃᕕ🝧🜼}}",
+    border: true, borderColor: "#8A6A3A", borderThickness: 2, borderOffset: 40
+  },
+{ name: "First Frost",   // surface: Hoarfrost — ice feathering a night window
+    bg1: "#0E1A2A", bgGradient: true, bg2: "#1E3652", bgAngle: 180, text1: "#EAF4FF", outlineMode: "off", font: "Alegreya SC",
+    texture: true, textureType: "frost", textureOpacity: 62, textureBlend: 'screen',
+    textureTint1: '#CFE6FF',
+    accent1: "#A8D0FF", accent2: "#E2E8F0",
+    spell: "{{🜼🝳✝}}ᚹ🝜🜘🜠[[⎐ᛟ🝍⚴]]",
+    vignette: true, vignetteBlend: 'multiply', vignetteIntensity: 28
+  },
+{ name: "Marbled",   // surface: Suminagashi — floating ink, a bookbinder's endpaper
+    bg1: "#F3EEE3", text1: "#1F2430", outlineMode: "off", font: "Libre Baskerville",
+    texture: true, textureType: "suminagashi", textureOpacity: 52, textureBlend: 'multiply',
+    textureTint1: '#2A3D66', textureTint2: '#8A3442',
+    accent1: "#2A3D66", accent2: "#8A3442",
+    spell: "🜪♂[[ᛞ🝫ᚢᛝ]]{{🝁ᚾᛚᛃ🝩}}",
+    cardToggle: true, cardColor1: '#F3EEE3', cardOpacity: '82', cardBlend: 'source-over'
+  },
+{ name: "Rose Window",   // surface: Stained Glass — a cathedral's rose at dusk
+    bg1: "#140C18", bgGradient: true, bg2: "#2B1430", bgAngle: 160, text1: "#FBEFE6", outlineMode: "off", font: "DM Serif Display",
+    texture: true, textureType: "stainedglass", textureOpacity: 52, textureBlend: 'source-over',
+    accent1: "#E05A6A", accent2: "#5A7FE0",
+    spell: "[[🜡🜮🝅🝣]]🜣🝳🝩🜒ᛞᛖ{{🝋}}",
+    cardToggle: true, cardColor1: '#120A14', cardOpacity: '62', cardBlend: 'darken'
+  },
 ];
-/** The preset grid's groups, in order (headers in the grid; the presets
- *  themselves carry no group field, so the five Ruby called perfect stay
- *  exactly as they are). */
+/** The preset grid's groups, in order, named for what a person is looking
+ *  for (Ruby: by use, not by element), each with a Runology Archetype as the
+ *  texture menu's groups have; alphabetical within each. The presets carry no
+ *  group field, so the five Ruby called perfect stay exactly as they are.
+ *  Every preset is in exactly one group (test/presets.test.mjs). */
 export const PRESET_GROUPS = [
-  { name: 'Simple', count: 4 },
-  { name: 'Whimsy ♡', count: 8 },
-  { name: 'Sharpness √', count: 8 },
-  { name: 'Chaos ∆', count: 8 },
-  { name: 'Touch 🜚', count: 8 },
+  { glyph: '🝓', name: 'Quiet Pages',        presets: ['Plainsong', 'Inkwell', 'Sea Glass', 'Dusk Letter', 'Hush', 'Ruled'] },
+  { glyph: '𝀶', name: 'Bright & Playful',   presets: ['Gingham', 'Sundress', 'Sunroom', 'Postcard', 'Daydream'] },
+  { glyph: '🝊', name: 'Night & Stars',      presets: ['Andromeda', 'Starbloom', 'Nocturne', 'Solstice', 'Event Horizon', 'Sleepwalk'] },
+  { glyph: '🜚', name: 'Glow & Glitter',     presets: ['Euphoria', 'Kindling', 'Lucid', 'Gold Leaf'] },
+  { glyph: '🜁', name: 'Weather & Water',    presets: ['December', 'Petrichor', 'Homebound', 'Stillwater', 'Lotus Bloom', 'First Frost'] },
+  { glyph: '🜥', name: 'Places',             presets: ['Homesick', 'Insomnia', 'Mirage', 'Fernlight', 'Wayfinder', 'Riverbed'] },
+  { glyph: 'Ᏹ', name: 'Paper & Keepsakes',  presets: ['Handled', 'Foxed', 'Sealed', 'Mended', 'Hourglass', 'Ashfall', 'Marbled'] },
+  { glyph: '🝢', name: 'Bold & Graphic',     presets: ['Fervor', 'Rumor', 'Signal', 'Projection'] },
+  { glyph: '⎐', name: 'Ritual & Omen',      presets: ['Desire', 'Gateway', 'Omen', 'Rose Window'] },
 ];
 
 /**
@@ -514,6 +609,7 @@ export const isProductionHost = () => typeof location !== 'undefined' && /^poetr
  * Order order, Vitrum engraving and record, Creation what you make).
  */
 export const TEXTURE_GROUPS = [
+  { glyph: '🜛', name: 'Basics', types: ['cells', 'checker', 'softgradient', 'plainnoise', 'polka', 'stripes'] },
   { glyph: '🜃', name: 'Paper & Grounds', types: ['coldpress', 'grain', 'linen', 'oldpaper'] },
   { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'magicparticles', 'clouds', 'embers'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain'] },

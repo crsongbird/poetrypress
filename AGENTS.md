@@ -72,7 +72,7 @@ from the source files (unbuilt) — everything must work both ways.
 | `steps.js` · `stepsTouch.js` · `stepsChaos.js` · `stepsWhimsy.js` · `stepsLight.js` · `stepsSharpness.js` (Halftone Screen, Film Grain) | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains (Touch: weave, cloth, panes, glass, flakes · Chaos: crazing, brushwork, glaze · Whimsy: smoke, light shaft, dust motes, painted sky, painted ridges, watercolour wash · Light: ANGRY STROKES (Painter's Frustration), the LIGHT ENGINE as a part (material: picture + heights + gloss map + shade/highlight/light hues, lit by the dial through lightHeights; a canvas pass lights on a ≤1.2M-point grid and composes at full size), OIL PAINT (any picture → strokes along its forms, stopping at edges, Hertzmann 1998, plus the paint's heights), CANVAS WEAVE) |
 | `cartomancyTable.js` | what else is on Cartomancy's table (TABLE_OBJECTS: candle, cup, glass, crystal ball… each with its layer, weight, size, variety and painter), where clutter goes (crtTableObjects), counters (crtToken) and card damage (crtDamageFor, crtCardPath, crtDamage). Bundled BEFORE cartomancy.js and imports nothing from it: cartomancy.js hands it its drawing kit (CRT_KIT) when it loads |
 | `cartomancy.js` | Cartomancy: a card game in progress, and its parts — table, card, coin, the deal by a game's rules — also the Athanor's Table, Deal, Table Objects and Coins steps (CARD_STEPS) |
-| `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape, Painter's Frustration, Halftone, Film Grain, First Snow, Burning Mana, Euphoria Dust); each an Athanor template with its TEACH |
+| `chains.js` | textures rebuilt as chains of steps (the six Basics, Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape, Painter's Frustration, Halftone, Film Grain, First Snow, Burning Mana, Euphoria Dust, Contour Map, Flow-Field Ink, Turing Skin, Watercolor Wash); each an Athanor template with its TEACH |
 | `athanor.js` · `forge.js` | the Athanor: graph walker, cache and budget (in the worker) · node editor UI (Drawflow) |
 | `boxFx.js` | the inset box's glass and GPU blends |
 | `runology.js` | Ruby's Runes of Power: Archetypes, Accent Runes, Chroma (its words in the seed banks, its glyphs among the spell glyphs) |
@@ -229,6 +229,22 @@ two parts agree.
   edge in came-widths/8, pane number, palette slot) → Glass (lit behind and
   in front; a pane's look comes from its number: mulberry32, so the same pane
   is the same glass; the dome turns outward along −∇edge).
+- THE BASICS (chains plainnoise, stripes, polka, checker, softgradient,
+  cells; menu group 🜛 first): quiet grounds of two or three general parts
+  each (Value Noise, Waves, Threshold, Cells, Math, Gradient, Mix, Levels),
+  every slider a plain 0–100 (Gradient's Angle in degrees). They are the
+  Athanor's easiest lessons as much as textures.
+- PARTS THAT KEEP A TEXTURE'S OWN RANDOMNESS (Particles, Terrain, Turing
+  Pattern, Flow Lines, Washes) draw under withSeed(ctx.seed + Variant·7919),
+  so the texture they came from keeps its exact look; Variant (0–99) gives
+  two such parts in one graph different draws.
+- CONTOUR MAP: Terrain → Contour Lines (any gray map's isolines) inked by Mix
+  over the Light Engine's hillshade (relief now reaches 200). TURING SKIN:
+  Turing Pattern (Gray–Scott) → Map Range → Light Engine. FLOW-FIELD INK:
+  Flow Lines (Jobard–Lefer spacing; an Angle Map input bends it by any gray
+  map). WATERCOLOR WASH: Washes (two densities) → Pigment → Pigment (any
+  gray map laid as watercolor). The old Reaction–Diffusion part stays for
+  old graphs (it asks for the Turing Skin texture).
 - PARTICLES (stepsWhimsy 'particles', canvas): flakes / sparks / motes, the
   old painters (texWhimsy genSnow, genEmbers, genMagicParticles). It draws
   under withSeed(ctx.seed + Scatter·7919), NOT the node's own seed, so
@@ -620,7 +636,14 @@ one. Each owns a different visual channel, so they combine without competing.
   element that requires another person to have been there. Touch textures
   read as relief and take the light.
 - **Equal weight**: no element is smaller because it is quieter. Today:
-  9 · 8 · 8 · 11 textures, 4 presets each.
+  9 · 8 · 8 · 11 textures, and the six Basics (🜛), which take whichever
+  element their four readings give them.
+- **Presets** are grouped by what a person is looking for (PRESET_GROUPS:
+  Quiet Pages, Bright & Playful, Night & Stars, Glow & Glitter, Weather &
+  Water, Places, Paper & Keepsakes, Bold & Graphic, Ritual & Omen), each
+  headed by a Runology Archetype, alphabetical within; every preset in
+  exactly one group (test/presets.test.mjs). Under Multiply a grey texture's
+  Dark Hue shows twice as light (pixelPass's remap): pick it half as bright.
 
 **Symbols.** 🜚 is Touch, the Return glyph, and the app's mark for "touch
 this" — this exact variant; it is personally significant, never substitute

@@ -47,12 +47,15 @@ Guidance. Script Highlighting colors the markup as you type.
 
 Choose the **aspect ratio** (9:16 to begin with, or square, landscape, or a
 custom size in pixels) and where the text sits. **Built-In Presets** are whole
-looks (typeface, colors, texture, frame) applied in one click. Every click
+looks (typeface, colors, texture, frame) applied in one click, grouped by what
+you might be after: Quiet Pages, Bright & Playful, Night & Stars, Places and
+so on. Every click
 draws a new seed, so a preset gives a slightly different image each time. The
 preset stays lit until you change something; clicking it again rerolls it.
 
 **Custom Presets** are your own saved looks, in alphabetical order. Save the
-current look with Create in Esoterica → Spellcrafting. A first visit finds
+current look with ＋ Save this look at the end of the list, or Create in
+Esoterica → Spellcrafting. A first visit finds
 one plain example there, to try or delete.
 
 ### 3. Thoughtforms: the type

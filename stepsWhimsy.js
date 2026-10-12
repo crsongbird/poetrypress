@@ -26,7 +26,7 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed } from './texCore.js';
+import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles } from './texWhimsy.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -647,10 +647,83 @@ const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'co
 // PARTICLES: three ways light hangs in the air, each the painter of a texture that used to be its own
 // (texWhimsy: genSnow, genEmbers, genMagicParticles) — flakes (First Snow), sparks (Burning Mana) and
 // motes (Euphoria Dust) — drawn over any picture, in any colours, the wind from any direction
+// Lay a comb through water
+// and every tooth leaves a line
+// that will not cross another.
+// FLOW LINES (Flow-Field Ink's painter, texWhimsy genFlowField until now; after Tyler Hobbs's essay on flow fields):
+// evenly spaced streamlines, as Jobard &
+// Lefer (1997) space them — a line grows from a seed both ways along the field and stops short of any other line —
+// drawn as tapering strokes of ink. The field is the dial's direction bent by noise (Turbulence), or bent by any gray
+// map wired into Angle Map. px/area: the canvas's own canonical sizes (E.px, E.carea), so the grid and the page agree.
+function whimFlowLines(w, h, o, px, area){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU);
+  const unit = Math.min(w, h), zoom = o.zoom, amt = o.amt, turb = o.turb;
+  const lv = lightVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
+  let fieldAt;
+  if(o.map){ const M = o.map, mw = o.mw, mh = o.mh;
+    fieldAt = (x, y) => base + (M[Math.min(mh - 1, Math.max(0, y/h*mh|0))*mw + Math.min(mw - 1, Math.max(0, x/w*mw|0))] - 0.5)*Math.PI*2.6*turb; }
+  else { const g1 = makeNoiseGrid(6, 6), g2 = makeNoiseGrid(13, 13);
+    fieldAt = (x, y) => { const u = x/unit/zoom, v = y/unit/zoom;
+      return base + (sampleNoiseGrid(g1, 6, 6, u*2.2, v*2.2)*0.75 + sampleNoiseGrid(g2, 13, 13, u*5, v*5)*0.25 - 0.5)*Math.PI*2.6*turb; }; }
+  const sep = px(54)*zoom/Math.max(0.3, amt), step = Math.max(0.6, px(4)), cell = sep*0.5;
+  const gw = Math.ceil(w/cell) + 1, gh = Math.ceil(h/cell) + 1, grid = new Array(gw*gh);
+  const near = (x, y, own) => { const cx = Math.floor(x/cell), cy = Math.floor(y/cell);
+    for(let j = cy - 2; j <= cy + 2; j++) for(let i = cx - 2; i <= cx + 2; i++){ if(i < 0 || j < 0 || i >= gw || j >= gh) continue; const L = grid[j*gw + i]; if(!L) continue;
+      for(const p of L){ if(p[2] === own && p[3] > -1) continue; const dx = p[0] - x, dy = p[1] - y; if(dx*dx + dy*dy < sep*sep) return true; } }
+    return false; };
+  const add = (x, y, own) => { const k = Math.floor(y/cell)*gw + Math.floor(x/cell); (grid[k] || (grid[k] = [])).push([x, y, own, 0]); };
+  const tries = Math.round(area/(3072*3072)*1400*Math.min(3, amt));
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  let strokeId = 0;
+  for(let t = 0; t < tries; t++){
+    const sx = Math.random()*w, sy = Math.random()*h;
+    if(near(sx, sy, -1)) continue;
+    const id = strokeId++, pts = [[sx, sy]];
+    for(const dir of [1, -1]){                       // walk both ways from the seed point
+      let x = sx, y = sy;
+      for(let s = 0; s < 900; s++){
+        const a = fieldAt(x, y); const nx = x + Math.cos(a)*step*dir, ny = y + Math.sin(a)*step*dir;
+        if(nx < -sep || ny < -sep || nx > w + sep || ny > h + sep) break;
+        const cx = Math.floor(nx/cell), cy = Math.floor(ny/cell); let hit = false;      // too close to ANOTHER line
+        for(let j = cy - 2; j <= cy + 2 && !hit; j++) for(let i = cx - 2; i <= cx + 2 && !hit; i++){ if(i < 0 || j < 0 || i >= gw || j >= gh) continue; const L = grid[j*gw + i]; if(!L) continue;
+          for(const p of L){ if(p[2] === id) continue; const dx = p[0] - nx, dy = p[1] - ny; if(dx*dx + dy*dy < sep*sep*0.55){ hit = true; break; } } }
+        if(hit) break;
+        x = nx; y = ny; if(dir > 0) pts.push([x, y]); else pts.unshift([x, y]);
+      }
+    }
+    if(pts.length < 12) continue;
+    for(const p of pts) if(p[0] >= 0 && p[1] >= 0 && p[0] < w && p[1] < h) add(p[0], p[1], id);
+    // one ink or the other, its width a little its own, tapering at both ends
+    const wd = px(9 + Math.random()*9)*zoom*Math.min(1.3, 0.55 + 0.45/Math.max(0.4, amt)), col = Math.random() < 0.18 ? o.ink2 : o.ink1;
+    ctx.strokeStyle = col; ctx.globalAlpha = 0.82 + Math.random()*0.15;
+    const n = pts.length, seg = Math.max(4, Math.floor(n/14));
+    for(let a = 0; a < n - 1; a += seg){
+      const b = Math.min(n - 1, a + seg), m = (a + b)/2/(n - 1), taper = Math.min(1, Math.sin(m*Math.PI)*1.6);
+      ctx.lineWidth = Math.max(px(0.4), wd*(0.35 + 0.65*taper));
+      ctx.beginPath(); ctx.moveTo(pts[a][0], pts[a][1]); for(let q = a + 1; q <= b; q++) ctx.lineTo(pts[q][0], pts[q][1]); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 export const WHIMSY_STEPS = {
+  flowlines: { cat: 'Marks', label: 'Flow Lines', ins: ['over', 'angle map', 'ink', 'second ink', 'flow from'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'colour', 'value'], outs: ['image'] },
+    params: [WHIM_R('amount', 'Lines', 100, 30, 300), WHIM_R('size', 'Scale', 100, 40, 250), WHIM_R('turbulence', 'Turbulence', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, i1 = E.input(n, 3), i2 = E.input(n, 4), dv = E.input(n, 5), mv = E.input(n, 2);
+      const o = { amt: E.num(n, 'amount', 100)/100, zoom: E.num(n, 'size', 100)/100, turb: E.num(n, 'turbulence', 50)/100,
+        light: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0),
+        ink1: Array.isArray(i1) ? whimHex(i1) : '#2B2A3A', ink2: Array.isArray(i2) ? whimHex(i2) : '#7A4A6A' };
+      if(mv != null){ const mw = Math.max(8, Math.min(512, w >> 2)), mh = Math.max(8, Math.round(mw*h/w)); o.map = kitField(mv, mw, mh); o.mw = mw; o.mh = mh; }
+      // the texture's own seed (+ Variant): Flow-Field Ink draws the lines it always drew
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => { const c = whimFlowLines(w, h, o, E.px, E.carea);
+        const over = E.input(n, 1); if(over == null) return [c];
+        const [pc, px] = kitPicture(over, w, h); px.drawImage(c, 0, 0); return [pc]; }); },
+    run(E, n){ const [c] = this.paint(E, n); return [E.readCanvas(c)]; } },
   particles: { cat: 'Marks', label: 'Particles', ins: ['over', 'color a', 'color b', 'wind from'], outs: ['image'], io: { ins: ['image', 'colour', 'colour', 'value'], outs: ['image'] },
-    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Scatter', 0, 0, 99)], cost: () => 6,
+    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Variant', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, kind = String(E.P(n, 'kind', 'flakes')), amt = Math.max(0.02, E.num(n, 'amount', 100)/100), zoom = Math.max(0.2, E.num(n, 'size', 100)/100), form = E.num(n, 'form', 50)/100;
       const ca = E.input(n, 2), cb = E.input(n, 3), dv = E.input(n, 4), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
       // the texture's own seed (+ Scatter), not the part's: so First Snow, Burning Mana and Euphoria Dust fall exactly as they always did

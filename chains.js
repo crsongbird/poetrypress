@@ -25,6 +25,79 @@ import { weaveGridDiv } from './stepsTouch.js';
 import { paramPort } from './steps.js';
 
 export const TEXTURE_CHAINS = {
+  // ═══ 🜛 BASICS: quiet grounds, two or three parts each — the easiest graphs to open and learn from ═══
+  // 🜛 Plain Noise: Value Noise → Levels
+  plainnoise: { label: 'Plain Noise', div: 2, teach: 'This is Plain Noise, a soft cloudy ground. Value Noise makes the clouds: Scale sets how many across the page, Detail adds finer clouds over them (octaves). Levels sets the Contrast by moving its dark and light points toward each other. Try: wire this noise into another part\'s gray input, a Warp or a Color Ramp.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 30 }, 40, 40],                     // 1
+      ['knob', { slot: '2', name: 'Detail', def: 50 }, 40, 140],                   // 2
+      ['knob', { slot: '3', name: 'Contrast', def: 20 }, 40, 240],                 // 3
+      ['noise', { scale: 60, '~scale': '5,200', octaves: 4, '~octaves': '1,6' }, 320, 60],   // 4
+      ['levels', { lo: 0, '~lo': '0,40', hi: 100, '~hi': '100,60', gamma: 50 }, 600, 120],  // 5
+      ['surface', { name: 'Plain Noise', ground: 'grey' }, 880, 120]],             // 6
+    wires: [[1, 1, 4, paramPort('noise', 'scale')], [2, 1, 4, paramPort('noise', 'octaves')], [3, 1, 5, paramPort('levels', 'lo')], [3, 1, 5, paramPort('levels', 'hi')],
+      [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🜛 Stripes: Waves → Threshold
+  stripes: { label: 'Stripes', div: 2, teach: 'This is Stripes. Waves makes smooth bands of light and dark; Threshold cuts them into stripes. Where Threshold cuts sets the Stripe Width, and its Softness blurs the edges back toward waves. Angle turns the Waves. Try: wire a Value Noise into the Waves\' Warp input to make the stripes wander like wood grain.', nodes: [
+      ['knob', { slot: '1', name: 'Stripe Count', def: 20 }, 40, 40],              // 1
+      ['knob', { slot: '2', name: 'Stripe Width', def: 50 }, 40, 140],             // 2
+      ['knob', { slot: '3', name: 'Softness', def: 20 }, 40, 240],                 // 3
+      ['knob', { slot: '4', name: 'Angle', def: 50 }, 40, 340],                    // 4
+      ['waves', { freq: 20, '~freq': '3,60', angle: 90, '~angle': '0,180' }, 320, 60],     // 5
+      ['threshold', { at: 50, '~at': '97,3', soft: 20, '~soft': '1,100' }, 600, 140],    // 6
+      ['surface', { name: 'Stripes', ground: 'grey' }, 880, 140]],                 // 7
+    wires: [[1, 1, 5, paramPort('waves', 'freq')], [4, 1, 5, paramPort('waves', 'angle')], [2, 1, 6, paramPort('threshold', 'at')], [3, 1, 6, paramPort('threshold', 'soft')],
+      [5, 1, 6, 1], [6, 1, 7, 1]] },
+  // 🜛 Polka Dots: Cells (in rows, no jitter) → Threshold of the distance to each center
+  polka: { label: 'Polka Dots', div: 2, teach: 'This is Polka Dots, made from Cells. With no Jitter, Cells puts one point in the middle of every square of a grid; its first output is how far each spot is from the nearest point. Threshold keeps what is near: a round dot about every point. Spacing is Cells\' Scale, Dot Size is where Threshold cuts, and Scatter is the Jitter that throws the points out of their rows. Try: wire the Cells\' Edges output into the Surface instead.', nodes: [
+      ['knob', { slot: '1', name: 'Spacing', def: 50 }, 40, 40],                   // 1
+      ['knob', { slot: '2', name: 'Dot Size', def: 45 }, 40, 140],                 // 2
+      ['knob', { slot: '3', name: 'Scatter', def: 0 }, 40, 240],                   // 3
+      ['cells', { scale: 110, '~scale': '200,30', jitter: 0, '~jitter': '0,100' }, 320, 60],  // 4
+      ['threshold', { at: 25, '~at': '8,46', soft: 4, '~soft': '2,6' }, 600, 120], // 5
+      ['surface', { name: 'Polka Dots', ground: 'grey' }, 880, 120]],              // 6
+    wires: [[1, 1, 4, paramPort('cells', 'scale')], [3, 1, 4, paramPort('cells', 'jitter')], [2, 1, 5, paramPort('threshold', 'at')],
+      [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🜛 Checkerboard: two Waves, across and down, each cut by Threshold; Math (difference) crosses them
+  checker: { label: 'Checkerboard', div: 2, teach: 'This is Checkerboard. Two Waves, one across and one down, are each cut into stripes by Threshold. Math, set to Difference, keeps a square where exactly one of the two stripes is light: that is a checkerboard. One Knob (Squares) sets both Waves\' Frequency, Softness both Thresholds, and Turn both Angles, so the squares stay square. Try: set Math to Multiply for a grid of windows, or Max for a plaid.', nodes: [
+      ['knob', { slot: '1', name: 'Squares', def: 20 }, 40, 40],                   // 1
+      ['knob', { slot: '2', name: 'Softness', def: 10 }, 40, 160],                 // 2
+      ['knob', { slot: '3', name: 'Turn', def: 0 }, 40, 280],                      // 3
+      ['waves', { freq: 12, '~freq': '2,40', angle: 0, '~angle': '0,90' }, 320, 40],       // 4
+      ['waves', { freq: 12, '~freq': '2,40', angle: 90, '~angle': '90,180' }, 320, 240],   // 5
+      ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 40],                // 6
+      ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 240],               // 7
+      ['math', { op: 'difference' }, 860, 140],                                    // 8
+      ['surface', { name: 'Checkerboard', ground: 'grey' }, 1100, 140]],           // 9
+    wires: [[1, 1, 4, paramPort('waves', 'freq')], [1, 1, 5, paramPort('waves', 'freq')], [3, 1, 4, paramPort('waves', 'angle')], [3, 1, 5, paramPort('waves', 'angle')],
+      [2, 1, 6, paramPort('threshold', 'soft')], [2, 1, 7, paramPort('threshold', 'soft')],
+      [4, 1, 6, 1], [5, 1, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
+  // 🜛 Gradient: a straight and a round Gradient, Mixed by Roundness; Levels bends the falloff
+  softgradient: { label: 'Gradient', div: 4, teach: 'This is Gradient, a smooth fall from dark to light. There are two Gradient parts, one straight and one round (Invert turns the round one into a glow, light in the middle); Mix blends between them by Roundness, so the ramp can bend into a glow. Angle turns the straight one. Levels\' Gamma is the Falloff: how quickly the light gives way. Try: wire a Value Noise into Mix\'s amount instead of the Knob.', nodes: [
+      ['knob', { slot: '1', name: 'Angle', def: 25 }, 40, 40],                     // 1
+      ['knob', { slot: '2', name: 'Roundness', def: 0 }, 40, 160],                 // 2
+      ['knob', { slot: '3', name: 'Falloff', def: 50 }, 40, 280],                  // 3
+      ['gradient', { shape: 'linear', angle: 90, '~angle': '0,360' }, 320, 40],    // 4
+      ['gradient', { shape: 'radial', angle: 90 }, 320, 200],                      // 5
+      ['mix', { t: 0, '~t': '0,100' }, 800, 100],                                  // 6
+      ['levels', { lo: 0, hi: 100, gamma: 50, '~gamma': '0,100' }, 1040, 120],     // 7
+      ['surface', { name: 'Gradient', ground: 'grey' }, 1280, 120],                // 8
+      ['invert', {}, 560, 200]],                                                   // 9 (light in the middle: a glow)
+    wires: [[1, 1, 4, paramPort('gradient', 'angle')], [2, 1, 6, paramPort('mix', 't')], [3, 1, 7, paramPort('levels', 'gamma')],
+      [4, 1, 6, 1], [5, 1, 9, 1], [9, 1, 6, 2], [6, 1, 7, 1], [7, 1, 8, 1]] },
+  // 🜛 Cells: Cells' distance (inverted: domes) and edges (inverted: flat cells), Mixed by Lines; lit by the dial
+  cells: { label: 'Cells', div: 2, teach: 'This is Cells, like pebbles, cobbles or a sponge. Cells gives the distance to each cell\'s middle and the lines between cells; Invert turns each the right way up (light in the middle). Mix blends the round domes into flat cells with crisp lines by Lines. The same picture goes into the Surface\'s Height, scaled by Relief, so the dial lights it. Try: turn the light dial on the page, then set Order to 0 for a grid of tiles.', nodes: [
+      ['knob', { slot: '1', name: 'Cell Size', def: 40 }, 40, 40],                 // 1
+      ['knob', { slot: '2', name: 'Order', def: 20 }, 40, 140],                    // 2
+      ['knob', { slot: '3', name: 'Lines', def: 50 }, 40, 240],                    // 3
+      ['knob', { slot: '4', name: 'Relief', def: 40 }, 40, 340],                   // 4
+      ['cells', { scale: 60, '~scale': '200,20', jitter: 80, '~jitter': '100,0' }, 300, 60],  // 5
+      ['invert', {}, 540, 20], ['invert', {}, 540, 140],                           // 6, 7
+      ['mix', { t: 50, '~t': '0,100' }, 760, 80],                                  // 8
+      ['levels', { lo: 10, hi: 95, gamma: 50 }, 980, 80],                          // 9
+      ['math', { op: 'multiply' }, 980, 260],                                      // 10
+      ['surface', { name: 'Cells', ground: 'grey' }, 1220, 140]],                  // 11
+    wires: [[1, 1, 5, paramPort('cells', 'scale')], [2, 1, 5, paramPort('cells', 'jitter')], [5, 1, 6, 1], [5, 2, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [3, 1, 8, paramPort('mix', 't')],
+      [8, 1, 9, 1], [9, 1, 11, 1], [9, 1, 10, 1], [4, 1, 10, 2], [10, 1, 11, 2]] },
   // √ Harsh Rain: far sheets, then near streaks drawn over them; the dial is
   // where the rain comes from, Gusts swings it about that
   rainstreaks: { label: 'Harsh Rain', div: 2, teach: 'This is Harsh Rain. The Light Dial sets the direction the rain comes from. The first Streaks part draws far, soft sheets of rain; the second draws near streaks over them. The two Knobs are this texture\'s sliders on the page (Rain Zoom and Gusts), wired into the settings they move. Try: turn the dial, then raise Gusts.', nodes: [
@@ -141,6 +214,57 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // 🜚 Contour Map: Terrain → Contour Lines, inked over the land lit by the Light Engine (the hillshade)
+  contour: { label: 'Contour Map', div: 2, teach: 'This is Contour Map, a survey of an imagined land. Terrain makes the land\'s heights. The Light Engine lights a plain gray picture by those heights (the hillshade), and Mix fades it toward plain gray by the Hillshade knob. Contour Lines draws the lines of equal height, every fifth heavier; the last Mix inks them over the hillshade in the Ink color. Try: wire another texture, or a Gradient, into Contour Lines instead of the Terrain.', nodes: [
+      ['knob', { slot: '1', name: 'Terrain Scale', def: 23 }, 40, 40],             // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Contour Interval', def: 32 }, 40, 160],         // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Hillshade', def: 45 }, 40, 280],                // 3
+      ['terrain', { scale: 100, '~scale': '40,300', crests: 22, variant: 0 }, 300, 40],   // 4
+      ['number', { value: 50 }, 300, 220],                                         // 5  (a plain gray picture)
+      ['material', { relief: 200, gloss: 5, shine: 0, shadow: 35, occlusion: 15, ambient: 45 }, 560, 160],   // 6
+      ['mix', { t: 45, '~t': '0,100' }, 820, 200],                                 // 7  (the hillshade, faded to gray)
+      ['contours', { levels: 20, '~levels': '6,50', weight: 100, index: 5, strength: 90 }, 560, 0],   // 8
+      ['colour', { hex: '#222222' }, 820, 20],                                     // 9  (the ink)
+      ['mix', { t: 50 }, 1060, 100],                                               // 10 (the lines inked over it)
+      ['surface', { name: 'Contour Map', ground: 'grey' }, 1300, 100]],            // 11
+    wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
+      [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
+  // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
+  turing: { label: 'Turing Skin', div: 2, teach: 'This is Turing Skin. Turing Pattern grows the marks of an animal\'s skin or a coral (Pattern slides from spots to holes). Map Range turns it into a picture, the marks a little lighter than the skin between, and the Light Engine raises the marks by Relief and lights them by the dial. Try: wire the Turing Pattern into a Color Ramp first, or set Pattern to Maze.', nodes: [
+      ['knob', { slot: '1', name: 'Pattern Scale', def: 25 }, 40, 40],             // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Growth', def: 75 }, 40, 140],                   // 2  (80 of 20–100)
+      ['knob', { slot: '3', name: 'Pattern', def: 25 }, 40, 240],                  // 3
+      ['knob', { slot: '4', name: 'Relief', def: 50 }, 40, 340],                   // 4
+      ['grayscott', { pattern: 25, '~pattern': '0,100', growth: 80, '~growth': '20,100', scale: 100, '~scale': '50,250', variant: 0 }, 300, 80],   // 5
+      ['maprange', { inLo: 0, inHi: 100, outLo: 31, outHi: 69 }, 560, 40],          // 6  (the skin 128 ∓ 48)
+      ['material', { relief: 23, '~relief': '6,40', gloss: 35, shine: 47, shadow: 45, occlusion: 40, ambient: 45 }, 800, 120],   // 7
+      ['surface', { name: 'Turing Skin', ground: 'grey' }, 1060, 140]],            // 8
+    wires: [[1, 1, 5, paramPort('grayscott', 'scale')], [2, 1, 5, paramPort('grayscott', 'growth')], [3, 1, 5, paramPort('grayscott', 'pattern')], [4, 1, 7, paramPort('material', 'relief')],
+      [5, 1, 6, 1], [6, 1, 7, 1], [5, 1, 7, 2], [7, 1, 8, 1]] },
+  // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
+  watercolour: { label: 'Watercolor Wash', div: 2, teach: 'This is Watercolor Wash. Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
+      ['knob', { slot: '1', name: 'Wash Size', def: 29 }, 40, 40],                 // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Pigment', def: 32 }, 40, 140],                  // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Pigment Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Pigment Hue' }, 40, 500],   // 5, 6
+      ['washes', { amount: 100, '~amount': '30,250', size: 100, '~size': '40,250', wet: 50, '~wet': '0,100' }, 300, 60],   // 7
+      ['pigment', { wet: 50, '~wet': '0,100' }, 560, 60],                          // 8
+      ['pigment', { wet: 50, '~wet': '0,100' }, 800, 160],                         // 9
+      ['surface', { name: 'Watercolor Wash', ground: 'colour' }, 1040, 160]],      // 10
+    wires: [[1, 1, 7, paramPort('washes', 'size')], [2, 1, 7, paramPort('washes', 'amount')], [3, 1, 7, paramPort('washes', 'wet')], [3, 1, 8, paramPort('pigment', 'wet')], [3, 1, 9, paramPort('pigment', 'wet')],
+      [7, 1, 8, 2], [5, 1, 8, 3], [4, 1, 8, 4], [8, 1, 9, 1], [7, 2, 9, 2], [6, 1, 9, 3], [4, 1, 9, 4], [9, 1, 10, 1]] },
+  // ♡ Flow-Field Ink: one Flow Lines part, the dial its current
+  flowfield: { label: 'Flow-Field Ink', canvas: true, teach: 'This is Flow-Field Ink. One part makes it: Flow Lines, which grows evenly spaced ink lines along a current and stops each one short of the others. The Light Dial goes into Flow From, so the current runs the way the dial points; Turbulence bends it into eddies. The two Hues are the inks. Try: wire a Terrain or a Value Noise into Angle Map, then turn Turbulence up.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Lines', def: 26 }, 40, 140],                    // 2  (100 of 30–300)
+      ['knob', { slot: '3', name: 'Turbulence', def: 50 }, 40, 240],               // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 500],   // 5, 6
+      ['flowlines', { amount: 100, '~amount': '30,300', size: 100, '~size': '40,250', turbulence: 50, '~turbulence': '0,100' }, 320, 140],   // 7
+      ['surface', { name: 'Flow-Field Ink', ground: 'colour' }, 600, 160]],        // 8
+    wires: [[1, 1, 7, paramPort('flowlines', 'size')], [2, 1, 7, paramPort('flowlines', 'amount')], [3, 1, 7, paramPort('flowlines', 'turbulence')],
+      [4, 1, 7, 5], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ♡ First Snow, Burning Mana and Euphoria Dust: one Particles part each, of its own kind
   snow: { label: 'First Snow', canvas: true, teach: 'This is First Snow. One part makes it: Particles, set to flakes. The Light Dial goes into Wind From, so the wind blows from where the dial points, and the Wind knob says how hard. The flakes are colored by the Snow Hue (or anything wired into Color A). Try: turn the dial with Wind up, then set Kind to sparks.', nodes: [
       ['knob', { slot: '1', name: 'Flake Size', def: 14 }, 40, 40],                // 1  (100 of 60–340)

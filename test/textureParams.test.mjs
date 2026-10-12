@@ -11,7 +11,10 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock } from './canvasMock.mjs';
 installCanvasMock();
-const { TEXTURE_PARAMS, TEXTURE_CAPS, paramsFor, getTextureCanvas } = await import('../textureGenerators.js');
+const { TEXTURE_PARAMS, TEXTURE_CAPS, paramsFor, getTextureCanvas, clearTextureCache } = await import('../textureGenerators.js');
+const { clearAthanorCache } = await import('../athanor.js');
+// a probe measures the drawing itself: a texture (or a chain's part) served from a cache draws nothing
+const fresh = () => { clearTextureCache(); clearAthanorCache(); };
 const { PRESETS } = await import('../appOptions.js');
 
 let failures = 0;
@@ -27,7 +30,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 47 textures, and the Athanor\'s own', new Set(textureTypes).size === 48 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
+check('the picker offers 53 textures, and the Athanor\'s own', new Set(textureTypes).size === 54 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -40,7 +43,7 @@ check('every texture declares two params, plus an optional third that must be Fo
     || ((t === 'dunes' || t === 'moss') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
     // (Painted Landscape: Tilt, then Color — grey as it was, or painted in colour)
     || (t === 'landscape' && d.length === 6 && d[2].key === 'form' && d[3].key === 'tilt' && d[4].key === 'hue' && d[5].key === 'shape')
-    || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash' || t === 'turing' || t === 'frost') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')
+    || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash' || t === 'turing' || t === 'frost' || t === 'stripes' || t === 'cells') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')
     // the Athanor: six plain knobs, named on the page from its graph's Knob nodes
     || (t === 'athanor' && d.length === 6 && d.every((p, i) => p.key === 'k' + (i + 1)))));
 
@@ -104,7 +107,7 @@ check('Math Static was replaced, and its successor is the Transmutation Circle (
 // real size change from a no-op.
 const M = await import('./canvasMock.mjs');
 function probe(type, v1, v2){
-  M.resetCreatedCanvases();
+  fresh(); M.resetCreatedCanvases();
   const c = getTextureCanvas(type, 600, 600, { accent1: '#c9a876', accent2: '#7a8ca3', seed: 5, p1: v1, p2: v2 });
   // Several textures do their real work on an internal downscaled canvas, so
   // the returned canvas's own stats say nothing about them. Aggregate across
@@ -122,7 +125,10 @@ function probe(type, v1, v2){
          // otherwise be lost in the noise of a texture that also draws a lot.
          + st.rotSigned*5000;
   }
-  return { geo, dims: M.createdCanvases.map(x=>x.width+'x'+x.height).join(',') };
+  // the marks alone (no pixels), and where every written pixel's tone lies
+  let lines = 0, hash = 0;
+  for(const cv of M.createdCanvases){ const st = cv.getContext('2d')._stats; lines += st.radiusSum + st.pathLen + st.pathDx + st.rectArea/500; hash = (Math.imul(hash, 31) + (st.pixelHash || 0)) >>> 0; }
+  return { geo, lines, hash, dims: M.createdCanvases.map(x=>x.width+'x'+x.height).join(',') };
 }
 function movesWith(type, i){
   const d = TEXTURE_PARAMS[type];
@@ -132,7 +138,9 @@ function movesWith(type, i){
   const [a0, a1] = span(i);
   const lo = i === 0 ? probe(type, a0, d[1].def) : probe(type, d[0].def, a0);
   const hi = i === 0 ? probe(type, a1, d[1].def) : probe(type, d[0].def, a1);
-  return Math.abs(hi.geo - lo.geo) > Math.max(0.25, lo.geo * 0.002) || lo.dims !== hi.dims;
+  return Math.abs(hi.geo - lo.geo) > Math.max(0.25, lo.geo * 0.002) || lo.dims !== hi.dims || lo.hash !== hi.hash
+    // marks drawn and read back (a chain's parts) show only in their geometry: weigh it apart from the pixels
+    || Math.abs(hi.lines - lo.lines) > Math.max(0.25, lo.lines * 0.002);
 }
 // 'astral' is a composite assembled in canvasRenderer from astral_fog and
 // astral_stars; probing the composite name directly is meaningless, so its
@@ -148,11 +156,11 @@ if(deadSecond.length) console.log('   inert:', deadSecond.join(', '));
 // zoom must change size WITHOUT changing how many things are drawn -- the
 // old implementation coupled them, which is why rain thinned as it zoomed
 const rainLo = probe('rainstreaks', 100, 100), rainHi = probe('rainstreaks', 500, 100);
-const strokesOf = (v1) => { M.resetCreatedCanvases();
+const strokesOf = (v1) => { fresh(); M.resetCreatedCanvases();
   const c = getTextureCanvas('rainstreaks', 600, 600, { seed: 5, p1: v1, p2: 100 });
   return c.getContext('2d')._stats.strokes; };
 check('zooming rain changes streak size, not streak count',
-  strokesOf(100) === strokesOf(500) && rainHi.geo > rainLo.geo * 1.5);
+  strokesOf(100) === strokesOf(500) && rainHi.lines > rainLo.lines * 1.5);
 
 // the composite's two halves, which is where its knobs actually land
 const starsLo = probe('astral_stars', 20, 100), starsHi = probe('astral_stars', 300, 100);

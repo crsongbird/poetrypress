@@ -14,7 +14,7 @@
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
-import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed } from './texCore.js';
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -39,7 +39,57 @@ function crackNet(ww, wh, size){
   };
 }
 
+// Two chemicals, one feeding,
+// one eating — and out of nothing
+// the leopard's spots.
+// THE GRAY–SCOTT MODEL (Turing Skin's own, texChaos genTuringSkin until now): two chemicals on a torus, one
+// feeding the other, walked along the feed/kill map by Pattern — spots → coral → maze → worms → holes (Pearson
+// 1993's classes; Karl Sims's tutorial). Its own grid, whatever the page's; then sampled bicubically and given a
+// crisp edge. Returns the pattern as a field 0..1 on the ww×wh grid.
+function chaosTuring(ww, wh, growth, zoom, form){
+  const FK = [[0.0367, 0.0649], [0.0545, 0.062], [0.029, 0.057], [0.078, 0.061], [0.039, 0.058]];
+  const t = Math.max(0, Math.min(1, form))*(FK.length - 1), i0 = Math.min(FK.length - 2, Math.floor(t)), fr = t - i0;
+  const Fd = FK[i0][0] + (FK[i0 + 1][0] - FK[i0][0])*fr, Kd = FK[i0][1] + (FK[i0 + 1][1] - FK[i0][1])*fr;
+  const G = Math.max(48, Math.min(160, Math.round(110/zoom))), short = Math.min(ww, wh);
+  const gx = Math.max(16, Math.round(G*ww/short)), gy = Math.max(16, Math.round(G*wh/short)), n = gx*gy;
+  let A = new Float32Array(n).fill(1), B = new Float32Array(n), A2 = new Float32Array(n), B2 = new Float32Array(n);
+  // seeds: small patches, a few of them large; and a few stray specks
+  const seeds = 6 + Math.floor(Math.random()*10);
+  for(let s = 0; s < seeds; s++){ const cx = Math.floor(Math.random()*gx), cy = Math.floor(Math.random()*gy), r = 1 + Math.floor(Math.random()*3);
+    for(let y = -r; y <= r; y++) for(let x = -r; x <= r; x++){ const k = ((cy + y + gy) % gy)*gx + ((cx + x + gx) % gx); B[k] = 1; A[k] = 0.5; } }
+  for(let k = 0; k < n; k++) if(Math.random() < 0.002) B[k] = 0.5;
+  // (a budget of cell-updates, so a fine pattern on a wide page stays quick)
+  const iters = Math.min(Math.round(900 + 5100*growth), Math.round(55e6/n));
+  for(let it = 0; it < iters; it++){
+    for(let y = 0; y < gy; y++){
+      const yu = ((y - 1 + gy) % gy)*gx, yc = y*gx, yd = ((y + 1) % gy)*gx;
+      for(let x = 0; x < gx; x++){
+        const xl = x === 0 ? gx - 1 : x - 1, xr = x === gx - 1 ? 0 : x + 1, k = yc + x, a = A[k], b = B[k];
+        const la = 0.2*(A[yu + x] + A[yd + x] + A[yc + xl] + A[yc + xr]) + 0.05*(A[yu + xl] + A[yu + xr] + A[yd + xl] + A[yd + xr]) - a;
+        const lb = 0.2*(B[yu + x] + B[yd + x] + B[yc + xl] + B[yc + xr]) + 0.05*(B[yu + xl] + B[yu + xr] + B[yd + xl] + B[yd + xr]) - b;
+        const abb = a*b*b;
+        A2[k] = a + (1.0*la - abb + Fd*(1 - a)); B2[k] = b + (0.5*lb + abb - (Kd + Fd)*b);
+      }
+    }
+    let tmp = A; A = A2; A2 = tmp; tmp = B; B = B2; B2 = tmp;
+  }
+  const at = (x, y) => B[((y % gy + gy) % gy)*gx + ((x % gx + gx) % gx)];
+  const cub = (p0, p1, p2, p3, t2) => p1 + 0.5*t2*(p2 - p0 + t2*(2*p0 - 5*p1 + 4*p2 - p3 + t2*(3*(p1 - p2) + p3 - p0)));
+  let bmin = Infinity, bmax = -Infinity; for(let k = 0; k < n; k++){ if(B[k] < bmin) bmin = B[k]; if(B[k] > bmax) bmax = B[k]; }
+  const mid = bmin + (bmax - bmin)*0.45, soft = Math.max(0.01, (bmax - bmin)*0.12), S = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ const fy = (y + 0.5)/wh*gy - 0.5, y1 = Math.floor(fy), ty = fy - y1;
+    for(let x = 0; x < ww; x++){ const fx = (x + 0.5)/ww*gx - 0.5, x1 = Math.floor(fx), tx = fx - x1;
+      const row = j => cub(at(x1 - 1, y1 + j), at(x1, y1 + j), at(x1 + 1, y1 + j), at(x1 + 2, y1 + j), tx);
+      const v = cub(row(-1), row(0), row(1), row(2), ty), s = Math.max(0, Math.min(1, (v - mid)/soft*0.5 + 0.5));
+      S[y*ww + x] = s*s*(3 - 2*s); } }
+  return S;
+}
+
 export const CHAOS_STEPS = {
+  grayscott: { cat: 'Noise', label: 'Turing Pattern', ins: [], outs: ['pattern'],
+    params: [CHAOS_R('pattern', 'Pattern', 25), CHAOS_R('growth', 'Growth', 80, 20, 100), CHAOS_R('scale', 'Scale', 100, 50, 250), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 30,
+    run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => [chaosTuring(ww, wh, Math.max(0.1, Math.min(1, num(n, 'growth', 80)/100)), num(n, 'scale', 100)/100, num(n, 'pattern', 25)/100)]); } },
   crazing: { cat: 'Textures', label: 'Crazing', ins: [], outs: ['height', 'glaze', 'grime', 'fine'],
     params: [CHAOS_R('scale', 'Fracture Scale', 100, 60, 400), CHAOS_R('density', 'Crack Density', 100, 10, 900), CHAOS_R('age', 'Enameling', 0)], cost: () => 14,
     // Crazing as it really looks: hairline cracks in a glassy surface that is

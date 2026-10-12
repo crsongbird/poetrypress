@@ -45,9 +45,9 @@ check('gradients: Sweep (conic) and Mirrored for the backdrop and the box, and f
   const textureGroups = groups.filter(g => O.TEXTURE_GROUPS.some(t => g === t.glyph + ' ' + t.name.replace(/&/g, '&amp;')));
   const sel = (html.match(/<select id="textureType">([\s\S]*?)<\/select>/) || ['', ''])[1];
   const sizes = [...sel.matchAll(/<optgroup[^>]*>([\s\S]*?)<\/optgroup>/g)].map(m => (m[1].match(/<option/g) || []).length);
-  check('the texture menu goes by what a surface IS: ten groups (appOptions TEXTURE_GROUPS, the same in the Athanor), at least three in each (but Yours), each glyph a Runology Archetype (no emoji)',
-    textureGroups.length === 10 && sizes.slice(0, 9).every(n => n >= 3) && O.TEXTURE_GROUPS.slice(0, 9).every((g, i) => g.types.length === sizes[i])
-    && O.TEXTURE_GROUPS.every(g => ['🜃','🜚','🜁','🝊','🜥','🜄','Ᏹ','🝓','⎐','🜉'].includes(g.glyph)));
+  check('the texture menu goes by what a surface IS: eleven groups, the Basics first (appOptions TEXTURE_GROUPS, the same in the Athanor), at least three in each (but Yours), each glyph a Runology Archetype (no emoji)',
+    textureGroups.length === 11 && sizes.slice(0, 10).every(n => n >= 3) && O.TEXTURE_GROUPS.slice(0, 10).every((g, i) => g.types.length === sizes[i])
+    && O.TEXTURE_GROUPS[0].name === 'Basics' && O.TEXTURE_GROUPS.every(g => ['🜛','🜃','🜚','🜁','🝊','🜥','🜄','Ᏹ','🝓','⎐','🜉'].includes(g.glyph)));
   const alpha = [...sel.matchAll(/<optgroup[^>]*>([\s\S]*?)<\/optgroup>/g)].every(m => { const names = [...m[1].matchAll(/>([^<]+)<\/option>/g)].map(x => x[1].toLowerCase().replace(/'/g, ''));
     return names.every((n, i) => i === 0 || names[i - 1] <= n); });
   check('…each group alphabetical', alpha);

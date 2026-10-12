@@ -16,6 +16,13 @@
  */
 export const CPU = { willReadFrequently: true };
 
+// a smooth multi-octave noise sampler, on grids drawn from the seed (texTouch's surfaces; the Terrain part)
+export function fbmSampler(cells, octaves){
+  const grids = [];
+  for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
+  const norm = grids.reduce((s, o) => s + o.amp, 0);
+  return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
+}
 export function makeNoiseGrid(gw, gh){
   const g = new Float32Array(gw*gh);
   for(let i=0;i<g.length;i++) g[i] = Math.random();

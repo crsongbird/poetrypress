@@ -123,7 +123,7 @@ export function forgeHelpHtml(){
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
     + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
     + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
-    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view; use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
+    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view (or drag anywhere with the middle button, or with Space held); use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
     + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Kept</b> keeps the graph on this browser's shelf by name, opens kept graphs, and saves the shelf to a file (or brings graphs in from one) to share them. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
     + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
     + sec('parts', 'Every part', parts);
@@ -214,6 +214,16 @@ export async function openForge(deps){
   const ask = o => deps.ask ? deps.ask(o) : Promise.resolve(true);
   const promptFor = o => deps.prompt ? deps.prompt(o) : Promise.resolve(null);
   if(!F.editor){
+    // Drawflow finds a node's fields by the selector [df-KEY], unescaped; a wire's range ('~relief') is a key too, and
+    // '[df-~relief]' is no selector — it threw, and a graph with ranges (Painter's Frustration, Contour Map…) loaded
+    // only its first few parts. Such selectors are escaped here (only the [df-…] ones, only when they need it).
+    if(typeof Element !== 'undefined' && !Element.prototype.querySelectorAll.__forgeSafe){
+      const qsa = Element.prototype.querySelectorAll;
+      const safe = function(sel){ const m = typeof sel === 'string' && /^\[df-(.+)\]$/.exec(sel);
+        if(m && /[^\w-]/.test(m[1]) && typeof CSS !== 'undefined' && CSS.escape) sel = '[df-' + CSS.escape(m[1]) + ']';
+        return qsa.call(this, sel); };
+      safe.__forgeSafe = true; Element.prototype.querySelectorAll = safe;
+    }
     const ed = F.editor = new Drawflow(area);
     // zoom in small steps (Drawflow's 0.1 a wheel-notch is far too quick on a trackpad or a pinch)
     ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.12; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
@@ -359,6 +369,30 @@ export async function openForge(deps){
     area.addEventListener('dragover', e => e.preventDefault());
     area.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer && e.dataTransfer.getData('text/forge'); if(!type) return;
       const p = toGrid(e.clientX, e.clientY); add(type, p.x, p.y); });
+    // ---- PANNING (Ruby: it locked, or the browser began dragging a ghost) ----
+    // Drawflow pans only when the pressed element's FIRST class is 'parent-drawflow' or 'drawflow': the container
+    // was 'forge-canvas …', so wherever the sheet had been panned or zoomed away from, a press did nothing and
+    // the browser selected text instead (the markup now lists parent-drawflow first; this keeps it so).
+    if(area.classList[0] !== 'parent-drawflow'){ const cls = [...area.classList].filter(c => c !== 'parent-drawflow'); area.className = ['parent-drawflow', ...cls].join(' '); }
+    // never the browser's own drag (a preview's ghost, selected text)
+    area.addEventListener('dragstart', e => e.preventDefault());
+    area.addEventListener('selectstart', e => { if(!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
+    // the middle button (or Space held) pans from anywhere, over parts too, as in Blender and ComfyUI
+    let spaceHeld = false, panFrom = null;
+    document.addEventListener('keydown', e => { if(e.code === 'Space' && !veil.hidden && !(e.target && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target.tagName))){ spaceHeld = true; e.preventDefault(); } });
+    document.addEventListener('keyup', e => { if(e.code === 'Space') spaceHeld = false; });
+    area.addEventListener('pointerdown', e => {
+      if(e.pointerType !== 'mouse' || !(e.button === 1 || (e.button === 0 && spaceHeld))) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      panFrom = { x: e.clientX, y: e.clientY, cx: ed.canvas_x, cy: ed.canvas_y }; area.classList.add('panning');
+      try { area.setPointerCapture(e.pointerId); } catch(_){}
+    }, true);
+    area.addEventListener('mousedown', e => { if(panFrom || e.button === 1){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    area.addEventListener('pointermove', e => { if(!panFrom) return; e.stopImmediatePropagation();
+      ed.canvas_x = panFrom.cx + e.clientX - panFrom.x; ed.canvas_y = panFrom.cy + e.clientY - panFrom.y;
+      ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`; }, true);
+    for(const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) area.addEventListener(ev, () => { if(panFrom){ panFrom = null; area.classList.remove('panning'); } }, true);
+    area.addEventListener('auxclick', e => { if(e.button === 1) e.preventDefault(); });
     // ---- moving: a node only by its title bar (and not when pinned); anywhere else, the grid pans ----
     let ptrKind = 'mouse';
     area.addEventListener('pointerdown', e => { ptrKind = e.pointerType || 'mouse'; }, true);

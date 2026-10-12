@@ -134,6 +134,15 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
   }
 }
 
+{ const fsrc = readFileSync(new URL('../forge.js', import.meta.url), 'utf8'), cs = await import('../chains.js');
+  // a wire's range is kept as '~key' in a node's data, and Drawflow looks data up as [df-KEY]: unescaped, that threw mid-load
+  const ranged = Object.entries(cs.TEXTURE_CHAINS).filter(([, c]) => c.nodes.some(([, d]) => Object.keys(d).some(k => k[0] === '~'))).map(([k]) => k);
+  check('graphs with a wire\'s range ("~key") load whole: Drawflow\'s [df-…] selectors are escaped (' + ranged.length + ' chains carry ranges)',
+    ranged.length > 5 && /Element\.prototype\.querySelectorAll = safe/.test(fsrc) && /CSS\.escape\(m\[1\]\)/.test(fsrc));
+  check('the Athanor\'s grid pans wherever it is pressed: the container\'s first class is Drawflow\'s own (it pans only on "parent-drawflow" or "drawflow")',
+    /class="parent-drawflow forge-canvas"/.test(html) && /area\.classList\[0\] !== 'parent-drawflow'/.test(fsrc) && /e\.button === 1 \|\| \(e\.button === 0 && spaceHeld\)/.test(fsrc));
+}
+
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

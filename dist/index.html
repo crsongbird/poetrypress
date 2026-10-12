@@ -1836,7 +1836,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-part[draggable="true"]{ cursor:grab; }
 .forge-part:hover{ border-color:var(--cat); }
 /* the grid */
-.forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; -webkit-touch-callout:none; background:
+.forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; background:
   radial-gradient(circle, color-mix(in srgb, var(--fg-text) 16%, transparent) 1px, transparent 1.5px) 0 0/24px 24px, var(--fg-ground); }
 .forge-canvas .drawflow .drawflow-node{ display:block; border-radius:0; background:var(--fg-node); border:1px solid var(--fg-line); border-top:3px solid var(--cat, #888); color:var(--fg-text);
   width:216px; padding:0 0 4px; font-size:13px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.7); min-height:0; }
@@ -1881,6 +1881,8 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas .drawflow svg.connection .main-path.forge-hit{ stroke:transparent !important; stroke-width:18px; stroke-dasharray:none; pointer-events:stroke; cursor:pointer; }
 .forge-canvas .drawflow .connection .main-path.selected:not(.forge-hit), .forge-canvas .drawflow svg.connection:hover .main-path:not(.forge-hit){ stroke-width:4.5px; filter:brightness(1.2); }
 .forge-canvas .drawflow-delete{ display:none; }
+.forge-canvas input, .forge-canvas textarea{ -webkit-user-select:text; user-select:text; }
+.forge-canvas.panning, .forge-canvas.panning *{ cursor:grabbing !important; }
 /* ✂: where a wire was tapped */
 .forge-cut{ position:absolute; z-index:6; width:auto; margin:0; padding:4px 10px; border-radius:0; border:1px solid var(--fg-accent); background:var(--fg-panel); color:var(--fg-accent); font-size:13px; box-shadow:0 8px 20px -10px rgba(0,0,0,.8); }
 .forge-cut[hidden]{ display:none; }
@@ -3043,6 +3045,13 @@ function stitchInnerEdge(path, style, opts){
  */
 const CPU = { willReadFrequently: true };
 
+// a smooth multi-octave noise sampler, on grids drawn from the seed (texTouch's surfaces; the Terrain part)
+function fbmSampler(cells, octaves){
+  const grids = [];
+  for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
+  const norm = grids.reduce((s, o) => s + o.amp, 0);
+  return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
+}
 function makeNoiseGrid(gw, gh){
   const g = new Float32Array(gw*gh);
   for(let i=0;i<g.length;i++) g[i] = Math.random();
@@ -4825,74 +4834,7 @@ function genMoon(w,h,amt,zoom,form,night){
 // distance, made of air.
 // PAINTED LANDSCAPE is a chain now: painted sky → painted ridges → watercolour wash (stepsWhimsy.js, chains.js 'landscape').
 
-// Lay a comb through water
-// and every tooth leaves a line
-// that will not cross another.
-/**
- * Flow-Field Ink — long pen strokes that follow a smooth field without ever
- * crossing (after Tyler Hobbs's essay on flow fields): the field's angle comes
- * from layered noise, turned toward the dial's direction (FLOW); each stroke
- * starts somewhere, walks the field, and stops where it would come too close
- * to another, so the page fills with even, river-like lines. Some strokes in
- * the second ink; widths vary a little, and each stroke tapers at its ends.
- * SCALE · LINES · TURBULENCE
- */
-function genFlowField(w,h,amt,zoom,light,form,tint1,tint2){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const turb=Math.max(0,Math.min(1, form==null?0.5:form));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  const unit=Math.min(w,h);
-  // the field: the dial's direction (the flow), bent by noise as TURBULENCE rises
-  const lv=lightVec(light==null?0:light), base=Math.hypot(lv.lx,lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
-  const g1=makeNoiseGrid(6,6), g2=makeNoiseGrid(13,13);
-  const fieldAt=(x,y)=>{ const u=x/unit/zoom, v=y/unit/zoom;
-    return base + (sampleNoiseGrid(g1,6,6,u*2.2,v*2.2)*0.75 + sampleNoiseGrid(g2,13,13,u*5,v*5)*0.25 - 0.5)*Math.PI*2.6*turb; };
-  // spacing: how close two strokes may run (canonical, so the preview matches)
-  const sep=cpx(54)*zoom/Math.max(0.3, amt), step=Math.max(0.6, cpx(4)), cell=sep*0.5;
-  const gw=Math.ceil(w/cell)+1, gh=Math.ceil(h/cell)+1, grid=new Array(gw*gh);
-  const near=(x,y,own)=>{ const cx=Math.floor(x/cell), cy=Math.floor(y/cell);
-    for(let j=cy-2;j<=cy+2;j++) for(let i=cx-2;i<=cx+2;i++){ if(i<0||j<0||i>=gw||j>=gh) continue; const L=grid[j*gw+i]; if(!L) continue;
-      for(const p of L){ if(p[2]===own && p[3] > -1) continue; const dx=p[0]-x, dy=p[1]-y; if(dx*dx+dy*dy < sep*sep) return true; } }
-    return false; };
-  const add=(x,y,own)=>{ const k=Math.floor(y/cell)*gw + Math.floor(x/cell); (grid[k] || (grid[k]=[])).push([x,y,own,0]); };
-  const ink1=tint1 || '#2B2A3A', ink2=tint2 || '#7A4A6A';
-  const tries=Math.round(canonArea(w,h)/(3072*3072)*1400*Math.min(3, amt));
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  let strokeId=0;
-  for(let t=0;t<tries;t++){
-    const sx=Math.random()*w, sy=Math.random()*h;
-    if(near(sx,sy,-1)) continue;
-    const id=strokeId++, pts=[[sx,sy]];
-    // walk both ways from the seed point
-    for(const dir of [1,-1]){
-      let x=sx, y=sy;
-      for(let s=0;s<900;s++){
-        const a=fieldAt(x,y); const nx=x + Math.cos(a)*step*dir, ny=y + Math.sin(a)*step*dir;
-        if(nx<-sep||ny<-sep||nx>w+sep||ny>h+sep) break;
-        // too close to ANOTHER stroke (its own recent points don't count)
-        const cx=Math.floor(nx/cell), cy=Math.floor(ny/cell); let hit=false;
-        for(let j=cy-2;j<=cy+2 && !hit;j++) for(let i=cx-2;i<=cx+2 && !hit;i++){ if(i<0||j<0||i>=gw||j>=gh) continue; const L=grid[j*gw+i]; if(!L) continue;
-          for(const p of L){ if(p[2]===id) continue; const dx=p[0]-nx, dy=p[1]-ny; if(dx*dx+dy*dy < sep*sep*0.55){ hit=true; break; } } }
-        if(hit) break;
-        x=nx; y=ny; if(dir>0) pts.push([x,y]); else pts.unshift([x,y]);
-      }
-    }
-    if(pts.length < 12) continue;
-    for(const p of pts) if(p[0]>=0&&p[1]>=0&&p[0]<w&&p[1]<h) add(p[0],p[1],id);
-    // the stroke: one ink or the other, its width a little its own, tapering at both ends
-    const wd=cpx(9 + Math.random()*9)*zoom*Math.min(1.3, 0.55 + 0.45/Math.max(0.4, amt)), col=Math.random()<0.18 ? ink2 : ink1;
-    ctx.strokeStyle=col; ctx.globalAlpha=0.82 + Math.random()*0.15;
-    const n=pts.length, seg=Math.max(4, Math.floor(n/14));
-    for(let a=0;a<n-1;a+=seg){
-      const b=Math.min(n-1, a+seg), m=(a+b)/2/(n-1), taper=Math.min(1, Math.sin(m*Math.PI)*1.6);
-      ctx.lineWidth=Math.max(cpx(0.4), wd*(0.35 + 0.65*taper));
-      ctx.beginPath(); ctx.moveTo(pts[a][0], pts[a][1]); for(let q=a+1;q<=b;q++) ctx.lineTo(pts[q][0], pts[q][1]); ctx.stroke();
-    }
-  }
-  ctx.globalAlpha=1;
-  return c;
-}
+// FLOW-FIELD INK is a chain now: one Flow Lines part (stepsWhimsy.js whimFlowLines; chains.js 'flowfield').
 
 
 /* ==== texSharpness.js ==== */
@@ -6247,86 +6189,7 @@ function genBlackHole(w,h,amt,zoom,light,form){
   return c;
 }
 
-// Two chemicals, one feeding,
-// one eating — and out of nothing
-// the leopard's spots.
-/**
- * Turing Skin — a reaction–diffusion system (Gray–Scott, as Karl Sims's
- * tutorial lays it out): two chemicals spread at different rates, one
- * feeding on the other, and from a few random seeds patterns grow as they do
- * on skins and shells. PATTERN walks the feed/kill map: spots that divide,
- * coral, a maze, worms, holes. GROWTH is how long it has had to grow (low:
- * colonies still spreading from their seeds; high: the whole page). The sim
- * runs on its own grid, the same at any page size (so a preview is the
- * export, smaller), wraps at the edges, and is drawn smooth and crisp, as
- * raised skin, lit by the dial.
- * PATTERN SCALE · GROWTH · PATTERN · RELIEF
- */
-function genTuringSkin(w,h,amt,zoom,light,form,relief,M3){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const growth=Math.max(0.1, Math.min(1, amt)), rel=Math.max(0, Math.min(1, relief==null ? 0.5 : relief));
-  // the feed/kill map, walked by PATTERN: spots → coral → maze → worms → holes
-  const FK=[[0.0367,0.0649],[0.0545,0.062],[0.029,0.057],[0.078,0.061],[0.039,0.058]];
-  const t=Math.max(0, Math.min(1, form==null ? 0.25 : form))*(FK.length-1), i0=Math.min(FK.length-2, Math.floor(t)), fr=t-i0;
-  const Fd=FK[i0][0]+(FK[i0+1][0]-FK[i0][0])*fr, Kd=FK[i0][1]+(FK[i0+1][1]-FK[i0][1])*fr;
-  // the grid: its own size, whatever the page's
-  const G=Math.max(48, Math.min(160, Math.round(110/zoom))), short=Math.min(w,h);
-  const gx=Math.max(16, Math.round(G*w/short)), gy=Math.max(16, Math.round(G*h/short)), n=gx*gy;
-  let A=new Float32Array(n).fill(1), B=new Float32Array(n), A2=new Float32Array(n), B2=new Float32Array(n);
-  // seeds: small patches, a few of them large
-  const seeds=6 + Math.floor(Math.random()*10);
-  for(let s=0;s<seeds;s++){ const cx=Math.floor(Math.random()*gx), cy=Math.floor(Math.random()*gy), r=1 + Math.floor(Math.random()*3);
-    for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++){ const k=((cy+y+gy)%gy)*gx + ((cx+x+gx)%gx); B[k]=1; A[k]=0.5; } }
-  for(let k=0;k<n;k++) if(Math.random()<0.002) B[k]=0.5;     // a few stray specks
-  // (a budget of cell-updates, so a fine pattern on a wide page stays quick)
-  const iters=Math.min(Math.round(900 + 5100*growth), Math.round(55e6/n));
-  for(let it=0;it<iters;it++){
-    for(let y=0;y<gy;y++){
-      const yu=((y-1+gy)%gy)*gx, yc=y*gx, yd=((y+1)%gy)*gx;
-      for(let x=0;x<gx;x++){
-        const xl=x===0 ? gx-1 : x-1, xr=x===gx-1 ? 0 : x+1, k=yc+x;
-        const a=A[k], b=B[k];
-        const la=0.2*(A[yu+x]+A[yd+x]+A[yc+xl]+A[yc+xr]) + 0.05*(A[yu+xl]+A[yu+xr]+A[yd+xl]+A[yd+xr]) - a;
-        const lb=0.2*(B[yu+x]+B[yd+x]+B[yc+xl]+B[yc+xr]) + 0.05*(B[yu+xl]+B[yu+xr]+B[yd+xl]+B[yd+xr]) - b;
-        const abb=a*b*b;
-        A2[k]=a + (1.0*la - abb + Fd*(1-a));
-        B2[k]=b + (0.5*lb + abb - (Kd+Fd)*b);
-      }
-    }
-    let tmp=A; A=A2; A2=tmp; tmp=B; B=B2; B2=tmp;
-  }
-  // drawn at the page's working size: B sampled smoothly (bicubic, wrapping),
-  // then given a crisp edge
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), N=ww*wh, unit=Math.min(ww,wh);
-  const at=(x,y)=>B[((y%gy+gy)%gy)*gx + ((x%gx+gx)%gx)];
-  const cub=(p0,p1,p2,p3,t2)=>p1 + 0.5*t2*(p2-p0 + t2*(2*p0-5*p1+4*p2-p3 + t2*(3*(p1-p2)+p3-p0)));
-  let bmin=Infinity, bmax=-Infinity; for(let k=0;k<n;k++){ if(B[k]<bmin) bmin=B[k]; if(B[k]>bmax) bmax=B[k]; }
-  const mid=bmin + (bmax-bmin)*0.45, soft=Math.max(0.01, (bmax-bmin)*0.12);
-  const S=new Float32Array(N), Hh=new Float32Array(N);
-  for(let y=0;y<wh;y++){
-    const fy=(y+0.5)/wh*gy-0.5, y1=Math.floor(fy), ty=fy-y1;
-    for(let x=0;x<ww;x++){
-      const fx=(x+0.5)/ww*gx-0.5, x1=Math.floor(fx), tx=fx-x1;
-      const row=j=>cub(at(x1-1,y1+j), at(x1,y1+j), at(x1+1,y1+j), at(x1+2,y1+j), tx);
-      const v=cub(row(-1), row(0), row(1), row(2), ty);
-      const s=Math.max(0, Math.min(1, (v-mid)/soft*0.5 + 0.5)), sm2=s*s*(3-2*s), i=y*ww+x;
-      S[i]=sm2; Hh[i]=sm2*unit*0.006*(0.3 + 1.7*rel);
-    }
-  }
-  const L=lightHeights(Hh, ww, wh, { light, relief:1, gloss:0.35, shadow:0.45, ao:0.4, ambient:0.45 });
-  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
-  for(let i=0;i<N;i++){
-    // the pattern lighter than the skin between; light and shade on top
-    const base=128 + (S[i]-0.5)*96;
-    for(let c=0;c<3;c++){ const v=base*litK(L, i, 0.45, M3, c)/L.flat + L.spec[i]*120*litS(M3, c); d[i*4+c]=v<0?0:v>255?255:v; }
-    d[i*4+3]=255;
-  }
-  sctx.putImageData(img,0,0);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
-  return c;
-}
+// TURING SKIN is a chain now: Turing Pattern → Light Engine (stepsChaos.js chaosTuring; chains.js 'turing').
 
 // Draw a bow along the edge:
 // the sand runs from what is moving
@@ -7014,13 +6877,7 @@ function genGlassRain(w,h,amt,zoom,light,form,M3,env){
 }
 
 // ---------- textures lit by lightHeights (texCore): a surface, then its light ----------
-// a smooth multi-octave noise sampler, on grids drawn from the seed
-function fbmSampler(cells, octaves){
-  const grids = [];
-  for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
-  const norm = grids.reduce((s, o) => s + o.amp, 0);
-  return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
-}
+// (fbmSampler, the smooth multi-octave noise these surfaces are made of, is texCore's: the Terrain part shares it)
 // a lit surface, coloured per pixel and laid on the page
 function paintLit(w, h, div, ww, wh, colour){
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -7910,54 +7767,7 @@ function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
   });
 }
 
-// Every line a promise
-// kept at one height all the way
-// round the hill and home.
-/**
- * Contour Map — a survey of an imagined land: a terrain of layered noise,
- * drawn as CONTOUR LINES (after the marching-squares maps d3-contour makes;
- * here each line is found per pixel from how far the height is from its
- * level, measured against the slope, so lines stay one width on steep and
- * gentle ground alike), every fifth an index line, heavier; with HILLSHADE
- * beneath — the land lit by the dial, as relief maps are.
- * TERRAIN SCALE · CONTOUR INTERVAL · HILLSHADE
- */
-function genContourMap(w,h,amt,zoom,light,form,M3){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const shade=Math.max(0,Math.min(1, form==null?0.45:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  // the land: ridges and valleys (ridged noise for crests, broad noise for the masses)
-  const broad=fbmSampler(3, 4), ridge=fbmSampler(5, 3), warp=fbmSampler(3, 2);
-  const sc=1/zoom, H=new Float32Array(N);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const u=x/unit*sc, v=y/unit*sc, wu=u + (warp(u*0.5, v*0.5)-0.5)*0.6, wv=v + (warp(v*0.5+3.1, u*0.5+1.7)-0.5)*0.6;
-    const r=1 - Math.abs(ridge(wu*0.6, wv*0.6)*2 - 1);
-    H[y*ww+x]=0.78*broad(wu*0.45, wv*0.45) + 0.22*r*r*r;     // broad masses, a few sharper crests
-  }
-  let hmin=Infinity, hmax=-Infinity; for(let i=0;i<N;i++){ if(H[i]<hmin) hmin=H[i]; if(H[i]>hmax) hmax=H[i]; }
-  for(let i=0;i<N;i++) H[i]=(H[i]-hmin)/Math.max(1e-6, hmax-hmin);
-  // the interval: how many levels from the lowest ground to the highest
-  const levels=Math.max(5, Math.round(20*amt)), lw=Math.max(0.5, unit*0.0011), lwIdx=lw*2.1;
-  const LN=new Float32Array(N);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, v=H[i]*levels;
-    const gx=(H[y*ww+Math.min(ww-1,x+1)] - H[y*ww+Math.max(0,x-1)])*0.5*levels, gy=(H[Math.min(wh-1,y+1)*ww+x] - H[Math.max(0,y-1)*ww+x])*0.5*levels;
-    const g=Math.max(1e-4, Math.hypot(gx, gy)), f=v - Math.floor(v), dist=Math.min(f, 1-f)/g;     // in pixels, to the nearest level
-    const k=Math.round(v), idx=k % 5 === 0, half=(idx ? lwIdx : lw)*0.5;
-    LN[i]=Math.max(0, Math.min(1, half + 0.5 - dist))*(idx ? 1 : 0.8);
-  }
-  // hillshade: the land lit by the dial (its heights scaled to the map's size)
-  const HH=new Float32Array(N); for(let i=0;i<N;i++) HH[i]=H[i]*unit*0.06;
-  const L=lightHeights(HH, ww, wh, { light, relief:1, gloss:0.05, shadow:0.35, ao:0.15, ambient:0.45 });
-  return paintLit(w,h,div,ww,wh, i => {
-    const k=L.light[i]/L.flat, out=[0,0,0];
-    for(let c=0;c<3;c++){
-      const hill=128 + (128*litK(L, i, 0.45, M3, c)/L.flat - 128)*shade;
-      out[c]=clamp255(hill - LN[i]*(hill - 34)*0.9);
-    }
-    return out;
-  });
-}
+// CONTOUR MAP is a chain now: Terrain → Contour Lines over the Light Engine's hillshade (stepsTouch.js; chains.js 'contour').
 
 // STAINED GLASS is a chain now: panes → glass (stepsTouch.js paneLayout, litGlass; chains.js 'stainedglass').
 
@@ -8033,82 +7843,7 @@ function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
   });
 }
 
-/**
- * Watercolour Wash — pigment laid in washes, after Tyler Hobbs's method: a
- * blob is a polygon deformed by recursive midpoint displacement, then drawn
- * forty times over at a few percent opacity, each copy deformed again, so the
- * edges go soft and uneven where the copies disagree. On top of that, what
- * watercolour does on paper (Curtis et al., "Computer-Generated Watercolor"):
- * EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in
- * the paper's tooth) and a GRADED WASH (it runs downhill — the dial). The two
- * pigments mix subtractively where they overlap. WETNESS softens and spreads
- * the edges; dry washes keep hard, dark rims.
- */
-function genWatercolour(w,h,amt,zoom,light,form,tint1,tint2){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const wet=Math.max(0,Math.min(1, form==null?0.5:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const gauss=()=>{ let u=0, v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
-  const deform=(poly, depth, vs)=>{
-    let P=poly;
-    for(let d=0; d<depth; d++){
-      const Q=[];
-      for(let i=0;i<P.length;i++){
-        const a=P[i], b=P[(i+1)%P.length], len=Math.hypot(b[0]-a[0], b[1]-a[1]);
-        Q.push(a);
-        Q.push([(a[0]+b[0])/2 + gauss()*len*a[2]*vs, (a[1]+b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]);
-      }
-      P=Q;
-    }
-    return P;
-  };
-  const layers=[document.createElement('canvas'), document.createElement('canvas')];
-  const lx=layers.map(c=>{ c.width=ww; c.height=wh; const x=c.getContext('2d', CPU); x.fillStyle='#000'; return x; });
-  const nB=Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
-  const LAY=Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha=Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
-  for(let b=0;b<nB;b++){
-    // the first is a broad, pale ground wash; the rest are passages laid over it
-    const ground=b===0, cx=ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy=ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
-    const R=unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k=Math.random()<0.62 ? 0 : 1;
-    const sides=10, base=[], sq=0.7 + Math.random()*0.3;
-    for(let s=0;s<sides;s++){ const a=s/sides*Math.PI*2, rr=R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
-    const shape=deform(base, 3, 0.2);
-    const ctx=lx[k]; ctx.globalAlpha=ground ? alpha*0.45 : alpha;
-    for(let l=0;l<LAY;l++){
-      const P=deform(shape, 3, 0.07 + wet*0.2);
-      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill();
-    }
-  }
-  const Dk=lx.map(ctx=>{ const d=ctx.getImageData(0,0,ww,wh).data, D=new Float32Array(N); for(let i=0;i<N;i++) D[i]=d[i*4+3]/255; return D; });
-  // a box blur, for the edge: pigment drifts to where the wash thins out
-  const blurF=(S, r)=>{ const T=new Float32Array(N), O=new Float32Array(N), n=2*r+1;
-    for(let y=0;y<wh;y++){ let s=0; for(let x=-r;x<=r;x++) s+=S[y*ww+Math.min(ww-1,Math.max(0,x))];
-      for(let x=0;x<ww;x++){ T[y*ww+x]=s/n; s+=S[y*ww+Math.min(ww-1,x+r+1)] - S[y*ww+Math.max(0,x-r)]; } }
-    for(let x=0;x<ww;x++){ let s=0; for(let y=-r;y<=r;y++) s+=T[Math.min(wh-1,Math.max(0,y))*ww+x];
-      for(let y=0;y<wh;y++){ O[y*ww+x]=s/n; s+=T[Math.min(wh-1,y+r+1)*ww+x] - T[Math.max(0,y-r)*ww+x]; } }
-    return O; };
-  const er=Math.max(1, Math.round(unit*(0.006 + wet*0.012)));
-  const blurred=Dk.map(D=>blurF(blurF(D, er), er));
-  const tooth=fbmSampler(28, 2), bloom=fbmSampler(5, 3);
-  const lv=lightVec(light==null?0:light), lm=Math.hypot(lv.lx,lv.ly), gx=lm>1e-3?lv.lx/lm:0, gy=lm>1e-3?lv.ly/lm:0, run=Math.min(1, lm);
-  const cols=[parseHex(tint1 || '#2E5C8A'), parseHex(tint2 || '#B0465A')];
-  const rim=1.1*(1 - wet*0.6), gran=0.12 + 0.12*(1-wet);
-  return paintLit(w,h,div,ww,wh, i => {
-    const x=i%ww, y=(i/ww)|0, u=x/unit, v=y/unit;
-    const grade=1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);      // downhill holds more pigment
-    const t=tooth(u*1.5, v*1.5), bl=bloom(u, v);
-    let r=255, g=255, b=255;
-    for(let k=0;k<2;k++){
-      let d=Dk[k][i]; if(d < 0.004) continue;
-      d+=Math.max(0, d - blurred[k][i])*rim*2.2;                              // the darker drying edge
-      d*=grade*(1 + gran*(t - 0.5)*2)*(0.62 + 0.76*bl*bl);                       // granulation, and an uneven load
-      d=Math.max(0, Math.min(1, d*1.1));
-      const c=cols[k];
-      r*=1 - d*(1 - c.r/255); g*=1 - d*(1 - c.g/255); b*=1 - d*(1 - c.b/255);
-    }
-    return [clamp255(r), clamp255(g), clamp255(b)];
-  });
-}
+// WATERCOLOR WASH is a chain now: Washes → Pigment → Pigment (stepsTouch.js touchWashes, touchPigment; chains.js 'watercolour').
 
 
 /* ==== cartomancyTable.js ==== */
@@ -9498,7 +9233,110 @@ function weaveGridDiv(w, h, S, zoom){
   return Math.max(fine, Math.min(coarse, Math.min(w, h)*WEAVES[0].pitch*zoom/3.2));
 }
 
+// WATERCOLOR, in two parts (Watercolor Wash, texTouch genWatercolour until now). WASHES lays the pigment's
+// shapes after Tyler Hobbs's method: a polygon deformed by recursive midpoint displacement, drawn forty times
+// over at a few percent, each copy deformed again — two layers, one per pigment, as densities 0..1.
+function touchWashes(ww, wh, amt, zoom, wet){
+  const unit = Math.min(ww, wh), N = ww*wh;
+  const gauss = () => { let u = 0, v = 0; while(!u) u = Math.random(); while(!v) v = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const deform = (poly, depth, vs) => { let P = poly;
+    for(let d = 0; d < depth; d++){ const Q = [];
+      for(let i = 0; i < P.length; i++){ const a = P[i], b = P[(i + 1) % P.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        Q.push(a); Q.push([(a[0] + b[0])/2 + gauss()*len*a[2]*vs, (a[1] + b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]); }
+      P = Q; }
+    return P; };
+  const layers = [document.createElement('canvas'), document.createElement('canvas')];
+  const lx = layers.map(c => { c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; return x; });
+  const nB = Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
+  const LAY = Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha = Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
+  for(let b = 0; b < nB; b++){
+    // the first is a broad, pale ground wash; the rest are passages laid over it
+    const ground = b === 0, cx = ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy = ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
+    const R = unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k = Math.random() < 0.62 ? 0 : 1;
+    const sides = 10, base = [], sq = 0.7 + Math.random()*0.3;
+    for(let s = 0; s < sides; s++){ const a = s/sides*Math.PI*2, rr = R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
+    const shape = deform(base, 3, 0.2), ctx = lx[k]; ctx.globalAlpha = ground ? alpha*0.45 : alpha;
+    for(let l = 0; l < LAY; l++){ const P = deform(shape, 3, 0.07 + wet*0.2);
+      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i = 1; i < P.length; i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill(); }
+  }
+  return lx.map(ctx => { const d = ctx.getImageData(0, 0, ww, wh).data, D = new Float32Array(N); for(let i = 0; i < N; i++) D[i] = d[i*4 + 3]/255; return D; });
+}
+// PIGMENT lays any density (a gray map) on a picture as watercolor does on paper (Curtis et al., "Computer-Generated
+// Watercolor"): EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in the paper's tooth), an
+// uneven load, and a GRADED WASH (it runs downhill: the dial). It mixes subtractively with what is under it.
+function touchPigment(D, img, ww, wh, col, wet, light){
+  const unit = Math.min(ww, wh), N = ww*wh;
+  const blurF = (S, r) => { const T = new Float32Array(N), O = new Float32Array(N), n = 2*r + 1;
+    for(let y = 0; y < wh; y++){ let s = 0; for(let x = -r; x <= r; x++) s += S[y*ww + Math.min(ww - 1, Math.max(0, x))];
+      for(let x = 0; x < ww; x++){ T[y*ww + x] = s/n; s += S[y*ww + Math.min(ww - 1, x + r + 1)] - S[y*ww + Math.max(0, x - r)]; } }
+    for(let x = 0; x < ww; x++){ let s = 0; for(let y = -r; y <= r; y++) s += T[Math.min(wh - 1, Math.max(0, y))*ww + x];
+      for(let y = 0; y < wh; y++){ O[y*ww + x] = s/n; s += T[Math.min(wh - 1, y + r + 1)*ww + x] - T[Math.max(0, y - r)*ww + x]; } }
+    return O; };
+  const er = Math.max(1, Math.round(unit*(0.006 + wet*0.012))), blurred = blurF(blurF(D, er), er);
+  const tooth = fbmSampler(28, 2), bloom = fbmSampler(5, 3);
+  const lv = lightVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
+  const rim = 1.1*(1 - wet*0.6), gran = 0.12 + 0.12*(1 - wet), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+  for(let i = 0; i < N; i++){
+    const x = i % ww, y = (i/ww) | 0, u = x/unit, v = y/unit;
+    let r = img.r[i], g = img.g[i], b = img.b[i], d = D[i];
+    if(d >= 0.004){
+      const grade = 1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);        // downhill holds more pigment
+      d += Math.max(0, d - blurred[i])*rim*2.2;                                   // the darker drying edge
+      d *= grade*(1 + gran*(tooth(u*1.5, v*1.5) - 0.5)*2)*(0.62 + 0.76*bloom(u, v)**2);   // granulation, and an uneven load
+      d = Math.max(0, Math.min(1, d*1.1));
+      r *= 1 - d*(1 - col[0]); g *= 1 - d*(1 - col[1]); b *= 1 - d*(1 - col[2]);
+    }
+    out.r[i] = r; out.g[i] = g; out.b[i] = b;
+  }
+  return out;
+}
+
 const TOUCH_STEPS = {
+  washes: { cat: 'Marks', label: 'Washes', ins: [], outs: ['first', 'second'],
+    params: [TOUCH_R('amount', 'Pigment', 100, 30, 250), TOUCH_R('size', 'Wash Size', 100, 40, 250), TOUCH_R('wet', 'Wetness', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => touchWashes(ww, wh, num(n, 'amount', 100)/100, num(n, 'size', 100)/100, num(n, 'wet', 50)/100)); } },
+  pigment: { cat: 'Light & Color', label: 'Pigment', ins: ['paper', 'density', 'color', 'runs to'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'value'], outs: ['image'] },
+    params: [TOUCH_R('wet', 'Wetness', 50)], cost: () => 4,
+    run(E, n){ const { ww, wh, input, num, asField, asImage, ctx } = E, D = asField(input(n, 2)); if(!D) return null;
+      const img = asImage(input(n, 1) ?? 1), c = input(n, 3), col = Array.isArray(c) ? c : [0.18, 0.36, 0.54], dv = input(n, 4);
+      return [touchPigment(D, img, ww, wh, col, num(n, 'wet', 50)/100, typeof dv === 'number' ? dv*360 : (ctx.light ?? 0))]; } },
+  // TERRAIN: Contour Map's land — broad masses and a few sharp crests, warped — as heights 0..1.
+  // Drawn from the texture's own seed (+ Variant), so the map shows the land it always did.
+  terrain: { cat: 'Noise', label: 'Terrain', ins: [], outs: ['height'],
+    params: [TOUCH_R('scale', 'Scale', 100, 40, 300), TOUCH_R('crests', 'Crests', 22), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 3,
+    run(E, n){ const { ww, wh, N, unit, num, ctx } = E;
+      const sc = 100/Math.max(1, num(n, 'scale', 100)), cr = num(n, 'crests', 22)/100, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => {
+        const broad = fbmSampler(3, 4), ridge = fbmSampler(5, 3), warp = fbmSampler(3, 2), H = new Float32Array(N);
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+          const u = x/unit*sc, v = y/unit*sc, wu = u + (warp(u*0.5, v*0.5) - 0.5)*0.6, wv = v + (warp(v*0.5 + 3.1, u*0.5 + 1.7) - 0.5)*0.6;
+          const r = 1 - Math.abs(ridge(wu*0.6, wv*0.6)*2 - 1);
+          H[y*ww + x] = (1 - cr)*broad(wu*0.45, wv*0.45) + cr*r*r*r;
+        }
+        let lo = Infinity, hi = -Infinity; for(let i = 0; i < N; i++){ if(H[i] < lo) lo = H[i]; if(H[i] > hi) hi = H[i]; }
+        for(let i = 0; i < N; i++) H[i] = (H[i] - lo)/Math.max(1e-6, hi - lo);
+        return [H]; }); } },
+  // Every line a promise
+  // kept at one height all the way
+  // round the hill and home.
+  // CONTOUR LINES: the isolines of any gray map (d3-contour's maps, found per pixel: how far the value is from its
+  // level, against the slope, so a line keeps one width on steep and gentle ground); every Nth an index line, heavier
+  contours: { cat: 'Marks', label: 'Contour Lines', ins: ['height'], outs: ['lines'],
+    params: [TOUCH_R('levels', 'Levels', 20, 3, 60), TOUCH_R('weight', 'Line Weight', 100, 25, 400), TOUCH_R('index', 'Index Every', 5, 0, 10), TOUCH_R('strength', 'Strength', 90)], cost: () => 2,
+    run(E, n){ const { ww, wh, N, unit, num, input, asField } = E, H = asField(input(n, 1)); if(!H) return null;
+      // a line finer than half a cell is drawn half a cell wide but fainter, so a small preview keeps the export's weight
+      const levels = Math.max(3, Math.round(num(n, 'levels', 20))), lw0 = unit*0.0011*num(n, 'weight', 100)/100, lw = Math.max(0.5, lw0), lwIdx = Math.max(0.5, lw0*2.1);
+      const fade = Math.min(1, lw0/0.5), fadeIdx = Math.min(1, lw0*2.1/0.5);
+      const every = Math.round(num(n, 'index', 5)), st = num(n, 'strength', 90)/100, LN = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+        const i = y*ww + x, v = H[i]*levels;
+        const gx = (H[y*ww + Math.min(ww - 1, x + 1)] - H[y*ww + Math.max(0, x - 1)])*0.5*levels, gy = (H[Math.min(wh - 1, y + 1)*ww + x] - H[Math.max(0, y - 1)*ww + x])*0.5*levels;
+        const g = Math.max(1e-4, Math.hypot(gx, gy)), f = v - Math.floor(v), dist = Math.min(f, 1 - f)/g;
+        const k = Math.round(v), idx = every > 0 && k % every === 0, half = (idx ? lwIdx : lw)*0.5;
+        LN[i] = Math.max(0, Math.min(1, half + 0.5 - dist))*(idx ? fadeIdx : 0.8*fade)*st;
+      }
+      return [LN]; } },
   weave: { cat: 'Textures', label: 'Weave', ins: [], outs: ['shade', 'sheen'],
     params: [TOUCH_R('weave', 'Weave', 50), TOUCH_R('scale', 'Scale', 100, 50, 400)], cost: () => 6,
     // The weave is a NORMAL MAP (threads are far too fine to be heights that
@@ -10648,10 +10486,83 @@ const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'co
 // PARTICLES: three ways light hangs in the air, each the painter of a texture that used to be its own
 // (texWhimsy: genSnow, genEmbers, genMagicParticles) — flakes (First Snow), sparks (Burning Mana) and
 // motes (Euphoria Dust) — drawn over any picture, in any colours, the wind from any direction
+// Lay a comb through water
+// and every tooth leaves a line
+// that will not cross another.
+// FLOW LINES (Flow-Field Ink's painter, texWhimsy genFlowField until now; after Tyler Hobbs's essay on flow fields):
+// evenly spaced streamlines, as Jobard &
+// Lefer (1997) space them — a line grows from a seed both ways along the field and stops short of any other line —
+// drawn as tapering strokes of ink. The field is the dial's direction bent by noise (Turbulence), or bent by any gray
+// map wired into Angle Map. px/area: the canvas's own canonical sizes (E.px, E.carea), so the grid and the page agree.
+function whimFlowLines(w, h, o, px, area){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU);
+  const unit = Math.min(w, h), zoom = o.zoom, amt = o.amt, turb = o.turb;
+  const lv = lightVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
+  let fieldAt;
+  if(o.map){ const M = o.map, mw = o.mw, mh = o.mh;
+    fieldAt = (x, y) => base + (M[Math.min(mh - 1, Math.max(0, y/h*mh|0))*mw + Math.min(mw - 1, Math.max(0, x/w*mw|0))] - 0.5)*Math.PI*2.6*turb; }
+  else { const g1 = makeNoiseGrid(6, 6), g2 = makeNoiseGrid(13, 13);
+    fieldAt = (x, y) => { const u = x/unit/zoom, v = y/unit/zoom;
+      return base + (sampleNoiseGrid(g1, 6, 6, u*2.2, v*2.2)*0.75 + sampleNoiseGrid(g2, 13, 13, u*5, v*5)*0.25 - 0.5)*Math.PI*2.6*turb; }; }
+  const sep = px(54)*zoom/Math.max(0.3, amt), step = Math.max(0.6, px(4)), cell = sep*0.5;
+  const gw = Math.ceil(w/cell) + 1, gh = Math.ceil(h/cell) + 1, grid = new Array(gw*gh);
+  const near = (x, y, own) => { const cx = Math.floor(x/cell), cy = Math.floor(y/cell);
+    for(let j = cy - 2; j <= cy + 2; j++) for(let i = cx - 2; i <= cx + 2; i++){ if(i < 0 || j < 0 || i >= gw || j >= gh) continue; const L = grid[j*gw + i]; if(!L) continue;
+      for(const p of L){ if(p[2] === own && p[3] > -1) continue; const dx = p[0] - x, dy = p[1] - y; if(dx*dx + dy*dy < sep*sep) return true; } }
+    return false; };
+  const add = (x, y, own) => { const k = Math.floor(y/cell)*gw + Math.floor(x/cell); (grid[k] || (grid[k] = [])).push([x, y, own, 0]); };
+  const tries = Math.round(area/(3072*3072)*1400*Math.min(3, amt));
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  let strokeId = 0;
+  for(let t = 0; t < tries; t++){
+    const sx = Math.random()*w, sy = Math.random()*h;
+    if(near(sx, sy, -1)) continue;
+    const id = strokeId++, pts = [[sx, sy]];
+    for(const dir of [1, -1]){                       // walk both ways from the seed point
+      let x = sx, y = sy;
+      for(let s = 0; s < 900; s++){
+        const a = fieldAt(x, y); const nx = x + Math.cos(a)*step*dir, ny = y + Math.sin(a)*step*dir;
+        if(nx < -sep || ny < -sep || nx > w + sep || ny > h + sep) break;
+        const cx = Math.floor(nx/cell), cy = Math.floor(ny/cell); let hit = false;      // too close to ANOTHER line
+        for(let j = cy - 2; j <= cy + 2 && !hit; j++) for(let i = cx - 2; i <= cx + 2 && !hit; i++){ if(i < 0 || j < 0 || i >= gw || j >= gh) continue; const L = grid[j*gw + i]; if(!L) continue;
+          for(const p of L){ if(p[2] === id) continue; const dx = p[0] - nx, dy = p[1] - ny; if(dx*dx + dy*dy < sep*sep*0.55){ hit = true; break; } } }
+        if(hit) break;
+        x = nx; y = ny; if(dir > 0) pts.push([x, y]); else pts.unshift([x, y]);
+      }
+    }
+    if(pts.length < 12) continue;
+    for(const p of pts) if(p[0] >= 0 && p[1] >= 0 && p[0] < w && p[1] < h) add(p[0], p[1], id);
+    // one ink or the other, its width a little its own, tapering at both ends
+    const wd = px(9 + Math.random()*9)*zoom*Math.min(1.3, 0.55 + 0.45/Math.max(0.4, amt)), col = Math.random() < 0.18 ? o.ink2 : o.ink1;
+    ctx.strokeStyle = col; ctx.globalAlpha = 0.82 + Math.random()*0.15;
+    const n = pts.length, seg = Math.max(4, Math.floor(n/14));
+    for(let a = 0; a < n - 1; a += seg){
+      const b = Math.min(n - 1, a + seg), m = (a + b)/2/(n - 1), taper = Math.min(1, Math.sin(m*Math.PI)*1.6);
+      ctx.lineWidth = Math.max(px(0.4), wd*(0.35 + 0.65*taper));
+      ctx.beginPath(); ctx.moveTo(pts[a][0], pts[a][1]); for(let q = a + 1; q <= b; q++) ctx.lineTo(pts[q][0], pts[q][1]); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  flowlines: { cat: 'Marks', label: 'Flow Lines', ins: ['over', 'angle map', 'ink', 'second ink', 'flow from'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'colour', 'value'], outs: ['image'] },
+    params: [WHIM_R('amount', 'Lines', 100, 30, 300), WHIM_R('size', 'Scale', 100, 40, 250), WHIM_R('turbulence', 'Turbulence', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, i1 = E.input(n, 3), i2 = E.input(n, 4), dv = E.input(n, 5), mv = E.input(n, 2);
+      const o = { amt: E.num(n, 'amount', 100)/100, zoom: E.num(n, 'size', 100)/100, turb: E.num(n, 'turbulence', 50)/100,
+        light: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0),
+        ink1: Array.isArray(i1) ? whimHex(i1) : '#2B2A3A', ink2: Array.isArray(i2) ? whimHex(i2) : '#7A4A6A' };
+      if(mv != null){ const mw = Math.max(8, Math.min(512, w >> 2)), mh = Math.max(8, Math.round(mw*h/w)); o.map = kitField(mv, mw, mh); o.mw = mw; o.mh = mh; }
+      // the texture's own seed (+ Variant): Flow-Field Ink draws the lines it always drew
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => { const c = whimFlowLines(w, h, o, E.px, E.carea);
+        const over = E.input(n, 1); if(over == null) return [c];
+        const [pc, px] = kitPicture(over, w, h); px.drawImage(c, 0, 0); return [pc]; }); },
+    run(E, n){ const [c] = this.paint(E, n); return [E.readCanvas(c)]; } },
   particles: { cat: 'Marks', label: 'Particles', ins: ['over', 'color a', 'color b', 'wind from'], outs: ['image'], io: { ins: ['image', 'colour', 'colour', 'value'], outs: ['image'] },
-    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Scatter', 0, 0, 99)], cost: () => 6,
+    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Variant', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, kind = String(E.P(n, 'kind', 'flakes')), amt = Math.max(0.02, E.num(n, 'amount', 100)/100), zoom = Math.max(0.2, E.num(n, 'size', 100)/100), form = E.num(n, 'form', 50)/100;
       const ca = E.input(n, 2), cb = E.input(n, 3), dv = E.input(n, 4), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
       // the texture's own seed (+ Scatter), not the part's: so First Snow, Burning Mana and Euphoria Dust fall exactly as they always did
@@ -10746,7 +10657,57 @@ function crackNet(ww, wh, size){
   };
 }
 
+// Two chemicals, one feeding,
+// one eating — and out of nothing
+// the leopard's spots.
+// THE GRAY–SCOTT MODEL (Turing Skin's own, texChaos genTuringSkin until now): two chemicals on a torus, one
+// feeding the other, walked along the feed/kill map by Pattern — spots → coral → maze → worms → holes (Pearson
+// 1993's classes; Karl Sims's tutorial). Its own grid, whatever the page's; then sampled bicubically and given a
+// crisp edge. Returns the pattern as a field 0..1 on the ww×wh grid.
+function chaosTuring(ww, wh, growth, zoom, form){
+  const FK = [[0.0367, 0.0649], [0.0545, 0.062], [0.029, 0.057], [0.078, 0.061], [0.039, 0.058]];
+  const t = Math.max(0, Math.min(1, form))*(FK.length - 1), i0 = Math.min(FK.length - 2, Math.floor(t)), fr = t - i0;
+  const Fd = FK[i0][0] + (FK[i0 + 1][0] - FK[i0][0])*fr, Kd = FK[i0][1] + (FK[i0 + 1][1] - FK[i0][1])*fr;
+  const G = Math.max(48, Math.min(160, Math.round(110/zoom))), short = Math.min(ww, wh);
+  const gx = Math.max(16, Math.round(G*ww/short)), gy = Math.max(16, Math.round(G*wh/short)), n = gx*gy;
+  let A = new Float32Array(n).fill(1), B = new Float32Array(n), A2 = new Float32Array(n), B2 = new Float32Array(n);
+  // seeds: small patches, a few of them large; and a few stray specks
+  const seeds = 6 + Math.floor(Math.random()*10);
+  for(let s = 0; s < seeds; s++){ const cx = Math.floor(Math.random()*gx), cy = Math.floor(Math.random()*gy), r = 1 + Math.floor(Math.random()*3);
+    for(let y = -r; y <= r; y++) for(let x = -r; x <= r; x++){ const k = ((cy + y + gy) % gy)*gx + ((cx + x + gx) % gx); B[k] = 1; A[k] = 0.5; } }
+  for(let k = 0; k < n; k++) if(Math.random() < 0.002) B[k] = 0.5;
+  // (a budget of cell-updates, so a fine pattern on a wide page stays quick)
+  const iters = Math.min(Math.round(900 + 5100*growth), Math.round(55e6/n));
+  for(let it = 0; it < iters; it++){
+    for(let y = 0; y < gy; y++){
+      const yu = ((y - 1 + gy) % gy)*gx, yc = y*gx, yd = ((y + 1) % gy)*gx;
+      for(let x = 0; x < gx; x++){
+        const xl = x === 0 ? gx - 1 : x - 1, xr = x === gx - 1 ? 0 : x + 1, k = yc + x, a = A[k], b = B[k];
+        const la = 0.2*(A[yu + x] + A[yd + x] + A[yc + xl] + A[yc + xr]) + 0.05*(A[yu + xl] + A[yu + xr] + A[yd + xl] + A[yd + xr]) - a;
+        const lb = 0.2*(B[yu + x] + B[yd + x] + B[yc + xl] + B[yc + xr]) + 0.05*(B[yu + xl] + B[yu + xr] + B[yd + xl] + B[yd + xr]) - b;
+        const abb = a*b*b;
+        A2[k] = a + (1.0*la - abb + Fd*(1 - a)); B2[k] = b + (0.5*lb + abb - (Kd + Fd)*b);
+      }
+    }
+    let tmp = A; A = A2; A2 = tmp; tmp = B; B = B2; B2 = tmp;
+  }
+  const at = (x, y) => B[((y % gy + gy) % gy)*gx + ((x % gx + gx) % gx)];
+  const cub = (p0, p1, p2, p3, t2) => p1 + 0.5*t2*(p2 - p0 + t2*(2*p0 - 5*p1 + 4*p2 - p3 + t2*(3*(p1 - p2) + p3 - p0)));
+  let bmin = Infinity, bmax = -Infinity; for(let k = 0; k < n; k++){ if(B[k] < bmin) bmin = B[k]; if(B[k] > bmax) bmax = B[k]; }
+  const mid = bmin + (bmax - bmin)*0.45, soft = Math.max(0.01, (bmax - bmin)*0.12), S = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ const fy = (y + 0.5)/wh*gy - 0.5, y1 = Math.floor(fy), ty = fy - y1;
+    for(let x = 0; x < ww; x++){ const fx = (x + 0.5)/ww*gx - 0.5, x1 = Math.floor(fx), tx = fx - x1;
+      const row = j => cub(at(x1 - 1, y1 + j), at(x1, y1 + j), at(x1 + 1, y1 + j), at(x1 + 2, y1 + j), tx);
+      const v = cub(row(-1), row(0), row(1), row(2), ty), s = Math.max(0, Math.min(1, (v - mid)/soft*0.5 + 0.5));
+      S[y*ww + x] = s*s*(3 - 2*s); } }
+  return S;
+}
+
 const CHAOS_STEPS = {
+  grayscott: { cat: 'Noise', label: 'Turing Pattern', ins: [], outs: ['pattern'],
+    params: [CHAOS_R('pattern', 'Pattern', 25), CHAOS_R('growth', 'Growth', 80, 20, 100), CHAOS_R('scale', 'Scale', 100, 50, 250), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 30,
+    run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => [chaosTuring(ww, wh, Math.max(0.1, Math.min(1, num(n, 'growth', 80)/100)), num(n, 'scale', 100)/100, num(n, 'pattern', 25)/100)]); } },
   crazing: { cat: 'Textures', label: 'Crazing', ins: [], outs: ['height', 'glaze', 'grime', 'fine'],
     params: [CHAOS_R('scale', 'Fracture Scale', 100, 60, 400), CHAOS_R('density', 'Crack Density', 100, 10, 900), CHAOS_R('age', 'Enameling', 0)], cost: () => 14,
     // Crazing as it really looks: hairline cracks in a glassy surface that is
@@ -11186,7 +11147,7 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 const LIGHT_STEPS = {
   material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
     io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
-    params: [LT_R('relief', 'Relief', 50), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35)],
+    params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35)],
     cost: () => 10,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){
@@ -11523,7 +11484,13 @@ const STEP_DOCS = {
   glaze: 'Lights and colors crazed glaze from its maps.',
   material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
   oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
-  particles: 'Light hanging in the air, drawn over whatever comes in (or on nothing): Kind is snowflakes (First Snow), sparks falling in arcs (Burning Mana) or glittering motes (Euphoria Dust). The two color ports color them; the last setting is the wind for flakes, how far a spark\'s hue strays, or how wildly motes scatter. Wire the Light Dial into Wind From to blow the snow. Two Particles parts fall alike: give one a different Scatter.',
+  flowlines: 'Ink lines that flow like a current, evenly spaced and never crossing (Flow-Field Ink). They run the way the dial points (wire the Light Dial into Flow From), bent by Turbulence; wire any gray map into Angle Map and they bend by that instead. Lines sets how close they run; Scale, how wide the strokes and swirls.',
+  grayscott: 'A pattern that grows by itself, as on a leopard or a coral (the Gray–Scott model of two chemicals, Turing\'s idea): Pattern slides from spots through coral, maze and worms to holes; Growth is how long it has had to spread; Scale, how big its marks are. Wire it into a Light Engine\'s Height to raise it.',
+  washes: 'The shapes of two watercolor pigments, as two gray maps: blobs, each drawn forty times over a little differently, so their edges go soft (Tyler Hobbs\'s method). Wire each into a Pigment part. Wetness spreads them; Pigment lays more.',
+  pigment: 'Lays a gray map on a picture as watercolor pigment in one color: darker at its drying edges, settling into the paper\'s grain, running toward where the dial points. Wire one Pigment into the next to mix two colors where they overlap.',
+  terrain: 'Heights for an imagined land: broad hills and valleys with a few sharp crests (Contour Map\'s land). Scale zooms in or out; Crests sharpens the ridges; Variant is another land from the same seed. Wire it into a Light Engine\'s Height, or into Contour Lines.',
+  contours: 'Draws the contour lines of any gray map, as on a survey map: Levels is how many lines from the darkest to the lightest, and every Nth (Index Every) is heavier. Out comes a map of the lines, light where they are. Try it on a texture, or a Gradient for evenly spaced rings.',
+  particles: 'Light hanging in the air, drawn over whatever comes in (or on nothing): Kind is snowflakes (First Snow), sparks falling in arcs (Burning Mana) or glittering motes (Euphoria Dust). The two color ports color them; the last setting is the wind for flakes, how far a spark\'s hue strays, or how wildly motes scatter. Wire the Light Dial into Wind From to blow the snow. Two Particles parts fall alike: give one a different Variant.',
   strokes: 'A few fast, loaded swipes of gray paint (Painter\'s Frustration): each a body with bristle marks, fraying at the tail, flinging droplets. Wetness makes the paint mix, bleed and drip. Its second output is the paint\'s thickness, for a Light Engine.',
   screen: 'Prints a tone as a screen of dots, the way newspapers and comics do: a dot in every cell, as big as the tone is bright there. Wire a picture through Invert first to screen it dark-for-big. Screen Angle turns the grid.',
   grain: 'Film grain: Kind slides from silver (crisp grains in clumps) through film and paper (its cloudy formation and fibres) to a digital sensor (noise in each color, rows and columns). A color picture centered on gray: blend it over anything.',
@@ -11979,6 +11946,79 @@ function stepRange(name, key){
 
 
 const TEXTURE_CHAINS = {
+  // ═══ 🜛 BASICS: quiet grounds, two or three parts each — the easiest graphs to open and learn from ═══
+  // 🜛 Plain Noise: Value Noise → Levels
+  plainnoise: { label: 'Plain Noise', div: 2, teach: 'This is Plain Noise, a soft cloudy ground. Value Noise makes the clouds: Scale sets how many across the page, Detail adds finer clouds over them (octaves). Levels sets the Contrast by moving its dark and light points toward each other. Try: wire this noise into another part\'s gray input, a Warp or a Color Ramp.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 30 }, 40, 40],                     // 1
+      ['knob', { slot: '2', name: 'Detail', def: 50 }, 40, 140],                   // 2
+      ['knob', { slot: '3', name: 'Contrast', def: 20 }, 40, 240],                 // 3
+      ['noise', { scale: 60, '~scale': '5,200', octaves: 4, '~octaves': '1,6' }, 320, 60],   // 4
+      ['levels', { lo: 0, '~lo': '0,40', hi: 100, '~hi': '100,60', gamma: 50 }, 600, 120],  // 5
+      ['surface', { name: 'Plain Noise', ground: 'grey' }, 880, 120]],             // 6
+    wires: [[1, 1, 4, paramPort('noise', 'scale')], [2, 1, 4, paramPort('noise', 'octaves')], [3, 1, 5, paramPort('levels', 'lo')], [3, 1, 5, paramPort('levels', 'hi')],
+      [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🜛 Stripes: Waves → Threshold
+  stripes: { label: 'Stripes', div: 2, teach: 'This is Stripes. Waves makes smooth bands of light and dark; Threshold cuts them into stripes. Where Threshold cuts sets the Stripe Width, and its Softness blurs the edges back toward waves. Angle turns the Waves. Try: wire a Value Noise into the Waves\' Warp input to make the stripes wander like wood grain.', nodes: [
+      ['knob', { slot: '1', name: 'Stripe Count', def: 20 }, 40, 40],              // 1
+      ['knob', { slot: '2', name: 'Stripe Width', def: 50 }, 40, 140],             // 2
+      ['knob', { slot: '3', name: 'Softness', def: 20 }, 40, 240],                 // 3
+      ['knob', { slot: '4', name: 'Angle', def: 50 }, 40, 340],                    // 4
+      ['waves', { freq: 20, '~freq': '3,60', angle: 90, '~angle': '0,180' }, 320, 60],     // 5
+      ['threshold', { at: 50, '~at': '97,3', soft: 20, '~soft': '1,100' }, 600, 140],    // 6
+      ['surface', { name: 'Stripes', ground: 'grey' }, 880, 140]],                 // 7
+    wires: [[1, 1, 5, paramPort('waves', 'freq')], [4, 1, 5, paramPort('waves', 'angle')], [2, 1, 6, paramPort('threshold', 'at')], [3, 1, 6, paramPort('threshold', 'soft')],
+      [5, 1, 6, 1], [6, 1, 7, 1]] },
+  // 🜛 Polka Dots: Cells (in rows, no jitter) → Threshold of the distance to each center
+  polka: { label: 'Polka Dots', div: 2, teach: 'This is Polka Dots, made from Cells. With no Jitter, Cells puts one point in the middle of every square of a grid; its first output is how far each spot is from the nearest point. Threshold keeps what is near: a round dot about every point. Spacing is Cells\' Scale, Dot Size is where Threshold cuts, and Scatter is the Jitter that throws the points out of their rows. Try: wire the Cells\' Edges output into the Surface instead.', nodes: [
+      ['knob', { slot: '1', name: 'Spacing', def: 50 }, 40, 40],                   // 1
+      ['knob', { slot: '2', name: 'Dot Size', def: 45 }, 40, 140],                 // 2
+      ['knob', { slot: '3', name: 'Scatter', def: 0 }, 40, 240],                   // 3
+      ['cells', { scale: 110, '~scale': '200,30', jitter: 0, '~jitter': '0,100' }, 320, 60],  // 4
+      ['threshold', { at: 25, '~at': '8,46', soft: 4, '~soft': '2,6' }, 600, 120], // 5
+      ['surface', { name: 'Polka Dots', ground: 'grey' }, 880, 120]],              // 6
+    wires: [[1, 1, 4, paramPort('cells', 'scale')], [3, 1, 4, paramPort('cells', 'jitter')], [2, 1, 5, paramPort('threshold', 'at')],
+      [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🜛 Checkerboard: two Waves, across and down, each cut by Threshold; Math (difference) crosses them
+  checker: { label: 'Checkerboard', div: 2, teach: 'This is Checkerboard. Two Waves, one across and one down, are each cut into stripes by Threshold. Math, set to Difference, keeps a square where exactly one of the two stripes is light: that is a checkerboard. One Knob (Squares) sets both Waves\' Frequency, Softness both Thresholds, and Turn both Angles, so the squares stay square. Try: set Math to Multiply for a grid of windows, or Max for a plaid.', nodes: [
+      ['knob', { slot: '1', name: 'Squares', def: 20 }, 40, 40],                   // 1
+      ['knob', { slot: '2', name: 'Softness', def: 10 }, 40, 160],                 // 2
+      ['knob', { slot: '3', name: 'Turn', def: 0 }, 40, 280],                      // 3
+      ['waves', { freq: 12, '~freq': '2,40', angle: 0, '~angle': '0,90' }, 320, 40],       // 4
+      ['waves', { freq: 12, '~freq': '2,40', angle: 90, '~angle': '90,180' }, 320, 240],   // 5
+      ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 40],                // 6
+      ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 240],               // 7
+      ['math', { op: 'difference' }, 860, 140],                                    // 8
+      ['surface', { name: 'Checkerboard', ground: 'grey' }, 1100, 140]],           // 9
+    wires: [[1, 1, 4, paramPort('waves', 'freq')], [1, 1, 5, paramPort('waves', 'freq')], [3, 1, 4, paramPort('waves', 'angle')], [3, 1, 5, paramPort('waves', 'angle')],
+      [2, 1, 6, paramPort('threshold', 'soft')], [2, 1, 7, paramPort('threshold', 'soft')],
+      [4, 1, 6, 1], [5, 1, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
+  // 🜛 Gradient: a straight and a round Gradient, Mixed by Roundness; Levels bends the falloff
+  softgradient: { label: 'Gradient', div: 4, teach: 'This is Gradient, a smooth fall from dark to light. There are two Gradient parts, one straight and one round (Invert turns the round one into a glow, light in the middle); Mix blends between them by Roundness, so the ramp can bend into a glow. Angle turns the straight one. Levels\' Gamma is the Falloff: how quickly the light gives way. Try: wire a Value Noise into Mix\'s amount instead of the Knob.', nodes: [
+      ['knob', { slot: '1', name: 'Angle', def: 25 }, 40, 40],                     // 1
+      ['knob', { slot: '2', name: 'Roundness', def: 0 }, 40, 160],                 // 2
+      ['knob', { slot: '3', name: 'Falloff', def: 50 }, 40, 280],                  // 3
+      ['gradient', { shape: 'linear', angle: 90, '~angle': '0,360' }, 320, 40],    // 4
+      ['gradient', { shape: 'radial', angle: 90 }, 320, 200],                      // 5
+      ['mix', { t: 0, '~t': '0,100' }, 800, 100],                                  // 6
+      ['levels', { lo: 0, hi: 100, gamma: 50, '~gamma': '0,100' }, 1040, 120],     // 7
+      ['surface', { name: 'Gradient', ground: 'grey' }, 1280, 120],                // 8
+      ['invert', {}, 560, 200]],                                                   // 9 (light in the middle: a glow)
+    wires: [[1, 1, 4, paramPort('gradient', 'angle')], [2, 1, 6, paramPort('mix', 't')], [3, 1, 7, paramPort('levels', 'gamma')],
+      [4, 1, 6, 1], [5, 1, 9, 1], [9, 1, 6, 2], [6, 1, 7, 1], [7, 1, 8, 1]] },
+  // 🜛 Cells: Cells' distance (inverted: domes) and edges (inverted: flat cells), Mixed by Lines; lit by the dial
+  cells: { label: 'Cells', div: 2, teach: 'This is Cells, like pebbles, cobbles or a sponge. Cells gives the distance to each cell\'s middle and the lines between cells; Invert turns each the right way up (light in the middle). Mix blends the round domes into flat cells with crisp lines by Lines. The same picture goes into the Surface\'s Height, scaled by Relief, so the dial lights it. Try: turn the light dial on the page, then set Order to 0 for a grid of tiles.', nodes: [
+      ['knob', { slot: '1', name: 'Cell Size', def: 40 }, 40, 40],                 // 1
+      ['knob', { slot: '2', name: 'Order', def: 20 }, 40, 140],                    // 2
+      ['knob', { slot: '3', name: 'Lines', def: 50 }, 40, 240],                    // 3
+      ['knob', { slot: '4', name: 'Relief', def: 40 }, 40, 340],                   // 4
+      ['cells', { scale: 60, '~scale': '200,20', jitter: 80, '~jitter': '100,0' }, 300, 60],  // 5
+      ['invert', {}, 540, 20], ['invert', {}, 540, 140],                           // 6, 7
+      ['mix', { t: 50, '~t': '0,100' }, 760, 80],                                  // 8
+      ['levels', { lo: 10, hi: 95, gamma: 50 }, 980, 80],                          // 9
+      ['math', { op: 'multiply' }, 980, 260],                                      // 10
+      ['surface', { name: 'Cells', ground: 'grey' }, 1220, 140]],                  // 11
+    wires: [[1, 1, 5, paramPort('cells', 'scale')], [2, 1, 5, paramPort('cells', 'jitter')], [5, 1, 6, 1], [5, 2, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [3, 1, 8, paramPort('mix', 't')],
+      [8, 1, 9, 1], [9, 1, 11, 1], [9, 1, 10, 1], [4, 1, 10, 2], [10, 1, 11, 2]] },
   // √ Harsh Rain: far sheets, then near streaks drawn over them; the dial is
   // where the rain comes from, Gusts swings it about that
   rainstreaks: { label: 'Harsh Rain', div: 2, teach: 'This is Harsh Rain. The Light Dial sets the direction the rain comes from. The first Streaks part draws far, soft sheets of rain; the second draws near streaks over them. The two Knobs are this texture\'s sliders on the page (Rain Zoom and Gusts), wired into the settings they move. Try: turn the dial, then raise Gusts.', nodes: [
@@ -12095,6 +12135,57 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // 🜚 Contour Map: Terrain → Contour Lines, inked over the land lit by the Light Engine (the hillshade)
+  contour: { label: 'Contour Map', div: 2, teach: 'This is Contour Map, a survey of an imagined land. Terrain makes the land\'s heights. The Light Engine lights a plain gray picture by those heights (the hillshade), and Mix fades it toward plain gray by the Hillshade knob. Contour Lines draws the lines of equal height, every fifth heavier; the last Mix inks them over the hillshade in the Ink color. Try: wire another texture, or a Gradient, into Contour Lines instead of the Terrain.', nodes: [
+      ['knob', { slot: '1', name: 'Terrain Scale', def: 23 }, 40, 40],             // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Contour Interval', def: 32 }, 40, 160],         // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Hillshade', def: 45 }, 40, 280],                // 3
+      ['terrain', { scale: 100, '~scale': '40,300', crests: 22, variant: 0 }, 300, 40],   // 4
+      ['number', { value: 50 }, 300, 220],                                         // 5  (a plain gray picture)
+      ['material', { relief: 200, gloss: 5, shine: 0, shadow: 35, occlusion: 15, ambient: 45 }, 560, 160],   // 6
+      ['mix', { t: 45, '~t': '0,100' }, 820, 200],                                 // 7  (the hillshade, faded to gray)
+      ['contours', { levels: 20, '~levels': '6,50', weight: 100, index: 5, strength: 90 }, 560, 0],   // 8
+      ['colour', { hex: '#222222' }, 820, 20],                                     // 9  (the ink)
+      ['mix', { t: 50 }, 1060, 100],                                               // 10 (the lines inked over it)
+      ['surface', { name: 'Contour Map', ground: 'grey' }, 1300, 100]],            // 11
+    wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
+      [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
+  // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
+  turing: { label: 'Turing Skin', div: 2, teach: 'This is Turing Skin. Turing Pattern grows the marks of an animal\'s skin or a coral (Pattern slides from spots to holes). Map Range turns it into a picture, the marks a little lighter than the skin between, and the Light Engine raises the marks by Relief and lights them by the dial. Try: wire the Turing Pattern into a Color Ramp first, or set Pattern to Maze.', nodes: [
+      ['knob', { slot: '1', name: 'Pattern Scale', def: 25 }, 40, 40],             // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Growth', def: 75 }, 40, 140],                   // 2  (80 of 20–100)
+      ['knob', { slot: '3', name: 'Pattern', def: 25 }, 40, 240],                  // 3
+      ['knob', { slot: '4', name: 'Relief', def: 50 }, 40, 340],                   // 4
+      ['grayscott', { pattern: 25, '~pattern': '0,100', growth: 80, '~growth': '20,100', scale: 100, '~scale': '50,250', variant: 0 }, 300, 80],   // 5
+      ['maprange', { inLo: 0, inHi: 100, outLo: 31, outHi: 69 }, 560, 40],          // 6  (the skin 128 ∓ 48)
+      ['material', { relief: 23, '~relief': '6,40', gloss: 35, shine: 47, shadow: 45, occlusion: 40, ambient: 45 }, 800, 120],   // 7
+      ['surface', { name: 'Turing Skin', ground: 'grey' }, 1060, 140]],            // 8
+    wires: [[1, 1, 5, paramPort('grayscott', 'scale')], [2, 1, 5, paramPort('grayscott', 'growth')], [3, 1, 5, paramPort('grayscott', 'pattern')], [4, 1, 7, paramPort('material', 'relief')],
+      [5, 1, 6, 1], [6, 1, 7, 1], [5, 1, 7, 2], [7, 1, 8, 1]] },
+  // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
+  watercolour: { label: 'Watercolor Wash', div: 2, teach: 'This is Watercolor Wash. Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
+      ['knob', { slot: '1', name: 'Wash Size', def: 29 }, 40, 40],                 // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Pigment', def: 32 }, 40, 140],                  // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Pigment Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Pigment Hue' }, 40, 500],   // 5, 6
+      ['washes', { amount: 100, '~amount': '30,250', size: 100, '~size': '40,250', wet: 50, '~wet': '0,100' }, 300, 60],   // 7
+      ['pigment', { wet: 50, '~wet': '0,100' }, 560, 60],                          // 8
+      ['pigment', { wet: 50, '~wet': '0,100' }, 800, 160],                         // 9
+      ['surface', { name: 'Watercolor Wash', ground: 'colour' }, 1040, 160]],      // 10
+    wires: [[1, 1, 7, paramPort('washes', 'size')], [2, 1, 7, paramPort('washes', 'amount')], [3, 1, 7, paramPort('washes', 'wet')], [3, 1, 8, paramPort('pigment', 'wet')], [3, 1, 9, paramPort('pigment', 'wet')],
+      [7, 1, 8, 2], [5, 1, 8, 3], [4, 1, 8, 4], [8, 1, 9, 1], [7, 2, 9, 2], [6, 1, 9, 3], [4, 1, 9, 4], [9, 1, 10, 1]] },
+  // ♡ Flow-Field Ink: one Flow Lines part, the dial its current
+  flowfield: { label: 'Flow-Field Ink', canvas: true, teach: 'This is Flow-Field Ink. One part makes it: Flow Lines, which grows evenly spaced ink lines along a current and stops each one short of the others. The Light Dial goes into Flow From, so the current runs the way the dial points; Turbulence bends it into eddies. The two Hues are the inks. Try: wire a Terrain or a Value Noise into Angle Map, then turn Turbulence up.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Lines', def: 26 }, 40, 140],                    // 2  (100 of 30–300)
+      ['knob', { slot: '3', name: 'Turbulence', def: 50 }, 40, 240],               // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 500],   // 5, 6
+      ['flowlines', { amount: 100, '~amount': '30,300', size: 100, '~size': '40,250', turbulence: 50, '~turbulence': '0,100' }, 320, 140],   // 7
+      ['surface', { name: 'Flow-Field Ink', ground: 'colour' }, 600, 160]],        // 8
+    wires: [[1, 1, 7, paramPort('flowlines', 'size')], [2, 1, 7, paramPort('flowlines', 'amount')], [3, 1, 7, paramPort('flowlines', 'turbulence')],
+      [4, 1, 7, 5], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ♡ First Snow, Burning Mana and Euphoria Dust: one Particles part each, of its own kind
   snow: { label: 'First Snow', canvas: true, teach: 'This is First Snow. One part makes it: Particles, set to flakes. The Light Dial goes into Wind From, so the wind blows from where the dial points, and the Wind knob says how hard. The flakes are colored by the Snow Hue (or anything wired into Color A). Try: turn the dial with Wind up, then set Kind to sparks.', nodes: [
       ['knob', { slot: '1', name: 'Flake Size', def: 14 }, 40, 40],                // 1  (100 of 60–340)
@@ -12873,6 +12964,30 @@ const TEXTURE_PARAMS = {
                   {key:'hue',   label:'Wear',            min:0,  max:100, def:30,  unit:''}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
+  // 🜛 BASICS: quiet grounds, each a chain of two or three parts (chains.js); every slider a plain 0–100
+  plainnoise:    [{key:'zoom',  label:'Scale',           min:0,  max:100, def:30,  unit:''},
+                  {key:'amt',   label:'Detail',          min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Contrast',        min:0,  max:100, def:20,  unit:''}],
+  stripes:       [{key:'zoom',  label:'Stripe Count',    min:0,  max:100, def:20,  unit:''},
+                  {key:'amt',   label:'Stripe Width',    min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Softness',        min:0,  max:100, def:20,  unit:''},
+                  // 0 upright, 50 level (ruled lines), 100 upright again
+                  {key:'shape', label:'Angle',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
+  polka:         [{key:'zoom',  label:'Spacing',         min:0,  max:100, def:50,  unit:''},
+                  {key:'amt',   label:'Dot Size',        min:0,  max:100, def:45,  unit:''},
+                  // in rows (0) → thrown about (100)
+                  {key:'form',  label:'Scatter',         min:0,  max:100, def:0,   unit:''}],
+  checker:       [{key:'zoom',  label:'Squares',         min:0,  max:100, def:20,  unit:''},
+                  {key:'amt',   label:'Softness',        min:0,  max:100, def:10,  unit:''},
+                  {key:'form',  label:'Turn',            min:0,  max:100, def:0,   unit:'', ticks:[0,50,100]}],
+  softgradient:  [{key:'angle', label:'Angle',           min:0,  max:360, def:90,  unit:'°'},
+                  {key:'amt',   label:'Roundness',       min:0,  max:100, def:0,   unit:''},
+                  {key:'form',  label:'Falloff',         min:0,  max:100, def:50,  unit:'', ticks:[50]}],
+  cells:         [{key:'zoom',  label:'Cell Size',       min:0,  max:100, def:40,  unit:''},
+                  {key:'amt',   label:'Order',           min:0,  max:100, def:20,  unit:''},
+                  // round domes (0) → flat cells with crisp lines (100)
+                  {key:'form',  label:'Lines',           min:0,  max:100, def:50,  unit:''},
+                  {key:'shape', label:'Relief',          min:0,  max:100, def:40,  unit:''}],
 };
 
 /**
@@ -12891,6 +13006,19 @@ const TEXTURE_PARAMS = {
  * silently ignored.
  */
 const TEXTURE_CAPS = {
+  plainnoise:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  stripes:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  polka:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  checker:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  softgradient:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // the cells' heights lit by the dial (the Surface's Height)
+  cells:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — whimsy —
   clouds:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -13133,6 +13261,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'plainnoise' || type === 'stripes' || type === 'polka' || type === 'checker' || type === 'softgradient' || type === 'cells'){
+    result = genChain(type, w, h, light, extra);           // 🜛 Basics: two or three parts each (chains.js)
   } else if(type === 'brushstrokes'){
     result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
@@ -13156,17 +13286,17 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'chladni'){
     result = genChladni(w,h,amt,zoom,light,form);
   } else if(type === 'contour'){
-    result = genContourMap(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
   } else if(type === 'suminagashi'){
     result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'watercolour'){
-    result = genWatercolour(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
-    result = genFlowField(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1 || '#2B2A3A', tint2 || '#7A4A6A');   // Flow Lines, the dial its current (chains.js)
   } else if(type === 'turing'){
-    result = genTuringSkin(w,h,amt,zoom,light,form,extra.shape/100,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
   } else if(type === 'frost'){
     result = genHoarfrost(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'ash'){
@@ -14042,6 +14172,14 @@ Have fun!</textarea>
             <label data-str="label.surface_variant">Surface Variant</label>
             <select id="textureType">
               <!-- grouped by what a surface IS (each group alphabetical); each group's glyph a Runology Archetype that means it (appOptions.js TEXTURE_GROUPS) -->
+              <optgroup label="🜛 Basics">
+                <option value="cells" data-str="option.cells">Cells</option>
+                <option value="checker" data-str="option.checkerboard">Checkerboard</option>
+                <option value="softgradient" data-str="option.gradient">Gradient</option>
+                <option value="plainnoise" data-str="option.plain_noise">Plain Noise</option>
+                <option value="polka" data-str="option.polka_dots">Polka Dots</option>
+                <option value="stripes" data-str="option.stripes">Stripes</option>
+              </optgroup>
               <optgroup label="🜃 Paper &amp; Grounds">
                 <option value="coldpress" data-str="option.cold_press">Cold Press</option>
                 <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
@@ -14635,7 +14773,7 @@ Have fun!</textarea>
     </div>
     <div class="forge-body">
       <div class="forge-palette" id="forgePalette"></div>
-      <div class="forge-canvas" id="forgeCanvas"></div>
+      <div class="parent-drawflow forge-canvas" id="forgeCanvas"></div>
       <!-- what it makes: bottom right, over the grid; as small as it can be around the preview -->
       <aside class="forge-dock" id="forgeDock" aria-label="What it makes">
         <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes (tap: larger)"></canvas>
@@ -15004,6 +15142,12 @@ const UI_STRINGS = {
   'option.burning_mana':                       "Sparkler",
   'option.first_snow':                         "First Snow",
   'option.aurora_veil':                        "Aurora Veil",
+  'option.cells':                              "Cells",
+  'option.checkerboard':                       "Checkerboard",
+  'option.gradient':                           "Gradient",
+  'option.plain_noise':                        "Plain Noise",
+  'option.polka_dots':                         "Polka Dots",
+  'option.stripes':                            "Stripes",
   'option.waking_grain':                       "Waking Grain",
   'option.metal_leaf':                         "Scattered Polygons",
   'option.lotus_pond':                         "Lotus Pond",
@@ -15185,10 +15329,9 @@ function applyStrings(root){
  *              and (for Cinzel/Unica One) a noItalic flag. Index position
  *              matters: the Segmentation Operator's f:N directive and each
  *              preset's `font` field both resolve against this array.
- *   PRESETS  — 36 built-in looks: four Simple ones first (light to read
- *              and quick to draw), then eight each of Whimsy, Sharpness,
- *              Chaos and Touch (PRESET_GROUPS heads each group in the
- *              grid; the order is the grouping). Each entry is grouped into
+ *   PRESETS  — 48 built-in looks. Their order no longer groups them:
+ *              PRESET_GROUPS does, by what a person is looking for (Quiet
+ *              Pages, Night & Stars, Places…). Each entry is grouped into
  *              background / text / effects / font / texture / accents /
  *              border fields (only the fields that preset actually uses —
  *              most presets omit most of these). Order matters: it fills
@@ -15624,16 +15767,112 @@ const PRESETS = [
     cardToggle: true, cardColor1: '#3A4558', cardGradientToggle: true, cardColor2: '#6B7C96', cardGradientType: 'radial', cardOpacity: '80', cardBlend: 'multiply',
     fx1Type: 'shadow', fx1Color: '#0B1018', fx1K1: '18', fx1K2: '6', fx1Angle: '90'
   },
+  // ═══ Twelve more (Jupiter–Eukelade): the Basics, and surfaces that had no preset ═══
+{ name: "Hush",   // surface: Plain Noise (🜛) — a page barely clouded
+    bg1: "#E9E5DD", bgGradient: true, bg2: "#DCD6CB", bgAngle: 170, text1: "#2A2724", outlineMode: "off", font: "Spectral",
+    texture: true, textureType: "plainnoise", textureOpacity: 30, texP1: 22, texP2: 50, texP3: 15, textureBlend: 'soft-light',
+    textureTint1: '#FFFFFF', textureTint2: '#6E655A',
+    accent1: "#7A6A56", accent2: "#5F6B6E",
+    spell: "[[⯔🜳🝠🝒]]🜐🝟🜝🜁ᛠ{{⚼ᚠ}}"
+  },
+{ name: "Ruled",   // surface: Stripes (🜛) — a notebook's blue rules
+    bg1: "#F7F4EC", text1: "#1E2A3A", outlineMode: "off", font: "Caveat", maxSize: 140,
+    texture: true, textureType: "stripes", textureOpacity: 42, texP1: 30, texP2: 98, texP3: 2, texP4: 50, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#485A72',   // (under Multiply a dark hue shows twice as light)
+    accent1: "#C8484A", accent2: "#5F86B4",
+    spell: "{{Ᏹ🝯}}♡🝪☉🜟[[🝔⚻ᛊ🝜🝏]]"
+  },
+{ name: "Gingham",   // surface: Checkerboard (🜛) — a picnic cloth
+    bg1: "#FBF6EF", text1: "#3A1C1E", outlineMode: "off", font: "Fraunces",
+    texture: true, textureType: "checker", textureOpacity: 22, texP1: 32, texP2: 25, texP3: 0, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#6C292D',
+    accent1: "#D9525A", accent2: "#5E8C5A",
+    spell: "[[✡ᛖ🝅🝓🝚⚷⚺🝔]]🝱⯚{{🝪}}"
+  },
+{ name: "Sundress",   // surface: Polka Dots (🜛) — pink, with a little scatter
+    bg1: "#FFE8E2", text1: "#4A1630", outlineMode: "off", font: "Comfortaa",
+    texture: true, textureType: "polka", textureOpacity: 40, texP1: 58, texP2: 42, texP3: 12, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#774858',
+    accent1: "#C24A68", accent2: "#3F8A78",
+    spell: "{{🜌☉ᛉ}}[[🝊🜶]]⯢⯓ᛚ🜇⯰⛤"
+  },
+{ name: "Sunroom",   // surface: Gradient (🜛) — warm light pooling in the middle
+    bg1: "#FFF3DE", bgGradient: true, bg2: "#FFE0BD", bgAngle: 160, text1: "#4A2C14", outlineMode: "off", font: "Raleway",
+    texture: true, textureType: "softgradient", textureOpacity: 70, texP1: 90, texP2: 100, texP3: 62, textureBlend: 'soft-light',
+    textureTint1: '#FFF8E0', textureTint2: '#D97F45',
+    accent1: "#B0601E", accent2: "#5A7A40",
+    spell: "{{ᛠ}}[[🜝]]ᛞᚢ♅✝🜮🝛🝂🜿🜌"
+  },
+{ name: "Postcard",   // surface: Watercolor Wash — a sky in blue and apricot
+    bg1: "#FAF6EE", text1: "#24303C", outlineMode: "off", font: "Architects Daughter",
+    texture: true, textureType: "watercolour", textureOpacity: 62, textureBlend: 'multiply',
+    textureTint1: '#7FB2D0', textureTint2: '#EFA683',
+    accent1: "#4F86A8", accent2: "#C06A44",
+    spell: "♡[[⛤🜅🝋🝐🝔🝧🜔⚹⯗]]{{🜐}}",
+    border: true, borderColor: "#FFFFFF", borderThickness: 18, borderOffset: 0
+  },
+{ name: "Riverbed",   // surface: Cells (🜛) — pebbles lit from the upper left
+    bg1: "#6C6A60", bgGradient: true, bg2: "#4C5753", bgAngle: 160, text1: "#F5F2EA", outlineMode: "off", font: "Marcellus",
+    texture: true, textureType: "cells", textureOpacity: 72, texP1: 45, texP2: 15, texP3: 15, texP4: 65, textureBlend: 'overlay', textureLight: '315',
+    textureTint1: '#ECE6D6', textureTint2: '#18201E',
+    accent1: "#E8DCB4", accent2: "#B8D6CE",
+    spell: "{{ᛃ🝔⯰⯘⯗ᛯ♅}}[[♡⯲]]☊🜏",
+    cardToggle: true, cardColor1: '#252B29', cardOpacity: '55', cardBlend: 'multiply'
+  },
+{ name: "Fernlight",   // surface: Moss on Stone — green in a cool wood
+    bg1: "#1D281D", bgGradient: true, bg2: "#2F3F27", bgAngle: 150, text1: "#EEF3E2", outlineMode: "off", font: "Alegreya",
+    texture: true, textureType: "moss", textureOpacity: 58, textureBlend: 'source-over',
+    accent1: "#9CC07A", accent2: "#C9B27A",
+    spell: "ᛇ🜟{{🝪⯛⚻ᕕ}}[[🝂ᛗ⚷🝣🝃]]",
+    cardToggle: true, cardColor1: '#162016', cardOpacity: '50', cardBlend: 'darken'
+  },
+{ name: "Wayfinder",   // surface: Contour Map — a survey sheet in sepia and sage
+    bg1: "#EEE7D3", text1: "#2E2A1E", outlineMode: "off", font: "Source Sans 3",
+    texture: true, textureType: "contour", textureOpacity: 55, textureBlend: 'multiply',
+    textureTint1: '#FFFFFF', textureTint2: '#45351D',
+    accent1: "#8A6A3A", accent2: "#4E7A6A",
+    spell: "🜹🜳⯦[[ᛯᚦ🜞🜙]]{{ᛃᕕ🝧🜼}}",
+    border: true, borderColor: "#8A6A3A", borderThickness: 2, borderOffset: 40
+  },
+{ name: "First Frost",   // surface: Hoarfrost — ice feathering a night window
+    bg1: "#0E1A2A", bgGradient: true, bg2: "#1E3652", bgAngle: 180, text1: "#EAF4FF", outlineMode: "off", font: "Alegreya SC",
+    texture: true, textureType: "frost", textureOpacity: 62, textureBlend: 'screen',
+    textureTint1: '#CFE6FF',
+    accent1: "#A8D0FF", accent2: "#E2E8F0",
+    spell: "{{🜼🝳✝}}ᚹ🝜🜘🜠[[⎐ᛟ🝍⚴]]",
+    vignette: true, vignetteBlend: 'multiply', vignetteIntensity: 28
+  },
+{ name: "Marbled",   // surface: Suminagashi — floating ink, a bookbinder's endpaper
+    bg1: "#F3EEE3", text1: "#1F2430", outlineMode: "off", font: "Libre Baskerville",
+    texture: true, textureType: "suminagashi", textureOpacity: 52, textureBlend: 'multiply',
+    textureTint1: '#2A3D66', textureTint2: '#8A3442',
+    accent1: "#2A3D66", accent2: "#8A3442",
+    spell: "🜪♂[[ᛞ🝫ᚢᛝ]]{{🝁ᚾᛚᛃ🝩}}",
+    cardToggle: true, cardColor1: '#F3EEE3', cardOpacity: '82', cardBlend: 'source-over'
+  },
+{ name: "Rose Window",   // surface: Stained Glass — a cathedral's rose at dusk
+    bg1: "#140C18", bgGradient: true, bg2: "#2B1430", bgAngle: 160, text1: "#FBEFE6", outlineMode: "off", font: "DM Serif Display",
+    texture: true, textureType: "stainedglass", textureOpacity: 52, textureBlend: 'source-over',
+    accent1: "#E05A6A", accent2: "#5A7FE0",
+    spell: "[[🜡🜮🝅🝣]]🜣🝳🝩🜒ᛞᛖ{{🝋}}",
+    cardToggle: true, cardColor1: '#120A14', cardOpacity: '62', cardBlend: 'darken'
+  },
 ];
-/** The preset grid's groups, in order (headers in the grid; the presets
- *  themselves carry no group field, so the five Ruby called perfect stay
- *  exactly as they are). */
+/** The preset grid's groups, in order, named for what a person is looking
+ *  for (Ruby: by use, not by element), each with a Runology Archetype as the
+ *  texture menu's groups have; alphabetical within each. The presets carry no
+ *  group field, so the five Ruby called perfect stay exactly as they are.
+ *  Every preset is in exactly one group (test/presets.test.mjs). */
 const PRESET_GROUPS = [
-  { name: 'Simple', count: 4 },
-  { name: 'Whimsy ♡', count: 8 },
-  { name: 'Sharpness √', count: 8 },
-  { name: 'Chaos ∆', count: 8 },
-  { name: 'Touch 🜚', count: 8 },
+  { glyph: '🝓', name: 'Quiet Pages',        presets: ['Plainsong', 'Inkwell', 'Sea Glass', 'Dusk Letter', 'Hush', 'Ruled'] },
+  { glyph: '𝀶', name: 'Bright & Playful',   presets: ['Gingham', 'Sundress', 'Sunroom', 'Postcard', 'Daydream'] },
+  { glyph: '🝊', name: 'Night & Stars',      presets: ['Andromeda', 'Starbloom', 'Nocturne', 'Solstice', 'Event Horizon', 'Sleepwalk'] },
+  { glyph: '🜚', name: 'Glow & Glitter',     presets: ['Euphoria', 'Kindling', 'Lucid', 'Gold Leaf'] },
+  { glyph: '🜁', name: 'Weather & Water',    presets: ['December', 'Petrichor', 'Homebound', 'Stillwater', 'Lotus Bloom', 'First Frost'] },
+  { glyph: '🜥', name: 'Places',             presets: ['Homesick', 'Insomnia', 'Mirage', 'Fernlight', 'Wayfinder', 'Riverbed'] },
+  { glyph: 'Ᏹ', name: 'Paper & Keepsakes',  presets: ['Handled', 'Foxed', 'Sealed', 'Mended', 'Hourglass', 'Ashfall', 'Marbled'] },
+  { glyph: '🝢', name: 'Bold & Graphic',     presets: ['Fervor', 'Rumor', 'Signal', 'Projection'] },
+  { glyph: '⎐', name: 'Ritual & Omen',      presets: ['Desire', 'Gateway', 'Omen', 'Rose Window'] },
 ];
 
 /**
@@ -15693,6 +15932,7 @@ const isProductionHost = () => typeof location !== 'undefined' && /^poetrypress\
  * Order order, Vitrum engraving and record, Creation what you make).
  */
 const TEXTURE_GROUPS = [
+  { glyph: '🜛', name: 'Basics', types: ['cells', 'checker', 'softgradient', 'plainnoise', 'polka', 'stripes'] },
   { glyph: '🜃', name: 'Paper & Grounds', types: ['coldpress', 'grain', 'linen', 'oldpaper'] },
   { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'magicparticles', 'clouds', 'embers'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain'] },
@@ -17680,6 +17920,13 @@ function seedFromText(text){
  */
 const CPU = { willReadFrequently: true };
 
+// a smooth multi-octave noise sampler, on grids drawn from the seed (texTouch's surfaces; the Terrain part)
+function fbmSampler(cells, octaves){
+  const grids = [];
+  for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
+  const norm = grids.reduce((s, o) => s + o.amp, 0);
+  return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
+}
 function makeNoiseGrid(gw, gh){
   const g = new Float32Array(gw*gh);
   for(let i=0;i<g.length;i++) g[i] = Math.random();
@@ -19462,74 +19709,7 @@ function genMoon(w,h,amt,zoom,form,night){
 // distance, made of air.
 // PAINTED LANDSCAPE is a chain now: painted sky → painted ridges → watercolour wash (stepsWhimsy.js, chains.js 'landscape').
 
-// Lay a comb through water
-// and every tooth leaves a line
-// that will not cross another.
-/**
- * Flow-Field Ink — long pen strokes that follow a smooth field without ever
- * crossing (after Tyler Hobbs's essay on flow fields): the field's angle comes
- * from layered noise, turned toward the dial's direction (FLOW); each stroke
- * starts somewhere, walks the field, and stops where it would come too close
- * to another, so the page fills with even, river-like lines. Some strokes in
- * the second ink; widths vary a little, and each stroke tapers at its ends.
- * SCALE · LINES · TURBULENCE
- */
-function genFlowField(w,h,amt,zoom,light,form,tint1,tint2){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const turb=Math.max(0,Math.min(1, form==null?0.5:form));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU);
-  const unit=Math.min(w,h);
-  // the field: the dial's direction (the flow), bent by noise as TURBULENCE rises
-  const lv=lightVec(light==null?0:light), base=Math.hypot(lv.lx,lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
-  const g1=makeNoiseGrid(6,6), g2=makeNoiseGrid(13,13);
-  const fieldAt=(x,y)=>{ const u=x/unit/zoom, v=y/unit/zoom;
-    return base + (sampleNoiseGrid(g1,6,6,u*2.2,v*2.2)*0.75 + sampleNoiseGrid(g2,13,13,u*5,v*5)*0.25 - 0.5)*Math.PI*2.6*turb; };
-  // spacing: how close two strokes may run (canonical, so the preview matches)
-  const sep=cpx(54)*zoom/Math.max(0.3, amt), step=Math.max(0.6, cpx(4)), cell=sep*0.5;
-  const gw=Math.ceil(w/cell)+1, gh=Math.ceil(h/cell)+1, grid=new Array(gw*gh);
-  const near=(x,y,own)=>{ const cx=Math.floor(x/cell), cy=Math.floor(y/cell);
-    for(let j=cy-2;j<=cy+2;j++) for(let i=cx-2;i<=cx+2;i++){ if(i<0||j<0||i>=gw||j>=gh) continue; const L=grid[j*gw+i]; if(!L) continue;
-      for(const p of L){ if(p[2]===own && p[3] > -1) continue; const dx=p[0]-x, dy=p[1]-y; if(dx*dx+dy*dy < sep*sep) return true; } }
-    return false; };
-  const add=(x,y,own)=>{ const k=Math.floor(y/cell)*gw + Math.floor(x/cell); (grid[k] || (grid[k]=[])).push([x,y,own,0]); };
-  const ink1=tint1 || '#2B2A3A', ink2=tint2 || '#7A4A6A';
-  const tries=Math.round(canonArea(w,h)/(3072*3072)*1400*Math.min(3, amt));
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  let strokeId=0;
-  for(let t=0;t<tries;t++){
-    const sx=Math.random()*w, sy=Math.random()*h;
-    if(near(sx,sy,-1)) continue;
-    const id=strokeId++, pts=[[sx,sy]];
-    // walk both ways from the seed point
-    for(const dir of [1,-1]){
-      let x=sx, y=sy;
-      for(let s=0;s<900;s++){
-        const a=fieldAt(x,y); const nx=x + Math.cos(a)*step*dir, ny=y + Math.sin(a)*step*dir;
-        if(nx<-sep||ny<-sep||nx>w+sep||ny>h+sep) break;
-        // too close to ANOTHER stroke (its own recent points don't count)
-        const cx=Math.floor(nx/cell), cy=Math.floor(ny/cell); let hit=false;
-        for(let j=cy-2;j<=cy+2 && !hit;j++) for(let i=cx-2;i<=cx+2 && !hit;i++){ if(i<0||j<0||i>=gw||j>=gh) continue; const L=grid[j*gw+i]; if(!L) continue;
-          for(const p of L){ if(p[2]===id) continue; const dx=p[0]-nx, dy=p[1]-ny; if(dx*dx+dy*dy < sep*sep*0.55){ hit=true; break; } } }
-        if(hit) break;
-        x=nx; y=ny; if(dir>0) pts.push([x,y]); else pts.unshift([x,y]);
-      }
-    }
-    if(pts.length < 12) continue;
-    for(const p of pts) if(p[0]>=0&&p[1]>=0&&p[0]<w&&p[1]<h) add(p[0],p[1],id);
-    // the stroke: one ink or the other, its width a little its own, tapering at both ends
-    const wd=cpx(9 + Math.random()*9)*zoom*Math.min(1.3, 0.55 + 0.45/Math.max(0.4, amt)), col=Math.random()<0.18 ? ink2 : ink1;
-    ctx.strokeStyle=col; ctx.globalAlpha=0.82 + Math.random()*0.15;
-    const n=pts.length, seg=Math.max(4, Math.floor(n/14));
-    for(let a=0;a<n-1;a+=seg){
-      const b=Math.min(n-1, a+seg), m=(a+b)/2/(n-1), taper=Math.min(1, Math.sin(m*Math.PI)*1.6);
-      ctx.lineWidth=Math.max(cpx(0.4), wd*(0.35 + 0.65*taper));
-      ctx.beginPath(); ctx.moveTo(pts[a][0], pts[a][1]); for(let q=a+1;q<=b;q++) ctx.lineTo(pts[q][0], pts[q][1]); ctx.stroke();
-    }
-  }
-  ctx.globalAlpha=1;
-  return c;
-}
+// FLOW-FIELD INK is a chain now: one Flow Lines part (stepsWhimsy.js whimFlowLines; chains.js 'flowfield').
 
 
 /* ==== texSharpness.js ==== */
@@ -20884,86 +21064,7 @@ function genBlackHole(w,h,amt,zoom,light,form){
   return c;
 }
 
-// Two chemicals, one feeding,
-// one eating — and out of nothing
-// the leopard's spots.
-/**
- * Turing Skin — a reaction–diffusion system (Gray–Scott, as Karl Sims's
- * tutorial lays it out): two chemicals spread at different rates, one
- * feeding on the other, and from a few random seeds patterns grow as they do
- * on skins and shells. PATTERN walks the feed/kill map: spots that divide,
- * coral, a maze, worms, holes. GROWTH is how long it has had to grow (low:
- * colonies still spreading from their seeds; high: the whole page). The sim
- * runs on its own grid, the same at any page size (so a preview is the
- * export, smaller), wraps at the edges, and is drawn smooth and crisp, as
- * raised skin, lit by the dial.
- * PATTERN SCALE · GROWTH · PATTERN · RELIEF
- */
-function genTuringSkin(w,h,amt,zoom,light,form,relief,M3){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const growth=Math.max(0.1, Math.min(1, amt)), rel=Math.max(0, Math.min(1, relief==null ? 0.5 : relief));
-  // the feed/kill map, walked by PATTERN: spots → coral → maze → worms → holes
-  const FK=[[0.0367,0.0649],[0.0545,0.062],[0.029,0.057],[0.078,0.061],[0.039,0.058]];
-  const t=Math.max(0, Math.min(1, form==null ? 0.25 : form))*(FK.length-1), i0=Math.min(FK.length-2, Math.floor(t)), fr=t-i0;
-  const Fd=FK[i0][0]+(FK[i0+1][0]-FK[i0][0])*fr, Kd=FK[i0][1]+(FK[i0+1][1]-FK[i0][1])*fr;
-  // the grid: its own size, whatever the page's
-  const G=Math.max(48, Math.min(160, Math.round(110/zoom))), short=Math.min(w,h);
-  const gx=Math.max(16, Math.round(G*w/short)), gy=Math.max(16, Math.round(G*h/short)), n=gx*gy;
-  let A=new Float32Array(n).fill(1), B=new Float32Array(n), A2=new Float32Array(n), B2=new Float32Array(n);
-  // seeds: small patches, a few of them large
-  const seeds=6 + Math.floor(Math.random()*10);
-  for(let s=0;s<seeds;s++){ const cx=Math.floor(Math.random()*gx), cy=Math.floor(Math.random()*gy), r=1 + Math.floor(Math.random()*3);
-    for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++){ const k=((cy+y+gy)%gy)*gx + ((cx+x+gx)%gx); B[k]=1; A[k]=0.5; } }
-  for(let k=0;k<n;k++) if(Math.random()<0.002) B[k]=0.5;     // a few stray specks
-  // (a budget of cell-updates, so a fine pattern on a wide page stays quick)
-  const iters=Math.min(Math.round(900 + 5100*growth), Math.round(55e6/n));
-  for(let it=0;it<iters;it++){
-    for(let y=0;y<gy;y++){
-      const yu=((y-1+gy)%gy)*gx, yc=y*gx, yd=((y+1)%gy)*gx;
-      for(let x=0;x<gx;x++){
-        const xl=x===0 ? gx-1 : x-1, xr=x===gx-1 ? 0 : x+1, k=yc+x;
-        const a=A[k], b=B[k];
-        const la=0.2*(A[yu+x]+A[yd+x]+A[yc+xl]+A[yc+xr]) + 0.05*(A[yu+xl]+A[yu+xr]+A[yd+xl]+A[yd+xr]) - a;
-        const lb=0.2*(B[yu+x]+B[yd+x]+B[yc+xl]+B[yc+xr]) + 0.05*(B[yu+xl]+B[yu+xr]+B[yd+xl]+B[yd+xr]) - b;
-        const abb=a*b*b;
-        A2[k]=a + (1.0*la - abb + Fd*(1-a));
-        B2[k]=b + (0.5*lb + abb - (Kd+Fd)*b);
-      }
-    }
-    let tmp=A; A=A2; A2=tmp; tmp=B; B=B2; B2=tmp;
-  }
-  // drawn at the page's working size: B sampled smoothly (bicubic, wrapping),
-  // then given a crisp edge
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), N=ww*wh, unit=Math.min(ww,wh);
-  const at=(x,y)=>B[((y%gy+gy)%gy)*gx + ((x%gx+gx)%gx)];
-  const cub=(p0,p1,p2,p3,t2)=>p1 + 0.5*t2*(p2-p0 + t2*(2*p0-5*p1+4*p2-p3 + t2*(3*(p1-p2)+p3-p0)));
-  let bmin=Infinity, bmax=-Infinity; for(let k=0;k<n;k++){ if(B[k]<bmin) bmin=B[k]; if(B[k]>bmax) bmax=B[k]; }
-  const mid=bmin + (bmax-bmin)*0.45, soft=Math.max(0.01, (bmax-bmin)*0.12);
-  const S=new Float32Array(N), Hh=new Float32Array(N);
-  for(let y=0;y<wh;y++){
-    const fy=(y+0.5)/wh*gy-0.5, y1=Math.floor(fy), ty=fy-y1;
-    for(let x=0;x<ww;x++){
-      const fx=(x+0.5)/ww*gx-0.5, x1=Math.floor(fx), tx=fx-x1;
-      const row=j=>cub(at(x1-1,y1+j), at(x1,y1+j), at(x1+1,y1+j), at(x1+2,y1+j), tx);
-      const v=cub(row(-1), row(0), row(1), row(2), ty);
-      const s=Math.max(0, Math.min(1, (v-mid)/soft*0.5 + 0.5)), sm2=s*s*(3-2*s), i=y*ww+x;
-      S[i]=sm2; Hh[i]=sm2*unit*0.006*(0.3 + 1.7*rel);
-    }
-  }
-  const L=lightHeights(Hh, ww, wh, { light, relief:1, gloss:0.35, shadow:0.45, ao:0.4, ambient:0.45 });
-  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
-  for(let i=0;i<N;i++){
-    // the pattern lighter than the skin between; light and shade on top
-    const base=128 + (S[i]-0.5)*96;
-    for(let c=0;c<3;c++){ const v=base*litK(L, i, 0.45, M3, c)/L.flat + L.spec[i]*120*litS(M3, c); d[i*4+c]=v<0?0:v>255?255:v; }
-    d[i*4+3]=255;
-  }
-  sctx.putImageData(img,0,0);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
-  return c;
-}
+// TURING SKIN is a chain now: Turing Pattern → Light Engine (stepsChaos.js chaosTuring; chains.js 'turing').
 
 // Draw a bow along the edge:
 // the sand runs from what is moving
@@ -21651,13 +21752,7 @@ function genGlassRain(w,h,amt,zoom,light,form,M3,env){
 }
 
 // ---------- textures lit by lightHeights (texCore): a surface, then its light ----------
-// a smooth multi-octave noise sampler, on grids drawn from the seed
-function fbmSampler(cells, octaves){
-  const grids = [];
-  for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
-  const norm = grids.reduce((s, o) => s + o.amp, 0);
-  return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
-}
+// (fbmSampler, the smooth multi-octave noise these surfaces are made of, is texCore's: the Terrain part shares it)
 // a lit surface, coloured per pixel and laid on the page
 function paintLit(w, h, div, ww, wh, colour){
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -22547,54 +22642,7 @@ function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
   });
 }
 
-// Every line a promise
-// kept at one height all the way
-// round the hill and home.
-/**
- * Contour Map — a survey of an imagined land: a terrain of layered noise,
- * drawn as CONTOUR LINES (after the marching-squares maps d3-contour makes;
- * here each line is found per pixel from how far the height is from its
- * level, measured against the slope, so lines stay one width on steep and
- * gentle ground alike), every fifth an index line, heavier; with HILLSHADE
- * beneath — the land lit by the dial, as relief maps are.
- * TERRAIN SCALE · CONTOUR INTERVAL · HILLSHADE
- */
-function genContourMap(w,h,amt,zoom,light,form,M3){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const shade=Math.max(0,Math.min(1, form==null?0.45:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  // the land: ridges and valleys (ridged noise for crests, broad noise for the masses)
-  const broad=fbmSampler(3, 4), ridge=fbmSampler(5, 3), warp=fbmSampler(3, 2);
-  const sc=1/zoom, H=new Float32Array(N);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const u=x/unit*sc, v=y/unit*sc, wu=u + (warp(u*0.5, v*0.5)-0.5)*0.6, wv=v + (warp(v*0.5+3.1, u*0.5+1.7)-0.5)*0.6;
-    const r=1 - Math.abs(ridge(wu*0.6, wv*0.6)*2 - 1);
-    H[y*ww+x]=0.78*broad(wu*0.45, wv*0.45) + 0.22*r*r*r;     // broad masses, a few sharper crests
-  }
-  let hmin=Infinity, hmax=-Infinity; for(let i=0;i<N;i++){ if(H[i]<hmin) hmin=H[i]; if(H[i]>hmax) hmax=H[i]; }
-  for(let i=0;i<N;i++) H[i]=(H[i]-hmin)/Math.max(1e-6, hmax-hmin);
-  // the interval: how many levels from the lowest ground to the highest
-  const levels=Math.max(5, Math.round(20*amt)), lw=Math.max(0.5, unit*0.0011), lwIdx=lw*2.1;
-  const LN=new Float32Array(N);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, v=H[i]*levels;
-    const gx=(H[y*ww+Math.min(ww-1,x+1)] - H[y*ww+Math.max(0,x-1)])*0.5*levels, gy=(H[Math.min(wh-1,y+1)*ww+x] - H[Math.max(0,y-1)*ww+x])*0.5*levels;
-    const g=Math.max(1e-4, Math.hypot(gx, gy)), f=v - Math.floor(v), dist=Math.min(f, 1-f)/g;     // in pixels, to the nearest level
-    const k=Math.round(v), idx=k % 5 === 0, half=(idx ? lwIdx : lw)*0.5;
-    LN[i]=Math.max(0, Math.min(1, half + 0.5 - dist))*(idx ? 1 : 0.8);
-  }
-  // hillshade: the land lit by the dial (its heights scaled to the map's size)
-  const HH=new Float32Array(N); for(let i=0;i<N;i++) HH[i]=H[i]*unit*0.06;
-  const L=lightHeights(HH, ww, wh, { light, relief:1, gloss:0.05, shadow:0.35, ao:0.15, ambient:0.45 });
-  return paintLit(w,h,div,ww,wh, i => {
-    const k=L.light[i]/L.flat, out=[0,0,0];
-    for(let c=0;c<3;c++){
-      const hill=128 + (128*litK(L, i, 0.45, M3, c)/L.flat - 128)*shade;
-      out[c]=clamp255(hill - LN[i]*(hill - 34)*0.9);
-    }
-    return out;
-  });
-}
+// CONTOUR MAP is a chain now: Terrain → Contour Lines over the Light Engine's hillshade (stepsTouch.js; chains.js 'contour').
 
 // STAINED GLASS is a chain now: panes → glass (stepsTouch.js paneLayout, litGlass; chains.js 'stainedglass').
 
@@ -22670,82 +22718,7 @@ function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
   });
 }
 
-/**
- * Watercolour Wash — pigment laid in washes, after Tyler Hobbs's method: a
- * blob is a polygon deformed by recursive midpoint displacement, then drawn
- * forty times over at a few percent opacity, each copy deformed again, so the
- * edges go soft and uneven where the copies disagree. On top of that, what
- * watercolour does on paper (Curtis et al., "Computer-Generated Watercolor"):
- * EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in
- * the paper's tooth) and a GRADED WASH (it runs downhill — the dial). The two
- * pigments mix subtractively where they overlap. WETNESS softens and spreads
- * the edges; dry washes keep hard, dark rims.
- */
-function genWatercolour(w,h,amt,zoom,light,form,tint1,tint2){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const wet=Math.max(0,Math.min(1, form==null?0.5:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const gauss=()=>{ let u=0, v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
-  const deform=(poly, depth, vs)=>{
-    let P=poly;
-    for(let d=0; d<depth; d++){
-      const Q=[];
-      for(let i=0;i<P.length;i++){
-        const a=P[i], b=P[(i+1)%P.length], len=Math.hypot(b[0]-a[0], b[1]-a[1]);
-        Q.push(a);
-        Q.push([(a[0]+b[0])/2 + gauss()*len*a[2]*vs, (a[1]+b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]);
-      }
-      P=Q;
-    }
-    return P;
-  };
-  const layers=[document.createElement('canvas'), document.createElement('canvas')];
-  const lx=layers.map(c=>{ c.width=ww; c.height=wh; const x=c.getContext('2d', CPU); x.fillStyle='#000'; return x; });
-  const nB=Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
-  const LAY=Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha=Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
-  for(let b=0;b<nB;b++){
-    // the first is a broad, pale ground wash; the rest are passages laid over it
-    const ground=b===0, cx=ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy=ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
-    const R=unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k=Math.random()<0.62 ? 0 : 1;
-    const sides=10, base=[], sq=0.7 + Math.random()*0.3;
-    for(let s=0;s<sides;s++){ const a=s/sides*Math.PI*2, rr=R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
-    const shape=deform(base, 3, 0.2);
-    const ctx=lx[k]; ctx.globalAlpha=ground ? alpha*0.45 : alpha;
-    for(let l=0;l<LAY;l++){
-      const P=deform(shape, 3, 0.07 + wet*0.2);
-      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill();
-    }
-  }
-  const Dk=lx.map(ctx=>{ const d=ctx.getImageData(0,0,ww,wh).data, D=new Float32Array(N); for(let i=0;i<N;i++) D[i]=d[i*4+3]/255; return D; });
-  // a box blur, for the edge: pigment drifts to where the wash thins out
-  const blurF=(S, r)=>{ const T=new Float32Array(N), O=new Float32Array(N), n=2*r+1;
-    for(let y=0;y<wh;y++){ let s=0; for(let x=-r;x<=r;x++) s+=S[y*ww+Math.min(ww-1,Math.max(0,x))];
-      for(let x=0;x<ww;x++){ T[y*ww+x]=s/n; s+=S[y*ww+Math.min(ww-1,x+r+1)] - S[y*ww+Math.max(0,x-r)]; } }
-    for(let x=0;x<ww;x++){ let s=0; for(let y=-r;y<=r;y++) s+=T[Math.min(wh-1,Math.max(0,y))*ww+x];
-      for(let y=0;y<wh;y++){ O[y*ww+x]=s/n; s+=T[Math.min(wh-1,y+r+1)*ww+x] - T[Math.max(0,y-r)*ww+x]; } }
-    return O; };
-  const er=Math.max(1, Math.round(unit*(0.006 + wet*0.012)));
-  const blurred=Dk.map(D=>blurF(blurF(D, er), er));
-  const tooth=fbmSampler(28, 2), bloom=fbmSampler(5, 3);
-  const lv=lightVec(light==null?0:light), lm=Math.hypot(lv.lx,lv.ly), gx=lm>1e-3?lv.lx/lm:0, gy=lm>1e-3?lv.ly/lm:0, run=Math.min(1, lm);
-  const cols=[parseHex(tint1 || '#2E5C8A'), parseHex(tint2 || '#B0465A')];
-  const rim=1.1*(1 - wet*0.6), gran=0.12 + 0.12*(1-wet);
-  return paintLit(w,h,div,ww,wh, i => {
-    const x=i%ww, y=(i/ww)|0, u=x/unit, v=y/unit;
-    const grade=1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);      // downhill holds more pigment
-    const t=tooth(u*1.5, v*1.5), bl=bloom(u, v);
-    let r=255, g=255, b=255;
-    for(let k=0;k<2;k++){
-      let d=Dk[k][i]; if(d < 0.004) continue;
-      d+=Math.max(0, d - blurred[k][i])*rim*2.2;                              // the darker drying edge
-      d*=grade*(1 + gran*(t - 0.5)*2)*(0.62 + 0.76*bl*bl);                       // granulation, and an uneven load
-      d=Math.max(0, Math.min(1, d*1.1));
-      const c=cols[k];
-      r*=1 - d*(1 - c.r/255); g*=1 - d*(1 - c.g/255); b*=1 - d*(1 - c.b/255);
-    }
-    return [clamp255(r), clamp255(g), clamp255(b)];
-  });
-}
+// WATERCOLOR WASH is a chain now: Washes → Pigment → Pigment (stepsTouch.js touchWashes, touchPigment; chains.js 'watercolour').
 
 
 /* ==== cartomancyTable.js ==== */
@@ -24135,7 +24108,110 @@ function weaveGridDiv(w, h, S, zoom){
   return Math.max(fine, Math.min(coarse, Math.min(w, h)*WEAVES[0].pitch*zoom/3.2));
 }
 
+// WATERCOLOR, in two parts (Watercolor Wash, texTouch genWatercolour until now). WASHES lays the pigment's
+// shapes after Tyler Hobbs's method: a polygon deformed by recursive midpoint displacement, drawn forty times
+// over at a few percent, each copy deformed again — two layers, one per pigment, as densities 0..1.
+function touchWashes(ww, wh, amt, zoom, wet){
+  const unit = Math.min(ww, wh), N = ww*wh;
+  const gauss = () => { let u = 0, v = 0; while(!u) u = Math.random(); while(!v) v = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const deform = (poly, depth, vs) => { let P = poly;
+    for(let d = 0; d < depth; d++){ const Q = [];
+      for(let i = 0; i < P.length; i++){ const a = P[i], b = P[(i + 1) % P.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        Q.push(a); Q.push([(a[0] + b[0])/2 + gauss()*len*a[2]*vs, (a[1] + b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]); }
+      P = Q; }
+    return P; };
+  const layers = [document.createElement('canvas'), document.createElement('canvas')];
+  const lx = layers.map(c => { c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; return x; });
+  const nB = Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
+  const LAY = Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha = Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
+  for(let b = 0; b < nB; b++){
+    // the first is a broad, pale ground wash; the rest are passages laid over it
+    const ground = b === 0, cx = ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy = ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
+    const R = unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k = Math.random() < 0.62 ? 0 : 1;
+    const sides = 10, base = [], sq = 0.7 + Math.random()*0.3;
+    for(let s = 0; s < sides; s++){ const a = s/sides*Math.PI*2, rr = R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
+    const shape = deform(base, 3, 0.2), ctx = lx[k]; ctx.globalAlpha = ground ? alpha*0.45 : alpha;
+    for(let l = 0; l < LAY; l++){ const P = deform(shape, 3, 0.07 + wet*0.2);
+      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i = 1; i < P.length; i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill(); }
+  }
+  return lx.map(ctx => { const d = ctx.getImageData(0, 0, ww, wh).data, D = new Float32Array(N); for(let i = 0; i < N; i++) D[i] = d[i*4 + 3]/255; return D; });
+}
+// PIGMENT lays any density (a gray map) on a picture as watercolor does on paper (Curtis et al., "Computer-Generated
+// Watercolor"): EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in the paper's tooth), an
+// uneven load, and a GRADED WASH (it runs downhill: the dial). It mixes subtractively with what is under it.
+function touchPigment(D, img, ww, wh, col, wet, light){
+  const unit = Math.min(ww, wh), N = ww*wh;
+  const blurF = (S, r) => { const T = new Float32Array(N), O = new Float32Array(N), n = 2*r + 1;
+    for(let y = 0; y < wh; y++){ let s = 0; for(let x = -r; x <= r; x++) s += S[y*ww + Math.min(ww - 1, Math.max(0, x))];
+      for(let x = 0; x < ww; x++){ T[y*ww + x] = s/n; s += S[y*ww + Math.min(ww - 1, x + r + 1)] - S[y*ww + Math.max(0, x - r)]; } }
+    for(let x = 0; x < ww; x++){ let s = 0; for(let y = -r; y <= r; y++) s += T[Math.min(wh - 1, Math.max(0, y))*ww + x];
+      for(let y = 0; y < wh; y++){ O[y*ww + x] = s/n; s += T[Math.min(wh - 1, y + r + 1)*ww + x] - T[Math.max(0, y - r)*ww + x]; } }
+    return O; };
+  const er = Math.max(1, Math.round(unit*(0.006 + wet*0.012))), blurred = blurF(blurF(D, er), er);
+  const tooth = fbmSampler(28, 2), bloom = fbmSampler(5, 3);
+  const lv = lightVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
+  const rim = 1.1*(1 - wet*0.6), gran = 0.12 + 0.12*(1 - wet), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+  for(let i = 0; i < N; i++){
+    const x = i % ww, y = (i/ww) | 0, u = x/unit, v = y/unit;
+    let r = img.r[i], g = img.g[i], b = img.b[i], d = D[i];
+    if(d >= 0.004){
+      const grade = 1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);        // downhill holds more pigment
+      d += Math.max(0, d - blurred[i])*rim*2.2;                                   // the darker drying edge
+      d *= grade*(1 + gran*(tooth(u*1.5, v*1.5) - 0.5)*2)*(0.62 + 0.76*bloom(u, v)**2);   // granulation, and an uneven load
+      d = Math.max(0, Math.min(1, d*1.1));
+      r *= 1 - d*(1 - col[0]); g *= 1 - d*(1 - col[1]); b *= 1 - d*(1 - col[2]);
+    }
+    out.r[i] = r; out.g[i] = g; out.b[i] = b;
+  }
+  return out;
+}
+
 const TOUCH_STEPS = {
+  washes: { cat: 'Marks', label: 'Washes', ins: [], outs: ['first', 'second'],
+    params: [TOUCH_R('amount', 'Pigment', 100, 30, 250), TOUCH_R('size', 'Wash Size', 100, 40, 250), TOUCH_R('wet', 'Wetness', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => touchWashes(ww, wh, num(n, 'amount', 100)/100, num(n, 'size', 100)/100, num(n, 'wet', 50)/100)); } },
+  pigment: { cat: 'Light & Color', label: 'Pigment', ins: ['paper', 'density', 'color', 'runs to'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'value'], outs: ['image'] },
+    params: [TOUCH_R('wet', 'Wetness', 50)], cost: () => 4,
+    run(E, n){ const { ww, wh, input, num, asField, asImage, ctx } = E, D = asField(input(n, 2)); if(!D) return null;
+      const img = asImage(input(n, 1) ?? 1), c = input(n, 3), col = Array.isArray(c) ? c : [0.18, 0.36, 0.54], dv = input(n, 4);
+      return [touchPigment(D, img, ww, wh, col, num(n, 'wet', 50)/100, typeof dv === 'number' ? dv*360 : (ctx.light ?? 0))]; } },
+  // TERRAIN: Contour Map's land — broad masses and a few sharp crests, warped — as heights 0..1.
+  // Drawn from the texture's own seed (+ Variant), so the map shows the land it always did.
+  terrain: { cat: 'Noise', label: 'Terrain', ins: [], outs: ['height'],
+    params: [TOUCH_R('scale', 'Scale', 100, 40, 300), TOUCH_R('crests', 'Crests', 22), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 3,
+    run(E, n){ const { ww, wh, N, unit, num, ctx } = E;
+      const sc = 100/Math.max(1, num(n, 'scale', 100)), cr = num(n, 'crests', 22)/100, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => {
+        const broad = fbmSampler(3, 4), ridge = fbmSampler(5, 3), warp = fbmSampler(3, 2), H = new Float32Array(N);
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+          const u = x/unit*sc, v = y/unit*sc, wu = u + (warp(u*0.5, v*0.5) - 0.5)*0.6, wv = v + (warp(v*0.5 + 3.1, u*0.5 + 1.7) - 0.5)*0.6;
+          const r = 1 - Math.abs(ridge(wu*0.6, wv*0.6)*2 - 1);
+          H[y*ww + x] = (1 - cr)*broad(wu*0.45, wv*0.45) + cr*r*r*r;
+        }
+        let lo = Infinity, hi = -Infinity; for(let i = 0; i < N; i++){ if(H[i] < lo) lo = H[i]; if(H[i] > hi) hi = H[i]; }
+        for(let i = 0; i < N; i++) H[i] = (H[i] - lo)/Math.max(1e-6, hi - lo);
+        return [H]; }); } },
+  // Every line a promise
+  // kept at one height all the way
+  // round the hill and home.
+  // CONTOUR LINES: the isolines of any gray map (d3-contour's maps, found per pixel: how far the value is from its
+  // level, against the slope, so a line keeps one width on steep and gentle ground); every Nth an index line, heavier
+  contours: { cat: 'Marks', label: 'Contour Lines', ins: ['height'], outs: ['lines'],
+    params: [TOUCH_R('levels', 'Levels', 20, 3, 60), TOUCH_R('weight', 'Line Weight', 100, 25, 400), TOUCH_R('index', 'Index Every', 5, 0, 10), TOUCH_R('strength', 'Strength', 90)], cost: () => 2,
+    run(E, n){ const { ww, wh, N, unit, num, input, asField } = E, H = asField(input(n, 1)); if(!H) return null;
+      // a line finer than half a cell is drawn half a cell wide but fainter, so a small preview keeps the export's weight
+      const levels = Math.max(3, Math.round(num(n, 'levels', 20))), lw0 = unit*0.0011*num(n, 'weight', 100)/100, lw = Math.max(0.5, lw0), lwIdx = Math.max(0.5, lw0*2.1);
+      const fade = Math.min(1, lw0/0.5), fadeIdx = Math.min(1, lw0*2.1/0.5);
+      const every = Math.round(num(n, 'index', 5)), st = num(n, 'strength', 90)/100, LN = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+        const i = y*ww + x, v = H[i]*levels;
+        const gx = (H[y*ww + Math.min(ww - 1, x + 1)] - H[y*ww + Math.max(0, x - 1)])*0.5*levels, gy = (H[Math.min(wh - 1, y + 1)*ww + x] - H[Math.max(0, y - 1)*ww + x])*0.5*levels;
+        const g = Math.max(1e-4, Math.hypot(gx, gy)), f = v - Math.floor(v), dist = Math.min(f, 1 - f)/g;
+        const k = Math.round(v), idx = every > 0 && k % every === 0, half = (idx ? lwIdx : lw)*0.5;
+        LN[i] = Math.max(0, Math.min(1, half + 0.5 - dist))*(idx ? fadeIdx : 0.8*fade)*st;
+      }
+      return [LN]; } },
   weave: { cat: 'Textures', label: 'Weave', ins: [], outs: ['shade', 'sheen'],
     params: [TOUCH_R('weave', 'Weave', 50), TOUCH_R('scale', 'Scale', 100, 50, 400)], cost: () => 6,
     // The weave is a NORMAL MAP (threads are far too fine to be heights that
@@ -25285,10 +25361,83 @@ const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'co
 // PARTICLES: three ways light hangs in the air, each the painter of a texture that used to be its own
 // (texWhimsy: genSnow, genEmbers, genMagicParticles) — flakes (First Snow), sparks (Burning Mana) and
 // motes (Euphoria Dust) — drawn over any picture, in any colours, the wind from any direction
+// Lay a comb through water
+// and every tooth leaves a line
+// that will not cross another.
+// FLOW LINES (Flow-Field Ink's painter, texWhimsy genFlowField until now; after Tyler Hobbs's essay on flow fields):
+// evenly spaced streamlines, as Jobard &
+// Lefer (1997) space them — a line grows from a seed both ways along the field and stops short of any other line —
+// drawn as tapering strokes of ink. The field is the dial's direction bent by noise (Turbulence), or bent by any gray
+// map wired into Angle Map. px/area: the canvas's own canonical sizes (E.px, E.carea), so the grid and the page agree.
+function whimFlowLines(w, h, o, px, area){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU);
+  const unit = Math.min(w, h), zoom = o.zoom, amt = o.amt, turb = o.turb;
+  const lv = lightVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
+  let fieldAt;
+  if(o.map){ const M = o.map, mw = o.mw, mh = o.mh;
+    fieldAt = (x, y) => base + (M[Math.min(mh - 1, Math.max(0, y/h*mh|0))*mw + Math.min(mw - 1, Math.max(0, x/w*mw|0))] - 0.5)*Math.PI*2.6*turb; }
+  else { const g1 = makeNoiseGrid(6, 6), g2 = makeNoiseGrid(13, 13);
+    fieldAt = (x, y) => { const u = x/unit/zoom, v = y/unit/zoom;
+      return base + (sampleNoiseGrid(g1, 6, 6, u*2.2, v*2.2)*0.75 + sampleNoiseGrid(g2, 13, 13, u*5, v*5)*0.25 - 0.5)*Math.PI*2.6*turb; }; }
+  const sep = px(54)*zoom/Math.max(0.3, amt), step = Math.max(0.6, px(4)), cell = sep*0.5;
+  const gw = Math.ceil(w/cell) + 1, gh = Math.ceil(h/cell) + 1, grid = new Array(gw*gh);
+  const near = (x, y, own) => { const cx = Math.floor(x/cell), cy = Math.floor(y/cell);
+    for(let j = cy - 2; j <= cy + 2; j++) for(let i = cx - 2; i <= cx + 2; i++){ if(i < 0 || j < 0 || i >= gw || j >= gh) continue; const L = grid[j*gw + i]; if(!L) continue;
+      for(const p of L){ if(p[2] === own && p[3] > -1) continue; const dx = p[0] - x, dy = p[1] - y; if(dx*dx + dy*dy < sep*sep) return true; } }
+    return false; };
+  const add = (x, y, own) => { const k = Math.floor(y/cell)*gw + Math.floor(x/cell); (grid[k] || (grid[k] = [])).push([x, y, own, 0]); };
+  const tries = Math.round(area/(3072*3072)*1400*Math.min(3, amt));
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  let strokeId = 0;
+  for(let t = 0; t < tries; t++){
+    const sx = Math.random()*w, sy = Math.random()*h;
+    if(near(sx, sy, -1)) continue;
+    const id = strokeId++, pts = [[sx, sy]];
+    for(const dir of [1, -1]){                       // walk both ways from the seed point
+      let x = sx, y = sy;
+      for(let s = 0; s < 900; s++){
+        const a = fieldAt(x, y); const nx = x + Math.cos(a)*step*dir, ny = y + Math.sin(a)*step*dir;
+        if(nx < -sep || ny < -sep || nx > w + sep || ny > h + sep) break;
+        const cx = Math.floor(nx/cell), cy = Math.floor(ny/cell); let hit = false;      // too close to ANOTHER line
+        for(let j = cy - 2; j <= cy + 2 && !hit; j++) for(let i = cx - 2; i <= cx + 2 && !hit; i++){ if(i < 0 || j < 0 || i >= gw || j >= gh) continue; const L = grid[j*gw + i]; if(!L) continue;
+          for(const p of L){ if(p[2] === id) continue; const dx = p[0] - nx, dy = p[1] - ny; if(dx*dx + dy*dy < sep*sep*0.55){ hit = true; break; } } }
+        if(hit) break;
+        x = nx; y = ny; if(dir > 0) pts.push([x, y]); else pts.unshift([x, y]);
+      }
+    }
+    if(pts.length < 12) continue;
+    for(const p of pts) if(p[0] >= 0 && p[1] >= 0 && p[0] < w && p[1] < h) add(p[0], p[1], id);
+    // one ink or the other, its width a little its own, tapering at both ends
+    const wd = px(9 + Math.random()*9)*zoom*Math.min(1.3, 0.55 + 0.45/Math.max(0.4, amt)), col = Math.random() < 0.18 ? o.ink2 : o.ink1;
+    ctx.strokeStyle = col; ctx.globalAlpha = 0.82 + Math.random()*0.15;
+    const n = pts.length, seg = Math.max(4, Math.floor(n/14));
+    for(let a = 0; a < n - 1; a += seg){
+      const b = Math.min(n - 1, a + seg), m = (a + b)/2/(n - 1), taper = Math.min(1, Math.sin(m*Math.PI)*1.6);
+      ctx.lineWidth = Math.max(px(0.4), wd*(0.35 + 0.65*taper));
+      ctx.beginPath(); ctx.moveTo(pts[a][0], pts[a][1]); for(let q = a + 1; q <= b; q++) ctx.lineTo(pts[q][0], pts[q][1]); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  flowlines: { cat: 'Marks', label: 'Flow Lines', ins: ['over', 'angle map', 'ink', 'second ink', 'flow from'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'colour', 'value'], outs: ['image'] },
+    params: [WHIM_R('amount', 'Lines', 100, 30, 300), WHIM_R('size', 'Scale', 100, 40, 250), WHIM_R('turbulence', 'Turbulence', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, i1 = E.input(n, 3), i2 = E.input(n, 4), dv = E.input(n, 5), mv = E.input(n, 2);
+      const o = { amt: E.num(n, 'amount', 100)/100, zoom: E.num(n, 'size', 100)/100, turb: E.num(n, 'turbulence', 50)/100,
+        light: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0),
+        ink1: Array.isArray(i1) ? whimHex(i1) : '#2B2A3A', ink2: Array.isArray(i2) ? whimHex(i2) : '#7A4A6A' };
+      if(mv != null){ const mw = Math.max(8, Math.min(512, w >> 2)), mh = Math.max(8, Math.round(mw*h/w)); o.map = kitField(mv, mw, mh); o.mw = mw; o.mh = mh; }
+      // the texture's own seed (+ Variant): Flow-Field Ink draws the lines it always drew
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => { const c = whimFlowLines(w, h, o, E.px, E.carea);
+        const over = E.input(n, 1); if(over == null) return [c];
+        const [pc, px] = kitPicture(over, w, h); px.drawImage(c, 0, 0); return [pc]; }); },
+    run(E, n){ const [c] = this.paint(E, n); return [E.readCanvas(c)]; } },
   particles: { cat: 'Marks', label: 'Particles', ins: ['over', 'color a', 'color b', 'wind from'], outs: ['image'], io: { ins: ['image', 'colour', 'colour', 'value'], outs: ['image'] },
-    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Scatter', 0, 0, 99)], cost: () => 6,
+    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Variant', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, kind = String(E.P(n, 'kind', 'flakes')), amt = Math.max(0.02, E.num(n, 'amount', 100)/100), zoom = Math.max(0.2, E.num(n, 'size', 100)/100), form = E.num(n, 'form', 50)/100;
       const ca = E.input(n, 2), cb = E.input(n, 3), dv = E.input(n, 4), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
       // the texture's own seed (+ Scatter), not the part's: so First Snow, Burning Mana and Euphoria Dust fall exactly as they always did
@@ -25383,7 +25532,57 @@ function crackNet(ww, wh, size){
   };
 }
 
+// Two chemicals, one feeding,
+// one eating — and out of nothing
+// the leopard's spots.
+// THE GRAY–SCOTT MODEL (Turing Skin's own, texChaos genTuringSkin until now): two chemicals on a torus, one
+// feeding the other, walked along the feed/kill map by Pattern — spots → coral → maze → worms → holes (Pearson
+// 1993's classes; Karl Sims's tutorial). Its own grid, whatever the page's; then sampled bicubically and given a
+// crisp edge. Returns the pattern as a field 0..1 on the ww×wh grid.
+function chaosTuring(ww, wh, growth, zoom, form){
+  const FK = [[0.0367, 0.0649], [0.0545, 0.062], [0.029, 0.057], [0.078, 0.061], [0.039, 0.058]];
+  const t = Math.max(0, Math.min(1, form))*(FK.length - 1), i0 = Math.min(FK.length - 2, Math.floor(t)), fr = t - i0;
+  const Fd = FK[i0][0] + (FK[i0 + 1][0] - FK[i0][0])*fr, Kd = FK[i0][1] + (FK[i0 + 1][1] - FK[i0][1])*fr;
+  const G = Math.max(48, Math.min(160, Math.round(110/zoom))), short = Math.min(ww, wh);
+  const gx = Math.max(16, Math.round(G*ww/short)), gy = Math.max(16, Math.round(G*wh/short)), n = gx*gy;
+  let A = new Float32Array(n).fill(1), B = new Float32Array(n), A2 = new Float32Array(n), B2 = new Float32Array(n);
+  // seeds: small patches, a few of them large; and a few stray specks
+  const seeds = 6 + Math.floor(Math.random()*10);
+  for(let s = 0; s < seeds; s++){ const cx = Math.floor(Math.random()*gx), cy = Math.floor(Math.random()*gy), r = 1 + Math.floor(Math.random()*3);
+    for(let y = -r; y <= r; y++) for(let x = -r; x <= r; x++){ const k = ((cy + y + gy) % gy)*gx + ((cx + x + gx) % gx); B[k] = 1; A[k] = 0.5; } }
+  for(let k = 0; k < n; k++) if(Math.random() < 0.002) B[k] = 0.5;
+  // (a budget of cell-updates, so a fine pattern on a wide page stays quick)
+  const iters = Math.min(Math.round(900 + 5100*growth), Math.round(55e6/n));
+  for(let it = 0; it < iters; it++){
+    for(let y = 0; y < gy; y++){
+      const yu = ((y - 1 + gy) % gy)*gx, yc = y*gx, yd = ((y + 1) % gy)*gx;
+      for(let x = 0; x < gx; x++){
+        const xl = x === 0 ? gx - 1 : x - 1, xr = x === gx - 1 ? 0 : x + 1, k = yc + x, a = A[k], b = B[k];
+        const la = 0.2*(A[yu + x] + A[yd + x] + A[yc + xl] + A[yc + xr]) + 0.05*(A[yu + xl] + A[yu + xr] + A[yd + xl] + A[yd + xr]) - a;
+        const lb = 0.2*(B[yu + x] + B[yd + x] + B[yc + xl] + B[yc + xr]) + 0.05*(B[yu + xl] + B[yu + xr] + B[yd + xl] + B[yd + xr]) - b;
+        const abb = a*b*b;
+        A2[k] = a + (1.0*la - abb + Fd*(1 - a)); B2[k] = b + (0.5*lb + abb - (Kd + Fd)*b);
+      }
+    }
+    let tmp = A; A = A2; A2 = tmp; tmp = B; B = B2; B2 = tmp;
+  }
+  const at = (x, y) => B[((y % gy + gy) % gy)*gx + ((x % gx + gx) % gx)];
+  const cub = (p0, p1, p2, p3, t2) => p1 + 0.5*t2*(p2 - p0 + t2*(2*p0 - 5*p1 + 4*p2 - p3 + t2*(3*(p1 - p2) + p3 - p0)));
+  let bmin = Infinity, bmax = -Infinity; for(let k = 0; k < n; k++){ if(B[k] < bmin) bmin = B[k]; if(B[k] > bmax) bmax = B[k]; }
+  const mid = bmin + (bmax - bmin)*0.45, soft = Math.max(0.01, (bmax - bmin)*0.12), S = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ const fy = (y + 0.5)/wh*gy - 0.5, y1 = Math.floor(fy), ty = fy - y1;
+    for(let x = 0; x < ww; x++){ const fx = (x + 0.5)/ww*gx - 0.5, x1 = Math.floor(fx), tx = fx - x1;
+      const row = j => cub(at(x1 - 1, y1 + j), at(x1, y1 + j), at(x1 + 1, y1 + j), at(x1 + 2, y1 + j), tx);
+      const v = cub(row(-1), row(0), row(1), row(2), ty), s = Math.max(0, Math.min(1, (v - mid)/soft*0.5 + 0.5));
+      S[y*ww + x] = s*s*(3 - 2*s); } }
+  return S;
+}
+
 const CHAOS_STEPS = {
+  grayscott: { cat: 'Noise', label: 'Turing Pattern', ins: [], outs: ['pattern'],
+    params: [CHAOS_R('pattern', 'Pattern', 25), CHAOS_R('growth', 'Growth', 80, 20, 100), CHAOS_R('scale', 'Scale', 100, 50, 250), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 30,
+    run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => [chaosTuring(ww, wh, Math.max(0.1, Math.min(1, num(n, 'growth', 80)/100)), num(n, 'scale', 100)/100, num(n, 'pattern', 25)/100)]); } },
   crazing: { cat: 'Textures', label: 'Crazing', ins: [], outs: ['height', 'glaze', 'grime', 'fine'],
     params: [CHAOS_R('scale', 'Fracture Scale', 100, 60, 400), CHAOS_R('density', 'Crack Density', 100, 10, 900), CHAOS_R('age', 'Enameling', 0)], cost: () => 14,
     // Crazing as it really looks: hairline cracks in a glassy surface that is
@@ -25823,7 +26022,7 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 const LIGHT_STEPS = {
   material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
     io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
-    params: [LT_R('relief', 'Relief', 50), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35)],
+    params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35)],
     cost: () => 10,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){
@@ -26160,7 +26359,13 @@ const STEP_DOCS = {
   glaze: 'Lights and colors crazed glaze from its maps.',
   material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
   oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
-  particles: 'Light hanging in the air, drawn over whatever comes in (or on nothing): Kind is snowflakes (First Snow), sparks falling in arcs (Burning Mana) or glittering motes (Euphoria Dust). The two color ports color them; the last setting is the wind for flakes, how far a spark\'s hue strays, or how wildly motes scatter. Wire the Light Dial into Wind From to blow the snow. Two Particles parts fall alike: give one a different Scatter.',
+  flowlines: 'Ink lines that flow like a current, evenly spaced and never crossing (Flow-Field Ink). They run the way the dial points (wire the Light Dial into Flow From), bent by Turbulence; wire any gray map into Angle Map and they bend by that instead. Lines sets how close they run; Scale, how wide the strokes and swirls.',
+  grayscott: 'A pattern that grows by itself, as on a leopard or a coral (the Gray–Scott model of two chemicals, Turing\'s idea): Pattern slides from spots through coral, maze and worms to holes; Growth is how long it has had to spread; Scale, how big its marks are. Wire it into a Light Engine\'s Height to raise it.',
+  washes: 'The shapes of two watercolor pigments, as two gray maps: blobs, each drawn forty times over a little differently, so their edges go soft (Tyler Hobbs\'s method). Wire each into a Pigment part. Wetness spreads them; Pigment lays more.',
+  pigment: 'Lays a gray map on a picture as watercolor pigment in one color: darker at its drying edges, settling into the paper\'s grain, running toward where the dial points. Wire one Pigment into the next to mix two colors where they overlap.',
+  terrain: 'Heights for an imagined land: broad hills and valleys with a few sharp crests (Contour Map\'s land). Scale zooms in or out; Crests sharpens the ridges; Variant is another land from the same seed. Wire it into a Light Engine\'s Height, or into Contour Lines.',
+  contours: 'Draws the contour lines of any gray map, as on a survey map: Levels is how many lines from the darkest to the lightest, and every Nth (Index Every) is heavier. Out comes a map of the lines, light where they are. Try it on a texture, or a Gradient for evenly spaced rings.',
+  particles: 'Light hanging in the air, drawn over whatever comes in (or on nothing): Kind is snowflakes (First Snow), sparks falling in arcs (Burning Mana) or glittering motes (Euphoria Dust). The two color ports color them; the last setting is the wind for flakes, how far a spark\'s hue strays, or how wildly motes scatter. Wire the Light Dial into Wind From to blow the snow. Two Particles parts fall alike: give one a different Variant.',
   strokes: 'A few fast, loaded swipes of gray paint (Painter\'s Frustration): each a body with bristle marks, fraying at the tail, flinging droplets. Wetness makes the paint mix, bleed and drip. Its second output is the paint\'s thickness, for a Light Engine.',
   screen: 'Prints a tone as a screen of dots, the way newspapers and comics do: a dot in every cell, as big as the tone is bright there. Wire a picture through Invert first to screen it dark-for-big. Screen Angle turns the grid.',
   grain: 'Film grain: Kind slides from silver (crisp grains in clumps) through film and paper (its cloudy formation and fibres) to a digital sensor (noise in each color, rows and columns). A color picture centered on gray: blend it over anything.',
@@ -26616,6 +26821,79 @@ function stepRange(name, key){
 
 
 const TEXTURE_CHAINS = {
+  // ═══ 🜛 BASICS: quiet grounds, two or three parts each — the easiest graphs to open and learn from ═══
+  // 🜛 Plain Noise: Value Noise → Levels
+  plainnoise: { label: 'Plain Noise', div: 2, teach: 'This is Plain Noise, a soft cloudy ground. Value Noise makes the clouds: Scale sets how many across the page, Detail adds finer clouds over them (octaves). Levels sets the Contrast by moving its dark and light points toward each other. Try: wire this noise into another part\'s gray input, a Warp or a Color Ramp.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 30 }, 40, 40],                     // 1
+      ['knob', { slot: '2', name: 'Detail', def: 50 }, 40, 140],                   // 2
+      ['knob', { slot: '3', name: 'Contrast', def: 20 }, 40, 240],                 // 3
+      ['noise', { scale: 60, '~scale': '5,200', octaves: 4, '~octaves': '1,6' }, 320, 60],   // 4
+      ['levels', { lo: 0, '~lo': '0,40', hi: 100, '~hi': '100,60', gamma: 50 }, 600, 120],  // 5
+      ['surface', { name: 'Plain Noise', ground: 'grey' }, 880, 120]],             // 6
+    wires: [[1, 1, 4, paramPort('noise', 'scale')], [2, 1, 4, paramPort('noise', 'octaves')], [3, 1, 5, paramPort('levels', 'lo')], [3, 1, 5, paramPort('levels', 'hi')],
+      [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🜛 Stripes: Waves → Threshold
+  stripes: { label: 'Stripes', div: 2, teach: 'This is Stripes. Waves makes smooth bands of light and dark; Threshold cuts them into stripes. Where Threshold cuts sets the Stripe Width, and its Softness blurs the edges back toward waves. Angle turns the Waves. Try: wire a Value Noise into the Waves\' Warp input to make the stripes wander like wood grain.', nodes: [
+      ['knob', { slot: '1', name: 'Stripe Count', def: 20 }, 40, 40],              // 1
+      ['knob', { slot: '2', name: 'Stripe Width', def: 50 }, 40, 140],             // 2
+      ['knob', { slot: '3', name: 'Softness', def: 20 }, 40, 240],                 // 3
+      ['knob', { slot: '4', name: 'Angle', def: 50 }, 40, 340],                    // 4
+      ['waves', { freq: 20, '~freq': '3,60', angle: 90, '~angle': '0,180' }, 320, 60],     // 5
+      ['threshold', { at: 50, '~at': '97,3', soft: 20, '~soft': '1,100' }, 600, 140],    // 6
+      ['surface', { name: 'Stripes', ground: 'grey' }, 880, 140]],                 // 7
+    wires: [[1, 1, 5, paramPort('waves', 'freq')], [4, 1, 5, paramPort('waves', 'angle')], [2, 1, 6, paramPort('threshold', 'at')], [3, 1, 6, paramPort('threshold', 'soft')],
+      [5, 1, 6, 1], [6, 1, 7, 1]] },
+  // 🜛 Polka Dots: Cells (in rows, no jitter) → Threshold of the distance to each center
+  polka: { label: 'Polka Dots', div: 2, teach: 'This is Polka Dots, made from Cells. With no Jitter, Cells puts one point in the middle of every square of a grid; its first output is how far each spot is from the nearest point. Threshold keeps what is near: a round dot about every point. Spacing is Cells\' Scale, Dot Size is where Threshold cuts, and Scatter is the Jitter that throws the points out of their rows. Try: wire the Cells\' Edges output into the Surface instead.', nodes: [
+      ['knob', { slot: '1', name: 'Spacing', def: 50 }, 40, 40],                   // 1
+      ['knob', { slot: '2', name: 'Dot Size', def: 45 }, 40, 140],                 // 2
+      ['knob', { slot: '3', name: 'Scatter', def: 0 }, 40, 240],                   // 3
+      ['cells', { scale: 110, '~scale': '200,30', jitter: 0, '~jitter': '0,100' }, 320, 60],  // 4
+      ['threshold', { at: 25, '~at': '8,46', soft: 4, '~soft': '2,6' }, 600, 120], // 5
+      ['surface', { name: 'Polka Dots', ground: 'grey' }, 880, 120]],              // 6
+    wires: [[1, 1, 4, paramPort('cells', 'scale')], [3, 1, 4, paramPort('cells', 'jitter')], [2, 1, 5, paramPort('threshold', 'at')],
+      [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🜛 Checkerboard: two Waves, across and down, each cut by Threshold; Math (difference) crosses them
+  checker: { label: 'Checkerboard', div: 2, teach: 'This is Checkerboard. Two Waves, one across and one down, are each cut into stripes by Threshold. Math, set to Difference, keeps a square where exactly one of the two stripes is light: that is a checkerboard. One Knob (Squares) sets both Waves\' Frequency, Softness both Thresholds, and Turn both Angles, so the squares stay square. Try: set Math to Multiply for a grid of windows, or Max for a plaid.', nodes: [
+      ['knob', { slot: '1', name: 'Squares', def: 20 }, 40, 40],                   // 1
+      ['knob', { slot: '2', name: 'Softness', def: 10 }, 40, 160],                 // 2
+      ['knob', { slot: '3', name: 'Turn', def: 0 }, 40, 280],                      // 3
+      ['waves', { freq: 12, '~freq': '2,40', angle: 0, '~angle': '0,90' }, 320, 40],       // 4
+      ['waves', { freq: 12, '~freq': '2,40', angle: 90, '~angle': '90,180' }, 320, 240],   // 5
+      ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 40],                // 6
+      ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 240],               // 7
+      ['math', { op: 'difference' }, 860, 140],                                    // 8
+      ['surface', { name: 'Checkerboard', ground: 'grey' }, 1100, 140]],           // 9
+    wires: [[1, 1, 4, paramPort('waves', 'freq')], [1, 1, 5, paramPort('waves', 'freq')], [3, 1, 4, paramPort('waves', 'angle')], [3, 1, 5, paramPort('waves', 'angle')],
+      [2, 1, 6, paramPort('threshold', 'soft')], [2, 1, 7, paramPort('threshold', 'soft')],
+      [4, 1, 6, 1], [5, 1, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
+  // 🜛 Gradient: a straight and a round Gradient, Mixed by Roundness; Levels bends the falloff
+  softgradient: { label: 'Gradient', div: 4, teach: 'This is Gradient, a smooth fall from dark to light. There are two Gradient parts, one straight and one round (Invert turns the round one into a glow, light in the middle); Mix blends between them by Roundness, so the ramp can bend into a glow. Angle turns the straight one. Levels\' Gamma is the Falloff: how quickly the light gives way. Try: wire a Value Noise into Mix\'s amount instead of the Knob.', nodes: [
+      ['knob', { slot: '1', name: 'Angle', def: 25 }, 40, 40],                     // 1
+      ['knob', { slot: '2', name: 'Roundness', def: 0 }, 40, 160],                 // 2
+      ['knob', { slot: '3', name: 'Falloff', def: 50 }, 40, 280],                  // 3
+      ['gradient', { shape: 'linear', angle: 90, '~angle': '0,360' }, 320, 40],    // 4
+      ['gradient', { shape: 'radial', angle: 90 }, 320, 200],                      // 5
+      ['mix', { t: 0, '~t': '0,100' }, 800, 100],                                  // 6
+      ['levels', { lo: 0, hi: 100, gamma: 50, '~gamma': '0,100' }, 1040, 120],     // 7
+      ['surface', { name: 'Gradient', ground: 'grey' }, 1280, 120],                // 8
+      ['invert', {}, 560, 200]],                                                   // 9 (light in the middle: a glow)
+    wires: [[1, 1, 4, paramPort('gradient', 'angle')], [2, 1, 6, paramPort('mix', 't')], [3, 1, 7, paramPort('levels', 'gamma')],
+      [4, 1, 6, 1], [5, 1, 9, 1], [9, 1, 6, 2], [6, 1, 7, 1], [7, 1, 8, 1]] },
+  // 🜛 Cells: Cells' distance (inverted: domes) and edges (inverted: flat cells), Mixed by Lines; lit by the dial
+  cells: { label: 'Cells', div: 2, teach: 'This is Cells, like pebbles, cobbles or a sponge. Cells gives the distance to each cell\'s middle and the lines between cells; Invert turns each the right way up (light in the middle). Mix blends the round domes into flat cells with crisp lines by Lines. The same picture goes into the Surface\'s Height, scaled by Relief, so the dial lights it. Try: turn the light dial on the page, then set Order to 0 for a grid of tiles.', nodes: [
+      ['knob', { slot: '1', name: 'Cell Size', def: 40 }, 40, 40],                 // 1
+      ['knob', { slot: '2', name: 'Order', def: 20 }, 40, 140],                    // 2
+      ['knob', { slot: '3', name: 'Lines', def: 50 }, 40, 240],                    // 3
+      ['knob', { slot: '4', name: 'Relief', def: 40 }, 40, 340],                   // 4
+      ['cells', { scale: 60, '~scale': '200,20', jitter: 80, '~jitter': '100,0' }, 300, 60],  // 5
+      ['invert', {}, 540, 20], ['invert', {}, 540, 140],                           // 6, 7
+      ['mix', { t: 50, '~t': '0,100' }, 760, 80],                                  // 8
+      ['levels', { lo: 10, hi: 95, gamma: 50 }, 980, 80],                          // 9
+      ['math', { op: 'multiply' }, 980, 260],                                      // 10
+      ['surface', { name: 'Cells', ground: 'grey' }, 1220, 140]],                  // 11
+    wires: [[1, 1, 5, paramPort('cells', 'scale')], [2, 1, 5, paramPort('cells', 'jitter')], [5, 1, 6, 1], [5, 2, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [3, 1, 8, paramPort('mix', 't')],
+      [8, 1, 9, 1], [9, 1, 11, 1], [9, 1, 10, 1], [4, 1, 10, 2], [10, 1, 11, 2]] },
   // √ Harsh Rain: far sheets, then near streaks drawn over them; the dial is
   // where the rain comes from, Gusts swings it about that
   rainstreaks: { label: 'Harsh Rain', div: 2, teach: 'This is Harsh Rain. The Light Dial sets the direction the rain comes from. The first Streaks part draws far, soft sheets of rain; the second draws near streaks over them. The two Knobs are this texture\'s sliders on the page (Rain Zoom and Gusts), wired into the settings they move. Try: turn the dial, then raise Gusts.', nodes: [
@@ -26732,6 +27010,57 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // 🜚 Contour Map: Terrain → Contour Lines, inked over the land lit by the Light Engine (the hillshade)
+  contour: { label: 'Contour Map', div: 2, teach: 'This is Contour Map, a survey of an imagined land. Terrain makes the land\'s heights. The Light Engine lights a plain gray picture by those heights (the hillshade), and Mix fades it toward plain gray by the Hillshade knob. Contour Lines draws the lines of equal height, every fifth heavier; the last Mix inks them over the hillshade in the Ink color. Try: wire another texture, or a Gradient, into Contour Lines instead of the Terrain.', nodes: [
+      ['knob', { slot: '1', name: 'Terrain Scale', def: 23 }, 40, 40],             // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Contour Interval', def: 32 }, 40, 160],         // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Hillshade', def: 45 }, 40, 280],                // 3
+      ['terrain', { scale: 100, '~scale': '40,300', crests: 22, variant: 0 }, 300, 40],   // 4
+      ['number', { value: 50 }, 300, 220],                                         // 5  (a plain gray picture)
+      ['material', { relief: 200, gloss: 5, shine: 0, shadow: 35, occlusion: 15, ambient: 45 }, 560, 160],   // 6
+      ['mix', { t: 45, '~t': '0,100' }, 820, 200],                                 // 7  (the hillshade, faded to gray)
+      ['contours', { levels: 20, '~levels': '6,50', weight: 100, index: 5, strength: 90 }, 560, 0],   // 8
+      ['colour', { hex: '#222222' }, 820, 20],                                     // 9  (the ink)
+      ['mix', { t: 50 }, 1060, 100],                                               // 10 (the lines inked over it)
+      ['surface', { name: 'Contour Map', ground: 'grey' }, 1300, 100]],            // 11
+    wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
+      [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
+  // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
+  turing: { label: 'Turing Skin', div: 2, teach: 'This is Turing Skin. Turing Pattern grows the marks of an animal\'s skin or a coral (Pattern slides from spots to holes). Map Range turns it into a picture, the marks a little lighter than the skin between, and the Light Engine raises the marks by Relief and lights them by the dial. Try: wire the Turing Pattern into a Color Ramp first, or set Pattern to Maze.', nodes: [
+      ['knob', { slot: '1', name: 'Pattern Scale', def: 25 }, 40, 40],             // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Growth', def: 75 }, 40, 140],                   // 2  (80 of 20–100)
+      ['knob', { slot: '3', name: 'Pattern', def: 25 }, 40, 240],                  // 3
+      ['knob', { slot: '4', name: 'Relief', def: 50 }, 40, 340],                   // 4
+      ['grayscott', { pattern: 25, '~pattern': '0,100', growth: 80, '~growth': '20,100', scale: 100, '~scale': '50,250', variant: 0 }, 300, 80],   // 5
+      ['maprange', { inLo: 0, inHi: 100, outLo: 31, outHi: 69 }, 560, 40],          // 6  (the skin 128 ∓ 48)
+      ['material', { relief: 23, '~relief': '6,40', gloss: 35, shine: 47, shadow: 45, occlusion: 40, ambient: 45 }, 800, 120],   // 7
+      ['surface', { name: 'Turing Skin', ground: 'grey' }, 1060, 140]],            // 8
+    wires: [[1, 1, 5, paramPort('grayscott', 'scale')], [2, 1, 5, paramPort('grayscott', 'growth')], [3, 1, 5, paramPort('grayscott', 'pattern')], [4, 1, 7, paramPort('material', 'relief')],
+      [5, 1, 6, 1], [6, 1, 7, 1], [5, 1, 7, 2], [7, 1, 8, 1]] },
+  // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
+  watercolour: { label: 'Watercolor Wash', div: 2, teach: 'This is Watercolor Wash. Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
+      ['knob', { slot: '1', name: 'Wash Size', def: 29 }, 40, 40],                 // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Pigment', def: 32 }, 40, 140],                  // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Pigment Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Pigment Hue' }, 40, 500],   // 5, 6
+      ['washes', { amount: 100, '~amount': '30,250', size: 100, '~size': '40,250', wet: 50, '~wet': '0,100' }, 300, 60],   // 7
+      ['pigment', { wet: 50, '~wet': '0,100' }, 560, 60],                          // 8
+      ['pigment', { wet: 50, '~wet': '0,100' }, 800, 160],                         // 9
+      ['surface', { name: 'Watercolor Wash', ground: 'colour' }, 1040, 160]],      // 10
+    wires: [[1, 1, 7, paramPort('washes', 'size')], [2, 1, 7, paramPort('washes', 'amount')], [3, 1, 7, paramPort('washes', 'wet')], [3, 1, 8, paramPort('pigment', 'wet')], [3, 1, 9, paramPort('pigment', 'wet')],
+      [7, 1, 8, 2], [5, 1, 8, 3], [4, 1, 8, 4], [8, 1, 9, 1], [7, 2, 9, 2], [6, 1, 9, 3], [4, 1, 9, 4], [9, 1, 10, 1]] },
+  // ♡ Flow-Field Ink: one Flow Lines part, the dial its current
+  flowfield: { label: 'Flow-Field Ink', canvas: true, teach: 'This is Flow-Field Ink. One part makes it: Flow Lines, which grows evenly spaced ink lines along a current and stops each one short of the others. The Light Dial goes into Flow From, so the current runs the way the dial points; Turbulence bends it into eddies. The two Hues are the inks. Try: wire a Terrain or a Value Noise into Angle Map, then turn Turbulence up.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Lines', def: 26 }, 40, 140],                    // 2  (100 of 30–300)
+      ['knob', { slot: '3', name: 'Turbulence', def: 50 }, 40, 240],               // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 500],   // 5, 6
+      ['flowlines', { amount: 100, '~amount': '30,300', size: 100, '~size': '40,250', turbulence: 50, '~turbulence': '0,100' }, 320, 140],   // 7
+      ['surface', { name: 'Flow-Field Ink', ground: 'colour' }, 600, 160]],        // 8
+    wires: [[1, 1, 7, paramPort('flowlines', 'size')], [2, 1, 7, paramPort('flowlines', 'amount')], [3, 1, 7, paramPort('flowlines', 'turbulence')],
+      [4, 1, 7, 5], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ♡ First Snow, Burning Mana and Euphoria Dust: one Particles part each, of its own kind
   snow: { label: 'First Snow', canvas: true, teach: 'This is First Snow. One part makes it: Particles, set to flakes. The Light Dial goes into Wind From, so the wind blows from where the dial points, and the Wind knob says how hard. The flakes are colored by the Snow Hue (or anything wired into Color A). Try: turn the dial with Wind up, then set Kind to sparks.', nodes: [
       ['knob', { slot: '1', name: 'Flake Size', def: 14 }, 40, 40],                // 1  (100 of 60–340)
@@ -27510,6 +27839,30 @@ const TEXTURE_PARAMS = {
                   {key:'hue',   label:'Wear',            min:0,  max:100, def:30,  unit:''}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
+  // 🜛 BASICS: quiet grounds, each a chain of two or three parts (chains.js); every slider a plain 0–100
+  plainnoise:    [{key:'zoom',  label:'Scale',           min:0,  max:100, def:30,  unit:''},
+                  {key:'amt',   label:'Detail',          min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Contrast',        min:0,  max:100, def:20,  unit:''}],
+  stripes:       [{key:'zoom',  label:'Stripe Count',    min:0,  max:100, def:20,  unit:''},
+                  {key:'amt',   label:'Stripe Width',    min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Softness',        min:0,  max:100, def:20,  unit:''},
+                  // 0 upright, 50 level (ruled lines), 100 upright again
+                  {key:'shape', label:'Angle',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
+  polka:         [{key:'zoom',  label:'Spacing',         min:0,  max:100, def:50,  unit:''},
+                  {key:'amt',   label:'Dot Size',        min:0,  max:100, def:45,  unit:''},
+                  // in rows (0) → thrown about (100)
+                  {key:'form',  label:'Scatter',         min:0,  max:100, def:0,   unit:''}],
+  checker:       [{key:'zoom',  label:'Squares',         min:0,  max:100, def:20,  unit:''},
+                  {key:'amt',   label:'Softness',        min:0,  max:100, def:10,  unit:''},
+                  {key:'form',  label:'Turn',            min:0,  max:100, def:0,   unit:'', ticks:[0,50,100]}],
+  softgradient:  [{key:'angle', label:'Angle',           min:0,  max:360, def:90,  unit:'°'},
+                  {key:'amt',   label:'Roundness',       min:0,  max:100, def:0,   unit:''},
+                  {key:'form',  label:'Falloff',         min:0,  max:100, def:50,  unit:'', ticks:[50]}],
+  cells:         [{key:'zoom',  label:'Cell Size',       min:0,  max:100, def:40,  unit:''},
+                  {key:'amt',   label:'Order',           min:0,  max:100, def:20,  unit:''},
+                  // round domes (0) → flat cells with crisp lines (100)
+                  {key:'form',  label:'Lines',           min:0,  max:100, def:50,  unit:''},
+                  {key:'shape', label:'Relief',          min:0,  max:100, def:40,  unit:''}],
 };
 
 /**
@@ -27528,6 +27881,19 @@ const TEXTURE_PARAMS = {
  * silently ignored.
  */
 const TEXTURE_CAPS = {
+  plainnoise:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  stripes:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  polka:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  checker:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  softgradient:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // the cells' heights lit by the dial (the Surface's Height)
+  cells:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — whimsy —
   clouds:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -27770,6 +28136,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'plainnoise' || type === 'stripes' || type === 'polka' || type === 'checker' || type === 'softgradient' || type === 'cells'){
+    result = genChain(type, w, h, light, extra);           // 🜛 Basics: two or three parts each (chains.js)
   } else if(type === 'brushstrokes'){
     result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
@@ -27793,17 +28161,17 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'chladni'){
     result = genChladni(w,h,amt,zoom,light,form);
   } else if(type === 'contour'){
-    result = genContourMap(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
   } else if(type === 'suminagashi'){
     result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'watercolour'){
-    result = genWatercolour(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
-    result = genFlowField(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1 || '#2B2A3A', tint2 || '#7A4A6A');   // Flow Lines, the dial its current (chains.js)
   } else if(type === 'turing'){
-    result = genTuringSkin(w,h,amt,zoom,light,form,extra.shape/100,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
   } else if(type === 'frost'){
     result = genHoarfrost(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'ash'){
@@ -28152,6 +28520,31 @@ const PRIMAL_ELEMENTS = [
 ];
 
 const TEXTURE_ELEMENTS = {
+  // 🜛 the Basics
+  plainnoise: { def: 'wind', wind: { name: 'Plain Noise' },
+    fire:  { name: 'Smoulder',  k: [55, 80, 60], t: ['#FFC27A', '#3A0C06'], blend: 'overlay' },
+    water: { name: 'Fog Bank',  k: [12, 30, 10], t: ['#DCEBFA', '#1E2E44'], blend: 'soft-light' },
+    earth: { name: 'Sandstone', k: [80, 100, 45], t: ['#F0D9A8', '#5A3A1E'], blend: 'multiply' } },
+  stripes: { def: 'earth', earth: { name: 'Stripes' },
+    fire:  { name: 'Candy Stripe',  k: [12, 50, 6, 25],  t: ['#FFF2EC', '#C8283A'], blend: 'multiply' },
+    water: { name: 'Sailor Stripe', k: [8, 60, 4, 50],   t: ['#F4F8FF', '#1F3F8A'], blend: 'multiply' },
+    wind:  { name: 'Pinstripe',     k: [30, 92, 12, 0],  t: ['#F2F6EE', '#3E5A44'], blend: 'overlay' } },
+  polka: { def: 'wind', wind: { name: 'Polka Dots' },
+    fire:  { name: 'Cherry Dots',  k: [65, 55, 0],  t: ['#FFF4EE', '#C21E32'], blend: 'multiply' },
+    water: { name: 'Bubbles',      k: [40, 35, 85], t: ['#EAF6FF', '#2C6FA8'], blend: 'overlay' },
+    earth: { name: 'Mustard Seed', k: [15, 30, 40], t: ['#F7E9C0', '#8A6414'], blend: 'multiply' } },
+  checker: { def: 'earth', earth: { name: 'Checkerboard' },
+    fire:  { name: 'Gingham',        k: [30, 30, 0],   t: ['#FFF6F2', '#D2444A'], blend: 'multiply' },
+    water: { name: 'Tilework',       k: [15, 4, 50],   t: ['#F2F8FC', '#2A5C8C'], blend: 'multiply' },
+    wind:  { name: 'Garden Trellis', k: [35, 16, 50],  t: ['#EEF6E6', '#3F6A3A'], blend: 'overlay' } },
+  softgradient: { def: 'water', water: { name: 'Gradient' },
+    fire:  { name: 'Sunset Glow',  k: [90, 100, 70], t: ['#FFD08A', '#5A1020'], blend: 'soft-light' },
+    wind:  { name: 'Morning Haze', k: [270, 30, 30], t: ['#F2FAEE', '#2E4A3A'], blend: 'soft-light' },
+    earth: { name: 'Lamplight',    k: [90, 85, 40],  t: ['#FFE2A8', '#1E1408'], blend: 'overlay' } },
+  cells: { def: 'earth', earth: { name: 'Cells' },
+    fire:  { name: 'Lava Crust', k: [50, 30, 100, 70], t: ['#FFB25A', '#2A0604'], blend: 'hard-light', light: [300, 100] },
+    water: { name: 'Sea Sponge', k: [20, 10, 0, 60],   t: ['#CFE8FF', '#0E2A44'], blend: 'overlay',    light: [330, 100] },
+    wind:  { name: 'Leaf Veins', k: [15, 0, 85, 25],   t: ['#E6F4D8', '#24401E'], blend: 'soft-light', light: [315, 100] } },
   // ---- ♡ Whimsy ----
   clouds: { def: 'wind', wind: { name: 'Sleep Haze' },
     // the haze lit from below, coals under smoke
@@ -28694,7 +29087,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Pasiphae';
+const RELEASE = 'Jupiter–Eukelade';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-12';
 
@@ -28728,7 +29121,7 @@ const TEXTURE_LOOKS = {
   aurora: 'hanging curtains of aurora light', moon: 'a large moon among clouds', landscape: 'a painted range of hills and mountains',
   flowfield: 'flowing ink lines that never cross', suminagashi: 'marbled rings of floating ink', grain: 'fine film grain',
   metalleaf: 'scattered flakes of metal leaf', flowers: 'lotus blossoms floating on water', brushstrokes: 'broad, expressive brushstrokes',
-  halftone: 'a halftone dot screen', rainstreaks: 'slanting streaks of hard rain', hatch: 'fine hatched pencil lines',
+  halftone: 'a halftone dot screen', plainnoise: 'soft, cloudy noise', stripes: 'plain stripes', polka: 'polka dots', checker: 'a checkerboard', softgradient: 'a smooth gradient', cells: 'rounded cells, like pebbles', rainstreaks: 'slanting streaks of hard rain', hatch: 'fine hatched pencil lines',
   cityscape: 'a city skyline at night, its windows lit, over water', guilloche: 'engraved rosettes, like those on a banknote',
   stainedglass: 'panes of stained glass held in lead', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
@@ -29520,7 +29913,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-12 · 580c85b";
+const STAMP = "2026-10-12 · be9dc81";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -32601,7 +32994,7 @@ function forgeHelpHtml(){
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
     + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
     + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
-    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view; use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
+    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view (or drag anywhere with the middle button, or with Space held); use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
     + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Kept</b> keeps the graph on this browser's shelf by name, opens kept graphs, and saves the shelf to a file (or brings graphs in from one) to share them. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
     + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
     + sec('parts', 'Every part', parts);
@@ -32692,6 +33085,16 @@ async function openForge(deps){
   const ask = o => deps.ask ? deps.ask(o) : Promise.resolve(true);
   const promptFor = o => deps.prompt ? deps.prompt(o) : Promise.resolve(null);
   if(!F.editor){
+    // Drawflow finds a node's fields by the selector [df-KEY], unescaped; a wire's range ('~relief') is a key too, and
+    // '[df-~relief]' is no selector — it threw, and a graph with ranges (Painter's Frustration, Contour Map…) loaded
+    // only its first few parts. Such selectors are escaped here (only the [df-…] ones, only when they need it).
+    if(typeof Element !== 'undefined' && !Element.prototype.querySelectorAll.__forgeSafe){
+      const qsa = Element.prototype.querySelectorAll;
+      const safe = function(sel){ const m = typeof sel === 'string' && /^\[df-(.+)\]$/.exec(sel);
+        if(m && /[^\w-]/.test(m[1]) && typeof CSS !== 'undefined' && CSS.escape) sel = '[df-' + CSS.escape(m[1]) + ']';
+        return qsa.call(this, sel); };
+      safe.__forgeSafe = true; Element.prototype.querySelectorAll = safe;
+    }
     const ed = F.editor = new Drawflow(area);
     // zoom in small steps (Drawflow's 0.1 a wheel-notch is far too quick on a trackpad or a pinch)
     ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.12; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
@@ -32837,6 +33240,30 @@ async function openForge(deps){
     area.addEventListener('dragover', e => e.preventDefault());
     area.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer && e.dataTransfer.getData('text/forge'); if(!type) return;
       const p = toGrid(e.clientX, e.clientY); add(type, p.x, p.y); });
+    // ---- PANNING (Ruby: it locked, or the browser began dragging a ghost) ----
+    // Drawflow pans only when the pressed element's FIRST class is 'parent-drawflow' or 'drawflow': the container
+    // was 'forge-canvas …', so wherever the sheet had been panned or zoomed away from, a press did nothing and
+    // the browser selected text instead (the markup now lists parent-drawflow first; this keeps it so).
+    if(area.classList[0] !== 'parent-drawflow'){ const cls = [...area.classList].filter(c => c !== 'parent-drawflow'); area.className = ['parent-drawflow', ...cls].join(' '); }
+    // never the browser's own drag (a preview's ghost, selected text)
+    area.addEventListener('dragstart', e => e.preventDefault());
+    area.addEventListener('selectstart', e => { if(!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
+    // the middle button (or Space held) pans from anywhere, over parts too, as in Blender and ComfyUI
+    let spaceHeld = false, panFrom = null;
+    document.addEventListener('keydown', e => { if(e.code === 'Space' && !veil.hidden && !(e.target && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target.tagName))){ spaceHeld = true; e.preventDefault(); } });
+    document.addEventListener('keyup', e => { if(e.code === 'Space') spaceHeld = false; });
+    area.addEventListener('pointerdown', e => {
+      if(e.pointerType !== 'mouse' || !(e.button === 1 || (e.button === 0 && spaceHeld))) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      panFrom = { x: e.clientX, y: e.clientY, cx: ed.canvas_x, cy: ed.canvas_y }; area.classList.add('panning');
+      try { area.setPointerCapture(e.pointerId); } catch(_){}
+    }, true);
+    area.addEventListener('mousedown', e => { if(panFrom || e.button === 1){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    area.addEventListener('pointermove', e => { if(!panFrom) return; e.stopImmediatePropagation();
+      ed.canvas_x = panFrom.cx + e.clientX - panFrom.x; ed.canvas_y = panFrom.cy + e.clientY - panFrom.y;
+      ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`; }, true);
+    for(const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) area.addEventListener(ev, () => { if(panFrom){ panFrom = null; area.classList.remove('panning'); } }, true);
+    area.addEventListener('auxclick', e => { if(e.button === 1) e.preventDefault(); });
     // ---- moving: a node only by its title bar (and not when pinned); anywhere else, the grid pans ----
     let ptrKind = 'mouse';
     area.addEventListener('pointerdown', e => { ptrKind = e.pointerType || 'mouse'; }, true);
@@ -34471,13 +34898,14 @@ function presetTile(p, onPick, extraClass){
 }
 
 // the built-in looks, each group under its own heading (Simple first), alphabetical within it (Ruby)
-{ let at = 0; const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
-  for(const g of (PRESET_GROUPS || [{ name: '', count: PRESETS.length }])){
-    if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = g.name; presetGrid.appendChild(hd); }
-    PRESETS.slice(at, at + g.count).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
-    at += g.count;
+// (groups by what a person is looking for — PRESET_GROUPS names each one's presets; any left out come last)
+{ const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
+  const placed = new Set();
+  for(const g of (PRESET_GROUPS || [])){
+    if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = (g.glyph ? g.glyph + ' ' : '') + g.name; presetGrid.appendChild(hd); }
+    PRESETS.filter(p => (g.presets || []).includes(p.name) && !placed.has(p)).sort(byName).forEach(p => { placed.add(p); presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)); });
   }
-  PRESETS.slice(at).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
+  PRESETS.filter(p => !placed.has(p)).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
 }
 
 // ---- hover previews (desktop) ----
@@ -36589,6 +37017,7 @@ commitHistory();
 // once shown; it and the shimmer above it keep moving even while the page
 // itself is busy (they run on the compositor).
 const WORKING_WORDS = {
+  plainnoise: 'Stirring the noise', stripes: 'Ruling the stripes', polka: 'Spotting the dots', checker: 'Laying the squares', softgradient: 'Grading the light', cells: 'Growing the cells',
   bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
   clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',
   aurora: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',

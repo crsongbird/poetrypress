@@ -32,8 +32,9 @@ for(const t of types){
     T.getTextureCanvas(t, 320, 320, { accent1: '#c9a876', accent2: '#7a8ca3', seed: 4242, p1: a, p2: b, light: 135, tint1: '#D9B45B', tint2: '#7a8ca3' });
     const agg = {};
     for(const c of M.createdCanvases)
-      for(const [k, v] of Object.entries(c.getContext('2d')._stats))
-        agg[k] = (agg[k] || 0) + (typeof v === 'number' ? v : 0);
+      for(const [k, v] of Object.entries(c.getContext('2d')._stats)){
+        if(k === 'pixelHash') continue;          // (the knob probes' signal: a hash doesn't sum; the stored prints predate it)
+        agg[k] = (agg[k] || 0) + (typeof v === 'number' ? v : 0); }
     for(const k of Object.keys(agg)) agg[k] = +agg[k].toFixed(6);
     agg.canvases = M.createdCanvases.length;
     current[`${t}@${a},${b}`] = agg;

@@ -34,10 +34,10 @@ import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
-import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil, genMoon, genFlowField } from './texWhimsy.js';
+import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil, genMoon } from './texWhimsy.js';
 import { genFlowers, genCityscape, genGuilloche } from './texSharpness.js';
-import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genTuringSkin, genChladni } from './texChaos.js';
-import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genContourMap, genSuminagashi, genWatercolour } from './texTouch.js';
+import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genChladni } from './texChaos.js';
+import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genSuminagashi } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -291,6 +291,30 @@ export const TEXTURE_PARAMS = {
                   {key:'hue',   label:'Wear',            min:0,  max:100, def:30,  unit:''}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
+  // 🜛 BASICS: quiet grounds, each a chain of two or three parts (chains.js); every slider a plain 0–100
+  plainnoise:    [{key:'zoom',  label:'Scale',           min:0,  max:100, def:30,  unit:''},
+                  {key:'amt',   label:'Detail',          min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Contrast',        min:0,  max:100, def:20,  unit:''}],
+  stripes:       [{key:'zoom',  label:'Stripe Count',    min:0,  max:100, def:20,  unit:''},
+                  {key:'amt',   label:'Stripe Width',    min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Softness',        min:0,  max:100, def:20,  unit:''},
+                  // 0 upright, 50 level (ruled lines), 100 upright again
+                  {key:'shape', label:'Angle',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
+  polka:         [{key:'zoom',  label:'Spacing',         min:0,  max:100, def:50,  unit:''},
+                  {key:'amt',   label:'Dot Size',        min:0,  max:100, def:45,  unit:''},
+                  // in rows (0) → thrown about (100)
+                  {key:'form',  label:'Scatter',         min:0,  max:100, def:0,   unit:''}],
+  checker:       [{key:'zoom',  label:'Squares',         min:0,  max:100, def:20,  unit:''},
+                  {key:'amt',   label:'Softness',        min:0,  max:100, def:10,  unit:''},
+                  {key:'form',  label:'Turn',            min:0,  max:100, def:0,   unit:'', ticks:[0,50,100]}],
+  softgradient:  [{key:'angle', label:'Angle',           min:0,  max:360, def:90,  unit:'°'},
+                  {key:'amt',   label:'Roundness',       min:0,  max:100, def:0,   unit:''},
+                  {key:'form',  label:'Falloff',         min:0,  max:100, def:50,  unit:'', ticks:[50]}],
+  cells:         [{key:'zoom',  label:'Cell Size',       min:0,  max:100, def:40,  unit:''},
+                  {key:'amt',   label:'Order',           min:0,  max:100, def:20,  unit:''},
+                  // round domes (0) → flat cells with crisp lines (100)
+                  {key:'form',  label:'Lines',           min:0,  max:100, def:50,  unit:''},
+                  {key:'shape', label:'Relief',          min:0,  max:100, def:40,  unit:''}],
 };
 
 /**
@@ -309,6 +333,19 @@ export const TEXTURE_PARAMS = {
  * silently ignored.
  */
 export const TEXTURE_CAPS = {
+  plainnoise:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  stripes:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  polka:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  checker:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  softgradient:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // the cells' heights lit by the dial (the Surface's Height)
+  cells:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — whimsy —
   clouds:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -551,6 +588,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'plainnoise' || type === 'stripes' || type === 'polka' || type === 'checker' || type === 'softgradient' || type === 'cells'){
+    result = genChain(type, w, h, light, extra);           // 🜛 Basics: two or three parts each (chains.js)
   } else if(type === 'brushstrokes'){
     result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
@@ -574,17 +613,17 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'chladni'){
     result = genChladni(w,h,amt,zoom,light,form);
   } else if(type === 'contour'){
-    result = genContourMap(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
   } else if(type === 'suminagashi'){
     result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
   } else if(type === 'watercolour'){
-    result = genWatercolour(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
-    result = genFlowField(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1 || '#2B2A3A', tint2 || '#7A4A6A');   // Flow Lines, the dial its current (chains.js)
   } else if(type === 'turing'){
-    result = genTuringSkin(w,h,amt,zoom,light,form,extra.shape/100,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
   } else if(type === 'frost'){
     result = genHoarfrost(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.mat,extra.glow);
   } else if(type === 'ash'){

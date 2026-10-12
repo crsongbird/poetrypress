@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler } from './texCore.js';
 
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
@@ -628,13 +628,7 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
 }
 
 // ---------- textures lit by lightHeights (texCore): a surface, then its light ----------
-// a smooth multi-octave noise sampler, on grids drawn from the seed
-function fbmSampler(cells, octaves){
-  const grids = [];
-  for(let o = 0; o < octaves; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), amp: Math.pow(0.5, o) }); }
-  const norm = grids.reduce((s, o) => s + o.amp, 0);
-  return (u, v) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.amp; return s/norm; };
-}
+// (fbmSampler, the smooth multi-octave noise these surfaces are made of, is texCore's: the Terrain part shares it)
 // a lit surface, coloured per pixel and laid on the page
 function paintLit(w, h, div, ww, wh, colour){
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -1524,54 +1518,7 @@ export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
   });
 }
 
-// Every line a promise
-// kept at one height all the way
-// round the hill and home.
-/**
- * Contour Map — a survey of an imagined land: a terrain of layered noise,
- * drawn as CONTOUR LINES (after the marching-squares maps d3-contour makes;
- * here each line is found per pixel from how far the height is from its
- * level, measured against the slope, so lines stay one width on steep and
- * gentle ground alike), every fifth an index line, heavier; with HILLSHADE
- * beneath — the land lit by the dial, as relief maps are.
- * TERRAIN SCALE · CONTOUR INTERVAL · HILLSHADE
- */
-export function genContourMap(w,h,amt,zoom,light,form,M3){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const shade=Math.max(0,Math.min(1, form==null?0.45:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  // the land: ridges and valleys (ridged noise for crests, broad noise for the masses)
-  const broad=fbmSampler(3, 4), ridge=fbmSampler(5, 3), warp=fbmSampler(3, 2);
-  const sc=1/zoom, H=new Float32Array(N);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const u=x/unit*sc, v=y/unit*sc, wu=u + (warp(u*0.5, v*0.5)-0.5)*0.6, wv=v + (warp(v*0.5+3.1, u*0.5+1.7)-0.5)*0.6;
-    const r=1 - Math.abs(ridge(wu*0.6, wv*0.6)*2 - 1);
-    H[y*ww+x]=0.78*broad(wu*0.45, wv*0.45) + 0.22*r*r*r;     // broad masses, a few sharper crests
-  }
-  let hmin=Infinity, hmax=-Infinity; for(let i=0;i<N;i++){ if(H[i]<hmin) hmin=H[i]; if(H[i]>hmax) hmax=H[i]; }
-  for(let i=0;i<N;i++) H[i]=(H[i]-hmin)/Math.max(1e-6, hmax-hmin);
-  // the interval: how many levels from the lowest ground to the highest
-  const levels=Math.max(5, Math.round(20*amt)), lw=Math.max(0.5, unit*0.0011), lwIdx=lw*2.1;
-  const LN=new Float32Array(N);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, v=H[i]*levels;
-    const gx=(H[y*ww+Math.min(ww-1,x+1)] - H[y*ww+Math.max(0,x-1)])*0.5*levels, gy=(H[Math.min(wh-1,y+1)*ww+x] - H[Math.max(0,y-1)*ww+x])*0.5*levels;
-    const g=Math.max(1e-4, Math.hypot(gx, gy)), f=v - Math.floor(v), dist=Math.min(f, 1-f)/g;     // in pixels, to the nearest level
-    const k=Math.round(v), idx=k % 5 === 0, half=(idx ? lwIdx : lw)*0.5;
-    LN[i]=Math.max(0, Math.min(1, half + 0.5 - dist))*(idx ? 1 : 0.8);
-  }
-  // hillshade: the land lit by the dial (its heights scaled to the map's size)
-  const HH=new Float32Array(N); for(let i=0;i<N;i++) HH[i]=H[i]*unit*0.06;
-  const L=lightHeights(HH, ww, wh, { light, relief:1, gloss:0.05, shadow:0.35, ao:0.15, ambient:0.45 });
-  return paintLit(w,h,div,ww,wh, i => {
-    const k=L.light[i]/L.flat, out=[0,0,0];
-    for(let c=0;c<3;c++){
-      const hill=128 + (128*litK(L, i, 0.45, M3, c)/L.flat - 128)*shade;
-      out[c]=clamp255(hill - LN[i]*(hill - 34)*0.9);
-    }
-    return out;
-  });
-}
+// CONTOUR MAP is a chain now: Terrain → Contour Lines over the Light Engine's hillshade (stepsTouch.js; chains.js 'contour').
 
 // STAINED GLASS is a chain now: panes → glass (stepsTouch.js paneLayout, litGlass; chains.js 'stainedglass').
 
@@ -1647,79 +1594,4 @@ export function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
   });
 }
 
-/**
- * Watercolour Wash — pigment laid in washes, after Tyler Hobbs's method: a
- * blob is a polygon deformed by recursive midpoint displacement, then drawn
- * forty times over at a few percent opacity, each copy deformed again, so the
- * edges go soft and uneven where the copies disagree. On top of that, what
- * watercolour does on paper (Curtis et al., "Computer-Generated Watercolor"):
- * EDGE DARKENING (pigment drifts to a drying edge), GRANULATION (it settles in
- * the paper's tooth) and a GRADED WASH (it runs downhill — the dial). The two
- * pigments mix subtractively where they overlap. WETNESS softens and spreads
- * the edges; dry washes keep hard, dark rims.
- */
-export function genWatercolour(w,h,amt,zoom,light,form,tint1,tint2){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const wet=Math.max(0,Math.min(1, form==null?0.5:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const gauss=()=>{ let u=0, v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
-  const deform=(poly, depth, vs)=>{
-    let P=poly;
-    for(let d=0; d<depth; d++){
-      const Q=[];
-      for(let i=0;i<P.length;i++){
-        const a=P[i], b=P[(i+1)%P.length], len=Math.hypot(b[0]-a[0], b[1]-a[1]);
-        Q.push(a);
-        Q.push([(a[0]+b[0])/2 + gauss()*len*a[2]*vs, (a[1]+b[1])/2 + gauss()*len*a[2]*vs, a[2]*(0.85 + Math.random()*0.3)]);
-      }
-      P=Q;
-    }
-    return P;
-  };
-  const layers=[document.createElement('canvas'), document.createElement('canvas')];
-  const lx=layers.map(c=>{ c.width=ww; c.height=wh; const x=c.getContext('2d', CPU); x.fillStyle='#000'; return x; });
-  const nB=Math.max(3, Math.round((4 + Math.random()*3)*(ww*wh)/(unit*unit)/zoom));
-  const LAY=Math.round((30 + wet*14)*(0.75 + 0.25*Math.min(2.5, amt))), alpha=Math.min(0.1, 0.024*Math.sqrt(amt)*(1.15 - wet*0.3));   // more pigment: more, and denser, layers
-  for(let b=0;b<nB;b++){
-    // the first is a broad, pale ground wash; the rest are passages laid over it
-    const ground=b===0, cx=ground ? ww*(0.3 + Math.random()*0.4) : Math.random()*ww, cy=ground ? wh*(0.3 + Math.random()*0.4) : Math.random()*wh;
-    const R=unit*zoom*(ground ? 0.6 + Math.random()*0.2 : 0.2*(0.55 + Math.random()*0.8)), k=Math.random()<0.62 ? 0 : 1;
-    const sides=10, base=[], sq=0.7 + Math.random()*0.3;
-    for(let s=0;s<sides;s++){ const a=s/sides*Math.PI*2, rr=R*(0.85 + Math.random()*0.3); base.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr*sq, 0.5 + Math.random()*0.9]); }
-    const shape=deform(base, 3, 0.2);
-    const ctx=lx[k]; ctx.globalAlpha=ground ? alpha*0.45 : alpha;
-    for(let l=0;l<LAY;l++){
-      const P=deform(shape, 3, 0.07 + wet*0.2);
-      ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); ctx.fill();
-    }
-  }
-  const Dk=lx.map(ctx=>{ const d=ctx.getImageData(0,0,ww,wh).data, D=new Float32Array(N); for(let i=0;i<N;i++) D[i]=d[i*4+3]/255; return D; });
-  // a box blur, for the edge: pigment drifts to where the wash thins out
-  const blurF=(S, r)=>{ const T=new Float32Array(N), O=new Float32Array(N), n=2*r+1;
-    for(let y=0;y<wh;y++){ let s=0; for(let x=-r;x<=r;x++) s+=S[y*ww+Math.min(ww-1,Math.max(0,x))];
-      for(let x=0;x<ww;x++){ T[y*ww+x]=s/n; s+=S[y*ww+Math.min(ww-1,x+r+1)] - S[y*ww+Math.max(0,x-r)]; } }
-    for(let x=0;x<ww;x++){ let s=0; for(let y=-r;y<=r;y++) s+=T[Math.min(wh-1,Math.max(0,y))*ww+x];
-      for(let y=0;y<wh;y++){ O[y*ww+x]=s/n; s+=T[Math.min(wh-1,y+r+1)*ww+x] - T[Math.max(0,y-r)*ww+x]; } }
-    return O; };
-  const er=Math.max(1, Math.round(unit*(0.006 + wet*0.012)));
-  const blurred=Dk.map(D=>blurF(blurF(D, er), er));
-  const tooth=fbmSampler(28, 2), bloom=fbmSampler(5, 3);
-  const lv=lightVec(light==null?0:light), lm=Math.hypot(lv.lx,lv.ly), gx=lm>1e-3?lv.lx/lm:0, gy=lm>1e-3?lv.ly/lm:0, run=Math.min(1, lm);
-  const cols=[parseHex(tint1 || '#2E5C8A'), parseHex(tint2 || '#B0465A')];
-  const rim=1.1*(1 - wet*0.6), gran=0.12 + 0.12*(1-wet);
-  return paintLit(w,h,div,ww,wh, i => {
-    const x=i%ww, y=(i/ww)|0, u=x/unit, v=y/unit;
-    const grade=1 + run*0.45*((u - ww/unit/2)*gx + (v - wh/unit/2)*gy);      // downhill holds more pigment
-    const t=tooth(u*1.5, v*1.5), bl=bloom(u, v);
-    let r=255, g=255, b=255;
-    for(let k=0;k<2;k++){
-      let d=Dk[k][i]; if(d < 0.004) continue;
-      d+=Math.max(0, d - blurred[k][i])*rim*2.2;                              // the darker drying edge
-      d*=grade*(1 + gran*(t - 0.5)*2)*(0.62 + 0.76*bl*bl);                       // granulation, and an uneven load
-      d=Math.max(0, Math.min(1, d*1.1));
-      const c=cols[k];
-      r*=1 - d*(1 - c.r/255); g*=1 - d*(1 - c.g/255); b*=1 - d*(1 - c.b/255);
-    }
-    return [clamp255(r), clamp255(g), clamp255(b)];
-  });
-}
+// WATERCOLOR WASH is a chain now: Washes → Pigment → Pigment (stepsTouch.js touchWashes, touchPigment; chains.js 'watercolour').

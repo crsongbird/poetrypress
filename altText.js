@@ -27,7 +27,7 @@ export const TEXTURE_LOOKS = {
   aurora: 'hanging curtains of aurora light', moon: 'a large moon among clouds', landscape: 'a painted range of hills and mountains',
   flowfield: 'flowing ink lines that never cross', suminagashi: 'marbled rings of floating ink', grain: 'fine film grain',
   metalleaf: 'scattered flakes of metal leaf', flowers: 'lotus blossoms floating on water', brushstrokes: 'broad, expressive brushstrokes',
-  halftone: 'a halftone dot screen', rainstreaks: 'slanting streaks of hard rain', hatch: 'fine hatched pencil lines',
+  halftone: 'a halftone dot screen', plainnoise: 'soft, cloudy noise', stripes: 'plain stripes', polka: 'polka dots', checker: 'a checkerboard', softgradient: 'a smooth gradient', cells: 'rounded cells, like pebbles', rainstreaks: 'slanting streaks of hard rain', hatch: 'fine hatched pencil lines',
   cityscape: 'a city skyline at night, its windows lit, over water', guilloche: 'engraved rosettes, like those on a banknote',
   stainedglass: 'panes of stained glass held in lead', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',

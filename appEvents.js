@@ -1125,13 +1125,14 @@ function presetTile(p, onPick, extraClass){
 }
 
 // the built-in looks, each group under its own heading (Simple first), alphabetical within it (Ruby)
-{ let at = 0; const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
-  for(const g of (PRESET_GROUPS || [{ name: '', count: PRESETS.length }])){
-    if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = g.name; presetGrid.appendChild(hd); }
-    PRESETS.slice(at, at + g.count).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
-    at += g.count;
+// (groups by what a person is looking for — PRESET_GROUPS names each one's presets; any left out come last)
+{ const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
+  const placed = new Set();
+  for(const g of (PRESET_GROUPS || [])){
+    if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = (g.glyph ? g.glyph + ' ' : '') + g.name; presetGrid.appendChild(hd); }
+    PRESETS.filter(p => (g.presets || []).includes(p.name) && !placed.has(p)).sort(byName).forEach(p => { placed.add(p); presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)); });
   }
-  PRESETS.slice(at).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
+  PRESETS.filter(p => !placed.has(p)).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
 }
 
 // ---- hover previews (desktop) ----
@@ -3243,6 +3244,7 @@ commitHistory();
 // once shown; it and the shimmer above it keep moving even while the page
 // itself is busy (they run on the compositor).
 const WORKING_WORDS = {
+  plainnoise: 'Stirring the noise', stripes: 'Ruling the stripes', polka: 'Spotting the dots', checker: 'Laying the squares', softgradient: 'Grading the light', cells: 'Growing the cells',
   bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
   clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',
   aurora: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',

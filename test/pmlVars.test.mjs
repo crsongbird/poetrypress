@@ -377,9 +377,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
     !/Math\.round\(\(w\*h\)\/\d+/.test(gens));
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
-  // (Fractured Glaze is a chain now: its grid is the chain's, canonDiv(2) in textureGenerators.js genChain)
+  // (Fractured Glaze, Contour Map, Turing Skin and Watercolor Wash are chains now: their grid is the chain's, canonDiv(2) in textureGenerators.js genChain)
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 31 && /const hdiv = canonDiv\(2\)/.test(src('stepsLight.js')) && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js'))
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 28 && /const hdiv = canonDiv\(2\)/.test(src('stepsLight.js')) && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js'))
     && /const \[gw, gh\] = whimGrid\(E, 6\)/.test(src('stepsWhimsy.js')) && /E\.canvasPass \? \[Math\.ceil\(E\.ww\/canonDiv\(d\)\)/.test(src('stepsWhimsy.js')));
   {
     // Linen's grid: threads at least ~3 px apart; never finer than the export's grid, never coarser than the canvas
