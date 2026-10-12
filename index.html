@@ -9,7 +9,7 @@
      left enabled. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#131116">
+<meta name="theme-color" content="#151313">
 <!-- already dark: dark-mode add-ons (Dark Reader and its kin) leave it alone;
      the colour scheme follows the theme (theme.js), light only for Vellum -->
 <meta name="darkreader-lock">
@@ -21,6 +21,7 @@
 <title>PoetryPress</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&family=Alegreya+SC:ital,wght@0,400;0,500;0,700;1,400&family=Alegreya+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400;500;700&family=Caveat:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&family=Merriweather:ital,wght@0,400;0,600;1,400;1,600&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Oswald:wght@400;500;600&family=Unica+One:wght@400&family=Shadows+Into+Light:wght@400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400;1,600&family=Architects+Daughter:wght@400&family=Josefin+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Inter:ital,wght@0,400;0,600;1,400;1,600&family=Work+Sans:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:ital,wght@0,400;0,600;1,400;1,600&family=UnifrakturMaguntia&family=Pinyon+Script&family=IM+Fell+English:ital@0;1&family=Special+Elite&family=Uncial+Antiqua&family=Poiret+One&family=Zilla+Slab:ital,wght@0,500;0,700;1,500&family=Almendra:ital,wght@0,400;0,700;1,400&family=VT323&family=Rye&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.css"/>
 <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@v0.24.0/dist/coloris.min.js"></script>
@@ -39,8 +40,11 @@
   <div class="app-header">
     <span class="app-header-spacer header-moon" id="headerMoon"></span>
     <strong class="app-header-title">PoetryPress <svg class="vellum-sigil" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1.9 21.9 12 12 22.1 2.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 7.1 16.9 12 12 16.9 7.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 4.4V19.6" stroke="#6FA8FF" opacity="0.88"/><path d="M11.95 1.73 21.42 12.48 11.35 22.10 2.63 11.45Z" stroke="#C9A0FF" opacity="0.88"/><path d="M12.07 7.25 16.29 11.84 12.27 16.84 7.40 11.55Z" stroke="#C9A0FF" opacity="0.88"/><path d="M11.65 3.89V19.61" stroke="#C9A0FF" opacity="0.88"/><path d="M12.66 2.04 22.33 11.82 12.38 21.48 1.77 12.27Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.35 6.98 16.26 11.64 11.55 16.56 7.58 11.53Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.60 4.99V18.91" stroke="#9B7FE8" opacity="0.88"/><path d="M11.78 1.89 21.04 11.86 12.73 21.40 2.27 11.32Z" stroke="#E0526F" opacity="0.88"/><path d="M12.14 7.81 16.37 11.11 11.25 16.97 6.23 11.25Z" stroke="#E0526F" opacity="0.88"/><path d="M11.99 5.16V19.46" stroke="#E0526F" opacity="0.88"/><circle cx="12" cy="12" r="1.35" fill="#E0526F" stroke="none"/></svg></strong>
-    <button class="shortcut-btn" id="shortcutBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
-    <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="kofi-link">support (Ko-fi)</a>
+    <div class="app-header-tools">
+      <button class="athanor-top" id="athanorTopBtn" data-sound="athanorOpen" type="button" title="Open the Athanor, the node editor: build a surface texture from its parts, or open one of the app's textures to see how it is made"><span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span></button>
+      <button class="shortcut-btn" id="shortcutBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+      <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="support-btn" id="supportBtn" title="PoetryPress is free and always will be. If it has given you something, you can give back on Ko-fi."><span class="support-heart" aria-hidden="true">♡</span><span class="support-word">Support</span></a>
+    </div>
   </div>
 
   <div class="controls">
@@ -531,71 +535,73 @@ inside of a <~~dead person~~/trans>'s dreams.
           <div class="field full">
             <label data-str="label.surface_variant">Surface Variant</label>
             <select id="textureType">
-              <!-- grouped by how a surface is made and what it is for (each group alphabetical; the four elements are the presets' language) -->
-              <optgroup label="◌ Grounds">
+              <!-- grouped by what a surface IS (each group alphabetical); each group's glyph a Runology Archetype that means it (appOptions.js TEXTURE_GROUPS) -->
+              <optgroup label="🜃 Paper &amp; Grounds">
                 <option value="coldpress" data-str="option.cold_press">Cold Press</option>
+                <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
                 <option value="oldpaper" data-str="option.old_paper">Old Paper</option>
-                <option value="clouds" data-str="option.sleep_haze">Sleep Haze</option>
                 <option value="grain" data-str="option.waking_grain">Waking Grain</option>
               </optgroup>
-              <optgroup label="✧ Light &amp; Particles">
+              <optgroup label="🜚 Light, Sparks &amp; Dust">
                 <option value="bokeh" data-str="option.dream_bloom">Dream Bloom</option>
-                <option value="snow" data-str="option.first_snow">First Snow</option>
-                <option value="rainstreaks" data-str="option.still_rain">Harsh Rain</option>
                 <option value="magicparticles" data-str="option.euphoria_dust">Pixie Dust</option>
+                <option value="clouds" data-str="option.sleep_haze">Sleep Haze</option>
                 <option value="embers" data-str="option.burning_mana">Sparkler</option>
               </optgroup>
-              <optgroup label="☾ The Heavens">
+              <optgroup label="🜁 Weather">
+                <option value="snow" data-str="option.first_snow">First Snow</option>
+                <option value="rainstreaks" data-str="option.still_rain">Harsh Rain</option>
+                <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
+                <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
+              </optgroup>
+              <optgroup label="🝊 Sky &amp; Cosmos">
                 <option value="aurora" data-str="option.aurora_veil">Aurora Veil</option>
                 <option value="blackhole" data-str="option.blackhole">Black Hole</option>
                 <option value="astral" data-str="option.deep_field">Deep Field</option>
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
               </optgroup>
-              <optgroup label="⛰ Places">
+              <optgroup label="🜥 Places &amp; Scenes">
                 <option value="contour" data-str="option.contour">Contour Map</option>
                 <option value="dunes" data-str="option.dunes">Dune Ripples</option>
                 <option value="flowers" data-str="option.lotus_pond">Lotus Pond</option>
-                <option value="moss" data-str="option.moss">Moss on Stone</option>
                 <option value="cityscape" data-str="option.cityscape">Night City</option>
                 <option value="landscape" data-str="option.landscape">Painted Landscape</option>
                 <option value="water" data-str="option.scrying_pool">Scrying Pool</option>
               </optgroup>
-              <optgroup label="〰 Ink &amp; Paint">
+              <optgroup label="🜄 Ink &amp; Paint">
                 <option value="flowfield" data-str="option.flow_field">Flow-Field Ink</option>
                 <option value="brushstrokes" data-str="option.painter_s_frustration">Painter's Frustration</option>
                 <option value="inkbleed" data-str="option.rorschach_test">Rorschach Test</option>
                 <option value="hatch" data-str="option.silverpoint_hatch">Silverpoint Hatch</option>
                 <option value="suminagashi" data-str="option.suminagashi">Suminagashi</option>
-                <option value="watercolour" data-str="option.watercolour">Watercolour Wash</option>
+                <option value="watercolour" data-str="option.watercolour">Watercolor Wash</option>
               </optgroup>
-              <optgroup label="✋ Materials">
+              <optgroup label="Ᏹ Materials &amp; Craft">
                 <option value="ash" data-str="option.burnt_letter">Burnt Letter</option>
                 <option value="crystal" data-str="option.crystal_leaf">Crystal Leaf</option>
                 <option value="cupring" data-str="option.cup_ring">Cup Ring</option>
                 <option value="crackedglaze" data-str="option.fractured_glaze">Fractured Glaze</option>
-                <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
                 <option value="kintsugi" data-str="option.kintsugi">Kintsugi</option>
-                <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
                 <option value="spangle" data-str="option.metal_spangle">Metal Spangle</option>
+                <option value="moss" data-str="option.moss">Moss on Stone</option>
                 <option value="wax" data-str="option.poured_wax">Poured Wax</option>
-                <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
                 <option value="metalleaf" data-str="option.metal_leaf">Scattered Polygons</option>
+                <option value="stainedglass" data-str="option.stained_glass">Stained Glass</option>
               </optgroup>
-              <optgroup label="◇ Pattern &amp; Geometry">
+              <optgroup label="🝓 Pattern &amp; Order">
                 <option value="mathnoise" data-str="option.binary_pattern">Binary Pattern</option>
                 <option value="chladni" data-str="option.chladni">Chladni Sand</option>
                 <option value="tessellate" data-str="option.facet_field">Facet Field</option>
                 <option value="guilloche" data-str="option.guilloche">Guilloché</option>
                 <option value="halftone" data-str="option.90s_dots">Retro Dots</option>
-                <option value="stainedglass" data-str="option.stained_glass">Stained Glass</option>
                 <option value="turing" data-str="option.turing_skin">Turing Skin</option>
               </optgroup>
-              <optgroup label="🜍 Signs &amp; Symbols">
+              <optgroup label="⎐ Signs, Sigils &amp; Cards">
                 <option value="cards" data-str="option.cartomancy">Cartomancy</option>
                 <option value="sigils" data-str="option.sigil_scatter">Sigil Scatter</option>
                 <option value="summoning" data-str="option.summoning_circles">Transmutation Circle</option>
               </optgroup>
-              <optgroup label="🜉 Yours" id="athanorGroup">
+              <optgroup label="🜉 Your Surfaces" id="athanorGroup">
                 <option value="athanor" id="athanorOption">From the Athanor</option>
               </optgroup>
             </select>
@@ -653,7 +659,7 @@ inside of a <~~dead person~~/trans>'s dreams.
 <div class="field full" id="lightRow">
             <label data-str="label.light_direction">Light Direction</label>
             <div class="light-dial-row">
-              <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the centre toward where the light comes from">
+              <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward where the light comes from">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
                   <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="-0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
                   <!-- 🜚: the spike and its two curls grow out of the rim toward the light; the curls flare outward -->
@@ -673,7 +679,7 @@ inside of a <~~dead person~~/trans>'s dreams.
                 </svg>
               </div>
               <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset" aria-label="Reset the dial">⟲</button>
-              <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="To the centre" aria-label="Move the dial to its centre">◎</button>
+              <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="To the center" aria-label="Move the dial to its center">◎</button>
               <button type="button" class="ld-btn ld-random" id="lightRandom" data-sound="dialRandom" title="A random angle" aria-label="Turn the dial to a random angle">⚄</button>
             </div>
             <!-- the dial's two numbers, shown and typed: its angle, and how far out it reaches (100 the rim; past it, lower) -->
@@ -694,19 +700,19 @@ inside of a <~~dead person~~/trans>'s dreams.
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint3Row">
-            <label id="tint3Label" data-str="label.highlight_hue" title="SPECULAR: the colour of the shine where the light catches the surface (white: as it is; its alpha is how much)">Specular Hue</label>
+            <label id="tint3Label" data-str="label.highlight_hue" title="SPECULAR: the color of the shine where the light catches the surface (white: as it is; its alpha is how much)">Specular Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint4Row">
-            <label id="tint4Label" data-str="label.shade_hue" title="SHADOW: the colour the shadows fill with — the sky's light, bouncing back (white: as it is; its alpha is how much)">Shadow Hue</label>
+            <label id="tint4Label" data-str="label.shade_hue" title="SHADOW: the color the shadows fill with — the sky's light, bouncing back (white: as it is; its alpha is how much)">Shadow Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint6Row">
-            <label id="tint6Label" data-str="label.diffuse_hue" title="DIFFUSE: the colour of the light itself, on everything it reaches (white: as it is; its alpha is how much)">Diffuse Hue</label>
+            <label id="tint6Label" data-str="label.diffuse_hue" title="DIFFUSE: the color of the light itself, on everything it reaches (white: as it is; its alpha is how much)">Diffuse Hue</label>
             <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint5Row">
-            <label id="tint5Label" data-str="label.fifth_hue" title="A coloured texture's GLOW (black: none), or a grey texture's MATERIAL — the colour of the surface itself (mid-grey: none)">Glow Hue</label>
+            <label id="tint5Label" data-str="label.fifth_hue" title="A colored texture's GLOW (black: none), or a gray texture's MATERIAL — the color of the surface itself (mid-gray: none)">Glow Hue</label>
             <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full" id="seedRow">
@@ -1071,7 +1077,7 @@ inside of a <~~dead person~~/trans>'s dreams.
         <p class="hint full" data-str="hint.athanor">A surface texture node editor: wire the app's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
         <input type="hidden" id="forgeGraph" value="">
         <p class="hint full forge-summary" id="forgeSummary"></p>
-        <button class="btn-major full" id="forgeOpenBtn" data-sound="athanorOpen" type="button" data-str="button.forgeOpenBtn">🜉 Open the Athanor</button>
+        <p class="hint full" data-str="hint.athanor_open">Open it with 🜉 The Athanor, at the top of the page.</p>
       </div>
     </details>
 
@@ -1114,6 +1120,7 @@ inside of a <~~dead person~~/trans>'s dreams.
       <span class="forge-spacer"></span>
       <select id="forgeStarter" class="forge-starter" title="Begin from a working graph, or one of the app's own textures"></select>
       <button type="button" class="ghost" id="forgeKeptBtn" title="Keep this surface by name, or open one kept">Kept</button>
+      <button type="button" class="ghost" id="forgeDocBtn" aria-expanded="false" aria-controls="forgeDoc" title="How the Athanor works">Help</button>
       <button type="button" class="ghost" id="forgeRevert" title="Back to the graph as it was when the Athanor opened">Revert</button>
       <button type="button" class="ghost" id="forgeClear">Clear</button>
       <span class="forge-zoom">
@@ -1133,21 +1140,12 @@ inside of a <~~dead person~~/trans>'s dreams.
         <div class="forge-dock-row">
           <span class="forge-status" id="forgeStatus"></span>
           <label class="forge-check" title="Each node shows what it makes"><input type="checkbox" id="forgeSteps"> Steps</label>
-          <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeHelp" title="How it works">?</button>
-        </div>
-        <div class="forge-help-pop" id="forgeHelp" hidden>
-          <div class="forge-legend" id="forgeLegend"></div>
-          <p class="forge-help">Wires wear the colour of what they carry. A ⚙ setting takes a wire. Hold anything — or right-click it — to see what it can do.</p>
-          <ol class="forge-primer">
-            <li><b>Parts make or change pictures</b>; wires carry them on, left to right. Each part shows what it makes.</li>
-            <li><b>Every graph ends in a Surface.</b> What reaches its image is the texture; what reaches its height is lit by the dial.</li>
-            <li><b>Knobs, Hues and Accents</b> are the page's own sliders and colours: wire them into ⚙ settings to drive them from the page.</li>
-            <li><b>To wire on a phone:</b> hold a part, choose “Wire from it…”, then tap the part it goes into and choose where.</li>
-            <li><b>Start from…</b> opens working graphs to take apart — the starters, and the app's own textures as they are made.</li>
-          </ol>
+          <button type="button" class="forge-seed-btn" id="forgeSeedBtn" title="A new seed: every part that uses chance draws it from the page's seed">⟳ Seed</button>
+          <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeDoc" title="How the Athanor works">?</button>
         </div>
       </aside>
       <button type="button" class="forge-cut" id="forgeCut" hidden title="Cut this wire">✂ Cut</button>
+      <article class="forge-doc" id="forgeDoc" hidden aria-label="How the Athanor works"></article>
     </div>
     <div class="forge-menu" id="forgeMenu" role="menu" hidden></div>
   </div>
@@ -1179,7 +1177,7 @@ inside of a <~~dead person~~/trans>'s dreams.
     <button class="tab-btn" data-tab="style" type="button" title="Aspect ratio and presets" data-str="tab.rituals"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="11.60" r="9.60" stroke="currentColor" opacity="1.0"/><path d="M12.24 20.77 7.06 5.05 20.77 14.65H3.44L16.99 4.30Z" stroke="currentColor" opacity="0.72"/><circle cx="11.91" cy="11.49" r="9.84" stroke="currentColor" opacity="0.72"/><path d="M12.20 20.76 6.16 4.66 20.38 14.46H2.96L18.02 5.14Z" stroke="currentColor" opacity="0.56"/><circle cx="11.42" cy="12.12" r="9.44" stroke="currentColor" opacity="0.56"/><path d="M11.37 20.09 6.56 5.21 21.22 14.61H3.83L17.29 4.23Z" stroke="currentColor" opacity="0.4"/><circle cx="11.32" cy="12.11" r="9.20" stroke="currentColor" opacity="0.4"/></svg></span>Rituals</button>
     <button class="tab-btn" data-tab="type" type="button" title="Fonts and text effects" data-str="tab.thoughtforms"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.4V12.4" stroke="currentColor" opacity="1.0"/><path d="M2.4 16.1H21.6" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="20.00" r="2.25" stroke="currentColor" opacity="1.0"/><path d="M4.95 4.86H20.16L11.94 15.95Z" stroke="currentColor" opacity="0.72"/><path d="M12.28 7.85V12.79" stroke="currentColor" opacity="0.72"/><path d="M2.15 15.87H21.17" stroke="currentColor" opacity="0.72"/><circle cx="11.55" cy="20.49" r="2.12" stroke="currentColor" opacity="0.72"/><path d="M4.87 4.12H19.09L12.13 15.68Z" stroke="currentColor" opacity="0.56"/><path d="M11.88 6.89V13.02" stroke="currentColor" opacity="0.56"/><path d="M3.12 16.42H21.66" stroke="currentColor" opacity="0.56"/><circle cx="11.64" cy="20.51" r="2.16" stroke="currentColor" opacity="0.56"/><path d="M4.53 3.96H19.77L12.09 15.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.97 7.54V12.95" stroke="currentColor" opacity="0.4"/><path d="M2.65 15.60H21.60" stroke="currentColor" opacity="0.4"/><circle cx="11.85" cy="19.79" r="2.49" stroke="currentColor" opacity="0.4"/></svg></span>Thoughtforms</button>
     <button class="tab-btn" data-tab="page" type="button" title="Backgrounds, textures and borders" data-str="tab.materia"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M11.87 3.13 20.73 11.72 12.10 21.61 2.14 11.88Z" stroke="currentColor" opacity="0.72"/><path d="M12.23 2.89 21.63 12.62 11.34 21.92 2.13 12.46Z" stroke="currentColor" opacity="0.56"/><path d="M12.24 2.89 20.75 12.09 12.13 21.01 2.85 11.62Z" stroke="currentColor" opacity="0.4"/></svg></span>Materia</button>
-    <button class="tab-btn" data-tab="more" type="button" title="Advanced options" data-str="tab.esoterica"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span>Esoterica</button>
+    <button class="tab-btn" data-tab="more" type="button" title="Advanced options" id="moreTabBtn"><span class="tab-swap"><span class="tab-face eso"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span><span data-str="tab.esoterica">Esoterica</span></span><span class="tab-face ret" aria-hidden="true"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span><span>Return</span></span></span></button>
   </nav>
 
 </div>

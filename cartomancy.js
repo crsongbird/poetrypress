@@ -15,6 +15,9 @@
  *   crtPaintDeal(ctx, w, h, opts)        the deal drawn, lit, on whatever is there
  *   CARD_STEPS                           Table, Deal and Coins for the Athanor
  *
+ * What else is on the table (a candle, a cup, a letter…) and what has
+ * happened to the cards (a dog-ear, a ring, a burn) are cartomancyTable.js.
+ *
  * Its suits are the four elements as the alchemists drew them (fire △, water
  * ▽, air and earth barred), coloured by the page's two accents and the
  * texture's two hues. The major arcana are Vellum's own (The Familiar, The
@@ -29,12 +32,13 @@
  */
 import { CPU, cpx, lightVec, parseHex, pickWeighted } from './texCore.js';
 import { GLYPH_FONT } from './spell.js';
+import { CRT_KIT, TABLE_OBJECTS, crtObject, crtTableObjects, crtPaintObject, crtToken, crtTokenKind, crtDamageFor, crtCut, crtCardPath, crtDamage } from './cartomancyTable.js';
 
 const CRT_SERIF = 'Georgia, "Times New Roman", serif';
-const crtRGB = c => Array.isArray(c) ? c : (() => { const p = parseHex(c || '#808080'); return [p.r, p.g, p.b]; })();
-const crtCss = (c, a = 1) => `rgba(${Math.max(0, Math.min(255, c[0]|0))},${Math.max(0, Math.min(255, c[1]|0))},${Math.max(0, Math.min(255, c[2]|0))},${a})`;
-const crtMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
-const crtPick = a => a[Math.floor(Math.random()*a.length)];
+export const crtRGB = c => Array.isArray(c) ? c : (() => { const p = parseHex(c || '#808080'); return [p.r, p.g, p.b]; })();
+export const crtCss = (c, a = 1) => `rgba(${Math.max(0, Math.min(255, c[0]|0))},${Math.max(0, Math.min(255, c[1]|0))},${Math.max(0, Math.min(255, c[2]|0))},${a})`;
+export const crtMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
+export const crtPick = a => a[Math.floor(Math.random()*a.length)];
 
 // ---- MATERIALS, chosen by the seed ----
 export const TABLE_MATERIALS = {
@@ -64,16 +68,25 @@ export const COINAGES = [
   { name: 'cinders', mark: '🜂', metal: 'copper' }, { name: 'sigils', mark: '⛤', metal: 'iron' }, { name: 'crowns', mark: '♔', metal: 'gold' },
   { name: 'tides', mark: '🜄', metal: 'silver' }, { name: 'mercies', mark: '☿', metal: 'silver' },
 ];
+// (none quite a game you know: the layouts are their own, so a viewer can only sometimes name what is being played)
 export const CARD_GAMES = {
-  reading:  'a reading: a spread laid for one, the deck beside it',
+  reading:  'a reading: a spread laid for one (a cross, a line, a horseshoe, a grid or a star), the deck beside it',
   trick:    'a trick-taking game: each player\'s hand, a trick in the middle, the stock and its trump',
-  patience: 'patience for one: the tableau in columns, the foundations by suit, the stock and the waste',
-  wager:    'a wagering game: hands, the shared cards in a row, a pot and each player\'s coin',
+  patience: 'patience for one: the tableau in five to eight columns, the foundations by suit, the stock and the waste',
+  wager:    'a wagering game: hands, the shared cards in a row, a pot and each player\'s coin (or beads, or beans)',
   pairs:    'pairs: the deck face down in a grid, a few turned up and matched',
+  crossroads: 'a crossing game: arms of cards run out from one card in the middle, a player at the end of each',
+  duel:     'a duel for two: each player\'s line of cards before them, a crowned card between',
+  ring:     'a ring game: the cards laid in a circle round a centerpiece, some turned up',
+  stair:    'a stair: rows of cards overlapping, narrowing as they climb, some already taken',
+  market:   'a market game: a row of cards to choose from, each player\'s kept cards laid out before them',
+  abandoned:'a game abandoned: hands dropped where they were, the deck spilled, a card gone over the edge',
 };
 
 // ---- the elements, as the alchemists drew them: fire △, water ▽, air △ barred, earth ▽ barred ----
 export function crtElement(ctx, x, y, s, e, fill){
+  // the fifth, quintessence (a misprint, or a deck from somewhere else): a circle and its point
+  if(e === 4){ ctx.beginPath(); ctx.arc(x, y, s*0.75, 0, Math.PI*2); if(fill) ctx.fill(); ctx.moveTo(x + s*0.18, y); ctx.arc(x, y, s*0.18, 0, Math.PI*2); ctx.stroke(); return; }
   const up = (e === 0 || e === 2); ctx.beginPath();
   if(up){ ctx.moveTo(x, y - s); ctx.lineTo(x + s*0.9, y + s*0.6); ctx.lineTo(x - s*0.9, y + s*0.6); }
   else { ctx.moveTo(x, y + s); ctx.lineTo(x + s*0.9, y - s*0.6); ctx.lineTo(x - s*0.9, y - s*0.6); }
@@ -81,7 +94,7 @@ export function crtElement(ctx, x, y, s, e, fill){
   if(e >= 2){ const by = up ? y + s*0.05 : y - s*0.05; ctx.moveTo(x - s*0.85, by); ctx.lineTo(x + s*0.85, by); }
   ctx.stroke();
 }
-export const CRT_SUITS = ['Fire', 'Water', 'Air', 'Earth'];
+export const CRT_SUITS = ['Fire', 'Water', 'Air', 'Earth', 'Aether'];
 export const CRT_ARCANA = [['0','The Familiar','bird'],['I','The Witch','fox'],['II','The Vellum','sigil'],['III','The Seed','seed'],['IV','The Spell','eye'],
   ['V','The Grimoire','book'],['VI','The Lotus','lotus'],['VII','The Dial','dial'],['VIII','Kintsugi','bowl'],['IX','The Scrying Pool','pool'],
   ['X','The Wheel of Seeds','wheel'],['XIII','The Black Hole','hole'],['XIV','Transmutation','circle'],['XV','The Crystal','crystal'],
@@ -89,7 +102,10 @@ export const CRT_ARCANA = [['0','The Familiar','bird'],['I','The Witch','fox'],[
   ['XI','The Alembic','glyph:🝪'],['XII','Caput Mortuum','glyph:🝎'],['XVI','The Crucible','glyph:🝥'],['XX','The Comet','glyph:☄'],
   ['XXII','Lilith','glyph:⚸'],['XXIII','The Caduceus','glyph:🝐'],['XXIV','Sedna','glyph:⯲'],['XXV','Quintessence','glyph:🜚']];
 // the rare cards are not equally rare: Saturn 3 : Enceladus 2 : the Kitsune 1
-export const CRT_RARE = [[['✦','Saturn','saturn'],3],[['✦','Enceladus','enceladus'],2],[['✦','The Kitsune','kitsune'],1]];
+export const CRT_RARE = [[['✦','Saturn','saturn'],3],[['✦','Enceladus','enceladus'],2],[['✦','The Kitsune','kitsune'],1],
+  [['✦','The Robin','robin'],2],[['✦','The Moth','moth'],2],[['✦','The Hag Stone','hagstone'],2],[['✦','The Unwritten','blank'],1]];
+// what a deck's back may bear at its heart
+export const CRT_MEDALS = ['sigil', 'sigil', 'moon', 'eye', 'star', 'seed', 'sun', 'lotus', 'crystal', 'wheel'];
 
 /** An emblem, simply drawn in ink (or a sign from the lore, in the symbol font). */
 export function crtEmblem(ctx, kind, s){
@@ -117,6 +133,13 @@ export function crtEmblem(ctx, kind, s){
     case 'fox': ctx.moveTo(-s*0.45,-s*0.55); ctx.lineTo(-s*0.2,-s*0.15); ctx.lineTo(s*0.2,-s*0.15); ctx.lineTo(s*0.45,-s*0.55); ctx.lineTo(s*0.4,s*0.05); ctx.lineTo(0,s*0.5); ctx.lineTo(-s*0.4,s*0.05); ctx.closePath(); break;
     case 'saturn': ctx.arc(0,0,s*0.3,0,Math.PI*2); ctx.moveTo(s*0.8,0); ctx.ellipse(0,0,s*0.8,s*0.2,-0.35,0,Math.PI*2); ctx.moveTo(s*0.65,0); ctx.ellipse(0,0,s*0.62,s*0.15,-0.35,0,Math.PI*2); break;
     case 'enceladus': ctx.arc(0,s*0.2,s*0.4,0,Math.PI*2); for(let k=-2;k<=2;k++){ ctx.moveTo(k*s*0.08,s*0.6); ctx.lineTo(k*s*0.22,s*0.95); } for(let k=0;k<4;k++){ ctx.moveTo(-s*0.25+k*s*0.15,s*0.05); ctx.lineTo(-s*0.15+k*s*0.15,s*0.35); } break;
+    case 'robin': ctx.ellipse(-s*0.05,s*0.1,s*0.42,s*0.32,-0.2,0,Math.PI*2); ctx.moveTo(s*0.5,-s*0.22); ctx.arc(s*0.3,-s*0.22,s*0.2,0,Math.PI*2); ctx.moveTo(s*0.5,-s*0.25); ctx.lineTo(s*0.72,-s*0.2); ctx.lineTo(s*0.5,-s*0.15);
+      ctx.moveTo(-s*0.42,s*0.05); ctx.lineTo(-s*0.8,-s*0.15); ctx.moveTo(-s*0.05,s*0.42); ctx.lineTo(-s*0.1,s*0.68); ctx.moveTo(s*0.08,s*0.42); ctx.lineTo(s*0.08,s*0.68);
+      ctx.moveTo(s*0.32,s*0.1); ctx.quadraticCurveTo(s*0.15,s*0.35,-s*0.15,s*0.38); break;
+    case 'moth': for(const g of [-1,1]){ ctx.moveTo(0,-s*0.1); ctx.quadraticCurveTo(g*s*0.8,-s*0.7,g*s*0.7,s*0.05); ctx.quadraticCurveTo(g*s*0.4,s*0.1,0,0); ctx.moveTo(0,s*0.05); ctx.quadraticCurveTo(g*s*0.55,s*0.15,g*s*0.4,s*0.5); ctx.quadraticCurveTo(g*s*0.15,s*0.45,0,s*0.15);
+      ctx.moveTo(0,-s*0.25); ctx.quadraticCurveTo(g*s*0.1,-s*0.5,g*s*0.3,-s*0.6); ctx.moveTo(g*s*0.38+s*0.06,-s*0.2); ctx.arc(g*s*0.38,-s*0.2,s*0.06,0,Math.PI*2); } ctx.moveTo(0,-s*0.25); ctx.lineTo(0,s*0.45); break;
+    case 'hagstone': ctx.moveTo(s*0.65,0); ctx.ellipse(0,0,s*0.65,s*0.5,0.2,0,Math.PI*2); ctx.moveTo(s*0.22,-s*0.05); ctx.ellipse(s*0.08,-s*0.05,s*0.14,s*0.11,0.2,0,Math.PI*2); break;
+    case 'blank': break;
     case 'kitsune': for(let k=0;k<7;k++){ const a=-Math.PI*0.9+k*Math.PI*0.8/6; ctx.moveTo(0,s*0.3); ctx.quadraticCurveTo(Math.cos(a)*s*0.4,s*0.3+Math.sin(a)*s*0.4,Math.cos(a)*s*0.8,s*0.1+Math.sin(a)*s*0.7); }
       ctx.moveTo(-s*0.18,s*0.05); ctx.lineTo(-s*0.1,-s*0.25); ctx.lineTo(0,-s*0.05); ctx.lineTo(s*0.1,-s*0.25); ctx.lineTo(s*0.18,s*0.05); ctx.lineTo(0,s*0.3); ctx.closePath(); break;
   }
@@ -169,7 +192,7 @@ export function crtLight(light, tilt){
 }
 
 /** A card's rounded rectangle about the origin. */
-function crtRound(ctx, W, H, r){ ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
+function crtRound(ctx, W, H, r, begin = true){ if(begin) ctx.beginPath(); ctx.moveTo(-W/2+r,-H/2); ctx.lineTo(W/2-r,-H/2); ctx.arc(W/2-r,-H/2+r,r,-Math.PI/2,0);
   ctx.lineTo(W/2,H/2-r); ctx.arc(W/2-r,H/2-r,r,0,Math.PI/2); ctx.lineTo(-W/2+r,H/2); ctx.arc(-W/2+r,H/2-r,r,Math.PI/2,Math.PI);
   ctx.lineTo(-W/2,-H/2+r); ctx.arc(-W/2+r,-H/2+r,r,Math.PI,Math.PI*1.5); ctx.closePath(); }
 
@@ -202,27 +225,58 @@ export function crtCard(ctx, W, H, face, look){
   // this card's own paper: a little lighter or darker, warmer or cooler than its neighbours
   const paper = crtMix(crtMix(S.paper, V.tone > 0 ? [255,255,255] : [0,0,0], Math.abs(V.tone)), V.warm > 0 ? [236, 206, 150] : [196, 206, 222], Math.abs(V.warm)*(dark ? 0.4 : 1));
   const ink = S.ink, cols = (look.suitCols || []).map(crtRGB);
+  // its outline: rounded, or with a corner torn or folded away (cartomancyTable.js)
+  const dmg = look.dmg || null, cut = crtCut(dmg), outline = (c, begin = true) => crtCardPath(c, W, H, r, cut, begin);
   // its shadow on whatever lies beneath: a card is thin, so a tight contact shadow and a soft one thrown
   // a little away from the light (further the higher it lies). A canvas shadow's offset is never turned
   // with the drawing, so it is worked in the page's own frame.
   const lift = W*(0.008 + (look.lift || 0)), rot = look.rot || 0, co = Math.cos(rot), si = Math.sin(rot);
   const toLocal = (px, py) => [px*co + py*si, -px*si + py*co];
   { const [dx, dy] = toLocal(L.sx*lift, L.sy*lift);
-    crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); crtRound(c, W, H, r); c.restore(); }, 0, 0, W*0.012, 0.42, 0);
-    crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); crtRound(c, W, H, r); c.restore(); }, dx, dy, W*0.04, 0.26, 4); }
-  crtRound(ctx, W, H, r); ctx.fillStyle = crtCss(paper); ctx.fill();
+    // (each copy of the outline added to the one path, not begun afresh: the sweep is their union)
+    crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); outline(c, false); c.restore(); }, 0, 0, W*0.012, 0.42, 0);
+    crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); outline(c, false); c.restore(); }, dx, dy, W*0.04, 0.26, 4); }
+  outline(ctx); ctx.fillStyle = crtCss(paper); ctx.fill();
   // the stock: lighter toward the light (a card is never quite flat), a sheen if it is lacquered
   const tx = L.tx*Math.cos(rot) + L.ty*Math.sin(rot), ty = -L.tx*Math.sin(rot) + L.ty*Math.cos(rot);
   const cg = ctx.createLinearGradient(tx*W*0.6, ty*H*0.6, -tx*W*0.6, -ty*H*0.6);
   cg.addColorStop(0, crtCss(crtMix(paper, [255,255,255], 0.12))); cg.addColorStop(1, crtCss(crtMix(paper, [0,0,0], 0.12)));
-  crtRound(ctx, W, H, r); ctx.fillStyle = cg; ctx.fill();
+  outline(ctx); ctx.fillStyle = cg; ctx.fill();
   // the edge: gilt bright where it faces the light, dark where it turns away (or the paper's own edge)
   const edge = gilt || crtMix(paper, [0,0,0], 0.3), eg = ctx.createLinearGradient(tx*W*0.5, ty*H*0.5, -tx*W*0.5, -ty*H*0.5);
   eg.addColorStop(0, crtCss(crtMix(edge, [255,255,255], 0.45))); eg.addColorStop(0.5, crtCss(edge)); eg.addColorStop(1, crtCss(crtMix(edge, [0,0,0], 0.45)));
-  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); crtRound(ctx, W, H, r); ctx.stroke();
-  ctx.save(); crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }); ctx.restore();
-  crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark);
+  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); outline(ctx); ctx.stroke();
+  ctx.save(); if(cut){ outline(ctx); ctx.clip(); } crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }); ctx.restore();
+  crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline);
+  if(dmg) crtDamage(ctx, W, H, r, dmg, paper, cols, [tx, ty], outline, !!face.back);
 }
+
+/** A back's pattern about the origin (stroke and fill already set): symmetrical, so any family member is the house's. */
+function crtBackPattern(ctx, pat, W, H){
+  const T = Math.PI*2; ctx.beginPath();
+  switch(pat){
+    case 0: for(let k = -8; k <= 8; k++){ ctx.moveTo(k*W*0.12 - H, -H); ctx.lineTo(k*W*0.12 + H, H); ctx.moveTo(k*W*0.12 + H, -H); ctx.lineTo(k*W*0.12 - H, H); } break;           // lattice
+    case 1: for(let k = 0; k < 36; k++){ const a = k/36*T; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a)*H, Math.sin(a)*H); } break;                                               // rays
+    case 2: for(let k = 1; k < 12; k++){ ctx.moveTo(k*W*0.07, 0); ctx.arc(0, 0, k*W*0.07, 0, T); } break;                                                                    // rings
+    case 3: { const q = W*0.09; ctx.stroke(); for(let i = -8; i < 8; i++) for(let j = -10; j < 10; j++) if((i + j) & 1) ctx.fillRect(i*q, j*q, q, q); ctx.beginPath(); break; }   // checks
+    case 4: { const q = W*0.1; for(let j = -10; j <= 10; j++) for(let i = -6; i <= 6; i++){ const x = i*q + (j & 1)*q/2, y = j*q*0.55; ctx.moveTo(x + q/2, y); ctx.arc(x, y, q/2, 0, Math.PI); } break; }   // scales
+    case 5: { const q = W*0.13; for(let j = -8; j <= 8; j++) for(let i = -5; i <= 5; i++){ const x = i*q + (j & 1)*q/2, y = j*q*0.7, a = q*0.22;
+      ctx.moveTo(x, y - a); ctx.lineTo(x + a*0.25, y - a*0.25); ctx.lineTo(x + a, y); ctx.lineTo(x + a*0.25, y + a*0.25); ctx.lineTo(x, y + a); ctx.lineTo(x - a*0.25, y + a*0.25); ctx.lineTo(x - a, y); ctx.lineTo(x - a*0.25, y - a*0.25); ctx.closePath(); } ctx.fill(); ctx.beginPath(); break; }   // stars
+    case 6: for(let j = -14; j <= 14; j++){ const y0 = j*W*0.07; ctx.moveTo(-W, y0); for(let x = -W; x <= W; x += W*0.04) ctx.lineTo(x, y0 + Math.sin(x/W*Math.PI*6)*W*0.025*(j & 1 ? -1 : 1)); } break;   // waves
+    case 7: { for(let k = 0; k < 12; k++){ const a = k/12*T, x = Math.cos(a)*W*0.33, y = Math.sin(a)*W*0.33*1.3, q = W*0.045; ctx.moveTo(x + q, y); ctx.arc(x, y, q, 0, T); }
+      ctx.fill(); ctx.beginPath(); for(let j = -9; j <= 9; j++) for(let i = -5; i <= 5; i++){ const x = i*W*0.12, y = j*W*0.12; if(Math.hypot(x, y/1.3) > W*0.42){ ctx.moveTo(x + W*0.01, y); ctx.arc(x, y, W*0.01, 0, T); } } ctx.fill(); ctx.beginPath();
+      for(let k = 0; k < 12; k++){ const a = k/12*T, x = Math.cos(a)*W*0.33, y = Math.sin(a)*W*0.33*1.3; ctx.moveTo(x + W*0.045, y); ctx.arc(x, y, W*0.045, 0, T); } break; }   // moons
+    case 8: for(const [sx, sy] of [[1,1],[-1,1],[1,-1],[-1,-1]]) for(let k = 0; k < 3; k++){ const cx = sx*W*(0.22 + k*0.06), cy = sy*H*(0.18 + k*0.1);
+      ctx.moveTo(cx, cy); for(let t = 0; t <= 1; t += 0.05){ const a = t*T*1.4, rr = W*0.1*(1 - t*0.8); ctx.lineTo(cx + sx*Math.cos(a)*rr, cy + sy*Math.sin(a)*rr); } } break;   // vines
+    default: { ctx.moveTo(-W, -H); ctx.lineTo(W, H); ctx.lineTo(W, -H); ctx.closePath(); ctx.globalAlpha *= 0.4; ctx.fill(); ctx.globalAlpha /= 0.4; ctx.beginPath();
+      for(let k = -6; k <= 6; k++){ const x = k*W*0.1, y = k*H*0.1; ctx.moveTo(x, y - W*0.03); ctx.lineTo(x + W*0.03, y); ctx.lineTo(x, y + W*0.03); ctx.lineTo(x - W*0.03, y); ctx.closePath(); } break; }   // a parted field
+  }
+  ctx.stroke();
+}
+/** A deck's back, chosen by the seed: its colour, pattern, medallion, rule and margin (and its secrets). */
+export function crtBack(){ const R = Math.random;
+  return { back: true, backCol: Math.floor(R()*4), pattern: Math.floor(R()*10), medal: crtPick(CRT_MEDALS), border: Math.floor(R()*3), bleed: R() < 0.3,
+    fox: R() < 0.05, off: R() < 0.04 ? [(R() - 0.5)*0.08, (R() - 0.5)*0.06] : null }; }
 
 /** What is printed on a card (its back, or its face) — ink only, on the paper already laid. */
 function crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }){
@@ -230,17 +284,28 @@ function crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }){
   const fw = W*0.84, fh = H*0.88;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if(face.back){
-    // the BACK: the deck's own pattern — lattice, rays or rings — round the Vellum's diamond, in one of the suit colours
-    const bc = cols.length ? cols[face.backCol || 0] : ink;
-    ctx.save(); crtRound(ctx, fw, fh, r*0.6); ctx.clip(); ctx.fillStyle = crtCss(crtMix(bc, paper, 0.25)); ctx.fillRect(-W, -H, W*2, H*2);
-    ctx.strokeStyle = crtCss(crtMix(bc, [255,255,255], 0.45)); ctx.lineWidth = Math.max(cpx(0.6), W*0.008); ctx.globalAlpha = 0.6; ctx.beginPath();
-    const pat = face.pattern || 0;
-    if(pat === 0) for(let k = -8; k <= 8; k++){ ctx.moveTo(k*W*0.12 - H, -H); ctx.lineTo(k*W*0.12 + H, H); ctx.moveTo(k*W*0.12 + H, -H); ctx.lineTo(k*W*0.12 - H, H); }
-    else if(pat === 1) for(let k = 0; k < 36; k++){ const a = k/36*Math.PI*2; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a)*H, Math.sin(a)*H); }
-    else for(let k = 1; k < 12; k++){ ctx.moveTo(k*W*0.07, 0); ctx.arc(0, 0, k*W*0.07, 0, Math.PI*2); }
-    ctx.stroke(); ctx.restore(); ctx.globalAlpha = 1;
-    ctx.fillStyle = crtCss(paper); ctx.beginPath(); ctx.arc(0, 0, W*0.22, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle = crtCss(ink);
-    crtEmblem(ctx, 'sigil', W*0.22);
+    // the BACK: one house's family of designs — always symmetrical, two-toned, a medallion at the heart — in one
+    // of the suit colours: lattice, rays, rings, checks, scales, stars, waves, moons, vines or a parted field;
+    // a printed margin or full bleed; a single, double or dotted rule. (Now and then a fox hides in it; now and
+    // then the print slipped.)
+    const bc = cols.length ? cols[face.backCol || 0] : ink, lite = crtMix(bc, [255,255,255], 0.45), bleed = face.bleed;
+    const bw = bleed ? W*0.97 : fw, bh = bleed ? H*0.975 : fh;
+    ctx.save(); crtRound(ctx, bw, bh, r*0.6); ctx.clip(); ctx.fillStyle = crtCss(crtMix(bc, paper, 0.25)); ctx.fillRect(-W, -H, W*2, H*2);
+    if(face.off) ctx.translate(face.off[0]*W, face.off[1]*H);
+    ctx.strokeStyle = crtCss(lite); ctx.fillStyle = crtCss(lite, 0.5); ctx.lineWidth = Math.max(cpx(0.6), W*0.008); ctx.globalAlpha = 0.6;
+    crtBackPattern(ctx, face.pattern || 0, W, H);
+    if(face.fox){ ctx.globalAlpha = 0.85; ctx.save(); ctx.translate(bw*0.36, bh*0.4); ctx.lineWidth = Math.max(cpx(0.4), W*0.008); crtEmblem(ctx, 'fox', W*0.06); ctx.restore(); }
+    ctx.restore(); ctx.globalAlpha = 1;
+    // the rule round it
+    ctx.strokeStyle = crtCss(gilt ? crtMix(gilt, bc, 0.3) : lite); ctx.lineWidth = Math.max(cpx(0.6), W*0.012);
+    const rule = (k) => { crtRound(ctx, bw - k*W, bh - k*W, r*0.5); ctx.stroke(); };
+    if(face.border === 2){ ctx.setLineDash([W*0.012, W*0.025]); rule(0.06); ctx.setLineDash([]); }
+    else { rule(0.06); if(face.border === 1){ ctx.lineWidth *= 0.5; rule(0.1); } }
+    // the medallion
+    ctx.save(); if(face.off) ctx.translate(face.off[0]*W, face.off[1]*H);
+    ctx.fillStyle = crtCss(paper); ctx.strokeStyle = crtCss(lite); ctx.lineWidth = Math.max(cpx(0.6), W*0.012); ctx.beginPath(); ctx.arc(0, 0, W*0.22, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = crtCss(ink); ctx.fillStyle = crtCss(ink); ctx.lineWidth = Math.max(cpx(0.7), W*0.01);
+    crtEmblem(ctx, face.medal || 'sigil', W*0.2); ctx.restore();
     return;
   }
   // the frame: a double rule, small diamonds at the corners
@@ -284,9 +349,9 @@ function crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }){
  * (each card bowed and turned its own way, so each catches it differently) and
  * a glint on its light-facing edge. Matte stocks sheen faintly, lacquer brightly.
  */
-function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark){
+function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline = c => crtRound(c, W, H, r)){
   const R = Math.random;
-  ctx.save(); crtRound(ctx, W, H, r); ctx.clip();
+  ctx.save(); outline(ctx); ctx.clip();
   // grain: fine fibres and flecks of the stock
   const n = Math.round(26 + V.age*30);
   for(let k = 0; k < n; k++){ const d = R() < 0.5; ctx.fillStyle = d ? 'rgba(60,40,20,0.07)' : 'rgba(255,255,255,0.08)';
@@ -294,7 +359,7 @@ function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark){
   // age: foxing on an old card, a toned margin
   if(!dark && V.age > 0.6){ for(let k = 0; k < 3 + Math.floor(V.age*5); k++){ const x = (R() - 0.5)*W*0.9, y = (R() - 0.5)*H*0.9, q = W*(0.01 + R()*0.03), g = ctx.createRadialGradient(x, y, 0, x, y, q);
       g.addColorStop(0, 'rgba(150,100,50,0.16)'); g.addColorStop(1, 'rgba(150,100,50,0)'); ctx.fillStyle = g; ctx.fillRect(x - q, y - q, q*2, q*2); }
-    ctx.strokeStyle = 'rgba(150,110,60,0.12)'; ctx.lineWidth = W*0.05; crtRound(ctx, W, H, r); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(150,110,60,0.12)'; ctx.lineWidth = W*0.05; outline(ctx); ctx.stroke(); }
   // wear: a corner or two rubbed pale (dark stocks show it most)
   if(V.wear > 0.45) for(const [cx, cy] of [[-1,-1],[1,-1],[-1,1],[1,1]]) if(R() < 0.45){ const x = cx*W/2, y = cy*H/2, q = W*(0.08 + R()*0.08), g = ctx.createRadialGradient(x, y, 0, x, y, q);
     g.addColorStop(0, `rgba(255,255,255,${dark ? 0.22 : 0.18})`); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(x - q, y - q, q*2, q*2); }
@@ -314,7 +379,7 @@ function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark){
   // the glint: the edge facing the light catches it
   ctx.save(); const eg = ctx.createLinearGradient(tx*W*0.5, ty*H*0.5, 0, 0);
   eg.addColorStop(0, `rgba(255,255,255,${0.25 + gl*0.5})`); eg.addColorStop(0.35, 'rgba(255,255,255,0)');
-  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.5), W*0.006); crtRound(ctx, W*0.995, H*0.997, r); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.5), W*0.006); outline(ctx); ctx.stroke(); ctx.restore();
 }
 
 /** ONE COIN: a struck disc of metal, its face lit from the dial, its rim catching the light; heads or tails. */
@@ -382,76 +447,162 @@ export function crtStack(ctx, x, y, r, n, coin, look){
 
 /**
  * WHERE EVERYTHING LIES, by the game's rules. Returns a list, in drawing order:
- * { kind: 'card', x, y, rot, face, lift } and { kind: 'coin' | 'stack', x, y, r, n, coin }.
- * opts: { count (0.2–4), scatter (0–1), stakes (0–1), suits: [0–3…], cw (card width), coinage }.
+ * { kind: 'card', x, y, rot, face, lift, dmg }, { kind: 'coin' | 'stack', x, y, r, n, coin },
+ * { kind: 'token', x, y, r, tok } and { kind: 'object', type, x, y, s, rot, v, layer } (a
+ * game's own props: a score sheet, a centerpiece). opts: { count (0.2–4), scatter (0–1),
+ * stakes (0–1), wear (0–1), suits: [0–3…], cw (card width), coinage }.
  */
 export function crtDeal(game, w, h, opts){
-  const out = [], cw = opts.cw, ch = cw*1.7, sc = opts.scatter || 0, suits = opts.suits || [0, 1, 2, 3], coinage = opts.coinage || COINAGES[0];
-  const jig = (v, a) => v + (Math.random() - 0.5)*a;
-  const mess = (x, y, rot, face, lift = 0) => out.push({ kind: 'card', x: jig(x, cw*sc*0.6), y: jig(y, cw*sc*0.6), rot: jig(rot, sc*0.6), face, lift });
-  const rank = () => Math.random() < 0.2 ? crtPick(['Page', 'Knight', 'Queen', 'King']) : 1 + Math.floor(Math.random()*10);
-  const suitCard = () => ({ suit: crtPick(suits), rank: rank() });
-  const anyCard = () => Math.random() < 0.035 ? { major: pickWeighted(CRT_RARE), rare: true } : Math.random() < 0.3 ? { major: crtPick(CRT_ARCANA) } : suitCard();
-  const back = { back: true, backCol: Math.floor(Math.random()*4), pattern: Math.floor(Math.random()*3) };
-  const pile = (x, y, n, rot = 0) => { for(let k = 0; k < n; k++) mess(x + k*cw*0.006, y - k*cw*0.008, rot + (Math.random() - 0.5)*0.05, back, k*0.01); };
-  const coins = (x, y, n, spread) => { for(let k = 0; k < n; k++) out.push({ kind: 'coin', x: jig(x, spread), y: jig(y, spread), r: cw*(0.16 + Math.random()*0.05),
-    coin: { mark: coinage.mark, metal: coinage.metal, tails: Math.random() < 0.4, value: crtPick([1, 1, 5, 10, 20]), turn: Math.random()*6.28 } }); };
-  const stack = (x, y, n) => out.push({ kind: 'stack', x, y, r: cw*0.19, n, coin: { mark: coinage.mark, metal: coinage.metal, turn: Math.random()*6.28 } });
+  const out = [], cw = opts.cw, ch = cw*1.7, sc = opts.scatter || 0, suits = opts.suits || [0, 1, 2, 3], coinage = opts.coinage || COINAGES[0], R = Math.random;
+  const wear = opts.wear ?? 0.3, back = crtBack(), stranger = crtBack(), unit = Math.min(w, h);
+  const jig = (v, a) => v + (R() - 0.5)*a;
+  // a card's damage: rarer the newer the deck (Wear)
+  const harm = () => R() < wear*0.32 ? crtDamageFor(R, back) : null;
+  const mess = (x, y, rot, face, lift = 0) => out.push({ kind: 'card', x: jig(x, cw*sc*0.6), y: jig(y, cw*sc*0.6), rot: jig(rot, sc*0.6), face, lift, dmg: harm() });
+  const rank = () => R() < 0.2 ? crtPick(['Page', 'Knight', 'Queen', 'King']) : 1 + Math.floor(R()*10);
+  // (once in a long while a suit card of the fifth element: a misprint, or a deck from somewhere else)
+  const suitCard = () => ({ suit: R() < 0.004 ? 4 : crtPick(suits), rank: rank() });
+  const anyCard = () => R() < 0.035 ? { major: pickWeighted(CRT_RARE), rare: true } : R() < 0.3 ? { major: crtPick(CRT_ARCANA) } : suitCard();
+  // face down: this deck's back — or, one card in a long while, a stranger's
+  const backCard = () => R() < 0.015 ? stranger : back;
+  const pile = (x, y, n, rot = 0) => { for(let k = 0; k < n; k++) mess(x + k*cw*0.006, y - k*cw*0.008, rot + (R() - 0.5)*0.05, backCard(), k*0.01); };
+  const coinOf = () => { const foreign = R() < 0.03 ? crtPick(COINAGES) : coinage;   // a coin from somewhere else, in the pot
+    return { mark: foreign.mark, metal: foreign.metal, tails: R() < 0.4, value: crtPick([1, 1, 5, 10, 20]), turn: R()*6.28 }; };
+  const coins = (x, y, n, spread) => { for(let k = 0; k < n; k++) out.push({ kind: 'coin', x: jig(x, spread), y: jig(y, spread), r: cw*(0.16 + R()*0.05), coin: coinOf() }); };
+  const stack = (x, y, n) => out.push({ kind: 'stack', x, y, r: cw*0.19, n, coin: { mark: coinage.mark, metal: coinage.metal, turn: R()*6.28 } });
+  const tok = crtTokenKind(), tokens = (x, y, n, spread) => { for(let k = 0; k < n; k++) out.push({ kind: 'token', x: jig(x, spread), y: jig(y, spread), r: cw*(0.09 + R()*0.04), tok }); };
+  const prop = (type, x, y, extra) => out.push(crtObject(type, x, y, cw, extra));
   const money = Math.random() < opts.stakes;           // not every game is played for coin
   // a hand, fanned, at a seat round the table (seat angle a: where the player sits, looking in)
   const seat = (a, d) => [w/2 + Math.cos(a)*w*d, h/2 + Math.sin(a)*h*d];
-  const hand = (a, n, up, spread = 0.12) => { const [x, y] = seat(a, 0.42), rot = a + Math.PI/2;
+  const hand = (a, n, up, spread = 0.12, d = 0.42) => { const [x, y] = seat(a, d), rot = a + Math.PI/2;
     for(let k = 0; k < n; k++){ const f = (k - (n - 1)/2)*spread, px = x + Math.cos(rot)*f*cw*2.1, py = y + Math.sin(rot)*f*cw*2.1;
-      mess(px, py, rot - Math.PI + f*1.1 + (up ? 0 : 0), up ? suitCard() : back, k*0.004); } };
+      mess(px, py, rot - Math.PI + f*1.1, up ? suitCard() : backCard(), k*0.004); }
+    // (a card sharp: an ace tucked under the hand, a corner showing)
+    if(R() < 0.02) mess(x + Math.cos(rot)*cw*0.9, y + Math.sin(rot)*cw*0.9 + cw*0.3, rot - Math.PI + 0.5, { suit: crtPick(suits), rank: 1 }, -0.004); };
+  const scoreSheet = () => { const [x, y] = crtPick([[0.1, 0.12], [0.9, 0.12], [0.1, 0.88], [0.9, 0.88]]); prop('score', w*x, h*y, { rot: (R() - 0.5)*0.5 }); };
   const n = Math.max(0.2, opts.count || 1);
   if(game === 'reading'){
-    // the spread: a card and the card that crosses it; above, below, behind, before; the staff of four beside
-    const cx = w*0.42, cy = h*0.5, g = ch*1.15;
-    pile(w*0.86, h*0.12, 8);
-    for(const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) mess(cx + dx*cw*1.6, cy + dy*g, 0, anyCard());
-    mess(cx, cy, 0, anyCard()); mess(cx, cy, Math.PI/2, anyCard(), 0.02);
-    for(let k = 0; k < 4; k++) mess(w*0.8, h*0.88 - k*ch*0.62*Math.min(1, n), 0, anyCard());
+    // the spread — not always the same one — and the deck beside it; the querent's card sometimes set apart
+    const cx = w*(0.42 + R()*0.08), cy = h*0.5, spread = crtPick(['cross', 'cross', 'line', 'horseshoe', 'grid', 'star']);
+    const [px, py] = crtPick([[0.86, 0.12], [0.14, 0.12], [0.86, 0.88]]); pile(w*px, h*py, 8);
+    if(spread === 'cross'){
+      // a card and the card that crosses it; above, below, behind, before; the staff of four beside
+      const g = ch*1.15; for(const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) mess(cx + dx*cw*1.6, cy + dy*g, 0, anyCard());
+      mess(cx, cy, 0, anyCard()); mess(cx, cy, Math.PI/2, anyCard(), 0.02);
+      for(let k = 0; k < 4; k++) mess(w*0.8, h*0.88 - k*ch*0.62*Math.min(1, n), 0, anyCard());
+    } else if(spread === 'line'){ const k = R() < 0.5 ? 3 : 5; for(let i = 0; i < k; i++) mess(w/2 + (i - (k - 1)/2)*cw*1.25, cy, 0, anyCard()); }
+    else if(spread === 'horseshoe'){ const rad = Math.min(unit*0.32, ch*1.9); for(let i = 0; i < 7; i++){ const a = Math.PI*(1.1 - i/6*1.2); mess(w/2 + Math.cos(a)*rad, cy + 0.2*rad - Math.sin(a)*rad*0.8, -(a - Math.PI/2)*0.35, anyCard()); } }
+    else if(spread === 'grid'){ for(let i = 0; i < 3; i++) for(let j = 0; j < 3; j++) mess(w/2 + (i - 1)*cw*1.2, cy + (j - 1)*ch*1.08, 0, anyCard()); if(R() < 0.4) mess(w/2, cy, Math.PI/2, anyCard(), 0.02); }
+    else { const rad = Math.min(unit*0.3, ch*1.25); mess(w/2, cy, 0, anyCard()); for(let i = 0; i < 5; i++){ const a = -Math.PI/2 + i/5*Math.PI*2; mess(w/2 + Math.cos(a)*rad, cy + Math.sin(a)*rad, a + Math.PI/2, anyCard()); } }
+    if(spread !== 'cross' && R() < 0.4) mess(w*0.12, h*0.5, 0, { major: crtPick(CRT_ARCANA) });          // the significator
     if(money) coins(w*0.15, h*0.85, Math.round(3*n), cw*0.5);          // a querent's offering
   } else if(game === 'trick'){
     // players at their seats, each with a hand (the near one face up); a trick in the middle, one card from each
-    const players = 2 + Math.floor(Math.random()*4), handN = Math.max(2, Math.round(5*n));
+    const players = 2 + Math.floor(R()*4), handN = Math.max(2, Math.round(5*n));
     for(let p = 0; p < players; p++){ const a = Math.PI/2 + p/players*Math.PI*2; hand(a, handN, p === 0);
       // the tricks each has won, face down at their elbow
-      const [tx, ty] = seat(a + 0.55, 0.36); if(Math.random() < 0.7) pile(tx, ty, 1 + Math.floor(Math.random()*4), a);
-      if(money){ const [mx, my] = seat(a - 0.5, 0.33); stack(mx, my, 2 + Math.floor(Math.random()*6)); } }
-    const played = 1 + Math.floor(Math.random()*players);
-    for(let p = 0; p < played; p++){ const a = Math.PI/2 + p/players*Math.PI*2; mess(w/2 + Math.cos(a)*cw*0.7, h/2 + Math.sin(a)*cw*0.7, a + Math.PI/2 + (Math.random() - 0.5)*0.4, suitCard(), 0.01*p); }
+      const [tx, ty] = seat(a + 0.55, 0.36); if(R() < 0.7) pile(tx, ty, 1 + Math.floor(R()*4), a);
+      if(money){ const [mx, my] = seat(a - 0.5, 0.33); stack(mx, my, 2 + Math.floor(R()*6)); } }
+    const played = 1 + Math.floor(R()*players);
+    for(let p = 0; p < played; p++){ const a = Math.PI/2 + p/players*Math.PI*2; mess(w/2 + Math.cos(a)*cw*0.7, h/2 + Math.sin(a)*cw*0.7, a + Math.PI/2 + (R() - 0.5)*0.4, suitCard(), 0.01*p); }
     // the stock, and the trump turned up beneath it
     mess(w*0.5 + cw*2.4, h*0.5 - ch*0.2, Math.PI/2, suitCard()); pile(w*0.5 + cw*2.4, h*0.5 - ch*0.2, 6);
+    if(!money && R() < 0.6) scoreSheet();
   } else if(game === 'patience'){
-    // seven columns, each a run of face-down cards and its face-up cascade; the foundations above, by suit; stock and waste
-    const cols = 7, gx = w/(cols + 0.5), top = h*0.34, step = ch*0.16, cwN = Math.round(3*n);
-    if(cw > gx*0.86) return crtDeal(game, w, h, { ...opts, cw: gx*0.86 });          // seven columns must fit side by side
-    for(let c = 0; c < cols; c++){ const x = gx*(c + 0.75), down = c, up = 1 + Math.floor(Math.random()*Math.min(5, cwN + 1));
-      for(let k = 0; k < down; k++) mess(x, top + k*step*0.6, 0, back, k*0.003);
+    // five to eight columns, each a run of face-down cards and its face-up cascade; the foundations above, by suit; stock and waste
+    const cols = 5 + Math.floor(R()*4), gx = w/(cols + 0.5), top = h*0.34, step = ch*0.16, cwN = Math.round(3*n);
+    if(cw > gx*0.86) return crtDeal(game, w, h, { ...opts, cw: gx*0.86 });          // the columns must fit side by side
+    for(let c = 0; c < cols; c++){ const x = gx*(c + 0.75), down = c, up = 1 + Math.floor(R()*Math.min(5, cwN + 1));
+      for(let k = 0; k < down; k++) mess(x, top + k*step*0.6, 0, backCard(), k*0.003);
       for(let k = 0; k < up; k++) mess(x, top + down*step*0.6 + k*step*1.4, 0, { suit: crtPick(suits), rank: Math.max(1, 13 - c - k*1 - 3) > 10 ? crtPick(['Queen','King']) : Math.max(1, 10 - k) }, (down + k)*0.003); }
-    suits.forEach((s, i) => mess(gx*(3.75 + i), h*0.12, 0, { suit: s, rank: 1 + Math.floor(Math.random()*4) }));
+    suits.forEach((s, i) => mess(gx*(cols - suits.length + i + 0.75), h*0.12, 0, { suit: s, rank: 1 + Math.floor(R()*4) }));
     pile(gx*0.75, h*0.12, 10);
     for(let k = 0; k < 3; k++) mess(gx*1.75 + k*cw*0.22, h*0.12, 0, suitCard(), k*0.004);
   } else if(game === 'wager'){
-    // hands of two round the table, the shared cards in a row (the last ones still face down), the pot, each player's coin
-    const players = 3 + Math.floor(Math.random()*4);
+    // hands of two round the table, the shared cards in a row (the last ones still face down), the pot, each player's stake —
+    // in coin, or (not every game is played for money) in beads, stones, beans or buttons
+    const players = 3 + Math.floor(R()*4);
     for(let p = 0; p < players; p++){ const a = Math.PI/2 + p/players*Math.PI*2; hand(a, 2, p === 0, 0.3);
-      const [mx, my] = seat(a - 0.45, 0.32); stack(mx, my, 3 + Math.floor(Math.random()*9)); if(Math.random() < 0.5) stack(mx + cw*0.45, my + cw*0.1, 2 + Math.floor(Math.random()*5)); }
-    const shown = 3 + Math.floor(Math.random()*3);
-    for(let k = 0; k < 5; k++) mess(w/2 + (k - 2)*cw*1.12, h*0.46, 0, k < shown ? anyCard() : back);
-    coins(w/2, h*0.6, Math.round(10*n*(0.5 + opts.stakes)), cw*0.9);
+      const [mx, my] = seat(a - 0.45, 0.32);
+      if(money){ stack(mx, my, 3 + Math.floor(R()*9)); if(R() < 0.5) stack(mx + cw*0.45, my + cw*0.1, 2 + Math.floor(R()*5)); }
+      else tokens(mx, my, 3 + Math.floor(R()*8), cw*0.5); }
+    const shown = 3 + Math.floor(R()*3);
+    for(let k = 0; k < 5; k++) mess(w/2 + (k - 2)*cw*1.12, h*0.46, 0, k < shown ? anyCard() : backCard());
+    if(money){ coins(w/2, h*0.6, Math.round(10*n*(0.5 + opts.stakes)), cw*0.9);
+      if(R() < 0.1) prop('iou', w/2 + (R() - 0.5)*cw, h*0.62, { v: { text: `${2 + Math.floor(R()*20)} ${coinage.name}` }, rot: (R() - 0.5)*0.8 }); }
+    else tokens(w/2, h*0.6, Math.round(8*n), cw*0.8);
     pile(w/2 - cw*3.6, h*0.46, 9);
+  } else if(game === 'crossroads'){
+    // one card at the crossing; two to four arms of cards running out from it (the last of each face down); a player at each arm's end
+    const arms = 2 + Math.floor(R()*3), a0 = R() < 0.5 ? 0 : Math.PI/4, stepL = ch*0.72, len = Math.max(2, Math.min(Math.floor(unit*0.3/stepL), Math.round(2 + n)));
+    mess(w/2, h/2, 0, anyCard());
+    for(let k = 0; k < arms; k++){ const a = a0 + k*Math.PI*2/(arms === 3 ? 3 : 4) + (arms === 2 && k ? Math.PI/2 : 0);
+      for(let i = 1; i <= len; i++) mess(w/2 + Math.cos(a)*stepL*i, h/2 + Math.sin(a)*stepL*i, a + Math.PI/2, i === len ? backCard() : suitCard(), i*0.003);
+      hand(a, 3, k === 0, 0.14, 0.46);
+      if(money){ const [mx, my] = seat(a + 0.4, 0.4); stack(mx, my, 2 + Math.floor(R()*5)); } }
+    if(!money && R() < 0.4) scoreSheet();
+  } else if(game === 'duel'){
+    // two face each other: a line of cards before each (face up), their hands, their decks; the crown between
+    const side = w > h*1.25, k = 3 + Math.floor(R()*3);
+    for(const near of [1, -1]){
+      const a = side ? (near > 0 ? 0 : Math.PI) : (near > 0 ? Math.PI/2 : -Math.PI/2);
+      hand(a, Math.max(2, Math.round(4*n)), near > 0, 0.12, 0.43);
+      for(let i = 0; i < k; i++){ const off = (i - (k - 1)/2)*cw*1.15;
+        const x = side ? w/2 + near*ch*0.85 : w/2 + off, y = side ? h/2 + off*1.0 : h/2 + near*ch*0.8;
+        mess(x, y, side ? Math.PI/2 : 0, R() < 0.85 ? suitCard() : backCard(), 0); }
+      const dx = side ? w/2 + near*ch*1.8 : w/2 + near*(k/2 + 0.9)*cw*1.15, dy = side ? h/2 - near*(k/2 + 0.9)*cw*1.15 : h/2 + near*ch*1.6;
+      pile(dx, dy, 7, side ? Math.PI/2 : 0);
+      if(money) stack(side ? dx : dx + near*cw*1.0, side ? dy + near*cw*1.0 : dy, 2 + Math.floor(R()*7)); }
+    mess(w/2, h/2, side ? 0 : Math.PI/2, { major: R() < 0.06 ? pickWeighted(CRT_RARE) : crtPick(CRT_ARCANA) }, 0.01);
+  } else if(game === 'ring'){
+    // cards in a ring — seven, nine, eleven or thirteen — round a centerpiece; some turned up
+    const N = crtPick([7, 9, 11, 13]), rad = Math.min(unit*0.34, cw*N*0.26);
+    const center = crtPick(['candle', 'ball', 'cup', 'hagstone', 'quartz', 'pile', 'pile']);
+    if(center === 'pile') pile(w/2, h/2, 10, R()*6.28);
+    for(let i = 0; i < N; i++){ const a = -Math.PI/2 + i/N*Math.PI*2; mess(w/2 + Math.cos(a)*rad, h/2 + Math.sin(a)*rad, a + Math.PI/2, R() < 0.4 ? anyCard() : backCard(), 0); }
+    if(center !== 'pile') prop(center, w/2, h/2, { k: 1.1 });
+    if(R() < 0.6) hand(Math.PI/2, Math.max(2, Math.round(3*n)), true, 0.14, 0.47);
+    if(money) coins(w*0.82, h*0.86, Math.round(4*n), cw*0.5);
+  } else if(game === 'stair'){
+    // rows of cards, each overlapping the one above, narrowing as they climb, the stair leaning one way; some already taken
+    const rows = 4 + Math.floor(R()*3), lean = (R() < 0.5 ? -1 : 1)*cw*0.3, rise = ch*0.42, base = h*0.5 + rise*(rows - 1)/2;
+    for(let r = rows - 1; r >= 0; r--){ const count = rows - r, y = base - (rows - 1 - r)*rise, x0 = w/2 + (rows - 1 - r)*lean - (count - 1)/2*cw*1.08;
+      for(let i = 0; i < count; i++) if(r === 0 || R() > 0.18) mess(x0 + i*cw*1.08, y, 0, R() < 0.9 ? suitCard() : backCard(), (rows - r)*0.003); }
+    pile(w*0.14, h*0.86, 9); for(let k = 0; k < 3; k++) mess(w*0.14 + cw*1.3 + k*cw*0.25, h*0.86, 0, suitCard(), k*0.004);
+    if(R() < 0.5) for(let k = 0; k < Math.round(3*n); k++) mess(w*0.86 + (R() - 0.5)*cw*0.4, h*0.86 + (R() - 0.5)*cw*0.3, (R() - 0.5)*0.6, suitCard(), k*0.004);   // the pairs taken off
+  } else if(game === 'market'){
+    // a row of cards to choose from beside the deck; each player's kept cards before them, their hand behind
+    const players = 2 + Math.floor(R()*3), row = 4 + Math.floor(R()*3);
+    pile(w/2 - (row/2 + 0.8)*cw*1.12, h/2, 12);
+    for(let k = 0; k < row; k++) mess(w/2 + (k - (row - 1)/2)*cw*1.12 + cw*0.4, h/2, 0, anyCard());
+    for(let p = 0; p < players; p++){ const a = Math.PI/2 + p/players*Math.PI*2; hand(a, Math.max(2, Math.round(3*n)), p === 0, 0.12, 0.44);
+      const kept = 1 + Math.floor(R()*4), [kx, ky] = seat(a, 0.27);
+      for(let i = 0; i < kept; i++) mess(kx + Math.cos(a + Math.PI/2)*(i - (kept - 1)/2)*cw*0.5, ky + Math.sin(a + Math.PI/2)*(i - (kept - 1)/2)*cw*0.5, a - Math.PI/2, suitCard(), i*0.004);
+      if(money){ const [mx, my] = seat(a - 0.5, 0.36); coins(mx, my, 2 + Math.floor(R()*4), cw*0.3); } }
+    if(!money && R() < 0.5) scoreSheet();
+  } else if(game === 'abandoned'){
+    // nobody is here: hands dropped face down where they were, the deck spilled in an arc, a card halfway off the edge
+    const spill = Math.round(12*n), ax = w*(0.3 + R()*0.4), ay = h*(0.3 + R()*0.4), ar = unit*(0.15 + R()*0.15), a0 = R()*6.28;
+    for(let k = 0; k < spill; k++){ const t = k/spill, a = a0 + t*2.4; mess(ax + Math.cos(a)*ar*(0.6 + t*0.6), ay + Math.sin(a)*ar*(0.6 + t*0.6), a + R()*1.2, R() < 0.3 ? anyCard() : backCard(), k*0.003); }
+    for(let p = 0; p < 1 + Math.floor(R()*3); p++){ const hx = w*(0.15 + R()*0.7), hy = h*(0.15 + R()*0.7), hr = R()*6.28;
+      for(let k = 0; k < 4; k++) mess(hx + Math.cos(hr)*k*cw*0.25, hy + Math.sin(hr)*k*cw*0.25, hr + k*0.15, backCard(), k*0.004); }
+    const edge = crtPick([[0, 0.3 + R()*0.4], [1, 0.3 + R()*0.4], [0.3 + R()*0.4, 0], [0.3 + R()*0.4, 1]]);
+    mess(w*edge[0], h*edge[1], R()*6.28, R() < 0.5 ? anyCard() : backCard());
+    if(money) coins(w*(0.2 + R()*0.6), h*(0.2 + R()*0.6), Math.round(6*n), unit*0.25);
+    if(R() < 0.6) prop('glass', w*(0.15 + R()*0.7), h*(0.15 + R()*0.7), { v: { level: 0 } });
   } else {
     // pairs: the deck face down in a grid; a few turned up — two that match, kept by their finder
     const cols = Math.max(3, Math.round(5*Math.sqrt(n))), rows = Math.max(2, Math.round(cols*h/w*0.75)), gx = w/(cols + 0.5), gy = h/(rows + 0.5);
-    const turned = new Set(); while(turned.size < Math.min(4, cols*rows)) turned.add(Math.floor(Math.random()*cols*rows));
+    const turned = new Set(); while(turned.size < Math.min(4, cols*rows)) turned.add(Math.floor(R()*cols*rows));
     const twin = anyCard();
     let t = 0;
-    for(let r = 0; r < rows; r++) for(let c = 0; c < cols; c++){ const i = r*cols + c; mess(gx*(c + 0.75), gy*(r + 0.75), 0, turned.has(i) ? (t++ < 2 ? twin : anyCard()) : back); }
+    for(let r = 0; r < rows; r++) for(let c = 0; c < cols; c++){ const i = r*cols + c; mess(gx*(c + 0.75), gy*(r + 0.75), 0, turned.has(i) ? (t++ < 2 ? twin : anyCard()) : backCard()); }
     if(money) coins(w*0.88, h*0.9, Math.round(4*n), cw*0.4);
   }
-  for(const it of out) it.cw = cw;                     // (the width this game was dealt at: patience narrows it to fit)
+  for(const it of out) if(it.kind === 'card') it.cw = cw;      // (the width this game was dealt at: patience narrows it to fit)
+  // a marked deck, one time in a long while: every face the same card
+  if(R() < 0.006){ const one = suitCard(); for(const it of out) if(it.kind === 'card' && !it.face.back) it.face = one; }
   return out;
 }
 
@@ -469,19 +620,27 @@ export function crtChooseDeal(o = {}){
 }
 /**
  * THE DEAL DRAWN on whatever the canvas holds (a table). o: { game, stock,
- * gilt, coinage, suits, count (0.2–3), scatter (0–1), stakes (0–1), size (1:
- * as the texture), suitCols: [4], light, tilt }. CARDS IN PLAY: more cards,
- * a little smaller. Returns what lies where (for a mask).
+ * gilt, coinage, suits, count (0.2–3), scatter (0–1), stakes (0–1), wear
+ * (0–1: how many cards are damaged), clutter (0–1: what else is on the
+ * table), size (1: as the texture), suitCols: [4], light, tilt }. CARDS IN
+ * PLAY: more cards, a little smaller. Drawn in layers: stains, then flat
+ * things (a letter, a feather), the game, then tall things (a candle, a cup),
+ * whose shadows fall across the cards. Returns what lies where (for a mask).
  */
 export function crtPaintDeal(x, w, h, o){
   const unit = Math.min(w, h), count = Math.max(0.2, o.count ?? 1), cw = unit*0.11*(o.size ?? 1)*(0.85 + 0.3/Math.sqrt(Math.max(0.3, count)));
-  const items = crtDeal(o.game, w, h, { cw, count, scatter: o.scatter ?? 0.22, stakes: o.stakes ?? 0.5, suits: o.suits, coinage: o.coinage });
+  const dealt = crtDeal(o.game, w, h, { cw, count, scatter: o.scatter ?? 0.22, stakes: o.stakes ?? 0.5, wear: o.wear ?? 0.3, suits: o.suits, coinage: o.coinage });
+  const items = dealt.concat(crtTableObjects(dealt, w, h, cw, o.clutter ?? 0.4));
   const look = { stock: o.stock, gilt: o.gilt, suitCols: o.suitCols, L: crtLight(o.light, o.tilt) };
-  for(const it of items){
-    if(it.kind === 'card'){ const k = it.cw || cw; x.save(); x.translate(it.x, it.y); x.rotate(it.rot); crtCard(x, k, k*1.7, it.face, { ...look, rot: it.rot, lift: it.lift }); x.restore(); }
+  const draw = it => {
+    if(it.kind === 'card'){ const k = it.cw || cw; x.save(); x.translate(it.x, it.y); x.rotate(it.rot); crtCard(x, k, k*1.7, it.face, { ...look, rot: it.rot, lift: it.lift, dmg: it.dmg }); x.restore(); }
     else if(it.kind === 'coin') crtCoin(x, it.x, it.y, it.r, it.coin, look);
-    else crtStack(x, it.x, it.y, it.r, it.n, it.coin, look);
-  }
+    else if(it.kind === 'stack') crtStack(x, it.x, it.y, it.r, it.n, it.coin, look);
+    else if(it.kind === 'token') crtToken(x, it.x, it.y, it.r, it.tok, look.L);
+    else crtPaintObject(x, it, look.L);
+  };
+  const layer = it => it.kind !== 'object' ? 2 : it.layer === 'under' ? 0 : it.layer === 'flat' ? 1 : 3;
+  for(const k of [0, 1, 2, 3]) for(const it of items) if(layer(it) === k) draw(it);
   x.globalAlpha = 1; x.shadowColor = 'transparent';
   return { items, cw };
 }
@@ -511,6 +670,7 @@ function crtDealOpts(E, n){
   const cols = [2, 3, 4, 5].map((j, i) => { const v = input(n, j); return Array.isArray(v) ? v.map(q => q*255) : crtRGB(CRT_SUIT_DEFAULTS[i]); });
   return { ...crtChooseDeal({ game: String(P(n, 'game', 'seed')), stock: String(P(n, 'stock', 'seed')), gilt: String(P(n, 'gilt', 'seed')), coinage: String(P(n, 'coinage', 'seed')), suits: String(P(n, 'suits', 'seed')) }),
     count: num(n, 'count', 100)/100, size: num(n, 'size', 100)/100, scatter: num(n, 'scatter', 20)/90, stakes: num(n, 'stakes', 50)/100,
+    clutter: num(n, 'clutter', 40)/100, wear: num(n, 'wear', 30)/100,
     suitCols: cols, light: ctx.light, tilt: (ctx.lightTilt ?? 100)/100 };
 }
 export const CARD_STEPS = {
@@ -522,12 +682,26 @@ export const CARD_STEPS = {
   deal: { cat: 'Marks', label: 'Deal (Cards)', ins: ['table', 'fire hue', 'water hue', 'air hue', 'earth hue'], outs: ['image', 'mask'], io: { ins: ['image', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [CRT_SEL('game', 'Game', ['seed', ...Object.keys(CARD_GAMES)]), CRT_SEL('stock', 'Card Stock', ['seed', ...Object.keys(CARD_STOCKS)]), CRT_SEL('gilt', 'Edge', ['seed', ...Object.keys(GILT)]),
       CRT_SEL('suits', 'Suits', ['seed', '2', '3', '4']), CRT_SEL('coinage', 'Coinage', ['seed', ...COINAGES.map(c => c.name)]),
-      CRT_R('count', 'Cards in Play', 100, 20, 300), CRT_R('size', 'Card Size', 100, 50, 200), CRT_R('scatter', 'Scatter', 20, 0, 90), CRT_R('stakes', 'Stakes', 50)], cost: () => 8,
+      CRT_R('count', 'Cards in Play', 100, 20, 300), CRT_R('size', 'Card Size', 100, 50, 200), CRT_R('scatter', 'Scatter', 20, 0, 90), CRT_R('stakes', 'Stakes', 50),
+      CRT_R('clutter', 'Clutter', 40), CRT_R('wear', 'Wear', 30)], cost: () => 8,
     // the cards laid on what comes in (a Table), lit by the dial
     paint(E, n){ const [c, x] = crtGround(E, E.input(n, 1)); const o = crtDealOpts(E, n); const d = crtPaintDeal(x, E.ww, E.wh, o); return [c, null, d]; },
     run(E, n){ const [c, , d] = this.paint(E, n);
       return [E.readCanvas(c), crtMask(E, mx => { mx.fillStyle = '#fff'; for(const it of d.items){ if(it.kind === 'card'){ const k = it.cw || d.cw; mx.save(); mx.translate(it.x, it.y); mx.rotate(it.rot); mx.fillRect(-k/2, -k*0.85, k, k*1.7); mx.restore(); }
+        else if(it.kind === 'object'){ if(it.layer !== 'under'){ mx.beginPath(); mx.arc(it.x, it.y, it.s*0.5, 0, Math.PI*2); mx.fill(); } }
         else { mx.beginPath(); mx.arc(it.x, it.y, it.r, 0, Math.PI*2); mx.fill(); } } })]; } },
+  // what else is on a table (cartomancyTable.js): a candle, a cup, a crystal ball, a letter… laid on what comes in, toward its edges
+  objects: { cat: 'Marks', label: 'Table Objects', ins: ['ground'], outs: ['image', 'mask'], io: { ins: ['image'], outs: ['image', 'field'] },
+    params: [CRT_SEL('kind', 'Kind', ['seed', ...Object.keys(TABLE_OBJECTS).filter(k => TABLE_OBJECTS[k].weight > 0)]), CRT_R('count', 'How Many', 4, 1, 24), CRT_R('size', 'Size', 100, 30, 300)], cost: () => 6,
+    paint(E, n){ const { ww, wh, unit, ctx, P, num } = E; const [c, x] = crtGround(E, E.input(n, 1));
+      const kind = String(P(n, 'kind', 'seed')), cw = unit*0.11*num(n, 'size', 100)/100, k = Math.round(num(n, 'count', 4)), L = crtLight(ctx.light, (ctx.lightTilt ?? 100)/100);
+      const items = kind === 'seed' ? crtTableObjects([], ww, wh, cw, 1).slice(0, k) : [];
+      if(kind !== 'seed') for(let i = 0; i < k; i++){ const it = crtObject(kind, 0, 0, cw); it.x = Math.random()*ww; it.y = Math.random()*wh; items.push(it); }
+      while(kind === 'seed' && items.length < k){ const more = crtTableObjects(items, ww, wh, cw, 1); if(!more.length) break; items.push(...more.slice(0, k - items.length)); }
+      for(const lay of ['under', 'flat', 'tall']) for(const it of items) if(it.layer === lay) crtPaintObject(x, it, L);
+      return [c, null, items]; },
+    run(E, n){ const [c, , items] = this.paint(E, n);
+      return [E.readCanvas(c), crtMask(E, mx => { mx.fillStyle = '#fff'; for(const it of items){ mx.beginPath(); mx.arc(it.x, it.y, it.s*0.5, 0, Math.PI*2); mx.fill(); } })]; } },
   coins: { cat: 'Marks', label: 'Coins', ins: [], outs: ['image', 'mask'], io: { outs: ['image', 'field'] },
     params: [CRT_SEL('metal', 'Metal', Object.keys(COIN_METALS)), CRT_R('count', 'Coins', 30, 1, 200), CRT_R('size', 'Size', 100, 30, 300), CRT_R('stacks', 'Stacked', 30)], cost: () => 4,
     run(E, n){ const { ww, wh, unit, ctx, P, num, readCanvas } = E;
@@ -539,3 +713,5 @@ export const CARD_STEPS = {
       for(const it of items) it.kind === 'coin' ? crtCoin(x, it.x, it.y, it.r, it.coin, { L }) : crtStack(x, it.x, it.y, it.r, it.n, it.coin, { L });
       return [readCanvas(c), crtMask(E, mx => { mx.fillStyle = '#fff'; for(const it of items){ mx.beginPath(); mx.arc(it.x, it.y - (it.n ? it.n*it.r*0.08 : 0), it.r*(it.n ? 1.1 : 1), 0, Math.PI*2); mx.fill(); } })]; } },
 };
+// (the table's other things are drawn with the cards' own kit: cartomancyTable.js)
+Object.assign(CRT_KIT, { shadow: crtShadow, emblem: crtEmblem, element: crtElement, css: crtCss, mix: crtMix, rgb: crtRGB });

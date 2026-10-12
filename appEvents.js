@@ -1111,6 +1111,7 @@ function paintWhenSeen(canvasEl, paint){
 function presetTile(p, onPick, extraClass){
   const btn = document.createElement('div');
   btn.className = 'preset-btn' + (extraClass ? ' ' + extraClass : '');
+  if(btn.dataset) btn.dataset.name = p.name || '';
   const swatch = document.createElement('canvas');
   swatch.className = 'preset-swatch';
   paintWhenSeen(swatch, () => paintPresetSwatch(swatch, p, SWATCH.width, SWATCH.height));
@@ -1166,16 +1167,42 @@ function endHoverPreview(){
   clearTimeout(state.history.timer);
   scheduleRender();
 }
-// a click keeps the preset (the preview simply becomes the look), as one step of history
+// a click keeps the preset (the preview simply becomes the look), as one step of history.
+// Every click is a NEW SEED (Ruby); clicking the look that is still lit (nothing
+// meaningful changed since) keeps it and only rerolls — and now and then takes
+// another of its surface's readings (🜂 🜄 🜁 🜃)
 async function pickPreset(p){
   clearTimeout(hover.timer);
-  if(needsGuard() && !await guardWork('Apply this preset', `“${p.name}”`)){ endHoverPreview(); return; }
+  const again = litPreset.name === p.name && !litPresetChanged();
+  if(!again && needsGuard() && !await guardWork('Apply this preset', `“${p.name}”`)){ endHoverPreview(); return; }
   markFresh();
   const showing = hover.on === p;
   hover.base = null; hover.on = null;
-  if(showing) commitSoon();          // already on the page, its seed and all: keep exactly what was shown
+  if(again){ maybeRerollSeed(); if(Math.random() < 0.45) swapReading(); scheduleRender(); commitSoon(); }
+  else if(showing) commitSoon();     // already on the page, its new seed and all: keep exactly what was shown
   else applyPreset(p);
+  lightPreset(p.name);
   murmur.play('preset');
+}
+// ---- THE LIT LOOK (Ruby): a preset or spell stays lit after it is applied,
+// until a MEANINGFUL change (anything but the seed and the look's name) ----
+// (the look settles over a moment — textures, tints that follow accents — so its
+// signature is taken at the first history step after it lands: that step IS the look)
+const litPreset = { name: null, sig: null };
+function meaningfulSig(){ try { const o = JSON.parse(lookSnapshot()); delete o.textureSeedValue; delete o.lookName; return JSON.stringify(o); } catch(e){ return ''; } }
+function litPresetChanged(){ return !!litPreset.name && litPreset.sig != null && meaningfulSig() !== litPreset.sig; }
+function paintLitPreset(){ if(presetGrid && presetGrid.querySelectorAll) presetGrid.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('lit', !!litPreset.name && !!b.dataset && b.dataset.name === litPreset.name)); }
+function lightPreset(name){ litPreset.name = name || null; litPreset.sig = null; paintLitPreset(); }
+function checkLitPreset(){
+  if(!litPreset.name) return;
+  if(litPreset.sig == null){ litPreset.sig = meaningfulSig(); return; }
+  if(litPresetChanged()){ litPreset.name = null; litPreset.sig = null; paintLitPreset(); }
+}
+/** Another of the surface's readings, not the one showing (a click on a lit look, now and then). */
+function swapReading(){
+  const list = elementsFor($('textureType').value).filter(e => e.el !== state.ui.element);
+  if(!list.length) return;
+  applyElement(list[Math.floor(Math.random()*list.length)].el);
 }
 if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
@@ -1198,10 +1225,13 @@ function renderSavedPresets(saved){
   for(const rec of saved){
     const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
     presetGrid.appendChild(presetTile(shot, ()=>{
+      // a spell is YOUR look: the first click puts it back exactly, seed and all;
+      // a click while it is still lit rerolls the seed (and now and then the reading)
+      if(litPreset.name === rec.name && !litPresetChanged()){ maybeRerollSeed(); if(Math.random() < 0.45) swapReading(); scheduleRender(); commitSoon(); lightPreset(rec.name); return; }
       // the same filter as applying from Esoterica — a spell is a look
       safeRestore(stripToLook(Object.assign({}, rec.settings, { spell: rec.spell })), 'This spell');
       if(document.body && document.body.dataset) document.body.dataset.lookName = rec.name || '';
-      scheduleRender();
+      scheduleRender(); lightPreset(rec.name);
     }, 'preset-custom'));
   }
 
@@ -1318,7 +1348,7 @@ function applyPreset(p){
   const __locks = snapshotLocked();
   try {
   applyThemePalette(deriveThemePalette(p));
-  maybeRerollSeed(p.textureSeed);
+  maybeRerollSeed();                 // every application a new seed (Ruby): a ritual is cast fresh each time
   setColorField('bgColor1Hex', p.bg1);
   $('bgGradientToggle').checked = !!p.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!p.bgGradient);
@@ -1438,6 +1468,7 @@ function applyFullPreset(p){
     restoreSettings(s);
     $('activeSpell').value = p.spell || '';
     if(document.body && document.body.dataset) document.body.dataset.lookName = p.name || '';
+    maybeRerollSeed();                 // a built-in look is cast fresh each time, as the others are
     scheduleRender();
   } finally {
     restoreLocked(__locks);
@@ -1507,6 +1538,15 @@ if(typeof document.querySelectorAll === 'function'){
   }
   tabBtns.forEach((b, i) => b.addEventListener('click', () => { if(!b.classList.contains('active')) murmur.play('tab', { index: i }); activateTab(b.dataset.tab); }));
   activateTab('write');
+  // ESOTERICA ON A DESK (Ruby): a click anywhere outside its drawer closes it
+  // (not inside a picker, a dialog or the Athanor, which float above the page);
+  // while it is open its button reads Return (CSS: body.more-open)
+  document.addEventListener('pointerdown', e => {
+    if(current !== 'more' || !desktopNow() || !e.target || !e.target.closest) return;
+    if(e.target.closest('#esoDrawer, .tab-btn[data-tab="more"], #clr-picker, .modal-veil, .sheet-veil, .forge-veil, .toast, [role="dialog"]')) return;
+    activateTab(before);
+  }, true);
+  document.addEventListener('vellum-layout', () => { if(current === 'more') activateTab(before); placeEsoterica(); });
   // THE SIDEBAR'S WIDTH: its right edge drags (desktop); remembered in this
   // browser — it is how the person likes the room, not part of a look
   const app = document.querySelector && document.querySelector('.app');
@@ -1526,10 +1566,38 @@ if(typeof document.querySelectorAll === 'function'){
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
     grip.addEventListener('dblclick', () => { root.style.removeProperty('--side-w'); try { localStorage.removeItem(KEY); } catch(_){} });
   }
+  // ESOTERICA'S DRAWER: its left edge drags the same way (desktop), remembered too
+  if(app && typeof document.createElement === 'function' && document.documentElement && document.documentElement.style){
+    const root = document.documentElement, KEY = 'pp.drawerWidth';
+    const clampD = v => Math.max(320, Math.min(Math.max(320, (window.innerWidth || 1200) - (parseInt(getComputedStyle(root).getPropertyValue('--side-w')) || 460) - 360), Math.round(v)));
+    const setD = v => root.style.setProperty('--drawer-w', clampD(v) + 'px');
+    try { const saved = +localStorage.getItem(KEY); if(saved) setD(saved); } catch(e){}
+    const grip = document.createElement('div'); grip.className = 'drawer-resize side-resize-like'; grip.title = 'Drag to resize · double-click to reset';
+    grip.setAttribute('role', 'separator'); grip.setAttribute('aria-orientation', 'vertical');
+    app.appendChild(grip);
+    let dragging = false;
+    grip.addEventListener('pointerdown', e => { dragging = true; document.body.classList.add('side-dragging'); try { grip.setPointerCapture(e.pointerId); } catch(_){} e.preventDefault(); });
+    grip.addEventListener('pointermove', e => { if(dragging) setD((window.innerWidth || 0) - e.clientX); });
+    const end = () => { if(!dragging) return; dragging = false; document.body.classList.remove('side-dragging');
+      try { localStorage.setItem(KEY, String(parseInt(getComputedStyle(root).getPropertyValue('--drawer-w')) || 440)); } catch(_){} };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+    grip.addEventListener('dblclick', () => { root.style.removeProperty('--drawer-w'); try { localStorage.removeItem(KEY); } catch(_){} });
+  }
 }
 
-if(detectMobile() && typeof document.querySelectorAll === 'function'){
-  document.body.classList.add('is-mobile');
+// THE PHONE LAYOUT (Ruby): a phone, and ANY window taller than it is wide or
+// narrower than 900px — a portrait desktop window gets it too, live, as it is
+// resized (the old in-between layout is retired). Its setup runs once, the
+// first time it is wanted; everything it attaches is harmless on a desk.
+function wantPhoneLayout(){
+  if(detectMobile()) return true;
+  if(typeof window === 'undefined' || !window.innerWidth) return false;
+  return window.innerHeight > window.innerWidth || window.innerWidth < 900;
+}
+let phoneSetUp = false;
+function setupPhoneLayout(){
+  if(phoneSetUp || typeof document.querySelectorAll !== 'function') return;
+  phoneSetUp = true;
 
 
   // Keyboard awareness. visualViewport shrinks when the soft keyboard opens,
@@ -1709,6 +1777,17 @@ if(detectMobile() && typeof document.querySelectorAll === 'function'){
     }, {passive:true});
   }
 }
+function applyLayout(){
+  if(!document.body || !document.body.classList) return;
+  const on = wantPhoneLayout(), was = document.body.classList.contains('is-mobile');
+  if(on) setupPhoneLayout();
+  document.body.classList.toggle('is-mobile', on);
+  if(was !== on && typeof document.dispatchEvent === 'function' && typeof CustomEvent === 'function') document.dispatchEvent(new CustomEvent('vellum-layout', { detail: { phone: on } }));
+}
+if(typeof document.querySelectorAll === 'function'){
+  applyLayout();
+  if(typeof window !== 'undefined' && window.addEventListener){ let lt = 0; window.addEventListener('resize', () => { clearTimeout(lt); lt = setTimeout(applyLayout, 120); }); }
+}
 
 // ---- the preview: pan and zoom (desktop and phone) ----
 // Panzoom (timmywil/panzoom, the established library) rather than our own:
@@ -1734,7 +1813,11 @@ if(typeof Panzoom === 'function' && typeof document.querySelector === 'function'
         const lim = (cv.offsetWidth || 0)*0.5*(1 - 0.5/z)/1, limY = (cv.offsetHeight || 0)*0.5*(1 - 0.5/z);
         const x = Math.max(-lim, Math.min(lim, p.x)), y = Math.max(-limY, Math.min(limY, p.y));
         if(x !== p.x || y !== p.y) pz.pan(x, y, { animate: false, force: true }); };
-      wrap.addEventListener('wheel', (e) => { if(e.target && e.target.closest && e.target.closest('button')) return; pz.zoomWithWheel(e); bound(); zoomSettled(); }, { passive: false });
+      // the wheel zooms only with Ctrl or ⌘ held (a trackpad's pinch sends that too): a plain
+      // scroll over the image used to zoom it by surprise (Ruby's "pillarbox" screenshot)
+      wrap.addEventListener('wheel', (e) => { if(e.target && e.target.closest && e.target.closest('button')) return; if(!(e.ctrlKey || e.metaKey)) return; pz.zoomWithWheel(e); bound(); zoomSettled(); }, { passive: false });
+      // the window changes shape: fit the picture again
+      if(typeof window !== 'undefined' && window.addEventListener){ let rt = 0; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if(pz.getScale() > 1.01){ pz.reset({ animate: false }); zoomSettled(); } }, 150); }); }
       cv.addEventListener('panzoomchange', () => { wrap.classList.toggle('zoomed', pz.getScale() > 1.01); });
       cv.addEventListener('panzoomend', () => { bound(); zoomSettled(); });
       cv.addEventListener('dblclick', () => { pz.reset(); zoomSettled(); });
@@ -1956,9 +2039,18 @@ if($('lightDial') && $('lightDial').addEventListener){
   const fromPointer = (e, snapTicks) => {
     const rc = dial.getBoundingClientRect(), x = (e.clientX - rc.left) / rc.width * 100 - 50, y = (e.clientY - rc.top) / rc.height * 100 - 50;
     // the rim of ☉ is 100; an engine-lit texture lets it be pulled further out (to 130: lower light)
-    let deg = Math.atan2(x, -y) * 180 / Math.PI, tilt = Math.min(dialMax(), Math.hypot(x, y) / 30 * 100);
-    // near a tick on the rim, take its exact direction at the horizon
-    if(snapTicks || tilt > 88){ const nearest = Math.round(deg / 45) * 45; if(Math.abs(nearest - deg) < 7){ deg = nearest; if(tilt > 88 && tilt < 108) tilt = 100; } }
+    let deg = Math.atan2(x, -y) * 180 / Math.PI;
+    // THE RIM HOLDS (Ruby): the light SNAPS to 100% reach as the finger nears
+    // the rim, and stays there until it is pulled well past it; beyond, it
+    // moves more slowly, like pulling against a detent (to 130, only for the
+    // engine-lit textures)
+    const raw = Math.hypot(x, y) / 30 * 100;
+    let tilt = raw < 93 ? raw : raw < 118 ? 100 : Math.min(dialMax(), 100 + (raw - 118) * 0.45);
+    tilt = Math.min(dialMax(), tilt);
+    if(tilt === 100 && fromPointer.was !== 100 && typeof navigator !== 'undefined' && navigator.vibrate) try { navigator.vibrate(8); } catch(_){}
+    fromPointer.was = tilt;
+    // near a tick on the rim, take its exact direction
+    if(snapTicks || tilt > 88){ const nearest = Math.round(deg / 45) * 45; if(Math.abs(nearest - deg) < 7) deg = nearest; }
     // the halfway ring catches lightly
     if(Math.abs(tilt - 50) < 4) tilt = 50;
     setLight(deg, tilt, false);
@@ -2269,11 +2361,10 @@ if(typeof document.querySelectorAll === 'function'){
   const body = document.body;
   const moreBtn = Array.from(document.querySelectorAll('.tab-btn'))
     .find(b => b.dataset.tab === 'more');
-  const moreLabel = moreBtn ? moreBtn.textContent : '';
-  const moreIcon = moreBtn && moreBtn.innerHTML;
 
   function enterFocus(){
-    if(!body.classList || body.classList.contains('focus-mode')) return;
+    // (only in the phone layout: on a desk the editor is simply typed in — Ruby)
+    if(!body.classList || body.classList.contains('focus-mode') || !body.classList.contains('is-mobile')) return;
     body.classList.add('focus-mode');
     const card = poem.closest ? poem.closest('.card') : null;
     if(card) card.classList.add('focus-keep');
@@ -2281,13 +2372,12 @@ if(typeof document.querySelectorAll === 'function'){
     // uses to mean "touch this"
     // the box changes size as the class lands; repaint once it has
     if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
-    if(moreBtn) moreBtn.innerHTML = '<span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span>' + 'Return';
+    // (Esoterica's button shows its Return face: CSS, body.focus-mode)
   }
   function exitFocus(){
     if(!body.classList || !body.classList.contains('focus-mode')) return;
     body.classList.remove('focus-mode');
     document.querySelectorAll('.focus-keep').forEach(c => c.classList.remove('focus-keep'));
-    if(moreBtn && moreIcon) moreBtn.innerHTML = moreIcon;
     if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
     if(poem.blur) poem.blur();
   }
@@ -2571,7 +2661,7 @@ if(document.addEventListener) for(const ev of ['input', 'change']) document.addE
   applyAthanorGraph(true); paintForgeSummary();
 }, true);
 setTimeout(paintShelfOptions, 0);
-const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
   ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH,
@@ -2581,7 +2671,8 @@ const forgeDeps = () => ({ $, textures: Object.keys(TEXTURE_PARAMS).filter(t => 
   // "Use as Surface": the Athanor's texture on the page
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
     t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
-if($('forgeOpenBtn') && $('forgeOpenBtn').addEventListener) $('forgeOpenBtn').addEventListener('click', () => openForge(forgeDeps()));
+// THE ATHANOR opens from the top bar, on every device
+if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openForge(forgeDeps()));
 if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => { closeForge(forgeDeps()); paintForgeSummary(); });
 setTimeout(() => { paintForgeSummary(); applyAthanorGraph(true); }, 0);
 
@@ -3013,6 +3104,7 @@ function commitHistory(){
   h.index = h.stack.length - 1;
   state.ui.edits = (state.ui.edits || 0) + 1;
   paintHistoryButtons();
+  checkLitPreset();
 }
 function commitSoon(){ clearTimeout(state.history.timer); state.history.timer = setTimeout(commitHistory, 450); }
 function stepHistory(dir){
@@ -3022,7 +3114,7 @@ function stepHistory(dir){
   clearTimeout(h.timer);
   h.index = to; h.restoring = true;
   try { restoreSettings(JSON.parse(h.stack[to])); } finally { h.restoring = false; }
-  refreshUi(); scheduleRender(); paintHistoryButtons();
+  refreshUi(); scheduleRender(); paintHistoryButtons(); checkLitPreset();
 }
 if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepHistory(-1));
 if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepHistory(1));

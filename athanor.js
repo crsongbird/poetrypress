@@ -278,30 +278,30 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
 // each: nodes [type, data, x, y] and wires [from, output, to, input] (1-based)
 // TEACH: what each shows, in a few lines (the Athanor shows it when the graph is opened)
 export const ATHANOR_STARTERS = {
-  agate: { label: 'Agate', teach: 'Value Noise, turned up by a Knob (Turbulence), bends a set of Waves into bands; Levels sharpens them; a Colour Ramp paints them between your two Hues. Try: the Knob, the Waves\u2019 Frequency, the Ramp\u2019s Middle.', nodes: [
+  agate: { label: 'Agate', teach: 'This graph makes banded stone. A Value Noise is turned up by a Knob (Turbulence) with Math, and that bends a set of Waves, so the stripes wander like agate. Levels sharpens the bands, and a Color Ramp colors them between your two Hues. Try: turn the Turbulence knob, then change the Waves\' Frequency.', nodes: [
       ['noise', { scale: 14, octaves: 6 }, 40, 60], ['knob', { slot: '1', name: 'Turbulence', def: 85 }, 40, 260],
       ['math', { op: 'multiply' }, 280, 120], ['waves', { freq: 4, angle: 30 }, 500, 120], ['levels', { lo: 0, hi: 100, gamma: 78 }, 720, 120],
       ['hue', { slot: '1', name: 'Stone Hue' }, 720, 320], ['hue', { slot: '2', name: 'Vein Hue' }, 720, 440],
       ['ramp', { mid: 70 }, 960, 160], ['surface', { name: 'Agate', ground: 'colour' }, 1200, 160]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
-  leaded: { label: 'Leaded Window', teach: 'Cells give three maps: distance, edges and an id for each cell. The edges, through Threshold and Invert, are the lead; the ids, through a Colour Ramp, the glass. Blend lays the lead over the glass, and the lead\u2019s mask is the Surface\u2019s height, so the dial lights it raised.', nodes: [
+  leaded: { label: 'Leaded Window', teach: 'This graph makes a leaded window. Cells gives three maps: the distance to each cell\'s center, the edges between cells, and a number for each cell. The edges go through Threshold and Invert to become the lead; the cell numbers go through a Color Ramp to color the glass. Blend lays the lead over the glass, and the lead also goes into the Surface\'s Height, so the dial lights it as if raised. Try: change Cells\' Scale and Jitter.', nodes: [
       ['cells', { scale: 70, jitter: 85 }, 40, 80], ['knob', { slot: '1', name: 'Leading', def: 60 }, 40, 300], ['math', { op: 'multiply' }, 280, 60],
       ['threshold', { at: 45, soft: 8 }, 500, 40], ['invert', {}, 720, 40],
       ['hue', { slot: '1', name: 'Glass Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Glass Hue' }, 300, 420],
       ['ramp', { mid: 50 }, 540, 260], ['blend', { mode: 'multiply', opacity: 100 }, 940, 140], ['surface', { name: 'Leaded Window', ground: 'colour' }, 1180, 140]],
     wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 3, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1], [5, 1, 9, 2], [9, 1, 10, 1], [4, 1, 10, 2]] },
-  terrain: { label: 'Lit Terrain', teach: 'One Value Noise used twice: coloured by a Colour Ramp between two Hues, and as the HEIGHT a Surface lights with the dial (a Knob sets how high). Turn the light dial and watch the hills.', nodes: [
+  terrain: { label: 'Lit Terrain', teach: 'This graph makes lit hills. One Value Noise is used twice: a Color Ramp colors it between two Hues for the picture, and a Knob scales it for the Surface\'s Height, which the dial lights. Try: turn the light dial on the page and watch the shadows move, then raise the Relief knob.', nodes: [
       ['noise', { scale: 18, octaves: 6 }, 40, 80], ['knob', { slot: '1', name: 'Relief', def: 60 }, 40, 280], ['math', { op: 'multiply' }, 280, 220],
       ['hue', { slot: '1', name: 'High Hue' }, 280, 20], ['hue', { slot: '2', name: 'Low Hue' }, 280, 120],
       ['ramp', { mid: 45 }, 520, 60], ['surface', { name: 'Lit Terrain', ground: 'colour' }, 760, 120]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [1, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1], [3, 1, 7, 2]] },
-  woven: { label: 'Woven Waves', teach: 'Two Waves crossed (Math: max) make threads; a Knob thins them, Levels hardens them, Tint colours them between two Hues. The threads are also the height, so the dial lights the weave.', nodes: [
+  woven: { label: 'Woven Waves', teach: 'This graph makes woven cloth. Two Waves, one across and one down, are combined with Math (max) to make threads. A Knob thins them, Levels hardens them, and Tint colors them between your two Hues. The threads also go into the Surface\'s Height, so the dial lights the weave. Try: change one Waves\' Angle.', nodes: [
       ['waves', { freq: 14, angle: 0 }, 40, 40], ['waves', { freq: 14, angle: 90 }, 40, 220], ['math', { op: 'max' }, 280, 120],
       ['knob', { slot: '1', name: 'Thread', def: 80 }, 280, 300], ['math', { op: 'multiply' }, 500, 160],
       ['levels', { lo: 20, hi: 100, gamma: 50 }, 720, 120], ['tint', {}, 940, 120], ['surface', { name: 'Woven Waves', ground: 'colour' }, 1160, 120],
       ['hue', { slot: '1', name: 'Thread Hue' }, 720, 300], ['hue', { slot: '2', name: 'Shadow Hue' }, 720, 420]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1], [6, 1, 7, 1], [9, 1, 7, 2], [10, 1, 7, 3], [7, 1, 8, 1], [6, 1, 8, 2]] },
-  bloom: { label: 'Reaction Bloom', teach: 'Reaction\u2013Diffusion grows spots and coral; a Blur of it, mixed back in by a Knob (Bloom), softens it; a Colour Ramp paints it between two Hues, and the Mix is the height.', nodes: [
+  bloom: { label: 'Reaction Bloom', teach: 'This graph makes soft coral. Reaction–Diffusion grows a pattern; Blur softens a copy of it; Mix blends the two, by an amount a Knob (Bloom) sets. A Color Ramp colors the result between two Hues, and the mix also gives the Surface its Height. Try: change the Reaction–Diffusion Pattern.', nodes: [
       ['turing', { pattern: 'coral', scale: 100 }, 40, 80], ['blur', { radius: 10 }, 300, 160], ['knob', { slot: '1', name: 'Bloom', def: 40 }, 300, 300],
       ['mix', { t: 50 }, 520, 80],
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],

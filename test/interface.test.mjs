@@ -40,11 +40,13 @@ check('gradients: Sweep (conic) and Mirrored for the backdrop and the box, and f
   && html.includes('id="textGradientType"') && /\['textGradientType',\s+'textGradientType',\s+'text'\]/.test(ev) && /textGradientType:'linear'/.test(ev));
 {
   const groups = [...html.matchAll(/<optgroup label="([^"]+)"/g)].map(m => m[1]);
-  const textureGroups = groups.filter(g => /Grounds|Particles|Heavens|Places|Ink|Materials|Pattern|Signs|Yours/.test(g));
+  const O = await import('../appOptions.js');
+  const textureGroups = groups.filter(g => O.TEXTURE_GROUPS.some(t => g === t.glyph + ' ' + t.name.replace(/&/g, '&amp;')));
   const sel = (html.match(/<select id="textureType">([\s\S]*?)<\/select>/) || ['', ''])[1];
   const sizes = [...sel.matchAll(/<optgroup[^>]*>([\s\S]*?)<\/optgroup>/g)].map(m => (m[1].match(/<option/g) || []).length);
-  check('the texture menu goes by how a surface is made and what it is for: nine groups, at least three in each (but Yours)',
-    textureGroups.length === 9 && sizes.slice(0, 8).every(n => n >= 3));
+  check('the texture menu goes by what a surface IS: ten groups (appOptions TEXTURE_GROUPS, the same in the Athanor), at least three in each (but Yours), each glyph a Runology Archetype (no emoji)',
+    textureGroups.length === 10 && sizes.slice(0, 9).every(n => n >= 3) && O.TEXTURE_GROUPS.slice(0, 9).every((g, i) => g.types.length === sizes[i])
+    && O.TEXTURE_GROUPS.every(g => ['🜃','🜚','🜁','🝊','🜥','🜄','Ᏹ','🝓','⎐','🜉'].includes(g.glyph)));
   const alpha = [...sel.matchAll(/<optgroup[^>]*>([\s\S]*?)<\/optgroup>/g)].every(m => { const names = [...m[1].matchAll(/>([^<]+)<\/option>/g)].map(x => x[1].toLowerCase().replace(/'/g, ''));
     return names.every((n, i) => i === 0 || names[i - 1] <= n); });
   check('…each group alphabetical', alpha);
@@ -61,6 +63,65 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
   /function refreshUi\(\)\{/.test(ev) && /for\(const \[box, block\] of SUBBLOCKS\)/.test(ev) && /refreshUi\(\); scheduleRender\(\); paintHistoryButtons\(\);/.test(ev)
   && /try \{ return withLocksPreservedInner\(fn\); \} finally \{ if\(typeof refreshUi === 'function'\) refreshUi\(\); \}/.test(ev));
 
+{
+  // ---- Kale → Ruby's round of the specimen: the type, Rosé, the top bar, the dial's rim, American English ----
+  const css = src('poetrypress.css');
+  check('THE TYPE is Alegreya (reading), Alegreya SC (headings, as true small caps), Alegreya Sans (labels): loaded from Google Fonts, light weights, the title no longer bold',
+    /family=Alegreya:ital,wght@0,400\.\.900/.test(html) && /family=Alegreya\+SC/.test(html) && /family=Alegreya\+Sans/.test(html)
+    && /--ui-text:'Alegreya'/.test(css) && /--ui-caps:'Alegreya SC'/.test(css) && /--ui-sans:'Alegreya Sans'/.test(css)
+    && /\.card-title, summary\.card-title\{ font-family:var\(--ui-caps\); font-weight:500; text-transform:lowercase;/.test(css) && !/\.app-header-title\{[^}]*font-weight:700/.test(css));
+  check('ROSÉ has neutral warm near-black grounds (no plum): pink and pale blue the only colours',
+    /:root\[data-theme="rose"\]\{[\s\S]*?--bg-deep:#0e0d0d;[\s\S]*?--bg-panel:#151313;/.test(css) && /--accent-2:#a3c6e3/.test(css));
+  check('THE TOP BAR: 🜉 The Athanor (glyph large, name small) opens the node editor; a quiet Support button whose heart breathes now and then (still under reduced motion)',
+    html.includes('id="athanorTopBtn"') && html.includes('<span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span>')
+    && /\$\('athanorTopBtn'\)\.addEventListener\('click', \(\) => openForge\(forgeDeps\(\)\)\)/.test(ev)
+    && html.includes('class="support-btn"') && /@keyframes support-breathe/.test(css) && /prefers-reduced-motion: reduce\)\{ \.support-heart\{ animation:none; \}/.test(css));
+  check('THE DIAL\'S RIM HOLDS: the light snaps to 100% near the rim and must be pulled well past it; beyond, it moves at under half speed',
+    /let tilt = raw < 93 \? raw : raw < 118 \? 100 : Math\.min\(dialMax\(\), 100 \+ \(raw - 118\) \* 0\.45\);/.test(ev));
+  const visible = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<script[\s\S]*?<\/script>/g, '').replace(/<style[\s\S]*?<\/style>/g, '').replace(/ (id|class|for|data-[a-z-]+|value|href|src)="[^"]*"/g, '');
+  check('AMERICAN ENGLISH where people read it (color, gray, center): the page, the strings, the Athanor\'s words',
+    !/\b(colour|Colour|colours|coloured|grey|centre)\b/.test(visible.replace(/Alegreya/g, '')) && !/"[^"]*\b(Colour|colour)\b[^"]*"/.test(src('strings.js'))
+    && /'Light & Color'/.test(src('steps.js')) && /export const forgeWord = /.test(src('forge.js')));
+}
+{
+  // ---- pass 2: the desk ----
+  const css = src('poetrypress.css');
+  check('A PORTRAIT OR NARROW WINDOW gets the phone layout, live as it is resized (a phone always): the old in-between layout retired',
+    /function wantPhoneLayout\(\)\{\n  if\(detectMobile\(\)\) return true;[\s\S]*?return window\.innerHeight > window\.innerWidth \|\| window\.innerWidth < 900;/.test(ev)
+    && /function applyLayout\(\)/.test(ev) && /new CustomEvent\('vellum-layout'/.test(ev));
+  check('ESOTERICA on a desk: a click outside its drawer closes it; its button reads Return while open (two faces in one cell, so it never changes size); the editor\'s focus mode (and its Return) only on a phone',
+    /if\(current !== 'more' \|\| !desktopNow\(\)/.test(ev) && html.includes('<span class="tab-face ret" aria-hidden="true">')
+    && /body\.more-open:not\(\.is-mobile\) \.tab-face\.ret, body\.focus-mode \.tab-face\.ret\{ visibility:visible; \}/.test(css)
+    && /\|\| !body\.classList\.contains\('is-mobile'\)\) return;/.test(ev));
+  check('THE EDITOR on a desk is at least half the tab\'s height', /body:not\(\.is-mobile\) \.card\[data-tab="write"\] \.editor-input\{ min-height:calc\(\(var\(--vvh, 100vh\) - 110px\) \* 0\.5\); \}/.test(css));
+  check('A LOOK STAYS LIT until a meaningful change (anything but the seed and the name); every click a NEW SEED; a click on the lit look rerolls and now and then takes another reading',
+    /function meaningfulSig\(\)\{ try \{ const o = JSON\.parse\(lookSnapshot\(\)\); delete o\.textureSeedValue; delete o\.lookName;/.test(ev)
+    && /if\(again\)\{ maybeRerollSeed\(\); if\(Math\.random\(\) < 0\.45\) swapReading\(\);/.test(ev) && /maybeRerollSeed\(\);                 \/\/ every application a new seed/.test(ev)
+    && /\.preset-btn\.lit\{/.test(css) && /checkLitPreset\(\);\n\}/.test(ev));
+  check('THE PREVIEW zooms only with Ctrl or ⌘ held (or a pinch), and fits again when the window changes shape',
+    /if\(!\(e\.ctrlKey \|\| e\.metaKey\)\) return; pz\.zoomWithWheel\(e\);/.test(ev) && /if\(pz\.getScale\(\) > 1\.01\)\{ pz\.reset\(\{ animate: false \}\); zoomSettled\(\); \}/.test(ev));
+}
+{
+  // ---- pass 3: the Athanor ----
+  const S = await import('../steps.js'), F = src('forge.js'), A = await import('../athanor.js'), CH = await import('../chains.js');
+  check('EVERY PART SAYS WHAT IT DOES (a plain sentence: the parts list, its menu, the Help\'s glossary); the parts list has a search and each category says what it holds; no Output in it (the Surface is always there)',
+    Object.values(S.STEPS).every(st => (st.doc || '').length > 25) && /class="forge-find" id="forgeFind"/.test(F) && /<span class="fpart-doc">/.test(F)
+    && /FORGE_CATEGORIES\.filter\(cat => cat !== 'Output'\)/.test(F) && /hint: N\.doc \|\| forgeCatName\(N\.cat\)/.test(F));
+  check('THE SURFACE STAYS: it cannot be removed or copied; Clear leaves a fresh one; a graph from anywhere without one gets one',
+    /if\(isSurface\(id\)\)\{ if\(deps\.warn\)/.test(F) && /label: 'The Surface stays'/.test(F) && /ed\.clear\(\); add\('surface', 420, 90\);/.test(F)
+    && /if\(!Object\.values\(rawNodes\(\)\)\.some\(n => n\.name === 'surface'\)\) add\('surface', 900, 120\);/.test(F));
+  check('A HELP DOCUMENT (from the bar\'s Help and the dock\'s ?): twelve sections — what it is, reading a graph, wires, conversions, settings, the page\'s controls, seeds and chance, the Surface, mouse and phone, keeping, limits, every part — over the grid, never the parts list',
+    (A.ATHANOR_LIMITS && /export function forgeHelpHtml\(\)/.test(F)) && html.includes('id="forgeDocBtn"') && html.includes('<article class="forge-doc" id="forgeDoc" hidden')
+    && (F.match(/\+ sec\('/g) || []).length === 12 && /@media \(min-width: 900px\)\{ \.forge-doc\{ left:calc\(236px \+ 12px\)/.test(src('poetrypress.css')) && !html.includes('forge-help-pop'));
+  check('MORE PARTS: Number and Random Number (anything can be random now); Map Range; Shape Mask; Split and Merge Channels; Switch; Hue & Saturation — and a Combine & Mask category (Mix, Blend, Math, Split, Merge, Switch)',
+    ['number', 'random', 'maprange', 'shape', 'split', 'merge', 'switch', 'hsv'].every(k => S.STEPS[k] && typeof S.STEPS[k].run === 'function')
+    && Object.values(S.STEPS).filter(st => st.cat === 'Combine').length === 6 && S.STEP_CATEGORIES.filter(c => c !== 'Output').every(c => Object.values(S.STEPS).filter(st => st.cat === c).length >= 3));
+  check('A NEW SEED from inside the Athanor (⟳ Seed): every part\'s chance comes from the page\'s seed', html.includes('id="forgeSeedBtn"') && /reseed: \(\) => \{ const f = \$\('textureSeedValue'\)/.test(ev));
+  check('TEACHING NOTES that teach (a teacher, not a riddle): each says what the graph makes, how, and what to try',
+    [...Object.values(A.ATHANOR_STARTERS), ...Object.values(CH.TEXTURE_CHAINS)].every(t => /^This (graph makes|is) /.test(t.teach) && /Try: /.test(t.teach)));
+  check('THE README explains the whole app plainly: the three engines, each tab, the Athanor, saving',
+    /## How PoetryPress works/.test(src('README.md')) && /\*\*a node editor, the Athanor\*\*/.test(src('README.md')) && /### 7\. Saving/.test(src('README.md')));
+}
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

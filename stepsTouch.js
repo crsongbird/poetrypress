@@ -355,7 +355,7 @@ export function paneLayout(ww, wh, zoom, amt, order){
       for(let j = 0; j < n; j++){ const a = (j + off)/n*Math.PI*2, r = k*sep;
         S.push([cx + Math.cos(a)*r + (Math.random()*2 - 1)*jit, cy + Math.sin(a)*r + (Math.random()*2 - 1)*jit, k, j]); } }
   }
-  // each pane's colour slot of the glazier's ten (a patterned window repeats a few, in its rhythm), and its own number
+  // each pane's color slot of the glazier's ten (a patterned window repeats a few, in its rhythm), and its own number
   const RHY = [0, 3, 8, 6, 4, 9].slice(0, 4 + Math.floor(Math.random()*2));
   const slot = S.map(s => s[2] >= 0 ? (s[2]*3 + (s[3] % 2)*5) % 10 : s[2] === -2 ? RHY[s[3] % RHY.length] : Math.floor(Math.random()*10));
   const own = S.map(() => Math.random());
@@ -527,7 +527,7 @@ Object.assign(TOUCH_STEPS, {
     params: [TOUCH_R('size', 'Pane Size', 100, 50, 250), TOUCH_R('leading', 'Leading', 100, 30, 250), TOUCH_R('shape', 'Shape', 25)], cost: () => 10,
     run(E, n){ const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100, E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)));
       return [L.lead, L.edge, L.pane, L.pal]; } },
-  glass: { cat: 'Light & Colour', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue'],
+  glass: { cat: 'Light & Color', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue'],
     outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour'], outs: ['image'] },
     params: [TOUCH_R('relief', 'Lead Relief', 100, 25, 300)], cost: () => 16,
     run(E, n){ const { ww, wh, N, input, asField, ctx } = E;

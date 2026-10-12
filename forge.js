@@ -16,6 +16,7 @@
 import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, layoutAthanor } from './athanor.js';
 import { STEPS, STEP_BLENDS, STEP_CATEGORIES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
+import { TEXTURE_GROUPS } from './appOptions.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
@@ -23,7 +24,7 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 // ---- the parts: every node a step of steps.js (shared with the textures
 // rebuilt as chains) — ports, params and category as the editor shows them
 export const FORGE_BLENDS = STEP_BLENDS;
-export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, ins: s.ins, outs: s.outs, params: s.params,
+export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
   inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts }]));
 export const FORGE_CATEGORIES = STEP_CATEGORIES;
 /**
@@ -34,15 +35,39 @@ export const FORGE_CATEGORIES = STEP_CATEGORIES;
  * small diamond in the number's colour.
  */
 export const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA' };
-export const FORGE_TYPE_NAMES = { field: 'a grey map', image: 'a picture', colour: 'one colour', value: 'one number' };
-export const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Light & Colour': '#FFB070', 'Output': '#F3ECF8' };
-export const FORGE_CAT_GLYPHS = { 'Inputs': '☽', 'Noise': '✧', 'Marks': '✎', 'Textures': '❀', 'Shape': '◈', 'Light & Colour': '☼', 'Output': '🜉' };
+export const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number' };
+export const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
+/** What each category holds, in a line (the parts list and the Help). */
+export const FORGE_CAT_DOCS = {
+  'Inputs': 'Values from the page: its sliders, hues, accents, light dial and seed; and numbers you set or roll.',
+  'Noise': 'Parts that make a pattern from nothing: noise, cells, waves, shapes, smoke.',
+  'Marks': 'Parts that draw strokes and objects over what comes in: rain, hatching, flakes, cards.',
+  'Textures': 'Whole techniques taken from the app\'s textures: a weave, a table, a sky, any texture from the menu.',
+  'Shape': 'Parts that change a gray map: its levels, blur, folds, warps.',
+  'Combine': 'Parts that put two or more things together, or take a picture apart.',
+  'Light & Color': 'Parts that color a gray map, or light it as if it had height.',
+  'Output': 'The Surface: what reaches it is the texture.',
+};
+/**
+ * Each category's NAME as shown, and its GLYPH: a Runology Archetype whose
+ * meaning it shares (Symbology's metadata) — Dyna is will and imagination
+ * (what the page hands in), Chaos change and the wild (noise), Sound's neume a
+ * written mark (marks), Vitrum a stored technique and record (whole
+ * textures), Fire conversion and transfer (shaping), Quintessence light and
+ * shimmer (light and color), Contract a bond (combining), Creation what is
+ * made (the output).
+ */
+export const FORGE_CAT_GLYPHS = { 'Inputs': '🝆', 'Noise': '🝢', 'Marks': '𝀶', 'Textures': '⎐', 'Shape': '🜂', 'Combine': 'ᛯ', 'Light & Color': '🜚', 'Output': '🜉' };
+export const FORGE_CAT_NAMES = { 'Inputs': 'Page Inputs', 'Noise': 'Noise & Pattern', 'Marks': 'Drawn Marks', 'Textures': 'Whole Textures', 'Shape': 'Shape & Transform', 'Combine': 'Combine & Mask', 'Light & Color': 'Light & Color', 'Output': 'Output' };
+export const forgeCatName = cat => FORGE_CAT_NAMES[cat] || cat;
 const forgeCatClass = cat => 'forge-' + cat.toLowerCase().replace(/[^a-z]+/g, '-');
 
 // ---- a node's face: ROWS that line up with its ports (each row one port's
 // height), so a ⚙ port sits beside the slider it drives; params without a
 // port follow; a small preview of the node's own result at the foot ----
 const forgeEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// a port's name as shown (the names are the parts' own words; the app speaks American English)
+export const forgeWord = s => String(s).replace(/colour/g, 'color').replace(/Colour/g, 'Color').replace(/\bgrey\b/g, 'gray');
 export function forgeNodeHtml(type, lists = {}, data = {}){
   const N = FORGE_NODES[type]; if(!N) return '';
   const ctl = ([key, label, kind, def, x]) => {
@@ -50,7 +75,7 @@ export function forgeNodeHtml(type, lists = {}, data = {}){
     const v = data[key];
     if(typeof v === 'string' && v[0] === '@') return `<label class="forge-param forge-bound" data-p="${key}" title="Bound: @k1–@k6 a slider, @dial the dial; [lo,hi] its range"><span>${forgeEsc(label)}</span><input type="text" df-${key} value="${forgeEsc(v)}"></label>`;
     if(kind === 'range') return `<label class="forge-param" data-p="${key}"><span>${forgeEsc(label)}</span><input type="range" df-${key} min="${x.min}" max="${x.max}" value="${def}"><output>${def}</output></label>`;
-    if(kind === 'select') return `<label class="forge-param" data-p="${key}"><span>${forgeEsc(label)}</span><select df-${key}>${x.options.map(o => `<option value="${forgeEsc(o)}">${forgeEsc(o)}</option>`).join('')}</select></label>`;
+    if(kind === 'select') return `<label class="forge-param" data-p="${key}"><span>${forgeEsc(label)}</span><select df-${key}>${x.options.map(o => `<option value="${forgeEsc(o)}">${forgeEsc(forgeWord(o))}</option>`).join('')}</select></label>`;
     if(kind === 'texture' || kind === 'stitch'){ const opts = (kind === 'texture' ? lists.textures : lists.stitches) || [def];
       return `<label class="forge-param" data-p="${key}"><span>${forgeEsc(label)}</span><select df-${key}>${opts.map(o => `<option value="${forgeEsc(o)}">${forgeEsc(o)}</option>`).join('')}</select></label>`; }
     return `<label class="forge-param" data-p="${key}"><span>${forgeEsc(label)}</span><input type="text" df-${key} value="${forgeEsc(def)}"></label>`;
@@ -61,12 +86,44 @@ export function forgeNodeHtml(type, lists = {}, data = {}){
     + `<button type="button" class="forge-node-btn forge-pin" data-act="pin" title="Pin in place" aria-label="Pin in place">${lists.lock || '⌖'}</button>`
     + `<button type="button" class="forge-node-btn" data-act="menu" title="What it can do" aria-label="What it can do">⋯</button></div><div class="forge-rows">`;
   for(let i = 0; i < rows; i++){
-    const left = i < N.dataIns ? `<span class="fp-in" data-t="${N.inTypes[i]}">${forgeEsc(N.ins[i])}</span>` : i < N.ins.length ? ctl(byKey[N.paramPorts[i - N.dataIns]]) : '<span></span>';
-    const right = i < N.outs.length ? `<span class="fp-out" data-t="${N.outTypes[i]}">${forgeEsc(N.outs[i])}</span>` : '';
+    const left = i < N.dataIns ? `<span class="fp-in" data-t="${N.inTypes[i]}">${forgeEsc(forgeWord(N.ins[i]))}</span>` : i < N.ins.length ? ctl(byKey[N.paramPorts[i - N.dataIns]]) : '<span></span>';
+    const right = i < N.outs.length ? `<span class="fp-out" data-t="${N.outTypes[i]}">${forgeEsc(forgeWord(N.outs[i]))}</span>` : '';
     html += `<div class="forge-row">${left}${right}</div>`;
   }
   html += N.params.filter(p => !N.paramPorts.includes(p[0])).map(p => `<div class="forge-row extra">${ctl(p)}</div>`).join('');
   return html + `</div><canvas class="forge-node-preview" width="64" height="64" aria-hidden="true"></canvas>`;
+}
+/**
+ * THE HELP DOCUMENT (the Athanor's Help): how the editor works, in plain
+ * instructive language — a teacher explaining to a student. Its last section
+ * lists every part with what it does (the parts' own docs, steps.js).
+ */
+export function forgeHelpHtml(){
+  const sec = (id, title, body) => `<section id="fd-${id}"><h3>${title}</h3>${body}</section>`;
+  const types = Object.entries(FORGE_TYPE_COLOURS).map(([t]) => `<li><i class="fd-swatch" style="background:var(--t-${t})"></i><b>${forgeEsc(FORGE_TYPE_NAMES[t])}</b> — ${{
+    field: 'a gray picture: every point has a value from black (0) to white (1). Noise, masks and heights travel this way.',
+    image: 'a colored picture: every point has a red, a green and a blue.',
+    colour: 'one color for the whole page.',
+    value: 'one number from 0 to 1, like a slider\'s position.' }[t]}</li>`).join('');
+  const parts = FORGE_CATEGORIES.map(cat => `<h4><span class="forge-cat-glyph" style="color:${FORGE_CAT_COLOURS[cat]}">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</h4><p class="fd-catdoc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p><dl>`
+    + Object.values(FORGE_NODES).filter(n => n.cat === cat).sort((a, b) => a.label.localeCompare(b.label)).map(n => `<dt>${forgeEsc(n.label)}</dt><dd>${forgeEsc(n.doc)}</dd>`).join('') + '</dl>').join('');
+  const toc = [['what', 'What the Athanor is'], ['read', 'Reading a graph'], ['wires', 'Wires and what they carry'], ['convert', 'When the kinds do not match'],
+    ['settings', 'Settings and ⚙ ports'], ['page', 'The page\'s own controls'], ['seed', 'Seeds and chance'], ['surface', 'The Surface'],
+    ['hands', 'Working with a mouse, or on a phone'], ['keep', 'Starting, keeping and sharing'], ['limits', 'Limits'], ['parts', 'Every part']];
+  return `<div class="fd-head"><b>How the Athanor works</b><button type="button" class="fd-close" data-doc="close" aria-label="Close the help">✕ Close</button></div>`
+    + `<nav class="fd-toc">${toc.map(([id, t]) => `<a href="#fd-${id}">${t}</a>`).join('')}</nav>`
+    + sec('what', 'What the Athanor is', `<p>The Athanor is a node editor for surface textures. You build a texture from small <b>parts</b> (nodes) joined by <b>wires</b>. Each part does one job: it makes a pattern, changes one, colors it, or lights it. What reaches the <b>Surface</b> at the end becomes a texture you can use on the page (Surface Variant → 🜉 From the Athanor, or the <b>Use</b> button).</p><p>Most of the app's own textures are built this way. Open one from <b>Start from…</b> to see how it is made, then change it, take parts from it, or mix it with parts of another.</p>`)
+    + sec('read', 'Reading a graph', `<p>Read a graph from left to right. Parts on the left make or bring in something; each wire carries it to the next part on the right; the Surface is at the far right.</p><p>Each part shows a small picture of what it makes (turn these off with <b>Steps</b> in the corner if the editor feels slow). The large picture in the corner is what the whole graph makes; tap it to make it larger.</p><p>A part's <b>inputs</b> are the dots on its left edge and its <b>outputs</b> the dots on its right. Its <b>settings</b> are the sliders and menus inside it.</p>`)
+    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of four kinds of thing. The dot and the wire wear the kind's color:</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
+    + sec('convert', 'When the kinds do not match', `<p>You can wire any output into any input. When the kinds differ, the Athanor converts the value on the way:</p><ul><li>A <b>gray picture</b> into a color picture: the same gray in red, green and blue.</li><li>A <b>color picture</b> into a gray input: its brightness.</li><li>A <b>color</b> or a <b>number</b> into a picture input: a flat page of that color or that gray.</li><li>A <b>picture</b> into a number (a ⚙ port): its average brightness. A color: its brightness.</li><li>Anything that is not a color into a <b>color</b> input: the input uses its own default instead (a Hue input falls back to the page's hue).</li></ul><p>Nothing breaks when kinds are mixed. Wiring a color into a number, for example, gives a number from its brightness, which can be an interesting way to drive a setting.</p>`)
+    + sec('settings', 'Settings and ⚙ ports', `<p>Most sliders in a part have a <b>⚙ port</b> beside them. A number wired there moves the setting across its whole range: 0 is the slider's lowest, 1 its highest. Hold the setting (or right-click it) and choose <b>Set the range the wire sweeps…</b> to use only part of the range.</p><p>Holding a setting also lets you <b>bind</b> it to a page slider or the light dial without a wire, or <b>wire a Knob into it</b> in one step.</p>`)
+    + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
+    + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
+    + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
+    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part by its title bar to move it; drag anywhere else to move the view; use the wheel or − ⌖ + to zoom. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
+    + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Kept</b> keeps the graph on this browser's shelf by name, opens kept graphs, and saves the shelf to a file (or brings graphs in from one) to share them. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
+    + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
+    + sec('parts', 'Every part', parts);
 }
 /** A new node's data: each param at its default. */
 export function forgeNodeData(type){
@@ -224,7 +281,10 @@ export async function openForge(deps){
     ed.on('nodeMoved', () => { paintWires(); save(); });
     ed.on('nodeDataChanged', () => { save(); touched(); });
     ed.on('import', () => setTimeout(paintAll, 0));
-    const load = (g, keepDirty) => { const was = F.dirty; F.quiet = true; ed.clear(); ed.import(faces(g)); F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; };
+    const load = (g, keepDirty) => { const was = F.dirty; F.quiet = true; ed.clear(); ed.import(faces(g));
+      // (a graph from anywhere, without a Surface: it gets one)
+      if(!Object.values(rawNodes()).some(n => n.name === 'surface')) add('surface', 900, 120);
+      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; };
     F.load = load;
     // a node's face drawn again from its data (a param bound or unbound changes its control)
     const reface = id => {
@@ -256,8 +316,17 @@ export async function openForge(deps){
     // ---- the palette: categories that fold; tap to add in the middle, or drag onto the canvas (with a mouse) ----
     const finePointer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
     if(palette){
-      palette.innerHTML = FORGE_CATEGORIES.map(cat => `<details class="forge-cat" open style="--cat:${FORGE_CAT_COLOURS[cat]}"><summary><span aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(cat)}</summary>` +
-        Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}">${forgeEsc(n.label)}</button>`).join('') + `</details>`).join('');
+      // THE PARTS LIST: a search, then each category (its glyph, its name, what it holds) and
+      // its parts, each with what it does in a line. (No Output: every graph has its Surface.)
+      palette.innerHTML = `<input type="search" class="forge-find" id="forgeFind" placeholder="Find a part…" aria-label="Find a part" autocomplete="off">`
+        + FORGE_CATEGORIES.filter(cat => cat !== 'Output').map(cat => `<details class="forge-cat" open style="--cat:${FORGE_CAT_COLOURS[cat]}"><summary><span class="forge-cat-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</summary>`
+        + `<p class="forge-cat-doc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p>`
+        + Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}" title="${forgeEsc(n.doc)}"><span class="fpart-name">${forgeEsc(n.label)}</span><span class="fpart-doc">${forgeEsc(n.doc)}</span></button>`).join('') + `</details>`).join('');
+      const find = palette.querySelector('#forgeFind');
+      if(find) find.addEventListener('input', () => { const q = find.value.trim().toLowerCase();
+        palette.querySelectorAll('.forge-cat').forEach(c => { let any = 0;
+          c.querySelectorAll('.forge-part').forEach(b => { const hit = !q || b.textContent.toLowerCase().includes(q); b.hidden = !hit; if(hit) any++; });
+          c.hidden = !any; if(q && any) c.open = true; }); });
       palette.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.forge-part'); if(b){ add(b.dataset.type); setParts(false); } });
       palette.addEventListener('dragstart', e => { const b = e.target.closest && e.target.closest('.forge-part'); if(b && e.dataTransfer) e.dataTransfer.setData('text/forge', b.dataset.type); });
     }
@@ -290,7 +359,10 @@ export async function openForge(deps){
       const wired = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].some(p => (p.connections || []).length);
       const changed = N && N.params.some(p => n.data && n.data[p[0]] !== undefined && String(n.data[p[0]]) !== String(p[3]));
       return wired || changed; };
+    const isSurface = id => ((nodeOf(id) || {}).name === 'surface');
     const removeAsked = async id => {
+      // every graph keeps its Surface: it is where the texture comes out (Ruby)
+      if(isSurface(id)){ if(deps.warn) deps.warn(['the Surface stays: every graph ends in one. Cut its wires to start over']); sound('nothingToUndo'); return; }
       if(F.dirty && carries(id)){
         const label = labelOf(id);
         if(!await ask({ title: `Remove the ${label}?`, body: 'Its settings and its wires go with it.', confirmLabel: 'Remove', danger: true })) return;
@@ -371,7 +443,7 @@ export async function openForge(deps){
     // ---- WIRING BY MENU: choose one end, then the other (no dragging) ----
     let pending = null;                                        // { from: 'out' | 'in', id, port: 'output_k' | 'input_k' }
     const pendBar = (() => { let el = $('forgePending'); if(!el && body){ el = document.createElement('div'); el.id = 'forgePending'; el.className = 'forge-pending'; el.hidden = true; el.setAttribute('role', 'status'); body.appendChild(el); } return el; })();
-    const portInfo = (id, side, j) => { const N = N_(id); return N ? { name: side === 'out' ? N.outs[j] : N.ins[j], t: (side === 'out' ? N.outTypes[j] : N.inTypes[j]) || 'field' } : { name: '?', t: 'field' }; };
+    const portInfo = (id, side, j) => { const N = N_(id); return N ? { name: forgeWord(side === 'out' ? N.outs[j] : N.ins[j]), t: (side === 'out' ? N.outTypes[j] : N.inTypes[j]) || 'field' } : { name: '?', t: 'field' }; };
     const showPending = () => { if(!pendBar) return;
       if(!pending){ pendBar.hidden = true; pendBar.innerHTML = ''; return; }
       const j = +pending.port.replace(/\D+/g, '') - 1, P = portInfo(pending.id, pending.from, j);
@@ -398,7 +470,7 @@ export async function openForge(deps){
       const side = pending.from === 'out' ? 'in' : 'out', list = (side === 'in' ? N.ins : N.outs).map((name, j) => {
         const t = (side === 'in' ? N.inTypes[j] : N.outTypes[j]) || 'field', key = (side === 'in' ? 'input_' : 'output_') + (j + 1);
         const wired = side === 'in' && ((((n.inputs || {})[key] || {}).connections || []).length > 0);
-        return { j, t, key, same: t === from.t, glyph: side === 'in' ? (j >= N.dataIns ? '⚙' : '▸') : '◂', label: String(name).replace(/^⚙\s*/, ''), colour: `var(--t-${t})`,
+        return { j, t, key, same: t === from.t, glyph: side === 'in' ? (j >= N.dataIns ? '⚙' : '▸') : '◂', label: forgeWord(String(name).replace(/^⚙\s*/, '')), colour: `var(--t-${t})`,
           hint: (FORGE_TYPE_NAMES[t] || '') + (t === from.t ? '' : ' (converted)') + (wired ? ' — replaces its wire' : ''),
           act: () => side === 'in' ? connect(pending.id, pending.port, String(id), key) : connect(String(id), key, pending.id, pending.port) }; });
       if(!list.length) return { title: labelOf(id), hint: side === 'in' ? 'It takes nothing in.' : 'It gives nothing out.', items: [{ glyph: '✕', label: 'Stop wiring', act: stopWire }] };
@@ -410,7 +482,7 @@ export async function openForge(deps){
       const go = j => startWire(side, id, (side === 'out' ? 'output_' : 'input_') + (j + 1));
       if(names.length === 1) return { act: () => go(0) };
       return { sub: () => ({ title: side === 'out' ? `Wire from ${labelOf(id)}: which?` : `Wire into ${labelOf(id)}: which?`, items: names.map((name, j) => { const t = (side === 'out' ? N.outTypes[j] : N.inTypes[j]) || 'field';
-        return { glyph: side === 'out' ? '◂' : (j >= N.dataIns ? '⚙' : '▸'), label: String(name).replace(/^⚙\s*/, ''), hint: FORGE_TYPE_NAMES[t], colour: `var(--t-${t})`, act: () => go(j) }; }) }) }; };
+        return { glyph: side === 'out' ? '◂' : (j >= N.dataIns ? '⚙' : '▸'), label: forgeWord(String(name).replace(/^⚙\s*/, '')), hint: FORGE_TYPE_NAMES[t], colour: `var(--t-${t})`, act: () => go(j) }; }) }) }; };
     // while wiring, a TAP on another part chooses it (a pointer that goes down and up in place:
     // a phone's tap never reaches the grid as a click; a hold is answered by the menu instead)
     let tapAt = null;
@@ -429,20 +501,21 @@ export async function openForge(deps){
     const nodeMenu = id => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
       const from = N.outs.length ? wireStart(id, 'out') : null, into = N.ins.length ? wireStart(id, 'in') : null;
-      return { title: labelOf(id), hint: N.cat, items: [
+      return { title: labelOf(id), hint: N.doc || forgeCatName(N.cat), items: [
         ...(from ? [{ glyph: '⟿', label: 'Wire from it…', hint: N.outs.length === 1 ? N.outs[0] : 'choose which', ...from }] : []),
         ...(into ? [{ glyph: '⟾', label: 'Wire into it…', hint: 'choose which', ...into }] : []),
         ...(from || into ? [{ sep: true }] : []),
         { glyph: '⌖', label: isPinned(id) ? 'Let it move again' : 'Pin it in place', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
-        { glyph: '⧉', label: 'Make a copy', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
+        { glyph: '⧉', label: 'Make a copy', disabled: n.name === 'surface', hint: n.name === 'surface' ? 'a graph has one Surface' : '', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
         { glyph: '↺', label: 'Every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
             for(const k of Object.keys(n.data || {})) if(k[0] !== '_') patch[k] = undefined; Object.assign(patch, d); setData(id, patch); } },
         { glyph: '✂', label: wires ? `Cut its ${wires} wire${wires === 1 ? '' : 's'}` : 'No wires to cut', disabled: !wires, act: () => { ed.removeConnectionNodeId('node-' + id); paintNode(id); save(); touched(); } },
         { sep: true },
-        { glyph: '✕', label: 'Remove it', danger: true, act: () => removeAsked(id) }] }; };
+        n.name === 'surface' ? { glyph: '✕', label: 'The Surface stays', hint: 'every graph ends in one', disabled: true }
+          : { glyph: '✕', label: 'Remove it', danger: true, act: () => removeAsked(id) }] }; };
     const portMenu = (id, side, j) => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const key = (side === 'in' ? 'input_' : 'output_') + (j + 1), p = (side === 'in' ? n.inputs : n.outputs)[key] || { connections: [] }, cnt = (p.connections || []).length;
-      const name = side === 'in' ? N.ins[j] : N.outs[j], t = side === 'in' ? N.inTypes[j] : N.outTypes[j];
+      const name = forgeWord(side === 'in' ? N.ins[j] : N.outs[j]), t = side === 'in' ? N.inTypes[j] : N.outTypes[j];
       return { title: `${labelOf(id)}: ${name}`, hint: `${side === 'in' ? 'Takes' : 'Gives'} ${FORGE_TYPE_NAMES[t] || ''}`, items: [
         side === 'out' ? { glyph: '⟿', label: 'Wire this to…', hint: 'then tap the part it goes into', act: () => startWire('out', id, key) }
           : { glyph: '⟾', label: cnt ? 'Wire something else into this…' : 'Wire something into this…', hint: 'then tap the part it comes from', act: () => startWire('in', id, key) },
@@ -499,8 +572,8 @@ export async function openForge(deps){
       if(nid != null) ed.addConnection(nid, id, 'output_1', 'input_' + port);
     };
     const canvasMenu = (cx, cy) => { const g = toGrid(cx, cy); return { title: 'The grid', items: [
-      { glyph: '＋', label: 'Add a part here', sub: () => ({ title: 'Add a part here', items: FORGE_CATEGORIES.map(cat => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: cat, colour: FORGE_CAT_COLOURS[cat],
-        sub: () => ({ title: cat, items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: FORGE_CAT_COLOURS[cat], act: () => add(type, g.x, g.y) })) }) })) }) },
+      { glyph: '＋', label: 'Add a part here', sub: () => ({ title: 'Add a part here', items: FORGE_CATEGORIES.map(cat => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: forgeCatName(cat), colour: FORGE_CAT_COLOURS[cat],
+        sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: FORGE_CAT_COLOURS[cat], act: () => add(type, g.x, g.y) })) }) })) }) },
       { glyph: '⌖', label: 'Everything in view', act: () => fitView() },
       { glyph: '▦', label: 'Tidy into columns', hint: 'pinned nodes stay put', act: () => tidy() }] }; };
     // ---- what is under a point: the things there, nearest first ----
@@ -593,7 +666,7 @@ export async function openForge(deps){
     const count = () => Object.keys(nodesOf()).length;
     if($('forgeClear')) $('forgeClear').addEventListener('click', async () => {
       if(count() && F.dirty && !await ask({ title: 'Clear the whole graph?', body: 'Every node and wire goes. (Revert brings back the graph as it was when the Athanor opened.)', confirmLabel: 'Clear', danger: true })) return;
-      F.quiet = true; ed.clear(); F.quiet = false; F.version = ATHANOR_VERSION; save(); F.dirty = false; sound('nodeRemove');
+      F.quiet = true; ed.clear(); add('surface', 420, 90); F.quiet = false; F.version = ATHANOR_VERSION; save(); F.dirty = false; sound('nodeRemove');
     });
     if($('forgeRevert')) $('forgeRevert').addEventListener('click', async () => {
       if(!F.opened) return;
@@ -608,16 +681,18 @@ export async function openForge(deps){
     // WHAT A GRAPH TEACHES: a note over the grid when a starter or a texture is opened
     const note = (() => { let el = $('forgeNote'); if(!el && body){ el = document.createElement('div'); el.id = 'forgeNote'; el.className = 'forge-note'; el.hidden = true; body.appendChild(el); } return el; })();
     const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; return; }
-      note.innerHTML = `<b>${forgeEsc(label)}</b><p>${forgeEsc(teach)}</p><p class="forge-note-how">Read it left to right: each part shows what it makes; every wire carries it on. Hold a part to see what it can do.</p><button type="button" class="forge-note-x" aria-label="Close">✕</button>`;
+      note.innerHTML = `<b>${forgeEsc(label)}</b><p>${forgeEsc(teach)}</p><p class="forge-note-how">Read it from left to right: each part shows what it makes, and each wire carries that on to the next part. Hold a part (or right-click it) to see what it can do. The Help button explains everything.</p><button type="button" class="forge-note-x" aria-label="Close">✕</button>`;
       note.hidden = false; };
     F.showNote = showNote;
     if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) note.hidden = true; });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
     const st = $('forgeStarter');
     if(st){
+      // the starters, then the app's own textures under the same group headings as the Surface menu
+      const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
       st.innerHTML = '<option value="">Start from…</option>'
-        + '<optgroup label="Starters">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
-        + '<optgroup label="PoetryPress textures">' + Object.entries(TEXTURE_CHAINS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>';
+        + '<optgroup label="🝆 Starters to Take Apart">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
+        + chained.map(([g, ts]) => `<optgroup label="${forgeEsc(g.glyph + ' ' + g.name)}">` + ts.map(k => `<option value="${k}">${forgeEsc(TEXTURE_CHAINS[k].label)}</option>`).join('') + '</optgroup>').join('');
       st.addEventListener('change', async () => {
         const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
         const S = ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]; await openGraph(g, S.label, S.teach);
@@ -689,8 +764,17 @@ export async function openForge(deps){
     // the preview: tap for large, tap again for small
     const pv = $('forgePreview'); if(pv) pv.addEventListener('click', () => { const d = $('forgeDock'); if(d) d.classList.toggle('big'); });
     // the help: what each colour carries, and the few things worth knowing
-    const hb = $('forgeHelpBtn'), hp = $('forgeHelp');
-    if(hb && hp) hb.addEventListener('click', () => { hp.hidden = !hp.hidden; hb.setAttribute('aria-expanded', hp.hidden ? 'false' : 'true'); });
+    // THE HELP: an organized document over the grid (never over the parts list), from the bar's
+    // Help or the dock's ?; its sections are forgeHelpHtml's, its parts glossary the parts' own docs
+    const doc = $('forgeDoc');
+    const showDoc = on => { if(!doc) return; if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; } doc.hidden = !on;
+      ['forgeHelpBtn', 'forgeDocBtn'].forEach(k => { const b = $(k); if(b) b.setAttribute('aria-expanded', on ? 'true' : 'false'); }); if(on) doc.scrollTop = 0; };
+    F.showDoc = showDoc;
+    ['forgeHelpBtn', 'forgeDocBtn'].forEach(k => { const b = $(k); if(b) b.addEventListener('click', () => showDoc(!!(doc && doc.hidden))); });
+    if(doc) doc.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-doc]'); if(t && t.dataset.doc === 'close') showDoc(false);
+      const j = e.target.closest && e.target.closest('a[href^="#fd-"]'); if(j){ e.preventDefault(); const el = doc.querySelector(j.getAttribute('href')); if(el) el.scrollIntoView({ block: 'start' }); } });
+    // A NEW SEED, from inside the Athanor: every part's own randomness comes from the page's seed
+    if($('forgeSeedBtn') && deps.reseed) $('forgeSeedBtn').addEventListener('click', () => { deps.reseed(); previews(); });
     const lg = $('forgeLegend');
     if(lg) lg.innerHTML = Object.entries(FORGE_TYPE_COLOURS).map(([t]) => `<span><i style="background:var(--t-${t})"></i>${forgeEsc(FORGE_TYPE_NAMES[t])}</span>`).join('')
       + `<span><i class="pp" style="background:var(--t-value)"></i>⚙ a setting that takes a wire</span>`;

@@ -74,7 +74,7 @@ check('…a hue set by a reading is the person\'s (it stops following the accent
   /setColorField\('textureTint' \+ \(i \+ 1\) \+ 'Hex', hex\); state\.ui\.tintFollows\[i\] = false;/.test(ev) && /applyElement[\s\S]{0,2000}commitSoon\(\)/.test(ev));
 check('the default is marked, the one applied is lit and named; a new texture clears it',
   /b\.classList\.toggle\('is-default', !!v\.isDefault\)/.test(ev) && /state\.ui\.element = null; paintElements\(\);/.test(ev));
-check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', html.includes('<optgroup label="🜉 Yours" id="athanorGroup"') && html.includes('forge-glyph" aria-hidden="true">🜉<'));
+check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', html.includes('<optgroup label="🜉 Your Surfaces" id="athanorGroup"') && html.includes('forge-glyph" aria-hidden="true">🜉<'));
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

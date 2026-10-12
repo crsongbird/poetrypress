@@ -12,9 +12,16 @@ const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const C = await import('../cartomancy.js'), S = await import('../steps.js'), A = await import('../athanor.js'), T = await import('../textureGenerators.js');
 
-check('Cartomancy deals a game by the seed: a reading, tricks, patience, a wager or pairs — players, suits and stakes its own',
-  Object.keys(C.CARD_GAMES).join(',') === 'reading,trick,patience,wager,pairs' && /const all = \[0, 1, 2, 3\]\.sort\(\(\) => Math\.random\(\) - 0\.5\), suits = all\.slice\(0, 2 \+ Math\.floor\(Math\.random\(\)\*3\)\)/.test(src('cartomancy.js'))
+check('Cartomancy deals a game by the seed (eleven, none quite one you know) — players, suits and stakes its own',
+  Object.keys(C.CARD_GAMES).join(',') === 'reading,trick,patience,wager,pairs,crossroads,duel,ring,stair,market,abandoned' && /const all = \[0, 1, 2, 3\]\.sort\(\(\) => Math\.random\(\) - 0\.5\), suits = all\.slice\(0, 2 \+ Math\.floor\(Math\.random\(\)\*3\)\)/.test(src('cartomancy.js'))
   && /const money = Math\.random\(\) < opts\.stakes;/.test(src('cartomancy.js')));
+{ const TT = await import('../cartomancyTable.js');
+  check('what else is on the table (cartomancyTable.js): sixteen kinds, the clutter kept toward the edges and off the cards; damage cuts a card\'s corner; games not played for money use counters',
+    Object.keys(TT.TABLE_OBJECTS).length >= 16 && ['candle', 'cup', 'ball', 'watch', 'letter', 'feather', 'score', 'iou'].every(k => TT.TABLE_OBJECTS[k])
+    && /Math\.min\(0\.82, Math\.hypot\(\(x - w\/2\)\/\(w\/2\)/.test(src('cartomancyTable.js'))
+    && TT.crtCut({ kind: 'tear', corner: 2, size: 0.2, b: 0.5 }).corner === 2 && TT.crtCut({ kind: 'ring' }) === null
+    && /else tokens\(mx, my, 3 \+ Math\.floor\(R\(\)\*8\), cw\*0\.5\);/.test(src('cartomancy.js'))
+    && (() => { const items = [], all = TT.crtTableObjects(items, 1000, 1000, 110, 1); return all.every(o => o.kind === 'object' && o.x >= 0 && o.x <= 1000); })()); }
 check('…on a table of its own material (felt, velvet, wood, marble, slate, linen) under a lamp, its cards of a chosen stock and edge, its coin an invented coinage',
   Object.keys(C.TABLE_MATERIALS).length >= 8 && Object.keys(C.CARD_STOCKS).length >= 4 && C.COINAGES.length >= 6 && C.COINAGES.every(c => c.name && c.mark && C.COIN_METALS[c.metal]));
 check('…its four suits coloured by the page\'s accents and the texture\'s two hues; cards and coins cast shadows away from the dial',

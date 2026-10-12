@@ -282,7 +282,7 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
     'Poppins','Nunito','Roboto','Work Sans','Josefin Sans','Unica One'];
   check('the first 22 fonts keep their positions (PML /f:N selects by position)',
     FROZEN.every((f, i) => FONTS[i].family === f));
-  check('58 fonts, each labelled "Style · Family"', FONTS.length === 58 && FONTS.every(f => / · /.test(f.label)));
+  check('61 fonts, each labelled "Style · Family" (the last three Alegreya, the app\'s own faces)', FONTS.length === 61 && FONTS.every(f => / · /.test(f.label)));
   const { FONT_GROUPS } = await import('../appOptions.js');
   const grouped = FONT_GROUPS.flatMap(g => g[1]);
   check('every font sits in exactly one picker group (Serif … Pixel & Game), and every group name is real',
@@ -893,9 +893,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
       /drawer = document\.createElement\('aside'\); drawer\.className = 'eso-drawer';/.test(ev2)
       && /p\.dataset\.tab === name \|\| \(desk && name === 'more' && p\.dataset\.tab === before\)/.test(ev2)
       && /body\.more-open:not\(\.is-mobile\) \.controls\{ opacity:\.42;/.test(css2) && /"controls stage drawer"/.test(css2));
-    check('desktop: the left sidebar resizes by its edge (remembered in this browser, double-click resets); the image fits between',
-      /grip\.className = 'side-resize'/.test(ev2) && /localStorage\.setItem\(KEY/.test(ev2) && /grid-template-columns:var\(--side-w, 460px\) minmax\(0,1fr\);/.test(css2)
-      && /max-width:calc\(100vw - var\(--side-w, 460px\) - 80px\)/.test(css2) && /^\.side-resize\{ display:none; \}/m.test(css2));
+    check('desktop: the left sidebar and Esoterica\'s drawer resize by their edges (a faint line with a grip; remembered in this browser, double-click resets); the image fits between',
+      /grip\.className = 'side-resize'/.test(ev2) && /grip\.className = 'drawer-resize side-resize-like'/.test(ev2) && /localStorage\.setItem\(KEY/.test(ev2) && /grid-template-columns:var\(--side-w, 460px\) minmax\(0,1fr\);/.test(css2)
+      && /max-width:calc\(100vw - var\(--side-w, 460px\) - 56px\)/.test(css2) && /var\(--drawer-w, 440px\)/.test(css2) && /^\.side-resize\{ display:none; \}/m.test(css2));
   }
   {
     const sh = src('texSharpness.js'), ch3 = src('texChaos.js'), T2 = await import('../textureGenerators.js');
@@ -905,9 +905,10 @@ check('the inset box is painted on its own layer, then blended on as one image (
       T2.paramsFor('metalleaf').map(d => d.label).join('|') === 'Leaf Size|Coverage|Shape|Sheen|Glitter' && T2.paramsFor('metalleaf').slice(2).every(d => d.def === 0)
       && /if\(shapeV > 0 && Math\.random\(\) < shapeV\)\{/.test(src('stepsTouch.js')) && /if\(sheen > 0\)\{ const ta = Math\.random\(\)/.test(src('stepsTouch.js')) && /const flakes = Math\.max\(10, Math\.round\(\(120 \+ Math\.random\(\)\*90\)\*amt\)\);/.test(src('stepsTouch.js'))
       && /data-str="option\.metal_leaf">Scattered Polygons</.test(src('index.html')));
-    check('Cartomancy is a game in progress (cartomancy.js): elemental suits, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune); Cards in Play, Scatter, Stakes',
-      T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Cards in Play|Scatter|Stakes'
-      && /export const CRT_RARE = \[\[\['✦','Saturn','saturn'\],3\],\[\['✦','Enceladus','enceladus'\],2\],\[\['✦','The Kitsune','kitsune'\],1\]\];/.test(src('cartomancy.js')) && /pickWeighted\(CRT_RARE\)/.test(src('cartomancy.js')));
+    check('Cartomancy is a game in progress (cartomancy.js): elemental suits, a Vellum arcana, rare easter eggs (Saturn, Enceladus, the Kitsune, the Robin, the Moth, the Hag Stone, the Unwritten); Cards in Play, Scatter, Stakes, Clutter, Wear',
+      T2.TEXTURE_CAPS.cards.light === true && T2.paramsFor('cards').map(d => d.label).join('|') === 'Cards in Play|Scatter|Stakes|Clutter|Wear'
+      && /export const CRT_RARE = \[\[\['✦','Saturn','saturn'\],3\],\[\['✦','Enceladus','enceladus'\],2\],\[\['✦','The Kitsune','kitsune'\],1\],/.test(src('cartomancy.js'))
+      && ['robin', 'moth', 'hagstone', 'blank'].every(k => src('cartomancy.js').includes(`'${k}'],`)) && /pickWeighted\(CRT_RARE\)/.test(src('cartomancy.js')));
     check('unused hues are HIDDEN, not greyed; the report lays hues out in rows (≤3 one line; 4 → 2×2; 5 → 3+2; 6 → 3+3)',
       /classList\.toggle\('tool-hidden', !caps\.material\)/.test(src('appEvents.js')) && /\.field\.tool-hidden/.test(src('poetrypress.css'))
       && resolvePmlVariables('§SurfParamsB', { hues: [1,2,3,4,5].map(i => ({ label: 'H'+i, hex: '#00000'+i })) }).split('\n').length === 2

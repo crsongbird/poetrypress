@@ -41,7 +41,7 @@ export const TEXTURE_ELEMENTS = {
   // ---- ♡ Whimsy ----
   clouds: { def: 'wind', wind: { name: 'Sleep Haze' },
     // the haze lit from below, coals under smoke
-    fire:  { name: 'Smoulder',    k: [70, 140, 75],  t: ['#FF9A4D', '#2A0606'], blend: 'screen',    light: [150, 90] },
+    fire:  { name: 'Smolder',    k: [70, 140, 75],  t: ['#FF9A4D', '#2A0606'], blend: 'screen',    light: [150, 90] },
     // sea-fret: lifted high, barely dragged, no dust
     water: { name: 'Sea Fret',    k: [160, 20, 0],   t: ['#CFE8F2', '#0A1C2E'], blend: 'screen',    light: [0, 30] },
     earth: { name: 'Dust Storm',  k: [110, 190, 100], t: ['#E8C27A', '#3B2A14'], blend: 'overlay',  light: [250, 100] } },
@@ -156,9 +156,9 @@ export const TEXTURE_ELEMENTS = {
     water: { name: 'Ice Mosaic',    k: [200, 40],  t: ['#F0FAFF', '#3A7EA8'] },
     earth: { name: 'Pyrite',        k: [120, 220], t: ['#FFF2B0', '#8C7A2E'] } },
   cards: { def: 'wind', wind: { name: 'Cartomancy' },
-    fire:  { name: 'Burning Deck', k: [160, 60, 100], t: ['#D9822B', '#8E1B1B'], blend: 'source-over' },
-    water: { name: 'Tide-Spread',  k: [60, 8, 0],    t: ['#2E8A9A', '#2E4FA8'] },
-    earth: { name: 'Old Tarot',    k: [120, 25, 30], t: ['#7A5A2E', '#4A6A2E'], blend: 'multiply' } },
+    fire:  { name: 'Burning Deck', k: [160, 60, 100, 75, 70], t: ['#D9822B', '#8E1B1B'], blend: 'source-over' },
+    water: { name: 'Tide-Spread',  k: [60, 8, 0, 30, 5],    t: ['#2E8A9A', '#2E4FA8'] },
+    earth: { name: 'Old Tarot',    k: [120, 25, 30, 60, 75], t: ['#7A5A2E', '#4A6A2E'], blend: 'multiply' } },
   blackhole: { def: 'water', water: { name: 'Black Hole' },
     fire:  { name: 'Quasar',        k: [180, 260, 90], t: ['#FFD9A0', '#2A0602'], blend: 'screen' },
     wind:  { name: 'Event Horizon', k: [60, 30, 100],  t: ['#DFFFF0', '#03140C'], blend: 'screen' },
@@ -233,7 +233,7 @@ export const TEXTURE_ELEMENTS = {
     fire:  { name: 'Lava Field',  k: [80, 160, 70], t: ['#FFC07A', '#5A0E04'], blend: 'hard-light' },
     water: { name: 'Bathymetry',  k: [160, 120, 30], t: ['#CDEBF5', '#0A2A4A'] },
     wind:  { name: 'Isobars',     k: [260, 140, 0], t: ['#F0F8F0', '#2A4A3A'] } },
-  watercolour: { def: 'water', water: { name: 'Watercolour Wash' },
+  watercolour: { def: 'water', water: { name: 'Watercolor Wash' },
     fire:  { name: 'Sunset Wash',  k: [160, 160, 70], t: ['#E8502A', '#F2B63D'], light: [180, 80] },
     wind:  { name: 'Sage Sketch',  k: [70, 70, 15],   t: ['#7A9A6A', '#B8C8A0'] },
     earth: { name: 'Umber Study',  k: [120, 220, 30], t: ['#8A5A2A', '#4A3A2A'] } },

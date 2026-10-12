@@ -1052,7 +1052,7 @@ function renderInto(canvas){
     // the fifth hue (glow, material or base), where the texture has one
     const tint5 = caps.hue5 ? ($('textureTint5Hex') || {}).value || null : null;
     const tint6 = caps.diffuse ? ($('textureTint6Hex') || {}).value || null : null;
-    // the page's own colours, for Rain on Glass's outdoors
+    // the page's own colors, for Rain on Glass's outdoors
     const env = caps.pageEnv ? ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount) : [bg1]).join(',') : undefined;
     const seed = parseInt($('textureSeedValue').value, 10) || 0;
 

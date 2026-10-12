@@ -118,7 +118,7 @@ export const CHAOS_STEPS = {
         return Math.max(0, Math.min(1, 0.5 + (sampleNoiseGrid(strk, 48, 48, al*3, ac*40) - 0.5)*ks + (sampleNoiseGrid(runs, 64, 16, u*63, v*4) - 0.5)*kr + (sampleNoiseGrid(pool, 7, 7, u*6, v*6) - 0.5)*kp)); })];
     } },
 
-  glaze: { cat: 'Light & Colour', label: 'Glaze', ins: ['height', 'glaze', 'grime', 'fine', 'thickness', 'glaze hue', 'base hue'], outs: ['image'],
+  glaze: { cat: 'Light & Color', label: 'Glaze', ins: ['height', 'glaze', 'grime', 'fine', 'thickness', 'glaze hue', 'base hue'], outs: ['image'],
     params: [CHAOS_R('scale', 'Fracture Scale', 100, 60, 400), CHAOS_R('gloss', 'Gloss', 85), CHAOS_R('grime', 'Grime', 40)], cost: () => 16,
     // Coloured as a game engine would: GLAZE and BASE (the clay body, bare in
     // chips, peels and crack bottoms) are the albedos; the material hues (the

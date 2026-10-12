@@ -69,7 +69,8 @@ from the source files (unbuilt) — everything must work both ways.
 | `textureService.js` · `textureWorker.js` | textures made off the main thread |
 | `textureElements.js` | each texture's four readings (🜂 🜄 🜁 🜃), one its default |
 | `steps.js` · `stepsTouch.js` · `stepsChaos.js` · `stepsWhimsy.js` | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains (Touch: weave, cloth, panes, glass, flakes · Chaos: crazing, brushwork, glaze · Whimsy: smoke, light shaft, dust motes, painted sky, painted ridges, watercolour wash) |
-| `cartomancy.js` | Cartomancy: a card game in progress, and its parts — table, card, coin, the deal by a game's rules — also the Athanor's Table, Deal and Coins steps (CARD_STEPS) |
+| `cartomancyTable.js` | what else is on Cartomancy's table (TABLE_OBJECTS: candle, cup, glass, crystal ball… each with its layer, weight, size, variety and painter), where clutter goes (crtTableObjects), counters (crtToken) and card damage (crtDamageFor, crtCardPath, crtDamage). Bundled BEFORE cartomancy.js and imports nothing from it: cartomancy.js hands it its drawing kit (CRT_KIT) when it loads |
+| `cartomancy.js` | Cartomancy: a card game in progress, and its parts — table, card, coin, the deal by a game's rules — also the Athanor's Table, Deal, Table Objects and Coins steps (CARD_STEPS) |
 | `chains.js` | textures rebuilt as chains of steps (Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape); each an Athanor template with its TEACH |
 | `athanor.js` · `forge.js` | the Athanor: graph walker, cache and budget (in the worker) · node editor UI (Drawflow) |
 | `boxFx.js` | the inset box's glass and GPU blends |
@@ -197,6 +198,17 @@ chain: its parts PAINT (step.paint: a canvas at full size, as well as RUN on
 the grid), and the texture is made by a CANVAS PASS (chain.canvas →
 evalAthanor with ctx.canvas). Every chain and starter carries TEACH: a few
 lines the Athanor shows when it is opened.
+
+EVERY PART HAS A DOC (steps.js STEP_DOCS): one plain, instructive sentence —
+what goes in, what comes out, what to try. The parts list, a part's menu and
+the Athanor's Help glossary show it; a test fails for a part without one.
+Instructive text (docs, teaching notes, the Help) is a teacher explaining to a
+student; flavor text (names, the lore) may riddle — never the instructions.
+Categories (STEP_CATEGORIES; names and Runology glyphs: forge.js
+FORGE_CAT_NAMES / FORGE_CAT_GLYPHS) keep at least three parts each; Output
+(the Surface) is not in the parts list. THE SURFACE STAYS: exactly one per
+graph, never removed or copied (Clear leaves one; a graph without one gets
+one).
 
 THE STEPS' KIT (texCore.js): kitCanvas, kitPicture (whatever came in, as a
 canvas to draw on), kitField (as a grey field on a grid), kitFieldCanvas,
@@ -505,8 +517,8 @@ before/after measurements AND an identical-render comparison.
   fitView (the grid scales about its middle: see the maths there). KEPT
   surfaces: localStorage uv.forge.kept.v1 (forgeShelf), each validated on
   opening and on import. Drawflow's own ✕ is hidden; the menus replace it.
-- CARTOMANCY (cartomancy.js): the seed picks a GAME (reading, trick, patience,
-  wager, pairs), its players, the suits in the deck (2–4), the TABLE material,
+- CARTOMANCY (cartomancy.js): the seed picks a GAME (eleven: CARD_GAMES — each
+  a layout of its own, never exactly a real game's), its players, the suits in the deck (2–4), the TABLE material,
   the card STOCK and edge, and the COINAGE; STAKES is how likely and how much
   money lies on it. crtDeal returns what lies where (a list), then each thing
   is drawn with its own shadow (canvas shadows: their offset is never turned
@@ -516,6 +528,16 @@ before/after measurements AND an identical-render comparison.
   Accent nodes, two Hues → Table → Deal → Surface; selects left at 'seed' are
   the seed's to choose: crtChooseTable / crtChooseDeal), made on the page (web
   fonts) by a canvas pass. No duplicate starter: "Start from… → Cartomancy".
+  A deck's BACK is crtBack() (one house's family: pattern, medallion, rule,
+  margin). WEAR (knob 5) is how often a card has a damage (crtDamageFor; a
+  tear or dog-ear changes the card's OUTLINE, crtCardPath, used for its fill,
+  clip and shadow — a shadow's path is the union of the swept outlines, so
+  the outline is added with begin=false). CLUTTER (knob 4): crtTableObjects
+  places TABLE_OBJECTS best-of-18, toward the edges, off the cards; a game
+  lays its own props (a score sheet, a ring's centerpiece) with crtObject.
+  crtPaintDeal draws in layers: under (stains) → flat → the game → tall.
+  Adding an object: an entry in TABLE_OBJECTS with a painter (ctx, it, L) that
+  draws from above, lit by L (crtLight), with tobKit.shadow for its shadow.
 - WIRING BY MENU (forge.js): hold a part or a port → "Wire from it…" / "Wire
   into it…" → a bar (#forgePending) says what is being wired → tap or hold
   the other part (a tap is a pointer down and up in place: a phone's tap

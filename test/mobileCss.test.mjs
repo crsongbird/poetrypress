@@ -147,7 +147,7 @@ check('every tab icon is drawn scratchy — each stroke gone over more than once
 check('every tab icon shares one viewBox and stroke weight',
   tabs.every(t => t[2].includes('viewBox="0 0 24 24"') && t[2].includes('stroke-width="1.6"')));
 check('tabs use the new names',
-  ['Inscription','Rituals','Thoughtforms','Materia','Esoterica'].every(n => html.includes('>' + n + '</button>')));
+  ['Inscription','Rituals','Thoughtforms','Materia'].every(n => html.includes('>' + n + '</button>')) && html.includes('<span data-str="tab.esoterica">Esoterica</span>'));
 
 check('Form & Bearing now lives on the Aspects tab',
   /<details class="card" data-tab="style" open>\s*<summary class="card-title"[^>]*>\s*Form &amp; Bearing/.test(html));
@@ -191,9 +191,9 @@ check('the download button sits inside the preview frame',
 // structural, not a character distance: the header now carries an inline
 // sigil that is longer than the old window allowed
 const headerStart = html.indexOf('<div class="app-header">');
-const headerEnd = html.indexOf('</div>', headerStart);
-const kofiAt = html.indexOf('kofi-link');
-check('the Ko-fi link lives in the header now',
+const headerEnd = html.indexOf('</div>\n  </div>', headerStart);
+const kofiAt = html.indexOf('class="support-btn"');
+check('the Ko-fi link lives in the header (a quiet Support button beside 🜉 The Athanor)',
   headerStart !== -1 && kofiAt > headerStart && kofiAt < headerEnd &&
   // the retired element was class="app-title"; a bare 'app-title' now also
   // occurs inside apple-mobile-web-app-title, which is correct

@@ -60,6 +60,7 @@ const ORDER = [
   'texSharpness.js',      // √ generators
   'texChaos.js',          // ∆ generators
   'texTouch.js',          // 🜚 generators
+  'cartomancyTable.js',   // what else is on the table (candle, cup, letter…) and what has happened to the cards
   'cartomancy.js',        // a card game on a table: its parts (table, cards, coins, the deal) and the texture
   'stepsTouch.js',        // steps for 🜚 surfaces: weave, cloth (Linen); panes, glass; flakes
   'stepsWhimsy.js',       // steps for ♡ surfaces: smoke, light shaft, motes; painted sky, ridges, wash
@@ -124,7 +125,7 @@ html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'cartomancy.js', 'stepsTouch.js', 'stepsWhimsy.js', 'stepsChaos.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsWhimsy.js', 'stepsChaos.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');

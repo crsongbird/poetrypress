@@ -96,12 +96,16 @@ export const FONTS = [
   { label:"Mono · IBM Plex Mono", family:"IBM Plex Mono", weight:"400" },
   { label:"Hand-lettered · Amatic SC", family:"Amatic SC", weight:"700", noItalic:true },
   { label:"Universal · Noto Serif", family:"Noto Serif", weight:"400" },   // Latin, Greek, Cyrillic, Vietnamese
+  // the app's own faces (Ruby's specimen choice), for poems too
+  { label:"Literary · Alegreya", family:"Alegreya", weight:"400" },
+  { label:"Small Caps · Alegreya SC", family:"Alegreya SC", weight:"400" },
+  { label:"Humanist · Alegreya Sans", family:"Alegreya Sans", weight:"400" },
 ];
 
 // The picker groups the fonts (its options keep their /f:N positions)
 export const FONT_GROUPS = [
-  ['Serif', ['Bodoni Moda','Cormorant Garamond','Crimson Pro','EB Garamond','Literata','Playfair Display','Merriweather','Zilla Slab','Fraunces','DM Serif Display','Libre Baskerville','Spectral','Noto Serif']],
-  ['Sans', ['Inter','Roboto','Work Sans','Source Sans 3','Space Grotesk','Poppins','Josefin Sans','Nunito','Comfortaa','Raleway','Oswald']],
+  ['Serif', ['Alegreya','Alegreya SC','Bodoni Moda','Cormorant Garamond','Crimson Pro','EB Garamond','Literata','Playfair Display','Merriweather','Zilla Slab','Fraunces','DM Serif Display','Libre Baskerville','Spectral','Noto Serif']],
+  ['Sans', ['Alegreya Sans','Inter','Roboto','Work Sans','Source Sans 3','Space Grotesk','Poppins','Josefin Sans','Nunito','Comfortaa','Raleway','Oswald']],
   ['Mono & Typewriter', ['Courier Prime','Special Elite','Space Mono','JetBrains Mono','IBM Plex Mono','Share Tech Mono']],
   ['Hand & Script', ['Architects Daughter','Caveat','Shadows Into Light','Amatic SC','Permanent Marker','Pinyon Script','Great Vibes','Tangerine']],
   ['Display & Historic', ['Cinzel','Cinzel Decorative','Marcellus','IM Fell English','Uncial Antiqua','Almendra','UnifrakturMaguntia','Pirata One','Poiret One','Abril Fatface','Rye','Stardos Stencil','Bungee','Monoton','Unica One','Orbitron']],
@@ -494,3 +498,24 @@ export const DEV_TEMPLATE = "## <\u00a7UVIcon PoetryPress/rainbow/c> <Applicatio
 export const OPEN_ON_POEM = false;
 /** Production is poetrypress.*; anything else — vellum, a local file — is development. */
 export const isProductionHost = () => typeof location !== 'undefined' && /^poetrypress\./i.test(location.hostname || '');
+
+/**
+ * THE TEXTURE GROUPS, as the Surface menu and the Athanor's "Start from…"
+ * both show them: grouped by what a surface IS, each group's glyph a Runology
+ * Archetype whose meaning it shares (Symbology's metadata: Earth is ground
+ * and soil, Quintessence light and shimmer, Wind weather, Astral sky and
+ * stars, Planar worlds and travel, Water flow, Materia crafting and matter,
+ * Order order, Vitrum engraving and record, Creation what you make).
+ */
+export const TEXTURE_GROUPS = [
+  { glyph: '🜃', name: 'Paper & Grounds', types: ['coldpress', 'grain', 'linen', 'oldpaper'] },
+  { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'magicparticles', 'clouds', 'embers'] },
+  { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain'] },
+  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurora', 'blackhole', 'astral', 'moon'] },
+  { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
+  { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
+  { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackedglaze', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass'] },
+  { glyph: '🝓', name: 'Pattern & Order', types: ['mathnoise', 'chladni', 'tessellate', 'guilloche', 'halftone', 'turing'] },
+  { glyph: '⎐', name: 'Signs, Sigils & Cards', types: ['cards', 'sigils', 'summoning'] },
+  { glyph: '🜉', name: 'Your Surfaces', types: ['athanor'] },
+];

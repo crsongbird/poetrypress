@@ -38,7 +38,7 @@ Nesting works: `**bold [with accent] still bold**`
 |---|---|
 | `/l` `/c` `/r` | align left, center, right |
 | `/left` `/center` `/right` | same |
-| `~A` `~B` `~C` `~D` | rhyme marker — shown as a coloured bar, not text |
+| `~A` `~B` `~C` `~D` | rhyme marker — shown as a colored bar, not text |
 
 Combine: `a rhyming line~A/r`
 
@@ -52,7 +52,7 @@ Wrap part of a line in `<…>` and chain directives after it.
 
 | Directive | Effect | Bare form |
 |---|---|---|
-| `#:hex` | custom colour | — |
+| `#:hex` | custom color | — |
 | `f:N` | typeface by index | — |
 | `scale:N` | size, % of fitted size | 100 |
 | `track:N` | letter-spacing, % | 100 |
@@ -72,14 +72,14 @@ Split a line between alignments:
 <left side/l><right side/r>
 ```
 
-Emoji inside a coloured span are tinted to match.
+Emoji inside a colored span are tinted to match.
 
 ---
 
 ### Effects and underlines
 
 `<word/fx:outline(#fff,4)+glow(#fd0,40,70)>` — up to three effects, in order
-(colour, knob 1, knob 2, angle): outline, shadow, longshadow, glow,
+(color, knob 1, knob 2, angle): outline, shadow, longshadow, glow,
 letterpress, bevel, chromatic, doublestrike, erosion. `/fx:none` clears.
 `<word/under:wave,#c33,150>` — an underline in any of the stitches. The older
 `/fx0` `/fx1` `/fx2` `/effect:` forms still work.
@@ -94,14 +94,14 @@ written; `\§` writes a literal §.
 |---|---|
 | `§SurfName` · `§SurfBlendMode` · `§LightDir` · `§TextureSeed` | the texture's name, blend, light arrow, seed |
 | `§SurfParamsA` | `Knob: [value]  Knob: [value]  Opacity: [value] {moon}`, as PML |
-| `§SurfParamsB` | the texture's hues, each in its own colour |
+| `§SurfParamsB` | the texture's hues, each in its own color |
 | `§MoonPhase!tonight` · `!seed` · `!opacity` | a moon: tonight's, the Fractal Moon's for this seed, the opacity |
 | `§MoonPhase:x` | x from −1 to 1: 0 full, ±1 new; negative waxes, positive wanes |
 | `§Glyph!input` `ritual` `thoughtform` `materia` `esoterica` `touch` `return` `sigil` | the app's drawn glyphs, inline |
 | `§Glyph!whimsy` `sharpness` `chaos` | ♡ √ ∆ |
 | `§Spell` · `§SpellName` · `§Font` · `§Canvas` · `§TypeEffect` · `§Today` | the look's spell and its name, the typeface, the page size, the effect, the date |
 | `§SpellRunes` · `§Rune!name` | Runology: the spell's Archetypes by name (Wind · Fire · Aether); any Archetype or Accent's glyph (§Rune!astral → 🝊) |
-| `§Reading` | the surface's reading, when one of its four was applied (🜂 Smoulder) |
+| `§Reading` | the surface's reading, when one of its four was applied (🜂 Smolder) |
 | `§RenderMs` · `§Profile` · `§CacheMB` · `§Fonts` · `§Build` | render time, and by stage; texture memory; fonts fetched; which build |
 
 A texture test page:

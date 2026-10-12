@@ -282,7 +282,11 @@ export const TEXTURE_PARAMS = {
                   // dealt square (0) → the table swept about (90)
                   {key:'angle', label:'Scatter',         min:0,  max:90,  def:20,  unit:'°'},
                   // whether there is money on the table, and how much: none (0) → high stakes
-                  {key:'form',  label:'Stakes',          min:0,  max:100, def:50,  unit:''}],
+                  {key:'form',  label:'Stakes',          min:0,  max:100, def:50,  unit:''},
+                  // what else is on the table: nothing (0) → a candle, a cup, a letter, a feather… crowding the edges
+                  {key:'shape', label:'Clutter',         min:0,  max:100, def:40,  unit:''},
+                  // the cards new (0) → dog-eared, torn, ringed, burnt, waxed, marked
+                  {key:'hue',   label:'Wear',            min:0,  max:100, def:30,  unit:''}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
 };
@@ -295,7 +299,7 @@ export const TEXTURE_PARAMS = {
  * texture (the first is its default); `light` says whether it reads as
  * relief and therefore responds to a light direction; `tints` is how many
  * colours it accepts, with `tintLabels` naming them in the texture's own
- * terms rather than "colour 1".
+ * terms rather than "color 1".
  *
  * Only textures that genuinely consume a colour declare tints. The rest are
  * monochrome by construction and take their colour from the blend against
@@ -369,10 +373,10 @@ export const TEXTURE_CAPS = {
   // a painted glaze over a clay body, coloured as a game engine would (see genCrackedGlaze)
   crackedglaze:  { blends:['overlay','soft-light','hard-light','source-over','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, light:true, tints:2,
                    tintLabels:['Glaze Hue','Base Hue'], tintDefaults:['#A9B4B0','#7A6A5E'] },
-  // a carved surface: Light Hue is the light's colour, Dark Hue the material's; it starts lit from overhead
+  // a carved surface: Light Hue is the light's color, Dark Hue the material's; it starts lit from overhead
   // Old Paper: Foxing and Fold Ghost, merged (see genOldPaper)
   oldpaper:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2,
-                   tintLabels:['Age Hue','Mould Hue'], tintDefaults:['#8A6A3C','#5F6A4E'] },
+                   tintLabels:['Age Hue','Mold Hue'], tintDefaults:['#8A6A3C','#5F6A4E'] },
   // looking into a crystal (genCrystalLeaf): its own colours, lit
   crystal:   { blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
                    tintLabels:['Crystal Hue','Inclusion Hue'], tintDefaults:['#B9A6D8','#D9A441'] },
@@ -461,7 +465,7 @@ for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crystal']
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
 for(const t of ['brushstrokes', 'crackedglaze', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
-TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the colour of the flakes' };
+TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
 // the fifth hue as a generator wants it: glow as 0–1 channels (null: none);

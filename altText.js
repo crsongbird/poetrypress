@@ -31,13 +31,13 @@ export const TEXTURE_LOOKS = {
   cityscape: 'a city skyline at night, its windows lit, over water', guilloche: 'engraved rosettes, like those on a banknote',
   stainedglass: 'panes of stained glass held in lead', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
-  crackedglaze: 'cracked and crazed ceramic glaze', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, and sometimes coins)',
+  crackedglaze: 'cracked and crazed ceramic glaze', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, sometimes coins, and often other things left there: a candle, a cup, a letter)',
   blackhole: 'a black hole ringed by a bright, swirling disc', turing: 'organic spots and stripes, like animal skin or coral',
-  chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolour paper',
+  chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolor paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
   ash: 'charred paper, ash and embers', wax: 'pools of sealing wax', dunes: 'wind-rippled sand dunes', kintsugi: 'pottery mended with seams of gold',
   moss: 'moss growing on stone', water: 'rippling water', glassrain: 'raindrops running down a window', frost: 'feathery frost crystals',
-  contour: 'a topographic map of contour lines', watercolour: 'soft washes of watercolour', athanor: 'a surface made in the Athanor node editor',
+  contour: 'a topographic map of contour lines', watercolour: 'soft washes of watercolor', athanor: 'a surface made in the Athanor node editor',
 };
 
 const BLEND_WORDS = {
@@ -50,7 +50,7 @@ const BLEND_WORDS = {
 const EFFECT_NAMES = { outline: 'Outline', shadow: 'Drop Shadow', longshadow: 'Long Shadow', glow: 'Glow', letterpress: 'Letterpress', bevel: 'Bevel',
   chromatic: 'Chromatic Split', doublestrike: 'Double Strike', erosion: 'Erosion', bloom: 'Bloom', halo: 'Halo' };
 const EFFECT_WORDS = { outline: 'an outline', shadow: 'a drop shadow', longshadow: 'a long cast shadow', glow: 'a soft glow', letterpress: 'a letterpress impression',
-  bevel: 'a raised bevel', chromatic: 'a red and blue colour split', doublestrike: 'a double strike', erosion: 'worn, eroded edges' };
+  bevel: 'a raised bevel', chromatic: 'a red and blue color split', doublestrike: 'a double strike', erosion: 'worn, eroded edges' };
 
 // ---- colours, named as a person would ----
 const hsl = hex => {
@@ -65,14 +65,14 @@ const hsl = hex => {
 };
 const HUES = [[12, 'red'], [32, 'orange'], [46, 'amber'], [64, 'yellow'], [80, 'olive'], [150, 'green'], [178, 'teal'], [198, 'cyan'],
   [228, 'blue'], [255, 'indigo'], [285, 'violet'], [318, 'purple'], [342, 'magenta'], [361, 'red']];
-/** A colour's everyday name: "deep plum", "pale gold", "warm grey", "near-black". */
+/** A colour's everyday name: "deep plum", "pale gold", "warm gray", "near-black". */
 export function colourName(hex){
   const c = hsl(hex); if(!c) return '';
   const { h, s, l } = c;
   if(l < 0.07) return 'near-black';
   if(l > 0.95 && s < 0.5) return 'white';
   if(s < 0.12){
-    const tone = l < 0.25 ? 'charcoal' : l < 0.45 ? 'dark grey' : l < 0.7 ? 'grey' : l < 0.88 ? 'light grey' : 'off-white';
+    const tone = l < 0.25 ? 'charcoal' : l < 0.45 ? 'dark gray' : l < 0.7 ? 'gray' : l < 0.88 ? 'light gray' : 'off-white';
     return s > 0.04 ? (h < 70 || h > 300 ? 'warm ' : 'cool ') + tone : tone;
   }
   let name = HUES.find(([lim]) => h < lim)[1];

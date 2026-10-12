@@ -6,7 +6,131 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Kale)
+## 1 · Ruby to judge (new in Jupiter–Taygete)
+- PAINTED LANDSCAPE, in Bob Ross's manner: evergreens laid in with a fan
+  brush (dark first, the light on the sun's side), bushes tapped in, a framing
+  tree at an edge; mountains knife-painted (light pulled down the sunny faces,
+  slivers on the peaks, snow); mist at the foot of each far range; criss-cross
+  strokes in the sky; light cut across the water. THE COAST now stands in the
+  sea: far headlands are strips on the horizon, each ending at its own
+  waterline with its reflection under it; a cliff leans and steps down in
+  ledges, rock knifed down its face, foam at its foot.
+- CARTOMANCY, far more various:
+  - ELEVEN GAMES, none quite one you know: a reading (its spread a cross, a
+    line, a horseshoe, a grid or a star, a significator set apart), tricks,
+    patience in five to eight columns, a wager, pairs — and new: crossroads
+    (arms of cards out from one), a duel for two (lines facing, a crowned card
+    between), a ring round a centerpiece, a stair, a market row, and a game
+    abandoned (hands dropped, the deck spilled, a card over the edge).
+  - CARD BACKS as one house's family: always symmetrical, two-toned, a
+    medallion at the heart — ten patterns (lattice, rays, rings, checks,
+    scales, stars, waves, moons, vines, a parted field), ten medallions, a
+    printed margin or full bleed, a single, double or dotted rule.
+  - NOT ALWAYS FOR MONEY: a wager without coin is played for beads, stones,
+    beans or buttons; a trick game or a market without it keeps a score sheet.
+  - DAMAGED CARDS (a new slider, WEAR): dog-ears showing the other side, torn
+    corners with pale fibres, creases, cup rings, burns from an edge, candle
+    wax, pinholes, tide lines, pencil marks.
+  - THINGS ON THE TABLE (a new slider, CLUTTER), kept toward the edges and off
+    the cards: candles (lit, warming everything near; or blown out, smoking),
+    cups of tea or coffee or the leaves left in one, wine glasses throwing red
+    light into their shadows, a crystal ball (a window in it, a bright caustic
+    in its shadow), quartz points, dice, a pocket watch on its chain, rings, a
+    hag stone, old keys, feathers, letters (open, or sealed in wax), petals or
+    a dried leaf, matches, stains. Tall things are drawn after the cards, so
+    their shadows fall across them.
+  - EASTER EGGS (some for Ruby to find): The Robin, The Moth, The Hag Stone and
+    The Unwritten among the rare cards; a stranger's card in the pile; a fox
+    hidden in a deck's back; a back misprinted off true; a card of the fifth
+    suit (Aether); an ace tucked under a hand; a marked deck (every face the
+    same card); a coin from another coinage in the pot; an I.O.U.; tea leaves
+    making a crescent, a ring or two fox ears; a watch stopped at 3:33, 11:11
+    or 4:44, its lid engraved; a seal with the Witch's fox; a robin's feather;
+    a moth at the flame; dice showing elements, or all the same; a score
+    sheet headed by a fox and a bird.
+  - A TABLE OBJECTS part in the Athanor lays the same things on any picture
+    (choose a kind, or leave it to the seed).
+
+## 1a · Ruby to judge (from Jupiter–Erinome)
+- THE ATHANOR'S HELP: a Help button (and the ? in the corner) opens a
+  document over the grid — never over the parts list — in twelve sections:
+  what it is, reading a graph, wires and the four kinds they carry, what
+  happens when kinds don't match (every conversion, plainly), settings and ⚙
+  ports, the page's own controls, SEEDS AND CHANCE (how the page's seed reaches
+  every part, and how to make anything random), the Surface, mouse and phone,
+  starting/keeping/sharing, limits, and every part with what it does.
+- THE PARTS LIST: a search box; each category says what it holds; each part
+  says what it does in a line (hover for the whole sentence). A part's menu
+  starts with the same sentence.
+- THE TEACHING NOTES teach: what the graph makes, how, and one thing to try.
+- THE SURFACE STAYS: it can't be removed or copied; Clear leaves a fresh one.
+- NEW PARTS: Number and Random Number (wire a Random Number into any ⚙ setting
+  and that setting is new with every seed); Map Range; Shape Mask (circle,
+  ring, square, diamond, star, vignette); Split Channels and Merge Channels;
+  Switch (choose A or B by a number — a Knob makes it a page switch); Hue &
+  Saturation. A new category, ᛯ Combine & Mask (Mix, Blend, Math, Split,
+  Merge, Switch).
+- ⟳ SEED in the Athanor's corner: a new page seed without leaving it.
+- THE README explains how the whole app works, plainly, tab by tab.
+
+## 1b · Ruby to judge (from Jupiter–Aitne)
+- A PORTRAIT WINDOW, or one narrower than 900px, gets the phone layout — live,
+  as the window is resized — and a wider one the desk layout; the old
+  in-between layout is gone.
+- ESOTERICA on a desk: a click anywhere outside its drawer closes it, and while
+  it is open its button reads ⊙ Return, in the same space (one button, two
+  faces, so it never changes size). Typing in the editor on a desk no longer
+  switches to focus mode — that, and its Return, are a phone's.
+- THE EDITOR on a desk is at least half the tab's height, however short the
+  poem.
+- RESIZING: the sidebar's right edge and now Esoterica's left edge drag (a
+  faint line with a dotted grip at its middle, so they can be found); each is
+  remembered; double-click resets.
+- THE PREVIEW: the wheel zooms only with Ctrl or ⌘ held (a trackpad pinch
+  works as before). A plain scroll over the picture used to zoom it — that is
+  the cropped, magnified picture in Ruby's screenshot. A window that changes
+  shape fits the picture again. (The picture itself fills its pane at the
+  canvas's own shape; the dark bands beside a square picture in a wide pane
+  are the pane, not a box. If something else looked pillarboxed, say where.)
+- RITUALS: every click is a new seed; the look stays lit until something
+  meaningful changes (anything but the seed); clicking the lit one again
+  rerolls, and now and then takes another of its surface's readings. Your
+  own Bound Spells come back exactly the first time, and reroll after.
+
+## 1c · Ruby to judge (from Jupiter–Isonoe)
+- THE TYPE is Ruby's specimen: Alegreya for reading, Alegreya SC for the
+  headings (true small caps, set in lowercase so every letter is one),
+  Alegreya Sans for the labels and plain buttons; nothing bold (the title
+  was Fraunces at a heavier weight — that was the clash). Numbers in the
+  controls stand on the line (Alegreya's own figures are old-style). The three
+  are in the poem's font list too (the last three; Literary, Small Caps,
+  Humanist).
+- ROSÉ: neutral warm near-black grounds, as in the specimen — pink and pale
+  blue the only colors. (The plum was mine: it came from cooling the grounds
+  when the green went. The gold-and-purple in the preview is the Dusk Letter
+  template's own.)
+- THE TOP BAR: 🜉 The Athanor (the glyph large, its name small) opens the node
+  editor from anywhere; a quiet Support button beside it, its little heart
+  breathing once every nine seconds — the only thing on the page that moves
+  by itself, and still for anyone who asks their device for less motion.
+  (Esoterica's Athanor card now points to it.)
+- THE GROUPS' GLYPHS are Runology Archetypes chosen by their meanings in
+  Symbology's metadata, and the names say what is in them:
+  🜃 Paper & Grounds · 🜚 Light, Sparks & Dust · 🜁 Weather · 🝊 Sky & Cosmos ·
+  🜥 Places & Scenes · 🜄 Ink & Paint · Ᏹ Materials & Craft · 🝓 Pattern & Order
+  · ⎐ Signs, Sigils & Cards · 🜉 Your Surfaces. Some textures moved (Sleep Haze
+  to Light; Linen Tooth to Paper; Harsh Rain, First Snow, Rain on Glass and
+  Hoarfrost into Weather; Moss and Stained Glass into Materials).
+  The Athanor's parts: 🝆 Page Inputs · 🝢 Noise & Pattern · 𝀶 Drawn Marks ·
+  ⎐ Whole Textures · 🜂 Shape & Transform · 🜚 Light & Color · 🜉 Output.
+  "Start from…" uses the same headings as the Surface menu.
+- THE DIAL'S RIM HOLDS: near the rim the light snaps to 100% and stays there
+  until it is pulled well past; beyond (engine-lit textures only), it moves
+  at under half speed. A phone gives a tiny tap as it catches.
+- AMERICAN ENGLISH wherever a person reads it (color, gray, center, mold,
+  smolder): the page, its strings, the Athanor, the alt text, README, PML.md.
+
+## 1d · Ruby to judge (from Jupiter–Kale)
 - THE FOUR, BUILT IN THE ATHANOR (each texture is now made from its graph,
   and "Start from…" opens it, with a note on what it teaches):
   - SLEEP HAZE: Smoke (Lift, Drag) → Light Shaft (the Light Dial wired in;
@@ -30,7 +154,7 @@ Recommendations".
 - New parts for anyone's graphs: Smoke, Light Shaft, Dust Motes, Painted
   Sky, Painted Ridges, Watercolour Wash, Panes, Glass, Flakes.
 
-## 1a · Still to judge from Jupiter–Chaldene
+## 1e · Still to judge from Jupiter–Chaldene
 - WIRING ON A PHONE, without dragging: hold a part (or one of its ports) →
   "Wire from it…" (or "Wire into it…", or "Wire this to…" on a port) → a bar
   at the top says what is being wired → tap (or hold) the part it goes to →
@@ -51,7 +175,7 @@ Recommendations".
   The Card Table starter is gone (it was the duplicate).
 - A new input part, ACCENT (the page's accent colours), beside Hue.
 
-## 1b · Still to judge from Jupiter–Herse
+## 1f · Still to judge from Jupiter–Herse
 - PoetryPress again wherever a person reads it (title, header, home-screen
   name, the alt text, README); Unfixable Vellum stays inside the code.
 - ROSÉ: the green is a pale blue now (#a3c6e3), the grounds a cooler
@@ -163,6 +287,10 @@ Recommendations".
 
 
 ## 2 · Waiting on Ruby
+- INLINE CODE CRASH: `backticks` in PML could not be made to crash here
+  (Chromium: typed, pasted, empty, unclosed, inside headings, with variables).
+  Which text, which browser (Firefox?), and what happened — frozen tab, blank
+  preview, an error?
 - SOUNDS — the instrument itself, when Ruby wants it back:
   - a STRING instrument, something unusual (plucked string by physical model;
     ideas: an Aeolian harp, strings sounded by wind; sympathetic strings that
