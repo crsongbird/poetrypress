@@ -31,11 +31,19 @@ const JUPITER = ['Amalthea', 'Thebe', 'Io', 'Europa', 'Ganymede', 'Callisto', 'T
   'Iocaste', 'Ananke', 'Philophrosyne', 'Eurydome', 'Arche', 'Autonoe', 'Pasithee', 'Herse', 'Chaldene', 'Kale',
   'Isonoe', 'Aitne', 'Erinome', 'Taygete', 'Carme', 'Sponde', 'Kalyke', 'Pasiphae', 'Eukelade', 'Eirene',
   'Megaclite', 'Sinope', 'Hegemone', 'Aoede', 'Kallichore', 'Callirrhoe', 'Cyllene', 'Kore'];   // then Saturn's
+// node build.mjs --notes: print the newest section of CHANGELOG.md (the release's commit message)
+if(process.argv.includes('--notes')){
+  const log = readFileSync('CHANGELOG.md', 'utf8'), at = log.indexOf('\n## '), next = log.indexOf('\n## ', at + 4);
+  const sec = log.slice(at + 1, next < 0 ? undefined : next).trim();
+  console.log('PoetryPress-' + sec.replace(/^## (\S+).*/, '$1') + '\n\n' + sec.split('\n').slice(1).join('\n').trim());
+  process.exit(0);
+}
 if(process.argv.includes('--next')){
   const cur = /RELEASE = '([^']+)'/.exec(readFileSync('release.js', 'utf8'))[1].split('–')[1];
   const i = JUPITER.indexOf(cur);
   if(i < 0 || i + 1 >= JUPITER.length){ console.error(`No moon after ${cur} in the list: extend JUPITER in build.mjs.`); process.exit(1); }
-  writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = 'Jupiter–${JUPITER[i + 1]}'`));
+  writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = 'Jupiter–${JUPITER[i + 1]}'`)
+    .replace(/RELEASE_DATE = '[^']*'/, `RELEASE_DATE = '${new Date().toISOString().slice(0, 10)}'`));
   console.log(`release: Jupiter–${cur} → Jupiter–${JUPITER[i + 1]}`);
 }
 
@@ -153,12 +161,15 @@ console.log(`flattened ${ORDER.length} modules into one page — upload the whol
 // node build.mjs --zip
 // Writes release/unfixable-vellum-<moon>-YYYY-MM-DD.zip (the moon in the name, so
 // two releases made the same day never share a file name): every source, test, tool,
-// doc and the built dist/, with its folders intact. No dependencies — the zip
+// doc and the built dist/, with its folders intact. Older archives in release/ are removed. No dependencies — the zip
 // is written by hand with Node's own deflate. Only on request: it isn't
 // needed to build or test, and archiving every build would be wasted work.
 if(process.argv.includes('--zip')){
   const { readdirSync: ls, statSync, readFileSync: rf, writeFileSync: wf, mkdirSync: md } = await import('fs');
   const zlib = await import('zlib');
+  // only the newest archive is kept: the old ones are deleted first (Ruby: old releases
+  // left lying about only fill space — and the context of whoever works on this next)
+  try { for(const f of ls('release')) if(f.endsWith('.zip')){ (await import('fs')).unlinkSync('release/' + f); console.log('removed old archive release/' + f); } } catch(e){ /* no release/ yet */ }
   const SKIP = new Set(['node_modules', '.git', 'release']);
   const files = [];
   const walk = dir => {

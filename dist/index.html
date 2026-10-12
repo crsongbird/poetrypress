@@ -9,7 +9,7 @@
      left enabled. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#151313">
+<meta name="theme-color" content="#131116">
 <!-- already dark: dark-mode add-ons (Dark Reader and its kin) leave it alone;
      the colour scheme follows the theme (theme.js), light only for Vellum -->
 <meta name="darkreader-lock">
@@ -469,14 +469,13 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 }
 
 /* ---------- Spellcrafting & Grimoire ---------- */
+/* the saved looks wrap into rows (alphabetical, vault.js) — never a sideways scroller (Ruby) */
 .spell-wheel{
-  display:flex; gap:8px; overflow-x:auto; padding:2px 0 8px;
-  scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; padding:2px 0 8px;
 }
 .spell-wheel:empty{ display:none; }
 .spell-chip{
-  flex:0 0 auto; scroll-snap-align:start; cursor:pointer;
-  min-width:104px; max-width:104px;
+  cursor:pointer; min-width:0;
   border:1px solid var(--line); border-radius:3px;
   background:var(--bg-deep); padding:0; overflow:hidden;
   font-family:inherit; color:var(--text-dim);
@@ -1215,24 +1214,25 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
 
 /* Cinder — rosier, greyer, darker. Violet kept as an accent, not a ground. */
 :root[data-theme="rose"]{
-  /* Rosé (Ruby: pink and pale blue, nothing else) — the grounds a NEUTRAL warm
-     near-black, as in the type specimen, so the only colours are the two
-     pinks and the pale blue; no plum, no green */
-  --bg-deep:#0e0d0d;
-  --bg-panel:#151313;
-  --bg-panel-2:#1e1b1b;
-  --bg-card:#191717;
-  --line:#322d2c;
-  --text-main:#ECE4E0;
-  --text-dim:#b3aaa6;         /* lifted: as body text it must pass contrast */
+  /* Faded Rosewood, cooled (Ruby: pink and pale blue, no more green) — the
+     grounds lean from brown toward a plum-charcoal so both pinks and the pale
+     blue sit on them without clashing; the two pinks kept from before.
+     (Taygete tried neutral grounds; Ruby: the plum grew on her, on OLED most) */
+  --bg-deep:#0b0a0d;
+  --bg-panel:#131116;
+  --bg-panel-2:#1f1b22;
+  --bg-card:#17141a;
+  --line:#342d37;
+  --text-main:#E9DDE3;
+  --text-dim:#b5aab6;         /* lifted: as body text it must pass contrast */
   --accent:#e2899f;           /* rose, not candy */
   --accent-dim:#c26c82;
   --rose:#C68892;
   --ui-violet:#eda3b5;
-  --on-accent:#171313;
+  --on-accent:#161317;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
   --ui-selected:#ff6b92;      /* redder with the accent, still fully saturated */
-; --accent-2:#a3c6e3; --hi:rgba(255,242,238,.04); }
+; --accent-2:#a3c6e3; --hi:rgba(246,236,250,.045); }
 
 /* Aether — the original. */
 :root[data-theme="aether"]{
@@ -1638,18 +1638,25 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
   @keyframes drawerIn{ from{ transform:translateX(40px); opacity:0; } to{ transform:none; opacity:1; } }
   body.more-open:not(.is-mobile) .controls{ opacity:.42; filter:saturate(.55); transition:opacity .2s, filter .2s; }
   body.more-open:not(.is-mobile) .controls:hover, body.more-open:not(.is-mobile) .controls:focus-within{ opacity:.9; filter:none; }
-  body.more-open:not(.is-mobile) #poemCanvas{ max-width:calc(100vw - var(--side-w, 460px) - var(--drawer-w, 440px) - 60px); }
   body:not(.is-mobile) .tab-ico{ width:20px; height:20px; }
   body:not(.is-mobile) .controls{ grid-area:controls; width:auto; min-width:0; }
-  body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; }
+  /* THE PREVIEW PANE (desktop): the viewer is the whole pane, whatever the page's shape — the
+     picture fits inside it (the aspect ratio changes the picture, never the viewer), a zoom
+     fills the pane, and the buttons sit in their own strip along its foot, never on the picture */
+  body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; align-items:stretch; justify-content:stretch; gap:0; }
+  body:not(.is-mobile) .canvas-wrap{ flex:1 1 0; min-height:0; width:100%; box-sizing:border-box; padding:10px 10px 50px;
+    display:flex; align-items:center; justify-content:center; box-shadow:none; }
+  body:not(.is-mobile) .canvas-wrap::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:42px; z-index:40;
+    background:var(--bg-panel); border-top:1px solid var(--line); pointer-events:none; }
+  body:not(.is-mobile) .reset-view-btn{ bottom:8px; }
   body:not(.is-mobile) .card[data-tab]{ display:none; }
   body:not(.is-mobile) .card[data-tab].tab-active{ display:block; }
-  body:not(.is-mobile) #poemCanvas{ max-height:calc(var(--vvh, 100vh) - 128px); max-width:calc(100vw - var(--side-w, 460px) - 56px); }
+  body:not(.is-mobile) #poemCanvas{ max-height:100%; max-width:100%; }
   body:not(.is-mobile) .drag-handle{ display:none; }
 }
 /* on a desktop, Save image sits at the stage's lower right, across from undo
    and redo (its old place at the top right now runs under the navigation) */
-@media (min-width: 900px){ body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:24px; bottom:16px; } }
+@media (min-width: 900px){ body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:10px; bottom:5px; padding:6px 16px; } }
 
 /* ---------- working: a shimmer along the top of the image while a texture
    is made in the worker, or while Save image renders the full size ---------- */
@@ -13178,26 +13185,51 @@ self.onmessage = (e) => {
         <div class="editor-gutter" id="poemGutter" aria-hidden="true"></div>
         <div class="editor-scroll">
           <pre class="editor-mirror" id="poemMirror" aria-hidden="true"></pre>
-          <textarea id="poemText" class="editor-input" spellcheck="false" wrap="soft">## Wanting [(Aether)]
+          <textarea id="poemText" class="editor-input" spellcheck="false" wrap="soft">## WTF is [PoetryPress]?
 
-I had to greet you
-in  <our native language/f:12>
-but our species knew nothing.
+>  [{"well, it's a weird art tool for text"]}
+>  [{"...or something..."]}
+>  [{"but like... how do I use it?"]}
 
-Only love,
-       {[merged with anguish...]}
+*big breath*
 
-So I opened your helmet.
+Ok.
+So you write on this thing
+   (first tab: [§Glyph!input **Inscription**])
 
-The <aether/scale:115/fx2,#A98CFF,26,0,0> <b/basis:-5><l/basis:-10><e/basis:-18><d/basis:-26> <o/basis:-33><u/basis:-45><t/basis:-55> of your [held-shut jaw] like
-<*rainbows and starlight and awe*/rainbow>, and
-{whatever} stirs,
-                  <*wanting*/jitter:300>
-inside of a <~~dead person~~/trans>'s dreams.
+and the text can be {formatted}
+[in a basic markup language]
+which has simple and complex shortcuts [🌸]
 
+---
+-# for instance:
+> justified right/r
+> &lt;also/left> &lt;justified right/right>
+^ using a different method
+---
 
--# It sounds beautiful and rotten, both,
--# as it occupies all the [empty space] in you.</textarea>
+*ANYWAY*
+
+you can also SELECT a generative texture
+-# and can make one yourself
+and it lets you typeset {and set formatting}
+and do other
+potentially &lt;interesting/jitter:200/f:12> things
+
+[also everything is sharable]
+
+> I made this because I'm a weird poet
+> and I noticed people don't read text anymore
+> so I wanted my poems to be unique and eye-catching
+
+so... there's a whole generative texture engine &amp;
+*almost* as many art tools as Adobe Photoshop
+in a     &lt;**m o b i l e   f i r s t   U I**/rainbow>
+-#                                      ...that is still [under construction]
+
+and it just happens to be {**Completely FREE**}.
+
+Have fun!</textarea>
         </div>
       </div>
 
@@ -13315,10 +13347,10 @@ inside of a <~~dead person~~/trans>'s dreams.
           <label data-str="label.aspect_ratio">Aspect Ratio</label>
           <p class="sub-label" data-str="hint.standard">Standard</p>
           <div class="radio-group" id="aspectGroup">
-            <div class="radio-btn active" data-val="1:1">1:1</div>
+            <div class="radio-btn" data-val="1:1">1:1</div>
             <div class="radio-btn" data-val="2:3">2:3</div>
             <div class="radio-btn" data-val="3:4">3:4</div>
-            <div class="radio-btn" data-val="9:16">9:16</div>
+            <div class="radio-btn active" data-val="9:16">9:16</div>
             <div class="radio-btn" data-val="1:2">1:2</div>
             <div class="radio-btn" data-val="9:20.5">9:20.5</div>
           </div>
@@ -13334,9 +13366,9 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
           <div class="row" id="customSizeRow">
             <div class="field"><label for="customW" data-str="label.width">Width</label>
-              <input type="number" id="customW" min="256" max="4096" step="1" value="3072"></div>
+              <input type="number" id="customW" min="256" max="4096" step="1" value="2304"></div>
             <div class="field"><label for="customH" data-str="label.height">Height</label>
-              <input type="number" id="customH" min="256" max="4096" step="1" value="3072"></div>
+              <input type="number" id="customH" min="256" max="4096" step="1" value="4096"></div>
           </div>
         </div>
         <div class="field">
@@ -13359,8 +13391,14 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
     <details class="card" data-tab="style" open>
-      <summary class="card-title" data-str="card.known_rituals">  Known Rituals</summary>
+      <summary class="card-title" data-str="card.builtin_presets">Built-In Presets</summary>
       <div class="preset-grid" id="presetGrid"></div>
+    </details>
+
+    <details class="card" data-tab="style" id="customPresetsCard" open>
+      <summary class="card-title" data-str="card.custom_presets">Custom Presets</summary>
+      <div class="preset-grid" id="customPresetGrid"></div>
+      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">Looks you save appear here. To save the current look, open Esoterica → Spellcrafting and press Create.</p>
     </details>
 
 
@@ -14220,7 +14258,7 @@ inside of a <~~dead person~~/trans>'s dreams.
 
   <div class="stage">
     <div class="canvas-wrap">
-      <canvas id="poemCanvas" width="3072" height="3072"></canvas>
+      <canvas id="poemCanvas" width="2304" height="4096"></canvas>
       <div class="work-bar" aria-hidden="true"><i></i></div>
       <p class="working-line" id="workingLine" aria-live="polite"></p>
       <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position" data-str="button.resetViewBtn">⟲</button>
@@ -14427,7 +14465,9 @@ const UI_STRINGS = {
   'card.incantation_editor_poetic_magick_l': "Incantation Editor (Poetic Magick Language)",
   'card.arcane_guidance_pml_syntax':       "Arcane Guidance (PML Syntax)",
   'card.form_amp_bearing':                 "Form & Bearing",
-  'card.known_rituals':                    "Known Rituals",
+  'card.builtin_presets':                  "Built-In Presets",
+  'card.custom_presets':                   "Custom Presets",
+  'hint.custom_presets_empty':             "Looks you save appear here. To save the current look, open Esoterica → Spellcrafting and press Create.",
   'card.script_options':                   "Script Options",
   'card.typeface_effects':                 "Text Effects",
   'card.backdrop_color':                   "Backdrop Color",
@@ -15287,12 +15327,18 @@ function getActiveRadioValue(containerId){
 }
 
 /**
- * The page every build opens on, for now: a live instrument panel of
- * §Variables — and a calling card for the poet behind the press. At launch,
- * set OPEN_ON_POEM to true and production will open on a poem instead.
+ * THE INSTRUMENT PANEL: a live page of §Variables (what the look is made of,
+ * how long it took). No longer the opening page: it waits in the Grimoire,
+ * dated the release (it shows how the Grimoire keeps a poem).
  */
 const DEV_TEMPLATE = "## <\u00a7UVIcon PoetryPress/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] \u00a7SpellRunes // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90> \u00a7Reading\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7SeedPhrase] \u00b7 \u00a7TextureSeed  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
-const OPEN_ON_POEM = false;
+/** The Grimoire's title for it. */
+const DEV_TEMPLATE_TITLE = 'PoetryPress Instrument Panel';
+/**
+ * THE OPENING PAGE (Ruby's own words): what PoetryPress is and how to begin,
+ * written in PML so it shows the markup off as it explains it.
+ */
+const WELCOME_POEM = "## WTF is [PoetryPress]?\n\n>  [{\"well, it's a weird art tool for text\"]}\n>  [{\"...or something...\"]}\n>  [{\"but like... how do I use it?\"]}\n\n*big breath*\n\nOk.\nSo you write on this thing\n   (first tab: [§Glyph!input **Inscription**])\n\nand the text can be {formatted}\n[in a basic markup language]\nwhich has simple and complex shortcuts [🌸]\n\n---\n-# for instance:\n> justified right/r\n> <also/left> <justified right/right>\n^ using a different method\n---\n\n*ANYWAY*\n\nyou can also SELECT a generative texture\n-# and can make one yourself\nand it lets you typeset {and set formatting}\nand do other\npotentially <interesting/jitter:200/f:12> things\n\n[also everything is sharable]\n\n> I made this because I'm a weird poet\n> and I noticed people don't read text anymore\n> so I wanted my poems to be unique and eye-catching\n\nso... there's a whole generative texture engine &\n*almost* as many art tools as Adobe Photoshop\nin a     <**m o b i l e   f i r s t   U I**/rainbow>\n-#                                      ...that is still [under construction]\n\nand it just happens to be {**Completely FREE**}.\n\nHave fun!";
 /** Production is poetrypress.*; anything else — vellum, a local file — is development. */
 const isProductionHost = () => typeof location !== 'undefined' && /^poetrypress\./i.test(location.hostname || '');
 
@@ -27991,7 +28037,9 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Taygete';
+const RELEASE = 'Jupiter–Carme';
+// the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
+const RELEASE_DATE = '2026-10-12';
 
 
 /* ==== altText.js ==== */
@@ -28815,7 +28863,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-12 · c46e137";
+const STAMP = "2026-10-12 · 4a17c6e";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -29223,10 +29271,12 @@ function drawCodeBackdrop(ctx, x, y, w, size, style){
     const px = ctx.getImageData(Math.max(0, Math.round(x + w/2)), Math.max(0, Math.round(y + size*0.55)), 1, 1).data;
     behind = (px[0]*0.299 + px[1]*0.587 + px[2]*0.114) / 255;
   } catch(e){ /* unreadable canvas: assume a midtone */ }
-  const [hue] = hexToHsl(style.accent1Color || '#9B7FE8');
+  // (hexToHsl gives { h, s, l }, s and l in percent; hslToHex takes the same — an array read of it threw
+  // here, and every frame with inline code failed: the preview froze on its last good picture)
+  const { h: hue } = hexToHsl(/^#[0-9a-f]{6}$/i.test(style.accent1Color || '') ? style.accent1Color : '#9B7FE8');
   const light = behind < 0.5;                          // dark page: light backdrop
-  const back = hslToHex(hue, light ? 0.32 : 0.28, light ? 0.88 : 0.15);
-  const ink  = hslToHex(hue, light ? 0.45 : 0.3,  light ? 0.14 : 0.92);
+  const back = hslToHex(hue, light ? 32 : 28, light ? 88 : 15);
+  const ink  = hslToHex(hue, light ? 45 : 30, light ? 14 : 92);
   const padX = size*0.24, top = y - size*0.06, h = size*1.2, r = size*0.18;
   ctx.save();
   ctx.globalAlpha = 0.62; ctx.fillStyle = back;
@@ -30828,7 +30878,7 @@ const DEFAULT_THEME = 'rose';
 const RENAMED = { cinder: 'rose' };
 
 /** The ground colour of each theme, for the OS title bar. */
-const THEME_CHROME = { rose:'#151313', aether:'#100e16', fathom:'#070d14', vellum:'#d8cec0' };
+const THEME_CHROME = { rose:'#131116', aether:'#100e16', fathom:'#070d14', vellum:'#d8cec0' };
 
 /** Themes on a light ground (every other is dark). */
 const LIGHT_THEMES = ['vellum'];
@@ -31429,7 +31479,7 @@ function createVault(deps){
     const wheel = el('spellWheel');
     if(wheel){
       wheel.innerHTML = '';
-      for(const s of spells){
+      for(const s of sortedSpells()){
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'spell-chip' + (s.name === selectedSpell ? ' selected' : '');
@@ -31468,6 +31518,9 @@ function createVault(deps){
     setDisabled('spellCreateBtn', !spellIsDirty());
   }
 
+  /** The saved looks in alphabetical order (numbers in order: Spell 2 before Spell 10), however they were made. */
+  function sortedSpells(){ return [...spells].sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' })); }
+
   function renderPoems(){
     const list = el('grimoireList');
     if(list){
@@ -31501,7 +31554,7 @@ function createVault(deps){
     renderSpells();
     renderPoems();
     // the Aspects grid mirrors the saved spells, so it is told when they change
-    if(typeof deps.onSpellsChanged === 'function') deps.onSpellsChanged(spells);
+    if(typeof deps.onSpellsChanged === 'function') deps.onSpellsChanged(sortedSpells());
   }
 
   function persistSpells(){
@@ -31734,8 +31787,28 @@ function createVault(deps){
   refresh();
   receiveShared();
 
+  /**
+   * FIRST-VISIT EXAMPLES (Ruby): a poem waiting in the Grimoire and a look among the
+   * custom presets, each added once and only if nothing of the same name is there —
+   * the user deletes them like anything else. Returns what was added.
+   */
+  function seed({ poem, spell } = {}){
+    const added = [];
+    if(poem && isValidPoem(poem) && !poems.some(p => poemKeyOf(p) === poemKeyOf(poem))){
+      poems.push({ id: 'p' + (poem.savedTs || Date.now()).toString(36) + 'seed', savedAt: stamp(new Date(poem.savedTs || Date.now())), savedTs: Date.now(), ...poem });
+      if(persistPoems()) added.push('poem');
+    }
+    if(spell && isValidSpell(spell) && !spells.some(s => spellKeyOf(s) === spellKeyOf(spell))){
+      spells.push({ spell: generateSpell(), savedAt: stamp(), savedTs: Date.now(), ...spell });
+      if(persistSpells()) added.push('spell');
+    }
+    if(added.length) refresh();
+    return added;
+  }
+
   return {
     refresh,
+    seed,
     _state: () => ({ spells, poems, selectedSpell, selectedPoem }),
     _select: (kind, val) => {
       if(kind === 'spell') selectedSpell = val; else selectedPoem = val;
@@ -32599,6 +32672,7 @@ function closeForge(deps){
 
 
 
+
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -32621,7 +32695,7 @@ const murmur = createMurmur({ enabled: false });
  * one surface, and nothing can read a half-declared variable during boot.
  */
 const state = {
-  page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
+  page: { align: 'left', valign: 'center', aspect: '9:16', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
   ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
   locks: new Set(),
   // undo/redo: look snapshots (see the history section)
@@ -33007,7 +33081,7 @@ function syncCustomSize(){
   if(document.body && document.body.classList) document.body.classList.toggle('custom-size', on);
   if(on) applyCustomSize();
   else if(ASPECTS[state.page.aspect]) pickAspect(state.page.aspect);
-  else pickAspect('1:1');
+  else pickAspect('9:16');
 }
 $('customSizeToggle').addEventListener('change', syncCustomSize);
 ['customW','customH'].forEach(id => $(id).addEventListener('change', ()=>{
@@ -33634,7 +33708,6 @@ $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
 
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
-const PRESET_COLUMNS = 4;
 
 // Preset tiles paint when they come into view (Rituals may never be opened),
 // one per animation frame so even opening it never freezes the page. Where
@@ -33741,7 +33814,7 @@ async function pickPreset(p){
 const litPreset = { name: null, sig: null };
 function meaningfulSig(){ try { const o = JSON.parse(lookSnapshot()); delete o.textureSeedValue; delete o.lookName; return JSON.stringify(o); } catch(e){ return ''; } }
 function litPresetChanged(){ return !!litPreset.name && litPreset.sig != null && meaningfulSig() !== litPreset.sig; }
-function paintLitPreset(){ if(presetGrid && presetGrid.querySelectorAll) presetGrid.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('lit', !!litPreset.name && !!b.dataset && b.dataset.name === litPreset.name)); }
+function paintLitPreset(){ for(const g of [presetGrid, $('customPresetGrid')]) if(g && g.querySelectorAll) g.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('lit', !!litPreset.name && !!b.dataset && b.dataset.name === litPreset.name)); }
 function lightPreset(name){ litPreset.name = name || null; litPreset.sig = null; paintLitPreset(); }
 function checkLitPreset(){
   if(!litPreset.name) return;
@@ -33756,25 +33829,23 @@ function swapReading(){
 }
 if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
-// Saved spells join the same grid rather than living only in Esoterica.
-// Everything from the divider down is rebuilt whenever the saved set changes,
-// so the built-in tiles above it are never touched.
-const builtInCount = presetGrid.children.length;
+// CUSTOM PRESETS (Ruby): the saved spells, in a card of their own under the built-in
+// ones, alphabetical, in as many rows as they need (never a sideways scroller) — a
+// library that can grow until the built-in ones aren't needed. Rebuilt whenever the
+// saved set changes.
+const customGrid = $('customPresetGrid');
+if(customGrid && customGrid.addEventListener) customGrid.addEventListener('mouseleave', endHoverPreview);
 
 function renderSavedPresets(saved){
-  while(presetGrid.children.length > builtInCount){
-    presetGrid.removeChild(presetGrid.children[presetGrid.children.length - 1]);
-  }
+  if(!customGrid) return;
+  customGrid.innerHTML = '';
+  const empty = $('customPresetsEmpty');
+  if(empty) empty.style.display = (saved && saved.length) ? 'none' : '';
   if(!saved || !saved.length) return;
-
-  const divider = document.createElement('p');
-  divider.className = 'preset-divider';
-  divider.textContent = 'Bound Spells';
-  presetGrid.appendChild(divider);
 
   for(const rec of saved){
     const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
-    presetGrid.appendChild(presetTile(shot, ()=>{
+    customGrid.appendChild(presetTile(shot, ()=>{
       // a spell is YOUR look: the first click puts it back exactly, seed and all;
       // a click while it is still lit rerolls the seed (and now and then the reading)
       if(litPreset.name === rec.name && !litPresetChanged()){ maybeRerollSeed(); if(Math.random() < 0.45) swapReading(); scheduleRender(); commitSoon(); lightPreset(rec.name); return; }
@@ -33784,17 +33855,7 @@ function renderSavedPresets(saved){
       scheduleRender(); lightPreset(rec.name);
     }, 'preset-custom'));
   }
-
-  // blanks so a part-filled last row stays rectangular
-  const remainder = saved.length % PRESET_COLUMNS;
-  if(remainder){
-    for(let i = remainder; i < PRESET_COLUMNS; i++){
-      const blank = document.createElement('div');
-      blank.className = 'preset-btn preset-empty';
-      blank.setAttribute('aria-hidden', 'true');
-      presetGrid.appendChild(blank);
-    }
-  }
+  paintLitPreset();
 }
 
 function applyThemePalette(colors){
@@ -35510,6 +35571,16 @@ function safeRestore(obj, what = 'This look'){
   return true;
 }
 
+// the example look a first visit finds among the custom presets: plain on purpose (warm paper,
+// dark ink, Alegreya, a little linen) — something to try, change, or delete
+const FIRST_VISIT_KEY = 'uv.firstvisit.v1';
+const EXAMPLE_LOOK = { name: 'Example · Linen Page', settings: {
+  bg1: '#EDE6D8', bgGradient: true, bg2: '#DCCFB8', bgAngle: 160, bgGradientType: 'linear',
+  text1: '#2A2320', textGradient: false, font: 'Alegreya', accent1: '#9C3D54', accent2: '#3D6A8A',
+  texture: true, textureType: 'linen', textureOpacity: 45, textureBlend: 'soft-light',
+  border: false, cardToggle: false, vignette: true, vignetteBlend: 'multiply', vignetteIntensity: 18,
+  fx1Type: 'none', fx2Type: 'none', fx3Type: 'none', outlineMode: 'off' } };
+
 // A spell is the look, never the words -- the poem belongs to the Grimoire.
 function settingsForSpell(){
   return stripToLook(serializeCurrentSettings());
@@ -35553,9 +35624,19 @@ applyPreset(defaultPalettePreset);
 // that, then draw the preview at the size it is shown.
 if(!state.page.exportW){ state.page.exportW = canvas.width; state.page.exportH = canvas.height; }
 applyPreviewScale();
-// Every build opens on the §Variables instrument panel for now; at launch,
-// OPEN_ON_POEM (appOptions.js) lets production open on a poem instead.
-if(!(OPEN_ON_POEM && isProductionHost())){ $('poemText').value = DEV_TEMPLATE; repaintEditor(); }
+// Every visit opens on the welcome page (Ruby's own words: what this is and how to begin).
+$('poemText').value = WELCOME_POEM; repaintEditor();
+// FIRST VISIT: the instrument panel waits in the Grimoire, dated the release (it shows how the
+// Grimoire keeps a poem), and one plain example look waits among the custom presets. Once only:
+// deleted, they stay deleted.
+try {
+  if(typeof localStorage !== 'undefined' && !localStorage.getItem(FIRST_VISIT_KEY)){
+    const [y, mo, d] = String(RELEASE_DATE).split('-').map(Number), ts = new Date(y, (mo || 1) - 1, d || 1, 12, 0).getTime();
+    vault.seed({ poem: { title: DEV_TEMPLATE_TITLE, text: DEV_TEMPLATE, savedTs: ts },
+                 spell: { name: EXAMPLE_LOOK.name, settings: { ...settingsForSpell(), ...EXAMPLE_LOOK.settings, lookName: EXAMPLE_LOOK.name } } });
+    localStorage.setItem(FIRST_VISIT_KEY, '1');
+  }
+} catch(e){ /* storage refused: the app works the same without the examples */ }
 // Fonts are fetched on first use now (fonts.js, asked for by the renderer);
 // the first render happens as soon as the page is ready.
 render();

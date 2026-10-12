@@ -34,7 +34,8 @@ import { withAltText } from './jpegMeta.js';
 import { describeLook } from './altText.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
-import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, isProductionHost, OPEN_ON_POEM } from './appOptions.js';
+import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
+import { RELEASE_DATE } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout } from './textureGenerators.js';
@@ -71,7 +72,7 @@ const murmur = createMurmur({ enabled: false });
  * one surface, and nothing can read a half-declared variable during boot.
  */
 const state = {
-  page: { align: 'left', valign: 'center', aspect: '1:1', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
+  page: { align: 'left', valign: 'center', aspect: '9:16', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
   ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
   locks: new Set(),
   // undo/redo: look snapshots (see the history section)
@@ -457,7 +458,7 @@ function syncCustomSize(){
   if(document.body && document.body.classList) document.body.classList.toggle('custom-size', on);
   if(on) applyCustomSize();
   else if(ASPECTS[state.page.aspect]) pickAspect(state.page.aspect);
-  else pickAspect('1:1');
+  else pickAspect('9:16');
 }
 $('customSizeToggle').addEventListener('change', syncCustomSize);
 ['customW','customH'].forEach(id => $(id).addEventListener('change', ()=>{
@@ -1084,7 +1085,6 @@ $('advancedJson').value = JSON.stringify(serializeCurrentSettings(), null, 2);
 
 // ---------- presets ----------
 const presetGrid = $('presetGrid');
-const PRESET_COLUMNS = 4;
 
 // Preset tiles paint when they come into view (Rituals may never be opened),
 // one per animation frame so even opening it never freezes the page. Where
@@ -1191,7 +1191,7 @@ async function pickPreset(p){
 const litPreset = { name: null, sig: null };
 function meaningfulSig(){ try { const o = JSON.parse(lookSnapshot()); delete o.textureSeedValue; delete o.lookName; return JSON.stringify(o); } catch(e){ return ''; } }
 function litPresetChanged(){ return !!litPreset.name && litPreset.sig != null && meaningfulSig() !== litPreset.sig; }
-function paintLitPreset(){ if(presetGrid && presetGrid.querySelectorAll) presetGrid.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('lit', !!litPreset.name && !!b.dataset && b.dataset.name === litPreset.name)); }
+function paintLitPreset(){ for(const g of [presetGrid, $('customPresetGrid')]) if(g && g.querySelectorAll) g.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('lit', !!litPreset.name && !!b.dataset && b.dataset.name === litPreset.name)); }
 function lightPreset(name){ litPreset.name = name || null; litPreset.sig = null; paintLitPreset(); }
 function checkLitPreset(){
   if(!litPreset.name) return;
@@ -1206,25 +1206,23 @@ function swapReading(){
 }
 if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
-// Saved spells join the same grid rather than living only in Esoterica.
-// Everything from the divider down is rebuilt whenever the saved set changes,
-// so the built-in tiles above it are never touched.
-const builtInCount = presetGrid.children.length;
+// CUSTOM PRESETS (Ruby): the saved spells, in a card of their own under the built-in
+// ones, alphabetical, in as many rows as they need (never a sideways scroller) — a
+// library that can grow until the built-in ones aren't needed. Rebuilt whenever the
+// saved set changes.
+const customGrid = $('customPresetGrid');
+if(customGrid && customGrid.addEventListener) customGrid.addEventListener('mouseleave', endHoverPreview);
 
 function renderSavedPresets(saved){
-  while(presetGrid.children.length > builtInCount){
-    presetGrid.removeChild(presetGrid.children[presetGrid.children.length - 1]);
-  }
+  if(!customGrid) return;
+  customGrid.innerHTML = '';
+  const empty = $('customPresetsEmpty');
+  if(empty) empty.style.display = (saved && saved.length) ? 'none' : '';
   if(!saved || !saved.length) return;
-
-  const divider = document.createElement('p');
-  divider.className = 'preset-divider';
-  divider.textContent = 'Bound Spells';
-  presetGrid.appendChild(divider);
 
   for(const rec of saved){
     const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
-    presetGrid.appendChild(presetTile(shot, ()=>{
+    customGrid.appendChild(presetTile(shot, ()=>{
       // a spell is YOUR look: the first click puts it back exactly, seed and all;
       // a click while it is still lit rerolls the seed (and now and then the reading)
       if(litPreset.name === rec.name && !litPresetChanged()){ maybeRerollSeed(); if(Math.random() < 0.45) swapReading(); scheduleRender(); commitSoon(); lightPreset(rec.name); return; }
@@ -1234,17 +1232,7 @@ function renderSavedPresets(saved){
       scheduleRender(); lightPreset(rec.name);
     }, 'preset-custom'));
   }
-
-  // blanks so a part-filled last row stays rectangular
-  const remainder = saved.length % PRESET_COLUMNS;
-  if(remainder){
-    for(let i = remainder; i < PRESET_COLUMNS; i++){
-      const blank = document.createElement('div');
-      blank.className = 'preset-btn preset-empty';
-      blank.setAttribute('aria-hidden', 'true');
-      presetGrid.appendChild(blank);
-    }
-  }
+  paintLitPreset();
 }
 
 function applyThemePalette(colors){
@@ -2960,6 +2948,16 @@ function safeRestore(obj, what = 'This look'){
   return true;
 }
 
+// the example look a first visit finds among the custom presets: plain on purpose (warm paper,
+// dark ink, Alegreya, a little linen) — something to try, change, or delete
+const FIRST_VISIT_KEY = 'uv.firstvisit.v1';
+const EXAMPLE_LOOK = { name: 'Example · Linen Page', settings: {
+  bg1: '#EDE6D8', bgGradient: true, bg2: '#DCCFB8', bgAngle: 160, bgGradientType: 'linear',
+  text1: '#2A2320', textGradient: false, font: 'Alegreya', accent1: '#9C3D54', accent2: '#3D6A8A',
+  texture: true, textureType: 'linen', textureOpacity: 45, textureBlend: 'soft-light',
+  border: false, cardToggle: false, vignette: true, vignetteBlend: 'multiply', vignetteIntensity: 18,
+  fx1Type: 'none', fx2Type: 'none', fx3Type: 'none', outlineMode: 'off' } };
+
 // A spell is the look, never the words -- the poem belongs to the Grimoire.
 function settingsForSpell(){
   return stripToLook(serializeCurrentSettings());
@@ -3003,9 +3001,19 @@ applyPreset(defaultPalettePreset);
 // that, then draw the preview at the size it is shown.
 if(!state.page.exportW){ state.page.exportW = canvas.width; state.page.exportH = canvas.height; }
 applyPreviewScale();
-// Every build opens on the §Variables instrument panel for now; at launch,
-// OPEN_ON_POEM (appOptions.js) lets production open on a poem instead.
-if(!(OPEN_ON_POEM && isProductionHost())){ $('poemText').value = DEV_TEMPLATE; repaintEditor(); }
+// Every visit opens on the welcome page (Ruby's own words: what this is and how to begin).
+$('poemText').value = WELCOME_POEM; repaintEditor();
+// FIRST VISIT: the instrument panel waits in the Grimoire, dated the release (it shows how the
+// Grimoire keeps a poem), and one plain example look waits among the custom presets. Once only:
+// deleted, they stay deleted.
+try {
+  if(typeof localStorage !== 'undefined' && !localStorage.getItem(FIRST_VISIT_KEY)){
+    const [y, mo, d] = String(RELEASE_DATE).split('-').map(Number), ts = new Date(y, (mo || 1) - 1, d || 1, 12, 0).getTime();
+    vault.seed({ poem: { title: DEV_TEMPLATE_TITLE, text: DEV_TEMPLATE, savedTs: ts },
+                 spell: { name: EXAMPLE_LOOK.name, settings: { ...settingsForSpell(), ...EXAMPLE_LOOK.settings, lookName: EXAMPLE_LOOK.name } } });
+    localStorage.setItem(FIRST_VISIT_KEY, '1');
+  }
+} catch(e){ /* storage refused: the app works the same without the examples */ }
 // Fonts are fetched on first use now (fonts.js, asked for by the renderer);
 // the first render happens as soon as the page is ready.
 render();

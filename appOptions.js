@@ -490,12 +490,18 @@ export function getActiveRadioValue(containerId){
 }
 
 /**
- * The page every build opens on, for now: a live instrument panel of
- * §Variables — and a calling card for the poet behind the press. At launch,
- * set OPEN_ON_POEM to true and production will open on a poem instead.
+ * THE INSTRUMENT PANEL: a live page of §Variables (what the look is made of,
+ * how long it took). No longer the opening page: it waits in the Grimoire,
+ * dated the release (it shows how the Grimoire keeps a poem).
  */
 export const DEV_TEMPLATE = "## <\u00a7UVIcon PoetryPress/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] \u00a7SpellRunes // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90> \u00a7Reading\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7SeedPhrase] \u00b7 \u00a7TextureSeed  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
-export const OPEN_ON_POEM = false;
+/** The Grimoire's title for it. */
+export const DEV_TEMPLATE_TITLE = 'PoetryPress Instrument Panel';
+/**
+ * THE OPENING PAGE (Ruby's own words): what PoetryPress is and how to begin,
+ * written in PML so it shows the markup off as it explains it.
+ */
+export const WELCOME_POEM = "## WTF is [PoetryPress]?\n\n>  [{\"well, it's a weird art tool for text\"]}\n>  [{\"...or something...\"]}\n>  [{\"but like... how do I use it?\"]}\n\n*big breath*\n\nOk.\nSo you write on this thing\n   (first tab: [§Glyph!input **Inscription**])\n\nand the text can be {formatted}\n[in a basic markup language]\nwhich has simple and complex shortcuts [🌸]\n\n---\n-# for instance:\n> justified right/r\n> <also/left> <justified right/right>\n^ using a different method\n---\n\n*ANYWAY*\n\nyou can also SELECT a generative texture\n-# and can make one yourself\nand it lets you typeset {and set formatting}\nand do other\npotentially <interesting/jitter:200/f:12> things\n\n[also everything is sharable]\n\n> I made this because I'm a weird poet\n> and I noticed people don't read text anymore\n> so I wanted my poems to be unique and eye-catching\n\nso... there's a whole generative texture engine &\n*almost* as many art tools as Adobe Photoshop\nin a     <**m o b i l e   f i r s t   U I**/rainbow>\n-#                                      ...that is still [under construction]\n\nand it just happens to be {**Completely FREE**}.\n\nHave fun!";
 /** Production is poetrypress.*; anything else — vellum, a local file — is development. */
 export const isProductionHost = () => typeof location !== 'undefined' && /^poetrypress\./i.test(location.hostname || '');
 

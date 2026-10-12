@@ -296,10 +296,12 @@ function drawCodeBackdrop(ctx, x, y, w, size, style){
     const px = ctx.getImageData(Math.max(0, Math.round(x + w/2)), Math.max(0, Math.round(y + size*0.55)), 1, 1).data;
     behind = (px[0]*0.299 + px[1]*0.587 + px[2]*0.114) / 255;
   } catch(e){ /* unreadable canvas: assume a midtone */ }
-  const [hue] = hexToHsl(style.accent1Color || '#9B7FE8');
+  // (hexToHsl gives { h, s, l }, s and l in percent; hslToHex takes the same — an array read of it threw
+  // here, and every frame with inline code failed: the preview froze on its last good picture)
+  const { h: hue } = hexToHsl(/^#[0-9a-f]{6}$/i.test(style.accent1Color || '') ? style.accent1Color : '#9B7FE8');
   const light = behind < 0.5;                          // dark page: light backdrop
-  const back = hslToHex(hue, light ? 0.32 : 0.28, light ? 0.88 : 0.15);
-  const ink  = hslToHex(hue, light ? 0.45 : 0.3,  light ? 0.14 : 0.92);
+  const back = hslToHex(hue, light ? 32 : 28, light ? 88 : 15);
+  const ink  = hslToHex(hue, light ? 45 : 30, light ? 14 : 92);
   const padX = size*0.24, top = y - size*0.06, h = size*1.2, r = size*0.18;
   ctx.save();
   ctx.globalAlpha = 0.62; ctx.fillStyle = back;

@@ -28,7 +28,8 @@ The sections below follow the tabs, left to right.
 
 ### 1. Inscription: the words
 
-Type your poem in the editor. Plain text works as it is. To style it, use
+The app opens on a short welcome page, written in PML. Type your poem over it
+in the editor. Plain text works as it is. To style it, use
 **PML** (Poetic Magick Language), a markup in the spirit of Markdown:
 
 - `## ` at the start of a line makes it a heading, and `-# ` a small aside;
@@ -44,12 +45,15 @@ Guidance. Script Highlighting colors the markup as you type.
 
 ### 2. Rituals: the shape and the presets
 
-Choose the **aspect ratio** (square, portrait, landscape, or a custom size in
-pixels) and where the text sits. **Known Rituals** are presets: whole looks
-(typeface, colors, texture, frame) applied in one click. Every click draws a
-new seed, so a ritual gives a slightly different image each time. The ritual
-stays lit until you change something; clicking it again rerolls it. Your own
-saved looks (Bound Spells) appear here too.
+Choose the **aspect ratio** (9:16 to begin with, or square, landscape, or a
+custom size in pixels) and where the text sits. **Built-In Presets** are whole
+looks (typeface, colors, texture, frame) applied in one click. Every click
+draws a new seed, so a preset gives a slightly different image each time. The
+preset stays lit until you change something; clicking it again rerolls it.
+
+**Custom Presets** are your own saved looks, in alphabetical order. Save the
+current look with Create in Esoterica → Spellcrafting. A first visit finds
+one plain example there, to try or delete.
 
 ### 3. Thoughtforms: the type
 
@@ -84,7 +88,9 @@ cache so that a change remakes only what changed.
 
 - **Spellcrafting**: keep the whole look as a *spell* by name, bring it back,
   or share it as a link.
-- **The Grimoire**: keep the poems themselves, dated by the moon.
+- **The Grimoire**: keep the poems themselves, dated by the moon. A first
+  visit finds the Instrument Panel there: a page of §Variables that shows
+  what the current look is made of.
 - **Interface**: the app's theme (Rosé, Aether, Fathom, Vellum) and its sound.
 - **The Workbench**: export or import the whole look as JSON.
 

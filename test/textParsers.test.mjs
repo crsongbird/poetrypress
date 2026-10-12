@@ -28,11 +28,8 @@ for(const src of ['{[a]}', '{[a}]', '[{a]}', '[{a}]']){
   check(`gradient closes correctly: ${src}`, segs.length === 1 && segs[0].text === 'a');
 }
 
-// the actual default poem, read straight from index.html rather than
-// retyped here — avoids this test ever drifting out of sync with reality
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const m = html.match(/<textarea id="poemText"[^>]*>([\s\S]*?)<\/textarea>/);
-const flood = m[1];
+// "Wanting", the old default poem, kept as a fixture (the app opens on a welcome page now)
+const flood = readFileSync(new URL('./fixtures/wanting.pml', import.meta.url), 'utf8');
 
 let lines;
 try {

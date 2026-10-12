@@ -21,9 +21,10 @@ check('the switches that showed a section are EYES; a card\'s own eye sits in it
   /const CARD_EYES = \{ textureToggle:/.test(ev) && /headTools\(head\)\.appendChild\(box\);/.test(ev) && /input\[type="checkbox"\]\.eye/.test(css)
   && /if\(card\.open !== was\) card\.open = was;/.test(ev));
 check('the tools sit at the heading\'s far end, spaced apart from each other and from the fold', /\.head-tools\{ float:right; display:inline-flex; align-items:center; gap:16px; margin-left:18px;/.test(css));
-check('more folds: Form & Bearing, Known Rituals and Interface fold like the rest',
+check('more folds: Form & Bearing, Built-In Presets, Custom Presets and Interface fold like the rest',
   /<details class="card" data-tab="style" open>\s*<summary class="card-title"[^>]*>\s*Form &amp; Bearing/.test(html)
-  && /<details class="card" data-tab="style" open>\s*<summary class="card-title"[^>]*>\s*Known Rituals/.test(html)
+  && /<details class="card" data-tab="style" open>\s*<summary class="card-title"[^>]*>\s*Built-In Presets/.test(html)
+  && /<details class="card" data-tab="style" id="customPresetsCard" open>\s*<summary class="card-title" data-str="card\.custom_presets">Custom Presets/.test(html)
   && /<details class="card" data-tab="more">\s*<summary class="card-title" data-str="card\.appearance">Interface<\/summary>/.test(html) && /'card\.appearance':\s+"Interface"/.test(src('strings.js')));
 check('sound is a switch and a volume on one line, with nothing to read', /<div class="sound-row">\s*<input type="checkbox" id="soundToggle" class="switch">/.test(html) && !/hint\.sounds/.test(html));
 check('the dial\'s numbers show beneath it and can be typed (views of the saved values)',
@@ -70,8 +71,8 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
     /family=Alegreya:ital,wght@0,400\.\.900/.test(html) && /family=Alegreya\+SC/.test(html) && /family=Alegreya\+Sans/.test(html)
     && /--ui-text:'Alegreya'/.test(css) && /--ui-caps:'Alegreya SC'/.test(css) && /--ui-sans:'Alegreya Sans'/.test(css)
     && /\.card-title, summary\.card-title\{ font-family:var\(--ui-caps\); font-weight:500; text-transform:lowercase;/.test(css) && !/\.app-header-title\{[^}]*font-weight:700/.test(css));
-  check('ROSÉ has neutral warm near-black grounds (no plum): pink and pale blue the only colours',
-    /:root\[data-theme="rose"\]\{[\s\S]*?--bg-deep:#0e0d0d;[\s\S]*?--bg-panel:#151313;/.test(css) && /--accent-2:#a3c6e3/.test(css));
+  check('ROSÉ keeps its plum-charcoal grounds (Ruby, after trying neutral): pink and pale blue on them',
+    /:root\[data-theme="rose"\]\{[\s\S]*?--bg-deep:#0b0a0d;[\s\S]*?--bg-panel:#131116;/.test(css) && /--accent-2:#a3c6e3/.test(css));
   check('THE TOP BAR: 🜉 The Athanor (glyph large, name small) opens the node editor; a quiet Support button whose heart breathes now and then (still under reduced motion)',
     html.includes('id="athanorTopBtn"') && html.includes('<span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span>')
     && /\$\('athanorTopBtn'\)\.addEventListener\('click', \(\) => openForge\(forgeDeps\(\)\)\)/.test(ev)
@@ -121,6 +122,21 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
     [...Object.values(A.ATHANOR_STARTERS), ...Object.values(CH.TEXTURE_CHAINS)].every(t => /^This (graph makes|is) /.test(t.teach) && /Try: /.test(t.teach)));
   check('THE README explains the whole app plainly: the three engines, each tab, the Athanor, saving',
     /## How PoetryPress works/.test(src('README.md')) && /\*\*a node editor, the Athanor\*\*/.test(src('README.md')) && /### 7\. Saving/.test(src('README.md')));
+}
+// ---- Ruby's 23:22 pass ----
+{
+  const rend = src('canvasRenderer.js'), css = src('poetrypress.css'), H = await import('../canvasRenderer.js');
+  // `inline code` froze the preview: its backdrop read hexToHsl's { h, s, l } as an array and every frame threw
+  const hsl = H.hexToHsl('#9B7FE8');
+  check('INLINE CODE: the backdrop reads hexToHsl as { h, s, l } (an array read threw, and every frame with `code` failed)',
+    /const \{ h: hue \} = hexToHsl\(/.test(rend) && !/const \[[^\]]*\] = hexToHsl\(/.test(rend)
+    && typeof hsl === 'object' && isFinite(hsl.h) && /^#[0-9a-f]{6}$/i.test(H.hslToHex(hsl.h, 32, 88)));
+  check('THE PREVIEW PANE (desktop): the viewer is the whole pane, the picture fits inside it, the buttons in a strip along its foot',
+    /body:not\(\.is-mobile\) \.canvas-wrap\{ flex:1 1 0; min-height:0; width:100%;/.test(css) && /body:not\(\.is-mobile\) \.canvas-wrap::after\{/.test(css)
+    && /body:not\(\.is-mobile\) #poemCanvas\{ max-height:100%; max-width:100%; \}/.test(css));
+  check('the page opens at 9:16', /<div class="radio-btn active" data-val="9:16">/.test(src('index.html')) && /<canvas id="poemCanvas" width="2304" height="4096">/.test(src('index.html'))
+    && /aspect: '9:16'/.test(src('appEvents.js')));
+  check('release archives: the build removes the old ones before writing the new', /if\(f\.endsWith\('\.zip'\)\)\{ \(await import\('fs'\)\)\.unlinkSync\('release\/' \+ f\)/.test(src('build.mjs')));
 }
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

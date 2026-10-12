@@ -429,8 +429,10 @@ check('the inset box is painted on its own layer, then blended on as one image (
   {
     const O = await import('../appOptions.js');
     const asHost = h => { globalThis.location = { hostname: h }; const r = O.isProductionHost(); delete globalThis.location; return r; };
-    check('every build opens on the template for now; at launch, OPEN_ON_POEM lets production open on a poem',
-      /if\(!\(OPEN_ON_POEM && isProductionHost\(\)\)\)\{ \$\('poemText'\)\.value = DEV_TEMPLATE;/.test(ev) && O.OPEN_ON_POEM === false &&
+    check('every visit opens on the welcome page (WELCOME_POEM, also the textarea\'s own text); the instrument panel waits in the Grimoire, dated the release, with an example look, once',
+      /\$\('poemText'\)\.value = WELCOME_POEM;/.test(ev) && /<textarea id="poemText"[^>]*>## WTF is \[PoetryPress\]\?/.test(src('index.html'))
+      && /vault\.seed\(\{ poem: \{ title: DEV_TEMPLATE_TITLE, text: DEV_TEMPLATE, savedTs: ts \}/.test(ev) && /localStorage\.setItem\(FIRST_VISIT_KEY, '1'\)/.test(ev)
+      && /export const RELEASE_DATE = '\d{4}-\d\d-\d\d';/.test(src('release.js')) && /RELEASE_DATE = '\$\{new Date\(\)\.toISOString\(\)\.slice\(0, 10\)\}'/.test(src('build.mjs')) &&
       asHost('poetrypress.unfixable.place') === true && asHost('vellum.unfixable.place') === false);
   }
   const P = await import('../textParsers.js');
@@ -895,7 +897,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
       && /body\.more-open:not\(\.is-mobile\) \.controls\{ opacity:\.42;/.test(css2) && /"controls stage drawer"/.test(css2));
     check('desktop: the left sidebar and Esoterica\'s drawer resize by their edges (a faint line with a grip; remembered in this browser, double-click resets); the image fits between',
       /grip\.className = 'side-resize'/.test(ev2) && /grip\.className = 'drawer-resize side-resize-like'/.test(ev2) && /localStorage\.setItem\(KEY/.test(ev2) && /grid-template-columns:var\(--side-w, 460px\) minmax\(0,1fr\);/.test(css2)
-      && /max-width:calc\(100vw - var\(--side-w, 460px\) - 56px\)/.test(css2) && /var\(--drawer-w, 440px\)/.test(css2) && /^\.side-resize\{ display:none; \}/m.test(css2));
+      && /body:not\(\.is-mobile\) #poemCanvas\{ max-height:100%; max-width:100%; \}/.test(css2) && /var\(--drawer-w, 440px\)/.test(css2) && /^\.side-resize\{ display:none; \}/m.test(css2));
   }
   {
     const sh = src('texSharpness.js'), ch3 = src('texChaos.js'), T2 = await import('../textureGenerators.js');

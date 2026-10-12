@@ -9,7 +9,7 @@
      left enabled. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#151313">
+<meta name="theme-color" content="#131116">
 <!-- already dark: dark-mode add-ons (Dark Reader and its kin) leave it alone;
      the colour scheme follows the theme (theme.js), light only for Vellum -->
 <meta name="darkreader-lock">
@@ -59,26 +59,51 @@
         <div class="editor-gutter" id="poemGutter" aria-hidden="true"></div>
         <div class="editor-scroll">
           <pre class="editor-mirror" id="poemMirror" aria-hidden="true"></pre>
-          <textarea id="poemText" class="editor-input" spellcheck="false" wrap="soft">## Wanting [(Aether)]
+          <textarea id="poemText" class="editor-input" spellcheck="false" wrap="soft">## WTF is [PoetryPress]?
 
-I had to greet you
-in  <our native language/f:12>
-but our species knew nothing.
+>  [{"well, it's a weird art tool for text"]}
+>  [{"...or something..."]}
+>  [{"but like... how do I use it?"]}
 
-Only love,
-       {[merged with anguish...]}
+*big breath*
 
-So I opened your helmet.
+Ok.
+So you write on this thing
+   (first tab: [§Glyph!input **Inscription**])
 
-The <aether/scale:115/fx2,#A98CFF,26,0,0> <b/basis:-5><l/basis:-10><e/basis:-18><d/basis:-26> <o/basis:-33><u/basis:-45><t/basis:-55> of your [held-shut jaw] like
-<*rainbows and starlight and awe*/rainbow>, and
-{whatever} stirs,
-                  <*wanting*/jitter:300>
-inside of a <~~dead person~~/trans>'s dreams.
+and the text can be {formatted}
+[in a basic markup language]
+which has simple and complex shortcuts [🌸]
 
+---
+-# for instance:
+> justified right/r
+> &lt;also/left> &lt;justified right/right>
+^ using a different method
+---
 
--# It sounds beautiful and rotten, both,
--# as it occupies all the [empty space] in you.</textarea>
+*ANYWAY*
+
+you can also SELECT a generative texture
+-# and can make one yourself
+and it lets you typeset {and set formatting}
+and do other
+potentially &lt;interesting/jitter:200/f:12> things
+
+[also everything is sharable]
+
+> I made this because I'm a weird poet
+> and I noticed people don't read text anymore
+> so I wanted my poems to be unique and eye-catching
+
+so... there's a whole generative texture engine &amp;
+*almost* as many art tools as Adobe Photoshop
+in a     &lt;**m o b i l e   f i r s t   U I**/rainbow>
+-#                                      ...that is still [under construction]
+
+and it just happens to be {**Completely FREE**}.
+
+Have fun!</textarea>
         </div>
       </div>
 
@@ -196,10 +221,10 @@ inside of a <~~dead person~~/trans>'s dreams.
           <label data-str="label.aspect_ratio">Aspect Ratio</label>
           <p class="sub-label" data-str="hint.standard">Standard</p>
           <div class="radio-group" id="aspectGroup">
-            <div class="radio-btn active" data-val="1:1">1:1</div>
+            <div class="radio-btn" data-val="1:1">1:1</div>
             <div class="radio-btn" data-val="2:3">2:3</div>
             <div class="radio-btn" data-val="3:4">3:4</div>
-            <div class="radio-btn" data-val="9:16">9:16</div>
+            <div class="radio-btn active" data-val="9:16">9:16</div>
             <div class="radio-btn" data-val="1:2">1:2</div>
             <div class="radio-btn" data-val="9:20.5">9:20.5</div>
           </div>
@@ -215,9 +240,9 @@ inside of a <~~dead person~~/trans>'s dreams.
           </div>
           <div class="row" id="customSizeRow">
             <div class="field"><label for="customW" data-str="label.width">Width</label>
-              <input type="number" id="customW" min="256" max="4096" step="1" value="3072"></div>
+              <input type="number" id="customW" min="256" max="4096" step="1" value="2304"></div>
             <div class="field"><label for="customH" data-str="label.height">Height</label>
-              <input type="number" id="customH" min="256" max="4096" step="1" value="3072"></div>
+              <input type="number" id="customH" min="256" max="4096" step="1" value="4096"></div>
           </div>
         </div>
         <div class="field">
@@ -240,8 +265,14 @@ inside of a <~~dead person~~/trans>'s dreams.
     </details>
 
     <details class="card" data-tab="style" open>
-      <summary class="card-title" data-str="card.known_rituals">  Known Rituals</summary>
+      <summary class="card-title" data-str="card.builtin_presets">Built-In Presets</summary>
       <div class="preset-grid" id="presetGrid"></div>
+    </details>
+
+    <details class="card" data-tab="style" id="customPresetsCard" open>
+      <summary class="card-title" data-str="card.custom_presets">Custom Presets</summary>
+      <div class="preset-grid" id="customPresetGrid"></div>
+      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">Looks you save appear here. To save the current look, open Esoterica → Spellcrafting and press Create.</p>
     </details>
 
 
@@ -1101,7 +1132,7 @@ inside of a <~~dead person~~/trans>'s dreams.
 
   <div class="stage">
     <div class="canvas-wrap">
-      <canvas id="poemCanvas" width="3072" height="3072"></canvas>
+      <canvas id="poemCanvas" width="2304" height="4096"></canvas>
       <div class="work-bar" aria-hidden="true"><i></i></div>
       <p class="working-line" id="workingLine" aria-live="polite"></p>
       <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position" data-str="button.resetViewBtn">⟲</button>

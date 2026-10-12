@@ -27,7 +27,8 @@ result is saved as a 3072 px JPEG.
 node build.mjs            # flatten all modules into dist/index.html (+ the texture worker, sw.js, manifest)
 sh test.sh                # parse check + build + all test suites — must end "all N suites passed"
 sh check.sh file.js …     # syntax-check modules quickly
-node build.mjs --zip      # archive the project into release/ (keep only the latest archive)
+node build.mjs --zip      # archive the project into release/ (old archives are deleted first)
+node build.mjs --notes    # print the newest CHANGELOG section (the release's commit message)
 node build.mjs --next     # advance release.js to the next moon — once per shipped release
 
 npm install @napi-rs/canvas                    # once, for the tools below
@@ -280,9 +281,13 @@ the in-app help (terse) and `README.md`.
 must never contain `/` if it may land inside a segment (that is why the
 release reads `Jupiter–Io`, with an en dash).
 
-**Ship a release** — tests green → `node build.mjs --next` → build → `--zip`
-(remove the previous archive) → unpack the archive and run its tests →
-present the archive once.
+**Ship a release** (one per pass, at its end) — tests green → `node build.mjs
+--next` → write the release's section at the top of CHANGELOG.md (plain patch
+notes) → build → copy the project into the clone of crsongbird/poetrypress
+(everything but release/ and node_modules; the repo keeps its CNAME) → run its
+tests there → commit to main with `node build.mjs --notes` as the message →
+push. Main is live (GitHub Pages, poetrypress.unfixable.place). Screenshots
+only when asked or when they help the work; no picture sets by default.
 
 ---
 

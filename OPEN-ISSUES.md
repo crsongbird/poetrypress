@@ -6,7 +6,29 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Taygete)
+## 1 · Ruby to judge (new in Jupiter–Carme)
+- INLINE CODE works again. The crash was mine: the code's backdrop read a
+  color as the wrong shape, so every frame with `code` in it failed and the
+  preview kept its last good picture. Not Firefox only. A test now holds it.
+- THE PREVIEW (desktop): the viewer is the whole right pane, whatever the
+  page's shape; the picture fits inside it, so the aspect ratio changes the
+  picture, never the viewer. The buttons (fit, undo, redo, filmstrip, Save
+  image) sit in a strip along the pane's foot, off the picture. A zoom
+  (Ctrl or ⌘ + wheel) fills the whole pane. The phone is unchanged.
+- PRESETS: Built-In Presets (was Known Rituals) and a new card under it,
+  Custom Presets: your saved looks, alphabetical, in as many rows as they
+  need. The saved looks in Esoterica → Spellcrafting are alphabetical too,
+  and wrap into rows instead of scrolling sideways.
+- THE OPENING PAGE is Ruby's "WTF is PoetryPress?", in 9:16 (now the
+  default shape). A first visit also finds the Instrument Panel (the old
+  opening page) in the Grimoire, dated the release, and one plain example
+  look in Custom Presets ("Example · Linen Page": warm paper, dark ink,
+  Alegreya, a little linen). Each is added once; deleted, it stays deleted.
+- ROSÉ is the plum-charcoal again (Ruby: it grew on her, on OLED most).
+- THE BUILD keeps one archive: `node build.mjs --zip` deletes the old ones
+  in release/ first.
+
+## 1a · Ruby to judge (from Jupiter–Taygete)
 - PAINTED LANDSCAPE, in Bob Ross's manner: evergreens laid in with a fan
   brush (dark first, the light on the sun's side), bushes tapped in, a framing
   tree at an edge; mountains knife-painted (light pulled down the sunny faces,
@@ -51,7 +73,7 @@ Recommendations".
   - A TABLE OBJECTS part in the Athanor lays the same things on any picture
     (choose a kind, or leave it to the seed).
 
-## 1a · Ruby to judge (from Jupiter–Erinome)
+## 1b · Ruby to judge (from Jupiter–Erinome)
 - THE ATHANOR'S HELP: a Help button (and the ? in the corner) opens a
   document over the grid — never over the parts list — in twelve sections:
   what it is, reading a graph, wires and the four kinds they carry, what
@@ -73,7 +95,7 @@ Recommendations".
 - ⟳ SEED in the Athanor's corner: a new page seed without leaving it.
 - THE README explains how the whole app works, plainly, tab by tab.
 
-## 1b · Ruby to judge (from Jupiter–Aitne)
+## 1c · Ruby to judge (from Jupiter–Aitne)
 - A PORTRAIT WINDOW, or one narrower than 900px, gets the phone layout — live,
   as the window is resized — and a wider one the desk layout; the old
   in-between layout is gone.
@@ -95,9 +117,9 @@ Recommendations".
 - RITUALS: every click is a new seed; the look stays lit until something
   meaningful changes (anything but the seed); clicking the lit one again
   rerolls, and now and then takes another of its surface's readings. Your
-  own Bound Spells come back exactly the first time, and reroll after.
+  own saved looks (Custom Presets) come back exactly the first time, and reroll after.
 
-## 1c · Ruby to judge (from Jupiter–Isonoe)
+## 1d · Ruby to judge (from Jupiter–Isonoe)
 - THE TYPE is Ruby's specimen: Alegreya for reading, Alegreya SC for the
   headings (true small caps, set in lowercase so every letter is one),
   Alegreya Sans for the labels and plain buttons; nothing bold (the title
@@ -105,10 +127,6 @@ Recommendations".
   controls stand on the line (Alegreya's own figures are old-style). The three
   are in the poem's font list too (the last three; Literary, Small Caps,
   Humanist).
-- ROSÉ: neutral warm near-black grounds, as in the specimen — pink and pale
-  blue the only colors. (The plum was mine: it came from cooling the grounds
-  when the green went. The gold-and-purple in the preview is the Dusk Letter
-  template's own.)
 - THE TOP BAR: 🜉 The Athanor (the glyph large, its name small) opens the node
   editor from anywhere; a quiet Support button beside it, its little heart
   breathing once every nine seconds — the only thing on the page that moves
@@ -130,7 +148,7 @@ Recommendations".
 - AMERICAN ENGLISH wherever a person reads it (color, gray, center, mold,
   smolder): the page, its strings, the Athanor, the alt text, README, PML.md.
 
-## 1d · Ruby to judge (from Jupiter–Kale)
+## 1e · Ruby to judge (from Jupiter–Kale)
 - THE FOUR, BUILT IN THE ATHANOR (each texture is now made from its graph,
   and "Start from…" opens it, with a note on what it teaches):
   - SLEEP HAZE: Smoke (Lift, Drag) → Light Shaft (the Light Dial wired in;
@@ -154,7 +172,7 @@ Recommendations".
 - New parts for anyone's graphs: Smoke, Light Shaft, Dust Motes, Painted
   Sky, Painted Ridges, Watercolour Wash, Panes, Glass, Flakes.
 
-## 1e · Still to judge from Jupiter–Chaldene
+## 1f · Still to judge from Jupiter–Chaldene
 - WIRING ON A PHONE, without dragging: hold a part (or one of its ports) →
   "Wire from it…" (or "Wire into it…", or "Wire this to…" on a port) → a bar
   at the top says what is being wired → tap (or hold) the part it goes to →
@@ -175,7 +193,7 @@ Recommendations".
   The Card Table starter is gone (it was the duplicate).
 - A new input part, ACCENT (the page's accent colours), beside Hue.
 
-## 1f · Still to judge from Jupiter–Herse
+## 1g · Still to judge from Jupiter–Herse
 - PoetryPress again wherever a person reads it (title, header, home-screen
   name, the alt text, README); Unfixable Vellum stays inside the code.
 - ROSÉ: the green is a pale blue now (#a3c6e3), the grounds a cooler
@@ -287,10 +305,6 @@ Recommendations".
 
 
 ## 2 · Waiting on Ruby
-- INLINE CODE CRASH: `backticks` in PML could not be made to crash here
-  (Chromium: typed, pasted, empty, unclosed, inside headings, with variables).
-  Which text, which browser (Firefox?), and what happened — frozen tab, blank
-  preview, an error?
 - SOUNDS — the instrument itself, when Ruby wants it back:
   - a STRING instrument, something unusual (plucked string by physical model;
     ideas: an Aeolian harp, strings sounded by wind; sympathetic strings that
@@ -303,6 +317,11 @@ Recommendations".
   Fine, or keep a fast path?
 
 ## 3 · Long horizon
+- THE SATURN RELEASE (Ruby): once every texture is taken apart into parts, a
+  creative enough user should be able to make in the Athanor anything Filter
+  Forge or Blender's shader nodes can — shaders and blending included. Blend
+  modes and shader components get rethought then, as parts. Custom Presets
+  are where that library grows (until the built-in ones aren't needed).
 - IMPORTS: a tab of images placed on the page, each a LAYER (position, size,
   turn, opacity, a blend mode, a lock, an eye) — and the text, the surface,
   the box and the border as layers too, each with its own blend. A layer list

@@ -151,8 +151,8 @@ check('tabs use the new names',
 
 check('Form & Bearing now lives on the Aspects tab',
   /<details class="card" data-tab="style" open>\s*<summary class="card-title"[^>]*>\s*Form &amp; Bearing/.test(html));
-check('Form & Bearing sits above Known Rituals',
-  html.indexOf('Form &amp; Bearing') < html.indexOf('>  Known Rituals</summary>'));
+check('Form & Bearing sits above Built-In Presets, and Custom Presets below them',
+  html.indexOf('Form &amp; Bearing') < html.indexOf('>Built-In Presets</summary>') && html.indexOf('>Built-In Presets</summary>') < html.indexOf('>Custom Presets</summary>'));
 
 for(const [title, shouldBeOpen] of [['Backdrop Color', true], ['Surface Texture', true], ['Border Options', false], ['Vignette Options', false]]){
   const m = html.match(new RegExp('<details class="card" data-tab="page"( open)?>\\s*<summary class="card-title"[^>]*>' + title + '</summary>'));
@@ -363,7 +363,8 @@ check('re-enabling it is a one-line change', /PARKED/.test(edCss));
 check('swatches are not cropped',
   /\.preset-swatch\{[^}]*\}/.test(edCss) && !/\.preset-swatch\{[^}]*object-fit/.test(edCss));
 check('saved presets can join the grid', /renderSavedPresets/.test(evJs));
-check('a part-filled row is padded with blanks', /preset-empty/.test(evJs) && /preset-empty/.test(edCss));
+check('custom presets have their own grid, rebuilt whole, alphabetical (vault.js sortedSpells), in rows (never a sideways scroller)',
+  /customGrid\.innerHTML = ''/.test(evJs) && /deps\.onSpellsChanged\(sortedSpells\(\)\)/.test(readFileSync(new URL('../vault.js', import.meta.url), 'utf8')) && /\.spell-wheel\{\s*display:grid;/.test(readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8')));
 check('the vault tells the grid when saved spells change',
   /onSpellsChanged/.test(evJs));
 

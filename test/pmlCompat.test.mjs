@@ -19,8 +19,9 @@ let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 const golden = JSON.parse(readFileSync(new URL('./fixtures/pml-golden.json', import.meta.url), 'utf8'));
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const poem = html.match(/<textarea id="poemText"[^>]*>([\s\S]*?)<\/textarea>/)[1];
+// the poem the fixture was captured from ("Wanting", the default page until Taygete — the app now
+// opens on a welcome page, so the poem is kept here, exactly as it was in index.html)
+const poem = readFileSync(new URL('./fixtures/wanting.pml', import.meta.url), 'utf8');
 
 const SAMPLES = [poem,
   '<word/fx0>', '<word/fx1>', '<word/fx1,#ff0000,5>', '<word/fx2>', '<word/fx2,#fff,10,4,4>',

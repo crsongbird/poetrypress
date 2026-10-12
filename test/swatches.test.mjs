@@ -82,10 +82,9 @@ check('the glyphs are centred both ways',
 
 // ---- saved presets in the grid ----
 const savedFn = (ev.match(/function renderSavedPresets[\s\S]*?\n\}/) || [''])[0];
-check('saved presets are appended, never replacing the built-ins',
-  /presetGrid\.children\.length > builtInCount/.test(savedFn));
-check('the row is completed with blanks', /preset-empty/.test(savedFn));
-check('blanks are hidden from assistive tech', /aria-hidden/.test(savedFn));
+check('saved presets go in their own grid (Custom Presets), never among the built-ins',
+  /customGrid\.appendChild\(presetTile\(/.test(savedFn) && !/presetGrid\.appendChild/.test(savedFn));
+check('an empty Custom Presets says how to fill it', /customPresetsEmpty/.test(savedFn));
 check('a saved preset applies its own look and spell, through the look filter',
   /safeRestore\(stripToLook\(Object\.assign\(\{\}, rec\.settings, \{ spell: rec\.spell \}\)\), 'This spell'\)/.test(savedFn));
 check('tiles are built by one shared helper', /function presetTile/.test(ev));

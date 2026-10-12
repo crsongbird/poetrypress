@@ -21,9 +21,9 @@ check('appEvents.js boots on a mobile device without throwing', threw === null);
 if(threw) console.log('  threw:', threw.stack || threw.message);
 
 check('body gets the is-mobile class', bodyClasses.has('is-mobile'));
-// 16 = Inscription 2, Rituals 2, Thoughtforms 2, Materia 5, Esoterica 5
-// (Esoterica gained the Appearance card and the Athanor; Materia the Inset Box)
-check('every card was found as a tab panel', panels.length === 16);
+// 17 = Inscription 2, Rituals 3, Thoughtforms 2, Materia 5, Esoterica 5
+// (Esoterica gained the Appearance card and the Athanor; Materia the Inset Box; Rituals Custom Presets)
+check('every card was found as a tab panel', panels.length === 17);
 check('all five tab buttons were found', buttons.length === 5);
 check('preset grid still populated on mobile', registry['presetGrid'].children.length === 41);
 

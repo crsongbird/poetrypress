@@ -271,7 +271,7 @@ export function createVault(deps){
     const wheel = el('spellWheel');
     if(wheel){
       wheel.innerHTML = '';
-      for(const s of spells){
+      for(const s of sortedSpells()){
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'spell-chip' + (s.name === selectedSpell ? ' selected' : '');
@@ -310,6 +310,9 @@ export function createVault(deps){
     setDisabled('spellCreateBtn', !spellIsDirty());
   }
 
+  /** The saved looks in alphabetical order (numbers in order: Spell 2 before Spell 10), however they were made. */
+  function sortedSpells(){ return [...spells].sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' })); }
+
   function renderPoems(){
     const list = el('grimoireList');
     if(list){
@@ -343,7 +346,7 @@ export function createVault(deps){
     renderSpells();
     renderPoems();
     // the Aspects grid mirrors the saved spells, so it is told when they change
-    if(typeof deps.onSpellsChanged === 'function') deps.onSpellsChanged(spells);
+    if(typeof deps.onSpellsChanged === 'function') deps.onSpellsChanged(sortedSpells());
   }
 
   function persistSpells(){
@@ -576,8 +579,28 @@ export function createVault(deps){
   refresh();
   receiveShared();
 
+  /**
+   * FIRST-VISIT EXAMPLES (Ruby): a poem waiting in the Grimoire and a look among the
+   * custom presets, each added once and only if nothing of the same name is there —
+   * the user deletes them like anything else. Returns what was added.
+   */
+  function seed({ poem, spell } = {}){
+    const added = [];
+    if(poem && isValidPoem(poem) && !poems.some(p => poemKeyOf(p) === poemKeyOf(poem))){
+      poems.push({ id: 'p' + (poem.savedTs || Date.now()).toString(36) + 'seed', savedAt: stamp(new Date(poem.savedTs || Date.now())), savedTs: Date.now(), ...poem });
+      if(persistPoems()) added.push('poem');
+    }
+    if(spell && isValidSpell(spell) && !spells.some(s => spellKeyOf(s) === spellKeyOf(spell))){
+      spells.push({ spell: generateSpell(), savedAt: stamp(), savedTs: Date.now(), ...spell });
+      if(persistSpells()) added.push('spell');
+    }
+    if(added.length) refresh();
+    return added;
+  }
+
   return {
     refresh,
+    seed,
     _state: () => ({ spells, poems, selectedSpell, selectedPoem }),
     _select: (kind, val) => {
       if(kind === 'spell') selectedSpell = val; else selectedPoem = val;

@@ -436,14 +436,13 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 }
 
 /* ---------- Spellcrafting & Grimoire ---------- */
+/* the saved looks wrap into rows (alphabetical, vault.js) — never a sideways scroller (Ruby) */
 .spell-wheel{
-  display:flex; gap:8px; overflow-x:auto; padding:2px 0 8px;
-  scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; padding:2px 0 8px;
 }
 .spell-wheel:empty{ display:none; }
 .spell-chip{
-  flex:0 0 auto; scroll-snap-align:start; cursor:pointer;
-  min-width:104px; max-width:104px;
+  cursor:pointer; min-width:0;
   border:1px solid var(--line); border-radius:3px;
   background:var(--bg-deep); padding:0; overflow:hidden;
   font-family:inherit; color:var(--text-dim);
@@ -1182,24 +1181,25 @@ body.custom-size #aspectGroupWide{ opacity:.35; pointer-events:none; }
 
 /* Cinder — rosier, greyer, darker. Violet kept as an accent, not a ground. */
 :root[data-theme="rose"]{
-  /* Rosé (Ruby: pink and pale blue, nothing else) — the grounds a NEUTRAL warm
-     near-black, as in the type specimen, so the only colours are the two
-     pinks and the pale blue; no plum, no green */
-  --bg-deep:#0e0d0d;
-  --bg-panel:#151313;
-  --bg-panel-2:#1e1b1b;
-  --bg-card:#191717;
-  --line:#322d2c;
-  --text-main:#ECE4E0;
-  --text-dim:#b3aaa6;         /* lifted: as body text it must pass contrast */
+  /* Faded Rosewood, cooled (Ruby: pink and pale blue, no more green) — the
+     grounds lean from brown toward a plum-charcoal so both pinks and the pale
+     blue sit on them without clashing; the two pinks kept from before.
+     (Taygete tried neutral grounds; Ruby: the plum grew on her, on OLED most) */
+  --bg-deep:#0b0a0d;
+  --bg-panel:#131116;
+  --bg-panel-2:#1f1b22;
+  --bg-card:#17141a;
+  --line:#342d37;
+  --text-main:#E9DDE3;
+  --text-dim:#b5aab6;         /* lifted: as body text it must pass contrast */
   --accent:#e2899f;           /* rose, not candy */
   --accent-dim:#c26c82;
   --rose:#C68892;
   --ui-violet:#eda3b5;
-  --on-accent:#171313;
+  --on-accent:#161317;
   --ui-texture:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.38'/></svg>");
   --ui-selected:#ff6b92;      /* redder with the accent, still fully saturated */
-; --accent-2:#a3c6e3; --hi:rgba(255,242,238,.04); }
+; --accent-2:#a3c6e3; --hi:rgba(246,236,250,.045); }
 
 /* Aether — the original. */
 :root[data-theme="aether"]{
@@ -1605,18 +1605,25 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
   @keyframes drawerIn{ from{ transform:translateX(40px); opacity:0; } to{ transform:none; opacity:1; } }
   body.more-open:not(.is-mobile) .controls{ opacity:.42; filter:saturate(.55); transition:opacity .2s, filter .2s; }
   body.more-open:not(.is-mobile) .controls:hover, body.more-open:not(.is-mobile) .controls:focus-within{ opacity:.9; filter:none; }
-  body.more-open:not(.is-mobile) #poemCanvas{ max-width:calc(100vw - var(--side-w, 460px) - var(--drawer-w, 440px) - 60px); }
   body:not(.is-mobile) .tab-ico{ width:20px; height:20px; }
   body:not(.is-mobile) .controls{ grid-area:controls; width:auto; min-width:0; }
-  body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; }
+  /* THE PREVIEW PANE (desktop): the viewer is the whole pane, whatever the page's shape — the
+     picture fits inside it (the aspect ratio changes the picture, never the viewer), a zoom
+     fills the pane, and the buttons sit in their own strip along its foot, never on the picture */
+  body:not(.is-mobile) .stage{ grid-area:stage; min-height:0; overflow:hidden; align-items:stretch; justify-content:stretch; gap:0; }
+  body:not(.is-mobile) .canvas-wrap{ flex:1 1 0; min-height:0; width:100%; box-sizing:border-box; padding:10px 10px 50px;
+    display:flex; align-items:center; justify-content:center; box-shadow:none; }
+  body:not(.is-mobile) .canvas-wrap::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:42px; z-index:40;
+    background:var(--bg-panel); border-top:1px solid var(--line); pointer-events:none; }
+  body:not(.is-mobile) .reset-view-btn{ bottom:8px; }
   body:not(.is-mobile) .card[data-tab]{ display:none; }
   body:not(.is-mobile) .card[data-tab].tab-active{ display:block; }
-  body:not(.is-mobile) #poemCanvas{ max-height:calc(var(--vvh, 100vh) - 128px); max-width:calc(100vw - var(--side-w, 460px) - 56px); }
+  body:not(.is-mobile) #poemCanvas{ max-height:100%; max-width:100%; }
   body:not(.is-mobile) .drag-handle{ display:none; }
 }
 /* on a desktop, Save image sits at the stage's lower right, across from undo
    and redo (its old place at the top right now runs under the navigation) */
-@media (min-width: 900px){ body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:24px; bottom:16px; } }
+@media (min-width: 900px){ body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:10px; bottom:5px; padding:6px 16px; } }
 
 /* ---------- working: a shimmer along the top of the image while a texture
    is made in the worker, or while Save image renders the full size ---------- */
