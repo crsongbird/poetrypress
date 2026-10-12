@@ -45,9 +45,10 @@ check('gradients: Sweep (conic) and Mirrored for the backdrop and the box, and f
   const textureGroups = groups.filter(g => O.TEXTURE_GROUPS.some(t => g === t.glyph + ' ' + t.name.replace(/&/g, '&amp;')));
   const sel = (html.match(/<select id="textureType">([\s\S]*?)<\/select>/) || ['', ''])[1];
   const sizes = [...sel.matchAll(/<optgroup[^>]*>([\s\S]*?)<\/optgroup>/g)].map(m => (m[1].match(/<option/g) || []).length);
-  check('the texture menu goes by what a surface IS: eleven groups, the Basics first (appOptions TEXTURE_GROUPS, the same in the Athanor), at least three in each (but Yours), each glyph a Runology Archetype (no emoji)',
-    textureGroups.length === 11 && sizes.slice(0, 10).every(n => n >= 3) && O.TEXTURE_GROUPS.slice(0, 10).every((g, i) => g.types.length === sizes[i])
-    && O.TEXTURE_GROUPS[0].name === 'Basics' && O.TEXTURE_GROUPS.every(g => ['🜛','🜃','🜚','🜁','🝊','🜥','🜄','Ᏹ','🝓','⎐','🜉'].includes(g.glyph)));
+  check('the texture menu goes by what a surface IS (appOptions TEXTURE_GROUPS, the same in the Athanor), at least three in each (but Yours), each glyph a Runology Archetype (no emoji); the Basics are the Athanor\'s alone (hidden in the menu, so old looks open)',
+    textureGroups.length === O.TEXTURE_GROUPS.length && sizes.slice(0, -1).every(n => n >= 3) && O.TEXTURE_GROUPS.slice(0, -1).every((g, i) => g.types.length === sizes[i])
+    && !O.TEXTURE_GROUPS.some(g => g.name === 'Basics') && O.ATHANOR_BASICS.types.every(t => new RegExp('<option value="' + t + '"[^>]*hidden>').test(html))
+    && O.TEXTURE_GROUPS.every(g => ['🜃','🜚','🜁','🝊','🜥','🜄','Ᏹ','🝓','🝆','⎐','🜉'].includes(g.glyph)));
   const alpha = [...sel.matchAll(/<optgroup[^>]*>([\s\S]*?)<\/optgroup>/g)].every(m => { const names = [...m[1].matchAll(/>([^<]+)<\/option>/g)].map(x => x[1].toLowerCase().replace(/'/g, ''));
     return names.every((n, i) => i === 0 || names[i - 1] <= n); });
   check('…each group alphabetical', alpha);
@@ -87,8 +88,9 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
 {
   // ---- pass 2: the desk ----
   const css = src('poetrypress.css');
-  check('A PORTRAIT OR NARROW WINDOW gets the phone layout, live as it is resized (a phone always): the old in-between layout retired',
-    /function wantPhoneLayout\(\)\{\n  if\(detectMobile\(\)\) return true;[\s\S]*?return window\.innerHeight > window\.innerWidth \|\| window\.innerWidth < 900;/.test(ev)
+  check('A WINDOW 2:3 OR TALLER gets the phone layout, by its shape and never a fixed width, live as it is resized (a phone always); the desktop\'s panes work at any width, and the phone\'s rules only ever apply to the phone layout',
+    /function wantPhoneLayout\(\)\{\n  if\(detectMobile\(\)\) return true;[\s\S]*?return window\.innerWidth\/window\.innerHeight <= PHONE_RATIO/.test(ev) && /const PHONE_RATIO = 2\/3;/.test(ev)
+    && !/@media \(min-width: 900px\)\{\s*body:not\(\.is-mobile\) \.app\{/.test(css) && !/@media \(max-width: 860px\)/.test(css) && /body\.is-mobile \.controls \{ width: 100%/.test(css)
     && /function applyLayout\(\)/.test(ev) && /new CustomEvent\('vellum-layout'/.test(ev));
   check('ESOTERICA on a desk: a click outside its drawer closes it; its button reads Return while open (two faces in one cell, so it never changes size); the editor\'s focus mode (and its Return) only on a phone',
     /if\(current !== 'more' \|\| !desktopNow\(\)/.test(ev) && html.includes('<span class="tab-face ret" aria-hidden="true">')

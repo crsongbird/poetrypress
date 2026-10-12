@@ -37,7 +37,7 @@ import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, C
 import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil, genMoon } from './texWhimsy.js';
 import { genFlowers, genCityscape, genGuilloche } from './texSharpness.js';
 import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genChladni } from './texChaos.js';
-import { genColdPress, genOldPaper, genCupRing, genPouredWax, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genSuminagashi } from './texTouch.js';
+import { genColdPress, genOldPaper, genCupRing, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genSuminagashi } from './texTouch.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -190,7 +190,11 @@ export const TEXTURE_PARAMS = {
   stainedglass:  [{key:'zoom',  label:'Pane Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Leading',         min:30, max:250, def:100, unit:'%'},
                   // the window's kind: random shards (0–30) → a patterned lattice → a rose window (55–80) → an ordered grid (80+)
-                  {key:'form',  label:'Shape',           min:0,  max:100, def:25,  unit:''}],
+                  {key:'form',  label:'Shape',           min:0,  max:100, def:25,  unit:''},
+                  // the palette's colors (0, as before) → a painted landscape behind the glass, each pane its color there (Tiffany's windows)
+                  {key:'shape', label:'Scene',           min:0,  max:100, def:0,   unit:''},
+                  {key:'hue',   label:'Glass Texture',   min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Cathedral','Hammered','Seedy','Opalescent']},
+                  {key:'tilt',  label:'Window',          min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Whole Page','Lancet Arch','Round Window']}],
   suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
                   // still concentric rings → swept by breath and fan
@@ -224,7 +228,12 @@ export const TEXTURE_PARAMS = {
   wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3},
                   // thin and spreading → thick and lumpy
-                  {key:'form',  label:'Viscosity',       min:0,  max:100, def:45,  unit:''}],
+                  {key:'form',  label:'Viscosity',       min:0,  max:100, def:45,  unit:''},
+                  // wax (0) → a fluid's spatter: drops flung away from the dial, crowned pools (Ruby)
+                  {key:'shape', label:'Splatter',        min:0,  max:100, def:0,   unit:''},
+                  {key:'hue',   label:'Height',          min:0,  max:100, def:50,  unit:''},
+                  // matte (0) → wet and glossy (100)
+                  {key:'tilt',  label:'Sheen',           min:0,  max:100, def:50,  unit:''}],
   dunes:         [{key:'zoom',  label:'Ripple Size',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Wind',            min:0,  max:100, def:50,  unit:''},
                   {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''},
@@ -291,6 +300,23 @@ export const TEXTURE_PARAMS = {
                   {key:'hue',   label:'Wear',            min:0,  max:100, def:30,  unit:''}],
   tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
+  // 🝊 Aurora: curtains of rays over Deep Field's stars (chains.js 'aurorasky')
+  aurorasky:     [{key:'zoom',  label:'Curtain Height',  min:40, max:180, def:100, unit:'%'},
+                  {key:'amt',   label:'Rays',            min:20, max:250, def:100, unit:'%'},
+                  {key:'form',  label:'Curtains',        min:1,  max:5,   def:2,   unit:''},
+                  // oxygen's red, high up: rare and strong (100) → none (0)
+                  {key:'shape', label:'Red Sky',         min:0,  max:100, def:30,  unit:''},
+                  {key:'hue',   label:'Stars',           min:20, max:300, def:100, unit:'%'}],
+  // 🜉 GENERATIVE: processes simulated, laid on a material, lit (stepsGenerative.js; chains.js)
+  lichtenberg:   [{key:'zoom',  label:'Reach',           min:0,  max:100, def:50,  unit:''},
+                  // bushy (high) → one thin strike (low)
+                  {key:'amt',   label:'Branching',       min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Poles',           min:1,  max:3,   def:2,   unit:'', ticks:[1,2,3], names:['One Strike','Two Poles','Three Poles']},
+                  {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Charred Wood','Embers','Acrylic']}],
+  growth:        [{key:'zoom',  label:'Growth',          min:0,  max:100, def:55,  unit:''},
+                  {key:'amt',   label:'Fold Size',       min:50, max:250, def:100, unit:'%'},
+                  {key:'form',  label:'Seeds',           min:1,  max:7,   def:1,   unit:''},
+                  {key:'shape', label:'Relief',          min:0,  max:100, def:50,  unit:''}],
   // 🜛 BASICS: quiet grounds, each a chain of two or three parts (chains.js); every slider a plain 0–100
   plainnoise:    [{key:'zoom',  label:'Scale',           min:0,  max:100, def:30,  unit:''},
                   {key:'amt',   label:'Detail',          min:0,  max:100, def:50,  unit:''},
@@ -333,6 +359,14 @@ export const TEXTURE_PARAMS = {
  * silently ignored.
  */
 export const TEXTURE_CAPS = {
+  // light on black, screened over the page (as Deep Field is); the dial is the field lines: the rays lean and the hem arcs
+  aurorasky:     { blends:['screen','lighten','color-dodge','overlay','soft-light','hard-light','source-over'], light:true, dial:'Field Lines', tints:0 },
+  // the dial: where the strike enters, and the light on the burn
+  lichtenberg:   { blends:['source-over','multiply','overlay','soft-light','hard-light','screen','lighten','luminosity'], light:true, dial:'Strike & Light', material:true, tints:2,
+                   tintLabels:['Wood Hue','Grain Hue'], tintDefaults:['#CCA373','#6B4226'] },
+  // the dial: the sun it grows toward, and the light on it
+  growth:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Sun', material:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   plainnoise:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   stripes:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
@@ -588,6 +622,10 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'aurorasky'){
+    result = genChain(type, w, h, light, extra);           // Starfield → Aurora Curtains (chains.js)
+  } else if(type === 'lichtenberg' || type === 'growth'){
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // 🜉 Discharge → Burn → Light Engine · Growing Line → Light Engine (chains.js)
   } else if(type === 'plainnoise' || type === 'stripes' || type === 'polka' || type === 'checker' || type === 'softgradient' || type === 'cells'){
     result = genChain(type, w, h, light, extra);           // 🜛 Basics: two or three parts each (chains.js)
   } else if(type === 'brushstrokes'){
@@ -629,7 +667,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'ash'){
     result = genBurntLetter(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat);
   } else if(type === 'wax'){
-    result = genPouredWax(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1 || '#7A2B2B');   // Pours → Meniscus → the wax's colour → Light Engine (translucent) → Glow (chains.js)
   } else if(type === 'dunes'){
     result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
   } else if(type === 'kintsugi'){

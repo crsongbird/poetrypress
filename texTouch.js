@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
 
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
@@ -178,68 +178,7 @@ export function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
 // It ran before it
 // set, so the thick edge tells you
 // which way the page leaned.
-export function genPouredWax(w,h,amt,zoom,light,tint,form,M3,GL){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const visc=Math.max(0,Math.min(1, form==null ? 0.45 : form));
-  const wax=parseHex(tint||'#7A2B2B');
-  // Sealing wax poured and left to set. Pour points and volumes come from the
-  // seed; each pour spreads into a pool, and pools that meet MERGE into one
-  // surface (a metaball field: the wax is wherever the summed pours reach a
-  // threshold). The top is flat, the edge a rounded meniscus. Thin wax at the edges glows a little — it is
-  // translucent. Lit by lightHeights with a satin sheen.
-  // POOL SIZE · POOL COUNT · VISCOSITY (thin and spreading → thick and lumpy)
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
-  const n=Math.max(1, Math.round(3*amt));
-  const spread=1.2 - 0.45*visc;                                  // thin wax runs wide
-  const thick=unit*(0.004 + 0.009*visc);                         // and thick wax stands taller
-  const pours=[];
-  for(let k=0;k<n;k++){
-    const V=0.4 + Math.random()*0.9;
-    const R=unit*0.12*zoom*spread*Math.sqrt(V);
-    const cx=ww*(0.1+Math.random()*0.8), cy=wh*(0.1+Math.random()*0.8);
-    pours.push({ cx, cy, R, V, ph1:Math.random()*6.28, ph2:Math.random()*6.28, lobes:3+Math.floor(Math.random()*3) });
-    // a pour runs on in a lobe or two: smaller blobs nudged downhill from it
-    const runs=Math.floor(Math.random()*3*(1-visc*0.6));
-    for(let r=0;r<runs;r++){ const a=Math.random()*6.28, d=R*(0.6+Math.random()*0.5);
-      pours.push({ cx:cx+Math.cos(a)*d, cy:cy+Math.sin(a)*d, R:R*(0.35+Math.random()*0.3), V:V*0.5, ph1:Math.random()*6.28, ph2:Math.random()*6.28, lobes:3, run:true }); }
-  }
-  const lump=fbmSampler(5, 3);
-  const F=new Float32Array(ww*wh);
-  for(const p of pours){
-    const reach=p.R*1.6, x0=Math.max(0,Math.floor(p.cx-reach)), x1=Math.min(ww-1,Math.ceil(p.cx+reach)), y0=Math.max(0,Math.floor(p.cy-reach)), y1=Math.min(wh-1,Math.ceil(p.cy+reach));
-    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
-      const dx=x-p.cx, dy=y-p.cy, a=Math.atan2(dy,dx);
-      const Rw=p.R*(1 + 0.12*Math.sin(a*p.lobes + p.ph1) + 0.06*Math.sin(a*7 + p.ph2));   // never a true circle
-      const q=(dx*dx + dy*dy)/(Rw*Rw*2.2);
-      if(q < 1) F[y*ww+x] += p.V*(1-q)*(1-q);
-    }
-  }
-  const T0=0.16, T1=0.16 + 0.10 + 0.25*visc;                     // the meniscus: wider when thick
-  const H=new Float32Array(ww*wh), M=new Float32Array(ww*wh);
-  for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, f=F[i];
-    if(f <= T0) continue;
-    const t=Math.min(1,(f-T0)/(T1-T0)), m=t*t*(3-2*t);
-    M[i]=Math.min(1,(f-T0)/0.025);                               // coverage, antialiased at the edge
-    // flat top, rounded edge; thick wax is lumpy, and rises a little where poured
-    H[i]=thick*(m + visc*0.35*(lump(x/ww,y/wh)-0.5) + 0.25*Math.max(0, f - T1*1.6));
-  }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.62, shadow:0.45, ao:0.2, ambient:0.42 });
-  const flat=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.62, shadow:0, ao:0, ambient:0.42 });
-  const fl=flat.light[0]||1, fs=flat.spec[0];
-  return paintLit(w,h,div,ww,wh, i => {
-    const k=L.light[i]/fl, m=M[i];
-    if(m<=0){ const v=128 + (k - 1)*90; return [clamp255(v), clamp255(v), clamp255(v)]; }   // the paper, with the wax's shadow on it (neutral: it blends)
-    const K=c=>litK(L,i,0.42,M3,c)/fl;
-    const thin=1 - Math.min(1, H[i]/(thick*0.7));                // translucent where thin
-    const glow=1 + 0.45*thin, sp=L.spec[i]*0.9*255;
-    const c=[wax.r*glow*K(0) + sp*litS(M3,0), wax.g*glow*K(1) + sp*0.92*litS(M3,1), wax.b*glow*K(2) + sp*0.85*litS(M3,2)];
-    // GLOW: candlelight in the thick of the wax, as if lit from within
-    if(GL){ const e=255*(1-thin)*0.85; c[0]+=GL.r*e; c[1]+=GL.g*e; c[2]+=GL.b*e; }
-    const g=128 + (k-1)*90;
-    return [clamp255(g*(1-m) + c[0]*m), clamp255(g*(1-m) + c[1]*m), clamp255(g*(1-m) + c[2]*m)];
-  });
-}
+// (POURED WAX is a chain now: Pours → Meniscus → colour → Light Engine with Translucency → Glow; stepsTouch.js, chains.js 'wax'.)
 
 // Never the whole print —
 // just enough ridge to prove that
@@ -1171,6 +1110,8 @@ export function genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,crinkle,M3,GL){
  * (Brushed metal, terraces and flecks — the old Crystal Leaf — live on as
  * Metal Spangle.)
  */
+// the last lit structure (one: a preview's size, kept while its hues are changed)
+const CRYSTAL_KEPT={ key:null, V:null, L:null };
 export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,M3,GL){
   amt=(amt==null?0.7:amt); zoom=(zoom==null?1:zoom);
   const clarity=Math.max(0,Math.min(1,amt)), fire=Math.max(0,Math.min(1, form==null ? 0.5 : form));
@@ -1185,10 +1126,15 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
                tone:Math.random(), ghost:Math.random()<0.45,
                rot:Math.random()*Math.PI/3, slope:0.45+Math.random()*0.5, h:Math.random()*cs*0.4, film:Math.random(), stri:0.4+Math.random()*1.2 }); }
     return { cs, gx, gy, F }; };
-  const near=(S,x,y)=>{ const ci=Math.floor(x/S.cs)+1, cj=Math.floor(y/S.cs)+1; let d1=1e18, d2=1e18, f1=null, f2=null;
-    for(let b=cj-1;b<=cj+1;b++) for(let a=ci-1;a<=ci+1;a++){ if(a<0||b<0||a>=S.gx||b>=S.gy) continue; const f=S.F[b*S.gx+a], dd=(x-f.x)**2+(y-f.y)**2;
-      if(dd<d1){ d2=d1; f2=f1; d1=dd; f1=f; } else if(dd<d2){ d2=dd; f2=f; } }
-    const edge=f2 ? (d2-d1)/(2*Math.hypot(f2.x-f1.x, f2.y-f1.y)) : 1e9; return { f:f1, g:f2, edge }; };
+  // (SPEED, Ruby: "insanely slow". The same maths, made cheap: the nearest-face search writes into a scratch
+  // record instead of allocating one per pixel, a point's sector and ridge come from dot products instead of
+  // atan2 and a modulo — ridge = rr·sin(30° − δ) = ½·along − (√3/2)·|across| — and the colour is mixed inline.
+  // The lit structure (V, the light) depends on neither hue, so it is kept: a hue, a blend or the inclusions'
+  // colour changed redraws from it at once.)
+  const near=(S,x,y,o)=>{ const ci=Math.floor(x/S.cs)+1, cj=Math.floor(y/S.cs)+1; let d1=1e18, d2=1e18, f1=null, f2=null;
+    for(let b=cj-1;b<=cj+1;b++){ if(b<0||b>=S.gy) continue; for(let a=ci-1;a<=ci+1;a++){ if(a<0||a>=S.gx) continue; const f=S.F[b*S.gx+a], ex=x-f.x, ey=y-f.y, dd=ex*ex+ey*ey;
+      if(dd<d1){ d2=d1; f2=f1; d1=dd; f1=f; } else if(dd<d2){ d2=dd; f2=f; } } }
+    o.f=f1; o.edge=f2 ? (d2-d1)/(2*Math.sqrt((f2.x-f1.x)**2+(f2.y-f1.y)**2)) : 1e9; return o; };
   const FRONT=faces(unit*0.42*zoom), BACK=faces(unit*0.27*zoom);
   // FIRE: internal planes through the stone; grazing light flashes most
   const np=Math.round(3+fire*12), P=[];
@@ -1196,19 +1142,30 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     const meet=Math.abs(nx*SX+ny*SY), flash=(0.25+0.75*Math.pow(1-meet, 2))*(0.15+0.85*Math.random()**1.5);
     P.push({ nx, ny, c:nx*px+ny*py, wd:unit*(0.004+Math.random()*0.018), flash, ax:Math.cos(a), ay:Math.sin(a), mid:px*Math.cos(a)+py*Math.sin(a), len:unit*(0.15+Math.random()*0.5) }); }
   const veil=makeNoiseGrid(8,8), feathers=makeNoiseGrid(40,40);
-  const NM=new Float32Array(N*3), H=new Float32Array(N), V=new Float32Array(N*3);
-  const spec=(t)=>[ Math.max(0, Math.min(1, 1.5-Math.abs(t*4-3))), Math.max(0, Math.min(1, 1.5-Math.abs(t*4-2))), Math.max(0, Math.min(1, 1.5-Math.abs(t*4-1))) ];
-  const REFR=unit*0.12, TAU=Math.PI*2;
+  // the kept structure: everything that shapes it, and a trace of the seed's draws (the faces, the planes)
+  const lv0=lightVec(light==null?315:light), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',
+    FRONT.F.length, FRONT.F[0].x, FRONT.F[FRONT.F.length-1].tone, BACK.F[0].y, P[0].c, P[P.length-1].len, veil[3], feathers[7]].join('|');
+  let V, L;
+  if(CRYSTAL_KEPT.key===keyC){ V=CRYSTAL_KEPT.V; L=CRYSTAL_KEPT.L; }
+  else {
+  const NM=new Float32Array(N*3), H=new Float32Array(N); V=new Float32Array(N*3);
+  const REFR=unit*0.12, R3=Math.sqrt(3)/2, SEC=[0,1,2,3,4,5].map(s=>(s+0.5)*Math.PI/3);
+  const nA={f:null,edge:0}, nB={f:null,edge:0}, oneMinusClar=1-clarity;
+  // each point's six face directions, once (not six cosines and sines per pixel)
+  for(const f of FRONT.F){ const dc=new Float64Array(12); for(let k=0;k<6;k++){ const m=SEC[k]+f.rot; dc[k*2]=Math.cos(m); dc[k*2+1]=Math.sin(m); } f.dc=dc; }
+  const thinS=unit*0.0016, apexS=unit*0.01, striS=Math.max(1, unit*0.004), backS=unit*0.004;
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const i=y*ww+x, A=near(FRONT,x,y), f=A.f;
+    const i=y*ww+x, A=near(FRONT,x,y,nA), f=A.f;
     // EACH CRYSTAL A POINT: a six-sided pyramid seen from above (a geode's
     // druse, quartz points) — six triangular faces round its apex, each lit
     // on its own; where neighbours meet, a valley
-    const dx=x-f.x, dy=y-f.y, rr=Math.hypot(dx,dy), R=FRONT.cs*0.62;
-    const ang=((Math.atan2(dy,dx)-f.rot)%TAU+TAU)%TAU, sec=Math.floor(ang/(Math.PI/3)), fr=ang/(Math.PI/3)-sec;
-    const mid=(sec+0.5)*Math.PI/3+f.rot, mx=Math.cos(mid), my=Math.sin(mid), along=dx*mx+dy*my;   // along: the hexagonal distance from the apex
+    const dx=x-f.x, dy=y-f.y, rr=Math.sqrt(dx*dx+dy*dy), R=FRONT.cs*0.62;
+    // its sector: the face whose middle direction the point lies most along
+    let best=-2, mx=1, my=0; const DC=f.dc;
+    for(let k=0;k<12;k+=2){ const dd=dx*DC[k]+dy*DC[k+1]; if(dd>best){ best=dd; mx=DC[k]; my=DC[k+1]; } }
+    const along=dx*mx+dy*my, across=Math.abs(dx*my-dy*mx);   // along: the hexagonal distance from the apex
     // growth striations across each face (quartz's horizontal lines), as a ripple in its slope
-    const stri=Math.sin(along/Math.max(1, unit*0.004)+f.film*6)*0.05*f.stri;
+    const stri=Math.sin(along/striS+f.film*6)*0.05*f.stri;
     const sl=f.slope*(1+stri), nz=1/Math.sqrt(1+sl*sl);
     NM[i*3]=mx*sl*nz; NM[i*3+1]=my*sl*nz; NM[i*3+2]=nz;
     H[i]=(f.h - f.slope*along)*0.35;                                // for the shadows one point throws on the next
@@ -1216,42 +1173,44 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     const admit=0.3+0.7*Math.max(0, -(mx*SX+my*SY));
     let v=0.08+0.08*f.tone + admit*0.42*Math.max(0, 1-along/R*0.8);
     // inner glow pooling toward the heart of each point (masked away from its rim, as a Fresnel term would)
-    v+=0.22*clarity*Math.exp(-((rr/(R*0.55))**2));
+    const g0=rr/(R*0.55); v+=0.22*clarity*Math.exp(-(g0*g0));
     // DEPTH: crystals behind, seen through the face it is on — bent by that face's tilt, and fading
-    const B=near(BACK, x+mx*f.slope*REFR, y+my*f.slope*REFR);
-    v+=0.07*B.f.tone + 0.3*Math.exp(-B.edge/(unit*0.004))*clarity*(0.4+0.6*admit);
+    const B=near(BACK, x+mx*f.slope*REFR, y+my*f.slope*REFR, nB);
+    v+=0.07*B.f.tone + 0.3*Math.exp(-B.edge/backS)*clarity*(0.4+0.6*admit);
     // the ridges between faces, and the apex: crisp, worn bright (edge highlights)
-    const ridge=rr*Math.sin(Math.min(fr, 1-fr)*Math.PI/3);
-    v+=0.55*Math.exp(-ridge/(unit*0.0016))*Math.min(1, rr/(unit*0.01)) + 0.35*Math.exp(-A.edge/(unit*0.0016));
+    const ridge=Math.max(0, 0.5*along - R3*across);
+    v+=0.55*Math.exp(-ridge/thinS)*Math.min(1, rr/apexS) + 0.35*Math.exp(-A.edge/thinS);
     // PHANTOMS: smaller points it once was, nested inside it — hexagons
     if(ph>0.02 && f.ghost){ const st=R*0.22, k=along/st;
-      if(k>0.6 && k<3.6){ const q=k-Math.floor(k); v+=Math.exp(-(((Math.min(q, 1-q))*st/(unit*0.0016))**2))*ph*0.4; } }
+      if(k>0.6 && k<3.6){ const q=k-Math.floor(k), e=(Math.min(q, 1-q))*st/thinS; v+=Math.exp(-(e*e))*ph*0.4; } }
+    let r=v, g=v, bl=v;
     // a thin-film sheen on the faces: faint bands of colour (iridescence)
-    const film=Math.sin(along/R*9 + f.film*9);
-    let r0=v, g0=v, b0=v;
-    if(fire>0.05){ const sp=spec(0.5+0.5*film), k2=0.06*fire*admit; r0+=sp[0]*k2; g0+=sp[1]*k2; b0+=sp[2]*k2; }
-    let r=r0, g=g0, bl=b0;
-    for(const p of P){ const d=x*p.nx+y*p.ny-p.c; if(Math.abs(d)>p.wd*7) continue;
-      const along=x*p.ax+y*p.ay-p.mid; if(Math.abs(along)>p.len) continue;
-      const fade=Math.sin(Math.PI*0.5*(1-Math.abs(along)/p.len)), str=p.flash*fade*(0.3+0.7*fire);
-      const core=Math.exp(-((d/p.wd)**2))*str*0.75, halo=Math.exp(-((d/(p.wd*5))**2))*str*0.12;  // the flash, and light scattered round it
-      const sp=spec(Math.max(0,Math.min(1, 0.5+d/(p.wd*2.5)*0.5))), dsp=0.3+0.7*fire;
-      r+=halo+core*((1-dsp)+dsp*sp[0]*1.5); g+=halo+core*((1-dsp)+dsp*sp[1]*1.5); bl+=halo+core*((1-dsp)+dsp*sp[2]*1.5);
+    if(fire>0.05){ const t=0.5+0.5*Math.sin(along/R*9 + f.film*9), k2=0.06*fire*admit;
+      r+=Math.max(0, Math.min(1, 1.5-Math.abs(t*4-3)))*k2; g+=Math.max(0, Math.min(1, 1.5-Math.abs(t*4-2)))*k2; bl+=Math.max(0, Math.min(1, 1.5-Math.abs(t*4-1)))*k2; }
+    for(let k=0;k<P.length;k++){ const p=P[k], d=x*p.nx+y*p.ny-p.c; if(Math.abs(d)>p.wd*7) continue;
+      const al=x*p.ax+y*p.ay-p.mid; if(Math.abs(al)>p.len) continue;
+      const fade=Math.sin(Math.PI*0.5*(1-Math.abs(al)/p.len)), str=p.flash*fade*(0.3+0.7*fire);
+      const dw=d/p.wd, dh=d/(p.wd*5), core=Math.exp(-(dw*dw))*str*0.75, halo=Math.exp(-(dh*dh))*str*0.12;  // the flash, and light scattered round it
+      const t=Math.max(0,Math.min(1, 0.5+d/(p.wd*2.5)*0.5)), dsp=0.3+0.7*fire;
+      r+=halo+core*((1-dsp)+dsp*Math.max(0, Math.min(1, 1.5-Math.abs(t*4-3)))*1.5); g+=halo+core*((1-dsp)+dsp*Math.max(0, Math.min(1, 1.5-Math.abs(t*4-2)))*1.5); bl+=halo+core*((1-dsp)+dsp*Math.max(0, Math.min(1, 1.5-Math.abs(t*4-1)))*1.5);
       if(GL){ r+=(core+halo*2)*GL.r; g+=(core+halo*2)*GL.g; bl+=(core+halo*2)*GL.b; } }
     // CLARITY: a milky veil, feathered
-    const cloud=(1-clarity)*(0.35+0.65*sampleNoiseGrid(veil,8,8,x/ww*7,y/wh*7))*(0.7+0.3*sampleNoiseGrid(feathers,40,40,x/ww*39,y/wh*39));
-    r=r*(1-cloud*0.55)+cloud*0.6; g=g*(1-cloud*0.55)+cloud*0.6; bl=bl*(1-cloud*0.55)+cloud*0.6;
+    if(oneMinusClar>0){ const cloud=oneMinusClar*(0.35+0.65*sampleNoiseGrid(veil,8,8,x/ww*7,y/wh*7))*(0.7+0.3*sampleNoiseGrid(feathers,40,40,x/ww*39,y/wh*39));
+      r=r*(1-cloud*0.55)+cloud*0.6; g=g*(1-cloud*0.55)+cloud*0.6; bl=bl*(1-cloud*0.55)+cloud*0.6; }
     V[i*3]=r; V[i*3+1]=g; V[i*3+2]=bl;
   }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.95, shadow:0.45, ao:0.25, ambient:0.5, normals:NM });
+  L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.95, shadow:0.45, ao:0.25, ambient:0.5, normals:NM });
+  CRYSTAL_KEPT.key=keyC; CRYSTAL_KEPT.V=V; CRYSTAL_KEPT.L=L;
+  }
   const fl=L.flat||1, lum=Math.max(1, 0.2126*CR.r+0.7152*CR.g+0.0722*CR.b), hue=[CR.r/lum, CR.g/lum, CR.b/lum];
+  const HT=hue.map(hc=>{ const t=new Float64Array(1026); for(let k=0;k<=1025;k++) t[k]=hc**(1.2-Math.min(1, k/1024)); return t; });
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
   for(let i=0;i<N;i++){
     const q=i*4, sp=L.spec[i];
     for(let c=0;c<3;c++){
-      // deep (dark) stone carries the hue fully; the bright fire, less
-      const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], tint=hue[c]**(1.2-Math.min(1, inside));
+      // deep (dark) stone carries the hue fully; the bright fire, less (hue^(1.2 − inside), from a table: a power per channel per pixel was half the time)
+      const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], u=(inside<0?0:inside>1?1:inside)*1024, u0=u|0, T=HT[c], tint=u0>=1024 ? T[1024] : T[u0]+(T[u0+1]-T[u0])*(u-u0);
       const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c);
       d[q+c]=val<0?0:val>255?255:val;
     }

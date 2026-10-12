@@ -6,28 +6,21 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Eukelade)
-- PANNING THE ATHANOR: fixed. Drawflow pans only when the pressed element's
-  FIRST class is its own; ours put forge-canvas first, so wherever the sheet
-  had been panned or zoomed away from, a press did nothing and the browser
-  selected text (the drag-ghost). Also: the middle button, or Space held,
-  pans from anywhere, over parts too.
-- GRAPHS WITH RANGES LOAD WHOLE: a part whose wire sweeps part of a range
-  ('~relief') made the graph editor throw as it loaded, so Painter's
-  Frustration, Painted Landscape, Oil on Canvas and the new chains opened
-  with only their first few parts. Fixed.
-- THE BASICS (🜛, first in the texture menu): Cells (lit), Checkerboard,
-  Gradient, Plain Noise, Polka Dots, Stripes. Each two or three parts, each
-  with four readings, each a lesson in the Athanor (Start from…).
-- PRESETS by what a person is after: Quiet Pages, Bright & Playful, Night &
-  Stars, Glow & Glitter, Weather & Water, Places, Paper & Keepsakes, Bold &
-  Graphic, Ritual & Omen. Twelve new: Hush, Ruled, Gingham, Sundress,
-  Sunroom, Postcard, Riverbed, Fernlight, Wayfinder, First Frost, Marbled,
-  Rose Window (the Basics, and surfaces that had no preset).
-- NEW PARTS: Terrain, Contour Lines, Turing Pattern, Flow Lines (with an
-  Angle Map input), Washes, Pigment. Contour Map, Turing Skin, Flow-Field
-  Ink and Watercolor Wash are chains of them (Flow-Field Ink draws exactly as
-  before; the others look the same by eye).
+## 1 · Ruby to judge (new in Jupiter–Eirene)
+- LAYOUT by shape: 2:3 or taller is the phone layout; squarer is the desktop at any width.
+- PRESET GROUPS as Ruby named them (+ Nature, Materials & Craft, Grown & Generated). Gone: Riverbed,
+  Gingham, Ruled, First Frost. Reworked: Sea Glass, Sunroom, Sundress, Hush, Signal, Rose Window. New:
+  Struck, Coral, Leopard, Borealis. The Basics are the Athanor's only.
+- GENERATIVE, first two (QA together, as Ruby offered): Lichtenberg Figures (dielectric breakdown, Kim et al.
+  2007; wood / embers / acrylic), Ruffled Growth (differential growth). Next candidates from the research:
+  knotwork by Cromwell's grid (sigils that interlace), substrate cracks on glaze, Physarum veins as
+  embroidery on linen, hyphae growing through paper.
+- AURORA (new, a sky) and SILK RIBBONS (the old Aurora Veil, renamed).
+- POURED WAX → spatter: Splatter, Height, Sheen; translucency in the Light Engine. Sealed uses the
+  new waxier look (same knobs): check it still feels right.
+- STAINED GLASS: Scene, Glass Texture, Window.
+- CRYSTAL LEAF: ~25% faster to make, hue changes ~10× faster. The rest of its cost is the light
+  (lightHeights at 9M points); the GPU path should take it on a real machine.
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
@@ -37,9 +30,6 @@ Recommendations".
   with its own lore and rules.
 - PAINTED LANDSCAPE: more variety in the water and land textures.
 - REROLLING: the dice are in (Kalyke); tell me what still sticks.
-- THE ATHANOR: textures inside a graph sometimes needed swapping to show.
-  Likely found (Eukelade): a graph with a wire's range set ('~key') threw
-  as it loaded, so only its first parts appeared. Tell me if it happens again.
 - OIL PAINT loses small things (distant trees) at Impasto 50; a finer pass
   where the picture has small detail.
 

@@ -567,14 +567,13 @@ Have fun!</textarea>
             <label data-str="label.surface_variant">Surface Variant</label>
             <select id="textureType">
               <!-- grouped by what a surface IS (each group alphabetical); each group's glyph a Runology Archetype that means it (appOptions.js TEXTURE_GROUPS) -->
-              <optgroup label="🜛 Basics">
-                <option value="cells" data-str="option.cells">Cells</option>
-                <option value="checker" data-str="option.checkerboard">Checkerboard</option>
-                <option value="softgradient" data-str="option.gradient">Gradient</option>
-                <option value="plainnoise" data-str="option.plain_noise">Plain Noise</option>
-                <option value="polka" data-str="option.polka_dots">Polka Dots</option>
-                <option value="stripes" data-str="option.stripes">Stripes</option>
-              </optgroup>
+              <!-- the Basics live in the Athanor (Start from… → Basics); kept here hidden, so a look saved with one still opens -->
+              <option value="cells" data-str="option.cells" hidden>Cells</option>
+              <option value="checker" data-str="option.checkerboard" hidden>Checkerboard</option>
+              <option value="softgradient" data-str="option.gradient" hidden>Gradient</option>
+              <option value="plainnoise" data-str="option.plain_noise" hidden>Plain Noise</option>
+              <option value="polka" data-str="option.polka_dots" hidden>Polka Dots</option>
+              <option value="stripes" data-str="option.stripes" hidden>Stripes</option>
               <optgroup label="🜃 Paper &amp; Grounds">
                 <option value="coldpress" data-str="option.cold_press">Cold Press</option>
                 <option value="linen" data-str="option.linen_tooth">Linen Tooth</option>
@@ -584,6 +583,7 @@ Have fun!</textarea>
               <optgroup label="🜚 Light, Sparks &amp; Dust">
                 <option value="bokeh" data-str="option.dream_bloom">Dream Bloom</option>
                 <option value="magicparticles" data-str="option.euphoria_dust">Pixie Dust</option>
+                <option value="aurora" data-str="option.aurora_veil">Silk Ribbons</option>
                 <option value="clouds" data-str="option.sleep_haze">Sleep Haze</option>
                 <option value="embers" data-str="option.burning_mana">Sparkler</option>
               </optgroup>
@@ -594,7 +594,7 @@ Have fun!</textarea>
                 <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
               </optgroup>
               <optgroup label="🝊 Sky &amp; Cosmos">
-                <option value="aurora" data-str="option.aurora_veil">Aurora Veil</option>
+                <option value="aurorasky" data-str="option.aurora">Aurora</option>
                 <option value="blackhole" data-str="option.blackhole">Black Hole</option>
                 <option value="astral" data-str="option.deep_field">Deep Field</option>
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
@@ -633,6 +633,10 @@ Have fun!</textarea>
                 <option value="tessellate" data-str="option.facet_field">Facet Field</option>
                 <option value="guilloche" data-str="option.guilloche">Guilloché</option>
                 <option value="halftone" data-str="option.90s_dots">Retro Dots</option>
+              </optgroup>
+              <optgroup label="🝆 Grown &amp; Generated">
+                <option value="lichtenberg" data-str="option.lichtenberg">Lichtenberg Figures</option>
+                <option value="growth" data-str="option.ruffled_growth">Ruffled Growth</option>
                 <option value="turing" data-str="option.turing_skin">Turing Skin</option>
               </optgroup>
               <optgroup label="⎐ Signs, Sigils &amp; Cards">

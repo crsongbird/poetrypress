@@ -55,12 +55,25 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
+  // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
+  // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
+  if(o.sss > 0){ const r = Math.max(1, Math.round(unit*0.006*(0.5 + o.sss))), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
+    for(let i = 0; i < K.length; i++){ const k = K[i] + (B[i] - K[i])*o.sss*0.85; K[i] = k + (1 - Math.min(1, k))*0.22*o.sss; S[i] = S[i]*(1 - o.sss*0.5) + SB[i]*o.sss*0.6; } }
   return { K, S };
+}
+// a box blur on a gw×gh grid (rows, then columns)
+function ltBlur(F, gw, gh, r){
+  const T = new Float32Array(F.length), O = new Float32Array(F.length);
+  for(let y = 0; y < gh; y++){ let s = 0, c = 0; for(let x = 0; x <= r && x < gw; x++){ s += F[y*gw + x]; c++; }
+    for(let x = 0; x < gw; x++){ T[y*gw + x] = s/c; const a = x - r, b = x + r + 1; if(a >= 0){ s -= F[y*gw + a]; c--; } if(b < gw){ s += F[y*gw + b]; c++; } } }
+  for(let x = 0; x < gw; x++){ let s = 0, c = 0; for(let y = 0; y <= r && y < gh; y++){ s += T[y*gw + x]; c++; }
+    for(let y = 0; y < gh; y++){ O[y*gw + x] = s/c; const a = y - r, b = y + r + 1; if(a >= 0){ s -= T[a*gw + x]; c--; } if(b < gh){ s += T[b*gw + x]; c++; } } }
+  return O;
 }
 function ltSettings(E, n){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
   return { deg, relief: E.num(n, 'relief', 50)/100, gloss: E.num(n, 'gloss', 25)/100, shadow: E.num(n, 'shadow', 60)/100,
-    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100 };
+    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100 };
 }
 
 // ---- OIL PAINT: strokes laid along the picture's forms ----
@@ -314,7 +327,7 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 export const LIGHT_STEPS = {
   material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
     io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
-    params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35)],
+    params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0)],
     cost: () => 10,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){

@@ -4,6 +4,50 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Eirene (2026-10-12)
+
+- Layout: the phone layout now follows the window's shape, not its width. Any
+  window 2:3 or taller gets it; anything squarer gets the two desktop panes
+  at any width. Fixed the half-empty stacked layout at in-between widths.
+- Crystal Leaf (Lucid) draws about a quarter faster, and changing its hues
+  redraws in a fraction of the time (its lit structure is kept). The picture
+  is identical.
+- Presets are regrouped by Ruby's categories: Basic Scenes, Paper &
+  Stationery, Skies & Stars, Weather & Water, Particle Systems, Geometric,
+  Nature, Materials & Craft, Grown & Generated, and Rituals & Magic.
+  - Removed: Riverbed, Gingham, Ruled and First Frost.
+  - Reworked: Sea Glass (a deeper sea), Sunroom (the backdrop's own round
+    gradient), Sundress (engraved rosettes), Hush (cold-press paper), Signal
+    (the glyphs shown bright) and Rose Window (a round window in stone).
+  - New: Struck, Coral, Leopard and Borealis.
+- The six Basics now live only in the Athanor (Start from… → Basics). Looks
+  saved with one still open.
+- New textures, in a new group, Grown & Generated:
+  - Lichtenberg Figures: the branching path electricity burns, grown the way
+    lightning is simulated. Use one strike or two or three poles. Choose
+    charred wood, live embers or a strike lit inside clear acrylic. The dial
+    sets where it enters.
+  - Ruffled Growth: a line that grows, crowds itself and folds like coral or
+    lettuce, toward the dial's sun.
+- New texture, Aurora: curtains of fine rays over Deep Field's stars, green low
+  and red high, with a pink hem. The dial leans the rays.
+- Aurora Veil is now called Silk Ribbons. Same look; saved looks keep it.
+- Poured Wax is waxier: light sinks into it and comes back out (translucency).
+  New sliders:
+  - Splatter takes it from poured wax to flung paint or ink.
+  - Height sets how thick it stands.
+  - Sheen goes from matte to wet.
+  New readings: Spilt Ink, Paint Spatter and Lacquer Seals.
+- Stained Glass gains three sliders: Scene, Glass Texture and Window.
+  - Scene colors each pane from a painted landscape behind it.
+  - Glass Texture runs from cathedral through hammered and seedy to
+    opalescent.
+  - Window sets the glass in a lancet arch or a round window in stone.
+  At 0 it draws exactly as before.
+- New Athanor parts: Discharge, Wood, Burn, Growing Line, Starfield, Aurora
+  Curtains, Pours, Meniscus and Glow Hue. The Light Engine gains Translucency;
+  Panes and Glass gain the stained-glass options above.
+
 ## Jupiter–Eukelade (2026-10-12)
 
 - Fixed: panning the Athanor's grid often did nothing, or started selecting

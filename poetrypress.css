@@ -184,30 +184,31 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
    report a CSS width above 860px while still being unmistakably phone-shaped
    in portrait). Catching (orientation: portrait) with a higher width ceiling
    alongside the plain width check is more reliable than either alone. */
-@media (max-width: 860px), (orientation: portrait) and (max-width: 1024px){
-  .app{ flex-direction:column; height:100vh; overflow:hidden; }
-  .app-header{ display:grid; }
-  .controls{
+/* (once by width and orientation; now the phone layout itself — body.is-mobile, set by wantPhoneLayout — decides) */
+@media all{
+  body.is-mobile .app{ flex-direction:column; height:100vh; overflow:hidden; }
+  body.is-mobile .app-header{ display:grid; }
+  body.is-mobile .controls{
     order:2; width:100%; min-width:0; max-height:56vh;
     border-right:none; border-top:1px solid var(--line);
   }
-  .stage{ order:1; flex:0 0 auto; height:44vh; gap:8px; padding-top:6px; }
-  #poemCanvas{ max-height:calc(44vh - 30px); max-width:92vw; }
-  .download-btn{ top:auto; bottom:14px; right:14px; padding:8px 16px; font-size:13px; }
+  body.is-mobile .stage{ order:1; flex:0 0 auto; height:44vh; gap:8px; padding-top:6px; }
+  body.is-mobile #poemCanvas{ max-height:calc(44vh - 30px); max-width:92vw; }
+  body.is-mobile .download-btn{ top:auto; bottom:14px; right:14px; padding:8px 16px; font-size:13px; }
 
   /* Canonical desktop reference is ~2560x1440; canonical mobile is ~1080x1920,
      which typically carries higher effective density. Rather than detecting
      DPI directly (unreliable across devices), just nudge base sizes up a
      little here — enough to help readability/tappability, not enough to lose
      the compact feel. */
-  label{ font-size:14px; }
-  select, textarea, input[type="text"], input[type="number"]{ font-size:16px; }
-  .card-title{ font-size:14px; }
-  .hint{ font-size:13px; }
-  button.ghost{ font-size:15px; }
-  .radio-btn{ font-size:14px; }
-  .check-row label{ font-size:15px; }
-  .preset-label{ font-size:11px; }
+  body.is-mobile label{ font-size:14px; }
+  body.is-mobile select, body.is-mobile textarea, body.is-mobile input[type="text"], body.is-mobile input[type="number"]{ font-size:16px; }
+  body.is-mobile .card-title{ font-size:14px; }
+  body.is-mobile .hint{ font-size:13px; }
+  body.is-mobile button.ghost{ font-size:15px; }
+  body.is-mobile .radio-btn{ font-size:14px; }
+  body.is-mobile .check-row label{ font-size:15px; }
+  body.is-mobile .preset-label{ font-size:11px; }
 }
 
 /* ============================================================
@@ -240,6 +241,8 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
 
 /* the whole app is exactly as tall as the screen really is */
 body.is-mobile .app { overflow: hidden; flex-direction: column; }
+/* the panel is the screen's whole width, however wide a tall window is (a desktop's 460 px sidebar never applies) */
+body.is-mobile .controls { width: 100%; max-width: none; }
 body.is-mobile .app-header { font-size: 12px; }
 
 /* preview on top, fixed share of the real viewport */
@@ -1564,10 +1567,11 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 
 /* ---------- DESKTOP: a website's shape ----------
    The logo across the top, the navigation under it, the controls on the left
-   and the image on the right — one panel at a time, as on a phone. */
-@media (min-width: 900px){
+   and the image on the right — one panel at a time, as on a phone. At any
+   width: the shape of the window (wantPhoneLayout) decides, not its width. */
+@media all{
   body:not(.is-mobile) .app{
-  display:grid; grid-template-columns:var(--side-w, 460px) minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr);
+  display:grid; grid-template-columns:min(var(--side-w, 460px), 52vw) minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr);
   grid-template-areas:"header header" "nav nav" "controls stage";
 }
   /* the sidebar's width is the person's: drag its edge (double-click: back to 460) */
@@ -1581,7 +1585,7 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
   body:not(.is-mobile) .app-header{ display:grid; grid-area:header; position:static; justify-content:stretch; gap:14px; }
   body:not(.is-mobile) .app-header-spacer{ position:absolute; left:16px; }
   body:not(.is-mobile) .tabbar{
-  grid-area:nav; display:flex; justify-content:flex-start; gap:6px; padding:6px 12px;
+  grid-area:nav; display:flex; justify-content:flex-start; gap:6px; padding:6px 12px; overflow-x:auto; scrollbar-width:none;   /* (a small window: the tabs scroll rather than clip) */
   background:var(--bg-panel); border-bottom:1px solid var(--line);
 }
   /* each tab its own surface: a hover, and a clearly filled active state */
@@ -1598,7 +1602,7 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
      stays where it was, faded back toward the page (Ruby), and the image
      takes the space between them */
   body.more-open:not(.is-mobile) .app{
-    grid-template-columns:var(--side-w, 460px) minmax(0,1fr) var(--drawer-w, 440px);
+    grid-template-columns:min(var(--side-w, 460px), 40vw) minmax(0,1fr) min(var(--drawer-w, 440px), 36vw);
     grid-template-areas:"header header header" "nav nav nav" "controls stage drawer";
   }
   body:not(.is-mobile) .eso-drawer{ display:none; }
@@ -1628,7 +1632,7 @@ body.is-mobile #undoBtn{ left:56px; } body.is-mobile #redoBtn{ left:105px; }
 }
 /* on a desktop, Save image sits at the stage's lower right, across from undo
    and redo (its old place at the top right now runs under the navigation) */
-@media (min-width: 900px){ body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:10px; bottom:5px; padding:6px 16px; } }
+@media all{ body:not(.is-mobile) .download-btn{ position:absolute; top:auto; right:10px; bottom:5px; padding:6px 16px; } }
 
 /* ---------- working: a shimmer along the top of the image while a texture
    is made in the worker, or while Save image renders the full size ---------- */
@@ -2096,7 +2100,7 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 /* RESIZING ON A DESK (Ruby): the sidebar's right edge and Esoterica's left edge
    drag; each shows a faint line with a grip at its middle, so it can be found */
 .drawer-resize{ display:none; }
-@media (min-width: 900px){
+@media all{
   body:not(.is-mobile) .side-resize, body.more-open:not(.is-mobile) .drawer-resize{
     display:block; position:relative; width:9px; z-index:20; cursor:col-resize; touch-action:none;
     background:linear-gradient(90deg, transparent 4px, var(--line) 4px, var(--line) 5px, transparent 5px); }

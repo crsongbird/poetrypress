@@ -220,7 +220,10 @@ export const UI_STRINGS = {
   'option.euphoria_dust':                      "Pixie Dust",
   'option.burning_mana':                       "Sparkler",
   'option.first_snow':                         "First Snow",
-  'option.aurora_veil':                        "Aurora Veil",
+  'option.aurora_veil':                        "Silk Ribbons",   // (was Aurora Veil: it looks like combed silk, not a sky; the id stays 'aurora')
+  'option.aurora':                             "Aurora",
+  'option.lichtenberg':                        "Lichtenberg Figures",
+  'option.ruffled_growth':                     "Ruffled Growth",
   'option.cells':                              "Cells",
   'option.checkerboard':                       "Checkerboard",
   'option.gradient':                           "Gradient",

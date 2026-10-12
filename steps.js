@@ -39,6 +39,7 @@ import { WHIMSY_STEPS } from './stepsWhimsy.js';
 import { LIGHT_STEPS } from './stepsLight.js';
 import { SHARP_STEPS } from './stepsSharpness.js';
 import { CHAOS_STEPS } from './stepsChaos.js';
+import { GEN_STEPS } from './stepsGenerative.js';
 import { CARD_STEPS } from './cartomancy.js';
 
 const STEP_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -66,6 +67,7 @@ const STEP_PARTS = {
   // inputs: what the finished texture offers on the page
   knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50)] },
   hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
+  glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
   seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
@@ -128,6 +130,9 @@ const STEP_PARTS = {
 export const STEP_DOCS = {
   knob: 'One of the page\'s six sliders, as a number from 0 to 1. Wire it into a ⚙ setting and that slider drives the setting.',
   hue: 'One of the texture\'s two hue pickers on the page, as a color.',
+  glowhue: 'The texture\'s Glow Hue on the page (light from within: candlelight in wax), as a color; black when it is off. Blend it in with Screen through a mask.',
+  pours: 'Pools of poured liquid as a gray map: each pour spreads, never quite round, and pools that touch merge. Splatter flings drops away from where the dial points, stretched as they fly, and spikes the pools\' edges: wax at 0, a spatter of paint or ink near 100. Wire it into Meniscus.',
+  meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge, lumps where it is thick. Out come its heights, where it covers, where it is thin (it lets light through there) and where it is thick.',
   accent: 'One of the page\'s two accent colors (the colors set under Thoughtforms).',
   colour: 'A fixed color you type as a hex code, such as #C0392B.',
   dial: 'The page\'s light dial: its direction (0 to 1 around the circle) and how low the light is.',
@@ -190,6 +195,12 @@ export const STEP_DOCS = {
   grayscott: 'A pattern that grows by itself, as on a leopard or a coral (the Gray–Scott model of two chemicals, Turing\'s idea): Pattern slides from spots through coral, maze and worms to holes; Growth is how long it has had to spread; Scale, how big its marks are. Wire it into a Light Engine\'s Height to raise it.',
   washes: 'The shapes of two watercolor pigments, as two gray maps: blobs, each drawn forty times over a little differently, so their edges go soft (Tyler Hobbs\'s method). Wire each into a Pigment part. Wetness spreads them; Pigment lays more.',
   pigment: 'Lays a gray map on a picture as watercolor pigment in one color: darker at its drying edges, settling into the paper\'s grain, running toward where the dial points. Wire one Pigment into the next to mix two colors where they overlap.',
+  discharge: 'A Lichtenberg figure: the branching path electricity burns through wood or acrylic. Wire the Light Dial into Strike From to choose where it enters. Branching makes it bushy (high) or thin and straight (low); Poles 2 or 3 grow from that many electrodes toward each other until they meet. Out comes a gray map of the channels, thick where the most current ran: wire it into Burn.',
+  wood: 'A wooden plank as a picture and heights: growth rings, dark late wood, fibres along the grain. Rings sets how close they are; Figure how much they wander. Wire two colors in for another wood.',
+  burn: 'Burns any gray map into a picture: charred and sunk into wood at 0, glowing like embers at 50, lit inside a clear acrylic block at 100. Scorch is how far the browning spreads; Depth how deep the channels sink. Wire its picture and height into a Light Engine.',
+  growline: 'A line that grows: its points push each other apart, follow their neighbours and split where they stretch, so it ruffles like a lettuce leaf or brain coral (differential growth). Growth is how long it has grown; Fold Size how big its folds are; Seeds how many start. Wire the Light Dial into Sun and it grows toward the light. Outputs: the line, the filled body, and a relief for the Light Engine.',
+  starfield: 'Deep Field\'s stars, over whatever comes in (or on black): each a soft glow as bright as the star, colored by its heat, the brightest with spikes. Stars sets how many; Atmosphere makes them twinkle and dim toward the horizon.',
+  curtains: 'An aurora: curtains of fine vertical rays rising from a bright, folded hem, green low and red high, with a pink fringe at the hem, drawn as added light over whatever comes in. Wire the Light Dial into Field From to lean the rays. Try Red Sky high for a rare red aurora.',
   terrain: 'Heights for an imagined land: broad hills and valleys with a few sharp crests (Contour Map\'s land). Scale zooms in or out; Crests sharpens the ridges; Variant is another land from the same seed. Wire it into a Light Engine\'s Height, or into Contour Lines.',
   contours: 'Draws the contour lines of any gray map, as on a survey map: Levels is how many lines from the darkest to the lightest, and every Nth (Index Every) is heavier. Out comes a map of the lines, light where they are. Try it on a texture, or a Gradient for evenly spaced rings.',
   particles: 'Light hanging in the air, drawn over whatever comes in (or on nothing): Kind is snowflakes (First Snow), sparks falling in arcs (Burning Mana) or glittering motes (Euphoria Dust). The two color ports color them; the last setting is the wind for flakes, how far a spark\'s hue strays, or how wildly motes scatter. Wire the Light Dial into Wind From to blow the snow. Two Particles parts fall alike: give one a different Variant.',
@@ -224,6 +235,7 @@ const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
     return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
   },
+  glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r/255, g.g/255, g.b/255] : [0, 0, 0]]; },
   hue(E, n){ const { ctx, P, hexCol } = E;
     return [hexCol((ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] || '#FFFFFF')];
   },
@@ -601,7 +613,7 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS };
 export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);

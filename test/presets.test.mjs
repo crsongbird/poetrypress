@@ -23,10 +23,11 @@ check('every name in a group is a preset', stray.length === 0);
 if(stray.length) console.log('   strays:', stray.join(', '));
 check('groups are named for what they hold, each glyph a Runology Archetype (no emoji, no element signs)',
   PRESET_GROUPS.every(g => g.name && ARCHETYPES.some(a => a.glyph === g.glyph) && !/[♡√∆]/.test(g.name)));
-check('the quiet, readable pages come first', PRESET_GROUPS[0].name === 'Quiet Pages' && PRESET_GROUPS[0].presets.includes('Plainsong'));
-check('no group is a lonely one: four or more in each', PRESET_GROUPS.every(g => g.presets.length >= 4));
-check('each Basics texture has a preset of its own (the quiet grounds are shown off)',
-  ['plainnoise', 'stripes', 'polka', 'checker', 'softgradient', 'cells'].every(t => PRESETS.some(p => p.textureType === t)));
+check('the basic scenes come first (Ruby\'s grouping)', PRESET_GROUPS[0].name === 'Basic Scenes' && PRESET_GROUPS[0].presets.includes('Plainsong'));
+check('no group is a lonely one: three or more in each', PRESET_GROUPS.every(g => g.presets.length >= 3));
+check('the Basics are the Athanor\'s: no preset uses one (Ruby: too plain for a look of their own)',
+  !['plainnoise', 'stripes', 'polka', 'checker', 'softgradient', 'cells'].some(t => PRESETS.some(p => p.textureType === t)));
+check('the grown and generated textures have presets of their own', ['lichtenberg', 'growth', 'aurorasky'].every(t => PRESETS.some(p => p.textureType === t)));
 check('the five Ruby called perfect are still here', ['Andromeda', 'Euphoria', 'Lotus Bloom', 'Gateway', 'Sealed'].every(n => names.includes(n)));
 const families = new Set(FONTS.map(f => f.family));
 const badFont = PRESETS.filter(p => p.font && !families.has(p.font));

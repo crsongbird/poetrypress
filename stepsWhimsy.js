@@ -27,7 +27,7 @@
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
 import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU } from './texCore.js';
-import { genEmbers, genSnow, genMagicParticles } from './texWhimsy.js';
+import { genEmbers, genSnow, genMagicParticles, genAstralStars } from './texWhimsy.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
@@ -707,8 +707,76 @@ function whimFlowLines(w, h, o, px, area){
   ctx.globalAlpha = 1;
   return c;
 }
+// Green below, red above —
+// the same oxygen, burning
+// at two different heights.
+// AURORA CURTAINS: an aurora as a photograph shows one — not ribbons but CURTAINS of fine vertical RAYS along the
+// magnetic field, hanging from a bright, folded lower hem. Each ray is a particle: a streak of light whose colour
+// follows its height as the real emission does (oxygen's 557.7 nm green low down, its 630 nm red high up, a
+// nitrogen pink-violet fringe at the very hem; after the Stanford pbrt aurora's altitude table), drawn additively,
+// so where rays crowd the curtain glows. The dial leans the rays (the field lines) and turns the arc of the hem.
+function whimAurora(x, w, h, o, px){
+  const unit = Math.min(w, h), R = Math.random, curtains = Math.max(1, Math.round(o.curtains));
+  const lean = o.lean, H = unit*0.55*o.height;
+  const hue = (t, k) => {   // t: 0 at the hem, 1 at the top of a ray; k: how red the high sky is (Color)
+    const g = [80, 255, 120], r = [255, 40, 80], hem = [255, 110, 200];
+    const top = Math.min(1, t*1.6), mix = Math.min(1, top*top*(0.15 + 1.1*k)), low = Math.max(0, 1 - t*14)*0.7*(0.3 + 0.7*o.fringe);
+    return [0, 1, 2].map(c => (g[c]*(1 - mix) + r[c]*mix)*(1 - low) + hem[c]*low);
+  };
+  x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
+  for(let c = 0; c < curtains; c++){
+    // the hem: a line across the sky, folded (sums of slow waves), lower curtains brighter and nearer
+    const y0 = h*(0.38 + 0.38*(curtains === 1 ? 0.5 : c/(curtains - 1)))*(0.85 + R()*0.3), amp = unit*(0.06 + R()*0.11), ph = [R()*6.3, R()*6.3, R()*6.3], fr = [1.2 + R()*1.6, 3 + R()*3, 7 + R()*6];
+    const arc = o.arc*unit*0.25, bright = (0.55 + 0.45*R())*(1 - c*0.12);
+    const hemY = X => y0 + Math.sin(X/unit*fr[0] + ph[0])*amp + Math.sin(X/unit*fr[1] + ph[1])*amp*0.35 + Math.sin(X/unit*fr[2] + ph[2])*amp*0.12 + arc*Math.pow((X/w - 0.5)*2, 2);
+    // the curtain's light comes and goes along it: bright knots, dim gaps (rays crowd in bundles)
+    const knots = [], nk = 4 + Math.floor(R()*5); for(let k = 0; k < nk; k++) knots.push([R()*w, unit*(0.05 + R()*0.18), 0.4 + R()*0.6]);
+    const along = X => { let s = 0.18; for(const [kx, kw, ka] of knots){ const d = (X - kx)/kw; s += ka*Math.exp(-d*d); } return Math.min(1.4, s); };
+    // fine striation along the curtain: a few frequencies of ripple in its brightness (the rays crowd and part)
+    const st = [[R()*6.3, 40 + R()*30], [R()*6.3, 90 + R()*60], [R()*6.3, 190 + R()*120]];
+    const stri = X => { let s = 0; for(const [p, f] of st) s += Math.sin(X/unit*f + p); return 0.55 + 0.45*s/3; };
+    // THE BODY: column by column, a band of light rising from the hem — brightest just above it, fading slowly up
+    // (the emission's height profile), its colour by height; added light, so bundles of columns glow
+    const colW = px(3.2), cols = Math.ceil(w/colW) + 1;
+    for(let k = 0; k < cols; k++){
+      const X = k*colW, a = along(X)*bright*stri(X); if(a < 0.04) continue;
+      const len = H*(0.45 + 0.55*Math.min(1, a))*(0.85 + 0.3*stri(X*1.7 + 13)), base = hemY(X), lx = lean*len;
+      const g = x.createLinearGradient(X, base, X + lx, base - len), col = t => hue(t, o.red);
+      const stops = [[0, 0.0], [0.03, 0.85], [0.1, 0.7], [0.3, 0.38], [0.55, 0.16], [0.8, 0.05], [1, 0]];
+      for(const [t, al] of stops){ const c2 = col(t); g.addColorStop(t, `rgba(${c2[0]|0},${c2[1]|0},${c2[2]|0},${Math.min(1, al*a*0.85*o.glow)})`); }
+      x.fillStyle = g; x.beginPath(); x.moveTo(X - colW*0.6, base + px(2)); x.lineTo(X + colW*0.6, base + px(2)); x.lineTo(X + colW*0.6 + lx, base - len); x.lineTo(X - colW*0.6 + lx, base - len); x.closePath(); x.fill();
+    }
+    // THE RAYS: thin, brighter streaks through the body (the field lines picked out)
+    const rays = Math.round(w/px(9)*o.rays);
+    for(let i = 0; i < rays; i++){
+      const X = R()*w, a = along(X)*bright*stri(X); if(R() > a) continue;
+      const len = H*(0.3 + 0.7*R())*(0.6 + 0.4*Math.min(1, a)), base = hemY(X) - px(2), wd = px(1.2 + R()*2.4), lx = lean*len;
+      const g = x.createLinearGradient(X, base, X + lx, base - len);
+      for(const [t, al] of [[0, 0.5], [0.15, 0.4], [0.5, 0.14], [1, 0]]){ const c2 = hue(t, o.red); g.addColorStop(t, `rgba(${c2[0]|0},${c2[1]|0},${c2[2]|0},${Math.min(1, al*a*0.9*o.glow)})`); }
+      x.strokeStyle = g; x.lineWidth = wd; x.beginPath(); x.moveTo(X, base); x.lineTo(X + lx, base - len); x.stroke();
+    }
+  }
+  x.restore();
+}
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 export const WHIMSY_STEPS = {
+  starfield: { cat: 'Marks', label: 'Starfield', ins: ['over', 'color a', 'color b'], outs: ['image'], io: { ins: ['image', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked
+    paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
+      const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
+      const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0); return [pc]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  curtains: { cat: 'Marks', label: 'Aurora Curtains', ins: ['over', 'field from'], outs: ['image'], io: { ins: ['image', 'value'], outs: ['image'] },
+    params: [WHIM_R('curtains', 'Curtains', 2, 1, 5), WHIM_R('rays', 'Rays', 100, 20, 250), WHIM_R('height', 'Height', 100, 40, 180), WHIM_R('red', 'Red Sky', 30),
+      WHIM_R('fringe', 'Pink Hem', 50), WHIM_R('glow', 'Brightness', 100, 20, 250), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 2), deg = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0), a = (deg - 90)*Math.PI/180;
+      const o = { curtains: E.num(n, 'curtains', 2), rays: E.num(n, 'rays', 100)/100, height: E.num(n, 'height', 100)/100, red: E.num(n, 'red', 30)/100,
+        fringe: E.num(n, 'fringe', 50)/100, glow: E.num(n, 'glow', 100)/100, lean: Math.cos(a)*0.35, arc: Math.sin(a)*0.5 };
+      const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h);
+      withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 4441) >>> 0, () => whimAurora(x, w, h, o, E.px));
+      return [pc]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   flowlines: { cat: 'Marks', label: 'Flow Lines', ins: ['over', 'angle map', 'ink', 'second ink', 'flow from'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'colour', 'value'], outs: ['image'] },
     params: [WHIM_R('amount', 'Lines', 100, 30, 300), WHIM_R('size', 'Scale', 100, 40, 250), WHIM_R('turbulence', 'Turbulence', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, i1 = E.input(n, 3), i2 = E.input(n, 4), dv = E.input(n, 5), mv = E.input(n, 2);

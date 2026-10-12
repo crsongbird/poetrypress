@@ -202,18 +202,92 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 7, paramPort('flakes', 'size')], [2, 1, 7, paramPort('flakes', 'coverage')], [3, 1, 7, paramPort('flakes', 'shape')], [4, 1, 7, paramPort('flakes', 'sheen')],
       [5, 1, 7, paramPort('flakes', 'glitter')], [6, 1, 7, 2], [7, 1, 8, 1]] },
   // 🜚 Stained Glass: the window's panes (four kinds), then the glass lit from behind and in front
-  stainedglass: { label: 'Stained Glass', div: 3, teach: 'This is Stained Glass. Panes lays out the window (random shards, a lattice, a rose window or a grid, chosen by Shape) and hands on four maps: the lead, the distance from it, a number for each pane, and each pane\'s color slot. Glass lights them: from behind, toward the dial\'s sun, and from the front, where each domed pane catches the light. Try: wire Cells into Glass instead of Panes.', nodes: [
+  stainedglass: { label: 'Stained Glass', div: 3, teach: 'This is Stained Glass. Panes lays out the window (random shards, a lattice, a rose window or a grid, chosen by Shape; Size Variety mixes big panes with small; Window sets it in a pointed lancet arch or a round window, with stone around it) and hands on its maps: the lead, the distance from it, a number for each pane, each pane\'s color slot, and where the window is. Glass lights them from behind, toward the dial\'s sun, and from the front. Its Texture runs from smooth cathedral glass through hammered and seedy to milky opalescent glass. Scene colors each pane from a picture behind it, as Tiffany\'s landscape windows were made: here a Painted Sky with Painted Ridges. Try: raise Scene, or wire any texture into Glass\'s Scene.', nodes: [
       ['knob', { slot: '1', name: 'Pane Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
       ['knob', { slot: '2', name: 'Leading', def: 32 }, 40, 140],                 // 2  (100 of 30–250)
       ['knob', { slot: '3', name: 'Shape', def: 25 }, 40, 240],                   // 3
       ['hue', { slot: '1', name: 'Glass Hue' }, 40, 340],                         // 4
       ['hue', { slot: '2', name: 'Second Glass Hue' }, 40, 440],                  // 5
-      ['panes', { size: 100, leading: 100, shape: 25 }, 320, 60],                 // 6
-      ['glass', { relief: 100 }, 600, 140],                                       // 7
-      ['surface', { name: 'Stained Glass', ground: 'colour' }, 880, 180]],        // 8
+      ['panes', { size: 100, leading: 100, shape: 25, variety: 0, '~variety': '0,45', frame: 0, '~frame': '0,100' }, 320, 60],   // 6
+      ['glass', { relief: 100, scene: 0, '~scene': '0,100', texture: 0, '~texture': '0,100', reflect: 100 }, 600, 140],   // 7
+      ['surface', { name: 'Stained Glass', ground: 'colour' }, 880, 180],         // 8
+      ['knob', { slot: '4', name: 'Scene', def: 0 }, 40, 540],                    // 9
+      ['knob', { slot: '5', name: 'Glass Texture', def: 0 }, 40, 640],            // 10
+      ['knob', { slot: '6', name: 'Window', def: 0 }, 40, 740],                   // 11
+      ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 100 }, 320, 560],   // 12 (the scene behind the glass)
+      ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 100 }, 320, 700]],   // 13
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
-      [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
+      [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [6, 5, 7, 7], [7, 1, 8, 1],
+      [9, 1, 7, paramPort('glass', 'scene')], [10, 1, 7, paramPort('glass', 'texture')], [11, 1, 6, paramPort('panes', 'frame')], [12, 1, 13, 1], [13, 1, 7, 8],
+      [9, 1, 6, paramPort('panes', 'variety')]] },   // (Scene also sets Size Variety: a scene wants small panes for its detail)
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
+  // 🝊 Aurora: Deep Field's stars, then curtains of rays over them
+  aurorasky: { label: 'Aurora', canvas: true, teach: 'This is Aurora. Starfield lays Deep Field\'s stars on black; Aurora Curtains hangs curtains of light over them, each made of thousands of fine rays rising from a bright folded hem — green low down, red high up (the two colors oxygen glows at different heights), a pink fringe at the hem. The Light Dial goes into Field From: the rays lean along it and the hem bends. It is screened over the page, as Deep Field is. Try: raise Red Sky and Curtain Height for a rare red aurora.', nodes: [
+      ['knob', { slot: '1', name: 'Curtain Height', def: 43 }, 40, 40],           // 1  (100 of 40–180)
+      ['knob', { slot: '2', name: 'Rays', def: 35 }, 40, 140],                     // 2  (100 of 20–250)
+      ['knob', { slot: '3', name: 'Curtains', def: 25 }, 40, 240],                 // 3  (2 of 1–5)
+      ['knob', { slot: '4', name: 'Red Sky', def: 30 }, 40, 340],                  // 4
+      ['knob', { slot: '5', name: 'Stars', def: 29 }, 40, 440],                    // 5  (100 of 20–300)
+      ['dial', {}, 40, 540],                                                       // 6
+      ['starfield', { amount: 100, '~amount': '20,300', atmosphere: 30 }, 320, 360],   // 7
+      ['curtains', { curtains: 2, '~curtains': '1,5', rays: 100, '~rays': '20,250', height: 100, '~height': '40,180', red: 30, '~red': '0,100', fringe: 50, glow: 100 }, 600, 160],   // 8
+      ['surface', { name: 'Aurora', ground: 'colour' }, 880, 200]],                // 9
+    wires: [[1, 1, 8, paramPort('curtains', 'height')], [2, 1, 8, paramPort('curtains', 'rays')], [3, 1, 8, paramPort('curtains', 'curtains')], [4, 1, 8, paramPort('curtains', 'red')],
+      [5, 1, 7, paramPort('starfield', 'amount')], [6, 1, 8, 2], [7, 1, 8, 1], [8, 1, 9, 1]] },
+  // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
+  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'This is Lichtenberg Figures: the branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
+      ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                     // 1
+      ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 140],                // 2
+      ['knob', { slot: '3', name: 'Poles', def: 50 }, 40, 240],                    // 3  (2 of 1–3)
+      ['knob', { slot: '4', name: 'Material', def: 0 }, 40, 340],                  // 4
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Wood Hue' }, 40, 520], ['hue', { slot: '2', name: 'Grain Hue' }, 40, 600],   // 6, 7
+      ['wood', { rings: 40, figure: 50 }, 300, 520],                               // 8
+      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,3', grain: 30, width: 100 }, 300, 120],   // 9
+      ['burn', { material: 0, '~material': '0,100', scorch: 50, depth: 55 }, 580, 300],   // 10
+      ['material', { relief: 35, gloss: 30, shine: 25, shadow: 55, occlusion: 40, ambient: 40 }, 840, 300],   // 11
+      ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 1100, 320]],  // 12
+    wires: [[1, 1, 9, paramPort('discharge', 'reach')], [2, 1, 9, paramPort('discharge', 'branching')], [3, 1, 9, paramPort('discharge', 'poles')], [4, 1, 10, paramPort('burn', 'material')],
+      [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1]] },
+  // 🜉 Ruffled Growth: a Growing Line, its body raised and lit
+  growth: { label: 'Ruffled Growth', div: 2, teach: 'This is Ruffled Growth: differential growth. Growing Line starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
+      ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
+      ['knob', { slot: '2', name: 'Fold Size', def: 25 }, 40, 140],                // 2  (100 of 50–250)
+      ['knob', { slot: '3', name: 'Seeds', def: 0 }, 40, 240],                     // 3  (1 of 1–7)
+      ['knob', { slot: '4', name: 'Relief', def: 50 }, 40, 340],                   // 4
+      ['dial', {}, 40, 440],                                                       // 5
+      ['growline', { growth: 55, '~growth': '0,100', fold: 100, '~fold': '50,250', seeds: 1, '~seeds': '1,7', photo: 40 }, 300, 120],   // 6
+      ['number', { value: 40 }, 300, 380], ['number', { value: 74 }, 300, 460],   // 7, 8 (the ground, the body)
+      ['mix', { t: 50 }, 560, 300],                                                // 9
+      ['number', { value: 18 }, 560, 460],                                         // 10 (the line's crease)
+      ['mix', { t: 50 }, 780, 300],                                                // 11
+      ['material', { relief: 40, '~relief': '0,90', gloss: 35, shine: 30, shadow: 55, occlusion: 45, ambient: 40 }, 1000, 200],   // 12
+      ['surface', { name: 'Ruffled Growth', ground: 'grey' }, 1240, 220]],         // 13
+    wires: [[1, 1, 6, paramPort('growline', 'growth')], [2, 1, 6, paramPort('growline', 'fold')], [3, 1, 6, paramPort('growline', 'seeds')], [4, 1, 12, paramPort('material', 'relief')],
+      [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1]] },
+  // 🜚 Poured Wax (Ruby: waxier, and a slider from wax to a fluid's spatter): Pours → Meniscus → colour → Light Engine
+  wax: { label: 'Poured Wax', div: 2, teach: 'This is Poured Wax. Pours makes the pools (pools that touch merge); Splatter flings drops away from where the dial points, so it becomes a spatter of paint or ink. Meniscus gives the pools a flat top and a rounded edge. The wax is lighter where it is thin (Hue & Saturation brightens it, Mix lays it in by Thin), and the Light Engine lights it with Translucency, the way light sinks into wax and comes back out. The Glow Hue is screened in where the wax is thick, as if a candle were inside it. Try: Splatter 80 and Viscosity 0 for spilt ink, Sheen 100 for wet paint.', nodes: [
+      ['knob', { slot: '1', name: 'Pool Size', def: 17 }, 40, 40],                 // 1  (100 of 40–400)
+      ['knob', { slot: '2', name: 'Pool Count', def: 27 }, 40, 130],               // 2  (100 of 25–300)
+      ['knob', { slot: '3', name: 'Viscosity', def: 45 }, 40, 220],                // 3
+      ['knob', { slot: '4', name: 'Splatter', def: 0 }, 40, 310],                  // 4
+      ['knob', { slot: '5', name: 'Height', def: 50 }, 40, 400],                   // 5
+      ['knob', { slot: '6', name: 'Sheen', def: 50 }, 40, 490],                    // 6
+      ['dial', {}, 40, 580],                                                       // 7
+      ['hue', { slot: '1', name: 'Wax Hue' }, 300, 420], ['glowhue', {}, 1040, 460],   // 8, 9
+      ['pours', { size: 100, '~size': '40,400', count: 100, '~count': '25,300', viscosity: 45, '~viscosity': '0,100', splatter: 0, '~splatter': '0,100' }, 300, 60],   // 10
+      ['meniscus', { viscosity: 45, '~viscosity': '0,100', height: 50, '~height': '0,100', lumps: 50 }, 560, 60],   // 11
+      ['hsv', { hue: 0, sat: 92, val: 145 }, 560, 420],                            // 12 (the wax where it is thin: lighter)
+      ['mix', { t: 50 }, 800, 380],                                                // 13
+      ['number', { value: 50 }, 800, 520],                                         // 14 (the page beneath)
+      ['mix', { t: 50 }, 1040, 300],                                               // 15
+      ['material', { relief: 58, gloss: 60, '~gloss': '20,100', shine: 50, '~shine': '10,90', shadow: 45, occlusion: 20, ambient: 42, translucency: 45 }, 1280, 160],   // 16
+      ['blend', { mode: 'screen', opacity: 85 }, 1520, 220],                       // 17
+      ['surface', { name: 'Poured Wax', ground: 'grey' }, 1760, 240]],             // 18
+    wires: [[1, 1, 10, paramPort('pours', 'size')], [2, 1, 10, paramPort('pours', 'count')], [3, 1, 10, paramPort('pours', 'viscosity')], [3, 1, 11, paramPort('meniscus', 'viscosity')], [4, 1, 10, paramPort('pours', 'splatter')],
+      [5, 1, 11, paramPort('meniscus', 'height')], [6, 1, 16, paramPort('material', 'gloss')], [6, 1, 16, paramPort('material', 'shine')], [7, 1, 10, 1], [7, 1, 16, 7],
+      [10, 1, 11, 1], [8, 1, 12, 1], [8, 1, 13, 1], [12, 1, 13, 2], [11, 3, 13, 3], [14, 1, 15, 1], [13, 1, 15, 2], [11, 2, 15, 3],
+      [15, 1, 16, 1], [11, 1, 16, 2], [16, 1, 17, 1], [9, 1, 17, 2], [11, 4, 17, 3], [17, 1, 18, 1]] },
   // 🜚 Contour Map: Terrain → Contour Lines, inked over the land lit by the Light Engine (the hillshade)
   contour: { label: 'Contour Map', div: 2, teach: 'This is Contour Map, a survey of an imagined land. Terrain makes the land\'s heights. The Light Engine lights a plain gray picture by those heights (the hillshade), and Mix fades it toward plain gray by the Hillshade knob. Contour Lines draws the lines of equal height, every fifth heavier; the last Mix inks them over the hillshade in the Ink color. Try: wire another texture, or a Gradient, into Contour Lines instead of the Terrain.', nodes: [
       ['knob', { slot: '1', name: 'Terrain Scale', def: 23 }, 40, 40],             // 1  (100 of 40–300)

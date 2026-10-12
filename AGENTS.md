@@ -70,6 +70,7 @@ from the source files (unbuilt) — everything must work both ways.
 | `textureService.js` · `textureWorker.js` | textures made off the main thread |
 | `textureElements.js` | each texture's four readings (🜂 🜄 🜁 🜃), one its default |
 | `steps.js` · `stepsTouch.js` · `stepsChaos.js` · `stepsWhimsy.js` · `stepsLight.js` · `stepsSharpness.js` (Halftone Screen, Film Grain) | THE STEPS: the operations surfaces are made of — the Athanor's parts, and the textures rebuilt as chains (Touch: weave, cloth, panes, glass, flakes · Chaos: crazing, brushwork, glaze · Whimsy: smoke, light shaft, dust motes, painted sky, painted ridges, watercolour wash · Light: ANGRY STROKES (Painter's Frustration), the LIGHT ENGINE as a part (material: picture + heights + gloss map + shade/highlight/light hues, lit by the dial through lightHeights; a canvas pass lights on a ≤1.2M-point grid and composes at full size), OIL PAINT (any picture → strokes along its forms, stopping at edges, Hertzmann 1998, plus the paint's heights), CANVAS WEAVE) |
+| `stepsGenerative.js` | parts that GROW: Discharge (Lichtenberg), Wood, Burn, Growing Line (differential growth) |
 | `cartomancyTable.js` | what else is on Cartomancy's table (TABLE_OBJECTS: candle, cup, glass, crystal ball… each with its layer, weight, size, variety and painter), where clutter goes (crtTableObjects), counters (crtToken) and card damage (crtDamageFor, crtCardPath, crtDamage). Bundled BEFORE cartomancy.js and imports nothing from it: cartomancy.js hands it its drawing kit (CRT_KIT) when it loads |
 | `cartomancy.js` | Cartomancy: a card game in progress, and its parts — table, card, coin, the deal by a game's rules — also the Athanor's Table, Deal, Table Objects and Coins steps (CARD_STEPS) |
 | `chains.js` | textures rebuilt as chains of steps (the six Basics, Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted Landscape, Painter's Frustration, Halftone, Film Grain, First Snow, Burning Mana, Euphoria Dust, Contour Map, Flow-Field Ink, Turing Skin, Watercolor Wash); each an Athanor template with its TEACH |
@@ -230,7 +231,8 @@ two parts agree.
   in front; a pane's look comes from its number: mulberry32, so the same pane
   is the same glass; the dome turns outward along −∇edge).
 - THE BASICS (chains plainnoise, stripes, polka, checker, softgradient,
-  cells; menu group 🜛 first): quiet grounds of two or three general parts
+  cells; appOptions ATHANOR_BASICS — the Athanor's Start from… only, hidden
+  options in the menu so old looks open; no preset uses one): quiet grounds of two or three general parts
   each (Value Noise, Waves, Threshold, Cells, Math, Gradient, Mix, Levels),
   every slider a plain 0–100 (Gradient's Angle in degrees). They are the
   Athanor's easiest lessons as much as textures.
@@ -245,6 +247,22 @@ two parts agree.
   map). WATERCOLOR WASH: Washes (two densities) → Pigment → Pigment (any
   gray map laid as watercolor). The old Reaction–Diffusion part stays for
   old graphs (it asks for the Turing Skin texture).
+- GROWN & GENERATED (stepsGenerative.js): Ruby wants textures BETWEEN a
+  plain pattern and a whole scene — a process simulated, laid on a material,
+  lit. Lichtenberg Figures: Discharge (Kim–Sewall–Lin fast Laplacian growth:
+  point charges, candidates ∝ φ^η, poles pull) → Burn into Wood → Light Engine.
+  Ruffled Growth: Growing Line (differential growth on a spatial hash). Both
+  run in page units on their own lattice and draw from the seed + Variant.
+- AURORA (chains 'aurorasky', canvas): Starfield (Deep Field's stars) → Aurora
+  Curtains (columns of light by height: green low, red high, pink hem; rays).
+  The old 'aurora' id is Silk Ribbons (same look, renamed).
+- POURED WAX (chains 'wax'): Pours (Splatter after every pour's draws) →
+  Meniscus → colour by thickness → Light Engine with Translucency (a blur of
+  the light itself: subsurface) → Glow Hue screened where thick.
+- STAINED GLASS's extra knobs draw nothing at 0 (Size Variety, Window, Scene,
+  Texture); the Scene's parts are evaluated only when Scene > 0.
+- LAYOUT: wantPhoneLayout is the window's SHAPE (w/h ≤ 2/3); the desktop CSS
+  applies at any width; the phone's rules are scoped to body.is-mobile.
 - PARTICLES (stepsWhimsy 'particles', canvas): flakes / sparks / motes, the
   old painters (texWhimsy genSnow, genEmbers, genMagicParticles). It draws
   under withSeed(ctx.seed + Scatter·7919), NOT the node's own seed, so
@@ -638,9 +656,9 @@ one. Each owns a different visual channel, so they combine without competing.
 - **Equal weight**: no element is smaller because it is quieter. Today:
   9 · 8 · 8 · 11 textures, and the six Basics (🜛), which take whichever
   element their four readings give them.
-- **Presets** are grouped by what a person is looking for (PRESET_GROUPS:
-  Quiet Pages, Bright & Playful, Night & Stars, Glow & Glitter, Weather &
-  Water, Places, Paper & Keepsakes, Bold & Graphic, Ritual & Omen), each
+- **Presets** are grouped as Ruby named them (PRESET_GROUPS: Basic Scenes,
+  Paper & Stationery, Skies & Stars, Weather & Water, Particle Systems,
+  Geometric, Nature, Materials & Craft, Grown & Generated, Rituals & Magic), each
   headed by a Runology Archetype, alphabetical within; every preset in
   exactly one group (test/presets.test.mjs). Under Multiply a grey texture's
   Dark Hue shows twice as light (pixelPass's remap): pick it half as bright.

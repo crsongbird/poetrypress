@@ -74,6 +74,7 @@ const ORDER = [
   'stepsWhimsy.js',       // steps for ♡ surfaces: smoke, light shaft, motes; painted sky, ridges, wash
   'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze)
   'stepsLight.js',        // the engine's own parts: Light Engine, Oil Paint, Canvas Weave, Angry Strokes
+  'stepsGenerative.js',   // parts that grow: Discharge (Lichtenberg), Wood, Burn, Growing Line
   'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain
   'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
   'chains.js',            // textures rebuilt as chains of steps (and the Athanor's templates)
@@ -135,7 +136,7 @@ html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsGenerative.js', 'steps.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');

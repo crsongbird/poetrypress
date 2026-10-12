@@ -38,6 +38,19 @@ export const PRIMAL_ELEMENTS = [
 ];
 
 export const TEXTURE_ELEMENTS = {
+  aurorasky: { def: 'wind', wind: { name: 'Aurora' },
+    fire:  { name: 'Red Aurora',      k: [160, 90, 1, 95, 80],  light: [30, 100] },
+    water: { name: 'Quiet Arc',       k: [70, 60, 1, 10, 160],  light: [0, 40] },
+    earth: { name: 'Corona Storm',    k: [180, 220, 5, 55, 60], light: [200, 100] } },
+  // 🝆 grown and generated
+  lichtenberg: { def: 'earth', earth: { name: 'Lichtenberg Figures' },
+    fire:  { name: 'Live Embers',     k: [70, 55, 2, 50],  t: ['#B88A5C', '#5A3820'], light: [300, 100] },
+    water: { name: 'Acrylic Strike',  k: [75, 40, 1, 100], t: ['#B88A5C', '#5A3820'], light: [330, 100] },
+    wind:  { name: 'Three Poles',     k: [85, 75, 3, 0],   t: ['#E2C9A4', '#8C6A48'], light: [20, 100] } },
+  growth: { def: 'earth', earth: { name: 'Ruffled Growth' },
+    fire:  { name: 'Brain Coral',     k: [90, 130, 2, 70], t: ['#FFD2B8', '#5A1A12'], blend: 'overlay' },
+    water: { name: 'Sea Lettuce',     k: [60, 220, 3, 45], t: ['#D8FFF0', '#0E3A3A'], blend: 'soft-light' },
+    wind:  { name: 'Many Seeds',      k: [100, 90, 7, 40], t: ['#F2F6E8', '#26301F'], blend: 'overlay' } },
   // 🜛 the Basics
   plainnoise: { def: 'wind', wind: { name: 'Plain Noise' },
     fire:  { name: 'Smoulder',  k: [55, 80, 60], t: ['#FFC27A', '#3A0C06'], blend: 'overlay' },
@@ -90,7 +103,7 @@ export const TEXTURE_ELEMENTS = {
     fire:  { name: 'Ash Rain', k: [200, 240, 30],  t5: '#FFB38A', blend: 'screen', light: [200, 100] },
     wind:  { name: 'Blizzard', k: [160, 260, 100], t5: '#F2FBFF', light: [90, 100] },
     earth: { name: 'Pollen',   k: [300, 70, 20],  t5: '#F2D46B', light: [120, 60] } },
-  aurora: { def: 'wind', wind: { name: 'Aurora Veil' },
+  aurora: { def: 'wind', wind: { name: 'Silk Ribbons' },
     fire:  { name: 'Solar Flare',   k: [180, 400, 70], t: ['#FF6A3D', '#FFD36E'], blend: 'screen' },
     water: { name: 'Undertow',      k: [90, 1200, 30], t: ['#2FD5C9', '#1B3B8C'], blend: 'overlay' },
     earth: { name: 'Desert Mirage', k: [60, 200, 50],  t: ['#F2C46B', '#A8642A'], blend: 'overlay' } },
@@ -151,9 +164,9 @@ export const TEXTURE_ELEMENTS = {
     water: { name: 'Banknote Blue', k: [100, 180, 30], t: ['#BFE6F0', '#0A2A4A'], blend: 'hard-light' },
     wind:  { name: 'Spirograph',    k: [70, 100, 60],  t: ['#F2FFF0', '#1E3A2A'], blend: 'hard-light' } },
   stainedglass: { def: 'water', water: { name: 'Stained Glass' },
-    fire:  { name: 'Rose Window',  k: [80, 100, 90], t: ['#C8102E', '#F2A900'], light: [180, 80] },
-    wind:  { name: 'Clear Quarry', k: [140, 60, 60], t: ['#BFD8C8', '#E8EEE0'] },
-    earth: { name: 'Amber Shards', k: [70, 160, 5],  t: ['#B5651D', '#E3B04B'] } },
+    fire:  { name: 'Rose Window',      k: [70, 110, 70, 0, 34, 100],   t: ['#C8102E', '#1E3FA0'], light: [180, 80] },
+    wind:  { name: 'Landscape Window', k: [80, 70, 10, 100, 75, 50],   t: ['#BFD8C8', '#E8EEE0'] },
+    earth: { name: 'Seedy Amber',      k: [70, 160, 5, 0, 67, 0],      t: ['#B5651D', '#E3B04B'] } },
 
   // ---- ∆ Chaos ----
   sigils: { def: 'wind', wind: { name: 'Sigil Scatter' },
@@ -226,10 +239,11 @@ export const TEXTURE_ELEMENTS = {
     water: { name: 'Doused',          k: [160, 200, 95, 0],  t: ['#5A6A78', '#2A4A6A'] },
     wind:  { name: 'Ash on the Wind', k: [60, 380, 20, 10],  t: ['#E8E6E0', '#FF8A3A'] },
     earth: { name: 'Volcanic Fall',   k: [200, 300, 90, 50], t: ['#5A5450', '#FF3A0A'] } },
+  // (Ruby: the white and yellow waxes read as bodily fluids; the readings now show the texture's range instead)
   wax: { def: 'fire', fire: { name: 'Poured Wax' },
-    water: { name: 'Sea-Glass Wax', k: [160, 60, 20],  t: ['#3A7A8A'] },
-    wind:  { name: 'Candle Drips',  k: [60, 260, 70],  t: ['#F2EDE0'] },
-    earth: { name: 'Beeswax',       k: [260, 40, 90],  t: ['#C8902A'] } },
+    water: { name: 'Spilt Ink',     k: [110, 120, 5, 85, 25, 90],  t: ['#1E2C5A'] },
+    wind:  { name: 'Paint Spatter', k: [70, 200, 20, 70, 40, 75],  t: ['#2F7A5A'] },
+    earth: { name: 'Lacquer Seals', k: [160, 70, 85, 0, 85, 70],   t: ['#2A2018'] } },
   dunes: { def: 'earth', earth: { name: 'Dune Ripples' },
     fire:  { name: 'Red Desert',   k: [140, 70, 70, 60], t: ['#C8582A', '#FFD0A0'], light: [250, 110] },
     water: { name: 'Tidal Flats',  k: [60, 30, 10, 20],  t: ['#9AA8A0', '#E8F4F8'], light: [100, 80] },

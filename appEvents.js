@@ -574,7 +574,7 @@ if($('randomSurfaceBtn') && $('randomSurfaceBtn').addEventListener) $('randomSur
     if(!$('textureToggle').checked){ $('textureToggle').checked = true; $('textureToggle').dispatchEvent(new Event('change', { bubbles: true })); }
     if(!state.locks.has('textureType')){
       const graph = (($('forgeGraph') || {}).value || '').length > 40;
-      const types = [...$('textureType').options].map(o => o.value).filter(v => v && (v !== 'athanor' || graph) && v !== $('textureType').value);
+      const types = [...$('textureType').options].filter(o => !o.hidden).map(o => o.value).filter(v => v && (v !== 'athanor' || graph) && v !== $('textureType').value);
       $('textureType').value = types[Math.floor(Math.random()*types.length)];
       $('textureType').dispatchEvent(new Event('change', { bubbles: true }));
     }
@@ -1583,14 +1583,16 @@ if(typeof document.querySelectorAll === 'function'){
   }
 }
 
-// THE PHONE LAYOUT (Ruby): a phone, and ANY window taller than it is wide or
-// narrower than 900px — a portrait desktop window gets it too, live, as it is
-// resized (the old in-between layout is retired). Its setup runs once, the
-// first time it is wanted; everything it attaches is harmless on a desk.
+// THE PHONE LAYOUT (Ruby): a phone, and ANY window as tall as 2:3 or taller
+// (width ÷ height ≤ 2/3) — by its SHAPE, never a fixed width, which suits some
+// screens and not others; a desktop window that shape gets it too, live, as it
+// is resized. Anything squarer is the desktop's two panes, at any width. Its
+// setup runs once, the first time it is wanted; it is harmless on a desk.
+const PHONE_RATIO = 2/3;
 function wantPhoneLayout(){
   if(detectMobile()) return true;
-  if(typeof window === 'undefined' || !window.innerWidth) return false;
-  return window.innerHeight > window.innerWidth || window.innerWidth < 900;
+  if(typeof window === 'undefined' || !window.innerWidth || !window.innerHeight) return false;
+  return window.innerWidth/window.innerHeight <= PHONE_RATIO + 1e-6;
 }
 let phoneSetUp = false;
 function setupPhoneLayout(){
@@ -3244,10 +3246,11 @@ commitHistory();
 // once shown; it and the shimmer above it keep moving even while the page
 // itself is busy (they run on the compositor).
 const WORKING_WORDS = {
+  lichtenberg: 'Striking the arc', growth: 'Growing the line',
   plainnoise: 'Stirring the noise', stripes: 'Ruling the stripes', polka: 'Spotting the dots', checker: 'Laying the squares', softgradient: 'Grading the light', cells: 'Growing the cells',
   bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
   clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',
-  aurora: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',
+  aurora: 'Combing the silk', aurorasky: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',
   suminagashi: 'Floating the ink', grain: 'Developing the grain', metalleaf: 'Laying the leaf', flowers: 'Opening the lotuses',
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', sigils: 'Inscribing the sigils',

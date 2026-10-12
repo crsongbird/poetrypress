@@ -105,6 +105,72 @@ function touchPigment(D, img, ww, wh, col, wet, light){
 }
 
 export const TOUCH_STEPS = {
+  // POURED WAX, in parts (texTouch genPouredWax until now). POURS: pour points and volumes from the seed; each
+  // pour spreads into a pool, and pools that meet MERGE (a metaball field). SPLATTER (Ruby: a wax simulator that
+  // becomes a fluid-spatter simulator): drops thrown from each pour, away from the dial, stretched along their
+  // flight, and crowns of spikes on the pools — at 0 exactly the pours as they were.
+  pours: { cat: 'Marks', label: 'Pours', ins: ['thrown from'], outs: ['amount'], io: { ins: ['value'], outs: ['field'] },
+    params: [TOUCH_R('size', 'Pool Size', 100, 40, 400), TOUCH_R('count', 'Pool Count', 100, 25, 300), TOUCH_R('viscosity', 'Viscosity', 45), TOUCH_R('splatter', 'Splatter', 0), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 3,
+    run(E, n){ const { ww, wh, unit, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      const zoom = num(n, 'size', 100)/100, amt = num(n, 'count', 100)/100, visc = num(n, 'viscosity', 45)/100, spl = num(n, 'splatter', 0)/100;
+      const dv = E.input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, tx = -Math.cos(da), ty = -Math.sin(da);
+      return withSeed(seed, () => {
+        const nP = Math.max(1, Math.round(3*amt)), spread = 1.2 - 0.45*visc, pours = [];
+        for(let k = 0; k < nP; k++){
+          const V = 0.4 + Math.random()*0.9, R = unit*0.12*zoom*spread*Math.sqrt(V), cx = ww*(0.1 + Math.random()*0.8), cy = wh*(0.1 + Math.random()*0.8);
+          pours.push({ cx, cy, R, V, ph1: Math.random()*6.28, ph2: Math.random()*6.28, lobes: 3 + Math.floor(Math.random()*3) });
+          // a pour runs on in a lobe or two: smaller blobs nudged downhill from it
+          const runs = Math.floor(Math.random()*3*(1 - visc*0.6));
+          for(let r = 0; r < runs; r++){ const a = Math.random()*6.28, d = R*(0.6 + Math.random()*0.5);
+            pours.push({ cx: cx + Math.cos(a)*d, cy: cy + Math.sin(a)*d, R: R*(0.35 + Math.random()*0.3), V: V*0.5, ph1: Math.random()*6.28, ph2: Math.random()*6.28, lobes: 3, run: true }); }
+        }
+        // the splatter (its own draws, after every pour's: at 0 the pours above are exactly as they were)
+        if(spl > 0){ const mains = pours.filter(p => !p.run);
+          for(const p of mains){
+            // the crown: fingers of liquid of every length, mostly toward the throw
+            const nS = Math.round(7 + spl*16); p.spikes = [];
+            for(let k = 0; k < nS; k++){ const a = Math.random() < 0.5 ? Math.atan2(ty, tx) + (Math.random() - 0.5)*2.2 : Math.random()*6.283;
+              p.spikes.push([a, Math.pow(Math.random(), 1.6)*spl*1.7, 0.05 + Math.random()*0.12]); }
+            const m = Math.round(spl*46*Math.sqrt(p.V));
+            for(let k = 0; k < m; k++){
+              // flung mostly away from the dial (a throw), some everywhere (a splash)
+              const a0 = Math.atan2(ty, tx), a = Math.random() < 0.65 ? a0 + (Math.random() - 0.5)*1.6 : Math.random()*6.283;
+              const dist = p.R*(1.05 + Math.pow(Math.random(), 1.8)*(1.2 + 3.6*spl)), r = p.R*(0.035 + Math.pow(Math.random(), 2)*0.16)*(1.15 - 0.6*spl);
+              const stretch = 1 + Math.random()*2.6*spl*Math.min(1, dist/(p.R*2));
+              pours.push({ cx: p.cx + Math.cos(a)*dist, cy: p.cy + Math.sin(a)*dist, R: r, V: 0.75 + Math.random()*0.5, ph1: Math.random()*6.28, ph2: Math.random()*6.28, lobes: 4, ex: Math.cos(a), ey: Math.sin(a), st: stretch, drop: true });
+              // a trail of beads back toward the pool behind a long throw
+              if(stretch > 2 && Math.random() < 0.5){ const beads = 2 + Math.floor(Math.random()*3);
+                for(let b = 1; b <= beads; b++){ const t = b/(beads + 1)*0.5; pours.push({ cx: p.cx + Math.cos(a)*dist*(1 - t), cy: p.cy + Math.sin(a)*dist*(1 - t), R: r*(0.45 - t*0.4), V: 0.8, ph1: 0, ph2: 0, lobes: 3, drop: true }); } }
+            } } }
+        const F = new Float32Array(ww*wh);
+        for(const p of pours){
+          const st = p.st || 1, reach = p.R*1.6*st*(p.spikes ? 1 + spl*1.7 : 1), x0 = Math.max(0, Math.floor(p.cx - reach)), x1 = Math.min(ww - 1, Math.ceil(p.cx + reach)), y0 = Math.max(0, Math.floor(p.cy - reach)), y1 = Math.min(wh - 1, Math.ceil(p.cy + reach));
+          for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+            let dx = x - p.cx, dy = y - p.cy;
+            if(st > 1){ const u = dx*p.ex + dy*p.ey, v = -dx*p.ey + dy*p.ex; dx = u/st; dy = v; }   // a drop stretched along its flight
+            const a = Math.atan2(dy, dx);
+            let Rw = p.R*(1 + 0.12*Math.sin(a*p.lobes + p.ph1) + 0.06*Math.sin(a*7 + p.ph2));   // never a true circle
+            if(p.spikes){ let g = 0; for(const [sa, sl, sw] of p.spikes){ let d = a - sa; d -= Math.round(d/6.283185)*6.283185; g += sl*Math.exp(-(d*d)/(sw*sw)); } Rw *= 1 + g; }   // and its crown, when it splashes
+            const q = (dx*dx + dy*dy)/(Rw*Rw*2.2);
+            if(q < 1) F[y*ww + x] += p.V*(1 - q)*(1 - q);
+          }
+        }
+        return [F]; }); } },
+  // MENISCUS: the poured field's surface — flat-topped, round-edged, lumpy where thick (its own lumps, from the seed)
+  meniscus: { cat: 'Shape', label: 'Meniscus', ins: ['amount'], outs: ['height', 'coverage', 'thin', 'thick'], io: { ins: ['field'], outs: ['field', 'field', 'field', 'field'] },
+    params: [TOUCH_R('viscosity', 'Viscosity', 45), TOUCH_R('height', 'Height', 50), TOUCH_R('lumps', 'Lumps', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 2,
+    run(E, n){ const { ww, wh, N, num, input, asField, ctx } = E, F = asField(input(n, 1)); if(!F) return null;
+      const visc = num(n, 'viscosity', 45)/100, hk = num(n, 'height', 50)/50, lk = num(n, 'lumps', 50)/50;
+      const lump = withSeed(((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919 + 31) >>> 0, () => fbmSampler(5, 3));
+      // heights in 0..1 of a thick pour (the Light Engine's Relief scales them): thick wax stands taller
+      const thickK = (0.004 + 0.009*visc)/0.013, T0 = 0.16, T1 = 0.16 + 0.10 + 0.25*visc;
+      const H = new Float32Array(N), C = new Float32Array(N), TH = new Float32Array(N), TK = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const i = y*ww + x, f = F[i]; if(f <= T0) continue;
+        const t = Math.min(1, (f - T0)/(T1 - T0)), m = t*t*(3 - 2*t);
+        C[i] = Math.min(1, (f - T0)/0.025);
+        const h0 = thickK*hk*(m + visc*0.35*lk*(lump(x/ww, y/wh) - 0.5) + 0.25*Math.max(0, f - T1*1.6));
+        H[i] = Math.max(0, Math.min(1, h0*0.75)); TH[i] = C[i]*(1 - Math.min(1, m/0.7)); TK[i] = C[i]*Math.min(1, m); }
+      return [H, C, TH, TK]; } },
   washes: { cat: 'Marks', label: 'Washes', ins: [], outs: ['first', 'second'],
     params: [TOUCH_R('amount', 'Pigment', 100, 30, 250), TOUCH_R('size', 'Wash Size', 100, 40, 250), TOUCH_R('wet', 'Wetness', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
     run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
@@ -424,7 +490,7 @@ export const TOUCH_STEPS = {
  * distance from the lead's centre, 1 at eight came-widths), pane (each
  * pane's own number, 0..1) and palette (which of the glazier's ten colours).
  */
-export function paneLayout(ww, wh, zoom, amt, order){
+export function paneLayout(ww, wh, zoom, amt, order, more = {}){
   const unit = Math.min(ww, wh), N = ww*wh, sep = unit*0.1*zoom;
   const kind = order < 0.3 ? 'random' : order < 0.55 ? 'pattern' : order < 0.8 ? 'rose' : 'grid';
   // the seeds: [x, y, ring, index-in-ring] — ring -1 a random pane, -2 a patterned one (index: its colour slot)
@@ -458,6 +524,13 @@ export function paneLayout(ww, wh, zoom, amt, order){
       for(let j = 0; j < n; j++){ const a = (j + off)/n*Math.PI*2, r = k*sep;
         S.push([cx + Math.cos(a)*r + (Math.random()*2 - 1)*jit, cy + Math.sin(a)*r + (Math.random()*2 - 1)*jit, k, j]); } }
   }
+  // VARIETY: panes of many sizes — some cells split into several small panes (where a glazier needed detail);
+  // its draws happen only when it is up, so at 0 the window is exactly as it was
+  const variety = more.variety || 0;
+  if(variety > 0 && kind === 'random'){ const extra = [];
+    for(const s0 of S){ if(Math.random() > variety*0.55) continue; const k = 2 + Math.floor(Math.random()*4*variety);
+      for(let j = 0; j < k; j++) extra.push([s0[0] + (Math.random() - 0.5)*sep*0.9, s0[1] + (Math.random() - 0.5)*sep*0.9, -1, 0]); }
+    S.push(...extra); }
   // each pane's color slot of the glazier's ten (a patterned window repeats a few, in its rhythm), and its own number
   const RHY = [0, 3, 8, 6, 4, 9].slice(0, 4 + Math.floor(Math.random()*2));
   const slot = S.map(s => s[2] >= 0 ? (s[2]*3 + (s[3] % 2)*5) % 10 : s[2] === -2 ? RHY[s[3] % RHY.length] : Math.floor(Math.random()*10));
@@ -466,7 +539,17 @@ export function paneLayout(ww, wh, zoom, amt, order){
   const bs = sep*1.15, bw = Math.ceil(ww/bs) + 4, bh = Math.ceil(wh/bs) + 4, B2 = new Array(bw*bh);
   S.forEach((s, i) => { const bx = Math.floor(s[0]/bs) + 2, by = Math.floor(s[1]/bs) + 2; if(bx < 0 || by < 0 || bx >= bw || by >= bh) return; (B2[by*bw + bx] || (B2[by*bw + bx] = [])).push(i); });
   const lw = Math.max(0.6, unit*0.0065*amt);                         // the came's half-width
-  const lead = new Float32Array(N), edge = new Float32Array(N), pane = new Float32Array(N), pal = new Float32Array(N);
+  const lead = new Float32Array(N), edge = new Float32Array(N), pane = new Float32Array(N), pal = new Float32Array(N), win = new Float32Array(N).fill(1);
+  // THE WINDOW'S SHAPE: none (the whole page is glass), a LANCET (a tall pointed arch), or a ROUND window; outside it, stone,
+  // and a came along its edge. frameD(x, y): how far inside the outline, in pixels (< 0: outside)
+  const frame = more.frame || 0, mg = unit*0.07;
+  const frameD = frame === 1 ? (x, y) => {
+      const L = mg, Rr = ww - mg, top = mg, bot = wh - mg, half = (Rr - L)/2, rad = (Rr - L)*0.86;
+      const spring = top + Math.sqrt(Math.max(0, rad*rad - (rad - half)**2));   // where the arch's two arcs leave the sides
+      let d = Math.min(x - L, Rr - x, bot - y);
+      if(y < spring){ const dl = rad - Math.hypot(x - (L + rad), y - spring), dr = rad - Math.hypot(x - (Rr - rad), y - spring); d = Math.min(d, dl, dr); }
+      return d; }
+    : frame === 2 ? (x, y) => Math.min(ww, wh)/2 - mg - Math.hypot(x - ww/2, y - wh/2) : null;
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const bx = Math.floor(x/bs) + 2, by = Math.floor(y/bs) + 2;
     let best = -1, bd = Infinity;
@@ -477,10 +560,12 @@ export function paneLayout(ww, wh, zoom, amt, order){
     for(let j = by - 1; j <= by + 1; j++) for(let i = bx - 1; i <= bx + 1; i++){ if(i < 0 || j < 0 || i >= bw || j >= bh) continue; const L = B2[j*bw + i]; if(!L) continue;
       for(const k of L){ if(k === best) continue; const s2 = S[k], gx = s2[0] - s1[0], gy = s2[1] - s1[1], gl = Math.hypot(gx, gy) || 1;
         const dd = ((x - s1[0])*gx + (y - s1[1])*gy)/gl, ed = gl/2 - dd; if(ed < e) e = ed; } }
-    const p = y*ww + x, q = e/lw;
+    const p = y*ww + x;
+    if(frameD){ const fd = frameD(x, y); if(fd < -lw){ win[p] = 0; continue; } if(Math.abs(fd) < e) e = Math.abs(fd); }
+    const q = e/lw;
     lead[p] = q < 1 ? Math.sqrt(Math.max(0, 1 - q*q)) : 0; edge[p] = Math.min(1, e/(lw*8)); pane[p] = own[best]; pal[p] = (slot[best] + 0.5)/10;
   }
-  return { lead, edge, pane, pal };
+  return { lead, edge, pane, pal, win };
 }
 /**
  * GLASS: panes lit — from BEHIND (brighter toward the dial's sun, streaked and
@@ -491,13 +576,24 @@ export function paneLayout(ww, wh, zoom, amt, order){
  * metal in relief, lit by the dial. Colours: the two hues and what a glazier
  * sets beside them (amber, green, pale).
  */
-export function litGlass(F, ww, wh, colA, colB, light, relief){
-  const { lead, edge, pane, pal } = F, unit = Math.min(ww, wh), N = ww*wh, lwPx = Math.max(0.6, unit*0.0065)*relief;
+export function litGlass(F, ww, wh, colA, colB, light, relief, more = {}){
+  const { lead, edge, pane, pal } = F, win = F.win || null, scene = more.scene || null, sceneK = more.sceneK || 0, tex = more.texture || 0, refl = more.reflect ?? 1, unit = Math.min(ww, wh), N = ww*wh, lwPx = Math.max(0.6, unit*0.0065)*relief;
   const mixA = (a, b, t) => a.map((v, i) => v + (b[i] - v)*t), A = colA, Bc = colB, AMBER = [214, 152, 40], GREEN = [46, 122, 62], PALE = [232, 224, 196];
   const PAL = [A, A, mixA(A, [0, 0, 0], 0.35), Bc, Bc, mixA(Bc, AMBER, 0.5), AMBER, GREEN, mixA(A, PALE, 0.6), PALE];
   const fbm = (cells, oct) => { const gs = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; gs.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
     const nm = gs.reduce((s, o) => s + o.a, 0); return (u, v) => { let s = 0; for(const o of gs) s += sampleNoiseGrid(o.grid, o.g, o.g, u*(o.g - 1), v*(o.g - 1))*o.a; return s/nm; }; };
   const streak = fbm(4, 3), tooth = fbm(18, 2);
+  // THE GLASS'S TEXTURE (0 cathedral, as before) → HAMMERED (dimpled) → SEEDY (full of bubbles) → OPALESCENT (milky, Tiffany's
+  // swirled glass, which glows with its own colour more than it shows the light through); weights, so the knob slides between them
+  const tri = (t, c) => Math.max(0, 1 - Math.abs(t - c)/0.34), wHam = tex > 0 ? tri(tex, 0.34) : 0, wSeed = tex > 0 ? tri(tex, 0.67) : 0, wOpal = Math.max(0, (tex - 0.67)/0.33);
+  const swirl = tex > 0.5 ? fbm(3, 4) : null;
+  // A SCENE behind the leading: each pane takes the average colour of the picture where it lies (a landscape window, Tiffany's way)
+  let paneCol = null;
+  if(scene && sceneK > 0){ paneCol = new Map();
+    for(let i = 0; i < N; i++){ if(lead[i] > 0 || (win && win[i] < 0.5)) continue; const k = pane[i]; let a = paneCol.get(k); if(!a){ a = [0, 0, 0, 0]; paneCol.set(k, a); } a[0] += scene.r[i]; a[1] += scene.g[i]; a[2] += scene.b[i]; a[3]++; }
+    for(const a of paneCol.values()){ const m = (a[0] + a[1] + a[2])/(3*a[3]);
+      // glass is richer than paint: the colour pushed from its grey, and never quite black
+      const mm = 0.5 + (m - 0.5)*1.35; for(let c = 0; c < 3; c++) a[c] = Math.max(18, Math.min(255, (mm + (a[c]/a[3] - m)*1.9)*255*1.05)); } }
   // the came's relief and the glass's ripple, lit by the dial
   const H = new Float32Array(N);
   for(let i = 0; i < N; i++){ const x = i % ww, y = (i/ww) | 0; H[i] = lead[i] > 0 ? lwPx*(1.6*lead[i] + 0.6) : (tooth(x/unit*2, y/unit*2) - 0.5)*lwPx*0.35; }
@@ -515,25 +611,36 @@ export function litGlass(F, ww, wh, colA, colB, light, relief){
   const r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N), clamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
   for(let i = 0; i < N; i++){
     const x = i % ww, y = (i/ww) | 0, er = edge[i]*8;                  // the distance from the lead, in came-widths
+    if(win && win[i] < 0.5){
+      // outside the window: the stone it is set in, lit by the dial
+      const sv = (42 + 30*L.light[i]/L.flat)*(0.85 + 0.3*tooth(x/unit*6, y/unit*6))/255; r[i] = clamp(sv*1.05); g[i] = clamp(sv); b[i] = clamp(sv*0.92); continue; }
     if(lead[i] > 0){
       // lead: dull grey metal, lit by the dial
       const gv = (34 + 46*L.light[i]/L.flat + 150*L.spec[i])/255; r[i] = clamp(gv); g[i] = clamp(gv); b[i] = clamp(gv*1.04); continue;
     }
-    const P = paneOf(pane[i]), u = x/unit, v = y/unit, col = PAL[Math.min(9, Math.floor(pal[i]*10))];
+    const P = paneOf(pane[i]), u = x/unit, v = y/unit; let col = PAL[Math.min(9, Math.floor(pal[i]*10))];
+    if(paneCol){ const sc = paneCol.get(pane[i]); if(sc) col = [0, 1, 2].map(c => col[c] + (sc[c] - col[c])*sceneK); }
     const back = 0.72 + 0.5*Math.max(0, 1 - Math.hypot(x - sunX, y - sunY)/diag*1.4);
     const along = u*P.cs + v*P.sn, across = -u*P.sn + v*P.cs;
     const st = 0.86 + 0.28*streak(along*0.6 + P.k*37, across*7);
     let bk = P.sh*back*st*(0.72 + 0.28*Math.min(1, (er - 1)/2.5));       // darker against the lead (thicker glass)
-    // a bubble now and then, held in the glass
-    if(er > 2.5){ const cx = Math.floor(x/bub), cy = Math.floor(y/bub), hb = hashB(cx, cy, P.k);
-      if(hb < 0.022){ const bx = (cx + 0.5)*bub, by = (cy + 0.5)*bub, rr = bub*(0.12 + hb*8), d = Math.hypot(x - bx, y - by); if(d < rr) bk *= 1.12 + 0.2*(d/rr); } }
+    // a bubble now and then, held in the glass (seedy glass: full of small ones)
+    if(er > 2.5){ const bs = bub*(1 - 0.6*wSeed), cx = Math.floor(x/bs), cy = Math.floor(y/bs), hb = hashB(cx, cy, P.k);
+      if(hb < 0.022 + 0.2*wSeed){ const bx = (cx + 0.5)*bs, by = (cy + 0.5)*bs, rr = bs*(0.12 + hb*(8 - 6*wSeed)), d = Math.hypot(x - bx, y - by); if(d < rr) bk *= 1.12 + 0.2*(d/rr); } }
+    // hammered: a field of shallow dimples, each a lens that gathers the light behind it
+    let dimX = 0, dimY = 0;
+    if(wHam > 0){ const ds = unit*0.012, cx = Math.floor(x/ds), cy = Math.floor(y/ds), jx = (hashB(cx, cy, 3.1) - 0.5)*0.6, jy = (hashB(cx, cy, 5.7) - 0.5)*0.6;
+      const ox = x/ds - cx - 0.5 - jx, oy = y/ds - cy - 0.5 - jy, dd = Math.min(1, Math.hypot(ox, oy)*1.6);
+      dimX = ox*wHam*0.9; dimY = oy*wHam*0.9; bk *= 1 + wHam*(0.22*(1 - dd*dd) - 0.08); }
+    // opalescent: milky, swirled; it glows with its own colour more than it lets the light through
+    if(wOpal > 0){ const sw = swirl(u*1.2 + P.k*13, v*1.2), milk = wOpal*(0.35 + 0.4*sw); bk = bk*(1 - wOpal*0.35) + milk*0.5; col = col.map((c, k) => c + ((PALE[k] + c)/2 - c)*milk*0.6); }
     // the FRONT: the pane's lean and its dome (its normal turning outward toward the lead), rippled
     const gx = edge[i + (x < ww - 1 ? 1 : 0)] - edge[i - (x > 0 ? 1 : 0)], gy = edge[i + (y < wh - 1 ? ww : 0)] - edge[i - (y > 0 ? ww : 0)], gl = Math.hypot(gx, gy) || 1;
-    const dome = (1 - edge[i])*0.35, qx = P.nx - gx/gl*dome, qy = P.ny - gy/gl*dome, ql = Math.hypot(qx, qy, P.nz) || 1;
+    const dome = (1 - edge[i])*0.35, qx = P.nx - gx/gl*dome + dimX, qy = P.ny - gy/gl*dome + dimY, ql = Math.hypot(qx, qy, P.nz) || 1;
     const rip = (L.spec[i] - 0.02)*0.6, nh = Math.max(0, (qx*HX + qy*HY + P.nz*HZ)/ql + rip);
     const flash = Math.pow(nh, 60)*230, roll = Math.pow(nh, 8)*30;
     let rim = 0; if(er < 2.2){ const face = -(gx*FX + gy*FY)/gl; if(face > 0) rim = face*(1 - (er - 1)/1.2)*70; }
-    const sheen = L.spec[i]*70 + flash + roll + Math.max(0, rim);
+    const sheen = (L.spec[i]*70 + flash + roll + Math.max(0, rim))*refl;
     r[i] = clamp((col[0]*bk + sheen)/255); g[i] = clamp((col[1]*bk + sheen)/255); b[i] = clamp((col[2]*bk + sheen)/255);
   }
   return { r, g, b };
@@ -626,17 +733,20 @@ export function drawFlakes(ctx, w, h, o){
 
 const touchRGB = (v, def) => { if(Array.isArray(v)) return v.map(q => Math.round(q*255)); const p = parseHex(def); return [p.r, p.g, p.b]; };
 Object.assign(TOUCH_STEPS, {
-  panes: { cat: 'Noise', label: 'Panes', ins: [], outs: ['lead', 'edge', 'pane', 'palette'],
-    params: [TOUCH_R('size', 'Pane Size', 100, 50, 250), TOUCH_R('leading', 'Leading', 100, 30, 250), TOUCH_R('shape', 'Shape', 25)], cost: () => 10,
-    run(E, n){ const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100, E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)));
-      return [L.lead, L.edge, L.pane, L.pal]; } },
-  glass: { cat: 'Light & Color', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue'],
-    outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour'], outs: ['image'] },
-    params: [TOUCH_R('relief', 'Lead Relief', 100, 25, 300)], cost: () => 16,
+  panes: { cat: 'Noise', label: 'Panes', ins: [], outs: ['lead', 'edge', 'pane', 'palette', 'window'],
+    params: [TOUCH_R('size', 'Pane Size', 100, 50, 250), TOUCH_R('leading', 'Leading', 100, 30, 250), TOUCH_R('shape', 'Shape', 25), TOUCH_R('variety', 'Size Variety', 0), TOUCH_R('frame', 'Window: None · Lancet · Round', 0)], cost: () => 10,
+    run(E, n){ const fr = E.num(n, 'frame', 0), more = { variety: E.num(n, 'variety', 0)/100, frame: fr < 33 ? 0 : fr < 67 ? 1 : 2 };
+      const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100, E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)), more);
+      return [L.lead, L.edge, L.pane, L.pal, L.win]; } },
+  glass: { cat: 'Light & Color', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue', 'window', 'scene'],
+    outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour', 'field', 'image'], outs: ['image'] },
+    params: [TOUCH_R('relief', 'Lead Relief', 100, 25, 300), TOUCH_R('scene', 'Scene', 0), TOUCH_R('texture', 'Cathedral · Hammered · Seedy · Opal', 0), TOUCH_R('reflect', 'Reflectance', 100, 0, 250)], cost: () => 16,
     run(E, n){ const { ww, wh, N, input, asField, ctx } = E;
       const f = j => asField(input(n, j)) || new Float32Array(N);
-      return [litGlass({ lead: f(1), edge: (asField(input(n, 2)) || new Float32Array(N).fill(1)), pane: f(3), pal: f(4) }, ww, wh,
-        touchRGB(input(n, 5), '#2148A8'), touchRGB(input(n, 6), '#A8182C'), ctx.light, E.num(n, 'relief', 100)/100)]; } },
+      return [litGlass({ lead: f(1), edge: (asField(input(n, 2)) || new Float32Array(N).fill(1)), pane: f(3), pal: f(4), win: asField(input(n, 7)) }, ww, wh,
+        touchRGB(input(n, 5), '#2148A8'), touchRGB(input(n, 6), '#A8182C'), ctx.light, E.num(n, 'relief', 100)/100,
+        { scene: E.num(n, 'scene', 0) > 0 && input(n, 8) != null ? E.asImage(input(n, 8)) : null, sceneK: E.num(n, 'scene', 0)/100,   // (the scene is only made when it is wanted)
+          texture: E.num(n, 'texture', 0)/100, reflect: E.num(n, 'reflect', 100)/100 })]; } },
   flakes: { cat: 'Marks', label: 'Flakes', ins: ['base', 'leaf hue'], outs: ['image', 'mask'], io: { ins: ['image', 'colour'], outs: ['image', 'field'] },
     params: [TOUCH_R('size', 'Leaf Size', 100, 60, 360), TOUCH_R('coverage', 'Coverage', 100, 20, 260), TOUCH_R('shape', 'Shape', 0), TOUCH_R('sheen', 'Sheen', 0), TOUCH_R('glitter', 'Glitter', 0)], cost: () => 4,
     opts(E, n){ const c = touchRGB(E.input(n, 2), '#E0B38D');

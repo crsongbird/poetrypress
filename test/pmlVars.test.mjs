@@ -377,9 +377,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
     !/Math\.round\(\(w\*h\)\/\d+/.test(gens));
   check('no line width has a fixed-pixel floor any more',
     !/lineWidth ?= ?Math\.max\(\d*\.?\d+,/.test(gens) && !/lineWidth ?= ?\d*\.?\d+;/.test(gens));
-  // (Fractured Glaze, Contour Map, Turing Skin and Watercolor Wash are chains now: their grid is the chain's, canonDiv(2) in textureGenerators.js genChain)
+  // (Fractured Glaze, Contour Map, Turing Skin, Watercolor Wash and Poured Wax are chains now: their grid is the chain's, canonDiv(2) in textureGenerators.js genChain)
   check('working grids are canonical (canonDiv), so pixel-built textures keep the export grid',
-    (gens.match(/canonDiv\(\d\)/g) || []).length === 28 && /const hdiv = canonDiv\(2\)/.test(src('stepsLight.js')) && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js'))
+    (gens.match(/canonDiv\(\d\)/g) || []).length === 27 && /const hdiv = canonDiv\(2\)/.test(src('stepsLight.js')) && /canonDiv\(chain\.div \|\| 1\)/.test(src('textureGenerators.js'))
     && /const \[gw, gh\] = whimGrid\(E, 6\)/.test(src('stepsWhimsy.js')) && /E\.canvasPass \? \[Math\.ceil\(E\.ww\/canonDiv\(d\)\)/.test(src('stepsWhimsy.js')));
   {
     // Linen's grid: threads at least ~3 px apart; never finer than the export's grid, never coarser than the canvas
@@ -657,7 +657,9 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const T = await import('../textureGenerators.js'), tt = src('texTouch.js');
   check('Old Paper is folded paper: long folds and crinkle as heights, lit; Folds, Age and Crinkle knobs',
     T.paramsFor('oldpaper').map(d => d.label).join('|') === 'Scale|Folds|Age|Crinkle' && /const L=lightHeights\(H, ww, wh, \{ light, relief:1, gloss:0\.1, shadow:0\.4/.test(tt));
-  check('Poured Wax pools merge (a metaball field), lit with a satin sheen; a Viscosity knob', T.paramsFor('wax')[2].label === 'Viscosity' && /pools that meet MERGE into one/.test(tt) && /gloss:0\.62/.test(tt));
+  { const st = src('stepsTouch.js'), ch = src('chains.js');
+    check('Poured Wax is a chain: pools merge (a metaball field), Splatter flings drops away from the dial, the Meniscus shapes them, the Light Engine lights them with Translucency; Viscosity, Splatter, Height and Sheen knobs',
+      T.paramsFor('wax').map(d => d.label).join('|') === 'Pool Size|Pool Count|Viscosity|Splatter|Height|Sheen' && /pools that meet MERGE/.test(st) && /meniscus: \{ cat: 'Shape'/.test(st) && /translucency: 45/.test(ch)); }
 }
 
 // ---- inline glyphs on every canvas; materials; normal maps; folds ----
@@ -778,14 +780,14 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const xl = t.slice(t.indexOf('export function genCrystalLeaf('));
   check('Crystal Leaf: a druse of six-faced points (each face lit, striated, edge-worn), a refracted layer behind, fire with dispersion; Clarity, Fire, Phantoms, Inclusions',
     knobs('crystal') === 'Facet Size|Clarity|Fire|Phantoms|Inclusions' && T.TEXTURE_CAPS.crystal.diffuse === true
-    && /const B=near\(BACK, x\+mx\*f\.slope\*REFR, y\+my\*f\.slope\*REFR\);/.test(xl) && /EACH CRYSTAL A POINT: a six-sided pyramid/.test(xl) && /dsp=0\.3\+0\.7\*fire/.test(xl) && /rutile needles/.test(xl));
+    && /const B=near\(BACK, x\+mx\*f\.slope\*REFR, y\+my\*f\.slope\*REFR, nB\);/.test(xl) && /EACH CRYSTAL A POINT: a six-sided pyramid/.test(xl) && /dsp=0\.3\+0\.7\*fire/.test(xl) && /rutile needles/.test(xl));
 }
 
 // ---- the background randomiser changes the texture the way a person does ----
 {
   const ev = src('appEvents.js');
   check('randomising picks from the menu itself and fires a real change (the knobs relabel)',
-    /const types = \[\.\.\.\$\('textureType'\)\.options\]\.map\(o => o\.value\)/.test(ev)
+    /const types = \[\.\.\.\$\('textureType'\)\.options\]\.filter\(o => !o\.hidden\)\.map\(o => o\.value\)/.test(ev)
     && /\$\('textureType'\)\.dispatchEvent\(new Event\('change', \{ bubbles: true \}\)\);/.test(ev)
     && /if\(!state\.locks\.has\('textureType'\)\)\{/.test(ev));
   check('restoring a lock that did not change announces nothing (a locked texture keeps its knobs)',
@@ -896,7 +898,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
       && /p\.dataset\.tab === name \|\| \(desk && name === 'more' && p\.dataset\.tab === before\)/.test(ev2)
       && /body\.more-open:not\(\.is-mobile\) \.controls\{ opacity:\.42;/.test(css2) && /"controls stage drawer"/.test(css2));
     check('desktop: the left sidebar and Esoterica\'s drawer resize by their edges (a faint line with a grip; remembered in this browser, double-click resets); the image fits between',
-      /grip\.className = 'side-resize'/.test(ev2) && /grip\.className = 'drawer-resize side-resize-like'/.test(ev2) && /localStorage\.setItem\(KEY/.test(ev2) && /grid-template-columns:var\(--side-w, 460px\) minmax\(0,1fr\);/.test(css2)
+      /grip\.className = 'side-resize'/.test(ev2) && /grip\.className = 'drawer-resize side-resize-like'/.test(ev2) && /localStorage\.setItem\(KEY/.test(ev2) && /grid-template-columns:min\(var\(--side-w, 460px\), 52vw\) minmax\(0,1fr\);/.test(css2)
       && /body:not\(\.is-mobile\) #poemCanvas\{ max-height:100%; max-width:100%; \}/.test(css2) && /var\(--drawer-w, 440px\)/.test(css2) && /^\.side-resize\{ display:none; \}/m.test(css2));
   }
   {
