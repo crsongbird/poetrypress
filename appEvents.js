@@ -1124,11 +1124,11 @@ function presetTile(p, onPick, extraClass){
   return btn;
 }
 
-// the built-in looks, each group under its own heading (Simple first)
-{ let at = 0;
+// the built-in looks, each group under its own heading (Simple first), alphabetical within it (Ruby)
+{ let at = 0; const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
   for(const g of (PRESET_GROUPS || [{ name: '', count: PRESETS.length }])){
     if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = g.name; presetGrid.appendChild(hd); }
-    PRESETS.slice(at, at + g.count).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
+    PRESETS.slice(at, at + g.count).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
     at += g.count;
   }
   PRESETS.slice(at).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
@@ -1218,7 +1218,15 @@ function renderSavedPresets(saved){
   customGrid.innerHTML = '';
   const empty = $('customPresetsEmpty');
   if(empty) empty.style.display = (saved && saved.length) ? 'none' : '';
-  if(!saved || !saved.length) return;
+  // the last tile saves the look on the page as a new custom preset (Ruby: "omg yes")
+  const addSave = () => { if(typeof document.createElement !== 'function') return;
+    const t = document.createElement('div'); t.className = 'preset-btn preset-save'; t.setAttribute('role', 'button'); t.tabIndex = 0;
+    t.title = 'Save the look on the page as a preset of your own';
+    t.innerHTML = '<span class="preset-save-plus" aria-hidden="true">＋</span><span class="preset-label">Save this look</span>';
+    const go = () => { if(typeof vault !== 'undefined' && vault.create) vault.create(); };
+    t.addEventListener('click', go); t.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } });
+    customGrid.appendChild(t); };
+  if(!saved || !saved.length){ addSave(); return; }
 
   for(const rec of saved){
     const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
@@ -1232,6 +1240,7 @@ function renderSavedPresets(saved){
       scheduleRender(); lightPreset(rec.name);
     }, 'preset-custom'));
   }
+  addSave();
   paintLitPreset();
 }
 

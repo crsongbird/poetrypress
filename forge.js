@@ -36,6 +36,9 @@ export const FORGE_CATEGORIES = STEP_CATEGORIES;
  */
 export const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA' };
 export const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number' };
+/** A PART'S COLOR is the kind of thing it makes (its first output's type), the same color its
+ *  output dots and wires wear (Ruby: node, wire and connector colors as data types). The Surface keeps its own. */
+export const forgePartColour = N => !N ? '#999' : N.cat === 'Output' ? FORGE_CAT_COLOURS.Output : `var(--t-${(N.outTypes && N.outTypes[0]) || 'field'})`;
 export const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
 /** What each category holds, in a line (the parts list and the Help). */
 export const FORGE_CAT_DOCS = {
@@ -114,7 +117,7 @@ export function forgeHelpHtml(){
     + `<nav class="fd-toc">${toc.map(([id, t]) => `<a href="#fd-${id}">${t}</a>`).join('')}</nav>`
     + sec('what', 'What the Athanor is', `<p>The Athanor is a node editor for surface textures. You build a texture from small <b>parts</b> (nodes) joined by <b>wires</b>. Each part does one job: it makes a pattern, changes one, colors it, or lights it. What reaches the <b>Surface</b> at the end becomes a texture you can use on the page (Surface Variant → 🜉 From the Athanor, or the <b>Use</b> button).</p><p>Most of the app's own textures are built this way. Open one from <b>Start from…</b> to see how it is made, then change it, take parts from it, or mix it with parts of another.</p>`)
     + sec('read', 'Reading a graph', `<p>Read a graph from left to right. Parts on the left make or bring in something; each wire carries it to the next part on the right; the Surface is at the far right.</p><p>Each part shows a small picture of what it makes (turn these off with <b>Steps</b> in the corner if the editor feels slow). The large picture in the corner is what the whole graph makes; tap it to make it larger.</p><p>A part's <b>inputs</b> are the dots on its left edge and its <b>outputs</b> the dots on its right. Its <b>settings</b> are the sliders and menus inside it.</p>`)
-    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of four kinds of thing. The dot and the wire wear the kind's color:</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
+    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of four kinds of thing. The dot, the wire and the part that makes it all wear the kind's color (a part's color is the kind of thing it makes; the Surface keeps its own):</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
     + sec('convert', 'When the kinds do not match', `<p>You can wire any output into any input. When the kinds differ, the Athanor converts the value on the way:</p><ul><li>A <b>gray picture</b> into a color picture: the same gray in red, green and blue.</li><li>A <b>color picture</b> into a gray input: its brightness.</li><li>A <b>color</b> or a <b>number</b> into a picture input: a flat page of that color or that gray.</li><li>A <b>picture</b> into a number (a ⚙ port): its average brightness. A color: its brightness.</li><li>Anything that is not a color into a <b>color</b> input: the input uses its own default instead (a Hue input falls back to the page's hue).</li></ul><p>Nothing breaks when kinds are mixed. Wiring a color into a number, for example, gives a number from its brightness, which can be an interesting way to drive a setting.</p>`)
     + sec('settings', 'Settings and ⚙ ports', `<p>Most sliders in a part have a <b>⚙ port</b> beside them. A number wired there moves the setting across its whole range: 0 is the slider's lowest, 1 its highest. Hold the setting (or right-click it) and choose <b>Set the range the wire sweeps…</b> to use only part of the range.</p><p>Holding a setting also lets you <b>bind</b> it to a page slider or the light dial without a wire, or <b>wire a Knob into it</b> in one step.</p>`)
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
@@ -213,7 +216,7 @@ export async function openForge(deps){
   if(!F.editor){
     const ed = F.editor = new Drawflow(area);
     // zoom in small steps (Drawflow's 0.1 a wheel-notch is far too quick on a trackpad or a pinch)
-    ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.3; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
+    ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.12; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
     ed.draggable_inputs = false;                         // a slider slides; it never drags its node
     ed.start();
     const lists = { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' };
@@ -225,7 +228,7 @@ export async function openForge(deps){
     // ---- colour: ports and wires by what travels on them; rows show which params a wire drives ----
     const paintNode = id => {
       const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && FORGE_NODES[n.name]; if(!el || !N) return;
-      el.style.setProperty('--cat', FORGE_CAT_COLOURS[N.cat] || '#999');
+      el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
       const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? 'Pinned — tap to let it move' : 'Pin in place'; }
       el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns); d.title = (N.ins[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.inTypes[j]] || ''); });
@@ -319,9 +322,9 @@ export async function openForge(deps){
       // THE PARTS LIST: a search, then each category (its glyph, its name, what it holds) and
       // its parts, each with what it does in a line. (No Output: every graph has its Surface.)
       palette.innerHTML = `<input type="search" class="forge-find" id="forgeFind" placeholder="Find a part…" aria-label="Find a part" autocomplete="off">`
-        + FORGE_CATEGORIES.filter(cat => cat !== 'Output').map(cat => `<details class="forge-cat" open style="--cat:${FORGE_CAT_COLOURS[cat]}"><summary><span class="forge-cat-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</summary>`
+        + FORGE_CATEGORIES.filter(cat => cat !== 'Output').map(cat => `<details class="forge-cat" open style="--cat:var(--fg-dim)"><summary><span class="forge-cat-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</summary>`
         + `<p class="forge-cat-doc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p>`
-        + Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}" title="${forgeEsc(n.doc)}"><span class="fpart-name">${forgeEsc(n.label)}</span><span class="fpart-doc">${forgeEsc(n.doc)}</span></button>`).join('') + `</details>`).join('');
+        + Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}" style="--cat:${forgePartColour(n)}" title="${forgeEsc(n.doc)}"><span class="fpart-name">${forgeEsc(n.label)}</span><span class="fpart-doc">${forgeEsc(n.doc)}</span></button>`).join('') + `</details>`).join('');
       const find = palette.querySelector('#forgeFind');
       if(find) find.addEventListener('input', () => { const q = find.value.trim().toLowerCase();
         palette.querySelectorAll('.forge-cat').forEach(c => { let any = 0;
@@ -386,7 +389,11 @@ export async function openForge(deps){
       F.cutWire = wireOf(p.parentElement);
     });
     ed.on('connectionUnselected', hideCut);
-    ed.on('nodeSelected', hideCut);
+    // a part tapped or clicked comes to the front, over any it overlaps (Ruby)
+    let frontZ = 2;
+    const toFront = id => { const el = area.querySelector('#node-' + id); if(el) el.style.zIndex = String(++frontZ); };
+    ed.on('nodeSelected', id => { hideCut(); toFront(id); });
+    area.addEventListener('pointerdown', e => { const el = e.target.closest && e.target.closest('.drawflow-node'); if(el && el.id) toFront(el.id.replace('node-', '')); }, true);
     if(cut) cut.addEventListener('click', () => { cutWire(F.cutWire); });
     document.addEventListener('keydown', e => {
       if(veil.hidden) return;
@@ -573,7 +580,7 @@ export async function openForge(deps){
     };
     const canvasMenu = (cx, cy) => { const g = toGrid(cx, cy); return { title: 'The grid', items: [
       { glyph: '＋', label: 'Add a part here', sub: () => ({ title: 'Add a part here', items: FORGE_CATEGORIES.map(cat => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: forgeCatName(cat), colour: FORGE_CAT_COLOURS[cat],
-        sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: FORGE_CAT_COLOURS[cat], act: () => add(type, g.x, g.y) })) }) })) }) },
+        sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: forgePartColour(nn), act: () => add(type, g.x, g.y) })) }) })) }) },
       { glyph: '⌖', label: 'Everything in view', act: () => fitView() },
       { glyph: '▦', label: 'Tidy into columns', hint: 'pinned nodes stay put', act: () => tidy() }] }; };
     // ---- what is under a point: the things there, nearest first ----
@@ -600,7 +607,7 @@ export async function openForge(deps){
     const menuFor = (t, x, y) => t.kind === 'wire' ? wireMenu(t.w) : t.kind === 'node' ? nodeMenu(t.id) : t.kind === 'port' ? portMenu(t.id, t.side, t.j) : t.kind === 'param' ? paramMenu(t.id, t.p) : canvasMenu(x, y);
     const describe = t => {
       if(t.kind === 'wire') return wireDesc(t.w);
-      const N = N_(t.id), colour = N ? FORGE_CAT_COLOURS[N.cat] : '';
+      const N = N_(t.id), colour = N ? forgePartColour(N) : '';
       if(t.kind === 'node') return { glyph: N ? FORGE_CAT_GLYPHS[N.cat] : '', label: `The ${labelOf(t.id)} node`, hint: 'move, pin, copy, remove', colour };
       if(t.kind === 'param'){ const P = N.params.find(p => p[0] === t.p) || []; return { glyph: '⚙', label: P[1] || t.p, hint: `a setting on ${labelOf(t.id)}`, colour: 'var(--t-value)' }; }
       const name = t.side === 'in' ? N.ins[t.j] : N.outs[t.j], ty = t.side === 'in' ? N.inTypes[t.j] : N.outTypes[t.j];
@@ -656,6 +663,18 @@ export async function openForge(deps){
       ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
     };
     F.fitView = fitView;
+    // THE WHEEL zooms toward the pointer, with or without Ctrl (Drawflow's own zoomed only with Ctrl,
+    // about the middle, and a big texture's graph opened at the farthest zoom out could not go
+    // further: Ruby's "the zoom locks"). The view's centre is its origin, as fitView has it.
+    area.addEventListener('wheel', e => {
+      if(e.target.closest && e.target.closest('input, select, textarea, .forge-menu')) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      const r = area.getBoundingClientRect(), mx = r.width/2, my = r.height/2, sx = e.clientX - r.left, sy = e.clientY - r.top, z0 = ed.zoom || 1;
+      const z = Math.max(ed.zoom_min, Math.min(ed.zoom_max, z0*Math.exp(-Math.max(-60, Math.min(60, e.deltaY))*0.0022)));
+      const px = (sx - ed.canvas_x - mx)/z0 + mx, py = (sy - ed.canvas_y - my)/z0 + my;
+      ed.zoom = z; ed.zoom_last_value = z; ed.canvas_x = sx - mx - (px - mx)*z; ed.canvas_y = sy - my - (py - my)*z;
+      ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
+    }, { capture: true, passive: false });
     const tidy = () => {
       const g = slim(), data = g.drawflow.Home.data, pins = {};
       for(const [id, n] of Object.entries(data)) if(n.data && n.data._pin) pins[id] = [n.pos_x, n.pos_y];
@@ -680,11 +699,20 @@ export async function openForge(deps){
     };
     // WHAT A GRAPH TEACHES: a note over the grid when a starter or a texture is opened
     const note = (() => { let el = $('forgeNote'); if(!el && body){ el = document.createElement('div'); el.id = 'forgeNote'; el.className = 'forge-note'; el.hidden = true; body.appendChild(el); } return el; })();
-    const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; return; }
+    const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; veil.classList.remove('note-open'); return; }
       note.innerHTML = `<b>${forgeEsc(label)}</b><p>${forgeEsc(teach)}</p><p class="forge-note-how">Read it from left to right: each part shows what it makes, and each wire carries that on to the next part. Hold a part (or right-click it) to see what it can do. The Help button explains everything.</p><button type="button" class="forge-note-x" aria-label="Close">✕</button>`;
-      note.hidden = false; };
+      note.hidden = false; veil.classList.add('note-open'); };
     F.showNote = showNote;
-    if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) note.hidden = true; });
+    // the note stays until it is closed — by its ✕ or by a click anywhere else (Ruby); while it shows,
+    // the grid dims a little behind it, so the note is what is read first
+    const hideNote = () => { if(note && !note.hidden){ note.hidden = true; veil.classList.remove('note-open'); } };
+    if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) hideNote(); });
+    veil.addEventListener('pointerdown', e => { if(note && !note.hidden && !(e.target.closest && e.target.closest('.forge-note'))) hideNote(); }, true);
+    // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
+    if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
+      openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
+        { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
+        { glyph: '?', label: 'Help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
     const st = $('forgeStarter');
     if(st){

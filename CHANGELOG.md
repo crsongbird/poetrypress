@@ -4,6 +4,42 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Sponde (2026-10-12)
+
+- The Athanor has the app's lighting engine as a part, the Light Engine. Wire
+  a picture and its heights into it and the light dial lights them. Its
+  settings are Relief, Gloss (or a gloss map, for shine in some places only),
+  Shine, Shadow, Occlusion and Ambient. It also has hue ports for the shadow,
+  highlight and light colors; left empty, it uses the page's own material
+  hues.
+- Oil Paint: a new part that repaints any picture in oil brushstrokes. Big
+  strokes go down first, then smaller ones where there is detail; each
+  follows the picture's shapes and stops at its edges. Its second output is
+  the paint's heights (ridges, bristle grooves, paint piled at the ends), for
+  the Light Engine.
+- Canvas Weave: a new part, the cloth under a painting, as heights.
+- A new starter, Oil on Canvas: any texture turned into an oil painting the
+  dial lights.
+- Painted Landscape is now oil on canvas that the light dial lights. A sixth
+  slider, Impasto, sets how thick the paint stands; 0 is the old flat
+  painting.
+- Athanor:
+  - each part wears the color of what it makes, the same color as its
+    output dots and wires;
+  - a tapped or clicked part comes to the front;
+  - the mouse wheel zooms toward the pointer, and the view can zoom out
+    further on big graphs;
+  - larger type in the parts;
+  - on a phone, the top bar is one row: ⋯ holds Kept, Help, Revert and
+    Clear, and the zoom buttons are gone (pinch to zoom);
+  - the teaching note sits beside the parts list instead of over it, dims
+    the grid while it shows, and closes with a click anywhere;
+  - its old card in Esoterica is gone; it opens from the top bar.
+- Presets: the built-in presets are alphabetical within each heading.
+  Custom Presets ends with a "＋ Save this look" tile.
+- Cartomancy: Wear has far more range. At the top, nearly every card is
+  marked, many two or three times.
+
 ## Jupiter–Carme (2026-10-12)
 
 - Inline code works again. Its background box read a color the wrong way, so

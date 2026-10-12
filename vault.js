@@ -601,6 +601,7 @@ export function createVault(deps){
   return {
     refresh,
     seed,
+    create: createSpell,
     _state: () => ({ spells, poems, selectedSpell, selectedPoem }),
     _select: (kind, val) => {
       if(kind === 'spell') selectedSpell = val; else selectedPoem = val;

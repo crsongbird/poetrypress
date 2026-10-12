@@ -245,7 +245,9 @@ export const TEXTURE_PARAMS = {
                   // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
                   {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''},
                   // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
-                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''}],
+                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''},
+                  // brushwork the dial lights: none (0, the old flat painting) → thick oil, every stroke standing up
+                  {key:'shape', label:'Impasto',         min:0,  max:100, def:50,  unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -320,7 +322,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
   // the dial is the WIND here, not a light (dial: its name for this texture)
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
-  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },

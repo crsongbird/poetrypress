@@ -226,7 +226,8 @@ export function crtCard(ctx, W, H, face, look){
   const paper = crtMix(crtMix(S.paper, V.tone > 0 ? [255,255,255] : [0,0,0], Math.abs(V.tone)), V.warm > 0 ? [236, 206, 150] : [196, 206, 222], Math.abs(V.warm)*(dark ? 0.4 : 1));
   const ink = S.ink, cols = (look.suitCols || []).map(crtRGB);
   // its outline: rounded, or with a corner torn or folded away (cartomancyTable.js)
-  const dmg = look.dmg || null, cut = crtCut(dmg), outline = (c, begin = true) => crtCardPath(c, W, H, r, cut, begin);
+  // its damage: none, or one to three marks (a list); the first tear or dog-ear decides its outline
+  const dmgs = Array.isArray(look.dmg) ? look.dmg : look.dmg ? [look.dmg] : [], cut = crtCut(dmgs.find(d => crtCut(d)) || null), outline = (c, begin = true) => crtCardPath(c, W, H, r, cut, begin);
   // its shadow on whatever lies beneath: a card is thin, so a tight contact shadow and a soft one thrown
   // a little away from the light (further the higher it lies). A canvas shadow's offset is never turned
   // with the drawing, so it is worked in the page's own frame.
@@ -248,7 +249,9 @@ export function crtCard(ctx, W, H, face, look){
   ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); outline(ctx); ctx.stroke();
   ctx.save(); if(cut){ outline(ctx); ctx.clip(); } crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }); ctx.restore();
   crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline);
-  if(dmg) crtDamage(ctx, W, H, r, dmg, paper, cols, [tx, ty], outline, !!face.back);
+  // (only one cut corner per card: a second tear or fold is drawn as a crease instead)
+  let cutDone = false;
+  for(const d of dmgs){ const own = crtCut(d) ? (cutDone ? { ...d, kind: 'crease' } : d) : d; if(crtCut(own)) cutDone = true; crtDamage(ctx, W, H, r, own, paper, cols, [tx, ty], outline, !!face.back); }
 }
 
 /** A back's pattern about the origin (stroke and fill already set): symmetrical, so any family member is the house's. */
@@ -457,7 +460,9 @@ export function crtDeal(game, w, h, opts){
   const wear = opts.wear ?? 0.3, back = crtBack(), stranger = crtBack(), unit = Math.min(w, h);
   const jig = (v, a) => v + (R() - 0.5)*a;
   // a card's damage: rarer the newer the deck (Wear)
-  const harm = () => R() < wear*0.32 ? crtDamageFor(R, back) : null;
+  // WEAR: at 0 a new deck; at 100 nearly every card marked, many twice or three times (Ruby: far more range)
+  const harm = () => { if(!(R() < wear*0.85)) return null; const list = [crtDamageFor(R, back)];
+    if(R() < wear*0.55) list.push(crtDamageFor(R, back)); if(R() < wear*0.3) list.push(crtDamageFor(R, back)); return list; };
   const mess = (x, y, rot, face, lift = 0) => out.push({ kind: 'card', x: jig(x, cw*sc*0.6), y: jig(y, cw*sc*0.6), rot: jig(rot, sc*0.6), face, lift, dmg: harm() });
   const rank = () => R() < 0.2 ? crtPick(['Page', 'Knight', 'Queen', 'King']) : 1 + Math.floor(R()*10);
   // (once in a long while a suit card of the fifth element: a misprint, or a deck from somewhere else)

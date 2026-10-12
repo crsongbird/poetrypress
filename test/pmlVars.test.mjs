@@ -822,7 +822,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
     T.paramsFor('brushstrokes').map(d => d.label).join('|') === 'Stroke Width|Stroke Count|Wetness' && T.paramsFor('brushstrokes')[2].def === 0
     && /if\(wet > 0\.25\)\{/.test(sh) && /ctx\.globalAlpha = 0\.65\*wet;/.test(sh));
   check('Painted Landscape has Wetness (watercolour blooms), twelve countries (fields and a volcano the newest), and Color: a time of day, aerial perspective, broken colour; painted clouds',
-    T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness|Tilt|Color'
+    T.paramsFor('landscape').map(d => d.label).join('|') === 'Distance|Ridges|Wetness|Tilt|Color|Impasto'
     && ['mesa:', 'forest:', 'tundra:', 'lake:', 'coast:', 'fields:', 'volcano:'].every(k => src('stepsWhimsy.js').includes('  ' + k))
     && /export const LAND_TIMES = \{/.test(src('stepsWhimsy.js')) && /pick\(\['cumulus', 'cumulus', 'stratus', 'cirrus', 'mixed'\]\)/.test(src('stepsWhimsy.js')) && /const atValue = /.test(src('stepsWhimsy.js')));
 }

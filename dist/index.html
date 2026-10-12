@@ -1163,6 +1163,11 @@ canvas.chip-swatch{ display:block; width:100%; height:39px; }
   pointer-events:none;
 }
 .preset-btn.preset-custom .preset-label{ font-style:italic; }
+/* ＋ Save this look: the last of the custom presets, a tile of its own shape */
+.preset-btn.preset-save{ display:flex; flex-direction:column; cursor:pointer; border-style:dashed; }
+.preset-save .preset-save-plus{ display:flex; align-items:center; justify-content:center; height:39px; font-size:22px; color:var(--accent); opacity:.8; }
+body.is-mobile .preset-save .preset-save-plus{ height:35px; }
+.preset-btn.preset-save:hover .preset-save-plus, .preset-btn.preset-save:focus-visible .preset-save-plus{ opacity:1; }
 .preset-divider{
   grid-column:1 / -1;
   font-size:10px; letter-spacing:.14em; text-transform:uppercase;
@@ -1834,10 +1839,10 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; -webkit-touch-callout:none; background:
   radial-gradient(circle, color-mix(in srgb, var(--fg-text) 16%, transparent) 1px, transparent 1.5px) 0 0/24px 24px, var(--fg-ground); }
 .forge-canvas .drawflow .drawflow-node{ display:block; border-radius:0; background:var(--fg-node); border:1px solid var(--fg-line); border-top:3px solid var(--cat, #888); color:var(--fg-text);
-  width:200px; padding:0 0 4px; font-size:12px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.7); min-height:0; }
+  width:216px; padding:0 0 4px; font-size:13px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.7); min-height:0; }
 .forge-canvas .drawflow .drawflow-node.selected{ border-color:var(--cat, var(--fg-accent)); box-shadow:0 0 0 1px var(--cat, var(--fg-accent)), 0 10px 24px -14px rgba(0,0,0,0.7); background:var(--fg-node); }
 /* the title bar is the handle: it alone moves a node (a pinned node not at all) */
-.forge-node-title{ display:flex; align-items:center; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; height:26px; padding:0 2px 0 8px; color:var(--fg-text);
+.forge-node-title{ display:flex; align-items:center; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:14px; height:26px; padding:0 2px 0 8px; color:var(--fg-text);
   background:color-mix(in srgb, var(--cat, #888) 16%, transparent); white-space:nowrap; cursor:grab; touch-action:none; }
 .drawflow-node.pinned .forge-node-title{ cursor:default; background:color-mix(in srgb, var(--cat, #888) 8%, transparent); }
 .forge-node-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
@@ -1851,13 +1856,13 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-rows{ padding:4px 10px 0; }
 .forge-row{ height:22px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
 .forge-row.extra{ height:auto; min-height:22px; }
-.fp-in, .fp-out{ font-family:var(--ui-code); font-size:10.5px; color:var(--fg-dim); white-space:nowrap; }
+.fp-in, .fp-out{ font-family:var(--ui-code); font-size:11.5px; color:var(--fg-dim); white-space:nowrap; }
 .fp-in::before{ content:'▸ '; color:var(--tc); } .fp-out::after{ content:' ▸'; color:var(--tc); }
 [data-t="field"]{ --tc:var(--t-field); } [data-t="image"]{ --tc:var(--t-image); } [data-t="colour"]{ --tc:var(--t-colour); } [data-t="value"]{ --tc:var(--t-value); }
-.forge-param{ flex:1; display:grid; grid-template-columns:64px 1fr 30px; gap:4px; align-items:center; font-size:11px; color:var(--fg-dim); min-width:0; }
-.forge-row.extra .forge-param{ grid-template-columns:64px 1fr; }
-.forge-param input, .forge-param select{ width:100%; min-width:0; font-size:11px; border-radius:0; accent-color:var(--cat); }
-.forge-param output{ font-family:var(--ui-code); font-size:10px; text-align:right; color:var(--fg-text); white-space:nowrap; }
+.forge-param{ flex:1; display:grid; grid-template-columns:70px 1fr 32px; gap:4px; align-items:center; font-size:12px; color:var(--fg-dim); min-width:0; }
+.forge-row.extra .forge-param{ grid-template-columns:70px 1fr; }
+.forge-param input, .forge-param select{ width:100%; min-width:0; font-size:12px; border-radius:0; accent-color:var(--cat); }
+.forge-param output{ font-family:var(--ui-code); font-size:11px; text-align:right; color:var(--fg-text); white-space:nowrap; }
 .forge-param.wired{ color:var(--t-value); } .forge-param.wired input{ opacity:0.3; pointer-events:none; } .forge-param.wired output{ color:var(--t-value); }
 .forge-param.wired span::before{ content:'⚙ '; }
 .forge-bound input{ color:var(--t-value); font-family:var(--ui-code); }
@@ -2013,6 +2018,29 @@ summary.card-title, .card-title{ overflow:hidden; }
 .forge-note .forge-note-how{ color:var(--text-dim); font-size:12px; }
 .forge-note .forge-note-x{ position:absolute; right:4px; top:4px; width:auto; margin:0; padding:2px 7px; border-radius:0; background:none; border:0; color:var(--text-dim); }
 .forge-pending:not([hidden]) ~ .forge-note{ top:52px; }
+/* while a teaching note shows, the grid dims a little behind it (a click anywhere closes it: forge.js) */
+.forge-canvas{ transition:filter .2s; }
+.forge-veil.note-open .forge-canvas, .forge-veil.note-open .forge-dock{ filter:brightness(.55) saturate(.8); }
+/* on a desk the note sits beside the parts list, never over it */
+@media (min-width: 761px){ body:not(.is-mobile) .forge-note{ left:188px; width:min(380px, calc(100% - 200px)); } }
+@media (min-width: 900px){ body:not(.is-mobile) .forge-note{ left:248px; width:min(380px, calc(100% - 260px)); } }
+/* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ⋯ (Kept, Help, Revert,
+   Clear), Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
+.forge-more-btn{ display:none; }
+@media (max-width: 760px){
+  .forge-bar{ flex-wrap:nowrap; gap:4px; padding:4px 6px; }
+  .forge-bar button, .forge-bar .forge-starter{ font-size:13px; padding:5px 9px; min-height:32px; }
+  .forge-name, .forge-wide, .forge-zoom{ display:none !important; }
+  .forge-more-btn{ display:inline-block; }
+  .forge-starter{ max-width:none; flex:1 1 auto; min-width:0; }
+  .forge-spacer{ display:none; }
+}
+body.is-mobile .forge-bar{ flex-wrap:nowrap; gap:4px; padding:4px 6px; }
+body.is-mobile .forge-bar button, body.is-mobile .forge-bar .forge-starter{ font-size:13px; padding:5px 9px; min-height:32px; }
+body.is-mobile .forge-name, body.is-mobile .forge-wide, body.is-mobile .forge-zoom{ display:none !important; }
+body.is-mobile .forge-more-btn{ display:inline-block; }
+body.is-mobile .forge-starter{ max-width:none; flex:1 1 auto; min-width:0; }
+body.is-mobile .forge-spacer{ display:none; }
 .forge-primer{ margin:6px 0 0; padding-left:18px; font-size:12.5px; line-height:1.4; }
 .forge-primer li{ margin:3px 0; }
 
@@ -9172,7 +9200,8 @@ function crtCard(ctx, W, H, face, look){
   const paper = crtMix(crtMix(S.paper, V.tone > 0 ? [255,255,255] : [0,0,0], Math.abs(V.tone)), V.warm > 0 ? [236, 206, 150] : [196, 206, 222], Math.abs(V.warm)*(dark ? 0.4 : 1));
   const ink = S.ink, cols = (look.suitCols || []).map(crtRGB);
   // its outline: rounded, or with a corner torn or folded away (cartomancyTable.js)
-  const dmg = look.dmg || null, cut = crtCut(dmg), outline = (c, begin = true) => crtCardPath(c, W, H, r, cut, begin);
+  // its damage: none, or one to three marks (a list); the first tear or dog-ear decides its outline
+  const dmgs = Array.isArray(look.dmg) ? look.dmg : look.dmg ? [look.dmg] : [], cut = crtCut(dmgs.find(d => crtCut(d)) || null), outline = (c, begin = true) => crtCardPath(c, W, H, r, cut, begin);
   // its shadow on whatever lies beneath: a card is thin, so a tight contact shadow and a soft one thrown
   // a little away from the light (further the higher it lies). A canvas shadow's offset is never turned
   // with the drawing, so it is worked in the page's own frame.
@@ -9194,7 +9223,9 @@ function crtCard(ctx, W, H, face, look){
   ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); outline(ctx); ctx.stroke();
   ctx.save(); if(cut){ outline(ctx); ctx.clip(); } crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }); ctx.restore();
   crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline);
-  if(dmg) crtDamage(ctx, W, H, r, dmg, paper, cols, [tx, ty], outline, !!face.back);
+  // (only one cut corner per card: a second tear or fold is drawn as a crease instead)
+  let cutDone = false;
+  for(const d of dmgs){ const own = crtCut(d) ? (cutDone ? { ...d, kind: 'crease' } : d) : d; if(crtCut(own)) cutDone = true; crtDamage(ctx, W, H, r, own, paper, cols, [tx, ty], outline, !!face.back); }
 }
 
 /** A back's pattern about the origin (stroke and fill already set): symmetrical, so any family member is the house's. */
@@ -9403,7 +9434,9 @@ function crtDeal(game, w, h, opts){
   const wear = opts.wear ?? 0.3, back = crtBack(), stranger = crtBack(), unit = Math.min(w, h);
   const jig = (v, a) => v + (R() - 0.5)*a;
   // a card's damage: rarer the newer the deck (Wear)
-  const harm = () => R() < wear*0.32 ? crtDamageFor(R, back) : null;
+  // WEAR: at 0 a new deck; at 100 nearly every card marked, many twice or three times (Ruby: far more range)
+  const harm = () => { if(!(R() < wear*0.85)) return null; const list = [crtDamageFor(R, back)];
+    if(R() < wear*0.55) list.push(crtDamageFor(R, back)); if(R() < wear*0.3) list.push(crtDamageFor(R, back)); return list; };
   const mess = (x, y, rot, face, lift = 0) => out.push({ kind: 'card', x: jig(x, cw*sc*0.6), y: jig(y, cw*sc*0.6), rot: jig(rot, sc*0.6), face, lift, dmg: harm() });
   const rank = () => R() < 0.2 ? crtPick(['Page', 'Knight', 'Queen', 'King']) : 1 + Math.floor(R()*10);
   // (once in a long while a suit card of the fifth element: a misprint, or a deck from somewhere else)
@@ -11065,6 +11098,199 @@ const CHAOS_STEPS = {
 };
 
 
+/* ==== stepsLight.js ==== */
+/**
+ * stepsLight.js — THE ENGINE'S OWN PARTS for the Athanor (Ruby: "we especially
+ * need the lighting engine in there since so many other textures depend on
+ * it"). The app's lit textures are all made the same way: a picture (what
+ * colour the surface is) and its HEIGHTS (how it stands up from the page),
+ * lit by the dial. These parts let any graph do that, and give a picture
+ * heights to light.
+ *
+ *   material  LIGHT ENGINE: a picture and its heights lit by the dial, the way
+ *             the lit textures are — relief, gloss (or a gloss map: shine in
+ *             some places only), cast shadows, occlusion in the crevices,
+ *             ambient light; the Shade, Highlight and Light hues colour the
+ *             shadows, the shine and the light itself (unwired: the page's
+ *             own material hues). Out: the lit picture, the light, the shine.
+ *   oilpaint  OIL PAINT: any picture repainted in strokes of oil — big strokes
+ *             first, smaller ones where there is detail, each laid along the
+ *             picture's forms (Hertzmann's painterly rendering, 1998) — and the
+ *             paint's HEIGHTS: ridges where the bristles dragged, paint piled at
+ *             a stroke's edges and ends. Wire both into a Light Engine and the
+ *             dial lights the impasto.
+ *   canvasweave CANVAS: the cloth under a painting, as heights (a plain weave).
+ *
+ * Each paints at full size in a canvas pass (the page's own textures) and runs
+ * on the Athanor's grid otherwise; the same code does both.
+ */
+
+const LT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+const ltClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+// a hue at the brightness of white: the colour it casts without darkening (as texCore's materials)
+const ltHue = c => { const lum = Math.max(0.05, 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]); return c.map(x => Math.min(2.5, x/lum)); };
+const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
+
+/** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
+function ltMaterial(E, n){
+  const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
+  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di');
+  return (sh || hi || di) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di } : null;
+}
+/** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
+function ltK(k, M, c){
+  if(!M) return k;
+  const deep = Math.max(0, Math.min(1, 2*(1 - k)));
+  const di = M.di ? 1 + (M.di[c] - 1)*Math.min(1, k)*(1 - deep) : 1;
+  return k*(1 + (M.sh[c] - 1)*deep)*di;
+}
+/**
+ * THE ENGINE, on a gw×gh grid: heights H (0..1) → { K: light over flat ground's,
+ * S: the shine }, from the dial (deg) and the part's settings.
+ */
+function ltLight(H, gw, gh, deg, o, glossMap){
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.012;
+  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
+  const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
+  const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
+  for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
+  return { K, S };
+}
+function ltSettings(E, n){
+  const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
+  return { deg, relief: E.num(n, 'relief', 50)/100, gloss: E.num(n, 'gloss', 25)/100, shadow: E.num(n, 'shadow', 60)/100,
+    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100 };
+}
+
+// ---- OIL PAINT: strokes laid along the picture's forms ----
+/**
+ * The picture (a canvas, w×h) repainted in oil: returns [paint canvas, heights canvas].
+ * o: { size (brush, 1 as made), length, detail (0..1: how many smaller strokes), vary (colour jitter), amount (0..1: 0 the picture untouched) }.
+ */
+function oilPaint(src, w, h, o){
+  const R = Math.random, unit = Math.min(w, h);
+  const [pc, px] = kitCanvas(w, h), [hc, hx] = kitCanvas(w, h);
+  px.drawImage(src, 0, 0, w, h);
+  hx.fillStyle = 'rgb(60,60,60)'; hx.fillRect(0, 0, w, h);                    // a thin ground of paint everywhere
+  if(!(o.amount > 0)) return [pc, hc];
+  // the picture, sampled small: its colours, and its forms (a blurred lightness, and which way it runs)
+  const sw = Math.max(48, Math.min(384, Math.round(w/Math.max(1, unit/320)))), sh = Math.max(48, Math.round(sw*h/w));
+  const [, sx] = kitCanvas(sw, sh); sx.drawImage(src, 0, 0, sw, sh);
+  const d = sx.getImageData(0, 0, sw, sh).data, lumA = new Float32Array(sw*sh);
+  for(let i = 0; i < sw*sh; i++) lumA[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
+  const blur = new Float32Array(sw*sh);
+  for(let y = 0; y < sh; y++) for(let x = 0; x < sw; x++){ let s = 0, c = 0;
+    for(let j = -2; j <= 2; j++) for(let k = -2; k <= 2; k++){ const yy = Math.min(sh - 1, Math.max(0, y + j)), xx = Math.min(sw - 1, Math.max(0, x + k)); s += lumA[yy*sw + xx]; c++; }
+    blur[y*sw + x] = s/c; }
+  const at = (a, x, y) => a[Math.min(sh - 1, Math.max(0, y|0))*sw + Math.min(sw - 1, Math.max(0, x|0))];
+  // which way a stroke runs at (u, v) in 0..1: along the picture's contours (across its gradient), else a lazy horizontal
+  const flowPh = R()*6.28;
+  const dirAt = (u, v) => { const x = u*sw, y = v*sh, gx = at(blur, x + 1, y) - at(blur, x - 1, y), gy = at(blur, x, y + 1) - at(blur, x, y - 1), m = Math.hypot(gx, gy);
+    const lazy = Math.sin(u*4 + flowPh)*0.35 + Math.sin(v*7 + flowPh*2)*0.2;
+    if(m < 0.012) return [Math.cos(lazy), Math.sin(lazy), 0];
+    return [-gy/m, gx/m, Math.min(1, m*12)]; };
+  const colAt = (u, v) => { const q = (Math.min(sh - 1, Math.max(0, v*sh|0))*sw + Math.min(sw - 1, Math.max(0, u*sw|0)))*4; return [d[q], d[q+1], d[q+2]]; };
+  const base = unit*0.03*o.size;
+  const passes = [[1, 1], [0.55, 0.35 + o.detail*0.5], [0.3, 0.15 + o.detail*0.6]];
+  px.lineCap = 'round'; px.lineJoin = 'round'; hx.lineCap = 'round'; hx.lineJoin = 'round';
+  for(const [k, chance] of passes){
+    const r = Math.max(cpx(1.2), base*k), step = r*1.25, cols = Math.ceil(w/step), rows = Math.ceil(h/step), cells = [];
+    for(let gy = 0; gy < rows; gy++) for(let gx = 0; gx < cols; gx++) cells.push([gx, gy]);
+    for(let i = cells.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }   // laid in no order, as a hand would
+    let budget = k === 1 ? Infinity : 7000;
+    for(const [gx, gy] of cells){
+      const x0 = (gx + R())*step, y0 = (gy + R())*step, u = x0/w, v = y0/h, [dx0, dy0, edge] = dirAt(u, v);
+      // the smaller strokes go where there is something to say: edges and detail
+      if(k < 1 && R() > chance*(0.35 + edge*1.3)) continue;
+      if(budget-- <= 0) break;
+      // the stroke: from its middle out both ways, bending with the forms
+      // (a stroke stops where the picture's colour changes — Hertzmann's rule — so edges stay where they were)
+      const len = r*(2 + R()*3)*o.length, segs = 4, pts = [[x0, y0]], c0 = colAt(u, v), edgeAt = 70 + (1 - o.detail)*60;
+      for(const sgn of [1, -1]){ let x = x0, y = y0, ddx = dx0*sgn, ddy = dy0*sgn;
+        for(let s = 0; s < segs; s++){ const [ex, ey] = dirAt(x/w, y/h), dot = ex*ddx + ey*ddy, f = dot < 0 ? -1 : 1;
+          ddx = ddx*0.6 + ex*f*0.4; ddy = ddy*0.6 + ey*f*0.4; const m = Math.hypot(ddx, ddy) || 1; ddx /= m; ddy /= m;
+          const nx2 = x + ddx*len/(segs*2), ny2 = y + ddy*len/(segs*2), cn = colAt(nx2/w, ny2/h);
+          if(Math.abs(cn[0] - c0[0]) + Math.abs(cn[1] - c0[1]) + Math.abs(cn[2] - c0[2]) > edgeAt) break;
+          x = nx2; y = ny2; sgn > 0 ? pts.push([x, y]) : pts.unshift([x, y]); } }
+      if(pts.length < 2){ const [a, b2] = pts[0]; pts.push([a + dx0*r*0.3, b2 + dy0*r*0.3]); }
+      const c = c0, j = 1 + (R() - 0.5)*0.12*o.vary, warm = (R() - 0.5)*10*o.vary;
+      const col = `rgba(${Math.round(c[0]*j + warm)},${Math.round(c[1]*j)},${Math.round(c[2]*j - warm)},${0.92*o.amount})`;
+      const path = (x, off) => { x.beginPath(); pts.forEach(([a, b], q) => { const nx = q < pts.length - 1 ? pts[q+1][1] - b : b - pts[q-1][1], ny = q < pts.length - 1 ? -(pts[q+1][0] - a) : -(a - pts[q-1][0]), m = Math.hypot(nx, ny) || 1;
+        const X = a + nx/m*off, Y = b + ny/m*off; q ? x.lineTo(X, Y) : x.moveTo(X, Y); }); };
+      // the paint
+      px.strokeStyle = col; px.lineWidth = r*1.6; path(px, 0); px.stroke();
+      // its bristles: a few threads a little lighter and darker along it
+      for(let b = 0; b < 4; b++){ const off = (R() - 0.5)*r*1.3, t = R() < 0.5 ? 0.88 : 1.12;
+        px.strokeStyle = `rgba(${Math.round(c[0]*j*t)},${Math.round(c[1]*j*t)},${Math.round(c[2]*j*t)},${0.32*o.amount})`; px.lineWidth = Math.max(cpx(0.5), r*0.14); path(px, off); px.stroke(); }
+      // the paint's HEIGHTS: the stroke's body; ridges at its edges where the paint piles; grooves where the bristles dragged
+      const body = 115 + R()*40;
+      hx.strokeStyle = `rgb(${body|0},${body|0},${body|0})`; hx.lineWidth = r*1.6; path(hx, 0); hx.stroke();
+      hx.lineWidth = Math.max(cpx(0.6), r*0.22);
+      for(const off of [-r*0.72, r*0.72]){ const g = Math.min(255, body + 28)|0; hx.strokeStyle = `rgb(${g},${g},${g})`; path(hx, off); hx.stroke(); }
+      for(let b = 0; b < 3; b++){ const off = (R() - 0.5)*r*1.1, g = Math.max(0, body - 12 - R()*16)|0; hx.strokeStyle = `rgb(${g},${g},${g})`; hx.lineWidth = Math.max(cpx(0.4), r*0.1); path(hx, off); hx.stroke(); }
+      // where the brush lifted: a little ridge of paint at the end
+      const [ex, ey] = pts[pts.length - 1], g2 = Math.min(255, body + 38)|0; hx.fillStyle = `rgb(${g2},${g2},${g2})`; hx.beginPath(); hx.arc(ex, ey, r*0.55, 0, 6.283); hx.fill();
+    }
+  }
+  return [pc, hc];
+}
+const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, 'length', 100)/100, detail: E.num(n, 'detail', 50)/100, vary: E.num(n, 'vary', 50)/100, amount: E.num(n, 'amount', 100)/100 });
+
+/** A plain-weave canvas as heights, on a w×h grid (thread every `pitch` px). */
+function weaveField(w, h, pitch){
+  const f = new Float32Array(w*h), p = Math.max(2, pitch);
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const u = x/p, v = y/p, cu = Math.floor(u), cv = Math.floor(v), over = (cu + cv) & 1;
+    const fu = u - cu, fv = v - cv, a = Math.sin(fu*Math.PI), b = Math.sin(fv*Math.PI);
+    f[y*w + x] = over ? 0.35 + 0.65*b*(0.6 + 0.4*a) : 0.35 + 0.65*a*(0.6 + 0.4*b);
+  }
+  return f;
+}
+
+const LIGHT_STEPS = {
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
+    params: [LT_R('relief', 'Relief', 50), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35)],
+    cost: () => 10,
+    // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
+    paint(E, n){
+      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2);
+      const [pc, px] = kitPicture(E.input(n, 1), w, h);
+      if(hv == null) return [pc, kitFieldCanvas(new Float32Array(4).fill(0.5), 2, 2), kitFieldCanvas(new Float32Array(4), 2, 2)];
+      const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
+      const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
+      const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
+      const { K, S } = ltLight(H, gw, gh, o.deg, o, G);
+      const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
+      for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
+        for(let x = 0; x < w; x++){ const gx = Math.min(gw - 1.001, (x + 0.5)/dv - 0.5), x0 = Math.max(0, gx|0), fx = Math.max(0, gx - x0), x1 = Math.min(gw - 1, x0 + 1);
+          const k = (K[r0 + x0]*(1 - fx) + K[r0 + x1]*fx)*(1 - fy) + (K[r1 + x0]*(1 - fx) + K[r1 + x1]*fx)*fy;
+          const s = ((S[r0 + x0]*(1 - fx) + S[r0 + x1]*fx)*(1 - fy) + (S[r1 + x0]*(1 - fx) + S[r1 + x1]*fx)*fy)*sk, q = (y*w + x)*4;
+          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*ltK(k, M, c) + s*(M ? M.hi[c] : 1); } }
+      px.putImageData(im, 0, 0);
+      const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
+      return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
+    run(E, n){
+      const { ww, wh, N } = E, o = ltSettings(E, n), M = ltMaterial(E, n);
+      const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
+      if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
+      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : null;
+      const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
+      const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
+      for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
+        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*ltK(K[i], M, c) + s*(M ? M.hi[c] : 1); }
+      return [out, lf, S]; } },
+  oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
+    params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50)],
+    cost: () => 16,
+    paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
+    run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
+      return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
+  canvasweave: { cat: 'Noise', label: 'Canvas Weave', ins: [], outs: ['heights'], params: [LT_R('pitch', 'Thread Size', 100, 30, 400)], cost: () => 2,
+    run(E, n){ return [weaveField(E.ww, E.wh, cpx(2.2)*E.num(n, 'pitch', 100)/100/(E.ctx.div > 0 ? E.ctx.div : 1))]; } },
+};
+
+
 /* ==== steps.js ==== */
 /**
  * steps.js — THE STEPS: the small operations Vellum's surfaces are made of,
@@ -11100,6 +11326,7 @@ const CHAOS_STEPS = {
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
+
 
 
 
@@ -11249,6 +11476,9 @@ const STEP_DOCS = {
   hsv: 'Turns a picture\'s hues around the color wheel, and changes its saturation and brightness.',
   glass: 'Lights a tiling as stained glass: from behind toward the dial\'s sun, and from the front, each pane domed and catching the light.',
   glaze: 'Lights and colors crazed glaze from its maps.',
+  material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
+  oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
+  canvasweave: 'The cloth under a painting, as heights: a plain weave. Mix it into a painting\'s heights to let the canvas show through thin paint.',
   shaft: 'A shaft of light from the dial through any density (smoke, noise): the density glows inside it. Its second output is the beam itself.',
   surface: 'The end of every graph. What reaches Image is the texture; a gray map in Height is lit by the dial. A graph has exactly one.',
 };
@@ -11653,7 +11883,7 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
@@ -11816,7 +12046,7 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
-  landscape: { label: 'Painted Landscape', canvas: true, teach: 'This is Painted Landscape. Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Wash bleeds the painting (Wetness). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
+  landscape: { label: 'Painted Landscape', canvas: true, teach: 'This is Painted Landscape. Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Wash bleeds the painting (Wetness). Oil Paint repaints it in brushstrokes with the paint\'s heights, and the Light Engine lights those by the dial; the Impasto knob drives both (0: no strokes, as it used to be). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
       ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3
@@ -11825,10 +12055,14 @@ const TEXTURE_CHAINS = {
       ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 0 }, 320, 40],                                  // 6
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 0 }, 600, 120],            // 7
       ['wash', { wet: 0 }, 880, 160],                                             // 8
-      ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1160, 180]],     // 9
+      ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
+      ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
+      ['material', { relief: 50, gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
+      ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
     wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
-      [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 9, 1]] },
+      [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 10, 1], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 9, 1],
+      [12, 1, 10, paramPort('oilpaint', 'amount')], [12, 1, 11, paramPort('material', 'relief')]] },
 };
 
 
@@ -12141,6 +12375,11 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
+  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
+      ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
+      ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
+      ['material', { relief: 55, gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
+    wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -12480,7 +12719,9 @@ const TEXTURE_PARAMS = {
                   // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
                   {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''},
                   // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
-                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''}],
+                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''},
+                  // brushwork the dial lights: none (0, the old flat painting) → thick oil, every stroke standing up
+                  {key:'shape', label:'Impasto',         min:0,  max:100, def:50,  unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -12555,7 +12796,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
   // the dial is the WIND here, not a light (dial: its name for this texture)
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
-  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
@@ -13398,7 +13639,7 @@ Have fun!</textarea>
     <details class="card" data-tab="style" id="customPresetsCard" open>
       <summary class="card-title" data-str="card.custom_presets">Custom Presets</summary>
       <div class="preset-grid" id="customPresetGrid"></div>
-      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">Looks you save appear here. To save the current look, open Esoterica → Spellcrafting and press Create.</p>
+      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">Your own looks: ＋ Save this look keeps the look on the page here, by a name you give it.</p>
     </details>
 
 
@@ -14228,15 +14469,8 @@ Have fun!</textarea>
       </div>
     </details>
 
-    <details class="card" data-tab="more" id="forgePanel">
-      <summary class="card-title" data-str="card.athanor">The Athanor</summary>
-      <div class="card-grid">
-        <p class="hint full" data-str="hint.athanor">A surface texture node editor: wire the app's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.</p>
-        <input type="hidden" id="forgeGraph" value="">
-        <p class="hint full forge-summary" id="forgeSummary"></p>
-        <p class="hint full" data-str="hint.athanor_open">Open it with 🜉 The Athanor, at the top of the page.</p>
-      </div>
-    </details>
+    <!-- the Athanor's graph, saved with the look (the editor itself opens from 🜉 The Athanor, at the top) -->
+    <input type="hidden" id="forgeGraph" value="">
 
     <details class="card" data-tab="more" id="advancedPanel">
       <summary class="card-title" style="cursor:pointer;" data-str="card.workbench">Workbench</summary>
@@ -14272,14 +14506,15 @@ Have fun!</textarea>
   <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
   <div class="forge-veil" id="forgeVeil" hidden>
     <div class="forge-bar">
-      <span class="forge-title"><span class="forge-glyph" aria-hidden="true">🜉</span> The Athanor <small class="forge-sub">Surface texture node editor</small></span>
+      <span class="forge-title"><span class="forge-glyph" aria-hidden="true">🜉</span><span class="forge-name"> The Athanor</span> <small class="forge-sub">Surface texture node editor</small></span>
       <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid">＋ Parts</button>
       <span class="forge-spacer"></span>
       <select id="forgeStarter" class="forge-starter" title="Begin from a working graph, or one of the app's own textures"></select>
-      <button type="button" class="ghost" id="forgeKeptBtn" title="Keep this surface by name, or open one kept">Kept</button>
-      <button type="button" class="ghost" id="forgeDocBtn" aria-expanded="false" aria-controls="forgeDoc" title="How the Athanor works">Help</button>
-      <button type="button" class="ghost" id="forgeRevert" title="Back to the graph as it was when the Athanor opened">Revert</button>
-      <button type="button" class="ghost" id="forgeClear">Clear</button>
+      <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: Kept, Help, Revert, Clear" title="Kept, Help, Revert, Clear">⋯</button>
+      <button type="button" class="ghost forge-wide" id="forgeKeptBtn" title="Keep this surface by name, or open one kept">Kept</button>
+      <button type="button" class="ghost forge-wide" id="forgeDocBtn" aria-expanded="false" aria-controls="forgeDoc" title="How the Athanor works">Help</button>
+      <button type="button" class="ghost forge-wide" id="forgeRevert" title="Back to the graph as it was when the Athanor opened">Revert</button>
+      <button type="button" class="ghost forge-wide" id="forgeClear">Clear</button>
       <span class="forge-zoom">
         <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
         <button type="button" class="ghost" id="forgeFit" title="Everything in view" aria-label="Everything in view">⌖</button>
@@ -14467,14 +14702,13 @@ const UI_STRINGS = {
   'card.form_amp_bearing':                 "Form & Bearing",
   'card.builtin_presets':                  "Built-In Presets",
   'card.custom_presets':                   "Custom Presets",
-  'hint.custom_presets_empty':             "Looks you save appear here. To save the current look, open Esoterica → Spellcrafting and press Create.",
+  'hint.custom_presets_empty':             "Your own looks: ＋ Save this look keeps the look on the page here, by a name you give it.",
   'card.script_options':                   "Script Options",
   'card.typeface_effects':                 "Text Effects",
   'card.backdrop_color':                   "Backdrop Color",
   'card.surface_texture':                  "Surface Texture",
   'card.border_options':                   "Border Options",
   'card.inset_box':                       "Inset Box",
-  'card.athanor':                         "The Athanor",
   'card.vignette_options':                 "Vignette Options",
   'card.appearance':                       "Interface",
   'card.spellcrafting':                    "Spellcrafting",
@@ -14625,8 +14859,6 @@ const UI_STRINGS = {
   'label.base_variant':                      "Base Variant",
   'label.base_opacity':                      "Base Opacity",
   'label.base_blend':                        "Base Blend",
-  'hint.athanor':                            "A surface texture node editor: wire the app's own parts — noises, textures, stitches, the light engine, blends, hues, the six knobs and the dial — into a texture of your own. Its Surface appears at the bottom of Surface Variant (The Athanor); its Knob and Hue nodes become that texture's sliders and hues. The graph is saved with the look.",
-  'hint.athanor_open':                       "Open it with 🜉 The Athanor, at the top of the page.",
   'label.glass_strength':                    "Strength",
   'label.glass_scale':                       "Scale",
   'label.box_link':                          "⛓ Shape Linked to Border",
@@ -23501,7 +23733,8 @@ function crtCard(ctx, W, H, face, look){
   const paper = crtMix(crtMix(S.paper, V.tone > 0 ? [255,255,255] : [0,0,0], Math.abs(V.tone)), V.warm > 0 ? [236, 206, 150] : [196, 206, 222], Math.abs(V.warm)*(dark ? 0.4 : 1));
   const ink = S.ink, cols = (look.suitCols || []).map(crtRGB);
   // its outline: rounded, or with a corner torn or folded away (cartomancyTable.js)
-  const dmg = look.dmg || null, cut = crtCut(dmg), outline = (c, begin = true) => crtCardPath(c, W, H, r, cut, begin);
+  // its damage: none, or one to three marks (a list); the first tear or dog-ear decides its outline
+  const dmgs = Array.isArray(look.dmg) ? look.dmg : look.dmg ? [look.dmg] : [], cut = crtCut(dmgs.find(d => crtCut(d)) || null), outline = (c, begin = true) => crtCardPath(c, W, H, r, cut, begin);
   // its shadow on whatever lies beneath: a card is thin, so a tight contact shadow and a soft one thrown
   // a little away from the light (further the higher it lies). A canvas shadow's offset is never turned
   // with the drawing, so it is worked in the page's own frame.
@@ -23523,7 +23756,9 @@ function crtCard(ctx, W, H, face, look){
   ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); outline(ctx); ctx.stroke();
   ctx.save(); if(cut){ outline(ctx); ctx.clip(); } crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }); ctx.restore();
   crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline);
-  if(dmg) crtDamage(ctx, W, H, r, dmg, paper, cols, [tx, ty], outline, !!face.back);
+  // (only one cut corner per card: a second tear or fold is drawn as a crease instead)
+  let cutDone = false;
+  for(const d of dmgs){ const own = crtCut(d) ? (cutDone ? { ...d, kind: 'crease' } : d) : d; if(crtCut(own)) cutDone = true; crtDamage(ctx, W, H, r, own, paper, cols, [tx, ty], outline, !!face.back); }
 }
 
 /** A back's pattern about the origin (stroke and fill already set): symmetrical, so any family member is the house's. */
@@ -23732,7 +23967,9 @@ function crtDeal(game, w, h, opts){
   const wear = opts.wear ?? 0.3, back = crtBack(), stranger = crtBack(), unit = Math.min(w, h);
   const jig = (v, a) => v + (R() - 0.5)*a;
   // a card's damage: rarer the newer the deck (Wear)
-  const harm = () => R() < wear*0.32 ? crtDamageFor(R, back) : null;
+  // WEAR: at 0 a new deck; at 100 nearly every card marked, many twice or three times (Ruby: far more range)
+  const harm = () => { if(!(R() < wear*0.85)) return null; const list = [crtDamageFor(R, back)];
+    if(R() < wear*0.55) list.push(crtDamageFor(R, back)); if(R() < wear*0.3) list.push(crtDamageFor(R, back)); return list; };
   const mess = (x, y, rot, face, lift = 0) => out.push({ kind: 'card', x: jig(x, cw*sc*0.6), y: jig(y, cw*sc*0.6), rot: jig(rot, sc*0.6), face, lift, dmg: harm() });
   const rank = () => R() < 0.2 ? crtPick(['Page', 'Knight', 'Queen', 'King']) : 1 + Math.floor(R()*10);
   // (once in a long while a suit card of the fifth element: a misprint, or a deck from somewhere else)
@@ -25394,6 +25631,199 @@ const CHAOS_STEPS = {
 };
 
 
+/* ==== stepsLight.js ==== */
+/**
+ * stepsLight.js — THE ENGINE'S OWN PARTS for the Athanor (Ruby: "we especially
+ * need the lighting engine in there since so many other textures depend on
+ * it"). The app's lit textures are all made the same way: a picture (what
+ * colour the surface is) and its HEIGHTS (how it stands up from the page),
+ * lit by the dial. These parts let any graph do that, and give a picture
+ * heights to light.
+ *
+ *   material  LIGHT ENGINE: a picture and its heights lit by the dial, the way
+ *             the lit textures are — relief, gloss (or a gloss map: shine in
+ *             some places only), cast shadows, occlusion in the crevices,
+ *             ambient light; the Shade, Highlight and Light hues colour the
+ *             shadows, the shine and the light itself (unwired: the page's
+ *             own material hues). Out: the lit picture, the light, the shine.
+ *   oilpaint  OIL PAINT: any picture repainted in strokes of oil — big strokes
+ *             first, smaller ones where there is detail, each laid along the
+ *             picture's forms (Hertzmann's painterly rendering, 1998) — and the
+ *             paint's HEIGHTS: ridges where the bristles dragged, paint piled at
+ *             a stroke's edges and ends. Wire both into a Light Engine and the
+ *             dial lights the impasto.
+ *   canvasweave CANVAS: the cloth under a painting, as heights (a plain weave).
+ *
+ * Each paints at full size in a canvas pass (the page's own textures) and runs
+ * on the Athanor's grid otherwise; the same code does both.
+ */
+
+const LT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+const ltClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+// a hue at the brightness of white: the colour it casts without darkening (as texCore's materials)
+const ltHue = c => { const lum = Math.max(0.05, 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]); return c.map(x => Math.min(2.5, x/lum)); };
+const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
+
+/** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
+function ltMaterial(E, n){
+  const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
+  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di');
+  return (sh || hi || di) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di } : null;
+}
+/** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
+function ltK(k, M, c){
+  if(!M) return k;
+  const deep = Math.max(0, Math.min(1, 2*(1 - k)));
+  const di = M.di ? 1 + (M.di[c] - 1)*Math.min(1, k)*(1 - deep) : 1;
+  return k*(1 + (M.sh[c] - 1)*deep)*di;
+}
+/**
+ * THE ENGINE, on a gw×gh grid: heights H (0..1) → { K: light over flat ground's,
+ * S: the shine }, from the dial (deg) and the part's settings.
+ */
+function ltLight(H, gw, gh, deg, o, glossMap){
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.012;
+  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
+  const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
+  const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
+  for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
+  return { K, S };
+}
+function ltSettings(E, n){
+  const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
+  return { deg, relief: E.num(n, 'relief', 50)/100, gloss: E.num(n, 'gloss', 25)/100, shadow: E.num(n, 'shadow', 60)/100,
+    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100 };
+}
+
+// ---- OIL PAINT: strokes laid along the picture's forms ----
+/**
+ * The picture (a canvas, w×h) repainted in oil: returns [paint canvas, heights canvas].
+ * o: { size (brush, 1 as made), length, detail (0..1: how many smaller strokes), vary (colour jitter), amount (0..1: 0 the picture untouched) }.
+ */
+function oilPaint(src, w, h, o){
+  const R = Math.random, unit = Math.min(w, h);
+  const [pc, px] = kitCanvas(w, h), [hc, hx] = kitCanvas(w, h);
+  px.drawImage(src, 0, 0, w, h);
+  hx.fillStyle = 'rgb(60,60,60)'; hx.fillRect(0, 0, w, h);                    // a thin ground of paint everywhere
+  if(!(o.amount > 0)) return [pc, hc];
+  // the picture, sampled small: its colours, and its forms (a blurred lightness, and which way it runs)
+  const sw = Math.max(48, Math.min(384, Math.round(w/Math.max(1, unit/320)))), sh = Math.max(48, Math.round(sw*h/w));
+  const [, sx] = kitCanvas(sw, sh); sx.drawImage(src, 0, 0, sw, sh);
+  const d = sx.getImageData(0, 0, sw, sh).data, lumA = new Float32Array(sw*sh);
+  for(let i = 0; i < sw*sh; i++) lumA[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
+  const blur = new Float32Array(sw*sh);
+  for(let y = 0; y < sh; y++) for(let x = 0; x < sw; x++){ let s = 0, c = 0;
+    for(let j = -2; j <= 2; j++) for(let k = -2; k <= 2; k++){ const yy = Math.min(sh - 1, Math.max(0, y + j)), xx = Math.min(sw - 1, Math.max(0, x + k)); s += lumA[yy*sw + xx]; c++; }
+    blur[y*sw + x] = s/c; }
+  const at = (a, x, y) => a[Math.min(sh - 1, Math.max(0, y|0))*sw + Math.min(sw - 1, Math.max(0, x|0))];
+  // which way a stroke runs at (u, v) in 0..1: along the picture's contours (across its gradient), else a lazy horizontal
+  const flowPh = R()*6.28;
+  const dirAt = (u, v) => { const x = u*sw, y = v*sh, gx = at(blur, x + 1, y) - at(blur, x - 1, y), gy = at(blur, x, y + 1) - at(blur, x, y - 1), m = Math.hypot(gx, gy);
+    const lazy = Math.sin(u*4 + flowPh)*0.35 + Math.sin(v*7 + flowPh*2)*0.2;
+    if(m < 0.012) return [Math.cos(lazy), Math.sin(lazy), 0];
+    return [-gy/m, gx/m, Math.min(1, m*12)]; };
+  const colAt = (u, v) => { const q = (Math.min(sh - 1, Math.max(0, v*sh|0))*sw + Math.min(sw - 1, Math.max(0, u*sw|0)))*4; return [d[q], d[q+1], d[q+2]]; };
+  const base = unit*0.03*o.size;
+  const passes = [[1, 1], [0.55, 0.35 + o.detail*0.5], [0.3, 0.15 + o.detail*0.6]];
+  px.lineCap = 'round'; px.lineJoin = 'round'; hx.lineCap = 'round'; hx.lineJoin = 'round';
+  for(const [k, chance] of passes){
+    const r = Math.max(cpx(1.2), base*k), step = r*1.25, cols = Math.ceil(w/step), rows = Math.ceil(h/step), cells = [];
+    for(let gy = 0; gy < rows; gy++) for(let gx = 0; gx < cols; gx++) cells.push([gx, gy]);
+    for(let i = cells.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }   // laid in no order, as a hand would
+    let budget = k === 1 ? Infinity : 7000;
+    for(const [gx, gy] of cells){
+      const x0 = (gx + R())*step, y0 = (gy + R())*step, u = x0/w, v = y0/h, [dx0, dy0, edge] = dirAt(u, v);
+      // the smaller strokes go where there is something to say: edges and detail
+      if(k < 1 && R() > chance*(0.35 + edge*1.3)) continue;
+      if(budget-- <= 0) break;
+      // the stroke: from its middle out both ways, bending with the forms
+      // (a stroke stops where the picture's colour changes — Hertzmann's rule — so edges stay where they were)
+      const len = r*(2 + R()*3)*o.length, segs = 4, pts = [[x0, y0]], c0 = colAt(u, v), edgeAt = 70 + (1 - o.detail)*60;
+      for(const sgn of [1, -1]){ let x = x0, y = y0, ddx = dx0*sgn, ddy = dy0*sgn;
+        for(let s = 0; s < segs; s++){ const [ex, ey] = dirAt(x/w, y/h), dot = ex*ddx + ey*ddy, f = dot < 0 ? -1 : 1;
+          ddx = ddx*0.6 + ex*f*0.4; ddy = ddy*0.6 + ey*f*0.4; const m = Math.hypot(ddx, ddy) || 1; ddx /= m; ddy /= m;
+          const nx2 = x + ddx*len/(segs*2), ny2 = y + ddy*len/(segs*2), cn = colAt(nx2/w, ny2/h);
+          if(Math.abs(cn[0] - c0[0]) + Math.abs(cn[1] - c0[1]) + Math.abs(cn[2] - c0[2]) > edgeAt) break;
+          x = nx2; y = ny2; sgn > 0 ? pts.push([x, y]) : pts.unshift([x, y]); } }
+      if(pts.length < 2){ const [a, b2] = pts[0]; pts.push([a + dx0*r*0.3, b2 + dy0*r*0.3]); }
+      const c = c0, j = 1 + (R() - 0.5)*0.12*o.vary, warm = (R() - 0.5)*10*o.vary;
+      const col = `rgba(${Math.round(c[0]*j + warm)},${Math.round(c[1]*j)},${Math.round(c[2]*j - warm)},${0.92*o.amount})`;
+      const path = (x, off) => { x.beginPath(); pts.forEach(([a, b], q) => { const nx = q < pts.length - 1 ? pts[q+1][1] - b : b - pts[q-1][1], ny = q < pts.length - 1 ? -(pts[q+1][0] - a) : -(a - pts[q-1][0]), m = Math.hypot(nx, ny) || 1;
+        const X = a + nx/m*off, Y = b + ny/m*off; q ? x.lineTo(X, Y) : x.moveTo(X, Y); }); };
+      // the paint
+      px.strokeStyle = col; px.lineWidth = r*1.6; path(px, 0); px.stroke();
+      // its bristles: a few threads a little lighter and darker along it
+      for(let b = 0; b < 4; b++){ const off = (R() - 0.5)*r*1.3, t = R() < 0.5 ? 0.88 : 1.12;
+        px.strokeStyle = `rgba(${Math.round(c[0]*j*t)},${Math.round(c[1]*j*t)},${Math.round(c[2]*j*t)},${0.32*o.amount})`; px.lineWidth = Math.max(cpx(0.5), r*0.14); path(px, off); px.stroke(); }
+      // the paint's HEIGHTS: the stroke's body; ridges at its edges where the paint piles; grooves where the bristles dragged
+      const body = 115 + R()*40;
+      hx.strokeStyle = `rgb(${body|0},${body|0},${body|0})`; hx.lineWidth = r*1.6; path(hx, 0); hx.stroke();
+      hx.lineWidth = Math.max(cpx(0.6), r*0.22);
+      for(const off of [-r*0.72, r*0.72]){ const g = Math.min(255, body + 28)|0; hx.strokeStyle = `rgb(${g},${g},${g})`; path(hx, off); hx.stroke(); }
+      for(let b = 0; b < 3; b++){ const off = (R() - 0.5)*r*1.1, g = Math.max(0, body - 12 - R()*16)|0; hx.strokeStyle = `rgb(${g},${g},${g})`; hx.lineWidth = Math.max(cpx(0.4), r*0.1); path(hx, off); hx.stroke(); }
+      // where the brush lifted: a little ridge of paint at the end
+      const [ex, ey] = pts[pts.length - 1], g2 = Math.min(255, body + 38)|0; hx.fillStyle = `rgb(${g2},${g2},${g2})`; hx.beginPath(); hx.arc(ex, ey, r*0.55, 0, 6.283); hx.fill();
+    }
+  }
+  return [pc, hc];
+}
+const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, 'length', 100)/100, detail: E.num(n, 'detail', 50)/100, vary: E.num(n, 'vary', 50)/100, amount: E.num(n, 'amount', 100)/100 });
+
+/** A plain-weave canvas as heights, on a w×h grid (thread every `pitch` px). */
+function weaveField(w, h, pitch){
+  const f = new Float32Array(w*h), p = Math.max(2, pitch);
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const u = x/p, v = y/p, cu = Math.floor(u), cv = Math.floor(v), over = (cu + cv) & 1;
+    const fu = u - cu, fv = v - cv, a = Math.sin(fu*Math.PI), b = Math.sin(fv*Math.PI);
+    f[y*w + x] = over ? 0.35 + 0.65*b*(0.6 + 0.4*a) : 0.35 + 0.65*a*(0.6 + 0.4*b);
+  }
+  return f;
+}
+
+const LIGHT_STEPS = {
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
+    params: [LT_R('relief', 'Relief', 50), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35)],
+    cost: () => 10,
+    // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
+    paint(E, n){
+      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2);
+      const [pc, px] = kitPicture(E.input(n, 1), w, h);
+      if(hv == null) return [pc, kitFieldCanvas(new Float32Array(4).fill(0.5), 2, 2), kitFieldCanvas(new Float32Array(4), 2, 2)];
+      const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
+      const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
+      const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
+      const { K, S } = ltLight(H, gw, gh, o.deg, o, G);
+      const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
+      for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
+        for(let x = 0; x < w; x++){ const gx = Math.min(gw - 1.001, (x + 0.5)/dv - 0.5), x0 = Math.max(0, gx|0), fx = Math.max(0, gx - x0), x1 = Math.min(gw - 1, x0 + 1);
+          const k = (K[r0 + x0]*(1 - fx) + K[r0 + x1]*fx)*(1 - fy) + (K[r1 + x0]*(1 - fx) + K[r1 + x1]*fx)*fy;
+          const s = ((S[r0 + x0]*(1 - fx) + S[r0 + x1]*fx)*(1 - fy) + (S[r1 + x0]*(1 - fx) + S[r1 + x1]*fx)*fy)*sk, q = (y*w + x)*4;
+          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*ltK(k, M, c) + s*(M ? M.hi[c] : 1); } }
+      px.putImageData(im, 0, 0);
+      const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
+      return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
+    run(E, n){
+      const { ww, wh, N } = E, o = ltSettings(E, n), M = ltMaterial(E, n);
+      const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
+      if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
+      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : null;
+      const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
+      const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
+      for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
+        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*ltK(K[i], M, c) + s*(M ? M.hi[c] : 1); }
+      return [out, lf, S]; } },
+  oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
+    params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50)],
+    cost: () => 16,
+    paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
+    run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
+      return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
+  canvasweave: { cat: 'Noise', label: 'Canvas Weave', ins: [], outs: ['heights'], params: [LT_R('pitch', 'Thread Size', 100, 30, 400)], cost: () => 2,
+    run(E, n){ return [weaveField(E.ww, E.wh, cpx(2.2)*E.num(n, 'pitch', 100)/100/(E.ctx.div > 0 ? E.ctx.div : 1))]; } },
+};
+
+
 /* ==== steps.js ==== */
 /**
  * steps.js — THE STEPS: the small operations Vellum's surfaces are made of,
@@ -25429,6 +25859,7 @@ const CHAOS_STEPS = {
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
+
 
 
 
@@ -25578,6 +26009,9 @@ const STEP_DOCS = {
   hsv: 'Turns a picture\'s hues around the color wheel, and changes its saturation and brightness.',
   glass: 'Lights a tiling as stained glass: from behind toward the dial\'s sun, and from the front, each pane domed and catching the light.',
   glaze: 'Lights and colors crazed glaze from its maps.',
+  material: 'The app\'s own lighting. Wire a picture into Picture and a gray map into Height, and the dial lights it: slopes facing the light brighten, shadows fall, crevices darken, shiny places catch a highlight. Gloss Map makes some places shinier than others. The three hue ports color the shadows, the shine and the light; leave them empty to use the page\'s own material hues. Do not also wire the height into the Surface, or it is lit twice.',
+  oilpaint: 'Repaints any picture in strokes of oil: big strokes first, then smaller ones where there is detail, each following the picture\'s shapes. Its second output is the paint\'s heights (ridges, bristle grooves, paint piled at the ends). Wire both into a Light Engine and the dial lights the brushwork.',
+  canvasweave: 'The cloth under a painting, as heights: a plain weave. Mix it into a painting\'s heights to let the canvas show through thin paint.',
   shaft: 'A shaft of light from the dial through any density (smoke, noise): the density glows inside it. Its second output is the beam itself.',
   surface: 'The end of every graph. What reaches Image is the texture; a gray map in Height is lit by the dial. A graph has exactly one.',
 };
@@ -25982,7 +26416,7 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
@@ -26145,7 +26579,7 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [7, 1, 8, 1]] },
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
-  landscape: { label: 'Painted Landscape', canvas: true, teach: 'This is Painted Landscape. Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Wash bleeds the painting (Wetness). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
+  landscape: { label: 'Painted Landscape', canvas: true, teach: 'This is Painted Landscape. Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Wash bleeds the painting (Wetness). Oil Paint repaints it in brushstrokes with the paint\'s heights, and the Light Engine lights those by the dial; the Impasto knob drives both (0: no strokes, as it used to be). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
       ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3
@@ -26154,10 +26588,14 @@ const TEXTURE_CHAINS = {
       ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 0 }, 320, 40],                                  // 6
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 0 }, 600, 120],            // 7
       ['wash', { wet: 0 }, 880, 160],                                             // 8
-      ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1160, 180]],     // 9
+      ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
+      ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
+      ['material', { relief: 50, gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
+      ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
     wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
-      [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 9, 1]] },
+      [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 10, 1], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 9, 1],
+      [12, 1, 10, paramPort('oilpaint', 'amount')], [12, 1, 11, paramPort('material', 'relief')]] },
 };
 
 
@@ -26470,6 +26908,11 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
+  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
+      ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
+      ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
+      ['material', { relief: 55, gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
+    wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -26809,7 +27252,9 @@ const TEXTURE_PARAMS = {
                   // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
                   {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''},
                   // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
-                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''}],
+                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''},
+                  // brushwork the dial lights: none (0, the old flat painting) → thick oil, every stroke standing up
+                  {key:'shape', label:'Impasto',         min:0,  max:100, def:50,  unit:''}],
   cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
                   {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
   blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
@@ -26884,7 +27329,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
   // the dial is the WIND here, not a light (dial: its name for this texture)
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
-  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
@@ -27531,9 +27976,9 @@ const TEXTURE_ELEMENTS = {
     wind:  { name: 'Moon in Cloud', k: [80, 80, 90, 50],   t: ['#E6F2EC', '#1A2420'] },
     earth: { name: 'Harvest Moon',  k: [150, 160, 10, 60], t: ['#FFD27F', '#2E1C08'] } },
   landscape: { def: 'earth', earth: { name: 'Painted Landscape' },
-    fire:  { name: 'Volcanic Dusk', k: [120, 200, 20, 30, 0], t: ['#FFA060', '#180303'] },
-    water: { name: 'Misty Fjord',   k: [180, 90, 85, 10, 0],  t: ['#CDE7F0', '#0E2A3A'] },
-    wind:  { name: 'High Plains',   k: [80, 140, 20, 60, 85],  t: ['#F4FFE0', '#12200E'] } },
+    fire:  { name: 'Volcanic Dusk', k: [120, 200, 20, 30, 0, 65], t: ['#FFA060', '#180303'] },
+    water: { name: 'Misty Fjord',   k: [180, 90, 85, 10, 0, 25],  t: ['#CDE7F0', '#0E2A3A'] },
+    wind:  { name: 'High Plains',   k: [80, 140, 20, 60, 85, 55],  t: ['#F4FFE0', '#12200E'] } },
   flowfield: { def: 'wind', wind: { name: 'Flow-Field Ink' },
     fire:  { name: 'Flame Tongues', k: [80, 160, 85],  t: ['#C2261B', '#F29A2E'], light: [0, 100] },
     water: { name: 'Current',       k: [160, 120, 25], t: ['#1D4E89', '#3FA7B5'], light: [90, 100] },
@@ -28037,7 +28482,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Carme';
+const RELEASE = 'Jupiter–Sponde';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-12';
 
@@ -28863,7 +29308,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-12 · 4a17c6e";
+const STAMP = "2026-10-12 · e9c6dab";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -31809,6 +32254,7 @@ function createVault(deps){
   return {
     refresh,
     seed,
+    create: createSpell,
     _state: () => ({ spells, poems, selectedSpell, selectedPoem }),
     _select: (kind, val) => {
       if(kind === 'spell') selectedSpell = val; else selectedPoem = val;
@@ -31856,6 +32302,9 @@ const FORGE_CATEGORIES = STEP_CATEGORIES;
  */
 const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA' };
 const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number' };
+/** A PART'S COLOR is the kind of thing it makes (its first output's type), the same color its
+ *  output dots and wires wear (Ruby: node, wire and connector colors as data types). The Surface keeps its own. */
+const forgePartColour = N => !N ? '#999' : N.cat === 'Output' ? FORGE_CAT_COLOURS.Output : `var(--t-${(N.outTypes && N.outTypes[0]) || 'field'})`;
 const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
 /** What each category holds, in a line (the parts list and the Help). */
 const FORGE_CAT_DOCS = {
@@ -31934,7 +32383,7 @@ function forgeHelpHtml(){
     + `<nav class="fd-toc">${toc.map(([id, t]) => `<a href="#fd-${id}">${t}</a>`).join('')}</nav>`
     + sec('what', 'What the Athanor is', `<p>The Athanor is a node editor for surface textures. You build a texture from small <b>parts</b> (nodes) joined by <b>wires</b>. Each part does one job: it makes a pattern, changes one, colors it, or lights it. What reaches the <b>Surface</b> at the end becomes a texture you can use on the page (Surface Variant → 🜉 From the Athanor, or the <b>Use</b> button).</p><p>Most of the app's own textures are built this way. Open one from <b>Start from…</b> to see how it is made, then change it, take parts from it, or mix it with parts of another.</p>`)
     + sec('read', 'Reading a graph', `<p>Read a graph from left to right. Parts on the left make or bring in something; each wire carries it to the next part on the right; the Surface is at the far right.</p><p>Each part shows a small picture of what it makes (turn these off with <b>Steps</b> in the corner if the editor feels slow). The large picture in the corner is what the whole graph makes; tap it to make it larger.</p><p>A part's <b>inputs</b> are the dots on its left edge and its <b>outputs</b> the dots on its right. Its <b>settings</b> are the sliders and menus inside it.</p>`)
-    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of four kinds of thing. The dot and the wire wear the kind's color:</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
+    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of four kinds of thing. The dot, the wire and the part that makes it all wear the kind's color (a part's color is the kind of thing it makes; the Surface keeps its own):</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
     + sec('convert', 'When the kinds do not match', `<p>You can wire any output into any input. When the kinds differ, the Athanor converts the value on the way:</p><ul><li>A <b>gray picture</b> into a color picture: the same gray in red, green and blue.</li><li>A <b>color picture</b> into a gray input: its brightness.</li><li>A <b>color</b> or a <b>number</b> into a picture input: a flat page of that color or that gray.</li><li>A <b>picture</b> into a number (a ⚙ port): its average brightness. A color: its brightness.</li><li>Anything that is not a color into a <b>color</b> input: the input uses its own default instead (a Hue input falls back to the page's hue).</li></ul><p>Nothing breaks when kinds are mixed. Wiring a color into a number, for example, gives a number from its brightness, which can be an interesting way to drive a setting.</p>`)
     + sec('settings', 'Settings and ⚙ ports', `<p>Most sliders in a part have a <b>⚙ port</b> beside them. A number wired there moves the setting across its whole range: 0 is the slider's lowest, 1 its highest. Hold the setting (or right-click it) and choose <b>Set the range the wire sweeps…</b> to use only part of the range.</p><p>Holding a setting also lets you <b>bind</b> it to a page slider or the light dial without a wire, or <b>wire a Knob into it</b> in one step.</p>`)
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
@@ -32033,7 +32482,7 @@ async function openForge(deps){
   if(!F.editor){
     const ed = F.editor = new Drawflow(area);
     // zoom in small steps (Drawflow's 0.1 a wheel-notch is far too quick on a trackpad or a pinch)
-    ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.3; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
+    ed.reroute = true; ed.curvature = 0.4; ed.zoom_min = 0.12; ed.zoom_max = 1.8; ed.zoom_value = 0.04;
     ed.draggable_inputs = false;                         // a slider slides; it never drags its node
     ed.start();
     const lists = { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' };
@@ -32045,7 +32494,7 @@ async function openForge(deps){
     // ---- colour: ports and wires by what travels on them; rows show which params a wire drives ----
     const paintNode = id => {
       const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && FORGE_NODES[n.name]; if(!el || !N) return;
-      el.style.setProperty('--cat', FORGE_CAT_COLOURS[N.cat] || '#999');
+      el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
       const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? 'Pinned — tap to let it move' : 'Pin in place'; }
       el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns); d.title = (N.ins[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.inTypes[j]] || ''); });
@@ -32139,9 +32588,9 @@ async function openForge(deps){
       // THE PARTS LIST: a search, then each category (its glyph, its name, what it holds) and
       // its parts, each with what it does in a line. (No Output: every graph has its Surface.)
       palette.innerHTML = `<input type="search" class="forge-find" id="forgeFind" placeholder="Find a part…" aria-label="Find a part" autocomplete="off">`
-        + FORGE_CATEGORIES.filter(cat => cat !== 'Output').map(cat => `<details class="forge-cat" open style="--cat:${FORGE_CAT_COLOURS[cat]}"><summary><span class="forge-cat-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</summary>`
+        + FORGE_CATEGORIES.filter(cat => cat !== 'Output').map(cat => `<details class="forge-cat" open style="--cat:var(--fg-dim)"><summary><span class="forge-cat-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</summary>`
         + `<p class="forge-cat-doc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p>`
-        + Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}" title="${forgeEsc(n.doc)}"><span class="fpart-name">${forgeEsc(n.label)}</span><span class="fpart-doc">${forgeEsc(n.doc)}</span></button>`).join('') + `</details>`).join('');
+        + Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}" style="--cat:${forgePartColour(n)}" title="${forgeEsc(n.doc)}"><span class="fpart-name">${forgeEsc(n.label)}</span><span class="fpart-doc">${forgeEsc(n.doc)}</span></button>`).join('') + `</details>`).join('');
       const find = palette.querySelector('#forgeFind');
       if(find) find.addEventListener('input', () => { const q = find.value.trim().toLowerCase();
         palette.querySelectorAll('.forge-cat').forEach(c => { let any = 0;
@@ -32206,7 +32655,11 @@ async function openForge(deps){
       F.cutWire = wireOf(p.parentElement);
     });
     ed.on('connectionUnselected', hideCut);
-    ed.on('nodeSelected', hideCut);
+    // a part tapped or clicked comes to the front, over any it overlaps (Ruby)
+    let frontZ = 2;
+    const toFront = id => { const el = area.querySelector('#node-' + id); if(el) el.style.zIndex = String(++frontZ); };
+    ed.on('nodeSelected', id => { hideCut(); toFront(id); });
+    area.addEventListener('pointerdown', e => { const el = e.target.closest && e.target.closest('.drawflow-node'); if(el && el.id) toFront(el.id.replace('node-', '')); }, true);
     if(cut) cut.addEventListener('click', () => { cutWire(F.cutWire); });
     document.addEventListener('keydown', e => {
       if(veil.hidden) return;
@@ -32393,7 +32846,7 @@ async function openForge(deps){
     };
     const canvasMenu = (cx, cy) => { const g = toGrid(cx, cy); return { title: 'The grid', items: [
       { glyph: '＋', label: 'Add a part here', sub: () => ({ title: 'Add a part here', items: FORGE_CATEGORIES.map(cat => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: forgeCatName(cat), colour: FORGE_CAT_COLOURS[cat],
-        sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: FORGE_CAT_COLOURS[cat], act: () => add(type, g.x, g.y) })) }) })) }) },
+        sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: forgePartColour(nn), act: () => add(type, g.x, g.y) })) }) })) }) },
       { glyph: '⌖', label: 'Everything in view', act: () => fitView() },
       { glyph: '▦', label: 'Tidy into columns', hint: 'pinned nodes stay put', act: () => tidy() }] }; };
     // ---- what is under a point: the things there, nearest first ----
@@ -32420,7 +32873,7 @@ async function openForge(deps){
     const menuFor = (t, x, y) => t.kind === 'wire' ? wireMenu(t.w) : t.kind === 'node' ? nodeMenu(t.id) : t.kind === 'port' ? portMenu(t.id, t.side, t.j) : t.kind === 'param' ? paramMenu(t.id, t.p) : canvasMenu(x, y);
     const describe = t => {
       if(t.kind === 'wire') return wireDesc(t.w);
-      const N = N_(t.id), colour = N ? FORGE_CAT_COLOURS[N.cat] : '';
+      const N = N_(t.id), colour = N ? forgePartColour(N) : '';
       if(t.kind === 'node') return { glyph: N ? FORGE_CAT_GLYPHS[N.cat] : '', label: `The ${labelOf(t.id)} node`, hint: 'move, pin, copy, remove', colour };
       if(t.kind === 'param'){ const P = N.params.find(p => p[0] === t.p) || []; return { glyph: '⚙', label: P[1] || t.p, hint: `a setting on ${labelOf(t.id)}`, colour: 'var(--t-value)' }; }
       const name = t.side === 'in' ? N.ins[t.j] : N.outs[t.j], ty = t.side === 'in' ? N.inTypes[t.j] : N.outTypes[t.j];
@@ -32476,6 +32929,18 @@ async function openForge(deps){
       ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
     };
     F.fitView = fitView;
+    // THE WHEEL zooms toward the pointer, with or without Ctrl (Drawflow's own zoomed only with Ctrl,
+    // about the middle, and a big texture's graph opened at the farthest zoom out could not go
+    // further: Ruby's "the zoom locks"). The view's centre is its origin, as fitView has it.
+    area.addEventListener('wheel', e => {
+      if(e.target.closest && e.target.closest('input, select, textarea, .forge-menu')) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      const r = area.getBoundingClientRect(), mx = r.width/2, my = r.height/2, sx = e.clientX - r.left, sy = e.clientY - r.top, z0 = ed.zoom || 1;
+      const z = Math.max(ed.zoom_min, Math.min(ed.zoom_max, z0*Math.exp(-Math.max(-60, Math.min(60, e.deltaY))*0.0022)));
+      const px = (sx - ed.canvas_x - mx)/z0 + mx, py = (sy - ed.canvas_y - my)/z0 + my;
+      ed.zoom = z; ed.zoom_last_value = z; ed.canvas_x = sx - mx - (px - mx)*z; ed.canvas_y = sy - my - (py - my)*z;
+      ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
+    }, { capture: true, passive: false });
     const tidy = () => {
       const g = slim(), data = g.drawflow.Home.data, pins = {};
       for(const [id, n] of Object.entries(data)) if(n.data && n.data._pin) pins[id] = [n.pos_x, n.pos_y];
@@ -32500,11 +32965,20 @@ async function openForge(deps){
     };
     // WHAT A GRAPH TEACHES: a note over the grid when a starter or a texture is opened
     const note = (() => { let el = $('forgeNote'); if(!el && body){ el = document.createElement('div'); el.id = 'forgeNote'; el.className = 'forge-note'; el.hidden = true; body.appendChild(el); } return el; })();
-    const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; return; }
+    const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; veil.classList.remove('note-open'); return; }
       note.innerHTML = `<b>${forgeEsc(label)}</b><p>${forgeEsc(teach)}</p><p class="forge-note-how">Read it from left to right: each part shows what it makes, and each wire carries that on to the next part. Hold a part (or right-click it) to see what it can do. The Help button explains everything.</p><button type="button" class="forge-note-x" aria-label="Close">✕</button>`;
-      note.hidden = false; };
+      note.hidden = false; veil.classList.add('note-open'); };
     F.showNote = showNote;
-    if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) note.hidden = true; });
+    // the note stays until it is closed — by its ✕ or by a click anywhere else (Ruby); while it shows,
+    // the grid dims a little behind it, so the note is what is read first
+    const hideNote = () => { if(note && !note.hidden){ note.hidden = true; veil.classList.remove('note-open'); } };
+    if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) hideNote(); });
+    veil.addEventListener('pointerdown', e => { if(note && !note.hidden && !(e.target.closest && e.target.closest('.forge-note'))) hideNote(); }, true);
+    // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
+    if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
+      openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
+        { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
+        { glyph: '?', label: 'Help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
     const st = $('forgeStarter');
     if(st){
@@ -33747,11 +34221,11 @@ function presetTile(p, onPick, extraClass){
   return btn;
 }
 
-// the built-in looks, each group under its own heading (Simple first)
-{ let at = 0;
+// the built-in looks, each group under its own heading (Simple first), alphabetical within it (Ruby)
+{ let at = 0; const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
   for(const g of (PRESET_GROUPS || [{ name: '', count: PRESETS.length }])){
     if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = g.name; presetGrid.appendChild(hd); }
-    PRESETS.slice(at, at + g.count).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
+    PRESETS.slice(at, at + g.count).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
     at += g.count;
   }
   PRESETS.slice(at).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
@@ -33841,7 +34315,15 @@ function renderSavedPresets(saved){
   customGrid.innerHTML = '';
   const empty = $('customPresetsEmpty');
   if(empty) empty.style.display = (saved && saved.length) ? 'none' : '';
-  if(!saved || !saved.length) return;
+  // the last tile saves the look on the page as a new custom preset (Ruby: "omg yes")
+  const addSave = () => { if(typeof document.createElement !== 'function') return;
+    const t = document.createElement('div'); t.className = 'preset-btn preset-save'; t.setAttribute('role', 'button'); t.tabIndex = 0;
+    t.title = 'Save the look on the page as a preset of your own';
+    t.innerHTML = '<span class="preset-save-plus" aria-hidden="true">＋</span><span class="preset-label">Save this look</span>';
+    const go = () => { if(typeof vault !== 'undefined' && vault.create) vault.create(); };
+    t.addEventListener('click', go); t.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } });
+    customGrid.appendChild(t); };
+  if(!saved || !saved.length){ addSave(); return; }
 
   for(const rec of saved){
     const shot = Object.assign({ name: rec.name }, rec.settings, { spell: rec.spell });
@@ -33855,6 +34337,7 @@ function renderSavedPresets(saved){
       scheduleRender(); lightPreset(rec.name);
     }, 'preset-custom'));
   }
+  addSave();
   paintLitPreset();
 }
 

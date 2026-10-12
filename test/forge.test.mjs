@@ -41,7 +41,8 @@ check('Drawflow loads only when the Athanor opens, from the CDN at an exact vers
   check('on a phone: the parts are a drawer that scrolls with one finger (no dragging from it), the preview a small dock bottom right',
     html.includes('id="forgePartsBtn"') && /finePointer \? ' draggable="true"' : ''/.test(fsrc) && /\.forge-palette\{[^}]*touch-action:pan-y/.test(css) && html.includes('id="forgeDock"'));
 }
-check('under Esoterica, with its own card and a full-screen editor', /<details class="card" data-tab="more" id="forgePanel">/.test(html) && html.includes('id="forgeVeil"'));
+check('opened from the top bar (its old Esoterica card is gone); a full-screen editor; its graph kept in a hidden field saved with the look',
+  !/id="forgePanel"/.test(html) && html.includes('id="athanorTopBtn"') && html.includes('id="forgeVeil"') && /<input type="hidden" id="forgeGraph" value="">/.test(html));
 
 // ---- the evaluator (athanor.js): a graph made into a picture ----
 {
@@ -97,8 +98,8 @@ check('under Esoterica, with its own card and a full-screen editor', /<details c
     && F.describeForge(big).includes('too many nodes') && F.describeForge(heavy).includes('reduced detail')
     && /const B = athanorBudget\(extra\.graph \|\| ''\);/.test(readFileSync(new URL('../textureGenerators.js', import.meta.url), 'utf8')));
   const starters = Object.keys(C.ATHANOR_STARTERS);
-  check('five starter graphs, each a working surface that says what it teaches (evaluated here; the Reaction–Diffusion one needs the page\'s textures)',
-    starters.length === 5 && starters.every(k => (C.ATHANOR_STARTERS[k].teach || '').length > 60) && starters.filter(k => k !== 'bloom').every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
+  check('six starter graphs, each a working surface that says what it teaches (evaluated here; Reaction–Diffusion and Oil on Canvas need the page\'s textures and canvas)',
+    starters.length === 6 && starters.every(k => (C.ATHANOR_STARTERS[k].teach || '').length > 60) && starters.filter(k => k !== 'bloom' && k !== 'oil').every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
       return gr.v === 2 && im && im.r.some(v => v > 0.02) && C.athanorName(gr) === C.ATHANOR_STARTERS[k].label; }));
   check('…offered from the editor\'s bar, with every part\'s ports filled in on load', html.includes('id="forgeStarter"')
     && /P\.ins\.forEach\(\(_, j\) => \{ n\.inputs\['input_' \+ \(j \+ 1\)\]/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')));
@@ -111,6 +112,20 @@ check('under Esoterica, with its own card and a full-screen editor', /<details c
     const im = run2(gg); const levels = new Set(); const pz = C.evalAthanor(JSON.stringify({ v: 2, drawflow: { Home: { data: { ...nd, 5: { ...nd[5], inputs: { input_1: { connections: [{ node: po, input: 'output_1' }] } } } } } } }), 48, 48, { seed: 1 }, {});
     for(const v of pz.r) levels.add(Math.round(v*1000));
     check('new parts: Posterize (steps), Tile & Rotate, Edge Detect', ['posterize', 'transform', 'edges'].every(k => F.FORGE_NODES[k]) && levels.size === 4 && im.r.some(v => v > 0.2) && im.r.some(v => v < 0.05));
+  }
+  {
+    // THE LIGHT ENGINE (stepsLight.js): a picture and its heights lit by the dial — turn the dial, the light moves
+    let id3 = 1; const nd = {}; const mk = (name, data = {}) => { const i = String(id3++); nd[i] = { id: +i, name, data, inputs: {}, outputs: {} }; return i; };
+    const wr = (a, o, b, j) => { (nd[b].inputs['input_' + j] ||= { connections: [] }).connections.push({ node: a, input: 'output_' + o }); };
+    const ns = mk('noise', { scale: 60, octaves: 4 }), co = mk('colour', { hex: '#C08040' }), me = mk('material', { relief: 100, gloss: 40, shine: 50, shadow: 60, occlusion: 35, ambient: 35 }), sf = mk('surface', {});
+    wr(co, 1, me, 1); wr(ns, 1, me, 2); wr(me, 1, sf, 1);
+    const gg = JSON.stringify({ v: 2, drawflow: { Home: { data: nd } } }), at = deg => C.evalAthanor(gg, 48, 48, { seed: 3, light: deg, knobs: [50, 50, 50, 50, 50, 50], tints: ['#FFFFFF', '#000000'] }, {});
+    const a = at(315), b = at(135); let diff = 0, spread = 0; for(let i = 0; i < a.r.length; i++){ diff += Math.abs(a.r[i] - b.r[i]); spread = Math.max(spread, Math.abs(a.r[i] - 0.75)); }
+    check('THE LIGHT ENGINE lights a picture by its heights: the dial moves the light; Oil Paint and Canvas Weave are parts too; an Oil on Canvas starter',
+      ['material', 'oilpaint', 'canvasweave'].every(k => F.FORGE_NODES[k] && F.FORGE_NODES[k].doc.length > 40) && diff/a.r.length > 0.004 && spread > 0.02
+      && C.ATHANOR_STARTERS.oil && /\['oilpaint', \{ amount: 50/.test(readFileSync(new URL('../chains.js', import.meta.url), 'utf8')));
+    check('A PART\'S COLOR is the kind of thing it makes (its output\'s type), as its dots and wires are',
+      F.forgePartColour(F.FORGE_NODES.noise) === 'var(--t-field)' && F.forgePartColour(F.FORGE_NODES.oilpaint) === 'var(--t-image)' && F.forgePartColour(F.FORGE_NODES.knob) === 'var(--t-value)');
   }
 }
 
