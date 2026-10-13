@@ -34,19 +34,19 @@ if(process.env.DRAFT_BOOT){
   const winListeners = {};
   global.window = { addEventListener: (t, fn) => (winListeners[t] = winListeners[t] || []).push(fn) };
   installCanvasMock();
-  const registry = installDomMock(makeMockContext, makeMockCanvas);
+  installDomMock(makeMockContext, makeMockCanvas);
   let threw = null;
   try { await import('../appEvents.js'); } catch(e){ threw = String(e && e.stack || e); }
-  const out = { threw, welcome: WELCOME_POEM, poemAtBoot: registry.poemText.value, textMarginAtBoot: registry.textMargin.value };
+  const out = { threw, welcome: WELCOME_POEM, poemAtBoot: document.getElementById('poemText').value, textMarginAtBoot: document.getElementById('textMargin').value };
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const act = process.env.DRAFT_ACT || '';
   if(!threw && act){
     // a person writes, and moves a look control
-    registry.poemText.value = 'a draft the phone must not lose';
-    registry.textMargin.value = '17';
-    document.dispatchEvent({ type: 'input', target: registry.poemText });
-    document.dispatchEvent({ type: 'input', target: registry.textMargin });
-    out.savedAtOnce = store.has(DRAFT_KEY) && JSON.parse(store.get(DRAFT_KEY)).poem === registry.poemText.value;
+    document.getElementById('poemText').value = 'a draft the phone must not lose';
+    document.getElementById('textMargin').value = '17';
+    document.dispatchEvent({ type: 'input', target: document.getElementById('poemText') });
+    document.dispatchEvent({ type: 'input', target: document.getElementById('textMargin') });
+    out.savedAtOnce = store.has(DRAFT_KEY) && JSON.parse(store.get(DRAFT_KEY)).poem === document.getElementById('poemText').value;
     if(act === 'debounce') await wait(1300);
     if(act === 'hide'){ document.visibilityState = 'hidden'; document.dispatchEvent({ type: 'visibilitychange' }); }
     if(act === 'pagehide') (winListeners.pagehide || []).forEach(fn => fn({ type: 'pagehide' }));
