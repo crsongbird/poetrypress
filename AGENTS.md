@@ -178,6 +178,14 @@ and fails on any that isn't saved and restored; the only exceptions are in its
 EXEMPT list, each with its reason (app preferences, the JSON box, dialogs).
 `test/audit.test.mjs` checks the other direction (every saved key round-trips).
 
+THE DRAFT (appEvents.js, `uv.draft.v1`: `{ poem, look, savedAt }`): the poem
+and `stripToLook(serializeCurrentSettings())`, saved 1 s after the last
+input/change/click/keydown and at once on `visibilitychange` → hidden and
+`pagehide` (phones drop tabs without an unload). At boot, after the first-visit
+seeding, a draft whose poem is not `WELCOME_POEM` comes back through `checkLook`
+(quietly) then `safeRestore`; anything else opens the welcome page. A new
+setting needs nothing extra: the draft is the look. `test/draft.test.mjs`.
+
 ## The componentizing rule (Ruby's standing rule)
 
 Every texture touched is taken apart as it is touched: its working parts
