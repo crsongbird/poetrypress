@@ -31865,7 +31865,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-12 · 417ab65";
+const STAMP = "2026-10-13 · 5bb4e3a";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -38781,6 +38781,35 @@ try {
     localStorage.setItem(FIRST_VISIT_KEY, '1');
   }
 } catch(e){ /* storage refused: the app works the same without the examples */ }
+// THE DRAFT: a phone drops a background tab without an unload event, so the poem in progress and
+// its look are kept in this browser (DRAFT_KEY: { poem, look, savedAt }) a moment after each change
+// and at once when the page is hidden. The next visit opens on the draft; no draft, a draft of the
+// welcome poem itself, or one that won't load opens on the welcome page as before.
+const DRAFT_KEY = 'uv.draft.v1', DRAFT_WAIT_MS = 1000;
+let draftSaveTimer = null;
+function saveDraft(){
+  clearTimeout(draftSaveTimer); draftSaveTimer = null;
+  try {
+    if(typeof localStorage === 'undefined') return;
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ poem: $('poemText').value, look: stripToLook(serializeCurrentSettings()), savedAt: Date.now() }));
+  } catch(e){ /* private mode or a full store: the draft just isn't kept */ }
+}
+function saveDraftSoon(){ clearTimeout(draftSaveTimer); draftSaveTimer = setTimeout(saveDraft, DRAFT_WAIT_MS); }
+function restoreDraft(){
+  let d = null;
+  try { d = typeof localStorage === 'undefined' ? null : JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch(e){ return false; }
+  if(!d || typeof d !== 'object' || typeof d.poem !== 'string' || d.poem === WELCOME_POEM) return false;
+  // a look that fails the check is passed over quietly (no dialog at start-up); one that throws is rolled back by safeRestore
+  if(!checkLook(d.look, 'The draft').ok || !safeRestore(d.look, 'The draft')) return false;
+  $('poemText').value = d.poem; repaintEditor();
+  return true;
+}
+try { restoreDraft(); } catch(e){ /* a draft never stops the app opening: the welcome page stands */ }
+// every way a poem or look changes passes through one of these (typing, sliders, presets, the
+// Grimoire, spells, JSON, undo); the save reads the page as it is when the moment is up
+for(const type of ['input', 'change', 'click', 'keydown']) document.addEventListener(type, saveDraftSoon, true);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveDraft(); });
+if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('pagehide', saveDraft);
 // Fonts are fetched on first use now (fonts.js, asked for by the renderer);
 // the first render happens as soon as the page is ready.
 render();
