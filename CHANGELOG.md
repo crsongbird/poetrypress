@@ -4,6 +4,11 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Unreleased
+
+- Your poem and its look are kept as you work, so a closed or dropped tab
+  opens again where you left off. A first visit still opens on the welcome page.
+
 ## Jupiter–Megaclite (2026-10-12)
 
 - New textures:
