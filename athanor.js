@@ -29,7 +29,7 @@
  * Athanor's grid runs each part's RUN instead.
  */
 import { lightHeights, parseHex, withSeed, cpx, scaleNow } from './texCore.js';
-import { STEPS, stepRange, paramPort } from './steps.js';
+import { STEPS, stepRange, paramPort, curveAt } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 
 /**
@@ -40,7 +40,10 @@ import { TEXTURE_CHAINS } from './chains.js';
  * node's result be kept between edits (below). A new graph is always the
  * newest version; one loaded keeps its own.
  */
-export const ATHANOR_VERSION = 2;
+// v3 (Filter Forge's MAP INPUTS): a picture wired into a part's ⚙ setting sets it point by point, wherever
+// the part can use it so (E.map); v2 took the picture's average. The textures' own chains stay v2, so
+// they draw exactly as they did.
+export const ATHANOR_VERSION = 3;
 export function athanorVersion(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
   catch(e){ return 1; }
@@ -67,16 +70,27 @@ export function athanorNodes(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return ((g.drawflow || {}).Home || {}).data || {}; }
   catch(e){ return {}; }
 }
-/** The sliders a graph offers: its Knob nodes, by slot (1–6). */
+/** The nodes whose work reaches the Surface (Filter Forge: a control that doesn't reach the Result isn't shown). */
+export function athanorReach(graph){
+  const nodes = athanorNodes(graph), seen = new Set(), s = Object.values(nodes).find(n => n.name === 'surface');
+  const walk = id => { if(seen.has(id) || !nodes[id]) return; seen.add(id);
+    for(const inp of Object.values(nodes[id].inputs || {})) for(const c of inp.connections || []) walk(String(c.node)); };
+  if(s) walk(String(s.id));
+  return seen;
+}
+/** The sliders a graph offers: its Knob nodes, by slot (1–6) — those that reach the Surface by a wire, or whose
+ *  slot a part on the way binds ('@k3'); a Knob left unwired offers nothing (it would move nothing). */
 export function athanorKnobs(graph){
-  const out = [];
-  for(const n of Object.values(athanorNodes(graph))){
+  const out = [], reach = athanorReach(graph), all = athanorNodes(graph);
+  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(m) boundSlots.add(+m[1]); }
+  for(const n of Object.values(all)){
     if(n.name !== 'knob') continue;
+    if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(6, parseInt((n.data || {}).slot, 10) || 1)))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
     if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
-  for(const n of Object.values(athanorNodes(graph))) for(const [k, v] of Object.entries(n.data || {})){
+  for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
     const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(!m) continue;
     const slot = +m[1]; if(out.find(q => q.slot === slot)) continue;
     const part = ((STEPS[n.name] || {}).params || []).find(q => q[0] === k);
@@ -86,9 +100,9 @@ export function athanorKnobs(graph){
 }
 /** The hues a graph uses: its Hue nodes, by slot (1–2). */
 export function athanorHues(graph){
-  const out = [];
+  const out = [], reach = athanorReach(graph);
   for(const n of Object.values(athanorNodes(graph))){
-    if(n.name !== 'hue') continue;
+    if(n.name !== 'hue' || !reach.has(String(n.id))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
     if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
   }
@@ -137,12 +151,25 @@ export function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: 
 export function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }
 const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
+/** A curve drawn as its graph (the step previews): a bright line over a faint grid on dark. */
+function curvePlot(c, ww, wh){
+  const N = ww*wh, f = new Float32Array(N).fill(0.08), lw = Math.max(1, Math.min(ww, wh)/40), pad = Math.min(ww, wh)*0.08;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const u = (x - pad)/(ww - 2*pad), v = 1 - (y - pad)/(wh - 2*pad), q = y*ww + x;
+    if(u < 0 || u > 1 || v < -0.02 || v > 1.02){ f[q] = 0.04; continue; }
+    if(Math.abs(u*4 - Math.round(u*4)) < 0.012 || Math.abs(v*4 - Math.round(v*4)) < 0.012) f[q] = 0.16;
+    const d = Math.abs(curveAt(c, u) - v)*(wh - 2*pad); if(d < lw) f[q] = Math.max(f[q], 1 - 0.5*d/lw);
+  }
+  return { r: f, g: f, b: f };
+}
 export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
-  const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null]);
+  const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
+  // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
+  const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, sizeK]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -155,7 +182,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const s = n.name + JSON.stringify(athanorWork(n.data)) + '[' + ins.join(';') + ']#' + id;
     sigs.set(id, s); return s;
   };
-  const N = ww*wh, unit = Math.min(ww, wh);
+  const N = ww*wh, unit = Math.min(ww, wh)*sizeK;
   const memo = new Map(), busy = new Set();
   const flat = v => new Float32Array(N).fill(v);
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
@@ -163,9 +190,13 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
   // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
   const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
+  // A CURVE (Filter Forge's curve components): a shape from 0 to 1, { curve: 257 samples }. Wired where a map
+  // is wanted it is laid across the page left to right; where a number is wanted, its average.
+  const isCurve = v => !!(v && typeof v === 'object' && v.curve instanceof Float32Array);
+  const curveField = c => { const f = new Float32Array(N); for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) f[y*ww + x] = curveAt(c, ww > 1 ? x/(ww - 1) : 0); return f; };
   const asField = (v, d = 0) => v == null ? null : typeof v === 'number' ? flat(v) : v instanceof Float32Array ? v
-    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
-  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v)
+    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : isCurve(v) ? curveField(v) : flat(d);
+  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v) : isCurve(v) ? (f => ({ r: f, g: f, b: f }))(curveField(v))
     : Array.isArray(v) ? { r: flat(v[0]), g: flat(v[1]), b: flat(v[2]) } : typeof v === 'number' ? { r: flat(v), g: flat(v), b: flat(v) } : null;
   const asColour = (v, d) => Array.isArray(v) ? v : v == null ? d : d;
   const hexCol = hex => { const c = parseHex(hex || '#808080'); return [c.r/255, c.g/255, c.b/255]; };
@@ -185,7 +216,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const R = stepRange(n.name, k), port = paramPort(n.name, k);
     let v;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
-      const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : null;
+      const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : isCurve(w) ? mean(w.curve) : null;
       // a wired param sweeps its whole range, or the part of it set by hand ('~key': 'lo,hi')
       const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
       const W = own && R ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
@@ -195,11 +226,38 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     if(isNaN(v) || !isFinite(v)) return d;
     return R ? Math.max(R[0], Math.min(R[1], v)) : v;
   };
+  // Filter Forge's stand-in for missing data (its "!" in a red circle): red and pale stripes round a ring
+  let standInPic = null;
+  const standIn = () => standInPic || (standInPic = (() => { const r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N), cx = ww/2, cy = wh/2, R = Math.min(ww, wh)*0.3;
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, d = Math.abs(Math.hypot(x - cx, y - cy) - R) < R*0.12, st = ((x + y)/Math.max(4, Math.min(ww, wh)/10) | 0) % 2;
+      const on = d || (Math.abs(x - cx) < R*0.09 && y > cy - R*0.55 && y < cy + R*0.2) || (Math.hypot(x - cx, y - (cy + R*0.42)) < R*0.1);
+      r[q] = on ? 0.95 : st ? 0.62 : 0.32; g[q] = on ? 0.95 : st ? 0.16 : 0.08; b[q] = on ? 0.92 : st ? 0.2 : 0.1; }
+    return { r, g, b }; })());
   const mean = f => { let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; };
+  // A MAP INPUT (Filter Forge's parameter mapping): a setting with a gray map or a picture on its ⚙ port is
+  // a value per point, across its range (or its own '~key' part of it); otherwise the setting as num() reads it.
+  // Only in a v3 graph: before, a wired map was averaged, and an old graph must draw as it always did.
+  const map = (n, k, d) => {
+    const port = v3 ? paramPort(n.name, k) : 0;
+    if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
+      const w = input(n, port);
+      if(w instanceof Float32Array || isImg(w) || isCv(w)){
+        const f = asField(w), R = stepRange(n.name, k) || [0, 100];
+        const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
+        const W = own ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
+        const o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = W[0] + (W[1] - W[0])*Math.max(0, Math.min(1, f[i]));
+        return o;
+      }
+    }
+    return num(n, k, d);
+  };
+  // a mapped setting at one point (a number, or one value of a map)
+  const at = (m, i) => typeof m === 'number' ? m : m[i];
   // the value arriving at a node's j-th input (1-based), or undefined
   const input = (n, j) => {
     const c = ((n.inputs || {})['input_' + j] || {}).connections || [];
-    if(!c.length) return undefined;
+    // an empty REQUIRED input, in the step previews only: a warning pattern stands in, so the part still shows its work
+    if(!c.length) return ctx.all && ((STEPS[n.name] || {}).required || []).includes(j) ? standIn() : undefined;
     const outs = evalNode(String(c[0].node)), k = parseInt(String(c[0].input).replace('output_', ''), 10) - 1;
     return outs ? outs[k] : undefined;
   };
@@ -209,7 +267,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig : null;
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v3' : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -246,7 +304,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // MARKS: strokes drawn on a canvas the grid's size, over a grey field (or a
   // flat grey), read back as a field; sizes in canonical pixels (px)
   const div = ctx.div > 0 ? ctx.div : 1, S = scaleNow();
-  const px = v => cpx(v)/div, carea = ww*wh*div*div/(S*S);
+  const px = v => cpx(v)/div*sizeK, carea = ww*wh*div*div/(S*S)/(sizeK*sizeK);
   const marks = (base, fill, draw) => {
     const c = document.createElement('canvas'); c.width = ww; c.height = wh;
     const x = c.getContext('2d', { willReadFrequently: true });
@@ -259,7 +317,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     for(let i = 0; i < N; i++) o[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
     return o;
   };
-  const E = { ww, wh, N, unit, ctx, deps, input, num, P, field, flat, asField, asImage, asColour, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
+  const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
   const RUN = n => { const step = STEPS[n.name]; if(!step) return null;
     // a canvas pass: a part that paints, paints; the Surface hands on what it is given
     if(ctx.canvas){ if(step.paint) return step.paint(E, n); if(n.name === 'surface') return [input(n, 1)]; }
@@ -268,7 +326,8 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     // every node's first output, as a picture (the step previews)
     const out = new Map();
     for(const id of Object.keys(nodes).sort((a, b) => +a - +b)){ const r = evalNode(id); const v = r && r[0];
-      out.set(id, v == null ? null : typeof v === 'number' ? asImage(v) : asImage(v)); }
+      // (a curve previews as its graph: a line on dark, the way a curve editor shows it)
+      out.set(id, v == null ? null : isCurve(v) ? curvePlot(v, ww, wh) : asImage(v)); }
     return out;
   }
   const res = evalNode(String(surface.id));
@@ -335,7 +394,8 @@ export function athanorStarter(name){
     ((data[a].outputs['output_' + o] ||= { connections: [] }).connections).push({ node: String(b), output: 'input_' + j });
   }
   layoutAthanor(data);
-  return { v: ATHANOR_VERSION, drawflow: { Home: { data } } };
+  // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
+  return { v: ATHANOR_STARTERS[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
 }
 /**
  * Lays a graph out to read left to right: each node in the column of its

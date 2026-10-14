@@ -4,6 +4,29 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Hegemone (2026-10-13)
+
+- The Athanor learns from Filter Forge:
+  - **Map inputs.** In a new graph, a gray map wired into a part's ⚙ setting
+    sets it point by point (a threshold that changes across the page, a
+    blend stronger in some places). Graphs made before still take the map's
+    average, and the textures draw exactly as before.
+  - **Curves**, a new kind of wire (green, dotted):
+    - Curve makes one: bias, gain, gamma, a bell, a peak, stairs, a step, a
+      wave, an arc, a wobble.
+    - Curve Ops repeats, shifts, flips or combines curves.
+    - Tone Curve runs a picture through one.
+    - Profile Gradient shapes a gradient with one.
+  - **New parts:** Perlin Noise, Bricks (a curve can shape the bevel),
+    Brightness & Contrast, High Pass, Sharpen, Motion Blur and Offset.
+  - **Math** gains divide, power, average, screen, modulo and sine.
+  - A part that needs an input shows its empty port in red, and its preview
+    shows a warning in its place until something is wired in.
+  - **Note**: words on the graph for whoever opens it next.
+  - The Surface has a **Size** that scales everything in the graph.
+  - Only controls that reach the Surface appear on the page.
+- ROADMAP.md is the plan for the surface engine, for whoever works on it next.
+
 ## Jupiter–Sinope (2026-10-13)
 
 - Your poem and its look are kept as you work, so a closed or dropped tab

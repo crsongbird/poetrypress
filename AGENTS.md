@@ -87,6 +87,7 @@ from the source files (unbuilt) — everything must work both ways.
 | `glyphs.js` · `moon.js` · `fonts.js` · `palette.js` · `theme.js` · `swatches.js` · `pwa.js` · `editor.js` | inline glyphs, moon phases, lazy fonts, theme palettes, preset tiles, installability, the PML editor |
 | `release.js` · `build.mjs` · `test/` · `tools/` | release name · bundler · tests · dev tools |
 | `OPEN-ISSUES.md` | the to-do list (open items only) · `README.md` — the human-facing reference |
+| `ROADMAP.md` | THE PLAN for the surface engine: what to build next and what depends on what (Ruby's future-directions doc + the Filter Forge study). Read it before starting Athanor work |
 
 ---
 
@@ -468,6 +469,22 @@ before/after measurements AND an identical-render comparison.
   `glossMap` (Kintsugi's gold, Moss beside stone, glaze beside bare body).
 
 ## Systems worth knowing
+- FILTER FORGE IN THE ATHANOR (see ROADMAP.md §1):
+  - MAP INPUTS: v3 graphs only. A gray map on a ⚙ setting is per point
+    wherever a part reads `E.map(n, key)` and `E.at(m, i)`; v2 averages it.
+    Texture chains stay v2; starters are the newest.
+  - CURVES: a fifth wire kind, `{ curve: Float32Array(257) }`, read with
+    steps.js `curveAt`. A curve laid where a map goes runs across the page,
+    left to right; where a number goes, its mean. In previews it is drawn as
+    its graph.
+  - REQUIRED INPUTS (STEP_REQUIRED): the editor marks the empty port red; the
+    step previews (ctx.all, their own cache keys) substitute a "!" stand-in,
+    which never reaches the Surface.
+  - SIZE: the Surface's `size` (25–400) scales `unit`, `px` and `carea`; at
+    100 nothing changes.
+  - THE REACH RULE (athanorReach): only Knobs and Hues that reach the
+    Surface are offered on the page (a bound '@kN' counts).
+  - NOTE is a part that makes nothing.
 - THE POEM'S LAYOUT (canvasRenderer TEXT_LAYOUT, textLayoutNow): each frame
   records its text runs as "x0,y0,x1,y1,line,stanza;…" in page fractions. A
   surface drawn before the text reads the previous frame's; a change asks for

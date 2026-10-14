@@ -25,7 +25,7 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 // rebuilt as chains) — ports, params and category as the editor shows them
 export const FORGE_BLENDS = STEP_BLENDS;
 export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
-  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts }]));
+  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [] }]));
 export const FORGE_CATEGORIES = STEP_CATEGORIES;
 /**
  * COLOUR CARRIES MEANING in the grid, whatever the app's theme: each part's
@@ -34,12 +34,12 @@ export const FORGE_CATEGORIES = STEP_CATEGORIES;
  * picture, one colour, one number. A ⚙ port (a param taking a wire) is a
  * small diamond in the number's colour.
  */
-export const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA' };
-export const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number' };
+export const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA', curve: '#93D98A' };
+export const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number', curve: 'a curve' };
 /** A PART'S COLOR is the kind of thing it makes (its first output's type), the same color its
  *  output dots and wires wear (Ruby: node, wire and connector colors as data types). The Surface keeps its own. */
 export const forgePartColour = N => !N ? '#999' : N.cat === 'Output' ? FORGE_CAT_COLOURS.Output : `var(--t-${(N.outTypes && N.outTypes[0]) || 'field'})`;
-export const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
+export const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Curves': '#93D98A', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
 /** What each category holds, in a line (the parts list and the Help). */
 export const FORGE_CAT_DOCS = {
   'Inputs': 'Values from the page: its sliders, hues, accents, light dial and seed; and numbers you set or roll.',
@@ -47,6 +47,7 @@ export const FORGE_CAT_DOCS = {
   'Marks': 'Parts that draw strokes and objects over what comes in: rain, hatching, flakes, cards.',
   'Textures': 'Whole techniques taken from the app\'s textures: a weave, a table, a sky, any texture from the menu.',
   'Shape': 'Parts that change a gray map: its levels, blur, folds, warps.',
+  'Curves': 'Parts that make and change curves — shapes from 0 to 1 — and the parts that read a picture through one.',
   'Combine': 'Parts that put two or more things together, or take a picture apart.',
   'Light & Color': 'Parts that color a gray map, or light it as if it had height.',
   'Output': 'The Surface: what reaches it is the texture.',
@@ -58,10 +59,11 @@ export const FORGE_CAT_DOCS = {
  * written mark (marks), Vitrum a stored technique and record (whole
  * textures), Fire conversion and transfer (shaping), Quintessence light and
  * shimmer (light and color), Contract a bond (combining), Creation what is
- * made (the output).
+ * made (the output), and Life (ᘓ), a rune of the Balance tier: a curve weighs
+ * light against dark (curves).
  */
-export const FORGE_CAT_GLYPHS = { 'Inputs': '🝆', 'Noise': '🝢', 'Marks': '𝀶', 'Textures': '⎐', 'Shape': '🜂', 'Combine': 'ᛯ', 'Light & Color': '🜚', 'Output': '🜉' };
-export const FORGE_CAT_NAMES = { 'Inputs': 'Page Inputs', 'Noise': 'Noise & Pattern', 'Marks': 'Drawn Marks', 'Textures': 'Whole Textures', 'Shape': 'Shape & Transform', 'Combine': 'Combine & Mask', 'Light & Color': 'Light & Color', 'Output': 'Output' };
+export const FORGE_CAT_GLYPHS = { 'Inputs': '🝆', 'Noise': '🝢', 'Marks': '𝀶', 'Textures': '⎐', 'Shape': '🜂', 'Curves': 'ᘓ', 'Combine': 'ᛯ', 'Light & Color': '🜚', 'Output': '🜉' };
+export const FORGE_CAT_NAMES = { 'Inputs': 'Page Inputs', 'Noise': 'Noise & Pattern', 'Marks': 'Drawn Marks', 'Textures': 'Whole Textures', 'Shape': 'Shape & Transform', 'Curves': 'Curves', 'Combine': 'Combine & Mask', 'Light & Color': 'Light & Color', 'Output': 'Output' };
 export const forgeCatName = cat => FORGE_CAT_NAMES[cat] || cat;
 const forgeCatClass = cat => 'forge-' + cat.toLowerCase().replace(/[^a-z]+/g, '-');
 
@@ -107,7 +109,8 @@ export function forgeHelpHtml(){
     field: 'a gray picture: every point has a value from black (0) to white (1). Noise, masks and heights travel this way.',
     image: 'a colored picture: every point has a red, a green and a blue.',
     colour: 'one color for the whole page.',
-    value: 'one number from 0 to 1, like a slider\'s position.' }[t]}</li>`).join('');
+    value: 'one number from 0 to 1, like a slider\'s position.',
+    curve: 'a shape from 0 to 1 that another part reads through: a tone curve, a gradient\'s profile. Wired where a gray map goes, it is laid across the page left to right.' }[t]}</li>`).join('');
   const parts = FORGE_CATEGORIES.map(cat => `<h4><span class="forge-cat-glyph" style="color:${FORGE_CAT_COLOURS[cat]}">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</h4><p class="fd-catdoc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p><dl>`
     + Object.values(FORGE_NODES).filter(n => n.cat === cat).sort((a, b) => a.label.localeCompare(b.label)).map(n => `<dt>${forgeEsc(n.label)}</dt><dd>${forgeEsc(n.doc)}</dd>`).join('') + '</dl>').join('');
   const toc = [['what', 'What the Athanor is'], ['read', 'Reading a graph'], ['wires', 'Wires and what they carry'], ['convert', 'When the kinds do not match'],
@@ -117,7 +120,7 @@ export function forgeHelpHtml(){
     + `<nav class="fd-toc">${toc.map(([id, t]) => `<a href="#fd-${id}">${t}</a>`).join('')}</nav>`
     + sec('what', 'What the Athanor is', `<p>The Athanor is a node editor for surface textures. You build a texture from small <b>parts</b> (nodes) joined by <b>wires</b>. Each part does one job: it makes a pattern, changes one, colors it, or lights it. What reaches the <b>Surface</b> at the end becomes a texture you can use on the page (Surface Variant → 🜉 From the Athanor, or the <b>Use</b> button).</p><p>Most of the app's own textures are built this way. Open one from <b>Start from…</b> to see how it is made, then change it, take parts from it, or mix it with parts of another.</p>`)
     + sec('read', 'Reading a graph', `<p>Read a graph from left to right. Parts on the left make or bring in something; each wire carries it to the next part on the right; the Surface is at the far right.</p><p>Each part shows a small picture of what it makes (turn these off with <b>Steps</b> in the corner if the editor feels slow). The large picture in the corner is what the whole graph makes; tap it to make it larger.</p><p>A part's <b>inputs</b> are the dots on its left edge and its <b>outputs</b> the dots on its right. Its <b>settings</b> are the sliders and menus inside it.</p>`)
-    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of four kinds of thing. The dot, the wire and the part that makes it all wear the kind's color (a part's color is the kind of thing it makes; the Surface keeps its own):</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
+    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of five kinds of thing. The dot, the wire and the part that makes it all wear the kind's color (a part's color is the kind of thing it makes; the Surface keeps its own):</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
     + sec('convert', 'When the kinds do not match', `<p>You can wire any output into any input. When the kinds differ, the Athanor converts the value on the way:</p><ul><li>A <b>gray picture</b> into a color picture: the same gray in red, green and blue.</li><li>A <b>color picture</b> into a gray input: its brightness.</li><li>A <b>color</b> or a <b>number</b> into a picture input: a flat page of that color or that gray.</li><li>A <b>picture</b> into a number (a ⚙ port): its average brightness. A color: its brightness.</li><li>Anything that is not a color into a <b>color</b> input: the input uses its own default instead (a Hue input falls back to the page's hue).</li></ul><p>Nothing breaks when kinds are mixed. Wiring a color into a number, for example, gives a number from its brightness, which can be an interesting way to drive a setting.</p>`)
     + sec('settings', 'Settings and ⚙ ports', `<p>Most sliders in a part have a <b>⚙ port</b> beside them. A number wired there moves the setting across its whole range: 0 is the slider's lowest, 1 its highest. Hold the setting (or right-click it) and choose <b>Set the range the wire sweeps…</b> to use only part of the range.</p><p>Holding a setting also lets you <b>bind</b> it to a page slider or the light dial without a wire, or <b>wire a Knob into it</b> in one step.</p>`)
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
@@ -241,7 +244,11 @@ export async function openForge(deps){
       el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
       const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? 'Pinned — tap to let it move' : 'Pin in place'; }
-      el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns); d.title = (N.ins[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.inTypes[j]] || ''); });
+      el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns);
+        // a REQUIRED input still empty is marked (Filter Forge's red port): the part has nothing to work on yet
+        const need = (N.required || []).includes(j + 1) && !(((n.inputs || {})['input_' + (j + 1)] || {}).connections || []).length;
+        d.classList.toggle('req', need); const lab = el.querySelectorAll('.fp-in')[j]; if(lab) lab.classList.toggle('req', need);
+        d.title = (N.ins[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.inTypes[j]] || '') + (need ? ' (needed: this part has nothing to work on without it)' : ''); });
       el.querySelectorAll('.outputs .output').forEach((d, j) => { d.dataset.t = N.outTypes[j] || 'field'; d.title = (N.outs[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.outTypes[j]] || ''); });
       el.querySelectorAll('.forge-param output').forEach(o => { const inp = o.parentElement.querySelector('input'); if(inp) o.textContent = inp.value; });
       N.paramPorts.forEach((key, j) => { const wired = ((n.inputs['input_' + (N.dataIns + j + 1)] || {}).connections || []).length > 0;

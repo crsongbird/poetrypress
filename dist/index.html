@@ -1815,10 +1815,10 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
    and wire wears the colour of what it carries (data-t: field · image ·
    colour · value; forge.js FORGE_TYPE_COLOURS). Square corners, as everywhere. */
 .forge-veil{ --fg-ground:var(--bg-deep); --fg-panel:var(--bg-panel); --fg-node:var(--bg-card); --fg-line:var(--line); --fg-text:var(--text-main); --fg-dim:var(--text-dim); --fg-accent:var(--accent);
-  --t-field:#CFC8DD; --t-image:#EE7FF5; --t-colour:#F4C44E; --t-value:#54D3EA;
+  --t-field:#CFC8DD; --t-image:#EE7FF5; --t-colour:#F4C44E; --t-value:#54D3EA; --t-curve:#93D98A;
   position:fixed; inset:0; z-index:180; background:var(--fg-ground); color:var(--fg-text); display:flex; flex-direction:column; }
 /* on the light theme the wire colours deepen, so they still read on paper */
-:root[data-theme="vellum"] .forge-veil{ --t-field:#6E6584; --t-image:#B23BB8; --t-colour:#A87A06; --t-value:#12809A; }
+:root[data-theme="vellum"] .forge-veil{ --t-field:#6E6584; --t-image:#B23BB8; --t-colour:#A87A06; --t-value:#12809A; --t-curve:#3E8A44; }
 .forge-veil[hidden]{ display:none; }
 .forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--fg-line); background:var(--fg-panel); }
 .forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
@@ -1862,7 +1862,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-row.extra{ height:auto; min-height:22px; }
 .fp-in, .fp-out{ font-family:var(--ui-code); font-size:11.5px; color:var(--fg-dim); white-space:nowrap; }
 .fp-in::before{ content:'▸ '; color:var(--tc); } .fp-out::after{ content:' ▸'; color:var(--tc); }
-[data-t="field"]{ --tc:var(--t-field); } [data-t="image"]{ --tc:var(--t-image); } [data-t="colour"]{ --tc:var(--t-colour); } [data-t="value"]{ --tc:var(--t-value); }
+[data-t="field"]{ --tc:var(--t-field); } [data-t="image"]{ --tc:var(--t-image); } [data-t="colour"]{ --tc:var(--t-colour); } [data-t="value"]{ --tc:var(--t-value); } [data-t="curve"]{ --tc:var(--t-curve); }
 .forge-param{ flex:1; display:grid; grid-template-columns:70px 1fr 32px; gap:4px; align-items:center; font-size:12px; color:var(--fg-dim); min-width:0; }
 .forge-row.extra .forge-param{ grid-template-columns:70px 1fr; }
 .forge-param input, .forge-param select{ width:100%; min-width:0; font-size:12px; border-radius:0; accent-color:var(--cat); }
@@ -1881,6 +1881,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas .drawflow svg.connection[data-t="image"] .main-path{ stroke:var(--t-image); }
 .forge-canvas .drawflow svg.connection[data-t="colour"] .main-path{ stroke:var(--t-colour); }
 .forge-canvas .drawflow svg.connection[data-t="value"] .main-path{ stroke:var(--t-value); stroke-dasharray:6 4; }
+.forge-canvas .drawflow svg.connection[data-t="curve"] .main-path{ stroke:var(--t-curve); stroke-dasharray:2 3; }
 /* each wire's wide twin: invisible, easy to tap (forge.js paintWires) */
 .forge-canvas .drawflow svg.connection .main-path.forge-hit{ stroke:transparent !important; stroke-width:18px; stroke-dasharray:none; pointer-events:stroke; cursor:pointer; }
 .forge-canvas .drawflow .connection .main-path.selected:not(.forge-hit), .forge-canvas .drawflow svg.connection:hover .main-path:not(.forge-hit){ stroke-width:4.5px; filter:brightness(1.2); }
@@ -2244,6 +2245,11 @@ button.preset-group-head:focus-visible{ outline:1px solid var(--accent-2); outli
 .preset-group-head .pg-name{ flex:1 1 auto; }
 .preset-group-head .pg-count{ color:var(--text-dim); letter-spacing:.04em; font-size:10.5px; }
 .preset-btn[hidden], .preset-group-head[hidden]{ display:none; }
+
+/* a REQUIRED input still empty (Filter Forge's red port): the part has nothing to work on yet */
+.forge-canvas .drawflow .drawflow-node .input.req{ background:#D2404A !important; box-shadow:0 0 0 2px color-mix(in srgb, #D2404A 35%, transparent); }
+.fp-in.req{ color:#E06070; }
+.fp-in.req::after{ content:' !'; font-weight:700; }
 
 </style>
 
@@ -12091,7 +12097,7 @@ const STEP_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', de
 const STEP_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const STEP_BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'darken', 'lighten', 'color-dodge', 'color-burn',
   'difference', 'exclusion', 'vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
-const STEP_CATEGORIES = ['Inputs', 'Noise', 'Marks', 'Textures', 'Shape', 'Combine', 'Light & Color', 'Output'];
+const STEP_CATEGORIES = ['Inputs', 'Noise', 'Marks', 'Textures', 'Shape', 'Curves', 'Combine', 'Light & Color', 'Output'];
 
 // ---- blends, as the canvas and the GPU do them (per channel, 0..1) ----
 const STEP_SOFT = (b, s) => s <= 0.5 ? b - (1 - 2*s)*b*(1 - b) : b + (2*s - 1)*((b <= 0.25 ? ((16*b - 12)*b + 4)*b : Math.sqrt(b)) - b);
@@ -12129,7 +12135,7 @@ const STEP_PARTS = {
   threshold:{ cat: 'Shape', label: 'Threshold', ins: ['field'], outs: ['mask'], params: [STEP_R('at', 'At', 50), STEP_R('soft', 'Softness', 10)] },
   blur:     { cat: 'Shape', label: 'Blur', ins: ['field'], outs: ['field'], params: [STEP_R('radius', 'Radius', 8, 0, 100)] },
   warp:     { cat: 'Shape', label: 'Warp', ins: ['field', 'by'], outs: ['field'], params: [STEP_R('amount', 'Amount', 20)] },
-  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract'])] },
+  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine'])] },
   mix:      { cat: 'Combine', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [STEP_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
   posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16)] },
@@ -12141,7 +12147,11 @@ const STEP_PARTS = {
   ramp:     { cat: 'Light & Color', label: 'Color Ramp', ins: ['field', 'color a', 'color b'], outs: ['image'], params: [STEP_R('mid', 'Middle', 50)] },
   blend:    { cat: 'Combine', label: 'Blend', ins: ['base', 'layer', 'mask'], outs: ['image'], params: [STEP_SEL('mode', 'Mode', STEP_BLENDS), STEP_R('opacity', 'Opacity', 100)] },
   // the end
-  surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour'])] },
+  surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour']),
+              // Filter Forge's SIZE: every distance in the graph is measured against it, so one slider scales the whole surface
+              STEP_R('size', 'Size', 100, 25, 400)] },
+  // a NOTE on the graph (Filter Forge's Note component): words for whoever opens it next; it makes nothing
+  note:     { cat: 'Inputs', label: 'Note', ins: [], outs: [], params: [['text', 'Note', 'text', 'A note to the next reader']] },
   // newer parts (the chains' own)
   colour:   { cat: 'Inputs', label: 'Color', ins: [], outs: ['colour'], params: [['hex', 'Color', 'text', '#808080']] },
   // the page's own two accent colors (Cartomancy's first two suits)
@@ -12166,6 +12176,23 @@ const STEP_PARTS = {
   merge:    { cat: 'Combine', label: 'Merge Channels', ins: ['red', 'green', 'blue'], outs: ['picture'], params: [] },
   switch:   { cat: 'Combine', label: 'Switch', ins: ['a', 'b', 'choose'], outs: ['result'], params: [STEP_R('at', 'Switch At', 50)] },
   hsv:      { cat: 'Light & Color', label: 'Hue & Saturation', ins: ['picture'], outs: ['picture'], params: [STEP_R('hue', 'Hue Turn', 0, 0, 360), STEP_R('sat', 'Saturation', 100, 0, 200), STEP_R('val', 'Brightness', 100, 0, 200)] },
+  // CURVES (Filter Forge's third kind of part): a shape from 0 to 1 that other parts read through — a tone curve,
+  // a gradient's profile, a bevel. Made by Curve, changed by Curve Ops, used by Tone Curve and Profile Gradient.
+  curve:    { cat: 'Curves', label: 'Curve', ins: [], outs: ['curve'], params: [STEP_SEL('shape', 'Shape', ['linear', 'bias', 'gain', 'gamma', 'gaussian', 'impulse', 'stairs', 'step', 'wave', 'arc', 'noise']),
+              STEP_R('amount', 'Bend', 50), STEP_R('count', 'Count', 4, 1, 24), STEP_R('low', 'Lowest', 0), STEP_R('high', 'Highest', 100)] },
+  curveops: { cat: 'Curves', label: 'Curve Ops', ins: ['curve', 'curve b'], outs: ['curve'], params: [STEP_SEL('op', 'Operation', ['frequency', 'phase', 'repeat', 'reverse', 'invert', 'amplitude', 'blend', 'multiply', 'max', 'min']),
+              STEP_R('amount', 'Amount', 50), STEP_R('count', 'Times', 2, 1, 16)] },
+  tonecurve:{ cat: 'Curves', label: 'Tone Curve', ins: ['picture', 'curve'], outs: ['picture'], params: [STEP_R('mix', 'Strength', 100)] },
+  profile:  { cat: 'Curves', label: 'Profile Gradient', ins: ['curve', 'along'], outs: ['field'], params: [STEP_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular', 'along a map']), STEP_R('angle', 'Angle', 90, 0, 360), STEP_R('repeat', 'Repeat', 1, 1, 12)] },
+  // FILTER FORGE'S PRIMITIVES that were missing (Adjustments, Processing, Transform, Noise, Patterns)
+  bricon:   { cat: 'Light & Color', label: 'Brightness & Contrast', ins: ['picture'], outs: ['picture'], params: [STEP_R('bright', 'Brightness', 0, -100, 100), STEP_R('contrast', 'Contrast', 0, -100, 100)] },
+  highpass: { cat: 'Shape', label: 'High Pass', ins: ['field'], outs: ['field'], params: [STEP_R('radius', 'Radius', 10, 1, 100), STEP_R('gain', 'Gain', 50)] },
+  sharpen:  { cat: 'Shape', label: 'Sharpen', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 50, 0, 200), STEP_R('radius', 'Radius', 4, 1, 50)] },
+  motionblur:{ cat: 'Shape', label: 'Motion Blur', ins: ['field'], outs: ['field'], params: [STEP_R('length', 'Length', 20, 0, 100), STEP_R('angle', 'Angle', 0, 0, 360)] },
+  offset:   { cat: 'Shape', label: 'Offset', ins: ['field'], outs: ['field'], params: [STEP_R('x', 'Across', 0, -100, 100), STEP_R('y', 'Down', 0, -100, 100)] },
+  perlin:   { cat: 'Noise', label: 'Perlin Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('details', 'Details', 4, 1, 8), STEP_R('rough', 'Roughness', 50), STEP_R('contrast', 'Contrast', 30)] },
+  bricks:   { cat: 'Noise', label: 'Bricks', ins: ['bevel'], outs: ['bricks', 'mortar', 'each brick'], params: [STEP_R('rows', 'Rows', 12, 2, 60), STEP_R('ratio', 'Length', 200, 100, 400),
+              STEP_R('mortar', 'Mortar', 12, 0, 40), STEP_R('stagger', 'Stagger', 50), STEP_R('bevel', 'Bevel', 30), STEP_R('vary', 'Variety', 30)] },
   // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
   // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
   poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas'],
@@ -12177,6 +12204,12 @@ const STEP_PARTS = {
   mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
   chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
 };
+/** A curve's value at t (0..1), between its samples ({ curve: Float32Array(257) }). */
+function curveAt(c, t){ const s = c.curve, n = s.length - 1, x = Math.max(0, Math.min(1, t))*n, i = Math.min(n - 1, Math.floor(x)), f = x - i; return s[i] + (s[i + 1] - s[i])*f; }
+const stepCurve = fn => { const s = new Float32Array(257); for(let i = 0; i <= 256; i++) s[i] = Math.max(-1, Math.min(2, fn(i/256))); return { curve: s }; };
+// Perlin's bias and gain (Perlin & Hoffert 1989), the curves Filter Forge names after them
+const stepBias = (t, b) => { b = Math.max(0.001, Math.min(0.999, b)); return Math.pow(Math.max(0, t), Math.log(b)/Math.log(0.5)); };
+const stepGain = (t, g) => t < 0.5 ? stepBias(2*t, 1 - g)/2 : 1 - stepBias(2 - 2*t, 1 - g)/2;
 // The poem's runs, as the page measured them: "x0,y0,x1,y1,line,stanza;…" in fractions of the page
 function poemRuns(text){
   const out = [];
@@ -12254,6 +12287,18 @@ const STEP_DOCS = {
   transform: 'Scales and turns a gray map, repeating it past its edges.',
   edges: 'Finds the edges in a gray map: where it changes fastest.',
   kaleidoscope: 'Folds a gray map into mirrored wedges around the center.',
+  note: 'A note on the graph: write what a part of it does, or why, for whoever opens it next. It makes nothing and takes no wires.',
+  bricon: 'Makes a picture brighter or darker, and its light and dark further apart (more contrast) or closer together (less). Both can take a gray map, so a picture can be brighter in some places than others.',
+  highpass: 'Keeps only the fine detail of a gray map, around a middle gray: what is left when its blur is taken away. Try: High Pass into a Light Engine\'s heights for crisp grain.',
+  sharpen: 'Makes the edges in a gray map crisper, by pushing each value away from the blur around it.',
+  motionblur: 'Smears a gray map along one direction, as a moving camera would. Try: Motion Blur on noise for rain or brushed metal.',
+  offset: 'Slides a gray map across and down; what slides off one side comes back on the other.',
+  perlin: 'Makes Perlin noise: smooth hills and valleys, finer Details laid over coarser, each weaker by the Roughness. Contrast pushes it toward black and white.',
+  bricks: 'Makes a wall of bricks: a height for each brick (beveled at its edges, the bevel\'s shape a curve if one is wired in), the mortar between them, and a different gray for each brick. Try: a Stairs curve into Bevel for stepped edges.',
+  curve: 'Makes a curve: a shape from 0 to 1, such as a smooth bias, a gain, a bell (gaussian), a peak (impulse), stairs, a step, a wave or a wobble (noise). Curves feed Tone Curve and Profile Gradient. Try: Stairs into a Tone Curve to posterize softly.',
+  curveops: 'Changes a curve: repeats it (Frequency, Repeat), shifts it (Phase), flips it (Reverse, Invert), squeezes it (Amplitude), or combines it with a second curve (Blend, Multiply, Max, Min).',
+  tonecurve: 'Runs every value of a gray map or picture through a curve, like the Curves adjustment in a photo editor. Try: a Wave curve for bands of light and dark.',
+  profile: 'Makes a gradient whose shape is a curve: across the page, around the middle, toward the edges, or along any gray map. Try: an Impulse curve, radial, for a raised ring.',
   poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray. Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
   grow: 'Grows the bright parts of a gray map outward (Amount above 50) or shrinks them (below 50), by the Radius. Try: shrink a mask to thin its edges, grow it to merge small spots.',
   pixelate: 'Breaks a gray map into flat cells — squares, bricks or diamonds — each the average of what it covers. Try: a big Cell Size over noise for a mosaic.',
@@ -12403,36 +12448,42 @@ const STEP_RUN = {
       { period: sz*6 + unit*0.012, amp: sz*2 + unit*0.004, width: sz, color: '#fff', side: 1 });
     return [lum(readCanvas(c))];
   },
-  levels(E, n){ const { N, input, num, asField } = E;
+  levels(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1), 0.5); if(!f) return null;
-    const lo = num(n, 'lo', 0)/100, hi = Math.max(lo + 0.01, num(n, 'hi', 100)/100), g = Math.pow(2, (num(n, 'gamma', 50) - 50)/25), o = new Float32Array(N);
-    for(let i = 0; i < N; i++) o[i] = Math.pow(Math.max(0, Math.min(1, (f[i] - lo)/(hi - lo))), g);
+    const LO = map(n, 'lo', 0), HI = map(n, 'hi', 100), GA = map(n, 'gamma', 50), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const lo = at(LO, i)/100, hi = Math.max(lo + 0.01, at(HI, i)/100), g = Math.pow(2, (at(GA, i) - 50)/25);
+      o[i] = Math.pow(Math.max(0, Math.min(1, (f[i] - lo)/(hi - lo))), g); }
     return [o];
   },
-  threshold(E, n){ const { N, input, num, asField } = E;
+  threshold(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1), 0.5); if(!f) return null;
-    const at = num(n, 'at', 50)/100, sf = Math.max(0.002, num(n, 'soft', 10)/200), o = new Float32Array(N);
-    for(let i = 0; i < N; i++){ const t = Math.max(0, Math.min(1, (f[i] - at + sf)/(2*sf))); o[i] = t*t*(3 - 2*t); }
+    const AT = map(n, 'at', 50), SF = map(n, 'soft', 10), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const a = at(AT, i)/100, sf = Math.max(0.002, at(SF, i)/200), t = Math.max(0, Math.min(1, (f[i] - a + sf)/(2*sf))); o[i] = t*t*(3 - 2*t); }
     return [o];
   },
   blur(E, n){ const { unit, input, num, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null; return [boxBlur(f, num(n, 'radius', 8)*unit/1536*1.2)];
   },
   warp(E, n){ const { ww, wh, N, unit, input, num, asField } = E;
     const f = asField(input(n, 1)), by = asField(input(n, 2)); if(!f) return null; if(!by) return [f];
-    const A = num(n, 'amount', 20)/100*unit*0.08, o = new Float32Array(N);
-    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, a = by[q]*Math.PI*2;
+    const AM = E.map(n, 'amount', 20), o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, a = by[q]*Math.PI*2, A = E.at(AM, q)/100*unit*0.08;
       const sx = Math.max(0, Math.min(ww - 1, Math.round(x + Math.cos(a)*A))), sy = Math.max(0, Math.min(wh - 1, Math.round(y + Math.sin(a)*A))); o[q] = f[sy*ww + sx]; }
     return [o];
   },
   math(E, n){ const { N, input, P, flat, asField } = E;
     const a = asField(input(n, 1), 0), b = asField(input(n, 2), 0); if(!a && !b) return null;
     const A = a || flat(0), B = b || flat(0), op = P(n, 'op', 'add'), o = new Float32Array(N);
-    const f = { add: (x, y) => x + y, multiply: (x, y) => x*y, max: Math.max, min: Math.min, difference: (x, y) => Math.abs(x - y), subtract: (x, y) => x - y }[op] || ((x, y) => x + y);
+    const f = { add: (x, y) => x + y, multiply: (x, y) => x*y, max: Math.max, min: Math.min, difference: (x, y) => Math.abs(x - y), subtract: (x, y) => x - y,
+      // Filter Forge's RGB Math, the useful few: b as a divisor, an exponent (0..1 → 0..4), a mean, a screen, a remainder, a wave
+      divide: (x, y) => y > 1e-4 ? x/y : 1, power: (x, y) => Math.pow(Math.max(0, x), (b ? y : 0.25)*4), average: (x, y) => (x + y)/2,
+      screen: (x, y) => 1 - (1 - x)*(1 - y), modulo: (x, y) => y > 1e-4 ? (x % y)/y : 0, sine: (x, y) => 0.5 + 0.5*Math.sin((x + y)*Math.PI*2) }[op] || ((x, y) => x + y);
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f(A[i], B[i])));
     return [o];
   },
-  mix(E, n){ const { N, input, num, asField, asImage } = E;
-    const ia = input(n, 1), ib = input(n, 2), ta = input(n, 3), tp = num(n, 't', 50)/100;
+  mix(E, n){ const { N, input, num, map, asField, asImage } = E;
+    const ia = input(n, 1), ib = input(n, 2), ta0 = input(n, 3), tm = map(n, 't', 50), tp = typeof tm === 'number' ? tm/100 : num(n, 't', 50)/100;
+    // (a map on ⚙ Amount is the amount point by point, as a gray map on its amount input is)
+    const ta = ta0 == null && typeof tm !== 'number' ? tm.map(v => v/100) : ta0;
     if(ia == null && ib == null) return null;
     // two colours by one amount: one colour (never a page of them)
     if(Array.isArray(ia) && Array.isArray(ib) && (ta == null || typeof ta === 'number')){ const k = ta == null ? tp : ta; return [[0, 1, 2].map(c => ia[c] + (ib[c] - ia[c])*k)]; }
@@ -12445,10 +12496,10 @@ const STEP_RUN = {
     if(isImg(v)){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }; for(let i = 0; i < N; i++){ o.r[i] = 1 - v.r[i]; o.g[i] = 1 - v.g[i]; o.b[i] = 1 - v.b[i]; } return [o]; }
     const f = asField(v), o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = 1 - f[i]; return [o];
   },
-  posterize(E, n){ const { N, input, num, asField } = E;
+  posterize(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
-    const k = Math.max(2, Math.min(16, Math.round(num(n, 'steps', 5)))), o = new Float32Array(N);
-    for(let i = 0; i < N; i++) o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1);
+    const K = map(n, 'steps', 5), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); }
     return [o];
   },
   transform(E, n){ const { ww, wh, N, input, num, asField } = E;
@@ -12500,9 +12551,9 @@ const STEP_RUN = {
   blend(E, n){ const { N, input, num, P, asField, asImage } = E;
     const base = asImage(input(n, 1) ?? 0.5), lay = input(n, 2), m = asField(input(n, 3));
     if(lay == null) return [base];
-    const L = asImage(lay), fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, op = num(n, 'opacity', 100)/100;
+    const L = asImage(lay), fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
     const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
-    for(let i = 0; i < N; i++){ const k = op*(m ? m[i] : 1);
+    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1);
       for(const c of ['r', 'g', 'b']){ const b0 = base[c][i]; o[c][i] = b0 + (Math.max(0, Math.min(1, fn(b0, L[c][i]))) - b0)*k; } }
     return [o];
   },
@@ -12633,15 +12684,16 @@ Object.assign(STEP_RUN, {
     return [o];
   },
 });
-Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
+Object.assign(STEP_COST, { note: () => 0, bricon: () => 1, highpass: () => 1.5, sharpen: () => 1.5, motionblur: () => 3, offset: () => 0.5, perlin: () => 2.5, bricks: () => 1, curve: () => 0.1, curveops: () => 0.1, tonecurve: () => 1, profile: () => 1, kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
 Object.assign(STEP_RUN, {
   number(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'value', 50)))/100]; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
   random(E, n){ const lo = E.num(n, 'lo', 0), hi = E.num(n, 'hi', 100); return [(lo + (hi - lo)*Math.random())/100]; },
-  maprange(E, n){ const { N, input, num, asField } = E;
+  maprange(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
-    const a = num(n, 'inLo', 0)/100, b = num(n, 'inHi', 100)/100, c = num(n, 'outLo', 0)/100, d = num(n, 'outHi', 100)/100, k = Math.abs(b - a) < 1e-6 ? 0 : 1/(b - a), o = new Float32Array(N);
-    for(let i = 0; i < N; i++){ const t = Math.max(0, Math.min(1, (f[i] - a)*k)); o[i] = c + (d - c)*t; }
+    const A = map(n, 'inLo', 0), B = map(n, 'inHi', 100), C = map(n, 'outLo', 0), D = map(n, 'outHi', 100), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const a = at(A, i)/100, b = at(B, i)/100, c = at(C, i)/100, d = at(D, i)/100, k = Math.abs(b - a) < 1e-6 ? 0 : 1/(b - a);
+      const t = Math.max(0, Math.min(1, (f[i] - a)*k)); o[i] = c + (d - c)*t; }
     return [o]; },
   shape(E, n){ const { ww, wh, unit, P, num, field } = E;
     const form = String(P(n, 'form', 'circle')), R = num(n, 'size', 60)/200, sf = Math.max(0.002, num(n, 'soft', 10)/200), cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit;
@@ -12664,6 +12716,111 @@ Object.assign(STEP_RUN, {
     const v = typeof c === 'number' ? c : c == null ? 0 : (() => { const f = asField(c); let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; })();
     const pick = v >= at ? input(n, 2) : input(n, 1);
     return pick == null ? null : [pick]; },
+  note(){ return []; },
+  bricon(E, n){ const { N, input, map, at, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+    const BR = map(n, 'bright', 0), CO = map(n, 'contrast', 0), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+    for(let i = 0; i < N; i++){ const b = at(BR, i)/100, c = at(CO, i)/100, k = c >= 0 ? 1/Math.max(0.01, 1 - c) : 1 + c;
+      for(const ch of ['r', 'g', 'b']) o[ch][i] = Math.max(0, Math.min(1, (im[ch][i] - 0.5)*k + 0.5 + b)); }
+    return [o];
+  },
+  highpass(E, n){ const { N, unit, input, num, map, at, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const lo = boxBlur(f, num(n, 'radius', 10)*unit/1536*1.2), G = map(n, 'gain', 50), o = new Float32Array(N);
+    for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, 0.5 + (f[i] - lo[i])*(1 + at(G, i)/10)));
+    return [o];
+  },
+  sharpen(E, n){ const { N, unit, input, num, map, at, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const lo = boxBlur(f, num(n, 'radius', 4)*unit/1536*1.2), A = map(n, 'amount', 50), o = new Float32Array(N);
+    for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f[i] + (f[i] - lo[i])*at(A, i)/50));
+    return [o];
+  },
+  motionblur(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const L = num(n, 'length', 20)/100*unit*0.15, an = num(n, 'angle', 0)*Math.PI/180; if(L < 0.5) return [f];
+    const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ let t = 0;
+      for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
+      o[y*ww + x] = t/S; }
+    return [o];
+  },
+  offset(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const ox = Math.round(num(n, 'x', 0)/100*ww), oy = Math.round(num(n, 'y', 0)/100*wh), o = new Float32Array(N);
+    // wrapped, as Filter Forge's Offset: what leaves one side comes back on the other
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) o[y*ww + x] = f[(((y - oy) % wh) + wh) % wh*ww + (((x - ox) % ww) + ww) % ww];
+    return [o];
+  },
+  perlin(E, n){ const { unit, input, num, map, at, field } = E;
+    // gradient noise (Perlin 2002, improved): a permutation from the node's own stream, octaves by Details, each Roughness weaker
+    const perm = new Uint8Array(512), p = Array.from({ length: 256 }, (_, i) => i);
+    for(let i = 255; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+    for(let i = 0; i < 512; i++) perm[i] = p[i & 255];
+    const s0 = input(n, 1), off = typeof s0 === 'number' ? s0*311 : 0;
+    const fade = t => t*t*t*(t*(t*6 - 15) + 10), lerp = (a, b, t) => a + (b - a)*t;
+    const grad = (h, x, y) => { const g = h & 7, u = g < 4 ? x : y, v = g < 4 ? y : x; return ((g & 1) ? -u : u) + ((g & 2) ? -2*v : 2*v); };
+    const noise = (x, y) => { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y); const u = fade(x), v = fade(y);
+      const a = perm[X] + Y, b = perm[X + 1] + Y;
+      return lerp(lerp(grad(perm[a], x, y), grad(perm[b], x - 1, y), u), lerp(grad(perm[a + 1], x, y - 1), grad(perm[b + 1], x - 1, y - 1), u), v)/2.2; };
+    const cells = Math.max(1, num(n, 'scale', 40))/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
+    let q = -1;
+    return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+      for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
+      const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+  },
+  bricks(E, n){ const { ww, wh, N, unit, input, num, isCurve } = E;
+    const rows = Math.max(2, Math.round(num(n, 'rows', 12))), bh = wh/rows, bw = bh*num(n, 'ratio', 200)/100, mo = num(n, 'mortar', 12)/100*bh*0.5;
+    const stag = num(n, 'stagger', 50)/100, bev = Math.max(1e-3, num(n, 'bevel', 30)/100*bh*0.5), vary = num(n, 'vary', 30)/100, cv = input(n, 1);
+    const hash = (i, j) => { let h = Math.imul(i*374761393 + j*668265263, 1274126177) ^ 0x5bd1e995; h = Math.imul(h ^ (h >>> 13), 1103515245); return ((h ^ (h >>> 16)) >>> 0)/4294967296; };
+    const B = new Float32Array(N), M = new Float32Array(N), I = new Float32Array(N);
+    for(let y = 0; y < wh; y++){ const row = Math.floor(y/bh), sh = (row % 2)*stag*bw, ly = y - row*bh;
+      for(let x = 0; x < ww; x++){ const col = Math.floor((x + sh)/bw), lx = x + sh - col*bw, q = y*ww + x;
+        // the distance in from the brick's nearest edge, past the mortar; the bevel's profile is the curve, if one comes in
+        const d = Math.min(lx, bw - lx, ly, bh - ly) - mo;
+        if(d <= 0){ M[q] = 1; continue; }
+        const t = Math.min(1, d/bev), h = isCurve(cv) ? curveAt(cv, t) : Math.sin(t*Math.PI/2), id = hash(col, row);
+        B[q] = h*(1 - vary + vary*id); I[q] = id; } }
+    return [B, M, I];
+  },
+  curve(E, n){ const { num, P } = E;
+    const shape = P(n, 'shape', 'linear'), a = num(n, 'amount', 50)/100, k = Math.max(1, Math.round(num(n, 'count', 4))), lo = num(n, 'low', 0)/100, hi = num(n, 'high', 100)/100;
+    // the noise curve's knots come from the node's own random stream (seed + id), the same until the seed changes
+    const knots = shape === 'noise' ? Array.from({ length: k + 2 }, () => Math.random()) : null;
+    const f = {
+      linear: t => t, bias: t => stepBias(t, a), gain: t => stepGain(t, a), gamma: t => Math.pow(t, Math.pow(2, (0.5 - a)*4)),
+      gaussian: t => Math.exp(-((t - 0.5)**2)/(2*(0.02 + a*0.3)**2)),
+      impulse: t => { const c = Math.max(0.001, Math.min(0.999, a)); return t < c ? t/c : (1 - t)/(1 - c); },
+      stairs: t => Math.min(k, Math.floor(t*(k + 1)))/k, step: t => t >= a ? 1 : 0,
+      wave: t => 0.5 - 0.5*Math.cos(t*k*Math.PI*2), arc: t => Math.sqrt(Math.max(0, 1 - (1 - t)**2)),
+      noise: t => { const x = t*(k + 1), i = Math.min(k, Math.floor(x)), u = x - i, w = u*u*(3 - 2*u); return knots[i] + (knots[i + 1] - knots[i])*w; },
+    }[shape] || (t => t);
+    return [stepCurve(t => lo + (hi - lo)*f(t))];
+  },
+  curveops(E, n){ const { input, num, P, isCurve } = E;
+    const c = input(n, 1), b = input(n, 2); if(!isCurve(c)) return null;
+    const op = P(n, 'op', 'frequency'), a = num(n, 'amount', 50)/100, k = Math.max(1, Math.round(num(n, 'count', 2))), cb = isCurve(b) ? b : null;
+    const frac = x => (x >= 1 && x === Math.floor(x)) ? 1 : x - Math.floor(x);   // (the last point stays the curve's end)
+    const g = { frequency: t => curveAt(c, frac(t*k)), phase: t => curveAt(c, (t + a) % 1),
+      repeat: t => { const x = t*k, i = Math.floor(x), u = x - i; return curveAt(c, i % 2 ? 1 - u : u); },
+      reverse: t => curveAt(c, 1 - t), invert: t => 1 - curveAt(c, t), amplitude: t => 0.5 + (curveAt(c, t) - 0.5)*a*2,
+      blend: t => cb ? curveAt(c, t) + (curveAt(cb, t) - curveAt(c, t))*a : curveAt(c, t), multiply: t => curveAt(c, t)*(cb ? curveAt(cb, t) : 1),
+      max: t => Math.max(curveAt(c, t), cb ? curveAt(cb, t) : -Infinity), min: t => Math.min(curveAt(c, t), cb ? curveAt(cb, t) : Infinity) }[op] || (t => curveAt(c, t));
+    return [stepCurve(g)];
+  },
+  tonecurve(E, n){ const { N, input, map, at, isCurve, isImg, asField } = E;
+    const v = input(n, 1), c = input(n, 2); if(v == null) return null; if(!isCurve(c)) return [v];
+    const MX = map(n, 'mix', 100), tone = (x, i) => { const m = at(MX, i)/100; return x + (curveAt(c, x) - x)*m; };
+    if(isImg(v)){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }; for(let i = 0; i < N; i++){ o.r[i] = tone(v.r[i], i); o.g[i] = tone(v.g[i], i); o.b[i] = tone(v.b[i], i); } return [o]; }
+    const f = asField(v), o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = tone(f[i], i); return [o];
+  },
+  profile(E, n){ const { ww, wh, N, input, num, P, isCurve, asField } = E;
+    const c = input(n, 1), along = asField(input(n, 2)), shape = P(n, 'shape', 'linear'), an = num(n, 'angle', 90)*Math.PI/180, rep = Math.max(1, Math.round(num(n, 'repeat', 1)));
+    const ca = Math.cos(an), sa = Math.sin(an), o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      const u = x/ww - 0.5, v = y/wh - 0.5, q = y*ww + x;
+      let t = shape === 'radial' ? Math.min(1, Math.hypot(u, v)/0.5) : shape === 'rectangular' ? Math.min(1, Math.max(Math.abs(u), Math.abs(v))/0.5)
+        : shape === 'along a map' ? (along ? along[q] : 0) : Math.max(0, Math.min(1, 0.5 + (u*ca + v*sa)/(Math.abs(ca) + Math.abs(sa))));
+      t = rep > 1 ? (t*rep) % 1 : t;
+      o[q] = isCurve(c) ? curveAt(c, t) : t;
+    }
+    return [o];
+  },
   poem(E, n){ const { ctx, ww, wh, N, num, boxBlur } = E;
     const runs = poemRuns(ctx.text);
     if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N)];
@@ -12729,19 +12886,19 @@ Object.assign(STEP_RUN, {
     return [o];
   },
   chroma(E, n){ const { ww, wh, N, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
-    const A = num(n, 'amount', 20)/100*unit*0.02, ang = num(n, 'angle', 0)*Math.PI/180, edge = num(n, 'edge', 0)/100;
+    const AM = E.map(n, 'amount', 20), ang = num(n, 'angle', 0)*Math.PI/180, edge = num(n, 'edge', 0)/100;
     const o = { r: new Float32Array(N), g: im.g.slice ? im.g.slice() : Float32Array.from(im.g), b: new Float32Array(N) };
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-      const q = y*ww + x, k = edge > 0 ? (1 - edge) + edge*Math.min(1, Math.hypot(x/ww - 0.5, y/wh - 0.5)/0.7071) : 1;
+      const q = y*ww + x, A = E.at(AM, q)/100*unit*0.02, k = edge > 0 ? (1 - edge) + edge*Math.min(1, Math.hypot(x/ww - 0.5, y/wh - 0.5)/0.7071) : 1;
       const dx = Math.cos(ang)*A*k, dy = Math.sin(ang)*A*k;
       const at = (ox, oy) => Math.min(wh - 1, Math.max(0, Math.round(y + oy)))*ww + Math.min(ww - 1, Math.max(0, Math.round(x + ox)));
       o.r[q] = im.r[at(dx, dy)]; o.b[q] = im.b[at(-dx, -dy)]; }
     return [o];
   },
-  hsv(E, n){ const { N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
-    const turn = num(n, 'hue', 0)/360, sat = num(n, 'sat', 100)/100, val = num(n, 'val', 100)/100;
+  hsv(E, n){ const { N, input, map, at, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+    const TU = map(n, 'hue', 0), SA = map(n, 'sat', 100), VA = map(n, 'val', 100);
     const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
-    for(let i = 0; i < N; i++){
+    for(let i = 0; i < N; i++){ const turn = at(TU, i)/360, sat = at(SA, i)/100, val = at(VA, i)/100;
       const r = im.r[i], g = im.g[i], b = im.b[i], mx = Math.max(r, g, b), mn = Math.min(r, g, b), dl = mx - mn;
       let h = 0; if(dl > 1e-6) h = mx === r ? ((g - b)/dl + 6) % 6 : mx === g ? (b - r)/dl + 2 : (r - g)/dl + 4; h = h/6 + turn; h -= Math.floor(h);
       const s = mx > 1e-6 ? Math.min(1, dl/mx*sat) : 0, v = Math.min(1, mx*val), k = n2 => { const t = (n2 + h*6) % 6; return v - v*s*Math.max(0, Math.min(t, 4 - t, 1)); };
@@ -12756,10 +12913,12 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  * colour), value (one number). The editor colours ports and wires by these;
  * the evaluator converts between them wherever a port asks (athanor.js).
  */
-const VALUE_TYPES = ['field', 'image', 'colour', 'value'];
+const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
   knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
-  split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
+  bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
+  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
@@ -12773,6 +12932,12 @@ const STEP_IO = {
 // can drive any of them — and a template shows its wiring instead of hiding it.
 const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 
+// REQUIRED INPUTS (Filter Forge): a part that has nothing to work on without its first input. The editor marks
+// the port while it is empty, and a step preview shows a warning pattern in its place, so the rest of the
+// part still shows what it does; the Surface itself never sees the stand-in (an old graph draws as it did).
+const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 'posterize', 'transform', 'edges', 'light', 'tint', 'ramp', 'kaleidoscope', 'polar',
+  'maprange', 'split', 'hsv', 'curveops', 'tonecurve', 'bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma',
+  'meniscus', 'pigment', 'contours', 'glaze', 'burn']);
 /** Every step: the part, its cost and what it does. */
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
@@ -12781,7 +12946,7 @@ const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, pa
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
-  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '',
+  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) ? [1] : [],
     dataIns: s.ins.length,
     ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
     inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),
@@ -13310,7 +13475,10 @@ const TEXTURE_CHAINS = {
  * node's result be kept between edits (below). A new graph is always the
  * newest version; one loaded keeps its own.
  */
-const ATHANOR_VERSION = 2;
+// v3 (Filter Forge's MAP INPUTS): a picture wired into a part's ⚙ setting sets it point by point, wherever
+// the part can use it so (E.map); v2 took the picture's average. The textures' own chains stay v2, so
+// they draw exactly as they did.
+const ATHANOR_VERSION = 3;
 function athanorVersion(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
   catch(e){ return 1; }
@@ -13337,16 +13505,27 @@ function athanorNodes(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return ((g.drawflow || {}).Home || {}).data || {}; }
   catch(e){ return {}; }
 }
-/** The sliders a graph offers: its Knob nodes, by slot (1–6). */
+/** The nodes whose work reaches the Surface (Filter Forge: a control that doesn't reach the Result isn't shown). */
+function athanorReach(graph){
+  const nodes = athanorNodes(graph), seen = new Set(), s = Object.values(nodes).find(n => n.name === 'surface');
+  const walk = id => { if(seen.has(id) || !nodes[id]) return; seen.add(id);
+    for(const inp of Object.values(nodes[id].inputs || {})) for(const c of inp.connections || []) walk(String(c.node)); };
+  if(s) walk(String(s.id));
+  return seen;
+}
+/** The sliders a graph offers: its Knob nodes, by slot (1–6) — those that reach the Surface by a wire, or whose
+ *  slot a part on the way binds ('@k3'); a Knob left unwired offers nothing (it would move nothing). */
 function athanorKnobs(graph){
-  const out = [];
-  for(const n of Object.values(athanorNodes(graph))){
+  const out = [], reach = athanorReach(graph), all = athanorNodes(graph);
+  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(m) boundSlots.add(+m[1]); }
+  for(const n of Object.values(all)){
     if(n.name !== 'knob') continue;
+    if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(6, parseInt((n.data || {}).slot, 10) || 1)))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
     if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
-  for(const n of Object.values(athanorNodes(graph))) for(const [k, v] of Object.entries(n.data || {})){
+  for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
     const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(!m) continue;
     const slot = +m[1]; if(out.find(q => q.slot === slot)) continue;
     const part = ((STEPS[n.name] || {}).params || []).find(q => q[0] === k);
@@ -13356,9 +13535,9 @@ function athanorKnobs(graph){
 }
 /** The hues a graph uses: its Hue nodes, by slot (1–2). */
 function athanorHues(graph){
-  const out = [];
+  const out = [], reach = athanorReach(graph);
   for(const n of Object.values(athanorNodes(graph))){
-    if(n.name !== 'hue') continue;
+    if(n.name !== 'hue' || !reach.has(String(n.id))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
     if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
   }
@@ -13407,12 +13586,25 @@ function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanor
 function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }
 const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
+/** A curve drawn as its graph (the step previews): a bright line over a faint grid on dark. */
+function curvePlot(c, ww, wh){
+  const N = ww*wh, f = new Float32Array(N).fill(0.08), lw = Math.max(1, Math.min(ww, wh)/40), pad = Math.min(ww, wh)*0.08;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const u = (x - pad)/(ww - 2*pad), v = 1 - (y - pad)/(wh - 2*pad), q = y*ww + x;
+    if(u < 0 || u > 1 || v < -0.02 || v > 1.02){ f[q] = 0.04; continue; }
+    if(Math.abs(u*4 - Math.round(u*4)) < 0.012 || Math.abs(v*4 - Math.round(v*4)) < 0.012) f[q] = 0.16;
+    const d = Math.abs(curveAt(c, u) - v)*(wh - 2*pad); if(d < lw) f[q] = Math.max(f[q], 1 - 0.5*d/lw);
+  }
+  return { r: f, g: f, b: f };
+}
 function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
-  const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null]);
+  const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
+  // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
+  const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, sizeK]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -13425,7 +13617,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const s = n.name + JSON.stringify(athanorWork(n.data)) + '[' + ins.join(';') + ']#' + id;
     sigs.set(id, s); return s;
   };
-  const N = ww*wh, unit = Math.min(ww, wh);
+  const N = ww*wh, unit = Math.min(ww, wh)*sizeK;
   const memo = new Map(), busy = new Set();
   const flat = v => new Float32Array(N).fill(v);
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
@@ -13433,9 +13625,13 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
   // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
   const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
+  // A CURVE (Filter Forge's curve components): a shape from 0 to 1, { curve: 257 samples }. Wired where a map
+  // is wanted it is laid across the page left to right; where a number is wanted, its average.
+  const isCurve = v => !!(v && typeof v === 'object' && v.curve instanceof Float32Array);
+  const curveField = c => { const f = new Float32Array(N); for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) f[y*ww + x] = curveAt(c, ww > 1 ? x/(ww - 1) : 0); return f; };
   const asField = (v, d = 0) => v == null ? null : typeof v === 'number' ? flat(v) : v instanceof Float32Array ? v
-    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
-  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v)
+    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : isCurve(v) ? curveField(v) : flat(d);
+  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v) : isCurve(v) ? (f => ({ r: f, g: f, b: f }))(curveField(v))
     : Array.isArray(v) ? { r: flat(v[0]), g: flat(v[1]), b: flat(v[2]) } : typeof v === 'number' ? { r: flat(v), g: flat(v), b: flat(v) } : null;
   const asColour = (v, d) => Array.isArray(v) ? v : v == null ? d : d;
   const hexCol = hex => { const c = parseHex(hex || '#808080'); return [c.r/255, c.g/255, c.b/255]; };
@@ -13455,7 +13651,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const R = stepRange(n.name, k), port = paramPort(n.name, k);
     let v;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
-      const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : null;
+      const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : isCurve(w) ? mean(w.curve) : null;
       // a wired param sweeps its whole range, or the part of it set by hand ('~key': 'lo,hi')
       const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
       const W = own && R ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
@@ -13465,11 +13661,38 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     if(isNaN(v) || !isFinite(v)) return d;
     return R ? Math.max(R[0], Math.min(R[1], v)) : v;
   };
+  // Filter Forge's stand-in for missing data (its "!" in a red circle): red and pale stripes round a ring
+  let standInPic = null;
+  const standIn = () => standInPic || (standInPic = (() => { const r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N), cx = ww/2, cy = wh/2, R = Math.min(ww, wh)*0.3;
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, d = Math.abs(Math.hypot(x - cx, y - cy) - R) < R*0.12, st = ((x + y)/Math.max(4, Math.min(ww, wh)/10) | 0) % 2;
+      const on = d || (Math.abs(x - cx) < R*0.09 && y > cy - R*0.55 && y < cy + R*0.2) || (Math.hypot(x - cx, y - (cy + R*0.42)) < R*0.1);
+      r[q] = on ? 0.95 : st ? 0.62 : 0.32; g[q] = on ? 0.95 : st ? 0.16 : 0.08; b[q] = on ? 0.92 : st ? 0.2 : 0.1; }
+    return { r, g, b }; })());
   const mean = f => { let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; };
+  // A MAP INPUT (Filter Forge's parameter mapping): a setting with a gray map or a picture on its ⚙ port is
+  // a value per point, across its range (or its own '~key' part of it); otherwise the setting as num() reads it.
+  // Only in a v3 graph: before, a wired map was averaged, and an old graph must draw as it always did.
+  const map = (n, k, d) => {
+    const port = v3 ? paramPort(n.name, k) : 0;
+    if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
+      const w = input(n, port);
+      if(w instanceof Float32Array || isImg(w) || isCv(w)){
+        const f = asField(w), R = stepRange(n.name, k) || [0, 100];
+        const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
+        const W = own ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
+        const o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = W[0] + (W[1] - W[0])*Math.max(0, Math.min(1, f[i]));
+        return o;
+      }
+    }
+    return num(n, k, d);
+  };
+  // a mapped setting at one point (a number, or one value of a map)
+  const at = (m, i) => typeof m === 'number' ? m : m[i];
   // the value arriving at a node's j-th input (1-based), or undefined
   const input = (n, j) => {
     const c = ((n.inputs || {})['input_' + j] || {}).connections || [];
-    if(!c.length) return undefined;
+    // an empty REQUIRED input, in the step previews only: a warning pattern stands in, so the part still shows its work
+    if(!c.length) return ctx.all && ((STEPS[n.name] || {}).required || []).includes(j) ? standIn() : undefined;
     const outs = evalNode(String(c[0].node)), k = parseInt(String(c[0].input).replace('output_', ''), 10) - 1;
     return outs ? outs[k] : undefined;
   };
@@ -13479,7 +13702,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig : null;
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v3' : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -13516,7 +13739,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // MARKS: strokes drawn on a canvas the grid's size, over a grey field (or a
   // flat grey), read back as a field; sizes in canonical pixels (px)
   const div = ctx.div > 0 ? ctx.div : 1, S = scaleNow();
-  const px = v => cpx(v)/div, carea = ww*wh*div*div/(S*S);
+  const px = v => cpx(v)/div*sizeK, carea = ww*wh*div*div/(S*S)/(sizeK*sizeK);
   const marks = (base, fill, draw) => {
     const c = document.createElement('canvas'); c.width = ww; c.height = wh;
     const x = c.getContext('2d', { willReadFrequently: true });
@@ -13529,7 +13752,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     for(let i = 0; i < N; i++) o[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
     return o;
   };
-  const E = { ww, wh, N, unit, ctx, deps, input, num, P, field, flat, asField, asImage, asColour, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
+  const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
   const RUN = n => { const step = STEPS[n.name]; if(!step) return null;
     // a canvas pass: a part that paints, paints; the Surface hands on what it is given
     if(ctx.canvas){ if(step.paint) return step.paint(E, n); if(n.name === 'surface') return [input(n, 1)]; }
@@ -13538,7 +13761,8 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     // every node's first output, as a picture (the step previews)
     const out = new Map();
     for(const id of Object.keys(nodes).sort((a, b) => +a - +b)){ const r = evalNode(id); const v = r && r[0];
-      out.set(id, v == null ? null : typeof v === 'number' ? asImage(v) : asImage(v)); }
+      // (a curve previews as its graph: a line on dark, the way a curve editor shows it)
+      out.set(id, v == null ? null : isCurve(v) ? curvePlot(v, ww, wh) : asImage(v)); }
     return out;
   }
   const res = evalNode(String(surface.id));
@@ -13605,7 +13829,8 @@ function athanorStarter(name){
     ((data[a].outputs['output_' + o] ||= { connections: [] }).connections).push({ node: String(b), output: 'input_' + j });
   }
   layoutAthanor(data);
-  return { v: ATHANOR_VERSION, drawflow: { Home: { data } } };
+  // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
+  return { v: ATHANOR_STARTERS[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
 }
 /**
  * Lays a graph out to read left to right: each node in the column of its
@@ -28136,7 +28361,7 @@ const STEP_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', de
 const STEP_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const STEP_BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'darken', 'lighten', 'color-dodge', 'color-burn',
   'difference', 'exclusion', 'vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
-const STEP_CATEGORIES = ['Inputs', 'Noise', 'Marks', 'Textures', 'Shape', 'Combine', 'Light & Color', 'Output'];
+const STEP_CATEGORIES = ['Inputs', 'Noise', 'Marks', 'Textures', 'Shape', 'Curves', 'Combine', 'Light & Color', 'Output'];
 
 // ---- blends, as the canvas and the GPU do them (per channel, 0..1) ----
 const STEP_SOFT = (b, s) => s <= 0.5 ? b - (1 - 2*s)*b*(1 - b) : b + (2*s - 1)*((b <= 0.25 ? ((16*b - 12)*b + 4)*b : Math.sqrt(b)) - b);
@@ -28174,7 +28399,7 @@ const STEP_PARTS = {
   threshold:{ cat: 'Shape', label: 'Threshold', ins: ['field'], outs: ['mask'], params: [STEP_R('at', 'At', 50), STEP_R('soft', 'Softness', 10)] },
   blur:     { cat: 'Shape', label: 'Blur', ins: ['field'], outs: ['field'], params: [STEP_R('radius', 'Radius', 8, 0, 100)] },
   warp:     { cat: 'Shape', label: 'Warp', ins: ['field', 'by'], outs: ['field'], params: [STEP_R('amount', 'Amount', 20)] },
-  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract'])] },
+  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine'])] },
   mix:      { cat: 'Combine', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [STEP_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
   posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16)] },
@@ -28186,7 +28411,11 @@ const STEP_PARTS = {
   ramp:     { cat: 'Light & Color', label: 'Color Ramp', ins: ['field', 'color a', 'color b'], outs: ['image'], params: [STEP_R('mid', 'Middle', 50)] },
   blend:    { cat: 'Combine', label: 'Blend', ins: ['base', 'layer', 'mask'], outs: ['image'], params: [STEP_SEL('mode', 'Mode', STEP_BLENDS), STEP_R('opacity', 'Opacity', 100)] },
   // the end
-  surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour'])] },
+  surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour']),
+              // Filter Forge's SIZE: every distance in the graph is measured against it, so one slider scales the whole surface
+              STEP_R('size', 'Size', 100, 25, 400)] },
+  // a NOTE on the graph (Filter Forge's Note component): words for whoever opens it next; it makes nothing
+  note:     { cat: 'Inputs', label: 'Note', ins: [], outs: [], params: [['text', 'Note', 'text', 'A note to the next reader']] },
   // newer parts (the chains' own)
   colour:   { cat: 'Inputs', label: 'Color', ins: [], outs: ['colour'], params: [['hex', 'Color', 'text', '#808080']] },
   // the page's own two accent colors (Cartomancy's first two suits)
@@ -28211,6 +28440,23 @@ const STEP_PARTS = {
   merge:    { cat: 'Combine', label: 'Merge Channels', ins: ['red', 'green', 'blue'], outs: ['picture'], params: [] },
   switch:   { cat: 'Combine', label: 'Switch', ins: ['a', 'b', 'choose'], outs: ['result'], params: [STEP_R('at', 'Switch At', 50)] },
   hsv:      { cat: 'Light & Color', label: 'Hue & Saturation', ins: ['picture'], outs: ['picture'], params: [STEP_R('hue', 'Hue Turn', 0, 0, 360), STEP_R('sat', 'Saturation', 100, 0, 200), STEP_R('val', 'Brightness', 100, 0, 200)] },
+  // CURVES (Filter Forge's third kind of part): a shape from 0 to 1 that other parts read through — a tone curve,
+  // a gradient's profile, a bevel. Made by Curve, changed by Curve Ops, used by Tone Curve and Profile Gradient.
+  curve:    { cat: 'Curves', label: 'Curve', ins: [], outs: ['curve'], params: [STEP_SEL('shape', 'Shape', ['linear', 'bias', 'gain', 'gamma', 'gaussian', 'impulse', 'stairs', 'step', 'wave', 'arc', 'noise']),
+              STEP_R('amount', 'Bend', 50), STEP_R('count', 'Count', 4, 1, 24), STEP_R('low', 'Lowest', 0), STEP_R('high', 'Highest', 100)] },
+  curveops: { cat: 'Curves', label: 'Curve Ops', ins: ['curve', 'curve b'], outs: ['curve'], params: [STEP_SEL('op', 'Operation', ['frequency', 'phase', 'repeat', 'reverse', 'invert', 'amplitude', 'blend', 'multiply', 'max', 'min']),
+              STEP_R('amount', 'Amount', 50), STEP_R('count', 'Times', 2, 1, 16)] },
+  tonecurve:{ cat: 'Curves', label: 'Tone Curve', ins: ['picture', 'curve'], outs: ['picture'], params: [STEP_R('mix', 'Strength', 100)] },
+  profile:  { cat: 'Curves', label: 'Profile Gradient', ins: ['curve', 'along'], outs: ['field'], params: [STEP_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular', 'along a map']), STEP_R('angle', 'Angle', 90, 0, 360), STEP_R('repeat', 'Repeat', 1, 1, 12)] },
+  // FILTER FORGE'S PRIMITIVES that were missing (Adjustments, Processing, Transform, Noise, Patterns)
+  bricon:   { cat: 'Light & Color', label: 'Brightness & Contrast', ins: ['picture'], outs: ['picture'], params: [STEP_R('bright', 'Brightness', 0, -100, 100), STEP_R('contrast', 'Contrast', 0, -100, 100)] },
+  highpass: { cat: 'Shape', label: 'High Pass', ins: ['field'], outs: ['field'], params: [STEP_R('radius', 'Radius', 10, 1, 100), STEP_R('gain', 'Gain', 50)] },
+  sharpen:  { cat: 'Shape', label: 'Sharpen', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 50, 0, 200), STEP_R('radius', 'Radius', 4, 1, 50)] },
+  motionblur:{ cat: 'Shape', label: 'Motion Blur', ins: ['field'], outs: ['field'], params: [STEP_R('length', 'Length', 20, 0, 100), STEP_R('angle', 'Angle', 0, 0, 360)] },
+  offset:   { cat: 'Shape', label: 'Offset', ins: ['field'], outs: ['field'], params: [STEP_R('x', 'Across', 0, -100, 100), STEP_R('y', 'Down', 0, -100, 100)] },
+  perlin:   { cat: 'Noise', label: 'Perlin Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('details', 'Details', 4, 1, 8), STEP_R('rough', 'Roughness', 50), STEP_R('contrast', 'Contrast', 30)] },
+  bricks:   { cat: 'Noise', label: 'Bricks', ins: ['bevel'], outs: ['bricks', 'mortar', 'each brick'], params: [STEP_R('rows', 'Rows', 12, 2, 60), STEP_R('ratio', 'Length', 200, 100, 400),
+              STEP_R('mortar', 'Mortar', 12, 0, 40), STEP_R('stagger', 'Stagger', 50), STEP_R('bevel', 'Bevel', 30), STEP_R('vary', 'Variety', 30)] },
   // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
   // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
   poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas'],
@@ -28222,6 +28468,12 @@ const STEP_PARTS = {
   mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
   chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
 };
+/** A curve's value at t (0..1), between its samples ({ curve: Float32Array(257) }). */
+function curveAt(c, t){ const s = c.curve, n = s.length - 1, x = Math.max(0, Math.min(1, t))*n, i = Math.min(n - 1, Math.floor(x)), f = x - i; return s[i] + (s[i + 1] - s[i])*f; }
+const stepCurve = fn => { const s = new Float32Array(257); for(let i = 0; i <= 256; i++) s[i] = Math.max(-1, Math.min(2, fn(i/256))); return { curve: s }; };
+// Perlin's bias and gain (Perlin & Hoffert 1989), the curves Filter Forge names after them
+const stepBias = (t, b) => { b = Math.max(0.001, Math.min(0.999, b)); return Math.pow(Math.max(0, t), Math.log(b)/Math.log(0.5)); };
+const stepGain = (t, g) => t < 0.5 ? stepBias(2*t, 1 - g)/2 : 1 - stepBias(2 - 2*t, 1 - g)/2;
 // The poem's runs, as the page measured them: "x0,y0,x1,y1,line,stanza;…" in fractions of the page
 function poemRuns(text){
   const out = [];
@@ -28299,6 +28551,18 @@ const STEP_DOCS = {
   transform: 'Scales and turns a gray map, repeating it past its edges.',
   edges: 'Finds the edges in a gray map: where it changes fastest.',
   kaleidoscope: 'Folds a gray map into mirrored wedges around the center.',
+  note: 'A note on the graph: write what a part of it does, or why, for whoever opens it next. It makes nothing and takes no wires.',
+  bricon: 'Makes a picture brighter or darker, and its light and dark further apart (more contrast) or closer together (less). Both can take a gray map, so a picture can be brighter in some places than others.',
+  highpass: 'Keeps only the fine detail of a gray map, around a middle gray: what is left when its blur is taken away. Try: High Pass into a Light Engine\'s heights for crisp grain.',
+  sharpen: 'Makes the edges in a gray map crisper, by pushing each value away from the blur around it.',
+  motionblur: 'Smears a gray map along one direction, as a moving camera would. Try: Motion Blur on noise for rain or brushed metal.',
+  offset: 'Slides a gray map across and down; what slides off one side comes back on the other.',
+  perlin: 'Makes Perlin noise: smooth hills and valleys, finer Details laid over coarser, each weaker by the Roughness. Contrast pushes it toward black and white.',
+  bricks: 'Makes a wall of bricks: a height for each brick (beveled at its edges, the bevel\'s shape a curve if one is wired in), the mortar between them, and a different gray for each brick. Try: a Stairs curve into Bevel for stepped edges.',
+  curve: 'Makes a curve: a shape from 0 to 1, such as a smooth bias, a gain, a bell (gaussian), a peak (impulse), stairs, a step, a wave or a wobble (noise). Curves feed Tone Curve and Profile Gradient. Try: Stairs into a Tone Curve to posterize softly.',
+  curveops: 'Changes a curve: repeats it (Frequency, Repeat), shifts it (Phase), flips it (Reverse, Invert), squeezes it (Amplitude), or combines it with a second curve (Blend, Multiply, Max, Min).',
+  tonecurve: 'Runs every value of a gray map or picture through a curve, like the Curves adjustment in a photo editor. Try: a Wave curve for bands of light and dark.',
+  profile: 'Makes a gradient whose shape is a curve: across the page, around the middle, toward the edges, or along any gray map. Try: an Impulse curve, radial, for a raised ring.',
   poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray. Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
   grow: 'Grows the bright parts of a gray map outward (Amount above 50) or shrinks them (below 50), by the Radius. Try: shrink a mask to thin its edges, grow it to merge small spots.',
   pixelate: 'Breaks a gray map into flat cells — squares, bricks or diamonds — each the average of what it covers. Try: a big Cell Size over noise for a mosaic.',
@@ -28448,36 +28712,42 @@ const STEP_RUN = {
       { period: sz*6 + unit*0.012, amp: sz*2 + unit*0.004, width: sz, color: '#fff', side: 1 });
     return [lum(readCanvas(c))];
   },
-  levels(E, n){ const { N, input, num, asField } = E;
+  levels(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1), 0.5); if(!f) return null;
-    const lo = num(n, 'lo', 0)/100, hi = Math.max(lo + 0.01, num(n, 'hi', 100)/100), g = Math.pow(2, (num(n, 'gamma', 50) - 50)/25), o = new Float32Array(N);
-    for(let i = 0; i < N; i++) o[i] = Math.pow(Math.max(0, Math.min(1, (f[i] - lo)/(hi - lo))), g);
+    const LO = map(n, 'lo', 0), HI = map(n, 'hi', 100), GA = map(n, 'gamma', 50), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const lo = at(LO, i)/100, hi = Math.max(lo + 0.01, at(HI, i)/100), g = Math.pow(2, (at(GA, i) - 50)/25);
+      o[i] = Math.pow(Math.max(0, Math.min(1, (f[i] - lo)/(hi - lo))), g); }
     return [o];
   },
-  threshold(E, n){ const { N, input, num, asField } = E;
+  threshold(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1), 0.5); if(!f) return null;
-    const at = num(n, 'at', 50)/100, sf = Math.max(0.002, num(n, 'soft', 10)/200), o = new Float32Array(N);
-    for(let i = 0; i < N; i++){ const t = Math.max(0, Math.min(1, (f[i] - at + sf)/(2*sf))); o[i] = t*t*(3 - 2*t); }
+    const AT = map(n, 'at', 50), SF = map(n, 'soft', 10), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const a = at(AT, i)/100, sf = Math.max(0.002, at(SF, i)/200), t = Math.max(0, Math.min(1, (f[i] - a + sf)/(2*sf))); o[i] = t*t*(3 - 2*t); }
     return [o];
   },
   blur(E, n){ const { unit, input, num, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null; return [boxBlur(f, num(n, 'radius', 8)*unit/1536*1.2)];
   },
   warp(E, n){ const { ww, wh, N, unit, input, num, asField } = E;
     const f = asField(input(n, 1)), by = asField(input(n, 2)); if(!f) return null; if(!by) return [f];
-    const A = num(n, 'amount', 20)/100*unit*0.08, o = new Float32Array(N);
-    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, a = by[q]*Math.PI*2;
+    const AM = E.map(n, 'amount', 20), o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, a = by[q]*Math.PI*2, A = E.at(AM, q)/100*unit*0.08;
       const sx = Math.max(0, Math.min(ww - 1, Math.round(x + Math.cos(a)*A))), sy = Math.max(0, Math.min(wh - 1, Math.round(y + Math.sin(a)*A))); o[q] = f[sy*ww + sx]; }
     return [o];
   },
   math(E, n){ const { N, input, P, flat, asField } = E;
     const a = asField(input(n, 1), 0), b = asField(input(n, 2), 0); if(!a && !b) return null;
     const A = a || flat(0), B = b || flat(0), op = P(n, 'op', 'add'), o = new Float32Array(N);
-    const f = { add: (x, y) => x + y, multiply: (x, y) => x*y, max: Math.max, min: Math.min, difference: (x, y) => Math.abs(x - y), subtract: (x, y) => x - y }[op] || ((x, y) => x + y);
+    const f = { add: (x, y) => x + y, multiply: (x, y) => x*y, max: Math.max, min: Math.min, difference: (x, y) => Math.abs(x - y), subtract: (x, y) => x - y,
+      // Filter Forge's RGB Math, the useful few: b as a divisor, an exponent (0..1 → 0..4), a mean, a screen, a remainder, a wave
+      divide: (x, y) => y > 1e-4 ? x/y : 1, power: (x, y) => Math.pow(Math.max(0, x), (b ? y : 0.25)*4), average: (x, y) => (x + y)/2,
+      screen: (x, y) => 1 - (1 - x)*(1 - y), modulo: (x, y) => y > 1e-4 ? (x % y)/y : 0, sine: (x, y) => 0.5 + 0.5*Math.sin((x + y)*Math.PI*2) }[op] || ((x, y) => x + y);
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f(A[i], B[i])));
     return [o];
   },
-  mix(E, n){ const { N, input, num, asField, asImage } = E;
-    const ia = input(n, 1), ib = input(n, 2), ta = input(n, 3), tp = num(n, 't', 50)/100;
+  mix(E, n){ const { N, input, num, map, asField, asImage } = E;
+    const ia = input(n, 1), ib = input(n, 2), ta0 = input(n, 3), tm = map(n, 't', 50), tp = typeof tm === 'number' ? tm/100 : num(n, 't', 50)/100;
+    // (a map on ⚙ Amount is the amount point by point, as a gray map on its amount input is)
+    const ta = ta0 == null && typeof tm !== 'number' ? tm.map(v => v/100) : ta0;
     if(ia == null && ib == null) return null;
     // two colours by one amount: one colour (never a page of them)
     if(Array.isArray(ia) && Array.isArray(ib) && (ta == null || typeof ta === 'number')){ const k = ta == null ? tp : ta; return [[0, 1, 2].map(c => ia[c] + (ib[c] - ia[c])*k)]; }
@@ -28490,10 +28760,10 @@ const STEP_RUN = {
     if(isImg(v)){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }; for(let i = 0; i < N; i++){ o.r[i] = 1 - v.r[i]; o.g[i] = 1 - v.g[i]; o.b[i] = 1 - v.b[i]; } return [o]; }
     const f = asField(v), o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = 1 - f[i]; return [o];
   },
-  posterize(E, n){ const { N, input, num, asField } = E;
+  posterize(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
-    const k = Math.max(2, Math.min(16, Math.round(num(n, 'steps', 5)))), o = new Float32Array(N);
-    for(let i = 0; i < N; i++) o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1);
+    const K = map(n, 'steps', 5), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); }
     return [o];
   },
   transform(E, n){ const { ww, wh, N, input, num, asField } = E;
@@ -28545,9 +28815,9 @@ const STEP_RUN = {
   blend(E, n){ const { N, input, num, P, asField, asImage } = E;
     const base = asImage(input(n, 1) ?? 0.5), lay = input(n, 2), m = asField(input(n, 3));
     if(lay == null) return [base];
-    const L = asImage(lay), fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, op = num(n, 'opacity', 100)/100;
+    const L = asImage(lay), fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
     const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
-    for(let i = 0; i < N; i++){ const k = op*(m ? m[i] : 1);
+    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1);
       for(const c of ['r', 'g', 'b']){ const b0 = base[c][i]; o[c][i] = b0 + (Math.max(0, Math.min(1, fn(b0, L[c][i]))) - b0)*k; } }
     return [o];
   },
@@ -28678,15 +28948,16 @@ Object.assign(STEP_RUN, {
     return [o];
   },
 });
-Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
+Object.assign(STEP_COST, { note: () => 0, bricon: () => 1, highpass: () => 1.5, sharpen: () => 1.5, motionblur: () => 3, offset: () => 0.5, perlin: () => 2.5, bricks: () => 1, curve: () => 0.1, curveops: () => 0.1, tonecurve: () => 1, profile: () => 1, kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
 Object.assign(STEP_RUN, {
   number(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'value', 50)))/100]; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
   random(E, n){ const lo = E.num(n, 'lo', 0), hi = E.num(n, 'hi', 100); return [(lo + (hi - lo)*Math.random())/100]; },
-  maprange(E, n){ const { N, input, num, asField } = E;
+  maprange(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
-    const a = num(n, 'inLo', 0)/100, b = num(n, 'inHi', 100)/100, c = num(n, 'outLo', 0)/100, d = num(n, 'outHi', 100)/100, k = Math.abs(b - a) < 1e-6 ? 0 : 1/(b - a), o = new Float32Array(N);
-    for(let i = 0; i < N; i++){ const t = Math.max(0, Math.min(1, (f[i] - a)*k)); o[i] = c + (d - c)*t; }
+    const A = map(n, 'inLo', 0), B = map(n, 'inHi', 100), C = map(n, 'outLo', 0), D = map(n, 'outHi', 100), o = new Float32Array(N);
+    for(let i = 0; i < N; i++){ const a = at(A, i)/100, b = at(B, i)/100, c = at(C, i)/100, d = at(D, i)/100, k = Math.abs(b - a) < 1e-6 ? 0 : 1/(b - a);
+      const t = Math.max(0, Math.min(1, (f[i] - a)*k)); o[i] = c + (d - c)*t; }
     return [o]; },
   shape(E, n){ const { ww, wh, unit, P, num, field } = E;
     const form = String(P(n, 'form', 'circle')), R = num(n, 'size', 60)/200, sf = Math.max(0.002, num(n, 'soft', 10)/200), cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit;
@@ -28709,6 +28980,111 @@ Object.assign(STEP_RUN, {
     const v = typeof c === 'number' ? c : c == null ? 0 : (() => { const f = asField(c); let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; })();
     const pick = v >= at ? input(n, 2) : input(n, 1);
     return pick == null ? null : [pick]; },
+  note(){ return []; },
+  bricon(E, n){ const { N, input, map, at, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+    const BR = map(n, 'bright', 0), CO = map(n, 'contrast', 0), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+    for(let i = 0; i < N; i++){ const b = at(BR, i)/100, c = at(CO, i)/100, k = c >= 0 ? 1/Math.max(0.01, 1 - c) : 1 + c;
+      for(const ch of ['r', 'g', 'b']) o[ch][i] = Math.max(0, Math.min(1, (im[ch][i] - 0.5)*k + 0.5 + b)); }
+    return [o];
+  },
+  highpass(E, n){ const { N, unit, input, num, map, at, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const lo = boxBlur(f, num(n, 'radius', 10)*unit/1536*1.2), G = map(n, 'gain', 50), o = new Float32Array(N);
+    for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, 0.5 + (f[i] - lo[i])*(1 + at(G, i)/10)));
+    return [o];
+  },
+  sharpen(E, n){ const { N, unit, input, num, map, at, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const lo = boxBlur(f, num(n, 'radius', 4)*unit/1536*1.2), A = map(n, 'amount', 50), o = new Float32Array(N);
+    for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f[i] + (f[i] - lo[i])*at(A, i)/50));
+    return [o];
+  },
+  motionblur(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const L = num(n, 'length', 20)/100*unit*0.15, an = num(n, 'angle', 0)*Math.PI/180; if(L < 0.5) return [f];
+    const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ let t = 0;
+      for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
+      o[y*ww + x] = t/S; }
+    return [o];
+  },
+  offset(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const ox = Math.round(num(n, 'x', 0)/100*ww), oy = Math.round(num(n, 'y', 0)/100*wh), o = new Float32Array(N);
+    // wrapped, as Filter Forge's Offset: what leaves one side comes back on the other
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) o[y*ww + x] = f[(((y - oy) % wh) + wh) % wh*ww + (((x - ox) % ww) + ww) % ww];
+    return [o];
+  },
+  perlin(E, n){ const { unit, input, num, map, at, field } = E;
+    // gradient noise (Perlin 2002, improved): a permutation from the node's own stream, octaves by Details, each Roughness weaker
+    const perm = new Uint8Array(512), p = Array.from({ length: 256 }, (_, i) => i);
+    for(let i = 255; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+    for(let i = 0; i < 512; i++) perm[i] = p[i & 255];
+    const s0 = input(n, 1), off = typeof s0 === 'number' ? s0*311 : 0;
+    const fade = t => t*t*t*(t*(t*6 - 15) + 10), lerp = (a, b, t) => a + (b - a)*t;
+    const grad = (h, x, y) => { const g = h & 7, u = g < 4 ? x : y, v = g < 4 ? y : x; return ((g & 1) ? -u : u) + ((g & 2) ? -2*v : 2*v); };
+    const noise = (x, y) => { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y); const u = fade(x), v = fade(y);
+      const a = perm[X] + Y, b = perm[X + 1] + Y;
+      return lerp(lerp(grad(perm[a], x, y), grad(perm[b], x - 1, y), u), lerp(grad(perm[a + 1], x, y - 1), grad(perm[b + 1], x - 1, y - 1), u), v)/2.2; };
+    const cells = Math.max(1, num(n, 'scale', 40))/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
+    let q = -1;
+    return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+      for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
+      const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+  },
+  bricks(E, n){ const { ww, wh, N, unit, input, num, isCurve } = E;
+    const rows = Math.max(2, Math.round(num(n, 'rows', 12))), bh = wh/rows, bw = bh*num(n, 'ratio', 200)/100, mo = num(n, 'mortar', 12)/100*bh*0.5;
+    const stag = num(n, 'stagger', 50)/100, bev = Math.max(1e-3, num(n, 'bevel', 30)/100*bh*0.5), vary = num(n, 'vary', 30)/100, cv = input(n, 1);
+    const hash = (i, j) => { let h = Math.imul(i*374761393 + j*668265263, 1274126177) ^ 0x5bd1e995; h = Math.imul(h ^ (h >>> 13), 1103515245); return ((h ^ (h >>> 16)) >>> 0)/4294967296; };
+    const B = new Float32Array(N), M = new Float32Array(N), I = new Float32Array(N);
+    for(let y = 0; y < wh; y++){ const row = Math.floor(y/bh), sh = (row % 2)*stag*bw, ly = y - row*bh;
+      for(let x = 0; x < ww; x++){ const col = Math.floor((x + sh)/bw), lx = x + sh - col*bw, q = y*ww + x;
+        // the distance in from the brick's nearest edge, past the mortar; the bevel's profile is the curve, if one comes in
+        const d = Math.min(lx, bw - lx, ly, bh - ly) - mo;
+        if(d <= 0){ M[q] = 1; continue; }
+        const t = Math.min(1, d/bev), h = isCurve(cv) ? curveAt(cv, t) : Math.sin(t*Math.PI/2), id = hash(col, row);
+        B[q] = h*(1 - vary + vary*id); I[q] = id; } }
+    return [B, M, I];
+  },
+  curve(E, n){ const { num, P } = E;
+    const shape = P(n, 'shape', 'linear'), a = num(n, 'amount', 50)/100, k = Math.max(1, Math.round(num(n, 'count', 4))), lo = num(n, 'low', 0)/100, hi = num(n, 'high', 100)/100;
+    // the noise curve's knots come from the node's own random stream (seed + id), the same until the seed changes
+    const knots = shape === 'noise' ? Array.from({ length: k + 2 }, () => Math.random()) : null;
+    const f = {
+      linear: t => t, bias: t => stepBias(t, a), gain: t => stepGain(t, a), gamma: t => Math.pow(t, Math.pow(2, (0.5 - a)*4)),
+      gaussian: t => Math.exp(-((t - 0.5)**2)/(2*(0.02 + a*0.3)**2)),
+      impulse: t => { const c = Math.max(0.001, Math.min(0.999, a)); return t < c ? t/c : (1 - t)/(1 - c); },
+      stairs: t => Math.min(k, Math.floor(t*(k + 1)))/k, step: t => t >= a ? 1 : 0,
+      wave: t => 0.5 - 0.5*Math.cos(t*k*Math.PI*2), arc: t => Math.sqrt(Math.max(0, 1 - (1 - t)**2)),
+      noise: t => { const x = t*(k + 1), i = Math.min(k, Math.floor(x)), u = x - i, w = u*u*(3 - 2*u); return knots[i] + (knots[i + 1] - knots[i])*w; },
+    }[shape] || (t => t);
+    return [stepCurve(t => lo + (hi - lo)*f(t))];
+  },
+  curveops(E, n){ const { input, num, P, isCurve } = E;
+    const c = input(n, 1), b = input(n, 2); if(!isCurve(c)) return null;
+    const op = P(n, 'op', 'frequency'), a = num(n, 'amount', 50)/100, k = Math.max(1, Math.round(num(n, 'count', 2))), cb = isCurve(b) ? b : null;
+    const frac = x => (x >= 1 && x === Math.floor(x)) ? 1 : x - Math.floor(x);   // (the last point stays the curve's end)
+    const g = { frequency: t => curveAt(c, frac(t*k)), phase: t => curveAt(c, (t + a) % 1),
+      repeat: t => { const x = t*k, i = Math.floor(x), u = x - i; return curveAt(c, i % 2 ? 1 - u : u); },
+      reverse: t => curveAt(c, 1 - t), invert: t => 1 - curveAt(c, t), amplitude: t => 0.5 + (curveAt(c, t) - 0.5)*a*2,
+      blend: t => cb ? curveAt(c, t) + (curveAt(cb, t) - curveAt(c, t))*a : curveAt(c, t), multiply: t => curveAt(c, t)*(cb ? curveAt(cb, t) : 1),
+      max: t => Math.max(curveAt(c, t), cb ? curveAt(cb, t) : -Infinity), min: t => Math.min(curveAt(c, t), cb ? curveAt(cb, t) : Infinity) }[op] || (t => curveAt(c, t));
+    return [stepCurve(g)];
+  },
+  tonecurve(E, n){ const { N, input, map, at, isCurve, isImg, asField } = E;
+    const v = input(n, 1), c = input(n, 2); if(v == null) return null; if(!isCurve(c)) return [v];
+    const MX = map(n, 'mix', 100), tone = (x, i) => { const m = at(MX, i)/100; return x + (curveAt(c, x) - x)*m; };
+    if(isImg(v)){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }; for(let i = 0; i < N; i++){ o.r[i] = tone(v.r[i], i); o.g[i] = tone(v.g[i], i); o.b[i] = tone(v.b[i], i); } return [o]; }
+    const f = asField(v), o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = tone(f[i], i); return [o];
+  },
+  profile(E, n){ const { ww, wh, N, input, num, P, isCurve, asField } = E;
+    const c = input(n, 1), along = asField(input(n, 2)), shape = P(n, 'shape', 'linear'), an = num(n, 'angle', 90)*Math.PI/180, rep = Math.max(1, Math.round(num(n, 'repeat', 1)));
+    const ca = Math.cos(an), sa = Math.sin(an), o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      const u = x/ww - 0.5, v = y/wh - 0.5, q = y*ww + x;
+      let t = shape === 'radial' ? Math.min(1, Math.hypot(u, v)/0.5) : shape === 'rectangular' ? Math.min(1, Math.max(Math.abs(u), Math.abs(v))/0.5)
+        : shape === 'along a map' ? (along ? along[q] : 0) : Math.max(0, Math.min(1, 0.5 + (u*ca + v*sa)/(Math.abs(ca) + Math.abs(sa))));
+      t = rep > 1 ? (t*rep) % 1 : t;
+      o[q] = isCurve(c) ? curveAt(c, t) : t;
+    }
+    return [o];
+  },
   poem(E, n){ const { ctx, ww, wh, N, num, boxBlur } = E;
     const runs = poemRuns(ctx.text);
     if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N)];
@@ -28774,19 +29150,19 @@ Object.assign(STEP_RUN, {
     return [o];
   },
   chroma(E, n){ const { ww, wh, N, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
-    const A = num(n, 'amount', 20)/100*unit*0.02, ang = num(n, 'angle', 0)*Math.PI/180, edge = num(n, 'edge', 0)/100;
+    const AM = E.map(n, 'amount', 20), ang = num(n, 'angle', 0)*Math.PI/180, edge = num(n, 'edge', 0)/100;
     const o = { r: new Float32Array(N), g: im.g.slice ? im.g.slice() : Float32Array.from(im.g), b: new Float32Array(N) };
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-      const q = y*ww + x, k = edge > 0 ? (1 - edge) + edge*Math.min(1, Math.hypot(x/ww - 0.5, y/wh - 0.5)/0.7071) : 1;
+      const q = y*ww + x, A = E.at(AM, q)/100*unit*0.02, k = edge > 0 ? (1 - edge) + edge*Math.min(1, Math.hypot(x/ww - 0.5, y/wh - 0.5)/0.7071) : 1;
       const dx = Math.cos(ang)*A*k, dy = Math.sin(ang)*A*k;
       const at = (ox, oy) => Math.min(wh - 1, Math.max(0, Math.round(y + oy)))*ww + Math.min(ww - 1, Math.max(0, Math.round(x + ox)));
       o.r[q] = im.r[at(dx, dy)]; o.b[q] = im.b[at(-dx, -dy)]; }
     return [o];
   },
-  hsv(E, n){ const { N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
-    const turn = num(n, 'hue', 0)/360, sat = num(n, 'sat', 100)/100, val = num(n, 'val', 100)/100;
+  hsv(E, n){ const { N, input, map, at, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+    const TU = map(n, 'hue', 0), SA = map(n, 'sat', 100), VA = map(n, 'val', 100);
     const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
-    for(let i = 0; i < N; i++){
+    for(let i = 0; i < N; i++){ const turn = at(TU, i)/360, sat = at(SA, i)/100, val = at(VA, i)/100;
       const r = im.r[i], g = im.g[i], b = im.b[i], mx = Math.max(r, g, b), mn = Math.min(r, g, b), dl = mx - mn;
       let h = 0; if(dl > 1e-6) h = mx === r ? ((g - b)/dl + 6) % 6 : mx === g ? (b - r)/dl + 2 : (r - g)/dl + 4; h = h/6 + turn; h -= Math.floor(h);
       const s = mx > 1e-6 ? Math.min(1, dl/mx*sat) : 0, v = Math.min(1, mx*val), k = n2 => { const t = (n2 + h*6) % 6; return v - v*s*Math.max(0, Math.min(t, 4 - t, 1)); };
@@ -28801,10 +29177,12 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  * colour), value (one number). The editor colours ports and wires by these;
  * the evaluator converts between them wherever a port asks (athanor.js).
  */
-const VALUE_TYPES = ['field', 'image', 'colour', 'value'];
+const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
   knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
-  split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
+  bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
+  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
@@ -28818,6 +29196,12 @@ const STEP_IO = {
 // can drive any of them — and a template shows its wiring instead of hiding it.
 const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 
+// REQUIRED INPUTS (Filter Forge): a part that has nothing to work on without its first input. The editor marks
+// the port while it is empty, and a step preview shows a warning pattern in its place, so the rest of the
+// part still shows what it does; the Surface itself never sees the stand-in (an old graph draws as it did).
+const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 'posterize', 'transform', 'edges', 'light', 'tint', 'ramp', 'kaleidoscope', 'polar',
+  'maprange', 'split', 'hsv', 'curveops', 'tonecurve', 'bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma',
+  'meniscus', 'pigment', 'contours', 'glaze', 'burn']);
 /** Every step: the part, its cost and what it does. */
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
@@ -28826,7 +29210,7 @@ const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, pa
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
-  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '',
+  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) ? [1] : [],
     dataIns: s.ins.length,
     ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
     inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),
@@ -29355,7 +29739,10 @@ const TEXTURE_CHAINS = {
  * node's result be kept between edits (below). A new graph is always the
  * newest version; one loaded keeps its own.
  */
-const ATHANOR_VERSION = 2;
+// v3 (Filter Forge's MAP INPUTS): a picture wired into a part's ⚙ setting sets it point by point, wherever
+// the part can use it so (E.map); v2 took the picture's average. The textures' own chains stay v2, so
+// they draw exactly as they did.
+const ATHANOR_VERSION = 3;
 function athanorVersion(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
   catch(e){ return 1; }
@@ -29382,16 +29769,27 @@ function athanorNodes(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return ((g.drawflow || {}).Home || {}).data || {}; }
   catch(e){ return {}; }
 }
-/** The sliders a graph offers: its Knob nodes, by slot (1–6). */
+/** The nodes whose work reaches the Surface (Filter Forge: a control that doesn't reach the Result isn't shown). */
+function athanorReach(graph){
+  const nodes = athanorNodes(graph), seen = new Set(), s = Object.values(nodes).find(n => n.name === 'surface');
+  const walk = id => { if(seen.has(id) || !nodes[id]) return; seen.add(id);
+    for(const inp of Object.values(nodes[id].inputs || {})) for(const c of inp.connections || []) walk(String(c.node)); };
+  if(s) walk(String(s.id));
+  return seen;
+}
+/** The sliders a graph offers: its Knob nodes, by slot (1–6) — those that reach the Surface by a wire, or whose
+ *  slot a part on the way binds ('@k3'); a Knob left unwired offers nothing (it would move nothing). */
 function athanorKnobs(graph){
-  const out = [];
-  for(const n of Object.values(athanorNodes(graph))){
+  const out = [], reach = athanorReach(graph), all = athanorNodes(graph);
+  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(m) boundSlots.add(+m[1]); }
+  for(const n of Object.values(all)){
     if(n.name !== 'knob') continue;
+    if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(6, parseInt((n.data || {}).slot, 10) || 1)))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
     if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
-  for(const n of Object.values(athanorNodes(graph))) for(const [k, v] of Object.entries(n.data || {})){
+  for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
     const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(!m) continue;
     const slot = +m[1]; if(out.find(q => q.slot === slot)) continue;
     const part = ((STEPS[n.name] || {}).params || []).find(q => q[0] === k);
@@ -29401,9 +29799,9 @@ function athanorKnobs(graph){
 }
 /** The hues a graph uses: its Hue nodes, by slot (1–2). */
 function athanorHues(graph){
-  const out = [];
+  const out = [], reach = athanorReach(graph);
   for(const n of Object.values(athanorNodes(graph))){
-    if(n.name !== 'hue') continue;
+    if(n.name !== 'hue' || !reach.has(String(n.id))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
     if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
   }
@@ -29452,12 +29850,25 @@ function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanor
 function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }
 const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
+/** A curve drawn as its graph (the step previews): a bright line over a faint grid on dark. */
+function curvePlot(c, ww, wh){
+  const N = ww*wh, f = new Float32Array(N).fill(0.08), lw = Math.max(1, Math.min(ww, wh)/40), pad = Math.min(ww, wh)*0.08;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const u = (x - pad)/(ww - 2*pad), v = 1 - (y - pad)/(wh - 2*pad), q = y*ww + x;
+    if(u < 0 || u > 1 || v < -0.02 || v > 1.02){ f[q] = 0.04; continue; }
+    if(Math.abs(u*4 - Math.round(u*4)) < 0.012 || Math.abs(v*4 - Math.round(v*4)) < 0.012) f[q] = 0.16;
+    const d = Math.abs(curveAt(c, u) - v)*(wh - 2*pad); if(d < lw) f[q] = Math.max(f[q], 1 - 0.5*d/lw);
+  }
+  return { r: f, g: f, b: f };
+}
 function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
-  const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null]);
+  const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
+  // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
+  const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, sizeK]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -29470,7 +29881,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const s = n.name + JSON.stringify(athanorWork(n.data)) + '[' + ins.join(';') + ']#' + id;
     sigs.set(id, s); return s;
   };
-  const N = ww*wh, unit = Math.min(ww, wh);
+  const N = ww*wh, unit = Math.min(ww, wh)*sizeK;
   const memo = new Map(), busy = new Set();
   const flat = v => new Float32Array(N).fill(v);
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
@@ -29478,9 +29889,13 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
   // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
   const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
+  // A CURVE (Filter Forge's curve components): a shape from 0 to 1, { curve: 257 samples }. Wired where a map
+  // is wanted it is laid across the page left to right; where a number is wanted, its average.
+  const isCurve = v => !!(v && typeof v === 'object' && v.curve instanceof Float32Array);
+  const curveField = c => { const f = new Float32Array(N); for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) f[y*ww + x] = curveAt(c, ww > 1 ? x/(ww - 1) : 0); return f; };
   const asField = (v, d = 0) => v == null ? null : typeof v === 'number' ? flat(v) : v instanceof Float32Array ? v
-    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : flat(d);
-  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v)
+    : isImg(v) ? lum(v) : isCv(v) ? lum(readCanvas(v)) : Array.isArray(v) ? flat(0.299*v[0] + 0.587*v[1] + 0.114*v[2]) : isCurve(v) ? curveField(v) : flat(d);
+  const asImage = v => v == null ? null : isImg(v) ? v : v instanceof Float32Array ? { r: v, g: v, b: v } : isCv(v) ? readCanvas(v) : isCurve(v) ? (f => ({ r: f, g: f, b: f }))(curveField(v))
     : Array.isArray(v) ? { r: flat(v[0]), g: flat(v[1]), b: flat(v[2]) } : typeof v === 'number' ? { r: flat(v), g: flat(v), b: flat(v) } : null;
   const asColour = (v, d) => Array.isArray(v) ? v : v == null ? d : d;
   const hexCol = hex => { const c = parseHex(hex || '#808080'); return [c.r/255, c.g/255, c.b/255]; };
@@ -29500,7 +29915,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const R = stepRange(n.name, k), port = paramPort(n.name, k);
     let v;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
-      const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : null;
+      const w = input(n, port), t = typeof w === 'number' ? w : w instanceof Float32Array ? mean(w) : Array.isArray(w) ? 0.299*w[0] + 0.587*w[1] + 0.114*w[2] : isImg(w) ? mean(lum(w)) : isCurve(w) ? mean(w.curve) : null;
       // a wired param sweeps its whole range, or the part of it set by hand ('~key': 'lo,hi')
       const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
       const W = own && R ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
@@ -29510,11 +29925,38 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     if(isNaN(v) || !isFinite(v)) return d;
     return R ? Math.max(R[0], Math.min(R[1], v)) : v;
   };
+  // Filter Forge's stand-in for missing data (its "!" in a red circle): red and pale stripes round a ring
+  let standInPic = null;
+  const standIn = () => standInPic || (standInPic = (() => { const r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N), cx = ww/2, cy = wh/2, R = Math.min(ww, wh)*0.3;
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, d = Math.abs(Math.hypot(x - cx, y - cy) - R) < R*0.12, st = ((x + y)/Math.max(4, Math.min(ww, wh)/10) | 0) % 2;
+      const on = d || (Math.abs(x - cx) < R*0.09 && y > cy - R*0.55 && y < cy + R*0.2) || (Math.hypot(x - cx, y - (cy + R*0.42)) < R*0.1);
+      r[q] = on ? 0.95 : st ? 0.62 : 0.32; g[q] = on ? 0.95 : st ? 0.16 : 0.08; b[q] = on ? 0.92 : st ? 0.2 : 0.1; }
+    return { r, g, b }; })());
   const mean = f => { let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; };
+  // A MAP INPUT (Filter Forge's parameter mapping): a setting with a gray map or a picture on its ⚙ port is
+  // a value per point, across its range (or its own '~key' part of it); otherwise the setting as num() reads it.
+  // Only in a v3 graph: before, a wired map was averaged, and an old graph must draw as it always did.
+  const map = (n, k, d) => {
+    const port = v3 ? paramPort(n.name, k) : 0;
+    if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
+      const w = input(n, port);
+      if(w instanceof Float32Array || isImg(w) || isCv(w)){
+        const f = asField(w), R = stepRange(n.name, k) || [0, 100];
+        const own = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(String(P(n, '~' + k, '')));
+        const W = own ? [Math.max(R[0], Math.min(R[1], +own[1])), Math.max(R[0], Math.min(R[1], +own[2]))] : R;
+        const o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = W[0] + (W[1] - W[0])*Math.max(0, Math.min(1, f[i]));
+        return o;
+      }
+    }
+    return num(n, k, d);
+  };
+  // a mapped setting at one point (a number, or one value of a map)
+  const at = (m, i) => typeof m === 'number' ? m : m[i];
   // the value arriving at a node's j-th input (1-based), or undefined
   const input = (n, j) => {
     const c = ((n.inputs || {})['input_' + j] || {}).connections || [];
-    if(!c.length) return undefined;
+    // an empty REQUIRED input, in the step previews only: a warning pattern stands in, so the part still shows its work
+    if(!c.length) return ctx.all && ((STEPS[n.name] || {}).required || []).includes(j) ? standIn() : undefined;
     const outs = evalNode(String(c[0].node)), k = parseInt(String(c[0].input).replace('output_', ''), 10) - 1;
     return outs ? outs[k] : undefined;
   };
@@ -29524,7 +29966,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig : null;
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v3' : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -29561,7 +30003,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // MARKS: strokes drawn on a canvas the grid's size, over a grey field (or a
   // flat grey), read back as a field; sizes in canonical pixels (px)
   const div = ctx.div > 0 ? ctx.div : 1, S = scaleNow();
-  const px = v => cpx(v)/div, carea = ww*wh*div*div/(S*S);
+  const px = v => cpx(v)/div*sizeK, carea = ww*wh*div*div/(S*S)/(sizeK*sizeK);
   const marks = (base, fill, draw) => {
     const c = document.createElement('canvas'); c.width = ww; c.height = wh;
     const x = c.getContext('2d', { willReadFrequently: true });
@@ -29574,7 +30016,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     for(let i = 0; i < N; i++) o[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
     return o;
   };
-  const E = { ww, wh, N, unit, ctx, deps, input, num, P, field, flat, asField, asImage, asColour, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
+  const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
   const RUN = n => { const step = STEPS[n.name]; if(!step) return null;
     // a canvas pass: a part that paints, paints; the Surface hands on what it is given
     if(ctx.canvas){ if(step.paint) return step.paint(E, n); if(n.name === 'surface') return [input(n, 1)]; }
@@ -29583,7 +30025,8 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     // every node's first output, as a picture (the step previews)
     const out = new Map();
     for(const id of Object.keys(nodes).sort((a, b) => +a - +b)){ const r = evalNode(id); const v = r && r[0];
-      out.set(id, v == null ? null : typeof v === 'number' ? asImage(v) : asImage(v)); }
+      // (a curve previews as its graph: a line on dark, the way a curve editor shows it)
+      out.set(id, v == null ? null : isCurve(v) ? curvePlot(v, ww, wh) : asImage(v)); }
     return out;
   }
   const res = evalNode(String(surface.id));
@@ -29650,7 +30093,8 @@ function athanorStarter(name){
     ((data[a].outputs['output_' + o] ||= { connections: [] }).connections).push({ node: String(b), output: 'input_' + j });
   }
   layoutAthanor(data);
-  return { v: ATHANOR_VERSION, drawflow: { Home: { data } } };
+  // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
+  return { v: ATHANOR_STARTERS[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
 }
 /**
  * Lays a graph out to read left to right: each node in the column of its
@@ -31385,7 +31829,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Sinope';
+const RELEASE = 'Jupiter–Hegemone';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-14';
 
@@ -32211,7 +32655,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-14 · 085bd6d";
+const STAMP = "2026-10-14 · 4999d0f";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -35491,7 +35935,7 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 // rebuilt as chains) — ports, params and category as the editor shows them
 const FORGE_BLENDS = STEP_BLENDS;
 const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
-  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts }]));
+  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [] }]));
 const FORGE_CATEGORIES = STEP_CATEGORIES;
 /**
  * COLOUR CARRIES MEANING in the grid, whatever the app's theme: each part's
@@ -35500,12 +35944,12 @@ const FORGE_CATEGORIES = STEP_CATEGORIES;
  * picture, one colour, one number. A ⚙ port (a param taking a wire) is a
  * small diamond in the number's colour.
  */
-const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA' };
-const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number' };
+const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA', curve: '#93D98A' };
+const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number', curve: 'a curve' };
 /** A PART'S COLOR is the kind of thing it makes (its first output's type), the same color its
  *  output dots and wires wear (Ruby: node, wire and connector colors as data types). The Surface keeps its own. */
 const forgePartColour = N => !N ? '#999' : N.cat === 'Output' ? FORGE_CAT_COLOURS.Output : `var(--t-${(N.outTypes && N.outTypes[0]) || 'field'})`;
-const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
+const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Curves': '#93D98A', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
 /** What each category holds, in a line (the parts list and the Help). */
 const FORGE_CAT_DOCS = {
   'Inputs': 'Values from the page: its sliders, hues, accents, light dial and seed; and numbers you set or roll.',
@@ -35513,6 +35957,7 @@ const FORGE_CAT_DOCS = {
   'Marks': 'Parts that draw strokes and objects over what comes in: rain, hatching, flakes, cards.',
   'Textures': 'Whole techniques taken from the app\'s textures: a weave, a table, a sky, any texture from the menu.',
   'Shape': 'Parts that change a gray map: its levels, blur, folds, warps.',
+  'Curves': 'Parts that make and change curves — shapes from 0 to 1 — and the parts that read a picture through one.',
   'Combine': 'Parts that put two or more things together, or take a picture apart.',
   'Light & Color': 'Parts that color a gray map, or light it as if it had height.',
   'Output': 'The Surface: what reaches it is the texture.',
@@ -35524,10 +35969,11 @@ const FORGE_CAT_DOCS = {
  * written mark (marks), Vitrum a stored technique and record (whole
  * textures), Fire conversion and transfer (shaping), Quintessence light and
  * shimmer (light and color), Contract a bond (combining), Creation what is
- * made (the output).
+ * made (the output), and Life (ᘓ), a rune of the Balance tier: a curve weighs
+ * light against dark (curves).
  */
-const FORGE_CAT_GLYPHS = { 'Inputs': '🝆', 'Noise': '🝢', 'Marks': '𝀶', 'Textures': '⎐', 'Shape': '🜂', 'Combine': 'ᛯ', 'Light & Color': '🜚', 'Output': '🜉' };
-const FORGE_CAT_NAMES = { 'Inputs': 'Page Inputs', 'Noise': 'Noise & Pattern', 'Marks': 'Drawn Marks', 'Textures': 'Whole Textures', 'Shape': 'Shape & Transform', 'Combine': 'Combine & Mask', 'Light & Color': 'Light & Color', 'Output': 'Output' };
+const FORGE_CAT_GLYPHS = { 'Inputs': '🝆', 'Noise': '🝢', 'Marks': '𝀶', 'Textures': '⎐', 'Shape': '🜂', 'Curves': 'ᘓ', 'Combine': 'ᛯ', 'Light & Color': '🜚', 'Output': '🜉' };
+const FORGE_CAT_NAMES = { 'Inputs': 'Page Inputs', 'Noise': 'Noise & Pattern', 'Marks': 'Drawn Marks', 'Textures': 'Whole Textures', 'Shape': 'Shape & Transform', 'Curves': 'Curves', 'Combine': 'Combine & Mask', 'Light & Color': 'Light & Color', 'Output': 'Output' };
 const forgeCatName = cat => FORGE_CAT_NAMES[cat] || cat;
 const forgeCatClass = cat => 'forge-' + cat.toLowerCase().replace(/[^a-z]+/g, '-');
 
@@ -35573,7 +36019,8 @@ function forgeHelpHtml(){
     field: 'a gray picture: every point has a value from black (0) to white (1). Noise, masks and heights travel this way.',
     image: 'a colored picture: every point has a red, a green and a blue.',
     colour: 'one color for the whole page.',
-    value: 'one number from 0 to 1, like a slider\'s position.' }[t]}</li>`).join('');
+    value: 'one number from 0 to 1, like a slider\'s position.',
+    curve: 'a shape from 0 to 1 that another part reads through: a tone curve, a gradient\'s profile. Wired where a gray map goes, it is laid across the page left to right.' }[t]}</li>`).join('');
   const parts = FORGE_CATEGORIES.map(cat => `<h4><span class="forge-cat-glyph" style="color:${FORGE_CAT_COLOURS[cat]}">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</h4><p class="fd-catdoc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p><dl>`
     + Object.values(FORGE_NODES).filter(n => n.cat === cat).sort((a, b) => a.label.localeCompare(b.label)).map(n => `<dt>${forgeEsc(n.label)}</dt><dd>${forgeEsc(n.doc)}</dd>`).join('') + '</dl>').join('');
   const toc = [['what', 'What the Athanor is'], ['read', 'Reading a graph'], ['wires', 'Wires and what they carry'], ['convert', 'When the kinds do not match'],
@@ -35583,7 +36030,7 @@ function forgeHelpHtml(){
     + `<nav class="fd-toc">${toc.map(([id, t]) => `<a href="#fd-${id}">${t}</a>`).join('')}</nav>`
     + sec('what', 'What the Athanor is', `<p>The Athanor is a node editor for surface textures. You build a texture from small <b>parts</b> (nodes) joined by <b>wires</b>. Each part does one job: it makes a pattern, changes one, colors it, or lights it. What reaches the <b>Surface</b> at the end becomes a texture you can use on the page (Surface Variant → 🜉 From the Athanor, or the <b>Use</b> button).</p><p>Most of the app's own textures are built this way. Open one from <b>Start from…</b> to see how it is made, then change it, take parts from it, or mix it with parts of another.</p>`)
     + sec('read', 'Reading a graph', `<p>Read a graph from left to right. Parts on the left make or bring in something; each wire carries it to the next part on the right; the Surface is at the far right.</p><p>Each part shows a small picture of what it makes (turn these off with <b>Steps</b> in the corner if the editor feels slow). The large picture in the corner is what the whole graph makes; tap it to make it larger.</p><p>A part's <b>inputs</b> are the dots on its left edge and its <b>outputs</b> the dots on its right. Its <b>settings</b> are the sliders and menus inside it.</p>`)
-    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of four kinds of thing. The dot, the wire and the part that makes it all wear the kind's color (a part's color is the kind of thing it makes; the Surface keeps its own):</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
+    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of five kinds of thing. The dot, the wire and the part that makes it all wear the kind's color (a part's color is the kind of thing it makes; the Surface keeps its own):</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
     + sec('convert', 'When the kinds do not match', `<p>You can wire any output into any input. When the kinds differ, the Athanor converts the value on the way:</p><ul><li>A <b>gray picture</b> into a color picture: the same gray in red, green and blue.</li><li>A <b>color picture</b> into a gray input: its brightness.</li><li>A <b>color</b> or a <b>number</b> into a picture input: a flat page of that color or that gray.</li><li>A <b>picture</b> into a number (a ⚙ port): its average brightness. A color: its brightness.</li><li>Anything that is not a color into a <b>color</b> input: the input uses its own default instead (a Hue input falls back to the page's hue).</li></ul><p>Nothing breaks when kinds are mixed. Wiring a color into a number, for example, gives a number from its brightness, which can be an interesting way to drive a setting.</p>`)
     + sec('settings', 'Settings and ⚙ ports', `<p>Most sliders in a part have a <b>⚙ port</b> beside them. A number wired there moves the setting across its whole range: 0 is the slider's lowest, 1 its highest. Hold the setting (or right-click it) and choose <b>Set the range the wire sweeps…</b> to use only part of the range.</p><p>Holding a setting also lets you <b>bind</b> it to a page slider or the light dial without a wire, or <b>wire a Knob into it</b> in one step.</p>`)
     + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
@@ -35707,7 +36154,11 @@ async function openForge(deps){
       el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
       const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? 'Pinned — tap to let it move' : 'Pin in place'; }
-      el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns); d.title = (N.ins[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.inTypes[j]] || ''); });
+      el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns);
+        // a REQUIRED input still empty is marked (Filter Forge's red port): the part has nothing to work on yet
+        const need = (N.required || []).includes(j + 1) && !(((n.inputs || {})['input_' + (j + 1)] || {}).connections || []).length;
+        d.classList.toggle('req', need); const lab = el.querySelectorAll('.fp-in')[j]; if(lab) lab.classList.toggle('req', need);
+        d.title = (N.ins[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.inTypes[j]] || '') + (need ? ' (needed: this part has nothing to work on without it)' : ''); });
       el.querySelectorAll('.outputs .output').forEach((d, j) => { d.dataset.t = N.outTypes[j] || 'field'; d.title = (N.outs[j] || '') + ' — ' + (FORGE_TYPE_NAMES[N.outTypes[j]] || ''); });
       el.querySelectorAll('.forge-param output').forEach(o => { const inp = o.parentElement.querySelector('input'); if(inp) o.textContent = inp.value; });
       N.paramPorts.forEach((key, j) => { const wired = ((n.inputs['input_' + (N.dataIns + j + 1)] || {}).connections || []).length > 0;

@@ -1782,10 +1782,10 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
    and wire wears the colour of what it carries (data-t: field · image ·
    colour · value; forge.js FORGE_TYPE_COLOURS). Square corners, as everywhere. */
 .forge-veil{ --fg-ground:var(--bg-deep); --fg-panel:var(--bg-panel); --fg-node:var(--bg-card); --fg-line:var(--line); --fg-text:var(--text-main); --fg-dim:var(--text-dim); --fg-accent:var(--accent);
-  --t-field:#CFC8DD; --t-image:#EE7FF5; --t-colour:#F4C44E; --t-value:#54D3EA;
+  --t-field:#CFC8DD; --t-image:#EE7FF5; --t-colour:#F4C44E; --t-value:#54D3EA; --t-curve:#93D98A;
   position:fixed; inset:0; z-index:180; background:var(--fg-ground); color:var(--fg-text); display:flex; flex-direction:column; }
 /* on the light theme the wire colours deepen, so they still read on paper */
-:root[data-theme="vellum"] .forge-veil{ --t-field:#6E6584; --t-image:#B23BB8; --t-colour:#A87A06; --t-value:#12809A; }
+:root[data-theme="vellum"] .forge-veil{ --t-field:#6E6584; --t-image:#B23BB8; --t-colour:#A87A06; --t-value:#12809A; --t-curve:#3E8A44; }
 .forge-veil[hidden]{ display:none; }
 .forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--fg-line); background:var(--fg-panel); }
 .forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
@@ -1829,7 +1829,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-row.extra{ height:auto; min-height:22px; }
 .fp-in, .fp-out{ font-family:var(--ui-code); font-size:11.5px; color:var(--fg-dim); white-space:nowrap; }
 .fp-in::before{ content:'▸ '; color:var(--tc); } .fp-out::after{ content:' ▸'; color:var(--tc); }
-[data-t="field"]{ --tc:var(--t-field); } [data-t="image"]{ --tc:var(--t-image); } [data-t="colour"]{ --tc:var(--t-colour); } [data-t="value"]{ --tc:var(--t-value); }
+[data-t="field"]{ --tc:var(--t-field); } [data-t="image"]{ --tc:var(--t-image); } [data-t="colour"]{ --tc:var(--t-colour); } [data-t="value"]{ --tc:var(--t-value); } [data-t="curve"]{ --tc:var(--t-curve); }
 .forge-param{ flex:1; display:grid; grid-template-columns:70px 1fr 32px; gap:4px; align-items:center; font-size:12px; color:var(--fg-dim); min-width:0; }
 .forge-row.extra .forge-param{ grid-template-columns:70px 1fr; }
 .forge-param input, .forge-param select{ width:100%; min-width:0; font-size:12px; border-radius:0; accent-color:var(--cat); }
@@ -1848,6 +1848,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas .drawflow svg.connection[data-t="image"] .main-path{ stroke:var(--t-image); }
 .forge-canvas .drawflow svg.connection[data-t="colour"] .main-path{ stroke:var(--t-colour); }
 .forge-canvas .drawflow svg.connection[data-t="value"] .main-path{ stroke:var(--t-value); stroke-dasharray:6 4; }
+.forge-canvas .drawflow svg.connection[data-t="curve"] .main-path{ stroke:var(--t-curve); stroke-dasharray:2 3; }
 /* each wire's wide twin: invisible, easy to tap (forge.js paintWires) */
 .forge-canvas .drawflow svg.connection .main-path.forge-hit{ stroke:transparent !important; stroke-width:18px; stroke-dasharray:none; pointer-events:stroke; cursor:pointer; }
 .forge-canvas .drawflow .connection .main-path.selected:not(.forge-hit), .forge-canvas .drawflow svg.connection:hover .main-path:not(.forge-hit){ stroke-width:4.5px; filter:brightness(1.2); }
@@ -2211,3 +2212,8 @@ button.preset-group-head:focus-visible{ outline:1px solid var(--accent-2); outli
 .preset-group-head .pg-name{ flex:1 1 auto; }
 .preset-group-head .pg-count{ color:var(--text-dim); letter-spacing:.04em; font-size:10.5px; }
 .preset-btn[hidden], .preset-group-head[hidden]{ display:none; }
+
+/* a REQUIRED input still empty (Filter Forge's red port): the part has nothing to work on yet */
+.forge-canvas .drawflow .drawflow-node .input.req{ background:#D2404A !important; box-shadow:0 0 0 2px color-mix(in srgb, #D2404A 35%, transparent); }
+.fp-in.req{ color:#E06070; }
+.fp-in.req::after{ content:' !'; font-weight:700; }

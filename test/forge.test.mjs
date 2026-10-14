@@ -7,6 +7,7 @@
 import { readFileSync } from 'fs';
 let failures = 0;
 const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
+const S = await import('../steps.js');
 const F = await import('../forge.js');
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
@@ -77,7 +78,7 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
 
   // ---- stages 4–5: versions, kept results, the budget, starters, more parts ----
   check('a graph has a version (none = 1); new ones are the newest, and the cache knows it',
-    C.athanorVersion(graph) === 1 && C.athanorVersion(JSON.stringify({ v: 2 })) === 2 && C.ATHANOR_VERSION === 2
+    C.athanorVersion(graph) === 1 && C.athanorVersion(JSON.stringify({ v: 2 })) === 2 && C.ATHANOR_VERSION === 3
     && C.athanorHash(graph) !== C.athanorHash(JSON.stringify({ ...JSON.parse(graph), v: 2 })));
   const g2 = JSON.stringify({ ...JSON.parse(graph), v: 2 });
   const run2 = (gr, knob = 40, seed = 5) => C.evalAthanor(gr, 48, 48, { knobs: [knob, 50, 50, 50, 50, 50], tints: ['#FFFFFF', '#203040'], light: 315, seed }, {});
@@ -100,7 +101,18 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
   const starters = Object.keys(C.ATHANOR_STARTERS);
   check('seven starter graphs, each a working surface that says what it teaches (evaluated here; Reaction–Diffusion and Oil on Canvas need the page\'s textures)',
     starters.length === 7 && starters.every(k => (C.ATHANOR_STARTERS[k].teach || '').length > 60) && starters.filter(k => k !== 'bloom' && k !== 'oil').every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
-      return gr.v === 2 && im && im.r.some(v => v > 0.02) && C.athanorName(gr) === C.ATHANOR_STARTERS[k].label; }));
+      return gr.v === C.ATHANOR_VERSION && im && im.r.some(v => v > 0.02) && C.athanorName(gr) === C.ATHANOR_STARTERS[k].label; }));
+  // FILTER FORGE'S MAP INPUTS (v3): a gray map on a ⚙ setting sets it point by point; v2 took its average
+  { const mk = v => JSON.stringify({ v, drawflow: { Home: { data: {
+      1: { id: 1, name: 'gradient', data: { shape: 'linear', angle: 0 }, inputs: {}, outputs: { output_1: { connections: [] } } },
+      2: { id: 2, name: 'number', data: { value: 50 }, inputs: {}, outputs: { output_1: { connections: [] } } },
+      3: { id: 3, name: 'threshold', data: { at: 50, soft: 0 }, inputs: { input_1: { connections: [{ node: '2', input: 'output_1' }] }, ['input_' + S.paramPort('threshold', 'at')]: { connections: [{ node: '1', input: 'output_1' }] } }, outputs: { output_1: { connections: [] } } },
+      4: { id: 4, name: 'surface', data: { name: 'T', ground: 'grey' }, inputs: { input_1: { connections: [{ node: '3', input: 'output_1' }] }, input_2: { connections: [] } }, outputs: {} } } } } });
+    const a = C.evalAthanor(mk(3), 40, 40, { seed: 1, knobs: [], tints: [] }, {}), b = C.evalAthanor(mk(2), 40, 40, { seed: 1, knobs: [], tints: [] }, {});
+    const row = im => [2, 20, 37].map(x => Math.round(im.r[20*40 + x]));
+    check('map inputs (v3, Filter Forge): a gradient on Threshold\'s ⚙ At sets the threshold point by point — the picture splits; a v2 graph still takes the average',
+      JSON.stringify(row(a)) !== JSON.stringify(row(b)) && new Set(row(a)).size > 1 && new Set(row(b)).size === 1);
+    check('the textures\' own chains stay v2 (their pictures never change); a starter is the newest', C.athanorStarter('stainedglass').v === 2 && C.athanorStarter('ripples').v === 3); }
   check('…offered from the editor\'s bar, with every part\'s ports filled in on load', html.includes('id="forgeStarter"')
     && /P\.ins\.forEach\(\(_, j\) => \{ n\.inputs\['input_' \+ \(j \+ 1\)\]/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')));
   {
