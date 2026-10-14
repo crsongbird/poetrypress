@@ -15,12 +15,13 @@ Recommendations".
 - QUESTION (randomizer levels, ROADMAP E1): where should Mutate Gently / Wild live — a long press on
   each die, or a small menu beside it?
 - From Jupiter–Sinope: the surface menus as tiles (Lichtenberg's thumbnail is heavy when small), preset
-  search and folding, Text Clearing, The Poem part. Open: which presets are redundant or superseded?
+  search and folding, Text Clearing, The Poem part. (Which presets are redundant or superseded waits for
+  the presets pass at the very end: ROADMAP Stage 4.)
   Lain's questions on the kept draft (a way back to the welcome page; an empty poem; the page shape).
 
 ## 1b · The direction — see ROADMAP.md
-The plan for the surface engine (Ruby's future-directions doc merged with the Filter Forge study):
-work items A–I with their dependencies and an order of passes. Delete items there as they ship.
+The plan for the surface engine, in four stages (Ruby): components → features → textures built from
+the parts → presets, last. No new or reworked presets before Stage 4. Delete items there as they ship.
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the

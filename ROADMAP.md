@@ -272,7 +272,7 @@ from the Words.
 - **H4 · Bind to Ink.** The surface's hues follow the text color
   (palette.js). This is a palette binding (H2) set by one action.
 
-### I · Surfaces from the document (build as chains, each with TEACH and four readings)
+### I · Surfaces from the document (Stage 3: as chains, each with TEACH and four readings; their presets wait for Stage 4)
 
 Buildable **now** with existing parts:
 - **Ink Thirst**: Perlin → Levels → Grow & Shrink (feathered) → multiply.
@@ -312,40 +312,95 @@ distance).
 
 ---
 
-## 3 · Order of work (what depends on what)
+## 3 · Order of work: four stages, presets last (Ruby)
+
+Ruby's order: **build the components, then the new features, then the new
+textures with the node components, then the presets.** A preset is the last
+thing made, because it is a look *over* everything else. Made earlier, it
+would have to be remade each time a part or a texture changed under it.
+
+**Until Stage 4: no new presets, and no preset removed or reworked.** A new
+texture ships with its four readings (🜂 🜄 🜁 🜃, which are not presets) and
+no preset of its own. Questions about presets (which are redundant or
+superseded) wait for Stage 4.
+
+### Stage 1 · Components: the parts library
+- **F1** Lookup, **F2** Bomber / Glyph Scatter, **F3** Border Mask.
+- **F4–F10**, the rest of Filter Forge's primitives, in the order of what
+  they unlock (§2 F).
+- **A1** map inputs on every per-point setting.
+- **A9** Variation on every random part.
+- **A3** Groups (v4), then **A4** Loop (its body is a group).
+- **A6** edges-only supersampling.
+
+### Stage 2 · Features: the engine, the controls, the poem
+- **B1** a lit Surface (CPU and shader together), then **B2** channels view.
+- **C1–C4** lighting (C needs B1).
+- **D1** control kinds, **D2** order of controls, **D3** remap UI,
+  **D4** curve control.
+- **E1–E3** randomizer levels, Back, one control at random. Ask Ruby first
+  where E1's choice lives.
+- **G1** rhymes, **G2** punctuation (needs F2), **G3** Protect Text,
+  **G4** Emotional Seed (needs A3), **G5** the box as an input.
+- **H1**'s actions that aren't presets: Summon Variation, Mutate Gently,
+  Freeze This Seed, Reveal Spell Graph.
+
+### Stage 3 · Textures: built from the parts
+- **I**: the surfaces from Ruby's document, as chains, each with TEACH and
+  four readings.
+  - Those "buildable now" can start as soon as Stage 1's parts they use
+    exist.
+  - The rest wait on F1, F2, F3 or B1 (§2 I).
+- **Rebuild the 27 textures that aren't chains yet**, so every texture is a
+  graph:
+  - bokeh astral flowers glassrain sigils mathnoise summoning inkbleed
+    oldpaper crystal spangle coldpress cupring guilloche chladni
+    suminagashi frost ash dunes kintsugi moss cityscape blackhole water
+    moon aurora tessellate.
+  - Each keeps its exact look: the fingerprints must not change.
+  - Stage 4 can only offer what is a chain.
+
+### Stage 4 · Presets: the last pass
+- **H2** presets as graphs with exposed settings (needs A3, D1, D2 and every
+  texture a chain).
+- **H3** Crossbreed, **H4** Bind to Ink, **E4** an author's default locks.
+- **The presets pass**:
+  - Ruby decides which presets are redundant or superseded.
+  - Old presets are reworked onto the new parts and features.
+  - New presets are made for the Stage 3 textures, as many as the groups
+    need (each group a multiple of four; readable, contrast ≥ 3:1).
+  - Andromeda, Euphoria, Lotus Bloom, Gateway and Sealed stay verbatim.
 
 ```
-             ┌──────────── F1 Lookup ─────────► I (foil, polarized, memory leak)
-             ├──────────── F2 Bomber ─────────► I (sigil weather, packet rain…) ─► G2
- (today) ────┼──────────── F3 Border Mask ────► I (frozen breath, salt bloom…)
-             ├── A1 map inputs (anytime, small, per part)
-             ├── A9 Variation ─────────────────────────────┐
-             ├── D1 control kinds ─► D2 order ─┐           │
-             │                      D3 remap UI│           │
-             ├── A3 GROUPS (v4) ───────────────┼─► H2 PRESETS AS GRAPHS ─► H3 Crossbreed
-             │        └─► A4 Loop             │           │              └─► E4 author locks
-             │        └─► G4 Emotional Seed   │           └─► H1 Summon / Mutate (with E1)
-             ├── E1 randomizer levels (ask Ruby where) ───┘
-             ├── B1 LIT SURFACE (CPU + shader) ─► C1 ambient ─► C2 more lights ─► C4 environment
-             │        └─► B2 channels view                 └─► C3 occlusion quality
-             └── G1 rhymes · G3 Protect Text (needs ctx ink + luminance)
+ STAGE 1 · COMPONENTS        STAGE 2 · FEATURES                 STAGE 3 · TEXTURES       STAGE 4 · PRESETS
+ F1 Lookup ───────────────────────────────────────────────────► I (foil, polarized…) ─┐
+ F2 Bomber ─────────────────► G2 punctuation ─────────────────► I (sigil weather…)  ──┤
+ F3 Border Mask ──────────────► G5 box input ─────────────────► I (frozen breath…)  ──┤
+ F4–F10 primitives ───────────────────────────────────────────► I (the rest)        ──┤
+ A1 map inputs · A9 Variation · A6 AA                             27 rebuilt as chains ┼─► H2 PRESETS AS GRAPHS
+ A3 GROUPS (v4) ─┬─► A4 Loop                                                           │      ├─► H3 Crossbreed
+                 └──────────► G4 Emotional Seed                                        │      ├─► H4 Bind to Ink
+                              D1 control kinds ─► D2 order ─► D4 curve control ────────┤      ├─► E4 author locks
+                              D3 remap UI · E1–E3 randomizer · H1 actions ────────────┘      └─► THE PRESETS PASS
+                              B1 LIT SURFACE ─► B2 channels; ─► C1 ─► C2 ─► C4; C3
+                              G1 rhymes · G3 Protect Text
 ```
 
 **Suggested passes** (one release each, AGENTS' recipe):
-1. F3 Border Mask + G1 rhymes + I: the eight "buildable now" surfaces, as
-   chains with presets.
-2. D1 control kinds + D3 remap UI + E1–E3 (after asking Ruby about E1's
-   placement).
-3. A3 Groups (v4) + G4 Emotional Seed as its first lesson.
-4. B1 lit Surface (CPU + GPU together) + B2 channels.
-5. F1 Lookup + F2 Bomber (+ the surfaces they unlock).
-6. H2 presets as graphs (start with the textures already chains) + H1
-   actions + D2.
-7. C1–C4 lighting, then H3 Crossbreed, A4 Loop, A6 edges-only AA, the
-   remaining F items.
 
-Alongside every pass: **rebuild one or two of the 27 remaining textures as
-chains** (the componentizing rule). H2 can only offer what is a chain.
+1. Stage 1: F3 Border Mask + F1 Lookup + F4 gradients + A9 Variation.
+2. Stage 1: F2 Bomber / Glyph Scatter + F6 noises and patterns.
+3. Stage 1: A3 Groups (v4) + A1 (the remaining map inputs).
+4. Stage 2: D1–D3 controls + E1–E3 randomizer (ask Ruby about E1 first).
+5. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
+6. Stage 2: G1, G3, G4, G5 + H1's actions.
+7. Stage 3: surfaces from the document, a few per pass, and two or three of
+   the 27 rebuilt as chains per pass, until all are chains.
+8. Stage 4: H2, H3, H4, E4, then the presets pass.
+
+The stages overlap at their edges: a texture whose parts all exist may be
+built while the next part is being written. The order that matters is that
+**presets come last**.
 
 ---
 
