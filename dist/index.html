@@ -1999,6 +1999,23 @@ input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{
 .die-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:16px/1 var(--ui-text); opacity:.55; cursor:pointer; }
 .die-btn:hover, .die-btn:focus-visible{ opacity:1; color:var(--accent); }
 .die-btn:active{ transform:rotate(90deg); transition:transform .12s; }
+/* the die's levels: ▾ beside it on a desk; on a phone a long press opens the same menu as a sheet */
+.die-pair{ display:inline-flex; align-items:center; gap:0; }
+.die-more{ flex:0 0 auto; width:auto; margin:0 0 0 1px; padding:0 2px; border:0; background:transparent; color:#6E6880; font:11px/1 var(--ui-text); opacity:.5; cursor:pointer; }
+.die-more:hover, .die-more:focus-visible{ opacity:1; color:var(--accent); }
+body.is-mobile .die-more{ display:none; }
+.die-menu{ position:fixed; z-index:230; min-width:220px; max-width:min(320px, calc(100vw - 16px)); padding:4px 0; background:var(--bg-card); color:var(--text-main);
+  border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.45); font-family:var(--ui-text); }
+body.is-mobile .die-menu{ left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom, 0px)); max-width:none; padding:6px 0 8px; }
+.die-menu-head{ padding:6px 14px 4px; font-family:var(--ui-caps); font-size:13px; color:var(--accent); }
+.die-menu-item{ display:flex; align-items:flex-start; gap:10px; width:100%; margin:0; padding:8px 14px; border:0; background:transparent; color:inherit; text-align:left; font:inherit; cursor:pointer; }
+body.is-mobile .die-menu-item{ padding:11px 16px; }
+.die-menu-item:hover, .die-menu-item:focus-visible{ background:color-mix(in srgb, var(--accent) 12%, transparent); outline:none; }
+.die-menu-item[disabled]{ opacity:.45; cursor:default; }
+.die-menu-glyph{ flex:0 0 1.2em; font-size:17px; line-height:1.1; color:var(--accent); text-align:center; }
+.die-menu-text{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.die-menu-label{ font-size:14px; }
+.die-menu-hint{ font-size:11.5px; color:var(--text-dim); }
 body.is-mobile .die-btn{ font-size:19px; }
 .check-row .head-tools{ float:none; order:9; flex:1 1 auto; justify-content:flex-end; padding-left:12px; }
 .master-lock{ width:24px; height:24px; padding:2px; }
@@ -17113,6 +17130,26 @@ const CHOOSER = {
   none: 'Nothing by that name. Try a group (Weather), a mood (rose, frost) or a material (glass).',
   surfaceTitle: 'Surface Variant',
   baseTitle: 'Base Surface',
+};
+
+/** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk. */
+const DIE = {
+  title: 'Roll this section (locked controls stay)',
+  titleSurface: 'Roll this section (Shift-click or hold: only a new seed)',
+  titlePhone: 'Roll this section (hold for gently, wildly or back)',
+  more: 'More ways to roll: gently, wildly, or back',
+  menuTitle: 'Roll this section',
+  gentle: 'Gently',
+  gentleHint: 'Sliders move a little; menus and switches stay; colors turn together',
+  usual: 'As usual',
+  usualHint: 'Every slider, menu and color in reason',
+  wild: 'Wildly',
+  wildHint: 'Anything goes: the whole range, switches too',
+  back: 'Back',
+  backHint: 'Return this section to how it was before its last roll',
+  backNone: 'Nothing to go back to yet',
+  seed: 'Only a new seed',
+  seedHint: 'The same surface, a new pattern',
 };
 
 /** The colour picker's own button. */
@@ -32807,7 +32844,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Aoede';
+const RELEASE = 'Jupiter–Kallichore';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-14';
 
@@ -33633,7 +33670,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-14 · b0d74ac";
+const STAMP = "2026-10-14 · f4abca3";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -40018,42 +40055,134 @@ function addMasterLock(root, head){
 // ---------- THE DICE (Ruby): a die beside every section's lock rerolls only that section ----------
 // The backdrop, the surface and the typeface roll as their Summon buttons do (known-good schemes);
 // any other section rolls each of its sliders, menus and colours within reason. Locked controls stay
-// (the lock beside the die keeps the whole section). On the Surface, Shift-click or a long press
-// rolls only the seed: the same texture, a new pattern (the seed keeps its own lock too).
+// (the lock beside the die keeps the whole section). On the Surface, Shift-click rolls only the seed:
+// the same texture, a new pattern (the seed keeps its own lock too).
+// THREE LEVELS (Ruby, ROADMAP E1), chosen from a long press on a phone and from ▾ beside the die on a desk:
+//   gentle — sliders move ±8% of their range; menus and switches stay; colours turn together
+//   usual  — what a tap does (the Summon buttons where a section has one)
+//   wild   — sliders anywhere in their range, every menu, switches too, colours anything
+// and BACK (E2): the section returns to how it was before its last roll, whatever else has changed since.
 const DIE_SUMMONS = { randomBgBtn: 1, randomSurfaceBtn: 1, randomFontBtn: 1 };
-function rollSection(root){
-  const own = Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
+const DIE_GENTLE = 0.08;
+function dieHsl(hex){ const { r, g, b } = hexToRgbObj(hex || '#808080'), R = r/255, G = g/255, B = b/255;
+  const mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn)/2, d = mx - mn;
+  if(!d) return [0, 0, l];
+  const s = d/(1 - Math.abs(2*l - 1)), h = mx === R ? ((G - B)/d + 6) % 6 : mx === G ? (B - R)/d + 2 : (R - G)/d + 4;
+  return [h*60, Math.min(1, s), l]; }
+function rollSection(root, level = 'usual'){
+  const own = level === 'usual' && Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
   if(own){ own.click(); return true; }        // (it plays its own sound)
+  const turn = (Math.random()*2 - 1)*24;      // gently: every colour turns by the same few degrees
   withLocksPreserved(() => {
-    for(const id of lockablesIn(root)){
-      const el = $(id); if(!el || el.disabled || state.locks.has(id) || id === 'textureSeedValue' || (el.closest && el.closest('.tool-hidden'))) continue;
-      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1, v = lo + (0.1 + Math.random()*0.8)*(hi - lo);
+    const ids = lockablesIn(root).filter(id => { const el = $(id); return el && !el.disabled && !state.locks.has(id) && id !== 'textureSeedValue' && !(el.closest && el.closest('.tool-hidden')); });
+    // menus first: a new surface relabels its sliders, which are rolled after it
+    const menus = ids.filter(id => $(id).tagName === 'SELECT'), rest = ids.filter(id => $(id).tagName !== 'SELECT');
+    if(level !== 'gentle') for(const id of menus){ const el = $(id);
+      const opts = [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '');
+      if(opts.length > 1){ el.value = opts[Math.floor(Math.random()*opts.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+    for(const id of rest){ const el = $(id);
+      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1;
+        const v = level === 'gentle' ? Math.max(lo, Math.min(hi, (+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo)))
+          : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
         el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
-      else if(el.tagName === 'SELECT'){ const opts = [...el.options].filter(o => !o.disabled && o.value !== ''); if(opts.length > 1){ el.value = opts[Math.floor(Math.random()*opts.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
-      else if(/Hex$/.test(id)){ const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
-        setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, Math.max(0.08, Math.min(0.92, l + (Math.random() - 0.5)*0.2)))); }
+      else if(el.type === 'checkbox'){ if(level === 'wild' && !(el.classList && el.classList.contains('eye')) && Math.random() < 0.5){ el.checked = !el.checked; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+      else if(/Hex$/.test(id)){
+        if(level === 'gentle'){ const [h, s, l] = dieHsl(el.value); setColorField(id, hslHex(((h + turn) % 360 + 360) % 360, s, l)); }
+        else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
+        else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
+          setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, Math.max(0.08, Math.min(0.92, l + (Math.random() - 0.5)*0.2)))); } }
     }
     scheduleRender();
   });
+}
+// BACK: each section remembers the look just before and just after its last roll; Back puts back
+// only what that roll changed, so edits made since in other sections stay.
+const dieRolls = new Map(), diePending = new Map();
+const summonIn = root => Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
+function rollWithBack(root, level){
+  const before = serializeCurrentSettings(), own = level === 'usual' && summonIn(root);
+  if(own){
+    // a Summon button may ask first (past a few edits): the roll is recorded when its own work has run
+    const old = diePending.get(root); if(old) own.removeEventListener('click', old);
+    const rec = () => { diePending.delete(root); setTimeout(() => dieRolls.set(root, { before, after: serializeCurrentSettings() }), 0); };
+    diePending.set(root, rec); own.addEventListener('click', rec, { once: true });
+    own.click(); return;                       // (it plays its own sound)
+  }
+  try { rollSection(root, level); } finally { dieRolls.set(root, { before, after: serializeCurrentSettings() }); }
+  murmur.play('reroll'); commitSoon();
+}
+function dieBack(root){
+  const r = dieRolls.get(root); if(!r) return false;
+  const now = serializeCurrentSettings(), same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for(const k of new Set([...Object.keys(r.before), ...Object.keys(r.after)])) if(!same(r.before[k], r.after[k])) now[k] = r.before[k];
+  dieRolls.delete(root);
+  withLocksPreserved(() => restoreSettings(now));
+  scheduleRender(); commitHistory(); murmur.play('undo');
+  return true;
+}
+// the dice's menu: beside the die on a desk, a sheet from the bottom on a phone (CSS)
+let dieMenu = null;
+function closeDieMenu(){ if(dieMenu){ dieMenu.remove(); dieMenu = null; } }
+function openDieMenu(root, anchor, surface){
+  closeDieMenu();
+  const m = document.createElement('div'); m.className = 'die-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', DIE.menuTitle);
+  const head = document.createElement('div'); head.className = 'die-menu-head'; head.textContent = DIE.menuTitle; m.appendChild(head);
+  const item = (glyph, label, hint, act, disabled) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'die-menu-item'; b.setAttribute('role', 'menuitem'); b.disabled = !!disabled;
+    const g = document.createElement('span'); g.className = 'die-menu-glyph'; g.textContent = glyph; g.setAttribute('aria-hidden', 'true');
+    const t = document.createElement('span'); t.className = 'die-menu-text';
+    const n = document.createElement('span'); n.className = 'die-menu-label'; n.textContent = label;
+    const h = document.createElement('span'); h.className = 'die-menu-hint'; h.textContent = hint;
+    t.appendChild(n); t.appendChild(h); b.appendChild(g); b.appendChild(t);
+    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closeDieMenu(); act(); });
+    m.appendChild(b); return b;
+  };
+  item('⚁', DIE.gentle, DIE.gentleHint, () => rollWithBack(root, 'gentle'));
+  item('⚄', DIE.usual, DIE.usualHint, () => rollWithBack(root, 'usual'));
+  item('⚅', DIE.wild, DIE.wildHint, () => rollWithBack(root, 'wild'));
+  if(surface) item('⁂', DIE.seed, DIE.seedHint, () => { maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); });
+  const has = dieRolls.has(root);
+  item('↶', DIE.back, has ? DIE.backHint : DIE.backNone, () => dieBack(root), !has);
+  document.body.appendChild(m); dieMenu = m;
+  if(!document.body.classList.contains('is-mobile') && anchor && anchor.getBoundingClientRect){
+    const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    m.style.left = Math.max(8, Math.min(vw - w - 8, r.right - w)) + 'px';
+    m.style.top = (r.bottom + 6 + h > vh - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+  }
+  const first = m.querySelector('.die-menu-item:not([disabled])'); if(first && first.focus) first.focus({ preventScroll: true });
+}
+if(typeof document.addEventListener === 'function'){
+  document.addEventListener('pointerdown', e => { if(dieMenu && !dieMenu.contains(e.target) && !(e.target.closest && e.target.closest('.die-more'))) closeDieMenu(); }, true);
+  document.addEventListener('keydown', e => { if(dieMenu && e.key === 'Escape'){ closeDieMenu(); } });
 }
 function addDie(root, head){
   if(!root || !head || !lockablesIn(root).length) return;
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'die-btn'; btn.textContent = '⚄';
   const surface = !!($('randomSurfaceBtn') && root.contains && root.contains($('randomSurfaceBtn')));
-  btn.title = surface ? 'Roll this section (Shift-click or hold: only a new seed)' : 'Roll this section (locked controls stay)';
-  btn.setAttribute('aria-label', btn.title);
+  const phone = () => !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
+  const title = () => phone() ? DIE.titlePhone : surface ? DIE.titleSurface : DIE.title;
+  btn.title = title(); btn.setAttribute('aria-label', btn.title); btn.setAttribute('aria-haspopup', 'menu');
+  // a long press: on a phone, the menu (as soon as it is held); on a desk, the Surface's seed alone
   let held = false, timer = 0;
-  btn.addEventListener('pointerdown', () => { held = false; clearTimeout(timer); timer = setTimeout(() => { held = true; }, 500); });
+  btn.addEventListener('pointerdown', () => { held = false; btn.title = title(); clearTimeout(timer);
+    timer = setTimeout(() => { held = true; if(phone()) openDieMenu(root, btn, surface); }, 500); });
   btn.addEventListener('pointerup', () => clearTimeout(timer));
+  btn.addEventListener('pointercancel', () => clearTimeout(timer));
   btn.addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
-    const seedOnly = surface && (e.shiftKey || held); held = false;
-    if(seedOnly){ maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); return; }
-    if(!rollSection(root)) murmur.play('reroll');
+    const wasHeld = held; held = false;
+    if(wasHeld && phone()) return;                               // (the menu is already open)
+    if(surface && (e.shiftKey || wasHeld)){ maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); return; }
+    rollWithBack(root, 'usual');
   });
   // (a long press must not open the phone's context menu)
   btn.addEventListener('contextmenu', e => e.preventDefault());
-  headTools(head).appendChild(btn);
+  // on a desk: ▾ beside the die opens the same menu
+  const more = document.createElement('button'); more.type = 'button'; more.className = 'die-more'; more.textContent = '▾';
+  more.title = DIE.more; more.setAttribute('aria-label', DIE.more); more.setAttribute('aria-haspopup', 'menu');
+  more.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); if(dieMenu){ closeDieMenu(); return; } openDieMenu(root, more, surface); });
+  const pair = document.createElement('span'); pair.className = 'die-pair'; pair.appendChild(btn); pair.appendChild(more);
+  headTools(head).appendChild(pair);
 }
 // the switches that show a whole card, moved into its heading as an eye
 const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the border', cardToggle: 'Show the inset box', vignetteToggle: 'Show the vignette' };

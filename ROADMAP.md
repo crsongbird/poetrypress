@@ -72,7 +72,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Groups (control components inside a group define its inputs) | none | **A3** |
 | Loop and its slaves (Iteration, Accumulated, Randomizer); Bitmap Cache; Lua script components | Results kept automatically (ATHANOR_KEPT) | **A4**; scripts parked (security) |
 | Note component | **Note** part | ✅ |
-| Randomizer: Next Variant / Back, per-parameter locks, Ctrl-click one setting, High/Medium/Low levels (color relationships kept) | A die and a lock on every section; undo | **E1–E4** |
+| Randomizer: Next Variant / Back, per-parameter locks, Ctrl-click one setting, High/Medium/Low levels (color relationships kept) | A die and a lock on every section, with Gently / As usual / Wildly and Back (E1, E2 done) | **E3–E4** |
 | Presets tab (snapshots of a filter's settings) | Presets, readings (🜂 🜄 🜁 🜃), Grimoire, kept surfaces | **H2** |
 | Obsolete component versions kept for old filters | Graph `v`, RETIRED ids, hidden options | ✅ |
 
@@ -175,16 +175,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### E · The randomizer
 
-- **E1 · Levels.**
-  - Low: Mutate Gently. Sliders move ±8% of their range; menus and switches
-    stay; hues turn together.
-  - Medium: today's die.
-  - High: menus too, and hues independently.
-  - Files: appEvents rollSection.
-  - **Ask Ruby** where the choice lives (long press on the die, or a menu
-    beside it). It is a UI decision.
-- **E2 · Back.** A die's own undo: one press returns the section as it was.
-  Today it is undo's general step.
 - **E3 · One control at random.** A long press (phone) or Ctrl-click
   (desktop) on a control's label.
 - **E4 · An author's default locks.** A preset or graph can ship with locks
@@ -247,8 +237,8 @@ Ripples from the Words.
 - **H1 · Preset level.**
   - Done: thumbnail, seed, intensity (opacity), the chooser.
   - To add:
-    - **Summon Variation** (E1 medium on the surface only);
-    - **Mutate Gently** (E1 low);
+    - **Summon Variation** (the Surface die, as usual);
+    - **Mutate Gently** (every die, gently, at once);
     - **Freeze This Seed** (the seed's lock, surfaced as an action);
     - **Reveal Spell Graph**: opens the texture's chain in the Athanor,
       which exists today as Start from…. Make it a button on the Surface
@@ -348,8 +338,7 @@ superseded) wait for Stage 4.
 - **C1–C4** lighting (C needs B1).
 - **D1** control kinds, **D2** order of controls, **D3** remap UI,
   **D4** curve control.
-- **E1–E3** randomizer levels, Back, one control at random. Ask Ruby first
-  where E1's choice lives.
+- **E3** one control at random (E1 levels and E2 Back are done).
 - **G2** punctuation (needs F2), **G3** Protect Text,
   **G4** Emotional Seed (needs A3), **G5** the box as an input.
 - **H1**'s actions that aren't presets: Summon Variation, Mutate Gently,
@@ -389,7 +378,7 @@ superseded) wait for Stage 4.
  A3 GROUPS (v4) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               D1 control kinds ─► D2 order ─► D4 curve control ──────────┤      ├─► E4 author locks
-                              D3 remap UI · E1–E3 randomizer · H1 actions ──────────────┘      └─► THE PRESETS PASS
+                              D3 remap UI · E3 one at random · H1 actions  ──────────────┘      └─► THE PRESETS PASS
                               B1 LIT SURFACE ─► B2 channels; ─► C1 ─► C2 ─► C4; C3
                               G3 Protect Text
 ```
@@ -398,7 +387,7 @@ superseded) wait for Stage 4.
 
 1. Stage 1: A3 Groups (v4) + A1 (the remaining map inputs).
 2. Stage 1: F6 noises and patterns (Ellipse, Delaunay edges) + F2's rest.
-3. Stage 2: D1–D3 controls + E1–E3 randomizer (ask Ruby about E1 first).
+3. Stage 2: D1–D3 controls + E3 one control at random.
 4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
 5. Stage 2: G2–G5 + H1's actions.
 6. Stage 3: the Surface Studies become textures, a few per pass; black boxes

@@ -6,7 +6,11 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Aoede)
+## 1 · Ruby to judge (new in Jupiter–Kallichore)
+- THE DIE'S LEVELS: hold a die on a phone, or tap ▾ beside it on a desk: Gently, As usual, Wildly, Back
+  (and Only a new seed on the Surface). Does Gently move enough, and Wildly too much?
+
+## From Jupiter–Aoede
 - SURFACE STUDIES: all 36 surfaces from the future-directions document as graphs of parts (Start from…
   → Surface Studies). First drafts tuned by eye: which read right, which should change before they
   become menu textures (ROADMAP §2 I)? Orbit Script, Transmutation Engine and Constellation are
@@ -20,8 +24,6 @@ Recommendations".
   curve shapes the bevel), Brightness & Contrast, High Pass, Sharpen, Motion Blur, Offset, more Math,
   required inputs (red port, "!" stand-in in previews), the Note, the Surface's Size, controls offered
   only when they reach the Surface.
-- QUESTION (randomizer levels, ROADMAP E1): where should Mutate Gently / Wild live — a long press on
-  each die, or a small menu beside it?
 - From Jupiter–Sinope: the surface menus as tiles (Lichtenberg's thumbnail is heavy when small), preset
   search and folding, Text Clearing, The Poem part. (Which presets are redundant or superseded waits for
   the presets pass at the very end: ROADMAP Stage 4.)

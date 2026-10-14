@@ -140,9 +140,17 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
     && /aspect: '9:16'/.test(src('appEvents.js')));
   check('release archives: the build removes the old ones before writing the new', /if\(f\.endsWith\('\.zip'\)\)\{ \(await import\('fs'\)\)\.unlinkSync\('release\/' \+ f\)/.test(src('build.mjs')));
 }
-check('THE DICE: a die beside every section\'s lock rolls only that section (the Summon buttons where a section has one; locked controls stay); Shift or a long press on the Surface\'s die rolls only the seed',
-  /function rollSection\(root\)\{/.test(src('appEvents.js')) && /addDie\(card, card\.querySelector\(':scope > summary'\)\); addMasterLock\(card/.test(src('appEvents.js'))
-  && /const seedOnly = surface && \(e\.shiftKey \|\| held\)/.test(src('appEvents.js')) && /withLocksPreserved\(\(\) => \{\n    for\(const id of lockablesIn\(root\)\)/.test(src('appEvents.js')) && /\.die-btn\{/.test(src('poetrypress.css')));
+check('THE DICE: a die beside every section\'s lock rolls only that section (the Summon buttons where a section has one; locked controls stay); Shift-click on the Surface\'s die rolls only the seed',
+  /function rollSection\(root, level = 'usual'\)\{/.test(src('appEvents.js')) && /addDie\(card, card\.querySelector\(':scope > summary'\)\); addMasterLock\(card/.test(src('appEvents.js'))
+  && /if\(surface && \(e\.shiftKey \|\| wasHeld\)\)/.test(src('appEvents.js')) && /withLocksPreserved\(\(\) => \{\n    const ids = lockablesIn\(root\)/.test(src('appEvents.js')) && /\.die-btn\{/.test(src('poetrypress.css')));
+{ const ev = src('appEvents.js'), css = src('poetrypress.css'), st = src('strings.js');
+  check('THE DIE\'S LEVELS (Ruby): gently (±8%, menus and switches stay, colors turn together), as usual, wildly (whole range, switches too)',
+    /const DIE_GENTLE = 0\.08;/.test(ev) && /if\(level !== 'gentle'\) for\(const id of menus\)/.test(ev) && /hslHex\(\(\(h \+ turn\) % 360/.test(ev) && /level === 'wild' && !\(el\.classList && el\.classList\.contains\('eye'\)\)/.test(ev));
+  check('the levels live in a long press on a phone and in ▾ beside the die on a desk (Ruby)',
+    /if\(phone\(\)\) openDieMenu\(root, btn, surface\)/.test(ev) && /more\.className = 'die-more'/.test(ev) && /body\.is-mobile \.die-more\{ display:none; \}/.test(css) && /body\.is-mobile \.die-menu\{/.test(css));
+  check('BACK puts back only what the section\'s last roll changed, and waits for a Summon that asks first',
+    /if\(!same\(r\.before\[k\], r\.after\[k\]\)\) now\[k\] = r\.before\[k\];/.test(ev) && /own\.addEventListener\('click', rec, \{ once: true \}\)/.test(ev));
+  check('the die\'s words live in strings.js', /export const DIE = \{/.test(st) && ['gentle', 'usual', 'wild', 'back', 'seed'].every(k => new RegExp('\\n  ' + k + ': ').test(st)) && !/'Gently'/.test(ev)); }
 check('a loaded look never changes the page\'s aspect ratio (Ruby: it stays as chosen until another is picked)', /const look = \{ \.\.\.c\.look \}; for\(const k of \['aspect', 'customSize', 'customW', 'customH'\]\) delete look\[k\];/.test(ev));
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

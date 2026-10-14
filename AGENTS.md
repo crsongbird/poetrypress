@@ -348,7 +348,15 @@ Other parts of a look:
   - Eyes are the old enable checkboxes (class `eye`); a card's own is moved
     into its heading (`CARD_EYES`). Both live in `.head-tools`, which never
     folds its section.
-  - A die beside each lock rerolls only that section (`rollSection`).
+  - A die beside each lock rerolls only that section (`rollSection(root, level)`).
+    - A tap rolls **as usual** (a section's Summon button where it has one).
+    - **Gently** (sliders ±8%, menus and switches stay, colours turn together)
+      and **Wildly** (whole ranges, every menu, switches too; never eyes) come
+      from a long press on a phone and ▾ beside the die on a desk (Ruby).
+    - **Back** (`dieBack`) puts back only what the section's last roll
+      changed. A Summon that asks first is recorded once its work has run.
+    - On the Surface, Shift-click (or a desk's long press) rolls only the
+      seed; on a phone that is a menu item.
 - **Asking and refusing:**
   - `askSure({title, body, confirmLabel, danger})` is the soft no, the app's
     own modal (never `confirm()`).

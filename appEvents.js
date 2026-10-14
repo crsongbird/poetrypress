@@ -50,7 +50,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
-import { applyStrings, fill, PICKER, CHOOSER } from './strings.js';
+import { applyStrings, fill, PICKER, CHOOSER, DIE } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -2217,42 +2217,134 @@ function addMasterLock(root, head){
 // ---------- THE DICE (Ruby): a die beside every section's lock rerolls only that section ----------
 // The backdrop, the surface and the typeface roll as their Summon buttons do (known-good schemes);
 // any other section rolls each of its sliders, menus and colours within reason. Locked controls stay
-// (the lock beside the die keeps the whole section). On the Surface, Shift-click or a long press
-// rolls only the seed: the same texture, a new pattern (the seed keeps its own lock too).
+// (the lock beside the die keeps the whole section). On the Surface, Shift-click rolls only the seed:
+// the same texture, a new pattern (the seed keeps its own lock too).
+// THREE LEVELS (Ruby, ROADMAP E1), chosen from a long press on a phone and from ▾ beside the die on a desk:
+//   gentle — sliders move ±8% of their range; menus and switches stay; colours turn together
+//   usual  — what a tap does (the Summon buttons where a section has one)
+//   wild   — sliders anywhere in their range, every menu, switches too, colours anything
+// and BACK (E2): the section returns to how it was before its last roll, whatever else has changed since.
 const DIE_SUMMONS = { randomBgBtn: 1, randomSurfaceBtn: 1, randomFontBtn: 1 };
-function rollSection(root){
-  const own = Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
+const DIE_GENTLE = 0.08;
+function dieHsl(hex){ const { r, g, b } = hexToRgbObj(hex || '#808080'), R = r/255, G = g/255, B = b/255;
+  const mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn)/2, d = mx - mn;
+  if(!d) return [0, 0, l];
+  const s = d/(1 - Math.abs(2*l - 1)), h = mx === R ? ((G - B)/d + 6) % 6 : mx === G ? (B - R)/d + 2 : (R - G)/d + 4;
+  return [h*60, Math.min(1, s), l]; }
+function rollSection(root, level = 'usual'){
+  const own = level === 'usual' && Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
   if(own){ own.click(); return true; }        // (it plays its own sound)
+  const turn = (Math.random()*2 - 1)*24;      // gently: every colour turns by the same few degrees
   withLocksPreserved(() => {
-    for(const id of lockablesIn(root)){
-      const el = $(id); if(!el || el.disabled || state.locks.has(id) || id === 'textureSeedValue' || (el.closest && el.closest('.tool-hidden'))) continue;
-      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1, v = lo + (0.1 + Math.random()*0.8)*(hi - lo);
+    const ids = lockablesIn(root).filter(id => { const el = $(id); return el && !el.disabled && !state.locks.has(id) && id !== 'textureSeedValue' && !(el.closest && el.closest('.tool-hidden')); });
+    // menus first: a new surface relabels its sliders, which are rolled after it
+    const menus = ids.filter(id => $(id).tagName === 'SELECT'), rest = ids.filter(id => $(id).tagName !== 'SELECT');
+    if(level !== 'gentle') for(const id of menus){ const el = $(id);
+      const opts = [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '');
+      if(opts.length > 1){ el.value = opts[Math.floor(Math.random()*opts.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+    for(const id of rest){ const el = $(id);
+      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1;
+        const v = level === 'gentle' ? Math.max(lo, Math.min(hi, (+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo)))
+          : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
         el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
-      else if(el.tagName === 'SELECT'){ const opts = [...el.options].filter(o => !o.disabled && o.value !== ''); if(opts.length > 1){ el.value = opts[Math.floor(Math.random()*opts.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
-      else if(/Hex$/.test(id)){ const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
-        setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, Math.max(0.08, Math.min(0.92, l + (Math.random() - 0.5)*0.2)))); }
+      else if(el.type === 'checkbox'){ if(level === 'wild' && !(el.classList && el.classList.contains('eye')) && Math.random() < 0.5){ el.checked = !el.checked; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+      else if(/Hex$/.test(id)){
+        if(level === 'gentle'){ const [h, s, l] = dieHsl(el.value); setColorField(id, hslHex(((h + turn) % 360 + 360) % 360, s, l)); }
+        else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
+        else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
+          setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, Math.max(0.08, Math.min(0.92, l + (Math.random() - 0.5)*0.2)))); } }
     }
     scheduleRender();
   });
+}
+// BACK: each section remembers the look just before and just after its last roll; Back puts back
+// only what that roll changed, so edits made since in other sections stay.
+const dieRolls = new Map(), diePending = new Map();
+const summonIn = root => Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
+function rollWithBack(root, level){
+  const before = serializeCurrentSettings(), own = level === 'usual' && summonIn(root);
+  if(own){
+    // a Summon button may ask first (past a few edits): the roll is recorded when its own work has run
+    const old = diePending.get(root); if(old) own.removeEventListener('click', old);
+    const rec = () => { diePending.delete(root); setTimeout(() => dieRolls.set(root, { before, after: serializeCurrentSettings() }), 0); };
+    diePending.set(root, rec); own.addEventListener('click', rec, { once: true });
+    own.click(); return;                       // (it plays its own sound)
+  }
+  try { rollSection(root, level); } finally { dieRolls.set(root, { before, after: serializeCurrentSettings() }); }
+  murmur.play('reroll'); commitSoon();
+}
+function dieBack(root){
+  const r = dieRolls.get(root); if(!r) return false;
+  const now = serializeCurrentSettings(), same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for(const k of new Set([...Object.keys(r.before), ...Object.keys(r.after)])) if(!same(r.before[k], r.after[k])) now[k] = r.before[k];
+  dieRolls.delete(root);
+  withLocksPreserved(() => restoreSettings(now));
+  scheduleRender(); commitHistory(); murmur.play('undo');
+  return true;
+}
+// the dice's menu: beside the die on a desk, a sheet from the bottom on a phone (CSS)
+let dieMenu = null;
+function closeDieMenu(){ if(dieMenu){ dieMenu.remove(); dieMenu = null; } }
+function openDieMenu(root, anchor, surface){
+  closeDieMenu();
+  const m = document.createElement('div'); m.className = 'die-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', DIE.menuTitle);
+  const head = document.createElement('div'); head.className = 'die-menu-head'; head.textContent = DIE.menuTitle; m.appendChild(head);
+  const item = (glyph, label, hint, act, disabled) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'die-menu-item'; b.setAttribute('role', 'menuitem'); b.disabled = !!disabled;
+    const g = document.createElement('span'); g.className = 'die-menu-glyph'; g.textContent = glyph; g.setAttribute('aria-hidden', 'true');
+    const t = document.createElement('span'); t.className = 'die-menu-text';
+    const n = document.createElement('span'); n.className = 'die-menu-label'; n.textContent = label;
+    const h = document.createElement('span'); h.className = 'die-menu-hint'; h.textContent = hint;
+    t.appendChild(n); t.appendChild(h); b.appendChild(g); b.appendChild(t);
+    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closeDieMenu(); act(); });
+    m.appendChild(b); return b;
+  };
+  item('⚁', DIE.gentle, DIE.gentleHint, () => rollWithBack(root, 'gentle'));
+  item('⚄', DIE.usual, DIE.usualHint, () => rollWithBack(root, 'usual'));
+  item('⚅', DIE.wild, DIE.wildHint, () => rollWithBack(root, 'wild'));
+  if(surface) item('⁂', DIE.seed, DIE.seedHint, () => { maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); });
+  const has = dieRolls.has(root);
+  item('↶', DIE.back, has ? DIE.backHint : DIE.backNone, () => dieBack(root), !has);
+  document.body.appendChild(m); dieMenu = m;
+  if(!document.body.classList.contains('is-mobile') && anchor && anchor.getBoundingClientRect){
+    const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    m.style.left = Math.max(8, Math.min(vw - w - 8, r.right - w)) + 'px';
+    m.style.top = (r.bottom + 6 + h > vh - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+  }
+  const first = m.querySelector('.die-menu-item:not([disabled])'); if(first && first.focus) first.focus({ preventScroll: true });
+}
+if(typeof document.addEventListener === 'function'){
+  document.addEventListener('pointerdown', e => { if(dieMenu && !dieMenu.contains(e.target) && !(e.target.closest && e.target.closest('.die-more'))) closeDieMenu(); }, true);
+  document.addEventListener('keydown', e => { if(dieMenu && e.key === 'Escape'){ closeDieMenu(); } });
 }
 function addDie(root, head){
   if(!root || !head || !lockablesIn(root).length) return;
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'die-btn'; btn.textContent = '⚄';
   const surface = !!($('randomSurfaceBtn') && root.contains && root.contains($('randomSurfaceBtn')));
-  btn.title = surface ? 'Roll this section (Shift-click or hold: only a new seed)' : 'Roll this section (locked controls stay)';
-  btn.setAttribute('aria-label', btn.title);
+  const phone = () => !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
+  const title = () => phone() ? DIE.titlePhone : surface ? DIE.titleSurface : DIE.title;
+  btn.title = title(); btn.setAttribute('aria-label', btn.title); btn.setAttribute('aria-haspopup', 'menu');
+  // a long press: on a phone, the menu (as soon as it is held); on a desk, the Surface's seed alone
   let held = false, timer = 0;
-  btn.addEventListener('pointerdown', () => { held = false; clearTimeout(timer); timer = setTimeout(() => { held = true; }, 500); });
+  btn.addEventListener('pointerdown', () => { held = false; btn.title = title(); clearTimeout(timer);
+    timer = setTimeout(() => { held = true; if(phone()) openDieMenu(root, btn, surface); }, 500); });
   btn.addEventListener('pointerup', () => clearTimeout(timer));
+  btn.addEventListener('pointercancel', () => clearTimeout(timer));
   btn.addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
-    const seedOnly = surface && (e.shiftKey || held); held = false;
-    if(seedOnly){ maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); return; }
-    if(!rollSection(root)) murmur.play('reroll');
+    const wasHeld = held; held = false;
+    if(wasHeld && phone()) return;                               // (the menu is already open)
+    if(surface && (e.shiftKey || wasHeld)){ maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); return; }
+    rollWithBack(root, 'usual');
   });
   // (a long press must not open the phone's context menu)
   btn.addEventListener('contextmenu', e => e.preventDefault());
-  headTools(head).appendChild(btn);
+  // on a desk: ▾ beside the die opens the same menu
+  const more = document.createElement('button'); more.type = 'button'; more.className = 'die-more'; more.textContent = '▾';
+  more.title = DIE.more; more.setAttribute('aria-label', DIE.more); more.setAttribute('aria-haspopup', 'menu');
+  more.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); if(dieMenu){ closeDieMenu(); return; } openDieMenu(root, more, surface); });
+  const pair = document.createElement('span'); pair.className = 'die-pair'; pair.appendChild(btn); pair.appendChild(more);
+  headTools(head).appendChild(pair);
 }
 // the switches that show a whole card, moved into its heading as an eye
 const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the border', cardToggle: 'Show the inset box', vignetteToggle: 'Show the vignette' };

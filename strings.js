@@ -363,6 +363,26 @@ export const CHOOSER = {
   baseTitle: 'Base Surface',
 };
 
+/** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk. */
+export const DIE = {
+  title: 'Roll this section (locked controls stay)',
+  titleSurface: 'Roll this section (Shift-click or hold: only a new seed)',
+  titlePhone: 'Roll this section (hold for gently, wildly or back)',
+  more: 'More ways to roll: gently, wildly, or back',
+  menuTitle: 'Roll this section',
+  gentle: 'Gently',
+  gentleHint: 'Sliders move a little; menus and switches stay; colors turn together',
+  usual: 'As usual',
+  usualHint: 'Every slider, menu and color in reason',
+  wild: 'Wildly',
+  wildHint: 'Anything goes: the whole range, switches too',
+  back: 'Back',
+  backHint: 'Return this section to how it was before its last roll',
+  backNone: 'Nothing to go back to yet',
+  seed: 'Only a new seed',
+  seedHint: 'The same surface, a new pattern',
+};
+
 /** The colour picker's own button. */
 export const PICKER = {
   done: 'Done',

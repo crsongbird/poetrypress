@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Kallichore (2026-10-14)
+
+- **Three ways to roll a section.** A tap on a section's die rolls it as
+  before. Hold the die on a phone, or tap the ▾ beside it on a computer, to
+  choose:
+  - **Gently:** sliders move a little, menus and switches stay, and colors
+    turn together, so the look stays itself.
+  - **As usual:** what a tap does.
+  - **Wildly:** anything goes, every slider across its whole range, menus,
+    switches too.
+  - **Back:** returns that section to how it was before its last roll,
+    without undoing changes you made elsewhere since.
+  - On the Surface, **Only a new seed** is there too (Shift-click still works
+    on a computer).
+
 ## Jupiter–Aoede (2026-10-14)
 
 - **Surface Studies.** All 36 surfaces from the future-directions document can
