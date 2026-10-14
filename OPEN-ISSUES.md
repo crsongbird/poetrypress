@@ -6,19 +6,29 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Megaclite)
-- KNOTWORK (Cromwell's grid; strands, breaks, shape, width, slide) — Interlace wears it.
-- FRACTURED GLAZE → cracks spreading (Tarbell's Substrate: cracks stop at cracks, branch at right angles;
-  From One Point aims an impact with the dial). Old crazed glaze kept hidden for old looks. Hourglass wears it.
-- VEINS OF LIGHT: space-colonization growth through strata / pebbles / sand / fibers / skin, steered into
-  the material's gaps — Circuitry wears it.
-- POSITIONING: Zoom + Slide on Lichtenberg and Ruffled Growth; Horizon on Aurora; Slide on Veins and Knotwork.
-- LICHTENBERG: one or two poles only; two always join; Zoom reaches the edges.
-- STAINED GLASS: arches of glass (Lancet · Arcade · Round), heavier outline came, border glass, no stone;
-  flat dark lead with solder joints.
-- ASPECT is locked to the person's choice; hover previews gone; 12 new presets (every group a multiple of 4);
-  spells in Runology's runes only.
-- Still open from before: Ruffled Growth, Aurora, Poured Wax/Sealed, the regrouped presets.
+## 1 · Ruby to judge (new in Jupiter–Sinope)
+- THE SURFACE MENUS AS TILES (search, folding groups, thumbnails cached per release). Lichtenberg's
+  thumbnail is heavy when small (its channel width has a floor) — worth a look.
+- PRESET SEARCH + folding groups. Question open: which presets are redundant or superseded?
+- TEXT CLEARING; THE POEM part (words, distance, lines, stanzas); Ripples from the Words starter.
+- New parts: Grow & Shrink, Pixelate, Twirl, Mirror, Chromatic Offset.
+- Lain's kept draft (merged): her open questions — a way back to the welcome page? Should an empty
+  poem open the welcome page? The page shape isn't kept between visits (by the aspect rule).
+
+## 1b · The direction (Ruby's future-directions doc) — next passes
+- THREE LEVELS: Preset (thumbnail, Summon Variation, Mutate Gently, Crossbreed, Freeze Seed) →
+  Customize Surface (4–8 controls chosen by the preset's author) → the Athanor (Reveal Spell Graph).
+  Presets become saved graphs with exposed params.
+- READABILITY AS PART OF THE SHADER: more poetic inputs — rhyme groups (~A, ~B), punctuation
+  positions, foreground color, local luminance behind the text, a minimum-contrast target;
+  Protect Text as one action.
+- NODE GROUPS (Unreal's material functions, Material Maker): a group of parts saved as one part.
+- Still missing from the doc's utility list: Displace by a map, Sharpen, Perspective, Glyph Scatter,
+  Image Input, Border Mask, Dilate by shape.
+- Surfaces from the doc to build as chains: Ink Thirst, Letterpress Bed, Registration Ghost,
+  Carbon Copy, Thermal Receipt, Breath on Glass, Polarized Dream, Drowned Light, Broken Rosette,
+  Impossible Cartography, Orbit Script, Misremembered Grid, Sigil Weather, Salt Bloom, Moth-Eaten
+  Velvet, Lichen Signal, Frozen Breath, Poured Mineral, CRT Séance, Dead Channel, Holographic Foil…
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the

@@ -81,6 +81,7 @@ from the source files (unbuilt) — everything must work both ways.
 | `symbolLore.js` | Symbology's glyphs with names and families (spell glyphs, circles, cards) |
 | `murmur.js` | soft interface sounds (Symbology's engine, Vellum's sounds); off until turned on |
 | `appOptions.js` | fonts, presets, aspects, defaults, the opening template |
+| `chooser.js` | a `<select>` shown as tiles (the surface menus): search, folding groups, thumbnails kept per release (localStorage `uv.thumbs.v1`) |
 | `strings.js` · `tunables.js` | hand-editable text · hand-editable numbers |
 | `spell.js` · `vault.js` | glyph spells; saving, sharing and the Grimoire |
 | `glyphs.js` · `moon.js` · `fonts.js` · `palette.js` · `theme.js` · `swatches.js` · `pwa.js` · `editor.js` | inline glyphs, moon phases, lazy fonts, theme palettes, preset tiles, installability, the PML editor |
@@ -467,6 +468,21 @@ before/after measurements AND an identical-render comparison.
   `glossMap` (Kintsugi's gold, Moss beside stone, glaze beside bare body).
 
 ## Systems worth knowing
+- THE POEM'S LAYOUT (canvasRenderer TEXT_LAYOUT, textLayoutNow): each frame
+  records its text runs as "x0,y0,x1,y1,line,stanza;…" in page fractions. A
+  surface drawn before the text reads the previous frame's; a change asks for
+  one more frame (only when something reads it). TEXT CLEARING
+  (textureClearing, PERSISTED, reset by presets via FRAME_DEFAULTS) takes a
+  soft mask of the runs out of each surface layer (clearedSurface,
+  destination-out; mask 192 px across, blurred there). THE POEM part
+  (steps.js 'poem': words, distance by an exact EDT, lines, stanzas) gets the
+  layout as ctx.text only when its graph contains it (graphUsesPoem); the
+  cache key carries it then (`_q`, layoutHash), never otherwise.
+- THE CHOOSER (chooser.js): the <select> stays the truth; the chooser shows
+  it and dispatches input+change. Thumbnails: the surface as a preset wears
+  it (else its defaults on a ground for its blend), made at 3× through the
+  swatch source (never on the page's thread) and drawn down; kept per
+  RELEASE. refreshUi refreshes the buttons (CHOOSERS).
 - KNOTWORK (stepsGenerative genKnot): Cromwell's construction — cells at odd
   doubled coordinates, crossings at edge midpoints; boundary edges and hashed
   symmetric breaks become turns; crossings alternate over/under by edge kind.

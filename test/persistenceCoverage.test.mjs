@@ -31,6 +31,7 @@ const EXEMPT = {
   forgeStarter: 'a one-shot menu in the Athanor: it loads a starter INTO the graph (forgeGraph, saved) and returns to "Start from…"',
   lightDegIn:   'the dial\'s angle typed or read: a view of textureLight, which is saved and restored',
   lightTiltIn:  'the dial\'s reach typed or read: a view of textureLightTilt, which is saved and restored',
+  presetSearch: 'a search over the preset grid: it filters what the grid shows, and is not part of an image',
   textureSeedWords: 'the seed shown as its phrase: a view of textureSeedValue, which is saved and restored (seedWords.js turns each into the other exactly)',
 };
 

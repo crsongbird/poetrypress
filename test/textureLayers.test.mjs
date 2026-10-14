@@ -17,7 +17,7 @@ check('all six are saved with the look (and so in the JSON, spells and share lin
 check('a look restores its base variant before its knobs (so they take the right range)',
   ev.indexOf("if(s.baseType && $('baseType')){ $('baseType').value = s.baseType; syncBaseParams(false); }") > 0
   && ev.indexOf("if(s.baseType && $('baseType'))") < ev.indexOf('applyPersisted(s.cardLink === undefined'));
-check('a preset turns the base layer off (it never leaks from one look to the next)', /cardFxScale:'50', baseToggle:false \};/.test(ev));
+check('a preset turns the base layer off (it never leaks from one look to the next)', /cardFxScale:'50', baseToggle:false[,}]/.test(ev));
 check('drawn beneath the main texture, with a turned seed and the variant\'s own hues',
   cr.indexOf("requestTexture('base', bt, W, H,") > 0 && cr.indexOf("requestTexture('base', bt, W, H,") < cr.indexOf("const type = $('textureType').value;")
   && /\^ 0x5bd1e995\) >>> 0/.test(cr) && /c === 'accent1' \? a1 : c === 'accent2' \? a2 : c/.test(cr));

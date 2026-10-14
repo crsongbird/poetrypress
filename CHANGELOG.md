@@ -4,10 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
-## Unreleased
+## Jupiter–Sinope (2026-10-13)
 
 - Your poem and its look are kept as you work, so a closed or dropped tab
-  opens again where you left off. A first visit still opens on the welcome page.
+  opens again where you left off. A first visit still opens on the welcome
+  page. (Lain's work.)
+- The surface menus (Surface Variant and Base Surface) are now tiles. Each
+  shows a small picture of the surface as a preset wears it. Groups fold, and
+  a search finds a surface by its name, its group, or the names of its
+  readings ("rose" finds Stained Glass). The pictures are made once per
+  release and kept in your browser, so they appear at once after that.
+- Built-In Presets has a search, and its groups fold. Folded groups are
+  remembered.
+- Text Clearing (Surface Texture): quiets the surface behind your words,
+  fading out around them, so small text stays readable over a busy surface.
+  Fixed: Base Surface's menu showed empty groups.
+- The Athanor can read your poem. The Poem is a new part that hands on four
+  maps:
+  - Words: where the words are.
+  - Distance: how far each point is from the words.
+  - Lines: a band for each line.
+  - Stanzas: a region for each stanza.
+  A new starter, Ripples from the Words, draws rings spreading out from the
+  text.
+- New Athanor parts: Grow & Shrink, Pixelate, Twirl, Mirror and Chromatic
+  Offset.
+- Preset tiles now show every knob and hue their preset sets.
 
 ## Jupiter–Megaclite (2026-10-12)
 

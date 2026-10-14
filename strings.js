@@ -107,6 +107,9 @@ export const UI_STRINGS = {
   'label.arc_angle':                           "Arc Angle",
   'label.customize_surface':                   "Customize Surface",
   'label.surface_variant':                     "Surface Variant",
+  'label.text_clearing':                       "Text Clearing",
+  'ph.preset_search':                          "Search looks: a name, a mood, a surface…",
+  'note.preset_none':                          "No look by that name. Try a mood (rain, gold) or a surface (glass, paper).",
   'label.x':                                   "—",
   'label.x2':                                  "—",
   'label.opacity':                             "Opacity",
@@ -350,6 +353,16 @@ export const DIALOGS = {
   },
 };
 
+/** The visual menus (chooser.js): the surface menus shown as tiles. */
+export const CHOOSER = {
+  search: 'Search by name, group or mood…',
+  close: 'Close',
+  open: 'Opens a menu of tiles',
+  none: 'Nothing by that name. Try a group (Weather), a mood (rose, frost) or a material (glass).',
+  surfaceTitle: 'Surface Variant',
+  baseTitle: 'Base Surface',
+};
+
 /** The colour picker's own button. */
 export const PICKER = {
   done: 'Done',
@@ -400,6 +413,13 @@ export function applyStrings(root){
     if(value === undefined) return;
     setOwnText(el, value);
     n++;
+  });
+  // a field's placeholder and its spoken name (data-str-ph)
+  scope.querySelectorAll('[data-str-ph]').forEach(el => {
+    if(!el || typeof el.setAttribute !== 'function' || typeof el.getAttribute !== 'function') return;
+    const value = UI_STRINGS[el.getAttribute('data-str-ph')];
+    if(value === undefined) return;
+    el.setAttribute('placeholder', value); el.setAttribute('aria-label', value); n++;
   });
   return n;
 }

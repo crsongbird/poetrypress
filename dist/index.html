@@ -2180,6 +2180,71 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
 
+/* ============================================================
+   THE CHOOSER (chooser.js): a surface menu shown as tiles.
+   The <select> stays in the page as the truth, out of sight.
+   ============================================================ */
+select.ch-native{ position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; border:0 !important;
+  margin:-1px !important; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; opacity:0; pointer-events:none; }
+.ch-trigger{ width:100%; display:flex; align-items:center; gap:9px; padding:4px 8px 4px 4px; min-height:44px; text-align:left; cursor:pointer;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
+  border:1px solid var(--line); color:var(--text-main); font:inherit; font-size:14px; box-shadow:inset 0 1px 2px var(--well); border-radius:0; }
+.ch-trigger:hover{ border-color:color-mix(in srgb, var(--accent-dim) 60%, var(--line)); }
+.ch-trigger:focus-visible{ outline:none; border-color:var(--accent-2); box-shadow:inset 0 1px 2px var(--well), 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent); }
+.ch-trig-thumb{ flex:0 0 34px; width:34px; height:34px; overflow:hidden; border:1px solid var(--line); background:var(--bg-deep); display:grid; place-items:center; }
+.ch-trig-thumb img, .ch-trig-thumb canvas{ width:100%; height:100%; display:block; object-fit:cover; }
+.ch-trig-name{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ch-trig-caret{ color:var(--text-dim); font-size:11px; }
+.ch-glyph{ color:var(--accent-2); font-size:20px; line-height:1; }
+
+.ch-panel{ position:fixed; z-index:900; display:flex; flex-direction:column; background:var(--bg-panel); color:var(--text-main);
+  border:1px solid var(--line); box-shadow:0 18px 40px -12px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 18%, transparent); }
+.ch-panel.ch-sheet{ left:0; right:0; bottom:0; top:auto; width:auto; max-height:calc(var(--vvh) * 0.82); border-width:1px 0 0;
+  padding-bottom:env(safe-area-inset-bottom, 0); }
+.ch-head{ display:flex; gap:6px; padding:8px; border-bottom:1px solid var(--line); background:var(--bg-panel-2); }
+.ch-search{ flex:1 1 auto; min-width:0; min-height:36px; font-size:15px; }
+.ch-panel input.ch-search{ width:auto; }
+.ch-close{ flex:0 0 40px; min-height:36px; background:none; border:1px solid var(--line); color:var(--text-dim); cursor:pointer; font-size:14px; }
+.ch-close:hover{ color:var(--text-main); border-color:var(--accent-dim); }
+.ch-body{ overflow:auto; overscroll-behavior:contain; padding:2px 8px 10px; }
+.ch-group > summary{ display:flex; align-items:center; gap:7px; padding:9px 2px 7px; cursor:pointer; list-style:none; position:sticky; top:0; z-index:1;
+  background:var(--bg-panel); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); border-radius:0; }
+.ch-group > summary::-webkit-details-marker{ display:none; }
+.ch-group > summary::before{ content:'▸'; display:inline-block; width:10px; color:var(--text-dim); transition:transform .12s; }
+.ch-group[open] > summary::before{ transform:rotate(90deg); }
+.ch-g-glyph{ font-size:15px; letter-spacing:0; text-transform:none; }
+.ch-g-name{ flex:1 1 auto; }
+.ch-g-count{ color:var(--text-dim); letter-spacing:.04em; font-size:10.5px; }
+.ch-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px; padding:2px 0 8px; }
+.ch-tile{ display:flex; flex-direction:column; gap:4px; padding:0; background:none; border:1px solid transparent; color:var(--text-main);
+  cursor:pointer; text-align:left; font:inherit; min-width:0; border-radius:0; }
+.ch-tile[hidden]{ display:none; }
+.ch-thumb{ display:grid; place-items:center; aspect-ratio:1; width:100%; overflow:hidden; background:var(--bg-deep); border:1px solid var(--line); }
+.ch-thumb img, .ch-thumb canvas{ width:100%; height:100%; display:block; object-fit:cover; }
+.ch-name{ font-size:12px; line-height:1.25; padding:0 2px 2px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.ch-tile:hover .ch-thumb{ border-color:var(--accent-dim); }
+.ch-tile:hover .ch-name{ color:var(--text-main); }
+.ch-tile:focus-visible{ outline:none; }
+.ch-tile:focus-visible .ch-thumb{ border-color:var(--accent-2); box-shadow:0 0 0 1px var(--accent-2); }
+.ch-tile[aria-pressed="true"] .ch-thumb{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 0 12px -3px var(--accent); }
+.ch-tile[aria-pressed="true"] .ch-name{ color:var(--text-main); }
+.ch-none{ margin:0; padding:14px 12px; color:var(--text-dim); font-size:13px; }
+body.is-mobile .ch-grid{ grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
+
+/* THE PRESET GRID's search, and its groups that fold */
+.preset-search{ width:100%; margin:0 0 6px; min-height:36px; }
+input.preset-search{ font-size:14px; }
+.preset-none{ margin:6px 0 2px; color:var(--text-dim); font-size:13px; }
+button.preset-group-head{ background:none; border:0; padding:6px 0 4px; cursor:pointer; text-align:left; font:inherit; font-size:11px; width:100%; }
+button.preset-group-head::before{ content:'▸'; display:inline-block; width:10px; color:var(--text-dim); transition:transform .12s; }
+button.preset-group-head[aria-expanded="true"]::before{ transform:rotate(90deg); }
+button.preset-group-head:hover .pg-name{ color:var(--text-main); }
+button.preset-group-head:focus-visible{ outline:1px solid var(--accent-2); outline-offset:2px; }
+.preset-group-head .pg-glyph{ font-size:14px; letter-spacing:0; }
+.preset-group-head .pg-name{ flex:1 1 auto; }
+.preset-group-head .pg-count{ color:var(--text-dim); letter-spacing:.04em; font-size:10.5px; }
+.preset-btn[hidden], .preset-group-head[hidden]{ display:none; }
+
 </style>
 
 <script type="text/js-worker" id="vellum-texture-worker">
@@ -12101,7 +12166,42 @@ const STEP_PARTS = {
   merge:    { cat: 'Combine', label: 'Merge Channels', ins: ['red', 'green', 'blue'], outs: ['picture'], params: [] },
   switch:   { cat: 'Combine', label: 'Switch', ins: ['a', 'b', 'choose'], outs: ['result'], params: [STEP_R('at', 'Switch At', 50)] },
   hsv:      { cat: 'Light & Color', label: 'Hue & Saturation', ins: ['picture'], outs: ['picture'], params: [STEP_R('hue', 'Hue Turn', 0, 0, 360), STEP_R('sat', 'Saturation', 100, 0, 200), STEP_R('val', 'Brightness', 100, 0, 200)] },
+  // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
+  // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
+  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas'],
+              params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100)] },
+  // more ways to reshape a gray map (Filter Forge's and Blender's staples)
+  grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
+  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
+  twirl:    { cat: 'Shape', label: 'Twirl', ins: ['field'], outs: ['field'], params: [STEP_R('angle', 'Twist', 180, -720, 720), STEP_R('radius', 'Radius', 70, 5, 150), STEP_R('x', 'Across', 50), STEP_R('y', 'Down', 50)] },
+  mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
+  chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
 };
+// The poem's runs, as the page measured them: "x0,y0,x1,y1,line,stanza;…" in fractions of the page
+function poemRuns(text){
+  const out = [];
+  for(const part of String(text || '').split(';')){ const v = part.split(',').map(Number); if(v.length >= 6 && v.every(isFinite)) out.push(v); }
+  return out;
+}
+// one row (or column) of an exact distance transform (Felzenszwalb & Huttenlocher 2012): squared distances in place
+function stepEdt1(f, n, d, v, z){
+  let k = 0; v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+  for(let q = 1; q < n; q++){
+    let s2 = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k]))/(2*q - 2*v[k]);
+    while(s2 <= z[k]){ k--; s2 = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k]))/(2*q - 2*v[k]); }
+    k++; v[k] = q; z[k] = s2; z[k + 1] = Infinity;
+  }
+  k = 0; for(let q = 0; q < n; q++){ while(z[k + 1] < q) k++; d[q] = (q - v[k])*(q - v[k]) + f[v[k]]; }
+}
+/** The distance (in cells) from every cell to the nearest cell of a mask (> 0.5): exact, linear time. */
+function stepDistance(mask, ww, wh){
+  const BIG = 1e12, g = new Float64Array(ww*wh), m = Math.max(ww, wh);
+  const f = new Float64Array(m), d = new Float64Array(m), v = new Int32Array(m), z = new Float64Array(m + 1);
+  for(let x = 0; x < ww; x++){ for(let y = 0; y < wh; y++) f[y] = mask[y*ww + x] > 0.5 ? 0 : BIG; stepEdt1(f, wh, d, v, z); for(let y = 0; y < wh; y++) g[y*ww + x] = d[y]; }
+  const out = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ for(let x = 0; x < ww; x++) f[x] = g[y*ww + x]; stepEdt1(f, ww, d, v, z); for(let x = 0; x < ww; x++) out[y*ww + x] = Math.sqrt(d[x]); }
+  return out;
+}
 /**
  * WHAT EACH PART DOES, in a sentence a person can use (the parts list, the
  * menus and the Help show these). Plain and instructive: what goes in, what
@@ -12154,6 +12254,12 @@ const STEP_DOCS = {
   transform: 'Scales and turns a gray map, repeating it past its edges.',
   edges: 'Finds the edges in a gray map: where it changes fastest.',
   kaleidoscope: 'Folds a gray map into mirrored wedges around the center.',
+  poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray. Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
+  grow: 'Grows the bright parts of a gray map outward (Amount above 50) or shrinks them (below 50), by the Radius. Try: shrink a mask to thin its edges, grow it to merge small spots.',
+  pixelate: 'Breaks a gray map into flat cells — squares, bricks or diamonds — each the average of what it covers. Try: a big Cell Size over noise for a mosaic.',
+  twirl: 'Twists a gray map around a point, most at the center and fading to none at the Radius. Try: a Twirl over Waves for a whirlpool.',
+  mirror: 'Folds a gray map onto itself so one half repeats the other: left to right, top to bottom, both, or across the diagonal.',
+  chroma: 'Slides a picture\'s red and blue apart in opposite directions, like a lens or a misprinted page. Toward the Edges keeps the middle sharp.',
   polar: 'Wraps a gray map into rings around the center.',
   maprange: 'Remaps a gray map\'s values: what was From Low to From High becomes To Low to To High.',
   wash: 'A watercolor wash over any picture: soft bleeding, and blooms when it is very wet.',
@@ -12527,7 +12633,7 @@ Object.assign(STEP_RUN, {
     return [o];
   },
 });
-Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5 });
+Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
 Object.assign(STEP_RUN, {
   number(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'value', 50)))/100]; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
@@ -12558,6 +12664,80 @@ Object.assign(STEP_RUN, {
     const v = typeof c === 'number' ? c : c == null ? 0 : (() => { const f = asField(c); let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; })();
     const pick = v >= at ? input(n, 2) : input(n, 1);
     return pick == null ? null : [pick]; },
+  poem(E, n){ const { ctx, ww, wh, N, num, boxBlur } = E;
+    const runs = poemRuns(ctx.text);
+    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N)];
+    const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
+    const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
+    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
+    const nLines = Math.max(...runs.map(r => r[4])) + 1, nSt = Math.max(...runs.map(r => r[5])) + 1;
+    for(const r of runs){
+      const h = (r[3] - r[1])*wh, p = h*pad;
+      const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      // a line is a band across the whole page at the line's own height, its gray rising line by line
+      const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
+      for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
+    }
+    // a stanza owns the page from halfway after the stanza above it to halfway before the one below
+    const span = []; for(const r of runs){ const s = span[r[5]] || (span[r[5]] = [Infinity, -Infinity]); s[0] = Math.min(s[0], r[1]); s[1] = Math.max(s[1], r[3]); }
+    const cuts = []; for(let i = 0; i + 1 < span.length; i++) if(span[i] && span[i + 1]) cuts.push((span[i][1] + span[i + 1][0])/2*wh);
+    for(let y = 0; y < wh; y++){ let k = 0; while(k < cuts.length && y >= cuts[k]) k++; const sv = (k + 1)/nSt; for(let x = 0; x < ww; x++) stanzas[y*ww + x] = sv; }
+    const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
+    for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
+    const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
+    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas];
+  },
+  grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
+    if(t === 0) return [f];
+    // a max (or min) filter, separable, by the radius; mixed with the original by how far Amount is from 50
+    const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
+      for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
+        for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
+        dst[horiz ? j*ww + i : i*ww + j] = m; } };
+    const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false);
+    for(let i = 0; i < N; i++) o[i] = f[i] + (o[i] - f[i])*t;
+    return [o];
+  },
+  pixelate(E, n){ const { ww, wh, N, unit, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares');
+    const cellOf = (x, y) => { if(kind === 'diamonds'){ const u = (x + y)/c, v = (x - y)/c; return Math.floor(u) + ':' + Math.floor(v); }
+      const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return Math.floor(sx/c) + ':' + row; };
+    const sum = new Map(), id = new Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k) || [0, 0]; s[0] += f[q]; s[1]++; sum.set(k, s); }
+    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
+    return [o];
+  },
+  twirl(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const turn = num(n, 'angle', 180)*Math.PI/180, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), q = y*ww + x;
+      if(r >= R){ o[q] = f[q]; continue; }
+      const t = 1 - r/R, a = Math.atan2(dy, dx) + turn*t*t;
+      const sx = Math.min(ww - 1, Math.max(0, Math.round(cx + Math.cos(a)*r))), sy = Math.min(wh - 1, Math.max(0, Math.round(cy + Math.sin(a)*r)));
+      o[q] = f[sy*ww + sx]; }
+    return [o];
+  },
+  mirror(E, n){ const { ww, wh, N, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const axis = P(n, 'axis', 'left to right'), at = num(n, 'at', 50)/100, fx = at*ww, fy = at*wh, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      let sx = x, sy = y;
+      if((axis === 'left to right' || axis === 'both') && x > fx) sx = Math.round(2*fx - x);
+      if((axis === 'top to bottom' || axis === 'both') && y > fy) sy = Math.round(2*fy - y);
+      if(axis === 'diagonal' && x/ww > y/wh){ sx = Math.round(y/wh*ww); sy = Math.round(x/ww*wh); }
+      o[y*ww + x] = f[Math.min(wh - 1, Math.max(0, sy))*ww + Math.min(ww - 1, Math.max(0, sx))]; }
+    return [o];
+  },
+  chroma(E, n){ const { ww, wh, N, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+    const A = num(n, 'amount', 20)/100*unit*0.02, ang = num(n, 'angle', 0)*Math.PI/180, edge = num(n, 'edge', 0)/100;
+    const o = { r: new Float32Array(N), g: im.g.slice ? im.g.slice() : Float32Array.from(im.g), b: new Float32Array(N) };
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      const q = y*ww + x, k = edge > 0 ? (1 - edge) + edge*Math.min(1, Math.hypot(x/ww - 0.5, y/wh - 0.5)/0.7071) : 1;
+      const dx = Math.cos(ang)*A*k, dy = Math.sin(ang)*A*k;
+      const at = (ox, oy) => Math.min(wh - 1, Math.max(0, Math.round(y + oy)))*ww + Math.min(ww - 1, Math.max(0, Math.round(x + ox)));
+      o.r[q] = im.r[at(dx, dy)]; o.b[q] = im.b[at(-dx, -dy)]; }
+    return [o];
+  },
   hsv(E, n){ const { N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
     const turn = num(n, 'hue', 0)/360, sat = num(n, 'sat', 100)/100, val = num(n, 'val', 100)/100;
     const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
@@ -12579,7 +12759,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
 const VALUE_TYPES = ['field', 'image', 'colour', 'value'];
 const STEP_IO = {
   knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
-  split: { ins: ['image'] }, merge: { outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
@@ -13232,7 +13412,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
   const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -13405,6 +13585,14 @@ const ATHANOR_STARTERS = {
       ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
       ['material', { relief: 22, '~relief': '0,45', gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
     wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
+  // the poem as an input (The Poem): rings spreading from the words, quiet where the words are
+  ripples: { label: 'Ripples from the Words', teach: 'This is a surface that knows where your poem is. The Poem hands on a Distance map: 0 at the words, rising to 1 far from them. A Value Noise warps it a little, and Contour Lines draws a line at every step of it, so rings spread out from the text like ripples from a stone. Levels turns the Distance into a mask that is dark only right around the words, and Math multiplies the rings by it, so they fade out close to the text and it stays clear. Try: change The Poem\'s Reach, or type more lines and watch the rings move.', nodes: [
+      ['poem', { padding: 30, softness: 0, reach: 70 }, 40, 80], ['noise', { scale: 8, octaves: 3 }, 40, 320],
+      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 140, index: 4, strength: 100 }, 520, 160],
+      ['math', { op: 'multiply' }, 740, 160], ['hue', { slot: '1', name: 'Ring Hue' }, 740, 340], ['hue', { slot: '2', name: 'Ground Hue' }, 740, 460],
+      ['ramp', { mid: 50 }, 960, 200], ['surface', { name: 'Ripples from the Words', ground: 'colour' }, 1180, 200],
+      ['levels', { lo: 4, hi: 16, gamma: 50 }, 520, 360]],
+    wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 2, 10, 1], [10, 1, 5, 2], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -14324,6 +14512,8 @@ function storeTexture(key, result){
   return result;
 }
 // everything a request means: its normalised knobs, and its key
+// the poem's layout, as a short key (FNV-1a): every character counts
+function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
@@ -14366,7 +14556,9 @@ function describeRequest(type, w, h, opts){
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
-            + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '');
+            + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
+            // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
+            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
@@ -14377,7 +14569,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const B = athanorBudget(extra.graph || '');
   const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null },
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '' },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -14401,7 +14593,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '' },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -14492,7 +14684,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, seed, lightTilt, accents: [accent1, accent2] }))));
+    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -14781,7 +14973,9 @@ Have fun!</textarea>
 
     <details class="card" data-tab="style" open>
       <summary class="card-title" data-str="card.builtin_presets">Built-In Presets</summary>
+      <input type="search" id="presetSearch" class="preset-search" data-str-ph="ph.preset_search" placeholder="Search looks: a name, a mood, a surface…" autocomplete="off" spellcheck="false" aria-label="Search the presets">
       <div class="preset-grid" id="presetGrid"></div>
+      <p class="preset-none" id="presetNone" hidden data-str="note.preset_none">No look by that name. Try a mood (rain, gold) or a surface (glass, paper).</p>
     </details>
 
     <details class="card" data-tab="style" id="customPresetsCard" open>
@@ -15212,6 +15406,11 @@ Have fun!</textarea>
             <label data-str="label.opacity">Opacity</label>
             <input type="range" id="textureOpacity" min="0" max="100" value="60" data-moon>
             <span class="range-val" id="textureOpacityVal">60%</span>
+          </div>
+          <div class="field full">
+            <label data-str="label.text_clearing" title="Quiets the surface behind the words, fading out around them, so small text stays readable over a busy surface.">Text Clearing</label>
+            <input type="range" id="textureClearing" min="0" max="100" value="0">
+            <span class="range-val" id="textureClearingVal">0%</span>
           </div>
           <div class="field full">
             <label for="textureBlend" data-str="label.blend_mode">Blend Mode</label>
@@ -15946,6 +16145,9 @@ const UI_STRINGS = {
   'label.arc_angle':                           "Arc Angle",
   'label.customize_surface':                   "Customize Surface",
   'label.surface_variant':                     "Surface Variant",
+  'label.text_clearing':                       "Text Clearing",
+  'ph.preset_search':                          "Search looks: a name, a mood, a surface…",
+  'note.preset_none':                          "No look by that name. Try a mood (rain, gold) or a surface (glass, paper).",
   'label.x':                                   "—",
   'label.x2':                                  "—",
   'label.opacity':                             "Opacity",
@@ -16189,6 +16391,16 @@ const DIALOGS = {
   },
 };
 
+/** The visual menus (chooser.js): the surface menus shown as tiles. */
+const CHOOSER = {
+  search: 'Search by name, group or mood…',
+  close: 'Close',
+  open: 'Opens a menu of tiles',
+  none: 'Nothing by that name. Try a group (Weather), a mood (rose, frost) or a material (glass).',
+  surfaceTitle: 'Surface Variant',
+  baseTitle: 'Base Surface',
+};
+
 /** The colour picker's own button. */
 const PICKER = {
   done: 'Done',
@@ -16239,6 +16451,13 @@ function applyStrings(root){
     if(value === undefined) return;
     setOwnText(el, value);
     n++;
+  });
+  // a field's placeholder and its spoken name (data-str-ph)
+  scope.querySelectorAll('[data-str-ph]').forEach(el => {
+    if(!el || typeof el.setAttribute !== 'function' || typeof el.getAttribute !== 'function') return;
+    const value = UI_STRINGS[el.getAttribute('data-str-ph')];
+    if(value === undefined) return;
+    el.setAttribute('placeholder', value); el.setAttribute('aria-label', value); n++;
   });
   return n;
 }
@@ -27992,7 +28211,42 @@ const STEP_PARTS = {
   merge:    { cat: 'Combine', label: 'Merge Channels', ins: ['red', 'green', 'blue'], outs: ['picture'], params: [] },
   switch:   { cat: 'Combine', label: 'Switch', ins: ['a', 'b', 'choose'], outs: ['result'], params: [STEP_R('at', 'Switch At', 50)] },
   hsv:      { cat: 'Light & Color', label: 'Hue & Saturation', ins: ['picture'], outs: ['picture'], params: [STEP_R('hue', 'Hue Turn', 0, 0, 360), STEP_R('sat', 'Saturation', 100, 0, 200), STEP_R('val', 'Brightness', 100, 0, 200)] },
+  // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
+  // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
+  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas'],
+              params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100)] },
+  // more ways to reshape a gray map (Filter Forge's and Blender's staples)
+  grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
+  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
+  twirl:    { cat: 'Shape', label: 'Twirl', ins: ['field'], outs: ['field'], params: [STEP_R('angle', 'Twist', 180, -720, 720), STEP_R('radius', 'Radius', 70, 5, 150), STEP_R('x', 'Across', 50), STEP_R('y', 'Down', 50)] },
+  mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
+  chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
 };
+// The poem's runs, as the page measured them: "x0,y0,x1,y1,line,stanza;…" in fractions of the page
+function poemRuns(text){
+  const out = [];
+  for(const part of String(text || '').split(';')){ const v = part.split(',').map(Number); if(v.length >= 6 && v.every(isFinite)) out.push(v); }
+  return out;
+}
+// one row (or column) of an exact distance transform (Felzenszwalb & Huttenlocher 2012): squared distances in place
+function stepEdt1(f, n, d, v, z){
+  let k = 0; v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+  for(let q = 1; q < n; q++){
+    let s2 = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k]))/(2*q - 2*v[k]);
+    while(s2 <= z[k]){ k--; s2 = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k]))/(2*q - 2*v[k]); }
+    k++; v[k] = q; z[k] = s2; z[k + 1] = Infinity;
+  }
+  k = 0; for(let q = 0; q < n; q++){ while(z[k + 1] < q) k++; d[q] = (q - v[k])*(q - v[k]) + f[v[k]]; }
+}
+/** The distance (in cells) from every cell to the nearest cell of a mask (> 0.5): exact, linear time. */
+function stepDistance(mask, ww, wh){
+  const BIG = 1e12, g = new Float64Array(ww*wh), m = Math.max(ww, wh);
+  const f = new Float64Array(m), d = new Float64Array(m), v = new Int32Array(m), z = new Float64Array(m + 1);
+  for(let x = 0; x < ww; x++){ for(let y = 0; y < wh; y++) f[y] = mask[y*ww + x] > 0.5 ? 0 : BIG; stepEdt1(f, wh, d, v, z); for(let y = 0; y < wh; y++) g[y*ww + x] = d[y]; }
+  const out = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ for(let x = 0; x < ww; x++) f[x] = g[y*ww + x]; stepEdt1(f, ww, d, v, z); for(let x = 0; x < ww; x++) out[y*ww + x] = Math.sqrt(d[x]); }
+  return out;
+}
 /**
  * WHAT EACH PART DOES, in a sentence a person can use (the parts list, the
  * menus and the Help show these). Plain and instructive: what goes in, what
@@ -28045,6 +28299,12 @@ const STEP_DOCS = {
   transform: 'Scales and turns a gray map, repeating it past its edges.',
   edges: 'Finds the edges in a gray map: where it changes fastest.',
   kaleidoscope: 'Folds a gray map into mirrored wedges around the center.',
+  poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray. Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
+  grow: 'Grows the bright parts of a gray map outward (Amount above 50) or shrinks them (below 50), by the Radius. Try: shrink a mask to thin its edges, grow it to merge small spots.',
+  pixelate: 'Breaks a gray map into flat cells — squares, bricks or diamonds — each the average of what it covers. Try: a big Cell Size over noise for a mosaic.',
+  twirl: 'Twists a gray map around a point, most at the center and fading to none at the Radius. Try: a Twirl over Waves for a whirlpool.',
+  mirror: 'Folds a gray map onto itself so one half repeats the other: left to right, top to bottom, both, or across the diagonal.',
+  chroma: 'Slides a picture\'s red and blue apart in opposite directions, like a lens or a misprinted page. Toward the Edges keeps the middle sharp.',
   polar: 'Wraps a gray map into rings around the center.',
   maprange: 'Remaps a gray map\'s values: what was From Low to From High becomes To Low to To High.',
   wash: 'A watercolor wash over any picture: soft bleeding, and blooms when it is very wet.',
@@ -28418,7 +28678,7 @@ Object.assign(STEP_RUN, {
     return [o];
   },
 });
-Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5 });
+Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
 Object.assign(STEP_RUN, {
   number(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'value', 50)))/100]; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
@@ -28449,6 +28709,80 @@ Object.assign(STEP_RUN, {
     const v = typeof c === 'number' ? c : c == null ? 0 : (() => { const f = asField(c); let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; })();
     const pick = v >= at ? input(n, 2) : input(n, 1);
     return pick == null ? null : [pick]; },
+  poem(E, n){ const { ctx, ww, wh, N, num, boxBlur } = E;
+    const runs = poemRuns(ctx.text);
+    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N)];
+    const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
+    const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
+    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
+    const nLines = Math.max(...runs.map(r => r[4])) + 1, nSt = Math.max(...runs.map(r => r[5])) + 1;
+    for(const r of runs){
+      const h = (r[3] - r[1])*wh, p = h*pad;
+      const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      // a line is a band across the whole page at the line's own height, its gray rising line by line
+      const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
+      for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
+    }
+    // a stanza owns the page from halfway after the stanza above it to halfway before the one below
+    const span = []; for(const r of runs){ const s = span[r[5]] || (span[r[5]] = [Infinity, -Infinity]); s[0] = Math.min(s[0], r[1]); s[1] = Math.max(s[1], r[3]); }
+    const cuts = []; for(let i = 0; i + 1 < span.length; i++) if(span[i] && span[i + 1]) cuts.push((span[i][1] + span[i + 1][0])/2*wh);
+    for(let y = 0; y < wh; y++){ let k = 0; while(k < cuts.length && y >= cuts[k]) k++; const sv = (k + 1)/nSt; for(let x = 0; x < ww; x++) stanzas[y*ww + x] = sv; }
+    const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
+    for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
+    const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
+    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas];
+  },
+  grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
+    if(t === 0) return [f];
+    // a max (or min) filter, separable, by the radius; mixed with the original by how far Amount is from 50
+    const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
+      for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
+        for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
+        dst[horiz ? j*ww + i : i*ww + j] = m; } };
+    const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false);
+    for(let i = 0; i < N; i++) o[i] = f[i] + (o[i] - f[i])*t;
+    return [o];
+  },
+  pixelate(E, n){ const { ww, wh, N, unit, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares');
+    const cellOf = (x, y) => { if(kind === 'diamonds'){ const u = (x + y)/c, v = (x - y)/c; return Math.floor(u) + ':' + Math.floor(v); }
+      const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return Math.floor(sx/c) + ':' + row; };
+    const sum = new Map(), id = new Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k) || [0, 0]; s[0] += f[q]; s[1]++; sum.set(k, s); }
+    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
+    return [o];
+  },
+  twirl(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const turn = num(n, 'angle', 180)*Math.PI/180, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), q = y*ww + x;
+      if(r >= R){ o[q] = f[q]; continue; }
+      const t = 1 - r/R, a = Math.atan2(dy, dx) + turn*t*t;
+      const sx = Math.min(ww - 1, Math.max(0, Math.round(cx + Math.cos(a)*r))), sy = Math.min(wh - 1, Math.max(0, Math.round(cy + Math.sin(a)*r)));
+      o[q] = f[sy*ww + sx]; }
+    return [o];
+  },
+  mirror(E, n){ const { ww, wh, N, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const axis = P(n, 'axis', 'left to right'), at = num(n, 'at', 50)/100, fx = at*ww, fy = at*wh, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      let sx = x, sy = y;
+      if((axis === 'left to right' || axis === 'both') && x > fx) sx = Math.round(2*fx - x);
+      if((axis === 'top to bottom' || axis === 'both') && y > fy) sy = Math.round(2*fy - y);
+      if(axis === 'diagonal' && x/ww > y/wh){ sx = Math.round(y/wh*ww); sy = Math.round(x/ww*wh); }
+      o[y*ww + x] = f[Math.min(wh - 1, Math.max(0, sy))*ww + Math.min(ww - 1, Math.max(0, sx))]; }
+    return [o];
+  },
+  chroma(E, n){ const { ww, wh, N, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+    const A = num(n, 'amount', 20)/100*unit*0.02, ang = num(n, 'angle', 0)*Math.PI/180, edge = num(n, 'edge', 0)/100;
+    const o = { r: new Float32Array(N), g: im.g.slice ? im.g.slice() : Float32Array.from(im.g), b: new Float32Array(N) };
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      const q = y*ww + x, k = edge > 0 ? (1 - edge) + edge*Math.min(1, Math.hypot(x/ww - 0.5, y/wh - 0.5)/0.7071) : 1;
+      const dx = Math.cos(ang)*A*k, dy = Math.sin(ang)*A*k;
+      const at = (ox, oy) => Math.min(wh - 1, Math.max(0, Math.round(y + oy)))*ww + Math.min(ww - 1, Math.max(0, Math.round(x + ox)));
+      o.r[q] = im.r[at(dx, dy)]; o.b[q] = im.b[at(-dx, -dy)]; }
+    return [o];
+  },
   hsv(E, n){ const { N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
     const turn = num(n, 'hue', 0)/360, sat = num(n, 'sat', 100)/100, val = num(n, 'val', 100)/100;
     const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
@@ -28470,7 +28804,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
 const VALUE_TYPES = ['field', 'image', 'colour', 'value'];
 const STEP_IO = {
   knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
-  split: { ins: ['image'] }, merge: { outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
@@ -29123,7 +29457,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
   const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -29296,6 +29630,14 @@ const ATHANOR_STARTERS = {
       ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
       ['material', { relief: 22, '~relief': '0,45', gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
     wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
+  // the poem as an input (The Poem): rings spreading from the words, quiet where the words are
+  ripples: { label: 'Ripples from the Words', teach: 'This is a surface that knows where your poem is. The Poem hands on a Distance map: 0 at the words, rising to 1 far from them. A Value Noise warps it a little, and Contour Lines draws a line at every step of it, so rings spread out from the text like ripples from a stone. Levels turns the Distance into a mask that is dark only right around the words, and Math multiplies the rings by it, so they fade out close to the text and it stays clear. Try: change The Poem\'s Reach, or type more lines and watch the rings move.', nodes: [
+      ['poem', { padding: 30, softness: 0, reach: 70 }, 40, 80], ['noise', { scale: 8, octaves: 3 }, 40, 320],
+      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 140, index: 4, strength: 100 }, 520, 160],
+      ['math', { op: 'multiply' }, 740, 160], ['hue', { slot: '1', name: 'Ring Hue' }, 740, 340], ['hue', { slot: '2', name: 'Ground Hue' }, 740, 460],
+      ['ramp', { mid: 50 }, 960, 200], ['surface', { name: 'Ripples from the Words', ground: 'colour' }, 1180, 200],
+      ['levels', { lo: 4, hi: 16, gamma: 50 }, 520, 360]],
+    wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 2, 10, 1], [10, 1, 5, 2], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -30215,6 +30557,8 @@ function storeTexture(key, result){
   return result;
 }
 // everything a request means: its normalised knobs, and its key
+// the poem's layout, as a short key (FNV-1a): every character counts
+function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
@@ -30257,7 +30601,9 @@ function describeRequest(type, w, h, opts){
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
-            + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '');
+            + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
+            // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
+            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
@@ -30268,7 +30614,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const B = athanorBudget(extra.graph || '');
   const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null },
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '' },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -30292,7 +30638,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '' },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -30383,7 +30729,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, seed, lightTilt, accents: [accent1, accent2] }))));
+    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -31039,9 +31385,9 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Megaclite';
+const RELEASE = 'Jupiter–Sinope';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
-const RELEASE_DATE = '2026-10-12';
+const RELEASE_DATE = '2026-10-14';
 
 
 /* ==== altText.js ==== */
@@ -31865,7 +32211,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-14 · 5bb4e3a";
+const STAMP = "2026-10-14 · 085bd6d";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -32164,6 +32510,51 @@ function cardLayer(w, h){
   if(!CARD_LAYER){ CARD_LAYER = document.createElement('canvas'); }
   if(CARD_LAYER.width !== w || CARD_LAYER.height !== h){ CARD_LAYER.width = w; CARD_LAYER.height = h; }
   return CARD_LAYER;
+}
+// WHERE THE WORDS ARE (the future-directions doc: "readability as part of the shader"): each frame records
+// its text's runs as fractions of the page — "x0,y0,x1,y1,line,stanza;…" — for Text Clearing below and for
+// the Athanor's The Poem part. A surface drawn before the text reads the last frame's record; a change in
+// it asks for one more frame, which then agrees with itself.
+let TEXT_LAYOUT = '';
+function textLayoutNow(){ return TEXT_LAYOUT; }
+/** A graph that asks for the poem (its The Poem part) is made with the layout; any other graph never sees it. */
+function graphUsesPoem(graph){ return /"name":\s*"poem"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
+// TEXT CLEARING: a surface quieted behind the words. The mask is made small (192 across, in page fractions,
+// so the preview and the export agree), blurred there, and scaled up: soft by construction, and cheap.
+let CLEAR_LAYER = null, CLEAR_MASK = { key: '', canvas: null };
+function clearingMask(W, H){
+  const mw = 192, mh = Math.max(8, Math.round(192*H/W)), key = TEXT_LAYOUT + '|' + mw + 'x' + mh;
+  if(CLEAR_MASK.key === key) return CLEAR_MASK.canvas;
+  const c = CLEAR_MASK.canvas || document.createElement('canvas'); c.width = mw; c.height = mh;
+  const x = c.getContext('2d'), a = new Float32Array(mw*mh), runs = [];
+  for(const part of TEXT_LAYOUT.split(';')){ const v = part.split(',').map(Number); if(v.length >= 4 && v.every(isFinite)) runs.push(v); }
+  let hsum = 0;
+  for(const [x0, y0, x1, y1] of runs){ const h = (y1 - y0)*mh, p = h*0.35; hsum += h;
+    for(let yy = Math.max(0, Math.floor(y0*mh - p)); yy < Math.min(mh, Math.ceil(y1*mh + p)); yy++)
+      for(let xx = Math.max(0, Math.floor(x0*mw - p)); xx < Math.min(mw, Math.ceil(x1*mw + p)); xx++) a[yy*mw + xx] = 1; }
+  // two box blurs, about a line's height across: the clearing fades out around the words rather than stopping
+  const rad = Math.max(1, Math.round(runs.length ? hsum/runs.length*0.7 : 2)), t = new Float32Array(mw*mh);
+  for(let pass = 0; pass < 2; pass++){
+    for(let yy = 0; yy < mh; yy++){ let acc = 0, n = 0; for(let xx = -rad; xx < mw + rad; xx++){ if(xx + rad < mw){ acc += a[yy*mw + xx + rad]; n++; } if(xx - rad - 1 >= 0){ acc -= a[yy*mw + xx - rad - 1]; n--; } if(xx >= 0 && xx < mw) t[yy*mw + xx] = acc/Math.max(1, n); } }
+    for(let xx = 0; xx < mw; xx++){ let acc = 0, n = 0; for(let yy = -rad; yy < mh + rad; yy++){ if(yy + rad < mh){ acc += t[(yy + rad)*mw + xx]; n++; } if(yy - rad - 1 >= 0){ acc -= t[(yy - rad - 1)*mw + xx]; n--; } if(yy >= 0 && yy < mh) a[yy*mw + xx] = acc/Math.max(1, n); } }
+  }
+  const im = x.createImageData(mw, mh);
+  for(let i = 0; i < mw*mh; i++){ im.data[i*4] = im.data[i*4 + 1] = im.data[i*4 + 2] = 255; im.data[i*4 + 3] = Math.round(Math.min(1, a[i]*1.4)*255); }
+  x.putImageData(im, 0, 0);
+  CLEAR_MASK = { key, canvas: c };
+  return c;
+}
+/** A surface with the words' clearing taken out of it (destination-out), on a layer kept between frames. */
+function clearedSurface(t, W, H, amount){
+  if(!TEXT_LAYOUT || amount <= 0) return t;
+  if(!CLEAR_LAYER) CLEAR_LAYER = document.createElement('canvas');
+  if(CLEAR_LAYER.width !== W || CLEAR_LAYER.height !== H){ CLEAR_LAYER.width = W; CLEAR_LAYER.height = H; }
+  const c = CLEAR_LAYER.getContext('2d');
+  c.globalCompositeOperation = 'copy'; c.globalAlpha = 1; c.drawImage(t, 0, 0, W, H);
+  c.globalCompositeOperation = 'destination-out'; c.globalAlpha = Math.min(1, amount); c.imageSmoothingEnabled = true;
+  c.drawImage(clearingMask(W, H), 0, 0, W, H);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  return CLEAR_LAYER;
 }
 /** The bloom's own layer, kept between renders and resized only when the page is. */
 let BLOOM_LAYER = null;
@@ -32962,7 +33353,8 @@ function renderInto(canvas){
   // A texture that can't be drawn is skipped, never allowed to abort the frame:
   // a frame abandoned mid-blend left the canvas in that blend, and the next
   // frame blended over the old one (two pages showing at once).
-  const drawTex = t => { if(!t) return; try { ctx.drawImage(t, 0, 0, W, H); } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
+  const clearing = Math.max(0, Math.min(100, parseFloat(($('textureClearing') || {}).value) || 0))/100;
+  const drawTex = t => { if(!t) return; try { ctx.drawImage(clearing > 0 ? clearedSurface(t, canvas.width, canvas.height, clearing) : t, 0, 0, W, H); } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
   const lap = name => { const t = clock(); laps.push(`${name} ${Math.round(t - lapAt)}`); lapAt = t; };
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const W = canvas.width, H = canvas.height;
@@ -33077,7 +33469,8 @@ function renderInto(canvas){
       ctx.globalCompositeOperation = blend;
       // (a Athanor surface carries its graph: the worker makes it from that)
       const graph = type === 'athanor' ? (($('forgeGraph') || {}).value || '') : undefined;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph, ...(graph ? { accent1: $('accent1ColorHex').value, accent2: $('accent2ColorHex').value } : {}) }));
+      const text = graph && graphUsesPoem(graph) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1: $('accent1ColorHex').value, accent2: $('accent2ColorHex').value } : {}) }));
       ctx.restore();
     }
   }
@@ -33351,12 +33744,16 @@ function renderInto(canvas){
 
   let cursorY = startY;
   ctx.textBaseline = 'top';
+  // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
+  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false;
+  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
 
   // the effect stack and underline the page gives every run (a segment may replace them)
   const runStyle = { fx: pageFx, under: pageUnder, baseFillStyle, plainTextColor: $('textColorHex').value,
     accent1Color, accent2Color, quoteAlpha: 1 };
 
   for(const line of lines){
+    if(line.isBlank){ if(inStanza){ stanza++; inStanza = false; } } else { if(textRuns.length) lineNo++; inStanza = true; }
     if(line.isBlank){
       if(line.rule){
         // a horizontal rule, centred in the blank line's height; its width is a
@@ -33442,6 +33839,7 @@ function renderInto(canvas){
       }
 
       drawRhymeMarker(flowX);
+      { const fx0 = lineAlign==='center' ? (W/2 - flowingTotalWidth/2) : lineAlign==='right' ? (W - paddingX - flowingTotalWidth) : paddingX; rec(fx0, flowX, cursorY, size*1.15); }
 
       for(const part of anchoredParts){
         const partSize = partSizeFor(part, size);
@@ -33452,6 +33850,7 @@ function renderInto(canvas){
         let pStyle = resolvePartStyle(part, style);
         if(part.code) pStyle = drawCodeBackdrop(ctx, pX, partCursorY(part, partSize), pWidth, partSize, pStyle);
         drawTextRun(ctx, part.segments, pX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
+        rec(pX, pX + pWidth, partCursorY(part, partSize), partSize*1.15);
       }
 
       cursorY += lineHeight;
@@ -33483,6 +33882,7 @@ function renderInto(canvas){
         afterX = drawTextRun(ctx, restSegments, afterX, cursorY, size, lineHeight, fontDef, style);
       }
       drawRhymeMarker(afterX);
+      rec(paddingX, afterX, cursorY, Math.max(size*1.15, dropCapSize*1.05));
 
       cursorY += Math.max(lineHeight, dropCapSize*1.05);
       continue;
@@ -33501,8 +33901,14 @@ function renderInto(canvas){
 
     drawTextRun(ctx, line.segments, startX, cursorY, size, lineHeight, fontDef, style);
     drawRhymeMarker(startX + totalWidth);
+    rec(startX, startX + totalWidth, cursorY, size*1.15);
     cursorY += lineHeight;
   }
+  // the layout changed: a surface that reads it is drawn again, once, with the new one
+  { const lay = textRuns.join(';');
+    if(lay !== TEXT_LAYOUT){ TEXT_LAYOUT = lay;
+      const g = $('textureType').value === 'athanor' && graphUsesPoem(($('forgeGraph') || {}).value || '');
+      if($('textureToggle').checked && (clearing > 0 || g)) setTimeout(scheduleRender, 0); } }
 
   // the spell is tied to the texture seed even when textures are off
   const seedForSpell = parseInt($('textureSeedValue').value, 10) || 0;
@@ -33726,12 +34132,13 @@ function deriveThemePalette({text1, text2, accent1, accent2, bg1, bg2}){
 // Turing Skin froze the page for a second each time the filmstrip repainted).
 // A tile painted without its texture is painted again when it arrives.
 let swatchSource = null;
-const swatchWaiting = new Map();          // canvas → [p, w, h]
+const swatchWaiting = new Map();          // canvas → [p, w, h, onPainted]
 function setSwatchTextureSource(fn){ swatchSource = fn; }
 function swatchTexturesArrived(){
   if(!swatchWaiting.size) return;
   const again = [...swatchWaiting]; swatchWaiting.clear();
-  for(const [canvas, args] of again) if(canvas.isConnected !== false) paintPresetSwatch(canvas, ...args);
+  // (a canvas off the page is repainted too when someone waits on it: the surface menus' thumbnails are made off the page)
+  for(const [canvas, args] of again) if(canvas.isConnected !== false || args[3]) paintPresetSwatch(canvas, ...args);
 }
 
 
@@ -33742,7 +34149,7 @@ function swatchTexturesArrived(){
  * from a full render — a few thousand pixels each, cached like any other
  * texture, so sixteen of them cost about one ordinary repaint.
  */
-function paintPresetSwatch(canvas, p, w, h){
+function paintPresetSwatch(canvas, p, w, h, onPainted = null){
   canvas.width = w; canvas.height = h;
   const c = canvas.getContext('2d');
 
@@ -33767,9 +34174,12 @@ function paintPresetSwatch(canvas, p, w, h){
       const caps = capsFor(p.textureType);
       const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
       const blend = p.textureBlend && caps.blends.includes(p.textureBlend) ? p.textureBlend : caps.blends[0];
-      const opts = { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, light: 315, tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, blend };
+      // every knob and hue the look sets, so a tile is the look in small
+      const opts = { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, p3: p.texP3, p4: p.texP4, p5: p.texP5, p6: p.texP6,
+        light: p.textureLight != null ? +p.textureLight : 315, lightTilt: p.textureLightTilt != null ? +p.textureLightTilt : undefined,
+        tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, tint3: p.textureTint3 || null, tint4: p.textureTint4 || null, tint5: p.textureTint5 || null, tint6: p.textureTint6 || null, blend };
       const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
-      if(!tex && swatchSource) swatchWaiting.set(canvas, [p, w, h]); else swatchWaiting.delete(canvas);
+      if(!tex && swatchSource){ swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; } else swatchWaiting.delete(canvas);
       if(tex){
         c.save();
         c.globalCompositeOperation = blend || 'overlay';
@@ -33834,6 +34244,239 @@ function paintPresetSwatch(canvas, p, w, h){
     }
     c.globalAlpha = 1;
   }
+  if(onPainted) try { onPainted(canvas); } catch(e){}
+}
+
+
+/* ==== chooser.js ==== */
+/**
+ * chooser.js — a menu you can see: a <select> shown as tiles.
+ *
+ *   Sixty names in a column
+ *   say less than one small picture
+ *   of each, side by side.
+ *
+ * The <select> stays the truth (saves, presets, undo and the tests all read
+ * and write it); the chooser only shows it. A button with the current tile
+ * and name stands where the menu was; tapping it opens a panel: a search
+ * field, then the menu's groups as folding sections of tiles. Choosing a
+ * tile sets the <select> and sends it the same input and change a person's
+ * own choice would. The panel is built afresh each time it opens, so
+ * options added later (kept surfaces) are there.
+ *
+ * Thumbnails: the caller paints them (chooseThumb); each finished one is
+ * kept as a small JPEG in this browser for the release (CHOOSER_CACHE_KEY),
+ * so after the first opening the tiles appear at once. A new release paints
+ * them again, since a texture may have changed.
+ *
+ * Folded groups are remembered per menu (localStorage), an app preference,
+ * never part of a look.
+ *
+ * Names here are ch/CH: the bundle is one scope.
+ */
+
+const CHOOSER_CACHE_KEY = 'uv.thumbs.v1';
+const CH_FOLD_KEY = id => 'uv.chooser.' + id + '.folded';
+
+// ---- pure helpers (the tests use these) ----
+
+/** The menu as groups of choices: [{ label, glyph, name, items: [{ value, text }] }], hidden options left out. */
+function chGroupsOf(select){
+  const out = [];
+  for(const g of Array.from(select.children || [])){
+    if(String(g.tagName).toUpperCase() !== 'OPTGROUP') continue;
+    const items = Array.from(g.children || []).filter(o => !o.hidden && String(o.tagName).toUpperCase() === 'OPTION')
+      .map(o => ({ value: o.value, text: String(o.textContent || '').trim() }));
+    if(!items.length) continue;
+    const label = String(g.label || '').replace(/&amp;/g, '&'), m = label.match(/^(\S+)\s+(.*)$/);
+    const glyphy = m && !/[A-Za-z]/.test(m[1]);
+    out.push({ label, glyph: glyphy ? m[1] : '', name: glyphy ? m[2] : label, items });
+  }
+  return out;
+}
+
+/** Does a choice answer the search? Every word of the query must appear in its name, its group, or its extra words. */
+function chMatches(query, item, groupName, extra = ''){
+  const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!words.length) return true;
+  const hay = (item.text + ' ' + groupName + ' ' + extra + ' ' + item.value).toLowerCase();
+  return words.every(w => hay.includes(w));
+}
+
+/** The thumbnail cache for this release: { release, map }. A different release starts empty. */
+function chCacheFor(raw, release){
+  let c = null; try { c = JSON.parse(raw || 'null'); } catch(e){ c = null; }
+  return (c && c.release === release && c.map && typeof c.map === 'object') ? c : { release, map: {} };
+}
+
+// ---- storage, quietly (a private window or a full store just means no memory) ----
+const chStore = {
+  get(k){ try { return typeof localStorage !== 'undefined' ? localStorage.getItem(k) : null; } catch(e){ return null; } },
+  set(k, v){ try { if(typeof localStorage !== 'undefined') localStorage.setItem(k, v); } catch(e){} },
+};
+let chCache = null, chRelease = '';
+function chThumbs(){ if(!chCache) chCache = chCacheFor(chStore.get(CHOOSER_CACHE_KEY), chRelease); return chCache; }
+let chSaveT = null;
+function chKeep(value, url){
+  const c = chThumbs(); c.map[value] = url;
+  clearTimeout(chSaveT); chSaveT = setTimeout(() => chStore.set(CHOOSER_CACHE_KEY, JSON.stringify(c)), 400);
+}
+
+/**
+ * Shows a <select> as a chooser.
+ *  opts.id       — a short name for this menu (folded groups are remembered under it)
+ *  opts.title    — the panel's heading
+ *  opts.thumb    — (value, canvas, done) paints a tile's thumbnail; call done() when it is final
+ *                  (it may paint a placeholder first and call done later). Return false to leave a glyph.
+ *  opts.extra    — (value) → more words a search may find it by (its readings, say)
+ *  opts.release  — the release name: thumbnails are kept for it
+ *  opts.size     — a thumbnail's pixels (default 160)
+ * Returns { refresh(), open(), close() }.
+ */
+function attachChooser(select, opts = {}){
+  if(!select || typeof document === 'undefined' || typeof document.createElement !== 'function' || !select.parentNode) return { refresh(){}, open(){}, close(){} };
+  chRelease = opts.release || chRelease;
+  const id = opts.id || select.id, SIZE = opts.size || 160;
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'ch-trigger'; btn.setAttribute('aria-haspopup', 'dialog');
+  btn.innerHTML = '<span class="ch-trig-thumb"></span><span class="ch-trig-name"></span><span class="ch-trig-caret" aria-hidden="true">▾</span>';
+  select.parentNode.insertBefore(btn, select.nextSibling);
+  select.classList.add('ch-native');
+  let panel = null, lastFocus = null;
+
+  const textOf = v => { const o = Array.from(select.options || []).find(o => o.value === v); return o ? String(o.textContent || '').trim() : v; };
+  const thumbInto = (holder, value) => {
+    holder.textContent = '';
+    const url = chThumbs().map[value];
+    if(url){ const im = document.createElement('img'); im.alt = ''; im.src = url; im.decoding = 'async'; holder.appendChild(im); return; }
+    const cv = document.createElement('canvas'); cv.width = cv.height = SIZE; holder.appendChild(cv);
+    let ok = false;
+    try { ok = opts.thumb ? opts.thumb(value, cv, () => { try { chKeep(value, cv.toDataURL('image/jpeg', 0.82)); } catch(e){} }) !== false : false; } catch(e){ ok = false; }
+    if(!ok){ holder.textContent = ''; holder.classList.add('ch-glyph'); holder.textContent = opts.glyphFor ? opts.glyphFor(value) : '◈'; }
+  };
+
+  function refresh(){
+    const v = select.value;
+    btn.querySelector('.ch-trig-name').textContent = textOf(v);
+    btn.setAttribute('aria-label', (opts.title || '') + ': ' + textOf(v) + '. ' + CHOOSER.open);
+    const t = btn.querySelector('.ch-trig-thumb'); t.classList.remove('ch-glyph'); thumbInto(t, v);
+    if(panel) panel.querySelectorAll('.ch-tile').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value === v)));
+  }
+
+  const folded = () => { try { return new Set(JSON.parse(chStore.get(CH_FOLD_KEY(id)) || '[]')); } catch(e){ return new Set(); } };
+  const saveFolded = s => chStore.set(CH_FOLD_KEY(id), JSON.stringify([...s]));
+
+  function choose(value){
+    if(select.value !== value){
+      select.value = value;
+      select.dispatchEvent(new Event('input', { bubbles: true }));
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    close(); refresh();
+  }
+
+  function build(){
+    const groups = chGroupsOf(select), shut = folded();
+    panel = document.createElement('div');
+    panel.className = 'ch-panel'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', opts.title || '');
+    panel.innerHTML = `<div class="ch-head"><input type="search" class="ch-search" placeholder="${CHOOSER.search}" aria-label="${CHOOSER.search}" autocomplete="off" spellcheck="false"><button type="button" class="ch-close" aria-label="${CHOOSER.close}">✕</button></div><div class="ch-body"></div><p class="ch-none" hidden>${CHOOSER.none}</p>`;
+    const body = panel.querySelector('.ch-body'), search = panel.querySelector('.ch-search');
+    const sections = [];
+    for(const g of groups){
+      const sec = document.createElement('details'); sec.className = 'ch-group'; sec.open = !shut.has(g.name);
+      const sum = document.createElement('summary');
+      sum.innerHTML = `<span class="ch-g-glyph"></span><span class="ch-g-name"></span><span class="ch-g-count"></span>`;
+      sum.querySelector('.ch-g-glyph').textContent = g.glyph; sum.querySelector('.ch-g-name').textContent = g.name;
+      sum.querySelector('.ch-g-count').textContent = g.items.length;
+      sec.appendChild(sum);
+      const grid = document.createElement('div'); grid.className = 'ch-grid'; sec.appendChild(grid);
+      const tiles = [];
+      for(const it of g.items){
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'ch-tile'; b.dataset.value = it.value;
+        b.setAttribute('aria-pressed', String(it.value === select.value));
+        b.innerHTML = '<span class="ch-thumb"></span><span class="ch-name"></span>';
+        b.querySelector('.ch-name').textContent = it.text;
+        b.addEventListener('click', () => choose(it.value));
+        grid.appendChild(b); tiles.push([b, it]);
+      }
+      // a folded group's tiles are painted when it is first opened
+      let painted = false;
+      const paint = () => { if(painted) return; painted = true; for(const [b, it] of tiles) thumbInto(b.querySelector('.ch-thumb'), it.value); };
+      if(sec.open) paint();
+      sec.addEventListener('toggle', () => {
+        if(sec.open) paint();
+        if(search.value) return;                       // a search opens groups for itself: not the person's folding
+        const s = folded(); if(sec.open) s.delete(g.name); else s.add(g.name); saveFolded(s);
+      });
+      body.appendChild(sec); sections.push({ sec, tiles, g, paint, wasOpen: sec.open });
+    }
+    search.addEventListener('input', () => {
+      const q = search.value; let any = false;
+      for(const S of sections){
+        let n = 0;
+        for(const [b, it] of S.tiles){ const hit = chMatches(q, it, S.g.name, opts.extra ? opts.extra(it.value) : ''); b.hidden = !hit; if(hit) n++; }
+        S.sec.hidden = n === 0; any = any || n > 0;
+        if(q){ if(n && !S.sec.open){ S.sec.open = true; } }
+        else S.sec.open = !folded().has(S.g.name);
+        S.sec.querySelector('.ch-g-count').textContent = q ? n + ' / ' + S.tiles.length : S.tiles.length;
+        if(S.sec.open) S.paint();
+      }
+      panel.querySelector('.ch-none').hidden = any;
+    });
+    search.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ const first = panel.querySelector('.ch-tile:not([hidden])'); if(first){ e.preventDefault(); first.click(); } }
+      if(e.key === 'ArrowDown'){ const first = panel.querySelector('.ch-group[open] .ch-tile:not([hidden])'); if(first){ e.preventDefault(); first.focus(); } }
+    });
+    panel.addEventListener('keydown', e => {
+      if(e.key === 'Escape'){ e.preventDefault(); close(); return; }
+      if(!e.target.classList || !e.target.classList.contains('ch-tile') || !/^Arrow/.test(e.key)) return;
+      // arrows move between the tiles in reading order; up and down by a row
+      const all = Array.from(panel.querySelectorAll('.ch-group[open] .ch-tile:not([hidden])')), i = all.indexOf(e.target);
+      if(i < 0) return;
+      const top = e.target.offsetTop, cols = Math.max(1, all.filter(t => t.parentNode === e.target.parentNode && t.offsetTop === top).length);
+      const j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'ArrowDown' ? i + cols : i - cols;
+      if(j < 0 && e.key === 'ArrowUp'){ e.preventDefault(); search.focus(); return; }
+      if(all[Math.max(0, Math.min(all.length - 1, j))]){ e.preventDefault(); all[Math.max(0, Math.min(all.length - 1, j))].focus(); }
+    });
+    panel.querySelector('.ch-close').addEventListener('click', close);
+    return panel;
+  }
+
+  const outside = e => { if(panel && !panel.contains(e.target) && !btn.contains(e.target)) close(); };
+  function place(){
+    if(!panel) return;
+    if(document.body.classList.contains('is-mobile')){ panel.classList.add('ch-sheet'); panel.style.left = panel.style.top = panel.style.width = ''; return; }
+    panel.classList.remove('ch-sheet');
+    const r = btn.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+    const w = Math.min(560, vw - 24), left = Math.max(12, Math.min(r.left, vw - w - 12));
+    const below = vh - r.bottom - 12, above = r.top - 12, up = below < 480 && above > below;
+    panel.style.width = w + 'px'; panel.style.left = left + 'px';
+    panel.style.maxHeight = Math.max(240, Math.min(vh * 0.72, up ? above : below)) + 'px';
+    panel.style.top = up ? '' : (r.bottom + 6) + 'px'; panel.style.bottom = up ? (vh - r.top + 6) + 'px' : '';
+  }
+  function open(){
+    if(panel) return close();
+    lastFocus = document.activeElement;
+    document.body.appendChild(build()); place();
+    btn.setAttribute('aria-expanded', 'true');
+    const cur = panel.querySelector('.ch-tile[aria-pressed="true"]');
+    if(cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'center' });
+    // the search field first on a desktop; on a phone the keyboard would cover the tiles, so the current tile
+    if(document.body.classList.contains('is-mobile')){ if(cur) cur.focus({ preventScroll: true }); }
+    else panel.querySelector('.ch-search').focus({ preventScroll: true });
+    setTimeout(() => { document.addEventListener('pointerdown', outside, true); window.addEventListener('resize', place); }, 0);
+  }
+  function close(){
+    if(!panel) return;
+    panel.remove(); panel = null;
+    btn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', outside, true); window.removeEventListener('resize', place);
+    if(lastFocus === btn || !lastFocus || !document.contains(lastFocus)) btn.focus({ preventScroll: true });
+  }
+  btn.addEventListener('click', open);
+  select.addEventListener('change', refresh);
+  refresh();
+  return { refresh, open, close, button: btn };
 }
 
 
@@ -35775,6 +36418,7 @@ function closeForge(deps){
 
 
 
+
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -35993,7 +36637,10 @@ function refreshUi(){
   run(refreshReadouts); run(syncFrameVisibility); run(syncBaseUi); run(paintMoons); run(paintSeedMoon); run(syncLightPad);
   run(paintElements); run(() => { for(const [, b] of lockButtons) if(b._paint) b._paint(); }); run(paintMasterLocks);
   run(() => syncSeedWords(false));
+  run(() => { for(const ch of CHOOSERS) ch.refresh(); });
 }
+// the surface menus as tiles (chooser.js), filled in below once the swatch source is set
+const CHOOSERS = [];
 
 function bindRadioGroup(containerId, onSelect){
   const group = $(containerId);
@@ -36040,7 +36687,7 @@ toggleSubblock('baseToggle','baseBlock');
   const bt = $('baseType'), main = $('textureType');
   if(bt && main && main.children && typeof document.createElement === 'function'){
     for(const g of Array.from(main.children)){
-      if(!g.label || g.id === 'athanorGroup') continue;
+      if(String(g.tagName).toUpperCase() !== 'OPTGROUP' || g.id === 'athanorGroup') continue;
       const og = document.createElement('optgroup'); og.label = g.label;
       for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'athanor') continue;
         const op = document.createElement('option'); op.value = o.value; op.textContent = o.textContent; og.appendChild(op); }
@@ -36462,6 +37109,7 @@ const PERSISTED = [
   ['bgRadialY',            'bgRadialY',            'text', '%'],
   ['bgRadialR',            'bgRadialR',            'text', '%'],
   ['borderGrain',          'borderGrain',          'text', '%'],
+  ['textureClearing',      'textureClearing',      'text', '%'],   // the surface quieted behind the words (canvasRenderer clearedSurface)
   ['borderRounded',        'borderRounded',        'check'],
   ['borderRadius',         'borderRadius',         'text', 'px'],
   ['cardToggle',           'cardToggle',           'check'],
@@ -36849,50 +37497,73 @@ function presetTile(p, onPick, extraClass){
   return btn;
 }
 
+// THE GRID'S GROUPS FOLD, and a search finds a look by its name, its group, its surface or its surface's
+// readings. Folded groups are remembered in this browser (an app preference, never part of a look).
+const PRESET_FOLD_KEY = 'uv.presets.folded';
+const presetFolded = () => { try { return new Set(JSON.parse(localStorage.getItem(PRESET_FOLD_KEY) || '[]')); } catch(e){ return new Set(); } };
+function groupTile(tile, group){ if(tile.dataset) tile.dataset.group = group; return tile; }
+function groupHead(g){
+  const hd = document.createElement('button'); hd.type = 'button'; hd.className = 'preset-group-head';
+  if(hd.dataset) hd.dataset.group = g.name;
+  for(const [cls, text] of [['pg-glyph', g.glyph || ''], ['pg-name', g.name], ['pg-count', String((g.presets || []).length)]]){
+    const sp = document.createElement('span'); sp.className = cls; sp.textContent = text; hd.appendChild(sp); }
+  const open = !presetFolded().has(g.name); hd.setAttribute('aria-expanded', String(open));
+  if(hd.addEventListener) hd.addEventListener('click', () => {
+    if(presetSearchText()) return;                      // while searching, the search decides what shows
+    const s = presetFolded(), nowOpen = s.has(g.name); if(nowOpen) s.delete(g.name); else s.add(g.name);
+    try { localStorage.setItem(PRESET_FOLD_KEY, JSON.stringify([...s])); } catch(e){}
+    filterPresets();
+  });
+  return hd;
+}
+const presetSearchText = () => { const f = $('presetSearch'); return f && f.value ? String(f.value).trim() : ''; };
+function presetWords(p){
+  const t = p.textureType, o = t && $('textureType') && Array.from($('textureType').options || []).find(o => o.value === t);
+  const E = t && TEXTURE_ELEMENTS[t]; const readings = E ? Object.values(E).map(r => r && r.name || '').join(' ') : '';
+  return [p.name, o ? o.textContent : '', readings, p.font || ''].join(' ');
+}
+function filterPresets(){
+  if(!presetGrid || !presetGrid.querySelectorAll) return;
+  const q = presetSearchText(), shut = presetFolded(), byName = new Map(PRESETS.map(p => [p.name, p]));
+  const shown = new Map();
+  presetGrid.querySelectorAll('.preset-btn').forEach(b => {
+    const g = b.dataset.group || '', p = byName.get(b.dataset.name);
+    const hit = !q || chMatches(q, { text: b.dataset.name || '', value: '' }, g, p ? presetWords(p) : '');
+    b.hidden = q ? !hit : shut.has(g);
+    if(hit) shown.set(g, (shown.get(g) || 0) + 1);
+  });
+  presetGrid.querySelectorAll('.preset-group-head').forEach(h => {
+    const g = h.dataset.group, n = shown.get(g) || 0, total = PRESET_GROUPS.find(x => x.name === g)?.presets.length || 0;
+    h.hidden = !!q && !n;
+    h.setAttribute('aria-expanded', String(q ? true : !shut.has(g)));
+    const c = h.querySelector('.pg-count'); if(c) c.textContent = q ? n + ' / ' + total : total;
+  });
+  const none = $('presetNone'); if(none) none.hidden = !q || shown.size > 0;
+}
+if($('presetSearch') && $('presetSearch').addEventListener) $('presetSearch').addEventListener('input', filterPresets);
+
 // the built-in looks, each group under its own heading (Simple first), alphabetical within it (Ruby)
 // (groups by what a person is looking for — PRESET_GROUPS names each one's presets; any left out come last)
 { const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
   const placed = new Set();
   for(const g of (PRESET_GROUPS || [])){
-    if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = (g.glyph ? g.glyph + ' ' : '') + g.name; presetGrid.appendChild(hd); }
-    PRESETS.filter(p => (g.presets || []).includes(p.name) && !placed.has(p)).sort(byName).forEach(p => { placed.add(p); presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)); });
+    if(g.name && typeof document.createElement === 'function') presetGrid.appendChild(groupHead(g));
+    PRESETS.filter(p => (g.presets || []).includes(p.name) && !placed.has(p)).sort(byName).forEach(p => { placed.add(p); presetGrid.appendChild(groupTile(presetTile(p, ()=>pickPreset(p)), g.name)); });
   }
-  PRESETS.filter(p => !placed.has(p)).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
+  PRESETS.filter(p => !placed.has(p)).sort(byName).forEach(p => presetGrid.appendChild(groupTile(presetTile(p, ()=>pickPreset(p)), '')));
+  try { filterPresets(); } catch(e){}
 }
 
-// ---- hover previews (desktop) ----
-// Resting the pointer on a preset tile shows it on the page; moving off the
-// grid puts your own look back exactly; a click keeps it. A preview is never
-// a step of undo history and never a change you made (Canva and Figma try a
-// style on hover the same way). Only where a real pointer hovers.
-const HOVER_DELAY = 380;
-const hover = { base: null, timer: 0, on: null };   // (the preview in progress: your look, kept to put back)
-const canHover = () => !detectMobile() && typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
-// (Ruby: retired — some surfaces took seconds to try on, and it wasn't needed. A tile is applied by a click.)
-function hoverPreview(tile){ return tile; }
-function endHoverPreview(){
-  clearTimeout(hover.timer);
-  if(!hover.base) return;
-  const b = hover.base; hover.base = null; hover.on = null;
-  state.history.restoring = true;
-  try { restoreSettings(b.look); if(b.palette) applyThemePalette(b.palette); if(document.body && document.body.dataset) document.body.dataset.lookName = b.name || ''; }
-  finally { state.history.restoring = false; }
-  clearTimeout(state.history.timer);
-  scheduleRender();
-}
-// a click keeps the preset (the preview simply becomes the look), as one step of history.
+// (hover previews on desktop were retired, Ruby: some surfaces took seconds to try on. A tile is applied by a click.)
+// a click applies the preset, as one step of history.
 // Every click is a NEW SEED (Ruby); clicking the look that is still lit (nothing
 // meaningful changed since) keeps it and only rerolls — and now and then takes
 // another of its surface's readings (🜂 🜄 🜁 🜃)
 async function pickPreset(p){
-  clearTimeout(hover.timer);
   const again = litPreset.name === p.name && !litPresetChanged();
-  if(!again && needsGuard() && !await guardWork('Apply this preset', `“${p.name}”`)){ endHoverPreview(); return; }
+  if(!again && needsGuard() && !await guardWork('Apply this preset', `“${p.name}”`)) return;
   markFresh();
-  const showing = hover.on === p;
-  hover.base = null; hover.on = null;
   if(again){ maybeRerollSeed(); if(Math.random() < 0.45) swapReading(); scheduleRender(); commitSoon(); }
-  else if(showing) commitSoon();     // already on the page, its new seed and all: keep exactly what was shown
   else applyPreset(p);
   lightPreset(p.name);
   murmur.play('preset');
@@ -36917,14 +37588,12 @@ function swapReading(){
   if(!list.length) return;
   applyElement(list[Math.floor(Math.random()*list.length)].el);
 }
-if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
 // CUSTOM PRESETS (Ruby): the saved spells, in a card of their own under the built-in
 // ones, alphabetical, in as many rows as they need (never a sideways scroller) — a
 // library that can grow until the built-in ones aren't needed. Rebuilt whenever the
 // saved set changes.
 const customGrid = $('customPresetGrid');
-if(customGrid && customGrid.addEventListener) customGrid.addEventListener('mouseleave', endHoverPreview);
 
 function renderSavedPresets(saved){
   if(!customGrid) return;
@@ -38299,7 +38968,7 @@ applyStrings(document);
 }
 // ---------- frame and box controls: readouts, visibility, moons ----------
 const RANGE_UNITS = { borderGradientAngle:'°', bgRadialX:'%', bgRadialY:'%', bgRadialR:'%', borderThickness:'px', borderOffset:'px',
-  borderGrain:'%', borderRadius:'px', cardGradientAngle:'°', cardOffset:'px', cardThickness:'px', cardRadius:'px', cardFxAmount:'', cardFxScale:'' };
+  borderGrain:'%', textureClearing:'%', borderRadius:'px', cardGradientAngle:'°', cardOffset:'px', cardThickness:'px', cardRadius:'px', cardFxAmount:'', cardFxScale:'' };
 function refreshReadouts(){
   for(const [id, unit] of Object.entries(RANGE_UNITS)){ const el = $(id), out = $(id + 'Val'); if(el && out) out.textContent = el.value + unit; }
   paintMoons();
@@ -38372,7 +39041,8 @@ function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
-    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6) };
+    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
+    text: graphUsesPoem(json) ? textLayoutNow() : undefined };   // (the poem's layout, for a graph that reads it)
 }
 /** A texture made in the worker, handed to `done` when it is ready (the newest wish per slot wins). */
 const workerWish = new Map();
@@ -38468,7 +39138,7 @@ const FRAME_DEFAULTS = { bgGradientType:'linear', textGradientType:'linear', bgR
   borderRounded:false, borderRadius:'60', cardToggle:false, cardColor1:'#FFF6EE', cardGradientToggle:false,
   cardColor2:'#F2E2EA', cardGradientType:'linear', cardGradientAngle:'90', cardOpacity:'70', cardBlend:'source-over',
   borderBlend:'source-over', borderBloomBlend:'source-over', borderGradientAngle:'45',
-  borderStitch:'solid', borderStitchOut:false, cardLink:true, cardFx:'none', cardFxAmount:'50', cardFxScale:'50', baseToggle:false };
+  borderStitch:'solid', borderStitchOut:false, cardLink:true, cardFx:'none', cardFxAmount:'50', cardFxScale:'50', baseToggle:false, textureClearing:'0' };
 
 // Every opacity READOUT (any slider marked data-moon) is a moon that waxes with the value — new at 0%, full
 // at 100% — in place of a percentage. (It was once drawn on the slider's
@@ -38899,7 +39569,7 @@ function setFilmstrip(open){
 }
 function commitHistory(){
   const h = state.history;
-  if(h.restoring || hover.base) return;                      // (a hover preview is not a change)
+  if(h.restoring) return;
   const snap = lookSnapshot();
   if(h.stack[h.index] === snap) return;                      // nothing actually changed
   h.stack = h.stack.slice(0, h.index + 1);                   // a new change drops the redo branch
@@ -39028,6 +39698,34 @@ setSwatchTextureSource((type, w, h, opts) => {
   return peekTexture(textureKeyFor(type, w, h, opts)) || null;
 });
 onTextureReady(() => swatchTexturesArrived());
+
+// ---------- THE SURFACE MENUS AS TILES ----------
+// Each surface's tile is the surface as a preset wears it (its ground, hues, blend and knobs), or, worn by
+// none, its defaults on a ground that suits its blend. Thumbnails are kept for the release (chooser.js).
+{
+  const backFor = b => /multiply|darken|burn/.test(b) ? '#EEE4D2' : /screen|lighten|dodge/.test(b) ? '#100E16' : /overlay|soft|hard/.test(b) ? '#6A3A4E' : '#1A1720';
+  const wornBy = type => PRESETS.find(p => p.textureType === type && p.texture);
+  const thumbLook = type => {
+    const P = wornBy(type);
+    if(P) return { ...P, spell: '', border: false, cardToggle: false, textureOpacity: Math.max(60, P.textureOpacity ?? 100) };
+    const caps = capsFor(type);
+    return { bg1: backFor(caps.blends[0]), texture: true, textureType: type, textureOpacity: 100, accent1: '#E07A8A', accent2: '#7A8AE8' };
+  };
+  const thumb = (value, canvas, done) => {
+    if(!TEXTURE_PARAMS[value] || value === 'athanor') return false;
+    // made at three times the tile and drawn down: grown and simulated surfaces need room to show what they are
+    const big = document.createElement('canvas');
+    paintPresetSwatch(big, thumbLook(value), canvas.width*3, canvas.height*3, () => {
+      const c = canvas.getContext('2d'); c.imageSmoothingQuality = 'high'; c.drawImage(big, 0, 0, canvas.width, canvas.height); done(); });
+    return true;
+  };
+  // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
+  const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
+  const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
+  for(const [sel, title] of [[$('textureType'), CHOOSER.surfaceTitle], [$('baseType'), CHOOSER.baseTitle]]){
+    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160 })); } catch(e){ /* the plain menu still works */ }
+  }
+}
 
 </script>
 

@@ -63,6 +63,7 @@ const ENUM = {
   lineSpacing: v => +((+v || 0) + 0.15).toFixed(2),
   textMargin: v => (+v || 100) === 60 ? 75 : 60,
   textureOpacity: v => Math.min(99, (+v || 0) + 3),
+  textureClearing: v => (+v || 0) === 40 ? '55' : '40',
   poemText: () => '## Audit\nline one~A\n<two/effect:halo,40>',
   username: () => '@audit',
   lookName: v => v === 'Audit Look' ? 'Other Look' : 'Audit Look',

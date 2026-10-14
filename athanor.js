@@ -142,7 +142,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
   const v2 = athanorVersion(graph) >= 2;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -315,6 +315,14 @@ export const ATHANOR_STARTERS = {
       ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
       ['material', { relief: 22, '~relief': '0,45', gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
     wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
+  // the poem as an input (The Poem): rings spreading from the words, quiet where the words are
+  ripples: { label: 'Ripples from the Words', teach: 'This is a surface that knows where your poem is. The Poem hands on a Distance map: 0 at the words, rising to 1 far from them. A Value Noise warps it a little, and Contour Lines draws a line at every step of it, so rings spread out from the text like ripples from a stone. Levels turns the Distance into a mask that is dark only right around the words, and Math multiplies the rings by it, so they fade out close to the text and it stays clear. Try: change The Poem\'s Reach, or type more lines and watch the rings move.', nodes: [
+      ['poem', { padding: 30, softness: 0, reach: 70 }, 40, 80], ['noise', { scale: 8, octaves: 3 }, 40, 320],
+      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 140, index: 4, strength: 100 }, 520, 160],
+      ['math', { op: 'multiply' }, 740, 160], ['hue', { slot: '1', name: 'Ring Hue' }, 740, 340], ['hue', { slot: '2', name: 'Ground Hue' }, 740, 460],
+      ['ramp', { mid: 50 }, 960, 200], ['surface', { name: 'Ripples from the Words', ground: 'colour' }, 1180, 200],
+      ['levels', { lo: 4, hi: 16, gamma: 50 }, 520, 360]],
+    wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 2, 10, 1], [10, 1, 5, 2], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

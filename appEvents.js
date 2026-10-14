@@ -29,15 +29,16 @@ import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, openForge, closeForge, describeForge } from './forge.js';
 import { athanorKnobs, athanorHues, athanorName, athanorNodes, validateGraph } from './athanor.js';
-import { elementsFor } from './textureElements.js';
+import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
+import { attachChooser, chMatches } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
 import { describeLook } from './altText.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
-import { RELEASE_DATE } from './release.js';
+import { RELEASE, RELEASE_DATE } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText } from './canvasRenderer.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
@@ -49,7 +50,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
-import { applyStrings, fill, PICKER } from './strings.js';
+import { applyStrings, fill, PICKER, CHOOSER } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -268,7 +269,10 @@ function refreshUi(){
   run(refreshReadouts); run(syncFrameVisibility); run(syncBaseUi); run(paintMoons); run(paintSeedMoon); run(syncLightPad);
   run(paintElements); run(() => { for(const [, b] of lockButtons) if(b._paint) b._paint(); }); run(paintMasterLocks);
   run(() => syncSeedWords(false));
+  run(() => { for(const ch of CHOOSERS) ch.refresh(); });
 }
+// the surface menus as tiles (chooser.js), filled in below once the swatch source is set
+const CHOOSERS = [];
 
 function bindRadioGroup(containerId, onSelect){
   const group = $(containerId);
@@ -315,7 +319,7 @@ toggleSubblock('baseToggle','baseBlock');
   const bt = $('baseType'), main = $('textureType');
   if(bt && main && main.children && typeof document.createElement === 'function'){
     for(const g of Array.from(main.children)){
-      if(!g.label || g.id === 'athanorGroup') continue;
+      if(String(g.tagName).toUpperCase() !== 'OPTGROUP' || g.id === 'athanorGroup') continue;
       const og = document.createElement('optgroup'); og.label = g.label;
       for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'athanor') continue;
         const op = document.createElement('option'); op.value = o.value; op.textContent = o.textContent; og.appendChild(op); }
@@ -737,6 +741,7 @@ const PERSISTED = [
   ['bgRadialY',            'bgRadialY',            'text', '%'],
   ['bgRadialR',            'bgRadialR',            'text', '%'],
   ['borderGrain',          'borderGrain',          'text', '%'],
+  ['textureClearing',      'textureClearing',      'text', '%'],   // the surface quieted behind the words (canvasRenderer clearedSurface)
   ['borderRounded',        'borderRounded',        'check'],
   ['borderRadius',         'borderRadius',         'text', 'px'],
   ['cardToggle',           'cardToggle',           'check'],
@@ -1124,50 +1129,73 @@ function presetTile(p, onPick, extraClass){
   return btn;
 }
 
+// THE GRID'S GROUPS FOLD, and a search finds a look by its name, its group, its surface or its surface's
+// readings. Folded groups are remembered in this browser (an app preference, never part of a look).
+const PRESET_FOLD_KEY = 'uv.presets.folded';
+const presetFolded = () => { try { return new Set(JSON.parse(localStorage.getItem(PRESET_FOLD_KEY) || '[]')); } catch(e){ return new Set(); } };
+function groupTile(tile, group){ if(tile.dataset) tile.dataset.group = group; return tile; }
+function groupHead(g){
+  const hd = document.createElement('button'); hd.type = 'button'; hd.className = 'preset-group-head';
+  if(hd.dataset) hd.dataset.group = g.name;
+  for(const [cls, text] of [['pg-glyph', g.glyph || ''], ['pg-name', g.name], ['pg-count', String((g.presets || []).length)]]){
+    const sp = document.createElement('span'); sp.className = cls; sp.textContent = text; hd.appendChild(sp); }
+  const open = !presetFolded().has(g.name); hd.setAttribute('aria-expanded', String(open));
+  if(hd.addEventListener) hd.addEventListener('click', () => {
+    if(presetSearchText()) return;                      // while searching, the search decides what shows
+    const s = presetFolded(), nowOpen = s.has(g.name); if(nowOpen) s.delete(g.name); else s.add(g.name);
+    try { localStorage.setItem(PRESET_FOLD_KEY, JSON.stringify([...s])); } catch(e){}
+    filterPresets();
+  });
+  return hd;
+}
+const presetSearchText = () => { const f = $('presetSearch'); return f && f.value ? String(f.value).trim() : ''; };
+function presetWords(p){
+  const t = p.textureType, o = t && $('textureType') && Array.from($('textureType').options || []).find(o => o.value === t);
+  const E = t && TEXTURE_ELEMENTS[t]; const readings = E ? Object.values(E).map(r => r && r.name || '').join(' ') : '';
+  return [p.name, o ? o.textContent : '', readings, p.font || ''].join(' ');
+}
+function filterPresets(){
+  if(!presetGrid || !presetGrid.querySelectorAll) return;
+  const q = presetSearchText(), shut = presetFolded(), byName = new Map(PRESETS.map(p => [p.name, p]));
+  const shown = new Map();
+  presetGrid.querySelectorAll('.preset-btn').forEach(b => {
+    const g = b.dataset.group || '', p = byName.get(b.dataset.name);
+    const hit = !q || chMatches(q, { text: b.dataset.name || '', value: '' }, g, p ? presetWords(p) : '');
+    b.hidden = q ? !hit : shut.has(g);
+    if(hit) shown.set(g, (shown.get(g) || 0) + 1);
+  });
+  presetGrid.querySelectorAll('.preset-group-head').forEach(h => {
+    const g = h.dataset.group, n = shown.get(g) || 0, total = PRESET_GROUPS.find(x => x.name === g)?.presets.length || 0;
+    h.hidden = !!q && !n;
+    h.setAttribute('aria-expanded', String(q ? true : !shut.has(g)));
+    const c = h.querySelector('.pg-count'); if(c) c.textContent = q ? n + ' / ' + total : total;
+  });
+  const none = $('presetNone'); if(none) none.hidden = !q || shown.size > 0;
+}
+if($('presetSearch') && $('presetSearch').addEventListener) $('presetSearch').addEventListener('input', filterPresets);
+
 // the built-in looks, each group under its own heading (Simple first), alphabetical within it (Ruby)
 // (groups by what a person is looking for — PRESET_GROUPS names each one's presets; any left out come last)
 { const byName = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
   const placed = new Set();
   for(const g of (PRESET_GROUPS || [])){
-    if(g.name && typeof document.createElement === 'function'){ const hd = document.createElement('div'); hd.className = 'preset-group-head'; hd.textContent = (g.glyph ? g.glyph + ' ' : '') + g.name; presetGrid.appendChild(hd); }
-    PRESETS.filter(p => (g.presets || []).includes(p.name) && !placed.has(p)).sort(byName).forEach(p => { placed.add(p); presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)); });
+    if(g.name && typeof document.createElement === 'function') presetGrid.appendChild(groupHead(g));
+    PRESETS.filter(p => (g.presets || []).includes(p.name) && !placed.has(p)).sort(byName).forEach(p => { placed.add(p); presetGrid.appendChild(groupTile(presetTile(p, ()=>pickPreset(p)), g.name)); });
   }
-  PRESETS.filter(p => !placed.has(p)).sort(byName).forEach(p => presetGrid.appendChild(hoverPreview(presetTile(p, ()=>pickPreset(p)), p)));
+  PRESETS.filter(p => !placed.has(p)).sort(byName).forEach(p => presetGrid.appendChild(groupTile(presetTile(p, ()=>pickPreset(p)), '')));
+  try { filterPresets(); } catch(e){}
 }
 
-// ---- hover previews (desktop) ----
-// Resting the pointer on a preset tile shows it on the page; moving off the
-// grid puts your own look back exactly; a click keeps it. A preview is never
-// a step of undo history and never a change you made (Canva and Figma try a
-// style on hover the same way). Only where a real pointer hovers.
-const HOVER_DELAY = 380;
-const hover = { base: null, timer: 0, on: null };   // (the preview in progress: your look, kept to put back)
-const canHover = () => !detectMobile() && typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
-// (Ruby: retired — some surfaces took seconds to try on, and it wasn't needed. A tile is applied by a click.)
-function hoverPreview(tile){ return tile; }
-function endHoverPreview(){
-  clearTimeout(hover.timer);
-  if(!hover.base) return;
-  const b = hover.base; hover.base = null; hover.on = null;
-  state.history.restoring = true;
-  try { restoreSettings(b.look); if(b.palette) applyThemePalette(b.palette); if(document.body && document.body.dataset) document.body.dataset.lookName = b.name || ''; }
-  finally { state.history.restoring = false; }
-  clearTimeout(state.history.timer);
-  scheduleRender();
-}
-// a click keeps the preset (the preview simply becomes the look), as one step of history.
+// (hover previews on desktop were retired, Ruby: some surfaces took seconds to try on. A tile is applied by a click.)
+// a click applies the preset, as one step of history.
 // Every click is a NEW SEED (Ruby); clicking the look that is still lit (nothing
 // meaningful changed since) keeps it and only rerolls — and now and then takes
 // another of its surface's readings (🜂 🜄 🜁 🜃)
 async function pickPreset(p){
-  clearTimeout(hover.timer);
   const again = litPreset.name === p.name && !litPresetChanged();
-  if(!again && needsGuard() && !await guardWork('Apply this preset', `“${p.name}”`)){ endHoverPreview(); return; }
+  if(!again && needsGuard() && !await guardWork('Apply this preset', `“${p.name}”`)) return;
   markFresh();
-  const showing = hover.on === p;
-  hover.base = null; hover.on = null;
   if(again){ maybeRerollSeed(); if(Math.random() < 0.45) swapReading(); scheduleRender(); commitSoon(); }
-  else if(showing) commitSoon();     // already on the page, its new seed and all: keep exactly what was shown
   else applyPreset(p);
   lightPreset(p.name);
   murmur.play('preset');
@@ -1192,14 +1220,12 @@ function swapReading(){
   if(!list.length) return;
   applyElement(list[Math.floor(Math.random()*list.length)].el);
 }
-if(presetGrid && presetGrid.addEventListener) presetGrid.addEventListener('mouseleave', endHoverPreview);
 
 // CUSTOM PRESETS (Ruby): the saved spells, in a card of their own under the built-in
 // ones, alphabetical, in as many rows as they need (never a sideways scroller) — a
 // library that can grow until the built-in ones aren't needed. Rebuilt whenever the
 // saved set changes.
 const customGrid = $('customPresetGrid');
-if(customGrid && customGrid.addEventListener) customGrid.addEventListener('mouseleave', endHoverPreview);
 
 function renderSavedPresets(saved){
   if(!customGrid) return;
@@ -2574,7 +2600,7 @@ applyStrings(document);
 }
 // ---------- frame and box controls: readouts, visibility, moons ----------
 const RANGE_UNITS = { borderGradientAngle:'°', bgRadialX:'%', bgRadialY:'%', bgRadialR:'%', borderThickness:'px', borderOffset:'px',
-  borderGrain:'%', borderRadius:'px', cardGradientAngle:'°', cardOffset:'px', cardThickness:'px', cardRadius:'px', cardFxAmount:'', cardFxScale:'' };
+  borderGrain:'%', textureClearing:'%', borderRadius:'px', cardGradientAngle:'°', cardOffset:'px', cardThickness:'px', cardRadius:'px', cardFxAmount:'', cardFxScale:'' };
 function refreshReadouts(){
   for(const [id, unit] of Object.entries(RANGE_UNITS)){ const el = $(id), out = $(id + 'Val'); if(el && out) out.textContent = el.value + unit; }
   paintMoons();
@@ -2647,7 +2673,8 @@ function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
-    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6) };
+    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
+    text: graphUsesPoem(json) ? textLayoutNow() : undefined };   // (the poem's layout, for a graph that reads it)
 }
 /** A texture made in the worker, handed to `done` when it is ready (the newest wish per slot wins). */
 const workerWish = new Map();
@@ -2743,7 +2770,7 @@ const FRAME_DEFAULTS = { bgGradientType:'linear', textGradientType:'linear', bgR
   borderRounded:false, borderRadius:'60', cardToggle:false, cardColor1:'#FFF6EE', cardGradientToggle:false,
   cardColor2:'#F2E2EA', cardGradientType:'linear', cardGradientAngle:'90', cardOpacity:'70', cardBlend:'source-over',
   borderBlend:'source-over', borderBloomBlend:'source-over', borderGradientAngle:'45',
-  borderStitch:'solid', borderStitchOut:false, cardLink:true, cardFx:'none', cardFxAmount:'50', cardFxScale:'50', baseToggle:false };
+  borderStitch:'solid', borderStitchOut:false, cardLink:true, cardFx:'none', cardFxAmount:'50', cardFxScale:'50', baseToggle:false, textureClearing:'0' };
 
 // Every opacity READOUT (any slider marked data-moon) is a moon that waxes with the value — new at 0%, full
 // at 100% — in place of a percentage. (It was once drawn on the slider's
@@ -3174,7 +3201,7 @@ function setFilmstrip(open){
 }
 function commitHistory(){
   const h = state.history;
-  if(h.restoring || hover.base) return;                      // (a hover preview is not a change)
+  if(h.restoring) return;
   const snap = lookSnapshot();
   if(h.stack[h.index] === snap) return;                      // nothing actually changed
   h.stack = h.stack.slice(0, h.index + 1);                   // a new change drops the redo branch
@@ -3303,3 +3330,31 @@ setSwatchTextureSource((type, w, h, opts) => {
   return peekTexture(textureKeyFor(type, w, h, opts)) || null;
 });
 onTextureReady(() => swatchTexturesArrived());
+
+// ---------- THE SURFACE MENUS AS TILES ----------
+// Each surface's tile is the surface as a preset wears it (its ground, hues, blend and knobs), or, worn by
+// none, its defaults on a ground that suits its blend. Thumbnails are kept for the release (chooser.js).
+{
+  const backFor = b => /multiply|darken|burn/.test(b) ? '#EEE4D2' : /screen|lighten|dodge/.test(b) ? '#100E16' : /overlay|soft|hard/.test(b) ? '#6A3A4E' : '#1A1720';
+  const wornBy = type => PRESETS.find(p => p.textureType === type && p.texture);
+  const thumbLook = type => {
+    const P = wornBy(type);
+    if(P) return { ...P, spell: '', border: false, cardToggle: false, textureOpacity: Math.max(60, P.textureOpacity ?? 100) };
+    const caps = capsFor(type);
+    return { bg1: backFor(caps.blends[0]), texture: true, textureType: type, textureOpacity: 100, accent1: '#E07A8A', accent2: '#7A8AE8' };
+  };
+  const thumb = (value, canvas, done) => {
+    if(!TEXTURE_PARAMS[value] || value === 'athanor') return false;
+    // made at three times the tile and drawn down: grown and simulated surfaces need room to show what they are
+    const big = document.createElement('canvas');
+    paintPresetSwatch(big, thumbLook(value), canvas.width*3, canvas.height*3, () => {
+      const c = canvas.getContext('2d'); c.imageSmoothingQuality = 'high'; c.drawImage(big, 0, 0, canvas.width, canvas.height); done(); });
+    return true;
+  };
+  // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
+  const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
+  const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
+  for(const [sel, title] of [[$('textureType'), CHOOSER.surfaceTitle], [$('baseType'), CHOOSER.baseTitle]]){
+    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160 })); } catch(e){ /* the plain menu still works */ }
+  }
+}

@@ -14,12 +14,13 @@ import { capsFor, getTextureCanvas } from './textureGenerators.js';
 // Turing Skin froze the page for a second each time the filmstrip repainted).
 // A tile painted without its texture is painted again when it arrives.
 let swatchSource = null;
-const swatchWaiting = new Map();          // canvas → [p, w, h]
+const swatchWaiting = new Map();          // canvas → [p, w, h, onPainted]
 export function setSwatchTextureSource(fn){ swatchSource = fn; }
 export function swatchTexturesArrived(){
   if(!swatchWaiting.size) return;
   const again = [...swatchWaiting]; swatchWaiting.clear();
-  for(const [canvas, args] of again) if(canvas.isConnected !== false) paintPresetSwatch(canvas, ...args);
+  // (a canvas off the page is repainted too when someone waits on it: the surface menus' thumbnails are made off the page)
+  for(const [canvas, args] of again) if(canvas.isConnected !== false || args[3]) paintPresetSwatch(canvas, ...args);
 }
 import { buildLines } from './textParsers.js';
 import { spellToPML } from './spell.js';
@@ -31,7 +32,7 @@ import { SWATCH } from './tunables.js';
  * from a full render — a few thousand pixels each, cached like any other
  * texture, so sixteen of them cost about one ordinary repaint.
  */
-export function paintPresetSwatch(canvas, p, w, h){
+export function paintPresetSwatch(canvas, p, w, h, onPainted = null){
   canvas.width = w; canvas.height = h;
   const c = canvas.getContext('2d');
 
@@ -56,9 +57,12 @@ export function paintPresetSwatch(canvas, p, w, h){
       const caps = capsFor(p.textureType);
       const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
       const blend = p.textureBlend && caps.blends.includes(p.textureBlend) ? p.textureBlend : caps.blends[0];
-      const opts = { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, light: 315, tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, blend };
+      // every knob and hue the look sets, so a tile is the look in small
+      const opts = { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, p3: p.texP3, p4: p.texP4, p5: p.texP5, p6: p.texP6,
+        light: p.textureLight != null ? +p.textureLight : 315, lightTilt: p.textureLightTilt != null ? +p.textureLightTilt : undefined,
+        tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, tint3: p.textureTint3 || null, tint4: p.textureTint4 || null, tint5: p.textureTint5 || null, tint6: p.textureTint6 || null, blend };
       const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
-      if(!tex && swatchSource) swatchWaiting.set(canvas, [p, w, h]); else swatchWaiting.delete(canvas);
+      if(!tex && swatchSource){ swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; } else swatchWaiting.delete(canvas);
       if(tex){
         c.save();
         c.globalCompositeOperation = blend || 'overlay';
@@ -123,4 +127,5 @@ export function paintPresetSwatch(canvas, p, w, h){
     }
     c.globalAlpha = 1;
   }
+  if(onPainted) try { onPainted(canvas); } catch(e){}
 }

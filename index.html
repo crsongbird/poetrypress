@@ -266,7 +266,9 @@ Have fun!</textarea>
 
     <details class="card" data-tab="style" open>
       <summary class="card-title" data-str="card.builtin_presets">Built-In Presets</summary>
+      <input type="search" id="presetSearch" class="preset-search" data-str-ph="ph.preset_search" placeholder="Search looks: a name, a mood, a surface…" autocomplete="off" spellcheck="false" aria-label="Search the presets">
       <div class="preset-grid" id="presetGrid"></div>
+      <p class="preset-none" id="presetNone" hidden data-str="note.preset_none">No look by that name. Try a mood (rain, gold) or a surface (glass, paper).</p>
     </details>
 
     <details class="card" data-tab="style" id="customPresetsCard" open>
@@ -697,6 +699,11 @@ Have fun!</textarea>
             <label data-str="label.opacity">Opacity</label>
             <input type="range" id="textureOpacity" min="0" max="100" value="60" data-moon>
             <span class="range-val" id="textureOpacityVal">60%</span>
+          </div>
+          <div class="field full">
+            <label data-str="label.text_clearing" title="Quiets the surface behind the words, fading out around them, so small text stays readable over a busy surface.">Text Clearing</label>
+            <input type="range" id="textureClearing" min="0" max="100" value="0">
+            <span class="range-val" id="textureClearingVal">0%</span>
           </div>
           <div class="field full">
             <label for="textureBlend" data-str="label.blend_mode">Blend Mode</label>

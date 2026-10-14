@@ -825,6 +825,8 @@ export function storeTexture(key, result){
   return result;
 }
 // everything a request means: its normalised knobs, and its key
+// the poem's layout, as a short key (FNV-1a): every character counts
+function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
@@ -867,7 +869,9 @@ function describeRequest(type, w, h, opts){
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
-            + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '');
+            + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
+            // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
+            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
@@ -878,7 +882,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const B = athanorBudget(extra.graph || '');
   const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null },
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '' },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -902,7 +906,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '' },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -993,7 +997,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, seed, lightTilt, accents: [accent1, accent2] }))));
+    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

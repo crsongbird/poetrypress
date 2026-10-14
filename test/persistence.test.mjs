@@ -46,6 +46,7 @@ const skip = new Set([
   'highlightToggle',   // checked separately below
   'textureSeedLock',   // derived from the seed field
   'textureSeedWords',  // the seed's phrase: a VIEW of textureSeedValue, which is saved
+  'presetSearch',      // a search over the preset grid: a view, not part of an image
   'lightDegIn', 'lightTiltIn',   // the dial's numbers: VIEWS of textureLight and textureLightTilt, which are saved
   'fontFamily',        // captured as `font` by family NAME, asserted below —
                        // storing the index would break whenever FONTS changes

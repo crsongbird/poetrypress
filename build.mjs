@@ -93,6 +93,7 @@ const ORDER = [
   'canvasRenderer.js',    // parsed lines into pixels
   'palette.js',           // colour picker suggestions
   'swatches.js',          // painted preset/spell tiles
+  'chooser.js',           // a <select> shown as tiles (the surface menus)
   'pwa.js',               // service worker registration, theme colour
   'theme.js',             // UI theme selection
   'editor.js',            // PML highlighting

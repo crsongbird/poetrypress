@@ -188,6 +188,51 @@ function cardLayer(w, h){
   if(CARD_LAYER.width !== w || CARD_LAYER.height !== h){ CARD_LAYER.width = w; CARD_LAYER.height = h; }
   return CARD_LAYER;
 }
+// WHERE THE WORDS ARE (the future-directions doc: "readability as part of the shader"): each frame records
+// its text's runs as fractions of the page — "x0,y0,x1,y1,line,stanza;…" — for Text Clearing below and for
+// the Athanor's The Poem part. A surface drawn before the text reads the last frame's record; a change in
+// it asks for one more frame, which then agrees with itself.
+let TEXT_LAYOUT = '';
+export function textLayoutNow(){ return TEXT_LAYOUT; }
+/** A graph that asks for the poem (its The Poem part) is made with the layout; any other graph never sees it. */
+export function graphUsesPoem(graph){ return /"name":\s*"poem"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
+// TEXT CLEARING: a surface quieted behind the words. The mask is made small (192 across, in page fractions,
+// so the preview and the export agree), blurred there, and scaled up: soft by construction, and cheap.
+let CLEAR_LAYER = null, CLEAR_MASK = { key: '', canvas: null };
+function clearingMask(W, H){
+  const mw = 192, mh = Math.max(8, Math.round(192*H/W)), key = TEXT_LAYOUT + '|' + mw + 'x' + mh;
+  if(CLEAR_MASK.key === key) return CLEAR_MASK.canvas;
+  const c = CLEAR_MASK.canvas || document.createElement('canvas'); c.width = mw; c.height = mh;
+  const x = c.getContext('2d'), a = new Float32Array(mw*mh), runs = [];
+  for(const part of TEXT_LAYOUT.split(';')){ const v = part.split(',').map(Number); if(v.length >= 4 && v.every(isFinite)) runs.push(v); }
+  let hsum = 0;
+  for(const [x0, y0, x1, y1] of runs){ const h = (y1 - y0)*mh, p = h*0.35; hsum += h;
+    for(let yy = Math.max(0, Math.floor(y0*mh - p)); yy < Math.min(mh, Math.ceil(y1*mh + p)); yy++)
+      for(let xx = Math.max(0, Math.floor(x0*mw - p)); xx < Math.min(mw, Math.ceil(x1*mw + p)); xx++) a[yy*mw + xx] = 1; }
+  // two box blurs, about a line's height across: the clearing fades out around the words rather than stopping
+  const rad = Math.max(1, Math.round(runs.length ? hsum/runs.length*0.7 : 2)), t = new Float32Array(mw*mh);
+  for(let pass = 0; pass < 2; pass++){
+    for(let yy = 0; yy < mh; yy++){ let acc = 0, n = 0; for(let xx = -rad; xx < mw + rad; xx++){ if(xx + rad < mw){ acc += a[yy*mw + xx + rad]; n++; } if(xx - rad - 1 >= 0){ acc -= a[yy*mw + xx - rad - 1]; n--; } if(xx >= 0 && xx < mw) t[yy*mw + xx] = acc/Math.max(1, n); } }
+    for(let xx = 0; xx < mw; xx++){ let acc = 0, n = 0; for(let yy = -rad; yy < mh + rad; yy++){ if(yy + rad < mh){ acc += t[(yy + rad)*mw + xx]; n++; } if(yy - rad - 1 >= 0){ acc -= t[(yy - rad - 1)*mw + xx]; n--; } if(yy >= 0 && yy < mh) a[yy*mw + xx] = acc/Math.max(1, n); } }
+  }
+  const im = x.createImageData(mw, mh);
+  for(let i = 0; i < mw*mh; i++){ im.data[i*4] = im.data[i*4 + 1] = im.data[i*4 + 2] = 255; im.data[i*4 + 3] = Math.round(Math.min(1, a[i]*1.4)*255); }
+  x.putImageData(im, 0, 0);
+  CLEAR_MASK = { key, canvas: c };
+  return c;
+}
+/** A surface with the words' clearing taken out of it (destination-out), on a layer kept between frames. */
+function clearedSurface(t, W, H, amount){
+  if(!TEXT_LAYOUT || amount <= 0) return t;
+  if(!CLEAR_LAYER) CLEAR_LAYER = document.createElement('canvas');
+  if(CLEAR_LAYER.width !== W || CLEAR_LAYER.height !== H){ CLEAR_LAYER.width = W; CLEAR_LAYER.height = H; }
+  const c = CLEAR_LAYER.getContext('2d');
+  c.globalCompositeOperation = 'copy'; c.globalAlpha = 1; c.drawImage(t, 0, 0, W, H);
+  c.globalCompositeOperation = 'destination-out'; c.globalAlpha = Math.min(1, amount); c.imageSmoothingEnabled = true;
+  c.drawImage(clearingMask(W, H), 0, 0, W, H);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  return CLEAR_LAYER;
+}
 /** The bloom's own layer, kept between renders and resized only when the page is. */
 let BLOOM_LAYER = null;
 function bloomLayer(w, h){
@@ -985,7 +1030,8 @@ function renderInto(canvas){
   // A texture that can't be drawn is skipped, never allowed to abort the frame:
   // a frame abandoned mid-blend left the canvas in that blend, and the next
   // frame blended over the old one (two pages showing at once).
-  const drawTex = t => { if(!t) return; try { ctx.drawImage(t, 0, 0, W, H); } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
+  const clearing = Math.max(0, Math.min(100, parseFloat(($('textureClearing') || {}).value) || 0))/100;
+  const drawTex = t => { if(!t) return; try { ctx.drawImage(clearing > 0 ? clearedSurface(t, canvas.width, canvas.height, clearing) : t, 0, 0, W, H); } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
   const lap = name => { const t = clock(); laps.push(`${name} ${Math.round(t - lapAt)}`); lapAt = t; };
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const W = canvas.width, H = canvas.height;
@@ -1100,7 +1146,8 @@ function renderInto(canvas){
       ctx.globalCompositeOperation = blend;
       // (a Athanor surface carries its graph: the worker makes it from that)
       const graph = type === 'athanor' ? (($('forgeGraph') || {}).value || '') : undefined;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph, ...(graph ? { accent1: $('accent1ColorHex').value, accent2: $('accent2ColorHex').value } : {}) }));
+      const text = graph && graphUsesPoem(graph) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
+      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1: $('accent1ColorHex').value, accent2: $('accent2ColorHex').value } : {}) }));
       ctx.restore();
     }
   }
@@ -1374,12 +1421,16 @@ function renderInto(canvas){
 
   let cursorY = startY;
   ctx.textBaseline = 'top';
+  // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
+  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false;
+  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
 
   // the effect stack and underline the page gives every run (a segment may replace them)
   const runStyle = { fx: pageFx, under: pageUnder, baseFillStyle, plainTextColor: $('textColorHex').value,
     accent1Color, accent2Color, quoteAlpha: 1 };
 
   for(const line of lines){
+    if(line.isBlank){ if(inStanza){ stanza++; inStanza = false; } } else { if(textRuns.length) lineNo++; inStanza = true; }
     if(line.isBlank){
       if(line.rule){
         // a horizontal rule, centred in the blank line's height; its width is a
@@ -1465,6 +1516,7 @@ function renderInto(canvas){
       }
 
       drawRhymeMarker(flowX);
+      { const fx0 = lineAlign==='center' ? (W/2 - flowingTotalWidth/2) : lineAlign==='right' ? (W - paddingX - flowingTotalWidth) : paddingX; rec(fx0, flowX, cursorY, size*1.15); }
 
       for(const part of anchoredParts){
         const partSize = partSizeFor(part, size);
@@ -1475,6 +1527,7 @@ function renderInto(canvas){
         let pStyle = resolvePartStyle(part, style);
         if(part.code) pStyle = drawCodeBackdrop(ctx, pX, partCursorY(part, partSize), pWidth, partSize, pStyle);
         drawTextRun(ctx, part.segments, pX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
+        rec(pX, pX + pWidth, partCursorY(part, partSize), partSize*1.15);
       }
 
       cursorY += lineHeight;
@@ -1506,6 +1559,7 @@ function renderInto(canvas){
         afterX = drawTextRun(ctx, restSegments, afterX, cursorY, size, lineHeight, fontDef, style);
       }
       drawRhymeMarker(afterX);
+      rec(paddingX, afterX, cursorY, Math.max(size*1.15, dropCapSize*1.05));
 
       cursorY += Math.max(lineHeight, dropCapSize*1.05);
       continue;
@@ -1524,8 +1578,14 @@ function renderInto(canvas){
 
     drawTextRun(ctx, line.segments, startX, cursorY, size, lineHeight, fontDef, style);
     drawRhymeMarker(startX + totalWidth);
+    rec(startX, startX + totalWidth, cursorY, size*1.15);
     cursorY += lineHeight;
   }
+  // the layout changed: a surface that reads it is drawn again, once, with the new one
+  { const lay = textRuns.join(';');
+    if(lay !== TEXT_LAYOUT){ TEXT_LAYOUT = lay;
+      const g = $('textureType').value === 'athanor' && graphUsesPoem(($('forgeGraph') || {}).value || '');
+      if($('textureToggle').checked && (clearing > 0 || g)) setTimeout(scheduleRender, 0); } }
 
   // the spell is tied to the texture seed even when textures are off
   const seedForSpell = parseInt($('textureSeedValue').value, 10) || 0;

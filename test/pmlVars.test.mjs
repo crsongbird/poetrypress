@@ -316,9 +316,9 @@ check('the poem fonts fall back to the symbol fonts, so spell glyphs draw', /\$\
     !/^let (currentAlign|currentValign|currentAspect|bgStopCount|textStopCount|pickingField|currentThemePalette)\b/m.test(ev));
   check('undo and redo step through look snapshots (never the poem, locks or name)',
     /function lookSnapshot\(\)\{ return JSON\.stringify\(stripToLook\(serializeCurrentSettings\(\)\)\); \}/.test(ev));
-  check('restoring a step is not itself recorded as a change (nor is a hover preview)', /if\(h\.restoring \|\| hover\.base\) return;/.test(ev));
+  check('restoring a step is not itself recorded as a change', /if\(h\.restoring\) return;/.test(ev));
   check('no hover previews (Ruby: retired, some surfaces were slow to try on): a preset tile is applied by a click only',
-    /function hoverPreview\(tile\)\{ return tile; \}/.test(ev) && !/addEventListener\('mouseenter', \(\) => \{\n    if\(!canHover\(\)\)/.test(ev));
+    !/hoverPreview|endHoverPreview|addEventListener\('mouseenter'/.test(ev));
   check('the undo buttons are ☋ and ☊', /id="undoBtn"[^>]*>☋</.test(src('index.html')) && /id="redoBtn"[^>]*>☊</.test(src('index.html')));
   const core = src('texCore.js'), tg = src('textureGenerators.js');
   check('tint and blend remap are one pass, in place (no copies)',
@@ -359,7 +359,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
   const tg = src('textureGenerators.js');
   check('textures generate inside withScale, and the cache key only changes when S is not 1',
     /withScale\(scale, \(\) => withLightTilt\(lightTilt\/100, \(\) => withSeed\(seed,/.test(tg) && /\(scale === 1 \? '' : `_x\$\{scale\}`\)/.test(tg));
-  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5, p6)?(, graph(, \.\.\.\(graph \? \{ accent1: \$\('accent1ColorHex'\)\.value, accent2: \$\('accent2ColorHex'\)\.value \} : \{\}\))?)? \}/g) || []).length === 6);
+  check('the renderer passes its S to every texture it draws', (cr.match(/scale: S(, p4, p5, p6)?(, graph(, text)?(, \.\.\.\(graph \? \{ accent1: \$\('accent1ColorHex'\)\.value, accent2: \$\('accent2ColorHex'\)\.value \} : \{\}\))?)? \}/g) || []).length === 6);
   check('the render scale is 1 today (the preview is the export size)', /let RENDER_SCALE = 1;/.test(cr));
   check('§Scale reports it', resolvePmlVariables('§Scale', { scale: 1 }) === '1' && resolvePmlVariables('§Scale', { scale: 1/3 }) === '0.333');
 }
@@ -598,7 +598,7 @@ check('the inset box is painted on its own layer, then blended on as one image (
 // ---- no two pages at once ----
 {
   check('every frame starts from a clean slate (ctx.reset, or a full manual reset)', /if\(typeof ctx\.reset === 'function'\) ctx\.reset\(\);/.test(cr) && /ctx\.globalCompositeOperation = 'source-over';\s*if\('filter' in ctx\)/.test(cr));
-  check('a texture that cannot be drawn is skipped, never allowed to abort the frame', /try \{ ctx\.drawImage\(t, 0, 0, W, H\); \} catch\(err\)/.test(cr));
+  check('a texture that cannot be drawn is skipped, never allowed to abort the frame', /try \{ ctx\.drawImage\(clearing > 0 \? clearedSurface\(t, canvas\.width, canvas\.height, clearing\) : t, 0, 0, W, H\); \} catch\(err\)/.test(cr));
   check('the cache never closes a bitmap (the service may still be showing it)', !/gone\.close\(\)/.test(src('textureGenerators.js')));
   check('the page canvas is a CPU canvas, like its layers (first request sets it)', /const ctx = canvas\.getContext\('2d', \{ willReadFrequently: true \}\);/.test(ev));
   check('after a full-size save, the full-size textures leave the cache', /dropLargeTextures\(\(state\.page\.exportW \|\| pw\)\*\(state\.page\.exportH \|\| ph\)\);/.test(ev));

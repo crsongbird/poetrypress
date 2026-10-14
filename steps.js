@@ -121,7 +121,42 @@ const STEP_PARTS = {
   merge:    { cat: 'Combine', label: 'Merge Channels', ins: ['red', 'green', 'blue'], outs: ['picture'], params: [] },
   switch:   { cat: 'Combine', label: 'Switch', ins: ['a', 'b', 'choose'], outs: ['result'], params: [STEP_R('at', 'Switch At', 50)] },
   hsv:      { cat: 'Light & Color', label: 'Hue & Saturation', ins: ['picture'], outs: ['picture'], params: [STEP_R('hue', 'Hue Turn', 0, 0, 360), STEP_R('sat', 'Saturation', 100, 0, 200), STEP_R('val', 'Brightness', 100, 0, 200)] },
+  // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
+  // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
+  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas'],
+              params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100)] },
+  // more ways to reshape a gray map (Filter Forge's and Blender's staples)
+  grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
+  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
+  twirl:    { cat: 'Shape', label: 'Twirl', ins: ['field'], outs: ['field'], params: [STEP_R('angle', 'Twist', 180, -720, 720), STEP_R('radius', 'Radius', 70, 5, 150), STEP_R('x', 'Across', 50), STEP_R('y', 'Down', 50)] },
+  mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
+  chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
 };
+// The poem's runs, as the page measured them: "x0,y0,x1,y1,line,stanza;…" in fractions of the page
+export function poemRuns(text){
+  const out = [];
+  for(const part of String(text || '').split(';')){ const v = part.split(',').map(Number); if(v.length >= 6 && v.every(isFinite)) out.push(v); }
+  return out;
+}
+// one row (or column) of an exact distance transform (Felzenszwalb & Huttenlocher 2012): squared distances in place
+function stepEdt1(f, n, d, v, z){
+  let k = 0; v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+  for(let q = 1; q < n; q++){
+    let s2 = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k]))/(2*q - 2*v[k]);
+    while(s2 <= z[k]){ k--; s2 = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k]))/(2*q - 2*v[k]); }
+    k++; v[k] = q; z[k] = s2; z[k + 1] = Infinity;
+  }
+  k = 0; for(let q = 0; q < n; q++){ while(z[k + 1] < q) k++; d[q] = (q - v[k])*(q - v[k]) + f[v[k]]; }
+}
+/** The distance (in cells) from every cell to the nearest cell of a mask (> 0.5): exact, linear time. */
+export function stepDistance(mask, ww, wh){
+  const BIG = 1e12, g = new Float64Array(ww*wh), m = Math.max(ww, wh);
+  const f = new Float64Array(m), d = new Float64Array(m), v = new Int32Array(m), z = new Float64Array(m + 1);
+  for(let x = 0; x < ww; x++){ for(let y = 0; y < wh; y++) f[y] = mask[y*ww + x] > 0.5 ? 0 : BIG; stepEdt1(f, wh, d, v, z); for(let y = 0; y < wh; y++) g[y*ww + x] = d[y]; }
+  const out = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++){ for(let x = 0; x < ww; x++) f[x] = g[y*ww + x]; stepEdt1(f, ww, d, v, z); for(let x = 0; x < ww; x++) out[y*ww + x] = Math.sqrt(d[x]); }
+  return out;
+}
 /**
  * WHAT EACH PART DOES, in a sentence a person can use (the parts list, the
  * menus and the Help show these). Plain and instructive: what goes in, what
@@ -174,6 +209,12 @@ export const STEP_DOCS = {
   transform: 'Scales and turns a gray map, repeating it past its edges.',
   edges: 'Finds the edges in a gray map: where it changes fastest.',
   kaleidoscope: 'Folds a gray map into mirrored wedges around the center.',
+  poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray. Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
+  grow: 'Grows the bright parts of a gray map outward (Amount above 50) or shrinks them (below 50), by the Radius. Try: shrink a mask to thin its edges, grow it to merge small spots.',
+  pixelate: 'Breaks a gray map into flat cells — squares, bricks or diamonds — each the average of what it covers. Try: a big Cell Size over noise for a mosaic.',
+  twirl: 'Twists a gray map around a point, most at the center and fading to none at the Radius. Try: a Twirl over Waves for a whirlpool.',
+  mirror: 'Folds a gray map onto itself so one half repeats the other: left to right, top to bottom, both, or across the diagonal.',
+  chroma: 'Slides a picture\'s red and blue apart in opposite directions, like a lens or a misprinted page. Toward the Edges keeps the middle sharp.',
   polar: 'Wraps a gray map into rings around the center.',
   maprange: 'Remaps a gray map\'s values: what was From Low to From High becomes To Low to To High.',
   wash: 'A watercolor wash over any picture: soft bleeding, and blooms when it is very wet.',
@@ -547,7 +588,7 @@ Object.assign(STEP_RUN, {
     return [o];
   },
 });
-Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5 });
+Object.assign(STEP_COST, { kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
 Object.assign(STEP_RUN, {
   number(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'value', 50)))/100]; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
@@ -578,6 +619,80 @@ Object.assign(STEP_RUN, {
     const v = typeof c === 'number' ? c : c == null ? 0 : (() => { const f = asField(c); let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0; })();
     const pick = v >= at ? input(n, 2) : input(n, 1);
     return pick == null ? null : [pick]; },
+  poem(E, n){ const { ctx, ww, wh, N, num, boxBlur } = E;
+    const runs = poemRuns(ctx.text);
+    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N)];
+    const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
+    const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
+    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
+    const nLines = Math.max(...runs.map(r => r[4])) + 1, nSt = Math.max(...runs.map(r => r[5])) + 1;
+    for(const r of runs){
+      const h = (r[3] - r[1])*wh, p = h*pad;
+      const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      // a line is a band across the whole page at the line's own height, its gray rising line by line
+      const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
+      for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
+    }
+    // a stanza owns the page from halfway after the stanza above it to halfway before the one below
+    const span = []; for(const r of runs){ const s = span[r[5]] || (span[r[5]] = [Infinity, -Infinity]); s[0] = Math.min(s[0], r[1]); s[1] = Math.max(s[1], r[3]); }
+    const cuts = []; for(let i = 0; i + 1 < span.length; i++) if(span[i] && span[i + 1]) cuts.push((span[i][1] + span[i + 1][0])/2*wh);
+    for(let y = 0; y < wh; y++){ let k = 0; while(k < cuts.length && y >= cuts[k]) k++; const sv = (k + 1)/nSt; for(let x = 0; x < ww; x++) stanzas[y*ww + x] = sv; }
+    const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
+    for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
+    const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
+    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas];
+  },
+  grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
+    if(t === 0) return [f];
+    // a max (or min) filter, separable, by the radius; mixed with the original by how far Amount is from 50
+    const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
+      for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
+        for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
+        dst[horiz ? j*ww + i : i*ww + j] = m; } };
+    const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false);
+    for(let i = 0; i < N; i++) o[i] = f[i] + (o[i] - f[i])*t;
+    return [o];
+  },
+  pixelate(E, n){ const { ww, wh, N, unit, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares');
+    const cellOf = (x, y) => { if(kind === 'diamonds'){ const u = (x + y)/c, v = (x - y)/c; return Math.floor(u) + ':' + Math.floor(v); }
+      const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return Math.floor(sx/c) + ':' + row; };
+    const sum = new Map(), id = new Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k) || [0, 0]; s[0] += f[q]; s[1]++; sum.set(k, s); }
+    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
+    return [o];
+  },
+  twirl(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const turn = num(n, 'angle', 180)*Math.PI/180, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), q = y*ww + x;
+      if(r >= R){ o[q] = f[q]; continue; }
+      const t = 1 - r/R, a = Math.atan2(dy, dx) + turn*t*t;
+      const sx = Math.min(ww - 1, Math.max(0, Math.round(cx + Math.cos(a)*r))), sy = Math.min(wh - 1, Math.max(0, Math.round(cy + Math.sin(a)*r)));
+      o[q] = f[sy*ww + sx]; }
+    return [o];
+  },
+  mirror(E, n){ const { ww, wh, N, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const axis = P(n, 'axis', 'left to right'), at = num(n, 'at', 50)/100, fx = at*ww, fy = at*wh, o = new Float32Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      let sx = x, sy = y;
+      if((axis === 'left to right' || axis === 'both') && x > fx) sx = Math.round(2*fx - x);
+      if((axis === 'top to bottom' || axis === 'both') && y > fy) sy = Math.round(2*fy - y);
+      if(axis === 'diagonal' && x/ww > y/wh){ sx = Math.round(y/wh*ww); sy = Math.round(x/ww*wh); }
+      o[y*ww + x] = f[Math.min(wh - 1, Math.max(0, sy))*ww + Math.min(ww - 1, Math.max(0, sx))]; }
+    return [o];
+  },
+  chroma(E, n){ const { ww, wh, N, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+    const A = num(n, 'amount', 20)/100*unit*0.02, ang = num(n, 'angle', 0)*Math.PI/180, edge = num(n, 'edge', 0)/100;
+    const o = { r: new Float32Array(N), g: im.g.slice ? im.g.slice() : Float32Array.from(im.g), b: new Float32Array(N) };
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+      const q = y*ww + x, k = edge > 0 ? (1 - edge) + edge*Math.min(1, Math.hypot(x/ww - 0.5, y/wh - 0.5)/0.7071) : 1;
+      const dx = Math.cos(ang)*A*k, dy = Math.sin(ang)*A*k;
+      const at = (ox, oy) => Math.min(wh - 1, Math.max(0, Math.round(y + oy)))*ww + Math.min(ww - 1, Math.max(0, Math.round(x + ox)));
+      o.r[q] = im.r[at(dx, dy)]; o.b[q] = im.b[at(-dx, -dy)]; }
+    return [o];
+  },
   hsv(E, n){ const { N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
     const turn = num(n, 'hue', 0)/360, sat = num(n, 'sat', 100)/100, val = num(n, 'val', 100)/100;
     const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
@@ -599,7 +714,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
 export const VALUE_TYPES = ['field', 'image', 'colour', 'value'];
 const STEP_IO = {
   knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
-  split: { ins: ['image'] }, merge: { outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },

@@ -19,7 +19,7 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 const vault = readFileSync(new URL('../vault.js', import.meta.url), 'utf8');
 
-const tagged = [...html.matchAll(/data-str="([^"]+)"/g)].map(m => m[1]);
+const tagged = [...html.matchAll(/data-str(?:-ph)?="([^"]+)"/g)].map(m => m[1]);   // (data-str-ph: a placeholder)
 check('the markup is tagged with string keys', tagged.length >= 35);
 check('no key is used twice in the markup', new Set(tagged).size === tagged.length);
 
