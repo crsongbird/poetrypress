@@ -9,6 +9,18 @@ two concept documents Ruby gave:
    its rendering engine, its output stage, its controls and remappers, its
    randomizer.
 
+**Ruby's two end goals for the project:**
+1. **Every surface in the future-directions document is a node graph in the
+   Athanor.** Done as a first draft: all 36 are Surface Studies (§2 I). Stage
+   3 makes each a texture in the menu.
+2. **Textures are graphs of general parts, not black boxes.** A part that
+   draws a whole texture is a good start, not the end: §2 J lists them and
+   what they come apart into.
+
+Ruby may approve a texture's look changing for a better or faster method, from
+compare.mjs's sheets (AGENTS §8): rebuilding a black box needn't be
+pixel-identical if Ruby says yes.
+
 Read AGENTS.md first: its invariants and standing rules bind everything
 here. This file says **what** to build and **in what order**. When an item is
 finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
@@ -104,11 +116,11 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   re-evaluates those pixels at 2× and averages. Filter Forge's "AA zones".
   - Prove: scale-audit improves on Bricks and Threshold; cost measured on the
     baseline phone (AGENTS: measure on the right machine).
-- **A9 · Variation on every random part.** A `variation` param (0–99) mixed
-  into the node's seed, as Filter Forge's local Variation. The existing
-  Variant params map onto it.
-  - Prove: two Perlin Noises in one graph differ with different Variation;
-    old graphs unchanged (default 0 = today's stream).
+- **A9 · Variation on every random part.** Done for Value Noise, Perlin
+  Noise, Cells, Curve (noise) and Scatter (`variation` mixed into the node's
+  seed; 0 is the old stream). Still to do: map the older parts' own Variant
+  params (Tendrils, Flow Lines, Discharge…) onto it, so one setting means the
+  same thing everywhere.
 
 ### B · The output stage (the Surface)
 
@@ -181,37 +193,32 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### F · Primitives still missing (Filter Forge's list, ordered by what they unlock)
 
-- **F1 · Lookup.** Sample a picture at coordinates given by two gray maps.
-  It unlocks refraction, holographic foil, polarized interference and
-  Memory Leak.
-- **F2 · Bomber / Glyph Scatter.** Scatter copies of a picture or a glyph:
-  - count, size, rotation and layer, each randomizable;
-  - per-particle outputs (Filter Forge's Bomber Plus slaves);
-  - glyphs from spell.js and symbolLore.js, so in a canvas pass on the page:
-    web fonts, see ON_PAGE.
-  - Unlocks: Sigil Weather, Packet Rain, Letterpress Bed's stray
-    impressions, Broken Rosette.
-- **F3 · Border Mask.** A soft frame from the page's edges, or from the
-  inset box's edges (ctx.box from the renderer, like ctx.text).
-  - Unlocks: Frozen Breath, Salt Bloom, No-Signal Halo, Registration Ghost.
-- **F4 · Gradients.**
-  - 3- and 5-color gradients, and a Color Ramp with more stops (Filter
-    Forge's Elevation Gradient).
-  - Spectrum.
-  - Noise Gradient.
+- **F2 · Glyph Scatter, the rest.** Scatter (Marks) exists: dots, rings,
+  stars, crosses, dashes, diamonds, sparks, drawn sigils or any picture, with
+  where/which-way maps and per-mark outputs. Still to do:
+  - glyphs from symbolLore.js in web fonts (a canvas pass on the page, see
+    ON_PAGE);
+  - layers (which mark is on top) and a per-mark color input.
+- **F3 · Border Mask from the inset box.** Border Mask frames the page's
+  edges; the box's edges wait for G5 (ctx.box from the renderer, like
+  ctx.text).
+- **F4 · Noise Gradient.** (Gradient Map with five stops and Spectrum are
+  done.)
 - **F5 · Channels.**
   - Extract/Assemble HSB and Lab (RGB exists as Split/Merge).
   - Alpha is a design decision: the Athanor has no alpha today. Park it
     unless needed.
 - **F6 · More noises and patterns.**
   - Noises: Blocks, Pyramids, Stones, Techno.
-  - Patterns: Checker, Tiles, Pavements, Ellipse, Polygon.
+  - Patterns: Tiles, Pavements, Ellipse (Orbit Script wants true ellipses),
+    Polygon. (Grid & Dots covers checker, grid lines, dots, hex dots,
+    diamonds and stripes.)
   - The Basics' chains can become starters using them.
 - **F7 · Processing.**
   - Median, Percentile, Refraction (needs F1), Smudge.
   - Map Switch: choose among N pictures by a map.
   - Multiblend.
-  - Displace by a map's slope.
+  - (Displace by a map's slope is done: Displace.)
 - **F8 · Transform.** Rotate and Scale as their own parts (Tile & Rotate does
   both today), Flip, Perspective.
 - **F9 · The rest of RGB Math.** Abs, floor/ceil/round, lerp, log, if. Done
@@ -221,12 +228,9 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### G · The poem as an input (Ruby's future-directions doc)
 
-Done: The Poem (words, distance, lines, stanzas), Text Clearing, Ripples
-from the Words.
+Done: The Poem (words, distance, lines, stanzas, rhymes), Text Clearing,
+Ripples from the Words.
 
-- **G1 · Rhyme groups.** A mask per rhyme letter (`~A`, `~B`), from the
-  layout's per-line rhyme letter. TEXT_LAYOUT gains a 7th field; the parser
-  must keep old layouts.
 - **G2 · Punctuation positions.** A layout of points where punctuation sits,
   for "Punctuation Particles". Needs F2 to scatter from them.
 - **G3 · What the text sits on.**
@@ -272,43 +276,49 @@ from the Words.
 - **H4 · Bind to Ink.** The surface's hues follow the text color
   (palette.js). This is a palette binding (H2) set by one action.
 
-### I · Surfaces from the document (Stage 3: as chains, each with TEACH and four readings; their presets wait for Stage 4)
+### I · Surfaces from the document (Stage 3: as textures in the menu, each with four readings; presets wait for Stage 4)
 
-Buildable **now** with existing parts:
-- **Ink Thirst**: Perlin → Levels → Grow & Shrink (feathered) → multiply.
-- **Moonlit Fibers**: Value Noise → Motion Blur → High Pass → Threshold
-  (soft) → Tint.
-- **Carbon Copy**: Perlin → Motion Blur (pressure bands) → Tint (blue-black),
-  with erased patches by Cells.
-- **Dead Channel**: Perlin → Motion Blur (vertical) → Posterize → Chromatic
-  Offset.
-- **Compression Garden**: Pixelate (squares) → Chromatic Offset → Sharpen
-  (ringing).
-- **Drowned Light**: Cells edges → Warp → Blur → screen.
-- **Lichen Signal**: Cells at three scales → Math → Ramp.
-- **Misremembered Grid**: Waves (two) → Math max → Warp → dropout by Cells id.
-- **Mycelial Letter**: Tendrils over the poem's distance (G is done).
-- **Aether Current**: Flow Lines bent by the poem's distance (an Angle Map
-  input).
-- **CRT Séance**: Waves (scanlines) → Twirl at the edges (curvature) →
-  Chromatic Offset → glow.
-- **Poured Mineral**: Agate starter + Profile Gradient along a distance field.
+All 36 exist as **Surface Studies** (athanorStudies.js; Start from… →
+Surface Studies): graphs of general parts with TEACH and Knobs, first
+drafts tuned by eye. Stage 3 turns each into a texture: a chain in chains.js
+(knobs bound to sliders), four readings, alt-text words, a fingerprint. Its
+study stays as the graph to learn from.
 
-Need **F1 Lookup**: Polarized Dream, Holographic Foil, Memory Leak.
+| Study | Status | What it waits for |
+|---|---|---|
+| Moonlit Fibers, Ink Thirst, Carbon Copy, Dead Channel, Compression Garden, Drowned Light, Lichen Signal, Misremembered Grid, CRT Séance, Poured Mineral, Broken Rosette, Holographic Foil, Polarized Dream, Memory Leak, No-Signal Halo, Frozen Breath, Salt Bloom, Registration Ghost, Thermal Receipt, Sigil Weather, Packet Rain, Impossible Cartography, Cathedral Interference, Breath on Glass, Terminal Afterimage, Cracked Lacquer | a graph of general parts | Stage 3: become textures |
+| Mycelial Letter, Aether Current | general parts plus a process primitive (Tendrils, Flow Lines) | nothing: process primitives stay single parts (§J) |
+| Letterpress Bed, Moth-Eaten Velvet, Scar Tissue | lit by the Light Engine | B1 (a lit Surface) to be at their best |
+| Deep-Space Dust | general parts | F4 Noise Gradient would give its color drift |
+| Constellation Without Stars | **approximation**: Cells edges stand in for star lines | a Delaunay-edges part (F6) |
+| Orbit Script | **approximation**: radial rings, sigils scattered on them | F6 Ellipse; writing along a path |
+| Transmutation Engine | **approximation**: rings, folded spokes, ring marks | a circle-diagram part (glyphs at stations), after J's Transmutation Circle |
+| Magnetic Aurora | uses Starfield and Aurora Curtains, whole-sky parts | J: Curtains taken apart |
 
-Need **F2 Bomber/Glyph Scatter**: Sigil Weather, Packet Rain, Letterpress Bed,
-Broken Rosette, Constellation Without Stars (plus a Delaunay-edges part).
+### J · Black boxes to take apart (Ruby: "a good start")
 
-Need **F3 Border Mask**: Frozen Breath, Salt Bloom, No-Signal Halo,
-Registration Ghost.
+A **process primitive** is one algorithm someone reaches for on its own: it
+stays one part. Discharge (Laplacian growth), Growing Line (differential
+growth), Turing Pattern (Gray–Scott), Tendrils (space colonization),
+Knotwork, Flow Lines, Terrain.
 
-Need **B1 lit Surface** to be at their best: Letterpress Bed, Moth-Eaten
-Velvet, Scar Tissue, Thermal Receipt (heat bloom as emission).
+A **whole-texture part** draws a finished picture and hides its working. Each
+comes apart into general parts plus, at most, one process primitive:
 
-Already exist (rebuild as chains when touched): Transmutation Engine (=
-Transmutation Circle → a node group, A3), Magnetic Aurora (Aurora),
-Cracked Lacquer (Fractured Glaze), Breath on Glass (Rain on Glass + poem
-distance).
+| Part | Comes apart into |
+|---|---|
+| Texture from the Menu | nothing: it stays for old graphs; every texture becomes a chain (Stage 3), so a graph never needs it |
+| Panes · Glass (Stained Glass) | Cells-like panes (Voronoi with a window outline), Threshold lead, Gradient Map glass, Light Engine |
+| Deal · Table (Cartomancy) | Scatter of card shapes (F2 layers), a card-face part, the Light Engine for shadows |
+| Painted Sky · Painted Ridges (Landscape) | Gradient + Perlin sky; ridges as stacked Profile Gradients through Noise curves; Watercolour Wash |
+| Particles (Snow, Mana, Dust) | Scatter with glow (dots, sparks), Blur, screen |
+| Smoke | Perlin warped by Perlin, Levels, Motion Blur |
+| Aurora Curtains · Starfield | curtains as Profile Gradients along a warped curve, rays as Motion Blur of noise; stars as Scatter (sparks) |
+| Oil Paint · Angry Strokes | Scatter of strokes (dashes) turned by a flow map, Light Engine |
+| Matrix (Veins of Light) | Cells, Perlin and Threshold for its "ways" |
+
+Prove each: compare.mjs sheets to Ruby; a pixel-identical rebuild needs no
+approval, a changed one does.
 
 ---
 
@@ -325,11 +335,11 @@ no preset of its own. Questions about presets (which are redundant or
 superseded) wait for Stage 4.
 
 ### Stage 1 · Components: the parts library
-- **F1** Lookup, **F2** Bomber / Glyph Scatter, **F3** Border Mask.
+- **F2** Glyph Scatter's rest, **F3** from the box.
 - **F4–F10**, the rest of Filter Forge's primitives, in the order of what
   they unlock (§2 F).
 - **A1** map inputs on every per-point setting.
-- **A9** Variation on every random part.
+- **A9** the older Variant params onto Variation.
 - **A3** Groups (v4), then **A4** Loop (its body is a group).
 - **A6** edges-only supersampling.
 
@@ -340,17 +350,16 @@ superseded) wait for Stage 4.
   **D4** curve control.
 - **E1–E3** randomizer levels, Back, one control at random. Ask Ruby first
   where E1's choice lives.
-- **G1** rhymes, **G2** punctuation (needs F2), **G3** Protect Text,
+- **G2** punctuation (needs F2), **G3** Protect Text,
   **G4** Emotional Seed (needs A3), **G5** the box as an input.
 - **H1**'s actions that aren't presets: Summon Variation, Mutate Gently,
   Freeze This Seed, Reveal Spell Graph.
 
 ### Stage 3 · Textures: built from the parts
-- **I**: the surfaces from Ruby's document, as chains, each with TEACH and
-  four readings.
-  - Those "buildable now" can start as soon as Stage 1's parts they use
-    exist.
-  - The rest wait on F1, F2, F3 or B1 (§2 I).
+- **I**: the 36 Surface Studies become textures in the menu, each a chain
+  with four readings. The approximations wait on their parts (§2 I).
+- **J**: whole-texture parts taken apart (§2 J), each through compare.mjs and
+  Ruby's approval when its look changes.
 - **Rebuild the 27 textures that aren't chains yet**, so every texture is a
   graph:
   - bokeh astral flowers glassrain sigils mathnoise summoning inkbleed
@@ -372,31 +381,29 @@ superseded) wait for Stage 4.
   - Andromeda, Euphoria, Lotus Bloom, Gateway and Sealed stay verbatim.
 
 ```
- STAGE 1 · COMPONENTS        STAGE 2 · FEATURES                 STAGE 3 · TEXTURES       STAGE 4 · PRESETS
- F1 Lookup ───────────────────────────────────────────────────► I (foil, polarized…) ─┐
- F2 Bomber ─────────────────► G2 punctuation ─────────────────► I (sigil weather…)  ──┤
- F3 Border Mask ──────────────► G5 box input ─────────────────► I (frozen breath…)  ──┤
- F4–F10 primitives ───────────────────────────────────────────► I (the rest)        ──┤
- A1 map inputs · A9 Variation · A6 AA                             27 rebuilt as chains ┼─► H2 PRESETS AS GRAPHS
- A3 GROUPS (v4) ─┬─► A4 Loop                                                           │      ├─► H3 Crossbreed
-                 └──────────► G4 Emotional Seed                                        │      ├─► H4 Bind to Ink
-                              D1 control kinds ─► D2 order ─► D4 curve control ────────┤      ├─► E4 author locks
-                              D3 remap UI · E1–E3 randomizer · H1 actions ────────────┘      └─► THE PRESETS PASS
+ STAGE 1 · COMPONENTS        STAGE 2 · FEATURES                 STAGE 3 · TEXTURES          STAGE 4 · PRESETS
+ F2 Glyph Scatter (rest) ───► G2 punctuation ─────────────────► I studies → textures ───┐
+ F3 from the box ────────────► G5 box input                      J black boxes apart  ───┤
+ F4–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
+ A1 map inputs · A9 Variant→Variation · A6 AA                    27 rebuilt as chains ───┼─► H2 PRESETS AS GRAPHS
+ A3 GROUPS (v4) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
+                 └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
+                              D1 control kinds ─► D2 order ─► D4 curve control ──────────┤      ├─► E4 author locks
+                              D3 remap UI · E1–E3 randomizer · H1 actions ──────────────┘      └─► THE PRESETS PASS
                               B1 LIT SURFACE ─► B2 channels; ─► C1 ─► C2 ─► C4; C3
-                              G1 rhymes · G3 Protect Text
+                              G3 Protect Text
 ```
 
 **Suggested passes** (one release each, AGENTS' recipe):
 
-1. Stage 1: F3 Border Mask + F1 Lookup + F4 gradients + A9 Variation.
-2. Stage 1: F2 Bomber / Glyph Scatter + F6 noises and patterns.
-3. Stage 1: A3 Groups (v4) + A1 (the remaining map inputs).
-4. Stage 2: D1–D3 controls + E1–E3 randomizer (ask Ruby about E1 first).
-5. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
-6. Stage 2: G1, G3, G4, G5 + H1's actions.
-7. Stage 3: surfaces from the document, a few per pass, and two or three of
-   the 27 rebuilt as chains per pass, until all are chains.
-8. Stage 4: H2, H3, H4, E4, then the presets pass.
+1. Stage 1: A3 Groups (v4) + A1 (the remaining map inputs).
+2. Stage 1: F6 noises and patterns (Ellipse, Delaunay edges) + F2's rest.
+3. Stage 2: D1–D3 controls + E1–E3 randomizer (ask Ruby about E1 first).
+4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
+5. Stage 2: G2–G5 + H1's actions.
+6. Stage 3: the Surface Studies become textures, a few per pass; black boxes
+   taken apart and the 27 rebuilt as chains, two or three per pass.
+7. Stage 4: H2, H3, H4, E4, then the presets pass.
 
 The stages overlap at their edges: a texture whose parts all exist may be
 built while the next part is being written. The order that matters is that

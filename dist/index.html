@@ -12049,6 +12049,213 @@ const GEN_STEPS = {
 };
 
 
+/* ==== stepsPatterns.js ==== */
+/**
+ * stepsPatterns.js — general parts, the second shelf: patterns, scattering,
+ * gradients, and pictures read through other pictures.
+ *
+ *   Filter Forge's bomber
+ *   throws a handful of small things;
+ *   where they land, a page.
+ *
+ * Every part here is general (a part someone reaches for twice), from Filter
+ * Forge's component list and Ruby's future-directions doc (ROADMAP §2 F):
+ *   Scatter (Bomber, Glyph Scatter) · Grid & Dots (Checker, Tiles, Dots) ·
+ *   Border Mask · Lookup · Displace · Gradient Map (3- and 5-color,
+ *   Elevation Gradient) · Spectrum.
+ * Each carries its doc, ports, cost and whether its first input is required.
+ * Names here are pat/PAT_: the bundle is one scope.
+ */
+
+const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
+const patClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const patHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16)/255, ((n >> 8) & 255)/255, (n & 255)/255]; };
+
+// ---- SCATTER: the shapes it can throw ----
+// each drawn white on a canvas, centred at 0,0 with radius 1 (the caller scales and turns)
+const PAT_SHAPES = ['dot', 'ring', 'star', 'cross', 'dash', 'diamond', 'spark', 'sigil', 'picture'];
+function patShape(x, kind, rand){
+  x.beginPath();
+  if(kind === 'dot'){ x.arc(0, 0, 1, 0, Math.PI*2); x.fill(); return; }
+  if(kind === 'ring'){ x.lineWidth = 0.28; x.arc(0, 0, 0.85, 0, Math.PI*2); x.stroke(); return; }
+  if(kind === 'diamond'){ x.moveTo(0, -1); x.lineTo(0.62, 0); x.lineTo(0, 1); x.lineTo(-0.62, 0); x.closePath(); x.fill(); return; }
+  if(kind === 'dash'){ x.rect(-1, -0.14, 2, 0.28); x.fill(); return; }
+  if(kind === 'cross'){ x.rect(-1, -0.14, 2, 0.28); x.rect(-0.14, -1, 0.28, 2); x.fill(); return; }
+  if(kind === 'star' || kind === 'spark'){
+    const pts = kind === 'star' ? 5 : 4, inner = kind === 'star' ? 0.42 : 0.16;
+    for(let i = 0; i < pts*2; i++){ const a = i*Math.PI/pts - Math.PI/2, r = i % 2 ? inner : 1; i ? x.lineTo(Math.cos(a)*r, Math.sin(a)*r) : x.moveTo(Math.cos(a)*r, Math.sin(a)*r); }
+    x.closePath(); x.fill(); return; }
+  if(kind === 'sigil'){
+    // a small sigil: three to six strokes, lines and arcs, inside a circle, as Sigil Scatter's are inscribed
+    x.lineWidth = 0.13; x.lineCap = 'round';
+    const n = 3 + Math.floor(rand()*4), pt = () => { const a = rand()*Math.PI*2, r = 0.25 + rand()*0.75; return [Math.cos(a)*r, Math.sin(a)*r]; };
+    for(let i = 0; i < n; i++){ x.beginPath();
+      if(rand() < 0.35){ const r = 0.2 + rand()*0.6, a = rand()*Math.PI*2; x.arc((rand() - 0.5)*0.6, (rand() - 0.5)*0.6, r, a, a + 1 + rand()*3); }
+      else { const [a1, b1] = pt(), [a2, b2] = pt(); x.moveTo(a1, b1); x.lineTo(a2, b2); }
+      x.stroke(); }
+    if(rand() < 0.4){ x.beginPath(); x.arc(0, 0, 0.95, 0, Math.PI*2); x.stroke(); }
+    return; }
+}
+
+const PATTERN_STEPS = {
+  // FILTER FORGE'S BOMBER: throw copies of a shape (or of a picture) across the page, each of its own size, turn
+  // and brightness; where they may fall can be a gray map, and which way they turn an angle map (a vector field)
+  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'],
+    io: { ins: ['image', 'field', 'field'], outs: ['field', 'field', 'field'] },
+    params: [PAT_SEL('shape', 'Shape', PAT_SHAPES), PAT_R('count', 'Count', 60, 1, 400), PAT_R('size', 'Size', 20, 1, 100), PAT_R('vary', 'Size Variety', 50),
+      PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 3,
+    doc: 'Throws copies of a shape — dots, rings, stars, crosses, dashes, diamonds, sparks, small sigils, or any picture wired in — across the page, each its own size, turn and brightness. A gray map in Where says where they may fall; an angle map in Which Way turns them all one way, like iron filings. Try: Sigil with Clumping for a storm of signs.',
+    run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
+      const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3)), pic = shape === 'picture' ? asImage(input(n, 1)) : null;
+      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), R0 = num(n, 'size', 20)/100*unit*0.12;
+      const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
+      const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [mc, mx] = mk(), [ic, ix] = mk();
+      mx.globalCompositeOperation = 'lighten';
+      // a picture to stamp, as a small canvas
+      let stamp = null;
+      if(pic){ const s = document.createElement('canvas'); s.width = ww; s.height = wh; const sx = s.getContext('2d', CPU), im = sx.createImageData(ww, wh);
+        for(let i = 0; i < N; i++){ im.data[i*4] = pic.r[i]*255; im.data[i*4 + 1] = pic.g[i]*255; im.data[i*4 + 2] = pic.b[i]*255; im.data[i*4 + 3] = 255; } sx.putImageData(im, 0, 0); stamp = s; }
+      // Variation turns the throw without moving the seed (Filter Forge's local Variation)
+      const v0 = Math.round(num(n, 'variation', 0)); let st = 0x9e3779b9 ^ Math.floor(Math.random()*4294967296) ^ Math.imul(v0 + 1, 2654435761);
+      const rand = () => { st |= 0; st = st + 0x6D2B79F5 | 0; let t = Math.imul(st ^ st >>> 15, 1 | st); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; };
+      const centres = Array.from({ length: 3 + Math.floor(rand()*5) }, () => [rand()*ww, rand()*wh]);
+      for(let i = 0; i < count; i++){
+        let x = 0, y = 0;
+        for(let tries = 0; tries < 12; tries++){
+          if(rand() < clump){ const c = centres[Math.floor(rand()*centres.length)], g = Math.sqrt(-2*Math.log(Math.max(1e-6, rand())))*unit*0.09, a = rand()*Math.PI*2; x = c[0] + Math.cos(a)*g; y = c[1] + Math.sin(a)*g; }
+          else { x = rand()*ww; y = rand()*wh; }
+          if(!where) break;
+          const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0));
+          if(rand() < where[q]) break;
+          if(tries === 11) x = -1e9;
+        }
+        if(x < -1e8) continue;
+        const r = Math.max(0.5, R0*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
+        let ang = (rand() - 0.5)*Math.PI*2*turn;
+        if(way){ const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0)); ang = way[q]*Math.PI*2 + (rand() - 0.5)*turn*0.6; }
+        const g = Math.round(255*(1 - fade*rand())), id = Math.round(20 + rand()*235);
+        for(const [ctx, col] of [[mx, `rgb(${g},${g},${g})`], [ix, `rgb(${id},${id},${id})`]]){
+          ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(r, r); ctx.fillStyle = ctx.strokeStyle = col;
+          if(stamp){ if(ctx === mx){ ctx.globalAlpha = g/255; ctx.drawImage(stamp, -1, -1, 2, 2); } else ctx.fillRect(-1, -1, 2, 2); }
+          else { const s0 = st; patShape(ctx, shape, rand); if(ctx === mx) st = s0; }     // (the id pass draws the same sigil)
+          ctx.restore(); }
+      }
+      const marks = E.lum(readCanvas(mc)), each = E.lum(readCanvas(ic));
+      return [marks, E.boxBlur(marks, Math.max(1, R0*0.18)), each];
+    } },
+
+  // FILTER FORGE'S CHECKER, TILES and DOTS in one: a regular pattern, turned and sized
+  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'],
+    params: [PAT_SEL('kind', 'Pattern', ['checker', 'grid lines', 'dots', 'hex dots', 'diamonds', 'stripes']), PAT_R('cells', 'Cells', 12, 2, 120), PAT_R('weight', 'Line or Dot Size', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('soft', 'Softness', 10)],
+    cost: () => 1,
+    doc: 'Makes a regular pattern: a checkerboard, grid lines, dots in rows or in a honeycomb, diamonds, or stripes, as many across as Cells, turned by Angle. Try: dots with a gray map on ⚙ Line or Dot Size for a halftone.',
+    run(E, n){ const { ww, wh, unit, P, num, map, at, field } = E;
+      const kind = P(n, 'kind', 'checker'), c = Math.max(2, num(n, 'cells', 12)), a = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+      const WT = map(n, 'weight', 30), SF = num(n, 'soft', 10)/100*0.25 + 0.01;
+      const sm = (e, d) => patClamp(0.5 - d/e);         // a soft edge: 1 inside, 0 outside
+      let q = -1;
+      return [field((u, v, x, y) => { q++;
+        const px = (x - ww/2)/unit*c, py = (y - wh/2)/unit*c, X = px*ca + py*sa, Y = -px*sa + py*ca, w = at(WT, q)/100;
+        const fx = X - Math.floor(X), fy = Y - Math.floor(Y);
+        if(kind === 'checker') return ((Math.floor(X) + Math.floor(Y)) & 1) ? 1 : 0;
+        if(kind === 'stripes') return sm(SF, Math.abs(fx - 0.5) - w*0.5);
+        if(kind === 'grid lines') return Math.max(sm(SF, Math.min(fx, 1 - fx) - w*0.25), sm(SF, Math.min(fy, 1 - fy) - w*0.25));
+        if(kind === 'diamonds') return sm(SF, Math.abs(fx - 0.5) + Math.abs(fy - 0.5) - w*0.5);
+        if(kind === 'hex dots'){ const r = Math.floor(Y), off = (r & 1) ? 0.5 : 0, gx = X + off - Math.floor(X + off) - 0.5; return sm(SF, Math.hypot(gx, fy - 0.5) - w*0.5); }
+        return sm(SF, Math.hypot(fx - 0.5, fy - 0.5) - w*0.5); })];
+    } },
+
+  // A FRAME from the page's edges (ROADMAP F3): white at the edge, fading inward, square-cornered or round
+  border: { cat: 'Noise', label: 'Border Mask', ins: ['roughen'], outs: ['frame'], io: { ins: ['field'] },
+    params: [PAT_SEL('shape', 'Shape', ['square', 'rounded', 'oval']), PAT_R('width', 'Width', 12, 0, 50), PAT_R('soft', 'Softness', 50), PAT_R('rough', 'Roughness', 0)],
+    cost: () => 1,
+    doc: 'Makes a frame from the page\'s edges: white at the edge, fading to black inward over Width. A gray map in Roughen makes the inner edge ragged, like frost or salt creeping in. Try: Border Mask into a Mix\'s amount, to keep a texture to the margins.',
+    run(E, n){ const { ww, wh, unit, P, num, input, asField, field } = E;
+      const shape = P(n, 'shape', 'square'), W = Math.max(0.001, num(n, 'width', 12)/100*unit), soft = Math.max(0.02, num(n, 'soft', 50)/100), rough = num(n, 'rough', 0)/100, R = asField(input(n, 1));
+      let q = -1;
+      return [field((u, v, x, y) => { q++;
+        let d;                                                     // distance in from the edge, in pixels
+        if(shape === 'oval'){ const dx = (x - ww/2)/(ww/2), dy = (y - wh/2)/(wh/2); d = (1 - Math.hypot(dx, dy))*Math.min(ww, wh)/2; }
+        else if(shape === 'rounded'){ const r = W*1.5, cx = Math.min(Math.max(x, r), ww - r), cy = Math.min(Math.max(y, r), wh - r); d = Math.min(x, y, ww - x, wh - y);
+          if((x < r || x > ww - r) && (y < r || y > wh - r)) d = r - Math.hypot(x - cx, y - cy); }
+        else d = Math.min(x, y, ww - x, wh - y);
+        if(R) d -= (R[q] - 0.5)*W*rough*2;
+        const t = d/W; return patClamp(1 - (t - (1 - soft))/soft); })];
+    } },
+
+  // FILTER FORGE'S LOOKUP: a picture read at the places two gray maps name — refraction, foil, interference
+  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
+    params: [PAT_R('amount', 'Amount', 100), PAT_SEL('edges', 'At the Edges', ['repeat', 'mirror', 'clamp']), PAT_R('scale', 'Scale', 100, 10, 400)],
+    cost: () => 1,
+    doc: 'Reads a picture at the places two gray maps name: Across says how far across (0 left, 1 right), Down how far down. With Amount below 100 it moves only part of the way from each point. Try: Waves into Across over a Spectrum, for foil that shifts.',
+    run(E, n){ const { ww, wh, N, input, num, map, at, P, asImage, asField } = E;
+      const pic = asImage(input(n, 1)); if(!pic) return null;
+      const AX = asField(input(n, 2)), AY = asField(input(n, 3)), A = map(n, 'amount', 100), sc = num(n, 'scale', 100)/100, mode = P(n, 'edges', 'repeat');
+      const wrap = t => mode === 'clamp' ? patClamp(t) : mode === 'mirror' ? (m => m > 1 ? 2 - m : m)(((t % 2) + 2) % 2) : ((t % 1) + 1) % 1;
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, a = at(A, q)/100, u = x/ww, v = y/wh;
+        const tu = wrap((u + ((AX ? AX[q]*sc : u) - u)*a)), tv = wrap((v + ((AY ? AY[q]*sc : v) - v)*a));
+        const s = Math.min(wh - 1, Math.floor(tv*wh))*ww + Math.min(ww - 1, Math.floor(tu*ww));
+        o.r[q] = pic.r[s]; o.g[q] = pic.g[s]; o.b[q] = pic.b[s]; }
+      return [o];
+    } },
+
+  // DISPLACE BY A MAP'S SLOPE (Filter Forge's Refraction): a picture seen through a bumpy glass
+  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
+    params: [PAT_R('amount', 'Amount', 30), PAT_R('blur', 'Smoothing', 20)],
+    cost: () => 1.5,
+    doc: 'Bends a picture as if seen through glass shaped like a gray map: where the map slopes, the picture shifts. Try: Perlin Noise into By for water, or The Poem\'s Distance for words that ripple the page.',
+    run(E, n){ const { ww, wh, N, unit, input, num, map, at, asImage, asField, boxBlur } = E;
+      const pic = asImage(input(n, 1)); if(!pic) return null;
+      let by = asField(input(n, 2)); if(!by) return [pic];
+      by = boxBlur(by, num(n, 'blur', 20)/100*unit*0.02);
+      const A = map(n, 'amount', 30), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = at(A, q)/100*unit*0.5;
+        const gx = by[y*ww + Math.min(ww - 1, x + 1)] - by[y*ww + Math.max(0, x - 1)], gy = by[Math.min(wh - 1, y + 1)*ww + x] - by[Math.max(0, y - 1)*ww + x];
+        const sx = Math.min(ww - 1, Math.max(0, Math.round(x + gx*k))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + gy*k))), s = sy*ww + sx;
+        o.r[q] = pic.r[s]; o.g[q] = pic.g[s]; o.b[q] = pic.b[s]; }
+      return [o];
+    } },
+
+  // FILTER FORGE'S 3- AND 5-COLOR GRADIENTS and ELEVATION GRADIENT: a gray map colored by up to five colors
+  gradmap: { cat: 'Light & Color', label: 'Gradient Map', ins: ['field', 'color 1', 'color 2', 'color 3', 'color 4', 'color 5'], outs: ['picture'],
+    io: { ins: ['field', 'colour', 'colour', 'colour', 'colour', 'colour'], outs: ['image'] }, req: true,
+    params: [PAT_R('stops', 'Colors Used', 3, 2, 5), PAT_SEL('blend', 'Between', ['smooth', 'bands']),
+      ['c1', 'Color 1', 'text', '#120C18'], ['c2', 'Color 2', 'text', '#7A3050'], ['c3', 'Color 3', 'text', '#F2C8A0'], ['c4', 'Color 4', 'text', '#80B0D0'], ['c5', 'Color 5', 'text', '#FFFFFF']],
+    cost: () => 1,
+    doc: 'Colors a gray map with up to five colors, black taking the first and white the last (an elevation map\'s colors, or a sunset\'s). A color wired in replaces the one typed. Bands makes each color a flat step. Try: Terrain through sea, sand, grass and snow.',
+    run(E, n){ const { N, input, num, P, asField } = E;
+      const f = asField(input(n, 1)); if(!f) return null;
+      const k = Math.max(2, Math.min(5, Math.round(num(n, 'stops', 3)))), bands = P(n, 'blend', 'smooth') === 'bands';
+      const DEF = ['#120C18', '#7A3050', '#F2C8A0', '#80B0D0', '#FFFFFF'];
+      const cols = [1, 2, 3, 4, 5].slice(0, k).map(i => { const w = input(n, i + 1); return Array.isArray(w) ? w : patHex(P(n, 'c' + i, DEF[i - 1])); });
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const t = patClamp(f[i])*(k - 1), j = Math.min(k - 2, Math.floor(t)), u = bands ? (t - j < 0.5 ? 0 : 1) : t - j, a = cols[j], b = cols[j + 1];
+        o.r[i] = a[0] + (b[0] - a[0])*u; o.g[i] = a[1] + (b[1] - a[1])*u; o.b[i] = a[2] + (b[2] - a[2])*u; }
+      return [o];
+    } },
+
+  // FILTER FORGE'S SPECTRUM: every hue in turn, across the page, round it, or along any gray map
+  spectrum: { cat: 'Noise', label: 'Spectrum', ins: ['along'], outs: ['picture'], io: { ins: ['field'], outs: ['image'] },
+    params: [PAT_SEL('shape', 'Shape', ['linear', 'radial', 'around', 'along a map']), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('repeat', 'Repeat', 1, 1, 12), PAT_R('sat', 'Saturation', 80), PAT_R('light', 'Lightness', 55)],
+    cost: () => 1,
+    doc: 'Makes a rainbow: every hue in turn, across the page, out from the middle, around it, or along any gray map. Saturation and Lightness keep it soft or make it loud. Try: Along a Map with a High Pass of noise, read through Lookup, for oil on water.',
+    run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
+      const shape = P(n, 'shape', 'linear'), along = asField(input(n, 1)), an = num(n, 'angle', 0)*Math.PI/180, rep = Math.max(1, num(n, 'repeat', 1)), s = num(n, 'sat', 80)/100, l = num(n, 'light', 55)/100;
+      const ca = Math.cos(an), sa = Math.sin(an), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      const hsl = (h, c) => { const k = (c + h*12) % 12, a = s*Math.min(l, 1 - l); return l - a*Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, u = x/ww - 0.5, v = y/wh - 0.5;
+        let t = shape === 'radial' ? Math.hypot(u, v)*2 : shape === 'around' ? Math.atan2(v, u)/(Math.PI*2) + 0.5 : shape === 'along a map' ? (along ? along[q] : 0) : 0.5 + u*ca + v*sa;
+        t = ((t*rep % 1) + 1) % 1;
+        o.r[q] = hsl(t, 0); o.g[q] = hsl(t, 8); o.b[q] = hsl(t, 4); }
+      return [o];
+    } },
+};
+
+
 /* ==== steps.js ==== */
 /**
  * steps.js — THE STEPS: the small operations Vellum's surfaces are made of,
@@ -12093,6 +12300,7 @@ const GEN_STEPS = {
 
 
 
+
 const STEP_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const STEP_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const STEP_BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'darken', 'lighten', 'color-dodge', 'color-burn',
@@ -12123,8 +12331,8 @@ const STEP_PARTS = {
   seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
-  noise:    { cat: 'Noise', label: 'Value Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('octaves', 'Octaves', 3, 1, 6)] },
-  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80)] },
+  noise:    { cat: 'Noise', label: 'Value Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('octaves', 'Octaves', 3, 1, 6), STEP_R('variation', 'Variation', 0, 0, 99)] },
+  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80), STEP_R('variation', 'Variation', 0, 0, 99)] },
   waves:    { cat: 'Noise', label: 'Waves', ins: ['warp'], outs: ['field'], params: [STEP_R('freq', 'Frequency', 12, 1, 120), STEP_R('angle', 'Angle', 0, 0, 360)] },
   gradient: { cat: 'Noise', label: 'Gradient', ins: [], outs: ['field'], params: [STEP_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular']), STEP_R('angle', 'Angle', 90, 0, 360)] },
   turing:   { cat: 'Noise', label: 'Reaction–Diffusion', ins: ['seed'], outs: ['field'], params: [STEP_SEL('pattern', 'Pattern', ['spots', 'coral', 'maze', 'worms', 'holes']), STEP_R('scale', 'Scale', 100, 50, 250)] },
@@ -12179,7 +12387,7 @@ const STEP_PARTS = {
   // CURVES (Filter Forge's third kind of part): a shape from 0 to 1 that other parts read through — a tone curve,
   // a gradient's profile, a bevel. Made by Curve, changed by Curve Ops, used by Tone Curve and Profile Gradient.
   curve:    { cat: 'Curves', label: 'Curve', ins: [], outs: ['curve'], params: [STEP_SEL('shape', 'Shape', ['linear', 'bias', 'gain', 'gamma', 'gaussian', 'impulse', 'stairs', 'step', 'wave', 'arc', 'noise']),
-              STEP_R('amount', 'Bend', 50), STEP_R('count', 'Count', 4, 1, 24), STEP_R('low', 'Lowest', 0), STEP_R('high', 'Highest', 100)] },
+              STEP_R('amount', 'Bend', 50), STEP_R('count', 'Count', 4, 1, 24), STEP_R('low', 'Lowest', 0), STEP_R('high', 'Highest', 100), STEP_R('variation', 'Variation', 0, 0, 99)] },
   curveops: { cat: 'Curves', label: 'Curve Ops', ins: ['curve', 'curve b'], outs: ['curve'], params: [STEP_SEL('op', 'Operation', ['frequency', 'phase', 'repeat', 'reverse', 'invert', 'amplitude', 'blend', 'multiply', 'max', 'min']),
               STEP_R('amount', 'Amount', 50), STEP_R('count', 'Times', 2, 1, 16)] },
   tonecurve:{ cat: 'Curves', label: 'Tone Curve', ins: ['picture', 'curve'], outs: ['picture'], params: [STEP_R('mix', 'Strength', 100)] },
@@ -12190,13 +12398,14 @@ const STEP_PARTS = {
   sharpen:  { cat: 'Shape', label: 'Sharpen', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 50, 0, 200), STEP_R('radius', 'Radius', 4, 1, 50)] },
   motionblur:{ cat: 'Shape', label: 'Motion Blur', ins: ['field'], outs: ['field'], params: [STEP_R('length', 'Length', 20, 0, 100), STEP_R('angle', 'Angle', 0, 0, 360)] },
   offset:   { cat: 'Shape', label: 'Offset', ins: ['field'], outs: ['field'], params: [STEP_R('x', 'Across', 0, -100, 100), STEP_R('y', 'Down', 0, -100, 100)] },
-  perlin:   { cat: 'Noise', label: 'Perlin Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('details', 'Details', 4, 1, 8), STEP_R('rough', 'Roughness', 50), STEP_R('contrast', 'Contrast', 30)] },
+  perlin:   { cat: 'Noise', label: 'Perlin Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('details', 'Details', 4, 1, 8), STEP_R('rough', 'Roughness', 50), STEP_R('contrast', 'Contrast', 30), STEP_R('variation', 'Variation', 0, 0, 99)] },
   bricks:   { cat: 'Noise', label: 'Bricks', ins: ['bevel'], outs: ['bricks', 'mortar', 'each brick'], params: [STEP_R('rows', 'Rows', 12, 2, 60), STEP_R('ratio', 'Length', 200, 100, 400),
               STEP_R('mortar', 'Mortar', 12, 0, 40), STEP_R('stagger', 'Stagger', 50), STEP_R('bevel', 'Bevel', 30), STEP_R('vary', 'Variety', 30)] },
   // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
   // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
-  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas'],
-              params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100)] },
+  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas', 'rhymes'],
+              params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100),
+                STEP_SEL('rhyme', 'Rhymes', ['every rhyme', 'A', 'B', 'C', 'D', 'E', 'F'])] },
   // more ways to reshape a gray map (Filter Forge's and Blender's staples)
   grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
   pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
@@ -12299,7 +12508,7 @@ const STEP_DOCS = {
   curveops: 'Changes a curve: repeats it (Frequency, Repeat), shifts it (Phase), flips it (Reverse, Invert), squeezes it (Amplitude), or combines it with a second curve (Blend, Multiply, Max, Min).',
   tonecurve: 'Runs every value of a gray map or picture through a curve, like the Curves adjustment in a photo editor. Try: a Wave curve for bands of light and dark.',
   profile: 'Makes a gradient whose shape is a curve: across the page, around the middle, toward the edges, or along any gray map. Try: an Impulse curve, radial, for a raised ring.',
-  poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray. Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
+  poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray, and Rhymes is white on the lines that rhyme (~A, ~B in the poem: every rhyme, or one). Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
   grow: 'Grows the bright parts of a gray map outward (Amount above 50) or shrinks them (below 50), by the Radius. Try: shrink a mask to thin its edges, grow it to merge small spots.',
   pixelate: 'Breaks a gray map into flat cells — squares, bricks or diamonds — each the average of what it covers. Try: a big Cell Size over noise for a mosaic.',
   twirl: 'Twists a gray map around a point, most at the center and fading to none at the Radius. Try: a Twirl over Waves for a whirlpool.',
@@ -12821,9 +13030,11 @@ Object.assign(STEP_RUN, {
     }
     return [o];
   },
-  poem(E, n){ const { ctx, ww, wh, N, num, boxBlur } = E;
+  poem(E, n){ const { ctx, ww, wh, N, num, P, boxBlur } = E;
     const runs = poemRuns(ctx.text);
-    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N)];
+    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N), new Float32Array(N)];
+    // RHYMES (Ruby's doc, a rhyme group's mask): the words of the lines that rhyme (~A, ~B…: the run's 7th number, A = 1)
+    const want = P(n, 'rhyme', 'every rhyme'), wantN = want === 'every rhyme' ? -1 : want.charCodeAt(0) - 64, rhymeHard = new Float32Array(N);
     const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
     const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
     const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
@@ -12831,7 +13042,8 @@ Object.assign(STEP_RUN, {
     for(const r of runs){
       const h = (r[3] - r[1])*wh, p = h*pad;
       const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
-      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      const rh = r[6] || 0, isRhyme = rh > 0 && (wantN < 0 || rh === wantN);
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++){ hard[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
       // a line is a band across the whole page at the line's own height, its gray rising line by line
       const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
       for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
@@ -12843,7 +13055,7 @@ Object.assign(STEP_RUN, {
     const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
     for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
     const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
-    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas];
+    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard];
   },
   grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
     const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
@@ -12942,11 +13154,11 @@ const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...PATTERN_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
-  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) ? [1] : [],
+  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) || s.req ? [1] : [],
     dataIns: s.ins.length,
     ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
     inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),
@@ -12960,6 +13172,277 @@ function stepRange(name, key){
   const p = ((STEPS[name] || {}).params || []).find(q => q[0] === key);
   return p && p[2] === 'range' ? [p[4].min, p[4].max] : null;
 }
+
+
+/* ==== athanorStudies.js ==== */
+/**
+ * athanorStudies.js — the surfaces from Ruby's future-directions doc, built
+ * as graphs of parts: SURFACE STUDIES, offered in the Athanor's Start from…
+ *
+ *   Thirty-six surfaces,
+ *   each one a recipe of parts
+ *   anyone can change.
+ *
+ * Ruby: every surface and shader the doc suggested is to be a node graph in the
+ * Athanor by the end of the project, not a black box. Each study is a graph of
+ * general parts only (no "Texture from the Menu"), with its TEACH, and Knobs on
+ * the settings worth turning. They become textures in the menu in Stage 3 and
+ * get presets in Stage 4 (ROADMAP). ROADMAP §2 I keeps the list of which are done.
+ *
+ * Written with a small builder so a graph reads like the chain it is:
+ *   add(type, data) → its number;  wire(from, out, to, in) — `in` may be a
+ *   setting's key, meaning that setting's ⚙ port.
+ */
+
+function studyGraph(label, teach, build){
+  const nodes = [], wires = [];
+  const add = (type, data = {}) => { nodes.push([type, data, 0, 0]); return nodes.length; };
+  const wire = (a, ao, b, bi) => wires.push([a, ao, b, typeof bi === 'string' ? paramPort(nodes[b - 1][0], bi) : bi]);
+  // a quieter copy of a map: Math (multiply) by a Number
+  const fade = (from, out, value) => { const k = add('number', { value }), m = add('math', { op: 'multiply' }); wire(from, out, m, 1); wire(k, 1, m, 2); return m; };
+  build(add, wire, fade);
+  return { label, teach, study: true, nodes, wires };
+}
+// the usual ends: two hues from the page, and the Surface
+const studyHues = add => [add('hue', { slot: '1', name: 'Light Hue' }), add('hue', { slot: '2', name: 'Dark Hue' })];
+
+const ATHANOR_STUDIES = {
+  fibers: studyGraph('Moonlit Fibers', 'This is paper seen close under moonlight: long fibers lying mostly one way. Value Noise is smeared along one direction by Motion Blur (the Light Dial turns it), High Pass keeps only the fine strands, and a soft Threshold picks the brightest. Tint colors them between your two hues. Try: turn Fiber Length up for silk, down for felt.', (add, wire, fade) => {
+    const n = add('noise', { scale: 160, octaves: 3 }), mb = add('motionblur', { length: 80, angle: 20 }), hp = add('highpass', { radius: 4, gain: 70 }),
+      th = add('threshold', { at: 58, soft: 40, '~at': '40,70' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Moonlit Fibers', ground: 'colour' });
+    const k1 = add('knob', { slot: '1', name: 'Fiber Length', def: 80 }), k2 = add('knob', { slot: '2', name: 'Density', def: 50 }), dial = add('dial');
+    wire(n, 1, mb, 1); wire(mb, 1, hp, 1); wire(hp, 1, th, 1); wire(th, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, mb, 'length'); wire(k2, 1, th, 'at'); wire(dial, 1, mb, 'angle');
+  }),
+  inkthirst: studyGraph('Ink Thirst', 'This is paper that drinks ink unevenly: dark patches that feather at their edges instead of stopping. Perlin Noise gives the thirst, Levels decides how much of the page drinks, Grow & Shrink and Blur feather the edges. Try: raise Thirst for a page soaked through.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 25, details: 6, rough: 60, contrast: 40 }), lv = add('levels', { lo: 45, hi: 80, gamma: 50, '~lo': '70,25' }), gr = add('grow', { amount: 62, radius: 10 }),
+      b = add('blur', { radius: 6, '~radius': '1,16' }), inv = add('invert'), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Ink Thirst', ground: 'colour' });
+    const k1 = add('knob', { slot: '1', name: 'Thirst', def: 40 }), k2 = add('knob', { slot: '2', name: 'Feather', def: 40 });
+    wire(p, 1, lv, 1); wire(lv, 1, gr, 1); wire(gr, 1, b, 1); wire(b, 1, inv, 1); wire(inv, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, lv, 'lo'); wire(k2, 1, b, 'radius');
+  }),
+  carbon: studyGraph('Carbon Copy', 'This is a carbon copy: blue-black pigment pressed in bands as the hand moved, rubbed away in patches. Perlin Noise smeared sideways by Motion Blur gives the pressure bands; Cells, thresholded, cut erased patches out of it. Tint colors the pigment with your Dark Hue. Try: raise Erasing.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 160, details: 5, rough: 55, contrast: 40 }), mb = add('motionblur', { length: 100, angle: 0 }), lv = add('levels', { lo: 30, hi: 70, gamma: 50 }),
+      c = add('cells', { scale: 30, jitter: 90 }), th = add('threshold', { at: 22, soft: 30, '~at': '0,40' }), m = add('math', { op: 'multiply' }), inv = add('invert'),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Carbon Copy', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Erasing', def: 30 });
+    wire(p, 1, mb, 1); wire(mb, 1, lv, 1); wire(c, 1, th, 1); wire(lv, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, inv, 1); wire(inv, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, th, 'at');
+  }),
+  deadchannel: studyGraph('Dead Channel', 'This is a television tuned to a dead channel: near-black noise, torn into horizontal bands by a failing sync, the colors slipping apart. Perlin Noise smeared sideways, Posterize for the bands, Grid & Dots stripes for the scanlines, a Color Ramp, then Chromatic Offset. Try: raise Tearing.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 140, details: 3, contrast: 60 }), mb = add('motionblur', { length: 100, angle: 0 }), po = add('posterize', { steps: 6 }),
+      g = add('grid', { kind: 'stripes', cells: 120, weight: 55, angle: 90, soft: 60 }), m = add('math', { op: 'multiply' }), [l, d] = studyHues(add), r = add('ramp', { mid: 40 }),
+      ch = add('chroma', { amount: 40, angle: 0 }), s = add('surface', { name: 'Dead Channel', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Tearing', def: 40 });
+    wire(p, 1, mb, 1); wire(mb, 1, po, 1); wire(po, 1, m, 1); wire(g, 1, m, 2); wire(m, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, ch, 'amount');
+  }),
+  compression: studyGraph('Compression Garden', 'This is a picture compressed until its blocks show, kept as a mosaic on purpose: square cells, colors in bands, the red and blue slipping at the edges. Perlin Noise, Pixelate, a banded Gradient Map, Chromatic Offset. Try: change Block Size.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 18, details: 4 }), px = add('pixelate', { size: 40, cell: 'squares' }), gm = add('gradmap', { stops: 5, blend: 'bands', c1: '#141018', c2: '#3E5C4A', c3: '#9AB070', c4: '#E8D8A0', c5: '#F4B0B8' }),
+      ch = add('chroma', { amount: 30, angle: 0 }), s = add('surface', { name: 'Compression Garden', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Block Size', def: 25 });
+    wire(p, 1, px, 1); wire(px, 1, gm, 1); wire(gm, 1, ch, 1); wire(ch, 1, s, 1); wire(k1, 1, px, 'size');
+  }),
+  drowned: studyGraph('Drowned Light', 'This is light seen through deep water: the bright web of caustics, slowed and blurred. The edges of Cells make the web; Warp by Perlin Noise bends it as water does; Blur softens it; a Color Ramp lights it. Try: raise Depth to blur it further.', (add, wire, fade) => {
+    const c = add('cells', { scale: 45, jitter: 100 }), p = add('perlin', { scale: 12, details: 3 }), w = add('warp', { amount: 45 }), b = add('blur', { radius: 3, '~radius': '1,12' }), lv = add('levels', { lo: 50, hi: 95, gamma: 40 }),
+      [l, d] = studyHues(add), r = add('ramp', { mid: 40 }), s = add('surface', { name: 'Drowned Light', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Depth', def: 20 });
+    wire(c, 2, w, 1); wire(p, 1, w, 2); wire(w, 1, b, 1); wire(b, 1, lv, 1); wire(lv, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, s, 1); wire(k1, 1, b, 'radius');
+  }),
+  lichen: studyGraph('Lichen Signal', 'This is lichen on stone: colonies with colored rims and dark centers, at more than one scale. Cells give the colonies (their distance is dark at the center), Perlin Noise decides where they grow, Edge Detect draws their rims, and a Gradient Map colors stone, rim and center. Try: raise Colonies.', (add, wire, fade) => {
+    const c = add('cells', { scale: 60, jitter: 90 }), p = add('perlin', { scale: 25, details: 4 }), th = add('threshold', { at: 52, soft: 12, '~at': '70,35' }), m = add('math', { op: 'multiply' }),
+      e = add('edges', { strength: 80 }), a = add('math', { op: 'max' }), gm = add('gradmap', { stops: 4, c1: '#3A3A36', c2: '#6E7A56', c3: '#C8A848', c4: '#E8E0C0' }),
+      s = add('surface', { name: 'Lichen Signal', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Colonies', def: 50 });
+    wire(p, 1, th, 1); wire(c, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, e, 1); wire(m, 1, a, 1); wire(e, 1, a, 2); wire(a, 1, gm, 1); wire(gm, 1, s, 1);
+    wire(k1, 1, th, 'at');
+  }),
+  misgrid: studyGraph('Misremembered Grid', 'This is a grid that forgets itself: its lines bend, some cells drop out, and a faint second copy sits beside the first. Grid & Dots draws the lines, Warp bends them by noise, Offset makes the afterimage, and Cells, thresholded, punch out the dropouts. Try: raise Drift.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'grid lines', cells: 12, weight: 14, soft: 20 }), p = add('perlin', { scale: 6, details: 3 }), w = add('warp', { amount: 18, '~amount': '0,50' }),
+      o = add('offset', { x: 1, y: 1 }), mx = add('math', { op: 'max' }),
+      c = add('cells', { scale: 60 }), th = add('threshold', { at: 12, soft: 0 }), m = add('math', { op: 'multiply' }),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Misremembered Grid', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Drift', def: 18 });
+    wire(g, 1, w, 1); wire(p, 1, w, 2); wire(w, 1, o, 1); const lv = fade(o, 1, 40); wire(w, 1, mx, 1); wire(lv, 1, mx, 2);
+    wire(c, 3, th, 1); wire(mx, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, w, 'amount');
+  }),
+  mycelial: studyGraph('Mycelial Letter', 'This is mycelium growing toward the poem: fine threads branching out from the page\'s edge and gathering where the words are. The Poem\'s Distance (inverted) gives Tendrils the ways to grow along; their glow is screened over a dark page. Try: type more lines and watch it find them.', (add, wire, fade) => {
+    const po = add('poem', { padding: 60, softness: 30, reach: 60 }), inv = add('invert'), td = add('tendrils', { amount: 70, branching: 60, roots: 4, keep: 80 }),
+      [l, d] = studyHues(add), r = add('ramp', { mid: 30 }), s = add('surface', { name: 'Mycelial Letter', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Growth', def: 70 });
+    wire(po, 2, inv, 1); wire(inv, 1, td, 1); wire(td, 2, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, s, 1); wire(k1, 1, td, 'amount');
+  }),
+  aether: studyGraph('Aether Current', 'This is a current flowing around the poem, as water flows around stones. Flow Lines draws the ribbons; The Poem\'s Distance, wired into its Angle Map, bends them around the words. Try: raise Turbulence.', (add, wire, fade) => {
+    const po = add('poem', { padding: 60, softness: 60, reach: 40 }), [l, d] = studyHues(add), fl = add('flowlines', { amount: 100, size: 100, turbulence: 30 }),
+      s = add('surface', { name: 'Aether Current', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Turbulence', def: 30 });
+    wire(po, 2, fl, 2); wire(l, 1, fl, 3); wire(d, 1, fl, 4); wire(fl, 1, s, 1); wire(k1, 1, fl, 'turbulence');
+  }),
+  crt: studyGraph('CRT Séance', 'This is an old monitor at a séance: scanlines, a glow of phosphor noise, colors slipping at the edges, darker toward the curved rim. Grid & Dots stripes are the scanlines, Perlin Noise the phosphor, a Border Mask (oval) the falloff, then a Color Ramp and Chromatic Offset strongest at the edges. Try: raise Damage.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'stripes', cells: 120, weight: 45, angle: 90, soft: 70 }), p = add('perlin', { scale: 200, details: 2, contrast: 40 }), m = add('math', { op: 'multiply' }),
+      bm = add('border', { shape: 'oval', width: 30, soft: 100 }), inv = add('invert'), m2 = add('math', { op: 'multiply' }), [l, d] = studyHues(add), r = add('ramp', { mid: 50 }),
+      ch = add('chroma', { amount: 50, angle: 0, edge: 100 }), s = add('surface', { name: 'CRT Séance', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Damage', def: 50 });
+    wire(g, 1, m, 1); wire(p, 1, m, 2); wire(bm, 1, inv, 1); wire(m, 1, m2, 1); wire(inv, 1, m2, 2); wire(m2, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, ch, 'amount');
+  }),
+  mineral: studyGraph('Poured Mineral', 'This is poured stone: agate, or oxidized metal, its bands following a shape that wanders. Perlin Noise is warped by itself, and a Profile Gradient reads it through a Wave curve, so it bands; a Gradient Map colors the bands. Try: raise Bands.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 8, details: 5 }), p2 = add('perlin', { scale: 4, details: 3 }), w = add('warp', { amount: 60 }), cv = add('curve', { shape: 'wave', count: 7 }),
+      pg = add('profile', { shape: 'along a map' }), gm = add('gradmap', { stops: 5, c1: '#2A1418', c2: '#7A3A2A', c3: '#D89A68', c4: '#F0E0C8', c5: '#8A5040' }),
+      s = add('surface', { name: 'Poured Mineral', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Bands', def: 30 });
+    wire(p, 1, w, 1); wire(p2, 1, w, 2); wire(cv, 1, pg, 1); wire(w, 1, pg, 2); wire(pg, 1, gm, 1); wire(gm, 1, s, 1); wire(k1, 1, cv, 'count');
+  }),
+  rosette: studyGraph('Broken Rosette', 'This is a rosette whose symmetry fails: a pattern folded into a kaleidoscope, with wedges missing where Cells say so. Grid & Dots diamonds folded by Kaleidoscope make the rose; a thresholded Cells id knocks pieces out; Tint colors it. Try: change Folds.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'diamonds', cells: 9, weight: 70, soft: 20 }), k = add('kaleidoscope', { folds: 12, zoom: 100 }), c = add('cells', { scale: 5 }), th = add('threshold', { at: 20, soft: 0 }),
+      m = add('math', { op: 'multiply' }), sh = add('shape', { form: 'circle', size: 95, soft: 20 }), m2 = add('math', { op: 'multiply' }), [l, d] = studyHues(add), t = add('tint'),
+      s = add('surface', { name: 'Broken Rosette', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Folds', def: 50 });
+    wire(g, 1, k, 1); wire(c, 3, th, 1); wire(k, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, m2, 1); wire(sh, 1, m2, 2); wire(m2, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, k, 'folds');
+  }),
+  foil: studyGraph('Holographic Foil', 'This is holographic foil: rainbow bands that move with the angle you hold it at, crossed by fine diffraction lines. A Spectrum is read through Lookup at the places Waves (bent by Perlin Noise) say; Grid & Dots stripes are screened over it for the diffraction. Try: turn the Light Dial.', (add, wire, fade) => {
+    const sp = add('spectrum', { sat: 60, light: 64, repeat: 2 }), w = add('waves', { freq: 3, angle: 30 }), p = add('perlin', { scale: 6, details: 3 }), lk = add('lookup', { amount: 100, edges: 'mirror' }),
+      g = add('grid', { kind: 'stripes', cells: 60, weight: 30, angle: 60, soft: 80 }), bl = add('blend', { mode: 'screen', opacity: 12 }), s = add('surface', { name: 'Holographic Foil', ground: 'colour' }),
+      dial = add('dial');
+    wire(p, 1, w, 1); wire(sp, 1, lk, 1); wire(w, 1, lk, 2); wire(p, 1, lk, 3); wire(lk, 1, bl, 1); wire(g, 1, bl, 2); wire(bl, 1, s, 1); wire(dial, 1, w, 'angle');
+  }),
+  polarized: studyGraph('Polarized Dream', 'This is light through stressed glass between polarizers: interference bands in every color, flowing. Two sets of Waves, warped by noise, are multiplied into an interference pattern, and a Spectrum is laid along it. Hue & Saturation keeps it soft. Try: change Saturation, or the Waves\' Frequency.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 5, details: 4 }), w1 = add('waves', { freq: 3, angle: 20 }), w2 = add('waves', { freq: 4, angle: 110 }), m = add('math', { op: 'multiply' }), sp = add('spectrum', { shape: 'along a map', repeat: 2, sat: 45, light: 58 }),
+      hs = add('hsv', { hue: 0, sat: 80, val: 100 }), s = add('surface', { name: 'Polarized Dream', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Saturation', def: 40 });
+    wire(p, 1, w1, 1); wire(p, 1, w2, 1); wire(w1, 1, m, 1); wire(w2, 1, m, 2); wire(m, 1, sp, 1); wire(sp, 1, hs, 1); wire(hs, 1, s, 1); wire(k1, 1, hs, 'sat');
+  }),
+  memoryleak: studyGraph('Memory Leak', 'This is a picture with its memory leaking: rectangles of it come loose and land somewhere else, their colors slipping. The same Perlin Noise is colored twice, once slid by Offset; a Mix shows the slid copy only in the blocks that pixelated, thresholded Value Noise picks; Chromatic Offset finishes it. Try: raise Leaking.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 40, details: 6 }), o = add('offset', { x: 30, y: 8 }), gmA = add('gradmap', { stops: 3 }), gmB = add('gradmap', { stops: 3, c2: '#305A78', c3: '#C8E0D0' }),
+      c = add('noise', { scale: 30, octaves: 1 }), px = add('pixelate', { size: 50, cell: 'bricks' }), th = add('threshold', { at: 75, soft: 0, '~at': '90,50' }), mx = add('mix', { t: 50 }),
+      ch = add('chroma', { amount: 45, angle: 0 }), s = add('surface', { name: 'Memory Leak', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Leaking', def: 30 });
+    wire(p, 1, gmA, 1); wire(p, 1, o, 1); wire(o, 1, gmB, 1); wire(c, 1, px, 1); wire(px, 1, th, 1); wire(gmA, 1, mx, 1); wire(gmB, 1, mx, 2); wire(th, 1, mx, 3); wire(mx, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, th, 'at');
+  }),
+  nosignal: studyGraph('No-Signal Halo', 'This is a quiet center ringed by a failing signal: calm in the middle, more broken toward the edges. A Border Mask (oval) is the Mix amount between a still dark page and loud noise colored by a Ramp, with Chromatic Offset strongest at the edges. Try: raise Width to bring the noise in.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 160, details: 2, contrast: 80 }), [l, d] = studyHues(add), r = add('ramp', { mid: 50 }), ch = add('chroma', { amount: 70, edge: 100 }), base = add('colour', { hex: '#0E0C12' }),
+      bm = add('border', { shape: 'oval', width: 40, soft: 100 }), mx = add('mix', { t: 50 }), s = add('surface', { name: 'No-Signal Halo', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Width', def: 40 });
+    wire(p, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(base, 1, mx, 1); wire(ch, 1, mx, 2); wire(bm, 1, mx, 3); wire(mx, 1, s, 1); wire(k1, 1, bm, 'width');
+  }),
+  frozenbreath: studyGraph('Frozen Breath', 'This is frost on a window, thickest at the edges, leaving the middle clear to read through. A Border Mask, roughened by noise, says where it grows; High Pass of noise, thresholded, gives the crystals; Tint colors them white. Try: raise Frost Reach.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 30, details: 6, rough: 70 }), bm = add('border', { shape: 'rounded', width: 30, soft: 60, rough: 80, '~width': '5,45' }), hp = add('highpass', { radius: 3, gain: 80 }),
+      th = add('threshold', { at: 54, soft: 30 }), m = add('math', { op: 'multiply' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Frozen Breath', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Frost Reach', def: 30 });
+    wire(p, 1, bm, 1); wire(p, 1, hp, 1); wire(hp, 1, th, 1); wire(th, 1, m, 1); wire(bm, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, bm, 'width');
+  }),
+  saltbloom: studyGraph('Salt Bloom', 'This is salt drying out of a page: crystals gathering at the margins, merging where they crowd. Scatter throws clumped dots where a Border Mask allows; Grow & Shrink and Blur merge them; the Light Engine gives them relief. Try: raise Salt.', (add, wire, fade) => {
+    const bm = add('border', { shape: 'square', width: 35, soft: 90 }), sc = add('scatter', { shape: 'dot', count: 260, size: 8, vary: 80, clump: 60 }), gr = add('grow', { amount: 80, radius: 5 }),
+      b = add('blur', { radius: 2 }), [l, d] = studyHues(add), t = add('tint'), le = add('material', { relief: 18, gloss: 40, shine: 40, shadow: 30, occlusion: 40, ambient: 55 }),
+      s = add('surface', { name: 'Salt Bloom', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Salt', def: 60 });
+    wire(bm, 1, sc, 2); wire(sc, 1, gr, 1); wire(gr, 1, b, 1); wire(b, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, le, 1); wire(b, 1, le, 2); wire(le, 1, s, 1); wire(k1, 1, sc, 'count');
+  }),
+  registration: studyGraph('Registration Ghost', 'This is print whose plates slipped: cyan and magenta halftone echoes, faint, mostly near the edges where the slip shows. Grid & Dots makes the halftone, its dot size mapped by noise; one copy is slid by Offset; each is tinted and multiplied; a Border Mask keeps them to the margins. Try: raise Slip.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 10, details: 3 }), g = add('grid', { kind: 'hex dots', cells: 70, weight: 40 }), o = add('offset', { x: 1, y: 0 }),
+      cyan = add('colour', { hex: '#40B8D0' }), mag = add('colour', { hex: '#D0408A' }), white = add('colour', { hex: '#F4EEE4' }), ra = add('ramp', { mid: 50 }), rb = add('ramp', { mid: 50 }),
+      bl = add('blend', { mode: 'multiply', opacity: 80 }), bm = add('border', { shape: 'square', width: 30, soft: 100 }), bl2 = add('blend', { mode: 'normal', opacity: 100 }),
+      s = add('surface', { name: 'Registration Ghost', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Slip', def: 20 });
+    wire(p, 1, g, 'weight'); wire(g, 1, o, 1); wire(g, 1, ra, 1); wire(white, 1, ra, 2); wire(cyan, 1, ra, 3); wire(o, 1, rb, 1); wire(white, 1, rb, 2); wire(mag, 1, rb, 3);
+    wire(ra, 1, bl, 1); wire(rb, 1, bl, 2); wire(white, 1, bl2, 1); wire(bl, 1, bl2, 2); wire(bm, 1, bl2, 3); wire(bl2, 1, s, 1); wire(k1, 1, o, 'x');
+  }),
+  thermal: studyGraph('Thermal Receipt', 'This is thermal paper: off-white, faint vertical banding from the printer\'s head, blooms where heat touched it, darker toward the edges with age. Grid & Dots stripes are the banding, blurred Perlin Noise the heat bloom, a Border Mask the aging, all colored by a Gradient Map. Try: raise Heat.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'stripes', cells: 90, weight: 50, soft: 100 }), lv = fade(g, 1, 12), p = add('perlin', { scale: 6, details: 2 }), b = add('blur', { radius: 8 }),
+      th = add('levels', { lo: 55, hi: 90, gamma: 50, '~lo': '65,30' }), bm = add('border', { shape: 'square', width: 16, soft: 100 }), m = add('math', { op: 'max' }), m2 = add('math', { op: 'max' }), mf = add('math', { op: 'average' }),
+      gm = add('gradmap', { stops: 3, c1: '#F4F0E6', c2: '#C8BEB0', c3: '#6A5E5A' }), s = add('surface', { name: 'Thermal Receipt', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Heat', def: 45 });
+    wire(p, 1, b, 1); wire(b, 1, th, 1); wire(th, 1, m, 1); wire(bm, 1, m, 2); wire(m, 1, m2, 1); wire(lv, 1, mf, 1); wire(m2, 1, mf, 2); wire(mf, 1, gm, 1); wire(gm, 1, s, 1);
+    wire(k1, 1, th, 'lo');
+  }),
+  letterpress: studyGraph('Letterpress Bed', 'This is a printer\'s bed after years of use: a field of shallow dents, a few stray impressions, lit from the side. Scatter drops faint rectangles (stray type); blurred Perlin Noise is the worn bed; their sum is the height, and the Light Engine lights it by the dial. Try: turn the Light Dial low.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 30, details: 4, contrast: 10 }), sc = add('scatter', { shape: 'dash', count: 30, size: 12, vary: 40, turn: 0, fade: 60 }), b = add('blur', { radius: 2 }),
+      inv = add('invert'), m = add('math', { op: 'average' }), [l, d] = studyHues(add), t = add('tint'), le = add('material', { relief: 40, gloss: 15, shine: 15, shadow: 70, occlusion: 50, ambient: 45 }),
+      s = add('surface', { name: 'Letterpress Bed', ground: 'colour' }), dial = add('dial'), k1 = add('knob', { slot: '1', name: 'Depth', def: 40 });
+    wire(sc, 1, b, 1); wire(b, 1, inv, 1); wire(p, 1, m, 1); wire(inv, 1, m, 2); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(m, 1, t, 1); wire(t, 1, le, 1); wire(m, 1, le, 2); wire(dial, 1, le, 7); wire(le, 1, s, 1);
+    wire(k1, 1, le, 'relief');
+  }),
+  velvet: studyGraph('Moth-Eaten Velvet', 'This is velvet, dense and dark, worn through in places where the light comes up from underneath. Fine Perlin Noise is the pile; Scatter, grown and thresholded, eats the holes; a Mix shows your Light Hue through them. Try: raise Moths.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 200, details: 2, contrast: 20 }), [l, d] = studyHues(add), r = add('ramp', { mid: 30 }), sc = add('scatter', { shape: 'dot', count: 50, size: 10, vary: 90, clump: 50, '~count': '10,200' }),
+      p2 = add('perlin', { scale: 40 }), w = add('warp', { amount: 30 }), th = add('threshold', { at: 40, soft: 60 }), mx = add('mix', { t: 50 }), s = add('surface', { name: 'Moth-Eaten Velvet', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Moths', def: 30 });
+    wire(p, 1, r, 1); wire(d, 1, r, 2); wire(d, 1, r, 3); wire(sc, 1, w, 1); wire(p2, 1, w, 2); wire(w, 1, th, 1); wire(r, 1, mx, 1); wire(l, 1, mx, 2); wire(th, 1, mx, 3); wire(mx, 1, s, 1);
+    wire(k1, 1, sc, 'count');
+  }),
+  scar: studyGraph('Scar Tissue', 'This is a surface of fibers, stretched and interrupted and grown back together: closer to handmade paper than to anatomy. Noise is smeared into fibers by Motion Blur, warped where it was stretched, broken where Scatter\'s dashes cross it, and lit by the Light Engine. Try: raise Stretch.', (add, wire, fade) => {
+    const n = add('noise', { scale: 140, octaves: 3 }), mb = add('motionblur', { length: 90, angle: 10 }), p = add('perlin', { scale: 5 }), w = add('warp', { amount: 35 }),
+      sc = add('scatter', { shape: 'dash', count: 40, size: 20, turn: 30 }), b = add('blur', { radius: 3 }), inv = add('invert'), m = add('math', { op: 'multiply' }),
+      [l, d] = studyHues(add), t = add('tint'), le = add('material', { relief: 55, gloss: 20, shine: 25, shadow: 50, occlusion: 40, ambient: 50 }), s = add('surface', { name: 'Scar Tissue', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Stretch', def: 35 });
+    wire(n, 1, mb, 1); wire(mb, 1, w, 1); wire(p, 1, w, 2); wire(sc, 1, b, 1); wire(b, 1, inv, 1); wire(w, 1, m, 1); wire(inv, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3);
+    wire(t, 1, le, 1); wire(m, 1, le, 2); wire(le, 1, s, 1); wire(k1, 1, w, 'amount');
+  }),
+  spacedust: studyGraph('Deep-Space Dust', 'This is dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Spectrum, dimmed, drifts the color. Try: raise Emptiness.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 6, details: 6, rough: 65, contrast: 50 }), lv = add('levels', { lo: 50, hi: 85, gamma: 50 }), sc = add('scatter', { shape: 'dot', count: 400, size: 2, vary: 90, clump: 30, fade: 70 }),
+      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('spectrum', { shape: 'along a map', sat: 35, light: 50 }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
+      s = add('surface', { name: 'Deep-Space Dust', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Emptiness', def: 50 });
+    wire(p, 1, lv, 1); wire(lv, 1, sc, 2); wire(p, 1, fogL, 1); wire(sc, 1, m, 1); wire(fog, 1, m, 2); wire(m, 1, bl, 1); wire(p, 1, sp, 1); wire(sp, 1, bl, 2); wire(bl, 1, s, 1); wire(k1, 1, lv, 'lo');
+  }),
+  sigilweather: studyGraph('Sigil Weather', 'This is weather made of signs: sigils carried on a wind, gathering into fronts and storms and leaving clear sky between. Scatter throws small sigils where Perlin Noise is high, and turns each the way a second noise blows (Which Way). Try: raise Storm.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 14, details: 4, contrast: 40 }), lv = add('levels', { lo: 40, hi: 75, gamma: 50 }), wind = add('perlin', { scale: 4, details: 2 }),
+      sc = add('scatter', { shape: 'sigil', count: 90, size: 22, vary: 60, turn: 40, clump: 20 }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Sigil Weather', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Storm', def: 40 });
+    wire(p, 1, lv, 1); wire(lv, 1, sc, 2); wire(wind, 1, sc, 3); wire(sc, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, sc, 'count');
+  }),
+  packetrain: studyGraph('Packet Rain', 'This is rain made of data: short dashes falling in columns, gathered into masses rather than evenly everywhere. Scatter throws dashes, all turned straight down (a Number into Which Way), only where stretched Perlin Noise is high. Try: raise Downpour.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 6, details: 3, contrast: 30 }), tr = add('motionblur', { length: 100, angle: 90 }), lv = add('levels', { lo: 30, hi: 60, gamma: 50 }), down = add('number', { value: 25 }),
+      sc = add('scatter', { shape: 'dash', count: 260, size: 10, vary: 70, turn: 0, fade: 40 }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Packet Rain', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Downpour', def: 60 });
+    wire(p, 1, tr, 1); wire(tr, 1, lv, 1); wire(lv, 1, sc, 2); wire(down, 1, sc, 3); wire(sc, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, sc, 'count');
+  }),
+  constellation: studyGraph('Constellation Without Stars', 'This is a star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. The edges of Cells are the joining lines; tiny Scatter dots mark the meetings; both are faded and tinted. Try: raise Lines.', (add, wire, fade) => {
+    const c = add('cells', { scale: 9, jitter: 100 }), th = add('threshold', { at: 88, soft: 10 }), lv = fade(th, 1, 35), sc = add('scatter', { shape: 'dot', count: 40, size: 2, vary: 60, fade: 50 }),
+      m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Constellation Without Stars', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Lines', def: 50 });
+    wire(c, 2, th, 1); wire(lv, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, c, 'scale');
+  }),
+  cartography: studyGraph('Impossible Cartography', 'This is a map of nowhere: contour lines, a few unlabeled symbols, a faint grid, on old paper. Terrain gives the land; Contour Lines draw it; Scatter places rings and crosses; Grid & Dots lays a survey grid; a Gradient Map colors the paper. Try: raise Relief for steeper country.', (add, wire, fade) => {
+    const tr = add('terrain', { scale: 100, crests: 50 }), ct = add('contours', { levels: 18, weight: 120, index: 5, strength: 80 }), sc = add('scatter', { shape: 'ring', count: 10, size: 8, vary: 40 }),
+      sc2 = add('scatter', { shape: 'cross', count: 8, size: 6, turn: 0 }), g = add('grid', { kind: 'grid lines', cells: 8, weight: 6, soft: 0 }), lv = fade(g, 1, 20),
+      m = add('math', { op: 'max' }), m2 = add('math', { op: 'max' }), m3 = add('math', { op: 'max' }), inv = add('invert'),
+      gm = add('gradmap', { stops: 3, c1: '#4A3628', c2: '#A08060', c3: '#EAD8B8' }), s = add('surface', { name: 'Impossible Cartography', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Relief', def: 50 });
+    wire(tr, 1, ct, 1); wire(ct, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, m2, 1); wire(sc2, 1, m2, 2); wire(m2, 1, m3, 1); wire(lv, 1, m3, 2); wire(m3, 1, inv, 1); wire(inv, 1, gm, 1); wire(gm, 1, s, 1);
+    wire(k1, 1, ct, 'levels');
+  }),
+  cathedral: studyGraph('Cathedral Interference', 'This is window tracery passed through interference: the lead lines of pointed arches, doubled and shifted until they beat against each other. Panes draws an arcade window\'s leading; Warp bends one copy by Waves; their Difference makes the interference. Try: raise Interference, gently.', (add, wire, fade) => {
+    const pn = add('panes', { size: 140, leading: 120, shape: 60, frame: 70 }), w = add('waves', { freq: 8, angle: 90 }), wp = add('warp', { amount: 6, '~amount': '0,30' }), m = add('math', { op: 'difference' }),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Cathedral Interference', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Interference', def: 6 });
+    wire(pn, 1, wp, 1); wire(w, 1, wp, 2); wire(pn, 1, m, 1); wire(wp, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, wp, 'amount');
+  }),
+  magaurora: studyGraph('Magnetic Aurora', 'This is an aurora pulled by a magnetic field: luminous bands that split and merge, displaced together by one wind. Starfield and Aurora Curtains make the sky; Displace by Perlin Noise bends it all the same way. Try: raise Field.', (add, wire, fade) => {
+    const sf = add('starfield', { amount: 100, atmosphere: 30 }), cu = add('curtains', { curtains: 3, rays: 100, height: 110, red: 30 }), p = add('perlin', { scale: 4, details: 3 }),
+      dp = add('displace', { amount: 40, blur: 30 }), s = add('surface', { name: 'Magnetic Aurora', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Field', def: 40 });
+    wire(sf, 1, cu, 1); wire(cu, 1, dp, 1); wire(p, 1, dp, 2); wire(dp, 1, s, 1); wire(k1, 1, dp, 'amount');
+  }),
+  breathglass: studyGraph('Breath on Glass', 'This is breath on a cold window: fog gathered unevenly, tiny droplets, and a few clear trails where drops ran down. Blurred Perlin Noise is the fog; Scatter dots are the droplets; Scatter dashes, smeared downward by Motion Blur, are the trails; a Border Mask cools the edges. Try: raise Fog.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 10, details: 4 }), lv = add('levels', { lo: 20, hi: 80, gamma: 60, '~lo': '45,0' }), dr = add('scatter', { shape: 'dot', count: 300, size: 2, vary: 70, fade: 40 }),
+      tr = add('scatter', { shape: 'dot', count: 8, size: 5, vary: 50 }), mb = add('motionblur', { length: 100, angle: 90 }), lt = add('levels', { lo: 0, hi: 15, gamma: 50 }),
+      m = add('math', { op: 'max' }), m2 = add('math', { op: 'subtract' }), bm = add('border', { shape: 'rounded', width: 20, soft: 100 }), m3 = add('math', { op: 'max' }),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Breath on Glass', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Fog', def: 50 });
+    wire(p, 1, lv, 1); wire(lv, 1, m, 1); wire(dr, 1, m, 2); wire(tr, 1, mb, 1); wire(mb, 1, lt, 1); wire(m, 1, m2, 1); wire(lt, 1, m2, 2); wire(m2, 1, m3, 1); wire(bm, 1, m3, 2);
+    wire(m3, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, lv, 'lo');
+  }),
+  afterimage: studyGraph('Terminal Afterimage', 'This is the ghost an old terminal leaves: soft persistence trails in green or amber, and faint rectangles where windows used to be. Scatter throws blocks that Motion Blur smears into trails; faint scanlines from Grid & Dots; a Color Ramp in your hues; Chromatic Offset barely. Try: raise Persistence.', (add, wire, fade) => {
+    const sc = add('scatter', { shape: 'dash', count: 25, size: 40, vary: 60, turn: 0, fade: 70 }), mb = add('motionblur', { length: 60, angle: 0 }), b = add('blur', { radius: 10 }),
+      g = add('grid', { kind: 'stripes', cells: 120, weight: 30, angle: 90, soft: 80 }), lv = fade(g, 1, 16), m = add('math', { op: 'max' }),
+      [l, d] = studyHues(add), r = add('ramp', { mid: 40 }), ch = add('chroma', { amount: 10 }), s = add('surface', { name: 'Terminal Afterimage', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Persistence', def: 60 });
+    wire(sc, 1, mb, 1); wire(mb, 1, b, 1); wire(b, 1, m, 1); wire(lv, 1, m, 2); wire(m, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, mb, 'length');
+  }),
+  orbit: studyGraph('Orbit Script', 'This is writing that circles: rings of an orrery, with signs strung along them like beads. A Profile Gradient (radial) read through a Wave curve makes the rings; Threshold thins them to lines; Scatter strings small sigils only where the rings are. An approximation: true ellipses and writing along a path wait for their own parts. Try: raise Rings.', (add, wire, fade) => {
+    const cv = add('curve', { shape: 'wave', count: 6 }), pg = add('profile', { shape: 'radial' }), th = add('threshold', { at: 94, soft: 8 }), near = add('blur', { radius: 2 }),
+      sc = add('scatter', { shape: 'sigil', count: 70, size: 14, vary: 40, turn: 100 }), m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'),
+      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 25 });
+    const ring = fade(th, 1, 55);
+    wire(cv, 1, pg, 1); wire(pg, 1, th, 1); wire(th, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, cv, 'count');
+  }),
+  transmutation: studyGraph('Transmutation Engine', 'This is a circle diagram of an alchemical engine: concentric rings, spokes folded into symmetry, a few stations marked. Rings come from a radial Profile Gradient through a Stairs curve and Edge Detect; Grid & Dots lines folded by Kaleidoscope make the spokes; a Shape Mask keeps it in the circle. An approximation: the true diagram part (with glyphs at the stations) is still to come. Try: change Folds.', (add, wire, fade) => {
+    const cv = add('curve', { shape: 'stairs', count: 5 }), pg = add('profile', { shape: 'radial' }), e = add('edges', { strength: 100 }), g = add('grid', { kind: 'grid lines', cells: 6, weight: 8, soft: 10 }),
+      k = add('kaleidoscope', { folds: 8, zoom: 100 }), sk = fade(k, 1, 60), m = add('math', { op: 'max' }), sh = add('shape', { form: 'circle', size: 90, soft: 4 }), m2 = add('math', { op: 'multiply' }),
+      sc = add('scatter', { shape: 'ring', count: 12, size: 10, vary: 20 }), m3 = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'),
+      s = add('surface', { name: 'Transmutation Engine', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Folds', def: 43 });
+    wire(cv, 1, pg, 1); wire(pg, 1, e, 1); wire(g, 1, k, 1); wire(e, 1, m, 1); wire(sk, 1, m, 2); wire(m, 1, m2, 1); wire(sh, 1, m2, 2); wire(sh, 1, sc, 2);
+    wire(m2, 1, m3, 1); wire(sc, 1, m3, 2); wire(m3, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, k, 'folds');
+  }),
+  lacquer: studyGraph('Cracked Lacquer', 'This is old lacquer, crazed into islands: each a little domed, a dark fracture between them, a narrow highlight at the rim. Cells give the islands (their distance is the dome), a Threshold of their edges the fractures, and the Light Engine the gloss. Try: Cells and Fracture Width move separately.', (add, wire, fade) => {
+    const c = add('cells', { scale: 22, jitter: 85, '~scale': '40,160' }), p = add('perlin', { scale: 8 }), w = add('warp', { amount: 20 }), inv = add('invert'), e = add('threshold', { at: 92, soft: 6 }), fr = add('invert'),
+      m = add('math', { op: 'multiply' }), gm = add('gradmap', { stops: 3, c1: '#120606', c2: '#5A0E12', c3: '#A82028' }), le = add('material', { relief: 50, gloss: 80, shine: 70, shadow: 40, occlusion: 50, ambient: 40 }),
+      s = add('surface', { name: 'Cracked Lacquer', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Cells', def: 50 }), k2 = add('knob', { slot: '2', name: 'Fracture Width', def: 92 });
+    wire(c, 1, w, 1); wire(p, 1, w, 2); wire(w, 1, inv, 1); wire(c, 2, e, 1); wire(e, 1, fr, 1); wire(inv, 1, m, 1); wire(fr, 1, m, 2); wire(m, 1, gm, 1); wire(gm, 1, le, 1); wire(m, 1, le, 2); wire(le, 1, s, 1);
+    wire(k1, 1, c, 'scale'); wire(k2, 1, e, 'at');
+  }),
+};
 
 
 /* ==== chains.js ==== */
@@ -13467,6 +13950,7 @@ const TEXTURE_CHAINS = {
 
 
 
+
 /**
  * A graph's VERSION, so an old graph keeps making what it made. Version 1
  * drew every node's randomness from one stream, in the order the graph was
@@ -13707,7 +14191,9 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
       // version 2: the node's own randomness, from the seed and its id
-      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
+      // (a part's own VARIATION, Filter Forge's local Variation, turns its draw without moving the page's seed; 0 is as before)
+      const vr = Math.round(+((n.data || {}).variation) || 0);
+      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
       if(key && out) athanorKeep(key, out);
     }
     busy.delete(id); memo.set(id, out);
@@ -13812,7 +14298,7 @@ const ATHANOR_STARTERS = {
   // the poem as an input (The Poem): rings spreading from the words, quiet where the words are
   ripples: { label: 'Ripples from the Words', teach: 'This is a surface that knows where your poem is. The Poem hands on a Distance map: 0 at the words, rising to 1 far from them. A Value Noise warps it a little, and Contour Lines draws a line at every step of it, so rings spread out from the text like ripples from a stone. Levels turns the Distance into a mask that is dark only right around the words, and Math multiplies the rings by it, so they fade out close to the text and it stays clear. Try: change The Poem\'s Reach, or type more lines and watch the rings move.', nodes: [
       ['poem', { padding: 30, softness: 0, reach: 70 }, 40, 80], ['noise', { scale: 8, octaves: 3 }, 40, 320],
-      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 140, index: 4, strength: 100 }, 520, 160],
+      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 280, index: 4, strength: 100 }, 520, 160],
       ['math', { op: 'multiply' }, 740, 160], ['hue', { slot: '1', name: 'Ring Hue' }, 740, 340], ['hue', { slot: '2', name: 'Ground Hue' }, 740, 460],
       ['ramp', { mid: 50 }, 960, 200], ['surface', { name: 'Ripples from the Words', ground: 'colour' }, 1180, 200],
       ['levels', { lo: 4, hi: 16, gamma: 50 }, 520, 360]],
@@ -13820,7 +14306,7 @@ const ATHANOR_STARTERS = {
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
-  const S = ATHANOR_STARTERS[name] || TEXTURE_CHAINS[name]; if(!S) return null;
+  const S = ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] || TEXTURE_CHAINS[name]; if(!S) return null;
   const data = {};
   S.nodes.forEach(([type, d, x, y], i) => { const id = i + 1;
     data[id] = { id, name: type, data: { ...d }, class: '', html: '', typenode: false, inputs: {}, outputs: {}, pos_x: x, pos_y: y }; });
@@ -13830,7 +14316,7 @@ function athanorStarter(name){
   }
   layoutAthanor(data);
   // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
-  return { v: ATHANOR_STARTERS[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
+  return { v: ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
 }
 /**
  * Lays a graph out to read left to right: each node in the column of its
@@ -14794,7 +15280,10 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const B = athanorBudget(extra.graph || '');
   const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '' },
+    // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
+    //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '',
+      ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -28209,6 +28698,213 @@ const GEN_STEPS = {
 };
 
 
+/* ==== stepsPatterns.js ==== */
+/**
+ * stepsPatterns.js — general parts, the second shelf: patterns, scattering,
+ * gradients, and pictures read through other pictures.
+ *
+ *   Filter Forge's bomber
+ *   throws a handful of small things;
+ *   where they land, a page.
+ *
+ * Every part here is general (a part someone reaches for twice), from Filter
+ * Forge's component list and Ruby's future-directions doc (ROADMAP §2 F):
+ *   Scatter (Bomber, Glyph Scatter) · Grid & Dots (Checker, Tiles, Dots) ·
+ *   Border Mask · Lookup · Displace · Gradient Map (3- and 5-color,
+ *   Elevation Gradient) · Spectrum.
+ * Each carries its doc, ports, cost and whether its first input is required.
+ * Names here are pat/PAT_: the bundle is one scope.
+ */
+
+const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
+const patClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const patHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16)/255, ((n >> 8) & 255)/255, (n & 255)/255]; };
+
+// ---- SCATTER: the shapes it can throw ----
+// each drawn white on a canvas, centred at 0,0 with radius 1 (the caller scales and turns)
+const PAT_SHAPES = ['dot', 'ring', 'star', 'cross', 'dash', 'diamond', 'spark', 'sigil', 'picture'];
+function patShape(x, kind, rand){
+  x.beginPath();
+  if(kind === 'dot'){ x.arc(0, 0, 1, 0, Math.PI*2); x.fill(); return; }
+  if(kind === 'ring'){ x.lineWidth = 0.28; x.arc(0, 0, 0.85, 0, Math.PI*2); x.stroke(); return; }
+  if(kind === 'diamond'){ x.moveTo(0, -1); x.lineTo(0.62, 0); x.lineTo(0, 1); x.lineTo(-0.62, 0); x.closePath(); x.fill(); return; }
+  if(kind === 'dash'){ x.rect(-1, -0.14, 2, 0.28); x.fill(); return; }
+  if(kind === 'cross'){ x.rect(-1, -0.14, 2, 0.28); x.rect(-0.14, -1, 0.28, 2); x.fill(); return; }
+  if(kind === 'star' || kind === 'spark'){
+    const pts = kind === 'star' ? 5 : 4, inner = kind === 'star' ? 0.42 : 0.16;
+    for(let i = 0; i < pts*2; i++){ const a = i*Math.PI/pts - Math.PI/2, r = i % 2 ? inner : 1; i ? x.lineTo(Math.cos(a)*r, Math.sin(a)*r) : x.moveTo(Math.cos(a)*r, Math.sin(a)*r); }
+    x.closePath(); x.fill(); return; }
+  if(kind === 'sigil'){
+    // a small sigil: three to six strokes, lines and arcs, inside a circle, as Sigil Scatter's are inscribed
+    x.lineWidth = 0.13; x.lineCap = 'round';
+    const n = 3 + Math.floor(rand()*4), pt = () => { const a = rand()*Math.PI*2, r = 0.25 + rand()*0.75; return [Math.cos(a)*r, Math.sin(a)*r]; };
+    for(let i = 0; i < n; i++){ x.beginPath();
+      if(rand() < 0.35){ const r = 0.2 + rand()*0.6, a = rand()*Math.PI*2; x.arc((rand() - 0.5)*0.6, (rand() - 0.5)*0.6, r, a, a + 1 + rand()*3); }
+      else { const [a1, b1] = pt(), [a2, b2] = pt(); x.moveTo(a1, b1); x.lineTo(a2, b2); }
+      x.stroke(); }
+    if(rand() < 0.4){ x.beginPath(); x.arc(0, 0, 0.95, 0, Math.PI*2); x.stroke(); }
+    return; }
+}
+
+const PATTERN_STEPS = {
+  // FILTER FORGE'S BOMBER: throw copies of a shape (or of a picture) across the page, each of its own size, turn
+  // and brightness; where they may fall can be a gray map, and which way they turn an angle map (a vector field)
+  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'],
+    io: { ins: ['image', 'field', 'field'], outs: ['field', 'field', 'field'] },
+    params: [PAT_SEL('shape', 'Shape', PAT_SHAPES), PAT_R('count', 'Count', 60, 1, 400), PAT_R('size', 'Size', 20, 1, 100), PAT_R('vary', 'Size Variety', 50),
+      PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 3,
+    doc: 'Throws copies of a shape — dots, rings, stars, crosses, dashes, diamonds, sparks, small sigils, or any picture wired in — across the page, each its own size, turn and brightness. A gray map in Where says where they may fall; an angle map in Which Way turns them all one way, like iron filings. Try: Sigil with Clumping for a storm of signs.',
+    run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
+      const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3)), pic = shape === 'picture' ? asImage(input(n, 1)) : null;
+      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), R0 = num(n, 'size', 20)/100*unit*0.12;
+      const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
+      const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [mc, mx] = mk(), [ic, ix] = mk();
+      mx.globalCompositeOperation = 'lighten';
+      // a picture to stamp, as a small canvas
+      let stamp = null;
+      if(pic){ const s = document.createElement('canvas'); s.width = ww; s.height = wh; const sx = s.getContext('2d', CPU), im = sx.createImageData(ww, wh);
+        for(let i = 0; i < N; i++){ im.data[i*4] = pic.r[i]*255; im.data[i*4 + 1] = pic.g[i]*255; im.data[i*4 + 2] = pic.b[i]*255; im.data[i*4 + 3] = 255; } sx.putImageData(im, 0, 0); stamp = s; }
+      // Variation turns the throw without moving the seed (Filter Forge's local Variation)
+      const v0 = Math.round(num(n, 'variation', 0)); let st = 0x9e3779b9 ^ Math.floor(Math.random()*4294967296) ^ Math.imul(v0 + 1, 2654435761);
+      const rand = () => { st |= 0; st = st + 0x6D2B79F5 | 0; let t = Math.imul(st ^ st >>> 15, 1 | st); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; };
+      const centres = Array.from({ length: 3 + Math.floor(rand()*5) }, () => [rand()*ww, rand()*wh]);
+      for(let i = 0; i < count; i++){
+        let x = 0, y = 0;
+        for(let tries = 0; tries < 12; tries++){
+          if(rand() < clump){ const c = centres[Math.floor(rand()*centres.length)], g = Math.sqrt(-2*Math.log(Math.max(1e-6, rand())))*unit*0.09, a = rand()*Math.PI*2; x = c[0] + Math.cos(a)*g; y = c[1] + Math.sin(a)*g; }
+          else { x = rand()*ww; y = rand()*wh; }
+          if(!where) break;
+          const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0));
+          if(rand() < where[q]) break;
+          if(tries === 11) x = -1e9;
+        }
+        if(x < -1e8) continue;
+        const r = Math.max(0.5, R0*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
+        let ang = (rand() - 0.5)*Math.PI*2*turn;
+        if(way){ const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0)); ang = way[q]*Math.PI*2 + (rand() - 0.5)*turn*0.6; }
+        const g = Math.round(255*(1 - fade*rand())), id = Math.round(20 + rand()*235);
+        for(const [ctx, col] of [[mx, `rgb(${g},${g},${g})`], [ix, `rgb(${id},${id},${id})`]]){
+          ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(r, r); ctx.fillStyle = ctx.strokeStyle = col;
+          if(stamp){ if(ctx === mx){ ctx.globalAlpha = g/255; ctx.drawImage(stamp, -1, -1, 2, 2); } else ctx.fillRect(-1, -1, 2, 2); }
+          else { const s0 = st; patShape(ctx, shape, rand); if(ctx === mx) st = s0; }     // (the id pass draws the same sigil)
+          ctx.restore(); }
+      }
+      const marks = E.lum(readCanvas(mc)), each = E.lum(readCanvas(ic));
+      return [marks, E.boxBlur(marks, Math.max(1, R0*0.18)), each];
+    } },
+
+  // FILTER FORGE'S CHECKER, TILES and DOTS in one: a regular pattern, turned and sized
+  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'],
+    params: [PAT_SEL('kind', 'Pattern', ['checker', 'grid lines', 'dots', 'hex dots', 'diamonds', 'stripes']), PAT_R('cells', 'Cells', 12, 2, 120), PAT_R('weight', 'Line or Dot Size', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('soft', 'Softness', 10)],
+    cost: () => 1,
+    doc: 'Makes a regular pattern: a checkerboard, grid lines, dots in rows or in a honeycomb, diamonds, or stripes, as many across as Cells, turned by Angle. Try: dots with a gray map on ⚙ Line or Dot Size for a halftone.',
+    run(E, n){ const { ww, wh, unit, P, num, map, at, field } = E;
+      const kind = P(n, 'kind', 'checker'), c = Math.max(2, num(n, 'cells', 12)), a = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+      const WT = map(n, 'weight', 30), SF = num(n, 'soft', 10)/100*0.25 + 0.01;
+      const sm = (e, d) => patClamp(0.5 - d/e);         // a soft edge: 1 inside, 0 outside
+      let q = -1;
+      return [field((u, v, x, y) => { q++;
+        const px = (x - ww/2)/unit*c, py = (y - wh/2)/unit*c, X = px*ca + py*sa, Y = -px*sa + py*ca, w = at(WT, q)/100;
+        const fx = X - Math.floor(X), fy = Y - Math.floor(Y);
+        if(kind === 'checker') return ((Math.floor(X) + Math.floor(Y)) & 1) ? 1 : 0;
+        if(kind === 'stripes') return sm(SF, Math.abs(fx - 0.5) - w*0.5);
+        if(kind === 'grid lines') return Math.max(sm(SF, Math.min(fx, 1 - fx) - w*0.25), sm(SF, Math.min(fy, 1 - fy) - w*0.25));
+        if(kind === 'diamonds') return sm(SF, Math.abs(fx - 0.5) + Math.abs(fy - 0.5) - w*0.5);
+        if(kind === 'hex dots'){ const r = Math.floor(Y), off = (r & 1) ? 0.5 : 0, gx = X + off - Math.floor(X + off) - 0.5; return sm(SF, Math.hypot(gx, fy - 0.5) - w*0.5); }
+        return sm(SF, Math.hypot(fx - 0.5, fy - 0.5) - w*0.5); })];
+    } },
+
+  // A FRAME from the page's edges (ROADMAP F3): white at the edge, fading inward, square-cornered or round
+  border: { cat: 'Noise', label: 'Border Mask', ins: ['roughen'], outs: ['frame'], io: { ins: ['field'] },
+    params: [PAT_SEL('shape', 'Shape', ['square', 'rounded', 'oval']), PAT_R('width', 'Width', 12, 0, 50), PAT_R('soft', 'Softness', 50), PAT_R('rough', 'Roughness', 0)],
+    cost: () => 1,
+    doc: 'Makes a frame from the page\'s edges: white at the edge, fading to black inward over Width. A gray map in Roughen makes the inner edge ragged, like frost or salt creeping in. Try: Border Mask into a Mix\'s amount, to keep a texture to the margins.',
+    run(E, n){ const { ww, wh, unit, P, num, input, asField, field } = E;
+      const shape = P(n, 'shape', 'square'), W = Math.max(0.001, num(n, 'width', 12)/100*unit), soft = Math.max(0.02, num(n, 'soft', 50)/100), rough = num(n, 'rough', 0)/100, R = asField(input(n, 1));
+      let q = -1;
+      return [field((u, v, x, y) => { q++;
+        let d;                                                     // distance in from the edge, in pixels
+        if(shape === 'oval'){ const dx = (x - ww/2)/(ww/2), dy = (y - wh/2)/(wh/2); d = (1 - Math.hypot(dx, dy))*Math.min(ww, wh)/2; }
+        else if(shape === 'rounded'){ const r = W*1.5, cx = Math.min(Math.max(x, r), ww - r), cy = Math.min(Math.max(y, r), wh - r); d = Math.min(x, y, ww - x, wh - y);
+          if((x < r || x > ww - r) && (y < r || y > wh - r)) d = r - Math.hypot(x - cx, y - cy); }
+        else d = Math.min(x, y, ww - x, wh - y);
+        if(R) d -= (R[q] - 0.5)*W*rough*2;
+        const t = d/W; return patClamp(1 - (t - (1 - soft))/soft); })];
+    } },
+
+  // FILTER FORGE'S LOOKUP: a picture read at the places two gray maps name — refraction, foil, interference
+  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
+    params: [PAT_R('amount', 'Amount', 100), PAT_SEL('edges', 'At the Edges', ['repeat', 'mirror', 'clamp']), PAT_R('scale', 'Scale', 100, 10, 400)],
+    cost: () => 1,
+    doc: 'Reads a picture at the places two gray maps name: Across says how far across (0 left, 1 right), Down how far down. With Amount below 100 it moves only part of the way from each point. Try: Waves into Across over a Spectrum, for foil that shifts.',
+    run(E, n){ const { ww, wh, N, input, num, map, at, P, asImage, asField } = E;
+      const pic = asImage(input(n, 1)); if(!pic) return null;
+      const AX = asField(input(n, 2)), AY = asField(input(n, 3)), A = map(n, 'amount', 100), sc = num(n, 'scale', 100)/100, mode = P(n, 'edges', 'repeat');
+      const wrap = t => mode === 'clamp' ? patClamp(t) : mode === 'mirror' ? (m => m > 1 ? 2 - m : m)(((t % 2) + 2) % 2) : ((t % 1) + 1) % 1;
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, a = at(A, q)/100, u = x/ww, v = y/wh;
+        const tu = wrap((u + ((AX ? AX[q]*sc : u) - u)*a)), tv = wrap((v + ((AY ? AY[q]*sc : v) - v)*a));
+        const s = Math.min(wh - 1, Math.floor(tv*wh))*ww + Math.min(ww - 1, Math.floor(tu*ww));
+        o.r[q] = pic.r[s]; o.g[q] = pic.g[s]; o.b[q] = pic.b[s]; }
+      return [o];
+    } },
+
+  // DISPLACE BY A MAP'S SLOPE (Filter Forge's Refraction): a picture seen through a bumpy glass
+  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
+    params: [PAT_R('amount', 'Amount', 30), PAT_R('blur', 'Smoothing', 20)],
+    cost: () => 1.5,
+    doc: 'Bends a picture as if seen through glass shaped like a gray map: where the map slopes, the picture shifts. Try: Perlin Noise into By for water, or The Poem\'s Distance for words that ripple the page.',
+    run(E, n){ const { ww, wh, N, unit, input, num, map, at, asImage, asField, boxBlur } = E;
+      const pic = asImage(input(n, 1)); if(!pic) return null;
+      let by = asField(input(n, 2)); if(!by) return [pic];
+      by = boxBlur(by, num(n, 'blur', 20)/100*unit*0.02);
+      const A = map(n, 'amount', 30), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = at(A, q)/100*unit*0.5;
+        const gx = by[y*ww + Math.min(ww - 1, x + 1)] - by[y*ww + Math.max(0, x - 1)], gy = by[Math.min(wh - 1, y + 1)*ww + x] - by[Math.max(0, y - 1)*ww + x];
+        const sx = Math.min(ww - 1, Math.max(0, Math.round(x + gx*k))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + gy*k))), s = sy*ww + sx;
+        o.r[q] = pic.r[s]; o.g[q] = pic.g[s]; o.b[q] = pic.b[s]; }
+      return [o];
+    } },
+
+  // FILTER FORGE'S 3- AND 5-COLOR GRADIENTS and ELEVATION GRADIENT: a gray map colored by up to five colors
+  gradmap: { cat: 'Light & Color', label: 'Gradient Map', ins: ['field', 'color 1', 'color 2', 'color 3', 'color 4', 'color 5'], outs: ['picture'],
+    io: { ins: ['field', 'colour', 'colour', 'colour', 'colour', 'colour'], outs: ['image'] }, req: true,
+    params: [PAT_R('stops', 'Colors Used', 3, 2, 5), PAT_SEL('blend', 'Between', ['smooth', 'bands']),
+      ['c1', 'Color 1', 'text', '#120C18'], ['c2', 'Color 2', 'text', '#7A3050'], ['c3', 'Color 3', 'text', '#F2C8A0'], ['c4', 'Color 4', 'text', '#80B0D0'], ['c5', 'Color 5', 'text', '#FFFFFF']],
+    cost: () => 1,
+    doc: 'Colors a gray map with up to five colors, black taking the first and white the last (an elevation map\'s colors, or a sunset\'s). A color wired in replaces the one typed. Bands makes each color a flat step. Try: Terrain through sea, sand, grass and snow.',
+    run(E, n){ const { N, input, num, P, asField } = E;
+      const f = asField(input(n, 1)); if(!f) return null;
+      const k = Math.max(2, Math.min(5, Math.round(num(n, 'stops', 3)))), bands = P(n, 'blend', 'smooth') === 'bands';
+      const DEF = ['#120C18', '#7A3050', '#F2C8A0', '#80B0D0', '#FFFFFF'];
+      const cols = [1, 2, 3, 4, 5].slice(0, k).map(i => { const w = input(n, i + 1); return Array.isArray(w) ? w : patHex(P(n, 'c' + i, DEF[i - 1])); });
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const t = patClamp(f[i])*(k - 1), j = Math.min(k - 2, Math.floor(t)), u = bands ? (t - j < 0.5 ? 0 : 1) : t - j, a = cols[j], b = cols[j + 1];
+        o.r[i] = a[0] + (b[0] - a[0])*u; o.g[i] = a[1] + (b[1] - a[1])*u; o.b[i] = a[2] + (b[2] - a[2])*u; }
+      return [o];
+    } },
+
+  // FILTER FORGE'S SPECTRUM: every hue in turn, across the page, round it, or along any gray map
+  spectrum: { cat: 'Noise', label: 'Spectrum', ins: ['along'], outs: ['picture'], io: { ins: ['field'], outs: ['image'] },
+    params: [PAT_SEL('shape', 'Shape', ['linear', 'radial', 'around', 'along a map']), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('repeat', 'Repeat', 1, 1, 12), PAT_R('sat', 'Saturation', 80), PAT_R('light', 'Lightness', 55)],
+    cost: () => 1,
+    doc: 'Makes a rainbow: every hue in turn, across the page, out from the middle, around it, or along any gray map. Saturation and Lightness keep it soft or make it loud. Try: Along a Map with a High Pass of noise, read through Lookup, for oil on water.',
+    run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
+      const shape = P(n, 'shape', 'linear'), along = asField(input(n, 1)), an = num(n, 'angle', 0)*Math.PI/180, rep = Math.max(1, num(n, 'repeat', 1)), s = num(n, 'sat', 80)/100, l = num(n, 'light', 55)/100;
+      const ca = Math.cos(an), sa = Math.sin(an), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      const hsl = (h, c) => { const k = (c + h*12) % 12, a = s*Math.min(l, 1 - l); return l - a*Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, u = x/ww - 0.5, v = y/wh - 0.5;
+        let t = shape === 'radial' ? Math.hypot(u, v)*2 : shape === 'around' ? Math.atan2(v, u)/(Math.PI*2) + 0.5 : shape === 'along a map' ? (along ? along[q] : 0) : 0.5 + u*ca + v*sa;
+        t = ((t*rep % 1) + 1) % 1;
+        o.r[q] = hsl(t, 0); o.g[q] = hsl(t, 8); o.b[q] = hsl(t, 4); }
+      return [o];
+    } },
+};
+
+
 /* ==== stepsSharpness.js ==== */
 /**
  * stepsSharpness.js — steps for √ SHARPNESS surfaces, each a part that works on
@@ -28357,6 +29053,7 @@ const SHARP_STEPS = {
 
 
 
+
 const STEP_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const STEP_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const STEP_BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'darken', 'lighten', 'color-dodge', 'color-burn',
@@ -28387,8 +29084,8 @@ const STEP_PARTS = {
   seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
-  noise:    { cat: 'Noise', label: 'Value Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('octaves', 'Octaves', 3, 1, 6)] },
-  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80)] },
+  noise:    { cat: 'Noise', label: 'Value Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('octaves', 'Octaves', 3, 1, 6), STEP_R('variation', 'Variation', 0, 0, 99)] },
+  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80), STEP_R('variation', 'Variation', 0, 0, 99)] },
   waves:    { cat: 'Noise', label: 'Waves', ins: ['warp'], outs: ['field'], params: [STEP_R('freq', 'Frequency', 12, 1, 120), STEP_R('angle', 'Angle', 0, 0, 360)] },
   gradient: { cat: 'Noise', label: 'Gradient', ins: [], outs: ['field'], params: [STEP_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular']), STEP_R('angle', 'Angle', 90, 0, 360)] },
   turing:   { cat: 'Noise', label: 'Reaction–Diffusion', ins: ['seed'], outs: ['field'], params: [STEP_SEL('pattern', 'Pattern', ['spots', 'coral', 'maze', 'worms', 'holes']), STEP_R('scale', 'Scale', 100, 50, 250)] },
@@ -28443,7 +29140,7 @@ const STEP_PARTS = {
   // CURVES (Filter Forge's third kind of part): a shape from 0 to 1 that other parts read through — a tone curve,
   // a gradient's profile, a bevel. Made by Curve, changed by Curve Ops, used by Tone Curve and Profile Gradient.
   curve:    { cat: 'Curves', label: 'Curve', ins: [], outs: ['curve'], params: [STEP_SEL('shape', 'Shape', ['linear', 'bias', 'gain', 'gamma', 'gaussian', 'impulse', 'stairs', 'step', 'wave', 'arc', 'noise']),
-              STEP_R('amount', 'Bend', 50), STEP_R('count', 'Count', 4, 1, 24), STEP_R('low', 'Lowest', 0), STEP_R('high', 'Highest', 100)] },
+              STEP_R('amount', 'Bend', 50), STEP_R('count', 'Count', 4, 1, 24), STEP_R('low', 'Lowest', 0), STEP_R('high', 'Highest', 100), STEP_R('variation', 'Variation', 0, 0, 99)] },
   curveops: { cat: 'Curves', label: 'Curve Ops', ins: ['curve', 'curve b'], outs: ['curve'], params: [STEP_SEL('op', 'Operation', ['frequency', 'phase', 'repeat', 'reverse', 'invert', 'amplitude', 'blend', 'multiply', 'max', 'min']),
               STEP_R('amount', 'Amount', 50), STEP_R('count', 'Times', 2, 1, 16)] },
   tonecurve:{ cat: 'Curves', label: 'Tone Curve', ins: ['picture', 'curve'], outs: ['picture'], params: [STEP_R('mix', 'Strength', 100)] },
@@ -28454,13 +29151,14 @@ const STEP_PARTS = {
   sharpen:  { cat: 'Shape', label: 'Sharpen', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 50, 0, 200), STEP_R('radius', 'Radius', 4, 1, 50)] },
   motionblur:{ cat: 'Shape', label: 'Motion Blur', ins: ['field'], outs: ['field'], params: [STEP_R('length', 'Length', 20, 0, 100), STEP_R('angle', 'Angle', 0, 0, 360)] },
   offset:   { cat: 'Shape', label: 'Offset', ins: ['field'], outs: ['field'], params: [STEP_R('x', 'Across', 0, -100, 100), STEP_R('y', 'Down', 0, -100, 100)] },
-  perlin:   { cat: 'Noise', label: 'Perlin Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('details', 'Details', 4, 1, 8), STEP_R('rough', 'Roughness', 50), STEP_R('contrast', 'Contrast', 30)] },
+  perlin:   { cat: 'Noise', label: 'Perlin Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('details', 'Details', 4, 1, 8), STEP_R('rough', 'Roughness', 50), STEP_R('contrast', 'Contrast', 30), STEP_R('variation', 'Variation', 0, 0, 99)] },
   bricks:   { cat: 'Noise', label: 'Bricks', ins: ['bevel'], outs: ['bricks', 'mortar', 'each brick'], params: [STEP_R('rows', 'Rows', 12, 2, 60), STEP_R('ratio', 'Length', 200, 100, 400),
               STEP_R('mortar', 'Mortar', 12, 0, 40), STEP_R('stagger', 'Stagger', 50), STEP_R('bevel', 'Bevel', 30), STEP_R('vary', 'Variety', 30)] },
   // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
   // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
-  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas'],
-              params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100)] },
+  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas', 'rhymes'],
+              params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100),
+                STEP_SEL('rhyme', 'Rhymes', ['every rhyme', 'A', 'B', 'C', 'D', 'E', 'F'])] },
   // more ways to reshape a gray map (Filter Forge's and Blender's staples)
   grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
   pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
@@ -28563,7 +29261,7 @@ const STEP_DOCS = {
   curveops: 'Changes a curve: repeats it (Frequency, Repeat), shifts it (Phase), flips it (Reverse, Invert), squeezes it (Amplitude), or combines it with a second curve (Blend, Multiply, Max, Min).',
   tonecurve: 'Runs every value of a gray map or picture through a curve, like the Curves adjustment in a photo editor. Try: a Wave curve for bands of light and dark.',
   profile: 'Makes a gradient whose shape is a curve: across the page, around the middle, toward the edges, or along any gray map. Try: an Impulse curve, radial, for a raised ring.',
-  poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray. Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
+  poem: 'The poem on the page: Words is white where its words are, Distance grows from 0 at the words to 1 far away, Lines and Stanzas give each line and stanza its own gray, and Rhymes is white on the lines that rhyme (~A, ~B in the poem: every rhyme, or one). Try: Distance into a Mix\'s amount, so the texture quiets near the words.',
   grow: 'Grows the bright parts of a gray map outward (Amount above 50) or shrinks them (below 50), by the Radius. Try: shrink a mask to thin its edges, grow it to merge small spots.',
   pixelate: 'Breaks a gray map into flat cells — squares, bricks or diamonds — each the average of what it covers. Try: a big Cell Size over noise for a mosaic.',
   twirl: 'Twists a gray map around a point, most at the center and fading to none at the Radius. Try: a Twirl over Waves for a whirlpool.',
@@ -29085,9 +29783,11 @@ Object.assign(STEP_RUN, {
     }
     return [o];
   },
-  poem(E, n){ const { ctx, ww, wh, N, num, boxBlur } = E;
+  poem(E, n){ const { ctx, ww, wh, N, num, P, boxBlur } = E;
     const runs = poemRuns(ctx.text);
-    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N)];
+    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N), new Float32Array(N)];
+    // RHYMES (Ruby's doc, a rhyme group's mask): the words of the lines that rhyme (~A, ~B…: the run's 7th number, A = 1)
+    const want = P(n, 'rhyme', 'every rhyme'), wantN = want === 'every rhyme' ? -1 : want.charCodeAt(0) - 64, rhymeHard = new Float32Array(N);
     const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
     const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
     const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
@@ -29095,7 +29795,8 @@ Object.assign(STEP_RUN, {
     for(const r of runs){
       const h = (r[3] - r[1])*wh, p = h*pad;
       const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
-      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      const rh = r[6] || 0, isRhyme = rh > 0 && (wantN < 0 || rh === wantN);
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++){ hard[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
       // a line is a band across the whole page at the line's own height, its gray rising line by line
       const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
       for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
@@ -29107,7 +29808,7 @@ Object.assign(STEP_RUN, {
     const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
     for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
     const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
-    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas];
+    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard];
   },
   grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
     const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
@@ -29206,11 +29907,11 @@ const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...PATTERN_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
-  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) ? [1] : [],
+  return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) || s.req ? [1] : [],
     dataIns: s.ins.length,
     ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
     inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),
@@ -29224,6 +29925,277 @@ function stepRange(name, key){
   const p = ((STEPS[name] || {}).params || []).find(q => q[0] === key);
   return p && p[2] === 'range' ? [p[4].min, p[4].max] : null;
 }
+
+
+/* ==== athanorStudies.js ==== */
+/**
+ * athanorStudies.js — the surfaces from Ruby's future-directions doc, built
+ * as graphs of parts: SURFACE STUDIES, offered in the Athanor's Start from…
+ *
+ *   Thirty-six surfaces,
+ *   each one a recipe of parts
+ *   anyone can change.
+ *
+ * Ruby: every surface and shader the doc suggested is to be a node graph in the
+ * Athanor by the end of the project, not a black box. Each study is a graph of
+ * general parts only (no "Texture from the Menu"), with its TEACH, and Knobs on
+ * the settings worth turning. They become textures in the menu in Stage 3 and
+ * get presets in Stage 4 (ROADMAP). ROADMAP §2 I keeps the list of which are done.
+ *
+ * Written with a small builder so a graph reads like the chain it is:
+ *   add(type, data) → its number;  wire(from, out, to, in) — `in` may be a
+ *   setting's key, meaning that setting's ⚙ port.
+ */
+
+function studyGraph(label, teach, build){
+  const nodes = [], wires = [];
+  const add = (type, data = {}) => { nodes.push([type, data, 0, 0]); return nodes.length; };
+  const wire = (a, ao, b, bi) => wires.push([a, ao, b, typeof bi === 'string' ? paramPort(nodes[b - 1][0], bi) : bi]);
+  // a quieter copy of a map: Math (multiply) by a Number
+  const fade = (from, out, value) => { const k = add('number', { value }), m = add('math', { op: 'multiply' }); wire(from, out, m, 1); wire(k, 1, m, 2); return m; };
+  build(add, wire, fade);
+  return { label, teach, study: true, nodes, wires };
+}
+// the usual ends: two hues from the page, and the Surface
+const studyHues = add => [add('hue', { slot: '1', name: 'Light Hue' }), add('hue', { slot: '2', name: 'Dark Hue' })];
+
+const ATHANOR_STUDIES = {
+  fibers: studyGraph('Moonlit Fibers', 'This is paper seen close under moonlight: long fibers lying mostly one way. Value Noise is smeared along one direction by Motion Blur (the Light Dial turns it), High Pass keeps only the fine strands, and a soft Threshold picks the brightest. Tint colors them between your two hues. Try: turn Fiber Length up for silk, down for felt.', (add, wire, fade) => {
+    const n = add('noise', { scale: 160, octaves: 3 }), mb = add('motionblur', { length: 80, angle: 20 }), hp = add('highpass', { radius: 4, gain: 70 }),
+      th = add('threshold', { at: 58, soft: 40, '~at': '40,70' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Moonlit Fibers', ground: 'colour' });
+    const k1 = add('knob', { slot: '1', name: 'Fiber Length', def: 80 }), k2 = add('knob', { slot: '2', name: 'Density', def: 50 }), dial = add('dial');
+    wire(n, 1, mb, 1); wire(mb, 1, hp, 1); wire(hp, 1, th, 1); wire(th, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, mb, 'length'); wire(k2, 1, th, 'at'); wire(dial, 1, mb, 'angle');
+  }),
+  inkthirst: studyGraph('Ink Thirst', 'This is paper that drinks ink unevenly: dark patches that feather at their edges instead of stopping. Perlin Noise gives the thirst, Levels decides how much of the page drinks, Grow & Shrink and Blur feather the edges. Try: raise Thirst for a page soaked through.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 25, details: 6, rough: 60, contrast: 40 }), lv = add('levels', { lo: 45, hi: 80, gamma: 50, '~lo': '70,25' }), gr = add('grow', { amount: 62, radius: 10 }),
+      b = add('blur', { radius: 6, '~radius': '1,16' }), inv = add('invert'), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Ink Thirst', ground: 'colour' });
+    const k1 = add('knob', { slot: '1', name: 'Thirst', def: 40 }), k2 = add('knob', { slot: '2', name: 'Feather', def: 40 });
+    wire(p, 1, lv, 1); wire(lv, 1, gr, 1); wire(gr, 1, b, 1); wire(b, 1, inv, 1); wire(inv, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, lv, 'lo'); wire(k2, 1, b, 'radius');
+  }),
+  carbon: studyGraph('Carbon Copy', 'This is a carbon copy: blue-black pigment pressed in bands as the hand moved, rubbed away in patches. Perlin Noise smeared sideways by Motion Blur gives the pressure bands; Cells, thresholded, cut erased patches out of it. Tint colors the pigment with your Dark Hue. Try: raise Erasing.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 160, details: 5, rough: 55, contrast: 40 }), mb = add('motionblur', { length: 100, angle: 0 }), lv = add('levels', { lo: 30, hi: 70, gamma: 50 }),
+      c = add('cells', { scale: 30, jitter: 90 }), th = add('threshold', { at: 22, soft: 30, '~at': '0,40' }), m = add('math', { op: 'multiply' }), inv = add('invert'),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Carbon Copy', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Erasing', def: 30 });
+    wire(p, 1, mb, 1); wire(mb, 1, lv, 1); wire(c, 1, th, 1); wire(lv, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, inv, 1); wire(inv, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, th, 'at');
+  }),
+  deadchannel: studyGraph('Dead Channel', 'This is a television tuned to a dead channel: near-black noise, torn into horizontal bands by a failing sync, the colors slipping apart. Perlin Noise smeared sideways, Posterize for the bands, Grid & Dots stripes for the scanlines, a Color Ramp, then Chromatic Offset. Try: raise Tearing.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 140, details: 3, contrast: 60 }), mb = add('motionblur', { length: 100, angle: 0 }), po = add('posterize', { steps: 6 }),
+      g = add('grid', { kind: 'stripes', cells: 120, weight: 55, angle: 90, soft: 60 }), m = add('math', { op: 'multiply' }), [l, d] = studyHues(add), r = add('ramp', { mid: 40 }),
+      ch = add('chroma', { amount: 40, angle: 0 }), s = add('surface', { name: 'Dead Channel', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Tearing', def: 40 });
+    wire(p, 1, mb, 1); wire(mb, 1, po, 1); wire(po, 1, m, 1); wire(g, 1, m, 2); wire(m, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, ch, 'amount');
+  }),
+  compression: studyGraph('Compression Garden', 'This is a picture compressed until its blocks show, kept as a mosaic on purpose: square cells, colors in bands, the red and blue slipping at the edges. Perlin Noise, Pixelate, a banded Gradient Map, Chromatic Offset. Try: change Block Size.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 18, details: 4 }), px = add('pixelate', { size: 40, cell: 'squares' }), gm = add('gradmap', { stops: 5, blend: 'bands', c1: '#141018', c2: '#3E5C4A', c3: '#9AB070', c4: '#E8D8A0', c5: '#F4B0B8' }),
+      ch = add('chroma', { amount: 30, angle: 0 }), s = add('surface', { name: 'Compression Garden', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Block Size', def: 25 });
+    wire(p, 1, px, 1); wire(px, 1, gm, 1); wire(gm, 1, ch, 1); wire(ch, 1, s, 1); wire(k1, 1, px, 'size');
+  }),
+  drowned: studyGraph('Drowned Light', 'This is light seen through deep water: the bright web of caustics, slowed and blurred. The edges of Cells make the web; Warp by Perlin Noise bends it as water does; Blur softens it; a Color Ramp lights it. Try: raise Depth to blur it further.', (add, wire, fade) => {
+    const c = add('cells', { scale: 45, jitter: 100 }), p = add('perlin', { scale: 12, details: 3 }), w = add('warp', { amount: 45 }), b = add('blur', { radius: 3, '~radius': '1,12' }), lv = add('levels', { lo: 50, hi: 95, gamma: 40 }),
+      [l, d] = studyHues(add), r = add('ramp', { mid: 40 }), s = add('surface', { name: 'Drowned Light', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Depth', def: 20 });
+    wire(c, 2, w, 1); wire(p, 1, w, 2); wire(w, 1, b, 1); wire(b, 1, lv, 1); wire(lv, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, s, 1); wire(k1, 1, b, 'radius');
+  }),
+  lichen: studyGraph('Lichen Signal', 'This is lichen on stone: colonies with colored rims and dark centers, at more than one scale. Cells give the colonies (their distance is dark at the center), Perlin Noise decides where they grow, Edge Detect draws their rims, and a Gradient Map colors stone, rim and center. Try: raise Colonies.', (add, wire, fade) => {
+    const c = add('cells', { scale: 60, jitter: 90 }), p = add('perlin', { scale: 25, details: 4 }), th = add('threshold', { at: 52, soft: 12, '~at': '70,35' }), m = add('math', { op: 'multiply' }),
+      e = add('edges', { strength: 80 }), a = add('math', { op: 'max' }), gm = add('gradmap', { stops: 4, c1: '#3A3A36', c2: '#6E7A56', c3: '#C8A848', c4: '#E8E0C0' }),
+      s = add('surface', { name: 'Lichen Signal', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Colonies', def: 50 });
+    wire(p, 1, th, 1); wire(c, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, e, 1); wire(m, 1, a, 1); wire(e, 1, a, 2); wire(a, 1, gm, 1); wire(gm, 1, s, 1);
+    wire(k1, 1, th, 'at');
+  }),
+  misgrid: studyGraph('Misremembered Grid', 'This is a grid that forgets itself: its lines bend, some cells drop out, and a faint second copy sits beside the first. Grid & Dots draws the lines, Warp bends them by noise, Offset makes the afterimage, and Cells, thresholded, punch out the dropouts. Try: raise Drift.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'grid lines', cells: 12, weight: 14, soft: 20 }), p = add('perlin', { scale: 6, details: 3 }), w = add('warp', { amount: 18, '~amount': '0,50' }),
+      o = add('offset', { x: 1, y: 1 }), mx = add('math', { op: 'max' }),
+      c = add('cells', { scale: 60 }), th = add('threshold', { at: 12, soft: 0 }), m = add('math', { op: 'multiply' }),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Misremembered Grid', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Drift', def: 18 });
+    wire(g, 1, w, 1); wire(p, 1, w, 2); wire(w, 1, o, 1); const lv = fade(o, 1, 40); wire(w, 1, mx, 1); wire(lv, 1, mx, 2);
+    wire(c, 3, th, 1); wire(mx, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, w, 'amount');
+  }),
+  mycelial: studyGraph('Mycelial Letter', 'This is mycelium growing toward the poem: fine threads branching out from the page\'s edge and gathering where the words are. The Poem\'s Distance (inverted) gives Tendrils the ways to grow along; their glow is screened over a dark page. Try: type more lines and watch it find them.', (add, wire, fade) => {
+    const po = add('poem', { padding: 60, softness: 30, reach: 60 }), inv = add('invert'), td = add('tendrils', { amount: 70, branching: 60, roots: 4, keep: 80 }),
+      [l, d] = studyHues(add), r = add('ramp', { mid: 30 }), s = add('surface', { name: 'Mycelial Letter', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Growth', def: 70 });
+    wire(po, 2, inv, 1); wire(inv, 1, td, 1); wire(td, 2, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, s, 1); wire(k1, 1, td, 'amount');
+  }),
+  aether: studyGraph('Aether Current', 'This is a current flowing around the poem, as water flows around stones. Flow Lines draws the ribbons; The Poem\'s Distance, wired into its Angle Map, bends them around the words. Try: raise Turbulence.', (add, wire, fade) => {
+    const po = add('poem', { padding: 60, softness: 60, reach: 40 }), [l, d] = studyHues(add), fl = add('flowlines', { amount: 100, size: 100, turbulence: 30 }),
+      s = add('surface', { name: 'Aether Current', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Turbulence', def: 30 });
+    wire(po, 2, fl, 2); wire(l, 1, fl, 3); wire(d, 1, fl, 4); wire(fl, 1, s, 1); wire(k1, 1, fl, 'turbulence');
+  }),
+  crt: studyGraph('CRT Séance', 'This is an old monitor at a séance: scanlines, a glow of phosphor noise, colors slipping at the edges, darker toward the curved rim. Grid & Dots stripes are the scanlines, Perlin Noise the phosphor, a Border Mask (oval) the falloff, then a Color Ramp and Chromatic Offset strongest at the edges. Try: raise Damage.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'stripes', cells: 120, weight: 45, angle: 90, soft: 70 }), p = add('perlin', { scale: 200, details: 2, contrast: 40 }), m = add('math', { op: 'multiply' }),
+      bm = add('border', { shape: 'oval', width: 30, soft: 100 }), inv = add('invert'), m2 = add('math', { op: 'multiply' }), [l, d] = studyHues(add), r = add('ramp', { mid: 50 }),
+      ch = add('chroma', { amount: 50, angle: 0, edge: 100 }), s = add('surface', { name: 'CRT Séance', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Damage', def: 50 });
+    wire(g, 1, m, 1); wire(p, 1, m, 2); wire(bm, 1, inv, 1); wire(m, 1, m2, 1); wire(inv, 1, m2, 2); wire(m2, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, ch, 'amount');
+  }),
+  mineral: studyGraph('Poured Mineral', 'This is poured stone: agate, or oxidized metal, its bands following a shape that wanders. Perlin Noise is warped by itself, and a Profile Gradient reads it through a Wave curve, so it bands; a Gradient Map colors the bands. Try: raise Bands.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 8, details: 5 }), p2 = add('perlin', { scale: 4, details: 3 }), w = add('warp', { amount: 60 }), cv = add('curve', { shape: 'wave', count: 7 }),
+      pg = add('profile', { shape: 'along a map' }), gm = add('gradmap', { stops: 5, c1: '#2A1418', c2: '#7A3A2A', c3: '#D89A68', c4: '#F0E0C8', c5: '#8A5040' }),
+      s = add('surface', { name: 'Poured Mineral', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Bands', def: 30 });
+    wire(p, 1, w, 1); wire(p2, 1, w, 2); wire(cv, 1, pg, 1); wire(w, 1, pg, 2); wire(pg, 1, gm, 1); wire(gm, 1, s, 1); wire(k1, 1, cv, 'count');
+  }),
+  rosette: studyGraph('Broken Rosette', 'This is a rosette whose symmetry fails: a pattern folded into a kaleidoscope, with wedges missing where Cells say so. Grid & Dots diamonds folded by Kaleidoscope make the rose; a thresholded Cells id knocks pieces out; Tint colors it. Try: change Folds.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'diamonds', cells: 9, weight: 70, soft: 20 }), k = add('kaleidoscope', { folds: 12, zoom: 100 }), c = add('cells', { scale: 5 }), th = add('threshold', { at: 20, soft: 0 }),
+      m = add('math', { op: 'multiply' }), sh = add('shape', { form: 'circle', size: 95, soft: 20 }), m2 = add('math', { op: 'multiply' }), [l, d] = studyHues(add), t = add('tint'),
+      s = add('surface', { name: 'Broken Rosette', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Folds', def: 50 });
+    wire(g, 1, k, 1); wire(c, 3, th, 1); wire(k, 1, m, 1); wire(th, 1, m, 2); wire(m, 1, m2, 1); wire(sh, 1, m2, 2); wire(m2, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, k, 'folds');
+  }),
+  foil: studyGraph('Holographic Foil', 'This is holographic foil: rainbow bands that move with the angle you hold it at, crossed by fine diffraction lines. A Spectrum is read through Lookup at the places Waves (bent by Perlin Noise) say; Grid & Dots stripes are screened over it for the diffraction. Try: turn the Light Dial.', (add, wire, fade) => {
+    const sp = add('spectrum', { sat: 60, light: 64, repeat: 2 }), w = add('waves', { freq: 3, angle: 30 }), p = add('perlin', { scale: 6, details: 3 }), lk = add('lookup', { amount: 100, edges: 'mirror' }),
+      g = add('grid', { kind: 'stripes', cells: 60, weight: 30, angle: 60, soft: 80 }), bl = add('blend', { mode: 'screen', opacity: 12 }), s = add('surface', { name: 'Holographic Foil', ground: 'colour' }),
+      dial = add('dial');
+    wire(p, 1, w, 1); wire(sp, 1, lk, 1); wire(w, 1, lk, 2); wire(p, 1, lk, 3); wire(lk, 1, bl, 1); wire(g, 1, bl, 2); wire(bl, 1, s, 1); wire(dial, 1, w, 'angle');
+  }),
+  polarized: studyGraph('Polarized Dream', 'This is light through stressed glass between polarizers: interference bands in every color, flowing. Two sets of Waves, warped by noise, are multiplied into an interference pattern, and a Spectrum is laid along it. Hue & Saturation keeps it soft. Try: change Saturation, or the Waves\' Frequency.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 5, details: 4 }), w1 = add('waves', { freq: 3, angle: 20 }), w2 = add('waves', { freq: 4, angle: 110 }), m = add('math', { op: 'multiply' }), sp = add('spectrum', { shape: 'along a map', repeat: 2, sat: 45, light: 58 }),
+      hs = add('hsv', { hue: 0, sat: 80, val: 100 }), s = add('surface', { name: 'Polarized Dream', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Saturation', def: 40 });
+    wire(p, 1, w1, 1); wire(p, 1, w2, 1); wire(w1, 1, m, 1); wire(w2, 1, m, 2); wire(m, 1, sp, 1); wire(sp, 1, hs, 1); wire(hs, 1, s, 1); wire(k1, 1, hs, 'sat');
+  }),
+  memoryleak: studyGraph('Memory Leak', 'This is a picture with its memory leaking: rectangles of it come loose and land somewhere else, their colors slipping. The same Perlin Noise is colored twice, once slid by Offset; a Mix shows the slid copy only in the blocks that pixelated, thresholded Value Noise picks; Chromatic Offset finishes it. Try: raise Leaking.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 40, details: 6 }), o = add('offset', { x: 30, y: 8 }), gmA = add('gradmap', { stops: 3 }), gmB = add('gradmap', { stops: 3, c2: '#305A78', c3: '#C8E0D0' }),
+      c = add('noise', { scale: 30, octaves: 1 }), px = add('pixelate', { size: 50, cell: 'bricks' }), th = add('threshold', { at: 75, soft: 0, '~at': '90,50' }), mx = add('mix', { t: 50 }),
+      ch = add('chroma', { amount: 45, angle: 0 }), s = add('surface', { name: 'Memory Leak', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Leaking', def: 30 });
+    wire(p, 1, gmA, 1); wire(p, 1, o, 1); wire(o, 1, gmB, 1); wire(c, 1, px, 1); wire(px, 1, th, 1); wire(gmA, 1, mx, 1); wire(gmB, 1, mx, 2); wire(th, 1, mx, 3); wire(mx, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, th, 'at');
+  }),
+  nosignal: studyGraph('No-Signal Halo', 'This is a quiet center ringed by a failing signal: calm in the middle, more broken toward the edges. A Border Mask (oval) is the Mix amount between a still dark page and loud noise colored by a Ramp, with Chromatic Offset strongest at the edges. Try: raise Width to bring the noise in.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 160, details: 2, contrast: 80 }), [l, d] = studyHues(add), r = add('ramp', { mid: 50 }), ch = add('chroma', { amount: 70, edge: 100 }), base = add('colour', { hex: '#0E0C12' }),
+      bm = add('border', { shape: 'oval', width: 40, soft: 100 }), mx = add('mix', { t: 50 }), s = add('surface', { name: 'No-Signal Halo', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Width', def: 40 });
+    wire(p, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(base, 1, mx, 1); wire(ch, 1, mx, 2); wire(bm, 1, mx, 3); wire(mx, 1, s, 1); wire(k1, 1, bm, 'width');
+  }),
+  frozenbreath: studyGraph('Frozen Breath', 'This is frost on a window, thickest at the edges, leaving the middle clear to read through. A Border Mask, roughened by noise, says where it grows; High Pass of noise, thresholded, gives the crystals; Tint colors them white. Try: raise Frost Reach.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 30, details: 6, rough: 70 }), bm = add('border', { shape: 'rounded', width: 30, soft: 60, rough: 80, '~width': '5,45' }), hp = add('highpass', { radius: 3, gain: 80 }),
+      th = add('threshold', { at: 54, soft: 30 }), m = add('math', { op: 'multiply' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Frozen Breath', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Frost Reach', def: 30 });
+    wire(p, 1, bm, 1); wire(p, 1, hp, 1); wire(hp, 1, th, 1); wire(th, 1, m, 1); wire(bm, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, bm, 'width');
+  }),
+  saltbloom: studyGraph('Salt Bloom', 'This is salt drying out of a page: crystals gathering at the margins, merging where they crowd. Scatter throws clumped dots where a Border Mask allows; Grow & Shrink and Blur merge them; the Light Engine gives them relief. Try: raise Salt.', (add, wire, fade) => {
+    const bm = add('border', { shape: 'square', width: 35, soft: 90 }), sc = add('scatter', { shape: 'dot', count: 260, size: 8, vary: 80, clump: 60 }), gr = add('grow', { amount: 80, radius: 5 }),
+      b = add('blur', { radius: 2 }), [l, d] = studyHues(add), t = add('tint'), le = add('material', { relief: 18, gloss: 40, shine: 40, shadow: 30, occlusion: 40, ambient: 55 }),
+      s = add('surface', { name: 'Salt Bloom', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Salt', def: 60 });
+    wire(bm, 1, sc, 2); wire(sc, 1, gr, 1); wire(gr, 1, b, 1); wire(b, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, le, 1); wire(b, 1, le, 2); wire(le, 1, s, 1); wire(k1, 1, sc, 'count');
+  }),
+  registration: studyGraph('Registration Ghost', 'This is print whose plates slipped: cyan and magenta halftone echoes, faint, mostly near the edges where the slip shows. Grid & Dots makes the halftone, its dot size mapped by noise; one copy is slid by Offset; each is tinted and multiplied; a Border Mask keeps them to the margins. Try: raise Slip.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 10, details: 3 }), g = add('grid', { kind: 'hex dots', cells: 70, weight: 40 }), o = add('offset', { x: 1, y: 0 }),
+      cyan = add('colour', { hex: '#40B8D0' }), mag = add('colour', { hex: '#D0408A' }), white = add('colour', { hex: '#F4EEE4' }), ra = add('ramp', { mid: 50 }), rb = add('ramp', { mid: 50 }),
+      bl = add('blend', { mode: 'multiply', opacity: 80 }), bm = add('border', { shape: 'square', width: 30, soft: 100 }), bl2 = add('blend', { mode: 'normal', opacity: 100 }),
+      s = add('surface', { name: 'Registration Ghost', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Slip', def: 20 });
+    wire(p, 1, g, 'weight'); wire(g, 1, o, 1); wire(g, 1, ra, 1); wire(white, 1, ra, 2); wire(cyan, 1, ra, 3); wire(o, 1, rb, 1); wire(white, 1, rb, 2); wire(mag, 1, rb, 3);
+    wire(ra, 1, bl, 1); wire(rb, 1, bl, 2); wire(white, 1, bl2, 1); wire(bl, 1, bl2, 2); wire(bm, 1, bl2, 3); wire(bl2, 1, s, 1); wire(k1, 1, o, 'x');
+  }),
+  thermal: studyGraph('Thermal Receipt', 'This is thermal paper: off-white, faint vertical banding from the printer\'s head, blooms where heat touched it, darker toward the edges with age. Grid & Dots stripes are the banding, blurred Perlin Noise the heat bloom, a Border Mask the aging, all colored by a Gradient Map. Try: raise Heat.', (add, wire, fade) => {
+    const g = add('grid', { kind: 'stripes', cells: 90, weight: 50, soft: 100 }), lv = fade(g, 1, 12), p = add('perlin', { scale: 6, details: 2 }), b = add('blur', { radius: 8 }),
+      th = add('levels', { lo: 55, hi: 90, gamma: 50, '~lo': '65,30' }), bm = add('border', { shape: 'square', width: 16, soft: 100 }), m = add('math', { op: 'max' }), m2 = add('math', { op: 'max' }), mf = add('math', { op: 'average' }),
+      gm = add('gradmap', { stops: 3, c1: '#F4F0E6', c2: '#C8BEB0', c3: '#6A5E5A' }), s = add('surface', { name: 'Thermal Receipt', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Heat', def: 45 });
+    wire(p, 1, b, 1); wire(b, 1, th, 1); wire(th, 1, m, 1); wire(bm, 1, m, 2); wire(m, 1, m2, 1); wire(lv, 1, mf, 1); wire(m2, 1, mf, 2); wire(mf, 1, gm, 1); wire(gm, 1, s, 1);
+    wire(k1, 1, th, 'lo');
+  }),
+  letterpress: studyGraph('Letterpress Bed', 'This is a printer\'s bed after years of use: a field of shallow dents, a few stray impressions, lit from the side. Scatter drops faint rectangles (stray type); blurred Perlin Noise is the worn bed; their sum is the height, and the Light Engine lights it by the dial. Try: turn the Light Dial low.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 30, details: 4, contrast: 10 }), sc = add('scatter', { shape: 'dash', count: 30, size: 12, vary: 40, turn: 0, fade: 60 }), b = add('blur', { radius: 2 }),
+      inv = add('invert'), m = add('math', { op: 'average' }), [l, d] = studyHues(add), t = add('tint'), le = add('material', { relief: 40, gloss: 15, shine: 15, shadow: 70, occlusion: 50, ambient: 45 }),
+      s = add('surface', { name: 'Letterpress Bed', ground: 'colour' }), dial = add('dial'), k1 = add('knob', { slot: '1', name: 'Depth', def: 40 });
+    wire(sc, 1, b, 1); wire(b, 1, inv, 1); wire(p, 1, m, 1); wire(inv, 1, m, 2); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(m, 1, t, 1); wire(t, 1, le, 1); wire(m, 1, le, 2); wire(dial, 1, le, 7); wire(le, 1, s, 1);
+    wire(k1, 1, le, 'relief');
+  }),
+  velvet: studyGraph('Moth-Eaten Velvet', 'This is velvet, dense and dark, worn through in places where the light comes up from underneath. Fine Perlin Noise is the pile; Scatter, grown and thresholded, eats the holes; a Mix shows your Light Hue through them. Try: raise Moths.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 200, details: 2, contrast: 20 }), [l, d] = studyHues(add), r = add('ramp', { mid: 30 }), sc = add('scatter', { shape: 'dot', count: 50, size: 10, vary: 90, clump: 50, '~count': '10,200' }),
+      p2 = add('perlin', { scale: 40 }), w = add('warp', { amount: 30 }), th = add('threshold', { at: 40, soft: 60 }), mx = add('mix', { t: 50 }), s = add('surface', { name: 'Moth-Eaten Velvet', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Moths', def: 30 });
+    wire(p, 1, r, 1); wire(d, 1, r, 2); wire(d, 1, r, 3); wire(sc, 1, w, 1); wire(p2, 1, w, 2); wire(w, 1, th, 1); wire(r, 1, mx, 1); wire(l, 1, mx, 2); wire(th, 1, mx, 3); wire(mx, 1, s, 1);
+    wire(k1, 1, sc, 'count');
+  }),
+  scar: studyGraph('Scar Tissue', 'This is a surface of fibers, stretched and interrupted and grown back together: closer to handmade paper than to anatomy. Noise is smeared into fibers by Motion Blur, warped where it was stretched, broken where Scatter\'s dashes cross it, and lit by the Light Engine. Try: raise Stretch.', (add, wire, fade) => {
+    const n = add('noise', { scale: 140, octaves: 3 }), mb = add('motionblur', { length: 90, angle: 10 }), p = add('perlin', { scale: 5 }), w = add('warp', { amount: 35 }),
+      sc = add('scatter', { shape: 'dash', count: 40, size: 20, turn: 30 }), b = add('blur', { radius: 3 }), inv = add('invert'), m = add('math', { op: 'multiply' }),
+      [l, d] = studyHues(add), t = add('tint'), le = add('material', { relief: 55, gloss: 20, shine: 25, shadow: 50, occlusion: 40, ambient: 50 }), s = add('surface', { name: 'Scar Tissue', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Stretch', def: 35 });
+    wire(n, 1, mb, 1); wire(mb, 1, w, 1); wire(p, 1, w, 2); wire(sc, 1, b, 1); wire(b, 1, inv, 1); wire(w, 1, m, 1); wire(inv, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3);
+    wire(t, 1, le, 1); wire(m, 1, le, 2); wire(le, 1, s, 1); wire(k1, 1, w, 'amount');
+  }),
+  spacedust: studyGraph('Deep-Space Dust', 'This is dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Spectrum, dimmed, drifts the color. Try: raise Emptiness.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 6, details: 6, rough: 65, contrast: 50 }), lv = add('levels', { lo: 50, hi: 85, gamma: 50 }), sc = add('scatter', { shape: 'dot', count: 400, size: 2, vary: 90, clump: 30, fade: 70 }),
+      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('spectrum', { shape: 'along a map', sat: 35, light: 50 }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
+      s = add('surface', { name: 'Deep-Space Dust', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Emptiness', def: 50 });
+    wire(p, 1, lv, 1); wire(lv, 1, sc, 2); wire(p, 1, fogL, 1); wire(sc, 1, m, 1); wire(fog, 1, m, 2); wire(m, 1, bl, 1); wire(p, 1, sp, 1); wire(sp, 1, bl, 2); wire(bl, 1, s, 1); wire(k1, 1, lv, 'lo');
+  }),
+  sigilweather: studyGraph('Sigil Weather', 'This is weather made of signs: sigils carried on a wind, gathering into fronts and storms and leaving clear sky between. Scatter throws small sigils where Perlin Noise is high, and turns each the way a second noise blows (Which Way). Try: raise Storm.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 14, details: 4, contrast: 40 }), lv = add('levels', { lo: 40, hi: 75, gamma: 50 }), wind = add('perlin', { scale: 4, details: 2 }),
+      sc = add('scatter', { shape: 'sigil', count: 90, size: 22, vary: 60, turn: 40, clump: 20 }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Sigil Weather', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Storm', def: 40 });
+    wire(p, 1, lv, 1); wire(lv, 1, sc, 2); wire(wind, 1, sc, 3); wire(sc, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, sc, 'count');
+  }),
+  packetrain: studyGraph('Packet Rain', 'This is rain made of data: short dashes falling in columns, gathered into masses rather than evenly everywhere. Scatter throws dashes, all turned straight down (a Number into Which Way), only where stretched Perlin Noise is high. Try: raise Downpour.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 6, details: 3, contrast: 30 }), tr = add('motionblur', { length: 100, angle: 90 }), lv = add('levels', { lo: 30, hi: 60, gamma: 50 }), down = add('number', { value: 25 }),
+      sc = add('scatter', { shape: 'dash', count: 260, size: 10, vary: 70, turn: 0, fade: 40 }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Packet Rain', ground: 'colour' }),
+      k1 = add('knob', { slot: '1', name: 'Downpour', def: 60 });
+    wire(p, 1, tr, 1); wire(tr, 1, lv, 1); wire(lv, 1, sc, 2); wire(down, 1, sc, 3); wire(sc, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, sc, 'count');
+  }),
+  constellation: studyGraph('Constellation Without Stars', 'This is a star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. The edges of Cells are the joining lines; tiny Scatter dots mark the meetings; both are faded and tinted. Try: raise Lines.', (add, wire, fade) => {
+    const c = add('cells', { scale: 9, jitter: 100 }), th = add('threshold', { at: 88, soft: 10 }), lv = fade(th, 1, 35), sc = add('scatter', { shape: 'dot', count: 40, size: 2, vary: 60, fade: 50 }),
+      m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Constellation Without Stars', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Lines', def: 50 });
+    wire(c, 2, th, 1); wire(lv, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, c, 'scale');
+  }),
+  cartography: studyGraph('Impossible Cartography', 'This is a map of nowhere: contour lines, a few unlabeled symbols, a faint grid, on old paper. Terrain gives the land; Contour Lines draw it; Scatter places rings and crosses; Grid & Dots lays a survey grid; a Gradient Map colors the paper. Try: raise Relief for steeper country.', (add, wire, fade) => {
+    const tr = add('terrain', { scale: 100, crests: 50 }), ct = add('contours', { levels: 18, weight: 120, index: 5, strength: 80 }), sc = add('scatter', { shape: 'ring', count: 10, size: 8, vary: 40 }),
+      sc2 = add('scatter', { shape: 'cross', count: 8, size: 6, turn: 0 }), g = add('grid', { kind: 'grid lines', cells: 8, weight: 6, soft: 0 }), lv = fade(g, 1, 20),
+      m = add('math', { op: 'max' }), m2 = add('math', { op: 'max' }), m3 = add('math', { op: 'max' }), inv = add('invert'),
+      gm = add('gradmap', { stops: 3, c1: '#4A3628', c2: '#A08060', c3: '#EAD8B8' }), s = add('surface', { name: 'Impossible Cartography', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Relief', def: 50 });
+    wire(tr, 1, ct, 1); wire(ct, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, m2, 1); wire(sc2, 1, m2, 2); wire(m2, 1, m3, 1); wire(lv, 1, m3, 2); wire(m3, 1, inv, 1); wire(inv, 1, gm, 1); wire(gm, 1, s, 1);
+    wire(k1, 1, ct, 'levels');
+  }),
+  cathedral: studyGraph('Cathedral Interference', 'This is window tracery passed through interference: the lead lines of pointed arches, doubled and shifted until they beat against each other. Panes draws an arcade window\'s leading; Warp bends one copy by Waves; their Difference makes the interference. Try: raise Interference, gently.', (add, wire, fade) => {
+    const pn = add('panes', { size: 140, leading: 120, shape: 60, frame: 70 }), w = add('waves', { freq: 8, angle: 90 }), wp = add('warp', { amount: 6, '~amount': '0,30' }), m = add('math', { op: 'difference' }),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Cathedral Interference', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Interference', def: 6 });
+    wire(pn, 1, wp, 1); wire(w, 1, wp, 2); wire(pn, 1, m, 1); wire(wp, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, wp, 'amount');
+  }),
+  magaurora: studyGraph('Magnetic Aurora', 'This is an aurora pulled by a magnetic field: luminous bands that split and merge, displaced together by one wind. Starfield and Aurora Curtains make the sky; Displace by Perlin Noise bends it all the same way. Try: raise Field.', (add, wire, fade) => {
+    const sf = add('starfield', { amount: 100, atmosphere: 30 }), cu = add('curtains', { curtains: 3, rays: 100, height: 110, red: 30 }), p = add('perlin', { scale: 4, details: 3 }),
+      dp = add('displace', { amount: 40, blur: 30 }), s = add('surface', { name: 'Magnetic Aurora', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Field', def: 40 });
+    wire(sf, 1, cu, 1); wire(cu, 1, dp, 1); wire(p, 1, dp, 2); wire(dp, 1, s, 1); wire(k1, 1, dp, 'amount');
+  }),
+  breathglass: studyGraph('Breath on Glass', 'This is breath on a cold window: fog gathered unevenly, tiny droplets, and a few clear trails where drops ran down. Blurred Perlin Noise is the fog; Scatter dots are the droplets; Scatter dashes, smeared downward by Motion Blur, are the trails; a Border Mask cools the edges. Try: raise Fog.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 10, details: 4 }), lv = add('levels', { lo: 20, hi: 80, gamma: 60, '~lo': '45,0' }), dr = add('scatter', { shape: 'dot', count: 300, size: 2, vary: 70, fade: 40 }),
+      tr = add('scatter', { shape: 'dot', count: 8, size: 5, vary: 50 }), mb = add('motionblur', { length: 100, angle: 90 }), lt = add('levels', { lo: 0, hi: 15, gamma: 50 }),
+      m = add('math', { op: 'max' }), m2 = add('math', { op: 'subtract' }), bm = add('border', { shape: 'rounded', width: 20, soft: 100 }), m3 = add('math', { op: 'max' }),
+      [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Breath on Glass', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Fog', def: 50 });
+    wire(p, 1, lv, 1); wire(lv, 1, m, 1); wire(dr, 1, m, 2); wire(tr, 1, mb, 1); wire(mb, 1, lt, 1); wire(m, 1, m2, 1); wire(lt, 1, m2, 2); wire(m2, 1, m3, 1); wire(bm, 1, m3, 2);
+    wire(m3, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, lv, 'lo');
+  }),
+  afterimage: studyGraph('Terminal Afterimage', 'This is the ghost an old terminal leaves: soft persistence trails in green or amber, and faint rectangles where windows used to be. Scatter throws blocks that Motion Blur smears into trails; faint scanlines from Grid & Dots; a Color Ramp in your hues; Chromatic Offset barely. Try: raise Persistence.', (add, wire, fade) => {
+    const sc = add('scatter', { shape: 'dash', count: 25, size: 40, vary: 60, turn: 0, fade: 70 }), mb = add('motionblur', { length: 60, angle: 0 }), b = add('blur', { radius: 10 }),
+      g = add('grid', { kind: 'stripes', cells: 120, weight: 30, angle: 90, soft: 80 }), lv = fade(g, 1, 16), m = add('math', { op: 'max' }),
+      [l, d] = studyHues(add), r = add('ramp', { mid: 40 }), ch = add('chroma', { amount: 10 }), s = add('surface', { name: 'Terminal Afterimage', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Persistence', def: 60 });
+    wire(sc, 1, mb, 1); wire(mb, 1, b, 1); wire(b, 1, m, 1); wire(lv, 1, m, 2); wire(m, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
+    wire(k1, 1, mb, 'length');
+  }),
+  orbit: studyGraph('Orbit Script', 'This is writing that circles: rings of an orrery, with signs strung along them like beads. A Profile Gradient (radial) read through a Wave curve makes the rings; Threshold thins them to lines; Scatter strings small sigils only where the rings are. An approximation: true ellipses and writing along a path wait for their own parts. Try: raise Rings.', (add, wire, fade) => {
+    const cv = add('curve', { shape: 'wave', count: 6 }), pg = add('profile', { shape: 'radial' }), th = add('threshold', { at: 94, soft: 8 }), near = add('blur', { radius: 2 }),
+      sc = add('scatter', { shape: 'sigil', count: 70, size: 14, vary: 40, turn: 100 }), m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'),
+      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 25 });
+    const ring = fade(th, 1, 55);
+    wire(cv, 1, pg, 1); wire(pg, 1, th, 1); wire(th, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, cv, 'count');
+  }),
+  transmutation: studyGraph('Transmutation Engine', 'This is a circle diagram of an alchemical engine: concentric rings, spokes folded into symmetry, a few stations marked. Rings come from a radial Profile Gradient through a Stairs curve and Edge Detect; Grid & Dots lines folded by Kaleidoscope make the spokes; a Shape Mask keeps it in the circle. An approximation: the true diagram part (with glyphs at the stations) is still to come. Try: change Folds.', (add, wire, fade) => {
+    const cv = add('curve', { shape: 'stairs', count: 5 }), pg = add('profile', { shape: 'radial' }), e = add('edges', { strength: 100 }), g = add('grid', { kind: 'grid lines', cells: 6, weight: 8, soft: 10 }),
+      k = add('kaleidoscope', { folds: 8, zoom: 100 }), sk = fade(k, 1, 60), m = add('math', { op: 'max' }), sh = add('shape', { form: 'circle', size: 90, soft: 4 }), m2 = add('math', { op: 'multiply' }),
+      sc = add('scatter', { shape: 'ring', count: 12, size: 10, vary: 20 }), m3 = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'),
+      s = add('surface', { name: 'Transmutation Engine', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Folds', def: 43 });
+    wire(cv, 1, pg, 1); wire(pg, 1, e, 1); wire(g, 1, k, 1); wire(e, 1, m, 1); wire(sk, 1, m, 2); wire(m, 1, m2, 1); wire(sh, 1, m2, 2); wire(sh, 1, sc, 2);
+    wire(m2, 1, m3, 1); wire(sc, 1, m3, 2); wire(m3, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, k, 'folds');
+  }),
+  lacquer: studyGraph('Cracked Lacquer', 'This is old lacquer, crazed into islands: each a little domed, a dark fracture between them, a narrow highlight at the rim. Cells give the islands (their distance is the dome), a Threshold of their edges the fractures, and the Light Engine the gloss. Try: Cells and Fracture Width move separately.', (add, wire, fade) => {
+    const c = add('cells', { scale: 22, jitter: 85, '~scale': '40,160' }), p = add('perlin', { scale: 8 }), w = add('warp', { amount: 20 }), inv = add('invert'), e = add('threshold', { at: 92, soft: 6 }), fr = add('invert'),
+      m = add('math', { op: 'multiply' }), gm = add('gradmap', { stops: 3, c1: '#120606', c2: '#5A0E12', c3: '#A82028' }), le = add('material', { relief: 50, gloss: 80, shine: 70, shadow: 40, occlusion: 50, ambient: 40 }),
+      s = add('surface', { name: 'Cracked Lacquer', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Cells', def: 50 }), k2 = add('knob', { slot: '2', name: 'Fracture Width', def: 92 });
+    wire(c, 1, w, 1); wire(p, 1, w, 2); wire(w, 1, inv, 1); wire(c, 2, e, 1); wire(e, 1, fr, 1); wire(inv, 1, m, 1); wire(fr, 1, m, 2); wire(m, 1, gm, 1); wire(gm, 1, le, 1); wire(m, 1, le, 2); wire(le, 1, s, 1);
+    wire(k1, 1, c, 'scale'); wire(k2, 1, e, 'at');
+  }),
+};
 
 
 /* ==== chains.js ==== */
@@ -29731,6 +30703,7 @@ const TEXTURE_CHAINS = {
 
 
 
+
 /**
  * A graph's VERSION, so an old graph keeps making what it made. Version 1
  * drew every node's randomness from one stream, in the order the graph was
@@ -29971,7 +30944,9 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
       // version 2: the node's own randomness, from the seed and its id
-      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
+      // (a part's own VARIATION, Filter Forge's local Variation, turns its draw without moving the page's seed; 0 is as before)
+      const vr = Math.round(+((n.data || {}).variation) || 0);
+      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
       if(key && out) athanorKeep(key, out);
     }
     busy.delete(id); memo.set(id, out);
@@ -30076,7 +31051,7 @@ const ATHANOR_STARTERS = {
   // the poem as an input (The Poem): rings spreading from the words, quiet where the words are
   ripples: { label: 'Ripples from the Words', teach: 'This is a surface that knows where your poem is. The Poem hands on a Distance map: 0 at the words, rising to 1 far from them. A Value Noise warps it a little, and Contour Lines draws a line at every step of it, so rings spread out from the text like ripples from a stone. Levels turns the Distance into a mask that is dark only right around the words, and Math multiplies the rings by it, so they fade out close to the text and it stays clear. Try: change The Poem\'s Reach, or type more lines and watch the rings move.', nodes: [
       ['poem', { padding: 30, softness: 0, reach: 70 }, 40, 80], ['noise', { scale: 8, octaves: 3 }, 40, 320],
-      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 140, index: 4, strength: 100 }, 520, 160],
+      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 280, index: 4, strength: 100 }, 520, 160],
       ['math', { op: 'multiply' }, 740, 160], ['hue', { slot: '1', name: 'Ring Hue' }, 740, 340], ['hue', { slot: '2', name: 'Ground Hue' }, 740, 460],
       ['ramp', { mid: 50 }, 960, 200], ['surface', { name: 'Ripples from the Words', ground: 'colour' }, 1180, 200],
       ['levels', { lo: 4, hi: 16, gamma: 50 }, 520, 360]],
@@ -30084,7 +31059,7 @@ const ATHANOR_STARTERS = {
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
-  const S = ATHANOR_STARTERS[name] || TEXTURE_CHAINS[name]; if(!S) return null;
+  const S = ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] || TEXTURE_CHAINS[name]; if(!S) return null;
   const data = {};
   S.nodes.forEach(([type, d, x, y], i) => { const id = i + 1;
     data[id] = { id, name: type, data: { ...d }, class: '', html: '', typenode: false, inputs: {}, outputs: {}, pos_x: x, pos_y: y }; });
@@ -30094,7 +31069,7 @@ function athanorStarter(name){
   }
   layoutAthanor(data);
   // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
-  return { v: ATHANOR_STARTERS[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
+  return { v: ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
 }
 /**
  * Lays a graph out to read left to right: each node in the column of its
@@ -31058,7 +32033,10 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const B = athanorBudget(extra.graph || '');
   const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '' },
+    // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
+    //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '',
+      ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -31829,7 +32807,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Hegemone';
+const RELEASE = 'Jupiter–Aoede';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-14';
 
@@ -32655,7 +33633,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-14 · 4999d0f";
+const STAMP = "2026-10-14 · b0d74ac";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -34189,8 +35167,8 @@ function renderInto(canvas){
   let cursorY = startY;
   ctx.textBaseline = 'top';
   // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
-  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false;
-  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
+  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0;
+  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
 
   // the effect stack and underline the page gives every run (a segment may replace them)
   const runStyle = { fx: pageFx, under: pageUnder, baseFillStyle, plainTextColor: $('textColorHex').value,
@@ -34198,6 +35176,8 @@ function renderInto(canvas){
 
   for(const line of lines){
     if(line.isBlank){ if(inStanza){ stanza++; inStanza = false; } } else { if(textRuns.length) lineNo++; inStanza = true; }
+    // (a line's rhyme letter, ~A → 1: the 7th number of its runs, for The Poem's Rhymes)
+    rhyme = !line.isBlank && line.rhymeLetter ? Math.max(0, String(line.rhymeLetter).toUpperCase().charCodeAt(0) - 64) : 0;
     if(line.isBlank){
       if(line.rule){
         // a horizontal rule, centred in the blank line's height; its width is a
@@ -35928,6 +36908,7 @@ function createVault(deps){
 
 
 
+
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
 
@@ -36705,10 +37686,11 @@ async function openForge(deps){
       const chained = [ATHANOR_BASICS, ...TEXTURE_GROUPS].map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
       st.innerHTML = '<option value="">Start from…</option>'
         + '<optgroup label="🝆 Starters to Take Apart">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
+        + '<optgroup label="🜍 Surface Studies">' + Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
         + chained.map(([g, ts]) => `<optgroup label="${forgeEsc(g.glyph + ' ' + g.name)}">` + ts.map(k => `<option value="${k}">${forgeEsc(TEXTURE_CHAINS[k].label)}</option>`).join('') + '</optgroup>').join('');
       st.addEventListener('change', async () => {
         const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
-        const S = ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]; await openGraph(g, S.label, S.teach);
+        const S = ATHANOR_STARTERS[k] || ATHANOR_STUDIES[k] || TEXTURE_CHAINS[k]; await openGraph(g, S.label, S.teach);
       });
     }
     // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----

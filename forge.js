@@ -13,6 +13,7 @@
  *
  * No imports of app state: the page hands in what it needs (deps).
  */
+import { ATHANOR_STUDIES } from './athanorStudies.js';
 import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, layoutAthanor } from './athanor.js';
 import { STEPS, STEP_BLENDS, STEP_CATEGORIES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
@@ -795,10 +796,11 @@ export async function openForge(deps){
       const chained = [ATHANOR_BASICS, ...TEXTURE_GROUPS].map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
       st.innerHTML = '<option value="">Start from…</option>'
         + '<optgroup label="🝆 Starters to Take Apart">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
+        + '<optgroup label="🜍 Surface Studies">' + Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
         + chained.map(([g, ts]) => `<optgroup label="${forgeEsc(g.glyph + ' ' + g.name)}">` + ts.map(k => `<option value="${k}">${forgeEsc(TEXTURE_CHAINS[k].label)}</option>`).join('') + '</optgroup>').join('');
       st.addEventListener('change', async () => {
         const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
-        const S = ATHANOR_STARTERS[k] || TEXTURE_CHAINS[k]; await openGraph(g, S.label, S.teach);
+        const S = ATHANOR_STARTERS[k] || ATHANOR_STUDIES[k] || TEXTURE_CHAINS[k]; await openGraph(g, S.label, S.teach);
       });
     }
     // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----

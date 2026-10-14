@@ -1422,8 +1422,8 @@ function renderInto(canvas){
   let cursorY = startY;
   ctx.textBaseline = 'top';
   // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
-  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false;
-  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
+  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0;
+  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
 
   // the effect stack and underline the page gives every run (a segment may replace them)
   const runStyle = { fx: pageFx, under: pageUnder, baseFillStyle, plainTextColor: $('textColorHex').value,
@@ -1431,6 +1431,8 @@ function renderInto(canvas){
 
   for(const line of lines){
     if(line.isBlank){ if(inStanza){ stanza++; inStanza = false; } } else { if(textRuns.length) lineNo++; inStanza = true; }
+    // (a line's rhyme letter, ~A → 1: the 7th number of its runs, for The Poem's Rhymes)
+    rhyme = !line.isBlank && line.rhymeLetter ? Math.max(0, String(line.rhymeLetter).toUpperCase().charCodeAt(0) - 64) : 0;
     if(line.isBlank){
       if(line.rule){
         // a horizontal rule, centred in the blank line's height; its width is a

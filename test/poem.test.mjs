@@ -48,7 +48,7 @@ check('the Ripples from the Words starter teaches with The Poem', /"name":"poem"
 
 // the page's side
 check('the renderer records each run as fractions of the page, and asks one more frame when the layout changes',
-  /let TEXT_LAYOUT = '';/.test(cr) && /textRuns\.push\(\[x0\/W, top\/H, x1\/W, \(top \+ h\)\/H, lineNo, stanza\]/.test(cr) && /if\(lay !== TEXT_LAYOUT\)\{ TEXT_LAYOUT = lay;/.test(cr));
+  /let TEXT_LAYOUT = '';/.test(cr) && /textRuns\.push\(\[x0\/W, top\/H, x1\/W, \(top \+ h\)\/H, lineNo, stanza, rhyme\]/.test(cr) && /if\(lay !== TEXT_LAYOUT\)\{ TEXT_LAYOUT = lay;/.test(cr));
 check('Text Clearing takes a soft mask of the words out of each surface layer (destination-out), the mask made small in page fractions',
   /c\.globalCompositeOperation = 'destination-out'; c\.globalAlpha = Math\.min\(1, amount\);/.test(cr) && /const mw = 192, mh = Math\.max\(8, Math\.round\(192\*H\/W\)\)/.test(cr));
 check('only a graph with The Poem in it is sent the layout', /const text = graph && graphUsesPoem\(graph\) \? TEXT_LAYOUT : undefined;/.test(cr));

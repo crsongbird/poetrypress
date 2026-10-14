@@ -31,6 +31,7 @@
 import { lightHeights, parseHex, withSeed, cpx, scaleNow } from './texCore.js';
 import { STEPS, stepRange, paramPort, curveAt } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
+import { ATHANOR_STUDIES } from './athanorStudies.js';
 
 /**
  * A graph's VERSION, so an old graph keeps making what it made. Version 1
@@ -272,7 +273,9 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
       // version 2: the node's own randomness, from the seed and its id
-      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
+      // (a part's own VARIATION, Filter Forge's local Variation, turns its draw without moving the page's seed; 0 is as before)
+      const vr = Math.round(+((n.data || {}).variation) || 0);
+      try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
       if(key && out) athanorKeep(key, out);
     }
     busy.delete(id); memo.set(id, out);
@@ -377,7 +380,7 @@ export const ATHANOR_STARTERS = {
   // the poem as an input (The Poem): rings spreading from the words, quiet where the words are
   ripples: { label: 'Ripples from the Words', teach: 'This is a surface that knows where your poem is. The Poem hands on a Distance map: 0 at the words, rising to 1 far from them. A Value Noise warps it a little, and Contour Lines draws a line at every step of it, so rings spread out from the text like ripples from a stone. Levels turns the Distance into a mask that is dark only right around the words, and Math multiplies the rings by it, so they fade out close to the text and it stays clear. Try: change The Poem\'s Reach, or type more lines and watch the rings move.', nodes: [
       ['poem', { padding: 30, softness: 0, reach: 70 }, 40, 80], ['noise', { scale: 8, octaves: 3 }, 40, 320],
-      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 140, index: 4, strength: 100 }, 520, 160],
+      ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 280, index: 4, strength: 100 }, 520, 160],
       ['math', { op: 'multiply' }, 740, 160], ['hue', { slot: '1', name: 'Ring Hue' }, 740, 340], ['hue', { slot: '2', name: 'Ground Hue' }, 740, 460],
       ['ramp', { mid: 50 }, 960, 200], ['surface', { name: 'Ripples from the Words', ground: 'colour' }, 1180, 200],
       ['levels', { lo: 4, hi: 16, gamma: 50 }, 520, 360]],
@@ -385,7 +388,7 @@ export const ATHANOR_STARTERS = {
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){
-  const S = ATHANOR_STARTERS[name] || TEXTURE_CHAINS[name]; if(!S) return null;
+  const S = ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] || TEXTURE_CHAINS[name]; if(!S) return null;
   const data = {};
   S.nodes.forEach(([type, d, x, y], i) => { const id = i + 1;
     data[id] = { id, name: type, data: { ...d }, class: '', html: '', typenode: false, inputs: {}, outputs: {}, pos_x: x, pos_y: y }; });
@@ -395,7 +398,7 @@ export function athanorStarter(name){
   }
   layoutAthanor(data);
   // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
-  return { v: ATHANOR_STARTERS[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
+  return { v: ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
 }
 /**
  * Lays a graph out to read left to right: each node in the column of its

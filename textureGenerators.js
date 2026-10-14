@@ -31,7 +31,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { evalAthanor, athanorHash, athanorBudget, athanorStarter } from './athanor.js';
+import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil, genMoon } from './texWhimsy.js';
@@ -882,7 +882,10 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const B = athanorBudget(extra.graph || '');
   const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '' },
+    // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
+    //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '',
+      ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;

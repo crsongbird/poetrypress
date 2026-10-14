@@ -6,7 +6,15 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Hegemone)
+## 1 · Ruby to judge (new in Jupiter–Aoede)
+- SURFACE STUDIES: all 36 surfaces from the future-directions document as graphs of parts (Start from…
+  → Surface Studies). First drafts tuned by eye: which read right, which should change before they
+  become menu textures (ROADMAP §2 I)? Orbit Script, Transmutation Engine and Constellation are
+  approximations.
+- New parts: Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum; Variation;
+  The Poem's Rhymes.
+
+## From Jupiter–Hegemone
 - FILTER FORGE IN THE ATHANOR: map inputs (a gray map on a ⚙ setting sets it point by point; new graphs
   only), CURVES (a fifth wire: Curve, Curve Ops, Tone Curve, Profile Gradient), Perlin Noise, Bricks (a
   curve shapes the bevel), Brightness & Contrast, High Pass, Sharpen, Motion Blur, Offset, more Math,

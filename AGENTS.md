@@ -46,9 +46,18 @@ into an image people stop to read.
   `vellum.unfixable.place`.
 
 **The rules most often broken.** Each has a test that will catch you:
-1. **Old work never changes.** Existing poems, looks, presets and graphs
-   must draw exactly as before. You *add* (a version, an id, an option); you
-   never redefine. See §7.
+1. **Old work never changes without Ruby's say-so.** By default, existing
+   poems, looks, presets and graphs draw exactly as before: you *add* (a
+   version, an id, an option), you don't redefine. **But a better app wins**
+   (Ruby):
+   - A texture may be **replaced** by a better or faster method, and a test
+     or invariant that stands in the way of a better app may be
+     **loosened**.
+   - Either one needs **Ruby's approval from test renders**: make them with
+     `tools/compare.mjs`, send them, and wait for Ruby's yes before
+     shipping.
+   - See §7 and §8 "Replace a texture's method". The exceptions that never
+     bend are PML (poems people wrote) and the frozen word-seed banks.
 2. **Every control is saved.** Anything a person can change goes into the
    look: saved, restored, and reset by presets. This is the persistence
    rule, §5.4.
@@ -85,13 +94,14 @@ node build.mjs --next     # advance release.js to the next moon — once per shi
 node build.mjs --notes    # print the newest CHANGELOG section (the release's commit message)
 node build.mjs --zip      # archive the project into release/ (old archives deleted first)
 
-npm install @napi-rs/canvas                    # once, for the tools below
+npm install --no-save @napi-rs/canvas          # once, for the tools below (node_modules is git-ignored)
 node tools/look.mjs '<json>' out.png <cols>    # a quick look at specific texture settings
 node tools/scale-audit.mjs [--knobs min|max]   # does a texture look the same drawn small?
 node tools/texture-gallery.mjs --only a,b      # four backgrounds each — ONLY when a visual review is asked for
 python tools/page-audit.py                     # whole pages, every preset (needs Playwright)
 python3 tools/icons.py                         # redraw the nav glyphs, the sigil and the app icons
 node test/textureFingerprints.test.mjs --update   # accept new texture renders — only those you meant to change
+node tools/compare.mjs a,b [--ref HEAD]          # before/after renders of a texture's readings, for Ruby's approval
 ```
 
 The site must work **both built and unbuilt** (served straight from the
@@ -166,7 +176,9 @@ default.
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts. Generative: Discharge, Wood, Burn, Growing Line, Knotwork, Matrix, Tendrils. Light: the Light Engine, Oil Paint, Canvas Weave, Angry Strokes |
+| `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
+| `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in Start from…; bundled before chains.js |
 | `athanor.js` | the graph evaluator (in the worker), its cache (`ATHANOR_KEPT`), budget, versions, starters, `validateGraph` |
 | `forge.js` | the editor UI (Drawflow): menus, wiring, help, the shelf of kept surfaces |
 
@@ -361,7 +373,7 @@ Other parts of a look:
   Widths are remembered and cleared when a font arrives. Keep new text
   layout on that path: text measurement once took ~70% of the page's CPU.
 - **THE POEM'S LAYOUT** (`TEXT_LAYOUT`, `textLayoutNow()`):
-  - Each frame records its text runs as `x0,y0,x1,y1,line,stanza;…` in page
+  - Each frame records its text runs as `x0,y0,x1,y1,line,stanza,rhyme;…` in page
     fractions.
   - A surface drawn before the text reads the previous frame's record. A
     change asks for one more frame, and only when something reads it.
@@ -503,6 +515,9 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   `withSeed(ctx.seed + Variant·7919)`, so the texture they came from keeps
   its exact look: Particles, Terrain, Turing Pattern, Flow Lines, Washes,
   Discharge, Growing Line.
+- **Variation** (Filter Forge's local Variation): a part's `variation`
+  setting (0–99) is mixed into its node seed in `evalNode`. 0 is the old
+  stream, so old graphs draw as before. Give it to every new random part.
 
 ### 6.3 · Graphs
 - **The format:** a graph is Drawflow's export JSON, kept in `#forgeGraph`
@@ -518,7 +533,9 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   - v1: one random stream for all nodes.
   - v2: each node seeded from (seed, id). This is what makes the kept
     results (`ATHANOR_KEPT`) safe.
-  - v3: map inputs (§6.4).
+  - v3: map inputs (§6.4). A v3 graph is also told its grid's divisor
+    (`div`), so `E.px` and `E.carea` are true canonical sizes and counts;
+    older graphs keep the old (coarser) reading.
   - **Texture chains stay v2**, so their pictures never change. Starters
     take the newest.
 - **THE SURFACE STAYS:** exactly one per graph, never removed or copied.
@@ -531,8 +548,13 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   - Unknown steps, bad wires and out-of-range params are reported and fixed.
   - Every param is clamped.
   - The work budget draws a heavy graph on a coarser grid.
-- **Every chain and starter carries TEACH:** a few lines the Athanor shows
-  when it opens.
+- **Every chain, starter and study carries TEACH:** a few lines the Athanor
+  shows when it opens.
+- **Surface Studies** (athanorStudies.js): written with a small builder
+  (`add`, `wire` by port number or by a setting's key, `fade`). General parts
+  only, never Texture from the Menu. Each wired Knob gets a useful sweep with
+  `'~key': 'lo,hi'`. TEACH starts "This is…" and has a "Try:".
+  test/studies.test.mjs checks them.
 - **The reach rule** (`athanorReach`): only Knobs and Hues that reach the
   Surface are offered on the page. A slot bound by `'@kN'` counts.
 - **The poem as input:** the **The Poem** part (words, distance, lines,
@@ -591,6 +613,16 @@ The full study and what is still to do are in ROADMAP.md §1.
 Each is guarded by a test. If one fails after a deliberate change, update
 the test to the new intent; never weaken it just to pass.
 
+**These serve the app, not the other way round** (Ruby).
+- When an invariant or a test stands between the app and a better version of
+  itself (a better or faster texture, a cleaner control), propose loosening
+  it.
+- Show Ruby what changes (renders for anything visual, made with
+  `tools/compare.mjs`) and loosen it once Ruby approves.
+- Then rewrite the test to the new intent and note the change here.
+- Two never bend: **PML** (poems people wrote must keep rendering) and the
+  **word-seed banks** (phrases people have seen).
+
 - **PML is a contract.** Every existing poem renders identically.
   - `test/fixtures/pml-golden.json` is **never** regenerated: find what
     changed.
@@ -612,9 +644,12 @@ the test to the new intent; never weaken it just to pass.
     `spangle`, in both `RETIRED` and `retireLook`).
   - Saves carry no version, so never reuse an id for a different picture.
     Old ids stay loadable as hidden `<option>`s.
-- **Textures change only on purpose.** Fingerprints
-  (`test/fixtures/texture-fingerprints.json`) are updated with `--update`
-  only for the textures you meant to change.
+- **Textures change only on purpose, and visibly only with Ruby's
+  approval.** Fingerprints (`test/fixtures/texture-fingerprints.json`) are
+  updated with `--update` only for the textures you meant to change.
+  - A change Ruby can see goes through `tools/compare.mjs` first.
+  - A replacement Ruby approved may keep its id; Ruby decides whether old
+    looks should keep the old picture under a new id instead.
 - **Athanor versions:** never change what an old graph version makes (§6.3).
 - **Canonical pixels:**
   - no raw `(w*h)/K` counts;
@@ -689,6 +724,21 @@ the test to the new intent; never weaken it just to pass.
 4. If it draws text in web fonts, add it to `ON_PAGE`.
 5. Accept its first fingerprint. Check `scale-audit`. Look at it.
 6. **No preset for it until the presets pass** (ROADMAP Stage 4).
+
+**Replace a texture's method** (Ruby: allowed when the result is better or
+faster, with Ruby's approval from test renders)
+1. Build the new method, as a chain of parts.
+2. `node tools/compare.mjs <texture> --ref HEAD`: its four readings, the old
+   code above and the new below, with timings and how much changed.
+3. Send Ruby the sheet and say what is better (the look, the speed, or
+   both) and what is lost. **Wait for Ruby's yes.**
+4. Once approved:
+   - accept its fingerprints;
+   - say in CHANGELOG that the texture was remade;
+   - if Ruby wants old looks to keep the old picture, give the new method a
+     NEW id and retire the old one to it (§7). Otherwise keep the id.
+5. Never ship a visible replacement unapproved. Leave it on a branch or
+   behind a hidden option until Ruby has seen it.
 
 **Add a setting:**
 - markup;
@@ -952,9 +1002,10 @@ background) don't belong in it.
   - Reinvent only for a good reason, and say what it is.
   - The prior art so far: the Claude Doc "Unfixable Vellum — Prior Art &
     Recommendations", and the Filter Forge study (ROADMAP.md §1).
-- **Don't replace what Ruby loves; add beside it.** A texture Ruby liked
-  keeps its exact look at its defaults: a new idea becomes a knob, or a new
-  texture.
+- **Don't replace what Ruby loves without asking; add beside it by
+  default.** A texture Ruby liked keeps its exact look at its defaults: a new
+  idea becomes a knob, or a new texture. A better or faster method may
+  replace it once Ruby approves the test renders (§8).
 - **Do the work** rather than talking about it: attention is finite.
 - **Find the cause** instead of guessing twice. Screenshots are evidence:
   read them closely. Prove a fix by rendering or measuring it.

@@ -4,6 +4,36 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Aoede (2026-10-14)
+
+- **Surface Studies.** All 36 surfaces from the future-directions document can
+  now be opened in the Athanor (Start from… → Surface Studies), each built from
+  general parts you can see, rewire and change, with a short lesson and a few
+  knobs: Moonlit Fibers, Ink Thirst, Carbon Copy, Dead Channel, Holographic
+  Foil, Memory Leak, Frozen Breath, Sigil Weather, Cracked Lacquer and the
+  rest. These are first drafts. Orbit Script, Transmutation Engine and
+  Constellation Without Stars are approximations until their own parts exist.
+  They become textures in the Surface menu later.
+- **New parts in the Athanor:**
+  - **Scatter (Marks):** dots, rings, stars, crosses, dashes, diamonds,
+    sparks, sigils or any picture, thrown across the page. A map can say where
+    they fall and another which way they turn.
+  - **Grid & Dots:** checker, grid lines, dots, hex dots, diamonds, stripes.
+  - **Border Mask:** a soft frame from the page's edges, square, rounded or
+    oval, roughened by any map.
+  - **Lookup:** reads a picture at places given by two gray maps.
+  - **Displace:** pushes a picture along the slope of a map.
+  - **Gradient Map:** colors a gray map with up to five colors, smooth or in
+    bands.
+  - **Spectrum:** a rainbow, straight, round, around a point or laid along a
+    map.
+- **Variation** on Value Noise, Perlin Noise, Cells and Curve: change the
+  number for a different pattern from the same settings.
+- **The Poem** part has a **Rhymes** output: the words of lines that rhyme,
+  every rhyme or one letter at a time.
+- Fixed: in graphs made in the Athanor, marks, sizes and counts now come out
+  at their true size at every resolution.
+
 ## Jupiter–Hegemone (2026-10-13)
 
 - The Athanor learns from Filter Forge:
