@@ -197,7 +197,7 @@ check('the editor has a line-number gutter', html.includes('id="poemGutter"'));
 // deliberately changed: a lock pinned to the far edge reads as belonging to
 // the row, not to the one setting it governs
 check('locks sit beside their label, not at the far edge',
-  /^\d+px$/.test(effective(edCss, '.lock-btn', 'margin-left') || '') && !/margin-left:auto/.test(edCss));
+  /^\d+px$/.test(effective(edCss, '.lock-btn', 'margin-left') || '') && !/\.lock-btn[^{}]*\{[^}]*margin-left:auto/.test(edCss));
 check('a one-line modal input stays one line',
   /\.modal-input\[rows="1"\]\{[^}]*height:2\.5em/.test(readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8')));
 check('vertical alignment is visually split from justification',

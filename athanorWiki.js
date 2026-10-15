@@ -34,7 +34,7 @@ export const WIKI_ARTICLES = [
 <li>Every part shows a <b>small preview</b> of what it makes, so you can see each step.</li>
 <li>Wires carry one of <b>five kinds of data</b>: gray maps, pictures, colors, numbers and curves. See [[kinds]].</li>
 <li>The app’s own textures are graphs (all but Deep Field). <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts. On the page, <b>🜉 Open in the Athanor</b> under the Surface opens the one you are using, at its sliders and hues.</li>
-<li>Nothing here can break your page: undo and <b>Revert</b> are always there. The page shows a graph only when it is the page’s surface: the bar says <b>✓ On the Page</b> when it is, and <b>⇱ Show on Page</b> puts it there.</li>
+<li>Nothing here can break your page: undo and <b>Revert</b> are always there. The Athanor is a workbench with a graph of its own, kept in this browser until you open another. The page shows it only when it is the page’s surface: the bar says <b>✓ On the Page</b> when it is (then every change shows on the page as you make it), and <b>⇱ Show on Page</b> puts it there. Choosing another surface for the page, even one you kept, leaves the bench as it was.</li>
 </ul>
 <p>The same way of working runs Blender’s shader nodes, Substance Designer, Houdini, Nuke and Filter Forge. What you learn here carries over.</p>
 <p>New to this? Start with [[first|your first surface]].</p>` },
@@ -267,7 +267,7 @@ export const WIKI_ARTICLES = [
 <li><b>⋯</b> › <b>Copy the wiring</b> copies the graph on the grid as text, to paste anywhere or into another Athanor.</li>
 <li><b>⋯</b> › <b>Your shelf…</b> replaces a kept surface with the graph on the grid, copies or shares its <b>wiring</b>, takes it off the shelf, takes pasted wiring in, and saves or loads the whole shelf as a file.</li>
 <li>In the surface menu, hold (or right-click) a surface you made to share or copy its wiring.</li>
-<li>The graph is also saved inside your look, so spells, shared links and saved JSON carry it.</li>
+<li>A surface on the page is also saved inside your look, so spells, shared links and saved JSON carry its graph.</li>
 </ul>
 <p><b>Revert</b> (in ⋯) returns to the graph as it was when the Athanor opened.</p>` },
 

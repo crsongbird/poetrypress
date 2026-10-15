@@ -159,8 +159,7 @@ const scriptTag = '<script type="module" src="appEvents.js"></script>';
 if (!html.includes(linkTag)) throw new Error('stylesheet link not found in index.html — build would silently drop the CSS');
 if (!html.includes(scriptTag)) throw new Error('module script tag not found in index.html — build would silently drop the JS');
 
-// (replaced by a function: a replacement STRING reads $& $' $` and $$ in the code as patterns — a `'$&$&'`
-// in canvasRenderer once pasted the script tag into the middle of the bundle)
+// (by a function: a replacement string would read $& and the like in the code as patterns)
 html = html.replace(linkTag, () => `<style>\n${css}\n</style>`);
 html = html.replace(scriptTag, () => `<script>\n${js}\n</script>`);
 if (!html.includes(js)) throw new Error('the bundle was not inlined verbatim');

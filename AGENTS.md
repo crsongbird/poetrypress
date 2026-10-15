@@ -1001,8 +1001,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Lichtenberg Figures:**
     - Discharge (Kim–Sewall–Lin fast Laplacian growth) → Burn into Wood →
       Light Engine.
-    - One or two poles; two always join.
-    - It grows at zoom 1 and is transformed afterwards.
+    - One, two or three poles (Ruby chose this first growth over one whose
+      poles always joined).
+    - It grows as it always did; Zoom and Slide are a camera on the result.
   - **Ruffled Growth:** Differential Growth (on a spatial
     hash).
   - **Positioning:** generated textures take Zoom and Slide (along the
@@ -1076,10 +1077,6 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
 - The worker's script block must be in `<head>`: it has to exist before the
   page first asks for a texture.
 - `__BUILD_STAMP__` left unreplaced reads as underline markup in PML.
-- build.mjs inlines the bundle with a replacer FUNCTION: a replacement
-  string reads `$&` in the code as "the match" (a `'$&$&'` once pasted the
-  script tag into the middle of the page). It checks the code went in
-  verbatim.
 
 **Textures**
 - `amt` is floored at 2%. A knob that must reach 0 needs its own key

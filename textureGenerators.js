@@ -342,7 +342,7 @@ export const TEXTURE_PARAMS = {
   lichtenberg:   [{key:'zoom',  label:'Reach',           min:0,  max:100, def:50,  unit:''},
                   // bushy (high) → one thin strike (low)
                   {key:'amt',   label:'Branching',       min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Poles',           min:1,  max:2,   def:2,   unit:'', ticks:[1,2], names:['One Strike','Two Poles']},
+                  {key:'form',  label:'Poles',           min:1,  max:3,   def:2,   unit:'', ticks:[1,2,3], names:['One Strike','Two Poles','Three Poles']},
                   {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Charred Wood','Embers','Acrylic']},
                   // close in, so the branches run off the page's edges
                   {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},

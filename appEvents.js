@@ -3054,13 +3054,33 @@ if(document.addEventListener) for(const ev of ['input', 'change']) document.addE
   const rec = keptByValue(t.value);
   const v = rec ? validateGraph(rec.graph) : { ok: false, problems: ['it is no longer on the shelf'] };
   if(!v.ok){ t.value = 'athanor'; hardNo('That kept surface can’t be used', v.problems.join('; ') + '.'); return; }
-  // one name: the page calls it what the shelf does
+  // one name: the page calls it what the shelf does. Only the PAGE takes it: the Athanor's bench keeps its work
   $('forgeGraph').value = JSON.stringify(forgeNameSurface(v.graph, rec.name)); t.value = 'athanor';
   applyAthanorGraph(true); paintForgeSummary();
+  if(openForge.paintPage) openForge.paintPage();
 }, true);
+// THE BENCH (Ruby): the Athanor's own graph, kept in this browser (an app preference, never a look). The page's
+// surface graph is the look's (#forgeGraph). They are one while the page shows the bench's graph: then each change
+// on the bench reaches the page. Choosing a kept surface, or loading a look, changes only the page. The first time,
+// the bench starts as the page's graph, so nothing in progress is lost.
+const BENCH_KEY = 'uv.forge.bench.v1';
+let benchJson = null;
+function bench(){
+  if(benchJson == null){ try { benchJson = localStorage.getItem(BENCH_KEY); } catch(e){} if(benchJson == null) benchJson = ($('forgeGraph') || {}).value || ''; }
+  return benchJson;
+}
+const benchOnPage = (json = bench()) => !!($('textureToggle') && $('textureToggle').checked && $('textureType') && $('textureType').value === 'athanor'
+  && json && ($('forgeGraph') || {}).value === json);
+function setBench(json){
+  const linked = benchOnPage();
+  benchJson = json; try { localStorage.setItem(BENCH_KEY, json); } catch(e){}
+  if(linked) $('forgeGraph').value = json;
+}
+/** Whether the bench holds work found nowhere else: not on the shelf, not on the page (replacing it asks first). */
+function benchUnkept(){ const j = bench(); return Object.keys(athanorNodes(j)).length > 2 && !benchOnPage(j) && !forgeShelf().some(r => r.graph === j); }
 setTimeout(paintShelfOptions, 0);
-const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
-  onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
+const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+  onSave: () => { if(!benchOnPage()) return; paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
   // a wiki figure: every part of its little graph, at canonical settings, each in its own slot so figures don't wait on each other
   figure: (json, key, paint) => { const ids = Object.keys(athanorNodes(json)).sort((a, b) => +a - +b); if(!ids.length) return;
@@ -3071,23 +3091,26 @@ const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); i
   validate: json => validateGraph(json),
   warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
   // whether the page's surface is this graph, and putting it there (the bar says which, and does it)
-  onPage: () => !!($('textureToggle') && $('textureToggle').checked && $('textureType') && $('textureType').value === 'athanor'),
+  onPage: () => benchOnPage(),
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
-    t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
+    $('forgeGraph').value = bench(); t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); applyAthanorGraph(true); paintForgeSummary(); scheduleRender(); commitSoon(); } });
 // THE ATHANOR opens from the top bar, on every device
 function openAthanorNow(){ return openForge(forgeDeps()); }
 // REVEAL (ROADMAP H1, Reveal Spell Graph): the page's surface opened in the Athanor as the graph it is made of,
 // its Knobs set to the sliders' own values, so the Athanor shows exactly what the page does
 async function revealSurface(){
   const type = ($('textureType') || {}).value || '';
-  if(type === 'athanor'){ openAthanorNow(); return; }
-  const chain = TEXTURE_CHAINS[type], g = chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6].map(i => ($('texP' + i) || {}).value));
+  // an Athanor surface: the page's own graph onto the bench (it is the bench's already while the page shows it)
+  if(type === 'athanor' && benchOnPage()){ openAthanorNow(); return; }
+  const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
+  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
-  // the Athanor's own graph, if it has work on it, is replaced only when asked (Revert brings it back)
-  if(Object.keys(athanorNodes(($('forgeGraph') || {}).value || '')).length > 2
-    && !await askSure({ title: FORGE_BAR.revealAskTitle.replace('{name}', chain.label), body: FORGE_BAR.revealAskBody, confirmLabel: FORGE_BAR.revealAskYes, danger: false })) return;
+  const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
+  // the bench's work, if it is kept nowhere else, is replaced only when asked (Revert brings it back)
+  if(benchUnkept() && !await askSure({ title: FORGE_BAR.revealAskTitle.replace('{name}', label), body: FORGE_BAR.revealAskBody, confirmLabel: FORGE_BAR.revealAskYes, danger: false })) return;
   await openAthanorNow();
-  if(openForge.openGraph) openForge.openGraph(g, chain.label, chain.teach, true);
+  if(openForge.openGraph && await openForge.openGraph(g, label, page ? null : chain.teach, true) && page){
+    $('forgeGraph').value = bench(); paintForgeSummary(); if(openForge.paintPage) openForge.paintPage(); }   // (the page and the bench are one again)
 }
 // PROTECT THE TEXT (ROADMAP G3): Text Clearing raised just far enough that every line of the poem stands off
 // what it sits on at READABLE.ratio, measured on the frame itself (canvasRenderer measureTextGround), each line
@@ -3784,7 +3807,11 @@ function holdSurface(value, tile){
   const name = kept ? keptByValue(value).name : (athanorName(graph) || 'My Surface');
   const rec = kept ? keptByValue(value) : { name, graph, savedAt: new Date().toISOString() };
   const share = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-  const open = () => { if(kept){ const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); } openAthanorNow(); };
+  // (opened on the Athanor's bench: the page keeps its surface; the bench's own work is replaced only when asked)
+  const open = async () => {
+    if(!kept){ if(($('textureType') || {}).value === 'athanor') revealSurface(); else openAthanorNow(); return; }
+    const v = validateGraph(rec.graph); if(!v.ok){ hardNo('That kept surface can’t be opened', v.problems.join('; ') + '.'); return; }
+    await openAthanorNow(); if(openForge.openGraph) openForge.openGraph(forgeNameSurface(v.graph, name), name); };
   openSheetMenu(tile, kept ? name : KEPT.current + ': ' + name, [
     ...(kept ? [{ glyph: '◈', label: KEPT.use, act: () => { const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); CHOOSERS.forEach(c => c && c.close && c.close()); } }] : []),
     { glyph: '🜉', label: KEPT.open, act: () => { CHOOSERS.forEach(c => c && c.close && c.close()); open(); } },

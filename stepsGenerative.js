@@ -45,81 +45,67 @@ const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0
 const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
 
 // ---------------- DISCHARGE ----------------
-// The figure, grown in its own frame on a lattice G cells along the page's short side (finer as it is zoomed, so a
-// close view keeps its twigs). One pole: a strike branching out from where it entered. Two poles (as in every real
-// figure between two electrodes): each grows toward the other's pull until they MEET — always, so there is a path
-// between them, as lightning has — and the channel between them carries all the current. o.zoom, o.ax/ay (the axis,
-// from the dial), o.offset (the figure slid along it). Returns segments [x0, y0, x1, y1, current] in page units.
+// The figure on a lattice G cells along the page's short side. Poles sit at the page's rim toward the dial (one),
+// across from each other (two), or a triangle (three). Returns segments [x0, y0, x1, y1, current] in page units (short side 1).
+// (Ruby: this, the first growth, was the better filter; a later one that always joined two poles is gone.) THE CAMERA:
+// the figure grows as it always did, then o.zoom magnifies the finished figure about the page's middle, slid by
+// o.offset along the dial's line: zoom 1 and no slide are the figure exactly as first made.
 function genLichtenberg(aspX, aspY, o){
-  // grown at zoom 1 (the page and a margin), on a lattice finer as it will be magnified; then ZOOMED about its middle
-  const zoom = Math.max(0.5, o.zoom || 1), G = Math.round(240*Math.min(1.8, Math.sqrt(Math.max(1, zoom)))), h = 1/G;
-  const viewW = aspX, viewH = aspY, mg = 0.12, gx = Math.round((viewW + mg*2)/h), gy = Math.round((viewH + mg*2)/h);
-  const poles = Math.max(1, Math.min(2, Math.round(o.poles))), eta = o.eta, target = o.count;
-  const ax = o.dx, ay = o.dy, cxP = viewW/2, cyP = viewH/2;
-  const toL = (x, y) => [Math.round((x + mg)/h), Math.round((y + mg)/h)];
-  const half = Math.min(viewW, viewH)*0.42, P = [];
-  if(poles === 1) P.push(toL(cxP - ax*half*0.25, cyP - ay*half*0.25));
-  else { P.push(toL(cxP - ax*half, cyP - ay*half)); P.push(toL(cxP + ax*half, cyP + ay*half)); }
-  for(const p of P){ p[0] = Math.min(gx - 2, Math.max(1, p[0])); p[1] = Math.min(gy - 2, Math.max(1, p[1])); }
+  const G = 240, h = 1/G, gx = Math.round(G*aspX), gy = Math.round(G*aspY);
+  const poles = Math.max(1, Math.min(3, o.poles)), eta = o.eta, target = o.count;
+  // the poles: toward the dial and round from it
+  const cx = aspX/2, cy = aspY/2, rad = Math.min(aspX, aspY)*0.46, P = [];
+  for(let k = 0; k < poles; k++){ const a = Math.atan2(o.dy, o.dx) + k*Math.PI*2/poles;
+    const R = poles === 1 ? rad*0.15 : rad;                 // one pole: a strike near the middle, toward the dial
+    P.push([Math.round((cx + Math.cos(a)*R)/h), Math.round((cy + Math.sin(a)*R)/h)]); }
   // charges (lattice points with a jitter, so the channel isn't drawn on graph paper), per tree
-  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], CS = [], occ = new Int32Array(gx*gy).fill(-1);
+  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], occ = new Uint8Array(gx*gy);
   const cand = new Map();   // lattice index → { s: [sum per tree], t: tree, p: parent }
   const R1 = 0.5;
-  const addCharge = (ix, iy, t, p, s0) => {
+  const addCharge = (ix, iy, t, p) => {
     const id = X.length; X.push(ix); Y.push(iy); JX.push((Math.random() - 0.5)*0.7); JY.push((Math.random() - 0.5)*0.7); par.push(p); tree.push(t);
-    CS.push(s0 || new Float64Array(poles));
-    occ[iy*gx + ix] = id; cand.delete(iy*gx + ix);
-    // every candidate, and every charge, feels the new charge (Kim et al.: a point charge's potential, 1 − R1/r, summed)
+    occ[iy*gx + ix] = 1; cand.delete(iy*gx + ix);
+    // every candidate feels the new charge (Kim et al.: the potential of a point charge, 1 − R1/r, summed)
     for(const c of cand.values()){ const dx = c.x - ix, dy = c.y - iy, r = Math.sqrt(dx*dx + dy*dy); c.s[t] += 1 - R1/Math.max(R1, r); }
-    for(let q = 0; q < id; q++){ const dx = X[q] - ix, dy = Y[q] - iy, r = Math.sqrt(dx*dx + dy*dy); CS[q][t] += 1 - R1/Math.max(R1, r); }
-    // its free neighbours become candidates, their potential the charge's own a cell away (its own field there: 1 − R1/1)
+    // its free neighbours become candidates (their potential from every charge so far)
     for(let j = -1; j <= 1; j++) for(let i = -1; i <= 1; i++){ if(!i && !j) continue; const x = ix + i, y = iy + j;
-      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x] >= 0) continue; const k = y*gx + x; if(cand.has(k)) continue;
-      const s = Float64Array.from(CS[id]); s[t] += 1 - R1/Math.hypot(i, j);
+      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x]) continue; const k = y*gx + x; if(cand.has(k)) continue;
+      const s = new Float64Array(poles); for(let q = 0; q < X.length; q++){ const dx = x - X[q], dy = y - Y[q], r = Math.sqrt(dx*dx + dy*dy); s[tree[q]] += 1 - R1/Math.max(R1, r); }
       cand.set(k, { x, y, s, t, p: id }); }
     return id;
   };
   const count = new Array(poles).fill(0);
-  P.forEach((p, t) => { addCharge(p[0], p[1], t, -1); count[t]++; });
+  P.forEach((p, t) => { addCharge(Math.min(gx - 2, Math.max(1, p[0])), Math.min(gy - 2, Math.max(1, p[1])), t, -1); count[t]++; });
   // grain: growth along it is easier (wood burns along its fibres)
-  const ga = o.grain;
-  let turn = 0, joined = null;
-  const cap = target*4;
-  for(let step = poles; step < cap; step++){
-    if(step >= target && (poles === 1 || joined)) break;
+  const ga = o.grain, gcx = 1, gcy = 0;
+  let turn = 0;
+  for(let step = poles; step < target; step++){
     const t = turn; turn = (turn + 1) % poles;
-    // until they meet, the other pole pulls harder the longer it takes
-    const pull = poles > 1 && !joined ? Math.min(0.95, 0.62 + 0.33*Math.max(0, step - target*0.6)/target) : 0;
+    // the candidates of this tree: its own potential (high at the tips, far from the channel already burnt) and,
+    // with more than one pole, the pull of the nearest other pole (the opposite charge) — each normalised, then
+    // blended, then raised to the power η
     const list = []; let lo = Infinity, hi = -Infinity, alo = Infinity, ahi = -Infinity;
     for(const c of cand.values()){ if(c.t !== t) continue;
       const phi = c.s[t]/Math.max(1, count[t]); let att = 0;
-      if(pull > 0){ const q = 1 - t; att = -Math.hypot(c.x - P[q][0], c.y - P[q][1]); }
+      if(poles > 1){ let dm = Infinity; for(let q = 0; q < poles; q++) if(q !== t){ const d2 = Math.hypot(c.x - P[q][0], c.y - P[q][1]); if(d2 < dm) dm = d2; } att = -dm; }
       list.push([c, phi, att]); if(phi < lo) lo = phi; if(phi > hi) hi = phi; if(att < alo) alo = att; if(att > ahi) ahi = att; }
-    if(!list.length) continue;
-    let tot = 0; const w = new Float64Array(list.length);
+    if(!list.length) break;
+    let tot = 0; const w = new Float64Array(list.length), pull = poles > 1 ? 0.62 : 0;
     for(let i = 0; i < list.length; i++){ const c = list[i][0], pn = (1 - pull)*(list[i][1] - lo)/Math.max(1e-9, hi - lo) + pull*(list[i][2] - alo)/Math.max(1e-9, ahi - alo);
-      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs(dx/m); }
-      w[i] = Math.pow(pn, eta + (pull > 0.8 ? 2 : 0))*g; tot += w[i]; }
+      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs((dx*gcx + dy*gcy)/m); }
+      w[i] = Math.pow(pn, eta)*g; tot += w[i]; }
     let r = Math.random()*tot, pick = list.length - 1; for(let i = 0; i < list.length; i++){ r -= w[i]; if(r <= 0){ pick = i; break; } }
-    const c = list[pick][0], id = addCharge(c.x, c.y, t, c.p, c.s); count[t]++;
-    // THE MEETING: a new step beside the other tree joins the two (the arc closes)
-    if(poles > 1 && !joined){
-      for(let j = -1; j <= 1 && !joined; j++) for(let i = -1; i <= 1 && !joined; i++){ const k = (c.y + j)*gx + (c.x + i), q = k >= 0 && k < occ.length ? occ[k] : -1;
-        if(q >= 0 && tree[q] !== t) joined = [id, q]; }
-    }
+    const c = list[pick][0]; addCharge(c.x, c.y, t, c.p); count[t]++;
   }
-  // the current through each step: everything that grew beyond it; the channel between the poles carries it all
+  // the current through each step: everything that grew beyond it
   const n = X.length, desc = new Float64Array(n).fill(1);
   for(let i = n - 1; i >= 0; i--) if(par[i] >= 0) desc[par[i]] += desc[i];
-  if(joined){ const main = n*0.5; for(const e of joined){ for(let k = e; k >= 0; k = par[k]) desc[k] = Math.max(desc[k], main); } }
-  // into the page: zoomed about the figure's middle, then slid along the dial's line
-  const sx = viewW/2 + ax*o.offset*viewW*0.45, sy = viewH/2 + ay*o.offset*viewH*0.45;
-  const pageX = (ix, jx) => sx + ((ix + jx)*h - mg - cxP)*zoom, pageY = (iy, jy) => sy + ((iy + jy)*h - mg - cyP)*zoom;
+  const zoom = o.zoom || 1, off = o.offset || 0, sx = cx + o.dx*off*aspX*0.45, sy = cy + o.dy*off*aspY*0.45;
+  const camX = v => zoom === 1 && !off ? v : sx + (v - cx)*zoom, camY = v => zoom === 1 && !off ? v : sy + (v - cy)*zoom;
   const segs = [];
   for(let i = 0; i < n; i++){ const p = par[i]; if(p < 0) continue;
-    segs.push([pageX(X[p], JX[p]), pageY(Y[p], JY[p]), pageX(X[i], JX[i]), pageY(Y[i], JY[i]), desc[i]]); }
-  if(joined){ const [a, b] = joined; segs.push([pageX(X[a], JX[a]), pageY(Y[a], JY[a]), pageX(X[b], JX[b]), pageY(Y[b], JY[b]), n*0.5]); }
-  return { segs, n, scale: 1/zoom };
+    segs.push([camX((X[p] + JX[p])*h), camY((Y[p] + JY[p])*h), camX((X[i] + JX[i])*h), camY((Y[i] + JY[i])*h), desc[i]]); }
+  return { segs, n };
 }
 
 // ---------------- WOOD ----------------
@@ -602,16 +588,17 @@ export const GEN_STEPS = {
       return [pc, hc]; },
     run(E, n){ const [pc, hc] = this.paint(E, n); return [E.readCanvas(pc), E.asField(E.readCanvas(hc))]; } },
   discharge: { cat: 'Marks', label: 'Discharge', ins: ['strike from'], outs: ['channels'], io: { ins: ['value'], outs: ['field'] },
-    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 2), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
+    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
       GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100;
-      const o = { count: Math.round((700 + 8000*num(n, 'reach', 50)/100)*Math.min(2.6, Math.max(1, zoom)**0.85)), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
+      const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
         grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));
       const [c, x] = kitCanvas(ww, wh); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.strokeStyle = '#fff'; x.lineCap = 'round';
       const wk = num(n, 'width', 100)/100;
       // thick where the most current ran; the twigs fade as well as thin
-      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9), E.px(1.6)*wk*Math.pow(cur, 0.34)*Math.pow(zoom, 0.25));
+      // (magnified with the figure: the camera brings the channels closer, wider as well as longer)
+      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9)*zoom, E.px(1.6)*wk*Math.pow(cur, 0.34)*zoom);
         x.globalAlpha = Math.min(1, 0.35 + Math.pow(cur, 0.5)*0.22); x.lineWidth = w;
         x.beginPath(); x.moveTo(x0*unit, y0*unit); x.lineTo(x1*unit, y1*unit); x.stroke(); }
       return [E.asField(E.readCanvas(c))]; } },

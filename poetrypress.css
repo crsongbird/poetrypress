@@ -693,6 +693,9 @@ body.is-mobile.focus-mode .editor-wrap{ border-left:0; border-right:0; border-ra
 body.is-mobile.focus-mode .controls{ padding-left:4px; padding-right:10px; }
 /* the credit fields belong to the page, not to writing it */
 body.is-mobile.focus-mode .card.focus-keep .field:not(.editor-field){ display:none; }
+/* while typing, the credit's row and the spell code's switch step aside (Ruby): the poem has the room */
+body.is-mobile.focus-mode .card.focus-keep .spell-mark-row,
+body.is-mobile.focus-mode .card.focus-keep > .row{ display:none; }
 body.is-mobile.focus-mode .card.focus-keep .card-grid{ gap:0; }
 /* the header must not shift sideways when the Ko-fi link leaves */
 body.is-mobile.focus-mode .app-header-spacer{ display:none; }
@@ -2092,6 +2095,8 @@ body.is-mobile .wk-search{ width:100%; }
 body.is-mobile .forge-doc .fd-head{ flex-direction:column; align-items:stretch; gap:8px; }
 body.is-mobile .forge-doc .fd-head b{ white-space:nowrap; }
 body.is-mobile .forge-doc .wk-tools{ justify-content:flex-start; }
+/* Close on the far side from Contents and Back, so a hurried thumb doesn't shut the wiki (Ruby) */
+body.is-mobile .forge-doc .wk-tools [data-doc="close"]{ margin-left:auto; }
 .forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
 

@@ -6,7 +6,21 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 0 · Asked for, waiting on Ruby's answers (the next build)
+- THE POEM ON A PHONE: while typing, the text area fills the room above the keyboard and never runs under it (a
+  thin scroll inside); a tap below the last line puts the caret at the end.
+- LOCKS are too easy to toggle by accident: where does it happen (scrolling past, or tapping a name)?
+- CIRCUIT BOARD's personality: an Era slider (today → future and quantum → magitech), with stamps, labels and
+  glyphs of made-up technology, chosen by the seed (as Cartomancy and Night City have theirs).
+- RINGWORLD, a new surface: an abstract ring world with great structural and environmental variety, lit by the
+  engine; its light is the star at the center, so the dial moves the camera and one slider sets the light.
+  Presets for it in Stage 4.
+
+## 1 · Ruby to judge (new in Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- LICHTENBERG FIGURES, the first growth again, with Zoom and Slide as a camera (sheet sent). Its three readings were
+  set for the joined growth: Acrylic Strike and Close Strike are now close-ups. Keep them, or set new ones?
+- THE BENCH: the Athanor keeps its own graph; the page's surface is the look's. Show on Page joins them (then every
+  change shows on the page). With that, is Show on Page still wanted, or should Keep also put a surface on the page?
 - THE PRESET LEVEL (ROADMAP H1): Summon Variation, Mutate Gently and Freeze This Seed sit in a row above the
   presets, under Rituals. Is that their place, and do the names say what they do?
 - PROTECT THE TEXT (◐ under Text Clearing) aims at 3:1, as the presets are held to; a tenth of the ground under a line
@@ -18,8 +32,8 @@ Recommendations".
   the way of scrolling?
 - 🜉 OPEN IN THE ATHANOR under the Surface (ROADMAP's Reveal Spell Graph): the page's surface as its graph, at
   the page's sliders and hues. Is the name right, and does it belong there (or beside the four readings)?
-- OIL PAINT'S DETAIL (branch `oil-detail`, not live): a last fine pass repaints what the big strokes lost (distant
-  trees come back as small painted trees); the review sheet was sent. Yes, no, stronger or subtler?
+- OIL PAINT'S IMPASTO (branch `oil-impasto`, not live): paint laid thick in the lights and thin in the darks, a
+  stroke's load thinning along it, and the fine detail strokes raised as thin paint on top. Sheet sent.
 - MORE PARTS: Split and Merge HSB, Split and Merge Lab, Median (Percentile), Map Switch, Flip, Perspective.
 - A BORDER GRADIENT AT 0° now runs straight across (it drew at 45°): a look saved at exactly 0° changes. Say if
   those should keep the old diagonal.
@@ -41,11 +55,10 @@ Recommendations".
   other pages want one?
 
 ## From Saturn–Janus
-- THE ATHANOR'S BAR (Ruby: "Start… Kept, Keep, Use: Use feels redundant; the other menus feel… not
-  particularly good"): Open ▾ (your surfaces, starters, Basics, studies, the app's textures, each with what it
-  teaches) · Keep · ↶ ↷ · the view · ⋯ (copy, your shelf, Tidy, Revert, Clear, the wiki) · ✓ On the Page /
-  ⇱ Show on Page · Done (offers to show a changed graph). Every menu's hints now show whole, under each name.
-  Which menus still feel wrong, and where?
+- THE ATHANOR'S BAR, Ruby's notes to settle before it is rebuilt: ＋ Parts farthest left, ⋯ farthest right; Open as a
+  drawer like the surface picker, across the bar's free width (and something else on tall, narrow screens); no
+  logo on a phone (embossed on the workbench instead, parts over it); snap to grid; "Spread out" under Tidy; the
+  phone's zoom is touchy again.
 
 ## From Saturn–Epimetheus
 - CIRCUIT BOARD (Pattern & Order), in place of Veins of Light: Traces, Bends, Charge (Substrate → Color →

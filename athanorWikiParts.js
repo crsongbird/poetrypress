@@ -809,7 +809,7 @@ export const WIKI_PARTS = {
     line: 'Repaints a picture in oil brushstrokes that follow its shapes, and gives the paint’s heights.',
     ins: { picture: 'The picture to repaint.' },
     outs: { painting: 'The painting.', heights: 'Paint thickness, for the Light Engine.' },
-    set: { amount: 'How much is repainted.', size: 'Brush size.', length: 'Stroke length.', detail: 'Smaller strokes where there is detail.', vary: 'Color variation between strokes.' },
+    set: { amount: 'How much is repainted.', size: 'Brush size.', length: 'Stroke length.', detail: 'Smaller strokes where there is detail; then a last pass with a fine brush wherever the painting still differs from the picture, so small things (a distant tree, a window) keep their shape.', vary: 'Color variation between strokes.' },
   },
   strokes: {
     line: 'A few fast, loaded swipes of paint with bristle marks and flung droplets.',
@@ -1077,7 +1077,7 @@ export const WIKI_PARTS = {
     about: 'Grown by Laplacian growth: each step goes where the electric potential is strongest, so it forks and reaches like lightning.',
     ins: { 'strike from': 'Where it enters (wire the Light Dial).' },
     outs: { channels: 'The burned paths, thicker where more current ran.' },
-    set: { reach: 'How far it grows.', branching: 'Bushy or thin.', poles: 'One electrode, or two that meet.', grain: 'Follows the wood grain.', width: 'Channel width.', zoom: 'Zoom.', offset: 'Slides it along the dial’s line.', variant: 'Another figure.' },
+    set: { reach: 'How far it grows.', branching: 'Bushy or thin.', poles: 'One strike, or two or three electrodes round the rim, each growing toward the others.', grain: 'Follows the wood grain.', width: 'Channel width.', zoom: 'Brings the finished figure closer, as a camera would: the same figure, larger, its channels wider.', offset: 'Frames it: slides the view along the dial’s line.', variant: 'Another figure.' },
     see: ['part:burn', 'part:wood'],
   },
   growline: {

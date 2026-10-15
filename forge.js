@@ -7,9 +7,9 @@
  * at the bottom of Surface Variant.
  *
  * Built on Drawflow (jerosoler/Drawflow, MIT): vanilla JS, touch-friendly,
- * small — loaded only when the Athanor is first opened. Its graph (Drawflow's
- * own export JSON) is kept in the hidden #forgeGraph field, so it is saved,
- * loaded, shared and shown in the JSON like every other setting.
+ * small — loaded only when the Athanor is first opened. It works on its own
+ * graph, the bench (Drawflow's export JSON, kept in this browser); a surface
+ * on the page is the look's graph (#forgeGraph), saved and shared with it.
  *
  * No imports of app state: the page hands in what it needs (deps).
  */
@@ -215,10 +215,12 @@ export async function forgeCopy(text){
 
 /**
  * Opens the Athanor over the page. deps: { $, textures: [ids], stitches: [ids],
- * onSave(json), preview(json, canvas), steps(json, paint), use(), ask(opts) →
+ * bench(), setBench(json), unkept(), onSave(json), preview(json, canvas), steps(json, paint), use(), ask(opts) →
  * Promise<bool>, prompt(opts) → Promise<string|null>, sound(name),
  * validate(json) → { ok, graph, problems }, warn(problems), lock (an icon) }.
- * The graph is read from and written back to deps.$('forgeGraph').
+ * THE BENCH (Ruby: choosing a kept surface for the page must not take away the work in progress): the
+ * Athanor works on a graph of its own, deps.bench() / deps.setBench(json). The page's graph is the look's
+ * (#forgeGraph); while the page shows the bench's graph, every change to the bench reaches the page too.
  *
  * HOW IT IS HANDLED (Ruby: precise pokes are not a thing on a phone):
  *  - a node moves only by its title bar, unless pinned (the lock in its bar);
@@ -305,9 +307,9 @@ export async function openForge(deps){
     // ---- saving, the previews ----
     let thumbT = 0, stepsT = 0;
     const previews = () => {
-      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(($('forgeGraph') || {}).value, c); } catch(e){} }, 250);
+      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c); } catch(e){} }, 250);
       clearTimeout(stepsT);
-      if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(($('forgeGraph') || {}).value, paintSteps); } catch(e){} }, 450);
+      if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
     };
     const paintSteps = (sheet, ids, t, cols) => ids.forEach((id, i) => { const cv = area.querySelector(`#node-${id} .forge-node-preview`); if(!cv) return;
       const x = cv.getContext('2d'); x.imageSmoothingEnabled = true; x.clearRect(0, 0, cv.width, cv.height); x.drawImage(sheet, (i % cols)*t, Math.floor(i/cols)*t, t, t, 0, 0, cv.width, cv.height); });
@@ -329,7 +331,7 @@ export async function openForge(deps){
         n.inputs = ordered(n.inputs, 'input_'); n.outputs = ordered(n.outputs, 'output_'); }
       return g; };
     F.faces = faces;
-    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
+    const save = () => { const json = JSON.stringify(slim()); deps.setBench(json); if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
     F.save = save;
     // ---- UNDO AND REDO (Ruby): every change to the graph is a step back — a part added, moved,
     // removed, a wire, a setting, a whole graph opened. ↶ ↷ in the bar; Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or
@@ -410,7 +412,13 @@ export async function openForge(deps){
     }
     // on a phone the parts are a drawer (＋ Parts), so the grid has the whole screen
     const partsBtn = $('forgePartsBtn');
-    const setParts = open => { if(!partsBtn) return; veil.classList.toggle('parts-open', open); partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+    // ON A PHONE ONE THING OPENS AT A TIME (Ruby): the parts drawer, the wiki and a menu each close the others;
+    // a desk has room for them side by side
+    const phoneNow = () => !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
+    const onlyThis = keep => { if(!phoneNow()) return; if(keep !== 'parts') setParts(false); if(keep !== 'doc' && F.showDoc && doc0 && !doc0.hidden) F.showDoc(false); if(keep !== 'menu' && F.closeMenu) F.closeMenu(); };
+    const doc0 = $('forgeDoc');
+    const setParts = open => { if(!partsBtn) return; if(open) onlyThis('parts'); veil.classList.toggle('parts-open', open); partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+    F.onlyThis = onlyThis;
     if(partsBtn) partsBtn.addEventListener('click', () => setParts(!veil.classList.contains('parts-open')));
     area.addEventListener('dragover', e => e.preventDefault());
     area.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer && e.dataTransfer.getData('text/forge'); if(!type) return;
@@ -539,7 +547,7 @@ export async function openForge(deps){
       const first = menu.querySelector('.forge-menu-item:not([disabled])'); if(first && finePointer) first.focus();
     };
     const openMenu = (x, y, m) => {
-      if(!menu || !m) return; menuStack = [m]; menu.hidden = false; drawMenu();
+      if(!menu || !m) return; F.onlyThis('menu'); menuStack = [m]; menu.hidden = false; drawMenu();
       // beside the finger on a desk; a sheet from the bottom on a phone (CSS)
       const r = veil.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
       menu.style.left = Math.max(6, Math.min(r.width - w - 6, x - r.left + 4)) + 'px';
@@ -833,7 +841,7 @@ export async function openForge(deps){
     // open a graph (a starter, a template, a kept surface) in place of this one — asking first if this one has changed
     // (asked: whoever calls has asked already — the Surface card's Open in the Athanor)
     const openGraph = async (g, label, teach, asked) => {
-      if(!asked && count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid is replaced. Undo or Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
+      if(!asked && count() && (F.dirty || (deps.unkept && deps.unkept())) && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid is replaced. Undo or Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
       stopWire(); load(g); sound('graphLoad'); setTimeout(fitView, 30); showNote(label, teach); return true;
     };
     F.openGraph = openGraph;
@@ -1003,7 +1011,7 @@ export async function openForge(deps){
       doc.classList.remove('wk-show-nav');
       doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id || (id.startsWith('part:') && a.dataset.wiki === 'cat:' + ((FORGE_NODES[id.slice(5)] || {}).cat))));
       const b = doc.querySelector('.wk-back'); if(b) b.disabled = !wiki.back.length; };
-    const showDoc = (on, id) => { if(!doc) return; if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; goWiki(wiki.at, false); }
+    const showDoc = (on, id) => { if(!doc) return; if(on) F.onlyThis('doc'); if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; goWiki(wiki.at, false); }
       doc.hidden = !on; if(on && id) goWiki(id);
       { const b = $('forgeHelpBtn'); if(b) b.setAttribute('aria-expanded', on ? 'true' : 'false'); } };
     F.showDoc = showDoc; F.goWiki = id => showDoc(true, id);
@@ -1027,7 +1035,7 @@ export async function openForge(deps){
   }
   // the graph saved with the look (checked first: a graph from anywhere can't break the page), or a first one
   const ed = F.editor;
-  let saved = null; const raw = ($('forgeGraph') || {}).value || '';
+  let saved = null; const raw = deps.bench() || '';
   if(raw){ const v = deps.validate ? deps.validate(raw) : { ok: true, graph: JSON.parse(raw), problems: [] };
     if(v.ok) saved = v.graph; if(v.problems && v.problems.length && deps.warn) deps.warn(v.problems); }
   if(saved && saved.drawflow) F.load(saved);

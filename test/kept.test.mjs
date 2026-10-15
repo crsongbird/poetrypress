@@ -5,9 +5,11 @@
  * Run: node test/kept.test.mjs
  */
 import { readFileSync } from 'fs';
-import { installCanvasMock } from './canvasMock.mjs';
+import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
-installDomMock(); installCanvasMock();
+const store = {};
+globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
+installCanvasMock(); const reg = installDomMock(makeMockContext, makeMockCanvas);
 const F = await import('../forge.js');
 const A = await import('../athanor.js');
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
@@ -37,5 +39,13 @@ check('kept surfaces are chosen by name (not by place on the shelf), and the pag
   /o\.value = 'kept:' \+ encodeURIComponent\(rec\.name\)/.test(ev) && /forgeNameSurface\(v\.graph, rec\.name\)/.test(ev));
 check('kept surfaces get thumbnails at canonical settings, kept with them until their wiring changes', /function keptThumb\(rec, canvas, unsaved\)/.test(ev) && /rec\.thumb\.of === of/.test(ev) && /seed: 4242, scale: n\/3072, light: 315, lightTilt: 100/.test(ev));
 check('a long press on a surface made in the Athanor opens its menu: use, open, share, copy the wiring, take it off', /opts\.hold\(it\.value, b\)/.test(ch) && /function holdSurface\(value, tile\)/.test(ev) && /KEPT\.copy, hint: KEPT\.copyHint, act: \(\) => copyWiring\(rec\)/.test(ev));
+// ---- THE BENCH (Ruby): choosing a kept surface sets the page's surface and leaves the Athanor's work alone ----
+{ const wip = JSON.stringify(A.athanorStarter('ripples'));
+  store['uv.forge.bench.v1'] = wip; F.forgeShelfWrite(read.surfaces);
+  await import('../appEvents.js'); await new Promise(r => setTimeout(r, 30));
+  const t = reg['textureType']; t.value = 'kept:' + encodeURIComponent('Halftone2'); document.dispatchEvent({ type: 'change', target: t });
+  check('choosing Halftone2 in the Surface menu shows it on the page, by its name',
+    t.value === 'athanor' && A.athanorName(reg['forgeGraph'].value) === 'Halftone2');
+  check('…and the work in progress on the Athanor\'s bench is untouched', store['uv.forge.bench.v1'] === wip); }
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

@@ -54,18 +54,19 @@ const badRange = textureTypes.filter(t => paramsFor(t).some(d => !(d.min < d.max
 check('every default sits inside its own min/max', badRange.length === 0);
 if(badRange.length) console.log('   offenders:', badRange.join(', '));
 
-// generation must survive both extremes of both knobs
+// generation must survive both extremes of both knobs (the corners where both are low or both high are drawn
+// by textureFingerprints already; the two crossed corners are drawn here, at the same small size)
 let broke = 0;
 for(const t of Object.keys(TEXTURE_PARAMS)){
   const [a, b] = TEXTURE_PARAMS[t];
-  for(const [v1, v2] of [[a.min,b.min],[a.max,b.max],[a.min,b.max],[a.max,b.min]]){
+  for(const [v1, v2] of [[a.min,b.max],[a.max,b.min]]){
     try {
-      const c = getTextureCanvas(t, 700, 700, { accent1: '#c9a876', accent2: '#7a8ca3', seed: 99, p1: v1, p2: v2 });
-      if(!c || c.width !== 700) throw new Error('wrong size');
+      const c = getTextureCanvas(t, 320, 320, { accent1: '#c9a876', accent2: '#7a8ca3', seed: 99, p1: v1, p2: v2 });
+      if(!c || c.width !== 320) throw new Error('wrong size');
     } catch(e){ broke++; console.log('   FAIL', t, v1, v2, e.message); }
   }
 }
-check('every texture generates at all four param corners', broke === 0);
+check('every texture generates at the crossed corners of its two knobs (one low, one high)', broke === 0);
 
 // zoom must actually change the output, or the knob is decorative
 const zoomable = Object.keys(TEXTURE_PARAMS).find(t => TEXTURE_PARAMS[t][0].key === 'zoom');

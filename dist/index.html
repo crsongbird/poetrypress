@@ -726,6 +726,9 @@ body.is-mobile.focus-mode .editor-wrap{ border-left:0; border-right:0; border-ra
 body.is-mobile.focus-mode .controls{ padding-left:4px; padding-right:10px; }
 /* the credit fields belong to the page, not to writing it */
 body.is-mobile.focus-mode .card.focus-keep .field:not(.editor-field){ display:none; }
+/* while typing, the credit's row and the spell code's switch step aside (Ruby): the poem has the room */
+body.is-mobile.focus-mode .card.focus-keep .spell-mark-row,
+body.is-mobile.focus-mode .card.focus-keep > .row{ display:none; }
 body.is-mobile.focus-mode .card.focus-keep .card-grid{ gap:0; }
 /* the header must not shift sideways when the Ko-fi link leaves */
 body.is-mobile.focus-mode .app-header-spacer{ display:none; }
@@ -2125,6 +2128,8 @@ body.is-mobile .wk-search{ width:100%; }
 body.is-mobile .forge-doc .fd-head{ flex-direction:column; align-items:stretch; gap:8px; }
 body.is-mobile .forge-doc .fd-head b{ white-space:nowrap; }
 body.is-mobile .forge-doc .wk-tools{ justify-content:flex-start; }
+/* Close on the far side from Contents and Back, so a hurried thumb doesn't shut the wiki (Ruby) */
+body.is-mobile .forge-doc .wk-tools [data-doc="close"]{ margin-left:auto; }
 .forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
 
@@ -11284,6 +11289,40 @@ function oilPaint(src, w, h, o){
       const [ex, ey] = pts[pts.length - 1], g2 = Math.min(255, body + 38)|0; hx.fillStyle = `rgb(${g2},${g2},${g2})`; hx.beginPath(); hx.arc(ex, ey, r*0.55, 0, 6.283); hx.fill();
     }
   }
+  // DETAIL RESCUED (Ruby: small things, distant trees, were lost): Hertzmann's rule for a finer brush — compare the
+  // painting so far with the picture, at a finer grid, and lay small short strokes only where they still differ.
+  // It comes after the passes above, so they draw exactly as they did; only where detail was lost is touched.
+  if(o.detail > 0){
+    const dw = Math.max(64, Math.min(1024, Math.round(w/Math.max(1, unit/900)))), dh = Math.max(64, Math.round(dw*h/w)), sc = w/dw;
+    const [, fx] = kitCanvas(dw, dh), [, gx2] = kitCanvas(dw, dh); fx.drawImage(src, 0, 0, dw, dh); gx2.drawImage(pc, 0, 0, dw, dh);
+    const F = fx.getImageData(0, 0, dw, dh).data, G = gx2.getImageData(0, 0, dw, dh).data;
+    const fcol = (x, y) => { const q = (Math.min(dh - 1, Math.max(0, y|0))*dw + Math.min(dw - 1, Math.max(0, x|0)))*4; return [F[q], F[q+1], F[q+2]]; };
+    const r = Math.max(cpx(1.2), base*0.14), step = Math.max(1, r*1.1/sc), T = 46 - o.detail*26;     // the brush, its spacing on the fine grid, how different is "lost"
+    const cells = []; for(let y = 0; y < dh; y += step) for(let x = 0; x < dw; x += step) cells.push([x, y]);
+    for(let i = cells.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
+    let budget = 14000;
+    for(const [cx, cy] of cells){
+      // the cell's error: how far the painting is from the picture, at its worst point
+      let worst = 0, wx = cx, wy = cy;
+      for(let j = 0; j < step; j++) for(let k = 0; k < step; k++){ const x = Math.min(dw - 1, cx + k|0), y = Math.min(dh - 1, cy + j|0), q = (y*dw + x)*4;
+        const e = Math.abs(F[q] - G[q]) + Math.abs(F[q+1] - G[q+1]) + Math.abs(F[q+2] - G[q+2]); if(e > worst){ worst = e; wx = x; wy = y; } }
+      if(worst/3 < T || budget-- <= 0) continue;
+      // which way: along the small thing's own outline, from the fine picture (a trunk's stroke runs up it), else the forms'
+      const lum = (x, y) => { const q = (Math.min(dh - 1, Math.max(0, y))*dw + Math.min(dw - 1, Math.max(0, x)))*4; return 0.299*F[q] + 0.587*F[q+1] + 0.114*F[q+2]; };
+      let gx = 0, gy = 0; for(let j = -1; j <= 1; j++){ gx += lum(wx + 1, wy + j) - lum(wx - 1, wy + j); gy += lum(wx + j, wy + 1) - lum(wx + j, wy - 1); }
+      const gm = Math.hypot(gx, gy), [fdx, fdy] = dirAt((wx + 0.5)*sc/w, (wy + 0.5)*sc/h), dx0 = gm > 12 ? -gy/gm : fdx, dy0 = gm > 12 ? gx/gm : fdy;
+      const x0 = (wx + 0.5)*sc, y0 = (wy + 0.5)*sc, c = fcol(wx, wy), len = r*(1.4 + R()*2)*o.length, pts = [[x0, y0]];
+      // a short stroke, stopped where the picture's colour changes, so the small thing keeps its shape
+      for(const sgn of [1, -1]){ let x = x0, y = y0;
+        for(let s = 0; s < 2; s++){ const nx2 = x + dx0*sgn*len/4, ny2 = y + dy0*sgn*len/4, cn = fcol(nx2/sc, ny2/sc);
+          if(Math.abs(cn[0] - c[0]) + Math.abs(cn[1] - c[1]) + Math.abs(cn[2] - c[2]) > 60) break;
+          x = nx2; y = ny2; sgn > 0 ? pts.push([x, y]) : pts.unshift([x, y]); } }
+      if(pts.length < 2) pts.push([x0 + dx0*r*0.25, y0 + dy0*r*0.25]);
+      const j = 1 + (R() - 0.5)*0.1*o.vary, line = (x, wdt, style) => { x.strokeStyle = style; x.lineWidth = wdt; x.beginPath(); pts.forEach(([a, b], q) => q ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+      line(px, r*1.5, `rgba(${Math.round(c[0]*j)},${Math.round(c[1]*j)},${Math.round(c[2]*j)},${Math.min(0.95, 1.4*o.amount)})`);
+      const body = 120 + R()*35; line(hx, r*1.5, `rgb(${body|0},${body|0},${body|0})`);
+    }
+  }
   return [pc, hc];
 }
 const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, 'length', 100)/100, detail: E.num(n, 'detail', 50)/100, vary: E.num(n, 'vary', 50)/100, amount: E.num(n, 'amount', 100)/100 });
@@ -11765,81 +11804,67 @@ const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0
 const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
 
 // ---------------- DISCHARGE ----------------
-// The figure, grown in its own frame on a lattice G cells along the page's short side (finer as it is zoomed, so a
-// close view keeps its twigs). One pole: a strike branching out from where it entered. Two poles (as in every real
-// figure between two electrodes): each grows toward the other's pull until they MEET — always, so there is a path
-// between them, as lightning has — and the channel between them carries all the current. o.zoom, o.ax/ay (the axis,
-// from the dial), o.offset (the figure slid along it). Returns segments [x0, y0, x1, y1, current] in page units.
+// The figure on a lattice G cells along the page's short side. Poles sit at the page's rim toward the dial (one),
+// across from each other (two), or a triangle (three). Returns segments [x0, y0, x1, y1, current] in page units (short side 1).
+// (Ruby: this, the first growth, was the better filter; a later one that always joined two poles is gone.) THE CAMERA:
+// the figure grows as it always did, then o.zoom magnifies the finished figure about the page's middle, slid by
+// o.offset along the dial's line: zoom 1 and no slide are the figure exactly as first made.
 function genLichtenberg(aspX, aspY, o){
-  // grown at zoom 1 (the page and a margin), on a lattice finer as it will be magnified; then ZOOMED about its middle
-  const zoom = Math.max(0.5, o.zoom || 1), G = Math.round(240*Math.min(1.8, Math.sqrt(Math.max(1, zoom)))), h = 1/G;
-  const viewW = aspX, viewH = aspY, mg = 0.12, gx = Math.round((viewW + mg*2)/h), gy = Math.round((viewH + mg*2)/h);
-  const poles = Math.max(1, Math.min(2, Math.round(o.poles))), eta = o.eta, target = o.count;
-  const ax = o.dx, ay = o.dy, cxP = viewW/2, cyP = viewH/2;
-  const toL = (x, y) => [Math.round((x + mg)/h), Math.round((y + mg)/h)];
-  const half = Math.min(viewW, viewH)*0.42, P = [];
-  if(poles === 1) P.push(toL(cxP - ax*half*0.25, cyP - ay*half*0.25));
-  else { P.push(toL(cxP - ax*half, cyP - ay*half)); P.push(toL(cxP + ax*half, cyP + ay*half)); }
-  for(const p of P){ p[0] = Math.min(gx - 2, Math.max(1, p[0])); p[1] = Math.min(gy - 2, Math.max(1, p[1])); }
+  const G = 240, h = 1/G, gx = Math.round(G*aspX), gy = Math.round(G*aspY);
+  const poles = Math.max(1, Math.min(3, o.poles)), eta = o.eta, target = o.count;
+  // the poles: toward the dial and round from it
+  const cx = aspX/2, cy = aspY/2, rad = Math.min(aspX, aspY)*0.46, P = [];
+  for(let k = 0; k < poles; k++){ const a = Math.atan2(o.dy, o.dx) + k*Math.PI*2/poles;
+    const R = poles === 1 ? rad*0.15 : rad;                 // one pole: a strike near the middle, toward the dial
+    P.push([Math.round((cx + Math.cos(a)*R)/h), Math.round((cy + Math.sin(a)*R)/h)]); }
   // charges (lattice points with a jitter, so the channel isn't drawn on graph paper), per tree
-  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], CS = [], occ = new Int32Array(gx*gy).fill(-1);
+  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], occ = new Uint8Array(gx*gy);
   const cand = new Map();   // lattice index → { s: [sum per tree], t: tree, p: parent }
   const R1 = 0.5;
-  const addCharge = (ix, iy, t, p, s0) => {
+  const addCharge = (ix, iy, t, p) => {
     const id = X.length; X.push(ix); Y.push(iy); JX.push((Math.random() - 0.5)*0.7); JY.push((Math.random() - 0.5)*0.7); par.push(p); tree.push(t);
-    CS.push(s0 || new Float64Array(poles));
-    occ[iy*gx + ix] = id; cand.delete(iy*gx + ix);
-    // every candidate, and every charge, feels the new charge (Kim et al.: a point charge's potential, 1 − R1/r, summed)
+    occ[iy*gx + ix] = 1; cand.delete(iy*gx + ix);
+    // every candidate feels the new charge (Kim et al.: the potential of a point charge, 1 − R1/r, summed)
     for(const c of cand.values()){ const dx = c.x - ix, dy = c.y - iy, r = Math.sqrt(dx*dx + dy*dy); c.s[t] += 1 - R1/Math.max(R1, r); }
-    for(let q = 0; q < id; q++){ const dx = X[q] - ix, dy = Y[q] - iy, r = Math.sqrt(dx*dx + dy*dy); CS[q][t] += 1 - R1/Math.max(R1, r); }
-    // its free neighbours become candidates, their potential the charge's own a cell away (its own field there: 1 − R1/1)
+    // its free neighbours become candidates (their potential from every charge so far)
     for(let j = -1; j <= 1; j++) for(let i = -1; i <= 1; i++){ if(!i && !j) continue; const x = ix + i, y = iy + j;
-      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x] >= 0) continue; const k = y*gx + x; if(cand.has(k)) continue;
-      const s = Float64Array.from(CS[id]); s[t] += 1 - R1/Math.hypot(i, j);
+      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x]) continue; const k = y*gx + x; if(cand.has(k)) continue;
+      const s = new Float64Array(poles); for(let q = 0; q < X.length; q++){ const dx = x - X[q], dy = y - Y[q], r = Math.sqrt(dx*dx + dy*dy); s[tree[q]] += 1 - R1/Math.max(R1, r); }
       cand.set(k, { x, y, s, t, p: id }); }
     return id;
   };
   const count = new Array(poles).fill(0);
-  P.forEach((p, t) => { addCharge(p[0], p[1], t, -1); count[t]++; });
+  P.forEach((p, t) => { addCharge(Math.min(gx - 2, Math.max(1, p[0])), Math.min(gy - 2, Math.max(1, p[1])), t, -1); count[t]++; });
   // grain: growth along it is easier (wood burns along its fibres)
-  const ga = o.grain;
-  let turn = 0, joined = null;
-  const cap = target*4;
-  for(let step = poles; step < cap; step++){
-    if(step >= target && (poles === 1 || joined)) break;
+  const ga = o.grain, gcx = 1, gcy = 0;
+  let turn = 0;
+  for(let step = poles; step < target; step++){
     const t = turn; turn = (turn + 1) % poles;
-    // until they meet, the other pole pulls harder the longer it takes
-    const pull = poles > 1 && !joined ? Math.min(0.95, 0.62 + 0.33*Math.max(0, step - target*0.6)/target) : 0;
+    // the candidates of this tree: its own potential (high at the tips, far from the channel already burnt) and,
+    // with more than one pole, the pull of the nearest other pole (the opposite charge) — each normalised, then
+    // blended, then raised to the power η
     const list = []; let lo = Infinity, hi = -Infinity, alo = Infinity, ahi = -Infinity;
     for(const c of cand.values()){ if(c.t !== t) continue;
       const phi = c.s[t]/Math.max(1, count[t]); let att = 0;
-      if(pull > 0){ const q = 1 - t; att = -Math.hypot(c.x - P[q][0], c.y - P[q][1]); }
+      if(poles > 1){ let dm = Infinity; for(let q = 0; q < poles; q++) if(q !== t){ const d2 = Math.hypot(c.x - P[q][0], c.y - P[q][1]); if(d2 < dm) dm = d2; } att = -dm; }
       list.push([c, phi, att]); if(phi < lo) lo = phi; if(phi > hi) hi = phi; if(att < alo) alo = att; if(att > ahi) ahi = att; }
-    if(!list.length) continue;
-    let tot = 0; const w = new Float64Array(list.length);
+    if(!list.length) break;
+    let tot = 0; const w = new Float64Array(list.length), pull = poles > 1 ? 0.62 : 0;
     for(let i = 0; i < list.length; i++){ const c = list[i][0], pn = (1 - pull)*(list[i][1] - lo)/Math.max(1e-9, hi - lo) + pull*(list[i][2] - alo)/Math.max(1e-9, ahi - alo);
-      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs(dx/m); }
-      w[i] = Math.pow(pn, eta + (pull > 0.8 ? 2 : 0))*g; tot += w[i]; }
+      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs((dx*gcx + dy*gcy)/m); }
+      w[i] = Math.pow(pn, eta)*g; tot += w[i]; }
     let r = Math.random()*tot, pick = list.length - 1; for(let i = 0; i < list.length; i++){ r -= w[i]; if(r <= 0){ pick = i; break; } }
-    const c = list[pick][0], id = addCharge(c.x, c.y, t, c.p, c.s); count[t]++;
-    // THE MEETING: a new step beside the other tree joins the two (the arc closes)
-    if(poles > 1 && !joined){
-      for(let j = -1; j <= 1 && !joined; j++) for(let i = -1; i <= 1 && !joined; i++){ const k = (c.y + j)*gx + (c.x + i), q = k >= 0 && k < occ.length ? occ[k] : -1;
-        if(q >= 0 && tree[q] !== t) joined = [id, q]; }
-    }
+    const c = list[pick][0]; addCharge(c.x, c.y, t, c.p); count[t]++;
   }
-  // the current through each step: everything that grew beyond it; the channel between the poles carries it all
+  // the current through each step: everything that grew beyond it
   const n = X.length, desc = new Float64Array(n).fill(1);
   for(let i = n - 1; i >= 0; i--) if(par[i] >= 0) desc[par[i]] += desc[i];
-  if(joined){ const main = n*0.5; for(const e of joined){ for(let k = e; k >= 0; k = par[k]) desc[k] = Math.max(desc[k], main); } }
-  // into the page: zoomed about the figure's middle, then slid along the dial's line
-  const sx = viewW/2 + ax*o.offset*viewW*0.45, sy = viewH/2 + ay*o.offset*viewH*0.45;
-  const pageX = (ix, jx) => sx + ((ix + jx)*h - mg - cxP)*zoom, pageY = (iy, jy) => sy + ((iy + jy)*h - mg - cyP)*zoom;
+  const zoom = o.zoom || 1, off = o.offset || 0, sx = cx + o.dx*off*aspX*0.45, sy = cy + o.dy*off*aspY*0.45;
+  const camX = v => zoom === 1 && !off ? v : sx + (v - cx)*zoom, camY = v => zoom === 1 && !off ? v : sy + (v - cy)*zoom;
   const segs = [];
   for(let i = 0; i < n; i++){ const p = par[i]; if(p < 0) continue;
-    segs.push([pageX(X[p], JX[p]), pageY(Y[p], JY[p]), pageX(X[i], JX[i]), pageY(Y[i], JY[i]), desc[i]]); }
-  if(joined){ const [a, b] = joined; segs.push([pageX(X[a], JX[a]), pageY(Y[a], JY[a]), pageX(X[b], JX[b]), pageY(Y[b], JY[b]), n*0.5]); }
-  return { segs, n, scale: 1/zoom };
+    segs.push([camX((X[p] + JX[p])*h), camY((Y[p] + JY[p])*h), camX((X[i] + JX[i])*h), camY((Y[i] + JY[i])*h), desc[i]]); }
+  return { segs, n };
 }
 
 // ---------------- WOOD ----------------
@@ -12322,16 +12347,17 @@ const GEN_STEPS = {
       return [pc, hc]; },
     run(E, n){ const [pc, hc] = this.paint(E, n); return [E.readCanvas(pc), E.asField(E.readCanvas(hc))]; } },
   discharge: { cat: 'Marks', label: 'Discharge', ins: ['strike from'], outs: ['channels'], io: { ins: ['value'], outs: ['field'] },
-    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 2), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
+    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
       GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100;
-      const o = { count: Math.round((700 + 8000*num(n, 'reach', 50)/100)*Math.min(2.6, Math.max(1, zoom)**0.85)), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
+      const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
         grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));
       const [c, x] = kitCanvas(ww, wh); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.strokeStyle = '#fff'; x.lineCap = 'round';
       const wk = num(n, 'width', 100)/100;
       // thick where the most current ran; the twigs fade as well as thin
-      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9), E.px(1.6)*wk*Math.pow(cur, 0.34)*Math.pow(zoom, 0.25));
+      // (magnified with the figure: the camera brings the channels closer, wider as well as longer)
+      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9)*zoom, E.px(1.6)*wk*Math.pow(cur, 0.34)*zoom);
         x.globalAlpha = Math.min(1, 0.35 + Math.pow(cur, 0.5)*0.22); x.lineWidth = w;
         x.beginPath(); x.moveTo(x0*unit, y0*unit); x.lineTo(x1*unit, y1*unit); x.stroke(); }
       return [E.asField(E.readCanvas(c))]; } },
@@ -14797,15 +14823,15 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
       [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
-  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Zoom brings it close; Slide moves it along the dial\'s line. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
+  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Zoom brings the finished figure closer, as a camera would; Slide frames it along the dial\'s line. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
       ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                     // 1
       ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 140],                // 2
-      ['knob', { slot: '3', name: 'Poles', def: 100 }, 40, 240],                   // 3  (2 of 1–2)
+      ['knob', { slot: '3', name: 'Poles', def: 50 }, 40, 240],                    // 3  (2 of 1–3)
       ['knob', { slot: '4', name: 'Material', def: 0 }, 40, 340],                  // 4
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Wood Hue' }, 40, 520], ['hue', { slot: '2', name: 'Grain Hue' }, 40, 600],   // 6, 7
       ['wood', { rings: 40, figure: 50 }, 300, 520],                               // 8
-      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,2', grain: 30, width: 100, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100' }, 300, 120],   // 9
+      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,3', grain: 30, width: 100, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100' }, 300, 120],   // 9
       ['burn', { material: 0, '~material': '0,100', scorch: 50, depth: 55 }, 580, 300],   // 10
       ['material', { relief: 35, gloss: 30, shine: 25, shadow: 55, occlusion: 40, ambient: 40 }, 840, 300],   // 11
       ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 1100, 320],   // 12
@@ -15824,7 +15850,7 @@ const TEXTURE_PARAMS = {
   lichtenberg:   [{key:'zoom',  label:'Reach',           min:0,  max:100, def:50,  unit:''},
                   // bushy (high) → one thin strike (low)
                   {key:'amt',   label:'Branching',       min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Poles',           min:1,  max:2,   def:2,   unit:'', ticks:[1,2], names:['One Strike','Two Poles']},
+                  {key:'form',  label:'Poles',           min:1,  max:3,   def:2,   unit:'', ticks:[1,2,3], names:['One Strike','Two Poles','Three Poles']},
                   {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Charred Wood','Embers','Acrylic']},
                   // close in, so the branches run off the page's edges
                   {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},
@@ -18355,7 +18381,7 @@ const FORGE_BAR = {
   // the Surface card's 🜉 Open in the Athanor (ROADMAP H1: Reveal Spell Graph)
   revealNone: 'This surface is not a graph yet, so it can’t be opened in the Athanor.',
   revealAskTitle: 'Open {name} in the Athanor?',
-  revealAskBody: 'Its graph takes the place of the one in the Athanor now. Revert, in the Athanor’s ⋯ menu, brings that one back.',
+  revealAskBody: 'The graph on the Athanor’s bench isn’t kept anywhere, and this one takes its place. Revert, in the Athanor’s ⋯ menu, brings it back until you close the Athanor; Keep it first to have it later.',
   revealAskYes: 'Open (Reveal it)',
   open: 'Open',
   openTitle: 'Open a graph',
@@ -18375,7 +18401,7 @@ const FORGE_BAR = {
   onPage: '✓ On the Page',
   onPageHint: 'The page’s surface is this graph: what you change here shows there',
   toPage: '⇱ Show on Page',
-  toPageHint: 'Make this graph the page’s surface (From the Athanor)',
+  toPageHint: 'Make this graph the page’s surface (From the Athanor): from then on, each change here shows on the page',
   toPageItem: 'Show it on the page',
   shelf: 'Your shelf…',
   shelfHint: 'open, replace, copy, share or remove kept surfaces; carry them as a file',
@@ -29352,6 +29378,40 @@ function oilPaint(src, w, h, o){
       const [ex, ey] = pts[pts.length - 1], g2 = Math.min(255, body + 38)|0; hx.fillStyle = `rgb(${g2},${g2},${g2})`; hx.beginPath(); hx.arc(ex, ey, r*0.55, 0, 6.283); hx.fill();
     }
   }
+  // DETAIL RESCUED (Ruby: small things, distant trees, were lost): Hertzmann's rule for a finer brush — compare the
+  // painting so far with the picture, at a finer grid, and lay small short strokes only where they still differ.
+  // It comes after the passes above, so they draw exactly as they did; only where detail was lost is touched.
+  if(o.detail > 0){
+    const dw = Math.max(64, Math.min(1024, Math.round(w/Math.max(1, unit/900)))), dh = Math.max(64, Math.round(dw*h/w)), sc = w/dw;
+    const [, fx] = kitCanvas(dw, dh), [, gx2] = kitCanvas(dw, dh); fx.drawImage(src, 0, 0, dw, dh); gx2.drawImage(pc, 0, 0, dw, dh);
+    const F = fx.getImageData(0, 0, dw, dh).data, G = gx2.getImageData(0, 0, dw, dh).data;
+    const fcol = (x, y) => { const q = (Math.min(dh - 1, Math.max(0, y|0))*dw + Math.min(dw - 1, Math.max(0, x|0)))*4; return [F[q], F[q+1], F[q+2]]; };
+    const r = Math.max(cpx(1.2), base*0.14), step = Math.max(1, r*1.1/sc), T = 46 - o.detail*26;     // the brush, its spacing on the fine grid, how different is "lost"
+    const cells = []; for(let y = 0; y < dh; y += step) for(let x = 0; x < dw; x += step) cells.push([x, y]);
+    for(let i = cells.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
+    let budget = 14000;
+    for(const [cx, cy] of cells){
+      // the cell's error: how far the painting is from the picture, at its worst point
+      let worst = 0, wx = cx, wy = cy;
+      for(let j = 0; j < step; j++) for(let k = 0; k < step; k++){ const x = Math.min(dw - 1, cx + k|0), y = Math.min(dh - 1, cy + j|0), q = (y*dw + x)*4;
+        const e = Math.abs(F[q] - G[q]) + Math.abs(F[q+1] - G[q+1]) + Math.abs(F[q+2] - G[q+2]); if(e > worst){ worst = e; wx = x; wy = y; } }
+      if(worst/3 < T || budget-- <= 0) continue;
+      // which way: along the small thing's own outline, from the fine picture (a trunk's stroke runs up it), else the forms'
+      const lum = (x, y) => { const q = (Math.min(dh - 1, Math.max(0, y))*dw + Math.min(dw - 1, Math.max(0, x)))*4; return 0.299*F[q] + 0.587*F[q+1] + 0.114*F[q+2]; };
+      let gx = 0, gy = 0; for(let j = -1; j <= 1; j++){ gx += lum(wx + 1, wy + j) - lum(wx - 1, wy + j); gy += lum(wx + j, wy + 1) - lum(wx + j, wy - 1); }
+      const gm = Math.hypot(gx, gy), [fdx, fdy] = dirAt((wx + 0.5)*sc/w, (wy + 0.5)*sc/h), dx0 = gm > 12 ? -gy/gm : fdx, dy0 = gm > 12 ? gx/gm : fdy;
+      const x0 = (wx + 0.5)*sc, y0 = (wy + 0.5)*sc, c = fcol(wx, wy), len = r*(1.4 + R()*2)*o.length, pts = [[x0, y0]];
+      // a short stroke, stopped where the picture's colour changes, so the small thing keeps its shape
+      for(const sgn of [1, -1]){ let x = x0, y = y0;
+        for(let s = 0; s < 2; s++){ const nx2 = x + dx0*sgn*len/4, ny2 = y + dy0*sgn*len/4, cn = fcol(nx2/sc, ny2/sc);
+          if(Math.abs(cn[0] - c[0]) + Math.abs(cn[1] - c[1]) + Math.abs(cn[2] - c[2]) > 60) break;
+          x = nx2; y = ny2; sgn > 0 ? pts.push([x, y]) : pts.unshift([x, y]); } }
+      if(pts.length < 2) pts.push([x0 + dx0*r*0.25, y0 + dy0*r*0.25]);
+      const j = 1 + (R() - 0.5)*0.1*o.vary, line = (x, wdt, style) => { x.strokeStyle = style; x.lineWidth = wdt; x.beginPath(); pts.forEach(([a, b], q) => q ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+      line(px, r*1.5, `rgba(${Math.round(c[0]*j)},${Math.round(c[1]*j)},${Math.round(c[2]*j)},${Math.min(0.95, 1.4*o.amount)})`);
+      const body = 120 + R()*35; line(hx, r*1.5, `rgb(${body|0},${body|0},${body|0})`);
+    }
+  }
   return [pc, hc];
 }
 const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, 'length', 100)/100, detail: E.num(n, 'detail', 50)/100, vary: E.num(n, 'vary', 50)/100, amount: E.num(n, 'amount', 100)/100 });
@@ -29626,81 +29686,67 @@ const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0
 const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
 
 // ---------------- DISCHARGE ----------------
-// The figure, grown in its own frame on a lattice G cells along the page's short side (finer as it is zoomed, so a
-// close view keeps its twigs). One pole: a strike branching out from where it entered. Two poles (as in every real
-// figure between two electrodes): each grows toward the other's pull until they MEET — always, so there is a path
-// between them, as lightning has — and the channel between them carries all the current. o.zoom, o.ax/ay (the axis,
-// from the dial), o.offset (the figure slid along it). Returns segments [x0, y0, x1, y1, current] in page units.
+// The figure on a lattice G cells along the page's short side. Poles sit at the page's rim toward the dial (one),
+// across from each other (two), or a triangle (three). Returns segments [x0, y0, x1, y1, current] in page units (short side 1).
+// (Ruby: this, the first growth, was the better filter; a later one that always joined two poles is gone.) THE CAMERA:
+// the figure grows as it always did, then o.zoom magnifies the finished figure about the page's middle, slid by
+// o.offset along the dial's line: zoom 1 and no slide are the figure exactly as first made.
 function genLichtenberg(aspX, aspY, o){
-  // grown at zoom 1 (the page and a margin), on a lattice finer as it will be magnified; then ZOOMED about its middle
-  const zoom = Math.max(0.5, o.zoom || 1), G = Math.round(240*Math.min(1.8, Math.sqrt(Math.max(1, zoom)))), h = 1/G;
-  const viewW = aspX, viewH = aspY, mg = 0.12, gx = Math.round((viewW + mg*2)/h), gy = Math.round((viewH + mg*2)/h);
-  const poles = Math.max(1, Math.min(2, Math.round(o.poles))), eta = o.eta, target = o.count;
-  const ax = o.dx, ay = o.dy, cxP = viewW/2, cyP = viewH/2;
-  const toL = (x, y) => [Math.round((x + mg)/h), Math.round((y + mg)/h)];
-  const half = Math.min(viewW, viewH)*0.42, P = [];
-  if(poles === 1) P.push(toL(cxP - ax*half*0.25, cyP - ay*half*0.25));
-  else { P.push(toL(cxP - ax*half, cyP - ay*half)); P.push(toL(cxP + ax*half, cyP + ay*half)); }
-  for(const p of P){ p[0] = Math.min(gx - 2, Math.max(1, p[0])); p[1] = Math.min(gy - 2, Math.max(1, p[1])); }
+  const G = 240, h = 1/G, gx = Math.round(G*aspX), gy = Math.round(G*aspY);
+  const poles = Math.max(1, Math.min(3, o.poles)), eta = o.eta, target = o.count;
+  // the poles: toward the dial and round from it
+  const cx = aspX/2, cy = aspY/2, rad = Math.min(aspX, aspY)*0.46, P = [];
+  for(let k = 0; k < poles; k++){ const a = Math.atan2(o.dy, o.dx) + k*Math.PI*2/poles;
+    const R = poles === 1 ? rad*0.15 : rad;                 // one pole: a strike near the middle, toward the dial
+    P.push([Math.round((cx + Math.cos(a)*R)/h), Math.round((cy + Math.sin(a)*R)/h)]); }
   // charges (lattice points with a jitter, so the channel isn't drawn on graph paper), per tree
-  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], CS = [], occ = new Int32Array(gx*gy).fill(-1);
+  const X = [], Y = [], JX = [], JY = [], par = [], tree = [], occ = new Uint8Array(gx*gy);
   const cand = new Map();   // lattice index → { s: [sum per tree], t: tree, p: parent }
   const R1 = 0.5;
-  const addCharge = (ix, iy, t, p, s0) => {
+  const addCharge = (ix, iy, t, p) => {
     const id = X.length; X.push(ix); Y.push(iy); JX.push((Math.random() - 0.5)*0.7); JY.push((Math.random() - 0.5)*0.7); par.push(p); tree.push(t);
-    CS.push(s0 || new Float64Array(poles));
-    occ[iy*gx + ix] = id; cand.delete(iy*gx + ix);
-    // every candidate, and every charge, feels the new charge (Kim et al.: a point charge's potential, 1 − R1/r, summed)
+    occ[iy*gx + ix] = 1; cand.delete(iy*gx + ix);
+    // every candidate feels the new charge (Kim et al.: the potential of a point charge, 1 − R1/r, summed)
     for(const c of cand.values()){ const dx = c.x - ix, dy = c.y - iy, r = Math.sqrt(dx*dx + dy*dy); c.s[t] += 1 - R1/Math.max(R1, r); }
-    for(let q = 0; q < id; q++){ const dx = X[q] - ix, dy = Y[q] - iy, r = Math.sqrt(dx*dx + dy*dy); CS[q][t] += 1 - R1/Math.max(R1, r); }
-    // its free neighbours become candidates, their potential the charge's own a cell away (its own field there: 1 − R1/1)
+    // its free neighbours become candidates (their potential from every charge so far)
     for(let j = -1; j <= 1; j++) for(let i = -1; i <= 1; i++){ if(!i && !j) continue; const x = ix + i, y = iy + j;
-      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x] >= 0) continue; const k = y*gx + x; if(cand.has(k)) continue;
-      const s = Float64Array.from(CS[id]); s[t] += 1 - R1/Math.hypot(i, j);
+      if(x < 1 || y < 1 || x >= gx - 1 || y >= gy - 1 || occ[y*gx + x]) continue; const k = y*gx + x; if(cand.has(k)) continue;
+      const s = new Float64Array(poles); for(let q = 0; q < X.length; q++){ const dx = x - X[q], dy = y - Y[q], r = Math.sqrt(dx*dx + dy*dy); s[tree[q]] += 1 - R1/Math.max(R1, r); }
       cand.set(k, { x, y, s, t, p: id }); }
     return id;
   };
   const count = new Array(poles).fill(0);
-  P.forEach((p, t) => { addCharge(p[0], p[1], t, -1); count[t]++; });
+  P.forEach((p, t) => { addCharge(Math.min(gx - 2, Math.max(1, p[0])), Math.min(gy - 2, Math.max(1, p[1])), t, -1); count[t]++; });
   // grain: growth along it is easier (wood burns along its fibres)
-  const ga = o.grain;
-  let turn = 0, joined = null;
-  const cap = target*4;
-  for(let step = poles; step < cap; step++){
-    if(step >= target && (poles === 1 || joined)) break;
+  const ga = o.grain, gcx = 1, gcy = 0;
+  let turn = 0;
+  for(let step = poles; step < target; step++){
     const t = turn; turn = (turn + 1) % poles;
-    // until they meet, the other pole pulls harder the longer it takes
-    const pull = poles > 1 && !joined ? Math.min(0.95, 0.62 + 0.33*Math.max(0, step - target*0.6)/target) : 0;
+    // the candidates of this tree: its own potential (high at the tips, far from the channel already burnt) and,
+    // with more than one pole, the pull of the nearest other pole (the opposite charge) — each normalised, then
+    // blended, then raised to the power η
     const list = []; let lo = Infinity, hi = -Infinity, alo = Infinity, ahi = -Infinity;
     for(const c of cand.values()){ if(c.t !== t) continue;
       const phi = c.s[t]/Math.max(1, count[t]); let att = 0;
-      if(pull > 0){ const q = 1 - t; att = -Math.hypot(c.x - P[q][0], c.y - P[q][1]); }
+      if(poles > 1){ let dm = Infinity; for(let q = 0; q < poles; q++) if(q !== t){ const d2 = Math.hypot(c.x - P[q][0], c.y - P[q][1]); if(d2 < dm) dm = d2; } att = -dm; }
       list.push([c, phi, att]); if(phi < lo) lo = phi; if(phi > hi) hi = phi; if(att < alo) alo = att; if(att > ahi) ahi = att; }
-    if(!list.length) continue;
-    let tot = 0; const w = new Float64Array(list.length);
+    if(!list.length) break;
+    let tot = 0; const w = new Float64Array(list.length), pull = poles > 1 ? 0.62 : 0;
     for(let i = 0; i < list.length; i++){ const c = list[i][0], pn = (1 - pull)*(list[i][1] - lo)/Math.max(1e-9, hi - lo) + pull*(list[i][2] - alo)/Math.max(1e-9, ahi - alo);
-      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs(dx/m); }
-      w[i] = Math.pow(pn, eta + (pull > 0.8 ? 2 : 0))*g; tot += w[i]; }
+      let g = 1; if(ga > 0){ const dx = c.x - X[c.p], dy = c.y - Y[c.p], m = Math.hypot(dx, dy) || 1; g = 1 + ga*2.5*Math.abs((dx*gcx + dy*gcy)/m); }
+      w[i] = Math.pow(pn, eta)*g; tot += w[i]; }
     let r = Math.random()*tot, pick = list.length - 1; for(let i = 0; i < list.length; i++){ r -= w[i]; if(r <= 0){ pick = i; break; } }
-    const c = list[pick][0], id = addCharge(c.x, c.y, t, c.p, c.s); count[t]++;
-    // THE MEETING: a new step beside the other tree joins the two (the arc closes)
-    if(poles > 1 && !joined){
-      for(let j = -1; j <= 1 && !joined; j++) for(let i = -1; i <= 1 && !joined; i++){ const k = (c.y + j)*gx + (c.x + i), q = k >= 0 && k < occ.length ? occ[k] : -1;
-        if(q >= 0 && tree[q] !== t) joined = [id, q]; }
-    }
+    const c = list[pick][0]; addCharge(c.x, c.y, t, c.p); count[t]++;
   }
-  // the current through each step: everything that grew beyond it; the channel between the poles carries it all
+  // the current through each step: everything that grew beyond it
   const n = X.length, desc = new Float64Array(n).fill(1);
   for(let i = n - 1; i >= 0; i--) if(par[i] >= 0) desc[par[i]] += desc[i];
-  if(joined){ const main = n*0.5; for(const e of joined){ for(let k = e; k >= 0; k = par[k]) desc[k] = Math.max(desc[k], main); } }
-  // into the page: zoomed about the figure's middle, then slid along the dial's line
-  const sx = viewW/2 + ax*o.offset*viewW*0.45, sy = viewH/2 + ay*o.offset*viewH*0.45;
-  const pageX = (ix, jx) => sx + ((ix + jx)*h - mg - cxP)*zoom, pageY = (iy, jy) => sy + ((iy + jy)*h - mg - cyP)*zoom;
+  const zoom = o.zoom || 1, off = o.offset || 0, sx = cx + o.dx*off*aspX*0.45, sy = cy + o.dy*off*aspY*0.45;
+  const camX = v => zoom === 1 && !off ? v : sx + (v - cx)*zoom, camY = v => zoom === 1 && !off ? v : sy + (v - cy)*zoom;
   const segs = [];
   for(let i = 0; i < n; i++){ const p = par[i]; if(p < 0) continue;
-    segs.push([pageX(X[p], JX[p]), pageY(Y[p], JY[p]), pageX(X[i], JX[i]), pageY(Y[i], JY[i]), desc[i]]); }
-  if(joined){ const [a, b] = joined; segs.push([pageX(X[a], JX[a]), pageY(Y[a], JY[a]), pageX(X[b], JX[b]), pageY(Y[b], JY[b]), n*0.5]); }
-  return { segs, n, scale: 1/zoom };
+    segs.push([camX((X[p] + JX[p])*h), camY((Y[p] + JY[p])*h), camX((X[i] + JX[i])*h), camY((Y[i] + JY[i])*h), desc[i]]); }
+  return { segs, n };
 }
 
 // ---------------- WOOD ----------------
@@ -30183,16 +30229,17 @@ const GEN_STEPS = {
       return [pc, hc]; },
     run(E, n){ const [pc, hc] = this.paint(E, n); return [E.readCanvas(pc), E.asField(E.readCanvas(hc))]; } },
   discharge: { cat: 'Marks', label: 'Discharge', ins: ['strike from'], outs: ['channels'], io: { ins: ['value'], outs: ['field'] },
-    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 2), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
+    params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
       GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100;
-      const o = { count: Math.round((700 + 8000*num(n, 'reach', 50)/100)*Math.min(2.6, Math.max(1, zoom)**0.85)), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
+      const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
         grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));
       const [c, x] = kitCanvas(ww, wh); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.strokeStyle = '#fff'; x.lineCap = 'round';
       const wk = num(n, 'width', 100)/100;
       // thick where the most current ran; the twigs fade as well as thin
-      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9), E.px(1.6)*wk*Math.pow(cur, 0.34)*Math.pow(zoom, 0.25));
+      // (magnified with the figure: the camera brings the channels closer, wider as well as longer)
+      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9)*zoom, E.px(1.6)*wk*Math.pow(cur, 0.34)*zoom);
         x.globalAlpha = Math.min(1, 0.35 + Math.pow(cur, 0.5)*0.22); x.lineWidth = w;
         x.beginPath(); x.moveTo(x0*unit, y0*unit); x.lineTo(x1*unit, y1*unit); x.stroke(); }
       return [E.asField(E.readCanvas(c))]; } },
@@ -32865,15 +32912,15 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
       [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
-  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Zoom brings it close; Slide moves it along the dial\'s line. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
+  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Zoom brings the finished figure closer, as a camera would; Slide frames it along the dial\'s line. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
       ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                     // 1
       ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 140],                // 2
-      ['knob', { slot: '3', name: 'Poles', def: 100 }, 40, 240],                   // 3  (2 of 1–2)
+      ['knob', { slot: '3', name: 'Poles', def: 50 }, 40, 240],                    // 3  (2 of 1–3)
       ['knob', { slot: '4', name: 'Material', def: 0 }, 40, 340],                  // 4
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Wood Hue' }, 40, 520], ['hue', { slot: '2', name: 'Grain Hue' }, 40, 600],   // 6, 7
       ['wood', { rings: 40, figure: 50 }, 300, 520],                               // 8
-      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,2', grain: 30, width: 100, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100' }, 300, 120],   // 9
+      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,3', grain: 30, width: 100, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100' }, 300, 120],   // 9
       ['burn', { material: 0, '~material': '0,100', scorch: 50, depth: 55 }, 580, 300],   // 10
       ['material', { relief: 35, gloss: 30, shine: 25, shadow: 55, occlusion: 40, ambient: 40 }, 840, 300],   // 11
       ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 1100, 320],   // 12
@@ -33892,7 +33939,7 @@ const TEXTURE_PARAMS = {
   lichtenberg:   [{key:'zoom',  label:'Reach',           min:0,  max:100, def:50,  unit:''},
                   // bushy (high) → one thin strike (low)
                   {key:'amt',   label:'Branching',       min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Poles',           min:1,  max:2,   def:2,   unit:'', ticks:[1,2], names:['One Strike','Two Poles']},
+                  {key:'form',  label:'Poles',           min:1,  max:3,   def:2,   unit:'', ticks:[1,2,3], names:['One Strike','Two Poles','Three Poles']},
                   {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Charred Wood','Embers','Acrylic']},
                   // close in, so the branches run off the page's edges
                   {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},
@@ -35231,11 +35278,11 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Helene';
+const RELEASE = 'Saturn–Polydeuces';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"T0JyuUt0","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"diqF4TTe","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"zuBCPU-R","lichtenberg":"SjNBBzSY","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","sigils":"oFaAKxnj","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"aVKpXREs","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
+const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"T0JyuUt0","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"diqF4TTe","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"xK7t7fvT","lichtenberg":"waq0_kgT","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","sigils":"oFaAKxnj","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"aVKpXREs","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
 const SWATCH_STAMP = '0DYbl39Q';
 
 
@@ -36060,7 +36107,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 9a4aee7";
+const STAMP = "2026-10-15 · 2562e4d";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -40255,7 +40302,7 @@ const WIKI_PARTS = {
     line: 'Repaints a picture in oil brushstrokes that follow its shapes, and gives the paint’s heights.',
     ins: { picture: 'The picture to repaint.' },
     outs: { painting: 'The painting.', heights: 'Paint thickness, for the Light Engine.' },
-    set: { amount: 'How much is repainted.', size: 'Brush size.', length: 'Stroke length.', detail: 'Smaller strokes where there is detail.', vary: 'Color variation between strokes.' },
+    set: { amount: 'How much is repainted.', size: 'Brush size.', length: 'Stroke length.', detail: 'Smaller strokes where there is detail; then a last pass with a fine brush wherever the painting still differs from the picture, so small things (a distant tree, a window) keep their shape.', vary: 'Color variation between strokes.' },
   },
   strokes: {
     line: 'A few fast, loaded swipes of paint with bristle marks and flung droplets.',
@@ -40523,7 +40570,7 @@ const WIKI_PARTS = {
     about: 'Grown by Laplacian growth: each step goes where the electric potential is strongest, so it forks and reaches like lightning.',
     ins: { 'strike from': 'Where it enters (wire the Light Dial).' },
     outs: { channels: 'The burned paths, thicker where more current ran.' },
-    set: { reach: 'How far it grows.', branching: 'Bushy or thin.', poles: 'One electrode, or two that meet.', grain: 'Follows the wood grain.', width: 'Channel width.', zoom: 'Zoom.', offset: 'Slides it along the dial’s line.', variant: 'Another figure.' },
+    set: { reach: 'How far it grows.', branching: 'Bushy or thin.', poles: 'One strike, or two or three electrodes round the rim, each growing toward the others.', grain: 'Follows the wood grain.', width: 'Channel width.', zoom: 'Brings the finished figure closer, as a camera would: the same figure, larger, its channels wider.', offset: 'Frames it: slides the view along the dial’s line.', variant: 'Another figure.' },
     see: ['part:burn', 'part:wood'],
   },
   growline: {
@@ -40631,7 +40678,7 @@ const WIKI_ARTICLES = [
 <li>Every part shows a <b>small preview</b> of what it makes, so you can see each step.</li>
 <li>Wires carry one of <b>five kinds of data</b>: gray maps, pictures, colors, numbers and curves. See [[kinds]].</li>
 <li>The app’s own textures are graphs (all but Deep Field). <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts. On the page, <b>🜉 Open in the Athanor</b> under the Surface opens the one you are using, at its sliders and hues.</li>
-<li>Nothing here can break your page: undo and <b>Revert</b> are always there. The page shows a graph only when it is the page’s surface: the bar says <b>✓ On the Page</b> when it is, and <b>⇱ Show on Page</b> puts it there.</li>
+<li>Nothing here can break your page: undo and <b>Revert</b> are always there. The Athanor is a workbench with a graph of its own, kept in this browser until you open another. The page shows it only when it is the page’s surface: the bar says <b>✓ On the Page</b> when it is (then every change shows on the page as you make it), and <b>⇱ Show on Page</b> puts it there. Choosing another surface for the page, even one you kept, leaves the bench as it was.</li>
 </ul>
 <p>The same way of working runs Blender’s shader nodes, Substance Designer, Houdini, Nuke and Filter Forge. What you learn here carries over.</p>
 <p>New to this? Start with [[first|your first surface]].</p>` },
@@ -40864,7 +40911,7 @@ const WIKI_ARTICLES = [
 <li><b>⋯</b> › <b>Copy the wiring</b> copies the graph on the grid as text, to paste anywhere or into another Athanor.</li>
 <li><b>⋯</b> › <b>Your shelf…</b> replaces a kept surface with the graph on the grid, copies or shares its <b>wiring</b>, takes it off the shelf, takes pasted wiring in, and saves or loads the whole shelf as a file.</li>
 <li>In the surface menu, hold (or right-click) a surface you made to share or copy its wiring.</li>
-<li>The graph is also saved inside your look, so spells, shared links and saved JSON carry it.</li>
+<li>A surface on the page is also saved inside your look, so spells, shared links and saved JSON carry its graph.</li>
 </ul>
 <p><b>Revert</b> (in ⋯) returns to the graph as it was when the Athanor opened.</p>` },
 
@@ -41091,9 +41138,9 @@ function wikiSearch(q){
  * at the bottom of Surface Variant.
  *
  * Built on Drawflow (jerosoler/Drawflow, MIT): vanilla JS, touch-friendly,
- * small — loaded only when the Athanor is first opened. Its graph (Drawflow's
- * own export JSON) is kept in the hidden #forgeGraph field, so it is saved,
- * loaded, shared and shown in the JSON like every other setting.
+ * small — loaded only when the Athanor is first opened. It works on its own
+ * graph, the bench (Drawflow's export JSON, kept in this browser); a surface
+ * on the page is the look's graph (#forgeGraph), saved and shared with it.
  *
  * No imports of app state: the page hands in what it needs (deps).
  */
@@ -41298,10 +41345,12 @@ async function forgeCopy(text){
 
 /**
  * Opens the Athanor over the page. deps: { $, textures: [ids], stitches: [ids],
- * onSave(json), preview(json, canvas), steps(json, paint), use(), ask(opts) →
+ * bench(), setBench(json), unkept(), onSave(json), preview(json, canvas), steps(json, paint), use(), ask(opts) →
  * Promise<bool>, prompt(opts) → Promise<string|null>, sound(name),
  * validate(json) → { ok, graph, problems }, warn(problems), lock (an icon) }.
- * The graph is read from and written back to deps.$('forgeGraph').
+ * THE BENCH (Ruby: choosing a kept surface for the page must not take away the work in progress): the
+ * Athanor works on a graph of its own, deps.bench() / deps.setBench(json). The page's graph is the look's
+ * (#forgeGraph); while the page shows the bench's graph, every change to the bench reaches the page too.
  *
  * HOW IT IS HANDLED (Ruby: precise pokes are not a thing on a phone):
  *  - a node moves only by its title bar, unless pinned (the lock in its bar);
@@ -41388,9 +41437,9 @@ async function openForge(deps){
     // ---- saving, the previews ----
     let thumbT = 0, stepsT = 0;
     const previews = () => {
-      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(($('forgeGraph') || {}).value, c); } catch(e){} }, 250);
+      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c); } catch(e){} }, 250);
       clearTimeout(stepsT);
-      if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(($('forgeGraph') || {}).value, paintSteps); } catch(e){} }, 450);
+      if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
     };
     const paintSteps = (sheet, ids, t, cols) => ids.forEach((id, i) => { const cv = area.querySelector(`#node-${id} .forge-node-preview`); if(!cv) return;
       const x = cv.getContext('2d'); x.imageSmoothingEnabled = true; x.clearRect(0, 0, cv.width, cv.height); x.drawImage(sheet, (i % cols)*t, Math.floor(i/cols)*t, t, t, 0, 0, cv.width, cv.height); });
@@ -41412,7 +41461,7 @@ async function openForge(deps){
         n.inputs = ordered(n.inputs, 'input_'); n.outputs = ordered(n.outputs, 'output_'); }
       return g; };
     F.faces = faces;
-    const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
+    const save = () => { const json = JSON.stringify(slim()); deps.setBench(json); if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
     F.save = save;
     // ---- UNDO AND REDO (Ruby): every change to the graph is a step back — a part added, moved,
     // removed, a wire, a setting, a whole graph opened. ↶ ↷ in the bar; Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or
@@ -41493,7 +41542,13 @@ async function openForge(deps){
     }
     // on a phone the parts are a drawer (＋ Parts), so the grid has the whole screen
     const partsBtn = $('forgePartsBtn');
-    const setParts = open => { if(!partsBtn) return; veil.classList.toggle('parts-open', open); partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+    // ON A PHONE ONE THING OPENS AT A TIME (Ruby): the parts drawer, the wiki and a menu each close the others;
+    // a desk has room for them side by side
+    const phoneNow = () => !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
+    const onlyThis = keep => { if(!phoneNow()) return; if(keep !== 'parts') setParts(false); if(keep !== 'doc' && F.showDoc && doc0 && !doc0.hidden) F.showDoc(false); if(keep !== 'menu' && F.closeMenu) F.closeMenu(); };
+    const doc0 = $('forgeDoc');
+    const setParts = open => { if(!partsBtn) return; if(open) onlyThis('parts'); veil.classList.toggle('parts-open', open); partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+    F.onlyThis = onlyThis;
     if(partsBtn) partsBtn.addEventListener('click', () => setParts(!veil.classList.contains('parts-open')));
     area.addEventListener('dragover', e => e.preventDefault());
     area.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer && e.dataTransfer.getData('text/forge'); if(!type) return;
@@ -41622,7 +41677,7 @@ async function openForge(deps){
       const first = menu.querySelector('.forge-menu-item:not([disabled])'); if(first && finePointer) first.focus();
     };
     const openMenu = (x, y, m) => {
-      if(!menu || !m) return; menuStack = [m]; menu.hidden = false; drawMenu();
+      if(!menu || !m) return; F.onlyThis('menu'); menuStack = [m]; menu.hidden = false; drawMenu();
       // beside the finger on a desk; a sheet from the bottom on a phone (CSS)
       const r = veil.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
       menu.style.left = Math.max(6, Math.min(r.width - w - 6, x - r.left + 4)) + 'px';
@@ -41916,7 +41971,7 @@ async function openForge(deps){
     // open a graph (a starter, a template, a kept surface) in place of this one — asking first if this one has changed
     // (asked: whoever calls has asked already — the Surface card's Open in the Athanor)
     const openGraph = async (g, label, teach, asked) => {
-      if(!asked && count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid is replaced. Undo or Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
+      if(!asked && count() && (F.dirty || (deps.unkept && deps.unkept())) && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid is replaced. Undo or Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
       stopWire(); load(g); sound('graphLoad'); setTimeout(fitView, 30); showNote(label, teach); return true;
     };
     F.openGraph = openGraph;
@@ -42086,7 +42141,7 @@ async function openForge(deps){
       doc.classList.remove('wk-show-nav');
       doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id || (id.startsWith('part:') && a.dataset.wiki === 'cat:' + ((FORGE_NODES[id.slice(5)] || {}).cat))));
       const b = doc.querySelector('.wk-back'); if(b) b.disabled = !wiki.back.length; };
-    const showDoc = (on, id) => { if(!doc) return; if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; goWiki(wiki.at, false); }
+    const showDoc = (on, id) => { if(!doc) return; if(on) F.onlyThis('doc'); if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; goWiki(wiki.at, false); }
       doc.hidden = !on; if(on && id) goWiki(id);
       { const b = $('forgeHelpBtn'); if(b) b.setAttribute('aria-expanded', on ? 'true' : 'false'); } };
     F.showDoc = showDoc; F.goWiki = id => showDoc(true, id);
@@ -42110,7 +42165,7 @@ async function openForge(deps){
   }
   // the graph saved with the look (checked first: a graph from anywhere can't break the page), or a first one
   const ed = F.editor;
-  let saved = null; const raw = ($('forgeGraph') || {}).value || '';
+  let saved = null; const raw = deps.bench() || '';
   if(raw){ const v = deps.validate ? deps.validate(raw) : { ok: true, graph: JSON.parse(raw), problems: [] };
     if(v.ok) saved = v.graph; if(v.problems && v.problems.length && deps.warn) deps.warn(v.problems); }
   if(saved && saved.drawflow) F.load(saved);
@@ -45191,13 +45246,33 @@ if(document.addEventListener) for(const ev of ['input', 'change']) document.addE
   const rec = keptByValue(t.value);
   const v = rec ? validateGraph(rec.graph) : { ok: false, problems: ['it is no longer on the shelf'] };
   if(!v.ok){ t.value = 'athanor'; hardNo('That kept surface can’t be used', v.problems.join('; ') + '.'); return; }
-  // one name: the page calls it what the shelf does
+  // one name: the page calls it what the shelf does. Only the PAGE takes it: the Athanor's bench keeps its work
   $('forgeGraph').value = JSON.stringify(forgeNameSurface(v.graph, rec.name)); t.value = 'athanor';
   applyAthanorGraph(true); paintForgeSummary();
+  if(openForge.paintPage) openForge.paintPage();
 }, true);
+// THE BENCH (Ruby): the Athanor's own graph, kept in this browser (an app preference, never a look). The page's
+// surface graph is the look's (#forgeGraph). They are one while the page shows the bench's graph: then each change
+// on the bench reaches the page. Choosing a kept surface, or loading a look, changes only the page. The first time,
+// the bench starts as the page's graph, so nothing in progress is lost.
+const BENCH_KEY = 'uv.forge.bench.v1';
+let benchJson = null;
+function bench(){
+  if(benchJson == null){ try { benchJson = localStorage.getItem(BENCH_KEY); } catch(e){} if(benchJson == null) benchJson = ($('forgeGraph') || {}).value || ''; }
+  return benchJson;
+}
+const benchOnPage = (json = bench()) => !!($('textureToggle') && $('textureToggle').checked && $('textureType') && $('textureType').value === 'athanor'
+  && json && ($('forgeGraph') || {}).value === json);
+function setBench(json){
+  const linked = benchOnPage();
+  benchJson = json; try { localStorage.setItem(BENCH_KEY, json); } catch(e){}
+  if(linked) $('forgeGraph').value = json;
+}
+/** Whether the bench holds work found nowhere else: not on the shelf, not on the page (replacing it asks first). */
+function benchUnkept(){ const j = bench(); return Object.keys(athanorNodes(j)).length > 2 && !benchOnPage(j) && !forgeShelf().some(r => r.graph === j); }
 setTimeout(paintShelfOptions, 0);
-const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
-  onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
+const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+  onSave: () => { if(!benchOnPage()) return; paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
   // a wiki figure: every part of its little graph, at canonical settings, each in its own slot so figures don't wait on each other
   figure: (json, key, paint) => { const ids = Object.keys(athanorNodes(json)).sort((a, b) => +a - +b); if(!ids.length) return;
@@ -45208,23 +45283,26 @@ const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); i
   validate: json => validateGraph(json),
   warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
   // whether the page's surface is this graph, and putting it there (the bar says which, and does it)
-  onPage: () => !!($('textureToggle') && $('textureToggle').checked && $('textureType') && $('textureType').value === 'athanor'),
+  onPage: () => benchOnPage(),
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
-    t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
+    $('forgeGraph').value = bench(); t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); applyAthanorGraph(true); paintForgeSummary(); scheduleRender(); commitSoon(); } });
 // THE ATHANOR opens from the top bar, on every device
 function openAthanorNow(){ return openForge(forgeDeps()); }
 // REVEAL (ROADMAP H1, Reveal Spell Graph): the page's surface opened in the Athanor as the graph it is made of,
 // its Knobs set to the sliders' own values, so the Athanor shows exactly what the page does
 async function revealSurface(){
   const type = ($('textureType') || {}).value || '';
-  if(type === 'athanor'){ openAthanorNow(); return; }
-  const chain = TEXTURE_CHAINS[type], g = chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6].map(i => ($('texP' + i) || {}).value));
+  // an Athanor surface: the page's own graph onto the bench (it is the bench's already while the page shows it)
+  if(type === 'athanor' && benchOnPage()){ openAthanorNow(); return; }
+  const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
+  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
-  // the Athanor's own graph, if it has work on it, is replaced only when asked (Revert brings it back)
-  if(Object.keys(athanorNodes(($('forgeGraph') || {}).value || '')).length > 2
-    && !await askSure({ title: FORGE_BAR.revealAskTitle.replace('{name}', chain.label), body: FORGE_BAR.revealAskBody, confirmLabel: FORGE_BAR.revealAskYes, danger: false })) return;
+  const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
+  // the bench's work, if it is kept nowhere else, is replaced only when asked (Revert brings it back)
+  if(benchUnkept() && !await askSure({ title: FORGE_BAR.revealAskTitle.replace('{name}', label), body: FORGE_BAR.revealAskBody, confirmLabel: FORGE_BAR.revealAskYes, danger: false })) return;
   await openAthanorNow();
-  if(openForge.openGraph) openForge.openGraph(g, chain.label, chain.teach, true);
+  if(openForge.openGraph && await openForge.openGraph(g, label, page ? null : chain.teach, true) && page){
+    $('forgeGraph').value = bench(); paintForgeSummary(); if(openForge.paintPage) openForge.paintPage(); }   // (the page and the bench are one again)
 }
 // PROTECT THE TEXT (ROADMAP G3): Text Clearing raised just far enough that every line of the poem stands off
 // what it sits on at READABLE.ratio, measured on the frame itself (canvasRenderer measureTextGround), each line
@@ -45921,7 +45999,11 @@ function holdSurface(value, tile){
   const name = kept ? keptByValue(value).name : (athanorName(graph) || 'My Surface');
   const rec = kept ? keptByValue(value) : { name, graph, savedAt: new Date().toISOString() };
   const share = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-  const open = () => { if(kept){ const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); } openAthanorNow(); };
+  // (opened on the Athanor's bench: the page keeps its surface; the bench's own work is replaced only when asked)
+  const open = async () => {
+    if(!kept){ if(($('textureType') || {}).value === 'athanor') revealSurface(); else openAthanorNow(); return; }
+    const v = validateGraph(rec.graph); if(!v.ok){ hardNo('That kept surface can’t be opened', v.problems.join('; ') + '.'); return; }
+    await openAthanorNow(); if(openForge.openGraph) openForge.openGraph(forgeNameSurface(v.graph, name), name); };
   openSheetMenu(tile, kept ? name : KEPT.current + ': ' + name, [
     ...(kept ? [{ glyph: '◈', label: KEPT.use, act: () => { const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); CHOOSERS.forEach(c => c && c.close && c.close()); } }] : []),
     { glyph: '🜉', label: KEPT.open, act: () => { CHOOSERS.forEach(c => c && c.close && c.close()); open(); } },

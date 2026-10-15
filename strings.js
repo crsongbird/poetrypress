@@ -474,7 +474,7 @@ export const FORGE_BAR = {
   // the Surface card's 🜉 Open in the Athanor (ROADMAP H1: Reveal Spell Graph)
   revealNone: 'This surface is not a graph yet, so it can’t be opened in the Athanor.',
   revealAskTitle: 'Open {name} in the Athanor?',
-  revealAskBody: 'Its graph takes the place of the one in the Athanor now. Revert, in the Athanor’s ⋯ menu, brings that one back.',
+  revealAskBody: 'The graph on the Athanor’s bench isn’t kept anywhere, and this one takes its place. Revert, in the Athanor’s ⋯ menu, brings it back until you close the Athanor; Keep it first to have it later.',
   revealAskYes: 'Open (Reveal it)',
   open: 'Open',
   openTitle: 'Open a graph',
@@ -494,7 +494,7 @@ export const FORGE_BAR = {
   onPage: '✓ On the Page',
   onPageHint: 'The page’s surface is this graph: what you change here shows there',
   toPage: '⇱ Show on Page',
-  toPageHint: 'Make this graph the page’s surface (From the Athanor)',
+  toPageHint: 'Make this graph the page’s surface (From the Athanor): from then on, each change here shows on the page',
   toPageItem: 'Show it on the page',
   shelf: 'Your shelf…',
   shelfHint: 'open, replace, copy, share or remove kept surfaces; carry them as a file',

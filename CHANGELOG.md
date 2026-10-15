@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Polydeuces (2026-10-15)
+
+- **Lichtenberg Figures grow as they first did:** one strike, or two or
+  three poles, each branching on its own (the version whose two poles always
+  joined is gone). Zoom and Slide are now a camera on the finished figure:
+  Zoom brings it closer, larger and with wider channels, and Slide frames
+  it along the dial's line. At 100% and no slide, it is the first figure
+  exactly.
+- **Oil Paint keeps small things:** a last pass with a fine brush repaints
+  whatever the big strokes lost, so distant trees and windows keep their
+  shape. Painted Landscape shows it most.
+- **The Athanor is a workbench of its own.** Choosing a kept surface (your
+  Halftone2, say) in the Surface menu puts it on the page and leaves the work
+  in the Athanor alone. While the page shows the Athanor's graph, every
+  change there shows on the page as before. 🜉 Open in the Athanor asks
+  before it replaces work that isn't kept anywhere.
+- On a phone, the Athanor opens one thing at a time: the parts drawer, the
+  wiki and a menu each close the others. The wiki's Close sits apart from
+  Contents and Back.
+- While you type the poem on a phone, the spell code's switch and the credit
+  step aside.
+- **Under the hood:**
+  - pruned the stylesheet: checked in every state, nothing in it goes unused;
+  - reviewed the tests: a slow suite no longer draws the texture corners the
+    fingerprints already draw, so a full run is about half a minute shorter.
+
 ## Saturn–Helene (2026-10-15)
 
 - **Three new buttons above the presets**, for more of the look you have

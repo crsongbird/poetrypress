@@ -150,6 +150,40 @@ function oilPaint(src, w, h, o){
       const [ex, ey] = pts[pts.length - 1], g2 = Math.min(255, body + 38)|0; hx.fillStyle = `rgb(${g2},${g2},${g2})`; hx.beginPath(); hx.arc(ex, ey, r*0.55, 0, 6.283); hx.fill();
     }
   }
+  // DETAIL RESCUED (Ruby: small things, distant trees, were lost): Hertzmann's rule for a finer brush — compare the
+  // painting so far with the picture, at a finer grid, and lay small short strokes only where they still differ.
+  // It comes after the passes above, so they draw exactly as they did; only where detail was lost is touched.
+  if(o.detail > 0){
+    const dw = Math.max(64, Math.min(1024, Math.round(w/Math.max(1, unit/900)))), dh = Math.max(64, Math.round(dw*h/w)), sc = w/dw;
+    const [, fx] = kitCanvas(dw, dh), [, gx2] = kitCanvas(dw, dh); fx.drawImage(src, 0, 0, dw, dh); gx2.drawImage(pc, 0, 0, dw, dh);
+    const F = fx.getImageData(0, 0, dw, dh).data, G = gx2.getImageData(0, 0, dw, dh).data;
+    const fcol = (x, y) => { const q = (Math.min(dh - 1, Math.max(0, y|0))*dw + Math.min(dw - 1, Math.max(0, x|0)))*4; return [F[q], F[q+1], F[q+2]]; };
+    const r = Math.max(cpx(1.2), base*0.14), step = Math.max(1, r*1.1/sc), T = 46 - o.detail*26;     // the brush, its spacing on the fine grid, how different is "lost"
+    const cells = []; for(let y = 0; y < dh; y += step) for(let x = 0; x < dw; x += step) cells.push([x, y]);
+    for(let i = cells.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
+    let budget = 14000;
+    for(const [cx, cy] of cells){
+      // the cell's error: how far the painting is from the picture, at its worst point
+      let worst = 0, wx = cx, wy = cy;
+      for(let j = 0; j < step; j++) for(let k = 0; k < step; k++){ const x = Math.min(dw - 1, cx + k|0), y = Math.min(dh - 1, cy + j|0), q = (y*dw + x)*4;
+        const e = Math.abs(F[q] - G[q]) + Math.abs(F[q+1] - G[q+1]) + Math.abs(F[q+2] - G[q+2]); if(e > worst){ worst = e; wx = x; wy = y; } }
+      if(worst/3 < T || budget-- <= 0) continue;
+      // which way: along the small thing's own outline, from the fine picture (a trunk's stroke runs up it), else the forms'
+      const lum = (x, y) => { const q = (Math.min(dh - 1, Math.max(0, y))*dw + Math.min(dw - 1, Math.max(0, x)))*4; return 0.299*F[q] + 0.587*F[q+1] + 0.114*F[q+2]; };
+      let gx = 0, gy = 0; for(let j = -1; j <= 1; j++){ gx += lum(wx + 1, wy + j) - lum(wx - 1, wy + j); gy += lum(wx + j, wy + 1) - lum(wx + j, wy - 1); }
+      const gm = Math.hypot(gx, gy), [fdx, fdy] = dirAt((wx + 0.5)*sc/w, (wy + 0.5)*sc/h), dx0 = gm > 12 ? -gy/gm : fdx, dy0 = gm > 12 ? gx/gm : fdy;
+      const x0 = (wx + 0.5)*sc, y0 = (wy + 0.5)*sc, c = fcol(wx, wy), len = r*(1.4 + R()*2)*o.length, pts = [[x0, y0]];
+      // a short stroke, stopped where the picture's colour changes, so the small thing keeps its shape
+      for(const sgn of [1, -1]){ let x = x0, y = y0;
+        for(let s = 0; s < 2; s++){ const nx2 = x + dx0*sgn*len/4, ny2 = y + dy0*sgn*len/4, cn = fcol(nx2/sc, ny2/sc);
+          if(Math.abs(cn[0] - c[0]) + Math.abs(cn[1] - c[1]) + Math.abs(cn[2] - c[2]) > 60) break;
+          x = nx2; y = ny2; sgn > 0 ? pts.push([x, y]) : pts.unshift([x, y]); } }
+      if(pts.length < 2) pts.push([x0 + dx0*r*0.25, y0 + dy0*r*0.25]);
+      const j = 1 + (R() - 0.5)*0.1*o.vary, line = (x, wdt, style) => { x.strokeStyle = style; x.lineWidth = wdt; x.beginPath(); pts.forEach(([a, b], q) => q ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+      line(px, r*1.5, `rgba(${Math.round(c[0]*j)},${Math.round(c[1]*j)},${Math.round(c[2]*j)},${Math.min(0.95, 1.4*o.amount)})`);
+      const body = 120 + R()*35; line(hx, r*1.5, `rgb(${body|0},${body|0},${body|0})`);
+    }
+  }
   return [pc, hc];
 }
 const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, 'length', 100)/100, detail: E.num(n, 'detail', 50)/100, vary: E.num(n, 'vary', 50)/100, amount: E.num(n, 'amount', 100)/100 });
