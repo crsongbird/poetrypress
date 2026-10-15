@@ -78,7 +78,7 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
 
   // ---- stages 4–5: versions, kept results, the budget, starters, more parts ----
   check('a graph has a version (none = 1); new ones are the newest, and the cache knows it',
-    C.athanorVersion(graph) === 1 && C.athanorVersion(JSON.stringify({ v: 2 })) === 2 && C.ATHANOR_VERSION === 3
+    C.athanorVersion(graph) === 1 && C.athanorVersion(JSON.stringify({ v: 2 })) === 2 && C.ATHANOR_VERSION === 4
     && C.athanorHash(graph) !== C.athanorHash(JSON.stringify({ ...JSON.parse(graph), v: 2 })));
   const g2 = JSON.stringify({ ...JSON.parse(graph), v: 2 });
   const run2 = (gr, knob = 40, seed = 5) => C.evalAthanor(gr, 48, 48, { knobs: [knob, 50, 50, 50, 50, 50], tints: ['#FFFFFF', '#203040'], light: 315, seed }, {});
@@ -112,7 +112,7 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
     const row = im => [2, 20, 37].map(x => Math.round(im.r[20*40 + x]));
     check('map inputs (v3, Filter Forge): a gradient on Threshold\'s ⚙ At sets the threshold point by point — the picture splits; a v2 graph still takes the average',
       JSON.stringify(row(a)) !== JSON.stringify(row(b)) && new Set(row(a)).size > 1 && new Set(row(b)).size === 1);
-    check('the textures\' own chains stay v2 (their pictures never change); a starter is the newest', C.athanorStarter('stainedglass').v === 2 && C.athanorStarter('ripples').v === 3); }
+    check('the textures\' own chains stay v2 (their pictures never change); a starter is the newest', C.athanorStarter('stainedglass').v === 2 && C.athanorStarter('ripples').v === C.ATHANOR_VERSION); }
   check('…offered from the editor\'s bar (Open), with every part\'s ports filled in on load', html.includes('id="forgeOpenBtn"')
     && /P\.ins\.forEach\(\(_, j\) => \{ n\.inputs\['input_' \+ \(j \+ 1\)\]/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')));
   {

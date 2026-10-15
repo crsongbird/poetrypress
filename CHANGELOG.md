@@ -4,6 +4,23 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Pallene (2026-10-15)
+
+- **More settings follow a map.** In the Athanor, a gray map wired into one
+  of these settings' ⚙ now sets it point by point instead of as one average:
+  Blur's Radius (sharp in places, soft in others), the Scale of Value Noise
+  and Perlin Noise, Motion Blur's Length and Angle, Grow & Shrink's Amount,
+  Twirl's Twist, Edge Detect's Strength, Scatter's Size (each mark sized
+  where it lands), the Relief of both lights, and the Light Engine's Gloss.
+- **Each part's wiki page marks the settings that take a map** ("by point",
+  linked to the page that explains maps), and a setting's menu says whether
+  a map on its ⚙ works point by point or as an average.
+- Surfaces you kept before draw exactly as they did: they read these
+  settings as one average, as before. Graphs begun from now on (from
+  **Open**, or ⋯ › Clear the grid) take them point by point.
+- Fixed: the wiki said a higher Scale gives Value Noise and Perlin Noise
+  bigger blobs. It gives more, smaller ones.
+
 ## Saturn–Anthe (2026-10-15)
 
 - **Every texture in the menu but Deep Field now opens in the Athanor.**

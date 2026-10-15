@@ -346,6 +346,22 @@ const STEP_COST = {
   forms: () => 2, streaks: () => 4, hatching: () => 6,
 };
 
+// ---- a noise whose Scale is a map ----
+// A noise at a scale that varies by point (Filter Forge's mapped Scale): layers an octave apart (cells = scale/10),
+// each point read between the two nearest, mixed so the pattern keeps its contrast (two unrelated layers simply
+// averaged would flatten it). `layer(cells)` gives a function (x, y, q) → a value around 0.5.
+function stepScaleByPoint(E, SC, layer){
+  const { ww, wh, N } = E; let lo = Infinity, hi = -Infinity;
+  for(let i = 0; i < N; i++){ const c = Math.max(1, SC[i])/10; if(c < lo) lo = c; if(c > hi) hi = c; }
+  const K = Math.max(1, Math.ceil(Math.log2(hi/lo) - 1e-9)), layers = Array.from({ length: K + 1 }, (_, j) => layer(lo*Math.pow(2, j))), o = new Float32Array(N);
+  for(let y = 0, q = 0; y < wh; y++) for(let x = 0; x < ww; x++, q++){
+    const p = Math.log2(Math.max(1, SC[q])/10/lo), j = Math.min(K - 1, Math.floor(p)), t = Math.max(0, Math.min(1, p - j));
+    const a = layers[j](x, y, q) - 0.5, b = t > 0 ? layers[j + 1](x, y, q) - 0.5 : 0;
+    o[q] = Math.max(0, Math.min(1, 0.5 + (a*(1 - t) + b*t)/Math.sqrt((1 - t)*(1 - t) + t*t)));
+  }
+  return o;
+}
+
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
@@ -365,13 +381,18 @@ const STEP_RUN = {
   page(E, n){ const { field } = E;
     return [field(u => u), field((u, v) => v), field((u, v) => Math.min(1, Math.hypot(u - 0.5, v - 0.5)/0.7071))];
   },
-  noise(E, n){ const { unit, input, num, field } = E;
-    const cells = Math.max(1, num(n, 'scale', 40))/10, oct = Math.max(1, Math.min(6, Math.round(num(n, 'octaves', 3))));
+  noise(E, n){ const { unit, input, num, map, field } = E;
+    const SC = map(n, 'scale', 40);
+    const cells = Math.max(1, typeof SC === 'number' ? SC : 40)/10, oct = Math.max(1, Math.min(6, Math.round(num(n, 'octaves', 3))));
     const s0 = input(n, 1), off = typeof s0 === 'number' ? s0*97 : 0;
-    const grids = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
-    const norm = grids.reduce((s, o) => s + o.a, 0);
+    // one layer of noise at `cells` across the short side, its octaves each half as strong
+    const layer = cells => { const grids = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
+      const norm = grids.reduce((s, o) => s + o.a, 0);
+      return (x, y) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, x/unit*(o.g - 1) + off, y/unit*(o.g - 1) + off*1.7)*o.a; return s/norm; }; };
     // square cells, `scale/10` of them across the page's short side
-    return [field((u, v, x, y) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, x/unit*(o.g - 1) + off, y/unit*(o.g - 1) + off*1.7)*o.a; return s/norm; })];
+    if(typeof SC === 'number'){ const one = layer(cells); return [field((u, v, x, y) => one(x, y))]; }
+    // SCALE BY POINT (a map on its ⚙): layers an octave apart, each point read between the two nearest
+    return [stepScaleByPoint(E, SC, layer)];
   },
   cells(E, n){ const { ww, wh, N, unit, num } = E;
     const sc = Math.max(2, num(n, 'scale', 30))/10, jit = num(n, 'jitter', 80)/100, cs = unit/sc;
@@ -443,7 +464,17 @@ const STEP_RUN = {
     for(let i = 0; i < N; i++){ const a = at(AT, i)/100, sf = Math.max(0.002, at(SF, i)/200), t = Math.max(0, Math.min(1, (f[i] - a + sf)/(2*sf))); o[i] = t*t*(3 - 2*t); }
     return [o];
   },
-  blur(E, n){ const { unit, input, num, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null; return [boxBlur(f, num(n, 'radius', 8)*unit/1536*1.2)];
+  blur(E, n){ const { N, unit, input, map, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const RA = map(n, 'radius', 8);
+    if(typeof RA === 'number') return [boxBlur(f, RA*unit/1536*1.2)];
+    // RADIUS BY POINT (a map on its ⚙): the field blurred at a few radii (a blur stack), each point read between the two nearest
+    const k = unit/1536*1.2; let lo = Infinity, hi = -Infinity; for(let i = 0; i < N; i++){ const r = RA[i]*k; if(r < lo) lo = r; if(r > hi) hi = r; }
+    const eff = r => r < 0.5 ? 0 : Math.max(1, Math.round(r)), radii = [...new Set(Array.from({ length: 7 }, (_, j) => eff(lo + (hi - lo)*(j/6)**2)))].sort((a, b) => a - b);
+    if(radii.length === 1) return [boxBlur(f, radii[0])];
+    const stack = radii.map(r => boxBlur(f, r)), o = new Float32Array(N), L = radii.length;
+    for(let i = 0; i < N; i++){ const r = RA[i]*k; let j = 0; while(j < L - 2 && r > radii[j + 1]) j++;
+      const t = Math.max(0, Math.min(1, (r - radii[j])/(radii[j + 1] - radii[j]))); o[i] = stack[j][i] + (stack[j + 1][i] - stack[j][i])*t; }
+    return [o];
   },
   warp(E, n){ const { ww, wh, N, unit, input, num, asField } = E;
     const f = asField(input(n, 1)), by = asField(input(n, 2)); if(!f) return null; if(!by) return [f];
@@ -496,13 +527,14 @@ const STEP_RUN = {
     }
     return [o];
   },
-  edges(E, n){ const { ww, wh, N, unit, input, num, field, asField } = E;
+  edges(E, n){ const { ww, wh, N, unit, input, map, asField } = E;
     // Sobel: where the field changes fastest
     const f = asField(input(n, 1)); if(!f) return null;
-    const k = num(n, 'strength', 50)/50*unit/96, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
+    const SM = map(n, 'strength', 50), K = typeof SM === 'number' ? SM/50*unit/96 : 0, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
       const gx = at(x+1,y-1) + 2*at(x+1,y) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x-1,y) - at(x-1,y+1);
       const gy = at(x-1,y+1) + 2*at(x,y+1) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x,y-1) - at(x+1,y-1);
+      const k = typeof SM === 'number' ? K : SM[y*ww + x]/50*unit/96;   // (STRENGTH BY POINT: a map on its ⚙)
       o[y*ww + x] = Math.min(1, Math.hypot(gx, gy)*k/8);
     }
     return [o];
@@ -510,8 +542,9 @@ const STEP_RUN = {
   light(E, n){ const { N, unit, ctx, input, num, flat, asField, lightOf } = E;
     const h0 = asField(input(n, 1)); if(!h0) return null;
     const dial = input(n, 2), deg = typeof dial === 'number' ? dial*360 : (ctx.light ?? 315);
-    const H = new Float32Array(N), rel = num(n, 'relief', 50)/100*unit*0.02;
-    for(let i = 0; i < N; i++) H[i] = h0[i]*rel;
+    // (RELIEF BY POINT: a map on its ⚙ raises the heights more in some places than others)
+    const H = new Float32Array(N), RM = E.map(n, 'relief', 50), rel = typeof RM === 'number' ? RM/100*unit*0.02 : 0;
+    for(let i = 0; i < N; i++) H[i] = h0[i]*(typeof RM === 'number' ? rel : RM[i]/100*unit*0.02);
     const L = lightOf(H, deg, 1, num(n, 'gloss', 30)/100, num(n, 'shadow', 60)/100), lf = new Float32Array(N), sp = new Float32Array(N);
     for(let i = 0; i < N; i++){ lf[i] = Math.min(1, L.light[i]/L.flat*0.5); sp[i] = L.spec[i]; }
     return [lf, sp];
@@ -728,8 +761,19 @@ Object.assign(STEP_RUN, {
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f[i] + (f[i] - lo[i])*at(A, i)/50));
     return [o];
   },
-  motionblur(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const L = num(n, 'length', 20)/100*unit*0.15, an = num(n, 'angle', 0)*Math.PI/180; if(L < 0.5) return [f];
+  motionblur(E, n){ const { ww, wh, N, unit, input, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const LM = map(n, 'length', 20), AM = map(n, 'angle', 0);
+    if(typeof LM !== 'number' || typeof AM !== 'number'){
+      // LENGTH AND ANGLE BY POINT (a map on a ⚙): each point smeared along its own stroke
+      const o = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, L = at(LM, q)/100*unit*0.15, an = at(AM, q)*Math.PI/180;
+        if(L < 0.5){ o[q] = f[q]; continue; }
+        const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L; let t = 0;
+        for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
+        o[q] = t/S; }
+      return [o];
+    }
+    const L = LM/100*unit*0.15, an = AM*Math.PI/180; if(L < 0.5) return [f];
     const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L, o = new Float32Array(N);
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ let t = 0;
       for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
@@ -753,11 +797,20 @@ Object.assign(STEP_RUN, {
     const noise = (x, y) => { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y); const u = fade(x), v = fade(y);
       const a = perm[X] + Y, b = perm[X + 1] + Y;
       return lerp(lerp(grad(perm[a], x, y), grad(perm[b], x - 1, y), u), lerp(grad(perm[a + 1], x, y - 1), grad(perm[b + 1], x - 1, y - 1), u), v)/2.2; };
-    const cells = Math.max(1, num(n, 'scale', 40))/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
-    let q = -1;
-    return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+    const SC = map(n, 'scale', 40);
+    const cells = Math.max(1, typeof SC === 'number' ? SC : 40)/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
+    if(typeof SC === 'number'){
+      let q = -1;
+      return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+        for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
+        const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+    }
+    // SCALE BY POINT (a map on its ⚙): the same noise at scales an octave apart, each point read between the two nearest
+    const layer = cells => (x, y, q) => { const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
       for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
-      const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+      return 0.5 + t/norm*(1 + at(C, q)/100*3); };
+    const o = stepScaleByPoint(E, SC, layer); for(let i = 0; i < o.length; i++) o[i] = Math.max(0, Math.min(1, o[i]));
+    return [o];
   },
   bricks(E, n){ const { ww, wh, N, unit, input, num, isCurve } = E;
     const rows = Math.max(2, Math.round(num(n, 'rows', 12))), bh = wh/rows, bw = bh*num(n, 'ratio', 200)/100, mo = num(n, 'mortar', 12)/100*bh*0.5;
@@ -843,15 +896,23 @@ Object.assign(STEP_RUN, {
     const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
     return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard];
   },
-  grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
-    if(t === 0) return [f];
+  grow(E, n){ const { ww, wh, N, unit, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const AM = map(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2));
     // a max (or min) filter, separable, by the radius; mixed with the original by how far Amount is from 50
-    const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
-      for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
-        for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
-        dst[horiz ? j*ww + i : i*ww + j] = m; } };
-    const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false);
+    const filter = up => { const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
+        for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
+          for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
+          dst[horiz ? j*ww + i : i*ww + j] = m; } };
+      const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false); return o; };
+    if(typeof AM !== 'number'){
+      // AMOUNT BY POINT (a map on its ⚙): grown where the map is past 50, shrunk where it is below
+      let g = null, s = null; for(let i = 0; i < N; i++){ if(AM[i] > 50 && !g) g = filter(true); if(AM[i] < 50 && !s) s = filter(false); }
+      const o = new Float32Array(N); for(let i = 0; i < N; i++){ const a = at(AM, i), t = Math.abs(a - 50)/50, F = a >= 50 ? g : s; o[i] = F ? f[i] + (F[i] - f[i])*t : f[i]; }
+      return [o];
+    }
+    const a = AM, up = a >= 50, t = Math.abs(a - 50)/50;
+    if(t === 0) return [f];
+    const o = filter(up);
     for(let i = 0; i < N; i++) o[i] = f[i] + (o[i] - f[i])*t;
     return [o];
   },
@@ -864,11 +925,12 @@ Object.assign(STEP_RUN, {
     const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
     return [o];
   },
-  twirl(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const turn = num(n, 'angle', 180)*Math.PI/180, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
+  twirl(E, n){ const { ww, wh, N, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    // (TWIST BY POINT: a map on its ⚙ turns each point by its own angle)
+    const TW = map(n, 'angle', 180), turn = typeof TW === 'number' ? TW*Math.PI/180 : 0, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), q = y*ww + x;
       if(r >= R){ o[q] = f[q]; continue; }
-      const t = 1 - r/R, a = Math.atan2(dy, dx) + turn*t*t;
+      const t = 1 - r/R, a = Math.atan2(dy, dx) + (typeof TW === 'number' ? turn : at(TW, q)*Math.PI/180)*t*t;
       const sx = Math.min(ww - 1, Math.max(0, Math.round(cx + Math.cos(a)*r))), sy = Math.min(wh - 1, Math.max(0, Math.round(cy + Math.sin(a)*r)));
       o[q] = f[sy*ww + sx]; }
     return [o];
@@ -936,6 +998,16 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 'posterize', 'transform', 'edges', 'light', 'tint', 'ramp', 'kaleidoscope', 'polar',
   'maprange', 'split', 'hsv', 'curveops', 'tonecurve', 'bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma',
   'meniscus', 'pigment', 'contours', 'glaze', 'burn']);
+// SETTINGS THAT TAKE A MAP (Filter Forge's parameter mapping): in a v3 graph a gray map or a picture on one of
+// these ⚙ ports sets it point by point (athanor.js E.map); any other setting reads a map's average. One list: the
+// evaluator maps only what is here, the wiki marks these settings, the editor's menu says so. (A family's part
+// carries its own `maps`.) `key:4`: from graph version 4 on (an older graph reads it whole, as it always did).
+const STEP_MAPS = { levels: ['lo', 'hi', 'gamma'], threshold: ['at', 'soft'], warp: ['amount'], mix: ['t'], posterize: ['steps'], blend: ['opacity'],
+  maprange: ['inLo', 'inHi', 'outLo', 'outHi'], bricon: ['bright', 'contrast'], highpass: ['gain'], sharpen: ['amount'], tonecurve: ['mix'], chroma: ['amount'],
+  hsv: ['hue', 'sat', 'val'], noise: ['scale:4'], perlin: ['scale:4', 'rough', 'contrast'], blur: ['radius:4'], motionblur: ['length:4', 'angle:4'], grow: ['amount:4'],
+  twirl: ['angle:4'], edges: ['strength:4'], light: ['relief:4'] };
+const stepMapKeys = list => (list || []).map(m => String(m).split(':')[0]);
+const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String(m).includes(':')).map(m => String(m).split(':')).map(([k, v]) => [k, +v]));
 /** Every step: the part, its cost and what it does. */
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
@@ -945,6 +1017,7 @@ export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) =
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
   return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) || s.req ? [1] : [],
+    maps: stepMapKeys(STEP_MAPS[k] || s.maps), mapsSince: stepMapsSince(STEP_MAPS[k] || s.maps),
     dataIns: s.ins.length,
     ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
     inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),

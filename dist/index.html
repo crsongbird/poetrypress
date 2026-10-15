@@ -2090,6 +2090,7 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .wk-fig figcaption{ margin-top:8px; font-size:12px; line-height:1.45; color:var(--fg-dim); }
 .wk-req{ font:11px var(--ui-sans); color:#ff7a7a; border:1px solid currentColor; padding:0 4px; margin-left:4px; }
 .wk-gear{ color:var(--t-value); }
+.wk-page a.wk-map{ font:11px var(--ui-sans); color:var(--t-field); border:1px solid currentColor; padding:0 4px; margin-left:4px; white-space:nowrap; }
 .wk-see{ margin-top:14px; font-size:13px; color:var(--fg-dim); }
 .wk-gloss{ display:grid; grid-template-columns:minmax(130px, 190px) 1fr; gap:5px 14px; }
 .wk-gloss dt{ font-weight:500; } .wk-gloss dd{ margin:0; color:var(--fg-dim); }
@@ -11163,8 +11164,8 @@ function ltK(k, M, c){
  * S: the shine }, from the dial (deg) and the part's settings.
  */
 function ltLight(H, gw, gh, deg, o, glossMap){
-  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03;
-  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
+  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
@@ -11183,10 +11184,14 @@ function ltBlur(F, gw, gh, r){
     for(let y = 0; y < gh; y++){ O[y*gw + x] = s/c; const a = y - r, b = y + r + 1; if(a >= 0){ s -= T[a*gw + x]; c--; } if(b < gh){ s += T[b*gw + x]; c++; } } }
   return O;
 }
-function ltSettings(E, n){
+// (on the grid, `byPoint`: Relief and Gloss may be maps, a value per point; a canvas pass reads them whole)
+function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
-  return { deg, relief: E.num(n, 'relief', 50)/100, gloss: E.num(n, 'gloss', 25)/100, shadow: E.num(n, 'shadow', 60)/100,
-    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100 };
+  const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25);
+  const per = M => { const o = new Float32Array(M.length); for(let i = 0; i < M.length; i++) o[i] = M[i]/100; return o; };
+  return { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
+    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
+    reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
 }
 
 // ---- OIL PAINT: strokes laid along the picture's forms ----
@@ -11438,7 +11443,7 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
     io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0)],
     cost: () => 10,
@@ -11461,10 +11466,11 @@ const LIGHT_STEPS = {
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
       return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
     run(E, n){
-      const { ww, wh, N } = E, o = ltSettings(E, n), M = ltMaterial(E, n);
+      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n);
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
-      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : null;
+      // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
+      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
       const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
@@ -12414,7 +12420,7 @@ function patShape(x, kind, rand){
 const PATTERN_STEPS = {
   // FILTER FORGE'S BOMBER: throw copies of a shape (or of a picture) across the page, each of its own size, turn
   // and brightness; where they may fall can be a gray map, and which way they turn an angle map (a vector field)
-  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'],
+  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'], maps: ['size:4'],
     io: { ins: ['image', 'field', 'field'], outs: ['field', 'field', 'field'] },
     params: [PAT_SEL('shape', 'Shape', PAT_SHAPES), PAT_R('count', 'Count', 60, 1, 400), PAT_R('size', 'Size', 20, 1, 100), PAT_R('vary', 'Size Variety', 50),
       PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99)],
@@ -12422,7 +12428,9 @@ const PATTERN_STEPS = {
     doc: 'Scatters copies of a mark across the page (dots, stars, sigils, or any picture), each with its own size, turn and brightness.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
       const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3)), pic = shape === 'picture' ? asImage(input(n, 1)) : null;
-      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), R0 = num(n, 'size', 20)/100*unit*0.12;
+      // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
+      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
+      const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
       const [mc, mx] = mk(), [ic, ix] = mk();
@@ -12446,7 +12454,8 @@ const PATTERN_STEPS = {
           if(tries === 11) x = -1e9;
         }
         if(x < -1e8) continue;
-        const r = Math.max(0.5, R0*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
+        const Rm = typeof SZ === 'number' ? R0 : SZ[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))]/100*unit*0.12;
+        const r = Math.max(0.5, Rm*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
         let ang = (rand() - 0.5)*Math.PI*2*turn;
         if(way){ const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0)); ang = way[q]*Math.PI*2 + (rand() - 0.5)*turn*0.6; }
         const g = Math.round(255*(1 - fade*rand())), id = Math.round(20 + rand()*235);
@@ -12461,7 +12470,7 @@ const PATTERN_STEPS = {
     } },
 
   // FILTER FORGE'S CHECKER, TILES and DOTS in one: a regular pattern, turned and sized
-  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'],
+  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'], maps: ['weight'],
     params: [PAT_SEL('kind', 'Pattern', ['checker', 'grid lines', 'dots', 'hex dots', 'diamonds', 'stripes']), PAT_R('cells', 'Cells', 12, 2, 120), PAT_R('weight', 'Line or Dot Size', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('soft', 'Softness', 10)],
     cost: () => 1,
     doc: 'A regular pattern: checkerboard, grid lines, dots in rows or in a honeycomb, diamonds, or stripes.',
@@ -12500,7 +12509,7 @@ const PATTERN_STEPS = {
     } },
 
   // FILTER FORGE'S LOOKUP: a picture read at the places two gray maps name — refraction, foil, interference
-  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
+  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 100), PAT_SEL('edges', 'At the Edges', ['repeat', 'mirror', 'clamp']), PAT_R('scale', 'Scale', 100, 10, 400)],
     cost: () => 1,
     doc: 'Rebuilds a picture by reading it at positions given by two gray maps.',
@@ -12517,7 +12526,7 @@ const PATTERN_STEPS = {
     } },
 
   // DISPLACE BY A MAP'S SLOPE (Filter Forge's Refraction): a picture seen through a bumpy glass
-  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
+  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 30), PAT_R('blur', 'Smoothing', 20)],
     cost: () => 1.5,
     doc: 'Bends a picture as if seen through glass shaped like a gray map.',
@@ -12917,6 +12926,22 @@ const STEP_COST = {
   forms: () => 2, streaks: () => 4, hatching: () => 6,
 };
 
+// ---- a noise whose Scale is a map ----
+// A noise at a scale that varies by point (Filter Forge's mapped Scale): layers an octave apart (cells = scale/10),
+// each point read between the two nearest, mixed so the pattern keeps its contrast (two unrelated layers simply
+// averaged would flatten it). `layer(cells)` gives a function (x, y, q) → a value around 0.5.
+function stepScaleByPoint(E, SC, layer){
+  const { ww, wh, N } = E; let lo = Infinity, hi = -Infinity;
+  for(let i = 0; i < N; i++){ const c = Math.max(1, SC[i])/10; if(c < lo) lo = c; if(c > hi) hi = c; }
+  const K = Math.max(1, Math.ceil(Math.log2(hi/lo) - 1e-9)), layers = Array.from({ length: K + 1 }, (_, j) => layer(lo*Math.pow(2, j))), o = new Float32Array(N);
+  for(let y = 0, q = 0; y < wh; y++) for(let x = 0; x < ww; x++, q++){
+    const p = Math.log2(Math.max(1, SC[q])/10/lo), j = Math.min(K - 1, Math.floor(p)), t = Math.max(0, Math.min(1, p - j));
+    const a = layers[j](x, y, q) - 0.5, b = t > 0 ? layers[j + 1](x, y, q) - 0.5 : 0;
+    o[q] = Math.max(0, Math.min(1, 0.5 + (a*(1 - t) + b*t)/Math.sqrt((1 - t)*(1 - t) + t*t)));
+  }
+  return o;
+}
+
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
@@ -12936,13 +12961,18 @@ const STEP_RUN = {
   page(E, n){ const { field } = E;
     return [field(u => u), field((u, v) => v), field((u, v) => Math.min(1, Math.hypot(u - 0.5, v - 0.5)/0.7071))];
   },
-  noise(E, n){ const { unit, input, num, field } = E;
-    const cells = Math.max(1, num(n, 'scale', 40))/10, oct = Math.max(1, Math.min(6, Math.round(num(n, 'octaves', 3))));
+  noise(E, n){ const { unit, input, num, map, field } = E;
+    const SC = map(n, 'scale', 40);
+    const cells = Math.max(1, typeof SC === 'number' ? SC : 40)/10, oct = Math.max(1, Math.min(6, Math.round(num(n, 'octaves', 3))));
     const s0 = input(n, 1), off = typeof s0 === 'number' ? s0*97 : 0;
-    const grids = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
-    const norm = grids.reduce((s, o) => s + o.a, 0);
+    // one layer of noise at `cells` across the short side, its octaves each half as strong
+    const layer = cells => { const grids = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
+      const norm = grids.reduce((s, o) => s + o.a, 0);
+      return (x, y) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, x/unit*(o.g - 1) + off, y/unit*(o.g - 1) + off*1.7)*o.a; return s/norm; }; };
     // square cells, `scale/10` of them across the page's short side
-    return [field((u, v, x, y) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, x/unit*(o.g - 1) + off, y/unit*(o.g - 1) + off*1.7)*o.a; return s/norm; })];
+    if(typeof SC === 'number'){ const one = layer(cells); return [field((u, v, x, y) => one(x, y))]; }
+    // SCALE BY POINT (a map on its ⚙): layers an octave apart, each point read between the two nearest
+    return [stepScaleByPoint(E, SC, layer)];
   },
   cells(E, n){ const { ww, wh, N, unit, num } = E;
     const sc = Math.max(2, num(n, 'scale', 30))/10, jit = num(n, 'jitter', 80)/100, cs = unit/sc;
@@ -13014,7 +13044,17 @@ const STEP_RUN = {
     for(let i = 0; i < N; i++){ const a = at(AT, i)/100, sf = Math.max(0.002, at(SF, i)/200), t = Math.max(0, Math.min(1, (f[i] - a + sf)/(2*sf))); o[i] = t*t*(3 - 2*t); }
     return [o];
   },
-  blur(E, n){ const { unit, input, num, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null; return [boxBlur(f, num(n, 'radius', 8)*unit/1536*1.2)];
+  blur(E, n){ const { N, unit, input, map, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const RA = map(n, 'radius', 8);
+    if(typeof RA === 'number') return [boxBlur(f, RA*unit/1536*1.2)];
+    // RADIUS BY POINT (a map on its ⚙): the field blurred at a few radii (a blur stack), each point read between the two nearest
+    const k = unit/1536*1.2; let lo = Infinity, hi = -Infinity; for(let i = 0; i < N; i++){ const r = RA[i]*k; if(r < lo) lo = r; if(r > hi) hi = r; }
+    const eff = r => r < 0.5 ? 0 : Math.max(1, Math.round(r)), radii = [...new Set(Array.from({ length: 7 }, (_, j) => eff(lo + (hi - lo)*(j/6)**2)))].sort((a, b) => a - b);
+    if(radii.length === 1) return [boxBlur(f, radii[0])];
+    const stack = radii.map(r => boxBlur(f, r)), o = new Float32Array(N), L = radii.length;
+    for(let i = 0; i < N; i++){ const r = RA[i]*k; let j = 0; while(j < L - 2 && r > radii[j + 1]) j++;
+      const t = Math.max(0, Math.min(1, (r - radii[j])/(radii[j + 1] - radii[j]))); o[i] = stack[j][i] + (stack[j + 1][i] - stack[j][i])*t; }
+    return [o];
   },
   warp(E, n){ const { ww, wh, N, unit, input, num, asField } = E;
     const f = asField(input(n, 1)), by = asField(input(n, 2)); if(!f) return null; if(!by) return [f];
@@ -13067,13 +13107,14 @@ const STEP_RUN = {
     }
     return [o];
   },
-  edges(E, n){ const { ww, wh, N, unit, input, num, field, asField } = E;
+  edges(E, n){ const { ww, wh, N, unit, input, map, asField } = E;
     // Sobel: where the field changes fastest
     const f = asField(input(n, 1)); if(!f) return null;
-    const k = num(n, 'strength', 50)/50*unit/96, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
+    const SM = map(n, 'strength', 50), K = typeof SM === 'number' ? SM/50*unit/96 : 0, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
       const gx = at(x+1,y-1) + 2*at(x+1,y) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x-1,y) - at(x-1,y+1);
       const gy = at(x-1,y+1) + 2*at(x,y+1) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x,y-1) - at(x+1,y-1);
+      const k = typeof SM === 'number' ? K : SM[y*ww + x]/50*unit/96;   // (STRENGTH BY POINT: a map on its ⚙)
       o[y*ww + x] = Math.min(1, Math.hypot(gx, gy)*k/8);
     }
     return [o];
@@ -13081,8 +13122,9 @@ const STEP_RUN = {
   light(E, n){ const { N, unit, ctx, input, num, flat, asField, lightOf } = E;
     const h0 = asField(input(n, 1)); if(!h0) return null;
     const dial = input(n, 2), deg = typeof dial === 'number' ? dial*360 : (ctx.light ?? 315);
-    const H = new Float32Array(N), rel = num(n, 'relief', 50)/100*unit*0.02;
-    for(let i = 0; i < N; i++) H[i] = h0[i]*rel;
+    // (RELIEF BY POINT: a map on its ⚙ raises the heights more in some places than others)
+    const H = new Float32Array(N), RM = E.map(n, 'relief', 50), rel = typeof RM === 'number' ? RM/100*unit*0.02 : 0;
+    for(let i = 0; i < N; i++) H[i] = h0[i]*(typeof RM === 'number' ? rel : RM[i]/100*unit*0.02);
     const L = lightOf(H, deg, 1, num(n, 'gloss', 30)/100, num(n, 'shadow', 60)/100), lf = new Float32Array(N), sp = new Float32Array(N);
     for(let i = 0; i < N; i++){ lf[i] = Math.min(1, L.light[i]/L.flat*0.5); sp[i] = L.spec[i]; }
     return [lf, sp];
@@ -13299,8 +13341,19 @@ Object.assign(STEP_RUN, {
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f[i] + (f[i] - lo[i])*at(A, i)/50));
     return [o];
   },
-  motionblur(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const L = num(n, 'length', 20)/100*unit*0.15, an = num(n, 'angle', 0)*Math.PI/180; if(L < 0.5) return [f];
+  motionblur(E, n){ const { ww, wh, N, unit, input, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const LM = map(n, 'length', 20), AM = map(n, 'angle', 0);
+    if(typeof LM !== 'number' || typeof AM !== 'number'){
+      // LENGTH AND ANGLE BY POINT (a map on a ⚙): each point smeared along its own stroke
+      const o = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, L = at(LM, q)/100*unit*0.15, an = at(AM, q)*Math.PI/180;
+        if(L < 0.5){ o[q] = f[q]; continue; }
+        const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L; let t = 0;
+        for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
+        o[q] = t/S; }
+      return [o];
+    }
+    const L = LM/100*unit*0.15, an = AM*Math.PI/180; if(L < 0.5) return [f];
     const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L, o = new Float32Array(N);
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ let t = 0;
       for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
@@ -13324,11 +13377,20 @@ Object.assign(STEP_RUN, {
     const noise = (x, y) => { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y); const u = fade(x), v = fade(y);
       const a = perm[X] + Y, b = perm[X + 1] + Y;
       return lerp(lerp(grad(perm[a], x, y), grad(perm[b], x - 1, y), u), lerp(grad(perm[a + 1], x, y - 1), grad(perm[b + 1], x - 1, y - 1), u), v)/2.2; };
-    const cells = Math.max(1, num(n, 'scale', 40))/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
-    let q = -1;
-    return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+    const SC = map(n, 'scale', 40);
+    const cells = Math.max(1, typeof SC === 'number' ? SC : 40)/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
+    if(typeof SC === 'number'){
+      let q = -1;
+      return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+        for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
+        const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+    }
+    // SCALE BY POINT (a map on its ⚙): the same noise at scales an octave apart, each point read between the two nearest
+    const layer = cells => (x, y, q) => { const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
       for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
-      const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+      return 0.5 + t/norm*(1 + at(C, q)/100*3); };
+    const o = stepScaleByPoint(E, SC, layer); for(let i = 0; i < o.length; i++) o[i] = Math.max(0, Math.min(1, o[i]));
+    return [o];
   },
   bricks(E, n){ const { ww, wh, N, unit, input, num, isCurve } = E;
     const rows = Math.max(2, Math.round(num(n, 'rows', 12))), bh = wh/rows, bw = bh*num(n, 'ratio', 200)/100, mo = num(n, 'mortar', 12)/100*bh*0.5;
@@ -13414,15 +13476,23 @@ Object.assign(STEP_RUN, {
     const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
     return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard];
   },
-  grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
-    if(t === 0) return [f];
+  grow(E, n){ const { ww, wh, N, unit, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const AM = map(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2));
     // a max (or min) filter, separable, by the radius; mixed with the original by how far Amount is from 50
-    const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
-      for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
-        for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
-        dst[horiz ? j*ww + i : i*ww + j] = m; } };
-    const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false);
+    const filter = up => { const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
+        for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
+          for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
+          dst[horiz ? j*ww + i : i*ww + j] = m; } };
+      const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false); return o; };
+    if(typeof AM !== 'number'){
+      // AMOUNT BY POINT (a map on its ⚙): grown where the map is past 50, shrunk where it is below
+      let g = null, s = null; for(let i = 0; i < N; i++){ if(AM[i] > 50 && !g) g = filter(true); if(AM[i] < 50 && !s) s = filter(false); }
+      const o = new Float32Array(N); for(let i = 0; i < N; i++){ const a = at(AM, i), t = Math.abs(a - 50)/50, F = a >= 50 ? g : s; o[i] = F ? f[i] + (F[i] - f[i])*t : f[i]; }
+      return [o];
+    }
+    const a = AM, up = a >= 50, t = Math.abs(a - 50)/50;
+    if(t === 0) return [f];
+    const o = filter(up);
     for(let i = 0; i < N; i++) o[i] = f[i] + (o[i] - f[i])*t;
     return [o];
   },
@@ -13435,11 +13505,12 @@ Object.assign(STEP_RUN, {
     const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
     return [o];
   },
-  twirl(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const turn = num(n, 'angle', 180)*Math.PI/180, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
+  twirl(E, n){ const { ww, wh, N, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    // (TWIST BY POINT: a map on its ⚙ turns each point by its own angle)
+    const TW = map(n, 'angle', 180), turn = typeof TW === 'number' ? TW*Math.PI/180 : 0, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), q = y*ww + x;
       if(r >= R){ o[q] = f[q]; continue; }
-      const t = 1 - r/R, a = Math.atan2(dy, dx) + turn*t*t;
+      const t = 1 - r/R, a = Math.atan2(dy, dx) + (typeof TW === 'number' ? turn : at(TW, q)*Math.PI/180)*t*t;
       const sx = Math.min(ww - 1, Math.max(0, Math.round(cx + Math.cos(a)*r))), sy = Math.min(wh - 1, Math.max(0, Math.round(cy + Math.sin(a)*r)));
       o[q] = f[sy*ww + sx]; }
     return [o];
@@ -13507,6 +13578,16 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 'posterize', 'transform', 'edges', 'light', 'tint', 'ramp', 'kaleidoscope', 'polar',
   'maprange', 'split', 'hsv', 'curveops', 'tonecurve', 'bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma',
   'meniscus', 'pigment', 'contours', 'glaze', 'burn']);
+// SETTINGS THAT TAKE A MAP (Filter Forge's parameter mapping): in a v3 graph a gray map or a picture on one of
+// these ⚙ ports sets it point by point (athanor.js E.map); any other setting reads a map's average. One list: the
+// evaluator maps only what is here, the wiki marks these settings, the editor's menu says so. (A family's part
+// carries its own `maps`.) `key:4`: from graph version 4 on (an older graph reads it whole, as it always did).
+const STEP_MAPS = { levels: ['lo', 'hi', 'gamma'], threshold: ['at', 'soft'], warp: ['amount'], mix: ['t'], posterize: ['steps'], blend: ['opacity'],
+  maprange: ['inLo', 'inHi', 'outLo', 'outHi'], bricon: ['bright', 'contrast'], highpass: ['gain'], sharpen: ['amount'], tonecurve: ['mix'], chroma: ['amount'],
+  hsv: ['hue', 'sat', 'val'], noise: ['scale:4'], perlin: ['scale:4', 'rough', 'contrast'], blur: ['radius:4'], motionblur: ['length:4', 'angle:4'], grow: ['amount:4'],
+  twirl: ['angle:4'], edges: ['strength:4'], light: ['relief:4'] };
+const stepMapKeys = list => (list || []).map(m => String(m).split(':')[0]);
+const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String(m).includes(':')).map(m => String(m).split(':')).map(([k, v]) => [k, +v]));
 /** Every step: the part, its cost and what it does. */
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
@@ -13516,6 +13597,7 @@ const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
   return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) || s.req ? [1] : [],
+    maps: stepMapKeys(STEP_MAPS[k] || s.maps), mapsSince: stepMapsSince(STEP_MAPS[k] || s.maps),
     dataIns: s.ins.length,
     ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
     inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),
@@ -14621,7 +14703,10 @@ const TEXTURE_CHAINS = {
 // v3 (Filter Forge's MAP INPUTS): a picture wired into a part's ⚙ setting sets it point by point, wherever
 // the part can use it so (E.map); v2 took the picture's average. The textures' own chains stay v2, so
 // they draw exactly as they did.
-const ATHANOR_VERSION = 3;
+// v4: more settings take a map point by point (Blur's Radius, the noises' Scale, Motion Blur, Grow & Shrink,
+// Twirl, Edge Detect, Scatter's Size, the lights' Relief and the Light Engine's Gloss: steps.js STEP_MAPS,
+// `name:4`); a v3 graph still reads those whole, as it did.
+const ATHANOR_VERSION = 4;
 function athanorVersion(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
   catch(e){ return 1; }
@@ -14744,7 +14829,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
-  const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
+  const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
   const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, sizeK]);
@@ -14816,7 +14901,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // a value per point, across its range (or its own '~key' part of it); otherwise the setting as num() reads it.
   // Only in a v3 graph: before, a wired map was averaged, and an old graph must draw as it always did.
   const map = (n, k, d) => {
-    const port = v3 ? paramPort(n.name, k) : 0;
+    const S = STEPS[n.name] || {}, port = v3 && (S.maps || []).includes(k) && gv >= ((S.mapsSince || {})[k] || 3) ? paramPort(n.name, k) : 0;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
       const w = input(n, port);
       if(w instanceof Float32Array || isImg(w) || isCv(w)){
@@ -14845,7 +14930,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v3' : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v' + gv : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -28773,8 +28858,8 @@ function ltK(k, M, c){
  * S: the shine }, from the dial (deg) and the part's settings.
  */
 function ltLight(H, gw, gh, deg, o, glossMap){
-  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03;
-  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
+  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
@@ -28793,10 +28878,14 @@ function ltBlur(F, gw, gh, r){
     for(let y = 0; y < gh; y++){ O[y*gw + x] = s/c; const a = y - r, b = y + r + 1; if(a >= 0){ s -= T[a*gw + x]; c--; } if(b < gh){ s += T[b*gw + x]; c++; } } }
   return O;
 }
-function ltSettings(E, n){
+// (on the grid, `byPoint`: Relief and Gloss may be maps, a value per point; a canvas pass reads them whole)
+function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
-  return { deg, relief: E.num(n, 'relief', 50)/100, gloss: E.num(n, 'gloss', 25)/100, shadow: E.num(n, 'shadow', 60)/100,
-    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100 };
+  const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25);
+  const per = M => { const o = new Float32Array(M.length); for(let i = 0; i < M.length; i++) o[i] = M[i]/100; return o; };
+  return { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
+    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
+    reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
 }
 
 // ---- OIL PAINT: strokes laid along the picture's forms ----
@@ -29048,7 +29137,7 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
     io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0)],
     cost: () => 10,
@@ -29071,10 +29160,11 @@ const LIGHT_STEPS = {
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
       return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
     run(E, n){
-      const { ww, wh, N } = E, o = ltSettings(E, n), M = ltMaterial(E, n);
+      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n);
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
-      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : null;
+      // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
+      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
       const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
@@ -29817,7 +29907,7 @@ function patShape(x, kind, rand){
 const PATTERN_STEPS = {
   // FILTER FORGE'S BOMBER: throw copies of a shape (or of a picture) across the page, each of its own size, turn
   // and brightness; where they may fall can be a gray map, and which way they turn an angle map (a vector field)
-  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'],
+  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'], maps: ['size:4'],
     io: { ins: ['image', 'field', 'field'], outs: ['field', 'field', 'field'] },
     params: [PAT_SEL('shape', 'Shape', PAT_SHAPES), PAT_R('count', 'Count', 60, 1, 400), PAT_R('size', 'Size', 20, 1, 100), PAT_R('vary', 'Size Variety', 50),
       PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99)],
@@ -29825,7 +29915,9 @@ const PATTERN_STEPS = {
     doc: 'Scatters copies of a mark across the page (dots, stars, sigils, or any picture), each with its own size, turn and brightness.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
       const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3)), pic = shape === 'picture' ? asImage(input(n, 1)) : null;
-      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), R0 = num(n, 'size', 20)/100*unit*0.12;
+      // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
+      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
+      const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
       const [mc, mx] = mk(), [ic, ix] = mk();
@@ -29849,7 +29941,8 @@ const PATTERN_STEPS = {
           if(tries === 11) x = -1e9;
         }
         if(x < -1e8) continue;
-        const r = Math.max(0.5, R0*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
+        const Rm = typeof SZ === 'number' ? R0 : SZ[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))]/100*unit*0.12;
+        const r = Math.max(0.5, Rm*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
         let ang = (rand() - 0.5)*Math.PI*2*turn;
         if(way){ const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0)); ang = way[q]*Math.PI*2 + (rand() - 0.5)*turn*0.6; }
         const g = Math.round(255*(1 - fade*rand())), id = Math.round(20 + rand()*235);
@@ -29864,7 +29957,7 @@ const PATTERN_STEPS = {
     } },
 
   // FILTER FORGE'S CHECKER, TILES and DOTS in one: a regular pattern, turned and sized
-  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'],
+  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'], maps: ['weight'],
     params: [PAT_SEL('kind', 'Pattern', ['checker', 'grid lines', 'dots', 'hex dots', 'diamonds', 'stripes']), PAT_R('cells', 'Cells', 12, 2, 120), PAT_R('weight', 'Line or Dot Size', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('soft', 'Softness', 10)],
     cost: () => 1,
     doc: 'A regular pattern: checkerboard, grid lines, dots in rows or in a honeycomb, diamonds, or stripes.',
@@ -29903,7 +29996,7 @@ const PATTERN_STEPS = {
     } },
 
   // FILTER FORGE'S LOOKUP: a picture read at the places two gray maps name — refraction, foil, interference
-  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
+  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 100), PAT_SEL('edges', 'At the Edges', ['repeat', 'mirror', 'clamp']), PAT_R('scale', 'Scale', 100, 10, 400)],
     cost: () => 1,
     doc: 'Rebuilds a picture by reading it at positions given by two gray maps.',
@@ -29920,7 +30013,7 @@ const PATTERN_STEPS = {
     } },
 
   // DISPLACE BY A MAP'S SLOPE (Filter Forge's Refraction): a picture seen through a bumpy glass
-  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
+  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 30), PAT_R('blur', 'Smoothing', 20)],
     cost: () => 1.5,
     doc: 'Bends a picture as if seen through glass shaped like a gray map.',
@@ -30527,6 +30620,22 @@ const STEP_COST = {
   forms: () => 2, streaks: () => 4, hatching: () => 6,
 };
 
+// ---- a noise whose Scale is a map ----
+// A noise at a scale that varies by point (Filter Forge's mapped Scale): layers an octave apart (cells = scale/10),
+// each point read between the two nearest, mixed so the pattern keeps its contrast (two unrelated layers simply
+// averaged would flatten it). `layer(cells)` gives a function (x, y, q) → a value around 0.5.
+function stepScaleByPoint(E, SC, layer){
+  const { ww, wh, N } = E; let lo = Infinity, hi = -Infinity;
+  for(let i = 0; i < N; i++){ const c = Math.max(1, SC[i])/10; if(c < lo) lo = c; if(c > hi) hi = c; }
+  const K = Math.max(1, Math.ceil(Math.log2(hi/lo) - 1e-9)), layers = Array.from({ length: K + 1 }, (_, j) => layer(lo*Math.pow(2, j))), o = new Float32Array(N);
+  for(let y = 0, q = 0; y < wh; y++) for(let x = 0; x < ww; x++, q++){
+    const p = Math.log2(Math.max(1, SC[q])/10/lo), j = Math.min(K - 1, Math.floor(p)), t = Math.max(0, Math.min(1, p - j));
+    const a = layers[j](x, y, q) - 0.5, b = t > 0 ? layers[j + 1](x, y, q) - 0.5 : 0;
+    o[q] = Math.max(0, Math.min(1, 0.5 + (a*(1 - t) + b*t)/Math.sqrt((1 - t)*(1 - t) + t*t)));
+  }
+  return o;
+}
+
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
@@ -30546,13 +30655,18 @@ const STEP_RUN = {
   page(E, n){ const { field } = E;
     return [field(u => u), field((u, v) => v), field((u, v) => Math.min(1, Math.hypot(u - 0.5, v - 0.5)/0.7071))];
   },
-  noise(E, n){ const { unit, input, num, field } = E;
-    const cells = Math.max(1, num(n, 'scale', 40))/10, oct = Math.max(1, Math.min(6, Math.round(num(n, 'octaves', 3))));
+  noise(E, n){ const { unit, input, num, map, field } = E;
+    const SC = map(n, 'scale', 40);
+    const cells = Math.max(1, typeof SC === 'number' ? SC : 40)/10, oct = Math.max(1, Math.min(6, Math.round(num(n, 'octaves', 3))));
     const s0 = input(n, 1), off = typeof s0 === 'number' ? s0*97 : 0;
-    const grids = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
-    const norm = grids.reduce((s, o) => s + o.a, 0);
+    // one layer of noise at `cells` across the short side, its octaves each half as strong
+    const layer = cells => { const grids = []; for(let o = 0; o < oct; o++){ const g = Math.max(2, Math.round(cells*Math.pow(2, o))) + 1; grids.push({ g, grid: makeNoiseGrid(g, g), a: Math.pow(0.5, o) }); }
+      const norm = grids.reduce((s, o) => s + o.a, 0);
+      return (x, y) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, x/unit*(o.g - 1) + off, y/unit*(o.g - 1) + off*1.7)*o.a; return s/norm; }; };
     // square cells, `scale/10` of them across the page's short side
-    return [field((u, v, x, y) => { let s = 0; for(const o of grids) s += sampleNoiseGrid(o.grid, o.g, o.g, x/unit*(o.g - 1) + off, y/unit*(o.g - 1) + off*1.7)*o.a; return s/norm; })];
+    if(typeof SC === 'number'){ const one = layer(cells); return [field((u, v, x, y) => one(x, y))]; }
+    // SCALE BY POINT (a map on its ⚙): layers an octave apart, each point read between the two nearest
+    return [stepScaleByPoint(E, SC, layer)];
   },
   cells(E, n){ const { ww, wh, N, unit, num } = E;
     const sc = Math.max(2, num(n, 'scale', 30))/10, jit = num(n, 'jitter', 80)/100, cs = unit/sc;
@@ -30624,7 +30738,17 @@ const STEP_RUN = {
     for(let i = 0; i < N; i++){ const a = at(AT, i)/100, sf = Math.max(0.002, at(SF, i)/200), t = Math.max(0, Math.min(1, (f[i] - a + sf)/(2*sf))); o[i] = t*t*(3 - 2*t); }
     return [o];
   },
-  blur(E, n){ const { unit, input, num, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null; return [boxBlur(f, num(n, 'radius', 8)*unit/1536*1.2)];
+  blur(E, n){ const { N, unit, input, map, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const RA = map(n, 'radius', 8);
+    if(typeof RA === 'number') return [boxBlur(f, RA*unit/1536*1.2)];
+    // RADIUS BY POINT (a map on its ⚙): the field blurred at a few radii (a blur stack), each point read between the two nearest
+    const k = unit/1536*1.2; let lo = Infinity, hi = -Infinity; for(let i = 0; i < N; i++){ const r = RA[i]*k; if(r < lo) lo = r; if(r > hi) hi = r; }
+    const eff = r => r < 0.5 ? 0 : Math.max(1, Math.round(r)), radii = [...new Set(Array.from({ length: 7 }, (_, j) => eff(lo + (hi - lo)*(j/6)**2)))].sort((a, b) => a - b);
+    if(radii.length === 1) return [boxBlur(f, radii[0])];
+    const stack = radii.map(r => boxBlur(f, r)), o = new Float32Array(N), L = radii.length;
+    for(let i = 0; i < N; i++){ const r = RA[i]*k; let j = 0; while(j < L - 2 && r > radii[j + 1]) j++;
+      const t = Math.max(0, Math.min(1, (r - radii[j])/(radii[j + 1] - radii[j]))); o[i] = stack[j][i] + (stack[j + 1][i] - stack[j][i])*t; }
+    return [o];
   },
   warp(E, n){ const { ww, wh, N, unit, input, num, asField } = E;
     const f = asField(input(n, 1)), by = asField(input(n, 2)); if(!f) return null; if(!by) return [f];
@@ -30677,13 +30801,14 @@ const STEP_RUN = {
     }
     return [o];
   },
-  edges(E, n){ const { ww, wh, N, unit, input, num, field, asField } = E;
+  edges(E, n){ const { ww, wh, N, unit, input, map, asField } = E;
     // Sobel: where the field changes fastest
     const f = asField(input(n, 1)); if(!f) return null;
-    const k = num(n, 'strength', 50)/50*unit/96, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
+    const SM = map(n, 'strength', 50), K = typeof SM === 'number' ? SM/50*unit/96 : 0, o = new Float32Array(N), at = (x, y) => f[Math.max(0, Math.min(wh - 1, y))*ww + Math.max(0, Math.min(ww - 1, x))];
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
       const gx = at(x+1,y-1) + 2*at(x+1,y) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x-1,y) - at(x-1,y+1);
       const gy = at(x-1,y+1) + 2*at(x,y+1) + at(x+1,y+1) - at(x-1,y-1) - 2*at(x,y-1) - at(x+1,y-1);
+      const k = typeof SM === 'number' ? K : SM[y*ww + x]/50*unit/96;   // (STRENGTH BY POINT: a map on its ⚙)
       o[y*ww + x] = Math.min(1, Math.hypot(gx, gy)*k/8);
     }
     return [o];
@@ -30691,8 +30816,9 @@ const STEP_RUN = {
   light(E, n){ const { N, unit, ctx, input, num, flat, asField, lightOf } = E;
     const h0 = asField(input(n, 1)); if(!h0) return null;
     const dial = input(n, 2), deg = typeof dial === 'number' ? dial*360 : (ctx.light ?? 315);
-    const H = new Float32Array(N), rel = num(n, 'relief', 50)/100*unit*0.02;
-    for(let i = 0; i < N; i++) H[i] = h0[i]*rel;
+    // (RELIEF BY POINT: a map on its ⚙ raises the heights more in some places than others)
+    const H = new Float32Array(N), RM = E.map(n, 'relief', 50), rel = typeof RM === 'number' ? RM/100*unit*0.02 : 0;
+    for(let i = 0; i < N; i++) H[i] = h0[i]*(typeof RM === 'number' ? rel : RM[i]/100*unit*0.02);
     const L = lightOf(H, deg, 1, num(n, 'gloss', 30)/100, num(n, 'shadow', 60)/100), lf = new Float32Array(N), sp = new Float32Array(N);
     for(let i = 0; i < N; i++){ lf[i] = Math.min(1, L.light[i]/L.flat*0.5); sp[i] = L.spec[i]; }
     return [lf, sp];
@@ -30909,8 +31035,19 @@ Object.assign(STEP_RUN, {
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f[i] + (f[i] - lo[i])*at(A, i)/50));
     return [o];
   },
-  motionblur(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const L = num(n, 'length', 20)/100*unit*0.15, an = num(n, 'angle', 0)*Math.PI/180; if(L < 0.5) return [f];
+  motionblur(E, n){ const { ww, wh, N, unit, input, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const LM = map(n, 'length', 20), AM = map(n, 'angle', 0);
+    if(typeof LM !== 'number' || typeof AM !== 'number'){
+      // LENGTH AND ANGLE BY POINT (a map on a ⚙): each point smeared along its own stroke
+      const o = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, L = at(LM, q)/100*unit*0.15, an = at(AM, q)*Math.PI/180;
+        if(L < 0.5){ o[q] = f[q]; continue; }
+        const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L; let t = 0;
+        for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
+        o[q] = t/S; }
+      return [o];
+    }
+    const L = LM/100*unit*0.15, an = AM*Math.PI/180; if(L < 0.5) return [f];
     const S = Math.max(2, Math.min(48, Math.round(L))), dx = Math.cos(an)*L, dy = Math.sin(an)*L, o = new Float32Array(N);
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ let t = 0;
       for(let k = 0; k < S; k++){ const s = k/(S - 1) - 0.5, sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*s))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*s))); t += f[sy*ww + sx]; }
@@ -30934,11 +31071,20 @@ Object.assign(STEP_RUN, {
     const noise = (x, y) => { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y); const u = fade(x), v = fade(y);
       const a = perm[X] + Y, b = perm[X + 1] + Y;
       return lerp(lerp(grad(perm[a], x, y), grad(perm[b], x - 1, y), u), lerp(grad(perm[a + 1], x, y - 1), grad(perm[b + 1], x - 1, y - 1), u), v)/2.2; };
-    const cells = Math.max(1, num(n, 'scale', 40))/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
-    let q = -1;
-    return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+    const SC = map(n, 'scale', 40);
+    const cells = Math.max(1, typeof SC === 'number' ? SC : 40)/10, det = Math.max(1, Math.min(8, Math.round(num(n, 'details', 4)))), R = map(n, 'rough', 50), C = map(n, 'contrast', 30);
+    if(typeof SC === 'number'){
+      let q = -1;
+      return [field((u, v, x, y) => { q++; const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
+        for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
+        const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+    }
+    // SCALE BY POINT (a map on its ⚙): the same noise at scales an octave apart, each point read between the two nearest
+    const layer = cells => (x, y, q) => { const rough = 0.25 + at(R, q)/100*0.6; let t = 0, a = 1, norm = 0, fr = 1;
       for(let o = 0; o < det; o++){ t += noise(x/unit*cells*fr + off + o*17.3, y/unit*cells*fr + off*1.7 + o*31.1)*a; norm += a; a *= rough; fr *= 2; }
-      const k = 1 + at(C, q)/100*3; return Math.max(0, Math.min(1, 0.5 + t/norm*k)); })];
+      return 0.5 + t/norm*(1 + at(C, q)/100*3); };
+    const o = stepScaleByPoint(E, SC, layer); for(let i = 0; i < o.length; i++) o[i] = Math.max(0, Math.min(1, o[i]));
+    return [o];
   },
   bricks(E, n){ const { ww, wh, N, unit, input, num, isCurve } = E;
     const rows = Math.max(2, Math.round(num(n, 'rows', 12))), bh = wh/rows, bw = bh*num(n, 'ratio', 200)/100, mo = num(n, 'mortar', 12)/100*bh*0.5;
@@ -31024,15 +31170,23 @@ Object.assign(STEP_RUN, {
     const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
     return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard];
   },
-  grow(E, n){ const { ww, wh, N, unit, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const a = num(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2)), up = a >= 50, t = Math.abs(a - 50)/50;
-    if(t === 0) return [f];
+  grow(E, n){ const { ww, wh, N, unit, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    const AM = map(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2));
     // a max (or min) filter, separable, by the radius; mixed with the original by how far Amount is from 50
-    const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
-      for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
-        for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
-        dst[horiz ? j*ww + i : i*ww + j] = m; } };
-    const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false);
+    const filter = up => { const pass = (src, dst, horiz) => { const L = horiz ? ww : wh, M = horiz ? wh : ww;
+        for(let j = 0; j < M; j++) for(let i = 0; i < L; i++){ let m = up ? -Infinity : Infinity;
+          for(let k = Math.max(0, i - rad), e = Math.min(L - 1, i + rad); k <= e; k++){ const v = src[horiz ? j*ww + k : k*ww + j]; m = up ? (v > m ? v : m) : (v < m ? v : m); }
+          dst[horiz ? j*ww + i : i*ww + j] = m; } };
+      const tmp = new Float32Array(N), o = new Float32Array(N); pass(f, tmp, true); pass(tmp, o, false); return o; };
+    if(typeof AM !== 'number'){
+      // AMOUNT BY POINT (a map on its ⚙): grown where the map is past 50, shrunk where it is below
+      let g = null, s = null; for(let i = 0; i < N; i++){ if(AM[i] > 50 && !g) g = filter(true); if(AM[i] < 50 && !s) s = filter(false); }
+      const o = new Float32Array(N); for(let i = 0; i < N; i++){ const a = at(AM, i), t = Math.abs(a - 50)/50, F = a >= 50 ? g : s; o[i] = F ? f[i] + (F[i] - f[i])*t : f[i]; }
+      return [o];
+    }
+    const a = AM, up = a >= 50, t = Math.abs(a - 50)/50;
+    if(t === 0) return [f];
+    const o = filter(up);
     for(let i = 0; i < N; i++) o[i] = f[i] + (o[i] - f[i])*t;
     return [o];
   },
@@ -31045,11 +31199,12 @@ Object.assign(STEP_RUN, {
     const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
     return [o];
   },
-  twirl(E, n){ const { ww, wh, N, input, num, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const turn = num(n, 'angle', 180)*Math.PI/180, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
+  twirl(E, n){ const { ww, wh, N, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
+    // (TWIST BY POINT: a map on its ⚙ turns each point by its own angle)
+    const TW = map(n, 'angle', 180), turn = typeof TW === 'number' ? TW*Math.PI/180 : 0, R = Math.max(1, num(n, 'radius', 70)/100*Math.min(ww, wh)/2), cx = num(n, 'x', 50)/100*ww, cy = num(n, 'y', 50)/100*wh, o = new Float32Array(N);
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), q = y*ww + x;
       if(r >= R){ o[q] = f[q]; continue; }
-      const t = 1 - r/R, a = Math.atan2(dy, dx) + turn*t*t;
+      const t = 1 - r/R, a = Math.atan2(dy, dx) + (typeof TW === 'number' ? turn : at(TW, q)*Math.PI/180)*t*t;
       const sx = Math.min(ww - 1, Math.max(0, Math.round(cx + Math.cos(a)*r))), sy = Math.min(wh - 1, Math.max(0, Math.round(cy + Math.sin(a)*r)));
       o[q] = f[sy*ww + sx]; }
     return [o];
@@ -31117,6 +31272,16 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 'posterize', 'transform', 'edges', 'light', 'tint', 'ramp', 'kaleidoscope', 'polar',
   'maprange', 'split', 'hsv', 'curveops', 'tonecurve', 'bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma',
   'meniscus', 'pigment', 'contours', 'glaze', 'burn']);
+// SETTINGS THAT TAKE A MAP (Filter Forge's parameter mapping): in a v3 graph a gray map or a picture on one of
+// these ⚙ ports sets it point by point (athanor.js E.map); any other setting reads a map's average. One list: the
+// evaluator maps only what is here, the wiki marks these settings, the editor's menu says so. (A family's part
+// carries its own `maps`.) `key:4`: from graph version 4 on (an older graph reads it whole, as it always did).
+const STEP_MAPS = { levels: ['lo', 'hi', 'gamma'], threshold: ['at', 'soft'], warp: ['amount'], mix: ['t'], posterize: ['steps'], blend: ['opacity'],
+  maprange: ['inLo', 'inHi', 'outLo', 'outHi'], bricon: ['bright', 'contrast'], highpass: ['gain'], sharpen: ['amount'], tonecurve: ['mix'], chroma: ['amount'],
+  hsv: ['hue', 'sat', 'val'], noise: ['scale:4'], perlin: ['scale:4', 'rough', 'contrast'], blur: ['radius:4'], motionblur: ['length:4', 'angle:4'], grow: ['amount:4'],
+  twirl: ['angle:4'], edges: ['strength:4'], light: ['relief:4'] };
+const stepMapKeys = list => (list || []).map(m => String(m).split(':')[0]);
+const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String(m).includes(':')).map(m => String(m).split(':')).map(([k, v]) => [k, +v]));
 /** Every step: the part, its cost and what it does. */
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
@@ -31126,6 +31291,7 @@ const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
   return [k, { ...s, doc: STEP_DOCS[k] || s.doc || '', required: STEP_REQUIRED.has(k) || s.req ? [1] : [],
+    maps: stepMapKeys(STEP_MAPS[k] || s.maps), mapsSince: stepMapsSince(STEP_MAPS[k] || s.maps),
     dataIns: s.ins.length,
     ins: s.ins.concat(paramPorts.map(key => '⚙ ' + s.params.find(p => p[0] === key)[1])),
     inTypes: s.ins.map((_, i) => (io.ins || [])[i] || 'field').concat(paramPorts.map(() => 'value')),
@@ -32231,7 +32397,10 @@ const TEXTURE_CHAINS = {
 // v3 (Filter Forge's MAP INPUTS): a picture wired into a part's ⚙ setting sets it point by point, wherever
 // the part can use it so (E.map); v2 took the picture's average. The textures' own chains stay v2, so
 // they draw exactly as they did.
-const ATHANOR_VERSION = 3;
+// v4: more settings take a map point by point (Blur's Radius, the noises' Scale, Motion Blur, Grow & Shrink,
+// Twirl, Edge Detect, Scatter's Size, the lights' Relief and the Light Engine's Gloss: steps.js STEP_MAPS,
+// `name:4`); a v3 graph still reads those whole, as it did.
+const ATHANOR_VERSION = 4;
 function athanorVersion(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
   catch(e){ return 1; }
@@ -32354,7 +32523,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
-  const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
+  const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
   const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, sizeK]);
@@ -32426,7 +32595,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // a value per point, across its range (or its own '~key' part of it); otherwise the setting as num() reads it.
   // Only in a v3 graph: before, a wired map was averaged, and an old graph must draw as it always did.
   const map = (n, k, d) => {
-    const port = v3 ? paramPort(n.name, k) : 0;
+    const S = STEPS[n.name] || {}, port = v3 && (S.maps || []).includes(k) && gv >= ((S.mapsSince || {})[k] || 3) ? paramPort(n.name, k) : 0;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
       const w = input(n, port);
       if(w instanceof Float32Array || isImg(w) || isCv(w)){
@@ -32455,7 +32624,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v3' : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v' + gv : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -34347,7 +34516,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Anthe';
+const RELEASE = 'Saturn–Pallene';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -35176,7 +35345,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 0ba509d";
+const STAMP = "2026-10-15 · d33f776";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -38586,16 +38755,16 @@ const WIKI_PARTS = {
     about: 'Value noise scatters random grays on a grid and blends smoothly between them. Several layers of it are stacked, each finer and fainter than the last (octaves), which gives the cloudy look. It is the starting point for clouds, stains, variation and anything that should feel uneven.',
     ins: { seed: 'A number that shifts the pattern (normally left empty: the page’s seed is used).' },
     outs: { field: 'The noise, black to white.' },
-    set: { scale: 'How large the blobs are. Higher values give fewer, bigger clouds.', octaves: 'How many finer layers are added on top. 1 is very soft; 6 is detailed and grainy.', variation: 'Picks another pattern with the same settings.' },
-    tips: ['Into a Levels part to turn soft clouds into crisper blotches.', 'Into a Warp’s By input to make anything wobble.'],
-    see: ['graymap', 'part:perlin', 'seeds'],
+    set: { scale: 'How many blobs fit across the page: higher values give more, smaller clouds. A map on its ⚙ changes the size across the page.', octaves: 'How many finer layers are added on top. 1 is very soft; 6 is detailed and grainy.', variation: 'Picks another pattern with the same settings.' },
+    tips: ['Into a Levels part to turn soft clouds into crisper blotches.', 'Into a Warp’s By input to make anything wobble.', 'Wire a Gradient into Scale’s ⚙: big clouds on one side of the page, fine grain on the other.'],
+    see: ['graymap', 'part:perlin', 'seeds', 'mapping'],
   },
   perlin: {
     line: 'Perlin noise: smooth hills and valleys of gray, with as much fine detail as you ask for.',
     about: 'Perlin noise is the classic noise of computer graphics, invented by Ken Perlin for the film Tron. Like value noise it stacks layers (octaves), but each layer is made of smooth slopes rather than blobs, so it looks more natural: marble, terrain, smoke, skin.',
     ins: { seed: 'A number that shifts the pattern (normally left empty).' },
     outs: { field: 'The noise, black to white.' },
-    set: { scale: 'The size of the largest hills.', details: 'The number of layers (octaves). More layers add finer detail.', rough: 'How strong each finer layer is compared with the one before. Low is smooth; high is rough and gritty.', contrast: 'Pushes the result toward black and white.', variation: 'Picks another pattern with the same settings.' },
+    set: { scale: 'How many of the largest hills fit across the page: higher is finer. A map on its ⚙ changes the size across the page.', details: 'The number of layers (octaves). More layers add finer detail.', rough: 'How strong each finer layer is compared with the one before. Low is smooth; high is rough and gritty.', contrast: 'Pushes the result toward black and white.', variation: 'Picks another pattern with the same settings.' },
     tips: ['Use it as a height map in the Light Engine for a rough stone.', 'Wire it into a Warp’s By input at a low Strength for a natural wobble.'],
     see: ['part:noise', 'heights'],
   },
@@ -38758,16 +38927,17 @@ const WIKI_PARTS = {
     line: 'Softens a gray map: each point becomes the average of the area around it.',
     ins: { field: 'The gray map to blur.' },
     outs: { field: 'The blurred map.' },
-    set: { radius: 'How wide the blur is.' },
-    tips: ['Blur a height map a little before lighting it: edges become rounded instead of stepped.'],
-    see: ['part:motionblur'],
+    set: { radius: 'How wide the blur is. A gray map on its ⚙ sets it point by point: sharp where the map is dark, soft where it is light.' },
+    tips: ['Blur a height map a little before lighting it: edges become rounded instead of stepped.', 'Wire a Gradient into Radius’s ⚙ for a focus fall-off: sharp on one side of the page, soft on the other.'],
+    see: ['part:motionblur', 'mapping'],
   },
   motionblur: {
     line: 'Smears a gray map along one direction, like a moving camera.',
     ins: { field: 'The gray map.' },
     outs: { field: 'The smeared map.' },
-    set: { length: 'How far it smears.', angle: 'Which way.' },
-    tips: ['On noise: rain, brushed metal or fibers.', 'Wire the Light Dial’s Direction into Angle.'],
+    set: { length: 'How far it smears (a map on its ⚙: a different length at every point).', angle: 'Which way (a map on its ⚙: each point its own way).' },
+    tips: ['On noise: rain, brushed metal or fibers.', 'Wire the Light Dial’s Direction into Angle.', 'Wire a Perlin Noise into Angle’s ⚙: the smear swirls like brushed hair.'],
+    see: ['part:blur', 'mapping'],
   },
   warp: {
     line: 'Pushes a gray map around, guided by a second map: anything becomes wobbly or wavy.',
@@ -38797,7 +38967,7 @@ const WIKI_PARTS = {
   edges: {
     line: 'Finds the edges in a gray map: bright where it changes quickly, dark where it is flat.',
     ins: { field: 'The map.' }, outs: { edges: 'The edges.' },
-    set: { strength: 'How bright the edges are.' },
+    set: { strength: 'How bright the edges are (a map on its ⚙: brighter in some places than others).' },
   },
   kaleidoscope: {
     line: 'Folds a gray map into mirrored wedges around the center, like a kaleidoscope.',
@@ -38837,7 +39007,9 @@ const WIKI_PARTS = {
     line: 'Grows the bright parts of a gray map outward, or shrinks them inward.',
     about: 'Above 50 the white areas spread (dilate); below 50 they retreat (erode). Growing merges nearby specks; shrinking thins lines and removes small dots.',
     ins: { field: 'The map.' }, outs: { field: 'The result.' },
-    set: { amount: 'Below 50 shrinks, above 50 grows.', radius: 'How far.' },
+    set: { amount: 'Below 50 shrinks, above 50 grows (a map on its ⚙: grown in some places, shrunk in others).', radius: 'How far.' },
+    tips: ['Wire a Gradient into Amount’s ⚙: lines thin out across the page, then thicken.'],
+    see: ['mapping'],
   },
   pixelate: {
     line: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers.',
@@ -38847,7 +39019,9 @@ const WIKI_PARTS = {
   twirl: {
     line: 'Twists a gray map around a point, strongest at the center and fading out at the radius.',
     ins: { field: 'The map.' }, outs: { field: 'The twisted map.' },
-    set: { angle: 'How far it twists (negative turns the other way).', radius: 'How far out the twist reaches.', x: 'Center, left to right.', y: 'Center, top to bottom.' },
+    set: { angle: 'How far it twists (negative turns the other way). A map on its ⚙ twists each point by its own amount.', radius: 'How far out the twist reaches.', x: 'Center, left to right.', y: 'Center, top to bottom.' },
+    tips: ['Wire a Value Noise into Twist’s ⚙ for a twist that eddies instead of turning evenly.'],
+    see: ['part:polar', 'mapping'],
   },
   mirror: {
     line: 'Folds a gray map onto itself so one half repeats the other.',
@@ -38998,7 +39172,7 @@ const WIKI_PARTS = {
     about: 'A lightweight relative of the Light Engine: it returns the light and the highlights separately, for you to combine yourself.',
     ins: { height: 'The height map.', dial: 'The light direction (empty: the page dial).' },
     outs: { light: 'Shading.', highlight: 'Shine.' },
-    set: { relief: 'How tall the heights are.', gloss: 'Highlight sharpness.', shadow: 'Shadow strength.' },
+    set: { relief: 'How tall the heights are (a map on its ⚙: taller in some places than others).', gloss: 'Highlight sharpness.', shadow: 'Shadow strength.' },
     see: ['part:material', 'heights'],
   },
   material: {
@@ -39006,7 +39180,7 @@ const WIKI_PARTS = {
     about: 'The Light Engine is what makes surfaces look physical. Give it a picture (the color) and a height map (the shape), and it lights the shape from the dial as a game engine would: slopes facing the light brighten, shadows fall behind raised parts, crevices darken (ambient occlusion), and shiny areas catch highlights.',
     ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).' },
     outs: { image: 'The lit picture.', light: 'The lighting alone, as gray.', highlight: 'The shine alone.' },
-    set: { relief: 'How tall the heights are.', gloss: 'How tight the highlights are.', shine: 'How bright the highlights are.', shadow: 'How dark cast shadows are.', occlusion: 'How dark crevices get.', ambient: 'Light that reaches everywhere, filling the shadows.', translucency: 'Light passing into the surface and back out (wax, skin).' },
+    set: { relief: 'How tall the heights are (a map on its ⚙: taller in some places than others).', gloss: 'How tight the highlights are (a map on its ⚙ works as the gloss map does).', shine: 'How bright the highlights are.', shadow: 'How dark cast shadows are.', occlusion: 'How dark crevices get.', ambient: 'Light that reaches everywhere, filling the shadows.', translucency: 'Light passing into the surface and back out (wax, skin).' },
     tips: ['Don’t also wire the height into the Surface: it would be lit twice.'],
     see: ['heights', 'part:light'],
   },
@@ -39050,7 +39224,7 @@ const WIKI_PARTS = {
     about: 'Scatter (Filter Forge calls this a bomber) places many copies of a small mark. A map in Where decides where they may land, and a map in Which Way turns them all to follow it, like iron filings.',
     ins: { picture: 'A picture to use as the mark (Shape: picture).', where: 'Where marks may fall: they land only on light areas.', 'which way': 'Turns each mark to the map’s value at that point.' },
     outs: { marks: 'All the marks, white on black.', heights: 'The marks as heights.', 'each mark': 'A different gray per mark.' },
-    set: { shape: 'The mark.', count: 'How many.', size: 'Their size.', vary: 'How much sizes differ.', turn: 'How randomly each is rotated.', clump: 'Gathers them into clusters.', fade: 'How much their brightness varies.', variation: 'Another arrangement.' },
+    set: { shape: 'The mark.', count: 'How many.', size: 'Their size (a map on its ⚙: each mark sized by the map where it lands).', vary: 'How much sizes differ.', turn: 'How randomly each is rotated.', clump: 'Gathers them into clusters.', fade: 'How much their brightness varies.', variation: 'Another arrangement.' },
     see: ['mapping', 'masks'],
   },
   screen: {
@@ -39654,7 +39828,7 @@ const WIKI_ARTICLES = [
 <p>Other ideas: noise on a Threshold’s Cutoff for uneven edges; The Poem’s Distance on a Mix’s amount so a texture fades near the words; noise on Scatter’s Size.</p>
 <h3>Key facts</h3>
 <ul>
-<li>It works where a part reads the setting point by point. Settings that can’t vary (how many octaves, which shape) use the map’s average.</li>
+<li>It works where a part reads the setting point by point: on each part’s page those settings are marked <b>by point</b>. Settings that can’t vary (how many octaves, which shape) use the map’s average.</li>
 <li>It works in graphs made with this version. Older graphs, and the app’s own textures, use the average, so they keep looking exactly as before.</li>
 <li>Combine it with [[ranges]] to choose how far the setting moves.</li>
 </ul>` },
@@ -39914,9 +40088,9 @@ function wkPartHtml(k, ctx){
   const params = S.params || [];
   if(params.length){
     h += `<h3>Settings</h3><table class="wk-table">` + params.map(p => {
-      const [key, label, type, def, o] = p, gear = (S.paramPorts || []).includes(key);
+      const [key, label, type, def, o] = p, gear = (S.paramPorts || []).includes(key), byPoint = (S.maps || []).includes(key);
       const range = type === 'range' ? `${o.min}–${o.max}, default ${def}` : type === 'select' ? (o.options || []).join(' · ') : 'text';
-      return `<tr><td><b>${wkEsc(label)}</b>${gear ? ' <span class="wk-gear" title="Has a ⚙ port: a wire can drive it">⚙</span>' : ''}</td><td class="wk-range">${wkEsc(range)}</td><td>${wkLinks(wkEsc((W.set || {})[key] || ''), ctx)}</td></tr>`;
+      return `<tr><td><b>${wkEsc(label)}</b>${gear ? ' <span class="wk-gear" title="Has a ⚙ port: a wire can drive it">⚙</span>' : ''}${byPoint ? ' <a href="#" class="wk-map" data-wiki="mapping" title="A gray map on its ⚙ sets it point by point">by point</a>' : ''}</td><td class="wk-range">${wkEsc(range)}</td><td>${wkLinks(wkEsc((W.set || {})[key] || ''), ctx)}</td></tr>`;
     }).join('') + `</table>`;
   }
   if((W.tips || []).length) h += `<h3>Try</h3><ul>` + W.tips.map(t => `<li>${wkLinks(wkEsc(t), ctx)}</li>`).join('') + `</ul>`;
@@ -40004,7 +40178,7 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 // ---- the parts: every node a step of steps.js (shared with the textures
 // rebuilt as chains) — ports, params and category as the editor shows them
 const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
-  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [] }]));
+  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [], maps: s.maps || [], mapsSince: s.mapsSince || {} }]));
 const FORGE_CATEGORIES = STEP_CATEGORIES;
 /**
  * COLOUR CARRIES MEANING in the grid, whatever the app's theme: each part's
@@ -40658,7 +40832,10 @@ async function openForge(deps){
         }
       }
       items.push({ glyph: '↺', label: `Reset to default (${def})`, act: () => setData(id, { [key]: def }) });
-      return { title: `${label}`, hint: `a setting of ${labelOf(id)}` + (wired ? ', driven by a wire' : bound ? `, bound to ${v.slice(1).replace(/\[.*$/, '').replace(/^k/, 'slider ')}` : ''), items };
+      // (a setting that takes a map says so: what a gray map on its ⚙ does)
+      // (in a graph older than the setting's map input, a map is still averaged: the graph draws as it did)
+      const byPoint = (N.maps || []).includes(key) && (F.version || ATHANOR_VERSION) >= ((N.mapsSince || {})[key] || 3) ? '; a gray map on its ⚙ sets it point by point' : port ? '; a map on its ⚙ gives it the map’s average' : '';
+      return { title: `${label}`, hint: `a setting of ${labelOf(id)}` + (wired ? ', driven by a wire' : bound ? `, bound to ${v.slice(1).replace(/\[.*$/, '').replace(/^k/, 'slider ')}` : '') + byPoint, items };
     };
     // a Knob (or the Light Dial) set beside a node and wired into one of its ⚙ ports
     const wireIn = (id, key, port, kind) => {

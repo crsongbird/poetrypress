@@ -44,7 +44,10 @@ import { ATHANOR_STUDIES } from './athanorStudies.js';
 // v3 (Filter Forge's MAP INPUTS): a picture wired into a part's ⚙ setting sets it point by point, wherever
 // the part can use it so (E.map); v2 took the picture's average. The textures' own chains stay v2, so
 // they draw exactly as they did.
-export const ATHANOR_VERSION = 3;
+// v4: more settings take a map point by point (Blur's Radius, the noises' Scale, Motion Blur, Grow & Shrink,
+// Twirl, Edge Detect, Scatter's Size, the lights' Relief and the Light Engine's Gloss: steps.js STEP_MAPS,
+// `name:4`); a v3 graph still reads those whole, as it did.
+export const ATHANOR_VERSION = 4;
 export function athanorVersion(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
   catch(e){ return 1; }
@@ -167,7 +170,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const nodes = athanorNodes(graph);
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
-  const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
+  const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
   const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, sizeK]);
@@ -239,7 +242,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // a value per point, across its range (or its own '~key' part of it); otherwise the setting as num() reads it.
   // Only in a v3 graph: before, a wired map was averaged, and an old graph must draw as it always did.
   const map = (n, k, d) => {
-    const port = v3 ? paramPort(n.name, k) : 0;
+    const S = STEPS[n.name] || {}, port = v3 && (S.maps || []).includes(k) && gv >= ((S.mapsSince || {})[k] || 3) ? paramPort(n.name, k) : 0;
     if(port && (((n.inputs || {})['input_' + port] || {}).connections || []).length){
       const w = input(n, port);
       if(w instanceof Float32Array || isImg(w) || isCv(w)){
@@ -268,7 +271,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v3' : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v' + gv : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {

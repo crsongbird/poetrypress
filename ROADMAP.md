@@ -58,7 +58,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Filter Forge | Vellum today | Status |
 |---|---|---|
 | Map / Curve / Numeric components; ports colored by type | Five wire kinds: gray map, picture, color, number, **curve** (green, dotted) | ✅ (curves added in Jupiter–Hegemone) |
-| Parameter mapping (a picture on a setting varies it point by point) | ⚙ ports. In v3 graphs a map is per point where a part reads `E.map`; v2 graphs average it | ✅ for Levels, Threshold, Warp, Mix, Posterize, Map Range, Blend, Hue & Saturation, Chromatic Offset, Brightness & Contrast, High Pass, Sharpen, Perlin Noise, Tone Curve. **A1** for the rest |
+| Parameter mapping (a picture on a setting varies it point by point) | ⚙ ports. In v3 graphs a map is per point for the settings a part declares (`maps`; the wiki marks them "by point"); v2 graphs average it | ✅ (a setting that can't vary, such as a count of octaves, takes the average) |
 | Remappers (limit or reverse a control's range per target; one slider, many ranges) | `'~key': 'lo,hi'` per wired ⚙ (lo > hi reverses) | ✅ engine; **D3** UI |
 | Required inputs (red; a stand-in image keeps the rest working) | `STEP_REQUIRED`: a red port with "!", and a "!"-in-a-circle stand-in in step previews only | ✅ |
 | Result: Simple vs Surface (lit by Surface Color, Height, Reflectivity, Reflection Blur, Metallic) | Surface (picture + height) and the Light Engine as a part | **B1** |
@@ -85,13 +85,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### A · The engine (athanor.js, steps.js)
 
-- **A1 · Map inputs everywhere they make sense.** Give every per-point
-  setting `E.map`/`E.at`: Blur radius (a variable-radius blur), noise
-  scales, Grow & Shrink, Twirl, Motion Blur length, the Light Engine's relief
-  and gloss.
-  - Files: steps.js and its families.
-  - Prove: a v3 graph with a gradient on the ⚙ varies across the page; the
-    same graph at v2 doesn't; fingerprints unchanged.
 - **A3 · Groups.** A selection of parts saved as one part (Filter Forge's
   groups; Unreal's material functions):
   - Knob, Hue and Number nodes inside a group become its inputs.
@@ -101,8 +94,8 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   - Files: athanor.js (evaluate a group as a sub-graph with its own memo),
     forge.js (collapse, expand, edit inside), steps.js (a `group` step that
     carries its graph).
-  - Depends on: A3a, the graph format's sub-graph field. Add a version (v4):
-    a v3 graph must load unchanged.
+  - Depends on: A3a, the graph format's sub-graph field. Add a version (v5):
+    a v4 graph must load unchanged.
   - Prove: a grouped Agate draws identically to the ungrouped one; validateGraph
     limits nodes inside groups too.
 - **A4 · Loop.** Repeat a sub-graph N times, feeding each pass the last, with
@@ -124,7 +117,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   - Save ports by their meaning (`in:tone`, `set:scale`) and translate to
     Drawflow's `input_N` only when the editor draws. (The editor still lines
     ports up by order; `faces` sorting them stays.)
-  - Old graphs load through a v4 translation; `validateGraph` checks names.
+  - Old graphs load through a v5 translation; `validateGraph` checks names.
   - Prove: add an input to a part in a test, and an old graph's wires still
     reach the same settings.
 - **A9 · Variation on every random part.** Done for Value Noise, Perlin
@@ -336,10 +329,9 @@ superseded) wait for Stage 4.
 - **F2** Glyph Scatter's rest, **F3** from the box.
 - **F4–F10**, the rest of Filter Forge's primitives, in the order of what
   they unlock (§2 F).
-- **A1** map inputs on every per-point setting.
 - **A9** the older Variant params onto Variation.
-- **A10** ports saved by name (with A3's v4: both change the format once).
-- **A3** Groups (v4), then **A4** Loop (its body is a group).
+- **A10** ports saved by name (with A3's v5: both change the format once).
+- **A3** Groups (v5), then **A4** Loop (its body is a group).
 - **A6** edges-only supersampling.
 
 ### Stage 2 · Features: the engine, the controls, the poem
@@ -384,8 +376,8 @@ superseded) wait for Stage 4.
  F2 Glyph Scatter (rest) ───► G2 punctuation ─────────────────► I studies → textures ───┐
  F3 from the box ────────────► G5 box input                      J black boxes apart  ───┤
  F4–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
- A1 map inputs · A9 Variant→Variation · A6 AA                    the rest as chains   ───┼─► H2 PRESETS AS GRAPHS
- A3 GROUPS (v4) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
+ A10 ports by name · A9 Variant→Variation · A6 AA              Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
+ A3 GROUPS (v5) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               D1 control kinds ─► D2 order ─► D4 curve control ──────────┤      ├─► E4 author locks
                               D3 remap UI · E3 one at random · H1 actions  ──────────────┘      └─► THE PRESETS PASS
@@ -395,7 +387,7 @@ superseded) wait for Stage 4.
 
 **Suggested passes** (one release each, AGENTS' recipe):
 
-1. Stage 1: A3 Groups (v4) + A1 (the remaining map inputs).
+1. Stage 1: A3 Groups (v5) + A10 (ports saved by name: both change the format once).
 2. Stage 1: F6 noises and patterns (Ellipse, Delaunay edges) + F2's rest.
 3. Stage 2: D1–D3 controls + E3 one control at random.
 4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.

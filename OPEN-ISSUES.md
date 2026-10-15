@@ -6,7 +6,11 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- MAPS ON MORE SETTINGS (graph version 4): Blur's Radius, the noises' Scale, Motion Blur, Grow & Shrink, Twirl,
+  Edge Detect, Scatter's Size, Relief and Gloss take a gray map point by point; the wiki marks them "by point".
+  A Scale that sweeps from 1 shows thin vertical bands at the very edge where the size changes fastest (a
+  wire range such as 20,200 avoids it): worth smoothing?
 - Every menu texture but Deep Field is now a chain, each pixel-identical (checked in Node and in the
   browser, at the defaults and with every slider, the light and the hues moved): Saturn–Anthe added
   eighteen, Saturn–Methone eight. Each of these is one whole part for now (ROADMAP §2 J takes them apart);

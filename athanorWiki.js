@@ -161,7 +161,7 @@ export const WIKI_ARTICLES = [
 <p>Other ideas: noise on a Threshold’s Cutoff for uneven edges; The Poem’s Distance on a Mix’s amount so a texture fades near the words; noise on Scatter’s Size.</p>
 <h3>Key facts</h3>
 <ul>
-<li>It works where a part reads the setting point by point. Settings that can’t vary (how many octaves, which shape) use the map’s average.</li>
+<li>It works where a part reads the setting point by point: on each part’s page those settings are marked <b>by point</b>. Settings that can’t vary (how many octaves, which shape) use the map’s average.</li>
 <li>It works in graphs made with this version. Older graphs, and the app’s own textures, use the average, so they keep looking exactly as before.</li>
 <li>Combine it with [[ranges]] to choose how far the setting moves.</li>
 </ul>` },
@@ -421,9 +421,9 @@ function wkPartHtml(k, ctx){
   const params = S.params || [];
   if(params.length){
     h += `<h3>Settings</h3><table class="wk-table">` + params.map(p => {
-      const [key, label, type, def, o] = p, gear = (S.paramPorts || []).includes(key);
+      const [key, label, type, def, o] = p, gear = (S.paramPorts || []).includes(key), byPoint = (S.maps || []).includes(key);
       const range = type === 'range' ? `${o.min}–${o.max}, default ${def}` : type === 'select' ? (o.options || []).join(' · ') : 'text';
-      return `<tr><td><b>${wkEsc(label)}</b>${gear ? ' <span class="wk-gear" title="Has a ⚙ port: a wire can drive it">⚙</span>' : ''}</td><td class="wk-range">${wkEsc(range)}</td><td>${wkLinks(wkEsc((W.set || {})[key] || ''), ctx)}</td></tr>`;
+      return `<tr><td><b>${wkEsc(label)}</b>${gear ? ' <span class="wk-gear" title="Has a ⚙ port: a wire can drive it">⚙</span>' : ''}${byPoint ? ' <a href="#" class="wk-map" data-wiki="mapping" title="A gray map on its ⚙ sets it point by point">by point</a>' : ''}</td><td class="wk-range">${wkEsc(range)}</td><td>${wkLinks(wkEsc((W.set || {})[key] || ''), ctx)}</td></tr>`;
     }).join('') + `</table>`;
   }
   if((W.tips || []).length) h += `<h3>Try</h3><ul>` + W.tips.map(t => `<li>${wkLinks(wkEsc(t), ctx)}</li>`).join('') + `</ul>`;

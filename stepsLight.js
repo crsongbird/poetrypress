@@ -50,8 +50,8 @@ function ltK(k, M, c){
  * S: the shine }, from the dial (deg) and the part's settings.
  */
 function ltLight(H, gw, gh, deg, o, glossMap){
-  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03;
-  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*rel;
+  const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
+  for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   const L = lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
@@ -70,10 +70,14 @@ function ltBlur(F, gw, gh, r){
     for(let y = 0; y < gh; y++){ O[y*gw + x] = s/c; const a = y - r, b = y + r + 1; if(a >= 0){ s -= T[a*gw + x]; c--; } if(b < gh){ s += T[b*gw + x]; c++; } } }
   return O;
 }
-function ltSettings(E, n){
+// (on the grid, `byPoint`: Relief and Gloss may be maps, a value per point; a canvas pass reads them whole)
+function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
-  return { deg, relief: E.num(n, 'relief', 50)/100, gloss: E.num(n, 'gloss', 25)/100, shadow: E.num(n, 'shadow', 60)/100,
-    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100 };
+  const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25);
+  const per = M => { const o = new Float32Array(M.length); for(let i = 0; i < M.length; i++) o[i] = M[i]/100; return o; };
+  return { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
+    ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
+    reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
 }
 
 // ---- OIL PAINT: strokes laid along the picture's forms ----
@@ -325,7 +329,7 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 export const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'],
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
     io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0)],
     cost: () => 10,
@@ -348,10 +352,11 @@ export const LIGHT_STEPS = {
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
       return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
     run(E, n){
-      const { ww, wh, N } = E, o = ltSettings(E, n), M = ltMaterial(E, n);
+      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n);
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
-      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : null;
+      // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
+      const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
       const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);

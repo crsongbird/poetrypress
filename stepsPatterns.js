@@ -50,7 +50,7 @@ function patShape(x, kind, rand){
 export const PATTERN_STEPS = {
   // FILTER FORGE'S BOMBER: throw copies of a shape (or of a picture) across the page, each of its own size, turn
   // and brightness; where they may fall can be a gray map, and which way they turn an angle map (a vector field)
-  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'],
+  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'], maps: ['size:4'],
     io: { ins: ['image', 'field', 'field'], outs: ['field', 'field', 'field'] },
     params: [PAT_SEL('shape', 'Shape', PAT_SHAPES), PAT_R('count', 'Count', 60, 1, 400), PAT_R('size', 'Size', 20, 1, 100), PAT_R('vary', 'Size Variety', 50),
       PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99)],
@@ -58,7 +58,9 @@ export const PATTERN_STEPS = {
     doc: 'Scatters copies of a mark across the page (dots, stars, sigils, or any picture), each with its own size, turn and brightness.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
       const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3)), pic = shape === 'picture' ? asImage(input(n, 1)) : null;
-      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), R0 = num(n, 'size', 20)/100*unit*0.12;
+      // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
+      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
+      const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
       const [mc, mx] = mk(), [ic, ix] = mk();
@@ -82,7 +84,8 @@ export const PATTERN_STEPS = {
           if(tries === 11) x = -1e9;
         }
         if(x < -1e8) continue;
-        const r = Math.max(0.5, R0*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
+        const Rm = typeof SZ === 'number' ? R0 : SZ[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))]/100*unit*0.12;
+        const r = Math.max(0.5, Rm*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
         let ang = (rand() - 0.5)*Math.PI*2*turn;
         if(way){ const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0)); ang = way[q]*Math.PI*2 + (rand() - 0.5)*turn*0.6; }
         const g = Math.round(255*(1 - fade*rand())), id = Math.round(20 + rand()*235);
@@ -97,7 +100,7 @@ export const PATTERN_STEPS = {
     } },
 
   // FILTER FORGE'S CHECKER, TILES and DOTS in one: a regular pattern, turned and sized
-  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'],
+  grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'], maps: ['weight'],
     params: [PAT_SEL('kind', 'Pattern', ['checker', 'grid lines', 'dots', 'hex dots', 'diamonds', 'stripes']), PAT_R('cells', 'Cells', 12, 2, 120), PAT_R('weight', 'Line or Dot Size', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('soft', 'Softness', 10)],
     cost: () => 1,
     doc: 'A regular pattern: checkerboard, grid lines, dots in rows or in a honeycomb, diamonds, or stripes.',
@@ -136,7 +139,7 @@ export const PATTERN_STEPS = {
     } },
 
   // FILTER FORGE'S LOOKUP: a picture read at the places two gray maps name — refraction, foil, interference
-  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
+  lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 100), PAT_SEL('edges', 'At the Edges', ['repeat', 'mirror', 'clamp']), PAT_R('scale', 'Scale', 100, 10, 400)],
     cost: () => 1,
     doc: 'Rebuilds a picture by reading it at positions given by two gray maps.',
@@ -153,7 +156,7 @@ export const PATTERN_STEPS = {
     } },
 
   // DISPLACE BY A MAP'S SLOPE (Filter Forge's Refraction): a picture seen through a bumpy glass
-  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
+  displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 30), PAT_R('blur', 'Smoothing', 20)],
     cost: () => 1.5,
     doc: 'Bends a picture as if seen through glass shaped like a gray map.',

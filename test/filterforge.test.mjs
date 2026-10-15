@@ -45,6 +45,42 @@ check('Filter Forge\'s missing primitives are parts, each with its doc', ['brico
   check('Bricks hands on the mortar between the bricks (white on the joints)', px(br, 10, 0) === 1 && px(br, 10, 5) === 0 && px(br, 20, 5) === 1); }
 check('Math has Filter Forge\'s useful RGB Math (divide, power, average, screen, modulo, sine), the old operations unchanged', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine'].every(o => S.STEPS.math.params[0][4].options.includes(o)) && S.STEPS.math.params[0][4].options[0] === 'add');
 
+// ---- parameter mapping: every setting a part declares in `maps` follows a map point by point (from v3, or the
+// version it names: `scale:4`), and only the map's average in an older graph ----
+{ const T = ['#FF3000', '#0030FF'];
+  // what each kind of input is fed (a picture: Perlin noise tinted in two hues, so a hue's turn shows)
+  const feed = { field: (id, nodes) => (nodes.push(node(id, 'perlin', { scale: 120 })), [id, 1]),
+    image: (id, nodes) => (nodes.push(node(id + 50, 'perlin', { scale: 90 }), node(id, 'tint', {}, { 1: [id + 50, 1] })), [id, 1]),
+    curve: (id, nodes) => (nodes.push(node(id, 'curve', { shape: 'wave', count: 2 })), [id, 1]) };
+  // only the inputs a part needs (a mask on Mix, or a gloss map on the Light Engine, would stand in for the setting), and settings that let the mapped one show
+  const only = { mix: [1, 2], material: [1, 2] };
+  const extra = { motionblur: { length: 100 }, grow: { radius: 60 }, highpass: { radius: 100 }, sharpen: { radius: 100 }, material: { relief: 200, shine: 100 }, grid: { kind: 'dots' } };
+  const canvasDrawn = new Set(['scatter']);   // (draws its marks on a canvas, which Node can't rasterize: checked by eye)
+  // the setting driven by a gradient (angle 0 or 180), or by a Number at the gradient's average (`flat`)
+  const avg = (() => { const g = C.evalAthanor(graph([node(1, 'gradient', { shape: 'linear', angle: 0 }), node(99, 'surface', { ground: 'grey' }, { 1: [1, 1] })]), W, H, { seed: 3, knobs: [], tints: T }, {});
+    let t = 0; for(const x of g.r) t += x; return t/g.r.length; })();
+  const outOf = (k, key, angle, v) => { const s = S.STEPS[k], nodes = [angle === 'flat' ? node(1, 'number', { value: avg*100 }) : node(1, 'gradient', { shape: 'linear', angle })], ins = {};
+    s.inTypes.slice(0, s.dataIns).forEach((t, j) => { if(feed[t] && (!only[k] || only[k].includes(j + 1))) ins[j + 1] = feed[t](10 + j, nodes); });
+    ins[S.paramPort(k, key)] = [1, 1];
+    nodes.push(node(5, k, { ...(extra[k] || {}) }, ins), node(99, 'surface', { ground: 'grey' }, { 1: [5, 1] }));
+    const im = C.evalAthanor(graph(nodes, v), W, H, { seed: 3, knobs: [], tints: T }, {});
+    return im ? (im.r || im) : null; };
+  const diff = (a, b) => { let t = 0; for(let i = 0; i < a.length; i++) t += Math.abs(a[i] - b[i]); return t/a.length; };
+  const mapped = Object.entries(S.STEPS).flatMap(([k, s]) => s.maps.map(key => [k, key]));
+  const stray = mapped.filter(([k, key]) => !S.STEPS[k].paramPorts.includes(key));
+  check('every setting declared as taking a map is a real setting with a ⚙ port' + (stray.length ? ': ' + stray.join(' ') : ''), mapped.length >= 30 && !stray.length);
+  const still = [], leaks = [];
+  for(const [k, key] of mapped.filter(([k]) => !canvasDrawn.has(k))){
+    const since = S.STEPS[k].mapsSince[key] || 3;
+    const a3 = outOf(k, key, 0, since), b3 = outOf(k, key, 180, since), a2 = outOf(k, key, 0, since - 1), f2 = outOf(k, key, 'flat', since - 1);
+    if(!a3 || !b3 || diff(a3, b3) < 0.002) still.push(k + '.' + key);
+    if(!a2 || !f2 || diff(a2, f2) > 1e-3) leaks.push(k + '.' + key); }
+  check('in a graph of its version each of them follows the map point by point (a gradient and its reverse give different pictures)' + (still.length ? ': not for ' + still.join(', ') : ''), !still.length);
+  check('in the version before, each takes only the map\'s average (as a Number at that average does), so old graphs draw as they did' + (leaks.length ? ': not for ' + leaks.join(', ') : ''), !leaks.length);
+  // a setting not in the list never maps: Pixelate reads Size whole even in the newest graph
+  const pa = outOf('pixelate', 'size', 0, C.ATHANOR_VERSION), pb = outOf('pixelate', 'size', 'flat', C.ATHANOR_VERSION);
+  check('a setting not declared reads a map\'s average, even in the newest graph', !S.STEPS.pixelate.maps.includes('size') && diff(pa, pb) < 1e-4); }
+
 // ---- required inputs ----
 check('required inputs are known for the parts that need one', S.STEPS.blur.required.includes(1) && S.STEPS.levels.required.includes(1) && !S.STEPS.mix.required.length && !S.STEPS.noise.required.length);
 { const p = preview([node(1, 'blur', { radius: 2 })], 1), real = C.evalAthanor(graph([node(1, 'blur', { radius: 2 }), node(99, 'surface', { ground: 'grey' }, { 1: [1, 1] })]), W, H, { seed: 1, knobs: [], tints: [] }, {});

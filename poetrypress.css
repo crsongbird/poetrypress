@@ -2057,6 +2057,7 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .wk-fig figcaption{ margin-top:8px; font-size:12px; line-height:1.45; color:var(--fg-dim); }
 .wk-req{ font:11px var(--ui-sans); color:#ff7a7a; border:1px solid currentColor; padding:0 4px; margin-left:4px; }
 .wk-gear{ color:var(--t-value); }
+.wk-page a.wk-map{ font:11px var(--ui-sans); color:var(--t-field); border:1px solid currentColor; padding:0 4px; margin-left:4px; white-space:nowrap; }
 .wk-see{ margin-top:14px; font-size:13px; color:var(--fg-dim); }
 .wk-gloss{ display:grid; grid-template-columns:minmax(130px, 190px) 1fr; gap:5px 14px; }
 .wk-gloss dt{ font-weight:500; } .wk-gloss dd{ margin:0; color:var(--fg-dim); }

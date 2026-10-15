@@ -622,6 +622,9 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   - v3: map inputs (§6.4). A v3 graph is also told its grid's divisor
     (`div`), so `E.px` and `E.carea` are true canonical sizes and counts;
     older graphs keep the old (coarser) reading.
+  - v4: more settings take maps (those marked `key:4` in `STEP_MAPS`).
+    Kept results are keyed by the version, so a v3 graph never borrows a v4
+    result.
   - **Texture chains stay v2**, so their pictures never change. Starters
     take the newest.
 - **THE SURFACE STAYS:** exactly one per graph, never removed or copied.
@@ -654,8 +657,14 @@ The full study and what is still to do are in ROADMAP.md §1.
 - **Param ports (⚙):** a wire into a setting sweeps its range, or the part
   of it set by `'~key': 'lo,hi'`. lo > hi reverses it (Filter Forge's
   remapper).
-- **Map inputs** (v3 graphs only): a gray map on a ⚙ is per point wherever
-  the part reads `E.map`/`E.at`. v2 graphs average the map.
+- **Map inputs** (v3 graphs on): a gray map on a ⚙ is per point for the
+  settings a part declares (`STEP_MAPS` in steps.js, or a family part's
+  `maps`; `key:4` from v4), read with `E.map`/`E.at`. The evaluator maps only those; the wiki
+  marks them "by point" and the setting's menu says so. Any other setting,
+  and every setting in a v2 graph, takes the map's average.
+  - A number from `E.map` keeps the old code path, so a v2 graph draws
+    exactly as before; filterforge.test checks every declared setting both
+    ways.
 - **Curves:** `{ curve: Float32Array(257) }`, read with `curveAt`.
   - Laid where a map goes, a curve runs across the page left to right.
   - Where a number goes, it gives its mean.
@@ -801,7 +810,10 @@ the test to the new intent; never weaken it just to pass.
    - `STEP_IO` for anything that isn't a gray map;
    - `STEP_COST`;
    - `STEP_REQUIRED` if it needs its first input.
-3. Read per-point settings with `E.map` where the loop allows (v3).
+3. Read per-point settings with `E.map` where the loop allows, and declare
+   them (`STEP_MAPS` or the part's `maps`). A setting that already exists
+   and starts to take a map does so from a new graph version (`key:5`…),
+   so an older graph still reads it whole.
 4. Add a test (test/filterforge.test.mjs or the part's own suite).
 5. Its wiki page in `WIKI_PARTS` (line, about, every input, output and
    setting, a tip, see-also); link it from the articles where it belongs.

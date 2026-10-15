@@ -27,7 +27,7 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 // ---- the parts: every node a step of steps.js (shared with the textures
 // rebuilt as chains) — ports, params and category as the editor shows them
 export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
-  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [] }]));
+  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [], maps: s.maps || [], mapsSince: s.mapsSince || {} }]));
 export const FORGE_CATEGORIES = STEP_CATEGORIES;
 /**
  * COLOUR CARRIES MEANING in the grid, whatever the app's theme: each part's
@@ -681,7 +681,10 @@ export async function openForge(deps){
         }
       }
       items.push({ glyph: '↺', label: `Reset to default (${def})`, act: () => setData(id, { [key]: def }) });
-      return { title: `${label}`, hint: `a setting of ${labelOf(id)}` + (wired ? ', driven by a wire' : bound ? `, bound to ${v.slice(1).replace(/\[.*$/, '').replace(/^k/, 'slider ')}` : ''), items };
+      // (a setting that takes a map says so: what a gray map on its ⚙ does)
+      // (in a graph older than the setting's map input, a map is still averaged: the graph draws as it did)
+      const byPoint = (N.maps || []).includes(key) && (F.version || ATHANOR_VERSION) >= ((N.mapsSince || {})[key] || 3) ? '; a gray map on its ⚙ sets it point by point' : port ? '; a map on its ⚙ gives it the map’s average' : '';
+      return { title: `${label}`, hint: `a setting of ${labelOf(id)}` + (wired ? ', driven by a wire' : bound ? `, bound to ${v.slice(1).replace(/\[.*$/, '').replace(/^k/, 'slider ')}` : '') + byPoint, items };
     };
     // a Knob (or the Light Dial) set beside a node and wired into one of its ⚙ ports
     const wireIn = (id, key, port, kind) => {
