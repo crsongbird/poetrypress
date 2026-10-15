@@ -12,7 +12,8 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, fbmSampler, withSeed } from './texCore.js';
+import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { genColdPress, genCupRing, genOldPaper, genBurntLetter, genHoarfrost, genGlassRain, genWater, genDunes, genMoss, genKintsugi, genSpangle, genCrystalLeaf, genSuminagashi } from './texTouch.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -105,6 +106,61 @@ function touchPigment(D, img, ww, wh, col, wet, light){
 }
 
 export const TOUCH_STEPS = {
+  // 🜚 the older Touch textures, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  coldpress: kitWhole({ cat: 'Textures', label: 'Cold Press', ins: ['light from'], outs: ['paper'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Tooth Scale', 100, 75, 400), TOUCH_R('amount', 'Tooth Depth', 100, 20, 300), TOUCH_R('form', 'Press', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
+      return () => genColdPress(w, h, a, z, light, f, E.ctx.mat || null); }),
+  cupring: kitWhole({ cat: 'Marks', label: 'Cup Ring', ins: ['light from', 'stain hue'], outs: ['rings'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ring Size', 100, 40, 320), TOUCH_R('amount', 'Ring Count', 100, 30, 300), TOUCH_R('form', 'Spill', 35), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
+      return () => genCupRing(w, h, a, z, light, t1, f, E.ctx.mat || null, E.ctx.glow || null); }),
+  oldpaper: kitWhole({ cat: 'Textures', label: 'Old Paper', ins: ['light from', 'age hue', 'mold hue'], outs: ['paper'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Scale', 100, 40, 400), TOUCH_R('amount', 'Folds', 35), TOUCH_R('form', 'Age', 30), TOUCH_R('crinkle', 'Crinkle', 25), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), c = wholeShare(E, n, 'crinkle', 25);
+      return () => genOldPaper(w, h, a, z, light, t1, t2, f, c, E.ctx.mat || null, E.ctx.glow || null); }),
+  ash: kitWhole({ cat: 'Textures', label: 'Burnt Letter', ins: ['light from', 'ash hue', 'ember hue'], outs: ['ash'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Flake Size', 100, 40, 300), TOUCH_R('amount', 'Ashfall', 100, 20, 400), TOUCH_R('form', 'Char', 55), TOUCH_R('embers', 'Embers', 20), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 55), em = wholeShare(E, n, 'embers', 20);
+      return () => genBurntLetter(w, h, a, z, light, t1, t2, f, em, E.ctx.mat || null); }),
+  hoarfrost: kitWhole({ cat: 'Marks', label: 'Hoarfrost', ins: ['light from', 'frost hue'], outs: ['frost'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Crystal Size', 100, 50, 250), TOUCH_R('amount', 'Frost', 100, 20, 250), TOUCH_R('form', 'Feathering', 55), TOUCH_R('rime', 'Rime', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 55), r = wholeShare(E, n, 'rime', 30);
+      return () => genHoarfrost(w, h, a, z, light, t1, f, r, E.ctx.mat || null, E.ctx.glow || null); }),
+  glassrain: kitWhole({ cat: 'Textures', label: 'Rain on Glass', ins: ['light from'], outs: ['glass'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Drop Size', 100, 40, 300), TOUCH_R('amount', 'Rain', 100, 20, 300), TOUCH_R('form', 'Condensation', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 12 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
+      return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null); }),
+  water: kitWhole({ cat: 'Textures', label: 'Scrying Pool', ins: ['light from'], outs: ['pool'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Wave Scale', 100, 40, 250), TOUCH_R('amount', 'Turbulence', 35), TOUCH_R('form', 'Depth', 35), TOUCH_R('haze', 'Haze', 10), TOUCH_R('murk', 'Murk', 0), TOUCH_R('tilt', 'Tilt', 35), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 12 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
+      const hz = wholeShare(E, n, 'haze', 10), mk = wholeShare(E, n, 'murk', 0), tl = wholeShare(E, n, 'tilt', 35);
+      return () => genWater(w, h, a, z, light, f, hz, mk, tl, E.ctx.mat || null); }),
+  dunes: kitWhole({ cat: 'Textures', label: 'Dune Ripples', ins: ['light from', 'sand hue', 'sun hue'], outs: ['sand'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ripple Size', 100, 40, 300), TOUCH_R('amount', 'Wind', 50), TOUCH_R('form', 'Dune Height', 40), TOUCH_R('tilt', 'Tilt', 40), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40), tl = wholeShare(E, n, 'tilt', 40);
+      return () => genDunes(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+  moss: kitWhole({ cat: 'Textures', label: 'Moss on Stone', ins: ['light from', 'stone hue', 'moss hue'], outs: ['stone'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Stone Scale', 100, 40, 300), TOUCH_R('amount', 'Moss', 45), TOUCH_R('form', 'Dampness', 30), TOUCH_R('tilt', 'Tilt', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 45), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), tl = wholeShare(E, n, 'tilt', 30);
+      return () => genMoss(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+  kintsugi: kitWhole({ cat: 'Textures', label: 'Kintsugi', ins: ['light from', 'glaze hue', 'gold hue'], outs: ['vessel'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Seam Width', 100, 50, 300), TOUCH_R('amount', 'Fractures', 100, 20, 400), TOUCH_R('form', 'Gloss', 70), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 70);
+      return () => genKintsugi(w, h, a, z, light, t1, t2, f, E.ctx.mat || null, E.ctx.glow || null); }),
+  spangle: kitWhole({ cat: 'Textures', label: 'Metal Spangle', ins: ['light from', 'metal hue'], outs: ['metal'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Crystal Size', 100, 40, 300), TOUCH_R('amount', 'Dendrites', 50), TOUCH_R('form', 'Terraces', 0), TOUCH_R('irregular', 'Irregularity', 40), TOUCH_R('brushing', 'Brushing', 0), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), v = wholeShare(E, n, 'irregular', 40), b = wholeShare(E, n, 'brushing', 0);
+      return () => genSpangle(w, h, a, z, light, t1, f, v, b, E.ctx.mat || null, E.ctx.glow || null); }),
+  crystal: kitWhole({ cat: 'Textures', label: 'Crystal Leaf', ins: ['light from', 'crystal hue', 'inclusion hue'], outs: ['crystal'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Facet Size', 100, 40, 300), TOUCH_R('amount', 'Clarity', 70), TOUCH_R('form', 'Fire', 50), TOUCH_R('phantoms', 'Phantoms', 30), TOUCH_R('inclusions', 'Inclusions', 20), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 70), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
+      const ph = wholeShare(E, n, 'phantoms', 30), inc = wholeShare(E, n, 'inclusions', 20);
+      return () => genCrystalLeaf(w, h, a, z, light, t1, t2, f, ph, inc, E.ctx.mat || null, E.ctx.glow || null); }),
+  marbling: kitWhole({ cat: 'Textures', label: 'Suminagashi', ins: ['breath from', 'ink hue', 'second ink hue'], outs: ['marbling'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ring Size', 100, 50, 250), TOUCH_R('amount', 'Drops', 100, 30, 250), TOUCH_R('form', 'Breath', 40), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40);
+      return () => genSuminagashi(w, h, a, z, light, f, t1, t2); }),
   // POURED WAX, in parts (texTouch genPouredWax until now). POURS: pour points and volumes from the seed; each
   // pour spreads into a pool, and pools that meet MERGE (a metaball field). SPLATTER (Ruby: a wax simulator that
   // becomes a fluid-spatter simulator): drops thrown from each pour, away from the dial, stretched along their

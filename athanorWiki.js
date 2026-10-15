@@ -226,6 +226,7 @@ export const WIKI_ARTICLES = [
 <li>Every random part uses the <b>page’s seed</b> combined with its own place in the graph, so two copies of a part still differ.</li>
 <li><b>⟳ Seed</b> (in the corner here, or beside the seed on the page) rolls a new seed: everything random changes together.</li>
 <li><b>Variation</b> on a single part changes only that part’s pattern, leaving the rest of the graph as it is.</li>
+<li>The parts that draw one of the app’s whole textures have <b>Variant</b> instead: at 0 the part draws exactly what the texture draws for this seed; any other number gives another of its kind.</li>
 <li><b>Random Number</b> makes an ordinary setting part of the roll.</li>
 </ul>` },
   { id: 'resolution', group: 'Building techniques', title: 'Size and resolution', body: `

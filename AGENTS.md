@@ -224,7 +224,7 @@ default.
 | File | Role |
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
-| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes |
+| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes |
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in the Athanor's Open menu; bundled before chains.js |
@@ -592,6 +592,15 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   `withSeed(ctx.seed + Variant·7919)`, so the texture they came from keeps
   its exact look: Particles, Terrain, Turing Pattern, Flow Lines, Washes,
   Discharge, Differential Growth.
+- **A whole texture as one part** (`kitWhole` in texCore.js) wraps an older
+  generator, so its texture is a chain before it is taken apart (Stage 3 J):
+  - `prep(E, n, w, h)` reads the inputs and settings, then returns the
+    drawing, which runs under the texture's own stream (+ Variant·7919).
+  - `wholeDial` gives back the whole degrees the generator was always given;
+    `wholeZoom`, `wholeAmt`, `wholeShare` read settings as `readParam` did.
+  - `wholeHex` turns a wired color into a hex, or null when nothing is wired
+    or the Hue's picker is empty (the Hue part marks that color `none`): the
+    generator then uses its own default, as it always did.
 - **Variation** (Filter Forge's local Variation): a part's `variation`
   setting (0–99) is mixed into its node seed in `evalNode`. 0 is the old
   stream, so old graphs draw as before. Give it to every new random part.
@@ -985,7 +994,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   Hue screened where thick.
 - **Rain on Glass** simulates on the EXPORT's grid at every size, then
   scales. A chaotic simulation fed sizes that differ by a fraction drifts
-  apart.
+  apart. Its part shows the page through the drops, so a graph holding it
+  is given the page's colors (`graphUsesBackdrop`), as one with a Page
+  Backdrop is.
 - **Scattered Polygons** (chain `metalleaf`): Flakes over any base. At 0 on
   Shape, Sheen and Glitter it draws exactly the original flakes.
 - **Sleep Haze** (chain `clouds`): Smoke → Light Shaft (a Dial port) → Dust

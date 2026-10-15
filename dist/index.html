@@ -3821,6 +3821,33 @@ function kitImage(cv, gw, gh){
   for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
   return { r, g, b };
 }
+/**
+ * A WHOLE TEXTURE AS A PART (Stage 3, until it is taken apart): one of the
+ * older generators wrapped as a step, so its texture is a chain and draws
+ * exactly as it always did. `prep(E, n, w, h)` reads the part's inputs and
+ * settings and returns the drawing (a function); it runs under the part's own
+ * stream, the texture's seed plus Variant × 7919 (Variant 0: the texture's
+ * own draws). Inputs are read first, outside that stream.
+ */
+function kitWhole(part, prep){
+  return { ...part,
+    paint(E, n){ const draw = prep(E, n, E.ww, E.wh); return [withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0, draw)]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } };
+}
+/** Its dial: the degrees the texture was given (a turn × 360 can miss a whole degree by a hair), else the page's light. */
+function wholeDial(E, n, j){
+  const v = E.input(n, j); if(typeof v !== 'number') return E.ctx.light ?? null;
+  const d = v*360, r = Math.round(d); return Math.abs(d - r) < 1e-7 ? r : d;
+}
+/** Its color on input j as a hex, or null (nothing wired, or a Hue whose picker is empty): the generator's own color. */
+function wholeHex(E, n, j){
+  const v = E.input(n, j);
+  return Array.isArray(v) && !v.none ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
+}
+/** Its settings read as the texture's sliders always were: a size (at least ¼), an amount (at least 2%), a share. */
+const wholeZoom = (E, n, k, d) => Math.max(0.25, E.num(n, k, d)/100);
+const wholeAmt = (E, n, k, d) => Math.max(0.02, E.num(n, k, d)/100);
+const wholeShare = (E, n, k, d) => E.num(n, k, d)/100;
 /** A choice the SEED makes, the same in every part that asks it (not the part's own random stream): from list, by the seed and a name. */
 function seedChoice(seed, salt){ let h = 2166136261 ^ (seed >>> 0); for(let i = 0; i < salt.length; i++){ h ^= salt.charCodeAt(i); h = Math.imul(h, 16777619); } return mulberry32(h >>> 0); }
 
@@ -8984,6 +9011,7 @@ Object.assign(CRT_KIT, { shadow: crtShadow, emblem: crtEmblem, element: crtEleme
  */
 
 
+
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
@@ -9075,6 +9103,61 @@ function touchPigment(D, img, ww, wh, col, wet, light){
 }
 
 const TOUCH_STEPS = {
+  // 🜚 the older Touch textures, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  coldpress: kitWhole({ cat: 'Textures', label: 'Cold Press', ins: ['light from'], outs: ['paper'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Tooth Scale', 100, 75, 400), TOUCH_R('amount', 'Tooth Depth', 100, 20, 300), TOUCH_R('form', 'Press', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
+      return () => genColdPress(w, h, a, z, light, f, E.ctx.mat || null); }),
+  cupring: kitWhole({ cat: 'Marks', label: 'Cup Ring', ins: ['light from', 'stain hue'], outs: ['rings'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ring Size', 100, 40, 320), TOUCH_R('amount', 'Ring Count', 100, 30, 300), TOUCH_R('form', 'Spill', 35), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
+      return () => genCupRing(w, h, a, z, light, t1, f, E.ctx.mat || null, E.ctx.glow || null); }),
+  oldpaper: kitWhole({ cat: 'Textures', label: 'Old Paper', ins: ['light from', 'age hue', 'mold hue'], outs: ['paper'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Scale', 100, 40, 400), TOUCH_R('amount', 'Folds', 35), TOUCH_R('form', 'Age', 30), TOUCH_R('crinkle', 'Crinkle', 25), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), c = wholeShare(E, n, 'crinkle', 25);
+      return () => genOldPaper(w, h, a, z, light, t1, t2, f, c, E.ctx.mat || null, E.ctx.glow || null); }),
+  ash: kitWhole({ cat: 'Textures', label: 'Burnt Letter', ins: ['light from', 'ash hue', 'ember hue'], outs: ['ash'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Flake Size', 100, 40, 300), TOUCH_R('amount', 'Ashfall', 100, 20, 400), TOUCH_R('form', 'Char', 55), TOUCH_R('embers', 'Embers', 20), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 55), em = wholeShare(E, n, 'embers', 20);
+      return () => genBurntLetter(w, h, a, z, light, t1, t2, f, em, E.ctx.mat || null); }),
+  hoarfrost: kitWhole({ cat: 'Marks', label: 'Hoarfrost', ins: ['light from', 'frost hue'], outs: ['frost'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Crystal Size', 100, 50, 250), TOUCH_R('amount', 'Frost', 100, 20, 250), TOUCH_R('form', 'Feathering', 55), TOUCH_R('rime', 'Rime', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 55), r = wholeShare(E, n, 'rime', 30);
+      return () => genHoarfrost(w, h, a, z, light, t1, f, r, E.ctx.mat || null, E.ctx.glow || null); }),
+  glassrain: kitWhole({ cat: 'Textures', label: 'Rain on Glass', ins: ['light from'], outs: ['glass'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Drop Size', 100, 40, 300), TOUCH_R('amount', 'Rain', 100, 20, 300), TOUCH_R('form', 'Condensation', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 12 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
+      return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null); }),
+  water: kitWhole({ cat: 'Textures', label: 'Scrying Pool', ins: ['light from'], outs: ['pool'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Wave Scale', 100, 40, 250), TOUCH_R('amount', 'Turbulence', 35), TOUCH_R('form', 'Depth', 35), TOUCH_R('haze', 'Haze', 10), TOUCH_R('murk', 'Murk', 0), TOUCH_R('tilt', 'Tilt', 35), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 12 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
+      const hz = wholeShare(E, n, 'haze', 10), mk = wholeShare(E, n, 'murk', 0), tl = wholeShare(E, n, 'tilt', 35);
+      return () => genWater(w, h, a, z, light, f, hz, mk, tl, E.ctx.mat || null); }),
+  dunes: kitWhole({ cat: 'Textures', label: 'Dune Ripples', ins: ['light from', 'sand hue', 'sun hue'], outs: ['sand'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ripple Size', 100, 40, 300), TOUCH_R('amount', 'Wind', 50), TOUCH_R('form', 'Dune Height', 40), TOUCH_R('tilt', 'Tilt', 40), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40), tl = wholeShare(E, n, 'tilt', 40);
+      return () => genDunes(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+  moss: kitWhole({ cat: 'Textures', label: 'Moss on Stone', ins: ['light from', 'stone hue', 'moss hue'], outs: ['stone'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Stone Scale', 100, 40, 300), TOUCH_R('amount', 'Moss', 45), TOUCH_R('form', 'Dampness', 30), TOUCH_R('tilt', 'Tilt', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 45), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), tl = wholeShare(E, n, 'tilt', 30);
+      return () => genMoss(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+  kintsugi: kitWhole({ cat: 'Textures', label: 'Kintsugi', ins: ['light from', 'glaze hue', 'gold hue'], outs: ['vessel'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Seam Width', 100, 50, 300), TOUCH_R('amount', 'Fractures', 100, 20, 400), TOUCH_R('form', 'Gloss', 70), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 70);
+      return () => genKintsugi(w, h, a, z, light, t1, t2, f, E.ctx.mat || null, E.ctx.glow || null); }),
+  spangle: kitWhole({ cat: 'Textures', label: 'Metal Spangle', ins: ['light from', 'metal hue'], outs: ['metal'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Crystal Size', 100, 40, 300), TOUCH_R('amount', 'Dendrites', 50), TOUCH_R('form', 'Terraces', 0), TOUCH_R('irregular', 'Irregularity', 40), TOUCH_R('brushing', 'Brushing', 0), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), v = wholeShare(E, n, 'irregular', 40), b = wholeShare(E, n, 'brushing', 0);
+      return () => genSpangle(w, h, a, z, light, t1, f, v, b, E.ctx.mat || null, E.ctx.glow || null); }),
+  crystal: kitWhole({ cat: 'Textures', label: 'Crystal Leaf', ins: ['light from', 'crystal hue', 'inclusion hue'], outs: ['crystal'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Facet Size', 100, 40, 300), TOUCH_R('amount', 'Clarity', 70), TOUCH_R('form', 'Fire', 50), TOUCH_R('phantoms', 'Phantoms', 30), TOUCH_R('inclusions', 'Inclusions', 20), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 70), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
+      const ph = wholeShare(E, n, 'phantoms', 30), inc = wholeShare(E, n, 'inclusions', 20);
+      return () => genCrystalLeaf(w, h, a, z, light, t1, t2, f, ph, inc, E.ctx.mat || null, E.ctx.glow || null); }),
+  marbling: kitWhole({ cat: 'Textures', label: 'Suminagashi', ins: ['breath from', 'ink hue', 'second ink hue'], outs: ['marbling'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ring Size', 100, 50, 250), TOUCH_R('amount', 'Drops', 100, 30, 250), TOUCH_R('form', 'Breath', 40), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40);
+      return () => genSuminagashi(w, h, a, z, light, f, t1, t2); }),
   // POURED WAX, in parts (texTouch genPouredWax until now). POURS: pour points and volumes from the seed; each
   // pour spreads into a pool, and pools that meet MERGE (a metaball field). SPLATTER (Ruby: a wax simulator that
   // becomes a fluid-spatter simulator): drops thrown from each pour, away from the dial, stretched along their
@@ -10502,6 +10585,15 @@ function whimAurora(x, w, h, o, px){
 }
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  // Silk Ribbons and Dream Bloom, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  ribbons: kitWhole({ cat: 'Marks', label: 'Silk Ribbons', ins: ['blend from', 'curtain hue', 'hem hue'], outs: ['ribbons'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('zoom', 'Curtain Height', 100, 40, 220), WHIM_R('amount', 'Ribbon Count', 100, 20, 1800), WHIM_R('form', 'Bloom', 0), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0);
+      return () => genAuroraVeil(w, h, a, z, light, t1, t2, f); }),
+  bokeh: kitWhole({ cat: 'Marks', label: 'Dream Bloom', ins: ['light hue'], outs: ['bloom'], io: { ins: ['colour'], outs: ['image'] },
+    params: [WHIM_R('zoom', 'Focal Plane', 100, 25, 400), WHIM_R('amount', 'Orb Count', 100, 20, 260), WHIM_R('form', 'Aperture', 0), WHIM_R('object', 'Object Shape', 0), WHIM_R('spread', 'Color Variation', 0, 0, 180), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const t1 = wholeHex(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), o = E.num(n, 'object', 0), sp = E.num(n, 'spread', 0);
+      return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
     params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
@@ -10821,6 +10913,12 @@ const chaosSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant',
 // a color from a port (0–1 channels), as the generators take it: a hex code
 const chaosHex = v => Array.isArray(v) ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
 const CHAOS_STEPS = {
+  // Transmutation Circle, one part (kitWhole: drawn as it always was, under the texture's own seed + Variant);
+  // lettered in web fonts, so the texture is made on the page (textureService ON_PAGE)
+  transmutation: kitWhole({ cat: 'Marks', label: 'Transmutation Circle', ins: ['position'], outs: ['circle'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
+      return () => genSummoningCircles(w, h, a, z, light, f); }),
   // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
   sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
@@ -11401,6 +11499,7 @@ const LIGHT_STEPS = {
  *            rows and columns), blended between neighbours by Kind.
  */
 
+
 const SH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
 /** Dots on a w×h canvas: a cell every max(w,h)/48·scale, each dot's radius the tone there (0..1 field on w×h). */
@@ -11565,6 +11664,15 @@ function shGuilloche(w,h,amt,zoom,light,form){
 }
 
 const SHARP_STEPS = {
+  // Night City and Lotus Pond, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  cityscape: kitWhole({ cat: 'Textures', label: 'Night City', ins: ['window hue', 'water hue'], outs: ['city'], io: { ins: ['colour', 'colour'], outs: ['image'] },
+    params: [SH_R('zoom', 'Skyline Height', 100, 60, 180), SH_R('amount', 'Lit Windows', 100, 0, 300), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const t1 = wholeHex(E, n, 1), t2 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100);
+      return () => genCityscape(w, h, a, z, t1, t2, E.ctx.glow || null); }),
+  lotus: kitWhole({ cat: 'Marks', label: 'Lotus Pond', ins: ['light from', 'petal hue', 'heart hue'], outs: ['blooms'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [SH_R('zoom', 'Bloom Size', 150, 50, 450), SH_R('amount', 'Bloom Count', 60, 10, 300), SH_R('form', 'Flower', 50), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 60), z = wholeZoom(E, n, 'zoom', 150), f = wholeShare(E, n, 'form', 50);
+      return () => genFlowers(w, h, a, z, t1, t2, f, light, E.ctx.glow || null); }),
   rosettes: { cat: 'Marks', label: 'Guilloché', ins: ['light from'], outs: ['engraving', 'lines'], io: { ins: ['value'], outs: ['image', 'field'] },
     params: [SH_R('zoom', 'Rosette Size', 100, 50, 250), SH_R('amount', 'Line Density', 100, 30, 200), SH_R('form', 'Lobes', 45), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8,
     // a canvas pass at full size, under the texture's own seed (+ Variant): Guilloché as it was
@@ -12752,6 +12860,24 @@ const STEP_DOCS = {
   facets: 'A field of cut facets, each tilted its own way, so the light catches some and leaves others dark: Facet Field.',
   blackhole: 'A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.',
   moon: 'A moon whose seas and craters are fractal noise, in the seed’s phase, under a night sky of faint stars and cloud.',
+  coldpress: 'Watercolor paper’s tooth: rounded hills and hollows pressed in by felt, with fine fibers, lit by the dial.',
+  cupring: 'Where a cup stood on paper: dried coffee rings, dark at their rims, with drips and a second, offset ring.',
+  oldpaper: 'A sheet of old paper: its folds and creases lit by the dial, yellowed, foxed and mildewed with age.',
+  ash: 'The ash a burnt letter leaves: curled flakes charred black and burnt pale at their rims, some still glowing.',
+  hoarfrost: 'Frost ferns grown across a pane from its frame inward, branching at sixty degrees, lit by the dial.',
+  glassrain: 'Rain on a window: drops that sit, slide, merge and leave trails, as lit domes over the page’s own colors.',
+  water: 'Looking down into a pool: waves on the surface, caustics on the floor, fish and leaves below, the sky mirrored when tilted.',
+  dunes: 'Wind-built dunes and the ripples on them, lit low by the dial, seen from above or toward the horizon.',
+  moss: 'Rough stone with moss in its crevices and on its flat tops, lit by the dial.',
+  kintsugi: 'A glazed pot broken and mended with gold: the seams raised and bright, the glaze glossy.',
+  spangle: 'Metal that crystallized as it cooled: grains each tilted its own way, with branching dendrites, flashing as the light turns.',
+  crystal: 'Looking into a clear crystal: cut faces, light caught inside as fire, ghost crystals and needles within.',
+  marbling: 'Suminagashi, Japanese ink marbling: rings of ink dropped in turn on still water, moved by a breath, lifted onto paper.',
+  ribbons: 'Curtains of light hung in sheets, like silk ribbons or an aurora, in one color or blended between two.',
+  bokeh: 'Out-of-focus lights through a real lens: soft discs whose blur follows each one’s distance from the focal plane.',
+  cityscape: 'A city at night across the water: a skyline of mostly dark windows, a few of them lit, reflected below.',
+  lotus: 'Flowers floating on water, from a bell bud through lotus to hydrangea, each petal shaded and throwing its shadow.',
+  transmutation: 'A transmutation circle, drawn by hand or machined: rings of glyphs, polygrams and planets, placed by the dial.',
   rosettes: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',
   sand: 'Sand on a ringing plate: grains thrown off what moves gather on the lines where nothing does (or wherever a map is white).',
   bits: 'A grid of small marks (squares, dashes, bars) that surface wherever a field rises: Binary Pattern’s glyphs.',
@@ -12797,8 +12923,9 @@ const STEP_RUN = {
     return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
   },
   glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
-  hue(E, n){ const { ctx, P, hexCol } = E;
-    return [hexCol((ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] || '#FFFFFF')];
+  hue(E, n){ const { ctx, P, hexCol } = E, t = (ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1];
+    // an empty picker reads as white, and says so (`none`): a whole texture as a part then uses its own color
+    const c = hexCol(t || '#FFFFFF'); if(!/^#?[0-9a-f]{6}/i.test(t || '')) c.none = true; return [c];
   },
   dial(E, n){ const { ctx } = E;
     return [((ctx.light ?? 315) % 360)/360, Math.max(0, Math.min(1.3, (ctx.lightTilt ?? 100)/100))];
@@ -14045,6 +14172,186 @@ const TEXTURE_CHAINS = {
       ['moon', { zoom: 100, '~zoom': '60,150', amount: 100, '~amount': '20,190', form: 30, '~form': '0,100', night: 70, '~night': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Fractal Moon', ground: 'grey' }, 600, 120]],            // 6
     wires: [[1, 1, 5, paramPort('moon', 'zoom')], [2, 1, 5, paramPort('moon', 'amount')], [3, 1, 5, paramPort('moon', 'form')], [4, 1, 5, paramPort('moon', 'night')], [5, 1, 6, 1]] },
+  // the older textures, each one part with the sliders wired in (each drawn exactly as it was)
+  coldpress: { label: 'Cold Press', canvas: true, teach: 'Watercolor paper, and what the felt it was pressed between left on it. One part makes it: Cold Press raises the tooth as heights (rounded hills and hollows over a gentle swell), so a low light fills the hollows with shadow, and lays the fibers as a normal map, too fine to cast shadows but still catching the light. Press runs from hot press (smooth) to rough. Try: pull the Light Dial out past its rim, and the tooth stands up in long shadows.', nodes: [
+      ['knob', { slot: '1', name: 'Tooth Scale', def: 8 }, 40, 40],                // 1  (100 of 75–400)
+      ['knob', { slot: '2', name: 'Tooth Depth', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Press', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['coldpress', { zoom: 100, '~zoom': '75,400', amount: 100, '~amount': '20,300', form: 50, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Cold Press', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('coldpress', 'zoom')], [2, 1, 5, paramPort('coldpress', 'amount')], [3, 1, 5, paramPort('coldpress', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  cupring: { label: 'Cup Ring', canvas: true, teach: 'Where a mug of coffee stood on paper. One part makes it: Cup Ring draws each ring the way coffee dries, carried to the edge so the band darkens to a crisp outer line, pooled on the downhill side, mottled where the paper drank it, with drips and a second, offset ring. The Stain Hue is the coffee; the dial gives only a faint sheen where the film is thick. Try: raise Spill for drips and a pale wash inside the rings.', nodes: [
+      ['knob', { slot: '1', name: 'Ring Size', def: 21 }, 40, 40],                // 1  (100 of 40–320)
+      ['knob', { slot: '2', name: 'Ring Count', def: 26 }, 40, 140],                // 2  (100 of 30–300)
+      ['knob', { slot: '3', name: 'Spill', def: 35 }, 40, 240],                // 3  (35 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Stain Hue' }, 40, 440],                // 5
+      ['cupring', { zoom: 100, '~zoom': '40,320', amount: 100, '~amount': '30,300', form: 35, '~form': '0,100' }, 320, 100],   // 6
+      ['surface', { name: 'Cup Ring', ground: 'grey' }, 600, 120]],   // 7
+    wires: [[1, 1, 6, paramPort('cupring', 'zoom')], [2, 1, 6, paramPort('cupring', 'amount')], [3, 1, 6, paramPort('cupring', 'form')], [4, 1, 6, 1], [5, 1, 6, 2], [6, 1, 7, 1]] },
+  oldpaper: { label: 'Old Paper', canvas: true, teach: 'What time and handling do to a sheet. One part makes it: Old Paper folds the sheet as it was folded to be carried (the seed decides how) and crinkles it, as heights the Light Dial lights; then Age yellows it from the edges, gathers foxing in the margins and mildew in colonies, and at the end scorches it. Age Hue colors the yellowing, Mold Hue the mildew. Try: Folds at 100, and the folds tear in from the edge.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 17 }, 40, 40],                // 1  (100 of 40–400)
+      ['knob', { slot: '2', name: 'Folds', def: 35 }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3', name: 'Age', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '4', name: 'Crinkle', def: 25 }, 40, 340],                // 4  (25 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Age Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Mold Hue' }, 40, 620],                // 7
+      ['oldpaper', { zoom: 100, '~zoom': '40,400', amount: 35, '~amount': '0,100', form: 30, '~form': '0,100', crinkle: 25, '~crinkle': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Old Paper', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('oldpaper', 'zoom')], [2, 1, 8, paramPort('oldpaper', 'amount')], [3, 1, 8, paramPort('oldpaper', 'form')], [4, 1, 8, paramPort('oldpaper', 'crinkle')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  ash: { label: 'Burnt Letter', canvas: true, teach: 'The ash a burnt page leaves, as it lies. One part makes it: Burnt Letter scatters curled flakes (many small, a few large), each charred black at its heart and pale at its rim, crazed with the lines of the page it was, lifting at its ends so the Light Dial lights one side and throws a shadow; soot and soft piles of powder lie between them. Char moves the flakes from pale ash to black; Embers keeps some burning along their edge. Try: Char at 20 and Embers at 80.', nodes: [
+      ['knob', { slot: '1', name: 'Flake Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Ashfall', def: 21 }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3', name: 'Char', def: 55 }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4', name: 'Embers', def: 20 }, 40, 340],                // 4  (20 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Ash Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Ember Hue' }, 40, 620],                // 7
+      ['ash', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,400', form: 55, '~form': '0,100', embers: 20, '~embers': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Burnt Letter', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('ash', 'zoom')], [2, 1, 8, paramPort('ash', 'amount')], [3, 1, 8, paramPort('ash', 'form')], [4, 1, 8, paramPort('ash', 'embers')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  frost: { label: 'Hoarfrost', canvas: true, teach: 'Frost ferns across a pane. One part makes it: Hoarfrost grows them the way branching things grow toward the room they have (space colonization): from seeds along the frame inward, each crystal turning by sixty degrees, twigs feathering into needles, a matte rime toward the edges. The ice glints in the Light Dial’s light. Try: Feathering at 0 for bare branches, then raise it.', nodes: [
+      ['knob', { slot: '1', name: 'Crystal Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Frost', def: 35 }, 40, 140],                // 2  (100 of 20–250)
+      ['knob', { slot: '3', name: 'Feathering', def: 55 }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4', name: 'Rime', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Frost Hue' }, 40, 540],                // 6
+      ['hoarfrost', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '20,250', form: 55, '~form': '0,100', rime: 30, '~rime': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Hoarfrost', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('hoarfrost', 'zoom')], [2, 1, 7, paramPort('hoarfrost', 'amount')], [3, 1, 7, paramPort('hoarfrost', 'form')], [4, 1, 7, paramPort('hoarfrost', 'rime')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+  glassrain: { label: 'Rain on Glass', canvas: true, teach: 'Rain on a window, simulated. One part makes it: Rain on Glass lets drops sit until they are heavy, then slide, sweep up droplets, merge and leave beaded trails, wiping the fog as they go; each drop is a small dome the Light Dial lights, and through them you see the page behind the glass. Condensation is the fog and the fine droplets between. Try: Condensation at 100, Rain low: a fogged pane with a few clear runs.', nodes: [
+      ['knob', { slot: '1', name: 'Drop Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Rain', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Condensation', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['glassrain', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Rain on Glass', ground: 'colour' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('glassrain', 'zoom')], [2, 1, 5, paramPort('glassrain', 'amount')], [3, 1, 5, paramPort('glassrain', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  water: { label: 'Scrying Pool', canvas: true, teach: 'Looking down into a pool. One part makes it: Scrying Pool lays waves on the surface, refracts what lies below through them (more the deeper it is) and focuses the light into caustics on the floor; the seed picks the pool: a koi pond, a pebbled stream, or a wishing well. Tilt tips the camera toward the horizon, where the water mirrors the sky. Try: Tilt at 0 and Turbulence low, then press ⟳ Seed.', nodes: [
+      ['knob', { slot: '1', name: 'Wave Scale', def: 29 }, 40, 40],                // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Turbulence', def: 35 }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3', name: 'Depth', def: 35 }, 40, 240],                // 3  (35 of 0–100)
+      ['knob', { slot: '4', name: 'Haze', def: 10 }, 40, 340],                // 4  (10 of 0–100)
+      ['knob', { slot: '5', name: 'Murk', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['knob', { slot: '6', name: 'Tilt', def: 35 }, 40, 540],                // 6  (35 of 0–100)
+      ['dial', {}, 40, 640],                                                       // 7
+      ['water', { zoom: 100, '~zoom': '40,250', amount: 35, '~amount': '0,100', form: 35, '~form': '0,100', haze: 10, '~haze': '0,100', murk: 0, '~murk': '0,100', tilt: 35, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Scrying Pool', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('water', 'zoom')], [2, 1, 8, paramPort('water', 'amount')], [3, 1, 8, paramPort('water', 'form')], [4, 1, 8, paramPort('water', 'haze')], [5, 1, 8, paramPort('water', 'murk')], [6, 1, 8, paramPort('water', 'tilt')], [7, 1, 8, 1], [8, 1, 9, 1]] },
+  dunes: { label: 'Dune Ripples', canvas: true, teach: 'A field of wind-blown sand. One part makes it: Dune Ripples builds the dunes the seed picks (ridges across the wind, crescents, or long dunes along it), each with a gentle windward slope and a steep slip face, then covers the slopes with ripples where the wind works. The Light Dial is the sun; Tilt tips the camera toward the horizon. Try: Dune Height at 0 for ripples alone, then lower the sun.', nodes: [
+      ['knob', { slot: '1', name: 'Ripple Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Wind', def: 50 }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3', name: 'Dune Height', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['knob', { slot: '4', name: 'Tilt', def: 40 }, 40, 340],                // 4  (40 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Sand Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Sun Hue' }, 40, 620],                // 7
+      ['dunes', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 40, '~form': '0,100', tilt: 40, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Dune Ripples', ground: 'colour' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('dunes', 'zoom')], [2, 1, 8, paramPort('dunes', 'amount')], [3, 1, 8, paramPort('dunes', 'form')], [4, 1, 8, paramPort('dunes', 'tilt')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  moss: { label: 'Moss on Stone', canvas: true, teach: 'Stone, and moss where moss grows. One part makes it: Moss on Stone raises rough stone as heights and lays moss where the stone dips below its surroundings and where it is flat, as soft raised clumps, each lit by the Light Dial with its own gloss. Dampness darkens and shines the stone. Try: Moss at 100 and Dampness at 80, for a wet forest floor.', nodes: [
+      ['knob', { slot: '1', name: 'Stone Scale', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Moss', def: 45 }, 40, 140],                // 2  (45 of 0–100)
+      ['knob', { slot: '3', name: 'Dampness', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '4', name: 'Tilt', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Stone Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Moss Hue' }, 40, 620],                // 7
+      ['moss', { zoom: 100, '~zoom': '40,300', amount: 45, '~amount': '0,100', form: 30, '~form': '0,100', tilt: 30, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Moss on Stone', ground: 'colour' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('moss', 'zoom')], [2, 1, 8, paramPort('moss', 'amount')], [3, 1, 8, paramPort('moss', 'form')], [4, 1, 8, paramPort('moss', 'tilt')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  kintsugi: { label: 'Kintsugi', canvas: true, teach: 'A glazed vessel broken and mended with gold. One part makes it: Kintsugi breaks the glaze along some edges of a warped cell network, fills each crack with a raised seam of gold, and curves the whole wall away toward the sides, so the Light Dial draws one long highlight down it. Glaze Hue and Gold Hue color the two materials. Try: Fractures at 400, Seam Width at 50.', nodes: [
+      ['knob', { slot: '1', name: 'Seam Width', def: 20 }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2', name: 'Fractures', def: 21 }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3', name: 'Gloss', def: 70 }, 40, 240],                // 3  (70 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Glaze Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Gold Hue' }, 40, 520],                // 6
+      ['kintsugi', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,400', form: 70, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Kintsugi', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('kintsugi', 'zoom')], [2, 1, 7, paramPort('kintsugi', 'amount')], [3, 1, 7, paramPort('kintsugi', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  spangle: { label: 'Metal Spangle', canvas: true, teach: 'Metal that crystallized as it cooled: the spangle on galvanized zinc, the stepped hollows of bismuth. One part makes it: Metal Spangle grows grains, each tilted its own way, with feathered dendrites, so turning the Light Dial flashes them one by one. Terraces steps them down into bismuth’s colored hollows; Brushing lays fine lines across them. Try: Terraces at 100, then turn the dial slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Crystal Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Dendrites', def: 50 }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3', name: 'Terraces', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4', name: 'Variation', def: 40 }, 40, 340],                // 4  (40 of 0–100)
+      ['knob', { slot: '5', name: 'Brushing', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['dial', {}, 40, 540],                                                       // 6
+      ['hue', { slot: '1', name: 'Metal Hue' }, 40, 640],                // 7
+      ['spangle', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 0, '~form': '0,100', irregular: 40, '~irregular': '0,100', brushing: 0, '~brushing': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Metal Spangle', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('spangle', 'zoom')], [2, 1, 8, paramPort('spangle', 'amount')], [3, 1, 8, paramPort('spangle', 'form')], [4, 1, 8, paramPort('spangle', 'irregular')], [5, 1, 8, paramPort('spangle', 'brushing')], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
+  crystal: { label: 'Crystal Leaf', canvas: true, teach: 'Looking into a crystal, close up. One part makes it: Crystal Leaf cuts a few large faces, each lit from its edge by the Light Dial and fading inward, with a second set behind them seen through by refraction; Fire flashes where light meets an inner face, split into its colors. Phantoms are ghost crystals inside, Inclusions needles and bubbles. Try: Clarity at 100 and Fire at 100.', nodes: [
+      ['knob', { slot: '1', name: 'Facet Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Clarity', def: 70 }, 40, 140],                // 2  (70 of 0–100)
+      ['knob', { slot: '3', name: 'Fire', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['knob', { slot: '4', name: 'Phantoms', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['knob', { slot: '5', name: 'Inclusions', def: 20 }, 40, 440],                // 5  (20 of 0–100)
+      ['dial', {}, 40, 540],                                                       // 6
+      ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],                // 7
+      ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],                // 8
+      ['crystal', { zoom: 100, '~zoom': '40,300', amount: 70, '~amount': '0,100', form: 50, '~form': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],   // 9
+      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 600, 120]],   // 10
+    wires: [[1, 1, 9, paramPort('crystal', 'zoom')], [2, 1, 9, paramPort('crystal', 'amount')], [3, 1, 9, paramPort('crystal', 'form')], [4, 1, 9, paramPort('crystal', 'phantoms')], [5, 1, 9, paramPort('crystal', 'inclusions')], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
+  suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Ring Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Drops', def: 32 }, 40, 140],                // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Breath', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 520],                // 6
+      ['marbling', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,250', form: 40, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Suminagashi', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('marbling', 'zoom')], [2, 1, 7, paramPort('marbling', 'amount')], [3, 1, 7, paramPort('marbling', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  aurora: { label: 'Silk Ribbons', canvas: true, teach: 'Ribbons of light hung in sheets. One part makes it: Silk Ribbons draws each ribbon as a filled sheet with a soft falloff. With two different hues the color blends across the page, from the side the Blend Direction dial points to toward the other; Bloom spills the brightest light into a grainy glow, as on film. Try: a red Curtain Hue and a blue Hem Hue, then turn the dial.', nodes: [
+      ['knob', { slot: '1', name: 'Curtain Height', def: 33 }, 40, 40],                // 1  (100 of 40–220)
+      ['knob', { slot: '2', name: 'Ribbon Count', def: 4 }, 40, 140],                // 2  (100 of 20–1800)
+      ['knob', { slot: '3', name: 'Bloom', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Curtain Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Hem Hue' }, 40, 520],                // 6
+      ['ribbons', { zoom: 100, '~zoom': '40,220', amount: 100, '~amount': '20,1800', form: 0, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Silk Ribbons', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('ribbons', 'zoom')], [2, 1, 7, paramPort('ribbons', 'amount')], [3, 1, 7, paramPort('ribbons', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  bokeh: { label: 'Dream Bloom', canvas: true, teach: 'Lights out of focus, through a real lens. One part makes it: Dream Bloom places motes at real distances from a 50 mm lens at f/1.8 and blurs each by the thin-lens circle of confusion, so those near the Focal Plane stay small and sharp and the rest swell into discs the shape of the Aperture. Object Shape picks what the motes are. Try: Object Shape on the snowflake and Focal Plane low.', nodes: [
+      ['knob', { slot: '1', name: 'Focal Plane', def: 20 }, 40, 40],                // 1  (100 of 25–400)
+      ['knob', { slot: '2', name: 'Orb Count', def: 33 }, 40, 140],                // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Aperture', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4', name: 'Object Shape', def: 0 }, 40, 340],                // 4  (0 of 0–100)
+      ['knob', { slot: '5', name: 'Color Variation', def: 0 }, 40, 440],                // 5  (0 of 0–180)
+      ['hue', { slot: '1', name: 'Light Hue' }, 40, 540],                // 6
+      ['bokeh', { zoom: 100, '~zoom': '25,400', amount: 100, '~amount': '20,260', form: 0, '~form': '0,100', object: 0, '~object': '0,100', spread: 0, '~spread': '0,180' }, 320, 100],   // 7
+      ['surface', { name: 'Dream Bloom', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('bokeh', 'zoom')], [2, 1, 7, paramPort('bokeh', 'amount')], [3, 1, 7, paramPort('bokeh', 'form')], [4, 1, 7, paramPort('bokeh', 'object')], [5, 1, 7, paramPort('bokeh', 'spread')], [6, 1, 7, 1], [7, 1, 8, 1]] },
+  cityscape: { label: 'Night City', canvas: true, teach: 'A city at night across the water. One part makes it: Night City raises a skyline of mostly dark windows (the few lit ones are what make a city look awake), reflected in rippling streaks below; the seed decides what lies at its feet. Window Hue is the lamplight, Water Hue the river. Try: Lit Windows at 0, then raise it slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Skyline Height', def: 33 }, 40, 40],                // 1  (100 of 60–180)
+      ['knob', { slot: '2', name: 'Lit Windows', def: 33 }, 40, 140],                // 2  (100 of 0–300)
+      ['hue', { slot: '1', name: 'Window Hue' }, 40, 240],                // 3
+      ['hue', { slot: '2', name: 'Water Hue' }, 40, 320],                // 4
+      ['cityscape', { zoom: 100, '~zoom': '60,180', amount: 100, '~amount': '0,300' }, 320, 100],   // 5
+      ['surface', { name: 'Night City', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('cityscape', 'zoom')], [2, 1, 5, paramPort('cityscape', 'amount')], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1]] },
+  flowers: { label: 'Lotus Pond', canvas: true, teach: 'Flowers floating on water. One part makes it: Lotus Pond draws each bloom ring by ring, its petals shaded on their far halves and its shadow thrown on the water away from the Light Dial; Form runs through bell bud, cherry, day lily, lotus, daisy, rosette and hydrangea. Its ground is clear, so the page’s backdrop is the water. Try: Form at 100 for hydrangea, then 50 for lotus.', nodes: [
+      ['knob', { slot: '1', name: 'Bloom Size', def: 25 }, 40, 40],                // 1  (150 of 50–450)
+      ['knob', { slot: '2', name: 'Bloom Count', def: 17 }, 40, 140],                // 2  (60 of 10–300)
+      ['knob', { slot: '3', name: 'Form', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Petal Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Heart Hue' }, 40, 520],                // 6
+      ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
+      ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
+      ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Organic ↔ Tech', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Transmutation Circle', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
   chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
       ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
@@ -14790,9 +15097,6 @@ function validateGraph(json){
 
 
 
-
-
-
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
  *
@@ -15403,13 +15707,13 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   let result;  if(type === 'clouds'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'flowers'){
-    result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Lotus Pond (chains.js)
   } else if(type === 'inkbleed'){
     result = genChain(type, w, h, light, extra, tint1, tint2);   // Ink Blot (chains.js)
   } else if(type === 'crackedglaze'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'bokeh'){
-    result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dream Bloom (chains.js)
   } else if(type === 'embers'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
@@ -15423,7 +15727,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'magicparticles'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (motes) (chains.js)
   } else if(type === 'glassrain'){
-    result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
+    result = genChain(type, w, h, light, extra);           // Rain on Glass, over the page's own colors (chains.js)
   } else if(type === 'rainstreaks'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
@@ -15451,11 +15755,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'linen'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'coldpress'){
-    result = genColdPress(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Cold Press (chains.js)
   } else if(type === 'oldpaper'){
-    result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Old Paper (chains.js)
   } else if(type === 'cupring'){
-    result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Cup Ring (chains.js)
   } else if(type === 'athanor'){
     result = genAthanor(w,h,light,tint1,tint2,extra);
   } else if(type === 'athanorsteps'){
@@ -15469,7 +15773,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
   } else if(type === 'suminagashi'){
-    result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Suminagashi (chains.js)
   } else if(type === 'watercolour'){
     result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
@@ -15477,42 +15781,42 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'turing'){
     result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
   } else if(type === 'frost'){
-    result = genHoarfrost(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Hoarfrost (chains.js)
   } else if(type === 'ash'){
-    result = genBurntLetter(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Burnt Letter (chains.js)
   } else if(type === 'wax'){
     result = genChain(type, w, h, light, extra, tint1 || '#7A2B2B');   // Pours → Meniscus → the wax's colour → Light Engine (translucent) → Glow (chains.js)
   } else if(type === 'dunes'){
-    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dune Ripples (chains.js)
   } else if(type === 'kintsugi'){
-    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Kintsugi (chains.js)
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Moss on Stone (chains.js)
   } else if(type === 'landscape'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // painted sky → painted ridges → wash (chains.js)
   } else if(type === 'cityscape'){
-    result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Night City (chains.js)
   } else if(type === 'blackhole'){
     result = genChain(type, w, h, light, extra);           // Black Hole (chains.js)
   } else if(type === 'water'){
-    result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.tilt,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Scrying Pool (chains.js)
   } else if(type === 'moon'){
     result = genChain(type, w, h, light, extra);           // Fractal Moon (chains.js)
   } else if(type === 'aurora'){
-    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Silk Ribbons (chains.js)
   } else if(type === 'hatch'){
     result = genChain(type, w, h, light, extra);
   } else if(type === 'cards'){
     // a chain (chains.js 'cards'), drawn by a canvas pass: the four suits the page's two accents, the texture's two hues
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'summoning'){
-    result = genSummoningCircles(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Transmutation Circle, on the page (its glyphs are web fonts) (chains.js)
   } else if(type === 'metalleaf'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // flakes (chains.js)
   } else if(type === 'crystal'){
-    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Crystal Leaf (chains.js)
   } else if(type === 'spangle'){
-    result = genSpangle(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Metal Spangle (chains.js)
   } else if(type === 'grain'){
     result = genChain(type, w, h, light, extra);           // Film Grain (chains.js)
   } else {
@@ -15594,8 +15898,8 @@ function storeTexture(key, result){
 }
 // everything a request means: its normalised knobs, and its key
 // the poem's layout, as a short key (FNV-1a): every character counts
-/** Does a graph hold a Page Backdrop part (and so want the page's own colors)? */
-function graphUsesBackdrop(graph){ return /"name":\s*"backdrop"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
+/** Does a graph hold a Page Backdrop part, or Rain on Glass (which shows the page through its drops), and so want the page's own colors? */
+function graphUsesBackdrop(graph){ return /"name":\s*"(?:backdrop|glassrain)"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
@@ -21127,6 +21431,33 @@ function kitImage(cv, gw, gh){
   for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
   return { r, g, b };
 }
+/**
+ * A WHOLE TEXTURE AS A PART (Stage 3, until it is taken apart): one of the
+ * older generators wrapped as a step, so its texture is a chain and draws
+ * exactly as it always did. `prep(E, n, w, h)` reads the part's inputs and
+ * settings and returns the drawing (a function); it runs under the part's own
+ * stream, the texture's seed plus Variant × 7919 (Variant 0: the texture's
+ * own draws). Inputs are read first, outside that stream.
+ */
+function kitWhole(part, prep){
+  return { ...part,
+    paint(E, n){ const draw = prep(E, n, E.ww, E.wh); return [withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0, draw)]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } };
+}
+/** Its dial: the degrees the texture was given (a turn × 360 can miss a whole degree by a hair), else the page's light. */
+function wholeDial(E, n, j){
+  const v = E.input(n, j); if(typeof v !== 'number') return E.ctx.light ?? null;
+  const d = v*360, r = Math.round(d); return Math.abs(d - r) < 1e-7 ? r : d;
+}
+/** Its color on input j as a hex, or null (nothing wired, or a Hue whose picker is empty): the generator's own color. */
+function wholeHex(E, n, j){
+  const v = E.input(n, j);
+  return Array.isArray(v) && !v.none ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
+}
+/** Its settings read as the texture's sliders always were: a size (at least ¼), an amount (at least 2%), a share. */
+const wholeZoom = (E, n, k, d) => Math.max(0.25, E.num(n, k, d)/100);
+const wholeAmt = (E, n, k, d) => Math.max(0.02, E.num(n, k, d)/100);
+const wholeShare = (E, n, k, d) => E.num(n, k, d)/100;
 /** A choice the SEED makes, the same in every part that asks it (not the part's own random stream): from list, by the seed and a name. */
 function seedChoice(seed, salt){ let h = 2166136261 ^ (seed >>> 0); for(let i = 0; i < salt.length; i++){ h ^= salt.charCodeAt(i); h = Math.imul(h, 16777619); } return mulberry32(h >>> 0); }
 
@@ -26290,6 +26621,7 @@ Object.assign(CRT_KIT, { shadow: crtShadow, emblem: crtEmblem, element: crtEleme
  */
 
 
+
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
 // Weave keyframes: silk → twill → linen → canvas → burlap
@@ -26381,6 +26713,61 @@ function touchPigment(D, img, ww, wh, col, wet, light){
 }
 
 const TOUCH_STEPS = {
+  // 🜚 the older Touch textures, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  coldpress: kitWhole({ cat: 'Textures', label: 'Cold Press', ins: ['light from'], outs: ['paper'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Tooth Scale', 100, 75, 400), TOUCH_R('amount', 'Tooth Depth', 100, 20, 300), TOUCH_R('form', 'Press', 50), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
+      return () => genColdPress(w, h, a, z, light, f, E.ctx.mat || null); }),
+  cupring: kitWhole({ cat: 'Marks', label: 'Cup Ring', ins: ['light from', 'stain hue'], outs: ['rings'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ring Size', 100, 40, 320), TOUCH_R('amount', 'Ring Count', 100, 30, 300), TOUCH_R('form', 'Spill', 35), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
+      return () => genCupRing(w, h, a, z, light, t1, f, E.ctx.mat || null, E.ctx.glow || null); }),
+  oldpaper: kitWhole({ cat: 'Textures', label: 'Old Paper', ins: ['light from', 'age hue', 'mold hue'], outs: ['paper'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Scale', 100, 40, 400), TOUCH_R('amount', 'Folds', 35), TOUCH_R('form', 'Age', 30), TOUCH_R('crinkle', 'Crinkle', 25), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), c = wholeShare(E, n, 'crinkle', 25);
+      return () => genOldPaper(w, h, a, z, light, t1, t2, f, c, E.ctx.mat || null, E.ctx.glow || null); }),
+  ash: kitWhole({ cat: 'Textures', label: 'Burnt Letter', ins: ['light from', 'ash hue', 'ember hue'], outs: ['ash'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Flake Size', 100, 40, 300), TOUCH_R('amount', 'Ashfall', 100, 20, 400), TOUCH_R('form', 'Char', 55), TOUCH_R('embers', 'Embers', 20), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 55), em = wholeShare(E, n, 'embers', 20);
+      return () => genBurntLetter(w, h, a, z, light, t1, t2, f, em, E.ctx.mat || null); }),
+  hoarfrost: kitWhole({ cat: 'Marks', label: 'Hoarfrost', ins: ['light from', 'frost hue'], outs: ['frost'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Crystal Size', 100, 50, 250), TOUCH_R('amount', 'Frost', 100, 20, 250), TOUCH_R('form', 'Feathering', 55), TOUCH_R('rime', 'Rime', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 55), r = wholeShare(E, n, 'rime', 30);
+      return () => genHoarfrost(w, h, a, z, light, t1, f, r, E.ctx.mat || null, E.ctx.glow || null); }),
+  glassrain: kitWhole({ cat: 'Textures', label: 'Rain on Glass', ins: ['light from'], outs: ['glass'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Drop Size', 100, 40, 300), TOUCH_R('amount', 'Rain', 100, 20, 300), TOUCH_R('form', 'Condensation', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 12 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
+      return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null); }),
+  water: kitWhole({ cat: 'Textures', label: 'Scrying Pool', ins: ['light from'], outs: ['pool'], io: { ins: ['value'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Wave Scale', 100, 40, 250), TOUCH_R('amount', 'Turbulence', 35), TOUCH_R('form', 'Depth', 35), TOUCH_R('haze', 'Haze', 10), TOUCH_R('murk', 'Murk', 0), TOUCH_R('tilt', 'Tilt', 35), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 12 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
+      const hz = wholeShare(E, n, 'haze', 10), mk = wholeShare(E, n, 'murk', 0), tl = wholeShare(E, n, 'tilt', 35);
+      return () => genWater(w, h, a, z, light, f, hz, mk, tl, E.ctx.mat || null); }),
+  dunes: kitWhole({ cat: 'Textures', label: 'Dune Ripples', ins: ['light from', 'sand hue', 'sun hue'], outs: ['sand'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ripple Size', 100, 40, 300), TOUCH_R('amount', 'Wind', 50), TOUCH_R('form', 'Dune Height', 40), TOUCH_R('tilt', 'Tilt', 40), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40), tl = wholeShare(E, n, 'tilt', 40);
+      return () => genDunes(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+  moss: kitWhole({ cat: 'Textures', label: 'Moss on Stone', ins: ['light from', 'stone hue', 'moss hue'], outs: ['stone'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Stone Scale', 100, 40, 300), TOUCH_R('amount', 'Moss', 45), TOUCH_R('form', 'Dampness', 30), TOUCH_R('tilt', 'Tilt', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 45), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), tl = wholeShare(E, n, 'tilt', 30);
+      return () => genMoss(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+  kintsugi: kitWhole({ cat: 'Textures', label: 'Kintsugi', ins: ['light from', 'glaze hue', 'gold hue'], outs: ['vessel'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Seam Width', 100, 50, 300), TOUCH_R('amount', 'Fractures', 100, 20, 400), TOUCH_R('form', 'Gloss', 70), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 70);
+      return () => genKintsugi(w, h, a, z, light, t1, t2, f, E.ctx.mat || null, E.ctx.glow || null); }),
+  spangle: kitWhole({ cat: 'Textures', label: 'Metal Spangle', ins: ['light from', 'metal hue'], outs: ['metal'], io: { ins: ['value', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Crystal Size', 100, 40, 300), TOUCH_R('amount', 'Dendrites', 50), TOUCH_R('form', 'Terraces', 0), TOUCH_R('irregular', 'Irregularity', 40), TOUCH_R('brushing', 'Brushing', 0), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), v = wholeShare(E, n, 'irregular', 40), b = wholeShare(E, n, 'brushing', 0);
+      return () => genSpangle(w, h, a, z, light, t1, f, v, b, E.ctx.mat || null, E.ctx.glow || null); }),
+  crystal: kitWhole({ cat: 'Textures', label: 'Crystal Leaf', ins: ['light from', 'crystal hue', 'inclusion hue'], outs: ['crystal'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Facet Size', 100, 40, 300), TOUCH_R('amount', 'Clarity', 70), TOUCH_R('form', 'Fire', 50), TOUCH_R('phantoms', 'Phantoms', 30), TOUCH_R('inclusions', 'Inclusions', 20), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 70), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
+      const ph = wholeShare(E, n, 'phantoms', 30), inc = wholeShare(E, n, 'inclusions', 20);
+      return () => genCrystalLeaf(w, h, a, z, light, t1, t2, f, ph, inc, E.ctx.mat || null, E.ctx.glow || null); }),
+  marbling: kitWhole({ cat: 'Textures', label: 'Suminagashi', ins: ['breath from', 'ink hue', 'second ink hue'], outs: ['marbling'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [TOUCH_R('zoom', 'Ring Size', 100, 50, 250), TOUCH_R('amount', 'Drops', 100, 30, 250), TOUCH_R('form', 'Breath', 40), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40);
+      return () => genSuminagashi(w, h, a, z, light, f, t1, t2); }),
   // POURED WAX, in parts (texTouch genPouredWax until now). POURS: pour points and volumes from the seed; each
   // pour spreads into a pool, and pools that meet MERGE (a metaball field). SPLATTER (Ruby: a wax simulator that
   // becomes a fluid-spatter simulator): drops thrown from each pour, away from the dial, stretched along their
@@ -27808,6 +28195,15 @@ function whimAurora(x, w, h, o, px){
 }
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  // Silk Ribbons and Dream Bloom, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  ribbons: kitWhole({ cat: 'Marks', label: 'Silk Ribbons', ins: ['blend from', 'curtain hue', 'hem hue'], outs: ['ribbons'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('zoom', 'Curtain Height', 100, 40, 220), WHIM_R('amount', 'Ribbon Count', 100, 20, 1800), WHIM_R('form', 'Bloom', 0), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0);
+      return () => genAuroraVeil(w, h, a, z, light, t1, t2, f); }),
+  bokeh: kitWhole({ cat: 'Marks', label: 'Dream Bloom', ins: ['light hue'], outs: ['bloom'], io: { ins: ['colour'], outs: ['image'] },
+    params: [WHIM_R('zoom', 'Focal Plane', 100, 25, 400), WHIM_R('amount', 'Orb Count', 100, 20, 260), WHIM_R('form', 'Aperture', 0), WHIM_R('object', 'Object Shape', 0), WHIM_R('spread', 'Color Variation', 0, 0, 180), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const t1 = wholeHex(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), o = E.num(n, 'object', 0), sp = E.num(n, 'spread', 0);
+      return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
     params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
@@ -28127,6 +28523,12 @@ const chaosSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant',
 // a color from a port (0–1 channels), as the generators take it: a hex code
 const chaosHex = v => Array.isArray(v) ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
 const CHAOS_STEPS = {
+  // Transmutation Circle, one part (kitWhole: drawn as it always was, under the texture's own seed + Variant);
+  // lettered in web fonts, so the texture is made on the page (textureService ON_PAGE)
+  transmutation: kitWhole({ cat: 'Marks', label: 'Transmutation Circle', ins: ['position'], outs: ['circle'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
+      return () => genSummoningCircles(w, h, a, z, light, f); }),
   // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
   sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
@@ -29584,6 +29986,7 @@ const PATTERN_STEPS = {
  *            rows and columns), blended between neighbours by Kind.
  */
 
+
 const SH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
 /** Dots on a w×h canvas: a cell every max(w,h)/48·scale, each dot's radius the tone there (0..1 field on w×h). */
@@ -29748,6 +30151,15 @@ function shGuilloche(w,h,amt,zoom,light,form){
 }
 
 const SHARP_STEPS = {
+  // Night City and Lotus Pond, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  cityscape: kitWhole({ cat: 'Textures', label: 'Night City', ins: ['window hue', 'water hue'], outs: ['city'], io: { ins: ['colour', 'colour'], outs: ['image'] },
+    params: [SH_R('zoom', 'Skyline Height', 100, 60, 180), SH_R('amount', 'Lit Windows', 100, 0, 300), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const t1 = wholeHex(E, n, 1), t2 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100);
+      return () => genCityscape(w, h, a, z, t1, t2, E.ctx.glow || null); }),
+  lotus: kitWhole({ cat: 'Marks', label: 'Lotus Pond', ins: ['light from', 'petal hue', 'heart hue'], outs: ['blooms'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [SH_R('zoom', 'Bloom Size', 150, 50, 450), SH_R('amount', 'Bloom Count', 60, 10, 300), SH_R('form', 'Flower', 50), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 60), z = wholeZoom(E, n, 'zoom', 150), f = wholeShare(E, n, 'form', 50);
+      return () => genFlowers(w, h, a, z, t1, t2, f, light, E.ctx.glow || null); }),
   rosettes: { cat: 'Marks', label: 'Guilloché', ins: ['light from'], outs: ['engraving', 'lines'], io: { ins: ['value'], outs: ['image', 'field'] },
     params: [SH_R('zoom', 'Rosette Size', 100, 50, 250), SH_R('amount', 'Line Density', 100, 30, 200), SH_R('form', 'Lobes', 45), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8,
     // a canvas pass at full size, under the texture's own seed (+ Variant): Guilloché as it was
@@ -30058,6 +30470,24 @@ const STEP_DOCS = {
   facets: 'A field of cut facets, each tilted its own way, so the light catches some and leaves others dark: Facet Field.',
   blackhole: 'A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.',
   moon: 'A moon whose seas and craters are fractal noise, in the seed’s phase, under a night sky of faint stars and cloud.',
+  coldpress: 'Watercolor paper’s tooth: rounded hills and hollows pressed in by felt, with fine fibers, lit by the dial.',
+  cupring: 'Where a cup stood on paper: dried coffee rings, dark at their rims, with drips and a second, offset ring.',
+  oldpaper: 'A sheet of old paper: its folds and creases lit by the dial, yellowed, foxed and mildewed with age.',
+  ash: 'The ash a burnt letter leaves: curled flakes charred black and burnt pale at their rims, some still glowing.',
+  hoarfrost: 'Frost ferns grown across a pane from its frame inward, branching at sixty degrees, lit by the dial.',
+  glassrain: 'Rain on a window: drops that sit, slide, merge and leave trails, as lit domes over the page’s own colors.',
+  water: 'Looking down into a pool: waves on the surface, caustics on the floor, fish and leaves below, the sky mirrored when tilted.',
+  dunes: 'Wind-built dunes and the ripples on them, lit low by the dial, seen from above or toward the horizon.',
+  moss: 'Rough stone with moss in its crevices and on its flat tops, lit by the dial.',
+  kintsugi: 'A glazed pot broken and mended with gold: the seams raised and bright, the glaze glossy.',
+  spangle: 'Metal that crystallized as it cooled: grains each tilted its own way, with branching dendrites, flashing as the light turns.',
+  crystal: 'Looking into a clear crystal: cut faces, light caught inside as fire, ghost crystals and needles within.',
+  marbling: 'Suminagashi, Japanese ink marbling: rings of ink dropped in turn on still water, moved by a breath, lifted onto paper.',
+  ribbons: 'Curtains of light hung in sheets, like silk ribbons or an aurora, in one color or blended between two.',
+  bokeh: 'Out-of-focus lights through a real lens: soft discs whose blur follows each one’s distance from the focal plane.',
+  cityscape: 'A city at night across the water: a skyline of mostly dark windows, a few of them lit, reflected below.',
+  lotus: 'Flowers floating on water, from a bell bud through lotus to hydrangea, each petal shaded and throwing its shadow.',
+  transmutation: 'A transmutation circle, drawn by hand or machined: rings of glyphs, polygrams and planets, placed by the dial.',
   rosettes: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',
   sand: 'Sand on a ringing plate: grains thrown off what moves gather on the lines where nothing does (or wherever a map is white).',
   bits: 'A grid of small marks (squares, dashes, bars) that surface wherever a field rises: Binary Pattern’s glyphs.',
@@ -30103,8 +30533,9 @@ const STEP_RUN = {
     return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
   },
   glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
-  hue(E, n){ const { ctx, P, hexCol } = E;
-    return [hexCol((ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] || '#FFFFFF')];
+  hue(E, n){ const { ctx, P, hexCol } = E, t = (ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1];
+    // an empty picker reads as white, and says so (`none`): a whole texture as a part then uses its own color
+    const c = hexCol(t || '#FFFFFF'); if(!/^#?[0-9a-f]{6}/i.test(t || '')) c.none = true; return [c];
   },
   dial(E, n){ const { ctx } = E;
     return [((ctx.light ?? 315) % 360)/360, Math.max(0, Math.min(1.3, (ctx.lightTilt ?? 100)/100))];
@@ -31351,6 +31782,186 @@ const TEXTURE_CHAINS = {
       ['moon', { zoom: 100, '~zoom': '60,150', amount: 100, '~amount': '20,190', form: 30, '~form': '0,100', night: 70, '~night': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Fractal Moon', ground: 'grey' }, 600, 120]],            // 6
     wires: [[1, 1, 5, paramPort('moon', 'zoom')], [2, 1, 5, paramPort('moon', 'amount')], [3, 1, 5, paramPort('moon', 'form')], [4, 1, 5, paramPort('moon', 'night')], [5, 1, 6, 1]] },
+  // the older textures, each one part with the sliders wired in (each drawn exactly as it was)
+  coldpress: { label: 'Cold Press', canvas: true, teach: 'Watercolor paper, and what the felt it was pressed between left on it. One part makes it: Cold Press raises the tooth as heights (rounded hills and hollows over a gentle swell), so a low light fills the hollows with shadow, and lays the fibers as a normal map, too fine to cast shadows but still catching the light. Press runs from hot press (smooth) to rough. Try: pull the Light Dial out past its rim, and the tooth stands up in long shadows.', nodes: [
+      ['knob', { slot: '1', name: 'Tooth Scale', def: 8 }, 40, 40],                // 1  (100 of 75–400)
+      ['knob', { slot: '2', name: 'Tooth Depth', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Press', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['coldpress', { zoom: 100, '~zoom': '75,400', amount: 100, '~amount': '20,300', form: 50, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Cold Press', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('coldpress', 'zoom')], [2, 1, 5, paramPort('coldpress', 'amount')], [3, 1, 5, paramPort('coldpress', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  cupring: { label: 'Cup Ring', canvas: true, teach: 'Where a mug of coffee stood on paper. One part makes it: Cup Ring draws each ring the way coffee dries, carried to the edge so the band darkens to a crisp outer line, pooled on the downhill side, mottled where the paper drank it, with drips and a second, offset ring. The Stain Hue is the coffee; the dial gives only a faint sheen where the film is thick. Try: raise Spill for drips and a pale wash inside the rings.', nodes: [
+      ['knob', { slot: '1', name: 'Ring Size', def: 21 }, 40, 40],                // 1  (100 of 40–320)
+      ['knob', { slot: '2', name: 'Ring Count', def: 26 }, 40, 140],                // 2  (100 of 30–300)
+      ['knob', { slot: '3', name: 'Spill', def: 35 }, 40, 240],                // 3  (35 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Stain Hue' }, 40, 440],                // 5
+      ['cupring', { zoom: 100, '~zoom': '40,320', amount: 100, '~amount': '30,300', form: 35, '~form': '0,100' }, 320, 100],   // 6
+      ['surface', { name: 'Cup Ring', ground: 'grey' }, 600, 120]],   // 7
+    wires: [[1, 1, 6, paramPort('cupring', 'zoom')], [2, 1, 6, paramPort('cupring', 'amount')], [3, 1, 6, paramPort('cupring', 'form')], [4, 1, 6, 1], [5, 1, 6, 2], [6, 1, 7, 1]] },
+  oldpaper: { label: 'Old Paper', canvas: true, teach: 'What time and handling do to a sheet. One part makes it: Old Paper folds the sheet as it was folded to be carried (the seed decides how) and crinkles it, as heights the Light Dial lights; then Age yellows it from the edges, gathers foxing in the margins and mildew in colonies, and at the end scorches it. Age Hue colors the yellowing, Mold Hue the mildew. Try: Folds at 100, and the folds tear in from the edge.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 17 }, 40, 40],                // 1  (100 of 40–400)
+      ['knob', { slot: '2', name: 'Folds', def: 35 }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3', name: 'Age', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '4', name: 'Crinkle', def: 25 }, 40, 340],                // 4  (25 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Age Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Mold Hue' }, 40, 620],                // 7
+      ['oldpaper', { zoom: 100, '~zoom': '40,400', amount: 35, '~amount': '0,100', form: 30, '~form': '0,100', crinkle: 25, '~crinkle': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Old Paper', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('oldpaper', 'zoom')], [2, 1, 8, paramPort('oldpaper', 'amount')], [3, 1, 8, paramPort('oldpaper', 'form')], [4, 1, 8, paramPort('oldpaper', 'crinkle')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  ash: { label: 'Burnt Letter', canvas: true, teach: 'The ash a burnt page leaves, as it lies. One part makes it: Burnt Letter scatters curled flakes (many small, a few large), each charred black at its heart and pale at its rim, crazed with the lines of the page it was, lifting at its ends so the Light Dial lights one side and throws a shadow; soot and soft piles of powder lie between them. Char moves the flakes from pale ash to black; Embers keeps some burning along their edge. Try: Char at 20 and Embers at 80.', nodes: [
+      ['knob', { slot: '1', name: 'Flake Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Ashfall', def: 21 }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3', name: 'Char', def: 55 }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4', name: 'Embers', def: 20 }, 40, 340],                // 4  (20 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Ash Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Ember Hue' }, 40, 620],                // 7
+      ['ash', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,400', form: 55, '~form': '0,100', embers: 20, '~embers': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Burnt Letter', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('ash', 'zoom')], [2, 1, 8, paramPort('ash', 'amount')], [3, 1, 8, paramPort('ash', 'form')], [4, 1, 8, paramPort('ash', 'embers')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  frost: { label: 'Hoarfrost', canvas: true, teach: 'Frost ferns across a pane. One part makes it: Hoarfrost grows them the way branching things grow toward the room they have (space colonization): from seeds along the frame inward, each crystal turning by sixty degrees, twigs feathering into needles, a matte rime toward the edges. The ice glints in the Light Dial’s light. Try: Feathering at 0 for bare branches, then raise it.', nodes: [
+      ['knob', { slot: '1', name: 'Crystal Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Frost', def: 35 }, 40, 140],                // 2  (100 of 20–250)
+      ['knob', { slot: '3', name: 'Feathering', def: 55 }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4', name: 'Rime', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Frost Hue' }, 40, 540],                // 6
+      ['hoarfrost', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '20,250', form: 55, '~form': '0,100', rime: 30, '~rime': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Hoarfrost', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('hoarfrost', 'zoom')], [2, 1, 7, paramPort('hoarfrost', 'amount')], [3, 1, 7, paramPort('hoarfrost', 'form')], [4, 1, 7, paramPort('hoarfrost', 'rime')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+  glassrain: { label: 'Rain on Glass', canvas: true, teach: 'Rain on a window, simulated. One part makes it: Rain on Glass lets drops sit until they are heavy, then slide, sweep up droplets, merge and leave beaded trails, wiping the fog as they go; each drop is a small dome the Light Dial lights, and through them you see the page behind the glass. Condensation is the fog and the fine droplets between. Try: Condensation at 100, Rain low: a fogged pane with a few clear runs.', nodes: [
+      ['knob', { slot: '1', name: 'Drop Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Rain', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Condensation', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['glassrain', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Rain on Glass', ground: 'colour' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('glassrain', 'zoom')], [2, 1, 5, paramPort('glassrain', 'amount')], [3, 1, 5, paramPort('glassrain', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  water: { label: 'Scrying Pool', canvas: true, teach: 'Looking down into a pool. One part makes it: Scrying Pool lays waves on the surface, refracts what lies below through them (more the deeper it is) and focuses the light into caustics on the floor; the seed picks the pool: a koi pond, a pebbled stream, or a wishing well. Tilt tips the camera toward the horizon, where the water mirrors the sky. Try: Tilt at 0 and Turbulence low, then press ⟳ Seed.', nodes: [
+      ['knob', { slot: '1', name: 'Wave Scale', def: 29 }, 40, 40],                // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Turbulence', def: 35 }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3', name: 'Depth', def: 35 }, 40, 240],                // 3  (35 of 0–100)
+      ['knob', { slot: '4', name: 'Haze', def: 10 }, 40, 340],                // 4  (10 of 0–100)
+      ['knob', { slot: '5', name: 'Murk', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['knob', { slot: '6', name: 'Tilt', def: 35 }, 40, 540],                // 6  (35 of 0–100)
+      ['dial', {}, 40, 640],                                                       // 7
+      ['water', { zoom: 100, '~zoom': '40,250', amount: 35, '~amount': '0,100', form: 35, '~form': '0,100', haze: 10, '~haze': '0,100', murk: 0, '~murk': '0,100', tilt: 35, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Scrying Pool', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('water', 'zoom')], [2, 1, 8, paramPort('water', 'amount')], [3, 1, 8, paramPort('water', 'form')], [4, 1, 8, paramPort('water', 'haze')], [5, 1, 8, paramPort('water', 'murk')], [6, 1, 8, paramPort('water', 'tilt')], [7, 1, 8, 1], [8, 1, 9, 1]] },
+  dunes: { label: 'Dune Ripples', canvas: true, teach: 'A field of wind-blown sand. One part makes it: Dune Ripples builds the dunes the seed picks (ridges across the wind, crescents, or long dunes along it), each with a gentle windward slope and a steep slip face, then covers the slopes with ripples where the wind works. The Light Dial is the sun; Tilt tips the camera toward the horizon. Try: Dune Height at 0 for ripples alone, then lower the sun.', nodes: [
+      ['knob', { slot: '1', name: 'Ripple Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Wind', def: 50 }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3', name: 'Dune Height', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['knob', { slot: '4', name: 'Tilt', def: 40 }, 40, 340],                // 4  (40 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Sand Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Sun Hue' }, 40, 620],                // 7
+      ['dunes', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 40, '~form': '0,100', tilt: 40, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Dune Ripples', ground: 'colour' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('dunes', 'zoom')], [2, 1, 8, paramPort('dunes', 'amount')], [3, 1, 8, paramPort('dunes', 'form')], [4, 1, 8, paramPort('dunes', 'tilt')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  moss: { label: 'Moss on Stone', canvas: true, teach: 'Stone, and moss where moss grows. One part makes it: Moss on Stone raises rough stone as heights and lays moss where the stone dips below its surroundings and where it is flat, as soft raised clumps, each lit by the Light Dial with its own gloss. Dampness darkens and shines the stone. Try: Moss at 100 and Dampness at 80, for a wet forest floor.', nodes: [
+      ['knob', { slot: '1', name: 'Stone Scale', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Moss', def: 45 }, 40, 140],                // 2  (45 of 0–100)
+      ['knob', { slot: '3', name: 'Dampness', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '4', name: 'Tilt', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Stone Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Moss Hue' }, 40, 620],                // 7
+      ['moss', { zoom: 100, '~zoom': '40,300', amount: 45, '~amount': '0,100', form: 30, '~form': '0,100', tilt: 30, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Moss on Stone', ground: 'colour' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('moss', 'zoom')], [2, 1, 8, paramPort('moss', 'amount')], [3, 1, 8, paramPort('moss', 'form')], [4, 1, 8, paramPort('moss', 'tilt')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  kintsugi: { label: 'Kintsugi', canvas: true, teach: 'A glazed vessel broken and mended with gold. One part makes it: Kintsugi breaks the glaze along some edges of a warped cell network, fills each crack with a raised seam of gold, and curves the whole wall away toward the sides, so the Light Dial draws one long highlight down it. Glaze Hue and Gold Hue color the two materials. Try: Fractures at 400, Seam Width at 50.', nodes: [
+      ['knob', { slot: '1', name: 'Seam Width', def: 20 }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2', name: 'Fractures', def: 21 }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3', name: 'Gloss', def: 70 }, 40, 240],                // 3  (70 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Glaze Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Gold Hue' }, 40, 520],                // 6
+      ['kintsugi', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,400', form: 70, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Kintsugi', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('kintsugi', 'zoom')], [2, 1, 7, paramPort('kintsugi', 'amount')], [3, 1, 7, paramPort('kintsugi', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  spangle: { label: 'Metal Spangle', canvas: true, teach: 'Metal that crystallized as it cooled: the spangle on galvanized zinc, the stepped hollows of bismuth. One part makes it: Metal Spangle grows grains, each tilted its own way, with feathered dendrites, so turning the Light Dial flashes them one by one. Terraces steps them down into bismuth’s colored hollows; Brushing lays fine lines across them. Try: Terraces at 100, then turn the dial slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Crystal Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Dendrites', def: 50 }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3', name: 'Terraces', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4', name: 'Variation', def: 40 }, 40, 340],                // 4  (40 of 0–100)
+      ['knob', { slot: '5', name: 'Brushing', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['dial', {}, 40, 540],                                                       // 6
+      ['hue', { slot: '1', name: 'Metal Hue' }, 40, 640],                // 7
+      ['spangle', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 0, '~form': '0,100', irregular: 40, '~irregular': '0,100', brushing: 0, '~brushing': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Metal Spangle', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('spangle', 'zoom')], [2, 1, 8, paramPort('spangle', 'amount')], [3, 1, 8, paramPort('spangle', 'form')], [4, 1, 8, paramPort('spangle', 'irregular')], [5, 1, 8, paramPort('spangle', 'brushing')], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
+  crystal: { label: 'Crystal Leaf', canvas: true, teach: 'Looking into a crystal, close up. One part makes it: Crystal Leaf cuts a few large faces, each lit from its edge by the Light Dial and fading inward, with a second set behind them seen through by refraction; Fire flashes where light meets an inner face, split into its colors. Phantoms are ghost crystals inside, Inclusions needles and bubbles. Try: Clarity at 100 and Fire at 100.', nodes: [
+      ['knob', { slot: '1', name: 'Facet Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Clarity', def: 70 }, 40, 140],                // 2  (70 of 0–100)
+      ['knob', { slot: '3', name: 'Fire', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['knob', { slot: '4', name: 'Phantoms', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['knob', { slot: '5', name: 'Inclusions', def: 20 }, 40, 440],                // 5  (20 of 0–100)
+      ['dial', {}, 40, 540],                                                       // 6
+      ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],                // 7
+      ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],                // 8
+      ['crystal', { zoom: 100, '~zoom': '40,300', amount: 70, '~amount': '0,100', form: 50, '~form': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],   // 9
+      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 600, 120]],   // 10
+    wires: [[1, 1, 9, paramPort('crystal', 'zoom')], [2, 1, 9, paramPort('crystal', 'amount')], [3, 1, 9, paramPort('crystal', 'form')], [4, 1, 9, paramPort('crystal', 'phantoms')], [5, 1, 9, paramPort('crystal', 'inclusions')], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
+  suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Ring Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Drops', def: 32 }, 40, 140],                // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Breath', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 520],                // 6
+      ['marbling', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,250', form: 40, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Suminagashi', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('marbling', 'zoom')], [2, 1, 7, paramPort('marbling', 'amount')], [3, 1, 7, paramPort('marbling', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  aurora: { label: 'Silk Ribbons', canvas: true, teach: 'Ribbons of light hung in sheets. One part makes it: Silk Ribbons draws each ribbon as a filled sheet with a soft falloff. With two different hues the color blends across the page, from the side the Blend Direction dial points to toward the other; Bloom spills the brightest light into a grainy glow, as on film. Try: a red Curtain Hue and a blue Hem Hue, then turn the dial.', nodes: [
+      ['knob', { slot: '1', name: 'Curtain Height', def: 33 }, 40, 40],                // 1  (100 of 40–220)
+      ['knob', { slot: '2', name: 'Ribbon Count', def: 4 }, 40, 140],                // 2  (100 of 20–1800)
+      ['knob', { slot: '3', name: 'Bloom', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Curtain Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Hem Hue' }, 40, 520],                // 6
+      ['ribbons', { zoom: 100, '~zoom': '40,220', amount: 100, '~amount': '20,1800', form: 0, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Silk Ribbons', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('ribbons', 'zoom')], [2, 1, 7, paramPort('ribbons', 'amount')], [3, 1, 7, paramPort('ribbons', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  bokeh: { label: 'Dream Bloom', canvas: true, teach: 'Lights out of focus, through a real lens. One part makes it: Dream Bloom places motes at real distances from a 50 mm lens at f/1.8 and blurs each by the thin-lens circle of confusion, so those near the Focal Plane stay small and sharp and the rest swell into discs the shape of the Aperture. Object Shape picks what the motes are. Try: Object Shape on the snowflake and Focal Plane low.', nodes: [
+      ['knob', { slot: '1', name: 'Focal Plane', def: 20 }, 40, 40],                // 1  (100 of 25–400)
+      ['knob', { slot: '2', name: 'Orb Count', def: 33 }, 40, 140],                // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Aperture', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4', name: 'Object Shape', def: 0 }, 40, 340],                // 4  (0 of 0–100)
+      ['knob', { slot: '5', name: 'Color Variation', def: 0 }, 40, 440],                // 5  (0 of 0–180)
+      ['hue', { slot: '1', name: 'Light Hue' }, 40, 540],                // 6
+      ['bokeh', { zoom: 100, '~zoom': '25,400', amount: 100, '~amount': '20,260', form: 0, '~form': '0,100', object: 0, '~object': '0,100', spread: 0, '~spread': '0,180' }, 320, 100],   // 7
+      ['surface', { name: 'Dream Bloom', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('bokeh', 'zoom')], [2, 1, 7, paramPort('bokeh', 'amount')], [3, 1, 7, paramPort('bokeh', 'form')], [4, 1, 7, paramPort('bokeh', 'object')], [5, 1, 7, paramPort('bokeh', 'spread')], [6, 1, 7, 1], [7, 1, 8, 1]] },
+  cityscape: { label: 'Night City', canvas: true, teach: 'A city at night across the water. One part makes it: Night City raises a skyline of mostly dark windows (the few lit ones are what make a city look awake), reflected in rippling streaks below; the seed decides what lies at its feet. Window Hue is the lamplight, Water Hue the river. Try: Lit Windows at 0, then raise it slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Skyline Height', def: 33 }, 40, 40],                // 1  (100 of 60–180)
+      ['knob', { slot: '2', name: 'Lit Windows', def: 33 }, 40, 140],                // 2  (100 of 0–300)
+      ['hue', { slot: '1', name: 'Window Hue' }, 40, 240],                // 3
+      ['hue', { slot: '2', name: 'Water Hue' }, 40, 320],                // 4
+      ['cityscape', { zoom: 100, '~zoom': '60,180', amount: 100, '~amount': '0,300' }, 320, 100],   // 5
+      ['surface', { name: 'Night City', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('cityscape', 'zoom')], [2, 1, 5, paramPort('cityscape', 'amount')], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1]] },
+  flowers: { label: 'Lotus Pond', canvas: true, teach: 'Flowers floating on water. One part makes it: Lotus Pond draws each bloom ring by ring, its petals shaded on their far halves and its shadow thrown on the water away from the Light Dial; Form runs through bell bud, cherry, day lily, lotus, daisy, rosette and hydrangea. Its ground is clear, so the page’s backdrop is the water. Try: Form at 100 for hydrangea, then 50 for lotus.', nodes: [
+      ['knob', { slot: '1', name: 'Bloom Size', def: 25 }, 40, 40],                // 1  (150 of 50–450)
+      ['knob', { slot: '2', name: 'Bloom Count', def: 17 }, 40, 140],                // 2  (60 of 10–300)
+      ['knob', { slot: '3', name: 'Form', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Petal Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Heart Hue' }, 40, 520],                // 6
+      ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
+      ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
+      ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Organic ↔ Tech', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Transmutation Circle', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
   chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
       ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
@@ -32096,9 +32707,6 @@ function validateGraph(json){
 
 
 
-
-
-
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
  *
@@ -32709,13 +33317,13 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   let result;  if(type === 'clouds'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'flowers'){
-    result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Lotus Pond (chains.js)
   } else if(type === 'inkbleed'){
     result = genChain(type, w, h, light, extra, tint1, tint2);   // Ink Blot (chains.js)
   } else if(type === 'crackedglaze'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'bokeh'){
-    result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dream Bloom (chains.js)
   } else if(type === 'embers'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
@@ -32729,7 +33337,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'magicparticles'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (motes) (chains.js)
   } else if(type === 'glassrain'){
-    result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
+    result = genChain(type, w, h, light, extra);           // Rain on Glass, over the page's own colors (chains.js)
   } else if(type === 'rainstreaks'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
@@ -32757,11 +33365,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'linen'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'coldpress'){
-    result = genColdPress(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Cold Press (chains.js)
   } else if(type === 'oldpaper'){
-    result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Old Paper (chains.js)
   } else if(type === 'cupring'){
-    result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Cup Ring (chains.js)
   } else if(type === 'athanor'){
     result = genAthanor(w,h,light,tint1,tint2,extra);
   } else if(type === 'athanorsteps'){
@@ -32775,7 +33383,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
   } else if(type === 'suminagashi'){
-    result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Suminagashi (chains.js)
   } else if(type === 'watercolour'){
     result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
@@ -32783,42 +33391,42 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'turing'){
     result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
   } else if(type === 'frost'){
-    result = genHoarfrost(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Hoarfrost (chains.js)
   } else if(type === 'ash'){
-    result = genBurntLetter(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Burnt Letter (chains.js)
   } else if(type === 'wax'){
     result = genChain(type, w, h, light, extra, tint1 || '#7A2B2B');   // Pours → Meniscus → the wax's colour → Light Engine (translucent) → Glow (chains.js)
   } else if(type === 'dunes'){
-    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dune Ripples (chains.js)
   } else if(type === 'kintsugi'){
-    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Kintsugi (chains.js)
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Moss on Stone (chains.js)
   } else if(type === 'landscape'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // painted sky → painted ridges → wash (chains.js)
   } else if(type === 'cityscape'){
-    result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Night City (chains.js)
   } else if(type === 'blackhole'){
     result = genChain(type, w, h, light, extra);           // Black Hole (chains.js)
   } else if(type === 'water'){
-    result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.tilt,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Scrying Pool (chains.js)
   } else if(type === 'moon'){
     result = genChain(type, w, h, light, extra);           // Fractal Moon (chains.js)
   } else if(type === 'aurora'){
-    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Silk Ribbons (chains.js)
   } else if(type === 'hatch'){
     result = genChain(type, w, h, light, extra);
   } else if(type === 'cards'){
     // a chain (chains.js 'cards'), drawn by a canvas pass: the four suits the page's two accents, the texture's two hues
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'summoning'){
-    result = genSummoningCircles(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Transmutation Circle, on the page (its glyphs are web fonts) (chains.js)
   } else if(type === 'metalleaf'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // flakes (chains.js)
   } else if(type === 'crystal'){
-    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Crystal Leaf (chains.js)
   } else if(type === 'spangle'){
-    result = genSpangle(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Metal Spangle (chains.js)
   } else if(type === 'grain'){
     result = genChain(type, w, h, light, extra);           // Film Grain (chains.js)
   } else {
@@ -32900,8 +33508,8 @@ function storeTexture(key, result){
 }
 // everything a request means: its normalised knobs, and its key
 // the poem's layout, as a short key (FNV-1a): every character counts
-/** Does a graph hold a Page Backdrop part (and so want the page's own colors)? */
-function graphUsesBackdrop(graph){ return /"name":\s*"backdrop"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
+/** Does a graph hold a Page Backdrop part, or Rain on Glass (which shows the page through its drops), and so want the page's own colors? */
+function graphUsesBackdrop(graph){ return /"name":\s*"(?:backdrop|glassrain)"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
@@ -33739,7 +34347,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Methone';
+const RELEASE = 'Saturn–Anthe';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -34568,7 +35176,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 52075a0";
+const STAMP = "2026-10-15 · 0ba509d";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -38601,6 +39209,169 @@ const WIKI_PARTS = {
     tips: ["Clouds at 0 and Night Sky at 100 for a clear night."],
     see: ["part:starfield", "seeds"],
   },
+  // ---- the older textures, each one part (drawn exactly as its menu entry draws it, at Variant 0)
+  coldpress: {
+    line: "Watercolor paper’s tooth: rounded hills and hollows pressed in by felt, with fine fibers, lit by the dial.",
+    about: "Watercolor paper is pressed between felts, and the felt leaves its texture behind: soft rounded hills and hollows over a gentle larger swell. These are heights, so a low light fills the hollows with shadow. The paper’s fibers are far too fine to cast shadows but still catch the light, so they are a detail normal map: they shade without shadowing. Press runs from hot press (smooth and fine) through cold press to rough (big, deep tooth).",
+    ins: {"light from": "The light’s direction (wire the Light Dial)."},
+    outs: {"paper": "The lit paper, gray where it faces the light squarely (so it blends like any gray-ground surface)."},
+    set: {"zoom": "Tooth Scale: how large the hills of the felt are.", "amount": "Tooth Depth: how deep they are, and so how dark the shadows in the hollows.", "form": "Press: hot press at 0, cold press in the middle, rough at 100.", "variant": "Other felt, other fibers."},
+    tips: ["Lower the light toward the horizon (pull the dial out): the tooth stands up in long shadows."],
+    see: ["heights", "part:light", "part:canvasweave"],
+  },
+  cupring: {
+    line: "Where a cup stood on paper: dried coffee rings, dark at their rims, with drips and a second, offset ring.",
+    about: "Dried coffee is flat, so the color does the work. As a drop dries its coffee is carried to the edge (the coffee-ring effect), so each ring is a band that darkens to a crisp outer line, with a faint tide line where the liquid last paused. Coffee pools on the downhill side, so a ring is heavy on one side and thins to broken arcs on the other; the paper drinks it, mottling the band and feathering its edge. A mug is often set down twice, and drips leave small rings of their own. The light gives only a faint sheen where the film is thick.",
+    ins: {"light from": "The light’s direction, for the sheen (wire the Light Dial).", "stain hue": "The coffee’s color (empty: a coffee brown)."},
+    outs: {"rings": "The stains on gray paper."},
+    set: {"zoom": "Ring Size: how large a mug left them.", "amount": "Ring Count: how many times a cup was set down.", "form": "Spill: drips, and the pale wash inside each ring.", "variant": "Other rings in other places."},
+    tips: ["Set it over Old Paper with Multiply for a letter that has been lived with."],
+    see: ["part:oldpaper", "blendmodes", "part:wash"],
+  },
+  oldpaper: {
+    line: "A sheet of old paper: its folds and creases lit by the dial, yellowed, foxed and mildewed with age.",
+    about: "What time and handling do to a sheet. Folds are a few long creases from how it was folded to be carried (in half, in a letter’s thirds, a corner turned down: the seed decides), and at the top of their range they tear in from the edge. Age yellows it from the edges, gathers foxing spots in clusters at the margins, blooms mildew in fuzzy colonies, and at the very end scorches an edge and burns a hole or two. Crinkle is the small unevenness of paper once damp and the creases of a pocket. Folds and crinkle are heights, lit by the dial.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "age hue": "The yellowing and the foxing (empty: a tea brown).", "mold hue": "The mildew (empty: a gray green)."},
+    outs: {"paper": "The sheet, gray where it is clean and flat."},
+    set: {"zoom": "Scale: the size of everything on the sheet.", "amount": "Folds: how many, and how deep; they tear near the top.", "form": "Age: a clean sheet at 0, yellowed, foxed and mildewed, scorched at 100.", "crinkle": "Crinkle: small creases and soft buckles.", "variant": "Another sheet, folded another way."},
+    tips: ["The Glow Hue makes the spots fluoresce, as foxing does under ultraviolet light."],
+    see: ["heights", "part:cupring", "part:ash"],
+  },
+  ash: {
+    line: "The ash a burnt letter leaves: curled flakes charred black and burnt pale at their rims, some still glowing.",
+    about: "Flakes of a burnt page as they lie: many small and a few large, each charred black at its heart and burnt through to pale ash at its rim, crazed into a fine grid of cracks (the fibers and ruled lines of the page it was), the palest eaten into lace. Each flake lifts at its ends like a drying leaf, so the dial lights one side, shades the other and throws a soft shadow. Fine soot dusts the ground, soft piles of powder gather where it fell thickest, and some flakes are still alight along their edge.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "ash hue": "The pale ash (empty: a warm gray).", "ember hue": "The burning edges (empty: an orange flame)."},
+    outs: {"ash": "The ash on gray."},
+    set: {"zoom": "Flake Size.", "amount": "Ashfall: how much fell.", "form": "Char: pale ash at 0, black char at 100.", "embers": "How many flakes still burn along their edge.", "variant": "Other flakes, fallen elsewhere."},
+    tips: ["Char low and Embers high: a page still burning out."],
+    see: ["part:burn", "part:oldpaper", "heights"],
+  },
+  hoarfrost: {
+    line: "Frost ferns grown across a pane from its frame inward, branching at sixty degrees, lit by the dial.",
+    about: "Frost grows toward the room it has, the way veins and trees do (space colonization, after Runions and his colleagues). Seeds sit along the frame and a few specks in the open; each crystal keeps its own six-fold axes, so its branches turn by sixty degrees; trunks thicken with what they carry, and twigs feather into needles. A matte rime gathers toward the edges. The ice glints where the dial’s light catches it.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "frost hue": "The ice’s color (empty: a cold white)."},
+    outs: {"frost": "The frost on gray glass."},
+    set: {"zoom": "Crystal Size: how large the ferns grow.", "amount": "Frost: how much of the pane it covers.", "form": "Feathering: bare branches at 0, every twig feathered with needles at 100.", "rime": "Rime: the frosted haze toward the frame.", "variant": "Other seeds, other ferns."},
+    tips: ["Compare Tendrils, which grows the same way through any paths you give it."],
+    see: ["part:tendrils", "part:glassrain", "seeds"],
+  },
+  glassrain: {
+    line: "Rain on a window: drops that sit, slide, merge and leave trails, as lit domes over the page’s own colors.",
+    about: "Rain on a pane, worked the way rain works it (after Lucas Bebber’s RainEffect): drops sit where they land until they are heavy enough to slide; a sliding drop wanders, sweeps up the droplets in its way, merges with any drop it meets, sheds a beaded trail behind it and wipes the fog clean along its path. The drops are then drawn as metaballs, so neighbors run together into lumps, and as heights, so each is a small dome the dial lights: shaded away from the light, a highlight where it catches, dark at its steep rim. Through them you see the page behind the glass. The rain is simulated on the saved image’s own grid, so the preview’s drops are the export’s drops.",
+    ins: {"light from": "The light’s direction (wire the Light Dial)."},
+    outs: {"glass": "The wet pane, gray where it is dry."},
+    set: {"zoom": "Drop Size.", "amount": "Rain: how many drops fall.", "form": "Condensation: the fog and the fine droplets between the drops.", "variant": "Another shower."},
+    tips: ["Raise Condensation for a fogged pane, wiped clear only where drops have run."],
+    see: ["part:backdrop", "heights", "resolution"],
+  },
+  water: {
+    line: "Looking down into a pool: waves on the surface, caustics on the floor, fish and leaves below, the sky mirrored when tilted.",
+    about: "A pool seen from above, by the seed: a koi pond (koi pale and dark at different depths, lily pads on the surface), a pebbled stream (stones, darting minnows, weed) or a wishing well (coins, a lone fish, a fallen leaf). The waves refract everything below, more the deeper it lies, and focus the light into caustics that play over the floor and the fishes’ backs; fish and leaves cast soft shadows on the floor, offset with the dial. Tilt the camera and the far water mirrors the sky and recedes into haze.",
+    ins: {"light from": "The light’s direction (wire the Light Dial)."},
+    outs: {"pool": "The pool."},
+    set: {"zoom": "Wave Scale.", "amount": "Turbulence: still water low, choppy high.", "form": "Depth: how deep the floor lies, and so how far it is bent and softened.", "haze": "Haze over the far water when tilted.", "murk": "Murk: clear water at 0, cloudy toward 100.", "tilt": "The camera: straight down at 0, tipped toward the horizon as it rises.", "variant": "Another pool (the seed picks which kind)."},
+    tips: ["Press ⟳ Seed to find the koi pond, the stream or the well."],
+    see: ["seeds", "part:displace"],
+  },
+  dunes: {
+    line: "Wind-built dunes and the ripples on them, lit low by the dial, seen from above or toward the horizon.",
+    about: "A field of wind-blown sand, after the way deserts are simulated (Beneš and Roa: sand hops downwind, slides down faces steeper than its angle of rest, and lies still in the wind’s shadow). The seed picks the dunes: ridges across the wind, ridges broken into crescents, or long sharp dunes running with it. Each has a long gentle windward slope and a steep slip face. Ripples cover the slopes where the wind works, gone from the slip faces, and heavier dark grains settle in their troughs. The dial is the sun.",
+    ins: {"light from": "The sun’s direction (wire the Light Dial).", "sand hue": "The sand (empty: a warm tan).", "sun hue": "The sunlight on it (empty: a pale warm white)."},
+    outs: {"sand": "The lit dunes."},
+    set: {"zoom": "Ripple Size.", "amount": "Wind: softer, wandering ripples low; sharper, straighter ones high.", "form": "Dune Height: flat ripples at 0, tall dunes at 100.", "tilt": "The camera: straight down at 0, the far dunes fading into haze as it tips up.", "variant": "Another desert."},
+    tips: ["Lower the sun (pull the dial out past the rim) for long evening shadows."],
+    see: ["heights", "part:terrain"],
+  },
+  moss: {
+    line: "Rough stone with moss in its crevices and on its flat tops, lit by the dial.",
+    about: "Stone, and moss where moss grows: it gathers where the stone dips below its surroundings and where it is flat, as soft raised clumps with a fibrous, matte surface. The stone takes the light and casts shadow; each has its own gloss, so damp stone shines while moss stays soft. Dampness darkens and glosses the stone and deepens the moss.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "stone hue": "The stone (empty: a warm gray).", "moss hue": "The moss (empty: a moss green)."},
+    outs: {"stone": "The lit stone and moss."},
+    set: {"zoom": "Stone Scale.", "amount": "Moss: bare stone at 0, mostly moss at 100.", "form": "Dampness: dry at 0, wet and dark at 100.", "tilt": "The camera: straight down at 0, tipped toward the horizon as it rises.", "variant": "Other stone."},
+    tips: ["The Glow Hue makes the moss glow at its tips, like something bioluminescent."],
+    see: ["heights", "part:material"],
+  },
+  kintsugi: {
+    line: "A glazed pot broken and mended with gold: the seams raised and bright, the glaze glossy.",
+    about: "Kintsugi mends broken ceramic with lacquer and gold, so the breaks become the beauty. The cracks follow some edges of a warped cell network (not every edge breaks), jagged as broken ceramic is, and each is filled with a raised seam of gold. You see the outside of a curved vessel, a cylinder or the shoulder of a bowl (the seed decides), so the wall turns away toward the sides and catches one long highlight. The glaze takes a glossy shine and the gold a bright metallic one.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "glaze hue": "The glaze (empty: a pale cream).", "gold hue": "The seams (empty: gold)."},
+    outs: {"vessel": "The mended vessel."},
+    set: {"zoom": "Seam Width.", "amount": "Fractures: how broken it was.", "form": "Gloss: a matte glaze at 0, a wet shine at 100.", "variant": "Another break, another vessel."},
+    tips: ["The Glow Hue lights the gold from within, spilling a little onto the glaze."],
+    see: ["part:cracks", "part:glaze", "part:cells"],
+  },
+  spangle: {
+    line: "Metal that crystallized as it cooled: grains each tilted its own way, with branching dendrites, flashing as the light turns.",
+    about: "The spangle on galvanized zinc, the stepped hollows of bismuth. Each grain is one crystal whose face is tilted its own way (a normal map), so as the dial turns the grains flash and darken one by one, which is what makes spangle look like spangle. Feathered dendrites grow from each grain’s center. Terraces step each crystal down into a square hollow and color the steps as bismuth’s oxide does, a thin film running gold, magenta, blue and green with its thickness. Brushing lays fine lines across the light, like brushed steel. Tiny flecks inside glint when the light finds them.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "metal hue": "The metal (empty: a cool steel)."},
+    outs: {"metal": "The lit metal."},
+    set: {"zoom": "Crystal Size: how large a grain is.", "amount": "Dendrites: how feathered the grains are.", "form": "Terraces: flat grains at 0, stepped bismuth with its oxide colors at 100.", "irregular": "Irregularity: orderly grains like snowflakes at 0, uneven sizes and bent, missing arms toward 100.", "brushing": "Brushing: fine lines brushed across the metal.", "variant": "Other grains."},
+    tips: ["Turn the dial slowly and watch the grains flash one by one."],
+    see: ["part:cells", "part:material", "part:crystal"],
+  },
+  crystal: {
+    line: "Looking into a clear crystal: cut faces, light caught inside as fire, ghost crystals and needles within.",
+    about: "Close up inside quartz, amethyst or a geode’s heart. A few large faces, each tilted its own way, take light in at the edge turned toward it, so every face runs from a bright edge to dark. A second set of faces lies behind the first, seen through it and shifted by refraction, its edges soft internal reflections. Fire is light caught inside, flashing where it meets an inner face at a grazing angle and split into its colors. Phantoms are the outlines of faces the crystal had as it grew; inclusions are needles and bubbles caught in the stone.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "crystal hue": "The stone (empty: a pale violet).", "inclusion hue": "The needles inside it (empty: a rutile gold)."},
+    outs: {"crystal": "The crystal."},
+    set: {"zoom": "Facet Size.", "amount": "Clarity: milky and veiled at 0, clear and deep at 100.", "form": "Fire: how much light flashes inside.", "phantoms": "Phantoms: ghost crystals nested in the faces.", "inclusions": "Inclusions: needles and bubbles in the stone.", "variant": "Another stone."},
+    tips: ["The Glow Hue lights the fire from within."],
+    see: ["part:spangle", "part:facets", "part:glass"],
+  },
+  marbling: {
+    line: "Suminagashi, Japanese ink marbling: rings of ink dropped in turn on still water, moved by a breath, lifted onto paper.",
+    about: "Drops of ink and of clear water are laid on still water in turn, each pushing the earlier rings outward, then a breath or a fan moves them and paper lifts the pattern off. It is drawn as Aubrey Jaffer’s mathematical marbling: a drop pushes every point outward (keeping its area), and a stroke moves points along its line, less the farther they lie. Both can be undone exactly, so each pixel is traced backward through every drop and stroke to the drop it came from: ink, the second ink, or water. The dial is the breath’s direction.",
+    ins: {"breath from": "The direction the breath moves the rings (wire the Light Dial).", "ink hue": "The first ink (empty: sumi black).", "second ink hue": "The second ink (empty: an indigo)."},
+    outs: {"marbling": "The marbled sheet, in its own colors."},
+    set: {"zoom": "Ring Size.", "amount": "Drops: how many rings are laid.", "form": "Breath: still rings at 0, swept far along the dial at 100.", "variant": "Other drops."},
+    tips: ["Breath at 0 shows the rings as they were dropped; raise it slowly and watch them comb out."],
+    see: ["part:warp", "part:twirl", "part:pigment"],
+  },
+  ribbons: {
+    line: "Curtains of light hung in sheets, like silk ribbons or an aurora, in one color or blended between two.",
+    about: "Ribbons of light hang across the page, each a filled sheet with a soft falloff top and bottom. With one color the whole veil is that color; with two different hues, the color blends across the page from the side the dial points to toward the other (here the dial is the blend’s direction, not a light). Bloom spills the brightest light into a soft glow that is itself grainy, as on film.",
+    ins: {"blend from": "Where the curtain color gives way to the hem color (wire the Light Dial).", "curtain hue": "The ribbons’ color (empty: uncolored light).", "hem hue": "A second color to blend toward (empty, or the same as the curtain: one color)."},
+    outs: {"ribbons": "The ribbons on gray."},
+    set: {"zoom": "Curtain Height: how tall each sheet hangs.", "amount": "Ribbon Count.", "form": "Bloom: none at 0, a grainy glow at 100.", "variant": "Other ribbons."},
+    tips: ["Two hues far apart (a red and a blue) make the blend easy to see; then turn the dial."],
+    see: ["part:curtains", "color"],
+  },
+  bokeh: {
+    line: "Out-of-focus lights through a real lens: soft discs whose blur follows each one’s distance from the focal plane.",
+    about: "A camera’s thin lens, 50 mm at f/1.8: every mote sits at a real distance, from 30 cm to 6 m (more of them far away), and its blur is the thin-lens circle of confusion for that distance, so motes near the focal plane are small and sharp and the rest swell into soft discs. Each disc is the mote convolved with the aperture’s real shape, round or bladed. The motes themselves can be dots, petals, leaves, stars, snowflakes, droplets, crescents or flowers.",
+    ins: {"light hue": "The motes’ color (empty: a soft pink)."},
+    outs: {"bloom": "The motes on gray."},
+    set: {"zoom": "Focal Plane: focused near at 25, far at 400.", "amount": "Orb Count.", "form": "Aperture: round at 0, then seven, six and five blades; a heart at the very top.", "object": "Object Shape: dot, petal, leaf, star, snowflake, droplet, crescent, flower, in that order across the range.", "spread": "Color Variation: each mote’s hue turned at random within this many degrees.", "variant": "Other motes."},
+    tips: ["Object Shape on snowflake and Focal Plane low: a few sharp flakes before a blur of others."],
+    see: ["part:particles", "part:motes", "part:blur"],
+  },
+  cityscape: {
+    line: "A city at night across the water: a skyline of mostly dark windows, a few of them lit, reflected below.",
+    about: "Most windows are dark; the few that are lit are what make a city look awake. The skyline stands across the water under faint stars, its lit windows broken into ripples in the reflection. The seed decides what lies at its feet: a waterfront (with a tall needle tower on some seeds), farmland, or an elevated highway and railway.",
+    ins: {"window hue": "The lit windows (empty: a warm lamplight).", "water hue": "The water (empty: a night blue)."},
+    outs: {"city": "The city at night."},
+    set: {"zoom": "Skyline Height: low buildings at 60, towers at 180.", "amount": "Lit Windows: how many are lit.", "variant": "Another city."},
+    tips: ["The Glow Hue is the city’s glow: the sky above the lights, lit from below."],
+    see: ["seeds", "color"],
+  },
+  lotus: {
+    line: "Flowers floating on water, from a bell bud through lotus to hydrangea, each petal shaded and throwing its shadow.",
+    about: "Blooms float on a transparent ground (the page shows through). Flower runs through seven kinds in turn, each blending into the next: bell bud, cherry blossom, day lily, lotus (with its seed pod), daisy, rosette and hydrangea. The light comes from the dial: each petal’s fold turns its far half into shade, each bloom brightens on its lit side and throws its shadow on the water away from the light, and each ring of petals shades the ring beneath it. A lower light throws longer shadows.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "petal hue": "The petals (empty: a pink).", "heart hue": "The center and stamens (empty: a gold)."},
+    outs: {"blooms": "The flowers, on a transparent ground."},
+    set: {"zoom": "Bloom Size.", "amount": "Bloom Count.", "form": "Flower: bell bud at 0, cherry, day lily, lotus at 50, daisy, rosette, hydrangea at 100.", "variant": "Other blooms in other places."},
+    tips: ["Its ground is transparent, so on the page the backdrop is the water: try a deep blue backdrop."],
+    see: ["part:scatter", "part:mix"],
+  },
+  transmutation: {
+    line: "A transmutation circle, drawn by hand or machined: rings of glyphs, polygrams and planets, placed by the dial.",
+    about: "One circle, built from the rim inward as a stack of bands. Complexity is how many: a bare ring and star at the low end, a crowded seal of glyph bands, polygrams within polygrams and planets at the high. Organic ↔ Tech is its making: drawn by hand with vines, leaves and moons at one end; machined at the other, with gauge ticks, segmented arcs, circuit traces and hex digits, and a noisy bloom rising toward the digital end. The dial places it: at its center the circle sits in the middle of the page, and pulled out it moves that way. Its glyphs are lettered in the app’s web fonts, so the texture is drawn on the page itself.",
+    ins: {"position": "Where the circle sits (wire the Light Dial: its center is the page’s)."},
+    outs: {"circle": "The circle on gray."},
+    set: {"zoom": "Circle Size.", "amount": "Complexity: how many bands.", "form": "Organic ↔ Tech: hand-drawn at 0, machined at 100.", "variant": "Another circle."},
+    tips: ["Organic ↔ Tech near 100 and Complexity high: a seal on a dying screen."],
+    see: ["part:sigilmarks", "part:polar"],
+  },
   rosettes: {
     line: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',
     about: 'The rose engine and the geometric lathe engraved banknotes and watch dials with lines too fine and too regular to copy by hand. This part lays a field of fine waves in two interlaced families, then one to three rosettes, each a lobed loop repeated many times with its phase stepped round, so the copies cross and weave into lace, and at the heart a spirograph that closes on itself. The lines are cut into the plate as grooves and lit from the dial: one wall catches the light, the other falls into shade.',
@@ -38948,6 +39719,7 @@ const WIKI_ARTICLES = [
 <li>Every random part uses the <b>page’s seed</b> combined with its own place in the graph, so two copies of a part still differ.</li>
 <li><b>⟳ Seed</b> (in the corner here, or beside the seed on the page) rolls a new seed: everything random changes together.</li>
 <li><b>Variation</b> on a single part changes only that part’s pattern, leaving the rest of the graph as it is.</li>
+<li>The parts that draw one of the app’s whole textures have <b>Variant</b> instead: at 0 the part draws exactly what the texture draws for this seed; any other number gives another of its kind.</li>
 <li><b>Random Number</b> makes an ordinary setting part of the roll.</li>
 </ul>` },
   { id: 'resolution', group: 'Building techniques', title: 'Size and resolution', body: `

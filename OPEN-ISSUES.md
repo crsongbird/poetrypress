@@ -6,10 +6,11 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
-- Eight textures became chains (each pixel-identical): Binary Pattern, Chladni Sand, Guilloché, Sigil Scatter,
-  Rorschach Test, Facet Field, Black Hole, Fractal Moon. Each is one whole part for now (ROADMAP §2 J takes
-  them apart later); Bit Grid and Chladni Sand take any map on Where.
+## 1 · Ruby to judge (new in Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- Every menu texture but Deep Field is now a chain, each pixel-identical (checked in Node and in the
+  browser, at the defaults and with every slider, the light and the hues moved): Saturn–Anthe added
+  eighteen, Saturn–Methone eight. Each of these is one whole part for now (ROADMAP §2 J takes them apart);
+  Bit Grid and Chladni Sand take any map on Where. Do the new wiki pages for these parts teach enough?
 - THE ARCANE GUIDANCE (Inscription) now teaches: what each mark is and why, then an example with ⤓ Try (it
   goes in the poem where the cursor is; undo takes it back). It now also teaches /fx: and /under:.
 - THE WIKI'S FIGURES: eleven concept pages (gray maps, pictures, colors, numbers, curves, mapping, wire
@@ -139,11 +140,12 @@ the parts → presets, last. No new or reworked presets before Stage 4. Delete i
   laptop or a tablet.
 
 ## 4 · Next (no input needed)
-- EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon): ROADMAP.md Stage 3
-  keeps the list of textures that aren't chains yet. Likely shared parts
-  first: Particles (Deep Field's stars, Dream Bloom's motes), Terrain (Dunes,
-  Moss), Pigment (Suminagashi's inks), the Light Engine (most 🜚 Touch
-  textures), a Marbling part (Suminagashi, Ink Blot).
+- EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon): only Deep Field is left (ROADMAP.md Stage 3).
+  It is two layers, each blended with the page in turn, so one graph can't draw it exactly: it waits for a
+  graph that can hand the page more than one layer. Then the whole-texture parts are taken apart (§2 J):
+  likely shared parts first: Particles (Deep Field's stars, Dream Bloom's motes), Terrain (Dunes, Moss),
+  Pigment (Suminagashi's inks), the Light Engine (most 🜚 Touch textures), a Marbling part (Suminagashi,
+  Ink Blot).
 - The Athanor on a phone, still: haptics on a long press, an accessibility
   pass.
 - In the Athanor, a grey chain (Harsh Rain, Silverpoint Hatch) shows grey: the

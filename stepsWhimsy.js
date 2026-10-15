@@ -26,8 +26,8 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU } from './texCore.js';
-import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon } from './texWhimsy.js';
+import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh } from './texWhimsy.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
@@ -760,6 +760,15 @@ function whimAurora(x, w, h, o, px){
 }
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 export const WHIMSY_STEPS = {
+  // Silk Ribbons and Dream Bloom, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
+  ribbons: kitWhole({ cat: 'Marks', label: 'Silk Ribbons', ins: ['blend from', 'curtain hue', 'hem hue'], outs: ['ribbons'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('zoom', 'Curtain Height', 100, 40, 220), WHIM_R('amount', 'Ribbon Count', 100, 20, 1800), WHIM_R('form', 'Bloom', 0), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0);
+      return () => genAuroraVeil(w, h, a, z, light, t1, t2, f); }),
+  bokeh: kitWhole({ cat: 'Marks', label: 'Dream Bloom', ins: ['light hue'], outs: ['bloom'], io: { ins: ['colour'], outs: ['image'] },
+    params: [WHIM_R('zoom', 'Focal Plane', 100, 25, 400), WHIM_R('amount', 'Orb Count', 100, 20, 260), WHIM_R('form', 'Aperture', 0), WHIM_R('object', 'Object Shape', 0), WHIM_R('spread', 'Color Variation', 0, 0, 180), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const t1 = wholeHex(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), o = E.num(n, 'object', 0), sp = E.num(n, 'spread', 0);
+      return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
     params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,

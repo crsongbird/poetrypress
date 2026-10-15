@@ -4,6 +4,22 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Anthe (2026-10-15)
+
+- **Every texture in the menu but Deep Field now opens in the Athanor.**
+  Eighteen more are graphs: Cold Press, Old Paper, Dream Bloom, Silk
+  Ribbons, Hoarfrost, Rain on Glass, Dune Ripples, Lotus Pond, Night City,
+  Scrying Pool, Suminagashi, Burnt Letter, Crystal Leaf, Cup Ring, Kintsugi,
+  Metal Spangle, Moss on Stone and Transmutation Circle. Open one from
+  **Open** › The app's own textures to see its sliders, hues and dial wired
+  in, and use its part in your own surfaces. Each looks exactly as it did.
+- **Eighteen new parts**, one for each, with a wiki page saying what it
+  does, how it does it and what each setting changes. **Variant** on these
+  parts gives another of the same kind; at 0 the part draws exactly what the
+  texture draws.
+- A Rain on Glass part in your own graph shows the page's colors through
+  its drops, as the texture does on the page.
+
 ## Saturn–Methone (2026-10-15)
 
 - **Eight more textures open in the Athanor.** Binary Pattern, Chladni

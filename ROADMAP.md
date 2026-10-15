@@ -362,10 +362,8 @@ superseded) wait for Stage 4.
   graph. The list (menu ids; test/hygiene keeps it the code's, so delete
   one here when it becomes a chain):
   <!-- not-chains -->
-  - ash astral aurora bokeh cityscape coldpress crystal
-    cupring dunes flowers frost glassrain kintsugi
-    moss oldpaper spangle suminagashi summoning
-    water
+  - astral (Deep Field: two layers, each blended with the page in turn, so
+    it needs a graph that can hand the page more than one layer)
   <!-- /not-chains -->
   - Each keeps its exact look: the fingerprints must not change.
   - Stage 4 can only offer what is a chain.

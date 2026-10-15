@@ -368,6 +368,186 @@ export const TEXTURE_CHAINS = {
       ['moon', { zoom: 100, '~zoom': '60,150', amount: 100, '~amount': '20,190', form: 30, '~form': '0,100', night: 70, '~night': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Fractal Moon', ground: 'grey' }, 600, 120]],            // 6
     wires: [[1, 1, 5, paramPort('moon', 'zoom')], [2, 1, 5, paramPort('moon', 'amount')], [3, 1, 5, paramPort('moon', 'form')], [4, 1, 5, paramPort('moon', 'night')], [5, 1, 6, 1]] },
+  // the older textures, each one part with the sliders wired in (each drawn exactly as it was)
+  coldpress: { label: 'Cold Press', canvas: true, teach: 'Watercolor paper, and what the felt it was pressed between left on it. One part makes it: Cold Press raises the tooth as heights (rounded hills and hollows over a gentle swell), so a low light fills the hollows with shadow, and lays the fibers as a normal map, too fine to cast shadows but still catching the light. Press runs from hot press (smooth) to rough. Try: pull the Light Dial out past its rim, and the tooth stands up in long shadows.', nodes: [
+      ['knob', { slot: '1', name: 'Tooth Scale', def: 8 }, 40, 40],                // 1  (100 of 75–400)
+      ['knob', { slot: '2', name: 'Tooth Depth', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Press', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['coldpress', { zoom: 100, '~zoom': '75,400', amount: 100, '~amount': '20,300', form: 50, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Cold Press', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('coldpress', 'zoom')], [2, 1, 5, paramPort('coldpress', 'amount')], [3, 1, 5, paramPort('coldpress', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  cupring: { label: 'Cup Ring', canvas: true, teach: 'Where a mug of coffee stood on paper. One part makes it: Cup Ring draws each ring the way coffee dries, carried to the edge so the band darkens to a crisp outer line, pooled on the downhill side, mottled where the paper drank it, with drips and a second, offset ring. The Stain Hue is the coffee; the dial gives only a faint sheen where the film is thick. Try: raise Spill for drips and a pale wash inside the rings.', nodes: [
+      ['knob', { slot: '1', name: 'Ring Size', def: 21 }, 40, 40],                // 1  (100 of 40–320)
+      ['knob', { slot: '2', name: 'Ring Count', def: 26 }, 40, 140],                // 2  (100 of 30–300)
+      ['knob', { slot: '3', name: 'Spill', def: 35 }, 40, 240],                // 3  (35 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Stain Hue' }, 40, 440],                // 5
+      ['cupring', { zoom: 100, '~zoom': '40,320', amount: 100, '~amount': '30,300', form: 35, '~form': '0,100' }, 320, 100],   // 6
+      ['surface', { name: 'Cup Ring', ground: 'grey' }, 600, 120]],   // 7
+    wires: [[1, 1, 6, paramPort('cupring', 'zoom')], [2, 1, 6, paramPort('cupring', 'amount')], [3, 1, 6, paramPort('cupring', 'form')], [4, 1, 6, 1], [5, 1, 6, 2], [6, 1, 7, 1]] },
+  oldpaper: { label: 'Old Paper', canvas: true, teach: 'What time and handling do to a sheet. One part makes it: Old Paper folds the sheet as it was folded to be carried (the seed decides how) and crinkles it, as heights the Light Dial lights; then Age yellows it from the edges, gathers foxing in the margins and mildew in colonies, and at the end scorches it. Age Hue colors the yellowing, Mold Hue the mildew. Try: Folds at 100, and the folds tear in from the edge.', nodes: [
+      ['knob', { slot: '1', name: 'Scale', def: 17 }, 40, 40],                // 1  (100 of 40–400)
+      ['knob', { slot: '2', name: 'Folds', def: 35 }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3', name: 'Age', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '4', name: 'Crinkle', def: 25 }, 40, 340],                // 4  (25 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Age Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Mold Hue' }, 40, 620],                // 7
+      ['oldpaper', { zoom: 100, '~zoom': '40,400', amount: 35, '~amount': '0,100', form: 30, '~form': '0,100', crinkle: 25, '~crinkle': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Old Paper', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('oldpaper', 'zoom')], [2, 1, 8, paramPort('oldpaper', 'amount')], [3, 1, 8, paramPort('oldpaper', 'form')], [4, 1, 8, paramPort('oldpaper', 'crinkle')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  ash: { label: 'Burnt Letter', canvas: true, teach: 'The ash a burnt page leaves, as it lies. One part makes it: Burnt Letter scatters curled flakes (many small, a few large), each charred black at its heart and pale at its rim, crazed with the lines of the page it was, lifting at its ends so the Light Dial lights one side and throws a shadow; soot and soft piles of powder lie between them. Char moves the flakes from pale ash to black; Embers keeps some burning along their edge. Try: Char at 20 and Embers at 80.', nodes: [
+      ['knob', { slot: '1', name: 'Flake Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Ashfall', def: 21 }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3', name: 'Char', def: 55 }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4', name: 'Embers', def: 20 }, 40, 340],                // 4  (20 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Ash Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Ember Hue' }, 40, 620],                // 7
+      ['ash', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,400', form: 55, '~form': '0,100', embers: 20, '~embers': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Burnt Letter', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('ash', 'zoom')], [2, 1, 8, paramPort('ash', 'amount')], [3, 1, 8, paramPort('ash', 'form')], [4, 1, 8, paramPort('ash', 'embers')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  frost: { label: 'Hoarfrost', canvas: true, teach: 'Frost ferns across a pane. One part makes it: Hoarfrost grows them the way branching things grow toward the room they have (space colonization): from seeds along the frame inward, each crystal turning by sixty degrees, twigs feathering into needles, a matte rime toward the edges. The ice glints in the Light Dial’s light. Try: Feathering at 0 for bare branches, then raise it.', nodes: [
+      ['knob', { slot: '1', name: 'Crystal Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Frost', def: 35 }, 40, 140],                // 2  (100 of 20–250)
+      ['knob', { slot: '3', name: 'Feathering', def: 55 }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4', name: 'Rime', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Frost Hue' }, 40, 540],                // 6
+      ['hoarfrost', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '20,250', form: 55, '~form': '0,100', rime: 30, '~rime': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Hoarfrost', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('hoarfrost', 'zoom')], [2, 1, 7, paramPort('hoarfrost', 'amount')], [3, 1, 7, paramPort('hoarfrost', 'form')], [4, 1, 7, paramPort('hoarfrost', 'rime')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+  glassrain: { label: 'Rain on Glass', canvas: true, teach: 'Rain on a window, simulated. One part makes it: Rain on Glass lets drops sit until they are heavy, then slide, sweep up droplets, merge and leave beaded trails, wiping the fog as they go; each drop is a small dome the Light Dial lights, and through them you see the page behind the glass. Condensation is the fog and the fine droplets between. Try: Condensation at 100, Rain low: a fogged pane with a few clear runs.', nodes: [
+      ['knob', { slot: '1', name: 'Drop Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Rain', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Condensation', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['glassrain', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Rain on Glass', ground: 'colour' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('glassrain', 'zoom')], [2, 1, 5, paramPort('glassrain', 'amount')], [3, 1, 5, paramPort('glassrain', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  water: { label: 'Scrying Pool', canvas: true, teach: 'Looking down into a pool. One part makes it: Scrying Pool lays waves on the surface, refracts what lies below through them (more the deeper it is) and focuses the light into caustics on the floor; the seed picks the pool: a koi pond, a pebbled stream, or a wishing well. Tilt tips the camera toward the horizon, where the water mirrors the sky. Try: Tilt at 0 and Turbulence low, then press ⟳ Seed.', nodes: [
+      ['knob', { slot: '1', name: 'Wave Scale', def: 29 }, 40, 40],                // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Turbulence', def: 35 }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3', name: 'Depth', def: 35 }, 40, 240],                // 3  (35 of 0–100)
+      ['knob', { slot: '4', name: 'Haze', def: 10 }, 40, 340],                // 4  (10 of 0–100)
+      ['knob', { slot: '5', name: 'Murk', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['knob', { slot: '6', name: 'Tilt', def: 35 }, 40, 540],                // 6  (35 of 0–100)
+      ['dial', {}, 40, 640],                                                       // 7
+      ['water', { zoom: 100, '~zoom': '40,250', amount: 35, '~amount': '0,100', form: 35, '~form': '0,100', haze: 10, '~haze': '0,100', murk: 0, '~murk': '0,100', tilt: 35, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Scrying Pool', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('water', 'zoom')], [2, 1, 8, paramPort('water', 'amount')], [3, 1, 8, paramPort('water', 'form')], [4, 1, 8, paramPort('water', 'haze')], [5, 1, 8, paramPort('water', 'murk')], [6, 1, 8, paramPort('water', 'tilt')], [7, 1, 8, 1], [8, 1, 9, 1]] },
+  dunes: { label: 'Dune Ripples', canvas: true, teach: 'A field of wind-blown sand. One part makes it: Dune Ripples builds the dunes the seed picks (ridges across the wind, crescents, or long dunes along it), each with a gentle windward slope and a steep slip face, then covers the slopes with ripples where the wind works. The Light Dial is the sun; Tilt tips the camera toward the horizon. Try: Dune Height at 0 for ripples alone, then lower the sun.', nodes: [
+      ['knob', { slot: '1', name: 'Ripple Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Wind', def: 50 }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3', name: 'Dune Height', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['knob', { slot: '4', name: 'Tilt', def: 40 }, 40, 340],                // 4  (40 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Sand Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Sun Hue' }, 40, 620],                // 7
+      ['dunes', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 40, '~form': '0,100', tilt: 40, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Dune Ripples', ground: 'colour' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('dunes', 'zoom')], [2, 1, 8, paramPort('dunes', 'amount')], [3, 1, 8, paramPort('dunes', 'form')], [4, 1, 8, paramPort('dunes', 'tilt')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  moss: { label: 'Moss on Stone', canvas: true, teach: 'Stone, and moss where moss grows. One part makes it: Moss on Stone raises rough stone as heights and lays moss where the stone dips below its surroundings and where it is flat, as soft raised clumps, each lit by the Light Dial with its own gloss. Dampness darkens and shines the stone. Try: Moss at 100 and Dampness at 80, for a wet forest floor.', nodes: [
+      ['knob', { slot: '1', name: 'Stone Scale', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Moss', def: 45 }, 40, 140],                // 2  (45 of 0–100)
+      ['knob', { slot: '3', name: 'Dampness', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '4', name: 'Tilt', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['dial', {}, 40, 440],                                                       // 5
+      ['hue', { slot: '1', name: 'Stone Hue' }, 40, 540],                // 6
+      ['hue', { slot: '2', name: 'Moss Hue' }, 40, 620],                // 7
+      ['moss', { zoom: 100, '~zoom': '40,300', amount: 45, '~amount': '0,100', form: 30, '~form': '0,100', tilt: 30, '~tilt': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Moss on Stone', ground: 'colour' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('moss', 'zoom')], [2, 1, 8, paramPort('moss', 'amount')], [3, 1, 8, paramPort('moss', 'form')], [4, 1, 8, paramPort('moss', 'tilt')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+  kintsugi: { label: 'Kintsugi', canvas: true, teach: 'A glazed vessel broken and mended with gold. One part makes it: Kintsugi breaks the glaze along some edges of a warped cell network, fills each crack with a raised seam of gold, and curves the whole wall away toward the sides, so the Light Dial draws one long highlight down it. Glaze Hue and Gold Hue color the two materials. Try: Fractures at 400, Seam Width at 50.', nodes: [
+      ['knob', { slot: '1', name: 'Seam Width', def: 20 }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2', name: 'Fractures', def: 21 }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3', name: 'Gloss', def: 70 }, 40, 240],                // 3  (70 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Glaze Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Gold Hue' }, 40, 520],                // 6
+      ['kintsugi', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,400', form: 70, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Kintsugi', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('kintsugi', 'zoom')], [2, 1, 7, paramPort('kintsugi', 'amount')], [3, 1, 7, paramPort('kintsugi', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  spangle: { label: 'Metal Spangle', canvas: true, teach: 'Metal that crystallized as it cooled: the spangle on galvanized zinc, the stepped hollows of bismuth. One part makes it: Metal Spangle grows grains, each tilted its own way, with feathered dendrites, so turning the Light Dial flashes them one by one. Terraces steps them down into bismuth’s colored hollows; Brushing lays fine lines across them. Try: Terraces at 100, then turn the dial slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Crystal Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Dendrites', def: 50 }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3', name: 'Terraces', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4', name: 'Variation', def: 40 }, 40, 340],                // 4  (40 of 0–100)
+      ['knob', { slot: '5', name: 'Brushing', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['dial', {}, 40, 540],                                                       // 6
+      ['hue', { slot: '1', name: 'Metal Hue' }, 40, 640],                // 7
+      ['spangle', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 0, '~form': '0,100', irregular: 40, '~irregular': '0,100', brushing: 0, '~brushing': '0,100' }, 320, 100],   // 8
+      ['surface', { name: 'Metal Spangle', ground: 'grey' }, 600, 120]],   // 9
+    wires: [[1, 1, 8, paramPort('spangle', 'zoom')], [2, 1, 8, paramPort('spangle', 'amount')], [3, 1, 8, paramPort('spangle', 'form')], [4, 1, 8, paramPort('spangle', 'irregular')], [5, 1, 8, paramPort('spangle', 'brushing')], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
+  crystal: { label: 'Crystal Leaf', canvas: true, teach: 'Looking into a crystal, close up. One part makes it: Crystal Leaf cuts a few large faces, each lit from its edge by the Light Dial and fading inward, with a second set behind them seen through by refraction; Fire flashes where light meets an inner face, split into its colors. Phantoms are ghost crystals inside, Inclusions needles and bubbles. Try: Clarity at 100 and Fire at 100.', nodes: [
+      ['knob', { slot: '1', name: 'Facet Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2', name: 'Clarity', def: 70 }, 40, 140],                // 2  (70 of 0–100)
+      ['knob', { slot: '3', name: 'Fire', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['knob', { slot: '4', name: 'Phantoms', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['knob', { slot: '5', name: 'Inclusions', def: 20 }, 40, 440],                // 5  (20 of 0–100)
+      ['dial', {}, 40, 540],                                                       // 6
+      ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],                // 7
+      ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],                // 8
+      ['crystal', { zoom: 100, '~zoom': '40,300', amount: 70, '~amount': '0,100', form: 50, '~form': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],   // 9
+      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 600, 120]],   // 10
+    wires: [[1, 1, 9, paramPort('crystal', 'zoom')], [2, 1, 9, paramPort('crystal', 'amount')], [3, 1, 9, paramPort('crystal', 'form')], [4, 1, 9, paramPort('crystal', 'phantoms')], [5, 1, 9, paramPort('crystal', 'inclusions')], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
+  suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Ring Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Drops', def: 32 }, 40, 140],                // 2  (100 of 30–250)
+      ['knob', { slot: '3', name: 'Breath', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 520],                // 6
+      ['marbling', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,250', form: 40, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Suminagashi', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('marbling', 'zoom')], [2, 1, 7, paramPort('marbling', 'amount')], [3, 1, 7, paramPort('marbling', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  aurora: { label: 'Silk Ribbons', canvas: true, teach: 'Ribbons of light hung in sheets. One part makes it: Silk Ribbons draws each ribbon as a filled sheet with a soft falloff. With two different hues the color blends across the page, from the side the Blend Direction dial points to toward the other; Bloom spills the brightest light into a grainy glow, as on film. Try: a red Curtain Hue and a blue Hem Hue, then turn the dial.', nodes: [
+      ['knob', { slot: '1', name: 'Curtain Height', def: 33 }, 40, 40],                // 1  (100 of 40–220)
+      ['knob', { slot: '2', name: 'Ribbon Count', def: 4 }, 40, 140],                // 2  (100 of 20–1800)
+      ['knob', { slot: '3', name: 'Bloom', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Curtain Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Hem Hue' }, 40, 520],                // 6
+      ['ribbons', { zoom: 100, '~zoom': '40,220', amount: 100, '~amount': '20,1800', form: 0, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Silk Ribbons', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('ribbons', 'zoom')], [2, 1, 7, paramPort('ribbons', 'amount')], [3, 1, 7, paramPort('ribbons', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  bokeh: { label: 'Dream Bloom', canvas: true, teach: 'Lights out of focus, through a real lens. One part makes it: Dream Bloom places motes at real distances from a 50 mm lens at f/1.8 and blurs each by the thin-lens circle of confusion, so those near the Focal Plane stay small and sharp and the rest swell into discs the shape of the Aperture. Object Shape picks what the motes are. Try: Object Shape on the snowflake and Focal Plane low.', nodes: [
+      ['knob', { slot: '1', name: 'Focal Plane', def: 20 }, 40, 40],                // 1  (100 of 25–400)
+      ['knob', { slot: '2', name: 'Orb Count', def: 33 }, 40, 140],                // 2  (100 of 20–260)
+      ['knob', { slot: '3', name: 'Aperture', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4', name: 'Object Shape', def: 0 }, 40, 340],                // 4  (0 of 0–100)
+      ['knob', { slot: '5', name: 'Color Variation', def: 0 }, 40, 440],                // 5  (0 of 0–180)
+      ['hue', { slot: '1', name: 'Light Hue' }, 40, 540],                // 6
+      ['bokeh', { zoom: 100, '~zoom': '25,400', amount: 100, '~amount': '20,260', form: 0, '~form': '0,100', object: 0, '~object': '0,100', spread: 0, '~spread': '0,180' }, 320, 100],   // 7
+      ['surface', { name: 'Dream Bloom', ground: 'grey' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('bokeh', 'zoom')], [2, 1, 7, paramPort('bokeh', 'amount')], [3, 1, 7, paramPort('bokeh', 'form')], [4, 1, 7, paramPort('bokeh', 'object')], [5, 1, 7, paramPort('bokeh', 'spread')], [6, 1, 7, 1], [7, 1, 8, 1]] },
+  cityscape: { label: 'Night City', canvas: true, teach: 'A city at night across the water. One part makes it: Night City raises a skyline of mostly dark windows (the few lit ones are what make a city look awake), reflected in rippling streaks below; the seed decides what lies at its feet. Window Hue is the lamplight, Water Hue the river. Try: Lit Windows at 0, then raise it slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Skyline Height', def: 33 }, 40, 40],                // 1  (100 of 60–180)
+      ['knob', { slot: '2', name: 'Lit Windows', def: 33 }, 40, 140],                // 2  (100 of 0–300)
+      ['hue', { slot: '1', name: 'Window Hue' }, 40, 240],                // 3
+      ['hue', { slot: '2', name: 'Water Hue' }, 40, 320],                // 4
+      ['cityscape', { zoom: 100, '~zoom': '60,180', amount: 100, '~amount': '0,300' }, 320, 100],   // 5
+      ['surface', { name: 'Night City', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('cityscape', 'zoom')], [2, 1, 5, paramPort('cityscape', 'amount')], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1]] },
+  flowers: { label: 'Lotus Pond', canvas: true, teach: 'Flowers floating on water. One part makes it: Lotus Pond draws each bloom ring by ring, its petals shaded on their far halves and its shadow thrown on the water away from the Light Dial; Form runs through bell bud, cherry, day lily, lotus, daisy, rosette and hydrangea. Its ground is clear, so the page’s backdrop is the water. Try: Form at 100 for hydrangea, then 50 for lotus.', nodes: [
+      ['knob', { slot: '1', name: 'Bloom Size', def: 25 }, 40, 40],                // 1  (150 of 50–450)
+      ['knob', { slot: '2', name: 'Bloom Count', def: 17 }, 40, 140],                // 2  (60 of 10–300)
+      ['knob', { slot: '3', name: 'Form', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['hue', { slot: '1', name: 'Petal Hue' }, 40, 440],                // 5
+      ['hue', { slot: '2', name: 'Heart Hue' }, 40, 520],                // 6
+      ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
+    wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
+      ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
+      ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Organic ↔ Tech', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['dial', {}, 40, 340],                                                       // 4
+      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Transmutation Circle', ground: 'grey' }, 600, 120]],   // 6
+    wires: [[1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
   chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
       ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)

@@ -14,8 +14,8 @@
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
-import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed, kitCanvas, CPU, cpx, canonArea, lightVec } from './texCore.js';
-import { genSigils, genInkBleed, genTessellate, genBlackHole } from './texChaos.js';
+import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed, kitCanvas, CPU, cpx, canonArea, lightVec, kitWhole, wholeDial, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { genSigils, genInkBleed, genTessellate, genBlackHole, genSummoningCircles } from './texChaos.js';
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -226,6 +226,12 @@ const chaosSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant',
 // a color from a port (0–1 channels), as the generators take it: a hex code
 const chaosHex = v => Array.isArray(v) ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
 export const CHAOS_STEPS = {
+  // Transmutation Circle, one part (kitWhole: drawn as it always was, under the texture's own seed + Variant);
+  // lettered in web fonts, so the texture is made on the page (textureService ON_PAGE)
+  transmutation: kitWhole({ cat: 'Marks', label: 'Transmutation Circle', ins: ['position'], outs: ['circle'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
+      return () => genSummoningCircles(w, h, a, z, light, f); }),
   // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
   sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,

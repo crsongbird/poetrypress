@@ -95,13 +95,13 @@ const ORDER = [
   'texTouch.js',          // 🜚 generators
   'cartomancyTable.js',   // what else is on the table (candle, cup, letter…) and what has happened to the cards
   'cartomancy.js',        // a card game on a table: its parts (table, cards, coins, the deal) and the texture
-  'stepsTouch.js',        // steps for 🜚 surfaces: weave, cloth (Linen); panes, glass; flakes
-  'stepsWhimsy.js',       // steps for ♡ surfaces: smoke, light shaft, motes; painted sky, ridges, wash
-  'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze)
-  'stepsLight.js',        // the engine's own parts: Light Engine, Oil Paint, Canvas Weave, Angry Strokes
-  'stepsGenerative.js',   // parts that grow: Discharge (Lichtenberg), Wood, Burn, Growing Line
+  'stepsTouch.js',        // steps for 🜚 surfaces: weave, cloth (Linen); panes, glass; flakes; pours; the older Touch textures as whole parts
+  'stepsWhimsy.js',       // steps for ♡ surfaces: smoke, light shaft, motes; painted sky, ridges, wash; Silk Ribbons, Dream Bloom, Fractal Moon
+  'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze); sigils, blots, facets, the black hole, the transmutation circle
+  'stepsLight.js',        // the engine's own parts: Light Engine, Oil Paint, Canvas Weave, Paint Swipes
+  'stepsGenerative.js',   // parts that grow: Discharge (Lichtenberg), Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces
   'stepsPatterns.js',     // general parts, second shelf: Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum
-  'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain
+  'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain, Guilloché; Night City, Lotus Pond
   'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
   'athanorStudies.js',    // the future-directions surfaces, as graphs of parts (Open → Surface Studies)
   'chains.js',            // textures rebuilt as chains of steps (and the Athanor's templates)

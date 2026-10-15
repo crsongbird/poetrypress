@@ -771,5 +771,32 @@ export function kitImage(cv, gw, gh){
   for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
   return { r, g, b };
 }
+/**
+ * A WHOLE TEXTURE AS A PART (Stage 3, until it is taken apart): one of the
+ * older generators wrapped as a step, so its texture is a chain and draws
+ * exactly as it always did. `prep(E, n, w, h)` reads the part's inputs and
+ * settings and returns the drawing (a function); it runs under the part's own
+ * stream, the texture's seed plus Variant × 7919 (Variant 0: the texture's
+ * own draws). Inputs are read first, outside that stream.
+ */
+export function kitWhole(part, prep){
+  return { ...part,
+    paint(E, n){ const draw = prep(E, n, E.ww, E.wh); return [withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0, draw)]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } };
+}
+/** Its dial: the degrees the texture was given (a turn × 360 can miss a whole degree by a hair), else the page's light. */
+export function wholeDial(E, n, j){
+  const v = E.input(n, j); if(typeof v !== 'number') return E.ctx.light ?? null;
+  const d = v*360, r = Math.round(d); return Math.abs(d - r) < 1e-7 ? r : d;
+}
+/** Its color on input j as a hex, or null (nothing wired, or a Hue whose picker is empty): the generator's own color. */
+export function wholeHex(E, n, j){
+  const v = E.input(n, j);
+  return Array.isArray(v) && !v.none ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
+}
+/** Its settings read as the texture's sliders always were: a size (at least ¼), an amount (at least 2%), a share. */
+export const wholeZoom = (E, n, k, d) => Math.max(0.25, E.num(n, k, d)/100);
+export const wholeAmt = (E, n, k, d) => Math.max(0.02, E.num(n, k, d)/100);
+export const wholeShare = (E, n, k, d) => E.num(n, k, d)/100;
 /** A choice the SEED makes, the same in every part that asks it (not the part's own random stream): from list, by the seed and a name. */
 export function seedChoice(seed, salt){ let h = 2166136261 ^ (seed >>> 0); for(let i = 0; i < salt.length; i++){ h ^= salt.charCodeAt(i); h = Math.imul(h, 16777619); } return mulberry32(h >>> 0); }

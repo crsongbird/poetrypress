@@ -34,10 +34,7 @@ import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
-import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil } from './texWhimsy.js';
-import { genFlowers, genCityscape } from './texSharpness.js';
-import { genSummoningCircles } from './texChaos.js';
-import { genColdPress, genOldPaper, genCupRing, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genSuminagashi } from './texTouch.js';
+import { genAstralFog, genAstralStars } from './texWhimsy.js';
 
 /**
  * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
@@ -649,13 +646,13 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   let result;  if(type === 'clouds'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'flowers'){
-    result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Lotus Pond (chains.js)
   } else if(type === 'inkbleed'){
     result = genChain(type, w, h, light, extra, tint1, tint2);   // Ink Blot (chains.js)
   } else if(type === 'crackedglaze'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'bokeh'){
-    result = genBokeh(w,h,amt,zoom,form,extra.shape,extra.hueSpread,tint1);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dream Bloom (chains.js)
   } else if(type === 'embers'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
@@ -669,7 +666,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'magicparticles'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (motes) (chains.js)
   } else if(type === 'glassrain'){
-    result = genGlassRain(w,h,amt,zoom,light,form,extra.mat,extra.env);
+    result = genChain(type, w, h, light, extra);           // Rain on Glass, over the page's own colors (chains.js)
   } else if(type === 'rainstreaks'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
@@ -697,11 +694,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'linen'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'coldpress'){
-    result = genColdPress(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Cold Press (chains.js)
   } else if(type === 'oldpaper'){
-    result = genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Old Paper (chains.js)
   } else if(type === 'cupring'){
-    result = genCupRing(w,h,amt,zoom,light,tint1,form,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Cup Ring (chains.js)
   } else if(type === 'athanor'){
     result = genAthanor(w,h,light,tint1,tint2,extra);
   } else if(type === 'athanorsteps'){
@@ -715,7 +712,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
   } else if(type === 'suminagashi'){
-    result = genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Suminagashi (chains.js)
   } else if(type === 'watercolour'){
     result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
@@ -723,42 +720,42 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'turing'){
     result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
   } else if(type === 'frost'){
-    result = genHoarfrost(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Hoarfrost (chains.js)
   } else if(type === 'ash'){
-    result = genBurntLetter(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.mat);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Burnt Letter (chains.js)
   } else if(type === 'wax'){
     result = genChain(type, w, h, light, extra, tint1 || '#7A2B2B');   // Pours → Meniscus → the wax's colour → Light Engine (translucent) → Glow (chains.js)
   } else if(type === 'dunes'){
-    result = genDunes(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dune Ripples (chains.js)
   } else if(type === 'kintsugi'){
-    result = genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Kintsugi (chains.js)
   } else if(type === 'moss'){
-    result = genMoss(w,h,amt,zoom,light,tint1,tint2,form,extra.tilt,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Moss on Stone (chains.js)
   } else if(type === 'landscape'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // painted sky → painted ridges → wash (chains.js)
   } else if(type === 'cityscape'){
-    result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Night City (chains.js)
   } else if(type === 'blackhole'){
     result = genChain(type, w, h, light, extra);           // Black Hole (chains.js)
   } else if(type === 'water'){
-    result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.tilt,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Scrying Pool (chains.js)
   } else if(type === 'moon'){
     result = genChain(type, w, h, light, extra);           // Fractal Moon (chains.js)
   } else if(type === 'aurora'){
-    result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Silk Ribbons (chains.js)
   } else if(type === 'hatch'){
     result = genChain(type, w, h, light, extra);
   } else if(type === 'cards'){
     // a chain (chains.js 'cards'), drawn by a canvas pass: the four suits the page's two accents, the texture's two hues
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'summoning'){
-    result = genSummoningCircles(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Transmutation Circle, on the page (its glyphs are web fonts) (chains.js)
   } else if(type === 'metalleaf'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // flakes (chains.js)
   } else if(type === 'crystal'){
-    result = genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);           // Crystal Leaf (chains.js)
   } else if(type === 'spangle'){
-    result = genSpangle(w,h,amt,zoom,light,tint1,form,extra.shape/100,extra.hueSpread/100,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1);           // Metal Spangle (chains.js)
   } else if(type === 'grain'){
     result = genChain(type, w, h, light, extra);           // Film Grain (chains.js)
   } else {
@@ -840,8 +837,8 @@ export function storeTexture(key, result){
 }
 // everything a request means: its normalised knobs, and its key
 // the poem's layout, as a short key (FNV-1a): every character counts
-/** Does a graph hold a Page Backdrop part (and so want the page's own colors)? */
-export function graphUsesBackdrop(graph){ return /"name":\s*"backdrop"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
+/** Does a graph hold a Page Backdrop part, or Rain on Glass (which shows the page through its drops), and so want the page's own colors? */
+export function graphUsesBackdrop(graph){ return /"name":\s*"(?:backdrop|glassrain)"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;

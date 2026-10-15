@@ -289,6 +289,24 @@ export const STEP_DOCS = {
   facets: 'A field of cut facets, each tilted its own way, so the light catches some and leaves others dark: Facet Field.',
   blackhole: 'A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.',
   moon: 'A moon whose seas and craters are fractal noise, in the seed’s phase, under a night sky of faint stars and cloud.',
+  coldpress: 'Watercolor paper’s tooth: rounded hills and hollows pressed in by felt, with fine fibers, lit by the dial.',
+  cupring: 'Where a cup stood on paper: dried coffee rings, dark at their rims, with drips and a second, offset ring.',
+  oldpaper: 'A sheet of old paper: its folds and creases lit by the dial, yellowed, foxed and mildewed with age.',
+  ash: 'The ash a burnt letter leaves: curled flakes charred black and burnt pale at their rims, some still glowing.',
+  hoarfrost: 'Frost ferns grown across a pane from its frame inward, branching at sixty degrees, lit by the dial.',
+  glassrain: 'Rain on a window: drops that sit, slide, merge and leave trails, as lit domes over the page’s own colors.',
+  water: 'Looking down into a pool: waves on the surface, caustics on the floor, fish and leaves below, the sky mirrored when tilted.',
+  dunes: 'Wind-built dunes and the ripples on them, lit low by the dial, seen from above or toward the horizon.',
+  moss: 'Rough stone with moss in its crevices and on its flat tops, lit by the dial.',
+  kintsugi: 'A glazed pot broken and mended with gold: the seams raised and bright, the glaze glossy.',
+  spangle: 'Metal that crystallized as it cooled: grains each tilted its own way, with branching dendrites, flashing as the light turns.',
+  crystal: 'Looking into a clear crystal: cut faces, light caught inside as fire, ghost crystals and needles within.',
+  marbling: 'Suminagashi, Japanese ink marbling: rings of ink dropped in turn on still water, moved by a breath, lifted onto paper.',
+  ribbons: 'Curtains of light hung in sheets, like silk ribbons or an aurora, in one color or blended between two.',
+  bokeh: 'Out-of-focus lights through a real lens: soft discs whose blur follows each one’s distance from the focal plane.',
+  cityscape: 'A city at night across the water: a skyline of mostly dark windows, a few of them lit, reflected below.',
+  lotus: 'Flowers floating on water, from a bell bud through lotus to hydrangea, each petal shaded and throwing its shadow.',
+  transmutation: 'A transmutation circle, drawn by hand or machined: rings of glyphs, polygrams and planets, placed by the dial.',
   rosettes: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',
   sand: 'Sand on a ringing plate: grains thrown off what moves gather on the lines where nothing does (or wherever a map is white).',
   bits: 'A grid of small marks (squares, dashes, bars) that surface wherever a field rises: Binary Pattern’s glyphs.',
@@ -334,8 +352,9 @@ const STEP_RUN = {
     return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
   },
   glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
-  hue(E, n){ const { ctx, P, hexCol } = E;
-    return [hexCol((ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] || '#FFFFFF')];
+  hue(E, n){ const { ctx, P, hexCol } = E, t = (ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1];
+    // an empty picker reads as white, and says so (`none`): a whole texture as a part then uses its own color
+    const c = hexCol(t || '#FFFFFF'); if(!/^#?[0-9a-f]{6}/i.test(t || '')) c.none = true; return [c];
   },
   dial(E, n){ const { ctx } = E;
     return [((ctx.light ?? 315) % 360)/360, Math.max(0, Math.min(1.3, (ctx.lightTilt ?? 100)/100))];
