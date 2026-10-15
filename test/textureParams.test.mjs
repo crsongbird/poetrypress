@@ -93,11 +93,7 @@ const outOfRange = PRESETS.filter(p => {
 check('preset knob values are inside their texture\'s range', outOfRange.length === 0);
 if(outOfRange.length) console.log('   offenders:', outOfRange.map(p=>p.name).join(', '));
 
-// names that were lies
-check('the cracks texture is no longer called non-euclidean', !html.includes('Non-Euclid Cracks'));
-check('the mosaic is no longer called twisting', !html.includes('Twisting Geometry'));
-check('Math Static was replaced, and its successor is the Transmutation Circle (one circle now)',
-  !html.includes('Math Static') && html.includes('>Transmutation Circle<') && !html.includes('>Summoning Circles<'));
+// (names that were lies, Non-Euclid Cracks and the rest, are kept out by test/wiki.test.mjs's RETIRED_NAMES)
 
 // ---- every knob must actually do something ----
 // This is the check that was missing when zoom was faked by generating at a

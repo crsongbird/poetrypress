@@ -13,6 +13,14 @@ prints it).
 - The guide now also teaches the effect stack (`/fx:outline(…)+glow(…)`)
   and stitched underlines (`/under:wave,…`), which until now only PML.md
   explained.
+- **Under the hood:**
+  - pruned the stylesheet: three declarations that never won anywhere are
+    gone, checked against every screen;
+  - reviewed the tests: the save-and-load suite that repeated the audit is
+    gone (its own checks moved to the audit and the coverage suite), the
+    themes have a suite of their own, tested by behavior, and checks for
+    names and controls long since gone were folded into one list of retired
+    names.
 
 ## Saturn–Aegaeon (2026-10-15)
 

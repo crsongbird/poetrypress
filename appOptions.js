@@ -370,7 +370,7 @@ export const PRESETS = [
     border: true, borderColor: '#E8C27A', borderThickness: 2, borderOffset: 40,
     fx1Type: 'bevel', fx1K1: '25', fx1K2: '40', fx1Angle: '315'
   },
-{ name: "Signal",   // surface: Math Static (∆)
+{ name: "Signal",   // surface: Binary Pattern (∆)
     bg1: "#0E0F12", text1: "#E8E8E8", outlineMode: "off", font: "VT323",
     texture: true, textureType: "mathnoise", textureOpacity: 78, texP1: 220, texP2: 170, textureBlend: 'screen',
     textureTint1: '#7CFFB2', textureTint2: '#000000',

@@ -18,7 +18,7 @@ import { installDomMock } from './domMock.mjs';
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
-const { ASPECTS, PRESETS } = await import('../appOptions.js');
+const { ASPECTS, PRESETS, FONTS } = await import('../appOptions.js');
 const { paramsFor, capsFor } = await import('../textureGenerators.js');
 
 let failures = 0;
@@ -127,6 +127,8 @@ const lost = Object.keys(changed).filter(k => !DERIVED.has(k) && norm(changed[k]
 check(`all ${Object.keys(changed).length - DERIVED.size} independent keys survive a load`, lost.length === 0);
 for(const k of lost) console.log(`   ${k}: set ${JSON.stringify(changed[k])} -> came back ${JSON.stringify(back[k])}`);
 
+// the typeface by its family's name, never its place in the list (a place points at another face when FONTS grows)
+check('the typeface is saved by its name, not its place in the list', typeof back.font === 'string' && FONTS.some(f => f.family === back.font) && back.font === changed.font);
 // nothing may appear on the way back that was never saved
 const invented = Object.keys(back).filter(k => !(k in base));
 check('loading does not invent keys that saving never produced', invented.length === 0);

@@ -62,6 +62,11 @@ if(notSaved.length) console.log('   not saved:', notSaved.join(', '), '— add i
 check('every control on the page is RESTORED from a look (or exempt, with a reason)', notRestored.length === 0);
 if(notRestored.length) console.log('   not restored:', notRestored.join(', '));
 check('no exemption names a control that no longer exists', Object.keys(EXEMPT).every(id => ids.includes(id)));
+// the PERSISTED table: one row per key, and no control saved both by the table and by hand (it would be restored twice)
+const tableKeys = [...persisted.matchAll(/\[\s*'(\w+)',/g)].map(m => m[1]);
+const handWritten = [...body('serializeCurrentSettings').matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]);
+check('no key appears twice in the PERSISTED table', tableKeys.length > 20 && new Set(tableKeys).size === tableKeys.length);
+check('no control is saved both by the table and by hand', !tableKeys.some(k => handWritten.includes(k)));
 
 // everything built on save/restore uses them — so covering them covers all of it
 check('the Workbench JSON shows serializeCurrentSettings() and loads with restoreSettings()',

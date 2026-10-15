@@ -194,7 +194,6 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
      width:100%; min-width:0;
     border-right:none; border-top:1px solid var(--line);
   }
-  body.is-mobile #poemCanvas{ max-width:92vw; }
   body.is-mobile .download-btn{ top:auto; bottom:14px;    }
 
   /* Canonical desktop reference is ~2560x1440; canonical mobile is ~1080x1920,
@@ -238,7 +237,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
 /* the whole app is exactly as tall as the screen really is */
 body.is-mobile .app { overflow: hidden; flex-direction: column; }
 /* the panel is the screen's whole width, however wide a tall window is (a desktop's 460 px sidebar never applies) */
-body.is-mobile .controls { width: 100%; max-width: none; }
+body.is-mobile .controls { width: 100%;  }
 body.is-mobile .app-header { font-size: 12px; }
 
 /* preview on top, fixed share of the real viewport */
@@ -1551,7 +1550,6 @@ body.is-mobile .tool-row{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
 body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 4; }
 body.is-mobile .tool-row > #seedRow{   padding-right:12px;   }
 /* one rule between the halves: the hues' own left edge (no second one beside it) */
-body.is-mobile .tool-row > #lightRow{ border-right:none; }
 body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }
 body.is-mobile .tool-row .light-dial{ margin:0 auto; }
 /* (the hue fields' left rule is not for the seed, which sits under the dial) */
