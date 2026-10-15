@@ -340,7 +340,7 @@ function syncBaseParams(useDefaults){
     if(f && f.style) f.style.display = d ? '' : 'none';
     if(!d || !el) return;
     el.min = d.min; el.max = d.max; if(useDefaults) el.value = d.def;
-    if(lab) lab.textContent = d.label;
+    if(lab) setLabelText(lab, d.label);
     if(out) out.textContent = paramReadout(d, +el.value);
   });
 }
@@ -515,23 +515,31 @@ $('lineSpacing').addEventListener('input', ()=>{
   scheduleRender();
 });
 
+// The Summon buttons roll the way last chosen on any die (dieLevel): as usual, their known-good
+// schemes; gently or wildly, their whole section that way. A locked control is never touched.
+const summonCard = id => { const b = $(id); return b && b.closest ? b.closest('details.card') : null; };
 $('randomFontBtn').addEventListener('click', ()=>{
-  // locked controls are restored after the randomiser runs
+  const lv = dieLevel(), card = summonCard('randomFontBtn');
+  if(lv !== 'usual' && card){ rollSection(card, lv, { summon: true }); return; }
+  const free = id => !state.locks.has(id);
   withLocksPreserved(()=>{
-  fontSelect.value = Math.floor(Math.random()*FONTS.length);
-  setColorField('textColorHex', randHex());
+  if(free('fontFamily')) fontSelect.value = Math.floor(Math.random()*FONTS.length);
+  if(free('textColorHex')) setColorField('textColorHex', randHex());
 
-  const gradOn = Math.random() < 0.6;
-  $('textGradientToggle').checked = gradOn;
-  $('gradientBlock').classList.toggle('open', gradOn);
-  if(gradOn){
-    setColorField('textColor2Hex', randHex());
-    $('textGradientAngle').value = Math.floor(Math.random()*360);
-    $('textGradientAngleVal').textContent = $('textGradientAngle').value+'°';
+  // the gradient's switch belongs to its colours: when they are locked, it stays
+  if(free('textColor2Hex') && free('textGradientAngle')){
+    const gradOn = Math.random() < 0.6;
+    $('textGradientToggle').checked = gradOn;
+    $('gradientBlock').classList.toggle('open', gradOn);
+    if(gradOn){
+      setColorField('textColor2Hex', randHex());
+      $('textGradientAngle').value = Math.floor(Math.random()*360);
+      $('textGradientAngleVal').textContent = $('textGradientAngle').value+'°';
+    }
   }
 
-  setColorField('accent1ColorHex', randHex());
-  setColorField('accent2ColorHex', randHex());
+  if(free('accent1ColorHex')) setColorField('accent1ColorHex', randHex());
+  if(free('accent2ColorHex')) setColorField('accent2ColorHex', randHex());
 
   scheduleRender();
   });
@@ -562,18 +570,26 @@ function hslHex(h, s, l){
 }
 function hexToRgbObj(hex){ const n = parseInt(String(hex).replace('#', '').slice(0, 6), 16) || 0; return { r: n >> 16, g: (n >> 8) & 255, b: n & 255 }; }
 $('randomBgBtn').addEventListener('click', ()=>{
-  // locked controls are restored after the randomiser runs
+  const lv = dieLevel(), card = summonCard('randomBgBtn');
+  if(lv !== 'usual' && card){ rollSection(card, lv, { summon: true }); return; }
+  // locked controls are never set, and restored after the randomiser runs
   withLocksPreserved(()=>{
     const grad = $('bgGradientToggle').checked, n = grad ? (state.page.bgStops || 2) : 1;
     const cols = backdropColours(n);
-    ['bgColor1Hex', 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex'].slice(0, n).forEach((id, i) => setColorField(id, cols[i]));
-    if(grad && $('bgGradientAngle')){ $('bgGradientAngle').value = Math.floor(Math.random()*360); if($('bgGradientAngleVal')) $('bgGradientAngleVal').textContent = $('bgGradientAngle').value + '°'; }
+    ['bgColor1Hex', 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex'].slice(0, n).forEach((id, i) => { if(!state.locks.has(id)) setColorField(id, cols[i]); });
+    if(grad && $('bgGradientAngle') && !state.locks.has('bgGradientAngle')){ $('bgGradientAngle').value = Math.floor(Math.random()*360); if($('bgGradientAngleVal')) $('bgGradientAngleVal').textContent = $('bgGradientAngle').value + '°'; }
     scheduleRender();
   });
 });
 // RANDOM SURFACE: a texture from the menu, one of its four readings (known-good
 // settings, which respect locks), and a new seed — nothing else on the page
 if($('randomSurfaceBtn') && $('randomSurfaceBtn').addEventListener) $('randomSurfaceBtn').addEventListener('click', ()=>{
+  const lv = dieLevel(), card = summonCard('randomSurfaceBtn');
+  if(lv !== 'usual' && card){
+    // gently: the same surface, nudged; wildly: anything (the surface switched on, as Summon always does)
+    if(lv === 'wild' && !$('textureToggle').checked){ $('textureToggle').checked = true; $('textureToggle').dispatchEvent(new Event('change', { bubbles: true })); }
+    rollSection(card, lv, { summon: true }); return;
+  }
   withLocksPreserved(()=>{
     if(!$('textureToggle').checked){ $('textureToggle').checked = true; $('textureToggle').dispatchEvent(new Event('change', { bubbles: true })); }
     if(!state.locks.has('textureType')){
@@ -1795,6 +1811,7 @@ function applyLayout(){
   const on = wantPhoneLayout(), was = document.body.classList.contains('is-mobile');
   if(on) setupPhoneLayout();
   document.body.classList.toggle('is-mobile', on);
+  if(on !== was) setTimeout(() => paintDice(), 0);   // (later: this runs at boot, before the dice exist)
   if(was !== on && typeof document.dispatchEvent === 'function' && typeof CustomEvent === 'function') document.dispatchEvent(new CustomEvent('vellum-layout', { detail: { phone: on } }));
 }
 if(typeof document.querySelectorAll === 'function'){
@@ -1878,7 +1895,7 @@ function syncTextureParams(useDefaults){
     if(useDefaults || slider.value === '' || +slider.value < def.min || +slider.value > def.max){
       slider.value = def.def;
     }
-    label.textContent = def.label;
+    setLabelText(label, def.label);            // (never textContent: it wiped the knob's padlock)
     out.textContent = paramReadout(def, +slider.value);
   });
 }
@@ -2085,7 +2102,12 @@ if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEvent
 // random angle, keeping the distance. Neither is sticky.
 if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => setLight(parseFloat($('textureLight').value) || 0, 0, true));
 if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEventListener('click', () => {
-  const t = parseFloat(($('textureLightTilt') || {}).value); setLight(Math.random()*360, isNaN(t) ? 100 : t, true); });
+  // a locked light stays; otherwise it turns the way the dice roll (a little, anywhere, or anywhere and any height)
+  if(state.locks.has('textureLight')){ toast(DIE.locked); murmur.play('blocked'); return; }
+  const lv = dieLevel(), deg = parseFloat($('textureLight').value) || 0, tt = parseFloat(($('textureLightTilt') || {}).value), t = isNaN(tt) ? 100 : tt;
+  if(lv === 'gentle') setLight(deg + (Math.random()*2 - 1)*15, t + (Math.random()*2 - 1)*8, true);
+  else if(lv === 'wild') setLight(Math.random()*360, Math.random()*dialMax(), true);
+  else setLight(Math.random()*360, t, true); });
 /** How far the dial reaches: past its rim (130) only for engine-lit textures. */
 function dialMax(){ const t = $('textureType'); return (t && (capsFor(t.value) || {}).lowLight) ? 130 : 100; }
 syncLightPad();
@@ -2099,7 +2121,8 @@ bindColorField('textureTint5Hex', ()=>scheduleRender());
 bindColorField('textureTint6Hex', ()=>scheduleRender());
 /** A label's own words, leaving what else lives in it (its padlock) alone —
  *  writing textContent wiped the lock off every hue whose name changes. */
-const textNode = el => (el && el.childNodes && typeof el.childNodes[Symbol.iterator] === 'function') ? [...el.childNodes].find(n => n.nodeType === 3) : null;
+// (a function, not a const: labels are renamed at boot, before this line runs)
+function textNode(el){ return (el && el.childNodes && typeof el.childNodes[Symbol.iterator] === 'function') ? [...el.childNodes].find(n => n.nodeType === 3) : null; }
 function labelText(el){ const t = textNode(el); return t ? t.nodeValue.trim() : String(el.textContent || '').trim(); }
 function setLabelText(el, text){
   if(!el) return;
@@ -2215,45 +2238,75 @@ function addMasterLock(root, head){
   headTools(head).appendChild(btn); masterLocks.push({ root, btn });
 }
 // ---------- THE DICE (Ruby): a die beside every section's lock rerolls only that section ----------
-// The backdrop, the surface and the typeface roll as their Summon buttons do (known-good schemes);
-// any other section rolls each of its sliders, menus and colours within reason. Locked controls stay
-// (the lock beside the die keeps the whole section). On the Surface, Shift-click rolls only the seed:
-// the same texture, a new pattern (the seed keeps its own lock too).
-// THREE LEVELS (Ruby, ROADMAP E1), chosen from a long press on a phone and from ▾ beside the die on a desk:
-//   gentle — sliders move ±8% of their range; menus and switches stay; colours turn together
-//   usual  — what a tap does (the Summon buttons where a section has one)
-//   wild   — sliders anywhere in their range, every menu, switches too, colours anything
+// Locked controls are never touched: a roll skips them, and withLocksPreserved puts back anything a
+// change set off in them (Ruby: locks supersede randomization). On the Surface, Shift-click rolls
+// only the seed: the same texture, a new pattern (the seed keeps its own lock too).
+// THREE WAYS (Ruby, ROADMAP E1), chosen from a long press on a phone and ▾ beside the die on a desk.
+// The way last chosen is REMEMBERED (an app preference) and every die and Summon button rolls that way:
+//   gentle — sliders ±8% of their range; colours drift together; the light dial moves a little;
+//            menus and switches stay, so the surface never changes; a typeface may become a similar one
+//   usual  — the Summon buttons' known-good schemes; elsewhere every slider, menu and colour in reason
+//   wild   — sliders anywhere in their range, every menu, any colour, the light anywhere (never a switch)
 // and BACK (E2): the section returns to how it was before its last roll, whatever else has changed since.
 const DIE_SUMMONS = { randomBgBtn: 1, randomSurfaceBtn: 1, randomFontBtn: 1 };
-const DIE_GENTLE = 0.08;
+const DIE_GENTLE = 0.08, DIE_LEVELS = ['gentle', 'usual', 'wild'], DIE_LEVEL_KEY = 'uv.dice.level';
+const DIE_GLYPH = { gentle: '⚁', usual: '⚄', wild: '⚅' };
+function dieLevel(){ try { const v = localStorage.getItem(DIE_LEVEL_KEY); if(DIE_LEVELS.includes(v)) return v; } catch(e){} return 'usual'; }
+function setDieLevel(level){ if(!DIE_LEVELS.includes(level)) return; try { localStorage.setItem(DIE_LEVEL_KEY, level); } catch(e){} paintDice(); }
+const dieWord = level => DIE[level + 'Word'] || level;
 function dieHsl(hex){ const { r, g, b } = hexToRgbObj(hex || '#808080'), R = r/255, G = g/255, B = b/255;
   const mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn)/2, d = mx - mn;
   if(!d) return [0, 0, l];
   const s = d/(1 - Math.abs(2*l - 1)), h = mx === R ? ((G - B)/d + 6) % 6 : mx === G ? (B - R)/d + 2 : (R - G)/d + 4;
   return [h*60, Math.min(1, s), l]; }
-function rollSection(root, level = 'usual'){
-  const own = level === 'usual' && Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
-  if(own){ own.click(); return true; }        // (it plays its own sound)
-  const turn = (Math.random()*2 - 1)*24;      // gently: every colour turns by the same few degrees
+const dieClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const dieRollable = id => { const el = $(id); return !!el && !el.disabled && !state.locks.has(id) && !(el.closest && el.closest('.tool-hidden')); };
+/** A typeface close to this one: the same family of faces (FONT_GROUPS), never the same one. */
+function similarFont(i){
+  const fam = (FONTS[i] || {}).family, group = (FONT_GROUPS.find(([, fs]) => fs.includes(fam)) || [null, []])[1];
+  const near = FONTS.map((f, k) => k).filter(k => k !== i && group.includes(FONTS[k].family));
+  return near.length ? near[Math.floor(Math.random()*near.length)] : i;
+}
+/** The menus a roll may choose among (the Athanor only when there is a graph to draw). */
+function dieOptions(el){
+  const graph = (($('forgeGraph') || {}).value || '').length > 40;
+  return [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '' && !(el.id === 'textureType' && o.value === 'athanor' && !graph));
+}
+function rollSection(root, level = 'usual', opts = {}){
+  const shift = (Math.random()*2 - 1)*15;     // gently: every colour drifts by the same few degrees…
   withLocksPreserved(() => {
-    const ids = lockablesIn(root).filter(id => { const el = $(id); return el && !el.disabled && !state.locks.has(id) && id !== 'textureSeedValue' && !(el.closest && el.closest('.tool-hidden')); });
+    const ids = () => lockablesIn(root).filter(id => dieRollable(id) && id !== 'textureSeedValue' && id !== 'textureLight');
     // menus first: a new surface relabels its sliders, which are rolled after it
-    const menus = ids.filter(id => $(id).tagName === 'SELECT'), rest = ids.filter(id => $(id).tagName !== 'SELECT');
-    if(level !== 'gentle') for(const id of menus){ const el = $(id);
-      const opts = [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '');
-      if(opts.length > 1){ el.value = opts[Math.floor(Math.random()*opts.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
-    for(const id of rest){ const el = $(id);
+    for(const id of ids().filter(id => $(id).tagName === 'SELECT')){ const el = $(id);
+      if(level === 'gentle'){
+        // the surface (and every other menu) stays; a typeface may become a similar one
+        if(id === 'fontFamily' && (opts.summon || Math.random() < 0.6)){ const k = similarFont(+el.value); if(String(k) !== el.value){ el.value = String(k); el.dispatchEvent(new Event('change', { bubbles: true })); } }
+        continue;
+      }
+      const o = dieOptions(el);
+      if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+    for(const id of ids().filter(id => $(id).tagName !== 'SELECT')){ const el = $(id);
       if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1;
-        const v = level === 'gentle' ? Math.max(lo, Math.min(hi, (+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo)))
+        const v = level === 'gentle' ? dieClamp((+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo), lo, hi)
           : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
         el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
-      else if(el.type === 'checkbox'){ if(level === 'wild' && !(el.classList && el.classList.contains('eye')) && Math.random() < 0.5){ el.checked = !el.checked; el.dispatchEvent(new Event('change', { bubbles: true })); } }
       else if(/Hex$/.test(id)){
-        if(level === 'gentle'){ const [h, s, l] = dieHsl(el.value); setColorField(id, hslHex(((h + turn) % 360 + 360) % 360, s, l)); }
+        // …and each moves a touch of its own
+        if(level === 'gentle'){ const [h, sa, l] = dieHsl(el.value);
+          setColorField(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
         else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
         else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
-          setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, Math.max(0.08, Math.min(0.92, l + (Math.random() - 0.5)*0.2)))); } }
+          setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
+      // (switches are never rolled: they show and hide whole sections, and sit beside the locks)
     }
+    // the light dial: a little way round when gentle, anywhere when wild
+    if(root.contains && $('textureLight') && root.contains($('textureLight')) && dieRollable('textureLight') && level !== 'usual'){
+      const deg = parseFloat($('textureLight').value) || 0, tilt = parseFloat(($('textureLightTilt') || {}).value); const t = isNaN(tilt) ? 100 : tilt;
+      if(level === 'gentle') setLight(deg + (Math.random()*2 - 1)*15, t + (Math.random()*2 - 1)*8, false);
+      else setLight(Math.random()*360, Math.random()*dialMax(), false);
+    }
+    if(level === 'wild' && root.contains && $('textureSeedValue') && root.contains($('textureSeedValue'))) maybeRerollSeed();
     scheduleRender();
   });
 }
@@ -2262,9 +2315,10 @@ function rollSection(root, level = 'usual'){
 const dieRolls = new Map(), diePending = new Map();
 const summonIn = root => Object.keys(DIE_SUMMONS).map(id => $(id)).find(b => b && root.contains && root.contains(b));
 function rollWithBack(root, level){
-  const before = serializeCurrentSettings(), own = level === 'usual' && summonIn(root);
+  const before = serializeCurrentSettings(), own = summonIn(root);
   if(own){
-    // a Summon button may ask first (past a few edits): the roll is recorded when its own work has run
+    // a section with a Summon button rolls through it (it rolls the remembered way). It may ask first
+    // (past a few edits): the roll is recorded when its own work has run
     const old = diePending.get(root); if(old) own.removeEventListener('click', old);
     const rec = () => { diePending.delete(root); setTimeout(() => dieRolls.set(root, { before, after: serializeCurrentSettings() }), 0); };
     diePending.set(root, rec); own.addEventListener('click', rec, { once: true });
@@ -2281,6 +2335,14 @@ function dieBack(root){
   withLocksPreserved(() => restoreSettings(now));
   scheduleRender(); commitHistory(); murmur.play('undo');
   return true;
+}
+// every die shows the way it will roll (⚁ gently, ⚄ as usual, ⚅ wildly), and says so
+const dieButtons = [];
+function paintDice(){
+  const lv = dieLevel(), phone = !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
+  for(const d of dieButtons){ d.btn.textContent = DIE_GLYPH[lv];
+    d.btn.title = fill(phone ? DIE.titlePhone : d.surface ? DIE.titleSurface : DIE.title, dieWord(lv)); d.btn.setAttribute('aria-label', d.btn.title); d.btn.dataset.level = lv; }
+  for(const id of Object.keys(DIE_SUMMONS)){ const b = $(id); if(b && b.setAttribute){ b.title = fill(DIE.summonTitle, dieWord(lv)); b.dataset.level = lv; } }
 }
 // the dice's menu: beside the die on a desk, a sheet from the bottom on a phone (CSS)
 let dieMenu = null;
@@ -2299,9 +2361,12 @@ function openDieMenu(root, anchor, surface){
     b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closeDieMenu(); act(); });
     m.appendChild(b); return b;
   };
-  item('⚁', DIE.gentle, DIE.gentleHint, () => rollWithBack(root, 'gentle'));
-  item('⚄', DIE.usual, DIE.usualHint, () => rollWithBack(root, 'usual'));
-  item('⚅', DIE.wild, DIE.wildHint, () => rollWithBack(root, 'wild'));
+  const lv = dieLevel();
+  for(const way of DIE_LEVELS){
+    const b = item(DIE_GLYPH[way], DIE[way], DIE[way + 'Hint'], () => { setDieLevel(way); rollWithBack(root, way); });
+    b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', way === lv ? 'true' : 'false');
+    if(way === lv){ b.classList.add('current'); const n = document.createElement('span'); n.className = 'die-menu-now'; n.textContent = DIE.now; b.querySelector('.die-menu-text').appendChild(n); }
+  }
   if(surface) item('⁂', DIE.seed, DIE.seedHint, () => { maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); });
   const has = dieRolls.has(root);
   item('↶', DIE.back, has ? DIE.backHint : DIE.backNone, () => dieBack(root), !has);
@@ -2322,11 +2387,10 @@ function addDie(root, head){
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'die-btn'; btn.textContent = '⚄';
   const surface = !!($('randomSurfaceBtn') && root.contains && root.contains($('randomSurfaceBtn')));
   const phone = () => !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
-  const title = () => phone() ? DIE.titlePhone : surface ? DIE.titleSurface : DIE.title;
-  btn.title = title(); btn.setAttribute('aria-label', btn.title); btn.setAttribute('aria-haspopup', 'menu');
+  btn.setAttribute('aria-haspopup', 'menu'); dieButtons.push({ btn, surface });
   // a long press: on a phone, the menu (as soon as it is held); on a desk, the Surface's seed alone
   let held = false, timer = 0;
-  btn.addEventListener('pointerdown', () => { held = false; btn.title = title(); clearTimeout(timer);
+  btn.addEventListener('pointerdown', () => { held = false; clearTimeout(timer);
     timer = setTimeout(() => { held = true; if(phone()) openDieMenu(root, btn, surface); }, 500); });
   btn.addEventListener('pointerup', () => clearTimeout(timer));
   btn.addEventListener('pointercancel', () => clearTimeout(timer));
@@ -2335,7 +2399,7 @@ function addDie(root, head){
     const wasHeld = held; held = false;
     if(wasHeld && phone()) return;                               // (the menu is already open)
     if(surface && (e.shiftKey || wasHeld)){ maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); return; }
-    rollWithBack(root, 'usual');
+    rollWithBack(root, dieLevel());
   });
   // (a long press must not open the phone's context menu)
   btn.addEventListener('contextmenu', e => e.preventDefault());
@@ -2368,7 +2432,7 @@ function installHeadings(){
   for(const sub of document.querySelectorAll('.subblock[id]')){
     const prev = sub.previousElementSibling; if(prev && prev.classList && prev.classList.contains('check-row') && !prev.hidden) addMasterLock(sub, prev);
   }
-  paintMasterLocks();
+  paintMasterLocks(); paintDice();
 }
 
 function snapshotLocked(){
@@ -2380,7 +2444,9 @@ function snapshotLocked(){
   return snap;
 }
 function restoreLocked(snap){
-  for(const id in snap){
+  // menus first: putting back a surface resets its sliders, which are put back after it
+  const ids = Object.keys(snap), isMenu = id => { const n = $(id); return !!n && n.tagName === 'SELECT'; };
+  for(const id of [...ids.filter(isMenu), ...ids.filter(id => !isMenu(id))]){
     const n = $(id);
     if(!n) continue;
     // unchanged: nothing to restore, and no change to announce (a texture
@@ -2634,7 +2700,7 @@ function syncFxSlot(i, resetToDefaults){
     const def = d[k.toLowerCase()]; show('fx'+i+k+'Field', !!def);
     if(!def) continue;
     const el = $('fx'+i+k);
-    if($('fx'+i+k+'Label')) $('fx'+i+k+'Label').textContent = def[0];
+    if($('fx'+i+k+'Label')) setLabelText($('fx'+i+k+'Label'), def[0]);
     el.min = def[1]; el.max = def[2];
     if(resetToDefaults) el.value = def[3];
     if($('fx'+i+k+'Val')) $('fx'+i+k+'Val').textContent = el.value + def[4];
@@ -2720,7 +2786,7 @@ function syncFrameVisibility(){
   const glass = ($('cardFx') && $('cardFx').value) || 'none';
   show('cardFxAmountField', glass !== 'none'); show('cardFxScaleField', glass !== 'none' && glass !== 'lens');
   const scaleName = { frost: 'Grit', reeded: 'Flute Width', pixel: 'Cell Size', emboss: 'Depth', prism: 'Split' }[glass];
-  if($('cardFxScaleLabel') && scaleName) $('cardFxScaleLabel').textContent = scaleName;
+  if($('cardFxScaleLabel') && scaleName) setLabelText($('cardFxScaleLabel'), scaleName);
 }
 for(const id of [...Object.keys(RANGE_UNITS), 'bgGradientType', 'textGradientType', 'borderRounded', 'borderGradientToggle', 'cardToggle', 'cardGradientToggle',
                  'cardGradientType', 'cardOpacity', 'cardBlend', 'borderBlend', 'borderBloomBlend', 'borderStitch', 'borderStitchOut',

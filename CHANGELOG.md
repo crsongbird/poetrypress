@@ -4,6 +4,26 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Callirrhoe (2026-10-14)
+
+- **The dice remember how you like to roll.** Choose Gently, As usual or
+  Wildly from any die (hold it on a phone, or tap ▾ beside it on a computer)
+  and every die rolls that way from then on, along with the Summon New
+  Typeface, Backdrop and Surface buttons and the light dial's ⚄. Each die
+  shows the way it will roll: ⚁ gently, ⚄ as usual, ⚅ wildly.
+- **Gently** now also turns the light dial a little, lets colors drift
+  together with a touch of their own, never changes the surface, and when it
+  changes the typeface picks a similar one (a serif for a serif).
+- **Wildly** no longer flips switches.
+- **Locks win.** Nothing a lock holds is changed by any die, Summon button,
+  the light's ⚄ or a preset:
+  - Fixed: renaming a surface's knobs wiped their padlocks, so the knobs of
+    most surfaces couldn't stay locked. The same was true of the base
+    layer's knobs and the text effects' settings.
+  - Fixed: a locked surface put back after a roll could reset its own locked
+    knobs.
+  - The light's ⚄ says so when the light is locked, instead of turning it.
+
 ## Jupiter–Kallichore (2026-10-14)
 
 - **Three ways to roll a section.** A tap on a section's die rolls it as

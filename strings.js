@@ -363,24 +363,31 @@ export const CHOOSER = {
   baseTitle: 'Base Surface',
 };
 
-/** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk. */
+/** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk.
+ *  The way last chosen is remembered, and every die and Summon button rolls that way. {name} is the way. */
 export const DIE = {
-  title: 'Roll this section (locked controls stay)',
-  titleSurface: 'Roll this section (Shift-click or hold: only a new seed)',
-  titlePhone: 'Roll this section (hold for gently, wildly or back)',
-  more: 'More ways to roll: gently, wildly, or back',
+  title: 'Roll this section {name} (locked controls stay)',
+  titleSurface: 'Roll this section {name} (Shift-click or hold: only a new seed)',
+  titlePhone: 'Roll this section {name} (hold to choose how)',
+  summonTitle: 'Rolls {name}: choose how from any die (hold it, or ▾ beside it)',
+  more: 'How to roll: gently, as usual, wildly, or back',
   menuTitle: 'Roll this section',
+  now: 'every die rolls this way now',
   gentle: 'Gently',
-  gentleHint: 'Sliders move a little; menus and switches stay; colors turn together',
+  gentleWord: 'gently',
+  gentleHint: 'Sliders, colors and the light move a little; the surface stays; a similar typeface',
   usual: 'As usual',
+  usualWord: 'as usual',
   usualHint: 'Every slider, menu and color in reason',
   wild: 'Wildly',
-  wildHint: 'Anything goes: the whole range, switches too',
+  wildWord: 'wildly',
+  wildHint: 'Anything goes: every slider across its range, every menu, any color',
   back: 'Back',
   backHint: 'Return this section to how it was before its last roll',
   backNone: 'Nothing to go back to yet',
   seed: 'Only a new seed',
   seedHint: 'The same surface, a new pattern',
+  locked: 'Locked: the light stays where it is',
 };
 
 /** The colour picker's own button. */

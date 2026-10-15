@@ -310,7 +310,7 @@ Other parts of a look:
 - **The dial as a joystick:** `caps.dial` renames it (Wind Direction,
   View…).
   - Rename labels with `setLabelText`, never `textContent` (that wiped the
-    padlocks).
+    padlocks: the surface knobs' locks vanished this way twice).
   - Point things FROM the dial's handle: (cos a, sin a) with
     a = (deg − 90)°.
 
@@ -349,14 +349,22 @@ Other parts of a look:
     into its heading (`CARD_EYES`). Both live in `.head-tools`, which never
     folds its section.
   - A die beside each lock rerolls only that section (`rollSection(root, level)`).
-    - A tap rolls **as usual** (a section's Summon button where it has one).
-    - **Gently** (sliders ±8%, menus and switches stay, colours turn together)
-      and **Wildly** (whole ranges, every menu, switches too; never eyes) come
-      from a long press on a phone and ▾ beside the die on a desk (Ruby).
+    - Three ways (Ruby): **gently** (sliders ±8%; colours drift together and
+      a touch apart; the light turns a little; menus and switches stay, so the
+      surface never changes; a typeface may become a similar one,
+      `similarFont`), **as usual**, **wildly** (whole ranges, every menu, any
+      colour, the light anywhere; never a switch).
+    - The way is chosen from a long press on a phone, ▾ beside the die on a
+      desk, and **remembered** (localStorage `uv.dice.level`, an app
+      preference). Every die, the three Summon buttons and the light's ⚄
+      roll that way; seed-only buttons don't. Dice show it (⚁ ⚄ ⚅).
     - **Back** (`dieBack`) puts back only what the section's last roll
       changed. A Summon that asks first is recorded once its work has run.
     - On the Surface, Shift-click (or a desk's long press) rolls only the
       seed; on a phone that is a menu item.
+  - **Locks supersede every roll** (Ruby): rolls skip locked controls, and
+    `restoreLocked` puts menus back before sliders (a surface put back resets
+    its sliders).
 - **Asking and refusing:**
   - `askSure({title, body, confirmLabel, danger})` is the soft no, the app's
     own modal (never `confirm()`).

@@ -6,9 +6,10 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Kallichore)
-- THE DIE'S LEVELS: hold a die on a phone, or tap ▾ beside it on a desk: Gently, As usual, Wildly, Back
-  (and Only a new seed on the Surface). Does Gently move enough, and Wildly too much?
+## 1 · Ruby to judge (new in Jupiter–Callirrhoe)
+- THE DICE remember their way (Gently / As usual / Wildly) and every die, Summon button and the light's ⚄
+  follows it. Gently: colors drift a little, the light turns a little, the surface stays, typefaces stay
+  in their family. Locks now hold everywhere (knob padlocks had been disappearing).
 
 ## From Jupiter–Aoede
 - SURFACE STUDIES: all 36 surfaces from the future-directions document as graphs of parts (Start from…

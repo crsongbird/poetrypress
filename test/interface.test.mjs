@@ -140,12 +140,19 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
     && /aspect: '9:16'/.test(src('appEvents.js')));
   check('release archives: the build removes the old ones before writing the new', /if\(f\.endsWith\('\.zip'\)\)\{ \(await import\('fs'\)\)\.unlinkSync\('release\/' \+ f\)/.test(src('build.mjs')));
 }
-check('THE DICE: a die beside every section\'s lock rolls only that section (the Summon buttons where a section has one; locked controls stay); Shift-click on the Surface\'s die rolls only the seed',
-  /function rollSection\(root, level = 'usual'\)\{/.test(src('appEvents.js')) && /addDie\(card, card\.querySelector\(':scope > summary'\)\); addMasterLock\(card/.test(src('appEvents.js'))
-  && /if\(surface && \(e\.shiftKey \|\| wasHeld\)\)/.test(src('appEvents.js')) && /withLocksPreserved\(\(\) => \{\n    const ids = lockablesIn\(root\)/.test(src('appEvents.js')) && /\.die-btn\{/.test(src('poetrypress.css')));
+check('THE DICE: a die beside every section\'s lock rolls only that section (through its Summon button where it has one); Shift-click on the Surface\'s die rolls only the seed',
+  /function rollSection\(root, level = 'usual', opts = \{\}\)\{/.test(src('appEvents.js')) && /addDie\(card, card\.querySelector\(':scope > summary'\)\); addMasterLock\(card/.test(src('appEvents.js'))
+  && /if\(surface && \(e\.shiftKey \|\| wasHeld\)\)/.test(src('appEvents.js')) && /\.die-btn\{/.test(src('poetrypress.css')));
 { const ev = src('appEvents.js'), css = src('poetrypress.css'), st = src('strings.js');
-  check('THE DIE\'S LEVELS (Ruby): gently (±8%, menus and switches stay, colors turn together), as usual, wildly (whole range, switches too)',
-    /const DIE_GENTLE = 0\.08;/.test(ev) && /if\(level !== 'gentle'\) for\(const id of menus\)/.test(ev) && /hslHex\(\(\(h \+ turn\) % 360/.test(ev) && /level === 'wild' && !\(el\.classList && el\.classList\.contains\('eye'\)\)/.test(ev));
+  check('THE DIE\'S WAYS (Ruby): gently (±8%, colors drift together and a touch apart, the light moves a little, the surface never changes, a similar typeface), as usual, wildly (never a switch)',
+    /const DIE_GENTLE = 0\.08/.test(ev) && /if\(level === 'gentle'\)\{\n        \/\/ the surface \(and every other menu\) stays/.test(ev) && /similarFont\(\+el\.value\)/.test(ev)
+    && /if\(level === 'gentle'\) setLight\(deg \+ \(Math\.random\(\)\*2 - 1\)\*15/.test(ev) && !/el\.checked = !el\.checked/.test(ev));
+  check('the way last chosen is remembered (an app preference, never in a look), and every die, Summon button and the light\'s ⚄ rolls that way',
+    /DIE_LEVEL_KEY = 'uv\.dice\.level'/.test(ev) && /rollWithBack\(root, dieLevel\(\)\)/.test(ev) && (ev.match(/const lv = dieLevel\(\), card = summonCard\('random(Font|Bg|Surface)Btn'\)/g) || []).length === 3
+    && /if\(state\.locks\.has\('textureLight'\)\)\{ toast\(DIE\.locked\)/.test(ev));
+  check('LOCKS SUPERSEDE every roll (Ruby): a roll skips what is locked, and putting locks back sets menus first (a surface put back cannot reset its locked sliders)',
+    /const dieRollable = id => \{ const el = \$\(id\); return !!el && !el\.disabled && !state\.locks\.has\(id\)/.test(ev) && /for\(const id of \[\.\.\.ids\.filter\(isMenu\), \.\.\.ids\.filter\(id => !isMenu\(id\)\)\]\)/.test(ev)
+    && /if\(free\('fontFamily'\)\)/.test(ev));
   check('the levels live in a long press on a phone and in ▾ beside the die on a desk (Ruby)',
     /if\(phone\(\)\) openDieMenu\(root, btn, surface\)/.test(ev) && /more\.className = 'die-more'/.test(ev) && /body\.is-mobile \.die-more\{ display:none; \}/.test(css) && /body\.is-mobile \.die-menu\{/.test(css));
   check('BACK puts back only what the section\'s last roll changed, and waits for a Summon that asks first',
