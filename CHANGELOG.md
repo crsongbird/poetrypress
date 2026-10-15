@@ -4,6 +4,38 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Pan (2026-10-15)
+
+The first release named for Saturn's moons: Jupiter's ran out.
+
+- **The Athanor has a wiki.** Help is now an encyclopedia of the editor,
+  with contents, search, Back and links between pages:
+  - **Start here:** what a node editor is, a step-by-step first surface, and
+    how to read a graph.
+  - **Data and wires:** what a gray map, a picture, a color, a number and a
+    curve each are, what happens when kinds don't match, ⚙ settings,
+    required inputs, driving a setting with a map, and wire ranges, with
+    worked examples.
+  - **Techniques:** masks and blending, blend modes, height maps and light,
+    seeds and Variation, size and resolution.
+  - **A page for every part:** what it does and why you'd use it, its
+    inputs, outputs and settings each explained, things to try, and related
+    pages.
+  - A glossary.
+- **About this part** in every part's menu opens its page. A port's menu can
+  explain what it carries.
+- **Menus explain themselves:** each action has a plain name and a line
+  saying what it does ("Connect its output…: click the part it should
+  feed", "Set wire range…: which part of its range the wire sweeps").
+- **Clearer names:** Levels has Black Point and White Point, Threshold a
+  Cutoff, Perlin Noise Octaves; ports read "map" and "picture" rather than
+  "field" and "image". Some parts are renamed for what they do: Simple
+  Lighting, Paint Swipes, Growth Medium, Differential Growth, Watercolor
+  Bleed, Stained Glass, Card Deal.
+- The notes shown when a graph opens explain how it is built again, and what
+  to try.
+- Tooltips elsewhere in the app are full sentences again.
+
 ## Jupiter–Kore (2026-10-14)
 
 - **Clearer, shorter text in the Athanor.** Part descriptions, the notes

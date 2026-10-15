@@ -2175,6 +2175,50 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .fd-swatch{ display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
 .fd-swatch.pp{ border-radius:0; transform:rotate(45deg) scale(.8); }
 @media (max-width: 640px){ .forge-doc dl{ grid-template-columns:1fr; } .forge-doc dd{ margin-bottom:6px; } }
+/* THE WIKI (forge.js + athanorWiki.js): contents beside the page on a desk; on a phone the contents fold
+   away behind ☰ Contents and the page has the width */
+.wk-tools{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.wk-search{ width:min(220px, 40vw); margin:0; padding:4px 8px; font:13px var(--ui-sans); background:var(--fg-ground); color:var(--fg-text); border:1px solid var(--fg-line); border-radius:0; }
+.wk-back:disabled{ opacity:.35; cursor:default; }
+.wk-contents-btn{ display:none; }
+.wk-body{ display:grid; grid-template-columns:minmax(170px, 210px) 1fr; gap:22px; padding-top:8px; }
+.wk-nav{ position:sticky; top:58px; align-self:start; max-height:calc(var(--vvh, 100vh) - 140px); overflow-y:auto; font-family:var(--ui-sans); font-size:13px; padding-right:6px; border-right:1px solid var(--fg-line); }
+.wk-nav h4{ margin:12px 0 4px; font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:.08em; font-size:13px; color:var(--fg-dim); }
+.wk-nav ul{ list-style:none; margin:0; padding:0; } .wk-nav li{ margin:2px 0; }
+.wk-nav a{ color:var(--fg-text); text-decoration:none; display:block; padding:2px 6px; border-left:2px solid transparent; }
+.wk-nav a:hover{ color:var(--fg-accent); } .wk-nav a.on{ color:var(--fg-accent); border-left-color:var(--fg-accent); }
+.wk-page{ min-width:0; outline:none; line-height:1.55; }
+.wk-page h2{ margin:4px 0 6px; font-family:var(--ui-display, var(--ui-caps)); font-weight:500; font-size:22px; color:var(--fg-accent); }
+.wk-page a{ color:var(--fg-accent); text-decoration:none; border-bottom:1px dotted currentColor; }
+.wk-kicker{ margin:0 0 6px; font:12px var(--ui-sans); color:var(--fg-dim); text-transform:lowercase; letter-spacing:.06em; }
+.wk-lead{ font-size:15.5px; }
+.wk-table{ width:100%; border-collapse:collapse; margin:6px 0 10px; font-size:13.5px; }
+.wk-table th{ text-align:left; font:500 12px var(--ui-sans); color:var(--fg-dim); text-transform:lowercase; letter-spacing:.05em; padding:4px 8px; border-bottom:1px solid var(--fg-line); }
+.wk-table td{ vertical-align:top; padding:5px 8px; border-bottom:1px solid color-mix(in srgb, var(--fg-line) 60%, transparent); }
+.wk-table td:first-child{ white-space:nowrap; }
+.wk-range{ font-family:var(--ui-code, monospace); font-size:12px; color:var(--fg-dim); white-space:nowrap; }
+.wk-page .wk-kind{ border:0; white-space:nowrap; color:var(--fg-text); }
+.wk-req{ font:11px var(--ui-sans); color:#ff7a7a; border:1px solid currentColor; padding:0 4px; margin-left:4px; }
+.wk-gear{ color:var(--t-value); }
+.wk-see{ margin-top:14px; font-size:13px; color:var(--fg-dim); }
+.wk-gloss{ display:grid; grid-template-columns:minmax(130px, 190px) 1fr; gap:5px 14px; }
+.wk-gloss dt{ font-weight:500; } .wk-gloss dd{ margin:0; color:var(--fg-dim); }
+.wk-hits{ list-style:none; padding:0; } .wk-hits li{ margin:6px 0; } .wk-tag{ font:11px var(--ui-sans); color:var(--fg-dim); }
+@media (max-width: 760px){
+  .wk-body{ grid-template-columns:1fr; }
+  .wk-contents-btn{ display:inline-block; }
+  .wk-nav{ display:none; position:static; max-height:none; border-right:0; border-bottom:1px solid var(--fg-line); padding-bottom:8px; }
+  .forge-doc.wk-show-nav .wk-nav{ display:block; }
+  .wk-search{ width:100%; order:-1; }
+  .wk-table td:first-child{ white-space:normal; }
+  .wk-range{ white-space:normal; }
+  .wk-gloss{ grid-template-columns:1fr; } .wk-gloss dd{ margin-bottom:6px; }
+}
+body.is-mobile .wk-body{ grid-template-columns:1fr; }
+body.is-mobile .wk-contents-btn{ display:inline-block; }
+body.is-mobile .wk-nav{ display:none; position:static; max-height:none; border-right:0; border-bottom:1px solid var(--fg-line); }
+body.is-mobile .forge-doc.wk-show-nav .wk-nav{ display:block; }
+body.is-mobile .wk-search{ width:100%; }
 .forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
 

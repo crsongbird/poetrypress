@@ -55,7 +55,7 @@ export const PATTERN_STEPS = {
     params: [PAT_SEL('shape', 'Shape', PAT_SHAPES), PAT_R('count', 'Count', 60, 1, 400), PAT_R('size', 'Size', 20, 1, 100), PAT_R('vary', 'Size Variety', 50),
       PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 3,
-    doc: 'Scatters marks (dots, rings, stars, crosses, dashes, sparks, sigils, or any picture) with per-mark size, turn and brightness. Where: a density mask. Which Way: an angle map.',
+    doc: 'Scatters copies of a mark across the page (dots, stars, sigils, or any picture), each with its own size, turn and brightness.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
       const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3)), pic = shape === 'picture' ? asImage(input(n, 1)) : null;
       const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), R0 = num(n, 'size', 20)/100*unit*0.12;
@@ -100,7 +100,7 @@ export const PATTERN_STEPS = {
   grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'],
     params: [PAT_SEL('kind', 'Pattern', ['checker', 'grid lines', 'dots', 'hex dots', 'diamonds', 'stripes']), PAT_R('cells', 'Cells', 12, 2, 120), PAT_R('weight', 'Line or Dot Size', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('soft', 'Softness', 10)],
     cost: () => 1,
-    doc: 'Regular patterns: checker, grid lines, dots, hex dots, diamonds or stripes. A gray map on ⚙ Line or Dot Size makes a halftone.',
+    doc: 'A regular pattern: checkerboard, grid lines, dots in rows or in a honeycomb, diamonds, or stripes.',
     run(E, n){ const { ww, wh, unit, P, num, map, at, field } = E;
       const kind = P(n, 'kind', 'checker'), c = Math.max(2, num(n, 'cells', 12)), a = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
       const WT = map(n, 'weight', 30), SF = num(n, 'soft', 10)/100*0.25 + 0.01;
@@ -121,7 +121,7 @@ export const PATTERN_STEPS = {
   border: { cat: 'Noise', label: 'Border Mask', ins: ['roughen'], outs: ['frame'], io: { ins: ['field'] },
     params: [PAT_SEL('shape', 'Shape', ['square', 'rounded', 'oval']), PAT_R('width', 'Width', 12, 0, 50), PAT_R('soft', 'Softness', 50), PAT_R('rough', 'Roughness', 0)],
     cost: () => 1,
-    doc: 'A frame mask from the page edges: white at the edge, fading over Width. Roughen makes the inner edge ragged.',
+    doc: 'A frame-shaped mask from the page’s edges: white at the edge, fading to black inward.',
     run(E, n){ const { ww, wh, unit, P, num, input, asField, field } = E;
       const shape = P(n, 'shape', 'square'), W = Math.max(0.001, num(n, 'width', 12)/100*unit), soft = Math.max(0.02, num(n, 'soft', 50)/100), rough = num(n, 'rough', 0)/100, R = asField(input(n, 1));
       let q = -1;
@@ -139,7 +139,7 @@ export const PATTERN_STEPS = {
   lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 100), PAT_SEL('edges', 'At the Edges', ['repeat', 'mirror', 'clamp']), PAT_R('scale', 'Scale', 100, 10, 400)],
     cost: () => 1,
-    doc: 'Samples a picture at the coordinates given by two gray maps (Across, Down). Amount below 100 moves only part of the way.',
+    doc: 'Rebuilds a picture by reading it at positions given by two gray maps.',
     run(E, n){ const { ww, wh, N, input, num, map, at, P, asImage, asField } = E;
       const pic = asImage(input(n, 1)); if(!pic) return null;
       const AX = asField(input(n, 2)), AY = asField(input(n, 3)), A = map(n, 'amount', 100), sc = num(n, 'scale', 100)/100, mode = P(n, 'edges', 'repeat');
@@ -156,7 +156,7 @@ export const PATTERN_STEPS = {
   displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 30), PAT_R('blur', 'Smoothing', 20)],
     cost: () => 1.5,
-    doc: 'Refracts a picture by the slope of a gray map, like glass or water.',
+    doc: 'Bends a picture as if seen through glass shaped like a gray map.',
     run(E, n){ const { ww, wh, N, unit, input, num, map, at, asImage, asField, boxBlur } = E;
       const pic = asImage(input(n, 1)); if(!pic) return null;
       let by = asField(input(n, 2)); if(!by) return [pic];
@@ -172,10 +172,10 @@ export const PATTERN_STEPS = {
   // FILTER FORGE'S 3- AND 5-COLOR GRADIENTS and ELEVATION GRADIENT: a gray map colored by up to five colors
   gradmap: { cat: 'Light & Color', label: 'Gradient Map', ins: ['field', 'color 1', 'color 2', 'color 3', 'color 4', 'color 5'], outs: ['picture'],
     io: { ins: ['field', 'colour', 'colour', 'colour', 'colour', 'colour'], outs: ['image'] }, req: true,
-    params: [PAT_R('stops', 'Colors Used', 3, 2, 5), PAT_SEL('blend', 'Between', ['smooth', 'bands']),
+    params: [PAT_R('stops', 'Colors Used', 3, 2, 5), PAT_SEL('blend', 'Transition', ['smooth', 'bands']),
       ['c1', 'Color 1', 'text', '#120C18'], ['c2', 'Color 2', 'text', '#7A3050'], ['c3', 'Color 3', 'text', '#F2C8A0'], ['c4', 'Color 4', 'text', '#80B0D0'], ['c5', 'Color 5', 'text', '#FFFFFF']],
     cost: () => 1,
-    doc: 'Gradient map with up to five stops. Wired colors replace typed ones. Bands: hard steps instead of smooth.',
+    doc: 'Colors a gray map with up to five colors: black takes the first, white the last.',
     run(E, n){ const { N, input, num, P, asField } = E;
       const f = asField(input(n, 1)); if(!f) return null;
       const k = Math.max(2, Math.min(5, Math.round(num(n, 'stops', 3)))), bands = P(n, 'blend', 'smooth') === 'bands';
@@ -191,7 +191,7 @@ export const PATTERN_STEPS = {
   spectrum: { cat: 'Noise', label: 'Spectrum', ins: ['along'], outs: ['picture'], io: { ins: ['field'], outs: ['image'] },
     params: [PAT_SEL('shape', 'Shape', ['linear', 'radial', 'around', 'along a map']), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('repeat', 'Repeat', 1, 1, 12), PAT_R('sat', 'Saturation', 80), PAT_R('light', 'Lightness', 55)],
     cost: () => 1,
-    doc: 'A hue spectrum: linear, radial, angular, or along a gray map. Saturation and Lightness set how strong.',
+    doc: 'A rainbow: every hue in turn, across the page, from the center, around it, or along any gray map.',
     run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
       const shape = P(n, 'shape', 'linear'), along = asField(input(n, 1)), an = num(n, 'angle', 0)*Math.PI/180, rep = Math.max(1, num(n, 'repeat', 1)), s = num(n, 'sat', 80)/100, l = num(n, 'light', 55)/100;
       const ca = Math.cos(an), sa = Math.sin(an), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };

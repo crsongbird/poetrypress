@@ -838,7 +838,7 @@ export const WHIMSY_STEPS = {
       paintRidges(x, E.ww, E.wh, S, { amt: E.num(n, 'bands', 100)/100, zoom: E.num(n, 'distance', 100)/100, colour });
       return [c]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
-  wash: { cat: 'Shape', label: 'Watercolor Wash', ins: ['picture'], outs: ['image'], io: { ins: ['image'], outs: ['image'] },
+  wash: { cat: 'Shape', label: 'Watercolor Bleed', ins: ['picture'], outs: ['image'], io: { ins: ['image'], outs: ['image'] },
     params: [WHIM_R('wet', 'Wetness', 50)], cost: () => 2,
     paint(E, n){ const [c, x] = kitPicture(E.input(n, 1), E.ww, E.wh, E.ww, E.wh); paintWash(x, c, E.ww, E.wh, E.num(n, 'wet', 50)/100); return [c]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },

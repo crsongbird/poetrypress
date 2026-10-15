@@ -31,6 +31,13 @@ const JUPITER = ['Amalthea', 'Thebe', 'Io', 'Europa', 'Ganymede', 'Callisto', 'T
   'Iocaste', 'Ananke', 'Philophrosyne', 'Eurydome', 'Arche', 'Autonoe', 'Pasithee', 'Herse', 'Chaldene', 'Kale',
   'Isonoe', 'Aitne', 'Erinome', 'Taygete', 'Carme', 'Sponde', 'Kalyke', 'Pasiphae', 'Eukelade', 'Eirene',
   'Megaclite', 'Sinope', 'Hegemone', 'Aoede', 'Kallichore', 'Callirrhoe', 'Cyllene', 'Kore'];   // then Saturn's
+// Saturn's named moons, in order of distance (the shepherds and ring moons, the great moons, then the far
+// irregulars). Pandora is left out: Ruby set the word aside (AGENTS §11).
+const SATURN = ['Pan', 'Daphnis', 'Atlas', 'Prometheus', 'Epimetheus', 'Janus', 'Aegaeon', 'Mimas', 'Methone', 'Anthe',
+  'Pallene', 'Enceladus', 'Tethys', 'Telesto', 'Calypso', 'Dione', 'Helene', 'Polydeuces', 'Rhea', 'Titan', 'Hyperion',
+  'Iapetus', 'Kiviuq', 'Ijiraq', 'Phoebe', 'Paaliaq', 'Skathi', 'Albiorix', 'Bebhionn', 'Erriapus', 'Skoll', 'Siarnaq',
+  'Tarqeq', 'Greip', 'Hyrrokkin', 'Jarnsaxa', 'Tarvos', 'Mundilfari', 'Bergelmir', 'Narvi', 'Suttungr', 'Hati',
+  'Farbauti', 'Thrymr', 'Aegir', 'Bestla', 'Fenrir', 'Surtur', 'Kari', 'Ymir', 'Loge', 'Fornjot'];
 // node build.mjs --notes: print the newest section of CHANGELOG.md (the release's commit message)
 if(process.argv.includes('--notes')){
   const log = readFileSync('CHANGELOG.md', 'utf8'), at = log.indexOf('\n## '), next = log.indexOf('\n## ', at + 4);
@@ -39,12 +46,14 @@ if(process.argv.includes('--notes')){
   process.exit(0);
 }
 if(process.argv.includes('--next')){
-  const cur = /RELEASE = '([^']+)'/.exec(readFileSync('release.js', 'utf8'))[1].split('–')[1];
-  const i = JUPITER.indexOf(cur);
-  if(i < 0 || i + 1 >= JUPITER.length){ console.error(`No moon after ${cur} in the list: extend JUPITER in build.mjs.`); process.exit(1); }
-  writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = 'Jupiter–${JUPITER[i + 1]}'`)
+  const [planet, cur] = /RELEASE = '([^']+)'/.exec(readFileSync('release.js', 'utf8'))[1].split('–');
+  const order = [...JUPITER.map(m => ['Jupiter', m]), ...SATURN.map(m => ['Saturn', m])];
+  const i = order.findIndex(([p, m]) => p === planet && m === cur);
+  if(i < 0 || i + 1 >= order.length){ console.error(`No moon after ${planet}–${cur} in the list: extend SATURN in build.mjs.`); process.exit(1); }
+  const [np, nm] = order[i + 1];
+  writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = '${np}–${nm}'`)
     .replace(/RELEASE_DATE = '[^']*'/, `RELEASE_DATE = '${new Date().toISOString().slice(0, 10)}'`));
-  console.log(`release: Jupiter–${cur} → Jupiter–${JUPITER[i + 1]}`);
+  console.log(`release: ${planet}–${cur} → ${np}–${nm}`);
 }
 
 const ORDER = [
@@ -100,6 +109,8 @@ const ORDER = [
   'theme.js',             // UI theme selection
   'editor.js',            // PML highlighting
   'vault.js',             // Spellcrafting and the Grimoire
+  'athanorWikiParts.js',  // the Athanor wiki's page for every part
+  'athanorWiki.js',       // the Athanor's wiki: articles, search, the parts' pages
   'forge.js',             // the Athanor: a node editor for new surfaces (scaffold)
   'appEvents.js',         // entry point, needs everything
 ];

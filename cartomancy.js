@@ -684,7 +684,7 @@ export const CARD_STEPS = {
     paint(E, n){ const { ww, wh, ctx, P, num } = E; const [c, x] = crtStepCanvas(E);
       crtTable(x, ww, wh, crtChooseTable(String(P(n, 'mat', 'seed'))), ctx.light, { vignette: num(n, 'lamp', 50)/100 }); return [c, null]; },
     run(E, n){ const im = E.readCanvas(this.paint(E, n)[0]); return [im, E.lum(im)]; } },
-  deal: { cat: 'Marks', label: 'Deal (Cards)', ins: ['table', 'fire hue', 'water hue', 'air hue', 'earth hue'], outs: ['image', 'mask'], io: { ins: ['image', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
+  deal: { cat: 'Marks', label: 'Card Deal', ins: ['table', 'fire hue', 'water hue', 'air hue', 'earth hue'], outs: ['image', 'mask'], io: { ins: ['image', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [CRT_SEL('game', 'Game', ['seed', ...Object.keys(CARD_GAMES)]), CRT_SEL('stock', 'Card Stock', ['seed', ...Object.keys(CARD_STOCKS)]), CRT_SEL('gilt', 'Edge', ['seed', ...Object.keys(GILT)]),
       CRT_SEL('suits', 'Suits', ['seed', '2', '3', '4']), CRT_SEL('coinage', 'Coinage', ['seed', ...COINAGES.map(c => c.name)]),
       CRT_R('count', 'Cards in Play', 100, 20, 300), CRT_R('size', 'Card Size', 100, 50, 200), CRT_R('scatter', 'Scatter', 20, 0, 90), CRT_R('stakes', 'Stakes', 50),

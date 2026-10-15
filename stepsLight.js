@@ -363,7 +363,7 @@ export const LIGHT_STEPS = {
     paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
     run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
       return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
-  strokes: { cat: 'Marks', label: 'Angry Strokes', ins: [], outs: ['painting', 'heights'], io: { outs: ['image', 'field'] },
+  strokes: { cat: 'Marks', label: 'Paint Swipes', ins: [], outs: ['painting', 'heights'], io: { outs: ['image', 'field'] },
     params: [LT_R('width', 'Stroke Width', 100, 60, 380), LT_R('count', 'Stroke Count', 100, 20, 260), LT_R('wet', 'Wetness', 0)], cost: () => 6,
     paint(E, n){ return paintAngryStrokes(E.ww, E.wh, E.num(n, 'count', 100)/100, E.num(n, 'width', 100)/100, E.num(n, 'wet', 0)/100); },
     run(E, n){ const [c, hc] = this.paint(E, n); return [kitImage(c, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },

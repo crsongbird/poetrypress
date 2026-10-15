@@ -33,7 +33,7 @@ check('Drawflow loads only when the Athanor opens, from the CDN at an exact vers
   check('a long press or a right-click opens what a thing can do; several things under the finger ask "Which did you mean?"',
     html.includes('id="forgeMenu"') && /Which did you mean\?/.test(fsrc) && /area\.addEventListener\('contextmenu'/.test(fsrc) && /setTimeout\(\(\) => \{ if\(answered \|\| !pressAt\) return;/.test(fsrc));
   check('a setting can be bound to a slider or the dial, given a range, or have a Knob wired into it — from its menu',
-    /Bind to a page slider/.test(fsrc) && /'Set range…'/.test(fsrc) && /'Set wire range…'/.test(fsrc) && /'Wire a Knob in'/.test(fsrc));
+    /Bind to a page slider/.test(fsrc) && /'Set its range…'/.test(fsrc) && /'Set wire range…'/.test(fsrc) && /'Add a Knob for it'/.test(fsrc));
   check('the view: everything in sight (⌖), and tidying into columns (pinned nodes stay)', html.includes('id="forgeFit"') && /const fitView = \(\) =>/.test(fsrc) && /layoutAthanor\(data\); for\(const \[id, p\] of Object\.entries\(pins\)\)/.test(fsrc));
   check('kept surfaces: a shelf in this browser, opened again, saved as a file and brought in (each checked)',
     F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /v = validate \? validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeKeptBtn"'));

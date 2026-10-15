@@ -490,14 +490,14 @@ check('the inset box is painted on its own layer, then blended on as one image (
   check('the light is raking by default, softer as it rises, flat overhead', Math.abs(full.lx - 1) < 1e-9 && Math.abs(half.lx - 0.5) < 1e-9 && over.lx === 0);
   check('the light\'s height keys the texture cache only when it is not the horizon', /\(lightTilt === 100 \? '' : `_t\$\{lightTilt\}`\)/.test(src('textureGenerators.js')));
   const P = await import('../pmlVars.js');
-  check('§Build names the release, even unbuilt', /^Jupiter–\w+/.test(P.BUILD));
+  check('§Build names the release, even unbuilt', /^(Jupiter|Saturn)–\w+/.test(P.BUILD));
   {
     // the whole stamp survives inside a segment with directives (a slash in it
     // was read as a directive, leaving only "Jupiter")
     const T = await import('../textParsers.js');
     const line = T.buildLines(P.resolvePmlVariables('<[\\<§Build\\>]/right/basis:140>', {}), true, true)[0];
     const text = (line.parts || [{ segments: line.segments }]).flatMap(p => p.segments).map(s => s.text).join('');
-    check('the build stamp prints whole inside a segment', text.includes('Jupiter–Io') || /Jupiter–\w+/.test(text));
+    check('the build stamp prints whole inside a segment', text.includes('Jupiter–Io') || /(Jupiter|Saturn)–\w+/.test(text));
   }
   check('build.mjs --next walks Jupiter\'s moons in order', /const JUPITER = \['Amalthea', 'Thebe', 'Io', 'Europa', 'Ganymede', 'Callisto'/.test(src('build.mjs')));
   check('the Needle stands in a back layer, beside downtown, shorter than the towers',

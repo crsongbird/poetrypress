@@ -27,7 +27,7 @@ import { paramPort } from './steps.js';
 export const TEXTURE_CHAINS = {
   // ═══ 🜛 BASICS: quiet grounds, two or three parts each — the easiest graphs to open and learn from ═══
   // 🜛 Plain Noise: Value Noise → Levels
-  plainnoise: { label: 'Plain Noise', div: 2, teach: 'Value Noise → Levels. Scale and Detail set the noise; Contrast moves the Levels points together. Try: feed it into a Warp or a Color Ramp.', nodes: [
+  plainnoise: { label: 'Plain Noise', div: 2, teach: 'A soft cloudy ground. Value Noise makes the clouds: Scale sets how many across the page, Detail adds finer clouds over them (octaves). Levels sets the Contrast by moving its dark and light points toward each other. Try: wire this noise into another part\'s gray input, a Warp or a Color Ramp.', nodes: [
       ['knob', { slot: '1', name: 'Scale', def: 30 }, 40, 40],                     // 1
       ['knob', { slot: '2', name: 'Detail', def: 50 }, 40, 140],                   // 2
       ['knob', { slot: '3', name: 'Contrast', def: 20 }, 40, 240],                 // 3
@@ -37,7 +37,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 4, paramPort('noise', 'scale')], [2, 1, 4, paramPort('noise', 'octaves')], [3, 1, 5, paramPort('levels', 'lo')], [3, 1, 5, paramPort('levels', 'hi')],
       [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🜛 Stripes: Waves → Threshold
-  stripes: { label: 'Stripes', div: 2, teach: 'Waves → Threshold. Stripe Width is the threshold; Softness blends back toward a sine. Try: Value Noise into the Waves\' Warp for wood grain.', nodes: [
+  stripes: { label: 'Stripes', div: 2, teach: 'Waves makes smooth bands of light and dark; Threshold cuts them into stripes. Where Threshold cuts sets the Stripe Width, and its Softness blurs the edges back toward waves. Angle turns the Waves. Try: wire a Value Noise into the Waves\' Warp input to make the stripes wander like wood grain.', nodes: [
       ['knob', { slot: '1', name: 'Stripe Count', def: 20 }, 40, 40],              // 1
       ['knob', { slot: '2', name: 'Stripe Width', def: 50 }, 40, 140],             // 2
       ['knob', { slot: '3', name: 'Softness', def: 20 }, 40, 240],                 // 3
@@ -48,7 +48,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 5, paramPort('waves', 'freq')], [4, 1, 5, paramPort('waves', 'angle')], [2, 1, 6, paramPort('threshold', 'at')], [3, 1, 6, paramPort('threshold', 'soft')],
       [5, 1, 6, 1], [6, 1, 7, 1]] },
   // 🜛 Polka Dots: Cells (in rows, no jitter) → Threshold of the distance to each center
-  polka: { label: 'Polka Dots', div: 2, teach: 'Cells (no jitter = a grid) → Threshold of the distance: one dot per point. Spacing is the cell scale; Scatter is the jitter. Try: wire Cells\' Edges into the Surface instead.', nodes: [
+  polka: { label: 'Polka Dots', div: 2, teach: 'Polka dots, made from Cells. With no Jitter, Cells puts one point in the middle of every square of a grid; its first output is how far each spot is from the nearest point. Threshold keeps what is near: a round dot about every point. Spacing is Cells\' Scale, Dot Size is where Threshold cuts, and Scatter is the Jitter that throws the points out of their rows. Try: wire the Cells\' Edges output into the Surface instead.', nodes: [
       ['knob', { slot: '1', name: 'Spacing', def: 50 }, 40, 40],                   // 1
       ['knob', { slot: '2', name: 'Dot Size', def: 45 }, 40, 140],                 // 2
       ['knob', { slot: '3', name: 'Scatter', def: 0 }, 40, 240],                   // 3
@@ -58,7 +58,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 4, paramPort('cells', 'scale')], [3, 1, 4, paramPort('cells', 'jitter')], [2, 1, 5, paramPort('threshold', 'at')],
       [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🜛 Checkerboard: two Waves, across and down, each cut by Threshold; Math (difference) crosses them
-  checker: { label: 'Checkerboard', div: 2, teach: 'Two Waves (across and down), each thresholded, combined with Math › Difference. One Knob drives both frequencies so the squares stay square. Try: Math › Multiply for windows, Max for plaid.', nodes: [
+  checker: { label: 'Checkerboard', div: 2, teach: 'Two Waves, one across and one down, are each cut into stripes by Threshold. Math, set to Difference, keeps a square where exactly one of the two stripes is light: that is a checkerboard. One Knob (Squares) sets both Waves\' Frequency, Softness both Thresholds, and Turn both Angles, so the squares stay square. Try: set Math to Multiply for a grid of windows, or Max for a plaid.', nodes: [
       ['knob', { slot: '1', name: 'Squares', def: 20 }, 40, 40],                   // 1
       ['knob', { slot: '2', name: 'Softness', def: 10 }, 40, 160],                 // 2
       ['knob', { slot: '3', name: 'Turn', def: 0 }, 40, 280],                      // 3
@@ -72,7 +72,7 @@ export const TEXTURE_CHAINS = {
       [2, 1, 6, paramPort('threshold', 'soft')], [2, 1, 7, paramPort('threshold', 'soft')],
       [4, 1, 6, 1], [5, 1, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
   // 🜛 Gradient: a straight and a round Gradient, Mixed by Roundness; Levels bends the falloff
-  softgradient: { label: 'Gradient', div: 4, teach: 'A linear and a radial Gradient, mixed by Roundness; Levels\' gamma is the falloff. Try: Value Noise into Mix\'s amount.', nodes: [
+  softgradient: { label: 'Gradient', div: 4, teach: 'A smooth fall from dark to light. There are two Gradient parts, one straight and one round (Invert turns the round one into a glow, light in the middle); Mix blends between them by Roundness, so the ramp can bend into a glow. Angle turns the straight one. Levels\' Gamma is the Falloff: how quickly the light gives way. Try: wire a Value Noise into Mix\'s amount instead of the Knob.', nodes: [
       ['knob', { slot: '1', name: 'Angle', def: 25 }, 40, 40],                     // 1
       ['knob', { slot: '2', name: 'Roundness', def: 0 }, 40, 160],                 // 2
       ['knob', { slot: '3', name: 'Falloff', def: 50 }, 40, 280],                  // 3
@@ -85,7 +85,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 4, paramPort('gradient', 'angle')], [2, 1, 6, paramPort('mix', 't')], [3, 1, 7, paramPort('levels', 'gamma')],
       [4, 1, 6, 1], [5, 1, 9, 1], [9, 1, 6, 2], [6, 1, 7, 1], [7, 1, 8, 1]] },
   // 🜛 Cells: Cells' distance (inverted: domes) and edges (inverted: flat cells), Mixed by Lines; lit by the dial
-  cells: { label: 'Cells', div: 2, teach: 'Cells → Invert, mixing domes and flat cells by Lines. The same map feeds Height (scaled by Relief), so the dial lights it. Try: Order at 0 for tiles.', nodes: [
+  cells: { label: 'Cells', div: 2, teach: 'Like pebbles, cobbles or a sponge. Cells gives the distance to each cell\'s middle and the lines between cells; Invert turns each the right way up (light in the middle). Mix blends the round domes into flat cells with crisp lines by Lines. The same picture goes into the Surface\'s Height, scaled by Relief, so the dial lights it. Try: turn the light dial on the page, then set Order to 0 for a grid of tiles.', nodes: [
       ['knob', { slot: '1', name: 'Cell Size', def: 40 }, 40, 40],                 // 1
       ['knob', { slot: '2', name: 'Order', def: 20 }, 40, 140],                    // 2
       ['knob', { slot: '3', name: 'Lines', def: 50 }, 40, 240],                    // 3
@@ -100,7 +100,7 @@ export const TEXTURE_CHAINS = {
       [8, 1, 9, 1], [9, 1, 11, 1], [9, 1, 10, 1], [4, 1, 10, 2], [10, 1, 11, 2]] },
   // √ Harsh Rain: far sheets, then near streaks drawn over them; the dial is
   // where the rain comes from, Gusts swings it about that
-  rainstreaks: { label: 'Harsh Rain', div: 2, teach: 'Two Streaks parts: far sheets, then near streaks. The Light Dial sets the direction. Try: turn the dial, then raise Gusts.', nodes: [
+  rainstreaks: { label: 'Harsh Rain', div: 2, teach: 'The Light Dial sets the direction the rain comes from. The first Streaks part draws far, soft sheets of rain; the second draws near streaks over them. The two Knobs are this texture\'s sliders on the page (Rain Zoom and Gusts), wired into the settings they move. Try: turn the dial, then raise Gusts.', nodes: [
       ['knob', { slot: '1', name: 'Rain Zoom', def: 0 }, 40, 300],                 // 1
       ['knob', { slot: '2', name: 'Gusts', def: 0 }, 40, 170],                     // 2
       ['dial', {}, 40, 40],                                                        // 3
@@ -111,7 +111,7 @@ export const TEXTURE_CHAINS = {
       [1, 1, 5, paramPort('streaks', 'length')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // √ Silverpoint Hatch: soft forms say where the drawing is dark; hatching
   // gathers there, along the dial; the ink tarnishes with Age
-  hatch: { label: 'Silverpoint Hatch', div: 2, teach: 'Soft Forms → Hatching along the dial\'s direction; Age mixes two inks, laid on gray by a Color Ramp. Try: raise Cross-Hatching, then change Soft Forms\' Size.', nodes: [
+  hatch: { label: 'Silverpoint Hatch', div: 2, teach: 'Soft Forms makes a few large shapes that say where the drawing is dark. Hatching draws pencil strokes that gather in those dark places, along the dial\'s direction. Two Colors, mixed by the Age knob, make the ink, and a Color Ramp lays the ink over a gray ground. Try: raise Cross-Hatching, then change Soft Forms\' Size.', nodes: [
       ['knob', { slot: '1', name: 'Cross-Hatching', def: 38 }, 40, 180],          // 1
       ['knob', { slot: '2', name: 'Line Density', def: 13 }, 40, 300],            // 2
       ['knob', { slot: '3', name: 'Age', def: 30 }, 320, 560],                    // 3
@@ -130,7 +130,7 @@ export const TEXTURE_CHAINS = {
   // 🜚 Linen: the weave (a normal map, lit by the dial) → the cloth coloured
   // and its details laid on as heights, lit. Its grid keeps the threads at
   // least three pixels apart, and no finer (a preview no longer pays the export's price)
-  linen: { label: 'Linen Tooth', teach: 'Weave → Cloth & Details (two hues, seams, stitching, lit by the dial). Try: move Weave from silk to burlap.', grid: (w, h, S, k) => weaveGridDiv(w, h, S, (50 + (k[0] ?? 14.3)*3.5)/100), nodes: [
+  linen: { label: 'Linen Tooth', teach: 'Weave makes the threads, as shading and sheen. Cloth & Details colors them with two Hues and adds seams and stitching, lit by the dial. The Knobs are this texture\'s sliders on the page. Try: move the Weave knob from silk to burlap.', grid: (w, h, S, k) => weaveGridDiv(w, h, S, (50 + (k[0] ?? 14.3)*3.5)/100), nodes: [
       ['knob', { slot: '1', name: 'Weave Scale', def: 14 }, 40, 40],              // 1
       ['knob', { slot: '2', name: 'Details', def: 42 }, 40, 300],                 // 2
       ['knob', { slot: '3', name: 'Weave', def: 50 }, 40, 170],                   // 3
@@ -143,7 +143,7 @@ export const TEXTURE_CHAINS = {
       [4, 1, 7, 1], [4, 2, 7, 2], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ∆ Fractured Glaze: the crazing (heights, glaze, grime, the finest cracks)
   // and the brushwork (how thick it was painted) → the glaze lit and coloured
-  crackedglaze: { label: 'Fractured Glaze', div: 2, teach: 'Crazing (height, glaze, grime, fine cracks) + Brushwork (glaze thickness) → Glaze. Try: raise Enameling.', nodes: [
+  crackedglaze: { label: 'Fractured Glaze', div: 2, teach: 'Crazing makes four maps of cracked glaze: its heights, the glaze, grime in the cracks, and the finest cracks. Brushwork says how thickly the glaze was painted. Glaze lights and colors all of these with two Hues. Try: raise Enameling to see the glaze age and peel.', nodes: [
       ['knob', { slot: '1', name: 'Fracture Scale', def: 12 }, 40, 40],           // 1
       ['knob', { slot: '2', name: 'Crack Density', def: 10 }, 40, 170],           // 2
       ['knob', { slot: '3', name: 'Enameling', def: 0 }, 40, 300],                // 3
@@ -159,7 +159,7 @@ export const TEXTURE_CHAINS = {
   // picks the game, the table, the cards and the coin (each 'seed' setting:
   // choose one instead to fix it). Its four suits are the page's two Accents
   // and the texture's two Hues. Drawn on the page at full size (a canvas pass).
-  cards: { label: 'Cartomancy', canvas: true, teach: 'Table → Deal. Menus left at “seed” let the seed choose game, table, cards and coins. Suits come from the accents and hues. Try: Game › ring, then ⟳ Seed.', nodes: [
+  cards: { label: 'Cartomancy', canvas: true, teach: 'Table draws a table top under a lamp; Card Deal lays a card game on it. The menus left at “seed” let the seed choose (the game, the table, the cards, the coins); pick one to fix it. The four suits are the page\'s two Accents and the texture\'s two Hues. The Knobs are this texture\'s sliders: Cards in Play, Scatter, Stakes, Clutter (what else is on the table) and Wear (how damaged the cards are). Try: set Game to “ring”, then press ⟳ Seed. A Table Objects part lays the same candles, cups and letters on any picture.', nodes: [
       ['knob', { slot: '1', name: 'Cards in Play', def: 29 }, 40, 40],            // 1  (100 of 20–300)
       ['knob', { slot: '2', name: 'Scatter', def: 22 }, 40, 140],                 // 2  (20 of 0–90)
       ['knob', { slot: '3', name: 'Stakes', def: 50 }, 40, 240],                  // 3
@@ -178,7 +178,7 @@ export const TEXTURE_CHAINS = {
   // ♡ Sleep Haze: smoke rising in a dusty room, a shaft of light through it
   // from the dial's way, dust catching the light. Drawn by a canvas pass (the
   // smoke on its own soft grid, the motes at full size).
-  clouds: { label: 'Sleep Haze', canvas: true, teach: 'Smoke (density) → Light Shaft from the dial → Dust Motes inside the beam. Try: Value Noise into the Light Shaft instead of Smoke.', nodes: [
+  clouds: { label: 'Sleep Haze', canvas: true, teach: 'Smoke makes a density map: haze in layers and wisps rising (Lift and Drag set how). A Light Shaft shines from the Light Dial\'s direction through that density, so the smoke glows inside the beam; its second output is the beam itself. Dust Motes draws specks that show only where the beam catches them. Try: wire a Value Noise into the Light Shaft instead of the Smoke.', nodes: [
       ['knob', { slot: '1', name: 'Lift', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Drag', def: 30 }, 40, 140],                    // 2  (60 of 0–200)
       ['knob', { slot: '3', name: 'Dust', def: 35 }, 40, 240],                    // 3
@@ -190,7 +190,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 5, paramPort('smoke', 'lift')], [2, 1, 5, paramPort('smoke', 'drag')], [5, 1, 6, 1], [4, 1, 6, 2], [3, 1, 6, paramPort('shaft', 'dust')],
       [6, 1, 7, 1], [6, 2, 7, 2], [3, 1, 7, paramPort('motes', 'dust')], [7, 1, 8, 1]] },
   // √ Scattered Polygons: flakes of leaf over a grey ground, in the leaf's hue
-  metalleaf: { label: 'Scattered Polygons', canvas: true, teach: 'Flakes over its Base (empty here: gray). Shape, Sheen and Glitter vary the flakes; Mask lets Mix place them on another picture. Try: Value Noise into Base.', nodes: [
+  metalleaf: { label: 'Scattered Polygons', canvas: true, teach: 'Flakes lays translucent flakes of leaf, in the Leaf Hue, over whatever comes into its Base (here nothing, so a gray ground). Shape makes them polygons of every kind, Sheen tilts each toward the dial\'s light, and Glitter speckles them. Its Mask output shows where the flakes lie, so Mix can lay them onto another picture. Try: wire a Value Noise into Base.', nodes: [
       ['knob', { slot: '1', name: 'Leaf Size', def: 13 }, 40, 40],                // 1  (100 of 60–360)
       ['knob', { slot: '2', name: 'Coverage', def: 33 }, 40, 140],                // 2  (100 of 20–260)
       ['knob', { slot: '3', name: 'Shape', def: 0 }, 40, 240],                    // 3
@@ -202,7 +202,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 7, paramPort('flakes', 'size')], [2, 1, 7, paramPort('flakes', 'coverage')], [3, 1, 7, paramPort('flakes', 'shape')], [4, 1, 7, paramPort('flakes', 'sheen')],
       [5, 1, 7, paramPort('flakes', 'glitter')], [6, 1, 7, 2], [7, 1, 8, 1]] },
   // 🜚 Stained Glass: the window's panes (four kinds), then the glass lit from behind and in front
-  stainedglass: { label: 'Stained Glass', div: 3, teach: 'Panes (layout, window shape, lead, pane ids) → Glass (backlit toward the dial; texture from cathedral to opalescent). Scene shows a Painted Sky and Ridges through the panes, Tiffany-style. Try: raise Scene, or wire any texture into it.', nodes: [
+  stainedglass: { label: 'Stained Glass', div: 3, teach: 'Panes lays out the window (random shards, a lattice, a rose window or a grid, chosen by Shape; Size Variety mixes big panes with small; Window draws a pointed lancet arch, a round window or an arcade of three lancets in heavier lead, with a border of glass in its own colors beyond) and hands on its maps: the lead, the distance from it, a number for each pane, each pane\'s color slot, where the window is, and the joints where cames meet. Stained Glass lights them from behind, toward the dial\'s sun, and from the front; its lead is flat, dark and soldered at the joints. Its Texture runs from smooth cathedral glass through hammered and seedy to milky opalescent glass. Scene colors each pane from a picture behind it, as Tiffany\'s landscape windows were made: here a Painted Sky with Painted Ridges. Try: raise Scene, or wire any texture into Stained Glass\'s Scene.', nodes: [
       ['knob', { slot: '1', name: 'Pane Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
       ['knob', { slot: '2', name: 'Leading', def: 32 }, 40, 140],                 // 2  (100 of 30–250)
       ['knob', { slot: '3', name: 'Shape', def: 25 }, 40, 240],                   // 3
@@ -222,7 +222,7 @@ export const TEXTURE_CHAINS = {
       [9, 1, 6, paramPort('panes', 'variety')]] },   // (Scene also sets Size Variety: a scene wants small panes for its detail)
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
   // 🝊 Aurora: Deep Field's stars, then curtains of rays over them
-  aurorasky: { label: 'Aurora', canvas: true, teach: 'Starfield → Aurora Curtains: rays over a folded hem, green low, red high. The Light Dial leans the rays. Screened over the page. Try: raise Red Sky and Curtain Height.', nodes: [
+  aurorasky: { label: 'Aurora', canvas: true, teach: 'Starfield lays Deep Field\'s stars on black; Aurora Curtains hangs curtains of light over them, each made of thousands of fine rays rising from a bright folded hem — green low down, red high up (the two colors oxygen glows at different heights), a pink fringe at the hem. The Light Dial goes into Field From: the rays lean along it and the hem bends. It is screened over the page, as Deep Field is. Try: raise Red Sky and Curtain Height for a rare red aurora.', nodes: [
       ['knob', { slot: '1', name: 'Curtain Height', def: 43 }, 40, 40],           // 1  (100 of 40–180)
       ['knob', { slot: '2', name: 'Rays', def: 35 }, 40, 140],                     // 2  (100 of 20–250)
       ['knob', { slot: '3', name: 'Curtains', def: 25 }, 40, 240],                 // 3  (2 of 1–5)
@@ -236,7 +236,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 8, paramPort('curtains', 'height')], [2, 1, 8, paramPort('curtains', 'rays')], [3, 1, 8, paramPort('curtains', 'curtains')], [4, 1, 8, paramPort('curtains', 'red')],
       [5, 1, 7, paramPort('starfield', 'amount')], [6, 1, 8, 2], [7, 1, 8, 1], [8, 1, 9, 1], [10, 1, 8, paramPort('curtains', 'horizon')]] },
   // 🜚 Fractured Glaze (the second): cracks that SPREAD — Tarbell's Substrate — lit as glaze by the dial
-  crackle: { label: 'Fractured Glaze', div: 2, teach: 'Spreading Cracks (Tarbell\'s Substrate: long early cracks, shorter later ones at right angles) + Brushwork → Glaze. From One Point bursts them from the dial. Try: raise Chipping, or From One Point at 100.', nodes: [
+  crackle: { label: 'Fractured Glaze', div: 2, teach: 'Spreading Cracks lets cracks run across the glaze: each runs until it meets another, and then a new one starts from a crack already there, at right angles, so the first are long and each after shorter, as real crackle is. From One Point makes the first cracks burst from where the dial points, like an impact. It hands Glaze four maps: heights, where the glaze is, grime in the cracks and the finest cracks; Brushwork says how thick the glaze was painted. Glaze lights it all with your two Hues. Try: Chipping up, or From One Point at 100.', nodes: [
       ['knob', { slot: '1', name: 'Crack Scale', def: 20 }, 40, 40],              // 1  (100 of 50–300)
       ['knob', { slot: '2', name: 'Cracks', def: 21 }, 40, 130],                  // 2  (100 of 20–400)
       ['knob', { slot: '3', name: 'From One Point', def: 30 }, 40, 220],          // 3
@@ -251,7 +251,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 7, paramPort('cracks', 'scale')], [2, 1, 7, paramPort('cracks', 'count')], [3, 1, 7, paramPort('cracks', 'spread')], [4, 1, 7, paramPort('cracks', 'wander')], [5, 1, 7, paramPort('cracks', 'age')],
       [6, 1, 7, 1], [1, 1, 11, paramPort('glaze', 'scale')], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
   // 🝆 Veins of Light: a network grown (space colonization) through a material's ways, glowing inside it
-  veins: { label: 'Veins of Light', div: 2, teach: 'Matrix (material + Ways: seams, gaps, creases) → Tendrils (space colonization from the dial\'s side). Wires are cut into the height, lit by the Light Engine; Glow Hue screened along them. Try: Material › Pebbles, then turn the dial.', nodes: [
+  veins: { label: 'Veins of Light', div: 2, teach: 'Glowing wires grown through stone, sand, fibre or skin. Growth Medium makes the material (Material picks it) and says where something could creep through it: the seams between rock layers, the gaps between pebbles, the creases in skin. Tendrils grows a network from the dial\'s side of the page through those ways: each tip reaches toward the nearest open space and branches where it must (space colonization, the way leaf veins and tree crowns are modelled). Tint colors the material in your Material Hue; the wires are cut into its heights (Math), the Light Engine lights it, and Blend screens the Glow Hue in where the network runs. Try: Material at Pebbles, then turn the dial.', nodes: [
       ['knob', { slot: '1', name: 'Material', def: 10 }, 40, 40],                  // 1
       ['knob', { slot: '2', name: 'Reach', def: 60 }, 40, 130],                    // 2
       ['knob', { slot: '3', name: 'Branching', def: 50 }, 40, 220],                // 3
@@ -272,7 +272,7 @@ export const TEXTURE_CHAINS = {
       [6, 1, 11, paramPort('tendrils', 'slide')], [7, 1, 11, 2], [10, 3, 11, 1], [10, 1, 13, 1], [8, 1, 13, 2], [12, 1, 13, 3], [10, 2, 14, 1], [11, 1, 14, 2],
       [13, 1, 15, 1], [14, 1, 15, 2], [15, 1, 16, 1], [9, 1, 16, 2], [11, 2, 16, 3], [4, 1, 16, paramPort('blend', 'opacity')], [16, 1, 17, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
-  knotwork: { label: 'Knotwork', div: 2, teach: 'Knotwork (Cromwell\'s plait; Breaks turn strands back into knots inside an outline) → Blur the height → Light Engine. Try: Breaks 0 for a plain plait, or more Strands.', nodes: [
+  knotwork: { label: 'Knotwork', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
       ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)
       ['knob', { slot: '2', name: 'Strands', def: 14 }, 40, 130],                  // 2  (6 of 3–24)
       ['knob', { slot: '3', name: 'Breaks', def: 45 }, 40, 220],                   // 3
@@ -287,7 +287,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
       [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
-  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'Discharge (Laplacian growth from Strike From) → Burn into Wood → Light Engine. Material moves from char to embers to acrylic. Try: Poles 1, or Contour Lines into Burn\'s Channels.', nodes: [
+  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Zoom brings it close; Slide moves it along the dial\'s line. Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
       ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                     // 1
       ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 140],                // 2
       ['knob', { slot: '3', name: 'Poles', def: 100 }, 40, 240],                   // 3  (2 of 1–2)
@@ -303,7 +303,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 9, paramPort('discharge', 'reach')], [2, 1, 9, paramPort('discharge', 'branching')], [3, 1, 9, paramPort('discharge', 'poles')], [4, 1, 10, paramPort('burn', 'material')],
       [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1], [13, 1, 9, paramPort('discharge', 'zoom')], [14, 1, 9, paramPort('discharge', 'offset')]] },
   // 🜉 Ruffled Growth: a Growing Line, its body raised and lit
-  growth: { label: 'Ruffled Growth', div: 2, teach: 'Growing Line (differential growth toward the dial\'s Sun) → body as picture and height → Light Engine. Try: raise Seeds, or burn the line into Wood.', nodes: [
+  growth: { label: 'Ruffled Growth', div: 2, teach: 'Differential growth: Differential Growth starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
       ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
       ['knob', { slot: '2', name: 'Fold Size', def: 25 }, 40, 140],                // 2  (100 of 50–250)
       ['knob', { slot: '3', name: 'Seeds', def: 0 }, 40, 240],                     // 3  (1 of 1–7)
@@ -320,7 +320,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 6, paramPort('growline', 'growth')], [2, 1, 6, paramPort('growline', 'fold')], [3, 1, 6, paramPort('growline', 'seeds')], [4, 1, 12, paramPort('material', 'relief')],
       [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1], [14, 1, 6, paramPort('growline', 'zoom')], [15, 1, 6, paramPort('growline', 'offset')]] },
   // 🜚 Poured Wax (Ruby: waxier, and a slider from wax to a fluid's spatter): Pours → Meniscus → colour → Light Engine
-  wax: { label: 'Poured Wax', div: 2, teach: 'Pours → Meniscus → color by thickness → Light Engine with Translucency; Glow Hue screened where thick. Splatter flings drops from the dial. Try: Splatter 80, Viscosity 0 for spilt ink.', nodes: [
+  wax: { label: 'Poured Wax', div: 2, teach: 'Pours makes the pools (pools that touch merge); Splatter flings drops away from where the dial points, so it becomes a spatter of paint or ink. Meniscus gives the pools a flat top and a rounded edge. The wax is lighter where it is thin (Hue & Saturation brightens it, Mix lays it in by Thin), and the Light Engine lights it with Translucency, the way light sinks into wax and comes back out. The Glow Hue is screened in where the wax is thick, as if a candle were inside it. Try: Splatter 80 and Viscosity 0 for spilt ink, Sheen 100 for wet paint.', nodes: [
       ['knob', { slot: '1', name: 'Pool Size', def: 17 }, 40, 40],                 // 1  (100 of 40–400)
       ['knob', { slot: '2', name: 'Pool Count', def: 27 }, 40, 130],               // 2  (100 of 25–300)
       ['knob', { slot: '3', name: 'Viscosity', def: 45 }, 40, 220],                // 3
@@ -343,7 +343,7 @@ export const TEXTURE_CHAINS = {
       [10, 1, 11, 1], [8, 1, 12, 1], [8, 1, 13, 1], [12, 1, 13, 2], [11, 3, 13, 3], [14, 1, 15, 1], [13, 1, 15, 2], [11, 2, 15, 3],
       [15, 1, 16, 1], [11, 1, 16, 2], [16, 1, 17, 1], [9, 1, 17, 2], [11, 4, 17, 3], [17, 1, 18, 1]] },
   // 🜚 Contour Map: Terrain → Contour Lines, inked over the land lit by the Light Engine (the hillshade)
-  contour: { label: 'Contour Map', div: 2, teach: 'Terrain → hillshade (Light Engine), faded by Hillshade; Contour Lines inked over it. Try: a Gradient or another texture into Contour Lines.', nodes: [
+  contour: { label: 'Contour Map', div: 2, teach: 'A survey of an imagined land. Terrain makes the land\'s heights. The Light Engine lights a plain gray picture by those heights (the hillshade), and Mix fades it toward plain gray by the Hillshade knob. Contour Lines draws the lines of equal height, every fifth heavier; the last Mix inks them over the hillshade in the Ink color. Try: wire another texture, or a Gradient, into Contour Lines instead of the Terrain.', nodes: [
       ['knob', { slot: '1', name: 'Terrain Scale', def: 23 }, 40, 40],             // 1  (100 of 40–300)
       ['knob', { slot: '2', name: 'Contour Interval', def: 32 }, 40, 160],         // 2  (100 of 30–250)
       ['knob', { slot: '3', name: 'Hillshade', def: 45 }, 40, 280],                // 3
@@ -358,7 +358,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
       [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
   // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
-  turing: { label: 'Turing Skin', div: 2, teach: 'Turing Pattern (Gray–Scott) → Map Range → Light Engine by Relief. Try: Pattern › Maze, or a Color Ramp before lighting.', nodes: [
+  turing: { label: 'Turing Skin', div: 2, teach: 'Turing Pattern grows the marks of an animal\'s skin or a coral (Pattern slides from spots to holes). Map Range turns it into a picture, the marks a little lighter than the skin between, and the Light Engine raises the marks by Relief and lights them by the dial. Try: wire the Turing Pattern into a Color Ramp first, or set Pattern to Maze.', nodes: [
       ['knob', { slot: '1', name: 'Pattern Scale', def: 25 }, 40, 40],             // 1  (100 of 50–250)
       ['knob', { slot: '2', name: 'Growth', def: 75 }, 40, 140],                   // 2  (80 of 20–100)
       ['knob', { slot: '3', name: 'Pattern', def: 25 }, 40, 240],                  // 3
@@ -370,7 +370,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 5, paramPort('grayscott', 'scale')], [2, 1, 5, paramPort('grayscott', 'growth')], [3, 1, 5, paramPort('grayscott', 'pattern')], [4, 1, 7, paramPort('material', 'relief')],
       [5, 1, 6, 1], [6, 1, 7, 1], [5, 1, 7, 2], [7, 1, 8, 1]] },
   // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
-  watercolour: { label: 'Watercolor Wash', div: 2, teach: 'Washes (two layered blob shapes) → Pigment → Pigment; overlaps mix, edges darken, paint runs toward the dial. Try: Cells or noise into a Pigment\'s Density.', nodes: [
+  watercolour: { label: 'Watercolor Wash', div: 2, teach: 'Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
       ['knob', { slot: '1', name: 'Wash Size', def: 29 }, 40, 40],                 // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Pigment', def: 32 }, 40, 140],                  // 2  (100 of 30–250)
       ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
@@ -383,7 +383,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 7, paramPort('washes', 'size')], [2, 1, 7, paramPort('washes', 'amount')], [3, 1, 7, paramPort('washes', 'wet')], [3, 1, 8, paramPort('pigment', 'wet')], [3, 1, 9, paramPort('pigment', 'wet')],
       [7, 1, 8, 2], [5, 1, 8, 3], [4, 1, 8, 4], [8, 1, 9, 1], [7, 2, 9, 2], [6, 1, 9, 3], [4, 1, 9, 4], [9, 1, 10, 1]] },
   // ♡ Flow-Field Ink: one Flow Lines part, the dial its current
-  flowfield: { label: 'Flow-Field Ink', canvas: true, teach: 'Flow Lines: evenly spaced streamlines along the dial\'s direction, bent by Turbulence. The two hues are the inks. Try: Terrain or noise into Angle Map.', nodes: [
+  flowfield: { label: 'Flow-Field Ink', canvas: true, teach: 'One part makes it: Flow Lines, which grows evenly spaced ink lines along a current and stops each one short of the others. The Light Dial goes into Flow From, so the current runs the way the dial points; Turbulence bends it into eddies. The two Hues are the inks. Try: wire a Terrain or a Value Noise into Angle Map, then turn Turbulence up.', nodes: [
       ['knob', { slot: '1', name: 'Scale', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Lines', def: 26 }, 40, 140],                    // 2  (100 of 30–300)
       ['knob', { slot: '3', name: 'Turbulence', def: 50 }, 40, 240],               // 3
@@ -394,7 +394,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 7, paramPort('flowlines', 'size')], [2, 1, 7, paramPort('flowlines', 'amount')], [3, 1, 7, paramPort('flowlines', 'turbulence')],
       [4, 1, 7, 5], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ♡ First Snow, Burning Mana and Euphoria Dust: one Particles part each, of its own kind
-  snow: { label: 'First Snow', canvas: true, teach: 'Particles › flakes. The Light Dial sets the wind direction; Wind its strength. Try: Kind › sparks.', nodes: [
+  snow: { label: 'First Snow', canvas: true, teach: 'One part makes it: Particles, set to flakes. The Light Dial goes into Wind From, so the wind blows from where the dial points, and the Wind knob says how hard. The flakes are colored by the Snow Hue (or anything wired into Color A). Try: turn the dial with Wind up, then set Kind to sparks.', nodes: [
       ['knob', { slot: '1', name: 'Flake Size', def: 14 }, 40, 40],                // 1  (100 of 60–340)
       ['knob', { slot: '2', name: 'Snowfall', def: 33 }, 40, 140],                 // 2  (100 of 20–260)
       ['knob', { slot: '3', name: 'Wind', def: 0 }, 40, 240],                      // 3
@@ -402,7 +402,7 @@ export const TEXTURE_CHAINS = {
       ['particles', { kind: 'flakes', amount: 100, '~amount': '20,260', size: 100, '~size': '60,340', form: 0, '~form': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'First Snow', ground: 'grey' }, 600, 120]],              // 6
     wires: [[1, 1, 5, paramPort('particles', 'size')], [2, 1, 5, paramPort('particles', 'amount')], [3, 1, 5, paramPort('particles', 'form')], [4, 1, 5, 4], [5, 1, 6, 1]] },
-  embers: { label: 'Burning Mana', canvas: true, teach: 'Particles › sparks: ballistic arcs, white-hot heads. Hues follow the accents until set; Hue Drift varies each spark. Try: a texture into Over.', nodes: [
+  embers: { label: 'Burning Mana', canvas: true, teach: 'One part makes it: Particles, set to sparks, each flung out and bent down by gravity, white-hot at the head. The two Hues color the sparks (they follow the page\'s accents until you set them). Hue Drift lets each spark\'s color stray. Try: wire a Texture into Over to rain sparks on it.', nodes: [
       ['knob', { slot: '1', name: 'Ember Size', def: 7 }, 40, 40],                 // 1  (100 of 60–600)
       ['knob', { slot: '2', name: 'Ember Count', def: 17 }, 40, 140],              // 2  (100 of 20–500)
       ['knob', { slot: '3', name: 'Hue Drift', def: 10 }, 40, 240],                // 3
@@ -410,7 +410,7 @@ export const TEXTURE_CHAINS = {
       ['particles', { kind: 'sparks', amount: 100, '~amount': '20,500', size: 100, '~size': '60,600', form: 10, '~form': '0,100' }, 320, 100],   // 6
       ['surface', { name: 'Burning Mana', ground: 'grey' }, 600, 120]],            // 7
     wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
-  magicparticles: { label: 'Euphoria Dust', canvas: true, teach: 'Particles › motes. Chaos: trails at 0, scattered at 50, bursts at 100. Try: Chaos at 0, then 100.', nodes: [
+  magicparticles: { label: 'Euphoria Dust', canvas: true, teach: 'One part makes it: Particles, set to motes. The two Hues color them (they follow the page\'s accents until you set them). Chaos gathers the dust into trails at 0, scatters it at 50 and bursts it at 100. Try: set Chaos to 0, then 100.', nodes: [
       ['knob', { slot: '1', name: 'Sparkle Size', def: 44 }, 40, 40],              // 1  (100 of 20–200)
       ['knob', { slot: '2', name: 'Sparkle Count', def: 23 }, 40, 140],            // 2  (100 of 10–400)
       ['knob', { slot: '3', name: 'Chaos', def: 50 }, 40, 240],                    // 3
@@ -419,7 +419,7 @@ export const TEXTURE_CHAINS = {
       ['surface', { name: 'Euphoria Dust', ground: 'grey' }, 600, 120]],           // 7
     wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
   // √ Halftone: a soft Value Noise for the tone, printed as a Halftone Screen of dots.
-  halftone: { label: 'Halftone', canvas: true, teach: 'Value Noise (one octave) → Halftone Screen. Dot Scale: cell size; Dot Weight: ink. Try: another texture into the tone, or turn Screen Angle.', nodes: [
+  halftone: { label: 'Halftone', canvas: true, teach: 'A Value Noise with one octave makes a soft, slow tone; Halftone Screen prints it as dots, each as big as the tone is bright there. Dot Scale is the screen\'s cell size and Dot Weight how heavy the dots print. Try: wire another texture into the Halftone Screen\'s tone, or turn its Screen Angle.', nodes: [
       ['knob', { slot: '1', name: 'Dot Scale', def: 14 }, 40, 40],                 // 1  (100 of 50–400)
       ['knob', { slot: '2', name: 'Dot Weight', def: 33 }, 40, 140],               // 2  (100 of 30–240)
       ['noise', { scale: 10, octaves: 1 }, 320, 40],                               // 3
@@ -427,7 +427,7 @@ export const TEXTURE_CHAINS = {
       ['surface', { name: 'Halftone', ground: 'grey' }, 880, 100]],                // 5
     wires: [[1, 1, 4, paramPort('screen', 'scale')], [2, 1, 4, paramPort('screen', 'weight')], [3, 1, 4, 1], [4, 1, 5, 1]] },
   // √ Film Grain: one part, its Kind sliding from silver to digital
-  grain: { label: 'Film Grain', canvas: true, teach: 'Film Grain. Kind runs from silver halide through film and paper to digital sensor noise. Try: Kind 66 (paper), then Blend it over another texture.', nodes: [
+  grain: { label: 'Film Grain', canvas: true, teach: 'One part makes it: Film Grain, whose Kind slides from silver halide through film and paper to a digital sensor, blending neighbours in between. The Knobs are the texture\'s sliders: Grain Size, Contrast and Grain (the Kind). Try: set Kind to 66 for paper, then blend the grain over another texture with Blend.', nodes: [
       ['knob', { slot: '1', name: 'Grain Size', def: 0 }, 40, 40],                 // 1  (100 of 100–600)
       ['knob', { slot: '2', name: 'Contrast', def: 33 }, 40, 140],                 // 2  (100 of 30–240)
       ['knob', { slot: '3', name: 'Grain', def: 33 }, 40, 240],                    // 3
@@ -437,7 +437,7 @@ export const TEXTURE_CHAINS = {
   // √ Painter's Frustration: Angry Strokes lays the paint and its thickness; a little Canvas Weave
   // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
   // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
-  brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'Angry Strokes → thickness mixed with Canvas Weave → Light Engine. Wetness drives the strokes and the engine\'s Relief, Gloss and Shine. Try: turn the dial, then raise Wetness.', nodes: [
+  brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'Paint Swipes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [
       ['knob', { slot: '1', name: 'Stroke Width', def: 13 }, 40, 40],              // 1  (100 of 60–380)
       ['knob', { slot: '2', name: 'Stroke Count', def: 33 }, 40, 140],             // 2  (100 of 20–260)
       ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                   // 3
@@ -449,7 +449,7 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 4, paramPort('strokes', 'width')], [2, 1, 4, paramPort('strokes', 'count')], [3, 1, 4, paramPort('strokes', 'wet')],
       [3, 1, 7, paramPort('material', 'relief')], [3, 1, 7, paramPort('material', 'gloss')], [3, 1, 7, paramPort('material', 'shine')],
       [4, 1, 7, 1], [4, 2, 6, 1], [5, 1, 6, 2], [6, 1, 7, 2], [7, 1, 8, 1]] },
-  landscape: { label: 'Painted Landscape', canvas: true, teach: 'Painted Sky → Painted Ridges → Watercolor Wash → Oil Paint → Light Engine. Distance, Tilt and Color each drive sky and ridges together. Try: set Country, then raise Color.', nodes: [
+  landscape: { label: 'Painted Landscape', canvas: true, teach: 'Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Bleed bleeds the painting (Wetness). Oil Paint repaints it in brushstrokes with the paint\'s heights, and the Light Engine lights those by the dial; the Impasto knob drives both (0: no strokes, as it used to be). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
       ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3

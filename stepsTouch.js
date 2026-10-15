@@ -202,7 +202,7 @@ export const TOUCH_STEPS = {
   // CONTOUR LINES: the isolines of any gray map (d3-contour's maps, found per pixel: how far the value is from its
   // level, against the slope, so a line keeps one width on steep and gentle ground); every Nth an index line, heavier
   contours: { cat: 'Marks', label: 'Contour Lines', ins: ['height'], outs: ['lines'],
-    params: [TOUCH_R('levels', 'Levels', 20, 3, 60), TOUCH_R('weight', 'Line Weight', 100, 25, 400), TOUCH_R('index', 'Index Every', 5, 0, 10), TOUCH_R('strength', 'Strength', 90)], cost: () => 2,
+    params: [TOUCH_R('levels', 'Levels', 20, 3, 60), TOUCH_R('weight', 'Line Weight', 100, 25, 400), TOUCH_R('index', 'Heavy Line Every', 5, 0, 10), TOUCH_R('strength', 'Strength', 90)], cost: () => 2,
     run(E, n){ const { ww, wh, N, unit, num, input, asField } = E, H = asField(input(n, 1)); if(!H) return null;
       // a line finer than half a cell is drawn half a cell wide but fainter, so a small preview keeps the export's weight
       const levels = Math.max(3, Math.round(num(n, 'levels', 20))), lw0 = unit*0.0011*num(n, 'weight', 100)/100, lw = Math.max(0.5, lw0), lwIdx = Math.max(0.5, lw0*2.1);
@@ -748,7 +748,7 @@ Object.assign(TOUCH_STEPS, {
     run(E, n){ const fr = E.num(n, 'frame', 0), more = { variety: E.num(n, 'variety', 0)/100, frame: fr < 30 ? 0 : fr < 55 ? 1 : fr < 80 ? 3 : 2 };   // (Round stays at the top, where it was)
       const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100, E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)), more);
       return [L.lead, L.edge, L.pane, L.pal, L.win, L.joint]; } },
-  glass: { cat: 'Light & Color', label: 'Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue', 'window', 'scene', 'joints'],
+  glass: { cat: 'Light & Color', label: 'Stained Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue', 'window', 'scene', 'joints'],
     outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour', 'field', 'image', 'field'], outs: ['image'] },
     params: [TOUCH_R('relief', 'Lead Relief', 100, 25, 300), TOUCH_R('scene', 'Scene', 0), TOUCH_R('texture', 'Cathedral · Hammered · Seedy · Opal', 0), TOUCH_R('reflect', 'Reflectance', 100, 0, 250)], cost: () => 16,
     run(E, n){ const { ww, wh, N, input, asField, ctx } = E;

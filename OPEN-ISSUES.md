@@ -6,10 +6,15 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Kore)
-- THE ATHANOR'S VOICE: part docs, TEACH notes, Help and menus rewritten for the reader in AGENTS §11
-  (knows graphics basics, skims). Does it land? The rest of the app's help (the PML guide, tooltips)
-  is next, in the same voice.
+## 1 · Ruby to judge (new in Saturn–Pan)
+- THE ATHANOR'S WIKI: Help → contents, search, Back; a first-surface tutorial; concept articles (gray maps,
+  pictures, colors, numbers, curves, ports, mapping, ranges, masks, blend modes, heights, seeds); a page for
+  every part; a glossary. About this part in every part's menu. Does it teach? What is missing?
+- Renamed parts and settings (Simple Lighting, Paint Swipes, Growth Medium, Differential Growth, Watercolor
+  Bleed, Stained Glass, Card Deal; Black Point / White Point, Cutoff, Octaves; ports "map"/"picture").
+- Releases now follow Saturn's moons (Jupiter's ran out at Kore). Pandora is skipped: say if it should be in.
+- Next for the wiki: a picture for each concept article (an example graph and its result), and the PML
+  guide outside the Athanor in the same teaching voice.
 
 ## From Jupiter–Cyllene
 

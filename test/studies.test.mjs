@@ -40,7 +40,7 @@ check('The Poem has a Rhymes output and a rhyme to pick', S.STEPS.poem.outs.incl
 // ---- the studies ----
 const st = Object.entries(ATHANOR_STUDIES);
 check('there are at least 36 surface studies', st.length >= 36);
-check('every study\'s note is short (40 words at most) and says what to try', st.every(([, s]) => s.teach.split(/\s+/).length <= 40 && /Try:/.test(s.teach)));
+check('every study\'s note says what it is, how it is built, and what to try', st.every(([, s]) => s.teach.split(/\s+/).length >= 20 && /Try:/.test(s.teach)));
 check('every study is made of general parts only (no Texture from the Menu, no unknown part)', st.every(([, s]) => s.nodes.every(([t]) => S.STEPS[t] && t !== 'texture')));
 check('every study has exactly one Surface', st.every(([, s]) => s.nodes.filter(([t]) => t === 'surface').length === 1));
 check('every study offers at least one Knob or the Dial', st.every(([, s]) => s.nodes.some(([t]) => t === 'knob' || t === 'dial')));
