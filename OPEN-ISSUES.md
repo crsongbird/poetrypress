@@ -6,7 +6,12 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- OIL PAINT'S DETAIL (branch `oil-detail`, not live): a last fine pass repaints what the big strokes lost (distant
+  trees come back as small painted trees); the review sheet was sent. Yes, no, stronger or subtler?
+- MORE PARTS: Split and Merge HSB, Split and Merge Lab, Median (Percentile), Map Switch, Flip, Perspective.
+- A BORDER GRADIENT AT 0° now runs straight across (it drew at 45°): a look saved at exactly 0° changes. Say if
+  those should keep the old diagonal.
 - NEW PARTS: Ellipse, Polygon, Triangle Mesh, Blocks (its outlines are Techno), Pyramids, Noise Gradient; Cells'
   Stones; Math's Round, Floor, Ceiling, Greater, Less and Log. Three studies now use them: Constellation Without
   Stars (Triangle Mesh), Orbit Script (Ellipse) and Deep-Space Dust (Noise Gradient). Do they read right?
@@ -94,8 +99,6 @@ the parts → presets, last. No new or reworked presets before Stage 4. Delete i
   with its own lore and rules.
 - PAINTED LANDSCAPE: more variety in the water and land textures.
 - REROLLING: the dice are in (Kalyke); tell me what still sticks.
-- OIL PAINT loses small things (distant trees) at Impasto 50; a finer pass
-  where the picture has small detail.
 
 ## 1d · Found this pass
 - CONTOUR MAP at a quarter-size preview differs from its export more than

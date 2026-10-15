@@ -12382,7 +12382,9 @@ const GEN_STEPS = {
  *   Scatter (Bomber, Glyph Scatter) · Grid & Dots (Checker, Tiles, Dots) ·
  *   Ellipse · Polygon · Triangle Mesh (Delaunay) · Blocks (and Techno) ·
  *   Pyramids · Border Mask · Lookup · Displace · Gradient Map (3- and
- *   5-color, Elevation Gradient) · Noise Gradient · Spectrum.
+ *   5-color, Elevation Gradient) · Noise Gradient · Spectrum · Extract and
+ *   Assemble HSB and Lab · Median (Percentile) · Map Switch · Flip ·
+ *   Perspective.
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
@@ -12397,6 +12399,37 @@ const patInside = (sd, s) => { const t = patClamp(0.5 - sd/(2*s)); return t*t*(3
 const patHsv = ([r, g, b]) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
   const h = d < 1e-9 ? 0 : mx === r ? ((g - b)/d + 6) % 6 : mx === g ? (b - r)/d + 2 : (r - g)/d + 4; return [h/6, mx > 0 ? d/mx : 0, mx]; };
 const patRgb = ([h, s, v]) => { const f = k => { const q = (k + h*6) % 6; return v - v*s*Math.max(0, Math.min(1, q, 4 - q)); }; return [f(5), f(3), f(1)]; };
+// ---- color spaces: sRGB ↔ CIE Lab (D65), each channel 0..1 (a and b with 0.5 for neutral) ----
+const patLin = c => c <= 0.04045 ? c/12.92 : ((c + 0.055)/1.055)**2.4, patGam = c => c <= 0.0031308 ? c*12.92 : 1.055*c**(1/2.4) - 0.055;
+const patLabF = t => t > 216/24389 ? Math.cbrt(t) : (24389/27*t + 16)/116, patLabFi = t => t**3 > 216/24389 ? t**3 : (116*t - 16)/(24389/27);
+function patToLab(r, g, b){
+  const R = patLin(r), G = patLin(g), B = patLin(b);
+  const x = patLabF((0.4124*R + 0.3576*G + 0.1805*B)/0.95047), y = patLabF(0.2126*R + 0.7152*G + 0.0722*B), z = patLabF((0.0193*R + 0.1192*G + 0.9505*B)/1.08883);
+  return [(116*y - 16)/100, 500*(x - y)/255 + 0.5, 200*(y - z)/255 + 0.5];
+}
+function patFromLab(L, A, B){
+  const y = (L*100 + 16)/116, x = y + (A - 0.5)*255/500, z = y - (B - 0.5)*255/200, X = patLabFi(x)*0.95047, Y = patLabFi(y), Z = patLabFi(z)*1.08883;
+  return [3.2406*X - 1.5372*Y - 0.4986*Z, -0.9689*X + 1.8758*Y + 0.0415*Z, 0.0557*X - 0.2040*Y + 1.0570*Z].map(c => patClamp(patGam(Math.max(0, c))));
+}
+/**
+ * A RANK FILTER along lines (Huang's sliding histogram, 256 levels): each value replaced by the one at `p` (0 the
+ * least, 0.5 the median, 1 the most) among its neighbours within r. Run across, then down: a separable median.
+ */
+function patRank(src, ww, wh, r, p, across){
+  const out = new Float32Array(src.length), hist = new Int32Array(256), L = across ? ww : wh, M = across ? wh : ww;
+  const at = (j, i) => across ? j*ww + i : i*ww + j;
+  for(let j = 0; j < M; j++){ hist.fill(0); let n = 0, m = 0, below = 0;
+    const bin = i => Math.max(0, Math.min(255, src[at(j, i)]*255 + 0.5 | 0));
+    const add = (i, s) => { const b = bin(i); hist[b] += s; n += s; if(b < m) below += s; };
+    for(let i = 0; i <= Math.min(L - 1, r); i++) add(i, 1);
+    for(let i = 0; i < L; i++){
+      const k = Math.floor(p*(n - 1));
+      while(below > k && m > 0){ m--; below -= hist[m]; }
+      while(below + hist[m] <= k && m < 255){ below += hist[m]; m++; }
+      out[at(j, i)] = m/255;
+      if(i - r >= 0) add(i - r, -1); if(i + r + 1 < L) add(i + r + 1, 1); } }
+  return out;
+}
 /**
  * DELAUNAY TRIANGLES of points [[x, y], …] (Bowyer–Watson): the points are added one by one, and the triangles
  * whose circumcircle holds the new point are taken out and the hole re-triangulated from it. Returns triangles
@@ -12714,6 +12747,86 @@ const PATTERN_STEPS = {
         const a = stops[j], b = stops[j + 1]; o.r[i] = a[0] + (b[0] - a[0])*u; o.g[i] = a[1] + (b[1] - a[1])*u; o.b[i] = a[2] + (b[2] - a[2])*u; }
       return [o];
     } },
+
+  // FILTER FORGE'S EXTRACT HSB and ASSEMBLE HSB: a picture as hue, saturation and brightness, and back
+  splithsb: { cat: 'Combine', label: 'Split HSB', ins: ['picture'], outs: ['hue', 'saturation', 'brightness'], io: { ins: ['image'], outs: ['field', 'field', 'field'] }, req: true,
+    params: [], cost: () => 1,
+    doc: 'Splits a picture into three gray maps: its hue (around the color wheel), its saturation and its brightness.',
+    run(E, n){ const { N, input, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const h = new Float32Array(N), s = new Float32Array(N), v = new Float32Array(N);
+      for(let i = 0; i < N; i++){ const c = patHsv([patClamp(im.r[i]), patClamp(im.g[i]), patClamp(im.b[i])]); h[i] = c[0]; s[i] = c[1]; v[i] = c[2]; }
+      return [h, s, v]; } },
+  mergehsb: { cat: 'Combine', label: 'Merge HSB', ins: ['hue', 'saturation', 'brightness'], outs: ['picture'], io: { ins: ['field', 'field', 'field'], outs: ['image'] },
+    params: [], cost: () => 1,
+    doc: 'Makes a picture from three gray maps: a hue, a saturation and a brightness (an empty one is red, full, bright).',
+    run(E, n){ const { N, input, asField } = E; const h = asField(input(n, 1)), s = asField(input(n, 2)), v = asField(input(n, 3)); if(!h && !s && !v) return null;
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const c = patRgb([((h ? h[i] : 0) % 1 + 1) % 1, patClamp(s ? s[i] : 1), patClamp(v ? v[i] : 1)]); o.r[i] = c[0]; o.g[i] = c[1]; o.b[i] = c[2]; }
+      return [o]; } },
+  // FILTER FORGE'S EXTRACT LAB and ASSEMBLE LAB: lightness as the eye sees it, and two color axes
+  splitlab: { cat: 'Combine', label: 'Split Lab', ins: ['picture'], outs: ['lightness', 'green–red', 'blue–yellow'], io: { ins: ['image'], outs: ['field', 'field', 'field'] }, req: true,
+    params: [], cost: () => 1.5,
+    doc: 'Splits a picture into lightness as the eye sees it (CIE Lab) and two color axes, green to red and blue to yellow.',
+    run(E, n){ const { N, input, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const L = new Float32Array(N), A = new Float32Array(N), B = new Float32Array(N);
+      for(let i = 0; i < N; i++){ const c = patToLab(patClamp(im.r[i]), patClamp(im.g[i]), patClamp(im.b[i])); L[i] = c[0]; A[i] = c[1]; B[i] = c[2]; }
+      return [L, A, B]; } },
+  mergelab: { cat: 'Combine', label: 'Merge Lab', ins: ['lightness', 'green–red', 'blue–yellow'], outs: ['picture'], io: { ins: ['field', 'field', 'field'], outs: ['image'] },
+    params: [], cost: () => 1.5,
+    doc: 'Makes a picture from a lightness and two color axes (CIE Lab); an empty axis is neutral gray.',
+    run(E, n){ const { N, input, asField } = E; const l = asField(input(n, 1)), a = asField(input(n, 2)), b = asField(input(n, 3)); if(!l && !a && !b) return null;
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const c = patFromLab(l ? l[i] : 0.5, a ? a[i] : 0.5, b ? b[i] : 0.5); o.r[i] = c[0]; o.g[i] = c[1]; o.b[i] = c[2]; }
+      return [o]; } },
+
+  // FILTER FORGE'S MEDIAN and PERCENTILE: each point takes the middle value of those around it (or another rank)
+  median: { cat: 'Shape', label: 'Median', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_R('radius', 'Radius', 10, 1, 100), PAT_R('rank', 'Percentile', 50)],
+    cost: () => 3,
+    doc: 'Gives each point the middle value of those around it: specks and scratches vanish while edges stay sharp. Other percentiles darken or lighten.',
+    run(E, n){ const { ww, wh, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const r = Math.max(1, Math.round(num(n, 'radius', 10)*unit/1536*1.2)), p = num(n, 'rank', 50)/100;
+      const ch = c => patRank(patRank(c, ww, wh, r, p, true), ww, wh, r, p, false);
+      return [im.r === im.g && im.g === im.b ? (f => ({ r: f, g: f, b: f }))(ch(im.r)) : { r: ch(im.r), g: ch(im.g), b: ch(im.b) }]; } },
+
+  // FILTER FORGE'S MAP SWITCH: a map chooses, point by point, which of up to four pictures shows
+  mapswitch: { cat: 'Combine', label: 'Map Switch', ins: ['by', 'a', 'b', 'c', 'd'], outs: ['picture'], io: { ins: ['field', 'image', 'image', 'image', 'image'], outs: ['image'] }, req: true,
+    params: [PAT_R('soft', 'Softness', 10)],
+    cost: () => 1,
+    doc: 'A gray map chooses, point by point, which of up to four pictures shows: the darkest band shows A, the lightest the last one wired.',
+    run(E, n){ const { N, input, num, asField, asImage } = E; const by = asField(input(n, 1)); if(!by) return null;
+      const pics = [2, 3, 4, 5].map(j => input(n, j)).filter(v => v != null).map(asImage); if(!pics.length) return null;
+      const K = pics.length, sf = num(n, 'soft', 10)/100*0.5, o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const t = patClamp(by[i])*K, j = Math.min(K - 1, Math.floor(t)), f = t - j;
+        // within Softness of a band's edge, the two pictures blend
+        let k = j, w = 0; if(sf > 0){ if(f > 1 - sf && j < K - 1){ k = j + 1; w = (f - (1 - sf))/(2*sf); } else if(f < sf && j > 0){ k = j - 1; w = (sf - f)/(2*sf); } }
+        const A = pics[j], B = pics[k]; o.r[i] = A.r[i] + (B.r[i] - A.r[i])*w; o.g[i] = A.g[i] + (B.g[i] - A.g[i])*w; o.b[i] = A.b[i] + (B.b[i] - A.b[i])*w; }
+      return [o]; } },
+
+  // FILTER FORGE'S FLIP: a picture mirrored, left to right or top to bottom (Mirror folds; Flip turns it over)
+  flip: { cat: 'Shape', label: 'Flip', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_SEL('axis', 'Flip', ['left to right', 'top to bottom', 'both'])],
+    cost: () => 0.5,
+    doc: 'Turns a picture over, left to right or top to bottom, as a mirror shows it.',
+    run(E, n){ const { ww, wh, N, input, P, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const ax = P(n, 'axis', 'left to right'), fx = ax !== 'top to bottom', fy = ax !== 'left to right', o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, s = (fy ? wh - 1 - y : y)*ww + (fx ? ww - 1 - x : x); o.r[q] = im.r[s]; o.g[q] = im.g[s]; o.b[q] = im.b[s]; }
+      return [o]; } },
+
+  // FILTER FORGE'S PERSPECTIVE: a picture laid flat on the ground and seen at a slant, repeating to the horizon
+  perspective: { cat: 'Shape', label: 'Perspective', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_R('tilt', 'Tilt', 50, 0, 95), PAT_R('scale', 'Scale', 100, 25, 400)],
+    cost: () => 1,
+    doc: 'Lays a picture flat on the ground and looks at it at a slant: it shrinks toward the top of the page and repeats to the horizon.',
+    run(E, n){ const { ww, wh, N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const t = num(n, 'tilt', 50)/100, sc = 100/Math.max(25, num(n, 'scale', 100)), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      // the ground's depth at each row: 1 at the bottom (the picture as it is), farther toward the top
+      const wrap = (v, m) => ((v % m) + m) % m;
+      for(let y = 0; y < wh; y++){ const v = (y + 0.5)/wh, z = 1/(1 - t + t*v), vs = t > 1e-4 ? 1 - (z - 1)/t : v;
+        for(let x = 0; x < ww; x++){ const u = (x + 0.5)/ww, us = 0.5 + (u - 0.5)*z;
+          const sx = wrap(us*sc*ww - 0.5, ww), sy = wrap((vs - 1)*sc*wh + wh - 0.5, wh), x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0, x1 = (x0 + 1) % ww, y1 = (y0 + 1) % wh, q = y*ww + x;
+          for(const c of ['r', 'g', 'b']){ const a = im[c]; o[c][q] = (a[y0*ww + x0]*(1 - fx) + a[y0*ww + x1]*fx)*(1 - fy) + (a[y1*ww + x0]*(1 - fx) + a[y1*ww + x1]*fx)*fy; } } }
+      return [o]; } },
 
   // FILTER FORGE'S 3- AND 5-COLOR GRADIENTS and ELEVATION GRADIENT: a gray map colored by up to five colors
   gradmap: { cat: 'Light & Color', label: 'Gradient Map', ins: ['field', 'color 1', 'color 2', 'color 3', 'color 4', 'color 5'], outs: ['picture'],
@@ -30047,7 +30160,9 @@ const GEN_STEPS = {
  *   Scatter (Bomber, Glyph Scatter) · Grid & Dots (Checker, Tiles, Dots) ·
  *   Ellipse · Polygon · Triangle Mesh (Delaunay) · Blocks (and Techno) ·
  *   Pyramids · Border Mask · Lookup · Displace · Gradient Map (3- and
- *   5-color, Elevation Gradient) · Noise Gradient · Spectrum.
+ *   5-color, Elevation Gradient) · Noise Gradient · Spectrum · Extract and
+ *   Assemble HSB and Lab · Median (Percentile) · Map Switch · Flip ·
+ *   Perspective.
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
@@ -30062,6 +30177,37 @@ const patInside = (sd, s) => { const t = patClamp(0.5 - sd/(2*s)); return t*t*(3
 const patHsv = ([r, g, b]) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
   const h = d < 1e-9 ? 0 : mx === r ? ((g - b)/d + 6) % 6 : mx === g ? (b - r)/d + 2 : (r - g)/d + 4; return [h/6, mx > 0 ? d/mx : 0, mx]; };
 const patRgb = ([h, s, v]) => { const f = k => { const q = (k + h*6) % 6; return v - v*s*Math.max(0, Math.min(1, q, 4 - q)); }; return [f(5), f(3), f(1)]; };
+// ---- color spaces: sRGB ↔ CIE Lab (D65), each channel 0..1 (a and b with 0.5 for neutral) ----
+const patLin = c => c <= 0.04045 ? c/12.92 : ((c + 0.055)/1.055)**2.4, patGam = c => c <= 0.0031308 ? c*12.92 : 1.055*c**(1/2.4) - 0.055;
+const patLabF = t => t > 216/24389 ? Math.cbrt(t) : (24389/27*t + 16)/116, patLabFi = t => t**3 > 216/24389 ? t**3 : (116*t - 16)/(24389/27);
+function patToLab(r, g, b){
+  const R = patLin(r), G = patLin(g), B = patLin(b);
+  const x = patLabF((0.4124*R + 0.3576*G + 0.1805*B)/0.95047), y = patLabF(0.2126*R + 0.7152*G + 0.0722*B), z = patLabF((0.0193*R + 0.1192*G + 0.9505*B)/1.08883);
+  return [(116*y - 16)/100, 500*(x - y)/255 + 0.5, 200*(y - z)/255 + 0.5];
+}
+function patFromLab(L, A, B){
+  const y = (L*100 + 16)/116, x = y + (A - 0.5)*255/500, z = y - (B - 0.5)*255/200, X = patLabFi(x)*0.95047, Y = patLabFi(y), Z = patLabFi(z)*1.08883;
+  return [3.2406*X - 1.5372*Y - 0.4986*Z, -0.9689*X + 1.8758*Y + 0.0415*Z, 0.0557*X - 0.2040*Y + 1.0570*Z].map(c => patClamp(patGam(Math.max(0, c))));
+}
+/**
+ * A RANK FILTER along lines (Huang's sliding histogram, 256 levels): each value replaced by the one at `p` (0 the
+ * least, 0.5 the median, 1 the most) among its neighbours within r. Run across, then down: a separable median.
+ */
+function patRank(src, ww, wh, r, p, across){
+  const out = new Float32Array(src.length), hist = new Int32Array(256), L = across ? ww : wh, M = across ? wh : ww;
+  const at = (j, i) => across ? j*ww + i : i*ww + j;
+  for(let j = 0; j < M; j++){ hist.fill(0); let n = 0, m = 0, below = 0;
+    const bin = i => Math.max(0, Math.min(255, src[at(j, i)]*255 + 0.5 | 0));
+    const add = (i, s) => { const b = bin(i); hist[b] += s; n += s; if(b < m) below += s; };
+    for(let i = 0; i <= Math.min(L - 1, r); i++) add(i, 1);
+    for(let i = 0; i < L; i++){
+      const k = Math.floor(p*(n - 1));
+      while(below > k && m > 0){ m--; below -= hist[m]; }
+      while(below + hist[m] <= k && m < 255){ below += hist[m]; m++; }
+      out[at(j, i)] = m/255;
+      if(i - r >= 0) add(i - r, -1); if(i + r + 1 < L) add(i + r + 1, 1); } }
+  return out;
+}
 /**
  * DELAUNAY TRIANGLES of points [[x, y], …] (Bowyer–Watson): the points are added one by one, and the triangles
  * whose circumcircle holds the new point are taken out and the hole re-triangulated from it. Returns triangles
@@ -30379,6 +30525,86 @@ const PATTERN_STEPS = {
         const a = stops[j], b = stops[j + 1]; o.r[i] = a[0] + (b[0] - a[0])*u; o.g[i] = a[1] + (b[1] - a[1])*u; o.b[i] = a[2] + (b[2] - a[2])*u; }
       return [o];
     } },
+
+  // FILTER FORGE'S EXTRACT HSB and ASSEMBLE HSB: a picture as hue, saturation and brightness, and back
+  splithsb: { cat: 'Combine', label: 'Split HSB', ins: ['picture'], outs: ['hue', 'saturation', 'brightness'], io: { ins: ['image'], outs: ['field', 'field', 'field'] }, req: true,
+    params: [], cost: () => 1,
+    doc: 'Splits a picture into three gray maps: its hue (around the color wheel), its saturation and its brightness.',
+    run(E, n){ const { N, input, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const h = new Float32Array(N), s = new Float32Array(N), v = new Float32Array(N);
+      for(let i = 0; i < N; i++){ const c = patHsv([patClamp(im.r[i]), patClamp(im.g[i]), patClamp(im.b[i])]); h[i] = c[0]; s[i] = c[1]; v[i] = c[2]; }
+      return [h, s, v]; } },
+  mergehsb: { cat: 'Combine', label: 'Merge HSB', ins: ['hue', 'saturation', 'brightness'], outs: ['picture'], io: { ins: ['field', 'field', 'field'], outs: ['image'] },
+    params: [], cost: () => 1,
+    doc: 'Makes a picture from three gray maps: a hue, a saturation and a brightness (an empty one is red, full, bright).',
+    run(E, n){ const { N, input, asField } = E; const h = asField(input(n, 1)), s = asField(input(n, 2)), v = asField(input(n, 3)); if(!h && !s && !v) return null;
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const c = patRgb([((h ? h[i] : 0) % 1 + 1) % 1, patClamp(s ? s[i] : 1), patClamp(v ? v[i] : 1)]); o.r[i] = c[0]; o.g[i] = c[1]; o.b[i] = c[2]; }
+      return [o]; } },
+  // FILTER FORGE'S EXTRACT LAB and ASSEMBLE LAB: lightness as the eye sees it, and two color axes
+  splitlab: { cat: 'Combine', label: 'Split Lab', ins: ['picture'], outs: ['lightness', 'green–red', 'blue–yellow'], io: { ins: ['image'], outs: ['field', 'field', 'field'] }, req: true,
+    params: [], cost: () => 1.5,
+    doc: 'Splits a picture into lightness as the eye sees it (CIE Lab) and two color axes, green to red and blue to yellow.',
+    run(E, n){ const { N, input, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const L = new Float32Array(N), A = new Float32Array(N), B = new Float32Array(N);
+      for(let i = 0; i < N; i++){ const c = patToLab(patClamp(im.r[i]), patClamp(im.g[i]), patClamp(im.b[i])); L[i] = c[0]; A[i] = c[1]; B[i] = c[2]; }
+      return [L, A, B]; } },
+  mergelab: { cat: 'Combine', label: 'Merge Lab', ins: ['lightness', 'green–red', 'blue–yellow'], outs: ['picture'], io: { ins: ['field', 'field', 'field'], outs: ['image'] },
+    params: [], cost: () => 1.5,
+    doc: 'Makes a picture from a lightness and two color axes (CIE Lab); an empty axis is neutral gray.',
+    run(E, n){ const { N, input, asField } = E; const l = asField(input(n, 1)), a = asField(input(n, 2)), b = asField(input(n, 3)); if(!l && !a && !b) return null;
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const c = patFromLab(l ? l[i] : 0.5, a ? a[i] : 0.5, b ? b[i] : 0.5); o.r[i] = c[0]; o.g[i] = c[1]; o.b[i] = c[2]; }
+      return [o]; } },
+
+  // FILTER FORGE'S MEDIAN and PERCENTILE: each point takes the middle value of those around it (or another rank)
+  median: { cat: 'Shape', label: 'Median', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_R('radius', 'Radius', 10, 1, 100), PAT_R('rank', 'Percentile', 50)],
+    cost: () => 3,
+    doc: 'Gives each point the middle value of those around it: specks and scratches vanish while edges stay sharp. Other percentiles darken or lighten.',
+    run(E, n){ const { ww, wh, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const r = Math.max(1, Math.round(num(n, 'radius', 10)*unit/1536*1.2)), p = num(n, 'rank', 50)/100;
+      const ch = c => patRank(patRank(c, ww, wh, r, p, true), ww, wh, r, p, false);
+      return [im.r === im.g && im.g === im.b ? (f => ({ r: f, g: f, b: f }))(ch(im.r)) : { r: ch(im.r), g: ch(im.g), b: ch(im.b) }]; } },
+
+  // FILTER FORGE'S MAP SWITCH: a map chooses, point by point, which of up to four pictures shows
+  mapswitch: { cat: 'Combine', label: 'Map Switch', ins: ['by', 'a', 'b', 'c', 'd'], outs: ['picture'], io: { ins: ['field', 'image', 'image', 'image', 'image'], outs: ['image'] }, req: true,
+    params: [PAT_R('soft', 'Softness', 10)],
+    cost: () => 1,
+    doc: 'A gray map chooses, point by point, which of up to four pictures shows: the darkest band shows A, the lightest the last one wired.',
+    run(E, n){ const { N, input, num, asField, asImage } = E; const by = asField(input(n, 1)); if(!by) return null;
+      const pics = [2, 3, 4, 5].map(j => input(n, j)).filter(v => v != null).map(asImage); if(!pics.length) return null;
+      const K = pics.length, sf = num(n, 'soft', 10)/100*0.5, o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const t = patClamp(by[i])*K, j = Math.min(K - 1, Math.floor(t)), f = t - j;
+        // within Softness of a band's edge, the two pictures blend
+        let k = j, w = 0; if(sf > 0){ if(f > 1 - sf && j < K - 1){ k = j + 1; w = (f - (1 - sf))/(2*sf); } else if(f < sf && j > 0){ k = j - 1; w = (sf - f)/(2*sf); } }
+        const A = pics[j], B = pics[k]; o.r[i] = A.r[i] + (B.r[i] - A.r[i])*w; o.g[i] = A.g[i] + (B.g[i] - A.g[i])*w; o.b[i] = A.b[i] + (B.b[i] - A.b[i])*w; }
+      return [o]; } },
+
+  // FILTER FORGE'S FLIP: a picture mirrored, left to right or top to bottom (Mirror folds; Flip turns it over)
+  flip: { cat: 'Shape', label: 'Flip', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_SEL('axis', 'Flip', ['left to right', 'top to bottom', 'both'])],
+    cost: () => 0.5,
+    doc: 'Turns a picture over, left to right or top to bottom, as a mirror shows it.',
+    run(E, n){ const { ww, wh, N, input, P, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const ax = P(n, 'axis', 'left to right'), fx = ax !== 'top to bottom', fy = ax !== 'left to right', o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, s = (fy ? wh - 1 - y : y)*ww + (fx ? ww - 1 - x : x); o.r[q] = im.r[s]; o.g[q] = im.g[s]; o.b[q] = im.b[s]; }
+      return [o]; } },
+
+  // FILTER FORGE'S PERSPECTIVE: a picture laid flat on the ground and seen at a slant, repeating to the horizon
+  perspective: { cat: 'Shape', label: 'Perspective', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_R('tilt', 'Tilt', 50, 0, 95), PAT_R('scale', 'Scale', 100, 25, 400)],
+    cost: () => 1,
+    doc: 'Lays a picture flat on the ground and looks at it at a slant: it shrinks toward the top of the page and repeats to the horizon.',
+    run(E, n){ const { ww, wh, N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const t = num(n, 'tilt', 50)/100, sc = 100/Math.max(25, num(n, 'scale', 100)), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      // the ground's depth at each row: 1 at the bottom (the picture as it is), farther toward the top
+      const wrap = (v, m) => ((v % m) + m) % m;
+      for(let y = 0; y < wh; y++){ const v = (y + 0.5)/wh, z = 1/(1 - t + t*v), vs = t > 1e-4 ? 1 - (z - 1)/t : v;
+        for(let x = 0; x < ww; x++){ const u = (x + 0.5)/ww, us = 0.5 + (u - 0.5)*z;
+          const sx = wrap(us*sc*ww - 0.5, ww), sy = wrap((vs - 1)*sc*wh + wh - 0.5, wh), x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0, x1 = (x0 + 1) % ww, y1 = (y0 + 1) % wh, q = y*ww + x;
+          for(const c of ['r', 'g', 'b']){ const a = im[c]; o[c][q] = (a[y0*ww + x0]*(1 - fx) + a[y0*ww + x1]*fx)*(1 - fy) + (a[y1*ww + x0]*(1 - fx) + a[y1*ww + x1]*fx)*fy; } } }
+      return [o]; } },
 
   // FILTER FORGE'S 3- AND 5-COLOR GRADIENTS and ELEVATION GRADIENT: a gray map colored by up to five colors
   gradmap: { cat: 'Light & Color', label: 'Gradient Map', ins: ['field', 'color 1', 'color 2', 'color 3', 'color 4', 'color 5'], outs: ['picture'],
@@ -34872,7 +35098,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Enceladus';
+const RELEASE = 'Saturn–Tethys';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -35701,7 +35927,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 877dda8";
+const STAMP = "2026-10-15 · 805892d";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -37006,7 +37232,8 @@ function renderInto(canvas){
     // Grit breaks the smooth ramp: speckle weighted by the same falloff, so
     // it gathers where the vignette is strongest instead of dusting evenly.
     if(grit > 0){
-      const dots = Math.round((W*H)/EFFECTS.gritDensity * grit);
+      // counted over the EXPORT's area and sized in its pixels (rpx), so a preview is the saved image scaled down
+      const dots = Math.round((W*H)/(RENDER_SCALE*RENDER_SCALE)/EFFECTS.gritDensity * grit);
       for(let i=0;i<dots;i++){
         const x = Math.random()*W, y = Math.random()*H;
         const d = Math.hypot(x-vcx, y-vcy) / outerR;
@@ -37014,7 +37241,7 @@ function renderInto(canvas){
         const falloff = Math.min(1, (d - aperture) / Math.max(0.05, 1 - aperture));
         ctx.globalAlpha = falloff * intensity * grit * (0.25 + Math.random()*0.55);
         ctx.fillStyle = vignetteRGB === '255,255,255' ? '#fff' : '#000';
-        ctx.fillRect(x, y, 1 + Math.random()*1.6, 1 + Math.random()*1.6);
+        ctx.fillRect(x, y, rpx(1 + Math.random()*1.6), rpx(1 + Math.random()*1.6));
       }
       ctx.globalAlpha = 1;
     }
@@ -37114,7 +37341,8 @@ function renderInto(canvas){
     if($('borderGradientToggle').checked){
       // along an angle across the whole page (45°, the default, is corner to
       // corner), so each side of the frame passes through the stops
-      const ga = (parseFloat(($('borderGradientAngle') || {}).value) || 45) * Math.PI/180, half = Math.hypot(W, H)/2;
+      // (0° is an angle like any other: straight across. It once fell back to 45°, as if unset.)
+      const gv = parseFloat(($('borderGradientAngle') || {}).value), ga = (isFinite(gv) ? gv : 45) * Math.PI/180, half = Math.hypot(W, H)/2;
       const g = ctx.createLinearGradient(W/2 - Math.cos(ga)*half, H/2 - Math.sin(ga)*half, W/2 + Math.cos(ga)*half, H/2 + Math.sin(ga)*half);
       const stops = [bColor, $('borderColor2Hex').value, $('borderColor3Hex').value].filter(Boolean);
       stops.forEach((col, i) => g.addColorStop(stops.length > 1 ? i/(stops.length-1) : 0, col));
@@ -39229,6 +39457,74 @@ const WIKI_PARTS = {
     set: { stops: 'How many colors along the way.', drift: 'How far each strays from the line between A and B: a plain gradient at 0.', smooth: 'Bands at 0; each color blending into the next at 100.', ca: 'Color A, used when nothing is wired.', cb: 'Color B, used when nothing is wired.', variation: 'Another drift.' },
     tips: ['Perlin Noise in, two dark blues and violets for A and B, Drift at 60: a nebula.'],
     see: ['part:gradmap', 'part:spectrum', 'color'],
+  },
+  splithsb: {
+    line: 'Splits a picture into three gray maps: its hue (around the color wheel), its saturation and its brightness.',
+    about: 'Hue, saturation and brightness are another way to describe a color: which color it is (red, then yellow, green, cyan, blue, magenta and back to red, as the map goes from black to white), how strong it is (gray at 0), and how bright (black at 0). Split a picture this way to work on one of them alone, then put it back together with Merge HSB.',
+    ins: { picture: 'The picture to split.' },
+    outs: { hue: 'Its hue: black and white are both red, the colors between in order around the wheel.', saturation: 'How strong its color is: black is gray.', brightness: 'How bright it is: its strongest channel.' },
+    tips: ['Hue through a Levels and back through Merge HSB: shift every color at once without touching the light.'],
+    see: ['part:mergehsb', 'part:hsv', 'color'],
+  },
+  mergehsb: {
+    line: 'Makes a picture from three gray maps: a hue, a saturation and a brightness (an empty one is red, full, bright).',
+    about: 'Merge HSB builds colors from three maps: the hue picks the color around the wheel, the saturation how strong, the brightness how light. An input left empty takes its fullest value, so a Gradient wired into Hue alone gives a rainbow.',
+    ins: { hue: 'Which color, around the wheel (empty: red).', saturation: 'How strong (empty: full).', brightness: 'How bright (empty: full).' },
+    outs: { picture: 'The colors.' },
+    tips: ['A Perlin Noise into Hue and a Cells Id into Brightness: a stained mosaic in every color.'],
+    see: ['part:splithsb', 'part:spectrum', 'color'],
+  },
+  splitlab: {
+    line: 'Splits a picture into lightness as the eye sees it (CIE Lab) and two color axes, green to red and blue to yellow.',
+    about: 'CIE Lab describes color the way the eye weighs it: Lightness is how light a color looks (a yellow looks lighter than a blue of the same strength), and two axes hold the color itself: green to red, and blue to yellow, each gray in the middle. Working on Lightness alone sharpens or evens a picture without shifting its colors.',
+    ins: { picture: 'The picture to split.' },
+    outs: { lightness: 'How light each point looks.', 'green–red': 'Green below the middle gray, red above it.', 'blue–yellow': 'Blue below the middle gray, yellow above it.' },
+    tips: ['Lightness through Sharpen and back through Merge Lab: crisper, with no color fringes.'],
+    see: ['part:mergelab', 'part:split', 'color'],
+  },
+  mergelab: {
+    line: 'Makes a picture from a lightness and two color axes (CIE Lab); an empty axis is neutral gray.',
+    about: 'Merge Lab is the other half of Split Lab: a lightness, a green-to-red axis and a blue-to-yellow axis back into a picture. Leave both color axes empty for a gray picture with the eye’s own lightness.',
+    ins: { lightness: 'How light (empty: middle).', 'green–red': 'Green to red (empty: neither).', 'blue–yellow': 'Blue to yellow (empty: neither).' },
+    outs: { picture: 'The picture.' },
+    tips: ['Wire the same noise into both color axes, one through Invert: colors that swing between two complements.'],
+    see: ['part:splitlab', 'part:merge'],
+  },
+  median: {
+    line: 'Gives each point the middle value of those around it: specks and scratches vanish while edges stay sharp. Other percentiles darken or lighten.',
+    about: 'Where Blur averages a point’s neighbors (and so softens edges), Median takes the one in the middle when they are put in order, so a lone speck is outvoted and disappears while an edge, where half the neighbors are each side, stays where it was. Percentile picks another place in that order: at 0 the darkest neighbor (dark areas grow), at 100 the lightest. It works on each color of a picture.',
+    ins: { picture: 'The picture (or gray map).' },
+    outs: { picture: 'The filtered picture.' },
+    set: { radius: 'How far around each point it looks.', rank: 'Which neighbor it takes, darkest (0) to lightest (100); 50 is the median.' },
+    tips: ['On a Scatter of dots, Median at a small radius cleans away the smallest specks and leaves the rest.', 'Percentile at 10: dark cracks thicken, as old varnish does.'],
+    see: ['part:blur', 'part:grow'],
+  },
+  mapswitch: {
+    line: 'A gray map chooses, point by point, which of up to four pictures shows: the darkest band shows A, the lightest the last one wired.',
+    about: 'Map Switch divides the map’s grays into as many bands as there are pictures wired in: with three, the darkest third of the map shows A, the middle third B, the lightest C. Softness blends neighbors where one band meets the next. Mix blends two pictures by a map; Map Switch chooses among several.',
+    ins: { by: 'The gray map that chooses.', a: 'The picture for the darkest band.', b: 'The next.', c: 'The next.', d: 'The picture for the lightest band.' },
+    outs: { picture: 'The pictures, each where the map chose it.' },
+    set: { soft: 'How wide the blend is where one band meets the next.' },
+    tips: ['Terrain into By, with sand, grass, rock and snow pictures in A to D: a map colored by height.'],
+    see: ['part:mix', 'part:switch', 'masks'],
+  },
+  flip: {
+    line: 'Turns a picture over, left to right or top to bottom, as a mirror shows it.',
+    about: 'Flip reverses a picture: left to right, top to bottom, or both (the same as turning it half around). Mirror is different: it folds the picture so one half repeats the other.',
+    ins: { picture: 'The picture.' },
+    outs: { picture: 'The flipped picture.' },
+    set: { axis: 'Left to right, top to bottom, or both.' },
+    tips: ['Mix a picture with its own flip at 50: a soft symmetry.'],
+    see: ['part:mirror', 'part:transform'],
+  },
+  perspective: {
+    line: 'Lays a picture flat on the ground and looks at it at a slant: it shrinks toward the top of the page and repeats to the horizon.',
+    about: 'Perspective treats the picture as a floor seen from a standing height: the bottom of the page is near and shows the picture at its own size; toward the top the floor recedes, so the picture grows smaller and repeats, the way tiles do across a hall. Tilt is how slanted the view is; Scale sizes the floor.',
+    ins: { picture: 'The picture to lay down.' },
+    outs: { picture: 'The floor, in perspective.' },
+    set: { tilt: 'How slanted the view: flat on at 0, toward the horizon at 95.', scale: 'How large the picture is on the floor.' },
+    tips: ['Grid & Dots (checker) through Perspective: a tiled floor running away from you.'],
+    see: ['part:transform', 'part:lookup'],
   },
   turing: {
     line: 'An older reaction–diffusion part (spots, coral, mazes), kept for graphs that use it. New graphs: use Turing Pattern.',

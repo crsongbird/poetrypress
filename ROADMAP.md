@@ -196,22 +196,17 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 - **F3 · Border Mask from the inset box.** Border Mask frames the page's
   edges; the box's edges wait for G5 (ctx.box from the renderer, like
   ctx.text).
-- **F5 · Channels.**
-  - Extract/Assemble HSB and Lab (RGB exists as Split/Merge).
-  - Alpha is a design decision: the Athanor has no alpha today. Park it
-    unless needed.
+- **F5 · Alpha** is a design decision: the Athanor has no alpha today. Park
+  it unless needed. (Channels as RGB, HSB and Lab are done.)
 - **F6 · More patterns.** Pavements (irregular paving stones in rows).
   Done: Blocks (and Techno, its outlines), Pyramids, Stones (Cells), Ellipse,
   Polygon, Triangle Mesh; Grid & Dots and Bricks cover checker, tiles, grid
   lines, dots, hex dots, diamonds and stripes.
   - The Basics' chains can become starters using them.
-- **F7 · Processing.**
-  - Median, Percentile, Refraction (needs F1), Smudge.
-  - Map Switch: choose among N pictures by a map.
-  - Multiblend.
-  - (Displace by a map's slope is done: Displace.)
+- **F7 · Processing.** Refraction (needs F1), Smudge, Multiblend. (Done:
+  Median with Percentile, Map Switch, Displace.)
 - **F8 · Transform.** Rotate and Scale as their own parts (Tile & Rotate does
-  both today), Flip, Perspective.
+  both today). (Done: Flip, Perspective.)
 - **F10 · Curve ops still missing.** Transition, Fade, Bezier, and Circular
   Arc variants (Bezier needs D4's editor).
 
@@ -320,8 +315,8 @@ superseded) wait for Stage 4.
 
 ### Stage 1 · Components: the parts library
 - **F2** Glyph Scatter's rest, **F3** from the box.
-- **F5, F6, F7, F8, F10**, the rest of Filter Forge's primitives, in the order
-  of what they unlock (§2 F).
+- **F6, F7, F8, F10**, the rest of Filter Forge's primitives, in the order of
+  what they unlock (§2 F).
 - **A9** the older Variant params onto Variation.
 - **A10** ports saved by name (with A3's v5: both change the format once).
 - **A3** Groups (v5), then **A4** Loop (its body is a group).

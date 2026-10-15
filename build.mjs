@@ -100,7 +100,7 @@ const ORDER = [
   'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze); sigils, blots, facets, the black hole, the transmutation circle
   'stepsLight.js',        // the engine's own parts: Light Engine, Oil Paint, Canvas Weave, Paint Swipes
   'stepsGenerative.js',   // parts that grow: Discharge (Lichtenberg), Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces
-  'stepsPatterns.js',     // general parts, second shelf: Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh, Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum
+  'stepsPatterns.js',     // general parts, second shelf: Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh, Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum, HSB and Lab, Median, Map Switch, Flip, Perspective
   'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain, Guilloché; Night City, Lotus Pond
   'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
   'athanorStudies.js',    // the future-directions surfaces, as graphs of parts (Open → Surface Studies)

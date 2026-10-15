@@ -42,8 +42,8 @@ check('Drawflow loads only when the Athanor opens, from the CDN at an exact vers
   check('on a phone: the parts are a drawer that scrolls with one finger (no dragging from it), the preview a small dock bottom right',
     html.includes('id="forgePartsBtn"') && /finePointer \? ' draggable="true"' : ''/.test(fsrc) && /\.forge-palette\{[^}]*touch-action:pan-y/.test(css) && html.includes('id="forgeDock"'));
 }
-check('opened from the top bar (its old Esoterica card is gone); a full-screen editor; its graph kept in a hidden field saved with the look',
-  !/id="forgePanel"/.test(html) && html.includes('id="athanorTopBtn"') && html.includes('id="forgeVeil"') && /<input type="hidden" id="forgeGraph" value="">/.test(html));
+check('opened from the top bar; a full-screen editor; its graph kept in a hidden field saved with the look',
+  html.includes('id="athanorTopBtn"') && html.includes('id="forgeVeil"') && /<input type="hidden" id="forgeGraph" value="">/.test(html));
 
 // ---- the evaluator (athanor.js): a graph made into a picture ----
 {

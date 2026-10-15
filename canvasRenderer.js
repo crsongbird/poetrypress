@@ -1193,7 +1193,8 @@ function renderInto(canvas){
     // Grit breaks the smooth ramp: speckle weighted by the same falloff, so
     // it gathers where the vignette is strongest instead of dusting evenly.
     if(grit > 0){
-      const dots = Math.round((W*H)/EFFECTS.gritDensity * grit);
+      // counted over the EXPORT's area and sized in its pixels (rpx), so a preview is the saved image scaled down
+      const dots = Math.round((W*H)/(RENDER_SCALE*RENDER_SCALE)/EFFECTS.gritDensity * grit);
       for(let i=0;i<dots;i++){
         const x = Math.random()*W, y = Math.random()*H;
         const d = Math.hypot(x-vcx, y-vcy) / outerR;
@@ -1201,7 +1202,7 @@ function renderInto(canvas){
         const falloff = Math.min(1, (d - aperture) / Math.max(0.05, 1 - aperture));
         ctx.globalAlpha = falloff * intensity * grit * (0.25 + Math.random()*0.55);
         ctx.fillStyle = vignetteRGB === '255,255,255' ? '#fff' : '#000';
-        ctx.fillRect(x, y, 1 + Math.random()*1.6, 1 + Math.random()*1.6);
+        ctx.fillRect(x, y, rpx(1 + Math.random()*1.6), rpx(1 + Math.random()*1.6));
       }
       ctx.globalAlpha = 1;
     }
@@ -1301,7 +1302,8 @@ function renderInto(canvas){
     if($('borderGradientToggle').checked){
       // along an angle across the whole page (45°, the default, is corner to
       // corner), so each side of the frame passes through the stops
-      const ga = (parseFloat(($('borderGradientAngle') || {}).value) || 45) * Math.PI/180, half = Math.hypot(W, H)/2;
+      // (0° is an angle like any other: straight across. It once fell back to 45°, as if unset.)
+      const gv = parseFloat(($('borderGradientAngle') || {}).value), ga = (isFinite(gv) ? gv : 45) * Math.PI/180, half = Math.hypot(W, H)/2;
       const g = ctx.createLinearGradient(W/2 - Math.cos(ga)*half, H/2 - Math.sin(ga)*half, W/2 + Math.cos(ga)*half, H/2 + Math.sin(ga)*half);
       const stops = [bColor, $('borderColor2Hex').value, $('borderColor3Hex').value].filter(Boolean);
       stops.forEach((col, i) => g.addColorStop(stops.length > 1 ? i/(stops.length-1) : 0, col));

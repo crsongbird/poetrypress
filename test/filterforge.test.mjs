@@ -70,6 +70,20 @@ check('Math has Filter Forge\'s useful RGB Math (divide, power, average, screen,
   const fl = run([node(1, 'gradient', { angle: 0 }), node(2, 'number', { value: 25 }), node(3, 'math', { op: 'floor' }, { 1: [1, 1], 2: [2, 1] })], [3, 1]);
   const gt = run([node(1, 'gradient', { angle: 0 }), node(2, 'number', { value: 50 }), node(3, 'math', { op: 'greater' }, { 1: [1, 1], 2: [2, 1] })], [3, 1]);
   check('Math: Floor snaps to steps of B (a gradient becomes four terraces); Greater is white only where A is lighter than B', new Set(fl.r.map(v => Math.round(v*100))).size <= 5 && gt.r[20*W + 5] === 0 && gt.r[20*W + 35] === 1);
+  // F5, F7, F8: channels as HSB and Lab, a rank filter, a switch by map, a flip, a floor in perspective
+  const pic = [node(1, 'perlin', { scale: 60 }), node(2, 'hue', { slot: '1' }), node(3, 'hue', { slot: '2' }), node(4, 'tint', {}, { 1: [1, 1], 2: [2, 1], 3: [3, 1] })], T2 = { tints: ['#E04020', '#2060C0'] };
+  const orig = run(pic, [4, 1], T2), back = (sp, mg) => run([...pic, node(5, sp, {}, { 1: [4, 1] }), node(6, mg, {}, { 1: [5, 1], 2: [5, 2], 3: [5, 3] })], [6, 1], T2);
+  const err = im => { let e = 0; for(let i = 0; i < W*H; i++) e = Math.max(e, Math.abs(im.r[i] - orig.r[i]), Math.abs(im.g[i] - orig.g[i]), Math.abs(im.b[i] - orig.b[i])); return e; };
+  check('Split HSB and Merge HSB, and Split Lab and Merge Lab, take a picture apart and put it back as it was', err(back('splithsb', 'mergehsb')) < 1e-3 && err(back('splitlab', 'mergelab')) < 0.01);
+  const speck = [node(1, 'number', { value: 20 }), node(2, 'shape', { form: 'circle', size: 4, soft: 1 }), node(3, 'math', { op: 'max' }, { 1: [1, 1], 2: [2, 1] })];
+  const md = run([...speck, node(4, 'median', { radius: 100 }, { 1: [3, 1] })], [4, 1]), dark = run([...speck, node(4, 'median', { radius: 100, rank: 0 }, { 1: [3, 1] })], [4, 1]);
+  check('Median takes a lone speck away (every point the middle of its neighbors); Percentile 0 takes the darkest', run(speck, [3, 1]).r[20*W + 20] > 0.9 && md.r[20*W + 20] < 0.25 && Math.max(...dark.r) < 0.25);
+  const sw = run([node(1, 'gradient', { angle: 0 }), node(2, 'colour', { hex: '#FF0000' }), node(3, 'colour', { hex: '#00FF00' }), node(4, 'colour', { hex: '#0000FF' }), node(5, 'mapswitch', { soft: 0 }, { 1: [1, 1], 2: [2, 1], 3: [3, 1], 4: [4, 1] })], [5, 1]);
+  check('Map Switch: a gradient shows A on its dark third, B in the middle, C on its light third', sw.r[20*W + 3] > 0.9 && sw.g[20*W + 20] > 0.9 && sw.b[20*W + 37] > 0.9);
+  const fp = run([node(1, 'gradient', { angle: 0 }), node(2, 'flip', {}, { 1: [1, 1] })], [2, 1]), g0 = run([node(1, 'gradient', { angle: 0 })], [1, 1]);
+  check('Flip turns a picture over: a left-to-right gradient runs right to left', Math.abs(fp.r[20*W + 5] - g0.r[20*W + 34]) < 1e-6 && fp.r[20*W + 5] > fp.r[20*W + 34]);
+  const flat = run([...pic, node(5, 'perspective', { tilt: 0 }, { 1: [4, 1] })], [5, 1], T2), slant = run([...pic, node(5, 'perspective', { tilt: 80 }, { 1: [4, 1] })], [5, 1], T2);
+  check('Perspective at Tilt 0 is the picture as it is; tilted, the bottom row stays and the top changes', err(flat) < 1e-5 && Math.abs(slant.r[39*W + 20] - orig.r[39*W + 20]) < 0.05 && err(slant) > 0.05);
   const stones = run([node(1, 'cells', { scale: 40, gap: 30 })], [1, 4]);
   check('Cells hands on Stones too: rounded, highest in the middle, with gaps of 0 between', Math.max(...stones.r) > 0.9 && stones.r.filter(v => v === 0).length > W*H*0.05); }
 

@@ -4,6 +4,35 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Tethys (2026-10-15)
+
+- **More new parts in the Athanor**, from Filter Forge's list:
+  - **Split HSB** and **Merge HSB**: a picture as hue, saturation and
+    brightness, and back. Wire a Gradient into Merge HSB's Hue for a
+    rainbow.
+  - **Split Lab** and **Merge Lab**: lightness as the eye sees it, and two
+    color axes, to work on the light without shifting the colors.
+  - **Median**: each point takes the middle of its neighbors, so specks
+    vanish and edges stay sharp. Its Percentile darkens or lightens instead.
+  - **Map Switch**: a gray map chooses which of up to four pictures shows,
+    band by band (sand, grass, rock and snow by height, say).
+  - **Flip**: a picture turned over, left to right or top to bottom.
+  - **Perspective**: a picture laid flat on the ground and seen at a slant,
+    repeating toward the horizon, like a tiled floor.
+- Each has its own wiki page.
+- Fixed: a border gradient set to 0° drew at 45°, as if unset. It now runs
+  straight across, as the slider says.
+- Fixed: the vignette's grit was coarser in the preview than in the saved
+  image. It is now measured in the saved image's pixels, so the preview is
+  the saved image scaled down.
+- **Under the hood:**
+  - pruned the stylesheet: it was checked in every state, and nothing in it
+    goes unused;
+  - reviewed the tests: the frame's suite now checks what the real render
+    draws (the gradient's line, the bloom's passes, the vignette's circles
+    and grit) instead of reading the code, which is how the two fixes above
+    were found; a check for a long-gone panel was dropped.
+
 ## Saturn–Enceladus (2026-10-15)
 
 - **New parts in the Athanor**, from Filter Forge's list:
