@@ -275,6 +275,8 @@ export const UI_STRINGS = {
   'option.aether':                             "Aether",
   'option.fathom':                             "Fathom",
   'option.vellum':                             "Vellum",
+  // ---- the Athanor's bar ----
+  'kept.keep':                             "Keep",
 };
 
 /**
@@ -388,6 +390,35 @@ export const DIE = {
   seed: 'Only a new seed',
   seedHint: 'The same surface, a new pattern',
   locked: 'Locked: the light stays where it is',
+};
+
+/** Surfaces made in the Athanor and kept on this browser's shelf: their menus (the Athanor's Kept,
+ *  and a long press on one of Your Surfaces in the surface menu). {name} is the surface's name. */
+export const KEPT = {
+  keep: 'Keep',
+  keepTitle: 'Keep this surface on the shelf, by its name',
+  keepAsk: 'Keep this surface?',
+  keepBody: 'Its name is the Surface part’s name too. It stays on this browser’s shelf, to open again or choose from the surface menu.',
+  replaceAsk: 'Replace the kept \u201C{name}\u201D?',
+  replaceBody: 'A surface on the shelf already has that name. The one kept now is set aside for this graph.',
+  replaceWith: 'Replace it with the graph on the grid',
+  replaceWithAsk: 'Replace \u201C{name}\u201D with the graph on the grid?',
+  replaceWithBody: 'The kept surface becomes what is on the grid now. Its old wiring is gone from this browser.',
+  replace: 'Replace',
+  use: 'Use it as the surface',
+  open: 'Open it in the Athanor',
+  copy: 'Copy the wiring',
+  copyHint: 'as text to paste anywhere, or into another Athanor',
+  share: 'Share the wiring…',
+  copied: 'The wiring of \u201C{name}\u201D is copied.',
+  copyFailed: 'This browser would not copy. The wiring is shown instead: select it and copy it.',
+  drop: 'Take it off the shelf',
+  paste: 'Paste a surface’s wiring…',
+  pasteAsk: 'Paste a surface’s wiring',
+  pasteBody: 'The text that Copy the wiring makes (or a shelf file’s text). It is put on your shelf.',
+  pasteNone: 'That isn’t a surface’s wiring. Nothing was changed.',
+  current: 'The surface on the page',
+  keepIt: 'Keep it on the shelf…',
 };
 
 /** The colour picker's own button. */

@@ -76,7 +76,7 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
     /:root\[data-theme="rose"\]\{[\s\S]*?--bg-deep:#0b0a0d;[\s\S]*?--bg-panel:#131116;/.test(css) && /--accent-2:#a3c6e3/.test(css));
   check('THE TOP BAR: 🜉 The Athanor (glyph large, name small) opens the node editor; a quiet Support button whose heart breathes now and then (still under reduced motion)',
     html.includes('id="athanorTopBtn"') && html.includes('<span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span>')
-    && /\$\('athanorTopBtn'\)\.addEventListener\('click', \(\) => openForge\(forgeDeps\(\)\)\)/.test(ev)
+    && /\$\('athanorTopBtn'\)\.addEventListener\('click', \(\) => openAthanorNow\(\)\)/.test(ev) && /function openAthanorNow\(\)\{ openForge\(forgeDeps\(\)\); \}/.test(ev)
     && html.includes('class="support-btn"') && /@keyframes support-breathe/.test(css) && /prefers-reduced-motion: reduce\)\{ \.support-heart\{ animation:none; \}/.test(css));
   check('THE DIAL\'S RIM HOLDS: the light snaps to 100% near the rim and must be pulled well past it; beyond, it moves at under half speed',
     /let tilt = raw < 93 \? raw : raw < 118 \? 100 : Math\.min\(dialMax\(\), 100 \+ \(raw - 118\) \* 0\.45\);/.test(ev));

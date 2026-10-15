@@ -2004,7 +2004,7 @@ input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{
 .die-more{ flex:0 0 auto; width:auto; margin:0 0 0 1px; padding:0 2px; border:0; background:transparent; color:#6E6880; font:11px/1 var(--ui-text); opacity:.5; cursor:pointer; }
 .die-more:hover, .die-more:focus-visible{ opacity:1; color:var(--accent); }
 body.is-mobile .die-more{ display:none; }
-.die-menu{ position:fixed; z-index:230; min-width:220px; max-width:min(320px, calc(100vw - 16px)); padding:4px 0; background:var(--bg-card); color:var(--text-main);
+.die-menu{ position:fixed; z-index:1000; min-width:220px; max-width:min(320px, calc(100vw - 16px)); padding:4px 0; background:var(--bg-card); color:var(--text-main);
   border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.45); font-family:var(--ui-text); }
 body.is-mobile .die-menu{ left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom, 0px)); max-width:none; padding:6px 0 8px; }
 .die-menu-head{ padding:6px 14px 4px; font-family:var(--ui-caps); font-size:13px; color:var(--accent); }
@@ -2012,6 +2012,7 @@ body.is-mobile .die-menu{ left:8px; right:8px; bottom:calc(8px + env(safe-area-i
 body.is-mobile .die-menu-item{ padding:11px 16px; }
 .die-menu-item:hover, .die-menu-item:focus-visible{ background:color-mix(in srgb, var(--accent) 12%, transparent); outline:none; }
 .die-menu-item[disabled]{ opacity:.45; cursor:default; }
+.die-menu-item.danger .die-menu-label, .die-menu-item.danger .die-menu-glyph{ color:var(--rose); }
 .die-menu-glyph{ flex:0 0 1.2em; font-size:17px; line-height:1.1; color:var(--accent); text-align:center; }
 .die-menu-text{ display:flex; flex-direction:column; gap:1px; min-width:0; }
 .die-menu-label{ font-size:14px; }
@@ -2056,8 +2057,8 @@ summary.card-title, .card-title{ overflow:hidden; }
 /* on a desk the note sits beside the parts list, never over it */
 @media (min-width: 761px){ body:not(.is-mobile) .forge-note{ left:188px; width:min(380px, calc(100% - 200px)); } }
 @media (min-width: 900px){ body:not(.is-mobile) .forge-note{ left:248px; width:min(380px, calc(100% - 260px)); } }
-/* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ⋯ (Kept, Help, Revert,
-   Clear), Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
+/* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ↶ ↷, ⋯ (Kept, Help, Revert,
+   Clear), Keep, Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
 .forge-more-btn{ display:none; }
 .forge-bar .forge-hist{ padding:4px 9px; font-size:15px; } .forge-bar .forge-hist:disabled{ opacity:.3; }
 @media (max-width: 760px){
@@ -2074,6 +2075,12 @@ body.is-mobile .forge-name, body.is-mobile .forge-wide, body.is-mobile .forge-zo
 body.is-mobile .forge-more-btn{ display:inline-block; }
 body.is-mobile .forge-starter{ max-width:none; flex:1 1 auto; min-width:0; }
 body.is-mobile .forge-spacer{ display:none; }
+/* Keep sits in the bar too (one tap, Ruby): the buttons draw in a little so Start from… keeps room to be read */
+body.is-mobile .forge-bar button{ padding:5px 7px; }
+body.is-mobile .forge-bar .forge-hist{ padding:5px 7px; }
+body.is-mobile .forge-starter{ min-width:64px; }
+body.is-mobile .forge-bar{ gap:3px; }
+@media (max-width: 380px){ body.is-mobile .forge-title{ display:none; } }
 .forge-primer{ margin:6px 0 0; padding-left:18px; font-size:12.5px; line-height:1.4; }
 .forge-primer li{ margin:3px 0; }
 
@@ -16619,6 +16626,7 @@ Have fun!</textarea>
         <button type="button" class="ghost" id="forgeFit" title="Everything in view" aria-label="Everything in view">⌖</button>
         <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
       </span>
+      <button type="button" class="ghost" id="forgeKeepBtn" title="Keep this surface on the shelf, by its name" data-str="kept.keep">Keep</button>
       <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use</button>
       <button type="button" class="btn-major" id="forgeCloseBtn" data-sound="athanorClose">Done</button>
     </div>
@@ -17047,6 +17055,8 @@ const UI_STRINGS = {
   'option.aether':                             "Aether",
   'option.fathom':                             "Fathom",
   'option.vellum':                             "Vellum",
+  // ---- the Athanor's bar ----
+  'kept.keep':                             "Keep",
 };
 
 /**
@@ -17160,6 +17170,35 @@ const DIE = {
   seed: 'Only a new seed',
   seedHint: 'The same surface, a new pattern',
   locked: 'Locked: the light stays where it is',
+};
+
+/** Surfaces made in the Athanor and kept on this browser's shelf: their menus (the Athanor's Kept,
+ *  and a long press on one of Your Surfaces in the surface menu). {name} is the surface's name. */
+const KEPT = {
+  keep: 'Keep',
+  keepTitle: 'Keep this surface on the shelf, by its name',
+  keepAsk: 'Keep this surface?',
+  keepBody: 'Its name is the Surface part’s name too. It stays on this browser’s shelf, to open again or choose from the surface menu.',
+  replaceAsk: 'Replace the kept \u201C{name}\u201D?',
+  replaceBody: 'A surface on the shelf already has that name. The one kept now is set aside for this graph.',
+  replaceWith: 'Replace it with the graph on the grid',
+  replaceWithAsk: 'Replace \u201C{name}\u201D with the graph on the grid?',
+  replaceWithBody: 'The kept surface becomes what is on the grid now. Its old wiring is gone from this browser.',
+  replace: 'Replace',
+  use: 'Use it as the surface',
+  open: 'Open it in the Athanor',
+  copy: 'Copy the wiring',
+  copyHint: 'as text to paste anywhere, or into another Athanor',
+  share: 'Share the wiring…',
+  copied: 'The wiring of \u201C{name}\u201D is copied.',
+  copyFailed: 'This browser would not copy. The wiring is shown instead: select it and copy it.',
+  drop: 'Take it off the shelf',
+  paste: 'Paste a surface’s wiring…',
+  pasteAsk: 'Paste a surface’s wiring',
+  pasteBody: 'The text that Copy the wiring makes (or a shelf file’s text). It is put on your shelf.',
+  pasteNone: 'That isn’t a surface’s wiring. Nothing was changed.',
+  current: 'The surface on the page',
+  keepIt: 'Keep it on the shelf…',
 };
 
 /** The colour picker's own button. */
@@ -32854,7 +32893,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Jupiter–Callirrhoe';
+const RELEASE = 'Jupiter–Cyllene';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 
@@ -33680,7 +33719,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 5c565c2";
+const STAMP = "2026-10-15 · 30df3e8";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -35802,6 +35841,7 @@ function chKeep(value, url){
  *  opts.extra    — (value) → more words a search may find it by (its readings, say)
  *  opts.release  — the release name: thumbnails are kept for it
  *  opts.size     — a thumbnail's pixels (default 160)
+ *  opts.hold     — (value, tile) → true when it opened a menu of its own for that tile (a long press or right-click)
  * Returns { refresh(), open(), close() }.
  */
 function attachChooser(select, opts = {}){
@@ -35867,7 +35907,14 @@ function attachChooser(select, opts = {}){
         b.setAttribute('aria-pressed', String(it.value === select.value));
         b.innerHTML = '<span class="ch-thumb"></span><span class="ch-name"></span>';
         b.querySelector('.ch-name').textContent = it.text;
-        b.addEventListener('click', () => choose(it.value));
+        // a long press (or right-click) asks opts.hold for the tile's own menu (a kept surface: share its wiring…)
+        let held = false, timer = 0;
+        if(opts.hold){
+          b.addEventListener('pointerdown', () => { held = false; clearTimeout(timer); timer = setTimeout(() => { if(opts.hold(it.value, b)) held = true; }, 500); });
+          for(const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(timer));
+          b.addEventListener('contextmenu', e => { if(held){ e.preventDefault(); return; } if(opts.hold(it.value, b)){ e.preventDefault(); held = true; } });
+        }
+        b.addEventListener('click', () => { if(held){ held = false; return; } choose(it.value); });
         grid.appendChild(b); tiles.push([b, it]);
       }
       // a folded group's tiles are painted when it is first opened
@@ -36956,6 +37003,7 @@ function createVault(deps){
 
 
 
+
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
 
@@ -37065,7 +37113,7 @@ function forgeHelpHtml(){
     + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
     + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
     + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view (or drag anywhere with the middle button, or with Space held); use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
-    + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Kept</b> keeps the graph on this browser's shelf by name, opens kept graphs, and saves the shelf to a file (or brings graphs in from one) to share them. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
+    + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Keep</b> puts the graph on this browser's shelf under its Surface part's name (one name: keep it under another and the Surface part takes that name too). Kept surfaces appear under Your Surfaces in the surface menu, with a picture of each. <b>Kept</b> opens them, replaces one with the graph on the grid, copies or shares a surface's wiring as text, takes pasted wiring back in, and saves the shelf to a file. In the surface menu, hold a surface you made (or right-click it) to share or copy its wiring. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
     + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
     + sec('parts', 'Every part', parts);
 }
@@ -37117,6 +37165,44 @@ function forgeShelf(){
 }
 function forgeShelfWrite(list){
   try { localStorage.setItem(FORGE_SHELF_KEY, JSON.stringify(list)); return true; } catch(e){ return false; }
+}
+/** Puts a surface on the shelf, in place of one by the same name (any case). */
+function forgeShelfPut(rec){
+  const list = forgeShelf(), at = list.findIndex(r => r.name.toLowerCase() === rec.name.toLowerCase());
+  if(at >= 0) list[at] = rec; else list.push(rec);
+  return forgeShelfWrite(list);
+}
+// ONE NAME (Ruby): a surface's name is its Surface part's name, and the name it is kept under — the
+// same name in both places, always. Keeping it under a new name renames its Surface part.
+const forgeSurfaceNode = g => Object.values((((g || {}).drawflow || {}).Home || {}).data || {}).find(n => n && n.name === 'surface') || null;
+function forgeSurfaceNameOf(g){ const n = forgeSurfaceNode(g); return n && n.data && n.data.name ? String(n.data.name).trim() : ''; }
+function forgeNameSurface(g, name){ const n = forgeSurfaceNode(g); if(n) n.data = { ...(n.data || {}), name }; return g; }
+/** A surface's wiring as text to copy or share: the shelf file's form (no thumbnails: they are made again). */
+function forgeWiringText(recs){
+  return JSON.stringify({ kind: 'unfixable-vellum-surfaces', surfaces: recs.map(r => ({ name: r.name, graph: r.graph, savedAt: r.savedAt })) }, null, 1);
+}
+/** Surfaces read from text someone pasted or a file: a shelf file, one kept surface, or a bare graph.
+ *  Each is checked by validate(json) → { ok, graph }, and named as its Surface part is. null: none at all. */
+function forgeReadSurfaces(text, validate){
+  let data; try { data = typeof text === 'string' ? JSON.parse(text.trim()) : text; } catch(e){ return null; }
+  const raw = Array.isArray(data) ? data : data && Array.isArray(data.surfaces) ? data.surfaces
+    : data && typeof data.graph === 'string' ? [data] : data && data.drawflow ? [{ name: '', graph: JSON.stringify(data) }] : null;
+  if(!raw) return null;
+  const surfaces = []; let bad = 0;
+  for(const r of raw){
+    if(!r || typeof r.graph !== 'string'){ bad++; continue; }
+    let v; try { v = validate ? validate(r.graph) : { ok: true, graph: JSON.parse(r.graph) }; } catch(e){ v = { ok: false }; }
+    if(!v.ok || !v.graph){ bad++; continue; }
+    const name = String((typeof r.name === 'string' && r.name.trim()) || forgeSurfaceNameOf(v.graph) || 'Surface').trim().slice(0, 60);
+    surfaces.push({ name, graph: JSON.stringify(forgeNameSurface(v.graph, name)), savedAt: r.savedAt || new Date().toISOString() });
+  }
+  return { surfaces, bad };
+}
+/** Copies text; false when the browser won't (the caller shows the text instead). */
+async function forgeCopy(text){
+  try { if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); return true; } } catch(e){}
+  try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select();
+    const ok = document.execCommand && document.execCommand('copy'); t.remove(); return !!ok; } catch(e){ return false; }
 }
 
 /**
@@ -37225,7 +37311,12 @@ async function openForge(deps){
         // every port the part has, wired or not (a starter, or a part that gained one, lists only its wires)
         n.inputs = n.inputs || {}; n.outputs = n.outputs || {};
         P.ins.forEach((_, j) => { n.inputs['input_' + (j + 1)] = n.inputs['input_' + (j + 1)] || { connections: [] }; });
-        P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; }); }
+        P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; });
+        // ports in their own order. Drawflow makes a node's ports in the order its list has them, and
+        // the face lines each port up with its row by that order: a graph whose wires were made in
+        // another order ({input_2, input_3, input_1}) drew its wires to the wrong rows (Ruby's Halftone)
+        const ordered = (o, pre) => Object.fromEntries(Object.keys(o).sort((a, b) => (+a.slice(pre.length) || 0) - (+b.slice(pre.length) || 0)).map(k => [k, o[k]]));
+        n.inputs = ordered(n.inputs, 'input_'); n.outputs = ordered(n.outputs, 'output_'); }
       return g; };
     F.faces = faces;
     const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
@@ -37724,6 +37815,7 @@ async function openForge(deps){
     // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
     if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
       openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
+        { glyph: '✚', label: 'Keep this surface…', act: () => keep() },
         { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
         { glyph: '?', label: 'Help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
@@ -37731,7 +37823,9 @@ async function openForge(deps){
     if(st){
       // the starters, then the app's own textures under the same group headings as the Surface menu
       const chained = [ATHANOR_BASICS, ...TEXTURE_GROUPS].map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
-      st.innerHTML = '<option value="">Start from…</option>'
+      // (on a phone the bar is narrow: the menu says only "Start…")
+      const phoneBar = !!(document.body && document.body.classList.contains('is-mobile'));
+      st.innerHTML = `<option value="">${phoneBar ? 'Start…' : 'Start from…'}</option>`
         + '<optgroup label="🝆 Starters to Take Apart">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
         + '<optgroup label="🜍 Surface Studies">' + Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
         + chained.map(([g, ts]) => `<optgroup label="${forgeEsc(g.glyph + ' ' + g.name)}">` + ts.map(k => `<option value="${k}">${forgeEsc(TEXTURE_CHAINS[k].label)}</option>`).join('') + '</optgroup>').join('');
@@ -37741,27 +37835,57 @@ async function openForge(deps){
       });
     }
     // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----
+    const surfaceId = () => { const e = Object.entries(rawNodes()).find(([, n]) => n.name === 'surface'); return e ? e[0] : null; };
     const surfaceName = () => { const s = Object.values(rawNodes()).find(n => n.name === 'surface'); return ((s && s.data && s.data.name) || 'My Surface').trim(); };
+    // ONE NAME: the name it is kept under is the Surface part's name; keeping it under another renames the part
     const keep = async () => {
       if(!count()){ if(deps.warn) deps.warn(['there is nothing on the grid to keep']); return; }
-      const name = await promptFor({ title: 'Keep this surface?', body: 'Give it a name. It stays on this browser’s shelf, to open again.', input: true, defaultValue: surfaceName(), confirmLabel: 'Keep' });
+      const name = await promptFor({ title: KEPT.keepAsk, body: KEPT.keepBody, input: true, defaultValue: surfaceName(), confirmLabel: KEPT.keep });
       const clean = String(name || '').trim().slice(0, 60); if(!clean) return;
-      const list = forgeShelf(), at = list.findIndex(r => r.name.toLowerCase() === clean.toLowerCase());
-      if(at >= 0 && !await ask({ title: `Replace the kept “${list[at].name}”?`, body: 'A surface on the shelf already has that name.', confirmLabel: 'Replace', danger: true })) return;
-      const rec = { name: clean, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() };
-      if(at >= 0) list[at] = rec; else list.push(rec);
-      if(!forgeShelfWrite(list)){ if(deps.warn) deps.warn(['this browser would not keep it (storage is full or blocked)']); return; }
+      const at = forgeShelf().find(r => r.name.toLowerCase() === clean.toLowerCase());
+      if(at && !await ask({ title: fill(KEPT.replaceAsk, at.name), body: KEPT.replaceBody, confirmLabel: KEPT.replace, danger: true })) return;
+      const sid = surfaceId(); if(sid && surfaceName() !== clean) setData(sid, { name: clean });
+      if(!forgeShelfPut({ name: clean, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() })){ if(deps.warn) deps.warn(['this browser would not keep it (storage is full or blocked)']); return; }
       sound('nodeAdd'); if(deps.onShelf) deps.onShelf();
+    };
+    // a kept surface replaced by the graph on the grid (it keeps its own name, and so does the Surface part)
+    const replaceKept = async rec => {
+      if(!count()){ if(deps.warn) deps.warn(['there is nothing on the grid to keep']); return; }
+      if(!await ask({ title: fill(KEPT.replaceWithAsk, rec.name), body: KEPT.replaceWithBody, confirmLabel: KEPT.replace, danger: true })) return;
+      const sid = surfaceId(); if(sid && surfaceName() !== rec.name) setData(sid, { name: rec.name });
+      forgeShelfPut({ name: rec.name, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() }); sound('nodeAdd'); if(deps.onShelf) deps.onShelf();
     };
     const openKept = async rec => {
       const v = deps.validate ? deps.validate(rec.graph) : { ok: true, graph: JSON.parse(rec.graph), problems: [] };
       if(!v.ok){ if(deps.refuse) deps.refuse('That kept surface can’t be opened', v.problems.join('; ') + '. Nothing was changed.'); return; }
       if(v.problems.length && deps.warn) deps.warn(v.problems);
-      await openGraph(v.graph, rec.name);
+      await openGraph(forgeNameSurface(v.graph, rec.name), rec.name);
     };
     const dropKept = async rec => {
       if(!await ask({ title: `Take “${rec.name}” off the shelf?`, body: 'It is gone from this browser. (Looks that use it keep their own copy.)', confirmLabel: 'Take it off', danger: true })) return;
       forgeShelfWrite(forgeShelf().filter(r => r.name !== rec.name)); if(deps.onShelf) deps.onShelf();
+    };
+    const copyKept = async rec => { const text = forgeWiringText([rec]);
+      if(await forgeCopy(text)){ if(deps.toast) deps.toast(fill(KEPT.copied, rec.name)); }
+      else await promptFor({ title: KEPT.copy, body: KEPT.copyFailed, input: true, rows: 8, defaultValue: text, confirmLabel: 'Done', alert: true }); };
+    const shareKept = rec => { try { navigator.share({ title: rec.name, text: forgeWiringText([rec]) }).catch(() => {}); } catch(e){} };
+    const canShare = () => typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+    // the graph on the grid, as a kept surface would carry it (for Copy and Share before it is kept)
+    const onGrid = () => ({ name: surfaceName(), graph: JSON.stringify(slim()), savedAt: new Date().toISOString() });
+    // surfaces pasted as text (what Copy the wiring makes): onto the shelf, asking before one replaces another
+    const takeIn = async (read) => {
+      if(!read || !read.surfaces.length){ if(deps.refuse) deps.refuse(KEPT.pasteAsk, KEPT.pasteNone); return 0; }
+      const have = new Set(forgeShelf().map(r => r.name.toLowerCase())), clash = read.surfaces.filter(r => have.has(r.name.toLowerCase()));
+      if(clash.length && !await ask({ title: fill(KEPT.replaceAsk, clash.map(r => r.name).join('”, “')), body: KEPT.replaceBody, confirmLabel: KEPT.replace, danger: true })) return 0;
+      for(const r of read.surfaces) forgeShelfPut(r);
+      if(deps.onShelf) deps.onShelf();
+      if(deps.warn) deps.warn([`${read.surfaces.length} surface${read.surfaces.length === 1 ? '' : 's'} put on the shelf` + (read.bad ? `, ${read.bad} left out (unreadable)` : '')]);
+      return read.surfaces.length;
+    };
+    const pasteKept = async () => {
+      const text = await promptFor({ title: KEPT.pasteAsk, body: KEPT.pasteBody, input: true, rows: 6, defaultValue: '', confirmLabel: 'Put it on the shelf' });
+      if(text == null || !String(text).trim()) return;
+      await takeIn(forgeReadSurfaces(String(text), deps.validate));
     };
     const exportShelf = () => {
       const blob = new Blob([JSON.stringify({ kind: 'unfixable-vellum-surfaces', surfaces: forgeShelf() }, null, 1)], { type: 'application/json' });
@@ -37772,28 +37896,30 @@ async function openForge(deps){
       inp.addEventListener('change', async () => {
         const f = inp.files && inp.files[0]; if(!f) return;
         if(f.size > 4*1024*1024){ if(deps.refuse) deps.refuse('That file is too large', 'A shelf file is at most 4 MB. Nothing was changed.'); return; }
-        let data; try { data = JSON.parse(await f.text()); } catch(e){ if(deps.refuse) deps.refuse('That isn’t readable JSON', 'Nothing was changed.'); return; }
-        const incoming = Array.isArray(data) ? data : (data && Array.isArray(data.surfaces) ? data.surfaces : []);
-        const list = forgeShelf(); let added = 0, bad = 0;
-        for(const r of incoming){ if(!r || typeof r.name !== 'string' || typeof r.graph !== 'string'){ bad++; continue; }
-          const v = deps.validate ? deps.validate(r.graph) : { ok: true, graph: JSON.parse(r.graph) }; if(!v.ok){ bad++; continue; }
-          const rec = { name: r.name.trim().slice(0, 60) || 'Surface', graph: JSON.stringify(v.graph), savedAt: r.savedAt || new Date().toISOString() };
-          const at = list.findIndex(x => x.name.toLowerCase() === rec.name.toLowerCase()); if(at >= 0) list[at] = rec; else list.push(rec); added++; }
-        forgeShelfWrite(list); if(deps.onShelf) deps.onShelf();
-        if(deps.warn) deps.warn([`${added} surface${added === 1 ? '' : 's'} put on the shelf` + (bad ? `, ${bad} left out (unreadable)` : '')]);
+        const read = forgeReadSurfaces(await f.text(), deps.validate);
+        if(!read){ if(deps.refuse) deps.refuse('That isn’t readable JSON', 'Nothing was changed.'); return; }
+        await takeIn(read);
       });
       inp.click();
     };
     const shelfMenu = () => { const list = forgeShelf(); return { title: 'Kept surfaces', hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet.', items: [
       { glyph: '✚', label: 'Keep this surface…', act: keep },
+      { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(onGrid()) },
+      ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(onGrid()) }] : []),
       ...(list.length ? [{ sep: true }] : []),
       ...list.slice().reverse().map(rec => ({ glyph: '🜉', label: rec.name, hint: String(rec.savedAt || '').slice(0, 10), sub: () => ({ title: rec.name, items: [
         { glyph: '⇩', label: 'Open it', act: () => openKept(rec) },
+        { glyph: '⟲', label: KEPT.replaceWith, danger: true, act: () => replaceKept(rec) },
+        { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(rec) },
+        ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(rec) }] : []),
         { glyph: '✕', label: 'Take it off the shelf', danger: true, act: () => dropKept(rec) }] }) })),
       { sep: true },
+      { glyph: '⎘', label: KEPT.paste, act: pasteKept },
       { glyph: '⇪', label: 'Save the shelf as a file', disabled: !list.length, act: exportShelf },
       { glyph: '⇣', label: 'Bring surfaces in from a file…', act: importShelf }] }; };
     if($('forgeKeptBtn')) $('forgeKeptBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, shelfMenu()); });
+    // Keep, one tap from the bar (Ruby: it was two menus deep)
+    if($('forgeKeepBtn')) $('forgeKeepBtn').addEventListener('click', () => keep());
     if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
     if($('forgeUndo')) $('forgeUndo').addEventListener('click', () => stepHist(-1));
     if($('forgeRedo')) $('forgeRedo').addEventListener('click', () => stepHist(1));
@@ -40195,29 +40321,24 @@ function paintDice(){
 // the dice's menu: beside the die on a desk, a sheet from the bottom on a phone (CSS)
 let dieMenu = null;
 function closeDieMenu(){ if(dieMenu){ dieMenu.remove(); dieMenu = null; } }
-function openDieMenu(root, anchor, surface){
+/** A small menu of actions: beside its anchor on a desk, a sheet from the bottom on a phone (the dice's,
+ *  and a kept surface's long press). items: { glyph, label, hint, act, disabled, danger, checked, now }. */
+function openSheetMenu(anchor, title, items){
   closeDieMenu();
-  const m = document.createElement('div'); m.className = 'die-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', DIE.menuTitle);
-  const head = document.createElement('div'); head.className = 'die-menu-head'; head.textContent = DIE.menuTitle; m.appendChild(head);
-  const item = (glyph, label, hint, act, disabled) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'die-menu-item'; b.setAttribute('role', 'menuitem'); b.disabled = !!disabled;
-    const g = document.createElement('span'); g.className = 'die-menu-glyph'; g.textContent = glyph; g.setAttribute('aria-hidden', 'true');
+  const m = document.createElement('div'); m.className = 'die-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', title);
+  const head = document.createElement('div'); head.className = 'die-menu-head'; head.textContent = title; m.appendChild(head);
+  for(const it of items){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'die-menu-item' + (it.danger ? ' danger' : '') + (it.checked ? ' current' : ''); b.disabled = !!it.disabled;
+    b.setAttribute('role', it.checked !== undefined ? 'menuitemradio' : 'menuitem'); if(it.checked !== undefined) b.setAttribute('aria-checked', it.checked ? 'true' : 'false');
+    const g = document.createElement('span'); g.className = 'die-menu-glyph'; g.textContent = it.glyph || ''; g.setAttribute('aria-hidden', 'true');
     const t = document.createElement('span'); t.className = 'die-menu-text';
-    const n = document.createElement('span'); n.className = 'die-menu-label'; n.textContent = label;
-    const h = document.createElement('span'); h.className = 'die-menu-hint'; h.textContent = hint;
-    t.appendChild(n); t.appendChild(h); b.appendChild(g); b.appendChild(t);
-    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closeDieMenu(); act(); });
-    m.appendChild(b); return b;
-  };
-  const lv = dieLevel();
-  for(const way of DIE_LEVELS){
-    const b = item(DIE_GLYPH[way], DIE[way], DIE[way + 'Hint'], () => { setDieLevel(way); rollWithBack(root, way); });
-    b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', way === lv ? 'true' : 'false');
-    if(way === lv){ b.classList.add('current'); const n = document.createElement('span'); n.className = 'die-menu-now'; n.textContent = DIE.now; b.querySelector('.die-menu-text').appendChild(n); }
+    const n = document.createElement('span'); n.className = 'die-menu-label'; n.textContent = it.label; t.appendChild(n);
+    if(it.hint){ const h = document.createElement('span'); h.className = 'die-menu-hint'; h.textContent = it.hint; t.appendChild(h); }
+    if(it.now){ const w = document.createElement('span'); w.className = 'die-menu-now'; w.textContent = it.now; t.appendChild(w); }
+    b.appendChild(g); b.appendChild(t);
+    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closeDieMenu(); it.act(); });
+    m.appendChild(b);
   }
-  if(surface) item('⁂', DIE.seed, DIE.seedHint, () => { maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); });
-  const has = dieRolls.has(root);
-  item('↶', DIE.back, has ? DIE.backHint : DIE.backNone, () => dieBack(root), !has);
   document.body.appendChild(m); dieMenu = m;
   if(!document.body.classList.contains('is-mobile') && anchor && anchor.getBoundingClientRect){
     const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
@@ -40225,6 +40346,14 @@ function openDieMenu(root, anchor, surface){
     m.style.top = (r.bottom + 6 + h > vh - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
   }
   const first = m.querySelector('.die-menu-item:not([disabled])'); if(first && first.focus) first.focus({ preventScroll: true });
+}
+function openDieMenu(root, anchor, surface){
+  const lv = dieLevel(), has = dieRolls.has(root);
+  openSheetMenu(anchor, DIE.menuTitle, [
+    ...DIE_LEVELS.map(way => ({ glyph: DIE_GLYPH[way], label: DIE[way], hint: DIE[way + 'Hint'], checked: way === lv, now: way === lv ? DIE.now : '',
+      act: () => { setDieLevel(way); rollWithBack(root, way); } })),
+    ...(surface ? [{ glyph: '⁂', label: DIE.seed, hint: DIE.seedHint, act: () => { maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); } }] : []),
+    { glyph: '↶', label: DIE.back, hint: has ? DIE.backHint : DIE.backNone, disabled: !has, act: () => dieBack(root) }]);
 }
 if(typeof document.addEventListener === 'function'){
   document.addEventListener('pointerdown', e => { if(dieMenu && !dieMenu.contains(e.target) && !(e.target.closest && e.target.closest('.die-more'))) closeDieMenu(); }, true);
@@ -40710,21 +40839,25 @@ function athanorStepSheet(json, paint){
 function paintShelfOptions(){
   const g = $('athanorGroup'); if(!g || typeof document.createElement !== 'function' || !g.querySelectorAll) return;
   g.querySelectorAll('option.kept').forEach(o => o.remove());
-  forgeShelf().forEach((rec, i) => { const o = document.createElement('option'); o.value = 'kept:' + i; o.className = 'kept'; o.textContent = rec.name; g.appendChild(o); });
+  // by name, not by place on the shelf: a tile's thumbnail and a long press stay with their surface
+  forgeShelf().forEach(rec => { const o = document.createElement('option'); o.value = 'kept:' + encodeURIComponent(rec.name); o.className = 'kept'; o.textContent = rec.name; g.appendChild(o); });
+  if(typeof CHOOSERS !== 'undefined') CHOOSERS.forEach(c => c && c.refresh && c.refresh());
 }
+const keptByValue = value => { const name = decodeURIComponent(String(value).slice(5)); return forgeShelf().find(r => r.name === name) || null; };
 if(document.addEventListener) for(const ev of ['input', 'change']) document.addEventListener(ev, e => {
   const t = e.target; if(!t || t.id !== 'textureType' || !String(t.value).startsWith('kept:')) return;
-  const rec = forgeShelf()[+t.value.slice(5)];
+  const rec = keptByValue(t.value);
   const v = rec ? validateGraph(rec.graph) : { ok: false, problems: ['it is no longer on the shelf'] };
   if(!v.ok){ t.value = 'athanor'; hardNo('That kept surface can’t be used', v.problems.join('; ') + '.'); return; }
-  $('forgeGraph').value = JSON.stringify(v.graph); t.value = 'athanor';
+  // one name: the page calls it what the shelf does
+  $('forgeGraph').value = JSON.stringify(forgeNameSurface(v.graph, rec.name)); t.value = 'athanor';
   applyAthanorGraph(true); paintForgeSummary();
 }, true);
 setTimeout(paintShelfOptions, 0);
 const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
-  ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH,
+  ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH, toast: t => toast(t),
   onShelf: () => { if(typeof paintShelfOptions === 'function') paintShelfOptions(); },
   validate: json => validateGraph(json),
   warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
@@ -40732,7 +40865,8 @@ const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); i
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
     t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
 // THE ATHANOR opens from the top bar, on every device
-if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openForge(forgeDeps()));
+function openAthanorNow(){ openForge(forgeDeps()); }
+if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openAthanorNow());
 if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => { closeForge(forgeDeps()); paintForgeSummary(); });
 setTimeout(() => { paintForgeSummary(); applyAthanorGraph(true); }, 0);
 
@@ -41337,6 +41471,56 @@ setSwatchTextureSource((type, w, h, opts) => {
 });
 onTextureReady(() => swatchTexturesArrived());
 
+// ---------- SURFACES MADE IN THE ATHANOR, in the surface menu ----------
+// THEIR THUMBNAILS (Ruby): drawn at the canonical settings (the graph's own knob defaults, one seed, the
+// light from the upper left, plain hues), in the worker, and kept with the surface on the shelf until its
+// wiring changes. (Not in the chooser's per-release cache: a kept surface can be replaced under its name.)
+const keptHash = text => { let h = 2166136261; for(let i = 0; i < text.length; i++){ h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + text.length; };
+function keptOpts(json, n){
+  const defs = athanorKnobs(json), knob = i => (defs.find(x => x.slot === i) || {}).def ?? 50;
+  return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8',
+    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
+}
+function keptThumb(rec, canvas, unsaved){
+  if(!rec || !rec.graph || rec.graph.length < 40) return false;
+  const of = keptHash(rec.graph), x = canvas.getContext('2d');
+  const paint = src => { x.fillStyle = '#1A1720'; x.fillRect(0, 0, canvas.width, canvas.height); x.drawImage(src, 0, 0, canvas.width, canvas.height); };
+  if(rec.thumb && rec.thumb.of === of && /^data:image\/jpeg;base64,/.test(rec.thumb.url || '')){ const im = new Image(); im.onload = () => paint(im); im.src = rec.thumb.url; return true; }
+  const n = 192;
+  whenTexture('keptThumb:' + (rec.name || '~page'), 'athanor', n, n, keptOpts(rec.graph, n), tex => {
+    paint(tex);
+    if(unsaved) return;
+    try { const url = canvas.toDataURL('image/jpeg', 0.8); const now = forgeShelf().find(r => r.name === rec.name);
+      if(now && keptHash(now.graph) === of) forgeShelfPut({ ...now, thumb: { of, url } }); } catch(e){}
+  });
+  return true;
+}
+// A LONG PRESS on a surface made in the Athanor (Ruby): share its wiring, copy it, open it, take it off the shelf
+async function copyWiring(rec){
+  const text = forgeWiringText([rec]);
+  if(await forgeCopy(text)) toast(fill(KEPT.copied, rec.name));
+  else await modalPrompt({ title: KEPT.copy, body: KEPT.copyFailed, input: true, rows: 8, defaultValue: text, confirmLabel: 'Done', alert: true });
+}
+function holdSurface(value, tile){
+  const kept = String(value).startsWith('kept:'), page = value === 'athanor';
+  if(!kept && !page) return false;
+  const graph = kept ? (keptByValue(value) || {}).graph : ($('forgeGraph') || {}).value || '';
+  if(!graph || graph.length < 40) return false;
+  const name = kept ? keptByValue(value).name : (athanorName(graph) || 'My Surface');
+  const rec = kept ? keptByValue(value) : { name, graph, savedAt: new Date().toISOString() };
+  const share = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const open = () => { if(kept){ const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); } openAthanorNow(); };
+  openSheetMenu(tile, kept ? name : KEPT.current + ': ' + name, [
+    ...(kept ? [{ glyph: '◈', label: KEPT.use, act: () => { const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); CHOOSERS.forEach(c => c && c.close && c.close()); } }] : []),
+    { glyph: '🜉', label: KEPT.open, act: () => { CHOOSERS.forEach(c => c && c.close && c.close()); open(); } },
+    ...(share ? [{ glyph: '⇗', label: KEPT.share, act: () => { try { navigator.share({ title: name, text: forgeWiringText([rec]) }).catch(() => {}); } catch(e){} } }] : []),
+    { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyWiring(rec) },
+    ...(kept ? [{ glyph: '✕', label: KEPT.drop, danger: true, act: async () => {
+      if(!await askSure({ title: `Take “${name}” off the shelf?`, body: 'It is gone from this browser. (Looks that use it keep their own copy.)', confirmLabel: 'Take it off', danger: true })) return;
+      forgeShelfWrite(forgeShelf().filter(r => r.name !== name)); paintShelfOptions(); } }] : [])]);
+  return true;
+}
+
 // ---------- THE SURFACE MENUS AS TILES ----------
 // Each surface's tile is the surface as a preset wears it (its ground, hues, blend and knobs), or, worn by
 // none, its defaults on a ground that suits its blend. Thumbnails are kept for the release (chooser.js).
@@ -41350,7 +41534,9 @@ onTextureReady(() => swatchTexturesArrived());
     return { bg1: backFor(caps.blends[0]), texture: true, textureType: type, textureOpacity: 100, accent1: '#E07A8A', accent2: '#7A8AE8' };
   };
   const thumb = (value, canvas, done) => {
-    if(!TEXTURE_PARAMS[value] || value === 'athanor') return false;
+    if(String(value).startsWith('kept:')) return keptThumb(keptByValue(value), canvas);
+    if(value === 'athanor') return keptThumb({ name: '', graph: ($('forgeGraph') || {}).value || '' }, canvas, true);
+    if(!TEXTURE_PARAMS[value]) return false;
     // made at three times the tile and drawn down: grown and simulated surfaces need room to show what they are
     const big = document.createElement('canvas');
     paintPresetSwatch(big, thumbLook(value), canvas.width*3, canvas.height*3, () => {
@@ -41361,7 +41547,7 @@ onTextureReady(() => swatchTexturesArrived());
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
   const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
   for(const [sel, title] of [[$('textureType'), CHOOSER.surfaceTitle], [$('baseType'), CHOOSER.baseTitle]]){
-    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160 })); } catch(e){ /* the plain menu still works */ }
+    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160, hold: sel.id === 'textureType' ? holdSurface : null })); } catch(e){ /* the plain menu still works */ }
   }
 }
 

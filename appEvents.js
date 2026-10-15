@@ -27,7 +27,7 @@
 import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
-import { forgeShelf, openForge, closeForge, describeForge } from './forge.js';
+import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
 import { athanorKnobs, athanorHues, athanorName, athanorNodes, validateGraph } from './athanor.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser, chMatches } from './chooser.js';
@@ -50,7 +50,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
-import { applyStrings, fill, PICKER, CHOOSER, DIE } from './strings.js';
+import { applyStrings, fill, PICKER, CHOOSER, DIE, KEPT } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -2347,29 +2347,24 @@ function paintDice(){
 // the dice's menu: beside the die on a desk, a sheet from the bottom on a phone (CSS)
 let dieMenu = null;
 function closeDieMenu(){ if(dieMenu){ dieMenu.remove(); dieMenu = null; } }
-function openDieMenu(root, anchor, surface){
+/** A small menu of actions: beside its anchor on a desk, a sheet from the bottom on a phone (the dice's,
+ *  and a kept surface's long press). items: { glyph, label, hint, act, disabled, danger, checked, now }. */
+function openSheetMenu(anchor, title, items){
   closeDieMenu();
-  const m = document.createElement('div'); m.className = 'die-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', DIE.menuTitle);
-  const head = document.createElement('div'); head.className = 'die-menu-head'; head.textContent = DIE.menuTitle; m.appendChild(head);
-  const item = (glyph, label, hint, act, disabled) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'die-menu-item'; b.setAttribute('role', 'menuitem'); b.disabled = !!disabled;
-    const g = document.createElement('span'); g.className = 'die-menu-glyph'; g.textContent = glyph; g.setAttribute('aria-hidden', 'true');
+  const m = document.createElement('div'); m.className = 'die-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', title);
+  const head = document.createElement('div'); head.className = 'die-menu-head'; head.textContent = title; m.appendChild(head);
+  for(const it of items){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'die-menu-item' + (it.danger ? ' danger' : '') + (it.checked ? ' current' : ''); b.disabled = !!it.disabled;
+    b.setAttribute('role', it.checked !== undefined ? 'menuitemradio' : 'menuitem'); if(it.checked !== undefined) b.setAttribute('aria-checked', it.checked ? 'true' : 'false');
+    const g = document.createElement('span'); g.className = 'die-menu-glyph'; g.textContent = it.glyph || ''; g.setAttribute('aria-hidden', 'true');
     const t = document.createElement('span'); t.className = 'die-menu-text';
-    const n = document.createElement('span'); n.className = 'die-menu-label'; n.textContent = label;
-    const h = document.createElement('span'); h.className = 'die-menu-hint'; h.textContent = hint;
-    t.appendChild(n); t.appendChild(h); b.appendChild(g); b.appendChild(t);
-    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closeDieMenu(); act(); });
-    m.appendChild(b); return b;
-  };
-  const lv = dieLevel();
-  for(const way of DIE_LEVELS){
-    const b = item(DIE_GLYPH[way], DIE[way], DIE[way + 'Hint'], () => { setDieLevel(way); rollWithBack(root, way); });
-    b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', way === lv ? 'true' : 'false');
-    if(way === lv){ b.classList.add('current'); const n = document.createElement('span'); n.className = 'die-menu-now'; n.textContent = DIE.now; b.querySelector('.die-menu-text').appendChild(n); }
+    const n = document.createElement('span'); n.className = 'die-menu-label'; n.textContent = it.label; t.appendChild(n);
+    if(it.hint){ const h = document.createElement('span'); h.className = 'die-menu-hint'; h.textContent = it.hint; t.appendChild(h); }
+    if(it.now){ const w = document.createElement('span'); w.className = 'die-menu-now'; w.textContent = it.now; t.appendChild(w); }
+    b.appendChild(g); b.appendChild(t);
+    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closeDieMenu(); it.act(); });
+    m.appendChild(b);
   }
-  if(surface) item('⁂', DIE.seed, DIE.seedHint, () => { maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); });
-  const has = dieRolls.has(root);
-  item('↶', DIE.back, has ? DIE.backHint : DIE.backNone, () => dieBack(root), !has);
   document.body.appendChild(m); dieMenu = m;
   if(!document.body.classList.contains('is-mobile') && anchor && anchor.getBoundingClientRect){
     const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
@@ -2377,6 +2372,14 @@ function openDieMenu(root, anchor, surface){
     m.style.top = (r.bottom + 6 + h > vh - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
   }
   const first = m.querySelector('.die-menu-item:not([disabled])'); if(first && first.focus) first.focus({ preventScroll: true });
+}
+function openDieMenu(root, anchor, surface){
+  const lv = dieLevel(), has = dieRolls.has(root);
+  openSheetMenu(anchor, DIE.menuTitle, [
+    ...DIE_LEVELS.map(way => ({ glyph: DIE_GLYPH[way], label: DIE[way], hint: DIE[way + 'Hint'], checked: way === lv, now: way === lv ? DIE.now : '',
+      act: () => { setDieLevel(way); rollWithBack(root, way); } })),
+    ...(surface ? [{ glyph: '⁂', label: DIE.seed, hint: DIE.seedHint, act: () => { maybeRerollSeed(); scheduleRender(); murmur.play('reroll'); } }] : []),
+    { glyph: '↶', label: DIE.back, hint: has ? DIE.backHint : DIE.backNone, disabled: !has, act: () => dieBack(root) }]);
 }
 if(typeof document.addEventListener === 'function'){
   document.addEventListener('pointerdown', e => { if(dieMenu && !dieMenu.contains(e.target) && !(e.target.closest && e.target.closest('.die-more'))) closeDieMenu(); }, true);
@@ -2862,21 +2865,25 @@ function athanorStepSheet(json, paint){
 function paintShelfOptions(){
   const g = $('athanorGroup'); if(!g || typeof document.createElement !== 'function' || !g.querySelectorAll) return;
   g.querySelectorAll('option.kept').forEach(o => o.remove());
-  forgeShelf().forEach((rec, i) => { const o = document.createElement('option'); o.value = 'kept:' + i; o.className = 'kept'; o.textContent = rec.name; g.appendChild(o); });
+  // by name, not by place on the shelf: a tile's thumbnail and a long press stay with their surface
+  forgeShelf().forEach(rec => { const o = document.createElement('option'); o.value = 'kept:' + encodeURIComponent(rec.name); o.className = 'kept'; o.textContent = rec.name; g.appendChild(o); });
+  if(typeof CHOOSERS !== 'undefined') CHOOSERS.forEach(c => c && c.refresh && c.refresh());
 }
+const keptByValue = value => { const name = decodeURIComponent(String(value).slice(5)); return forgeShelf().find(r => r.name === name) || null; };
 if(document.addEventListener) for(const ev of ['input', 'change']) document.addEventListener(ev, e => {
   const t = e.target; if(!t || t.id !== 'textureType' || !String(t.value).startsWith('kept:')) return;
-  const rec = forgeShelf()[+t.value.slice(5)];
+  const rec = keptByValue(t.value);
   const v = rec ? validateGraph(rec.graph) : { ok: false, problems: ['it is no longer on the shelf'] };
   if(!v.ok){ t.value = 'athanor'; hardNo('That kept surface can’t be used', v.problems.join('; ') + '.'); return; }
-  $('forgeGraph').value = JSON.stringify(v.graph); t.value = 'athanor';
+  // one name: the page calls it what the shelf does
+  $('forgeGraph').value = JSON.stringify(forgeNameSurface(v.graph, rec.name)); t.value = 'athanor';
   applyAthanorGraph(true); paintForgeSummary();
 }, true);
 setTimeout(paintShelfOptions, 0);
 const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
-  ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH,
+  ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH, toast: t => toast(t),
   onShelf: () => { if(typeof paintShelfOptions === 'function') paintShelfOptions(); },
   validate: json => validateGraph(json),
   warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
@@ -2884,7 +2891,8 @@ const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); i
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
     t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
 // THE ATHANOR opens from the top bar, on every device
-if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openForge(forgeDeps()));
+function openAthanorNow(){ openForge(forgeDeps()); }
+if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openAthanorNow());
 if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => { closeForge(forgeDeps()); paintForgeSummary(); });
 setTimeout(() => { paintForgeSummary(); applyAthanorGraph(true); }, 0);
 
@@ -3489,6 +3497,56 @@ setSwatchTextureSource((type, w, h, opts) => {
 });
 onTextureReady(() => swatchTexturesArrived());
 
+// ---------- SURFACES MADE IN THE ATHANOR, in the surface menu ----------
+// THEIR THUMBNAILS (Ruby): drawn at the canonical settings (the graph's own knob defaults, one seed, the
+// light from the upper left, plain hues), in the worker, and kept with the surface on the shelf until its
+// wiring changes. (Not in the chooser's per-release cache: a kept surface can be replaced under its name.)
+const keptHash = text => { let h = 2166136261; for(let i = 0; i < text.length; i++){ h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + text.length; };
+function keptOpts(json, n){
+  const defs = athanorKnobs(json), knob = i => (defs.find(x => x.slot === i) || {}).def ?? 50;
+  return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8',
+    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
+}
+function keptThumb(rec, canvas, unsaved){
+  if(!rec || !rec.graph || rec.graph.length < 40) return false;
+  const of = keptHash(rec.graph), x = canvas.getContext('2d');
+  const paint = src => { x.fillStyle = '#1A1720'; x.fillRect(0, 0, canvas.width, canvas.height); x.drawImage(src, 0, 0, canvas.width, canvas.height); };
+  if(rec.thumb && rec.thumb.of === of && /^data:image\/jpeg;base64,/.test(rec.thumb.url || '')){ const im = new Image(); im.onload = () => paint(im); im.src = rec.thumb.url; return true; }
+  const n = 192;
+  whenTexture('keptThumb:' + (rec.name || '~page'), 'athanor', n, n, keptOpts(rec.graph, n), tex => {
+    paint(tex);
+    if(unsaved) return;
+    try { const url = canvas.toDataURL('image/jpeg', 0.8); const now = forgeShelf().find(r => r.name === rec.name);
+      if(now && keptHash(now.graph) === of) forgeShelfPut({ ...now, thumb: { of, url } }); } catch(e){}
+  });
+  return true;
+}
+// A LONG PRESS on a surface made in the Athanor (Ruby): share its wiring, copy it, open it, take it off the shelf
+async function copyWiring(rec){
+  const text = forgeWiringText([rec]);
+  if(await forgeCopy(text)) toast(fill(KEPT.copied, rec.name));
+  else await modalPrompt({ title: KEPT.copy, body: KEPT.copyFailed, input: true, rows: 8, defaultValue: text, confirmLabel: 'Done', alert: true });
+}
+function holdSurface(value, tile){
+  const kept = String(value).startsWith('kept:'), page = value === 'athanor';
+  if(!kept && !page) return false;
+  const graph = kept ? (keptByValue(value) || {}).graph : ($('forgeGraph') || {}).value || '';
+  if(!graph || graph.length < 40) return false;
+  const name = kept ? keptByValue(value).name : (athanorName(graph) || 'My Surface');
+  const rec = kept ? keptByValue(value) : { name, graph, savedAt: new Date().toISOString() };
+  const share = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const open = () => { if(kept){ const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); } openAthanorNow(); };
+  openSheetMenu(tile, kept ? name : KEPT.current + ': ' + name, [
+    ...(kept ? [{ glyph: '◈', label: KEPT.use, act: () => { const t = $('textureType'); t.value = value; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); CHOOSERS.forEach(c => c && c.close && c.close()); } }] : []),
+    { glyph: '🜉', label: KEPT.open, act: () => { CHOOSERS.forEach(c => c && c.close && c.close()); open(); } },
+    ...(share ? [{ glyph: '⇗', label: KEPT.share, act: () => { try { navigator.share({ title: name, text: forgeWiringText([rec]) }).catch(() => {}); } catch(e){} } }] : []),
+    { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyWiring(rec) },
+    ...(kept ? [{ glyph: '✕', label: KEPT.drop, danger: true, act: async () => {
+      if(!await askSure({ title: `Take “${name}” off the shelf?`, body: 'It is gone from this browser. (Looks that use it keep their own copy.)', confirmLabel: 'Take it off', danger: true })) return;
+      forgeShelfWrite(forgeShelf().filter(r => r.name !== name)); paintShelfOptions(); } }] : [])]);
+  return true;
+}
+
 // ---------- THE SURFACE MENUS AS TILES ----------
 // Each surface's tile is the surface as a preset wears it (its ground, hues, blend and knobs), or, worn by
 // none, its defaults on a ground that suits its blend. Thumbnails are kept for the release (chooser.js).
@@ -3502,7 +3560,9 @@ onTextureReady(() => swatchTexturesArrived());
     return { bg1: backFor(caps.blends[0]), texture: true, textureType: type, textureOpacity: 100, accent1: '#E07A8A', accent2: '#7A8AE8' };
   };
   const thumb = (value, canvas, done) => {
-    if(!TEXTURE_PARAMS[value] || value === 'athanor') return false;
+    if(String(value).startsWith('kept:')) return keptThumb(keptByValue(value), canvas);
+    if(value === 'athanor') return keptThumb({ name: '', graph: ($('forgeGraph') || {}).value || '' }, canvas, true);
+    if(!TEXTURE_PARAMS[value]) return false;
     // made at three times the tile and drawn down: grown and simulated surfaces need room to show what they are
     const big = document.createElement('canvas');
     paintPresetSwatch(big, thumbLook(value), canvas.width*3, canvas.height*3, () => {
@@ -3513,6 +3573,6 @@ onTextureReady(() => swatchTexturesArrived());
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
   const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
   for(const [sel, title] of [[$('textureType'), CHOOSER.surfaceTitle], [$('baseType'), CHOOSER.baseTitle]]){
-    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160 })); } catch(e){ /* the plain menu still works */ }
+    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160, hold: sel.id === 'textureType' ? holdSurface : null })); } catch(e){ /* the plain menu still works */ }
   }
 }

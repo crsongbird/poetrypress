@@ -6,7 +6,13 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Callirrhoe)
+## 1 · Ruby to judge (new in Jupiter–Cyllene)
+- KEPT SURFACES: wires on their right rows; one name (Surface part = kept name); Keep in the bar; Replace;
+  thumbnails on Your Surfaces; hold a surface you made to share or copy its wiring; Paste a surface's
+  wiring in Kept. Halftone2 picks up its picture the first time the surface menu shows it.
+
+## From Jupiter–Callirrhoe
+
 - THE DICE remember their way (Gently / As usual / Wildly) and every die, Summon button and the light's ⚄
   follows it. Gently: colors drift a little, the light turns a little, the surface stays, typefaces stay
   in their family. Locks now hold everywhere (knob padlocks had been disappearing).

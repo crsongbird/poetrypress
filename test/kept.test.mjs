@@ -1,0 +1,41 @@
+/**
+ * kept.test.mjs — surfaces made in the Athanor and kept on the shelf (Ruby's Halftone2 report):
+ * one name (the Surface part's name is the name it is kept under), wiring that can be copied,
+ * shared and pasted back, ports drawn in their own order, thumbnails, Keep in the bar.
+ * Run: node test/kept.test.mjs
+ */
+import { readFileSync } from 'fs';
+import { installCanvasMock } from './canvasMock.mjs';
+import { installDomMock } from './domMock.mjs';
+installDomMock(); installCanvasMock();
+const F = await import('../forge.js');
+const A = await import('../athanor.js');
+const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+let failures = 0;
+const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
+const ruby = src('test/fixtures/kept-halftone2.json');
+const validate = j => A.validateGraph(j);
+
+const read = F.forgeReadSurfaces(ruby, validate);
+check('Ruby\'s shelf text reads back: one surface, Halftone2', read && read.surfaces.length === 1 && read.surfaces[0].name === 'Halftone2' && read.bad === 0);
+check('ONE NAME: a kept surface\'s Surface part is named as it is kept (it said "Halftone")', read && F.forgeSurfaceNameOf(JSON.parse(read.surfaces[0].graph)) === 'Halftone2');
+const text = F.forgeWiringText(read.surfaces), again = F.forgeReadSurfaces(text, validate);
+check('Copy the wiring → paste it back: the same surface', again && again.surfaces.length === 1 && again.surfaces[0].name === 'Halftone2' && again.surfaces[0].graph === read.surfaces[0].graph && !/thumb/.test(text));
+const bare = F.forgeReadSurfaces(JSON.parse(read.surfaces[0].graph), validate);
+check('a bare graph pasted is a surface named by its Surface part', bare && bare.surfaces.length === 1 && bare.surfaces[0].name === 'Halftone2');
+check('text that isn\'t wiring is refused (nothing on the shelf changes)', F.forgeReadSurfaces('hello', validate) === null && F.forgeReadSurfaces('{"a":1}', validate) === null);
+check('a broken surface among good ones is counted and left out', (() => { const r = F.forgeReadSurfaces(JSON.stringify({ surfaces: [read.surfaces[0], { name: 'x', graph: 'nope' }] }), validate); return r && r.surfaces.length === 1 && r.bad === 1; })());
+
+const fg = src('forge.js'), ev = src('appEvents.js'), html = src('index.html'), ch = src('chooser.js');
+check('WIRES LAND ON THEIR ROWS: a node\'s ports are put in their own order before Drawflow draws them (Halftone2\'s were input_2, input_3, input_1)',
+  /n\.inputs = ordered\(n\.inputs, 'input_'\); n\.outputs = ordered\(n\.outputs, 'output_'\);/.test(fg));
+check('keeping under a new name renames the Surface part; keeping over a kept one asks first (the soft no)',
+  /if\(sid && surfaceName\(\) !== clean\) setData\(sid, \{ name: clean \}\)/.test(fg) && /fill\(KEPT\.replaceAsk, at\.name\)[^\n]*danger: true/.test(fg));
+check('Replace it with the graph on the grid, asked first', /const replaceKept = async rec => \{[\s\S]{0,200}fill\(KEPT\.replaceWithAsk, rec\.name\)[^\n]*danger: true/.test(fg));
+check('Keep is one tap, in the bar', /id="forgeKeepBtn"/.test(html) && /\$\('forgeKeepBtn'\)\.addEventListener\('click', \(\) => keep\(\)\)/.test(fg));
+check('kept surfaces are chosen by name (not by place on the shelf), and the page calls them what the shelf does',
+  /o\.value = 'kept:' \+ encodeURIComponent\(rec\.name\)/.test(ev) && /forgeNameSurface\(v\.graph, rec\.name\)/.test(ev));
+check('kept surfaces get thumbnails at canonical settings, kept with them until their wiring changes', /function keptThumb\(rec, canvas, unsaved\)/.test(ev) && /rec\.thumb\.of === of/.test(ev) && /seed: 4242, scale: n\/3072, light: 315, lightTilt: 100/.test(ev));
+check('a long press on a surface made in the Athanor opens its menu: use, open, share, copy the wiring, take it off', /opts\.hold\(it\.value, b\)/.test(ch) && /function holdSurface\(value, tile\)/.test(ev) && /KEPT\.copy, hint: KEPT\.copyHint, act: \(\) => copyWiring\(rec\)/.test(ev));
+console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
+process.exit(failures ? 1 : 0);

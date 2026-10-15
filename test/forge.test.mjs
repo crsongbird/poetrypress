@@ -36,7 +36,7 @@ check('Drawflow loads only when the Athanor opens, from the CDN at an exact vers
     /Bind to a page slider/.test(fsrc) && /Set its range…/.test(fsrc) && /Set the range the wire sweeps…/.test(fsrc) && /Wire a Knob into it/.test(fsrc));
   check('the view: everything in sight (⌖), and tidying into columns (pinned nodes stay)', html.includes('id="forgeFit"') && /const fitView = \(\) =>/.test(fsrc) && /layoutAthanor\(data\); for\(const \[id, p\] of Object\.entries\(pins\)\)/.test(fsrc));
   check('kept surfaces: a shelf in this browser, opened again, saved as a file and brought in (each checked)',
-    F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /deps\.validate \? deps\.validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeKeptBtn"'));
+    F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /v = validate \? validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeKeptBtn"'));
   check('the Athanor wears the app\'s theme; only the wires and ports keep the colours of what they carry',
     /\.forge-veil\{ --fg-ground:var\(--bg-deep\); --fg-panel:var\(--bg-panel\)/.test(css) && /:root\[data-theme="vellum"\] \.forge-veil\{ --t-field/.test(css));
   check('on a phone: the parts are a drawer that scrolls with one finger (no dragging from it), the preview a small dock bottom right',

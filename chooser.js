@@ -81,6 +81,7 @@ function chKeep(value, url){
  *  opts.extra    — (value) → more words a search may find it by (its readings, say)
  *  opts.release  — the release name: thumbnails are kept for it
  *  opts.size     — a thumbnail's pixels (default 160)
+ *  opts.hold     — (value, tile) → true when it opened a menu of its own for that tile (a long press or right-click)
  * Returns { refresh(), open(), close() }.
  */
 export function attachChooser(select, opts = {}){
@@ -146,7 +147,14 @@ export function attachChooser(select, opts = {}){
         b.setAttribute('aria-pressed', String(it.value === select.value));
         b.innerHTML = '<span class="ch-thumb"></span><span class="ch-name"></span>';
         b.querySelector('.ch-name').textContent = it.text;
-        b.addEventListener('click', () => choose(it.value));
+        // a long press (or right-click) asks opts.hold for the tile's own menu (a kept surface: share its wiring…)
+        let held = false, timer = 0;
+        if(opts.hold){
+          b.addEventListener('pointerdown', () => { held = false; clearTimeout(timer); timer = setTimeout(() => { if(opts.hold(it.value, b)) held = true; }, 500); });
+          for(const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(timer));
+          b.addEventListener('contextmenu', e => { if(held){ e.preventDefault(); return; } if(opts.hold(it.value, b)){ e.preventDefault(); held = true; } });
+        }
+        b.addEventListener('click', () => { if(held){ held = false; return; } choose(it.value); });
         grid.appendChild(b); tiles.push([b, it]);
       }
       // a folded group's tiles are painted when it is first opened

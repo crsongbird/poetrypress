@@ -613,8 +613,25 @@ The full study and what is still to do are in ROADMAP.md §1.
   - Escape or Cancel stops.
 - **Asking first:** before Clear, Revert, Start from…, or deleting a node,
   the editor asks whenever the grid has work on it.
-- **Kept surfaces:** localStorage `uv.forge.kept.v1` (`forgeShelf`), each
-  validated on opening and import.
+- **Kept surfaces:** localStorage `uv.forge.kept.v1` (`forgeShelf`,
+  `forgeShelfPut`), each validated on opening and import.
+  - **One name** (Ruby): the name a surface is kept under is its Surface
+    part's name. Keeping under a new name renames the part
+    (`forgeNameSurface`).
+  - **Keep** is in the bar. Replacing a kept surface asks first (the soft
+    no).
+  - **Wiring as text:** `forgeWiringText` (the shelf file's form, without
+    thumbnails) for Copy and Share; `forgeReadSurfaces` reads it back from a
+    paste or a file (a shelf, one surface, or a bare graph).
+  - **In the surface menu** they are options `kept:<name>`, chosen by name.
+    Their thumbnails (`keptThumb`) are drawn at canonical settings in the
+    worker and stored with the surface (`thumb: { of, url }`) until its
+    wiring changes. A long press or right-click on one (chooser
+    `opts.hold`) opens its menu (`holdSurface`).
+- **Ports in their own order:** `faces` sorts a node's inputs and outputs by
+  number before Drawflow draws them. Drawflow makes ports in list order and
+  the face lines them up by that order, so a graph wired in another order
+  drew wires to the wrong rows.
 - **Step previews:** one sheet made in the worker (`athanorsteps`),
   switchable (`#forgeSteps`, localStorage `uv.forge.steps`).
 - **Drawflow** (like Panzoom and Coloris) loads from jsdelivr at an exact

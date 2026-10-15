@@ -4,6 +4,28 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Cyllene (2026-10-14)
+
+- **Fixed: wires drawn to the wrong row.** In a graph whose wires were made
+  in a different order from its ports, the Athanor drew them into the wrong
+  settings, although they were really connected to the right ones (Ruby's
+  Halftone showed this). Every wire now lands on the port it is connected to.
+- **One name for a surface.** The Surface part's name is now also the name
+  it is kept under. Keep it under a new name and the Surface part takes that
+  name too. Choosing a kept surface in the surface menu shows it by the same
+  name, so it no longer looks like the menu picked something else.
+- **Keep is one tap**, in the Athanor's bar (and first in its ⋯ menu).
+- **Replace:** a kept surface can be replaced with the graph on the grid,
+  and keeping a surface under a name already taken asks before replacing it.
+- **Your Surfaces have pictures.** Each kept surface's tile shows the
+  surface, drawn at its default settings, and the picture is redrawn when its
+  wiring changes.
+- **Share the wiring.** Hold a surface you made in the surface menu (or
+  right-click it) to use it, open it in the Athanor, share or copy its
+  wiring as text, or take it off the shelf. The Athanor's Kept menu can copy
+  and share wiring too, and **Paste a surface's wiring…** puts copied wiring
+  back on a shelf, yours or someone else's.
+
 ## Jupiter–Callirrhoe (2026-10-14)
 
 - **The dice remember how you like to roll.** Choose Gently, As usual or

@@ -18,6 +18,7 @@ import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, atha
 import { STEPS, STEP_BLENDS, STEP_CATEGORIES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS } from './appOptions.js';
+import { KEPT, fill } from './strings.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
@@ -128,7 +129,7 @@ export function forgeHelpHtml(){
     + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
     + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
     + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view (or drag anywhere with the middle button, or with Space held); use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
-    + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Kept</b> keeps the graph on this browser's shelf by name, opens kept graphs, and saves the shelf to a file (or brings graphs in from one) to share them. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
+    + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Keep</b> puts the graph on this browser's shelf under its Surface part's name (one name: keep it under another and the Surface part takes that name too). Kept surfaces appear under Your Surfaces in the surface menu, with a picture of each. <b>Kept</b> opens them, replaces one with the graph on the grid, copies or shares a surface's wiring as text, takes pasted wiring back in, and saves the shelf to a file. In the surface menu, hold a surface you made (or right-click it) to share or copy its wiring. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
     + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
     + sec('parts', 'Every part', parts);
 }
@@ -180,6 +181,44 @@ export function forgeShelf(){
 }
 export function forgeShelfWrite(list){
   try { localStorage.setItem(FORGE_SHELF_KEY, JSON.stringify(list)); return true; } catch(e){ return false; }
+}
+/** Puts a surface on the shelf, in place of one by the same name (any case). */
+export function forgeShelfPut(rec){
+  const list = forgeShelf(), at = list.findIndex(r => r.name.toLowerCase() === rec.name.toLowerCase());
+  if(at >= 0) list[at] = rec; else list.push(rec);
+  return forgeShelfWrite(list);
+}
+// ONE NAME (Ruby): a surface's name is its Surface part's name, and the name it is kept under — the
+// same name in both places, always. Keeping it under a new name renames its Surface part.
+const forgeSurfaceNode = g => Object.values((((g || {}).drawflow || {}).Home || {}).data || {}).find(n => n && n.name === 'surface') || null;
+export function forgeSurfaceNameOf(g){ const n = forgeSurfaceNode(g); return n && n.data && n.data.name ? String(n.data.name).trim() : ''; }
+export function forgeNameSurface(g, name){ const n = forgeSurfaceNode(g); if(n) n.data = { ...(n.data || {}), name }; return g; }
+/** A surface's wiring as text to copy or share: the shelf file's form (no thumbnails: they are made again). */
+export function forgeWiringText(recs){
+  return JSON.stringify({ kind: 'unfixable-vellum-surfaces', surfaces: recs.map(r => ({ name: r.name, graph: r.graph, savedAt: r.savedAt })) }, null, 1);
+}
+/** Surfaces read from text someone pasted or a file: a shelf file, one kept surface, or a bare graph.
+ *  Each is checked by validate(json) → { ok, graph }, and named as its Surface part is. null: none at all. */
+export function forgeReadSurfaces(text, validate){
+  let data; try { data = typeof text === 'string' ? JSON.parse(text.trim()) : text; } catch(e){ return null; }
+  const raw = Array.isArray(data) ? data : data && Array.isArray(data.surfaces) ? data.surfaces
+    : data && typeof data.graph === 'string' ? [data] : data && data.drawflow ? [{ name: '', graph: JSON.stringify(data) }] : null;
+  if(!raw) return null;
+  const surfaces = []; let bad = 0;
+  for(const r of raw){
+    if(!r || typeof r.graph !== 'string'){ bad++; continue; }
+    let v; try { v = validate ? validate(r.graph) : { ok: true, graph: JSON.parse(r.graph) }; } catch(e){ v = { ok: false }; }
+    if(!v.ok || !v.graph){ bad++; continue; }
+    const name = String((typeof r.name === 'string' && r.name.trim()) || forgeSurfaceNameOf(v.graph) || 'Surface').trim().slice(0, 60);
+    surfaces.push({ name, graph: JSON.stringify(forgeNameSurface(v.graph, name)), savedAt: r.savedAt || new Date().toISOString() });
+  }
+  return { surfaces, bad };
+}
+/** Copies text; false when the browser won't (the caller shows the text instead). */
+export async function forgeCopy(text){
+  try { if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); return true; } } catch(e){}
+  try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select();
+    const ok = document.execCommand && document.execCommand('copy'); t.remove(); return !!ok; } catch(e){ return false; }
 }
 
 /**
@@ -288,7 +327,12 @@ export async function openForge(deps){
         // every port the part has, wired or not (a starter, or a part that gained one, lists only its wires)
         n.inputs = n.inputs || {}; n.outputs = n.outputs || {};
         P.ins.forEach((_, j) => { n.inputs['input_' + (j + 1)] = n.inputs['input_' + (j + 1)] || { connections: [] }; });
-        P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; }); }
+        P.outs.forEach((_, j) => { n.outputs['output_' + (j + 1)] = n.outputs['output_' + (j + 1)] || { connections: [] }; });
+        // ports in their own order. Drawflow makes a node's ports in the order its list has them, and
+        // the face lines each port up with its row by that order: a graph whose wires were made in
+        // another order ({input_2, input_3, input_1}) drew its wires to the wrong rows (Ruby's Halftone)
+        const ordered = (o, pre) => Object.fromEntries(Object.keys(o).sort((a, b) => (+a.slice(pre.length) || 0) - (+b.slice(pre.length) || 0)).map(k => [k, o[k]]));
+        n.inputs = ordered(n.inputs, 'input_'); n.outputs = ordered(n.outputs, 'output_'); }
       return g; };
     F.faces = faces;
     const save = () => { const json = JSON.stringify(slim()); const f = $('forgeGraph'); if(f){ f.value = json; } if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
@@ -787,6 +831,7 @@ export async function openForge(deps){
     // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
     if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
       openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
+        { glyph: '✚', label: 'Keep this surface…', act: () => keep() },
         { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
         { glyph: '?', label: 'Help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
@@ -794,7 +839,9 @@ export async function openForge(deps){
     if(st){
       // the starters, then the app's own textures under the same group headings as the Surface menu
       const chained = [ATHANOR_BASICS, ...TEXTURE_GROUPS].map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
-      st.innerHTML = '<option value="">Start from…</option>'
+      // (on a phone the bar is narrow: the menu says only "Start…")
+      const phoneBar = !!(document.body && document.body.classList.contains('is-mobile'));
+      st.innerHTML = `<option value="">${phoneBar ? 'Start…' : 'Start from…'}</option>`
         + '<optgroup label="🝆 Starters to Take Apart">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
         + '<optgroup label="🜍 Surface Studies">' + Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
         + chained.map(([g, ts]) => `<optgroup label="${forgeEsc(g.glyph + ' ' + g.name)}">` + ts.map(k => `<option value="${k}">${forgeEsc(TEXTURE_CHAINS[k].label)}</option>`).join('') + '</optgroup>').join('');
@@ -804,27 +851,57 @@ export async function openForge(deps){
       });
     }
     // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----
+    const surfaceId = () => { const e = Object.entries(rawNodes()).find(([, n]) => n.name === 'surface'); return e ? e[0] : null; };
     const surfaceName = () => { const s = Object.values(rawNodes()).find(n => n.name === 'surface'); return ((s && s.data && s.data.name) || 'My Surface').trim(); };
+    // ONE NAME: the name it is kept under is the Surface part's name; keeping it under another renames the part
     const keep = async () => {
       if(!count()){ if(deps.warn) deps.warn(['there is nothing on the grid to keep']); return; }
-      const name = await promptFor({ title: 'Keep this surface?', body: 'Give it a name. It stays on this browser’s shelf, to open again.', input: true, defaultValue: surfaceName(), confirmLabel: 'Keep' });
+      const name = await promptFor({ title: KEPT.keepAsk, body: KEPT.keepBody, input: true, defaultValue: surfaceName(), confirmLabel: KEPT.keep });
       const clean = String(name || '').trim().slice(0, 60); if(!clean) return;
-      const list = forgeShelf(), at = list.findIndex(r => r.name.toLowerCase() === clean.toLowerCase());
-      if(at >= 0 && !await ask({ title: `Replace the kept “${list[at].name}”?`, body: 'A surface on the shelf already has that name.', confirmLabel: 'Replace', danger: true })) return;
-      const rec = { name: clean, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() };
-      if(at >= 0) list[at] = rec; else list.push(rec);
-      if(!forgeShelfWrite(list)){ if(deps.warn) deps.warn(['this browser would not keep it (storage is full or blocked)']); return; }
+      const at = forgeShelf().find(r => r.name.toLowerCase() === clean.toLowerCase());
+      if(at && !await ask({ title: fill(KEPT.replaceAsk, at.name), body: KEPT.replaceBody, confirmLabel: KEPT.replace, danger: true })) return;
+      const sid = surfaceId(); if(sid && surfaceName() !== clean) setData(sid, { name: clean });
+      if(!forgeShelfPut({ name: clean, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() })){ if(deps.warn) deps.warn(['this browser would not keep it (storage is full or blocked)']); return; }
       sound('nodeAdd'); if(deps.onShelf) deps.onShelf();
+    };
+    // a kept surface replaced by the graph on the grid (it keeps its own name, and so does the Surface part)
+    const replaceKept = async rec => {
+      if(!count()){ if(deps.warn) deps.warn(['there is nothing on the grid to keep']); return; }
+      if(!await ask({ title: fill(KEPT.replaceWithAsk, rec.name), body: KEPT.replaceWithBody, confirmLabel: KEPT.replace, danger: true })) return;
+      const sid = surfaceId(); if(sid && surfaceName() !== rec.name) setData(sid, { name: rec.name });
+      forgeShelfPut({ name: rec.name, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() }); sound('nodeAdd'); if(deps.onShelf) deps.onShelf();
     };
     const openKept = async rec => {
       const v = deps.validate ? deps.validate(rec.graph) : { ok: true, graph: JSON.parse(rec.graph), problems: [] };
       if(!v.ok){ if(deps.refuse) deps.refuse('That kept surface can’t be opened', v.problems.join('; ') + '. Nothing was changed.'); return; }
       if(v.problems.length && deps.warn) deps.warn(v.problems);
-      await openGraph(v.graph, rec.name);
+      await openGraph(forgeNameSurface(v.graph, rec.name), rec.name);
     };
     const dropKept = async rec => {
       if(!await ask({ title: `Take “${rec.name}” off the shelf?`, body: 'It is gone from this browser. (Looks that use it keep their own copy.)', confirmLabel: 'Take it off', danger: true })) return;
       forgeShelfWrite(forgeShelf().filter(r => r.name !== rec.name)); if(deps.onShelf) deps.onShelf();
+    };
+    const copyKept = async rec => { const text = forgeWiringText([rec]);
+      if(await forgeCopy(text)){ if(deps.toast) deps.toast(fill(KEPT.copied, rec.name)); }
+      else await promptFor({ title: KEPT.copy, body: KEPT.copyFailed, input: true, rows: 8, defaultValue: text, confirmLabel: 'Done', alert: true }); };
+    const shareKept = rec => { try { navigator.share({ title: rec.name, text: forgeWiringText([rec]) }).catch(() => {}); } catch(e){} };
+    const canShare = () => typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+    // the graph on the grid, as a kept surface would carry it (for Copy and Share before it is kept)
+    const onGrid = () => ({ name: surfaceName(), graph: JSON.stringify(slim()), savedAt: new Date().toISOString() });
+    // surfaces pasted as text (what Copy the wiring makes): onto the shelf, asking before one replaces another
+    const takeIn = async (read) => {
+      if(!read || !read.surfaces.length){ if(deps.refuse) deps.refuse(KEPT.pasteAsk, KEPT.pasteNone); return 0; }
+      const have = new Set(forgeShelf().map(r => r.name.toLowerCase())), clash = read.surfaces.filter(r => have.has(r.name.toLowerCase()));
+      if(clash.length && !await ask({ title: fill(KEPT.replaceAsk, clash.map(r => r.name).join('”, “')), body: KEPT.replaceBody, confirmLabel: KEPT.replace, danger: true })) return 0;
+      for(const r of read.surfaces) forgeShelfPut(r);
+      if(deps.onShelf) deps.onShelf();
+      if(deps.warn) deps.warn([`${read.surfaces.length} surface${read.surfaces.length === 1 ? '' : 's'} put on the shelf` + (read.bad ? `, ${read.bad} left out (unreadable)` : '')]);
+      return read.surfaces.length;
+    };
+    const pasteKept = async () => {
+      const text = await promptFor({ title: KEPT.pasteAsk, body: KEPT.pasteBody, input: true, rows: 6, defaultValue: '', confirmLabel: 'Put it on the shelf' });
+      if(text == null || !String(text).trim()) return;
+      await takeIn(forgeReadSurfaces(String(text), deps.validate));
     };
     const exportShelf = () => {
       const blob = new Blob([JSON.stringify({ kind: 'unfixable-vellum-surfaces', surfaces: forgeShelf() }, null, 1)], { type: 'application/json' });
@@ -835,28 +912,30 @@ export async function openForge(deps){
       inp.addEventListener('change', async () => {
         const f = inp.files && inp.files[0]; if(!f) return;
         if(f.size > 4*1024*1024){ if(deps.refuse) deps.refuse('That file is too large', 'A shelf file is at most 4 MB. Nothing was changed.'); return; }
-        let data; try { data = JSON.parse(await f.text()); } catch(e){ if(deps.refuse) deps.refuse('That isn’t readable JSON', 'Nothing was changed.'); return; }
-        const incoming = Array.isArray(data) ? data : (data && Array.isArray(data.surfaces) ? data.surfaces : []);
-        const list = forgeShelf(); let added = 0, bad = 0;
-        for(const r of incoming){ if(!r || typeof r.name !== 'string' || typeof r.graph !== 'string'){ bad++; continue; }
-          const v = deps.validate ? deps.validate(r.graph) : { ok: true, graph: JSON.parse(r.graph) }; if(!v.ok){ bad++; continue; }
-          const rec = { name: r.name.trim().slice(0, 60) || 'Surface', graph: JSON.stringify(v.graph), savedAt: r.savedAt || new Date().toISOString() };
-          const at = list.findIndex(x => x.name.toLowerCase() === rec.name.toLowerCase()); if(at >= 0) list[at] = rec; else list.push(rec); added++; }
-        forgeShelfWrite(list); if(deps.onShelf) deps.onShelf();
-        if(deps.warn) deps.warn([`${added} surface${added === 1 ? '' : 's'} put on the shelf` + (bad ? `, ${bad} left out (unreadable)` : '')]);
+        const read = forgeReadSurfaces(await f.text(), deps.validate);
+        if(!read){ if(deps.refuse) deps.refuse('That isn’t readable JSON', 'Nothing was changed.'); return; }
+        await takeIn(read);
       });
       inp.click();
     };
     const shelfMenu = () => { const list = forgeShelf(); return { title: 'Kept surfaces', hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet.', items: [
       { glyph: '✚', label: 'Keep this surface…', act: keep },
+      { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(onGrid()) },
+      ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(onGrid()) }] : []),
       ...(list.length ? [{ sep: true }] : []),
       ...list.slice().reverse().map(rec => ({ glyph: '🜉', label: rec.name, hint: String(rec.savedAt || '').slice(0, 10), sub: () => ({ title: rec.name, items: [
         { glyph: '⇩', label: 'Open it', act: () => openKept(rec) },
+        { glyph: '⟲', label: KEPT.replaceWith, danger: true, act: () => replaceKept(rec) },
+        { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(rec) },
+        ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(rec) }] : []),
         { glyph: '✕', label: 'Take it off the shelf', danger: true, act: () => dropKept(rec) }] }) })),
       { sep: true },
+      { glyph: '⎘', label: KEPT.paste, act: pasteKept },
       { glyph: '⇪', label: 'Save the shelf as a file', disabled: !list.length, act: exportShelf },
       { glyph: '⇣', label: 'Bring surfaces in from a file…', act: importShelf }] }; };
     if($('forgeKeptBtn')) $('forgeKeptBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, shelfMenu()); });
+    // Keep, one tap from the bar (Ruby: it was two menus deep)
+    if($('forgeKeepBtn')) $('forgeKeepBtn').addEventListener('click', () => keep());
     if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
     if($('forgeUndo')) $('forgeUndo').addEventListener('click', () => stepHist(-1));
     if($('forgeRedo')) $('forgeRedo').addEventListener('click', () => stepHist(1));

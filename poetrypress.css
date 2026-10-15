@@ -1971,7 +1971,7 @@ input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{
 .die-more{ flex:0 0 auto; width:auto; margin:0 0 0 1px; padding:0 2px; border:0; background:transparent; color:#6E6880; font:11px/1 var(--ui-text); opacity:.5; cursor:pointer; }
 .die-more:hover, .die-more:focus-visible{ opacity:1; color:var(--accent); }
 body.is-mobile .die-more{ display:none; }
-.die-menu{ position:fixed; z-index:230; min-width:220px; max-width:min(320px, calc(100vw - 16px)); padding:4px 0; background:var(--bg-card); color:var(--text-main);
+.die-menu{ position:fixed; z-index:1000; min-width:220px; max-width:min(320px, calc(100vw - 16px)); padding:4px 0; background:var(--bg-card); color:var(--text-main);
   border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.45); font-family:var(--ui-text); }
 body.is-mobile .die-menu{ left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom, 0px)); max-width:none; padding:6px 0 8px; }
 .die-menu-head{ padding:6px 14px 4px; font-family:var(--ui-caps); font-size:13px; color:var(--accent); }
@@ -1979,6 +1979,7 @@ body.is-mobile .die-menu{ left:8px; right:8px; bottom:calc(8px + env(safe-area-i
 body.is-mobile .die-menu-item{ padding:11px 16px; }
 .die-menu-item:hover, .die-menu-item:focus-visible{ background:color-mix(in srgb, var(--accent) 12%, transparent); outline:none; }
 .die-menu-item[disabled]{ opacity:.45; cursor:default; }
+.die-menu-item.danger .die-menu-label, .die-menu-item.danger .die-menu-glyph{ color:var(--rose); }
 .die-menu-glyph{ flex:0 0 1.2em; font-size:17px; line-height:1.1; color:var(--accent); text-align:center; }
 .die-menu-text{ display:flex; flex-direction:column; gap:1px; min-width:0; }
 .die-menu-label{ font-size:14px; }
@@ -2023,8 +2024,8 @@ summary.card-title, .card-title{ overflow:hidden; }
 /* on a desk the note sits beside the parts list, never over it */
 @media (min-width: 761px){ body:not(.is-mobile) .forge-note{ left:188px; width:min(380px, calc(100% - 200px)); } }
 @media (min-width: 900px){ body:not(.is-mobile) .forge-note{ left:248px; width:min(380px, calc(100% - 260px)); } }
-/* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ⋯ (Kept, Help, Revert,
-   Clear), Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
+/* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ↶ ↷, ⋯ (Kept, Help, Revert,
+   Clear), Keep, Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
 .forge-more-btn{ display:none; }
 .forge-bar .forge-hist{ padding:4px 9px; font-size:15px; } .forge-bar .forge-hist:disabled{ opacity:.3; }
 @media (max-width: 760px){
@@ -2041,6 +2042,12 @@ body.is-mobile .forge-name, body.is-mobile .forge-wide, body.is-mobile .forge-zo
 body.is-mobile .forge-more-btn{ display:inline-block; }
 body.is-mobile .forge-starter{ max-width:none; flex:1 1 auto; min-width:0; }
 body.is-mobile .forge-spacer{ display:none; }
+/* Keep sits in the bar too (one tap, Ruby): the buttons draw in a little so Start from… keeps room to be read */
+body.is-mobile .forge-bar button{ padding:5px 7px; }
+body.is-mobile .forge-bar .forge-hist{ padding:5px 7px; }
+body.is-mobile .forge-starter{ min-width:64px; }
+body.is-mobile .forge-bar{ gap:3px; }
+@media (max-width: 380px){ body.is-mobile .forge-title{ display:none; } }
 .forge-primer{ margin:6px 0 0; padding-left:18px; font-size:12.5px; line-height:1.4; }
 .forge-primer li{ margin:3px 0; }
 
