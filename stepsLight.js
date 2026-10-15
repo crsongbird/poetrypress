@@ -140,14 +140,19 @@ function oilPaint(src, w, h, o){
       // its bristles: a few threads a little lighter and darker along it
       for(let b = 0; b < 4; b++){ const off = (R() - 0.5)*r*1.3, t = R() < 0.5 ? 0.88 : 1.12;
         px.strokeStyle = `rgba(${Math.round(c[0]*j*t)},${Math.round(c[1]*j*t)},${Math.round(c[2]*j*t)},${0.32*o.amount})`; px.lineWidth = Math.max(cpx(0.5), r*0.14); path(px, off); px.stroke(); }
-      // the paint's HEIGHTS: the stroke's body; ridges at its edges where the paint piles; grooves where the bristles dragged
-      const body = 115 + R()*40;
-      hx.strokeStyle = `rgb(${body|0},${body|0},${body|0})`; hx.lineWidth = r*1.6; path(hx, 0); hx.stroke();
+      // the paint's HEIGHTS: the stroke's body; ridges at its edges where the paint piles; grooves where the bristles dragged.
+      // IMPASTO WHERE A PAINTER PUTS IT (Ruby): thick in the lights, thin in the darks ("fat over lean"), and a loaded
+      // brush lays most at the start, thinning along the stroke until it lifts and leaves a ridge
+      const lum0 = (0.299*c[0] + 0.587*c[1] + 0.114*c[2])/255, tk = 0.6 + 0.8*lum0, H = v => Math.max(0, Math.min(255, 60 + (v - 60)*tk))|0;
+      const body = 115 + R()*40, nseg = pts.length - 1;
+      hx.lineWidth = r*1.6;
+      for(let q = 0; q < nseg; q++){ const g = H(body + 14 - 28*q/Math.max(1, nseg - 1)); hx.strokeStyle = `rgb(${g},${g},${g})`;
+        hx.beginPath(); hx.moveTo(pts[q][0], pts[q][1]); hx.lineTo(pts[q + 1][0], pts[q + 1][1]); hx.stroke(); }
       hx.lineWidth = Math.max(cpx(0.6), r*0.22);
-      for(const off of [-r*0.72, r*0.72]){ const g = Math.min(255, body + 28)|0; hx.strokeStyle = `rgb(${g},${g},${g})`; path(hx, off); hx.stroke(); }
-      for(let b = 0; b < 3; b++){ const off = (R() - 0.5)*r*1.1, g = Math.max(0, body - 12 - R()*16)|0; hx.strokeStyle = `rgb(${g},${g},${g})`; hx.lineWidth = Math.max(cpx(0.4), r*0.1); path(hx, off); hx.stroke(); }
+      for(const off of [-r*0.72, r*0.72]){ const g = H(body + 28); hx.strokeStyle = `rgb(${g},${g},${g})`; path(hx, off); hx.stroke(); }
+      for(let b = 0; b < 3; b++){ const off = (R() - 0.5)*r*1.1, g = H(body - 12 - R()*16); hx.strokeStyle = `rgb(${g},${g},${g})`; hx.lineWidth = Math.max(cpx(0.4), r*0.1); path(hx, off); hx.stroke(); }
       // where the brush lifted: a little ridge of paint at the end
-      const [ex, ey] = pts[pts.length - 1], g2 = Math.min(255, body + 38)|0; hx.fillStyle = `rgb(${g2},${g2},${g2})`; hx.beginPath(); hx.arc(ex, ey, r*0.55, 0, 6.283); hx.fill();
+      const [ex, ey] = pts[pts.length - 1], g2 = H(body + 38); hx.fillStyle = `rgb(${g2},${g2},${g2})`; hx.beginPath(); hx.arc(ex, ey, r*0.55, 0, 6.283); hx.fill();
     }
   }
   // DETAIL RESCUED (Ruby: small things, distant trees, were lost): Hertzmann's rule for a finer brush — compare the
@@ -181,7 +186,16 @@ function oilPaint(src, w, h, o){
       if(pts.length < 2) pts.push([x0 + dx0*r*0.25, y0 + dy0*r*0.25]);
       const j = 1 + (R() - 0.5)*0.1*o.vary, line = (x, wdt, style) => { x.strokeStyle = style; x.lineWidth = wdt; x.beginPath(); pts.forEach(([a, b], q) => q ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
       line(px, r*1.5, `rgba(${Math.round(c[0]*j)},${Math.round(c[1]*j)},${Math.round(c[2]*j)},${Math.min(0.95, 1.4*o.amount)})`);
-      const body = 120 + R()*35; line(hx, r*1.5, `rgb(${body|0},${body|0},${body|0})`);
+      // its paint is a thin layer ON what lies below (added, not laid over flat), thicker in the lights, with the
+      // small ridges a fine brush leaves at its edges and where it lifts
+      const lift = (0.6 + 0.8*(0.299*c[0] + 0.587*c[1] + 0.114*c[2])/255)*(0.8 + R()*0.4), add = v => { const g = Math.round(v*lift); return `rgb(${g},${g},${g})`; };
+      hx.globalCompositeOperation = 'lighter';
+      line(hx, r*1.5, add(12));
+      for(const off of [-r*0.6, r*0.6]){ hx.strokeStyle = add(7); hx.lineWidth = Math.max(cpx(0.4), r*0.25); hx.beginPath();
+        pts.forEach(([a, b], q) => { const nx = q < pts.length - 1 ? pts[q+1][1] - b : b - pts[q-1][1], ny = q < pts.length - 1 ? -(pts[q+1][0] - a) : -(a - pts[q-1][0]), m = Math.hypot(nx, ny) || 1;
+          q ? hx.lineTo(a + nx/m*off, b + ny/m*off) : hx.moveTo(a + nx/m*off, b + ny/m*off); }); hx.stroke(); }
+      { const [ex, ey] = pts[pts.length - 1]; hx.fillStyle = add(10); hx.beginPath(); hx.arc(ex, ey, r*0.5, 0, 6.283); hx.fill(); }
+      hx.globalCompositeOperation = 'source-over';
     }
   }
   return [pc, hc];
