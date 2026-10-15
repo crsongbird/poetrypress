@@ -29,7 +29,7 @@ export const UI_STRINGS = {
   'card.form_amp_bearing':                 "Form & Bearing",
   'card.builtin_presets':                  "Built-In Presets",
   'card.custom_presets':                   "Custom Presets",
-  'hint.custom_presets_empty':             "Your own looks: ＋ Save this look keeps the look on the page here, by a name you give it.",
+  'hint.custom_presets_empty':             "＋ Save this look keeps the current look here, under a name.",
   'card.script_options':                   "Script Options",
   'card.typeface_effects':                 "Text Effects",
   'card.backdrop_color':                   "Backdrop Color",
@@ -45,7 +45,7 @@ export const UI_STRINGS = {
   // ---- hint ----
   'hint.standard':                         "Standard",
   'hint.landscape':                        "Landscape",
-  'hint.create_saves_the_current_look_as_a': "Create saves the current look as a spell you can bring back later.",
+  'hint.create_saves_the_current_look_as_a': "Create saves the current look as a spell.",
   'hint.the_grimoire_is_empty_record_a_poe': "The Grimoire is empty. Record a poem to keep it.",
 
   // ---- button ----

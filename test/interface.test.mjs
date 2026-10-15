@@ -111,17 +111,17 @@ check('ONE REFRESH puts every view right (sections, readouts, moons, dial, readi
     Object.values(S.STEPS).every(st => (st.doc || '').length > 25) && /class="forge-find" id="forgeFind"/.test(F) && /<span class="fpart-doc">/.test(F)
     && /FORGE_CATEGORIES\.filter\(cat => cat !== 'Output'\)/.test(F) && /hint: N\.doc \|\| forgeCatName\(N\.cat\)/.test(F));
   check('THE SURFACE STAYS: it cannot be removed or copied; Clear leaves a fresh one; a graph from anywhere without one gets one',
-    /if\(isSurface\(id\)\)\{ if\(deps\.warn\)/.test(F) && /label: 'The Surface stays'/.test(F) && /ed\.clear\(\); add\('surface', 420, 90\);/.test(F)
+    /if\(isSurface\(id\)\)\{ if\(deps\.warn\)/.test(F) && /label: 'Can’t delete the Surface'/.test(F) && /ed\.clear\(\); add\('surface', 420, 90\);/.test(F)
     && /if\(!Object\.values\(rawNodes\(\)\)\.some\(n => n\.name === 'surface'\)\) add\('surface', 900, 120\);/.test(F));
-  check('A HELP DOCUMENT (from the bar\'s Help and the dock\'s ?): twelve sections — what it is, reading a graph, wires, conversions, settings, the page\'s controls, seeds and chance, the Surface, mouse and phone, keeping, limits, every part — over the grid, never the parts list',
+  check('A HELP DOCUMENT (from the bar\'s Help and the dock\'s ?): eleven short sections — overview, wire types, mixed types, ⚙ ports, page inputs, seeds, the Surface, controls, keeping, limits, all parts — over the grid, never the parts list',
     (A.ATHANOR_LIMITS && /export function forgeHelpHtml\(\)/.test(F)) && html.includes('id="forgeDocBtn"') && html.includes('<article class="forge-doc" id="forgeDoc" hidden')
-    && (F.match(/\+ sec\('/g) || []).length === 12 && /@media \(min-width: 900px\)\{ \.forge-doc\{ left:calc\(236px \+ 12px\)/.test(src('poetrypress.css')) && !html.includes('forge-help-pop'));
+    && (F.match(/\+ sec\('/g) || []).length === 11 && /@media \(min-width: 900px\)\{ \.forge-doc\{ left:calc\(236px \+ 12px\)/.test(src('poetrypress.css')) && !html.includes('forge-help-pop'));
   check('MORE PARTS: Number and Random Number (anything can be random now); Map Range; Shape Mask; Split and Merge Channels; Switch; Hue & Saturation — and a Combine & Mask category (Mix, Blend, Math, Split, Merge, Switch)',
     ['number', 'random', 'maprange', 'shape', 'split', 'merge', 'switch', 'hsv'].every(k => S.STEPS[k] && typeof S.STEPS[k].run === 'function')
     && Object.values(S.STEPS).filter(st => st.cat === 'Combine').length === 6 && S.STEP_CATEGORIES.filter(c => c !== 'Output').every(c => Object.values(S.STEPS).filter(st => st.cat === c).length >= 3));
   check('A NEW SEED from inside the Athanor (⟳ Seed): every part\'s chance comes from the page\'s seed', html.includes('id="forgeSeedBtn"') && /reseed: \(\) => \{ const f = \$\('textureSeedValue'\)/.test(ev));
-  check('TEACHING NOTES that teach (a teacher, not a riddle): each says what the graph makes, how, and what to try',
-    [...Object.values(A.ATHANOR_STARTERS), ...Object.values(CH.TEXTURE_CHAINS)].every(t => /^This (graph makes|is) /.test(t.teach) && /Try: /.test(t.teach)));
+  check('TEACHING NOTES for a reader who knows the basics (Ruby): short (45 words at most), the chain of parts, and one thing to try',
+    [...Object.values(A.ATHANOR_STARTERS), ...Object.values(CH.TEXTURE_CHAINS)].every(t => t.teach.split(/\s+/).length <= 45 && /Try: /.test(t.teach) && !/^This (graph makes|is) /.test(t.teach)));
   check('THE README explains the whole app plainly: the three engines, each tab, the Athanor, saving',
     /## How PoetryPress works/.test(src('README.md')) && /\*\*a node editor, the Athanor\*\*/.test(src('README.md')) && /### 7\. Saving/.test(src('README.md')));
 }

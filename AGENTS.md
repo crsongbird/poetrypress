@@ -492,9 +492,9 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
     `STEP_COST` and `STEP_REQUIRED`;
   - or in one family object (`TOUCH_STEPS`, …) carrying its own `cost`,
     `io` and `doc`.
-- **Its doc:** every part has one plain, instructive sentence: what goes in,
-  what comes out, what to try. A test fails without it.
-  - Docs, TEACH and the Help are a teacher talking to a student.
+- **Its doc:** every part has one short line: what it does, its outputs when
+  they aren't obvious, at most one thing to try. A test fails without it.
+  Written for the reader in §11 (The reader), never down to them.
   - Names and lore may riddle; the instructions never do.
 - **Its category:** one of `STEP_CATEGORIES`, each with a name, glyph and
   colour in forge.js (`FORGE_CAT_*`). Every category keeps at least three
@@ -569,7 +569,8 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
 - **Surface Studies** (athanorStudies.js): written with a small builder
   (`add`, `wire` by port number or by a setting's key, `fade`). General parts
   only, never Texture from the Menu. Each wired Knob gets a useful sweep with
-  `'~key': 'lo,hi'`. TEACH starts "This is…" and has a "Try:".
+  `'~key': 'lo,hi'`. TEACH: what it is, the chain (A → B → C), and one
+  "Try:", in 40 words at most.
   test/studies.test.mjs checks them.
 - **The reach rule** (`athanorReach`): only Knobs and Hues that reach the
   Surface are offered on the page. A slot bound by `'@kN'` counts.
@@ -994,6 +995,25 @@ competing.
   - Its words are in the seed banks; its glyphs in the spells.
   - "Chrysm" and "Pandorans" are words Ruby set aside: use Vitrum and
     Runists.
+
+**The reader** (Ruby: "probably my target market"). An adult who knows the
+basics of computer graphics and interfaces (layers, blend modes, masks,
+noise, height maps), finished high school, maybe some college, and has ADHD:
+they skim and won't read a long explanation.
+- **Short.** A part's doc is one line (about 20 words). A TEACH note is under
+  40 words: what it is, the chain of parts (A → B → C), one "Try:". Menu
+  labels are a verb and a noun at most ("Wire in…", "Set wire range…",
+  "Reset all settings").
+- **Never talk down.** Use the standard terms (mask, height map, threshold,
+  octaves, Voronoi) and don't explain what a slider or a wire is. No
+  "This is…" openings, no metaphors standing in for instructions.
+- **Not cynical, not AI-sounding, not over-familiar.** No hype, no "you'll
+  love", no exclamation marks, no stacked triads, no chumminess.
+- **Flavour stays in names and lore** (the Athanor, Runology, the readings).
+  Useful text is plain. The witchy voice draws people in; it never stands
+  between them and how a thing works.
+- **The right verb for the hand:** click with a mouse, tap on touch; hold on
+  touch, right-click on a desk (forge.js `forgeClick`, `forgeHoldWord`).
 
 **Language.**
 - Ritual and arcane, but readable: someone who doesn't code must understand

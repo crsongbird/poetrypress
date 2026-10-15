@@ -42,17 +42,21 @@ export const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colou
  *  output dots and wires wear (Ruby: node, wire and connector colors as data types). The Surface keeps its own. */
 export const forgePartColour = N => !N ? '#999' : N.cat === 'Output' ? FORGE_CAT_COLOURS.Output : `var(--t-${(N.outTypes && N.outTypes[0]) || 'field'})`;
 export const FORGE_CAT_COLOURS = { 'Inputs': '#E9C46A', 'Noise': '#AE8CFF', 'Marks': '#FF8FB4', 'Textures': '#5ED6C3', 'Shape': '#80B9FF', 'Curves': '#93D98A', 'Combine': '#E6A8D7', 'Light & Color': '#FFB070', 'Output': '#F3ECF8' };
+/** THE RIGHT VERB for the hand in use (Ruby: "tap" on a desk is wrong): click with a mouse, tap on touch. */
+export function forgeTouch(){ try { return !!(document.body && document.body.classList.contains('is-mobile')) || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches); } catch(e){ return false; } }
+export function forgeClick(cap){ const w = forgeTouch() ? 'tap' : 'click'; return cap ? w[0].toUpperCase() + w.slice(1) : w; }
+export function forgeHoldWord(){ return forgeTouch() ? 'Hold' : 'Right-click'; }
 /** What each category holds, in a line (the parts list and the Help). */
 export const FORGE_CAT_DOCS = {
-  'Inputs': 'Values from the page: its sliders, hues, accents, light dial and seed; and numbers you set or roll.',
-  'Noise': 'Parts that make a pattern from nothing: noise, cells, waves, shapes, smoke.',
-  'Marks': 'Parts that draw strokes and objects over what comes in: rain, hatching, flakes, cards.',
-  'Textures': 'Whole techniques taken from the app\'s textures: a weave, a table, a sky, any texture from the menu.',
-  'Shape': 'Parts that change a gray map: its levels, blur, folds, warps.',
-  'Curves': 'Parts that make and change curves — shapes from 0 to 1 — and the parts that read a picture through one.',
-  'Combine': 'Parts that put two or more things together, or take a picture apart.',
-  'Light & Color': 'Parts that color a gray map, or light it as if it had height.',
-  'Output': 'The Surface: what reaches it is the texture.',
+  'Inputs': 'Page values (sliders, hues, accents, light, seed, the poem) and constants.',
+  'Noise': 'Generators: noise, cells, patterns, gradients, masks.',
+  'Marks': 'Strokes and objects drawn over the input: scatter, rain, hatching, cards.',
+  'Textures': 'Larger techniques from the app\'s textures: weave, table, sky, any menu texture.',
+  'Shape': 'Filters for gray maps: levels, blur, warp, distort.',
+  'Curves': '0–1 curves, and parts that remap through them.',
+  'Combine': 'Blending, mixing, switching, and channel split/merge.',
+  'Light & Color': 'Coloring and lighting: gradient maps, tints, the Light Engine.',
+  'Output': 'The Surface: whatever reaches it is the texture.',
 };
 /**
  * Each category's NAME as shown, and its GLYPH: a Runology Archetype whose
@@ -108,30 +112,28 @@ export function forgeNodeHtml(type, lists = {}, data = {}){
 export function forgeHelpHtml(){
   const sec = (id, title, body) => `<section id="fd-${id}"><h3>${title}</h3>${body}</section>`;
   const types = Object.entries(FORGE_TYPE_COLOURS).map(([t]) => `<li><i class="fd-swatch" style="background:var(--t-${t})"></i><b>${forgeEsc(FORGE_TYPE_NAMES[t])}</b> — ${{
-    field: 'a gray picture: every point has a value from black (0) to white (1). Noise, masks and heights travel this way.',
-    image: 'a colored picture: every point has a red, a green and a blue.',
-    colour: 'one color for the whole page.',
-    value: 'one number from 0 to 1, like a slider\'s position.',
-    curve: 'a shape from 0 to 1 that another part reads through: a tone curve, a gradient\'s profile. Wired where a gray map goes, it is laid across the page left to right.' }[t]}</li>`).join('');
+    field: 'one channel, 0 (black) to 1 (white): noise, masks, heights.',
+    image: 'RGB.',
+    colour: 'a single color.',
+    value: 'a single number, 0–1.',
+    curve: 'a 0–1 curve. Wired where a gray map goes, it runs left to right across the page.' }[t]}</li>`).join('');
   const parts = FORGE_CATEGORIES.map(cat => `<h4><span class="forge-cat-glyph" style="color:${FORGE_CAT_COLOURS[cat]}">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</h4><p class="fd-catdoc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p><dl>`
     + Object.values(FORGE_NODES).filter(n => n.cat === cat).sort((a, b) => a.label.localeCompare(b.label)).map(n => `<dt>${forgeEsc(n.label)}</dt><dd>${forgeEsc(n.doc)}</dd>`).join('') + '</dl>').join('');
-  const toc = [['what', 'What the Athanor is'], ['read', 'Reading a graph'], ['wires', 'Wires and what they carry'], ['convert', 'When the kinds do not match'],
-    ['settings', 'Settings and ⚙ ports'], ['page', 'The page\'s own controls'], ['seed', 'Seeds and chance'], ['surface', 'The Surface'],
-    ['hands', 'Working with a mouse, or on a phone'], ['keep', 'Starting, keeping and sharing'], ['limits', 'Limits'], ['parts', 'Every part']];
-  return `<div class="fd-head"><b>How the Athanor works</b><button type="button" class="fd-close" data-doc="close" aria-label="Close the help">✕ Close</button></div>`
+  const toc = [['what', 'Overview'], ['wires', 'Wire types'], ['convert', 'Mixed types'], ['settings', '⚙ ports'], ['page', 'Page inputs'],
+    ['seed', 'Seeds'], ['surface', 'The Surface'], ['hands', 'Controls'], ['keep', 'Keeping and sharing'], ['limits', 'Limits'], ['parts', 'All parts']];
+  return `<div class="fd-head"><b>The Athanor</b><button type="button" class="fd-close" data-doc="close" aria-label="Close the help">✕ Close</button></div>`
     + `<nav class="fd-toc">${toc.map(([id, t]) => `<a href="#fd-${id}">${t}</a>`).join('')}</nav>`
-    + sec('what', 'What the Athanor is', `<p>The Athanor is a node editor for surface textures. You build a texture from small <b>parts</b> (nodes) joined by <b>wires</b>. Each part does one job: it makes a pattern, changes one, colors it, or lights it. What reaches the <b>Surface</b> at the end becomes a texture you can use on the page (Surface Variant → 🜉 From the Athanor, or the <b>Use</b> button).</p><p>Most of the app's own textures are built this way. Open one from <b>Start from…</b> to see how it is made, then change it, take parts from it, or mix it with parts of another.</p>`)
-    + sec('read', 'Reading a graph', `<p>Read a graph from left to right. Parts on the left make or bring in something; each wire carries it to the next part on the right; the Surface is at the far right.</p><p>Each part shows a small picture of what it makes (turn these off with <b>Steps</b> in the corner if the editor feels slow). The large picture in the corner is what the whole graph makes; tap it to make it larger.</p><p>A part's <b>inputs</b> are the dots on its left edge and its <b>outputs</b> the dots on its right. Its <b>settings</b> are the sliders and menus inside it.</p>`)
-    + sec('wires', 'Wires and what they carry', `<p>A wire carries one of five kinds of thing. The dot, the wire and the part that makes it all wear the kind's color (a part's color is the kind of thing it makes; the Surface keeps its own):</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ a setting's port</b> — takes a number and moves that setting with it.</li></ul><p>An input takes one wire; connecting a new wire to it replaces the old one. An output can feed as many inputs as you like.</p>`)
-    + sec('convert', 'When the kinds do not match', `<p>You can wire any output into any input. When the kinds differ, the Athanor converts the value on the way:</p><ul><li>A <b>gray picture</b> into a color picture: the same gray in red, green and blue.</li><li>A <b>color picture</b> into a gray input: its brightness.</li><li>A <b>color</b> or a <b>number</b> into a picture input: a flat page of that color or that gray.</li><li>A <b>picture</b> into a number (a ⚙ port): its average brightness. A color: its brightness.</li><li>Anything that is not a color into a <b>color</b> input: the input uses its own default instead (a Hue input falls back to the page's hue).</li></ul><p>Nothing breaks when kinds are mixed. Wiring a color into a number, for example, gives a number from its brightness, which can be an interesting way to drive a setting.</p>`)
-    + sec('settings', 'Settings and ⚙ ports', `<p>Most sliders in a part have a <b>⚙ port</b> beside them. A number wired there moves the setting across its whole range: 0 is the slider's lowest, 1 its highest. Hold the setting (or right-click it) and choose <b>Set the range the wire sweeps…</b> to use only part of the range.</p><p>Holding a setting also lets you <b>bind</b> it to a page slider or the light dial without a wire, or <b>wire a Knob into it</b> in one step.</p>`)
-    + sec('page', 'The page\'s own controls', `<p>Parts in <b>Page Inputs</b> bring the page's controls into the graph:</p><ul><li><b>Knob</b>: one of the six sliders under Surface. Its Slider setting picks which; its Name becomes that slider's label when your texture is used.</li><li><b>Hue</b> and <b>Accent</b>: the texture's two hue pickers, and the page's two accent colors.</li><li><b>Light Dial</b>: the dial's direction and height.</li><li><b>Number</b>: a number you set by hand. <b>Random Number</b>: a number chosen between two limits, new with each seed.</li></ul>`)
-    + sec('seed', 'Seeds and chance', `<p>Every part that uses chance (noise, cells, scattered marks) draws it from the <b>page's seed</b> together with the part's own number. So a graph makes the same picture every time until the seed changes, and two parts of the same kind still differ from each other.</p><p>To see a different result, change the seed: the <b>⟳ Seed</b> button in the corner here, or ⟳ beside the seed under Surface on the page.</p><p>Some ways to use chance:</p><ul><li>Wire a <b>Random Number</b> into any ⚙ setting to make that setting random as well.</li><li>Wire the <b>Seed</b> part into a part's <b>seed</b> input to shift its pattern by the seed.</li><li>Menus with a <b>seed</b> choice (the card game, the country) let the seed choose; pick a value to fix it.</li></ul>`)
-    + sec('surface', 'The Surface', `<p>Every graph ends in exactly one Surface. It cannot be removed or copied; Clear leaves a fresh one.</p><ul><li><b>Image</b>: what reaches it is the texture's picture.</li><li><b>Height</b> (optional): a gray picture used as height and lit by the dial, so it looks raised.</li><li><b>Ground</b>: <i>gray</i> means the texture is gray, and the page colors it with its Light and Dark Hues and blends it; <i>color</i> means it is shown in its own colors.</li></ul>`)
-    + sec('hands', 'Working with a mouse, or on a phone', `<p><b>With a mouse:</b> drag from an output dot to an input dot to wire them. Drag a part anywhere but its controls to move it; drag the empty grid to move the view (or drag anywhere with the middle button, or with Space held); use the wheel or − ⌖ + to zoom. <b>Keys:</b> Ctrl+Z undoes and Ctrl+Shift+Z redoes (or ↶ ↷ in the bar), Ctrl+D copies the selected part, Delete removes it, F fits everything in view. Right-click anything to see what it can do. Click a wire, then ✂ or Delete, to cut it.</p><p><b>On a phone:</b> drag a part by its title bar (dragging anywhere else moves the view); ↶ ↷ in the bar undo and redo. Hold anything to see what it can do. To wire, hold a part and choose <b>Wire from it…</b>; a bar at the top says what is being wired; then tap the part it goes into and choose the input. The parts are in the <b>＋ Parts</b> drawer. When several things are under your finger, the Athanor asks which you meant.</p><p>The lock in a part's title bar pins it in place. <b>Tidy</b> (hold the empty grid) lays the graph out in columns.</p>`)
-    + sec('keep', 'Starting, keeping and sharing', `<p><b>Start from…</b> opens a starter graph or one of the app's own textures; a note says what it teaches. <b>Keep</b> puts the graph on this browser's shelf under its Surface part's name (one name: keep it under another and the Surface part takes that name too). Kept surfaces appear under Your Surfaces in the surface menu, with a picture of each. <b>Kept</b> opens them, replaces one with the graph on the grid, copies or shares a surface's wiring as text, takes pasted wiring back in, and saves the shelf to a file. In the surface menu, hold a surface you made (or right-click it) to share or copy its wiring. A graph is also saved with your look, so spells, shared links and JSON carry it.</p><p><b>Revert</b> goes back to the graph as it was when the Athanor opened.</p>`)
-    + sec('limits', 'Limits', `<p>A graph can hold up to ${ATHANOR_LIMITS.nodes} parts. A heavy graph is drawn on a coarser grid, so it stays responsive on a phone; the status line in the corner says when.</p>`)
-    + sec('parts', 'Every part', parts);
+    + sec('what', 'Overview', `<p>A node editor for surface textures. Parts feed left to right into the <b>Surface</b>; whatever reaches it is the texture. <b>Use</b> puts it on the page.</p><p>Most of the app's textures are graphs: open one from <b>Start from…</b> to see how it's built. Each part shows a preview (<b>Steps</b> turns them off). The large preview shows the whole graph; tap or click it to enlarge.</p>`)
+    + sec('wires', 'Wire types', `<p>Ports and wires are colored by what they carry. An input takes one wire; an output feeds any number.</p><ul class="fd-types">${types}<li><i class="fd-swatch pp" style="background:var(--t-value)"></i><b>⚙ setting port</b> — a number that drives that setting.</li></ul>`)
+    + sec('convert', 'Mixed types', `<p>Any output can go into any input; it's converted on the way:</p><ul><li>gray → RGB: the same gray in each channel.</li><li>RGB → gray: luminance.</li><li>color or number → picture: a flat fill.</li><li>picture → number: its mean.</li><li>non-color → color input: the input's default.</li></ul>`)
+    + sec('settings', '⚙ ports', `<ul><li>A number on a ⚙ sweeps the slider's full range (0 = min, 1 = max). <b>Set wire range…</b> narrows it; min above max inverts it.</li><li>In newer graphs a gray map on a ⚙ varies the setting across the page.</li><li>A setting can also be <b>bound</b> to a page slider or the light dial without a wire.</li></ul>`)
+    + sec('page', 'Page inputs', `<ul><li><b>Knob</b>: one of the six sliders under Surface; its Name becomes the slider's label.</li><li><b>Hue</b>, <b>Accent</b>: the texture's hues and the page's accents.</li><li><b>Light Dial</b>: direction and height.</li><li><b>Number</b>: a constant. <b>Random Number</b>: new with each seed.</li><li><b>The Poem</b>: where the words are.</li></ul><p>Only Knobs and Hues that reach the Surface appear on the page.</p>`)
+    + sec('seed', 'Seeds', `<p>Random parts are seeded by the page seed plus the part's id, so a graph is repeatable and copies of a part still differ. <b>⟳ Seed</b> (here, or beside the seed on the page) rerolls. <b>Variation</b> on a part gives it another pattern without changing the seed.</p>`)
+    + sec('surface', 'The Surface', `<ul><li>One per graph; it can't be deleted.</li><li><b>Image</b>: the texture. <b>Height</b> (optional): lit by the dial.</li><li><b>Ground</b>: <i>gray</i> is tinted and blended by the page; <i>color</i> is shown as is.</li><li><b>Name</b> is the surface's name everywhere, including the shelf.</li><li><b>Size</b> scales every distance in the graph.</li></ul>`)
+    + sec('hands', 'Controls', `<p><b>Mouse:</b> drag output → input to wire. Drag a part by its title; drag empty space to pan (or middle-drag, or Space+drag); wheel or − ⌖ + to zoom. Right-click anything for its menu. Click a wire, then ✂ or Delete.</p><p><b>Keys:</b> Ctrl+Z / Ctrl+Shift+Z undo and redo, Ctrl+D duplicate, Delete remove, F fit.</p><p><b>Touch:</b> drag a part by its title; drag elsewhere to pan; pinch to zoom. Hold anything for its menu. To wire: hold a part → <b>Wire out…</b> (or <b>Wire in…</b>) → tap the other part → pick the port. Parts are in <b>＋ Parts</b>.</p><p>The lock in a title bar pins the part. <b>Tidy layout</b> (in the grid's menu) arranges the graph in columns.</p>`)
+    + sec('keep', 'Keeping and sharing', `<ul><li><b>Keep</b> saves the graph to this browser's shelf under the Surface's name. Kept surfaces appear under Your Surfaces in the surface menu.</li><li><b>Kept</b> (in ⋯ on a phone): open, replace, copy or share a surface's wiring as text, paste wiring in, or export and import the shelf as a file.</li><li>In the surface menu, hold or right-click a surface you made to share or copy its wiring.</li><li>The graph is also saved in your look, so spells, links and JSON carry it. <b>Revert</b> restores the graph as it was when the Athanor opened.</li></ul>`)
+    + sec('limits', 'Limits', `<p>Up to ${ATHANOR_LIMITS.nodes} parts. Heavy graphs render on a coarser grid to stay responsive; the status line says when.</p>`)
+    + sec('parts', 'All parts', parts);
 }
 /** A new node's data: each param at its default. */
 export function forgeNodeData(type){
@@ -283,7 +285,7 @@ export async function openForge(deps){
       const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && FORGE_NODES[n.name]; if(!el || !N) return;
       el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
-      const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? 'Pinned — tap to let it move' : 'Pin in place'; }
+      const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? `Pinned — ${forgeClick()} to unpin` : 'Pin in place'; }
       el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns);
         // a REQUIRED input still empty is marked (Filter Forge's red port): the part has nothing to work on yet
         const need = (N.required || []).includes(j + 1) && !(((n.inputs || {})['input_' + (j + 1)] || {}).connections || []).length;
@@ -478,7 +480,7 @@ export async function openForge(deps){
       if(isSurface(id)){ if(deps.warn) deps.warn(['the Surface stays: every graph ends in one. Cut its wires to start over']); sound('nothingToUndo'); return; }
       if(F.dirty && carries(id)){
         const label = labelOf(id);
-        if(!await ask({ title: `Remove the ${label}?`, body: 'Its settings and its wires go with it.', confirmLabel: 'Remove', danger: true })) return;
+        if(!await ask({ title: `Delete ${label}?`, body: 'Its settings and wires go too.', confirmLabel: 'Delete', danger: true })) return;
       }
       ed.removeNodeId('node-' + id);
     };
@@ -573,8 +575,8 @@ export async function openForge(deps){
       if(!pending){ pendBar.hidden = true; pendBar.innerHTML = ''; return; }
       const j = +pending.port.replace(/\D+/g, '') - 1, P = portInfo(pending.id, pending.from, j);
       pendBar.innerHTML = `<i style="background:var(--t-${P.t})"></i><span>${pending.from === 'out'
-        ? `Wiring from ${forgeEsc(labelOf(pending.id))}\u2019s <b>${forgeEsc(P.name)}</b>: tap or hold the part it goes into.`
-        : `Wiring into ${forgeEsc(labelOf(pending.id))}\u2019s <b>${forgeEsc(P.name)}</b>: tap or hold the part it comes from.`}</span><button type="button" class="forge-pending-x">Cancel</button>`;
+        ? `From ${forgeEsc(labelOf(pending.id))} · <b>${forgeEsc(P.name)}</b>: ${forgeClick()} the target part.`
+        : `Into ${forgeEsc(labelOf(pending.id))} · <b>${forgeEsc(P.name)}</b>: ${forgeClick()} the source part.`}</span><button type="button" class="forge-pending-x">Cancel</button>`;
       pendBar.hidden = false; };
     const startWire = (from, id, port) => { pending = { from, id: String(id), port }; showPending(); area.classList.add('wiring'); hideCut(); };
     const stopWire = () => { pending = null; showPending(); area.classList.remove('wiring'); };
@@ -590,7 +592,7 @@ export async function openForge(deps){
     const connectMenu = id => {
       if(!pending) return null;
       const N = N_(id), n = nodeOf(id); if(!N || !n) return null;
-      if(String(id) === pending.id) return { title: 'That is the same part', hint: 'Choose another part to wire to.', items: [{ glyph: '✕', label: 'Stop wiring', act: stopWire }] };
+      if(String(id) === pending.id) return { title: 'Same part', hint: 'Pick a different part.', items: [{ glyph: '✕', label: 'Cancel wiring', act: stopWire }] };
       const j0 = +pending.port.replace(/\D+/g, '') - 1, from = portInfo(pending.id, pending.from, j0);
       const side = pending.from === 'out' ? 'in' : 'out', list = (side === 'in' ? N.ins : N.outs).map((name, j) => {
         const t = (side === 'in' ? N.inTypes[j] : N.outTypes[j]) || 'field', key = (side === 'in' ? 'input_' : 'output_') + (j + 1);
@@ -598,9 +600,9 @@ export async function openForge(deps){
         return { j, t, key, same: t === from.t, glyph: side === 'in' ? (j >= N.dataIns ? '⚙' : '▸') : '◂', label: forgeWord(String(name).replace(/^⚙\s*/, '')), colour: `var(--t-${t})`,
           hint: (FORGE_TYPE_NAMES[t] || '') + (t === from.t ? '' : ' (converted)') + (wired ? ' — replaces its wire' : ''),
           act: () => side === 'in' ? connect(pending.id, pending.port, String(id), key) : connect(String(id), key, pending.id, pending.port) }; });
-      if(!list.length) return { title: labelOf(id), hint: side === 'in' ? 'It takes nothing in.' : 'It gives nothing out.', items: [{ glyph: '✕', label: 'Stop wiring', act: stopWire }] };
+      if(!list.length) return { title: labelOf(id), hint: side === 'in' ? 'No inputs.' : 'No outputs.', items: [{ glyph: '✕', label: 'Cancel wiring', act: stopWire }] };
       list.sort((a, b) => (b.same - a.same) || (a.j - b.j));
-      return { title: side === 'in' ? `Into ${labelOf(id)}…` : `From ${labelOf(id)}…`, hint: `${from.name}: ${FORGE_TYPE_NAMES[from.t]}`, items: [...list, { sep: true }, { glyph: '✕', label: 'Stop wiring', act: stopWire }] };
+      return { title: side === 'in' ? `Into ${labelOf(id)}…` : `From ${labelOf(id)}…`, hint: `${from.name}: ${FORGE_TYPE_NAMES[from.t]}`, items: [...list, { sep: true }, { glyph: '✕', label: 'Cancel wiring', act: stopWire }] };
     };
     // "Wire from it…" / "Wire into it…": straight away when there is one port, else a list of them
     const wireStart = (id, side) => { const N = N_(id); if(!N) return null; const names = side === 'out' ? N.outs : N.ins;
@@ -627,23 +629,23 @@ export async function openForge(deps){
       const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
       const from = N.outs.length ? wireStart(id, 'out') : null, into = N.ins.length ? wireStart(id, 'in') : null;
       return { title: labelOf(id), hint: N.doc || forgeCatName(N.cat), items: [
-        ...(from ? [{ glyph: '⟿', label: 'Wire from it…', hint: N.outs.length === 1 ? N.outs[0] : 'choose which', ...from }] : []),
-        ...(into ? [{ glyph: '⟾', label: 'Wire into it…', hint: 'choose which', ...into }] : []),
+        ...(from ? [{ glyph: '⟿', label: 'Wire out…', hint: N.outs.length === 1 ? N.outs[0] : 'pick an output', ...from }] : []),
+        ...(into ? [{ glyph: '⟾', label: 'Wire in…', hint: 'pick an input', ...into }] : []),
         ...(from || into ? [{ sep: true }] : []),
         { glyph: '⌖', label: isPinned(id) ? 'Let it move again' : 'Pin it in place', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
-        { glyph: '⧉', label: 'Make a copy', disabled: n.name === 'surface', hint: n.name === 'surface' ? 'a graph has one Surface' : '', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
-        { glyph: '↺', label: 'Every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
+        { glyph: '⧉', label: 'Duplicate', disabled: n.name === 'surface', hint: n.name === 'surface' ? 'one Surface per graph' : '', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
+        { glyph: '↺', label: 'Reset all settings', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
             for(const k of Object.keys(n.data || {})) if(k[0] !== '_') patch[k] = undefined; Object.assign(patch, d); setData(id, patch); } },
         { glyph: '✂', label: wires ? `Cut its ${wires} wire${wires === 1 ? '' : 's'}` : 'No wires to cut', disabled: !wires, act: () => { ed.removeConnectionNodeId('node-' + id); paintNode(id); save(); touched(); } },
         { sep: true },
-        n.name === 'surface' ? { glyph: '✕', label: 'The Surface stays', hint: 'every graph ends in one', disabled: true }
-          : { glyph: '✕', label: 'Remove it', danger: true, act: () => removeAsked(id) }] }; };
+        n.name === 'surface' ? { glyph: '✕', label: 'Can’t delete the Surface', hint: 'one per graph', disabled: true }
+          : { glyph: '✕', label: 'Delete', danger: true, act: () => removeAsked(id) }] }; };
     const portMenu = (id, side, j) => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const key = (side === 'in' ? 'input_' : 'output_') + (j + 1), p = (side === 'in' ? n.inputs : n.outputs)[key] || { connections: [] }, cnt = (p.connections || []).length;
       const name = forgeWord(side === 'in' ? N.ins[j] : N.outs[j]), t = side === 'in' ? N.inTypes[j] : N.outTypes[j];
       return { title: `${labelOf(id)}: ${name}`, hint: `${side === 'in' ? 'Takes' : 'Gives'} ${FORGE_TYPE_NAMES[t] || ''}`, items: [
-        side === 'out' ? { glyph: '⟿', label: 'Wire this to…', hint: 'then tap the part it goes into', act: () => startWire('out', id, key) }
-          : { glyph: '⟾', label: cnt ? 'Wire something else into this…' : 'Wire something into this…', hint: 'then tap the part it comes from', act: () => startWire('in', id, key) },
+        side === 'out' ? { glyph: '⟿', label: 'Wire to…', hint: `then ${forgeClick()} the target`, act: () => startWire('out', id, key) }
+          : { glyph: '⟾', label: cnt ? 'Replace input…' : 'Wire in…', hint: `then ${forgeClick()} the source`, act: () => startWire('in', id, key) },
         { glyph: '✂', label: cnt ? (cnt === 1 ? 'Cut its wire' : `Cut its ${cnt} wires`) : 'Nothing wired here', disabled: !cnt, act: () => {
           for(const c of [...p.connections]) side === 'in' ? ed.removeSingleConnection(c.node, id, c.input, key) : ed.removeSingleConnection(id, c.node, key, c.output); } }] }; };
     const paramMenu = (id, key) => {
@@ -656,12 +658,12 @@ export async function openForge(deps){
       if(kind === 'range'){
         const lo = x.min, hi = x.max;
         if(wired){
-          items.push({ glyph: '↔', label: 'Set the range the wire sweeps…', hint: n.data['~' + key] ? String(n.data['~' + key]).replace(',', ' to ') : `all of it: ${lo} to ${hi}`, act: async () => {
-            const r = await promptFor({ title: `${label}: the range a wire sweeps`, body: `Two numbers between ${lo} and ${hi}: where it is at the wire's least, and at its most. (They can run backwards.)`, input: true, defaultValue: String(n.data['~' + key] || `${lo}, ${hi}`), confirmLabel: 'Set' });
+          items.push({ glyph: '↔', label: 'Set wire range…', hint: n.data['~' + key] ? String(n.data['~' + key]).replace(',', '–') : `full: ${lo}–${hi}`, act: async () => {
+            const r = await promptFor({ title: `${label}: wire range`, body: `Min, max (${lo}–${hi}). Min above max inverts it.`, input: true, defaultValue: String(n.data['~' + key] || `${lo}, ${hi}`), confirmLabel: 'Set' });
             const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return; const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
             setData(id, { ['~' + key]: (a === lo && b === hi) ? undefined : `${a},${b}` }); } });
-          if(n.data['~' + key]) items.push({ glyph: '⟷', label: 'Sweep the whole range again', act: () => setData(id, { ['~' + key]: undefined }) });
-          items.push({ glyph: '✂', label: 'Cut the wire into it', act: () => { const p = n.inputs['input_' + port]; for(const c of [...(p.connections || [])]) ed.removeSingleConnection(c.node, id, c.input, 'input_' + port); } });
+          if(n.data['~' + key]) items.push({ glyph: '⟷', label: 'Use full range', act: () => setData(id, { ['~' + key]: undefined }) });
+          items.push({ glyph: '✂', label: 'Cut wire', act: () => { const p = n.inputs['input_' + port]; for(const c of [...(p.connections || [])]) ed.removeSingleConnection(c.node, id, c.input, 'input_' + port); } });
         } else {
           const bindTo = (src, range) => setData(id, { [key]: '@' + src + (range ? `[${range[0]},${range[1]}]` : '') });
           const curRange = bound ? (/\[([^\]]+)\]/.exec(v) || [])[1] : null;
@@ -669,21 +671,21 @@ export async function openForge(deps){
             [1, 2, 3, 4, 5, 6].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
           items.push({ glyph: '☼', label: 'Bind to the light dial', hint: 'its direction', act: () => bindTo('dial', curRange && curRange.split(',')) });
           if(port){
-            items.push({ glyph: '⟾', label: 'Wire something into it…', hint: 'then tap the part it comes from', act: () => startWire('in', id, 'input_' + port) });
-            items.push({ glyph: '☽', label: 'Wire a Knob into it', hint: 'a page slider, shown as a node', act: () => wireIn(id, key, port, 'knob') });
-            items.push({ glyph: '☼', label: 'Wire the Light Dial into it', act: () => wireIn(id, key, port, 'dial') });
+            items.push({ glyph: '⟾', label: 'Wire in…', hint: `then ${forgeClick()} the source`, act: () => startWire('in', id, 'input_' + port) });
+            items.push({ glyph: '☽', label: 'Wire a Knob in', hint: 'drive it from a page slider', act: () => wireIn(id, key, port, 'knob') });
+            items.push({ glyph: '☼', label: 'Wire the Light Dial in', act: () => wireIn(id, key, port, 'dial') });
           }
           if(bound){
-            items.push({ glyph: '↔', label: 'Set its range…', hint: curRange ? curRange.replace(',', ' to ') : `all of it: ${lo} to ${hi}`, act: async () => {
-              const r = await promptFor({ title: `${label}: its range`, body: `Two numbers: where it is with the slider (or the dial) at its least, and at its most. Between ${lo} and ${hi}.`, input: true, defaultValue: curRange || `${lo}, ${hi}`, confirmLabel: 'Set' });
+            items.push({ glyph: '↔', label: 'Set range…', hint: curRange ? curRange.replace(',', '–') : `full: ${lo}–${hi}`, act: async () => {
+              const r = await promptFor({ title: `${label}: range`, body: `Min, max (${lo}–${hi}): the value at the slider's (or dial's) low and high ends.`, input: true, defaultValue: curRange || `${lo}, ${hi}`, confirmLabel: 'Set' });
               const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return;
               const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
               setData(id, { [key]: v.replace(/\[.*$/, '') + `[${a},${b}]` }); } });
-            items.push({ glyph: '⊘', label: 'Unbind (a plain number again)', act: () => setData(id, { [key]: def }) });
+            items.push({ glyph: '⊘', label: 'Unbind', act: () => setData(id, { [key]: def }) });
           }
         }
       }
-      items.push({ glyph: '↺', label: `Back to its default (${def})`, act: () => setData(id, { [key]: def }) });
+      items.push({ glyph: '↺', label: `Reset (${def})`, act: () => setData(id, { [key]: def }) });
       return { title: `${label}`, hint: `on ${labelOf(id)}` + (wired ? ' — driven by a wire' : bound ? ` — bound: ${v}` : ''), items };
     };
     // a Knob (or the Light Dial) set beside a node and wired into one of its ⚙ ports
@@ -699,8 +701,8 @@ export async function openForge(deps){
     const canvasMenu = (cx, cy) => { const g = toGrid(cx, cy); return { title: 'The grid', items: [
       { glyph: '＋', label: 'Add a part here', sub: () => ({ title: 'Add a part here', items: FORGE_CATEGORIES.map(cat => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: forgeCatName(cat), colour: FORGE_CAT_COLOURS[cat],
         sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: forgePartColour(nn), act: () => add(type, g.x, g.y) })) }) })) }) },
-      { glyph: '⌖', label: 'Everything in view', act: () => fitView() },
-      { glyph: '▦', label: 'Tidy into columns', hint: 'pinned nodes stay put', act: () => tidy() }] }; };
+      { glyph: '⌖', label: 'Fit to view', act: () => fitView() },
+      { glyph: '▦', label: 'Tidy layout', hint: 'pinned parts stay put', act: () => tidy() }] }; };
     // ---- what is under a point: the things there, nearest first ----
     const thingAt = el => {
       if(!el || !area.contains(el)) return null;
@@ -726,7 +728,7 @@ export async function openForge(deps){
     const describe = t => {
       if(t.kind === 'wire') return wireDesc(t.w);
       const N = N_(t.id), colour = N ? forgePartColour(N) : '';
-      if(t.kind === 'node') return { glyph: N ? FORGE_CAT_GLYPHS[N.cat] : '', label: `The ${labelOf(t.id)} node`, hint: 'move, pin, copy, remove', colour };
+      if(t.kind === 'node') return { glyph: N ? FORGE_CAT_GLYPHS[N.cat] : '', label: labelOf(t.id), hint: 'part', colour };
       if(t.kind === 'param'){ const P = N.params.find(p => p[0] === t.p) || []; return { glyph: '⚙', label: P[1] || t.p, hint: `a setting on ${labelOf(t.id)}`, colour: 'var(--t-value)' }; }
       const name = t.side === 'in' ? N.ins[t.j] : N.outs[t.j], ty = t.side === 'in' ? N.inTypes[t.j] : N.outTypes[t.j];
       return { glyph: t.side === 'in' ? '▸' : '◂', label: `${labelOf(t.id)}'s ${name}`, hint: `${t.side === 'in' ? 'takes' : 'gives'} ${FORGE_TYPE_NAMES[ty]}`, colour: `var(--t-${ty})` };
@@ -738,11 +740,11 @@ export async function openForge(deps){
       const all = thingsNear(x, y, touch ? 18 : 5);
       // while wiring: the part held is the other end
       if(pending){ const t = all.find(q => q.id && q.id !== pending.id);
-        openMenu(x, y, t ? connectMenu(t.id) : { title: 'Wiring', hint: 'Tap or hold the part to wire to.', items: [{ glyph: '✕', label: 'Stop wiring', act: stopWire }] }); return; }
+        openMenu(x, y, t ? connectMenu(t.id) : { title: 'Wiring', hint: `${forgeClick(true)} the part to wire to.`, items: [{ glyph: '✕', label: 'Cancel wiring', act: stopWire }] }); return; }
       const own = all.length > 1 && all[0].kind !== 'node' ? all.filter(t => !(t.kind === 'node' && t.id === all[0].id)) : all;
       if(!own.length){ openMenu(x, y, canvasMenu(x, y)); return; }
       if(own.length === 1){ const m = menuFor(own[0], x, y); if(m && own[0].kind !== 'node' && own[0].id){ m.items.push({ sep: true }, { glyph: '◇', label: `The ${labelOf(own[0].id)} node`, sub: () => nodeMenu(own[0].id) }); } openMenu(x, y, m); return; }
-      openMenu(x, y, { title: 'Which did you mean?', hint: 'Several things are under your finger.', items: own.slice(0, 6).map(t => ({ ...describe(t), sub: () => menuFor(t, x, y) })) });
+      openMenu(x, y, { title: 'Which did you mean?', hint: 'Several things are here.', items: own.slice(0, 6).map(t => ({ ...describe(t), sub: () => menuFor(t, x, y) })) });
     };
     F.menuAt = menuAt;
     // right-click, or a phone's own long press (it sends a contextmenu); a timer for the browsers that don't
@@ -804,23 +806,23 @@ export async function openForge(deps){
     // ---- the bar ----
     const count = () => Object.keys(nodesOf()).length;
     if($('forgeClear')) $('forgeClear').addEventListener('click', async () => {
-      if(count() && F.dirty && !await ask({ title: 'Clear the whole graph?', body: 'Every node and wire goes. (Revert brings back the graph as it was when the Athanor opened.)', confirmLabel: 'Clear', danger: true })) return;
+      if(count() && F.dirty && !await ask({ title: 'Clear the whole graph?', body: 'Removes every part and wire. Revert can bring it back.', confirmLabel: 'Clear', danger: true })) return;
       F.quiet = true; ed.clear(); add('surface', 420, 90); F.quiet = false; F.version = ATHANOR_VERSION; save(); F.dirty = false; sound('nodeRemove');
     });
     if($('forgeRevert')) $('forgeRevert').addEventListener('click', async () => {
       if(!F.opened) return;
-      if(F.dirty && !await ask({ title: 'Go back to how it was?', body: 'Everything changed since the Athanor opened is undone.', confirmLabel: 'Revert', danger: true })) return;
+      if(F.dirty && !await ask({ title: 'Revert?', body: 'Undoes every change since the Athanor opened.', confirmLabel: 'Revert', danger: true })) return;
       load(JSON.parse(F.opened)); sound('graphLoad'); setTimeout(fitView, 30);
     });
     // open a graph (a starter, a template, a kept surface) in place of this one — asking first if this one has changed
     const openGraph = async (g, label, teach) => {
-      if(count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid now is set aside. (Revert brings back the graph as it was when the Athanor opened.)', confirmLabel: 'Replace', danger: true })) return false;
+      if(count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The current graph is replaced. Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
       stopWire(); load(g); sound('graphLoad'); setTimeout(fitView, 30); showNote(label, teach); return true;
     };
     // WHAT A GRAPH TEACHES: a note over the grid when a starter or a texture is opened
     const note = (() => { let el = $('forgeNote'); if(!el && body){ el = document.createElement('div'); el.id = 'forgeNote'; el.className = 'forge-note'; el.hidden = true; body.appendChild(el); } return el; })();
     const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; veil.classList.remove('note-open'); return; }
-      note.innerHTML = `<b>${forgeEsc(label)}</b><p>${forgeEsc(teach)}</p><p class="forge-note-how">Read it from left to right: each part shows what it makes, and each wire carries that on to the next part. Hold a part (or right-click it) to see what it can do. The Help button explains everything.</p><button type="button" class="forge-note-x" aria-label="Close">✕</button>`;
+      note.innerHTML = `<b>${forgeEsc(label)}</b><p>${forgeEsc(teach)}</p><p class="forge-note-how">${forgeHoldWord()} any part for its menu. Help explains the rest.</p><button type="button" class="forge-note-x" aria-label="Close">✕</button>`;
       note.hidden = false; veil.classList.add('note-open'); };
     F.showNote = showNote;
     // the note stays until it is closed — by its ✕ or by a click anywhere else (Ruby); while it shows,
@@ -831,8 +833,8 @@ export async function openForge(deps){
     // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
     if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
       openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
-        { glyph: '✚', label: 'Keep this surface…', act: () => keep() },
-        { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
+        { glyph: '✚', label: 'Keep…', act: () => keep() },
+        { glyph: '🜉', label: 'Kept…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
         { glyph: '?', label: 'Help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
     const st = $('forgeStarter');
@@ -878,7 +880,7 @@ export async function openForge(deps){
       await openGraph(forgeNameSurface(v.graph, rec.name), rec.name);
     };
     const dropKept = async rec => {
-      if(!await ask({ title: `Take “${rec.name}” off the shelf?`, body: 'It is gone from this browser. (Looks that use it keep their own copy.)', confirmLabel: 'Take it off', danger: true })) return;
+      if(!await ask({ title: `Remove “${rec.name}” from the shelf?`, body: 'Looks that use it keep their own copy.', confirmLabel: 'Remove', danger: true })) return;
       forgeShelfWrite(forgeShelf().filter(r => r.name !== rec.name)); if(deps.onShelf) deps.onShelf();
     };
     const copyKept = async rec => { const text = forgeWiringText([rec]);
@@ -919,20 +921,20 @@ export async function openForge(deps){
       inp.click();
     };
     const shelfMenu = () => { const list = forgeShelf(); return { title: 'Kept surfaces', hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet.', items: [
-      { glyph: '✚', label: 'Keep this surface…', act: keep },
+      { glyph: '✚', label: 'Keep…', act: keep },
       { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(onGrid()) },
       ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(onGrid()) }] : []),
       ...(list.length ? [{ sep: true }] : []),
       ...list.slice().reverse().map(rec => ({ glyph: '🜉', label: rec.name, hint: String(rec.savedAt || '').slice(0, 10), sub: () => ({ title: rec.name, items: [
-        { glyph: '⇩', label: 'Open it', act: () => openKept(rec) },
+        { glyph: '⇩', label: 'Open', act: () => openKept(rec) },
         { glyph: '⟲', label: KEPT.replaceWith, danger: true, act: () => replaceKept(rec) },
         { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(rec) },
         ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(rec) }] : []),
-        { glyph: '✕', label: 'Take it off the shelf', danger: true, act: () => dropKept(rec) }] }) })),
+        { glyph: '✕', label: 'Remove from shelf', danger: true, act: () => dropKept(rec) }] }) })),
       { sep: true },
       { glyph: '⎘', label: KEPT.paste, act: pasteKept },
-      { glyph: '⇪', label: 'Save the shelf as a file', disabled: !list.length, act: exportShelf },
-      { glyph: '⇣', label: 'Bring surfaces in from a file…', act: importShelf }] }; };
+      { glyph: '⇪', label: 'Export shelf', disabled: !list.length, act: exportShelf },
+      { glyph: '⇣', label: 'Import from file…', act: importShelf }] }; };
     if($('forgeKeptBtn')) $('forgeKeptBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, shelfMenu()); });
     // Keep, one tap from the bar (Ruby: it was two menus deep)
     if($('forgeKeepBtn')) $('forgeKeepBtn').addEventListener('click', () => keep());

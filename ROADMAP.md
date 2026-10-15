@@ -116,6 +116,17 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   re-evaluates those pixels at 2× and averages. Filter Forge's "AA zones".
   - Prove: scale-audit improves on Bricks and Threshold; cost measured on the
     baseline phone (AGENTS: measure on the right machine).
+- **A10 · Ports saved by name, not by number** (Ruby's question, after
+  Halftone2's wires were drawn on the wrong rows). Nodes already have unique
+  ids. Ports are still saved as `input_N`, and a ⚙ port's N is
+  `dataIns + its place among the settings`, so a part that gains an input
+  would quietly shift every saved ⚙ wire on it.
+  - Save ports by their meaning (`in:tone`, `set:scale`) and translate to
+    Drawflow's `input_N` only when the editor draws. (The editor still lines
+    ports up by order; `faces` sorting them stays.)
+  - Old graphs load through a v4 translation; `validateGraph` checks names.
+  - Prove: add an input to a part in a test, and an old graph's wires still
+    reach the same settings.
 - **A9 · Variation on every random part.** Done for Value Noise, Perlin
   Noise, Cells, Curve (noise) and Scatter (`variation` mixed into the node's
   seed; 0 is the old stream). Still to do: map the older parts' own Variant
@@ -330,6 +341,7 @@ superseded) wait for Stage 4.
   they unlock (§2 F).
 - **A1** map inputs on every per-point setting.
 - **A9** the older Variant params onto Variation.
+- **A10** ports saved by name (with A3's v4: both change the format once).
 - **A3** Groups (v4), then **A4** Loop (its body is a group).
 - **A6** edges-only supersampling.
 

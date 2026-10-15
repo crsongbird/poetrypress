@@ -6,7 +6,13 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Jupiter–Cyllene)
+## 1 · Ruby to judge (new in Jupiter–Kore)
+- THE ATHANOR'S VOICE: part docs, TEACH notes, Help and menus rewritten for the reader in AGENTS §11
+  (knows graphics basics, skims). Does it land? The rest of the app's help (the PML guide, tooltips)
+  is next, in the same voice.
+
+## From Jupiter–Cyllene
+
 - KEPT SURFACES: wires on their right rows; one name (Surface part = kept name); Keep in the bar; Replace;
   thumbnails on Your Surfaces; hold a surface you made to share or copy its wiring; Paste a surface's
   wiring in Kept. Halftone2 picks up its picture the first time the surface menu shows it.

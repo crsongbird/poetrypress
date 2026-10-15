@@ -41,7 +41,7 @@
     <span class="app-header-spacer header-moon" id="headerMoon"></span>
     <strong class="app-header-title">PoetryPress <svg class="vellum-sigil" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1.9 21.9 12 12 22.1 2.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 7.1 16.9 12 12 16.9 7.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 4.4V19.6" stroke="#6FA8FF" opacity="0.88"/><path d="M11.95 1.73 21.42 12.48 11.35 22.10 2.63 11.45Z" stroke="#C9A0FF" opacity="0.88"/><path d="M12.07 7.25 16.29 11.84 12.27 16.84 7.40 11.55Z" stroke="#C9A0FF" opacity="0.88"/><path d="M11.65 3.89V19.61" stroke="#C9A0FF" opacity="0.88"/><path d="M12.66 2.04 22.33 11.82 12.38 21.48 1.77 12.27Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.35 6.98 16.26 11.64 11.55 16.56 7.58 11.53Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.60 4.99V18.91" stroke="#9B7FE8" opacity="0.88"/><path d="M11.78 1.89 21.04 11.86 12.73 21.40 2.27 11.32Z" stroke="#E0526F" opacity="0.88"/><path d="M12.14 7.81 16.37 11.11 11.25 16.97 6.23 11.25Z" stroke="#E0526F" opacity="0.88"/><path d="M11.99 5.16V19.46" stroke="#E0526F" opacity="0.88"/><circle cx="12" cy="12" r="1.35" fill="#E0526F" stroke="none"/></svg></strong>
     <div class="app-header-tools">
-      <button class="athanor-top" id="athanorTopBtn" data-sound="athanorOpen" type="button" title="Open the Athanor, the node editor: build a surface texture from its parts, or open one of the app's textures to see how it is made"><span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span></button>
+      <button class="athanor-top" id="athanorTopBtn" data-sound="athanorOpen" type="button" title="Open the Athanor (node editor): build a texture from parts, or open one of the app's textures"><span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span></button>
       <button class="shortcut-btn" id="shortcutBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="support-btn" id="supportBtn" title="PoetryPress is free and always will be. If it has given you something, you can give back on Ko-fi."><span class="support-heart" aria-hidden="true">♡</span><span class="support-word">Support</span></a>
     </div>
@@ -274,7 +274,7 @@ Have fun!</textarea>
     <details class="card" data-tab="style" id="customPresetsCard" open>
       <summary class="card-title" data-str="card.custom_presets">Custom Presets</summary>
       <div class="preset-grid" id="customPresetGrid"></div>
-      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">Your own looks: ＋ Save this look keeps the look on the page here, by a name you give it.</p>
+      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">＋ Save this look keeps the current look here, under a name.</p>
     </details>
 
 
@@ -308,7 +308,7 @@ Have fun!</textarea>
           </div>
         </div>
         <div class="field full">
-          <label data-str="label.text_margins" title="How much room the text keeps from the page edges and the frame. Lower lets the poem grow bigger.">Text Margins</label>
+          <label data-str="label.text_margins" title="Space between the text and the page edge or frame. Lower lets the poem grow.">Text Margins</label>
           <div class="angle-wrap">
             <input type="range" id="textMargin" min="20" max="150" step="5" value="100">
             <span class="angle-val" id="textMarginVal">100%</span>
@@ -701,7 +701,7 @@ Have fun!</textarea>
             <span class="range-val" id="textureOpacityVal">60%</span>
           </div>
           <div class="field full">
-            <label data-str="label.text_clearing" title="Quiets the surface behind the words, fading out around them, so small text stays readable over a busy surface.">Text Clearing</label>
+            <label data-str="label.text_clearing" title="Fades the surface behind the words, so small text stays readable.">Text Clearing</label>
             <input type="range" id="textureClearing" min="0" max="100" value="0">
             <span class="range-val" id="textureClearingVal">0%</span>
           </div>
@@ -754,19 +754,19 @@ Have fun!</textarea>
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint3Row">
-            <label id="tint3Label" data-str="label.highlight_hue" title="SPECULAR: the color of the shine where the light catches the surface (white: as it is; its alpha is how much)">Specular Hue</label>
+            <label id="tint3Label" data-str="label.highlight_hue" title="Specular color (white: unchanged; alpha: strength)">Specular Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint4Row">
-            <label id="tint4Label" data-str="label.shade_hue" title="SHADOW: the color the shadows fill with — the sky's light, bouncing back (white: as it is; its alpha is how much)">Shadow Hue</label>
+            <label id="tint4Label" data-str="label.shade_hue" title="Shadow color: the ambient light filling the shadows (white: unchanged; alpha: strength)">Shadow Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint6Row">
-            <label id="tint6Label" data-str="label.diffuse_hue" title="DIFFUSE: the color of the light itself, on everything it reaches (white: as it is; its alpha is how much)">Diffuse Hue</label>
+            <label id="tint6Label" data-str="label.diffuse_hue" title="Diffuse color: the light itself (white: unchanged; alpha: strength)">Diffuse Hue</label>
             <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint5Row">
-            <label id="tint5Label" data-str="label.fifth_hue" title="A colored texture's GLOW (black: none), or a gray texture's MATERIAL — the color of the surface itself (mid-gray: none)">Glow Hue</label>
+            <label id="tint5Label" data-str="label.fifth_hue" title="Glow color for a colored texture (black: none), or material color for a gray one (mid-gray: none)">Glow Hue</label>
             <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full" id="seedRow">
@@ -1086,7 +1086,7 @@ Have fun!</textarea>
       <summary class="card-title" data-str="card.spellcrafting">Spellcrafting</summary>
       <div style="margin-top:6px;">
         <div class="spell-wheel" id="spellWheel"></div>
-        <p class="hint" id="spellEmpty" style="margin:5px 0 0;" data-str="hint.create_saves_the_current_look_as_a">Create saves the current look as a spell you can bring back later.</p>
+        <p class="hint" id="spellEmpty" style="margin:5px 0 0;" data-str="hint.create_saves_the_current_look_as_a">Create saves the current look as a spell.</p>
         <div class="btn-row">
           <button class="btn-major" id="spellCreateBtn" data-sound="spellCreate" type="button" disabled data-str="button.spellCreateBtn">Create</button>
           <button class="btn-major" id="spellApplyBtn" data-sound="spellApply" type="button" disabled data-str="button.spellApplyBtn">Invoke</button>
@@ -1187,7 +1187,7 @@ Have fun!</textarea>
       <div class="parent-drawflow forge-canvas" id="forgeCanvas"></div>
       <!-- what it makes: bottom right, over the grid; as small as it can be around the preview -->
       <aside class="forge-dock" id="forgeDock" aria-label="What it makes">
-        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes (tap: larger)"></canvas>
+        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="The graph's output (click or tap to enlarge)"></canvas>
         <div class="forge-dock-row">
           <span class="forge-status" id="forgeStatus"></span>
           <label class="forge-check" title="Each node shows what it makes"><input type="checkbox" id="forgeSteps"> Steps</label>

@@ -343,42 +343,42 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
 // each: nodes [type, data, x, y] and wires [from, output, to, input] (1-based)
 // TEACH: what each shows, in a few lines (the Athanor shows it when the graph is opened)
 export const ATHANOR_STARTERS = {
-  agate: { label: 'Agate', teach: 'This graph makes banded stone. A Value Noise is turned up by a Knob (Turbulence) with Math, and that bends a set of Waves, so the stripes wander like agate. Levels sharpens the bands, and a Color Ramp colors them between your two Hues. Try: turn the Turbulence knob, then change the Waves\' Frequency.', nodes: [
+  agate: { label: 'Agate', teach: 'Value Noise, scaled by a Knob, warps Waves into wandering bands → Levels → Color Ramp. Try: Turbulence, then the Waves\' Frequency.', nodes: [
       ['noise', { scale: 14, octaves: 6 }, 40, 60], ['knob', { slot: '1', name: 'Turbulence', def: 85 }, 40, 260],
       ['math', { op: 'multiply' }, 280, 120], ['waves', { freq: 4, angle: 30 }, 500, 120], ['levels', { lo: 0, hi: 100, gamma: 78 }, 720, 120],
       ['hue', { slot: '1', name: 'Stone Hue' }, 720, 320], ['hue', { slot: '2', name: 'Vein Hue' }, 720, 440],
       ['ramp', { mid: 70 }, 960, 160], ['surface', { name: 'Agate', ground: 'colour' }, 1200, 160]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
-  leaded: { label: 'Leaded Window', teach: 'This graph makes a leaded window. Cells gives three maps: the distance to each cell\'s center, the edges between cells, and a number for each cell. The edges go through Threshold and Invert to become the lead; the cell numbers go through a Color Ramp to color the glass. Blend lays the lead over the glass, and the lead also goes into the Surface\'s Height, so the dial lights it as if raised. Try: change Cells\' Scale and Jitter.', nodes: [
+  leaded: { label: 'Leaded Window', teach: 'Cells: edges → Threshold → Invert become the lead (also the height); ids → Color Ramp color the glass; Blend combines. Try: Cells\' Scale and Jitter.', nodes: [
       ['cells', { scale: 70, jitter: 85 }, 40, 80], ['knob', { slot: '1', name: 'Leading', def: 60 }, 40, 300], ['math', { op: 'multiply' }, 280, 60],
       ['threshold', { at: 45, soft: 8 }, 500, 40], ['invert', {}, 720, 40],
       ['hue', { slot: '1', name: 'Glass Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Glass Hue' }, 300, 420],
       ['ramp', { mid: 50 }, 540, 260], ['blend', { mode: 'multiply', opacity: 100 }, 940, 140], ['surface', { name: 'Leaded Window', ground: 'colour' }, 1180, 140]],
     wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 3, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1], [5, 1, 9, 2], [9, 1, 10, 1], [4, 1, 10, 2]] },
-  terrain: { label: 'Lit Terrain', teach: 'This graph makes lit hills. One Value Noise is used twice: a Color Ramp colors it between two Hues for the picture, and a Knob scales it for the Surface\'s Height, which the dial lights. Try: turn the light dial on the page and watch the shadows move, then raise the Relief knob.', nodes: [
+  terrain: { label: 'Lit Terrain', teach: 'One Value Noise drives both color (Color Ramp) and Height (scaled by Relief), lit by the dial. Try: turn the dial on the page, then raise Relief.', nodes: [
       ['noise', { scale: 18, octaves: 6 }, 40, 80], ['knob', { slot: '1', name: 'Relief', def: 60 }, 40, 280], ['math', { op: 'multiply' }, 280, 220],
       ['hue', { slot: '1', name: 'High Hue' }, 280, 20], ['hue', { slot: '2', name: 'Low Hue' }, 280, 120],
       ['ramp', { mid: 45 }, 520, 60], ['surface', { name: 'Lit Terrain', ground: 'colour' }, 760, 120]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [1, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1], [3, 1, 7, 2]] },
-  woven: { label: 'Woven Waves', teach: 'This graph makes woven cloth. Two Waves, one across and one down, are combined with Math (max) to make threads. A Knob thins them, Levels hardens them, and Tint colors them between your two Hues. The threads also go into the Surface\'s Height, so the dial lights the weave. Try: change one Waves\' Angle.', nodes: [
+  woven: { label: 'Woven Waves', teach: 'Two Waves combined by Math › max → Levels → Tint; the same threads feed Height. Try: change one Waves\' Angle.', nodes: [
       ['waves', { freq: 14, angle: 0 }, 40, 40], ['waves', { freq: 14, angle: 90 }, 40, 220], ['math', { op: 'max' }, 280, 120],
       ['knob', { slot: '1', name: 'Thread', def: 80 }, 280, 300], ['math', { op: 'multiply' }, 500, 160],
       ['levels', { lo: 20, hi: 100, gamma: 50 }, 720, 120], ['tint', {}, 940, 120], ['surface', { name: 'Woven Waves', ground: 'colour' }, 1160, 120],
       ['hue', { slot: '1', name: 'Thread Hue' }, 720, 300], ['hue', { slot: '2', name: 'Shadow Hue' }, 720, 420]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1], [6, 1, 7, 1], [9, 1, 7, 2], [10, 1, 7, 3], [7, 1, 8, 1], [6, 1, 8, 2]] },
-  bloom: { label: 'Reaction Bloom', teach: 'This graph makes soft coral. Reaction–Diffusion grows a pattern; Blur softens a copy of it; Mix blends the two, by an amount a Knob (Bloom) sets. A Color Ramp colors the result between two Hues, and the mix also gives the Surface its Height. Try: change the Reaction–Diffusion Pattern.', nodes: [
+  bloom: { label: 'Reaction Bloom', teach: 'Reaction–Diffusion mixed with a blurred copy (Bloom) → Color Ramp, and into Height. Try: change Pattern.', nodes: [
       ['turing', { pattern: 'coral', scale: 100 }, 40, 80], ['blur', { radius: 10 }, 300, 160], ['knob', { slot: '1', name: 'Bloom', def: 40 }, 300, 300],
       ['mix', { t: 50 }, 520, 80],
       ['hue', { slot: '1', name: 'Light Hue' }, 520, 300], ['hue', { slot: '2', name: 'Dark Hue' }, 520, 420],
       ['ramp', { mid: 50 }, 760, 160], ['surface', { name: 'Reaction Bloom', ground: 'colour' }, 1000, 160]],
     wires: [[1, 1, 2, 1], [1, 1, 4, 1], [2, 1, 4, 2], [3, 1, 4, 3], [4, 1, 7, 1], [6, 1, 7, 2], [5, 1, 7, 3], [7, 1, 8, 1], [4, 1, 8, 2]] },
-  oil: { label: 'Oil on Canvas', teach: 'This graph makes an oil painting of any texture, one the dial can light. It is a tutorial in putting parts together: each part does one job and hands it to the next. Texture from the Menu makes a picture; Oil Paint repaints it in brushstrokes and gives a second output, the paint\'s heights. Mix lays a little Canvas Weave into those heights, so the cloth shows where the paint is thin. The Light Engine takes the painting and its heights and lights them by the dial, and a Knob (Impasto) sets how thick the paint stands. Try: turn the light dial on the page, then choose another texture in Texture from the Menu.', nodes: [
+  oil: { label: 'Oil on Canvas', teach: 'Texture from the Menu → Oil Paint (picture + paint height) → Canvas Weave mixed into the height → Light Engine; Impasto sets thickness. Try: choose another texture, then turn the dial.', nodes: [
       ['texture', { type: 'stainedglass', p1: 100, p2: 100, p3: 50 }, 40, 80], ['oilpaint', { amount: 100, size: 100, length: 100, detail: 50, vary: 50 }, 300, 60],
       ['canvasweave', { pitch: 100 }, 300, 340], ['mix', { t: 15 }, 560, 260], ['knob', { slot: '1', name: 'Impasto', def: 55 }, 560, 440],
       ['material', { relief: 22, '~relief': '0,45', gloss: 25, shine: 35, shadow: 55, occlusion: 35, ambient: 40 }, 800, 100], ['surface', { name: 'Oil on Canvas', ground: 'colour' }, 1060, 120]],
     wires: [[1, 1, 2, 1], [2, 1, 6, 1], [2, 2, 4, 1], [3, 1, 4, 2], [4, 1, 6, 2], [5, 1, 6, paramPort('material', 'relief')], [6, 1, 7, 1]] },
   // the poem as an input (The Poem): rings spreading from the words, quiet where the words are
-  ripples: { label: 'Ripples from the Words', teach: 'This is a surface that knows where your poem is. The Poem hands on a Distance map: 0 at the words, rising to 1 far from them. A Value Noise warps it a little, and Contour Lines draws a line at every step of it, so rings spread out from the text like ripples from a stone. Levels turns the Distance into a mask that is dark only right around the words, and Math multiplies the rings by it, so they fade out close to the text and it stays clear. Try: change The Poem\'s Reach, or type more lines and watch the rings move.', nodes: [
+  ripples: { label: 'Ripples from the Words', teach: 'The Poem\'s Distance, warped by noise → Contour Lines: rings around the text. A Levels mask fades them near the words. Try: change Reach, or add lines to the poem.', nodes: [
       ['poem', { padding: 30, softness: 0, reach: 70 }, 40, 80], ['noise', { scale: 8, octaves: 3 }, 40, 320],
       ['warp', { amount: 40 }, 300, 160], ['contours', { levels: 22, weight: 280, index: 4, strength: 100 }, 520, 160],
       ['math', { op: 'multiply' }, 740, 160], ['hue', { slot: '1', name: 'Ring Hue' }, 740, 340], ['hue', { slot: '2', name: 'Ground Hue' }, 740, 460],

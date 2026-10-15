@@ -4,6 +4,17 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Jupiter–Kore (2026-10-14)
+
+- **Clearer, shorter text in the Athanor.** Part descriptions, the notes
+  shown when a graph opens, the Help and the menus are rewritten for someone
+  who knows the basics of graphics: short, in standard terms, without the
+  hand-holding. Menus say "Wire in…", "Set wire range…", "Reset all
+  settings" instead of full sentences.
+- Instructions say **click** with a mouse and **tap** on a touch screen.
+- Fixed: tapping the Athanor's preview on a phone didn't enlarge it.
+- A few long tooltips elsewhere in the app are shorter.
+
 ## Jupiter–Cyllene (2026-10-14)
 
 - **Fixed: wires drawn to the wrong row.** In a graph whose wires were made

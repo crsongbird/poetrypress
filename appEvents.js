@@ -2215,7 +2215,7 @@ function paintMasterLocks(){
   for(const m of masterLocks){
     const ids = lockablesIn(m.root), n = ids.filter(id => state.locks.has(id)).length;
     m.btn.classList.toggle('locked', ids.length > 0 && n === ids.length); m.btn.classList.toggle('partial', n > 0 && n < ids.length);
-    m.btn.title = n === ids.length && n ? 'All locked here — tap to unlock them all' : n ? `${n} of ${ids.length} locked here — tap to lock them all` : 'Lock everything here';
+    m.btn.title = n === ids.length && n ? 'All locked (unlock all)' : n ? `${n} of ${ids.length} locked (lock all)` : 'Lock all in this section';
     m.btn.setAttribute('aria-pressed', n === ids.length && n ? 'true' : n ? 'mixed' : 'false');
   }
 }

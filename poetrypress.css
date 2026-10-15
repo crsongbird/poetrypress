@@ -1918,6 +1918,9 @@ body.is-mobile .forge-parts-btn{ display:inline-block; }
 body.is-mobile .forge-palette{ position:absolute; left:0; top:0; bottom:0; z-index:8; width:min(250px, 78vw); display:none; box-shadow:12px 0 30px -18px rgba(0,0,0,.9); }
 body.is-mobile .forge-veil.parts-open .forge-palette{ display:block; }
 body.is-mobile .forge-dock{ --pv:132px; right:6px; bottom:6px; padding:4px; }
+/* (tapped big on a phone too: this rule outranked .forge-dock.big, so a tap toggled the class and nothing grew) */
+body.is-mobile .forge-dock.big, .forge-dock.big{ --pv:min(460px, calc(100vw - 24px), calc(var(--vvh, 100vh) - 140px)); }
+.forge-preview{ touch-action:manipulation; -webkit-user-drag:none; user-select:none; }
 body.is-mobile .forge-menu{ position:fixed; left:0 !important; right:0; top:auto !important; bottom:0; max-width:none; width:auto; max-height:calc(var(--vvh, 100vh) * 0.6); border-left:0; border-right:0; border-bottom:0; }
 body.is-mobile .forge-menu-item{ padding:11px 14px; font-size:14px; }
 /* the four readings of a surface (🜂 🜄 🜁 🜃, textureElements.js): square,
