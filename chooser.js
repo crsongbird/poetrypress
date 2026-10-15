@@ -13,10 +13,10 @@
  * own choice would. The panel is built afresh each time it opens, so
  * options added later (kept surfaces) are there.
  *
- * Thumbnails: the caller paints them (chooseThumb); each finished one is
- * kept as a small JPEG in this browser for the release (CHOOSER_CACHE_KEY),
- * so after the first opening the tiles appear at once. A new release paints
- * them again, since a texture may have changed.
+ * Thumbnails: the caller paints them (opts.thumb); each finished one is
+ * kept as a small JPEG in this browser (CHOOSER_CACHE_KEY) with its STAMP
+ * (opts.stamp: what it was painted from), so the tiles appear at once, every
+ * visit and every release, and only a surface that changed is painted again.
  *
  * Folded groups are remembered per menu (localStorage), an app preference,
  * never part of a look.
@@ -25,7 +25,8 @@
  */
 import { CHOOSER } from './strings.js';
 
-export const CHOOSER_CACHE_KEY = 'uv.thumbs.v1';
+export const CHOOSER_CACHE_KEY = 'uv.thumbs.v2';
+const CH_OLD_KEYS = ['uv.thumbs.v1'];         // kept per release: dropped, to give their space back
 const CH_FOLD_KEY = id => 'uv.chooser.' + id + '.folded';
 
 // ---- pure helpers (the tests use these) ----
@@ -53,10 +54,15 @@ export function chMatches(query, item, groupName, extra = ''){
   return words.every(w => hay.includes(w));
 }
 
-/** The thumbnail cache for this release: { release, map }. A different release starts empty. */
-export function chCacheFor(raw, release){
+/** The thumbnail cache: { map: { value: { s: stamp, url } } }. Anything unreadable starts empty. */
+export function chCacheFor(raw){
   let c = null; try { c = JSON.parse(raw || 'null'); } catch(e){ c = null; }
-  return (c && c.release === release && c.map && typeof c.map === 'object') ? c : { release, map: {} };
+  return (c && c.map && typeof c.map === 'object' && !Array.isArray(c.map)) ? { map: c.map } : { map: {} };
+}
+/** A kept thumbnail, only if it was painted from what the tile shows now (its stamp). */
+export function chCached(cache, value, stamp){
+  const e = cache.map[value];
+  return e && typeof e === 'object' && e.s === stamp && /^data:image\//.test(e.url || '') ? e.url : null;
 }
 
 // ---- storage, quietly (a private window or a full store just means no memory) ----
@@ -64,11 +70,14 @@ const chStore = {
   get(k){ try { return typeof localStorage !== 'undefined' ? localStorage.getItem(k) : null; } catch(e){ return null; } },
   set(k, v){ try { if(typeof localStorage !== 'undefined') localStorage.setItem(k, v); } catch(e){} },
 };
-let chCache = null, chRelease = '';
-function chThumbs(){ if(!chCache) chCache = chCacheFor(chStore.get(CHOOSER_CACHE_KEY), chRelease); return chCache; }
+let chCache = null;
+function chThumbs(){
+  if(!chCache){ chCache = chCacheFor(chStore.get(CHOOSER_CACHE_KEY)); try { for(const k of CH_OLD_KEYS) if(typeof localStorage !== 'undefined') localStorage.removeItem(k); } catch(e){} }
+  return chCache;
+}
 let chSaveT = null;
-function chKeep(value, url){
-  const c = chThumbs(); c.map[value] = url;
+function chKeep(value, url, stamp){
+  const c = chThumbs(); c.map[value] = { s: stamp, url };
   clearTimeout(chSaveT); chSaveT = setTimeout(() => chStore.set(CHOOSER_CACHE_KEY, JSON.stringify(c)), 400);
 }
 
@@ -79,14 +88,15 @@ function chKeep(value, url){
  *  opts.thumb    — (value, canvas, done) paints a tile's thumbnail; call done() when it is final
  *                  (it may paint a placeholder first and call done later). Return false to leave a glyph.
  *  opts.extra    — (value) → more words a search may find it by (its readings, say)
- *  opts.release  — the release name: thumbnails are kept for it
+ *  opts.stamp    — (value) → what its thumbnail is painted from, as a short string: a kept thumbnail
+ *                  is shown only while its stamp is the same (a surface that changed is painted again)
  *  opts.size     — a thumbnail's pixels (default 160)
  *  opts.hold     — (value, tile) → true when it opened a menu of its own for that tile (a long press or right-click)
  * Returns { refresh(), open(), close() }.
  */
 export function attachChooser(select, opts = {}){
   if(!select || typeof document === 'undefined' || typeof document.createElement !== 'function' || !select.parentNode) return { refresh(){}, open(){}, close(){} };
-  chRelease = opts.release || chRelease;
+  const stampOf = v => { try { return String(opts.stamp ? opts.stamp(v) : ''); } catch(e){ return ''; } };
   const id = opts.id || select.id, SIZE = opts.size || 160;
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'ch-trigger'; btn.setAttribute('aria-haspopup', 'dialog');
@@ -98,11 +108,11 @@ export function attachChooser(select, opts = {}){
   const textOf = v => { const o = Array.from(select.options || []).find(o => o.value === v); return o ? String(o.textContent || '').trim() : v; };
   const thumbInto = (holder, value) => {
     holder.textContent = '';
-    const url = chThumbs().map[value];
+    const stamp = stampOf(value), url = chCached(chThumbs(), value, stamp);
     if(url){ const im = document.createElement('img'); im.alt = ''; im.src = url; im.decoding = 'async'; holder.appendChild(im); return; }
     const cv = document.createElement('canvas'); cv.width = cv.height = SIZE; holder.appendChild(cv);
     let ok = false;
-    try { ok = opts.thumb ? opts.thumb(value, cv, () => { try { chKeep(value, cv.toDataURL('image/jpeg', 0.82)); } catch(e){} }) !== false : false; } catch(e){ ok = false; }
+    try { ok = opts.thumb ? opts.thumb(value, cv, () => { try { chKeep(value, cv.toDataURL('image/jpeg', 0.82), stamp); } catch(e){} }) !== false : false; } catch(e){ ok = false; }
     if(!ok){ holder.textContent = ''; holder.classList.add('ch-glyph'); holder.textContent = opts.glyphFor ? opts.glyphFor(value) : '◈'; }
   };
 

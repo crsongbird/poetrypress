@@ -17,7 +17,7 @@ check('the parts come from what Vellum has: inputs (knobs, hues, dial, seed), no
 check('every node draws its own controls (bound with df-*) and starts at its defaults',
   Object.keys(F.FORGE_NODES).every(k => { const h = F.forgeNodeHtml(k, { textures: ['linen'], stitches: ['scallop'] }); const d = F.forgeNodeData(k);
     return h.includes('forge-node-title') && F.FORGE_NODES[k].params.every(p => h.includes('df-' + p[0]) && d[p[0]] === p[3]); }));
-check('the blend node offers the GPU blends too', ['vivid-light','linear-light','pin-light','subtract','divide'].every(b => F.FORGE_BLENDS.includes(b)));
+check('the blend node offers the GPU blends too', ['vivid-light','linear-light','pin-light','subtract','divide'].every(b => S.STEP_BLENDS.includes(b)));
 check('a graph is described in a few words', F.describeForge('{}').startsWith('Empty')
   && F.describeForge(JSON.stringify({ drawflow: { Home: { data: { 1: { name: 'noise', outputs: { output_1: { connections: [{ node: '2' }] } } }, 2: { name: 'surface', data: { name: 'Moss Glass' }, outputs: {} } } } } })) === '2 nodes, 1 wire → “Moss Glass”');
 check('the graph is saved with the look (PERSISTED forgeGraph, a hidden field), but editing it is not an undo step',
@@ -133,9 +133,9 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
     wr(co, 1, me, 1); wr(ns, 1, me, 2); wr(me, 1, sf, 1);
     const gg = JSON.stringify({ v: 2, drawflow: { Home: { data: nd } } }), at = deg => C.evalAthanor(gg, 48, 48, { seed: 3, light: deg, knobs: [50, 50, 50, 50, 50, 50], tints: ['#FFFFFF', '#000000'] }, {});
     const a = at(315), b = at(135); let diff = 0, spread = 0; for(let i = 0; i < a.r.length; i++){ diff += Math.abs(a.r[i] - b.r[i]); spread = Math.max(spread, Math.abs(a.r[i] - 0.75)); }
-    check('THE LIGHT ENGINE lights a picture by its heights: the dial moves the light; Oil Paint, Canvas Weave and Angry Strokes are parts too; the oil-on-canvas module sits inside Painted Landscape and Painter\'s Frustration, and Oil on Canvas is a starter to learn from (Ruby)',
+    check('THE LIGHT ENGINE lights a picture by its heights: the dial moves the light; Oil Paint, Canvas Weave and Paint Swipes are parts too; the oil-on-canvas module sits inside Painted Landscape and Painter\'s Frustration, and Oil on Canvas is a starter to learn from (Ruby)',
       ['material', 'oilpaint', 'canvasweave'].every(k => F.FORGE_NODES[k] && F.FORGE_NODES[k].doc.length > 40) && diff/a.r.length > 0.004 && spread > 0.02
-      && !!C.ATHANOR_STARTERS.oil && /brushstrokes: \{ label: "Painter's Frustration", canvas: true/.test(readFileSync(new URL('../chains.js', import.meta.url), 'utf8')) && /\['oilpaint', \{ amount: 50/.test(readFileSync(new URL('../chains.js', import.meta.url), 'utf8')));
+      && !!C.ATHANOR_STARTERS.oil && (CH => CH.TEXTURE_CHAINS.brushstrokes.canvas && Object.values(CH.TEXTURE_CHAINS).some(c => c.nodes.some(([k]) => k === 'oilpaint')))(await import('../chains.js')));
     { const FS = readFileSync(new URL('../forge.js', import.meta.url), 'utf8');
       check('THE ATHANOR\'S HANDS: undo/redo (a step per change, Ctrl/⌘+Z, Shift for redo, ↶ ↷), Ctrl+D copies a part, F fits; a mouse moves a part from anywhere but its controls; the wheel counts lines as pixels (Firefox); every wire is redrawn when the layout settles',
         /const stepHist = d => \{/.test(FS) && /if\(mod && k === 'z' && !typing\)/.test(FS) && /if\(mod && k === 'd' && !typing && ed\.node_selected\)/.test(FS)

@@ -52,6 +52,24 @@ check('the > prefix is stripped from the text',
   quoted.segments.map(s => s.text).join('') === 'a line held apart');
 check('quote lines are italicised', quoted.segments.every(s => s.italic));
 
+
+// ---- rules: --- and its directives ----
+{
+  const P = await import('../textParsers.js');
+  const r = t => P.parseRule(t, true, true);
+  check('--- is a rule, and [---] {---} take the accents', r('---').color === null && r('[---]').color === 'accent1' && r('{---}').color === 'accent2');
+  check('<---/50%/c> sets width and alignment; the \\ form works too',
+    r('<---/50%/c>').width === 0.5 && r('<---/50%/c>').align === 'c' && r('<---\\25%\\r>').width === 0.25 && r('<---\\25%\\r>').align === 'r');
+  check('rules take scale:N and the words left / center / right', r('<---/scale:50/center>').width === 0.5 && r('<---/scale:50/center>').align === 'c');
+  check('a rule can take its own color', r('<---/#:ff00aa>').customColor === '#ff00aa');
+  check('rules take a stitch and a side', r('<---/vine/up/60%>').style === 'vine' && r('<---/vine/up/60%>').side === -1);
+  check('rules take a motif size and a thread weight', r('<---/wave/size:150/weight:200>').size === 150 && r('<---/wave/size:150/weight:200>').weight === 200);
+  check('--- with words after it, or four dashes, stays text', r('--- text') === null && r('----') === null);
+  check('a rule is a blank line that carries it (layout treats it as a blank line)',
+    P.buildLines('a\n---\nb', true, true)[1].isBlank === true && !!P.buildLines('a\n---\nb', true, true)[1].rule);
+  check('a plain name has segments, not parts (the credit reads both shapes)', (l => !l.parts && !!l.segments)(P.buildLines('@ruby', true, true)[0]));
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : failures+' FAILURES');
 process.exit(failures === 0 ? 0 : 1);

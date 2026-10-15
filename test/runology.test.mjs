@@ -19,7 +19,7 @@ check('the Primal Four are the readings\' elements, with their Chroma (Fire red,
   ['🜂Fire Red', '🜁Wind Green', '🜄Water Blue', '🜃Earth Yellow'].every(x => R.ARCHETYPES.some(a => a.glyph + a.name + ' ' + a.chroma === x)));
 check('the shared words Ruby set aside stay out (Vitrum, not the old name; no Pandorans)',
   !/chrysm|pandoran/i.test(src('runology.js')) && R.ARCHETYPES.some(a => a.name === 'Vitrum'));
-check('🜉 is Creation, the Athanor\'s glyph', R.runeOf('🜉').name === 'Creation');
+check('🜉 is Creation, the Athanor\'s glyph', R.ARCHETYPES.find(a => a.glyph === '🜉').name === 'Creation');
 
 // its words and glyphs, where the app already uses such things
 {

@@ -89,6 +89,14 @@ check('a saved preset applies its own look and spell, through the look filter',
   /safeRestore\(stripToLook\(Object\.assign\(\{\}, rec\.settings, \{ spell: rec\.spell \}\)\), 'This spell'\)/.test(savedFn));
 check('tiles are built by one shared helper', /function presetTile/.test(ev));
 
+
+// ---- tiles paint when they are seen (paintWhenSeen) ----
+{
+  let threw = null;
+  try { globalThis.IntersectionObserver.showAll(); await new Promise(r => setTimeout(r, 50)); } catch(e){ threw = e; }
+  check('preset tiles paint once seen, each without throwing', threw === null);
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

@@ -185,6 +185,20 @@ check('an imported spell keeps its glyphs', out && out.spell === rec.spell);
 check('importing the same spell twice does not duplicate it',
   vaultMod.mergeRecords(merged.merged, incoming, vaultMod.spellKeyOf, vaultMod.isValidSpell).merged.length === 1);
 
+
+// ---- old looks open (AGENTS.md §7: saved keys are frozen; retired ids translate forward in retireLook) ----
+{
+  const base = save();
+  const opened = over => { load({ ...base, ...over }); return save(); };
+  check('a retired texture id opens as the texture that kept its look: whorl → dunes, crystalleaf → spangle, crucible → athanor, foxing and foldghost → oldpaper',
+    opened({ textureType: 'whorl' }).textureType === 'dunes' && opened({ textureType: 'crystalleaf' }).textureType === 'spangle'
+    && opened({ textureType: 'crucible' }).textureType === 'athanor' && opened({ textureType: 'foxing' }).textureType === 'oldpaper'
+    && opened({ textureType: 'foldghost' }).textureType === 'oldpaper');
+  const ink = opened({ textureType: 'inkbleed', textureTint1: '#FFFFFF', textureTint2: '#000000' });
+  check('an old Rorschach look (white and black hues) opens with ink and accent', /^#141414$/i.test(ink.textureTint1) && /^#B0283A$/i.test(ink.textureTint2));
+  load(base);
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

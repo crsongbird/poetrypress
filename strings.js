@@ -396,7 +396,6 @@ export const DIE = {
  *  and a long press on one of Your Surfaces in the surface menu). {name} is the surface's name. */
 export const KEPT = {
   keep: 'Keep',
-  keepTitle: 'Keep this surface on the shelf, by its name',
   keepAsk: 'Keep this surface?',
   keepBody: 'Its name is the Surface part’s name too. It stays on this browser’s shelf, to open again or choose from the surface menu.',
   replaceAsk: 'Replace the kept \u201C{name}\u201D?',
@@ -418,7 +417,8 @@ export const KEPT = {
   pasteBody: 'The text that Copy the wiring makes (or a shelf file’s text). It is put on your shelf.',
   pasteNone: 'That isn’t a surface’s wiring. Nothing was changed.',
   current: 'The surface on the page',
-  keepIt: 'Keep it on the shelf…',
+  keepIt: 'Keep this surface…',
+  keepHint: 'save it to the shelf under its name',
 };
 
 /** The colour picker's own button. */

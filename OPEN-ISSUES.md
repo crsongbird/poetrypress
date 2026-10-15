@@ -6,7 +6,16 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Pan)
+## 1 · Ruby to judge (new in Saturn–Atlas)
+- THE WIKI'S PAGES TURN: previous and next along the foot of every page, always in view on a phone.
+- SURFACE TILES are kept from release to release; only a surface that changed is painted again (the
+  first visit after this release paints them once more, to start the new store).
+- THE PROJECT KEEPS ITSELF CURRENT (AGENTS.md §1 rule 12): dead code, strings, styles and files and
+  stale docs fail the tests; the stylesheet was pruned (verified screen by screen); the tests were
+  reviewed. Aether is now a PML fixture (test/fixtures), so it keeps rendering as PML grows; the parked
+  sideways layout is gone (see §3).
+
+## From Saturn–Pan
 - THE ATHANOR'S WIKI: Help → contents, search, Back; a first-surface tutorial; concept articles (gray maps,
   pictures, colors, numbers, curves, ports, mapping, ranges, masks, blend modes, heights, seeds); a page for
   every part; a glossary. About this part in every part's menu. Does it teach? What is missing?
@@ -29,29 +38,21 @@ Recommendations".
   in their family. Locks now hold everywhere (knob padlocks had been disappearing).
 
 ## From Jupiter–Aoede
-- SURFACE STUDIES: all 36 surfaces from the future-directions document as graphs of parts (Start from…
-  → Surface Studies). First drafts tuned by eye: which read right, which should change before they
-  become menu textures (ROADMAP §2 I)? Orbit Script, Transmutation Engine and Constellation are
-  approximations.
 - New parts: Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum; Variation;
   The Poem's Rhymes.
-
-## From Jupiter–Hegemone
-- FILTER FORGE IN THE ATHANOR: map inputs (a gray map on a ⚙ setting sets it point by point; new graphs
-  only), CURVES (a fifth wire: Curve, Curve Ops, Tone Curve, Profile Gradient), Perlin Noise, Bricks (a
-  curve shapes the bevel), Brightness & Contrast, High Pass, Sharpen, Motion Blur, Offset, more Math,
-  required inputs (red port, "!" stand-in in previews), the Note, the Surface's Size, controls offered
-  only when they reach the Surface.
-- From Jupiter–Sinope: the surface menus as tiles (Lichtenberg's thumbnail is heavy when small), preset
-  search and folding, Text Clearing, The Poem part. (Which presets are redundant or superseded waits for
-  the presets pass at the very end: ROADMAP Stage 4.)
-  Lain's questions on the kept draft (a way back to the welcome page; an empty poem; the page shape).
+- Lain's questions on the kept draft (a way back to the welcome page; an empty poem; the page shape).
 
 ## 1b · The direction — see ROADMAP.md
 The plan for the surface engine, in four stages (Ruby): components → features → textures built from
 the parts → presets, last. No new or reworked presets before Stage 4. Delete items there as they ship.
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
+- THE ATHANOR'S MENUS (Ruby, on the Filter Forge pass: "perfect — these menus need to be easier to use
+  though, it's difficult to understand what is where and why. I'm getting it the more I play"). Make
+  where things are, and why, easier to see: the menus' order and grouping, what each says it does.
+- SURFACE STUDIES (Ruby: "The surface studies are... hmmm."): not right yet. Before any becomes a menu
+  texture (ROADMAP §2 I), ask which read right and what each is missing; Orbit Script, Transmutation
+  Engine and Constellation are approximations waiting on parts.
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
   everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,
@@ -107,32 +108,23 @@ the parts → presets, last. No new or reworked presets before Stage 4. Delete i
     readings, the Athanor's parts, the witchiness of the words. A general
     tool, with a voice.
 
+- A PHONE HELD SIDEWAYS: the parked side-by-side layout (preview left, panels right) was removed with
+  the dead code; `git log -S "orientation: landscape" -- poetrypress.css` finds it, if it is wanted on a
+  laptop or a tablet.
+
 ## 4 · Next (no input needed)
-- EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon: loadable, viewable
-  as a graph, mixable, kept and shared as one's own). 25 of 53 are chains:
-  the six Basics, Harsh Rain, Silverpoint Hatch, Linen Tooth, Fractured
-  Glaze, Cartomancy, Sleep Haze, Scattered Polygons, Stained Glass, Painted
-  Landscape, Painter's Frustration, Halftone, Film Grain, First Snow, Burning
-  Mana, Euphoria Dust, Contour Map, Flow-Field Ink, Turing Skin, Watercolor
-  Wash. Still to take apart (each when touched, or in passes): Dream Bloom,
-  Deep Field, Lotus Pond, Rain on Glass, Sigil Scatter, Machine Glyphs,
-  Transmutation Circles, Ink Blot, Old Paper, Crystal Leaf, Spangle, Cold
-  Press, Cup Ring, Guilloche, Chladni, Suminagashi, Hoarfrost, Burnt
-  Letter, Poured Wax, Dunes,
-  Kintsugi, Moss, City at Night, Black Hole, Scrying Pool, Moon, Aurora,
-  Tessellate. Likely shared parts first: the Particles part (done, Pasiphae:
-  Deep Field's stars and Dream Bloom's motes may join it), Terrain (done,
-  Eukelade: Dunes, Moss and the landscape's ridges may stand on it), Pigment
-  (done: Suminagashi's inks could be laid by it), the Light Engine part (done, Sponde: most 🜚 Touch textures
-  can end in it now), a
-  Marbling part (Suminagashi, Ink Blot).
+- EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon): ROADMAP.md Stage 3
+  keeps the list of textures that aren't chains yet. Likely shared parts
+  first: Particles (Deep Field's stars, Dream Bloom's motes), Terrain (Dunes,
+  Moss), Pigment (Suminagashi's inks), the Light Engine (most 🜚 Touch
+  textures), a Marbling part (Suminagashi, Ink Blot).
 - The Athanor on a phone, still: haptics on a long press, an accessibility
   pass.
 - In the Athanor, a grey chain (Harsh Rain, Silverpoint Hatch) shows grey: the
   Athanor's surface has no Light/Dark remap of its own yet.
 - The Athanor's GPU passes (blur, warp inside a graph).
 - Dream Bloom's convolution on the GPU (PERFORMANCE-AUDIT "Next on the GPU").
-- Split appEvents.js (~2,900 lines) into modules — the tests read its source
+- Split appEvents.js into modules — the tests read its source
   by regex, so they move with it.
 
 ## 5 · Check on a phone (new)

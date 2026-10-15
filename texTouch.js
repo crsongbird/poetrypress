@@ -183,7 +183,6 @@ export function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
 // Never the whole print —
 // just enough ridge to prove that
 // a hand was here once.
-function sstepZ(a,b,x){ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); }
 
 // Light through water:
 // shallow, it nets the floor in fire;

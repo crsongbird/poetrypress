@@ -466,6 +466,18 @@ export function installDomMock(makeMockContext, makeMockCanvas){
     global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
   }
 
+  // IntersectionObserver: tiles paint when they are seen (paintWhenSeen). In a test nothing is on a
+  // screen, so nothing is seen until a test asks (IntersectionObserver.showAll()): booting the app no
+  // longer paints all sixty preset tiles, each with its surface (that was most of every boot's 12 s).
+  if(typeof global.IntersectionObserver !== 'function'){
+    const watching = new Set();
+    global.IntersectionObserver = class {
+      constructor(cb){ this.cb = cb; this.els = new Set(); watching.add(this); }
+      observe(el){ this.els.add(el); } unobserve(el){ this.els.delete(el); } disconnect(){ this.els.clear(); }
+    };
+    global.IntersectionObserver.showAll = () => { for(const io of watching){ const els = [...io.els]; if(els.length) io.cb(els.map(target => ({ target, isIntersecting: true }))); } };
+  }
+
   // Coloris is a real third-party global, loaded via CDN in the browser --
   // not something this app defines. Records the last config passed in, so
   // tests can assert the theme palette actually got applied.
@@ -480,6 +492,7 @@ export function installDomMock(makeMockContext, makeMockCanvas){
       return registry[id];
     },
     createElement(tag){ return tag === 'canvas' ? makeMockCanvas() : makeFakeElement(null, {tag}); },
+    createTextNode(text){ const n = makeFakeElement(null, { tag: '#text' }); n.textContent = String(text); n.nodeType = 3; return n; },
     fonts: { load: () => Promise.resolve(), ready: Promise.resolve() },
     addEventListener(type, fn){ (documentListeners[type] = documentListeners[type] || []).push(fn); },
     dispatchEvent(evt){ (documentListeners[evt.type] || []).forEach(fn => fn(evt)); return true; },

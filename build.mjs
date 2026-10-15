@@ -56,6 +56,22 @@ if(process.argv.includes('--next')){
   console.log(`release: ${planet}–${cur} → ${np}–${nm}`);
 }
 
+// THE SURFACE MENUS' THUMBNAILS are kept in each browser until their surface changes (Ruby: "saved so they
+// don't need regenned"). A surface changes on purpose only with its fingerprints (test/fixtures), so each
+// surface's stamp is a hash of its fingerprints; SWATCH_STAMP a hash of the code that paints a thumbnail.
+{
+  const fp = JSON.parse(readFileSync('test/fixtures/texture-fingerprints.json', 'utf8')), by = {};
+  for(const [k, v] of Object.entries(fp)){ const t = k.split('@')[0]; (by[t] = by[t] || []).push(k + JSON.stringify(v)); }
+  const h = s => createHash('sha1').update(s).digest('base64url').slice(0, 8);
+  const stamps = Object.fromEntries(Object.keys(by).sort().map(t => [t, h(by[t].sort().join('|'))]));
+  const line = `export const TEXTURE_STAMPS = ${JSON.stringify(stamps)};`;
+  const sw = `export const SWATCH_STAMP = '${h(readFileSync('swatches.js', 'utf8'))}';`;
+  let rel = readFileSync('release.js', 'utf8');
+  rel = /export const TEXTURE_STAMPS = .*;/.test(rel) ? rel.replace(/export const TEXTURE_STAMPS = .*;/, line) : rel.trimEnd() + `\n// each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes\n${line}\n`;
+  rel = /export const SWATCH_STAMP = .*;/.test(rel) ? rel.replace(/export const SWATCH_STAMP = .*;/, sw) : rel.trimEnd() + `\n${sw}\n`;
+  writeFileSync('release.js', rel);
+}
+
 const ORDER = [
   // Every module comes after everything it imports. The bundle is one flat
   // scope, so a module placed before its dependency can read a const that is

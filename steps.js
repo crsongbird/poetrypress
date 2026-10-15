@@ -32,7 +32,7 @@
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
-import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField, CPU } from './texCore.js';
 import { drawStitch, pathFromPoints, roundRectPoints } from './stitches.js';
 import { TOUCH_STEPS } from './stepsTouch.js';
 import { WHIMSY_STEPS } from './stepsWhimsy.js';
@@ -392,7 +392,7 @@ const STEP_RUN = {
     return n.name === 'turing' ? [lum(img)] : [img, lum(img)];
   },
   stitch(E, n){ const { ww, wh, unit, num, P, readCanvas, lum } = E;
-    const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d');
+    const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU);
     x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh);
     const k = unit/1536, off = num(n, 'offset', 14)*k*2, sz = Math.max(1, num(n, 'size', 4))*k*2;
     drawStitch(x, pathFromPoints(roundRectPoints(off, off, ww - off*2, wh - off*2, 0), true), String(P(n, 'style', 'scallop')),

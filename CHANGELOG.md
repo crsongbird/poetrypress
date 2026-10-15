@@ -4,6 +4,30 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Atlas (2026-10-15)
+
+- **The wiki turns its own pages.** Every page of the Athanor's wiki ends in a
+  bar with the page before and the page after, in the order of the contents,
+  and the bar stays at the foot of the screen while you read.
+- **Surface tiles are remembered.** The thumbnails in the surface menus stay
+  in your browser from one visit and one release to the next; a tile is
+  painted again only when its surface really changed.
+- On a phone held sideways, the divider under the preview now always drags
+  up and down (it used to read the wrong direction).
+- The tree trunks in Painted Landscape keep their fine lines in the small
+  preview, as in the saved image.
+- **Under the hood:**
+  - pruned the stylesheet: the declarations that never won anywhere are
+    gone, checked against every screen (desk and phone, each tab, the
+    Athanor, its wiki, each theme), and the parked sideways layout went
+    with them;
+  - reviewed the tests: suites by concern instead of by session, behavior
+    instead of copies of the code, a dozen duplicates and snapshots gone,
+    and a test boot 70 times faster;
+  - the project now checks itself: unused code, strings, styles and files
+    fail the tests, and so do docs that name what no longer exists or
+    count differently from the code.
+
 ## Saturn–Daphnis (2026-10-15)
 
 - **The help keeps up with the app.** The rules for working on Vellum now

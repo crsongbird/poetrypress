@@ -91,10 +91,29 @@ into an image people stop to read.
     half (undocumented ports and settings, dead links, menu labels and part
     names the code no longer has, retired names); whether the help still
     *teaches* is judged by reading it (§11, Three voices).
+12. **Nothing goes stale** (Ruby: the project's documentation enforces
+    itself). `test/hygiene.test.mjs` fails, so staleness can't ship, when:
+    - code, a string, a CSS class, a fixture or a tool is unused
+      (`node tools/prune.mjs` lists them; a name kept on purpose says why
+      on its line: `// test hook: …` or `// kept: …`);
+    - a doc names a function, file or command that doesn't exist, states a
+      count the code disagrees with, or leaves a module or tool out of its
+      map; the changelog doesn't lead with this release; OPEN-ISSUES or
+      ROADMAP keep finished work;
+    - PML.md or the in-app guide teaches a directive that does nothing;
+    - a test reads a surface's source, repeats another suite's check, or
+      doesn't name itself.
+    Beyond what it can see: **retire things whole** (the code, its strings,
+    CSS, tests, docs and wiki go together), **merge what repeats** (one
+    list, one table, one source for a number), and keep the tests to
+    behavior and invariants (§8 Add a test). Every few releases, prune the
+    stylesheet and review the tests (§3 step 6); the hygiene test checks
+    the changelog says it happened.
 
 **Every pass:** read the parts of this file you'll touch → read ROADMAP.md
 if it's Athanor work → do the work → `sh test.sh` green → look at it →
-update the wiki and help text it touches (rule 11) → update CHANGELOG /
+update the wiki and help text it touches (rule 11) → delete what the change
+left unused (rule 12: `node tools/prune.mjs`) → update CHANGELOG /
 OPEN-ISSUES / this file → ship (§3).
 
 ---
@@ -117,6 +136,10 @@ python tools/page-audit.py                     # whole pages, every preset (need
 python3 tools/icons.py                         # redraw the nav glyphs, the sigil and the app icons
 node test/textureFingerprints.test.mjs --update   # accept new texture renders — only those you meant to change
 node tools/compare.mjs a,b [--ref HEAD]          # before/after renders of a texture's readings, for Ruby's approval
+node tools/prune.mjs                           # what has gone unused: names, strings, CSS, fixtures, tools (test/hygiene fails on any)
+python3 tools/css-audit.py                     # which CSS declarations never win, in any state (desk, phone, tabs, Athanor, themes)
+python3 tools/css-prune.py [--write]           # remove those, verified: no drawn element computes differently in any state
+node tools/make-murmur-studio.mjs              # rebuild tools/murmur-studio.html from its template and murmur.js
 ```
 
 The site must work **both built and unbuilt** (served straight from the
@@ -147,6 +170,14 @@ segment.
    and ROADMAP.md (delete what shipped).
    Check the help is current (§1 rule 11): for each CHANGELOG line, the
    wiki page, tooltip or guide that explains it says what the app now does.
+   **Housekeeping** (§1 rule 12), at least once in every five releases, said
+   in that release's notes under **Under the hood** (the hygiene test looks):
+   - *pruned the stylesheet*: `node build.mjs && python3 tools/css-prune.py
+     --write` (it removes only declarations that never win, and proves no
+     drawn element changes in any state), then look at the page;
+   - *reviewed the tests*: read the suites against §8 Add a test; delete
+     what tests a retired thing or an implementation, merge what repeats,
+     move a check to the suite of its concern.
 7. Commit to `main` with `node build.mjs --notes` as the message, then push.
    **Main is live.** The working copy is the clone of crsongbird/poetrypress
    and keeps its CNAME; release/ and node_modules are never committed.
@@ -168,7 +199,7 @@ default.
 | `textParsers.js` · `pmlVars.js` · `effects.js` | PML → lines and segments (`buildLines`) · `§Variables`, resolved before PML parses · the text effect stack and `/fx:` |
 | `stitches.js` | decorative motifs along any path (rules, borders, seams, inner edges) |
 | `boxFx.js` | the inset box's glass and GPU blends |
-| `chooser.js` · `swatches.js` | the surface menus shown as tiles (thumbnails kept per release in localStorage `uv.thumbs.v1`) · the painted preset tiles |
+| `chooser.js` · `swatches.js` | the surface menus shown as tiles (thumbnails kept in localStorage `uv.thumbs.v2`, each with a stamp: its surface's fingerprints, written into release.js by the build, the look it wears and the painter; only a changed surface is painted again) · the painted preset tiles |
 | `appOptions.js` | fonts, presets (`PRESETS`, `PRESET_GROUPS`), aspects, the welcome poem |
 | `strings.js` · `tunables.js` | every user-facing string · hand-editable numbers |
 | `spell.js` · `vault.js` | glyph spells · saving, sharing, the Grimoire |
@@ -203,7 +234,8 @@ default.
 
 **The rest:** `release.js` (the release name), `build.mjs` (the bundler; its
 `ORDER` lists every module after its imports), `test/` (one suite per
-concern), `tools/`.
+concern; `invariants` holds the source scans, `hygiene` keeps the project
+current), `tools/` (§2).
 
 ---
 
@@ -311,8 +343,8 @@ Other parts of a look:
   exact.
 - **Materials:** `materialOf(highlight, shade)` (null when both are white),
   then per channel `litK(L, i, ambient, M, c)` and `litS(M, c)`.
-  - The Shade hue colours what's darker than flat ground (`L.flat`), the
-    Highlight hue the shine. Hues are normalised to white's brightness.
+  - The Shadow Hue colours what's darker than flat ground (`L.flat`), the
+    Specular Hue the shine. Hues are normalised to white's brightness.
   - Caps `material: true` show the two pickers (`textureTint3Hex`,
     `textureTint4Hex`).
   - `opts.components` returns diffuse and occlusion apart.
@@ -346,7 +378,7 @@ Other parts of a look:
 - **Every hue has one job** (`hue5` in textureGenerators; colorRoles test):
   - Light / Dark: lighter and darker marks.
   - Material: a grey texture's surface.
-  - Highlight / Shade: glints and cast shadow.
+  - Specular / Shadow: glints and cast shadow.
   - Glow (`hue5.role: 'glow'`): a coloured texture's emitted light. It is
     black by default, and must be a no-op when black: screen it, or skip it
     when the colour sums to ~0.
@@ -501,8 +533,8 @@ Other parts of a look:
 **THE LONG HORIZON** (Ruby): every texture loadable in the Athanor, viewable
 as a graph, mixable with parts of other textures, and kept and shared as a
 person's own (Filter Forge, ComfyUI and Blender's way). Old textures are not
-avoided because the work is large. 32 textures are chains today; ROADMAP.md
-lists the 27 that aren't.
+avoided because the work is large. ROADMAP.md (Stage 3) keeps the one list
+of menu textures that aren't chains yet; the hygiene test keeps it the code's.
 
 ### 6.2 · Anatomy of a part
 A part is `{ cat, label, ins, outs, params, run(E, n) }`:
@@ -628,7 +660,7 @@ The full study and what is still to do are in ROADMAP.md §1.
 
 ### 6.5 · The editor (forge.js)
 - **Theme:** its face follows the app's theme. Only ports and wires keep
-  fixed colours, by kind (`FORGE_TYPE_COLOURS`). Node titles are marked by
+  fixed colours, by kind (`--t-<kind>` in poetrypress.css, both themes). Node titles are marked by
   category.
 - **Moving and menus:**
   - A node moves only by its title, so the grid can pan.
@@ -759,7 +791,7 @@ the test to the new intent; never weaken it just to pass.
 every article and TEACH note that names it, the menu hint, `RETIRED_NAMES`
 in test/wiki.test.mjs for the old name, and this file.
 
-**Add a wire kind:** `VALUE_TYPES`; `FORGE_TYPE_COLOURS`/`NAMES`;
+**Add a wire kind:** `VALUE_TYPES`; `FORGE_TYPE_NAMES`; its color as
 `--t-<kind>` in both themes; its own wiki article (what it is, where it
 comes from, what it converts to) linked from [[kinds]] and [[convert]], and
 the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
@@ -828,6 +860,27 @@ faster, with Ruby's approval from test renders)
 it to the line-rebuild copy list and to `resolvePartStyle`'s guard; document
 it in the in-app help and PML.md, with an example (§11: teaching, not
 shortening).
+
+**Add a test** (keep the suite worth running)
+1. Test **behavior**: call the module, or boot the app in the mock (`load` a
+   look, act, read the look back, as locks.test and audit.test do).
+2. A source scan only for an invariant or a pitfall (§7, §10), in
+   invariants.test.mjs, naming its section. Never a surface's source: the
+   fingerprints guard the pictures.
+3. Put it in the suite of its concern (persistence, locks, PML, …), never
+   in a suite named for a pass or a round.
+4. A suite opens by naming itself and what it guards
+   (`/**\n * name.test.mjs — …`).
+5. Retire a test with the thing it tests; don't keep "it is gone" checks for
+   things long gone.
+6. Keep it quick: a boot costs ~0.2 s in the mock. A suite over half a
+   minute needs a reason (the texture suites render).
+
+**Retire something** (a feature, a part, a control, a texture's old way):
+the code, its strings, its CSS, its tests, its wiki page and every doc that
+names it go in the same pass; old saves still open (§7: retire ids by
+`RETIRED`/`retireLook`, stitches by alias). `node tools/prune.mjs` and the
+hygiene test show what was left behind.
 
 **Add a §Variable:** in pmlVars.js, and its context in the renderer. A value
 must never contain `/` if it may land inside a segment.
@@ -985,6 +1038,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
 - The Node canvas mock has no `Path2D` or `isPointInPath`, and doesn't parse
   `innerHTML`. Build elements with `createElement` if the tests boot that
   code.
+- In the DOM mock nothing is ever on screen: the preset tiles don't paint at
+  boot (`IntersectionObserver.showAll()` paints them). Painting them made
+  every boot take 12 s. Selects have no `options` unless a test gives them
+  (locks.test gives the texture menu the page's).
+- **`pkill -f name` matches its own shell** (the command line holds the
+  name) and kills the command running it. Match with a bracket:
+  `pkill -f "[c]ss-prune"`.
+- **Never `git stash` to compare with HEAD.** A long test inside a stash
+  that times out leaves the work stashed. Use a worktree:
+  `git worktree add <scratch>/wt HEAD`.
 - The mock's pixel sum is RGB, so black ink sums to ~0. A knob that only
   changes black pixels looks "inert": make some mark respond, or check
   whether the probe can see it before changing the texture.

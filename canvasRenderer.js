@@ -117,7 +117,7 @@ function paintGradient(ctx, x, y, w, h, spec, colors){
     // no native box gradient: computed small and scaled up, which keeps it
     // smooth and costs a few thousand pixels, not millions
     const S = 128, small = document.createElement('canvas'); small.width = S; small.height = S;
-    const sx = small.getContext('2d'), img = sx.createImageData(S, S), d = img.data;
+    const sx = small.getContext('2d', { willReadFrequently: true }), img = sx.createImageData(S, S), d = img.data;
     const rgb = stops.map(hexRgb), n = rgb.length - 1;
     const hx = Math.max(spec.cx, 1 - spec.cx), hy = Math.max(spec.cy, 1 - spec.cy);
     for(let py = 0; py < S; py++) for(let px = 0; px < S; px++){
@@ -138,7 +138,7 @@ function paintGradient(ctx, x, y, w, h, spec, colors){
       ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
     } else {
       const S = 128, small = document.createElement('canvas'); small.width = S; small.height = S;
-      const sx = small.getContext('2d'), img = sx.createImageData(S, S), d = img.data, rgb = ring.map(hexRgb), n = rgb.length - 1;
+      const sx = small.getContext('2d', { willReadFrequently: true }), img = sx.createImageData(S, S), d = img.data, rgb = ring.map(hexRgb), n = rgb.length - 1;
       for(let py = 0; py < S; py++) for(let px = 0; px < S; px++){
         const u = (px + 0.5)/S*w + x - cx, v = (py + 0.5)/S*h + y - cy;
         let t = ((Math.atan2(v, u) - rad)/(2*Math.PI)) % 1; if(t < 0) t += 1; t *= n;
@@ -203,7 +203,7 @@ function clearingMask(W, H){
   const mw = 192, mh = Math.max(8, Math.round(192*H/W)), key = TEXT_LAYOUT + '|' + mw + 'x' + mh;
   if(CLEAR_MASK.key === key) return CLEAR_MASK.canvas;
   const c = CLEAR_MASK.canvas || document.createElement('canvas'); c.width = mw; c.height = mh;
-  const x = c.getContext('2d'), a = new Float32Array(mw*mh), runs = [];
+  const x = c.getContext('2d', { willReadFrequently: true }), a = new Float32Array(mw*mh), runs = [];
   for(const part of TEXT_LAYOUT.split(';')){ const v = part.split(',').map(Number); if(v.length >= 4 && v.every(isFinite)) runs.push(v); }
   let hsum = 0;
   for(const [x0, y0, x1, y1] of runs){ const h = (y1 - y0)*mh, p = h*0.35; hsum += h;
@@ -226,7 +226,7 @@ function clearedSurface(t, W, H, amount){
   if(!TEXT_LAYOUT || amount <= 0) return t;
   if(!CLEAR_LAYER) CLEAR_LAYER = document.createElement('canvas');
   if(CLEAR_LAYER.width !== W || CLEAR_LAYER.height !== H){ CLEAR_LAYER.width = W; CLEAR_LAYER.height = H; }
-  const c = CLEAR_LAYER.getContext('2d');
+  const c = CLEAR_LAYER.getContext('2d', { willReadFrequently: true });
   c.globalCompositeOperation = 'copy'; c.globalAlpha = 1; c.drawImage(t, 0, 0, W, H);
   c.globalCompositeOperation = 'destination-out'; c.globalAlpha = Math.min(1, amount); c.imageSmoothingEnabled = true;
   c.drawImage(clearingMask(W, H), 0, 0, W, H);
@@ -243,7 +243,7 @@ function bloomLayer(w, h){
 function grainTiles(){
   if(GRAIN_TILES) return GRAIN_TILES;
   const make = (tone) => { const T = 96, c = document.createElement('canvas'); c.width = T; c.height = T;
-    const x = c.getContext('2d'); let seed = tone === 0 ? 7 : 13;
+    const x = c.getContext('2d', { willReadFrequently: true }); let seed = tone === 0 ? 7 : 13;
     const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;      // stable, so grain never shimmers
     for(let i = 0; i < 420; i++){ x.globalAlpha = 0.35 + rand()*0.65; x.fillStyle = tone ? '#fff' : '#000';
       x.fillRect(rand()*T, rand()*T, 1 + rand()*1.6, 1 + rand()*1.6); }
@@ -540,7 +540,7 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
   const pad = Math.ceil(size * 0.25);
   const h = Math.ceil(size * 1.45) + pad * 2;
   const off = scratchCanvas(w + pad * 2, h);
-  const o = off.getContext('2d');
+  const o = off.getContext('2d', { willReadFrequently: true });
   o.font = ctx.font;
   o.textBaseline = ctx.textBaseline;
   o.textAlign = 'left';

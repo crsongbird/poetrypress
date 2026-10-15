@@ -285,9 +285,9 @@ export function landPalette(ck, TM){
  */
 export function paintEvergreen(ctx, x, y, th, dark, light, sunSide, paint, tone, unit){
   // fine strokes at any size: a big tree is MORE strokes, not fatter ones
-  const u = unit || th*8, rows = Math.max(6, Math.min(70, Math.round(th/(u*0.0075)))), lw = Math.max(0.6, Math.min(th*0.03, u*0.0045));
+  const u = unit || th*8, rows = Math.max(6, Math.min(70, Math.round(th/(u*0.0075)))), lw = Math.max(cpx(0.6), Math.min(th*0.03, u*0.0045));
   ctx.lineCap = 'round';
-  ctx.globalAlpha = 0.9; ctx.strokeStyle = paint(Math.max(0, tone - 30), dark); ctx.lineWidth = Math.max(0.6, th*0.025);
+  ctx.globalAlpha = 0.9; ctx.strokeStyle = paint(Math.max(0, tone - 30), dark); ctx.lineWidth = Math.max(cpx(0.6), th*0.025);
   ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (Math.random() - 0.5)*th*0.02, y - th); ctx.stroke();
   ctx.strokeStyle = paint(tone, dark); ctx.lineWidth = lw;
   for(let r = 0; r < rows; r++){

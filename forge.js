@@ -15,18 +15,17 @@
  */
 import { ATHANOR_STUDIES } from './athanorStudies.js';
 import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, layoutAthanor } from './athanor.js';
-import { STEPS, STEP_BLENDS, STEP_CATEGORIES } from './steps.js';
+import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS } from './appOptions.js';
 import { KEPT, fill } from './strings.js';
-import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle } from './athanorWiki.js';
+import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiNeighbors } from './athanorWiki.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
 
 // ---- the parts: every node a step of steps.js (shared with the textures
 // rebuilt as chains) — ports, params and category as the editor shows them
-export const FORGE_BLENDS = STEP_BLENDS;
 export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
   inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [] }]));
 export const FORGE_CATEGORIES = STEP_CATEGORIES;
@@ -37,7 +36,6 @@ export const FORGE_CATEGORIES = STEP_CATEGORIES;
  * picture, one colour, one number. A ⚙ port (a param taking a wire) is a
  * small diamond in the number's colour.
  */
-export const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA', curve: '#93D98A' };
 export const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number', curve: 'a curve' };
 /** A PART'S COLOR is the kind of thing it makes (its first output's type), the same color its
  *  output dots and wires wear (Ruby: node, wire and connector colors as data types). The Surface keeps its own. */
@@ -115,7 +113,14 @@ export function forgeHelpHtml(){
   return `<div class="fd-head"><b>The Athanor · Wiki</b><span class="wk-tools"><input type="search" class="wk-search" placeholder="Search the wiki…" aria-label="Search the wiki" autocomplete="off" spellcheck="false">`
     + `<button type="button" class="fd-close wk-contents-btn" data-doc="contents" aria-label="Contents">☰ Contents</button><button type="button" class="fd-close wk-back" data-doc="back" aria-label="Back" disabled>‹ Back</button>`
     + `<button type="button" class="fd-close" data-doc="close" aria-label="Close the wiki">✕ Close</button></span></div>`
-    + `<div class="wk-body"><nav class="wk-nav" aria-label="Contents">${wikiContentsHtml(forgeWikiCtx())}</nav><div class="wk-page" tabindex="-1"></div></div>`;
+    + `<div class="wk-body"><nav class="wk-nav" aria-label="Contents">${wikiContentsHtml(forgeWikiCtx())}</nav><div class="wk-page" tabindex="-1"></div></div>`
+    + `<nav class="wk-pager" aria-label="Previous and next page"></nav>`;
+}
+/** The bar along the wiki's foot: the pages before and after this one, in the contents' order. */
+export function forgePagerHtml(id){
+  const { prev, next } = wikiNeighbors(id, forgeWikiCtx());
+  const side = (p, dir) => p ? `<a href="#" class="wk-${dir}" data-wiki="${forgeEsc(p.id)}"><small>${dir === 'prev' ? '‹ Previous' : 'Next ›'}</small><span>${forgeEsc(p.title)}</span></a>` : '<span></span>';
+  return side(prev, 'prev') + side(next, 'next');
 }
 /** What the wiki needs from the editor: category names and lines, and the node limit. */
 export function forgeWikiCtx(){ return { catName: forgeCatName, catDoc: c => FORGE_CAT_DOCS[c] || '', categories: FORGE_CATEGORIES.slice(), nodes: ATHANOR_LIMITS.nodes }; }
@@ -822,7 +827,7 @@ export async function openForge(deps){
     // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
     if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
       openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
-        { glyph: '✚', label: 'Keep this surface…', hint: 'save it to the shelf under its name', act: () => keep() },
+        { glyph: '✚', label: KEPT.keepIt, hint: KEPT.keepHint, act: () => keep() },
         { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
         { glyph: '?', label: 'Wiki and help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
@@ -910,7 +915,7 @@ export async function openForge(deps){
       inp.click();
     };
     const shelfMenu = () => { const list = forgeShelf(); return { title: 'Kept surfaces', hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet.', items: [
-      { glyph: '✚', label: 'Keep this surface…', hint: 'save it to the shelf under its name', act: keep },
+      { glyph: '✚', label: KEPT.keepIt, hint: KEPT.keepHint, act: keep },
       { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(onGrid()) },
       ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(onGrid()) }] : []),
       ...(list.length ? [{ sep: true }] : []),
@@ -919,7 +924,7 @@ export async function openForge(deps){
         { glyph: '⟲', label: KEPT.replaceWith, danger: true, act: () => replaceKept(rec) },
         { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(rec) },
         ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(rec) }] : []),
-        { glyph: '✕', label: 'Take it off the shelf', danger: true, act: () => dropKept(rec) }] }) })),
+        { glyph: '✕', label: KEPT.drop, danger: true, act: () => dropKept(rec) }] }) })),
       { sep: true },
       { glyph: '⎘', label: KEPT.paste, act: pasteKept },
       { glyph: '⇪', label: 'Save the shelf as a file', hint: 'every kept surface, to back up or share', disabled: !list.length, act: exportShelf },
@@ -951,6 +956,7 @@ export async function openForge(deps){
     const goWiki = (id, push = true) => { const pg = page(); if(!pg) return;
       if(push && wiki.at && wiki.at !== id) wiki.back.push(wiki.at); wiki.at = id;
       pg.innerHTML = wikiArticleHtml(id, forgeWikiCtx()); pg.scrollTop = 0; doc.scrollTop = 0;
+      const pager = doc.querySelector('.wk-pager'); if(pager){ pager.innerHTML = forgePagerHtml(id); pager.hidden = false; }
       doc.classList.remove('wk-show-nav');
       doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id || (id.startsWith('part:') && a.dataset.wiki === 'cat:' + ((FORGE_NODES[id.slice(5)] || {}).cat))));
       const b = doc.querySelector('.wk-back'); if(b) b.disabled = !wiki.back.length; };
@@ -968,11 +974,12 @@ export async function openForge(deps){
       const q = e.target.value, pg = page(); if(!pg) return;
       if(!q.trim()){ goWiki(wiki.at, false); return; }
       const hits = wikiSearch(q);
+      { const pager = doc.querySelector('.wk-pager'); if(pager) pager.hidden = true; }
       pg.innerHTML = `<h2>Search: ${forgeEsc(q)}</h2>` + (hits.length ? '<ul class="wk-hits">' + hits.map(h => `<li><a href="#" data-wiki="${forgeEsc(h.id)}">${forgeEsc(h.title)}</a>${h.id.startsWith('part:') ? ' <span class="wk-tag">part</span>' : ''}</li>`).join('') + '</ul>' : '<p>Nothing found. Try another word, or browse the contents.</p>'); });
     // A NEW SEED, from inside the Athanor: every part's own randomness comes from the page's seed
     if($('forgeSeedBtn') && deps.reseed) $('forgeSeedBtn').addEventListener('click', () => { deps.reseed(); previews(); });
     const lg = $('forgeLegend');
-    if(lg) lg.innerHTML = Object.entries(FORGE_TYPE_COLOURS).map(([t]) => `<span><i style="background:var(--t-${t})"></i>${forgeEsc(FORGE_TYPE_NAMES[t])}</span>`).join('')
+    if(lg) lg.innerHTML = VALUE_TYPES.map(t => `<span><i style="background:var(--t-${t})"></i>${forgeEsc(FORGE_TYPE_NAMES[t])}</span>`).join('')
       + `<span><i class="pp" style="background:var(--t-value)"></i>⚙ a setting that takes a wire</span>`;
   }
   // the graph saved with the look (checked first: a graph from anywhere can't break the page), or a first one

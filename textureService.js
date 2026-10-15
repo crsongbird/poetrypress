@@ -16,6 +16,8 @@
 import { getTextureCanvas, textureKeyFor, peekTexture, storeTexture, dropLargeTextures } from './textureGenerators.js';
 
 const ON_PAGE = new Set(['summoning', 'cards']);      // they draw glyphs and card faces in web fonts
+// ?softgl in the address (AGENTS.md §5.5): the workers may light on software WebGL, to test the GPU path without a GPU
+const SOFTGL = typeof location !== 'undefined' && /[?&]softgl\b/.test(location.search || '');
 // A POOL of workers (one per spare core, up to two): two slots — Deep Field's
 // nebula and its stars — are made side by side, and a new wish for a slot
 // whose old texture is still being made starts at once on a free worker. The
@@ -158,7 +160,7 @@ function pump(){
     const f = { id, slot, key: job.key, type: job.type, job, worker, started: now() };
     worker.job = f; inflight.set(slot, f);
     busy(true, job.type);
-    worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts });
+    worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts, softgl: SOFTGL });
   }
 }
 

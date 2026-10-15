@@ -181,7 +181,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   a ⇄ to reverse it. The engine already supports `~key` with lo > hi.
 - **D4 · A Curve control.** A curve the person draws (a small curve editor
   on the page), feeding curve ports.
-  - Depends on: curves (done), D1.
+  - Depends on: D1.
   - The hard part is the editor on a phone: test on the baseline phone.
 
 ### E · The randomizer
@@ -263,11 +263,8 @@ Ripples from the Words.
 
   "Customize Surface" shows only the exposed controls; "All settings" shows
   the rest.
-  - Depends on: A3, D1, D2, and the texture being a chain (27 still aren't:
-    bokeh astral flowers glassrain sigils mathnoise summoning inkbleed
-    oldpaper crystal spangle coldpress cupring guilloche chladni suminagashi
-    frost ash dunes kintsugi moss cityscape blackhole water moon aurora
-    tessellate).
+  - Depends on: A3, D1, D2, and the texture being a chain (Stage 3 lists
+    those that aren't yet).
   - PERSISTED keys stay frozen: a preset-as-graph saves through forgeGraph
     and the existing keys.
 - **H3 · Crossbreed.** Two graphs with Surfaces: the result takes one's
@@ -361,12 +358,15 @@ superseded) wait for Stage 4.
   with four readings. The approximations wait on their parts (§2 I).
 - **J**: whole-texture parts taken apart (§2 J), each through compare.mjs and
   Ruby's approval when its look changes.
-- **Rebuild the 27 textures that aren't chains yet**, so every texture is a
-  graph:
-  - bokeh astral flowers glassrain sigils mathnoise summoning inkbleed
-    oldpaper crystal spangle coldpress cupring guilloche chladni
-    suminagashi frost ash dunes kintsugi moss cityscape blackhole water
-    moon aurora tessellate.
+- **Rebuild the textures that aren't chains yet**, so every texture is a
+  graph. The list (menu ids; test/hygiene keeps it the code's, so delete
+  one here when it becomes a chain):
+  <!-- not-chains -->
+  - ash astral aurora blackhole bokeh chladni cityscape coldpress crystal
+    cupring dunes flowers frost glassrain guilloche inkbleed kintsugi
+    mathnoise moon moss oldpaper sigils spangle suminagashi summoning
+    tessellate water
+  <!-- /not-chains -->
   - Each keeps its exact look: the fingerprints must not change.
   - Stage 4 can only offer what is a chain.
 
@@ -386,7 +386,7 @@ superseded) wait for Stage 4.
  F2 Glyph Scatter (rest) ───► G2 punctuation ─────────────────► I studies → textures ───┐
  F3 from the box ────────────► G5 box input                      J black boxes apart  ───┤
  F4–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
- A1 map inputs · A9 Variant→Variation · A6 AA                    27 rebuilt as chains ───┼─► H2 PRESETS AS GRAPHS
+ A1 map inputs · A9 Variant→Variation · A6 AA                    the rest as chains   ───┼─► H2 PRESETS AS GRAPHS
  A3 GROUPS (v4) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               D1 control kinds ─► D2 order ─► D4 curve control ──────────┤      ├─► E4 author locks
@@ -403,7 +403,7 @@ superseded) wait for Stage 4.
 4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
 5. Stage 2: G2–G5 + H1's actions.
 6. Stage 3: the Surface Studies become textures, a few per pass; black boxes
-   taken apart and the 27 rebuilt as chains, two or three per pass.
+   taken apart and the rest rebuilt as chains, two or three per pass.
 7. Stage 4: H2, H3, H4, E4, then the presets pass.
 
 The stages overlap at their edges: a texture whose parts all exist may be

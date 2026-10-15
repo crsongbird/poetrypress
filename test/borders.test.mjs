@@ -115,6 +115,25 @@ const thSrc = readFileSync(new URL('../theme.js', import.meta.url), 'utf8');
 check('a saved "cinder" choice becomes Rosé rather than being lost',
   /RENAMED = \{ cinder: 'rose' \}/.test(thSrc) && /name = RENAMED\[name\] \|\| name/.test(thSrc));
 
+
+// ---- stitches (stitches.js): one function along any path ----
+{
+  const St = await import('../stitches.js'), P = await import('../textParsers.js');
+  check('the stitch menu holds the kept stitches, drawn by one function', St.STITCH_STYLES.length >= 40 && typeof St.drawStitch === 'function');
+  check('a retired stitch still parses and draws, as its nearest kept relative (old poems and looks)',
+    ['running','satinscallop','pearls','openhearts','diamond'].every(k => St.STITCH_NAMES.includes(k) && St.STITCH_STYLES.includes(St.stitchOf(k)))
+    && P.parseRule('<---/satinscallop>', true, true).style === 'satinscallop' && St.stitchOf('satinscallop') === 'scallop');
+  check('every kept stitch shapes an inset box: each has its own inner edge',
+    St.STITCH_STYLES.every(k => St.stitchInnerEdge(St.pathFromPoints(St.roundRectPoints(0, 0, 300, 200, 0), true), k, { period: 20, amp: 8, width: 2, side: 1 }).length > 50));
+  const wavy = k => { const e = St.stitchInnerEdge(St.pathFromPoints(St.roundRectPoints(0, 0, 300, 300, 0), true), k, { period: 30, amp: 10, width: 2, side: 1 });
+    const ys = e.slice(0, 40).map(p => p[1]); return Math.max(...ys) - Math.min(...ys) > 4; };
+  check('beads bite and scallops scallop: their inner edges move in and out along the border', wavy('beads') && wavy('scallop'));
+  const path = St.pathFromPoints([[0, 0], [100, 0]], false);
+  check('a path measures its length, and its normal points down for a left-to-right line', path.len === 100 && path.point(50, 10)[1] === 10 && path.point(50, 10)[0] === 50);
+  const ring = St.pathFromPoints(St.roundRectPoints(0, 0, 100, 60, 10), true);
+  check('a rounded rectangle is a closed path, its normal pointing inward', ring.closed && ring.point(30, 5)[1] > 0);
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

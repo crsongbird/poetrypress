@@ -82,11 +82,6 @@ body{
 .controls::-webkit-scrollbar-thumb{background:var(--line); border-radius:2px;}
 
 .app-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:22px; letter-spacing:0.03em; margin:0 0 2px 0; }
-.kofi-link{
-  display:inline-block; font-size:12px; color:var(--accent); text-decoration:none;
-  margin:0 0 11px 0; border-bottom:1px dotted var(--accent-dim);
-}
-.kofi-link:hover{ color:var(--rose); border-bottom-color:var(--rose); }
 
 .card{
   background:var(--bg-card);
@@ -219,29 +214,23 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
    alongside the plain width check is more reliable than either alone. */
 /* (once by width and orientation; now the phone layout itself — body.is-mobile, set by wantPhoneLayout — decides) */
 @media all{
-  body.is-mobile .app{ flex-direction:column; height:100vh; overflow:hidden; }
+  body.is-mobile .app{ flex-direction:column; overflow:hidden; }
   body.is-mobile .app-header{ display:grid; }
   body.is-mobile .controls{
-    order:2; width:100%; min-width:0; max-height:56vh;
+     width:100%; min-width:0;
     border-right:none; border-top:1px solid var(--line);
   }
-  body.is-mobile .stage{ order:1; flex:0 0 auto; height:44vh; gap:8px; padding-top:6px; }
-  body.is-mobile #poemCanvas{ max-height:calc(44vh - 30px); max-width:92vw; }
-  body.is-mobile .download-btn{ top:auto; bottom:14px; right:14px; padding:8px 16px; font-size:13px; }
+  body.is-mobile #poemCanvas{ max-width:92vw; }
+  body.is-mobile .download-btn{ top:auto; bottom:14px;    }
 
   /* Canonical desktop reference is ~2560x1440; canonical mobile is ~1080x1920,
      which typically carries higher effective density. Rather than detecting
      DPI directly (unreliable across devices), just nudge base sizes up a
      little here — enough to help readability/tappability, not enough to lose
      the compact feel. */
-  body.is-mobile label{ font-size:14px; }
-  body.is-mobile select, body.is-mobile textarea, body.is-mobile input[type="text"], body.is-mobile input[type="number"]{ font-size:16px; }
-  body.is-mobile .card-title{ font-size:14px; }
   body.is-mobile .hint{ font-size:13px; }
   body.is-mobile button.ghost{ font-size:15px; }
-  body.is-mobile .radio-btn{ font-size:14px; }
   body.is-mobile .check-row label{ font-size:15px; }
-  body.is-mobile .preset-label{ font-size:11px; }
 }
 
 /* ============================================================
@@ -318,7 +307,7 @@ body.is-mobile .canvas-wrap canvas { margin: auto; }
 body.is-mobile .controls {
   order: 3;
   flex: 1 1 auto;
-  max-height: none;
+  
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -365,16 +354,9 @@ body.is-mobile .preset-btn { width: auto; }
 
 /* the poem is the point — give it room, measured not guessed */
 body.is-mobile .editor-wrap { height: calc(var(--vvh) * 0.40); }
-body.is-mobile #poemText {
-  /* floor so it is editable without pinch-zooming, ceiling so it does not
-     balloon on a large phone or tablet. vw is safe here -- horizontal units
-     are not affected by the URL bar the way vh is. */
-  font-size: clamp(13px, 3.3vw, 15px);
-  line-height: 1.5;
-}
 
 
-body.is-mobile .card-title { font-size: clamp(11px, 2.9vw, 13px); letter-spacing:.09em; margin-bottom: 6px; }
+body.is-mobile .card-title { font-size: clamp(11px, 2.9vw, 13px);  margin-bottom: 6px; }
 
 body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 
@@ -386,7 +368,6 @@ body.is-mobile select,
 body.is-mobile textarea { font-size: 16px; }   /* 16px: a phone never zooms in on a tapped field */
 
 /* the picker must clear the tab bar and the download button */
-body.is-mobile #clr-picker { }
 body.is-mobile .radio-btn { padding: 8px 6px; font-size: clamp(12px, 3vw, 13px); }
 
 
@@ -419,7 +400,7 @@ body.is-mobile #poemCanvas { transform-origin: center center; will-change: trans
 /* collapsible sections need to look tappable */
 body.is-mobile summary.card-title { cursor: pointer; list-style: none; padding: 2px 0; }
 body.is-mobile summary.card-title::-webkit-details-marker { display: none; }
-body.is-mobile summary.card-title::after { content: " ▾"; opacity: 0.55; }
+body.is-mobile summary.card-title::after { content: " ▾";  }
 body.is-mobile details[open] > summary.card-title::after { content: " ▴"; }
 
 
@@ -427,22 +408,13 @@ body.is-mobile details[open] > summary.card-title::after { content: " ▴"; }
 .app-header{ align-items:center; justify-content:space-between; gap:8px; }
 .app-header-title{ flex:1 1 auto; letter-spacing:0.04em; }
 .app-header-spacer{ flex:0 0 auto; width:88px; }
-.app-header .kofi-link{
-  flex:0 0 auto; text-align:right; font-style:italic;
-  /* was 0.62em and width-capped, which made it both unreadable AND forced a
-     line break mid-phrase. Readable size, no wrap, no fixed width. */
-  font-size:0.78em; opacity:0.8; white-space:nowrap; text-decoration:none;
-  border-bottom:1px solid currentColor; padding-bottom:1px;
-}
-.app-header .kofi-link:hover{ opacity:1; }
 
 body.is-mobile .app-header-spacer{ width:70px; }
-body.is-mobile .app-header .kofi-link{ font-size:0.72em; }
 
 /* download lives in the corner of the viewer now, out of the controls' way */
 body.is-mobile .canvas-wrap{ position:relative; }
 body.is-mobile .download-btn{
-  position:absolute; top:auto; left:auto;
+  position:absolute; top:auto; 
   right:7px; bottom:7px; z-index:45;
   padding:6px 11px; font-size:clamp(11px,2.8vw,13px);
   opacity:0.93;
@@ -557,27 +529,8 @@ body.is-mobile .field.full > .range-val{ float:right; font-size:11px; opacity:0.
    appeared from the stage keeping its pre-keyboard height. */
 body.is-mobile, html:has(body.is-mobile){ overflow:hidden; height:100%; overscroll-behavior:none; }
 
-body.is-mobile #poemText{ scroll-margin:0; }
 
 /* ---------- texture tools ---------- */
-.light-pad{
-  display:grid; grid-template-columns:repeat(3,1fr); padding:3px; border:1px solid var(--line); border-radius:3px;
-}
-.light-pad button{
-  aspect-ratio:1; border:1px solid var(--line); border-radius:2px;
-  background:transparent; cursor:pointer; padding:0;
-}
-.light-pad button::after{
-  content:""; width:5px; height:5px; margin:auto;
-  border-radius:50%; background:var(--text-dim); opacity:.5;
-}
-.light-pad button.active{ border-color:var(--accent); background:rgba(212,175,55,0.14); }
-.light-pad button.active::after{ background:var(--accent); opacity:1; }
-.light-core{
-  display:flex; align-items:center; justify-content:center;
-  font-size:13px; color:var(--text-dim); opacity:.65;
-}
-body.is-mobile .light-pad{ gap:4px; }
 
 /* a disabled tool must look inert, not merely quiet */
 .field.tool-off{ opacity:.34; pointer-events:none; }
@@ -609,9 +562,6 @@ body.is-mobile .light-pad{ gap:4px; }
 body.is-mobile .lock-btn{ font-size:13px; padding:0 4px; }
 
 /* light direction reads as arrows: the arrow points the way the light travels */
-.light-pad button{ color:var(--text-dim); line-height:1; }
-.light-pad button::after{ display:none; }
-.light-pad button.active{ color:var(--accent); }
 
 
 /* preview reset — silver against the gold download, and quiet until wanted */
@@ -642,7 +592,6 @@ body.is-mobile .preset-label{ font-size:11px; }
    header, preview, editor, bar, keyboard, and nothing else. */
 body.is-mobile.focus-mode .card[data-tab]:not(.focus-keep){ display:none; }
 body.is-mobile.focus-mode .app-header{ padding:2px 6px; font-size:11px; }
-body.is-mobile.focus-mode .app-header .kofi-link{ display:none; }
 body.is-mobile.focus-mode .stage{
   /* Must read --preview-frac like everywhere else. A constant here meant the
      divider updated the variable and nothing in focus mode listened, so the
@@ -745,7 +694,7 @@ body.is-mobile.focus-mode .editor-scroll{ min-height:0; }
 /* bracket families, told apart at a glance and weighted so they read as
    structure. Parens are literal text in PML, so they recede. */
 .pml-sq    { color:#7FD4C1; font-weight:700; }   /* [ ] accent one */
-.pml-cu    { color:#C9A0FF; font-weight:700; }   /* { } accent two */
+.pml-cu    { color:#C9A0FF; font-weight:700; }   /* {} accent two */
 .pml-bracket{ color:#D6DCE6; font-weight:700; }  /* < > segmentation */
 .pml-paren { color:#6E6880; }                    /* ( ) literal, set back */
 .pml-op    { font-weight:600; }
@@ -778,11 +727,6 @@ body.is-mobile.focus-mode .app-header-title{ text-align:center; }
 
 
 /* arrows point the way the light travels: inward, toward the page */
-.light-pad{ width:126px; gap:4px; }
-.light-pad button{ font-size:17px; }
-body.is-mobile .light-pad{ width:152px; }
-body.is-mobile .light-pad button{ font-size:19px; }
-.light-core svg{ width:17px; height:17px; opacity:.7; }
 
 /* locks sit at the end of their own label row, the same place every time,
    instead of wherever the markup happened to put them */
@@ -1014,7 +958,6 @@ body.is-mobile.focus-mode .editor-wrap{
 /* a locked control dims, so its state is visible without reading the icon */
 .field-locked > input:not(.lock-btn),
 .field-locked > select,
-.field-locked > .light-pad,
 .field-locked > input[type="range"]{ opacity:.45; }
 
 
@@ -1037,7 +980,6 @@ body.is-mobile .lock-btn{ width:16px; height:16px; margin-left:7px; }
 .field-locked input:not(.lock-btn),
 .field-locked select,
 .field-locked textarea,
-.field-locked .light-pad,
 .field-locked .angle-wrap,
 .field-locked .color-pair{
   opacity:.3;
@@ -1058,64 +1000,6 @@ body.is-mobile .lock-btn{ width:16px; height:16px; margin-left:7px; }
    and --preview-frac drives the split either way — height in portrait, width
    here — so the drag handle keeps working with no second variable.
    ============================================================ */
-/* PARKED. The landscape layout fired in situations it should not have, and is
-   better reconsidered on a laptop alongside the question of whether it should
-   replace the desktop layout outright. The min-width below never matches a
-   phone or tablet; drop it to re-enable. */
-@media (orientation: landscape) and (min-width: 4000px){
-  body.is-mobile .app{ flex-direction:row; }
-
-  body.is-mobile .stage{
-    order:1;
-    flex:0 0 auto;
-    width:clamp(28%, calc(100% * var(--preview-frac) * 1.6), 62%);
-    height:100%;
-    max-height:none;
-    padding:6px;
-  }
-  body.is-mobile .canvas-wrap{ height:100%; }
-  body.is-mobile #poemCanvas{ max-height:100%; max-width:100%; }
-
-  /* the divider becomes vertical */
-  body.is-mobile .drag-handle{
-    order:2;
-    width:12px; height:auto;
-    flex:0 0 auto;
-    align-self:stretch;
-    cursor:col-resize;
-    background:linear-gradient(90deg, rgba(255,255,255,0.05), transparent);
-    border-top:0; border-bottom:0;
-    border-left:1px solid rgba(255,255,255,0.07);
-    border-right:1px solid rgba(255,255,255,0.07);
-  }
-  body.is-mobile .drag-grip{ width:3px; height:40px; }
-
-  body.is-mobile .controls{
-    order:3;
-    flex:1 1 0;
-    min-width:0;
-    height:100%;
-    overflow-y:auto;
-    padding-bottom:calc(var(--tabbar-h) + 20px);
-  }
-
-  /* the bar stays across the bottom; it is the one thing that should not
-     become a column */
-  body.is-mobile .tabbar{ flex-direction:row; }
-
-  /* in focus mode the editor still gets the whole right-hand column */
-  body.is-mobile.focus-mode .stage{ width:clamp(24%, calc(100% * var(--preview-frac)), 45%); }
-  body.is-mobile.focus-mode .controls{ padding-bottom:calc(var(--tabbar-h) + 24px); }
-
-  /* short landscape (a phone on its side) has almost no height to spare */
-  @media (max-height: 460px){
-    body.is-mobile .app-header{ display:none; }
-    body.is-mobile .tabbar{ --tabbar-h:44px; height:44px; }
-    body.is-mobile .tab-btn{ font-size:9px; }
-    body.is-mobile .tab-ico{ width:17px; height:17px; }
-  }
-}
-
 /* ---------- the divider must always be grabbable ----------
    The stage is position:sticky with z-index:40 and the handle was a plain
    sibling with no stacking context of its own. Wherever the two boxes touch —
@@ -1134,11 +1018,6 @@ body.is-mobile .drag-handle::before{
   left:0; right:0;
   top:-11px; bottom:-11px;     /* ~33px tall to the thumb, 11px to the eye */
   z-index:1;
-}
-@media (orientation: landscape){
-  body.is-mobile .drag-handle::before{
-    top:0; bottom:0; left:-11px; right:-11px;
-  }
 }
 /* the grip is the visible affordance; widen it so it reads as a handle */
 body.is-mobile .drag-grip{ width:52px; height:4px; }
@@ -1160,23 +1039,12 @@ canvas.chip-swatch{ display:block; width:100%; height:39px; }
 
 
 /* saved presets join the grid; blanks keep the rows square */
-.preset-btn.preset-empty{
-  border-style:dashed;
-  opacity:.28;
-  pointer-events:none;
-}
 .preset-btn.preset-custom .preset-label{ font-style:italic; }
 /* ＋ Save this look: the last of the custom presets, a tile of its own shape */
 .preset-btn.preset-save{ display:flex; flex-direction:column; cursor:pointer; border-style:dashed; }
 .preset-save .preset-save-plus{ display:flex; align-items:center; justify-content:center; height:39px; font-size:22px; color:var(--accent); opacity:.8; }
 body.is-mobile .preset-save .preset-save-plus{ height:35px; }
 .preset-btn.preset-save:hover .preset-save-plus, .preset-btn.preset-save:focus-visible .preset-save-plus{ opacity:1; }
-.preset-divider{
-  grid-column:1 / -1;
-  font-size:10px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--text-dim); opacity:.7;
-  margin:6px 0 1px;
-}
 
 /* ============================================================
    FOCUS — one consistent ring, chosen rather than inherited
@@ -1308,7 +1176,6 @@ body::before{
 
 /* nav glyphs follow the theme's accent violet rather than a fixed one */
 body.is-mobile .tab-btn svg{ color:color-mix(in srgb, var(--ui-violet) 72%, var(--text-dim)); }
-body.is-mobile .tab-btn.active svg{ }
 
 /* ---------- a little less padding throughout ---------- */
 .card{ padding:9px 10px; background:linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 86%, var(--text-main) 3%), var(--bg-card) 42%); box-shadow:inset 0 1px 0 var(--hi), 0 1px 0 color-mix(in srgb, var(--lo) 50%, transparent), 0 10px 18px -16px var(--lo); position:relative; }
@@ -1330,7 +1197,6 @@ body.is-mobile .tabbar{
     color-mix(in srgb, var(--bg-deep) 96%, transparent));
   border-top:1px solid var(--line); box-shadow:0 -1px 0 var(--hi), 0 -8px 16px -12px var(--lo); }
 body.is-mobile .tab-btn{ color:color-mix(in srgb, var(--text-dim) 78%, transparent); }
-body.is-mobile .tab-btn.active{ }
 body.is-mobile .app-header{
   background:color-mix(in srgb, var(--bg-panel) 96%, transparent);
   border-bottom:1px solid var(--line);
@@ -1348,16 +1214,13 @@ body.is-mobile.focus-mode .drag-handle{
    takes the left column and the fields stack to its right. */
 body.is-mobile .tool-row{
   display:grid;
-  gap:6px 10px;
+  
   align-items:start;
 }
-body.is-mobile .tool-row > #lightRow{ grid-row:1 / span 4; margin:0; }
+body.is-mobile .tool-row > #lightRow{  margin:0; }
 body.is-mobile .tool-row > .field{ margin:0; }
-body.is-mobile .tool-row > .field label{ font-size:11px; }
 body.is-mobile .tool-row input[type="text"],
 body.is-mobile .tool-row input[type="number"]{ padding:3px 5px; font-size:13px; }
-body.is-mobile .tool-row .light-pad{ width:118px; }
-body.is-mobile .tool-row .light-pad button{ font-size:16px; }
 
 /* ---------- colour picker: always above the keyboard ----------
    On a phone Coloris anchors itself beside its field, using coordinates it
@@ -1427,7 +1290,6 @@ body.is-mobile #clr-picker{
 /* ---------- the moon ---------- */
 .moon-glyph{ display:inline-block; vertical-align:middle; color:var(--ui-violet, var(--accent)); }
 .header-moon{ justify-content:flex-start; opacity:.85; }
-.app-header .kofi-link{ display:flex; align-items:center; }
 
 /* the opacity readout is a moon that waxes with the value (see paintOpacityMoon) */
 #textureOpacityVal .moon-glyph{ color:var(--accent); }
@@ -1458,20 +1320,17 @@ body.is-mobile #clr-picker{
 @media (orientation: portrait){
   body.is-mobile .tool-row{
     grid-template-columns:auto minmax(0,1fr);
-    column-gap:0; row-gap:4px;
+     row-gap:4px;
   }
-  body.is-mobile .tool-row > #lightRow{ padding-right:12px; }
   body.is-mobile .tool-row > .field:not(#lightRow){
     border-left:1px solid color-mix(in srgb, var(--line) 80%, transparent);
-    padding-left:12px; min-width:0;
+    padding-left:12px; 
   }
   body.is-mobile .tool-row .field label{
-    display:flex; align-items:center; gap:4px; white-space:nowrap;
-    overflow:hidden; text-overflow:ellipsis; font-size:11px;
+    display:flex; align-items:center; gap:4px; 
+    overflow:hidden;  font-size:11px;
   }
-  body.is-mobile .tool-row input[type="text"]{ width:100%; min-width:0; }
-  body.is-mobile .tool-row .row{ display:flex; gap:6px; align-items:stretch; }
-  body.is-mobile .tool-row .row .field{ flex:1 1 auto; min-width:0; }
+  body.is-mobile .tool-row input[type="text"]{ width:100%;  }
   body.is-mobile #textureSeedValue{ min-width:0; }
 }
 
@@ -1490,7 +1349,6 @@ body.is-mobile .controls{ padding-top:0; padding-bottom:calc(var(--tabbar-h) + 6
 
 /* header: the moon at the left, Ko-fi centred vertically at the right */
 body.is-mobile .app-header{ align-items:center; }
-.app-header .kofi-link{ align-self:center; line-height:1; }
 .header-moon{ display:flex; align-items:center; color:var(--text-dim); }
 .header-moon .moon-glyph{ opacity:.8; }
 
@@ -1510,15 +1368,14 @@ body.is-mobile #clr-picker::-webkit-scrollbar{ display:none; }
 body.is-mobile .tool-row{ grid-template-columns:auto minmax(0,1fr); column-gap:12px; }
 body.is-mobile .tool-row > #lightRow{
   padding-right:12px;
-  border-right:1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  
   align-self:stretch;
 }
 body.is-mobile .tool-row > .field:not(#lightRow){ min-width:0; }
 body.is-mobile .tool-row > .field label{
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
 }
-body.is-mobile .tool-row .row{ display:flex; gap:6px; width:100%; min-width:0; }
-body.is-mobile .tool-row .row .field{ flex:1 1 auto; min-width:0; }
+body.is-mobile .tool-row .row{ display:flex; gap:6px; width:100%;  }
 body.is-mobile .tool-row #textureSeedValue{ min-width:0; width:100%; }
 #textureSeedReroll{ display:flex; align-items:center; justify-content:center;
                     min-width:40px; padding:0 8px !important; color:var(--accent); }
@@ -1529,7 +1386,7 @@ body.is-mobile .tool-row #textureSeedValue{ min-width:0; width:100%; }
 body.is-mobile .tool-row > .field{ width:100%; }
 body.is-mobile .tool-row .clr-field{ display:block; width:100%; }
 body.is-mobile .tool-row .clr-field input{ width:100%; box-sizing:border-box; }
-body.is-mobile .tool-row .row > .field{ flex:1 1 auto; min-width:0; width:auto; }
+body.is-mobile .tool-row .row > .field{   width:auto; }
 body.is-mobile .tool-row #textureSeedValue{ width:100%; min-width:0; box-sizing:border-box; }
 
 /* ---------- the picker points at the field it is editing ---------- */
@@ -1713,7 +1570,7 @@ body.is-mobile #clr-picker #clr-close{ display:block; width:calc(100% - 20px); m
    right. Ruby: the two halves roughly 50/50, the seed under the dial. */
 body.is-mobile .tool-row{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
 body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 4; }
-body.is-mobile .tool-row > #seedRow{ grid-column:1; grid-row:5; padding-right:12px; padding-left:0; border-left:none; }
+body.is-mobile .tool-row > #seedRow{   padding-right:12px;   }
 /* one rule between the halves: the hues' own left edge (no second one beside it) */
 body.is-mobile .tool-row > #lightRow{ border-right:none; }
 body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }
@@ -1738,7 +1595,7 @@ body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padd
 /* square, everywhere (circles stay circles: they have no corners) */
 .card, details.card, summary, button, .radio-btn, .preset-btn, .tab-btn, .ld-btn, .seed-moon, .snap-btn,
 select, textarea, input[type="text"], input[type="number"], .subblock, .eso-drawer, .hint code,
-.clr-field button, .clr-picker, .clr-swatches button, .download-btn, .modal, .modal-box, .toast,
+.clr-field button, .clr-picker, .clr-swatches button, .download-btn, .modal, .toast,
 body:not(.is-mobile) .tab-btn, .preset-group-head{ border-radius:0 !important; }
 
 /* surfaces: a little depth */
@@ -1905,9 +1762,6 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-check{ display:flex; align-items:center; gap:4px; font-size:11.5px; cursor:pointer; white-space:nowrap; } .forge-check input{ margin:0; }
 .forge-help-btn{ width:22px; height:22px; padding:0; margin:0; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-dim); font-size:12px; cursor:pointer; }
 .forge-help-btn[aria-expanded="true"]{ color:var(--fg-accent); border-color:var(--fg-accent); }
-.forge-legend{ display:grid; grid-template-columns:1fr 1fr; gap:3px 8px; font-size:11px; }
-.forge-legend span:last-child{ grid-column:1 / -1; }
-.forge-legend i{ display:inline-block; width:10px; height:10px; margin-right:6px; vertical-align:-1px; } .forge-legend i.pp{ width:8px; height:8px; transform:rotate(45deg); margin:0 7px 0 2px; }
 .forge-help{ font-size:11.5px; line-height:1.45; color:var(--fg-dim); margin:6px 0 0; }
 /* THE MENU: what a thing can do (a long press, a right-click, a node's ⋯) */
 .forge-menu{ position:absolute; z-index:20; min-width:220px; max-width:min(320px, calc(100vw - 16px)); max-height:calc(var(--vvh, 100vh) * 0.7); overflow:auto; overscroll-behavior:contain;
@@ -1985,7 +1839,7 @@ body.keyboard-open .spell-mark-row{ display:none; }
 .ld-values{ display:flex; gap:14px; margin-top:6px; font-size:12px; color:var(--text-dim); }
 .ld-values label{ display:flex; align-items:center; gap:4px; margin:0; font-size:12px; }
 .ld-values input{ width:4.2em; padding:2px 4px; font-family:var(--ui-code); font-size:12px; }
-body.is-mobile .ld-values input{ font-size:16px; width:4.4em; }
+body.is-mobile .ld-values input{  width:4.4em; }
 
 /* sound: a switch and its volume, on one line */
 .sound-row{ display:flex; align-items:center; gap:10px; margin-top:8px; }
@@ -2072,11 +1926,11 @@ summary.card-title, .card-title{ overflow:hidden; }
   .forge-starter{ max-width:none; flex:1 1 auto; min-width:0; }
   .forge-spacer{ display:none; }
 }
-body.is-mobile .forge-bar{ flex-wrap:nowrap; gap:4px; padding:4px 6px; }
+body.is-mobile .forge-bar{   padding:4px 6px; }
 body.is-mobile .forge-bar button, body.is-mobile .forge-bar .forge-starter{ font-size:13px; padding:5px 9px; min-height:32px; }
 body.is-mobile .forge-name, body.is-mobile .forge-wide, body.is-mobile .forge-zoom{ display:none !important; }
 body.is-mobile .forge-more-btn{ display:inline-block; }
-body.is-mobile .forge-starter{ max-width:none; flex:1 1 auto; min-width:0; }
+body.is-mobile .forge-starter{ max-width:none; flex:1 1 auto;  }
 body.is-mobile .forge-spacer{ display:none; }
 /* Keep sits in the bar too (one tap, Ruby): the buttons draw in a little so Start from… keeps room to be read */
 body.is-mobile .forge-bar button{ padding:5px 7px; }
@@ -2084,8 +1938,6 @@ body.is-mobile .forge-bar .forge-hist{ padding:5px 7px; }
 body.is-mobile .forge-starter{ min-width:64px; }
 body.is-mobile .forge-bar{ gap:3px; }
 @media (max-width: 380px){ body.is-mobile .forge-title{ display:none; } }
-.forge-primer{ margin:6px 0 0; padding-left:18px; font-size:12.5px; line-height:1.4; }
-.forge-primer li{ margin:3px 0; }
 
 
 /* ============================================================
@@ -2099,14 +1951,14 @@ body{ font-weight:400; }
 input, select, textarea, button{ font-family:inherit; }
 .app-title, .app-header-title{ font-family:var(--ui-text); font-weight:400; letter-spacing:0.01em; font-size:1.3em; }
 .card-title, summary.card-title{ font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:0.12em; font-size:14.5px; }
-.sub-label, .preset-divider, .preset-group-head, .subcard > summary, .pml-help h4, .spell-chip .chip-name, .preset-label,
+.sub-label, .preset-group-head, .subcard > summary, .pml-help h4, .spell-chip .chip-name, .preset-label,
 .forge-cat > summary, .forge-menu-head, .sheet-title, .modal-title{
   font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:0.1em; font-variation-settings:normal; }
 .sheet-title, .modal-title{ letter-spacing:0.06em; }
 .tab-btn, body:not(.is-mobile) .tab-btn{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.05em; font-variation-settings:normal; }
 .btn-major, .btn-danger, .download-btn, #clr-picker .clr-close, .forge-title{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; font-variation-settings:normal; }
 label, .field > label, .check-row label, .hint small, .ld-values, .fp-in, .fp-out, .forge-param span, .forge-status, .forge-sub{ font-family:var(--ui-sans); font-weight:400; }
-button.ghost, .chip, .seg button, .aspect-btn, .shortcut-btn, .forge-part, .forge-menu-item, .toast, .toast-act{ font-family:var(--ui-sans); font-weight:400; letter-spacing:0.02em; }
+button.ghost, .chip, .seg button, .shortcut-btn, .forge-part, .forge-menu-item, .toast, .toast-act{ font-family:var(--ui-sans); font-weight:400; letter-spacing:0.02em; }
 .hint{ font-family:var(--ui-text); font-style:italic; }
 .hint code, code, kbd{ font-style:normal; }
 output, .val, .readout{ font-family:var(--ui-sans); font-variant-numeric:tabular-nums; }
@@ -2143,7 +1995,7 @@ body.is-mobile .support-btn{ padding:2px 6px; font-size:11px; }
 @media (max-width: 420px){ body.is-mobile .athanor-top .at-label{ display:none; } body.is-mobile .app-header-title{ font-size:1.15em; } }
 
 /* numbers in the controls stand on the line (Alegreya's figures are old-style by default: lovely in a poem, not in a field) */
-input, select, output, .ld-values, .radio-btn, .seg button, .aspect-grid button, .btn-row button, .val, .readout, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
+input, select, output, .ld-values, .radio-btn, .seg button, .btn-row button, .val, .readout, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
 body.is-mobile .card-title, body.is-mobile summary.card-title{ letter-spacing:0.08em; }
 .radio-btn{ font-family:var(--ui-sans); letter-spacing:0.02em; }
 .athanor-top .at-label{ white-space:nowrap; }
@@ -2196,15 +2048,12 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .fd-head{ position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0 8px; background:var(--fg-panel); border-bottom:1px solid var(--fg-line); z-index:1; }
 .fd-head b{ font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:.1em; font-size:16px; color:var(--fg-accent); }
 .fd-close{ width:auto; margin:0; padding:3px 10px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:13px; cursor:pointer; }
-.fd-toc{ display:flex; flex-wrap:wrap; gap:4px 14px; padding:10px 0 4px; font-family:var(--ui-sans); font-size:13px; }
-.fd-toc a{ color:var(--fg-accent); text-decoration:none; border-bottom:1px dotted currentColor; }
 .forge-doc section{ padding-top:6px; }
 .forge-doc h3{ margin:18px 0 6px; font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:.08em; font-size:15.5px; color:var(--fg-accent); }
 .forge-doc h4{ margin:16px 0 2px; font-family:var(--ui-text); font-weight:500; font-size:15px; }
 .forge-doc p{ margin:6px 0; } .forge-doc ul{ margin:6px 0; padding-left:20px; } .forge-doc li{ margin:3px 0; }
 .forge-doc dl{ margin:4px 0 8px; display:grid; grid-template-columns:minmax(120px, 180px) 1fr; gap:4px 14px; }
 .forge-doc dt{ font-family:var(--ui-sans); font-weight:500; } .forge-doc dd{ margin:0; color:var(--fg-dim); }
-.fd-catdoc{ font-style:italic; color:var(--fg-dim); }
 .fd-swatch{ display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
 .fd-swatch.pp{ border-radius:0; transform:rotate(45deg) scale(.8); }
 @media (max-width: 640px){ .forge-doc dl{ grid-template-columns:1fr; } .forge-doc dd{ margin-bottom:6px; } }
@@ -2236,6 +2085,14 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .wk-see{ margin-top:14px; font-size:13px; color:var(--fg-dim); }
 .wk-gloss{ display:grid; grid-template-columns:minmax(130px, 190px) 1fr; gap:5px 14px; }
 .wk-gloss dt{ font-weight:500; } .wk-gloss dd{ margin:0; color:var(--fg-dim); }
+/* previous and next, always along the foot of the page (sticky inside the wiki's own scroll) */
+/* bottom:-28px and the matching margin: it rides over the wiki's own bottom padding, so no text shows beneath it */
+.wk-pager{ position:sticky; bottom:-28px; z-index:1; display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px 0 -28px; padding:8px 0 38px; background:var(--fg-panel); border-top:1px solid var(--fg-line); font-family:var(--ui-sans); }
+.wk-pager[hidden]{ display:none; }
+.wk-pager a{ display:flex; flex-direction:column; gap:1px; padding:6px 10px; min-height:40px; justify-content:center; border:1px solid var(--fg-line); color:var(--fg-text); text-decoration:none; min-width:0; }
+.wk-pager a span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; color:var(--fg-accent); }
+.wk-pager small{ font-size:11px; letter-spacing:.06em; text-transform:lowercase; color:var(--fg-dim); }
+.wk-pager .wk-next{ text-align:right; align-items:flex-end; }
 .wk-hits{ list-style:none; padding:0; } .wk-hits li{ margin:6px 0; } .wk-tag{ font:11px var(--ui-sans); color:var(--fg-dim); }
 @media (max-width: 760px){
   .wk-body{ grid-template-columns:1fr; }
@@ -2252,6 +2109,10 @@ body.is-mobile .wk-contents-btn{ display:inline-block; }
 body.is-mobile .wk-nav{ display:none; position:static; max-height:none; border-right:0; border-bottom:1px solid var(--fg-line); }
 body.is-mobile .forge-doc.wk-show-nav .wk-nav{ display:block; }
 body.is-mobile .wk-search{ width:100%; }
+/* on a phone the wiki's name takes one line, its tools the line beneath */
+body.is-mobile .forge-doc .fd-head{ flex-direction:column; align-items:stretch; gap:8px; }
+body.is-mobile .forge-doc .fd-head b{ white-space:nowrap; }
+body.is-mobile .forge-doc .wk-tools{ justify-content:flex-start; }
 .forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
 
@@ -2637,9 +2498,7 @@ const LORE = [
   ["✩","Stress-outlined star","Stars"],
 ];
 
-const LORE_BY = new Map(LORE.map(r => [r[0], r]));
 /** A symbol's name (or ''). */
-function loreName(glyph){ const r = LORE_BY.get(glyph); return r ? r[1] : ''; }
 const PLANETS = ['♄', '♃', '♂', '☉', '♀', '☿', '☽'];
 const ZODIAC = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'].map(g => g + '\uFE0E');
 // spells take one code point each, and nothing a browser would paint as an emoji
@@ -3407,7 +3266,7 @@ function setGpuLight(on){ GPU_LIGHT = !!on; }
 let GPU_SOFT_OK = false;
 function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; } }
 /** What lit this texture: 'gpu', or 'cpu' (no WebGL2, an emulator, or switched off). */
-function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }
+function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }   // test hook: which path lights (Node: always the CPU)
 function gpu(){
   if(GPU !== undefined) return GPU;
   GPU = null;
@@ -3768,9 +3627,7 @@ function pixelPass(src, lightHex, darkHex, family, groundHex){
   return src;
 }
 /** The tint alone (white over black is the identity: if(lightIsWhite && darkIsBlack) return src). */
-function tintMarks(src, lightHex, darkHex){ return pixelPass(src, lightHex, darkHex, null); }
 /** The remap alone. */
-function remapNeutral(src, family){ return family === 'mid' ? src : pixelPass(src, null, null, family); }
 
 // A smooth field sampled on a coarse lattice every `step` pixels and blended
 // between: broad shapes (stone, swells, moss, a nebula, smoke's body) change
@@ -6586,7 +6443,6 @@ function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
 // Never the whole print —
 // just enough ridge to prove that
 // a hand was here once.
-function sstepZ(a,b,x){ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); }
 
 // Light through water:
 // shallow, it nets the floor in fire;
@@ -10357,9 +10213,9 @@ function landPalette(ck, TM){
  */
 function paintEvergreen(ctx, x, y, th, dark, light, sunSide, paint, tone, unit){
   // fine strokes at any size: a big tree is MORE strokes, not fatter ones
-  const u = unit || th*8, rows = Math.max(6, Math.min(70, Math.round(th/(u*0.0075)))), lw = Math.max(0.6, Math.min(th*0.03, u*0.0045));
+  const u = unit || th*8, rows = Math.max(6, Math.min(70, Math.round(th/(u*0.0075)))), lw = Math.max(cpx(0.6), Math.min(th*0.03, u*0.0045));
   ctx.lineCap = 'round';
-  ctx.globalAlpha = 0.9; ctx.strokeStyle = paint(Math.max(0, tone - 30), dark); ctx.lineWidth = Math.max(0.6, th*0.025);
+  ctx.globalAlpha = 0.9; ctx.strokeStyle = paint(Math.max(0, tone - 30), dark); ctx.lineWidth = Math.max(cpx(0.6), th*0.025);
   ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (Math.random() - 0.5)*th*0.02, y - th); ctx.stroke();
   ctx.strokeStyle = paint(tone, dark); ctx.lineWidth = lw;
   for(let r = 0; r < rows; r++){
@@ -12724,7 +12580,7 @@ const STEP_RUN = {
     return n.name === 'turing' ? [lum(img)] : [img, lum(img)];
   },
   stitch(E, n){ const { ww, wh, unit, num, P, readCanvas, lum } = E;
-    const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d');
+    const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU);
     x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh);
     const k = unit/1536, off = num(n, 'offset', 14)*k*2, sz = Math.max(1, num(n, 'size', 4))*k*2;
     drawStitch(x, pathFromPoints(roundRectPoints(off, off, ww - off*2, wh - off*2, 0), true), String(P(n, 'style', 'scallop')),
@@ -14140,8 +13996,8 @@ function athanorKeep(key, outs){
   for(const [k, v] of ATHANOR_KEPT){ if(athanorKeptBytes <= ATHANOR_KEEP_BYTES) break; ATHANOR_KEPT.delete(k); athanorKeptBytes -= v.b; }
 }
 /** What is kept (for the tests and the debug view). */
-function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits }; }
-function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }
+function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits }; }   // test hook: the cache's size and hits
+function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }   // test hook: a cold cache, so a test measures a first run
 const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
 /** A curve drawn as its graph (the step previews): a bright line over a faint grid on dark. */
@@ -15513,7 +15369,9 @@ function getTextureCanvas(type, w, h, opts = {}){
 if(typeof document === 'undefined') globalThis.document = { createElement: () => new OffscreenCanvas(1, 1) };
 
 self.onmessage = (e) => {
-  const { id, type, w, h, opts } = e.data;
+  const { id, type, w, h, opts, softgl } = e.data;
+  // ?softgl in the page's address: software WebGL is allowed, so a machine without a GPU can test the GPU path
+  if(softgl) setGpuSoftware(true);
   try {
     // cpuLight: light on the CPU even where the GPU is there (to compare, or as a fallback)
     setGpuLight(!(opts && opts.cpuLight));
@@ -17223,7 +17081,6 @@ const DIE = {
  *  and a long press on one of Your Surfaces in the surface menu). {name} is the surface's name. */
 const KEPT = {
   keep: 'Keep',
-  keepTitle: 'Keep this surface on the shelf, by its name',
   keepAsk: 'Keep this surface?',
   keepBody: 'Its name is the Surface part’s name too. It stays on this browser’s shelf, to open again or choose from the surface menu.',
   replaceAsk: 'Replace the kept \u201C{name}\u201D?',
@@ -17245,7 +17102,8 @@ const KEPT = {
   pasteBody: 'The text that Copy the wiring makes (or a shelf file’s text). It is put on your shelf.',
   pasteNone: 'That isn’t a surface’s wiring. Nothing was changed.',
   current: 'The surface on the page',
-  keepIt: 'Keep it on the shelf…',
+  keepIt: 'Keep this surface…',
+  keepHint: 'save it to the shelf under its name',
 };
 
 /** The colour picker's own button. */
@@ -18005,7 +17863,6 @@ const DEV_TEMPLATE_TITLE = 'PoetryPress Instrument Panel';
  */
 const WELCOME_POEM = "## WTF is [PoetryPress]?\n\n>  [{\"well, it's a weird art tool for text\"]}\n>  [{\"...or something...\"]}\n>  [{\"but like... how do I use it?\"]}\n\n*big breath*\n\nOk.\nSo you write on this thing\n   (first tab: [§Glyph!input **Inscription**])\n\nand the text can be {formatted}\n[in a basic markup language]\nwhich has simple and complex shortcuts [🌸]\n\n---\n-# for instance:\n> justified right/r\n> <also/left> <justified right/right>\n^ using a different method\n---\n\n## *ANYWAY*/c\n\nyou can also SELECT a generative texture\n-# and can [\\[§Glyph!creation create your own\\]] using a built in tool\nand it lets you typeset {and set formatting}\nand do other\npotentially <interesting/jitter:200/f:12> things\n\n[also everything is sharable]\n\n> I made this because I'm a weird poet\n> and I noticed people don't read text anymore\n> so I wanted my poems to be unique and eye-catching\n\nso... there's a whole generative texture engine &\n*almost* as many art tools as Adobe Photoshop\nin a     <**m o b i l e   f i r s t   U I**/rainbow>\n-#                                      ...everything is still [under construction]\n\nand it just happens to be {**Completely FREE**}.\n\nHave fun!";
 /** Production is poetrypress.*; anything else — vellum, a local file — is development. */
-const isProductionHost = () => typeof location !== 'undefined' && /^poetrypress\./i.test(location.hostname || '');
 
 /**
  * THE TEXTURE GROUPS, as the Surface menu and the Athanor's "Start from…"
@@ -18368,7 +18225,6 @@ function stitchInnerEdge(path, style, opts){
  */
 
 const BFX_MAX = 1024;            // the working rectangle's long side, at most
-const BOX_GLASS = ['none', 'frost', 'lens', 'reeded', 'pixel', 'emboss', 'prism'];
 const BOX_GPU_BLENDS = ['vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
 
 const BFX_FRAG = `#version 300 es
@@ -19413,9 +19269,7 @@ const LORE = [
   ["✩","Stress-outlined star","Stars"],
 ];
 
-const LORE_BY = new Map(LORE.map(r => [r[0], r]));
 /** A symbol's name (or ''). */
-function loreName(glyph){ const r = LORE_BY.get(glyph); return r ? r[1] : ''; }
 const PLANETS = ['♄', '♃', '♂', '☉', '♀', '☿', '☽'];
 const ZODIAC = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'].map(g => g + '\uFE0E');
 // spells take one code point each, and nothing a browser would paint as an emoji
@@ -20219,7 +20073,7 @@ function setGpuLight(on){ GPU_LIGHT = !!on; }
 let GPU_SOFT_OK = false;
 function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; } }
 /** What lit this texture: 'gpu', or 'cpu' (no WebGL2, an emulator, or switched off). */
-function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }
+function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }   // test hook: which path lights (Node: always the CPU)
 function gpu(){
   if(GPU !== undefined) return GPU;
   GPU = null;
@@ -20580,9 +20434,7 @@ function pixelPass(src, lightHex, darkHex, family, groundHex){
   return src;
 }
 /** The tint alone (white over black is the identity: if(lightIsWhite && darkIsBlack) return src). */
-function tintMarks(src, lightHex, darkHex){ return pixelPass(src, lightHex, darkHex, null); }
 /** The remap alone. */
-function remapNeutral(src, family){ return family === 'mid' ? src : pixelPass(src, null, null, family); }
 
 // A smooth field sampled on a coarse lattice every `step` pixels and blended
 // between: broad shapes (stone, swells, moss, a nebula, smoke's body) change
@@ -23398,7 +23250,6 @@ function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
 // Never the whole print —
 // just enough ridge to prove that
 // a hand was here once.
-function sstepZ(a,b,x){ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); }
 
 // Light through water:
 // shallow, it nets the floor in fire;
@@ -27169,9 +27020,9 @@ function landPalette(ck, TM){
  */
 function paintEvergreen(ctx, x, y, th, dark, light, sunSide, paint, tone, unit){
   // fine strokes at any size: a big tree is MORE strokes, not fatter ones
-  const u = unit || th*8, rows = Math.max(6, Math.min(70, Math.round(th/(u*0.0075)))), lw = Math.max(0.6, Math.min(th*0.03, u*0.0045));
+  const u = unit || th*8, rows = Math.max(6, Math.min(70, Math.round(th/(u*0.0075)))), lw = Math.max(cpx(0.6), Math.min(th*0.03, u*0.0045));
   ctx.lineCap = 'round';
-  ctx.globalAlpha = 0.9; ctx.strokeStyle = paint(Math.max(0, tone - 30), dark); ctx.lineWidth = Math.max(0.6, th*0.025);
+  ctx.globalAlpha = 0.9; ctx.strokeStyle = paint(Math.max(0, tone - 30), dark); ctx.lineWidth = Math.max(cpx(0.6), th*0.025);
   ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (Math.random() - 0.5)*th*0.02, y - th); ctx.stroke();
   ctx.strokeStyle = paint(tone, dark); ctx.lineWidth = lw;
   for(let r = 0; r < rows; r++){
@@ -29536,7 +29387,7 @@ const STEP_RUN = {
     return n.name === 'turing' ? [lum(img)] : [img, lum(img)];
   },
   stitch(E, n){ const { ww, wh, unit, num, P, readCanvas, lum } = E;
-    const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d');
+    const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU);
     x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh);
     const k = unit/1536, off = num(n, 'offset', 14)*k*2, sz = Math.max(1, num(n, 'size', 4))*k*2;
     drawStitch(x, pathFromPoints(roundRectPoints(off, off, ww - off*2, wh - off*2, 0), true), String(P(n, 'style', 'scallop')),
@@ -30952,8 +30803,8 @@ function athanorKeep(key, outs){
   for(const [k, v] of ATHANOR_KEPT){ if(athanorKeptBytes <= ATHANOR_KEEP_BYTES) break; ATHANOR_KEPT.delete(k); athanorKeptBytes -= v.b; }
 }
 /** What is kept (for the tests and the debug view). */
-function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits }; }
-function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }
+function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits }; }   // test hook: the cache's size and hits
+function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }   // test hook: a cold cache, so a test measures a first run
 const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
 /** A curve drawn as its graph (the step previews): a bright line over a faint grid on dark. */
@@ -32672,7 +32523,7 @@ const ACCENTS = [
 ].map(([glyph, name]) => ({ glyph, name }));
 
 /** The Chroma: each with the hue Vellum draws it in and what it carries. */
-const CHROMA = [
+const CHROMA = [   // kept: Runology whole, as Symbology carries it (the colors wait for the presets pass)
   { name: 'Red',     glyph: '🔴', hex: '#C8402E', carries: 'fire, flame, combustion' },
   { name: 'Green',   glyph: '🟢', hex: '#4E9A5A', carries: 'wind, storm, severing' },
   { name: 'Blue',    glyph: '🔵', hex: '#2F62B0', carries: 'water, dilution, the cold' },
@@ -32691,7 +32542,6 @@ const BY_GLYPH = new Map([...ARCHETYPES.map(a => [a.glyph, a]), ...ACCENTS.map(a
 const RUNE_BY_NAME = Object.fromEntries([...ARCHETYPES, ...ACCENTS].map(r => [r.name.toLowerCase(), r.glyph]));
 
 /** What a glyph is in Runology, or null. */
-function runeOf(glyph){ return BY_GLYPH.get(glyph) || null; }
 
 /** A glyph spell (spell.js) read in Runology: the names of its Archetypes, in order. */
 function readSpell(spell){
@@ -32719,6 +32569,8 @@ function readSpell(spell){
  */
 
 const ON_PAGE = new Set(['summoning', 'cards']);      // they draw glyphs and card faces in web fonts
+// ?softgl in the address (AGENTS.md §5.5): the workers may light on software WebGL, to test the GPU path without a GPU
+const SOFTGL = typeof location !== 'undefined' && /[?&]softgl\b/.test(location.search || '');
 // A POOL of workers (one per spare core, up to two): two slots — Deep Field's
 // nebula and its stars — are made side by side, and a new wish for a slot
 // whose old texture is still being made starts at once on a free worker. The
@@ -32861,7 +32713,7 @@ function pump(){
     const f = { id, slot, key: job.key, type: job.type, job, worker, started: now() };
     worker.job = f; inflight.set(slot, f);
     busy(true, job.type);
-    worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts });
+    worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts, softgl: SOFTGL });
   }
 }
 
@@ -32940,9 +32792,12 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Daphnis';
+const RELEASE = 'Saturn–Atlas';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
+// each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
+const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"diqF4TTe","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"zuBCPU-R","lichtenberg":"SjNBBzSY","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","sigils":"oFaAKxnj","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"aVKpXREs","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
+const SWATCH_STAMP = 'n01W21QF';
 
 
 /* ==== altText.js ==== */
@@ -33766,7 +33621,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 5505791";
+const STAMP = "2026-10-15 · 4fcda2e";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -33995,7 +33850,7 @@ function paintGradient(ctx, x, y, w, h, spec, colors){
     // no native box gradient: computed small and scaled up, which keeps it
     // smooth and costs a few thousand pixels, not millions
     const S = 128, small = document.createElement('canvas'); small.width = S; small.height = S;
-    const sx = small.getContext('2d'), img = sx.createImageData(S, S), d = img.data;
+    const sx = small.getContext('2d', { willReadFrequently: true }), img = sx.createImageData(S, S), d = img.data;
     const rgb = stops.map(hexRgb), n = rgb.length - 1;
     const hx = Math.max(spec.cx, 1 - spec.cx), hy = Math.max(spec.cy, 1 - spec.cy);
     for(let py = 0; py < S; py++) for(let px = 0; px < S; px++){
@@ -34016,7 +33871,7 @@ function paintGradient(ctx, x, y, w, h, spec, colors){
       ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
     } else {
       const S = 128, small = document.createElement('canvas'); small.width = S; small.height = S;
-      const sx = small.getContext('2d'), img = sx.createImageData(S, S), d = img.data, rgb = ring.map(hexRgb), n = rgb.length - 1;
+      const sx = small.getContext('2d', { willReadFrequently: true }), img = sx.createImageData(S, S), d = img.data, rgb = ring.map(hexRgb), n = rgb.length - 1;
       for(let py = 0; py < S; py++) for(let px = 0; px < S; px++){
         const u = (px + 0.5)/S*w + x - cx, v = (py + 0.5)/S*h + y - cy;
         let t = ((Math.atan2(v, u) - rad)/(2*Math.PI)) % 1; if(t < 0) t += 1; t *= n;
@@ -34081,7 +33936,7 @@ function clearingMask(W, H){
   const mw = 192, mh = Math.max(8, Math.round(192*H/W)), key = TEXT_LAYOUT + '|' + mw + 'x' + mh;
   if(CLEAR_MASK.key === key) return CLEAR_MASK.canvas;
   const c = CLEAR_MASK.canvas || document.createElement('canvas'); c.width = mw; c.height = mh;
-  const x = c.getContext('2d'), a = new Float32Array(mw*mh), runs = [];
+  const x = c.getContext('2d', { willReadFrequently: true }), a = new Float32Array(mw*mh), runs = [];
   for(const part of TEXT_LAYOUT.split(';')){ const v = part.split(',').map(Number); if(v.length >= 4 && v.every(isFinite)) runs.push(v); }
   let hsum = 0;
   for(const [x0, y0, x1, y1] of runs){ const h = (y1 - y0)*mh, p = h*0.35; hsum += h;
@@ -34104,7 +33959,7 @@ function clearedSurface(t, W, H, amount){
   if(!TEXT_LAYOUT || amount <= 0) return t;
   if(!CLEAR_LAYER) CLEAR_LAYER = document.createElement('canvas');
   if(CLEAR_LAYER.width !== W || CLEAR_LAYER.height !== H){ CLEAR_LAYER.width = W; CLEAR_LAYER.height = H; }
-  const c = CLEAR_LAYER.getContext('2d');
+  const c = CLEAR_LAYER.getContext('2d', { willReadFrequently: true });
   c.globalCompositeOperation = 'copy'; c.globalAlpha = 1; c.drawImage(t, 0, 0, W, H);
   c.globalCompositeOperation = 'destination-out'; c.globalAlpha = Math.min(1, amount); c.imageSmoothingEnabled = true;
   c.drawImage(clearingMask(W, H), 0, 0, W, H);
@@ -34121,7 +33976,7 @@ function bloomLayer(w, h){
 function grainTiles(){
   if(GRAIN_TILES) return GRAIN_TILES;
   const make = (tone) => { const T = 96, c = document.createElement('canvas'); c.width = T; c.height = T;
-    const x = c.getContext('2d'); let seed = tone === 0 ? 7 : 13;
+    const x = c.getContext('2d', { willReadFrequently: true }); let seed = tone === 0 ? 7 : 13;
     const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;      // stable, so grain never shimmers
     for(let i = 0; i < 420; i++){ x.globalAlpha = 0.35 + rand()*0.65; x.fillStyle = tone ? '#fff' : '#000';
       x.fillRect(rand()*T, rand()*T, 1 + rand()*1.6, 1 + rand()*1.6); }
@@ -34418,7 +34273,7 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
   const pad = Math.ceil(size * 0.25);
   const h = Math.ceil(size * 1.45) + pad * 2;
   const off = scratchCanvas(w + pad * 2, h);
-  const o = off.getContext('2d');
+  const o = off.getContext('2d', { willReadFrequently: true });
   o.font = ctx.font;
   o.textBaseline = ctx.textBaseline;
   o.textAlign = 'left';
@@ -35821,10 +35676,10 @@ function paintPresetSwatch(canvas, p, w, h, onPainted = null){
  * own choice would. The panel is built afresh each time it opens, so
  * options added later (kept surfaces) are there.
  *
- * Thumbnails: the caller paints them (chooseThumb); each finished one is
- * kept as a small JPEG in this browser for the release (CHOOSER_CACHE_KEY),
- * so after the first opening the tiles appear at once. A new release paints
- * them again, since a texture may have changed.
+ * Thumbnails: the caller paints them (opts.thumb); each finished one is
+ * kept as a small JPEG in this browser (CHOOSER_CACHE_KEY) with its STAMP
+ * (opts.stamp: what it was painted from), so the tiles appear at once, every
+ * visit and every release, and only a surface that changed is painted again.
  *
  * Folded groups are remembered per menu (localStorage), an app preference,
  * never part of a look.
@@ -35832,7 +35687,8 @@ function paintPresetSwatch(canvas, p, w, h, onPainted = null){
  * Names here are ch/CH: the bundle is one scope.
  */
 
-const CHOOSER_CACHE_KEY = 'uv.thumbs.v1';
+const CHOOSER_CACHE_KEY = 'uv.thumbs.v2';
+const CH_OLD_KEYS = ['uv.thumbs.v1'];         // kept per release: dropped, to give their space back
 const CH_FOLD_KEY = id => 'uv.chooser.' + id + '.folded';
 
 // ---- pure helpers (the tests use these) ----
@@ -35860,10 +35716,15 @@ function chMatches(query, item, groupName, extra = ''){
   return words.every(w => hay.includes(w));
 }
 
-/** The thumbnail cache for this release: { release, map }. A different release starts empty. */
-function chCacheFor(raw, release){
+/** The thumbnail cache: { map: { value: { s: stamp, url } } }. Anything unreadable starts empty. */
+function chCacheFor(raw){
   let c = null; try { c = JSON.parse(raw || 'null'); } catch(e){ c = null; }
-  return (c && c.release === release && c.map && typeof c.map === 'object') ? c : { release, map: {} };
+  return (c && c.map && typeof c.map === 'object' && !Array.isArray(c.map)) ? { map: c.map } : { map: {} };
+}
+/** A kept thumbnail, only if it was painted from what the tile shows now (its stamp). */
+function chCached(cache, value, stamp){
+  const e = cache.map[value];
+  return e && typeof e === 'object' && e.s === stamp && /^data:image\//.test(e.url || '') ? e.url : null;
 }
 
 // ---- storage, quietly (a private window or a full store just means no memory) ----
@@ -35871,11 +35732,14 @@ const chStore = {
   get(k){ try { return typeof localStorage !== 'undefined' ? localStorage.getItem(k) : null; } catch(e){ return null; } },
   set(k, v){ try { if(typeof localStorage !== 'undefined') localStorage.setItem(k, v); } catch(e){} },
 };
-let chCache = null, chRelease = '';
-function chThumbs(){ if(!chCache) chCache = chCacheFor(chStore.get(CHOOSER_CACHE_KEY), chRelease); return chCache; }
+let chCache = null;
+function chThumbs(){
+  if(!chCache){ chCache = chCacheFor(chStore.get(CHOOSER_CACHE_KEY)); try { for(const k of CH_OLD_KEYS) if(typeof localStorage !== 'undefined') localStorage.removeItem(k); } catch(e){} }
+  return chCache;
+}
 let chSaveT = null;
-function chKeep(value, url){
-  const c = chThumbs(); c.map[value] = url;
+function chKeep(value, url, stamp){
+  const c = chThumbs(); c.map[value] = { s: stamp, url };
   clearTimeout(chSaveT); chSaveT = setTimeout(() => chStore.set(CHOOSER_CACHE_KEY, JSON.stringify(c)), 400);
 }
 
@@ -35886,14 +35750,15 @@ function chKeep(value, url){
  *  opts.thumb    — (value, canvas, done) paints a tile's thumbnail; call done() when it is final
  *                  (it may paint a placeholder first and call done later). Return false to leave a glyph.
  *  opts.extra    — (value) → more words a search may find it by (its readings, say)
- *  opts.release  — the release name: thumbnails are kept for it
+ *  opts.stamp    — (value) → what its thumbnail is painted from, as a short string: a kept thumbnail
+ *                  is shown only while its stamp is the same (a surface that changed is painted again)
  *  opts.size     — a thumbnail's pixels (default 160)
  *  opts.hold     — (value, tile) → true when it opened a menu of its own for that tile (a long press or right-click)
  * Returns { refresh(), open(), close() }.
  */
 function attachChooser(select, opts = {}){
   if(!select || typeof document === 'undefined' || typeof document.createElement !== 'function' || !select.parentNode) return { refresh(){}, open(){}, close(){} };
-  chRelease = opts.release || chRelease;
+  const stampOf = v => { try { return String(opts.stamp ? opts.stamp(v) : ''); } catch(e){ return ''; } };
   const id = opts.id || select.id, SIZE = opts.size || 160;
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'ch-trigger'; btn.setAttribute('aria-haspopup', 'dialog');
@@ -35905,11 +35770,11 @@ function attachChooser(select, opts = {}){
   const textOf = v => { const o = Array.from(select.options || []).find(o => o.value === v); return o ? String(o.textContent || '').trim() : v; };
   const thumbInto = (holder, value) => {
     holder.textContent = '';
-    const url = chThumbs().map[value];
+    const stamp = stampOf(value), url = chCached(chThumbs(), value, stamp);
     if(url){ const im = document.createElement('img'); im.alt = ''; im.src = url; im.decoding = 'async'; holder.appendChild(im); return; }
     const cv = document.createElement('canvas'); cv.width = cv.height = SIZE; holder.appendChild(cv);
     let ok = false;
-    try { ok = opts.thumb ? opts.thumb(value, cv, () => { try { chKeep(value, cv.toDataURL('image/jpeg', 0.82)); } catch(e){} }) !== false : false; } catch(e){ ok = false; }
+    try { ok = opts.thumb ? opts.thumb(value, cv, () => { try { chKeep(value, cv.toDataURL('image/jpeg', 0.82), stamp); } catch(e){} }) !== false : false; } catch(e){ ok = false; }
     if(!ok){ holder.textContent = ''; holder.classList.add('ch-glyph'); holder.textContent = opts.glyphFor ? opts.glyphFor(value) : '◈'; }
   };
 
@@ -38183,6 +38048,20 @@ function wikiContentsHtml(ctx = {}){
     return `<h4>${wkEsc(g)}</h4><ul>` + items.map(([id, t]) => `<li><a href="#" data-wiki="${wkEsc(id)}">${wkEsc(t)}</a></li>`).join('') + '</ul>';
   }).join('');
 }
+/** The reading order, as the contents lists it: each group's articles; under Parts, each category's
+ *  page followed by its parts (as its page lists them). Previous and next walk it. */
+function wikiOrder(ctx = {}){
+  const cats = ctx.categories || [];
+  return WIKI_GROUPS.flatMap(g => g === 'Parts'
+    ? cats.flatMap(c => ['cat:' + c, ...Object.entries(STEPS).filter(([, s]) => s.cat === c).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([k]) => 'part:' + k)])
+    : WIKI_ARTICLES.filter(a => a.group === g).map(a => a.id));
+}
+/** The pages either side of one in the reading order: { prev, next }, each { id, title } or null. */
+function wikiNeighbors(id, ctx = {}){
+  const order = wikiOrder(ctx), i = order.indexOf(String(id));
+  const at = j => (i >= 0 && order[j]) ? { id: order[j], title: String(order[j]).startsWith('cat:') && ctx.catName ? ctx.catName(order[j].slice(4)) : wikiTitle(order[j]) } : null;
+  return { prev: at(i - 1), next: at(i + 1) };
+}
 /** Search: titles first, then words in the text. Returns [{ id, title, where }]. */
 function wikiSearch(q){
   q = String(q || '').trim().toLowerCase(); if(q.length < 2) return [];
@@ -38224,7 +38103,6 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 
 // ---- the parts: every node a step of steps.js (shared with the textures
 // rebuilt as chains) — ports, params and category as the editor shows them
-const FORGE_BLENDS = STEP_BLENDS;
 const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
   inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [] }]));
 const FORGE_CATEGORIES = STEP_CATEGORIES;
@@ -38235,7 +38113,6 @@ const FORGE_CATEGORIES = STEP_CATEGORIES;
  * picture, one colour, one number. A ⚙ port (a param taking a wire) is a
  * small diamond in the number's colour.
  */
-const FORGE_TYPE_COLOURS = { field: '#CFC8DD', image: '#EE7FF5', colour: '#F4C44E', value: '#54D3EA', curve: '#93D98A' };
 const FORGE_TYPE_NAMES = { field: 'a gray map', image: 'a picture', colour: 'one color', value: 'one number', curve: 'a curve' };
 /** A PART'S COLOR is the kind of thing it makes (its first output's type), the same color its
  *  output dots and wires wear (Ruby: node, wire and connector colors as data types). The Surface keeps its own. */
@@ -38313,7 +38190,14 @@ function forgeHelpHtml(){
   return `<div class="fd-head"><b>The Athanor · Wiki</b><span class="wk-tools"><input type="search" class="wk-search" placeholder="Search the wiki…" aria-label="Search the wiki" autocomplete="off" spellcheck="false">`
     + `<button type="button" class="fd-close wk-contents-btn" data-doc="contents" aria-label="Contents">☰ Contents</button><button type="button" class="fd-close wk-back" data-doc="back" aria-label="Back" disabled>‹ Back</button>`
     + `<button type="button" class="fd-close" data-doc="close" aria-label="Close the wiki">✕ Close</button></span></div>`
-    + `<div class="wk-body"><nav class="wk-nav" aria-label="Contents">${wikiContentsHtml(forgeWikiCtx())}</nav><div class="wk-page" tabindex="-1"></div></div>`;
+    + `<div class="wk-body"><nav class="wk-nav" aria-label="Contents">${wikiContentsHtml(forgeWikiCtx())}</nav><div class="wk-page" tabindex="-1"></div></div>`
+    + `<nav class="wk-pager" aria-label="Previous and next page"></nav>`;
+}
+/** The bar along the wiki's foot: the pages before and after this one, in the contents' order. */
+function forgePagerHtml(id){
+  const { prev, next } = wikiNeighbors(id, forgeWikiCtx());
+  const side = (p, dir) => p ? `<a href="#" class="wk-${dir}" data-wiki="${forgeEsc(p.id)}"><small>${dir === 'prev' ? '‹ Previous' : 'Next ›'}</small><span>${forgeEsc(p.title)}</span></a>` : '<span></span>';
+  return side(prev, 'prev') + side(next, 'next');
 }
 /** What the wiki needs from the editor: category names and lines, and the node limit. */
 function forgeWikiCtx(){ return { catName: forgeCatName, catDoc: c => FORGE_CAT_DOCS[c] || '', categories: FORGE_CATEGORIES.slice(), nodes: ATHANOR_LIMITS.nodes }; }
@@ -39020,7 +38904,7 @@ async function openForge(deps){
     // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
     if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
       openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
-        { glyph: '✚', label: 'Keep this surface…', hint: 'save it to the shelf under its name', act: () => keep() },
+        { glyph: '✚', label: KEPT.keepIt, hint: KEPT.keepHint, act: () => keep() },
         { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
         { glyph: '?', label: 'Wiki and help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
     // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
@@ -39108,7 +38992,7 @@ async function openForge(deps){
       inp.click();
     };
     const shelfMenu = () => { const list = forgeShelf(); return { title: 'Kept surfaces', hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet.', items: [
-      { glyph: '✚', label: 'Keep this surface…', hint: 'save it to the shelf under its name', act: keep },
+      { glyph: '✚', label: KEPT.keepIt, hint: KEPT.keepHint, act: keep },
       { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(onGrid()) },
       ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(onGrid()) }] : []),
       ...(list.length ? [{ sep: true }] : []),
@@ -39117,7 +39001,7 @@ async function openForge(deps){
         { glyph: '⟲', label: KEPT.replaceWith, danger: true, act: () => replaceKept(rec) },
         { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(rec) },
         ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(rec) }] : []),
-        { glyph: '✕', label: 'Take it off the shelf', danger: true, act: () => dropKept(rec) }] }) })),
+        { glyph: '✕', label: KEPT.drop, danger: true, act: () => dropKept(rec) }] }) })),
       { sep: true },
       { glyph: '⎘', label: KEPT.paste, act: pasteKept },
       { glyph: '⇪', label: 'Save the shelf as a file', hint: 'every kept surface, to back up or share', disabled: !list.length, act: exportShelf },
@@ -39149,6 +39033,7 @@ async function openForge(deps){
     const goWiki = (id, push = true) => { const pg = page(); if(!pg) return;
       if(push && wiki.at && wiki.at !== id) wiki.back.push(wiki.at); wiki.at = id;
       pg.innerHTML = wikiArticleHtml(id, forgeWikiCtx()); pg.scrollTop = 0; doc.scrollTop = 0;
+      const pager = doc.querySelector('.wk-pager'); if(pager){ pager.innerHTML = forgePagerHtml(id); pager.hidden = false; }
       doc.classList.remove('wk-show-nav');
       doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id || (id.startsWith('part:') && a.dataset.wiki === 'cat:' + ((FORGE_NODES[id.slice(5)] || {}).cat))));
       const b = doc.querySelector('.wk-back'); if(b) b.disabled = !wiki.back.length; };
@@ -39166,11 +39051,12 @@ async function openForge(deps){
       const q = e.target.value, pg = page(); if(!pg) return;
       if(!q.trim()){ goWiki(wiki.at, false); return; }
       const hits = wikiSearch(q);
+      { const pager = doc.querySelector('.wk-pager'); if(pager) pager.hidden = true; }
       pg.innerHTML = `<h2>Search: ${forgeEsc(q)}</h2>` + (hits.length ? '<ul class="wk-hits">' + hits.map(h => `<li><a href="#" data-wiki="${forgeEsc(h.id)}">${forgeEsc(h.title)}</a>${h.id.startsWith('part:') ? ' <span class="wk-tag">part</span>' : ''}</li>`).join('') + '</ul>' : '<p>Nothing found. Try another word, or browse the contents.</p>'); });
     // A NEW SEED, from inside the Athanor: every part's own randomness comes from the page's seed
     if($('forgeSeedBtn') && deps.reseed) $('forgeSeedBtn').addEventListener('click', () => { deps.reseed(); previews(); });
     const lg = $('forgeLegend');
-    if(lg) lg.innerHTML = Object.entries(FORGE_TYPE_COLOURS).map(([t]) => `<span><i style="background:var(--t-${t})"></i>${forgeEsc(FORGE_TYPE_NAMES[t])}</span>`).join('')
+    if(lg) lg.innerHTML = VALUE_TYPES.map(t => `<span><i style="background:var(--t-${t})"></i>${forgeEsc(FORGE_TYPE_NAMES[t])}</span>`).join('')
       + `<span><i class="pp" style="background:var(--t-value)"></i>⚙ a setting that takes a wire</span>`;
   }
   // the graph saved with the look (checked first: a graph from anywhere can't break the page), or a first one
@@ -40904,13 +40790,9 @@ function setupPhoneLayout(){
     let dragging = false;
     const setFrac = (f) => root.style.setProperty('--preview-frac',
     Math.min(PREVIEW.maxFraction, Math.max(PREVIEW.minFraction, f)).toFixed(3));
-    // One variable drives both orientations: in portrait it is a share of
-    // height, in landscape a share of width. The handle reads whichever axis
-    // it is actually dividing.
-    const sideBySide = () => window.innerWidth > window.innerHeight;
+    // the preview's share of the visible height (the phone layout is always one column)
     const fracFor = (e) => {
       const r = stageEl.getBoundingClientRect();
-      if(sideBySide()) return (e.clientX - r.left) / (window.innerWidth || 1);
       const visible = parseFloat(getComputedStyle(root).getPropertyValue('--vvh')) || window.innerHeight;
       return (e.clientY - r.top) / visible;
     };
@@ -42747,7 +42629,8 @@ function holdSurface(value, tile){
 
 // ---------- THE SURFACE MENUS AS TILES ----------
 // Each surface's tile is the surface as a preset wears it (its ground, hues, blend and knobs), or, worn by
-// none, its defaults on a ground that suits its blend. Thumbnails are kept for the release (chooser.js).
+// none, its defaults on a ground that suits its blend. Thumbnails are kept in the browser until what they are
+// painted from changes (chooser.js): the surface (its fingerprints' stamp), the look it wears, the painter.
 {
   const backFor = b => /multiply|darken|burn/.test(b) ? '#EEE4D2' : /screen|lighten|dodge/.test(b) ? '#100E16' : /overlay|soft|hard/.test(b) ? '#6A3A4E' : '#1A1720';
   const wornBy = type => PRESETS.find(p => p.textureType === type && p.texture);
@@ -42767,11 +42650,13 @@ function holdSurface(value, tile){
       const c = canvas.getContext('2d'); c.imageSmoothingQuality = 'high'; c.drawImage(big, 0, 0, canvas.width, canvas.height); done(); });
     return true;
   };
+  const stamp = value => String(value).startsWith('kept:') || value === 'athanor' ? ''
+    : `${TEXTURE_STAMPS[value] || ''}|${SWATCH_STAMP}|${keptHash(JSON.stringify(thumbLook(value)))}`;
   // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
   const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
   for(const [sel, title] of [[$('textureType'), CHOOSER.surfaceTitle], [$('baseType'), CHOOSER.baseTitle]]){
-    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160, hold: sel.id === 'textureType' ? holdSurface : null })); } catch(e){ /* the plain menu still works */ }
+    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, stamp, size: 160, hold: sel.id === 'textureType' ? holdSurface : null })); } catch(e){ /* the plain menu still works */ }
   }
 }
 

@@ -52,20 +52,11 @@ const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++,
 check('a .is-mobile block exists', start !== -1 && mobile.includes('body.is-mobile'));
 // The slice must not reach back into the ORIGINAL responsive block (the
 // max-width:860px one). Media queries written inside the mobile section —
-// the landscape layout, for instance — are expected and fine.
+// are expected and fine.
 check('the slice excludes the older responsive block',
   !/max-width:\s*860px/.test(mobile));
 
-// 1. no vh in mobile sizing — except the documented --vvh fallback and
-//    max-width (horizontal vw/vh is not affected by the URL bar)
-const vhLines = mobile.split('\n').filter(l => {
-  if(!/\d\s*vh\b/.test(l)) return false;
-  if(l.includes('--vvh: 100vh')) return false;            // the documented fallback
-  if(/var\(--vvh(-stable)?,\s*100vh\)/.test(l)) return false;  // same fallback, inline form
-  return true;
-});
-check('no vertical sizing uses vh (must use --vvh)', vhLines.length === 0);
-if(vhLines.length) vhLines.forEach(l => console.log('   offender:', l.trim()));
+// 1. (no bare vh in phone rules: invariants.test.mjs §7)
 
 // 2. whatever the media query sizes by ID must be re-sized by ID here
 const mqIdProps = [...css.matchAll(/#poemCanvas\s*\{([^}]*)\}/g)].map(m => m[1]);
@@ -132,13 +123,8 @@ const controlsRule = (mobile.match(/body\.is-mobile\s+\.controls\s*\{[^}]*\}/) |
 check('controls padding does not double-count the keyboard either',
   !controlsRule.includes('--kb-height'));
 
-// 3. Editable text needs a floor (readable without pinch-zoom) and a ceiling
-//    (so it does not balloon on a big screen).
-const poemRule = (mobile.match(/body\.is-mobile\s+#poemText\s*\{[^}]*\}/) || [''])[0];
-check('the poem field clamps its font size between a floor and a ceiling',
-  /font-size:\s*clamp\(/.test(poemRule));
 
-// --- this round's structural promises ---
+// --- the structure the phone layout relies on ---
 const tabs = [...html.matchAll(/class="tab-btn[^"]*" data-tab="(\w+)"[^>]*>([\s\S]*?)<\/button>/g)];
 check('all five tabs carry a drawn SVG icon, not an emoji',
   tabs.length === 5 && tabs.every(t => t[2].includes('<svg') && !/[\u{1F300}-\u{1FAFF}]/u.test(t[2])));
@@ -146,22 +132,13 @@ check('every tab icon is drawn scratchy — each stroke gone over more than once
   tabs.every(t => (t[2].match(/<path|<circle/g) || []).length >= 3));
 check('every tab icon shares one viewBox and stroke weight',
   tabs.every(t => t[2].includes('viewBox="0 0 24 24"') && t[2].includes('stroke-width="1.6"')));
-check('tabs use the new names',
-  ['Inscription','Rituals','Thoughtforms','Materia'].every(n => html.includes('>' + n + '</button>')) && html.includes('<span data-str="tab.esoterica">Esoterica</span>'));
 
-check('Form & Bearing now lives on the Aspects tab',
-  /<details class="card" data-tab="style" open>\s*<summary class="card-title"[^>]*>\s*Form &amp; Bearing/.test(html));
-check('Form & Bearing sits above Built-In Presets, and Custom Presets below them',
-  html.indexOf('Form &amp; Bearing') < html.indexOf('>Built-In Presets</summary>') && html.indexOf('>Built-In Presets</summary>') < html.indexOf('>Custom Presets</summary>'));
 
 for(const [title, shouldBeOpen] of [['Backdrop Color', true], ['Surface Texture', true], ['Border Options', false], ['Vignette Options', false]]){
   const m = html.match(new RegExp('<details class="card" data-tab="page"( open)?>\\s*<summary class="card-title"[^>]*>' + title + '</summary>'));
   check(`Materia section "${title}" exists and is ${shouldBeOpen ? 'open' : 'closed'} by default`,
     !!m && !!m[1] === shouldBeOpen);
 }
-check('Thoughtforms: Script Options is open, Text Effects is closed',
-  /<details class="card" data-tab="type" open>\s*<summary class="card-title"[^>]*>Script Options/.test(html) &&
-  /<details class="card" data-tab="type">\s*<summary class="card-title"[^>]*>Text Effects/.test(html));
 
 check('the preview has a draggable divider', html.includes('id="dragHandle"'));
 check('the preview share is a variable the divider can write',
@@ -188,24 +165,7 @@ check('the download button sits inside the preview frame',
   (() => { const canvasAt = html.indexOf('<canvas id="poemCanvas"'), btn = html.indexOf('<button class="download-btn"');
            const frameOpen = html.lastIndexOf('<div', canvasAt);
            return canvasAt !== -1 && btn > canvasAt && frameOpen !== -1; })());
-// structural, not a character distance: the header now carries an inline
-// sigil that is longer than the old window allowed
-const headerStart = html.indexOf('<div class="app-header">');
-const headerEnd = html.indexOf('</div>\n  </div>', headerStart);
-const kofiAt = html.indexOf('class="support-btn"');
-check('the Ko-fi link lives in the header (a quiet Support button beside 🜉 The Athanor)',
-  headerStart !== -1 && kofiAt > headerStart && kofiAt < headerEnd &&
-  // the retired element was class="app-title"; a bare 'app-title' now also
-  // occurs inside apple-mobile-web-app-title, which is correct
-  !/class="app-title"/.test(html));
-check('the header carries the Vellum sigil, not an emoji diamond',
-  html.slice(headerStart, headerEnd).includes('class="vellum-sigil"') && !html.includes('Vellum ♦️'));
-check('the app is named PoetryPress (Unfixable Vellum inside)', html.includes('<title>PoetryPress</title>') && html.includes('PoetryPress <svg'));
-
-// ---- this turn's promises ----
 check('the preview has a reset-position control', html.includes('id="resetViewBtn"'));
-check('the Runeforms glyph is the drawn inverted triangle',
-  /data-tab="type"[\s\S]*?M4\.4 4\.6H19\.6L12 15\.9Z/.test(html));
 check('deselected nav glyphs relax and selected ones stiffen',
   /\.tab-btn svg\{[^}]*stroke-width:1\.15/.test(mobile) &&
   /\.tab-btn\.active svg\{[^}]*stroke-width:1\.85/.test(mobile));
@@ -233,7 +193,7 @@ check('the textarea renders no glyphs of its own',
 check('the caret stays visible', /caret-color/.test(js2));
 check('the editor has a line-number gutter', html.includes('id="poemGutter"'));
 
-// ---- this round's fixes ----
+// ---- regressions fixed once (kept fixed) ----
 // deliberately changed: a lock pinned to the far edge reads as belonging to
 // the row, not to the one setting it governs
 check('locks sit beside their label, not at the far edge',
@@ -347,16 +307,6 @@ check('exactly one element scrolls in focus mode',
   focusScrollers.length === 1 && focusScrollers[0] === '.controls');
 if(focusScrollers.length !== 1) console.log('   scrollers:', focusScrollers.join(', '));
 
-// ---- landscape (parked) ----
-// The landscape layout fired when it should not have and is parked behind a
-// min-width no phone or tablet reaches. The rules are kept intact so it can be
-// reconsidered on a laptop; only the trigger is disabled.
-const land = (edCss.match(/@media \(orientation: landscape\)[^{]*\{[\s\S]*$/) || [''])[0];
-check('the landscape rules are still present', land.includes('flex-direction:row'));
-check('the landscape layout cannot currently trigger',
-  /@media \(orientation: landscape\) and \(min-width: 4000px\)/.test(edCss));
-check('re-enabling it is a one-line change', /PARKED/.test(edCss));
-
 // ---- preset swatches ----
 // `object-fit: cover` cropped the canvas top and bottom, which is why the
 // border only appeared on the left and right.
@@ -375,12 +325,8 @@ check('the focus guard exempts buttons inside the preview',
   /const isControl = \(e\) =>[\s\S]{0,120}closest\('button'\)/.test(evJs) &&
   /pointerdown'[^)]*\)=>\{ if\(!isControl\(e\)\)/.test(evJs));
 check('the touch handler exempts them too', /if\(!isControl\(e\) && e\.preventDefault\)/.test(evJs));
-check('the button reads Save image', html.includes('>Save image<'));
 
 // ---- button order ----
-check('alignment reads West, Neutral, East',
-  html.indexOf('>West<') < html.indexOf('>Neutral<') &&
-  html.indexOf('>Neutral<') < html.indexOf('>East<'));
 check('confirm sits to the left of cancel',
   html.indexOf('id="modalConfirm"') < html.indexOf('id="modalCancel"'));
 

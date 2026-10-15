@@ -37,5 +37,33 @@ check('every spell is a valid one', PRESETS.every(p => validateSpell(p.spell || 
 { const { PANDORAN_RUNES } = await import('../spell.js');
   check('every preset\'s spell is written in Pandoran runes only (Ruby: Runology\'s Archetypes and Accents)', PRESETS.every(p => Array.from(p.spell.replace(/[\[\]{}]/g, '')).every(g => PANDORAN_RUNES.includes(g))) && PANDORAN_RUNES.length === 35); }
 
+
+// ---- every preset is readable (AGENTS.md §5.8: 3:1 or better against what is behind the text) ----
+{
+  const lum = h => { const n = parseInt(h.replace('#','').slice(0,6), 16);
+    return [n>>16, (n>>8)&255, n&255].map(v => { v /= 255; return v <= 0.03928 ? v/12.92 : ((v+0.055)/1.055)**2.4; })
+      .reduce((a, v, i) => a + v*[0.2126, 0.7152, 0.0722][i], 0); };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05)/(y + 0.05); };
+  // with an inset box (Normal blend) the text sits on the page mixed toward the box color by its opacity;
+  // other box blends fall back to the page, the stricter case
+  const mixHex = (a, b, t) => { const A = parseInt(a.slice(1,7),16), B = parseInt(b.slice(1,7),16);
+    const ch = s => Math.round(((A>>s)&255) + (((B>>s)&255) - ((A>>s)&255))*t);
+    return '#' + [16,8,0].map(ch).map(v => v.toString(16).padStart(2,'0')).join(''); };
+  const low = [];
+  for(const p of PRESETS){
+    let bgs = [p.bg1, p.bg2, p.bg3, p.bg4].filter(Boolean);
+    if(p.cardToggle && (p.cardBlend || 'source-over') === 'source-over'){
+      const o = (parseFloat(p.cardOpacity ?? 70) || 0)/100, box = p.cardColor1 || '#FFF6EE';
+      bgs = bgs.map(b => mixHex(b, box, o));
+    }
+    for(const k of ['text1','text2','text3','text4','accent1','accent2']){
+      if(!p[k]) continue;
+      const worst = Math.min(...bgs.map(b => ratio(p[k], b)));
+      if(worst < 3) low.push(`${p.name} ${k} ${worst.toFixed(1)}:1`);
+    }
+  }
+  check('every preset\'s text and accents reach 3:1 against the worst stop of what is behind them (box or page)' + (low.length ? ': ' + low.slice(0, 4).join(', ') : ''), low.length === 0);
+}
+
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

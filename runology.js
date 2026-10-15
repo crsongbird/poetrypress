@@ -55,7 +55,7 @@ export const ACCENTS = [
 ].map(([glyph, name]) => ({ glyph, name }));
 
 /** The Chroma: each with the hue Vellum draws it in and what it carries. */
-export const CHROMA = [
+export const CHROMA = [   // kept: Runology whole, as Symbology carries it (the colors wait for the presets pass)
   { name: 'Red',     glyph: '🔴', hex: '#C8402E', carries: 'fire, flame, combustion' },
   { name: 'Green',   glyph: '🟢', hex: '#4E9A5A', carries: 'wind, storm, severing' },
   { name: 'Blue',    glyph: '🔵', hex: '#2F62B0', carries: 'water, dilution, the cold' },
@@ -74,7 +74,6 @@ const BY_GLYPH = new Map([...ARCHETYPES.map(a => [a.glyph, a]), ...ACCENTS.map(a
 export const RUNE_BY_NAME = Object.fromEntries([...ARCHETYPES, ...ACCENTS].map(r => [r.name.toLowerCase(), r.glyph]));
 
 /** What a glyph is in Runology, or null. */
-export function runeOf(glyph){ return BY_GLYPH.get(glyph) || null; }
 
 /** A glyph spell (spell.js) read in Runology: the names of its Archetypes, in order. */
 export function readSpell(spell){

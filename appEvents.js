@@ -36,7 +36,7 @@ import { describeLook } from './altText.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
-import { RELEASE, RELEASE_DATE } from './release.js';
+import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout } from './textureGenerators.js';
@@ -1706,13 +1706,9 @@ function setupPhoneLayout(){
     let dragging = false;
     const setFrac = (f) => root.style.setProperty('--preview-frac',
     Math.min(PREVIEW.maxFraction, Math.max(PREVIEW.minFraction, f)).toFixed(3));
-    // One variable drives both orientations: in portrait it is a share of
-    // height, in landscape a share of width. The handle reads whichever axis
-    // it is actually dividing.
-    const sideBySide = () => window.innerWidth > window.innerHeight;
+    // the preview's share of the visible height (the phone layout is always one column)
     const fracFor = (e) => {
       const r = stageEl.getBoundingClientRect();
-      if(sideBySide()) return (e.clientX - r.left) / (window.innerWidth || 1);
       const visible = parseFloat(getComputedStyle(root).getPropertyValue('--vvh')) || window.innerHeight;
       return (e.clientY - r.top) / visible;
     };
@@ -3549,7 +3545,8 @@ function holdSurface(value, tile){
 
 // ---------- THE SURFACE MENUS AS TILES ----------
 // Each surface's tile is the surface as a preset wears it (its ground, hues, blend and knobs), or, worn by
-// none, its defaults on a ground that suits its blend. Thumbnails are kept for the release (chooser.js).
+// none, its defaults on a ground that suits its blend. Thumbnails are kept in the browser until what they are
+// painted from changes (chooser.js): the surface (its fingerprints' stamp), the look it wears, the painter.
 {
   const backFor = b => /multiply|darken|burn/.test(b) ? '#EEE4D2' : /screen|lighten|dodge/.test(b) ? '#100E16' : /overlay|soft|hard/.test(b) ? '#6A3A4E' : '#1A1720';
   const wornBy = type => PRESETS.find(p => p.textureType === type && p.texture);
@@ -3569,10 +3566,12 @@ function holdSurface(value, tile){
       const c = canvas.getContext('2d'); c.imageSmoothingQuality = 'high'; c.drawImage(big, 0, 0, canvas.width, canvas.height); done(); });
     return true;
   };
+  const stamp = value => String(value).startsWith('kept:') || value === 'athanor' ? ''
+    : `${TEXTURE_STAMPS[value] || ''}|${SWATCH_STAMP}|${keptHash(JSON.stringify(thumbLook(value)))}`;
   // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
   const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
   for(const [sel, title] of [[$('textureType'), CHOOSER.surfaceTitle], [$('baseType'), CHOOSER.baseTitle]]){
-    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, release: RELEASE, size: 160, hold: sel.id === 'textureType' ? holdSurface : null })); } catch(e){ /* the plain menu still works */ }
+    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, stamp, size: 160, hold: sel.id === 'textureType' ? holdSurface : null })); } catch(e){ /* the plain menu still works */ }
   }
 }

@@ -383,6 +383,20 @@ export function wikiContentsHtml(ctx = {}){
     return `<h4>${wkEsc(g)}</h4><ul>` + items.map(([id, t]) => `<li><a href="#" data-wiki="${wkEsc(id)}">${wkEsc(t)}</a></li>`).join('') + '</ul>';
   }).join('');
 }
+/** The reading order, as the contents lists it: each group's articles; under Parts, each category's
+ *  page followed by its parts (as its page lists them). Previous and next walk it. */
+export function wikiOrder(ctx = {}){
+  const cats = ctx.categories || [];
+  return WIKI_GROUPS.flatMap(g => g === 'Parts'
+    ? cats.flatMap(c => ['cat:' + c, ...Object.entries(STEPS).filter(([, s]) => s.cat === c).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([k]) => 'part:' + k)])
+    : WIKI_ARTICLES.filter(a => a.group === g).map(a => a.id));
+}
+/** The pages either side of one in the reading order: { prev, next }, each { id, title } or null. */
+export function wikiNeighbors(id, ctx = {}){
+  const order = wikiOrder(ctx), i = order.indexOf(String(id));
+  const at = j => (i >= 0 && order[j]) ? { id: order[j], title: String(order[j]).startsWith('cat:') && ctx.catName ? ctx.catName(order[j].slice(4)) : wikiTitle(order[j]) } : null;
+  return { prev: at(i - 1), next: at(i + 1) };
+}
 /** Search: titles first, then words in the text. Returns [{ id, title, where }]. */
 export function wikiSearch(q){
   q = String(q || '').trim().toLowerCase(); if(q.length < 2) return [];

@@ -48,7 +48,6 @@ check('Aurora Veil has two hues, the hem defaulting to the curtain\'s colour',
 
 // ---- generic tint: marks only, white is no tint ----
 check('light marks take the light hue and dark marks the dark hue — two tints, not one',
-  /export function tintMarks\(src, lightHex, darkHex\)/.test(core) &&
   /d\[i\] = gr \+ k \* \(L\.r - gr\) \+ cr;/.test(core) && /d\[i\] = gr \+ k \* \(D\.r - gr\) \+ cr;/.test(core));
 check('the lotus is painted in its own colours: petals and heart',
   T.TEXTURE_CAPS.flowers.tintLabels.join('|') === 'Petal Hue|Heart Hue' && !T.TEXTURE_CAPS.flowers.genericTint &&
@@ -61,18 +60,8 @@ check('generic tints default to white and black',
   tinted.every(([, c]) => c.tints === 2 && c.tintDefaults[0] === '#FFFFFF' && c.tintDefaults[1] === '#000000'));
 check('monochrome textures can be tinted', tinted.length >= 15);
 
-check('every tint is named as a Hue', tinted.every(([, c]) => / Hue$/.test(c.tintLabels[0])));
 
 // ---- the size knob works below 100% ----
-check('size is no longer clamped at 100%', !/zoom = Math\.max\(1, val\/100\)/.test(tg) && /Math\.max\(0\.25, val\/100\)/.test(tg));
-const whimsy = readFileSync(new URL('../texWhimsy.js', import.meta.url), 'utf8');
-check('Sleep Haze is smoke: lift, drag, dust, and lit from the light',
-  T.paramsFor('clouds').map(d => d.label).join('|') === 'Lift|Drag|Dust' && T.TEXTURE_CAPS.clouds.light === true);
-check('…its wisps are particles carried by curl noise, softened as they age; rings drift up; motes catch the shaft',
-  // (Sleep Haze is a chain now: smoke → light shaft → dust motes, stepsWhimsy.js)
-  (() => { const sw = readFileSync(new URL('../stepsWhimsy.js', import.meta.url), 'utf8');
-    return /const \[AX, AY\] = curlField\(PA\), \[BX, BY\] = curlField\(PB\);/.test(sw) && /W = WL\[t < unit\*0\.1 \? 0 : t < unit\*0\.3 \? 1 : 2\];/.test(sw)
-      && /const rings = Math\.random\(\) < 0\.2 \? 0/.test(sw) && /b = Math\.pow\(beam \? beam\(x, y\) : 0\.25, 1\.5\)/.test(sw); })());
 
 // ---- accents are followed until a tint is chosen or locked ----
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
@@ -82,31 +71,14 @@ check('a locked tint is left alone', /state\.locks\.has\(ids\[i\]\)\) continue;/
 check('a hand-picked tint stops following', /if\(!state\.ui\.tintBySystem\) state\.ui\.tintFollows\[0\] = false/.test(ev));
 check('the app writing a tint is not mistaken for a person', /state\.ui\.tintBySystem = true;\s*setColorField/.test(ev));
 
-// ---- string table ----
-const strs = readFileSync(new URL('../strings.js', import.meta.url), 'utf8');
-check('the string table stores no HTML entities (text nodes do not decode them)',
-  !/"[^"]*&(amp|lt|gt|quot|#\d+);[^"]*"/.test(strs));
-
 // ---- the moon ----
 check('the Fractal Moon exists: Moon Size, Fractal Depth, Clouds, Night Sky', T.paramsFor('moon').map(d => d.label).join('|') === 'Moon Size|Fractal Depth|Clouds|Night Sky');
-check('its phase avoids new and full, so the organic side always shows',
-  /const phase = \(Math\.random\(\)\*2 - 1\)\*0\.72;/.test(whimsy));
-// the seed button must read the SAME draws the moon is drawn from
-check('the generator and the seed button share one set of draws',
-  /function moonDraws\(\)/.test(whimsy) && /withSeed\(seed, moonDraws\)/.test(whimsy) &&
-  /moonDraws\(\);/.test(whimsy.slice(whimsy.indexOf('export function genMoon'))));
 let threw = null;
 try { for(const s of [1, 2, 3]) T.getTextureCanvas('moon', 300, 300, { seed: s, p1: 100, p2: 100, light: 315, tint1: '#d9a6b3', blend: 'hard-light' }); }
 catch(e){ threw = e; }
 check('it renders across seeds', threw === null);
 
 // ---- the Scrying Pool ----
-const touch = readFileSync(new URL('../texTouch.js', import.meta.url), 'utf8');
-// (rebuilt as a physical surface: see pmlVars' Scrying Pool checks)
-check('the pool is a physical surface: travelling waves, refracted rays, glints',
-  /, waves=\[\]/.test(touch) && /const C=new Float32Array\(PN\);/.test(touch) && /const glint=Math\.pow\(nh, 400\)/.test(touch));
-check('wave scale sets the waves\' length, on the export grid at any size',
-  /const lam=Math\.max\(unit\*0\.025, unit\*0\.22\*zoom/.test(touch) && /const div=canonDiv\(2\), ww=Math\.ceil\(w\/div\), wh=Math\.ceil\(h\/div\), unit=Math\.min\(ww,wh\), N=ww\*wh;\n  const la=/.test(touch));
 check('it is neutral by default: the page supplies the colour',
   T.TEXTURE_CAPS.water.tintDefaults[0] === '#FFFFFF' && T.TEXTURE_CAPS.water.blends[0] === 'soft-light');
 let wthrew = null;

@@ -63,6 +63,14 @@ const E = await import('../effects.js');
 check('every old /effect name still translates (effects.js)',
   TYPE_EFFECT_NAMES.filter(n => n !== 'none').every(n => { const L = E.legacyTypeEffect(n, 60, '#000', 45, 100, 30); return !!(L.fx || L.under); }));
 
+// ---- Ruby's Aether (both pieces, as written in PML): captured when it joined the fixtures, never regenerated ----
+{
+  const text = readFileSync(new URL('./fixtures/aether.pml.txt', import.meta.url), 'utf8');
+  const pieces = text.split(/^=== .* ===\s*$/m).map(s => s.trim()).filter(Boolean);
+  const want = JSON.parse(readFileSync(new URL('./fixtures/aether-golden.json', import.meta.url), 'utf8'));
+  check('Aether still parses exactly as it did (the square card and the full piece)', pieces.length === want.length && pieces.every((p, i) => strip(buildLines(p, true, true)) === want[i]));
+}
+
 // ---- fields must survive the rebuild ----
 // buildLines copies each part into a fresh object field by field; a field a
 // directive sets but the copy omits is parsed and then silently dropped.
@@ -72,6 +80,22 @@ const copyLine = (tp.match(/return \{ justify:p\.justify,[^}]*\}/) || [''])[0];
 const dropped = setFields.filter(f => !copyLine.includes(f + ':p.' + f));
 check('every field a directive sets is carried through', dropped.length === 0);
 if(dropped.length) console.log('   dropped:', dropped.join(', '));
+
+
+// ---- fonts: /f:N picks by position, so the order is frozen (AGENTS.md §7) ----
+{
+  const { FONTS, FONT_GROUPS } = await import('../appOptions.js');
+  const FROZEN = ['Bodoni Moda','Cormorant Garamond','Crimson Pro','EB Garamond','Literata','Playfair Display','Merriweather',
+    'Courier Prime','Space Mono','JetBrains Mono','Cinzel','Oswald','Architects Daughter','Caveat','Shadows Into Light','Inter',
+    'Poppins','Nunito','Roboto','Work Sans','Josefin Sans','Unica One'];
+  check('the first 22 fonts keep their positions (PML /f:N selects by position; new fonts are appended)', FROZEN.every((f, i) => FONTS[i].family === f));
+  check('every font is labelled "Style · Family"', FONTS.every(f => / · /.test(f.label)));
+  const grouped = FONT_GROUPS.flatMap(g => g[1]);
+  check('every font sits in exactly one picker group, and every group name is a real font',
+    FONTS.every(f => grouped.filter(n => n === f.family).length === 1) && grouped.every(n => FONTS.some(f => f.family === n)));
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  check('every page font is requested from Google Fonts', FONTS.every(f => html.includes('family=' + f.family.replace(/ /g, '+'))));
+}
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

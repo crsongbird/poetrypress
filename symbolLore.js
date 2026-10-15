@@ -211,9 +211,7 @@ export const LORE = [
   ["✩","Stress-outlined star","Stars"],
 ];
 
-const LORE_BY = new Map(LORE.map(r => [r[0], r]));
 /** A symbol's name (or ''). */
-export function loreName(glyph){ const r = LORE_BY.get(glyph); return r ? r[1] : ''; }
 export const PLANETS = ['♄', '♃', '♂', '☉', '♀', '☿', '☽'];
 export const ZODIAC = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'].map(g => g + '\uFE0E');
 // spells take one code point each, and nothing a browser would paint as an emoji

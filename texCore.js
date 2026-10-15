@@ -224,7 +224,7 @@ export function setGpuLight(on){ GPU_LIGHT = !!on; }
 let GPU_SOFT_OK = false;
 export function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; } }
 /** What lit this texture: 'gpu', or 'cpu' (no WebGL2, an emulator, or switched off). */
-export function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }
+export function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }   // test hook: which path lights (Node: always the CPU)
 function gpu(){
   if(GPU !== undefined) return GPU;
   GPU = null;
@@ -585,9 +585,7 @@ export function pixelPass(src, lightHex, darkHex, family, groundHex){
   return src;
 }
 /** The tint alone (white over black is the identity: if(lightIsWhite && darkIsBlack) return src). */
-export function tintMarks(src, lightHex, darkHex){ return pixelPass(src, lightHex, darkHex, null); }
 /** The remap alone. */
-export function remapNeutral(src, family){ return family === 'mid' ? src : pixelPass(src, null, null, family); }
 
 // A smooth field sampled on a coarse lattice every `step` pixels and blended
 // between: broad shapes (stone, swells, moss, a nebula, smoke's body) change

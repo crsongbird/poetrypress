@@ -8,7 +8,7 @@
  * Run: node test/chooser.test.mjs
  */
 import { readFileSync } from 'fs';
-const { chGroupsOf, chMatches, chCacheFor, CHOOSER_CACHE_KEY } = await import('../chooser.js');
+const { chGroupsOf, chMatches, chCacheFor, chCached, CHOOSER_CACHE_KEY } = await import('../chooser.js');
 let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -31,10 +31,15 @@ check('a search needs every word, anywhere in the name, group or extra words',
   chMatches('rose glass', { text: 'Stained Glass', value: 'stainedglass' }, 'Materials & Craft', 'Rose Window Seedy Amber') &&
   !chMatches('rose paper', { text: 'Stained Glass', value: 'stainedglass' }, 'Materials & Craft', 'Rose Window') &&
   chMatches('', { text: 'x', value: 'x' }, '', ''));
-check('thumbnails are kept per release: a new release starts empty',
-  chCacheFor(JSON.stringify({ release: 'A', map: { moon: 'data:' } }), 'A').map.moon === 'data:' &&
-  Object.keys(chCacheFor(JSON.stringify({ release: 'A', map: { moon: 'data:' } }), 'B').map).length === 0 &&
-  Object.keys(chCacheFor('not json', 'B').map).length === 0);
+{
+  const raw = JSON.stringify({ map: { moon: { s: 'A', url: 'data:image/jpeg;base64,x' } } });
+  check('a kept thumbnail shows while its stamp is the same, across visits and releases', chCached(chCacheFor(raw), 'moon', 'A') === 'data:image/jpeg;base64,x');
+  check('…and is painted again once its surface (or the look it wears) changed: a new stamp', chCached(chCacheFor(raw), 'moon', 'B') === null);
+  check('an unreadable store starts empty', Object.keys(chCacheFor('not json').map).length === 0 && Object.keys(chCacheFor(JSON.stringify({ release: 'A', map: [] })).map).length === 0);
+  const R = await import('../release.js');
+  check('every surface in the menu has a stamp from its fingerprints (build.mjs writes them into release.js)',
+    Object.keys(R.TEXTURE_STAMPS).length > 40 && typeof R.SWATCH_STAMP === 'string' && R.SWATCH_STAMP.length === 8);
+}
 check('the cache key is versioned', /\.v\d+$/.test(CHOOSER_CACHE_KEY));
 check('both surface menus are shown as choosers, and refreshUi keeps their buttons current',
   /\[\$\('textureType'\), CHOOSER\.surfaceTitle\], \[\$\('baseType'\), CHOOSER\.baseTitle\]/.test(ev) && /for\(const ch of CHOOSERS\) ch\.refresh\(\)/.test(ev));

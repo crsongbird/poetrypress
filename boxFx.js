@@ -21,7 +21,6 @@
  */
 
 const BFX_MAX = 1024;            // the working rectangle's long side, at most
-export const BOX_GLASS = ['none', 'frost', 'lens', 'reeded', 'pixel', 'emboss', 'prism'];
 export const BOX_GPU_BLENDS = ['vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
 
 const BFX_FRAG = `#version 300 es

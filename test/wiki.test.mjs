@@ -58,5 +58,14 @@ check('every link in the wiki leads to a page' + (dead.length ? ': ' + dead.slic
 check('the concept pages answer the basics: what a gray map, a picture, a curve and a mask are', ['graymap', 'picture', 'curve', 'masks', 'kinds'].every(id => W.WIKI_ARTICLES.find(a => a.id === id && a.body.length > 400)));
 check('a part page lists its inputs, outputs and settings', (() => { const h = W.wikiArticleHtml('part:levels'); return /Inputs/.test(h) && /Outputs/.test(h) && /Settings/.test(h) && /Black Point/.test(h) && /required/.test(h); })());
 check('search finds articles and parts', W.wikiSearch('mask').length > 3 && W.wikiSearch('levels').some(h => h.id === 'part:levels'));
+{
+  const ctx = { categories: S.STEP_CATEGORIES, catName: c => c };
+  const order = W.wikiOrder(ctx);
+  check('the reading order holds every article and every part, once each', new Set(order).size === order.length
+    && W.WIKI_ARTICLES.every(a => order.includes(a.id)) && keys.every(k => order.includes('part:' + k)));
+  const first = W.wikiNeighbors(order[0], ctx), last = W.wikiNeighbors(order.at(-1), ctx), mid = W.wikiNeighbors('part:levels', ctx);
+  check('previous and next walk it: none before the first page, none after the last, two around a part',
+    !first.prev && first.next && first.next.id === order[1] && !last.next && mid.prev && mid.next && mid.prev.title && mid.next.title);
+}
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

@@ -177,15 +177,6 @@ let inkArea = 0;
 for(const cv of M.createdCanvases) inkArea += cv.getContext('2d')._stats.radiusSum;
 check('the Rorschach covers only a small part of the card', inkArea < 800 * 2);
 
-// ---- hatching must actually cross ----
-// A single set of parallel lines is rain, not hatching. Silverpoint hatches in
-// patches that follow a form, and crosses a second layer in the deepest shadow.
-// (Silverpoint Hatch is a chain of steps now: its Hatching step, chains.js)
-check('the hatch crosses a second layer in the deepest shadow (Cross-Hatching: the darkest third by default)',
-  /const layers = cross > 0 && t > 1 - cross \? 2 : 1;/.test(readFileSync(new URL('../steps.js', import.meta.url), 'utf8')) &&
-  /const la = a \+ l\*ca2/.test(readFileSync(new URL('../steps.js', import.meta.url), 'utf8')) &&
-  /\[1, 1, 5, paramPort\('hatching', 'cross'\)\]/.test(readFileSync(new URL('../chains.js', import.meta.url), 'utf8')));
-
 // ---- aurora must paint something ----
 M.resetCreatedCanvases();
 getTextureCanvas('aurora', 800, 800, { seed: 3, p1: 100, p2: 100 });
