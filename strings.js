@@ -53,6 +53,7 @@ export const UI_STRINGS = {
   'button.randomBgBtn':                    "⟳ Summon New Backdrop",
   'button.randomSurfaceBtn':               "⟳ Summon New Surface",
   'button.revealSurfaceBtn':               "🜉 Open in the Athanor",
+  'button.protectTextBtn':                 "◐ Protect the Text",
   'button.spellCreateBtn':                 "Create",
   'button.spellApplyBtn':                  "Invoke",
   'button.spellShareBtn':                     "Share",
@@ -378,6 +379,18 @@ export const PML_GUIDE = {
 export const SURFACE_LAYERS = {
   swappedUp: 'The surfaces traded places: the one that was beneath is on top.',
   swappedDown: 'The surfaces traded places: the one that was on top is beneath.',
+};
+// PROTECT THE TEXT (the button under Text Clearing): what it found and what it did.
+// {words} is the faintest line's opening words, {ratio} its contrast, {need} the aim, {amount} the clearing.
+export const PROTECT = {
+  locked: 'Text Clearing is locked. Unlock it to let Protect the Text raise it.',
+  noWords: 'There are no words on the page to protect.',
+  already: 'Already readable: even the faintest line, “{words}”, stands at {ratio}:1 against what it sits on. {need}:1 is enough.',
+  raised: 'Text Clearing raised to {amount}%: every line now stands at {ratio}:1 or better against what it sits on.',
+  raisedBut: 'Text Clearing raised to {amount}%: every line clearing can help now stands at {need}:1 or better. “{words}” can’t get there by clearing (at most {ratio}:1): its ink is too close to the backdrop beneath.',
+  short: 'Cleared all the way: “{words}” now stands at {ratio}:1, short of {need}:1. Its ink is close to the backdrop: a lighter or darker ink would help.',
+  cannot: 'Clearing can’t help: “{words}” stands at {ratio}:1, and the backdrop beneath the surfaces is as close to its ink. Try a lighter or darker ink, or another backdrop.',
+  noSurface: 'No surface is shown, so there is nothing to clear: “{words}” stands at {ratio}:1 against the backdrop. A lighter or darker ink, or backdrop, would help.',
 };
 export const CHOOSER = {
   search: 'Search by name, group or mood…',

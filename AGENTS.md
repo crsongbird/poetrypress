@@ -448,6 +448,16 @@ Other parts of a look:
     change asks for one more frame, and only when something reads it.
   - **Text Clearing** (`textureClearing`) takes a soft mask of the runs out
     of each surface layer. The mask is 192 px across, blurred there.
+  - **Protect the Text** (`protectText`, ROADMAP G3) raises Text Clearing to
+    the least that brings every line to `READABLE.ratio` (tunables.js).
+    `measureTextGround()` draws a frame that keeps a small copy of its ground
+    just before the words, and `groundContrast` reads each run against it,
+    segment by segment in the ink written there (accents, a gradient along
+    a segment, the page's text gradient, a quote's faintness). It never
+    lowers the clearing and a lock holds it; a line clearing can't help is
+    named by its words and left out of the aim.
+  - The **Ink** part hands a graph the text color (after the two accents in
+    `ctx.accents`); only a graph with one keys its cache on the ink.
 - **Stitches** (stitches.js):
   - `STITCH_STYLES` is the menu; parse with `STITCH_NAMES`; draw through
     `stitchOf()`.
@@ -1060,6 +1070,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
 - The worker's script block must be in `<head>`: it has to exist before the
   page first asks for a texture.
 - `__BUILD_STAMP__` left unreplaced reads as underline markup in PML.
+- build.mjs inlines the bundle with a replacer FUNCTION: a replacement
+  string reads `$&` in the code as "the match" (a `'$&$&'` once pasted the
+  script tag into the middle of the page). It checks the code went in
+  verbatim.
 
 **Textures**
 - `amt` is floored at 2%. A knob that must reach 0 needs its own key

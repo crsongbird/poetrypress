@@ -2281,6 +2281,19 @@ const MARKS = {
   insetY: 0.025,
 };
 
+/** Protect the Text: how readable the words must be against what they sit on. */
+const READABLE = {
+  /** The contrast every line must reach, its ink against the ground beneath
+   *  it (WCAG's 3:1, the same the presets are held to). */
+  ratio: 3,
+  /** The share of the ground under a line allowed to fall short: a speck of
+   *  a busy surface shouldn't make a line unreadable. */
+  allowance: 0.1,
+  /** The page is measured this many pixels across, whatever its size, so the
+   *  preview and the saved image measure alike. */
+  probeWidth: 360,
+};
+
 /** Glyph spells. */
 const SPELLS = {
   /** Allowed lengths. Must all be prime — validation checks it. */
@@ -12977,6 +12990,8 @@ const STEP_PARTS = {
   colour:   { cat: 'Inputs', label: 'Color', ins: [], outs: ['colour'], params: [['hex', 'Color', 'text', '#808080']] },
   // the page's own two accent colors (Cartomancy's first two suits)
   accent:   { cat: 'Inputs', label: 'Accent', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Accent', ['1', '2']), ['name', 'Name', 'text', 'Accent']] },
+  // the poem's own ink (ROADMAP G3): a surface that keeps its distance from the words' color
+  ink:      { cat: 'Inputs', label: 'Ink', ins: [], outs: ['colour'], params: [['name', 'Name', 'text', 'Ink']] },
   // the page's own backdrop (Materia's color or gradient): what a surface drawn over the whole page can be made of
   backdrop: { cat: 'Inputs', label: 'Page Backdrop', ins: [], outs: ['picture'], params: [] },
   forms:    { cat: 'Noise', label: 'Soft Forms', ins: [], outs: ['tone'], params: [STEP_R('count', 'Forms', 5, 1, 12), STEP_R('size', 'Size', 50), STEP_R('noise', 'Noise', 50)] },
@@ -13071,6 +13086,7 @@ const STEP_DOCS = {
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
   accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  ink: 'Brings the poem’s ink, the color its words are written in, into the graph.',
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
@@ -13471,6 +13487,8 @@ const STEP_RUN = {
   accent(E, n){ const { ctx, P, hexCol } = E, k = (parseInt(P(n, 'slot', '1'), 10) || 1) - 1;
     return [hexCol((ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k] || '#808080')];
   },
+  // (the page's text color; a gradient's first stop. The Athanor's own previews, with no page, write in the default ink)
+  ink(E){ return [E.hexCol((E.ctx.accents || [])[2] || '#F2F2EF')]; },
   // the backdrop's colors, top to bottom (a board's green where there is no page: the Athanor's own previews)
   backdrop(E){ const { ww, wh, N, ctx, hexCol } = E;
     const cols = (Array.isArray(ctx.env) && ctx.env.length ? ctx.env : ['#16382B', '#0B2219']).map(c => hexCol(String(c))), last = cols.length - 1;
@@ -13855,7 +13873,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
@@ -16338,6 +16356,8 @@ function describeRequest(type, w, h, opts){
   // (Cartomancy's first two suits are the accents; an Athanor graph with an Accent node reads them too)
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards'
     || ((type === 'athanor' || type === 'athanorsteps') && /"name":\s*"accent"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''))));
+  // (and a graph with an Ink part changes with the poem's ink; any other surface never sees it)
+  const inkKeyed = (type === 'athanor' || type === 'athanorsteps') && /"name":\s*"ink"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''));
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
@@ -16347,7 +16367,8 @@ function describeRequest(type, w, h, opts){
             + (env ? `_e${env}` : '')
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
-            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '');
+            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
+            + (inkKeyed ? `_i${opts.ink || ''}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
@@ -16476,7 +16497,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2] }))));
+    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2, opts.ink || null] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -16998,6 +17019,7 @@ held on till bright~B</code></p>
           <input type="range" id="textureClearing" min="0" max="100" value="0">
           <span class="range-val" id="textureClearingVal">0%</span>
         </div>
+        <button class="ghost full" id="protectTextBtn" type="button" data-str="button.protectTextBtn" title="Raises Text Clearing just far enough that every line of the poem stands at 3:1 contrast or better against what it sits on (its ink against the ground beneath it, measured on the page itself). It never lowers the clearing. A line whose own ink is too close to the backdrop beneath can't be helped by clearing: it is named, and left out of the aim.">◐ Protect the Text</button>
       </div>
     </details>
 
@@ -17818,6 +17840,19 @@ const MARKS = {
   insetY: 0.025,
 };
 
+/** Protect the Text: how readable the words must be against what they sit on. */
+const READABLE = {
+  /** The contrast every line must reach, its ink against the ground beneath
+   *  it (WCAG's 3:1, the same the presets are held to). */
+  ratio: 3,
+  /** The share of the ground under a line allowed to fall short: a speck of
+   *  a busy surface shouldn't make a line unreadable. */
+  allowance: 0.1,
+  /** The page is measured this many pixels across, whatever its size, so the
+   *  preview and the saved image measure alike. */
+  probeWidth: 360,
+};
+
 /** Glyph spells. */
 const SPELLS = {
   /** Allowed lengths. Must all be prime — validation checks it. */
@@ -17889,6 +17924,7 @@ const UI_STRINGS = {
   'button.randomBgBtn':                    "⟳ Summon New Backdrop",
   'button.randomSurfaceBtn':               "⟳ Summon New Surface",
   'button.revealSurfaceBtn':               "🜉 Open in the Athanor",
+  'button.protectTextBtn':                 "◐ Protect the Text",
   'button.spellCreateBtn':                 "Create",
   'button.spellApplyBtn':                  "Invoke",
   'button.spellShareBtn':                     "Share",
@@ -18214,6 +18250,18 @@ const PML_GUIDE = {
 const SURFACE_LAYERS = {
   swappedUp: 'The surfaces traded places: the one that was beneath is on top.',
   swappedDown: 'The surfaces traded places: the one that was on top is beneath.',
+};
+// PROTECT THE TEXT (the button under Text Clearing): what it found and what it did.
+// {words} is the faintest line's opening words, {ratio} its contrast, {need} the aim, {amount} the clearing.
+const PROTECT = {
+  locked: 'Text Clearing is locked. Unlock it to let Protect the Text raise it.',
+  noWords: 'There are no words on the page to protect.',
+  already: 'Already readable: even the faintest line, “{words}”, stands at {ratio}:1 against what it sits on. {need}:1 is enough.',
+  raised: 'Text Clearing raised to {amount}%: every line now stands at {ratio}:1 or better against what it sits on.',
+  raisedBut: 'Text Clearing raised to {amount}%: every line clearing can help now stands at {need}:1 or better. “{words}” can’t get there by clearing (at most {ratio}:1): its ink is too close to the backdrop beneath.',
+  short: 'Cleared all the way: “{words}” now stands at {ratio}:1, short of {need}:1. Its ink is close to the backdrop: a lighter or darker ink would help.',
+  cannot: 'Clearing can’t help: “{words}” stands at {ratio}:1, and the backdrop beneath the surfaces is as close to its ink. Try a lighter or darker ink, or another backdrop.',
+  noSurface: 'No surface is shown, so there is nothing to clear: “{words}” stands at {ratio}:1 against the backdrop. A lighter or darker ink, or backdrop, would help.',
 };
 const CHOOSER = {
   search: 'Search by name, group or mood…',
@@ -30993,6 +31041,8 @@ const STEP_PARTS = {
   colour:   { cat: 'Inputs', label: 'Color', ins: [], outs: ['colour'], params: [['hex', 'Color', 'text', '#808080']] },
   // the page's own two accent colors (Cartomancy's first two suits)
   accent:   { cat: 'Inputs', label: 'Accent', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Accent', ['1', '2']), ['name', 'Name', 'text', 'Accent']] },
+  // the poem's own ink (ROADMAP G3): a surface that keeps its distance from the words' color
+  ink:      { cat: 'Inputs', label: 'Ink', ins: [], outs: ['colour'], params: [['name', 'Name', 'text', 'Ink']] },
   // the page's own backdrop (Materia's color or gradient): what a surface drawn over the whole page can be made of
   backdrop: { cat: 'Inputs', label: 'Page Backdrop', ins: [], outs: ['picture'], params: [] },
   forms:    { cat: 'Noise', label: 'Soft Forms', ins: [], outs: ['tone'], params: [STEP_R('count', 'Forms', 5, 1, 12), STEP_R('size', 'Size', 50), STEP_R('noise', 'Noise', 50)] },
@@ -31087,6 +31137,7 @@ const STEP_DOCS = {
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
   accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  ink: 'Brings the poem’s ink, the color its words are written in, into the graph.',
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
@@ -31487,6 +31538,8 @@ const STEP_RUN = {
   accent(E, n){ const { ctx, P, hexCol } = E, k = (parseInt(P(n, 'slot', '1'), 10) || 1) - 1;
     return [hexCol((ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k] || '#808080')];
   },
+  // (the page's text color; a gradient's first stop. The Athanor's own previews, with no page, write in the default ink)
+  ink(E){ return [E.hexCol((E.ctx.accents || [])[2] || '#F2F2EF')]; },
   // the backdrop's colors, top to bottom (a board's green where there is no page: the Athanor's own previews)
   backdrop(E){ const { ww, wh, N, ctx, hexCol } = E;
     const cols = (Array.isArray(ctx.env) && ctx.env.length ? ctx.env : ['#16382B', '#0B2219']).map(c => hexCol(String(c))), last = cols.length - 1;
@@ -31871,7 +31924,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
@@ -34354,6 +34407,8 @@ function describeRequest(type, w, h, opts){
   // (Cartomancy's first two suits are the accents; an Athanor graph with an Accent node reads them too)
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards'
     || ((type === 'athanor' || type === 'athanorsteps') && /"name":\s*"accent"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''))));
+  // (and a graph with an Ink part changes with the poem's ink; any other surface never sees it)
+  const inkKeyed = (type === 'athanor' || type === 'athanorsteps') && /"name":\s*"ink"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''));
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
@@ -34363,7 +34418,8 @@ function describeRequest(type, w, h, opts){
             + (env ? `_e${env}` : '')
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
-            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '');
+            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
+            + (inkKeyed ? `_i${opts.ink || ''}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
@@ -34492,7 +34548,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2] }))));
+    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2, opts.ink || null] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -35154,7 +35210,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Calypso';
+const RELEASE = 'Saturn–Dione';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -35983,7 +36039,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 5098b30";
+const STAMP = "2026-10-15 · 4e31963";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -36317,6 +36373,62 @@ function clearingMask(W, H){
   x.putImageData(im, 0, 0);
   CLEAR_MASK = { key, canvas: c };
   return c;
+}
+// PROTECT THE TEXT (ROADMAP G3): how well the words stand off what they sit on. Asked for, a frame keeps a
+// small copy of itself just before its words are drawn (backdrop, surfaces, vignette, box, border: all the
+// ground) and measures each line on it: the ink against the ground beneath, as a contrast ratio (WCAG's).
+// The probe is a fixed size in page fractions, so the preview and the export measure alike.
+let GROUND_PROBE = null, PROBE_LAYER = null, PROBE_INK_LAYER = null, PROBE_INKS = null;
+const LIN = new Float32Array(256).map((_, v) => { v /= 255; return v <= 0.04045 ? v/12.92 : Math.pow((v + 0.055)/1.055, 2.4); });
+/** A color the words are written in, as [r, g, b, alpha] (a quote is written fainter); null if it isn't a hex. */
+function inkOf(c, alpha = 1){ let h = String(c || '').trim().replace('#', '');
+  if(/^[0-9a-f]{3}$/i.test(h)) h = h.replace(/./g, c => c + c);
+  if(!/^[0-9a-f]{6}/i.test(h)) return null;
+  const n = parseInt(h.slice(0, 6), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255, alpha]; }
+/** How a run's words are colored, at a point of the probe: its span's ink (a span is one segment of the line). */
+function spanInks(sp, fx, x, y, gw, inkField){
+  if(sp.ramp){ const n = sp.ramp.length, t = Math.max(0, Math.min(1, (fx - sp.x0)/Math.max(1e-6, sp.x1 - sp.x0)))*(n - 1), i = Math.min(n - 2, Math.floor(t)), f = t - i;
+    if(n < 2) return sp.ramp; const a = sp.ramp[i], b = sp.ramp[i + 1];
+    return [[a[0] + (b[0] - a[0])*f, a[1] + (b[1] - a[1])*f, a[2] + (b[2] - a[2])*f, a[3]]]; }
+  if(sp.page){ const i = (y*gw + x)*4; return [[inkField[i], inkField[i + 1], inkField[i + 2], sp.alpha]]; }
+  return sp.inks;
+}
+/** Each run's contrast against its ground: the ground's pixels (RGBA, gw × gh) under the run's box (page
+ *  fractions), against the ink written there (a faint ink laid over the ground as it is drawn), read where only
+ *  `allowance` of the ground falls lower. A run is { box: [x0, y0, x1, y1], line, words, inks } (held to the worst of
+ *  its inks), or carries `spans` across it: { x0, x1, inks }, a ramp of colors along it ({ ramp }), or the
+ *  page's own ink read from `inkField` ({ page, alpha }: a text gradient laid across the page). */
+function groundContrast(data, gw, gh, runs, allowance = READABLE.allowance, inkField = null){
+  const lines = [], ink = k => Array.isArray(k) ? k : inkOf(k);
+  for(const run of runs){ const [x0, y0, x1, y1] = run.box;
+    const spans = (run.spans || [{ x0, x1, inks: run.inks }]).map(sp => ({ ...sp, inks: (sp.inks || []).map(ink).filter(Boolean), ramp: sp.ramp && sp.ramp.map(ink).filter(Boolean) }))
+      .filter(sp => sp.inks.length || (sp.ramp && sp.ramp.length) || (sp.page && inkField));
+    if(!spans.length) continue;
+    const r = [];
+    for(let x = Math.max(0, Math.floor(x0*gw)); x < Math.min(gw, Math.ceil(x1*gw)); x++){
+      const fx = (x + 0.5)/gw;
+      let sp = spans[0], d = Infinity;   // the span written here, or the nearest (the room between them)
+      for(const s of spans){ const dd = fx < s.x0 ? s.x0 - fx : fx > s.x1 ? fx - s.x1 : 0; if(dd < d){ d = dd; sp = s; } }
+      for(let y = Math.max(0, Math.floor(y0*gh)); y < Math.min(gh, Math.ceil(y1*gh)); y++){
+        const i = (y*gw + x)*4, R = data[i], G = data[i + 1], B = data[i + 2], g = 0.2126*LIN[R] + 0.7152*LIN[G] + 0.0722*LIN[B];
+        let m = Infinity;
+        for(const [kr, kg, kb, a] of spanInks(sp, fx, x, y, gw, inkField)){
+          const k = 0.2126*LIN[Math.round(kr*a + R*(1 - a))] + 0.7152*LIN[Math.round(kg*a + G*(1 - a))] + 0.0722*LIN[Math.round(kb*a + B*(1 - a))];
+          const c = (Math.max(k, g) + 0.05)/(Math.min(k, g) + 0.05); if(c < m) m = c; }
+        r.push(m); } }
+    if(!r.length) continue;
+    r.sort((a, b) => a - b);
+    lines.push({ line: run.line, words: run.words || '', ratio: r[Math.min(r.length - 1, Math.floor(r.length*allowance))] });
+  }
+  const worst = lines.reduce((w, l) => !w || l.ratio < w.ratio ? l : w, null);
+  return { lines, worst: worst ? worst.ratio : Infinity, line: worst ? worst.line : -1, words: worst ? worst.words : '' };
+}
+/** Draw a frame and measure it: each line of the poem against what it sits on (null with no words). */
+function measureTextGround(){
+  GROUND_PROBE = { ask: true };
+  try { render(); } finally { PROBE_INKS = null; }
+  const got = GROUND_PROBE; GROUND_PROBE = null;
+  return got && got.result && got.result.lines.length ? got.result : null;
 }
 /** A surface with the words' clearing taken out of it (destination-out), on a layer kept between frames. */
 function clearedSurface(t, W, H, amount){
@@ -36699,6 +36811,16 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
       g.addColorStop(0, c1); g.addColorStop(1, c2);
       segFill = g;
     }
+
+    // (protecting the text: the color this segment is written in, across its width, faint as a quote is)
+    if(PROBE_INKS){ const PW = ctx.canvas.width, sp = { x0: x/PW, x1: (x + Math.max(w, 1))/PW }, k = c => inkOf(c, quoteAlpha), c = seg.color;
+      const ramp = style.customGradientColors && style.customGradientColors.length>=2 ? style.customGradientColors
+        : c==='gradFwd' ? [accent1Color, accent2Color] : c==='gradRev' ? [accent2Color, accent1Color]
+        : c==='lgAccent1' ? [style.plainTextColor, accent1Color] : c==='rgAccent1' ? [accent1Color, style.plainTextColor]
+        : c==='lgAccent2' ? [style.plainTextColor, accent2Color] : c==='rgAccent2' ? [accent2Color, style.plainTextColor] : null;
+      const solid = c==='accent1' ? accent1Color : c==='accent2' ? accent2Color : typeof baseFillStyle === 'string' ? baseFillStyle : null;
+      PROBE_INKS.now.push(ramp ? { ...sp, ramp: ramp.map(k).filter(Boolean) } : solid ? { ...sp, inks: [k(solid)].filter(Boolean) } : { ...sp, page: true, alpha: quoteAlpha });
+      PROBE_INKS.words += seg.text || ''; }
 
     const emojiTint = style.customGradientColors && style.customGradientColors.length>=2
       ? (m=>`rgb(${m.r},${m.g},${m.b})`)(mixHex(style.customGradientColors[0], style.customGradientColors[style.customGradientColors.length-1], 0.5))
@@ -37200,7 +37322,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     // (an Athanor surface carries its graph: the worker makes it from that)
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
     const text = graph && graphUsesPoem(graph) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1, accent2 } : {}) }));
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -37526,11 +37648,27 @@ function renderInto(canvas){
   const pageFx = pageEffectStack();
   const pageUnder = ($('underAll') && $('underAll').value) ? { style: $('underAll').value, color: null, weight: 100 } : null;
 
+  // asked to protect the text: keep the ground, small, before the words are drawn on it
+  if(GROUND_PROBE && GROUND_PROBE.ask){ const gw = READABLE.probeWidth, gh = Math.max(8, Math.round(gw*H/W));
+    if(!PROBE_LAYER) PROBE_LAYER = document.createElement('canvas');
+    PROBE_LAYER.width = gw; PROBE_LAYER.height = gh;
+    const px = PROBE_LAYER.getContext('2d', { willReadFrequently: true });
+    px.imageSmoothingEnabled = true; px.drawImage(canvas, 0, 0, gw, gh);
+    // (a text gradient is laid across the page: the ink at each point is read from the gradient drawn as small)
+    let inkField = null;
+    if(typeof baseFillStyle !== 'string'){ if(!PROBE_INK_LAYER) PROBE_INK_LAYER = document.createElement('canvas');
+      PROBE_INK_LAYER.width = gw; PROBE_INK_LAYER.height = gh;
+      const ix = PROBE_INK_LAYER.getContext('2d', { willReadFrequently: true });
+      ix.setTransform(gw/W, 0, 0, gh/H, 0, 0); ix.fillStyle = baseFillStyle; ix.fillRect(0, 0, W, H); ix.setTransform(1, 0, 0, 1, 0, 0);
+      inkField = ix.getImageData(0, 0, gw, gh).data; }
+    GROUND_PROBE.ground = { data: px.getImageData(0, 0, gw, gh).data, gw, gh, runs: [], inkField };
+    PROBE_INKS = { now: [], words: '' }; }
   let cursorY = startY;
   ctx.textBaseline = 'top';
   // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
   const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0;
-  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
+  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(','));
+    if(PROBE_INKS){ GROUND_PROBE.ground.runs.push({ box: [x0/W, top/H, x1/W, (top + h)/H], line: lineNo, spans: PROBE_INKS.now, words: PROBE_INKS.words.replace(/\s+/g, ' ').trim() }); PROBE_INKS.now = []; PROBE_INKS.words = ''; } };
 
   // the effect stack and underline the page gives every run (a segment may replace them)
   const runStyle = { fx: pageFx, under: pageUnder, baseFillStyle, plainTextColor: $('textColorHex').value,
@@ -37692,6 +37830,9 @@ function renderInto(canvas){
   }
   // the layout changed: a surface that reads it is drawn again, once, with the new one
   { const lay = textRuns.join(';');
+    if(GROUND_PROBE && GROUND_PROBE.ground){ const { data, gw, gh, runs, inkField } = GROUND_PROBE.ground;
+      GROUND_PROBE.result = groundContrast(data, gw, gh, runs, READABLE.allowance, inkField);
+      GROUND_PROBE.result.settled = lay === TEXT_LAYOUT; GROUND_PROBE.ground = null; PROBE_INKS = null; }
     if(lay !== TEXT_LAYOUT){ TEXT_LAYOUT = lay;
       const g = $('textureType').value === 'athanor' && graphUsesPoem(($('forgeGraph') || {}).value || '');
       if($('textureToggle').checked && (clearing > 0 || g)) setTimeout(scheduleRender, 0); } }
@@ -39360,7 +39501,16 @@ const WIKI_PARTS = {
     about: 'Accents are the colors the poem uses for highlighted words. Building a surface from them makes it match the text automatically.',
     outs: { colour: 'The accent color.' },
     set: { slot: 'Accent 1 or Accent 2.', name: 'A name for your own reference.' },
-    see: ['color'],
+    see: ['color', 'part:ink'],
+  },
+  ink: {
+    line: 'Brings the poem’s ink, the color its words are written in, into the graph.',
+    about: 'The ink is the text color set under Inscription (with a gradient, its first color). A surface built from it changes when the ink does: marks drawn in the poem’s own color, or a ground kept apart from it. In the Athanor’s own previews, where there is no poem, it is the default pale ink.',
+    outs: { colour: 'The ink’s color.' },
+    set: { name: 'A name for your own reference.' },
+    tips: ['Wire it into Tint as the light hue, over a faint gray map: the surface is written in the poem’s own ink, and stays in key when the ink changes.',
+      'Under busy words, Protect the Text (under Text Effects, beside Text Clearing) measures the page and clears the surface just enough.'],
+    see: ['color', 'part:accent', 'part:hue'],
   },
   number: {
     line: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
@@ -40536,7 +40686,7 @@ const WIKI_ARTICLES = [
 <h3>The Surface’s ground</h3>
 <p>A Surface set to <b>gray</b> treats whatever arrives as a gray map and lets the page color it with its own hues. A Surface set to <b>color</b> shows the picture as it is. See [[surface]].</p>` },
   { id: 'color', group: 'Data and wires', title: 'Colors', body: `
-<p>A <b>color</b> wire carries one color for the whole page. Colors come from <b>Hue</b> parts (the page’s hue pickers), <b>Accent</b> parts (the poem’s accent colors), and the <b>Color</b> part (a hex code you type).</p>
+<p>A <b>color</b> wire carries one color for the whole page. Colors come from <b>Hue</b> parts (the page’s hue pickers), <b>Accent</b> parts (the poem’s accent colors), the <b>Ink</b> part (the color the poem is written in), and the <b>Color</b> part (a hex code you type).</p>
 {{fig:color}}
 <p>Parts take colors through ports like <i>light hue</i>, <i>ink</i>, <i>glass hue</i>. When such a port is empty, the part uses its own default (often the page’s hue), so wiring a color in is a way to <b>override</b> it.</p>
 <p>Using Hue parts rather than fixed colors lets whoever uses your surface recolor it from the page. See [[controls]].</p>` },
@@ -44949,7 +45099,7 @@ function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
-    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
+    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined };   // (the page's backdrop, for a graph with a Page Backdrop)
 }
@@ -45026,6 +45176,39 @@ async function revealSurface(){
   await openAthanorNow();
   if(openForge.openGraph) openForge.openGraph(g, chain.label, chain.teach, true);
 }
+// PROTECT THE TEXT (ROADMAP G3): Text Clearing raised just far enough that every line of the poem stands off
+// what it sits on at READABLE.ratio, measured on the frame itself (canvasRenderer measureTextGround), each line
+// in its own inks. It never lowers the clearing, and a lock holds it. A line clearing can't bring there (its ink
+// as close to the backdrop beneath) is named and left out of the aim, so it can't cost the others their
+// surface; when no line can be helped it says so and changes nothing. Clearing is monotone: search by halves.
+async function protectText(){
+  const el = $('textureClearing'); if(!el) return;
+  if(state.locks.has('textureClearing')){ toast(PROTECT.locked); murmur.play('blocked'); return; }
+  await texturesSettled();
+  const need = READABLE.ratio, at = v => { el.value = String(v); let m = measureTextGround(); if(m && !m.settled) m = measureTextGround(); return m; };
+  const words = l => { const w = (l && l.words) || '…'; return w.length > 30 ? w.slice(0, 28).trimEnd() + '…' : w; };
+  const say = (k, l, amount) => PROTECT[k].replace('{words}', words(l)).replace('{ratio}', l ? (Math.floor(l.ratio*10)/10).toFixed(1) : '')
+    .replace('{need}', need).replace('{amount}', amount);
+  const done = (v, text) => { el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); toast(text); };
+  const faintest = (m, which = () => true) => m.lines.reduce((w, l, i) => which(i) && (!w || l.ratio < w.ratio) ? l : w, null);
+  const from = Math.max(0, Math.min(100, Math.round(parseFloat(el.value) || 0))), here = at(from);
+  if(!here) return done(from, PROTECT.noWords);
+  if(here.worst >= need) return done(from, say('already', faintest(here)));
+  const full = from < 100 ? at(100) : here;
+  // the lines clearing can bring to the aim, and those it can't (their own ink is the trouble)
+  const helps = i => full && full.lines.length === here.lines.length && full.lines[i].ratio >= need, stuck = i => !helps(i);
+  const wanted = here.lines.some((l, i) => helps(i) && l.ratio < need), lost = faintest(full || here, stuck);
+  if(!wanted){
+    if(full && full.worst > here.worst + 0.05) return done(100, say('short', lost, 100));
+    return done(from, say($('textureToggle').checked ? 'cannot' : 'noSurface', faintest(here)));
+  }
+  let lo = from, hi = 100;          // lo falls short, hi reaches the aim (on every line it can)
+  const reaches = m => m && m.lines.length === full.lines.length && m.lines.every((l, i) => !helps(i) || l.ratio >= need);
+  while(hi - lo > 1){ const mid = (lo + hi) >> 1; if(reaches(at(mid))) hi = mid; else lo = mid; }
+  const got = at(hi);
+  done(hi, lost ? say('raisedBut', faintest(full, stuck), hi) : say('raised', faintest(got), hi));
+}
+if($('protectTextBtn') && $('protectTextBtn').addEventListener) $('protectTextBtn').addEventListener('click', () => { protectText(); });
 function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') || {}).value || ''; if(b) b.disabled = !(t === 'athanor' || TEXTURE_CHAINS[t]); }
 if($('revealSurfaceBtn') && $('revealSurfaceBtn').addEventListener) $('revealSurfaceBtn').addEventListener('click', () => { revealSurface(); });
 $('textureType').addEventListener('change', paintReveal);
@@ -45657,7 +45840,7 @@ onTextureReady(() => swatchTexturesArrived());
 const keptHash = text => { let h = 2166136261; for(let i = 0; i < text.length; i++){ h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + text.length; };
 function keptOpts(json, n){
   const defs = athanorKnobs(json), knob = i => (defs.find(x => x.slot === i) || {}).def ?? 50;
-  return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8',
+  return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8', ink: '#F2F2EF',
     p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
 }
 function keptThumb(rec, canvas, unsaved){

@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Dione (2026-10-15)
+
+- **◐ Protect the Text**, a new button under Text Clearing (in Text
+  Effects): it measures every line of the poem against what it sits on and
+  raises Text Clearing just far enough that each stands at 3:1 contrast or
+  better. Each line is read in the inks it is really written in (accents,
+  gradients, a quote's faintness). It never lowers the clearing, and a lock
+  on Text Clearing holds it. A line whose own ink is too close to the
+  backdrop can't be helped by clearing: it is named by its words, and the
+  rest are protected without it.
+- **Ink**, a new part in the Athanor: the color the poem is written in,
+  brought into a graph, so a surface can be built in the poem's own ink.
+- Under the hood: the page is now assembled with the code copied in exactly
+  as written (a `$&` in the code could have been read as a pattern).
+
 ## Saturn–Calypso (2026-10-15)
 
 - **A Knob has a Kind.** In the Athanor a Knob can be a plain slider;

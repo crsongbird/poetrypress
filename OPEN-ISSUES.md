@@ -6,7 +6,11 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- PROTECT THE TEXT (◐ under Text Clearing) aims at 3:1, as the presets are held to; a tenth of the ground under a line
+  may fall short (specks, stars). On busy surfaces 3:1 reads well but not easily; 4.5:1 (WCAG's for small text) clears
+  more. Both are one number in tunables.js (READABLE). On the default backdrop the welcome poem's rainbow line is named as one
+  clearing can't help (its violet and blue on the dark backdrop): fair, or should a rainbow be excused?
 - KNOB KINDS (slider, Steps with names, Angle in degrees, Switch), ORDER OF THE SLIDERS (the Surface's menu),
   REVERSE THE WIRE, and ROLLING ONE CONTROL (Ctrl-click or hold its name). Hold on a phone: does it ever get in
   the way of scrolling?

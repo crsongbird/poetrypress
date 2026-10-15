@@ -76,6 +76,19 @@ export const MARKS = {
   insetY: 0.025,
 };
 
+/** Protect the Text: how readable the words must be against what they sit on. */
+export const READABLE = {
+  /** The contrast every line must reach, its ink against the ground beneath
+   *  it (WCAG's 3:1, the same the presets are held to). */
+  ratio: 3,
+  /** The share of the ground under a line allowed to fall short: a speck of
+   *  a busy surface shouldn't make a line unreadable. */
+  allowance: 0.1,
+  /** The page is measured this many pixels across, whatever its size, so the
+   *  preview and the saved image measure alike. */
+  probeWidth: 360,
+};
+
 /** Glyph spells. */
 export const SPELLS = {
   /** Allowed lengths. Must all be prime — validation checks it. */

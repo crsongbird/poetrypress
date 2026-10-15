@@ -46,6 +46,16 @@ check('the Ripples from the Words starter teaches with The Poem', /"name":"poem"
   const a = textureKeyFor('athanor', 300, 400, { graph: g, text: 'a' }), b = textureKeyFor('athanor', 300, 400, { graph: g, text: 'b' }), c = textureKeyFor('linen', 300, 400, { text: 'a' }), d = textureKeyFor('linen', 300, 400, {});
   check('a poem graph\'s cache key follows the layout; any other surface\'s never does', a !== b && c === d); }
 
+// the poem's ink (ROADMAP G3): an Ink part brings the text color in, and a graph with one changes with it
+{ const inkGraph = JSON.stringify({ v: 4, drawflow: { Home: { data: {
+    1: { id: 1, name: 'ink', data: { name: 'Ink' }, inputs: {}, outputs: { output_1: { connections: [] } } },
+    2: { id: 2, name: 'surface', data: { name: 'T', ground: 'color' }, inputs: { input_1: { connections: [{ node: '1', input: 'output_1' }] }, input_2: { connections: [] } }, outputs: {} } } } } });
+  const of = accents => { const im = evalAthanor(inkGraph, 8, 8, { seed: 1, knobs: [], tints: [], accents }, {}); return [im.r[0], im.g[0], im.b[0]].map(v => Math.round(v*255)); };
+  check('an Ink part gives the poem\'s ink (the page passes it after the two accents)', JSON.stringify(of(['#FF0000', '#00FF00', '#204060'])) === '[32,64,96]');
+  check('…and with no page (the Athanor\'s previews), the default pale ink', JSON.stringify(of(null)) === '[242,242,239]');
+  const k = (graph, ink) => textureKeyFor('athanor', 300, 400, { graph, ink }), plain = JSON.stringify(athanorStarter('ripples'));
+  check('an ink graph\'s cache key follows the ink; any other graph\'s never does', k(inkGraph, '#111111') !== k(inkGraph, '#EEEEEE') && k(plain, '#111111') === k(plain, '#EEEEEE')); }
+
 // the page's side
 check('the renderer records each run as fractions of the page, and asks one more frame when the layout changes',
   /let TEXT_LAYOUT = '';/.test(cr) && /textRuns\.push\(\[x0\/W, top\/H, x1\/W, \(top \+ h\)\/H, lineNo, stanza, rhyme\]/.test(cr) && /if\(lay !== TEXT_LAYOUT\)\{ TEXT_LAYOUT = lay;/.test(cr));

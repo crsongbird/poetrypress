@@ -42,7 +42,7 @@ import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './ef
 import { requestTexture, onTextureReady, textureServiceInfo } from './textureService.js';
 import { ensureFonts, fontsRequested } from './fonts.js';
 import { mixHex } from './texCore.js';
-import { EFFECTS, MARKS } from './tunables.js';
+import { EFFECTS, MARKS, READABLE } from './tunables.js';
 
 
 function isEmojiCodePoint(cp){
@@ -222,6 +222,62 @@ function clearingMask(W, H){
   x.putImageData(im, 0, 0);
   CLEAR_MASK = { key, canvas: c };
   return c;
+}
+// PROTECT THE TEXT (ROADMAP G3): how well the words stand off what they sit on. Asked for, a frame keeps a
+// small copy of itself just before its words are drawn (backdrop, surfaces, vignette, box, border: all the
+// ground) and measures each line on it: the ink against the ground beneath, as a contrast ratio (WCAG's).
+// The probe is a fixed size in page fractions, so the preview and the export measure alike.
+let GROUND_PROBE = null, PROBE_LAYER = null, PROBE_INK_LAYER = null, PROBE_INKS = null;
+const LIN = new Float32Array(256).map((_, v) => { v /= 255; return v <= 0.04045 ? v/12.92 : Math.pow((v + 0.055)/1.055, 2.4); });
+/** A color the words are written in, as [r, g, b, alpha] (a quote is written fainter); null if it isn't a hex. */
+function inkOf(c, alpha = 1){ let h = String(c || '').trim().replace('#', '');
+  if(/^[0-9a-f]{3}$/i.test(h)) h = h.replace(/./g, c => c + c);
+  if(!/^[0-9a-f]{6}/i.test(h)) return null;
+  const n = parseInt(h.slice(0, 6), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255, alpha]; }
+/** How a run's words are colored, at a point of the probe: its span's ink (a span is one segment of the line). */
+function spanInks(sp, fx, x, y, gw, inkField){
+  if(sp.ramp){ const n = sp.ramp.length, t = Math.max(0, Math.min(1, (fx - sp.x0)/Math.max(1e-6, sp.x1 - sp.x0)))*(n - 1), i = Math.min(n - 2, Math.floor(t)), f = t - i;
+    if(n < 2) return sp.ramp; const a = sp.ramp[i], b = sp.ramp[i + 1];
+    return [[a[0] + (b[0] - a[0])*f, a[1] + (b[1] - a[1])*f, a[2] + (b[2] - a[2])*f, a[3]]]; }
+  if(sp.page){ const i = (y*gw + x)*4; return [[inkField[i], inkField[i + 1], inkField[i + 2], sp.alpha]]; }
+  return sp.inks;
+}
+/** Each run's contrast against its ground: the ground's pixels (RGBA, gw × gh) under the run's box (page
+ *  fractions), against the ink written there (a faint ink laid over the ground as it is drawn), read where only
+ *  `allowance` of the ground falls lower. A run is { box: [x0, y0, x1, y1], line, words, inks } (held to the worst of
+ *  its inks), or carries `spans` across it: { x0, x1, inks }, a ramp of colors along it ({ ramp }), or the
+ *  page's own ink read from `inkField` ({ page, alpha }: a text gradient laid across the page). */
+export function groundContrast(data, gw, gh, runs, allowance = READABLE.allowance, inkField = null){
+  const lines = [], ink = k => Array.isArray(k) ? k : inkOf(k);
+  for(const run of runs){ const [x0, y0, x1, y1] = run.box;
+    const spans = (run.spans || [{ x0, x1, inks: run.inks }]).map(sp => ({ ...sp, inks: (sp.inks || []).map(ink).filter(Boolean), ramp: sp.ramp && sp.ramp.map(ink).filter(Boolean) }))
+      .filter(sp => sp.inks.length || (sp.ramp && sp.ramp.length) || (sp.page && inkField));
+    if(!spans.length) continue;
+    const r = [];
+    for(let x = Math.max(0, Math.floor(x0*gw)); x < Math.min(gw, Math.ceil(x1*gw)); x++){
+      const fx = (x + 0.5)/gw;
+      let sp = spans[0], d = Infinity;   // the span written here, or the nearest (the room between them)
+      for(const s of spans){ const dd = fx < s.x0 ? s.x0 - fx : fx > s.x1 ? fx - s.x1 : 0; if(dd < d){ d = dd; sp = s; } }
+      for(let y = Math.max(0, Math.floor(y0*gh)); y < Math.min(gh, Math.ceil(y1*gh)); y++){
+        const i = (y*gw + x)*4, R = data[i], G = data[i + 1], B = data[i + 2], g = 0.2126*LIN[R] + 0.7152*LIN[G] + 0.0722*LIN[B];
+        let m = Infinity;
+        for(const [kr, kg, kb, a] of spanInks(sp, fx, x, y, gw, inkField)){
+          const k = 0.2126*LIN[Math.round(kr*a + R*(1 - a))] + 0.7152*LIN[Math.round(kg*a + G*(1 - a))] + 0.0722*LIN[Math.round(kb*a + B*(1 - a))];
+          const c = (Math.max(k, g) + 0.05)/(Math.min(k, g) + 0.05); if(c < m) m = c; }
+        r.push(m); } }
+    if(!r.length) continue;
+    r.sort((a, b) => a - b);
+    lines.push({ line: run.line, words: run.words || '', ratio: r[Math.min(r.length - 1, Math.floor(r.length*allowance))] });
+  }
+  const worst = lines.reduce((w, l) => !w || l.ratio < w.ratio ? l : w, null);
+  return { lines, worst: worst ? worst.ratio : Infinity, line: worst ? worst.line : -1, words: worst ? worst.words : '' };
+}
+/** Draw a frame and measure it: each line of the poem against what it sits on (null with no words). */
+export function measureTextGround(){
+  GROUND_PROBE = { ask: true };
+  try { render(); } finally { PROBE_INKS = null; }
+  const got = GROUND_PROBE; GROUND_PROBE = null;
+  return got && got.result && got.result.lines.length ? got.result : null;
 }
 /** A surface with the words' clearing taken out of it (destination-out), on a layer kept between frames. */
 function clearedSurface(t, W, H, amount){
@@ -604,6 +660,16 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
       g.addColorStop(0, c1); g.addColorStop(1, c2);
       segFill = g;
     }
+
+    // (protecting the text: the color this segment is written in, across its width, faint as a quote is)
+    if(PROBE_INKS){ const PW = ctx.canvas.width, sp = { x0: x/PW, x1: (x + Math.max(w, 1))/PW }, k = c => inkOf(c, quoteAlpha), c = seg.color;
+      const ramp = style.customGradientColors && style.customGradientColors.length>=2 ? style.customGradientColors
+        : c==='gradFwd' ? [accent1Color, accent2Color] : c==='gradRev' ? [accent2Color, accent1Color]
+        : c==='lgAccent1' ? [style.plainTextColor, accent1Color] : c==='rgAccent1' ? [accent1Color, style.plainTextColor]
+        : c==='lgAccent2' ? [style.plainTextColor, accent2Color] : c==='rgAccent2' ? [accent2Color, style.plainTextColor] : null;
+      const solid = c==='accent1' ? accent1Color : c==='accent2' ? accent2Color : typeof baseFillStyle === 'string' ? baseFillStyle : null;
+      PROBE_INKS.now.push(ramp ? { ...sp, ramp: ramp.map(k).filter(Boolean) } : solid ? { ...sp, inks: [k(solid)].filter(Boolean) } : { ...sp, page: true, alpha: quoteAlpha });
+      PROBE_INKS.words += seg.text || ''; }
 
     const emojiTint = style.customGradientColors && style.customGradientColors.length>=2
       ? (m=>`rgb(${m.r},${m.g},${m.b})`)(mixHex(style.customGradientColors[0], style.customGradientColors[style.customGradientColors.length-1], 0.5))
@@ -1105,7 +1171,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     // (an Athanor surface carries its graph: the worker makes it from that)
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
     const text = graph && graphUsesPoem(graph) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1, accent2 } : {}) }));
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -1431,11 +1497,27 @@ function renderInto(canvas){
   const pageFx = pageEffectStack();
   const pageUnder = ($('underAll') && $('underAll').value) ? { style: $('underAll').value, color: null, weight: 100 } : null;
 
+  // asked to protect the text: keep the ground, small, before the words are drawn on it
+  if(GROUND_PROBE && GROUND_PROBE.ask){ const gw = READABLE.probeWidth, gh = Math.max(8, Math.round(gw*H/W));
+    if(!PROBE_LAYER) PROBE_LAYER = document.createElement('canvas');
+    PROBE_LAYER.width = gw; PROBE_LAYER.height = gh;
+    const px = PROBE_LAYER.getContext('2d', { willReadFrequently: true });
+    px.imageSmoothingEnabled = true; px.drawImage(canvas, 0, 0, gw, gh);
+    // (a text gradient is laid across the page: the ink at each point is read from the gradient drawn as small)
+    let inkField = null;
+    if(typeof baseFillStyle !== 'string'){ if(!PROBE_INK_LAYER) PROBE_INK_LAYER = document.createElement('canvas');
+      PROBE_INK_LAYER.width = gw; PROBE_INK_LAYER.height = gh;
+      const ix = PROBE_INK_LAYER.getContext('2d', { willReadFrequently: true });
+      ix.setTransform(gw/W, 0, 0, gh/H, 0, 0); ix.fillStyle = baseFillStyle; ix.fillRect(0, 0, W, H); ix.setTransform(1, 0, 0, 1, 0, 0);
+      inkField = ix.getImageData(0, 0, gw, gh).data; }
+    GROUND_PROBE.ground = { data: px.getImageData(0, 0, gw, gh).data, gw, gh, runs: [], inkField };
+    PROBE_INKS = { now: [], words: '' }; }
   let cursorY = startY;
   ctx.textBaseline = 'top';
   // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
   const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0;
-  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(',')); };
+  const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(','));
+    if(PROBE_INKS){ GROUND_PROBE.ground.runs.push({ box: [x0/W, top/H, x1/W, (top + h)/H], line: lineNo, spans: PROBE_INKS.now, words: PROBE_INKS.words.replace(/\s+/g, ' ').trim() }); PROBE_INKS.now = []; PROBE_INKS.words = ''; } };
 
   // the effect stack and underline the page gives every run (a segment may replace them)
   const runStyle = { fx: pageFx, under: pageUnder, baseFillStyle, plainTextColor: $('textColorHex').value,
@@ -1597,6 +1679,9 @@ function renderInto(canvas){
   }
   // the layout changed: a surface that reads it is drawn again, once, with the new one
   { const lay = textRuns.join(';');
+    if(GROUND_PROBE && GROUND_PROBE.ground){ const { data, gw, gh, runs, inkField } = GROUND_PROBE.ground;
+      GROUND_PROBE.result = groundContrast(data, gw, gh, runs, READABLE.allowance, inkField);
+      GROUND_PROBE.result.settled = lay === TEXT_LAYOUT; GROUND_PROBE.ground = null; PROBE_INKS = null; }
     if(lay !== TEXT_LAYOUT){ TEXT_LAYOUT = lay;
       const g = $('textureType').value === 'athanor' && graphUsesPoem(($('forgeGraph') || {}).value || '');
       if($('textureToggle').checked && (clearing > 0 || g)) setTimeout(scheduleRender, 0); } }

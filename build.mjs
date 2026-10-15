@@ -159,8 +159,11 @@ const scriptTag = '<script type="module" src="appEvents.js"></script>';
 if (!html.includes(linkTag)) throw new Error('stylesheet link not found in index.html — build would silently drop the CSS');
 if (!html.includes(scriptTag)) throw new Error('module script tag not found in index.html — build would silently drop the JS');
 
-html = html.replace(linkTag, `<style>\n${css}\n</style>`);
-html = html.replace(scriptTag, `<script>\n${js}\n</script>`);
+// (replaced by a function: a replacement STRING reads $& $' $` and $$ in the code as patterns — a `'$&$&'`
+// in canvasRenderer once pasted the script tag into the middle of the bundle)
+html = html.replace(linkTag, () => `<style>\n${css}\n</style>`);
+html = html.replace(scriptTag, () => `<script>\n${js}\n</script>`);
+if (!html.includes(js)) throw new Error('the bundle was not inlined verbatim');
 
 // The texture worker: the generator modules flattened again, with the worker's
 // own few lines last, embedded as an inert script block that the texture
@@ -170,7 +173,8 @@ const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js',
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');
-html = html.replace('</head>', `<script type="text/js-worker" id="vellum-texture-worker">\n${workerJs}\n</script>\n</head>`);
+html = html.replace('</head>', () => `<script type="text/js-worker" id="vellum-texture-worker">\n${workerJs}\n</script>\n</head>`);
+if (!html.includes(workerJs)) throw new Error('the texture worker was not inlined verbatim');
 
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/index.html', html);

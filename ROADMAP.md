@@ -204,14 +204,10 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 ### G · The poem as an input (Ruby's future-directions doc)
 
 Done: The Poem (words, distance, lines, stanzas, rhymes), Text Clearing,
-Ripples from the Words.
+Ripples from the Words, Protect the Text, Ink.
 
 - **G2 · Punctuation positions.** A layout of points where punctuation sits,
   for "Punctuation Particles". Needs F2 to scatter from them.
-- **G3 · What the text sits on.**
-  - Inputs: the ink color (foreground), and the luminance behind the text.
-  - A Protect Text action raises Text Clearing until each run reaches a
-    minimum contrast (pmlVars has the 3:1 test).
 - **G4 · Emotional Seed.** One knob driving color, density, turbulence and
   contrast together.
   - Depends on: A3 (a group whose one input fans out through remappers).
@@ -315,8 +311,8 @@ superseded) wait for Stage 4.
 - **B1** a lit Surface (CPU and shader together), then **B2** channels view.
 - **C1–C4** lighting (C needs B1).
 - **D1**'s dial, **D3**'s two handles, **D4** curve control.
-- **G2** punctuation (needs F2), **G3** Protect Text,
-  **G4** Emotional Seed (needs A3), **G5** the box as an input.
+- **G2** punctuation (needs F2), **G4** Emotional Seed (needs A3), **G5**
+  the box as an input.
 - **H1**'s actions that aren't presets: Summon Variation, Mutate Gently,
   Freeze This Seed.
 
@@ -357,7 +353,6 @@ superseded) wait for Stage 4.
                               D1 dial · D3 two handles ─► D4 curve control ──────────────┤      ├─► E4 author locks
                               H1 actions ────────────────────────────────────────────────┘      └─► THE PRESETS PASS
                               B1 LIT SURFACE ─► B2 channels; ─► C1 ─► C2 ─► C4; C3
-                              G3 Protect Text
 ```
 
 **Suggested passes** (one release each, AGENTS' recipe):
@@ -366,7 +361,7 @@ superseded) wait for Stage 4.
 2. Stage 1: F2's rest (glyphs in web fonts, layers, a color per mark) + F6's Pavements.
 3. Stage 2: D1's dial, D3's two handles, D4 the curve control.
 4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
-5. Stage 2: G2–G5 + H1's actions.
+5. Stage 2: G2, G4, G5 + H1's actions.
 6. Stage 3: the Surface Studies become textures, a few per pass; black boxes
    taken apart and the rest rebuilt as chains, two or three per pass.
 7. Stage 4: H2, H3, H4, E4, then the presets pass.

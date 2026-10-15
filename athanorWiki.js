@@ -110,7 +110,7 @@ export const WIKI_ARTICLES = [
 <h3>The Surface’s ground</h3>
 <p>A Surface set to <b>gray</b> treats whatever arrives as a gray map and lets the page color it with its own hues. A Surface set to <b>color</b> shows the picture as it is. See [[surface]].</p>` },
   { id: 'color', group: 'Data and wires', title: 'Colors', body: `
-<p>A <b>color</b> wire carries one color for the whole page. Colors come from <b>Hue</b> parts (the page’s hue pickers), <b>Accent</b> parts (the poem’s accent colors), and the <b>Color</b> part (a hex code you type).</p>
+<p>A <b>color</b> wire carries one color for the whole page. Colors come from <b>Hue</b> parts (the page’s hue pickers), <b>Accent</b> parts (the poem’s accent colors), the <b>Ink</b> part (the color the poem is written in), and the <b>Color</b> part (a hex code you type).</p>
 {{fig:color}}
 <p>Parts take colors through ports like <i>light hue</i>, <i>ink</i>, <i>glass hue</i>. When such a port is empty, the part uses its own default (often the page’s hue), so wiring a color in is a way to <b>override</b> it.</p>
 <p>Using Hue parts rather than fixed colors lets whoever uses your surface recolor it from the page. See [[controls]].</p>` },

@@ -878,6 +878,8 @@ function describeRequest(type, w, h, opts){
   // (Cartomancy's first two suits are the accents; an Athanor graph with an Accent node reads them too)
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards'
     || ((type === 'athanor' || type === 'athanorsteps') && /"name":\s*"accent"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''))));
+  // (and a graph with an Ink part changes with the poem's ink; any other surface never sees it)
+  const inkKeyed = (type === 'athanor' || type === 'athanorsteps') && /"name":\s*"ink"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''));
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
@@ -887,7 +889,8 @@ function describeRequest(type, w, h, opts){
             + (env ? `_e${env}` : '')
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
-            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '');
+            + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
+            + (inkKeyed ? `_i${opts.ink || ''}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
@@ -1016,7 +1019,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2] }))));
+    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2, opts.ink || null] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

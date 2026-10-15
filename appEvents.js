@@ -39,7 +39,7 @@ import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './ef
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow } from './canvasRenderer.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
@@ -51,8 +51,8 @@ import { blendFamily } from './texCore.js';
 import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from './swatches.js';
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
-import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
-import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR } from './strings.js';
+import { PREVIEW, SWATCH, DEFAULTS, READABLE } from './tunables.js';
+import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -2983,7 +2983,7 @@ function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
-    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
+    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined };   // (the page's backdrop, for a graph with a Page Backdrop)
 }
@@ -3060,6 +3060,39 @@ async function revealSurface(){
   await openAthanorNow();
   if(openForge.openGraph) openForge.openGraph(g, chain.label, chain.teach, true);
 }
+// PROTECT THE TEXT (ROADMAP G3): Text Clearing raised just far enough that every line of the poem stands off
+// what it sits on at READABLE.ratio, measured on the frame itself (canvasRenderer measureTextGround), each line
+// in its own inks. It never lowers the clearing, and a lock holds it. A line clearing can't bring there (its ink
+// as close to the backdrop beneath) is named and left out of the aim, so it can't cost the others their
+// surface; when no line can be helped it says so and changes nothing. Clearing is monotone: search by halves.
+async function protectText(){
+  const el = $('textureClearing'); if(!el) return;
+  if(state.locks.has('textureClearing')){ toast(PROTECT.locked); murmur.play('blocked'); return; }
+  await texturesSettled();
+  const need = READABLE.ratio, at = v => { el.value = String(v); let m = measureTextGround(); if(m && !m.settled) m = measureTextGround(); return m; };
+  const words = l => { const w = (l && l.words) || '…'; return w.length > 30 ? w.slice(0, 28).trimEnd() + '…' : w; };
+  const say = (k, l, amount) => PROTECT[k].replace('{words}', words(l)).replace('{ratio}', l ? (Math.floor(l.ratio*10)/10).toFixed(1) : '')
+    .replace('{need}', need).replace('{amount}', amount);
+  const done = (v, text) => { el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); toast(text); };
+  const faintest = (m, which = () => true) => m.lines.reduce((w, l, i) => which(i) && (!w || l.ratio < w.ratio) ? l : w, null);
+  const from = Math.max(0, Math.min(100, Math.round(parseFloat(el.value) || 0))), here = at(from);
+  if(!here) return done(from, PROTECT.noWords);
+  if(here.worst >= need) return done(from, say('already', faintest(here)));
+  const full = from < 100 ? at(100) : here;
+  // the lines clearing can bring to the aim, and those it can't (their own ink is the trouble)
+  const helps = i => full && full.lines.length === here.lines.length && full.lines[i].ratio >= need, stuck = i => !helps(i);
+  const wanted = here.lines.some((l, i) => helps(i) && l.ratio < need), lost = faintest(full || here, stuck);
+  if(!wanted){
+    if(full && full.worst > here.worst + 0.05) return done(100, say('short', lost, 100));
+    return done(from, say($('textureToggle').checked ? 'cannot' : 'noSurface', faintest(here)));
+  }
+  let lo = from, hi = 100;          // lo falls short, hi reaches the aim (on every line it can)
+  const reaches = m => m && m.lines.length === full.lines.length && m.lines.every((l, i) => !helps(i) || l.ratio >= need);
+  while(hi - lo > 1){ const mid = (lo + hi) >> 1; if(reaches(at(mid))) hi = mid; else lo = mid; }
+  const got = at(hi);
+  done(hi, lost ? say('raisedBut', faintest(full, stuck), hi) : say('raised', faintest(got), hi));
+}
+if($('protectTextBtn') && $('protectTextBtn').addEventListener) $('protectTextBtn').addEventListener('click', () => { protectText(); });
 function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') || {}).value || ''; if(b) b.disabled = !(t === 'athanor' || TEXTURE_CHAINS[t]); }
 if($('revealSurfaceBtn') && $('revealSurfaceBtn').addEventListener) $('revealSurfaceBtn').addEventListener('click', () => { revealSurface(); });
 $('textureType').addEventListener('change', paintReveal);
@@ -3691,7 +3724,7 @@ onTextureReady(() => swatchTexturesArrived());
 const keptHash = text => { let h = 2166136261; for(let i = 0; i < text.length; i++){ h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + text.length; };
 function keptOpts(json, n){
   const defs = athanorKnobs(json), knob = i => (defs.find(x => x.slot === i) || {}).def ?? 50;
-  return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8',
+  return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8', ink: '#F2F2EF',
     p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
 }
 function keptThumb(rec, canvas, unsaved){

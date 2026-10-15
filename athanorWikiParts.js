@@ -76,7 +76,16 @@ export const WIKI_PARTS = {
     about: 'Accents are the colors the poem uses for highlighted words. Building a surface from them makes it match the text automatically.',
     outs: { colour: 'The accent color.' },
     set: { slot: 'Accent 1 or Accent 2.', name: 'A name for your own reference.' },
-    see: ['color'],
+    see: ['color', 'part:ink'],
+  },
+  ink: {
+    line: 'Brings the poem’s ink, the color its words are written in, into the graph.',
+    about: 'The ink is the text color set under Inscription (with a gradient, its first color). A surface built from it changes when the ink does: marks drawn in the poem’s own color, or a ground kept apart from it. In the Athanor’s own previews, where there is no poem, it is the default pale ink.',
+    outs: { colour: 'The ink’s color.' },
+    set: { name: 'A name for your own reference.' },
+    tips: ['Wire it into Tint as the light hue, over a faint gray map: the surface is written in the poem’s own ink, and stays in key when the ink changes.',
+      'Under busy words, Protect the Text (under Text Effects, beside Text Clearing) measures the page and clears the surface just enough.'],
+    see: ['color', 'part:accent', 'part:hue'],
   },
   number: {
     line: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
