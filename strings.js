@@ -52,6 +52,7 @@ export const UI_STRINGS = {
   'button.randomFontBtn':                  "⟳ Summon New Typeface",
   'button.randomBgBtn':                    "⟳ Summon New Backdrop",
   'button.randomSurfaceBtn':               "⟳ Summon New Surface",
+  'button.revealSurfaceBtn':               "🜉 Open in the Athanor",
   'button.spellCreateBtn':                 "Create",
   'button.spellApplyBtn':                  "Invoke",
   'button.spellShareBtn':                     "Share",
@@ -445,6 +446,11 @@ export const KEPT = {
 /** The Athanor's bar (Ruby: "Start… Kept, Keep, Use: Use feels redundant"): Open (every graph there is to begin
  *  from), Keep, undo, ⋯ (everything else), whether the page shows this graph, and Done. */
 export const FORGE_BAR = {
+  // the Surface card's 🜉 Open in the Athanor (ROADMAP H1: Reveal Spell Graph)
+  revealNone: 'This surface is not a graph yet, so it can’t be opened in the Athanor.',
+  revealAskTitle: 'Open {name} in the Athanor?',
+  revealAskBody: 'Its graph takes the place of the one in the Athanor now. Revert, in the Athanor’s ⋯ menu, brings that one back.',
+  revealAskYes: 'Open (Reveal it)',
   open: 'Open',
   openTitle: 'Open a graph',
   openHint: 'It takes the place of the graph on the grid (asking first if you changed it). Undo brings it back.',

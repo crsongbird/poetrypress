@@ -33,7 +33,7 @@ export const WIKI_ARTICLES = [
 <li>A graph is read <b>from left to right</b>. Parts on the left make something; parts to their right change it; the <b>Surface</b> at the far right is where the texture comes out.</li>
 <li>Every part shows a <b>small preview</b> of what it makes, so you can see each step.</li>
 <li>Wires carry one of <b>five kinds of data</b>: gray maps, pictures, colors, numbers and curves. See [[kinds]].</li>
-<li>Most of the app’s own textures are graphs. <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts.</li>
+<li>The app’s own textures are graphs (all but Deep Field). <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts. On the page, <b>🜉 Open in the Athanor</b> under the Surface opens the one you are using, at its sliders and hues.</li>
 <li>Nothing here can break your page: undo and <b>Revert</b> are always there. The page shows a graph only when it is the page’s surface: the bar says <b>✓ On the Page</b> when it is, and <b>⇱ Show on Page</b> puts it there.</li>
 </ul>
 <p>The same way of working runs Blender’s shader nodes, Substance Designer, Houdini, Nuke and Filter Forge. What you learn here carries over.</p>

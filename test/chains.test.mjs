@@ -101,6 +101,16 @@ if(canvasOK){
   check('a new look is left as it is', s.textureLight === '200' && +s.texP2 === 30);
 }
 
+// ---- the Surface card's 🜉 Open in the Athanor: a texture's chain at the page's sliders ----
+{ const T = await import('../textureGenerators.js'), defs = T.paramsFor('kintsugi');
+  const knobs = g => Object.values(A.athanorNodes(g)).filter(n => n.name === 'knob').sort((a, b) => a.data.slot - b.data.slot).map(n => n.data.def);
+  const at = knobs(A.athanorStarterAt('kintsugi', defs, ['200', '100', '70']));
+  check('opened from the Surface card, a chain\'s Knobs stand where the sliders do (Seam Width 200 of 50–300 is 60 of 100)', Math.abs(at[0] - 60) < 1e-9 && Math.abs(at[1] - (100 - 20)/380*100) < 1e-9 && at[2] === 70);
+  const every = Object.keys(TEXTURE_CHAINS).filter(t => T.TEXTURE_PARAMS[t]).every(t => { const d = T.paramsFor(t), g = A.athanorStarterAt(t, d, d.map(x => x.def));
+    return Object.values(A.athanorNodes(g)).filter(n => n.name === 'knob').every(n => { const s = +n.data.slot, x = d[s - 1]; return !x || Math.abs(n.data.def - (x.def - x.min)/(x.max - x.min)*100) < 1e-9; }); });
+  check('…and at every texture\'s own defaults, every Knob stands at its slider\'s default', every);
+  check('a surface that is not a graph has nothing to open', A.athanorStarterAt('astral', [], []) === null); }
+
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

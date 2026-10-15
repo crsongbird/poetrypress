@@ -233,10 +233,8 @@ Ripples from the Words.
   - To add:
     - **Summon Variation** (the Surface die, as usual);
     - **Mutate Gently** (every die, gently, at once);
-    - **Freeze This Seed** (the seed's lock, surfaced as an action);
-    - **Reveal Spell Graph**: opens the texture's chain in the Athanor,
-      which exists today as the Athanor's Open menu. Make it a button on the Surface
-      card.
+    - **Freeze This Seed** (the seed's lock, surfaced as an action).
+  - Done: Reveal Spell Graph, the Surface card's **🜉 Open in the Athanor**.
 - **H2 · Presets as graphs with exposed settings.** A preset stores:
   - its graph;
   - its exposed controls (4–8, by D1/D2);
@@ -331,7 +329,7 @@ superseded) wait for Stage 4.
 - **G2** punctuation (needs F2), **G3** Protect Text,
   **G4** Emotional Seed (needs A3), **G5** the box as an input.
 - **H1**'s actions that aren't presets: Summon Variation, Mutate Gently,
-  Freeze This Seed, Reveal Spell Graph.
+  Freeze This Seed.
 
 ### Stage 3 · Textures: built from the parts
 - **I**: the 36 Surface Studies become textures in the menu, each a chain

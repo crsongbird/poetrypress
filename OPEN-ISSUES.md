@@ -6,7 +6,9 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- 🜉 OPEN IN THE ATHANOR under the Surface (ROADMAP's Reveal Spell Graph): the page's surface as its graph, at
+  the page's sliders and hues. Is the name right, and does it belong there (or beside the four readings)?
 - OIL PAINT'S DETAIL (branch `oil-detail`, not live): a last fine pass repaints what the big strokes lost (distant
   trees come back as small painted trees); the review sheet was sent. Yes, no, stronger or subtler?
 - MORE PARTS: Split and Merge HSB, Split and Merge Lab, Median (Percentile), Map Switch, Flip, Perspective.

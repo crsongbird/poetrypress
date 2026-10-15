@@ -813,10 +813,12 @@ export async function openForge(deps){
       load(JSON.parse(F.opened)); sound('graphLoad'); setTimeout(fitView, 30);
     };
     // open a graph (a starter, a template, a kept surface) in place of this one — asking first if this one has changed
-    const openGraph = async (g, label, teach) => {
-      if(count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid is replaced. Undo or Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
+    // (asked: whoever calls has asked already — the Surface card's Open in the Athanor)
+    const openGraph = async (g, label, teach, asked) => {
+      if(!asked && count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid is replaced. Undo or Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
       stopWire(); load(g); sound('graphLoad'); setTimeout(fitView, 30); showNote(label, teach); return true;
     };
+    F.openGraph = openGraph;
     // WHAT A GRAPH TEACHES: a note over the grid when a starter or a texture is opened
     const note = (() => { let el = $('forgeNote'); if(!el && body){ el = document.createElement('div'); el.id = 'forgeNote'; el.className = 'forge-note'; el.hidden = true; body.appendChild(el); } return el; })();
     const showNote = (label, teach) => { if(!note) return; if(!teach){ note.hidden = true; veil.classList.remove('note-open'); return; }

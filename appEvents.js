@@ -28,7 +28,8 @@ import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
-import { athanorKnobs, athanorHues, athanorName, athanorNodes, validateGraph } from './athanor.js';
+import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarterAt, validateGraph } from './athanor.js';
+import { TEXTURE_CHAINS } from './chains.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser, chMatches } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
@@ -287,7 +288,7 @@ function refreshUi(){
   for(const [r, l] of ANGLES) if(r && l) l.textContent = r.value + '°';
   const run = fn => { try { if(typeof fn === 'function') fn(); } catch(e){} };
   run(refreshReadouts); run(syncFrameVisibility); run(syncBaseUi); run(paintMoons); run(paintSeedMoon); run(syncLightPad);
-  run(paintElements); run(() => { for(const [, b] of lockButtons) if(b._paint) b._paint(); }); run(paintMasterLocks);
+  run(paintElements); run(() => { for(const [, b] of lockButtons) if(b._paint) b._paint(); }); run(paintMasterLocks); run(paintReveal);
   run(() => syncSeedWords(false));
   run(() => { for(const ch of CHOOSERS) ch.refresh(); });
 }
@@ -3009,7 +3010,23 @@ const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); i
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
     t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
 // THE ATHANOR opens from the top bar, on every device
-function openAthanorNow(){ openForge(forgeDeps()); }
+function openAthanorNow(){ return openForge(forgeDeps()); }
+// REVEAL (ROADMAP H1, Reveal Spell Graph): the page's surface opened in the Athanor as the graph it is made of,
+// its Knobs set to the sliders' own values, so the Athanor shows exactly what the page does
+async function revealSurface(){
+  const type = ($('textureType') || {}).value || '';
+  if(type === 'athanor'){ openAthanorNow(); return; }
+  const chain = TEXTURE_CHAINS[type], g = chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6].map(i => ($('texP' + i) || {}).value));
+  if(!g){ toast(FORGE_BAR.revealNone); return; }
+  // the Athanor's own graph, if it has work on it, is replaced only when asked (Revert brings it back)
+  if(Object.keys(athanorNodes(($('forgeGraph') || {}).value || '')).length > 2
+    && !await askSure({ title: FORGE_BAR.revealAskTitle.replace('{name}', chain.label), body: FORGE_BAR.revealAskBody, confirmLabel: FORGE_BAR.revealAskYes, danger: false })) return;
+  await openAthanorNow();
+  if(openForge.openGraph) openForge.openGraph(g, chain.label, chain.teach, true);
+}
+function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') || {}).value || ''; if(b) b.disabled = !(t === 'athanor' || TEXTURE_CHAINS[t]); }
+if($('revealSurfaceBtn') && $('revealSurfaceBtn').addEventListener) $('revealSurfaceBtn').addEventListener('click', () => { revealSurface(); });
+$('textureType').addEventListener('change', paintReveal);
 if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openAthanorNow());
 // Done: closed; a graph changed here that the page doesn't show is offered to it (Ruby: Use was redundant)
 if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => {

@@ -396,6 +396,17 @@ export function athanorStarter(name){
   return athanorGraphOf(S, ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] ? ATHANOR_VERSION : 2);
 }
 /** A graph from a spec of nodes [type, data, x?, y?] and wires [from, output, to, input] (1-based), laid out to read. */
+/**
+ * A texture's chain as it stands on the page (the Surface card's Open in the Athanor): its Knobs set to the
+ * sliders' values, each as its share of the slider's range (`defs`: the texture's TEXTURE_PARAMS).
+ */
+export function athanorStarterAt(name, defs, values){
+  const g = athanorStarter(name); if(!g) return null;
+  for(const n of Object.values(athanorNodes(g))) if(n.name === 'knob'){
+    const s = parseInt((n.data || {}).slot, 10) || 1, d = (defs || [])[s - 1], v = parseFloat((values || [])[s - 1]);
+    if(d && !isNaN(v)) n.data = { ...n.data, def: Math.max(0, Math.min(100, (v - d.min)/Math.max(1e-6, d.max - d.min)*100)) }; }
+  return g;
+}
 export function athanorGraphOf(S, v = ATHANOR_VERSION){
   const data = {};
   S.nodes.forEach(([type, d, x = 0, y = 0], i) => { const id = i + 1;

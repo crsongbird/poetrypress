@@ -4,6 +4,15 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Telesto (2026-10-15)
+
+- **🜉 Open in the Athanor**, a new button under the Surface: it opens the
+  surface you are using in the node editor, as the graph of parts it is made
+  of. Its sliders stand where yours do, and it uses your hues and light, so
+  what you see there is what the page shows. Change it there and keep it as
+  your own; the page keeps its surface until you show yours. (Deep Field is
+  not a graph yet, so for it the button rests.)
+
 ## Saturn–Tethys (2026-10-15)
 
 - **More new parts in the Athanor**, from Filter Forge's list:
