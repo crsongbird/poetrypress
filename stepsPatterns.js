@@ -9,8 +9,9 @@
  * Every part here is general (a part someone reaches for twice), from Filter
  * Forge's component list and Ruby's future-directions doc (ROADMAP §2 F):
  *   Scatter (Bomber, Glyph Scatter) · Grid & Dots (Checker, Tiles, Dots) ·
- *   Border Mask · Lookup · Displace · Gradient Map (3- and 5-color,
- *   Elevation Gradient) · Spectrum.
+ *   Ellipse · Polygon · Triangle Mesh (Delaunay) · Blocks (and Techno) ·
+ *   Pyramids · Border Mask · Lookup · Displace · Gradient Map (3- and
+ *   5-color, Elevation Gradient) · Noise Gradient · Spectrum.
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
@@ -20,6 +21,40 @@ const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def
 const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
 const patClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 const patHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16)/255, ((n >> 8) & 255)/255, (n & 255)/255]; };
+// a soft edge in the page's units: 1 well inside (sd < −s), 0 well outside (sd > s), smooth between
+const patInside = (sd, s) => { const t = patClamp(0.5 - sd/(2*s)); return t*t*(3 - 2*t); };
+// colors as hue (turns), saturation and value, and back
+const patHsv = ([r, g, b]) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const h = d < 1e-9 ? 0 : mx === r ? ((g - b)/d + 6) % 6 : mx === g ? (b - r)/d + 2 : (r - g)/d + 4; return [h/6, mx > 0 ? d/mx : 0, mx]; };
+const patRgb = ([h, s, v]) => { const f = k => { const q = (k + h*6) % 6; return v - v*s*Math.max(0, Math.min(1, q, 4 - q)); }; return [f(5), f(3), f(1)]; };
+/**
+ * DELAUNAY TRIANGLES of points [[x, y], …] (Bowyer–Watson): the points are added one by one, and the triangles
+ * whose circumcircle holds the new point are taken out and the hole re-triangulated from it. Returns triangles
+ * as index triples; no point lies inside another triangle's circle.
+ */
+export function patDelaunay(P){   // test hook: the Delaunay property is checked directly (filterforge.test)
+  const nP = P.length; if(nP < 3) return [];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const [x, y] of P){ x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const S = Math.max(x1 - x0, y1 - y0, 1)*20, mx = (x0 + x1)/2, pts = [...P, [mx - S, y0 - S], [mx + S, y0 - S], [mx, y1 + S]];
+  const circ = ([a, b, c]) => { const [ax, ay] = pts[a], [bx, by] = pts[b], [cx, cy] = pts[c], d = 2*(ax*(by - cy) + bx*(cy - ay) + cx*(ay - by)) || 1e-12;
+    const ux = ((ax*ax + ay*ay)*(by - cy) + (bx*bx + by*by)*(cy - ay) + (cx*cx + cy*cy)*(ay - by))/d, uy = ((ax*ax + ay*ay)*(cx - bx) + (bx*bx + by*by)*(ax - cx) + (cx*cx + cy*cy)*(bx - ax))/d;
+    return [ux, uy, (ax - ux)**2 + (ay - uy)**2]; };
+  let tris = [[nP, nP + 1, nP + 2]], C = tris.map(circ);
+  const key = (a, b) => a < b ? a + ',' + b : b + ',' + a, sides = t => [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]];
+  for(let i = 0; i < nP; i++){ const [x, y] = pts[i], bad = [], keep = [], keepC = [];
+    tris.forEach((t, k) => { const c = C[k]; ((x - c[0])**2 + (y - c[1])**2 < c[2]) ? bad.push(t) : (keep.push(t), keepC.push(c)); });
+    const seen = new Map(); for(const t of bad) for(const [a, b] of sides(t)) seen.set(key(a, b), (seen.get(key(a, b)) || 0) + 1);
+    for(const t of bad) for(const [a, b] of sides(t)) if(seen.get(key(a, b)) === 1){ const nt = [a, b, i]; keep.push(nt); keepC.push(circ(nt)); }
+    tris = keep; C = keepC; }
+  return tris.filter(t => t[0] < nP && t[1] < nP && t[2] < nP);
+}
+// rings of a shape: `K` of them, the outermost at d = 1. With a line width, each ring a line; without, bands
+// filled in turn (one band: the whole shape). m: the distance (page units) to the nearest ring; d: how far out
+function patRings(d, m, K, lw, sf){
+  if(lw > 0) return patInside(m - lw/2, sf);
+  const j = Math.max(1, Math.ceil(d*K - 1e-9)), base = j <= K && j % 2 === 1 ? 1 : 0, w = patClamp(m/sf);
+  return 0.5 + (base - 0.5)*w*w*(3 - 2*w);
+}
 
 // ---- SCATTER: the shapes it can throw ----
 // each drawn white on a canvas, centred at 0,0 with radius 1 (the caller scales and turns)
@@ -169,6 +204,144 @@ export const PATTERN_STEPS = {
         const gx = by[y*ww + Math.min(ww - 1, x + 1)] - by[y*ww + Math.max(0, x - 1)], gy = by[Math.min(wh - 1, y + 1)*ww + x] - by[Math.max(0, y - 1)*ww + x];
         const sx = Math.min(ww - 1, Math.max(0, Math.round(x + gx*k))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + gy*k))), s = sy*ww + sx;
         o.r[q] = pic.r[s]; o.g[q] = pic.g[s]; o.b[q] = pic.b[s]; }
+      return [o];
+    } },
+
+  // FILTER FORGE'S ELLIPSE (and Free Ellipse): one ellipse, or rings of them like orbits, filled or drawn as lines;
+  // with how far out from its centre each point lies, and how far round, to shape or place other things by
+  ellipse: { cat: 'Noise', label: 'Ellipse', ins: [], outs: ['shape', 'distance', 'around'],
+    params: [PAT_R('size', 'Size', 60, 1, 200), PAT_R('height', 'Height', 60, 5, 100), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
+      PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
+    cost: () => 1,
+    doc: 'An ellipse, or rings of them like orbits, filled or drawn as lines; also how far out from its center each point is, and how far around.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const A = Math.max(1e-3, num(n, 'size', 60)/200), B = Math.max(1e-3, A*num(n, 'height', 60)/100), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an);
+      const cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
+      const lw = num(n, 'line', 0)/100*0.04, sf = Math.max(0.7/unit, num(n, 'soft', 4)/100*0.05);
+      const shape = new Float32Array(N), dist = new Float32Array(N), round = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, px = x/unit - cx, py = y/unit - cy;
+        const u = (px*ca + py*sa)/A, v = (-px*sa + py*ca)/B, d = Math.hypot(u, v);
+        // how fast d grows per page unit here, so a ring's line is as wide all the way round
+        const g = d > 1e-9 ? Math.hypot(u/A, v/B)/d : 1/Math.min(A, B);
+        let m = Infinity; for(let k = 1; k <= K; k++){ const e = Math.abs(d - k/K)/g; if(e < m) m = e; }
+        shape[q] = patRings(d, m, K, lw, sf); dist[q] = Math.min(1, d); round[q] = Math.atan2(v, u)/(Math.PI*2) + 0.5; }
+      return [shape, dist, round];
+    } },
+
+  // FILTER FORGE'S POLYGON (and Free Polygon): a regular polygon, or a star, or rings of them; with a bevel (a
+  // pyramid, flat faces rising to the centre) and how far round each point lies
+  polygon: { cat: 'Noise', label: 'Polygon', ins: [], outs: ['shape', 'bevel', 'around'],
+    params: [PAT_R('sides', 'Sides', 6, 3, 12), PAT_R('star', 'Star', 0), PAT_R('size', 'Size', 60, 1, 200), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
+      PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
+    cost: () => 1,
+    doc: 'A regular polygon or a star, or rings of them, filled or drawn as lines; also a bevel that rises to its center, and how far around each point is.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const sides = Math.max(3, Math.min(12, Math.round(num(n, 'sides', 6)))), star = num(n, 'star', 0)/100, R = Math.max(1e-3, num(n, 'size', 60)/200);
+      const an = num(n, 'angle', 0)*Math.PI/180, cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
+      const lw = num(n, 'line', 0)/100*0.04, sf = Math.max(0.7/unit, num(n, 'soft', 4)/100*0.05);
+      // its corners (a star: every other one pulled in), the first pointing up; each edge as its outward normal and its distance from the centre
+      const M = star > 0 ? sides*2 : sides, a0 = an - Math.PI/2, V = Array.from({ length: M }, (_, k) => { const r = star > 0 && k % 2 ? R*(1 - star*0.8) : R, a = a0 + k*Math.PI*2/M; return [Math.cos(a)*r, Math.sin(a)*r]; });
+      const edges = V.map((p, k) => { const q = V[(k + 1) % M]; let nx = q[1] - p[1], ny = p[0] - q[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+        const h = p[0]*nx + p[1]*ny; return h < 0 ? [-nx, -ny, -h] : [nx, ny, h]; });
+      const shape = new Float32Array(N), bevel = new Float32Array(N), round = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, px = x/unit - cx, py = y/unit - cy;
+        const t = (((Math.atan2(py, px) - a0)/(Math.PI*2)) % 1 + 1) % 1, k = Math.min(M - 1, Math.floor(t*M)), [nx, ny, h] = edges[k];
+        // within its sector a point's place is how far it lies toward that edge: 1 on the outline
+        const d = Math.max(0, (px*nx + py*ny)/h);
+        let m = Infinity; for(let j = 1; j <= K; j++){ const e = Math.abs(d - j/K)*h; if(e < m) m = e; }
+        shape[q] = patRings(d, m, K, lw, sf); bevel[q] = 1 - Math.min(1, d); round[q] = t; }
+      return [shape, bevel, round];
+    } },
+
+  // A MESH OF TRIANGLES between scattered points (Delaunay's: no point inside another triangle's circle), its
+  // lines thinned to the shortest for a constellation; points land where a map is light
+  mesh: { cat: 'Marks', label: 'Triangle Mesh', ins: ['where'], outs: ['lines', 'points', 'facets'],
+    params: [PAT_R('count', 'Points', 40, 3, 400), PAT_R('even', 'Evenness', 50), PAT_R('prune', 'Thin Out', 0), PAT_R('line', 'Line Width', 15), PAT_R('dot', 'Point Size', 20), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 3,
+    doc: 'Scattered points joined into triangles (a Delaunay mesh): its lines, its points, and each triangle a flat gray of its own.',
+    run(E, n){ const { ww, wh, N, input, num, asField, readCanvas } = E;
+      const where = asField(input(n, 1)), count = Math.max(3, Math.min(400, Math.round(num(n, 'count', 40)))), tries = 1 + Math.round(num(n, 'even', 50)/100*12);
+      const prune = num(n, 'prune', 0)/100, lw = num(n, 'line', 15)/100*10, dot = num(n, 'dot', 20)/100*14;
+      // the points: each the best of a few candidates (the farthest from the rest: even), landing where the map is light
+      const P = [];
+      const cand = () => { for(let t = 0; t < 16; t++){ const x = Math.random()*ww, y = Math.random()*wh;
+        if(!where || Math.random() < where[Math.min(wh - 1, y | 0)*ww + Math.min(ww - 1, x | 0)]) return [x, y]; } return null; };
+      for(let i = 0; i < count; i++){ let best = null, bd = -1;
+        for(let c = 0; c < tries; c++){ const p = cand(); if(!p) continue; let d = Infinity; for(const o of P) d = Math.min(d, (o[0] - p[0])**2 + (o[1] - p[1])**2); if(d > bd){ bd = d; best = p; } }
+        if(best) P.push(best); }
+      const pts = P, nP = P.length, tris = patDelaunay(P);
+      // its edges, the longest dropped first as Thin Out rises
+      const seen = new Set(), E2 = [];
+      for(const t of tris) for(const [a, b] of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]]){ const k = a < b ? a + ',' + b : b + ',' + a; if(!seen.has(k)){ seen.add(k); E2.push([a, b, Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1])]); } }
+      E2.sort((p, q) => p[2] - q[2]); const kept = E2.slice(0, Math.max(0, Math.round(E2.length*(1 - prune*0.9))));
+      const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [lc, lx] = mk(), [pc, px] = mk(), [fc, fx] = mk();
+      lx.strokeStyle = '#fff'; lx.lineCap = 'round'; lx.lineWidth = E.px(lw); lx.beginPath();
+      for(const [a, b] of kept){ lx.moveTo(pts[a][0], pts[a][1]); lx.lineTo(pts[b][0], pts[b][1]); } if(lw > 0) lx.stroke();
+      px.fillStyle = '#fff'; if(dot > 0) for(let i = 0; i < nP; i++){ px.beginPath(); px.arc(pts[i][0], pts[i][1], E.px(dot)/2, 0, Math.PI*2); px.fill(); }
+      for(const t of tris){ const g = Math.round(20 + Math.random()*235); fx.fillStyle = `rgb(${g},${g},${g})`; fx.strokeStyle = fx.fillStyle; fx.lineWidth = Math.max(1, E.px(1));   // (stroked too: no seam between neighbours)
+        fx.beginPath(); fx.moveTo(pts[t[0]][0], pts[t[0]][1]); fx.lineTo(pts[t[1]][0], pts[t[1]][1]); fx.lineTo(pts[t[2]][0], pts[t[2]][1]); fx.closePath(); fx.fill(); fx.stroke(); }
+      return [E.lum(readCanvas(lc)), E.lum(readCanvas(pc)), E.lum(readCanvas(fc))];
+    } },
+
+  // FILTER FORGE'S BLOCKS and TECHNO: rectangles of random gray, laid at several sizes over each other; their
+  // outlines are Techno's circuitry of lines
+  blocks: { cat: 'Noise', label: 'Blocks', ins: [], outs: ['blocks', 'outlines'],
+    params: [PAT_R('scale', 'Scale', 6, 1, 60), PAT_R('octaves', 'Octaves', 3, 1, 5), PAT_R('fill', 'Density', 60), PAT_R('line', 'Line Width', 12), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 2,
+    doc: 'Rectangles of random gray laid at several sizes over each other; their outlines alone are a circuitry of lines (Filter Forge’s Techno).',
+    run(E, n){ const { ww, wh, N, unit, num, readCanvas } = E;
+      const cells0 = Math.max(1, num(n, 'scale', 6)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 3)))), fill = num(n, 'fill', 60)/100, lw = num(n, 'line', 12)/100*8;
+      const mk = bg => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = bg; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [oc, ox] = mk('#000'); ox.strokeStyle = '#fff'; ox.lineWidth = E.px(lw);
+      const sum = new Float32Array(N); let norm = 0;
+      for(let o = 0; o < oct; o++){ const cs = unit/(cells0*Math.pow(2, o)), gx = Math.ceil(ww/cs), gy = Math.ceil(wh/cs), a = Math.pow(0.5, o);
+        const [c, x] = mk('rgb(128,128,128)'), count = Math.round(fill*gx*gy*0.7);
+        ox.globalAlpha = Math.max(0.25, a);
+        for(let i = 0; i < count; i++){ const bx = Math.floor(Math.random()*gx), by = Math.floor(Math.random()*gy), bw = 1 + Math.floor(Math.random()*3), bh = 1 + Math.floor(Math.random()*3), g = Math.round(Math.random()*255);
+          x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(bx*cs, by*cs, bw*cs, bh*cs); if(lw > 0) ox.strokeRect(bx*cs, by*cs, bw*cs, bh*cs); }
+        const L = E.lum(readCanvas(c)); for(let i = 0; i < N; i++) sum[i] += L[i]*a; norm += a; }
+      for(let i = 0; i < N; i++) sum[i] /= norm;
+      return [sum, E.lum(readCanvas(oc))];
+    } },
+
+  // FILTER FORGE'S PYRAMIDS: a grid of pyramids (or cones, or domes), each its own height, at one or more sizes
+  pyramids: { cat: 'Noise', label: 'Pyramids', ins: [], outs: ['heights', 'cells'],
+    params: [PAT_R('scale', 'Scale', 10, 1, 80), PAT_R('octaves', 'Octaves', 1, 1, 5), PAT_R('round', 'Roundness', 0), PAT_R('vary', 'Height Variety', 50), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 1,
+    doc: 'A grid of pyramids, cones or domes, each of its own height, at one or more sizes: heights for studs, rivets and tiles.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const cells0 = Math.max(1, num(n, 'scale', 10)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 1)))), rd = num(n, 'round', 0)/100, vary = num(n, 'vary', 50)/100;
+      const H = new Float32Array(N), id = new Float32Array(N); let norm = 0;
+      for(let o = 0; o < oct; o++){ const cs = unit/(cells0*Math.pow(2, o)), gx = Math.ceil(ww/cs) + 1, gy = Math.ceil(wh/cs) + 1, a = Math.pow(0.5, o);
+        const ht = new Float32Array(gx*gy), gr = new Float32Array(gx*gy); for(let i = 0; i < gx*gy; i++){ ht[i] = 1 - vary*Math.random(); gr[i] = Math.random(); }
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const cx = Math.floor(x/cs), cy = Math.floor(y/cs), fx = x/cs - cx - 0.5, fy = y/cs - cy - 0.5, q = y*ww + x;
+          // pyramid (flat faces) → cone (round) at 50 → dome at 100
+          const pyr = 1 - 2*Math.max(Math.abs(fx), Math.abs(fy)), r = Math.min(1, 2*Math.hypot(fx, fy)), cone = 1 - r, dome = Math.sqrt(Math.max(0, 1 - r*r));
+          const s = rd < 0.5 ? pyr + (cone - pyr)*rd*2 : cone + (dome - cone)*(rd - 0.5)*2;
+          H[q] += Math.max(0, s)*ht[cy*gx + cx]*a; if(o === 0) id[q] = gr[cy*gx + cx]; }
+        norm += a; }
+      for(let i = 0; i < N; i++) H[i] /= norm;
+      return [H, id];
+    } },
+
+  // FILTER FORGE'S NOISE GRADIENT: a gray map colored by a gradient of many stops between two colors, each stop
+  // straying from the line between them: a palette that drifts, as nebulae and old dyes do
+  noisegrad: { cat: 'Light & Color', label: 'Noise Gradient', ins: ['field', 'color a', 'color b'], outs: ['picture'], io: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
+    params: [PAT_R('stops', 'Stops', 8, 2, 32), PAT_R('drift', 'Color Drift', 40), PAT_R('smooth', 'Smoothness', 70), ['ca', 'Color A', 'text', '#14102A'], ['cb', 'Color B', 'text', '#E8C8E0'], PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 1,
+    doc: 'Colors a gray map with a gradient of many stops between two colors, each stop straying from the line between them, so the colors drift.',
+    run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
+      const f = asField(input(n, 1)), K = Math.max(2, Math.min(32, Math.round(num(n, 'stops', 8)))), drift = num(n, 'drift', 40)/100, sm = num(n, 'smooth', 70)/100;
+      const ca = input(n, 2), cb = input(n, 3), A = Array.isArray(ca) ? ca : patHex(P(n, 'ca', '#14102A')), B = Array.isArray(cb) ? cb : patHex(P(n, 'cb', '#E8C8E0'));
+      // the stops: along the line from A to B, each turned in hue and moved in saturation and value by the drift
+      const stops = Array.from({ length: K }, (_, k) => { const t = k/(K - 1), c = [0, 1, 2].map(i => A[i] + (B[i] - A[i])*t), [h, s, v] = patHsv(c);
+        return patRgb([((h + (Math.random() - 0.5)*drift*0.5) % 1 + 1) % 1, patClamp(s + (Math.random() - 0.5)*drift*0.8), patClamp(v + (Math.random() - 0.5)*drift*0.5)]); });
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const v = f ? patClamp(f[i]) : (i % ww)/Math.max(1, ww - 1), t = v*(K - 1), j = Math.min(K - 2, Math.floor(t));
+        // Smoothness: hard bands at 0, each stop running straight into the next at 100 (eased between)
+        let u = patClamp((t - j - 0.5)/Math.max(1e-3, sm) + 0.5); u += (u*u*(3 - 2*u) - u)*(1 - sm);
+        const a = stops[j], b = stops[j + 1]; o.r[i] = a[0] + (b[0] - a[0])*u; o.g[i] = a[1] + (b[1] - a[1])*u; o.b[i] = a[2] + (b[2] - a[2])*u; }
       return [o];
     } },
 

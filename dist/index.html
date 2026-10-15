@@ -12380,8 +12380,9 @@ const GEN_STEPS = {
  * Every part here is general (a part someone reaches for twice), from Filter
  * Forge's component list and Ruby's future-directions doc (ROADMAP §2 F):
  *   Scatter (Bomber, Glyph Scatter) · Grid & Dots (Checker, Tiles, Dots) ·
- *   Border Mask · Lookup · Displace · Gradient Map (3- and 5-color,
- *   Elevation Gradient) · Spectrum.
+ *   Ellipse · Polygon · Triangle Mesh (Delaunay) · Blocks (and Techno) ·
+ *   Pyramids · Border Mask · Lookup · Displace · Gradient Map (3- and
+ *   5-color, Elevation Gradient) · Noise Gradient · Spectrum.
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
@@ -12390,6 +12391,40 @@ const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def
 const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
 const patClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 const patHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16)/255, ((n >> 8) & 255)/255, (n & 255)/255]; };
+// a soft edge in the page's units: 1 well inside (sd < −s), 0 well outside (sd > s), smooth between
+const patInside = (sd, s) => { const t = patClamp(0.5 - sd/(2*s)); return t*t*(3 - 2*t); };
+// colors as hue (turns), saturation and value, and back
+const patHsv = ([r, g, b]) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const h = d < 1e-9 ? 0 : mx === r ? ((g - b)/d + 6) % 6 : mx === g ? (b - r)/d + 2 : (r - g)/d + 4; return [h/6, mx > 0 ? d/mx : 0, mx]; };
+const patRgb = ([h, s, v]) => { const f = k => { const q = (k + h*6) % 6; return v - v*s*Math.max(0, Math.min(1, q, 4 - q)); }; return [f(5), f(3), f(1)]; };
+/**
+ * DELAUNAY TRIANGLES of points [[x, y], …] (Bowyer–Watson): the points are added one by one, and the triangles
+ * whose circumcircle holds the new point are taken out and the hole re-triangulated from it. Returns triangles
+ * as index triples; no point lies inside another triangle's circle.
+ */
+function patDelaunay(P){   // test hook: the Delaunay property is checked directly (filterforge.test)
+  const nP = P.length; if(nP < 3) return [];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const [x, y] of P){ x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const S = Math.max(x1 - x0, y1 - y0, 1)*20, mx = (x0 + x1)/2, pts = [...P, [mx - S, y0 - S], [mx + S, y0 - S], [mx, y1 + S]];
+  const circ = ([a, b, c]) => { const [ax, ay] = pts[a], [bx, by] = pts[b], [cx, cy] = pts[c], d = 2*(ax*(by - cy) + bx*(cy - ay) + cx*(ay - by)) || 1e-12;
+    const ux = ((ax*ax + ay*ay)*(by - cy) + (bx*bx + by*by)*(cy - ay) + (cx*cx + cy*cy)*(ay - by))/d, uy = ((ax*ax + ay*ay)*(cx - bx) + (bx*bx + by*by)*(ax - cx) + (cx*cx + cy*cy)*(bx - ax))/d;
+    return [ux, uy, (ax - ux)**2 + (ay - uy)**2]; };
+  let tris = [[nP, nP + 1, nP + 2]], C = tris.map(circ);
+  const key = (a, b) => a < b ? a + ',' + b : b + ',' + a, sides = t => [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]];
+  for(let i = 0; i < nP; i++){ const [x, y] = pts[i], bad = [], keep = [], keepC = [];
+    tris.forEach((t, k) => { const c = C[k]; ((x - c[0])**2 + (y - c[1])**2 < c[2]) ? bad.push(t) : (keep.push(t), keepC.push(c)); });
+    const seen = new Map(); for(const t of bad) for(const [a, b] of sides(t)) seen.set(key(a, b), (seen.get(key(a, b)) || 0) + 1);
+    for(const t of bad) for(const [a, b] of sides(t)) if(seen.get(key(a, b)) === 1){ const nt = [a, b, i]; keep.push(nt); keepC.push(circ(nt)); }
+    tris = keep; C = keepC; }
+  return tris.filter(t => t[0] < nP && t[1] < nP && t[2] < nP);
+}
+// rings of a shape: `K` of them, the outermost at d = 1. With a line width, each ring a line; without, bands
+// filled in turn (one band: the whole shape). m: the distance (page units) to the nearest ring; d: how far out
+function patRings(d, m, K, lw, sf){
+  if(lw > 0) return patInside(m - lw/2, sf);
+  const j = Math.max(1, Math.ceil(d*K - 1e-9)), base = j <= K && j % 2 === 1 ? 1 : 0, w = patClamp(m/sf);
+  return 0.5 + (base - 0.5)*w*w*(3 - 2*w);
+}
 
 // ---- SCATTER: the shapes it can throw ----
 // each drawn white on a canvas, centred at 0,0 with radius 1 (the caller scales and turns)
@@ -12542,6 +12577,144 @@ const PATTERN_STEPS = {
       return [o];
     } },
 
+  // FILTER FORGE'S ELLIPSE (and Free Ellipse): one ellipse, or rings of them like orbits, filled or drawn as lines;
+  // with how far out from its centre each point lies, and how far round, to shape or place other things by
+  ellipse: { cat: 'Noise', label: 'Ellipse', ins: [], outs: ['shape', 'distance', 'around'],
+    params: [PAT_R('size', 'Size', 60, 1, 200), PAT_R('height', 'Height', 60, 5, 100), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
+      PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
+    cost: () => 1,
+    doc: 'An ellipse, or rings of them like orbits, filled or drawn as lines; also how far out from its center each point is, and how far around.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const A = Math.max(1e-3, num(n, 'size', 60)/200), B = Math.max(1e-3, A*num(n, 'height', 60)/100), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an);
+      const cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
+      const lw = num(n, 'line', 0)/100*0.04, sf = Math.max(0.7/unit, num(n, 'soft', 4)/100*0.05);
+      const shape = new Float32Array(N), dist = new Float32Array(N), round = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, px = x/unit - cx, py = y/unit - cy;
+        const u = (px*ca + py*sa)/A, v = (-px*sa + py*ca)/B, d = Math.hypot(u, v);
+        // how fast d grows per page unit here, so a ring's line is as wide all the way round
+        const g = d > 1e-9 ? Math.hypot(u/A, v/B)/d : 1/Math.min(A, B);
+        let m = Infinity; for(let k = 1; k <= K; k++){ const e = Math.abs(d - k/K)/g; if(e < m) m = e; }
+        shape[q] = patRings(d, m, K, lw, sf); dist[q] = Math.min(1, d); round[q] = Math.atan2(v, u)/(Math.PI*2) + 0.5; }
+      return [shape, dist, round];
+    } },
+
+  // FILTER FORGE'S POLYGON (and Free Polygon): a regular polygon, or a star, or rings of them; with a bevel (a
+  // pyramid, flat faces rising to the centre) and how far round each point lies
+  polygon: { cat: 'Noise', label: 'Polygon', ins: [], outs: ['shape', 'bevel', 'around'],
+    params: [PAT_R('sides', 'Sides', 6, 3, 12), PAT_R('star', 'Star', 0), PAT_R('size', 'Size', 60, 1, 200), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
+      PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
+    cost: () => 1,
+    doc: 'A regular polygon or a star, or rings of them, filled or drawn as lines; also a bevel that rises to its center, and how far around each point is.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const sides = Math.max(3, Math.min(12, Math.round(num(n, 'sides', 6)))), star = num(n, 'star', 0)/100, R = Math.max(1e-3, num(n, 'size', 60)/200);
+      const an = num(n, 'angle', 0)*Math.PI/180, cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
+      const lw = num(n, 'line', 0)/100*0.04, sf = Math.max(0.7/unit, num(n, 'soft', 4)/100*0.05);
+      // its corners (a star: every other one pulled in), the first pointing up; each edge as its outward normal and its distance from the centre
+      const M = star > 0 ? sides*2 : sides, a0 = an - Math.PI/2, V = Array.from({ length: M }, (_, k) => { const r = star > 0 && k % 2 ? R*(1 - star*0.8) : R, a = a0 + k*Math.PI*2/M; return [Math.cos(a)*r, Math.sin(a)*r]; });
+      const edges = V.map((p, k) => { const q = V[(k + 1) % M]; let nx = q[1] - p[1], ny = p[0] - q[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+        const h = p[0]*nx + p[1]*ny; return h < 0 ? [-nx, -ny, -h] : [nx, ny, h]; });
+      const shape = new Float32Array(N), bevel = new Float32Array(N), round = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, px = x/unit - cx, py = y/unit - cy;
+        const t = (((Math.atan2(py, px) - a0)/(Math.PI*2)) % 1 + 1) % 1, k = Math.min(M - 1, Math.floor(t*M)), [nx, ny, h] = edges[k];
+        // within its sector a point's place is how far it lies toward that edge: 1 on the outline
+        const d = Math.max(0, (px*nx + py*ny)/h);
+        let m = Infinity; for(let j = 1; j <= K; j++){ const e = Math.abs(d - j/K)*h; if(e < m) m = e; }
+        shape[q] = patRings(d, m, K, lw, sf); bevel[q] = 1 - Math.min(1, d); round[q] = t; }
+      return [shape, bevel, round];
+    } },
+
+  // A MESH OF TRIANGLES between scattered points (Delaunay's: no point inside another triangle's circle), its
+  // lines thinned to the shortest for a constellation; points land where a map is light
+  mesh: { cat: 'Marks', label: 'Triangle Mesh', ins: ['where'], outs: ['lines', 'points', 'facets'],
+    params: [PAT_R('count', 'Points', 40, 3, 400), PAT_R('even', 'Evenness', 50), PAT_R('prune', 'Thin Out', 0), PAT_R('line', 'Line Width', 15), PAT_R('dot', 'Point Size', 20), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 3,
+    doc: 'Scattered points joined into triangles (a Delaunay mesh): its lines, its points, and each triangle a flat gray of its own.',
+    run(E, n){ const { ww, wh, N, input, num, asField, readCanvas } = E;
+      const where = asField(input(n, 1)), count = Math.max(3, Math.min(400, Math.round(num(n, 'count', 40)))), tries = 1 + Math.round(num(n, 'even', 50)/100*12);
+      const prune = num(n, 'prune', 0)/100, lw = num(n, 'line', 15)/100*10, dot = num(n, 'dot', 20)/100*14;
+      // the points: each the best of a few candidates (the farthest from the rest: even), landing where the map is light
+      const P = [];
+      const cand = () => { for(let t = 0; t < 16; t++){ const x = Math.random()*ww, y = Math.random()*wh;
+        if(!where || Math.random() < where[Math.min(wh - 1, y | 0)*ww + Math.min(ww - 1, x | 0)]) return [x, y]; } return null; };
+      for(let i = 0; i < count; i++){ let best = null, bd = -1;
+        for(let c = 0; c < tries; c++){ const p = cand(); if(!p) continue; let d = Infinity; for(const o of P) d = Math.min(d, (o[0] - p[0])**2 + (o[1] - p[1])**2); if(d > bd){ bd = d; best = p; } }
+        if(best) P.push(best); }
+      const pts = P, nP = P.length, tris = patDelaunay(P);
+      // its edges, the longest dropped first as Thin Out rises
+      const seen = new Set(), E2 = [];
+      for(const t of tris) for(const [a, b] of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]]){ const k = a < b ? a + ',' + b : b + ',' + a; if(!seen.has(k)){ seen.add(k); E2.push([a, b, Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1])]); } }
+      E2.sort((p, q) => p[2] - q[2]); const kept = E2.slice(0, Math.max(0, Math.round(E2.length*(1 - prune*0.9))));
+      const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [lc, lx] = mk(), [pc, px] = mk(), [fc, fx] = mk();
+      lx.strokeStyle = '#fff'; lx.lineCap = 'round'; lx.lineWidth = E.px(lw); lx.beginPath();
+      for(const [a, b] of kept){ lx.moveTo(pts[a][0], pts[a][1]); lx.lineTo(pts[b][0], pts[b][1]); } if(lw > 0) lx.stroke();
+      px.fillStyle = '#fff'; if(dot > 0) for(let i = 0; i < nP; i++){ px.beginPath(); px.arc(pts[i][0], pts[i][1], E.px(dot)/2, 0, Math.PI*2); px.fill(); }
+      for(const t of tris){ const g = Math.round(20 + Math.random()*235); fx.fillStyle = `rgb(${g},${g},${g})`; fx.strokeStyle = fx.fillStyle; fx.lineWidth = Math.max(1, E.px(1));   // (stroked too: no seam between neighbours)
+        fx.beginPath(); fx.moveTo(pts[t[0]][0], pts[t[0]][1]); fx.lineTo(pts[t[1]][0], pts[t[1]][1]); fx.lineTo(pts[t[2]][0], pts[t[2]][1]); fx.closePath(); fx.fill(); fx.stroke(); }
+      return [E.lum(readCanvas(lc)), E.lum(readCanvas(pc)), E.lum(readCanvas(fc))];
+    } },
+
+  // FILTER FORGE'S BLOCKS and TECHNO: rectangles of random gray, laid at several sizes over each other; their
+  // outlines are Techno's circuitry of lines
+  blocks: { cat: 'Noise', label: 'Blocks', ins: [], outs: ['blocks', 'outlines'],
+    params: [PAT_R('scale', 'Scale', 6, 1, 60), PAT_R('octaves', 'Octaves', 3, 1, 5), PAT_R('fill', 'Density', 60), PAT_R('line', 'Line Width', 12), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 2,
+    doc: 'Rectangles of random gray laid at several sizes over each other; their outlines alone are a circuitry of lines (Filter Forge’s Techno).',
+    run(E, n){ const { ww, wh, N, unit, num, readCanvas } = E;
+      const cells0 = Math.max(1, num(n, 'scale', 6)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 3)))), fill = num(n, 'fill', 60)/100, lw = num(n, 'line', 12)/100*8;
+      const mk = bg => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = bg; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [oc, ox] = mk('#000'); ox.strokeStyle = '#fff'; ox.lineWidth = E.px(lw);
+      const sum = new Float32Array(N); let norm = 0;
+      for(let o = 0; o < oct; o++){ const cs = unit/(cells0*Math.pow(2, o)), gx = Math.ceil(ww/cs), gy = Math.ceil(wh/cs), a = Math.pow(0.5, o);
+        const [c, x] = mk('rgb(128,128,128)'), count = Math.round(fill*gx*gy*0.7);
+        ox.globalAlpha = Math.max(0.25, a);
+        for(let i = 0; i < count; i++){ const bx = Math.floor(Math.random()*gx), by = Math.floor(Math.random()*gy), bw = 1 + Math.floor(Math.random()*3), bh = 1 + Math.floor(Math.random()*3), g = Math.round(Math.random()*255);
+          x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(bx*cs, by*cs, bw*cs, bh*cs); if(lw > 0) ox.strokeRect(bx*cs, by*cs, bw*cs, bh*cs); }
+        const L = E.lum(readCanvas(c)); for(let i = 0; i < N; i++) sum[i] += L[i]*a; norm += a; }
+      for(let i = 0; i < N; i++) sum[i] /= norm;
+      return [sum, E.lum(readCanvas(oc))];
+    } },
+
+  // FILTER FORGE'S PYRAMIDS: a grid of pyramids (or cones, or domes), each its own height, at one or more sizes
+  pyramids: { cat: 'Noise', label: 'Pyramids', ins: [], outs: ['heights', 'cells'],
+    params: [PAT_R('scale', 'Scale', 10, 1, 80), PAT_R('octaves', 'Octaves', 1, 1, 5), PAT_R('round', 'Roundness', 0), PAT_R('vary', 'Height Variety', 50), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 1,
+    doc: 'A grid of pyramids, cones or domes, each of its own height, at one or more sizes: heights for studs, rivets and tiles.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const cells0 = Math.max(1, num(n, 'scale', 10)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 1)))), rd = num(n, 'round', 0)/100, vary = num(n, 'vary', 50)/100;
+      const H = new Float32Array(N), id = new Float32Array(N); let norm = 0;
+      for(let o = 0; o < oct; o++){ const cs = unit/(cells0*Math.pow(2, o)), gx = Math.ceil(ww/cs) + 1, gy = Math.ceil(wh/cs) + 1, a = Math.pow(0.5, o);
+        const ht = new Float32Array(gx*gy), gr = new Float32Array(gx*gy); for(let i = 0; i < gx*gy; i++){ ht[i] = 1 - vary*Math.random(); gr[i] = Math.random(); }
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const cx = Math.floor(x/cs), cy = Math.floor(y/cs), fx = x/cs - cx - 0.5, fy = y/cs - cy - 0.5, q = y*ww + x;
+          // pyramid (flat faces) → cone (round) at 50 → dome at 100
+          const pyr = 1 - 2*Math.max(Math.abs(fx), Math.abs(fy)), r = Math.min(1, 2*Math.hypot(fx, fy)), cone = 1 - r, dome = Math.sqrt(Math.max(0, 1 - r*r));
+          const s = rd < 0.5 ? pyr + (cone - pyr)*rd*2 : cone + (dome - cone)*(rd - 0.5)*2;
+          H[q] += Math.max(0, s)*ht[cy*gx + cx]*a; if(o === 0) id[q] = gr[cy*gx + cx]; }
+        norm += a; }
+      for(let i = 0; i < N; i++) H[i] /= norm;
+      return [H, id];
+    } },
+
+  // FILTER FORGE'S NOISE GRADIENT: a gray map colored by a gradient of many stops between two colors, each stop
+  // straying from the line between them: a palette that drifts, as nebulae and old dyes do
+  noisegrad: { cat: 'Light & Color', label: 'Noise Gradient', ins: ['field', 'color a', 'color b'], outs: ['picture'], io: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
+    params: [PAT_R('stops', 'Stops', 8, 2, 32), PAT_R('drift', 'Color Drift', 40), PAT_R('smooth', 'Smoothness', 70), ['ca', 'Color A', 'text', '#14102A'], ['cb', 'Color B', 'text', '#E8C8E0'], PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 1,
+    doc: 'Colors a gray map with a gradient of many stops between two colors, each stop straying from the line between them, so the colors drift.',
+    run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
+      const f = asField(input(n, 1)), K = Math.max(2, Math.min(32, Math.round(num(n, 'stops', 8)))), drift = num(n, 'drift', 40)/100, sm = num(n, 'smooth', 70)/100;
+      const ca = input(n, 2), cb = input(n, 3), A = Array.isArray(ca) ? ca : patHex(P(n, 'ca', '#14102A')), B = Array.isArray(cb) ? cb : patHex(P(n, 'cb', '#E8C8E0'));
+      // the stops: along the line from A to B, each turned in hue and moved in saturation and value by the drift
+      const stops = Array.from({ length: K }, (_, k) => { const t = k/(K - 1), c = [0, 1, 2].map(i => A[i] + (B[i] - A[i])*t), [h, s, v] = patHsv(c);
+        return patRgb([((h + (Math.random() - 0.5)*drift*0.5) % 1 + 1) % 1, patClamp(s + (Math.random() - 0.5)*drift*0.8), patClamp(v + (Math.random() - 0.5)*drift*0.5)]); });
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const v = f ? patClamp(f[i]) : (i % ww)/Math.max(1, ww - 1), t = v*(K - 1), j = Math.min(K - 2, Math.floor(t));
+        // Smoothness: hard bands at 0, each stop running straight into the next at 100 (eased between)
+        let u = patClamp((t - j - 0.5)/Math.max(1e-3, sm) + 0.5); u += (u*u*(3 - 2*u) - u)*(1 - sm);
+        const a = stops[j], b = stops[j + 1]; o.r[i] = a[0] + (b[0] - a[0])*u; o.g[i] = a[1] + (b[1] - a[1])*u; o.b[i] = a[2] + (b[2] - a[2])*u; }
+      return [o];
+    } },
+
   // FILTER FORGE'S 3- AND 5-COLOR GRADIENTS and ELEVATION GRADIENT: a gray map colored by up to five colors
   gradmap: { cat: 'Light & Color', label: 'Gradient Map', ins: ['field', 'color 1', 'color 2', 'color 3', 'color 4', 'color 5'], outs: ['picture'],
     io: { ins: ['field', 'colour', 'colour', 'colour', 'colour', 'colour'], outs: ['image'] }, req: true,
@@ -12654,7 +12827,7 @@ const STEP_PARTS = {
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
   noise:    { cat: 'Noise', label: 'Value Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('octaves', 'Octaves', 3, 1, 6), STEP_R('variation', 'Variation', 0, 0, 99)] },
-  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80), STEP_R('variation', 'Variation', 0, 0, 99)] },
+  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id', 'stones'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80), STEP_R('variation', 'Variation', 0, 0, 99), STEP_R('gap', 'Gap', 25)] },
   waves:    { cat: 'Noise', label: 'Waves', ins: ['warp'], outs: ['field'], params: [STEP_R('freq', 'Frequency', 12, 1, 120), STEP_R('angle', 'Angle', 0, 0, 360)] },
   gradient: { cat: 'Noise', label: 'Gradient', ins: [], outs: ['field'], params: [STEP_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular']), STEP_R('angle', 'Angle', 90, 0, 360)] },
   turing:   { cat: 'Noise', label: 'Reaction–Diffusion (old)', ins: ['seed'], outs: ['field'], params: [STEP_SEL('pattern', 'Pattern', ['spots', 'coral', 'maze', 'worms', 'holes']), STEP_R('scale', 'Scale', 100, 50, 250)] },
@@ -12665,7 +12838,7 @@ const STEP_PARTS = {
   threshold:{ cat: 'Shape', label: 'Threshold', ins: ['field'], outs: ['mask'], params: [STEP_R('at', 'Cutoff', 50), STEP_R('soft', 'Softness', 10)] },
   blur:     { cat: 'Shape', label: 'Blur', ins: ['field'], outs: ['field'], params: [STEP_R('radius', 'Radius', 8, 0, 100)] },
   warp:     { cat: 'Shape', label: 'Warp', ins: ['field', 'by'], outs: ['field'], params: [STEP_R('amount', 'Strength', 20)] },
-  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine'])] },
+  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine', 'round', 'floor', 'ceiling', 'greater', 'less', 'log'])] },
   mix:      { cat: 'Combine', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [STEP_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
   posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16)] },
@@ -12978,15 +13151,17 @@ const STEP_RUN = {
     const sc = Math.max(2, num(n, 'scale', 30))/10, jit = num(n, 'jitter', 80)/100, cs = unit/sc;
     const gx = Math.ceil(ww/cs) + 2, gy = Math.ceil(wh/cs) + 2, pts = new Float32Array(gx*gy*3);
     for(let i = 0; i < gx*gy; i++){ pts[i*3] = 0.5 + (Math.random() - 0.5)*jit; pts[i*3+1] = 0.5 + (Math.random() - 0.5)*jit; pts[i*3+2] = Math.random(); }
-    const d1 = new Float32Array(N), ed = new Float32Array(N), id = new Float32Array(N);
+    const d1 = new Float32Array(N), ed = new Float32Array(N), id = new Float32Array(N), st = new Float32Array(N), gap = num(n, 'gap', 25)/100*0.3;
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
       const cx = Math.floor(x/cs) + 1, cy = Math.floor(y/cs) + 1; let a = 1e9, b = 1e9, ia = 0;
       for(let j = cy - 1; j <= cy + 1; j++) for(let i = cx - 1; i <= cx + 1; i++){ if(i < 0 || j < 0 || i >= gx || j >= gy) continue;
         const k = (j*gx + i)*3, px = (i - 1 + pts[k])*cs, py = (j - 1 + pts[k+1])*cs, d = Math.hypot(px - x, py - y);
         if(d < a){ b = a; a = d; ia = pts[k+2]; } else if(d < b) b = d; }
       const q = y*ww + x; d1[q] = Math.min(1, a/cs); ed[q] = 1 - Math.min(1, (b - a)/cs*4); id[q] = ia;
+      // STONES (Filter Forge's Stones): each cell a rounded stone, highest in its middle, with Gap between them
+      const t = Math.max(0, Math.min(1, ((b - a)/cs - gap)/0.5)); st[q] = 1 - (1 - t)**3;
     }
-    return [d1, ed, id];
+    return [d1, ed, id, st];
   },
   waves(E, n){ const { ww, wh, unit, input, num, field, asField } = E;
     const fq = Math.max(1, num(n, 'freq', 12)), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an);
@@ -13069,7 +13244,10 @@ const STEP_RUN = {
     const f = { add: (x, y) => x + y, multiply: (x, y) => x*y, max: Math.max, min: Math.min, difference: (x, y) => Math.abs(x - y), subtract: (x, y) => x - y,
       // Filter Forge's RGB Math, the useful few: b as a divisor, an exponent (0..1 → 0..4), a mean, a screen, a remainder, a wave
       divide: (x, y) => y > 1e-4 ? x/y : 1, power: (x, y) => Math.pow(Math.max(0, x), (b ? y : 0.25)*4), average: (x, y) => (x + y)/2,
-      screen: (x, y) => 1 - (1 - x)*(1 - y), modulo: (x, y) => y > 1e-4 ? (x % y)/y : 0, sine: (x, y) => 0.5 + 0.5*Math.sin((x + y)*Math.PI*2) }[op] || ((x, y) => x + y);
+      screen: (x, y) => 1 - (1 - x)*(1 - y), modulo: (x, y) => y > 1e-4 ? (x % y)/y : 0, sine: (x, y) => 0.5 + 0.5*Math.sin((x + y)*Math.PI*2),
+      // a to steps of b (round, floor, ceiling); 1 where a is greater (or less) than b, else 0; a logarithm, which lifts the darks
+      round: (x, y) => y > 1e-4 ? Math.round(x/y)*y : x, floor: (x, y) => y > 1e-4 ? Math.floor(x/y + 1e-9)*y : x, ceiling: (x, y) => y > 1e-4 ? Math.ceil(x/y - 1e-9)*y : x,
+      greater: (x, y) => x > y ? 1 : 0, less: (x, y) => x < y ? 1 : 0, log: (x, y) => Math.log(1 + Math.max(0, x)*(1 + y*99))/Math.log(2 + y*99) }[op] || ((x, y) => x + y);
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f(A[i], B[i])));
     return [o];
   },
@@ -13802,9 +13980,9 @@ const ATHANOR_STUDIES = {
     wire(n, 1, mb, 1); wire(mb, 1, w, 1); wire(p, 1, w, 2); wire(sc, 1, b, 1); wire(b, 1, inv, 1); wire(w, 1, m, 1); wire(inv, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3);
     wire(t, 1, le, 1); wire(m, 1, le, 2); wire(le, 1, s, 1); wire(k1, 1, w, 'amount');
   }),
-  spacedust: studyGraph('Deep-Space Dust', 'Dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Spectrum, dimmed, drifts the color. Try: raise Emptiness.', (add, wire, fade) => {
+  spacedust: studyGraph('Deep-Space Dust', 'Dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Noise Gradient laid along the same noise drifts the color between two of a nebula\'s. Try: raise Emptiness.', (add, wire, fade) => {
     const p = add('perlin', { scale: 6, details: 6, rough: 65, contrast: 50 }), lv = add('levels', { lo: 50, hi: 85, gamma: 50 }), sc = add('scatter', { shape: 'dot', count: 400, size: 2, vary: 90, clump: 30, fade: 70 }),
-      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('spectrum', { shape: 'along a map', sat: 35, light: 50 }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
+      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('noisegrad', { stops: 10, drift: 55, smooth: 85, ca: '#6A5890', cb: '#F0D8E8' }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
       s = add('surface', { name: 'Deep-Space Dust', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Emptiness', def: 50 });
     wire(p, 1, lv, 1); wire(lv, 1, sc, 2); wire(p, 1, fogL, 1); wire(sc, 1, m, 1); wire(fog, 1, m, 2); wire(m, 1, bl, 1); wire(p, 1, sp, 1); wire(sp, 1, bl, 2); wire(bl, 1, s, 1); wire(k1, 1, lv, 'lo');
   }),
@@ -13820,10 +13998,10 @@ const ATHANOR_STUDIES = {
       k1 = add('knob', { slot: '1', name: 'Downpour', def: 60 });
     wire(p, 1, tr, 1); wire(tr, 1, lv, 1); wire(lv, 1, sc, 2); wire(down, 1, sc, 3); wire(sc, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, sc, 'count');
   }),
-  constellation: studyGraph('Constellation Without Stars', 'A star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. The edges of Cells are the joining lines; tiny Scatter dots mark the meetings; both are faded and tinted. Try: raise Lines.', (add, wire, fade) => {
-    const c = add('cells', { scale: 9, jitter: 100 }), th = add('threshold', { at: 88, soft: 10 }), lv = fade(th, 1, 35), sc = add('scatter', { shape: 'dot', count: 40, size: 2, vary: 60, fade: 50 }),
+  constellation: studyGraph('Constellation Without Stars', 'A star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. Triangle Mesh joins scattered points into triangles (Delaunay\'s) and Thin Out keeps only the shorter lines, so neighbors join into constellations; a soft Perlin Noise on Where gathers the points into a band, as the Milky Way gathers stars. Its lines are faded, its points kept small, and both tinted. Try: raise Lines.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 8, details: 3, contrast: 40 }), me = add('mesh', { count: 70, even: 70, prune: 60, line: 8, dot: 12, '~prune': '92,20' }), lv = fade(me, 1, 40),
       m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Constellation Without Stars', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Lines', def: 50 });
-    wire(c, 2, th, 1); wire(lv, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, c, 'scale');
+    wire(p, 1, me, 1); wire(lv, 1, m, 1); wire(me, 2, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, me, 'prune');
   }),
   cartography: studyGraph('Impossible Cartography', 'A map of nowhere: contour lines, a few unlabeled symbols, a faint grid, on old paper. Terrain gives the land; Contour Lines draw it; Scatter places rings and crosses; Grid & Dots lays a survey grid; a Gradient Map colors the paper. Try: raise Relief for steeper country.', (add, wire, fade) => {
     const tr = add('terrain', { scale: 100, crests: 50 }), ct = add('contours', { levels: 18, weight: 120, index: 5, strength: 80 }), sc = add('scatter', { shape: 'ring', count: 10, size: 8, vary: 40 }),
@@ -13858,13 +14036,13 @@ const ATHANOR_STUDIES = {
     wire(sc, 1, mb, 1); wire(mb, 1, b, 1); wire(b, 1, m, 1); wire(lv, 1, m, 2); wire(m, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
     wire(k1, 1, mb, 'length');
   }),
-  orbit: studyGraph('Orbit Script', 'Writing that circles: rings of an orrery, with signs strung along them like beads. A Profile Gradient (radial) read through a Wave curve makes the rings; Threshold thins them to lines; Scatter strings small sigils only where the rings are. An approximation: true ellipses and writing along a path wait for their own parts. Try: raise Rings.', (add, wire, fade) => {
-    const cv = add('curve', { shape: 'wave', count: 6 }), pg = add('profile', { shape: 'radial' }), th = add('threshold', { at: 94, soft: 8 }), near = add('blur', { radius: 2 }),
+  orbit: studyGraph('Orbit Script', 'Writing that circles: the rings of an orrery seen a little from the side, with signs strung along them like beads. Ellipse draws the orbits as rings of lines, squashed and turned; Blur widens them a little into a path; Scatter strings small sigils only along that path, each turned at random. Writing that follows the orbit itself waits for a part of its own. Try: raise Rings.', (add, wire, fade) => {
+    const el = add('ellipse', { size: 180, height: 42, angle: 12, rings: 6, line: 5, soft: 6, '~rings': '2,14' }), near = add('blur', { radius: 3 }),
       sc = add('scatter', { shape: 'sigil', count: 70, size: 14, vary: 40, turn: 100 }), m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'),
-      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 25 });
-    const ring = fade(th, 1, 55);
-    wire(cv, 1, pg, 1); wire(pg, 1, th, 1); wire(th, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
-    wire(k1, 1, cv, 'count');
+      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 33 });
+    const ring = fade(el, 1, 55);
+    wire(el, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, el, 'rings');
   }),
   transmutation: studyGraph('Transmutation Engine', 'A circle diagram of an alchemical engine: concentric rings, spokes folded into symmetry, a few stations marked. Rings come from a radial Profile Gradient through a Stairs curve and Edge Detect; Grid & Dots lines folded by Kaleidoscope make the spokes; a Shape Mask keeps it in the circle. An approximation: the true diagram part (with glyphs at the stations) is still to come. Try: change Folds.', (add, wire, fade) => {
     const cv = add('curve', { shape: 'stairs', count: 5 }), pg = add('profile', { shape: 'radial' }), e = add('edges', { strength: 100 }), g = add('grid', { kind: 'grid lines', cells: 6, weight: 8, soft: 10 }),
@@ -29867,8 +30045,9 @@ const GEN_STEPS = {
  * Every part here is general (a part someone reaches for twice), from Filter
  * Forge's component list and Ruby's future-directions doc (ROADMAP §2 F):
  *   Scatter (Bomber, Glyph Scatter) · Grid & Dots (Checker, Tiles, Dots) ·
- *   Border Mask · Lookup · Displace · Gradient Map (3- and 5-color,
- *   Elevation Gradient) · Spectrum.
+ *   Ellipse · Polygon · Triangle Mesh (Delaunay) · Blocks (and Techno) ·
+ *   Pyramids · Border Mask · Lookup · Displace · Gradient Map (3- and
+ *   5-color, Elevation Gradient) · Noise Gradient · Spectrum.
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
@@ -29877,6 +30056,40 @@ const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def
 const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
 const patClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 const patHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16)/255, ((n >> 8) & 255)/255, (n & 255)/255]; };
+// a soft edge in the page's units: 1 well inside (sd < −s), 0 well outside (sd > s), smooth between
+const patInside = (sd, s) => { const t = patClamp(0.5 - sd/(2*s)); return t*t*(3 - 2*t); };
+// colors as hue (turns), saturation and value, and back
+const patHsv = ([r, g, b]) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const h = d < 1e-9 ? 0 : mx === r ? ((g - b)/d + 6) % 6 : mx === g ? (b - r)/d + 2 : (r - g)/d + 4; return [h/6, mx > 0 ? d/mx : 0, mx]; };
+const patRgb = ([h, s, v]) => { const f = k => { const q = (k + h*6) % 6; return v - v*s*Math.max(0, Math.min(1, q, 4 - q)); }; return [f(5), f(3), f(1)]; };
+/**
+ * DELAUNAY TRIANGLES of points [[x, y], …] (Bowyer–Watson): the points are added one by one, and the triangles
+ * whose circumcircle holds the new point are taken out and the hole re-triangulated from it. Returns triangles
+ * as index triples; no point lies inside another triangle's circle.
+ */
+function patDelaunay(P){   // test hook: the Delaunay property is checked directly (filterforge.test)
+  const nP = P.length; if(nP < 3) return [];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const [x, y] of P){ x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const S = Math.max(x1 - x0, y1 - y0, 1)*20, mx = (x0 + x1)/2, pts = [...P, [mx - S, y0 - S], [mx + S, y0 - S], [mx, y1 + S]];
+  const circ = ([a, b, c]) => { const [ax, ay] = pts[a], [bx, by] = pts[b], [cx, cy] = pts[c], d = 2*(ax*(by - cy) + bx*(cy - ay) + cx*(ay - by)) || 1e-12;
+    const ux = ((ax*ax + ay*ay)*(by - cy) + (bx*bx + by*by)*(cy - ay) + (cx*cx + cy*cy)*(ay - by))/d, uy = ((ax*ax + ay*ay)*(cx - bx) + (bx*bx + by*by)*(ax - cx) + (cx*cx + cy*cy)*(bx - ax))/d;
+    return [ux, uy, (ax - ux)**2 + (ay - uy)**2]; };
+  let tris = [[nP, nP + 1, nP + 2]], C = tris.map(circ);
+  const key = (a, b) => a < b ? a + ',' + b : b + ',' + a, sides = t => [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]];
+  for(let i = 0; i < nP; i++){ const [x, y] = pts[i], bad = [], keep = [], keepC = [];
+    tris.forEach((t, k) => { const c = C[k]; ((x - c[0])**2 + (y - c[1])**2 < c[2]) ? bad.push(t) : (keep.push(t), keepC.push(c)); });
+    const seen = new Map(); for(const t of bad) for(const [a, b] of sides(t)) seen.set(key(a, b), (seen.get(key(a, b)) || 0) + 1);
+    for(const t of bad) for(const [a, b] of sides(t)) if(seen.get(key(a, b)) === 1){ const nt = [a, b, i]; keep.push(nt); keepC.push(circ(nt)); }
+    tris = keep; C = keepC; }
+  return tris.filter(t => t[0] < nP && t[1] < nP && t[2] < nP);
+}
+// rings of a shape: `K` of them, the outermost at d = 1. With a line width, each ring a line; without, bands
+// filled in turn (one band: the whole shape). m: the distance (page units) to the nearest ring; d: how far out
+function patRings(d, m, K, lw, sf){
+  if(lw > 0) return patInside(m - lw/2, sf);
+  const j = Math.max(1, Math.ceil(d*K - 1e-9)), base = j <= K && j % 2 === 1 ? 1 : 0, w = patClamp(m/sf);
+  return 0.5 + (base - 0.5)*w*w*(3 - 2*w);
+}
 
 // ---- SCATTER: the shapes it can throw ----
 // each drawn white on a canvas, centred at 0,0 with radius 1 (the caller scales and turns)
@@ -30026,6 +30239,144 @@ const PATTERN_STEPS = {
         const gx = by[y*ww + Math.min(ww - 1, x + 1)] - by[y*ww + Math.max(0, x - 1)], gy = by[Math.min(wh - 1, y + 1)*ww + x] - by[Math.max(0, y - 1)*ww + x];
         const sx = Math.min(ww - 1, Math.max(0, Math.round(x + gx*k))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + gy*k))), s = sy*ww + sx;
         o.r[q] = pic.r[s]; o.g[q] = pic.g[s]; o.b[q] = pic.b[s]; }
+      return [o];
+    } },
+
+  // FILTER FORGE'S ELLIPSE (and Free Ellipse): one ellipse, or rings of them like orbits, filled or drawn as lines;
+  // with how far out from its centre each point lies, and how far round, to shape or place other things by
+  ellipse: { cat: 'Noise', label: 'Ellipse', ins: [], outs: ['shape', 'distance', 'around'],
+    params: [PAT_R('size', 'Size', 60, 1, 200), PAT_R('height', 'Height', 60, 5, 100), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
+      PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
+    cost: () => 1,
+    doc: 'An ellipse, or rings of them like orbits, filled or drawn as lines; also how far out from its center each point is, and how far around.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const A = Math.max(1e-3, num(n, 'size', 60)/200), B = Math.max(1e-3, A*num(n, 'height', 60)/100), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an);
+      const cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
+      const lw = num(n, 'line', 0)/100*0.04, sf = Math.max(0.7/unit, num(n, 'soft', 4)/100*0.05);
+      const shape = new Float32Array(N), dist = new Float32Array(N), round = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, px = x/unit - cx, py = y/unit - cy;
+        const u = (px*ca + py*sa)/A, v = (-px*sa + py*ca)/B, d = Math.hypot(u, v);
+        // how fast d grows per page unit here, so a ring's line is as wide all the way round
+        const g = d > 1e-9 ? Math.hypot(u/A, v/B)/d : 1/Math.min(A, B);
+        let m = Infinity; for(let k = 1; k <= K; k++){ const e = Math.abs(d - k/K)/g; if(e < m) m = e; }
+        shape[q] = patRings(d, m, K, lw, sf); dist[q] = Math.min(1, d); round[q] = Math.atan2(v, u)/(Math.PI*2) + 0.5; }
+      return [shape, dist, round];
+    } },
+
+  // FILTER FORGE'S POLYGON (and Free Polygon): a regular polygon, or a star, or rings of them; with a bevel (a
+  // pyramid, flat faces rising to the centre) and how far round each point lies
+  polygon: { cat: 'Noise', label: 'Polygon', ins: [], outs: ['shape', 'bevel', 'around'],
+    params: [PAT_R('sides', 'Sides', 6, 3, 12), PAT_R('star', 'Star', 0), PAT_R('size', 'Size', 60, 1, 200), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
+      PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
+    cost: () => 1,
+    doc: 'A regular polygon or a star, or rings of them, filled or drawn as lines; also a bevel that rises to its center, and how far around each point is.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const sides = Math.max(3, Math.min(12, Math.round(num(n, 'sides', 6)))), star = num(n, 'star', 0)/100, R = Math.max(1e-3, num(n, 'size', 60)/200);
+      const an = num(n, 'angle', 0)*Math.PI/180, cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
+      const lw = num(n, 'line', 0)/100*0.04, sf = Math.max(0.7/unit, num(n, 'soft', 4)/100*0.05);
+      // its corners (a star: every other one pulled in), the first pointing up; each edge as its outward normal and its distance from the centre
+      const M = star > 0 ? sides*2 : sides, a0 = an - Math.PI/2, V = Array.from({ length: M }, (_, k) => { const r = star > 0 && k % 2 ? R*(1 - star*0.8) : R, a = a0 + k*Math.PI*2/M; return [Math.cos(a)*r, Math.sin(a)*r]; });
+      const edges = V.map((p, k) => { const q = V[(k + 1) % M]; let nx = q[1] - p[1], ny = p[0] - q[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+        const h = p[0]*nx + p[1]*ny; return h < 0 ? [-nx, -ny, -h] : [nx, ny, h]; });
+      const shape = new Float32Array(N), bevel = new Float32Array(N), round = new Float32Array(N);
+      for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, px = x/unit - cx, py = y/unit - cy;
+        const t = (((Math.atan2(py, px) - a0)/(Math.PI*2)) % 1 + 1) % 1, k = Math.min(M - 1, Math.floor(t*M)), [nx, ny, h] = edges[k];
+        // within its sector a point's place is how far it lies toward that edge: 1 on the outline
+        const d = Math.max(0, (px*nx + py*ny)/h);
+        let m = Infinity; for(let j = 1; j <= K; j++){ const e = Math.abs(d - j/K)*h; if(e < m) m = e; }
+        shape[q] = patRings(d, m, K, lw, sf); bevel[q] = 1 - Math.min(1, d); round[q] = t; }
+      return [shape, bevel, round];
+    } },
+
+  // A MESH OF TRIANGLES between scattered points (Delaunay's: no point inside another triangle's circle), its
+  // lines thinned to the shortest for a constellation; points land where a map is light
+  mesh: { cat: 'Marks', label: 'Triangle Mesh', ins: ['where'], outs: ['lines', 'points', 'facets'],
+    params: [PAT_R('count', 'Points', 40, 3, 400), PAT_R('even', 'Evenness', 50), PAT_R('prune', 'Thin Out', 0), PAT_R('line', 'Line Width', 15), PAT_R('dot', 'Point Size', 20), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 3,
+    doc: 'Scattered points joined into triangles (a Delaunay mesh): its lines, its points, and each triangle a flat gray of its own.',
+    run(E, n){ const { ww, wh, N, input, num, asField, readCanvas } = E;
+      const where = asField(input(n, 1)), count = Math.max(3, Math.min(400, Math.round(num(n, 'count', 40)))), tries = 1 + Math.round(num(n, 'even', 50)/100*12);
+      const prune = num(n, 'prune', 0)/100, lw = num(n, 'line', 15)/100*10, dot = num(n, 'dot', 20)/100*14;
+      // the points: each the best of a few candidates (the farthest from the rest: even), landing where the map is light
+      const P = [];
+      const cand = () => { for(let t = 0; t < 16; t++){ const x = Math.random()*ww, y = Math.random()*wh;
+        if(!where || Math.random() < where[Math.min(wh - 1, y | 0)*ww + Math.min(ww - 1, x | 0)]) return [x, y]; } return null; };
+      for(let i = 0; i < count; i++){ let best = null, bd = -1;
+        for(let c = 0; c < tries; c++){ const p = cand(); if(!p) continue; let d = Infinity; for(const o of P) d = Math.min(d, (o[0] - p[0])**2 + (o[1] - p[1])**2); if(d > bd){ bd = d; best = p; } }
+        if(best) P.push(best); }
+      const pts = P, nP = P.length, tris = patDelaunay(P);
+      // its edges, the longest dropped first as Thin Out rises
+      const seen = new Set(), E2 = [];
+      for(const t of tris) for(const [a, b] of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]]){ const k = a < b ? a + ',' + b : b + ',' + a; if(!seen.has(k)){ seen.add(k); E2.push([a, b, Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1])]); } }
+      E2.sort((p, q) => p[2] - q[2]); const kept = E2.slice(0, Math.max(0, Math.round(E2.length*(1 - prune*0.9))));
+      const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [lc, lx] = mk(), [pc, px] = mk(), [fc, fx] = mk();
+      lx.strokeStyle = '#fff'; lx.lineCap = 'round'; lx.lineWidth = E.px(lw); lx.beginPath();
+      for(const [a, b] of kept){ lx.moveTo(pts[a][0], pts[a][1]); lx.lineTo(pts[b][0], pts[b][1]); } if(lw > 0) lx.stroke();
+      px.fillStyle = '#fff'; if(dot > 0) for(let i = 0; i < nP; i++){ px.beginPath(); px.arc(pts[i][0], pts[i][1], E.px(dot)/2, 0, Math.PI*2); px.fill(); }
+      for(const t of tris){ const g = Math.round(20 + Math.random()*235); fx.fillStyle = `rgb(${g},${g},${g})`; fx.strokeStyle = fx.fillStyle; fx.lineWidth = Math.max(1, E.px(1));   // (stroked too: no seam between neighbours)
+        fx.beginPath(); fx.moveTo(pts[t[0]][0], pts[t[0]][1]); fx.lineTo(pts[t[1]][0], pts[t[1]][1]); fx.lineTo(pts[t[2]][0], pts[t[2]][1]); fx.closePath(); fx.fill(); fx.stroke(); }
+      return [E.lum(readCanvas(lc)), E.lum(readCanvas(pc)), E.lum(readCanvas(fc))];
+    } },
+
+  // FILTER FORGE'S BLOCKS and TECHNO: rectangles of random gray, laid at several sizes over each other; their
+  // outlines are Techno's circuitry of lines
+  blocks: { cat: 'Noise', label: 'Blocks', ins: [], outs: ['blocks', 'outlines'],
+    params: [PAT_R('scale', 'Scale', 6, 1, 60), PAT_R('octaves', 'Octaves', 3, 1, 5), PAT_R('fill', 'Density', 60), PAT_R('line', 'Line Width', 12), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 2,
+    doc: 'Rectangles of random gray laid at several sizes over each other; their outlines alone are a circuitry of lines (Filter Forge’s Techno).',
+    run(E, n){ const { ww, wh, N, unit, num, readCanvas } = E;
+      const cells0 = Math.max(1, num(n, 'scale', 6)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 3)))), fill = num(n, 'fill', 60)/100, lw = num(n, 'line', 12)/100*8;
+      const mk = bg => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = bg; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [oc, ox] = mk('#000'); ox.strokeStyle = '#fff'; ox.lineWidth = E.px(lw);
+      const sum = new Float32Array(N); let norm = 0;
+      for(let o = 0; o < oct; o++){ const cs = unit/(cells0*Math.pow(2, o)), gx = Math.ceil(ww/cs), gy = Math.ceil(wh/cs), a = Math.pow(0.5, o);
+        const [c, x] = mk('rgb(128,128,128)'), count = Math.round(fill*gx*gy*0.7);
+        ox.globalAlpha = Math.max(0.25, a);
+        for(let i = 0; i < count; i++){ const bx = Math.floor(Math.random()*gx), by = Math.floor(Math.random()*gy), bw = 1 + Math.floor(Math.random()*3), bh = 1 + Math.floor(Math.random()*3), g = Math.round(Math.random()*255);
+          x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(bx*cs, by*cs, bw*cs, bh*cs); if(lw > 0) ox.strokeRect(bx*cs, by*cs, bw*cs, bh*cs); }
+        const L = E.lum(readCanvas(c)); for(let i = 0; i < N; i++) sum[i] += L[i]*a; norm += a; }
+      for(let i = 0; i < N; i++) sum[i] /= norm;
+      return [sum, E.lum(readCanvas(oc))];
+    } },
+
+  // FILTER FORGE'S PYRAMIDS: a grid of pyramids (or cones, or domes), each its own height, at one or more sizes
+  pyramids: { cat: 'Noise', label: 'Pyramids', ins: [], outs: ['heights', 'cells'],
+    params: [PAT_R('scale', 'Scale', 10, 1, 80), PAT_R('octaves', 'Octaves', 1, 1, 5), PAT_R('round', 'Roundness', 0), PAT_R('vary', 'Height Variety', 50), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 1,
+    doc: 'A grid of pyramids, cones or domes, each of its own height, at one or more sizes: heights for studs, rivets and tiles.',
+    run(E, n){ const { ww, wh, N, unit, num } = E;
+      const cells0 = Math.max(1, num(n, 'scale', 10)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 1)))), rd = num(n, 'round', 0)/100, vary = num(n, 'vary', 50)/100;
+      const H = new Float32Array(N), id = new Float32Array(N); let norm = 0;
+      for(let o = 0; o < oct; o++){ const cs = unit/(cells0*Math.pow(2, o)), gx = Math.ceil(ww/cs) + 1, gy = Math.ceil(wh/cs) + 1, a = Math.pow(0.5, o);
+        const ht = new Float32Array(gx*gy), gr = new Float32Array(gx*gy); for(let i = 0; i < gx*gy; i++){ ht[i] = 1 - vary*Math.random(); gr[i] = Math.random(); }
+        for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const cx = Math.floor(x/cs), cy = Math.floor(y/cs), fx = x/cs - cx - 0.5, fy = y/cs - cy - 0.5, q = y*ww + x;
+          // pyramid (flat faces) → cone (round) at 50 → dome at 100
+          const pyr = 1 - 2*Math.max(Math.abs(fx), Math.abs(fy)), r = Math.min(1, 2*Math.hypot(fx, fy)), cone = 1 - r, dome = Math.sqrt(Math.max(0, 1 - r*r));
+          const s = rd < 0.5 ? pyr + (cone - pyr)*rd*2 : cone + (dome - cone)*(rd - 0.5)*2;
+          H[q] += Math.max(0, s)*ht[cy*gx + cx]*a; if(o === 0) id[q] = gr[cy*gx + cx]; }
+        norm += a; }
+      for(let i = 0; i < N; i++) H[i] /= norm;
+      return [H, id];
+    } },
+
+  // FILTER FORGE'S NOISE GRADIENT: a gray map colored by a gradient of many stops between two colors, each stop
+  // straying from the line between them: a palette that drifts, as nebulae and old dyes do
+  noisegrad: { cat: 'Light & Color', label: 'Noise Gradient', ins: ['field', 'color a', 'color b'], outs: ['picture'], io: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
+    params: [PAT_R('stops', 'Stops', 8, 2, 32), PAT_R('drift', 'Color Drift', 40), PAT_R('smooth', 'Smoothness', 70), ['ca', 'Color A', 'text', '#14102A'], ['cb', 'Color B', 'text', '#E8C8E0'], PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 1,
+    doc: 'Colors a gray map with a gradient of many stops between two colors, each stop straying from the line between them, so the colors drift.',
+    run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
+      const f = asField(input(n, 1)), K = Math.max(2, Math.min(32, Math.round(num(n, 'stops', 8)))), drift = num(n, 'drift', 40)/100, sm = num(n, 'smooth', 70)/100;
+      const ca = input(n, 2), cb = input(n, 3), A = Array.isArray(ca) ? ca : patHex(P(n, 'ca', '#14102A')), B = Array.isArray(cb) ? cb : patHex(P(n, 'cb', '#E8C8E0'));
+      // the stops: along the line from A to B, each turned in hue and moved in saturation and value by the drift
+      const stops = Array.from({ length: K }, (_, k) => { const t = k/(K - 1), c = [0, 1, 2].map(i => A[i] + (B[i] - A[i])*t), [h, s, v] = patHsv(c);
+        return patRgb([((h + (Math.random() - 0.5)*drift*0.5) % 1 + 1) % 1, patClamp(s + (Math.random() - 0.5)*drift*0.8), patClamp(v + (Math.random() - 0.5)*drift*0.5)]); });
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const v = f ? patClamp(f[i]) : (i % ww)/Math.max(1, ww - 1), t = v*(K - 1), j = Math.min(K - 2, Math.floor(t));
+        // Smoothness: hard bands at 0, each stop running straight into the next at 100 (eased between)
+        let u = patClamp((t - j - 0.5)/Math.max(1e-3, sm) + 0.5); u += (u*u*(3 - 2*u) - u)*(1 - sm);
+        const a = stops[j], b = stops[j + 1]; o.r[i] = a[0] + (b[0] - a[0])*u; o.g[i] = a[1] + (b[1] - a[1])*u; o.b[i] = a[2] + (b[2] - a[2])*u; }
       return [o];
     } },
 
@@ -30348,7 +30699,7 @@ const STEP_PARTS = {
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
   noise:    { cat: 'Noise', label: 'Value Noise', ins: ['seed'], outs: ['field'], params: [STEP_R('scale', 'Scale', 40, 1, 200), STEP_R('octaves', 'Octaves', 3, 1, 6), STEP_R('variation', 'Variation', 0, 0, 99)] },
-  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80), STEP_R('variation', 'Variation', 0, 0, 99)] },
+  cells:    { cat: 'Noise', label: 'Cells', ins: ['seed'], outs: ['distance', 'edges', 'id', 'stones'], params: [STEP_R('scale', 'Scale', 30, 2, 200), STEP_R('jitter', 'Jitter', 80), STEP_R('variation', 'Variation', 0, 0, 99), STEP_R('gap', 'Gap', 25)] },
   waves:    { cat: 'Noise', label: 'Waves', ins: ['warp'], outs: ['field'], params: [STEP_R('freq', 'Frequency', 12, 1, 120), STEP_R('angle', 'Angle', 0, 0, 360)] },
   gradient: { cat: 'Noise', label: 'Gradient', ins: [], outs: ['field'], params: [STEP_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular']), STEP_R('angle', 'Angle', 90, 0, 360)] },
   turing:   { cat: 'Noise', label: 'Reaction–Diffusion (old)', ins: ['seed'], outs: ['field'], params: [STEP_SEL('pattern', 'Pattern', ['spots', 'coral', 'maze', 'worms', 'holes']), STEP_R('scale', 'Scale', 100, 50, 250)] },
@@ -30359,7 +30710,7 @@ const STEP_PARTS = {
   threshold:{ cat: 'Shape', label: 'Threshold', ins: ['field'], outs: ['mask'], params: [STEP_R('at', 'Cutoff', 50), STEP_R('soft', 'Softness', 10)] },
   blur:     { cat: 'Shape', label: 'Blur', ins: ['field'], outs: ['field'], params: [STEP_R('radius', 'Radius', 8, 0, 100)] },
   warp:     { cat: 'Shape', label: 'Warp', ins: ['field', 'by'], outs: ['field'], params: [STEP_R('amount', 'Strength', 20)] },
-  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine'])] },
+  math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine', 'round', 'floor', 'ceiling', 'greater', 'less', 'log'])] },
   mix:      { cat: 'Combine', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [STEP_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
   posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16)] },
@@ -30672,15 +31023,17 @@ const STEP_RUN = {
     const sc = Math.max(2, num(n, 'scale', 30))/10, jit = num(n, 'jitter', 80)/100, cs = unit/sc;
     const gx = Math.ceil(ww/cs) + 2, gy = Math.ceil(wh/cs) + 2, pts = new Float32Array(gx*gy*3);
     for(let i = 0; i < gx*gy; i++){ pts[i*3] = 0.5 + (Math.random() - 0.5)*jit; pts[i*3+1] = 0.5 + (Math.random() - 0.5)*jit; pts[i*3+2] = Math.random(); }
-    const d1 = new Float32Array(N), ed = new Float32Array(N), id = new Float32Array(N);
+    const d1 = new Float32Array(N), ed = new Float32Array(N), id = new Float32Array(N), st = new Float32Array(N), gap = num(n, 'gap', 25)/100*0.3;
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
       const cx = Math.floor(x/cs) + 1, cy = Math.floor(y/cs) + 1; let a = 1e9, b = 1e9, ia = 0;
       for(let j = cy - 1; j <= cy + 1; j++) for(let i = cx - 1; i <= cx + 1; i++){ if(i < 0 || j < 0 || i >= gx || j >= gy) continue;
         const k = (j*gx + i)*3, px = (i - 1 + pts[k])*cs, py = (j - 1 + pts[k+1])*cs, d = Math.hypot(px - x, py - y);
         if(d < a){ b = a; a = d; ia = pts[k+2]; } else if(d < b) b = d; }
       const q = y*ww + x; d1[q] = Math.min(1, a/cs); ed[q] = 1 - Math.min(1, (b - a)/cs*4); id[q] = ia;
+      // STONES (Filter Forge's Stones): each cell a rounded stone, highest in its middle, with Gap between them
+      const t = Math.max(0, Math.min(1, ((b - a)/cs - gap)/0.5)); st[q] = 1 - (1 - t)**3;
     }
-    return [d1, ed, id];
+    return [d1, ed, id, st];
   },
   waves(E, n){ const { ww, wh, unit, input, num, field, asField } = E;
     const fq = Math.max(1, num(n, 'freq', 12)), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an);
@@ -30763,7 +31116,10 @@ const STEP_RUN = {
     const f = { add: (x, y) => x + y, multiply: (x, y) => x*y, max: Math.max, min: Math.min, difference: (x, y) => Math.abs(x - y), subtract: (x, y) => x - y,
       // Filter Forge's RGB Math, the useful few: b as a divisor, an exponent (0..1 → 0..4), a mean, a screen, a remainder, a wave
       divide: (x, y) => y > 1e-4 ? x/y : 1, power: (x, y) => Math.pow(Math.max(0, x), (b ? y : 0.25)*4), average: (x, y) => (x + y)/2,
-      screen: (x, y) => 1 - (1 - x)*(1 - y), modulo: (x, y) => y > 1e-4 ? (x % y)/y : 0, sine: (x, y) => 0.5 + 0.5*Math.sin((x + y)*Math.PI*2) }[op] || ((x, y) => x + y);
+      screen: (x, y) => 1 - (1 - x)*(1 - y), modulo: (x, y) => y > 1e-4 ? (x % y)/y : 0, sine: (x, y) => 0.5 + 0.5*Math.sin((x + y)*Math.PI*2),
+      // a to steps of b (round, floor, ceiling); 1 where a is greater (or less) than b, else 0; a logarithm, which lifts the darks
+      round: (x, y) => y > 1e-4 ? Math.round(x/y)*y : x, floor: (x, y) => y > 1e-4 ? Math.floor(x/y + 1e-9)*y : x, ceiling: (x, y) => y > 1e-4 ? Math.ceil(x/y - 1e-9)*y : x,
+      greater: (x, y) => x > y ? 1 : 0, less: (x, y) => x < y ? 1 : 0, log: (x, y) => Math.log(1 + Math.max(0, x)*(1 + y*99))/Math.log(2 + y*99) }[op] || ((x, y) => x + y);
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f(A[i], B[i])));
     return [o];
   },
@@ -31496,9 +31852,9 @@ const ATHANOR_STUDIES = {
     wire(n, 1, mb, 1); wire(mb, 1, w, 1); wire(p, 1, w, 2); wire(sc, 1, b, 1); wire(b, 1, inv, 1); wire(w, 1, m, 1); wire(inv, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3);
     wire(t, 1, le, 1); wire(m, 1, le, 2); wire(le, 1, s, 1); wire(k1, 1, w, 'amount');
   }),
-  spacedust: studyGraph('Deep-Space Dust', 'Dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Spectrum, dimmed, drifts the color. Try: raise Emptiness.', (add, wire, fade) => {
+  spacedust: studyGraph('Deep-Space Dust', 'Dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Noise Gradient laid along the same noise drifts the color between two of a nebula\'s. Try: raise Emptiness.', (add, wire, fade) => {
     const p = add('perlin', { scale: 6, details: 6, rough: 65, contrast: 50 }), lv = add('levels', { lo: 50, hi: 85, gamma: 50 }), sc = add('scatter', { shape: 'dot', count: 400, size: 2, vary: 90, clump: 30, fade: 70 }),
-      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('spectrum', { shape: 'along a map', sat: 35, light: 50 }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
+      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('noisegrad', { stops: 10, drift: 55, smooth: 85, ca: '#6A5890', cb: '#F0D8E8' }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
       s = add('surface', { name: 'Deep-Space Dust', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Emptiness', def: 50 });
     wire(p, 1, lv, 1); wire(lv, 1, sc, 2); wire(p, 1, fogL, 1); wire(sc, 1, m, 1); wire(fog, 1, m, 2); wire(m, 1, bl, 1); wire(p, 1, sp, 1); wire(sp, 1, bl, 2); wire(bl, 1, s, 1); wire(k1, 1, lv, 'lo');
   }),
@@ -31514,10 +31870,10 @@ const ATHANOR_STUDIES = {
       k1 = add('knob', { slot: '1', name: 'Downpour', def: 60 });
     wire(p, 1, tr, 1); wire(tr, 1, lv, 1); wire(lv, 1, sc, 2); wire(down, 1, sc, 3); wire(sc, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, sc, 'count');
   }),
-  constellation: studyGraph('Constellation Without Stars', 'A star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. The edges of Cells are the joining lines; tiny Scatter dots mark the meetings; both are faded and tinted. Try: raise Lines.', (add, wire, fade) => {
-    const c = add('cells', { scale: 9, jitter: 100 }), th = add('threshold', { at: 88, soft: 10 }), lv = fade(th, 1, 35), sc = add('scatter', { shape: 'dot', count: 40, size: 2, vary: 60, fade: 50 }),
+  constellation: studyGraph('Constellation Without Stars', 'A star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. Triangle Mesh joins scattered points into triangles (Delaunay\'s) and Thin Out keeps only the shorter lines, so neighbors join into constellations; a soft Perlin Noise on Where gathers the points into a band, as the Milky Way gathers stars. Its lines are faded, its points kept small, and both tinted. Try: raise Lines.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 8, details: 3, contrast: 40 }), me = add('mesh', { count: 70, even: 70, prune: 60, line: 8, dot: 12, '~prune': '92,20' }), lv = fade(me, 1, 40),
       m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Constellation Without Stars', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Lines', def: 50 });
-    wire(c, 2, th, 1); wire(lv, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, c, 'scale');
+    wire(p, 1, me, 1); wire(lv, 1, m, 1); wire(me, 2, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, me, 'prune');
   }),
   cartography: studyGraph('Impossible Cartography', 'A map of nowhere: contour lines, a few unlabeled symbols, a faint grid, on old paper. Terrain gives the land; Contour Lines draw it; Scatter places rings and crosses; Grid & Dots lays a survey grid; a Gradient Map colors the paper. Try: raise Relief for steeper country.', (add, wire, fade) => {
     const tr = add('terrain', { scale: 100, crests: 50 }), ct = add('contours', { levels: 18, weight: 120, index: 5, strength: 80 }), sc = add('scatter', { shape: 'ring', count: 10, size: 8, vary: 40 }),
@@ -31552,13 +31908,13 @@ const ATHANOR_STUDIES = {
     wire(sc, 1, mb, 1); wire(mb, 1, b, 1); wire(b, 1, m, 1); wire(lv, 1, m, 2); wire(m, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
     wire(k1, 1, mb, 'length');
   }),
-  orbit: studyGraph('Orbit Script', 'Writing that circles: rings of an orrery, with signs strung along them like beads. A Profile Gradient (radial) read through a Wave curve makes the rings; Threshold thins them to lines; Scatter strings small sigils only where the rings are. An approximation: true ellipses and writing along a path wait for their own parts. Try: raise Rings.', (add, wire, fade) => {
-    const cv = add('curve', { shape: 'wave', count: 6 }), pg = add('profile', { shape: 'radial' }), th = add('threshold', { at: 94, soft: 8 }), near = add('blur', { radius: 2 }),
+  orbit: studyGraph('Orbit Script', 'Writing that circles: the rings of an orrery seen a little from the side, with signs strung along them like beads. Ellipse draws the orbits as rings of lines, squashed and turned; Blur widens them a little into a path; Scatter strings small sigils only along that path, each turned at random. Writing that follows the orbit itself waits for a part of its own. Try: raise Rings.', (add, wire, fade) => {
+    const el = add('ellipse', { size: 180, height: 42, angle: 12, rings: 6, line: 5, soft: 6, '~rings': '2,14' }), near = add('blur', { radius: 3 }),
       sc = add('scatter', { shape: 'sigil', count: 70, size: 14, vary: 40, turn: 100 }), m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'),
-      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 25 });
-    const ring = fade(th, 1, 55);
-    wire(cv, 1, pg, 1); wire(pg, 1, th, 1); wire(th, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
-    wire(k1, 1, cv, 'count');
+      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 33 });
+    const ring = fade(el, 1, 55);
+    wire(el, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, el, 'rings');
   }),
   transmutation: studyGraph('Transmutation Engine', 'A circle diagram of an alchemical engine: concentric rings, spokes folded into symmetry, a few stations marked. Rings come from a radial Profile Gradient through a Stairs curve and Edge Detect; Grid & Dots lines folded by Kaleidoscope make the spokes; a Shape Mask keeps it in the circle. An approximation: the true diagram part (with glyphs at the stations) is still to come. Try: change Folds.', (add, wire, fade) => {
     const cv = add('curve', { shape: 'stairs', count: 5 }), pg = add('profile', { shape: 'radial' }), e = add('edges', { strength: 100 }), g = add('grid', { kind: 'grid lines', cells: 6, weight: 8, soft: 10 }),
@@ -34516,7 +34872,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Pallene';
+const RELEASE = 'Saturn–Enceladus';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -35345,7 +35701,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · d33f776";
+const STAMP = "2026-10-15 · 877dda8";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -38772,9 +39128,9 @@ const WIKI_PARTS = {
     line: 'Cellular (Voronoi) noise: the page divided into cells around scattered points, like cobbles, scales or a sponge.',
     about: 'Cells scatters points across the page and gives every spot on the page to its nearest point. The result is a pattern of cells, like soap bubbles, cracked mud, stones or a giraffe’s coat. It hands on three different maps of the same cells.',
     ins: { seed: 'A number that shifts the points (normally left empty).' },
-    outs: { distance: 'Dark at each cell’s center, lighter toward its edge: domes, when inverted.', edges: 'Bright along the borders between cells: the cracks.', id: 'A different flat gray for each cell: use it to give each cell its own color or height.' },
-    set: { scale: 'How many cells across the page.', jitter: 'How far the points stray from a regular grid. 0 gives a perfect grid of squares.', variation: 'Picks another pattern.' },
-    tips: ['Id into a Color Ramp for a mosaic; Edges into Threshold → Invert for lead between them.'],
+    outs: { distance: 'Dark at each cell’s center, lighter toward its edge: domes, when inverted.', edges: 'Bright along the borders between cells: the cracks.', id: 'A different flat gray for each cell: use it to give each cell its own color or height.', stones: 'Each cell a rounded stone, highest in its middle, with a gap between it and the next (Filter Forge’s Stones).' },
+    set: { scale: 'How many cells across the page.', jitter: 'How far the points stray from a regular grid. 0 gives a perfect grid of squares.', variation: 'Picks another pattern.', gap: 'How wide the gaps between the stones are.' },
+    tips: ['Id into a Color Ramp for a mosaic; Edges into Threshold → Invert for lead between them.', 'Stones into the Light Engine’s height: cobbles, or a riverbed.'],
     see: ['part:threshold', 'part:invert'],
   },
   waves: {
@@ -38823,6 +39179,56 @@ const WIKI_PARTS = {
     outs: { picture: 'The rainbow.' },
     set: { shape: 'Linear, radial, around the center, or along a map.', angle: 'Direction of a linear spectrum.', repeat: 'How many times the rainbow repeats.', sat: 'How vivid the colors are.', light: 'How light the colors are.' },
     see: ['part:lookup', 'picture'],
+  },
+  ellipse: {
+    line: 'An ellipse, or rings of them like orbits, filled or drawn as lines; also how far out from its center each point is, and how far around.',
+    about: 'Ellipse draws one ellipse, sized against the page’s short side, squashed by Height and turned by Turn. Rings repeats it inward, each ring smaller, like the orbits of a planet’s moons: drawn as lines when Line Width is above 0, or as bands filled in turn when it is 0. Its two other outputs are made for building with: Distance is a gradient shaped like the ellipse, and Around runs once round its center, so a Lookup or a Gradient Map can place things along the orbits.',
+    outs: { shape: 'The ellipse or its rings, white on black.', distance: 'Black at the center, white at the outermost ring and beyond: a gradient shaped like the ellipse.', around: 'How far around the center each point is: black to white once round, starting on the right.' },
+    set: { size: 'How wide it is, against the page’s short side (100: half of it).', height: 'Its height as a share of its width: 100 is a circle.', angle: 'How far it is turned.', x: 'Its center, left to right.', y: 'Its center, top to bottom.', rings: 'How many rings, nested inward.', line: 'The width of each ring’s line; 0 fills the shape (or its bands, in turn).', soft: 'How soft its edges are.' },
+    tips: ['Rings at 7, Line Width at 4, Height at 35: the orbits of a little system, seen from the side.', 'Around into a Spectrum set to "along a map": color that turns with the orbit.'],
+    see: ['part:polygon', 'part:shape', 'part:lookup'],
+  },
+  polygon: {
+    line: 'A regular polygon or a star, or rings of them, filled or drawn as lines; also a bevel that rises to its center, and how far around each point is.',
+    about: 'Polygon draws a regular shape of 3 to 12 sides, its first corner pointing up. Star pulls every other corner in, so a pentagon becomes a five-pointed star. Rings nests smaller copies inside, as lines or as bands filled in turn. Bevel is a height map: each side a flat slope rising to the center, the way a cut gem or a roof is; the Light Engine lights it as faceted.',
+    outs: { shape: 'The polygon or its rings, white on black.', bevel: 'Heights: white at the center, falling flat to black at the edge.', around: 'How far around the center each point is: black to white once round.' },
+    set: { sides: 'How many sides (3 to 12).', star: 'Pulls every other corner in: 0 a polygon, higher a sharper star.', size: 'How large it is, against the page’s short side (100: corners at half of it).', angle: 'How far it is turned.', x: 'Its center, left to right.', y: 'Its center, top to bottom.', rings: 'How many rings, nested inward.', line: 'The width of each ring’s line; 0 fills the shape (or its bands, in turn).', soft: 'How soft its edges are.' },
+    tips: ['Bevel into the Light Engine’s height: a faceted gem that the dial lights face by face.', 'Sides 6, Star 50, Rings 4, Line Width 3: a hexagram seal.'],
+    see: ['part:ellipse', 'part:shape', 'heights'],
+  },
+  mesh: {
+    line: 'Scattered points joined into triangles (a Delaunay mesh): its lines, its points, and each triangle a flat gray of its own.',
+    about: 'Triangle Mesh scatters points and joins them the way Boris Delaunay described: into triangles none of whose circles holds another point, so the triangles are as close to even as the points allow. Evenness spreads the points out (each is the best of several tries, the farthest from the others). Thin Out drops the longest lines first, until only near neighbors are joined: a constellation. Where decides where the points may land. Facets gives every triangle its own gray, for a low-polygon look.',
+    ins: { where: 'Where points may land: only on light areas (empty: anywhere).' },
+    outs: { lines: 'The lines between the points.', points: 'The points as dots.', facets: 'Each triangle a flat gray of its own.' },
+    set: { count: 'How many points.', even: 'How evenly they are spread: clumped at random at 0, evenly apart at 100.', prune: 'Drops the longest lines first: every line at 0, only the shortest near 100.', line: 'The width of the lines.', dot: 'The size of the points.', variation: 'Another scattering.' },
+    tips: ['Thin Out at 60 and Point Size at 30: a constellation. Wire a Perlin Noise into Where and the stars gather into a band.', 'Facets into a Gradient Map: a low-polygon picture.'],
+    see: ['part:cells', 'part:scatter', 'masks'],
+  },
+  blocks: {
+    line: 'Rectangles of random gray laid at several sizes over each other; their outlines alone are a circuitry of lines (Filter Forge’s Techno).',
+    about: 'Blocks lays rectangles on a grid, one to three cells wide and tall, each a random gray, then does it again at half the size, and again: the layers are mixed, the large ones strongest. The result is a blocky noise, like a city seen from above or a corrupted image. Its second output is only the rectangles’ outlines: crossing lines at every size, the look Filter Forge calls Techno.',
+    outs: { blocks: 'The rectangles, mixed across their sizes.', outlines: 'Only their outlines, lighter for the larger ones.' },
+    set: { scale: 'How many cells fit across the page at the largest size.', octaves: 'How many sizes, each half the last.', fill: 'How many rectangles each size lays.', line: 'The width of the outlines.', variation: 'Other rectangles.' },
+    tips: ['Outlines into the Light Engine’s height at a low Relief: an engraved circuit plate.', 'Blocks into a Posterize at 4 steps: a city map.'],
+    see: ['part:traces', 'part:bricks', 'part:pixelate'],
+  },
+  pyramids: {
+    line: 'A grid of pyramids, cones or domes, each of its own height, at one or more sizes: heights for studs, rivets and tiles.',
+    about: 'Pyramids fills each cell of a grid with a pyramid whose four faces rise to a point. Roundness turns them into cones (at 50) and domes (at 100); Height Variety makes some lower than others. With more octaves, smaller pyramids are added on top, each size half the last. It is made to be a height map: the Light Engine lights it as studs, rivets or a quilted surface.',
+    outs: { heights: 'The heights, black at each cell’s edge.', cells: 'Each cell of the largest size a flat gray of its own.' },
+    set: { scale: 'How many cells fit across the page.', octaves: 'How many sizes laid on each other.', round: 'Pyramids at 0, cones at 50, domes at 100.', vary: 'How much their heights differ.', variation: 'Other heights.' },
+    tips: ['Into the Light Engine’s height with Roundness at 100: a sheet of rivets.', 'Cells into a Gradient Map, Heights into the Light Engine: tiles each glazed its own color.'],
+    see: ['heights', 'part:material', 'part:bricks'],
+  },
+  noisegrad: {
+    line: 'Colors a gray map with a gradient of many stops between two colors, each stop straying from the line between them, so the colors drift.',
+    about: 'A Gradient Map with two colors goes straight from one to the other. Noise Gradient lays many stops between them and moves each a little off that line, in hue, in saturation and in lightness, by the seed: the colors drift the way they do in a nebula, a marbled endpaper or an old dye. Smoothness decides whether the stops blend or sit in bands.',
+    ins: { field: 'The gray map to color (empty: left to right across the page).', 'color a': 'The color black takes (empty: Color A below).', 'color b': 'The color white takes (empty: Color B below).' },
+    outs: { picture: 'The colored map.' },
+    set: { stops: 'How many colors along the way.', drift: 'How far each strays from the line between A and B: a plain gradient at 0.', smooth: 'Bands at 0; each color blending into the next at 100.', ca: 'Color A, used when nothing is wired.', cb: 'Color B, used when nothing is wired.', variation: 'Another drift.' },
+    tips: ['Perlin Noise in, two dark blues and violets for A and B, Drift at 60: a nebula.'],
+    see: ['part:gradmap', 'part:spectrum', 'color'],
   },
   turing: {
     line: 'An older reaction–diffusion part (spots, coral, mazes), kept for graphs that use it. New graphs: use Turing Pattern.',
@@ -39061,10 +39467,10 @@ const WIKI_PARTS = {
   // ================= COMBINE =================
   math: {
     line: 'Combines two gray maps point by point: add, multiply, the larger, the smaller, and more.',
-    about: 'Math works on two maps one point at a time. Multiply is the most useful: it keeps only what is light in both (one map masks the other). Max keeps the lighter of the two (union); Min the darker (intersection); Difference shows where they differ.',
+    about: 'Math works on two maps one point at a time. Multiply is the most useful: it keeps only what is light in both (one map masks the other). Max keeps the lighter of the two (union); Min the darker (intersection); Difference shows where they differ. Round, Floor and Ceiling snap A to steps of B’s size (terraces); Greater and Less give white where A is lighter (or darker) than B and black elsewhere, a mask from a comparison; Log lifts the darks, more as B rises.',
     ins: { a: 'The first map.', b: 'The second map (or a number).' },
     outs: { result: 'The combined map.' },
-    set: { op: 'The operation. Add, multiply, max, min, difference, subtract, divide, power, average, screen, modulo, sine.' },
+    set: { op: 'The operation: add, multiply, max, min, difference, subtract, divide, power, average, screen, modulo, sine, round, floor, ceiling, greater, less, log.' },
     see: ['masks'],
   },
   mix: {

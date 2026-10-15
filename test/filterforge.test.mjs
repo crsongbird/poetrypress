@@ -45,6 +45,34 @@ check('Filter Forge\'s missing primitives are parts, each with its doc', ['brico
   check('Bricks hands on the mortar between the bricks (white on the joints)', px(br, 10, 0) === 1 && px(br, 10, 5) === 0 && px(br, 20, 5) === 1); }
 check('Math has Filter Forge\'s useful RGB Math (divide, power, average, screen, modulo, sine), the old operations unchanged', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine'].every(o => S.STEPS.math.params[0][4].options.includes(o)) && S.STEPS.math.params[0][4].options[0] === 'add');
 
+// ---- more of Filter Forge's primitives (ROADMAP §2 F): shapes, a mesh, noises, a drifting gradient, RGB Math ----
+{ const Pt = await import('../stepsPatterns.js');
+  const across = (im, y = 20) => Array.from({ length: W }, (_, x) => im.r[y*W + x] > 0.5 ? 1 : 0), runs = row => row.filter((v, i) => v && !row[i - 1]).length;
+  const el = run([node(1, 'ellipse', { size: 80, height: 100, rings: 3, line: 100, soft: 0 })], [1, 1]);
+  check('Ellipse: three rings drawn as lines are crossed six times on a line through the center', runs(across(el)) === 6);
+  const dist = run([node(1, 'ellipse', { size: 160, height: 50 })], [1, 2]), ar = run([node(1, 'ellipse', {})], [1, 3]);
+  check('…its Distance is 0 at the center and grows outward faster across its short axis, and Around runs once round', dist.r[20*W + 20] < 0.05 && dist.r[26*W + 20] > dist.r[20*W + 26] && Math.abs(ar.r[20*W + 30] - 0.5) < 0.05 && ar.r[10*W + 20] < 0.3);
+  const sq = run([node(1, 'polygon', { sides: 4, size: 100, angle: 45 })], [1, 1]), bv = run([node(1, 'polygon', { sides: 4, size: 100, angle: 45 })], [1, 2]);
+  check('Polygon: four sides turned 45° is a square (its corner filled, a point past its side empty); its Bevel rises flat to the center',
+    sq.r[11*W + 11] > 0.5 && sq.r[20*W + 39] < 0.5 && bv.r[20*W + 20] > 0.95 && Math.abs((bv.r[20*W + 23] - bv.r[20*W + 26]) - (bv.r[20*W + 26] - bv.r[20*W + 29])) < 0.02);
+  const st = run([node(1, 'polygon', { sides: 5, star: 60, size: 80 })], [1, 1]);
+  check('…and Star pulls every other corner in: a five-pointed star covers less than its pentagon', st.r.reduce((a, v) => a + v, 0) < run([node(1, 'polygon', { sides: 5, size: 80 })], [1, 1]).r.reduce((a, v) => a + v, 0)*0.75);
+  const pts = Array.from({ length: 60 }, (_, i) => [Math.abs(Math.sin(i*12.9898)*437.5) % 100, Math.abs(Math.sin(i*78.233)*943.1) % 100]), tris = Pt.patDelaunay(pts);
+  const inCircle = tris.some(([a, b, c]) => { const [ax, ay] = pts[a], [bx, by] = pts[b], [cx, cy] = pts[c], d = 2*(ax*(by - cy) + bx*(cy - ay) + cx*(ay - by));
+    const ux = ((ax*ax + ay*ay)*(by - cy) + (bx*bx + by*by)*(cy - ay) + (cx*cx + cy*cy)*(ay - by))/d, uy = ((ax*ax + ay*ay)*(cx - bx) + (bx*bx + by*by)*(ax - cx) + (cx*cx + cy*cy)*(bx - ax))/d, r2 = (ax - ux)**2 + (ay - uy)**2;
+    return pts.some((p, i) => i !== a && i !== b && i !== c && (p[0] - ux)**2 + (p[1] - uy)**2 < r2*(1 - 1e-9)); });
+  check('Triangle Mesh is Delaunay: no point lies inside another triangle\'s circle, and n points make 2n − 2 − (hull) triangles', tris.length > 60 && tris.length < 120 && !inCircle);
+  const py = run([node(1, 'pyramids', { scale: 4, vary: 0 })], [1, 1]);
+  check('Pyramids: each cell rises to 1 at its middle and falls to 0 at its edge', Math.max(...py.r) > 0.9 && Math.min(...py.r) < 0.06);
+  const two = run([node(1, 'gradient', { angle: 0 }), node(2, 'noisegrad', { drift: 0, smooth: 100, stops: 2, ca: '#000000', cb: '#FFFFFF' }, { 1: [1, 1] })], [2, 1]);
+  const drift = run([node(1, 'gradient', { angle: 0 }), node(2, 'noisegrad', { drift: 80, stops: 8, ca: '#000000', cb: '#FFFFFF' }, { 1: [1, 1] })], [2, 1]);
+  check('Noise Gradient: with no drift and two stops it is the plain gradient; with drift its colors stray', Math.abs(two.r[20*W + 30] - 30/W) < 0.06 && drift.r.some((v, i) => Math.abs(v - drift.g[i]) > 0.05));
+  const fl = run([node(1, 'gradient', { angle: 0 }), node(2, 'number', { value: 25 }), node(3, 'math', { op: 'floor' }, { 1: [1, 1], 2: [2, 1] })], [3, 1]);
+  const gt = run([node(1, 'gradient', { angle: 0 }), node(2, 'number', { value: 50 }), node(3, 'math', { op: 'greater' }, { 1: [1, 1], 2: [2, 1] })], [3, 1]);
+  check('Math: Floor snaps to steps of B (a gradient becomes four terraces); Greater is white only where A is lighter than B', new Set(fl.r.map(v => Math.round(v*100))).size <= 5 && gt.r[20*W + 5] === 0 && gt.r[20*W + 35] === 1);
+  const stones = run([node(1, 'cells', { scale: 40, gap: 30 })], [1, 4]);
+  check('Cells hands on Stones too: rounded, highest in the middle, with gaps of 0 between', Math.max(...stones.r) > 0.9 && stones.r.filter(v => v === 0).length > W*H*0.05); }
+
 // ---- parameter mapping: every setting a part declares in `maps` follows a map point by point (from v3, or the
 // version it names: `scale:4`), and only the map's average in an older graph ----
 { const T = ['#FF3000', '#0030FF'];

@@ -187,9 +187,9 @@ export const ATHANOR_STUDIES = {
     wire(n, 1, mb, 1); wire(mb, 1, w, 1); wire(p, 1, w, 2); wire(sc, 1, b, 1); wire(b, 1, inv, 1); wire(w, 1, m, 1); wire(inv, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3);
     wire(t, 1, le, 1); wire(m, 1, le, 2); wire(le, 1, s, 1); wire(k1, 1, w, 'amount');
   }),
-  spacedust: studyGraph('Deep-Space Dust', 'Dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Spectrum, dimmed, drifts the color. Try: raise Emptiness.', (add, wire, fade) => {
+  spacedust: studyGraph('Deep-Space Dust', 'Dust between stars: specks gathered into faint filaments over an uneven dark, its color drifting. Perlin Noise, steepened by Levels, says where the filaments lie; Scatter throws clumped specks only there; a Noise Gradient laid along the same noise drifts the color between two of a nebula\'s. Try: raise Emptiness.', (add, wire, fade) => {
     const p = add('perlin', { scale: 6, details: 6, rough: 65, contrast: 50 }), lv = add('levels', { lo: 50, hi: 85, gamma: 50 }), sc = add('scatter', { shape: 'dot', count: 400, size: 2, vary: 90, clump: 30, fade: 70 }),
-      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('spectrum', { shape: 'along a map', sat: 35, light: 50 }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
+      fogL = add('levels', { lo: 40, hi: 100, gamma: 40 }), fog = fade(fogL, 1, 60), m = add('math', { op: 'screen' }), sp = add('noisegrad', { stops: 10, drift: 55, smooth: 85, ca: '#6A5890', cb: '#F0D8E8' }), bl = add('blend', { mode: 'multiply', opacity: 100 }),
       s = add('surface', { name: 'Deep-Space Dust', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Emptiness', def: 50 });
     wire(p, 1, lv, 1); wire(lv, 1, sc, 2); wire(p, 1, fogL, 1); wire(sc, 1, m, 1); wire(fog, 1, m, 2); wire(m, 1, bl, 1); wire(p, 1, sp, 1); wire(sp, 1, bl, 2); wire(bl, 1, s, 1); wire(k1, 1, lv, 'lo');
   }),
@@ -205,10 +205,10 @@ export const ATHANOR_STUDIES = {
       k1 = add('knob', { slot: '1', name: 'Downpour', def: 60 });
     wire(p, 1, tr, 1); wire(tr, 1, lv, 1); wire(lv, 1, sc, 2); wire(down, 1, sc, 3); wire(sc, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, sc, 'count');
   }),
-  constellation: studyGraph('Constellation Without Stars', 'A star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. The edges of Cells are the joining lines; tiny Scatter dots mark the meetings; both are faded and tinted. Try: raise Lines.', (add, wire, fade) => {
-    const c = add('cells', { scale: 9, jitter: 100 }), th = add('threshold', { at: 88, soft: 10 }), lv = fade(th, 1, 35), sc = add('scatter', { shape: 'dot', count: 40, size: 2, vary: 60, fade: 50 }),
+  constellation: studyGraph('Constellation Without Stars', 'A star chart with the stars taken out: only the lines that joined them remain, faint, and the barest dots where they met. Triangle Mesh joins scattered points into triangles (Delaunay\'s) and Thin Out keeps only the shorter lines, so neighbors join into constellations; a soft Perlin Noise on Where gathers the points into a band, as the Milky Way gathers stars. Its lines are faded, its points kept small, and both tinted. Try: raise Lines.', (add, wire, fade) => {
+    const p = add('perlin', { scale: 8, details: 3, contrast: 40 }), me = add('mesh', { count: 70, even: 70, prune: 60, line: 8, dot: 12, '~prune': '92,20' }), lv = fade(me, 1, 40),
       m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'), s = add('surface', { name: 'Constellation Without Stars', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Lines', def: 50 });
-    wire(c, 2, th, 1); wire(lv, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, c, 'scale');
+    wire(p, 1, me, 1); wire(lv, 1, m, 1); wire(me, 2, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1); wire(k1, 1, me, 'prune');
   }),
   cartography: studyGraph('Impossible Cartography', 'A map of nowhere: contour lines, a few unlabeled symbols, a faint grid, on old paper. Terrain gives the land; Contour Lines draw it; Scatter places rings and crosses; Grid & Dots lays a survey grid; a Gradient Map colors the paper. Try: raise Relief for steeper country.', (add, wire, fade) => {
     const tr = add('terrain', { scale: 100, crests: 50 }), ct = add('contours', { levels: 18, weight: 120, index: 5, strength: 80 }), sc = add('scatter', { shape: 'ring', count: 10, size: 8, vary: 40 }),
@@ -243,13 +243,13 @@ export const ATHANOR_STUDIES = {
     wire(sc, 1, mb, 1); wire(mb, 1, b, 1); wire(b, 1, m, 1); wire(lv, 1, m, 2); wire(m, 1, r, 1); wire(d, 1, r, 2); wire(l, 1, r, 3); wire(r, 1, ch, 1); wire(ch, 1, s, 1);
     wire(k1, 1, mb, 'length');
   }),
-  orbit: studyGraph('Orbit Script', 'Writing that circles: rings of an orrery, with signs strung along them like beads. A Profile Gradient (radial) read through a Wave curve makes the rings; Threshold thins them to lines; Scatter strings small sigils only where the rings are. An approximation: true ellipses and writing along a path wait for their own parts. Try: raise Rings.', (add, wire, fade) => {
-    const cv = add('curve', { shape: 'wave', count: 6 }), pg = add('profile', { shape: 'radial' }), th = add('threshold', { at: 94, soft: 8 }), near = add('blur', { radius: 2 }),
+  orbit: studyGraph('Orbit Script', 'Writing that circles: the rings of an orrery seen a little from the side, with signs strung along them like beads. Ellipse draws the orbits as rings of lines, squashed and turned; Blur widens them a little into a path; Scatter strings small sigils only along that path, each turned at random. Writing that follows the orbit itself waits for a part of its own. Try: raise Rings.', (add, wire, fade) => {
+    const el = add('ellipse', { size: 180, height: 42, angle: 12, rings: 6, line: 5, soft: 6, '~rings': '2,14' }), near = add('blur', { radius: 3 }),
       sc = add('scatter', { shape: 'sigil', count: 70, size: 14, vary: 40, turn: 100 }), m = add('math', { op: 'max' }), [l, d] = studyHues(add), t = add('tint'),
-      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 25 });
-    const ring = fade(th, 1, 55);
-    wire(cv, 1, pg, 1); wire(pg, 1, th, 1); wire(th, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
-    wire(k1, 1, cv, 'count');
+      s = add('surface', { name: 'Orbit Script', ground: 'colour' }), k1 = add('knob', { slot: '1', name: 'Rings', def: 33 });
+    const ring = fade(el, 1, 55);
+    wire(el, 1, near, 1); wire(near, 1, sc, 2); wire(ring, 1, m, 1); wire(sc, 1, m, 2); wire(m, 1, t, 1); wire(l, 1, t, 2); wire(d, 1, t, 3); wire(t, 1, s, 1);
+    wire(k1, 1, el, 'rings');
   }),
   transmutation: studyGraph('Transmutation Engine', 'A circle diagram of an alchemical engine: concentric rings, spokes folded into symmetry, a few stations marked. Rings come from a radial Profile Gradient through a Stairs curve and Edge Detect; Grid & Dots lines folded by Kaleidoscope make the spokes; a Shape Mask keeps it in the circle. An approximation: the true diagram part (with glyphs at the stations) is still to come. Try: change Folds.', (add, wire, fade) => {
     const cv = add('curve', { shape: 'stairs', count: 5 }), pg = add('profile', { shape: 'radial' }), e = add('edges', { strength: 100 }), g = add('grid', { kind: 'grid lines', cells: 6, weight: 8, soft: 10 }),

@@ -196,17 +196,14 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 - **F3 · Border Mask from the inset box.** Border Mask frames the page's
   edges; the box's edges wait for G5 (ctx.box from the renderer, like
   ctx.text).
-- **F4 · Noise Gradient.** (Gradient Map with five stops and Spectrum are
-  done.)
 - **F5 · Channels.**
   - Extract/Assemble HSB and Lab (RGB exists as Split/Merge).
   - Alpha is a design decision: the Athanor has no alpha today. Park it
     unless needed.
-- **F6 · More noises and patterns.**
-  - Noises: Blocks, Pyramids, Stones, Techno.
-  - Patterns: Tiles, Pavements, Ellipse (Orbit Script wants true ellipses),
-    Polygon. (Grid & Dots covers checker, grid lines, dots, hex dots,
-    diamonds and stripes.)
+- **F6 · More patterns.** Pavements (irregular paving stones in rows).
+  Done: Blocks (and Techno, its outlines), Pyramids, Stones (Cells), Ellipse,
+  Polygon, Triangle Mesh; Grid & Dots and Bricks cover checker, tiles, grid
+  lines, dots, hex dots, diamonds and stripes.
   - The Basics' chains can become starters using them.
 - **F7 · Processing.**
   - Median, Percentile, Refraction (needs F1), Smudge.
@@ -215,8 +212,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   - (Displace by a map's slope is done: Displace.)
 - **F8 · Transform.** Rotate and Scale as their own parts (Tile & Rotate does
   both today), Flip, Perspective.
-- **F9 · The rest of RGB Math.** Abs, floor/ceil/round, lerp, log, if. Done
-  so far: divide, power, average, screen, modulo, sine.
 - **F10 · Curve ops still missing.** Transition, Fade, Bezier, and Circular
   Arc variants (Bezier needs D4's editor).
 
@@ -277,12 +272,10 @@ study stays as the graph to learn from.
 
 | Study | Status | What it waits for |
 |---|---|---|
-| Moonlit Fibers, Ink Thirst, Carbon Copy, Dead Channel, Compression Garden, Drowned Light, Lichen Signal, Misremembered Grid, CRT Séance, Poured Mineral, Broken Rosette, Holographic Foil, Polarized Dream, Memory Leak, No-Signal Halo, Frozen Breath, Salt Bloom, Registration Ghost, Thermal Receipt, Sigil Weather, Packet Rain, Impossible Cartography, Cathedral Interference, Breath on Glass, Terminal Afterimage, Cracked Lacquer | a graph of general parts | Stage 3: become textures |
+| Moonlit Fibers, Ink Thirst, Carbon Copy, Dead Channel, Deep-Space Dust, Constellation Without Stars, Compression Garden, Drowned Light, Lichen Signal, Misremembered Grid, CRT Séance, Poured Mineral, Broken Rosette, Holographic Foil, Polarized Dream, Memory Leak, No-Signal Halo, Frozen Breath, Salt Bloom, Registration Ghost, Thermal Receipt, Sigil Weather, Packet Rain, Impossible Cartography, Cathedral Interference, Breath on Glass, Terminal Afterimage, Cracked Lacquer | a graph of general parts | Stage 3: become textures |
 | Mycelial Letter, Aether Current | general parts plus a process primitive (Tendrils, Flow Lines) | nothing: process primitives stay single parts (§J) |
 | Letterpress Bed, Moth-Eaten Velvet, Scar Tissue | lit by the Light Engine | B1 (a lit Surface) to be at their best |
-| Deep-Space Dust | general parts | F4 Noise Gradient would give its color drift |
-| Constellation Without Stars | **approximation**: Cells edges stand in for star lines | a Delaunay-edges part (F6) |
-| Orbit Script | **approximation**: radial rings, sigils scattered on them | F6 Ellipse; writing along a path |
+| Orbit Script | Ellipse rings, sigils scattered along them | writing along a path |
 | Transmutation Engine | **approximation**: rings, folded spokes, ring marks | a circle-diagram part (glyphs at stations), after J's Transmutation Circle |
 | Magnetic Aurora | uses Starfield and Aurora Curtains, whole-sky parts | J: Curtains taken apart |
 
@@ -327,8 +320,8 @@ superseded) wait for Stage 4.
 
 ### Stage 1 · Components: the parts library
 - **F2** Glyph Scatter's rest, **F3** from the box.
-- **F4–F10**, the rest of Filter Forge's primitives, in the order of what
-  they unlock (§2 F).
+- **F5, F6, F7, F8, F10**, the rest of Filter Forge's primitives, in the order
+  of what they unlock (§2 F).
 - **A9** the older Variant params onto Variation.
 - **A10** ports saved by name (with A3's v5: both change the format once).
 - **A3** Groups (v5), then **A4** Loop (its body is a group).
@@ -375,7 +368,7 @@ superseded) wait for Stage 4.
  STAGE 1 · COMPONENTS        STAGE 2 · FEATURES                 STAGE 3 · TEXTURES          STAGE 4 · PRESETS
  F2 Glyph Scatter (rest) ───► G2 punctuation ─────────────────► I studies → textures ───┐
  F3 from the box ────────────► G5 box input                      J black boxes apart  ───┤
- F4–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
+ F5–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
  A10 ports by name · A9 Variant→Variation · A6 AA              Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
  A3 GROUPS (v5) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
@@ -388,7 +381,7 @@ superseded) wait for Stage 4.
 **Suggested passes** (one release each, AGENTS' recipe):
 
 1. Stage 1: A3 Groups (v5) + A10 (ports saved by name: both change the format once).
-2. Stage 1: F6 noises and patterns (Ellipse, Delaunay edges) + F2's rest.
+2. Stage 1: F2's rest (glyphs in web fonts, layers, a color per mark) + F6's Pavements.
 3. Stage 2: D1–D3 controls + E3 one control at random.
 4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
 5. Stage 2: G2–G5 + H1's actions.

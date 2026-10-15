@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Enceladus (2026-10-15)
+
+- **New parts in the Athanor**, from Filter Forge's list:
+  - **Ellipse**: an ellipse, or rings of them like orbits, drawn as lines
+    or filled in bands; it also gives how far out from its center each
+    point is, and how far around.
+  - **Polygon**: 3 to 12 sides, or a star, or rings of them, with a Bevel
+    that rises to its center for faceted heights.
+  - **Triangle Mesh**: scattered points joined into triangles (Delaunay's).
+    Thin Out keeps only the shorter lines, for constellations; Facets gives
+    each triangle its own gray, for a low-polygon look.
+  - **Blocks**: rectangles of random gray at several sizes. Their outlines
+    alone are a circuitry of lines.
+  - **Pyramids**: a grid of pyramids, cones or domes, for studs and rivets.
+  - **Noise Gradient**: a gradient between two colors whose many stops
+    drift, for nebulae and old dyes.
+  - **Cells** also gives **Stones**: rounded stones with a gap between them
+    (its new Gap setting).
+  - **Math** can now Round, Floor and Ceiling (terraces), compare (Greater,
+    Less) and take a Log.
+- **Three Surface Studies use them:**
+  - Constellation Without Stars draws its lines with Triangle Mesh;
+  - Orbit Script draws its orbits with Ellipse;
+  - Deep-Space Dust drifts its color with Noise Gradient.
+- Each new part has its own wiki page.
+
 ## Saturn–Pallene (2026-10-15)
 
 - **More settings follow a map.** In the Athanor, a gray map wired into one
