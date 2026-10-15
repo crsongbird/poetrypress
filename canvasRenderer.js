@@ -28,7 +28,7 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop } from './textureGenerators.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { fill, CHOOSER } from './strings.js';
 import { resolvePmlVariables } from './pmlVars.js';
@@ -1029,6 +1029,10 @@ let SURFACE_SOURCE = null;
 export function setSurfaceSource(fn){ SURFACE_SOURCE = fn; }
 /** Every blend a surface layer can take (Ruby): the canvas's own, and the ones mixed per pixel (boxFx.js). */
 export const SURFACE_BLENDS = [...CANVAS_BLENDS, ...BOX_GPU_BLENDS];
+/** The page's backdrop colors, as a surface made of them is told them: the color, or the gradient's stops. */
+export function pageEnvNow(stops = parseInt(getActiveRadioValue('bgStopsGroup'), 10) || 2, bg1 = $('bgColor1Hex').value){
+  return ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', stops) : [bg1]).join(',');
+}
 /** The surface the controls show, as a layer: the same keys a look saves. */
 export function surfaceFromDom(){
   const v = id => { const el = $(id); return el ? el.value : undefined; };
@@ -1072,7 +1076,8 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const tint = (n, on) => on ? (L['textureTint' + n] || null) : null;
   const tint1 = tint(1, tints >= 1), tint2 = tint(2, tints >= 2), tint3 = tint(3, caps.material), tint4 = tint(4, caps.material);
   const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse);
-  const envs = caps.pageEnv ? env() : undefined;
+  // the page's own colors: for a surface made of them (Rain on Glass, Circuit Board), or a graph with a Page Backdrop
+  const envs = caps.pageEnv || (type === 'athanor' && graphUsesBackdrop(L.forgeGraph || '')) ? env() : undefined;
   const seed = parseInt(L.textureSeed, 10) || 0;
   const p1 = num(L.texP1), p2 = num(L.texP2), p3 = num(L.texP3);
   // knobs four to six only where the surface has them (an Athanor surface: where its graph offers them)
@@ -1146,14 +1151,14 @@ function renderInto(canvas){
   // each drawn the same way from its settings. appEvents hands over the layer the controls are not
   // showing (setSurfaceSource); the one they show is read from the page.
   if($('textureToggle').checked){
-    const env = (bgStopCount, bg1) => ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount) : [bg1]).join(',');
+    const env = () => pageEnvNow(bgStopCount, bg1);
     const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null;
     const dom = surfaceFromDom();
     const upper = !src || src.editing !== 'lower' ? dom : src.other;
     const lower = src && src.lowerOn ? (src.editing === 'lower' ? dom : src.other) : null;
     for(const [L, slot] of [[lower, 'base'], [upper, 'main']]){
       if(!L || !L.textureType) continue;
-      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env: () => env(bgStopCount, bg1) });
+      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env });
     }
   }
 

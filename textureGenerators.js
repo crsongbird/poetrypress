@@ -316,6 +316,14 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'From One Point',  min:0,  max:100, def:30,  unit:''},
                   {key:'shape', label:'Wander',          min:0,  max:100, def:40,  unit:''},
                   {key:'hue',   label:'Chipping',        min:0,  max:100, def:0,   unit:''}],
+  // 🝓 Circuit Board (chains.js 'circuit'): Charge powers more traces, from bare copper to colored, glowing and sparking
+  circuit:       [{key:'amt',   label:'Traces',          min:0,  max:100, def:55,  unit:''},
+                  // square corners (Factorio's belts) → 45° chamfers (a board's)
+                  {key:'zoom',  label:'Bends',           min:0,  max:100, def:70,  unit:''},
+                  {key:'form',  label:'Charge',          min:0,  max:100, def:55,  unit:'', ticks:[0,18,50,84], names:['Substrate','Color','Glow','Sparks']},
+                  {key:'shape', label:'Data Flow',       min:0,  max:100, def:40,  unit:''},
+                  {key:'hue',   label:'Components',      min:0,  max:100, def:45,  unit:''},
+                  {key:'tilt',  label:'Scale',           min:40, max:300, def:100, unit:'%'}],
   // 🝆 Veins of Light (chains.js 'veins')
   veins:         [{key:'zoom',  label:'Material',        min:0,  max:100, def:10,  unit:'', ticks:[10,30,50,70,90], names:['Strata','Pebbles','Sand','Fibres','Skin']},
                   {key:'amt',   label:'Reach',           min:0,  max:100, def:60,  unit:''},
@@ -392,6 +400,9 @@ export const TEXTURE_PARAMS = {
  * silently ignored.
  */
 export const TEXTURE_CAPS = {
+  // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
+  circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
+                   tintLabels:['Trace Hue','Data Hue'], tintDefaults:['accent1','accent2'] },
   veins:         { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','lighten','luminosity'], light:true, dial:'Grow From & Light', material:true, tints:2,
                    tintLabels:['Material Hue','Glow Hue'], tintDefaults:['#B8A48C','#4FE3FF'] },
   crackle:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], light:true, material:true, dial:'Impact & Light', tints:2,
@@ -569,6 +580,7 @@ const GLOWS = {
   frost:       'moonlight caught in the ice',
   astral:      'airglow: the sky\'s own faint light, in slow waves',
   linen:       'luminous thread in the stitching',
+  circuit:     'an aura round the glowing traces, as if the board were lit from within',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
 // DIFFUSE (the light's own colour) where nothing else already says it: not
@@ -577,7 +589,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -662,6 +674,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'circuit'){
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // (its hues, else the accents) Circuit Traces on the page's backdrop → Threshold (Charge) → Light Engine → glow, data, sparks (chains.js)
   } else if(type === 'veins'){
     result = genChain(type, w, h, light, extra, tint1, tint2);   // Matrix → Tendrils (space colonization) → Light Engine → glow (chains.js)
   } else if(type === 'crackle'){
@@ -826,6 +840,8 @@ export function storeTexture(key, result){
 }
 // everything a request means: its normalised knobs, and its key
 // the poem's layout, as a short key (FNV-1a): every character counts
+/** Does a graph hold a Page Backdrop part (and so want the page's own colors)? */
+export function graphUsesBackdrop(graph){ return /"name":\s*"backdrop"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
@@ -842,7 +858,8 @@ function describeRequest(type, w, h, opts){
   const o5 = h5 ? resolveAlpha(opts.tint5, h5.def) : null;
   const t5 = (h5 && o5 && o5.toUpperCase() !== h5.def.toUpperCase()) ? o5.toUpperCase() : null;
   // the page's own colours, for a texture that shows the world behind the glass
-  const env = ((TEXTURE_CAPS[RETIRED[type] || type] || {}).pageEnv && opts.env) ? String(opts.env).toUpperCase() : null;
+  // (an Athanor graph has them when it holds a Page Backdrop part)
+  const env = (((TEXTURE_CAPS[RETIRED[type] || type] || {}).pageEnv || ((type === 'athanor' || type === 'athanorsteps') && graphUsesBackdrop(opts.graph))) && opts.env) ? String(opts.env).toUpperCase() : null;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
   // how low the light is, 0–100 (100: the horizon, as it always was)
@@ -884,7 +901,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '',
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null,
       ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -909,7 +926,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '' },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', env: extra.env || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -935,13 +952,13 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
-      mat: extra.mat || null, glow: extra.glow || null },
+      mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;

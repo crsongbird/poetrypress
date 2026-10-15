@@ -271,6 +271,61 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 10, paramPort('matrix', 'kind')], [5, 1, 10, paramPort('matrix', 'scale')], [5, 1, 11, paramPort('tendrils', 'zoom')], [2, 1, 11, paramPort('tendrils', 'amount')], [3, 1, 11, paramPort('tendrils', 'branching')],
       [6, 1, 11, paramPort('tendrils', 'slide')], [7, 1, 11, 2], [10, 3, 11, 1], [10, 1, 13, 1], [8, 1, 13, 2], [12, 1, 13, 3], [10, 2, 14, 1], [11, 1, 14, 2],
       [13, 1, 15, 1], [14, 1, 15, 2], [15, 1, 16, 1], [9, 1, 16, 2], [11, 2, 16, 3], [4, 1, 16, paramPort('blend', 'opacity')], [16, 1, 17, 1]] },
+  // 🝓 Circuit Board: Circuit Traces on the page's own backdrop; Threshold powers some traces (Charge), the Light Engine
+  // lights the board, then what it gives off is screened over: the traces' glow, the Glow Hue's aura, data, sparks
+  circuit: { label: 'Circuit Board', div: 2, teach: 'A circuit board drawn on the page itself. Circuit Traces routes it the way boards are routed by hand: chips first, then buses of parallel traces that run straight and turn together (Bends: square corners, or 45° chamfers), ending in vias and pads. Page Backdrop makes the board of your backdrop\'s colors; Blend lays the copper, the tinned pads, the chips and the silkscreen on it. Every trace has its own grey (Each Trace), so three Thresholds driven by Charge decide which are powered: colored in your Trace Hue first, then (the grey dimmed by Math, so Charge reaches it later) glowing, then sparking. The Light Engine raises and lights the board; then the light it gives off is screened over (Blend in Screen): the glow, the Glow Hue\'s aura, data running along the powered traces in your Data Hue, and sparks from Scatter. Try: Charge at 100, then Bends at 0 for square corners.', nodes: [
+      ['knob', { slot: '1', name: 'Traces', def: 55 }, 40, 40],                    // 1
+      ['knob', { slot: '3', name: 'Charge', def: 55 }, 40, 130],                   // 2
+      ['knob', { slot: '4', name: 'Data Flow', def: 40 }, 40, 220],                // 3
+      ['knob', { slot: '6', name: 'Scale', def: 23 }, 40, 310],                    // 4  (100 of 40–300)
+      ['knob', { slot: '5', name: 'Components', def: 45 }, 40, 400],               // 5
+      ['knob', { slot: '2', name: 'Bends', def: 70 }, 40, 490],                    // 6
+      ['dial', {}, 40, 580],                                                       // 7
+      ['hue', { slot: '1', name: 'Trace Hue' }, 40, 660], ['hue', { slot: '2', name: 'Data Hue' }, 40, 740], ['glowhue', {}, 40, 820],   // 8, 9, 10
+      ['backdrop', {}, 300, 700],                                                  // 11
+      ['traces', { traces: 55, '~traces': '0,100', scale: 100, '~scale': '40,300', bends: 70, '~bends': '0,100', parts: 45, '~parts': '0,100', flow: 40, '~flow': '0,100' }, 300, 120],   // 12
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 40],               // 13 (powered: colored)
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 160],              // 14 (glowing)
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 280],              // 15 (sparking)
+      ['math', { op: 'multiply' }, 1040, 40],                                      // 16 (the powered copper)
+      ['math', { op: 'multiply' }, 1040, 160],                                     // 17 (the glowing copper)
+      ['colour', { hex: '#FFFFFF' }, 560, 900],                                    // 18
+      ['blend', { mode: 'soft-light', opacity: 70 }, 560, 620],                    // 19 (bare copper under the mask)
+      ['colour', { hex: '#C9C1AA' }, 800, 900],                                    // 20 (tinned pads)
+      ['blend', { mode: 'source-over', opacity: 90 }, 800, 620],                   // 21
+      ['colour', { hex: '#141418' }, 1040, 900],                                   // 22 (the chips' epoxy)
+      ['blend', { mode: 'source-over', opacity: 96 }, 1040, 620],                  // 23
+      ['colour', { hex: '#ECE8DC' }, 1280, 900],                                   // 24 (silkscreen)
+      ['blend', { mode: 'source-over', opacity: 75 }, 1280, 620],                  // 25
+      ['blend', { mode: 'source-over', opacity: 100 }, 1520, 620],                 // 26 (powered traces in the Trace Hue)
+      ['blur', { radius: 2 }, 1040, 440],                                          // 27 (edges rounded)
+      ['material', { relief: 45, gloss: 50, shine: 45, shadow: 50, occlusion: 35, ambient: 42 }, 1760, 480],   // 28
+      ['blur', { radius: 22 }, 1040, 140],                                         // 29 (the glow: a halo)
+      ['blend', { mode: 'screen', opacity: 85 }, 2000, 420],                       // 30
+      ['blend', { mode: 'screen', opacity: 45 }, 2240, 420],                       // 31 (hot cores)
+      ['blur', { radius: 60 }, 1280, 140],                                         // 32 (the aura)
+      ['blend', { mode: 'screen', opacity: 90 }, 2480, 420],                       // 33 (the Glow Hue's emission)
+      ['math', { op: 'multiply' }, 1520, 40],                                      // 34 (data on the powered traces)
+      ['blur', { radius: 5 }, 1760, 40],                                           // 35
+      ['math', { op: 'screen' }, 2000, 40],                                        // 36
+      ['blend', { mode: 'screen', opacity: 100 }, 2720, 420],                      // 37 (data)
+      ['scatter', { shape: 'spark', count: 14, size: 8, vary: 70, turn: 100, clump: 0, fade: 50 }, 800, 300],   // 38
+      ['blur', { radius: 8 }, 1040, 300],                                          // 39
+      ['math', { op: 'screen' }, 1280, 300],                                       // 40
+      ['blend', { mode: 'screen', opacity: 100 }, 2960, 420],                      // 41 (sparks)
+      ['surface', { name: 'Circuit Board', ground: 'colour' }, 3200, 440],         // 42
+      ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
+      ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280]],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
+    wires: [[1, 1, 12, paramPort('traces', 'traces')], [4, 1, 12, paramPort('traces', 'scale')], [6, 1, 12, paramPort('traces', 'bends')], [5, 1, 12, paramPort('traces', 'parts')], [3, 1, 12, paramPort('traces', 'flow')],
+      [2, 1, 13, paramPort('threshold', 'at')], [2, 1, 14, paramPort('threshold', 'at')], [2, 1, 15, paramPort('threshold', 'at')],
+      [12, 3, 13, 1], [12, 3, 45, 1], [43, 1, 45, 2], [12, 3, 46, 1], [44, 1, 46, 2], [45, 1, 14, 1], [46, 1, 15, 1], [13, 1, 16, 1], [12, 1, 16, 2], [14, 1, 17, 1], [12, 1, 17, 2],
+      [11, 1, 19, 1], [18, 1, 19, 2], [12, 1, 19, 3], [19, 1, 21, 1], [20, 1, 21, 2], [12, 5, 21, 3], [21, 1, 23, 1], [22, 1, 23, 2], [12, 6, 23, 3],
+      [23, 1, 25, 1], [24, 1, 25, 2], [12, 7, 25, 3], [25, 1, 26, 1], [8, 1, 26, 2], [16, 1, 26, 3],
+      [12, 2, 27, 1], [26, 1, 28, 1], [27, 1, 28, 2], [12, 1, 28, 3], [7, 1, 28, 7],
+      [17, 1, 29, 1], [28, 1, 30, 1], [8, 1, 30, 2], [29, 1, 30, 3], [30, 1, 31, 1], [18, 1, 31, 2], [17, 1, 31, 3],
+      [17, 1, 32, 1], [31, 1, 33, 1], [10, 1, 33, 2], [32, 1, 33, 3],
+      [12, 4, 34, 1], [16, 1, 34, 2], [34, 1, 35, 1], [34, 1, 36, 1], [35, 1, 36, 2], [33, 1, 37, 1], [9, 1, 37, 2], [36, 1, 37, 3],
+      [15, 1, 38, 2], [38, 1, 39, 1], [38, 1, 40, 1], [39, 1, 40, 2], [37, 1, 41, 1], [18, 1, 41, 2], [40, 1, 41, 3], [41, 1, 42, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
   knotwork: { label: 'Knotwork', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
       ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)

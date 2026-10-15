@@ -44,7 +44,9 @@ function swLayer(c, L, w, h){
     const opts = { accent1: L.accent1, accent2: L.accent2, seed: (L.textureSeed != null ? L.textureSeed : SWATCH.fallbackSeed), p1: L.texP1, p2: L.texP2, p3: L.texP3, p4: L.texP4, p5: L.texP5, p6: L.texP6,
       light: L.textureLight != null ? +L.textureLight : 315, lightTilt: L.textureLightTilt != null ? +L.textureLightTilt : undefined,
       tint1: L.textureTint1 || null, tint2: L.textureTint2 || null, tint3: L.textureTint3 || null, tint4: L.textureTint4 || null, tint5: L.textureTint5 || null, tint6: L.textureTint6 || null,
-      blend: L.textureGround || blend };
+      blend: L.textureGround || blend,
+      // the look's own backdrop, for a surface made of it (Rain on Glass, Circuit Board)
+      env: [L.bg1, ...(L.bgGradient ? [L.bg2, L.bg3, L.bg4] : [])].filter(Boolean).join(',') || undefined };
     const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
     if(!tex) return !swatchSource;
     c.save();
@@ -77,7 +79,8 @@ export function paintPresetSwatch(canvas, p, w, h, onPainted = null){
 
   // surface: the lower one first, when the look has two (a look's lower surface keeps the upper's keys)
   if(p.texture && p.textureType){
-    if(p.baseToggle && p.baseLayer && p.baseLayer.textureType && !swLayer(c, { ...p.baseLayer, accent1: p.accent1, accent2: p.accent2 }, w, h)){
+    const page = { accent1: p.accent1, accent2: p.accent2, bg1: p.bg1, bg2: p.bg2, bg3: p.bg3, bg4: p.bg4, bgGradient: p.bgGradient };
+    if(p.baseToggle && p.baseLayer && p.baseLayer.textureType && !swLayer(c, { ...p.baseLayer, ...page }, w, h)){
       swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; }
     else if(!swLayer(c, p, w, h)){ swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; }
     else swatchWaiting.delete(canvas);

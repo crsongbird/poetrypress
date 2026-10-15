@@ -30,7 +30,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 59 textures (seven hidden: the Basics and the first Fractured Glaze), and the Athanor\'s own', new Set(textureTypes).size === 60 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
+check('the picker offers 60 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 61 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -39,7 +39,7 @@ check('every texture declares two params, plus an optional third that must be Fo
   Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
     || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf' || t === 'cards' || t === 'crackle') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
     // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
-    || ((t === 'water' || t === 'wax' || t === 'stainedglass' || t === 'lichtenberg' || t === 'growth' || t === 'aurorasky' || t === 'knotwork' || t === 'veins') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
+    || ((t === 'water' || t === 'wax' || t === 'stainedglass' || t === 'lichtenberg' || t === 'growth' || t === 'aurorasky' || t === 'knotwork' || t === 'veins' || t === 'circuit') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
     || ((t === 'dunes' || t === 'moss') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
     // (Painted Landscape: Tilt, then Color — grey as it was, or painted in colour)
     || (t === 'landscape' && d.length === 6 && d[2].key === 'form' && d[3].key === 'tilt' && d[4].key === 'hue' && d[5].key === 'shape')

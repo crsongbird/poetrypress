@@ -106,6 +106,8 @@ const STEP_PARTS = {
   colour:   { cat: 'Inputs', label: 'Color', ins: [], outs: ['colour'], params: [['hex', 'Color', 'text', '#808080']] },
   // the page's own two accent colors (Cartomancy's first two suits)
   accent:   { cat: 'Inputs', label: 'Accent', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Accent', ['1', '2']), ['name', 'Name', 'text', 'Accent']] },
+  // the page's own backdrop (Materia's color or gradient): what a surface drawn over the whole page can be made of
+  backdrop: { cat: 'Inputs', label: 'Page Backdrop', ins: [], outs: ['picture'], params: [] },
   forms:    { cat: 'Noise', label: 'Soft Forms', ins: [], outs: ['tone'], params: [STEP_R('count', 'Forms', 5, 1, 12), STEP_R('size', 'Size', 50), STEP_R('noise', 'Noise', 50)] },
   streaks:  { cat: 'Marks', label: 'Streaks', ins: ['base'], outs: ['field'], params: [STEP_SEL('kind', 'Kind', ['streaks', 'sheets']), STEP_R('angle', 'From', 0, 0, 360),
               STEP_R('spread', 'Gusts', 0, 0, 40), STEP_R('length', 'Length', 100, 100, 500), STEP_R('count', 'Count', 100, 0, 400), STEP_R('light', 'Light Share', 75), STEP_R('strength', 'Strength', 50)] },
@@ -198,6 +200,7 @@ export const STEP_DOCS = {
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
   accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
@@ -281,6 +284,7 @@ export const STEP_DOCS = {
   matrix: 'A material for something to grow through (strata, pebbles, sand, fibers or skin), with the paths through it.',
   tendrils: 'A branching network that grows through the paths you give it, like veins or roots.',
   knotwork: 'Celtic knotwork: strands crossing over and under, turned back into knots inside an outline.',
+  traces: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',
   discharge: 'A Lichtenberg figure: the branching path electricity burns through wood.',
   wood: 'A wooden plank: growth rings and grain, as a picture and heights.',
   burn: 'Burns a gray map into a picture: charred into wood, glowing embers, or etched into acrylic.',
@@ -321,7 +325,7 @@ const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
     return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
   },
-  glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r/255, g.g/255, g.b/255] : [0, 0, 0]]; },
+  glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
   hue(E, n){ const { ctx, P, hexCol } = E;
     return [hexCol((ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] || '#FFFFFF')];
   },
@@ -499,13 +503,17 @@ const STEP_RUN = {
     for(let i = 0; i < N; i++){ const t = Math.pow(Math.max(0, Math.min(1, f[i])), g); o.r[i] = a[0] + (b[0] - a[0])*t; o.g[i] = a[1] + (b[1] - a[1])*t; o.b[i] = a[2] + (b[2] - a[2])*t; }
     return [o];
   },
-  blend(E, n){ const { N, input, num, P, asField, asImage } = E;
+  blend(E, n){ const { N, input, P, asField, asImage } = E;
     const base = asImage(input(n, 1) ?? 0.5), lay = input(n, 2), m = asField(input(n, 3));
     if(lay == null) return [base];
-    const L = asImage(lay), fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
-    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
-    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1);
-      for(const c of ['r', 'g', 'b']){ const b0 = base[c][i]; o[c][i] = b0 + (Math.max(0, Math.min(1, fn(b0, L[c][i]))) - b0)*k; } }
+    // (a single color is read as itself, as a flat picture of it would hold it; where the mask is black, the base passes)
+    const col = Array.isArray(lay) ? lay.map(Math.fround) : null, L = col ? null : asImage(lay);
+    const fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
+    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, OR = o.r, OG = o.g, OB = o.b, BR = base.r, BG = base.g, BB = base.b;
+    const LR = L && L.r, LG = L && L.g, LB = L && L.b, cl = v => Math.max(0, Math.min(1, v));
+    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1), r0 = BR[i], g0 = BG[i], b0 = BB[i];
+      if(k === 0){ OR[i] = r0; OG[i] = g0; OB[i] = b0; continue; }
+      OR[i] = r0 + (cl(fn(r0, col ? col[0] : LR[i])) - r0)*k; OG[i] = g0 + (cl(fn(g0, col ? col[1] : LG[i])) - g0)*k; OB[i] = b0 + (cl(fn(b0, col ? col[2] : LB[i])) - b0)*k; }
     return [o];
   },
   surface(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
@@ -522,6 +530,15 @@ const STEP_RUN = {
   },
   accent(E, n){ const { ctx, P, hexCol } = E, k = (parseInt(P(n, 'slot', '1'), 10) || 1) - 1;
     return [hexCol((ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k] || '#808080')];
+  },
+  // the backdrop's colors, top to bottom (a board's green where there is no page: the Athanor's own previews)
+  backdrop(E){ const { ww, wh, N, ctx, hexCol } = E;
+    const cols = (Array.isArray(ctx.env) && ctx.env.length ? ctx.env : ['#16382B', '#0B2219']).map(c => hexCol(String(c))), last = cols.length - 1;
+    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+    for(let y = 0; y < wh; y++){ const f = (wh > 1 ? y/(wh - 1) : 0)*last, i = Math.min(Math.max(0, last - 1), Math.floor(f)), u = last ? f - i : 0, A = cols[i], B = cols[Math.min(last, i + 1)];
+      const r = A[0] + (B[0] - A[0])*u, g = A[1] + (B[1] - A[1])*u, b = A[2] + (B[2] - A[2])*u;
+      o.r.fill(r, y*ww, y*ww + ww); o.g.fill(g, y*ww, y*ww + ww); o.b.fill(b, y*ww, y*ww + ww); }
+    return [o];
   },
   // a few large soft shapes and a little noise: where a drawing is dark
   forms(E, n){ const { ww, wh, unit, num } = E;
@@ -869,7 +886,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 export const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },

@@ -11565,6 +11565,12 @@ const SHARP_STEPS = {
  *   burn       BURN: any gray map of channels laid into a picture as a burn —
  *              charred and sunken in wood, still glowing as embers, or lit from
  *              inside a block of clear acrylic — with the picture's heights.
+ *   traces     CIRCUIT TRACES: a circuit board routed as boards are by hand —
+ *              chips and their pins, then buses of parallel traces that run
+ *              straight and turn together (45° chamfers, or Factorio's 90°
+ *              corners), ending in vias and pads — with each trace's own grey
+ *              (so a cutoff can power some and not others), data running along
+ *              them, the pads, the parts and their silkscreen.
  *   growline   GROWING LINE: differential growth (Anders Hoff's "differential
  *              line"; Nervous System's Floraform in a plane): a closed line whose
  *              points push each other apart, follow their neighbours and split
@@ -11883,7 +11889,227 @@ function genTendrils(ww, wh, unit, W, o){
   return { NX, NY, PAR, flow };
 }
 
+// ---------------- CIRCUIT TRACES: a board's copper, routed ----------------
+// The way circuit boards are routed by hand, and the way generative circuit patterns are usually drawn: a grid of
+// cells one trace apart. CHIPS go down first, their pins round their edges. Then BUSES (one to eight traces side by
+// side) walk out from the pins, the page's edges and lone vias: straight for a while, then turning together, by 45°
+// (a board's chamfered corners) or by 90° (Factorio's belts), every trace keeping its distance from its neighbours
+// round the corner (a mitred offset), until something is in the way or the bus has gone far enough. There each trace
+// ends in a via or a pad. Every cell remembers the bus that crossed it, so no two buses cross. Small parts (resistors,
+// capacitors) and stitching vias fill some of what is left, and a silkscreen names the parts.
+// Everything is in CELLS (the page's short side is `across` cells), so the board is the same at any size.
+const CIR_DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];   // E SE S SW W NW N NE (y down)
+// a 3×5 font for the silkscreen's part names (U chips, R resistors, C capacitors, digits)
+const CIR_FONT = { U: '101101101101111', R: '110101110101101', C: '111100100100111', 0: '111101101101111', 1: '010110010010111', 2: '111001111100111',
+  3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111' };
+function genCircuit(cw, ch, o){
+  const R = Math.random, occ = new Int32Array(cw*ch), age = new Int32Array(cw*ch);
+  const inb = (x, y) => x >= 0 && y >= 0 && x < cw && y < ch, at = (x, y) => (y | 0)*cw + (x | 0);
+  // a mask kept clear (the part's first input): those cells are taken before anything is placed
+  if(o.clear) for(let y = 0; y < ch; y++) for(let x = 0; x < cw; x++) if(o.clear(x + 0.5, y + 0.5) > 0.5) occ[y*cw + x] = -3;
+  const chips = [], smd = [], vias = [], traces = [], names = [];
+  // ---- chips: square ones with pins on four sides, long ones on two ----
+  const nChips = Math.round(o.parts*cw*ch/650) + (o.parts > 0.08 ? 1 : 0);
+  for(let t = 0; t < nChips*14 && chips.length < nChips; t++){
+    const quad = R() < 0.5, a = quad ? 5 + (R()*7 | 0) : 2 + (R()*2 | 0), b = quad ? a : 5 + (R()*9 | 0);
+    const [W, H] = quad || R() < 0.5 ? [a, b] : [b, a];
+    const x = 3 + (R()*Math.max(1, cw - W - 6) | 0), y = 3 + (R()*Math.max(1, ch - H - 6) | 0);
+    let ok = x + W + 3 < cw && y + H + 3 < ch;
+    for(let j = y - 3; j < y + H + 3 && ok; j++) for(let i = x - 3; i < x + W + 3; i++) if(!inb(i, j) || occ[j*cw + i]){ ok = false; break; }
+    if(!ok) continue;
+    for(let j = y - 1; j <= y + H; j++) for(let i = x - 1; i <= x + W; i++) occ[j*cw + i] = -1;
+    const c = { x, y, w: W, h: H, pins: [], rank: R() }, sides = quad ? [0, 1, 2, 3] : W < H ? [1, 3] : [0, 2];
+    for(const sd of sides){ const len = sd % 2 === 0 ? W : H;
+      for(let k = 0; k < len; k++) c.pins.push({ side: sd, k, used: false, rank: -1,
+        x: sd === 0 || sd === 2 ? x + k + 0.5 : sd === 1 ? x + W + 0.5 : x - 0.5, y: sd === 1 || sd === 3 ? y + k + 0.5 : sd === 0 ? y - 0.5 : y + H + 0.5, dir: [6, 0, 2, 4][sd] }); }
+    chips.push(c); names.push({ kind: 'U', n: chips.length, x: x, y: y - 2.2, chip: c });
+  }
+  // ---- buses ----
+  const free = (x, y, id, t) => { if(!inb(x, y)) return 2; const q = at(x, y), v = occ[q]; return v === 0 || (v === id && age[q] > t - 4) ? 1 : 0; };
+  const mark = (ax, ay, bx, by, id, t) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)*4));
+    for(let s = 0; s <= n; s++){ const x = ax + (bx - ax)*s/n, y = ay + (by - ay)*s/n; if(!inb(x, y)) continue; const q = at(x, y); if(occ[q] === 0 || occ[q] === id){ occ[q] = id; age[q] = t; } } };
+  const nrm = d => { const [dx, dy] = CIR_DIRS[d], l = Math.hypot(dx, dy); return [dy/l, -dx/l]; };
+  const nBus = Math.round((0.2 + 3.4*o.traces)*cw*ch/150);
+  let id = 0;
+  const walk = (P, d, k, start, near = null) => {
+    id++; const offs = Array.from({ length: k }, (_, i) => i - (k - 1)/2), busRank = near == null ? R() : near*0.65 + R()*0.35;
+    let n = nrm(d);
+    const pts = offs.map(oi => [[P[0] + n[0]*oi, P[1] + n[1]*oi]]), cur = pts.map(p => p[0].slice());
+    // is the bus's footprint free at Q (going dd)? 0 no · 1 yes · 2 the whole bus has left the page
+    const ok = (Q, dd, t) => { const nn = nrm(dd); let out = 0;
+      for(const oi of offs){ const f = free(Q[0] + nn[0]*oi, Q[1] + nn[1]*oi, id, t); if(f === 0) return 0; if(f === 2) out++; }
+      // a little room either side, so two buses never touch
+      for(const oi of [offs[0] - 0.8, offs[k - 1] + 0.8]) if(free(Q[0] + nn[0]*oi, Q[1] + nn[1]*oi, id, t) === 0) return 0;
+      return out === k ? 2 : 1; };
+    const maxSteps = 8 + Math.round(R()*R()*150), turnP = 0.05 + 0.08*R(), diagonal = dd => dd % 2 === 1;
+    let t = 0, run = 0, mov = 0, end = R() < 0.62 ? 'via' : 'pad';
+    while(t < maxSteps){
+      t++;
+      const [dx, dy] = CIR_DIRS[d], Q = [P[0] + dx, P[1] + dy], mid = [P[0] + dx/2, P[1] + dy/2];
+      const f = ok(Q, d, t), fm = ok(mid, d, t);
+      if(f === 2){ end = 'off'; for(let i = 0; i < k; i++) pts[i].push([Q[0] + n[0]*offs[i], Q[1] + n[1]*offs[i]]); mov++; break; }
+      const blocked = !f || !fm;
+      // time to turn: a diagonal is a short jog; a straight run turns now and then; a blocked one must
+      const want = blocked || (run >= (diagonal(d) ? 2 + (R()*4 | 0) : 3) && R() < (diagonal(d) ? 0.45 : turnP));
+      if(want){
+        // which way: 45° (a board's chamfer) or 90° (a belt's corner), toward the side with more room
+        const opts = diagonal(d) || R() < o.bends ? [1, -1] : [2, -2];
+        const room = sg => { const dd = (d + sg + 8) % 8, [ex, ey] = CIR_DIRS[dd]; let r = 0;
+          for(let q = 1; q <= 6; q++){ if(!ok([P[0] + ex*q, P[1] + ey*q], dd, t)) break; r++; } return r + R()*0.5; };
+        let turned = false;
+        for(const [sg, r] of opts.map(sg => [sg, room(sg)]).sort((a, b) => b[1] - a[1])){
+          const d2 = (d + sg + 8) % 8;
+          if(r < 2 || (!o.diag && diagonal(d2))) continue;
+          // the corner: each trace turns where its offset line meets the new one (a mitre)
+          const n2 = nrm(d2), c = n[0]*n2[0] + n[1]*n2[1], m = [(n[0] + n2[0])/(1 + c), (n[1] + n2[1])/(1 + c)];
+          for(let i = 0; i < k; i++){ const q = [P[0] + m[0]*offs[i], P[1] + m[1]*offs[i]]; mark(cur[i][0], cur[i][1], q[0], q[1], id, t); pts[i].push(q); cur[i] = q; }
+          d = d2; n = n2; run = 0; turned = true; break;
+        }
+        if(turned) continue;
+        if(blocked) break;
+      }
+      // a step straight on: each trace's line marked as taken
+      for(let i = 0; i < k; i++){ const q = [Q[0] + n[0]*offs[i], Q[1] + n[1]*offs[i]]; mark(cur[i][0], cur[i][1], q[0], q[1], id, t); cur[i] = q; }
+      P = Q; run++; mov++;
+    }
+    if(mov < 2) return false;
+    const [dx, dy] = CIR_DIRS[d], ln = Math.hypot(dx, dy);
+    if(end !== 'off') for(let i = 0; i < k; i++){
+      // each trace runs on to its end (every other one a little further, so neighbouring vias don't touch)
+      const ext = end === 'via' && k > 1 && i % 2 ? 1.1 : 0; pts[i].push([cur[i][0] + dx/ln*ext, cur[i][1] + dy/ln*ext]); }
+    offs.forEach((_, i) => traces.push({ pts: pts[i], rank: Math.min(1, Math.max(0, busRank + (R() - 0.5)*0.14)), bus: id, start, end: end === 'off' ? null : end, w: k }));
+    return true;
+  };
+  for(let b = 0; b < nBus; b++){
+    const r = R();
+    const k = (q => q < 0.32 ? 1 : q < 0.46 ? 2 : q < 0.7 ? 3 + (R()*2 | 0) : 5 + (R()*4 | 0))(R());
+    if(r < 0.5 && chips.length){
+      // out of a chip: k pins side by side that nothing uses yet
+      const c = chips[R()*chips.length | 0], sd = c.pins[R()*c.pins.length | 0].side, row = c.pins.filter(p => p.side === sd);
+      // a run of k pins that nothing uses yet (as long a run as there is, up to k)
+      const k2 = Math.min(k, row.length); let run = [];
+      for(let tries = 0; tries < 6 && !run.length; tries++){ const s0 = R()*(row.length - k2 + 1) | 0, r2 = row.slice(s0, s0 + k2); if(!r2.some(p => p.used)) run = r2; }
+      if(!run.length) continue;
+      // pins on the left or top of a side are counted the other way round from the bus's offsets
+      const P = [run.reduce((a, p) => a + p.x, 0)/run.length, run.reduce((a, p) => a + p.y, 0)/run.length];
+      const before = traces.length;
+      if(walk(P, run[0].dir, run.length, 'pin', c.rank)){ run.forEach(p => { p.used = true; });
+        // which trace left from which pin: the nearest
+        for(const tr of traces.slice(before)){ const s = tr.pts[0]; let best = null, bd = 9; for(const p of run){ const dd = Math.hypot(p.x - s[0], p.y - s[1]); if(dd < bd){ bd = dd; best = p; } } if(best) best.rank = tr.rank; } }
+    } else if(r < 0.72){
+      // in from the page's edge
+      const e = R()*4 | 0, d = [2, 4, 6, 0][e], along = e % 2 === 0 ? cw : ch, s = 2 + (R()*(along - 4) | 0);
+      const P = e === 0 ? [s + 0.5, -0.5] : e === 1 ? [cw + 0.5, s + 0.5] : e === 2 ? [s + 0.5, ch + 0.5] : [-0.5, s + 0.5];
+      walk(P, d, k, 'edge');
+    } else {
+      // out of a row of vias, anywhere free
+      const x = 2 + (R()*(cw - 4) | 0), y = 2 + (R()*(ch - 4) | 0);
+      if(occ[at(x, y)]) continue;
+      walk([x + 0.5, y + 0.5], o.diag ? R()*8 | 0 : (R()*4 | 0)*2, Math.min(k, 4), 'via');
+    }
+  }
+  // ---- small parts and stitching vias in what is left ----
+  const room = (x, y, w, h, m) => { for(let j = y - m; j < y + h + m; j++) for(let i = x - m; i < x + w + m; i++) if(!inb(i, j) || occ[j*cw + i]) return false; return true; };
+  const nSmd = Math.round(o.parts*cw*ch/170);
+  for(let t = 0; t < nSmd*6 && smd.length < nSmd; t++){
+    const horiz = R() < 0.5, w = horiz ? 3 : 2, h = horiz ? 2 : 3, x = 1 + (R()*(cw - w - 2) | 0), y = 1 + (R()*(ch - h - 2) | 0);
+    if(!room(x, y, w, h, 1)) continue;
+    for(let j = y; j < y + h; j++) for(let i = x; i < x + w; i++) occ[j*cw + i] = -2;
+    smd.push({ x, y, w, h, horiz, cap: R() < 0.45 }); if(R() < 0.5) names.push({ kind: smd[smd.length - 1].cap ? 'C' : 'R', n: smd.length, x: x + w + 0.4, y: y + 0.2 });
+  }
+  const nVia = Math.round(o.parts*cw*ch/260);
+  for(let t = 0; t < nVia*4 && vias.length < nVia; t++){ const x = 1 + (R()*(cw - 2) | 0), y = 1 + (R()*(ch - 2) | 0); if(!room(x, y, 1, 1, 1)) continue; occ[y*cw + x] = -2; vias.push([x + 0.5, y + 0.5]); }
+  // the names: only where they don't sit on copper
+  const named = names.filter(nm => { const x = Math.floor(nm.x), y = Math.floor(nm.y); return room(x, y, 3, 2, 0); });
+  return { chips, smd, vias, traces, names: named };
+}
+// The board drawn: s pixels a cell. Each of the part's maps is its own canvas (see the part).
+function genDrawCircuit(B, ww, wh, s, o){
+  const mk = () => kitCanvas(ww, wh), cv = {}, fillAll = (x, c) => { x.fillStyle = c; x.fillRect(0, 0, ww, wh); };
+  for(const k of ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend']){ const [c, x] = mk(); fillAll(x, k === 'height' ? 'rgb(77,77,77)' : '#000'); x.lineCap = 'round'; x.lineJoin = 'round'; cv[k] = [c, x]; }
+  const g = v => { const q = Math.round(Math.max(0, Math.min(1, v))*255); return `rgb(${q},${q},${q})`; };
+  const line = (x, pts, w, col) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0]*s, p[1]*s) : x.moveTo(p[0]*s, p[1]*s)); x.stroke(); };
+  const disc = (x, p, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(p[0]*s, p[1]*s, r*s, 0, Math.PI*2); x.fill(); };
+  const rect = (x, X, Y, W, H, col) => { x.fillStyle = col; x.fillRect(X*s, Y*s, W*s, H*s); };
+  const [, CU] = cv.copper, [, HT] = cv.height, [, EA] = cv.each, [, DA] = cv.data, [, PD] = cv.pads, [, PT] = cv.parts, [, LG] = cv.legend;
+  const tw = 0.34;
+  // the traces: copper, raised a little, and each one's own grey (drawn wide, so a cutoff takes the whole trace)
+  for(const tr of B.traces){
+    const e = g(0.1 + 0.85*tr.rank);   // (never quite white: a cutoff at the top passes none)
+    line(CU, tr.pts, tw*s, '#fff'); line(HT, tr.pts, tw*s, 'rgb(107,107,107)'); line(EA, tr.pts, 0.78*s, e);
+    const ends = [];
+    if(tr.start === 'via') ends.push([tr.pts[0], 'via']);
+    if(tr.end) ends.push([tr.pts[tr.pts.length - 1], tr.end]);
+    for(const [p, kind] of ends){
+      if(kind === 'via'){ disc(CU, p, 0.4, '#fff'); disc(HT, p, 0.4, 'rgb(117,117,117)'); disc(HT, p, 0.16, 'rgb(31,31,31)'); disc(CU, p, 0.16, '#000'); disc(PD, p, 0.4, '#fff'); disc(PD, p, 0.16, '#000'); disc(EA, p, 0.46, e); }
+      else { rect(CU, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(HT, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, 'rgb(117,117,117)'); rect(PD, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(EA, p[0] - 0.42, p[1] - 0.42, 0.84, 0.84, e); }
+    }
+  }
+  // the chips: a dark body standing well above the board, a pin pad at every pin, a dimple at pin one
+  for(const c of B.chips){
+    rect(PT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, '#fff');
+    rect(HT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, 'rgb(205,205,205)'); rect(HT, c.x + 0.25, c.y + 0.25, c.w - 0.5, c.h - 0.5, 'rgb(218,218,218)');
+    disc(HT, [c.x + 0.9, c.y + 0.9], 0.3, 'rgb(196,196,196)');
+    for(const p of c.pins){ const [dx, dy] = CIR_DIRS[p.dir], L = 0.75, W = 0.4, cx = p.x - dx*0.15, cy = p.y - dy*0.15;
+      const [X, Y, Wd, Hd] = dx ? [cx - L/2, cy - W/2, L, W] : [cx - W/2, cy - L/2, W, L];
+      rect(CU, X, Y, Wd, Hd, '#fff'); rect(PD, X, Y, Wd, Hd, '#fff'); rect(HT, X, Y, Wd, Hd, 'rgb(122,122,122)');
+      if(p.rank >= 0) rect(EA, X - 0.05, Y - 0.05, Wd + 0.1, Hd + 0.1, g(0.1 + 0.85*p.rank)); }
+    // the silkscreen: an outline round the body and its pins, a notch at pin one
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.12*s; LG.strokeRect((c.x - 1.15)*s, (c.y - 1.15)*s, (c.w + 2.3)*s, (c.h + 2.3)*s);
+    disc(LG, [c.x - 1.15, c.y - 1.15], 0.32, '#fff');
+  }
+  // small parts: two pads and a body between
+  for(const p of B.smd){
+    const [a, b] = p.horiz ? [[p.x, p.y + 0.5, 0.9, 1], [p.x + 2.1, p.y + 0.5, 0.9, 1]] : [[p.x + 0.5, p.y, 1, 0.9], [p.x + 0.5, p.y + 2.1, 1, 0.9]];
+    for(const q of [a, b]){ rect(CU, ...q, '#fff'); rect(PD, ...q, '#fff'); rect(HT, ...q, 'rgb(122,122,122)'); }
+    const body = p.horiz ? [p.x + 0.55, p.y + 0.45, 1.9, 1.1] : [p.x + 0.45, p.y + 0.55, 1.1, 1.9];
+    rect(PT, ...body, p.cap ? 'rgb(150,150,150)' : '#fff'); rect(HT, ...body, p.cap ? 'rgb(168,168,168)' : 'rgb(158,158,158)');
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.strokeRect((p.x - 0.25)*s, (p.y - 0.25)*s, (p.w + 0.5)*s, (p.h + 0.5)*s);
+  }
+  for(const v of B.vias){ disc(CU, v, 0.38, '#fff'); disc(CU, v, 0.15, '#000'); disc(PD, v, 0.38, '#fff'); disc(PD, v, 0.15, '#000'); disc(HT, v, 0.38, 'rgb(115,115,115)'); disc(HT, v, 0.15, 'rgb(31,31,31)'); }
+  // the parts' names, in the silkscreen's little font
+  for(const nm of B.names){ const txt = nm.kind + nm.n, px = 0.24; let x0 = nm.x;
+    for(const ch of txt){ const bits = CIR_FONT[ch] || ''; for(let r = 0; r < 5; r++) for(let q = 0; q < 3; q++) if(bits[r*3 + q] === '1') rect(LG, x0 + q*px, nm.y + r*px, px*0.92, px*0.92, '#fff'); x0 += px*4; } }
+  // DATA: bright pulses running along the traces, a comet each (the head bright, the tail fading behind it), and
+  // packets of bits; each trace's are fixed by its own hash, so more Data Flow adds pulses and moves none
+  const flow = o.flow;
+  if(flow > 0) B.traces.forEach((tr, ti) => {
+    const P = tr.pts, seg = []; let L = 0;
+    for(let i = 1; i < P.length; i++){ const l = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); seg.push([L, l, P[i - 1], P[i]]); L += l; }
+    if(L < 1) return;
+    const point = u => { for(const [s0, l, a, b] of seg) if(u <= s0 + l || seg[seg.length - 1][2] === a){ const f = l ? Math.max(0, Math.min(1, (u - s0)/l)) : 0; return [a[0] + (b[0] - a[0])*f, a[1] + (b[1] - a[1])*f]; } return P[P.length - 1]; };
+    const hs = k => { const v = Math.sin((ti + 1)*127.1 + k*311.7 + o.salt*17.3)*43758.5453; return v - Math.floor(v); };
+    const slots = Math.ceil(L/3);
+    for(let k = 0; k < slots; k++){
+      if(hs(k*3) > flow*0.9) continue;
+      const head = hs(k*3 + 1)*L, len = 0.8 + hs(k*3 + 2)*2.6*(0.5 + flow), back = hs(k*7 + 5) < 0.5;
+      if(hs(k*5 + 9) < 0.28*flow){
+        // a packet: a run of bits, some lit
+        for(let b = 0; b < 6; b++){ if(hs(k*13 + b) < 0.45) continue; const u = head + (back ? -b : b)*0.42; if(u < 0 || u > L) continue; disc(DA, point(u), 0.13, '#fff'); }
+        continue; }
+      // a comet: ten short strokes, brighter toward the head
+      for(let q = 0; q < 10; q++){ const u0 = head - (back ? -1 : 1)*len*(q + 1)/10, u1 = head - (back ? -1 : 1)*len*q/10;
+        if(Math.max(u0, u1) < 0 || Math.min(u0, u1) > L) continue;
+        DA.globalAlpha = Math.pow(1 - q/10, 1.6); line(DA, [point(Math.max(0, Math.min(L, u0))), point(Math.max(0, Math.min(L, u1)))], tw*0.9*s, '#fff'); }
+      DA.globalAlpha = 1; disc(DA, point(Math.max(0, Math.min(L, head))), 0.2, '#fff');
+    }
+  });
+  return cv;
+}
+
 const GEN_STEPS = {
+  traces: { cat: 'Marks', label: 'Circuit Traces', ins: ['keep clear'], outs: ['copper', 'height', 'each trace', 'data', 'pads', 'parts', 'silkscreen'],
+    io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+    params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100), s = unit/across;
+      const cw = Math.max(4, Math.ceil(w/s)), ch = Math.max(4, Math.ceil(h/s)), kv = E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
+      const bends = E.num(n, 'bends', 70)/100;
+      const o = { traces: E.num(n, 'traces', 55)/100, parts: E.num(n, 'parts', 45)/100, bends, diag: bends > 0, flow: E.num(n, 'flow', 40)/100,
+        salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
+        clear: keep ? (x, y) => keep[Math.min(h - 1, Math.max(0, y*s | 0))*w + Math.min(w - 1, Math.max(0, x*s | 0))] : null };
+      const B = withSeed(genSeed(E, n), () => genCircuit(cw, ch, o)), cv = genDrawCircuit(B, w, h, s, o);
+      return ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend'].map(k => cv[k][0]); },
+    run(E, n){ return this.paint(E, n).map(c => E.asField(E.readCanvas(c))); } },
   matrix: { cat: 'Textures', label: 'Growth Medium', ins: [], outs: ['picture', 'height', 'ways'], io: { outs: ['field', 'field', 'field'] },
     params: [GEN_R('kind', 'Strata · Pebbles · Sand · Fibres · Skin', 25), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('angle', 'Angle', 0, 0, 180), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
     run(E, n){ const k = Math.min(4, Math.floor(E.num(n, 'kind', 25)/100*5));
@@ -12301,6 +12527,8 @@ const STEP_PARTS = {
   colour:   { cat: 'Inputs', label: 'Color', ins: [], outs: ['colour'], params: [['hex', 'Color', 'text', '#808080']] },
   // the page's own two accent colors (Cartomancy's first two suits)
   accent:   { cat: 'Inputs', label: 'Accent', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Accent', ['1', '2']), ['name', 'Name', 'text', 'Accent']] },
+  // the page's own backdrop (Materia's color or gradient): what a surface drawn over the whole page can be made of
+  backdrop: { cat: 'Inputs', label: 'Page Backdrop', ins: [], outs: ['picture'], params: [] },
   forms:    { cat: 'Noise', label: 'Soft Forms', ins: [], outs: ['tone'], params: [STEP_R('count', 'Forms', 5, 1, 12), STEP_R('size', 'Size', 50), STEP_R('noise', 'Noise', 50)] },
   streaks:  { cat: 'Marks', label: 'Streaks', ins: ['base'], outs: ['field'], params: [STEP_SEL('kind', 'Kind', ['streaks', 'sheets']), STEP_R('angle', 'From', 0, 0, 360),
               STEP_R('spread', 'Gusts', 0, 0, 40), STEP_R('length', 'Length', 100, 100, 500), STEP_R('count', 'Count', 100, 0, 400), STEP_R('light', 'Light Share', 75), STEP_R('strength', 'Strength', 50)] },
@@ -12393,6 +12621,7 @@ const STEP_DOCS = {
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
   accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
@@ -12476,6 +12705,7 @@ const STEP_DOCS = {
   matrix: 'A material for something to grow through (strata, pebbles, sand, fibers or skin), with the paths through it.',
   tendrils: 'A branching network that grows through the paths you give it, like veins or roots.',
   knotwork: 'Celtic knotwork: strands crossing over and under, turned back into knots inside an outline.',
+  traces: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',
   discharge: 'A Lichtenberg figure: the branching path electricity burns through wood.',
   wood: 'A wooden plank: growth rings and grain, as a picture and heights.',
   burn: 'Burns a gray map into a picture: charred into wood, glowing embers, or etched into acrylic.',
@@ -12516,7 +12746,7 @@ const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
     return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
   },
-  glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r/255, g.g/255, g.b/255] : [0, 0, 0]]; },
+  glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
   hue(E, n){ const { ctx, P, hexCol } = E;
     return [hexCol((ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] || '#FFFFFF')];
   },
@@ -12694,13 +12924,17 @@ const STEP_RUN = {
     for(let i = 0; i < N; i++){ const t = Math.pow(Math.max(0, Math.min(1, f[i])), g); o.r[i] = a[0] + (b[0] - a[0])*t; o.g[i] = a[1] + (b[1] - a[1])*t; o.b[i] = a[2] + (b[2] - a[2])*t; }
     return [o];
   },
-  blend(E, n){ const { N, input, num, P, asField, asImage } = E;
+  blend(E, n){ const { N, input, P, asField, asImage } = E;
     const base = asImage(input(n, 1) ?? 0.5), lay = input(n, 2), m = asField(input(n, 3));
     if(lay == null) return [base];
-    const L = asImage(lay), fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
-    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
-    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1);
-      for(const c of ['r', 'g', 'b']){ const b0 = base[c][i]; o[c][i] = b0 + (Math.max(0, Math.min(1, fn(b0, L[c][i]))) - b0)*k; } }
+    // (a single color is read as itself, as a flat picture of it would hold it; where the mask is black, the base passes)
+    const col = Array.isArray(lay) ? lay.map(Math.fround) : null, L = col ? null : asImage(lay);
+    const fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
+    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, OR = o.r, OG = o.g, OB = o.b, BR = base.r, BG = base.g, BB = base.b;
+    const LR = L && L.r, LG = L && L.g, LB = L && L.b, cl = v => Math.max(0, Math.min(1, v));
+    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1), r0 = BR[i], g0 = BG[i], b0 = BB[i];
+      if(k === 0){ OR[i] = r0; OG[i] = g0; OB[i] = b0; continue; }
+      OR[i] = r0 + (cl(fn(r0, col ? col[0] : LR[i])) - r0)*k; OG[i] = g0 + (cl(fn(g0, col ? col[1] : LG[i])) - g0)*k; OB[i] = b0 + (cl(fn(b0, col ? col[2] : LB[i])) - b0)*k; }
     return [o];
   },
   surface(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
@@ -12717,6 +12951,15 @@ const STEP_RUN = {
   },
   accent(E, n){ const { ctx, P, hexCol } = E, k = (parseInt(P(n, 'slot', '1'), 10) || 1) - 1;
     return [hexCol((ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k] || '#808080')];
+  },
+  // the backdrop's colors, top to bottom (a board's green where there is no page: the Athanor's own previews)
+  backdrop(E){ const { ww, wh, N, ctx, hexCol } = E;
+    const cols = (Array.isArray(ctx.env) && ctx.env.length ? ctx.env : ['#16382B', '#0B2219']).map(c => hexCol(String(c))), last = cols.length - 1;
+    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+    for(let y = 0; y < wh; y++){ const f = (wh > 1 ? y/(wh - 1) : 0)*last, i = Math.min(Math.max(0, last - 1), Math.floor(f)), u = last ? f - i : 0, A = cols[i], B = cols[Math.min(last, i + 1)];
+      const r = A[0] + (B[0] - A[0])*u, g = A[1] + (B[1] - A[1])*u, b = A[2] + (B[2] - A[2])*u;
+      o.r.fill(r, y*ww, y*ww + ww); o.g.fill(g, y*ww, y*ww + ww); o.b.fill(b, y*ww, y*ww + ww); }
+    return [o];
   },
   // a few large soft shapes and a little noise: where a drawing is dark
   forms(E, n){ const { ww, wh, unit, num } = E;
@@ -13064,7 +13307,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
@@ -13655,6 +13898,61 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 10, paramPort('matrix', 'kind')], [5, 1, 10, paramPort('matrix', 'scale')], [5, 1, 11, paramPort('tendrils', 'zoom')], [2, 1, 11, paramPort('tendrils', 'amount')], [3, 1, 11, paramPort('tendrils', 'branching')],
       [6, 1, 11, paramPort('tendrils', 'slide')], [7, 1, 11, 2], [10, 3, 11, 1], [10, 1, 13, 1], [8, 1, 13, 2], [12, 1, 13, 3], [10, 2, 14, 1], [11, 1, 14, 2],
       [13, 1, 15, 1], [14, 1, 15, 2], [15, 1, 16, 1], [9, 1, 16, 2], [11, 2, 16, 3], [4, 1, 16, paramPort('blend', 'opacity')], [16, 1, 17, 1]] },
+  // 🝓 Circuit Board: Circuit Traces on the page's own backdrop; Threshold powers some traces (Charge), the Light Engine
+  // lights the board, then what it gives off is screened over: the traces' glow, the Glow Hue's aura, data, sparks
+  circuit: { label: 'Circuit Board', div: 2, teach: 'A circuit board drawn on the page itself. Circuit Traces routes it the way boards are routed by hand: chips first, then buses of parallel traces that run straight and turn together (Bends: square corners, or 45° chamfers), ending in vias and pads. Page Backdrop makes the board of your backdrop\'s colors; Blend lays the copper, the tinned pads, the chips and the silkscreen on it. Every trace has its own grey (Each Trace), so three Thresholds driven by Charge decide which are powered: colored in your Trace Hue first, then (the grey dimmed by Math, so Charge reaches it later) glowing, then sparking. The Light Engine raises and lights the board; then the light it gives off is screened over (Blend in Screen): the glow, the Glow Hue\'s aura, data running along the powered traces in your Data Hue, and sparks from Scatter. Try: Charge at 100, then Bends at 0 for square corners.', nodes: [
+      ['knob', { slot: '1', name: 'Traces', def: 55 }, 40, 40],                    // 1
+      ['knob', { slot: '3', name: 'Charge', def: 55 }, 40, 130],                   // 2
+      ['knob', { slot: '4', name: 'Data Flow', def: 40 }, 40, 220],                // 3
+      ['knob', { slot: '6', name: 'Scale', def: 23 }, 40, 310],                    // 4  (100 of 40–300)
+      ['knob', { slot: '5', name: 'Components', def: 45 }, 40, 400],               // 5
+      ['knob', { slot: '2', name: 'Bends', def: 70 }, 40, 490],                    // 6
+      ['dial', {}, 40, 580],                                                       // 7
+      ['hue', { slot: '1', name: 'Trace Hue' }, 40, 660], ['hue', { slot: '2', name: 'Data Hue' }, 40, 740], ['glowhue', {}, 40, 820],   // 8, 9, 10
+      ['backdrop', {}, 300, 700],                                                  // 11
+      ['traces', { traces: 55, '~traces': '0,100', scale: 100, '~scale': '40,300', bends: 70, '~bends': '0,100', parts: 45, '~parts': '0,100', flow: 40, '~flow': '0,100' }, 300, 120],   // 12
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 40],               // 13 (powered: colored)
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 160],              // 14 (glowing)
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 280],              // 15 (sparking)
+      ['math', { op: 'multiply' }, 1040, 40],                                      // 16 (the powered copper)
+      ['math', { op: 'multiply' }, 1040, 160],                                     // 17 (the glowing copper)
+      ['colour', { hex: '#FFFFFF' }, 560, 900],                                    // 18
+      ['blend', { mode: 'soft-light', opacity: 70 }, 560, 620],                    // 19 (bare copper under the mask)
+      ['colour', { hex: '#C9C1AA' }, 800, 900],                                    // 20 (tinned pads)
+      ['blend', { mode: 'source-over', opacity: 90 }, 800, 620],                   // 21
+      ['colour', { hex: '#141418' }, 1040, 900],                                   // 22 (the chips' epoxy)
+      ['blend', { mode: 'source-over', opacity: 96 }, 1040, 620],                  // 23
+      ['colour', { hex: '#ECE8DC' }, 1280, 900],                                   // 24 (silkscreen)
+      ['blend', { mode: 'source-over', opacity: 75 }, 1280, 620],                  // 25
+      ['blend', { mode: 'source-over', opacity: 100 }, 1520, 620],                 // 26 (powered traces in the Trace Hue)
+      ['blur', { radius: 2 }, 1040, 440],                                          // 27 (edges rounded)
+      ['material', { relief: 45, gloss: 50, shine: 45, shadow: 50, occlusion: 35, ambient: 42 }, 1760, 480],   // 28
+      ['blur', { radius: 22 }, 1040, 140],                                         // 29 (the glow: a halo)
+      ['blend', { mode: 'screen', opacity: 85 }, 2000, 420],                       // 30
+      ['blend', { mode: 'screen', opacity: 45 }, 2240, 420],                       // 31 (hot cores)
+      ['blur', { radius: 60 }, 1280, 140],                                         // 32 (the aura)
+      ['blend', { mode: 'screen', opacity: 90 }, 2480, 420],                       // 33 (the Glow Hue's emission)
+      ['math', { op: 'multiply' }, 1520, 40],                                      // 34 (data on the powered traces)
+      ['blur', { radius: 5 }, 1760, 40],                                           // 35
+      ['math', { op: 'screen' }, 2000, 40],                                        // 36
+      ['blend', { mode: 'screen', opacity: 100 }, 2720, 420],                      // 37 (data)
+      ['scatter', { shape: 'spark', count: 14, size: 8, vary: 70, turn: 100, clump: 0, fade: 50 }, 800, 300],   // 38
+      ['blur', { radius: 8 }, 1040, 300],                                          // 39
+      ['math', { op: 'screen' }, 1280, 300],                                       // 40
+      ['blend', { mode: 'screen', opacity: 100 }, 2960, 420],                      // 41 (sparks)
+      ['surface', { name: 'Circuit Board', ground: 'colour' }, 3200, 440],         // 42
+      ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
+      ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280]],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
+    wires: [[1, 1, 12, paramPort('traces', 'traces')], [4, 1, 12, paramPort('traces', 'scale')], [6, 1, 12, paramPort('traces', 'bends')], [5, 1, 12, paramPort('traces', 'parts')], [3, 1, 12, paramPort('traces', 'flow')],
+      [2, 1, 13, paramPort('threshold', 'at')], [2, 1, 14, paramPort('threshold', 'at')], [2, 1, 15, paramPort('threshold', 'at')],
+      [12, 3, 13, 1], [12, 3, 45, 1], [43, 1, 45, 2], [12, 3, 46, 1], [44, 1, 46, 2], [45, 1, 14, 1], [46, 1, 15, 1], [13, 1, 16, 1], [12, 1, 16, 2], [14, 1, 17, 1], [12, 1, 17, 2],
+      [11, 1, 19, 1], [18, 1, 19, 2], [12, 1, 19, 3], [19, 1, 21, 1], [20, 1, 21, 2], [12, 5, 21, 3], [21, 1, 23, 1], [22, 1, 23, 2], [12, 6, 23, 3],
+      [23, 1, 25, 1], [24, 1, 25, 2], [12, 7, 25, 3], [25, 1, 26, 1], [8, 1, 26, 2], [16, 1, 26, 3],
+      [12, 2, 27, 1], [26, 1, 28, 1], [27, 1, 28, 2], [12, 1, 28, 3], [7, 1, 28, 7],
+      [17, 1, 29, 1], [28, 1, 30, 1], [8, 1, 30, 2], [29, 1, 30, 3], [30, 1, 31, 1], [18, 1, 31, 2], [17, 1, 31, 3],
+      [17, 1, 32, 1], [31, 1, 33, 1], [10, 1, 33, 2], [32, 1, 33, 3],
+      [12, 4, 34, 1], [16, 1, 34, 2], [34, 1, 35, 1], [34, 1, 36, 1], [35, 1, 36, 2], [33, 1, 37, 1], [9, 1, 37, 2], [36, 1, 37, 3],
+      [15, 1, 38, 2], [38, 1, 39, 1], [38, 1, 40, 1], [39, 1, 40, 2], [37, 1, 41, 1], [18, 1, 41, 2], [40, 1, 41, 3], [41, 1, 42, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
   knotwork: { label: 'Knotwork', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
       ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)
@@ -14025,7 +14323,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, sizeK]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, sizeK]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -14651,6 +14949,14 @@ const TEXTURE_PARAMS = {
                   {key:'form',  label:'From One Point',  min:0,  max:100, def:30,  unit:''},
                   {key:'shape', label:'Wander',          min:0,  max:100, def:40,  unit:''},
                   {key:'hue',   label:'Chipping',        min:0,  max:100, def:0,   unit:''}],
+  // 🝓 Circuit Board (chains.js 'circuit'): Charge powers more traces, from bare copper to colored, glowing and sparking
+  circuit:       [{key:'amt',   label:'Traces',          min:0,  max:100, def:55,  unit:''},
+                  // square corners (Factorio's belts) → 45° chamfers (a board's)
+                  {key:'zoom',  label:'Bends',           min:0,  max:100, def:70,  unit:''},
+                  {key:'form',  label:'Charge',          min:0,  max:100, def:55,  unit:'', ticks:[0,18,50,84], names:['Substrate','Color','Glow','Sparks']},
+                  {key:'shape', label:'Data Flow',       min:0,  max:100, def:40,  unit:''},
+                  {key:'hue',   label:'Components',      min:0,  max:100, def:45,  unit:''},
+                  {key:'tilt',  label:'Scale',           min:40, max:300, def:100, unit:'%'}],
   // 🝆 Veins of Light (chains.js 'veins')
   veins:         [{key:'zoom',  label:'Material',        min:0,  max:100, def:10,  unit:'', ticks:[10,30,50,70,90], names:['Strata','Pebbles','Sand','Fibres','Skin']},
                   {key:'amt',   label:'Reach',           min:0,  max:100, def:60,  unit:''},
@@ -14727,6 +15033,9 @@ const TEXTURE_PARAMS = {
  * silently ignored.
  */
 const TEXTURE_CAPS = {
+  // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
+  circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
+                   tintLabels:['Trace Hue','Data Hue'], tintDefaults:['accent1','accent2'] },
   veins:         { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','lighten','luminosity'], light:true, dial:'Grow From & Light', material:true, tints:2,
                    tintLabels:['Material Hue','Glow Hue'], tintDefaults:['#B8A48C','#4FE3FF'] },
   crackle:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], light:true, material:true, dial:'Impact & Light', tints:2,
@@ -14904,6 +15213,7 @@ const GLOWS = {
   frost:       'moonlight caught in the ice',
   astral:      'airglow: the sky\'s own faint light, in slow waves',
   linen:       'luminous thread in the stitching',
+  circuit:     'an aura round the glowing traces, as if the board were lit from within',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
 // DIFFUSE (the light's own colour) where nothing else already says it: not
@@ -14912,7 +15222,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -14997,6 +15307,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'circuit'){
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // (its hues, else the accents) Circuit Traces on the page's backdrop → Threshold (Charge) → Light Engine → glow, data, sparks (chains.js)
   } else if(type === 'veins'){
     result = genChain(type, w, h, light, extra, tint1, tint2);   // Matrix → Tendrils (space colonization) → Light Engine → glow (chains.js)
   } else if(type === 'crackle'){
@@ -15161,6 +15473,8 @@ function storeTexture(key, result){
 }
 // everything a request means: its normalised knobs, and its key
 // the poem's layout, as a short key (FNV-1a): every character counts
+/** Does a graph hold a Page Backdrop part (and so want the page's own colors)? */
+function graphUsesBackdrop(graph){ return /"name":\s*"backdrop"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
@@ -15177,7 +15491,8 @@ function describeRequest(type, w, h, opts){
   const o5 = h5 ? resolveAlpha(opts.tint5, h5.def) : null;
   const t5 = (h5 && o5 && o5.toUpperCase() !== h5.def.toUpperCase()) ? o5.toUpperCase() : null;
   // the page's own colours, for a texture that shows the world behind the glass
-  const env = ((TEXTURE_CAPS[RETIRED[type] || type] || {}).pageEnv && opts.env) ? String(opts.env).toUpperCase() : null;
+  // (an Athanor graph has them when it holds a Page Backdrop part)
+  const env = (((TEXTURE_CAPS[RETIRED[type] || type] || {}).pageEnv || ((type === 'athanor' || type === 'athanorsteps') && graphUsesBackdrop(opts.graph))) && opts.env) ? String(opts.env).toUpperCase() : null;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
   // how low the light is, 0–100 (100: the horizon, as it always was)
@@ -15219,7 +15534,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '',
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null,
       ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -15244,7 +15559,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '' },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', env: extra.env || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -15270,13 +15585,13 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
-      mat: extra.mat || null, glow: extra.glow || null },
+      mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -15952,6 +16267,8 @@ Have fun!</textarea>
               <option value="cells" data-str="option.cells" hidden>Cells</option>
               <!-- the first Fractured Glaze (Crazing), hidden: looks saved with it still open; its successor is 'crackle' -->
               <option value="crackedglaze" data-str="option.crazed_glaze" hidden>Crazed Glaze</option>
+              <!-- Veins of Light, hidden (Ruby: replaced by Circuit Board): looks saved with it, and the Circuitry preset, still open -->
+              <option value="veins" data-str="option.veins_of_light" hidden>Veins of Light</option>
               <option value="checker" data-str="option.checkerboard" hidden>Checkerboard</option>
               <option value="softgradient" data-str="option.gradient" hidden>Gradient</option>
               <option value="plainnoise" data-str="option.plain_noise" hidden>Plain Noise</option>
@@ -16013,6 +16330,7 @@ Have fun!</textarea>
               <optgroup label="🝓 Pattern &amp; Order">
                 <option value="mathnoise" data-str="option.binary_pattern">Binary Pattern</option>
                 <option value="chladni" data-str="option.chladni">Chladni Sand</option>
+                <option value="circuit" data-str="option.circuit_board">Circuit Board</option>
                 <option value="tessellate" data-str="option.facet_field">Facet Field</option>
                 <option value="guilloche" data-str="option.guilloche">Guilloché</option>
                 <option value="halftone" data-str="option.90s_dots">Retro Dots</option>
@@ -16021,7 +16339,6 @@ Have fun!</textarea>
                 <option value="lichtenberg" data-str="option.lichtenberg">Lichtenberg Figures</option>
                 <option value="growth" data-str="option.ruffled_growth">Ruffled Growth</option>
                 <option value="turing" data-str="option.turing_skin">Turing Skin</option>
-                <option value="veins" data-str="option.veins_of_light">Veins of Light</option>
               </optgroup>
               <optgroup label="⎐ Signs, Sigils &amp; Cards">
                 <option value="cards" data-str="option.cartomancy">Cartomancy</option>
@@ -16902,6 +17219,7 @@ const UI_STRINGS = {
   'option.aurora_veil':                        "Silk Ribbons",   // (was Aurora Veil: it looks like combed silk, not a sky; the id stays 'aurora')
   'option.aurora':                             "Aurora",
   'option.veins_of_light':                     "Veins of Light",
+  'option.circuit_board':                      "Circuit Board",
   'option.knotwork':                           "Knotwork",
   'option.lichtenberg':                        "Lichtenberg Figures",
   'option.ruffled_growth':                     "Ruffled Growth",
@@ -17889,8 +18207,8 @@ const TEXTURE_GROUPS = [
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
   { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackle', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass'] },
-  { glyph: '🝓', name: 'Pattern & Order', types: ['mathnoise', 'chladni', 'tessellate', 'guilloche', 'halftone'] },
-  { glyph: '🝆', name: 'Grown & Generated', types: ['lichtenberg', 'growth', 'turing', 'veins'] },
+  { glyph: '🝓', name: 'Pattern & Order', types: ['mathnoise', 'chladni', 'circuit', 'tessellate', 'guilloche', 'halftone'] },
+  { glyph: '🝆', name: 'Grown & Generated', types: ['lichtenberg', 'growth', 'turing'] },
   { glyph: '⎐', name: 'Signs, Sigils & Cards', types: ['cards', 'knotwork', 'sigils', 'summoning'] },
   { glyph: '🜉', name: 'Your Surfaces', types: ['athanor'] },
 ];
@@ -28273,6 +28591,12 @@ const LIGHT_STEPS = {
  *   burn       BURN: any gray map of channels laid into a picture as a burn —
  *              charred and sunken in wood, still glowing as embers, or lit from
  *              inside a block of clear acrylic — with the picture's heights.
+ *   traces     CIRCUIT TRACES: a circuit board routed as boards are by hand —
+ *              chips and their pins, then buses of parallel traces that run
+ *              straight and turn together (45° chamfers, or Factorio's 90°
+ *              corners), ending in vias and pads — with each trace's own grey
+ *              (so a cutoff can power some and not others), data running along
+ *              them, the pads, the parts and their silkscreen.
  *   growline   GROWING LINE: differential growth (Anders Hoff's "differential
  *              line"; Nervous System's Floraform in a plane): a closed line whose
  *              points push each other apart, follow their neighbours and split
@@ -28591,7 +28915,227 @@ function genTendrils(ww, wh, unit, W, o){
   return { NX, NY, PAR, flow };
 }
 
+// ---------------- CIRCUIT TRACES: a board's copper, routed ----------------
+// The way circuit boards are routed by hand, and the way generative circuit patterns are usually drawn: a grid of
+// cells one trace apart. CHIPS go down first, their pins round their edges. Then BUSES (one to eight traces side by
+// side) walk out from the pins, the page's edges and lone vias: straight for a while, then turning together, by 45°
+// (a board's chamfered corners) or by 90° (Factorio's belts), every trace keeping its distance from its neighbours
+// round the corner (a mitred offset), until something is in the way or the bus has gone far enough. There each trace
+// ends in a via or a pad. Every cell remembers the bus that crossed it, so no two buses cross. Small parts (resistors,
+// capacitors) and stitching vias fill some of what is left, and a silkscreen names the parts.
+// Everything is in CELLS (the page's short side is `across` cells), so the board is the same at any size.
+const CIR_DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];   // E SE S SW W NW N NE (y down)
+// a 3×5 font for the silkscreen's part names (U chips, R resistors, C capacitors, digits)
+const CIR_FONT = { U: '101101101101111', R: '110101110101101', C: '111100100100111', 0: '111101101101111', 1: '010110010010111', 2: '111001111100111',
+  3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111' };
+function genCircuit(cw, ch, o){
+  const R = Math.random, occ = new Int32Array(cw*ch), age = new Int32Array(cw*ch);
+  const inb = (x, y) => x >= 0 && y >= 0 && x < cw && y < ch, at = (x, y) => (y | 0)*cw + (x | 0);
+  // a mask kept clear (the part's first input): those cells are taken before anything is placed
+  if(o.clear) for(let y = 0; y < ch; y++) for(let x = 0; x < cw; x++) if(o.clear(x + 0.5, y + 0.5) > 0.5) occ[y*cw + x] = -3;
+  const chips = [], smd = [], vias = [], traces = [], names = [];
+  // ---- chips: square ones with pins on four sides, long ones on two ----
+  const nChips = Math.round(o.parts*cw*ch/650) + (o.parts > 0.08 ? 1 : 0);
+  for(let t = 0; t < nChips*14 && chips.length < nChips; t++){
+    const quad = R() < 0.5, a = quad ? 5 + (R()*7 | 0) : 2 + (R()*2 | 0), b = quad ? a : 5 + (R()*9 | 0);
+    const [W, H] = quad || R() < 0.5 ? [a, b] : [b, a];
+    const x = 3 + (R()*Math.max(1, cw - W - 6) | 0), y = 3 + (R()*Math.max(1, ch - H - 6) | 0);
+    let ok = x + W + 3 < cw && y + H + 3 < ch;
+    for(let j = y - 3; j < y + H + 3 && ok; j++) for(let i = x - 3; i < x + W + 3; i++) if(!inb(i, j) || occ[j*cw + i]){ ok = false; break; }
+    if(!ok) continue;
+    for(let j = y - 1; j <= y + H; j++) for(let i = x - 1; i <= x + W; i++) occ[j*cw + i] = -1;
+    const c = { x, y, w: W, h: H, pins: [], rank: R() }, sides = quad ? [0, 1, 2, 3] : W < H ? [1, 3] : [0, 2];
+    for(const sd of sides){ const len = sd % 2 === 0 ? W : H;
+      for(let k = 0; k < len; k++) c.pins.push({ side: sd, k, used: false, rank: -1,
+        x: sd === 0 || sd === 2 ? x + k + 0.5 : sd === 1 ? x + W + 0.5 : x - 0.5, y: sd === 1 || sd === 3 ? y + k + 0.5 : sd === 0 ? y - 0.5 : y + H + 0.5, dir: [6, 0, 2, 4][sd] }); }
+    chips.push(c); names.push({ kind: 'U', n: chips.length, x: x, y: y - 2.2, chip: c });
+  }
+  // ---- buses ----
+  const free = (x, y, id, t) => { if(!inb(x, y)) return 2; const q = at(x, y), v = occ[q]; return v === 0 || (v === id && age[q] > t - 4) ? 1 : 0; };
+  const mark = (ax, ay, bx, by, id, t) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)*4));
+    for(let s = 0; s <= n; s++){ const x = ax + (bx - ax)*s/n, y = ay + (by - ay)*s/n; if(!inb(x, y)) continue; const q = at(x, y); if(occ[q] === 0 || occ[q] === id){ occ[q] = id; age[q] = t; } } };
+  const nrm = d => { const [dx, dy] = CIR_DIRS[d], l = Math.hypot(dx, dy); return [dy/l, -dx/l]; };
+  const nBus = Math.round((0.2 + 3.4*o.traces)*cw*ch/150);
+  let id = 0;
+  const walk = (P, d, k, start, near = null) => {
+    id++; const offs = Array.from({ length: k }, (_, i) => i - (k - 1)/2), busRank = near == null ? R() : near*0.65 + R()*0.35;
+    let n = nrm(d);
+    const pts = offs.map(oi => [[P[0] + n[0]*oi, P[1] + n[1]*oi]]), cur = pts.map(p => p[0].slice());
+    // is the bus's footprint free at Q (going dd)? 0 no · 1 yes · 2 the whole bus has left the page
+    const ok = (Q, dd, t) => { const nn = nrm(dd); let out = 0;
+      for(const oi of offs){ const f = free(Q[0] + nn[0]*oi, Q[1] + nn[1]*oi, id, t); if(f === 0) return 0; if(f === 2) out++; }
+      // a little room either side, so two buses never touch
+      for(const oi of [offs[0] - 0.8, offs[k - 1] + 0.8]) if(free(Q[0] + nn[0]*oi, Q[1] + nn[1]*oi, id, t) === 0) return 0;
+      return out === k ? 2 : 1; };
+    const maxSteps = 8 + Math.round(R()*R()*150), turnP = 0.05 + 0.08*R(), diagonal = dd => dd % 2 === 1;
+    let t = 0, run = 0, mov = 0, end = R() < 0.62 ? 'via' : 'pad';
+    while(t < maxSteps){
+      t++;
+      const [dx, dy] = CIR_DIRS[d], Q = [P[0] + dx, P[1] + dy], mid = [P[0] + dx/2, P[1] + dy/2];
+      const f = ok(Q, d, t), fm = ok(mid, d, t);
+      if(f === 2){ end = 'off'; for(let i = 0; i < k; i++) pts[i].push([Q[0] + n[0]*offs[i], Q[1] + n[1]*offs[i]]); mov++; break; }
+      const blocked = !f || !fm;
+      // time to turn: a diagonal is a short jog; a straight run turns now and then; a blocked one must
+      const want = blocked || (run >= (diagonal(d) ? 2 + (R()*4 | 0) : 3) && R() < (diagonal(d) ? 0.45 : turnP));
+      if(want){
+        // which way: 45° (a board's chamfer) or 90° (a belt's corner), toward the side with more room
+        const opts = diagonal(d) || R() < o.bends ? [1, -1] : [2, -2];
+        const room = sg => { const dd = (d + sg + 8) % 8, [ex, ey] = CIR_DIRS[dd]; let r = 0;
+          for(let q = 1; q <= 6; q++){ if(!ok([P[0] + ex*q, P[1] + ey*q], dd, t)) break; r++; } return r + R()*0.5; };
+        let turned = false;
+        for(const [sg, r] of opts.map(sg => [sg, room(sg)]).sort((a, b) => b[1] - a[1])){
+          const d2 = (d + sg + 8) % 8;
+          if(r < 2 || (!o.diag && diagonal(d2))) continue;
+          // the corner: each trace turns where its offset line meets the new one (a mitre)
+          const n2 = nrm(d2), c = n[0]*n2[0] + n[1]*n2[1], m = [(n[0] + n2[0])/(1 + c), (n[1] + n2[1])/(1 + c)];
+          for(let i = 0; i < k; i++){ const q = [P[0] + m[0]*offs[i], P[1] + m[1]*offs[i]]; mark(cur[i][0], cur[i][1], q[0], q[1], id, t); pts[i].push(q); cur[i] = q; }
+          d = d2; n = n2; run = 0; turned = true; break;
+        }
+        if(turned) continue;
+        if(blocked) break;
+      }
+      // a step straight on: each trace's line marked as taken
+      for(let i = 0; i < k; i++){ const q = [Q[0] + n[0]*offs[i], Q[1] + n[1]*offs[i]]; mark(cur[i][0], cur[i][1], q[0], q[1], id, t); cur[i] = q; }
+      P = Q; run++; mov++;
+    }
+    if(mov < 2) return false;
+    const [dx, dy] = CIR_DIRS[d], ln = Math.hypot(dx, dy);
+    if(end !== 'off') for(let i = 0; i < k; i++){
+      // each trace runs on to its end (every other one a little further, so neighbouring vias don't touch)
+      const ext = end === 'via' && k > 1 && i % 2 ? 1.1 : 0; pts[i].push([cur[i][0] + dx/ln*ext, cur[i][1] + dy/ln*ext]); }
+    offs.forEach((_, i) => traces.push({ pts: pts[i], rank: Math.min(1, Math.max(0, busRank + (R() - 0.5)*0.14)), bus: id, start, end: end === 'off' ? null : end, w: k }));
+    return true;
+  };
+  for(let b = 0; b < nBus; b++){
+    const r = R();
+    const k = (q => q < 0.32 ? 1 : q < 0.46 ? 2 : q < 0.7 ? 3 + (R()*2 | 0) : 5 + (R()*4 | 0))(R());
+    if(r < 0.5 && chips.length){
+      // out of a chip: k pins side by side that nothing uses yet
+      const c = chips[R()*chips.length | 0], sd = c.pins[R()*c.pins.length | 0].side, row = c.pins.filter(p => p.side === sd);
+      // a run of k pins that nothing uses yet (as long a run as there is, up to k)
+      const k2 = Math.min(k, row.length); let run = [];
+      for(let tries = 0; tries < 6 && !run.length; tries++){ const s0 = R()*(row.length - k2 + 1) | 0, r2 = row.slice(s0, s0 + k2); if(!r2.some(p => p.used)) run = r2; }
+      if(!run.length) continue;
+      // pins on the left or top of a side are counted the other way round from the bus's offsets
+      const P = [run.reduce((a, p) => a + p.x, 0)/run.length, run.reduce((a, p) => a + p.y, 0)/run.length];
+      const before = traces.length;
+      if(walk(P, run[0].dir, run.length, 'pin', c.rank)){ run.forEach(p => { p.used = true; });
+        // which trace left from which pin: the nearest
+        for(const tr of traces.slice(before)){ const s = tr.pts[0]; let best = null, bd = 9; for(const p of run){ const dd = Math.hypot(p.x - s[0], p.y - s[1]); if(dd < bd){ bd = dd; best = p; } } if(best) best.rank = tr.rank; } }
+    } else if(r < 0.72){
+      // in from the page's edge
+      const e = R()*4 | 0, d = [2, 4, 6, 0][e], along = e % 2 === 0 ? cw : ch, s = 2 + (R()*(along - 4) | 0);
+      const P = e === 0 ? [s + 0.5, -0.5] : e === 1 ? [cw + 0.5, s + 0.5] : e === 2 ? [s + 0.5, ch + 0.5] : [-0.5, s + 0.5];
+      walk(P, d, k, 'edge');
+    } else {
+      // out of a row of vias, anywhere free
+      const x = 2 + (R()*(cw - 4) | 0), y = 2 + (R()*(ch - 4) | 0);
+      if(occ[at(x, y)]) continue;
+      walk([x + 0.5, y + 0.5], o.diag ? R()*8 | 0 : (R()*4 | 0)*2, Math.min(k, 4), 'via');
+    }
+  }
+  // ---- small parts and stitching vias in what is left ----
+  const room = (x, y, w, h, m) => { for(let j = y - m; j < y + h + m; j++) for(let i = x - m; i < x + w + m; i++) if(!inb(i, j) || occ[j*cw + i]) return false; return true; };
+  const nSmd = Math.round(o.parts*cw*ch/170);
+  for(let t = 0; t < nSmd*6 && smd.length < nSmd; t++){
+    const horiz = R() < 0.5, w = horiz ? 3 : 2, h = horiz ? 2 : 3, x = 1 + (R()*(cw - w - 2) | 0), y = 1 + (R()*(ch - h - 2) | 0);
+    if(!room(x, y, w, h, 1)) continue;
+    for(let j = y; j < y + h; j++) for(let i = x; i < x + w; i++) occ[j*cw + i] = -2;
+    smd.push({ x, y, w, h, horiz, cap: R() < 0.45 }); if(R() < 0.5) names.push({ kind: smd[smd.length - 1].cap ? 'C' : 'R', n: smd.length, x: x + w + 0.4, y: y + 0.2 });
+  }
+  const nVia = Math.round(o.parts*cw*ch/260);
+  for(let t = 0; t < nVia*4 && vias.length < nVia; t++){ const x = 1 + (R()*(cw - 2) | 0), y = 1 + (R()*(ch - 2) | 0); if(!room(x, y, 1, 1, 1)) continue; occ[y*cw + x] = -2; vias.push([x + 0.5, y + 0.5]); }
+  // the names: only where they don't sit on copper
+  const named = names.filter(nm => { const x = Math.floor(nm.x), y = Math.floor(nm.y); return room(x, y, 3, 2, 0); });
+  return { chips, smd, vias, traces, names: named };
+}
+// The board drawn: s pixels a cell. Each of the part's maps is its own canvas (see the part).
+function genDrawCircuit(B, ww, wh, s, o){
+  const mk = () => kitCanvas(ww, wh), cv = {}, fillAll = (x, c) => { x.fillStyle = c; x.fillRect(0, 0, ww, wh); };
+  for(const k of ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend']){ const [c, x] = mk(); fillAll(x, k === 'height' ? 'rgb(77,77,77)' : '#000'); x.lineCap = 'round'; x.lineJoin = 'round'; cv[k] = [c, x]; }
+  const g = v => { const q = Math.round(Math.max(0, Math.min(1, v))*255); return `rgb(${q},${q},${q})`; };
+  const line = (x, pts, w, col) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0]*s, p[1]*s) : x.moveTo(p[0]*s, p[1]*s)); x.stroke(); };
+  const disc = (x, p, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(p[0]*s, p[1]*s, r*s, 0, Math.PI*2); x.fill(); };
+  const rect = (x, X, Y, W, H, col) => { x.fillStyle = col; x.fillRect(X*s, Y*s, W*s, H*s); };
+  const [, CU] = cv.copper, [, HT] = cv.height, [, EA] = cv.each, [, DA] = cv.data, [, PD] = cv.pads, [, PT] = cv.parts, [, LG] = cv.legend;
+  const tw = 0.34;
+  // the traces: copper, raised a little, and each one's own grey (drawn wide, so a cutoff takes the whole trace)
+  for(const tr of B.traces){
+    const e = g(0.1 + 0.85*tr.rank);   // (never quite white: a cutoff at the top passes none)
+    line(CU, tr.pts, tw*s, '#fff'); line(HT, tr.pts, tw*s, 'rgb(107,107,107)'); line(EA, tr.pts, 0.78*s, e);
+    const ends = [];
+    if(tr.start === 'via') ends.push([tr.pts[0], 'via']);
+    if(tr.end) ends.push([tr.pts[tr.pts.length - 1], tr.end]);
+    for(const [p, kind] of ends){
+      if(kind === 'via'){ disc(CU, p, 0.4, '#fff'); disc(HT, p, 0.4, 'rgb(117,117,117)'); disc(HT, p, 0.16, 'rgb(31,31,31)'); disc(CU, p, 0.16, '#000'); disc(PD, p, 0.4, '#fff'); disc(PD, p, 0.16, '#000'); disc(EA, p, 0.46, e); }
+      else { rect(CU, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(HT, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, 'rgb(117,117,117)'); rect(PD, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(EA, p[0] - 0.42, p[1] - 0.42, 0.84, 0.84, e); }
+    }
+  }
+  // the chips: a dark body standing well above the board, a pin pad at every pin, a dimple at pin one
+  for(const c of B.chips){
+    rect(PT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, '#fff');
+    rect(HT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, 'rgb(205,205,205)'); rect(HT, c.x + 0.25, c.y + 0.25, c.w - 0.5, c.h - 0.5, 'rgb(218,218,218)');
+    disc(HT, [c.x + 0.9, c.y + 0.9], 0.3, 'rgb(196,196,196)');
+    for(const p of c.pins){ const [dx, dy] = CIR_DIRS[p.dir], L = 0.75, W = 0.4, cx = p.x - dx*0.15, cy = p.y - dy*0.15;
+      const [X, Y, Wd, Hd] = dx ? [cx - L/2, cy - W/2, L, W] : [cx - W/2, cy - L/2, W, L];
+      rect(CU, X, Y, Wd, Hd, '#fff'); rect(PD, X, Y, Wd, Hd, '#fff'); rect(HT, X, Y, Wd, Hd, 'rgb(122,122,122)');
+      if(p.rank >= 0) rect(EA, X - 0.05, Y - 0.05, Wd + 0.1, Hd + 0.1, g(0.1 + 0.85*p.rank)); }
+    // the silkscreen: an outline round the body and its pins, a notch at pin one
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.12*s; LG.strokeRect((c.x - 1.15)*s, (c.y - 1.15)*s, (c.w + 2.3)*s, (c.h + 2.3)*s);
+    disc(LG, [c.x - 1.15, c.y - 1.15], 0.32, '#fff');
+  }
+  // small parts: two pads and a body between
+  for(const p of B.smd){
+    const [a, b] = p.horiz ? [[p.x, p.y + 0.5, 0.9, 1], [p.x + 2.1, p.y + 0.5, 0.9, 1]] : [[p.x + 0.5, p.y, 1, 0.9], [p.x + 0.5, p.y + 2.1, 1, 0.9]];
+    for(const q of [a, b]){ rect(CU, ...q, '#fff'); rect(PD, ...q, '#fff'); rect(HT, ...q, 'rgb(122,122,122)'); }
+    const body = p.horiz ? [p.x + 0.55, p.y + 0.45, 1.9, 1.1] : [p.x + 0.45, p.y + 0.55, 1.1, 1.9];
+    rect(PT, ...body, p.cap ? 'rgb(150,150,150)' : '#fff'); rect(HT, ...body, p.cap ? 'rgb(168,168,168)' : 'rgb(158,158,158)');
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.strokeRect((p.x - 0.25)*s, (p.y - 0.25)*s, (p.w + 0.5)*s, (p.h + 0.5)*s);
+  }
+  for(const v of B.vias){ disc(CU, v, 0.38, '#fff'); disc(CU, v, 0.15, '#000'); disc(PD, v, 0.38, '#fff'); disc(PD, v, 0.15, '#000'); disc(HT, v, 0.38, 'rgb(115,115,115)'); disc(HT, v, 0.15, 'rgb(31,31,31)'); }
+  // the parts' names, in the silkscreen's little font
+  for(const nm of B.names){ const txt = nm.kind + nm.n, px = 0.24; let x0 = nm.x;
+    for(const ch of txt){ const bits = CIR_FONT[ch] || ''; for(let r = 0; r < 5; r++) for(let q = 0; q < 3; q++) if(bits[r*3 + q] === '1') rect(LG, x0 + q*px, nm.y + r*px, px*0.92, px*0.92, '#fff'); x0 += px*4; } }
+  // DATA: bright pulses running along the traces, a comet each (the head bright, the tail fading behind it), and
+  // packets of bits; each trace's are fixed by its own hash, so more Data Flow adds pulses and moves none
+  const flow = o.flow;
+  if(flow > 0) B.traces.forEach((tr, ti) => {
+    const P = tr.pts, seg = []; let L = 0;
+    for(let i = 1; i < P.length; i++){ const l = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); seg.push([L, l, P[i - 1], P[i]]); L += l; }
+    if(L < 1) return;
+    const point = u => { for(const [s0, l, a, b] of seg) if(u <= s0 + l || seg[seg.length - 1][2] === a){ const f = l ? Math.max(0, Math.min(1, (u - s0)/l)) : 0; return [a[0] + (b[0] - a[0])*f, a[1] + (b[1] - a[1])*f]; } return P[P.length - 1]; };
+    const hs = k => { const v = Math.sin((ti + 1)*127.1 + k*311.7 + o.salt*17.3)*43758.5453; return v - Math.floor(v); };
+    const slots = Math.ceil(L/3);
+    for(let k = 0; k < slots; k++){
+      if(hs(k*3) > flow*0.9) continue;
+      const head = hs(k*3 + 1)*L, len = 0.8 + hs(k*3 + 2)*2.6*(0.5 + flow), back = hs(k*7 + 5) < 0.5;
+      if(hs(k*5 + 9) < 0.28*flow){
+        // a packet: a run of bits, some lit
+        for(let b = 0; b < 6; b++){ if(hs(k*13 + b) < 0.45) continue; const u = head + (back ? -b : b)*0.42; if(u < 0 || u > L) continue; disc(DA, point(u), 0.13, '#fff'); }
+        continue; }
+      // a comet: ten short strokes, brighter toward the head
+      for(let q = 0; q < 10; q++){ const u0 = head - (back ? -1 : 1)*len*(q + 1)/10, u1 = head - (back ? -1 : 1)*len*q/10;
+        if(Math.max(u0, u1) < 0 || Math.min(u0, u1) > L) continue;
+        DA.globalAlpha = Math.pow(1 - q/10, 1.6); line(DA, [point(Math.max(0, Math.min(L, u0))), point(Math.max(0, Math.min(L, u1)))], tw*0.9*s, '#fff'); }
+      DA.globalAlpha = 1; disc(DA, point(Math.max(0, Math.min(L, head))), 0.2, '#fff');
+    }
+  });
+  return cv;
+}
+
 const GEN_STEPS = {
+  traces: { cat: 'Marks', label: 'Circuit Traces', ins: ['keep clear'], outs: ['copper', 'height', 'each trace', 'data', 'pads', 'parts', 'silkscreen'],
+    io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+    params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100), s = unit/across;
+      const cw = Math.max(4, Math.ceil(w/s)), ch = Math.max(4, Math.ceil(h/s)), kv = E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
+      const bends = E.num(n, 'bends', 70)/100;
+      const o = { traces: E.num(n, 'traces', 55)/100, parts: E.num(n, 'parts', 45)/100, bends, diag: bends > 0, flow: E.num(n, 'flow', 40)/100,
+        salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
+        clear: keep ? (x, y) => keep[Math.min(h - 1, Math.max(0, y*s | 0))*w + Math.min(w - 1, Math.max(0, x*s | 0))] : null };
+      const B = withSeed(genSeed(E, n), () => genCircuit(cw, ch, o)), cv = genDrawCircuit(B, w, h, s, o);
+      return ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend'].map(k => cv[k][0]); },
+    run(E, n){ return this.paint(E, n).map(c => E.asField(E.readCanvas(c))); } },
   matrix: { cat: 'Textures', label: 'Growth Medium', ins: [], outs: ['picture', 'height', 'ways'], io: { outs: ['field', 'field', 'field'] },
     params: [GEN_R('kind', 'Strata · Pebbles · Sand · Fibres · Skin', 25), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('angle', 'Angle', 0, 0, 180), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
     run(E, n){ const k = Math.min(4, Math.floor(E.num(n, 'kind', 25)/100*5));
@@ -29113,6 +29657,8 @@ const STEP_PARTS = {
   colour:   { cat: 'Inputs', label: 'Color', ins: [], outs: ['colour'], params: [['hex', 'Color', 'text', '#808080']] },
   // the page's own two accent colors (Cartomancy's first two suits)
   accent:   { cat: 'Inputs', label: 'Accent', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Accent', ['1', '2']), ['name', 'Name', 'text', 'Accent']] },
+  // the page's own backdrop (Materia's color or gradient): what a surface drawn over the whole page can be made of
+  backdrop: { cat: 'Inputs', label: 'Page Backdrop', ins: [], outs: ['picture'], params: [] },
   forms:    { cat: 'Noise', label: 'Soft Forms', ins: [], outs: ['tone'], params: [STEP_R('count', 'Forms', 5, 1, 12), STEP_R('size', 'Size', 50), STEP_R('noise', 'Noise', 50)] },
   streaks:  { cat: 'Marks', label: 'Streaks', ins: ['base'], outs: ['field'], params: [STEP_SEL('kind', 'Kind', ['streaks', 'sheets']), STEP_R('angle', 'From', 0, 0, 360),
               STEP_R('spread', 'Gusts', 0, 0, 40), STEP_R('length', 'Length', 100, 100, 500), STEP_R('count', 'Count', 100, 0, 400), STEP_R('light', 'Light Share', 75), STEP_R('strength', 'Strength', 50)] },
@@ -29205,6 +29751,7 @@ const STEP_DOCS = {
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
   accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
@@ -29288,6 +29835,7 @@ const STEP_DOCS = {
   matrix: 'A material for something to grow through (strata, pebbles, sand, fibers or skin), with the paths through it.',
   tendrils: 'A branching network that grows through the paths you give it, like veins or roots.',
   knotwork: 'Celtic knotwork: strands crossing over and under, turned back into knots inside an outline.',
+  traces: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',
   discharge: 'A Lichtenberg figure: the branching path electricity burns through wood.',
   wood: 'A wooden plank: growth rings and grain, as a picture and heights.',
   burn: 'Burns a gray map into a picture: charred into wood, glowing embers, or etched into acrylic.',
@@ -29328,7 +29876,7 @@ const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
     return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
   },
-  glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r/255, g.g/255, g.b/255] : [0, 0, 0]]; },
+  glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
   hue(E, n){ const { ctx, P, hexCol } = E;
     return [hexCol((ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] || '#FFFFFF')];
   },
@@ -29506,13 +30054,17 @@ const STEP_RUN = {
     for(let i = 0; i < N; i++){ const t = Math.pow(Math.max(0, Math.min(1, f[i])), g); o.r[i] = a[0] + (b[0] - a[0])*t; o.g[i] = a[1] + (b[1] - a[1])*t; o.b[i] = a[2] + (b[2] - a[2])*t; }
     return [o];
   },
-  blend(E, n){ const { N, input, num, P, asField, asImage } = E;
+  blend(E, n){ const { N, input, P, asField, asImage } = E;
     const base = asImage(input(n, 1) ?? 0.5), lay = input(n, 2), m = asField(input(n, 3));
     if(lay == null) return [base];
-    const L = asImage(lay), fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
-    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
-    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1);
-      for(const c of ['r', 'g', 'b']){ const b0 = base[c][i]; o[c][i] = b0 + (Math.max(0, Math.min(1, fn(b0, L[c][i]))) - b0)*k; } }
+    // (a single color is read as itself, as a flat picture of it would hold it; where the mask is black, the base passes)
+    const col = Array.isArray(lay) ? lay.map(Math.fround) : null, L = col ? null : asImage(lay);
+    const fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, OP = E.map(n, 'opacity', 100);
+    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, OR = o.r, OG = o.g, OB = o.b, BR = base.r, BG = base.g, BB = base.b;
+    const LR = L && L.r, LG = L && L.g, LB = L && L.b, cl = v => Math.max(0, Math.min(1, v));
+    for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100*(m ? m[i] : 1), r0 = BR[i], g0 = BG[i], b0 = BB[i];
+      if(k === 0){ OR[i] = r0; OG[i] = g0; OB[i] = b0; continue; }
+      OR[i] = r0 + (cl(fn(r0, col ? col[0] : LR[i])) - r0)*k; OG[i] = g0 + (cl(fn(g0, col ? col[1] : LG[i])) - g0)*k; OB[i] = b0 + (cl(fn(b0, col ? col[2] : LB[i])) - b0)*k; }
     return [o];
   },
   surface(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
@@ -29529,6 +30081,15 @@ const STEP_RUN = {
   },
   accent(E, n){ const { ctx, P, hexCol } = E, k = (parseInt(P(n, 'slot', '1'), 10) || 1) - 1;
     return [hexCol((ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k] || '#808080')];
+  },
+  // the backdrop's colors, top to bottom (a board's green where there is no page: the Athanor's own previews)
+  backdrop(E){ const { ww, wh, N, ctx, hexCol } = E;
+    const cols = (Array.isArray(ctx.env) && ctx.env.length ? ctx.env : ['#16382B', '#0B2219']).map(c => hexCol(String(c))), last = cols.length - 1;
+    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+    for(let y = 0; y < wh; y++){ const f = (wh > 1 ? y/(wh - 1) : 0)*last, i = Math.min(Math.max(0, last - 1), Math.floor(f)), u = last ? f - i : 0, A = cols[i], B = cols[Math.min(last, i + 1)];
+      const r = A[0] + (B[0] - A[0])*u, g = A[1] + (B[1] - A[1])*u, b = A[2] + (B[2] - A[2])*u;
+      o.r.fill(r, y*ww, y*ww + ww); o.g.fill(g, y*ww, y*ww + ww); o.b.fill(b, y*ww, y*ww + ww); }
+    return [o];
   },
   // a few large soft shapes and a little noise: where a drawing is dark
   forms(E, n){ const { ww, wh, unit, num } = E;
@@ -29876,7 +30437,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
@@ -30467,6 +31028,61 @@ const TEXTURE_CHAINS = {
     wires: [[1, 1, 10, paramPort('matrix', 'kind')], [5, 1, 10, paramPort('matrix', 'scale')], [5, 1, 11, paramPort('tendrils', 'zoom')], [2, 1, 11, paramPort('tendrils', 'amount')], [3, 1, 11, paramPort('tendrils', 'branching')],
       [6, 1, 11, paramPort('tendrils', 'slide')], [7, 1, 11, 2], [10, 3, 11, 1], [10, 1, 13, 1], [8, 1, 13, 2], [12, 1, 13, 3], [10, 2, 14, 1], [11, 1, 14, 2],
       [13, 1, 15, 1], [14, 1, 15, 2], [15, 1, 16, 1], [9, 1, 16, 2], [11, 2, 16, 3], [4, 1, 16, paramPort('blend', 'opacity')], [16, 1, 17, 1]] },
+  // 🝓 Circuit Board: Circuit Traces on the page's own backdrop; Threshold powers some traces (Charge), the Light Engine
+  // lights the board, then what it gives off is screened over: the traces' glow, the Glow Hue's aura, data, sparks
+  circuit: { label: 'Circuit Board', div: 2, teach: 'A circuit board drawn on the page itself. Circuit Traces routes it the way boards are routed by hand: chips first, then buses of parallel traces that run straight and turn together (Bends: square corners, or 45° chamfers), ending in vias and pads. Page Backdrop makes the board of your backdrop\'s colors; Blend lays the copper, the tinned pads, the chips and the silkscreen on it. Every trace has its own grey (Each Trace), so three Thresholds driven by Charge decide which are powered: colored in your Trace Hue first, then (the grey dimmed by Math, so Charge reaches it later) glowing, then sparking. The Light Engine raises and lights the board; then the light it gives off is screened over (Blend in Screen): the glow, the Glow Hue\'s aura, data running along the powered traces in your Data Hue, and sparks from Scatter. Try: Charge at 100, then Bends at 0 for square corners.', nodes: [
+      ['knob', { slot: '1', name: 'Traces', def: 55 }, 40, 40],                    // 1
+      ['knob', { slot: '3', name: 'Charge', def: 55 }, 40, 130],                   // 2
+      ['knob', { slot: '4', name: 'Data Flow', def: 40 }, 40, 220],                // 3
+      ['knob', { slot: '6', name: 'Scale', def: 23 }, 40, 310],                    // 4  (100 of 40–300)
+      ['knob', { slot: '5', name: 'Components', def: 45 }, 40, 400],               // 5
+      ['knob', { slot: '2', name: 'Bends', def: 70 }, 40, 490],                    // 6
+      ['dial', {}, 40, 580],                                                       // 7
+      ['hue', { slot: '1', name: 'Trace Hue' }, 40, 660], ['hue', { slot: '2', name: 'Data Hue' }, 40, 740], ['glowhue', {}, 40, 820],   // 8, 9, 10
+      ['backdrop', {}, 300, 700],                                                  // 11
+      ['traces', { traces: 55, '~traces': '0,100', scale: 100, '~scale': '40,300', bends: 70, '~bends': '0,100', parts: 45, '~parts': '0,100', flow: 40, '~flow': '0,100' }, 300, 120],   // 12
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 40],               // 13 (powered: colored)
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 160],              // 14 (glowing)
+      ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 280],              // 15 (sparking)
+      ['math', { op: 'multiply' }, 1040, 40],                                      // 16 (the powered copper)
+      ['math', { op: 'multiply' }, 1040, 160],                                     // 17 (the glowing copper)
+      ['colour', { hex: '#FFFFFF' }, 560, 900],                                    // 18
+      ['blend', { mode: 'soft-light', opacity: 70 }, 560, 620],                    // 19 (bare copper under the mask)
+      ['colour', { hex: '#C9C1AA' }, 800, 900],                                    // 20 (tinned pads)
+      ['blend', { mode: 'source-over', opacity: 90 }, 800, 620],                   // 21
+      ['colour', { hex: '#141418' }, 1040, 900],                                   // 22 (the chips' epoxy)
+      ['blend', { mode: 'source-over', opacity: 96 }, 1040, 620],                  // 23
+      ['colour', { hex: '#ECE8DC' }, 1280, 900],                                   // 24 (silkscreen)
+      ['blend', { mode: 'source-over', opacity: 75 }, 1280, 620],                  // 25
+      ['blend', { mode: 'source-over', opacity: 100 }, 1520, 620],                 // 26 (powered traces in the Trace Hue)
+      ['blur', { radius: 2 }, 1040, 440],                                          // 27 (edges rounded)
+      ['material', { relief: 45, gloss: 50, shine: 45, shadow: 50, occlusion: 35, ambient: 42 }, 1760, 480],   // 28
+      ['blur', { radius: 22 }, 1040, 140],                                         // 29 (the glow: a halo)
+      ['blend', { mode: 'screen', opacity: 85 }, 2000, 420],                       // 30
+      ['blend', { mode: 'screen', opacity: 45 }, 2240, 420],                       // 31 (hot cores)
+      ['blur', { radius: 60 }, 1280, 140],                                         // 32 (the aura)
+      ['blend', { mode: 'screen', opacity: 90 }, 2480, 420],                       // 33 (the Glow Hue's emission)
+      ['math', { op: 'multiply' }, 1520, 40],                                      // 34 (data on the powered traces)
+      ['blur', { radius: 5 }, 1760, 40],                                           // 35
+      ['math', { op: 'screen' }, 2000, 40],                                        // 36
+      ['blend', { mode: 'screen', opacity: 100 }, 2720, 420],                      // 37 (data)
+      ['scatter', { shape: 'spark', count: 14, size: 8, vary: 70, turn: 100, clump: 0, fade: 50 }, 800, 300],   // 38
+      ['blur', { radius: 8 }, 1040, 300],                                          // 39
+      ['math', { op: 'screen' }, 1280, 300],                                       // 40
+      ['blend', { mode: 'screen', opacity: 100 }, 2960, 420],                      // 41 (sparks)
+      ['surface', { name: 'Circuit Board', ground: 'colour' }, 3200, 440],         // 42
+      ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
+      ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280]],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
+    wires: [[1, 1, 12, paramPort('traces', 'traces')], [4, 1, 12, paramPort('traces', 'scale')], [6, 1, 12, paramPort('traces', 'bends')], [5, 1, 12, paramPort('traces', 'parts')], [3, 1, 12, paramPort('traces', 'flow')],
+      [2, 1, 13, paramPort('threshold', 'at')], [2, 1, 14, paramPort('threshold', 'at')], [2, 1, 15, paramPort('threshold', 'at')],
+      [12, 3, 13, 1], [12, 3, 45, 1], [43, 1, 45, 2], [12, 3, 46, 1], [44, 1, 46, 2], [45, 1, 14, 1], [46, 1, 15, 1], [13, 1, 16, 1], [12, 1, 16, 2], [14, 1, 17, 1], [12, 1, 17, 2],
+      [11, 1, 19, 1], [18, 1, 19, 2], [12, 1, 19, 3], [19, 1, 21, 1], [20, 1, 21, 2], [12, 5, 21, 3], [21, 1, 23, 1], [22, 1, 23, 2], [12, 6, 23, 3],
+      [23, 1, 25, 1], [24, 1, 25, 2], [12, 7, 25, 3], [25, 1, 26, 1], [8, 1, 26, 2], [16, 1, 26, 3],
+      [12, 2, 27, 1], [26, 1, 28, 1], [27, 1, 28, 2], [12, 1, 28, 3], [7, 1, 28, 7],
+      [17, 1, 29, 1], [28, 1, 30, 1], [8, 1, 30, 2], [29, 1, 30, 3], [30, 1, 31, 1], [18, 1, 31, 2], [17, 1, 31, 3],
+      [17, 1, 32, 1], [31, 1, 33, 1], [10, 1, 33, 2], [32, 1, 33, 3],
+      [12, 4, 34, 1], [16, 1, 34, 2], [34, 1, 35, 1], [34, 1, 36, 1], [35, 1, 36, 2], [33, 1, 37, 1], [9, 1, 37, 2], [36, 1, 37, 3],
+      [15, 1, 38, 2], [38, 1, 39, 1], [38, 1, 40, 1], [39, 1, 40, 2], [37, 1, 41, 1], [18, 1, 41, 2], [40, 1, 41, 3], [41, 1, 42, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
   knotwork: { label: 'Knotwork', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
       ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)
@@ -30837,7 +31453,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const v2 = athanorVersion(graph) >= 2, v3 = athanorVersion(graph) >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, sizeK]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, sizeK]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -31463,6 +32079,14 @@ const TEXTURE_PARAMS = {
                   {key:'form',  label:'From One Point',  min:0,  max:100, def:30,  unit:''},
                   {key:'shape', label:'Wander',          min:0,  max:100, def:40,  unit:''},
                   {key:'hue',   label:'Chipping',        min:0,  max:100, def:0,   unit:''}],
+  // 🝓 Circuit Board (chains.js 'circuit'): Charge powers more traces, from bare copper to colored, glowing and sparking
+  circuit:       [{key:'amt',   label:'Traces',          min:0,  max:100, def:55,  unit:''},
+                  // square corners (Factorio's belts) → 45° chamfers (a board's)
+                  {key:'zoom',  label:'Bends',           min:0,  max:100, def:70,  unit:''},
+                  {key:'form',  label:'Charge',          min:0,  max:100, def:55,  unit:'', ticks:[0,18,50,84], names:['Substrate','Color','Glow','Sparks']},
+                  {key:'shape', label:'Data Flow',       min:0,  max:100, def:40,  unit:''},
+                  {key:'hue',   label:'Components',      min:0,  max:100, def:45,  unit:''},
+                  {key:'tilt',  label:'Scale',           min:40, max:300, def:100, unit:'%'}],
   // 🝆 Veins of Light (chains.js 'veins')
   veins:         [{key:'zoom',  label:'Material',        min:0,  max:100, def:10,  unit:'', ticks:[10,30,50,70,90], names:['Strata','Pebbles','Sand','Fibres','Skin']},
                   {key:'amt',   label:'Reach',           min:0,  max:100, def:60,  unit:''},
@@ -31539,6 +32163,9 @@ const TEXTURE_PARAMS = {
  * silently ignored.
  */
 const TEXTURE_CAPS = {
+  // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
+  circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
+                   tintLabels:['Trace Hue','Data Hue'], tintDefaults:['accent1','accent2'] },
   veins:         { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','lighten','luminosity'], light:true, dial:'Grow From & Light', material:true, tints:2,
                    tintLabels:['Material Hue','Glow Hue'], tintDefaults:['#B8A48C','#4FE3FF'] },
   crackle:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], light:true, material:true, dial:'Impact & Light', tints:2,
@@ -31716,6 +32343,7 @@ const GLOWS = {
   frost:       'moonlight caught in the ice',
   astral:      'airglow: the sky\'s own faint light, in slow waves',
   linen:       'luminous thread in the stitching',
+  circuit:     'an aura round the glowing traces, as if the board were lit from within',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };
 // DIFFUSE (the light's own colour) where nothing else already says it: not
@@ -31724,7 +32352,7 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -31809,6 +32437,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'halftone'){
     result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
+  } else if(type === 'circuit'){
+    result = genChain(type, w, h, light, extra, accent1, accent2);   // (its hues, else the accents) Circuit Traces on the page's backdrop → Threshold (Charge) → Light Engine → glow, data, sparks (chains.js)
   } else if(type === 'veins'){
     result = genChain(type, w, h, light, extra, tint1, tint2);   // Matrix → Tendrils (space colonization) → Light Engine → glow (chains.js)
   } else if(type === 'crackle'){
@@ -31973,6 +32603,8 @@ function storeTexture(key, result){
 }
 // everything a request means: its normalised knobs, and its key
 // the poem's layout, as a short key (FNV-1a): every character counts
+/** Does a graph hold a Page Backdrop part (and so want the page's own colors)? */
+function graphUsesBackdrop(graph){ return /"name":\s*"backdrop"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
@@ -31989,7 +32621,8 @@ function describeRequest(type, w, h, opts){
   const o5 = h5 ? resolveAlpha(opts.tint5, h5.def) : null;
   const t5 = (h5 && o5 && o5.toUpperCase() !== h5.def.toUpperCase()) ? o5.toUpperCase() : null;
   // the page's own colours, for a texture that shows the world behind the glass
-  const env = ((TEXTURE_CAPS[RETIRED[type] || type] || {}).pageEnv && opts.env) ? String(opts.env).toUpperCase() : null;
+  // (an Athanor graph has them when it holds a Page Backdrop part)
+  const env = (((TEXTURE_CAPS[RETIRED[type] || type] || {}).pageEnv || ((type === 'athanor' || type === 'athanorsteps') && graphUsesBackdrop(opts.graph))) && opts.env) ? String(opts.env).toUpperCase() : null;
   // canonical-pixel scale (texCore.js): 1 at export size; keys unchanged at 1
   const scale = (opts.scale > 0 && isFinite(opts.scale)) ? opts.scale : 1;
   // how low the light is, 0–100 (100: the horizon, as it always was)
@@ -32031,7 +32664,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '',
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null,
       ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -32056,7 +32689,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '' },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', env: extra.env || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -32082,13 +32715,13 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
-      mat: extra.mat || null, glow: extra.glow || null },
+      mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -32214,6 +32847,11 @@ const TEXTURE_ELEMENTS = {
     fire:  { name: 'Red Aurora',      k: [160, 90, 1, 95, 80, 30],  light: [30, 100] },
     water: { name: 'Quiet Arc',       k: [70, 60, 1, 10, 160, 25],  light: [0, 40] },
     earth: { name: 'Corona Storm',    k: [180, 220, 5, 55, 60, 60], light: [200, 100] } },
+  // k: Traces, Bends, Charge, Data Flow, Components, Scale
+  circuit: { def: 'earth', earth: { name: 'Circuit Board' },
+    fire:  { name: 'Overclocked',    k: [75, 70, 100, 80, 50, 100], t: ['#FF6A3D', '#FFE9A8'], light: [300, 100] },
+    water: { name: 'Cold Storage',   k: [60, 90, 30, 25, 35, 70],   t: ['#6FA8FF', '#D8F0FF'] },
+    wind:  { name: 'Factory Floor',  k: [85, 0, 70, 60, 25, 120],   t: ['#F2A83C', '#7CF29A'], light: [210, 100] } },
   veins: { def: 'earth', earth: { name: 'Veins of Light' },
     fire:  { name: 'Molten Seams',   k: [10, 80, 40, 85, 80, 0],   t: ['#4A3A34', '#FF7A2A'], light: [300, 100] },
     water: { name: 'Fibre Optics',   k: [70, 70, 70, 75, 100, 30], t: ['#2C3640', '#7AE0FF'] },
@@ -32804,12 +33442,12 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Prometheus';
+const RELEASE = 'Saturn–Epimetheus';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"diqF4TTe","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"zuBCPU-R","lichtenberg":"SjNBBzSY","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","sigils":"oFaAKxnj","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"aVKpXREs","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
-const SWATCH_STAMP = 'ge37C7_s';
+const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"T0JyuUt0","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"diqF4TTe","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"zuBCPU-R","lichtenberg":"SjNBBzSY","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","sigils":"oFaAKxnj","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"aVKpXREs","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
+const SWATCH_STAMP = '0DYbl39Q';
 
 
 /* ==== altText.js ==== */
@@ -32841,7 +33479,7 @@ const TEXTURE_LOOKS = {
   aurora: 'hanging ribbons of silky light', aurorasky: 'an aurora: curtains of green and red light over a starry sky', moon: 'a large moon among clouds', landscape: 'a painted range of hills and mountains',
   flowfield: 'flowing ink lines that never cross', suminagashi: 'marbled rings of floating ink', grain: 'fine film grain',
   metalleaf: 'scattered flakes of metal leaf', flowers: 'lotus blossoms floating on water', brushstrokes: 'broad, expressive brushstrokes',
-  halftone: 'a halftone dot screen', veins: 'glowing veins of light grown through stone, sand, fibre or skin', knotwork: 'interlaced Celtic knotwork, raised from the page', lichtenberg: 'branching Lichtenberg figures burned by electricity', growth: 'a ruffled, folding line grown like coral', plainnoise: 'soft, cloudy noise', stripes: 'plain stripes', polka: 'polka dots', checker: 'a checkerboard', softgradient: 'a smooth gradient', cells: 'rounded cells, like pebbles', rainstreaks: 'slanting streaks of hard rain', hatch: 'fine hatched pencil lines',
+  halftone: 'a halftone dot screen', veins: 'glowing veins of light grown through stone, sand, fibre or skin', circuit: 'a circuit board: chips and buses of copper traces, some lit with current', knotwork: 'interlaced Celtic knotwork, raised from the page', lichtenberg: 'branching Lichtenberg figures burned by electricity', growth: 'a ruffled, folding line grown like coral', plainnoise: 'soft, cloudy noise', stripes: 'plain stripes', polka: 'polka dots', checker: 'a checkerboard', softgradient: 'a smooth gradient', cells: 'rounded cells, like pebbles', rainstreaks: 'slanting streaks of hard rain', hatch: 'fine hatched pencil lines',
   cityscape: 'a city skyline at night, its windows lit, over water', guilloche: 'engraved rosettes, like those on a banknote',
   stainedglass: 'panes of stained glass held in lead', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
@@ -33633,7 +34271,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 0565807";
+const STAMP = "2026-10-15 · d558bc1";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -34774,6 +35412,10 @@ let SURFACE_SOURCE = null;
 function setSurfaceSource(fn){ SURFACE_SOURCE = fn; }
 /** Every blend a surface layer can take (Ruby): the canvas's own, and the ones mixed per pixel (boxFx.js). */
 const SURFACE_BLENDS = [...CANVAS_BLENDS, ...BOX_GPU_BLENDS];
+/** The page's backdrop colors, as a surface made of them is told them: the color, or the gradient's stops. */
+function pageEnvNow(stops = parseInt(getActiveRadioValue('bgStopsGroup'), 10) || 2, bg1 = $('bgColor1Hex').value){
+  return ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', stops) : [bg1]).join(',');
+}
 /** The surface the controls show, as a layer: the same keys a look saves. */
 function surfaceFromDom(){
   const v = id => { const el = $(id); return el ? el.value : undefined; };
@@ -34817,7 +35459,8 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const tint = (n, on) => on ? (L['textureTint' + n] || null) : null;
   const tint1 = tint(1, tints >= 1), tint2 = tint(2, tints >= 2), tint3 = tint(3, caps.material), tint4 = tint(4, caps.material);
   const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse);
-  const envs = caps.pageEnv ? env() : undefined;
+  // the page's own colors: for a surface made of them (Rain on Glass, Circuit Board), or a graph with a Page Backdrop
+  const envs = caps.pageEnv || (type === 'athanor' && graphUsesBackdrop(L.forgeGraph || '')) ? env() : undefined;
   const seed = parseInt(L.textureSeed, 10) || 0;
   const p1 = num(L.texP1), p2 = num(L.texP2), p3 = num(L.texP3);
   // knobs four to six only where the surface has them (an Athanor surface: where its graph offers them)
@@ -34891,14 +35534,14 @@ function renderInto(canvas){
   // each drawn the same way from its settings. appEvents hands over the layer the controls are not
   // showing (setSurfaceSource); the one they show is read from the page.
   if($('textureToggle').checked){
-    const env = (bgStopCount, bg1) => ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount) : [bg1]).join(',');
+    const env = () => pageEnvNow(bgStopCount, bg1);
     const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null;
     const dom = surfaceFromDom();
     const upper = !src || src.editing !== 'lower' ? dom : src.other;
     const lower = src && src.lowerOn ? (src.editing === 'lower' ? dom : src.other) : null;
     for(const [L, slot] of [[lower, 'base'], [upper, 'main']]){
       if(!L || !L.textureType) continue;
-      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env: () => env(bgStopCount, bg1) });
+      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env });
     }
   }
 
@@ -35590,7 +36233,9 @@ function swLayer(c, L, w, h){
     const opts = { accent1: L.accent1, accent2: L.accent2, seed: (L.textureSeed != null ? L.textureSeed : SWATCH.fallbackSeed), p1: L.texP1, p2: L.texP2, p3: L.texP3, p4: L.texP4, p5: L.texP5, p6: L.texP6,
       light: L.textureLight != null ? +L.textureLight : 315, lightTilt: L.textureLightTilt != null ? +L.textureLightTilt : undefined,
       tint1: L.textureTint1 || null, tint2: L.textureTint2 || null, tint3: L.textureTint3 || null, tint4: L.textureTint4 || null, tint5: L.textureTint5 || null, tint6: L.textureTint6 || null,
-      blend: L.textureGround || blend };
+      blend: L.textureGround || blend,
+      // the look's own backdrop, for a surface made of it (Rain on Glass, Circuit Board)
+      env: [L.bg1, ...(L.bgGradient ? [L.bg2, L.bg3, L.bg4] : [])].filter(Boolean).join(',') || undefined };
     const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
     if(!tex) return !swatchSource;
     c.save();
@@ -35623,7 +36268,8 @@ function paintPresetSwatch(canvas, p, w, h, onPainted = null){
 
   // surface: the lower one first, when the look has two (a look's lower surface keeps the upper's keys)
   if(p.texture && p.textureType){
-    if(p.baseToggle && p.baseLayer && p.baseLayer.textureType && !swLayer(c, { ...p.baseLayer, accent1: p.accent1, accent2: p.accent2 }, w, h)){
+    const page = { accent1: p.accent1, accent2: p.accent2, bg1: p.bg1, bg2: p.bg2, bg3: p.bg3, bg4: p.bg4, bgGradient: p.bgGradient };
+    if(p.baseToggle && p.baseLayer && p.baseLayer.textureType && !swLayer(c, { ...p.baseLayer, ...page }, w, h)){
       swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; }
     else if(!swLayer(c, p, w, h)){ swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; }
     else swatchWaiting.delete(canvas);
@@ -36987,6 +37633,13 @@ const WIKI_PARTS = {
     set: { hex: 'The color as a hex code: #RRGGBB, or the short #RGB.' },
     see: ['color', 'part:hue'],
   },
+  backdrop: {
+    line: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
+    about: 'The backdrop is the color or gradient set under Materia, behind everything else. A surface made of it belongs to the page: change the backdrop and the surface changes with it. Circuit Board draws its board this way. In the Athanor’s own previews, where there is no page, it shows a board’s dark green.',
+    outs: { picture: 'The backdrop: one color, or the gradient’s colors laid from the top of the page to the bottom.' },
+    tips: ['Lay marks over it with Blend, and keep its opacity high: what shows through is the page itself.'],
+    see: ['part:accent', 'part:blend', 'picture'],
+  },
   accent: {
     line: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
     about: 'Accents are the colors the poem uses for highlighted words. Building a surface from them makes it match the text automatically.',
@@ -37607,6 +38260,15 @@ const WIKI_PARTS = {
     outs: { wires: 'The network.', glow: 'A soft glow around it.' },
     set: { amount: 'How far it reaches.', branching: 'How often it branches.', roots: 'How many starting points.', inner: 'Starts inside the page rather than at the edge.', slide: 'Moves the start along the edge.', zoom: 'Scale.', width: 'Line width.', keep: 'How strictly it follows the Ways.', variant: 'Another network.' },
   },
+  traces: {
+    line: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',
+    about: 'Circuit Traces routes a board the way boards are routed by hand, on a grid one trace apart. Chips go down first, their pins round their edges. Then buses (one to eight traces side by side) walk out from the pins, the page’s edges and lone vias: straight for a while, then turning together, every trace keeping its distance from its neighbors round the corner. A bus stops where something is in the way or when it has gone far enough, and each of its traces ends in a via or a pad. No two buses cross. Small parts and stitching vias fill some of what is left, and a silkscreen outlines and names the parts. Everything is measured against the page, so the board is the same at any size.',
+    ins: { 'keep clear': 'A gray map: where it is white, nothing is placed (wire The Poem’s words to route the traces round the poem).' },
+    outs: { copper: 'Every piece of copper: traces, pads, vias and pins (white).', height: 'Heights: the board low, the copper a little raised, the chips and parts standing up, the via holes sunk. Blur it a little before the Light Engine to round the edges.', 'each trace': 'Every trace in its own gray, drawn a little wider than the copper (a bus’s traces in similar grays). A Threshold of it picks some traces and not others: multiply by Copper to get their exact shapes.', data: 'Bright pulses running along every trace, a bright head and a fading tail, and packets of bits. Multiply by a mask to keep them to some traces.', pads: 'The bare metal: pads, pins and via rings, where solder would be.', parts: 'The bodies of the chips and the small parts (capacitors a little gray).', silkscreen: 'The printed white lines: outlines round the parts, and their names (U1, R4, C7).' },
+    set: { traces: 'How many buses are routed: a few at 0, a crowded board at 100.', scale: 'The size of the grid: lower is finer, with more traces across the page.', bends: 'How corners turn: at 0 every corner is square (Factorio’s belts), at 100 every turn is 45° (a board’s chamfered corners). In between, a mix.', parts: 'How many chips, small parts and stitching vias.', flow: 'How much data runs along the traces (Data).', variant: 'Another board.' },
+    tips: ['Each Trace into a Threshold, times Copper, is a set of powered traces: wire a Knob into the Threshold’s Cutoff and the board lights up as it turns.', 'Blur the powered traces and Blend them in Screen for a glow.'],
+    see: ['part:threshold', 'part:scatter', 'part:material', 'part:backdrop'],
+  },
   knotwork: {
     line: 'Celtic knotwork: strands crossing over and under, turned back into knots inside an outline.',
     ins: { 'slide toward': 'Moves it (wire the Light Dial).' },
@@ -37791,6 +38453,8 @@ const WIKI_ARTICLES = [
 <li>A <b>gray map wired into a picture input</b> becomes a gray picture: the same map used for red, green and blue.</li>
 <li>A <b>picture wired into a gray input</b> becomes its brightness (luminance), so a colored texture can be used as a mask or a height.</li>
 </ul>
+<h3>Where pictures come from</h3>
+<p>Most pictures are made in the graph, but one comes from the page: <b>Page Backdrop</b> brings in the backdrop (its color, or its gradient top to bottom), so a surface can be made of the page itself and change when the backdrop does. Circuit Board draws its board on it.</p>
 <h3>Turning gray into color</h3>
 <p>Parts in <b>Light &amp; Color</b> make pictures from gray maps: <b>Tint</b> and <b>Color Ramp</b> (two colors), <b>Gradient Map</b> (up to five), <b>Spectrum</b> (a rainbow). The Light Engine takes a picture and lights it.</p>
 <h3>Working with channels</h3>
@@ -42042,7 +42706,8 @@ function athanorOpts(json, n){
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
     tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
-    text: graphUsesPoem(json) ? textLayoutNow() : undefined };   // (the poem's layout, for a graph that reads it)
+    text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
+    env: graphUsesBackdrop(json) ? pageEnvNow() : undefined };   // (the page's backdrop, for a graph with a Page Backdrop)
 }
 /** A texture made in the worker, handed to `done` when it is ready (the newest wish per slot wins). */
 const workerWish = new Map();
@@ -42678,7 +43343,7 @@ commitHistory();
 // once shown; it and the shimmer above it keep moving even while the page
 // itself is busy (they run on the compositor).
 const WORKING_WORDS = {
-  veins: 'Growing the veins', knotwork: 'Plaiting the knot', lichtenberg: 'Striking the arc', growth: 'Growing the line',
+  veins: 'Growing the veins', circuit: 'Routing the traces', knotwork: 'Plaiting the knot', lichtenberg: 'Striking the arc', growth: 'Growing the line',
   plainnoise: 'Stirring the noise', stripes: 'Ruling the stripes', polka: 'Spotting the dots', checker: 'Laying the squares', softgradient: 'Grading the light', cells: 'Growing the cells',
   bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
   clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',

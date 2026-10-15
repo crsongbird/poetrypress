@@ -20,6 +20,12 @@
  *   burn       BURN: any gray map of channels laid into a picture as a burn —
  *              charred and sunken in wood, still glowing as embers, or lit from
  *              inside a block of clear acrylic — with the picture's heights.
+ *   traces     CIRCUIT TRACES: a circuit board routed as boards are by hand —
+ *              chips and their pins, then buses of parallel traces that run
+ *              straight and turn together (45° chamfers, or Factorio's 90°
+ *              corners), ending in vias and pads — with each trace's own grey
+ *              (so a cutoff can power some and not others), data running along
+ *              them, the pads, the parts and their silkscreen.
  *   growline   GROWING LINE: differential growth (Anders Hoff's "differential
  *              line"; Nervous System's Floraform in a plane): a closed line whose
  *              points push each other apart, follow their neighbours and split
@@ -339,7 +345,227 @@ function genTendrils(ww, wh, unit, W, o){
   return { NX, NY, PAR, flow };
 }
 
+// ---------------- CIRCUIT TRACES: a board's copper, routed ----------------
+// The way circuit boards are routed by hand, and the way generative circuit patterns are usually drawn: a grid of
+// cells one trace apart. CHIPS go down first, their pins round their edges. Then BUSES (one to eight traces side by
+// side) walk out from the pins, the page's edges and lone vias: straight for a while, then turning together, by 45°
+// (a board's chamfered corners) or by 90° (Factorio's belts), every trace keeping its distance from its neighbours
+// round the corner (a mitred offset), until something is in the way or the bus has gone far enough. There each trace
+// ends in a via or a pad. Every cell remembers the bus that crossed it, so no two buses cross. Small parts (resistors,
+// capacitors) and stitching vias fill some of what is left, and a silkscreen names the parts.
+// Everything is in CELLS (the page's short side is `across` cells), so the board is the same at any size.
+const CIR_DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];   // E SE S SW W NW N NE (y down)
+// a 3×5 font for the silkscreen's part names (U chips, R resistors, C capacitors, digits)
+const CIR_FONT = { U: '101101101101111', R: '110101110101101', C: '111100100100111', 0: '111101101101111', 1: '010110010010111', 2: '111001111100111',
+  3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111' };
+function genCircuit(cw, ch, o){
+  const R = Math.random, occ = new Int32Array(cw*ch), age = new Int32Array(cw*ch);
+  const inb = (x, y) => x >= 0 && y >= 0 && x < cw && y < ch, at = (x, y) => (y | 0)*cw + (x | 0);
+  // a mask kept clear (the part's first input): those cells are taken before anything is placed
+  if(o.clear) for(let y = 0; y < ch; y++) for(let x = 0; x < cw; x++) if(o.clear(x + 0.5, y + 0.5) > 0.5) occ[y*cw + x] = -3;
+  const chips = [], smd = [], vias = [], traces = [], names = [];
+  // ---- chips: square ones with pins on four sides, long ones on two ----
+  const nChips = Math.round(o.parts*cw*ch/650) + (o.parts > 0.08 ? 1 : 0);
+  for(let t = 0; t < nChips*14 && chips.length < nChips; t++){
+    const quad = R() < 0.5, a = quad ? 5 + (R()*7 | 0) : 2 + (R()*2 | 0), b = quad ? a : 5 + (R()*9 | 0);
+    const [W, H] = quad || R() < 0.5 ? [a, b] : [b, a];
+    const x = 3 + (R()*Math.max(1, cw - W - 6) | 0), y = 3 + (R()*Math.max(1, ch - H - 6) | 0);
+    let ok = x + W + 3 < cw && y + H + 3 < ch;
+    for(let j = y - 3; j < y + H + 3 && ok; j++) for(let i = x - 3; i < x + W + 3; i++) if(!inb(i, j) || occ[j*cw + i]){ ok = false; break; }
+    if(!ok) continue;
+    for(let j = y - 1; j <= y + H; j++) for(let i = x - 1; i <= x + W; i++) occ[j*cw + i] = -1;
+    const c = { x, y, w: W, h: H, pins: [], rank: R() }, sides = quad ? [0, 1, 2, 3] : W < H ? [1, 3] : [0, 2];
+    for(const sd of sides){ const len = sd % 2 === 0 ? W : H;
+      for(let k = 0; k < len; k++) c.pins.push({ side: sd, k, used: false, rank: -1,
+        x: sd === 0 || sd === 2 ? x + k + 0.5 : sd === 1 ? x + W + 0.5 : x - 0.5, y: sd === 1 || sd === 3 ? y + k + 0.5 : sd === 0 ? y - 0.5 : y + H + 0.5, dir: [6, 0, 2, 4][sd] }); }
+    chips.push(c); names.push({ kind: 'U', n: chips.length, x: x, y: y - 2.2, chip: c });
+  }
+  // ---- buses ----
+  const free = (x, y, id, t) => { if(!inb(x, y)) return 2; const q = at(x, y), v = occ[q]; return v === 0 || (v === id && age[q] > t - 4) ? 1 : 0; };
+  const mark = (ax, ay, bx, by, id, t) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)*4));
+    for(let s = 0; s <= n; s++){ const x = ax + (bx - ax)*s/n, y = ay + (by - ay)*s/n; if(!inb(x, y)) continue; const q = at(x, y); if(occ[q] === 0 || occ[q] === id){ occ[q] = id; age[q] = t; } } };
+  const nrm = d => { const [dx, dy] = CIR_DIRS[d], l = Math.hypot(dx, dy); return [dy/l, -dx/l]; };
+  const nBus = Math.round((0.2 + 3.4*o.traces)*cw*ch/150);
+  let id = 0;
+  const walk = (P, d, k, start, near = null) => {
+    id++; const offs = Array.from({ length: k }, (_, i) => i - (k - 1)/2), busRank = near == null ? R() : near*0.65 + R()*0.35;
+    let n = nrm(d);
+    const pts = offs.map(oi => [[P[0] + n[0]*oi, P[1] + n[1]*oi]]), cur = pts.map(p => p[0].slice());
+    // is the bus's footprint free at Q (going dd)? 0 no · 1 yes · 2 the whole bus has left the page
+    const ok = (Q, dd, t) => { const nn = nrm(dd); let out = 0;
+      for(const oi of offs){ const f = free(Q[0] + nn[0]*oi, Q[1] + nn[1]*oi, id, t); if(f === 0) return 0; if(f === 2) out++; }
+      // a little room either side, so two buses never touch
+      for(const oi of [offs[0] - 0.8, offs[k - 1] + 0.8]) if(free(Q[0] + nn[0]*oi, Q[1] + nn[1]*oi, id, t) === 0) return 0;
+      return out === k ? 2 : 1; };
+    const maxSteps = 8 + Math.round(R()*R()*150), turnP = 0.05 + 0.08*R(), diagonal = dd => dd % 2 === 1;
+    let t = 0, run = 0, mov = 0, end = R() < 0.62 ? 'via' : 'pad';
+    while(t < maxSteps){
+      t++;
+      const [dx, dy] = CIR_DIRS[d], Q = [P[0] + dx, P[1] + dy], mid = [P[0] + dx/2, P[1] + dy/2];
+      const f = ok(Q, d, t), fm = ok(mid, d, t);
+      if(f === 2){ end = 'off'; for(let i = 0; i < k; i++) pts[i].push([Q[0] + n[0]*offs[i], Q[1] + n[1]*offs[i]]); mov++; break; }
+      const blocked = !f || !fm;
+      // time to turn: a diagonal is a short jog; a straight run turns now and then; a blocked one must
+      const want = blocked || (run >= (diagonal(d) ? 2 + (R()*4 | 0) : 3) && R() < (diagonal(d) ? 0.45 : turnP));
+      if(want){
+        // which way: 45° (a board's chamfer) or 90° (a belt's corner), toward the side with more room
+        const opts = diagonal(d) || R() < o.bends ? [1, -1] : [2, -2];
+        const room = sg => { const dd = (d + sg + 8) % 8, [ex, ey] = CIR_DIRS[dd]; let r = 0;
+          for(let q = 1; q <= 6; q++){ if(!ok([P[0] + ex*q, P[1] + ey*q], dd, t)) break; r++; } return r + R()*0.5; };
+        let turned = false;
+        for(const [sg, r] of opts.map(sg => [sg, room(sg)]).sort((a, b) => b[1] - a[1])){
+          const d2 = (d + sg + 8) % 8;
+          if(r < 2 || (!o.diag && diagonal(d2))) continue;
+          // the corner: each trace turns where its offset line meets the new one (a mitre)
+          const n2 = nrm(d2), c = n[0]*n2[0] + n[1]*n2[1], m = [(n[0] + n2[0])/(1 + c), (n[1] + n2[1])/(1 + c)];
+          for(let i = 0; i < k; i++){ const q = [P[0] + m[0]*offs[i], P[1] + m[1]*offs[i]]; mark(cur[i][0], cur[i][1], q[0], q[1], id, t); pts[i].push(q); cur[i] = q; }
+          d = d2; n = n2; run = 0; turned = true; break;
+        }
+        if(turned) continue;
+        if(blocked) break;
+      }
+      // a step straight on: each trace's line marked as taken
+      for(let i = 0; i < k; i++){ const q = [Q[0] + n[0]*offs[i], Q[1] + n[1]*offs[i]]; mark(cur[i][0], cur[i][1], q[0], q[1], id, t); cur[i] = q; }
+      P = Q; run++; mov++;
+    }
+    if(mov < 2) return false;
+    const [dx, dy] = CIR_DIRS[d], ln = Math.hypot(dx, dy);
+    if(end !== 'off') for(let i = 0; i < k; i++){
+      // each trace runs on to its end (every other one a little further, so neighbouring vias don't touch)
+      const ext = end === 'via' && k > 1 && i % 2 ? 1.1 : 0; pts[i].push([cur[i][0] + dx/ln*ext, cur[i][1] + dy/ln*ext]); }
+    offs.forEach((_, i) => traces.push({ pts: pts[i], rank: Math.min(1, Math.max(0, busRank + (R() - 0.5)*0.14)), bus: id, start, end: end === 'off' ? null : end, w: k }));
+    return true;
+  };
+  for(let b = 0; b < nBus; b++){
+    const r = R();
+    const k = (q => q < 0.32 ? 1 : q < 0.46 ? 2 : q < 0.7 ? 3 + (R()*2 | 0) : 5 + (R()*4 | 0))(R());
+    if(r < 0.5 && chips.length){
+      // out of a chip: k pins side by side that nothing uses yet
+      const c = chips[R()*chips.length | 0], sd = c.pins[R()*c.pins.length | 0].side, row = c.pins.filter(p => p.side === sd);
+      // a run of k pins that nothing uses yet (as long a run as there is, up to k)
+      const k2 = Math.min(k, row.length); let run = [];
+      for(let tries = 0; tries < 6 && !run.length; tries++){ const s0 = R()*(row.length - k2 + 1) | 0, r2 = row.slice(s0, s0 + k2); if(!r2.some(p => p.used)) run = r2; }
+      if(!run.length) continue;
+      // pins on the left or top of a side are counted the other way round from the bus's offsets
+      const P = [run.reduce((a, p) => a + p.x, 0)/run.length, run.reduce((a, p) => a + p.y, 0)/run.length];
+      const before = traces.length;
+      if(walk(P, run[0].dir, run.length, 'pin', c.rank)){ run.forEach(p => { p.used = true; });
+        // which trace left from which pin: the nearest
+        for(const tr of traces.slice(before)){ const s = tr.pts[0]; let best = null, bd = 9; for(const p of run){ const dd = Math.hypot(p.x - s[0], p.y - s[1]); if(dd < bd){ bd = dd; best = p; } } if(best) best.rank = tr.rank; } }
+    } else if(r < 0.72){
+      // in from the page's edge
+      const e = R()*4 | 0, d = [2, 4, 6, 0][e], along = e % 2 === 0 ? cw : ch, s = 2 + (R()*(along - 4) | 0);
+      const P = e === 0 ? [s + 0.5, -0.5] : e === 1 ? [cw + 0.5, s + 0.5] : e === 2 ? [s + 0.5, ch + 0.5] : [-0.5, s + 0.5];
+      walk(P, d, k, 'edge');
+    } else {
+      // out of a row of vias, anywhere free
+      const x = 2 + (R()*(cw - 4) | 0), y = 2 + (R()*(ch - 4) | 0);
+      if(occ[at(x, y)]) continue;
+      walk([x + 0.5, y + 0.5], o.diag ? R()*8 | 0 : (R()*4 | 0)*2, Math.min(k, 4), 'via');
+    }
+  }
+  // ---- small parts and stitching vias in what is left ----
+  const room = (x, y, w, h, m) => { for(let j = y - m; j < y + h + m; j++) for(let i = x - m; i < x + w + m; i++) if(!inb(i, j) || occ[j*cw + i]) return false; return true; };
+  const nSmd = Math.round(o.parts*cw*ch/170);
+  for(let t = 0; t < nSmd*6 && smd.length < nSmd; t++){
+    const horiz = R() < 0.5, w = horiz ? 3 : 2, h = horiz ? 2 : 3, x = 1 + (R()*(cw - w - 2) | 0), y = 1 + (R()*(ch - h - 2) | 0);
+    if(!room(x, y, w, h, 1)) continue;
+    for(let j = y; j < y + h; j++) for(let i = x; i < x + w; i++) occ[j*cw + i] = -2;
+    smd.push({ x, y, w, h, horiz, cap: R() < 0.45 }); if(R() < 0.5) names.push({ kind: smd[smd.length - 1].cap ? 'C' : 'R', n: smd.length, x: x + w + 0.4, y: y + 0.2 });
+  }
+  const nVia = Math.round(o.parts*cw*ch/260);
+  for(let t = 0; t < nVia*4 && vias.length < nVia; t++){ const x = 1 + (R()*(cw - 2) | 0), y = 1 + (R()*(ch - 2) | 0); if(!room(x, y, 1, 1, 1)) continue; occ[y*cw + x] = -2; vias.push([x + 0.5, y + 0.5]); }
+  // the names: only where they don't sit on copper
+  const named = names.filter(nm => { const x = Math.floor(nm.x), y = Math.floor(nm.y); return room(x, y, 3, 2, 0); });
+  return { chips, smd, vias, traces, names: named };
+}
+// The board drawn: s pixels a cell. Each of the part's maps is its own canvas (see the part).
+function genDrawCircuit(B, ww, wh, s, o){
+  const mk = () => kitCanvas(ww, wh), cv = {}, fillAll = (x, c) => { x.fillStyle = c; x.fillRect(0, 0, ww, wh); };
+  for(const k of ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend']){ const [c, x] = mk(); fillAll(x, k === 'height' ? 'rgb(77,77,77)' : '#000'); x.lineCap = 'round'; x.lineJoin = 'round'; cv[k] = [c, x]; }
+  const g = v => { const q = Math.round(Math.max(0, Math.min(1, v))*255); return `rgb(${q},${q},${q})`; };
+  const line = (x, pts, w, col) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0]*s, p[1]*s) : x.moveTo(p[0]*s, p[1]*s)); x.stroke(); };
+  const disc = (x, p, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(p[0]*s, p[1]*s, r*s, 0, Math.PI*2); x.fill(); };
+  const rect = (x, X, Y, W, H, col) => { x.fillStyle = col; x.fillRect(X*s, Y*s, W*s, H*s); };
+  const [, CU] = cv.copper, [, HT] = cv.height, [, EA] = cv.each, [, DA] = cv.data, [, PD] = cv.pads, [, PT] = cv.parts, [, LG] = cv.legend;
+  const tw = 0.34;
+  // the traces: copper, raised a little, and each one's own grey (drawn wide, so a cutoff takes the whole trace)
+  for(const tr of B.traces){
+    const e = g(0.1 + 0.85*tr.rank);   // (never quite white: a cutoff at the top passes none)
+    line(CU, tr.pts, tw*s, '#fff'); line(HT, tr.pts, tw*s, 'rgb(107,107,107)'); line(EA, tr.pts, 0.78*s, e);
+    const ends = [];
+    if(tr.start === 'via') ends.push([tr.pts[0], 'via']);
+    if(tr.end) ends.push([tr.pts[tr.pts.length - 1], tr.end]);
+    for(const [p, kind] of ends){
+      if(kind === 'via'){ disc(CU, p, 0.4, '#fff'); disc(HT, p, 0.4, 'rgb(117,117,117)'); disc(HT, p, 0.16, 'rgb(31,31,31)'); disc(CU, p, 0.16, '#000'); disc(PD, p, 0.4, '#fff'); disc(PD, p, 0.16, '#000'); disc(EA, p, 0.46, e); }
+      else { rect(CU, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(HT, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, 'rgb(117,117,117)'); rect(PD, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(EA, p[0] - 0.42, p[1] - 0.42, 0.84, 0.84, e); }
+    }
+  }
+  // the chips: a dark body standing well above the board, a pin pad at every pin, a dimple at pin one
+  for(const c of B.chips){
+    rect(PT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, '#fff');
+    rect(HT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, 'rgb(205,205,205)'); rect(HT, c.x + 0.25, c.y + 0.25, c.w - 0.5, c.h - 0.5, 'rgb(218,218,218)');
+    disc(HT, [c.x + 0.9, c.y + 0.9], 0.3, 'rgb(196,196,196)');
+    for(const p of c.pins){ const [dx, dy] = CIR_DIRS[p.dir], L = 0.75, W = 0.4, cx = p.x - dx*0.15, cy = p.y - dy*0.15;
+      const [X, Y, Wd, Hd] = dx ? [cx - L/2, cy - W/2, L, W] : [cx - W/2, cy - L/2, W, L];
+      rect(CU, X, Y, Wd, Hd, '#fff'); rect(PD, X, Y, Wd, Hd, '#fff'); rect(HT, X, Y, Wd, Hd, 'rgb(122,122,122)');
+      if(p.rank >= 0) rect(EA, X - 0.05, Y - 0.05, Wd + 0.1, Hd + 0.1, g(0.1 + 0.85*p.rank)); }
+    // the silkscreen: an outline round the body and its pins, a notch at pin one
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.12*s; LG.strokeRect((c.x - 1.15)*s, (c.y - 1.15)*s, (c.w + 2.3)*s, (c.h + 2.3)*s);
+    disc(LG, [c.x - 1.15, c.y - 1.15], 0.32, '#fff');
+  }
+  // small parts: two pads and a body between
+  for(const p of B.smd){
+    const [a, b] = p.horiz ? [[p.x, p.y + 0.5, 0.9, 1], [p.x + 2.1, p.y + 0.5, 0.9, 1]] : [[p.x + 0.5, p.y, 1, 0.9], [p.x + 0.5, p.y + 2.1, 1, 0.9]];
+    for(const q of [a, b]){ rect(CU, ...q, '#fff'); rect(PD, ...q, '#fff'); rect(HT, ...q, 'rgb(122,122,122)'); }
+    const body = p.horiz ? [p.x + 0.55, p.y + 0.45, 1.9, 1.1] : [p.x + 0.45, p.y + 0.55, 1.1, 1.9];
+    rect(PT, ...body, p.cap ? 'rgb(150,150,150)' : '#fff'); rect(HT, ...body, p.cap ? 'rgb(168,168,168)' : 'rgb(158,158,158)');
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.strokeRect((p.x - 0.25)*s, (p.y - 0.25)*s, (p.w + 0.5)*s, (p.h + 0.5)*s);
+  }
+  for(const v of B.vias){ disc(CU, v, 0.38, '#fff'); disc(CU, v, 0.15, '#000'); disc(PD, v, 0.38, '#fff'); disc(PD, v, 0.15, '#000'); disc(HT, v, 0.38, 'rgb(115,115,115)'); disc(HT, v, 0.15, 'rgb(31,31,31)'); }
+  // the parts' names, in the silkscreen's little font
+  for(const nm of B.names){ const txt = nm.kind + nm.n, px = 0.24; let x0 = nm.x;
+    for(const ch of txt){ const bits = CIR_FONT[ch] || ''; for(let r = 0; r < 5; r++) for(let q = 0; q < 3; q++) if(bits[r*3 + q] === '1') rect(LG, x0 + q*px, nm.y + r*px, px*0.92, px*0.92, '#fff'); x0 += px*4; } }
+  // DATA: bright pulses running along the traces, a comet each (the head bright, the tail fading behind it), and
+  // packets of bits; each trace's are fixed by its own hash, so more Data Flow adds pulses and moves none
+  const flow = o.flow;
+  if(flow > 0) B.traces.forEach((tr, ti) => {
+    const P = tr.pts, seg = []; let L = 0;
+    for(let i = 1; i < P.length; i++){ const l = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); seg.push([L, l, P[i - 1], P[i]]); L += l; }
+    if(L < 1) return;
+    const point = u => { for(const [s0, l, a, b] of seg) if(u <= s0 + l || seg[seg.length - 1][2] === a){ const f = l ? Math.max(0, Math.min(1, (u - s0)/l)) : 0; return [a[0] + (b[0] - a[0])*f, a[1] + (b[1] - a[1])*f]; } return P[P.length - 1]; };
+    const hs = k => { const v = Math.sin((ti + 1)*127.1 + k*311.7 + o.salt*17.3)*43758.5453; return v - Math.floor(v); };
+    const slots = Math.ceil(L/3);
+    for(let k = 0; k < slots; k++){
+      if(hs(k*3) > flow*0.9) continue;
+      const head = hs(k*3 + 1)*L, len = 0.8 + hs(k*3 + 2)*2.6*(0.5 + flow), back = hs(k*7 + 5) < 0.5;
+      if(hs(k*5 + 9) < 0.28*flow){
+        // a packet: a run of bits, some lit
+        for(let b = 0; b < 6; b++){ if(hs(k*13 + b) < 0.45) continue; const u = head + (back ? -b : b)*0.42; if(u < 0 || u > L) continue; disc(DA, point(u), 0.13, '#fff'); }
+        continue; }
+      // a comet: ten short strokes, brighter toward the head
+      for(let q = 0; q < 10; q++){ const u0 = head - (back ? -1 : 1)*len*(q + 1)/10, u1 = head - (back ? -1 : 1)*len*q/10;
+        if(Math.max(u0, u1) < 0 || Math.min(u0, u1) > L) continue;
+        DA.globalAlpha = Math.pow(1 - q/10, 1.6); line(DA, [point(Math.max(0, Math.min(L, u0))), point(Math.max(0, Math.min(L, u1)))], tw*0.9*s, '#fff'); }
+      DA.globalAlpha = 1; disc(DA, point(Math.max(0, Math.min(L, head))), 0.2, '#fff');
+    }
+  });
+  return cv;
+}
+
 export const GEN_STEPS = {
+  traces: { cat: 'Marks', label: 'Circuit Traces', ins: ['keep clear'], outs: ['copper', 'height', 'each trace', 'data', 'pads', 'parts', 'silkscreen'],
+    io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+    params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100), s = unit/across;
+      const cw = Math.max(4, Math.ceil(w/s)), ch = Math.max(4, Math.ceil(h/s)), kv = E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
+      const bends = E.num(n, 'bends', 70)/100;
+      const o = { traces: E.num(n, 'traces', 55)/100, parts: E.num(n, 'parts', 45)/100, bends, diag: bends > 0, flow: E.num(n, 'flow', 40)/100,
+        salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
+        clear: keep ? (x, y) => keep[Math.min(h - 1, Math.max(0, y*s | 0))*w + Math.min(w - 1, Math.max(0, x*s | 0))] : null };
+      const B = withSeed(genSeed(E, n), () => genCircuit(cw, ch, o)), cv = genDrawCircuit(B, w, h, s, o);
+      return ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend'].map(k => cv[k][0]); },
+    run(E, n){ return this.paint(E, n).map(c => E.asField(E.readCanvas(c))); } },
   matrix: { cat: 'Textures', label: 'Growth Medium', ins: [], outs: ['picture', 'height', 'ways'], io: { outs: ['field', 'field', 'field'] },
     params: [GEN_R('kind', 'Strata · Pebbles · Sand · Fibres · Skin', 25), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('angle', 'Angle', 0, 0, 180), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
     run(E, n){ const k = Math.min(4, Math.floor(E.num(n, 'kind', 25)/100*5));

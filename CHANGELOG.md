@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Epimetheus (2026-10-15)
+
+- **Circuit Board**, a new surface in Pattern & Order, in place of Veins of
+  Light. Chips and buses of copper traces, routed the way boards are: the
+  traces run side by side and turn together, ending in vias and pads, with
+  small parts and their printed names between.
+  - **Charge** decides how many traces carry current: none (bare copper on
+    the board), then colored, then glowing, then sparking.
+  - **Data Flow** sends bright pulses and packets of bits along the powered
+    traces, in the Data Hue.
+  - **Bends** turns the corners square (like Factorio's belts) or at 45°
+    (like a board's), and **Traces**, **Components** and **Scale** set how
+    full and how fine it is.
+  - The board is made of your backdrop's own colors, the traces wear your
+    accents until you choose their hues, the Glow Hue adds an aura, and the
+    light dial lights it all.
+- Veins of Light leaves the menu. Looks made with it, and the Circuitry
+  preset, still open as they were.
+- **New in the Athanor:** Circuit Traces, the part that routes the board,
+  and **Page Backdrop**, which brings the page's backdrop into a graph as a
+  picture.
+- The Glow Hue now glows in Poured Wax (it had been too faint to see).
+- Preset and history tiles show surfaces made of the page in that look's
+  own colors.
+- The Athanor's Blend part is several times faster.
+
 ## Saturn–Prometheus (2026-10-15)
 
 - **Two Surfaces, each with every control.** Turn on Two Surfaces in the

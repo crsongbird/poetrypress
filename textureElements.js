@@ -42,6 +42,11 @@ export const TEXTURE_ELEMENTS = {
     fire:  { name: 'Red Aurora',      k: [160, 90, 1, 95, 80, 30],  light: [30, 100] },
     water: { name: 'Quiet Arc',       k: [70, 60, 1, 10, 160, 25],  light: [0, 40] },
     earth: { name: 'Corona Storm',    k: [180, 220, 5, 55, 60, 60], light: [200, 100] } },
+  // k: Traces, Bends, Charge, Data Flow, Components, Scale
+  circuit: { def: 'earth', earth: { name: 'Circuit Board' },
+    fire:  { name: 'Overclocked',    k: [75, 70, 100, 80, 50, 100], t: ['#FF6A3D', '#FFE9A8'], light: [300, 100] },
+    water: { name: 'Cold Storage',   k: [60, 90, 30, 25, 35, 70],   t: ['#6FA8FF', '#D8F0FF'] },
+    wind:  { name: 'Factory Floor',  k: [85, 0, 70, 60, 25, 120],   t: ['#F2A83C', '#7CF29A'], light: [210, 100] } },
   veins: { def: 'earth', earth: { name: 'Veins of Light' },
     fire:  { name: 'Molten Seams',   k: [10, 80, 40, 85, 80, 0],   t: ['#4A3A34', '#FF7A2A'], light: [300, 100] },
     water: { name: 'Fibre Optics',   k: [70, 70, 70, 75, 100, 30], t: ['#2C3640', '#7AE0FF'] },

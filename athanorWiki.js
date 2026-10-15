@@ -99,6 +99,8 @@ export const WIKI_ARTICLES = [
 <li>A <b>gray map wired into a picture input</b> becomes a gray picture: the same map used for red, green and blue.</li>
 <li>A <b>picture wired into a gray input</b> becomes its brightness (luminance), so a colored texture can be used as a mask or a height.</li>
 </ul>
+<h3>Where pictures come from</h3>
+<p>Most pictures are made in the graph, but one comes from the page: <b>Page Backdrop</b> brings in the backdrop (its color, or its gradient top to bottom), so a surface can be made of the page itself and change when the backdrop does. Circuit Board draws its board on it.</p>
 <h3>Turning gray into color</h3>
 <p>Parts in <b>Light &amp; Color</b> make pictures from gray maps: <b>Tint</b> and <b>Color Ramp</b> (two colors), <b>Gradient Map</b> (up to five), <b>Spectrum</b> (a rainbow). The Light Engine takes a picture and lights it.</p>
 <h3>Working with channels</h3>

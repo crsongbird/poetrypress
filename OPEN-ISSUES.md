@@ -6,7 +6,15 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Prometheus)
+## 1 · Ruby to judge (new in Saturn–Epimetheus)
+- CIRCUIT BOARD (Pattern & Order), in place of Veins of Light: Traces, Bends, Charge (Substrate → Color →
+  Glow → Sparks), Data Flow, Components, Scale; Trace Hue and Data Hue (the accents until chosen), the Glow
+  Hue's aura; the board in the backdrop's colors. Its readings: Overclocked, Cold Storage, Factory Floor.
+  What is it missing? Should Charge light whole buses (as now) or single traces?
+- The CIRCUITRY preset still wears Veins of Light (presets wait for Stage 4): at the presets pass it could
+  wear Circuit Board.
+
+## From Saturn–Prometheus
 - TWO SURFACES: Upper / Lower / Swap above the Surface Texture controls; every control edits the one
   shown (a thin line of the second accent down the card's edge says the lower is shown). Every blend for
   each, ⚡ ones mixed per pixel. Does choosing a layer read clearly? Should the dice and Summon reach both?

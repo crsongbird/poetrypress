@@ -224,7 +224,7 @@ default.
 | File | Role |
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
-| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes |
+| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes |
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in Start from…; bundled before chains.js |
@@ -921,6 +921,18 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - Draw order: under → flat → the game → tall.
   - To add an object: an entry with a painter that draws from above, lit by
     `crtLight`, with `tobKit.shadow`.
+- **Circuit Board** (chain `circuit`, Pattern & Order; it replaced Veins of
+  Light, which stays hidden for old looks and the Circuitry preset):
+  - Circuit Traces routes it in cells (`genCircuit`): chips first, then buses
+    of 1–8 traces from pins, edges and vias that turn together (a mitred
+    offset), ending in vias or pads; an occupancy grid keeps buses apart.
+  - Each Trace (a gray per trace, a bus's alike) goes through three
+    Thresholds on Charge; Math dims it for the glow and the sparks, so Charge
+    reaches them later. A param's `'~key'` range is clamped to the param's own,
+    so an onset past 0 needs a dimmed input, not a range past 100.
+  - The board is the page's backdrop (`pageEnv`, the Page Backdrop part);
+    its hues default to the accents (`tintDefaults`); data pulses are hashed
+    per trace, so more Data Flow adds pulses and moves none.
 - **Contour Map:** Terrain → Contour Lines (any gray map's isolines), inked
   by Mix over the Light Engine's hillshade.
 - **Crackle** (Fractured Glaze, chain `crackle`):
@@ -978,7 +990,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     above 0.
 - **Turing Skin:** Turing Pattern (Gray–Scott) → Map Range → Light Engine.
   The old Reaction–Diffusion part stays for old graphs.
-- **Veins of Light:** Growth Medium (strata, pebbles, sand, fibres, skin; its
+- **Veins of Light** (hidden): Growth Medium (strata, pebbles, sand, fibres, skin; its
   "ways") → Tendrils (Runions' space colonization, steered into the ways).
 - **Watercolor Wash:** Washes → Pigment → Pigment (any gray map laid as
   watercolor).

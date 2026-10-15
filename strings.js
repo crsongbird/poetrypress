@@ -226,6 +226,7 @@ export const UI_STRINGS = {
   'option.aurora_veil':                        "Silk Ribbons",   // (was Aurora Veil: it looks like combed silk, not a sky; the id stays 'aurora')
   'option.aurora':                             "Aurora",
   'option.veins_of_light':                     "Veins of Light",
+  'option.circuit_board':                      "Circuit Board",
   'option.knotwork':                           "Knotwork",
   'option.lichtenberg':                        "Lichtenberg Figures",
   'option.ruffled_growth':                     "Ruffled Growth",

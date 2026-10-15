@@ -711,8 +711,8 @@ export const TEXTURE_GROUPS = [
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
   { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackle', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass'] },
-  { glyph: '🝓', name: 'Pattern & Order', types: ['mathnoise', 'chladni', 'tessellate', 'guilloche', 'halftone'] },
-  { glyph: '🝆', name: 'Grown & Generated', types: ['lichtenberg', 'growth', 'turing', 'veins'] },
+  { glyph: '🝓', name: 'Pattern & Order', types: ['mathnoise', 'chladni', 'circuit', 'tessellate', 'guilloche', 'halftone'] },
+  { glyph: '🝆', name: 'Grown & Generated', types: ['lichtenberg', 'growth', 'turing'] },
   { glyph: '⎐', name: 'Signs, Sigils & Cards', types: ['cards', 'knotwork', 'sigils', 'summoning'] },
   { glyph: '🜉', name: 'Your Surfaces', types: ['athanor'] },
 ];

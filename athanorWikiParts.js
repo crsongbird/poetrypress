@@ -63,6 +63,13 @@ export const WIKI_PARTS = {
     set: { hex: 'The color as a hex code: #RRGGBB, or the short #RGB.' },
     see: ['color', 'part:hue'],
   },
+  backdrop: {
+    line: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
+    about: 'The backdrop is the color or gradient set under Materia, behind everything else. A surface made of it belongs to the page: change the backdrop and the surface changes with it. Circuit Board draws its board this way. In the Athanor’s own previews, where there is no page, it shows a board’s dark green.',
+    outs: { picture: 'The backdrop: one color, or the gradient’s colors laid from the top of the page to the bottom.' },
+    tips: ['Lay marks over it with Blend, and keep its opacity high: what shows through is the page itself.'],
+    see: ['part:accent', 'part:blend', 'picture'],
+  },
   accent: {
     line: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
     about: 'Accents are the colors the poem uses for highlighted words. Building a surface from them makes it match the text automatically.',
@@ -682,6 +689,15 @@ export const WIKI_PARTS = {
     ins: { ways: 'Where it may grow: light areas are open.', 'grow from': 'The side it grows in from (wire the Light Dial).' },
     outs: { wires: 'The network.', glow: 'A soft glow around it.' },
     set: { amount: 'How far it reaches.', branching: 'How often it branches.', roots: 'How many starting points.', inner: 'Starts inside the page rather than at the edge.', slide: 'Moves the start along the edge.', zoom: 'Scale.', width: 'Line width.', keep: 'How strictly it follows the Ways.', variant: 'Another network.' },
+  },
+  traces: {
+    line: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',
+    about: 'Circuit Traces routes a board the way boards are routed by hand, on a grid one trace apart. Chips go down first, their pins round their edges. Then buses (one to eight traces side by side) walk out from the pins, the page’s edges and lone vias: straight for a while, then turning together, every trace keeping its distance from its neighbors round the corner. A bus stops where something is in the way or when it has gone far enough, and each of its traces ends in a via or a pad. No two buses cross. Small parts and stitching vias fill some of what is left, and a silkscreen outlines and names the parts. Everything is measured against the page, so the board is the same at any size.',
+    ins: { 'keep clear': 'A gray map: where it is white, nothing is placed (wire The Poem’s words to route the traces round the poem).' },
+    outs: { copper: 'Every piece of copper: traces, pads, vias and pins (white).', height: 'Heights: the board low, the copper a little raised, the chips and parts standing up, the via holes sunk. Blur it a little before the Light Engine to round the edges.', 'each trace': 'Every trace in its own gray, drawn a little wider than the copper (a bus’s traces in similar grays). A Threshold of it picks some traces and not others: multiply by Copper to get their exact shapes.', data: 'Bright pulses running along every trace, a bright head and a fading tail, and packets of bits. Multiply by a mask to keep them to some traces.', pads: 'The bare metal: pads, pins and via rings, where solder would be.', parts: 'The bodies of the chips and the small parts (capacitors a little gray).', silkscreen: 'The printed white lines: outlines round the parts, and their names (U1, R4, C7).' },
+    set: { traces: 'How many buses are routed: a few at 0, a crowded board at 100.', scale: 'The size of the grid: lower is finer, with more traces across the page.', bends: 'How corners turn: at 0 every corner is square (Factorio’s belts), at 100 every turn is 45° (a board’s chamfered corners). In between, a mix.', parts: 'How many chips, small parts and stitching vias.', flow: 'How much data runs along the traces (Data).', variant: 'Another board.' },
+    tips: ['Each Trace into a Threshold, times Copper, is a set of powered traces: wire a Knob into the Threshold’s Cutoff and the board lights up as it turns.', 'Blur the powered traces and Blend them in Screen for a glow.'],
+    see: ['part:threshold', 'part:scatter', 'part:material', 'part:backdrop'],
   },
   knotwork: {
     line: 'Celtic knotwork: strands crossing over and under, turned back into knots inside an outline.',
