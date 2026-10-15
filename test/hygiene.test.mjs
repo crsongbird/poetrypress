@@ -168,6 +168,15 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
     if(JSON.stringify(P.buildLines(`<word/${d}>`, true, true)) === plain) guide.push(`index.html: /${d} parses to nothing`);
   }
   check('every /directive the in-app guide shows does something', !guide.length, guide);
+  // its examples (⤓ Try): each one PML that does something (a §Variable one: something to resolve)
+  const V = await import('../pmlVars.js');
+  const unent = t => t.replace(/&#10;/g, '\n').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&amp;/g, '&');
+  const flat = t => t.replace(/[*_~[\]{}<>#/`\\-]/g, c => '\\' + c);
+  const idle = [];
+  for(const m of rd('index.html').matchAll(/class="pml-ex" data-try="([^"]*)"/g)){ const ex = unent(m[1]);
+    const does = ex.includes('§') ? V.resolvePmlVariables(ex, {}) !== ex : JSON.stringify(P.buildLines(ex, true, true)) !== JSON.stringify(P.buildLines(flat(ex), true, true));
+    if(!does) idle.push(ex.slice(0, 40)); }
+  check('every example the in-app guide offers to try does something', !idle.length && rd('index.html').includes('data-try='), idle);
 }
 
 // ---------- 8 · the hue names the docs use are the app's ----------

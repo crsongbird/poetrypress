@@ -446,6 +446,11 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .pml-help dl{ margin:0 0 4px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
 .pml-help dt{ color:var(--text-main); }
 .pml-help dd{ margin:0; }
+/* the guide teaches: an opening line, and an example after each section with ⤓ Try (it goes in the poem) */
+.pml-help .pml-intro{ color:var(--text-main); margin-bottom:8px; }
+.pml-help .pml-ex{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin:4px 0 10px; }
+.pml-help .pml-ex code{ white-space:pre-wrap; flex:1; min-width:0; }
+.pml-help .pml-try{ width:auto; flex:0 0 auto; margin:0; padding:2px 8px; font-size:11.5px; }
 .pml-help .fontlist{
   margin:0; columns:2; column-gap:14px; font-size:0.86em; line-height:1.45;
 }
@@ -15809,71 +15814,86 @@ Have fun!</textarea>
     <details class="card" data-tab="write" id="formattingGuidePanel">
       <summary class="card-title" data-str="card.arcane_guidance_pml_syntax">Arcane Guidance (PML Syntax)</summary>
       <div class="pml-help" style="margin-top:6px; font-size:12px; color:var(--text-dim); line-height:1.6;">
+        <!-- THE GUIDE TEACHES (Ruby: the Athanor's voice, here too): what each mark is, why you'd use it, one thing to try.
+             Every ⤓ Try puts its example in the poem where the cursor is; undo takes it back. -->
+        <p class="pml-intro">PML (Poetic Magick Language) is how a poem is dressed. Write plainly and it reads plainly; a few marks change how part of it looks. A mark that isn’t understood is simply shown as typed, so nothing here can break a poem. Each section ends with an example: <b>⤓ Try</b> puts it in your poem, and undo takes it back.</p>
 
-        <h4>Inline styles</h4>
-        <p>Freely mixable and nestable: <code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strike~~</code></p>
+        <h4>Emphasis</h4>
+        <p>Wrap words to change their weight or line: <code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strike~~</code>. They mix and nest, so a phrase can be bold with one italic word inside.</p>
+        <p class="pml-ex" data-try="the **heart** of it, *softly*, ~~never~~ always"><code>the **heart** of it, *softly*, ~~never~~ always</code></p>
 
-        <h4>Accents &amp; gradients</h4>
+        <h4>Accents and gradients</h4>
+        <p>The page has two accent colors (set under Thoughtforms). Square brackets color words in the first, braces in the second, and the two together blend one into the other across the words. A slash fades an accent into the ordinary ink, from the left (<code>/lg</code>) or the right (<code>/rg</code>). An emoji inside takes the color too.</p>
         <dl>
           <dt><code>[one]</code> <code>{two}</code></dt><dd>accent one, accent two</dd>
-          <dt><code>{[text]}</code> <code>[{text]}</code></dt><dd>blend one accent into the other</dd>
-          <dt><code>[text/lg]</code> <code>[text/rg]</code></dt><dd>fade an accent into the normal ink</dd>
-          <dt><code>{text/lg}</code> <code>{text/rg}</code></dt><dd>same, using accent two</dd>
+          <dt><code>{[text]}</code> <code>[{text]}</code></dt><dd>one accent blending into the other, and the reverse</dd>
+          <dt><code>[text/lg]</code> <code>{text/rg}</code></dt><dd>an accent fading into the ink</dd>
         </dl>
-        <p>Emoji inside an accent or gradient span tint to match.</p>
+        <p class="pml-ex" data-try="a [red] word, a {blue} word, and {[both at once]}"><code>a [red] word, a {blue} word, and {[both at once]}</code></p>
 
-        <h4>Line types</h4>
+        <h4>Kinds of line</h4>
+        <p>A mark at the start of a line changes the whole line.</p>
         <dl>
-          <dt><code>##</code></dt><dd>large heading</dd>
-          <dt><code>-#</code></dt><dd>small aside</dd>
-          <dt><code>&gt;</code></dt><dd>quote — left bar, tilt, slight transparency</dd>
-          <dt><code>#D</code></dt><dd>drop cap — first letter enlarged</dd>
-          <dt><code>#S</code></dt><dd>small caps — lowercase becomes small capitals</dd>
+          <dt><code>##</code></dt><dd>a heading: larger, for titles</dd>
+          <dt><code>-#</code></dt><dd>a small aside, for dates and dedications</dd>
+          <dt><code>&gt;</code></dt><dd>a quote: a bar at the left, a slight tilt, a little fainter</dd>
+          <dt><code>#D</code></dt><dd>a drop cap: the first letter large, as in old books</dd>
+          <dt><code>#S</code></dt><dd>small caps: lowercase letters as small capitals</dd>
         </dl>
+        <p class="pml-ex" data-try="## The Lantern&#10;-# for M., in winter&#10;#D Once there was a light that would not go out."><code>## The Lantern
+-# for M., in winter
+#D Once there was a light that would not go out.</code></p>
+
+        <h4>Alignment</h4>
+        <p>End a line with <code>/l</code>, <code>/c</code> or <code>/r</code> (or <code>/left</code>, <code>/center</code>, <code>/right</code>) to set it apart from the page’s alignment. To split one line between alignments, put part of it in a segment (below) with its own.</p>
+        <p class="pml-ex" data-try="this line leans right/r&#10;left words &lt;and right words/r&gt;"><code>this line leans right/r
+left words &lt;and right words/r&gt;</code></p>
 
         <h4>Rhyme markers</h4>
-        <p>End a line with <code>~A</code> <code>~B</code> <code>~C</code> <code>~D</code> to tag its rhyme group — shown as a small colored bar, not as text. A and B use the accents; C and D use their split-complements. Combines with justification: <code>text~A/r</code></p>
-
-        <h4>Alignment (Horizontal)</h4>
-        <p><code>/l</code> <code>/c</code> <code>/r</code> — or <code>/left</code> <code>/center</code> <code>/right</code> — at the end of a line.</p>
-        <p>Split one line between alignments using segments:<br>
-        <code>left text &lt;right text/r&gt;</code><br>
-        <code>&lt;left/l&gt;&lt;center/c&gt;&lt;right/r&gt;</code></p>
+        <p>End a line with <code>~A</code>, <code>~B</code>, <code>~C</code> or <code>~D</code> to mark which rhyme it belongs to. Each is shown as a small colored bar beside the line, not as text: A and B in the accents, C and D in colors that sit opposite them. They combine with alignment: <code>text~A/r</code>.</p>
+        <p class="pml-ex" data-try="the night was cold~A&#10;the stars were old~A&#10;and still the light~B&#10;held on till bright~B"><code>the night was cold~A
+the stars were old~A
+and still the light~B
+held on till bright~B</code></p>
 
         <h4>Segments <code>&lt;…&gt;</code></h4>
-        <p>Isolate part of a line. Segments accept any inline style above, plus:</p>
+        <p>Angle brackets set part of a line apart, so it can be styled on its own. After the words, a slash and a directive say how; chain as many as you like. Each directive also works bare, with a sensible amount: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>, <code>/effect</code>.</p>
         <dl>
-          <dt><code>/#:ff00ff</code></dt><dd>custom color</dd>
-          <dt><code>/f:4</code></dt><dd>font, by index (below)</dd>
-          <dt><code>/scale:150</code></dt><dd>size, percent of the fitted size</dd>
-          <dt><code>/track:150</code></dt><dd>letter-spacing, percent</dd>
-          <dt><code>/basis:50</code></dt><dd>raise; negative lowers</dd>
-          <dt><code>/jitter:150</code></dt><dd>per-letter hand jitter, percent</dd>
-          <dt><code>/grad:1#f00,2#00f</code></dt><dd>custom gradient, up to 4 stops</dd>
-          <dt><code>/rainbow</code> <code>/trans</code> <code>/lesbian</code></dt><dd>preset gradients; add <code>:rev</code> to reverse</dd>
-          <dt><code>/fx1,#abc,3</code></dt><dd>outline — color, thickness</dd>
-          <dt><code>/fx2,#f0f,10,4,4</code></dt><dd>shadow — color, blur, x, y</dd>
-          <dt><code>/effect:halo,60,#fff</code></dt><dd>typeface effect — letterpress, longshadow, doublestrike, chromatic, halo, bevel, erosion, doubleline, wavyline, dottedline or bloom; then strength, hue, angle, distance and grain — all optional</dd>
-          <dt><code>/fx0</code></dt><dd>drop effects for this segment only</dd>
+          <dt><code>/#:ff00ff</code></dt><dd>a color of its own (a hex code)</dd>
+          <dt><code>/f:4</code></dt><dd>a typeface, by its number in the list at the end</dd>
+          <dt><code>/scale:150</code></dt><dd>size, as a percent of the size the poem was fitted to</dd>
+          <dt><code>/track:150</code></dt><dd>letter-spacing, as a percent</dd>
+          <dt><code>/basis:50</code></dt><dd>raises the words; a negative number lowers them</dd>
+          <dt><code>/jitter:150</code></dt><dd>shakes each letter a little, like a hand that trembles</dd>
+          <dt><code>/grad:1#f00,2#00f</code></dt><dd>a gradient of its own, up to four stops</dd>
+          <dt><code>/rainbow</code> <code>/trans</code> <code>/lesbian</code></dt><dd>gradients ready-made; add <code>:rev</code> to reverse one</dd>
+          <dt><code>/fx1,#abc,3</code></dt><dd>an outline: its color and thickness</dd>
+          <dt><code>/fx2,#f0f,10,4,4</code></dt><dd>a shadow: its color, blur, and how far across and down</dd>
+          <dt><code>/effect:halo,60,#fff</code></dt><dd>a typeface effect (letterpress, longshadow, doublestrike, chromatic, halo, bevel, erosion, doubleline, wavyline, dottedline or bloom), then its strength, hue, angle, distance and grain, each optional</dd>
+          <dt><code>/fx:outline(#fff,4)+glow(#fd0,40,70)</code></dt><dd>up to three effects, in order, each with its color, two amounts and an angle: outline, shadow, longshadow, glow, letterpress, bevel, chromatic, doublestrike or erosion (<code>/fx:none</code> clears them)</dd>
+          <dt><code>/under:wave,#c33,150</code></dt><dd>an underline sewn in any of the stitches: its color and size</dd>
+          <dt><code>/fx0</code></dt><dd>no effects for this segment, whatever the page has</dd>
         </dl>
-        <p>Every directive has a sane bare form: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>, <code>/effect</code>.</p>
-        <p>Chain as many as you like:<br><code>&lt;text/#:ff00ff/f:4/scale:150/r/fx2,#fff,10,4,4&gt;</code></p>
+        <p class="pml-ex" data-try="&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;"><code>&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;</code></p>
 
-        <h4>Rules</h4>
+        <h4>Rules and stitches</h4>
+        <p>A line of three dashes draws a rule across the page, to divide stanzas. In a segment it takes a width, an alignment and a stitch: a motif sewn along it, pointing down (the default) or up.</p>
 <dl>
-<dt><code>---</code> <code>[---]</code> <code>{---}</code></dt><dd>a line across; accents color it</dd>
-<dt><code>&lt;---/50%/c&gt;</code></dt><dd>width and alignment (<code>l c r</code>)</dd>
-<dt><code>&lt;---/vine/up&gt;</code></dt><dd>a stitch, pointing <code>down</code> (default) or <code>up</code></dd>
-<dt><code>/size:150</code> <code>/weight:200</code> <code>/#:ff00aa</code></dt><dd>motif size, thread weight, color</dd>
+<dt><code>---</code> <code>[---]</code> <code>{---}</code></dt><dd>a rule; an accent colors it</dd>
+<dt><code>&lt;---/50%/c&gt;</code></dt><dd>half the width, centered (<code>l c r</code>)</dd>
+<dt><code>&lt;---/vine/up&gt;</code></dt><dd>a stitch, pointing up</dd>
+<dt><code>/size:150</code> <code>/weight:200</code> <code>/#:ff00aa</code></dt><dd>the motif’s size, the thread’s weight, its color</dd>
 </dl>
 <p class="stitchlist" id="stitchList"></p>
-<p>Borders take the same stitches (Materia → Border Stitch); an inset box follows a stitched border's inner edge.</p>
+<p>Borders take the same stitches (Materia → Border Stitch), and an inset box follows a stitched border’s inner edge.</p>
+<p class="pml-ex" data-try="&lt;---/vine/60%/c&gt;"><code>&lt;---/vine/60%/c&gt;</code></p>
 
 <h4>Code</h4>
-<p><code>`text`</code> — shown as typed, in monospace, on a backdrop. Variables resolve inside; glyphs don't.</p>
+<p>Backticks show words exactly as typed, in a monospace face on a small backdrop: for a line of code, or anything marks would otherwise change. Variables (below) still resolve inside; glyphs don’t.</p>
+<p class="pml-ex" data-try="`**not bold**, [not an accent]`"><code>`**not bold**, [not an accent]`</code></p>
 
 <h4>Variables</h4>
-<p>Resolved before PML. Unknown names stay visible; <code>\§</code> prints §.</p>
+<p>A <code>§</code> and a name is replaced by a value before anything else is read: the surface’s name, tonight’s moon, the look’s spell. They let a page describe itself (the Instrument Panel in the Grimoire is made of them). A name the app doesn’t know stays visible; <code>\§</code> prints a plain §.</p>
 <dl>
 <dt><code>§SurfName</code> <code>§SurfParamsA</code> <code>§SurfParamsB</code></dt><dd>the surface, its knobs, its hues (with Two Surfaces, the one on top)</dd>
 <dt><code>§MoonPhase!tonight</code> <code>!seed</code> <code>:0.5</code></dt><dd>a moon (−1…1: 0 full, ±1 new)</dd>
@@ -15881,9 +15901,10 @@ Have fun!</textarea>
 <dt><code>§SpellName</code> <code>§Spell</code> <code>§Font</code> <code>§TypeEffect</code></dt><dd>the look</dd>
 <dt><code>§RenderMs</code> <code>§Profile</code> <code>§CacheMB</code> <code>§Canvas</code> <code>§Scale</code> <code>§Build</code></dt><dd>the renderer</dd>
 </dl>
+<p class="pml-ex" data-try="tonight&#x27;s moon: §MoonPhase!tonight, on §SurfName"><code>tonight&#x27;s moon: §MoonPhase!tonight, on §SurfName</code></p>
 
 <h4>Escaping</h4>
-        <p>Prefix any special character with <code>\</code> to print it literally: <code>\[text\]</code> prints <code>[text]</code></p>
+        <p>A backslash before any mark prints the mark itself instead of acting on it: <code>\[text\]</code> prints <code>[text]</code>.</p>
 
         <h4>Fonts, by index</h4>
         <p id="fontIndexList" class="fontlist"></p>
@@ -17361,6 +17382,12 @@ const BLEND_NAMES = {
   suits: 'Made for this surface', others: 'Every other blend', default: ' (default)',
 };
 
+/** The PML guide's examples (the Arcane Guidance): a button after each puts it in the poem. */
+const PML_GUIDE = {
+  try: '⤓ Try',
+  tryHint: 'Put this example in your poem, where the cursor is (undo takes it back)',
+  tried: 'Added to your poem. Undo takes it back.',
+};
 /** The two surface layers (the layer bar above the surface's controls). */
 const SURFACE_LAYERS = {
   swappedUp: 'The surfaces traded places: the one that was beneath is on top.',
@@ -33482,7 +33509,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Aegaeon';
+const RELEASE = 'Saturn–Mimas';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -34311,7 +34338,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 7cddc2f";
+const STAMP = "2026-10-15 · dfe629a";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -40117,6 +40144,22 @@ const fontSelect = $('fontFamily');
 fontSelect.value = 3;
 
 $('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i} &nbsp;${f.family}`).join('<br>');
+// THE GUIDE'S EXAMPLES: ⤓ Try puts one in the poem where the cursor is, on lines of its own (a step undo takes back)
+if($('formattingGuidePanel') && $('formattingGuidePanel').querySelectorAll) $('formattingGuidePanel').querySelectorAll('.pml-ex[data-try]').forEach(p => {
+  if(typeof document.createElement !== 'function') return;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'ghost pml-try'; b.textContent = PML_GUIDE.try; b.title = PML_GUIDE.tryHint; p.appendChild(b); });
+if($('formattingGuidePanel') && $('formattingGuidePanel').addEventListener) $('formattingGuidePanel').addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('.pml-try') : null; if(!b) return;
+  const host = b.closest ? b.closest('.pml-ex') : null, ta = $('poemText'), ex = (host && host.getAttribute('data-try')) || ''; if(!ta || !ex) return;
+  const v = ta.value, at = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : v.length;
+  const before = v.slice(0, at), after = v.slice(at);
+  const text = (before && !before.endsWith('\n') ? '\n' : '') + ex + (after && !after.startsWith('\n') ? '\n' : '');
+  ta.value = before + text + after;
+  try { ta.selectionStart = ta.selectionEnd = before.length + text.length; } catch(err){}
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+  if(typeof repaintEditor === 'function') repaintEditor();
+  toast(PML_GUIDE.tried);
+});
 
 const canvas = $('poemCanvas');
 // A CPU canvas, like every layer and texture drawn into it: in Chrome a GPU

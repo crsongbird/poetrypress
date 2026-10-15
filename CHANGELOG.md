@@ -4,6 +4,16 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Mimas (2026-10-15)
+
+- **The Arcane Guidance teaches.** The PML guide in the Inscription tab now
+  says what each kind of mark is and why you'd use it, then gives an
+  example. **⤓ Try** puts the example in your poem where the cursor is, and
+  undo takes it back.
+- The guide now also teaches the effect stack (`/fx:outline(…)+glow(…)`)
+  and stitched underlines (`/under:wave,…`), which until now only PML.md
+  explained.
+
 ## Saturn–Aegaeon (2026-10-15)
 
 - **The wiki shows what it teaches.** Each concept page in the Athanor's

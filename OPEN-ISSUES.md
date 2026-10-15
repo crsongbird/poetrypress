@@ -6,7 +6,9 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Mimas and Saturn–Aegaeon)
+- THE ARCANE GUIDANCE (Inscription) now teaches: what each mark is and why, then an example with ⤓ Try (it
+  goes in the poem where the cursor is; undo takes it back). It now also teaches /fx: and /under:.
 - THE WIKI'S FIGURES: eleven concept pages (gray maps, pictures, colors, numbers, curves, mapping, wire
   ranges, masks, blend modes, heights, seeds) open with a small graph and every part's picture. Clear? Which
   other pages want one?
@@ -48,7 +50,6 @@ Recommendations".
 - Renamed parts and settings (Simple Lighting, Paint Swipes, Growth Medium, Differential Growth, Watercolor
   Bleed, Stained Glass, Card Deal; Black Point / White Point, Cutoff, Octaves; ports "map"/"picture").
 - Releases now follow Saturn's moons (Jupiter's ran out at Kore). Pandora is skipped: say if it should be in.
-- Next for the wiki: the PML guide outside the Athanor in the same teaching voice.
 
 ## From Jupiter–Cyllene
 

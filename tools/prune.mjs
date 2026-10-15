@@ -99,7 +99,7 @@ export function pruneReport(){
     dead.push(key);
   }
   void used;
-  for(const group of ['DIALOGS', 'SURFACE_LAYERS', 'FORGE_BAR', 'CHOOSER', 'DIE', 'KEPT', 'PICKER', 'THEME_NOTES']){
+  for(const group of ['DIALOGS', 'SURFACE_LAYERS', 'FORGE_BAR', 'PML_GUIDE', 'CHOOSER', 'DIE', 'KEPT', 'PICKER', 'THEME_NOTES']){
     const at = strings.indexOf(`export const ${group} = {`); if(at < 0) continue;
     const body = strings.slice(at, strings.indexOf('\n};', at));
     for(const m of body.matchAll(/^  (\w+):/gm))

@@ -1,8 +1,11 @@
 # PML — the markup poems are written in
 
-The Arcane Guidance, in the app, teaches it as you go. This is the whole of it,
-for the curious. Everything here stays: a poem written once renders the same
-ever after.
+PML (Poetic Magick Language) is how a poem is dressed. Plain text is the poem;
+a few marks change how part of it looks, and a mark that isn't understood is
+simply shown as typed. The Arcane Guidance, in the app's Inscription tab,
+teaches it with an example for each part (⤓ Try puts one in your poem). This
+page is the whole of it, for reference. Everything here stays: a poem written
+once renders the same ever after.
 
 ### Inline
 
@@ -21,6 +24,8 @@ ever after.
 | `\[` | literal `[` — escapes any character |
 
 Nesting works: `**bold [with accent] still bold**`
+
+Try: `a [red] word, a {blue} word, and {[both at once]}`
 
 ### Line prefixes
 
@@ -41,6 +46,14 @@ Nesting works: `**bold [with accent] still bold**`
 | `~A` `~B` `~C` `~D` | rhyme marker — shown as a colored bar, not text |
 
 Combine: `a rhyming line~A/r`
+
+Try:
+
+```
+## The Lantern
+-# for M., in winter
+#D Once there was a light that would not go out.
+```
 
 ### Segments
 

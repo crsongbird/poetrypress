@@ -367,6 +367,12 @@ export const BLEND_NAMES = {
   suits: 'Made for this surface', others: 'Every other blend', default: ' (default)',
 };
 
+/** The PML guide's examples (the Arcane Guidance): a button after each puts it in the poem. */
+export const PML_GUIDE = {
+  try: '⤓ Try',
+  tryHint: 'Put this example in your poem, where the cursor is (undo takes it back)',
+  tried: 'Added to your poem. Undo takes it back.',
+};
 /** The two surface layers (the layer bar above the surface's controls). */
 export const SURFACE_LAYERS = {
   swappedUp: 'The surfaces traded places: the one that was beneath is on top.',

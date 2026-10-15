@@ -51,7 +51,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
-import { applyStrings, fill, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR } from './strings.js';
+import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -209,6 +209,22 @@ const fontSelect = $('fontFamily');
 fontSelect.value = 3;
 
 $('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i} &nbsp;${f.family}`).join('<br>');
+// THE GUIDE'S EXAMPLES: ⤓ Try puts one in the poem where the cursor is, on lines of its own (a step undo takes back)
+if($('formattingGuidePanel') && $('formattingGuidePanel').querySelectorAll) $('formattingGuidePanel').querySelectorAll('.pml-ex[data-try]').forEach(p => {
+  if(typeof document.createElement !== 'function') return;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'ghost pml-try'; b.textContent = PML_GUIDE.try; b.title = PML_GUIDE.tryHint; p.appendChild(b); });
+if($('formattingGuidePanel') && $('formattingGuidePanel').addEventListener) $('formattingGuidePanel').addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('.pml-try') : null; if(!b) return;
+  const host = b.closest ? b.closest('.pml-ex') : null, ta = $('poemText'), ex = (host && host.getAttribute('data-try')) || ''; if(!ta || !ex) return;
+  const v = ta.value, at = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : v.length;
+  const before = v.slice(0, at), after = v.slice(at);
+  const text = (before && !before.endsWith('\n') ? '\n' : '') + ex + (after && !after.startsWith('\n') ? '\n' : '');
+  ta.value = before + text + after;
+  try { ta.selectionStart = ta.selectionEnd = before.length + text.length; } catch(err){}
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+  if(typeof repaintEditor === 'function') repaintEditor();
+  toast(PML_GUIDE.tried);
+});
 
 const canvas = $('poemCanvas');
 // A CPU canvas, like every layer and texture drawn into it: in Chrome a GPU
