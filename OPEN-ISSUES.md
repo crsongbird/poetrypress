@@ -6,7 +6,13 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Atlas)
+## 1 · Ruby to judge (new in Saturn–Prometheus)
+- TWO SURFACES: Upper / Lower / Swap above the Surface Texture controls; every control edits the one
+  shown (a thin line of the second accent down the card's edge says the lower is shown). Every blend for
+  each, ⚡ ones mixed per pixel. Does choosing a layer read clearly? Should the dice and Summon reach both?
+- TEXT CLEARING now sits at the foot of Text Effects ("idk" — say if it should go back).
+
+## From Saturn–Atlas
 - THE WIKI'S PAGES TURN: previous and next along the foot of every page, always in view on a phone.
 - SURFACE TILES are kept from release to release; only a surface that changed is painted again (the
   first visit after this release paints them once more, to start the new store).

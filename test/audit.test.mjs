@@ -31,6 +31,7 @@ const load = obj => { reg['advancedJson'].value = JSON.stringify(obj); reg['adva
 const norm = v => {
   if(v === undefined || v === null) return v;
   if(Array.isArray(v)) return JSON.stringify([...v].sort());
+  if(typeof v === 'object') return JSON.stringify(Object.keys(v).sort().map(k => [k, norm(v[k])]));
   if(typeof v === 'boolean') return v;
   if(typeof v === 'number') return String(+v.toFixed(4));
   if(typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v)) return v.toLowerCase();
@@ -75,8 +76,9 @@ const ENUM = {
   borderStitch: v => v === 'vine' ? 'hearts' : 'vine',
   cardStitch: v => v === 'beads' ? 'stars' : 'beads',
   cardFx: v => v === 'frost' ? 'lens' : 'frost',
-  baseType: v => v === 'linen' ? 'grain' : 'linen',
-  baseBlend: v => v === 'multiply' ? 'screen' : 'multiply',
+  // the lower surface, whole (its keys are the upper's), and its locks
+  baseLayer: v => ({ ...v, textureType: 'linen', texP1: '83', texP2: '77', textureOpacity: 61, textureBlend: 'difference', textureTint1: '#123456', textureSeed: 4321 }),
+  baseLocks: () => ['texP2', 'textureBlend'],
   forgeGraph: v => v === '{"drawflow":{"Home":{"data":{}}},"audit":1}' ? '{"drawflow":{"Home":{"data":{}}},"audit":2}' : '{"drawflow":{"Home":{"data":{}}},"audit":1}',
   fx1Type: v => v === 'glow' ? 'outline' : 'glow', fx2Type: v => v === 'bevel' ? 'chromatic' : 'bevel', fx3Type: v => v === 'erosion' ? 'shadow' : 'erosion',
   underAll: v => v === 'wave' ? 'double' : 'wave',
@@ -84,7 +86,7 @@ const ENUM = {
 const SLIDERS = { borderBloom:'42', vignetteAperture:'41', vignetteCx:'12', vignetteCy:'88',
   vignetteNoise:'9', typeEffectStrength:'67', typeEffectAngle:'212', typeEffectDistance:'140',
   typeEffectGrain:'33', bgRadialX:'23', bgRadialY:'71', bgRadialR:'111', borderGrain:'37',
-  borderRadius:'144', cardRadius:'153', cardFxAmount:'37', cardFxScale:'71', baseOpacity:'61', baseP1:'83', baseP2:'77', cardGradientAngle:'217', cardOpacity:'58', borderGradientAngle:'123',
+  borderRadius:'144', cardRadius:'153', cardFxAmount:'37', cardFxScale:'71', cardGradientAngle:'217', cardOpacity:'58', borderGradientAngle:'123',
   textureLightTilt:'63', texP4:'43', texP5:'77', texP6:'31', fx1K1:'23', fx1K2:'61', fx1Angle:'137', fx2K1:'17', fx2K2:'44', fx2Angle:'211', fx3K1:'29', fx3K2:'53', fx3Angle:'301' };
 let hexN = 0;
 const freshHex = () => '#' + (0x1a2b3c + (++hexN) * 0x050709).toString(16).slice(-6);
@@ -104,6 +106,8 @@ function mutate(key, v){
 const DERIVED = new Set(['customW', 'customH', 'customSize', 'aspect', 'textureSeedWords', 'lookVersion']);   // (aspect: a loaded look never changes the page's shape — Ruby; pass 2)   // (lookVersion: the format a look was saved in, written fresh each save)   // (the seed's words follow the seed: seedWords.test checks they survive)
 
 // ---------- pass 1: every key ----------
+// (with Two Surfaces on, so the lower surface is saved too)
+reg['baseToggle'].checked = true; reg['baseToggle'].dispatchEvent({ type: 'change' });
 const base = save();
 const changed = {};
 const unknown = [];

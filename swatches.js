@@ -25,6 +25,7 @@ export function swatchTexturesArrived(){
 import { buildLines } from './textParsers.js';
 import { spellToPML } from './spell.js';
 import { SWATCH } from './tunables.js';
+import { CANVAS_BLENDS } from './boxFx.js';
 
 /**
  * Paints one swatch: the ground, a hint of its surface, its border, and its
@@ -32,6 +33,29 @@ import { SWATCH } from './tunables.js';
  * from a full render — a few thousand pixels each, cached like any other
  * texture, so sixteen of them cost about one ordinary repaint.
  */
+/** One surface layer onto a swatch, in small: false while its texture is still being made. */
+function swLayer(c, L, w, h){
+  try {
+    const caps = capsFor(L.textureType);
+    const type = L.textureType === 'astral' ? 'astral_stars' : L.textureType;
+    // (a canvas mixes the canvas's own blends; the per-pixel ones (⚡) show as the surface's first)
+    const blend = L.textureBlend && (caps.blends.includes(L.textureBlend) || CANVAS_BLENDS.includes(L.textureBlend)) ? L.textureBlend : caps.blends[0];
+    // every knob and hue the look sets, so a tile is the look in small
+    const opts = { accent1: L.accent1, accent2: L.accent2, seed: (L.textureSeed != null ? L.textureSeed : SWATCH.fallbackSeed), p1: L.texP1, p2: L.texP2, p3: L.texP3, p4: L.texP4, p5: L.texP5, p6: L.texP6,
+      light: L.textureLight != null ? +L.textureLight : 315, lightTilt: L.textureLightTilt != null ? +L.textureLightTilt : undefined,
+      tint1: L.textureTint1 || null, tint2: L.textureTint2 || null, tint3: L.textureTint3 || null, tint4: L.textureTint4 || null, tint5: L.textureTint5 || null, tint6: L.textureTint6 || null,
+      blend: L.textureGround || blend };
+    const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
+    if(!tex) return !swatchSource;
+    c.save();
+    c.globalCompositeOperation = blend || 'overlay';
+    c.globalAlpha = Math.min(1, (L.textureOpacity || 30) / 100);
+    c.drawImage(tex, 0, 0, w, h);
+    c.restore();
+  } catch(e){ /* a swatch is never worth failing a render over */ }
+  return true;
+}
+
 export function paintPresetSwatch(canvas, p, w, h, onPainted = null){
   canvas.width = w; canvas.height = h;
   const c = canvas.getContext('2d');
@@ -51,26 +75,12 @@ export function paintPresetSwatch(canvas, p, w, h, onPainted = null){
   }
   c.fillRect(0, 0, w, h);
 
-  // surface
+  // surface: the lower one first, when the look has two (a look's lower surface keeps the upper's keys)
   if(p.texture && p.textureType){
-    try {
-      const caps = capsFor(p.textureType);
-      const type = p.textureType === 'astral' ? 'astral_stars' : p.textureType;
-      const blend = p.textureBlend && caps.blends.includes(p.textureBlend) ? p.textureBlend : caps.blends[0];
-      // every knob and hue the look sets, so a tile is the look in small
-      const opts = { accent1: p.accent1, accent2: p.accent2, seed: (p.textureSeed != null ? p.textureSeed : SWATCH.fallbackSeed), p1: p.texP1, p2: p.texP2, p3: p.texP3, p4: p.texP4, p5: p.texP5, p6: p.texP6,
-        light: p.textureLight != null ? +p.textureLight : 315, lightTilt: p.textureLightTilt != null ? +p.textureLightTilt : undefined,
-        tint1: p.textureTint1 || null, tint2: p.textureTint2 || null, tint3: p.textureTint3 || null, tint4: p.textureTint4 || null, tint5: p.textureTint5 || null, tint6: p.textureTint6 || null, blend };
-      const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
-      if(!tex && swatchSource){ swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; } else swatchWaiting.delete(canvas);
-      if(tex){
-        c.save();
-        c.globalCompositeOperation = blend || 'overlay';
-        c.globalAlpha = Math.min(1, (p.textureOpacity || 30) / 100);
-        c.drawImage(tex, 0, 0, w, h);
-        c.restore();
-      }
-    } catch(e){ /* a swatch is never worth failing a render over */ }
+    if(p.baseToggle && p.baseLayer && p.baseLayer.textureType && !swLayer(c, { ...p.baseLayer, accent1: p.accent1, accent2: p.accent2 }, w, h)){
+      swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; }
+    else if(!swLayer(c, p, w, h)){ swatchWaiting.set(canvas, [p, w, h, onPainted]); onPainted = null; }
+    else swatchWaiting.delete(canvas);
   }
 
   // the inset box and the border, scaled down from the page: both share one

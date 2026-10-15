@@ -123,6 +123,13 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
   font-size:12.5px; color:var(--text-dim); cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
 .radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
+/* SURFACE LAYERS: Two Surfaces, and which one the controls below change (shown once there are two) */
+.layer-bar{ display:flex; flex-direction:column; gap:6px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+.layer-seg{ display:none; }
+.layer-bar.two .layer-seg{ display:flex; }
+.layer-seg .layer-swap{ flex:0 1 auto; padding:5px 12px; }
+/* while the lower surface is shown, the card says so: its border takes the second accent */
+body.editing-lower #textureBlock{ box-shadow:inset 2px 0 0 var(--accent-2); padding-left:8px; }
 
 button.ghost{
   width:100%; padding:5px 0; border-radius:2px;

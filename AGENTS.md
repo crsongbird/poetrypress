@@ -244,7 +244,7 @@ current), `tools/` (§2).
 ### 5.1 · Rendering
 `render()` draws, in order:
 1. backdrop;
-2. texture(s): the base layer first, then the main one;
+2. the surface: the lower layer first (Two Surfaces), then the upper;
 3. vignette;
 4. inset box;
 5. border (its bloom on its own half-resolution layer);
@@ -982,8 +982,23 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   "ways") → Tendrils (Runions' space colonization, steered into the ways).
 - **Watercolor Wash:** Washes → Pigment → Pigment (any gray map laid as
   watercolor).
-- **Texture layers:** the base layer is drawn first, in its own slot,
-  seeded `seed ^ 0x5bd1e995`. Presets turn it off.
+- **Two Surfaces** (the surface layers, appEvents `SURFACE LAYERS`): one set
+  of controls edits whichever layer the layer bar shows; the other waits in
+  `state.layers.other` under the same keys (its locks, reading and
+  hue-following beside it).
+  - A look saves the upper under its own keys and the lower as `baseLayer`
+    (`baseLocks`), whichever is shown. `exchangeLayers` trades the controls
+    with the waiting layer; Swap is that, kept as a step.
+  - The renderer draws both with `drawSurfaceLayer` (the lower in the `base`
+    slots): the shown one from the page (`surfaceFromDom`), the waiting one
+    from `setSurfaceSource`. The report (§Surf…) always tells of the upper.
+  - Every blend for every layer (`SURFACE_BLENDS`: the canvas's own and the ⚡
+    ones mixed per pixel by `boxBlend`). A grey surface is made on its blend's
+    neutral ground (`blendFamily`); `textureGround` keeps an older look's
+    ground until its blend is changed.
+  - A new lower starts as Waking Grain on `seed ^ 0x5bd1e995`. Presets clear
+    it (unless something of it is locked). Old looks' `baseType`… keys become
+    `baseLayer` in `retireBaseLayer`.
 
 ---
 

@@ -521,8 +521,8 @@ export function parseHex(hex){
  *   black  screen, lighten, color-dodge     -> black
  */
 export function blendFamily(blend){
-  if(['multiply', 'darken', 'color-burn'].includes(blend)) return 'white';
-  if(['screen', 'lighten', 'color-dodge', 'lighter'].includes(blend)) return 'black';
+  if(['multiply', 'darken', 'color-burn', 'linear-burn', 'divide'].includes(blend)) return 'white';
+  if(['screen', 'lighten', 'color-dodge', 'lighter', 'subtract'].includes(blend)) return 'black';
   return 'mid';
 }
 

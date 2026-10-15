@@ -35,26 +35,35 @@ check('swatches are painted, not CSS gradients',
 const sw = readFileSync(new URL('../swatches.js', import.meta.url), 'utf8');
 const paint = (sw.match(/function paintPresetSwatch[\s\S]*?\n\}/) || [''])[0];
 check('the painter exists', paint.length > 400);
-check('it paints the ground', /fillRect\(0, 0, w, h\)/.test(paint));
-check('it paints the surface', /getTextureCanvas\(/.test(paint));
-check('it honours the preset\'s blend, or the texture\'s default',
-  /const blend = p\.textureBlend && caps\.blends\.includes\(p\.textureBlend\) \? p\.textureBlend : caps\.blends\[0\]/.test(paint) &&
-  /globalCompositeOperation = blend/.test(paint));
-check('it honours the texture opacity', /textureOpacity/.test(paint));
-check('it draws the border when the preset has one', /if\(p\.border && p\.borderColor\)\{[\s\S]*?frame\(\); c\.stroke\(\);/.test(paint));
-check('it draws the inset box when the preset has one, rounded when the frame is', /if\(p\.cardToggle\)\{[\s\S]*?c\.fill\(\);/.test(paint) && /p\.borderRounded \?/.test(paint));
-check('it draws the glyphs', /spellToPML\(p\.spell\)/.test(paint));
-check('glyphs use the preset\'s own accents',
-  /sg\.color === 'accent1' \? \(p\.accent1/.test(paint));
-check('a swatch failure can never break the page', /catch\(e\)\{ \/\* a swatch is never worth/.test(paint));
-
-// cost: generated at swatch size, not full size then scaled
-check('the texture is generated at swatch size',
-  /getTextureCanvas\(type, w, h,/.test(paint));
-
-// the composite texture has no generator of its own under that name
-check('the composite starfield is mapped to a real generator',
-  /p\.textureType === 'astral' \? 'astral_stars'/.test(paint));
+// what it paints, by behavior: a canvas that writes down what is drawn on it, and a texture source that
+// writes down what it is asked for (the app's own is put back at the end)
+const { paintPresetSwatch, setSwatchTextureSource } = await import('../swatches.js');
+const asked = [];
+const recCanvas = () => {
+  const ops = [], base = { ops, globalCompositeOperation: 'source-over', globalAlpha: 1, fillStyle: '#000',
+    fillRect(){ ops.push(['fill', this.fillStyle]); }, drawImage(img){ ops.push(['draw', img && img.tex, this.globalCompositeOperation, this.globalAlpha]); },
+    measureText(t){ return { width: String(t || '').length * 6 }; }, createLinearGradient(){ return { addColorStop(){} }; } };
+  const ctx = new Proxy(base, { get: (t, k) => k in t ? t[k] : () => {} });
+  return { width: 0, height: 0, getContext: () => ctx, ops };
+};
+const paintWith = (look, source) => { setSwatchTextureSource(source); const cv = recCanvas(); paintPresetSwatch(cv, look, 120, 40); return cv.ops; };
+const src = (type, w, h, opts) => { asked.push({ type, w, h, opts }); return { tex: type, width: w, height: h }; };
+{
+  const ops = paintWith({ bg1: '#102030', texture: true, textureType: 'hatch', textureBlend: 'multiply', textureOpacity: 40 }, src);
+  check('it paints the ground', ops.some(o => o[0] === 'fill' && o[1] === '#102030'));
+  check('it paints the surface, in its blend and opacity', ops.some(o => o[0] === 'draw' && o[1] === 'hatch' && o[2] === 'multiply' && Math.abs(o[3] - 0.4) < 1e-6));
+  check('the texture is made at swatch size', asked.some(a => a.type === 'hatch' && a.w === 120 && a.h === 40));
+  const def = paintWith({ bg1: '#000', texture: true, textureType: 'hatch', textureBlend: 'vivid-light' }, src);
+  check('a blend a canvas can\'t mix (⚡) shows as the surface\'s own first', def.some(o => o[0] === 'draw' && o[2] === 'overlay'));
+  asked.length = 0; paintWith({ bg1: '#000', texture: true, textureType: 'astral' }, src);
+  check('the composite starfield is asked for by a real generator', asked.some(a => a.type === 'astral_stars'));
+  const two = paintWith({ bg1: '#000', texture: true, textureType: 'hatch', baseToggle: true, baseLayer: { textureType: 'linen', textureBlend: 'screen', textureOpacity: 70 } }, src);
+  const iLow = two.findIndex(o => o[0] === 'draw' && o[1] === 'linen'), iUp = two.findIndex(o => o[0] === 'draw' && o[1] === 'hatch');
+  check('a look with two surfaces shows both, the lower beneath', iLow >= 0 && iUp > iLow && two[iLow][2] === 'screen');
+  let threw = null; try { paintWith({ bg1: '#000', texture: true, textureType: 'hatch' }, () => { throw new Error('boom'); }); } catch(e){ threw = e; }
+  check('a swatch failure can never break the page', threw === null);
+  setSwatchTextureSource(src);   // (a source that answers, for the tiles below)
+}
 
 // the Spellcrafting wheel shares the painter rather than duplicating it
 check('the wheel uses the same painter', /deps\.paintSwatch/.test(vault));

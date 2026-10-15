@@ -4,6 +4,26 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Prometheus (2026-10-15)
+
+- **Two Surfaces, each with every control.** Turn on Two Surfaces in the
+  Surface Texture card and a second surface lies beneath the first. Upper
+  and Lower choose which one the controls below change: its variant, every
+  slider, its hues, its light, its seed, its readings and its locks. (The
+  old base layer had only two sliders; looks made with it open as before.)
+- **Swap** trades the two surfaces whole, blend and locks included.
+- **Every blend for every surface.** The Blend Mode menu lists the blends
+  made for the surface first, then every other: the canvas's own and six
+  more mixed pixel by pixel (Vivid Light, Linear Light, Pin Light, Linear
+  Burn, Subtract, Divide, marked ⚡). A grey surface is made on the ground
+  that suits the blend it is given, so the blend changes only its marks.
+- **Text Clearing** moved to the Text Effects card, beside the effects it
+  works with. It quiets both surfaces behind the words.
+- Preset and history tiles show both surfaces of a look.
+- The saved image's alt text names the surface beneath, and the report's
+  §Surf variables always describe the surface on top, whichever the
+  controls show.
+
 ## Saturn–Atlas (2026-10-15)
 
 - **The wiki turns its own pages.** Every page of the Athanor's wiki ends in a

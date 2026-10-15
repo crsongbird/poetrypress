@@ -17,7 +17,7 @@ import { readFileSync } from 'fs';
 let failures = 0;
 const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-const html = src('index.html'), ev = src('appEvents.js'), vault = src('vault.js');
+const html = src('index.html'), ev = src('appEvents.js'), vault = src('vault.js'), renderer = src('canvasRenderer.js');
 
 // controls that are deliberately NOT part of a look — each with its reason
 const EXEMPT = {
@@ -36,13 +36,18 @@ const EXEMPT = {
 };
 
 const ids = [...html.matchAll(/<(input|select|textarea)\b[^>]*\bid="([^"]+)"[^>]*>/g)].map(m => m[2]);
-const body = name => { const a = ev.indexOf('function ' + name + '('); const b = ev.indexOf('\nfunction ', a + 10); return a < 0 ? '' : ev.slice(a, b < 0 ? undefined : b); };
+const bodyIn = (text, name) => { const a = text.search(new RegExp('function ' + name + '\\(')); const b = text.indexOf('\nfunction ', a + 10); return a < 0 ? '' : text.slice(a, b < 0 ? undefined : b); };
+const body = name => bodyIn(ev, name);
 const persisted = ev.slice(ev.indexOf('const PERSISTED = ['), ev.indexOf('];', ev.indexOf('const PERSISTED = [')));
 const persistedIds = new Set([...persisted.matchAll(/\[\s*'[^']+',\s*'([^']+)'/g)].map(m => m[1]));
 // a control may be reached through an alias: const fontSelect = $('fontFamily');
 const aliases = {};
 for(const m of ev.matchAll(/^const (\w+) = \$\('([\w-]+)'\);/gm)) (aliases[m[2]] ||= []).push(m[1]);
-const ser = body('serializeCurrentSettings'), res = body('restoreSettings');
+// the surface's own controls are read and written per layer (the upper's or the lower's): the save reads them
+// through surfaceFromDom (canvasRenderer.js), the restore writes them through restoreSurface…()
+const helpers = (text, prefix) => [...new Set([...text.matchAll(new RegExp(`\\b(${prefix}\\w*)\\(`, 'g'))].map(m => m[1]))];
+const ser = body('serializeCurrentSettings') + helpers(body('serializeCurrentSettings'), 'surfaceFromDom').map(n => bodyIn(renderer, n)).join('\n');
+const res = body('restoreSettings') + helpers(body('restoreSettings'), 'restoreSurface').map(body).join('\n');
 const named = (text, id, quoted) => text.includes(quoted ? `'${id}'` : `$('${id}')`) || (aliases[id] || []).some(a => new RegExp(`\\b${a}\\b`).test(text));
 
 check('the page has controls to check (the scan works)', ids.length > 80);
@@ -50,7 +55,7 @@ check('the save and restore functions were found', ser.length > 200 && res.lengt
 const notSaved = [], notRestored = [];
 for(const id of ids){
   if(EXEMPT[id]) continue;
-  if(!(persistedIds.has(id) || named(ser, id, false))) notSaved.push(id);
+  if(!(persistedIds.has(id) || named(ser, id, false) || named(ser, id, true))) notSaved.push(id);
   if(!(persistedIds.has(id) || named(res, id, true) || named(res, id, false))) notRestored.push(id);
 }
 check('every control on the page is SAVED with a look (or exempt, with a reason)', notSaved.length === 0);

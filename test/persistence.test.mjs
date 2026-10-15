@@ -20,7 +20,6 @@ let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const serialize = (ev.match(/function serializeCurrentSettings\(\)\{[\s\S]*?\n\}/) || [''])[0];
 // Mechanical controls are declared once in the PERSISTED table and spread into
 // both the serializer and the restorer, so the table counts as both.
@@ -33,41 +32,8 @@ const applyPre  = (ev.match(/function applyPreset\(p\)\{[\s\S]*?\n\}/) || [''])[
 check('the serializer was found', serialize.length > 100);
 check('the restorer was found', restore.length > 100);
 
-// Only real state: inputs and selects. Labels, value readouts, buttons and
-// wrapper divs are not state and are excluded by element type, not by name.
-const stateIds = [...html.matchAll(/<(input|select|textarea)\b[^>]*\bid="([\w-]+)"/g)]
-  .filter(m => !/^modal/.test(m[2]))
-  .map(m => m[2]);
-check('found a realistic number of stateful controls', stateIds.length > 25);
-
-const skip = new Set([
-  'poemText',          // the poem is saved by the Grimoire, not by settings
-  'soundToggle', 'soundVolume', 'forgeSteps',   // interface sounds: a browser preference (localStorage), not a look
-  'highlightToggle',   // checked separately below
-  'textureSeedLock',   // derived from the seed field
-  'textureSeedWords',  // the seed's phrase: a VIEW of textureSeedValue, which is saved
-  'presetSearch',      // a search over the preset grid: a view, not part of an image
-  'lightDegIn', 'lightTiltIn',   // the dial's numbers: VIEWS of textureLight and textureLightTilt, which are saved
-  'fontFamily',        // captured as `font` by family NAME, asserted below —
-                       // storing the index would break whenever FONTS changes
-  'grimoireList',      // a picker over saved records, not a setting
-  'forgeStarter',      // a one-shot menu: loads a starter into forgeGraph (which is saved)
-  'advancedJson',      // the settings pane itself; capturing it would nest
-  'fullPreview',       // a developer's comparison switch, not part of a look
-  'uiTheme',           // how YOU like the app to look, not part of a saved
-                       // page — its own localStorage key, asserted below
-]);
-const uncaptured = stateIds.filter(id => !skip.has(id) && !serialize.includes(id) && !tableIds.includes(id));
-check('every stateful control is captured by the serializer', uncaptured.length === 0);
-if(uncaptured.length) console.log('   uncaptured:', uncaptured.join(', '));
-
-const unrestored = stateIds.filter(id => !skip.has(id) && serialize.includes(id) && !restore.includes(id) && !tableIds.includes(id));
-check('every captured control is restored again', unrestored.length === 0);
-if(unrestored.length) console.log('   not restored:', unrestored.join(', '));
-
-// features added after the serializer was first written — the usual suspects
-for(const key of ['textureBlend','textureLight','textureTint1','textureTint2','texP1','texP2','spell'])
-  check(`"${key}" survives save/load`, serialize.includes(key) && restore.includes(key));
+// (that every control on the page is saved and restored is test/persistenceCoverage.test.mjs's concern;
+// the round trip at the end shows the values really come back)
 
 // the font is deliberately stored by name, not by index: an index silently
 // points at a different typeface the moment the FONTS list changes
@@ -134,7 +100,9 @@ const norm = v => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v) ? v.toLow
                : v == null ? v : String(v);
 const vals = { borderGradientToggle:true, borderColor2Hex:'#112233', borderBloom:'73',
   vignetteCx:'12', fx1Type:'glow', fx1Angle:'212', fx1Color:'#abcdef',
-  fx2K2:'33' };
+  fx2K2:'33',
+  // the surface's own controls (saved per layer, through surfaceFromDom and restoreSurfaceDetails)
+  textureBlend:'screen', textureLight:'212', textureTint1Hex:'#345678', texP1:'41', texP2:'63' };
 for(const [id, v] of Object.entries(vals)){
   if(typeof v === 'boolean') registry[id].checked = v; else registry[id].value = v;
 }
@@ -154,6 +122,8 @@ check('everything saved comes back after a load', lost.length === 0);
 if(lost.length) console.log('   lost:', lost.map(k => k + ' ' + JSON.stringify(saved[k]) + '->' + JSON.stringify(again[k])).join(', '));
 check('the table fields specifically survive',
   saved.fx1Type === 'glow' && again.fx1Type === 'glow' && again.borderGradientToggle === true);
+check('the surface\'s blend, light, hue and knobs survive',
+  again.textureBlend === 'screen' && String(again.textureLight) === '212' && norm(again.textureTint1) === '#345678' && String(again.texP1) === '41' && String(again.texP2) === '63');
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

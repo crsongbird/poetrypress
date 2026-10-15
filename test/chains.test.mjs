@@ -88,7 +88,7 @@ if(canvasOK){
   const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
   const load = obj => { reg['advancedJson'].value = JSON.stringify(obj); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
   const base = save();
-  check('a look says which format it was saved in', base.lookVersion === 2);
+  check('a look says which format it was saved in', base.lookVersion === 3);
   const { lookVersion, ...old } = base;
   load({ ...old, texture: true, textureType: 'rainstreaks', texP1: '200', texP2: '-30', textureLight: '315' });
   let s = save();

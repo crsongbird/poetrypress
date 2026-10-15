@@ -70,7 +70,9 @@ The page is built in layers, from the bottom up:
 
 1. the **backdrop**: a color or a gradient;
 2. the **surface texture**: one of almost fifty, from film grain to a card
-   game left on a table, blended onto the backdrop;
+   game left on a table, blended onto the backdrop. Turn on **Two Surfaces**
+   for a second one beneath it, with every setting of its own; any blend
+   suits either;
 3. a **vignette**;
 4. the **border** and an inset **box**;
 5. the **text**, with its effects.

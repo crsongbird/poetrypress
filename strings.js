@@ -185,10 +185,10 @@ export const UI_STRINGS = {
   'label.roundedness':                       "Roundedness",
   'label.inset_box':                         "Inset Box?",
   'label.box_glass':                         "Glass",
-  'label.base_layer':                        "Base Layer (a texture beneath)?",
-  'label.base_variant':                      "Base Variant",
-  'label.base_opacity':                      "Base Opacity",
-  'label.base_blend':                        "Base Blend",
+  'label.base_layer':                        "Two Surfaces",
+  'button.layer_upper':                      "Upper",
+  'button.layer_lower':                      "Lower",
+  'button.layer_swap':                       "⇅ Swap",
   'label.glass_strength':                    "Strength",
   'label.glass_scale':                       "Scale",
   'label.box_link':                          "⛓ Shape Linked to Border",
@@ -356,13 +356,29 @@ export const DIALOGS = {
 };
 
 /** The visual menus (chooser.js): the surface menus shown as tiles. */
+/** Blend modes by name, for every surface layer's menu (⚡: mixed per pixel, on the GPU when there is one). */
+export const BLEND_NAMES = {
+  'source-over': 'Normal', multiply: 'Multiply', screen: 'Screen', overlay: 'Overlay', 'soft-light': 'Soft Light', 'hard-light': 'Hard Light',
+  darken: 'Darken', lighten: 'Lighten', 'color-dodge': 'Color Dodge', 'color-burn': 'Color Burn', lighter: 'Linear Dodge',
+  difference: 'Difference', exclusion: 'Exclusion', hue: 'Hue', saturation: 'Saturation', color: 'Color', luminosity: 'Luminosity',
+  'vivid-light': 'Vivid Light ⚡', 'linear-light': 'Linear Light ⚡', 'pin-light': 'Pin Light ⚡', 'linear-burn': 'Linear Burn ⚡',
+  subtract: 'Subtract ⚡', divide: 'Divide ⚡',
+  suits: 'Made for this surface', others: 'Every other blend', default: ' (default)',
+};
+
+/** The two surface layers (the layer bar above the surface's controls). */
+export const SURFACE_LAYERS = {
+  swappedUp: 'The surfaces traded places: the one that was beneath is on top.',
+  swappedDown: 'The surfaces traded places: the one that was on top is beneath.',
+};
 export const CHOOSER = {
   search: 'Search by name, group or mood…',
   close: 'Close',
   open: 'Opens a menu of tiles',
   none: 'Nothing by that name. Try a group (Weather), a mood (rose, frost) or a material (glass).',
   surfaceTitle: 'Surface Variant',
-  baseTitle: 'Base Surface',
+  athanorNamed: 'The Athanor: {name}',
+  athanorEmpty: 'The Athanor (empty)',
 };
 
 /** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk.

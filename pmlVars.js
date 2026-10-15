@@ -14,7 +14,7 @@
  * field are never passed through here.
  *
  * VARIABLES
- *   §SurfName           the surface texture's name ("None" when it is off)
+ *   §SurfName           the surface texture's name ("None" when it is off; the upper one, with Two Surfaces)
  *   §SurfBlendMode      its blend mode
  *   §SurfParamsA        "Knob: [value]  Knob: [value]  Opacity: [moon]" as PML
  *   §SurfParamsB        the texture's hues, each drawn in its own colour, as PML

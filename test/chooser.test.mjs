@@ -41,11 +41,10 @@ check('a search needs every word, anywhere in the name, group or extra words',
     Object.keys(R.TEXTURE_STAMPS).length > 40 && typeof R.SWATCH_STAMP === 'string' && R.SWATCH_STAMP.length === 8);
 }
 check('the cache key is versioned', /\.v\d+$/.test(CHOOSER_CACHE_KEY));
-check('both surface menus are shown as choosers, and refreshUi keeps their buttons current',
-  /\[\$\('textureType'\), CHOOSER\.surfaceTitle\], \[\$\('baseType'\), CHOOSER\.baseTitle\]/.test(ev) && /for\(const ch of CHOOSERS\) ch\.refresh\(\)/.test(ev));
+check('the surface menu is shown as a chooser, and refreshUi keeps its button current',
+  /attachChooser\(sel, \{ id: sel\.id, title: CHOOSER\.surfaceTitle/.test(ev) && /for\(const ch of CHOOSERS\) ch\.refresh\(\)/.test(ev));
 check('a thumbnail is the surface as a preset wears it, made at three times the tile and drawn down',
   /const wornBy = type =>/.test(ev) && /canvas\.width\*3, canvas\.height\*3/.test(ev));
-check('the base menu takes real groups only (an <option> has a label too)', /String\(g\.tagName\)\.toUpperCase\(\) !== 'OPTGROUP' \|\| g\.id === 'athanorGroup'/.test(ev));
 check('the preset grid has a search, and its group headings are buttons that fold',
   /id="presetSearch"/.test(html) && /hd\.type = 'button'; hd\.className = 'preset-group-head'/.test(ev) && /PRESET_FOLD_KEY = 'uv\.presets\.folded'/.test(ev));
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');

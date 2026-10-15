@@ -71,7 +71,7 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
   const T = await import('../textureGenerators.js');
   check('the Athanor is a surface like any other: its own Surface Variant, keyed by its graph, carried by the renderer',
     T.TEXTURE_PARAMS.athanor.length === 6 && T.textureKeyFor('athanor', 10, 10, { graph }) !== T.textureKeyFor('athanor', 10, 10, { graph: '' })
-    && /const graph = type === 'athanor' \? \(\(\$\('forgeGraph'\) \|\| \{\}\)\.value \|\| ''\) : undefined;/.test(readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8'))
+    && /const graph = type === 'athanor' \? \(L\.forgeGraph \|\| ''\) : undefined;/.test(readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8'))
     && html.includes('<option value="athanor" id="athanorOption">'));
   check('the page names its sliders and hues from the graph, before a look\'s knobs are restored',
     /function applyAthanorGraph\(redraw = true\)\{/.test(ev) && ev.indexOf("if(s.forgeGraph !== undefined && $('forgeGraph'))") < ev.indexOf('syncTextureParams(true);\n  syncTextureTools(true);'));

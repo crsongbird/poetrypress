@@ -92,7 +92,7 @@ written; `\§` writes a literal §.
 
 | Variable | Becomes |
 |---|---|
-| `§SurfName` · `§SurfBlendMode` · `§LightDir` · `§TextureSeed` | the texture's name, blend, light arrow, seed |
+| `§SurfName` · `§SurfBlendMode` · `§LightDir` · `§TextureSeed` | the texture's name, blend, light arrow, seed (with Two Surfaces, the upper one's) |
 | `§SurfParamsA` | `Knob: [value]  Knob: [value]  Opacity: [value] {moon}`, as PML |
 | `§SurfParamsB` | the texture's hues, each in its own color |
 | `§MoonPhase!tonight` · `!seed` · `!opacity` | a moon: tonight's, the Fractal Moon's for this seed, the opacity |

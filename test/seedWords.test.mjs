@@ -59,7 +59,7 @@ const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'), ht
 check('the seed field shows the phrase; the number stays the saved value (as a tooltip only — no number on show)',
   html.includes('id="textureSeedWords"') && /id="textureSeedValue"[^>]*hidden/.test(html) && !html.includes('textureSeedNumber') && /const n = seedFromText\(box\.value\);/.test(ev));
 check('what was typed is kept: saved with the look, and restored when it is still that seed\'s (a typed number stays a number)',
-  /textureSeedWords: \(\$\('textureSeedWords'\) \|\| \{\}\)\.value \|\| '',/.test(ev) && /seedFromText\(s\.textureSeedWords\) === n\)\{ box\.value = s\.textureSeedWords;/.test(ev)
+  /textureSeedWords: v\('textureSeedWords'\) \|\| ''/.test(readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8')) && /seedFromText\(s\.textureSeedWords\) === n\)\{ box\.value = s\.textureSeedWords;/.test(ev)
   && !/if\(\/\^\\s\*-\?\\d\+\\s\*\$\/\.test\(box\.value\)\) syncSeedWords\(true\)/.test(ev));
 check('one line, the whole width, last in the tools; a hair-thin themed scroller when the words overflow (no native bar)',
   /<input type="text" id="textureSeedWords"/.test(html) && html.includes('id="textureSeedScroll"')

@@ -22,6 +22,9 @@
 
 const BFX_MAX = 1024;            // the working rectangle's long side, at most
 export const BOX_GPU_BLENDS = ['vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
+/** The blends a canvas mixes itself (globalCompositeOperation): with BOX_GPU_BLENDS, every blend a surface layer can take. */
+export const CANVAS_BLENDS = ['source-over', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'darken', 'lighten', 'color-dodge', 'color-burn',
+  'lighter', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'];
 
 const BFX_FRAG = `#version 300 es
 precision highp float;
@@ -232,14 +235,16 @@ export function boxGlass(src, r, mode, amount, scale, S = 1, seed = 0){
 }
 
 /**
- * A blend the canvas can't do: the box's own layer `layer` (its rectangle
- * `lr` in that layer's pixels) mixed with the backdrop under it. Returns a
- * canvas for the rectangle `r`, already blended (draw it normally).
+ * A blend the canvas can't do: a layer `layer` (its rectangle `lr` in that
+ * layer's pixels: the box's own, or a whole surface layer) mixed with what
+ * lies under it. Returns a canvas for the rectangle `r`, already blended
+ * (draw it normally). `full`: work at the rectangle's own size.
  */
-export function boxBlend(src, r, layer, lr, blend, opacity){
+export function boxBlend(src, r, layer, lr, blend, opacity, full = false){
   const bi = BOX_GPU_BLENDS.indexOf(blend);
   if(bi < 0 || !src || !layer || r.w < 2 || r.h < 2) return null;
-  const { ww, wh } = bfxWork(r.w, r.h);
+  // the box's glass may be worked small; a surface layer (full) is mixed at its own size, pixel for pixel
+  const { ww, wh } = full ? { ww: Math.round(r.w), wh: Math.round(r.h) } : bfxWork(r.w, r.h);
   const crop = bfxCrop(src, r, ww, wh), aux = bfxCrop(layer, lr, ww, wh);
   const gpu = bfxRunGpu([{ mode: 9, blend: bi, opacity }], crop, aux, ww, wh);
   if(gpu) return gpu;

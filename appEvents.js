@@ -38,7 +38,7 @@ import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './ef
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem } from './canvasRenderer.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
@@ -46,11 +46,12 @@ import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
 import { moonPhase, moonGlyph, moonGlyphURI, phaseName } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
+import { blendFamily } from './texCore.js';
 import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from './swatches.js';
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
-import { applyStrings, fill, PICKER, CHOOSER, DIE, KEPT } from './strings.js';
+import { applyStrings, fill, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -76,6 +77,9 @@ const state = {
   page: { align: 'left', valign: 'center', aspect: '9:16', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
   ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
   locks: new Set(),
+  // SURFACE LAYERS: which one the controls show (upper or lower), the other one's settings (a layer: the
+  // upper's own keys), its locks, and its reading and hue-following; see the surface layers section
+  layers: { editing: 'upper', other: null, otherLocks: [], otherUi: null },
   // undo/redo: look snapshots (see the history section)
   history: { stack: [], index: -1, restoring: false, timer: null },
 };
@@ -309,49 +313,96 @@ toggleSubblock('borderToggle','borderBlock');
 toggleSubblock('accent1Toggle','accent1Block');
 toggleSubblock('accent2Toggle','accent2Block');
 toggleSubblock('textureToggle','textureBlock');
-toggleSubblock('baseToggle','baseBlock');
 
-// ---------- TEXTURE LAYERS: a base texture under the main one ----------
-// Its own variant, two of its knobs, an opacity and a blend; the light, the
-// seed (turned, so it never echoes the main one) and the variant's own
-// default hues come from the page.
-{
-  const bt = $('baseType'), main = $('textureType');
-  if(bt && main && main.children && typeof document.createElement === 'function'){
-    for(const g of Array.from(main.children)){
-      if(String(g.tagName).toUpperCase() !== 'OPTGROUP' || g.id === 'athanorGroup') continue;
-      const og = document.createElement('optgroup'); og.label = g.label;
-      for(const o of Array.from(g.children || [])){ if(o.value === 'astral' || o.value === 'athanor') continue;
-        const op = document.createElement('option'); op.value = o.value; op.textContent = o.textContent; og.appendChild(op); }
-      bt.appendChild(og);
-    }
-    if(!bt.value) bt.value = 'grain';
-  }
-  const bb = $('baseBlend');
-  if(bb && 'innerHTML' in bb) bb.innerHTML = [['overlay','Overlay'],['soft-light','Soft Light'],['hard-light','Hard Light'],['multiply','Multiply'],['screen','Screen'],
-    ['darken','Darken'],['lighten','Lighten'],['color-dodge','Color Dodge'],['color-burn','Color Burn'],['source-over','Normal'],['difference','Difference'],['exclusion','Exclusion']]
-    .map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+// ---------- SURFACE LAYERS (Ruby: "all controls for the second layer, a swap, every blend") ----------
+// Two surfaces, one above the other. The controls show ONE of them (the layer bar picks which); the
+// other's settings wait in state.layers.other, under the same keys the upper saves with. A look always
+// saves the upper under its own keys and the lower as `baseLayer`, whichever the controls show; Swap
+// trades the two whole, locks included.
+const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt',
+  'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround'];
+const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'textureSeedValue',
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
+const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
+const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
+/** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
+function freshLower(){
+  const defs = paramsFor('grain'), caps = capsFor('grain');
+  const L = { textureType: 'grain', textureOpacity: 50, textureBlend: 'overlay', textureLight: $('textureLight').value, textureLightTilt: '100',
+    textureSeed: ((parseInt($('textureSeedValue').value, 10) || 0) ^ 0x5bd1e995) >>> 0, textureSeedWords: '', forgeGraph: '' };
+  defs.forEach((d, i) => { L['texP' + (i + 1)] = String(d.def); });
+  (caps.tintDefaults || []).forEach((c, i) => { L['textureTint' + (i + 1)] = c === 'accent1' ? $('accent1ColorHex').value : c === 'accent2' ? $('accent2ColorHex').value : c; });
+  return L;
 }
-/** The base layer's two knobs, named and ranged for its variant. */
-function syncBaseParams(useDefaults){
-  const defs = paramsFor(($('baseType') || {}).value || 'grain');
-  [1, 2].forEach(i => {
-    const d = defs[i - 1], f = $('baseP' + i + 'Field'), el = $('baseP' + i), lab = $('baseP' + i + 'Label'), out = $('baseP' + i + 'Val');
-    if(f && f.style) f.style.display = d ? '' : 'none';
-    if(!d || !el) return;
-    el.min = d.min; el.max = d.max; if(useDefaults) el.value = d.def;
-    if(lab) setLabelText(lab, d.label);
-    if(out) out.textContent = paramReadout(d, +el.value);
-  });
+/** The controls show the other layer, and the one they showed waits (its locks with it, the reading it wears
+ *  and whether its hues follow the accents). Not a change to the look. */
+function exchangeLayers(){
+  const L = state.layers, shown = pickLayer(surfaceFromDom()), shownLocks = [...state.locks].filter(id => LAYER_LOCK_IDS.has(id));
+  const shownUi = { element: state.ui.element, follows: [...state.ui.tintFollows] };
+  const fresh = !L.other, next = L.other || freshLower(), nextLocks = L.otherLocks || [];
+  const nextUi = L.otherUi || { element: null, follows: fresh ? [true, true] : [false, false] };
+  const was = state.history.restoring; state.history.restoring = true;   // (not a step of its own)
+  try {
+    for(const id of LAYER_LOCK_IDS) state.locks.delete(id);
+    restoreSurfaceLayer(next);
+    for(const id of nextLocks) state.locks.add(id);
+  } finally { state.history.restoring = was; }
+  state.ui.element = nextUi.element; state.ui.tintFollows = [...nextUi.follows];
+  L.other = shown; L.otherLocks = shownLocks; L.otherUi = shownUi;
 }
-function syncBaseUi(){
-  if($('baseBlock') && $('baseToggle')) $('baseBlock').classList.toggle('open', $('baseToggle').checked);
-  syncBaseParams(false);
+/** Show the upper or the lower layer's settings. */
+function editLayer(which){
+  if(which === 'lower' && !lowerOn()) which = 'upper';
+  if(which === state.layers.editing) { paintLayerBar(); return; }
+  exchangeLayers(); state.layers.editing = which;
+  refreshUi(); scheduleRender();
 }
-if($('baseType') && $('baseType').addEventListener) $('baseType').addEventListener('change', () => { syncBaseParams(true); scheduleRender(); });
-for(const id of ['baseP1', 'baseP2', 'baseOpacity', 'baseBlend']){ const el = $(id); if(!el || !el.addEventListener) continue;
-  const on = () => { syncBaseParams(false); paintMoons(); scheduleRender(); }; el.addEventListener('input', on); el.addEventListener('change', on); }
-syncBaseParams(true);
+/** Trade the two surfaces (Ruby: everything about each, blend and locks too): the controls keep their place. */
+function swapLayers(){
+  if(!lowerOn()) return;
+  exchangeLayers(); refreshUi(); scheduleRender(); commitSoon();
+  toast(state.layers.editing === 'upper' ? SURFACE_LAYERS.swappedUp : SURFACE_LAYERS.swappedDown);
+}
+/** A surface's name as its menu shows it (an Athanor surface's from its own graph). */
+function surfaceNameOf(type, graph){
+  if(type === 'athanor' && graph !== undefined) return athanorTitleOf(graph);
+  const sel = $('textureType'), o = sel && sel.querySelector ? sel.querySelector(`option[value="${type}"]`) : null;
+  return o ? o.textContent.replace(/\s*\(default\)\s*$/i, '').trim() : String(type || '');
+}
+function paintLayerBar(){
+  const on = lowerOn(), bar = $('layerBar');
+  if(bar && bar.classList) bar.classList.toggle('two', on);
+  const seg = $('layerSeg');
+  if(seg && seg.querySelectorAll) seg.querySelectorAll('[data-layer]').forEach(b => {
+    const me = b.dataset.layer === state.layers.editing; b.classList.toggle('active', me); b.setAttribute('aria-pressed', String(me)); });
+  if(document.body && document.body.classList) document.body.classList.toggle('editing-lower', on && state.layers.editing === 'lower');
+}
+function syncBaseUi(){ if(!lowerOn() && state.layers.editing === 'lower') editLayer('upper'); paintLayerBar(); }
+if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
+if($('layerSwap') && $('layerSwap').addEventListener) $('layerSwap').addEventListener('click', swapLayers);
+if($('baseToggle') && $('baseToggle').addEventListener) $('baseToggle').addEventListener('change', () => {
+  if(lowerOn() && !state.layers.other && state.layers.editing === 'upper'){ state.layers.other = freshLower(); state.layers.otherUi = { element: null, follows: [true, true] }; }
+  syncBaseUi(); scheduleRender(); });
+// the renderer draws the layer the controls don't show from here
+setSurfaceSource(() => ({ editing: state.layers.editing, other: state.layers.other, lowerOn: lowerOn(), otherReading: readingOf(state.layers.other, state.layers.otherUi) }));
+/** The reading a waiting surface wears, as its row would say it (§Reading). */
+function readingOf(L, ui){
+  if(!L || !ui || !ui.element) return '';
+  const v = elementsFor(L.textureType).find(e => e.el === ui.element);
+  return v ? `${v.glyph} ${v.name}` : '';
+}
+/** A look's layers, as it saves them: the upper under its own keys, the lower as baseLayer (and its locks). */
+function layersIntoLook(s){
+  const L = state.layers;
+  if(L.editing === 'lower'){
+    const shown = pickLayer(s), shownLocks = (s.locks || []).filter(id => LAYER_LOCK_IDS.has(id));
+    Object.assign(s, L.other || {});
+    s.locks = [...(s.locks || []).filter(id => !LAYER_LOCK_IDS.has(id)), ...(L.otherLocks || [])];
+    s.baseLayer = shown; s.baseLocks = shownLocks;
+  } else if(L.other){ s.baseLayer = { ...L.other }; s.baseLocks = [...(L.otherLocks || [])]; }
+  return s;
+}
 toggleSubblock('vignetteToggle','vignetteBlock');
 $('vignetteBlend').addEventListener('change', scheduleRender);
 $('vignetteIntensity').addEventListener('input', ()=>{ $('vignetteIntensityVal').textContent=$('vignetteIntensity').value+'%'; scheduleRender(); });
@@ -662,23 +713,27 @@ function poemAltText(){
     poem = buildLines(raw, a1, a2).map(l => l.isBlank ? '' : (l.parts || [{ segments: l.segments || [] }])
       .map(p => (p.segments || []).map(s => s.text || '').join('')).join(' ').replace(/[\uE100-\uE23F]/g, '').replace(/\s+/g, ' ').trim());
   } catch(e){ poem = raw.split('\n'); }
-  const type = v('textureType'), caps = capsFor(type) || {}, defs = paramsFor(type) || [];
+  // the two surfaces, whichever the controls show (a reading belongs to the one shown)
+  const shown = pickLayer(surfaceFromDom()), editingLower = state.layers.editing === 'lower';
+  const upperL = editingLower ? (state.layers.other || {}) : shown, lowerL = editingLower ? shown : state.layers.other;
   const row = $('elementRow'), applied = row && row.dataset && row.dataset.applied;
-  const reading = applied ? elementsFor(type).find(e => e.el === state.ui.element) : null;
+  const describeSurface = (L, isShown) => {
+    const t = L.textureType, caps = capsFor(t) || {}, defs = paramsFor(t) || [];
+    const reading = isShown && applied ? elementsFor(t).find(e => e.el === state.ui.element) : null;
+    return { type: t, name: surfaceNameOf(t, L.forgeGraph), reading: reading && !reading.isDefault ? reading.name : null, element: reading ? reading.element : null,
+      opacity: +L.textureOpacity || 0, blend: L.textureBlend,
+      knobs: defs.map((d, i) => ({ label: d.label, value: +L['texP' + (i + 1)], min: d.min, max: d.max })),
+      hues: [L.textureTint1, L.textureTint2].slice(0, caps.tints || 0),
+      light: caps.light && !caps.dial ? { deg: +L.textureLight || 0, tilt: +L.textureLightTilt } : null };
+  };
   return describeLook({
     poem,
     font: text('fontFamily'),
     textColours: [v('textColorHex'), on('textGradientToggle') ? v('textColor2Hex') : null, a1 ? v('accent1ColorHex') : null, a2 ? v('accent2ColorHex') : null],
     effects: ['fx1Type', 'fx2Type', 'fx3Type'].map(v).filter(t => t && t !== 'none'),
     background: [v('bgColor1Hex'), on('bgGradientToggle') ? v('bgColor2Hex') : null],
-    surface: on('textureToggle') ? {
-      type, name: text('textureType'), reading: reading && !reading.isDefault ? reading.name : null, element: reading ? reading.element : null,
-      opacity: +v('textureOpacity') || 0, blend: v('textureBlend'),
-      knobs: defs.map((d, i) => ({ label: d.label, value: +v('texP' + (i + 1)), min: d.min, max: d.max })),
-      hues: [v('textureTint1Hex'), v('textureTint2Hex')].slice(0, caps.tints || 0),
-      light: caps.light && !caps.dial ? { deg: +v('textureLight') || 0, tilt: +v('textureLightTilt') } : null,
-    } : null,
-    base: on('baseToggle') ? { name: text('baseType') } : null,
+    surface: on('textureToggle') && upperL.textureType ? describeSurface(upperL, !editingLower) : null,
+    base: lowerOn() && lowerL && lowerL.textureType ? { name: surfaceNameOf(lowerL.textureType, lowerL.forgeGraph) } : null,
     border: on('borderToggle') ? { colour: v('borderColorHex'), stitch: text('borderStitch').toLowerCase() } : null,
     box: on('cardToggle'), vignette: on('vignetteToggle'),
     // the credit, as words (any PML colour markup is only colour)
@@ -779,12 +834,7 @@ const PERSISTED = [
   ['cardFxAmount',         'cardFxAmount',         'text', ''],
   ['cardFxScale',          'cardFxScale',          'text', ''],
   ['forgeGraph',           'forgeGraph',           'text'],      // the Athanor's graph (Drawflow's JSON)
-  ['baseToggle',           'baseToggle',           'check'],     // texture layers: the base beneath
-  ['baseType',             'baseType',             'text'],
-  ['baseP1',               'baseP1',               'text'],
-  ['baseP2',               'baseP2',               'text'],
-  ['baseOpacity',          'baseOpacity',          'text'],
-  ['baseBlend',            'baseBlend',            'text'],
+  ['baseToggle',           'baseToggle',           'check'],     // Two Surfaces: the lower one drawn (its settings are the look's baseLayer)
   ['borderBlend',          'borderBlend',          'text'],
   ['borderGradientAngle',  'borderGradientAngle',  'text', '°'],
   ['borderStitch',         'borderStitch',         'text'],
@@ -843,9 +893,9 @@ function applyPersisted(s){
 
 // a look's FORMAT: 2 since the dial took over Harsh Rain's slant and Silverpoint
 // Hatch's angle (their sliders took new jobs); older looks are translated on load
-const LOOK_VERSION = 2;
+const LOOK_VERSION = 3;
 function serializeCurrentSettings(){
-  return {
+  return layersIntoLook({
     lookVersion: LOOK_VERSION,
     bg1: $('bgColor1Hex').value,
     bgGradient: $('bgGradientToggle').checked,
@@ -871,32 +921,14 @@ function serializeCurrentSettings(){
 
 
     texture: $('textureToggle').checked,
-    textureType: $('textureType').value,
     // the mechanical controls, from the PERSISTED table above
     ...collectPersisted(),
+    // the surface the controls show (layersIntoLook puts the upper here, whichever it is)
+    ...surfaceFromDom(),
     spell: $('activeSpell').value,
     highlight: $('highlightToggle') ? $('highlightToggle').checked : true,
     // which controls the user has pinned against Randomize and presets
     locks: Array.from(state.locks),
-    textureBlend: $('textureBlend').value,
-    textureLight: $('textureLight').value,
-    textureLightTilt: $('textureLightTilt') ? $('textureLightTilt').value : '100',
-    textureTint1: $('textureTint1Hex').value,
-    textureTint2: $('textureTint2Hex').value,
-    textureTint3: $('textureTint3Hex').value,
-    textureTint4: $('textureTint4Hex').value,
-    textureTint5: $('textureTint5Hex').value,
-    textureTint6: $('textureTint6Hex').value,
-    texP1: $('texP1').value,
-    texP2: $('texP2').value,
-    texP3: $('texP3').value,
-    texP4: $('texP4').value,
-    texP5: $('texP5').value,
-    texP6: $('texP6').value,
-    // the seed as it was typed or shown (any words; the number below is what draws)
-    textureSeedWords: ($('textureSeedWords') || {}).value || '',
-    textureOpacity: parseFloat($('textureOpacity').value),
-    textureSeed: parseInt($('textureSeedValue').value, 10),
 
     border: $('borderToggle').checked,
     borderColor: $('borderColorHex').value,
@@ -920,13 +952,39 @@ function serializeCurrentSettings(){
     spellMark: $('spellMark').checked,   // the spell code in the corner: part of the look, so spells and shared links keep it
 
     poemText: $('poemText').value,
-  };
+  });
 }
 
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){
+function retireLook(s){ return retireBaseLayer(retireBlend(retireLookOnce(s))); }
+/** Before every blend was offered (format 3), a surface's blend menu held only the blends made for it, and
+ *  a saved blend it didn't hold fell back to the first of them: so it does here. */
+function retireBlend(s){
+  if(!s || +s.lookVersion >= 3 || !s.textureType || !s.textureBlend) return s;
+  const caps = capsFor(s.textureType);
+  return caps && caps.blends && !caps.blends.includes(s.textureBlend) ? { ...s, textureBlend: caps.blends[0] } : s;
+}
+/** A look saved with the old base layer (its variant, two knobs, opacity and blend; the page's light, the
+ *  seed turned, the variant's own hues) as a lower surface that draws the same. */
+function retireBaseLayer(s){
+  if(!s || s.baseType === undefined || s.baseLayer !== undefined) return s;
+  const t = s.baseType, caps = capsFor(t), defs = paramsFor(t);
+  const a1 = s.accent1 || ($('accent1ColorHex') || {}).value, a2 = s.accent2 || ($('accent2ColorHex') || {}).value;
+  const L = { textureType: t, textureOpacity: s.baseOpacity !== undefined ? +s.baseOpacity : 50, textureBlend: s.baseBlend || 'overlay',
+    textureLight: s.textureLight !== undefined ? s.textureLight : '315', textureLightTilt: s.textureLightTilt !== undefined ? s.textureLightTilt : '100',
+    textureTint3: '#FFFFFF', textureTint4: '#FFFFFF', textureTint5: hue5Default(t), textureTint6: '#FFFFFF',
+    textureSeed: ((parseInt(s.textureSeed, 10) || 0) ^ 0x5bd1e995) >>> 0, textureSeedWords: '', forgeGraph: '' };
+  // (a grey surface was made on the ground of its own first blend when the chosen one wasn't made for it)
+  if(caps.ground === 'grey' && !caps.blends.includes(L.textureBlend) && blendFamily(L.textureBlend) !== blendFamily(caps.blends[0])) L.textureGround = caps.blends[0];
+  defs.forEach((d, i) => { L['texP' + (i + 1)] = String(i === 0 && s.baseP1 !== undefined ? s.baseP1 : i === 1 && s.baseP2 !== undefined ? s.baseP2 : d.def); });
+  (caps.tintDefaults || []).forEach((c, i) => { L['textureTint' + (i + 1)] = c === 'accent1' ? a1 : c === 'accent2' ? a2 : c; });
+  const out = { ...s, baseLayer: L };
+  for(const k of ['baseType', 'baseP1', 'baseP2', 'baseOpacity', 'baseBlend']) delete out[k];
+  return out;
+}
+function retireLookOnce(s){
   if(!s) return s;
   if(s.textureType === 'whorl') return { ...s, textureType: 'dunes' };
   if(s.textureType === 'crucible') return { ...s, textureType: 'athanor' };   // the node editor's surface, briefly named the Crucible
@@ -954,10 +1012,15 @@ function retireLook(s){
 }
 function restoreSettings(s){
   s = retireLook(s);
+  // the layers: the controls take the upper (the look's own keys); the lower waits. If the controls were
+  // showing the lower, they show it again at the end (an undo keeps its place)
+  const wasEditing = state.layers.editing;
+  state.layers.editing = 'upper';
+  state.layers.other = s.baseLayer && typeof s.baseLayer === 'object' ? pickLayer(s.baseLayer) : null;
+  state.layers.otherLocks = Array.isArray(s.baseLocks) ? s.baseLocks.filter(id => LAYER_LOCK_IDS.has(id)) : [];
+  state.layers.otherUi = null;
   // the look's Athanor graph first: a Athanor surface's sliders are named from it
   if(s.forgeGraph !== undefined && $('forgeGraph')){ $('forgeGraph').value = s.forgeGraph; if(typeof applyAthanorGraph === 'function') applyAthanorGraph(false); }
-  // and the base layer's variant, so its knobs take their own ranges before their values
-  if(s.baseType && $('baseType')){ $('baseType').value = s.baseType; syncBaseParams(false); }
   if(s.bg1) setColorField('bgColor1Hex', s.bg1);
   $('bgGradientToggle').checked = !!s.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!s.bgGradient);
@@ -1014,33 +1077,8 @@ function restoreSettings(s){
     if(document.body && document.body.classList) document.body.classList.toggle('plain-editor', !s.highlight);
   }
   if(Array.isArray(s.locks)) restoreLockState(s.locks);
-  if(s.textureBlend) $('textureBlend').value = s.textureBlend;
-  if(s.textureLight !== undefined || s.textureLightTilt !== undefined){
-    if(s.textureLight !== undefined) $('textureLight').value = s.textureLight;
-    // looks saved before the dial had raking light only: 100
-    if($('textureLightTilt')) $('textureLightTilt').value = s.textureLightTilt !== undefined ? s.textureLightTilt : '100';
-    syncLightPad(); }
-  if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
-  if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
-  // material hues: white (none) unless the look carries them
-  setColorField('textureTint3Hex', s.textureTint3 || '#FFFFFF');
-  setColorField('textureTint4Hex', s.textureTint4 || '#FFFFFF');
-  // the fifth hue: its role's "none" unless the look carries one
-  setColorField('textureTint5Hex', s.textureTint5 || hue5Default(s.textureType || $('textureType').value));
-  setColorField('textureTint6Hex', s.textureTint6 || '#FFFFFF');
-  if(s.texP1 !== undefined) $('texP1').value = s.texP1;
-  if(s.texP2 !== undefined) $('texP2').value = s.texP2;
-  if(s.texP3 !== undefined) $('texP3').value = s.texP3;
-  if(s.texP4 !== undefined) $('texP4').value = s.texP4;
-  if(s.texP5 !== undefined) $('texP5').value = s.texP5;
-  if(s.texP6 !== undefined) $('texP6').value = s.texP6;
-  syncTextureParams(false);
-  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
-  if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
-  // the words go back only if they are still this seed's (else its phrase is shown)
-  { const box = $('textureSeedWords'), n = parseInt($('textureSeedValue').value, 10) || 0;
-    if(box){ if(typeof s.textureSeedWords === 'string' && s.textureSeedWords && seedFromText(s.textureSeedWords) === n){ box.value = s.textureSeedWords; if(box.dataset) box.dataset.seed = String(n); }
-      else syncSeedWords(true); } }
+  restoreSurfaceDetails(s);
+
 
   $('borderToggle').checked = !!s.border;
   $('borderBlock').classList.toggle('open', !!s.border);
@@ -1073,10 +1111,51 @@ function restoreSettings(s){
   if(s.spellMark !== undefined) $('spellMark').checked = !!s.spellMark;
   if(s.poemText!==undefined){ $('poemText').value = s.poemText; repaintEditor(); }
 
+  if(wasEditing === 'lower' && lowerOn()) editLayer('lower');
   scheduleRender();
   paintMoons();
   paintSeedMoon();
   refreshUi();
+}
+/** One surface layer into the controls (the keys a look saves the upper with): its graph and kind first,
+ *  so its sliders are named and ranged before their values. */
+function restoreSurfaceLayer(L){
+  if($('forgeGraph')){ $('forgeGraph').value = L.forgeGraph || ''; if(typeof applyAthanorGraph === 'function') applyAthanorGraph(false); }
+  if(L.textureType) $('textureType').value = L.textureType;
+  syncTextureParams(true);
+  syncTextureTools(true);
+  restoreSurfaceDetails(L);
+}
+/** A surface's blend, light, hues, knobs, opacity and seed into the controls. */
+function restoreSurfaceDetails(s){
+  if(s.textureBlend) $('textureBlend').value = s.textureBlend;
+  keepGround(s.textureGround);
+  if(s.textureLight !== undefined || s.textureLightTilt !== undefined){
+    if(s.textureLight !== undefined) $('textureLight').value = s.textureLight;
+    // looks saved before the dial had raking light only: 100
+    if($('textureLightTilt')) $('textureLightTilt').value = s.textureLightTilt !== undefined ? s.textureLightTilt : '100';
+    syncLightPad(); }
+  if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
+  if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
+  // material hues: white (none) unless the look carries them
+  setColorField('textureTint3Hex', s.textureTint3 || '#FFFFFF');
+  setColorField('textureTint4Hex', s.textureTint4 || '#FFFFFF');
+  // the fifth hue: its role's "none" unless the look carries one
+  setColorField('textureTint5Hex', s.textureTint5 || hue5Default(s.textureType || $('textureType').value));
+  setColorField('textureTint6Hex', s.textureTint6 || '#FFFFFF');
+  if(s.texP1 !== undefined) $('texP1').value = s.texP1;
+  if(s.texP2 !== undefined) $('texP2').value = s.texP2;
+  if(s.texP3 !== undefined) $('texP3').value = s.texP3;
+  if(s.texP4 !== undefined) $('texP4').value = s.texP4;
+  if(s.texP5 !== undefined) $('texP5').value = s.texP5;
+  if(s.texP6 !== undefined) $('texP6').value = s.texP6;
+  syncTextureParams(false);
+  if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
+  if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
+  // the words go back only if they are still this seed's (else its phrase is shown)
+  { const box = $('textureSeedWords'), n = parseInt($('textureSeedValue').value, 10) || 0;
+    if(box){ if(typeof s.textureSeedWords === 'string' && s.textureSeedWords && seedFromText(s.textureSeedWords) === n){ box.value = s.textureSeedWords; if(box.dataset) box.dataset.seed = String(n); }
+      else syncSeedWords(true); } }
 }
 
 $('advancedRefreshBtn').addEventListener('click', ()=>{
@@ -1371,6 +1450,10 @@ document.addEventListener('open', (e)=>{
 function applyPreset(p){
   // a FULL preset is a whole saved look (as a spell is saved), applied exactly
   if(p.full) return applyFullPreset(p);
+  // a preset dresses the upper surface: the controls show it first, and the lower goes (unless something
+  // of it is locked: then it waits, switched off, for its switch)
+  if(state.layers.editing === 'lower') editLayer('upper');
+  if(!state.locks.has('baseToggle') && !(state.layers.otherLocks || []).length){ state.layers.other = null; state.layers.otherLocks = []; state.layers.otherUi = null; }
   // a locked control is put back exactly as it was once the preset lands
   const __locks = snapshotLocked();
   try {
@@ -1931,29 +2014,26 @@ syncTextureParams(true);
 // TEXTURE_CAPS). Anything a texture cannot use is disabled rather than left
 // live and inert -- a control that silently does nothing is worse than one
 // that is visibly unavailable.
-const BLEND_LABELS = {
-  'source-over':'Normal',
-  'overlay':'Overlay', 'soft-light':'Soft Light', 'hard-light':'Hard Light',
-  'multiply':'Multiply', 'screen':'Screen', 'lighten':'Lighten',
-  'darken':'Darken', 'color-burn':'Color Burn', 'color-dodge':'Color Dodge',
-};
 
 function syncTextureTools(resetToDefaults){
   const type = $('textureType').value;
   const caps = capsFor(type);
 
-  // blend list is rebuilt per texture; the first entry is that texture's default
+  // EVERY BLEND for every surface (Ruby): the ones made for this surface first (its default at their
+  // head), then every other one a layer can take
   const sel = $('textureBlend');
   const previous = sel.value;
   sel.innerHTML = '';
-  caps.blends.forEach((b, i)=>{
-    const opt = document.createElement('option');
-    opt.value = b;
-    opt.textContent = BLEND_LABELS[b] || b;
-    if(i === 0) opt.textContent += ' (default)';
-    sel.appendChild(opt);
-  });
-  sel.value = (!resetToDefaults && caps.blends.includes(previous)) ? previous : caps.blends[0];
+  const group = (label, list) => {
+    const g = document.createElement('optgroup'); g.label = label;
+    for(const b of list){ const opt = document.createElement('option'); opt.value = b;
+      opt.textContent = (BLEND_NAMES[b] || b) + (b === caps.blends[0] ? BLEND_NAMES.default : ''); g.appendChild(opt); }
+    sel.appendChild(g);
+  };
+  group(BLEND_NAMES.suits, caps.blends);
+  group(BLEND_NAMES.others, SURFACE_BLENDS.filter(b => !caps.blends.includes(b)));
+  sel.value = (!resetToDefaults && SURFACE_BLENDS.includes(previous)) ? previous : caps.blends[0];
+  if(resetToDefaults) keepGround('');
 
   const lightRow = $('lightRow');
   if(lightRow){
@@ -2019,6 +2099,16 @@ function followAccents(){
     setColorField(ids[i], $(src).value);
     state.ui.tintBySystem = false;
     changed = true;
+  }
+  // the surface waiting behind the layer bar follows its accents too, unless its hue was chosen or is locked
+  const O = state.layers.other, ou = state.layers.otherUi;
+  if(O && ou && O.textureType){
+    const oc = capsFor(O.textureType), od = oc.tintDefaults || [];
+    for(let i = 0; i < Math.min(oc.tints || 0, 2); i++){
+      const src = od[i] === 'accent1' ? 'accent1ColorHex' : od[i] === 'accent2' ? 'accent2ColorHex' : null;
+      if(!src || !ou.follows[i] || (state.layers.otherLocks || []).includes(ids[i]) || O['textureTint' + (i + 1)] === $(src).value) continue;
+      O['textureTint' + (i + 1)] = $(src).value; changed = true;
+    }
   }
   if(changed) scheduleRender();
 }
@@ -2107,7 +2197,15 @@ if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEv
 /** How far the dial reaches: past its rim (130) only for engine-lit textures. */
 function dialMax(){ const t = $('textureType'); return (t && (capsFor(t.value) || {}).lowLight) ? 130 : 100; }
 syncLightPad();
-$('textureBlend').addEventListener('change', scheduleRender);
+$('textureBlend').addEventListener('change', () => { keepGround(''); scheduleRender(); });
+/** The ground an older look's surface was made on, kept while its blend is the one it was saved with
+ *  (canvasRenderer `textureGround`: before every blend was offered, a lower surface on a blend not made for
+ *  it was drawn on its own first blend's ground). Choosing a blend lets it go. */
+function keepGround(ground){
+  const b = $('textureBlend'); if(!b || !b.dataset) return;
+  b.dataset.ground = ground && SURFACE_BLENDS.includes(ground) ? ground : '';
+  b.dataset.groundFor = b.dataset.ground ? b.value : '';
+}
 // choosing a tint yourself stops it following the accents
 bindColorField('textureTint1Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[0] = false; scheduleRender(); });
 bindColorField('textureTint2Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[1] = false; scheduleRender(); });
@@ -2263,10 +2361,12 @@ function similarFont(i){
   const near = FONTS.map((f, k) => k).filter(k => k !== i && group.includes(FONTS[k].family));
   return near.length ? near[Math.floor(Math.random()*near.length)] : i;
 }
-/** The menus a roll may choose among (the Athanor only when there is a graph to draw). */
-function dieOptions(el){
+/** The menus a roll may choose among (the Athanor only when there is a graph to draw; a surface's blend
+ *  among those made for it, unless the roll is wild). */
+function dieOptions(el, level){
   const graph = (($('forgeGraph') || {}).value || '').length > 40;
-  return [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '' && !(el.id === 'textureType' && o.value === 'athanor' && !graph));
+  const suits = el.id === 'textureBlend' && level !== 'wild' ? capsFor($('textureType').value).blends : null;
+  return [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '' && !(el.id === 'textureType' && o.value === 'athanor' && !graph) && (!suits || suits.includes(o.value)));
 }
 function rollSection(root, level = 'usual', opts = {}){
   const shift = (Math.random()*2 - 1)*15;     // gently: every colour drifts by the same few degrees…
@@ -2279,7 +2379,7 @@ function rollSection(root, level = 'usual', opts = {}){
         if(id === 'fontFamily' && (opts.summon || Math.random() < 0.6)){ const k = similarFont(+el.value); if(String(k) !== el.value){ el.value = String(k); el.dispatchEvent(new Event('change', { bubbles: true })); } }
         continue;
       }
-      const o = dieOptions(el);
+      const o = dieOptions(el, level);
       if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); }
     }
     for(const id of ids().filter(id => $(id).tagName !== 'SELECT')){ const el = $(id);
@@ -2821,7 +2921,7 @@ function applyAthanorGraph(redraw = true){
   const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
     caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue')); }
-  if($('athanorOption')) $('athanorOption').textContent = name ? 'The Athanor: ' + name : 'The Athanor (empty)';
+  if($('athanorOption')) $('athanorOption').textContent = athanorTitleOf(g);
   if(redraw && $('textureType') && $('textureType').value === 'athanor'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
 }
 /** What the Athanor's pictures are made with: the page's seed, dial and hues;
@@ -3159,6 +3259,19 @@ function checkLook(obj, what = 'This look'){
     else if(v.problems.length){ look.forgeGraph = JSON.stringify(v.graph); notes.push('its Athanor graph was cleaned (' + v.problems.slice(0, 2).join('; ') + ')'); }
   }
   for(const [k, v] of Object.entries(look)) if(typeof v === 'string' && v.length > 20000 && k !== 'forgeGraph'){ delete look[k]; notes.push(`${k} was too long and was left out`); }
+  // the lower surface: an object of a layer's settings, its own graph checked as the upper's is
+  if(look.baseLayer !== undefined){
+    if(!look.baseLayer || typeof look.baseLayer !== 'object' || Array.isArray(look.baseLayer)){ delete look.baseLayer; notes.push('its lower surface was set aside'); }
+    else {
+      const L = pickLayer(look.baseLayer);
+      for(const [k, v] of Object.entries(L)) if(typeof v === 'string' && v.length > 20000 && k !== 'forgeGraph') delete L[k];
+      if(L.forgeGraph){ const v = validateGraph(L.forgeGraph);
+        if(!v.ok){ notes.push('its lower surface\'s Athanor graph was set aside (' + v.problems.join('; ') + ')'); L.forgeGraph = ''; }
+        else if(v.problems.length){ L.forgeGraph = JSON.stringify(v.graph); notes.push('its lower surface\'s Athanor graph was cleaned'); } }
+      look.baseLayer = L;
+    }
+  }
+  if(look.baseLocks !== undefined && !Array.isArray(look.baseLocks)) delete look.baseLocks;
   return { ok: true, look, notes };
 }
 function safeRestore(obj, what = 'This look'){
@@ -3571,7 +3684,7 @@ function holdSurface(value, tile){
   // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
   const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
-  for(const [sel, title] of [[$('textureType'), CHOOSER.surfaceTitle], [$('baseType'), CHOOSER.baseTitle]]){
-    try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title, thumb, extra, glyphFor, stamp, size: 160, hold: sel.id === 'textureType' ? holdSurface : null })); } catch(e){ /* the plain menu still works */ }
-  }
+  // (one menu serves both surfaces: the layer bar says which one it changes)
+  const sel = $('textureType');
+  try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title: CHOOSER.surfaceTitle, thumb, extra, glyphFor, stamp, size: 160, hold: holdSurface })); } catch(e){ /* the plain menu still works */ }
 }

@@ -198,7 +198,7 @@ Have fun!</textarea>
 <h4>Variables</h4>
 <p>Resolved before PML. Unknown names stay visible; <code>\§</code> prints §.</p>
 <dl>
-<dt><code>§SurfName</code> <code>§SurfParamsA</code> <code>§SurfParamsB</code></dt><dd>the surface, its knobs, its hues</dd>
+<dt><code>§SurfName</code> <code>§SurfParamsA</code> <code>§SurfParamsB</code></dt><dd>the surface, its knobs, its hues (with Two Surfaces, the one on top)</dd>
 <dt><code>§MoonPhase!tonight</code> <code>!seed</code> <code>:0.5</code></dt><dd>a moon (−1…1: 0 full, ±1 new)</dd>
 <dt><code>§Glyph!fire</code> <code>§Glyph!materia</code> <code>§UVIcon</code></dt><dd>glyphs, by name</dd>
 <dt><code>§SpellName</code> <code>§Spell</code> <code>§Font</code> <code>§TypeEffect</code></dt><dd>the look</dd>
@@ -475,6 +475,12 @@ Have fun!</textarea>
           </div>
         </div>
         <input type="hidden" id="underAll" value="">
+        <!-- TEXT CLEARING (Ruby: it belongs with the text): quiets every surface layer behind the words -->
+        <div class="field full">
+          <label data-str="label.text_clearing" title="Quiets the surfaces behind the words, fading them out around the letters, so small text stays readable over a busy surface. Both surface layers clear.">Text Clearing</label>
+          <input type="range" id="textureClearing" min="0" max="100" value="0">
+          <span class="range-val" id="textureClearingVal">0%</span>
+        </div>
       </div>
     </details>
 
@@ -565,6 +571,19 @@ Have fun!</textarea>
           <label for="textureToggle" data-str="label.customize_surface">Customize Surface</label>
         </div>
         <div class="subblock" id="textureBlock">
+          <!-- SURFACE LAYERS (Ruby): a second surface beneath the first; every control below edits the layer
+               chosen here, and Swap trades them whole (blend, hues, light, seed, locks) -->
+          <div class="layer-bar full" id="layerBar">
+            <div class="check-row">
+              <input type="checkbox" id="baseToggle">
+              <label for="baseToggle" data-str="label.base_layer" title="Adds a second surface beneath this one, with all its own settings. The two blend into each other and into the page.">Two Surfaces</label>
+            </div>
+            <div class="radio-group layer-seg" id="layerSeg" role="group" aria-label="Which surface the settings below change">
+              <button type="button" class="radio-btn active" data-layer="upper" aria-pressed="true" data-str="button.layer_upper" title="Show the settings of the surface on top">Upper</button>
+              <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Show the settings of the surface beneath">Lower</button>
+              <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Trade the two surfaces: each keeps everything it has, its blend, hues, light, seed and locks too">⇅ Swap</button>
+            </div>
+          </div>
           <div class="field full">
             <label data-str="label.surface_variant">Surface Variant</label>
             <select id="textureType">
@@ -701,11 +720,6 @@ Have fun!</textarea>
             <span class="range-val" id="textureOpacityVal">60%</span>
           </div>
           <div class="field full">
-            <label data-str="label.text_clearing" title="Quiets the surface behind the words, fading out around them, so small text stays readable over a busy surface.">Text Clearing</label>
-            <input type="range" id="textureClearing" min="0" max="100" value="0">
-            <span class="range-val" id="textureClearingVal">0%</span>
-          </div>
-          <div class="field full">
             <label for="textureBlend" data-str="label.blend_mode">Blend Mode</label>
             <select id="textureBlend"></select>
           </div>
@@ -783,36 +797,6 @@ Have fun!</textarea>
               <button class="ghost seed-moon" id="textureSeedReroll" data-sound="reroll" type="button" aria-label="Reroll the seed"></button>
             </div>
           </div>
-          </div>
-          <!-- TEXTURE LAYERS: a second texture under the main one -->
-          <div class="check-row full">
-            <input type="checkbox" id="baseToggle">
-            <label for="baseToggle" data-str="label.base_layer">Base Layer (a texture beneath)?</label>
-          </div>
-          <div class="subblock full" id="baseBlock">
-            <div class="field full">
-              <label data-str="label.base_variant">Base Variant</label>
-              <select id="baseType"></select>
-            </div>
-            <div class="field full" id="baseP1Field">
-              <label id="baseP1Label">—</label>
-              <input type="range" id="baseP1" min="0" max="100" value="100">
-              <span class="range-val" id="baseP1Val"></span>
-            </div>
-            <div class="field full" id="baseP2Field">
-              <label id="baseP2Label">—</label>
-              <input type="range" id="baseP2" min="0" max="100" value="100">
-              <span class="range-val" id="baseP2Val"></span>
-            </div>
-            <div class="field full">
-              <label data-str="label.base_opacity">Base Opacity</label>
-              <input type="range" id="baseOpacity" min="0" max="100" value="50" data-moon>
-              <span class="range-val" id="baseOpacityVal"></span>
-            </div>
-            <div class="field full">
-              <label data-str="label.base_blend">Base Blend</label>
-              <select id="baseBlend"></select>
-            </div>
           </div>
         </div>
 

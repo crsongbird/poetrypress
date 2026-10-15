@@ -28,14 +28,16 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, textureCacheMB, dropLargeTextures } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures } from './textureGenerators.js';
+import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
+import { fill, CHOOSER } from './strings.js';
 import { resolvePmlVariables } from './pmlVars.js';
 import { seedPhrase } from './seedWords.js';
 import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs, clearMeasureCache } from './glyphs.js';
 import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge, STITCH_STYLES } from './stitches.js';
-import { boxGlass, boxBlend, BOX_GPU_BLENDS } from './boxFx.js';
+import { boxGlass, boxBlend, BOX_GPU_BLENDS, CANVAS_BLENDS } from './boxFx.js';
 import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './effects.js';
 import { requestTexture, onTextureReady, textureServiceInfo } from './textureService.js';
 import { ensureFonts, fontsRequested } from './fonts.js';
@@ -904,34 +906,36 @@ export function resolvedPoemText(){
 }
 function pmlVarContext(W, H){
   const on = !$('textureToggle') || $('textureToggle').checked;
-  const type = $('textureType') ? $('textureType').value : '';
+  // the report tells of the surface on top, whichever one the layer bar shows (Two Surfaces): showing the
+  // lower to change it never changes the page
+  const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null, waiting = src && src.editing === 'lower' && src.other ? src.other : null;
+  const L = waiting || surfaceFromDom();
+  const type = L.textureType || '';
   const caps = capsFor(type), defs = paramsFor(type) || [];
-  const seed = parseInt($('textureSeedValue') && $('textureSeedValue').value, 10) || 0;
+  const seed = parseInt(L.textureSeed, 10) || 0;
+  const hex = n => String(L['textureTint' + n] || '');
   const hues = [];
-  for(let i = 0; i < Math.min(2, caps.tints || 0); i++){
-    const el = $(i ? 'textureTint2Hex' : 'textureTint1Hex');
-    if(el) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Second Hue' : 'Hue'), hex: el.value });
-  }
+  for(let i = 0; i < Math.min(2, caps.tints || 0); i++) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Second Hue' : 'Hue'), hex: hex(i + 1) });
   // the material hues and the fifth, when they are in use (not their "none")
-  if(caps.material) [['textureTint3Hex', 'Specular Hue'], ['textureTint4Hex', 'Shadow Hue']].forEach(([id, label]) => {
-    const el = $(id); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label, hex: el.value }); });
-  if(caps.diffuse){ const el = $('textureTint6Hex'); if(el && el.value.toUpperCase() !== '#FFFFFF') hues.push({ label: 'Diffuse Hue', hex: el.value }); }
-  if(caps.hue5){ const el = $('textureTint5Hex'); if(el && el.value.toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(el.value)) hues.push({ label: caps.hue5.label, hex: el.value }); }   // (fully transparent is none)
+  if(caps.material) [[3, 'Specular Hue'], [4, 'Shadow Hue']].forEach(([n, label]) => { if(hex(n) && hex(n).toUpperCase() !== '#FFFFFF') hues.push({ label, hex: hex(n) }); });
+  if(caps.diffuse && hex(6) && hex(6).toUpperCase() !== '#FFFFFF') hues.push({ label: 'Diffuse Hue', hex: hex(6) });
+  if(caps.hue5 && hex(5) && hex(5).toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(hex(5))) hues.push({ label: caps.hue5.label, hex: hex(5) });   // (fully transparent is none)
+  const optionOf = (id, value) => { const el = $(id), o = el && el.querySelector ? el.querySelector(`option[value="${value}"]`) : null; return (o && o.textContent) || value || ''; };
+  const tilt = +L.textureLightTilt;
   return {
-    surfName: on ? optionText('textureType') : 'None',
+    surfName: on ? (waiting ? (type === 'athanor' ? athanorTitleOf(L.forgeGraph) : optionOf('textureType', type)) : optionText('textureType')) : 'None',
     surfOff: !on,                                   // the surface's own lines step aside
-    blendName: optionText('textureBlend').replace(/\s*\(default\)\s*$/i, ''),
+    blendName: (waiting ? optionOf('textureBlend', L.textureBlend) : optionText('textureBlend')).replace(/\s*\(default\)\s*$/i, ''),
     // the arrow, and how high the light is when it isn't at the horizon
-    lightArrow: caps.light ? lightArrow($('textureLight') && $('textureLight').value)
-      + (caps.dial ? ' (' + caps.dial.split(' ')[0].toLowerCase() + ')'
-        : (($('textureLightTilt') && +$('textureLightTilt').value < 100) ? ' ' + Math.round(+$('textureLightTilt').value) + '%' : '')) : 'n/a',
+    lightArrow: caps.light ? lightArrow(L.textureLight)
+      + (caps.dial ? ' (' + caps.dial.split(' ')[0].toLowerCase() + ')' : (tilt < 100 ? ' ' + Math.round(tilt) + '%' : '')) : 'n/a',
     seed,
     seedPhrase: seedPhrase(seed),
-    // the reading (🜂 🜄 🜁 🜃) last applied to this surface, if any (appEvents marks it on its row)
-    reading: on && $('elementRow') && $('elementRow').dataset ? ($('elementRow').dataset.applied || '') : '',
+    // the reading (🜂 🜄 🜁 🜃) last applied to this surface, if any (appEvents marks it on its row, and keeps the waiting one's)
+    reading: !on ? '' : waiting ? (src.otherReading || '') : ($('elementRow') && $('elementRow').dataset ? ($('elementRow').dataset.applied || '') : ''),
     // every knob the texture has, by its own label and readout (up to five)
-    params: defs.map((d, i) => ({ label: d.label, value: ($('texP' + (i + 1) + 'Val') || {}).textContent || '' })),
-    opacity: Math.round(+($('textureOpacity') && $('textureOpacity').value) || 0),
+    params: defs.map((d, i) => ({ label: d.label, value: waiting ? paramReadout(d, +L['texP' + (i + 1)]) : (($('texP' + (i + 1) + 'Val') || {}).textContent || '') })),
+    opacity: Math.round(+L.textureOpacity || 0),
     hues,
     moonTonight: moonPhase(new Date()),
     moonSeed: moonForSeed(seed),
@@ -1019,19 +1023,97 @@ if(typeof window !== 'undefined') window.vellumDebug = {
   textures: () => textureServiceInfo(),
   profile: () => LAST_PROFILE, renderMs: () => LAST_RENDER_MS,
 };
+// ---------- SURFACE LAYERS ----------
+let SURFACE_SOURCE = null;
+/** appEvents tells the renderer about the layer the controls are not showing: () → { editing, other, lowerOn }. */
+export function setSurfaceSource(fn){ SURFACE_SOURCE = fn; }
+/** Every blend a surface layer can take (Ruby): the canvas's own, and the ones mixed per pixel (boxFx.js). */
+export const SURFACE_BLENDS = [...CANVAS_BLENDS, ...BOX_GPU_BLENDS];
+/** The surface the controls show, as a layer: the same keys a look saves. */
+export function surfaceFromDom(){
+  const v = id => { const el = $(id); return el ? el.value : undefined; };
+  const b = $('textureBlend'), ds = (b && b.dataset) || {};
+  const ground = ds.ground && ds.groundFor === b.value ? ds.ground : '';   // (appEvents keepGround)
+  return { textureType: v('textureType'), texP1: v('texP1'), texP2: v('texP2'), texP3: v('texP3'), texP4: v('texP4'), texP5: v('texP5'), texP6: v('texP6'),
+    textureOpacity: parseFloat(v('textureOpacity')), textureBlend: v('textureBlend'), textureLight: v('textureLight'),
+    textureLightTilt: $('textureLightTilt') ? v('textureLightTilt') : '100',
+    textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
+    textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
+    textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
+    ...(ground ? { textureGround: ground } : {}) };
+}
+/** An Athanor surface's own sliders and hues, read from its graph (each layer may carry a different one):
+ *  the highest slider it offers and how many hues. Remembered for the last graph asked about. */
+let athanorShapeMemo = { graph: null, top: 0, tints: 0 };
+/** An Athanor surface's line in the surface menu, from its own graph. */
+export const athanorTitleOf = graph => { const n = athanorName(graph || ''); return n ? fill(CHOOSER.athanorNamed, n) : CHOOSER.athanorEmpty; };
+function athanorShape(graph){
+  if(athanorShapeMemo.graph !== graph){
+    const knobs = athanorKnobs(graph), hues = athanorHues(graph);
+    athanorShapeMemo = { graph, top: knobs.reduce((m, k) => Math.max(m, k.slot), 0), tints: hues.length ? Math.max(...hues.map(h => h.slot)) : 0 };
+  }
+  return athanorShapeMemo;
+}
+/** One surface layer onto the page: its texture made (or found in the cache), cleared around the words, blended. */
+function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
+  const type = L.textureType, caps = capsFor(type), defs = paramsFor(type);
+  const num = x => { const n = parseFloat(x); return isNaN(n) ? null : n; };
+  const opacity = Math.max(0, num(L.textureOpacity) ?? 0)/100;
+  const chosen = L.textureBlend;
+  const blend = SURFACE_BLENDS.includes(chosen) ? chosen : defaultBlendFor(type);
+  // the ground the surface is made on: its blend's (a look from before every blend was offered may keep the
+  // ground it was drawn on then, `textureGround`, until its blend is changed)
+  const groundFor = SURFACE_BLENDS.includes(L.textureGround) ? L.textureGround : blend;
+  const gpu = BOX_GPU_BLENDS.includes(blend);
+  const light = caps.light ? (num(L.textureLight) || 0) : null;
+  const lightTilt = caps.light ? (num(L.textureLightTilt) ?? 100) : 100;
+  const shape = type === 'athanor' ? athanorShape(L.forgeGraph || '') : null;
+  const tints = shape ? shape.tints : caps.tints;
+  const tint = (n, on) => on ? (L['textureTint' + n] || null) : null;
+  const tint1 = tint(1, tints >= 1), tint2 = tint(2, tints >= 2), tint3 = tint(3, caps.material), tint4 = tint(4, caps.material);
+  const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse);
+  const envs = caps.pageEnv ? env() : undefined;
+  const seed = parseInt(L.textureSeed, 10) || 0;
+  const p1 = num(L.texP1), p2 = num(L.texP2), p3 = num(L.texP3);
+  // knobs four to six only where the surface has them (an Athanor surface: where its graph offers them)
+  const has = i => (shape ? shape.top : defs.length) >= i;
+  const p4 = has(4) ? num(L.texP4) : null, p5 = has(5) ? num(L.texP5) : null, p6 = has(6) ? num(L.texP6) : null;
+  const accent1 = $('accent1ColorHex').value, accent2 = $('accent2ColorHex').value;
+  const name = s => slot === 'main' ? s : 'base' + (s === 'main' ? '' : s);
+  // a texture that can't be drawn is skipped, never allowed to abort the frame
+  const put = t => { if(!t) return; try {
+    const img = clearing > 0 ? clearedSurface(t, canvas.width, canvas.height, clearing) : t;
+    if(gpu){   // the blends a canvas can't do, mixed per pixel at full size (the GPU when there is one)
+      const m = boxBlend(ctx.canvas, { x: 0, y: 0, w: ctx.canvas.width, h: ctx.canvas.height }, img, { x: 0, y: 0, w: img.width, h: img.height }, blend, opacity, true);
+      if(m){ ctx.save(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(m, 0, 0, W, H); ctx.restore(); return; }
+    }
+    ctx.drawImage(img, 0, 0, W, H);
+  } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
+  const layer = (gco, t) => { ctx.save(); ctx.globalAlpha = gpu ? 1 : opacity; ctx.globalCompositeOperation = gpu ? 'source-over' : gco; put(t); ctx.restore(); };
+  if(type === 'astral'){
+    // the light slot stays empty here; the nebula colour is a TINT
+    layer(blend === 'lighten' ? 'overlay' : blend, requestTexture(name('fog'), 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
+    layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S }));   // (tint5: the airglow's own colour)
+  } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
+    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6 }));
+  } else {
+    // (an Athanor surface carries its graph: the worker makes it from that)
+    const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
+    const text = graph && graphUsesPoem(graph) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1, accent2 } : {}) }));
+  }
+}
+
 // §Profile: where the last render's time went, stage by stage
 const clock = () => (typeof performance !== 'undefined' ? performance : Date).now();
 function renderInto(canvas){
   const renderStart = clock();
   const laps = []; let lapAt = renderStart;
   const S = RENDER_SCALE;
-  // a texture from the texture service: scaled to the page, since the one shown
-  // while a new one is made may have been made at another preview size
-  // A texture that can't be drawn is skipped, never allowed to abort the frame:
-  // a frame abandoned mid-blend left the canvas in that blend, and the next
-  // frame blended over the old one (two pages showing at once).
+  // (a texture from the texture service is drawn scaled to the page, since the one shown while a new one
+  // is made may have been made at another preview size; drawSurfaceLayer skips one that can't be drawn:
+  // a frame abandoned mid-blend once left two pages showing at once)
   const clearing = Math.max(0, Math.min(100, parseFloat(($('textureClearing') || {}).value) || 0))/100;
-  const drawTex = t => { if(!t) return; try { ctx.drawImage(clearing > 0 ? clearedSurface(t, canvas.width, canvas.height, clearing) : t, 0, 0, W, H); } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
   const lap = name => { const t = clock(); laps.push(`${name} ${Math.round(t - lapAt)}`); lapAt = t; };
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const W = canvas.width, H = canvas.height;
@@ -1060,95 +1142,18 @@ function renderInto(canvas){
     ctx.fillRect(0,0,W,H);
   }
 
-  // TEXTURE LAYERS: the base texture first, beneath the main one — its own
-  // variant, two knobs, opacity and blend; the page's light; the seed turned
-  // (so it never echoes the main texture); the variant's own default hues
-  if($('textureToggle').checked && $('baseToggle') && $('baseToggle').checked){
-    const bt = ($('baseType') || {}).value;
-    if(bt && bt !== 'astral' && bt !== 'athanor' && paramsFor(bt).length){
-      const bcaps = capsFor(bt), a1 = $('accent1ColorHex').value, a2 = $('accent2ColorHex').value;
-      const td = (bcaps.tintDefaults || []).map(c => c === 'accent1' ? a1 : c === 'accent2' ? a2 : c);
-      const chosen = ($('baseBlend') || {}).value || 'overlay';
-      const bnum = id => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? null : v; };
-      const bSeed = ((parseInt($('textureSeedValue').value, 10) || 0) ^ 0x5bd1e995) >>> 0;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(100, bnum('baseOpacity') ?? 50))/100;
-      ctx.globalCompositeOperation = chosen;
-      drawTex(requestTexture('base', bt, W, H, { accent1: a1, accent2: a2, seed: bSeed, p1: bnum('baseP1'), p2: bnum('baseP2'),
-        light: bcaps.light ? (parseFloat($('textureLight').value) || 0) : null, lightTilt: bcaps.light && $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100,
-        tint1: bcaps.tints >= 1 ? td[0] || null : null, tint2: bcaps.tints >= 2 ? td[1] || null : null, blend: bcaps.blends.includes(chosen) ? chosen : bcaps.blends[0], scale: S }));
-      ctx.restore();
-    }
-  }
-
+  // SURFACE LAYERS (Ruby: every control for both, any blend for each): the lower first, then the upper,
+  // each drawn the same way from its settings. appEvents hands over the layer the controls are not
+  // showing (setSurfaceSource); the one they show is read from the page.
   if($('textureToggle').checked){
-    const type = $('textureType').value;
-    const opacity = Math.max(0, parseFloat($('textureOpacity').value) || 0) / 100;
-    const accent1Color = $('accent1ColorHex').value;
-    const accent2Color = $('accent2ColorHex').value;
-    // blend, light and tints are now chosen per texture rather than inferred
-    const caps = capsFor(type);
-    const chosen = $('textureBlend').value;
-    const blend = caps.blends.includes(chosen) ? chosen : defaultBlendFor(type);
-    const light = caps.light ? (parseFloat($('textureLight').value) || 0) : null;
-    const lightTilt = caps.light && $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
-    const tint1 = caps.tints >= 1 ? $('textureTint1Hex').value : null;
-    const tint2 = caps.tints >= 2 ? $('textureTint2Hex').value : null;
-    // material hues (white = none), for the coloured lit textures
-    const tint3 = caps.material ? ($('textureTint3Hex') || {}).value || null : null;
-    const tint4 = caps.material ? ($('textureTint4Hex') || {}).value || null : null;
-    // the fifth hue (glow, material or base), where the texture has one
-    const tint5 = caps.hue5 ? ($('textureTint5Hex') || {}).value || null : null;
-    const tint6 = caps.diffuse ? ($('textureTint6Hex') || {}).value || null : null;
-    // the page's own colors, for Rain on Glass's outdoors
-    const env = caps.pageEnv ? ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount) : [bg1]).join(',') : undefined;
-    const seed = parseInt($('textureSeedValue').value, 10) || 0;
-
-    const tp1 = parseFloat($('texP1').value);
-    const tp2 = parseFloat($('texP2').value);
-    const p1 = isNaN(tp1) ? null : tp1;
-    const p2 = isNaN(tp2) ? null : tp2;
-    const tp3 = $('texP3') ? parseFloat($('texP3').value) : NaN;
-    const p3 = isNaN(tp3) ? null : tp3;
-    // knobs four and five, for the textures that have them (Dream Bloom)
-    const knob = id => { const el = $(id), f = el && el.parentElement; const v = el ? parseFloat(el.value) : NaN;
-      return (isNaN(v) || (f && f.style && f.style.display === 'none')) ? null : v; };
-    const p4 = knob('texP4'), p5 = knob('texP5'), p6 = knob('texP6');
-
-    if(type === 'astral'){
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = blend === 'lighten' ? 'overlay' : blend;
-      // the light slot stays empty here; the nebula colour is a TINT
-      drawTex(requestTexture('fog', 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
-      ctx.restore();
-
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('stars', 'astral_stars', W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p3, tint1, tint5, scale: S }));   // (tint5: the airglow's own colour)
-      ctx.restore();
-    } else if(type === 'inkbleed'){
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6 }));
-      ctx.restore();
-    } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = blend;
-      drawTex(requestTexture('main', type, W, H, { accent1: accent1Color, accent2: accent2Color, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6 }));
-      ctx.restore();
-    } else {
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.globalCompositeOperation = blend;
-      // (a Athanor surface carries its graph: the worker makes it from that)
-      const graph = type === 'athanor' ? (($('forgeGraph') || {}).value || '') : undefined;
-      const text = graph && graphUsesPoem(graph) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
-      drawTex(requestTexture('main', type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env, blend, scale: S, p4, p5, p6, graph, text, ...(graph ? { accent1: $('accent1ColorHex').value, accent2: $('accent2ColorHex').value } : {}) }));
-      ctx.restore();
+    const env = (bgStopCount, bg1) => ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', bgStopCount) : [bg1]).join(',');
+    const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null;
+    const dom = surfaceFromDom();
+    const upper = !src || src.editing !== 'lower' ? dom : src.other;
+    const lower = src && src.lowerOn ? (src.editing === 'lower' ? dom : src.other) : null;
+    for(const [L, slot] of [[lower, 'base'], [upper, 'main']]){
+      if(!L || !L.textureType) continue;
+      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env: () => env(bgStopCount, bg1) });
     }
   }
 
