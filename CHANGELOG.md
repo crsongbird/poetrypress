@@ -4,6 +4,24 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Janus (2026-10-15)
+
+- **The Athanor's bar, simpler.** It now reads: Open, Keep, undo and redo,
+  the view, ⋯, whether the page shows your graph, and Done.
+  - **Open** is the one place to begin from. It lists your kept surfaces,
+    the starters, the Basics, the Surface Studies and the app's own textures
+    by group, each with a line saying what it teaches.
+  - **⋯** holds everything else: copy or share the wiring, your shelf of
+    kept surfaces, Tidy, Revert, Clear the grid, and the wiki.
+  - **Use** is gone. The bar says **✓ On the Page** when the page shows
+    this graph, and **⇱ Show on Page** puts it there when it doesn't. If you
+    press Done after changing a graph the page isn't showing, the app offers
+    to show it.
+  - **Kept** is gone too: opening a kept surface is under Open, and the rest
+    is under ⋯ › Your shelf….
+- **Every menu in the Athanor** shows each item's hint in full, under its
+  name, instead of cutting it short.
+
 ## Saturn–Epimetheus (2026-10-15)
 
 - **Circuit Board**, a new surface in Pattern & Order, in place of Veins of

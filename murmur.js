@@ -79,7 +79,7 @@ export const MURMUR_FUNCTIONS = [
   { id: 'nodeRemove',     group: 'The Athanor',   label: 'Remove a node',          where: 'Delete, or its ✕' },
   { id: 'wireConnect',    group: 'The Athanor',   label: 'Connect a wire',         where: 'Port to port' },
   { id: 'wireDisconnect', group: 'The Athanor',   label: 'Cut a wire',             where: 'A wire’s ✕' },
-  { id: 'graphLoad',      group: 'The Athanor',   label: 'Load a graph',           where: 'Start from…, Revert' },
+  { id: 'graphLoad',      group: 'The Athanor',   label: 'Load a graph',           where: 'Open, Revert' },
   { id: 'confirm',        group: 'Asking',        label: 'Are you sure?',          where: 'Before something undoes your work' },
   { id: 'hardNo',         group: 'Asking',        label: 'That can’t be done',     where: 'Something that would break the page, refused' },
   { id: 'blocked',        group: 'Asking',        label: 'A switched-off control', where: 'Pressing what is off' },

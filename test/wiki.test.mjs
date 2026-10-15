@@ -44,7 +44,7 @@ for(const [id, body] of bodies) for(const m of body.matchAll(/<b>([^<]{2,60})<\/
 check('every menu item the wiki names is one the editor still has' + (staleMenu.length ? ': ' + staleMenu.slice(0, 4).join(', ') : ''), !staleMenu.length);
 check('every Part › Port the wiki names is a real part and port' + (stalePort.length ? ': ' + stalePort.slice(0, 4).join(', ') : ''), !stalePort.length);
 // Names that were renamed. When renaming a part, a setting or a menu item, add the old name here.
-const RETIRED_NAMES = ['Light (heights)', 'Deal (Cards)', 'Growing Line', 'Angry Strokes', 'Wire from it', 'Tidy layout', 'Watercolour Wash'];
+const RETIRED_NAMES = ['Light (heights)', 'Deal (Cards)', 'Growing Line', 'Angry Strokes', 'Wire from it', 'Tidy layout', 'Watercolour Wash', 'Start from…', '<b>Use</b>', '<b>Kept</b>'];
 const teach = ['chains.js', 'athanorStudies.js', 'athanor.js'].map(read).join('\n').match(/teach:\s*(['"`])(?:\\.|(?!\1).)*\1/g) || [];
 const docs = [...bodies.map(b => b[1]), ...teach, read('AGENTS.md'), appText];
 const back = RETIRED_NAMES.filter(n => docs.some(d => d.includes(n)));

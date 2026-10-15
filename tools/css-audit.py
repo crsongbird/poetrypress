@@ -108,7 +108,7 @@ STATES = [
   ('desk · Esoterica drawer closed', (1280, 800), ["document.querySelector('.tab-btn[data-tab=more]').click()", "document.querySelector('.tab-btn[data-tab=page]').click()"]),
   ('desk · narrow', (980, 760), ["document.querySelector('.tab-btn[data-tab=page]').click()"]),
   ('desk · the Athanor', (1280, 800), ["document.getElementById('athanorTopBtn').click()"]),
-  ('desk · the wiki', (1280, 800), ["document.getElementById('athanorTopBtn').click()", "document.getElementById('forgeDocBtn') && document.getElementById('forgeDocBtn').click()"]),
+  ('desk · the wiki', (1280, 800), ["document.getElementById('athanorTopBtn').click()", "document.getElementById('forgeHelpBtn') && document.getElementById('forgeHelpBtn').click()"]),
   ('desk · Vellum (light)', (1280, 800), ["document.documentElement.setAttribute('data-theme','vellum')"]),
   ('desk · Aether', (1280, 800), ["document.documentElement.setAttribute('data-theme','aether')"]),
   ('desk · Fathom', (1280, 800), ["document.documentElement.setAttribute('data-theme','fathom')"]),
@@ -119,7 +119,7 @@ STATES = [
   ('phone · Esoterica', (412, 915), ["document.querySelector('.tab-btn[data-tab=more]').click()", OPEN]),
   ('phone · focus mode', (412, 915), ["document.body.classList.add('focus-mode')"]),
   ('phone · the Athanor', (412, 915), ["document.getElementById('athanorTopBtn').click()"]),
-  ('phone · the wiki', (412, 915), ["document.getElementById('athanorTopBtn').click()", "document.getElementById('forgeDocBtn') && document.getElementById('forgeDocBtn').click()"]),
+  ('phone · the wiki', (412, 915), ["document.getElementById('athanorTopBtn').click()", "document.getElementById('forgeHelpBtn') && document.getElementById('forgeHelpBtn').click()"]),
   ('phone · Vellum (light)', (412, 915), ["document.documentElement.setAttribute('data-theme','vellum')"]),
   ('tablet', (900, 1200), ["document.querySelector('.tab-btn[data-tab=page]').click()"]),
 ]

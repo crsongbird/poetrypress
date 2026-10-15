@@ -1,6 +1,6 @@
 /**
  * athanorStudies.js — the surfaces from Ruby's future-directions doc, built
- * as graphs of parts: SURFACE STUDIES, offered in the Athanor's Start from…
+ * as graphs of parts: SURFACE STUDIES, offered in the Athanor's Open menu
  *
  *   Thirty-six surfaces,
  *   each one a recipe of parts

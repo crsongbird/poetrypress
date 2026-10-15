@@ -33,15 +33,15 @@ export const WIKI_ARTICLES = [
 <li>A graph is read <b>from left to right</b>. Parts on the left make something; parts to their right change it; the <b>Surface</b> at the far right is where the texture comes out.</li>
 <li>Every part shows a <b>small preview</b> of what it makes, so you can see each step.</li>
 <li>Wires carry one of <b>five kinds of data</b>: gray maps, pictures, colors, numbers and curves. See [[kinds]].</li>
-<li>Most of the app’s own textures are graphs. <b>Start from…</b> opens any of them, so you can see how they are made and borrow their parts.</li>
-<li>Nothing here can break your page: <b>Revert</b> and undo are always there, and the graph is only used when you press <b>Use</b>.</li>
+<li>Most of the app’s own textures are graphs. <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts.</li>
+<li>Nothing here can break your page: undo and <b>Revert</b> are always there. The page shows a graph only when it is the page’s surface: the bar says <b>✓ On the Page</b> when it is, and <b>⇱ Show on Page</b> puts it there.</li>
 </ul>
 <p>The same way of working runs Blender’s shader nodes, Substance Designer, Houdini, Nuke and Filter Forge. What you learn here carries over.</p>
 <p>New to this? Start with [[first|your first surface]].</p>` },
   { id: 'first', group: 'Start here', title: 'Your first surface, step by step', body: `
 <p>This walk-through builds a simple colored, lit stone in about five minutes. It touches every basic idea once.</p>
 <h3>1. Start clean</h3>
-<p>Choose <b>Clear</b> (in ⋯ on a phone). Only the <b>Surface</b> is left: the end of every graph.</p>
+<p>Open <b>⋯</b> in the bar and choose <b>Clear the grid</b>. Only the <b>Surface</b> is left: the end of every graph.</p>
 <h3>2. Make a pattern</h3>
 <p>Open <b>＋ Parts</b>, find <b>Perlin Noise</b> (in Noise), and add it. Its preview shows soft gray hills. Wire its output (the dot on its right edge) into the Surface’s <b>Image</b> input (a dot on the Surface’s left edge). The big preview in the corner now shows the noise: you have made a texture.</p>
 <p>With a mouse, drag from dot to dot. On a touch screen, hold the noise, choose <b>Connect its output…</b>, then tap the Surface and pick <b>picture</b>. See [[mouse]] and [[touch]].</p>
@@ -52,7 +52,7 @@ export const WIKI_ARTICLES = [
 <h3>5. Light it</h3>
 <p>Add a <b>Light Engine</b> (Light &amp; Color). Wire the Gradient Map into its <b>picture</b>, and the Levels output into its <b>height</b> as well. One output can feed many inputs. Wire the Light Engine into the Surface. Turn the light dial on the page: the hills cast shadows. See [[heights]].</p>
 <h3>6. Put a control on the page</h3>
-<p>Add a <b>Knob</b> (Inputs), name it “Roughness”, and wire it into the Perlin Noise’s <b>Roughness</b> ⚙ port. Press <b>Use</b>: the Surface section of the page now has a Roughness slider. See [[controls]].</p>
+<p>Add a <b>Knob</b> (Inputs), name it “Roughness”, and wire it into the Perlin Noise’s <b>Roughness</b> ⚙ port. Press <b>⇱ Show on Page</b> (unless the bar already says On the Page): the Surface section of the page now has a Roughness slider. See [[controls]].</p>
 <h3>7. Keep it</h3>
 <p>Press <b>Keep</b> and give it a name. It joins Your Surfaces in the surface menu. See [[keeping]].</p>` },
   { id: 'reading', group: 'Start here', title: 'Reading a graph', body: `
@@ -164,7 +164,7 @@ export const WIKI_ARTICLES = [
 <h3>An example</h3>
 <p>You put a Knob on the page and wire it into Perlin Noise’s <b>Roughness</b> (0–100). Above 50 the noise looks harsh, so half the slider is wasted. Open Roughness’s menu and choose <b>Set wire range…</b>, then enter <b>0, 50</b>. Now the whole slider sweeps 0 to 50.</p>
 <p>Want the slider called “Smoothness” instead? Rename the Knob and enter the range backwards, <b>50, 0</b>: the slider at 0 now gives Roughness 50, and the slider at 100 gives Roughness 0.</p>
-<p>One Knob can feed several settings, each with its own range, so a single slider moves them all by different amounts. The app’s textures do this often: open one from Start from… and look at the Knobs.</p>` },
+<p>One Knob can feed several settings, each with its own range, so a single slider moves them all by different amounts. The app’s textures do this often: open one from <b>Open</b> and look at the Knobs.</p>` },
 
   // ------------------------------------------------------------------ Building techniques
   { id: 'masks', group: 'Building techniques', title: 'Masks, mixing and blending', body: `
@@ -223,7 +223,7 @@ export const WIKI_ARTICLES = [
 
   // ------------------------------------------------------------------ The page and your graph
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
-<p>A graph is used on the page as the surface <b>From the Athanor</b> (press <b>Use</b>). The page shows only the controls you give it:</p>
+<p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Show on Page</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app offers to). The page shows only the controls you give it:</p>
 <ul>
 <li>Each <b>Knob</b> becomes one of the six sliders under Surface, labelled with the Knob’s name.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
@@ -246,15 +246,17 @@ export const WIKI_ARTICLES = [
 </ul>` },
   { id: 'poem', group: 'The page and your graph', title: 'Using the poem', body: `
 <p>Surfaces here sit behind poems, so a graph can know where the words are. <b>The Poem</b> part hands on gray maps of the text: where the words are, how far each point is from them, and which line, stanza or rhyme each belongs to.</p>
-<p>The most useful is <b>Distance</b>: 0 at the words, rising to 1 far away. Wired into a Mix’s amount (through Invert), it makes a texture fade near the text so the poem stays readable. Wired into Contour Lines, it makes rings spread from the words. Start from… › Ripples from the Words shows both.</p>` },
+<p>The most useful is <b>Distance</b>: 0 at the words, rising to 1 far away. Wired into a Mix’s amount (through Invert), it makes a texture fade near the text so the poem stays readable. Wired into Contour Lines, it makes rings spread from the words. <b>Open</b> › Starters to take apart › Ripples from the Words shows both.</p>` },
   { id: 'keeping', group: 'The page and your graph', title: 'Keeping and sharing surfaces', body: `
 <ul>
-<li><b>Keep</b> saves the graph on this browser’s shelf under its Surface’s name. It then appears under <b>Your Surfaces</b> in the surface menu, with a picture.</li>
-<li><b>Kept</b> (in ⋯ on a phone) opens kept surfaces, replaces one with the graph on the grid, copies or shares a surface’s <b>wiring</b> as text, takes pasted wiring in, and saves or loads the whole shelf as a file.</li>
+<li><b>Keep</b>, in the bar, saves the graph on this browser’s shelf under its Surface’s name. It then appears under <b>Your Surfaces</b> in the surface menu, with a picture.</li>
+<li><b>Open</b> › <b>Your surfaces</b> opens one again.</li>
+<li><b>⋯</b> › <b>Copy the wiring</b> copies the graph on the grid as text, to paste anywhere or into another Athanor.</li>
+<li><b>⋯</b> › <b>Your shelf…</b> replaces a kept surface with the graph on the grid, copies or shares its <b>wiring</b>, takes it off the shelf, takes pasted wiring in, and saves or loads the whole shelf as a file.</li>
 <li>In the surface menu, hold (or right-click) a surface you made to share or copy its wiring.</li>
 <li>The graph is also saved inside your look, so spells, shared links and saved JSON carry it.</li>
 </ul>
-<p><b>Revert</b> returns to the graph as it was when the Athanor opened.</p>` },
+<p><b>Revert</b> (in ⋯) returns to the graph as it was when the Athanor opened.</p>` },
 
   // ------------------------------------------------------------------ Using the editor
   { id: 'mouse', group: 'Using the editor', title: 'With a mouse and keyboard', body: `
@@ -291,7 +293,7 @@ export const WIKI_ARTICLES = [
 <li><b>Undo and redo</b> (↶ ↷) step through every change: parts, wires, settings, whole graphs opened.</li>
 <li>The <b>lock</b> in a part’s title bar pins it in place.</li>
 <li><b>Tidy into columns</b> (the grid’s menu) arranges the graph in columns from left to right; pinned parts stay where they are.</li>
-<li><b>Revert</b> goes back to the graph as it was when the Athanor opened; <b>Clear</b> empties the grid. Both ask first.</li>
+<li>In <b>⋯</b>: <b>Revert</b> goes back to the graph as it was when the Athanor opened; <b>Clear the grid</b> empties it. Both ask first.</li>
 </ul>` },
   { id: 'limits', group: 'Using the editor', title: 'Limits and speed', body: `
 <p>A graph can hold up to {{nodes}} parts. Heavy graphs are drawn on a coarser grid so the page stays responsive on a phone; the status line in the corner says when. Turning off <b>Steps</b> (the small previews) makes editing faster on slow devices.</p>` },

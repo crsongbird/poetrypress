@@ -34,10 +34,10 @@ for(const [type, ch] of Object.entries(TEXTURE_CHAINS)){
     && ch.wires.some(([a, , b, j]) => j > STEPS[ch.nodes[b-1][0]].dataIns);
   check(`${ch.label}: its steps exist, its wires fit their ports, and its sliders and dial are WIRED to the params they drive`, okNodes && okWires && binds.length === 0 && inputsWired);
   const g = A.athanorStarter(type);
-  check(`${ch.label}: opens as an Athanor template (Start from… → Vellum's textures), named, with its sliders`,
+  check(`${ch.label}: opens as an Athanor template (Open → the app's own textures), named, with its sliders`,
     g && A.athanorName(g) === ch.label && A.athanorKnobs(g).length >= 2);
 }
-check('the Athanor\'s menu lists the app\'s textures as templates, under the Surface menu\'s own group headings (TEXTURE_GROUPS), after the starters', /\[ATHANOR_BASICS, \.\.\.TEXTURE_GROUPS\]\.map\(g => \[g, g\.types\.filter\(t => TEXTURE_CHAINS\[t\]\)/.test(src('forge.js')) && /Starters to Take Apart/.test(src('forge.js')));
+check('the Athanor\'s Open menu lists the app\'s textures as templates, under the Surface menu\'s own group headings (TEXTURE_GROUPS), after the starters', /TEXTURE_GROUPS\.map\(g => \[g, g\.types\.filter\(t => TEXTURE_CHAINS\[t\]\)/.test(src('forge.js')) && /FORGE_BAR\.starters/.test(src('forge.js')));
 check('a bound param shows as written in its node (editable text)', F.forgeNodeHtml('streaks', {}, { angle: '@dial' }).includes('value="@dial"') && F.forgeNodeHtml('streaks', {}, { angle: '@dial' }).includes('forge-bound'));
 check('a bound param with no range of its own reads its step\'s range', JSON.stringify(stepRange('hatching', 'cross')) === '[0,100]');
 check('every range param of a working step has a ⚙ port after the step\'s own (Filter Forge: every slider takes a wire); inputs and the Surface have none',

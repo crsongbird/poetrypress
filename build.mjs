@@ -103,7 +103,7 @@ const ORDER = [
   'stepsPatterns.js',     // general parts, second shelf: Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum
   'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain
   'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
-  'athanorStudies.js',    // the future-directions surfaces, as graphs of parts (Start from… → Surface Studies)
+  'athanorStudies.js',    // the future-directions surfaces, as graphs of parts (Open → Surface Studies)
   'chains.js',            // textures rebuilt as chains of steps (and the Athanor's templates)
   'athanor.js',           // the Athanor's evaluator: a node graph made into a texture
   'textureGenerators.js',

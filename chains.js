@@ -1,6 +1,6 @@
 /**
  * chains.js — Vellum's textures REBUILT AS CHAINS OF STEPS (steps.js): each a
- * graph the Athanor can open as a template ("Start from…" → Vellum's own
+ * graph the Athanor can open as a template (Open → the app's own
  * textures), and which the texture itself is made from — the same graph,
  * evaluated by athanor.js on the texture's grid.
  *

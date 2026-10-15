@@ -227,7 +227,7 @@ default.
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes |
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
-| `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in Start from…; bundled before chains.js |
+| `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in the Athanor's Open menu; bundled before chains.js |
 | `athanor.js` | the graph evaluator (in the worker), its cache (`ATHANOR_KEPT`), budget, versions, starters, `validateGraph` |
 | `athanorWiki.js` · `athanorWikiParts.js` | the Athanor's wiki: concept articles, the first-surface tutorial, glossary, search (`WIKI_ARTICLES`, `wikiArticleHtml`, `wikiSearch`) · every part's page (`WIKI_PARTS`). Bundled before forge.js |
 | `forge.js` | the editor UI (Drawflow): menus, wiring, the wiki panel, the shelf of kept surfaces |
@@ -676,15 +676,26 @@ The full study and what is still to do are in ROADMAP.md §1.
   - A phone's tap is a pointer down and up in place; it never arrives as a
     click.
   - Escape or Cancel stops.
-- **Asking first:** before Clear, Revert, Start from…, or deleting a node,
+- **The bar** (Ruby: "Start… Kept, Keep, Use: Use feels redundant"):
+  **Open ▾** (every graph to begin from: your kept surfaces, the starters,
+  the Basics, the Surface Studies, the app's textures by group, each with
+  the first line of its TEACH as its hint), **Keep**, ↶ ↷, the zoom, **⋯**
+  (Show it on the page, Copy and Share the wiring, Your shelf…, Tidy,
+  Revert, Clear the grid, the wiki), the page chip (`forgePageBtn`: ✓ On the
+  Page, or ⇱ Show on Page, which is what Use did; `deps.onPage`), **Done**.
+  - `closeForge` returns whether the graph changed while open; Done then
+    offers to show a changed graph the page doesn't (a toast with an
+    action). Bar words live in strings.js `FORGE_BAR`.
+- **Asking first:** before Clear, Revert, Open, or deleting a node,
   the editor asks whenever the grid has work on it.
 - **Kept surfaces:** localStorage `uv.forge.kept.v1` (`forgeShelf`,
   `forgeShelfPut`), each validated on opening and import.
   - **One name** (Ruby): the name a surface is kept under is its Surface
     part's name. Keeping under a new name renames the part
     (`forgeNameSurface`).
-  - **Keep** is in the bar. Replacing a kept surface asks first (the soft
-    no).
+  - **Keep** is in the bar; opening one is in Open; managing them (replace,
+    copy, share, remove, paste, the shelf as a file) is ⋯ › Your shelf….
+    Replacing a kept surface asks first (the soft no).
   - **Wiring as text:** `forgeWiringText` (the shelf file's form, without
     thumbnails) for Copy and Share; `forgeReadSurfaces` reads it back from a
     paste or a file (a shelf, one surface, or a bare graph).
@@ -898,7 +909,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   Ribbons** (the same look, renamed).
 - **The Basics** (plainnoise, stripes, polka, checker, softgradient, cells;
   `ATHANOR_BASICS`):
-  - In the Athanor's Start from… only; hidden options so old looks open.
+  - In the Athanor's Open menu only; hidden options so old looks open.
   - No preset uses one.
   - They are quiet grounds of two or three general parts, with every slider
     a plain 0–100. They are the Athanor's easiest lessons.

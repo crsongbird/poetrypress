@@ -36,7 +36,7 @@ check('Drawflow loads only when the Athanor opens, from the CDN at an exact vers
     /Bind to a page slider/.test(fsrc) && /'Set its range…'/.test(fsrc) && /'Set wire range…'/.test(fsrc) && /'Add a Knob for it'/.test(fsrc));
   check('the view: everything in sight (⌖), and tidying into columns (pinned nodes stay)', html.includes('id="forgeFit"') && /const fitView = \(\) =>/.test(fsrc) && /layoutAthanor\(data\); for\(const \[id, p\] of Object\.entries\(pins\)\)/.test(fsrc));
   check('kept surfaces: a shelf in this browser, opened again, saved as a file and brought in (each checked)',
-    F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /v = validate \? validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeKeptBtn"'));
+    F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /v = validate \? validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeOpenBtn"') && /sub: shelfMenu/.test(fsrc));
   check('the Athanor wears the app\'s theme; only the wires and ports keep the colours of what they carry',
     /\.forge-veil\{ --fg-ground:var\(--bg-deep\); --fg-panel:var\(--bg-panel\)/.test(css) && /:root\[data-theme="vellum"\] \.forge-veil\{ --t-field/.test(css));
   check('on a phone: the parts are a drawer that scrolls with one finger (no dragging from it), the preview a small dock bottom right',
@@ -113,7 +113,7 @@ check('opened from the top bar (its old Esoterica card is gone); a full-screen e
     check('map inputs (v3, Filter Forge): a gradient on Threshold\'s ⚙ At sets the threshold point by point — the picture splits; a v2 graph still takes the average',
       JSON.stringify(row(a)) !== JSON.stringify(row(b)) && new Set(row(a)).size > 1 && new Set(row(b)).size === 1);
     check('the textures\' own chains stay v2 (their pictures never change); a starter is the newest', C.athanorStarter('stainedglass').v === 2 && C.athanorStarter('ripples').v === 3); }
-  check('…offered from the editor\'s bar, with every part\'s ports filled in on load', html.includes('id="forgeStarter"')
+  check('…offered from the editor\'s bar (Open), with every part\'s ports filled in on load', html.includes('id="forgeOpenBtn"')
     && /P\.ins\.forEach\(\(_, j\) => \{ n\.inputs\['input_' \+ \(j \+ 1\)\]/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')));
   {
     let id2 = 1; const nd = {}; const mk = (name, data = {}) => { const i = String(id2++); nd[i] = { id: +i, name, data, inputs: {}, outputs: {} }; return i; };

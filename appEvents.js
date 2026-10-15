@@ -51,7 +51,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS } from './tunables.js';
-import { applyStrings, fill, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS } from './strings.js';
+import { applyStrings, fill, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -173,7 +173,7 @@ const LOCKABLE = [
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
 if(typeof document.querySelectorAll === 'function'){
-  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'forgeStarter']);
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme']);
   for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
       + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
     if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
@@ -2984,13 +2984,17 @@ const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); i
   onShelf: () => { if(typeof paintShelfOptions === 'function') paintShelfOptions(); },
   validate: json => validateGraph(json),
   warn: problems => toast('The graph was cleaned on loading: ' + problems.slice(0, 2).join('; ') + (problems.length > 2 ? '…' : '')),
-  // "Use as Surface": the Athanor's texture on the page
+  // whether the page's surface is this graph, and putting it there (the bar says which, and does it)
+  onPage: () => !!($('textureToggle') && $('textureToggle').checked && $('textureType') && $('textureType').value === 'athanor'),
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
     t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); scheduleRender(); } });
 // THE ATHANOR opens from the top bar, on every device
 function openAthanorNow(){ openForge(forgeDeps()); }
 if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openAthanorNow());
-if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => { closeForge(forgeDeps()); paintForgeSummary(); });
+// Done: closed; a graph changed here that the page doesn't show is offered to it (Ruby: Use was redundant)
+if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => {
+  const d = forgeDeps(), changed = closeForge(d); paintForgeSummary();
+  if(changed && !d.onPage()) toast(FORGE_BAR.notOnPage, { label: FORGE_BAR.showIt, act: () => d.use() }); });
 setTimeout(() => { paintForgeSummary(); applyAthanorGraph(true); }, 0);
 
 // ---------- LINKED CONTROLS ----------

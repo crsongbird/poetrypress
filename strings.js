@@ -434,8 +434,43 @@ export const KEPT = {
   pasteBody: 'The text that Copy the wiring makes (or a shelf file’s text). It is put on your shelf.',
   pasteNone: 'That isn’t a surface’s wiring. Nothing was changed.',
   current: 'The surface on the page',
-  keepIt: 'Keep this surface…',
-  keepHint: 'save it to the shelf under its name',
+};
+
+/** The Athanor's bar (Ruby: "Start… Kept, Keep, Use: Use feels redundant"): Open (every graph there is to begin
+ *  from), Keep, undo, ⋯ (everything else), whether the page shows this graph, and Done. */
+export const FORGE_BAR = {
+  open: 'Open',
+  openTitle: 'Open a graph',
+  openHint: 'It takes the place of the graph on the grid (asking first if you changed it). Undo brings it back.',
+  yours: 'Your surfaces',
+  yoursHint: 'kept on this browser’s shelf',
+  yoursNone: 'Nothing kept yet: Keep puts the graph on the grid here',
+  starters: 'Starters to take apart',
+  startersHint: 'small working graphs, each teaching one idea',
+  basics: 'Basics',
+  basicsHint: 'quiet grounds of two or three parts: the easiest lessons',
+  studies: 'Surface Studies',
+  studiesHint: 'surfaces built only from general parts, to borrow from',
+  textures: 'The app’s own textures',
+  texturesHint: 'see how each is made, and borrow its parts',
+  more: 'The Athanor',
+  onPage: '✓ On the Page',
+  onPageHint: 'The page’s surface is this graph: what you change here shows there',
+  toPage: '⇱ Show on Page',
+  toPageHint: 'Make this graph the page’s surface (From the Athanor)',
+  toPageItem: 'Show it on the page',
+  shelf: 'Your shelf…',
+  shelfHint: 'open, replace, copy, share or remove kept surfaces; carry them as a file',
+  revert: 'Revert',
+  revertHint: 'back to the graph as it was when the Athanor opened',
+  clear: 'Clear the grid',
+  clearHint: 'only the Surface is left, to start from nothing',
+  tidy: 'Tidy into columns',
+  tidyHint: 'parts in columns from left to right; pinned parts stay',
+  help: 'Wiki and help',
+  helpHint: 'how the Athanor works, and a page for every part',
+  notOnPage: 'Your graph isn’t on the page.',
+  showIt: 'Show it',
 };
 
 /** The colour picker's own button. */

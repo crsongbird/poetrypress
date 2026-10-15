@@ -694,14 +694,14 @@ export const WELCOME_POEM = "## WTF is [PoetryPress]?\n\n>  [{\"well, it's a wei
 /** Production is poetrypress.*; anything else — vellum, a local file — is development. */
 
 /**
- * THE TEXTURE GROUPS, as the Surface menu and the Athanor's "Start from…"
+ * THE TEXTURE GROUPS, as the Surface menu and the Athanor's Open menu
  * both show them: grouped by what a surface IS, each group's glyph a Runology
  * Archetype whose meaning it shares (Symbology's metadata: Earth is ground
  * and soil, Quintessence light and shimmer, Wind weather, Astral sky and
  * stars, Planar worlds and travel, Water flow, Materia crafting and matter,
  * Order order, Vitrum engraving and record, Creation what you make).
  */
-/** The Basics: quiet patterns of two or three parts, the Athanor's first lessons (Start from… → Basics); not in the Surface menu (Ruby). */
+/** The Basics: quiet patterns of two or three parts, the Athanor's first lessons (Open → Basics); not in the Surface menu (Ruby). */
 export const ATHANOR_BASICS = { glyph: '🜛', name: 'Basics', types: ['cells', 'checker', 'softgradient', 'plainnoise', 'polka', 'stripes'] };
 export const TEXTURE_GROUPS = [
   { glyph: '🜃', name: 'Paper & Grounds', types: ['coldpress', 'grain', 'linen', 'oldpaper'] },

@@ -6,7 +6,14 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Epimetheus)
+## 1 · Ruby to judge (new in Saturn–Janus)
+- THE ATHANOR'S BAR (Ruby: "Start… Kept, Keep, Use: Use feels redundant; the other menus feel… not
+  particularly good"): Open ▾ (your surfaces, starters, Basics, studies, the app's textures, each with what it
+  teaches) · Keep · ↶ ↷ · the view · ⋯ (copy, your shelf, Tidy, Revert, Clear, the wiki) · ✓ On the Page /
+  ⇱ Show on Page · Done (offers to show a changed graph). Every menu's hints now show whole, under each name.
+  Which menus still feel wrong, and where?
+
+## From Saturn–Epimetheus
 - CIRCUIT BOARD (Pattern & Order), in place of Veins of Light: Traces, Bends, Charge (Substrate → Color →
   Glow → Sparks), Data Flow, Components, Scale; Trace Hue and Data Hue (the accents until chosen), the Glow
   Hue's aura; the board in the backdrop's colors. Its readings: Overclocked, Cold Storage, Factory Floor.
@@ -61,9 +68,6 @@ The plan for the surface engine, in four stages (Ruby): components → features 
 the parts → presets, last. No new or reworked presets before Stage 4. Delete items there as they ship.
 
 ## 1c · Ruby's notes to act on (her verdicts on Taygete and earlier; the rest she approved)
-- THE ATHANOR'S MENUS (Ruby, on the Filter Forge pass: "perfect — these menus need to be easier to use
-  though, it's difficult to understand what is where and why. I'm getting it the more I play"). Make
-  where things are, and why, easier to see: the menus' order and grouping, what each says it does.
 - SURFACE STUDIES (Ruby: "The surface studies are... hmmm."): not right yet. Before any becomes a menu
   texture (ROADMAP §2 I), ask which read right and what each is missing; Orbit Script, Transmutation
   Engine and Constellation are approximations waiting on parts.

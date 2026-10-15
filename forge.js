@@ -18,7 +18,7 @@ import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, atha
 import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS } from './appOptions.js';
-import { KEPT, fill } from './strings.js';
+import { KEPT, FORGE_BAR, fill } from './strings.js';
 import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiNeighbors } from './athanorWiki.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
@@ -232,7 +232,7 @@ export async function forgeCopy(text){
  *    part (or a port) → "Connect its output…" (or "Connect an input…"); a bar says what is
  *    being wired; then tap or hold the other part and choose its port from a
  *    list, each in its colour, the ones that carry the same kind first
- *  - a starter or a texture opened from "Start from…" says what it teaches
+ *  - a starter or a texture opened from Open says what it teaches
  */
 export async function openForge(deps){
   const { $ } = deps;
@@ -530,8 +530,9 @@ export async function openForge(deps){
         + `<button type="button" class="forge-menu-x" aria-label="Close">✕</button></div>`
         + (m.hint ? `<p class="forge-menu-hint">${forgeEsc(m.hint)}</p>` : '')
         + m.items.map((it, i) => it.sep ? '<hr>' : `<button type="button" class="forge-menu-item${it.danger ? ' danger' : ''}${it.sub ? ' has-sub' : ''}" data-i="${i}"${it.disabled ? ' disabled' : ''}`
-          + `${it.colour ? ` style="--mc:${it.colour}"` : ''}><span class="mi-glyph" aria-hidden="true">${forgeEsc(it.glyph || '')}</span><span class="mi-label">${forgeEsc(it.label)}</span>`
-          + `${it.hint ? `<small>${forgeEsc(it.hint)}</small>` : ''}</button>`).join('');
+          + `${it.colour ? ` style="--mc:${it.colour}"` : ''}><span class="mi-glyph" aria-hidden="true">${forgeEsc(it.glyph || '')}</span>`
+          // (the hint under the label, whole: a menu says what each thing does, never cut short)
+          + `<span class="mi-text"><span class="mi-label">${forgeEsc(it.label)}</span>${it.hint ? `<small>${forgeEsc(it.hint)}</small>` : ''}</span></button>`).join('');
       const first = menu.querySelector('.forge-menu-item:not([disabled])'); if(first && finePointer) first.focus();
     };
     const openMenu = (x, y, m) => {
@@ -799,15 +800,15 @@ export async function openForge(deps){
     };
     // ---- the bar ----
     const count = () => Object.keys(nodesOf()).length;
-    if($('forgeClear')) $('forgeClear').addEventListener('click', async () => {
+    const clearAll = async () => {
       if(count() && F.dirty && !await ask({ title: 'Clear the whole graph?', body: 'Every part and wire is removed. Undo or Revert can bring them back.', confirmLabel: 'Clear', danger: true })) return;
       F.quiet = true; ed.clear(); add('surface', 420, 90); F.quiet = false; F.version = ATHANOR_VERSION; save(); F.dirty = false; sound('nodeRemove');
-    });
-    if($('forgeRevert')) $('forgeRevert').addEventListener('click', async () => {
+    };
+    const revert = async () => {
       if(!F.opened) return;
       if(F.dirty && !await ask({ title: 'Revert to how it was?', body: 'Every change since the Athanor opened is undone.', confirmLabel: 'Revert', danger: true })) return;
       load(JSON.parse(F.opened)); sound('graphLoad'); setTimeout(fitView, 30);
-    });
+    };
     // open a graph (a starter, a template, a kept surface) in place of this one — asking first if this one has changed
     const openGraph = async (g, label, teach) => {
       if(count() && F.dirty && !await ask({ title: `Replace this graph with “${label}”?`, body: 'The graph on the grid is replaced. Undo or Revert can bring it back.', confirmLabel: 'Replace', danger: true })) return false;
@@ -824,28 +825,47 @@ export async function openForge(deps){
     const hideNote = () => { if(note && !note.hidden){ note.hidden = true; veil.classList.remove('note-open'); } };
     if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) hideNote(); });
     veil.addEventListener('pointerdown', e => { if(note && !note.hidden && !(e.target.closest && e.target.closest('.forge-note'))) hideNote(); }, true);
-    // ⋯ (a phone's bar): Kept, Help, Revert and Clear, in a menu
-    if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); const tap = id => () => { const b = $(id); if(b) b.click(); };
-      openMenu(r.left, r.bottom + 4, { title: 'The Athanor', items: [
-        { glyph: '✚', label: KEPT.keepIt, hint: KEPT.keepHint, act: () => keep() },
-        { glyph: '🜉', label: 'Kept surfaces…', act: () => { const b = $('forgeKeptBtn'), q = b.getBoundingClientRect(); openMenu(q.left || r.left, (q.bottom || r.bottom) + 4, shelfMenu()); } },
-        { glyph: '?', label: 'Wiki and help', act: tap('forgeDocBtn') }, { glyph: '↶', label: 'Revert', act: tap('forgeRevert') }, { glyph: '✕', label: 'Clear', act: tap('forgeClear') }] }); });
-    // the starters: a working graph to take apart, and Vellum's own textures as their chains of steps
-    const st = $('forgeStarter');
-    if(st){
-      // the starters, then the app's own textures under the same group headings as the Surface menu
-      const chained = [ATHANOR_BASICS, ...TEXTURE_GROUPS].map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
-      // (on a phone the bar is narrow: the menu says only "Start…")
-      const phoneBar = !!(document.body && document.body.classList.contains('is-mobile'));
-      st.innerHTML = `<option value="">${phoneBar ? 'Start…' : 'Start from…'}</option>`
-        + '<optgroup label="🝆 Starters to Take Apart">' + Object.entries(ATHANOR_STARTERS).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
-        + '<optgroup label="🜍 Surface Studies">' + Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, v]) => `<option value="${k}">${forgeEsc(v.label)}</option>`).join('') + '</optgroup>'
-        + chained.map(([g, ts]) => `<optgroup label="${forgeEsc(g.glyph + ' ' + g.name)}">` + ts.map(k => `<option value="${k}">${forgeEsc(TEXTURE_CHAINS[k].label)}</option>`).join('') + '</optgroup>').join('');
-      st.addEventListener('change', async () => {
-        const k = st.value; st.value = ''; const g = athanorStarter(k); if(!g) return;
-        const S = ATHANOR_STARTERS[k] || ATHANOR_STUDIES[k] || TEXTURE_CHAINS[k]; await openGraph(g, S.label, S.teach);
-      });
-    }
+    // OPEN (Ruby: one place for everything there is to begin from): your kept surfaces, the starters, the Basics,
+    // the Surface Studies and the app's own textures, each with what it teaches as its hint
+    const firstLine = t => { const m = /^[^.!?]*[.!?]/.exec(String(t || '')); return (m ? m[0] : String(t || '')).slice(0, 140); };
+    const opener = (k, S) => ({ glyph: '', label: S.label, hint: firstLine(S.teach), act: async () => { const g = athanorStarter(k); if(g) await openGraph(g, S.label, S.teach); } });
+    const openSpec = () => { const list = forgeShelf();
+      const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
+      const basics = ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t]);
+      return { title: FORGE_BAR.openTitle, hint: FORGE_BAR.openHint, items: [
+        list.length ? { glyph: '🜉', label: FORGE_BAR.yours, hint: FORGE_BAR.yoursHint, sub: () => ({ title: FORGE_BAR.yours, hint: FORGE_BAR.yoursHint,
+            items: list.slice().reverse().map(rec => ({ glyph: '🜉', label: rec.name, hint: String(rec.savedAt || '').slice(0, 10), act: () => openKept(rec) })) }) }
+          : { glyph: '🜉', label: FORGE_BAR.yours, hint: FORGE_BAR.yoursNone, disabled: true },
+        { glyph: '🝆', label: FORGE_BAR.starters, hint: FORGE_BAR.startersHint, sub: () => ({ title: FORGE_BAR.starters, items: Object.entries(ATHANOR_STARTERS).map(([k, v]) => opener(k, v)) }) },
+        { glyph: ATHANOR_BASICS.glyph, label: FORGE_BAR.basics, hint: FORGE_BAR.basicsHint, sub: () => ({ title: FORGE_BAR.basics, items: basics.map(k => opener(k, TEXTURE_CHAINS[k])) }) },
+        { glyph: '🜍', label: FORGE_BAR.studies, hint: FORGE_BAR.studiesHint, sub: () => ({ title: FORGE_BAR.studies,
+            items: Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, v]) => opener(k, v)) }) },
+        { glyph: '◈', label: FORGE_BAR.textures, hint: FORGE_BAR.texturesHint, sub: () => ({ title: FORGE_BAR.textures, hint: FORGE_BAR.texturesHint,
+            items: chained.map(([g, ts]) => ({ glyph: g.glyph, label: g.name, hint: ts.length + (ts.length === 1 ? ' texture' : ' textures'),
+              sub: () => ({ title: g.name, items: ts.map(k => opener(k, TEXTURE_CHAINS[k])) }) })) }) }] }; };
+    if($('forgeOpenBtn')) $('forgeOpenBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, openSpec()); });
+    // WHETHER THE PAGE SHOWS THIS GRAPH: said in the bar, and a tap puts it there when it doesn't (what Use did)
+    const paintPage = () => { const b = $('forgePageBtn'); if(!b) return; const on = !!(deps.onPage && deps.onPage());
+      // (on a phone, its glyph alone: ✓ or ⇱; its title says the rest)
+      const phone = !!(document.body && document.body.classList.contains('is-mobile')), txt = on ? FORGE_BAR.onPage : FORGE_BAR.toPage;
+      b.textContent = phone ? txt.split(' ')[0] : txt; b.title = on ? FORGE_BAR.onPageHint : FORGE_BAR.toPageHint; b.setAttribute('aria-label', txt.slice(2));
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); };
+    const toPage = () => { if(deps.use && !(deps.onPage && deps.onPage())){ deps.use(); sound('nodeAdd'); } paintPage(); };
+    F.paintPage = paintPage;
+    if($('forgePageBtn')) $('forgePageBtn').addEventListener('click', toPage);
+    // ⋯: everything else, on every device
+    if($('forgeMoreBtn')) $('forgeMoreBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(), onPage = !!(deps.onPage && deps.onPage());
+      openMenu(r.left, r.bottom + 4, { title: FORGE_BAR.more, items: [
+        ...(onPage ? [] : [{ glyph: '⇱', label: FORGE_BAR.toPageItem, hint: FORGE_BAR.toPageHint, act: toPage }]),
+        { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(onGrid()) },
+        ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(onGrid()) }] : []),
+        { glyph: '🜉', label: FORGE_BAR.shelf, hint: FORGE_BAR.shelfHint, sub: shelfMenu },
+        { sep: true },
+        { glyph: '▦', label: FORGE_BAR.tidy, hint: FORGE_BAR.tidyHint, act: () => tidy() },
+        { glyph: '↶', label: FORGE_BAR.revert, hint: FORGE_BAR.revertHint, act: revert },
+        { glyph: '✕', label: FORGE_BAR.clear, hint: FORGE_BAR.clearHint, danger: true, act: clearAll },
+        { sep: true },
+        { glyph: '?', label: FORGE_BAR.help, hint: FORGE_BAR.helpHint, act: () => F.showDoc && F.showDoc(true) }] }); });
     // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----
     const surfaceId = () => { const e = Object.entries(rawNodes()).find(([, n]) => n.name === 'surface'); return e ? e[0] : null; };
     const surfaceName = () => { const s = Object.values(rawNodes()).find(n => n.name === 'surface'); return ((s && s.data && s.data.name) || 'My Surface').trim(); };
@@ -914,11 +934,7 @@ export async function openForge(deps){
       });
       inp.click();
     };
-    const shelfMenu = () => { const list = forgeShelf(); return { title: 'Kept surfaces', hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet.', items: [
-      { glyph: '✚', label: KEPT.keepIt, hint: KEPT.keepHint, act: keep },
-      { glyph: '⧉', label: KEPT.copy, hint: KEPT.copyHint, act: () => copyKept(onGrid()) },
-      ...(canShare() ? [{ glyph: '⇗', label: KEPT.share, act: () => shareKept(onGrid()) }] : []),
-      ...(list.length ? [{ sep: true }] : []),
+    const shelfMenu = () => { const list = forgeShelf(); return { title: FORGE_BAR.shelf.replace('…', ''), hint: list.length ? 'Kept in this browser.' : 'Nothing kept yet: Keep puts the graph on the grid here.', items: [
       ...list.slice().reverse().map(rec => ({ glyph: '🜉', label: rec.name, hint: String(rec.savedAt || '').slice(0, 10), sub: () => ({ title: rec.name, items: [
         { glyph: '⇩', label: 'Open it in the editor', act: () => openKept(rec) },
         { glyph: '⟲', label: KEPT.replaceWith, danger: true, act: () => replaceKept(rec) },
@@ -929,10 +945,8 @@ export async function openForge(deps){
       { glyph: '⎘', label: KEPT.paste, act: pasteKept },
       { glyph: '⇪', label: 'Save the shelf as a file', hint: 'every kept surface, to back up or share', disabled: !list.length, act: exportShelf },
       { glyph: '⇣', label: 'Bring surfaces in from a file…', act: importShelf }] }; };
-    if($('forgeKeptBtn')) $('forgeKeptBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, shelfMenu()); });
     // Keep, one tap from the bar (Ruby: it was two menus deep)
     if($('forgeKeepBtn')) $('forgeKeepBtn').addEventListener('click', () => keep());
-    if($('forgeUseBtn') && deps.use) $('forgeUseBtn').addEventListener('click', () => deps.use());
     if($('forgeUndo')) $('forgeUndo').addEventListener('click', () => stepHist(-1));
     if($('forgeRedo')) $('forgeRedo').addEventListener('click', () => stepHist(1));
     if($('forgeZoomIn')) $('forgeZoomIn').addEventListener('click', () => ed.zoom_in());
@@ -962,9 +976,9 @@ export async function openForge(deps){
       const b = doc.querySelector('.wk-back'); if(b) b.disabled = !wiki.back.length; };
     const showDoc = (on, id) => { if(!doc) return; if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; goWiki(wiki.at, false); }
       doc.hidden = !on; if(on && id) goWiki(id);
-      ['forgeHelpBtn', 'forgeDocBtn'].forEach(k => { const b = $(k); if(b) b.setAttribute('aria-expanded', on ? 'true' : 'false'); }); };
+      { const b = $('forgeHelpBtn'); if(b) b.setAttribute('aria-expanded', on ? 'true' : 'false'); } };
     F.showDoc = showDoc; F.goWiki = id => showDoc(true, id);
-    ['forgeHelpBtn', 'forgeDocBtn'].forEach(k => { const b = $(k); if(b) b.addEventListener('click', () => showDoc(!!(doc && doc.hidden))); });
+    if($('forgeHelpBtn')) $('forgeHelpBtn').addEventListener('click', () => showDoc(!!(doc && doc.hidden)));
     if(doc) doc.addEventListener('click', e => {
       const t = e.target.closest && e.target.closest('[data-doc]');
       if(t){ const d = t.dataset.doc; if(d === 'close') showDoc(false); else if(d === 'contents') doc.classList.toggle('wk-show-nav'); else if(d === 'back' && wiki.back.length) goWiki(wiki.back.pop(), false); return; }
@@ -993,12 +1007,16 @@ export async function openForge(deps){
     F.quiet = true; add('noise', 40, 60); add('surface', 420, 90); F.quiet = false; F.paintAll(); F.save(); }
   F.opened = JSON.stringify(ed.export());
   F.dirty = false;
+  if(F.paintPage) F.paintPage();
   if(F.pushHist){ F.pushHist(); F.paintHist(); }           // the graph as it opened is the first step back
   setTimeout(() => { if(F.fitView) F.fitView(); if(F.redrawWires) F.redrawWires(); }, 40);
 }
+/** Close the Athanor. Returns whether the graph changed while it was open (the page offers to show it). */
 export function closeForge(deps){
+  const F = openForge, changed = !!(F.editor && F.opened && JSON.stringify(F.editor.export()) !== F.opened);
   const veil = deps.$('forgeVeil'); if(veil){ veil.hidden = true; veil.classList.remove('parts-open'); }
   if(openForge.closeMenu) openForge.closeMenu();
   if(openForge.stopWire) openForge.stopWire();
   if(document.body && document.body.classList) document.body.classList.remove('forge-open');
+  return changed;
 }

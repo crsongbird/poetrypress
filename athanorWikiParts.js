@@ -723,7 +723,7 @@ export const WIKI_PARTS = {
   // ================= TEXTURES: larger techniques =================
   texture: {
     line: 'Any texture from the Surface menu, as a picture to keep working on.',
-    about: 'A shortcut that renders one of the app’s textures whole. Most of them are graphs themselves: Start from… opens one to see its parts.',
+    about: 'A shortcut that renders one of the app’s textures whole. Most of them are graphs themselves: Open opens one to see its parts.',
     ins: { seed: 'Shifts its pattern.' },
     outs: { image: 'The texture in color.', grey: 'The texture in gray.' },
     set: { type: 'Which texture.', p1: 'Its first slider.', p2: 'Its second slider.', p3: 'Its third slider.' },

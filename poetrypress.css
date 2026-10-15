@@ -1657,7 +1657,6 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-spacer{ flex:1; }
 .forge-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; color:var(--fg-accent); letter-spacing:0.03em; white-space:nowrap; }
 .forge-sub{ font-family:var(--ui-text); font-variation-settings:normal; font-size:12px; color:var(--fg-text); opacity:0.6; letter-spacing:0; margin-left:6px; }
-.forge-starter{ max-width:170px; flex:0 1 auto; padding:4px 6px; }
 .forge-parts-btn{ display:none; }
 .forge-body{ flex:1; display:flex; min-height:0; position:relative; }
 /* the palette: categories that fold, each marked in its own colour */
@@ -1751,8 +1750,8 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-menu-item[disabled]{ opacity:0.45; cursor:default; }
 .forge-menu-item.danger{ color:#e08a8a; }
 .forge-menu-item .mi-glyph{ width:16px; flex:0 0 16px; text-align:center; color:var(--mc, var(--fg-dim)); font-family:'Noto Sans Symbols', 'Noto Sans Symbols 2', 'Segoe UI Symbol', var(--ui-text); }
-.forge-menu-item .mi-label{ flex:1; min-width:0; }
-.forge-menu-item small{ color:var(--fg-dim); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%; }
+.forge-menu-item .mi-text{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.forge-menu-item small{ color:var(--fg-dim); font-size:11px; line-height:1.35; }
 .forge-menu-item.has-sub .mi-label::after{ content:' ›'; color:var(--fg-dim); }
 body.forge-open{ overflow:hidden; }
 .forge-summary{ opacity:0.8; }
@@ -1763,7 +1762,6 @@ body.forge-open{ overflow:hidden; }
   .forge-title{ font-size:15px; }
   .forge-bar{ flex-wrap:wrap; row-gap:4px; padding:5px 6px; gap:4px; }
   .forge-bar button{ padding:4px 8px; }
-  .forge-starter{ max-width:118px; }
   .forge-parts-btn{ display:inline-block; }
   .forge-palette{ position:absolute; left:0; top:0; bottom:0; z-index:8; width:min(250px, 78vw); display:none; box-shadow:12px 0 30px -18px rgba(0,0,0,.9); }
   .forge-veil.parts-open .forge-palette{ display:block; }
@@ -1888,29 +1886,20 @@ summary.card-title, .card-title{ overflow:hidden; }
 /* on a desk the note sits beside the parts list, never over it */
 @media (min-width: 761px){ body:not(.is-mobile) .forge-note{ left:188px; width:min(380px, calc(100% - 200px)); } }
 @media (min-width: 900px){ body:not(.is-mobile) .forge-note{ left:248px; width:min(380px, calc(100% - 260px)); } }
-/* THE BAR ON A PHONE: one row — the glyph for a title, ＋ Parts, Start from…, ↶ ↷, ⋯ (Kept, Help, Revert,
-   Clear), Keep, Use, Done; the zoom buttons go (two fingers zoom); everything a size the thumb can hit */
-.forge-more-btn{ display:none; }
+/* THE BAR (Ruby: fewer, clearer things): Open ▾, Keep, ↶ ↷, the zoom, ⋯ (everything else), whether the page
+   shows the graph, Done. On a phone one row: the zoom goes (two fingers zoom) and the page chip says less */
 .forge-bar .forge-hist{ padding:4px 9px; font-size:15px; } .forge-bar .forge-hist:disabled{ opacity:.3; }
+.forge-bar .forge-page-btn.on{ color:var(--accent); border-color:transparent; background:none; cursor:default; }
 @media (max-width: 760px){
   .forge-bar{ flex-wrap:nowrap; gap:4px; padding:4px 6px; }
-  .forge-bar button, .forge-bar .forge-starter{ font-size:13px; padding:5px 9px; min-height:32px; }
-  .forge-name, .forge-wide, .forge-zoom{ display:none !important; }
-  .forge-more-btn{ display:inline-block; }
-  .forge-starter{ max-width:none; flex:1 1 auto; min-width:0; }
+  .forge-bar button{ font-size:13px; padding:5px 9px; min-height:32px; }
+  .forge-name, .forge-zoom{ display:none !important; }
   .forge-spacer{ display:none; }
 }
-body.is-mobile .forge-bar{   padding:4px 6px; }
-body.is-mobile .forge-bar button, body.is-mobile .forge-bar .forge-starter{ font-size:13px; padding:5px 9px; min-height:32px; }
-body.is-mobile .forge-name, body.is-mobile .forge-wide, body.is-mobile .forge-zoom{ display:none !important; }
-body.is-mobile .forge-more-btn{ display:inline-block; }
-body.is-mobile .forge-starter{ max-width:none; flex:1 1 auto;  }
+body.is-mobile .forge-bar{ padding:4px 6px; gap:3px; }
+body.is-mobile .forge-bar button{ font-size:13px; padding:5px 7px; min-height:32px; }
+body.is-mobile .forge-name, body.is-mobile .forge-zoom{ display:none !important; }
 body.is-mobile .forge-spacer{ display:none; }
-/* Keep sits in the bar too (one tap, Ruby): the buttons draw in a little so Start from… keeps room to be read */
-body.is-mobile .forge-bar button{ padding:5px 7px; }
-body.is-mobile .forge-bar .forge-hist{ padding:5px 7px; }
-body.is-mobile .forge-starter{ min-width:64px; }
-body.is-mobile .forge-bar{ gap:3px; }
 @media (max-width: 380px){ body.is-mobile .forge-title{ display:none; } }
 
 

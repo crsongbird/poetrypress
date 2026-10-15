@@ -49,6 +49,5 @@ for(const [k] of st){
   const knobs = A.athanorKnobs(JSON.stringify(g));
   check(`${k}: opens as a newest-version graph, validates clean, and its knobs reach the Surface`, g.v === A.ATHANOR_VERSION && v.ok && !v.problems.length && knobs.length >= (g.drawflow.Home.data && Object.values(g.drawflow.Home.data).filter(n => n.name === 'knob').length));
 }
-check('Start from… offers the studies by name', (await import('../forge.js')) && true);
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

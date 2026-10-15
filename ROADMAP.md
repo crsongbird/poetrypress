@@ -252,7 +252,7 @@ Ripples from the Words.
     - **Mutate Gently** (every die, gently, at once);
     - **Freeze This Seed** (the seed's lock, surfaced as an action);
     - **Reveal Spell Graph**: opens the texture's chain in the Athanor,
-      which exists today as Start from…. Make it a button on the Surface
+      which exists today as the Athanor's Open menu. Make it a button on the Surface
       card.
 - **H2 · Presets as graphs with exposed settings.** A preset stores:
   - its graph;
@@ -276,7 +276,7 @@ Ripples from the Words.
 
 ### I · Surfaces from the document (Stage 3: as textures in the menu, each with four readings; presets wait for Stage 4)
 
-All 36 exist as **Surface Studies** (athanorStudies.js; Start from… →
+All 36 exist as **Surface Studies** (athanorStudies.js; Open →
 Surface Studies): graphs of general parts with TEACH and Knobs, first
 drafts tuned by eye. Stage 3 turns each into a texture: a chain in chains.js
 (knobs bound to sliders), four readings, alt-text words, a fingerprint. Its

@@ -588,7 +588,7 @@ Have fun!</textarea>
             <label data-str="label.surface_variant">Surface Variant</label>
             <select id="textureType">
               <!-- grouped by what a surface IS (each group alphabetical); each group's glyph a Runology Archetype that means it (appOptions.js TEXTURE_GROUPS) -->
-              <!-- the Basics live in the Athanor (Start from… → Basics); kept here hidden, so a look saved with one still opens -->
+              <!-- the Basics live in the Athanor (Open → Basics); kept here hidden, so a look saved with one still opens -->
               <option value="cells" data-str="option.cells" hidden>Cells</option>
               <!-- the first Fractured Glaze (Crazing), hidden: looks saved with it still open; its successor is 'crackle' -->
               <option value="crackedglaze" data-str="option.crazed_glaze" hidden>Crazed Glaze</option>
@@ -1151,21 +1151,20 @@ Have fun!</textarea>
       <span class="forge-title"><span class="forge-glyph" aria-hidden="true">🜉</span><span class="forge-name"> The Athanor</span> <small class="forge-sub">Surface texture node editor</small></span>
       <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid">＋ Parts</button>
       <span class="forge-spacer"></span>
-      <select id="forgeStarter" class="forge-starter" title="Begin from a working graph, or one of the app's own textures"></select>
+      <!-- THE BAR (Ruby): Open (every graph to begin from: your kept surfaces, starters, studies, the app's own
+           textures), Keep, undo and redo, the view, ⋯ (the shelf, copy, Revert, Clear, the wiki), whether the page
+           shows this graph, and Done -->
+      <button type="button" class="ghost forge-open-btn" id="forgeOpenBtn" title="Open a graph: one of your kept surfaces, a starter, a study, or one of the app's own textures">Open ▾</button>
+      <button type="button" class="ghost" id="forgeKeepBtn" title="Keep this surface on the shelf, by its name" data-str="kept.keep">Keep</button>
       <button type="button" class="ghost forge-hist" id="forgeUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
       <button type="button" class="ghost forge-hist" id="forgeRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
-      <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: Kept, Help, Revert, Clear" title="Kept, Help, Revert, Clear">⋯</button>
-      <button type="button" class="ghost forge-wide" id="forgeKeptBtn" title="Keep this surface by name, or open one kept">Kept</button>
-      <button type="button" class="ghost forge-wide" id="forgeDocBtn" aria-expanded="false" aria-controls="forgeDoc" title="How the Athanor works">Help</button>
-      <button type="button" class="ghost forge-wide" id="forgeRevert" title="Back to the graph as it was when the Athanor opened">Revert</button>
-      <button type="button" class="ghost forge-wide" id="forgeClear">Clear</button>
       <span class="forge-zoom">
         <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
         <button type="button" class="ghost" id="forgeFit" title="Everything in view" aria-label="Everything in view">⌖</button>
         <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
       </span>
-      <button type="button" class="ghost" id="forgeKeepBtn" title="Keep this surface on the shelf, by its name" data-str="kept.keep">Keep</button>
-      <button type="button" class="ghost" id="forgeUseBtn" title="Show it on the page, as the Surface">Use</button>
+      <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: your shelf, copy, Revert, Clear, the wiki" title="Your shelf, copy and share, Revert, Clear, the wiki">⋯</button>
+      <button type="button" class="ghost forge-page-btn" id="forgePageBtn"></button>
       <button type="button" class="btn-major" id="forgeCloseBtn" data-sound="athanorClose">Done</button>
     </div>
     <div class="forge-body">
