@@ -13823,7 +13823,7 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 680], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 760]],   // 13 (100 of 50–400), 14
     wires: [[1, 1, 9, paramPort('discharge', 'reach')], [2, 1, 9, paramPort('discharge', 'branching')], [3, 1, 9, paramPort('discharge', 'poles')], [4, 1, 10, paramPort('burn', 'material')],
       [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1], [13, 1, 9, paramPort('discharge', 'zoom')], [14, 1, 9, paramPort('discharge', 'offset')]] },
-  // 🜉 Ruffled Growth: a Growing Line, its body raised and lit
+  // 🜉 Ruffled Growth: Differential Growth, its body raised and lit
   growth: { label: 'Ruffled Growth', div: 2, teach: 'Differential growth: Differential Growth starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
       ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
       ['knob', { slot: '2', name: 'Fold Size', def: 25 }, 40, 140],                // 2  (100 of 50–250)
@@ -13955,7 +13955,7 @@ const TEXTURE_CHAINS = {
       ['grain', { size: 100, contrast: 100, kind: 33 }, 320, 80],                  // 4
       ['surface', { name: 'Film Grain', ground: 'grey' }, 600, 100]],              // 5
     wires: [[1, 1, 4, paramPort('grain', 'size')], [2, 1, 4, paramPort('grain', 'contrast')], [3, 1, 4, paramPort('grain', 'kind')], [4, 1, 5, 1]] },
-  // √ Painter's Frustration: Angry Strokes lays the paint and its thickness; a little Canvas Weave
+  // √ Painter's Frustration: Paint Swipes lays the paint and its thickness; a little Canvas Weave
   // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
   // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
   brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'Paint Swipes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [
@@ -14181,7 +14181,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
   const isImg = v => v && typeof v === 'object' && v.r instanceof Float32Array;
   // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
-  // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
+  // every part can take one: before, a Mix between Paint Swipes and the Light Engine got nothing)
   const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
   // A CURVE (Filter Forge's curve components): a shape from 0 to 1, { curve: 257 samples }. Wired where a map
   // is wanted it is laid across the page left to right; where a number is wanted, its average.
@@ -30635,7 +30635,7 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 680], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 760]],   // 13 (100 of 50–400), 14
     wires: [[1, 1, 9, paramPort('discharge', 'reach')], [2, 1, 9, paramPort('discharge', 'branching')], [3, 1, 9, paramPort('discharge', 'poles')], [4, 1, 10, paramPort('burn', 'material')],
       [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1], [13, 1, 9, paramPort('discharge', 'zoom')], [14, 1, 9, paramPort('discharge', 'offset')]] },
-  // 🜉 Ruffled Growth: a Growing Line, its body raised and lit
+  // 🜉 Ruffled Growth: Differential Growth, its body raised and lit
   growth: { label: 'Ruffled Growth', div: 2, teach: 'Differential growth: Differential Growth starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
       ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
       ['knob', { slot: '2', name: 'Fold Size', def: 25 }, 40, 140],                // 2  (100 of 50–250)
@@ -30767,7 +30767,7 @@ const TEXTURE_CHAINS = {
       ['grain', { size: 100, contrast: 100, kind: 33 }, 320, 80],                  // 4
       ['surface', { name: 'Film Grain', ground: 'grey' }, 600, 100]],              // 5
     wires: [[1, 1, 4, paramPort('grain', 'size')], [2, 1, 4, paramPort('grain', 'contrast')], [3, 1, 4, paramPort('grain', 'kind')], [4, 1, 5, 1]] },
-  // √ Painter's Frustration: Angry Strokes lays the paint and its thickness; a little Canvas Weave
+  // √ Painter's Frustration: Paint Swipes lays the paint and its thickness; a little Canvas Weave
   // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
   // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
   brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'Paint Swipes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [
@@ -30993,7 +30993,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
   const isImg = v => v && typeof v === 'object' && v.r instanceof Float32Array;
   // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
-  // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
+  // every part can take one: before, a Mix between Paint Swipes and the Light Engine got nothing)
   const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
   // A CURVE (Filter Forge's curve components): a shape from 0 to 1, { curve: 257 samples }. Wired where a map
   // is wanted it is laid across the page left to right; where a number is wanted, its average.
@@ -32940,7 +32940,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Pan';
+const RELEASE = 'Saturn–Daphnis';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 
@@ -33766,7 +33766,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 28e0b55";
+const STAMP = "2026-10-15 · 5505791";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -37208,6 +37208,9 @@ const WIKI_PARTS = {
   turing: {
     line: 'An older reaction–diffusion part (spots, coral, mazes), kept for graphs that use it. New graphs: use Turing Pattern.',
     about: 'Kept so older graphs still draw the same. Turing Pattern does the same job better.',
+    ins: { seed: 'A gray map to start the pattern from. Empty, it starts from scattered random spots.' },
+    outs: { field: 'The grown pattern as a gray map.' },
+    set: { pattern: 'Which pattern grows: spots, coral, maze, worms or holes.', scale: 'How large the marks are.' },
     see: ['part:grayscott'],
   },
   grayscott: {
@@ -38085,7 +38088,7 @@ const WIKI_ARTICLES = [
 <ul>
 <li><b>Undo and redo</b> (↶ ↷) step through every change: parts, wires, settings, whole graphs opened.</li>
 <li>The <b>lock</b> in a part’s title bar pins it in place.</li>
-<li><b>Tidy layout</b> (the grid’s menu) arranges the graph in columns from left to right; pinned parts stay where they are.</li>
+<li><b>Tidy into columns</b> (the grid’s menu) arranges the graph in columns from left to right; pinned parts stay where they are.</li>
 <li><b>Revert</b> goes back to the graph as it was when the Athanor opened; <b>Clear</b> empties the grid. Both ask first.</li>
 </ul>` },
   { id: 'limits', group: 'Using the editor', title: 'Limits and speed', body: `
@@ -38419,7 +38422,7 @@ async function forgeCopy(text){
  *  - a wire is cut by tapping it (✂ appears where it was tapped), from its
  *    menu, or with Delete
  *  - WIRING WITHOUT DRAGGING (Ruby: drawing wires on a phone is hard): hold a
- *    part (or a port) → "Wire from it…" (or "…into it"); a bar says what is
+ *    part (or a port) → "Connect its output…" (or "Connect an input…"); a bar says what is
  *    being wired; then tap or hold the other part and choose its port from a
  *    list, each in its colour, the ones that carry the same kind first
  *  - a starter or a texture opened from "Start from…" says what it teaches
@@ -38783,7 +38786,7 @@ async function openForge(deps){
       list.sort((a, b) => (b.same - a.same) || (a.j - b.j));
       return { title: side === 'in' ? `Into ${labelOf(id)}…` : `From ${labelOf(id)}…`, hint: `${from.name}: ${FORGE_TYPE_NAMES[from.t]}`, items: [...list, { sep: true }, { glyph: '✕', label: 'Cancel wiring', act: stopWire }] };
     };
-    // "Wire from it…" / "Wire into it…": straight away when there is one port, else a list of them
+    // "Connect its output…" / "Connect an input…": straight away when there is one port, else a list of them
     const wireStart = (id, side) => { const N = N_(id); if(!N) return null; const names = side === 'out' ? N.outs : N.ins;
       const go = j => startWire(side, id, (side === 'out' ? 'output_' : 'input_') + (j + 1));
       if(names.length === 1) return { act: () => go(0) };

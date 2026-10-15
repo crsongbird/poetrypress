@@ -224,7 +224,7 @@ export async function forgeCopy(text){
  *  - a wire is cut by tapping it (✂ appears where it was tapped), from its
  *    menu, or with Delete
  *  - WIRING WITHOUT DRAGGING (Ruby: drawing wires on a phone is hard): hold a
- *    part (or a port) → "Wire from it…" (or "…into it"); a bar says what is
+ *    part (or a port) → "Connect its output…" (or "Connect an input…"); a bar says what is
  *    being wired; then tap or hold the other part and choose its port from a
  *    list, each in its colour, the ones that carry the same kind first
  *  - a starter or a texture opened from "Start from…" says what it teaches
@@ -588,7 +588,7 @@ export async function openForge(deps){
       list.sort((a, b) => (b.same - a.same) || (a.j - b.j));
       return { title: side === 'in' ? `Into ${labelOf(id)}…` : `From ${labelOf(id)}…`, hint: `${from.name}: ${FORGE_TYPE_NAMES[from.t]}`, items: [...list, { sep: true }, { glyph: '✕', label: 'Cancel wiring', act: stopWire }] };
     };
-    // "Wire from it…" / "Wire into it…": straight away when there is one port, else a list of them
+    // "Connect its output…" / "Connect an input…": straight away when there is one port, else a list of them
     const wireStart = (id, side) => { const N = N_(id); if(!N) return null; const names = side === 'out' ? N.outs : N.ins;
       const go = j => startWire(side, id, (side === 'out' ? 'output_' : 'input_') + (j + 1));
       if(names.length === 1) return { act: () => go(0) };

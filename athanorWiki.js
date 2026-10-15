@@ -288,7 +288,7 @@ export const WIKI_ARTICLES = [
 <ul>
 <li><b>Undo and redo</b> (↶ ↷) step through every change: parts, wires, settings, whole graphs opened.</li>
 <li>The <b>lock</b> in a part’s title bar pins it in place.</li>
-<li><b>Tidy layout</b> (the grid’s menu) arranges the graph in columns from left to right; pinned parts stay where they are.</li>
+<li><b>Tidy into columns</b> (the grid’s menu) arranges the graph in columns from left to right; pinned parts stay where they are.</li>
 <li><b>Revert</b> goes back to the graph as it was when the Athanor opened; <b>Clear</b> empties the grid. Both ask first.</li>
 </ul>` },
   { id: 'limits', group: 'Using the editor', title: 'Limits and speed', body: `

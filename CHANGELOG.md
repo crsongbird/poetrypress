@@ -4,6 +4,17 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Daphnis (2026-10-15)
+
+- **The help keeps up with the app.** The rules for working on Vellum now
+  say that a change isn't finished until the wiki, the tooltips and the
+  guides that explain it are current. A test checks the parts that can be
+  checked: every input, output and setting has its explanation, and the
+  wiki names only menu items and parts the editor still has.
+- The old Reaction–Diffusion part's page now explains its input, output and
+  settings.
+- The wiki's tidy instructions use the menu's real name: Tidy into columns.
+
 ## Saturn–Pan (2026-10-15)
 
 The first release named for Saturn's moons: Jupiter's ran out.

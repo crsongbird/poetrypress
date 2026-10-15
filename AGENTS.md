@@ -77,10 +77,25 @@ into an image people stop to read.
    presets. No new or reworked presets until ROADMAP Stage 4.
 10. **Ask when it's ambiguous**, or when two of Ruby's wishes disagree. Don't
     guess twice: find the cause.
+11. **The help moves with the app** (Ruby). A change isn't done until what
+    teaches it is current, in the same pass:
+    - **the Athanor's wiki** (`athanorWiki.js` articles, `athanorWikiParts.js`
+      part pages), every TEACH note that names what changed, and the menus'
+      hints;
+    - **the app's own help**: tooltips and hidden help in `strings.js` and
+      index.html, the PML guide (in-app and PML.md);
+    - this file, wherever it names the thing.
+    A new part, port, setting, menu item, wire kind or feature gets its
+    explanation; a rename or removal is followed everywhere the old name
+    appears (`grep` for it). `test/wiki.test.mjs` catches the mechanical
+    half (undocumented ports and settings, dead links, menu labels and part
+    names the code no longer has, retired names); whether the help still
+    *teaches* is judged by reading it (§11, Three voices).
 
 **Every pass:** read the parts of this file you'll touch → read ROADMAP.md
 if it's Athanor work → do the work → `sh test.sh` green → look at it →
-update CHANGELOG / OPEN-ISSUES / this file → ship (§3).
+update the wiki and help text it touches (rule 11) → update CHANGELOG /
+OPEN-ISSUES / this file → ship (§3).
 
 ---
 
@@ -130,6 +145,8 @@ segment.
 5. `node build.mjs`, then `sh test.sh` again.
 6. Update OPEN-ISSUES.md (delete what's done; add what Ruby should judge)
    and ROADMAP.md (delete what shipped).
+   Check the help is current (§1 rule 11): for each CHANGELOG line, the
+   wiki page, tooltip or guide that explains it says what the app now does.
 7. Commit to `main` with `node build.mjs --notes` as the message, then push.
    **Main is live.** The working copy is the clone of crsongbird/poetrypress
    and keeps its CNAME; release/ and node_modules are never committed.
@@ -176,7 +193,7 @@ default.
 | File | Role |
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
-| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts. Generative: Discharge, Wood, Burn, Growing Line, Knotwork, Matrix, Tendrils. Light: the Light Engine, Oil Paint, Canvas Weave, Angry Strokes |
+| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes |
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in Start from…; bundled before chains.js |
@@ -499,8 +516,14 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   shown in the parts list and menus; the part's `doc` is the same text),
   `about`, and what each input, output and setting does (`ins`, `outs`,
   `set`, keyed by port name and setting key), `tips`, `see`. A test fails
-  if a part lacks one or names a port or setting it doesn't have. Voice:
-  §11 (Three voices).
+  if a part lacks one, leaves a port or setting unexplained, or names one
+  it doesn't have. Voice: §11 (Three voices).
+  - Renaming a part, port or setting: change its wiki page, every article
+    and TEACH note that names it, and add the old name to `RETIRED_NAMES`
+    in test/wiki.test.mjs so it can't creep back.
+  - In articles, write menu items and settings in `<b>…</b>` exactly as the
+    app shows them, and a part's port as `<b>Part › Port</b>`: the test
+    checks those against the code.
   - Names and lore may riddle; the instructions never do.
 - **Its category:** one of `STEP_CATEGORIES`, each with a name, glyph and
   colour in forge.js (`FORGE_CAT_*`). Every category keeps at least three
@@ -536,7 +559,7 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
 - **Parts that keep a texture's own randomness** draw under
   `withSeed(ctx.seed + Variant·7919)`, so the texture they came from keeps
   its exact look: Particles, Terrain, Turing Pattern, Flow Lines, Washes,
-  Discharge, Growing Line.
+  Discharge, Differential Growth.
 - **Variation** (Filter Forge's local Variation): a part's `variation`
   setting (0–99) is mixed into its node seed in `evalNode`. 0 is the old
   stream, so old graphs draw as before. Give it to every new random part.
@@ -613,8 +636,11 @@ The full study and what is still to do are in ROADMAP.md §1.
   - `thingsNear()` asks "Which did you mean?" when two things are close.
 - **Wires:** each has an invisible wide twin (`.forge-hit`) that is easy to
   tap.
-- **Wiring by menu:** hold a part or port → "Wire from it…" → tap the other
-  part → choose a port.
+- **Wiring by menu:** hold a part → "Connect its output…" or "Connect an
+  input…" (a port: "Connect to…" / "Connect from…") → tap the other part →
+  choose a port. Every menu item has a hint saying what it does; a new item
+  gets one, and the wiki's [[menus]], [[mouse]] and [[touch]] articles name
+  it.
   - A phone's tap is a pointer down and up in place; it never arrives as a
     click.
   - Escape or Cancel stops.
@@ -725,11 +751,19 @@ the test to the new intent; never weaken it just to pass.
    - `STEP_REQUIRED` if it needs its first input.
 3. Read per-point settings with `E.map` where the loop allows (v3).
 4. Add a test (test/filterforge.test.mjs or the part's own suite).
-5. **Render it and look at it.**
+5. Its wiki page in `WIKI_PARTS` (line, about, every input, output and
+   setting, a tip, see-also); link it from the articles where it belongs.
+6. **Render it and look at it.**
+
+**Rename, change or remove a part, setting or menu item:** the wiki page,
+every article and TEACH note that names it, the menu hint, `RETIRED_NAMES`
+in test/wiki.test.mjs for the old name, and this file.
 
 **Add a wire kind:** `VALUE_TYPES`; `FORGE_TYPE_COLOURS`/`NAMES`;
-`--t-<kind>` in both themes; the Help text; conversions in athanor.js
-(`asField`, `asImage`, `num`); the preview's drawing of it.
+`--t-<kind>` in both themes; its own wiki article (what it is, where it
+comes from, what it converts to) linked from [[kinds]] and [[convert]], and
+the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
+`asImage`, `num`); the preview's drawing of it.
 
 **Rebuild a texture as a chain** (a long refactor, one texture at a time)
 1. Find or write its parts.
@@ -739,7 +773,7 @@ the test to the new intent; never weaken it just to pass.
    - its working grid (`div` or `grid`), or `canvas: true`;
    - each slider bound to the params it drives, across the slider's own
      range;
-   - TEACH.
+   - TEACH (what it is, how its parts make it, one "Try:").
 3. In textureGenerators.js, dispatch the type to `genChain`. Delete the old
    generator, but keep its haiku beside the part that inherited it.
 4. **Its fingerprint must not change.** If a slider's job did change: bump
@@ -760,7 +794,8 @@ the test to the new intent; never weaken it just to pass.
    - a `strings.js` entry;
    - `WORKING_WORDS`;
    - its four readings (textureElements.js);
-   - alt-text words.
+   - alt-text words;
+   - its TEACH note, and any new part's wiki page.
 4. If it draws text in web fonts, add it to `ON_PAGE`.
 5. Accept its first fingerprint. Check `scale-audit`. Look at it.
 6. **No preset for it until the presets pass** (ROADMAP Stage 4).
@@ -785,13 +820,14 @@ faster, with Ruby's approval from test renders)
 - a `PERSISTED` row (or an explicit save and restore);
 - preset handling (`FRAME_DEFAULTS`, so presets reset it);
 - the `audit.test.mjs` mutation table;
-- a `strings.js` label.
+- a `strings.js` label, and a tooltip that says plainly what it does (§11).
 
 `persistenceCoverage.test.mjs` fails until it is saved and restored.
 
 **Add PML:** parse in textParsers.js (the field is absent when unused); add
 it to the line-rebuild copy list and to `resolvePartStyle`'s guard; document
-it in the in-app help (tersely) and PML.md.
+it in the in-app help and PML.md, with an example (§11: teaching, not
+shortening).
 
 **Add a §Variable:** in pmlVars.js, and its context in the renderer. A value
 must never contain `/` if it may land inside a segment.
@@ -852,7 +888,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
       Light Engine.
     - One or two poles; two always join.
     - It grows at zoom 1 and is transformed afterwards.
-  - **Ruffled Growth:** Growing Line (differential growth on a spatial
+  - **Ruffled Growth:** Differential Growth (on a spatial
     hash).
   - **Positioning:** generated textures take Zoom and Slide (along the
     dial's axis).
@@ -861,7 +897,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - Boundary edges and hashed symmetric breaks become turns.
   - Crossings alternate over and under.
 - **Painted Landscape** (chain `landscape`, canvas): Painted Sky → Painted
-  Ridges → Watercolour Wash.
+  Ridges → Watercolor Bleed.
   - `landScene(seed, …)` is the shared scene.
   - Color keeps the grey painting's value and sets only its hue
     (`landPalette`). Color 0 is exactly the grey of before.
@@ -879,7 +915,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
 - **Sleep Haze** (chain `clouds`): Smoke → Light Shaft (a Dial port) → Dust
   Motes.
 - **Stained Glass** (chain `stainedglass`, grid at div 3):
-  - Panes (lead, edge, pane number, palette slot, window, joints) → Glass.
+  - Panes (lead, edge, pane number, palette slot, window, joints) → Stained Glass (the part).
     A pane's look comes from its number.
   - The Window setting: None · Lancet · Arcade · Round (Round kept at the top
     of the slider).
@@ -889,7 +925,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     above 0.
 - **Turing Skin:** Turing Pattern (Gray–Scott) → Map Range → Light Engine.
   The old Reaction–Diffusion part stays for old graphs.
-- **Veins of Light:** Matrix (strata, pebbles, sand, fibres, skin; its
+- **Veins of Light:** Growth Medium (strata, pebbles, sand, fibres, skin; its
   "ways") → Tendrils (Runions' space colonization, steered into the ways).
 - **Watercolor Wash:** Washes → Pigment → Pigment (any gray map laid as
   watercolor).

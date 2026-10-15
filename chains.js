@@ -302,7 +302,7 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 680], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 760]],   // 13 (100 of 50–400), 14
     wires: [[1, 1, 9, paramPort('discharge', 'reach')], [2, 1, 9, paramPort('discharge', 'branching')], [3, 1, 9, paramPort('discharge', 'poles')], [4, 1, 10, paramPort('burn', 'material')],
       [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1], [13, 1, 9, paramPort('discharge', 'zoom')], [14, 1, 9, paramPort('discharge', 'offset')]] },
-  // 🜉 Ruffled Growth: a Growing Line, its body raised and lit
+  // 🜉 Ruffled Growth: Differential Growth, its body raised and lit
   growth: { label: 'Ruffled Growth', div: 2, teach: 'Differential growth: Differential Growth starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
       ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
       ['knob', { slot: '2', name: 'Fold Size', def: 25 }, 40, 140],                // 2  (100 of 50–250)
@@ -434,7 +434,7 @@ export const TEXTURE_CHAINS = {
       ['grain', { size: 100, contrast: 100, kind: 33 }, 320, 80],                  // 4
       ['surface', { name: 'Film Grain', ground: 'grey' }, 600, 100]],              // 5
     wires: [[1, 1, 4, paramPort('grain', 'size')], [2, 1, 4, paramPort('grain', 'contrast')], [3, 1, 4, paramPort('grain', 'kind')], [4, 1, 5, 1]] },
-  // √ Painter's Frustration: Angry Strokes lays the paint and its thickness; a little Canvas Weave
+  // √ Painter's Frustration: Paint Swipes lays the paint and its thickness; a little Canvas Weave
   // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
   // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
   brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'Paint Swipes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [

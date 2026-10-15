@@ -299,8 +299,8 @@ study stays as the graph to learn from.
 ### J · Black boxes to take apart (Ruby: "a good start")
 
 A **process primitive** is one algorithm someone reaches for on its own: it
-stays one part. Discharge (Laplacian growth), Growing Line (differential
-growth), Turing Pattern (Gray–Scott), Tendrils (space colonization),
+stays one part. Discharge (Laplacian growth), Differential Growth (on a spatial
+hash), Turing Pattern (Gray–Scott), Tendrils (space colonization),
 Knotwork, Flow Lines, Terrain.
 
 A **whole-texture part** draws a finished picture and hides its working. Each
@@ -315,8 +315,8 @@ comes apart into general parts plus, at most, one process primitive:
 | Particles (Snow, Mana, Dust) | Scatter with glow (dots, sparks), Blur, screen |
 | Smoke | Perlin warped by Perlin, Levels, Motion Blur |
 | Aurora Curtains · Starfield | curtains as Profile Gradients along a warped curve, rays as Motion Blur of noise; stars as Scatter (sparks) |
-| Oil Paint · Angry Strokes | Scatter of strokes (dashes) turned by a flow map, Light Engine |
-| Matrix (Veins of Light) | Cells, Perlin and Threshold for its "ways" |
+| Oil Paint · Paint Swipes | Scatter of strokes (dashes) turned by a flow map, Light Engine |
+| Growth Medium (Veins of Light) | Cells, Perlin and Threshold for its "ways" |
 
 Prove each: compare.mjs sheets to Ruby; a pixel-identical rebuild needs no
 approval, a changed one does.

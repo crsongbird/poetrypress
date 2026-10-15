@@ -189,7 +189,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
   const isImg = v => v && typeof v === 'object' && v.r instanceof Float32Array;
   // (a CANVAS — what a painting part hands on in a canvas pass — is read back at the grid's size, so
-  // every part can take one: before, a Mix between Angry Strokes and the Light Engine got nothing)
+  // every part can take one: before, a Mix between Paint Swipes and the Light Engine got nothing)
   const isCv = v => !!(v && typeof v === 'object' && typeof v.getContext === 'function');
   // A CURVE (Filter Forge's curve components): a shape from 0 to 1, { curve: 257 samples }. Wired where a map
   // is wanted it is laid across the page left to right; where a number is wanted, its average.

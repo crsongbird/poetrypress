@@ -176,6 +176,9 @@ export const WIKI_PARTS = {
   turing: {
     line: 'An older reaction–diffusion part (spots, coral, mazes), kept for graphs that use it. New graphs: use Turing Pattern.',
     about: 'Kept so older graphs still draw the same. Turing Pattern does the same job better.',
+    ins: { seed: 'A gray map to start the pattern from. Empty, it starts from scattered random spots.' },
+    outs: { field: 'The grown pattern as a gray map.' },
+    set: { pattern: 'Which pattern grows: spots, coral, maze, worms or holes.', scale: 'How large the marks are.' },
     see: ['part:grayscott'],
   },
   grayscott: {

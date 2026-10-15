@@ -20,6 +20,35 @@ for(const k of keys){ const s = S.STEPS[k], w = P.WIKI_PARTS[k], ins = s.ins.sli
   for(const n of Object.keys(w.outs || {})) if(!s.outs.includes(n)) bad.push(k + ' out ' + n);
   for(const n of Object.keys(w.set || {})) if(!pk.includes(n)) bad.push(k + ' setting ' + n); }
 check('wiki entries name only ports and settings the part really has' + (bad.length ? ': ' + bad.slice(0, 4).join(', ') : ''), !bad.length);
+const gaps = [];
+for(const k of keys){ const s = S.STEPS[k], w = P.WIKI_PARTS[k];
+  for(const n of s.ins.slice(0, s.dataIns)) if(!(w.ins || {})[n]) gaps.push(k + ' in ' + n);
+  for(const n of s.outs) if(!(w.outs || {})[n]) gaps.push(k + ' out ' + n);
+  for(const p of s.params || []) if(!(w.set || {})[p[0]]) gaps.push(k + ' setting ' + p[0]); }
+check('every input, output and setting of every part is explained on its page' + (gaps.length ? ': ' + gaps.slice(0, 6).join(', ') : ''), !gaps.length);
+// Rule 11 (AGENTS.md §1): the help moves with the app. What the wiki writes in <b>…</b> as a menu item
+// (ending in …) or as Part › Port must be something the app still shows; old names must not creep back.
+const fs = await import('node:fs');
+const read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+const appText = ['forge.js', 'strings.js', 'index.html'].map(read).join('\n');
+const bodies = [...W.WIKI_ARTICLES.map(a => [a.id, a.body]), ...Object.entries(P.WIKI_PARTS).map(([k, w]) => ['part:' + k, JSON.stringify(w)])];
+const unb = t => t.replace(/&amp;/g, '&').replace(/&rsquo;|’/g, '’');
+const staleMenu = [], stalePort = [];
+const labelOf = new Map(keys.map(k => [S.STEPS[k].label, S.STEPS[k]]));
+for(const [id, body] of bodies) for(const m of body.matchAll(/<b>([^<]{2,60})<\/b>/g)){ const t = unb(m[1]);
+  if(/…$/.test(t) && !appText.includes(t) && !appText.includes(t.replace(/’/g, "\\'"))) staleMenu.push(id + ': ' + t);
+  const pp = t.match(/^(.+?) › (.+)$/);
+  if(pp){ const part = labelOf.get(pp[1]); const word = x => String(x).replace(/^⚙\s*/, '').toLowerCase();
+    const names = part ? [...part.ins, ...part.outs, ...(part.params || []).flatMap(p => [p[1], ...((p[4] && p[4].options) || [])])].map(word) : [];
+    if(!part || !names.includes(pp[2].toLowerCase())) stalePort.push(id + ': ' + t); } }
+check('every menu item the wiki names is one the editor still has' + (staleMenu.length ? ': ' + staleMenu.slice(0, 4).join(', ') : ''), !staleMenu.length);
+check('every Part › Port the wiki names is a real part and port' + (stalePort.length ? ': ' + stalePort.slice(0, 4).join(', ') : ''), !stalePort.length);
+// Names that were renamed. When renaming a part, a setting or a menu item, add the old name here.
+const RETIRED_NAMES = ['Light (heights)', 'Deal (Cards)', 'Growing Line', 'Angry Strokes', 'Wire from it', 'Tidy layout', 'Watercolour Wash'];
+const teach = ['chains.js', 'athanorStudies.js', 'athanor.js'].map(read).join('\n').match(/teach:\s*(['"`])(?:\\.|(?!\1).)*\1/g) || [];
+const docs = [...bodies.map(b => b[1]), ...teach, read('AGENTS.md'), appText];
+const back = RETIRED_NAMES.filter(n => docs.some(d => d.includes(n)));
+check('no retired name is back in the wiki, the TEACH notes, the menus or AGENTS.md' + (back.length ? ': ' + back.join(', ') : ''), !back.length);
 const ids = new Set([...W.WIKI_ARTICLES.map(a => a.id), ...keys.map(k => 'part:' + k)]);
 const links = [];
 for(const a of W.WIKI_ARTICLES) for(const m of a.body.matchAll(/\[\[([^\]|]+)/g)) links.push([a.id, m[1]]);
