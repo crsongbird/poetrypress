@@ -6,7 +6,10 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- KNOB KINDS (slider, Steps with names, Angle in degrees, Switch), ORDER OF THE SLIDERS (the Surface's menu),
+  REVERSE THE WIRE, and ROLLING ONE CONTROL (Ctrl-click or hold its name). Hold on a phone: does it ever get in
+  the way of scrolling?
 - 🜉 OPEN IN THE ATHANOR under the Surface (ROADMAP's Reveal Spell Graph): the page's surface as its graph, at
   the page's sliders and hues. Is the name right, and does it belong there (or beside the four readings)?
 - OIL PAINT'S DETAIL (branch `oil-detail`, not live): a last fine pass repaints what the big strokes lost (distant

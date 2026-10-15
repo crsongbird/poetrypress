@@ -609,6 +609,8 @@ export function paramReadout(def, value){
   if(!def) return '';
   // a knob whose marks have names reads as the nearest mark's name (Object Shape)
   if(def.names && def.ticks){ let k = 0; def.ticks.forEach((t, i) => { if(Math.abs(t - value) < Math.abs(def.ticks[k] - value)) k = i; }); return def.names[k]; }
+  // an Athanor Knob that is an angle: its 0–100 read as a turn (D1)
+  if(def.deg) return Math.round(value*3.6) + '°';
   if(def.base != null){
     const n = Math.max(1, Math.round(def.base * (value / 100)));
     return n.toLocaleString() + (def.absUnit != null ? def.absUnit : '');

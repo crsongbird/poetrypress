@@ -413,6 +413,8 @@ Other parts of a look:
       changed. A Summon that asks first is recorded once its work has run.
     - On the Surface, Shift-click (or a desk's long press) rolls only the
       seed; on a phone that is a menu item.
+    - **One control alone** (`rollByLabel`, `rollControl`): Ctrl- or ⌘-click
+      a control's name on a desk, or hold it on a phone; the dice's way.
   - **Locks supersede every roll** (Ruby): rolls skip locked controls, and
     `restoreLocked` puts menus back before sliders (a surface put back resets
     its sliders).

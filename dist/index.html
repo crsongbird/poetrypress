@@ -398,6 +398,8 @@ body.is-mobile .drag-grip { border-radius: 2px;
   background: rgba(255,255,255,0.28);
 }
 body.is-mobile.dragging-divider { user-select: none; }
+/* a control's name is held to roll it alone: no text selection, no callout */
+body.is-mobile .field > label{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
 
 /* the canvas can be pinched and dragged inside its frame */
 body.is-mobile .canvas-wrap { touch-action: none; }
@@ -1687,6 +1689,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 /* on the light theme the wire colours deepen, so they still read on paper */
 :root[data-theme="vellum"] .forge-veil{ --t-field:#6E6584; --t-image:#B23BB8; --t-colour:#A87A06; --t-value:#12809A; --t-curve:#3E8A44; }
 .forge-veil[hidden]{ display:none; }
+.forge-row[hidden]{ display:none; }
 .forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--fg-line); background:var(--fg-panel); }
 .forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
 .forge-zoom{ display:inline-flex; gap:0; } .forge-zoom button{ padding:4px 9px; min-width:30px; } .forge-zoom button + button{ border-left:none; }
@@ -12932,7 +12935,9 @@ const STEP_BLEND_FN = {
 // ---- the parts as the editor shows them ----
 const STEP_PARTS = {
   // inputs: what the finished texture offers on the page
-  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50)] },
+  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
+    STEP_SEL('kind', 'Kind', ['slider', 'steps', 'angle', 'switch']), [...STEP_R('steps', 'Steps', 3, 2, 12).slice(0, 4), { min: 2, max: 12, when: 'kind:steps' }],
+    ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]] },
   hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
@@ -13231,7 +13236,11 @@ function stepScaleByPoint(E, SC, layer){
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
-    return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
+    const v = Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100, kind = P(n, 'kind', 'slider');
+    // a Knob of steps hands on only its marks, a switch only off or on (whatever the slider between them says)
+    if(kind === 'steps'){ const k = Math.max(2, Math.min(12, Math.round(num(n, 'steps', 3)))) - 1; return [Math.round(v*k)/k]; }
+    if(kind === 'switch') return [v >= 0.5 ? 1 : 0];
+    return [v];
   },
   glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
   hue(E, n){ const { ctx, P, hexCol } = E, t = (ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1];
@@ -15041,7 +15050,10 @@ function athanorKnobs(graph){
     if(n.name !== 'knob') continue;
     if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(6, parseInt((n.data || {}).slot, 10) || 1)))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
-    if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
+    if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, d.def === '' || d.def == null || isNaN(+d.def) ? 50 : +d.def)),   // (a Default of 0 is 0)
+      // its kind (D1): a plain slider, steps (marks, named or numbered), an angle, or a switch
+      kind: ['steps', 'angle', 'switch'].includes(d.kind) ? d.kind : 'slider', steps: Math.max(2, Math.min(12, Math.round(+d.steps || 3))),
+      names: String(d.names || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 12).map(x => x.slice(0, 18)) });
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
   for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
@@ -16057,6 +16069,8 @@ function paramReadout(def, value){
   if(!def) return '';
   // a knob whose marks have names reads as the nearest mark's name (Object Shape)
   if(def.names && def.ticks){ let k = 0; def.ticks.forEach((t, i) => { if(Math.abs(t - value) < Math.abs(def.ticks[k] - value)) k = i; }); return def.names[k]; }
+  // an Athanor Knob that is an angle: its 0–100 read as a turn (D1)
+  if(def.deg) return Math.round(value*3.6) + '°';
   if(def.base != null){
     const n = Math.max(1, Math.round(def.base * (value / 100)));
     return n.toLocaleString() + (def.absUnit != null ? def.absUnit : '');
@@ -17700,6 +17714,7 @@ held on till bright~B</code></p>
         <dt><kbd>R</kbd></dt><dd>Reroll the texture seed</dd>
         <dt><kbd>B</kbd></dt><dd>Summon a new backdrop</dd>
         <dt><kbd>F</kbd></dt><dd>A random font</dd>
+        <dt><kbd>Ctrl</kbd>-click a control's name</dt><dd>Roll only that control, the dice's way</dd>
         <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>The previous / next preset</dd>
         <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Inscription · Rituals · Thoughtforms · Materia · Esoterica</dd>
         <dt><kbd>H</kbd></dt><dd>Show or hide the history filmstrip</dd>
@@ -18213,9 +18228,9 @@ const CHOOSER = {
 /** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk.
  *  The way last chosen is remembered, and every die and Summon button rolls that way. {name} is the way. */
 const DIE = {
-  title: 'Roll this section {name} (locked controls stay)',
-  titleSurface: 'Roll this section {name} (Shift-click or hold: only a new seed)',
-  titlePhone: 'Roll this section {name} (hold to choose how)',
+  title: 'Roll this section {name} (locked controls stay; Ctrl-click a control’s name to roll it alone)',
+  titleSurface: 'Roll this section {name} (Shift-click or hold: only a new seed; Ctrl-click a control’s name to roll it alone)',
+  titlePhone: 'Roll this section {name} (hold to choose how; hold a control’s name to roll it alone)',
   summonTitle: 'Rolls {name}: choose how from any die (hold it, or ▾ beside it)',
   more: 'How to roll: gently, as usual, wildly, or back',
   menuTitle: 'Roll this section',
@@ -18235,6 +18250,7 @@ const DIE = {
   seed: 'Only a new seed',
   seedHint: 'The same surface, a new pattern',
   locked: 'Locked: the light stays where it is',
+  oneLocked: 'Locked: it stays as it is',
 };
 
 /** Surfaces made in the Athanor and kept on this browser's shelf: their menus (the Athanor's Kept,
@@ -30935,7 +30951,9 @@ const STEP_BLEND_FN = {
 // ---- the parts as the editor shows them ----
 const STEP_PARTS = {
   // inputs: what the finished texture offers on the page
-  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50)] },
+  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
+    STEP_SEL('kind', 'Kind', ['slider', 'steps', 'angle', 'switch']), [...STEP_R('steps', 'Steps', 3, 2, 12).slice(0, 4), { min: 2, max: 12, when: 'kind:steps' }],
+    ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]] },
   hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
@@ -31234,7 +31252,11 @@ function stepScaleByPoint(E, SC, layer){
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
-    return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
+    const v = Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100, kind = P(n, 'kind', 'slider');
+    // a Knob of steps hands on only its marks, a switch only off or on (whatever the slider between them says)
+    if(kind === 'steps'){ const k = Math.max(2, Math.min(12, Math.round(num(n, 'steps', 3)))) - 1; return [Math.round(v*k)/k]; }
+    if(kind === 'switch') return [v >= 0.5 ? 1 : 0];
+    return [v];
   },
   glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
   hue(E, n){ const { ctx, P, hexCol } = E, t = (ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1];
@@ -33044,7 +33066,10 @@ function athanorKnobs(graph){
     if(n.name !== 'knob') continue;
     if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(6, parseInt((n.data || {}).slot, 10) || 1)))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
-    if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
+    if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, d.def === '' || d.def == null || isNaN(+d.def) ? 50 : +d.def)),   // (a Default of 0 is 0)
+      // its kind (D1): a plain slider, steps (marks, named or numbered), an angle, or a switch
+      kind: ['steps', 'angle', 'switch'].includes(d.kind) ? d.kind : 'slider', steps: Math.max(2, Math.min(12, Math.round(+d.steps || 3))),
+      names: String(d.names || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 12).map(x => x.slice(0, 18)) });
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
   for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
@@ -34060,6 +34085,8 @@ function paramReadout(def, value){
   if(!def) return '';
   // a knob whose marks have names reads as the nearest mark's name (Object Shape)
   if(def.names && def.ticks){ let k = 0; def.ticks.forEach((t, i) => { if(Math.abs(t - value) < Math.abs(def.ticks[k] - value)) k = i; }); return def.names[k]; }
+  // an Athanor Knob that is an angle: its 0–100 read as a turn (D1)
+  if(def.deg) return Math.round(value*3.6) + '°';
   if(def.base != null){
     const n = Math.max(1, Math.round(def.base * (value / 100)));
     return n.toLocaleString() + (def.absUnit != null ? def.absUnit : '');
@@ -35127,7 +35154,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Telesto';
+const RELEASE = 'Saturn–Calypso';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -35956,7 +35983,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · c8a4f3e";
+const STAMP = "2026-10-15 · 5098b30";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -39273,10 +39300,11 @@ const WIKI_PARTS = {
   // ================= INPUTS: values from the page =================
   knob: {
     line: 'Puts one of the page’s six surface sliders into the graph as a number, so a setting here can be moved from the page.',
-    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the six sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts.',
-    outs: { value: 'The slider’s position as a number from 0 (far left) to 1 (far right). Wire it into a setting’s ⚙ port.' },
-    set: { slot: 'Which of the six sliders this Knob is. Two Knobs on the same slider move together.', name: 'The label the slider shows on the page.', def: 'Where the slider sits when the surface is first chosen (0–100).' },
-    tips: ['Wire one Knob into two settings to move them together; give each wire its own range (see Wire ranges) so they move by different amounts.'],
+    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the six sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts. Its Kind decides what the slider is: a plain slider; Steps, a few marks it locks to (Filter Forge’s IntSlider), named or numbered; an Angle, read in degrees and marked every 45°; or a Switch, off or on. The Surface’s menu has Order of the sliders, to move them.',
+    outs: { value: 'The slider’s position as a number from 0 (far left) to 1 (far right); for Steps, only its marks; for a Switch, 0 or 1. Wire it into a setting’s ⚙ port.' },
+    set: { slot: 'Which of the six sliders this Knob is. Two Knobs on the same slider move together.', name: 'The label the slider shows on the page.', def: 'Where the slider sits when the surface is first chosen (0–100).',
+      kind: 'What the slider is: a plain slider, Steps (marks it locks to), an Angle (read in degrees) or a Switch (off or on).', steps: 'For Steps: how many marks.', names: 'For Steps or a Switch: the marks’ names, separated by commas (empty: numbers, or Off and On).' },
+    tips: ['Wire one Knob into two settings to move them together; give each wire its own range (see Wire ranges) so they move by different amounts.', 'A Knob of 3 Steps named “Calm, Restless, Storm” into a Perlin Noise’s Roughness: three moods, one slider.'],
     see: ['controls', 'ranges', 'part:number'],
   },
   hue: {
@@ -40635,7 +40663,7 @@ const WIKI_ARTICLES = [
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
 <p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Show on Page</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app offers to). The page shows only the controls you give it:</p>
 <ul>
-<li>Each <b>Knob</b> becomes one of the six sliders under Surface, labelled with the Knob’s name.</li>
+<li>Each <b>Knob</b> becomes one of the six sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
 <li>The <b>light dial</b> is always there for anything lit.</li>
 </ul>
@@ -40644,6 +40672,7 @@ const WIKI_ARTICLES = [
 <li>Only Knobs and Hues whose wires <b>reach the Surface</b> appear. One left unconnected is hidden.</li>
 <li>Choose which sliders matter. Two to four good controls are easier to use than six.</li>
 <li>Give each Knob a [[ranges|wire range]] that keeps its whole slider useful.</li>
+<li>The sliders appear in the order of their numbers. To move one, hold or right-click the Surface and choose <b>Order of the sliders…</b>: the Knob trades places with the one in the slider it moves to.</li>
 </ul>` },
   { id: 'surface', group: 'The page and your graph', title: 'The Surface', body: `
 <p>The Surface is the end of every graph. There is always exactly one: it can’t be deleted or copied, and Clear leaves a new one.</p>
@@ -40693,7 +40722,8 @@ const WIKI_ARTICLES = [
 <p>Right-click (or hold) anything for its menu:</p>
 <ul>
 <li><b>A part:</b> wire it, duplicate it, pin it in place, reset its settings, delete it, or open <b>About this part</b>.</li>
-<li><b>A setting:</b> wire a Knob or the light dial into it, bind it to a page slider, set its [[ranges|wire range]], reset it.</li>
+<li><b>A setting:</b> wire a Knob or the light dial into it, bind it to a page slider, set its [[ranges|wire range]] or <b>Reverse the wire</b>, reset it.</li>
+<li><b>The Surface:</b> besides a part’s own, <b>Order of the sliders…</b>, to choose which slider on the page each Knob is.</li>
 <li><b>A port:</b> wire into or out of it, or cut its wire.</li>
 <li><b>A wire:</b> see what it connects, or cut it.</li>
 <li><b>The empty grid:</b> add a part there, fit everything in view, tidy the layout.</li>
@@ -40983,7 +41013,8 @@ function forgeNodeHtml(type, lists = {}, data = {}){
     const right = i < N.outs.length ? `<span class="fp-out" data-t="${N.outTypes[i]}">${forgeEsc(forgeWord(N.outs[i]))}</span>` : '';
     html += `<div class="forge-row">${left}${right}</div>`;
   }
-  html += N.params.filter(p => !N.paramPorts.includes(p[0])).map(p => `<div class="forge-row extra">${ctl(p)}</div>`).join('');
+  // (a setting that matters only for some choice of another, `when: 'kind:steps|switch'`, shows only then: paintNode)
+  html += N.params.filter(p => !N.paramPorts.includes(p[0])).map(p => `<div class="forge-row extra"${p[4] && p[4].when ? ` data-when="${forgeEsc(p[4].when)}"` : ''}>${ctl(p)}</div>`).join('');
   return html + `</div><canvas class="forge-node-preview" width="64" height="64" aria-hidden="true"></canvas>`;
 }
 /**
@@ -41156,6 +41187,8 @@ async function openForge(deps){
       const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && FORGE_NODES[n.name]; if(!el || !N) return;
       el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
+      el.querySelectorAll('[data-when]').forEach(r => { const [k, vals] = r.dataset.when.split(':'), P = N.params.find(p => p[0] === k);
+        r.hidden = !vals.split('|').includes(String((n.data || {})[k] ?? (P ? P[3] : ''))); });
       const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? `Pinned — ${forgeClick()} to unpin` : 'Pin in place'; }
       el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns);
         // a REQUIRED input still empty is marked (Filter Forge's red port): the part has nothing to work on yet
@@ -41229,7 +41262,7 @@ async function openForge(deps){
     ed.on('connectionCreated', c => { paintNode(c.input_id); paintWires(); save(); touched(); sound('wireConnect'); });
     ed.on('connectionRemoved', c => { paintNode(c.input_id); save(); touched(); sound('wireDisconnect'); hideCut(); });
     ed.on('nodeMoved', () => { paintWires(); save(); });
-    ed.on('nodeDataChanged', () => { save(); touched(); });
+    ed.on('nodeDataChanged', id => { save(); touched(); if(id != null) paintNode(id); });
     ed.on('import', () => setTimeout(paintAll, 0));
     // EVERY WIRE REDRAWN from where its ports are now: a wire is drawn once, when it is made, and a
     // part whose face changes size afterwards (its fonts arriving, its rows redrawn, the editor opened
@@ -41497,6 +41530,17 @@ async function openForge(deps){
     // ---- menus for each kind of thing ----
     const wireMenu = w => { const d = wireDesc(w); return { title: 'A wire', hint: d.label + ' (' + d.hint + ')', items: [
       { glyph: '✂', label: 'Cut this wire', act: () => cutWire(w) }] }; };
+    // THE ORDER OF THE SLIDERS (Filter Forge's Order of Controls, ROADMAP D2): which page slider each Knob is, from the
+    // Surface's menu; moving one swaps it with the Knob in the slider it moves to
+    const knobsBySlot = () => { const by = {}; for(const [id, m] of Object.entries(rawNodes())) if(m.name === 'knob'){ const sl = String((m.data || {}).slot || '1'); (by[sl] ||= []).push(id); } return by; };
+    const moveSlot = (a, b) => { const by = knobsBySlot(); for(const id of by[a] || []) setData(id, { slot: b }); for(const id of by[b] || []) setData(id, { slot: a }); sound('nodeAdd'); };
+    const orderSpec = () => { const by = knobsBySlot(), name = sl => (by[sl] || []).map(id => String((nodeOf(id).data || {}).name || 'Knob')).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+      return { title: 'Order of the sliders', hint: 'Under Surface on the page, the Knobs’ sliders are in this order. Choose one to move it.', items: ['1', '2', '3', '4', '5', '6'].map(sl => {
+        const used = !!(by[sl] || []).length, k = +sl;
+        return { glyph: sl, label: used ? name(sl) : '(no Knob)', disabled: !used, hint: used ? `slider ${sl}` : 'a Knob set to this slider would show here',
+          sub: () => ({ title: name(sl), hint: `now slider ${sl}`, items: [
+            { glyph: '↑', label: k > 1 ? `Move up, to slider ${k - 1}` : 'Already first', disabled: k <= 1, hint: by[String(k - 1)] ? `${name(String(k - 1))} moves down in its place` : '', act: () => moveSlot(sl, String(k - 1)) },
+            { glyph: '↓', label: k < 6 ? `Move down, to slider ${k + 1}` : 'Already last', disabled: k >= 6, hint: by[String(k + 1)] ? `${name(String(k + 1))} moves up in its place` : '', act: () => moveSlot(sl, String(k + 1)) }] }) }; }) }; };
     const nodeMenu = id => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
       const from = N.outs.length ? wireStart(id, 'out') : null, into = N.ins.length ? wireStart(id, 'in') : null;
@@ -41506,6 +41550,7 @@ async function openForge(deps){
         ...(from ? [{ glyph: '⟿', label: 'Connect its output…', hint: (N.outs.length === 1 ? `${forgeWord(N.outs[0])}: ` : 'choose an output, then ') + `${forgeClick()} the part it should feed`, ...from }] : []),
         ...(into ? [{ glyph: '⟾', label: 'Connect an input…', hint: `choose an input, then ${forgeClick()} the part it should come from`, ...into }] : []),
         ...(from || into ? [{ sep: true }] : []),
+        ...(n.name === 'surface' && Object.keys(knobsBySlot()).length ? [{ glyph: '☰', label: 'Order of the sliders…', hint: 'which slider on the page each Knob is, and moving them', sub: orderSpec }, { sep: true }] : []),
         { glyph: '⌖', label: isPinned(id) ? 'Unpin it' : 'Pin it in place', hint: isPinned(id) ? 'it can be dragged and tidied again' : 'it stays put when dragged or tidied', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
         { glyph: '⧉', label: 'Duplicate', disabled: n.name === 'surface', hint: n.name === 'surface' ? 'a graph has exactly one Surface' : 'a copy with the same settings, without wires', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
         { glyph: '↺', label: 'Reset all settings', hint: 'every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
@@ -41537,6 +41582,9 @@ async function openForge(deps){
             const r = await promptFor({ title: `${label}: wire range`, body: `Two values between ${lo} and ${hi}: the setting when the wire is at its lowest (0), and at its highest (1). Enter them the other way round to reverse it.`, input: true, defaultValue: String(n.data['~' + key] || `${lo}, ${hi}`), confirmLabel: 'Set' });
             const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return; const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
             setData(id, { ['~' + key]: (a === lo && b === hi) ? undefined : `${a},${b}` }); } });
+          // ⇄ (ROADMAP D3, Filter Forge's remapper): the same wire, the other way round
+          { const cur = n.data['~' + key] ? String(n.data['~' + key]).split(',').map(Number) : [lo, hi];
+            items.push({ glyph: '⇄', label: 'Reverse the wire', hint: `its lowest now gives ${cur[1]}, its highest ${cur[0]}`, act: () => setData(id, { ['~' + key]: cur[1] === lo && cur[0] === hi ? undefined : `${cur[1]},${cur[0]}` }) }); }
           if(n.data['~' + key]) items.push({ glyph: '⟷', label: 'Use the full range again', hint: `${lo} to ${hi}`, act: () => setData(id, { ['~' + key]: undefined }) });
           items.push({ glyph: '?', label: 'About wire ranges', hint: 'in the wiki', act: () => F.goWiki && F.goWiki('ranges') });
           items.push({ glyph: '✂', label: 'Disconnect the wire', hint: 'the slider takes over again', act: () => { const p = n.inputs['input_' + port]; for(const c of [...(p.connections || [])]) ed.removeSingleConnection(c.node, id, c.input, 'input_' + port); } });
@@ -44317,20 +44365,7 @@ function rollSection(root, level = 'usual', opts = {}){
       const o = dieOptions(el, level);
       if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); }
     }
-    for(const id of ids().filter(id => $(id).tagName !== 'SELECT')){ const el = $(id);
-      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1;
-        const v = level === 'gentle' ? dieClamp((+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo), lo, hi)
-          : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
-        el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
-      else if(/Hex$/.test(id)){
-        // …and each moves a touch of its own
-        if(level === 'gentle'){ const [h, sa, l] = dieHsl(el.value);
-          setColorField(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
-        else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
-        else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
-          setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
-      // (switches are never rolled: they show and hide whole sections, and sit beside the locks)
-    }
+    for(const id of ids().filter(id => $(id).tagName !== 'SELECT')) rollControl(id, level, shift);
     // the light dial: a little way round when gentle, anywhere when wild
     if(root.contains && $('textureLight') && root.contains($('textureLight')) && dieRollable('textureLight') && level !== 'usual'){
       const deg = parseFloat($('textureLight').value) || 0, tilt = parseFloat(($('textureLightTilt') || {}).value); const t = isNaN(tilt) ? 100 : tilt;
@@ -44340,6 +44375,44 @@ function rollSection(root, level = 'usual', opts = {}){
     if(level === 'wild' && root.contains && $('textureSeedValue') && root.contains($('textureSeedValue'))) maybeRerollSeed();
     scheduleRender();
   });
+}
+/** One slider or color, rolled the die's way (a section's roll goes through here, control by control). */
+function rollControl(id, level, shift = 0){ const el = $(id); if(!el) return;
+  if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1;
+    const v = level === 'gentle' ? dieClamp((+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo), lo, hi)
+      : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
+    el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  else if(/Hex$/.test(id)){
+    // …and each moves a touch of its own
+    if(level === 'gentle'){ const [h, sa, l] = dieHsl(el.value);
+      setColorField(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
+    else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
+    else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
+      setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
+  else if(el.tagName === 'SELECT' && level !== 'gentle'){ const o = dieOptions(el, level); if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+  // (switches are never rolled: they show and hide whole sections, and sit beside the locks)
+}
+// ONE CONTROL AT RANDOM (ROADMAP E3, Filter Forge's Ctrl-click): Ctrl- or ⌘-click a control's name on a desk, or
+// hold it on a phone, and only that control rolls, the dice's way. A locked control stays, and says so.
+function rollByLabel(label){
+  const field = label.closest && label.closest('.field'); if(!field) return false;
+  const ids = lockablesIn(field).filter(id => $(id).tagName === 'SELECT' || $(id).type === 'range' || /Hex$/.test(id)); if(!ids.length) return false;
+  const free = ids.filter(dieRollable); if(!free.length){ toast(DIE.oneLocked); return true; }
+  const before = serializeCurrentSettings();
+  withLocksPreserved(() => { for(const id of free) rollControl(id, dieLevel()); scheduleRender(); });
+  if(JSON.stringify(before) !== JSON.stringify(serializeCurrentSettings())){ murmur.play('reroll'); commitSoon(); }
+  return true;
+}
+if(document.addEventListener){
+  // (a control's name: its label, never a button or a field inside it — the padlock sits in the label)
+  const labelOf = e => { const t = e.target; if(!t || !t.closest || t.closest('button, input, select, a')) return null; return t.closest('label'); };
+  document.addEventListener('click', e => { if(!(e.ctrlKey || e.metaKey)) return; const l = labelOf(e); if(l && rollByLabel(l)){ e.preventDefault(); e.stopPropagation(); } }, true);
+  let hold = null;
+  document.addEventListener('pointerdown', e => { if(e.pointerType !== 'touch') return; const l = labelOf(e); if(!l) return;
+    const x0 = e.clientX, y0 = e.clientY; hold = { l, x0, y0, t: setTimeout(() => { if(hold && hold.l === l){ hold.fired = rollByLabel(l); } }, 550) }; }, true);
+  const end = e => { if(!hold) return; clearTimeout(hold.t); if(hold.fired && e && e.cancelable) e.preventDefault(); hold = null; };
+  document.addEventListener('pointermove', e => { if(hold && Math.hypot(e.clientX - hold.x0, e.clientY - hold.y0) > 10){ clearTimeout(hold.t); hold = null; } }, true);
+  document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', end, true);
 }
 // BACK: each section remembers the look just before and just after its last roll; Back puts back
 // only what that roll changed, so edits made since in other sections stay.
@@ -44696,7 +44769,7 @@ if(document.querySelectorAll) document.querySelectorAll('input[data-angle]').for
 function setKnobTicks(slider, i, def){
   const btn = () => slider._snapBtn;
   const hideBtn = () => { if(btn() && btn().style){ btn().style.display = 'none'; btn().setAttribute('aria-pressed', 'false'); } };
-  slider.step = '1'; if(slider.dataset) delete slider.dataset.snapTicks;
+  slider.step = String(def.step || 1); if(slider.dataset) delete slider.dataset.snapTicks;
   if(def.key === 'angle'){
     addAngleSnap(slider); if(slider.setAttribute) slider.setAttribute('list', 'angleTicks');
     if(btn()){ btn().textContent = '∡'; btn().title = 'Snap to 15°'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); }
@@ -44709,6 +44782,8 @@ function setKnobTicks(slider, i, def){
     if(slider.dataset) slider.dataset.ticks = def.ticks.join(',');
     addAngleSnap(slider);                       // the same toggle, set to lock to ticks
     if(btn()){ btn().textContent = '⊹'; btn().title = 'Lock to the marks'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); btn()._ticks = true; }
+    // (a Knob of steps or a switch is locked to its marks from the start)
+    if(def.snap && slider.dataset){ slider.dataset.snapTicks = '1'; if(btn()) btn().setAttribute('aria-pressed', 'true'); }
   } else { if(slider.removeAttribute) slider.removeAttribute('list'); hideBtn(); }
   // 🎲 — a knob that asks for one (Object Shape) gets a die that picks a mark at random
   if(!slider._dice && def.dice && document.createElement && slider.parentNode && slider.parentNode.insertBefore){
@@ -44847,12 +44922,21 @@ function paintForgeSummary(){ if($('forgeSummary')) $('forgeSummary').textConten
  *  texture's sliders (named, ranged, defaulted), its Hue nodes its hues, its
  *  Surface's name the option at the bottom of Surface Variant. (The worker
  *  keeps six plain knobs; only the page's labels change.) */
+// A Knob's KIND (ROADMAP D1) as its slider shows it: steps and a switch are marks it locks to, named (or numbered);
+// an angle reads in degrees, marked every 45°. The value is 0–100 all the same (the Knob makes it what its kind is).
+function knobKind(k){
+  if(k.kind === 'switch') return { ticks: [0, 100], names: k.names.length >= 2 ? k.names.slice(0, 2) : ['Off', 'On'], snap: true };
+  if(k.kind === 'steps'){ const n = k.steps, ticks = Array.from({ length: n }, (_, i) => Math.round(i/(n - 1)*1000)/10);
+    return { ticks, names: ticks.map((t, i) => k.names[i] || String(i + 1)), snap: true, step: 0.1 }; }
+  if(k.kind === 'angle') return { ticks: [0, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100], deg: true, step: 0.5 };
+  return {};
+}
 function applyAthanorGraph(redraw = true){
   const g = ($('forgeGraph') || {}).value || '';
   const knobs = athanorKnobs(g), hues = athanorHues(g), name = athanorName(g);
   const top = knobs.reduce((m, k) => Math.max(m, k.slot), 0);
   TEXTURE_PARAMS.athanor = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
-    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '' }; });
+    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}) }; });
   const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
     caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue')); }

@@ -59,7 +59,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 |---|---|---|
 | Map / Curve / Numeric components; ports colored by type | Five wire kinds: gray map, picture, color, number, **curve** (green, dotted) | ✅ (curves added in Jupiter–Hegemone) |
 | Parameter mapping (a picture on a setting varies it point by point) | ⚙ ports. In v3 graphs a map is per point for the settings a part declares (`maps`; the wiki marks them "by point"); v2 graphs average it | ✅ (a setting that can't vary, such as a count of octaves, takes the average) |
-| Remappers (limit or reverse a control's range per target; one slider, many ranges) | `'~key': 'lo,hi'` per wired ⚙ (lo > hi reverses) | ✅ engine; **D3** UI |
+| Remappers (limit or reverse a control's range per target; one slider, many ranges) | `'~key': 'lo,hi'` per wired ⚙ (lo > hi reverses) | ✅ engine; ⇄ Reverse in the menu; **D3** two handles |
 | Required inputs (red; a stand-in image keeps the rest working) | `STEP_REQUIRED`: a red port with "!", and a "!"-in-a-circle stand-in in step previews only | ✅ |
 | Result: Simple vs Surface (lit by Surface Color, Height, Reflectivity, Reflection Blur, Metallic) | Surface (picture + height) and the Light Engine as a part | **B1** |
 | Render channels (Final, Diffuse, Bump, Normal, Specular, Metallic, Occlusion) | Step previews show each part's first output | **B2** |
@@ -68,11 +68,11 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Seamless Tiling | Not needed: a page is not tiled | parked |
 | Anti-aliasing: supersampling, "edges only" by AA zones | Grids drawn at a divisor and scaled up smooth | **A6** |
 | Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | One dial light, ambient, materials (Highlight, Shade, Diffuse hues), soft shadows, AO | **C1–C4** |
-| Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (6 slots), Hue (2), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ reach rule; **D1, D2** |
+| Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (6 slots), Hue (2), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ reach rule, Knob kinds (slider, steps, angle, switch), Order of the sliders; **D1** a dial |
 | Groups (control components inside a group define its inputs) | none | **A3** |
 | Loop and its slaves (Iteration, Accumulated, Randomizer); Bitmap Cache; Lua script components | Results kept automatically (ATHANOR_KEPT) | **A4**; scripts parked (security) |
 | Note component | **Note** part | ✅ |
-| Randomizer: Next Variant / Back, per-parameter locks, Ctrl-click one setting, High/Medium/Low levels (color relationships kept) | A die and a lock on every section, with Gently / As usual / Wildly and Back (E1, E2 done) | **E3–E4** |
+| Randomizer: Next Variant / Back, per-parameter locks, Ctrl-click one setting, High/Medium/Low levels (color relationships kept) | A die and a lock on every section, with Gently / As usual / Wildly and Back; Ctrl-click (or hold) a control's name to roll it alone | **E4** |
 | Presets tab (snapshots of a filter's settings) | Presets, readings (🜂 🜄 🜁 🜃), Grimoire, kept surfaces | **H2** |
 | Obsolete component versions kept for old filters | Graph `v`, RETIRED ids, hidden options | ✅ |
 
@@ -160,18 +160,11 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### D · Controls (Filter Forge's control components and remappers)
 
-- **D1 · Control kinds.** A Knob gets a kind:
-  - slider;
-  - steps (an IntSlider: ticks and names);
-  - angle (drawn as a dial);
-  - switch (a checkbox: two ticks).
-  - Files: steps.js `knob`, appEvents applyAthanorGraph (relabels the page's
-    sliders with ticks/names), forge.js.
-  - Prove: a switch knob's slider has two ticks named Off/On on the page.
-- **D2 · Order of controls.** The Surface lists which slot each control takes
-  (Filter Forge's "Order of Controls"). The menu can reorder them.
-- **D3 · Remapper UI.** A wired ⚙'s menu shows its range as two handles, with
-  a ⇄ to reverse it. The engine already supports `~key` with lo > hi.
+- **D1's dial.** A Knob of the Angle kind reads in degrees with 45° marks;
+  drawing it as a dial on the page is still to do. (Kinds, D2's Order of the
+  sliders and D3's ⇄ Reverse the wire are done.)
+- **D3 · Remapper UI.** A wired ⚙'s range as two handles in its menu (it is a
+  typed pair today).
 - **D4 · A Curve control.** A curve the person draws (a small curve editor
   on the page), feeding curve ports.
   - Depends on: D1.
@@ -179,8 +172,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### E · The randomizer
 
-- **E3 · One control at random.** A long press (phone) or Ctrl-click
-  (desktop) on a control's label.
 - **E4 · An author's default locks.** A preset or graph can ship with locks
   set (Filter Forge's "Reset Locks to Default").
   - Depends on: H2.
@@ -323,9 +314,7 @@ superseded) wait for Stage 4.
 ### Stage 2 · Features: the engine, the controls, the poem
 - **B1** a lit Surface (CPU and shader together), then **B2** channels view.
 - **C1–C4** lighting (C needs B1).
-- **D1** control kinds, **D2** order of controls, **D3** remap UI,
-  **D4** curve control.
-- **E3** one control at random (E1 levels and E2 Back are done).
+- **D1**'s dial, **D3**'s two handles, **D4** curve control.
 - **G2** punctuation (needs F2), **G3** Protect Text,
   **G4** Emotional Seed (needs A3), **G5** the box as an input.
 - **H1**'s actions that aren't presets: Summon Variation, Mutate Gently,
@@ -365,8 +354,8 @@ superseded) wait for Stage 4.
  A10 ports by name · A9 Variant→Variation · A6 AA              Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
  A3 GROUPS (v5) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
-                              D1 control kinds ─► D2 order ─► D4 curve control ──────────┤      ├─► E4 author locks
-                              D3 remap UI · E3 one at random · H1 actions  ──────────────┘      └─► THE PRESETS PASS
+                              D1 dial · D3 two handles ─► D4 curve control ──────────────┤      ├─► E4 author locks
+                              H1 actions ────────────────────────────────────────────────┘      └─► THE PRESETS PASS
                               B1 LIT SURFACE ─► B2 channels; ─► C1 ─► C2 ─► C4; C3
                               G3 Protect Text
 ```
@@ -375,7 +364,7 @@ superseded) wait for Stage 4.
 
 1. Stage 1: A3 Groups (v5) + A10 (ports saved by name: both change the format once).
 2. Stage 1: F2's rest (glyphs in web fonts, layers, a color per mark) + F6's Pavements.
-3. Stage 2: D1–D3 controls + E3 one control at random.
+3. Stage 2: D1's dial, D3's two handles, D4 the curve control.
 4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
 5. Stage 2: G2–G5 + H1's actions.
 6. Stage 3: the Surface Studies become textures, a few per pass; black boxes

@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Calypso (2026-10-15)
+
+- **A Knob has a Kind.** In the Athanor a Knob can be a plain slider;
+  **Steps**, a few marks the slider locks to, named as you like
+  ("Calm, Restless, Storm"); an **Angle**, read in degrees and marked every
+  45°; or a **Switch**, off or on. The graph sees only the marks, or 0 and 1.
+- **Order of the sliders**, in the Surface's menu (hold it or right-click
+  it): choose which slider on the page each Knob is.
+- **Reverse the wire**, in a wired setting's menu: the same wire, the other
+  way round.
+- **Roll one control alone:** Ctrl-click (⌘-click) a control's name, or hold
+  it on a phone, and only that control rolls, the dice's way. A locked one
+  stays.
+- Fixed: a Knob whose Default is 0 started at 50.
+
 ## Saturn–Telesto (2026-10-15)
 
 - **🜉 Open in the Athanor**, a new button under the Surface: it opens the

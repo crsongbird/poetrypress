@@ -365,6 +365,8 @@ body.is-mobile .drag-grip { border-radius: 2px;
   background: rgba(255,255,255,0.28);
 }
 body.is-mobile.dragging-divider { user-select: none; }
+/* a control's name is held to roll it alone: no text selection, no callout */
+body.is-mobile .field > label{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
 
 /* the canvas can be pinched and dragged inside its frame */
 body.is-mobile .canvas-wrap { touch-action: none; }
@@ -1654,6 +1656,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 /* on the light theme the wire colours deepen, so they still read on paper */
 :root[data-theme="vellum"] .forge-veil{ --t-field:#6E6584; --t-image:#B23BB8; --t-colour:#A87A06; --t-value:#12809A; --t-curve:#3E8A44; }
 .forge-veil[hidden]{ display:none; }
+.forge-row[hidden]{ display:none; }
 .forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--fg-line); background:var(--fg-panel); }
 .forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
 .forge-zoom{ display:inline-flex; gap:0; } .forge-zoom button{ padding:4px 9px; min-width:30px; } .forge-zoom button + button{ border-left:none; }

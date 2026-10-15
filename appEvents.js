@@ -2399,20 +2399,7 @@ function rollSection(root, level = 'usual', opts = {}){
       const o = dieOptions(el, level);
       if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); }
     }
-    for(const id of ids().filter(id => $(id).tagName !== 'SELECT')){ const el = $(id);
-      if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1;
-        const v = level === 'gentle' ? dieClamp((+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo), lo, hi)
-          : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
-        el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
-      else if(/Hex$/.test(id)){
-        // …and each moves a touch of its own
-        if(level === 'gentle'){ const [h, sa, l] = dieHsl(el.value);
-          setColorField(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
-        else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
-        else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
-          setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
-      // (switches are never rolled: they show and hide whole sections, and sit beside the locks)
-    }
+    for(const id of ids().filter(id => $(id).tagName !== 'SELECT')) rollControl(id, level, shift);
     // the light dial: a little way round when gentle, anywhere when wild
     if(root.contains && $('textureLight') && root.contains($('textureLight')) && dieRollable('textureLight') && level !== 'usual'){
       const deg = parseFloat($('textureLight').value) || 0, tilt = parseFloat(($('textureLightTilt') || {}).value); const t = isNaN(tilt) ? 100 : tilt;
@@ -2422,6 +2409,44 @@ function rollSection(root, level = 'usual', opts = {}){
     if(level === 'wild' && root.contains && $('textureSeedValue') && root.contains($('textureSeedValue'))) maybeRerollSeed();
     scheduleRender();
   });
+}
+/** One slider or color, rolled the die's way (a section's roll goes through here, control by control). */
+function rollControl(id, level, shift = 0){ const el = $(id); if(!el) return;
+  if(el.type === 'range'){ const lo = +el.min || 0, hi = +el.max || 100, st = +el.step || 1;
+    const v = level === 'gentle' ? dieClamp((+el.value || 0) + (Math.random()*2 - 1)*DIE_GENTLE*(hi - lo), lo, hi)
+      : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
+    el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  else if(/Hex$/.test(id)){
+    // …and each moves a touch of its own
+    if(level === 'gentle'){ const [h, sa, l] = dieHsl(el.value);
+      setColorField(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
+    else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
+    else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
+      setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
+  else if(el.tagName === 'SELECT' && level !== 'gentle'){ const o = dieOptions(el, level); if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
+  // (switches are never rolled: they show and hide whole sections, and sit beside the locks)
+}
+// ONE CONTROL AT RANDOM (ROADMAP E3, Filter Forge's Ctrl-click): Ctrl- or ⌘-click a control's name on a desk, or
+// hold it on a phone, and only that control rolls, the dice's way. A locked control stays, and says so.
+function rollByLabel(label){
+  const field = label.closest && label.closest('.field'); if(!field) return false;
+  const ids = lockablesIn(field).filter(id => $(id).tagName === 'SELECT' || $(id).type === 'range' || /Hex$/.test(id)); if(!ids.length) return false;
+  const free = ids.filter(dieRollable); if(!free.length){ toast(DIE.oneLocked); return true; }
+  const before = serializeCurrentSettings();
+  withLocksPreserved(() => { for(const id of free) rollControl(id, dieLevel()); scheduleRender(); });
+  if(JSON.stringify(before) !== JSON.stringify(serializeCurrentSettings())){ murmur.play('reroll'); commitSoon(); }
+  return true;
+}
+if(document.addEventListener){
+  // (a control's name: its label, never a button or a field inside it — the padlock sits in the label)
+  const labelOf = e => { const t = e.target; if(!t || !t.closest || t.closest('button, input, select, a')) return null; return t.closest('label'); };
+  document.addEventListener('click', e => { if(!(e.ctrlKey || e.metaKey)) return; const l = labelOf(e); if(l && rollByLabel(l)){ e.preventDefault(); e.stopPropagation(); } }, true);
+  let hold = null;
+  document.addEventListener('pointerdown', e => { if(e.pointerType !== 'touch') return; const l = labelOf(e); if(!l) return;
+    const x0 = e.clientX, y0 = e.clientY; hold = { l, x0, y0, t: setTimeout(() => { if(hold && hold.l === l){ hold.fired = rollByLabel(l); } }, 550) }; }, true);
+  const end = e => { if(!hold) return; clearTimeout(hold.t); if(hold.fired && e && e.cancelable) e.preventDefault(); hold = null; };
+  document.addEventListener('pointermove', e => { if(hold && Math.hypot(e.clientX - hold.x0, e.clientY - hold.y0) > 10){ clearTimeout(hold.t); hold = null; } }, true);
+  document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', end, true);
 }
 // BACK: each section remembers the look just before and just after its last roll; Back puts back
 // only what that roll changed, so edits made since in other sections stay.
@@ -2778,7 +2803,7 @@ if(document.querySelectorAll) document.querySelectorAll('input[data-angle]').for
 function setKnobTicks(slider, i, def){
   const btn = () => slider._snapBtn;
   const hideBtn = () => { if(btn() && btn().style){ btn().style.display = 'none'; btn().setAttribute('aria-pressed', 'false'); } };
-  slider.step = '1'; if(slider.dataset) delete slider.dataset.snapTicks;
+  slider.step = String(def.step || 1); if(slider.dataset) delete slider.dataset.snapTicks;
   if(def.key === 'angle'){
     addAngleSnap(slider); if(slider.setAttribute) slider.setAttribute('list', 'angleTicks');
     if(btn()){ btn().textContent = '∡'; btn().title = 'Snap to 15°'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); }
@@ -2791,6 +2816,8 @@ function setKnobTicks(slider, i, def){
     if(slider.dataset) slider.dataset.ticks = def.ticks.join(',');
     addAngleSnap(slider);                       // the same toggle, set to lock to ticks
     if(btn()){ btn().textContent = '⊹'; btn().title = 'Lock to the marks'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); btn()._ticks = true; }
+    // (a Knob of steps or a switch is locked to its marks from the start)
+    if(def.snap && slider.dataset){ slider.dataset.snapTicks = '1'; if(btn()) btn().setAttribute('aria-pressed', 'true'); }
   } else { if(slider.removeAttribute) slider.removeAttribute('list'); hideBtn(); }
   // 🎲 — a knob that asks for one (Object Shape) gets a die that picks a mark at random
   if(!slider._dice && def.dice && document.createElement && slider.parentNode && slider.parentNode.insertBefore){
@@ -2929,12 +2956,21 @@ function paintForgeSummary(){ if($('forgeSummary')) $('forgeSummary').textConten
  *  texture's sliders (named, ranged, defaulted), its Hue nodes its hues, its
  *  Surface's name the option at the bottom of Surface Variant. (The worker
  *  keeps six plain knobs; only the page's labels change.) */
+// A Knob's KIND (ROADMAP D1) as its slider shows it: steps and a switch are marks it locks to, named (or numbered);
+// an angle reads in degrees, marked every 45°. The value is 0–100 all the same (the Knob makes it what its kind is).
+function knobKind(k){
+  if(k.kind === 'switch') return { ticks: [0, 100], names: k.names.length >= 2 ? k.names.slice(0, 2) : ['Off', 'On'], snap: true };
+  if(k.kind === 'steps'){ const n = k.steps, ticks = Array.from({ length: n }, (_, i) => Math.round(i/(n - 1)*1000)/10);
+    return { ticks, names: ticks.map((t, i) => k.names[i] || String(i + 1)), snap: true, step: 0.1 }; }
+  if(k.kind === 'angle') return { ticks: [0, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100], deg: true, step: 0.5 };
+  return {};
+}
 function applyAthanorGraph(redraw = true){
   const g = ($('forgeGraph') || {}).value || '';
   const knobs = athanorKnobs(g), hues = athanorHues(g), name = athanorName(g);
   const top = knobs.reduce((m, k) => Math.max(m, k.slot), 0);
   TEXTURE_PARAMS.athanor = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
-    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '' }; });
+    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}) }; });
   const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
     caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue')); }

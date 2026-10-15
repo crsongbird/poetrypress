@@ -96,6 +96,17 @@ const base = save();
   check('every lock resolves to a labelled field' + (stranded.length ? ': ' + stranded.join(', ') : ''), stranded.length === 0);
 }
 
+// ---- one control at random (ROADMAP E3): Ctrl-click a control's name rolls it alone; a locked one stays ----
+{ load({ ...base, locks: [], texP1: '50', texP2: '50' }); await settle();
+  reg['texP1'].type = 'range';                     // (the mock's sliders don't know they are sliders)
+  const field = { contains: el => el === reg['texP1'] }, label = { closest: sel => sel === '.field' ? field : sel === 'label' ? label : null };
+  const ctrlClick = () => document.dispatchEvent({ type: 'click', ctrlKey: true, target: { closest: sel => sel === 'label' ? label : null }, preventDefault(){}, stopPropagation(){} });
+  let moved = false; for(let i = 0; i < 6 && !moved; i++){ ctrlClick(); await settle(); moved = save().texP1 !== '50'; }
+  const s = save();
+  check('Ctrl-click a control\'s name: only that control rolls', moved && s.texP2 === '50');
+  load({ ...s, locks: ['texP1'], texP1: '33' }); await settle(); ctrlClick(); await settle();
+  check('…and a locked one stays as it is', save().texP1 === '33'); }
+
 // ---- how a lock looks (AGENTS.md §11: a drawn padlock, never an emoji) ----
 check('the lock is a drawn padlock, not an emoji', /const LOCK_GLYPH\s*=\s*\n?\s*'<svg/.test(ev) && !/'🔒'|'🔓'/.test(ev));
 check('a locked control is inert and dimmed, its lock still live',

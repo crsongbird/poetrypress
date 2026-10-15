@@ -99,6 +99,22 @@ if(canvasOK){
   load({ ...base, texture: true, textureType: 'rainstreaks', texP2: '30', textureLight: '200' });
   s = save();
   check('a new look is left as it is', s.textureLight === '200' && +s.texP2 === 30);
+  // A KNOB'S KIND (ROADMAP D1): on the page, a switch is a slider of two marks named Off and On, locked to them;
+  // steps are their marks; in the graph, a switch hands on 0 or 1 and steps only their marks
+  const knobGraph = (kind, extra = {}) => JSON.stringify({ v: 4, drawflow: { Home: { data: {
+    1: { id: 1, name: 'knob', data: { slot: '1', name: 'Storm', def: 50, kind, ...extra }, inputs: {}, outputs: { output_1: { connections: [] } } },
+    2: { id: 2, name: 'perlin', data: {}, inputs: { ['input_' + paramPort('perlin', 'rough')]: { connections: [{ node: '1', input: 'output_1' }] } }, outputs: { output_1: { connections: [] } } },
+    3: { id: 3, name: 'surface', data: { name: 'K' }, inputs: { input_1: { connections: [{ node: '2', input: 'output_1' }] } }, outputs: {} } } } } });
+  const TG = await import('../textureGenerators.js');
+  load({ ...base, texture: true, textureType: 'athanor', forgeGraph: knobGraph('switch') }); await new Promise(r => setTimeout(r, 60));
+  const sw = TG.TEXTURE_PARAMS.athanor[0];
+  check('a switch Knob is a slider of two marks, Off and On, locked to them', JSON.stringify(sw.ticks) === '[0,100]' && JSON.stringify(sw.names) === '["Off","On"]'
+    && reg['texP1'].dataset.ticks === '0,100' && reg['texP1'].dataset.snapTicks === '1' && TG.paramReadout(sw, 100) === 'On');
+  load({ ...base, texture: true, textureType: 'athanor', forgeGraph: knobGraph('steps', { steps: 3, names: 'Calm, Restless, Storm' }) }); await new Promise(r => setTimeout(r, 60));
+  const st = TG.TEXTURE_PARAMS.athanor[0];
+  check('…three Steps are three named marks', JSON.stringify(st.ticks) === '[0,50,100]' && TG.paramReadout(st, 48) === 'Restless');
+  const K = (kind, v, extra) => { const run = STEPS.knob.run({ ctx: { knobs: [v] }, num: (n, k, d) => n.data[k] ?? d, P: (n, k, d) => n.data[k] ?? d }, { data: { slot: '1', kind, ...extra } }); return run[0]; };
+  check('…and in the graph a switch is 0 or 1, steps only their marks, a slider as it is', K('switch', 49) === 0 && K('switch', 51) === 1 && K('steps', 40, { steps: 3 }) === 0.5 && K('slider', 40) === 0.4 && K(undefined, 40) === 0.4);
 }
 
 // ---- the Surface card's 🜉 Open in the Athanor: a texture's chain at the page's sliders ----

@@ -16,10 +16,11 @@ export const WIKI_PARTS = {
   // ================= INPUTS: values from the page =================
   knob: {
     line: 'Puts one of the page’s six surface sliders into the graph as a number, so a setting here can be moved from the page.',
-    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the six sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts.',
-    outs: { value: 'The slider’s position as a number from 0 (far left) to 1 (far right). Wire it into a setting’s ⚙ port.' },
-    set: { slot: 'Which of the six sliders this Knob is. Two Knobs on the same slider move together.', name: 'The label the slider shows on the page.', def: 'Where the slider sits when the surface is first chosen (0–100).' },
-    tips: ['Wire one Knob into two settings to move them together; give each wire its own range (see Wire ranges) so they move by different amounts.'],
+    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the six sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts. Its Kind decides what the slider is: a plain slider; Steps, a few marks it locks to (Filter Forge’s IntSlider), named or numbered; an Angle, read in degrees and marked every 45°; or a Switch, off or on. The Surface’s menu has Order of the sliders, to move them.',
+    outs: { value: 'The slider’s position as a number from 0 (far left) to 1 (far right); for Steps, only its marks; for a Switch, 0 or 1. Wire it into a setting’s ⚙ port.' },
+    set: { slot: 'Which of the six sliders this Knob is. Two Knobs on the same slider move together.', name: 'The label the slider shows on the page.', def: 'Where the slider sits when the surface is first chosen (0–100).',
+      kind: 'What the slider is: a plain slider, Steps (marks it locks to), an Angle (read in degrees) or a Switch (off or on).', steps: 'For Steps: how many marks.', names: 'For Steps or a Switch: the marks’ names, separated by commas (empty: numbers, or Off and On).' },
+    tips: ['Wire one Knob into two settings to move them together; give each wire its own range (see Wire ranges) so they move by different amounts.', 'A Knob of 3 Steps named “Calm, Restless, Storm” into a Perlin Noise’s Roughness: three moods, one slider.'],
     see: ['controls', 'ranges', 'part:number'],
   },
   hue: {

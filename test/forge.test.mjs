@@ -59,7 +59,7 @@ check('opened from the top bar; a full-screen editor; its graph kept in a hidden
   wire(blend, 1, surf, 1); wire(cells, 1, surf, 2);
   const graph = JSON.stringify({ drawflow: { Home: { data: nodes } } });
   check('a graph names its sliders (Knob nodes), its hues (Hue nodes) and itself (the Surface)',
-    JSON.stringify(C.athanorKnobs(graph)) === JSON.stringify([{ slot: 1, label: 'Grain', def: 40 }]) && C.athanorHues(graph)[0].label === 'Soot' && C.athanorName(graph) === 'Test Ground');
+    JSON.stringify(C.athanorKnobs(graph).map(k => [k.slot, k.label, k.def, k.kind])) === JSON.stringify([[1, 'Grain', 40, 'slider']]) && C.athanorHues(graph)[0].label === 'Soot' && C.athanorName(graph) === 'Test Ground');
   const { withSeed } = await import('../texCore.js');
   const run = (knob, seed = 5) => withSeed(seed, () => C.evalAthanor(graph, 48, 48, { knobs: [knob, 50, 50, 50, 50, 50], tints: ['#FFFFFF', '#203040'], light: 315, seed }, {}));
   const a = run(40), b = run(40), c = run(90), d = run(40, 6);

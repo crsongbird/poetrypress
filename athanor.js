@@ -91,7 +91,10 @@ export function athanorKnobs(graph){
     if(n.name !== 'knob') continue;
     if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(6, parseInt((n.data || {}).slot, 10) || 1)))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
-    if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, +d.def || 50)) });
+    if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, d.def === '' || d.def == null || isNaN(+d.def) ? 50 : +d.def)),   // (a Default of 0 is 0)
+      // its kind (D1): a plain slider, steps (marks, named or numbered), an angle, or a switch
+      kind: ['steps', 'angle', 'switch'].includes(d.kind) ? d.kind : 'slider', steps: Math.max(2, Math.min(12, Math.round(+d.steps || 3))),
+      names: String(d.names || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 12).map(x => x.slice(0, 18)) });
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
   for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){

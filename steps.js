@@ -66,7 +66,9 @@ export const STEP_BLEND_FN = {
 // ---- the parts as the editor shows them ----
 const STEP_PARTS = {
   // inputs: what the finished texture offers on the page
-  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50)] },
+  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
+    STEP_SEL('kind', 'Kind', ['slider', 'steps', 'angle', 'switch']), [...STEP_R('steps', 'Steps', 3, 2, 12).slice(0, 4), { min: 2, max: 12, when: 'kind:steps' }],
+    ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]] },
   hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
@@ -365,7 +367,11 @@ function stepScaleByPoint(E, SC, layer){
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
-    return [Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100];
+    const v = Math.max(0, Math.min(100, +((ctx.knobs || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1] ?? num(n, 'def', 50))))/100, kind = P(n, 'kind', 'slider');
+    // a Knob of steps hands on only its marks, a switch only off or on (whatever the slider between them says)
+    if(kind === 'steps'){ const k = Math.max(2, Math.min(12, Math.round(num(n, 'steps', 3)))) - 1; return [Math.round(v*k)/k]; }
+    if(kind === 'switch') return [v >= 0.5 ? 1 : 0];
+    return [v];
   },
   glowhue(E, n){ const g = E.ctx.glow; return [g ? [g.r, g.g, g.b] : [0, 0, 0]]; },   // (glowOf: channels 0–1)
   hue(E, n){ const { ctx, P, hexCol } = E, t = (ctx.tints || [])[(parseInt(P(n, 'slot', '1'), 10) || 1) - 1];

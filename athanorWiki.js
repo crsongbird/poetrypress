@@ -237,7 +237,7 @@ export const WIKI_ARTICLES = [
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
 <p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Show on Page</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app offers to). The page shows only the controls you give it:</p>
 <ul>
-<li>Each <b>Knob</b> becomes one of the six sliders under Surface, labelled with the Knob’s name.</li>
+<li>Each <b>Knob</b> becomes one of the six sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
 <li>The <b>light dial</b> is always there for anything lit.</li>
 </ul>
@@ -246,6 +246,7 @@ export const WIKI_ARTICLES = [
 <li>Only Knobs and Hues whose wires <b>reach the Surface</b> appear. One left unconnected is hidden.</li>
 <li>Choose which sliders matter. Two to four good controls are easier to use than six.</li>
 <li>Give each Knob a [[ranges|wire range]] that keeps its whole slider useful.</li>
+<li>The sliders appear in the order of their numbers. To move one, hold or right-click the Surface and choose <b>Order of the sliders…</b>: the Knob trades places with the one in the slider it moves to.</li>
 </ul>` },
   { id: 'surface', group: 'The page and your graph', title: 'The Surface', body: `
 <p>The Surface is the end of every graph. There is always exactly one: it can’t be deleted or copied, and Clear leaves a new one.</p>
@@ -295,7 +296,8 @@ export const WIKI_ARTICLES = [
 <p>Right-click (or hold) anything for its menu:</p>
 <ul>
 <li><b>A part:</b> wire it, duplicate it, pin it in place, reset its settings, delete it, or open <b>About this part</b>.</li>
-<li><b>A setting:</b> wire a Knob or the light dial into it, bind it to a page slider, set its [[ranges|wire range]], reset it.</li>
+<li><b>A setting:</b> wire a Knob or the light dial into it, bind it to a page slider, set its [[ranges|wire range]] or <b>Reverse the wire</b>, reset it.</li>
+<li><b>The Surface:</b> besides a part’s own, <b>Order of the sliders…</b>, to choose which slider on the page each Knob is.</li>
 <li><b>A port:</b> wire into or out of it, or cut its wire.</li>
 <li><b>A wire:</b> see what it connects, or cut it.</li>
 <li><b>The empty grid:</b> add a part there, fit everything in view, tidy the layout.</li>

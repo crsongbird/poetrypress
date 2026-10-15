@@ -392,9 +392,9 @@ export const CHOOSER = {
 /** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk.
  *  The way last chosen is remembered, and every die and Summon button rolls that way. {name} is the way. */
 export const DIE = {
-  title: 'Roll this section {name} (locked controls stay)',
-  titleSurface: 'Roll this section {name} (Shift-click or hold: only a new seed)',
-  titlePhone: 'Roll this section {name} (hold to choose how)',
+  title: 'Roll this section {name} (locked controls stay; Ctrl-click a control’s name to roll it alone)',
+  titleSurface: 'Roll this section {name} (Shift-click or hold: only a new seed; Ctrl-click a control’s name to roll it alone)',
+  titlePhone: 'Roll this section {name} (hold to choose how; hold a control’s name to roll it alone)',
   summonTitle: 'Rolls {name}: choose how from any die (hold it, or ▾ beside it)',
   more: 'How to roll: gently, as usual, wildly, or back',
   menuTitle: 'Roll this section',
@@ -414,6 +414,7 @@ export const DIE = {
   seed: 'Only a new seed',
   seedHint: 'The same surface, a new pattern',
   locked: 'Locked: the light stays where it is',
+  oneLocked: 'Locked: it stays as it is',
 };
 
 /** Surfaces made in the Athanor and kept on this browser's shelf: their menus (the Athanor's Kept,

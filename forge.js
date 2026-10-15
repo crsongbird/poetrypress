@@ -101,7 +101,8 @@ export function forgeNodeHtml(type, lists = {}, data = {}){
     const right = i < N.outs.length ? `<span class="fp-out" data-t="${N.outTypes[i]}">${forgeEsc(forgeWord(N.outs[i]))}</span>` : '';
     html += `<div class="forge-row">${left}${right}</div>`;
   }
-  html += N.params.filter(p => !N.paramPorts.includes(p[0])).map(p => `<div class="forge-row extra">${ctl(p)}</div>`).join('');
+  // (a setting that matters only for some choice of another, `when: 'kind:steps|switch'`, shows only then: paintNode)
+  html += N.params.filter(p => !N.paramPorts.includes(p[0])).map(p => `<div class="forge-row extra"${p[4] && p[4].when ? ` data-when="${forgeEsc(p[4].when)}"` : ''}>${ctl(p)}</div>`).join('');
   return html + `</div><canvas class="forge-node-preview" width="64" height="64" aria-hidden="true"></canvas>`;
 }
 /**
@@ -274,6 +275,8 @@ export async function openForge(deps){
       const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && FORGE_NODES[n.name]; if(!el || !N) return;
       el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
+      el.querySelectorAll('[data-when]').forEach(r => { const [k, vals] = r.dataset.when.split(':'), P = N.params.find(p => p[0] === k);
+        r.hidden = !vals.split('|').includes(String((n.data || {})[k] ?? (P ? P[3] : ''))); });
       const pin = el.querySelector('.forge-pin'); if(pin){ pin.classList.toggle('locked', !!(n.data && n.data._pin)); pin.title = n.data && n.data._pin ? `Pinned — ${forgeClick()} to unpin` : 'Pin in place'; }
       el.querySelectorAll('.inputs .input').forEach((d, j) => { d.dataset.t = N.inTypes[j] || 'field'; d.classList.toggle('pp', j >= N.dataIns);
         // a REQUIRED input still empty is marked (Filter Forge's red port): the part has nothing to work on yet
@@ -347,7 +350,7 @@ export async function openForge(deps){
     ed.on('connectionCreated', c => { paintNode(c.input_id); paintWires(); save(); touched(); sound('wireConnect'); });
     ed.on('connectionRemoved', c => { paintNode(c.input_id); save(); touched(); sound('wireDisconnect'); hideCut(); });
     ed.on('nodeMoved', () => { paintWires(); save(); });
-    ed.on('nodeDataChanged', () => { save(); touched(); });
+    ed.on('nodeDataChanged', id => { save(); touched(); if(id != null) paintNode(id); });
     ed.on('import', () => setTimeout(paintAll, 0));
     // EVERY WIRE REDRAWN from where its ports are now: a wire is drawn once, when it is made, and a
     // part whose face changes size afterwards (its fonts arriving, its rows redrawn, the editor opened
@@ -615,6 +618,17 @@ export async function openForge(deps){
     // ---- menus for each kind of thing ----
     const wireMenu = w => { const d = wireDesc(w); return { title: 'A wire', hint: d.label + ' (' + d.hint + ')', items: [
       { glyph: '✂', label: 'Cut this wire', act: () => cutWire(w) }] }; };
+    // THE ORDER OF THE SLIDERS (Filter Forge's Order of Controls, ROADMAP D2): which page slider each Knob is, from the
+    // Surface's menu; moving one swaps it with the Knob in the slider it moves to
+    const knobsBySlot = () => { const by = {}; for(const [id, m] of Object.entries(rawNodes())) if(m.name === 'knob'){ const sl = String((m.data || {}).slot || '1'); (by[sl] ||= []).push(id); } return by; };
+    const moveSlot = (a, b) => { const by = knobsBySlot(); for(const id of by[a] || []) setData(id, { slot: b }); for(const id of by[b] || []) setData(id, { slot: a }); sound('nodeAdd'); };
+    const orderSpec = () => { const by = knobsBySlot(), name = sl => (by[sl] || []).map(id => String((nodeOf(id).data || {}).name || 'Knob')).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+      return { title: 'Order of the sliders', hint: 'Under Surface on the page, the Knobs’ sliders are in this order. Choose one to move it.', items: ['1', '2', '3', '4', '5', '6'].map(sl => {
+        const used = !!(by[sl] || []).length, k = +sl;
+        return { glyph: sl, label: used ? name(sl) : '(no Knob)', disabled: !used, hint: used ? `slider ${sl}` : 'a Knob set to this slider would show here',
+          sub: () => ({ title: name(sl), hint: `now slider ${sl}`, items: [
+            { glyph: '↑', label: k > 1 ? `Move up, to slider ${k - 1}` : 'Already first', disabled: k <= 1, hint: by[String(k - 1)] ? `${name(String(k - 1))} moves down in its place` : '', act: () => moveSlot(sl, String(k - 1)) },
+            { glyph: '↓', label: k < 6 ? `Move down, to slider ${k + 1}` : 'Already last', disabled: k >= 6, hint: by[String(k + 1)] ? `${name(String(k + 1))} moves up in its place` : '', act: () => moveSlot(sl, String(k + 1)) }] }) }; }) }; };
     const nodeMenu = id => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
       const from = N.outs.length ? wireStart(id, 'out') : null, into = N.ins.length ? wireStart(id, 'in') : null;
@@ -624,6 +638,7 @@ export async function openForge(deps){
         ...(from ? [{ glyph: '⟿', label: 'Connect its output…', hint: (N.outs.length === 1 ? `${forgeWord(N.outs[0])}: ` : 'choose an output, then ') + `${forgeClick()} the part it should feed`, ...from }] : []),
         ...(into ? [{ glyph: '⟾', label: 'Connect an input…', hint: `choose an input, then ${forgeClick()} the part it should come from`, ...into }] : []),
         ...(from || into ? [{ sep: true }] : []),
+        ...(n.name === 'surface' && Object.keys(knobsBySlot()).length ? [{ glyph: '☰', label: 'Order of the sliders…', hint: 'which slider on the page each Knob is, and moving them', sub: orderSpec }, { sep: true }] : []),
         { glyph: '⌖', label: isPinned(id) ? 'Unpin it' : 'Pin it in place', hint: isPinned(id) ? 'it can be dragged and tidied again' : 'it stays put when dragged or tidied', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
         { glyph: '⧉', label: 'Duplicate', disabled: n.name === 'surface', hint: n.name === 'surface' ? 'a graph has exactly one Surface' : 'a copy with the same settings, without wires', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
         { glyph: '↺', label: 'Reset all settings', hint: 'every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
@@ -655,6 +670,9 @@ export async function openForge(deps){
             const r = await promptFor({ title: `${label}: wire range`, body: `Two values between ${lo} and ${hi}: the setting when the wire is at its lowest (0), and at its highest (1). Enter them the other way round to reverse it.`, input: true, defaultValue: String(n.data['~' + key] || `${lo}, ${hi}`), confirmLabel: 'Set' });
             const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return; const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
             setData(id, { ['~' + key]: (a === lo && b === hi) ? undefined : `${a},${b}` }); } });
+          // ⇄ (ROADMAP D3, Filter Forge's remapper): the same wire, the other way round
+          { const cur = n.data['~' + key] ? String(n.data['~' + key]).split(',').map(Number) : [lo, hi];
+            items.push({ glyph: '⇄', label: 'Reverse the wire', hint: `its lowest now gives ${cur[1]}, its highest ${cur[0]}`, act: () => setData(id, { ['~' + key]: cur[1] === lo && cur[0] === hi ? undefined : `${cur[1]},${cur[0]}` }) }); }
           if(n.data['~' + key]) items.push({ glyph: '⟷', label: 'Use the full range again', hint: `${lo} to ${hi}`, act: () => setData(id, { ['~' + key]: undefined }) });
           items.push({ glyph: '?', label: 'About wire ranges', hint: 'in the wiki', act: () => F.goWiki && F.goWiki('ranges') });
           items.push({ glyph: '✂', label: 'Disconnect the wire', hint: 'the slider takes over again', act: () => { const p = n.inputs['input_' + port]; for(const c of [...(p.connections || [])]) ed.removeSingleConnection(c.node, id, c.input, 'input_' + port); } });
