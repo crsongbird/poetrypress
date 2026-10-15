@@ -6,7 +6,9 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- THE PRESET LEVEL (ROADMAP H1): Summon Variation, Mutate Gently and Freeze This Seed sit in a row above the
+  presets, under Rituals. Is that their place, and do the names say what they do?
 - PROTECT THE TEXT (◐ under Text Clearing) aims at 3:1, as the presets are held to; a tenth of the ground under a line
   may fall short (specks, stars). On busy surfaces 3:1 reads well but not easily; 4.5:1 (WCAG's for small text) clears
   more. Both are one number in tunables.js (READABLE). On the default backdrop the welcome poem's rainbow line is named as one

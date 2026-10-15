@@ -415,6 +415,12 @@ Other parts of a look:
       seed; on a phone that is a menu item.
     - **One control alone** (`rollByLabel`, `rollControl`): Ctrl- or ⌘-click
       a control's name on a desk, or hold it on a phone; the dice's way.
+  - **Above the presets** (ROADMAP H1, the preset level): **Summon
+    Variation** (a new seed, now and then another reading: what a click on
+    a lit preset does; a frozen seed leaves only the reading), **Mutate
+    Gently** (every section's die, gently, at once) and **Freeze This Seed**
+    (the seed's padlock as a button; `paintFreeze` keeps it pressed with the
+    lock).
   - **Locks supersede every roll** (Ruby): rolls skip locked controls, and
     `restoreLocked` puts menus back before sliders (a surface put back resets
     its sliders).

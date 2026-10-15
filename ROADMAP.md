@@ -215,13 +215,10 @@ Ripples from the Words, Protect the Text, Ink.
 
 ### H · The three levels (Ruby's future-directions doc)
 
-- **H1 · Preset level.**
-  - Done: thumbnail, seed, intensity (opacity), the chooser.
-  - To add:
-    - **Summon Variation** (the Surface die, as usual);
-    - **Mutate Gently** (every die, gently, at once);
-    - **Freeze This Seed** (the seed's lock, surfaced as an action).
-  - Done: Reveal Spell Graph, the Surface card's **🜉 Open in the Athanor**.
+Done: H1, the preset level (thumbnail, seed, intensity, the chooser; Summon
+Variation, Mutate Gently and Freeze This Seed above the presets; 🜉 Open in
+the Athanor).
+
 - **H2 · Presets as graphs with exposed settings.** A preset stores:
   - its graph;
   - its exposed controls (4–8, by D1/D2);
@@ -313,8 +310,6 @@ superseded) wait for Stage 4.
 - **D1**'s dial, **D3**'s two handles, **D4** curve control.
 - **G2** punctuation (needs F2), **G4** Emotional Seed (needs A3), **G5**
   the box as an input.
-- **H1**'s actions that aren't presets: Summon Variation, Mutate Gently,
-  Freeze This Seed.
 
 ### Stage 3 · Textures: built from the parts
 - **I**: the 36 Surface Studies become textures in the menu, each a chain
@@ -350,8 +345,8 @@ superseded) wait for Stage 4.
  A10 ports by name · A9 Variant→Variation · A6 AA              Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
  A3 GROUPS (v5) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
-                              D1 dial · D3 two handles ─► D4 curve control ──────────────┤      ├─► E4 author locks
-                              H1 actions ────────────────────────────────────────────────┘      └─► THE PRESETS PASS
+                              D1 dial · D3 two handles ─► D4 curve control ──────────────┘      ├─► E4 author locks
+                                                                                                └─► THE PRESETS PASS
                               B1 LIT SURFACE ─► B2 channels; ─► C1 ─► C2 ─► C4; C3
 ```
 
@@ -361,7 +356,7 @@ superseded) wait for Stage 4.
 2. Stage 1: F2's rest (glyphs in web fonts, layers, a color per mark) + F6's Pavements.
 3. Stage 2: D1's dial, D3's two handles, D4 the curve control.
 4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
-5. Stage 2: G2, G4, G5 + H1's actions.
+5. Stage 2: G2, G4, G5.
 6. Stage 3: the Surface Studies become textures, a few per pass; black boxes
    taken apart and the rest rebuilt as chains, two or three per pass.
 7. Stage 4: H2, H3, H4, E4, then the presets pass.

@@ -107,6 +107,33 @@ const base = save();
   load({ ...s, locks: ['texP1'], texP1: '33' }); await settle(); ctrlClick(); await settle();
   check('…and a locked one stays as it is', save().texP1 === '33'); }
 
+// ---- the preset level's actions (ROADMAP H1): Freeze This Seed is the seed's lock; Summon Variation; Mutate Gently ----
+{ const click = id => reg[id].dispatchEvent({ type: 'click' });
+  load({ ...base, locks: [], textureSeed: 1234 }); await settle();
+  click('freezeSeedBtn'); await settle();
+  check('Freeze This Seed locks the seed, and shows it pressed', save().locks.includes('textureSeedValue') && reg['freezeSeedBtn'].getAttribute('aria-pressed') === 'true');
+  click('summonVariationBtn'); await settle();
+  check('…and a variation keeps a frozen seed', String(save().textureSeed) === '1234');
+  click('freezeSeedBtn'); await settle();
+  check('pressed again, it thaws', !save().locks.includes('textureSeedValue') && reg['freezeSeedBtn'].getAttribute('aria-pressed') === 'false');
+  load({ ...base, locks: ['textureSeedValue'] }); await settle();
+  check('a look that comes with its seed locked shows the button pressed', reg['freezeSeedBtn'].getAttribute('aria-pressed') === 'true');
+  load({ ...base, locks: [], textureSeed: 1234 }); await settle();
+  const b0 = save(); click('summonVariationBtn'); await settle(); const b1 = save();
+  const off = changed(b0, b1).filter(k => !/^texture|^texP/.test(k));
+  check('Summon Variation grows the same look again: a new seed, and nothing but the surface changes', String(b0.textureSeed) === '1234' && String(b1.textureSeed) !== '1234' && off.length === 0); }
+{ // every section's die, gently, at once (the mock parses no markup: one stand-in section holding a few controls)
+  for(const id of ['texP1', 'texP2']) reg[id].type = 'range';
+  const ids = ['texP1', 'texP2', 'textureType', 'bgColor1Hex'], section = { contains: el => !!el && ids.includes(el.id) };
+  const q = document.querySelectorAll; document.querySelectorAll = sel => /details\.card\[data-tab\]/.test(sel) ? [section] : (q ? q(sel) : []);
+  load({ ...base, locks: ['texP2'], textureType: 'hatch', texP1: '50', texP2: '50', bg1: '#405060' }); await settle();
+  let s1 = save(), moved = false;
+  for(let i = 0; i < 6 && !moved; i++){ reg['mutateGentlyBtn'].dispatchEvent({ type: 'click' }); await settle(); s1 = save(); moved = s1.texP1 !== '50'; }
+  document.querySelectorAll = q;
+  check('Mutate Gently nudges every section a little: a slider moves no more than a gentle roll\'s reach, a color drifts',
+    moved && Math.abs(+s1.texP1 - 50) <= 10 && s1.bg1 !== '#405060');
+  check('…the surface stays (menus never roll gently), and a locked control stays', s1.textureType === 'hatch' && s1.texP2 === '50'); }
+
 // ---- how a lock looks (AGENTS.md §11: a drawn padlock, never an emoji) ----
 check('the lock is a drawn padlock, not an emoji', /const LOCK_GLYPH\s*=\s*\n?\s*'<svg/.test(ev) && !/'🔒'|'🔓'/.test(ev));
 check('a locked control is inert and dimmed, its lock still live',

@@ -2180,6 +2180,10 @@ select.ch-native{ position:absolute !important; width:1px !important; height:1px
 body.is-mobile .ch-grid{ grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
 
 /* THE PRESET GRID's search, and its groups that fold */
+/* the preset level's actions, three across above the presets (two lines on a phone if they must) */
+.preset-actions{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin:0 0 8px; }
+.preset-actions button.ghost{ padding:6px 4px; line-height:1.25; white-space:normal; }
+.preset-actions button.ghost[aria-pressed="true"]{ color:var(--text-main); border-color:var(--accent); background:color-mix(in srgb, var(--accent) 20%, transparent); }
 .preset-search{ width:100%; margin:0 0 6px; min-height:36px; }
 input.preset-search{ font-size:14px; }
 .preset-none{ margin:6px 0 2px; color:var(--text-dim); font-size:13px; }
@@ -16804,6 +16808,12 @@ held on till bright~B</code></p>
 
     <details class="card" data-tab="style" open>
       <summary class="card-title" data-str="card.builtin_presets">Built-In Presets</summary>
+      <!-- THE PRESET LEVEL'S ACTIONS (ROADMAP H1): more of the look on the page, without opening a section -->
+      <div class="preset-actions">
+        <button class="ghost" id="summonVariationBtn" type="button" data-str="button.summonVariationBtn" title="The same look, grown again: a new seed for its surface, and now and then another of the surface's four readings. Nothing else changes.">⟳ Summon Variation</button>
+        <button class="ghost" id="mutateGentlyBtn" type="button" data-str="button.mutateGentlyBtn" title="Every section rolled gently at once: sliders nudged a little, colors drifting together, the light turned a touch. Menus, switches and anything locked stay as they are.">≈ Mutate Gently</button>
+        <button class="ghost" id="freezeSeedBtn" type="button" aria-pressed="false" data-str="button.freezeSeedBtn" title="Lock the surface's seed (the padlock beside the seed, under Materia), so presets, dice and variations keep this exact pattern. Press again to thaw it.">❄︎ Freeze This Seed</button>
+      </div>
       <input type="search" id="presetSearch" class="preset-search" data-str-ph="ph.preset_search" placeholder="Search looks: a name, a mood, a surface…" autocomplete="off" spellcheck="false" aria-label="Search the presets">
       <div class="preset-grid" id="presetGrid"></div>
       <p class="preset-none" id="presetNone" hidden data-str="note.preset_none">No look by that name. Try a mood (rain, gold) or a surface (glass, paper).</p>
@@ -17925,6 +17935,9 @@ const UI_STRINGS = {
   'button.randomSurfaceBtn':               "⟳ Summon New Surface",
   'button.revealSurfaceBtn':               "🜉 Open in the Athanor",
   'button.protectTextBtn':                 "◐ Protect the Text",
+  'button.summonVariationBtn':             "⟳ Summon Variation",
+  'button.mutateGentlyBtn':                "≈ Mutate Gently",
+  'button.freezeSeedBtn':                  "❄︎ Freeze This Seed",
   'button.spellCreateBtn':                 "Create",
   'button.spellApplyBtn':                  "Invoke",
   'button.spellShareBtn':                     "Share",
@@ -18262,6 +18275,14 @@ const PROTECT = {
   short: 'Cleared all the way: “{words}” now stands at {ratio}:1, short of {need}:1. Its ink is close to the backdrop: a lighter or darker ink would help.',
   cannot: 'Clearing can’t help: “{words}” stands at {ratio}:1, and the backdrop beneath the surfaces is as close to its ink. Try a lighter or darker ink, or another backdrop.',
   noSurface: 'No surface is shown, so there is nothing to clear: “{words}” stands at {ratio}:1 against the backdrop. A lighter or darker ink, or backdrop, would help.',
+};
+// THE PRESET LEVEL'S ACTIONS (above the presets): what they did, when it needs saying
+const PRESET_ACTS = {
+  frozen: 'The seed is frozen: presets, dice and variations keep this pattern until you thaw it.',
+  thawed: 'The seed is thawed: presets and dice may grow a new pattern again.',
+  frozenReading: 'The seed is frozen, so the variation is another reading of the surface instead.',
+  frozenStill: 'The seed is frozen and this surface has no other reading: thaw the seed for a variation.',
+  noSurface: 'No surface is shown: a variation is a new seed for the surface.',
 };
 const CHOOSER = {
   search: 'Search by name, group or mood…',
@@ -35210,7 +35231,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Dione';
+const RELEASE = 'Saturn–Helene';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -36039,7 +36060,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · 4e31963";
+const STAMP = "2026-10-15 · 9a4aee7";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -43449,6 +43470,34 @@ function swapReading(){
   applyElement(list[Math.floor(Math.random()*list.length)].el);
 }
 
+// THE PRESET LEVEL'S ACTIONS (ROADMAP H1), above the presets: more of the look on the page without opening a section.
+// SUMMON VARIATION grows the same look again (what a click on a lit preset does): a new seed, now and then another
+// reading; a frozen seed leaves only the reading to change. MUTATE GENTLY rolls every die at once, gently (menus,
+// switches and locks stay). FREEZE THIS SEED is the seed's padlock, as an action.
+function summonVariation(){
+  const lit = litPreset.name && !litPresetChanged() ? litPreset.name : null, frozen = state.locks.has('textureSeedValue');
+  if(!$('textureToggle').checked){ toast(PRESET_ACTS.noSurface); murmur.play('blocked'); return; }
+  const before = state.ui.element;
+  if(frozen || Math.random() < 0.45) swapReading();
+  if(frozen){ if(state.ui.element === before){ toast(PRESET_ACTS.frozenStill); murmur.play('blocked'); return; } toast(PRESET_ACTS.frozenReading); }
+  else maybeRerollSeed();
+  scheduleRender(); commitSoon(); murmur.play('reroll');
+  if(lit) lightPreset(lit);                    // (still the look it was: it stays lit)
+}
+function mutateGently(){
+  if(typeof document.querySelectorAll !== 'function') return;
+  for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')) if(lockablesIn(card).length) rollSection(card, 'gentle');
+  refreshUi(); scheduleRender(); commitSoon(); murmur.play('reroll');
+}
+function freezeSeed(){
+  const b = lockButtons.get('textureSeedValue');
+  if(b) b.click(); else { state.locks.has('textureSeedValue') ? state.locks.delete('textureSeedValue') : state.locks.add('textureSeedValue'); paintMasterLocks(); }
+  toast(state.locks.has('textureSeedValue') ? PRESET_ACTS.frozen : PRESET_ACTS.thawed);
+}
+function paintFreeze(){ const b = $('freezeSeedBtn'); if(b && b.setAttribute) b.setAttribute('aria-pressed', state.locks.has('textureSeedValue') ? 'true' : 'false'); }
+for(const [id, act] of [['summonVariationBtn', summonVariation], ['mutateGentlyBtn', mutateGently], ['freezeSeedBtn', freezeSeed]])
+  if($(id) && $(id).addEventListener) $(id).addEventListener('click', () => act());
+
 // CUSTOM PRESETS (Ruby): the saved spells, in a card of their own under the built-in
 // ones, alphabetical, in as many rows as they need (never a sideways scroller) — a
 // library that can grow until the built-in ones aren't needed. Rebuilt whenever the
@@ -44445,6 +44494,7 @@ function paintMasterLocks(){
     m.btn.title = n === ids.length && n ? 'Everything here is locked. Click to unlock it all.' : n ? `${n} of ${ids.length} locked here. Click to lock them all.` : 'Lock everything in this section against dice and presets';
     m.btn.setAttribute('aria-pressed', n === ids.length && n ? 'true' : n ? 'mixed' : 'false');
   }
+  paintFreeze();          // (the seed's lock has a button of its own above the presets)
 }
 function headTools(head){
   let t = head.querySelector(':scope > .head-tools');

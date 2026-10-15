@@ -282,6 +282,12 @@ held on till bright~B</code></p>
 
     <details class="card" data-tab="style" open>
       <summary class="card-title" data-str="card.builtin_presets">Built-In Presets</summary>
+      <!-- THE PRESET LEVEL'S ACTIONS (ROADMAP H1): more of the look on the page, without opening a section -->
+      <div class="preset-actions">
+        <button class="ghost" id="summonVariationBtn" type="button" data-str="button.summonVariationBtn" title="The same look, grown again: a new seed for its surface, and now and then another of the surface's four readings. Nothing else changes.">⟳ Summon Variation</button>
+        <button class="ghost" id="mutateGentlyBtn" type="button" data-str="button.mutateGentlyBtn" title="Every section rolled gently at once: sliders nudged a little, colors drifting together, the light turned a touch. Menus, switches and anything locked stay as they are.">≈ Mutate Gently</button>
+        <button class="ghost" id="freezeSeedBtn" type="button" aria-pressed="false" data-str="button.freezeSeedBtn" title="Lock the surface's seed (the padlock beside the seed, under Materia), so presets, dice and variations keep this exact pattern. Press again to thaw it.">❄︎ Freeze This Seed</button>
+      </div>
       <input type="search" id="presetSearch" class="preset-search" data-str-ph="ph.preset_search" placeholder="Search looks: a name, a mood, a surface…" autocomplete="off" spellcheck="false" aria-label="Search the presets">
       <div class="preset-grid" id="presetGrid"></div>
       <p class="preset-none" id="presetNone" hidden data-str="note.preset_none">No look by that name. Try a mood (rain, gold) or a surface (glass, paper).</p>

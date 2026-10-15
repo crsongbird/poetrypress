@@ -54,6 +54,9 @@ export const UI_STRINGS = {
   'button.randomSurfaceBtn':               "⟳ Summon New Surface",
   'button.revealSurfaceBtn':               "🜉 Open in the Athanor",
   'button.protectTextBtn':                 "◐ Protect the Text",
+  'button.summonVariationBtn':             "⟳ Summon Variation",
+  'button.mutateGentlyBtn':                "≈ Mutate Gently",
+  'button.freezeSeedBtn':                  "❄︎ Freeze This Seed",
   'button.spellCreateBtn':                 "Create",
   'button.spellApplyBtn':                  "Invoke",
   'button.spellShareBtn':                     "Share",
@@ -391,6 +394,14 @@ export const PROTECT = {
   short: 'Cleared all the way: “{words}” now stands at {ratio}:1, short of {need}:1. Its ink is close to the backdrop: a lighter or darker ink would help.',
   cannot: 'Clearing can’t help: “{words}” stands at {ratio}:1, and the backdrop beneath the surfaces is as close to its ink. Try a lighter or darker ink, or another backdrop.',
   noSurface: 'No surface is shown, so there is nothing to clear: “{words}” stands at {ratio}:1 against the backdrop. A lighter or darker ink, or backdrop, would help.',
+};
+// THE PRESET LEVEL'S ACTIONS (above the presets): what they did, when it needs saying
+export const PRESET_ACTS = {
+  frozen: 'The seed is frozen: presets, dice and variations keep this pattern until you thaw it.',
+  thawed: 'The seed is thawed: presets and dice may grow a new pattern again.',
+  frozenReading: 'The seed is frozen, so the variation is another reading of the surface instead.',
+  frozenStill: 'The seed is frozen and this surface has no other reading: thaw the seed for a variation.',
+  noSurface: 'No surface is shown: a variation is a new seed for the surface.',
 };
 export const CHOOSER = {
   search: 'Search by name, group or mood…',

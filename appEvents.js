@@ -52,7 +52,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS, READABLE } from './tunables.js';
-import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT } from './strings.js';
+import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -1333,6 +1333,34 @@ function swapReading(){
   applyElement(list[Math.floor(Math.random()*list.length)].el);
 }
 
+// THE PRESET LEVEL'S ACTIONS (ROADMAP H1), above the presets: more of the look on the page without opening a section.
+// SUMMON VARIATION grows the same look again (what a click on a lit preset does): a new seed, now and then another
+// reading; a frozen seed leaves only the reading to change. MUTATE GENTLY rolls every die at once, gently (menus,
+// switches and locks stay). FREEZE THIS SEED is the seed's padlock, as an action.
+function summonVariation(){
+  const lit = litPreset.name && !litPresetChanged() ? litPreset.name : null, frozen = state.locks.has('textureSeedValue');
+  if(!$('textureToggle').checked){ toast(PRESET_ACTS.noSurface); murmur.play('blocked'); return; }
+  const before = state.ui.element;
+  if(frozen || Math.random() < 0.45) swapReading();
+  if(frozen){ if(state.ui.element === before){ toast(PRESET_ACTS.frozenStill); murmur.play('blocked'); return; } toast(PRESET_ACTS.frozenReading); }
+  else maybeRerollSeed();
+  scheduleRender(); commitSoon(); murmur.play('reroll');
+  if(lit) lightPreset(lit);                    // (still the look it was: it stays lit)
+}
+function mutateGently(){
+  if(typeof document.querySelectorAll !== 'function') return;
+  for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')) if(lockablesIn(card).length) rollSection(card, 'gentle');
+  refreshUi(); scheduleRender(); commitSoon(); murmur.play('reroll');
+}
+function freezeSeed(){
+  const b = lockButtons.get('textureSeedValue');
+  if(b) b.click(); else { state.locks.has('textureSeedValue') ? state.locks.delete('textureSeedValue') : state.locks.add('textureSeedValue'); paintMasterLocks(); }
+  toast(state.locks.has('textureSeedValue') ? PRESET_ACTS.frozen : PRESET_ACTS.thawed);
+}
+function paintFreeze(){ const b = $('freezeSeedBtn'); if(b && b.setAttribute) b.setAttribute('aria-pressed', state.locks.has('textureSeedValue') ? 'true' : 'false'); }
+for(const [id, act] of [['summonVariationBtn', summonVariation], ['mutateGentlyBtn', mutateGently], ['freezeSeedBtn', freezeSeed]])
+  if($(id) && $(id).addEventListener) $(id).addEventListener('click', () => act());
+
 // CUSTOM PRESETS (Ruby): the saved spells, in a card of their own under the built-in
 // ones, alphabetical, in as many rows as they need (never a sideways scroller) — a
 // library that can grow until the built-in ones aren't needed. Rebuilt whenever the
@@ -2329,6 +2357,7 @@ function paintMasterLocks(){
     m.btn.title = n === ids.length && n ? 'Everything here is locked. Click to unlock it all.' : n ? `${n} of ${ids.length} locked here. Click to lock them all.` : 'Lock everything in this section against dice and presets';
     m.btn.setAttribute('aria-pressed', n === ids.length && n ? 'true' : n ? 'mixed' : 'false');
   }
+  paintFreeze();          // (the seed's lock has a button of its own above the presets)
 }
 function headTools(head){
   let t = head.querySelector(':scope > .head-tools');

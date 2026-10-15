@@ -4,6 +4,20 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Helene (2026-10-15)
+
+- **Three new buttons above the presets**, for more of the look you have
+  without opening a section:
+  - **⟳ Summon Variation**: the same look grown again, with a new seed for
+    its surface and now and then another of its four readings. (Clicking a
+    lit preset again does the same.)
+  - **≈ Mutate Gently**: every section's die rolled gently at once. Sliders
+    move a little, colors drift together, the light turns a touch; menus,
+    switches and anything locked stay.
+  - **❄︎ Freeze This Seed**: locks the surface's seed, so presets, dice and
+    variations keep this exact pattern. It is the same lock as the padlock
+    beside the seed; press again to thaw it.
+
 ## Saturn–Dione (2026-10-15)
 
 - **◐ Protect the Text**, a new button under Text Clearing (in Text
