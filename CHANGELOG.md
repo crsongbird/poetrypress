@@ -4,6 +4,18 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Methone (2026-10-15)
+
+- **Eight more textures open in the Athanor.** Binary Pattern, Chladni
+  Sand, Guilloché, Sigil Scatter, Rorschach Test, Facet Field, Black Hole
+  and Fractal Moon are now graphs: open one from **Open** › The app's own
+  textures to see its sliders wired in, and take its part into your own
+  surfaces. Each looks exactly as it did.
+- **New parts:** Bit Grid, Chladni Sand, Guilloché, Sigils, Ink Blot, Facet
+  Field, Black Hole and Fractal Moon. Bit Grid and Chladni Sand can follow
+  any gray map wired into their **Where**; Guilloché also gives its lines
+  alone, to light or color another way.
+
 ## Saturn–Mimas (2026-10-15)
 
 - **The Arcane Guidance teaches.** The PML guide in the Inscription tab now

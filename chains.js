@@ -326,6 +326,73 @@ export const TEXTURE_CHAINS = {
       [17, 1, 32, 1], [31, 1, 33, 1], [10, 1, 33, 2], [32, 1, 33, 3],
       [12, 4, 34, 1], [16, 1, 34, 2], [34, 1, 35, 1], [34, 1, 36, 1], [35, 1, 36, 2], [33, 1, 37, 1], [9, 1, 37, 2], [36, 1, 37, 3],
       [15, 1, 38, 2], [38, 1, 39, 1], [38, 1, 40, 1], [39, 1, 40, 2], [37, 1, 41, 1], [18, 1, 41, 2], [40, 1, 41, 3], [41, 1, 42, 1]] },
+  // ∆ the Chaos textures, each one part (as its texture always drew) with the sliders wired in
+  sigils: { label: 'Sigil Scatter', canvas: true, teach: 'One part makes it: Sigils, which inscribes sigils with a broad nib (thick across the nib\'s angle, thin along it), ink pooling where each stroke ends. The dark ones are cut into the ground, the light ones raised from it, and the Light Dial lights that relief: a lit wall and a shadowed one in every cut. Chaos is the hand: steady at 0, then trembling, the nib skipping into scratches. Try: raise Chaos to 80, then turn the dial.', nodes: [
+      ['knob', { slot: '1', name: 'Sigil Zoom', def: 0 }, 40, 40],                 // 1  (100 of 100–500)
+      ['knob', { slot: '2', name: 'Sigil Count', def: 35 }, 40, 140],              // 2  (100 of 15–260)
+      ['knob', { slot: '3', name: 'Chaos', def: 20 }, 40, 240],                    // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['sigilmarks', { zoom: 100, '~zoom': '100,500', amount: 100, '~amount': '15,260', form: 20, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Sigil Scatter', ground: 'grey' }, 600, 120]],           // 6
+    wires: [[1, 1, 5, paramPort('sigilmarks', 'zoom')], [2, 1, 5, paramPort('sigilmarks', 'amount')], [3, 1, 5, paramPort('sigilmarks', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  inkbleed: { label: 'Rorschach Test', canvas: true, teach: 'One part makes it: Ink Blot, which drops ink on one half of a folded sheet and presses it, so the blot is mirrored. Wetness makes it bleed: pooled rims, pale mottled middles, wicking and drips. Color lets red join the black, then whole pastel figures, in your Ink Hue and Accent Hue. Try: set Color to 100, then press ⟳ Seed until you see something.', nodes: [
+      ['knob', { slot: '1', name: 'Blot Scale', def: 12 }, 40, 40],                // 1  (100 of 60–400)
+      ['knob', { slot: '2', name: 'Spread', def: 33 }, 40, 140],                   // 2  (100 of 30–240)
+      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
+      ['knob', { slot: '4', name: 'Color', def: 35 }, 40, 340],                    // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440], ['hue', { slot: '2', name: 'Accent Hue' }, 40, 520],   // 5, 6
+      ['blot', { zoom: 100, '~zoom': '60,400', amount: 100, '~amount': '30,240', form: 50, '~form': '0,100', color: 35, '~color': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Rorschach Test', ground: 'colour' }, 600, 120]],        // 8
+    wires: [[1, 1, 7, paramPort('blot', 'zoom')], [2, 1, 7, paramPort('blot', 'amount')], [3, 1, 7, paramPort('blot', 'form')], [4, 1, 7, paramPort('blot', 'color')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+  tessellate: { label: 'Facet Field', canvas: true, teach: 'One part makes it: Facet Field, a field of cut facets (a Voronoi of flat planes) each tilted its own way, so the Light Dial catches some and leaves others dark. Irregularity breaks the even cells apart. The Light Hue colors the light; the Material Hue is the stone itself; the Glow Hue fills the seams with molten light. Try: raise Irregularity, then lower the dial toward the horizon.', nodes: [
+      ['knob', { slot: '1', name: 'Facet Size', def: 14 }, 40, 40],                // 1  (100 of 50–400)
+      ['knob', { slot: '2', name: 'Irregularity', def: 0 }, 40, 140],              // 2  (0 of 0–240)
+      ['dial', {}, 40, 240],                                                       // 3
+      ['hue', { slot: '1', name: 'Light Hue' }, 40, 320], ['hue', { slot: '2', name: 'Material Hue' }, 40, 400],   // 4, 5
+      ['facets', { zoom: 100, '~zoom': '50,400', amount: 0, '~amount': '0,240' }, 320, 100],   // 6
+      ['surface', { name: 'Facet Field', ground: 'grey' }, 600, 120]],             // 7
+    wires: [[1, 1, 6, paramPort('facets', 'zoom')], [2, 1, 6, paramPort('facets', 'amount')], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Light Dial is the View: where you look from. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: turn the dial slowly, and watch the disc tilt.', nodes: [
+      ['knob', { slot: '1', name: 'Chaos', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Particles', def: 31 }, 40, 140],                // 2  (100 of 10–300)
+      ['knob', { slot: '3', name: 'Jets', def: 0 }, 40, 240],                      // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Black Hole', ground: 'grey' }, 600, 120]],              // 6
+    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  moon: { label: 'Fractal Moon', canvas: true, teach: 'One part makes it: Fractal Moon, a moon whose maria and craters are fractal noise, in the phase of the seed, under a night sky of faint stars and drifting cloud. Fractal Depth adds finer and finer detail; Clouds draws cloud across it; Night Sky darkens the sky around. Try: Clouds at 0 and Night Sky at 100, for a clear night.', nodes: [
+      ['knob', { slot: '1', name: 'Moon Size', def: 44 }, 40, 40],                 // 1  (100 of 60–150)
+      ['knob', { slot: '2', name: 'Fractal Depth', def: 47 }, 40, 140],            // 2  (100 of 20–190)
+      ['knob', { slot: '3', name: 'Clouds', def: 30 }, 40, 240],                   // 3
+      ['knob', { slot: '4', name: 'Night Sky', def: 70 }, 40, 340],                // 4
+      ['moon', { zoom: 100, '~zoom': '60,150', amount: 100, '~amount': '20,190', form: 30, '~form': '0,100', night: 70, '~night': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Fractal Moon', ground: 'grey' }, 600, 120]],            // 6
+    wires: [[1, 1, 5, paramPort('moon', 'zoom')], [2, 1, 5, paramPort('moon', 'amount')], [3, 1, 5, paramPort('moon', 'form')], [4, 1, 5, paramPort('moon', 'night')], [5, 1, 6, 1]] },
+  // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
+  chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
+      ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2', name: 'Sand', def: 29 }, 40, 140],                     // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Mode', def: 40 }, 40, 240],                     // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['sand', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,300', form: 40, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Chladni Sand', ground: 'grey' }, 600, 120]],            // 6
+    wires: [[1, 1, 5, paramPort('sand', 'zoom')], [2, 1, 5, paramPort('sand', 'amount')], [3, 1, 5, paramPort('sand', 'form')], [4, 1, 5, 2], [5, 1, 6, 1]] },
+  // 🝓 Guilloché: a field of interlaced waves and rosettes, engraved and lit by the dial
+  guilloche: { label: 'Guilloché', canvas: true, teach: 'The engraved rosettes of banknotes and watch dials, made the way a rose engine makes them. One part does it: Guilloché lays a field of fine interlaced waves, then rosettes over it, each many copies of one wavy loop turned a little each time, so the lines weave into lace, with a spirograph at its heart. The lines are cut into the plate as grooves, lit by the Light Dial. Its second output is the lines alone. Try: wire the Lines output into a Light Engine\'s height, with a Gradient Map as the picture.', nodes: [
+      ['knob', { slot: '1', name: 'Rosette Size', def: 25 }, 40, 40],              // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Line Density', def: 41 }, 40, 140],             // 2  (100 of 30–200)
+      ['knob', { slot: '3', name: 'Lobes', def: 45 }, 40, 240],                    // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['rosettes', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,200', form: 45, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Guilloché', ground: 'grey' }, 600, 120]],               // 6
+    wires: [[1, 1, 5, paramPort('rosettes', 'zoom')], [2, 1, 5, paramPort('rosettes', 'amount')], [3, 1, 5, paramPort('rosettes', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🝓 Binary Pattern: Bit Grid, drawn on its own soft noise
+  mathnoise: { label: 'Binary Pattern', canvas: true, teach: 'One part makes it: Bit Grid, a grid of small marks (filled and empty squares, dashes and bars, mostly dark, some light) that surface wherever a soft noise rises past a gate. Glyph Zoom is the size of a cell, Emergence how low the gate sits: more of the grid shows as it rises. Try: wire a Gradient into Bit Grid\'s Where, so the marks surface from one side of the page.', nodes: [
+      ['knob', { slot: '1', name: 'Glyph Zoom', def: 10 }, 40, 40],                // 1  (140 of 100–500)
+      ['knob', { slot: '2', name: 'Emergence', def: 48 }, 40, 140],                // 2  (130 of 30–240)
+      ['bits', { zoom: 140, '~zoom': '100,500', amount: 130, '~amount': '30,240' }, 320, 60],   // 3
+      ['surface', { name: 'Binary Pattern', ground: 'grey' }, 600, 80]],          // 4
+    wires: [[1, 1, 3, paramPort('bits', 'zoom')], [2, 1, 3, paramPort('bits', 'amount')], [3, 1, 4, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
   knotwork: { label: 'Knotwork', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
       ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)

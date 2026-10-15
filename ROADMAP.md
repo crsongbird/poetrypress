@@ -362,10 +362,10 @@ superseded) wait for Stage 4.
   graph. The list (menu ids; test/hygiene keeps it the code's, so delete
   one here when it becomes a chain):
   <!-- not-chains -->
-  - ash astral aurora blackhole bokeh chladni cityscape coldpress crystal
-    cupring dunes flowers frost glassrain guilloche inkbleed kintsugi
-    mathnoise moon moss oldpaper sigils spangle suminagashi summoning
-    tessellate water
+  - ash astral aurora bokeh cityscape coldpress crystal
+    cupring dunes flowers frost glassrain kintsugi
+    moss oldpaper spangle suminagashi summoning
+    water
   <!-- /not-chains -->
   - Each keeps its exact look: the fingerprints must not change.
   - Stage 4 can only offer what is a chain.

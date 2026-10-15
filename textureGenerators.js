@@ -34,9 +34,9 @@ import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
-import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil, genMoon } from './texWhimsy.js';
-import { genFlowers, genCityscape, genGuilloche } from './texSharpness.js';
-import { genSigils, genMathNoise, genSummoningCircles, genInkBleed, genTessellate, genBlackHole, genChladni } from './texChaos.js';
+import { genAstralFog, genAstralStars, genBokeh, genAuroraVeil } from './texWhimsy.js';
+import { genFlowers, genCityscape } from './texSharpness.js';
+import { genSummoningCircles } from './texChaos.js';
 import { genColdPress, genOldPaper, genCupRing, genDunes, genKintsugi, genMoss, genGlassRain, genWater, genSpangle, genCrystalLeaf, genBurntLetter, genHoarfrost, genSuminagashi } from './texTouch.js';
 
 /**
@@ -651,7 +651,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'flowers'){
     result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
   } else if(type === 'inkbleed'){
-    result = genInkBleed(w,h,amt,zoom,form,extra.shape/100,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Ink Blot (chains.js)
   } else if(type === 'crackedglaze'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'bokeh'){
@@ -659,7 +659,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'embers'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
-    result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Facet Field (chains.js)
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
@@ -691,9 +691,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'brushstrokes'){
     result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
-    result = genSigils(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Sigils (chains.js)
   } else if(type === 'mathnoise'){
-    result = genMathNoise(w,h,amt,zoom);
+    result = genChain(type, w, h, light, extra);           // Bit Grid (chains.js)
   } else if(type === 'linen'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'coldpress'){
@@ -707,9 +707,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'athanorsteps'){
     result = genAthanorSteps(w,h,light,tint1,tint2,extra);
   } else if(type === 'guilloche'){
-    result = genGuilloche(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Guilloché (chains.js)
   } else if(type === 'chladni'){
-    result = genChladni(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Chladni Sand (chains.js)
   } else if(type === 'contour'){
     result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
@@ -739,11 +739,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
-    result = genBlackHole(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Black Hole (chains.js)
   } else if(type === 'water'){
     result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.tilt,extra.mat);
   } else if(type === 'moon'){
-    result = genMoon(w,h,amt,zoom,form,extra.shape/100);
+    result = genChain(type, w, h, light, extra);           // Fractal Moon (chains.js)
   } else if(type === 'aurora'){
     result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){

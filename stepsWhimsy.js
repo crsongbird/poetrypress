@@ -27,7 +27,7 @@
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
 import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU } from './texCore.js';
-import { genEmbers, genSnow, genMagicParticles, genAstralStars } from './texWhimsy.js';
+import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon } from './texWhimsy.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
@@ -760,6 +760,12 @@ function whimAurora(x, w, h, o, px){
 }
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 export const WHIMSY_STEPS = {
+  // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
+  moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
+    params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => genMoon(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 30)/100, E.num(n, 'night', 70)/100))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   starfield: { cat: 'Marks', label: 'Starfield', ins: ['over', 'color a', 'color b'], outs: ['image'], io: { ins: ['image', 'colour', 'colour'], outs: ['image'] },
     params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
     // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked

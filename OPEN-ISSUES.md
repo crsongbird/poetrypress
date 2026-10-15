@@ -6,7 +6,10 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- Eight textures became chains (each pixel-identical): Binary Pattern, Chladni Sand, Guilloché, Sigil Scatter,
+  Rorschach Test, Facet Field, Black Hole, Fractal Moon. Each is one whole part for now (ROADMAP §2 J takes
+  them apart later); Bit Grid and Chladni Sand take any map on Where.
 - THE ARCANE GUIDANCE (Inscription) now teaches: what each mark is and why, then an example with ⤓ Try (it
   goes in the poem where the cursor is; undo takes it back). It now also teaches /fx: and /under:.
 - THE WIKI'S FIGURES: eleven concept pages (gray maps, pictures, colors, numbers, curves, mapping, wire

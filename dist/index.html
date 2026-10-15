@@ -5370,91 +5370,6 @@ function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
  */
 // (Film Grain is a chain now: stepsSharpness.js 'grain' → Surface; chains.js 'grain')
 
-// A lathe once turned
-// for a whole afternoon so
-// no one could copy it.
-/**
- * Guilloché — the engraved rosettes of banknotes and watch dials, after the
- * rose engine and the geometric lathe: a field of fine interlaced waves, and
- * rosettes laid over it, each many copies of one wavy loop, turned a little
- * each time, so the lines weave into lace. Cut into the plate: drawn as fine
- * grooves and lit by the dial (light on one wall, shade on the other).
- * ROSETTE SIZE · LINE DENSITY · LOBES
- */
-function genGuilloche(w,h,amt,zoom,light,form){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const lobeK=Math.max(0,Math.min(1, form==null?0.5:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh;
-  const x=cv.getContext('2d', CPU); x.fillStyle='#000'; x.fillRect(0,0,ww,wh);
-  x.strokeStyle='#fff'; x.lineCap='round'; x.lineJoin='round';
-  const lw=Math.max(0.55, unit*0.0011);
-  // THE FIELD: interlaced waves across the plate, two families half a period apart
-  const lam=unit*(0.07+0.05*Math.random())*zoom, amp=lam*(0.18+0.12*Math.random()), gap=unit*0.0065/Math.max(0.3, amt)*zoom;
-  const tilt=(Math.random()-0.5)*0.4, ct=Math.cos(tilt), st=Math.sin(tilt);
-  x.globalAlpha=0.55; x.lineWidth=lw*0.85;
-  for(let fam=0; fam<2; fam++){
-    for(let y0=-unit*0.5; y0<wh+unit*0.5; y0+=gap){
-      x.beginPath();
-      for(let px=-unit*0.3; px<=ww+unit*0.3; px+=Math.max(1, lam/24)){
-        const yy=y0 + amp*Math.sin(px/lam*Math.PI*2 + fam*Math.PI + y0/(gap*9));
-        const X=px*ct - (yy-wh/2)*st + 0, Y=wh/2 + px*st + (yy-wh/2)*ct;
-        if(px===-unit*0.3) x.moveTo(X,Y); else x.lineTo(X,Y);
-      }
-      x.stroke();
-    }
-  }
-  // THE ROSETTES: copies of one lobed loop, each turned a little
-  const nR=1 + Math.floor(Math.random()*3);
-  for(let k=0;k<nR;k++){
-    const R=unit*(0.16+0.16*Math.random())*zoom, cx=ww*(0.15+0.7*Math.random()), cy=wh*(0.15+0.7*Math.random());
-    const lobes=Math.round(5 + lobeK*19 + Math.random()*4), lobes2=Math.round(lobes*(1.5+Math.random())), a1=0.17+0.14*Math.random(), a2=0.04+0.05*Math.random()*lobeK;
-    const copies=Math.round((24 + 40*Math.min(2, amt))*(0.7+Math.random()*0.5)), inner=0.42+0.12*Math.random();
-    // a clear ring under each rosette, so it reads over the field
-    x.globalAlpha=1; x.fillStyle='#000'; x.beginPath(); x.arc(cx, cy, R*(1+a1+a2)*1.03, 0, Math.PI*2); x.fill();
-    // the outer band: one lobed loop, its phase stepped round a whole cycle copy
-    // by copy, so the loops cross and weave into a mesh
-    x.globalAlpha=0.9; x.lineWidth=lw;
-    const steps=Math.max(360, lobes*36);
-    for(let j=0;j<copies;j++){
-      const ph=j/copies*Math.PI*2;
-      x.beginPath();
-      for(let s2=0;s2<=steps;s2++){ const t=s2/steps*Math.PI*2;
-        const r=R*(1 + a1*Math.sin(lobes*t + ph) + a2*Math.sin(lobes2*t - ph*2));
-        const X=cx + Math.cos(t)*r, Y=cy + Math.sin(t)*r; if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
-      x.stroke();
-    }
-    // the heart: a spirograph (hypotrochoid) that closes on itself, turned a few times
-    const Rr=R*inner*(1 - a1*0.5), m=[2,3,5,7][Math.floor(Math.random()*4)], nT=Math.max(m+1, Math.round(lobes*0.6)), rr=Rr*m/nT, dd=rr*(0.65+0.3*Math.random());
-    const turns=Math.max(3, Math.round(6 + 10*Math.min(2, amt)*0.5));
-    x.globalAlpha=0.8; x.lineWidth=lw*0.9;
-    for(let j=0;j<turns;j++){
-      const rot=j/turns*Math.PI*2/nT; x.beginPath();
-      const st2=Math.max(600, nT*m*20);
-      for(let s2=0;s2<=st2;s2++){ const t=s2/st2*Math.PI*2*m;
-        const X0=(Rr-rr)*Math.cos(t) + dd*Math.cos((Rr-rr)/rr*t), Y0=(Rr-rr)*Math.sin(t) - dd*Math.sin((Rr-rr)/rr*t);
-        const X=cx + X0*Math.cos(rot) - Y0*Math.sin(rot), Y=cy + X0*Math.sin(rot) + Y0*Math.cos(rot); if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
-      x.stroke();
-    }
-  }
-  x.globalAlpha=1;
-  // engraved: the lines are GROOVES (heights below the plate), lit by the dial
-  const px=x.getImageData(0,0,ww,wh).data, H=new Float32Array(N), C=new Float32Array(N);
-  for(let i=0;i<N;i++){ const v=px[i*4]/255; C[i]=v; H[i]=-v*unit*0.0025; }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.6, shadow:0.3, ao:0.4, ambient:0.5 });
-  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sx=small.getContext('2d', CPU), im=sx.createImageData(ww,wh), d=im.data;
-  for(let i=0;i<N;i++){
-    // the plate mid-grey; a groove darker, its lit wall catching the light
-    const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
-    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
-  }
-  sx.putImageData(im,0,0);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const cx2=c.getContext('2d', CPU); cx2.imageSmoothingEnabled=true; cx2.drawImage(small,0,0,w,h);
-  return c;
-}
-
 
 /* ==== texChaos.js ==== */
 /**
@@ -5593,60 +5508,6 @@ function genSigils(w,h,amt,zoom,light,form,M3){
   ink.putImageData(img,0,0);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(inkC,0,0,w,h);
-  return c;
-}
-
-// Counting backwards from
-// a number nobody wrote down.
-// The grid keeps the score.
-function genMathNoise(w,h,amt,zoom){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const c = document.createElement('canvas');
-  c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0,0,w,h);
-
-  const cell = Math.max(cpx(6), Math.round((Math.max(w,h)/72) * zoom));    // floor in canonical pixels
-  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
-  const gw = Math.max(2, Math.round(cols/6)), gh = Math.max(2, Math.round(rows/6));
-  const field = makeNoiseGrid(gw, gh);
-
-  for(let ry=0; ry<rows; ry++){
-    for(let rx=0; rx<cols; rx++){
-      const n = sampleNoiseGrid(field, gw, gh, rx/cols, ry/rows);
-      // low field values stay empty ground; the pattern surfaces out of it
-      const gate = Math.max(0.02, Math.min(0.95, 0.46 / amt));
-      if(n < gate) continue;
-      const strength = (n-gate)/(1-gate);
-      const x = rx*cell, y = ry*cell;
-      const pad = cell*0.22;
-      const dark = Math.random() < 0.7;
-      const tone = dark ? 26 : 232;
-      ctx.globalAlpha = 0.18 + strength*0.62*Math.random();
-      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`;
-      ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
-      ctx.lineWidth = Math.max(cpx(0.5), cell*0.09);
-
-      const kind = Math.floor(Math.random()*4);
-      if(kind===0){
-        ctx.fillRect(x+pad, y+pad, cell-pad*2, cell-pad*2);
-      } else if(kind===1){
-        ctx.strokeRect(x+pad, y+pad, cell-pad*2, cell-pad*2);
-      } else if(kind===2){
-        ctx.beginPath();
-        ctx.moveTo(x+pad, y+cell*0.5);
-        ctx.lineTo(x+cell-pad, y+cell*0.5);
-        ctx.stroke();
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(x+cell*0.5, y+pad);
-        ctx.lineTo(x+cell*0.5, y+cell-pad);
-        ctx.stroke();
-      }
-    }
-  }
-  ctx.globalAlpha = 1;
   return c;
 }
 
@@ -6209,61 +6070,6 @@ function genBlackHole(w,h,amt,zoom,light,form){
 }
 
 // TURING SKIN is a chain now: Turing Pattern → Light Engine (stepsChaos.js chaosTuring; chains.js 'turing').
-
-// Draw a bow along the edge:
-// the sand runs from what is moving
-// to where nothing moves.
-/**
- * Chladni Sand — sand on a plate set ringing by a bow (Chladni, 1787): the
- * sand runs off what moves and gathers on the NODAL LINES, where nothing
- * does. The plate's pattern is the standing wave of a square plate (as Paul
- * Bourke writes it): cos(nπx)cos(mπy) − cos(mπx)cos(nπy), the seed choosing
- * the mode (n, m) and blending a neighbour into it. Each grain is a lit speck
- * with its own small shadow from the dial; a few stray grains still roam.
- * GRAIN SIZE · SAND · MODE (simple, a few lines → complex, many)
- */
-function genChladni(w,h,amt,zoom,light,form){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const modeK=Math.max(0,Math.min(1, form==null?0.4:form));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU); ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-  const unit=Math.min(w,h), aspX=w/unit, aspY=h/unit;
-  // the mode: higher MODE, higher n and m
-  const lo=1 + Math.round(modeK*6), n=lo + Math.floor(Math.random()*3), m=Math.max(1, n + 1 + Math.floor(Math.random()*(2 + modeK*4)));
-  const n2=n + (Math.random()<0.5 ? 1 : 2), m2=m + 1, mix=0.15 + Math.random()*0.35, ph=Math.random()*0.4;
-  const plate=(u,v)=>{ const X=u*aspX, Y=v*aspY, P=Math.PI;
-    const a=Math.cos(n*P*X)*Math.cos(m*P*Y) - Math.cos(m*P*X)*Math.cos(n*P*Y);
-    const b=Math.cos(n2*P*X + ph)*Math.cos(m2*P*Y) - Math.cos(m2*P*X)*Math.cos(n2*P*Y + ph);
-    return a*(1-mix) + b*mix; };
-  // sand gathers where the plate is still: density from |amplitude|, thin lines
-  const lineW=0.045 + 0.035*(1-modeK);
-  const count=Math.round(canonArea(w,h)/(3072*3072)*420000*amt);
-  const lv=lightVec(light==null?315:light), lm=Math.hypot(lv.lx,lv.ly)||1, sdx=lv.lx/lm, sdy=lv.ly/lm;
-  // grains are SPLATTED, not drawn one by one: each adds its area (canonical,
-  // so a preview holds the same sand as the export) to the pixels it covers,
-  // and its shadow, a little away from the light, to a shadow layer
-  const N=w*h, SAND=new Float32Array(N), SH=new Float32Array(N), BR=new Float32Array(N);
-  const shOff=cpx(1.2), splat=(arr, x, y, a)=>{ const x0=Math.floor(x), y0=Math.floor(y), fx=x-x0, fy=y-y0;
-    if(x0<0||y0<0||x0>=w-1||y0>=h-1) return;
-    const i=y0*w+x0; arr[i]+=a*(1-fx)*(1-fy); arr[i+1]+=a*fx*(1-fy); arr[i+w]+=a*(1-fx)*fy; arr[i+w+1]+=a*fx*fy; };
-  for(let k=0, tries=0; k<count && tries<count*14; tries++){
-    const u=Math.random(), v=Math.random(), am=plate(u,v), p=Math.exp(-(am/lineW)*(am/lineW));
-    if(Math.random() >= p*0.98 + 0.01) continue;
-    k++;
-    const r=cpx((0.55 + Math.random()*0.9)*zoom), area=Math.PI*r*r, x=u*w, y=v*h, t=Math.random();
-    // a big grain covers several pixels: spread it over its footprint
-    if(r > 1.2){ const R=Math.ceil(r); for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){ if(dx*dx+dy*dy>r*r) continue; splat(SAND, x+dx, y+dy, 1); splat(BR, x+dx, y+dy, t + (-(dx*sdx+dy*sdy)/r)*0.35); splat(SH, x+dx+sdx*shOff, y+dy+sdy*shOff, 1); } }
-    else { splat(SAND, x, y, area); splat(BR, x, y, area*t); splat(SH, x+sdx*shOff, y+sdy*shOff, area); }
-  }
-  const img=ctx.createImageData(w,h), d=img.data;
-  for(let i=0;i<N;i++){
-    const sd=Math.min(1, SAND[i]), sh=Math.min(1, SH[i])*(1-sd), br=SAND[i] > 0 ? BR[i]/SAND[i] : 0;
-    const sand=200 + br*45, v=128*(1 - sh*0.45) + (sand - 128)*sd;
-    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
-  }
-  ctx.putImageData(img,0,0);
-  return c;
-}
 
 
 /* ==== texTouch.js ==== */
@@ -10696,6 +10502,12 @@ function whimAurora(x, w, h, o, px){
 }
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
+  moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
+    params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => genMoon(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 30)/100, E.num(n, 'night', 70)/100))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   starfield: { cat: 'Marks', label: 'Starfield', ins: ['over', 'color a', 'color b'], outs: ['image'], io: { ins: ['image', 'colour', 'colour'], outs: ['image'] },
     params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
     // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked
@@ -10798,6 +10610,7 @@ const WHIMSY_STEPS = {
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
+
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -10911,7 +10724,142 @@ function chaosCracks(w, h, o){
   return { segs };
 }
 
+// Draw a bow along the edge:
+// the sand runs from what is moving
+// to where nothing moves.
+/**
+ * Chladni Sand — sand on a plate set ringing by a bow (Chladni, 1787): the
+ * sand runs off what moves and gathers on the NODAL LINES, where nothing
+ * does. The plate's pattern is the standing wave of a square plate (as Paul
+ * Bourke writes it): cos(nπx)cos(mπy) − cos(mπx)cos(nπy), the seed choosing
+ * the mode (n, m) and blending a neighbour into it. Each grain is a lit speck
+ * with its own small shadow from the dial; a few stray grains still roam.
+ * GRAIN SIZE · SAND · MODE (simple, a few lines → complex, many)
+ * SAND (the part): the same grains on any gray map wired into Where (they gather where it is white).
+ */
+function chaosSand(w,h,amt,zoom,light,form,where){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const modeK=Math.max(0,Math.min(1, form==null?0.4:form));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
+  const unit=Math.min(w,h), aspX=w/unit, aspY=h/unit;
+  // the mode: higher MODE, higher n and m
+  const lo=1 + Math.round(modeK*6), n=lo + Math.floor(Math.random()*3), m=Math.max(1, n + 1 + Math.floor(Math.random()*(2 + modeK*4)));
+  const n2=n + (Math.random()<0.5 ? 1 : 2), m2=m + 1, mix=0.15 + Math.random()*0.35, ph=Math.random()*0.4;
+  const plate=(u,v)=>{ const X=u*aspX, Y=v*aspY, P=Math.PI;
+    const a=Math.cos(n*P*X)*Math.cos(m*P*Y) - Math.cos(m*P*X)*Math.cos(n*P*Y);
+    const b=Math.cos(n2*P*X + ph)*Math.cos(m2*P*Y) - Math.cos(m2*P*X)*Math.cos(n2*P*Y + ph);
+    return a*(1-mix) + b*mix; };
+  // sand gathers where the plate is still: density from |amplitude|, thin lines
+  const lineW=0.045 + 0.035*(1-modeK);
+  const count=Math.round(canonArea(w,h)/(3072*3072)*420000*amt);
+  const lv=lightVec(light==null?315:light), lm=Math.hypot(lv.lx,lv.ly)||1, sdx=lv.lx/lm, sdy=lv.ly/lm;
+  // grains are SPLATTED, not drawn one by one: each adds its area (canonical,
+  // so a preview holds the same sand as the export) to the pixels it covers,
+  // and its shadow, a little away from the light, to a shadow layer
+  const N=w*h, SAND=new Float32Array(N), SH=new Float32Array(N), BR=new Float32Array(N);
+  const shOff=cpx(1.2), splat=(arr, x, y, a)=>{ const x0=Math.floor(x), y0=Math.floor(y), fx=x-x0, fy=y-y0;
+    if(x0<0||y0<0||x0>=w-1||y0>=h-1) return;
+    const i=y0*w+x0; arr[i]+=a*(1-fx)*(1-fy); arr[i+1]+=a*fx*(1-fy); arr[i+w]+=a*(1-fx)*fy; arr[i+w+1]+=a*fx*fy; };
+  for(let k=0, tries=0; k<count && tries<count*14; tries++){
+    const u=Math.random(), v=Math.random(), am=where ? 0 : plate(u,v), p=where ? where(u,v) : Math.exp(-(am/lineW)*(am/lineW));
+    if(Math.random() >= p*0.98 + 0.01) continue;
+    k++;
+    const r=cpx((0.55 + Math.random()*0.9)*zoom), area=Math.PI*r*r, x=u*w, y=v*h, t=Math.random();
+    // a big grain covers several pixels: spread it over its footprint
+    if(r > 1.2){ const R=Math.ceil(r); for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){ if(dx*dx+dy*dy>r*r) continue; splat(SAND, x+dx, y+dy, 1); splat(BR, x+dx, y+dy, t + (-(dx*sdx+dy*sdy)/r)*0.35); splat(SH, x+dx+sdx*shOff, y+dy+sdy*shOff, 1); } }
+    else { splat(SAND, x, y, area); splat(BR, x, y, area*t); splat(SH, x+sdx*shOff, y+sdy*shOff, area); }
+  }
+  const img=ctx.createImageData(w,h), d=img.data;
+  for(let i=0;i<N;i++){
+    const sd=Math.min(1, SAND[i]), sh=Math.min(1, SH[i])*(1-sd), br=SAND[i] > 0 ? BR[i]/SAND[i] : 0;
+    const sand=200 + br*45, v=128*(1 - sh*0.45) + (sand - 128)*sd;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  return c;
+}
+
+// Counting backwards from
+// a number nobody wrote down.
+// The grid keeps the score.
+// BIT GRID (Binary Pattern's marks): a grid of small marks (filled and empty squares, dashes, bars) that surface
+// wherever a field rises past a gate. The field is its own soft noise, or any gray map wired into Where.
+function chaosBitGrid(w, h, amt, zoom, where){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, w, h);
+  const cell = Math.max(cpx(6), Math.round((Math.max(w, h)/72)*zoom));    // floor in canonical pixels
+  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
+  const gw = Math.max(2, Math.round(cols/6)), gh = Math.max(2, Math.round(rows/6));
+  const field = where ? null : makeNoiseGrid(gw, gh);
+  for(let ry = 0; ry < rows; ry++){
+    for(let rx = 0; rx < cols; rx++){
+      const n = where ? where(rx/cols, ry/rows) : sampleNoiseGrid(field, gw, gh, rx/cols, ry/rows);
+      // low field values stay empty ground; the pattern surfaces out of it
+      const gate = Math.max(0.02, Math.min(0.95, 0.46/amt));
+      if(n < gate) continue;
+      const strength = (n - gate)/(1 - gate);
+      const x = rx*cell, y = ry*cell, pad = cell*0.22;
+      const dark = Math.random() < 0.7, tone = dark ? 26 : 232;
+      ctx.globalAlpha = 0.18 + strength*0.62*Math.random();
+      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`; ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
+      ctx.lineWidth = Math.max(cpx(0.5), cell*0.09);
+      const kind = Math.floor(Math.random()*4);
+      if(kind === 0) ctx.fillRect(x + pad, y + pad, cell - pad*2, cell - pad*2);
+      else if(kind === 1) ctx.strokeRect(x + pad, y + pad, cell - pad*2, cell - pad*2);
+      else if(kind === 2){ ctx.beginPath(); ctx.moveTo(x + pad, y + cell*0.5); ctx.lineTo(x + cell - pad, y + cell*0.5); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(x + cell*0.5, y + pad); ctx.lineTo(x + cell*0.5, y + cell - pad); ctx.stroke(); }
+    }
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
+
+// the texture's own seed (+ Variant), so a texture made of one of these parts draws as it always did
+const chaosSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+// a color from a port (0–1 channels), as the generators take it: a hex code
+const chaosHex = v => Array.isArray(v) ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
 const CHAOS_STEPS = {
+  // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
+  sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      return [withSeed(chaosSeed(E, n), () => genSigils(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 20)/100, E.ctx.mat || null))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  blot: { cat: 'Marks', label: 'Ink Blot', ins: ['ink', 'accent'], outs: ['blot'], io: { ins: ['colour', 'colour'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Blot Scale', 100, 60, 400), CHAOS_R('amount', 'Spread', 100, 30, 240), CHAOS_R('form', 'Wetness', 50), CHAOS_R('color', 'Color', 35), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, t = E.ctx.tints || [];
+      const ink = chaosHex(E.input(n, 1)) || t[0] || '#141414', acc = chaosHex(E.input(n, 2)) || t[1] || '#B0283A';
+      return [withSeed(chaosSeed(E, n), () => genInkBleed(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 50)/100, E.num(n, 'color', 35)/100, ink, acc))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  facets: { cat: 'Textures', label: 'Facet Field', ins: ['light from', 'light hue', 'material hue'], outs: ['facets'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Facet Size', 100, 50, 400), CHAOS_R('amount', 'Irregularity', 0, 0, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), t = E.ctx.tints || [];
+      const t1 = chaosHex(E.input(n, 2)) || t[0] || null, t2 = chaosHex(E.input(n, 3)) || t[1] || null;
+      return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      return [withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    // a canvas pass at full size, its grains under the texture's own seed (+ Variant): Chladni Sand as it was
+    paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null, dv = E.input(n, 2);
+      const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null, light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => chaosSand(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 40)/100, where))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  bits: { cat: 'Marks', label: 'Bit Grid', ins: ['where'], outs: ['pattern'], io: { ins: ['field'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Cell Size', 140, 100, 500), CHAOS_R('amount', 'Emergence', 130, 30, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 2,
+    // a canvas pass at full size; its marks drawn under the texture's own seed (+ Variant), so Binary Pattern is as it was
+    paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null;
+      const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null;
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => chaosBitGrid(w, h, Math.max(0.02, E.num(n, 'amount', 130)/100), Math.max(0.25, E.num(n, 'zoom', 140)/100), where))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
     params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
@@ -11530,7 +11478,100 @@ function paintGrain(w,h,amt,zoom,form){
 }
 
 
+// A lathe once turned
+// for a whole afternoon so
+// no one could copy it.
+/**
+ * Guilloché — the engraved rosettes of banknotes and watch dials, after the
+ * rose engine and the geometric lathe: a field of fine interlaced waves, and
+ * rosettes laid over it, each many copies of one wavy loop, turned a little
+ * each time, so the lines weave into lace. Cut into the plate: drawn as fine
+ * grooves and lit by the dial (light on one wall, shade on the other).
+ * ROSETTE SIZE · LINE DENSITY · LOBES
+ * Returns [the engraved plate, lit (full size), the lines themselves (on a grid of its own)].
+ */
+function shGuilloche(w,h,amt,zoom,light,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const lobeK=Math.max(0,Math.min(1, form==null?0.5:form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh;
+  const x=cv.getContext('2d', CPU); x.fillStyle='#000'; x.fillRect(0,0,ww,wh);
+  x.strokeStyle='#fff'; x.lineCap='round'; x.lineJoin='round';
+  const lw=Math.max(0.55, unit*0.0011);
+  // THE FIELD: interlaced waves across the plate, two families half a period apart
+  const lam=unit*(0.07+0.05*Math.random())*zoom, amp=lam*(0.18+0.12*Math.random()), gap=unit*0.0065/Math.max(0.3, amt)*zoom;
+  const tilt=(Math.random()-0.5)*0.4, ct=Math.cos(tilt), st=Math.sin(tilt);
+  x.globalAlpha=0.55; x.lineWidth=lw*0.85;
+  for(let fam=0; fam<2; fam++){
+    for(let y0=-unit*0.5; y0<wh+unit*0.5; y0+=gap){
+      x.beginPath();
+      for(let px=-unit*0.3; px<=ww+unit*0.3; px+=Math.max(1, lam/24)){
+        const yy=y0 + amp*Math.sin(px/lam*Math.PI*2 + fam*Math.PI + y0/(gap*9));
+        const X=px*ct - (yy-wh/2)*st + 0, Y=wh/2 + px*st + (yy-wh/2)*ct;
+        if(px===-unit*0.3) x.moveTo(X,Y); else x.lineTo(X,Y);
+      }
+      x.stroke();
+    }
+  }
+  // THE ROSETTES: copies of one lobed loop, each turned a little
+  const nR=1 + Math.floor(Math.random()*3);
+  for(let k=0;k<nR;k++){
+    const R=unit*(0.16+0.16*Math.random())*zoom, cx=ww*(0.15+0.7*Math.random()), cy=wh*(0.15+0.7*Math.random());
+    const lobes=Math.round(5 + lobeK*19 + Math.random()*4), lobes2=Math.round(lobes*(1.5+Math.random())), a1=0.17+0.14*Math.random(), a2=0.04+0.05*Math.random()*lobeK;
+    const copies=Math.round((24 + 40*Math.min(2, amt))*(0.7+Math.random()*0.5)), inner=0.42+0.12*Math.random();
+    // a clear ring under each rosette, so it reads over the field
+    x.globalAlpha=1; x.fillStyle='#000'; x.beginPath(); x.arc(cx, cy, R*(1+a1+a2)*1.03, 0, Math.PI*2); x.fill();
+    // the outer band: one lobed loop, its phase stepped round a whole cycle copy
+    // by copy, so the loops cross and weave into a mesh
+    x.globalAlpha=0.9; x.lineWidth=lw;
+    const steps=Math.max(360, lobes*36);
+    for(let j=0;j<copies;j++){
+      const ph=j/copies*Math.PI*2;
+      x.beginPath();
+      for(let s2=0;s2<=steps;s2++){ const t=s2/steps*Math.PI*2;
+        const r=R*(1 + a1*Math.sin(lobes*t + ph) + a2*Math.sin(lobes2*t - ph*2));
+        const X=cx + Math.cos(t)*r, Y=cy + Math.sin(t)*r; if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
+      x.stroke();
+    }
+    // the heart: a spirograph (hypotrochoid) that closes on itself, turned a few times
+    const Rr=R*inner*(1 - a1*0.5), m=[2,3,5,7][Math.floor(Math.random()*4)], nT=Math.max(m+1, Math.round(lobes*0.6)), rr=Rr*m/nT, dd=rr*(0.65+0.3*Math.random());
+    const turns=Math.max(3, Math.round(6 + 10*Math.min(2, amt)*0.5));
+    x.globalAlpha=0.8; x.lineWidth=lw*0.9;
+    for(let j=0;j<turns;j++){
+      const rot=j/turns*Math.PI*2/nT; x.beginPath();
+      const st2=Math.max(600, nT*m*20);
+      for(let s2=0;s2<=st2;s2++){ const t=s2/st2*Math.PI*2*m;
+        const X0=(Rr-rr)*Math.cos(t) + dd*Math.cos((Rr-rr)/rr*t), Y0=(Rr-rr)*Math.sin(t) - dd*Math.sin((Rr-rr)/rr*t);
+        const X=cx + X0*Math.cos(rot) - Y0*Math.sin(rot), Y=cy + X0*Math.sin(rot) + Y0*Math.cos(rot); if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
+      x.stroke();
+    }
+  }
+  x.globalAlpha=1;
+  // engraved: the lines are GROOVES (heights below the plate), lit by the dial
+  const px=x.getImageData(0,0,ww,wh).data, H=new Float32Array(N), C=new Float32Array(N);
+  for(let i=0;i<N;i++){ const v=px[i*4]/255; C[i]=v; H[i]=-v*unit*0.0025; }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.6, shadow:0.3, ao:0.4, ambient:0.5 });
+  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
+  const sx=small.getContext('2d', CPU), im=sx.createImageData(ww,wh), d=im.data;
+  for(let i=0;i<N;i++){
+    // the plate mid-grey; a groove darker, its lit wall catching the light
+    const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+  }
+  sx.putImageData(im,0,0);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const cx2=c.getContext('2d', CPU); cx2.imageSmoothingEnabled=true; cx2.drawImage(small,0,0,w,h);
+  return [c, cv];
+}
+
 const SHARP_STEPS = {
+  rosettes: { cat: 'Marks', label: 'Guilloché', ins: ['light from'], outs: ['engraving', 'lines'], io: { ins: ['value'], outs: ['image', 'field'] },
+    params: [SH_R('zoom', 'Rosette Size', 100, 50, 250), SH_R('amount', 'Line Density', 100, 30, 200), SH_R('form', 'Lobes', 45), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8,
+    // a canvas pass at full size, under the texture's own seed (+ Variant): Guilloché as it was
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => shGuilloche(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 45)/100)); },
+    run(E, n){ const [c, l] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(l))]; } },
   screen: { cat: 'Marks', label: 'Halftone Screen', ins: ['tone'], outs: ['dots'], io: { ins: ['field'], outs: ['field'] },
     params: [SH_R('scale', 'Dot Scale', 100, 50, 400), SH_R('weight', 'Dot Weight', 100, 30, 240), SH_R('angle', 'Screen Angle', 0, 0, 90)], cost: () => 3,
     paint(E, n){ const tone = kitField(E.input(n, 1) ?? 0.5, E.ww, E.wh) || new Float32Array(E.ww*E.wh).fill(0.5);
@@ -12706,6 +12747,14 @@ const STEP_DOCS = {
   matrix: 'A material for something to grow through (strata, pebbles, sand, fibers or skin), with the paths through it.',
   tendrils: 'A branching network that grows through the paths you give it, like veins or roots.',
   knotwork: 'Celtic knotwork: strands crossing over and under, turned back into knots inside an outline.',
+  sigilmarks: 'Sigils inscribed with a broad nib, cut into the ground or raised from it, and lit by the dial: Sigil Scatter’s marks.',
+  blot: 'A Rorschach blot: ink dropped on one half of a folded sheet and pressed, mirrored, bleeding as it dries.',
+  facets: 'A field of cut facets, each tilted its own way, so the light catches some and leaves others dark: Facet Field.',
+  blackhole: 'A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.',
+  moon: 'A moon whose seas and craters are fractal noise, in the seed’s phase, under a night sky of faint stars and cloud.',
+  rosettes: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',
+  sand: 'Sand on a ringing plate: grains thrown off what moves gather on the lines where nothing does (or wherever a map is white).',
+  bits: 'A grid of small marks (squares, dashes, bars) that surface wherever a field rises: Binary Pattern’s glyphs.',
   traces: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',
   discharge: 'A Lichtenberg figure: the branching path electricity burns through wood.',
   wood: 'A wooden plank: growth rings and grain, as a picture and heights.',
@@ -13954,6 +14003,73 @@ const TEXTURE_CHAINS = {
       [17, 1, 32, 1], [31, 1, 33, 1], [10, 1, 33, 2], [32, 1, 33, 3],
       [12, 4, 34, 1], [16, 1, 34, 2], [34, 1, 35, 1], [34, 1, 36, 1], [35, 1, 36, 2], [33, 1, 37, 1], [9, 1, 37, 2], [36, 1, 37, 3],
       [15, 1, 38, 2], [38, 1, 39, 1], [38, 1, 40, 1], [39, 1, 40, 2], [37, 1, 41, 1], [18, 1, 41, 2], [40, 1, 41, 3], [41, 1, 42, 1]] },
+  // ∆ the Chaos textures, each one part (as its texture always drew) with the sliders wired in
+  sigils: { label: 'Sigil Scatter', canvas: true, teach: 'One part makes it: Sigils, which inscribes sigils with a broad nib (thick across the nib\'s angle, thin along it), ink pooling where each stroke ends. The dark ones are cut into the ground, the light ones raised from it, and the Light Dial lights that relief: a lit wall and a shadowed one in every cut. Chaos is the hand: steady at 0, then trembling, the nib skipping into scratches. Try: raise Chaos to 80, then turn the dial.', nodes: [
+      ['knob', { slot: '1', name: 'Sigil Zoom', def: 0 }, 40, 40],                 // 1  (100 of 100–500)
+      ['knob', { slot: '2', name: 'Sigil Count', def: 35 }, 40, 140],              // 2  (100 of 15–260)
+      ['knob', { slot: '3', name: 'Chaos', def: 20 }, 40, 240],                    // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['sigilmarks', { zoom: 100, '~zoom': '100,500', amount: 100, '~amount': '15,260', form: 20, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Sigil Scatter', ground: 'grey' }, 600, 120]],           // 6
+    wires: [[1, 1, 5, paramPort('sigilmarks', 'zoom')], [2, 1, 5, paramPort('sigilmarks', 'amount')], [3, 1, 5, paramPort('sigilmarks', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  inkbleed: { label: 'Rorschach Test', canvas: true, teach: 'One part makes it: Ink Blot, which drops ink on one half of a folded sheet and presses it, so the blot is mirrored. Wetness makes it bleed: pooled rims, pale mottled middles, wicking and drips. Color lets red join the black, then whole pastel figures, in your Ink Hue and Accent Hue. Try: set Color to 100, then press ⟳ Seed until you see something.', nodes: [
+      ['knob', { slot: '1', name: 'Blot Scale', def: 12 }, 40, 40],                // 1  (100 of 60–400)
+      ['knob', { slot: '2', name: 'Spread', def: 33 }, 40, 140],                   // 2  (100 of 30–240)
+      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
+      ['knob', { slot: '4', name: 'Color', def: 35 }, 40, 340],                    // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440], ['hue', { slot: '2', name: 'Accent Hue' }, 40, 520],   // 5, 6
+      ['blot', { zoom: 100, '~zoom': '60,400', amount: 100, '~amount': '30,240', form: 50, '~form': '0,100', color: 35, '~color': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Rorschach Test', ground: 'colour' }, 600, 120]],        // 8
+    wires: [[1, 1, 7, paramPort('blot', 'zoom')], [2, 1, 7, paramPort('blot', 'amount')], [3, 1, 7, paramPort('blot', 'form')], [4, 1, 7, paramPort('blot', 'color')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+  tessellate: { label: 'Facet Field', canvas: true, teach: 'One part makes it: Facet Field, a field of cut facets (a Voronoi of flat planes) each tilted its own way, so the Light Dial catches some and leaves others dark. Irregularity breaks the even cells apart. The Light Hue colors the light; the Material Hue is the stone itself; the Glow Hue fills the seams with molten light. Try: raise Irregularity, then lower the dial toward the horizon.', nodes: [
+      ['knob', { slot: '1', name: 'Facet Size', def: 14 }, 40, 40],                // 1  (100 of 50–400)
+      ['knob', { slot: '2', name: 'Irregularity', def: 0 }, 40, 140],              // 2  (0 of 0–240)
+      ['dial', {}, 40, 240],                                                       // 3
+      ['hue', { slot: '1', name: 'Light Hue' }, 40, 320], ['hue', { slot: '2', name: 'Material Hue' }, 40, 400],   // 4, 5
+      ['facets', { zoom: 100, '~zoom': '50,400', amount: 0, '~amount': '0,240' }, 320, 100],   // 6
+      ['surface', { name: 'Facet Field', ground: 'grey' }, 600, 120]],             // 7
+    wires: [[1, 1, 6, paramPort('facets', 'zoom')], [2, 1, 6, paramPort('facets', 'amount')], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Light Dial is the View: where you look from. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: turn the dial slowly, and watch the disc tilt.', nodes: [
+      ['knob', { slot: '1', name: 'Chaos', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Particles', def: 31 }, 40, 140],                // 2  (100 of 10–300)
+      ['knob', { slot: '3', name: 'Jets', def: 0 }, 40, 240],                      // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Black Hole', ground: 'grey' }, 600, 120]],              // 6
+    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  moon: { label: 'Fractal Moon', canvas: true, teach: 'One part makes it: Fractal Moon, a moon whose maria and craters are fractal noise, in the phase of the seed, under a night sky of faint stars and drifting cloud. Fractal Depth adds finer and finer detail; Clouds draws cloud across it; Night Sky darkens the sky around. Try: Clouds at 0 and Night Sky at 100, for a clear night.', nodes: [
+      ['knob', { slot: '1', name: 'Moon Size', def: 44 }, 40, 40],                 // 1  (100 of 60–150)
+      ['knob', { slot: '2', name: 'Fractal Depth', def: 47 }, 40, 140],            // 2  (100 of 20–190)
+      ['knob', { slot: '3', name: 'Clouds', def: 30 }, 40, 240],                   // 3
+      ['knob', { slot: '4', name: 'Night Sky', def: 70 }, 40, 340],                // 4
+      ['moon', { zoom: 100, '~zoom': '60,150', amount: 100, '~amount': '20,190', form: 30, '~form': '0,100', night: 70, '~night': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Fractal Moon', ground: 'grey' }, 600, 120]],            // 6
+    wires: [[1, 1, 5, paramPort('moon', 'zoom')], [2, 1, 5, paramPort('moon', 'amount')], [3, 1, 5, paramPort('moon', 'form')], [4, 1, 5, paramPort('moon', 'night')], [5, 1, 6, 1]] },
+  // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
+  chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
+      ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2', name: 'Sand', def: 29 }, 40, 140],                     // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Mode', def: 40 }, 40, 240],                     // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['sand', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,300', form: 40, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Chladni Sand', ground: 'grey' }, 600, 120]],            // 6
+    wires: [[1, 1, 5, paramPort('sand', 'zoom')], [2, 1, 5, paramPort('sand', 'amount')], [3, 1, 5, paramPort('sand', 'form')], [4, 1, 5, 2], [5, 1, 6, 1]] },
+  // 🝓 Guilloché: a field of interlaced waves and rosettes, engraved and lit by the dial
+  guilloche: { label: 'Guilloché', canvas: true, teach: 'The engraved rosettes of banknotes and watch dials, made the way a rose engine makes them. One part does it: Guilloché lays a field of fine interlaced waves, then rosettes over it, each many copies of one wavy loop turned a little each time, so the lines weave into lace, with a spirograph at its heart. The lines are cut into the plate as grooves, lit by the Light Dial. Its second output is the lines alone. Try: wire the Lines output into a Light Engine\'s height, with a Gradient Map as the picture.', nodes: [
+      ['knob', { slot: '1', name: 'Rosette Size', def: 25 }, 40, 40],              // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Line Density', def: 41 }, 40, 140],             // 2  (100 of 30–200)
+      ['knob', { slot: '3', name: 'Lobes', def: 45 }, 40, 240],                    // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['rosettes', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,200', form: 45, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Guilloché', ground: 'grey' }, 600, 120]],               // 6
+    wires: [[1, 1, 5, paramPort('rosettes', 'zoom')], [2, 1, 5, paramPort('rosettes', 'amount')], [3, 1, 5, paramPort('rosettes', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🝓 Binary Pattern: Bit Grid, drawn on its own soft noise
+  mathnoise: { label: 'Binary Pattern', canvas: true, teach: 'One part makes it: Bit Grid, a grid of small marks (filled and empty squares, dashes and bars, mostly dark, some light) that surface wherever a soft noise rises past a gate. Glyph Zoom is the size of a cell, Emergence how low the gate sits: more of the grid shows as it rises. Try: wire a Gradient into Bit Grid\'s Where, so the marks surface from one side of the page.', nodes: [
+      ['knob', { slot: '1', name: 'Glyph Zoom', def: 10 }, 40, 40],                // 1  (140 of 100–500)
+      ['knob', { slot: '2', name: 'Emergence', def: 48 }, 40, 140],                // 2  (130 of 30–240)
+      ['bits', { zoom: 140, '~zoom': '100,500', amount: 130, '~amount': '30,240' }, 320, 60],   // 3
+      ['surface', { name: 'Binary Pattern', ground: 'grey' }, 600, 80]],          // 4
+    wires: [[1, 1, 3, paramPort('bits', 'zoom')], [2, 1, 3, paramPort('bits', 'amount')], [3, 1, 4, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
   knotwork: { label: 'Knotwork', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
       ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)
@@ -15289,7 +15405,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'flowers'){
     result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
   } else if(type === 'inkbleed'){
-    result = genInkBleed(w,h,amt,zoom,form,extra.shape/100,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Ink Blot (chains.js)
   } else if(type === 'crackedglaze'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'bokeh'){
@@ -15297,7 +15413,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'embers'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
-    result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Facet Field (chains.js)
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
@@ -15329,9 +15445,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'brushstrokes'){
     result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
-    result = genSigils(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Sigils (chains.js)
   } else if(type === 'mathnoise'){
-    result = genMathNoise(w,h,amt,zoom);
+    result = genChain(type, w, h, light, extra);           // Bit Grid (chains.js)
   } else if(type === 'linen'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'coldpress'){
@@ -15345,9 +15461,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'athanorsteps'){
     result = genAthanorSteps(w,h,light,tint1,tint2,extra);
   } else if(type === 'guilloche'){
-    result = genGuilloche(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Guilloché (chains.js)
   } else if(type === 'chladni'){
-    result = genChladni(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Chladni Sand (chains.js)
   } else if(type === 'contour'){
     result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
@@ -15377,11 +15493,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
-    result = genBlackHole(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Black Hole (chains.js)
   } else if(type === 'water'){
     result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.tilt,extra.mat);
   } else if(type === 'moon'){
-    result = genMoon(w,h,amt,zoom,form,extra.shape/100);
+    result = genChain(type, w, h, light, extra);           // Fractal Moon (chains.js)
   } else if(type === 'aurora'){
     result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){
@@ -22560,91 +22676,6 @@ function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
  */
 // (Film Grain is a chain now: stepsSharpness.js 'grain' → Surface; chains.js 'grain')
 
-// A lathe once turned
-// for a whole afternoon so
-// no one could copy it.
-/**
- * Guilloché — the engraved rosettes of banknotes and watch dials, after the
- * rose engine and the geometric lathe: a field of fine interlaced waves, and
- * rosettes laid over it, each many copies of one wavy loop, turned a little
- * each time, so the lines weave into lace. Cut into the plate: drawn as fine
- * grooves and lit by the dial (light on one wall, shade on the other).
- * ROSETTE SIZE · LINE DENSITY · LOBES
- */
-function genGuilloche(w,h,amt,zoom,light,form){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const lobeK=Math.max(0,Math.min(1, form==null?0.5:form));
-  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh;
-  const x=cv.getContext('2d', CPU); x.fillStyle='#000'; x.fillRect(0,0,ww,wh);
-  x.strokeStyle='#fff'; x.lineCap='round'; x.lineJoin='round';
-  const lw=Math.max(0.55, unit*0.0011);
-  // THE FIELD: interlaced waves across the plate, two families half a period apart
-  const lam=unit*(0.07+0.05*Math.random())*zoom, amp=lam*(0.18+0.12*Math.random()), gap=unit*0.0065/Math.max(0.3, amt)*zoom;
-  const tilt=(Math.random()-0.5)*0.4, ct=Math.cos(tilt), st=Math.sin(tilt);
-  x.globalAlpha=0.55; x.lineWidth=lw*0.85;
-  for(let fam=0; fam<2; fam++){
-    for(let y0=-unit*0.5; y0<wh+unit*0.5; y0+=gap){
-      x.beginPath();
-      for(let px=-unit*0.3; px<=ww+unit*0.3; px+=Math.max(1, lam/24)){
-        const yy=y0 + amp*Math.sin(px/lam*Math.PI*2 + fam*Math.PI + y0/(gap*9));
-        const X=px*ct - (yy-wh/2)*st + 0, Y=wh/2 + px*st + (yy-wh/2)*ct;
-        if(px===-unit*0.3) x.moveTo(X,Y); else x.lineTo(X,Y);
-      }
-      x.stroke();
-    }
-  }
-  // THE ROSETTES: copies of one lobed loop, each turned a little
-  const nR=1 + Math.floor(Math.random()*3);
-  for(let k=0;k<nR;k++){
-    const R=unit*(0.16+0.16*Math.random())*zoom, cx=ww*(0.15+0.7*Math.random()), cy=wh*(0.15+0.7*Math.random());
-    const lobes=Math.round(5 + lobeK*19 + Math.random()*4), lobes2=Math.round(lobes*(1.5+Math.random())), a1=0.17+0.14*Math.random(), a2=0.04+0.05*Math.random()*lobeK;
-    const copies=Math.round((24 + 40*Math.min(2, amt))*(0.7+Math.random()*0.5)), inner=0.42+0.12*Math.random();
-    // a clear ring under each rosette, so it reads over the field
-    x.globalAlpha=1; x.fillStyle='#000'; x.beginPath(); x.arc(cx, cy, R*(1+a1+a2)*1.03, 0, Math.PI*2); x.fill();
-    // the outer band: one lobed loop, its phase stepped round a whole cycle copy
-    // by copy, so the loops cross and weave into a mesh
-    x.globalAlpha=0.9; x.lineWidth=lw;
-    const steps=Math.max(360, lobes*36);
-    for(let j=0;j<copies;j++){
-      const ph=j/copies*Math.PI*2;
-      x.beginPath();
-      for(let s2=0;s2<=steps;s2++){ const t=s2/steps*Math.PI*2;
-        const r=R*(1 + a1*Math.sin(lobes*t + ph) + a2*Math.sin(lobes2*t - ph*2));
-        const X=cx + Math.cos(t)*r, Y=cy + Math.sin(t)*r; if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
-      x.stroke();
-    }
-    // the heart: a spirograph (hypotrochoid) that closes on itself, turned a few times
-    const Rr=R*inner*(1 - a1*0.5), m=[2,3,5,7][Math.floor(Math.random()*4)], nT=Math.max(m+1, Math.round(lobes*0.6)), rr=Rr*m/nT, dd=rr*(0.65+0.3*Math.random());
-    const turns=Math.max(3, Math.round(6 + 10*Math.min(2, amt)*0.5));
-    x.globalAlpha=0.8; x.lineWidth=lw*0.9;
-    for(let j=0;j<turns;j++){
-      const rot=j/turns*Math.PI*2/nT; x.beginPath();
-      const st2=Math.max(600, nT*m*20);
-      for(let s2=0;s2<=st2;s2++){ const t=s2/st2*Math.PI*2*m;
-        const X0=(Rr-rr)*Math.cos(t) + dd*Math.cos((Rr-rr)/rr*t), Y0=(Rr-rr)*Math.sin(t) - dd*Math.sin((Rr-rr)/rr*t);
-        const X=cx + X0*Math.cos(rot) - Y0*Math.sin(rot), Y=cy + X0*Math.sin(rot) + Y0*Math.cos(rot); if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
-      x.stroke();
-    }
-  }
-  x.globalAlpha=1;
-  // engraved: the lines are GROOVES (heights below the plate), lit by the dial
-  const px=x.getImageData(0,0,ww,wh).data, H=new Float32Array(N), C=new Float32Array(N);
-  for(let i=0;i<N;i++){ const v=px[i*4]/255; C[i]=v; H[i]=-v*unit*0.0025; }
-  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.6, shadow:0.3, ao:0.4, ambient:0.5 });
-  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
-  const sx=small.getContext('2d', CPU), im=sx.createImageData(ww,wh), d=im.data;
-  for(let i=0;i<N;i++){
-    // the plate mid-grey; a groove darker, its lit wall catching the light
-    const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
-    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
-  }
-  sx.putImageData(im,0,0);
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const cx2=c.getContext('2d', CPU); cx2.imageSmoothingEnabled=true; cx2.drawImage(small,0,0,w,h);
-  return c;
-}
-
 
 /* ==== texChaos.js ==== */
 /**
@@ -22783,60 +22814,6 @@ function genSigils(w,h,amt,zoom,light,form,M3){
   ink.putImageData(img,0,0);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(inkC,0,0,w,h);
-  return c;
-}
-
-// Counting backwards from
-// a number nobody wrote down.
-// The grid keeps the score.
-function genMathNoise(w,h,amt,zoom){
-  amt = (amt==null?1:amt); zoom = (zoom==null?1:zoom);
-  const c = document.createElement('canvas');
-  c.width=w; c.height=h;
-  const ctx = c.getContext('2d', CPU);
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0,0,w,h);
-
-  const cell = Math.max(cpx(6), Math.round((Math.max(w,h)/72) * zoom));    // floor in canonical pixels
-  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
-  const gw = Math.max(2, Math.round(cols/6)), gh = Math.max(2, Math.round(rows/6));
-  const field = makeNoiseGrid(gw, gh);
-
-  for(let ry=0; ry<rows; ry++){
-    for(let rx=0; rx<cols; rx++){
-      const n = sampleNoiseGrid(field, gw, gh, rx/cols, ry/rows);
-      // low field values stay empty ground; the pattern surfaces out of it
-      const gate = Math.max(0.02, Math.min(0.95, 0.46 / amt));
-      if(n < gate) continue;
-      const strength = (n-gate)/(1-gate);
-      const x = rx*cell, y = ry*cell;
-      const pad = cell*0.22;
-      const dark = Math.random() < 0.7;
-      const tone = dark ? 26 : 232;
-      ctx.globalAlpha = 0.18 + strength*0.62*Math.random();
-      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`;
-      ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
-      ctx.lineWidth = Math.max(cpx(0.5), cell*0.09);
-
-      const kind = Math.floor(Math.random()*4);
-      if(kind===0){
-        ctx.fillRect(x+pad, y+pad, cell-pad*2, cell-pad*2);
-      } else if(kind===1){
-        ctx.strokeRect(x+pad, y+pad, cell-pad*2, cell-pad*2);
-      } else if(kind===2){
-        ctx.beginPath();
-        ctx.moveTo(x+pad, y+cell*0.5);
-        ctx.lineTo(x+cell-pad, y+cell*0.5);
-        ctx.stroke();
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(x+cell*0.5, y+pad);
-        ctx.lineTo(x+cell*0.5, y+cell-pad);
-        ctx.stroke();
-      }
-    }
-  }
-  ctx.globalAlpha = 1;
   return c;
 }
 
@@ -23399,61 +23376,6 @@ function genBlackHole(w,h,amt,zoom,light,form){
 }
 
 // TURING SKIN is a chain now: Turing Pattern → Light Engine (stepsChaos.js chaosTuring; chains.js 'turing').
-
-// Draw a bow along the edge:
-// the sand runs from what is moving
-// to where nothing moves.
-/**
- * Chladni Sand — sand on a plate set ringing by a bow (Chladni, 1787): the
- * sand runs off what moves and gathers on the NODAL LINES, where nothing
- * does. The plate's pattern is the standing wave of a square plate (as Paul
- * Bourke writes it): cos(nπx)cos(mπy) − cos(mπx)cos(nπy), the seed choosing
- * the mode (n, m) and blending a neighbour into it. Each grain is a lit speck
- * with its own small shadow from the dial; a few stray grains still roam.
- * GRAIN SIZE · SAND · MODE (simple, a few lines → complex, many)
- */
-function genChladni(w,h,amt,zoom,light,form){
-  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
-  const modeK=Math.max(0,Math.min(1, form==null?0.4:form));
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d', CPU); ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
-  const unit=Math.min(w,h), aspX=w/unit, aspY=h/unit;
-  // the mode: higher MODE, higher n and m
-  const lo=1 + Math.round(modeK*6), n=lo + Math.floor(Math.random()*3), m=Math.max(1, n + 1 + Math.floor(Math.random()*(2 + modeK*4)));
-  const n2=n + (Math.random()<0.5 ? 1 : 2), m2=m + 1, mix=0.15 + Math.random()*0.35, ph=Math.random()*0.4;
-  const plate=(u,v)=>{ const X=u*aspX, Y=v*aspY, P=Math.PI;
-    const a=Math.cos(n*P*X)*Math.cos(m*P*Y) - Math.cos(m*P*X)*Math.cos(n*P*Y);
-    const b=Math.cos(n2*P*X + ph)*Math.cos(m2*P*Y) - Math.cos(m2*P*X)*Math.cos(n2*P*Y + ph);
-    return a*(1-mix) + b*mix; };
-  // sand gathers where the plate is still: density from |amplitude|, thin lines
-  const lineW=0.045 + 0.035*(1-modeK);
-  const count=Math.round(canonArea(w,h)/(3072*3072)*420000*amt);
-  const lv=lightVec(light==null?315:light), lm=Math.hypot(lv.lx,lv.ly)||1, sdx=lv.lx/lm, sdy=lv.ly/lm;
-  // grains are SPLATTED, not drawn one by one: each adds its area (canonical,
-  // so a preview holds the same sand as the export) to the pixels it covers,
-  // and its shadow, a little away from the light, to a shadow layer
-  const N=w*h, SAND=new Float32Array(N), SH=new Float32Array(N), BR=new Float32Array(N);
-  const shOff=cpx(1.2), splat=(arr, x, y, a)=>{ const x0=Math.floor(x), y0=Math.floor(y), fx=x-x0, fy=y-y0;
-    if(x0<0||y0<0||x0>=w-1||y0>=h-1) return;
-    const i=y0*w+x0; arr[i]+=a*(1-fx)*(1-fy); arr[i+1]+=a*fx*(1-fy); arr[i+w]+=a*(1-fx)*fy; arr[i+w+1]+=a*fx*fy; };
-  for(let k=0, tries=0; k<count && tries<count*14; tries++){
-    const u=Math.random(), v=Math.random(), am=plate(u,v), p=Math.exp(-(am/lineW)*(am/lineW));
-    if(Math.random() >= p*0.98 + 0.01) continue;
-    k++;
-    const r=cpx((0.55 + Math.random()*0.9)*zoom), area=Math.PI*r*r, x=u*w, y=v*h, t=Math.random();
-    // a big grain covers several pixels: spread it over its footprint
-    if(r > 1.2){ const R=Math.ceil(r); for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){ if(dx*dx+dy*dy>r*r) continue; splat(SAND, x+dx, y+dy, 1); splat(BR, x+dx, y+dy, t + (-(dx*sdx+dy*sdy)/r)*0.35); splat(SH, x+dx+sdx*shOff, y+dy+sdy*shOff, 1); } }
-    else { splat(SAND, x, y, area); splat(BR, x, y, area*t); splat(SH, x+sdx*shOff, y+sdy*shOff, area); }
-  }
-  const img=ctx.createImageData(w,h), d=img.data;
-  for(let i=0;i<N;i++){
-    const sd=Math.min(1, SAND[i]), sh=Math.min(1, SH[i])*(1-sd), br=SAND[i] > 0 ? BR[i]/SAND[i] : 0;
-    const sand=200 + br*45, v=128*(1 - sh*0.45) + (sand - 128)*sd;
-    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
-  }
-  ctx.putImageData(img,0,0);
-  return c;
-}
 
 
 /* ==== texTouch.js ==== */
@@ -27886,6 +27808,12 @@ function whimAurora(x, w, h, o, px){
 }
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
 const WHIMSY_STEPS = {
+  // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
+  moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
+    params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => genMoon(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 30)/100, E.num(n, 'night', 70)/100))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   starfield: { cat: 'Marks', label: 'Starfield', ins: ['over', 'color a', 'color b'], outs: ['image'], io: { ins: ['image', 'colour', 'colour'], outs: ['image'] },
     params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
     // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked
@@ -27988,6 +27916,7 @@ const WHIMSY_STEPS = {
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
+
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -28101,7 +28030,142 @@ function chaosCracks(w, h, o){
   return { segs };
 }
 
+// Draw a bow along the edge:
+// the sand runs from what is moving
+// to where nothing moves.
+/**
+ * Chladni Sand — sand on a plate set ringing by a bow (Chladni, 1787): the
+ * sand runs off what moves and gathers on the NODAL LINES, where nothing
+ * does. The plate's pattern is the standing wave of a square plate (as Paul
+ * Bourke writes it): cos(nπx)cos(mπy) − cos(mπx)cos(nπy), the seed choosing
+ * the mode (n, m) and blending a neighbour into it. Each grain is a lit speck
+ * with its own small shadow from the dial; a few stray grains still roam.
+ * GRAIN SIZE · SAND · MODE (simple, a few lines → complex, many)
+ * SAND (the part): the same grains on any gray map wired into Where (they gather where it is white).
+ */
+function chaosSand(w,h,amt,zoom,light,form,where){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const modeK=Math.max(0,Math.min(1, form==null?0.4:form));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
+  const unit=Math.min(w,h), aspX=w/unit, aspY=h/unit;
+  // the mode: higher MODE, higher n and m
+  const lo=1 + Math.round(modeK*6), n=lo + Math.floor(Math.random()*3), m=Math.max(1, n + 1 + Math.floor(Math.random()*(2 + modeK*4)));
+  const n2=n + (Math.random()<0.5 ? 1 : 2), m2=m + 1, mix=0.15 + Math.random()*0.35, ph=Math.random()*0.4;
+  const plate=(u,v)=>{ const X=u*aspX, Y=v*aspY, P=Math.PI;
+    const a=Math.cos(n*P*X)*Math.cos(m*P*Y) - Math.cos(m*P*X)*Math.cos(n*P*Y);
+    const b=Math.cos(n2*P*X + ph)*Math.cos(m2*P*Y) - Math.cos(m2*P*X)*Math.cos(n2*P*Y + ph);
+    return a*(1-mix) + b*mix; };
+  // sand gathers where the plate is still: density from |amplitude|, thin lines
+  const lineW=0.045 + 0.035*(1-modeK);
+  const count=Math.round(canonArea(w,h)/(3072*3072)*420000*amt);
+  const lv=lightVec(light==null?315:light), lm=Math.hypot(lv.lx,lv.ly)||1, sdx=lv.lx/lm, sdy=lv.ly/lm;
+  // grains are SPLATTED, not drawn one by one: each adds its area (canonical,
+  // so a preview holds the same sand as the export) to the pixels it covers,
+  // and its shadow, a little away from the light, to a shadow layer
+  const N=w*h, SAND=new Float32Array(N), SH=new Float32Array(N), BR=new Float32Array(N);
+  const shOff=cpx(1.2), splat=(arr, x, y, a)=>{ const x0=Math.floor(x), y0=Math.floor(y), fx=x-x0, fy=y-y0;
+    if(x0<0||y0<0||x0>=w-1||y0>=h-1) return;
+    const i=y0*w+x0; arr[i]+=a*(1-fx)*(1-fy); arr[i+1]+=a*fx*(1-fy); arr[i+w]+=a*(1-fx)*fy; arr[i+w+1]+=a*fx*fy; };
+  for(let k=0, tries=0; k<count && tries<count*14; tries++){
+    const u=Math.random(), v=Math.random(), am=where ? 0 : plate(u,v), p=where ? where(u,v) : Math.exp(-(am/lineW)*(am/lineW));
+    if(Math.random() >= p*0.98 + 0.01) continue;
+    k++;
+    const r=cpx((0.55 + Math.random()*0.9)*zoom), area=Math.PI*r*r, x=u*w, y=v*h, t=Math.random();
+    // a big grain covers several pixels: spread it over its footprint
+    if(r > 1.2){ const R=Math.ceil(r); for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){ if(dx*dx+dy*dy>r*r) continue; splat(SAND, x+dx, y+dy, 1); splat(BR, x+dx, y+dy, t + (-(dx*sdx+dy*sdy)/r)*0.35); splat(SH, x+dx+sdx*shOff, y+dy+sdy*shOff, 1); } }
+    else { splat(SAND, x, y, area); splat(BR, x, y, area*t); splat(SH, x+sdx*shOff, y+sdy*shOff, area); }
+  }
+  const img=ctx.createImageData(w,h), d=img.data;
+  for(let i=0;i<N;i++){
+    const sd=Math.min(1, SAND[i]), sh=Math.min(1, SH[i])*(1-sd), br=SAND[i] > 0 ? BR[i]/SAND[i] : 0;
+    const sand=200 + br*45, v=128*(1 - sh*0.45) + (sand - 128)*sd;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  return c;
+}
+
+// Counting backwards from
+// a number nobody wrote down.
+// The grid keeps the score.
+// BIT GRID (Binary Pattern's marks): a grid of small marks (filled and empty squares, dashes, bars) that surface
+// wherever a field rises past a gate. The field is its own soft noise, or any gray map wired into Where.
+function chaosBitGrid(w, h, amt, zoom, where){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, w, h);
+  const cell = Math.max(cpx(6), Math.round((Math.max(w, h)/72)*zoom));    // floor in canonical pixels
+  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
+  const gw = Math.max(2, Math.round(cols/6)), gh = Math.max(2, Math.round(rows/6));
+  const field = where ? null : makeNoiseGrid(gw, gh);
+  for(let ry = 0; ry < rows; ry++){
+    for(let rx = 0; rx < cols; rx++){
+      const n = where ? where(rx/cols, ry/rows) : sampleNoiseGrid(field, gw, gh, rx/cols, ry/rows);
+      // low field values stay empty ground; the pattern surfaces out of it
+      const gate = Math.max(0.02, Math.min(0.95, 0.46/amt));
+      if(n < gate) continue;
+      const strength = (n - gate)/(1 - gate);
+      const x = rx*cell, y = ry*cell, pad = cell*0.22;
+      const dark = Math.random() < 0.7, tone = dark ? 26 : 232;
+      ctx.globalAlpha = 0.18 + strength*0.62*Math.random();
+      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`; ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
+      ctx.lineWidth = Math.max(cpx(0.5), cell*0.09);
+      const kind = Math.floor(Math.random()*4);
+      if(kind === 0) ctx.fillRect(x + pad, y + pad, cell - pad*2, cell - pad*2);
+      else if(kind === 1) ctx.strokeRect(x + pad, y + pad, cell - pad*2, cell - pad*2);
+      else if(kind === 2){ ctx.beginPath(); ctx.moveTo(x + pad, y + cell*0.5); ctx.lineTo(x + cell - pad, y + cell*0.5); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(x + cell*0.5, y + pad); ctx.lineTo(x + cell*0.5, y + cell - pad); ctx.stroke(); }
+    }
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
+
+// the texture's own seed (+ Variant), so a texture made of one of these parts draws as it always did
+const chaosSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+// a color from a port (0–1 channels), as the generators take it: a hex code
+const chaosHex = v => Array.isArray(v) ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
 const CHAOS_STEPS = {
+  // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
+  sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      return [withSeed(chaosSeed(E, n), () => genSigils(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 20)/100, E.ctx.mat || null))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  blot: { cat: 'Marks', label: 'Ink Blot', ins: ['ink', 'accent'], outs: ['blot'], io: { ins: ['colour', 'colour'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Blot Scale', 100, 60, 400), CHAOS_R('amount', 'Spread', 100, 30, 240), CHAOS_R('form', 'Wetness', 50), CHAOS_R('color', 'Color', 35), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, t = E.ctx.tints || [];
+      const ink = chaosHex(E.input(n, 1)) || t[0] || '#141414', acc = chaosHex(E.input(n, 2)) || t[1] || '#B0283A';
+      return [withSeed(chaosSeed(E, n), () => genInkBleed(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 50)/100, E.num(n, 'color', 35)/100, ink, acc))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  facets: { cat: 'Textures', label: 'Facet Field', ins: ['light from', 'light hue', 'material hue'], outs: ['facets'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Facet Size', 100, 50, 400), CHAOS_R('amount', 'Irregularity', 0, 0, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), t = E.ctx.tints || [];
+      const t1 = chaosHex(E.input(n, 2)) || t[0] || null, t2 = chaosHex(E.input(n, 3)) || t[1] || null;
+      return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      return [withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    // a canvas pass at full size, its grains under the texture's own seed (+ Variant): Chladni Sand as it was
+    paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null, dv = E.input(n, 2);
+      const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null, light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => chaosSand(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 40)/100, where))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  bits: { cat: 'Marks', label: 'Bit Grid', ins: ['where'], outs: ['pattern'], io: { ins: ['field'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Cell Size', 140, 100, 500), CHAOS_R('amount', 'Emergence', 130, 30, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 2,
+    // a canvas pass at full size; its marks drawn under the texture's own seed (+ Variant), so Binary Pattern is as it was
+    paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null;
+      const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null;
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => chaosBitGrid(w, h, Math.max(0.02, E.num(n, 'amount', 130)/100), Math.max(0.25, E.num(n, 'zoom', 140)/100), where))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
     params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
@@ -29597,7 +29661,100 @@ function paintGrain(w,h,amt,zoom,form){
 }
 
 
+// A lathe once turned
+// for a whole afternoon so
+// no one could copy it.
+/**
+ * Guilloché — the engraved rosettes of banknotes and watch dials, after the
+ * rose engine and the geometric lathe: a field of fine interlaced waves, and
+ * rosettes laid over it, each many copies of one wavy loop, turned a little
+ * each time, so the lines weave into lace. Cut into the plate: drawn as fine
+ * grooves and lit by the dial (light on one wall, shade on the other).
+ * ROSETTE SIZE · LINE DENSITY · LOBES
+ * Returns [the engraved plate, lit (full size), the lines themselves (on a grid of its own)].
+ */
+function shGuilloche(w,h,amt,zoom,light,form){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const lobeK=Math.max(0,Math.min(1, form==null?0.5:form));
+  const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
+  const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh;
+  const x=cv.getContext('2d', CPU); x.fillStyle='#000'; x.fillRect(0,0,ww,wh);
+  x.strokeStyle='#fff'; x.lineCap='round'; x.lineJoin='round';
+  const lw=Math.max(0.55, unit*0.0011);
+  // THE FIELD: interlaced waves across the plate, two families half a period apart
+  const lam=unit*(0.07+0.05*Math.random())*zoom, amp=lam*(0.18+0.12*Math.random()), gap=unit*0.0065/Math.max(0.3, amt)*zoom;
+  const tilt=(Math.random()-0.5)*0.4, ct=Math.cos(tilt), st=Math.sin(tilt);
+  x.globalAlpha=0.55; x.lineWidth=lw*0.85;
+  for(let fam=0; fam<2; fam++){
+    for(let y0=-unit*0.5; y0<wh+unit*0.5; y0+=gap){
+      x.beginPath();
+      for(let px=-unit*0.3; px<=ww+unit*0.3; px+=Math.max(1, lam/24)){
+        const yy=y0 + amp*Math.sin(px/lam*Math.PI*2 + fam*Math.PI + y0/(gap*9));
+        const X=px*ct - (yy-wh/2)*st + 0, Y=wh/2 + px*st + (yy-wh/2)*ct;
+        if(px===-unit*0.3) x.moveTo(X,Y); else x.lineTo(X,Y);
+      }
+      x.stroke();
+    }
+  }
+  // THE ROSETTES: copies of one lobed loop, each turned a little
+  const nR=1 + Math.floor(Math.random()*3);
+  for(let k=0;k<nR;k++){
+    const R=unit*(0.16+0.16*Math.random())*zoom, cx=ww*(0.15+0.7*Math.random()), cy=wh*(0.15+0.7*Math.random());
+    const lobes=Math.round(5 + lobeK*19 + Math.random()*4), lobes2=Math.round(lobes*(1.5+Math.random())), a1=0.17+0.14*Math.random(), a2=0.04+0.05*Math.random()*lobeK;
+    const copies=Math.round((24 + 40*Math.min(2, amt))*(0.7+Math.random()*0.5)), inner=0.42+0.12*Math.random();
+    // a clear ring under each rosette, so it reads over the field
+    x.globalAlpha=1; x.fillStyle='#000'; x.beginPath(); x.arc(cx, cy, R*(1+a1+a2)*1.03, 0, Math.PI*2); x.fill();
+    // the outer band: one lobed loop, its phase stepped round a whole cycle copy
+    // by copy, so the loops cross and weave into a mesh
+    x.globalAlpha=0.9; x.lineWidth=lw;
+    const steps=Math.max(360, lobes*36);
+    for(let j=0;j<copies;j++){
+      const ph=j/copies*Math.PI*2;
+      x.beginPath();
+      for(let s2=0;s2<=steps;s2++){ const t=s2/steps*Math.PI*2;
+        const r=R*(1 + a1*Math.sin(lobes*t + ph) + a2*Math.sin(lobes2*t - ph*2));
+        const X=cx + Math.cos(t)*r, Y=cy + Math.sin(t)*r; if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
+      x.stroke();
+    }
+    // the heart: a spirograph (hypotrochoid) that closes on itself, turned a few times
+    const Rr=R*inner*(1 - a1*0.5), m=[2,3,5,7][Math.floor(Math.random()*4)], nT=Math.max(m+1, Math.round(lobes*0.6)), rr=Rr*m/nT, dd=rr*(0.65+0.3*Math.random());
+    const turns=Math.max(3, Math.round(6 + 10*Math.min(2, amt)*0.5));
+    x.globalAlpha=0.8; x.lineWidth=lw*0.9;
+    for(let j=0;j<turns;j++){
+      const rot=j/turns*Math.PI*2/nT; x.beginPath();
+      const st2=Math.max(600, nT*m*20);
+      for(let s2=0;s2<=st2;s2++){ const t=s2/st2*Math.PI*2*m;
+        const X0=(Rr-rr)*Math.cos(t) + dd*Math.cos((Rr-rr)/rr*t), Y0=(Rr-rr)*Math.sin(t) - dd*Math.sin((Rr-rr)/rr*t);
+        const X=cx + X0*Math.cos(rot) - Y0*Math.sin(rot), Y=cy + X0*Math.sin(rot) + Y0*Math.cos(rot); if(s2) x.lineTo(X,Y); else x.moveTo(X,Y); }
+      x.stroke();
+    }
+  }
+  x.globalAlpha=1;
+  // engraved: the lines are GROOVES (heights below the plate), lit by the dial
+  const px=x.getImageData(0,0,ww,wh).data, H=new Float32Array(N), C=new Float32Array(N);
+  for(let i=0;i<N;i++){ const v=px[i*4]/255; C[i]=v; H[i]=-v*unit*0.0025; }
+  const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.6, shadow:0.3, ao:0.4, ambient:0.5 });
+  const small=document.createElement('canvas'); small.width=ww; small.height=wh;
+  const sx=small.getContext('2d', CPU), im=sx.createImageData(ww,wh), d=im.data;
+  for(let i=0;i<N;i++){
+    // the plate mid-grey; a groove darker, its lit wall catching the light
+    const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+  }
+  sx.putImageData(im,0,0);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const cx2=c.getContext('2d', CPU); cx2.imageSmoothingEnabled=true; cx2.drawImage(small,0,0,w,h);
+  return [c, cv];
+}
+
 const SHARP_STEPS = {
+  rosettes: { cat: 'Marks', label: 'Guilloché', ins: ['light from'], outs: ['engraving', 'lines'], io: { ins: ['value'], outs: ['image', 'field'] },
+    params: [SH_R('zoom', 'Rosette Size', 100, 50, 250), SH_R('amount', 'Line Density', 100, 30, 200), SH_R('form', 'Lobes', 45), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8,
+    // a canvas pass at full size, under the texture's own seed (+ Variant): Guilloché as it was
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return withSeed(seed, () => shGuilloche(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 45)/100)); },
+    run(E, n){ const [c, l] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(l))]; } },
   screen: { cat: 'Marks', label: 'Halftone Screen', ins: ['tone'], outs: ['dots'], io: { ins: ['field'], outs: ['field'] },
     params: [SH_R('scale', 'Dot Scale', 100, 50, 400), SH_R('weight', 'Dot Weight', 100, 30, 240), SH_R('angle', 'Screen Angle', 0, 0, 90)], cost: () => 3,
     paint(E, n){ const tone = kitField(E.input(n, 1) ?? 0.5, E.ww, E.wh) || new Float32Array(E.ww*E.wh).fill(0.5);
@@ -29896,6 +30053,14 @@ const STEP_DOCS = {
   matrix: 'A material for something to grow through (strata, pebbles, sand, fibers or skin), with the paths through it.',
   tendrils: 'A branching network that grows through the paths you give it, like veins or roots.',
   knotwork: 'Celtic knotwork: strands crossing over and under, turned back into knots inside an outline.',
+  sigilmarks: 'Sigils inscribed with a broad nib, cut into the ground or raised from it, and lit by the dial: Sigil Scatter’s marks.',
+  blot: 'A Rorschach blot: ink dropped on one half of a folded sheet and pressed, mirrored, bleeding as it dries.',
+  facets: 'A field of cut facets, each tilted its own way, so the light catches some and leaves others dark: Facet Field.',
+  blackhole: 'A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.',
+  moon: 'A moon whose seas and craters are fractal noise, in the seed’s phase, under a night sky of faint stars and cloud.',
+  rosettes: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',
+  sand: 'Sand on a ringing plate: grains thrown off what moves gather on the lines where nothing does (or wherever a map is white).',
+  bits: 'A grid of small marks (squares, dashes, bars) that surface wherever a field rises: Binary Pattern’s glyphs.',
   traces: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',
   discharge: 'A Lichtenberg figure: the branching path electricity burns through wood.',
   wood: 'A wooden plank: growth rings and grain, as a picture and heights.',
@@ -31144,6 +31309,73 @@ const TEXTURE_CHAINS = {
       [17, 1, 32, 1], [31, 1, 33, 1], [10, 1, 33, 2], [32, 1, 33, 3],
       [12, 4, 34, 1], [16, 1, 34, 2], [34, 1, 35, 1], [34, 1, 36, 1], [35, 1, 36, 2], [33, 1, 37, 1], [9, 1, 37, 2], [36, 1, 37, 3],
       [15, 1, 38, 2], [38, 1, 39, 1], [38, 1, 40, 1], [39, 1, 40, 2], [37, 1, 41, 1], [18, 1, 41, 2], [40, 1, 41, 3], [41, 1, 42, 1]] },
+  // ∆ the Chaos textures, each one part (as its texture always drew) with the sliders wired in
+  sigils: { label: 'Sigil Scatter', canvas: true, teach: 'One part makes it: Sigils, which inscribes sigils with a broad nib (thick across the nib\'s angle, thin along it), ink pooling where each stroke ends. The dark ones are cut into the ground, the light ones raised from it, and the Light Dial lights that relief: a lit wall and a shadowed one in every cut. Chaos is the hand: steady at 0, then trembling, the nib skipping into scratches. Try: raise Chaos to 80, then turn the dial.', nodes: [
+      ['knob', { slot: '1', name: 'Sigil Zoom', def: 0 }, 40, 40],                 // 1  (100 of 100–500)
+      ['knob', { slot: '2', name: 'Sigil Count', def: 35 }, 40, 140],              // 2  (100 of 15–260)
+      ['knob', { slot: '3', name: 'Chaos', def: 20 }, 40, 240],                    // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['sigilmarks', { zoom: 100, '~zoom': '100,500', amount: 100, '~amount': '15,260', form: 20, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Sigil Scatter', ground: 'grey' }, 600, 120]],           // 6
+    wires: [[1, 1, 5, paramPort('sigilmarks', 'zoom')], [2, 1, 5, paramPort('sigilmarks', 'amount')], [3, 1, 5, paramPort('sigilmarks', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  inkbleed: { label: 'Rorschach Test', canvas: true, teach: 'One part makes it: Ink Blot, which drops ink on one half of a folded sheet and presses it, so the blot is mirrored. Wetness makes it bleed: pooled rims, pale mottled middles, wicking and drips. Color lets red join the black, then whole pastel figures, in your Ink Hue and Accent Hue. Try: set Color to 100, then press ⟳ Seed until you see something.', nodes: [
+      ['knob', { slot: '1', name: 'Blot Scale', def: 12 }, 40, 40],                // 1  (100 of 60–400)
+      ['knob', { slot: '2', name: 'Spread', def: 33 }, 40, 140],                   // 2  (100 of 30–240)
+      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
+      ['knob', { slot: '4', name: 'Color', def: 35 }, 40, 340],                    // 4
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440], ['hue', { slot: '2', name: 'Accent Hue' }, 40, 520],   // 5, 6
+      ['blot', { zoom: 100, '~zoom': '60,400', amount: 100, '~amount': '30,240', form: 50, '~form': '0,100', color: 35, '~color': '0,100' }, 320, 100],   // 7
+      ['surface', { name: 'Rorschach Test', ground: 'colour' }, 600, 120]],        // 8
+    wires: [[1, 1, 7, paramPort('blot', 'zoom')], [2, 1, 7, paramPort('blot', 'amount')], [3, 1, 7, paramPort('blot', 'form')], [4, 1, 7, paramPort('blot', 'color')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+  tessellate: { label: 'Facet Field', canvas: true, teach: 'One part makes it: Facet Field, a field of cut facets (a Voronoi of flat planes) each tilted its own way, so the Light Dial catches some and leaves others dark. Irregularity breaks the even cells apart. The Light Hue colors the light; the Material Hue is the stone itself; the Glow Hue fills the seams with molten light. Try: raise Irregularity, then lower the dial toward the horizon.', nodes: [
+      ['knob', { slot: '1', name: 'Facet Size', def: 14 }, 40, 40],                // 1  (100 of 50–400)
+      ['knob', { slot: '2', name: 'Irregularity', def: 0 }, 40, 140],              // 2  (0 of 0–240)
+      ['dial', {}, 40, 240],                                                       // 3
+      ['hue', { slot: '1', name: 'Light Hue' }, 40, 320], ['hue', { slot: '2', name: 'Material Hue' }, 40, 400],   // 4, 5
+      ['facets', { zoom: 100, '~zoom': '50,400', amount: 0, '~amount': '0,240' }, 320, 100],   // 6
+      ['surface', { name: 'Facet Field', ground: 'grey' }, 600, 120]],             // 7
+    wires: [[1, 1, 6, paramPort('facets', 'zoom')], [2, 1, 6, paramPort('facets', 'amount')], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Light Dial is the View: where you look from. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: turn the dial slowly, and watch the disc tilt.', nodes: [
+      ['knob', { slot: '1', name: 'Chaos', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Particles', def: 31 }, 40, 140],                // 2  (100 of 10–300)
+      ['knob', { slot: '3', name: 'Jets', def: 0 }, 40, 240],                      // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Black Hole', ground: 'grey' }, 600, 120]],              // 6
+    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  moon: { label: 'Fractal Moon', canvas: true, teach: 'One part makes it: Fractal Moon, a moon whose maria and craters are fractal noise, in the phase of the seed, under a night sky of faint stars and drifting cloud. Fractal Depth adds finer and finer detail; Clouds draws cloud across it; Night Sky darkens the sky around. Try: Clouds at 0 and Night Sky at 100, for a clear night.', nodes: [
+      ['knob', { slot: '1', name: 'Moon Size', def: 44 }, 40, 40],                 // 1  (100 of 60–150)
+      ['knob', { slot: '2', name: 'Fractal Depth', def: 47 }, 40, 140],            // 2  (100 of 20–190)
+      ['knob', { slot: '3', name: 'Clouds', def: 30 }, 40, 240],                   // 3
+      ['knob', { slot: '4', name: 'Night Sky', def: 70 }, 40, 340],                // 4
+      ['moon', { zoom: 100, '~zoom': '60,150', amount: 100, '~amount': '20,190', form: 30, '~form': '0,100', night: 70, '~night': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Fractal Moon', ground: 'grey' }, 600, 120]],            // 6
+    wires: [[1, 1, 5, paramPort('moon', 'zoom')], [2, 1, 5, paramPort('moon', 'amount')], [3, 1, 5, paramPort('moon', 'form')], [4, 1, 5, paramPort('moon', 'night')], [5, 1, 6, 1]] },
+  // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
+  chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
+      ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2', name: 'Sand', def: 29 }, 40, 140],                     // 2  (100 of 20–300)
+      ['knob', { slot: '3', name: 'Mode', def: 40 }, 40, 240],                     // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['sand', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,300', form: 40, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Chladni Sand', ground: 'grey' }, 600, 120]],            // 6
+    wires: [[1, 1, 5, paramPort('sand', 'zoom')], [2, 1, 5, paramPort('sand', 'amount')], [3, 1, 5, paramPort('sand', 'form')], [4, 1, 5, 2], [5, 1, 6, 1]] },
+  // 🝓 Guilloché: a field of interlaced waves and rosettes, engraved and lit by the dial
+  guilloche: { label: 'Guilloché', canvas: true, teach: 'The engraved rosettes of banknotes and watch dials, made the way a rose engine makes them. One part does it: Guilloché lays a field of fine interlaced waves, then rosettes over it, each many copies of one wavy loop turned a little each time, so the lines weave into lace, with a spirograph at its heart. The lines are cut into the plate as grooves, lit by the Light Dial. Its second output is the lines alone. Try: wire the Lines output into a Light Engine\'s height, with a Gradient Map as the picture.', nodes: [
+      ['knob', { slot: '1', name: 'Rosette Size', def: 25 }, 40, 40],              // 1  (100 of 50–250)
+      ['knob', { slot: '2', name: 'Line Density', def: 41 }, 40, 140],             // 2  (100 of 30–200)
+      ['knob', { slot: '3', name: 'Lobes', def: 45 }, 40, 240],                    // 3
+      ['dial', {}, 40, 340],                                                       // 4
+      ['rosettes', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,200', form: 45, '~form': '0,100' }, 320, 100],   // 5
+      ['surface', { name: 'Guilloché', ground: 'grey' }, 600, 120]],               // 6
+    wires: [[1, 1, 5, paramPort('rosettes', 'zoom')], [2, 1, 5, paramPort('rosettes', 'amount')], [3, 1, 5, paramPort('rosettes', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+  // 🝓 Binary Pattern: Bit Grid, drawn on its own soft noise
+  mathnoise: { label: 'Binary Pattern', canvas: true, teach: 'One part makes it: Bit Grid, a grid of small marks (filled and empty squares, dashes and bars, mostly dark, some light) that surface wherever a soft noise rises past a gate. Glyph Zoom is the size of a cell, Emergence how low the gate sits: more of the grid shows as it rises. Try: wire a Gradient into Bit Grid\'s Where, so the marks surface from one side of the page.', nodes: [
+      ['knob', { slot: '1', name: 'Glyph Zoom', def: 10 }, 40, 40],                // 1  (140 of 100–500)
+      ['knob', { slot: '2', name: 'Emergence', def: 48 }, 40, 140],                // 2  (130 of 30–240)
+      ['bits', { zoom: 140, '~zoom': '100,500', amount: 130, '~amount': '30,240' }, 320, 60],   // 3
+      ['surface', { name: 'Binary Pattern', ground: 'grey' }, 600, 80]],          // 4
+    wires: [[1, 1, 3, paramPort('bits', 'zoom')], [2, 1, 3, paramPort('bits', 'amount')], [3, 1, 4, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
   knotwork: { label: 'Knotwork', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
       ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)
@@ -32479,7 +32711,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'flowers'){
     result = genFlowers(w,h,amt,zoom,tint1,tint2,form,light,extra.glow);
   } else if(type === 'inkbleed'){
-    result = genInkBleed(w,h,amt,zoom,form,extra.shape/100,tint1,tint2);
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Ink Blot (chains.js)
   } else if(type === 'crackedglaze'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'bokeh'){
@@ -32487,7 +32719,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'embers'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
   } else if(type === 'tessellate'){
-    result = genTessellate(w,h,amt,zoom,light,tint1,tint2,extra.mat,extra.glow);
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Facet Field (chains.js)
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
@@ -32519,9 +32751,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'brushstrokes'){
     result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
   } else if(type === 'sigils'){
-    result = genSigils(w,h,amt,zoom,light,form,extra.mat);
+    result = genChain(type, w, h, light, extra);           // Sigils (chains.js)
   } else if(type === 'mathnoise'){
-    result = genMathNoise(w,h,amt,zoom);
+    result = genChain(type, w, h, light, extra);           // Bit Grid (chains.js)
   } else if(type === 'linen'){
     result = genChain(type, w, h, light, extra, tint1, tint2);
   } else if(type === 'coldpress'){
@@ -32535,9 +32767,9 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'athanorsteps'){
     result = genAthanorSteps(w,h,light,tint1,tint2,extra);
   } else if(type === 'guilloche'){
-    result = genGuilloche(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Guilloché (chains.js)
   } else if(type === 'chladni'){
-    result = genChladni(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Chladni Sand (chains.js)
   } else if(type === 'contour'){
     result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
@@ -32567,11 +32799,11 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'cityscape'){
     result = genCityscape(w,h,amt,zoom,tint1,tint2,extra.glow);
   } else if(type === 'blackhole'){
-    result = genBlackHole(w,h,amt,zoom,light,form);
+    result = genChain(type, w, h, light, extra);           // Black Hole (chains.js)
   } else if(type === 'water'){
     result = genWater(w,h,amt,zoom,light,form,extra.shape/100,extra.hueSpread/100,extra.tilt,extra.mat);
   } else if(type === 'moon'){
-    result = genMoon(w,h,amt,zoom,form,extra.shape/100);
+    result = genChain(type, w, h, light, extra);           // Fractal Moon (chains.js)
   } else if(type === 'aurora'){
     result = genAuroraVeil(w,h,amt,zoom,light,tint1,tint2,form);
   } else if(type === 'hatch'){
@@ -33507,7 +33739,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Mimas';
+const RELEASE = 'Saturn–Methone';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-15';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -34336,7 +34568,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-15 · fae2407";
+const STAMP = "2026-10-15 · 52075a0";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -38324,6 +38556,77 @@ const WIKI_PARTS = {
     ins: { ways: 'Where it may grow: light areas are open.', 'grow from': 'The side it grows in from (wire the Light Dial).' },
     outs: { wires: 'The network.', glow: 'A soft glow around it.' },
     set: { amount: 'How far it reaches.', branching: 'How often it branches.', roots: 'How many starting points.', inner: 'Starts inside the page rather than at the edge.', slide: 'Moves the start along the edge.', zoom: 'Scale.', width: 'Line width.', keep: 'How strictly it follows the Ways.', variant: 'Another network.' },
+  },
+  sigilmarks: {
+    line: "Sigils inscribed with a broad nib, cut into the ground or raised from it, and lit by the dial: Sigil Scatter’s marks.",
+    about: "A broad nib makes a stroke thick where it crosses the nib’s angle and thin where it runs along it: the thick-and-thin that makes writing look written. This part inscribes sigils that way, ink pooling where a stroke ends and bleeding a little into the page. The dark ones are cut into the ground like a chisel’s V-groove, the light ones stand raised, and the light engine lights that relief by the dial.",
+    ins: {"light from": "The light’s direction (wire the Light Dial)."},
+    outs: {"sigils": "The sigils on a mid-gray ground, cut and raised, lit."},
+    set: {"zoom": "The size of the sigils.", "amount": "How many are inscribed.", "form": "The hand: steady at 0, trembling above, the nib skipping into scratches and spatter near 100.", "variant": "Other sigils, in other places."},
+    tips: ["Turn the dial low for long shadows in the cuts."],
+    see: ["part:scatter", "part:knotwork", "heights"],
+  },
+  blot: {
+    line: "A Rorschach blot: ink dropped on one half of a folded sheet and pressed, mirrored, bleeding as it dries.",
+    about: "Ink is dropped on one half of a sheet, the sheet is folded and pressed, and the blot opens mirrored. Wetness lets it bleed: pooled rims, pale mottled middles, wicking into the fibres, drips and splatter. Color lets a second ink join the first, then whole pastel figures; the seed decides within that.",
+    ins: {"ink": "The ink’s color (empty: the surface’s Ink Hue).", "accent": "The second ink’s color (empty: the surface’s Accent Hue)."},
+    outs: {"blot": "The blot, in its own colors, on white paper."},
+    set: {"zoom": "The size of the blot.", "amount": "How far the ink spreads.", "form": "Wetness: crisp and solid at 0; pooled, mottled, wicking and dripping toward 100.", "color": "Black ink alone at 0, red joining it, whole pastel figures at 100.", "variant": "Another blot."},
+    tips: ["Press ⟳ Seed until you see something."],
+    see: ["part:mirror", "part:pigment", "part:wash"],
+  },
+  facets: {
+    line: "A field of cut facets, each tilted its own way, so the light catches some and leaves others dark: Facet Field.",
+    about: "The plane is divided into cells (a Voronoi diagram), and each cell is a flat facet tilted its own way, like a cut stone or crumpled foil. The light engine lights them from the dial, so some flash and some fall into shade, and the seams between them can glow.",
+    ins: {"light from": "The light’s direction (wire the Light Dial).", "light hue": "The light’s color (empty: the surface’s Light Hue).", "material hue": "The stone’s own color (empty: the surface’s Material Hue)."},
+    outs: {"facets": "The lit facets."},
+    set: {"zoom": "The size of a facet.", "amount": "Irregularity: even cells at 0, broken apart as it rises.", "variant": "Other facets."},
+    tips: ["Lower the light toward the horizon: more facets fall into shade."],
+    see: ["part:cells", "part:material", "heights"],
+  },
+  blackhole: {
+    line: "A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.",
+    about: "Every pixel follows a ray of light back past the hole, bent by its gravity: the stars behind are lensed into arcs and rings, and the disc of hot matter round the hole is seen over it and, bent round, under it too. The dial is where you look from.",
+    ins: {"view from": "Where you look from (wire the Light Dial)."},
+    outs: {"sky": "The hole, its disc and the lensed sky."},
+    set: {"zoom": "Chaos: how stirred the disc is.", "amount": "How full of particles the disc is.", "form": "Jets: beams fired from the poles, none at 0.", "variant": "Another sky, another disc."},
+    tips: ["Turn the dial slowly and watch the disc tilt."],
+    see: ["part:starfield", "part:polar"],
+  },
+  moon: {
+    line: "A moon whose seas and craters are fractal noise, in the seed’s phase, under a night sky of faint stars and cloud.",
+    about: "The moon’s face is fractal noise: broad dark seas, then finer and finer craters as Fractal Depth rises. Its phase comes from the seed (the same as §MoonPhase!seed), and it hangs in a night sky of faint stars, with cloud drifting across.",
+    outs: {"moon": "The moon and its sky."},
+    set: {"zoom": "The size of the moon.", "amount": "Fractal Depth: how fine its detail goes.", "form": "How much cloud drifts across.", "night": "How dark the sky around it is.", "variant": "Another moon, another phase."},
+    tips: ["Clouds at 0 and Night Sky at 100 for a clear night."],
+    see: ["part:starfield", "seeds"],
+  },
+  rosettes: {
+    line: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',
+    about: 'The rose engine and the geometric lathe engraved banknotes and watch dials with lines too fine and too regular to copy by hand. This part lays a field of fine waves in two interlaced families, then one to three rosettes, each a lobed loop repeated many times with its phase stepped round, so the copies cross and weave into lace, and at the heart a spirograph that closes on itself. The lines are cut into the plate as grooves and lit from the dial: one wall catches the light, the other falls into shade.',
+    ins: { 'light from': 'The light’s direction (wire the Light Dial).' },
+    outs: { engraving: 'The plate, mid-gray, with the lines cut into it and lit.', lines: 'The lines alone, white on black, to light or color another way.' },
+    set: { zoom: 'The size of the rosettes and the waves.', amount: 'How close the lines lie: the field’s spacing and the number of copies.', form: 'How many lobes each rosette turns: a few broad petals at 0, a fine crown at 100.', variant: 'Other rosettes, in other places.' },
+    tips: ['Wire Lines into Gradient Map for colored engraving, or into a Light Engine’s height for deeper cuts.'],
+    see: ['part:material', 'part:knotwork', 'heights'],
+  },
+  sand: {
+    line: 'Sand on a ringing plate: grains thrown off what moves gather on the lines where nothing does (or wherever a map is white).',
+    about: 'A metal plate set ringing by a bow vibrates in a standing wave. Sand on it is thrown off everything that moves and settles on the nodal lines, where nothing does: Ernst Chladni showed it in 1787, and the figures still carry his name. This part plays the plate (the square plate’s wave, as Paul Bourke writes it, the seed choosing its mode) and scatters the grains, each a lit speck with a small shadow away from the light.',
+    ins: { where: 'A gray map: the grains gather where it is white, in place of the plate’s own lines.', 'light from': 'The light’s direction (wire the Light Dial), for each grain’s shading and shadow.' },
+    outs: { sand: 'The sand on a mid-gray ground.' },
+    set: { zoom: 'The size of a grain.', amount: 'How much sand is poured.', form: 'The plate’s mode: a few lines at 0, many at 100.', variant: 'Another wave and another pouring.' },
+    tips: ['Wire Contour Lines or Cells’ Edges into Where for sand that traces them.', 'Raise Grain Size and lower Sand for a sparse, coarse scatter.'],
+    see: ['part:scatter', 'part:contours', 'heights'],
+  },
+  bits: {
+    line: 'A grid of small marks (squares, dashes, bars) that surface wherever a field rises: Binary Pattern’s glyphs.',
+    about: 'Bit Grid divides the page into square cells and asks a field, at each one, whether to mark it. Where the field is low the cell stays empty ground; past a gate it holds a mark (a filled square, an empty one, a dash or a bar, most of them dark and some light), and the higher the field rises the more strongly the mark is drawn. With nothing wired in, the field is its own soft noise, so the marks gather in drifts, like data surfacing.',
+    ins: { where: 'A gray map that decides where marks surface (white: everywhere it can). Empty: its own soft noise.' },
+    outs: { pattern: 'The marks on a mid-gray ground, ready for the page’s hues and blends.' },
+    set: { zoom: 'The size of a cell: larger cells, fewer and bigger marks.', amount: 'How low the gate sits: more of the grid shows as it rises.', variant: 'Another draw of the marks and the noise.' },
+    tips: ['Wire a Gradient into Where, so the marks surface from one side of the page.', 'Wire The Poem’s Distance in, inverted, to keep the marks off the words.'],
+    see: ['part:scatter', 'part:grid', 'graymap'],
   },
   traces: {
     line: 'A circuit board’s copper: chips, and buses of traces routed between them that turn together, ending in vias and pads.',

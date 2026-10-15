@@ -14,7 +14,8 @@
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
-import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed, kitCanvas } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed, kitCanvas, CPU, cpx, canonArea, lightVec } from './texCore.js';
+import { genSigils, genInkBleed, genTessellate, genBlackHole } from './texChaos.js';
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
@@ -128,7 +129,142 @@ function chaosCracks(w, h, o){
   return { segs };
 }
 
+// Draw a bow along the edge:
+// the sand runs from what is moving
+// to where nothing moves.
+/**
+ * Chladni Sand — sand on a plate set ringing by a bow (Chladni, 1787): the
+ * sand runs off what moves and gathers on the NODAL LINES, where nothing
+ * does. The plate's pattern is the standing wave of a square plate (as Paul
+ * Bourke writes it): cos(nπx)cos(mπy) − cos(mπx)cos(nπy), the seed choosing
+ * the mode (n, m) and blending a neighbour into it. Each grain is a lit speck
+ * with its own small shadow from the dial; a few stray grains still roam.
+ * GRAIN SIZE · SAND · MODE (simple, a few lines → complex, many)
+ * SAND (the part): the same grains on any gray map wired into Where (they gather where it is white).
+ */
+function chaosSand(w,h,amt,zoom,light,form,where){
+  amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
+  const modeK=Math.max(0,Math.min(1, form==null?0.4:form));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d', CPU); ctx.fillStyle='#808080'; ctx.fillRect(0,0,w,h);
+  const unit=Math.min(w,h), aspX=w/unit, aspY=h/unit;
+  // the mode: higher MODE, higher n and m
+  const lo=1 + Math.round(modeK*6), n=lo + Math.floor(Math.random()*3), m=Math.max(1, n + 1 + Math.floor(Math.random()*(2 + modeK*4)));
+  const n2=n + (Math.random()<0.5 ? 1 : 2), m2=m + 1, mix=0.15 + Math.random()*0.35, ph=Math.random()*0.4;
+  const plate=(u,v)=>{ const X=u*aspX, Y=v*aspY, P=Math.PI;
+    const a=Math.cos(n*P*X)*Math.cos(m*P*Y) - Math.cos(m*P*X)*Math.cos(n*P*Y);
+    const b=Math.cos(n2*P*X + ph)*Math.cos(m2*P*Y) - Math.cos(m2*P*X)*Math.cos(n2*P*Y + ph);
+    return a*(1-mix) + b*mix; };
+  // sand gathers where the plate is still: density from |amplitude|, thin lines
+  const lineW=0.045 + 0.035*(1-modeK);
+  const count=Math.round(canonArea(w,h)/(3072*3072)*420000*amt);
+  const lv=lightVec(light==null?315:light), lm=Math.hypot(lv.lx,lv.ly)||1, sdx=lv.lx/lm, sdy=lv.ly/lm;
+  // grains are SPLATTED, not drawn one by one: each adds its area (canonical,
+  // so a preview holds the same sand as the export) to the pixels it covers,
+  // and its shadow, a little away from the light, to a shadow layer
+  const N=w*h, SAND=new Float32Array(N), SH=new Float32Array(N), BR=new Float32Array(N);
+  const shOff=cpx(1.2), splat=(arr, x, y, a)=>{ const x0=Math.floor(x), y0=Math.floor(y), fx=x-x0, fy=y-y0;
+    if(x0<0||y0<0||x0>=w-1||y0>=h-1) return;
+    const i=y0*w+x0; arr[i]+=a*(1-fx)*(1-fy); arr[i+1]+=a*fx*(1-fy); arr[i+w]+=a*(1-fx)*fy; arr[i+w+1]+=a*fx*fy; };
+  for(let k=0, tries=0; k<count && tries<count*14; tries++){
+    const u=Math.random(), v=Math.random(), am=where ? 0 : plate(u,v), p=where ? where(u,v) : Math.exp(-(am/lineW)*(am/lineW));
+    if(Math.random() >= p*0.98 + 0.01) continue;
+    k++;
+    const r=cpx((0.55 + Math.random()*0.9)*zoom), area=Math.PI*r*r, x=u*w, y=v*h, t=Math.random();
+    // a big grain covers several pixels: spread it over its footprint
+    if(r > 1.2){ const R=Math.ceil(r); for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){ if(dx*dx+dy*dy>r*r) continue; splat(SAND, x+dx, y+dy, 1); splat(BR, x+dx, y+dy, t + (-(dx*sdx+dy*sdy)/r)*0.35); splat(SH, x+dx+sdx*shOff, y+dy+sdy*shOff, 1); } }
+    else { splat(SAND, x, y, area); splat(BR, x, y, area*t); splat(SH, x+sdx*shOff, y+sdy*shOff, area); }
+  }
+  const img=ctx.createImageData(w,h), d=img.data;
+  for(let i=0;i<N;i++){
+    const sd=Math.min(1, SAND[i]), sh=Math.min(1, SH[i])*(1-sd), br=SAND[i] > 0 ? BR[i]/SAND[i] : 0;
+    const sand=200 + br*45, v=128*(1 - sh*0.45) + (sand - 128)*sd;
+    const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  return c;
+}
+
+// Counting backwards from
+// a number nobody wrote down.
+// The grid keeps the score.
+// BIT GRID (Binary Pattern's marks): a grid of small marks (filled and empty squares, dashes, bars) that surface
+// wherever a field rises past a gate. The field is its own soft noise, or any gray map wired into Where.
+function chaosBitGrid(w, h, amt, zoom, where){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', CPU);
+  ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, w, h);
+  const cell = Math.max(cpx(6), Math.round((Math.max(w, h)/72)*zoom));    // floor in canonical pixels
+  const cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
+  const gw = Math.max(2, Math.round(cols/6)), gh = Math.max(2, Math.round(rows/6));
+  const field = where ? null : makeNoiseGrid(gw, gh);
+  for(let ry = 0; ry < rows; ry++){
+    for(let rx = 0; rx < cols; rx++){
+      const n = where ? where(rx/cols, ry/rows) : sampleNoiseGrid(field, gw, gh, rx/cols, ry/rows);
+      // low field values stay empty ground; the pattern surfaces out of it
+      const gate = Math.max(0.02, Math.min(0.95, 0.46/amt));
+      if(n < gate) continue;
+      const strength = (n - gate)/(1 - gate);
+      const x = rx*cell, y = ry*cell, pad = cell*0.22;
+      const dark = Math.random() < 0.7, tone = dark ? 26 : 232;
+      ctx.globalAlpha = 0.18 + strength*0.62*Math.random();
+      ctx.strokeStyle = `rgb(${tone},${tone},${tone})`; ctx.fillStyle = `rgb(${tone},${tone},${tone})`;
+      ctx.lineWidth = Math.max(cpx(0.5), cell*0.09);
+      const kind = Math.floor(Math.random()*4);
+      if(kind === 0) ctx.fillRect(x + pad, y + pad, cell - pad*2, cell - pad*2);
+      else if(kind === 1) ctx.strokeRect(x + pad, y + pad, cell - pad*2, cell - pad*2);
+      else if(kind === 2){ ctx.beginPath(); ctx.moveTo(x + pad, y + cell*0.5); ctx.lineTo(x + cell - pad, y + cell*0.5); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(x + cell*0.5, y + pad); ctx.lineTo(x + cell*0.5, y + cell - pad); ctx.stroke(); }
+    }
+  }
+  ctx.globalAlpha = 1;
+  return c;
+}
+
+// the texture's own seed (+ Variant), so a texture made of one of these parts draws as it always did
+const chaosSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+// a color from a port (0–1 channels), as the generators take it: a hex code
+const chaosHex = v => Array.isArray(v) ? '#' + v.slice(0, 3).map(c => Math.round(Math.max(0, Math.min(1, c))*255).toString(16).padStart(2, '0')).join('') : null;
 export const CHAOS_STEPS = {
+  // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
+  sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      return [withSeed(chaosSeed(E, n), () => genSigils(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 20)/100, E.ctx.mat || null))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  blot: { cat: 'Marks', label: 'Ink Blot', ins: ['ink', 'accent'], outs: ['blot'], io: { ins: ['colour', 'colour'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Blot Scale', 100, 60, 400), CHAOS_R('amount', 'Spread', 100, 30, 240), CHAOS_R('form', 'Wetness', 50), CHAOS_R('color', 'Color', 35), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, t = E.ctx.tints || [];
+      const ink = chaosHex(E.input(n, 1)) || t[0] || '#141414', acc = chaosHex(E.input(n, 2)) || t[1] || '#B0283A';
+      return [withSeed(chaosSeed(E, n), () => genInkBleed(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 50)/100, E.num(n, 'color', 35)/100, ink, acc))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  facets: { cat: 'Textures', label: 'Facet Field', ins: ['light from', 'light hue', 'material hue'], outs: ['facets'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Facet Size', 100, 50, 400), CHAOS_R('amount', 'Irregularity', 0, 0, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), t = E.ctx.tints || [];
+      const t1 = chaosHex(E.input(n, 2)) || t[0] || null, t2 = chaosHex(E.input(n, 3)) || t[1] || null;
+      return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      return [withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    // a canvas pass at full size, its grains under the texture's own seed (+ Variant): Chladni Sand as it was
+    paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null, dv = E.input(n, 2);
+      const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null, light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => chaosSand(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 40)/100, where))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  bits: { cat: 'Marks', label: 'Bit Grid', ins: ['where'], outs: ['pattern'], io: { ins: ['field'], outs: ['image'] },
+    params: [CHAOS_R('zoom', 'Cell Size', 140, 100, 500), CHAOS_R('amount', 'Emergence', 130, 30, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 2,
+    // a canvas pass at full size; its marks drawn under the texture's own seed (+ Variant), so Binary Pattern is as it was
+    paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null;
+      const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null;
+      const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
+      return [withSeed(seed, () => chaosBitGrid(w, h, Math.max(0.02, E.num(n, 'amount', 130)/100), Math.max(0.25, E.num(n, 'zoom', 140)/100), where))]; },
+    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
     params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
