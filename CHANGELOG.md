@@ -4,6 +4,15 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Aegaeon (2026-10-15)
+
+- **The wiki shows what it teaches.** Each concept page in the Athanor's
+  wiki now has a figure: a small working graph, with what each of its parts
+  makes, and a line saying what to see. There are eleven: gray maps,
+  pictures, colors, numbers, curves, driving a setting with a map, wire
+  ranges, masks, blend modes, heights, and seeds. They are drawn live by the
+  app, so they always show what the parts really do.
+
 ## Saturn–Janus (2026-10-15)
 
 - **The Athanor's bar, simpler.** It now reads: Open, Keep, undo and redo,

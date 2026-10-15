@@ -229,7 +229,7 @@ default.
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in the Athanor's Open menu; bundled before chains.js |
 | `athanor.js` | the graph evaluator (in the worker), its cache (`ATHANOR_KEPT`), budget, versions, starters, `validateGraph` |
-| `athanorWiki.js` · `athanorWikiParts.js` | the Athanor's wiki: concept articles, the first-surface tutorial, glossary, search (`WIKI_ARTICLES`, `wikiArticleHtml`, `wikiSearch`) · every part's page (`WIKI_PARTS`). Bundled before forge.js |
+| `athanorWiki.js` · `athanorWikiParts.js` | the Athanor's wiki: concept articles, the first-surface tutorial, glossary, search (`WIKI_ARTICLES`, `wikiArticleHtml`, `wikiSearch`), and figures (`WIKI_FIGURES`, `{{fig:key}}`: a small graph whose every part the worker draws when the page opens) · every part's page (`WIKI_PARTS`). Bundled before forge.js |
 | `forge.js` | the editor UI (Drawflow): menus, wiring, the wiki panel, the shelf of kept surfaces |
 
 **The rest:** `release.js` (the release name), `build.mjs` (the bundler; its

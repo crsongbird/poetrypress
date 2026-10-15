@@ -6,7 +6,12 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Janus)
+## 1 · Ruby to judge (new in Saturn–Aegaeon)
+- THE WIKI'S FIGURES: eleven concept pages (gray maps, pictures, colors, numbers, curves, mapping, wire
+  ranges, masks, blend modes, heights, seeds) open with a small graph and every part's picture. Clear? Which
+  other pages want one?
+
+## From Saturn–Janus
 - THE ATHANOR'S BAR (Ruby: "Start… Kept, Keep, Use: Use feels redundant; the other menus feel… not
   particularly good"): Open ▾ (your surfaces, starters, Basics, studies, the app's textures, each with what it
   teaches) · Keep · ↶ ↷ · the view · ⋯ (copy, your shelf, Tidy, Revert, Clear, the wiki) · ✓ On the Page /
@@ -43,8 +48,7 @@ Recommendations".
 - Renamed parts and settings (Simple Lighting, Paint Swipes, Growth Medium, Differential Growth, Watercolor
   Bleed, Stained Glass, Card Deal; Black Point / White Point, Cutoff, Octaves; ports "map"/"picture").
 - Releases now follow Saturn's moons (Jupiter's ran out at Kore). Pandora is skipped: say if it should be in.
-- Next for the wiki: a picture for each concept article (an example graph and its result), and the PML
-  guide outside the Athanor in the same teaching voice.
+- Next for the wiki: the PML guide outside the Athanor in the same teaching voice.
 
 ## From Jupiter–Cyllene
 

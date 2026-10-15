@@ -2980,6 +2980,10 @@ setTimeout(paintShelfOptions, 0);
 const forgeDeps = () => ({ $, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
+  // a wiki figure: every part of its little graph, at canonical settings, each in its own slot so figures don't wait on each other
+  figure: (json, key, paint) => { const ids = Object.keys(athanorNodes(json)).sort((a, b) => +a - +b); if(!ids.length) return;
+    const T = 112, { cols, rows } = athanorSheetLayout(ids.length);
+    whenTexture('wikiFig:' + key, 'athanorsteps', cols*T, rows*T, keptOpts(json, T), sheet => paint(sheet, ids, T, cols)); },
   ask: o => askSure(o), prompt: o => modalPrompt(o), refuse: (t, b) => hardNo(t, b), sound: fn => murmur.play(fn), lock: LOCK_GLYPH, toast: t => toast(t),
   onShelf: () => { if(typeof paintShelfOptions === 'function') paintShelfOptions(); },
   validate: json => validateGraph(json),

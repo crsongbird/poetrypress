@@ -389,16 +389,20 @@ export const ATHANOR_STARTERS = {
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){
   const S = ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] || TEXTURE_CHAINS[name]; if(!S) return null;
+  // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
+  return athanorGraphOf(S, ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] ? ATHANOR_VERSION : 2);
+}
+/** A graph from a spec of nodes [type, data, x?, y?] and wires [from, output, to, input] (1-based), laid out to read. */
+export function athanorGraphOf(S, v = ATHANOR_VERSION){
   const data = {};
-  S.nodes.forEach(([type, d, x, y], i) => { const id = i + 1;
+  S.nodes.forEach(([type, d, x = 0, y = 0], i) => { const id = i + 1;
     data[id] = { id, name: type, data: { ...d }, class: '', html: '', typenode: false, inputs: {}, outputs: {}, pos_x: x, pos_y: y }; });
   for(const [a, o, b, j] of S.wires){
     ((data[b].inputs['input_' + j] ||= { connections: [] }).connections).push({ node: String(a), input: 'output_' + o });
     ((data[a].outputs['output_' + o] ||= { connections: [] }).connections).push({ node: String(b), output: 'input_' + j });
   }
   layoutAthanor(data);
-  // (a texture's own chain stays v2: its picture never changes; a starter to learn from is the newest)
-  return { v: ATHANOR_STARTERS[name] || ATHANOR_STUDIES[name] ? ATHANOR_VERSION : 2, drawflow: { Home: { data } } };
+  return { v, drawflow: { Home: { data } } };
 }
 /**
  * Lays a graph out to read left to right: each node in the column of its

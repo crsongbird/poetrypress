@@ -79,6 +79,7 @@ export const WIKI_ARTICLES = [
 <p>Any output can be wired into any input. When the kinds differ, the value is converted on the way: see [[convert]].</p>` },
   { id: 'graymap', group: 'Data and wires', title: 'Gray maps', body: `
 <p>A <b>gray map</b> is the basic material of the Athanor. It is a grid covering the page, with one number at every point, from 0 to 1. It is shown as gray: 0 is black, 1 is white, 0.5 is middle gray.</p>
+{{fig:graymap}}
 <p>The same gray map can mean very different things depending on where it is wired:</p>
 <ul>
 <li>As a <b>mask</b>, white means “here” and black means “not here” (Mix, Blend). See [[masks]].</li>
@@ -94,6 +95,7 @@ export const WIKI_ARTICLES = [
 </ul>` },
   { id: 'picture', group: 'Data and wires', title: 'Pictures', body: `
 <p>A <b>picture</b> is a color image. On a screen, every color is a mix of red, green and blue light, so a picture is really <b>three gray maps stacked together</b>: one says how much red there is at each point, one green, one blue. Where all three are 1, you see white; where all three are 0, black; where only red is high, red.</p>
+{{fig:picture}}
 <p>That is why the two kinds convert so easily:</p>
 <ul>
 <li>A <b>gray map wired into a picture input</b> becomes a gray picture: the same map used for red, green and blue.</li>
@@ -109,13 +111,16 @@ export const WIKI_ARTICLES = [
 <p>A Surface set to <b>gray</b> treats whatever arrives as a gray map and lets the page color it with its own hues. A Surface set to <b>color</b> shows the picture as it is. See [[surface]].</p>` },
   { id: 'color', group: 'Data and wires', title: 'Colors', body: `
 <p>A <b>color</b> wire carries one color for the whole page. Colors come from <b>Hue</b> parts (the page’s hue pickers), <b>Accent</b> parts (the poem’s accent colors), and the <b>Color</b> part (a hex code you type).</p>
+{{fig:color}}
 <p>Parts take colors through ports like <i>light hue</i>, <i>ink</i>, <i>glass hue</i>. When such a port is empty, the part uses its own default (often the page’s hue), so wiring a color in is a way to <b>override</b> it.</p>
 <p>Using Hue parts rather than fixed colors lets whoever uses your surface recolor it from the page. See [[controls]].</p>` },
   { id: 'number', group: 'Data and wires', title: 'Numbers', body: `
 <p>A <b>number</b> wire carries one value from 0 to 1, the same everywhere on the page. Numbers come from <b>Knobs</b> (page sliders), the <b>Light Dial</b>, <b>Number</b>, <b>Random Number</b> and <b>Seed</b>.</p>
+{{fig:number}}
 <p>Numbers are mostly wired into <b>⚙ setting ports</b>, where 0 means the setting’s lowest value and 1 its highest. See [[ports]] and [[ranges]].</p>` },
   { id: 'curve', group: 'Data and wires', title: 'Curves', body: `
 <p>A <b>curve</b> is a rule for changing one number into another. Picture a graph: along the bottom, inputs from 0 to 1; up the side, outputs from 0 to 1. A straight diagonal line changes nothing; a line that rises quickly brightens the darks; a wave makes values go up and down repeatedly.</p>
+{{fig:curve}}
 <p>You meet curves in photo editors (the Curves adjustment) and in animation (easing). Here they do two jobs:</p>
 <ul>
 <li><b>Tone Curve</b> runs every value of a picture through a curve: Stairs posterizes softly, Wave makes bands.</li>
@@ -150,6 +155,7 @@ export const WIKI_ARTICLES = [
 <p>So the rest of the part still shows something useful, its preview uses a stand-in image (an exclamation mark) in place of the missing input. The stand-in never reaches the Surface. Wire something into the red port and the warning goes.</p>` },
   { id: 'mapping', group: 'Data and wires', title: 'Driving a setting with a map', body: `
 <p>This is the idea that makes node editors powerful (Filter Forge calls it <b>parameter mapping</b>). A setting doesn’t have to be one value for the whole page: wire a <b>gray map</b> into its ⚙ port and the setting takes a different value at every point, read from the map.</p>
+{{fig:mapping}}
 <h3>An example</h3>
 <p>Take a <b>Blur</b>. Its Radius is normally the same everywhere. Now wire a <b>Gradient</b> (left to right) into Radius’s ⚙: the left edge, where the gradient is black, isn’t blurred; the right edge, where it is white, is blurred fully; in between it grows steadily. A focus fall-off, made from two parts.</p>
 <p>Other ideas: noise on a Threshold’s Cutoff for uneven edges; The Poem’s Distance on a Mix’s amount so a texture fades near the words; noise on Scatter’s Size.</p>
@@ -161,6 +167,7 @@ export const WIKI_ARTICLES = [
 </ul>` },
   { id: 'ranges', group: 'Data and wires', title: 'Wire ranges (remapping)', body: `
 <p>A wire into a ⚙ port normally sweeps the setting’s whole range. Often you want less, or want it reversed. A <b>wire range</b> sets the two values the setting takes at the wire’s lowest (0) and highest (1).</p>
+{{fig:ranges}}
 <h3>An example</h3>
 <p>You put a Knob on the page and wire it into Perlin Noise’s <b>Roughness</b> (0–100). Above 50 the noise looks harsh, so half the slider is wasted. Open Roughness’s menu and choose <b>Set wire range…</b>, then enter <b>0, 50</b>. Now the whole slider sweeps 0 to 50.</p>
 <p>Want the slider called “Smoothness” instead? Rename the Knob and enter the range backwards, <b>50, 0</b>: the slider at 0 now gives Roughness 50, and the slider at 100 gives Roughness 0.</p>
@@ -169,6 +176,7 @@ export const WIKI_ARTICLES = [
   // ------------------------------------------------------------------ Building techniques
   { id: 'masks', group: 'Building techniques', title: 'Masks, mixing and blending', body: `
 <p>A <b>mask</b> is a gray map used to say where: white means yes, black means no, gray means partly. Most of the craft of combining textures is making good masks.</p>
+{{fig:masks}}
 <h3>Using a mask</h3>
 <ul>
 <li><b>Mix</b> shows picture A where the mask is black and picture B where it is white.</li>
@@ -185,6 +193,7 @@ export const WIKI_ARTICLES = [
 <p>Masks combine like sets: <b>Max</b> of two masks is their union, <b>Min</b> their overlap, <b>Invert</b> the opposite. See [[blendmodes]].</p>` },
   { id: 'blendmodes', group: 'Building techniques', title: 'Blend modes', body: `
 <p>A blend mode decides how a layer combines with what is beneath it. The same modes appear in every image editor.</p>
+{{fig:blendmodes}}
 <table class="wk-table"><tr><th>Mode</th><th>Effect</th></tr>
 <tr><td>Normal</td><td>The layer covers what is beneath.</td></tr>
 <tr><td>Multiply</td><td>Darkens: white leaves things unchanged, black makes black. For ink, shadows, grime.</td></tr>
@@ -196,6 +205,7 @@ export const WIKI_ARTICLES = [
 <p>The whole Surface is also blended onto the page with the blend chosen under Surface.</p>` },
   { id: 'heights', group: 'Building techniques', title: 'Height maps and light', body: `
 <p>A <b>height map</b> is a gray map read as a landscape: white is high, black is low. Lit from one side, it looks raised: the side facing the light is bright, the other side dark, and taller parts cast shadows. This is how flat textures become stone, paint and paper.</p>
+{{fig:heights}}
 <h3>Two ways to light</h3>
 <ul>
 <li>Wire a gray map into the <b>Surface’s Height</b>: the page lights it with its own dial.</li>
@@ -210,6 +220,7 @@ export const WIKI_ARTICLES = [
 </ul>` },
   { id: 'seeds', group: 'Building techniques', title: 'Seeds, Variation and chance', body: `
 <p>Random parts (noise, cells, scattered marks) aren’t truly random: they follow a <b>seed</b>, a number that decides the pattern. The same seed always gives the same picture, so a look can be saved and shared exactly.</p>
+{{fig:seeds}}
 <h3>Key facts</h3>
 <ul>
 <li>Every random part uses the <b>page’s seed</b> combined with its own place in the graph, so two copies of a part still differ.</li>
@@ -333,10 +344,66 @@ export function wikiTitle(id){
 }
 const wkKindChip = t => { const k = WIKI_KINDS[t] || WIKI_KINDS.field;
   return `<a href="#" class="wk-kind" data-wiki="${k[1]}"><i class="fd-swatch" style="background:var(--t-${t in WIKI_KINDS ? t : 'field'})"></i>${k[0]}</a>`; };
-/** [[id]] and [[id|words]] become links; {{k:kind}} a kind chip; {{nodes}} the node limit. */
+
+/**
+ * FIGURES (Ruby: a picture for each concept): a small graph and what each of its parts makes, drawn live by the
+ * texture worker when the page opens (so a figure is always what the parts really do). In an article, {{fig:key}}.
+ *   nodes, wires  the graph (as the starters are written: 1-based)
+ *   rows          what to show: node numbers, with '+' or '→' between (default '→'; ' ' for a gap); one row per line
+ *   labels        a node's own caption, where its part's name isn't enough
+ */
+export const WIKI_FIGURES = {
+  graymap: { caption: 'Perlin Noise makes a gray map; Levels pulls its dark and light points together for more contrast; Threshold cuts it into a mask. Each is a number at every point, shown as gray.',
+    nodes: [['perlin', { scale: 40 }], ['levels', { lo: 30, hi: 72 }], ['threshold', { at: 50, soft: 6 }], ['surface', {}]],
+    wires: [[1, 1, 2, 1], [2, 1, 3, 1], [3, 1, 4, 1]], rows: [[1, 2, 3]] },
+  picture: { caption: 'Gradient Map gives every gray its color: a picture. The Light Engine lights that picture, using the same gray map as its heights.',
+    nodes: [['perlin', { scale: 40 }], ['gradmap', {}], ['material', { relief: 200, ambient: 25 }], ['surface', { ground: 'colour' }]],
+    wires: [[1, 1, 2, 1], [2, 1, 3, 1], [1, 1, 3, 2], [3, 1, 4, 1]], rows: [[1, 2, 3]] },
+  color: { caption: 'Two colors and a gray map go into Tint: the light color where the map is white, the dark color where it is black.',
+    nodes: [['colour', { hex: '#24365C' }], ['colour', { hex: '#F2C8A0' }], ['waves', { freq: 8, angle: 30 }], ['tint', {}], ['surface', { ground: 'colour' }]],
+    wires: [[3, 1, 4, 1], [2, 1, 4, 2], [1, 1, 4, 3], [4, 1, 5, 1]], rows: [[3, '+', 2, '+', 1, '→', 4]], labels: { 1: 'Color (dark)', 2: 'Color (light)' } },
+  number: { caption: 'The same Waves with a number wired into its ⚙ Frequency. A number is one value for the whole page (shown as one flat gray): 0.05 makes a few broad bands, 0.35 many fine ones.',
+    nodes: [['number', { value: 5 }], ['waves', {}], ['number', { value: 35 }], ['waves', {}], ['surface', {}]],
+    wires: [[1, 1, 2, 2], [3, 1, 4, 2], [2, 1, 5, 1]], rows: [[1, 2], [3, 4]], labels: { 1: 'Number 0.05', 3: 'Number 0.35' } },
+  curve: { caption: 'A Curve (here, stairs) reshapes the tones of a smooth Gradient through Tone Curve: each gray moves to the height the curve gives it.',
+    nodes: [['gradient', { angle: 0 }], ['curve', { shape: 'stairs', count: 4 }], ['tonecurve', {}], ['surface', {}]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1]], rows: [[1, '+', 2, '→', 3]] },
+  mapping: { caption: 'A Gradient wired into Blur’s ⚙ Radius: the radius follows the map point by point, so the cells are sharp at the left and soft at the right.',
+    nodes: [['cells', { scale: 30 }], ['gradient', { angle: 0 }], ['blur', {}], ['surface', {}]],
+    wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1]], rows: [[1, '+', 2, '→', 3]] },
+  ranges: { caption: 'One number, two wire ranges. The first Waves sweeps its whole Frequency range; the second’s range is set to 16 down to 4, so the same number gives broader bands.',
+    nodes: [['number', { value: 40 }], ['waves', {}], ['waves', { '~freq': '16,4' }], ['surface', {}]],
+    wires: [[1, 1, 2, 2], [1, 1, 3, 2], [2, 1, 4, 1]], rows: [[1, 2], [1, 3]], labels: { 1: 'Number 0.4', 2: 'Waves (whole range)', 3: 'Waves (16 to 4)' } },
+  masks: { caption: 'Blend lays a layer over a base only where its mask is white: here a Spectrum over a colored noise, inside a Shape Mask’s circle.',
+    nodes: [['perlin', { scale: 40 }], ['gradmap', {}], ['spectrum', { angle: 45 }], ['shape', { form: 'circle', size: 60, soft: 20 }], ['blend', {}], ['surface', { ground: 'colour' }]],
+    wires: [[1, 1, 2, 1], [2, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1]], rows: [[2, '+', 3, '+', 4, '→', 5]], labels: { 2: 'Base', 3: 'Layer', 4: 'Mask' } },
+  blendmodes: { caption: 'The same two layers in three modes. Multiply only darkens, Screen only lightens, Overlay does both, keeping the base’s middle tones.',
+    nodes: [['perlin', { scale: 40 }], ['gradmap', {}], ['waves', { freq: 10, angle: 45 }], ['blend', { mode: 'multiply' }], ['blend', { mode: 'screen' }], ['blend', { mode: 'overlay' }], ['surface', { ground: 'colour' }]],
+    wires: [[1, 1, 2, 1], [2, 1, 4, 1], [3, 1, 4, 2], [2, 1, 5, 1], [3, 1, 5, 2], [2, 1, 6, 1], [3, 1, 6, 2], [4, 1, 7, 1]], rows: [[2, '+', 3, '→', 4, ' ', 5, ' ', 6]],
+    labels: { 2: 'Base', 3: 'Layer', 4: 'Multiply', 5: 'Screen', 6: 'Overlay' } },
+  heights: { caption: 'A gray map read as heights: the Light Engine raises the white and sinks the black, lights the slopes from the dial and lets the peaks cast shadows.',
+    nodes: [['cells', { scale: 22, jitter: 70 }], ['material', { relief: 200, shadow: 85, ambient: 20 }], ['surface', {}]],
+    wires: [[1, 1, 2, 2], [2, 1, 3, 1]], rows: [[1, 2]], labels: { 1: 'Cells (as heights)' } },
+  seeds: { caption: 'The same Perlin Noise with Variation 0 and Variation 37: the same kind of pattern, a different draw. The page’s seed changes every part at once.',
+    nodes: [['perlin', { scale: 40 }], ['perlin', { scale: 40, variation: 37 }], ['surface', {}]],
+    wires: [[1, 1, 3, 1]], rows: [[1], [2]], labels: { 1: 'Variation 0', 2: 'Variation 37' } },
+};
+/** A figure as the page shows it: tiles the editor fills from the worker (data-n: the node), arrows between. */
+function wkFigureHtml(key){
+  const F = WIKI_FIGURES[key]; if(!F) return '';
+  const label = n => (F.labels || {})[n] || ((STEPS[(F.nodes[n - 1] || [])[0]] || {}).label || '');
+  const row = r => { let out = '', prev = false;
+    for(const x of r){ if(x === '+' || x === '→' || x === ' '){ out += `<span class="wk-fig-op" aria-hidden="true">${x === ' ' ? '' : x}</span>`; prev = false; continue; }
+      if(prev) out += '<span class="wk-fig-op" aria-hidden="true">→</span>';
+      out += `<span class="wk-fig-step"><canvas data-n="${x}" width="112" height="112"></canvas><small>${wkEsc(label(x))}</small></span>`; prev = true; }
+    return `<div class="wk-fig-row">${out}</div>`; };
+  return `<figure class="wk-fig" data-fig="${wkEsc(key)}">${F.rows.map(row).join('')}<figcaption>${wkEsc(F.caption)}</figcaption></figure>`;
+}
+/** [[id]] and [[id|words]] become links; {{k:kind}} a kind chip; {{nodes}} the node limit; {{fig:key}} a figure. */
 function wkLinks(html, ctx){
   return html.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, id, words) => `<a href="#" data-wiki="${wkEsc(id)}">${wkEsc(words || wikiTitle(id))}</a>`)
-    .replace(/\{\{k:(\w+)\}\}/g, (m, t) => wkKindChip(t)).replace(/\{\{nodes\}\}/g, String((ctx && ctx.nodes) || 64));
+    .replace(/\{\{k:(\w+)\}\}/g, (m, t) => wkKindChip(t)).replace(/\{\{nodes\}\}/g, String((ctx && ctx.nodes) || 64))
+    .replace(/\{\{fig:(\w+)\}\}/g, (m, k) => wkFigureHtml(k));
 }
 /** A part's page: what it is, its inputs, outputs and settings, what to try, related pages. */
 function wkPartHtml(k, ctx){

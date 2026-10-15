@@ -14,12 +14,12 @@
  * No imports of app state: the page hands in what it needs (deps).
  */
 import { ATHANOR_STUDIES } from './athanorStudies.js';
-import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, layoutAthanor } from './athanor.js';
+import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, athanorGraphOf, layoutAthanor } from './athanor.js';
 import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS } from './appOptions.js';
 import { KEPT, FORGE_BAR, fill } from './strings.js';
-import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiNeighbors } from './athanorWiki.js';
+import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiNeighbors, WIKI_FIGURES } from './athanorWiki.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
@@ -967,9 +967,15 @@ export async function openForge(deps){
     // links between pages, a search, and Back. A part's own menu opens its page (About this part).
     const wiki = { at: 'welcome', back: [] };
     const page = () => doc && doc.querySelector('.wk-page');
+    // A FIGURE: its little graph made in the worker, every part's picture laid into its tile (WIKI_FIGURES)
+    const paintFigures = root => { if(!deps.figure || !root || !root.querySelectorAll) return;
+      root.querySelectorAll('.wk-fig[data-fig]').forEach(fig => { const spec = WIKI_FIGURES[fig.dataset.fig]; if(!spec) return;
+        deps.figure(JSON.stringify(athanorGraphOf(spec)), fig.dataset.fig, (sheet, ids, T, cols) => {
+          fig.querySelectorAll('canvas[data-n]').forEach(cv => { const i = ids.indexOf(String(cv.dataset.n)); if(i < 0) return;
+            cv.getContext('2d').drawImage(sheet, (i % cols)*T, Math.floor(i/cols)*T, T, T, 0, 0, cv.width, cv.height); }); }); }); };
     const goWiki = (id, push = true) => { const pg = page(); if(!pg) return;
       if(push && wiki.at && wiki.at !== id) wiki.back.push(wiki.at); wiki.at = id;
-      pg.innerHTML = wikiArticleHtml(id, forgeWikiCtx()); pg.scrollTop = 0; doc.scrollTop = 0;
+      pg.innerHTML = wikiArticleHtml(id, forgeWikiCtx()); pg.scrollTop = 0; doc.scrollTop = 0; paintFigures(pg);
       const pager = doc.querySelector('.wk-pager'); if(pager){ pager.innerHTML = forgePagerHtml(id); pager.hidden = false; }
       doc.classList.remove('wk-show-nav');
       doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id || (id.startsWith('part:') && a.dataset.wiki === 'cat:' + ((FORGE_NODES[id.slice(5)] || {}).cat))));

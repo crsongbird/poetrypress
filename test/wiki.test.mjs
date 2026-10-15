@@ -57,6 +57,14 @@ const dead = links.filter(([, id]) => !ids.has(id) && !id.startsWith('cat:'));
 check('every link in the wiki leads to a page' + (dead.length ? ': ' + dead.slice(0, 4).map(d => d.join('→')).join(', ') : ''), !dead.length);
 check('the concept pages answer the basics: what a gray map, a picture, a curve and a mask are', ['graymap', 'picture', 'curve', 'masks', 'kinds'].every(id => W.WIKI_ARTICLES.find(a => a.id === id && a.body.length > 400)));
 check('a part page lists its inputs, outputs and settings', (() => { const h = W.wikiArticleHtml('part:levels'); return /Inputs/.test(h) && /Outputs/.test(h) && /Settings/.test(h) && /Black Point/.test(h) && /required/.test(h); })());
+// FIGURES: each a working graph of real parts, each shown somewhere, and each article's figure one that exists
+{ const A = await import('../athanor.js'), F = W.WIKI_FIGURES, used = new Set();
+  for(const a of W.WIKI_ARTICLES) for(const m of a.body.matchAll(/\{\{fig:(\w+)\}\}/g)) used.add(m[1]);
+  const bad = Object.entries(F).filter(([, f]) => { const v = A.validateGraph(JSON.stringify(A.athanorGraphOf(f))); return !v.ok || v.problems.length
+    || f.rows.flat().some(x => typeof x === 'number' && !f.nodes[x - 1]); }).map(([k]) => k);
+  check('every wiki figure is a working graph of real parts, and shows only its own nodes' + (bad.length ? ': ' + bad.join(', ') : ''), !bad.length);
+  check('every figure is shown in an article, and every article\'s figure exists', [...used].every(k => F[k]) && Object.keys(F).every(k => used.has(k)));
+  check('a figure is drawn as tiles for the editor to fill, with its caption', /<canvas data-n="1"/.test(W.wikiArticleHtml('graymap')) && /<figcaption>/.test(W.wikiArticleHtml('graymap'))); }
 check('search finds articles and parts', W.wikiSearch('mask').length > 3 && W.wikiSearch('levels').some(h => h.id === 'part:levels'));
 {
   const ctx = { categories: S.STEP_CATEGORIES, catName: c => c };

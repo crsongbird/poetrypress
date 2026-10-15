@@ -2043,6 +2043,15 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .wk-table td:first-child{ white-space:nowrap; }
 .wk-range{ font-family:var(--ui-code, monospace); font-size:12px; color:var(--fg-dim); white-space:nowrap; }
 .wk-page .wk-kind{ border:0; white-space:nowrap; color:var(--fg-text); }
+/* FIGURES: a small graph, each part's picture in a tile, arrows between; the caption under */
+.wk-fig{ margin:10px 0 14px; padding:10px; border:1px solid var(--fg-line); background:color-mix(in srgb, var(--fg-ground) 70%, transparent); }
+.wk-fig-row{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.wk-fig-row + .wk-fig-row{ margin-top:8px; }
+.wk-fig-step{ display:flex; flex-direction:column; align-items:center; gap:3px; width:84px; }
+.wk-fig-step canvas{ width:84px; height:84px; background:var(--fg-ground); border:1px solid var(--fg-line); image-rendering:auto; }
+.wk-fig-step small{ font-size:10.5px; line-height:1.25; text-align:center; color:var(--fg-dim); }
+.wk-fig-op{ color:var(--fg-dim); font-size:15px; margin-bottom:16px; }
+.wk-fig figcaption{ margin-top:8px; font-size:12px; line-height:1.45; color:var(--fg-dim); }
 .wk-req{ font:11px var(--ui-sans); color:#ff7a7a; border:1px solid currentColor; padding:0 4px; margin-left:4px; }
 .wk-gear{ color:var(--t-value); }
 .wk-see{ margin-top:14px; font-size:13px; color:var(--fg-dim); }
