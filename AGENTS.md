@@ -450,6 +450,11 @@ Other parts of a look:
   - The phone's rules are scoped to `body.is-mobile`.
   - In focus mode there is one scroller.
   - The editor's mirror matches the textarea's metrics.
+  - The textarea is grown to its content (one line of slack, `fitHeight`)
+    inside the scrolling `.editor-wrap`, and must never scroll itself: a
+    scroll on it is undone and the height refitted (Firefox measured long
+    edits short, and the last lines could not be reached). Fonts arriving
+    and the room changing (`fitEditorRoom`) repaint it.
 - **Text layout:** fitting predicts the size and checks the grid around it.
   Widths are remembered and cleared when a font arrives. Keep new text
   layout on that path: text measurement once took ~70% of the page's CPU.
@@ -494,6 +499,29 @@ Other parts of a look:
     `cameraGuide()` draws a wireframe of the shot over the preview (fast, no
     render); the render follows on release.
   - Phone: the two dials side by side, the hues under both in two columns.
+- **The two dials, a standing goal** (Ruby: "every time you look at a
+  texture that has a camera and a viewport you should consider improvements
+  to usability using these dials"):
+  - Any tilt, pan, turn, zoom or position slider belongs on the camera
+    dial (Turn, View, Zoom). Any light is placed with the light dial
+    (direction and height; `caps.lowLight` lets it past the rim).
+  - Use them creatively where it stays intuitive (Ringworld: the light dial
+    is the time of day). But every control on a dial must do what its
+    handle suggests: a turn that changes nothing is worse than no dial.
+  - Done: Lichtenberg, Ringworld, Broken Glass, Scrying Pool, Dune Ripples,
+    Moss on Stone. Waiting: ROADMAP C5.
+- **The oblique camera's turn and lens** (texCore `obliqueFrame(ww, wh,
+  tilt, hRange, cam)`, `cam {turn, zoom}`):
+  - Turn spins the ground about the view's centre the way `groundCam`
+    does, so the dial means one thing everywhere. Zoom is the lens, 60% to
+    400% (the patch grows as the square of zooming out).
+  - Tilt 0 with a turn or zoom is a straight-down camera, not `flat`: no
+    haze, no sky mirrored in the water.
+  - The kitWhole parts read Turn and Camera Zoom with `wholeCam` and turn
+    the light against the camera (`wholeTurned`), so the sun stays where
+    the light dial points while the ground turns under it.
+  - Old looks: the Tilt slider's value became the camera's View (format 4,
+    `retireFormat4Layer`); at the defaults the pictures are unchanged.
 - **The report:** pmlVars drops a line whose surface variable has nothing to
   say (`LINE_DROP`, `ctx.surfOff`). `§Build` shows the release name.
 - **Sounds** (murmur.js): a sound design is data (`MURMUR_DESIGN`).
@@ -787,6 +815,12 @@ the test to the new intent; never weaken it just to pass.
 - Then rewrite the test to the new intent and note the change here.
 - Two never bend: **PML** (poems people wrote must keep rendering) and the
   **word-seed banks** (phrases people have seen).
+- **What people saved, break only on purpose** (Ruby: "it's inevitable that
+  we are going to break things so we should only do so with intention").
+  Keep old looks and graphs working as far as you can; a definite
+  improvement needn't preserve them exactly. When it can't, break knowingly:
+  bump `LOOK_VERSION`, translate the old look in `retireLook` so it lands as
+  near as it can, and say what moved in the CHANGELOG.
 
 - **PML is a contract.** Every existing poem renders identically.
   - `test/fixtures/pml-golden.json` is **never** regenerated: find what
@@ -1006,13 +1040,25 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Era** (7) and **Markings** (8), both 0 by default (the board exactly as
     before). Each chip, name and trace takes its era from its own hash
     (`level` in `genCircuit`), so the slider turns the board part by part;
-    `cirEraChip` draws the future's, quantum and magitech chips, and what of
-    them lights is copper with the chip's grey, so Charge powers it. The
+    `cirEraChip` draws the future's, quantum, atomic and magitech chips, and
+    what of them lights is copper with the chip's grey, so Charge powers it.
+    Five eras: Today, Future, Quantum, Atomic, Magitech. The
     Markings are placed last, in room the board left (`CIR_SAYS`, `CIR_EGGS`,
     runes a–l in `CIR_FONT`): every word made up, no real marks or brands.
-  - Magitech is steampunk (Ruby): brass gears and riveted bars set with
-    crystals, valves, coils wound round traces; the brass is its own output
-    (`brass`), laid over the chips. No sigils.
+  - **Atomic** (the fourth era; it was called Magitech until format 4, and
+    Ruby kept it: "Fallout … do more of that"): brass gears and riveted bars
+    set with crystals, valves, coils wound round traces; the brass is its own
+    output (`brass`), laid over the chips. No sigils.
+  - **Magitech** (the fifth; Ruby: Final Fantasy, not Fallout: sparks,
+    optical computing, crystals set in the board, holography, runes,
+    summoning circles): `cirMagitekChip` draws a summoning circle with a
+    star and runes, a faceted gem in a bezel, light guides curving to the
+    used pins, broken hologram rings, and on long chips a crystal rod in a
+    cradle. Its traces are light pipes. What glows is its own output,
+    `arcana`: the chain powers it (×13), blurs it, screens it cyan with a
+    violet halo, and scatters gold sparks along it.
+  - An old look's Era is rescaled ×0.75 (format 4), so a board saved at the
+    old Magitech is Atomic still.
   - **The poem kept clear** (Ruby): The Poem's lines go into Keep Clear set
     to "cutting it away": the board is routed as ever, then what lies under
     the lines is lifted (a cut trace ends in a via). The chain says
@@ -1072,18 +1118,35 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   Meniscus → colour by thickness → Light Engine with Translucency → Glow
   Hue screened where thick.
 - **Ringworld** (chain `ringworld`, Sky & Cosmos; Ruby: abstract, lit by
-  its star, the dial the camera, one slider the light):
+  its star; the camera dial the camera, the light dial the day):
   - Ringworld View (`genRingView`) follows each pixel's ray to the floor, a
     rim wall, the star, the shadow squares or space, and hands on MAPS (along
     and across in band widths, distance, detail, daylight, air). It draws
     nothing; Noise at Coordinates lays the land and clouds on those maps.
   - The camera dial is the camera (turn: where you look round the ring;
     view: how far up; zoom: the lens); Stand At places you across the band.
-    There is no light dial. The Light Engine takes its own light height
-    (`from: 'its own height'`), bound to Daylight, as the star never moves.
+  - The light dial is the day (`caps.dial: 'Daylight'`, `lowLight`): its
+    height is the time (the middle noon, the rim dusk, past it night), its
+    direction which side dusk comes from (`L.side`). The part maps it onto
+    Daylight (the slider is gone; old looks: format 4). The Light Engine
+    takes its own light height from Daylight Here, as the star never moves.
   - Daylight places the shadow squares: 0 midnight, 50 the dusk line, 100
     noon. The haze is lit by the day where the camera stands; stars fade by
     day.
+  - **Builders** (the sixth slider: By the Seed, Wilds, Engineers, Cities,
+    Magi, Ruins; `RING_WORKS` weights per builder). Everything of theirs is
+    a primitive in `L.prims` (beams, ship ellipsoids, crystal octahedra,
+    pillars of light, circles, trails, engines), each count and size from
+    the seed's own stream (`ringRand`), sizes power-law so a few are huge.
+    Cities are a third map (`ringCity`: blocks by day, lamps and windows at
+    night). The shadow-square size (`RING_SQS`) and the ring's spin
+    (`L.side`) come from the seed too.
+  - Rays test only what lies in their 16-pixel tile (`ringBin`): a long
+    thing is binned by its two ends' projections (clipped to the near
+    plane) widened by its width, the rest by a bounding cube. Looking
+    straight up once took 1.7 s; keep the binning when adding works.
+  - Clouds are their own crossing of a layer just under the air
+    (`Rc`), with their shadow laid on the far land (outs 21–24).
   - Corner rays are shared between pixels for its edges; keep `Math.hypot`
     out of its loops (it was a third of the time).
   - **The construction** (`ringBuild`, from the seed; Ruby: never bare):
@@ -1140,6 +1203,31 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - Each scratch, print, spot and speck is its own `mulberry32` draw: more
     of one adds and moves none. Fingerprint ridges finer than the grid fade
     into their smudge (a preview shows smudges, the export ridges).
+- **Broken Glass** (chain `brokenglass`, Materials & Craft; Ruby: "glass
+  fragments laying on nothing"): Glass Shards (stepsGenerative.js, `gs…`)
+  over mid-gray.
+  - Shards are polygons of 3–5 corners, power-law sizes, heaped about one
+    to three piles and flung wider (and some anywhere) as Spread rises;
+    each its own `mulberry32` draw. Each is evaluated per pixel by its
+    signed distance (`gsDist`) through a uniform grid of cells.
+  - A face flashes where its tilt lies between the light and the eye; the
+    edge band is split per colour channel (dispersion) and clear glass's
+    edge is green. The caustic is the shard scaled toward its middle and
+    cast away from the light by its lift, brightest at its rim, inside a
+    pale shadow.
+  - The camera dial is the ground camera (`groundCam`); with a Picture the
+    shard bends it by its tilt (A Dropped Frame starter, over Aurora).
+- **Dewy Webs** (chain `dewwebs`, Weather): Dewy Webs (`dw…`) → silk, dew
+  and glints screened onto mid-gray, the drops darkened round.
+  - Orb webs: frame and anchors, spokes, a hub mesh, the sticky spiral from
+    a free zone out to the frame, sagging between spokes; tears remove a
+    patch of spiral across some turns and leave loose ends hanging.
+  - Dew beads only where a wet thread would (Plateau–Rayleigh: a drop and
+    often a small satellite), larger low in the web; each drop a lens: a
+    point of light toward the light, a crescent on its far side.
+  - Silk glints by how far it runs across the light's way (`across³`), in
+    colours by Iridescence (`dwHue`). Line and drop floors are canonical
+    pixels (`E.px`): a thread finer than that fades.
 - **Veins of Light** (hidden): Growth Medium (strata, pebbles, sand, fibres, skin; its
   "ways") → Tendrils (Runions' space colonization, steered into the ways).
 - **Watercolor Wash:** Washes → Pigment → Pigment (any gray map laid as

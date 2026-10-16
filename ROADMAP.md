@@ -157,14 +157,20 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 - **C4 · An environment from the page.** The page's own backdrop colors as
   the sky the surface reflects: Filter Forge's HDRI, cheaply.
   - Depends on: B1.
-- **C5 · The camera dial for other textures** (Ruby: explore the second
-  dial). Done for Lichtenberg Figures and Ringworld (`caps.camera`, the
-  Camera Dial part). Candidates, each judged by its renders:
-  - the textures with a Tilt or View knob today (Scrying Pool, Dune
-    Ripples, Moss on Stone, Rain on Water), whose knob would become the
-    dial's View, an old look translated in `retireLook`;
-  - Contour Map and Painted Landscape (a land seen from above or across);
-  - Black Hole (the camera's orbit) and Night City (where you stand).
+- **C5 · The camera dial for other textures** (a standing goal: AGENTS
+  "The two dials"; Ruby: any tilt, pan or position slider belongs on the
+  camera dial, any light on the light dial). Done for Lichtenberg Figures,
+  Ringworld, Broken Glass, Scrying Pool, Dune Ripples and Moss on Stone.
+  Still to judge, each by its renders:
+  - Rain on Water: its View knob, but rain is the same every way round,
+    so the dial's Turn would change nothing. It needs a turn that means
+    something first (the wind driving the rain, a far bank) or a dial
+    without one.
+  - Contour Map and Painted Landscape (a land seen from above or across;
+    Painted Landscape's Tilt);
+  - Black Hole (the camera's orbit) and Night City (where you stand);
+  - Knotwork, Ruffled Growth and Discharge's Slide (a position along the
+    light dial's line): a pan, perhaps, if it stays intuitive.
   - Prove: at the old knob's values the picture is unchanged (fingerprints).
 
 ### D · Controls (Filter Forge's control components and remappers)

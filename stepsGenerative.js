@@ -36,7 +36,7 @@
  * any size, so a preview is the export, smaller. Their randomness is the
  * texture's seed (+ Variant), like the other parts that grow.
  */
-import { CPU, withSeed, kitCanvas, makeNoiseGrid, sampleNoiseGrid, lightVec } from './texCore.js';
+import { CPU, withSeed, kitCanvas, makeNoiseGrid, sampleNoiseGrid, lightVec, mulberry32 } from './texCore.js';
 
 const GEN_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const genClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -456,12 +456,13 @@ const CIR_EGGS = [
   '1000001110001111111111011101111111101111100011100', '0000110000111101111101111100001110000010000010100',
   '0011100011000011000001100000110000001100000011100', '0001000000100011111110011100011011001000100000000',
   '0001000000110000111000011110011111011111110000000', '0000000011111011000111011101110001101111100000000'];
-// what a stamp says, by its era (Today, Future, Quantum, Magitech): made up, every word of it
+// what a stamp says, by its era (Today, Future, Quantum, Atomic, Magitech): made up, every word of it
 const CIR_SAYS = [
   ['REV A', 'REV B', 'REV C', 'LOT 0427', 'DO NOT FLEX', 'ESD SAFE', 'TP1', 'GND', '3V3', '5V0', 'MADE BY HAND', 'KEEP DRY', 'PASS QC', 'SER 0091'],
   ['PHOTONIC BUS', 'NEURAL MESH', 'FUSION OK', 'GRAV LINK', 'SYNTH CORE', 'LIGHT PIPE 4', 'SELF HEAL', 'ORBITAL', 'NANO FAB 9', 'DREAM CACHE'],
   ['KEEP BELOW 20 MK', 'QUBIT ARRAY', 'ENTANGLED', 'OBSERVE GENTLY', 'SUPERPOSED', 'COHERENT', 'DO NOT LOOK', 'PHASE 0/1', 'SPIN UP', 'TUNNEL'],
-  ['WARDED', 'BOUND', 'THIRD MOON', 'SPELLBOUND', 'HEX SAFE', 'FAMILIAR PORT', 'MANA 9', 'BRAZIER', 'SIGIL 7', 'WITCH OK']];
+  ['WARDED', 'BOUND', 'THIRD MOON', 'SPELLBOUND', 'HEX SAFE', 'FAMILIAR PORT', 'MANA 9', 'BRAZIER', 'SIGIL 7', 'WITCH OK'],
+  ['LEYLINE 3', 'AETHER BUS', 'SUMMON GATE', 'PRISM CORE', 'STAR SEAL', 'ARCANE IO', 'SPELL CACHE', 'HALO 7', 'CRYSTAL OK', 'MANA 12', 'LIGHT ONLY', 'SING TO IT']];
 const CIR_SYLL = ['AR', 'VEL', 'ION', 'KAI', 'SOL', 'NYX', 'OR', 'TEL', 'LUM', 'QUA', 'MER', 'ZEN', 'RHO', 'AXI', 'DRA', 'FEN'];
 function genCircuit(cw, ch, o){
   const R = Math.random, occ = new Int32Array(cw*ch), age = new Int32Array(cw*ch);
@@ -582,22 +583,24 @@ function genCircuit(cw, ch, o){
   for(let t = 0; t < nVia*4 && vias.length < nVia; t++){ const x = 1 + (R()*(cw - 2) | 0), y = 1 + (R()*(ch - 2) | 0); if(!room(x, y, 1, 1, 1)) continue; occ[y*cw + x] = -2; vias.push([x + 0.5, y + 0.5]); }
   // the names: only where they don't sit on copper
   const named = names.filter(nm => { const x = Math.floor(nm.x), y = Math.floor(nm.y); return room(x, y, 3, 2, 0); });
-  // ---- THE ERA (Ruby: today's boards → the future's and quantum ones → magitech) ----
+  // ---- THE ERA (Ruby: today's boards → the future's and quantum ones → the atomic (brass, valves; "a hell of a lot more
+  //      like something I would imagine in Fallout") → magitech, as in Final Fantasy: crystals and optical computing,
+  //      holography, runes, summoning circles) ----
   // Nothing of the layout moves: each chip, name and trace has its own era, set by its own hash, so more Era turns more
   // of the board toward the next one (at 0, every one is today's, exactly as before).
   const eh = k => { const v = Math.sin((k + 1)*91.17 + o.salt*12.9898)*43758.5453; return v - Math.floor(v); };
-  const era = Math.max(0, Math.min(3, (o.era || 0)*3)), level = k => Math.min(3, Math.floor(era + eh(k)));
+  const era = Math.max(0, Math.min(4, (o.era || 0)*4)), level = k => Math.min(4, Math.floor(era + eh(k)));
   const runes = (k, n) => Array.from({ length: n }, (_, i) => 'abcdefghijkl'[Math.floor(eh(k*7 + i)*12)]).join('');
   chips.forEach((c, i) => { c.era = level(100 + i); }); smd.forEach((p, i) => { p.era = level(501 + i); });
   const fits = (nm, txt) => room(Math.floor(nm.x), Math.floor(nm.y), Math.ceil(txt.length*0.96), 2, 0);
   const shown = named.filter(nm => {
     const lv = nm.chip ? nm.chip.era : level(500 + nm.n); if(!lv) return true;
-    const txt = nm.kind === 'U' ? ['', 'NX' + nm.n, 'Q' + nm.n, runes(nm.n, 3)][lv] : ['', (nm.kind === 'C' ? 'CL' : 'PH') + nm.n, (nm.kind === 'C' ? 'CQ' : 'JJ') + nm.n, runes(600 + nm.n, 2)][lv];
+    const txt = nm.kind === 'U' ? ['', 'NX' + nm.n, 'Q' + nm.n, runes(nm.n, 3), runes(nm.n + 40, 2)][lv] : ['', (nm.kind === 'C' ? 'CL' : 'PH') + nm.n, (nm.kind === 'C' ? 'CQ' : 'JJ') + nm.n, runes(600 + nm.n, 2), runes(640 + nm.n, 1)][lv];
     nm.text = txt; return fits(nm, txt); });
   // a rune or three beside a magitech trace's longest run
   const glyphs = [];
   traces.forEach((tr, ti) => { tr.id = ti; tr.era = level(800 + ti); });
-  if(era > 0) traces.forEach((tr, ti) => { if(level(800 + ti) < 3 || tr.pts.length < 2) return;
+  if(era > 0) traces.forEach((tr, ti) => { if(level(800 + ti) < 3 || tr.pts.length < 2) return;   // (atomic and magitech traces alike)
     let best = 0, A = null, Bp = null; for(let i = 1; i < tr.pts.length; i++){ const l = Math.hypot(tr.pts[i][0] - tr.pts[i - 1][0], tr.pts[i][1] - tr.pts[i - 1][1]); if(l > best){ best = l; A = tr.pts[i - 1]; Bp = tr.pts[i]; } }
     if(best < 6) return; const mx = (A[0] + Bp[0])/2, my = (A[1] + Bp[1])/2, dx = (Bp[0] - A[0])/best, dy = (Bp[1] - A[1])/best;
     const txt = runes(900 + ti, 1 + Math.floor(eh(950 + ti)*3)), x = mx - dy*1.4 - txt.length*0.48, y = my + dx*1.4 - 0.6;
@@ -613,8 +616,8 @@ function genCircuit(cw, ch, o){
       const lv = level(1000 + k), kind = k === 0 ? 'title' : k === 1 && o.marks > 0.35 ? 'egg' : R() < 0.25 && lv > 0 && lv < 3 ? 'matrix' : 'say';
       if(kind === 'egg'){ const at = place(3, 3); if(at) stamps.push({ kind, x: at[0] + 0.15, y: at[1] + 0.15, egg: R()*CIR_EGGS.length | 0 }); continue; }
       if(kind === 'matrix'){ const at = place(2, 2); if(at) stamps.push({ kind, x: at[0] + 0.1, y: at[1] + 0.1, bits: Array.from({ length: 36 }, () => R() < 0.5) }); continue; }
-      const lines = kind === 'title' ? [lv === 3 ? runes(1100, 4) + ' ' + name() : name(), lv === 3 ? runes(1200, 3) : ['REV ', 'MK ', 'GEN ', 'CIRCLE '][lv] + 'ABCDEFGH'[R()*8 | 0]]
-        : [lv === 3 && R() < 0.4 ? runes(1300 + k, 2 + (R()*4 | 0)) : CIR_SAYS[lv][R()*CIR_SAYS[lv].length | 0]];
+      const lines = kind === 'title' ? [lv >= 3 ? runes(1100, 4) + ' ' + name() : name(), lv >= 3 ? runes(1200, 3) : ['REV ', 'MK ', 'GEN ', 'CIRCLE '][lv] + 'ABCDEFGH'[R()*8 | 0]]
+        : [lv >= 3 && R() < 0.4 ? runes(1300 + k, 2 + (R()*4 | 0)) : CIR_SAYS[lv][R()*CIR_SAYS[lv].length | 0]];
       const wc = Math.ceil(Math.max(...lines.map(t => t.length))*0.96 + 0.6), hc = Math.ceil(lines.length*1.45 + 0.4), at = place(wc, hc);
       if(at) stamps.push({ kind, x: at[0], y: at[1], w: wc, h: hc, lines, box: kind === 'title' || R() < 0.35 });
     }
@@ -684,9 +687,11 @@ function cirEraChip(c, K){
     LG.strokeRect((c.x - 1.15)*s, (c.y - 1.15)*s, (c.w + 2.3)*s, (c.h + 2.3)*s); if(LG.setLineDash) LG.setLineDash([]);
     return;
   }
-  // MAGITECH (Ruby: "it starts to go steampunk, with crystals and things that look maybe low-tech combined with things
-  // that look extremely high-tech"): a brass gear for a body, spoked over the dark, a cut crystal set in its hub that
-  // lights with the charge, rivets round it; a long one is a riveted brass bar set with a row of crystals
+  if(c.era === 4){ cirMagitekChip(c, K, h, e, mx, my, m, long, wide); return; }
+  // ATOMIC (the era that was Magitech's first: Ruby, "it starts to go steampunk, with crystals and things that look maybe
+  // low-tech combined with things that look extremely high-tech" — it went Fallout, and stays): a brass gear for a body,
+  // spoked over the dark, a cut crystal set in its hub that lights with the charge, rivets round it; a long one is a
+  // riveted brass bar set with a row of crystals
   const { BR } = K, crystal = (cx, cy, r) => { const pts = [[cx, cy - r], [cx + r*0.5, cy - r*0.45], [cx + r*0.5, cy + r*0.45], [cx, cy + r], [cx - r*0.5, cy + r*0.45], [cx - r*0.5, cy - r*0.45]];
     lit((x, col) => poly(x, pts, col)); poly(HT, pts, 'rgb(240,240,240)'); line(HT, [[cx, cy - r], [cx, cy + r]], 0.06*s, 'rgb(255,255,255)'); };
   const rivet = (x, y) => { disc(BR, [x, y], 0.2, '#fff'); disc(HT, [x, y], 0.2, 'rgb(214,214,214)'); };
@@ -712,15 +717,69 @@ function cirEraChip(c, K){
   { const k = 0.6, X0 = c.x - 1.15, Y0 = c.y - 1.15, X1 = c.x + c.w + 1.15, Y1 = c.y + c.h + 1.15;
     poly(LG, [[X0 + k, Y0], [X1 - k, Y0], [X1, Y0 + k], [X1, Y1 - k], [X1 - k, Y1], [X0 + k, Y1], [X0, Y1 - k], [X0, Y0 + k]], '#fff', false, 0.1); }
 }
+// MAGITECH, as Final Fantasy's (Ruby: "optical computing and crystals embedded in motherboards and all kinds of weird
+// stuff that diverges a bit from what a person would consider to be real, possibly with some holography, runes,
+// summoning circles"). A square chip is a cut crystal set in the board in a silver bezel, ringed by a summoning circle
+// (two rings, runes between, a star inside); light guides curve from it to its pins; over some, a hologram's rings hang.
+// A long one is a crystal rod in a cradle, runes along it. What lights is drawn in Arcana (its own light) and in Each
+// Trace's grey, so Charge powers it as it powers the copper.
+function cirMagitekChip(c, K, h, e, mx, my, m, long, wide){
+  const { HT, PD, PT, EA, LG, AR, poly, line, disc, s } = K;
+  const ring = (X, cx, cy, r, w, col, a0 = 0, a1 = Math.PI*2) => { X.strokeStyle = col; X.lineWidth = w*s; X.beginPath(); X.arc(cx*s, cy*s, r*s, a0, a1); X.stroke(); };
+  const glow = (draw, a = 1) => { AR.globalAlpha = a; draw(AR, '#fff'); AR.globalAlpha = 1; draw(EA, e); };
+  const gem = (cx, cy, rx, ry, rot = 0) => {
+    const n = 6, pts = Array.from({ length: n }, (_, k) => { const a = rot + k/n*Math.PI*2; return [cx + Math.cos(a)*rx, cy + Math.sin(a)*ry]; });
+    // the bezel (silver, raised), the stone in it (it glows), its facets (lines to a table in the middle)
+    const bez = pts.map(([x, y]) => [cx + (x - cx)*1.22, cy + (y - cy)*1.22]);
+    poly(PT, bez, '#fff'); poly(HT, bez, 'rgb(212,212,212)'); poly(PD, bez, '#fff');
+    poly(PD, pts, '#000'); poly(HT, pts, 'rgb(236,236,236)');
+    glow((X, col) => poly(X, pts, col), 0.75);
+    const tbl = pts.map(([x, y]) => [cx + (x - cx)*0.45, cy + (y - cy)*0.45]);
+    glow((X, col) => poly(X, tbl, col), 1);
+    for(let k = 0; k < n; k++){ line(HT, [pts[k], tbl[k]], 0.07*s, 'rgb(255,255,255)'); line(AR, [pts[k], tbl[k]], 0.08*s, '#fff'); } };
+  if(!long){
+    const R = Math.max(c.w, c.h)/2 + 0.9, n = 5 + Math.floor(h(6)*3);
+    // the summoning circle: the silkscreen's lines, and its light
+    for(const X of [LG]){ ring(X, mx, my, R, 0.12, '#fff'); ring(X, mx, my, R*0.8, 0.1, '#fff'); }
+    glow((X, col) => { ring(X, mx, my, R, 0.16, col); ring(X, mx, my, R*0.8, 0.12, col); }, 0.7);
+    const star = Array.from({ length: n }, (_, k) => { const a = -Math.PI/2 + k/n*Math.PI*2 + h(7); return [mx + Math.cos(a)*R*0.8, my + Math.sin(a)*R*0.8]; });
+    for(let k = 0; k < n; k++){ const A = star[k], B = star[(k + 2) % n]; line(LG, [A, B], 0.08*s, '#fff'); AR.globalAlpha = 0.5; line(AR, [A, B], 0.1*s, '#fff'); AR.globalAlpha = 1; line(EA, [A, B], 0.1*s, e); }
+    // runes round the band between the rings
+    const nr = Math.max(6, Math.floor(R*2*Math.PI*0.9/1.2));
+    for(let k = 0; k < nr; k++){ const a = k/nr*Math.PI*2, rr = R*0.9, bits = CIR_FONT['abcdefghijkl'[Math.floor(h(20 + k)*12)]], px = 0.13, x0 = mx + Math.cos(a)*rr - px*1.5, y0 = my + Math.sin(a)*rr - px*2.5;
+      for(let r = 0; r < 5; r++) for(let q = 0; q < 3; q++) if(bits[r*3 + q] === '1'){ LG.fillStyle = '#fff'; LG.fillRect((x0 + q*px)*s, (y0 + r*px)*s, px*0.9*s, px*0.9*s); AR.globalAlpha = 0.6; AR.fillStyle = '#fff'; AR.fillRect((x0 + q*px)*s, (y0 + r*px)*s, px*0.9*s, px*0.9*s); AR.globalAlpha = 1; } }
+    // the crystal at its heart
+    gem(mx, my, m*0.32 + 0.2, (m*0.32 + 0.2)*1.15, -Math.PI/2);
+    // light guides: a curve of light from the crystal to every pin in use
+    for(const p of c.pins){ if(p.rank < 0) continue; const a = Math.atan2(p.y - my, p.x - mx), r0 = m*0.42 + 0.3, sx = mx + Math.cos(a)*r0, sy = my + Math.sin(a)*r0, k1 = [(sx + p.x)/2 + Math.sin(a)*0.6, (sy + p.y)/2 - Math.cos(a)*0.6];
+      const pts = Array.from({ length: 9 }, (_, i) => { const t = i/8; return [(1 - t)*(1 - t)*sx + 2*(1 - t)*t*k1[0] + t*t*p.x, (1 - t)*(1 - t)*sy + 2*(1 - t)*t*k1[1] + t*t*p.y]; });
+      line(HT, pts, 0.16*s, 'rgb(150,150,150)'); line(AR, pts, 0.1*s, '#fff'); line(EA, pts, 0.22*s, K.g(0.1 + 0.85*p.rank)); }
+    // a hologram over some: broken rings of light hanging above the chip, ticks round them
+    if(h(8) < 0.55){ AR.globalAlpha = 0.4; for(const [rr, a0, span] of [[R*1.18, h(9)*6.3, 4.2], [R*1.32, h(10)*6.3, 2.6]]){ ring(AR, mx, my, rr, 0.07, '#fff', a0, a0 + span);
+        for(let k = 0; k < 24; k++){ const a = a0 + span*k/24; line(AR, [[mx + Math.cos(a)*rr, my + Math.sin(a)*rr], [mx + Math.cos(a)*(rr + 0.25), my + Math.sin(a)*(rr + 0.25)]], 0.05*s, '#fff'); } }
+      AR.globalAlpha = 1; }
+  } else {
+    // a crystal rod lying in a cradle, its facets running its length, runes along it
+    const L = Math.max(c.w, c.h), ux = wide ? 1 : 0, uy = wide ? 0 : 1, vx = uy, vy = ux, half = L/2 - 0.2, t = Math.max(0.45, m*0.38);
+    const rod = [[-half - t*0.8, 0], [-half, -t], [half, -t], [half + t*0.8, 0], [half, t], [-half, t]].map(([a, b]) => [mx + ux*a + vx*b, my + uy*a + vy*b]);
+    const cradle = rod.map(([x, y]) => [mx + (x - mx)*1.08 + vx*0, my + (y - my)*1.35]);
+    poly(PT, cradle, '#fff'); poly(HT, cradle, 'rgb(200,200,200)'); poly(PD, cradle, '#fff'); poly(PD, rod, '#000');
+    poly(HT, rod, 'rgb(240,240,240)'); glow((X, col) => poly(X, rod, col), 0.75);
+    glow((X, col) => line(X, [[mx - ux*half + vx*0, my - uy*half], [mx + ux*half, my + uy*half]], 0.16*s, col), 1);
+    for(const sg of [-1, 1]) line(HT, [[mx - ux*half + vx*sg*t*0.5, my - uy*half + vy*sg*t*0.5], [mx + ux*half + vx*sg*t*0.5, my + uy*half + vy*sg*t*0.5]], 0.06*s, 'rgb(255,255,255)');
+    const n = Math.max(2, Math.floor(L/1.1)); for(let k = 0; k < n; k++){ const a = -half + 0.5 + (2*half - 1)*k/Math.max(1, n - 1), x = mx + ux*a + vx*(t + 0.75) - 0.2, y = my + uy*a + vy*(t + 0.75) - 0.3, bits = CIR_FONT['abcdefghijkl'[Math.floor(h(30 + k)*12)]];
+      for(let r = 0; r < 5; r++) for(let q = 0; q < 3; q++) if(bits[r*3 + q] === '1'){ LG.fillStyle = '#fff'; LG.fillRect((x + q*0.13)*s, (y + r*0.13)*s, 0.12*s, 0.12*s); } }
+  }
+}
 // The board drawn: s pixels a cell. Each of the part's maps is its own canvas (see the part).
 function genDrawCircuit(B, ww, wh, s, o){
   const mk = () => kitCanvas(ww, wh), cv = {}, fillAll = (x, c) => { x.fillStyle = c; x.fillRect(0, 0, ww, wh); };
-  for(const k of ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend', 'brass']){ const [c, x] = mk(); fillAll(x, k === 'height' ? 'rgb(77,77,77)' : '#000'); x.lineCap = 'round'; x.lineJoin = 'round'; cv[k] = [c, x]; }
+  for(const k of ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend', 'brass', 'arcana']){ const [c, x] = mk(); fillAll(x, k === 'height' ? 'rgb(77,77,77)' : '#000'); x.lineCap = 'round'; x.lineJoin = 'round'; cv[k] = [c, x]; }
   const g = v => { const q = Math.round(Math.max(0, Math.min(1, v))*255); return `rgb(${q},${q},${q})`; };
   const line = (x, pts, w, col) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0]*s, p[1]*s) : x.moveTo(p[0]*s, p[1]*s)); x.stroke(); };
   const disc = (x, p, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(p[0]*s, p[1]*s, r*s, 0, Math.PI*2); x.fill(); };
   const rect = (x, X, Y, W, H, col) => { x.fillStyle = col; x.fillRect(X*s, Y*s, W*s, H*s); };
-  const [, CU] = cv.copper, [, HT] = cv.height, [, EA] = cv.each, [, DA] = cv.data, [, PD] = cv.pads, [, PT] = cv.parts, [, LG] = cv.legend, [, BR] = cv.brass;
+  const [, CU] = cv.copper, [, HT] = cv.height, [, EA] = cv.each, [, DA] = cv.data, [, PD] = cv.pads, [, PT] = cv.parts, [, LG] = cv.legend, [, BR] = cv.brass, [, AR] = cv.arcana;
   const tw = 0.34;
   // the traces: copper, raised a little, and each one's own grey (drawn wide, so a cutoff takes the whole trace)
   for(const tr of B.traces){
@@ -741,7 +800,7 @@ function genDrawCircuit(B, ww, wh, s, o){
   // the chips: a dark body standing well above the board, a pin pad at every pin, a dimple at pin one
   // (or, as the Era turns them: the future's, a quantum qubit, a magitech sigil — their pins are where they were)
   for(const c of B.chips){
-    if(c.era){ cirEraChip(c, { CU, HT, PD, PT, EA, LG, BR, rect, disc, line, poly, s, tw, g });
+    if(c.era){ cirEraChip(c, { CU, HT, PD, PT, EA, LG, BR, AR, rect, disc, line, poly, s, tw, g });
       for(const p of c.pins){ const [dx, dy] = CIR_DIRS[p.dir], L = 0.75, W = 0.4, cx = p.x - dx*0.15, cy = p.y - dy*0.15;
         const [X, Y, Wd, Hd] = dx ? [cx - L/2, cy - W/2, L, W] : [cx - W/2, cy - L/2, W, L];
         rect(CU, X, Y, Wd, Hd, '#fff'); rect(PD, X, Y, Wd, Hd, '#fff'); rect(HT, X, Y, Wd, Hd, 'rgb(122,122,122)');
@@ -763,6 +822,14 @@ function genDrawCircuit(B, ww, wh, s, o){
     const [a, b] = p.horiz ? [[p.x, p.y + 0.5, 0.9, 1], [p.x + 2.1, p.y + 0.5, 0.9, 1]] : [[p.x + 0.5, p.y, 1, 0.9], [p.x + 0.5, p.y + 2.1, 1, 0.9]];
     for(const q of [a, b]){ rect(CU, ...q, '#fff'); rect(PD, ...q, '#fff'); rect(HT, ...q, 'rgb(122,122,122)'); }
     const body = p.horiz ? [p.x + 0.55, p.y + 0.45, 1.9, 1.1] : [p.x + 0.45, p.y + 0.55, 1.1, 1.9];
+    if(p.era === 4){
+      // a shard of crystal set in the board, glowing with the charge (each its own hashed grey)
+      const [bx, by, bw, bh] = body, e = g(0.1 + 0.85*((Math.sin((p.x*7 + p.y*13)*12.9898)*43758.5453 % 1 + 1) % 1)), cx = bx + bw/2, cy = by + bh/2;
+      const pts = p.horiz ? [[bx, cy], [cx, by - 0.1], [bx + bw, cy], [cx, by + bh + 0.1]] : [[cx, by], [bx + bw + 0.1, cy], [cx, by + bh], [bx - 0.1, cy]];
+      poly(PD, pts, '#000'); poly(HT, pts, 'rgb(232,232,232)'); poly(AR, pts, '#fff'); poly(EA, pts, e);
+      line(HT, [pts[0], pts[2]], 0.06*s, 'rgb(255,255,255)');
+      continue;
+    }
     if(p.era === 3){
       // a valve: a glass envelope in brass end-caps, its filament glowing with the charge (each trace's grey: one hashed)
       const [bx, by, bw, bh] = body, e = g(0.1 + 0.85*((Math.sin((p.x*7 + p.y*13)*12.9898)*43758.5453 % 1 + 1) % 1));
@@ -776,7 +843,9 @@ function genDrawCircuit(B, ww, wh, s, o){
     rect(PT, ...body, p.cap ? 'rgb(150,150,150)' : '#fff'); rect(HT, ...body, p.cap ? 'rgb(168,168,168)' : 'rgb(158,158,158)');
     LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.strokeRect((p.x - 0.25)*s, (p.y - 0.25)*s, (p.w + 0.5)*s, (p.h + 0.5)*s);
   }
-  // a magitech trace has a coil wound round its longest run: brass wire, loop on loop
+  // a magitech trace is a light pipe: a thread of light down its middle (it lights with the charge)
+  for(const tr of B.traces){ if(tr.era !== 4 || tr.pts.length < 2) continue; line(AR, tr.pts, tw*0.32*s, '#fff'); }
+  // an atomic trace has a coil wound round its longest run: brass wire, loop on loop
   for(const tr of B.traces){ if(tr.era !== 3 || tr.pts.length < 2) continue;
     let best = 0, A = null, Bp = null; for(let i = 1; i < tr.pts.length; i++){ const l = Math.hypot(tr.pts[i][0] - tr.pts[i - 1][0], tr.pts[i][1] - tr.pts[i - 1][1]); if(l > best){ best = l; A = tr.pts[i - 1]; Bp = tr.pts[i]; } }
     if(best < 5) continue;
@@ -830,7 +899,8 @@ function genDrawCircuit(B, ww, wh, s, o){
 // into the arch overhead), a rim wall, the star, the shadow squares that make its nights, or open space. What the
 // part hands on are maps OF the world — where on the ring each pixel shows (along it and across it, in band widths),
 // how far off, how fine a pixel is there, and where it is day — so any noise or picture can be laid on the ring.
-const RING_SQ = 10, RING_COV = 0.36, RING_SQR = 0.15;   // shadow squares round the star, and the share of each turn they cover (night)
+const RING_COV = 0.36, RING_SQR = 0.15;   // the share of each turn the shadow squares cover (night), and their ring's radius
+const RING_SQS = [6, 8, 10, 10, 12, 14];   // how many squares circle the star: by the seed (more of them, shorter nights)
 function ringLook(o){
   const W = o.band, Hw = o.walls, hc = o.altitude, R = 1, z0 = o.place*W*0.45, fov = o.lens*Math.PI/180, f = 0.5/Math.tan(fov/2);
   const psi = o.look*Math.PI/180, th = o.lift*Math.PI/180, hx = Math.cos(psi), hz = Math.sin(psi);
@@ -840,38 +910,140 @@ function ringLook(o){
   const rx = 0, ry = -hz, rz = hx;
   const ux = ry*fz - rz*fy, uy = rz*fx - rx*fz, uz = rx*fy - ry*fx;
   // the shadow squares turn so that the camera stands where Daylight says: 1 noon (mid-gap), 0 midnight (mid-square)
-  // (0 midnight, behind the middle of a square; 0.5 the very edge of its shadow, dawn; 1 noon, the middle of a gap)
-  const dl = Math.max(0, Math.min(1, o.daylight)), per = Math.PI*2/RING_SQ, uc = dl < 0.5 ? RING_COV/2 + dl*RING_COV : RING_COV + (dl - 0.5)*(1 - RING_COV), q0 = -uc*per;
+  // (0 midnight, behind the middle of a square; 0.5 the very edge of its shadow, dusk; 1 noon, the middle of a gap)
+  const nsq = RING_SQS[((o.seed >>> 0) >>> 3) % RING_SQS.length];
+  const dl = Math.max(0, Math.min(1, o.daylight)), per = Math.PI*2/nsq, uc = dl < 0.5 ? RING_COV/2 + dl*RING_COV : RING_COV + (dl - 0.5)*(1 - RING_COV), q0 = -uc*per;
   // the air the walls hold in: thinning with height (Hs, its scale height), so a column straight up is o.air deep
   // (its optical depth) and the ground far along is hazed far more than the ground at your feet
   const Hs = Math.min(Hw*0.5, W*0.025) + 1e-6, L0 = Hs/Math.max(0.005, o.air);
-  const L = { W, Hw, hc, R, z0, f, fx, fy, fz, rx, ry, rz, ux, uy, uz, per, q0, Hs, L0, Px: R - hc };
+  // the clouds float this high over the floor (above you, unless you fly higher)
+  const L = { W, Hw, hc, R, z0, f, fx, fy, fz, rx, ry, rz, ux, uy, uz, per, q0, Hs, L0, Px: R - hc, side: o.side < 0 ? -1 : 1, Rc: R - W*0.012 };
   ringBuild(L, o);
   return L;
 }
-// THE CONSTRUCTION (Ruby: spires, bare scaffolding, spill mountains — "the seed should determine the environment and
-// the construction of the ringworld to some degree, and it should never be bare"). From the seed: which works this
-// ring has and how many, never none; Structures (o.build, 0.25 at its lowest) raises them.
+// THE WORKS (Ruby: "spires, archways, cities, lights, spaceships, structures, and magical/magitech … seed dependent as
+// much as you can so users see large varieties of ringworlds"; and before, "never bare"). Whoever built the ring
+// decides what stands on it: five builders, the seed's two (one leading, one in its shadow), or the one the Builders
+// slider names. Structures (o.build, 0.25 at its lowest) says how much. Each kind of work draws from its own stream,
+// so more Structures adds works and moves none.
+//            spires · arches · towers · ships · city · crystals · circles · pillars · scaffolding; the lights' colours
+const RING_BUILDERS = ['wilds', 'engineers', 'cities', 'magi', 'ruins'];
+const RING_WORKS = {
+  wilds:     { sp: 0.35, ar: 0.5, tw: 0,    sh: 0.12, ci: 0,    cr: 0.1,  rc: 0.25, pl: 0.35, sc: 0.15, mo: 1, pal: [[1, 0.82, 0.55], [0.6, 1, 0.75], [0.85, 0.95, 1]] },
+  engineers: { sp: 1,    ar: 0.8, tw: 0.45, sh: 0.8,  ci: 0.35, cr: 0,    rc: 0,    pl: 0,    sc: 1,    pal: [[1, 0.68, 0.32], [0.72, 0.9, 1], [1, 0.38, 0.25]] },
+  cities:    { sp: 0.35, ar: 0.4, tw: 1,    sh: 1,    ci: 1,    cr: 0,    rc: 0,    pl: 0.15, sc: 0.3,  pal: [[1, 0.76, 0.42], [1, 0.93, 0.8], [0.55, 0.82, 1]] },
+  magi:      { sp: 0.5,  ar: 0.9, tw: 0.25, sh: 0.3,  ci: 0.25, cr: 1,    rc: 1,    pl: 1,    sc: 0,    pal: [[0.72, 0.5, 1], [0.4, 0.95, 1], [1, 0.82, 0.45]] },
+  ruins:     { sp: 0.5,  ar: 1,   tw: 0.35, sh: 0.15, ci: 0.15, cr: 0.25, rc: 0.3,  pl: 0.1,  sc: 0.6, mo: 0.6, broken: 1, pal: [[1, 0.5, 0.28], [0.5, 1, 0.8], [0.9, 0.85, 0.7]] },
+};
+const ringRand = (seed, k) => { let st = (Math.imul((seed >>> 0) ^ 0x9E3779B9, 2*k + 1) ^ Math.imul(k + 7, 0x85EBCA6B)) | 0;
+  return () => { st = st + 0x6D2B79F5 | 0; let t = Math.imul(st ^ (st >>> 15), 1 | st); t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t; return ((t ^ (t >>> 14)) >>> 0)/4294967296; }; };
+const ringNorm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0]/l, v[1]/l, v[2]/l]; };
 function ringBuild(L, o){
   let st = (o.seed >>> 0) || 1; const rnd = () => { st = Math.imul(st ^ (st >>> 15), 2246822507) + 0x6D2B79F5 | 0; st = Math.imul(st ^ (st >>> 13), 3266489909); return ((st ^= st >>> 16) >>> 0)/4294967296; };
   const b = o.build, W = L.W, style = rnd();
-  // spires: needles standing up from the floor, many near you and a few far round the ring (the seed may grow a forest)
-  const forest = style < 0.3, nSp = Math.round((forest ? 18 : 8) + (forest ? 40 : 22)*b*(0.5 + rnd()));
-  L.spires = [];
-  for(let i = 0; i < nSp; i++){
-    // (none closer than a quarter of the band: a needle at your elbow would fill the view)
-    const near = i < nSp*0.7, side = rnd() < 0.5 ? -1 : 1, phi = near ? side*W*(0.3 + Math.pow(rnd(), 1.5)*4) : (rnd()*2 - 1)*Math.PI, z = (rnd()*2 - 1)*W*0.45;
-    const h = L.Hw*(0.8 + rnd()*(forest ? 1.8 : 3))*(0.6 + b*0.8), r = Math.max(W*0.0015, h*(0.008 + rnd()*0.012));
-    const cx = L.R*Math.cos(phi), cy = L.R*Math.sin(phi), ux = -Math.cos(phi), uy = -Math.sin(phi);
-    // (where it stands from the camera, for a quick test of whether a ray could come near it at all)
-    const mx = cx + ux*h/2 - L.Px, my = cy + uy*h/2, mz = z - L.z0, dist = Math.hypot(mx, my, mz), rho = h/2 + r*2;
-    const tx = cx + ux*h - L.Px, ty = cy + uy*h, tz = z - L.z0, tl = Math.hypot(tx, ty, tz), glowR = Math.max(r*1.2, W*0.002);
-    L.spires.push({ phi, z, h, r, glowR, tip: [tx/tl, ty/tl, tz/tl], tl, tipCos: Math.cos(Math.min(1.5, 3*glowR/tl)), bx: cx, by: cy, ux, uy, dir: [mx/dist, my/dist, mz/dist], cosB: dist > rho ? Math.cos(Math.asin(rho/dist)) : -1 });
-  }
+  // who built it
+  const pick = rnd(), pick2 = rnd(), w2 = 0.2 + rnd()*0.35;
+  const lead = o.builders > 0 ? RING_BUILDERS[Math.min(4, o.builders - 1)] : RING_BUILDERS[Math.floor(pick*5)], second = RING_BUILDERS[Math.floor(pick2*5)];
+  const A = RING_WORKS[lead], B = RING_WORKS[second], how = k => Math.max(A[k] || 0, (B[k] || 0)*w2), seed = o.seed >>> 0;
+  L.builders = lead; L.pal = A.pal.concat([B.pal[0]]);
+  const broken = how('broken'), P = L.prims = [];
+  const floorAt = (phi, z, up = 0) => [(L.R - up)*Math.cos(phi), (L.R - up)*Math.sin(phi), z];
+  const upAt = phi => [-Math.cos(phi), -Math.sin(phi), 0], alongAt = phi => [-Math.sin(phi), Math.cos(phi), 0];
+  const near = (r, lo, hi) => (r() < 0.5 ? -1 : 1)*W*(lo + Math.pow(r(), 1.5)*(hi - lo));
+  const beam = (B0, A0, h, r0, r1, more) => { const c = [B0[0] + A0[0]*h/2, B0[1] + A0[1]*h/2, B0[2] + A0[2]*h/2];
+    P.push({ k: 0, bx: B0[0], by: B0[1], bz: B0[2], ax: A0[0], ay: A0[1], az: A0[2], h, r0, r1, c, rad: h/2 + Math.max(r0, (more && more.glowR) || 0)*3, ...more }); };
+  // SPIRES: needles standing up from the floor, many near you and a few far round the ring (the seed may grow a forest)
+  { const r = ringRand(seed, 1), forest = style < 0.3, k = how('sp'), nSp = Math.max(3, Math.round(((forest ? 18 : 8) + (forest ? 40 : 22)*b*(0.5 + r()))*k));
+    for(let i = 0; i < nSp; i++){
+      // (none closer than a quarter of the band: a needle at your elbow would fill the view)
+      const isNear = i < nSp*0.7, phi = isNear ? near(r, 0.3, 4) : (r()*2 - 1)*Math.PI, z = (r()*2 - 1)*W*0.45;
+      const snapped = broken > 0 && r() < 0.6*broken, h = L.Hw*(0.8 + r()*(forest ? 1.8 : 3))*(0.6 + b*0.8)*(snapped ? 0.35 + r()*0.3 : 1), rr = Math.max(W*0.0015, h*(0.008 + r()*0.012));
+      const U = upAt(phi), base = floorAt(phi, z), tip = [base[0] + U[0]*h - L.Px, base[1] + U[1]*h, base[2] + U[2]*h - L.z0], tl = Math.hypot(tip[0], tip[1], tip[2]), glowR = Math.max(rr*1.2, W*0.002);
+      beam(base, U, h, rr, snapped ? rr*0.8 : rr*0.15, { spire: true, glowR, beacon: !snapped, tip: [tip[0]/tl, tip[1]/tl, tip[2]/tl], tl, tipCos: Math.cos(Math.min(1.5, 3*glowR/tl)) });
+    } }
+  // THE CITY: blocks of streets laid on the land where the seed's noise is high (lit at night), and towers in it
+  { const r = ringRand(seed, 2), k = how('ci');
+    L.city = { on: k > 0.05, cut: 1 - 0.8*k*(0.4 + 0.6*b), f: 0.9 + r()*1.6, cell: 0.003 + r()*0.004, salt: (r()*1e6) | 0 };
+    // (a city's own builders raise a skyline: more than twice the towers anyone else does)
+    const nTw = Math.round(how('tw')*(6 + 40*b)*(0.6 + 0.8*r())*(lead === 'cities' ? 2.4 : 1));
+    for(let i = 0, tries = 0; i < nTw && tries < nTw*30; tries++){
+      const phi = tries % 5 === 4 ? (r()*2 - 1)*Math.PI : near(r, 0.04, 2.5), z = (r()*2 - 1)*W*0.44, a = phi/W, c = z/W + 0.5;
+      if(L.city.on && ringCityCover(L, a, c) < 0.5 && r() < 0.85) continue;
+      const h = W*(0.015 + 0.12*Math.pow(r(), 2))*(0.6 + 0.8*b), r0 = h*(0.05 + 0.06*r());
+      beam(floorAt(phi, z), upAt(phi), h, r0, r0*(0.65 + 0.35*r()), { tower: true, id: i + 1 }); i++; } }
+  // MONOLITHS: standing stones, alone or in rings (the wilds' and the ruins'), some leaning
+  { const r = ringRand(seed, 8), k = how('mo'), nM = Math.round(k*(8 + 26*b*r()));
+    for(let i = 0; i < nM; ){ const phi = near(r, 0.03, 2), z = (r()*2 - 1)*W*0.44, ring = r() < 0.4 ? 5 + Math.floor(r()*5) : 1, rr = W*(0.006 + 0.02*r());
+      for(let j = 0; j < ring && i < nM; j++, i++){ const a = j/ring*Math.PI*2, ph = phi + (ring > 1 ? Math.cos(a)*rr : 0), zz = z + (ring > 1 ? Math.sin(a)*rr : 0);
+        const h = W*(0.006 + 0.03*Math.pow(r(), 1.5)), U = upAt(ph), T = alongAt(ph), lean = (r() - 0.5)*0.3, A0 = ringNorm([U[0] + T[0]*lean, U[1] + T[1]*lean, U[2] + lean*0.5]);
+        beam(floorAt(ph, zz), A0, h, h*(0.14 + 0.1*r()), h*(0.1 + 0.08*r()), { stone: true }); } } }
+  // ARCHES: great arches spanning the band from wall to wall (seen far off as bands across the arch overhead), and
+  // gateways standing on the land, across the ring or along it. A ruin's arches stand broken.
+  { const r = ringRand(seed, 3), k = how('ar'), nA = Math.round(k*(1 + 4*b*r())), nG = Math.round(k*(5 + 26*b*r()));
+    const arch = (phi, zc, span, ht, across, rad, segs) => { const U = upAt(phi), S = across ? [0, 0, 1] : alongAt(phi), C0 = floorAt(phi, zc);
+      const pt = th => [C0[0] + S[0]*Math.cos(th)*span/2 + U[0]*Math.sin(th)*ht, C0[1] + S[1]*Math.cos(th)*span/2 + U[1]*Math.sin(th)*ht, C0[2] + S[2]*Math.cos(th)*span/2 + U[2]*Math.sin(th)*ht];
+      for(let s = 0; s < segs; s++){ if(broken > 0 && r() < 0.32*broken) continue;
+        const p0 = pt(Math.PI*s/segs), p1 = pt(Math.PI*(s + 1)/segs), d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], l = Math.hypot(d[0], d[1], d[2]);
+        beam(p0, [d[0]/l, d[1]/l, d[2]/l], l*1.04, rad, rad, { arch: true }); } };
+    for(let i = 0; i < nA; i++){ const phi = i === 0 ? near(r, 0.8, 3) : (r() < 0.5 ? near(r, 1, 8) : (r()*2 - 1)*Math.PI);
+      arch(phi, 0, W*0.98, W*0.5*(0.45 + 0.7*r()), true, W*(0.004 + 0.008*r()), 18); }
+    for(let i = 0; i < nG; i++){ const phi = near(r, 0.05, 1.5), span = W*(0.03 + 0.2*Math.pow(r(), 1.5)), z = (r()*2 - 1)*(W*0.48 - span/2);
+      arch(phi, z, span, span*(0.5 + 0.6*r()), r() < 0.5, span*(0.035 + 0.03*r()), 10); } }
+  // SHIPS: hulls in the air, going along the ring or across it, engines lit behind, some drawing a trail
+  { const r = ringRand(seed, 4), k = how('sh'), nS = Math.round(k*(4 + 30*b*r()));
+    for(let i = 0; i < nS; i++){
+      const big = r() < 0.08, phi = big || r() < 0.25 ? (r()*2 - 1)*Math.PI*0.5 : near(r, 0.05, 3), z = (r()*2 - 1)*W*0.45, alt = W*(big ? 0.15 + 0.3*r() : 0.01 + 0.2*Math.pow(r(), 2));
+      const U = upAt(phi), T = alongAt(phi), psi = r()*Math.PI*2, F = ringNorm([T[0]*Math.cos(psi), T[1]*Math.cos(psi), Math.sin(psi)]), Sd = ringNorm([F[1]*U[2] - F[2]*U[1], F[2]*U[0] - F[0]*U[2], F[0]*U[1] - F[1]*U[0]]);
+      const ax = W*(big ? 0.08 + 0.12*r() : 0.004 + 0.025*Math.pow(r(), 3)), C = floorAt(phi, z, alt), trail = !big && r() < 0.6 ? ax*(10 + 50*r()) : 0;
+      P.push({ k: 1, c: C, F, U, S: Sd, ax, ay: ax*0.24, az: ax*0.36, rad: ax*1.2, col: L.pal[2 % L.pal.length] });
+      const E = [C[0] - F[0]*ax*1.05, C[1] - F[1]*ax*1.05, C[2] - F[2]*ax*1.05];
+      P.push({ k: 6, c: E, rad: ax*2.5, g: ax*0.35, col: L.pal[(i % 2) ? 1 : 2] });   // its engines
+      if(trail){ const S1 = [E[0] - F[0]*trail, E[1] - F[1]*trail, E[2] - F[2]*trail];
+        P.push({ k: 5, bx: E[0], by: E[1], bz: E[2], ax: -F[0], ay: -F[1], az: -F[2], h: trail, w: Math.min(ax*0.12, W*0.002), c: [(E[0] + S1[0])/2, (E[1] + S1[1])/2, (E[2] + S1[2])/2], rad: trail/2 + ax*4 }); }
+    } }
+  // CRYSTALS: floating stones of light, upright, turning slowly (the magi's), glowing from within
+  { const r = ringRand(seed, 5), k = how('cr'), nC = Math.round(k*(6 + 30*b*r()));
+    for(let i = 0; i < nC; i++){
+      const phi = near(r, 0.04, 2), z = (r()*2 - 1)*W*0.45, size = W*(0.004 + 0.03*Math.pow(r(), 2)), alt = W*0.004 + size*(1.5 + 6*r()), C = floorAt(phi, z, alt);
+      const U = upAt(phi), a = r()*Math.PI*2, tilt = (r() - 0.5)*0.5, T = alongAt(phi), E1 = ringNorm([T[0]*Math.cos(a), T[1]*Math.cos(a), Math.sin(a)]);
+      const E3 = ringNorm([U[0] + E1[0]*tilt, U[1] + E1[1]*tilt, U[2] + E1[2]*tilt]), E2 = ringNorm([E3[1]*E1[2] - E3[2]*E1[1], E3[2]*E1[0] - E3[0]*E1[2], E3[0]*E1[1] - E3[1]*E1[0]]);
+      const e = 1.6 + r()*0.9, planes = [];
+      for(const s1 of [-1, 1]) for(const s2 of [-1, 1]) for(const s3 of [-1, 1]) planes.push([(s1*E1[0] + s2*E2[0])/size + s3*E3[0]/(e*size), (s1*E1[1] + s2*E2[1])/size + s3*E3[1]/(e*size), (s1*E1[2] + s2*E2[2])/size + s3*E3[2]/(e*size)]);
+      P.push({ k: 2, c: C, size, planes, U, rad: size*e*1.2 + size*5, col: L.pal[i % L.pal.length] });
+    } }
+  // CIRCLES: summoning circles laid on the land, and halos hanging in the air: two rings, a star inside, runes between
+  { const r = ringRand(seed, 6), k = how('rc'), nR = Math.round(k*(3 + 12*b*r()));
+    for(let i = 0; i < nR; i++){
+      // (laid on the land they show only from above, the camera drawn out past the rim; most hang upright in the air)
+      const onFloor = r() < 0.3, phi = near(r, 0.04, 2), z = (r()*2 - 1)*W*0.42, rad = W*(onFloor ? 0.04 + 0.12*r() : 0.012 + 0.06*r());
+      const U = upAt(phi), T = alongAt(phi), C = floorAt(phi, z, onFloor ? W*0.0003 : rad*1.1 + W*(0.01 + 0.08*r())), upright = !onFloor && r() < 0.75;
+      const N = upright ? T : U, E1 = upright ? [0, 0, 1] : T, E2 = upright ? U : [0, 0, 1];
+      P.push({ k: 4, c: C, N, E1, E2, R: rad, rad: rad*1.15, points: 5 + Math.floor(r()*3), runes: 12 + Math.floor(r()*14), salt: (r()*1e6) | 0, col: L.pal[i % L.pal.length] });
+    } }
+  // PILLARS: beams of light from the land toward the star, seen far round the ring rising from the arch
+  { const r = ringRand(seed, 7), k = how('pl'), nP = Math.round(k*(2 + 8*b*r()));
+    for(let i = 0; i < nP; i++){ const phi = i % 2 ? (r()*2 - 1)*Math.PI : near(r, 0.5, 6), z = (r()*2 - 1)*W*0.4, U = upAt(phi), B0 = floorAt(phi, z), Lp = 0.25 + 0.65*r();
+      P.push({ k: 3, bx: B0[0], by: B0[1], bz: B0[2], ax: U[0], ay: U[1], az: U[2], h: Lp, w: W*(0.002 + 0.008*r()), c: floorAt(phi, z, Lp/2), rad: Lp/2 + W*0.06, col: L.pal[i % L.pal.length] }); } }
   // scaffolding: stretches of floor left unfinished, an open lattice over the void (more of it on some rings)
-  L.scaf = { on: style > 0.15, amount: (0.08 + 0.3*b)*(style > 0.7 ? 1.6 : 1), cell: 0.05 + rnd()*0.07, beam: 0.14 + rnd()*0.1, salt: (rnd()*1e6) | 0 };
+  { const k = how('sc'); L.scaf = { on: k > 0.1 && style > 0.1, amount: (0.08 + 0.3*b)*k*(style > 0.7 ? 1.6 : 1), cell: 0.05 + rnd()*0.07, beam: 0.14 + rnd()*0.1, salt: (rnd()*1e6) | 0 }; }
   // the rare seam: now and then the edge of the world shows (Ruby's egg), one ring in seven
   L.seam = ((o.seed >>> 0) % 7) === 3;
+}
+// the city's cover where it stands (0..1): the seed's noise, never at the walls' feet
+function ringCityCover(L, a, c){ const C = L.city; if(!C || !C.on) return 0;
+  return genClamp((mnValue(a*C.f + 11.3, c*C.f*1.6 + 2.9, C.salt) - C.cut)/0.06)*genClamp((0.47 - Math.abs(c - 0.5))/0.03); }
+// the city on the floor, filtered by a pixel's footprint: [its blocks by day (0..1), its lights at night (0..1)]
+function ringCity(L, a, c, foot){
+  const cov = ringCityCover(L, a, c); if(cov <= 0) return [0, 0];
+  const C = L.city, fx = a/C.cell, fy = c/C.cell, ix = Math.floor(fx), iy = Math.floor(fy), h = mnHash(ix, iy, C.salt), fine = genClamp(1.5 - foot/C.cell);
+  const ux = fx - ix, uy = fy - iy, street = ux < 0.14 || uy < 0.14;
+  // lights: the street's lamps in a line, and the block's lit windows as points (a 4×4 of them, some lit)
+  let light = 0;
+  if(street) light = (ux < 0.14 && uy < 0.14) ? 1 : 0.35;
+  else { const gx = Math.floor((ux - 0.14)/0.86*4), gy = Math.floor((uy - 0.14)/0.86*4), lx = (ux - 0.14)/0.86*4 - gx, ly = (uy - 0.14)/0.86*4 - gy;
+    light = (lx > 0.3 && lx < 0.7 && ly > 0.3 && ly < 0.7 && mnHash(ix*4 + gx, iy*4 + gy, C.salt + 5) < 0.25 + 0.5*h) ? 1 : 0; }
+  const fineL = genClamp(1.5 - foot*4/C.cell);
+  return [cov*(fine*(street ? 0.45 : 0.7 + 0.3*h) + (1 - fine)*0.66), cov*(fineL*light + (1 - fineL)*0.32)];
 }
 // the scaffolding's lattice, filtered by a pixel's own footprint (box-filtered beams: no shimmer at any distance)
 function ringLattice(L, a, c, foot){
@@ -884,10 +1056,43 @@ function ringLattice(L, a, c, foot){
   return [wR*beams, wR*(1 - beams)];
 }
 // day at a ring angle: 1 in a gap between the squares, 0 behind one, a soft edge (the star's own size) between
-function ringDay(L, phi){ let u = (phi - L.q0)/L.per; u -= Math.floor(u);
+// (L.side: which way round the dusk comes, by the light dial)
+function ringDay(L, phi){ let u = (phi*L.side - L.q0)/L.per; u -= Math.floor(u);
   const sd = u >= RING_COV ? Math.min(u - RING_COV, 1 - u) : -Math.min(u, RING_COV - u), t = genClamp(0.5 + sd/0.09); return t*t*(3 - 2*t); }
-// one ray: what it meets. Returns { kind: 0 space, 1 floor, 2 wall, 3 star, 4 square, t, phi, z, h (height up a wall), air, cosI }
-function ringRay(L, dx, dy, dz, air){
+// THE WORKS ON SCREEN: each work's bounding cube, projected, puts it in the tiles of the picture it can touch, so a
+// pixel tests only the few that could be in its way (they were tested for every pixel: a third of the time)
+const RING_TILE = 16;
+function ringBin(L, ww, wh, unit){
+  const px = 1/unit, tw = Math.ceil(ww/RING_TILE), th = Math.ceil(wh/RING_TILE), bins = Array.from({ length: tw*th }, () => []), all = [];
+  const cam = (x, y, z) => { const cx = x - L.Px, cz = z - L.z0; return [cx*L.rx + y*L.ry + cz*L.rz, cx*L.ux + y*L.uy + cz*L.uz, cx*L.fx + y*L.fy + cz*L.fz]; };
+  for(const p of L.prims){
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const box = (X, Y, Z, r) => { for(const dx of [-r, r]) for(const dy of [-r, r]){ const sx = L.f*(X + dx)/Z, sy = -L.f*(Y + dy)/Z;
+      if(sx < x0) x0 = sx; if(sx > x1) x1 = sx; if(sy < y0) y0 = sy; if(sy > y1) y1 = sy; } };
+    if(p.h !== undefined){
+      // a long thing (a beam, a pillar, a trail): its two ends, clipped to just before the camera, each widened by its width
+      const w = Math.max(p.r0 || 0, p.glowR ? p.glowR*3 : 0, p.w ? p.w*(p.k === 3 ? 6 : 5) : 0)*1.5 + 1e-6, near = 1e-5;
+      let A = cam(p.bx, p.by, p.bz), B = cam(p.bx + p.ax*p.h, p.by + p.ay*p.h, p.bz + p.az*p.h);
+      if(A[2] < near && B[2] < near) continue;
+      if(A[2] < near){ const t = (near - A[2])/(B[2] - A[2]); A = [A[0] + (B[0] - A[0])*t, A[1] + (B[1] - A[1])*t, near]; }
+      if(B[2] < near){ const t = (near - B[2])/(A[2] - B[2]); B = [B[0] + (A[0] - B[0])*t, B[1] + (A[1] - B[1])*t, near]; }
+      box(A[0], A[1], A[2], w); box(B[0], B[1], B[2], w);
+    } else {
+      const [X, Y, Z] = cam(p.c[0], p.c[1], p.c[2]), r = p.rad*1.733;
+      if(Z < -r) continue;
+      if(Z - r <= 1e-4){ all.push(p); continue; }
+      box(X, Y, Z - r, r); box(X, Y, Z + r, r);
+    }
+    const X0 = Math.floor(x0/px + ww/2) - 2, X1 = Math.ceil(x1/px + ww/2) + 2, Y0 = Math.floor(y0/px + wh/2) - 2, Y1 = Math.ceil(y1/px + wh/2) + 2;
+    if(X1 < 0 || X0 >= ww || Y1 < 0 || Y0 >= wh) continue;
+    for(let ty = Math.max(0, Math.floor(Y0/RING_TILE)); ty <= Math.min(th - 1, Math.floor(Y1/RING_TILE)); ty++)
+      for(let tx = Math.max(0, Math.floor(X0/RING_TILE)); tx <= Math.min(tw - 1, Math.floor(X1/RING_TILE)); tx++) bins[ty*tw + tx].push(p);
+  }
+  if(all.length) for(const bn of bins) for(const p of all) bn.push(p);
+  return { bins, tw, at: (x, y) => bins[Math.min(th - 1, Math.max(0, Math.floor(y/RING_TILE)))*tw + Math.min(tw - 1, Math.max(0, Math.floor(x/RING_TILE)))] };
+}
+// one ray: what it meets. Returns { kind: 0 space, 1 floor, 2 wall (or a work), 3 star, 4 square, t, phi, z, h (height up a wall), air, cosI }
+function ringRay(L, dx, dy, dz, air, list){
   const Px = L.Px, z0 = L.z0, a = dx*dx + dy*dy, b = Px*dx, c = Px*Px - L.R*L.R;
   let hit = null;
   if(a > 1e-12){ const t = (-b + Math.sqrt(b*b - a*c))/a, z = z0 + t*dz;
@@ -897,18 +1102,45 @@ function ringRay(L, dx, dy, dz, air){
   // the shadow squares: a ring of panels close round the star, 0.6 band widths tall
   const Rq = RING_SQR, aq = a, cq = Px*Px - Rq*Rq, dq = b*b - aq*cq;
   if(aq > 1e-12 && dq > 0){ const t1 = (-b - Math.sqrt(dq))/aq;
-    if(t1 > 0 && (!hit || t1 < hit.t)){ const z = z0 + t1*dz; if(Math.abs(z) <= L.W*0.3){ const X = Px + t1*dx, Y = t1*dy; let u = (Math.atan2(Y, X) - L.q0)/L.per; u -= Math.floor(u);
+    if(t1 > 0 && (!hit || t1 < hit.t)){ const z = z0 + t1*dz; if(Math.abs(z) <= L.W*0.3){ const X = Px + t1*dx, Y = t1*dy; let u = (Math.atan2(Y, X)*L.side - L.q0)/L.per; u -= Math.floor(u);
       if(u < RING_COV) hit = { kind: 4, t: t1, phi: 0, z, h: 0, cosI: 1 }; } } }
-  // the spires: a needle, tapering, along its own up (toward the axis) from its foot on the floor
-  if(L.spires) for(const sp of L.spires){
-    if(dx*sp.dir[0] + dy*sp.dir[1] + dz*sp.dir[2] < sp.cosB) continue;
-    // the closest approach of the ray (P + tD) and the spire's axis (B + uA·s, 0 ≤ s ≤ h)
-    const wx = Px - sp.bx, wy = -sp.by, wz = z0 - sp.z, b2 = dx*sp.ux + dy*sp.uy, d1 = dx*wx + dy*wy + dz*wz, e1 = sp.ux*wx + sp.uy*wy, den = 1 - b2*b2;
-    if(den < 1e-9) continue;
-    let t = (b2*e1 - d1)/den, sv = (e1 - b2*d1)/den;
-    if(sv < 0 || sv > sp.h || t <= 0 || (hit && t > hit.t)) continue;
-    const qx = Px + t*dx - (sp.bx + sp.ux*sv), qy = t*dy - (sp.by + sp.uy*sv), qz = z0 + t*dz - sp.z, rr = sp.r*(1 - 0.85*sv/sp.h);
-    if(qx*qx + qy*qy + qz*qz <= rr*rr) hit = { kind: 2, t, phi: sp.phi, z: sp.z + (qz >= 0 ? 1 : -1)*L.W*0.5, h: sv/L.W + 0.3, cosI: 0.5, spire: sv/sp.h };
+  // the works in this pixel's tile: needles and beams (spires, towers, arches), ships' hulls, crystals
+  if(list) for(const p of list){
+    if(p.k === 0){
+      // the closest approach of the ray (P + tD) and the beam's axis (B + A·s, 0 ≤ s ≤ h), then where it enters the beam
+      const wx = Px - p.bx, wy = -p.by, wz = z0 - p.bz, b2 = dx*p.ax + dy*p.ay + dz*p.az, d1 = dx*wx + dy*wy + dz*wz, e1 = p.ax*wx + p.ay*wy + p.az*wz, den = 1 - b2*b2;
+      if(den < 1e-9) continue;
+      const t = (b2*e1 - d1)/den, sv = (e1 - b2*d1)/den;
+      if(sv < 0 || sv > p.h || t <= 0 || (hit && t > hit.t)) continue;
+      const qx = Px + t*dx - (p.bx + p.ax*sv), qy = t*dy - (p.by + p.ay*sv), qz = z0 + t*dz - (p.bz + p.az*sv), q2 = qx*qx + qy*qy + qz*qz, rr = p.r0 + (p.r1 - p.r0)*sv/p.h;
+      if(q2 > rr*rr) continue;
+      const te = Math.max(1e-6, t - Math.sqrt(rr*rr - q2)/Math.sqrt(den)), Ex = Px + te*dx, Ey = te*dy, Ez = z0 + te*dz, se = (Ex - p.bx)*p.ax + (Ey - p.by)*p.ay + (Ez - p.bz)*p.az;
+      let nx = Ex - p.bx - p.ax*se, ny = Ey - p.by - p.ay*se, nz = Ez - p.bz - p.az*se; const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+      const phi = Math.atan2(Ey, Ex), Ux = -Math.cos(phi), Uy = -Math.sin(phi), view = Math.max(0, -(nx*dx + ny*dy + nz*dz)), top = Math.max(0, nx*Ux + ny*Uy);
+      hit = { kind: 2, t: te, phi, z: (p.bz >= 0 ? 1 : -1)*L.W*0.5, h: Math.max(0, se)/L.W + 0.3, cosI: 0.5, spire: p.spire ? sv/p.h : undefined,
+        shade: (0.5 + 0.5*view)*(0.62 + 0.38*top)*(p.arch ? 1.05 : p.tower ? 0.8 : 1), work: p, n: [nx, ny, nz], se };
+    } else if(p.k === 1){
+      // a hull: an ellipsoid along its heading
+      const ox = Px - p.c[0], oy = -p.c[1], oz = z0 - p.c[2];
+      const o1 = (ox*p.F[0] + oy*p.F[1] + oz*p.F[2])/p.ax, o2 = (ox*p.U[0] + oy*p.U[1] + oz*p.U[2])/p.ay, o3 = (ox*p.S[0] + oy*p.S[1] + oz*p.S[2])/p.az;
+      const d1 = (dx*p.F[0] + dy*p.F[1] + dz*p.F[2])/p.ax, d2 = (dx*p.U[0] + dy*p.U[1] + dz*p.U[2])/p.ay, d3 = (dx*p.S[0] + dy*p.S[1] + dz*p.S[2])/p.az;
+      const A2 = d1*d1 + d2*d2 + d3*d3, B2 = o1*d1 + o2*d2 + o3*d3, C2 = o1*o1 + o2*o2 + o3*o3 - 1, disc = B2*B2 - A2*C2;
+      if(disc <= 0) continue;
+      const t = (-B2 - Math.sqrt(disc))/A2; if(t <= 0 || (hit && t > hit.t)) continue;
+      const p1 = (o1 + t*d1)/p.ax, p2 = (o2 + t*d2)/p.ay, p3 = (o3 + t*d3)/p.az;
+      const n = ringNorm([p.F[0]*p1 + p.U[0]*p2 + p.S[0]*p3, p.F[1]*p1 + p.U[1]*p2 + p.S[1]*p3, p.F[2]*p1 + p.U[2]*p2 + p.S[2]*p3]);
+      const X = Px + t*dx, Y = t*dy, top = Math.max(0, n[0]*p.U[0] + n[1]*p.U[1] + n[2]*p.U[2]), view = Math.max(0, -(n[0]*dx + n[1]*dy + n[2]*dz));
+      hit = { kind: 2, t, phi: Math.atan2(Y, X), z: (p.c[2] >= 0 ? 1 : -1)*L.W*0.5, h: 0.3, cosI: 0.5, shade: 0.55*(0.35 + 0.65*top)*(0.6 + 0.4*view), work: p };
+    } else if(p.k === 2){
+      // a crystal: an upright octahedron, clipped plane by plane
+      const ox = Px - p.c[0], oy = -p.c[1], oz = z0 - p.c[2]; let tn = 0, tf = Infinity, nIn = null;
+      for(const n of p.planes){ const num = 1 - (n[0]*ox + n[1]*oy + n[2]*oz), dn = n[0]*dx + n[1]*dy + n[2]*dz;
+        if(Math.abs(dn) < 1e-12){ if(num < 0){ tf = -1; break; } continue; }
+        const t = num/dn; if(dn < 0){ if(t > tn){ tn = t; nIn = n; } } else if(t < tf) tf = t; }
+      if(!nIn || tn > tf || tn <= 0 || (hit && tn > hit.t)) continue;
+      const n = ringNorm(nIn), X = Px + tn*dx, Y = tn*dy, face = Math.abs(n[0]*dx + n[1]*dy + n[2]*dz), top = Math.max(0, n[0]*p.U[0] + n[1]*p.U[1] + n[2]*p.U[2]);
+      hit = { kind: 2, t: tn, phi: Math.atan2(Y, X), z: (p.c[2] >= 0 ? 1 : -1)*L.W*0.5, h: 0.3, cosI: 0.5, shade: 0.25 + 0.3*top, work: p, emit: 0.45 + 0.55*(1 - face) + 0.25*top };
+    }
   }
   // the star (radius 0.02) at the centre
   const cs = Px*Px - 0.0004, ds = b*b - (dx*dx + dy*dy + dz*dz)*cs;
@@ -916,6 +1148,51 @@ function ringRay(L, dx, dy, dz, air){
   if(!hit) hit = { kind: 0, t: 4, phi: 0, z: 0, h: 0, cosI: 1 };
   hit.air = air ? ringAir(L, dx, dy, dz, a, b, hit) : 0;
   return hit;
+}
+// THE LIGHTS that are not solid, along one ray up to what it met (at tHit): engines, trails, pillars, circles,
+// crystals' halos; each at least a pixel wide where it is, and dimmer as it thins below one (no shimmer)
+function ringGlow(L, dx, dy, dz, tHit, list, alpha, out){
+  const Px = L.Px, z0 = L.z0;
+  for(const p of list){
+    if(p.k === 3 || p.k === 5){
+      // a pillar or a trail: glow by the ray's distance from its line
+      const wx = Px - p.bx, wy = -p.by, wz = z0 - p.bz, b2 = dx*p.ax + dy*p.ay + dz*p.az, d1 = dx*wx + dy*wy + dz*wz, e1 = p.ax*wx + p.ay*wy + p.az*wz, den = 1 - b2*b2;
+      if(den < 1e-9) continue;
+      const t = (b2*e1 - d1)/den, sv = (e1 - b2*d1)/den; if(t <= 0 || t >= tHit || sv < 0 || sv > p.h) continue;
+      const qx = Px + t*dx - (p.bx + p.ax*sv), qy = t*dy - (p.by + p.ay*sv), qz = z0 + t*dz - (p.bz + p.az*sv), d = Math.sqrt(qx*qx + qy*qy + qz*qz);
+      const w = p.k === 5 ? p.w*(1 + 4*sv/p.h) : p.w, we = Math.max(w, t*alpha*1.2), kk = w/we, u = sv/p.h;
+      let v; let col;
+      if(p.k === 3){ v = (Math.exp(-(d*d)/(we*we))*Math.max(0.4, kk) + 0.35*Math.exp(-(d*d)/(25*we*we))*Math.max(0.3, Math.sqrt(kk)))*Math.pow(1 - u, 0.7); col = p.col; }
+      else { v = 0.22*Math.exp(-(d*d)/(we*we))*Math.sqrt(kk)*Math.pow(1 - u, 1.5); col = [0.95, 0.97, 1]; }
+      if(v > 1e-4){ out[0] += col[0]*v; out[1] += col[1]*v; out[2] += col[2]*v; }
+    } else if(p.k === 6 || p.k === 2){
+      // an engine, or a crystal's halo: a point of light
+      const vx = p.c[0] - Px, vy = p.c[1], vz = p.c[2] - z0, t0 = vx*dx + vy*dy + vz*dz, g = p.k === 6 ? p.g : p.size*3;
+      if(t0 <= 0 || t0 > tHit + g*2) continue;
+      const d2 = vx*vx + vy*vy + vz*vz - t0*t0, s = Math.max(g, t0*alpha*1.2), v = (p.k === 6 ? 1.2 : 0.45)*Math.exp(-d2/(s*s))*Math.max(0.2, Math.sqrt(g/s));
+      if(v > 1e-4){ out[0] += p.col[0]*v; out[1] += p.col[1]*v; out[2] += p.col[2]*v; }
+    } else if(p.k === 4){
+      // a circle: where the ray crosses its plane, two rings, a star inside, runes between them
+      const dn = dx*p.N[0] + dy*p.N[1] + dz*p.N[2]; if(Math.abs(dn) < 1e-5) continue;
+      const t = ((p.c[0] - Px)*p.N[0] + p.c[1]*p.N[1] + (p.c[2] - z0)*p.N[2])/dn; if(t <= 0 || t >= tHit) continue;
+      const qx = Px + t*dx - p.c[0], qy = t*dy - p.c[1], qz = z0 + t*dz - p.c[2], x = qx*p.E1[0] + qy*p.E1[1] + qz*p.E1[2], y = qx*p.E2[0] + qy*p.E2[1] + qz*p.E2[2], rho = Math.hypot(x, y);
+      if(rho > p.R*1.12) continue;
+      const lw = p.R*0.018, we = Math.max(lw, t*alpha*1.2/Math.max(0.12, Math.abs(dn))), kk = lw/we, R = p.R;
+      const ring = e => Math.exp(-((rho - e)*(rho - e))/(we*we));
+      let v = ring(R) + 0.8*ring(R*0.8) + (rho < R ? 0.06 : 0);
+      // the star: chords between every second point on the inner ring
+      for(let i = 0; i < p.points; i++){ const a0 = i/p.points*Math.PI*2, a1 = (i + 2)/p.points*Math.PI*2, x0 = Math.cos(a0)*R*0.8, y0 = Math.sin(a0)*R*0.8, x1 = Math.cos(a1)*R*0.8, y1 = Math.sin(a1)*R*0.8;
+        const ex = x1 - x0, ey = y1 - y0, f = Math.max(0, Math.min(1, ((x - x0)*ex + (y - y0)*ey)/(ex*ex + ey*ey))), ddx = x - x0 - ex*f, ddy = y - y0 - ey*f;
+        v += 0.7*Math.exp(-(ddx*ddx + ddy*ddy)/(we*we)); }
+      // the runes: a little 3×3 glyph in each sector of the band between the rings (an even glow when too fine to read)
+      if(rho > R*0.83 && rho < R*0.97){ const cellW = R*0.14/3;
+        if(t*alpha > cellW*0.8) v += 0.35;
+        else { const ang = Math.atan2(y, x)/(Math.PI*2) + 0.5, sec = Math.floor(ang*p.runes), uu = ang*p.runes - sec, vv = (rho - R*0.83)/(R*0.14);
+          const bits = mnHash(sec, 3, p.salt)*512 | 0, cell = Math.min(2, Math.floor(vv*3))*3 + Math.min(2, Math.floor(uu*3)); if((bits >> cell) & 1) v += 0.8; } }
+      v *= Math.sqrt(kk);
+      if(v > 1e-4){ out[0] += p.col[0]*v; out[1] += p.col[1]*v; out[2] += p.col[2]*v; }
+    }
+  }
 }
 // the air a ray passes through (its optical depth), summed where there is air: near the camera, and near the far floor it
 // meets (the ring's middle, far from any floor, is empty). Between the walls only.
@@ -940,16 +1217,18 @@ function genRingView(ww, wh, unit, o){
   const L = ringLook(o), N = ww*wh, along = new Float32Array(N), across = new Float32Array(N), dist = new Float32Array(N), detail = new Float32Array(N);
   const sky = new Float32Array(N), walls = new Float32Array(N), star = new Float32Array(N), day = new Float32Array(N), squares = new Float32Array(N), airs = new Float32Array(N);
   const scaf = new Float32Array(N), open = new Float32Array(N), seam = new Float32Array(N), skyAir = new Float32Array(N);
+  const city = new Float32Array(N), cityL = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lights = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+  const shade = new Float32Array(N).fill(1), cA = new Float32Array(N), cC = new Float32Array(N), cD = new Float32Array(N).fill(1), cHere = new Float32Array(N);
   // (the day where the camera stands: the air about it is lit by it, whatever lies beyond)
   const here = new Float32Array(N).fill(ringDay(L, 0)), beacon = new Float32Array(N);
-  const px = 1/unit, alpha = px/L.f, D3 = new Float64Array(3);
+  const px = 1/unit, alpha = px/L.f, D3 = new Float64Array(3), G = [0, 0, 0], bins = ringBin(L, ww, wh, unit), cityCol = L.pal[0], winCol = L.pal[1];
   const ray = (sx, sy) => { const dx = L.f*L.fx + sx*L.rx - sy*L.ux, dy = L.f*L.fy + sx*L.ry - sy*L.uy, dz = L.f*L.fz + sx*L.rz - sy*L.uz, l = Math.sqrt(dx*dx + dy*dy + dz*dz); D3[0] = dx/l; D3[1] = dy/l; D3[2] = dz/l; return D3; };
   // what each pixel's CORNER sees (shared by the four pixels round it): their mix is the pixel's coverage, its edges smooth
   const cw = ww + 1, K = new Uint8Array(cw*(wh + 1));
-  for(let y = 0; y <= wh; y++) for(let x = 0; x <= ww; x++){ const d = ray((x - ww/2)*px, (y - wh/2)*px); K[y*cw + x] = ringRay(L, d[0], d[1], d[2], false).kind; }
+  for(let y = 0; y <= wh; y++) for(let x = 0; x <= ww; x++){ const d = ray((x - ww/2)*px, (y - wh/2)*px); K[y*cw + x] = ringRay(L, d[0], d[1], d[2], false, bins.at(x, y)).kind; }
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-    const q = y*ww + x, sx = (x + 0.5 - ww/2)*px, sy = (y + 0.5 - wh/2)*px, ks = [K[y*cw + x], K[y*cw + x + 1], K[(y + 1)*cw + x], K[(y + 1)*cw + x + 1]];
-    const d = ray(sx, sy), dx = d[0], dy = d[1], dz = d[2], c = ringRay(L, dx, dy, dz, true);
+    const q = y*ww + x, list = bins.at(x, y), sx = (x + 0.5 - ww/2)*px, sy = (y + 0.5 - wh/2)*px, ks = [K[y*cw + x], K[y*cw + x + 1], K[(y + 1)*cw + x], K[(y + 1)*cw + x + 1]];
+    const d = ray(sx, sy), dx = d[0], dy = d[1], dz = d[2], c = ringRay(L, dx, dy, dz, true, list);
     let n0 = 0, n2 = 0, n3 = 0, n4 = 0; for(const k of ks){ if(k === 0) n0++; else if(k === 2) n2++; else if(k === 3) n3++; else if(k === 4) n4++; }
     // (the centre counts as much as the corners together)
     const w = k => (k === c.kind ? 0.5 : 0) + 0.125*(k === 0 ? n0 : k === 2 ? n2 : k === 3 ? n3 : n4);
@@ -960,25 +1239,43 @@ function genRingView(ww, wh, unit, o){
     if(cosA > 0.9){ const ang = Math.acos(cosA), glow = (space - w(4))*(Math.exp(-ang*ang/0.0016)*0.8 + Math.exp(-ang*ang/0.04)*0.25); star[q] = Math.min(1, star[q] + glow); }
     let H = c.kind === 1 || c.kind === 2 ? c : null;
     // (an edge pixel whose centre missed the ring: the ring's coordinates from a corner that met it)
-    if(!H) for(let k = 0; k < 4 && !H; k++) if(ks[k] === 1 || ks[k] === 2){ const e = ray(sx + ((k & 1) - 0.5)*px, sy + ((k >> 1) - 0.5)*px), h = ringRay(L, e[0], e[1], e[2], false); if(h.kind === 1 || h.kind === 2) H = h; }
+    if(!H) for(let k = 0; k < 4 && !H; k++) if(ks[k] === 1 || ks[k] === 2){ const e = ray(sx + ((k & 1) - 0.5)*px, sy + ((k >> 1) - 0.5)*px), h = ringRay(L, e[0], e[1], e[2], false, list); if(h.kind === 1 || h.kind === 2) H = h; }
     if(H){ along[q] = H.phi/L.W; across[q] = H.kind === 2 ? (H.z > 0 ? 1 + H.h : -H.h) : H.z/L.W + 0.5;
       dist[q] = 1 - Math.exp(-H.t/(L.W*6)); detail[q] = H.t*alpha/Math.max(0.03, H.cosI)/L.W; day[q] = ringDay(L, H.phi);
-      // the unfinished floor: its beams (metal), and the void seen between them (space shows through)
-      if(H.kind === 1){ const [bm, op] = ringLattice(L, along[q], across[q], detail[q]); const fl = 1 - space - w(2); scaf[q] = bm*fl; open[q] = op*fl; } }
+      if(H.shade !== undefined) shade[q] = 1 - w(2) + w(2)*H.shade;
+      const night = 1 - day[q];
+      // the unfinished floor: its beams (metal), and the void seen between them (space shows through); the city on the land
+      if(H.kind === 1){ const [bm, op] = ringLattice(L, along[q], across[q], detail[q]); const fl = 1 - space - w(2); scaf[q] = bm*fl; open[q] = op*fl;
+        if(L.city.on){ const [cb, cl] = ringCity(L, along[q], across[q], detail[q]); city[q] = cb*fl*(1 - bm); const v = cl*fl*(1 - bm)*Math.pow(night, 0.8)*1.1;
+          cityL.r[q] = cityCol[0]*v; cityL.g[q] = cityCol[1]*v; cityL.b[q] = cityCol[2]*v; } }
+      // a work's own light: a crystal glowing from within; a tower's windows, lit at night
+      if(H.emit){ const v = H.emit*w(2); lights.r[q] += H.work.col[0]*v; lights.g[q] += H.work.col[1]*v; lights.b[q] += H.work.col[2]*v; }
+      if(H.work && H.work.tower && night > 0.05){ const p = H.work, rh = p.r0*0.22, row = Math.floor(H.se/rh), T = [-Math.sin(H.phi), Math.cos(H.phi)], ang = Math.atan2(H.n[2], H.n[0]*T[0] + H.n[1]*T[1]);
+        const cu = (ang/(Math.PI*2) + 0.5)*36, col = Math.floor(cu), fine = genClamp(1.5 - H.t*alpha/rh);
+        const lit = mnHash(row, col + p.id*131, 77) < 0.35 ? 1 : 0, fy = H.se/rh - row, fx = cu - col, win = fy > 0.3 && fy < 0.75 && fx > 0.2 && fx < 0.8 ? lit : 0, v = (fine*win + (1 - fine)*0.12)*night*w(2)*0.9;
+        lights.r[q] += winCol[0]*v; lights.g[q] += winCol[1]*v; lights.b[q] += winCol[2]*v; } }
     else { dist[q] = 1; detail[q] = 1; day[q] = here[0]; }
     airs[q] = 1 - Math.exp(-c.air);
     // the air of the sky part of a pixel: an edge pixel whose centre met the ring takes it from a corner that saw space
     skyAir[q] = airs[q];
-    if(space > 0 && !(c.kind === 0 || c.kind === 3 || c.kind === 4)) for(let k = 0; k < 4; k++) if(ks[k] === 0){ const e = ray(sx + ((k & 1) - 0.5)*px, sy + ((k >> 1) - 0.5)*px), h = ringRay(L, e[0], e[1], e[2], true); skyAir[q] = 1 - Math.exp(-h.air); break; }
+    if(space > 0 && !(c.kind === 0 || c.kind === 3 || c.kind === 4)) for(let k = 0; k < 4; k++) if(ks[k] === 0){ const e = ray(sx + ((k & 1) - 0.5)*px, sy + ((k >> 1) - 0.5)*px), h = ringRay(L, e[0], e[1], e[2], true, list); skyAir[q] = 1 - Math.exp(-h.air); break; }
+    // THE CLOUDS float over the land: where this ray last crosses their layer before the ground it meets (so they stand off
+    // their shadows, and the ground at your feet, under them, has none of their bodies, only their shade)
+    if(H && H.kind === 1){ const a2 = dx*dx + dy*dy, b2 = L.Px*dx, c2 = L.Px*L.Px - L.Rc*L.Rc, disc = b2*b2 - a2*c2;
+      if(a2 > 1e-12 && disc > 0){ const tC = (-b2 + Math.sqrt(disc))/a2, zC = L.z0 + tC*dz;
+        if(tC > 0 && tC < H.t && Math.abs(zC) < L.W/2){ const X = L.Px + tC*dx, Y = tC*dy; cA[q] = Math.atan2(Y, X)/L.W; cC[q] = zC/L.W + 0.5;
+          cD[q] = tC*alpha/Math.max(0.03, Math.abs(X*dx + Y*dy)/L.Rc)/L.W; cHere[q] = 1 - space - w(2); } } }
     // a beacon at each spire's tip, always lit (red, as a tall thing's warning light is)
-    if(L.spires) for(const sp of L.spires){ const cosT = dx*sp.tip[0] + dy*sp.tip[1] + dz*sp.tip[2]; if(cosT < sp.tipCos) continue;
+    for(const sp of list){ if(!sp.beacon) continue; const cosT = dx*sp.tip[0] + dy*sp.tip[1] + dz*sp.tip[2]; if(cosT < sp.tipCos) continue;
       const a2 = (1 - cosT)*2*sp.tl*sp.tl/(sp.glowR*sp.glowR); if(a2 < 9) beacon[q] = Math.max(beacon[q], Math.exp(-a2)*Math.min(1, 0.002/(px*sp.tl/L.W) + 0.4)); }
+    // the lights that are not solid: engines, trails, pillars, circles, crystals' halos
+    G[0] = G[1] = G[2] = 0; ringGlow(L, dx, dy, dz, c.t, list, alpha, G); lights.r[q] += G[0]; lights.g[q] += G[1]; lights.b[q] += G[2];
     // the seam (a rare ring): the edges of the world's own box, faint, where you look out into space
     if(L.seam && space > 0){ const ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz), mxA = Math.max(ax, ay, az), mid = ax + ay + az - mxA - Math.min(ax, ay, az);
       const edge = Math.exp(-Math.pow((mxA - mid)/(px*1.5), 2)), u = (ax === mxA ? dy/ax : dx/mxA)*4, v = (az === mxA ? dy/az : dz/mxA)*4, gu = Math.abs(u - Math.round(u)), gv = Math.abs(v - Math.round(v));
       seam[q] = space*Math.min(1, edge + 0.35*Math.exp(-Math.pow(Math.min(gu, gv)/(px*6), 2))); }
   }
-  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir];
+  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere];
 }
 
 // a Ringworld View's settings (as its sliders give them) as the world it draws — shared with the camera's guide
@@ -987,7 +1284,8 @@ export function ringParams(r){
   return { band: W, walls: W*(0.04 + 0.7*r.walls/100), altitude: W*Math.pow(10, -3.2 + 3*r.altitude/100), look: r.look,
     lift: Math.max(-30, Math.min(89.5, r.up != null ? 90 - 90*Math.min(1.3, r.up) : (r.lift ?? 15)*0.9)),
     lens: 2*Math.atan(Math.tan((r.lens ?? 75)*Math.PI/360)/z)*180/Math.PI, place: (r.place ?? 0)/100, daylight: (r.daylight ?? 80)/100,
-    air: (a => 0.01 + 0.4*a*a)((r.air ?? 50)/100), build: 0.25 + 0.75*(r.build ?? 35)/100, seed: r.seed >>> 0 };
+    air: (a => 0.01 + 0.4*a*a)((r.air ?? 50)/100), build: 0.25 + 0.75*(r.build ?? 35)/100, seed: r.seed >>> 0,
+    side: r.side ?? 1, builders: Math.max(0, Math.min(5, Math.round((r.builders ?? 0)/20))) };
 }
 // THE CAMERA'S GUIDE (Ruby: "a fast render … almost a guide while you're adjusting the camera"): the shot as a few
 // lines, in page units (the short side 1), drawn over the page while the camera dial moves and the surface is still
@@ -1051,21 +1349,211 @@ function genMapNoise(X, Y, D, N, o){
   return [out, slope];
 }
 
+// ---------------- GLASS SHARDS ----------------
+// (Ruby: "a bunch of glass fragments laying on nothing" — "I really like glass textures and glassy things".) Broken
+// glass lying on the page: each shard a sharp polygon, tilted a little as it fell, some resting on others. The light
+// dial lights them: a face that lies right for the light flashes whole; the edges catch it on the side toward it, in
+// split colours (glass bends each colour its own way); and the light through each falls beside it on the ground as a
+// caustic, concentrated, fringed with colour, inside a pale shadow. Through the camera dial they lie on a plane.
+const GS_TINTS = [[1, 1, 1], [0.55, 0.86, 0.6], [0.96, 0.7, 0.34], [0.52, 0.7, 1], [0.8, 0.96, 0.9], [0.78, 0.58, 0.95]];   // clear, bottle green, amber, cobalt, sea glass, violet
+function gsShards(aspX, aspY, o){
+  const R = Math.random, salt = (R()*4294967296) >>> 0, area = aspX*aspY, n = Math.round(o.count*150*area), piles = [];
+  for(let k = 0; k < 3; k++) piles.push([aspX*(0.2 + 0.6*R()), aspY*(0.2 + 0.6*R())]);
+  const np = 1 + (salt % 3), out = [];
+  for(let i = 0; i < n; i++){
+    // (each shard its own draw: more Shards adds shards and moves none)
+    const r = mulberry32((salt + Math.imul(i + 1, 0x9E3779B1)) >>> 0), P = piles[Math.floor(r()*np)];
+    const g = () => { let u = 0; while(!u) u = r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r()); };
+    // where: about a pile, flung wider as Spread rises (a gaussian's tail: a few fly far); and, more as it rises, anywhere
+    const sig = 0.06 + 0.5*o.spread, flung = r() < Math.pow(o.spread, 1.5)*0.85, gx = g(), gy = g(), ux = r(), uy = r();
+    const cx = flung ? aspX*(-0.05 + 1.1*ux) : P[0] + gx*sig*aspX*0.5, cy = flung ? aspY*(-0.05 + 1.1*uy) : P[1] + gy*sig*aspY*0.5;
+    const size = o.size*(0.012 + 0.1*Math.pow(r(), 2.4)), k = r() < 0.4 ? 3 : r() < 0.75 ? 4 : 5;
+    // its outline: corners at uneven angles and distances, drawn out into a sliver as Slivers rises, turned any way
+    const angs = Array.from({ length: k }, (_, j) => (j + (r() - 0.5)*0.7)/k*Math.PI*2).sort((a, b) => a - b);
+    const stretch = 1 + o.slivers*3.5*r(), rot = r()*Math.PI, cr = Math.cos(rot), sr = Math.sin(rot);
+    const pts = angs.map(a => { const rr = size*(0.45 + 0.55*r()), x = Math.cos(a)*rr*stretch, y = Math.sin(a)*rr; return [cx + x*cr - y*sr, cy + x*sr + y*cr]; });
+    // how it lies (a little tilted, a little raised), and its glass's colour
+    const tl = 0.25 + 0.75*r()*r(), ta = r()*Math.PI*2, nx = Math.cos(ta)*tl*0.75, ny = Math.sin(ta)*tl*0.75, nl = Math.hypot(nx, ny, 1), lift = size*(0.04 + 0.4*r()*r()), tinted = r() < o.colors, tint = tinted ? GS_TINTS[1 + Math.floor(r()*(GS_TINTS.length - 1))] : GS_TINTS[0];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const p of pts){ x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+    const mx = pts.reduce((a, p) => a + p[0], 0)/k, my = pts.reduce((a, p) => a + p[1], 0)/k;
+    // (the edge of clear glass shows its own green, as window glass does seen edge on)
+    out.push({ pts, n: [nx/nl, ny/nl, 1/nl], lift, tint, edge: tinted ? tint : [0.82, 1, 0.9], size, mx, my, box: [x0, y0, x1, y1], th: size*(0.025 + 0.03*r()) });
+  }
+  return out;
+}
+// signed distance from a point to a shard's outline (+ inside), and the nearest edge's outward normal
+function gsDist(pts, x, y){
+  let d2 = Infinity, ex = 0, ey = 0, inside = false;
+  for(let i = 0, j = pts.length - 1; i < pts.length; j = i++){
+    const ax = pts[j][0], ay = pts[j][1], dx = pts[i][0] - ax, dy = pts[i][1] - ay, L2 = dx*dx + dy*dy || 1e-12, t = Math.max(0, Math.min(1, ((x - ax)*dx + (y - ay)*dy)/L2));
+    const qx = ax + dx*t - x, qy = ay + dy*t - y, q2 = qx*qx + qy*qy;
+    if(q2 < d2){ d2 = q2; const l = Math.sqrt(L2); ex = dy/l; ey = -dx/l; }
+    if((ay > y) !== (pts[i][1] > y) && x < ax + (y - ay)*dx/dy) inside = !inside;
+  }
+  return [inside ? Math.sqrt(d2) : -Math.sqrt(d2), ex, ey];
+}
+function gsRender(ww, wh, unit, S, o, cam, ground){
+  const N = ww*wh, aspX = ww/unit, aspY = wh/unit, out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, cov = new Float32Array(N), cau = new Float32Array(N);
+  // the light: its way across the page (toward the dial's handle) and its height (overhead at the dial's middle)
+  const a = (o.deg - 90)*Math.PI/180, Ex = Math.max(3, 90 - 78*Math.min(1.3, o.reach))*Math.PI/180, Lx = Math.cos(a)*Math.cos(Ex), Ly = Math.sin(a)*Math.cos(Ex), Lz = Math.sin(Ex);
+  const hl = Math.hypot(Lx, Ly, Lz + 1), Hx = Lx/hl, Hy = Ly/hl, Hz = (Lz + 1)/hl, ax = Math.cos(a), ay = Math.sin(a), cot = Math.cos(Ex)/Math.sin(Ex);
+  // the grid: which shards (with their shadows and caustics, cast away from the light) can touch each cell
+  const cs = 0.05, gx0 = -2, gy0 = -2, gw = Math.ceil((aspX + 4)/cs), gh = Math.ceil((aspY + 4)/cs), cells = new Map();
+  for(const sh of S){ const off = Math.min(sh.size*3, sh.lift*cot); sh.ox = -ax*off; sh.oy = -ay*off; const m = sh.size*0.15;
+    const bx0 = Math.min(sh.box[0], sh.box[0] + sh.ox) - m, by0 = Math.min(sh.box[1], sh.box[1] + sh.oy) - m, bx1 = Math.max(sh.box[2], sh.box[2] + sh.ox) + m, by1 = Math.max(sh.box[3], sh.box[3] + sh.oy) + m;
+    for(let cy = Math.max(0, Math.floor((by0 - gy0)/cs)); cy <= Math.min(gh - 1, Math.floor((by1 - gy0)/cs)); cy++)
+      for(let cx = Math.max(0, Math.floor((bx0 - gx0)/cs)); cx <= Math.min(gw - 1, Math.floor((bx1 - gx0)/cs)); cx++){ const key = cy*gw + cx; let l = cells.get(key); if(!l) cells.set(key, l = []); l.push(sh); } }
+  const look = (F, x, y) => { x = Math.max(0, Math.min(ww - 1.001, x)); y = Math.max(0, Math.min(wh - 1.001, y)); const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = y0*ww + x0, j = Math.min(wh - 1, y0 + 1)*ww + x0, x1 = x0 < ww - 1 ? 1 : 0;
+    return (F[i]*(1 - fx) + F[i + x1]*fx)*(1 - fy) + (F[j]*(1 - fx) + F[j + x1]*fx)*fy; };
+  const base = [0, 0, 0], col = [0, 0, 0];
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const q = y*ww + x; let px, py, fp;
+    if(cam){ const g = cam.toGround((x + 0.5)/unit, (y + 0.5)/unit); if(!g){ for(const [c, F] of [[0, out.r], [1, out.g], [2, out.b]]) F[q] = ground ? [ground.r, ground.g, ground.b][c][q] : 128/255; continue; } px = g[0]; py = g[1]; fp = g[3]/unit; }
+    else { px = (x + 0.5)/unit; py = (y + 0.5)/unit; fp = 1/unit; }
+    if(ground){ base[0] = ground.r[q]; base[1] = ground.g[q]; base[2] = ground.b[q]; } else base[0] = base[1] = base[2] = 128/255;
+    const cx = Math.floor((px - gx0)/cs), cy = Math.floor((py - gy0)/cs), list = cx >= 0 && cy >= 0 && cx < gw && cy < gh ? cells.get(cy*gw + cx) : null;
+    if(!list){ out.r[q] = base[0]; out.g[q] = base[1]; out.b[q] = base[2]; continue; }
+    // THE GROUND first: each shard's shadow, pale (it is glass), and inside it the light it gathers, its edges brightest, each colour a little apart
+    let shade = 0, cl = [0, 0, 0];
+    for(const sh of list){ const qx = px - sh.ox, qy = py - sh.oy, soft = fp + sh.lift*0.3;
+      const ds = gsDist(sh.pts, qx, qy)[0]; if(ds < -soft*2) continue;
+      shade = Math.max(shade, genClamp(0.5 + ds/soft)*o.shadows);
+      for(let c = 0; c < 3; c++){ const k = 0.86 - c*0.03, dc = gsDist(sh.pts, sh.mx + (qx - sh.mx)/k, sh.my + (qy - sh.my)/k)[0]*k, w = Math.max(fp, sh.size*0.02) + sh.lift*0.08;
+        if(dc < -w*3) continue; const inner = genClamp(0.5 + dc/w), edge = Math.exp(-(dc*dc)/(w*w));
+        cl[c] += o.caustics*(0.22*inner + 0.75*edge)*(0.4 + 0.6*sh.tint[c]); } }
+    for(let c = 0; c < 3; c++){ const v = base[c]*(1 - 0.28*shade); base[c] = 1 - (1 - v)*(1 - Math.min(1, cl[c])); }
+    cau[q] = Math.min(1, (cl[0] + cl[1] + cl[2])/3);
+    // THE SHARDS, each over what lies under it: bent a little, coloured by its glass, its face and edges lit
+    for(const sh of list){
+      const [sd, ex, ey] = gsDist(sh.pts, px, py), c = genClamp(0.5 + sd/fp); if(c <= 0) continue;
+      if(c > cov[q]) cov[q] = c;
+      const n = sh.n, spec = Math.pow(Math.max(0, n[0]*Hx + n[1]*Hy + n[2]*Hz), 70)*o.glints*1.2, face = 0.035 + 0.09*Math.max(0, n[0]*ax + n[1]*ay)/0.3;
+      const ew = Math.max(sh.th, fp*1.2), facing = ex*ax + ey*ay, inner = 0.12*Math.exp(-Math.pow((sd - ew*1.7)/(ew*0.6), 2));
+      // the corner nearest: a glint where two edges meet and face the light
+      let cd = Infinity; for(const p of sh.pts){ const d = Math.hypot(p[0] - px, p[1] - py); if(d < cd) cd = d; }
+      const corner = Math.max(0, facing)*Math.exp(-(cd*cd)/(ew*ew*6))*o.glints;
+      for(let ch = 0; ch < 3; ch++){
+        // the glass's own: what is under it, seen through it (bent by its tilt), tinted, a little darker
+        let v = ground ? look([ground.r, ground.g, ground.b][ch], x + n[0]*sh.th*unit*6, y + n[1]*sh.th*unit*6) : base[ch];
+        // (the shadows and the caustic light on the ground show through it too, on what it bends there)
+        if(ground) v = 1 - (1 - v*(1 - 0.28*shade))*(1 - Math.min(1, cl[ch]));
+        v *= (0.9 + 0.1*sh.tint[ch])*(1 - 0.35*(1 - sh.tint[ch]));
+        // its edge, each colour's band a little wider or narrower (the split), bright toward the light, dark away
+        const band = genClamp(1 - sd/(ew*(1.25 - 0.2*ch))), L = face*sh.tint[ch] + spec + band*(Math.max(0, facing)*0.85 + 0.08)*sh.edge[ch] + corner*1.5;
+        v = v*(1 - band*Math.max(0, -facing)*0.3 - inner);
+        col[ch] = 1 - (1 - v)*(1 - Math.min(1, L));
+      }
+      for(let ch = 0; ch < 3; ch++) base[ch] = base[ch]*(1 - c) + col[ch]*c;
+    }
+    out.r[q] = base[0]; out.g[q] = base[1]; out.b[q] = base[2];
+  }
+  return [out, cov, cau];
+}
+
+// ---------------- DEWY WEBS ----------------
+// (Ruby: "Dewey spider webs getting caught by the light … a texture we need to make".) Orb webs: a frame of anchor
+// threads, spokes from the hub, the sticky spiral wound out between them and sagging a little, some of it torn. Dew
+// gathers on the spiral in beads (as a wet thread breaks into drops, a big one and small ones between), larger low in
+// the web; each drop a tiny lens: a bright point toward the light, a rim, a dark heart. The silk glints where it runs
+// across the way to the light, and near the light it shows the colours thin silk splits it into.
+function dwWebs(aspX, aspY, o){
+  const R = Math.random, salt = (R()*4294967296) >>> 0, webs = [], nW = 1 + Math.round(o.webs*4);
+  for(let w = 0; w < nW; w++){
+    // (each web its own draw: more Webs adds webs and moves none)
+    const r = mulberry32((salt + Math.imul(w + 1, 0x85EBCA6B)) >>> 0), size = Math.min(aspX, aspY)*(w ? 0.16 + 0.22*r() : 0.32 + 0.12*r())*o.size;
+    // its hub: of a few places, the one farthest from the webs already strung
+    let hx = 0, hy = 0, best = -1;
+    for(let t = 0; t < 6; t++){ const x = aspX*(0.12 + 0.76*r()), y = aspY*(0.12 + 0.76*r()), d = webs.reduce((m, W) => Math.min(m, Math.hypot(x - W.hx, y - W.hy) - W.size*0.8), 9);
+      if(d > best){ best = d; hx = x; hy = y; } }
+    // the frame: a ring of anchor points round the hub at uneven reach (an orb web's hub sits a little above its middle)
+    const nf = 4 + Math.floor(r()*4), rot = r()*Math.PI*2, frame = Array.from({ length: nf }, (_, k) => { const t = rot + (k + (r() - 0.5)*0.55)/nf*Math.PI*2, s2 = Math.sin(t) > 0 ? 1.15 : 0.9;
+      return [hx + Math.cos(t)*size*(0.8 + 0.35*r()), hy + Math.sin(t)*size*(0.75 + 0.35*r())*s2]; });
+    // its tears: a stretch of the spiral gone, across some of its turns (Torn decides how many and how wide)
+    const tears = Array.from({ length: 3 }, (_, k) => ({ at: r()*Math.PI*2, wide: 0.25 + 0.6*r(), r0: 0.15 + 0.5*r(), r1: 0.55 + 0.6*r(), need: k*0.3 + 0.08*r(), hang: r() }));
+    webs.push({ hx, hy, size, spokes: 20 + Math.floor(r()*14), turns: Math.round(8 + o.threads*28*(0.8 + 0.4*r())), frame, tears, rot, salt: (r()*1e6) | 0,
+      anchors: frame.map(p => { const k = 1.5 + r()*3; return [p[0] + (p[0] - hx)*k, p[1] + (p[1] - hy)*k]; }) });
+  }
+  return webs;
+}
+const dwHue = h => [0, 1/3, 2/3].map(o => genClamp(Math.abs(((h + o) % 1)*6 - 3) - 1)*0.75 + 0.25);
+// where a spoke at angle t meets the frame (the polygon of anchor points), from the hub
+function dwReach(W, t){ const dx = Math.cos(t), dy = Math.sin(t); let best = W.size;
+  for(let i = 0, j = W.frame.length - 1; i < W.frame.length; j = i++){ const ax = W.frame[j][0] - W.hx, ay = W.frame[j][1] - W.hy, bx = W.frame[i][0] - W.hx, by = W.frame[i][1] - W.hy, ex = bx - ax, ey = by - ay, den = dx*ey - dy*ex;
+    if(Math.abs(den) < 1e-9) continue; const s = (ax*ey - ay*ex)/den, u = (ax*dy - ay*dx)/den; if(s > 0 && u >= 0 && u <= 1) best = Math.min(best, s); }
+  return best; }
+function dwDraw(ww, wh, unit, webs, o, E){
+  const [tc, tx] = kitCanvas(ww, wh), [gc, gx] = kitCanvas(ww, wh), [dc, dxx] = kitCanvas(ww, wh);
+  for(const X of [tx, gx, dxx]){ X.fillStyle = '#000'; X.fillRect(0, 0, ww, wh); X.lineCap = 'round'; X.lineJoin = 'round'; }
+  const a = (o.deg - 90)*Math.PI/180, Lx = Math.cos(a), Ly = Math.sin(a), thin = E.px(0.9), drops = []; let cur = null, rr = Math.random;
+  // a thread: drawn faint, and glinting where it runs across the light's way (each piece its own), in the colours
+  // thin silk splits light into (Iridescence), changing along the thread and with its angle
+  const silk = (pts, w0, alpha) => {
+    let w = E.px(w0)*o.width, al = alpha; if(w < thin){ al *= w/thin; w = thin; } tx.lineWidth = w; gx.lineWidth = w*1.4;
+    tx.globalAlpha = al; tx.strokeStyle = '#fff'; tx.beginPath(); pts.forEach((p, i) => i ? tx.lineTo(p[0]*unit, p[1]*unit) : tx.moveTo(p[0]*unit, p[1]*unit)); tx.stroke();
+    for(let i = 1; i < pts.length; i++){ const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy) || 1, across = Math.abs(dx*Ly - dy*Lx)/l;
+      const gl = Math.pow(across, 3)*Math.min(1, al*1.6); if(gl < 0.03) continue;
+      const d = cur ? Math.hypot((x0 + x1)/2 - cur.hx, (y0 + y1)/2 - cur.hy)/cur.size : 0, hc = dwHue((across*1.4 + d*1.6 + 0.55) % 1), k = o.irid;
+      gx.globalAlpha = gl; gx.strokeStyle = `rgb(${hc.map(c => Math.round(255*(1 - k + k*c))).join(',')})`; gx.beginPath(); gx.moveTo(x0*unit, y0*unit); gx.lineTo(x1*unit, y1*unit); gx.stroke(); } };
+  // dew along a thread: beads at a wet thread's rhythm (a drop, and often a small one between), larger low in the web
+  const bead = (pts, W, share) => { if(o.dew <= 0) return;
+    for(let i = 1; i < pts.length; i++){ const A = pts[i - 1], B = pts[i], len = Math.hypot(B[0] - A[0], B[1] - A[1]); let u = rr()*0.01;
+      while(u < len){ const v = u/len, P = [A[0] + (B[0] - A[0])*v, A[1] + (B[1] - A[1])*v], fall = genClamp((P[1] - W.hy)/W.size*0.5 + 0.5);
+        const rad = o.dropSize*(0.0011 + 0.0028*rr()*(0.4 + 0.8*fall))*(0.6 + 0.6*o.dew);
+        if(rr() < share*(0.2 + 0.8*o.dew)){ drops.push([P[0], P[1], rad]); if(rr() < 0.5) drops.push([P[0] + (B[0] - A[0])/len*rad*3.2, P[1] + (B[1] - A[1])/len*rad*3.2, rad*0.4]); }
+        u += rad*(5 + 9*(1 - o.dew))*(0.7 + 0.6*rr()); } } };
+  for(const W of webs){ cur = W;
+    const r = mulberry32(W.salt); rr = r;
+    // torn: whether the spiral at this angle and share of the way out is gone
+    const torn = (t, f) => W.tears.some(T => o.torn > T.need && f > T.r0 && f < T.r1 && Math.abs(((t - T.at) % (Math.PI*2) + Math.PI*3) % (Math.PI*2) - Math.PI) < T.wide*Math.min(1, (o.torn - T.need)*3));
+    // the anchor lines and the frame: the stoutest silk
+    for(let i = 0; i < W.frame.length; i++){ const f = W.frame[i], g = W.frame[(i + 1) % W.frame.length], A = W.anchors[i];
+      silk([f, A], 1.8, 0.6); const fr = [f, [(f[0] + g[0])/2, (f[1] + g[1])/2 + Math.hypot(g[0] - f[0], g[1] - f[1])*o.sag*0.03], g]; silk(fr, 1.8, 0.7); bead(fr, W, 0.35); }
+    // the spokes, hub to frame, and the hub's little mesh
+    const sp = Array.from({ length: W.spokes }, (_, k) => W.rot + (k + (r() - 0.5)*0.4)/W.spokes*Math.PI*2), reach = sp.map(t => dwReach(W, t));
+    sp.forEach((t, k) => { const P = [[W.hx, W.hy], [W.hx + Math.cos(t)*reach[k], W.hy + Math.sin(t)*reach[k]]]; silk(P, 1.2, 0.6); bead(P, W, 0.15); });
+    for(let j = 1; j <= 3; j++){ const hr = W.size*0.02*j; silk(sp.map(t => [W.hx + Math.cos(t)*hr, W.hy + Math.sin(t)*hr]).concat([[W.hx + Math.cos(sp[0])*hr, W.hy + Math.sin(sp[0])*hr]]), 0.9, 0.5); }
+    // the sticky spiral: from past the hub's free zone out to the frame, between each two spokes a thread sagging a little
+    const free = 0.16;
+    for(let k = 0; k < W.spokes; k++){ const t0 = sp[k], t1 = sp[(k + 1) % W.spokes] + (k === W.spokes - 1 ? Math.PI*2 : 0), rmax = Math.min(reach[k], reach[(k + 1) % W.spokes]);
+      for(let j = 0; j < W.turns; j++){ const f0 = free + (1 - free)*(j + (t0 - W.rot)/(Math.PI*2))/W.turns, f1 = free + (1 - free)*(j + (t1 - W.rot)/(Math.PI*2))/W.turns;
+        const r0 = f0*reach[k]*0.97, r1 = f1*reach[(k + 1) % W.spokes]*0.97; if(Math.max(r0/reach[k], r1/reach[(k + 1) % W.spokes]) > 0.97 || f1 > 1) break;
+        if(torn((t0 + t1)/2, (f0 + f1)/2)){
+          // a torn thread: now and then a loose end, hanging down from the spoke it is still caught on
+          if(r() < 0.12){ const P = [W.hx + Math.cos(t0)*r0, W.hy + Math.sin(t0)*r0], L = W.size*(0.03 + 0.1*r()), sw = (r() - 0.5)*L*0.6;
+            const loose = [P, [P[0] + sw*0.5, P[1] + L*0.5], [P[0] + sw, P[1] + L]]; silk(loose, 0.8, 0.7); bead(loose, W, 0.8); }
+          continue; }
+        const A = [W.hx + Math.cos(t0)*r0, W.hy + Math.sin(t0)*r0], B = [W.hx + Math.cos(t1)*r1, W.hy + Math.sin(t1)*r1], len = Math.hypot(B[0] - A[0], B[1] - A[1]), sag = len*o.sag*0.18;
+        const pts = Array.from({ length: 4 }, (_, i) => { const u = i/3; return [A[0] + (B[0] - A[0])*u, A[1] + (B[1] - A[1])*u + sag*4*u*(1 - u)]; });
+        silk(pts, 0.9, 0.75); bead(pts, W, 1); } } }
+  // the drops: each a tiny lens — its body faint, a point of light toward the light, a bright crescent on its far side
+  // (the light it gathers), drawn no smaller than a pixel (a smaller one fades instead)
+  for(const [x, y, rad] of drops){ let r = rad*unit; const floor = E.px(1.2); let al = 1; if(r < floor){ al = (r/floor)*(r/floor); r = floor; }
+    dxx.globalAlpha = al*0.45; dxx.fillStyle = '#fff'; dxx.beginPath(); dxx.arc(x*unit, y*unit, r, 0, Math.PI*2); dxx.fill();
+    dxx.globalAlpha = al; dxx.strokeStyle = '#fff'; dxx.lineWidth = Math.max(E.px(0.5), r*0.3); dxx.beginPath(); dxx.arc(x*unit, y*unit, r*0.78, a + Math.PI*0.65, a + Math.PI*1.35); dxx.stroke();
+    gx.globalAlpha = al; gx.fillStyle = '#fff'; gx.beginPath(); gx.arc((x + Lx*rad*0.42)*unit, (y + Ly*rad*0.42)*unit, Math.max(floor*0.75, r*0.28), 0, Math.PI*2); gx.fill(); }
+  return [tc, gc, dc];
+}
+
 export const GEN_STEPS = {
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
-  ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom'], outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air'],
-    io: { ins: ['value', 'value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+  ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
+    outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',
+      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here'],
+    io: { ins: ['value', 'value', 'value', 'value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field',
+      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field'] },
     params: [GEN_R('band', 'Band Width', 45), GEN_R('walls', 'Rim Walls', 25), GEN_R('altitude', 'Altitude', 15), GEN_R('look', 'Look Toward', 0, 0, 360), GEN_R('lift', 'Look Up', 15, -30, 100),
-      GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50), GEN_R('build', 'Construction', 35)], cost: () => 8,
-    doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, open space.',
-    // (a dial wired in is the camera — the Camera Dial, or the Light Dial: its direction where you look round the ring,
-    //  its height how far up (at the middle, straight up at the arch; at the rim, level; past it, a little down), and the
-    //  Camera Dial's zoom narrows the lens)
-    run(E, n){ const { ww, wh, unit, num, input } = E, toward = input(n, 1), up = input(n, 2), zoom = input(n, 3);
+      GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50), GEN_R('build', 'Construction', 35),
+      GEN_R('builders', 'Builders: Seed · Wilds · Engineers · Cities · Magi · Ruins', 0)], cost: () => 9,
+    doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, what its builders raised, open space.',
+    // (a dial wired in is the camera — the Camera Dial: its turn where you look round the ring, its view how far up (at the
+    //  middle, straight up at the arch; at the rim, level; past it, a little down), its zoom the lens. The Light Dial is
+    //  the day: its height the time (overhead noon, at the rim dusk, past it night), its direction which way dusk comes)
+    run(E, n){ const { ww, wh, unit, num, input } = E, toward = input(n, 1), up = input(n, 2), zoom = input(n, 3), sun = input(n, 4), from = input(n, 5);
+      const daylight = typeof sun === 'number' ? 100*(sun <= 1 ? 1 - 0.5*sun : Math.max(0, 0.5 - (sun - 1)/0.3*0.5)) : num(n, 'daylight', 80);
       return genRingView(ww, wh, unit, ringParams({ band: num(n, 'band', 45), walls: num(n, 'walls', 25), altitude: num(n, 'altitude', 15),
         look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0), up: typeof up === 'number' ? up : null, lift: num(n, 'lift', 15),
-        lens: num(n, 'lens', 75), zoom: typeof zoom === 'number' ? 25 + 375*zoom : 100, place: num(n, 'place', 0), daylight: num(n, 'daylight', 80), air: num(n, 'air', 50), build: num(n, 'build', 35),
-        seed: E.ctx.seed >>> 0 })); } },
+        lens: num(n, 'lens', 75), zoom: typeof zoom === 'number' ? 25 + 375*zoom : 100, place: num(n, 'place', 0), daylight, air: num(n, 'air', 50), build: num(n, 'build', 35),
+        side: typeof from === 'number' && Math.cos((from*360 - 90)*Math.PI/180) < 0 ? -1 : 1, builders: num(n, 'builders', 0), seed: E.ctx.seed >>> 0 })); } },
   // the GROUND CAMERA's view as maps (Wood and Discharge see the plank this way): where on the page's plane each pixel
   // looks, and how much of it a pixel spans — for Noise at Coordinates (or a Lookup) to lay anything on the same plank
   groundview: { cat: 'Shape', label: 'Ground Coordinates', ins: [], outs: ['across', 'down', 'detail'], io: { outs: ['field', 'field', 'field'] },
@@ -1090,8 +1578,8 @@ export const GEN_STEPS = {
     run(E, n){ const { num } = E;
       return genRaindrops(E.ww, E.wh, E.unit, { size: num(n, 'size', 100)/100, rain: num(n, 'rain', 50)/100, spread: num(n, 'spread', 50)/100, splash: num(n, 'splash', 40)/100,
         tilt: num(n, 'view', 35)/100, salt: ((E.ctx.seed >>> 0) + Math.round(num(n, 'variation', 0))*7919) >>> 0 }); } },
-  traces: { cat: 'Marks', label: 'Circuit Traces', ins: ['keep clear'], outs: ['copper', 'height', 'each trace', 'data', 'pads', 'parts', 'silkscreen', 'brass'],
-    io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+  traces: { cat: 'Marks', label: 'Circuit Traces', ins: ['keep clear'], outs: ['copper', 'height', 'each trace', 'data', 'pads', 'parts', 'silkscreen', 'brass', 'arcana'],
+    io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99),
       GEN_R('era', 'Era', 0), GEN_R('marks', 'Markings', 0), ['clearing', 'Keep Clear By', 'select', 'routing around it', { options: ['routing around it', 'cutting it away'] }]], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100), s = unit/across;
@@ -1106,7 +1594,7 @@ export const GEN_STEPS = {
       const look = keep ? (x, y) => keep[Math.min(h - 1, Math.max(0, y*s | 0))*w + Math.min(w - 1, Math.max(0, x*s | 0))] : null;
       if(look){ if(E.P(n, 'clearing', 'routing around it') !== 'cutting it away') o.clear = look; else if(keep.some(v => v > 0.5)) o.cut = (x, y) => look(x, y) > 0.5; }
       const B = withSeed(genSeed(E, n), () => genCircuit(cw, ch, o)), cv = genDrawCircuit(B, w, h, s, o);
-      return ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend', 'brass'].map(k => cv[k][0]); },
+      return ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend', 'brass', 'arcana'].map(k => cv[k][0]); },
     run(E, n){ return this.paint(E, n).map(c => E.asField(E.readCanvas(c))); } },
   matrix: { cat: 'Textures', label: 'Growth Medium', ins: [], outs: ['picture', 'height', 'ways'], io: { outs: ['field', 'field', 'field'] },
     params: [GEN_R('kind', 'Strata · Pebbles · Sand · Fibres · Skin', 25), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('angle', 'Angle', 0, 0, 180), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
@@ -1216,4 +1704,30 @@ export const GEN_STEPS = {
       const soft = E.boxBlur(body, unit*0.0045*o.fold*zoom), rel = new Float32Array(E.N);
       for(let i = 0; i < E.N; i++) rel[i] = genClamp(soft[i]*0.9 - line[i]*0.25 + 0.05);
       return [line, body, rel]; } },
+  // GLASS SHARDS (Ruby: "a bunch of glass fragments laying on nothing"): broken glass on the page, or over a picture
+  // wired in (seen through each shard, bent by its tilt). The light dial lights it — wired into light from and light
+  // height — and the camera dial lays the shards on a plane (wired into Turn, View and Camera Zoom)
+  shards: { cat: 'Marks', label: 'Glass Shards', ins: ['picture', 'light from', 'light height'], outs: ['picture', 'shards', 'caustics'],
+    io: { ins: ['image', 'value', 'value'], outs: ['image', 'field', 'field'] },
+    params: [GEN_R('count', 'Shards', 40), GEN_R('size', 'Size', 100, 30, 300), GEN_R('spread', 'Spread', 55), GEN_R('slivers', 'Slivers', 35), GEN_R('caustics', 'Caustics', 60),
+      GEN_R('glints', 'Glints', 60), GEN_R('colors', 'Colored Glass', 25), GEN_R('shadows', 'Shadows', 50), GEN_R('variant', 'Variant', 0, 0, 99),
+      GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 10,
+    doc: 'Broken glass lying on the page, or on a picture: sharp shards, a little tilted, lit by the light dial, each throwing its light beside it.',
+    run(E, n){ const { ww, wh, unit, num, input } = E, dial = genDial(E, n, 2), h = input(n, 3), pic = input(n, 1);
+      const o = { count: num(n, 'count', 40)/100, size: num(n, 'size', 100)/100, spread: num(n, 'spread', 55)/100, slivers: num(n, 'slivers', 35)/100, caustics: num(n, 'caustics', 60)/100,
+        glints: num(n, 'glints', 60)/100, colors: num(n, 'colors', 25)/100, shadows: num(n, 'shadows', 50)/100, deg: dial.deg,
+        reach: typeof h === 'number' ? h : Math.max(0, Math.min(1.3, (E.ctx.lightTilt ?? 100)/100)) };
+      const cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100)), S = withSeed(genSeed(E, n), () => gsShards(ww/unit, wh/unit, o));
+      return gsRender(ww, wh, unit, S, o, cam, pic != null ? E.asImage(pic) : null); } },
+  // DEWY WEBS (Ruby: "dewy spider webs getting caught by the light"): orb webs, beaded with dew, the silk glinting where
+  // it runs across the light's way, in the colours thin silk splits light into; the drops each a lens with a point of light
+  dewwebs: { cat: 'Marks', label: 'Dewy Webs', ins: ['light from'], outs: ['silk', 'glints', 'dew'], io: { ins: ['value'], outs: ['field', 'image', 'field'] },
+    params: [GEN_R('webs', 'Webs', 30), GEN_R('size', 'Size', 100, 40, 250), GEN_R('dew', 'Dew', 60), GEN_R('drops', 'Drop Size', 100, 30, 300), GEN_R('torn', 'Torn', 20),
+      GEN_R('sag', 'Sag', 40), GEN_R('irid', 'Iridescence', 50), GEN_R('threads', 'Threads', 50), GEN_R('width', 'Thread Width', 100, 30, 300), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 5,
+    doc: 'Orb webs strung across the page and beaded with dew: the silk, its glints in the colours thin silk makes, and the drops, each a tiny lens.',
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1);
+      const o = { webs: num(n, 'webs', 30)/100, size: num(n, 'size', 100)/100, dew: num(n, 'dew', 60)/100, dropSize: num(n, 'drops', 100)/100, torn: num(n, 'torn', 20)/100,
+        sag: num(n, 'sag', 40)/100, irid: num(n, 'irid', 50)/100, threads: num(n, 'threads', 50)/100, width: num(n, 'width', 100)/100, deg: dial.deg };
+      const [tc, gc, dc] = withSeed(genSeed(E, n), () => dwDraw(ww, wh, unit, dwWebs(ww/unit, wh/unit, o), o, E));
+      return [E.asField(E.readCanvas(tc)), E.readCanvas(gc), E.asField(E.readCanvas(dc))]; } },
 };

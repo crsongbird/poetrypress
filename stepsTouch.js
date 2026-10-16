@@ -12,7 +12,7 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare, wholeCam, wholeTurned } from './texCore.js';
 import { genColdPress, genCupRing, genOldPaper, genBurntLetter, genHoarfrost, genGlassRain, genWater, genDunes, genMoss, genKintsugi, genSpangle, genCrystalLeaf, genSuminagashi } from './texTouch.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -132,18 +132,21 @@ export const TOUCH_STEPS = {
     (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
       return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null); }),
   water: kitWhole({ cat: 'Textures', label: 'Scrying Pool', ins: ['light from'], outs: ['pool'], io: { ins: ['value'], outs: ['image'] },
-    params: [TOUCH_R('zoom', 'Wave Scale', 100, 40, 250), TOUCH_R('amount', 'Turbulence', 35), TOUCH_R('form', 'Depth', 35), TOUCH_R('haze', 'Haze', 10), TOUCH_R('murk', 'Murk', 0), TOUCH_R('tilt', 'Tilt', 35), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 12 },
-    (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
+    params: [TOUCH_R('zoom', 'Wave Scale', 100, 40, 250), TOUCH_R('amount', 'Turbulence', 35), TOUCH_R('form', 'Depth', 35), TOUCH_R('haze', 'Haze', 10), TOUCH_R('murk', 'Murk', 0), TOUCH_R('tilt', 'View', 35), TOUCH_R('variant', 'Variant', 0, 0, 99),
+      TOUCH_R('turn', 'Turn', 0, 0, 360), TOUCH_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12 },
+    (E, n, w, h) => { const cam = wholeCam(E, n), light = wholeTurned(wholeDial(E, n, 1), cam), a = wholeAmt(E, n, 'amount', 35), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 35);
       const hz = wholeShare(E, n, 'haze', 10), mk = wholeShare(E, n, 'murk', 0), tl = wholeShare(E, n, 'tilt', 35);
-      return () => genWater(w, h, a, z, light, f, hz, mk, tl, E.ctx.mat || null); }),
+      return () => genWater(w, h, a, z, light, f, hz, mk, tl, E.ctx.mat || null, cam); }),
   dunes: kitWhole({ cat: 'Textures', label: 'Dune Ripples', ins: ['light from', 'sand hue', 'sun hue'], outs: ['sand'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [TOUCH_R('zoom', 'Ripple Size', 100, 40, 300), TOUCH_R('amount', 'Wind', 50), TOUCH_R('form', 'Dune Height', 40), TOUCH_R('tilt', 'Tilt', 40), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 10 },
-    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40), tl = wholeShare(E, n, 'tilt', 40);
-      return () => genDunes(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+    params: [TOUCH_R('zoom', 'Ripple Size', 100, 40, 300), TOUCH_R('amount', 'Wind', 50), TOUCH_R('form', 'Dune Height', 40), TOUCH_R('tilt', 'View', 40), TOUCH_R('variant', 'Variant', 0, 0, 99),
+      TOUCH_R('turn', 'Turn', 0, 0, 360), TOUCH_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 10 },
+    (E, n, w, h) => { const cam = wholeCam(E, n), light = wholeTurned(wholeDial(E, n, 1), cam), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 50), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40), tl = wholeShare(E, n, 'tilt', 40);
+      return () => genDunes(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null, cam); }),
   moss: kitWhole({ cat: 'Textures', label: 'Moss on Stone', ins: ['light from', 'stone hue', 'moss hue'], outs: ['stone'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [TOUCH_R('zoom', 'Stone Scale', 100, 40, 300), TOUCH_R('amount', 'Moss', 45), TOUCH_R('form', 'Dampness', 30), TOUCH_R('tilt', 'Tilt', 30), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
-    (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 45), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), tl = wholeShare(E, n, 'tilt', 30);
-      return () => genMoss(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null); }),
+    params: [TOUCH_R('zoom', 'Stone Scale', 100, 40, 300), TOUCH_R('amount', 'Moss', 45), TOUCH_R('form', 'Dampness', 30), TOUCH_R('tilt', 'View', 30), TOUCH_R('variant', 'Variant', 0, 0, 99),
+      TOUCH_R('turn', 'Turn', 0, 0, 360), TOUCH_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 8 },
+    (E, n, w, h) => { const cam = wholeCam(E, n), light = wholeTurned(wholeDial(E, n, 1), cam), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 45), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30), tl = wholeShare(E, n, 'tilt', 30);
+      return () => genMoss(w, h, a, z, light, t1, t2, f, tl, E.ctx.mat || null, E.ctx.glow || null, cam); }),
   kintsugi: kitWhole({ cat: 'Textures', label: 'Kintsugi', ins: ['light from', 'glaze hue', 'gold hue'], outs: ['vessel'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Seam Width', 100, 50, 300), TOUCH_R('amount', 'Fractures', 100, 20, 400), TOUCH_R('form', 'Gloss', 70), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 70);

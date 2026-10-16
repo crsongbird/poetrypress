@@ -910,8 +910,10 @@ function applyPersisted(s){
 }
 
 // a look's FORMAT: 2 since the dial took over Harsh Rain's slant and Silverpoint
-// Hatch's angle (their sliders took new jobs); older looks are translated on load
-const LOOK_VERSION = 3;
+// Hatch's angle (their sliders took new jobs); 3 every blend for every surface; 4 Ringworld's day on the light dial and
+// Circuit Board's five eras.
+// Older looks are translated on load
+const LOOK_VERSION = 4;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -976,7 +978,24 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))); }
+function retireLook(s){ return retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))); }
+/** A look from before format 4 (Saturn–Titan and earlier): Ringworld's Daylight slider (6) onto the light dial (noon at
+ *  its middle, dusk at its rim, midnight past it), the sixth slider becoming Builders, by the seed; Circuit Board's Era
+ *  from four eras to five (the one that was Magitech is Atomic now, at 75 where it stood at 100); and the Tilt sliders of
+ *  Dune Ripples (4), Moss on Stone (4) and Scrying Pool (6) onto the camera dial's View (Ruby: "anytime we use a tilt …
+ *  we should set it for the camera"), the camera unturned at its own lens, so the picture is the one it was. */
+const FORMAT4_TILTS = { dunes: [4, 40], moss: [4, 30], water: [6, 35] };
+function retireFormat4Layer(L){
+  if(!L) return L;
+  if(L.textureType === 'circuit' && +L.texP7 > 0) return { ...L, texP7: String(Math.round(+L.texP7*0.75)) };
+  const tl = FORMAT4_TILTS[L.textureType];
+  if(tl){ const v = L['texP' + tl[0]], t = (v === undefined || v === null || v === '' || isNaN(+v)) ? tl[1] : +v, o = { ...L, cameraTurn: '0', cameraView: String(Math.round(Math.max(0, Math.min(100, t)))), cameraZoom: '100' };
+    delete o['texP' + tl[0]]; return o; }
+  if(L.textureType !== 'ringworld') return L;
+  const d = Math.max(0, Math.min(100, +L.texP6 >= 0 ? +L.texP6 : 80)), reach = d >= 50 ? (100 - d)*2 : 100 + (50 - d)*0.6;
+  return { ...L, texP6: '0', textureLight: '90', textureLightTilt: String(Math.round(reach)) };
+}
+function retireFormat4(s){ if(!s || +s.lookVersion >= 4) return s; let o = retireFormat4Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat4Layer(o.baseLayer) }; return o; }
 /** A look from before the camera dial (Saturn–Rhea and earlier): Lichtenberg's camera sliders (Zoom, Turn, View) and
  *  Ringworld's light dial (it was the camera) onto the camera dial; Lichtenberg's sliders as they are now (the strike
  *  where the light dial pointed; Embers as charred wood with a Glow Hue; Slide moved to the last slider). */
@@ -2934,8 +2953,11 @@ function fitEditorRoom(){
   const br = bar && bar.getBoundingClientRect ? bar.getBoundingClientRect() : null, barTop = br && br.height > 0 && br.top > 0 ? br.top : bottom;   // (a fixed bar has no offsetParent)
   const room = Math.floor(Math.min(bottom, barTop) - wrap.getBoundingClientRect().top - 6);
   if(!(room > 0)) return;
+  const was = b.classList.contains('editor-fit') && document.documentElement.style.getPropertyValue('--editor-room');
   document.documentElement.style.setProperty('--editor-room', Math.max(96, room) + 'px');
   b.classList.add('editor-fit');
+  // (a new room can change the editor's width — its scrollbar comes or goes — and so where its lines wrap: measure again)
+  if(was !== Math.max(96, room) + 'px' && typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
 }
 // (the preview's divider moves the editor's top: the room follows)
 if(typeof ResizeObserver === 'function' && typeof document.querySelector === 'function' && document.querySelector('.stage'))
@@ -3261,6 +3283,8 @@ async function revealSurface(){
   // an Athanor surface: the page's own graph onto the bench (it is the bench's already while the page shows it)
   if(type === 'athanor' && benchOnPage()){ openAthanorNow(); return; }
   const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
+  // the empty Athanor (no graph on the page yet): the editor opens as it is, to start one (Ruby: it is where anyone would go)
+  if(type === 'athanor' && !page){ openAthanorNow(); return; }
   const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
   const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
@@ -3735,6 +3759,8 @@ render();
 function remeasureAndRender(){
   invalidateTextMeasurements();
   render();
+  // (the editor's own font may be what arrived: its text wraps anew, so its height is measured again)
+  repaintEditor();
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(remeasureAndRender);
 // Textures that draw alchemical glyphs (transmutation circles) must not keep
@@ -3913,7 +3939,7 @@ const WORKING_WORDS = {
   aurora: 'Combing the silk', aurorasky: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',
   suminagashi: 'Floating the ink', grain: 'Developing the grain', metalleaf: 'Laying the leaf', flowers: 'Opening the lotuses',
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
-  cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', sigils: 'Inscribing the sigils',
+  cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
   tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',

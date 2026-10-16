@@ -203,7 +203,7 @@ export function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
  *           the sky (Fresnel) and the pool recedes into haze
  * WAVE SCALE · TURBULENCE · DEPTH · HAZE · MURK · TILT
  */
-export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3){
+export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   amt=(amt==null?0.35:amt); zoom=(zoom==null?1:zoom);
   const turb=Math.max(0,Math.min(1,amt)), depth=Math.max(0,Math.min(1, form==null ? 0.35 : form));
   const hz=Math.max(0,Math.min(1, haze==null ? 0.1 : haze)), mk=Math.max(0,Math.min(1, murk==null ? 0 : murk));
@@ -222,7 +222,7 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3){
   }
   const KINDS=['koi','stream','well'], kind=KINDS[Math.floor(Math.random()*KINDS.length)];
   // the patch the camera sees (the page itself, looking straight down)
-  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.01), DW=F.GW, DH=F.GH;
+  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.01, cam), DW=F.GW, DH=F.GH;
   const floor=unit*(0.03+depth*0.3), bend=floor*(1-1/1.33);
   const ox=-SX*ltilt*floor*0.35, oy=-SY*ltilt*floor*0.35;          // slanting light shifts the net
   const M=Math.ceil(Math.abs(ox)+Math.abs(oy)+bend*0.8+6), PW=DW+2*M, PH=DH+2*M, PN=PW*PH;
@@ -344,9 +344,10 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3){
   if(!F.flat){
     // tipped: the far water mirrors the sky (Fresnel), then recedes into haze
     const sky=Math.min(255, 128 + 52 + hz*20);
-    OUT=obliqueRender(F, HS, RGB, { fog:[sky, sky, sky], fogK: 0.2 + 0.25*tl });
-    for(let y=0;y<wh;y++){
-      const dy=-F.D*F.sp - F.cp*(y - wh/2), dz=-F.D*F.cp + F.sp*(y - wh/2), cosT=-dy/Math.hypot(dy, dz);
+    // (turned or zoomed but looking straight down (the camera dial at its middle): no haze, no sky in the water)
+    OUT=obliqueRender(F, HS, RGB, { fog:[sky, sky, sky], fogK: tl > 0.001 ? 0.2 + 0.25*tl : 0 });
+    if(tl > 0.001) for(let y=0;y<wh;y++){
+      const dy=-F.Df*F.sp - F.cp*(y - wh/2), dz=-F.Df*F.cp + F.sp*(y - wh/2), cosT=-dy/Math.hypot(dy, dz);
       const fr=Math.min(0.75, 0.04 + 1.2*Math.pow(1 - cosT, 2.2));
       for(let x=0;x<ww;x++){ const k=(y*ww+x)*3; for(let c=0;c<3;c++) OUT[k+c]=OUT[k+c]*(1-fr) + sky*fr; }
     }
@@ -596,7 +597,7 @@ const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
  *              tips toward the horizon and the far dunes fade into haze
  * RIPPLE SIZE · WIND (sharper, straighter ripples) · DUNE HEIGHT · TILT
  */
-export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
+export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   amt=(amt==null?0.5:amt); zoom=(zoom==null?1:zoom);
   const swell=Math.max(0,Math.min(1, form==null ? 0.4 : form)), tl=Math.max(0, Math.min(1, tilt==null ? 0 : tilt));
   const sand=parseHex(tint1||'#D9B98C'), sun=parseHex(tint2||'#FFF1D8');
@@ -605,7 +606,7 @@ export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
   const lambda=Math.max(3, unit*0.032*zoom), wind=Math.random()*Math.PI, cw=Math.cos(wind), sw=Math.sin(wind);
   const KINDS=['transverse','barchanoid','linear'], kind=KINDS[Math.floor(Math.random()*KINDS.length)];
   const L0=unit*(0.42+Math.random()*0.25), duneH=swell*unit*0.16;
-  const F=obliqueFrame(ww, wh, tl*0.85, duneH*1.2 + lambda*0.3), GW=F.GW, GH=F.GH, N=GW*GH;
+  const F=obliqueFrame(ww, wh, tl*0.85, duneH*1.2 + lambda*0.3, cam), GW=F.GW, GH=F.GH, N=GW*GH;
   // fields sampled in PAGE units (u = x/ww), so features keep their size however big the patch
   const ox=F.flat ? 0 : F.gcx - ww/2, oz=F.flat ? 0 : F.gcz - wh/2;
   const fs=(n, oct) => { const f=fbmSampler(n, oct); return (x, y) => f((x - ox)/ww + 3, (y - oz)/wh + 3); };
@@ -660,7 +661,7 @@ export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
   if(!F.flat){
     // the haze: the sand's colour washed toward the sun's
     const fog=[sand.r*0.45+sun.r*0.55, sand.g*0.45+sun.g*0.55, sand.b*0.45+sun.b*0.55];
-    OUT=obliqueRender(F, H, RGB, { fog, fogK: 0.3 + 0.4*tl });
+    OUT=obliqueRender(F, H, RGB, { fog, fogK: tl > 0.001 ? 0.3 + 0.4*tl : 0 });
   }
   return paintLit(w,h,div,ww,wh, i => [OUT[i*3], OUT[i*3+1], OUT[i*3+2]]);
 }
@@ -739,13 +740,13 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
  * The stone takes the light and casts shadow; DAMPNESS darkens and glosses
  * the stone and deepens the moss.  STONE SCALE · MOSS · DAMPNESS
  */
-export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
+export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   amt=(amt==null?0.45:amt); zoom=(zoom==null?1:zoom);
   const damp=Math.max(0,Math.min(1, form==null ? 0.3 : form)), tl=Math.max(0, Math.min(1, tilt || 0));
   const stone=parseHex(tint1||'#8A8579'), moss=parseHex(tint2||'#5F7E34');
   // TILT: the camera (texCore obliqueFrame): 0 straight down, as it always was
   const div=tl > 0.001 ? canonDiv(3) : canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh);
-  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.07), GW=F.GW, GH=F.GH, N=GW*GH;
+  const F=obliqueFrame(ww, wh, tl*0.8, unit*0.07, cam), GW=F.GW, GH=F.GH, N=GW*GH;
   const ox=F.flat ? 0 : F.gcx - ww/2, oz=F.flat ? 0 : F.gcz - wh/2;
   const rock=fbmSampler(2.2/zoom, 5), ridge=fbmSampler(5/zoom, 3), growth=fbmSampler(4, 3), fibre=fbmSampler(48, 2);
   const H=new Float32Array(N), M=new Float32Array(N);
@@ -782,7 +783,7 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL){
     RGB[i*3]=clamp255(sc[0]*(1-m) + mc[0]*m); RGB[i*3+1]=clamp255(sc[1]*(1-m) + mc[1]*m); RGB[i*3+2]=clamp255(sc[2]*(1-m) + mc[2]*m);
   }
   // tipped: the far stone recedes into a damp grey-green haze
-  const OUT=F.flat ? RGB : obliqueRender(F, H, RGB, { fog:[stone.r*0.55+moss.r*0.2+60, stone.g*0.55+moss.g*0.2+62, stone.b*0.55+moss.b*0.2+60], fogK: 0.25 + 0.35*tl });
+  const OUT=F.flat ? RGB : obliqueRender(F, H, RGB, { fog:[stone.r*0.55+moss.r*0.2+60, stone.g*0.55+moss.g*0.2+62, stone.b*0.55+moss.b*0.2+60], fogK: tl > 0.001 ? 0.25 + 0.35*tl : 0 });
   return paintLit(w,h,div,ww,wh, i => [OUT[i*3], OUT[i*3+1], OUT[i*3+2]]);
 }
 

@@ -410,6 +410,14 @@ export const ATHANOR_STARTERS = {
     wires: [[1, 1, 9, 1], [2, 1, 5, 1], [2, 2, 5, 2], [2, 1, 6, 1], [2, 2, 6, 2], [3, 1, 4, 1], [4, 1, 5, 3], [4, 1, 9, 9],
       [5, 1, 9, 2], [6, 2, 9, 3], [7, 1, 9, 4], [7, 3, 9, 5], [7, 2, 9, 6], [8, 1, 9, 7], [8, 2, 9, 8],
       [10, 1, 9, paramPort('glasspane', 'bend')], [11, 1, 8, paramPort('shatter', 'breaks')], [9, 1, 12, 1]] },
+  // a dropped frame (Ruby: "more ways to do crazy things with glass"): Glass Shards lying over Texture from the Menu
+  droppedframe: { label: 'A Dropped Frame', teach: 'A framed picture dropped face up, its glass in pieces on it. Texture from the Menu makes the picture, and Glass Shards lays the broken glass over it: through each shard the picture is bent by the shard\'s tilt and tinted by its glass, and beside each the light it gathers falls on the picture, inside a pale shadow. The Light Dial is the light (Light From and Light Height), and the Camera Dial tips the frame away from you (Turn, View and Camera Zoom). Try: turn Shards up, draw the light past the dial\'s rim for long caustics, or choose another texture in Texture from the Menu.', nodes: [
+      ['texture', { type: 'aurorasky' }, 40, 40], ['dial', {}, 40, 300], ['camdial', {}, 40, 420],
+      ['shards', { count: 45, '~count': '0,100', size: 120, spread: 60, slivers: 35, caustics: 70, glints: 70, colors: 10, shadows: 60, turn: 0, '~turn': '0,360', view: 0, '~view': '0,100', lens: 100, '~lens': '25,400' }, 320, 200],
+      ['knob', { slot: '1', name: 'Shards', def: 45 }, 40, 560],
+      ['surface', { name: 'A Dropped Frame', ground: 'colour' }, 600, 220]],
+    wires: [[1, 1, 4, 1], [2, 1, 4, 2], [2, 2, 4, 3], [3, 1, 4, paramPort('shards', 'turn')], [3, 2, 4, paramPort('shards', 'view')], [3, 3, 4, paramPort('shards', 'lens')],
+      [5, 1, 4, paramPort('shards', 'count')], [4, 1, 6, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

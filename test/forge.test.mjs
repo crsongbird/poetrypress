@@ -110,8 +110,8 @@ check('opened from the top bar; a full-screen editor; its graph kept in a hidden
     && F.describeForge(big).includes('too many nodes') && F.describeForge(heavy).includes('reduced detail')
     && /const B = athanorBudget\(extra\.graph \|\| ''\);/.test(readFileSync(new URL('../textureGenerators.js', import.meta.url), 'utf8')));
   const starters = Object.keys(C.ATHANOR_STARTERS);
-  check('eight starter graphs, each a working surface that says what it teaches (evaluated here; Reaction–Diffusion, Oil on Canvas and A Picture Under Glass need the page\'s textures)',
-    starters.length === 8 && starters.every(k => (C.ATHANOR_STARTERS[k].teach || '').length > 60) && starters.filter(k => k !== 'bloom' && k !== 'oil' && k !== 'vitrine').every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
+  check('nine starter graphs, each a working surface that says what it teaches (evaluated here; Reaction–Diffusion, Oil on Canvas, A Picture Under Glass and A Dropped Frame need the page\'s textures)',
+    starters.length === 9 && starters.every(k => (C.ATHANOR_STARTERS[k].teach || '').length > 60) && starters.filter(k => k !== 'bloom' && k !== 'oil' && k !== 'vitrine' && k !== 'droppedframe').every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
       return gr.v === C.ATHANOR_VERSION && im && im.r.some(v => v > 0.02) && C.athanorName(gr) === C.ATHANOR_STARTERS[k].label; }));
   // FILTER FORGE'S MAP INPUTS (v3): a gray map on a ⚙ setting sets it point by point; v2 took its average
   { const mk = v => JSON.stringify({ v, drawflow: { Home: { data: {

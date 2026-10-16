@@ -30,25 +30,27 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 63 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 64 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
+check('the picker offers 65 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 66 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
 // a third knob is always Form; Dream Bloom alone goes on to five (Object Shape, Colour Variation)
 check('every texture declares two params, plus an optional third that must be Form (and a fourth and fifth on a few: Dream Bloom, Crystal Leaf, Cartomancy…)',
   Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
-    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf' || t === 'cards' || t === 'crackle' || t === 'rainwater') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
-    // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
+    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf' || t === 'cards' || t === 'crackle' || t === 'rainwater' || t === 'water') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
+    // (a camera's Tilt is the camera dial's View now: Scrying Pool five, Dune Ripples and Moss on Stone three)
     // (Lichtenberg: its camera on the camera dial; eight of its own — the strike's angle, depth, channel width, slide)
     || (t === 'lichtenberg' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'angle' && d[7].key === 'slide')
-    // (Ringworld: eight, its camera on the dial and its light one of them)
-    || (t === 'ringworld' && d.length === 8 && d[5].label === 'Daylight')
+    // (Ringworld: eight, its camera on the camera dial, its day on the light dial, Builders the sixth)
+    || (t === 'ringworld' && d.length === 8 && d[5].label === 'Builders')
     // (Under Glass: eight, each a thing the glass catches, Cracks and Edge last but one and last)
     || (t === 'underglass' && d.length === 8 && d[5].label === 'Cracks' && d[7].label === 'Edge')
+    // (Broken Glass: eight, its camera on the camera dial, its light the light dial; Dewy Webs: eight, Iridescence seventh)
+    || (t === 'brokenglass' && d.length === 8 && d[0].label === 'Shards' && d[7].label === 'Shadows')
+    || (t === 'dewwebs' && d.length === 8 && d[0].label === 'Webs' && d[6].label === 'Iridescence')
     // (Circuit Board's Era and Markings: seventh and eighth)
     || (t === 'circuit' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt' && d[6].key === 'era' && d[7].key === 'marks')
-    || ((t === 'water' || t === 'wax' || t === 'stainedglass' || t === 'growth' || t === 'aurorasky' || t === 'knotwork' || t === 'veins') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
-    || ((t === 'dunes' || t === 'moss') && d.length === 4 && d[2].key === 'form' && d[3].key === 'tilt')
+    || ((t === 'wax' || t === 'stainedglass' || t === 'growth' || t === 'aurorasky' || t === 'knotwork' || t === 'veins') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
     // (Painted Landscape: Tilt, then Color — grey as it was, or painted in colour)
     || (t === 'landscape' && d.length === 6 && d[2].key === 'form' && d[3].key === 'tilt' && d[4].key === 'hue' && d[5].key === 'shape')
     || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash' || t === 'turing' || t === 'frost' || t === 'stripes' || t === 'cells') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')

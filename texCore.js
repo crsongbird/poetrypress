@@ -664,38 +664,46 @@ export function noMaterialHue(h){ return isWhiteHex(h); }
 // marches across the heights until it meets them, and the farther ground
 // fades into haze (aerial perspective). TILT 0 is straight down: exactly the
 // flat texture it always was (the frame is the page, and nothing is marched).
-//   obliqueFrame(ww, wh, tilt, hRange) — the ground patch to build: GW×GH
+//   obliqueFrame(ww, wh, tilt, hRange, cam) — the ground patch to build: GW×GH
 //     cells (larger than the page when tilted), and where the view's centre
-//     falls on it
+//     falls on it. cam (the Camera Dial: Ruby, "anytime we use a tilt … we
+//     should set it for the camera"): { turn (degrees), zoom (1 = as it was) }
+//     — Turn spins the camera about the view's centre, Zoom is the lens (the
+//     patch smaller as it rises); either one tips a flat texture into the frame
 //   obliqueRender(F, H, RGB, opts) — the page's pixels (RGB, 0..255) as the
 //     camera sees them; opts.fog = [r, g, b], opts.fogK (0..1)
-export function obliqueFrame(ww, wh, tilt, hRange){
-  const t = Math.max(0, Math.min(1, tilt || 0));
-  if(t < 0.001) return { flat: true, GW: ww, GH: wh, ww, wh };
+export function obliqueFrame(ww, wh, tilt, hRange, cam){
+  const t = Math.max(0, Math.min(1, tilt || 0)), turn = cam && +cam.turn ? +cam.turn*Math.PI/180 : 0, z = cam && +cam.zoom ? Math.max(0.6, Math.min(4, +cam.zoom)) : 1;   // (out no further than 60%: the patch grows as the square)
+  // (turned the way the ground camera turns — Wood, Discharge, Glass Shards — so the dial means one thing everywhere)
+  const ct = Math.cos(turn), st = -Math.sin(turn);
+  if(t < 0.001 && Math.abs(st) < 1e-6 && ct > 0 && Math.abs(z - 1) < 1e-6) return { flat: true, GW: ww, GH: wh, ww, wh };
   const p = (90 - 50*t)*Math.PI/180, sp = Math.sin(p), cp = Math.cos(p), D = 1.5*Math.max(ww, wh);   // near enough that the far ground is smaller
-  const hit = (x, y) => { const dy = -D*sp - cp*(y - wh/2), dz = -D*cp + sp*(y - wh/2), tt = (D*sp)/(-dy);
-    return [(x - ww/2)*tt, D*cp + dz*tt]; };
+  // the lens: its focal length (zoomed out while tipped, the page's top must still look down at the ground: no wider)
+  const Df = z === 1 ? D : Math.max(D*z, (wh/2)/Math.tan(Math.max(0.1, p - 0.1)));
+  // (turned: the ground about the view's centre, so a point the camera sees lies turned on the patch)
+  const hit = (x, y) => { const dy = -Df*sp - cp*(y - wh/2), dz = -Df*cp + sp*(y - wh/2), tt = (D*sp)/(-dy), gx = (x - ww/2)*tt, gz = D*cp + dz*tt;
+    return [gx*ct - gz*st, gx*st + gz*ct]; };
   const cs = [hit(0, 0), hit(ww, 0), hit(0, wh), hit(ww, wh)];
   const minX = Math.min(...cs.map(c => c[0])), maxX = Math.max(...cs.map(c => c[0]));
   const minZ = Math.min(...cs.map(c => c[1])), maxZ = Math.max(...cs.map(c => c[1]));
   // heights move where a ray meets the ground: room for that on every side
-  const graze = Math.max(0.2, Math.tan(p - Math.atan(wh/2/D))), m = Math.ceil((hRange || 0)/graze) + 3;
+  const graze = Math.max(0.2, Math.tan(p - Math.atan(wh/2/Df))), m = Math.ceil((hRange || 0)/graze) + 3;
   const GW = Math.ceil(maxX - minX) + 2*m, GH = Math.ceil(maxZ - minZ) + 2*m;
-  return { flat: false, ww, wh, GW, GH, gcx: -minX + m, gcz: -minZ + m, p, sp, cp, D };
+  return { flat: false, ww, wh, GW, GH, gcx: -minX + m, gcz: -minZ + m, p, sp, cp, D, Df, ct, st };
 }
 export function obliqueRender(F, H, RGB, opts = {}){
-  const { ww, wh, GW, GH, gcx, gcz, sp, cp, D } = F, N = ww*wh, out = new Float32Array(N*3);
+  const { ww, wh, GW, GH, gcx, gcz, sp, cp, D } = F, Df = F.Df ?? D, ct = F.ct ?? 1, st = F.st ?? 0, N = ww*wh, out = new Float32Array(N*3);
   let hMin = Infinity, hMax = -Infinity; for(let i = 0; i < H.length; i++){ if(H[i] < hMin) hMin = H[i]; if(H[i] > hMax) hMax = H[i]; }
   const fog = opts.fog || [200, 200, 200], fogK = opts.fogK == null ? 0.35 : opts.fogK;
-  const Cx = gcx, Cy = D*sp, Cz = gcz + D*cp;
+  const Cx = gcx - D*cp*st, Cy = D*sp, Cz = gcz + D*cp*ct;
   const at = (A, x, z) => { const fx = Math.max(0, Math.min(GW - 1.001, x)), fz = Math.max(0, Math.min(GH - 1.001, z)), i = fx|0, j = fz|0, tx = fx - i, tz = fz - j, k = j*GW + i;
     return (A[k]*(1-tx) + A[k+1]*tx)*(1-tz) + (A[k+GW]*(1-tx) + A[k+GW+1]*tx)*tz; };
   const atC = (x, z, c) => { const fx = Math.max(0, Math.min(GW - 1.001, x)), fz = Math.max(0, Math.min(GH - 1.001, z)), i = fx|0, j = fz|0, tx = fx - i, tz = fz - j, k = (j*GW + i)*3 + c;
     return (RGB[k]*(1-tx) + RGB[k+3]*tx)*(1-tz) + (RGB[k+GW*3]*(1-tx) + RGB[k+GW*3+3]*tx)*tz; };
   // the haze runs from the nearest ground to the farthest
-  const tNear = (Cy - hMax)/(D*sp + cp*wh/2), tFar = (Cy - hMin)/Math.max(1e-3, D*sp - cp*wh/2);
+  const tNear = (Cy - hMax)/(Df*sp + cp*wh/2), tFar = (Cy - hMin)/Math.max(1e-3, Df*sp - cp*wh/2);
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-    const dx = x - ww/2, dy = -D*sp - cp*(y - wh/2), dz = -D*cp + sp*(y - wh/2);
+    const ex = x - ww/2, dy = -Df*sp - cp*(y - wh/2), ez = -Df*cp + sp*(y - wh/2), dx = ex*ct - ez*st, dz = ex*st + ez*ct;
     const hs = Math.hypot(dx, dz), dt = 1.4/Math.max(1e-6, hs);
     let t = (Cy - hMax)/(-dy), tEnd = (Cy - hMin)/(-dy), prevD = null, prevT = t, hitT = tEnd;
     // (the last step lands exactly on the lowest level, where every ray has met the ground)
@@ -789,6 +797,13 @@ export function wholeDial(E, n, j){
   const v = E.input(n, j); if(typeof v !== 'number') return E.ctx.light ?? null;
   const d = v*360, r = Math.round(d); return Math.abs(d - r) < 1e-7 ? r : d;
 }
+/** Its camera (a tilted ground's Turn and Camera Zoom, wired from the Camera Dial), or null (as it always was); and the
+ *  light turned with it, so the light still comes from where the light dial points on the page. */
+export function wholeCam(E, n){
+  const turn = E.num(n, 'turn', 0), lens = E.num(n, 'lens', 100);
+  return (Math.abs(turn % 360) < 1e-6 && Math.abs(lens - 100) < 1e-6) ? null : { turn, zoom: lens/100 };
+}
+export const wholeTurned = (light, cam) => cam ? (((light ?? 315) - cam.turn) % 360 + 360) % 360 : light;
 /** Its color on input j as a hex, or null (nothing wired, or a Hue whose picker is empty): the generator's own color. */
 export function wholeHex(E, n, j){
   const v = E.input(n, j);

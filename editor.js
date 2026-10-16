@@ -263,14 +263,24 @@ export function installEditor({ textarea, mirror, gutter, onInput }){
   function fitHeight(){
     // measured against the mirror, not the textarea's own scrollHeight: the
     // mirror is an ordinary block whose height IS its content, with no
-    // min-height, rows attribute or scroll state to confuse the reading
+    // min-height, rows attribute or scroll state to confuse the reading.
+    // ONE LINE OF SLACK below the last (Ruby: "sometimes it is impossible to
+    // scroll to the bottom", in a long poem): a textarea a pixel short of its
+    // text scrolls ITSELF to show the caret (some browsers measure it short),
+    // and overflow:hidden then hides its last line where nothing outside can
+    // reach it. With room to spare it never has to.
     textarea.style.height = 'auto';
+    const lh = (typeof getComputedStyle === 'function' && parseFloat(getComputedStyle(textarea).lineHeight)) || 21;
     const h = Math.max(mirror.scrollHeight || 0, textarea.scrollHeight || 0);
-    if(h) textarea.style.height = h + 'px';
+    if(h) textarea.style.height = Math.ceil(h + lh) + 'px';
+    if(textarea.scrollTop) textarea.scrollTop = 0;
   }
 
   if(textarea.addEventListener){
     textarea.addEventListener('input', ()=>{ paint(); if(onInput) onInput(); });
+    // the textarea itself never scrolls (its box holds all its text; the box round it scrolls): if a browser scrolls
+    // it anyway to show the caret, its text slips under the mirror and its last lines out of reach, so it is put back
+    textarea.addEventListener('scroll', ()=>{ if(textarea.scrollTop){ textarea.scrollTop = 0; fitHeight(); } });
     // the caret can move without any input: taps, arrow keys, selection
     for(const evt of ['click', 'keyup', 'select']) textarea.addEventListener(evt, paint);
   }

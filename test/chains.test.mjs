@@ -88,7 +88,7 @@ if(canvasOK){
   const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
   const load = obj => { reg['advancedJson'].value = JSON.stringify(obj); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
   const base = save();
-  check('a look says which format it was saved in', base.lookVersion === 3);
+  check('a look says which format it was saved in', base.lookVersion === 4);
   const { lookVersion, ...old } = base;
   load({ ...old, texture: true, textureType: 'rainstreaks', texP1: '200', texP2: '-30', textureLight: '315' });
   let s = save();
@@ -99,6 +99,26 @@ if(canvasOK){
   load({ ...base, texture: true, textureType: 'rainstreaks', texP2: '30', textureLight: '200' });
   s = save();
   check('a new look is left as it is', s.textureLight === '200' && +s.texP2 === 30);
+  // format 4: Ringworld's Daylight slider onto the light dial (noon at its middle, dusk at its rim, past it night)
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '80', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('an old Ringworld look: Daylight 80 becomes the light dial at 40 (morning), the sixth slider Builders by the seed', +s.textureLightTilt === 40 && +s.texP6 === 0 && s.cameraTurn === '40');
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '20', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('…and Daylight 20 (night) past the dial\'s rim', +s.textureLightTilt === 118);
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'circuit', texP7: '100' });
+  s = save();
+  check('an old Circuit Board look at Magitech (four eras) stays the board it was: Atomic, at 75 of five eras', +s.texP7 === 75);
+  // format 4: the Tilt sliders onto the camera dial (Dune Ripples' fourth, Moss on Stone's fourth, Scrying Pool's sixth)
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'dunes', texP1: '140', texP4: '60', cameraTurn: '90', cameraView: '0', cameraZoom: '100' });
+  s = save();
+  check('an old Dune Ripples look: Tilt 60 becomes the camera dial\'s View 60, unturned', s.cameraView === '60' && s.cameraTurn === '0' && s.cameraZoom === '100' && +s.texP1 === 140);
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'water', texP6: '0', cameraTurn: '0', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('…a Scrying Pool looking straight down stays straight down', s.cameraView === '0');
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'moss' });
+  s = save();
+  check('…and a Moss on Stone look saved with no Tilt at all takes its old default, 30', s.cameraView === '30');
   // A KNOB'S KIND (ROADMAP D1): on the page, a switch is a slider of two marks named Off and On, locked to them;
   // steps are their marks; in the graph, a switch hands on 0 or 1 and steps only their marks
   const knobGraph = (kind, extra = {}) => JSON.stringify({ v: 4, drawflow: { Home: { data: {

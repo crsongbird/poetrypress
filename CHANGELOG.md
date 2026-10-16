@@ -4,6 +4,46 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Hyperion (2026-10-16)
+
+- **Ringworld's builders.** A new Builders slider chooses who raised the
+  ring: By the Seed, Wilds, Engineers, Cities, Magi or Ruins. They build
+  arches across the band and gateways, cities whose windows and streets
+  light up at night, ships trailing their engines, crystals, pillars of
+  light, glowing summoning circles and rings of standing stones. Ruins are
+  broken. Every seed also sets the size of the shadow squares and which way
+  the ring turns, so no two rings are alike. Clouds now cast their shadows on
+  the far land.
+  - **The light dial is the time of day:** noon at its middle, dusk at its
+    rim, night past it, and its direction says which side dusk comes from.
+    The Daylight slider is gone; looks saved before keep their hour.
+- **Circuit Board has five eras.** The brass-and-valves era is now called
+  **Atomic**, and a new **Magitech** follows it: summoning
+  circles and runes on the chips, gems set in the board, light guides,
+  floating holograms, and gold sparks over a cyan glow. A board saved at the
+  old Magitech stays Atomic.
+- **Broken Glass**, a new surface under Materials & Craft: shards of glass
+  lying on nothing, sharp and a little tilted. Their faces flash, their
+  edges split the light into colors, and each throws a bright caustic beside
+  it. Clear, bottle green, amber, cobalt, sea glass and violet. Use the
+  light dial to light it (pull it past the rim for long caustics), and the
+  camera dial to lay the glass on a floor.
+- **Dewy Webs**, a new surface under Weather: orb webs at dawn, beaded with
+  dew. Each drop is a tiny lens, and the silk glints where it crosses the
+  light, in rainbow colors with Iridescence. Webs can sag and tear.
+- **The camera dial on more surfaces:** Scrying Pool, Dune Ripples and Moss
+  on Stone. Their Tilt slider is now the dial's View, and they can also turn
+  (the sun stays put while the ground turns under it) and zoom. Looks saved
+  before keep their view.
+- **In the Athanor:** new parts Glass Shards and Dewy Webs. A new starter,
+  **A Dropped Frame**, lays broken glass over a picture, bent through each
+  shard. Circuit Traces has an Arcana output (Magitech's glow), and
+  Ringworld View takes the sun's height and direction.
+- **Fixes:**
+  - The poem box scrolls all the way to the end of a long edit.
+  - Edit in the Athanor on an empty Athanor surface opens the editor
+    instead of saying it isn't a graph yet.
+
 ## Saturn–Titan (2026-10-16)
 
 - **The Camera Dial**, a second dial beside the light dial, for surfaces seen

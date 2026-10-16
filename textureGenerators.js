@@ -101,14 +101,14 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
-  // RINGWORLD (chains.js 'ringworld'; Ruby: the dial is the camera, one slider the light, up to eight in all)
+  // RINGWORLD (chains.js 'ringworld'; Ruby: the camera on the camera dial, the day on the light dial; who built it, by the seed or chosen)
   ringworld:     [{key:'zoom',  label:'Band Width',      min:0,  max:100, def:45,  unit:''},
                   {key:'amt',   label:'Terrain',         min:0,  max:100, def:50,  unit:''},
                   {key:'form',  label:'Seas',            min:0,  max:100, def:40,  unit:''},
                   {key:'shape', label:'Structures',      min:0,  max:100, def:25,  unit:''},
                   {key:'hue',   label:'Atmosphere',      min:0,  max:100, def:50,  unit:''},
-                  // the one light: where the shadow squares stand (night → dawn → noon), and how high the light seems
-                  {key:'tilt',  label:'Daylight',        min:0,  max:100, def:80,  unit:'', ticks:[0,50,100], names:['Night','Dawn','Noon']},
+                  // who built the ring (its works, its lights): the seed's own pair, or one chosen
+                  {key:'builders', label:'Builders',     min:0,  max:100, def:0,   unit:'', ticks:[0,20,40,60,80,100], names:['By the Seed','Wilds','Engineers','Cities','Magi','Ruins']},
                   {key:'alt',   label:'Altitude',        min:0,  max:100, def:15,  unit:''},
                   // where across the band you stand: the middle, or near a wall (the lens is the camera dial's zoom)
                   {key:'place', label:'Stand At',        min:-100, max:100, def:0, unit:''}],
@@ -211,6 +211,30 @@ export const TEXTURE_PARAMS = {
                   {key:'hue',   label:'Glass Texture',   min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Cathedral','Hammered','Seedy','Opalescent']},
                   {key:'tilt',  label:'Window',          min:0,  max:100, def:0,   unit:'', ticks:[0,42,68,100], names:['Whole Page','Lancet Arch','Arcade','Round Window']}],
   // UNDER GLASS (chains.js 'underglass'; Ruby: a glass to lay over another surface): what the glass catches, on mid-gray
+  // BROKEN GLASS (chains.js 'brokenglass'; Ruby: "glass fragments laying on nothing"): shards and the light they catch, on mid-gray
+  brokenglass:   [{key:'count', label:'Shards',          min:0,  max:100, def:40,  unit:''},
+                  {key:'size',  label:'Size',            min:30, max:300, def:100, unit:'%'},
+                  // heaped where it fell (0) → flung across the page
+                  {key:'spread', label:'Spread',         min:0,  max:100, def:55,  unit:''},
+                  // broad pieces (0) → long slivers
+                  {key:'sliver', label:'Slivers',        min:0,  max:100, def:35,  unit:''},
+                  // the light each shard gathers onto the ground beside it
+                  {key:'caustic', label:'Caustics',      min:0,  max:100, def:60,  unit:''},
+                  {key:'glint', label:'Glints',          min:0,  max:100, def:60,  unit:''},
+                  // how many shards are bottle green, amber, cobalt, sea glass or violet
+                  {key:'colors', label:'Colored Glass',  min:0,  max:100, def:25,  unit:''},
+                  {key:'shadow', label:'Shadows',        min:0,  max:100, def:50,  unit:''}],
+  // DEWY WEBS (chains.js 'dewwebs'; Ruby: "dewy spider webs getting caught by the light"): silk, dew and glints on mid-gray
+  dewwebs:       [{key:'webs',  label:'Webs',            min:0,  max:100, def:30,  unit:''},
+                  {key:'size',  label:'Size',            min:40, max:250, def:100, unit:'%'},
+                  {key:'dew',   label:'Dew',             min:0,  max:100, def:60,  unit:''},
+                  {key:'drop',  label:'Drop Size',       min:30, max:300, def:100, unit:'%'},
+                  {key:'torn',  label:'Torn',            min:0,  max:100, def:20,  unit:''},
+                  {key:'sag',   label:'Sag',             min:0,  max:100, def:40,  unit:''},
+                  // white glints (0) → the colours thin silk splits the light into
+                  {key:'irid',  label:'Iridescence',     min:0,  max:100, def:50,  unit:''},
+                  // the spiral's turns: open (0) → close-wound
+                  {key:'threads', label:'Threads',       min:0,  max:100, def:50,  unit:''}],
   underglass:    [{key:'reflect', label:'Reflection',    min:0,  max:100, def:55,  unit:''},
                   {key:'scratch', label:'Scratches',     min:0,  max:100, def:40,  unit:''},
                   // straight, in bunches (0) → wiped round and round by a cloth (100)
@@ -265,17 +289,15 @@ export const TEXTURE_PARAMS = {
                   {key:'tilt',  label:'Sheen',           min:0,  max:100, def:50,  unit:''}],
   dunes:         [{key:'zoom',  label:'Ripple Size',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Wind',            min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''},
-                  // the camera: straight down (0, a flat texture) → tipped toward the horizon, the far dunes hazy
-                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:40,  unit:''}],
+                  {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''}],
+                  // (its camera — straight down, or tipped toward the horizon, the far dunes hazy — is the camera dial)
   kintsugi:      [{key:'zoom',  label:'Seam Width',      min:50, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Fractures',       min:20, max:400, def:100, unit:'%'},
                   {key:'form',  label:'Gloss',           min:0,  max:100, def:70,  unit:''}],
   moss:          [{key:'zoom',  label:'Stone Scale',     min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
-                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''},
-                  // the camera: straight down (0) → tipped, the far stone in haze
-                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:30,  unit:''}],
+                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
+                  // (its camera — straight down, or tipped, the far stone in haze — is the camera dial)
   landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
@@ -300,9 +322,8 @@ export const TEXTURE_PARAMS = {
                   // milky water, scattering the light
                   {key:'shape', label:'Haze',            min:0,  max:100, def:10,  unit:''},
                   // dirty water: light absorbed, silt hanging in it
-                  {key:'hue',   label:'Murk',            min:0,  max:100, def:0,   unit:''},
-                  // the camera: straight down (0) → tipped toward the far bank; the far water mirrors the sky
-                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:35,  unit:''}],
+                  {key:'hue',   label:'Murk',            min:0,  max:100, def:0,   unit:''}],
+                  // (its camera — straight down, or tipped toward the far bank, the far water mirroring the sky — is the camera dial)
   moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
                   {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'},
                   // banks drifting in front of the moon and stars, silver-lined, a halo in their veils (0: none)
@@ -354,7 +375,7 @@ export const TEXTURE_PARAMS = {
                   {key:'hue',   label:'Components',      min:0,  max:100, def:45,  unit:''},
                   {key:'tilt',  label:'Scale',           min:40, max:300, def:100, unit:'%'},
                   // (Ruby: slider 7) more of the board turns to the next era's parts, names and silkscreen
-                  {key:'era',   label:'Era',             min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Today','Future','Quantum','Magitech']},
+                  {key:'era',   label:'Era',             min:0,  max:100, def:0,   unit:'', ticks:[0,25,50,75,100], names:['Today','Future','Quantum','Atomic','Magitech']},
                   // stamps, codes and a little picture (the board's Easter eggs), in room the board left
                   {key:'marks', label:'Markings',        min:0,  max:100, def:0,   unit:''}],
   // 🝆 Veins of Light (chains.js 'veins')
@@ -490,7 +511,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // water is tinted by the page itself: neutral by default, like all of Touch
   water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:35, zoom:100, guide:'plane' } },
   moon:          { blends:['hard-light','multiply','overlay','soft-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // Remapped for every blend EXCEPT screen: its grey ground under screen
@@ -517,8 +538,9 @@ export const TEXTURE_CAPS = {
   // made from the page's own colours (pageEnv), so Normal is its default
   glassrain:     { blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
   // the camera dial is the camera: its turn where you look round the ring, its view how far up (the middle: the arch
-  // overhead), its zoom the lens; the light is the star's, set by Daylight, so there is no light dial
-  ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:false, tints:2,
+  // overhead), its zoom the lens. The light dial is the day (the star never moves; the shadow squares do): at its middle
+  // noon, at its rim dusk, past it night; its direction which way round the dusk comes
+  ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'] },
@@ -573,6 +595,12 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
                    tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
+  // shards on mid-gray: Screen keeps only the light they catch; Hard Light lays their shadows too. The camera dial lays them on a plane
+  brokenglass:   { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Shadow Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:0, zoom:100, guide:'plane' } },
+  // webs on mid-gray: the dial is the light the silk and dew catch
+  dewwebs:       { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // the light the glass catches, on mid-gray: Screen adds only that; Hard Light adds it and darkens too (grime, a thick edge), on any page
   underglass:    { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Reflection Hue','Grime Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -591,11 +619,11 @@ export const TEXTURE_CAPS = {
   wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
-                   light:true, material:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'] },
+                   light:true, material:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'], camera:{ turn:0, view:40, zoom:100, guide:'plane' } },
   kintsugi:      { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
                    light:true, material:true, tints:2, tintLabels:['Glaze Hue','Gold Hue'], tintDefaults:['#E8E1D3','#D4AF37'] },
   moss:          { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
-                   light:true, material:true, tints:2, tintLabels:['Stone Hue','Moss Hue'], tintDefaults:['#8A8579','#5F7E34'] },
+                   light:true, material:true, tints:2, tintLabels:['Stone Hue','Moss Hue'], tintDefaults:['#8A8579','#5F7E34'], camera:{ turn:0, view:30, zoom:100, guide:'plane' } },
 };
 
 
@@ -764,6 +792,10 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
+  } else if(type === 'brokenglass'){
+    result = genChain(type, w, h, light, extra);           // Glass Shards over mid-gray, the camera dial its plane (chains.js)
+  } else if(type === 'dewwebs'){
+    result = genChain(type, w, h, light, extra);           // Dewy Webs: silk, dew, glints screened onto mid-gray (chains.js)
   } else if(type === 'underglass'){
     result = genChain(type, w, h, light, extra);           // Window Reflection, Scratches, Smudges, Shatter → Glass Pane over mid-gray (chains.js)
   } else if(type === 'suminagashi'){
