@@ -44,6 +44,29 @@ const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0
 // the dial (a wired value 0..1, else the page's own) as an angle, and the unit vector toward its handle
 const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
 
+// ---------------- THE GROUND CAMERA ----------------
+// (Ruby: "change the fov of the lens and allow rotating or tracking around".) A part that draws a world lying on the
+// page (a plank, a figure burned into it) sees it through a pinhole camera: Turn spins the ground about the page's
+// middle, View tips its top away, so the far ground runs off toward a horizon above the page (never onto it), the
+// near ground comes closer, and the lens is as far off as 1.1 of the page's long side. Turn 0 and View 0: no camera
+// (null), the page exactly as it was. Everything in page units (the short side is 1).
+export function groundCam(aspX, aspY, turn, view){
+  const th = (+turn || 0)*Math.PI/180, v = Math.max(0, Math.min(100, +view || 0))/100;
+  if(v < 1e-6 && Math.abs(Math.sin(th)) < 1e-9 && Math.cos(th) > 0) return null;
+  const cx = aspX/2, cy = aspY/2, ct = Math.cos(th), st = Math.sin(th), d = 1.1*Math.max(aspX, aspY);
+  const phi = v*Math.min(1.2, Math.atan(0.9*2*d/aspY)), cp = Math.cos(phi), sp = Math.sin(phi);
+  return {
+    // a point of the ground → where it shows, and how much it is magnified there (null: behind the lens)
+    toScreen(gx, gy){ const X = gx - cx, Y = gy - cy, xr = X*ct - Y*st, yr = X*st + Y*ct, z = d - yr*sp;
+      if(z <= 1e-6) return null; const k = d/z; return [cx + xr*k, cy + yr*cp*k, k]; },
+    // a point of the screen → the ground seen there, its magnification, and how much ground one unit of screen
+    // spans there (the larger way: up the page, where the ground is foreshortened)
+    toGround(sx, sy){ const xs = sx - cx, ys = sy - cy, den = d*cp + ys*sp; if(den <= 1e-6) return null;
+      const yr = ys*d/den, z = d - yr*sp, k = d/z, xr = xs/k;
+      return [cx + xr*ct + yr*st, cy - xr*st + yr*ct, k, Math.max(1/k, 1/(cp*k*k))]; }
+  };
+}
+
 // ---------------- DISCHARGE ----------------
 // The figure on a lattice G cells along the page's short side. Poles sit at the page's rim toward the dial (one),
 // across from each other (two), or a triangle (three). Returns segments [x0, y0, x1, y1, current] in page units (short side 1).
@@ -108,20 +131,94 @@ function genLichtenberg(aspX, aspY, o){
   return { segs, n };
 }
 
+// ---------------- RAINDROPS ----------------
+// Rain on still water (Ruby's poem asked for it). Every drop that has fallen in the last moment is a ring wave
+// spreading from where it hit: a short wave packet (a sine inside a smooth window) whose radius is its age times its
+// speed, its height falling as it spreads (the energy shared round a growing circle), the longer waves running ahead
+// (dispersion). Drops live on the water itself, in ground units (the page's short side is 1), seeded by a hash of
+// each stretch of it, so any stretch near or far has its own and the picture never depends on the order things are
+// drawn in. THE CAMERA (o.tilt) looks across the water toward the horizon, as Perspective does: rings draw as
+// ellipses, smaller and denser with distance, and where a ring is finer than a pixel the water calms to flat (it
+// would only flicker). A drop younger than a breath still shows its splash: a crater, a crown, and a few droplets.
+function genRaindrops(ww, wh, unit, o){
+  const N = ww*wh, H = new Float32Array(N), S = new Float32Array(N), D = new Float32Array(N);
+  const lam = 0.012*o.size, packets = 2.5, Rmax = lam*(6 + 22*o.spread), reach = Rmax + lam*(packets + 1.5), C = Math.max(0.01, reach/2);
+  const density = 20 + 520*o.rain, perCell = density*C*C, fresh = o.splash > 0 ? 0.015 + 0.05*o.splash : 0, salt = o.salt >>> 0;
+  const hash = (a, b, c) => { let h = Math.imul(a, 374761393) ^ Math.imul(b, 668265263) ^ Math.imul(c, 2147483647) ^ salt; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0)/4294967296; };
+  const cells = new Map();
+  const dropsIn = (cx, cy) => { const key = cx*73856093 ^ cy*19349663; let L = cells.get(key); if(L) return L; L = [];
+    const n = Math.floor(perCell + hash(cx, cy, 0));
+    for(let k = 1; k <= n; k++){
+      // older drops wider and fainter; Spread lets the rings grow older (wider) before the next ones fall
+      const a = Math.pow(hash(cx, cy, k*7 + 1), 0.7 + (1 - o.spread)*1.6), l = lam*(0.8 + 0.4*hash(cx, cy, k*7 + 2))*(1 + 0.7*a);
+      L.push({ x: (cx + hash(cx, cy, k*7 + 3))*C, y: (cy + hash(cx, cy, k*7 + 4))*C, a, l, R: a*Rmax, amp: Math.pow(1 - a, 1.3)/Math.sqrt(1 + a*Rmax/lam),
+        splash: a < fresh, turn: hash(cx, cy, k*7 + 5)*6.283 }); }
+    cells.set(key, L); return L; };
+  const t = Math.max(0, Math.min(0.9, o.tilt)), zFar = 1/(1 - t), aspX = ww/unit, aspY = wh/unit;
+  // each row's depth: z (1 near, zFar at the top), its ground y, and a pixel's size on the water (forward, the larger)
+  const Z = new Float32Array(wh), GY = new Float32Array(wh), FT = new Float32Array(wh);
+  for(let y = 0; y < wh; y++){ const v = (y + 0.5)/wh, z = t > 1e-4 ? 1/(1 - t + t*v) : 1; Z[y] = z; GY[y] = (t > 1e-4 ? 1 - (z - 1)/t : v)*aspY; FT[y] = z*z/unit;
+    const dist = t > 1e-4 ? (z - 1)/(zFar - 1) : 0; D.fill(dist, y*ww, y*ww + ww); }
+  // the screen row nearest a ground y (rows run from far, at the top, to near)
+  const rowOf = gy => { if(t <= 1e-4) return gy/aspY*wh - 0.5; const G = 1 - gy/aspY, v = (1 - G + G*t)/(1 + G*t); return v*wh - 0.5; };
+  const h = new Float32Array(N);
+  // EACH DROP IS LAID WHERE IT REACHES (not each point asking every drop nearby): row by row, only across its ring's band
+  const gx0 = (0.5 - 0.5*zFar)*aspX - reach, gx1 = (0.5 + 0.5*zFar)*aspX + reach, gy0 = Math.min(GY[0], GY[wh - 1]) - reach, gy1 = Math.max(GY[0], GY[wh - 1]) + reach;
+  for(let cy = Math.floor(gy0/C); cy <= Math.floor(gy1/C); cy++) for(let cx = Math.floor(gx0/C); cx <= Math.floor(gx1/C); cx++) for(const d of dropsIn(cx, cy)){
+    const r0 = lam*0.7*(1 + d.a*12), rout = Math.max(d.R + d.l*1.5, d.splash ? r0*2.4 : 0), rin = d.splash ? 0 : Math.max(0, d.R - d.l*packets);
+    const ya = Math.max(0, Math.floor(Math.min(rowOf(d.y - rout), rowOf(d.y + rout)))), yb = Math.min(wh - 1, Math.ceil(Math.max(rowOf(d.y - rout), rowOf(d.y + rout))));
+    if(ya > yb) continue;
+    // a drop whose rings are finer than a pixel where it lies, and that isn't splashing, would only flicker: the water there is calm
+    const mid = Math.max(0, Math.min(wh - 1, Math.round(rowOf(d.y))));
+    if(!d.splash && d.l/FT[mid] < 1.2) continue;
+    for(let y = ya; y <= yb; y++){
+      const dy = GY[y] - d.y, dy2 = dy*dy; if(dy2 > rout*rout) continue;
+      const xo = Math.sqrt(rout*rout - dy2), xi = dy2 < rin*rin ? Math.sqrt(rin*rin - dy2) : 0, z = Z[y], foot = FT[y], row = y*ww;
+      const toPx = gx => ((gx/aspX - 0.5)/z + 0.5)*ww - 0.5;
+      for(const [a0, a1] of xi > 0 ? [[d.x - xo, d.x - xi], [d.x + xi, d.x + xo]] : [[d.x - xo, d.x + xo]]){
+        const xa = Math.max(0, Math.floor(toPx(a0))), xb = Math.min(ww - 1, Math.ceil(toPx(a1)));
+        for(let x = xa; x <= xb; x++){
+          const gx = (0.5 + ((x + 0.5)/ww - 0.5)*z)*aspX, dx = gx - d.x, r = Math.sqrt(dx*dx + dy2), w = (d.R - r)/d.l, q = row + x;
+          if(w > -1 && w < packets){
+            // a ring finer than a pixel (far off, or seen edge-on) calms rather than flickers
+            const sharp = Math.max(0, Math.min(1, (d.l/foot - 1.2)/2)), e = Math.sin(Math.PI*(w + 1)/(packets + 1));
+            h[q] += 1.6*d.amp*sharp*e*e*Math.sin(6.283*w); }
+          if(d.splash){
+            // the splash: a crater where it struck, a crown thrown up round it, and a few droplets flung out
+            const cr = (r - r0)/(lam*0.18);
+            if(r < r0) h[q] -= 0.6*(1 - r/r0)*(1 - r/r0);
+            if(cr > -3 && cr < 3){ const g = Math.exp(-cr*cr); h[q] += 0.5*g; if(g > S[q]) S[q] = g; }
+            for(let k = 0; k < 6; k++){ const ang = d.turn + k*1.047, rr = r0*1.9, ox = d.x + Math.cos(ang)*rr, oy = d.y + Math.sin(ang)*rr*0.9, dd = Math.hypot(gx - ox, GY[y] - oy)/(lam*0.14);
+              if(dd < 3){ const g = Math.exp(-dd*dd); if(g > S[q]) S[q] = g; h[q] += 0.3*g; } } }
+        }
+      }
+    }
+  }
+  for(let q = 0; q < N; q++){ const v = h[q]; H[q] = 0.5 + 0.22*v/(1 + 0.45*Math.abs(v)); S[q] = Math.min(1, S[q]*(0.4 + o.splash*0.6)); }
+  return [H, S, D];
+}
+
 // ---------------- WOOD ----------------
 function genWood(ww, wh, unit, o){
   const N = ww*wh, pic = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, H = new Float32Array(N);
   const warp = makeNoiseGrid(9, 9), fib = makeNoiseGrid(64, 12), fig = makeNoiseGrid(6, 6), knot = makeNoiseGrid(5, 5);
   const pithY = -0.22 - Math.random()*0.35, pithX = 0.2 + Math.random()*0.6, rings = 34*o.rings + 8, L = o.light, D = o.dark;
+  const cam = o.cam || null, ex = 9 - 4*o.figure, lateMean = 1/(ex + 1);
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
-    const u = x/unit, v = y/unit, i = y*ww + x;
+    let u = x/unit, v = y/unit, ringK = 1, fibK = 1;
+    const i = y*ww + x;
+    if(cam){ const g = cam.toGround((x + 0.5)/unit, (y + 0.5)/unit); if(!g) continue; u = g[0]; v = g[1];
+      // far off, a ring or a fibre finer than a pixel would only shimmer: it fades to its average
+      const foot = g[3]/unit; ringK = genClamp((1/rings/foot - 1.5)/2.5); fibK = genClamp((Math.min(ww/unit/63, wh/unit/11)/foot - 1)/2); }
     const wv = sampleNoiseGrid(warp, 9, 9, u/(ww/unit)*8, v/(wh/unit)*8) - 0.5;
-    // (flat-sawn: the rings cut at a slant across the board, so they arch — "cathedrals" — round a pith above it)
-    const r = Math.hypot((u - pithX*ww/unit)*0.8, v - pithY) + wv*0.05*o.figure + (sampleNoiseGrid(fig, 6, 6, u*2, v*2) - 0.5)*0.025*o.figure;
+    // (flat-sawn: the rings cut at a slant across the board, so they arch — "cathedrals" — round a pith above it;
+    //  past the page's top, as a camera sees it, they straighten toward the pith's line and never close round it)
+    const dv = v >= 0 ? v - pithY : -pithY*Math.exp(v/-pithY);
+    const r = Math.hypot((u - pithX*ww/unit)*0.8, dv) + wv*0.05*o.figure + (sampleNoiseGrid(fig, 6, 6, u*2, v*2) - 0.5)*0.025*o.figure;
     const f = r*rings, q = f - Math.floor(f);
     // early wood pale and soft, late wood a dark sharp band at the ring's end
-    const late = Math.pow(q, 9 - 4*o.figure);
-    const fibre = sampleNoiseGrid(fib, 64, 12, u/(ww/unit)*63, v/(wh/unit)*11), pore = sampleNoiseGrid(knot, 5, 5, u*1.3, v*1.3);
+    const late = ringK === 1 ? Math.pow(q, ex) : lateMean + (Math.pow(q, ex) - lateMean)*ringK;
+    const fb = sampleNoiseGrid(fib, 64, 12, u/(ww/unit)*63, v/(wh/unit)*11), fibre = fibK === 1 ? fb : 0.5 + (fb - 0.5)*fibK, pore = sampleNoiseGrid(knot, 5, 5, u*1.3, v*1.3);
     const tone = genClamp(0.1 + late*0.62 + (fibre - 0.5)*0.42 + (pore - 0.5)*0.18);
     pic.r[i] = L[0] + (D[0] - L[0])*tone; pic.g[i] = L[1] + (D[1] - L[1])*tone; pic.b[i] = L[2] + (D[2] - L[2])*tone;
     H[i] = 0.55 - late*0.05 + (fibre - 0.5)*0.05;
@@ -343,7 +440,27 @@ function genTendrils(ww, wh, unit, W, o){
 const CIR_DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];   // E SE S SW W NW N NE (y down)
 // a 3×5 font for the silkscreen's part names (U chips, R resistors, C capacitors, digits)
 const CIR_FONT = { U: '101101101101111', R: '110101110101101', C: '111100100100111', 0: '111101101101111', 1: '010110010010111', 2: '111001111100111',
-  3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111' };
+  3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111',
+  // (the rest of the alphabet and a few marks, for the Era's names and the Markings' stamps)
+  A: '010101111101101', B: '110101110101110', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '111100101101111', H: '101101111101101',
+  I: '111010010010111', J: '001001001101111', K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '110101101101101', O: '111101101101111',
+  P: '110101110100100', Q: '111101101111001', S: '111100111001111', T: '111010010010010', V: '101101101101010', W: '101101111111101', X: '101101010101101',
+  Y: '101101010010010', Z: '111001010100111', '-': '000000111000000', '.': '000000000000010', '/': '001001010100100', ' ': '000000000000000', '+': '000010111010000',
+  // RUNES (Magitech's silkscreen: made up, a stave and its branches), written as a–l
+  a: '010011010110010', b: '010111010010010', c: '101010010010101', d: '010010111010010', e: '110011010110011', f: '010101010101010',
+  g: '011010010010110', h: '101110100110101', i: '010010010101101', j: '100110111110100', k: '001011111011001', l: '111010010010111' };
+// the Markings' little pictures, 7×7 (the board's Easter eggs): a fox, a bird, a crescent moon, a star, a witch's hat, an eye
+const CIR_EGGS = [
+  '1000001110001111111111011101111111101111100011100', '0000110000111101111101111100001110000010000010100',
+  '0011100011000011000001100000110000001100000011100', '0001000000100011111110011100011011001000100000000',
+  '0001000000110000111000011110011111011111110000000', '0000000011111011000111011101110001101111100000000'];
+// what a stamp says, by its era (Today, Future, Quantum, Magitech): made up, every word of it
+const CIR_SAYS = [
+  ['REV A', 'REV B', 'REV C', 'LOT 0427', 'DO NOT FLEX', 'ESD SAFE', 'TP1', 'GND', '3V3', '5V0', 'MADE BY HAND', 'KEEP DRY', 'PASS QC', 'SER 0091'],
+  ['PHOTONIC BUS', 'NEURAL MESH', 'FUSION OK', 'GRAV LINK', 'SYNTH CORE', 'LIGHT PIPE 4', 'SELF HEAL', 'ORBITAL', 'NANO FAB 9', 'DREAM CACHE'],
+  ['KEEP BELOW 20 MK', 'QUBIT ARRAY', 'ENTANGLED', 'OBSERVE GENTLY', 'SUPERPOSED', 'COHERENT', 'DO NOT LOOK', 'PHASE 0/1', 'SPIN UP', 'TUNNEL'],
+  ['WARDED', 'BOUND', 'THIRD MOON', 'SPELLBOUND', 'HEX SAFE', 'FAMILIAR PORT', 'MANA 9', 'BRAZIER', 'SIGIL 7', 'WITCH OK']];
+const CIR_SYLL = ['AR', 'VEL', 'ION', 'KAI', 'SOL', 'NYX', 'OR', 'TEL', 'LUM', 'QUA', 'MER', 'ZEN', 'RHO', 'AXI', 'DRA', 'FEN'];
 function genCircuit(cw, ch, o){
   const R = Math.random, occ = new Int32Array(cw*ch), age = new Int32Array(cw*ch);
   const inb = (x, y) => x >= 0 && y >= 0 && x < cw && y < ch, at = (x, y) => (y | 0)*cw + (x | 0);
@@ -463,7 +580,95 @@ function genCircuit(cw, ch, o){
   for(let t = 0; t < nVia*4 && vias.length < nVia; t++){ const x = 1 + (R()*(cw - 2) | 0), y = 1 + (R()*(ch - 2) | 0); if(!room(x, y, 1, 1, 1)) continue; occ[y*cw + x] = -2; vias.push([x + 0.5, y + 0.5]); }
   // the names: only where they don't sit on copper
   const named = names.filter(nm => { const x = Math.floor(nm.x), y = Math.floor(nm.y); return room(x, y, 3, 2, 0); });
-  return { chips, smd, vias, traces, names: named };
+  // ---- THE ERA (Ruby: today's boards → the future's and quantum ones → magitech) ----
+  // Nothing of the layout moves: each chip, name and trace has its own era, set by its own hash, so more Era turns more
+  // of the board toward the next one (at 0, every one is today's, exactly as before).
+  const eh = k => { const v = Math.sin((k + 1)*91.17 + o.salt*12.9898)*43758.5453; return v - Math.floor(v); };
+  const era = Math.max(0, Math.min(3, (o.era || 0)*3)), level = k => Math.min(3, Math.floor(era + eh(k)));
+  const runes = (k, n) => Array.from({ length: n }, (_, i) => 'abcdefghijkl'[Math.floor(eh(k*7 + i)*12)]).join('');
+  chips.forEach((c, i) => { c.era = level(100 + i); });
+  const fits = (nm, txt) => room(Math.floor(nm.x), Math.floor(nm.y), Math.ceil(txt.length*0.96), 2, 0);
+  const shown = named.filter(nm => {
+    const lv = nm.chip ? nm.chip.era : level(500 + nm.n); if(!lv) return true;
+    const txt = nm.kind === 'U' ? ['', 'NX' + nm.n, 'Q' + nm.n, runes(nm.n, 3)][lv] : ['', (nm.kind === 'C' ? 'CL' : 'PH') + nm.n, (nm.kind === 'C' ? 'CQ' : 'JJ') + nm.n, runes(600 + nm.n, 2)][lv];
+    nm.text = txt; return fits(nm, txt); });
+  // a rune or three beside a magitech trace's longest run
+  const glyphs = [];
+  if(era > 0) traces.forEach((tr, ti) => { if(level(800 + ti) < 3 || tr.pts.length < 2) return;
+    let best = 0, A = null, Bp = null; for(let i = 1; i < tr.pts.length; i++){ const l = Math.hypot(tr.pts[i][0] - tr.pts[i - 1][0], tr.pts[i][1] - tr.pts[i - 1][1]); if(l > best){ best = l; A = tr.pts[i - 1]; Bp = tr.pts[i]; } }
+    if(best < 6) return; const mx = (A[0] + Bp[0])/2, my = (A[1] + Bp[1])/2, dx = (Bp[0] - A[0])/best, dy = (Bp[1] - A[1])/best;
+    const txt = runes(900 + ti, 1 + Math.floor(eh(950 + ti)*3)), x = mx - dy*1.4 - txt.length*0.48, y = my + dx*1.4 - 0.6;
+    if(room(Math.floor(x), Math.floor(y), Math.ceil(txt.length*0.96), 2, 0)) glyphs.push({ x, y, text: txt }); });
+  // ---- THE MARKINGS (Ruby: stamps, labels, glyphs, made-up technology, by the seed) ----
+  // Found room for last, so they move nothing; each says what its own era would say.
+  const stamps = [], nMarks = Math.round((o.marks || 0)*(1 + cw*ch/700));
+  if(nMarks > 0){
+    const name = () => CIR_SYLL[R()*16 | 0] + CIR_SYLL[R()*16 | 0] + (R() < 0.6 ? '-' + (2 + (R()*98 | 0)) : '');
+    const place = (wc, hc) => { for(let t = 0; t < 60; t++){ const x = 1 + (R()*Math.max(1, cw - wc - 2) | 0), y = 1 + (R()*Math.max(1, ch - hc - 2) | 0);
+      if(room(x, y, wc, hc, 1)){ for(let j = y; j < y + hc; j++) for(let i = x; i < x + wc; i++) occ[j*cw + i] = -4; return [x, y]; } } return null; };
+    for(let k = 0; k < nMarks; k++){
+      const lv = level(1000 + k), kind = k === 0 ? 'title' : k === 1 && o.marks > 0.35 ? 'egg' : R() < 0.25 && lv > 0 && lv < 3 ? 'matrix' : 'say';
+      if(kind === 'egg'){ const at = place(3, 3); if(at) stamps.push({ kind, x: at[0] + 0.15, y: at[1] + 0.15, egg: R()*CIR_EGGS.length | 0 }); continue; }
+      if(kind === 'matrix'){ const at = place(2, 2); if(at) stamps.push({ kind, x: at[0] + 0.1, y: at[1] + 0.1, bits: Array.from({ length: 36 }, () => R() < 0.5) }); continue; }
+      const lines = kind === 'title' ? [lv === 3 ? runes(1100, 4) + ' ' + name() : name(), lv === 3 ? runes(1200, 3) : ['REV ', 'MK ', 'GEN ', 'CIRCLE '][lv] + 'ABCDEFGH'[R()*8 | 0]]
+        : [lv === 3 && R() < 0.4 ? runes(1300 + k, 2 + (R()*4 | 0)) : CIR_SAYS[lv][R()*CIR_SAYS[lv].length | 0]];
+      const wc = Math.ceil(Math.max(...lines.map(t => t.length))*0.96 + 0.6), hc = Math.ceil(lines.length*1.45 + 0.4), at = place(wc, hc);
+      if(at) stamps.push({ kind, x: at[0], y: at[1], w: wc, h: hc, lines, box: kind === 'title' || R() < 0.35 });
+    }
+  }
+  return { chips, smd, vias, traces, names: shown, glyphs, stamps };
+}
+// A chip of another era, drawn in place of today's (its pins are drawn after, as today's are). What of it lights
+// is copper with the chip's own grey (each trace's way), so Charge powers it as it powers the traces.
+//   1 · the future's: a chamfered body with a window across it that lights, corner brackets for an outline
+//   2 · quantum: no package at all, a cross of bare metal (a qubit) on the board, a serpentine resonator, a dashed keep-out
+//   3 · magitech: a dark body set with gems that light, ringed by a sigil (a star in an oval)
+function cirEraChip(c, K){
+  const { CU, HT, PD, PT, EA, LG, rect, disc, line, poly, s, tw, g } = K, x0 = c.x - 0.1, y0 = c.y - 0.1, W = c.w + 0.2, H = c.h + 0.2, mx = c.x + c.w/2, my = c.y + c.h/2, m = Math.min(c.w, c.h);
+  const h = k => { const v = Math.sin((c.x*31 + c.y*17 + k)*12.9898)*43758.5453; return v - Math.floor(v); };
+  const used = c.pins.filter(p => p.rank >= 0), e = g(0.1 + 0.85*(used.length ? Math.max(...used.map(p => p.rank)) : h(9)));
+  const lit = (draw) => { draw(CU, '#fff'); draw(PD, '#fff'); draw(EA, e); };
+  const wide = c.w >= c.h, long = Math.max(c.w, c.h) > m*1.6;
+  if(c.era === 1){
+    const k = Math.min(0.9, m*0.25), body = [[x0 + k, y0], [x0 + W - k, y0], [x0 + W, y0 + k], [x0 + W, y0 + H - k], [x0 + W - k, y0 + H], [x0 + k, y0 + H], [x0, y0 + H - k], [x0, y0 + k]];
+    poly(PT, body, '#fff'); poly(HT, body, 'rgb(205,205,205)');
+    const win = wide ? [c.x + 0.7, my - 0.2, c.w - 1.4, 0.4] : [mx - 0.2, c.y + 0.7, 0.4, c.h - 1.4];
+    lit((x, col) => rect(x, ...win, col)); rect(HT, ...win, 'rgb(214,214,214)');
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.12*s;
+    for(const [ax, ay, sx, sy] of [[c.x - 1.15, c.y - 1.15, 1, 1], [c.x + c.w + 1.15, c.y - 1.15, -1, 1], [c.x - 1.15, c.y + c.h + 1.15, 1, -1], [c.x + c.w + 1.15, c.y + c.h + 1.15, -1, -1]]){
+      LG.beginPath(); LG.moveTo(ax*s, (ay + sy*1.2)*s); LG.lineTo(ax*s, ay*s); LG.lineTo((ax + sx*1.2)*s, ay*s); LG.stroke(); }
+    poly(LG, [[c.x - 1.15, c.y - 0.5], [c.x - 0.5, c.y - 1.15], [c.x - 1.15, c.y - 1.15]], '#fff');
+    return;
+  }
+  if(c.era === 2){
+    const ax = long ? (wide ? c.w*0.42 : 0.6) : Math.max(0.9, m*0.42), ay = long ? (wide ? 0.6 : c.h*0.42) : ax, aw = 0.45;
+    for(const r of [[mx - ax, my - aw/2, ax*2, aw], [mx - aw/2, my - ay, aw, ay*2]]){ lit((x, col) => rect(x, ...r, col)); rect(HT, ...r, 'rgb(118,118,118)'); }
+    // the resonator: a meander beside the cross, along the chip's long side
+    if(c.w >= 4 && c.h >= 4){ const turns = 2 + Math.floor(h(1)*3), pitch = (c.w*0.5 - 0.6)/(turns*2), top = c.y + 0.5, bot = my - 0.7, pts = [[mx + 0.4, bot]];
+      let x = mx + 0.4; for(let i = 0; i < turns*2; i++){ pts.push([x, i % 2 ? bot : top]); x += pitch; pts.push([x, i % 2 ? bot : top]); }
+      line(CU, pts, tw*0.55*s, '#fff'); line(PD, pts, tw*0.55*s, '#fff'); line(HT, pts, tw*0.55*s, 'rgb(104,104,104)'); }
+    // flux lines to the middle pin of each side
+    for(const sd of [0, 1, 2, 3]){ const ps = c.pins.filter(p => p.side === sd); if(!ps.length) continue; const p = ps[ps.length >> 1];
+      const end = sd === 0 ? [mx, my - ay] : sd === 1 ? [mx + ax, my] : sd === 2 ? [mx, my + ay] : [mx - ax, my];
+      line(CU, [end, [p.x, p.y]], tw*0.45*s, '#fff'); line(PD, [end, [p.x, p.y]], tw*0.3*s, '#fff'); }
+    LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; if(LG.setLineDash) LG.setLineDash([0.5*s, 0.4*s]);
+    LG.strokeRect((c.x - 1.15)*s, (c.y - 1.15)*s, (c.w + 2.3)*s, (c.h + 2.3)*s); if(LG.setLineDash) LG.setLineDash([]);
+    return;
+  }
+  // magitech: a capsule (round when square), a gem every few cells along it
+  const r = m/2 + 0.1, L = Math.max(c.w, c.h)/2 - r + 0.1, ux = wide ? 1 : 0, uy = wide ? 0 : 1;
+  const capsule = (x, col, k) => { x.strokeStyle = col; x.lineCap = 'round'; x.lineWidth = 2*r*k*s; x.beginPath(); x.moveTo((mx - ux*L)*s, (my - uy*L)*s); x.lineTo((mx + ux*L + 1e-3)*s, (my + uy*L + 1e-3)*s); x.stroke(); };
+  capsule(PT, '#fff', 1); capsule(HT, 'rgb(200,200,200)', 1); capsule(HT, 'rgb(212,212,212)', 0.75);
+  const gr = Math.max(0.4, r*0.45), sides = 4 + Math.floor(h(2)*3), nG = Math.max(1, Math.round((2*L)/2.6) + 1);
+  for(let k = 0; k < nG; k++){ const t = nG === 1 ? 0 : -L + 2*L*k/(nG - 1), gx = mx + ux*t, gy = my + uy*t;
+    const gem = Array.from({ length: sides }, (_, i) => { const a = i/sides*Math.PI*2 - Math.PI/2; return [gx + Math.cos(a)*gr, gy + Math.sin(a)*gr]; });
+    lit((x, col) => poly(x, gem, col)); poly(HT, gem, 'rgb(236,236,236)'); }
+  // the sigil: an oval round the whole of it, and a star inside
+  const rx = c.w/2 + 1.25, ry = c.h/2 + 1.25, n = 5 + Math.floor(h(3)*3), step = n === 6 ? 1 : 2;
+  LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s;
+  for(const k of [0, 0.4]){ LG.beginPath(); LG.ellipse(mx*s, my*s, (rx + k)*s, (ry + k)*s, 0, 0, Math.PI*2); LG.stroke(); }
+  const V = Array.from({ length: n }, (_, i) => { const a = i/n*Math.PI*2 - Math.PI/2; return [mx + Math.cos(a)*rx, my + Math.sin(a)*ry]; });
+  LG.beginPath(); for(let i = 0; i <= n; i++){ const p = V[(i*step) % n]; i ? LG.lineTo(p[0]*s, p[1]*s) : LG.moveTo(p[0]*s, p[1]*s); } LG.stroke();
 }
 // The board drawn: s pixels a cell. Each of the part's maps is its own canvas (see the part).
 function genDrawCircuit(B, ww, wh, s, o){
@@ -487,8 +692,19 @@ function genDrawCircuit(B, ww, wh, s, o){
       else { rect(CU, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(HT, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, 'rgb(117,117,117)'); rect(PD, p[0] - 0.36, p[1] - 0.36, 0.72, 0.72, '#fff'); rect(EA, p[0] - 0.42, p[1] - 0.42, 0.84, 0.84, e); }
     }
   }
+  // the silkscreen's letters (and runes), px cells a font pixel
+  const write = (txt, X, Y, px = 0.24) => { let x0 = X; for(const ch of txt){ const bits = CIR_FONT[ch] || ''; for(let r = 0; r < 5; r++) for(let q = 0; q < 3; q++) if(bits[r*3 + q] === '1') rect(LG, x0 + q*px, Y + r*px, px*0.92, px*0.92, '#fff'); x0 += px*4; } };
+  const poly = (x, pts, col, fill = true, w = 0.12) => { x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0]*s, p[1]*s) : x.moveTo(p[0]*s, p[1]*s)); x.closePath();
+    if(fill){ x.fillStyle = col; x.fill(); } else { x.strokeStyle = col; x.lineWidth = w*s; x.stroke(); } };
   // the chips: a dark body standing well above the board, a pin pad at every pin, a dimple at pin one
+  // (or, as the Era turns them: the future's, a quantum qubit, a magitech sigil — their pins are where they were)
   for(const c of B.chips){
+    if(c.era){ cirEraChip(c, { CU, HT, PD, PT, EA, LG, rect, disc, line, poly, s, tw, g });
+      for(const p of c.pins){ const [dx, dy] = CIR_DIRS[p.dir], L = 0.75, W = 0.4, cx = p.x - dx*0.15, cy = p.y - dy*0.15;
+        const [X, Y, Wd, Hd] = dx ? [cx - L/2, cy - W/2, L, W] : [cx - W/2, cy - L/2, W, L];
+        rect(CU, X, Y, Wd, Hd, '#fff'); rect(PD, X, Y, Wd, Hd, '#fff'); rect(HT, X, Y, Wd, Hd, 'rgb(122,122,122)');
+        if(p.rank >= 0) rect(EA, X - 0.05, Y - 0.05, Wd + 0.1, Hd + 0.1, g(0.1 + 0.85*p.rank)); }
+      continue; }
     rect(PT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, '#fff');
     rect(HT, c.x - 0.1, c.y - 0.1, c.w + 0.2, c.h + 0.2, 'rgb(205,205,205)'); rect(HT, c.x + 0.25, c.y + 0.25, c.w - 0.5, c.h - 0.5, 'rgb(218,218,218)');
     disc(HT, [c.x + 0.9, c.y + 0.9], 0.3, 'rgb(196,196,196)');
@@ -509,9 +725,17 @@ function genDrawCircuit(B, ww, wh, s, o){
     LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.strokeRect((p.x - 0.25)*s, (p.y - 0.25)*s, (p.w + 0.5)*s, (p.h + 0.5)*s);
   }
   for(const v of B.vias){ disc(CU, v, 0.38, '#fff'); disc(CU, v, 0.15, '#000'); disc(PD, v, 0.38, '#fff'); disc(PD, v, 0.15, '#000'); disc(HT, v, 0.38, 'rgb(115,115,115)'); disc(HT, v, 0.15, 'rgb(31,31,31)'); }
-  // the parts' names, in the silkscreen's little font
-  for(const nm of B.names){ const txt = nm.kind + nm.n, px = 0.24; let x0 = nm.x;
-    for(const ch of txt){ const bits = CIR_FONT[ch] || ''; for(let r = 0; r < 5; r++) for(let q = 0; q < 3; q++) if(bits[r*3 + q] === '1') rect(LG, x0 + q*px, nm.y + r*px, px*0.92, px*0.92, '#fff'); x0 += px*4; } }
+  // the parts' names, in the silkscreen's little font (each in its era's words)
+  for(const nm of B.names) write(nm.text || nm.kind + nm.n, nm.x, nm.y);
+  for(const gl of B.glyphs || []) write(gl.text, gl.x, gl.y);
+  // the Markings: stamps of what each era would print, a code block, and once a little picture
+  for(const st of B.stamps || []){
+    if(st.kind === 'egg'){ const bits = CIR_EGGS[st.egg], px = 0.38; for(let r = 0; r < 7; r++) for(let q = 0; q < 7; q++) if(bits[r*7 + q] === '1') rect(LG, st.x + q*px, st.y + r*px, px*0.9, px*0.9, '#fff'); continue; }
+    if(st.kind === 'matrix'){ const px = 0.3; LG.strokeStyle = '#fff'; LG.lineWidth = 0.08*s; LG.strokeRect(st.x*s, st.y*s, 6*px*s, 6*px*s);
+      st.bits.forEach((b, i) => { if(b) rect(LG, st.x + (i % 6)*px, st.y + Math.floor(i/6)*px, px*0.9, px*0.9, '#fff'); }); continue; }
+    st.lines.forEach((t, i) => write(t, st.x + 0.3, st.y + 0.35 + i*1.45));
+    if(st.box){ LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.strokeRect((st.x + 0.05)*s, (st.y + 0.05)*s, (st.w - 0.1)*s, (st.h - 0.1)*s); }
+  }
   // DATA: bright pulses running along the traces, a comet each (the head bright, the tail fading behind it), and
   // packets of bits; each trace's are fixed by its own hash, so more Data Flow adds pulses and moves none
   const flow = o.flow;
@@ -539,14 +763,169 @@ function genDrawCircuit(B, ww, wh, s, o){
   return cv;
 }
 
+// ---------------- A RINGWORLD, SEEN FROM ITS FLOOR ----------------
+// (Ruby: a ringworld, Niven's or Halo's, but abstract; its light the star at its centre, so the dial is the camera and
+// one slider the light.) A ring of radius 1 round its star, `W` wide, walled at both rims; the camera stands on its
+// inner floor. Each pixel's ray is followed to what it meets: the floor (near ground, or far off where the ring rises
+// into the arch overhead), a rim wall, the star, the shadow squares that make its nights, or open space. What the
+// part hands on are maps OF the world — where on the ring each pixel shows (along it and across it, in band widths),
+// how far off, how fine a pixel is there, and where it is day — so any noise or picture can be laid on the ring.
+const RING_SQ = 10, RING_COV = 0.36, RING_SQR = 0.15;   // shadow squares round the star, and the share of each turn they cover (night)
+function ringLook(o){
+  const W = o.band, Hw = o.walls, hc = o.altitude, R = 1, z0 = o.place*W*0.45, fov = o.lens*Math.PI/180, f = 0.5/Math.tan(fov/2);
+  const psi = o.look*Math.PI/180, th = o.lift*Math.PI/180, hx = Math.cos(psi), hz = Math.sin(psi);
+  // up is toward the ring's axis (−x); along the ring is +y, across it +z. f: forward; r: right; u: the screen's up
+  const fx = -Math.sin(th), fy = Math.cos(th)*hx, fz = Math.cos(th)*hz;
+  // right = h × up, with h = (0, hx, hz), up = (−1, 0, 0): (0, −hz, hx)
+  const rx = 0, ry = -hz, rz = hx;
+  const ux = ry*fz - rz*fy, uy = rz*fx - rx*fz, uz = rx*fy - ry*fx;
+  // the shadow squares turn so that the camera stands where Daylight says: 1 noon (mid-gap), 0 midnight (mid-square)
+  // (0 midnight, behind the middle of a square; 0.5 the very edge of its shadow, dawn; 1 noon, the middle of a gap)
+  const dl = Math.max(0, Math.min(1, o.daylight)), per = Math.PI*2/RING_SQ, uc = dl < 0.5 ? RING_COV/2 + dl*RING_COV : RING_COV + (dl - 0.5)*(1 - RING_COV), q0 = -uc*per;
+  // the air the walls hold in: thinning with height (Hs, its scale height), so a column straight up is o.air deep
+  // (its optical depth) and the ground far along is hazed far more than the ground at your feet
+  const Hs = Math.min(Hw*0.5, W*0.025) + 1e-6, L0 = Hs/Math.max(0.005, o.air);
+  return { W, Hw, hc, R, z0, f, fx, fy, fz, rx, ry, rz, ux, uy, uz, per, q0, Hs, L0, Px: R - hc };
+}
+// day at a ring angle: 1 in a gap between the squares, 0 behind one, a soft edge (the star's own size) between
+function ringDay(L, phi){ let u = (phi - L.q0)/L.per; u -= Math.floor(u);
+  const sd = u >= RING_COV ? Math.min(u - RING_COV, 1 - u) : -Math.min(u, RING_COV - u), t = genClamp(0.5 + sd/0.09); return t*t*(3 - 2*t); }
+// one ray: what it meets. Returns { kind: 0 space, 1 floor, 2 wall, 3 star, 4 square, t, phi, z, h (height up a wall), air, cosI }
+function ringRay(L, dx, dy, dz, air){
+  const Px = L.Px, z0 = L.z0, a = dx*dx + dy*dy, b = Px*dx, c = Px*Px - L.R*L.R;
+  let hit = null;
+  if(a > 1e-12){ const t = (-b + Math.sqrt(b*b - a*c))/a, z = z0 + t*dz;
+    if(Math.abs(z) <= L.W/2){ const X = Px + t*dx, Y = t*dy; hit = { kind: 1, t, phi: Math.atan2(Y, X), z, h: 0, cosI: Math.abs(X*dx + Y*dy)/L.R }; }
+    else if(Math.abs(dz) > 1e-12){ const zw = Math.sign(dz)*L.W/2, tw = (zw - z0)/dz, X = Px + tw*dx, Y = tw*dy, rho = Math.sqrt(X*X + Y*Y);
+      if(rho >= L.R - L.Hw) hit = { kind: 2, t: tw, phi: Math.atan2(Y, X), z: zw, h: (L.R - rho)/L.W, cosI: Math.abs(dz) }; } }
+  // the shadow squares: a ring of panels close round the star, 0.6 band widths tall
+  const Rq = RING_SQR, aq = a, cq = Px*Px - Rq*Rq, dq = b*b - aq*cq;
+  if(aq > 1e-12 && dq > 0){ const t1 = (-b - Math.sqrt(dq))/aq;
+    if(t1 > 0 && (!hit || t1 < hit.t)){ const z = z0 + t1*dz; if(Math.abs(z) <= L.W*0.3){ const X = Px + t1*dx, Y = t1*dy; let u = (Math.atan2(Y, X) - L.q0)/L.per; u -= Math.floor(u);
+      if(u < RING_COV) hit = { kind: 4, t: t1, phi: 0, z, h: 0, cosI: 1 }; } } }
+  // the star (radius 0.02) at the centre
+  const cs = Px*Px - 0.0004, ds = b*b - (dx*dx + dy*dy + dz*dz)*cs;
+  if(ds > 0){ const ts = (-b - Math.sqrt(ds))/(dx*dx + dy*dy + dz*dz); if(ts > 0 && (!hit || ts < hit.t)) hit = { kind: 3, t: ts, phi: 0, z: 0, h: 0, cosI: 1 }; }
+  if(!hit) hit = { kind: 0, t: 4, phi: 0, z: 0, h: 0, cosI: 1 };
+  hit.air = air ? ringAir(L, dx, dy, dz, a, b, hit) : 0;
+  return hit;
+}
+// the air a ray passes through (its optical depth), summed where there is air: near the camera, and near the far floor it
+// meets (the ring's middle, far from any floor, is empty). Between the walls only.
+function ringAir(L, dx, dy, dz, a, b, hit){
+  const Px = L.Px, top = L.R - L.Hs*7, ci = Px*Px - top*top, di = b*b - a*ci, end = hit.kind === 1 || hit.kind === 2 ? hit.t : 3;
+  const segs = [];
+  if(a <= 1e-12 || di <= 0) segs.push([0, end]);
+  else { const t1 = (-b - Math.sqrt(di))/a, t2 = (-b + Math.sqrt(di))/a; segs.push([0, Math.min(end, Math.max(0, t1))]); if(t2 < end) segs.push([Math.max(0, t2), end]); }
+  let tau = 0;
+  for(const [t0, t1] of segs){ if(t1 <= t0) continue; const n = 10, dt = (t1 - t0)/n;
+    for(let k = 0; k < n; k++){ const t = t0 + (k + 0.5)*dt, z = L.z0 + t*dz; if(Math.abs(z) > L.W/2) continue;
+      const X = Px + t*dx, Y = t*dy, h = L.R - Math.sqrt(X*X + Y*Y); if(h < 0) continue; tau += Math.exp(-h/L.Hs)*dt; } }
+  return tau/L.L0;
+}
+function genRingView(ww, wh, unit, o){
+  const L = ringLook(o), N = ww*wh, along = new Float32Array(N), across = new Float32Array(N), dist = new Float32Array(N), detail = new Float32Array(N);
+  const sky = new Float32Array(N), walls = new Float32Array(N), star = new Float32Array(N), day = new Float32Array(N), squares = new Float32Array(N), airs = new Float32Array(N);
+  // (the day where the camera stands: the air about it is lit by it, whatever lies beyond)
+  const here = new Float32Array(N).fill(ringDay(L, 0));
+  const px = 1/unit, alpha = px/L.f, D3 = new Float64Array(3);
+  const ray = (sx, sy) => { const dx = L.f*L.fx + sx*L.rx - sy*L.ux, dy = L.f*L.fy + sx*L.ry - sy*L.uy, dz = L.f*L.fz + sx*L.rz - sy*L.uz, l = Math.sqrt(dx*dx + dy*dy + dz*dz); D3[0] = dx/l; D3[1] = dy/l; D3[2] = dz/l; return D3; };
+  // what each pixel's CORNER sees (shared by the four pixels round it): their mix is the pixel's coverage, its edges smooth
+  const cw = ww + 1, K = new Uint8Array(cw*(wh + 1));
+  for(let y = 0; y <= wh; y++) for(let x = 0; x <= ww; x++){ const d = ray((x - ww/2)*px, (y - wh/2)*px); K[y*cw + x] = ringRay(L, d[0], d[1], d[2], false).kind; }
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const q = y*ww + x, sx = (x + 0.5 - ww/2)*px, sy = (y + 0.5 - wh/2)*px, ks = [K[y*cw + x], K[y*cw + x + 1], K[(y + 1)*cw + x], K[(y + 1)*cw + x + 1]];
+    const d = ray(sx, sy), dx = d[0], dy = d[1], dz = d[2], c = ringRay(L, dx, dy, dz, true);
+    let n0 = 0, n2 = 0, n3 = 0, n4 = 0; for(const k of ks){ if(k === 0) n0++; else if(k === 2) n2++; else if(k === 3) n3++; else if(k === 4) n4++; }
+    // (the centre counts as much as the corners together)
+    const w = k => (k === c.kind ? 0.5 : 0) + 0.125*(k === 0 ? n0 : k === 2 ? n2 : k === 3 ? n3 : n4);
+    const space = w(0) + w(3) + w(4);
+    sky[q] = space; walls[q] = w(2); star[q] = w(3); squares[q] = w(4);
+    // the star's glow in the air: by the angle from it (it stands straight up, at −x)
+    const cosA = Math.max(-1, Math.min(1, -dx));
+    if(cosA > 0.9){ const ang = Math.acos(cosA), glow = (space - w(4))*(Math.exp(-ang*ang/0.0016)*0.8 + Math.exp(-ang*ang/0.04)*0.25); star[q] = Math.min(1, star[q] + glow); }
+    let H = c.kind === 1 || c.kind === 2 ? c : null;
+    // (an edge pixel whose centre missed the ring: the ring's coordinates from a corner that met it)
+    if(!H) for(let k = 0; k < 4 && !H; k++) if(ks[k] === 1 || ks[k] === 2){ const e = ray(sx + ((k & 1) - 0.5)*px, sy + ((k >> 1) - 0.5)*px), h = ringRay(L, e[0], e[1], e[2], false); if(h.kind === 1 || h.kind === 2) H = h; }
+    if(H){ along[q] = H.phi/L.W; across[q] = H.kind === 2 ? (H.z > 0 ? 1 + H.h : -H.h) : H.z/L.W + 0.5;
+      dist[q] = 1 - Math.exp(-H.t/(L.W*6)); detail[q] = H.t*alpha/Math.max(0.03, H.cosI)/L.W; day[q] = ringDay(L, H.phi); }
+    else { dist[q] = 1; detail[q] = 1; day[q] = here[0]; }
+    airs[q] = 1 - Math.exp(-c.air);
+  }
+  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here];
+}
+
+// ---------------- NOISE AT COORDINATES ----------------
+// Noise read wherever two maps say (any projection: a ring's floor, a polar wrap, a perspective), never repeating, and
+// never finer than a pixel where it lands: a third map (Detail, how much ground a pixel spans there) ends the octaves
+// a pixel can't show, so far ground is smooth and near ground sharp.
+const mnHash = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0)/4294967296; };
+function mnValue(x, y, s){ const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx*fx*(3 - 2*fx), v = fy*fy*(3 - 2*fy);
+  const a = mnHash(xi, yi, s), b = mnHash(xi + 1, yi, s), c = mnHash(xi, yi + 1, s), d = mnHash(xi + 1, yi + 1, s);
+  return a + (b - a)*u + (c - a)*v + (a - b - c + d)*u*v; }
+function genMapNoise(X, Y, D, N, o){
+  const out = new Float32Array(N), slope = new Float32Array(N), base = 1/Math.max(1e-6, o.size), seed = o.seed | 0, oct = Math.max(1, Math.min(14, Math.round(o.octaves)));
+  const fbm = (x, y, foot) => {
+    if(o.warp > 0){ const wx = (mnValue(x*base*0.5 + 17.3, y*base*0.5, seed + 7) - 0.5)*o.warp*o.size, wy = (mnValue(x*base*0.5, y*base*0.5 + 41.1, seed + 9) - 0.5)*o.warp*o.size; x += wx; y += wy; }
+    let sum = 0, norm = 0, amp = 1, fq = base;
+    for(let k = 0; k < oct; k++){
+      // how many pixels one cell of this octave spans here: under one, it would only shimmer, so it gives way to its mean
+      const w = foot ? genClamp(1/(fq*foot) - 1) : 1;
+      if(w <= 0){ sum += amp*0.5; norm += amp; break; }
+      let nv = mnValue(x*fq, y*fq, seed + k*101);
+      if(o.ridges > 0){ const r = 1 - Math.abs(2*nv - 1); nv = nv + (r*r - nv)*o.ridges; }
+      sum += amp*(0.5 + (nv - 0.5)*w); norm += amp; amp *= o.rough; fq *= 2.03;
+    }
+    return sum/norm; };
+  for(let i = 0; i < N; i++){
+    const x = X ? X[i] : 0, y = Y ? Y[i] : 0, foot = D ? Math.max(1e-9, D[i]) : 0, v = fbm(x, y, foot);
+    out[i] = v;
+    // THE SLOPE, on the ground itself (not on the page): how steep the land is where this pixel looks, as if its
+    // heights were Steepness × Size tall; read across a pixel's own width, so far ground is as smooth as it looks
+    if(o.steep > 0){ const e = Math.max(foot*2.5, o.size*1e-4), gx = (fbm(x + e, y, foot) - v)/e, gy = (fbm(x, y + e, foot) - v)/e, g = Math.hypot(gx, gy)*o.steep*o.size*4;
+      slope[i] = 1 - 1/Math.sqrt(1 + g*g); }
+  }
+  return [out, slope];
+}
+
 export const GEN_STEPS = {
+  // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
+  ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up'], outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here'],
+    io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+    params: [GEN_R('band', 'Band Width', 45), GEN_R('walls', 'Rim Walls', 25), GEN_R('altitude', 'Altitude', 15), GEN_R('look', 'Look Toward', 0, 0, 360), GEN_R('lift', 'Look Up', 15, -30, 100),
+      GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50)], cost: () => 7,
+    doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, open space.',
+    // (the Light Dial wired in is the camera: its direction where you look round the ring, its height how far up —
+    //  at the dial's middle, straight up at the arch; at its rim, level; past the rim, a little down)
+    run(E, n){ const { ww, wh, unit, num, input } = E, b = num(n, 'band', 45)/100, W = 0.012 + 0.22*b*b, toward = input(n, 1), up = input(n, 2);
+      const o = { band: W, walls: W*(0.04 + 0.7*num(n, 'walls', 25)/100), altitude: W*Math.pow(10, -3.2 + 3*num(n, 'altitude', 15)/100),
+        look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0),
+        lift: Math.max(-30, Math.min(89.5, typeof up === 'number' ? 90 - 90*Math.min(1.3, up) : num(n, 'lift', 15)*0.9)), lens: num(n, 'lens', 75), place: num(n, 'place', 0)/100, daylight: num(n, 'daylight', 80)/100,
+        air: (a => 0.01 + 0.4*a*a)(num(n, 'air', 50)/100) };
+      return genRingView(ww, wh, unit, o); } },
+  mapnoise: { cat: 'Noise', label: 'Noise at Coordinates', ins: ['across', 'down', 'detail'], outs: ['noise', 'slope'], io: { ins: ['field', 'field', 'field'], outs: ['field', 'field'] },
+    params: [GEN_R('size', 'Size', 100, 1, 1000), GEN_R('octaves', 'Octaves', 8, 1, 14), GEN_R('rough', 'Roughness', 50), GEN_R('ridges', 'Ridges', 0), GEN_R('warp', 'Warp', 0), GEN_R('variation', 'Variation', 0, 0, 99),
+      GEN_R('steep', 'Steepness', 0)], cost: () => 4,
+    doc: 'Noise read wherever two maps say: laid on a ring, a polar wrap or a perspective, never repeating, never finer than a pixel where it lands.',
+    run(E, n){ const { N, num, input, asField } = E, X = asField(input(n, 1)), Y = asField(input(n, 2)), D = input(n, 3) != null ? asField(input(n, 3)) : null;
+      return genMapNoise(X, Y, D, N, { size: num(n, 'size', 100)/100, octaves: num(n, 'octaves', 8), rough: 0.3 + 0.4*num(n, 'rough', 50)/100, ridges: num(n, 'ridges', 0)/100,
+        warp: num(n, 'warp', 0)/100*2, steep: num(n, 'steep', 0)/100, seed: ((E.ctx.seed >>> 0) % 100003) + Math.round(num(n, 'variation', 0))*7919 }); } },
+  raindrops: { cat: 'Marks', label: 'Raindrops', ins: [], outs: ['ripples', 'splashes', 'distance'], io: { outs: ['field', 'field', 'field'] },
+    params: [GEN_R('size', 'Ripple Size', 100, 40, 250), GEN_R('rain', 'Rain', 50), GEN_R('spread', 'Spread', 50), GEN_R('splash', 'Splashes', 40), GEN_R('view', 'View', 35, 0, 85), GEN_R('variation', 'Variation', 0, 0, 99)], cost: () => 8,
+    doc: 'Rain falling on still water: every drop a ring wave spreading from where it struck, the newest still splashing, seen from above or across the water.',
+    run(E, n){ const { num } = E;
+      return genRaindrops(E.ww, E.wh, E.unit, { size: num(n, 'size', 100)/100, rain: num(n, 'rain', 50)/100, spread: num(n, 'spread', 50)/100, splash: num(n, 'splash', 40)/100,
+        tilt: num(n, 'view', 35)/100, salt: ((E.ctx.seed >>> 0) + Math.round(num(n, 'variation', 0))*7919) >>> 0 }); } },
   traces: { cat: 'Marks', label: 'Circuit Traces', ins: ['keep clear'], outs: ['copper', 'height', 'each trace', 'data', 'pads', 'parts', 'silkscreen'],
     io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
-    params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99),
+      GEN_R('era', 'Era', 0), GEN_R('marks', 'Markings', 0)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100), s = unit/across;
       const cw = Math.max(4, Math.ceil(w/s)), ch = Math.max(4, Math.ceil(h/s)), kv = E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
       const bends = E.num(n, 'bends', 70)/100;
       const o = { traces: E.num(n, 'traces', 55)/100, parts: E.num(n, 'parts', 45)/100, bends, diag: bends > 0, flow: E.num(n, 'flow', 40)/100,
+        era: E.num(n, 'era', 0)/100, marks: E.num(n, 'marks', 0)/100,
         salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
         clear: keep ? (x, y) => keep[Math.min(h - 1, Math.max(0, y*s | 0))*w + Math.min(w - 1, Math.max(0, x*s | 0))] : null };
       const B = withSeed(genSeed(E, n), () => genCircuit(cw, ch, o)), cv = genDrawCircuit(B, w, h, s, o);
@@ -589,8 +968,9 @@ export const GEN_STEPS = {
     run(E, n){ const [pc, hc] = this.paint(E, n); return [E.readCanvas(pc), E.asField(E.readCanvas(hc))]; } },
   discharge: { cat: 'Marks', label: 'Discharge', ins: ['strike from'], outs: ['channels'], io: { ins: ['value'], outs: ['field'] },
     params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
-      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
-    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100;
+      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99),
+      GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0)], cost: () => 12,
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0));
       const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
         grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));
@@ -598,14 +978,19 @@ export const GEN_STEPS = {
       const wk = num(n, 'width', 100)/100;
       // thick where the most current ran; the twigs fade as well as thin
       // (magnified with the figure: the camera brings the channels closer, wider as well as longer)
-      for(const [x0, y0, x1, y1, cur] of segs){ const w = Math.max(E.px(0.9)*zoom, E.px(1.6)*wk*Math.pow(cur, 0.34)*zoom);
-        x.globalAlpha = Math.min(1, 0.35 + Math.pow(cur, 0.5)*0.22); x.lineWidth = w;
-        x.beginPath(); x.moveTo(x0*unit, y0*unit); x.lineTo(x1*unit, y1*unit); x.stroke(); }
+      // (through the ground camera: a channel is as wide as it is near; one finer than the thinnest line fades instead)
+      const thin = E.px(0.9);
+      for(const [x0, y0, x1, y1, cur] of segs){ let w = Math.max(E.px(0.9)*zoom, E.px(1.6)*wk*Math.pow(cur, 0.34)*zoom), a = Math.min(1, 0.35 + Math.pow(cur, 0.5)*0.22);
+        let p = [x0, y0], q = [x1, y1];
+        if(cam){ p = cam.toScreen(x0, y0); q = cam.toScreen(x1, y1); if(!p || !q) continue; w *= (p[2] + q[2])/2; if(w < thin){ a *= w/thin; w = thin; } }
+        x.globalAlpha = a; x.lineWidth = w;
+        x.beginPath(); x.moveTo(p[0]*unit, p[1]*unit); x.lineTo(q[0]*unit, q[1]*unit); x.stroke(); }
       return [E.asField(E.readCanvas(c))]; } },
   wood: { cat: 'Textures', label: 'Wood', ins: ['light wood', 'dark wood'], outs: ['picture', 'height'], io: { ins: ['colour', 'colour'], outs: ['image', 'field'] },
-    params: [GEN_R('rings', 'Rings', 40), GEN_R('figure', 'Figure', 50), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    params: [GEN_R('rings', 'Rings', 40), GEN_R('figure', 'Figure', 50), GEN_R('variant', 'Variant', 0, 0, 99), GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0)], cost: () => 4,
     run(E, n){ const a = E.input(n, 1), b = E.input(n, 2);
-      const o = { rings: E.num(n, 'rings', 40)/100, figure: E.num(n, 'figure', 50)/100, light: Array.isArray(a) ? a : [0.80, 0.64, 0.45], dark: Array.isArray(b) ? b : [0.42, 0.26, 0.15] };
+      const o = { rings: E.num(n, 'rings', 40)/100, figure: E.num(n, 'figure', 50)/100, light: Array.isArray(a) ? a : [0.80, 0.64, 0.45], dark: Array.isArray(b) ? b : [0.42, 0.26, 0.15],
+        cam: groundCam(E.ww/E.unit, E.wh/E.unit, E.num(n, 'turn', 0), E.num(n, 'view', 0)) };
       return withSeed(genSeed(E, n), () => genWood(E.ww, E.wh, E.unit, o)); } },
   burn: { cat: 'Light & Color', label: 'Burn', ins: ['picture', 'channels', 'glow'], outs: ['picture', 'height'], io: { ins: ['image', 'field', 'colour'], outs: ['image', 'field'] },
     params: [GEN_R('material', 'Charred · Embers · Acrylic', 0), GEN_R('scorch', 'Scorch', 50), GEN_R('depth', 'Depth', 50)], cost: () => 3,

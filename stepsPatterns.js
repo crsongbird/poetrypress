@@ -476,6 +476,25 @@ export const PATTERN_STEPS = {
       return [o];
     } },
 
+  // GLOW (Ruby: a bloom took a dozen parts — blurs and screens — and a phone's memory): light given off, in one part.
+  // Where the glow map is bright, a halo spreads (Radius) and a wide, faint aura beyond it (Aura), colored and
+  // screened over the picture, the bright places themselves burning hottest (Core). Screening only ever adds light.
+  glow: { cat: 'Light & Color', label: 'Glow', ins: ['picture', 'glows', 'color'], outs: ['picture'], io: { ins: ['image', 'field', 'colour'], outs: ['image'] },
+    maps: ['strength:4'],
+    params: [PAT_R('radius', 'Radius', 22), PAT_R('aura', 'Aura', 60, 0, 200), PAT_R('strength', 'Strength', 85), PAT_R('auraK', 'Aura Strength', 45), PAT_R('core', 'Core', 45), ['hex', 'Color', 'text', '#FFE2B0']],
+    cost: () => 2,
+    doc: 'Light given off where a gray map is bright: a colored halo, a wide aura and hot cores, laid over a picture in one step.',
+    run(E, n){ const { N, unit, input, num, map, at, P, asField, asImage, boxBlur } = E;
+      const pic = asImage(input(n, 1) ?? 0), src = asField(input(n, 2)); if(!src) return [pic];
+      const w = input(n, 3), c = Array.isArray(w) ? w : patHex(P(n, 'hex', '#FFE2B0')), k = unit/1536*1.2;
+      const H = boxBlur(src, num(n, 'radius', 22)*k), ra = num(n, 'aura', 60)*k, A = ra >= 0.5 ? boxBlur(src, ra) : null;
+      const ST = map(n, 'strength', 85), au = num(n, 'auraK', 45)/100, core = num(n, 'core', 45)/100;
+      const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const g = patClamp(H[i]*at(ST, i)/100 + (A ? A[i]*au : 0) + src[i]*core);
+        o.r[i] = 1 - (1 - pic.r[i])*(1 - g*c[0]); o.g[i] = 1 - (1 - pic.g[i])*(1 - g*c[1]); o.b[i] = 1 - (1 - pic.b[i])*(1 - g*c[2]); }
+      return [o];
+    } },
+
   // FILTER FORGE'S SPECTRUM: every hue in turn, across the page, round it, or along any gray map
   spectrum: { cat: 'Noise', label: 'Spectrum', ins: ['along'], outs: ['picture'], io: { ins: ['field'], outs: ['image'] },
     params: [PAT_SEL('shape', 'Shape', ['linear', 'radial', 'around', 'along a map']), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('repeat', 'Repeat', 1, 1, 12), PAT_R('sat', 'Saturation', 80), PAT_R('light', 'Lightness', 55)],

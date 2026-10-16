@@ -4,9 +4,10 @@
  * Phones kill background tabs without an unload event, so the poem and its
  * look are kept as a DRAFT (localStorage uv.draft.v1: { poem, look, savedAt })
  * a moment after each change, and again when the page is hidden. At boot a
- * draft that differs from the welcome page is put back through safeRestore;
- * no draft, the welcome poem itself, or a draft that won't load all open on
- * the welcome page, exactly as before.
+ * draft that differs from the welcome page is put back through safeRestore,
+ * at the page shape it was left at; no draft, the welcome poem itself, or a
+ * draft that won't load all open on the welcome page, exactly as before. An
+ * empty poem is a fresh start (default theme, every slider and lock new).
  *
  * Each boot runs in its own process (appEvents.js runs once per import), with
  * an in-memory localStorage handed over from the boot before.
@@ -38,6 +39,7 @@ if(process.env.DRAFT_BOOT){
   let threw = null;
   try { await import('../appEvents.js'); } catch(e){ threw = String(e && e.stack || e); }
   const out = { threw, welcome: WELCOME_POEM, poemAtBoot: document.getElementById('poemText').value, textMarginAtBoot: document.getElementById('textMargin').value };
+  try { document.getElementById('advancedRefreshBtn').dispatchEvent({ type: 'click' }); out.aspectAtBoot = JSON.parse(document.getElementById('advancedJson').value).aspect; } catch(e){}
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const act = process.env.DRAFT_ACT || '';
   if(!threw && act){
@@ -125,6 +127,18 @@ check('a refused write does not throw', full.threw === null && !(DRAFT_KEY in fu
 // 8. the first-visit examples are seeded exactly as before, draft or not
 const fv = boot({ [DRAFT_KEY]: typed.store[DRAFT_KEY] });
 check('a first visit with a draft still seeds the examples once', fv.store[FIRST_VISIT_KEY] === '1' && fv.poemAtBoot === 'a draft the phone must not lose');
+
+// 9. the page's shape is the person's, and is kept between visits (Lain and Ruby)
+{ const look = { ...((d && d.look) || {}), aspect: '1:1' };
+  const shaped = boot({ [FIRST_VISIT_KEY]: '1', [DRAFT_KEY]: JSON.stringify({ poem: 'a square poem', look, savedAt: 1 }) });
+  check('a draft reopens at the page shape it was left at', shaped.poemAtBoot === 'a square poem' && shaped.aspectAtBoot === '1:1' && first.aspectAtBoot !== '1:1'); }
+
+// 10. an empty poem is a fresh start: the welcome page, the default theme, every slider and lock as new
+{ const look = { ...((d && d.look) || {}), aspect: '1:1', locks: ['textMargin'] };
+  const blank = boot({ [FIRST_VISIT_KEY]: '1', 'uv.theme.v1': 'aether', [DRAFT_KEY]: JSON.stringify({ poem: '  \n ', look, savedAt: 1 }) });
+  check('a draft whose poem was left empty opens the welcome page, at the opening look and shape',
+    blank.threw === null && blank.poemAtBoot === blank.welcome && String(blank.textMarginAtBoot) !== '17' && blank.aspectAtBoot === first.aspectAtBoot);
+  check('…with the theme back to its default, and the empty draft let go', blank.store['uv.theme.v1'] === 'rose' && !(DRAFT_KEY in blank.store)); }
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

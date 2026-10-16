@@ -170,8 +170,9 @@ segment.
    and ROADMAP.md (delete what shipped).
    Check the help is current (§1 rule 11): for each CHANGELOG line, the
    wiki page, tooltip or guide that explains it says what the app now does.
-   **Housekeeping** (§1 rule 12), at least once in every five releases, said
-   in that release's notes under **Under the hood** (the hygiene test looks):
+   **Housekeeping** (§1 rule 12), said in that release's notes under **Under
+   the hood** (the hygiene test looks): the stylesheet at least once in every
+   ten releases (Ruby: the prune is slow), the tests once in every five.
    - *pruned the stylesheet*: `node build.mjs && python3 tools/css-prune.py
      --write` (it removes only declarations that never win, and proves no
      drawn element changes in any state), then look at the page;
@@ -315,11 +316,14 @@ Other parts of a look:
     `visibilitychange` → hidden and on `pagehide`. Phones drop tabs without
     an unload event.
   - At boot, a draft whose poem isn't `WELCOME_POEM` comes back through
-    `checkLook` (quietly), then `safeRestore`. Anything else opens the
+    `checkLook` (quietly), then `safeRestore`, then its own page shape
+    (`restoreShape`). An empty poem is a fresh start: the welcome page, the
+    default theme, every slider and lock new. Anything else opens the
     welcome page.
   - `test/draft.test.mjs`.
 - **THE PAGE SHAPE is the person's.** `safeRestore` drops aspect and custom
-  size from every look loaded from outside.
+  size from every look loaded from outside; the draft keeps it between
+  visits.
 - **App preferences** (theme, sounds, folded groups, the chooser's
   thumbnails, step previews on or off) live in localStorage, **never** in a
   look.
@@ -366,8 +370,10 @@ Other parts of a look:
     a = (deg − 90)°.
 
 ### 5.6 · Knobs and colour roles
-- A texture declares **2–6 knobs** in `TEXTURE_PARAMS`, read by position as
-  `texP1`…`texP6`. The usual keys are zoom, amt, form, shape, hue and tilt.
+- A texture declares **2–8 knobs** in `TEXTURE_PARAMS`, read by position as
+  `texP1`…`texP8` (Ruby: eight at most). The usual keys are zoom, amt, form,
+  shape, hue and tilt; the seventh and eighth are a chain's own (a camera's
+  Turn and View, Circuit Board's Era). An Athanor graph's Knob has slots 1–8.
 - A knob may carry `ticks`, `names` and `dice`. A new knob key must be wired
   through:
   - `describeRequest` (the cache key);
@@ -650,7 +656,9 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   - The Surface's **Size** (25–400) scales `unit`, `px` and `carea` for the
     whole graph (Filter Forge's Size). At 100 nothing changes.
 - **Safety** (`validateGraph`):
-  - At most 256 KB (`ATHANOR_MAX_JSON`) and 64 nodes; twice that is refused
+  - A graph holds only its work in flight: each part's result is let go once
+    every part that reads it has run (the step previews keep them all).
+  - At most 256 KB (`ATHANOR_MAX_JSON`) and 96 nodes; twice that is refused
     outright.
   - Unknown steps, bad wires and out-of-range params are reported and fixed.
   - Every param is clamped.
@@ -983,6 +991,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - The board is the page's backdrop (`pageEnv`, the Page Backdrop part);
     its hues default to the accents (`tintDefaults`); data pulses are hashed
     per trace, so more Data Flow adds pulses and moves none.
+  - **Era** (7) and **Markings** (8), both 0 by default (the board exactly as
+    before). Each chip, name and trace takes its era from its own hash
+    (`level` in `genCircuit`), so the slider turns the board part by part;
+    `cirEraChip` draws the future's, quantum and magitech chips, and what of
+    them lights is copper with the chip's grey, so Charge powers it. The
+    Markings are placed last, in room the board left (`CIR_SAYS`, `CIR_EGGS`,
+    runes a–l in `CIR_FONT`): every word made up, no real marks or brands.
 - **Contour Map:** Terrain → Contour Lines (any gray map's isolines), inked
   by Mix over the Light Engine's hillshade.
 - **Crackle** (Fractured Glaze, chain `crackle`):
@@ -1004,6 +1019,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     - One, two or three poles (Ruby chose this first growth over one whose
       poles always joined).
     - It grows as it always did; Zoom and Slide are a camera on the result.
+    - Turn (7) and View (8) are the ground camera (`groundCam`, a pinhole
+      camera on the page's plane), wired into Wood and Discharge both. Turn 0
+      and View 0 are no camera at all. Past the page's top the rings
+      straighten (they never close round the pith), and far rings and
+      channels fade rather than shimmer.
   - **Ruffled Growth:** Differential Growth (on a spatial
     hash).
   - **Positioning:** generated textures take Zoom and Slide (along the
@@ -1023,6 +1043,28 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
 - **Poured Wax** (chain `wax`): Pours (Splatter after every pour's draws) →
   Meniscus → colour by thickness → Light Engine with Translucency → Glow
   Hue screened where thick.
+- **Ringworld** (chain `ringworld`, Sky & Cosmos; Ruby: abstract, lit by
+  its star, the dial the camera, one slider the light):
+  - Ringworld View (`genRingView`) follows each pixel's ray to the floor, a
+    rim wall, the star, the shadow squares or space, and hands on MAPS (along
+    and across in band widths, distance, detail, daylight, air). It draws
+    nothing; Noise at Coordinates lays the land and clouds on those maps.
+  - The Light Dial is wired in as the camera (direction: where you look;
+    height: how far up). The Light Engine takes its own light height
+    (`from: 'its own height'`), bound to Daylight, as the star never moves.
+  - Daylight places the shadow squares: 0 midnight, 50 the dusk line, 100
+    noon. The haze is lit by the day where the camera stands; stars fade by
+    day.
+  - Corner rays are shared between pixels for its edges; keep `Math.hypot`
+    out of its loops (it was a third of the time).
+- **Rain on Water** (chain `rainwater`, Weather): Raindrops → Tint (sky to
+  water by distance) → Displace by the ripples → Material → Glow on the
+  splashes.
+  - Drops are hashed per ground cell, so more Rain adds drops and moves none.
+  - Each drop is laid only across its ring's band, row by row, under a
+    perspective camera (View, the fifth knob, tilts it as the Perspective
+    part does).
+  - Rings finer than a pixel (far off) calm rather than flicker.
 - **Rain on Glass** simulates on the EXPORT's grid at every size, then
   scales. A chaotic simulation fed sizes that differ by a fraction drifts
   apart. Its part shows the page through the drops, so a graph holding it

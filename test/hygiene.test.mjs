@@ -128,10 +128,11 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
   check('CHANGELOG.md leads with this release, ' + RELEASE, first === RELEASE);
   const names = [...changelog.matchAll(/^## (.+?) \(/gm)].map(m => m[1]);
   check('every release appears once in the changelog', new Set(names).size === names.length);
-  // housekeeping (AGENTS.md §3 step 6): within every five releases, the stylesheet pruned and the tests reviewed
-  const recent = changelog.split(/^## /m).slice(1, 6).join('\n');
-  check('the last five releases pruned the stylesheet and reviewed the tests (said under **Under the hood**)',
-    /pruned the stylesheet/i.test(recent) && /reviewed the tests/i.test(recent));
+  // housekeeping (AGENTS.md §3 step 6): the tests reviewed within every five releases, the stylesheet pruned
+  // within every ten (Ruby: the prune is slow)
+  const within = n => changelog.split(/^## /m).slice(1, n + 1).join('\n');
+  check('the last five releases reviewed the tests, and the last ten pruned the stylesheet (said under **Under the hood**)',
+    /reviewed the tests/i.test(within(5)) && /pruned the stylesheet/i.test(within(10)));
   const done = [issues, roadmap].flatMap((t, i) => t.split('\n').filter(l => /^\s*[-*].*(\(done\b|\bDONE\b|✓|✅|\bshipped in\b)/.test(l)).map(l => (i ? 'ROADMAP: ' : 'OPEN-ISSUES: ') + l.trim().slice(0, 90)));
   check('OPEN-ISSUES.md and ROADMAP.md hold open work only (what is done is deleted, not marked)', !done.length, done);
 }

@@ -28,7 +28,7 @@ import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
-import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarterAt, validateGraph } from './athanor.js';
+import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser, chMatches } from './chooser.js';
@@ -43,7 +43,7 @@ import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, res
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
-import { applyTheme, savedTheme } from './theme.js';
+import { applyTheme, savedTheme, DEFAULT_THEME } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
 import { moonPhase, moonGlyph, moonGlyphURI, phaseName } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
@@ -169,7 +169,7 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
-  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','texP6','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
 ];
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
@@ -336,10 +336,10 @@ toggleSubblock('textureToggle','textureBlock');
 // other's settings wait in state.layers.other, under the same keys the upper saves with. A look always
 // saves the upper under its own keys and the lower as `baseLayer`, whichever the controls show; Swap
 // trades the two whole, locks included.
-const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt',
+const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'textureSeedValue',
-  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
 /** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
@@ -1111,16 +1111,7 @@ function restoreSettings(s){
 
   if(s.align){ state.page.align=s.align; setActiveRadioValue('alignGroup', s.align); }
   if(s.valign){ state.page.valign=s.valign; setActiveRadioValue('valignGroup', s.valign); }
-  if((s.customSize || s.aspect === 'custom') && s.customW && s.customH){
-    $('customSizeToggle').checked = true;
-    $('customW').value = clampSize(s.customW);
-    $('customH').value = clampSize(s.customH);
-    syncCustomSize();
-  } else if(s.aspect && ASPECTS[s.aspect]){
-    $('customSizeToggle').checked = false;
-    if(document.body && document.body.classList) document.body.classList.remove('custom-size');
-    pickAspect(s.aspect);
-  }
+  restoreShape(s);
 
   if(s.username!==undefined) $('usernameField').value = s.username;
   if(s.usernameCorner) $('usernameCorner').value = s.usernameCorner;
@@ -1166,6 +1157,8 @@ function restoreSurfaceDetails(s){
   if(s.texP4 !== undefined) $('texP4').value = s.texP4;
   if(s.texP5 !== undefined) $('texP5').value = s.texP5;
   if(s.texP6 !== undefined) $('texP6').value = s.texP6;
+  if(s.texP7 !== undefined) $('texP7').value = s.texP7;
+  if(s.texP8 !== undefined) $('texP8').value = s.texP8;
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
@@ -1560,6 +1553,8 @@ function applyPreset(p){
   if(p.texP4 !== undefined) $('texP4').value = p.texP4;
   if(p.texP5 !== undefined) $('texP5').value = p.texP5;
   if(p.texP6 !== undefined) $('texP6').value = p.texP6;
+  if(p.texP7 !== undefined) $('texP7').value = p.texP7;
+  if(p.texP8 !== undefined) $('texP8').value = p.texP8;
   syncTextureParams(false);
   if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintMoons(); }
 
@@ -1609,6 +1604,8 @@ function applyPreset(p){
     // a preset changes opacity and seed without anyone touching them
     paintMoons();
     paintSeedMoon();
+    // every view of every value made to match (Ruby: the surface's menu showed the surface before)
+    refreshUi();
   }
 }
 
@@ -1627,7 +1624,7 @@ function applyFullPreset(p){
     scheduleRender();
   } finally {
     restoreLocked(__locks);
-    paintMoons(); paintSeedMoon();
+    paintMoons(); paintSeedMoon(); refreshUi();
   }
 }
 
@@ -1802,6 +1799,7 @@ function setupPhoneLayout(){
     if(!keyboard) root.style.setProperty('--vvh-stable', visible + 'px');
     document.body.classList.toggle('keyboard-open', keyboard);
     syncBarHeight();
+    fitEditorRoom();
   };
 
   if(vv){
@@ -1998,9 +1996,10 @@ if(typeof Panzoom === 'function' && typeof document.querySelector === 'function'
 function syncTextureParams(useDefaults){
   const defs = paramsFor($('textureType').value);
   // two knobs for every texture, a third (Form) for many, up to five for the
-  // richest (Dream Bloom), six where a camera tilts (Scrying Pool); a knob a
-  // texture doesn't have is hidden
-  [0,1,2,3,4,5].forEach(i=>{
+  // richest (Dream Bloom), six where a camera tilts (Scrying Pool), eight at
+  // most (Lichtenberg's camera, Circuit Board's Era); a knob a texture doesn't
+  // have is hidden
+  [0,1,2,3,4,5,6,7].forEach(i=>{
     const def = defs[i];
     const row = $('texP'+(i+1)).parentElement;
     const slider = $('texP'+(i+1));
@@ -2032,7 +2031,7 @@ function draftWhileDragging(){
   clearTimeout(draftTimer);
   draftTimer = setTimeout(() => setDrafting(false), 250);
 }
-['texP1','texP2','texP3','texP4','texP5','texP6'].forEach(id=>{
+['texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8'].forEach(id=>{
   $(id).addEventListener('input', ()=>{
     draftWhileDragging();
     const defs = paramsFor($('textureType').value);
@@ -2331,9 +2330,16 @@ function installLocks(){
     btn._paint = paint;
     lockButtons.set(id, btn);
     if(host && host.appendChild) host.appendChild(btn);
+    guardLabelTaps(host, btn);
   }
 }
 
+/** A LABEL HANDS ITS TAPS TO THE FIRST BUTTON IN IT (Ruby: a scroll that began on a control's name locked it):
+ *  a label holding a padlock keeps them, so only the padlock itself locks. */
+export function guardLabelTaps(host, btn){   // test hook: locks.test taps a name and a padlock
+  if(host && host.tagName === 'LABEL' && !host.htmlFor && host.addEventListener)
+    host.addEventListener('click', e => { if(e.target !== btn && !(btn.contains && btn.contains(e.target))) e.preventDefault(); });
+}
 /** Rebuilds the lock set and the buttons' appearance from a saved list. */
 function restoreLockState(ids){
   state.locks.clear();
@@ -2751,13 +2757,13 @@ if(typeof document.querySelectorAll === 'function'){
     if(card) card.classList.add('focus-keep');
     // Schema becomes Return, carrying the Touch mark — the glyph the app
     // uses to mean "touch this"
-    // the box changes size as the class lands; repaint once it has
-    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
+    // the box changes size as the class lands; repaint once it has, and give the editor the room there is
+    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(() => { repaintEditor(); fitEditorRoom(); });
     // (Esoterica's button shows its Return face: CSS, body.focus-mode)
   }
   function exitFocus(){
     if(!body.classList || !body.classList.contains('focus-mode')) return;
-    body.classList.remove('focus-mode');
+    body.classList.remove('focus-mode', 'editor-fit');
     document.querySelectorAll('.focus-keep').forEach(c => c.classList.remove('focus-keep'));
     if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
     if(poem.blur) poem.blur();
@@ -2784,6 +2790,26 @@ if(typeof document.querySelectorAll === 'function'){
     });
   }
 }
+
+// WRITING ON A PHONE (Ruby): the editor fills the room between the preview and the keyboard (or the Return bar)
+// and never runs under them: it scrolls inside itself, with a thin bar, and its empty room below the last line
+// is still the text area, so a tap there writes at the end. The room is measured, not left to nested flexboxes
+// (which, when one of them refused to shrink, once left the last lines out of reach).
+function fitEditorRoom(){
+  const b = document.body;
+  if(!b || !b.classList || !b.classList.contains('focus-mode') || typeof document.querySelector !== 'function') return;
+  const wrap = document.querySelector('.editor-wrap'), bar = document.querySelector('.tabbar');
+  if(!wrap || !wrap.getBoundingClientRect) return;
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null, bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const br = bar && bar.getBoundingClientRect ? bar.getBoundingClientRect() : null, barTop = br && br.height > 0 && br.top > 0 ? br.top : bottom;   // (a fixed bar has no offsetParent)
+  const room = Math.floor(Math.min(bottom, barTop) - wrap.getBoundingClientRect().top - 6);
+  if(!(room > 0)) return;
+  document.documentElement.style.setProperty('--editor-room', Math.max(96, room) + 'px');
+  b.classList.add('editor-fit');
+}
+// (the preview's divider moves the editor's top: the room follows)
+if(typeof ResizeObserver === 'function' && typeof document.querySelector === 'function' && document.querySelector('.stage'))
+  new ResizeObserver(() => fitEditorRoom()).observe(document.querySelector('.stage'));
 
 // reset the preview to its default framing
 if($('resetViewBtn') && $('resetViewBtn').addEventListener){
@@ -3012,7 +3038,7 @@ function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
-    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6),
+    tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined };   // (the page's backdrop, for a graph with a Page Backdrop)
 }
@@ -3079,7 +3105,9 @@ function setBench(json){
 /** Whether the bench holds work found nowhere else: not on the shelf, not on the page (replacing it asks first). */
 function benchUnkept(){ const j = bench(); return Object.keys(athanorNodes(j)).length > 2 && !benchOnPage(j) && !forgeShelf().some(r => r.graph === j); }
 setTimeout(paintShelfOptions, 0);
-const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept, reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept,
+  chooser: (sel, o) => attachChooser(sel, { id: 'forgeOpen', thumb: openTileThumb, stamp: openTileStamp, glyphFor: () => '🜉', size: 160, side: true, wide: true, hold: holdSurface, ...o }),
+  reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { if(!benchOnPage()) return; paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
   // a wiki figure: every part of its little graph, at canonical settings, each in its own slot so figures don't wait on each other
@@ -3103,7 +3131,7 @@ async function revealSurface(){
   // an Athanor surface: the page's own graph onto the bench (it is the bench's already while the page shows it)
   if(type === 'athanor' && benchOnPage()){ openAthanorNow(); return; }
   const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
-  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6].map(i => ($('texP' + i) || {}).value)));
+  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
   const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
   // the bench's work, if it is kept nowhere else, is replaced only when asked (Revert brings it back)
@@ -3437,6 +3465,19 @@ function checkLook(obj, what = 'This look'){
   if(look.baseLocks !== undefined && !Array.isArray(look.baseLocks)) delete look.baseLocks;
   return { ok: true, look, notes };
 }
+/** The page's shape from a look: its aspect ratio, or its own width and height. */
+function restoreShape(s){
+  if((s.customSize || s.aspect === 'custom') && s.customW && s.customH){
+    $('customSizeToggle').checked = true;
+    $('customW').value = clampSize(s.customW);
+    $('customH').value = clampSize(s.customH);
+    syncCustomSize();
+  } else if(s.aspect && ASPECTS[s.aspect]){
+    $('customSizeToggle').checked = false;
+    if(document.body && document.body.classList) document.body.classList.remove('custom-size');
+    pickAspect(s.aspect);
+  }
+}
 function safeRestore(obj, what = 'This look'){
   const c = checkLook(obj, what);
   if(!c.ok){ hardNo('That can’t be loaded', c.why + ' Nothing was changed.'); return false; }
@@ -3523,8 +3564,10 @@ try {
 } catch(e){ /* storage refused: the app works the same without the examples */ }
 // THE DRAFT: a phone drops a background tab without an unload event, so the poem in progress and
 // its look are kept in this browser (DRAFT_KEY: { poem, look, savedAt }) a moment after each change
-// and at once when the page is hidden. The next visit opens on the draft; no draft, a draft of the
-// welcome poem itself, or one that won't load opens on the welcome page as before.
+// and at once when the page is hidden. The next visit opens on the draft, at the page's own shape (Lain and
+// Ruby: the shape is kept between visits). No draft, a draft of the welcome poem itself, or one that won't load
+// opens on the welcome page as before; an EMPTY poem is a fresh start: the welcome page, the default theme, and
+// every slider and lock as new.
 const DRAFT_KEY = 'uv.draft.v1', DRAFT_WAIT_MS = 1000;
 let draftSaveTimer = null;
 function saveDraft(){
@@ -3538,9 +3581,12 @@ function saveDraftSoon(){ clearTimeout(draftSaveTimer); draftSaveTimer = setTime
 function restoreDraft(){
   let d = null;
   try { d = typeof localStorage === 'undefined' ? null : JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch(e){ return false; }
-  if(!d || typeof d !== 'object' || typeof d.poem !== 'string' || d.poem === WELCOME_POEM) return false;
+  if(!d || typeof d !== 'object' || typeof d.poem !== 'string') return false;
+  if(!d.poem.trim()){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} applyTheme(DEFAULT_THEME); return false; }
+  if(d.poem === WELCOME_POEM) return false;
   // a look that fails the check is passed over quietly (no dialog at start-up); one that throws is rolled back by safeRestore
   if(!checkLook(d.look, 'The draft').ok || !safeRestore(d.look, 'The draft')) return false;
+  try { restoreShape(d.look); } catch(e){ /* the default shape stands */ }
   $('poemText').value = d.poem; repaintEditor();
   return true;
 }
@@ -3743,7 +3789,7 @@ const WORKING_WORDS = {
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',
-  water: 'Stilling the pool', glassrain: 'Beading the glass', frost: 'Growing the frost', contour: 'Surveying the contours',
+  water: 'Stilling the pool', glassrain: 'Beading the glass', rainwater: 'Letting the rain fall', ringworld: 'Raising the arch', frost: 'Growing the frost', contour: 'Surveying the contours',
   watercolour: 'Wetting the wash', athanor: 'Stoking the athanor', athanorsteps: 'Showing each step', saving: 'Pressing the page at full size',
 };
 const workingLine = $('workingLine');
@@ -3777,7 +3823,7 @@ const keptHash = text => { let h = 2166136261; for(let i = 0; i < text.length; i
 function keptOpts(json, n){
   const defs = athanorKnobs(json), knob = i => (defs.find(x => x.slot === i) || {}).def ?? 50;
   return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8', ink: '#F2F2EF',
-    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
+    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
 }
 function keptThumb(rec, canvas, unsaved){
   if(!rec || !rec.graph || rec.graph.length < 40) return false;
@@ -3823,6 +3869,24 @@ function holdSurface(value, tile){
   return true;
 }
 
+// THE ATHANOR'S OPEN, AS TILES: a graph's thumbnail (a starter, a study) made in the worker and kept by its wiring;
+// an app texture's is the surface menu's own, from the same keeping; a kept surface's is its shelf thumbnail
+let surfaceTiles = null;
+function openTileThumb(value, canvas, done){
+  const v = String(value);
+  if(v.startsWith('kept:')) return keptThumb(keptByValue(v), canvas);
+  const k = v.replace(/^(starter|study):/, '');
+  if(v !== k){ const g = athanorStarter(k); if(!g) return false; const n = canvas.width, x = canvas.getContext('2d');
+    whenTexture('openTile:' + v, 'athanor', n, n, keptOpts(JSON.stringify(g), n), tex => { x.fillStyle = '#1A1720'; x.fillRect(0, 0, n, n); x.drawImage(tex, 0, 0, n, n); done(); });
+    return true; }
+  return surfaceTiles ? surfaceTiles.thumb(v, canvas, done) : false;
+}
+function openTileStamp(value){
+  const v = String(value), k = v.replace(/^(starter|study):/, '');
+  if(v.startsWith('kept:') || !v) return '';
+  if(v !== k){ const g = athanorStarter(k); return g ? keptHash(JSON.stringify(g)) + '|' + SWATCH_STAMP : ''; }
+  return surfaceTiles ? surfaceTiles.stamp(v) : '';
+}
 // ---------- THE SURFACE MENUS AS TILES ----------
 // Each surface's tile is the surface as a preset wears it (its ground, hues, blend and knobs), or, worn by
 // none, its defaults on a ground that suits its blend. Thumbnails are kept in the browser until what they are
@@ -3851,6 +3915,7 @@ function holdSurface(value, tile){
   // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
   const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
+  surfaceTiles = { thumb, stamp, extra };
   // (one menu serves both surfaces: the layer bar says which one it changes)
   const sel = $('textureType');
   try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title: CHOOSER.surfaceTitle, thumb, extra, glyphFor, stamp, size: 160, hold: holdSurface })); } catch(e){ /* the plain menu still works */ }

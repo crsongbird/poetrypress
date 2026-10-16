@@ -198,6 +198,10 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   Median with Percentile, Map Switch, Displace.)
 - **F8 · Transform.** Rotate and Scale as their own parts (Tile & Rotate does
   both today). (Done: Flip, Perspective.)
+- **F11 · Shader parts** (Ruby: the pixel-shader parts, Oil Paint and the
+  per-pixel blends, are fast and versatile): more parts run as fragment
+  shaders on the GPU, with the CPU path beside each (AGENTS §5.5), and a way
+  to make new ones from shader parts.
 - **F10 · Curve ops still missing.** Transition, Fade, Bezier, and Circular
   Arc variants (Bezier needs D4's editor).
 
@@ -212,6 +216,9 @@ Ripples from the Words, Protect the Text, Ink.
   contrast together.
   - Depends on: A3 (a group whose one input fans out through remappers).
 - **G5 · The inset box as an input** (shared with F3).
+- **G6 · Text as a mask** (Ruby): the words knocking a surface out (the page
+  shows through the letters), letters filled with a surface, and the text's
+  shape as a mask any part can take. More parts that work with the text.
 
 ### H · The three levels (Ruby's future-directions doc)
 
@@ -336,6 +343,14 @@ superseded) wait for Stage 4.
   - New presets are made for the Stage 3 textures, as many as the groups
     need (each group a multiple of four; readable, contrast ≥ 3:1).
   - Andromeda, Euphoria, Lotus Bloom, Gateway and Sealed stay verbatim.
+  - The presets use what has been built (Ruby): the text as an input (Text
+    Clearing, Protect the Text, Ink, G6), the lit surfaces and the shader
+    parts.
+  - Sky scenes (Ruby may make these here): a day sky and weather, the light
+    from the dial; clouds mostly, now and then something flying across
+    (aircraft and contrails, birds, balloons, dragons, witches), seeded.
+  - Presets for Ringworld (Ruby: in this pass), Rain on Water, Circuit
+    Board's eras and Markings, and Lichtenberg's camera.
 
 ```
  STAGE 1 · COMPONENTS        STAGE 2 · FEATURES                 STAGE 3 · TEXTURES          STAGE 4 · PRESETS

@@ -41,7 +41,7 @@ function swLayer(c, L, w, h){
     // (a canvas mixes the canvas's own blends; the per-pixel ones (⚡) show as the surface's first)
     const blend = L.textureBlend && (caps.blends.includes(L.textureBlend) || CANVAS_BLENDS.includes(L.textureBlend)) ? L.textureBlend : caps.blends[0];
     // every knob and hue the look sets, so a tile is the look in small
-    const opts = { accent1: L.accent1, accent2: L.accent2, seed: (L.textureSeed != null ? L.textureSeed : SWATCH.fallbackSeed), p1: L.texP1, p2: L.texP2, p3: L.texP3, p4: L.texP4, p5: L.texP5, p6: L.texP6,
+    const opts = { accent1: L.accent1, accent2: L.accent2, seed: (L.textureSeed != null ? L.textureSeed : SWATCH.fallbackSeed), p1: L.texP1, p2: L.texP2, p3: L.texP3, p4: L.texP4, p5: L.texP5, p6: L.texP6, p7: L.texP7, p8: L.texP8,
       light: L.textureLight != null ? +L.textureLight : 315, lightTilt: L.textureLightTilt != null ? +L.textureLightTilt : undefined,
       tint1: L.textureTint1 || null, tint2: L.textureTint2 || null, tint3: L.textureTint3 || null, tint4: L.textureTint4 || null, tint5: L.textureTint5 || null, tint6: L.textureTint6 || null,
       blend: L.textureGround || blend,

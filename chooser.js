@@ -92,6 +92,8 @@ function chKeep(value, url, stamp){
  *                  is shown only while its stamp is the same (a surface that changed is painted again)
  *  opts.size     — a thumbnail's pixels (default 160)
  *  opts.hold     — (value, tile) → true when it opened a menu of its own for that tile (a long press or right-click)
+ *  opts.side     — on a phone, a sidebar from the left (the Athanor's Open) instead of a sheet from the bottom
+ *  opts.wide     — on a desk, as wide as the window allows (up to 960) instead of 560
  * Returns { refresh(), open(), close() }.
  */
 export function attachChooser(select, opts = {}){
@@ -213,10 +215,10 @@ export function attachChooser(select, opts = {}){
   const outside = e => { if(panel && !panel.contains(e.target) && !btn.contains(e.target)) close(); };
   function place(){
     if(!panel) return;
-    if(document.body.classList.contains('is-mobile')){ panel.classList.add('ch-sheet'); panel.style.left = panel.style.top = panel.style.width = ''; return; }
-    panel.classList.remove('ch-sheet');
+    if(document.body.classList.contains('is-mobile')){ panel.classList.add(opts.side ? 'ch-side' : 'ch-sheet'); panel.style.left = panel.style.top = panel.style.width = ''; return; }
+    panel.classList.remove('ch-sheet', 'ch-side');
     const r = btn.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
-    const w = Math.min(560, vw - 24), left = Math.max(12, Math.min(r.left, vw - w - 12));
+    const w = Math.min(opts.wide ? 960 : 560, vw - 24), left = Math.max(12, Math.min(r.left, vw - w - 12));
     const below = vh - r.bottom - 12, above = r.top - 12, up = below < 480 && above > below;
     panel.style.width = w + 'px'; panel.style.left = left + 'px';
     panel.style.maxHeight = Math.max(240, Math.min(vh * 0.72, up ? above : below)) + 'px';

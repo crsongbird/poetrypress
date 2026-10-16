@@ -640,12 +640,14 @@ held on till bright~B</code></p>
                 <option value="rainstreaks" data-str="option.still_rain">Harsh Rain</option>
                 <option value="frost" data-str="option.hoarfrost">Hoarfrost</option>
                 <option value="glassrain" data-str="option.rain_on_glass">Rain on Glass</option>
+                <option value="rainwater" data-str="option.rain_on_water">Rain on Water</option>
               </optgroup>
               <optgroup label="🝊 Sky &amp; Cosmos">
                 <option value="aurorasky" data-str="option.aurora">Aurora</option>
                 <option value="blackhole" data-str="option.blackhole">Black Hole</option>
                 <option value="astral" data-str="option.deep_field">Deep Field</option>
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
+                <option value="ringworld" data-str="option.ringworld">Ringworld</option>
               </optgroup>
               <optgroup label="🜥 Places &amp; Scenes">
                 <option value="contour" data-str="option.contour">Contour Map</option>
@@ -739,6 +741,16 @@ held on till bright~B</code></p>
             <label id="texP6Label">Knob 6</label>
             <input type="range" id="texP6" min="0" max="100" value="0">
             <span class="range-val" id="texP6Val"></span>
+          </div>
+          <div class="field full" id="texP7Field" style="display:none">
+            <label id="texP7Label">Knob 7</label>
+            <input type="range" id="texP7" min="0" max="100" value="0">
+            <span class="range-val" id="texP7Val"></span>
+          </div>
+          <div class="field full" id="texP8Field" style="display:none">
+            <label id="texP8Label">Knob 8</label>
+            <input type="range" id="texP8" min="0" max="100" value="0">
+            <span class="range-val" id="texP8Val"></span>
           </div>
           <div class="field full">
             <label data-str="label.opacity">Opacity</label>
@@ -1173,13 +1185,10 @@ held on till bright~B</code></p>
   <div class="forge-veil" id="forgeVeil" hidden>
     <div class="forge-bar">
       <span class="forge-title"><span class="forge-glyph" aria-hidden="true">🜉</span><span class="forge-name"> The Athanor</span> <small class="forge-sub">Surface texture node editor</small></span>
-      <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid">＋ Parts</button>
-      <span class="forge-spacer"></span>
-      <!-- THE BAR (Ruby): Open (every graph to begin from: your kept surfaces, starters, studies, the app's own
-           textures), Keep, undo and redo, the view, ⋯ (the shelf, copy, Revert, Clear, the wiki), whether the page
-           shows this graph, and Done -->
-      <button type="button" class="ghost forge-open-btn" id="forgeOpenBtn" title="Open a graph: one of your kept surfaces, a starter, a study, or one of the app's own textures">Open ▾</button>
-      <button type="button" class="ghost" id="forgeKeepBtn" title="Keep this surface on the shelf, by its name" data-str="kept.keep">Keep</button>
+      <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid" aria-label="Parts">＋<span class="fp-word"> Parts</span></button>
+      <!-- THE BAR (Ruby): ＋ Parts · Open (every graph to begin from, as a drawer of tiles across the bar's free width) ·
+           undo and redo · the view · Apply and Keep together · Done, where the Athanor was opened · ⋯ last -->
+      <select id="forgeOpenSelect" class="forge-open-select" aria-label="Open a graph: one of your kept surfaces, a starter, a study, or one of the app's own textures"></select>
       <button type="button" class="ghost forge-hist" id="forgeUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
       <button type="button" class="ghost forge-hist" id="forgeRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
       <span class="forge-zoom">
@@ -1187,9 +1196,12 @@ held on till bright~B</code></p>
         <button type="button" class="ghost" id="forgeFit" title="Everything in view" aria-label="Everything in view">⌖</button>
         <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
       </span>
-      <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: your shelf, copy, Revert, Clear, the wiki" title="Your shelf, copy and share, Revert, Clear, the wiki">⋯</button>
-      <button type="button" class="ghost forge-page-btn" id="forgePageBtn"></button>
+      <span class="forge-use">
+        <button type="button" class="ghost forge-page-btn" id="forgePageBtn"></button>
+        <button type="button" class="ghost" id="forgeKeepBtn" title="Keep this surface on the shelf, by its name" data-str="kept.keep">Keep</button>
+      </span>
       <button type="button" class="btn-major" id="forgeCloseBtn" data-sound="athanorClose">Done</button>
+      <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: your shelf, copy, Tidy, Revert, Clear, the wiki" title="Your shelf, copy and share, Tidy, Revert, Clear, the wiki">⋯</button>
     </div>
     <div class="forge-body">
       <div class="forge-palette" id="forgePalette"></div>

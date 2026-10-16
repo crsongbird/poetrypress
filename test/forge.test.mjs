@@ -34,9 +34,15 @@ check('Drawflow loads only when the Athanor opens, from the CDN at an exact vers
     html.includes('id="forgeMenu"') && /Which did you mean\?/.test(fsrc) && /area\.addEventListener\('contextmenu'/.test(fsrc) && /setTimeout\(\(\) => \{ if\(answered \|\| !pressAt\) return;/.test(fsrc));
   check('a setting can be bound to a slider or the dial, given a range, or have a Knob wired into it — from its menu',
     /Bind to a page slider/.test(fsrc) && /'Set its range…'/.test(fsrc) && /'Set wire range…'/.test(fsrc) && /'Add a Knob for it'/.test(fsrc));
-  check('the view: everything in sight (⌖), and tidying into columns (pinned nodes stay)', html.includes('id="forgeFit"') && /const fitView = \(\) =>/.test(fsrc) && /layoutAthanor\(data\); for\(const \[id, p\] of Object\.entries\(pins\)\)/.test(fsrc));
+  { const { layoutAthanor } = await import('../athanor.js');
+    const chain = () => ({ 1: { name: 'noise', inputs: {}, outputs: { output_1: { connections: [{ node: '2' }] } } }, 2: { name: 'blur', inputs: { input_1: { connections: [{ node: '1' }] } }, outputs: { output_1: { connections: [{ node: '3' }] } } },
+      3: { name: 'surface', inputs: { input_1: { connections: [{ node: '2' }] } }, outputs: {} }, 4: { name: 'noise', inputs: {}, outputs: { output_1: { connections: [{ node: '3' }] } } } });
+    const t = layoutAthanor(chain()), w = layoutAthanor(chain(), 2.2);
+    check('the view: everything in sight (⌖); Tidy lays parts in columns, left to right; Spread out the same, with wider gaps',
+      html.includes('id="forgeFit"') && t[1].pos_x < t[2].pos_x && t[2].pos_x < t[3].pos_x && t[1].pos_x === t[4].pos_x
+      && w[3].pos_x - w[1].pos_x > t[3].pos_x - t[1].pos_x && Math.abs(w[4].pos_y - w[1].pos_y) > Math.abs(t[4].pos_y - t[1].pos_y)); }
   check('kept surfaces: a shelf in this browser, opened again, saved as a file and brought in (each checked)',
-    F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /v = validate \? validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeOpenBtn"') && /sub: shelfMenu/.test(fsrc));
+    F.FORGE_SHELF_KEY === 'uv.forge.kept.v1' && typeof F.forgeShelf === 'function' && /v = validate \? validate\(r\.graph\)/.test(fsrc) && html.includes('id="forgeOpenSelect"') && /sub: shelfMenu/.test(fsrc));
   check('the Athanor wears the app\'s theme; only the wires and ports keep the colours of what they carry',
     /\.forge-veil\{ --fg-ground:var\(--bg-deep\); --fg-panel:var\(--bg-panel\)/.test(css) && /:root\[data-theme="vellum"\] \.forge-veil\{ --t-field/.test(css));
   check('on a phone: the parts are a drawer that scrolls with one finger (no dragging from it), the preview a small dock bottom right',
@@ -70,12 +76,17 @@ check('opened from the top bar; a full-screen editor; its graph kept in a hidden
   check('the cache knows the graph (positions don\'t count)', C.athanorHash(graph) !== C.athanorHash('') && C.athanorHash(graph) === C.athanorHash(graph.replace(/"data"/, '"data"')));
   const T = await import('../textureGenerators.js');
   check('the Athanor is a surface like any other: its own Surface Variant, keyed by its graph, carried by the renderer',
-    T.TEXTURE_PARAMS.athanor.length === 6 && T.textureKeyFor('athanor', 10, 10, { graph }) !== T.textureKeyFor('athanor', 10, 10, { graph: '' })
+    T.TEXTURE_PARAMS.athanor.length === 8 && T.textureKeyFor('athanor', 10, 10, { graph }) !== T.textureKeyFor('athanor', 10, 10, { graph: '' })
     && /const graph = type === 'athanor' \? \(L\.forgeGraph \|\| ''\) : undefined;/.test(readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8'))
     && html.includes('<option value="athanor" id="athanorOption">'));
   check('the page names its sliders and hues from the graph, before a look\'s knobs are restored',
     /function applyAthanorGraph\(redraw = true\)\{/.test(ev) && ev.indexOf("if(s.forgeGraph !== undefined && $('forgeGraph'))") < ev.indexOf('syncTextureParams(true);\n  syncTextureTools(true);'));
 
+  // MEMORY (Ruby: Circuit Board ran a phone out of memory): a part's result is let go once its readers have run
+  { const { TEXTURE_CHAINS } = await import('../chains.js'), g = JSON.stringify(C.athanorStarter('circuit')), n = Object.keys(C.athanorNodes(g)).length;
+    C.clearAthanorCache(); C.evalAthanor(g, 48, 48, { seed: 3, knobs: [50, 50, 50, 50, 50, 50], tints: [] }, {});
+    const held = C.athanorCacheInfo().peak;
+    check('a graph holds only the work in flight: Circuit Board (' + n + ' parts) never holds more than a third of its results at once (' + held + ')', !!TEXTURE_CHAINS.circuit && held > 0 && held <= n/3); }
   // ---- stages 4–5: versions, kept results, the budget, starters, more parts ----
   check('a graph has a version (none = 1); new ones are the newest, and the cache knows it',
     C.athanorVersion(graph) === 1 && C.athanorVersion(JSON.stringify({ v: 2 })) === 2 && C.ATHANOR_VERSION === 4
@@ -91,10 +102,10 @@ check('opened from the top bar; a full-screen editor; its graph kept in a hidden
   C.clearAthanorCache(); const e3 = run2(JSON.stringify(rev)); C.clearAthanorCache(); const e4 = run2(g2);
   check('…each node draws its own randomness (from the seed and its id), so the order it is reached in never matters', same(e3, e4));
   const big = { v: 2, drawflow: { Home: { data: {} } } };
-  for(let i = 1; i <= 70; i++) big.drawflow.Home.data[i] = { id: i, name: 'blur', data: {}, inputs: {}, outputs: {} };
+  for(let i = 1; i <= C.ATHANOR_LIMITS.nodes + 6; i++) big.drawflow.Home.data[i] = { id: i, name: 'blur', data: {}, inputs: {}, outputs: {} };
   const heavy = { v: 2, drawflow: { Home: { data: {} } } };
   for(let i = 1; i <= 20; i++) heavy.drawflow.Home.data[i] = { id: i, name: 'light', data: {}, inputs: {}, outputs: {} };
-  check('the work budget: past it a graph is drawn coarser (never more than 3×), past 64 nodes not at all — and the editor says so',
+  check('the work budget: past it a graph is drawn coarser (never more than 3×), past ' + C.ATHANOR_LIMITS.nodes + ' nodes not at all — and the editor says so',
     C.athanorBudget(graph).scale === 1 && C.athanorBudget(heavy).scale > 1 && C.athanorBudget(heavy).scale <= 3 && C.athanorBudget(big).tooMany
     && F.describeForge(big).includes('too many nodes') && F.describeForge(heavy).includes('reduced detail')
     && /const B = athanorBudget\(extra\.graph \|\| ''\);/.test(readFileSync(new URL('../textureGenerators.js', import.meta.url), 'utf8')));
@@ -113,7 +124,7 @@ check('opened from the top bar; a full-screen editor; its graph kept in a hidden
     check('map inputs (v3, Filter Forge): a gradient on Threshold\'s ⚙ At sets the threshold point by point — the picture splits; a v2 graph still takes the average',
       JSON.stringify(row(a)) !== JSON.stringify(row(b)) && new Set(row(a)).size > 1 && new Set(row(b)).size === 1);
     check('the textures\' own chains stay v2 (their pictures never change); a starter is the newest', C.athanorStarter('stainedglass').v === 2 && C.athanorStarter('ripples').v === C.ATHANOR_VERSION); }
-  check('…offered from the editor\'s bar (Open), with every part\'s ports filled in on load', html.includes('id="forgeOpenBtn"')
+  check('…offered from the editor\'s bar (Open), with every part\'s ports filled in on load', html.includes('id="forgeOpenSelect"')
     && /P\.ins\.forEach\(\(_, j\) => \{ n\.inputs\['input_' \+ \(j \+ 1\)\]/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')));
   {
     let id2 = 1; const nd = {}; const mk = (name, data = {}) => { const i = String(id2++); nd[i] = { id: +i, name, data, inputs: {}, outputs: {} }; return i; };

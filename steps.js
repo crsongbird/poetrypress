@@ -66,7 +66,7 @@ export const STEP_BLEND_FN = {
 // ---- the parts as the editor shows them ----
 const STEP_PARTS = {
   // inputs: what the finished texture offers on the page
-  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
+  knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6','7','8']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
     STEP_SEL('kind', 'Kind', ['slider', 'steps', 'angle', 'switch']), [...STEP_R('steps', 'Steps', 3, 2, 12).slice(0, 4), { min: 2, max: 12, when: 'kind:steps' }],
     ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]] },
   hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
@@ -198,7 +198,7 @@ export function stepDistance(mask, ww, wh){
  * comes out, what to try.
  */
 export const STEP_DOCS = {
-  knob: 'Puts one of the page’s six surface sliders into the graph as a number, so a setting here can be moved from the page.',
+  knob: 'Puts one of the page’s eight surface sliders into the graph as a number, so a setting here can be moved from the page.',
   hue: 'Brings one of the surface’s two hue pickers into the graph as a color.',
   glowhue: 'Brings the surface’s Glow Hue into the graph: a color for light that seems to come from inside the surface.',
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',

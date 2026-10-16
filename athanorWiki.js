@@ -34,7 +34,7 @@ export const WIKI_ARTICLES = [
 <li>Every part shows a <b>small preview</b> of what it makes, so you can see each step.</li>
 <li>Wires carry one of <b>five kinds of data</b>: gray maps, pictures, colors, numbers and curves. See [[kinds]].</li>
 <li>The app’s own textures are graphs (all but Deep Field). <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts. On the page, <b>🜉 Open in the Athanor</b> under the Surface opens the one you are using, at its sliders and hues.</li>
-<li>Nothing here can break your page: undo and <b>Revert</b> are always there. The Athanor is a workbench with a graph of its own, kept in this browser until you open another. The page shows it only when it is the page’s surface: the bar says <b>✓ On the Page</b> when it is (then every change shows on the page as you make it), and <b>⇱ Show on Page</b> puts it there. Choosing another surface for the page, even one you kept, leaves the bench as it was.</li>
+<li>Nothing here can break your page: undo and <b>Revert</b> are always there. The Athanor is a workbench with a graph of its own, kept in this browser until you open another. The page shows it only when it is the page’s surface: the bar says <b>✓ Applied</b> when it is (then every change shows on the page as you make it), and <b>⇱ Apply</b> puts it there. <b>Keep</b>, beside it, saves it under a name too. Choosing another surface for the page, even one you kept, leaves the bench as it was.</li>
 </ul>
 <p>The same way of working runs Blender’s shader nodes, Substance Designer, Houdini, Nuke and Filter Forge. What you learn here carries over.</p>
 <p>New to this? Start with [[first|your first surface]].</p>` },
@@ -52,7 +52,7 @@ export const WIKI_ARTICLES = [
 <h3>5. Light it</h3>
 <p>Add a <b>Light Engine</b> (Light &amp; Color). Wire the Gradient Map into its <b>picture</b>, and the Levels output into its <b>height</b> as well. One output can feed many inputs. Wire the Light Engine into the Surface. Turn the light dial on the page: the hills cast shadows. See [[heights]].</p>
 <h3>6. Put a control on the page</h3>
-<p>Add a <b>Knob</b> (Inputs), name it “Roughness”, and wire it into the Perlin Noise’s <b>Roughness</b> ⚙ port. Press <b>⇱ Show on Page</b> (unless the bar already says On the Page): the Surface section of the page now has a Roughness slider. See [[controls]].</p>
+<p>Add a <b>Knob</b> (Inputs), name it “Roughness”, and wire it into the Perlin Noise’s <b>Roughness</b> ⚙ port. Press <b>⇱ Apply</b> (unless the bar already says Applied): the Surface section of the page now has a Roughness slider. See [[controls]].</p>
 <h3>7. Keep it</h3>
 <p>Press <b>Keep</b> and give it a name. It joins Your Surfaces in the surface menu. See [[keeping]].</p>` },
   { id: 'reading', group: 'Start here', title: 'Reading a graph', body: `
@@ -235,9 +235,9 @@ export const WIKI_ARTICLES = [
 
   // ------------------------------------------------------------------ The page and your graph
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
-<p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Show on Page</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app offers to). The page shows only the controls you give it:</p>
+<p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Apply</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app offers to). The page shows only the controls you give it:</p>
 <ul>
-<li>Each <b>Knob</b> becomes one of the six sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees, or a <b>switch</b>, off or on.</li>
+<li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
 <li>The <b>light dial</b> is always there for anything lit.</li>
 </ul>
@@ -259,7 +259,7 @@ export const WIKI_ARTICLES = [
 </ul>` },
   { id: 'poem', group: 'The page and your graph', title: 'Using the poem', body: `
 <p>Surfaces here sit behind poems, so a graph can know where the words are. <b>The Poem</b> part hands on gray maps of the text: where the words are, how far each point is from them, and which line, stanza or rhyme each belongs to.</p>
-<p>The most useful is <b>Distance</b>: 0 at the words, rising to 1 far away. Wired into a Mix’s amount (through Invert), it makes a texture fade near the text so the poem stays readable. Wired into Contour Lines, it makes rings spread from the words. <b>Open</b> › Starters to take apart › Ripples from the Words shows both.</p>` },
+<p>The most useful is <b>Distance</b>: 0 at the words, rising to 1 far away. Wired into a Mix’s amount (through Invert), it makes a texture fade near the text so the poem stays readable. Wired into Contour Lines, it makes rings spread from the words. <b>Open</b> › <b>Starters to take apart</b> › Ripples from the Words shows both.</p>` },
   { id: 'keeping', group: 'The page and your graph', title: 'Keeping and sharing surfaces', body: `
 <ul>
 <li><b>Keep</b>, in the bar, saves the graph on this browser’s shelf under its Surface’s name. It then appears under <b>Your Surfaces</b> in the surface menu, with a picture.</li>
@@ -286,10 +286,11 @@ export const WIKI_ARTICLES = [
   { id: 'touch', group: 'Using the editor', title: 'On a touch screen', body: `
 <ul>
 <li><b>Move a part:</b> drag its title bar. Dragging anywhere else pans the grid.</li>
-<li><b>Zoom:</b> pinch.</li>
+<li><b>Zoom:</b> pinch. The zoom follows your fingers: twice as far apart is twice as near.</li>
 <li><b>Menus:</b> hold anything. See [[menus]].</li>
 <li><b>Wire:</b> hold a part and choose <b>Connect its output…</b> (or <b>Connect an input…</b>). A bar at the top shows what is being wired; tap the other part and choose its port. Cancel stops.</li>
-<li><b>Add parts:</b> ＋ Parts opens the drawer; tap a part to add it.</li>
+<li><b>Add parts:</b> <b>＋</b> (Parts), at the left of the bar, opens the drawer; tap a part to add it.</li>
+<li><b>Open a graph:</b> the wide button beside it, named for the graph on the grid, opens a drawer of everything to begin from, as pictures. On a phone one thing opens at a time: the drawer, the parts, the wiki or a menu.</li>
 <li><b>When things overlap,</b> the Athanor asks which you meant.</li>
 </ul>` },
   { id: 'menus', group: 'Using the editor', title: 'The menus', body: `
@@ -306,7 +307,8 @@ export const WIKI_ARTICLES = [
 <ul>
 <li><b>Undo and redo</b> (↶ ↷) step through every change: parts, wires, settings, whole graphs opened.</li>
 <li>The <b>lock</b> in a part’s title bar pins it in place.</li>
-<li><b>Tidy into columns</b> (the grid’s menu) arranges the graph in columns from left to right; pinned parts stay where they are.</li>
+<li><b>Tidy into columns</b> (the grid’s menu, or <b>⋯</b>) arranges the graph in columns from left to right; pinned parts stay where they are. <b>Spread out</b>, in <b>⋯</b>, does the same with wide gaps, so every wire can be followed.</li>
+<li><b>Snap parts to the grid</b>, in <b>⋯</b>, makes a part you move settle on the grid, so columns line up (<b>Stop snapping to the grid</b> turns it off).</li>
 <li>In <b>⋯</b>: <b>Revert</b> goes back to the graph as it was when the Athanor opened; <b>Clear the grid</b> empties it. Both ask first.</li>
 </ul>` },
   { id: 'limits', group: 'Using the editor', title: 'Limits and speed', body: `

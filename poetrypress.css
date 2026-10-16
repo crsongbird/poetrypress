@@ -920,6 +920,13 @@ body.is-mobile.focus-mode .editor-wrap{
   max-height:none;
   overflow:visible;          /* the editor no longer scrolls; .controls does */
 }
+/* …until its room is measured (fitEditorRoom, Ruby): then the editor fills the room above the keyboard,
+   scrolls inside itself with a thin bar, and its empty room below the last line is still the text area */
+body.is-mobile.focus-mode.editor-fit .controls{ padding-bottom:0; overflow:hidden; }
+body.is-mobile.focus-mode.editor-fit .editor-wrap{ height:var(--editor-room); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+body.is-mobile.focus-mode.editor-fit .editor-wrap::-webkit-scrollbar{ width:3px; }
+body.is-mobile.focus-mode.editor-fit .editor-wrap::-webkit-scrollbar-thumb{ background:var(--accent-dim); }
+body.is-mobile.focus-mode.editor-fit .editor-input{ min-height:calc(var(--editor-room) - 2px) !important; }   /* (over the metrics block's 0) */
 
 /* ---------- locks ----------
    The lock sits immediately after its label's text, not pushed to the far
@@ -1663,7 +1670,6 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-bar{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-bottom:1px solid var(--fg-line); background:var(--fg-panel); }
 .forge-bar button{ width:auto; flex:0 0 auto; margin:0; padding:4px 12px; }
 .forge-zoom{ display:inline-flex; gap:0; } .forge-zoom button{ padding:4px 9px; min-width:30px; } .forge-zoom button + button{ border-left:none; }
-.forge-spacer{ flex:1; }
 .forge-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:17px; color:var(--fg-accent); letter-spacing:0.03em; white-space:nowrap; }
 .forge-sub{ font-family:var(--ui-text); font-variation-settings:normal; font-size:12px; color:var(--fg-text); opacity:0.6; letter-spacing:0; margin-left:6px; }
 .forge-parts-btn{ display:none; }
@@ -1895,21 +1901,29 @@ summary.card-title, .card-title{ overflow:hidden; }
 /* on a desk the note sits beside the parts list, never over it */
 @media (min-width: 761px){ body:not(.is-mobile) .forge-note{ left:188px; width:min(380px, calc(100% - 200px)); } }
 @media (min-width: 900px){ body:not(.is-mobile) .forge-note{ left:248px; width:min(380px, calc(100% - 260px)); } }
-/* THE BAR (Ruby: fewer, clearer things): Open ▾, Keep, ↶ ↷, the zoom, ⋯ (everything else), whether the page
-   shows the graph, Done. On a phone one row: the zoom goes (two fingers zoom) and the page chip says less */
+/* THE BAR (Ruby): ＋ Parts, Open (the drawer's face, across the free width), ↶ ↷, the zoom, Apply and Keep side by
+   side, Done, and ⋯ last. On a phone one row: the zoom goes (two fingers zoom) and Apply says it by its glyph */
+.forge-bar .ch-trigger.forge-open{ flex:1 1 auto; width:auto; min-width:0; min-height:32px; padding:2px 8px 2px 2px; gap:7px; font-size:13.5px; }
+.forge-bar .ch-trigger.forge-open .ch-trig-thumb{ flex-basis:26px; width:26px; height:26px; }
+.forge-bar .ch-trigger.forge-open .ch-glyph{ font-size:16px; }
+.forge-use{ display:inline-flex; gap:0; } .forge-use button + button{ border-left:none; }
+/* the workbench's own mark: the Athanor's name embossed on the grid, under the parts */
+.forge-canvas::before{ content:'🜉 The Athanor'; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); pointer-events:none; z-index:0;
+  font-family:var(--ui-display); font-size:clamp(28px, 7vw, 64px); letter-spacing:0.08em; white-space:nowrap; color:var(--fg-ground);
+  text-shadow:0 1px 0 color-mix(in srgb, white 7%, transparent), 0 -1px 0 color-mix(in srgb, black 55%, transparent); opacity:.9; }
 .forge-bar .forge-hist{ padding:4px 9px; font-size:15px; } .forge-bar .forge-hist:disabled{ opacity:.3; }
 .forge-bar .forge-page-btn.on{ color:var(--accent); border-color:transparent; background:none; cursor:default; }
 @media (max-width: 760px){
   .forge-bar{ flex-wrap:nowrap; gap:4px; padding:4px 6px; }
   .forge-bar button{ font-size:13px; padding:5px 9px; min-height:32px; }
   .forge-name, .forge-zoom{ display:none !important; }
-  .forge-spacer{ display:none; }
 }
 body.is-mobile .forge-bar{ padding:4px 6px; gap:3px; }
 body.is-mobile .forge-bar button{ font-size:13px; padding:5px 7px; min-height:32px; }
 body.is-mobile .forge-name, body.is-mobile .forge-zoom{ display:none !important; }
-body.is-mobile .forge-spacer{ display:none; }
-@media (max-width: 380px){ body.is-mobile .forge-title{ display:none; } }
+/* on a phone the bar is for doing: the name is embossed on the workbench instead (Ruby) */
+body.is-mobile .forge-title{ display:none; }
+body.is-mobile .forge-parts-btn .fp-word{ display:none; }   /* ＋ alone: Open's face gets the width */
 
 
 /* ============================================================
@@ -2121,12 +2135,14 @@ select.ch-native{ position:absolute !important; width:1px !important; height:1px
   border:1px solid var(--line); box-shadow:0 18px 40px -12px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 18%, transparent); }
 .ch-panel.ch-sheet{ left:0; right:0; bottom:0; top:auto; width:auto; max-height:calc(var(--vvh) * 0.82); border-width:1px 0 0;
   padding-bottom:env(safe-area-inset-bottom, 0); }
+.ch-panel.ch-side{ left:0; top:0; bottom:0; right:auto; width:min(88vw, 420px); max-height:none; border-width:0 1px 0 0;
+  padding-top:env(safe-area-inset-top, 0); padding-bottom:env(safe-area-inset-bottom, 0); }
 .ch-head{ display:flex; gap:6px; padding:8px; border-bottom:1px solid var(--line); background:var(--bg-panel-2); }
 .ch-search{ flex:1 1 auto; min-width:0; min-height:36px; font-size:15px; }
 .ch-panel input.ch-search{ width:auto; }
 .ch-close{ flex:0 0 40px; min-height:36px; background:none; border:1px solid var(--line); color:var(--text-dim); cursor:pointer; font-size:14px; }
 .ch-close:hover{ color:var(--text-main); border-color:var(--accent-dim); }
-.ch-body{ overflow:auto; overscroll-behavior:contain; padding:2px 8px 10px; }
+.ch-body{ overflow:auto; overscroll-behavior:contain; padding:2px 8px 10px; flex:1 1 auto; min-height:0; }
 .ch-group > summary{ display:flex; align-items:center; gap:7px; padding:9px 2px 7px; cursor:pointer; list-style:none; position:sticky; top:0; z-index:1;
   background:var(--bg-panel); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); border-radius:0; }
 .ch-group > summary::-webkit-details-marker{ display:none; }

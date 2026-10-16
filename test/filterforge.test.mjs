@@ -84,6 +84,11 @@ check('Math has Filter Forge\'s useful RGB Math (divide, power, average, screen,
   check('Flip turns a picture over: a left-to-right gradient runs right to left', Math.abs(fp.r[20*W + 5] - g0.r[20*W + 34]) < 1e-6 && fp.r[20*W + 5] > fp.r[20*W + 34]);
   const flat = run([...pic, node(5, 'perspective', { tilt: 0 }, { 1: [4, 1] })], [5, 1], T2), slant = run([...pic, node(5, 'perspective', { tilt: 80 }, { 1: [4, 1] })], [5, 1], T2);
   check('Perspective at Tilt 0 is the picture as it is; tilted, the bottom row stays and the top changes', err(flat) < 1e-5 && Math.abs(slant.r[39*W + 20] - orig.r[39*W + 20]) < 0.05 && err(slant) > 0.05);
+  // Glow: a bloom in one part
+  const dot = [node(1, 'shape', { form: 'circle', size: 6, soft: 1 })], gw = run([...dot, node(2, 'glow', { radius: 100, aura: 0, core: 0 }, { 2: [1, 1] })], [2, 1]);
+  const none = run([...pic, node(5, 'glow', {}, { 1: [4, 1] })], [5, 1], T2), over = run([...pic, ...[node(6, 'shape', { form: 'circle', size: 6, soft: 1 })], node(5, 'glow', {}, { 1: [4, 1], 2: [6, 1] })], [5, 1], T2);
+  check('Glow: light spreads from a bright place, fading with distance; with nothing glowing the picture is left as it is; it only ever brightens',
+    gw.r[20*W + 20] > gw.r[20*W + 24] && gw.r[20*W + 24] > gw.r[20*W + 2] && err(none) < 1e-6 && over.r.every((v, i) => v >= orig.r[i] - 1e-6));
   const stones = run([node(1, 'cells', { scale: 40, gap: 30 })], [1, 4]);
   check('Cells hands on Stones too: rounded, highest in the middle, with gaps of 0 between', Math.max(...stones.r) > 0.9 && stones.r.filter(v => v === 0).length > W*H*0.05); }
 

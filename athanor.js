@@ -59,7 +59,7 @@ export function athanorVersion(graph){
  * grid (up to three times coarser; it is soft, never stuck); past the node
  * limit it is not made at all, and the editor says why.
  */
-export const ATHANOR_LIMITS = { nodes: 64, cost: 160 };
+export const ATHANOR_LIMITS = { nodes: 96, cost: 160 };   // (Ruby: 96 parts, now a graph holds only its work in flight)
 export function athanorBudget(graph){
   const nodes = Object.values(athanorNodes(graph));
   let cost = 0;
@@ -82,15 +82,15 @@ export function athanorReach(graph){
   if(s) walk(String(s.id));
   return seen;
 }
-/** The sliders a graph offers: its Knob nodes, by slot (1–6) — those that reach the Surface by a wire, or whose
+/** The sliders a graph offers: its Knob nodes, by slot (1–8) — those that reach the Surface by a wire, or whose
  *  slot a part on the way binds ('@k3'); a Knob left unwired offers nothing (it would move nothing). */
 export function athanorKnobs(graph){
   const out = [], reach = athanorReach(graph), all = athanorNodes(graph);
-  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(m) boundSlots.add(+m[1]); }
+  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-8])/.exec(v); if(m) boundSlots.add(+m[1]); }
   for(const n of Object.values(all)){
     if(n.name !== 'knob') continue;
-    if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(6, parseInt((n.data || {}).slot, 10) || 1)))) continue;
-    const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));
+    if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(8, parseInt((n.data || {}).slot, 10) || 1)))) continue;
+    const d = n.data || {}, slot = Math.max(1, Math.min(8, parseInt(d.slot, 10) || 1));
     if(!out.find(k => k.slot === slot)) out.push({ slot, label: String(d.name || 'Knob ' + slot).slice(0, 24), def: Math.max(0, Math.min(100, d.def === '' || d.def == null || isNaN(+d.def) ? 50 : +d.def)),   // (a Default of 0 is 0)
       // its kind (D1): a plain slider, steps (marks, named or numbered), an angle, or a switch
       kind: ['steps', 'angle', 'switch'].includes(d.kind) ? d.kind : 'slider', steps: Math.max(2, Math.min(12, Math.round(+d.steps || 3))),
@@ -98,7 +98,7 @@ export function athanorKnobs(graph){
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
   for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
-    const m = typeof v === 'string' && /^@k([1-6])/.exec(v); if(!m) continue;
+    const m = typeof v === 'string' && /^@k([1-8])/.exec(v); if(!m) continue;
     const slot = +m[1]; if(out.find(q => q.slot === slot)) continue;
     const part = ((STEPS[n.name] || {}).params || []).find(q => q[0] === k);
     out.push({ slot, label: String(part ? part[1] : 'Knob ' + slot).slice(0, 24), def: 50 });
@@ -136,7 +136,7 @@ export function athanorHash(graph){
 
 /**
  * The graph as a picture: { r, g, b } fields on a ww × wh grid, or null when
- * there is no Surface to show. ctx: { knobs: [six 0..100], tints: [hex, hex],
+ * there is no Surface to show. ctx: { knobs: [eight 0..100], tints: [hex, hex],
  * light (degrees), seed, scale }. deps.texture(type, w, h, opts) → a canvas.
  */
 // ---- each node's result, kept between edits (version 2 graphs) ----
@@ -144,7 +144,7 @@ export function athanorHash(graph){
 // where it sits), the grid, and what the page gives (seed, knobs, hues, dial):
 // change one node and only it and what lies downstream are made again. A few
 // dozen MB at most, the least recently used let go first.
-const ATHANOR_KEPT = new Map(); let athanorKeptBytes = 0, athanorHits = 0;
+const ATHANOR_KEPT = new Map(); let athanorKeptBytes = 0, athanorHits = 0, athanorPeak = 0;
 const ATHANOR_KEEP_BYTES = 48*1024*1024;
 const keptSize = outs => (outs || []).reduce((s, v) => s + (v instanceof Float32Array ? v.length*4 : v && v.r ? v.r.length*12 : 8), 0);
 function athanorKeep(key, outs){
@@ -154,7 +154,7 @@ function athanorKeep(key, outs){
   for(const [k, v] of ATHANOR_KEPT){ if(athanorKeptBytes <= ATHANOR_KEEP_BYTES) break; ATHANOR_KEPT.delete(k); athanorKeptBytes -= v.b; }
 }
 /** What is kept (for the tests and the debug view). */
-export function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits }; }   // test hook: the cache's size and hits
+export function athanorCacheInfo(){ return { entries: ATHANOR_KEPT.size, bytes: athanorKeptBytes, hits: athanorHits, peak: athanorPeak }; }   // test hook: the cache's size and hits, and the most results held at once by the last graph
 export function clearAthanorCache(){ ATHANOR_KEPT.clear(); athanorKeptBytes = 0; athanorHits = 0; }   // test hook: a cold cache, so a test measures a first run
 const fnv = str => { let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
@@ -190,7 +190,14 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     sigs.set(id, s); return s;
   };
   const N = ww*wh, unit = Math.min(ww, wh)*sizeK;
-  const memo = new Map(), busy = new Set();
+  const memo = new Map(), busy = new Set(); athanorPeak = 0;
+  // MEMORY (Ruby: Circuit Board ran Firefox on a phone out of memory): a part's result is let go as soon as every
+  // part that reads it has run, so only the work in flight is held, not the whole graph's (the step previews,
+  // which show every part, keep them all). What is worth keeping between edits stays in ATHANOR_KEPT.
+  const readers = new Map();
+  if(!ctx.all) for(const n of Object.values(nodes)) for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node); readers.set(s, (readers.get(s) || 0) + 1); }
+  const doneReading = n => { if(ctx.all) return;
+    for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node), left = (readers.get(s) || 0) - 1; readers.set(s, left); if(left <= 0) memo.delete(s); } };
   const flat = v => new Float32Array(N).fill(v);
   const lum = img => { const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]; return f; };
   const isImg = v => v && typeof v === 'object' && v.r instanceof Float32Array;
@@ -210,7 +217,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const P = (n, k, d) => { const v = (n.data || {})[k]; return v === undefined || v === '' ? d : v; };
   // a param bound to a slider or the dial ('@k2', '@k2[10,700]', '@dial', '@tilt')
   const bound = (n, k, s, d) => {
-    const m = /^@(k[1-6]|dial|tilt)(?:\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\])?$/.exec(s.trim()); if(!m) return d;
+    const m = /^@(k[1-8]|dial|tilt)(?:\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\])?$/.exec(s.trim()); if(!m) return d;
     const r = m[2] != null ? [+m[2], +m[3]] : null;
     if(m[1] === 'dial'){ const deg = ((ctx.light ?? 315) % 360 + 360) % 360; return r ? r[0] + (r[1] - r[0])*deg/360 : deg; }
     if(m[1] === 'tilt'){ const t = ctx.lightTilt ?? 100; return r ? r[0] + (r[1] - r[0])*t/130 : t; }
@@ -284,7 +291,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
       try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
       if(key && out) athanorKeep(key, out);
     }
-    busy.delete(id); memo.set(id, out);
+    busy.delete(id); memo.set(id, out); if(memo.size > athanorPeak) athanorPeak = memo.size; doneReading(n);
     return out;
   };
   // a value field the size of the page, from a function of (u, v) in 0..1
@@ -434,7 +441,7 @@ export function athanorNodeHeight(name){
   const preview = (S.cat === 'Inputs' || S.cat === 'Output') ? 0 : ATHANOR_NODE.preview;
   return ATHANOR_NODE.title + rows*ATHANOR_NODE.row + extras*ATHANOR_NODE.extra + preview + ATHANOR_NODE.pad;
 }
-export function layoutAthanor(data){
+export function layoutAthanor(data, spread = 1){
   const ids = Object.keys(data), depth = {}, busy = new Set();
   const d = id => { if(depth[id] !== undefined) return depth[id]; if(busy.has(id)) return 0; busy.add(id);
     let m = 0; for(const p of Object.values(data[id].inputs || {})) for(const c of p.connections || []) if(data[c.node]) m = Math.max(m, d(String(c.node)) + 1);
@@ -446,7 +453,8 @@ export function layoutAthanor(data){
   ids.sort((a, b) => (depth[a] - depth[b]) || (feedsY(a) - feedsY(b)) || (+a - +b)).forEach(id => (cols[depth[id]] ||= []).push(id));
   for(const [c, list] of Object.entries(cols)){
     let y = 30;
-    for(const id of list){ data[id].pos_x = 30 + +c*(ATHANOR_NODE.w + ATHANOR_NODE.colGap); data[id].pos_y = y; y += athanorNodeHeight(data[id].name) + ATHANOR_NODE.gap; }
+    // (spread: the gaps between columns and between parts, wider, so the wires can be followed — Ruby's Spread Out)
+    for(const id of list){ data[id].pos_x = 30 + +c*(ATHANOR_NODE.w + ATHANOR_NODE.colGap*spread); data[id].pos_y = y; y += athanorNodeHeight(data[id].name) + ATHANOR_NODE.gap*spread; }
   }
   return data;
 }

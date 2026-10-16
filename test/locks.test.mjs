@@ -44,6 +44,12 @@ const base = save();
   const after = save();
   check('a preset changes the look (the test can see it)', after.textureType !== before.textureType && after.lookName === 'Andromeda');
   check('…but a locked surface slider, a locked typeface and a locked color keep their values', after.texP1 === before.texP1 && after.font === 'Cinzel' && /^#123456$/i.test(after.bg1));
+  // (Ruby: the surface's own views went stale after a preset) — 🜉 Open in the Athanor rests for Deep Field, not a graph yet
+  const reveal = () => document.getElementById('revealSurfaceBtn').disabled;
+  check('after a preset every view of the surface is refreshed: Andromeda (Deep Field) rests 🜉 Open in the Athanor…', reveal() === true);
+  load({ ...base, locks: [] }); await settle();
+  walk(reg['presetGrid'], 'preset-btn').find(t => t.dataset.name === 'Rose Window').dispatchEvent({ type: 'click' }); await settle();
+  check('…and Rose Window (Stained Glass, a graph) wakes it', save().textureType === 'stainedglass' && reveal() === false);
 }
 
 // ---- the Summon buttons ----
@@ -133,6 +139,14 @@ const base = save();
   check('Mutate Gently nudges every section a little: a slider moves no more than a gentle roll\'s reach, a color drifts',
     moved && Math.abs(+s1.texP1 - 50) <= 10 && s1.bg1 !== '#405060');
   check('…the surface stays (menus never roll gently), and a locked control stays', s1.textureType === 'hatch' && s1.texP2 === '50'); }
+
+// ---- only the padlock locks: a tap on the control's name (a scroll that began there) never does ----
+{ const { guardLabelTaps } = await import('../appEvents.js');
+  const label = document.createElement('label'), btn = document.createElement('button'); label.tagName = 'LABEL'; label.appendChild(btn);
+  guardLabelTaps(label, btn);
+  let stopped = 0; const tap = target => label.dispatchEvent({ type: 'click', target, preventDefault(){ stopped++; } });
+  tap(label); const onName = stopped; tap(btn);
+  check('a tap on a control\'s name is kept from reaching its padlock; a tap on the padlock is not', onName === 1 && stopped === 1); }
 
 // ---- how a lock looks (AGENTS.md §11: a drawn padlock, never an emoji) ----
 check('the lock is a drawn padlock, not an emoji', /const LOCK_GLYPH\s*=\s*\n?\s*'<svg/.test(ev) && !/'🔒'|'🔓'/.test(ev));

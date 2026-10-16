@@ -44,9 +44,9 @@ export const TEXTURE_ELEMENTS = {
     earth: { name: 'Corona Storm',    k: [180, 220, 5, 55, 60, 60], light: [200, 100] } },
   // k: Traces, Bends, Charge, Data Flow, Components, Scale
   circuit: { def: 'earth', earth: { name: 'Circuit Board' },
-    fire:  { name: 'Overclocked',    k: [75, 70, 100, 80, 50, 100], t: ['#FF6A3D', '#FFE9A8'], light: [300, 100] },
-    water: { name: 'Cold Storage',   k: [60, 90, 30, 25, 35, 70],   t: ['#6FA8FF', '#D8F0FF'] },
-    wind:  { name: 'Factory Floor',  k: [85, 0, 70, 60, 25, 120],   t: ['#F2A83C', '#7CF29A'], light: [210, 100] } },
+    fire:  { name: 'Overclocked',    k: [75, 70, 100, 80, 50, 100, 0, 0], t: ['#FF6A3D', '#FFE9A8'], light: [300, 100] },
+    water: { name: 'Cold Storage',   k: [60, 90, 30, 25, 35, 70, 0, 0],   t: ['#6FA8FF', '#D8F0FF'] },
+    wind:  { name: 'Factory Floor',  k: [85, 0, 70, 60, 25, 120, 0, 0],   t: ['#F2A83C', '#7CF29A'], light: [210, 100] } },
   veins: { def: 'earth', earth: { name: 'Veins of Light' },
     fire:  { name: 'Molten Seams',   k: [10, 80, 40, 85, 80, 0],   t: ['#4A3A34', '#FF7A2A'], light: [300, 100] },
     water: { name: 'Fibre Optics',   k: [70, 70, 70, 75, 100, 30], t: ['#2C3640', '#7AE0FF'] },
@@ -57,9 +57,9 @@ export const TEXTURE_ELEMENTS = {
     wind:  { name: 'Quatrefoil Seal', k: [90, 7, 70, 67, 65, 30],   t: ['#E8F2DC', '#22301A'], blend: 'soft-light' } },
   // 🝆 grown and generated
   lichtenberg: { def: 'earth', earth: { name: 'Lichtenberg Figures' },
-    fire:  { name: 'Live Embers',     k: [70, 55, 2, 50, 140, 0],  t: ['#B88A5C', '#5A3820'], light: [300, 100] },
-    water: { name: 'Acrylic Strike',  k: [75, 40, 1, 100, 120, -20], t: ['#B88A5C', '#5A3820'], light: [330, 100] },
-    wind:  { name: 'Close Strike',    k: [85, 75, 2, 0, 260, 30],   t: ['#E2C9A4', '#8C6A48'], light: [20, 100] } },
+    fire:  { name: 'Live Embers',     k: [70, 55, 2, 50, 140, 0, 0, 0],  t: ['#B88A5C', '#5A3820'], light: [300, 100] },
+    water: { name: 'Acrylic Strike',  k: [75, 40, 1, 100, 120, -20, 0, 0], t: ['#B88A5C', '#5A3820'], light: [330, 100] },
+    wind:  { name: 'Close Strike',    k: [85, 75, 2, 0, 260, 30, 0, 0],   t: ['#E2C9A4', '#8C6A48'], light: [20, 100] } },
   growth: { def: 'earth', earth: { name: 'Ruffled Growth' },
     fire:  { name: 'Brain Coral',     k: [90, 130, 2, 70, 160, 20], t: ['#FFD2B8', '#5A1A12'], blend: 'overlay' },
     water: { name: 'Sea Lettuce',     k: [60, 220, 3, 45, 100, 0], t: ['#D8FFF0', '#0E3A3A'], blend: 'soft-light' },
@@ -277,6 +277,14 @@ export const TEXTURE_ELEMENTS = {
     fire:  { name: 'Molten Pool',    k: [80, 60, 50, 30, 0, 40],  t: ['#FFC27A', '#5A0A04'], blend: 'hard-light' },
     wind:  { name: 'Windswept Lake', k: [160, 90, 20, 30, 0, 60], t: ['#E6F5EE', '#1E3A30'] },
     earth: { name: 'Bog Water',      k: [120, 15, 80, 40, 80, 20], t: ['#B8A870', '#141008'], blend: 'overlay' } },
+  ringworld: { def: 'wind', wind: { name: 'Ringworld' },
+    fire:  { name: 'Burning Arch', k: [55, 70, 25, 40, 70, 50, 40, 75], t: ['#B8643A', '#E8885A'], light: [40, 55] },
+    water: { name: 'Ocean Ring',   k: [65, 40, 75, 25, 60, 85, 55, 85], t: ['#5E8F6A', '#7FB4E6'], light: [330, 50] },
+    earth: { name: 'Iron Desert',  k: [40, 80, 5, 60, 30, 92, 30, 70],  t: ['#C8925A', '#D9B48A'], light: [15, 48] } },
+  rainwater: { def: 'water', water: { name: 'Rain on Water' },
+    fire:  { name: 'Lantern Pond',   k: [120, 35, 70, 60, 70], t: ['#1A0E08', '#F2A24A'], light: [200, 60] },
+    wind:  { name: 'Downpour',       k: [70, 95, 25, 90, 40], t: ['#141C22', '#C9D4DC'], light: [320, 100] },
+    earth: { name: 'Last Drops',     k: [160, 12, 95, 15, 10], t: ['#0A1410', '#6E8A70'], light: [300, 80] } },
   glassrain: { def: 'water', water: { name: 'Rain on Glass' },
     fire:  { name: 'Steam',       k: [60, 60, 100], blend: 'screen' },
     wind:  { name: 'Driven Rain', k: [70, 280, 10], light: [60, 100] },
@@ -296,9 +304,9 @@ export const TEXTURE_ELEMENTS = {
 
   // ---- 🜉 The Athanor: its knobs mean whatever the graph makes them ----
   athanor: { def: 'earth', earth: { name: 'As Made' },
-    fire:  { name: 'Calcined', k: [85, 85, 85, 85, 85, 85], t: ['#FFD08A', '#5A0E08'] },
-    water: { name: 'Dissolved', k: [25, 40, 25, 40, 25, 40], t: ['#CFF0FF', '#0A2440'] },
-    wind:  { name: 'Sublimed',   k: [60, 15, 60, 15, 60, 15], t: ['#F0FFF4', '#2E4A3A'] } },
+    fire:  { name: 'Calcined', k: [85, 85, 85, 85, 85, 85, 50, 50], t: ['#FFD08A', '#5A0E08'] },
+    water: { name: 'Dissolved', k: [25, 40, 25, 40, 25, 40, 50, 50], t: ['#CFF0FF', '#0A2440'] },
+    wind:  { name: 'Sublimed',   k: [60, 15, 60, 15, 60, 15, 50, 50], t: ['#F0FFF4', '#2E4A3A'] } },
 };
 
 /** A texture's four readings, in button order (🜂 🜄 🜁 🜃): each its

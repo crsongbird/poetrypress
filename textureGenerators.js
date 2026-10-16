@@ -101,6 +101,23 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
+  // RINGWORLD (chains.js 'ringworld'; Ruby: the dial is the camera, one slider the light, up to eight in all)
+  ringworld:     [{key:'zoom',  label:'Band Width',      min:0,  max:100, def:45,  unit:''},
+                  {key:'amt',   label:'Terrain',         min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Seas',            min:0,  max:100, def:40,  unit:''},
+                  {key:'shape', label:'Structures',      min:0,  max:100, def:25,  unit:''},
+                  {key:'hue',   label:'Atmosphere',      min:0,  max:100, def:50,  unit:''},
+                  // the one light: where the shadow squares stand (night → dawn → noon), and how high the light seems
+                  {key:'tilt',  label:'Daylight',        min:0,  max:100, def:80,  unit:'', ticks:[0,50,100], names:['Night','Dawn','Noon']},
+                  {key:'alt',   label:'Altitude',        min:0,  max:100, def:15,  unit:''},
+                  {key:'lens',  label:'Lens',            min:30, max:120, def:75,  unit:'°'}],
+  // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon
+  rainwater:     [{key:'zoom',  label:'Ripple Size',     min:40, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Rain',            min:0,  max:100, def:50,  unit:''},
+                  // fresh drops' small tight rings (0) → wide, old, overlapping rings (100)
+                  {key:'form',  label:'Spread',          min:0,  max:100, def:50,  unit:''},
+                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''},
+                  {key:'hue',   label:'View',            min:0,  max:85,  def:35,  unit:'', ticks:[0, 85], names:['Overhead', 'Across the Water']}],
   glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Rain',            min:20, max:300, def:100, unit:'%'},
                   // a fine mist of tiny droplets between the drops
@@ -169,9 +186,9 @@ export const TEXTURE_PARAMS = {
                   // drips, and the faint wash inside the ring
                   {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
   // THE ATHANOR: a surface made in the node editor. Its knobs are the
-  // graph's Knob nodes (the page relabels them from the graph; here, six
+  // graph's Knob nodes (the page relabels them from the graph; here, eight
   // plain ones, so a request always has its values)
-  athanor:      [1,2,3,4,5,6].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
+  athanor:      [1,2,3,4,5,6,7,8].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
   guilloche:     [{key:'zoom',  label:'Rosette Size',    min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Line Density',    min:30, max:200, def:100, unit:'%'},
                   // how many lobes each rosette turns: a few broad petals → a fine crown
@@ -320,7 +337,11 @@ export const TEXTURE_PARAMS = {
                   {key:'form',  label:'Charge',          min:0,  max:100, def:55,  unit:'', ticks:[0,18,50,84], names:['Substrate','Color','Glow','Sparks']},
                   {key:'shape', label:'Data Flow',       min:0,  max:100, def:40,  unit:''},
                   {key:'hue',   label:'Components',      min:0,  max:100, def:45,  unit:''},
-                  {key:'tilt',  label:'Scale',           min:40, max:300, def:100, unit:'%'}],
+                  {key:'tilt',  label:'Scale',           min:40, max:300, def:100, unit:'%'},
+                  // (Ruby: slider 7) more of the board turns to the next era's parts, names and silkscreen
+                  {key:'era',   label:'Era',             min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Today','Future','Quantum','Magitech']},
+                  // stamps, codes and a little picture (the board's Easter eggs), in room the board left
+                  {key:'marks', label:'Markings',        min:0,  max:100, def:0,   unit:''}],
   // 🝆 Veins of Light (chains.js 'veins')
   veins:         [{key:'zoom',  label:'Material',        min:0,  max:100, def:10,  unit:'', ticks:[10,30,50,70,90], names:['Strata','Pebbles','Sand','Fibres','Skin']},
                   {key:'amt',   label:'Reach',           min:0,  max:100, def:60,  unit:''},
@@ -347,7 +368,10 @@ export const TEXTURE_PARAMS = {
                   // close in, so the branches run off the page's edges
                   {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},
                   // the figure slid along the dial's line (the dial turns it)
-                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
+                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''},
+                  // THE CAMERA (Ruby: up to eight sliders): turned about the plank's middle, and tipped to look across it
+                  {key:'angle', label:'Turn',            min:0,  max:360, def:0,   unit:'°'},
+                  {key:'view',  label:'View',            min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Overhead','Leaning','Low Across']}],
   growth:        [{key:'zoom',  label:'Growth',          min:0,  max:100, def:55,  unit:''},
                   {key:'amt',   label:'Fold Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'form',  label:'Seeds',           min:1,  max:7,   def:1,   unit:''},
@@ -474,6 +498,11 @@ export const TEXTURE_CAPS = {
   // glass in front of the page: transparent, the drops showing the outdoors
   // made from the page's own colours (pageEnv), so Normal is its default
   glassrain:     { blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
+  // the dial is the camera: its angle where you look round the ring, its reach how far up (the middle: the arch overhead)
+  ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, dial:'Camera', lowLight:true, tints:2,
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], lightDeg:40, lightTilt:55 },
+  rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
+                   tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'] },
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
   rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:true, dial:'Rain Direction', lightDeg:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -719,6 +748,10 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
     result = genChain(type, w, h, light, extra, tint1 || '#2B2A3A', tint2 || '#7A4A6A');   // Flow Lines, the dial its current (chains.js)
+  } else if(type === 'ringworld'){
+    result = genChain(type, w, h, light, extra, tint1 || '#6F8F55', tint2 || '#86AEDC');   // Ringworld View → Noise at Coordinates → color → Light Engine → air (chains.js)
+  } else if(type === 'rainwater'){
+    result = genChain(type, w, h, light, extra, tint1 || '#0E1A26', tint2 || '#8FA8BC');   // Raindrops → Tint by distance → Light Engine → Glow (chains.js)
   } else if(type === 'turing'){
     result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
   } else if(type === 'frost'){
@@ -872,8 +905,9 @@ function describeRequest(type, w, h, opts){
   const v3 = defs[2] ? ((p3 == null) ? defs[2].def : p3) : (defs.length === 0 && p3 != null ? p3 : null);
   // knobs four and five (Dream Bloom)
   const v4 = defs[3] ? ((opts.p4 == null) ? defs[3].def : opts.p4) : null, v5 = defs[4] ? ((opts.p5 == null) ? defs[4].def : opts.p5) : null;
-  // a sixth: a camera's Tilt (Scrying Pool)
+  // a sixth: a camera's Tilt (Scrying Pool); a seventh and eighth (Lichtenberg's camera, Circuit Board's Era)
   const v6 = defs[5] ? ((opts.p6 == null) ? defs[5].def : opts.p6) : null;
+  const v7 = defs[6] ? ((opts.p7 == null) ? defs[6].def : opts.p7) : null, v8 = defs[7] ? ((opts.p8 == null) ? defs[7].def : opts.p8) : null;
 
   // (Cartomancy's first two suits are the accents; an Athanor graph with an Accent node reads them too)
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards'
@@ -881,7 +915,7 @@ function describeRequest(type, w, h, opts){
   // (and a graph with an Ink part changes with the poem's ink; any other surface never sees it)
   const inkKeyed = (type === 'athanor' || type === 'athanorsteps') && /"name":\s*"ink"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''));
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
+            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
@@ -891,7 +925,7 @@ function describeRequest(type, w, h, opts){
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (inkKeyed ? `_i${opts.ink || ''}` : '');
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
@@ -977,7 +1011,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, scale, lightTilt, t3, t4, t5, t6, env } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, t3, t4, t5, t6, env } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -1019,7 +1053,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2, opts.ink || null] }))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2, opts.ink || null] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

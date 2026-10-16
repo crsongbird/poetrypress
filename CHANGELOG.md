@@ -4,6 +4,53 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Rhea (2026-10-16)
+
+- **Ringworld**, a new surface under Sky & Cosmos. You stand on the inside of a
+  ring round its star. Land and seas are sharp at your feet and smooth where
+  the ring rises into the arch overhead. Rim walls hold in the air, and
+  shadow squares circling the star make the nights.
+  - The Light Dial is the camera: turn it to look along the ring, toward a
+    wall or back; draw it toward the middle to look up at the arch.
+  - Daylight is the one light: night, the dusk line, or noon.
+  - It is built from two new parts anyone can use, Ringworld View and Noise
+    at Coordinates.
+- **Rain on Water**, for your poem: rings spread where the drops strike still
+  water, and the newest ones still splash. View looks down on it or across it
+  toward the horizon.
+- **A surface can have up to eight sliders.**
+  - Lichtenberg Figures: **Turn** and **View**, a camera that circles the
+    plank and tips to look across it. At 0 the figure is exactly as before.
+  - Circuit Board: **Era** (Today, Future, Quantum, Magitech) turns the board
+    toward the next era chip by chip. **Markings** adds stamps, codes and now
+    and then a little picture, in the room the board leaves. With both at 0
+    it is the board as before.
+  - An Athanor Knob can be any of the eight.
+- Changing the preset now updates the Surface panel under Materia.
+- Only the padlock toggles a lock, so tapping a name or scrolling past one
+  no longer locks it by accident.
+- Typing the poem on a phone: the text area fills the room above the
+  keyboard and scrolls inside it. A tap below the last line puts the cursor
+  at the end.
+- An empty poem starts fresh: the welcome page, the default theme, and every
+  slider and lock as new. Otherwise the page's shape is kept between visits.
+- **The Athanor:**
+  - The bar: ＋ Parts on the left, then Open, Apply and Keep together, and
+    Done, with ⋯ on the far right. Show on Page is now **Apply**.
+  - Open is a drawer of tiles. On a tall phone it is a sidebar.
+  - Pinch zoom follows your fingers, parts can snap to a grid, and ⋯ has
+    **Spread Out**: wide columns, so every wire can be followed.
+  - The logo is embossed on the workbench, and parts sit over it.
+  - A graph can have up to 96 parts and holds far less in memory while it
+    works, so Circuit Board no longer crashes Firefox on a phone. A new
+    **Glow** part makes a bloom in one step.
+  - The Light Engine can take a light height of its own, for a graph whose
+    dial does something else.
+- **Oil Paint's impasto** is merged: thick in the lights and thin in the
+  darks, with a stroke's load thinning along it.
+- **Under the hood:** the stylesheet is pruned every ten releases and the
+  tests are reviewed every five.
+
 ## Saturn–Polydeuces (2026-10-15)
 
 - **Lichtenberg Figures grow as they first did:** one strike, or two or

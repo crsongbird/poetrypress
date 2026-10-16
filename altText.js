@@ -36,7 +36,7 @@ export const TEXTURE_LOOKS = {
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolor paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
   ash: 'charred paper, ash and embers', wax: 'pools of sealing wax', dunes: 'wind-rippled sand dunes', kintsugi: 'pottery mended with seams of gold',
-  moss: 'moss growing on stone', water: 'rippling water', glassrain: 'raindrops running down a window', frost: 'feathery frost crystals',
+  moss: 'moss growing on stone', water: 'rippling water', glassrain: 'raindrops running down a window', rainwater: 'rain falling on still water, rings spreading where the drops strike', ringworld: 'the inside of a ringworld: land and seas rising into an arch across the sky, rim walls, a star overhead', frost: 'feathery frost crystals',
   contour: 'a topographic map of contour lines', watercolour: 'soft washes of watercolor', athanor: 'a surface made in the Athanor node editor',
 };
 

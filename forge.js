@@ -2,7 +2,7 @@
  * forge.js — THE ATHANOR (the alchemist's furnace; beneath the name, "Surface
  * texture node editor"): a node editor for making new surfaces out of the
  * pieces Vellum already has (generators, noises, the light engine, stitches,
- * blends, hues, the six knobs, the dial, the seed). The graph is made into a
+ * blends, hues, the eight knobs, the dial, the seed). The graph is made into a
  * texture by athanor.js (in the texture worker); it shows as "The Athanor"
  * at the bottom of Surface Variant.
  *
@@ -351,7 +351,7 @@ export async function openForge(deps){
     ed.on('nodeRemoved', () => { save(); touched(); sound('nodeRemove'); });
     ed.on('connectionCreated', c => { paintNode(c.input_id); paintWires(); save(); touched(); sound('wireConnect'); });
     ed.on('connectionRemoved', c => { paintNode(c.input_id); save(); touched(); sound('wireDisconnect'); hideCut(); });
-    ed.on('nodeMoved', () => { paintWires(); save(); });
+    ed.on('nodeMoved', id => { if(F.snapNode) F.snapNode(id); paintWires(); save(); });
     ed.on('nodeDataChanged', id => { save(); touched(); if(id != null) paintNode(id); });
     ed.on('import', () => setTimeout(paintAll, 0));
     // EVERY WIRE REDRAWN from where its ports are now: a wire is drawn once, when it is made, and a
@@ -364,7 +364,7 @@ export async function openForge(deps){
     const load = (g, keepDirty) => { const was = F.dirty; F.quiet = true; ed.clear(); ed.import(faces(g));
       // (a graph from anywhere, without a Surface: it gets one)
       if(!Object.values(rawNodes()).some(n => n.name === 'surface')) add('surface', 900, 120);
-      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; redrawSoon(); };
+      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; redrawSoon(); if(F.fillOpen) F.fillOpen(); };
     F.load = load;
     // a node's face drawn again from its data (a param bound or unbound changes its control)
     const reface = id => {
@@ -415,7 +415,8 @@ export async function openForge(deps){
     // ON A PHONE ONE THING OPENS AT A TIME (Ruby): the parts drawer, the wiki and a menu each close the others;
     // a desk has room for them side by side
     const phoneNow = () => !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
-    const onlyThis = keep => { if(!phoneNow()) return; if(keep !== 'parts') setParts(false); if(keep !== 'doc' && F.showDoc && doc0 && !doc0.hidden) F.showDoc(false); if(keep !== 'menu' && F.closeMenu) F.closeMenu(); };
+    const onlyThis = keep => { if(!phoneNow()) return; if(keep !== 'parts') setParts(false); if(keep !== 'doc' && F.showDoc && doc0 && !doc0.hidden) F.showDoc(false);
+      if(keep !== 'menu' && F.closeMenu) F.closeMenu(); if(keep !== 'open' && F.openCh) F.openCh.close(); };
     const doc0 = $('forgeDoc');
     const setParts = open => { if(!partsBtn) return; if(open) onlyThis('parts'); veil.classList.toggle('parts-open', open); partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
     F.onlyThis = onlyThis;
@@ -636,7 +637,7 @@ export async function openForge(deps){
         return { glyph: sl, label: used ? name(sl) : '(no Knob)', disabled: !used, hint: used ? `slider ${sl}` : 'a Knob set to this slider would show here',
           sub: () => ({ title: name(sl), hint: `now slider ${sl}`, items: [
             { glyph: '↑', label: k > 1 ? `Move up, to slider ${k - 1}` : 'Already first', disabled: k <= 1, hint: by[String(k - 1)] ? `${name(String(k - 1))} moves down in its place` : '', act: () => moveSlot(sl, String(k - 1)) },
-            { glyph: '↓', label: k < 6 ? `Move down, to slider ${k + 1}` : 'Already last', disabled: k >= 6, hint: by[String(k + 1)] ? `${name(String(k + 1))} moves up in its place` : '', act: () => moveSlot(sl, String(k + 1)) }] }) }; }) }; };
+            { glyph: '↓', label: k < 8 ? `Move down, to slider ${k + 1}` : 'Already last', disabled: k >= 8, hint: by[String(k + 1)] ? `${name(String(k + 1))} moves up in its place` : '', act: () => moveSlot(sl, String(k + 1)) }] }) }; }) }; };
     const nodeMenu = id => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
       const from = N.outs.length ? wireStart(id, 'out') : null, into = N.ins.length ? wireStart(id, 'in') : null;
@@ -687,8 +688,8 @@ export async function openForge(deps){
         } else {
           const bindTo = (src, range) => setData(id, { [key]: '@' + src + (range ? `[${range[0]},${range[1]}]` : '') });
           const curRange = bound ? (/\[([^\]]+)\]/.exec(v) || [])[1] : null;
-          items.push({ glyph: '◐', label: 'Bind to a page slider', hint: 'it follows one of the six sliders under Surface, without a wire', sub: () => ({ title: `${label}: bind to a slider`, hint: 'The slider moves it across its range.', items:
-            [1, 2, 3, 4, 5, 6].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
+          items.push({ glyph: '◐', label: 'Bind to a page slider', hint: 'it follows one of the eight sliders under Surface, without a wire', sub: () => ({ title: `${label}: bind to a slider`, hint: 'The slider moves it across its range.', items:
+            [1, 2, 3, 4, 5, 6, 7, 8].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
           items.push({ glyph: '☼', label: 'Bind to the light dial', hint: 'it follows the dial\'s direction', act: () => bindTo('dial', curRange && curRange.split(',')) });
           if(port){
             items.push({ glyph: '⟾', label: 'Connect from…', hint: `then ${forgeClick()} the part that should drive it`, act: () => startWire('in', id, 'input_' + port) });
@@ -718,7 +719,7 @@ export async function openForge(deps){
       const P = (N_(id).params.find(p => p[0] === key) || []), x = P[4] || { min: 0, max: 100 };
       const cur = parseFloat(n.data[key]); const at = isFinite(cur) ? Math.round((cur - x.min)/((x.max - x.min) || 1)*100) : 50;
       const used = new Set(Object.values(rawNodes()).filter(m => m.name === 'knob').map(m => String((m.data || {}).slot || '1')));
-      const slot = ['1', '2', '3', '4', '5', '6'].find(s => !used.has(s)) || '1';
+      const slot = ['1', '2', '3', '4', '5', '6', '7', '8'].find(s => !used.has(s)) || '1';
       const nid = add(kind, n.pos_x - 250, n.pos_y + 10 + (port - 1)*22, kind === 'knob' ? { slot, name: P[1] || 'Amount', def: Math.max(0, Math.min(100, at)) } : {});
       if(nid != null) ed.addConnection(nid, id, 'output_1', 'input_' + port);
     };
@@ -821,12 +822,38 @@ export async function openForge(deps){
       ed.zoom = z; ed.zoom_last_value = z; ed.canvas_x = sx - mx - (px - mx)*z; ed.canvas_y = sy - my - (py - my)*z;
       ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
     }, { capture: true, passive: false });
-    const tidy = () => {
+    const tidy = (spread = 1) => {
       const g = slim(), data = g.drawflow.Home.data, pins = {};
       for(const [id, n] of Object.entries(data)) if(n.data && n.data._pin) pins[id] = [n.pos_x, n.pos_y];
-      layoutAthanor(data); for(const [id, p] of Object.entries(pins)){ data[id].pos_x = p[0]; data[id].pos_y = p[1]; }
+      layoutAthanor(data, spread); for(const [id, p] of Object.entries(pins)){ data[id].pos_x = p[0]; data[id].pos_y = p[1]; }
       load(g, true); touched(); setTimeout(fitView, 30);
     };
+    // PINCH (Ruby: the zoom was touchy): Drawflow zoomed a fixed step on every move of two fingers, so quick fingers
+    // flew. Here the zoom follows the fingers' spread (twice as far apart, twice as near), about the point between
+    // them, and the grid doesn't pan under a pinch until every finger has lifted.
+    { const fingers = new Map(); let pinch = null, held = false;
+      const between = () => { const [a, b] = [...fingers.values()]; return { x: (a.x + b.x)/2, y: (a.y + b.y)/2, d: Math.hypot(a.x - b.x, a.y - b.y) }; };
+      area.addEventListener('pointerdown', e => { if(e.pointerType !== 'touch') return; fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if(fingers.size === 2){ const m = between(); pinch = { d: Math.max(24, m.d), z: ed.zoom || 1, cx: ed.canvas_x, cy: ed.canvas_y, x: m.x, y: m.y }; held = true; e.stopImmediatePropagation(); } }, true);
+      area.addEventListener('pointermove', e => {
+        if(!fingers.has(e.pointerId)) return; fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if(!pinch || fingers.size < 2){ if(held) e.stopImmediatePropagation(); return; }
+        e.stopImmediatePropagation(); e.preventDefault();
+        const m = between(), r = area.getBoundingClientRect(), W2 = r.width/2, H2 = r.height/2, z = Math.max(ed.zoom_min, Math.min(ed.zoom_max, pinch.z*m.d/pinch.d));
+        // the grid point first under the fingers stays under them
+        const px = (pinch.x - r.left - pinch.cx - W2)/pinch.z + W2, py = (pinch.y - r.top - pinch.cy - H2)/pinch.z + H2;
+        ed.zoom = z; ed.zoom_last_value = z; ed.canvas_x = m.x - r.left - W2 - (px - W2)*z; ed.canvas_y = m.y - r.top - H2 - (py - H2)*z;
+        ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`; }, true);
+      const lift = e => { fingers.delete(e.pointerId); if(fingers.size < 2) pinch = null; if(!fingers.size) held = false; };
+      for(const ev of ['pointerup', 'pointercancel']) area.addEventListener(ev, lift, true);
+      area.addEventListener('touchmove', e => { if(held || e.touches.length > 1){ e.stopImmediatePropagation(); if(e.cancelable) e.preventDefault(); } }, { capture: true, passive: false }); }
+    // SNAP TO THE GRID (Ruby): a moved part settles on the grid, when asked (an app preference)
+    const SNAP_KEY = 'uv.forge.snap', SNAP = 24;
+    const snapOn = () => { try { return localStorage.getItem(SNAP_KEY) === '1'; } catch(e){ return false; } };
+    const snapNode = id => { const n = (((ed.drawflow || {}).drawflow || {}).Home || {}).data, d = n && n[id]; if(!d) return;
+      const x = Math.round(d.pos_x/SNAP)*SNAP, y = Math.round(d.pos_y/SNAP)*SNAP; if(x === d.pos_x && y === d.pos_y) return;
+      d.pos_x = x; d.pos_y = y; const el = area.querySelector('#node-' + id); if(el){ el.style.left = x + 'px'; el.style.top = y + 'px'; } ed.updateConnectionNodes('node-' + id); };
+    F.snapNode = id => { if(snapOn()) snapNode(id); };
     // ---- the bar ----
     const count = () => Object.keys(nodesOf()).length;
     const clearAll = async () => {
@@ -856,25 +883,28 @@ export async function openForge(deps){
     const hideNote = () => { if(note && !note.hidden){ note.hidden = true; veil.classList.remove('note-open'); } };
     if(note) note.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-note-x')) hideNote(); });
     veil.addEventListener('pointerdown', e => { if(note && !note.hidden && !(e.target.closest && e.target.closest('.forge-note'))) hideNote(); }, true);
-    // OPEN (Ruby: one place for everything there is to begin from): your kept surfaces, the starters, the Basics,
-    // the Surface Studies and the app's own textures, each with what it teaches as its hint
-    const firstLine = t => { const m = /^[^.!?]*[.!?]/.exec(String(t || '')); return (m ? m[0] : String(t || '')).slice(0, 140); };
-    const opener = (k, S) => ({ glyph: '', label: S.label, hint: firstLine(S.teach), act: async () => { const g = athanorStarter(k); if(g) await openGraph(g, S.label, S.teach); } });
-    const openSpec = () => { const list = forgeShelf();
+    // OPEN, AS A DRAWER (Ruby: one place for everything there is to begin from, shown as the surface menu shows its
+    // surfaces): your kept surfaces, the starters, the Basics, the Surface Studies and the app's own textures by
+    // group, as tiles. A hidden <select> holds them and the page's tile drawer (chooser.js) shows it: it drops from
+    // the bar on a desk and slides in from the side on a phone. Its face names the graph on the grid.
+    const openSel = $('forgeOpenSelect'), openActs = new Map(), openWords = new Map();
+    let openCh = null;
+    const fillOpen = () => { if(!openSel) return;
+      openSel.innerHTML = ''; openActs.clear(); openWords.clear();
+      // (its face: what is on the grid — on a phone, its name alone)
+      const now = document.createElement('option'); now.value = ''; now.hidden = true; now.textContent = phoneNow() ? surfaceName() : fill(FORGE_BAR.openNow, surfaceName()); openSel.appendChild(now);
+      const group = (glyph, label, items) => { if(!items.length) return; const g = document.createElement('optgroup'); g.label = glyph + ' ' + label;
+        for(const [v, text, act, words] of items){ const o = document.createElement('option'); o.value = v; o.textContent = text; g.appendChild(o); openActs.set(v, act); openWords.set(v, words || ''); }
+        openSel.appendChild(g); };
+      const starter = (k, S) => async () => { const g = athanorStarter(k); if(g) await openGraph(g, S.label, S.teach); };
       const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
-      const basics = ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t]);
-      return { title: FORGE_BAR.openTitle, hint: FORGE_BAR.openHint, items: [
-        list.length ? { glyph: '🜉', label: FORGE_BAR.yours, hint: FORGE_BAR.yoursHint, sub: () => ({ title: FORGE_BAR.yours, hint: FORGE_BAR.yoursHint,
-            items: list.slice().reverse().map(rec => ({ glyph: '🜉', label: rec.name, hint: String(rec.savedAt || '').slice(0, 10), act: () => openKept(rec) })) }) }
-          : { glyph: '🜉', label: FORGE_BAR.yours, hint: FORGE_BAR.yoursNone, disabled: true },
-        { glyph: '🝆', label: FORGE_BAR.starters, hint: FORGE_BAR.startersHint, sub: () => ({ title: FORGE_BAR.starters, items: Object.entries(ATHANOR_STARTERS).map(([k, v]) => opener(k, v)) }) },
-        { glyph: ATHANOR_BASICS.glyph, label: FORGE_BAR.basics, hint: FORGE_BAR.basicsHint, sub: () => ({ title: FORGE_BAR.basics, items: basics.map(k => opener(k, TEXTURE_CHAINS[k])) }) },
-        { glyph: '🜍', label: FORGE_BAR.studies, hint: FORGE_BAR.studiesHint, sub: () => ({ title: FORGE_BAR.studies,
-            items: Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, v]) => opener(k, v)) }) },
-        { glyph: '◈', label: FORGE_BAR.textures, hint: FORGE_BAR.texturesHint, sub: () => ({ title: FORGE_BAR.textures, hint: FORGE_BAR.texturesHint,
-            items: chained.map(([g, ts]) => ({ glyph: g.glyph, label: g.name, hint: ts.length + (ts.length === 1 ? ' texture' : ' textures'),
-              sub: () => ({ title: g.name, items: ts.map(k => opener(k, TEXTURE_CHAINS[k])) }) })) }) }] }; };
-    if($('forgeOpenBtn')) $('forgeOpenBtn').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.bottom + 4, openSpec()); });
+      group('🜉', FORGE_BAR.yours, forgeShelf().slice().reverse().map(rec => ['kept:' + encodeURIComponent(rec.name), rec.name, () => openKept(rec)]));
+      group('🝆', FORGE_BAR.starters, Object.entries(ATHANOR_STARTERS).map(([k, S]) => ['starter:' + k, S.label, starter(k, S), S.teach]));
+      group(ATHANOR_BASICS.glyph, FORGE_BAR.basics, ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t]).map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
+      group('🜍', FORGE_BAR.studies, Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, S]) => ['study:' + k, S.label, starter(k, S), S.teach]));
+      for(const [g, ts] of chained) group(g.glyph, g.name, ts.map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
+      openSel.value = ''; if(openCh) openCh.refresh(); };
+    F.fillOpen = fillOpen;
     // WHETHER THE PAGE SHOWS THIS GRAPH: said in the bar, and a tap puts it there when it doesn't (what Use did)
     const paintPage = () => { const b = $('forgePageBtn'); if(!b) return; const on = !!(deps.onPage && deps.onPage());
       // (on a phone, its glyph alone: ✓ or ⇱; its title says the rest)
@@ -893,6 +923,9 @@ export async function openForge(deps){
         { glyph: '🜉', label: FORGE_BAR.shelf, hint: FORGE_BAR.shelfHint, sub: shelfMenu },
         { sep: true },
         { glyph: '▦', label: FORGE_BAR.tidy, hint: FORGE_BAR.tidyHint, act: () => tidy() },
+        { glyph: '⇹', label: FORGE_BAR.spread, hint: FORGE_BAR.spreadHint, act: () => tidy(2.2) },
+        { glyph: '⌗', label: snapOn() ? FORGE_BAR.snapOff : FORGE_BAR.snapOn, hint: FORGE_BAR.snapHint,
+          act: () => { try { localStorage.setItem(SNAP_KEY, snapOn() ? '0' : '1'); } catch(e){} } },
         { glyph: '↶', label: FORGE_BAR.revert, hint: FORGE_BAR.revertHint, act: revert },
         { glyph: '✕', label: FORGE_BAR.clear, hint: FORGE_BAR.clearHint, danger: true, act: clearAll },
         { sep: true },
@@ -909,7 +942,7 @@ export async function openForge(deps){
       if(at && !await ask({ title: fill(KEPT.replaceAsk, at.name), body: KEPT.replaceBody, confirmLabel: KEPT.replace, danger: true })) return;
       const sid = surfaceId(); if(sid && surfaceName() !== clean) setData(sid, { name: clean });
       if(!forgeShelfPut({ name: clean, graph: JSON.stringify(slim()), savedAt: new Date().toISOString() })){ if(deps.warn) deps.warn(['this browser would not keep it (storage is full or blocked)']); return; }
-      sound('nodeAdd'); if(deps.onShelf) deps.onShelf();
+      sound('nodeAdd'); if(deps.onShelf) deps.onShelf(); fillOpen();
     };
     // a kept surface replaced by the graph on the grid (it keeps its own name, and so does the Surface part)
     const replaceKept = async rec => {
@@ -924,9 +957,16 @@ export async function openForge(deps){
       if(v.problems.length && deps.warn) deps.warn(v.problems);
       await openGraph(forgeNameSurface(v.graph, rec.name), rec.name);
     };
+    // (Open's drawer is filled once the shelf's helpers above exist)
+    if(openSel){
+      fillOpen();
+      openCh = F.openCh = deps.chooser ? deps.chooser(openSel, { title: FORGE_BAR.openTitle, extra: v => openWords.get(v) || '' }) : null;
+      openSel.addEventListener('change', async () => { const act = openActs.get(openSel.value); if(act) await act(); fillOpen(); });
+      if(openCh && openCh.button){ openCh.button.classList.add('forge-open'); openCh.button.addEventListener('click', () => F.onlyThis && F.onlyThis('open'), true); }
+    }
     const dropKept = async rec => {
       if(!await ask({ title: `Remove “${rec.name}” from the shelf?`, body: 'Looks that use it keep their own copy.', confirmLabel: 'Remove', danger: true })) return;
-      forgeShelfWrite(forgeShelf().filter(r => r.name !== rec.name)); if(deps.onShelf) deps.onShelf();
+      forgeShelfWrite(forgeShelf().filter(r => r.name !== rec.name)); if(deps.onShelf) deps.onShelf(); fillOpen();
     };
     const copyKept = async rec => { const text = forgeWiringText([rec]);
       if(await forgeCopy(text)){ if(deps.toast) deps.toast(fill(KEPT.copied, rec.name)); }

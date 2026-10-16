@@ -6,21 +6,21 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 0 · Asked for, waiting on Ruby's answers (the next build)
-- THE POEM ON A PHONE: while typing, the text area fills the room above the keyboard and never runs under it (a
-  thin scroll inside); a tap below the last line puts the caret at the end.
-- LOCKS are too easy to toggle by accident: where does it happen (scrolling past, or tapping a name)?
-- CIRCUIT BOARD's personality: an Era slider (today → future and quantum → magitech), with stamps, labels and
-  glyphs of made-up technology, chosen by the seed (as Cartomancy and Night City have theirs).
-- RINGWORLD, a new surface: an abstract ring world with great structural and environmental variety, lit by the
-  engine; its light is the star at the center, so the dial moves the camera and one slider sets the light.
-  Presets for it in Stage 4.
-
-## 1 · Ruby to judge (new in Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- RINGWORLD (sheet sent): the dial as the camera, Daylight the one light, eight sliders (Band Width, Terrain, Seas,
+  Structures, Atmosphere, Daylight, Altitude, Lens) and four readings. Structures is only the rim walls' height and the
+  works that glow on the night side so far: what else should it raise? Its presets wait for Stage 4.
+- RAIN ON WATER: the rings, the splashes and the reflection toward the horizon (View). Its readings: Lantern Pond,
+  Downpour, Last Drops.
+- LICHTENBERG's camera (Turn 7, View 8): is View's lens wide enough, or should the lens be a slider of its own?
+- CIRCUIT BOARD's Era (7) and Markings (8): what each era draws, and what the stamps say. Should today's board carry
+  Markings by default, or stay bare until a preset asks?
+- THE ATHANOR's bar (Parts · Open · Apply and Keep · Done · ⋯), Open as a drawer (a sidebar on a tall phone), Snap,
+  Spread Out, pinch zoom, the embossed logo.
+- GLOW and the memory work: up to 96 parts; Circuit Board no longer holds every result at once. Does it open in Firefox
+  on your phone now?
 - LICHTENBERG FIGURES, the first growth again, with Zoom and Slide as a camera (sheet sent). Its three readings were
   set for the joined growth: Acrylic Strike and Close Strike are now close-ups. Keep them, or set new ones?
-- THE BENCH: the Athanor keeps its own graph; the page's surface is the look's. Show on Page joins them (then every
-  change shows on the page). With that, is Show on Page still wanted, or should Keep also put a surface on the page?
 - THE PRESET LEVEL (ROADMAP H1): Summon Variation, Mutate Gently and Freeze This Seed sit in a row above the
   presets, under Rituals. Is that their place, and do the names say what they do?
 - PROTECT THE TEXT (◐ under Text Clearing) aims at 3:1, as the presets are held to; a tenth of the ground under a line
@@ -32,8 +32,6 @@ Recommendations".
   the way of scrolling?
 - 🜉 OPEN IN THE ATHANOR under the Surface (ROADMAP's Reveal Spell Graph): the page's surface as its graph, at
   the page's sliders and hues. Is the name right, and does it belong there (or beside the four readings)?
-- OIL PAINT'S IMPASTO (branch `oil-impasto`, not live): paint laid thick in the lights and thin in the darks, a
-  stroke's load thinning along it, and the fine detail strokes raised as thin paint on top. Sheet sent.
 - MORE PARTS: Split and Merge HSB, Split and Merge Lab, Median (Percentile), Map Switch, Flip, Perspective.
 - A BORDER GRADIENT AT 0° now runs straight across (it drew at 45°): a look saved at exactly 0° changes. Say if
   those should keep the old diagonal.
@@ -106,7 +104,6 @@ Recommendations".
 ## From Jupiter–Aoede
 - New parts: Scatter, Grid & Dots, Border Mask, Lookup, Displace, Gradient Map, Spectrum; Variation;
   The Poem's Rhymes.
-- Lain's questions on the kept draft (a way back to the welcome page; an empty poem; the page shape).
 
 ## 1b · The direction — see ROADMAP.md
 The plan for the surface engine, in four stages (Ruby): components → features → textures built from
