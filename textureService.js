@@ -27,6 +27,11 @@ const SOFTGL = typeof location !== 'undefined' && /[?&]softgl\b/.test(location.s
 // only take turns with the first).
 const POOL_SIZE = Math.max(1, Math.min(2, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2) - 1));
 let crashes = 0; const MAX_CRASHES = 4;
+// A PHONE (a coarse pointer) has the cores but not the memory (Ruby: Firefox on a phone took the system down with it):
+// there a slot's stale job is never joined by its newest, and only one large picture is made at a time
+const FRUGAL = typeof matchMedia === 'function' && (() => { try { return matchMedia('(pointer: coarse)').matches; } catch(e){ return false; } })();
+const LARGE = 360000;            // pixels: anything bigger than a tile or a preview
+const large = j => j && j.w*j.h > LARGE;
 let pool = null, broken = false, nextId = 1, workerSrc = null, shownCount = 0, lastShown = '';
 const inflight = new Map();      // slot → { id, key, type, job, worker, started }
 const wanted = new Map();        // slot → the latest request waiting its turn
@@ -154,6 +159,8 @@ function pump(){
     // warm, while the stale job finishes alongside.
     const worker = pool.find(x => !x.job);
     if(!worker) continue;
+    if(FRUGAL && running) continue;               // (a phone: the newest waits for the stale one to finish)
+    if(FRUGAL && large(job) && pool.some(x => x.job && large(x.job.job))) continue;
     if(running) inflight.delete(slot);            // it runs on, shown only if nothing newer arrives first
     wanted.delete(slot);
     const id = nextId++;
@@ -190,7 +197,7 @@ function flushOnPage(){
 }
 
 /** For the debug hook: are the workers running, and what are they doing. */
-export function textureServiceInfo(){ return { worker: !!pool, workers: pool ? pool.length : 0, broken, inflight: inflight.size, waiting: wanted.size, crashes, shown: shownCount, lastShown, drafting }; }
+export function textureServiceInfo(){ return { worker: !!pool, workers: pool ? pool.length : 0, broken, inflight: inflight.size, waiting: wanted.size, crashes, shown: shownCount, lastShown, drafting, frugal: FRUGAL }; }
 
 /** Resolves once every requested texture has arrived (Save image waits on this). */
 export function texturesSettled(){

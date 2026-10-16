@@ -28,7 +28,7 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, chainReadsPoem } from './textureGenerators.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { fill, CHOOSER } from './strings.js';
 import { resolvePmlVariables } from './pmlVars.js';
@@ -1107,6 +1107,7 @@ export function surfaceFromDom(){
   return { textureType: v('textureType'), texP1: v('texP1'), texP2: v('texP2'), texP3: v('texP3'), texP4: v('texP4'), texP5: v('texP5'), texP6: v('texP6'), texP7: v('texP7'), texP8: v('texP8'),
     textureOpacity: parseFloat(v('textureOpacity')), textureBlend: v('textureBlend'), textureLight: v('textureLight'),
     textureLightTilt: $('textureLightTilt') ? v('textureLightTilt') : '100',
+    cameraTurn: v('cameraTurn'), cameraView: v('cameraView'), cameraZoom: v('cameraZoom'),
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
@@ -1150,6 +1151,8 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const has = i => (shape ? shape.top : defs.length) >= i;
   const p4 = has(4) ? num(L.texP4) : null, p5 = has(5) ? num(L.texP5) : null, p6 = has(6) ? num(L.texP6) : null, p7 = has(7) ? num(L.texP7) : null, p8 = has(8) ? num(L.texP8) : null;
   const accent1 = $('accent1ColorHex').value, accent2 = $('accent2ColorHex').value;
+  // the camera dial's (a texture with a camera, or a graph with a Camera Dial; the request keys it only then)
+  const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom } : undefined;
   const name = s => slot === 'main' ? s : 'base' + (s === 'main' ? '' : s);
   // a texture that can't be drawn is skipped, never allowed to abort the frame
   const put = t => { if(!t) return; try {
@@ -1166,12 +1169,12 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     layer(blend === 'lighten' ? 'overlay' : blend, requestTexture(name('fog'), 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
     layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S }));   // (tint5: the airglow's own colour)
   } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
-    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8 }));
+    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera }));
   } else {
     // (an Athanor surface carries its graph: the worker makes it from that)
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
-    const text = graph && graphUsesPoem(graph) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, graph, text, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    const text = (graph && graphUsesPoem(graph)) || chainReadsPoem(type) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -1683,7 +1686,7 @@ function renderInto(canvas){
       GROUND_PROBE.result = groundContrast(data, gw, gh, runs, READABLE.allowance, inkField);
       GROUND_PROBE.result.settled = lay === TEXT_LAYOUT; GROUND_PROBE.ground = null; PROBE_INKS = null; }
     if(lay !== TEXT_LAYOUT){ TEXT_LAYOUT = lay;
-      const g = $('textureType').value === 'athanor' && graphUsesPoem(($('forgeGraph') || {}).value || '');
+      const g = ($('textureType').value === 'athanor' && graphUsesPoem(($('forgeGraph') || {}).value || '')) || chainReadsPoem($('textureType').value);
       if($('textureToggle').checked && (clearing > 0 || g)) setTimeout(scheduleRender, 0); } }
 
   // the spell is tied to the texture seed even when textures are off

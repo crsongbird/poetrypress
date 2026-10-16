@@ -594,21 +594,11 @@ held on till bright~B</code></p>
           <label for="textureToggle" data-str="label.customize_surface">Customize Surface</label>
         </div>
         <div class="subblock" id="textureBlock">
-          <!-- SURFACE LAYERS (Ruby): a second surface beneath the first; every control below edits the layer
-               chosen here, and Swap trades them whole (blend, hues, light, seed, locks) -->
-          <div class="layer-bar full" id="layerBar">
-            <div class="check-row">
-              <input type="checkbox" id="baseToggle">
-              <label for="baseToggle" data-str="label.base_layer" title="Adds a second surface beneath this one, with all its own settings. The two blend into each other and into the page.">Two Surfaces</label>
-            </div>
-            <div class="radio-group layer-seg" id="layerSeg" role="group" aria-label="Which surface the settings below change">
-              <button type="button" class="radio-btn active" data-layer="upper" aria-pressed="true" data-str="button.layer_upper" title="Show the settings of the surface on top">Upper</button>
-              <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Show the settings of the surface beneath">Lower</button>
-              <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Trade the two surfaces: each keeps everything it has, its blend, hues, light, seed and locks too">⇅ Swap</button>
-            </div>
-          </div>
-          <div class="field full">
+          <!-- THE SURFACE (Ruby's order): its variant with the four readings beside it (the applied reading's name rides in
+               the variant's own field, quietly), then New Random Surface and Edit in the Athanor, then Two Surfaces -->
+          <div class="field full surface-variant">
             <label data-str="label.surface_variant">Surface Variant</label>
+            <div class="surface-pick">
             <select id="textureType">
               <!-- grouped by what a surface IS (each group alphabetical); each group's glyph a Runology Archetype that means it (appOptions.js TEXTURE_GROUPS) -->
               <!-- the Basics live in the Athanor (Open → Basics); kept here hidden, so a look saved with one still opens -->
@@ -676,6 +666,7 @@ held on till bright~B</code></p>
                 <option value="wax" data-str="option.poured_wax">Poured Wax</option>
                 <option value="metalleaf" data-str="option.metal_leaf">Scattered Polygons</option>
                 <option value="stainedglass" data-str="option.stained_glass">Stained Glass</option>
+                <option value="underglass" data-str="option.under_glass">Under Glass</option>
               </optgroup>
               <optgroup label="🝓 Pattern &amp; Order">
                 <option value="mathnoise" data-str="option.binary_pattern">Binary Pattern</option>
@@ -700,16 +691,30 @@ held on till bright~B</code></p>
                 <option value="athanor" id="athanorOption">From the Athanor</option>
               </optgroup>
             </select>
-          </div>
-          <button class="ghost full" id="randomSurfaceBtn" data-sound="summonBackdrop" type="button" data-str="button.randomSurfaceBtn">⟳ Summon New Surface</button>
-          <button class="ghost full" id="revealSurfaceBtn" data-sound="athanorOpen" type="button" data-str="button.revealSurfaceBtn" title="See how this surface is made: its parts and wires, opened in the Athanor (the node editor) at these sliders and hues. Change it there and keep it as your own; the page keeps this surface until you show yours.">🜉 Open in the Athanor</button>
-          <div class="field full element-field">
             <div class="element-row" id="elementRow" role="group" aria-label="Four readings of this surface">
               <button type="button" class="el-btn" data-el="fire"  aria-label="Fire">🜂</button>
               <button type="button" class="el-btn" data-el="water" aria-label="Water">🜄</button>
               <button type="button" class="el-btn" data-el="wind"  aria-label="Wind">🜁</button>
               <button type="button" class="el-btn" data-el="earth" aria-label="Earth">🜃</button>
-              <span class="el-name" id="elementName" aria-live="polite"></span>
+            </div>
+            </div>
+            <span class="el-name sr-only" id="elementName" aria-live="polite"></span>
+          </div>
+          <div class="surface-acts full">
+            <button class="ghost" id="randomSurfaceBtn" data-sound="summonBackdrop" type="button" data-str="button.randomSurfaceBtn">⟳ New Random Surface</button>
+            <button class="ghost" id="revealSurfaceBtn" data-sound="athanorOpen" type="button" data-str="button.revealSurfaceBtn" title="See how this surface is made: its parts and wires, opened in the Athanor (the node editor) at these sliders and hues. Change it there and keep it as your own; the page keeps this surface until you show yours.">🜉 Edit in the Athanor</button>
+          </div>
+          <!-- SURFACE LAYERS (Ruby; below the surface's own buttons, her order): a second surface beneath the first; every control below edits the layer
+               chosen here, and Swap trades them whole (blend, hues, light, seed, locks) -->
+          <div class="layer-bar full" id="layerBar">
+            <div class="check-row">
+              <input type="checkbox" id="baseToggle">
+              <label for="baseToggle" data-str="label.base_layer" title="Adds a second surface beneath this one, with all its own settings. The two blend into each other and into the page.">Two Surfaces</label>
+            </div>
+            <div class="radio-group layer-seg" id="layerSeg" role="group" aria-label="Which surface the settings below change">
+              <button type="button" class="radio-btn active" data-layer="upper" aria-pressed="true" data-str="button.layer_upper" title="Show the settings of the surface on top">Upper</button>
+              <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Show the settings of the surface beneath">Lower</button>
+              <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Trade the two surfaces: each keeps everything it has, its blend, hues, light, seed and locks too">⇅ Swap</button>
             </div>
           </div>
           <div class="field full">
@@ -796,6 +801,38 @@ held on till bright~B</code></p>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
           <input type="hidden" id="activeSpell" value="">
+          </div>
+          <!-- THE CAMERA DIAL (Ruby: a second dial, the camera's, so the light dial is the light's alone). Drag from the
+               middle toward where the camera stands: the middle looks straight down (or, on Ringworld, straight up),
+               the rim looks low across; ＋ and − (or a wheel, or a pinch) zoom. While it moves, a wireframe guide shows
+               the shot before the surface is made. Shown only for a surface with a camera. -->
+          <div class="field full tool-hidden" id="cameraRow">
+            <label data-str="label.camera">Camera</label>
+            <div class="light-dial-row">
+              <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: drag from the middle toward where the camera stands; the rim looks low across">
+                <svg viewBox="-50 -50 100 100" aria-hidden="true">
+                  <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
+                  <circle class="ld-ring" r="26"></circle>
+                  <circle class="ld-half" r="7.5"></circle>
+                  <!-- what the camera sees: a frame round the middle, smaller as it zooms in -->
+                  <rect class="cam-frame" id="cameraFrame" x="-9" y="-12" width="18" height="24"></rect>
+                  <line class="cam-sight" id="cameraSight" x1="0" y1="0" x2="0" y2="0"></line>
+                  <circle class="ld-centre" r="1.4"></circle>
+                  <circle class="ld-handle cam-handle" id="cameraHandle" r="5.6" cx="0" cy="0"></circle>
+                </svg>
+              </div>
+              <button type="button" class="ld-btn cam-zoom-in" id="cameraZoomIn" title="Zoom in" aria-label="Zoom in">＋</button>
+              <button type="button" class="ld-btn cam-zoom-out" id="cameraZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
+              <button type="button" class="ld-btn ld-reset" id="cameraReset" title="Reset the camera" aria-label="Reset the camera">⟲</button>
+            </div>
+            <div class="ld-values cam-values">
+              <label>Turn <input type="number" id="cameraTurnIn" min="0" max="359" step="1" inputmode="numeric">°</label>
+              <label>View <input type="number" id="cameraViewIn" min="0" max="100" step="1" inputmode="numeric">%</label>
+              <label>Zoom <input type="number" id="cameraZoomInput" min="25" max="400" step="1" inputmode="numeric">%</label>
+            </div>
+            <input type="hidden" id="cameraTurn" value="0">
+            <input type="hidden" id="cameraView" value="0">
+            <input type="hidden" id="cameraZoom" value="100">
           </div>
           <div class="field full" id="tint1Row">
             <label id="tint1Label" data-str="label.tint">Tint</label>
@@ -1204,10 +1241,13 @@ held on till bright~B</code></p>
       <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: your shelf, copy, Tidy, Revert, Clear, the wiki" title="Your shelf, copy and share, Tidy, Revert, Clear, the wiki">⋯</button>
     </div>
     <div class="forge-body">
+      <!-- (Ruby) the Athanor shows when it is busy, as the page does: a shimmer under the bar, and what it is making -->
+      <div class="work-bar forge-work-bar" aria-hidden="true"><i></i></div>
       <div class="forge-palette" id="forgePalette"></div>
       <div class="parent-drawflow forge-canvas" id="forgeCanvas"></div>
       <!-- what it makes: bottom right, over the grid; as small as it can be around the preview -->
       <aside class="forge-dock" id="forgeDock" aria-label="What it makes">
+        <p class="forge-working" id="forgeWorking" aria-live="polite"></p>
         <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes. Click or tap to enlarge."></canvas>
         <div class="forge-dock-row">
           <span class="forge-status" id="forgeStatus"></span>

@@ -61,6 +61,14 @@ check('the renderer records each run as fractions of the page, and asks one more
   /let TEXT_LAYOUT = '';/.test(cr) && /textRuns\.push\(\[x0\/W, top\/H, x1\/W, \(top \+ h\)\/H, lineNo, stanza, rhyme\]/.test(cr) && /if\(lay !== TEXT_LAYOUT\)\{ TEXT_LAYOUT = lay;/.test(cr));
 check('Text Clearing takes a soft mask of the words out of each surface layer (destination-out), the mask made small in page fractions',
   /c\.globalCompositeOperation = 'destination-out'; c\.globalAlpha = Math\.min\(1, amount\);/.test(cr) && /const mw = 192, mh = Math\.max\(8, Math\.round\(192\*H\/W\)\)/.test(cr));
-check('only a graph with The Poem in it is sent the layout', /const text = graph && graphUsesPoem\(graph\) \? TEXT_LAYOUT : undefined;/.test(cr));
+check('only a graph with The Poem in it, or a texture whose chain reads it (Circuit Board), is sent the layout',
+  /const text = \(graph && graphUsesPoem\(graph\)\) \|\| chainReadsPoem\(type\) \? TEXT_LAYOUT : undefined;/.test(cr));
+// Circuit Board keeps clear of the poem's lines, keyed by them coarsely: a keystroke inside a line draws nothing again
+{ const T = await import('../textureGenerators.js');
+  const a = '0.1,0.2,0.3,0.23,0,0,0;0.31,0.2,0.4,0.23,0,0,0', b = '0.1,0.2,0.3,0.23,0,0,0;0.31,0.2,0.401,0.23,0,0,0', c = a + ';0.1,0.3,0.6,0.33,1,0,0';
+  check('Circuit Board reads the poem by whole lines: typing inside a line keeps its key; a new line changes it',
+    T.chainReadsPoem('circuit') && !T.chainReadsPoem('rainwater') && T.poemLines(a) === T.poemLines(b)
+    && T.textureKeyFor('circuit', 64, 64, { text: a }) === T.textureKeyFor('circuit', 64, 64, { text: b }) && T.textureKeyFor('circuit', 64, 64, { text: a }) !== T.textureKeyFor('circuit', 64, 64, { text: c })
+    && T.textureKeyFor('rainwater', 64, 64, { text: a }) === T.textureKeyFor('rainwater', 64, 64, { text: c })); }
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

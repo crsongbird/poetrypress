@@ -127,6 +127,16 @@ if(canvasOK){
   check('…and at every texture\'s own defaults, every Knob stands at its slider\'s default', every);
   check('a surface that is not a graph has nothing to open', A.athanorStarterAt('astral', [], []) === null); }
 
+// ---- Under Glass (Ruby: a glass to lay over another surface): clean glass leaves what is under it alone ----
+{ const clean = A.evalAthanor(JSON.stringify(A.athanorStarter('underglass')), 24, 32, { seed: 9, knobs: [0, 0, 0, 0, 0, 0, 0, 0], tints: [], light: 315, lightTilt: 70 }, {});
+  check('Under Glass with every knob at 0 is exactly mid-gray, which its blend leaves alone', !!clean && [clean.r, clean.g, clean.b].every(ch => ch.every(v => Math.round(v*255) === 128)));
+  const pane = JSON.stringify({ v: 4, drawflow: { Home: { data: {
+    1: { id: 1, name: 'colour', data: { hex: '#336699' }, inputs: {}, outputs: { output_1: { connections: [] } } },
+    2: { id: 2, name: 'glasspane', data: {}, inputs: { input_1: { connections: [{ node: '1', input: 'output_1' }] } }, outputs: { output_1: { connections: [] } } },
+    3: { id: 3, name: 'surface', data: { name: 'G', ground: 'colour' }, inputs: { input_1: { connections: [{ node: '2', input: 'output_1' }] } }, outputs: {} } } } } });
+  const seen = A.evalAthanor(pane, 16, 16, { seed: 1, knobs: [], tints: [] }, {});
+  check('…and a Glass Pane with nothing on its glass shows its picture exactly', !!seen && seen.r.every(v => Math.round(v*255) === 0x33) && seen.b.every(v => Math.round(v*255) === 0x99)); }
+
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

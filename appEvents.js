@@ -30,6 +30,7 @@ import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
 import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
+import { cameraGuide } from './stepsGenerative.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser, chMatches } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
@@ -168,7 +169,7 @@ const LOCKABLE = [
   'bgColor1Hex','bgColor2Hex','bgColor3Hex','bgColor4Hex',
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
-  'fontFamily','textureType','textureOpacity','textureBlend','textureLight',
+  'fontFamily','textureType','textureOpacity','textureBlend','textureLight','cameraTurn',
   'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
 ];
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
@@ -336,16 +337,16 @@ toggleSubblock('textureToggle','textureBlock');
 // other's settings wait in state.layers.other, under the same keys the upper saves with. A look always
 // saves the upper under its own keys and the lower as `baseLayer`, whichever the controls show; Swap
 // trades the two whole, locks included.
-const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt',
+const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround'];
-const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'textureSeedValue',
+const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
   'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
 /** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
 function freshLower(){
   const defs = paramsFor('grain'), caps = capsFor('grain');
-  const L = { textureType: 'grain', textureOpacity: 50, textureBlend: 'overlay', textureLight: $('textureLight').value, textureLightTilt: '100',
+  const L = { textureType: 'grain', textureOpacity: 50, textureBlend: 'overlay', textureLight: $('textureLight').value, textureLightTilt: '100', cameraTurn: '0', cameraView: '0', cameraZoom: '100',
     textureSeed: ((parseInt($('textureSeedValue').value, 10) || 0) ^ 0x5bd1e995) >>> 0, textureSeedWords: '', forgeGraph: '' };
   defs.forEach((d, i) => { L['texP' + (i + 1)] = String(d.def); });
   (caps.tintDefaults || []).forEach((c, i) => { L['textureTint' + (i + 1)] = c === 'accent1' ? $('accent1ColorHex').value : c === 'accent2' ? $('accent2ColorHex').value : c; });
@@ -975,7 +976,26 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireBaseLayer(retireBlend(retireLookOnce(s))); }
+function retireLook(s){ return retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))); }
+/** A look from before the camera dial (Saturn–Rhea and earlier): Lichtenberg's camera sliders (Zoom, Turn, View) and
+ *  Ringworld's light dial (it was the camera) onto the camera dial; Lichtenberg's sliders as they are now (the strike
+ *  where the light dial pointed; Embers as charred wood with a Glow Hue; Slide moved to the last slider). */
+function retireCameraLayer(L){
+  if(!L || L.cameraTurn !== undefined) return L;
+  const n = (v, d) => (v === undefined || v === null || v === '' || isNaN(+v)) ? d : +v;
+  if(L.textureType === 'lichtenberg'){
+    const m = n(L.texP4, 0), out = { ...L, texP4: String(m >= 75 ? 100 : 0), texP5: String(n(L.textureLight, 315)), texP6: '50', texP7: '100', texP8: String(n(L.texP6, 0)),
+      cameraTurn: String(n(L.texP7, 0)), cameraView: String(n(L.texP8, 0)), cameraZoom: String(n(L.texP5, 100)) };
+    if(m >= 25 && m < 75 && (!L.textureTint5 || /^#?0{6}/i.test(L.textureTint5))) out.textureTint5 = '#FF6A1A';
+    return out;
+  }
+  if(L.textureType === 'ringworld'){
+    const lens = n(L.texP8, 75), zoom = Math.round(100*Math.tan(37.5*Math.PI/180)/Math.tan(lens*Math.PI/360));
+    return { ...L, texP8: '0', cameraTurn: String(n(L.textureLight, 40)), cameraView: String(Math.min(100, n(L.textureLightTilt, 55))), cameraZoom: String(zoom) };
+  }
+  return L;
+}
+function retireCamera(s){ if(!s) return s; let o = retireCameraLayer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireCameraLayer(o.baseLayer) }; return o; }
 /** Before every blend was offered (format 3), a surface's blend menu held only the blends made for it, and
  *  a saved blend it didn't hold fell back to the first of them: so it does here. */
 function retireBlend(s){
@@ -1143,6 +1163,9 @@ function restoreSurfaceDetails(s){
     // looks saved before the dial had raking light only: 100
     if($('textureLightTilt')) $('textureLightTilt').value = s.textureLightTilt !== undefined ? s.textureLightTilt : '100';
     syncLightPad(); }
+  // the camera: the look's own, or where its surface's camera starts
+  { const d = cameraStart(s.textureType || $('textureType').value);
+    putCamera(s.cameraTurn !== undefined ? s.cameraTurn : d.turn, s.cameraView !== undefined ? s.cameraView : d.view, s.cameraZoom !== undefined ? s.cameraZoom : d.zoom); }
   if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
   if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
   // material hues: white (none) unless the look carries them
@@ -1528,6 +1551,9 @@ function applyPreset(p){
   // and its direction: a preset's own, or where its texture's dial starts (Harsh Rain: straight down)
   { const ld = p.textureLight !== undefined ? p.textureLight : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
     if(ld != null){ $('textureLight').value = String(ld); syncLightPad(); } }
+  // and its camera: the preset's own, or where its texture's camera starts
+  { const d = cameraStart(p.textureType || $('textureType').value);
+    putCamera(p.cameraTurn ?? d.turn, p.cameraView ?? d.view, p.cameraZoom ?? d.zoom); }
 
   if(p.font){
     const idx = FONTS.findIndex(f=>f.family===p.font);
@@ -2089,6 +2115,13 @@ function syncTextureTools(resetToDefaults){
     if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = labelText(lbl); setLabelText(lbl, caps.dial || lbl.dataset.lightName); }
   }
 
+  // THE CAMERA DIAL: shown for a surface with a camera, beside the light dial, the hues below in two columns
+  { const cam = caps.camera, row = $('cameraRow'), tools = $('textureToolRow');
+    if(row && row.classList) row.classList.toggle('tool-hidden', !cam);
+    if(tools && tools.classList) tools.classList.toggle('has-camera', !!cam);
+    if(cam && resetToDefaults && !state.locks.has('cameraTurn')) putCamera(cam.turn ?? 0, cam.view ?? 0, cam.zoom ?? 100);
+    else syncCameraPad(); }
+
   const t1 = $('tint1Row'), t2 = $('tint2Row');
   // a hue the texture doesn't use is HIDDEN, as an unused slider is (Ruby)
   ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
@@ -2238,6 +2271,98 @@ if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEv
   if(lv === 'gentle') setLight(deg + (Math.random()*2 - 1)*15, t + (Math.random()*2 - 1)*8, true);
   else if(lv === 'wild') setLight(Math.random()*360, Math.random()*dialMax(), true);
   else setLight(Math.random()*360, t, true); });
+// ---------- THE CAMERA DIAL ----------
+// (Ruby: a second dial for the camera, so the light dial is the light's alone.) Its handle is where the camera stands:
+// round the dial, its turn; drawn out from the middle, how low it looks (the middle straight down — or, on Ringworld,
+// straight up — the rim low across); ＋ and −, a wheel or a pinch zoom it. While it moves, a guide of the shot is drawn
+// over the page at once (a plank's grid, a ring's edges), and the surface follows when it has been made.
+/** Where a surface's camera starts. */
+function cameraStart(type){ const c = (capsFor(type) || {}).camera || {}; return { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100 }; }
+function cameraNow(){ const v = id => parseFloat(($(id) || {}).value); const t = v('cameraTurn'), w = v('cameraView'), z = v('cameraZoom');
+  return { turn: isNaN(t) ? 0 : t, view: isNaN(w) ? 0 : w, zoom: isNaN(z) ? 100 : z }; }
+/** The camera into its three hidden fields (no render: a look or a preset is being put back). */
+function putCamera(turn, view, zoom){
+  const set = (id, v) => { const el = $(id); if(el) el.value = String(v); };
+  set('cameraTurn', Math.round(((+turn || 0) % 360 + 360) % 360)); set('cameraView', Math.round(Math.max(0, Math.min(100, +view || 0))));
+  set('cameraZoom', Math.round(Math.max(25, Math.min(400, +zoom || 100)))); syncCameraPad();
+}
+function syncCameraPad(){
+  const c = cameraNow(), k = Math.max(0, Math.min(100, c.view))/100, a = c.turn*Math.PI/180;
+  const set = (id, attrs) => { const el = $(id); if(el && el.setAttribute) for(const key in attrs) el.setAttribute(key, attrs[key]); };
+  const hx = Math.sin(a)*15*k, hy = -Math.cos(a)*15*k;
+  set('cameraHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
+  set('cameraSight', { x1: hx.toFixed(2), y1: hy.toFixed(2), x2: '0', y2: '0', opacity: k < 0.04 ? '0' : '0.8' });
+  // the frame: what the camera sees, turned with it, smaller as it zooms in
+  const f = Math.max(0.2, Math.min(2.4, 100/c.zoom)), w = 16*f, h = 22*f;
+  set('cameraFrame', { x: (-w/2).toFixed(2), y: (-h/2).toFixed(2), width: w.toFixed(2), height: h.toFixed(2), transform: `rotate(${c.turn.toFixed(1)})` });
+  const dial = $('cameraDial');
+  if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', c.view >= 99 && Math.abs(((c.turn - +t.dataset.deg + 540) % 360) - 180) < 0.5));
+  if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `turned ${Math.round(c.turn)}°, ${Math.round(c.view)}% low, zoom ${Math.round(c.zoom)}%`);
+  const ae = typeof document !== 'undefined' ? document.activeElement : null;
+  for(const [id, v] of [['cameraTurnIn', c.turn], ['cameraViewIn', c.view], ['cameraZoomInput', c.zoom]]){ const el = $(id); if(el && ae !== el) el.value = String(Math.round(v)); }
+}
+function setCamera(turn, view, zoom, commit){
+  if(!commit) draftWhileDragging();
+  putCamera(turn, view, zoom); scheduleRender(); drawCameraGuide(!commit);
+  if(commit && typeof commitSoon === 'function') commitSoon();
+}
+// THE GUIDE: the shot as lines over the page, at once, while the surface is still being made
+let camGuideT = 0;
+function drawCameraGuide(on){
+  const caps = capsFor(($('textureType') || {}).value) || {}, kind = caps.camera && caps.camera.guide;
+  const pc = $('poemCanvas'), wrap = pc && pc.parentElement;
+  if(!kind || !pc || !wrap || typeof document.createElement !== 'function' || !pc.getBoundingClientRect) return;
+  let g = wrap.querySelector && wrap.querySelector('.cam-guide');
+  if(!g){ g = document.createElement('canvas'); g.className = 'cam-guide'; g.setAttribute('aria-hidden', 'true'); wrap.appendChild(g); }
+  clearTimeout(camGuideT);
+  if(!on){ camGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
+  const r = pc.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dpr = Math.min(1.5, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
+  Object.assign(g.style, { left: (r.left - wr.left) + 'px', top: (r.top - wr.top) + 'px', width: r.width + 'px', height: r.height + 'px' });
+  g.width = Math.max(1, Math.round(r.width*dpr)); g.height = Math.max(1, Math.round(r.height*dpr));
+  const x = g.getContext('2d'); if(!x) return;
+  const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), v = id => parseFloat(($(id) || {}).value);
+  const ring = kind === 'ring' ? { band: v('texP1'), walls: v('texP4'), altitude: v('texP7'), place: v('texP8'), lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100 } : null;
+  const lines = cameraGuide(kind, aspX, aspY, c, ring);
+  x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
+  const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';
+  for(const pass of [0, 1]) for(const L of lines){
+    x.strokeStyle = pass ? accent : 'rgba(0,0,0,.55)'; x.globalAlpha = L.bold ? 0.95 : 0.6;
+    x.lineWidth = (L.bold ? 2.2 : 1)*dpr*(pass ? 1 : 2.6);
+    x.beginPath(); L.pts.forEach((p, i) => i ? x.lineTo(p[0]*u, p[1]*u) : x.moveTo(p[0]*u, p[1]*u)); x.stroke(); }
+  g.classList.add('on');
+}
+if($('cameraDial') && $('cameraDial').addEventListener){
+  const dial = $('cameraDial'), ptrs = new Map();
+  let pinch0 = 0, zoom0 = 100, dragging = false;
+  const fromPointer = (e, snapTicks) => {
+    const rc = dial.getBoundingClientRect(), x = (e.clientX - rc.left)/rc.width*100 - 50, y = (e.clientY - rc.top)/rc.height*100 - 50;
+    let turn = Math.atan2(x, -y)*180/Math.PI, view = Math.min(100, Math.hypot(x, y)/30*100);
+    if(snapTicks || view > 88){ const nearest = Math.round(turn/45)*45; if(Math.abs(nearest - turn) < 7) turn = nearest; }
+    if(Math.abs(view - 50) < 4) view = 50;
+    if(view > 96) view = 100;
+    const c = cameraNow(); setCamera(turn, view, c.zoom, false);
+  };
+  dial.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); if(dial.setPointerCapture) dial.setPointerCapture(e.pointerId);
+    if(ptrs.size === 2){ const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; zoom0 = cameraNow().zoom; dragging = false; return; }
+    dragging = true; fromPointer(e, e.target && e.target.classList && e.target.classList.contains('ld-tick')); });
+  dial.addEventListener('pointermove', e => { if(!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    // two fingers: a pinch zooms, as on a photo
+    if(ptrs.size === 2){ const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, c = cameraNow(); setCamera(c.turn, c.view, zoom0*d/pinch0, false); return; }
+    if(dragging) fromPointer(e, false); });
+  const end = e => { ptrs.delete(e.pointerId); if(ptrs.size === 0){ dragging = false; drawCameraGuide(false); if(typeof commitSoon === 'function') commitSoon(); } };
+  dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
+  dial.addEventListener('wheel', e => { e.preventDefault(); const c = cameraNow(); setCamera(c.turn, c.view, c.zoom*Math.exp(-e.deltaY*0.0015), false); clearTimeout(dial._wt); dial._wt = setTimeout(() => { drawCameraGuide(false); if(typeof commitSoon === 'function') commitSoon(); }, 350); }, { passive: false });
+  // keys: arrows turn it by 15°, page up/down lower and raise it, + and − zoom
+  dial.addEventListener('keydown', e => { const c = cameraNow();
+    const map = { ArrowRight: [15, 0, 1], ArrowDown: [15, 0, 1], ArrowLeft: [-15, 0, 1], ArrowUp: [-15, 0, 1], PageUp: [0, -10, 1], PageDown: [0, 10, 1], '+': [0, 0, 1.25], '=': [0, 0, 1.25], '-': [0, 0, 0.8] };
+    if(map[e.key]){ e.preventDefault(); const [dt, dv, dz] = map[e.key]; setCamera(c.turn + dt, c.view + dv, c.zoom*dz, true); } });
+}
+for(const [id, f] of [['cameraZoomIn', 1.25], ['cameraZoomOut', 0.8]]) if($(id) && $(id).addEventListener) $(id).addEventListener('click', () => { const c = cameraNow(); setCamera(c.turn, c.view, c.zoom*f, true); });
+if($('cameraReset') && $('cameraReset').addEventListener) $('cameraReset').addEventListener('click', () => { const d = cameraStart($('textureType').value); setCamera(d.turn, d.view, d.zoom, true); });
+// typing the camera's numbers sets it exactly
+for(const id of ['cameraTurnIn', 'cameraViewIn', 'cameraZoomInput']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
+  const c = cameraNow(), n = k => { const v = parseFloat(($(k) || {}).value); return isNaN(v) ? null : v; };
+  setCamera(n('cameraTurnIn') ?? c.turn, n('cameraViewIn') ?? c.view, n('cameraZoomInput') ?? c.zoom, true); });
 /** How far the dial reaches: past its rim (130) only for engine-lit textures. */
 function dialMax(){ const t = $('textureType'); return (t && (capsFor(t.value) || {}).lowLight) ? 130 : 100; }
 syncLightPad();
@@ -2656,6 +2781,8 @@ syncTextureTools(true);
 // them its default. A button sets what that reading names (knobs, hues, blend,
 // light) the way ⚄ Randomize does: a LOCKED control keeps its value, so
 // readings can be mixed (lock the hues of one, apply another's knobs).
+// (the surface menu's chooser, once it is attached: the applied reading's name rides in its field)
+let surfaceChooser = null;
 function paintElements(){
   const list = elementsFor($('textureType').value), on = state.ui.element;
   const row = $('elementRow'); if(!row || !row.querySelectorAll) return;
@@ -2669,9 +2796,10 @@ function paintElements(){
   });
   const v = list.find(e => e.el === on);
   if(row.dataset) row.dataset.applied = v ? `${v.glyph} ${v.name}` : '';      // (§Reading in a poem)
+  // the reading's name shows in the variant's own field (Ruby); this quiet line is for screen readers
+  if(surfaceChooser && surfaceChooser.refresh) surfaceChooser.refresh();
   const name = $('elementName'); if(!name) return;
-  name.textContent = '';
-  if(v){ const b = document.createElement('b'); b.textContent = v.name; name.appendChild(b); name.appendChild(document.createTextNode(` · ${v.element}${v.isDefault ? ', the default' : ''}`)); }
+  name.textContent = v ? `${v.name}, ${v.element}${v.isDefault ? ', the default' : ''}` : '';
 }
 function applyElement(id){
   const type = $('textureType').value, v = elementsFor(type).find(e => e.el === id);
@@ -2683,6 +2811,7 @@ function applyElement(id){
       // the texture as it always was: its knobs, hues, blend and light
       syncTextureParams(true); syncTextureTools(true);
       if(!state.locks.has('textureLight')) setLight(caps.lightDeg != null ? caps.lightDeg : LIGHT_DEFAULT.deg, caps.lightTilt != null ? caps.lightTilt : LIGHT_DEFAULT.tilt, false);
+      if(caps.camera && !state.locks.has('cameraTurn')){ const d = cameraStart(type); putCamera(d.turn, d.view, d.zoom); }
       return;
     }
     (v.k || []).forEach((x, i) => { const d = defs[i], el = $('texP' + (i + 1)); if(!d || !el) return;
@@ -2691,6 +2820,7 @@ function applyElement(id){
     if(v.t5 && caps.hue5) setColorField('textureTint5Hex', v.t5);
     if(v.blend && caps.blends.includes(v.blend)){ $('textureBlend').value = v.blend; fire($('textureBlend')); }
     if(v.light && caps.light && !state.locks.has('textureLight')) setLight(v.light[0], v.light[1], false);
+    if(v.cam && caps.camera && !state.locks.has('cameraTurn')) putCamera(v.cam[0], v.cam[1], v.cam[2]);
   });
   state.ui.element = id;
   paintElements(); scheduleRender();
@@ -3037,7 +3167,7 @@ function applyAthanorGraph(redraw = true){
 function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
-  return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100),
+  return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100), camera: cameraNow(),
     tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined };   // (the page's backdrop, for a graph with a Page Backdrop)
@@ -3783,7 +3913,7 @@ const WORKING_WORDS = {
   aurora: 'Combing the silk', aurorasky: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',
   suminagashi: 'Floating the ink', grain: 'Developing the grain', metalleaf: 'Laying the leaf', flowers: 'Opening the lotuses',
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
-  cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', sigils: 'Inscribing the sigils',
+  cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
   tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
@@ -3797,12 +3927,14 @@ let workShowT = 0, workHideT = 0, workShownAt = 0;
 function setWorking(what){
   if(!workingLine || !workingLine.classList) return;
   clearTimeout(workShowT); clearTimeout(workHideT);
+  // (the Athanor, over the page, shows the same words over its preview)
+  const fw = $('forgeWorking'), both = f => { f(workingLine); if(fw && fw.classList) f(fw); };
   if(what){
     const words = WORKING_WORDS[what] || 'Making the surface';
-    workShowT = setTimeout(() => { workingLine.textContent = words + '…'; workingLine.classList.add('on'); workShownAt = Date.now(); }, 400);
+    workShowT = setTimeout(() => { both(el => { el.textContent = words + '…'; el.classList.add('on'); }); workShownAt = Date.now(); }, 400);
   } else {
     const stay = Math.max(0, 700 - (Date.now() - workShownAt));
-    workHideT = setTimeout(() => workingLine.classList.remove('on'), workingLine.classList.contains('on') ? stay : 0);
+    workHideT = setTimeout(() => both(el => el.classList.remove('on')), workingLine.classList.contains('on') ? stay : 0);
   }
 }
 if(document.addEventListener) document.addEventListener('vellum-working', e => setWorking(e && e.detail && e.detail.what));
@@ -3872,6 +4004,7 @@ function holdSurface(value, tile){
 // THE ATHANOR'S OPEN, AS TILES: a graph's thumbnail (a starter, a study) made in the worker and kept by its wiring;
 // an app texture's is the surface menu's own, from the same keeping; a kept surface's is its shelf thumbnail
 let surfaceTiles = null;
+const textureNameOf = v => { const o = Array.from((($('textureType') || {}).options) || []).find(o => o.value === v); return o ? String(o.textContent || '').trim() : ''; };
 function openTileThumb(value, canvas, done){
   const v = String(value);
   if(v.startsWith('kept:')) return keptThumb(keptByValue(v), canvas);
@@ -3918,5 +4051,7 @@ function openTileStamp(value){
   surfaceTiles = { thumb, stamp, extra };
   // (one menu serves both surfaces: the layer bar says which one it changes)
   const sel = $('textureType');
-  try { if(sel) CHOOSERS.push(attachChooser(sel, { id: sel.id, title: CHOOSER.surfaceTitle, thumb, extra, glyphFor, stamp, size: 160, hold: holdSurface })); } catch(e){ /* the plain menu still works */ }
+  // (Ruby) the reading applied, when it isn't the surface's own name, rides quietly in the field: "Deep Field · Quasar"
+  const sub = value => { if(value !== ($('textureType') || {}).value) return ''; const v = elementsFor(value).find(e => e.el === state.ui.element); return v && !v.isDefault && v.name !== textureNameOf(value) ? v.name : ''; };
+  try { if(sel) CHOOSERS.push(surfaceChooser = attachChooser(sel, { id: sel.id, title: CHOOSER.surfaceTitle, thumb, extra, glyphFor, stamp, size: 160, hold: holdSurface, sub })); } catch(e){ /* the plain menu still works */ }
 }

@@ -157,6 +157,15 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 - **C4 · An environment from the page.** The page's own backdrop colors as
   the sky the surface reflects: Filter Forge's HDRI, cheaply.
   - Depends on: B1.
+- **C5 · The camera dial for other textures** (Ruby: explore the second
+  dial). Done for Lichtenberg Figures and Ringworld (`caps.camera`, the
+  Camera Dial part). Candidates, each judged by its renders:
+  - the textures with a Tilt or View knob today (Scrying Pool, Dune
+    Ripples, Moss on Stone, Rain on Water), whose knob would become the
+    dial's View, an old look translated in `retireLook`;
+  - Contour Map and Painted Landscape (a land seen from above or across);
+  - Black Hole (the camera's orbit) and Night City (where you stand).
+  - Prove: at the old knob's values the picture is unchanged (fingerprints).
 
 ### D · Controls (Filter Forge's control components and remappers)
 
@@ -313,7 +322,7 @@ superseded) wait for Stage 4.
 
 ### Stage 2 · Features: the engine, the controls, the poem
 - **B1** a lit Surface (CPU and shader together), then **B2** channels view.
-- **C1–C4** lighting (C needs B1).
+- **C1–C4** lighting (C needs B1); **C5** the camera dial on more textures.
 - **D1**'s dial, **D3**'s two handles, **D4** curve control.
 - **G2** punctuation (needs F2), **G4** Emotional Seed (needs A3), **G5**
   the box as an input.
@@ -350,7 +359,8 @@ superseded) wait for Stage 4.
     from the dial; clouds mostly, now and then something flying across
     (aircraft and contrails, birds, balloons, dragons, witches), seeded.
   - Presets for Ringworld (Ruby: in this pass), Rain on Water, Circuit
-    Board's eras and Markings, and Lichtenberg's camera.
+    Board's eras and Markings, Lichtenberg's camera, and Under Glass over
+    another surface (Two Surfaces).
 
 ```
  STAGE 1 · COMPONENTS        STAGE 2 · FEATURES                 STAGE 3 · TEXTURES          STAGE 4 · PRESETS

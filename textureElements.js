@@ -24,6 +24,7 @@
  *   t5     the fifth hue (Glow / Material / Snow Hue) where it matters
  *   blend  a blend mode from the texture's own list
  *   light  [direction°, distance 0–100 (past 100: lower, where allowed)]
+ *   cam    [turn°, view 0–100, zoom %] for a texture with a camera dial
  * The default element carries only its name: applying it puts the texture's
  * own defaults back.
  *
@@ -57,9 +58,9 @@ export const TEXTURE_ELEMENTS = {
     wind:  { name: 'Quatrefoil Seal', k: [90, 7, 70, 67, 65, 30],   t: ['#E8F2DC', '#22301A'], blend: 'soft-light' } },
   // 🝆 grown and generated
   lichtenberg: { def: 'earth', earth: { name: 'Lichtenberg Figures' },
-    fire:  { name: 'Live Embers',     k: [70, 55, 2, 50, 140, 0, 0, 0],  t: ['#B88A5C', '#5A3820'], light: [300, 100] },
-    water: { name: 'Acrylic Strike',  k: [75, 40, 1, 100, 120, -20, 0, 0], t: ['#B88A5C', '#5A3820'], light: [330, 100] },
-    wind:  { name: 'Close Strike',    k: [85, 75, 2, 0, 260, 30, 0, 0],   t: ['#E2C9A4', '#8C6A48'], light: [20, 100] } },
+    fire:  { name: 'Live Embers',     k: [70, 55, 2, 0, 300, 55, 110, 0],    t: ['#B88A5C', '#5A3820'], t5: '#FF6A1A', light: [300, 100], cam: [0, 0, 140] },
+    water: { name: 'Acrylic Strike',  k: [75, 40, 1, 100, 330, 50, 100, -20], t: ['#B88A5C', '#5A3820'], light: [330, 100], cam: [0, 0, 120] },
+    wind:  { name: 'Etched Brass',    k: [80, 60, 2, 67, 20, 65, 90, 0],     t: ['#E8C98A', '#5A4020'], t5: '#9FE0FF', light: [20, 100], cam: [30, 45, 115] } },
   growth: { def: 'earth', earth: { name: 'Ruffled Growth' },
     fire:  { name: 'Brain Coral',     k: [90, 130, 2, 70, 160, 20], t: ['#FFD2B8', '#5A1A12'], blend: 'overlay' },
     water: { name: 'Sea Lettuce',     k: [60, 220, 3, 45, 100, 0], t: ['#D8FFF0', '#0E3A3A'], blend: 'soft-light' },
@@ -176,6 +177,11 @@ export const TEXTURE_ELEMENTS = {
     fire:  { name: 'Sunburst Seal', k: [160, 160, 85], t: ['#FFD27A', '#6A1206'], blend: 'hard-light' },
     water: { name: 'Banknote Blue', k: [100, 180, 30], t: ['#BFE6F0', '#0A2A4A'], blend: 'hard-light' },
     wind:  { name: 'Spirograph',    k: [70, 100, 60],  t: ['#F2FFF0', '#1E3A2A'], blend: 'hard-light' } },
+  // Under Glass: its knobs Reflection, Scratches, Swirl, Smudges, Dust & Spots, Cracks, Waviness, Edge
+  underglass: { def: 'wind', wind: { name: 'Under Glass' },
+    fire:  { name: 'Shattered Pane',     k: [45, 30, 15, 20, 25, 70, 25, 0],   t: ['#FFF0DC', '#000000'], light: [300, 70] },
+    water: { name: 'Rain-Spotted Window', k: [55, 15, 10, 25, 100, 0, 55, 0],  t: ['#D4E8FF', '#000000'], light: [20, 60] },
+    earth: { name: 'Old Shop Window',    k: [40, 75, 75, 70, 55, 0, 70, 60],  t: ['#FFF0D2', '#2A2418'], blend: 'hard-light', light: [135, 85] } },
   stainedglass: { def: 'water', water: { name: 'Stained Glass' },
     fire:  { name: 'Rose Window',      k: [70, 110, 70, 0, 34, 100],   t: ['#C8102E', '#1E3FA0'], light: [180, 80] },
     wind:  { name: 'Landscape Window', k: [80, 70, 10, 100, 75, 50],   t: ['#BFD8C8', '#E8EEE0'] },
@@ -278,9 +284,9 @@ export const TEXTURE_ELEMENTS = {
     wind:  { name: 'Windswept Lake', k: [160, 90, 20, 30, 0, 60], t: ['#E6F5EE', '#1E3A30'] },
     earth: { name: 'Bog Water',      k: [120, 15, 80, 40, 80, 20], t: ['#B8A870', '#141008'], blend: 'overlay' } },
   ringworld: { def: 'wind', wind: { name: 'Ringworld' },
-    fire:  { name: 'Burning Arch', k: [55, 70, 25, 40, 70, 50, 40, 75], t: ['#B8643A', '#E8885A'], light: [40, 55] },
-    water: { name: 'Ocean Ring',   k: [65, 40, 75, 25, 60, 85, 55, 85], t: ['#5E8F6A', '#7FB4E6'], light: [330, 50] },
-    earth: { name: 'Iron Desert',  k: [40, 80, 5, 60, 30, 92, 30, 70],  t: ['#C8925A', '#D9B48A'], light: [15, 48] } },
+    fire:  { name: 'Burning Arch', k: [55, 70, 25, 40, 70, 50, 40, 0],   t: ['#B8643A', '#E8885A'], cam: [40, 55, 100] },
+    water: { name: 'Ocean Ring',   k: [65, 40, 75, 25, 60, 85, 55, 0],   t: ['#5E8F6A', '#7FB4E6'], cam: [330, 50, 84] },
+    earth: { name: 'Iron Desert',  k: [40, 80, 5, 60, 30, 92, 30, -40],  t: ['#C8925A', '#D9B48A'], cam: [15, 48, 110] } },
   rainwater: { def: 'water', water: { name: 'Rain on Water' },
     fire:  { name: 'Lantern Pond',   k: [120, 35, 70, 60, 70], t: ['#1A0E08', '#F2A24A'], light: [200, 60] },
     wind:  { name: 'Downpour',       k: [70, 95, 25, 90, 40], t: ['#141C22', '#C9D4DC'], light: [320, 100] },

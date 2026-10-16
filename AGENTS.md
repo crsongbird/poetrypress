@@ -225,7 +225,7 @@ default.
 | File | Role |
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
-| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes |
+| `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes. Touch: also the glass (Scratches, Smudges, Window Reflection, Shatter, Glass Pane) |
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh (`patDelaunay`), Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum; Split and Merge HSB and Lab, Median (`patRank`), Map Switch, Flip, Perspective |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in the Athanor's Open menu; bundled before chains.js |
@@ -482,6 +482,18 @@ Other parts of a look:
   - Build the ground on the frame's patch (larger than the page), light it
     from above, then render.
   - Tilt 0 returns `flat`: the texture is exactly its top-down self.
+- **The camera dial** (right of the light dial; Ruby: the light dial is only
+  the light):
+  - A texture opts in with `caps.camera {turn, view, zoom, guide}` (its
+    defaults; guide `'plane'` or `'ring'`). Its chain takes the camera from a
+    `camdial` part (Turn, View, Zoom), wired like a knob.
+  - `opts.camera` → `cameraOf()` → the cache key `_cm` and `ctx.camera`; only
+    a texture with the caps keys on it. Layer keys `cameraTurn/View/Zoom`,
+    locked with the light (LOCKABLE), saved and restored (`putCamera`).
+  - Deterministic: the same camera draws the same picture. While it moves,
+    `cameraGuide()` draws a wireframe of the shot over the preview (fast, no
+    render); the render follows on release.
+  - Phone: the two dials side by side, the hues under both in two columns.
 - **The report:** pmlVars drops a line whose surface variable has nothing to
   say (`LINE_DROP`, `ctx.surfOff`). `§Build` shows the release name.
 - **Sounds** (murmur.js): a sound design is data (`MURMUR_DESIGN`).
@@ -998,6 +1010,18 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     them lights is copper with the chip's grey, so Charge powers it. The
     Markings are placed last, in room the board left (`CIR_SAYS`, `CIR_EGGS`,
     runes a–l in `CIR_FONT`): every word made up, no real marks or brands.
+  - Magitech is steampunk (Ruby): brass gears and riveted bars set with
+    crystals, valves, coils wound round traces; the brass is its own output
+    (`brass`), laid over the chips. No sigils.
+  - **The poem kept clear** (Ruby): The Poem's lines go into Keep Clear set
+    to "cutting it away": the board is routed as ever, then what lies under
+    the lines is lifted (a cut trace ends in a via). The chain says
+    `poem: 'lines'`, so it is given the layout as whole lines rounded to
+    1/64 (`poemLines`): typing inside a line draws nothing again. A trace
+    keeps its own `id` through the cut (its data pulses and era hash by it).
+    A structural fingerprint change (an extra canvas) with identical pixels
+    is accepted only after proof (a pixel comparison with HEAD) that no pixel
+    moved.
 - **Contour Map:** Terrain → Contour Lines (any gray map's isolines), inked
   by Mix over the Light Engine's hillshade.
 - **Crackle** (Fractured Glaze, chain `crackle`):
@@ -1018,12 +1042,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
       Light Engine.
     - One, two or three poles (Ruby chose this first growth over one whose
       poles always joined).
-    - It grows as it always did; Zoom and Slide are a camera on the result.
-    - Turn (7) and View (8) are the ground camera (`groundCam`, a pinhole
-      camera on the page's plane), wired into Wood and Discharge both. Turn 0
-      and View 0 are no camera at all. Past the page's top the rings
-      straighten (they never close round the pith), and far rings and
+    - It grows as it always did; Reach and Slide place it.
+    - The camera dial is the ground camera (`groundCam`, a pinhole camera
+      on the page's plane, with zoom), wired into the material and Discharge
+      both. Turn 0 and View 0 are no camera at all. Past the page's top the
+      rings straighten (they never close round the pith), and far rings and
       channels fade rather than shimmer.
+    - The light dial is only the light; Strike Angle (a slider) is where
+      the strike enters. Materials: Charred Wood, Slate (fixed grays),
+      Brass, Acrylic; Depth cuts the channels; the Glow Hue (black: none)
+      lights them as if they still burned.
   - **Ruffled Growth:** Differential Growth (on a spatial
     hash).
   - **Positioning:** generated textures take Zoom and Slide (along the
@@ -1049,14 +1077,24 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     rim wall, the star, the shadow squares or space, and hands on MAPS (along
     and across in band widths, distance, detail, daylight, air). It draws
     nothing; Noise at Coordinates lays the land and clouds on those maps.
-  - The Light Dial is wired in as the camera (direction: where you look;
-    height: how far up). The Light Engine takes its own light height
+  - The camera dial is the camera (turn: where you look round the ring;
+    view: how far up; zoom: the lens); Stand At places you across the band.
+    There is no light dial. The Light Engine takes its own light height
     (`from: 'its own height'`), bound to Daylight, as the star never moves.
   - Daylight places the shadow squares: 0 midnight, 50 the dusk line, 100
     noon. The haze is lit by the day where the camera stands; stars fade by
     day.
   - Corner rays are shared between pixels for its edges; keep `Math.hypot`
     out of its loops (it was a third of the time).
+  - **The construction** (`ringBuild`, from the seed; Ruby: never bare):
+    spires (tapered needles along each spot's own up, beacons at their tips),
+    scaffolding (unfinished floor: a lattice box-filtered by the pixel's
+    footprint, the void seen through it), spill mountains (in the chain:
+    Across → Map Range → × the land → added). Structures raises all of it;
+    at 0 a few still stand. One ring in seven shows the world's seam.
+  - The air is sampled densely where it is (near the camera, near the far
+    floor) and thins away past the walls; an even spacing stepped past the
+    thin air beside a low wall and left a black band.
 - **Rain on Water** (chain `rainwater`, Weather): Raindrops → Tint (sky to
   water by distance) → Displace by the ripples → Material → Glow on the
   splashes.
@@ -1085,6 +1123,23 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     above 0.
 - **Turing Skin:** Turing Pattern (Gray–Scott) → Map Range → Light Engine.
   The old Reaction–Diffusion part stays for old graphs.
+- **Under Glass** (chain `underglass`, Materials & Craft; Ruby: a glass to
+  lay over another surface): Window Reflection, Scratches, Smudges and
+  Shatter → Glass Pane over mid-gray (stepsTouch.js, `ug…`).
+  - The Glass Pane adds what the glass catches as a screen does, so with
+    every knob at 0 the texture is exactly 128 (chains.test proves it) and
+    any overlay blend leaves the page alone. Screen adds only light; Hard
+    Light also darkens, and works on dark pages (Overlay and Soft Light are
+    weak there).
+  - Refraction needs what is under the glass, so it happens only in a graph
+    (the starter A Picture Under Glass: Texture from the Menu into the
+    Pane's Picture). Two Surfaces is a blend: no bending.
+  - Scratches glint where they lie across the way to the light's own
+    reflection (`ugUnit`: the page's middle overhead, toward the light as
+    the dial is drawn out), so swirls ring the light.
+  - Each scratch, print, spot and speck is its own `mulberry32` draw: more
+    of one adds and moves none. Fingerprint ridges finer than the grid fade
+    into their smudge (a preview shows smudges, the export ridges).
 - **Veins of Light** (hidden): Growth Medium (strata, pebbles, sand, fibres, skin; its
   "ways") → Tendrils (Runions' space colonization, steered into the ways).
 - **Watercolor Wash:** Washes → Pigment → Pigment (any gray map laid as

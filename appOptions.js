@@ -510,7 +510,8 @@ export const PRESETS = [
   // ═══ Grown & generated (Jupiter–Eirene): Lichtenberg Figures, Ruffled Growth, the Aurora sky ═══
 { name: "Struck",   // surface: Lichtenberg Figures — two poles' discharge burned into a maple board
     bg1: "#D8BC92", text1: "#1E140C", outlineMode: "off", font: "Fraunces",
-    texture: true, textureType: "lichtenberg", textureOpacity: 100, textureBlend: 'source-over', texP1: 70, texP2: 55, texP3: 2, texP4: 0, texP5: 130, texP6: 0,
+    texture: true, textureType: "lichtenberg", textureOpacity: 100, textureBlend: 'source-over', texP1: 70, texP2: 55, texP3: 2, texP4: 0, texP5: 300, texP6: 50, texP7: 100, texP8: 0,
+    cameraTurn: 0, cameraView: 0, cameraZoom: 130,   // (its Zoom moved onto the camera dial; the strike where its light was)
     textureTint1: '#D2A877', textureTint2: '#6B4226', textureLight: '300',
     accent1: "#6B2E14", accent2: "#3A4A2A",
     spell: "⯣🝓{{⯔🜉⯚🜄🝆⯤ᛯ⯧⯡🜁🝰⯘ᕕ}}[[⯗⯙]]",
@@ -710,7 +711,7 @@ export const TEXTURE_GROUPS = [
   { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringworld'] },
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
-  { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackle', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass'] },
+  { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackle', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass', 'underglass'] },
   { glyph: '🝓', name: 'Pattern & Order', types: ['mathnoise', 'chladni', 'circuit', 'tessellate', 'guilloche', 'halftone'] },
   { glyph: '🝆', name: 'Grown & Generated', types: ['lichtenberg', 'growth', 'turing'] },
   { glyph: '⎐', name: 'Signs, Sigils & Cards', types: ['cards', 'knotwork', 'sigils', 'summoning'] },

@@ -30,7 +30,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 62 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 63 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
+check('the picker offers 63 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 64 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -39,10 +39,12 @@ check('every texture declares two params, plus an optional third that must be Fo
   Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
     || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf' || t === 'cards' || t === 'crackle' || t === 'rainwater') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
     // a camera's Tilt comes last (Scrying Pool's sixth, Dune Ripples' fourth)
-    // (Lichtenberg's camera goes on to eight: Turn and View)
-    || (t === 'lichtenberg' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt' && d[6].key === 'angle' && d[7].key === 'view')
+    // (Lichtenberg: its camera on the camera dial; eight of its own — the strike's angle, depth, channel width, slide)
+    || (t === 'lichtenberg' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'angle' && d[7].key === 'slide')
     // (Ringworld: eight, its camera on the dial and its light one of them)
     || (t === 'ringworld' && d.length === 8 && d[5].label === 'Daylight')
+    // (Under Glass: eight, each a thing the glass catches, Cracks and Edge last but one and last)
+    || (t === 'underglass' && d.length === 8 && d[5].label === 'Cracks' && d[7].label === 'Edge')
     // (Circuit Board's Era and Markings: seventh and eighth)
     || (t === 'circuit' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt' && d[6].key === 'era' && d[7].key === 'marks')
     || ((t === 'water' || t === 'wax' || t === 'stainedglass' || t === 'growth' || t === 'aurorasky' || t === 'knotwork' || t === 'veins') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')

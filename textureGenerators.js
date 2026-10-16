@@ -110,7 +110,8 @@ export const TEXTURE_PARAMS = {
                   // the one light: where the shadow squares stand (night → dawn → noon), and how high the light seems
                   {key:'tilt',  label:'Daylight',        min:0,  max:100, def:80,  unit:'', ticks:[0,50,100], names:['Night','Dawn','Noon']},
                   {key:'alt',   label:'Altitude',        min:0,  max:100, def:15,  unit:''},
-                  {key:'lens',  label:'Lens',            min:30, max:120, def:75,  unit:'°'}],
+                  // where across the band you stand: the middle, or near a wall (the lens is the camera dial's zoom)
+                  {key:'place', label:'Stand At',        min:-100, max:100, def:0, unit:''}],
   // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon
   rainwater:     [{key:'zoom',  label:'Ripple Size',     min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Rain',            min:0,  max:100, def:50,  unit:''},
@@ -209,6 +210,20 @@ export const TEXTURE_PARAMS = {
                   {key:'shape', label:'Scene',           min:0,  max:100, def:0,   unit:''},
                   {key:'hue',   label:'Glass Texture',   min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Cathedral','Hammered','Seedy','Opalescent']},
                   {key:'tilt',  label:'Window',          min:0,  max:100, def:0,   unit:'', ticks:[0,42,68,100], names:['Whole Page','Lancet Arch','Arcade','Round Window']}],
+  // UNDER GLASS (chains.js 'underglass'; Ruby: a glass to lay over another surface): what the glass catches, on mid-gray
+  underglass:    [{key:'reflect', label:'Reflection',    min:0,  max:100, def:55,  unit:''},
+                  {key:'scratch', label:'Scratches',     min:0,  max:100, def:40,  unit:''},
+                  // straight, in bunches (0) → wiped round and round by a cloth (100)
+                  {key:'swirl', label:'Swirl',           min:0,  max:100, def:30,  unit:''},
+                  // fingerprints and smears
+                  {key:'smudge', label:'Smudges',        min:0,  max:100, def:35,  unit:''},
+                  {key:'dust',  label:'Dust & Spots',    min:0,  max:100, def:30,  unit:''},
+                  // 0: whole; a blow's cracks and rings, then a second and third blow
+                  {key:'cracks', label:'Cracks',         min:0,  max:100, def:0,   unit:''},
+                  // old glass's waves: they ripple the reflection (and in a graph, bend what is under it)
+                  {key:'wave',  label:'Waviness',        min:0,  max:100, def:30,  unit:''},
+                  // a thick sheet's bevelled edge round the page (0: none)
+                  {key:'edge',  label:'Edge',            min:0,  max:100, def:0,   unit:''}],
   suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
                   // still concentric rings → swept by breath and fan
@@ -360,18 +375,19 @@ export const TEXTURE_PARAMS = {
                   // slid along the dial's line (the dial also lights it)
                   {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
   // 🜉 GENERATIVE: processes simulated, laid on a material, lit (stepsGenerative.js; chains.js)
+  // (Ruby: the camera on a dial of its own, the light dial the light's alone, a slider for where the strike enters,
+  //  depth, glow with a hue, and more materials than embers)
   lichtenberg:   [{key:'zoom',  label:'Reach',           min:0,  max:100, def:50,  unit:''},
                   // bushy (high) → one thin strike (low)
                   {key:'amt',   label:'Branching',       min:0,  max:100, def:50,  unit:''},
                   {key:'form',  label:'Poles',           min:1,  max:3,   def:2,   unit:'', ticks:[1,2,3], names:['One Strike','Two Poles','Three Poles']},
-                  {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Charred Wood','Embers','Acrylic']},
-                  // close in, so the branches run off the page's edges
-                  {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},
-                  // the figure slid along the dial's line (the dial turns it)
-                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''},
-                  // THE CAMERA (Ruby: up to eight sliders): turned about the plank's middle, and tipped to look across it
-                  {key:'angle', label:'Turn',            min:0,  max:360, def:0,   unit:'°'},
-                  {key:'view',  label:'View',            min:0,  max:100, def:0,   unit:'', ticks:[0,50,100], names:['Overhead','Leaning','Low Across']}],
+                  {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Charred Wood','Slate','Brass','Acrylic']},
+                  // where the strike enters (it was the light dial's angle)
+                  {key:'angle', label:'Strike Angle',    min:0,  max:360, def:315, unit:'°'},
+                  {key:'depth', label:'Depth',           min:0,  max:100, def:50,  unit:''},
+                  {key:'width', label:'Channel Width',   min:30, max:300, def:100, unit:'%'},
+                  // the figure slid along the strike's line
+                  {key:'slide', label:'Slide',           min:-100, max:100, def:0, unit:''}],
   growth:        [{key:'zoom',  label:'Growth',          min:0,  max:100, def:55,  unit:''},
                   {key:'amt',   label:'Fold Size',       min:50, max:250, def:100, unit:'%'},
                   {key:'form',  label:'Seeds',           min:1,  max:7,   def:1,   unit:''},
@@ -432,9 +448,11 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Ribbon Hue','Outline Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // light on black, screened over the page (as Deep Field is); the dial is the field lines: the rays lean and the hem arcs
   aurorasky:     { blends:['screen','lighten','color-dodge','overlay','soft-light','hard-light','source-over'], light:true, dial:'Field Lines', tints:0 },
-  // the dial: where the strike enters, and the light on the burn
-  lichtenberg:   { blends:['source-over','multiply','overlay','soft-light','hard-light','screen','lighten','luminosity'], light:true, dial:'Strike & Light', material:true, tints:2,
-                   tintLabels:['Wood Hue','Grain Hue'], tintDefaults:['#CCA373','#6B4226'] },
+  // the dial: the light alone; the camera dial turns, tips and zooms the plank (Ruby); the Glow Hue lights the channels
+  lichtenberg:   { blends:['source-over','multiply','overlay','soft-light','hard-light','screen','lighten','luminosity'], light:true, material:true, tints:2,
+                   tintLabels:['Wood Hue','Grain Hue'], tintDefaults:['#CCA373','#6B4226'],
+                   hue5:{ role:'glow', def:'#000000', label:'Glow Hue', why:'the light the strike leaves in its channels, as if they still burned' },
+                   camera:{ turn:0, view:0, zoom:100, guide:'plane' } },
   // the dial: the sun it grows toward, and the light on it
   growth:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Sun', material:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -498,9 +516,10 @@ export const TEXTURE_CAPS = {
   // glass in front of the page: transparent, the drops showing the outdoors
   // made from the page's own colours (pageEnv), so Normal is its default
   glassrain:     { blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
-  // the dial is the camera: its angle where you look round the ring, its reach how far up (the middle: the arch overhead)
-  ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, dial:'Camera', lowLight:true, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], lightDeg:40, lightTilt:55 },
+  // the camera dial is the camera: its turn where you look round the ring, its view how far up (the middle: the arch
+  // overhead), its zoom the lens; the light is the star's, set by Daylight, so there is no light dial
+  ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:false, tints:2,
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'] },
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
@@ -554,6 +573,9 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
                    tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
+  // the light the glass catches, on mid-gray: Screen adds only that; Hard Light adds it and darkens too (grime, a thick edge), on any page
+  underglass:    { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, tints:2, genericTint:true,
+                   tintLabels:['Reflection Hue','Grime Hue'], tintDefaults:['#FFFFFF','#000000'] },
   suminagashi:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Breath Direction', tints:2,
                    tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['#1C1C26','#2C4C8E'] },
   watercolour:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Wash Direction', tints:2,
@@ -742,6 +764,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
   } else if(type === 'stainedglass'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
+  } else if(type === 'underglass'){
+    result = genChain(type, w, h, light, extra);           // Window Reflection, Scratches, Smudges, Shatter → Glass Pane over mid-gray (chains.js)
   } else if(type === 'suminagashi'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // Suminagashi (chains.js)
   } else if(type === 'watercolour'){
@@ -873,7 +897,28 @@ export function storeTexture(key, result){
 // everything a request means: its normalised knobs, and its key
 // the poem's layout, as a short key (FNV-1a): every character counts
 /** Does a graph hold a Page Backdrop part, or Rain on Glass (which shows the page through its drops), and so want the page's own colors? */
+/** Whether a graph reads the page's camera dial (then it is given the camera, and keyed by it). */
+export function graphUsesCamera(graph){ return /"name":\s*"camdial"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
+/** The camera a request means (a texture with a camera, or a graph with a Camera Dial): whole numbers, so the key is stable. */
+function cameraOf(type, opts){
+  const has = (TEXTURE_CAPS[RETIRED[type] || type] || {}).camera || ((type === 'athanor' || type === 'athanorsteps') && graphUsesCamera(opts.graph));
+  if(!has) return null;
+  const c = opts.camera || {}, d = (TEXTURE_CAPS[RETIRED[type] || type] || {}).camera || {};
+  const num = (v, dv) => { const x = +v; return isFinite(x) ? x : dv; };
+  return { turn: Math.round(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: Math.round(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: Math.round(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))) };
+}
 export function graphUsesBackdrop(graph){ return /"name":\s*"(?:backdrop|glassrain)"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
+/** The poem's layout as whole LINES, each box rounded out to 1/64 of the page (a chain with `poem: 'lines'` reads
+ *  only this: typing within a line changes nothing, so the surface is drawn again only when a line grows past a step). */
+export function poemLines(text){
+  const by = new Map();
+  for(const part of String(text || '').split(';')){ const v = part.split(',').map(Number); if(v.length < 6 || !v.every(isFinite)) continue;
+    const b = by.get(v[4]); if(b){ b[0] = Math.min(b[0], v[0]); b[1] = Math.min(b[1], v[1]); b[2] = Math.max(b[2], v[2]); b[3] = Math.max(b[3], v[3]); } else by.set(v[4], v.slice(0, 6)); }
+  const q = 64, dn = x => Math.floor(x*q)/q, up = x => Math.ceil(x*q)/q;
+  return [...by.values()].map(b => [dn(b[0]), dn(b[1]), up(b[2]), up(b[3]), b[4], b[5], 0].join(',')).join(';');
+}
+/** Whether a texture's own chain reads the poem (and so is given its layout). */
+export function chainReadsPoem(type){ const c = TEXTURE_CHAINS[RETIRED[type] || type]; return !!(c && c.poem); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
@@ -924,8 +969,10 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
+            + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
+            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '');
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, camera: cameraOf(type, opts) };
 }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
@@ -937,7 +984,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null,
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null, camera: extra.camera || null,
       ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -962,7 +1009,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', env: extra.env || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', env: extra.env || null, camera: extra.camera || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -988,13 +1035,13 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
-      mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null },
+      mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -1011,7 +1058,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, t3, t4, t5, t6, env } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, t3, t4, t5, t6, env, camera } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -1053,7 +1100,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', seed, lightTilt, accents: [accent1, accent2, opts.ink || null] }))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

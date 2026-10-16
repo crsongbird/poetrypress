@@ -12,7 +12,7 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genColdPress, genCupRing, genOldPaper, genBurntLetter, genHoarfrost, genGlassRain, genWater, genDunes, genMoss, genKintsugi, genSpangle, genCrystalLeaf, genSuminagashi } from './texTouch.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -823,4 +823,322 @@ Object.assign(TOUCH_STEPS, {
       drawFlakes(x, E.ww, E.wh, this.opts(E, n)); const im = E.readCanvas(c), after = E.lum(im), m = new Float32Array(E.N);
       for(let i = 0; i < E.N; i++) m[i] = Math.min(1, Math.abs(after[i] - before[i])*6);
       return [im, m]; } },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNDER GLASS (Ruby: a glass to lay over another surface, through Two Surfaces or a Blend in the Athanor).
+// A sheet of glass shows what lies under it, bent a little, and adds only what the glass itself catches: a window
+// it reflects, scratches glinting toward the light, the oil of fingers, water spots and dust, and cracks if it is
+// broken. Over mid-gray, clean glass that catches nothing is exactly mid-gray, so its blend leaves the page alone.
+//
+//   a pane laid flat —
+//   the room it will not let in
+//   shines on its surface
+
+// where the light's own reflection falls on the sheet, in page units: the page's middle when the light is
+// overhead, sliding toward the light as the dial's handle is drawn out (past the edge when the light is low)
+const ugUnit = (aspX, aspY, deg, reach) => { const a = (deg - 90)*Math.PI/180, d = reach*0.62*Math.hypot(aspX, aspY)/2;
+  return { x: aspX/2 + Math.cos(a)*d, y: aspY/2 + Math.sin(a)*d, dx: Math.cos(a), dy: Math.sin(a) }; };
+const ugLight = (E, n, dirPort, reachPort) => { const dv = dirPort ? E.input(n, dirPort) : null, rv = reachPort ? E.input(n, reachPort) : null;
+  return { deg: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), reach: typeof rv === 'number' ? rv : Math.max(0, Math.min(1.3, (E.ctx.lightTilt ?? 100)/100)) }; };
+const ugStep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
+
+// SCRATCHES: hairlines in bunches (things slid across the glass) and, with Swirl, the arcs a cloth leaves wiping
+// it round and round. Each scratch is its own draw (`mulberry32` from its number), so more Scratches adds scratches
+// and moves none. A scratch is a tiny groove: it throws the light back only across itself, so it glints where it
+// runs at right angles to the way toward the light's reflection, and round a wiped sheet the glints ring the light.
+function ugScratchLines(aspX, aspY, o){
+  const R = Math.random, salt = (R()*4294967296) >>> 0, area = aspX*aspY, n = Math.round(o.count*480*area), lines = [];
+  const bunches = [], wipes = [];
+  for(let k = 0; k < 6; k++) bunches.push({ x: R()*aspX, y: R()*aspY, a: R()*Math.PI, s: 0.12 + R()*0.3 });
+  for(let k = 0; k < 5; k++) wipes.push({ x: (R()*1.1 - 0.05)*aspX, y: (R()*1.1 - 0.05)*aspY });
+  const nb = 3 + (salt % 4), nw = 2 + (salt >>> 3) % 4;
+  for(let k = 0; k < n; k++){
+    const r = mulberry32((salt + Math.imul(k + 1, 0x9E3779B1)) >>> 0), depth = 0.25 + 0.75*Math.pow(r(), 1.8), wide = 0.6 + r()*0.8, kind = r(), pick = r(), a = r(), b = r(), c = r(), d = r();
+    if(kind < o.swirl*0.9){
+      // a wipe: an arc about one of the cloth's centres
+      const W = wipes[Math.floor(pick*nw)], rad = 0.02 + Math.pow(a, 0.8)*0.55, a0 = b*Math.PI*2, span = (0.04 + c*0.3)*(0.3 + 1.4*o.length)/Math.sqrt(rad + 0.05);
+      const steps = Math.max(2, Math.ceil(span/0.04)), pts = [];
+      for(let s = 0; s <= steps; s++){ const t = a0 + span*s/steps; pts.push([W.x + Math.cos(t)*rad, W.y + Math.sin(t)*rad]); }
+      lines.push({ pts, depth, wide });
+    } else {
+      const B = pick < 0.7 ? bunches[Math.floor(pick/0.7*nb)] : null;
+      const ang = B ? B.a + (a - 0.5)*0.22 : a*Math.PI, cx = B ? B.x + (b - 0.5)*B.s*2 : b*aspX, cy = B ? B.y + (c - 0.5)*B.s*2 : c*aspY;
+      const len = (0.012 + Math.pow(d, 2.2)*0.32)*(0.3 + 1.4*o.length), sag = (r() - 0.5)*0.16*len, steps = Math.max(2, Math.ceil(len/0.02)), pts = [], ux = Math.cos(ang), uy = Math.sin(ang);
+      for(let s = 0; s <= steps; s++){ const t = s/steps - 0.5, q = sag*(1 - 4*t*t); pts.push([cx + ux*t*len - uy*q, cy + uy*t*len + ux*q]); }
+      lines.push({ pts, depth, wide });
+    }
+  }
+  return lines;
+}
+function ugDrawScratches(lines, ww, wh, unit, hot, o, px){
+  const [sc, sx] = kitCanvas(ww, wh), [gc, gx] = kitCanvas(ww, wh);
+  for(const x of [sx, gx]){ x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.strokeStyle = '#fff'; x.lineCap = 'butt'; }
+  const thin = px(0.8), k = 2 + o.sharp*60, spread = 0.12 + 0.6*(1 - o.sharp);
+  for(const L of lines){
+    let w = px(1.8)*o.width*L.wide, a = L.depth; if(w < thin){ a *= w/thin; w = thin; }
+    sx.lineWidth = gx.lineWidth = w;
+    const P = L.pts, m = P.length - 1;
+    for(let s = 0; s < m; s++){
+      const x0 = P[s][0], y0 = P[s][1], x1 = P[s + 1][0], y1 = P[s + 1][1], taper = Math.sqrt(Math.sin(Math.PI*(s + 0.5)/m)), al = a*taper;
+      sx.globalAlpha = al; sx.beginPath(); sx.moveTo(x0*unit, y0*unit); sx.lineTo(x1*unit, y1*unit); sx.stroke();
+      // the glint: the groove lying across the way to the light's reflection, brightest near it
+      const tx = x1 - x0, ty = y1 - y0, hx = hot.x - (x0 + x1)/2, hy = hot.y - (y0 + y1)/2, tl = Math.hypot(tx, ty) || 1, hl = Math.hypot(hx, hy) || 1;
+      const g = Math.pow(Math.abs(tx*hy - ty*hx)/(tl*hl), k)*(0.25 + 0.75*Math.exp(-(hl*hl)/spread))*al;
+      if(g > 0.006){ gx.globalAlpha = Math.min(1, g*2); gx.beginPath(); gx.moveTo(x0*unit, y0*unit); gx.lineTo(x1*unit, y1*unit); gx.stroke(); }
+    }
+  }
+  return [sc, gc];
+}
+
+// SMUDGES: what hands and weather leave on glass. Fingerprints, a hand's few at a time (whorls, loops and arches,
+// each pressed harder on one side), smears where something wiped it, water spots (dried rings, in splashes), and
+// dust (specks, and a few fibres). Ridges finer than the grid can show fade into the smudge they make together.
+function ugSmudges(ww, wh, unit, o, px){
+  const N = ww*wh, R = Math.random, salt = (R()*4294967296) >>> 0, aspX = ww/unit, aspY = wh/unit, area = aspX*aspY;
+  const oil = new Float32Array(N), spots = new Float32Array(N), warp = fbmSampler(3, 3), grain = fbmSampler(20, 2);
+  const box = (cx, cy, r) => [Math.max(0, Math.floor((cx - r)*unit)), Math.min(ww - 1, Math.ceil((cx + r)*unit)), Math.max(0, Math.floor((cy - r)*unit)), Math.min(wh - 1, Math.ceil((cy + r)*unit))];
+  // FINGERPRINTS: a touch is two to four fingertips along an arc, pointing one way
+  const touches = Math.round(o.prints*4.5*area);
+  for(let t = 0; t < touches; t++){
+    const r = mulberry32((salt + Math.imul(t + 1, 0x85EBCA6B)) >>> 0);
+    const hx = r()*aspX, hy = r()*aspY, ha = r()*Math.PI*2, fingers = 1 + Math.floor(r()*4), Rp = 0.036*o.size*(0.85 + r()*0.3);
+    for(let f = 0; f < fingers; f++){
+      const off = (f - (fingers - 1)/2)*Rp*1.9, fwd = -0.3*off*off/Rp;
+      const cx = hx + Math.cos(ha + Math.PI/2)*off + Math.cos(ha)*fwd, cy = hy + Math.sin(ha + Math.PI/2)*off + Math.sin(ha)*fwd;
+      const pa = ha + (r() - 0.5)*0.5, ca = Math.cos(pa), sa = Math.sin(pa), nr = 12 + r()*5, kind = r(), side = r() < 0.5 ? -1 : 1, spiral = r() < 0.5 ? 0 : side;
+      const pdx = r()*2 - 1, pdy = r()*2 - 1, str = 0.55 + 0.45*r(), ox = r(), oy = r();
+      const period = Rp/nr*unit, rc = Math.max(0, Math.min(1, (period - 1.6)/2.4));
+      const [x0, x1, y0, y1] = box(cx, cy, Rp*1.2);
+      for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+        const u = (x + 0.5)/unit - cx, v = (y + 0.5)/unit - cy, lx = (u*sa - v*ca)/Rp, ly = (u*ca + v*sa)/Rp, rho = Math.hypot(lx/0.74, ly);
+        if(rho > 1.2) continue;
+        let ph;
+        if(kind < 0.35) ph = Math.hypot(lx*1.08, ly - 0.08)*nr + spiral*Math.atan2(ly, lx)/(2*Math.PI);   // a whorl (or a spiral one)
+        else if(kind < 0.85){   // a loop: ridges nested round its axis, which runs out to one side
+          const ax = side*1.4, ay = -0.9, bx = 0, by = 0.12, ex = ax - bx, ey = ay - by, q = Math.max(0, Math.min(1, ((lx - bx)*ex + (ly - by)*ey)/(ex*ex + ey*ey)));
+          ph = Math.hypot(lx - bx - q*ex, ly - by - q*ey)*nr;
+        } else ph = (ly + 0.5*Math.exp(-(lx*lx)/0.3))*nr;   // an arch
+        ph += (warp(ox + lx*0.5, oy + ly*0.5) - 0.5)*2.4;
+        const ridge = 0.5 + 0.5*Math.cos(ph*2*Math.PI), rv = 0.5 + (ridge - 0.5)*rc;
+        const rim = ugStep(0, 0.45, 1 - rho - (warp(oy + lx*0.7, ox + ly*0.7) - 0.5)*0.4), press = Math.max(0, Math.min(1, 0.6 + 0.8*(lx*pdx + ly*pdy)));
+        const i = y*ww + x, m = rim*press*str*(0.15 + 0.85*rv);
+        if(m > oil[i]) oil[i] = m;
+      }
+    }
+  }
+  // SMEARS: something wiped across it, leaving streaks along the stroke, thinning toward its end
+  const smears = Math.round(o.smears*4*area);
+  for(let s = 0; s < smears; s++){
+    const r = mulberry32((salt + Math.imul(s + 1, 0xC2B2AE35)) >>> 0);
+    const Rr = 0.12 + r()*0.5, mx = r()*aspX, my = r()*aspY, a = r()*Math.PI*2, cx = mx - Math.cos(a)*Rr, cy = my - Math.sin(a)*Rr;
+    const span = (0.08 + r()*0.3)/Rr, hw = (0.012 + r()*0.03)*o.size, str = 0.5 + 0.5*r(), gy = r();
+    const [x0, x1, y0, y1] = box(cx, cy, Rr + hw);
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+      const dx = (x + 0.5)/unit - cx, dy = (y + 0.5)/unit - cy, rr = Math.hypot(dx, dy), across = (rr - Rr)/hw;
+      if(across <= -1 || across >= 1) continue;
+      let ang = Math.atan2(dy, dx) - a; ang -= Math.round(ang/(2*Math.PI))*2*Math.PI;
+      const t = ang/span + 0.5; if(t <= 0 || t >= 1) continue;
+      const streak = grain(0.5 + across*0.4, gy), env = (1 - across*across)*(1 - across*across)*Math.pow(Math.sin(Math.PI*t), 0.6)*(1 - 0.55*t);
+      const i = y*ww + x; oil[i] = Math.min(1, oil[i] + env*str*0.75*(0.2 + 0.8*ugStep(0.35, 0.75, streak)));
+    }
+  }
+  // WATER SPOTS: dried drops, a splash of them at a time; the minerals gather at each one's edge
+  const splashes = o.spots > 0 ? Math.max(1, Math.round(o.spots*3*area)) : 0;
+  for(let s = 0; s < splashes; s++){
+    const r = mulberry32((salt + Math.imul(s + 1, 0x27D4EB2F)) >>> 0), sx = r()*aspX, sy = r()*aspY, m = Math.round(4 + o.spots*26*r());
+    for(let k = 0; k < m; k++){
+      const q = Math.pow(r(), 0.7)*0.12, an = r()*Math.PI*2, cx = sx + Math.cos(an)*q, cy = sy + Math.sin(an)*q, rs = (0.003 + Math.pow(r(), 2)*0.013)*o.size, str = 0.5 + 0.5*r();
+      const f1 = r()*6.28, f2 = r()*6.28, w1 = 0.01 + r()*0.04, w2 = r()*0.03;   // never quite round
+      const [x0, x1, y0, y1] = box(cx, cy, rs*1.5);
+      for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+        const ex = (x + 0.5)/unit - cx, ey = (y + 0.5)/unit - cy, th = Math.atan2(ey, ex), d = Math.hypot(ex, ey)/(rs*(1 + w1*Math.sin(3*th + f1) + w2*Math.sin(5*th + f2))); if(d > 1.3) continue;
+        const e = (d - 1)/0.14, v = str*(Math.exp(-(e*e))*0.9 + (d < 1 ? 0.16 : 0)), i = y*ww + x;
+        if(v > spots[i]) spots[i] = v;
+      }
+    }
+  }
+  // DUST: specks of every size, and now and then a fibre
+  const [dc, dx] = kitCanvas(ww, wh); dx.fillStyle = '#000'; dx.fillRect(0, 0, ww, wh); dx.fillStyle = dx.strokeStyle = '#fff'; dx.lineCap = 'round';
+  const specks = Math.round(o.dust*900*area), floor = px(0.7);
+  for(let k = 0; k < specks; k++){
+    const r = mulberry32((salt + Math.imul(k + 1, 0x165667B1)) >>> 0);
+    const x = r()*ww, y = r()*wh; let rad = px(0.45 + Math.pow(r(), 3)*2.4), al = 0.35 + 0.65*r();
+    if(rad < floor){ al *= (rad/floor)*(rad/floor); rad = floor; }
+    dx.globalAlpha = al; dx.beginPath(); dx.arc(x, y, rad, 0, Math.PI*2); dx.fill();
+  }
+  const fibres = Math.round(o.dust*28*area);
+  for(let k = 0; k < fibres; k++){
+    const r = mulberry32((salt + Math.imul(k + 1, 0xD3A2646C)) >>> 0);
+    let x = r()*aspX, y = r()*aspY, h = r()*Math.PI*2; const len = 0.01 + r()*0.04, steps = 10, turn = (r() - 0.5)*0.9;
+    dx.globalAlpha = 0.45 + 0.4*r(); dx.lineWidth = Math.max(floor, px(0.6 + r()*0.6)); dx.beginPath(); dx.moveTo(x*unit, y*unit);
+    for(let s = 0; s < steps; s++){ h += turn + (r() - 0.5)*0.8; x += Math.cos(h)*len/steps; y += Math.sin(h)*len/steps; dx.lineTo(x*unit, y*unit); }
+    dx.stroke();
+  }
+  return { oil, spots, dust: dc };
+}
+
+// WINDOW REFLECTION: what a pane or a polished face mirrors from the room. A window's bright bands (one wide, the
+// rest narrower beside it), lying across the way the light comes from and turned by Slant, brightest about where
+// the light's own reflection falls and fading along and away; and a soft glow of sky toward the light. A Bend map
+// ripples the bands, as old glass bends what it shows.
+function ugReflection(ww, wh, unit, hot, o, B){
+  const N = ww*wh, R = Math.random, out = new Float32Array(N), aspX = ww/unit, aspY = wh/unit, half = Math.hypot(aspX, aspY)/2;
+  const sl = o.slant*Math.PI/180, nx = hot.dx*Math.cos(sl) - hot.dy*Math.sin(sl), ny = hot.dx*Math.sin(sl) + hot.dy*Math.cos(sl);
+  const bands = [], nb = Math.max(1, Math.round(o.bands)); let at = 0;
+  for(let k = 0; k < nb; k++){ const w = (k === 0 ? 1 : 0.2 + R()*0.55)*o.width*0.2, gap = (0.015 + R()*0.07)*o.width;
+    bands.push({ c: at + w/2, w, b: k === 0 ? 0.8 : 0.4 + R()*0.4 }); at += w + gap; }
+  const mid = at/2 + (R() - 0.5)*0.08, len = 0.7 + R()*0.5, soft = 0.04 + 0.96*o.soft;
+  for(const b of bands) b.c -= mid;
+  const cx = aspX/2, cy = aspY/2;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x, u = (x + 0.5)/unit, v = (y + 0.5)/unit, px = u - hot.x, py = v - hot.y;
+    const s = px*nx + py*ny + (B ? (B[i] - 0.5)*0.03*o.ripple : 0), t = -px*ny + py*nx;
+    let val = 0;
+    for(const b of bands){ const e = Math.max(1.5/unit, soft*b.w*0.5), lo = b.c - b.w/2, hi = b.c + b.w/2;
+      if(s < lo - e || s > hi + e) continue;
+      val += b.b*ugStep(lo - e, lo + e, s)*(1 - ugStep(hi - e, hi + e, s))*(0.8 + 0.2*(s - lo)/b.w); }
+    val *= Math.exp(-(t*t)/(len*len))*Math.exp(-Math.max(0, Math.abs(s) - 0.15)*1.6);
+    // the sky: a soft glow on the side the light comes from
+    const sky = o.sky*0.35*ugStep(-0.9, 1, ((u - cx)*hot.dx + (v - cy)*hot.dy)/half);
+    out[i] = Math.min(1, val + sky);
+  }
+  return out;
+}
+
+// SHATTER: glass broken by a blow. Cracks run out from where it was struck, rings of cracks cross them (the
+// spider's web), and the heart is crushed to a star; Shards gives each piece between its own gray (the unbroken
+// pane black), so a Glass Pane can bend and mirror each piece its own way.
+function ugShatter(aspX, aspY, o){
+  const R = Math.random, salt = (R()*4294967296) >>> 0, cracks = [], cells = [];
+  const impacts = o.breaks <= 0 ? 0 : 1 + (o.breaks > 0.55 ? 1 : 0) + (o.breaks > 0.88 ? 1 : 0);
+  for(let m = 0; m < impacts; m++){
+    const r = mulberry32((salt + Math.imul(m + 1, 0x9E3779B1)) >>> 0);
+    const cx = (0.15 + r()*0.7)*aspX, cy = (0.15 + r()*0.7)*aspY, reach = (0.25 + 0.6*o.breaks)*(0.8 + 0.4*r())*o.reach*(m ? 0.6 : 1);
+    const nr = 6 + Math.round(o.rays*14 + r()*3), rays = [];
+    for(let k = 0; k < nr; k++){
+      const base = (k + (r() - 0.5)*0.6)/nr*Math.PI*2, L = reach*(0.45 + 0.75*r()), pts = [[cx, cy, 0]];
+      let h = base, x = cx, y = cy, d = 0;
+      while(d < L){ h += (r() - 0.5)*0.16 + (base - h)*0.15; x += Math.cos(h)*0.012; y += Math.sin(h)*0.012; d = Math.hypot(x - cx, y - cy); pts.push([x, y, d]); }
+      rays.push(pts); cracks.push(pts.map(p => [p[0], p[1]]));
+    }
+    // the rings: a vertex on each ray at each ring's radius, joined across to the next ray's, sagging inward
+    const nR = 2 + Math.round(o.rings*6), radius = j => reach*0.06*Math.pow(0.85/0.06, j/Math.max(1, nR - 1));
+    const vtx = rays.map(pts => { const out = []; for(let j = 0; j < nR; j++){ const want = radius(j)*(0.9 + 0.2*r()), q = pts.findIndex(p => p[2] >= want); out.push(q > 0 ? q : -1); } return out; });
+    const arc = [];   // arc[k][j]: the crack from ray k to ray k+1 at ring j (null: not cracked through)
+    for(let k = 0; k < nr; k++){ arc.push([]); const A = rays[k], B = rays[(k + 1) % nr];
+      for(let j = 0; j < nR; j++){ const qa = vtx[k][j], qb = vtx[(k + 1) % nr][j];
+        if(qa < 0 || qb < 0){ arc[k].push(null); continue; }
+        const p = A[qa], q = B[qb], pts = [[p[0], p[1]]];
+        for(let s = 1; s < 3; s++){ const t = s/3, mx = p[0] + (q[0] - p[0])*t, my = p[1] + (q[1] - p[1])*t, sag = 0.06 + (r() - 0.5)*0.05;
+          pts.push([mx + (cx - mx)*sag, my + (cy - my)*sag]); }
+        pts.push([q[0], q[1]]);
+        const cracked = r() < 0.8 || j === 0; arc[k].push({ pts, cracked }); if(cracked) cracks.push(pts); }
+    }
+    // the crushed heart
+    for(let k = 0; k < 26; k++){ const a = r()*Math.PI*2, l = 0.003 + r()*0.018, b = a + (r() - 0.5)*1.2, q = r()*0.006;
+      cracks.push([[cx + Math.cos(b)*q, cy + Math.sin(b)*q], [cx + Math.cos(a)*(q + l), cy + Math.sin(a)*(q + l)]]); }
+    // the pieces: between two rays and two rings (an uncracked ring leaves the two pieces one)
+    const ids = new Map(), root = key => { while(ids.get(key) !== key) key = ids.get(key); return key; };
+    for(let k = 0; k < nr; k++) for(let j = -1; j < nR - 1; j++){ const key = k*64 + j + 1; ids.set(key, key); }
+    for(let k = 0; k < nr; k++) for(let j = 0; j < nR - 1; j++){ const a = arc[k][j]; if(a && !a.cracked){ const lo = root(k*64 + j), hi = root(k*64 + j + 1); if(lo !== hi) ids.set(hi, lo); } }
+    for(let k = 0; k < nr; k++){ const A = rays[k], B = rays[(k + 1) % nr];
+      for(let j = -1; j < nR - 1; j++){
+        const a0 = j < 0 ? 0 : vtx[k][j], a1 = vtx[k][j + 1], b0 = j < 0 ? 0 : vtx[(k + 1) % nr][j], b1 = vtx[(k + 1) % nr][j + 1];
+        if(a0 < 0 || a1 < 0 || b0 < 0 || b1 < 0 || !arc[k][j + 1] || (j >= 0 && !arc[k][j])) continue;
+        const poly = [];
+        for(let q = a0; q <= a1; q++) poly.push(A[q]);
+        for(const p of arc[k][j + 1].pts) poly.push(p);
+        for(let q = b1; q >= b0; q--) poly.push(B[q]);
+        if(j >= 0) for(const p of arc[k][j].pts.slice().reverse()) poly.push(p);
+        const id = root(k*64 + j + 1), h = mulberry32((salt ^ Math.imul(m + 1, 0x632BE5AB) ^ Math.imul(id + 7, 0x85EBCA6B)) >>> 0)();
+        cells.push({ poly, v: 0.1 + 0.9*h });
+      }
+    }
+  }
+  return { cracks, cells };
+}
+
+// GLASS PANE: the glass itself, over a picture (or mid-gray). What lies under it is seen bent by the glass's
+// waves and, through a broken pane, each shard its own way; then the light the glass gives back is added as light
+// adds (a screen): the reflection (dulled where oil scatters it), the glints, the smudges, spots and dust, the
+// cracks. A thick edge darkens it, green in its depth. Clean glass catching nothing is the picture exactly.
+function ugPane(E, n){
+  const { ww, wh, N, unit, input, asField, asImage, num, ctx } = E;
+  const pic = asImage(input(n, 1) ?? 128/255), f = j => input(n, j) != null ? asField(input(n, j)) : null;
+  const Rf = f(2), G = f(3), O = f(4), D = f(5), Sp = f(6), C = f(7), SH = f(8), W = f(9);
+  const rk = num(n, 'reflect', 60)/100, gk = num(n, 'glint', 80)/100, ok = num(n, 'smudge', 60)/100, dk = num(n, 'dust', 70)/100, bk = num(n, 'bend', 30)/100, ek = num(n, 'edge', 0)/100;
+  const la = ((ctx.light ?? 315) - 90)*Math.PI/180, lx = Math.cos(la), ly = Math.sin(la);
+  const halo = C ? E.boxBlur(C, Math.max(1, E.px(3))) : null, bevel = (0.004 + 0.035*ek)*unit;
+  const P = [pic.r, pic.g, pic.b], out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, Q = [out.r, out.g, out.b];
+  const look = (F, x, y) => { x = Math.max(0, Math.min(ww - 1.001, x)); y = Math.max(0, Math.min(wh - 1.001, y)); const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = y0*ww + x0, j = Math.min(wh - 1, y0 + 1)*ww + x0, x1 = x0 < ww - 1 ? 1 : 0;
+    return (F[i]*(1 - fx) + F[i + x1]*fx)*(1 - fy) + (F[j]*(1 - fx) + F[j + x1]*fx)*fy; };
+  const edgeTint = [0.84, 0.97, 0.91];
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x;
+    // where the eye lands through the glass: bent along the waves' slope, and by each shard's tilt
+    let ox = 0, oy = 0;
+    if(W && bk > 0){ const gx = (W[y*ww + Math.min(ww - 1, x + 1)] - W[y*ww + Math.max(0, x - 1)])*0.5, gy = (W[Math.min(wh - 1, y + 1)*ww + x] - W[Math.max(0, y - 1)*ww + x])*0.5;
+      ox += gx*unit*unit*bk*0.006; oy += gy*unit*unit*bk*0.006; }
+    const sh = SH ? SH[i] : 0, tx = sh > 0.02 ? Math.sin(sh*917.3) : 0, ty = sh > 0.02 ? Math.cos(sh*533.7) : 0;
+    if(sh > 0.02){ ox += tx*unit*0.006*(0.3 + bk); oy += ty*unit*0.006*(0.3 + bk); }
+    // the light the glass gives back (a shard mirrors the room from its own angle)
+    const Rv = Rf ? (sh > 0.02 ? look(Rf, x + tx*unit*0.09, y + ty*unit*0.09) : Rf[i]) : 0, oil = O ? O[i] : 0;
+    let L = rk*Rv*(1 - 0.75*ok*oil) + ok*oil*0.34 + gk*(G ? G[i] : 0) + dk*((D ? D[i] : 0)*0.9 + (Sp ? Sp[i] : 0)*0.8);
+    if(sh > 0.02) L += 0.035*Math.max(0, tx*lx + ty*ly);
+    if(C) L += 0.85*C[i] + 0.3*halo[i];   // the faces of a crack catch the light, and glow a little
+    // a thick edge: the bevel facing the light catches it, a bright line where it meets the face, green in its depth
+    let tint = 0;
+    if(ek > 0){ const dl = x + 0.5, dr = ww - x - 0.5, dt = y + 0.5, db = wh - y - 0.5, d = Math.min(dl, dr, dt, db);
+      if(d < bevel*1.2){ const q = d/bevel, nx = d === dl ? -1 : d === dr ? 1 : 0, ny = d === dt ? -1 : d === db ? 1 : 0, face = Math.max(0, nx*lx + ny*ly);
+        const inb = q < 1 ? 1 : 0, ln = (q - 1)/0.08;
+        L += inb*face*0.35*Math.sin(Math.PI*Math.min(1, q)) + 0.25*Math.exp(-(ln*ln)); tint = inb*(1 - q*0.6); } }
+    L = Math.max(0, Math.min(1, L));
+    for(let c = 0; c < 3; c++){
+      let v = (ox || oy) ? look(P[c], x + ox, y + oy) : P[c][i];
+      v = 1 - (1 - v)*(1 - L);
+      if(tint > 0) v *= 1 - tint*(1 - edgeTint[c]);
+      Q[c][i] = v; }
+  }
+  return out;
+}
+
+Object.assign(TOUCH_STEPS, {
+  scratches: { cat: 'Marks', label: 'Scratches', ins: ['light from', 'light height'], outs: ['scratches', 'glints'], io: { ins: ['value', 'value'], outs: ['field', 'field'] },
+    doc: 'Fine scratches in glass or a polished face: straight, in bunches, or swirled where a cloth wiped it, with the glints they throw toward the light.',
+    params: [TOUCH_R('count', 'Scratches', 40), TOUCH_R('length', 'Length', 50), TOUCH_R('swirl', 'Swirl', 30), TOUCH_R('width', 'Width', 100, 30, 300), TOUCH_R('sharp', 'Glint Sharpness', 50), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 4,
+    run(E, n){ const { ww, wh, unit, num } = E, L = ugLight(E, n, 1, 2), hot = ugUnit(ww/unit, wh/unit, L.deg, L.reach);
+      const o = { count: num(n, 'count', 40)/100, length: num(n, 'length', 50)/100, swirl: num(n, 'swirl', 30)/100, width: num(n, 'width', 100)/100, sharp: num(n, 'sharp', 50)/100 };
+      const [sc, gc] = ugDrawScratches(ugScratchLines(ww/unit, wh/unit, o), ww, wh, unit, hot, o, E.px);
+      // a glint blooms a little round itself, as bright things do
+      const G = E.asField(E.readCanvas(gc)), bloom = E.boxBlur(G, Math.max(1, E.px(4)));
+      for(let i = 0; i < G.length; i++) G[i] = Math.min(1, G[i] + bloom[i]*1.6);
+      return [E.asField(E.readCanvas(sc)), G]; } },
+  smudges: { cat: 'Marks', label: 'Smudges', ins: [], outs: ['oil', 'spots', 'dust'], io: { outs: ['field', 'field', 'field'] },
+    doc: 'What hands and weather leave on glass: fingerprints, smears, dried water spots and dust, each as its own gray map.',
+    params: [TOUCH_R('prints', 'Fingerprints', 35), TOUCH_R('smears', 'Smears', 30), TOUCH_R('spots', 'Water Spots', 20), TOUCH_R('dust', 'Dust', 30), TOUCH_R('size', 'Size', 100, 40, 250), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 6,
+    run(E, n){ const { ww, wh, unit, num } = E;
+      const S = ugSmudges(ww, wh, unit, { prints: num(n, 'prints', 35)/100, smears: num(n, 'smears', 30)/100, spots: num(n, 'spots', 20)/100, dust: num(n, 'dust', 30)/100, size: num(n, 'size', 100)/100 }, E.px);
+      return [S.oil, S.spots, E.asField(E.readCanvas(S.dust))]; } },
+  reflection: { cat: 'Light & Color', label: 'Window Reflection', ins: ['light from', 'light height', 'bend'], outs: ['reflection'], io: { ins: ['value', 'value', 'field'], outs: ['field'] },
+    doc: 'The bright bands of a window mirrored in glass or a polished face, lying about where the light’s own reflection falls.',
+    params: [TOUCH_R('bands', 'Bands', 2, 1, 5), TOUCH_R('width', 'Width', 100, 30, 300), TOUCH_R('soft', 'Softness', 35), TOUCH_R('slant', 'Slant', 20, -90, 90), TOUCH_R('sky', 'Sky', 30), TOUCH_R('ripple', 'Ripple', 50), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 2,
+    run(E, n){ const { ww, wh, unit, num } = E, L = ugLight(E, n, 1, 2), B = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : null;
+      return [ugReflection(ww, wh, unit, ugUnit(ww/unit, wh/unit, L.deg, L.reach), { bands: num(n, 'bands', 2), width: num(n, 'width', 100)/100, soft: num(n, 'soft', 35)/100, slant: num(n, 'slant', 20),
+        sky: num(n, 'sky', 30)/100, ripple: num(n, 'ripple', 50)/100 }, B)]; } },
+  shatter: { cat: 'Marks', label: 'Shatter', ins: [], outs: ['cracks', 'shards'], io: { outs: ['field', 'field'] },
+    doc: 'Glass broken by a blow: cracks running out from where it was struck, rings of cracks across them, and a gray for each piece.',
+    params: [TOUCH_R('breaks', 'Breakage', 60), TOUCH_R('reach', 'Reach', 100, 40, 250), TOUCH_R('rays', 'Rays', 50), TOUCH_R('rings', 'Rings', 50), TOUCH_R('width', 'Crack Width', 100, 30, 300), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 3,
+    run(E, n){ const { ww, wh, unit, num } = E, S = ugShatter(ww/unit, wh/unit, { breaks: num(n, 'breaks', 60)/100, reach: num(n, 'reach', 100)/100, rays: num(n, 'rays', 50)/100, rings: num(n, 'rings', 50)/100 });
+      const [cc, cx] = kitCanvas(ww, wh), [sc, sx] = kitCanvas(ww, wh); cx.fillStyle = sx.fillStyle = '#000'; cx.fillRect(0, 0, ww, wh); sx.fillRect(0, 0, ww, wh);
+      for(const c of S.cells){ const g = Math.round(c.v*255); sx.fillStyle = `rgb(${g},${g},${g})`; sx.beginPath(); c.poly.forEach((p, k) => k ? sx.lineTo(p[0]*unit, p[1]*unit) : sx.moveTo(p[0]*unit, p[1]*unit)); sx.closePath(); sx.fill(); }
+      let w = E.px(2.4)*num(n, 'width', 100)/100, a = 1; const thin = E.px(0.8); if(w < thin){ a *= w/thin; w = thin; }
+      cx.strokeStyle = '#fff'; cx.lineWidth = w; cx.globalAlpha = a; cx.lineJoin = cx.lineCap = 'round';
+      for(const pts of S.cracks){ cx.beginPath(); pts.forEach((p, k) => k ? cx.lineTo(p[0]*unit, p[1]*unit) : cx.moveTo(p[0]*unit, p[1]*unit)); cx.stroke(); }
+      return [E.asField(E.readCanvas(cc)), E.asField(E.readCanvas(sc))]; } },
+  glasspane: { cat: 'Light & Color', label: 'Glass Pane', ins: ['picture', 'reflection', 'glints', 'oil', 'dust', 'spots', 'cracks', 'shards', 'waves'], outs: ['picture'],
+    io: { ins: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'], outs: ['image'] },
+    doc: 'A sheet of glass over a picture (or over mid-gray, to lay on another surface): it bends what lies under it and adds the light the glass catches.',
+    params: [TOUCH_R('reflect', 'Reflection', 60), TOUCH_R('glint', 'Glints', 80), TOUCH_R('smudge', 'Smudges', 60), TOUCH_R('dust', 'Dust', 70), TOUCH_R('bend', 'Bend', 30), TOUCH_R('edge', 'Edge', 0)], cost: () => 3,
+    run(E, n){ return [ugPane(E, n)]; } },
 });

@@ -4,6 +4,48 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Titan (2026-10-16)
+
+- **The Camera Dial**, a second dial beside the light dial, for surfaces seen
+  through a camera. Turn it to look round, draw it out to look lower and
+  across, and zoom with ＋ and −, a pinch or the wheel. While it moves, a
+  wireframe of the shot is drawn over the page, and the picture follows when
+  you let go. The light dial is now only the light.
+  - Lichtenberg Figures and Ringworld have it; looks saved before keep their
+    view.
+  - On a phone the two dials sit side by side, the hues under them in two
+    columns.
+- **Under Glass**, a new surface under Materials & Craft: a sheet of glass
+  laid over the page. It shows a window's reflection, scratches that glint
+  toward the light (wiped ones ring it), fingerprints, smears, water spots
+  and dust, and cracks if you break it.
+  - Clean glass changes nothing, so it goes over any other surface: choose
+    it as the Upper of Two Surfaces. Screen adds only what the glass
+    catches; Hard Light also darkens.
+  - In the Athanor, five new parts make it: Window Reflection, Scratches,
+    Smudges, Shatter and Glass Pane. The starter **A Picture Under Glass**
+    puts any texture under the pane, where old glass's waves and each
+    broken shard bend it.
+- **Lichtenberg Figures:** the strike's angle is a slider of its own; Depth
+  sinks the channels; a Glow Hue lights them as if they still burned; and the
+  plank can be Charred Wood, Slate, Brass or Acrylic. Its readings are new.
+- **Ringworld is never bare.** Each seed builds its own world: spires with
+  beacons at their tips, unfinished scaffolding with the void showing
+  through, mountains spilled against the walls, and now and then the ring's
+  seam. Structures raises all of it, and Stand At places you across the band.
+- **Circuit Board** keeps clear of your poem: the traces under its lines are
+  cut away, each ending in a via, and typing within a line doesn't redraw
+  the board. Its Magitech is now steampunk: brass gears and riveted bars set
+  with crystals, valves, and coils wound round the traces.
+- **The Surface section**, reordered: the surface and its reading on one line
+  with the four readings beside it, then New Random Surface and Edit in the
+  Athanor, then Two Surfaces with Upper, Lower and Swap.
+- **Firefox on a phone:** textures are made one at a time and the menu's
+  tiles are painted only as they scroll into view, so it should no longer
+  run out of memory. The Athanor shows a bar while it works.
+- **New parts in the Athanor:** Camera Dial (the page's second dial) and
+  Ground Coordinates (the page's plane as a camera sees it).
+
 ## Saturn–Rhea (2026-10-16)
 
 - **Ringworld**, a new surface under Sky & Cosmos. You stand on the inside of a

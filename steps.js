@@ -72,6 +72,7 @@ const STEP_PARTS = {
   hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
+  camdial:  { cat: 'Inputs', label: 'Camera Dial', ins: [], outs: ['turn', 'view', 'zoom'], params: [] },
   seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
@@ -208,6 +209,7 @@ export const STEP_DOCS = {
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
+  camdial: 'Brings the page’s camera dial into the graph: where the camera turns, how low it looks, and its zoom.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
@@ -381,6 +383,11 @@ const STEP_RUN = {
     // an empty picker reads as white, and says so (`none`): a whole texture as a part then uses its own color
     const c = hexCol(t || '#FFFFFF'); if(!/^#?[0-9a-f]{6}/i.test(t || '')) c.none = true; return [c];
   },
+  // the CAMERA DIAL (Ruby: a second dial, for the camera, so the light dial is the light's alone): its turn as 0–1 round
+  // the dial, its view as how far the handle is drawn out (0 overhead, 1 at the rim, up to 1.3 past it), its zoom as
+  // where it sits from 25% (0) to 400% (1) — wire each into a setting with a range ('~lens': '25,400')
+  camdial(E, n){ const c = E.ctx.camera || {}, z = c.zoom ?? 100;
+    return [((c.turn ?? 0) % 360 + 360) % 360/360, Math.max(0, Math.min(1.3, (c.view ?? 0)/100)), Math.max(0, Math.min(1, (z - 25)/375))]; },
   dial(E, n){ const { ctx } = E;
     return [((ctx.light ?? 315) % 360)/360, Math.max(0, Math.min(1.3, (ctx.lightTilt ?? 100)/100))];
   },
@@ -994,7 +1001,7 @@ const STEP_IO = {
   knob: { outs: ['value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
-  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, seed: { outs: ['value'] },
+  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },

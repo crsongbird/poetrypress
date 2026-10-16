@@ -348,7 +348,8 @@ const fmPad = effective(edCss, 'body.is-mobile.focus-mode .controls', 'padding-r
 check('focus mode leaves room for the focus ring beside the scrollbar', parseFloat(fmPad) >= 8);
 
 // ---- the light dial (☉ at the centre, an arrow toward it) ----
-check('the light dial has eight ticks that snap to 45°', (html.match(/class="ld-tick" data-deg="\d+"/g) || []).length === 8);
+check('the light dial has eight ticks that snap to 45° (and the camera dial beside it its own eight)', (html.slice(html.indexOf('id="lightRow"'), html.indexOf('id="cameraRow"')).match(/class="ld-tick" data-deg="\d+"/g) || []).length === 8
+  && (html.slice(html.indexOf('id="cameraRow"')).match(/class="ld-tick" data-deg="\d+"/g) || []).length === 8);
 check('the dial is ☉ at rest — one bold circle, the draggable dot at its heart — and grows 🜚\'s spike and curls as the dot moves',
   /class="ld-ring" r="26"/.test(html) && /id="lightHandle"/.test(html) && /id="lightSpike"/.test(html) && (html.match(/class="ld-curl"/g) || []).length === 2 && /set\('lightSpike', \{ transform: `rotate/.test(js));
 check('dragging the dial never scrolls the page', /\.light-dial\{[^}]*touch-action:none/.test(css));

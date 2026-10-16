@@ -31,6 +31,9 @@ const EXEMPT = {
   lightDegIn:   'the dial\'s angle typed or read: a view of textureLight, which is saved and restored',
   lightTiltIn:  'the dial\'s reach typed or read: a view of textureLightTilt, which is saved and restored',
   presetSearch: 'a search over the preset grid: it filters what the grid shows, and is not part of an image',
+  cameraTurnIn: 'the camera dial\'s turn typed or read: a view of cameraTurn, which is saved and restored',
+  cameraViewIn: 'the camera dial\'s view typed or read: a view of cameraView, which is saved and restored',
+  cameraZoomInput: 'the camera dial\'s zoom typed or read: a view of cameraZoom, which is saved and restored',
   forgeOpenSelect: 'the Athanor\'s Open drawer: picking one opens that graph on the bench; the bench is kept by itself, not as a control',
   textureSeedWords: 'the seed shown as its phrase: a view of textureSeedValue, which is saved and restored (seedWords.js turns each into the other exactly)',
 };
@@ -48,7 +51,9 @@ for(const m of ev.matchAll(/^const (\w+) = \$\('([\w-]+)'\);/gm)) (aliases[m[2]]
 // shape through restoreShape, which a draft uses too)
 const helpers = (text, prefix) => [...new Set([...text.matchAll(new RegExp(`\\b(${prefix}\\w*)\\(`, 'g'))].map(m => m[1]))];
 const ser = body('serializeCurrentSettings') + helpers(body('serializeCurrentSettings'), 'surfaceFromDom').map(n => bodyIn(renderer, n)).join('\n');
-const res = body('restoreSettings') + [...helpers(body('restoreSettings'), 'restoreSurface'), ...helpers(body('restoreSettings'), 'restoreShape')].map(body).join('\n');
+const res0 = body('restoreSettings') + [...helpers(body('restoreSettings'), 'restoreSurface'), ...helpers(body('restoreSettings'), 'restoreShape')].map(body).join('\n');
+// (the camera's three fields are put back through putCamera, which a preset and a reading use too)
+const res = res0 + helpers(res0, 'putCamera').map(body).join('\n');
 const named = (text, id, quoted) => text.includes(quoted ? `'${id}'` : `$('${id}')`) || (aliases[id] || []).some(a => new RegExp(`\\b${a}\\b`).test(text));
 
 check('the page has controls to check (the scan works)', ids.length > 80);

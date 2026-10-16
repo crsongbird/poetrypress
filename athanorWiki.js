@@ -33,7 +33,7 @@ export const WIKI_ARTICLES = [
 <li>A graph is read <b>from left to right</b>. Parts on the left make something; parts to their right change it; the <b>Surface</b> at the far right is where the texture comes out.</li>
 <li>Every part shows a <b>small preview</b> of what it makes, so you can see each step.</li>
 <li>Wires carry one of <b>five kinds of data</b>: gray maps, pictures, colors, numbers and curves. See [[kinds]].</li>
-<li>The app’s own textures are graphs (all but Deep Field). <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts. On the page, <b>🜉 Open in the Athanor</b> under the Surface opens the one you are using, at its sliders and hues.</li>
+<li>The app’s own textures are graphs (all but Deep Field). <b>Open</b>, in the bar, opens any of them, so you can see how they are made and borrow their parts. On the page, <b>🜉 Edit in the Athanor</b> under the Surface opens the one you are using, at its sliders and hues.</li>
 <li>Nothing here can break your page: undo and <b>Revert</b> are always there. The Athanor is a workbench with a graph of its own, kept in this browser until you open another. The page shows it only when it is the page’s surface: the bar says <b>✓ Applied</b> when it is (then every change shows on the page as you make it), and <b>⇱ Apply</b> puts it there. <b>Keep</b>, beside it, saves it under a name too. Choosing another surface for the page, even one you kept, leaves the bench as it was.</li>
 </ul>
 <p>The same way of working runs Blender’s shader nodes, Substance Designer, Houdini, Nuke and Filter Forge. What you learn here carries over.</p>
@@ -199,10 +199,12 @@ export const WIKI_ARTICLES = [
 <tr><td>Multiply</td><td>Darkens: white leaves things unchanged, black makes black. For ink, shadows, grime.</td></tr>
 <tr><td>Screen</td><td>Lightens: black leaves things unchanged. For light, glow, stars.</td></tr>
 <tr><td>Overlay, Soft Light</td><td>Darkens the darks and lightens the lights; middle gray does nothing. For texture and grain.</td></tr>
+<tr><td>Hard Light</td><td>Screens what is lighter than middle gray and multiplies what is darker; middle gray does nothing. Stronger than Overlay on a dark page.</td></tr>
 <tr><td>Darken, Lighten</td><td>Keeps the darker (or lighter) of the two.</td></tr>
 <tr><td>Difference</td><td>Shows how different they are; identical areas go black.</td></tr>
 <tr><td>Color Dodge, Burn</td><td>Strong brightening or darkening, for glows and scorches.</td></tr></table>
-<p>The whole Surface is also blended onto the page with the blend chosen under Surface.</p>` },
+<p>The whole Surface is also blended onto the page with the blend chosen under Surface.</p>
+<p><b>A layer made to go over others</b> is drawn on middle gray, so the modes that leave middle gray alone (Screen once the gray is mapped to black, Overlay, Soft Light, Hard Light) show only what it adds. Under Glass is made that way: its <b>Glass Pane</b> adds only what the glass catches, so it can be the Upper of Two Surfaces over anything. In a graph you can go further and put the picture into the Glass Pane itself, which also bends it: <b>Open</b> › <b>Starters to take apart</b> › A Picture Under Glass.</p>` },
   { id: 'heights', group: 'Building techniques', title: 'Height maps and light', body: `
 <p>A <b>height map</b> is a gray map read as a landscape: white is high, black is low. Lit from one side, it looks raised: the side facing the light is bright, the other side dark, and taller parts cast shadows. This is how flat textures become stone, paint and paper.</p>
 {{fig:heights}}

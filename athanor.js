@@ -176,7 +176,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, sizeK]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, ctx.camera || null, sizeK]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -398,6 +398,18 @@ export const ATHANOR_STARTERS = {
       ['ramp', { mid: 50 }, 960, 200], ['surface', { name: 'Ripples from the Words', ground: 'colour' }, 1180, 200],
       ['levels', { lo: 4, hi: 16, gamma: 50 }, 520, 360]],
     wires: [[1, 2, 3, 1], [2, 1, 3, 2], [3, 1, 4, 1], [4, 1, 5, 1], [1, 2, 10, 1], [10, 1, 5, 2], [5, 1, 8, 1], [7, 1, 8, 2], [6, 1, 8, 3], [8, 1, 9, 1]] },
+  // a picture under glass (Ruby: the glass made to go over another surface): the Glass Pane over Texture from the Menu
+  vitrine: { label: 'A Picture Under Glass', teach: 'A picture seen through a pane of glass. Texture from the Menu makes the picture, and the Glass Pane lays the glass over it. Old glass is never quite flat: a soft Perlin Noise, smoothed by Blur, is its waviness, and the Glass Pane bends what you see through it along the slopes, more as the Waviness knob rises. Window Reflection, Scratches and Smudges add the light the glass catches, as light adds, so where the glass is clean the picture shows as it is. Shatter breaks the pane, and through each shard the picture is bent its own way. Try: raise Cracks, then choose another texture in Texture from the Menu.', nodes: [
+      ['texture', { type: 'cityscape', p1: 100, p2: 100, p3: 50 }, 40, 40], ['dial', {}, 40, 300],
+      ['perlin', { scale: 8, details: 2, rough: 40, contrast: 30 }, 40, 440], ['blur', { radius: 6 }, 280, 440],
+      ['reflection', { bands: 2, width: 100, soft: 35, slant: 20, sky: 30, ripple: 50 }, 740, 300], ['scratches', { count: 35, length: 50, swirl: 30, width: 100, sharp: 50 }, 740, 140],
+      ['smudges', { prints: 30, smears: 25, spots: 15, dust: 30, size: 100 }, 740, 540], ['shatter', { breaks: 0, '~breaks': '0,100', reach: 100, rays: 50, rings: 50, width: 100 }, 740, 720],
+      ['glasspane', { reflect: 45, glint: 80, smudge: 60, dust: 70, bend: 40, '~bend': '0,100', edge: 30 }, 1000, 220],
+      ['knob', { slot: '1', name: 'Waviness', def: 40 }, 740, 880], ['knob', { slot: '2', name: 'Cracks', def: 0 }, 500, 880],
+      ['surface', { name: 'A Picture Under Glass', ground: 'colour' }, 1240, 220]],
+    wires: [[1, 1, 9, 1], [2, 1, 5, 1], [2, 2, 5, 2], [2, 1, 6, 1], [2, 2, 6, 2], [3, 1, 4, 1], [4, 1, 5, 3], [4, 1, 9, 9],
+      [5, 1, 9, 2], [6, 2, 9, 3], [7, 1, 9, 4], [7, 3, 9, 5], [7, 2, 9, 6], [8, 1, 9, 7], [8, 2, 9, 8],
+      [10, 1, 9, paramPort('glasspane', 'bend')], [11, 1, 8, paramPort('shatter', 'breaks')], [9, 1, 12, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

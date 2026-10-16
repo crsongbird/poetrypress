@@ -273,7 +273,7 @@ export const TEXTURE_CHAINS = {
       [13, 1, 15, 1], [14, 1, 15, 2], [15, 1, 16, 1], [9, 1, 16, 2], [11, 2, 16, 3], [4, 1, 16, paramPort('blend', 'opacity')], [16, 1, 17, 1]] },
   // 🝓 Circuit Board: Circuit Traces on the page's own backdrop; Threshold powers some traces (Charge), the Light Engine
   // lights the board, then what it gives off is screened over: the traces' glow, the Glow Hue's aura, data, sparks
-  circuit: { label: 'Circuit Board', div: 2, teach: 'A circuit board drawn on the page itself. Circuit Traces routes it the way boards are routed by hand: chips first, then buses of parallel traces that run straight and turn together (Bends: square corners, or 45° chamfers), ending in vias and pads. Page Backdrop makes the board of your backdrop\'s colors; Blend lays the copper, the tinned pads, the chips and the silkscreen on it. Every trace has its own grey (Each Trace), so three Thresholds driven by Charge decide which are powered: colored in your Trace Hue first, then (the grey dimmed by Math, so Charge reaches it later) glowing, then sparking. The Light Engine raises and lights the board; then the light it gives off is screened over (Blend in Screen): the glow, the Glow Hue\'s aura, data running along the powered traces in your Data Hue, and sparks from Scatter. Era (slider 7) turns the board, chip by chip, toward the future\'s, then quantum ones, then magitech; Markings (slider 8) stamps it with names, revisions and the odd little picture. Try: Charge at 100, then Bends at 0 for square corners.', nodes: [
+  circuit: { label: 'Circuit Board', div: 2, poem: 'lines', teach: 'A circuit board drawn on the page itself. Circuit Traces routes it the way boards are routed by hand: chips first, then buses of parallel traces that run straight and turn together (Bends: square corners, or 45° chamfers), ending in vias and pads. Page Backdrop makes the board of your backdrop\'s colors; Blend lays the copper, the tinned pads, the chips and the silkscreen on it. Every trace has its own grey (Each Trace), so three Thresholds driven by Charge decide which are powered: colored in your Trace Hue first, then (the grey dimmed by Math, so Charge reaches it later) glowing, then sparking. The Light Engine raises and lights the board; then the light it gives off is screened over (Blend in Screen): the glow, the Glow Hue\'s aura, data running along the powered traces in your Data Hue, and sparks from Scatter. Era (slider 7) turns the board, chip by chip, toward the future\'s, then quantum ones, then magitech; Markings (slider 8) stamps it with names, revisions and the odd little picture. The Poem keeps it clear of your words: Circuit Traces cuts away what lies under the lines after the board is routed, so the rest stays where it was as you write. Try: Charge at 100, then Bends at 0 for square corners.', nodes: [
       ['knob', { slot: '1', name: 'Traces', def: 55 }, 40, 40],                    // 1
       ['knob', { slot: '3', name: 'Charge', def: 55 }, 40, 130],                   // 2
       ['knob', { slot: '4', name: 'Data Flow', def: 40 }, 40, 220],                // 3
@@ -283,7 +283,7 @@ export const TEXTURE_CHAINS = {
       ['dial', {}, 40, 580],                                                       // 7
       ['hue', { slot: '1', name: 'Trace Hue' }, 40, 660], ['hue', { slot: '2', name: 'Data Hue' }, 40, 740], ['glowhue', {}, 40, 820],   // 8, 9, 10
       ['backdrop', {}, 300, 700],                                                  // 11
-      ['traces', { traces: 55, '~traces': '0,100', scale: 100, '~scale': '40,300', bends: 70, '~bends': '0,100', parts: 45, '~parts': '0,100', flow: 40, '~flow': '0,100' }, 300, 120],   // 12
+      ['traces', { traces: 55, '~traces': '0,100', scale: 100, '~scale': '40,300', bends: 70, '~bends': '0,100', parts: 45, '~parts': '0,100', flow: 40, '~flow': '0,100', clearing: 'cutting it away' }, 300, 120],   // 12
       ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 40],               // 13 (powered: colored)
       ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 160],              // 14 (glowing)
       ['threshold', { at: 100, '~at': '100,4', soft: 2 }, 800, 280],              // 15 (sparking)
@@ -317,12 +317,16 @@ export const TEXTURE_CHAINS = {
       ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
       ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
       // (Ruby: an Era slider, today → future and quantum → magitech; and markings, stamps and glyphs by the seed)
-      ['knob', { slot: '7', name: 'Era', def: 0 }, 40, 1060], ['knob', { slot: '8', name: 'Markings', def: 0 }, 40, 1140]],   // 47, 48
-    wires: [[47, 1, 12, paramPort('traces', 'era')], [48, 1, 12, paramPort('traces', 'marks')], [1, 1, 12, paramPort('traces', 'traces')], [4, 1, 12, paramPort('traces', 'scale')], [6, 1, 12, paramPort('traces', 'bends')], [5, 1, 12, paramPort('traces', 'parts')], [3, 1, 12, paramPort('traces', 'flow')],
+      ['knob', { slot: '7', name: 'Era', def: 0 }, 40, 1060], ['knob', { slot: '8', name: 'Markings', def: 0 }, 40, 1140],   // 47, 48
+      // (Ruby: no traces under the poem) its lines, cut away from the board after it is routed, so the rest stays put
+      ['poem', { padding: 45, softness: 0 }, 40, 1220],   // 49
+      // magitech's brass (gears, bars, rivets, valve caps, coils), laid over the chips before the silkscreen
+      ['colour', { hex: '#B8893C' }, 1160, 900], ['blend', { mode: 'source-over', opacity: 100 }, 1160, 620]],   // 50, 51
+    wires: [[49, 1, 12, 1], [47, 1, 12, paramPort('traces', 'era')], [48, 1, 12, paramPort('traces', 'marks')], [1, 1, 12, paramPort('traces', 'traces')], [4, 1, 12, paramPort('traces', 'scale')], [6, 1, 12, paramPort('traces', 'bends')], [5, 1, 12, paramPort('traces', 'parts')], [3, 1, 12, paramPort('traces', 'flow')],
       [2, 1, 13, paramPort('threshold', 'at')], [2, 1, 14, paramPort('threshold', 'at')], [2, 1, 15, paramPort('threshold', 'at')],
       [12, 3, 13, 1], [12, 3, 45, 1], [43, 1, 45, 2], [12, 3, 46, 1], [44, 1, 46, 2], [45, 1, 14, 1], [46, 1, 15, 1], [13, 1, 16, 1], [12, 1, 16, 2], [14, 1, 17, 1], [12, 1, 17, 2],
       [11, 1, 19, 1], [18, 1, 19, 2], [12, 1, 19, 3], [19, 1, 21, 1], [20, 1, 21, 2], [12, 5, 21, 3], [21, 1, 23, 1], [22, 1, 23, 2], [12, 6, 23, 3],
-      [23, 1, 25, 1], [24, 1, 25, 2], [12, 7, 25, 3], [25, 1, 26, 1], [8, 1, 26, 2], [16, 1, 26, 3],
+      [23, 1, 51, 1], [50, 1, 51, 2], [12, 8, 51, 3], [51, 1, 25, 1], [24, 1, 25, 2], [12, 7, 25, 3], [25, 1, 26, 1], [8, 1, 26, 2], [16, 1, 26, 3],
       [12, 2, 27, 1], [26, 1, 28, 1], [27, 1, 28, 2], [12, 1, 28, 3], [7, 1, 28, 7],
       [17, 1, 29, 1], [28, 1, 30, 1], [8, 1, 30, 2], [29, 1, 30, 3], [30, 1, 31, 1], [18, 1, 31, 2], [17, 1, 31, 3],
       [17, 1, 32, 1], [31, 1, 33, 1], [10, 1, 33, 2], [32, 1, 33, 3],
@@ -591,25 +595,46 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
       [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
-  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through wood or acrylic. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches. The Light Dial goes into Strike From (where it enters) and lights the result. Wood makes the plank; Burn chars the channels into it (or, as Material rises, leaves them glowing like embers, then lit inside clear acrylic), and the Light Engine shows the burn sunk into the grain. Zoom brings the finished figure closer, as a camera would; Slide frames it along the dial\'s line; Turn and View are the camera itself, turning about the plank and tipping to look across it (one Knob each, wired into both Wood and Discharge, so the plank and its figure move together). Try: set Poles to 1 for a single strike, or wire Contour Lines into Burn\'s Channels instead.', nodes: [
+  lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through a surface. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches; Strike Angle is where it enters. The Camera Dial is the camera, wired into Wood, Ground Coordinates and Discharge alike, so the plank and its figure turn, tip and zoom together; the Light Dial is only the light. Material chooses the plank through Map Switch: Wood\'s grain in your two hues, a slate (Noise at Coordinates on the plank, in slate\'s own grays), brushed brass (the same noise stretched along the plank) or a clear acrylic block. Burn chars the channels into wood, etches them pale into slate and brass, or lights them inside the acrylic; Depth sinks them and raises the relief; the Light Engine lights it, and Glow makes the channels give off your Glow Hue (black: none). Try: Material on Brass with a Glow Hue, then pull the camera low across the plank.', nodes: [
       ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                     // 1
-      ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 140],                // 2
-      ['knob', { slot: '3', name: 'Poles', def: 50 }, 40, 240],                    // 3  (2 of 1–3)
-      ['knob', { slot: '4', name: 'Material', def: 0 }, 40, 340],                  // 4
-      ['dial', {}, 40, 440],                                                       // 5
-      ['hue', { slot: '1', name: 'Wood Hue' }, 40, 520], ['hue', { slot: '2', name: 'Grain Hue' }, 40, 600],   // 6, 7
-      ['wood', { rings: 40, figure: 50, turn: 0, '~turn': '0,360', view: 0, '~view': '0,100' }, 300, 520],   // 8
-      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,3', grain: 30, width: 100, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100',
-        turn: 0, '~turn': '0,360', view: 0, '~view': '0,100' }, 300, 120],   // 9
-      ['burn', { material: 0, '~material': '0,100', scorch: 50, depth: 55 }, 580, 300],   // 10
-      ['material', { relief: 35, gloss: 30, shine: 25, shadow: 55, occlusion: 40, ambient: 40 }, 840, 300],   // 11
-      ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 1100, 320],   // 12
-      ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 680], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 760],   // 13 (100 of 50–400), 14
-      // the ground camera (Ruby: "rotating or tracking around"): Turn and View move the plank and its figure together
-      ['knob', { slot: '7', name: 'Turn', def: 0, kind: 'angle' }, 40, 840], ['knob', { slot: '8', name: 'View', def: 0 }, 40, 920]],   // 15, 16
-    wires: [[15, 1, 8, paramPort('wood', 'turn')], [15, 1, 9, paramPort('discharge', 'turn')], [16, 1, 8, paramPort('wood', 'view')], [16, 1, 9, paramPort('discharge', 'view')],
-      [1, 1, 9, paramPort('discharge', 'reach')], [2, 1, 9, paramPort('discharge', 'branching')], [3, 1, 9, paramPort('discharge', 'poles')], [4, 1, 10, paramPort('burn', 'material')],
-      [5, 1, 9, 1], [5, 1, 11, 7], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 12, 1], [13, 1, 9, paramPort('discharge', 'zoom')], [14, 1, 9, paramPort('discharge', 'offset')]] },
+      ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 120],                // 2
+      ['knob', { slot: '3', name: 'Poles', def: 50 }, 40, 200],                    // 3  (2 of 1–3)
+      ['knob', { slot: '4', name: 'Material', def: 0, kind: 'steps', steps: 4, names: 'Charred Wood, Slate, Brass, Acrylic' }, 40, 280],   // 4
+      ['knob', { slot: '5', name: 'Strike Angle', def: 87.5, kind: 'angle' }, 40, 360],   // 5  (315°)
+      ['knob', { slot: '6', name: 'Depth', def: 50 }, 40, 440],                    // 6
+      ['knob', { slot: '7', name: 'Channel Width', def: 26 }, 40, 520],           // 7  (100 of 30–300)
+      ['knob', { slot: '8', name: 'Slide', def: 50 }, 40, 600],                    // 8  (0 of −100–100)
+      ['camdial', {}, 40, 700], ['dial', {}, 40, 800],                             // 9, 10
+      ['hue', { slot: '1', name: 'Wood Hue' }, 40, 880], ['hue', { slot: '2', name: 'Grain Hue' }, 40, 960], ['glowhue', {}, 40, 1040],   // 11, 12, 13
+      ['wood', { rings: 40, figure: 50, turn: 0, '~turn': '0,360', view: 0, '~view': '0,100', lens: 100, '~lens': '25,400' }, 300, 700],   // 14
+      ['groundview', { turn: 0, '~turn': '0,360', view: 0, '~view': '0,100', lens: 100, '~lens': '25,400' }, 300, 860],   // 15
+      ['mapnoise', { size: 35, octaves: 7, rough: 60, ridges: 20, variation: 3 }, 560, 860],   // 16 (slate)
+      ['tint', {}, 800, 860],                                                      // 17 (between slate's own grays)
+      ['number', { value: 4 }, 300, 1000], ['math', { op: 'multiply' }, 560, 1000],   // 18, 19 (brushed: along the plank, stretched)
+      ['mapnoise', { size: 1, octaves: 5, rough: 50, variation: 7 }, 800, 1000],  // 20
+      ['colour', { hex: '#E2C27A' }, 800, 1100], ['colour', { hex: '#9C7836' }, 800, 1180], ['tint', {}, 1040, 1000],   // 21, 22, 23 (brass)
+      ['mapswitch', { soft: 0 }, 1280, 760],                                       // 24 (the plank, by Material)
+      ['discharge', { reach: 50, '~reach': '0,100', branching: 50, '~branching': '0,100', poles: 2, '~poles': '1,3', grain: 30, width: 100, '~width': '30,300', zoom: 100, offset: 0, '~offset': '-100,100',
+        turn: 0, '~turn': '0,360', view: 0, '~view': '0,100', lens: 100, '~lens': '25,400' }, 300, 120],   // 25
+      ['threshold', { at: 90, soft: 1 }, 560, 360], ['threshold', { at: 15, soft: 1 }, 560, 440], ['math', { op: 'subtract' }, 800, 440],   // 26 (acrylic), 27, 28 (etched: slate or brass)
+      ['burn', { material: 0, '~material': '0,100', scorch: 50, depth: 55, '~depth': '10,100', etch: 0, '~etch': '0,100' }, 1520, 300],   // 29
+      ['material', { relief: 35, '~relief': '0,70', gloss: 30, '~gloss': '25,70', shine: 25, '~shine': '25,75', shadow: 55, occlusion: 40, ambient: 40 }, 1760, 300],   // 30
+      ['glow', { radius: 10, aura: 40, strength: 85, auraK: 35, core: 45, hex: '#000000' }, 2000, 300],   // 31
+      ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 2240, 320],   // 32
+      ['colour', { hex: '#6E7680' }, 560, 940], ['colour', { hex: '#2A2E35' }, 560, 1020]],   // 33, 34 (slate's grays)
+    wires: [[1, 1, 25, paramPort('discharge', 'reach')], [2, 1, 25, paramPort('discharge', 'branching')], [3, 1, 25, paramPort('discharge', 'poles')], [5, 1, 25, 1],
+      [7, 1, 25, paramPort('discharge', 'width')], [8, 1, 25, paramPort('discharge', 'offset')],
+      [9, 1, 14, paramPort('wood', 'turn')], [9, 2, 14, paramPort('wood', 'view')], [9, 3, 14, paramPort('wood', 'lens')],
+      [9, 1, 15, paramPort('groundview', 'turn')], [9, 2, 15, paramPort('groundview', 'view')], [9, 3, 15, paramPort('groundview', 'lens')],
+      [9, 1, 25, paramPort('discharge', 'turn')], [9, 2, 25, paramPort('discharge', 'view')], [9, 3, 25, paramPort('discharge', 'lens')],
+      [11, 1, 14, 1], [12, 1, 14, 2],
+      [15, 1, 16, 1], [15, 2, 16, 2], [15, 3, 16, 3], [16, 1, 17, 1], [33, 1, 17, 2], [34, 1, 17, 3],
+      [15, 1, 19, 1], [18, 1, 19, 2], [19, 1, 20, 1], [15, 2, 20, 2], [15, 3, 20, 3], [20, 1, 23, 1], [21, 1, 23, 2], [22, 1, 23, 3],
+      [4, 1, 24, 1], [14, 1, 24, 2], [17, 1, 24, 3], [23, 1, 24, 4], [14, 1, 24, 5],
+      [4, 1, 26, 1], [4, 1, 27, 1], [27, 1, 28, 1], [26, 1, 28, 2],
+      [24, 1, 29, 1], [25, 1, 29, 2], [26, 1, 29, paramPort('burn', 'material')], [28, 1, 29, paramPort('burn', 'etch')], [6, 1, 29, paramPort('burn', 'depth')],
+      [29, 1, 30, 1], [29, 2, 30, 2], [10, 1, 30, 7], [6, 1, 30, paramPort('material', 'relief')], [4, 1, 30, paramPort('material', 'gloss')], [4, 1, 30, paramPort('material', 'shine')],
+      [30, 1, 31, 1], [25, 1, 31, 2], [13, 1, 31, 3], [31, 1, 32, 1]] },
   // 🜉 Ruffled Growth: Differential Growth, its body raised and lit
   growth: { label: 'Ruffled Growth', div: 2, teach: 'Differential growth: Differential Growth starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
       ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
@@ -680,7 +705,7 @@ export const TEXTURE_CHAINS = {
   // 🜁 Rain on Water: Raindrops (each drop a ring wave, the newest splashing) → the water's colour by distance → Light Engine → Glow
   // ◯ RINGWORLD (Ruby: a halo landscape, a Niven ringworld, but abstract; lit by its star, so the dial is the camera and one
   // slider the light): Ringworld View maps the world; Noise at Coordinates lays land and cloud on it; the rest is colour and light
-  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones; a second one makes clouds. Threshold and Map Range make seas of the low ground; Tint and Mix color land, water and walls; the Light Engine lights the relief from overhead at a height of its own (Daylight), as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Light Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch. Try: Daylight at 40 for a dusk line crossing the arch, or Band Width at 100 for a wide, flat world.', nodes: [
+  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones; a second one makes clouds. Threshold and Map Range make seas of the low ground; Tint and Mix color land, water and walls; the Light Engine lights the relief from overhead at a height of its own (Daylight), as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The seed builds each ring its own way (Ruby: never bare): spires with beacons at their tips, stretches of floor left as scaffolding over the void, spill mountains along the rims (Map Range of Across, added to the land), and Random Numbers pick the dry land\'s color, the land\'s twist and the clouds\' size; Structures raises it all. Try: Daylight at 40 for a dusk line crossing the arch, or Band Width at 100 for a wide, flat world.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],                 // 1
       ['knob', { slot: '2', name: 'Terrain', def: 50 }, 40, 120],                   // 2
       ['knob', { slot: '3', name: 'Seas', def: 40 }, 40, 200],                      // 3
@@ -688,12 +713,12 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '5', name: 'Atmosphere', def: 50 }, 40, 360],                // 5
       ['knob', { slot: '6', name: 'Daylight', def: 80 }, 40, 440],                  // 6
       ['knob', { slot: '7', name: 'Altitude', def: 15 }, 40, 520],                  // 7
-      ['knob', { slot: '8', name: 'Lens', def: 50 }, 40, 600],                      // 8  (75° of 30–120)
+      ['knob', { slot: '8', name: 'Stand At', def: 50 }, 40, 600],                  // 8  (the middle of the band)
       ['hue', { slot: '1', name: 'Land Hue' }, 40, 700], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 780],   // 9, 10
       ['ringview', { band: 45, '~band': '0,100', walls: 25, '~walls': '0,100', altitude: 15, '~altitude': '0,100', lens: 75, '~lens': '30,120',
         daylight: 80, '~daylight': '0,100', air: 50, '~air': '0,100' }, 300, 300],   // 11
       ['mapnoise', { size: 22, octaves: 14, rough: 78, ridges: 30, '~ridges': '0,85', warp: 45, steep: 25, '~steep': '8,60' }, 560, 120],   // 12 (the land's heights, and how steep)
-      ['mapnoise', { size: 18, octaves: 7, rough: 62, warp: 90, variation: 5 }, 560, 560],   // 13 (the clouds)
+      ['mapnoise', { size: 18, '~size': '8,40', octaves: 7, rough: 62, warp: 90, variation: 5 }, 560, 560],   // 13 (the clouds)
       ['mapnoise', { size: 45, octaves: 5, rough: 55, warp: 40, variation: 11 }, 560, 340],  // 14 (wet or dry)
       ['threshold', { at: 42, '~at': '25,60', soft: 2 }, 800, 40],                  // 15 (land, above the sea)
       ['maprange', { inLo: 42, '~inLo': '25,60', inHi: 92 }, 800, 140],             // 16 (height above the sea)
@@ -731,26 +756,39 @@ export const TEXTURE_CHAINS = {
       ['math', { op: 'multiply' }, 1280, 760],   // 62 (slopes on land only: the sea lies flat)
       ['maprange', { outLo: 10, outHi: 100 }, 1760, 860],   // 63 (the day about the camera, with the arch's own light at night)
       ['maprange', { outLo: 100, outHi: 12 }, 1760, 1180], ['blend', { mode: 'multiply', opacity: 100 }, 2000, 1180],   // 64, 65 (stars fade by day)
-      ['dial', {}, 40, 880]],   // 66 (the camera)
-    wires: [[66, 1, 11, 1], [66, 2, 11, 2], [1, 1, 11, paramPort('ringview', 'band')], [4, 1, 11, paramPort('ringview', 'walls')], [7, 1, 11, paramPort('ringview', 'altitude')], [8, 1, 11, paramPort('ringview', 'lens')],
+      ['camdial', {}, 40, 880],   // 66 (the camera: the Camera Dial — where you look, how far up, and the lens)
+      // THE CONSTRUCTION AND THE WORLD, by the seed (Ruby: never bare): spill mountains along the rims, the unfinished floor's
+      // scaffolding and the void through it, the spires' beacons, now and then the world's seam; the dry land's color,
+      // the land's shapes and the clouds' size each drawn by a Random Number
+      ['number', { value: 50 }, 800, 1300], ['math', { op: 'difference' }, 1040, 1300],   // 67, 68 (how far across from the middle)
+      ['maprange', { inLo: 30, inHi: 50, outHi: 40, '~outHi': '15,70' }, 1280, 1300], ['math', { op: 'multiply' }, 1520, 1300], ['math', { op: 'add' }, 1760, 1300],   // 69, 70, 71 (the spill mountains, raised on the land)
+      ['math', { op: 'max' }, 2720, 1100],                                         // 72 (space, and the void under the open floor)
+      ['colour', { hex: '#7FD8FF' }, 3200, 640], ['blend', { mode: 'screen', opacity: 55 }, 3440, 460],   // 73, 74 (the seam)
+      ['colour', { hex: '#FF5A4A' }, 3200, 760], ['blend', { mode: 'screen', opacity: 100 }, 3680, 460],   // 75, 76 (the beacons)
+      ['mix', { t: 50 }, 2000, 400],                                                // 77 (the scaffolding's beams)
+      ['random', { lo: 0, hi: 100 }, 560, 1400], ['gradmap', { stops: 5, c1: '#B59A6A', c2: '#A8583A', c3: '#D8D2C4', c4: '#7A5A8A', c5: '#5E7A70', blend: 'bands' }, 800, 1400],   // 78, 79 (the dry land's color)
+      ['random', { lo: 10, hi: 90 }, 300, 1500], ['random', { lo: 0, hi: 100 }, 300, 1580]],   // 80 (the land's twist), 81 (the clouds' size)
+    wires: [[66, 1, 11, 1], [66, 2, 11, 2], [66, 3, 11, 3], [4, 1, 11, paramPort('ringview', 'build')],
+      [11, 2, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [4, 1, 69, paramPort('maprange', 'outHi')], [69, 1, 70, 1], [12, 1, 70, 2], [12, 1, 71, 1], [70, 1, 71, 2],
+      [78, 1, 79, 1], [80, 1, 12, paramPort('mapnoise', 'warp')], [81, 1, 13, paramPort('mapnoise', 'size')], [1, 1, 11, paramPort('ringview', 'band')], [4, 1, 11, paramPort('ringview', 'walls')], [7, 1, 11, paramPort('ringview', 'altitude')], [8, 1, 11, paramPort('ringview', 'place')],
       [6, 1, 11, paramPort('ringview', 'daylight')], [5, 1, 11, paramPort('ringview', 'air')],
       [11, 1, 12, 1], [11, 2, 12, 2], [11, 4, 12, 3], [2, 1, 12, paramPort('mapnoise', 'ridges')],
       [11, 1, 13, 1], [11, 2, 13, 2], [11, 4, 13, 3], [11, 1, 14, 1], [11, 2, 14, 2], [11, 4, 14, 3],
-      [12, 1, 15, 1], [3, 1, 15, paramPort('threshold', 'at')], [12, 1, 16, 1], [3, 1, 16, paramPort('maprange', 'inLo')], [12, 1, 17, 1], [3, 1, 17, paramPort('maprange', 'inHi')],
-      [20, 1, 21, 1], [9, 1, 21, 2], [14, 1, 57, 1], [57, 1, 21, 3], [16, 1, 22, 1], [12, 2, 58, 1], [22, 1, 59, 1], [58, 1, 59, 2],
+      [71, 1, 15, 1], [3, 1, 15, paramPort('threshold', 'at')], [71, 1, 16, 1], [3, 1, 16, paramPort('maprange', 'inLo')], [71, 1, 17, 1], [3, 1, 17, paramPort('maprange', 'inHi')],
+      [79, 1, 21, 1], [9, 1, 21, 2], [14, 1, 57, 1], [57, 1, 21, 3], [16, 1, 22, 1], [12, 2, 58, 1], [22, 1, 59, 1], [58, 1, 59, 2],
       [21, 1, 23, 1], [18, 1, 23, 2], [59, 1, 23, 3], [17, 1, 24, 1], [10, 1, 24, 2], [19, 1, 24, 3],
       [24, 1, 25, 1], [23, 1, 25, 2], [15, 1, 25, 3],
-      [12, 1, 28, 1], [27, 1, 28, 2], [26, 1, 28, 3], [25, 1, 29, 1], [28, 1, 29, 2], [11, 6, 29, 3],
-      [29, 1, 61, 1], [60, 1, 61, 2], [12, 2, 62, 1], [15, 1, 62, 2], [62, 1, 60, 1], [61, 1, 31, 1], [16, 1, 31, 2], [2, 1, 12, paramPort('mapnoise', 'steep')], [30, 1, 31, 7], [2, 1, 31, paramPort('material', 'relief')], [6, 1, 31, paramPort('material', 'height')],
+      [71, 1, 28, 1], [27, 1, 28, 2], [26, 1, 28, 3], [25, 1, 29, 1], [28, 1, 29, 2], [11, 6, 29, 3], [29, 1, 77, 1], [28, 1, 77, 2], [11, 12, 77, 3],
+      [77, 1, 61, 1], [60, 1, 61, 2], [12, 2, 62, 1], [15, 1, 62, 2], [62, 1, 60, 1], [61, 1, 31, 1], [16, 1, 31, 2], [2, 1, 12, paramPort('mapnoise', 'steep')], [30, 1, 31, 7], [2, 1, 31, paramPort('material', 'relief')], [6, 1, 31, paramPort('material', 'height')],
       [13, 1, 32, 1], [5, 1, 32, paramPort('maprange', 'inLo')], [11, 6, 33, 1], [32, 1, 34, 1], [33, 1, 34, 2],
       [31, 1, 36, 1], [35, 1, 36, 2], [34, 1, 36, 3],
       [11, 8, 37, 1], [36, 1, 38, 1], [37, 1, 38, 2], [10, 1, 39, 1], [11, 11, 63, 1], [63, 1, 39, 2],
       [38, 1, 40, 1], [39, 1, 40, 2], [11, 10, 40, 3],
-      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [65, 1, 43, 1], [42, 1, 43, 2], [11, 9, 43, 3], [11, 10, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
-      [40, 1, 46, 1], [45, 1, 46, 2], [11, 5, 46, 3],
-      [46, 1, 48, 1], [47, 1, 48, 2], [11, 7, 48, 3],
+      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [65, 1, 43, 1], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
+      [40, 1, 46, 1], [45, 1, 46, 2], [72, 1, 46, 3], [11, 5, 72, 1], [11, 13, 72, 2],
+      [46, 1, 48, 1], [47, 1, 48, 2], [11, 7, 48, 3], [48, 1, 74, 1], [73, 1, 74, 2], [11, 14, 74, 3], [74, 1, 76, 1], [75, 1, 76, 2], [11, 15, 76, 3],
       [11, 1, 50, 1], [11, 2, 50, 2], [11, 4, 50, 3], [50, 1, 51, 1], [11, 8, 52, 1], [51, 1, 53, 1], [52, 1, 53, 2], [53, 1, 54, 1], [4, 1, 54, 2],
-      [48, 1, 56, 1], [55, 1, 56, 2], [54, 1, 56, 3], [56, 1, 49, 1]] },
+      [76, 1, 56, 1], [55, 1, 56, 2], [54, 1, 56, 3], [56, 1, 49, 1]] },
   rainwater: { label: 'Rain on Water', div: 2, teach: 'Rain falling on still water. Raindrops makes every drop that has fallen in the last moment: a ring wave spreading from where it struck, a short packet of ripples that weakens as it widens, the newest still splashing. It hands on three maps: the ripples as heights, the splashes, and how far off each point of the water lies. Tint colors the water by that distance (your Water Hue near, the Sky Hue it reflects toward the horizon), and Displace bends that reflection through the ripples; the Light Engine raises the ripples and catches the light on them; Glow makes the splashes sparkle. View looks from overhead (0) across the water toward the horizon, where the rings grow small and the water calms. Try: Spread at 100 for wide old rings, or wire Raindrops\' Ripples into a Displace to see the poem through the water.', nodes: [
       ['knob', { slot: '1', name: 'Ripple Size', def: 29 }, 40, 40],               // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Rain', def: 50 }, 40, 140],                     // 2
@@ -864,4 +902,28 @@ export const TEXTURE_CHAINS = {
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
       [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 10, 1], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 9, 1],
       [12, 1, 10, paramPort('oilpaint', 'amount')], [12, 1, 11, paramPort('material', 'relief')]] },
+  // Ᏹ Under Glass (Ruby: a glass to lay over another surface): the glass alone, on mid-gray, so its blend shows only what the glass catches
+  underglass: { label: 'Under Glass', div: 2, teach: 'A sheet of glass laid over the page. It is made to go over another surface: choose it as the Upper of Two Surfaces (Screen adds only the light it catches; Overlay also darkens), or in a graph put Texture from the Menu into the Glass Pane\'s Picture. Window Reflection mirrors a window\'s bright bands about where the light\'s own reflection falls; Scratches are hairlines in bunches or wiped in swirls, and its Glints are those lying across the way to the light; Smudges are fingerprints, smears, water spots and dust; Shatter breaks it, with a gray for each piece. A soft Perlin Noise is old glass\'s waviness: it ripples the reflection (and in a graph bends whatever is under it). The Glass Pane puts it together, adding light as light adds, so clean glass that catches nothing is exactly mid-gray and leaves the page alone. Try: turn the light dial and watch the glints ring the light, then raise Cracks.', nodes: [
+      ['knob', { slot: '1', name: 'Reflection', def: 55 }, 40, 40],              // 1
+      ['knob', { slot: '2', name: 'Scratches', def: 40 }, 40, 120],              // 2
+      ['knob', { slot: '3', name: 'Swirl', def: 30 }, 40, 200],                  // 3
+      ['knob', { slot: '4', name: 'Smudges', def: 35 }, 40, 280],                // 4
+      ['knob', { slot: '5', name: 'Dust & Spots', def: 30 }, 40, 360],           // 5
+      ['knob', { slot: '6', name: 'Cracks', def: 0 }, 40, 440],                  // 6
+      ['knob', { slot: '7', name: 'Waviness', def: 30 }, 40, 520],               // 7
+      ['knob', { slot: '8', name: 'Edge', def: 0 }, 40, 600],                    // 8
+      ['dial', {}, 40, 700],                                                     // 9
+      ['perlin', { scale: 8, details: 2, rough: 40, contrast: 30 }, 300, 780],   // 10
+      ['blur', { radius: 6 }, 540, 780],                                         // 11
+      ['reflection', { bands: 2, width: 100, soft: 35, slant: 20, sky: 30, ripple: 50, '~ripple': '0,100' }, 1020, 40],   // 12
+      ['scratches', { count: 40, '~count': '0,100', length: 50, swirl: 30, '~swirl': '0,100', width: 100, sharp: 50 }, 1020, 260],   // 13
+      ['smudges', { prints: 35, '~prints': '0,100', smears: 30, '~smears': '0,85', spots: 20, '~spots': '0,70', dust: 30, '~dust': '0,100', size: 100 }, 1020, 460],   // 14
+      ['shatter', { breaks: 0, '~breaks': '0,100', reach: 100, rays: 50, rings: 50, width: 100 }, 1020, 660],   // 15
+      ['glasspane', { reflect: 60, '~reflect': '0,100', glint: 80, smudge: 60, dust: 70, bend: 30, '~bend': '0,100', edge: 0, '~edge': '0,100' }, 1300, 300],   // 16
+      ['surface', { name: 'Under Glass', ground: 'grey' }, 1560, 300]],          // 17
+    wires: [[1, 1, 16, paramPort('glasspane', 'reflect')], [2, 1, 13, paramPort('scratches', 'count')], [3, 1, 13, paramPort('scratches', 'swirl')],
+      [4, 1, 14, paramPort('smudges', 'prints')], [4, 1, 14, paramPort('smudges', 'smears')], [5, 1, 14, paramPort('smudges', 'dust')], [5, 1, 14, paramPort('smudges', 'spots')],
+      [6, 1, 15, paramPort('shatter', 'breaks')], [7, 1, 16, paramPort('glasspane', 'bend')], [7, 1, 12, paramPort('reflection', 'ripple')], [8, 1, 16, paramPort('glasspane', 'edge')],
+      [9, 1, 12, 1], [9, 2, 12, 2], [9, 1, 13, 1], [9, 2, 13, 2], [10, 1, 11, 1], [11, 1, 12, 3],
+      [12, 1, 16, 2], [13, 2, 16, 3], [14, 1, 16, 4], [14, 3, 16, 5], [14, 2, 16, 6], [15, 1, 16, 7], [15, 2, 16, 8], [11, 1, 16, 9], [16, 1, 17, 1]] },
 };

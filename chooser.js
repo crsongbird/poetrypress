@@ -94,8 +94,16 @@ function chKeep(value, url, stamp){
  *  opts.hold     — (value, tile) → true when it opened a menu of its own for that tile (a long press or right-click)
  *  opts.side     — on a phone, a sidebar from the left (the Athanor's Open) instead of a sheet from the bottom
  *  opts.wide     — on a desk, as wide as the window allows (up to 960) instead of 560
+ *  opts.sub(v)   — a quiet second name shown after the first in the field (the surface's applied reading)
  * Returns { refresh(), open(), close() }.
  */
+// the tiles' watcher: paints each tile as it comes near the panel's view (none where IntersectionObserver is missing)
+function chViewer(root){
+  if(typeof IntersectionObserver !== 'function') return null;
+  if(root._io) return root._io;
+  root._io = new IntersectionObserver(es => { for(const e of es) if(e.isIntersecting){ root._io.unobserve(e.target); if(e.target._paint) e.target._paint(); } }, { root, rootMargin: '240px 0px' });
+  return root._io;
+}
 export function attachChooser(select, opts = {}){
   if(!select || typeof document === 'undefined' || typeof document.createElement !== 'function' || !select.parentNode) return { refresh(){}, open(){}, close(){} };
   const stampOf = v => { try { return String(opts.stamp ? opts.stamp(v) : ''); } catch(e){ return ''; } };
@@ -120,7 +128,10 @@ export function attachChooser(select, opts = {}){
 
   function refresh(){
     const v = select.value;
-    btn.querySelector('.ch-trig-name').textContent = textOf(v);
+    const nm = btn.querySelector('.ch-trig-name'); nm.textContent = textOf(v);
+    // (opts.sub: a quiet second name beside the first — the surface's applied reading)
+    const sub = opts.sub ? String(opts.sub(v) || '') : '';
+    if(sub){ const sp = document.createElement('span'); sp.className = 'ch-trig-sub'; sp.textContent = ' · ' + sub; nm.appendChild(sp); }
     btn.setAttribute('aria-label', (opts.title || '') + ': ' + textOf(v) + '. ' + CHOOSER.open);
     const t = btn.querySelector('.ch-trig-thumb'); t.classList.remove('ch-glyph'); thumbInto(t, v);
     if(panel) panel.querySelectorAll('.ch-tile').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value === v)));
@@ -169,9 +180,13 @@ export function attachChooser(select, opts = {}){
         b.addEventListener('click', () => { if(held){ held = false; return; } choose(it.value); });
         grid.appendChild(b); tiles.push([b, it]);
       }
-      // a folded group's tiles are painted when it is first opened
+      // a folded group's tiles are painted when it is first opened, and then each as it scrolls into view (Ruby:
+      // a phone grew touchy while every tile was made at once): a few at a time, the rest when they are wanted
       let painted = false;
-      const paint = () => { if(painted) return; painted = true; for(const [b, it] of tiles) thumbInto(b.querySelector('.ch-thumb'), it.value); };
+      const paintOne = (b, it) => { if(b._painted) return; b._painted = true; thumbInto(b.querySelector('.ch-thumb'), it.value); };
+      const paint = () => { if(painted) return; painted = true;
+        const io = chViewer(body); if(!io){ for(const [b, it] of tiles) paintOne(b, it); return; }
+        for(const [b, it] of tiles){ b._paint = () => paintOne(b, it); io.observe(b); } };
       if(sec.open) paint();
       sec.addEventListener('toggle', () => {
         if(sec.open) paint();
