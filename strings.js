@@ -198,6 +198,7 @@ export const UI_STRINGS = {
   'label.text_aware':                        "Text Aware",
   'label.text_blend':                        "Blend with Text",
   'label.shape_aware':                       "Shape Aware",
+  'label.text_cut':                          "Cut Out by Text",
   'button.layer_upper':                      "Upper",
   'button.layer_lower':                      "Lower",
   'button.layer_swap':                       "⇅ Swap",

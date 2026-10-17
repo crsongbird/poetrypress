@@ -10,13 +10,13 @@
  *            formation and fibres) or a digital sensor (per-channel noise,
  *            rows and columns), blended between neighbours by Kind.
  */
-import { CPU, scaleNow, kitCanvas, kitField, kitImage, withSeed, canonDiv, lightHeights, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { CPU, scaleNow, wordsRoom, kitCanvas, kitField, kitImage, withSeed, canonDiv, lightHeights, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genCityscape, genFlowers } from './texSharpness.js';
 
 const SH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
 /** Dots on a w×h canvas: a cell every max(w,h)/48·scale, each dot's radius the tone there (0..1 field on w×h). */
-function paintScreen(w, h, tone, weight, scale, angleDeg){
+function paintScreen(w, h, tone, weight, scale, angleDeg, room){
   const [c, x] = kitCanvas(w, h);
   x.fillStyle = 'rgb(205,205,205)'; x.fillRect(0, 0, w, h);
   const cell = Math.max(w, h)/48*scale, a = angleDeg*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
@@ -26,7 +26,7 @@ function paintScreen(w, h, tone, weight, scale, angleDeg){
   for(let j = -n; j <= n; j++) for(let i = -n; i <= n; i++){
     const u = (i + 0.5)*cell, v = (j + 0.5)*cell, px = cx0 + u*ca - v*sa, py = cy0 + u*sa + v*ca;
     if(px < -cell || py < -cell || px > w + cell || py > h + cell) continue;
-    const t = tone[Math.min(h - 1, Math.max(0, py|0))*w + Math.min(w - 1, Math.max(0, px|0))];
+    const q = Math.min(h - 1, Math.max(0, py|0))*w + Math.min(w - 1, Math.max(0, px|0)), t = tone[q]*(room ? room[q] : 1);
     const r = t*cell*0.48*weight; if(r < 0.6) continue;
     x.beginPath(); x.arc(px, py, r, 0, Math.PI*2); x.fill();
   }
@@ -195,8 +195,10 @@ export const SHARP_STEPS = {
     run(E, n){ const [c, l] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(l))]; } },
   screen: { cat: 'Marks', label: 'Halftone Screen', ins: ['tone'], outs: ['dots'], io: { ins: ['field'], outs: ['field'] },
     params: [SH_R('scale', 'Dot Scale', 100, 50, 400), SH_R('weight', 'Dot Weight', 100, 30, 240), SH_R('angle', 'Screen Angle', 0, 0, 90)], cost: () => 3,
+    // (Shape Aware: round the words the dots shrink away, a clean margin of paper about each line; in the letters the
+    //  screen is finer, to show in a stroke)
     paint(E, n){ const tone = kitField(E.input(n, 1) ?? 0.5, E.ww, E.wh) || new Float32Array(E.ww*E.wh).fill(0.5);
-      return [paintScreen(E.ww, E.wh, tone, E.num(n, 'weight', 100)/100, E.num(n, 'scale', 100)/100, E.num(n, 'angle', 0))]; },
+      return [paintScreen(E.ww, E.wh, tone, E.num(n, 'weight', 100)/100, E.num(n, 'scale', 100)/100*(E.ctx.fill ? 0.45 : 1), E.num(n, 'angle', 0), wordsRoom(E.ctx, E.ww, E.wh, 0.3, 1.4))]; },
     run(E, n){ return [kitField(this.paint(E, n)[0], E.ww, E.wh)]; } },
   grain: { cat: 'Noise', label: 'Film Grain', ins: [], outs: ['grain'], io: { outs: ['image'] },
     params: [SH_R('size', 'Grain Size', 100, 100, 600), SH_R('contrast', 'Contrast', 100, 30, 240), SH_R('kind', 'Kind', 33)], cost: () => 3,

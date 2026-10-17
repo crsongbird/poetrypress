@@ -130,10 +130,10 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
 .layer-seg .layer-swap{ flex:0 1 auto; padding:5px 12px; }
 /* the surface and the words: Text Aware for the first surface; Blend with Text (and Shape Aware) for the second */
 .layer-words{ display:flex; flex-wrap:wrap; gap:4px 16px; }
-.layer-words .words-blend, .layer-words .words-shape{ display:none; }
+.layer-words .words-blend{ display:none; }
 body.editing-lower .layer-words .words-aware{ display:none; }
-body.editing-lower .layer-words .words-blend, body.editing-lower .layer-words .words-shape{ display:flex; }
-.layer-words .words-shape.off{ opacity:.45; }
+body.editing-lower .layer-words .words-blend{ display:flex; }
+.layer-words .check-row.off{ opacity:.45; }
 /* while the lower surface is shown, the card says so: its border takes the second accent */
 body.editing-lower #textureBlock{ box-shadow:inset 2px 0 0 var(--accent-2); padding-left:8px; }
 

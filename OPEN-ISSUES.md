@@ -6,20 +6,17 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
-- THE SURFACE AND THE WORDS (Ruby's two boxes): Text Aware on the first surface (ticked: it knows where the poem
-  is; Broken Glass keeps its shards small on the lines, Dewy Webs keeps its hubs off them, Circuit Board cuts
-  clear); Blend with Text on the second (that surface fills the letters only, with its own blend and opacity) and
-  Shape Aware beside it (Broken Glass lies only on the lines, Dewy Webs strings a web across each, Circuit Board
-  routes finer). The Poem part has two new numbers for graphs: Aware and In the Letters. Next could be the words
-  knocking a surface out (the page through the letters) and the glyphs' own shape as a mask in graphs (ROADMAP G6).
-  Which other surfaces should answer Shape Aware?
-- RINGWORLD's new sliders (sheet sent): Landforms (the relief, the rim walls and the mountains against them, and
-  the seed's own country of peaks with snow, mesas, boulders near you, pinnacles and floating isles), Cities (the
-  works, and past 25 cities and glass domes whoever built it) and Traffic (ships, and past its middle lanes of
-  small craft, busier streets at night). Stand At went to the seed. The band's arches now spring from the walls'
-  tops with the air they hold shimmering beneath them. Old looks keep Terrain and Structures as Landforms and
-  Cities; Stand At became Traffic at its middle.
+## 1 · Ruby to judge (new in Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- THE SURFACE AND THE WORDS: Text Aware (first surface), Blend with Text (second), Shape Aware on both (on the page
+  the surface gives way round the words: Halftone, Silverpoint Hatch, Flow-Field Ink, Contour Map, Circuit Board; in
+  the letters Broken Glass, Dewy Webs and those go finer), and Cut Out by Text on both (the page shows through the
+  letters; on a backdrop close to the surface's color the letters read faint). Sheet sent. Which surfaces next
+  (ROADMAP G6 names Knotwork, Stained Glass, Tessellate, Deep Field's stars, Turing Skin)?
+- RINGWORLD's cohesion pass (sheet sent): arches on every ring (spans, flying buttresses, arcades, gates, stone
+  arches), ranges at the walls' feet, thicker spires and arches, nothing floating but the ships (crystals grow from
+  the land, rings of light stand on plinths, ruined arches stand as stubs, the floating isles are gone), the
+  Engineers as the Forerunners (blue lights, rim towers, bars of hard light), the seam on one ring in fifty. More
+  Halo? The view from the default camera is mostly near ground: should the default look further along the ring?
 - ROTATE and SCALE, two new parts in Shape: a picture turned or scaled about any center, past its edges repeated,
   mirrored or stretched (ROADMAP F8 done).
 - BROKEN GLASS (sheet sent): shards on nothing, faces that flash, edges split into colors, caustics in pale
@@ -34,8 +31,7 @@ Recommendations".
 - RINGWORLD's builders: the Builders slider (By the Seed, Wilds, Engineers, Cities, Magi, Ruins); arches,
   gateways, cities lit at night, ships and their trails, crystals, pillars of light, summoning circles, standing
   stones; the shadow squares' size and the ring's spin from the seed; clouds' shadows on the far land. The light
-  dial is the time of day. One ring in seven (seed % 7 = 3) still shows its seam as a wireframe, a misreading of
-  "the edge of the skybox": keep it, or take it out? Its presets wait for Stage 4.
+  dial is the time of day. Its presets wait for Stage 4.
 - RAIN ON WATER: the rings, the splashes and the reflection toward the horizon (View). Its readings: Lantern Pond,
   Downpour, Last Drops.
 - LICHTENBERG FIGURES remade (sheet sent): Strike Angle, Depth, a Glow Hue, Charred Wood · Slate · Brass · Acrylic, and
@@ -43,6 +39,10 @@ Recommendations".
 - CIRCUIT BOARD's five eras (crops sent): Atomic (the brass and valves, kept) and the new Magitech (summoning
   circles, runes, gems in the board, light guides, holograms, sparks over a cyan glow). And the board cut away under
   the poem's lines: does it read right as you type?
+- CIRCUIT BOARD's markings (sheet sent): each era's own words, now and then the page's own (poems, type), barcodes,
+  warnings, test points, makers' marks, moon phases, twenty little pictures; makers' codes on today's chips and values
+  by today's small parts; nothing printed on anything else. And the preview and the saved image are one board again
+  (sheet sent): worth a check on the phone at 9:20.5, where it showed.
 - THE POEM BOX on long edits (Firefox): the box now grows to its whole text inside the scroller and never scrolls
   itself, so the end is always reachable. Not seen in Chromium; does it hold in Firefox?
 - THE SURFACE SECTION in the new order: the surface and its reading (quiet) with 🜂 🜄 🜁 🜃 beside it, New Random

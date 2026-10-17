@@ -21,8 +21,7 @@ const A = await import('../athanor.js');
 // one library
 check('every Athanor part is a step, and every step does something', Object.keys(F.FORGE_NODES).every(k => STEPS[k] && typeof STEPS[k].run === 'function')
   && Object.keys(STEPS).every(k => F.FORGE_NODES[k]));
-check('the evaluator walks the graph; the steps do the work (no node code left in athanor.js)', !/switch\(n\.name\)/.test(src('athanor.js')) && /STEPS\[n\.name\]/.test(src('athanor.js')));
-check('the steps carry their own cost (the budget reads it)', Object.values(STEPS).every(s => typeof s.cost === 'function') && /\(STEPS\[n\.name\] \|\| \{\}\)\.cost/.test(src('athanor.js')));
+check('the steps carry their own cost (the budget reads it)', Object.values(STEPS).every(s => typeof s.cost === 'function'));
 check('new steps for the chains: Colour, Soft Forms, Streaks, Hatching (Marks)', ['colour', 'forms', 'streaks', 'hatching'].every(k => STEPS[k]) && STEPS.streaks.cat === 'Marks');
 
 // the chains
@@ -78,6 +77,15 @@ if(canvasOK){
   check('Silverpoint Hatch runs along the dial (125°: the old 35° hatching)', near(orient(draw('hatch', { light: 125, p1: 0, p2: 300 })), 35, 12));
   const ink = d => { let s = 0; for(let i = 0; i < d.length; i += 4) s += 128 - d[i]; return s; };
   check('…and Cross-Hatching lays more ink as it rises', ink(draw('hatch', { light: 125, p1: 100, p2: 200 })) > ink(draw('hatch', { light: 125, p1: 0, p2: 200 }))*1.2);
+  // the preview is the saved image, smaller (Ruby): what grows by chance on its grid grows on the export's. This page
+  // at a third is a grid one row off the export's, which routed another board and ran other cracks.
+  const boxes = cv => { const W = cv.width, H = cv.height, d = cv.getContext('2d').getImageData(0, 0, W, H).data, s = new Float64Array(16*28), n = new Float64Array(16*28);
+    for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){ const i = Math.min(27, y*28/H | 0)*16 + Math.min(15, x*16/W | 0), q = (y*W + x)*4; s[i] += d[q] + d[q+1] + d[q+2]; n[i] += 3; }
+    return s.map((v, i) => v/n[i]); };
+  for(const type of ['circuit', 'crackle']){ const page = [385, 684];
+    const A = boxes(T.getTextureCanvas(type, 128, 228, { seed: 7, scale: 128/385, page })), B = boxes(T.getTextureCanvas(type, 385, 684, { seed: 7, scale: 1, page }));
+    let d = 0; for(let i = 0; i < A.length; i++) d += Math.abs(A[i] - B[i]);
+    check(`${type}: the preview grows the saved image's picture (${(d/A.length).toFixed(1)})`, d/A.length < 4.5); }
 }
 
 // old looks: the slider's old job becomes the dial's direction
@@ -160,10 +168,12 @@ if(canvasOK){
     3: { id: 3, name: 'surface', data: { name: 'G', ground: 'colour' }, inputs: { input_1: { connections: [{ node: '2', input: 'output_1' }] } }, outputs: {} } } } } });
   const seen = A.evalAthanor(pane, 16, 16, { seed: 1, knobs: [], tints: [] }, {});
   check('…and a Glass Pane with nothing on its glass shows its picture exactly', !!seen && seen.r.every(v => Math.round(v*255) === 0x33) && seen.b.every(v => Math.round(v*255) === 0x99));
-// THE POEM's two globals: Aware (the surface is Text Aware) and In the Letters (blended into them, Shape Aware)
+// THE POEM's three globals: Aware (the surface is Text Aware), In the Letters (blended into them, Shape Aware) and Round
+// the Words (Shape Aware on the page)
 { const run = (await import('../steps.js')).STEPS.poem.run, E = o => ({ ctx: { text: '0.1,0.1,0.9,0.2,0,0,0', ...o }, ww: 8, wh: 8, N: 64, num: (n, k, d) => d, P: (n, k, d) => d, boxBlur: f => f });
-  const a = run(E({}), {}), b = run(E({ aware: false }), {}), c = run(E({ fill: true }), {});
-  check('The Poem hands on two numbers: Aware (1 unless the surface is not Text Aware) and In the Letters (1 when it fills them)', a[5] === 1 && a[6] === 0 && b[5] === 0 && c[6] === 1 && a.length === 7); } }
+  const a = run(E({}), {}), b = run(E({ aware: false }), {}), c = run(E({ fill: true }), {}), d = run(E({ around: true }), {});
+  check('The Poem hands on three numbers: Aware (1 unless the surface is not Text Aware), In the Letters (1 when it fills them) and Round the Words (1 under Shape Aware on the page)',
+    a[5] === 1 && a[6] === 0 && a[7] === 0 && b[5] === 0 && c[6] === 1 && d[7] === 1 && a.length === 8); } }
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

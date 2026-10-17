@@ -477,8 +477,8 @@ Other parts of a look:
   - The **Ink** part hands a graph the text color (after the two accents in
     `ctx.accents`); only a graph with one keys its cache on the ink.
   - **The surface and the words** (Ruby; layer keys `textureTextAware`,
-    `textureTextBlend`, `textureShapeAware`, saved with each layer, a look
-    without them aware and unblended):
+    `textureTextBlend`, `textureShapeAware`, `textureTextCut`, saved with
+    each layer, a look without them aware, unblended and uncut):
     - **Text Aware** (the first surface's box, ticked by default): only an
       aware surface is handed the layout; unticked, it is drawn as if the
       page had no words. The Poem's `aware` output says which.
@@ -488,12 +488,29 @@ Other parts of a look:
       transform), and after them the page is copied, the surface drawn onto
       the copy with its own blend and opacity (`drawSurfaceLayer`), the copy
       cut to the mask and laid back. Effects and underlines stay unfilled.
-    - **Shape Aware** (with Blend with Text): the request carries `fill`
-      (keyed `_F` for a poem-reading surface) → `ctx.fill`; The Poem's
-      `in the letters` is 1. Parts that answer it read `ctx.fill` and the
-      lines (`genLinesOf(ctx.text)`): Glass Shards lies only on the lines,
-      Dewy Webs strings a web across each, Circuit Traces routes finer and
-      keeps nothing clear. A chain that answers says `poem: 'lines'`.
+    - **Shape Aware** (either surface; greyed on the first while it is not
+      Text Aware). In the letters (with Blend with Text) the request carries
+      `fill` (keyed `_F` for a poem-reading surface) → `ctx.fill`; The
+      Poem's `in the letters` is 1. Parts that answer it read `ctx.fill`
+      and the lines (`genLinesOf(ctx.text)`): Glass Shards lies only on the
+      lines, Dewy Webs strings a web across each; Circuit Traces, Halftone
+      Screen, Hatching, Flow Lines and Terrain go finer. On the page it
+      carries `around` (keyed `_R`) → `ctx.around`, The Poem's `round the
+      words`: the surface gives way round the words (Ruby: "literally
+      anything that generates high contrast patterns all over the page …
+      avoid the text or highlight the text or interact with the text").
+      `wordsRoom(ctx, ww, wh, pad, reach)` (texCore) is 0 on and about each
+      line, 1 a reach away: Halftone Screen's dots and Hatching's strokes
+      shrink by it, Flow Lines bend along its contour and end on the words,
+      Terrain levels the land under them to one height (contours ring the
+      poem), Circuit Traces routes round what Keep Clear gives. A chain that
+      answers always says `poem: 'lines'`; one that answers only Shape Aware
+      says `poem: 'shape'` (handed the layout only then, so typing never
+      redraws it otherwise; `chainReadsPoem(type, shaped)`).
+    - **Cut Out by Text** (either surface; Ruby: "so the page shows through
+      the letters"): the page as it is before the first such surface is
+      kept (`CUT_CANVAS`), and after the words it is laid back inside the
+      glyph mask: the letters are windows, their effects still round them.
     - Text Aware used quietly (readability, never dramatic): a shard on a
       line is a small one; a web's hub is never on the words.
 - **Stitches** (stitches.js):
@@ -1067,6 +1084,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     Five eras: Today, Future, Quantum, Atomic, Magitech. The
     Markings are placed last, in room the board left (`CIR_SAYS`, `CIR_EGGS`,
     runes a–l in `CIR_FONT`): every word made up, no real marks or brands.
+    Each era prints its own kinds of stamp (`CIR_STAMPS`: lines of words,
+    titles, barcodes, warning triangles, test points, makers' marks, code
+    matrices, moon phases, the little pictures), and among its words some of
+    the page's own (poetry and type); by hash, Markings also prints a maker's
+    code and date on today's chips and values beside today's small parts.
+  - **Nothing written on anything** (Ruby: collision detection at high
+    density): every name, value, rune and stamp takes its cells (`taken`)
+    and is placed only where no copper, part or other word lies; a
+    magitech chip's hologram stays close about its circle and its name
+    stands above it.
   - **Atomic** (the fourth era; it was called Magitech until format 4, and
     Ruby kept it: "Fallout … do more of that"): brass gears and riveted bars
     set with crystals, valves, coils wound round traces; the brass is its own
@@ -1178,27 +1205,46 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     straight up once took 1.7 s; keep the binning when adding works.
   - Clouds are their own crossing of a layer just under the air
     (`Rc`), with their shadow laid on the far land (outs 21–24).
-  - **The band's arches spring from the rim walls' tops** (Ruby: "as if
-    they contain the atmosphere"); each holds a field (`k: 7`, a glow in its
-    plane, brighter edge-on and along the arch). Domes of glass (`k: 8`,
-    glow only, the rim catching light) stand over the city.
+  - **Arches** (Ruby: "as if they contain the atmosphere", then "only in
+    some designs … only always edge to edge"): every ring raises one or two
+    forms, by its builders (`RING_ARCHES`): spans from wall top to wall top,
+    each holding a field (`k: 7`, a glow in its plane, brighter edge-on and
+    along the arch); flying buttresses in rows (a quarter ellipse from under
+    a wall's top to a pier); arcades on piers with a deck, along the ring or
+    across it; gates; the land's own stone arches (rock, heaviest at the
+    feet). All are tubes of thick beams whose joints overlap (`tube`). Domes
+    of glass (`k: 8`, glow only, the rim catching light) stand over the city.
+  - **Nothing floats but the ships** (Ruby: "artistic cohesion, nothing
+    floating"): crystals grow from the land in clusters, sunk a third; a
+    standing ring of light rests on a stone plinth; a ruin's arch breaks in
+    its middle and stands as two stubs (`brk`), never a loose piece; the
+    floating isles are gone. Nothing stands where the camera is, nor looms
+    over it (a tower, mesa or stone closer than its height; an arch about
+    it): seen from under them, with their feet out of the frame, they read
+    as slabs in the sky.
+  - **The Forerunners' way** (Ruby: Halo, "push it more that way"): the
+    Engineers' lights are blue; rim towers stand on the walls' tops (`rt`),
+    and bars of hard light run from wall to wall (`br`, a `k: 3` glow with
+    `even`).
   - **Landforms** (`RING_LANDS`: alpine, mesa country, boulder fields,
-    hoodoos, karst, mixed, by the seed): peaks (cones, snow on the tall
-    ones), mesas and pinnacles (beams with `cap`: the ray meets the flat
-    top too), boulders (rock ellipsoids, half sunk, never larger than a
-    tenth of their distance), floating isles (inverted capped cones). Rock
-    works hand on `rock` and `snow` (outs 25, 26) and their own Across
-    (`ac`: where they stand, rising with height), so the land noise lays
-    stone on them; the chain mixes the walls' metal toward rock by it.
+    hoodoos, karst, mixed, by the seed): ranges along both walls' feet
+    (Ruby: "better landforms around the border mountains": a peak with two
+    lower shoulders and foothills before it, never above the wall's top),
+    peaks (cones, snow on the tall ones), mesas and pinnacles (beams with
+    `cap`: the ray meets the flat top too), boulders (rock ellipsoids, half
+    sunk, never larger than a tenth of their distance), the karst's stone
+    arches. Rock works hand on `rock` and `snow` (outs 25, 26) and their own
+    Across (`ac`: where they stand, rising with height), so the land noise
+    lays stone on them; the chain mixes the walls' metal toward rock by it.
   - Corner rays are shared between pixels for its edges; keep `Math.hypot`
     out of its loops (it was a third of the time).
   - **The construction** (`ringBuild`, from the seed; Ruby: never bare):
-    spires (tapered needles along each spot's own up, beacons at their tips),
+    spires (tapering towers along each spot's own up, beacons at their tips),
     scaffolding (unfinished floor: a lattice box-filtered by the pixel's
     footprint, the void seen through it), spill mountains (in the chain:
     Across → Map Range → × the land → added, by Landforms). Cities raises the
     builders' works;
-    at 0 a few still stand. One ring in seven shows the world's seam.
+    at 0 a few still stand. About one ring in fifty shows the world's seam.
   - The air is sampled densely where it is (near the camera, near the far
     floor) and thins away past the walls; an even spacing stepped past the
     thin air beside a low wall and left a black band.
@@ -1314,6 +1360,18 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   features. The count changes with the size, so a preview and its export
   would differ. Hash the canonical position instead, or make per-pixel
   randomness the last thing drawn.
+- **A layout grown by chance on its grid follows the grid's rounding**
+  (Ruby: the saved Circuit Board was not the preview's). A preview's grid
+  can be a row taller than the export's in proportion (the canvas and
+  `ceil(w/div)` both round), and a board routed in whole cells, cracks
+  walking pixel by pixel, frost colonizing its room or growth on the
+  grid's shape then grow another picture. Such parts grow on the EXPORT's
+  grid at every size and are drawn scaled: the request carries the page's
+  export size (`page`, from `setRenderScale(s, page)`; keyed `_p`, only for
+  a surface holding one of `PAGE_PARTS`), `ctx.page` is the export's grid
+  for a chain's own grid (`gridAtExport`), and `pageGrid(ww, wh, d)`
+  (texCore) gives it to a whole-texture generator. At the export nothing
+  changes. A new part that grows by chance on its grid joins `PAGE_PARTS`.
 - **Weighted choices:** `pickWeighted([[value, weight], …], roll)`. Pass an
   existing roll to keep a seed's other draws where they were: the falling
   star reuses `shootP`.

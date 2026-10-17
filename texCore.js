@@ -102,6 +102,42 @@ export function withScale(s, fn){
   try { return fn(); }
   finally { SCALE = prev; }
 }
+// THE PAGE (Ruby: the saved image's board was not the preview's). A generation that grows by chance on its grid
+// (cracks walking pixel by pixel, a board routed in whole cells, frost colonizing its room) is chaotic: a grid one
+// row taller, as a preview's rounding makes it, grows another picture. Those grow on the EXPORT's grid at every
+// size (`pageGrid`) and are drawn scaled, so the preview is the saved image, smaller. PAGE is the export's [w, h],
+// set for one generation by `withPage` (textureGenerators `pageOf`); without it the grid is its own.
+let PAGE = null;
+export function withPage(p, fn){
+  const prev = PAGE;
+  PAGE = Array.isArray(p) && p[0] > 0 && p[1] > 0 ? p : null;
+  try { return fn(); }
+  finally { PAGE = prev; }
+}
+/** The export's grid for a working grid ww × wh made with divisor d (canonDiv(d): d at the export), or the grid
+ *  itself when no page is known or the page is not its shape (within 2%). */
+export function pageGrid(ww, wh, d = 1){
+  if(!PAGE) return [ww, wh];
+  const g = [Math.ceil(PAGE[0]/Math.max(1, d)), Math.ceil(PAGE[1]/Math.max(1, d))];
+  return Math.abs(g[1]/g[0] - wh/ww) <= 0.02*(wh/ww) ? g : [ww, wh];
+}
+/** THE WORDS' ROOM (Shape Aware on a surface drawn on the page; Ruby: "the option to make it avoid the text or highlight
+ *  the text or interact with the text"): on a ww × wh grid, 0 on each line of the poem and a margin about it (pad, in
+ *  line heights), rising smoothly to 1 a reach further off. `ctx.text` is the layout's runs in page fractions. Null when
+ *  the surface is not asked to shape itself round the words (`ctx.around`), or there are none. */
+export function wordsRoom(ctx, ww, wh, pad = 0.35, reach = 1.6){
+  if(!ctx || !ctx.around || !ctx.text) return null;
+  const runs = String(ctx.text).split(';').map(p => p.split(',').map(Number)).filter(v => v.length >= 4 && v.slice(0, 4).every(isFinite) && v[2] > v[0] && v[3] > v[1]);
+  if(!runs.length) return null;
+  const room = new Float32Array(ww*wh).fill(1);
+  for(const r of runs){
+    const lh = (r[3] - r[1])*wh, p = lh*pad, R = Math.max(1, lh*reach), x0 = r[0]*ww - p, x1 = r[2]*ww + p, y0 = r[1]*wh - p, y1 = r[3]*wh + p;
+    for(let y = Math.max(0, Math.floor(y0 - R)); y < Math.min(wh, Math.ceil(y1 + R)); y++) for(let x = Math.max(0, Math.floor(x0 - R)); x < Math.min(ww, Math.ceil(x1 + R)); x++){
+      const dx = Math.max(x0 - x, 0, x - x1), dy = Math.max(y0 - y, 0, y - y1), d = Math.sqrt(dx*dx + dy*dy)/R;
+      if(d < 1){ const i = y*ww + x, v = d*d*(3 - 2*d); if(v < room[i]) room[i] = v; } }
+  }
+  return room;
+}
 /** The scale the current generation runs at. */
 /**
  * A WEIGHTED choice: traits that are common, uncommon or rare (as Fidenza and

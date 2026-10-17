@@ -26,7 +26,7 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { canonArea, canonDiv, wordsRoom, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh } from './texWhimsy.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -666,6 +666,13 @@ function whimFlowLines(w, h, o, px, area){
   else { const g1 = makeNoiseGrid(6, 6), g2 = makeNoiseGrid(13, 13);
     fieldAt = (x, y) => { const u = x/unit/zoom, v = y/unit/zoom;
       return base + (sampleNoiseGrid(g1, 6, 6, u*2.2, v*2.2)*0.75 + sampleNoiseGrid(g2, 13, 13, u*5, v*5)*0.25 - 0.5)*Math.PI*2.6*turb; }; }
+  // round the words: near them the way turns along the room's own contour (the side nearer the flow's), so lines bend
+  // round each line of the poem; on the words themselves a line ends
+  const R = o.room, rAt = (x, y) => R[Math.min(h - 1, Math.max(0, y | 0))*w + Math.min(w - 1, Math.max(0, x | 0))];
+  if(R){ const free = fieldAt; fieldAt = (x, y) => { const a = free(x, y), r = rAt(x, y); if(r >= 0.999) return a;
+    const gx = rAt(x + 2, y) - rAt(x - 2, y), gy = rAt(x, y + 2) - rAt(x, y - 2), g = Math.hypot(gx, gy); if(g < 1e-6) return a;
+    let t = Math.atan2(gx, -gy); if(Math.cos(t - a) < 0) t += Math.PI;
+    const k = 1 - r, d = Math.atan2(Math.sin(t - a), Math.cos(t - a)); return a + d*Math.min(1, k*1.6); }; }
   const sep = px(54)*zoom/Math.max(0.3, amt), step = Math.max(0.6, px(4)), cell = sep*0.5;
   const gw = Math.ceil(w/cell) + 1, gh = Math.ceil(h/cell) + 1, grid = new Array(gw*gh);
   const near = (x, y, own) => { const cx = Math.floor(x/cell), cy = Math.floor(y/cell);
@@ -678,13 +685,14 @@ function whimFlowLines(w, h, o, px, area){
   let strokeId = 0;
   for(let t = 0; t < tries; t++){
     const sx = Math.random()*w, sy = Math.random()*h;
-    if(near(sx, sy, -1)) continue;
+    if(near(sx, sy, -1) || (R && rAt(sx, sy) < 0.3)) continue;
     const id = strokeId++, pts = [[sx, sy]];
     for(const dir of [1, -1]){                       // walk both ways from the seed point
       let x = sx, y = sy;
       for(let s = 0; s < 900; s++){
         const a = fieldAt(x, y); const nx = x + Math.cos(a)*step*dir, ny = y + Math.sin(a)*step*dir;
         if(nx < -sep || ny < -sep || nx > w + sep || ny > h + sep) break;
+        if(R && rAt(nx, ny) < 0.12) break;
         const cx = Math.floor(nx/cell), cy = Math.floor(ny/cell); let hit = false;      // too close to ANOTHER line
         for(let j = cy - 2; j <= cy + 2 && !hit; j++) for(let i = cx - 2; i <= cx + 2 && !hit; i++){ if(i < 0 || j < 0 || i >= gw || j >= gh) continue; const L = grid[j*gw + i]; if(!L) continue;
           for(const p of L){ if(p[2] === id) continue; const dx = p[0] - nx, dy = p[1] - ny; if(dx*dx + dy*dy < sep*sep*0.55){ hit = true; break; } } }
@@ -799,6 +807,9 @@ export const WHIMSY_STEPS = {
         light: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0),
         ink1: Array.isArray(i1) ? whimHex(i1) : '#2B2A3A', ink2: Array.isArray(i2) ? whimHex(i2) : '#7A4A6A' };
       if(mv != null){ const mw = Math.max(8, Math.min(512, w >> 2)), mh = Math.max(8, Math.round(mw*h/w)); o.map = kitField(mv, mw, mh); o.mw = mw; o.mh = mh; }
+      // (Shape Aware: round the words the lines flow round them, as water round stones, and end at their margin; in the
+      //  letters they run closer, to show in a stroke)
+      o.room = wordsRoom(E.ctx, w, h, 0.3, 1.8); if(E.ctx.fill) o.zoom *= 0.45;
       // the texture's own seed (+ Variant): Flow-Field Ink draws the lines it always drew
       const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
       return withSeed(seed, () => { const c = whimFlowLines(w, h, o, E.px, E.carea);

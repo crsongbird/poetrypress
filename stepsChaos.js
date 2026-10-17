@@ -275,10 +275,13 @@ export const CHAOS_STEPS = {
     params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
       const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;
-      const area = (ww/unit)*(wh/unit), o = { count: 240*area*num(n, 'count', 100)/100/(zoom*zoom), spread: num(n, 'spread', 30)/100, wander: num(n, 'wander', 40)/100, dx: Math.cos(da), dy: Math.sin(da) };
+      // (the cracks run on the export's grid, `ctx.page`, at every size, and are drawn scaled: a crack walks pixel by
+      //  pixel, so a preview's own grid ran other cracks)
+      const [GW, GH] = ctx.page || [ww, wh], K = unit/Math.min(GW, GH);
+      const area = (GW/Math.min(GW, GH))*(GH/Math.min(GW, GH)), o = { count: 240*area*num(n, 'count', 100)/100/(zoom*zoom), spread: num(n, 'spread', 30)/100, wander: num(n, 'wander', 40)/100, dx: Math.cos(da), dy: Math.sin(da) };
       const seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       return withSeed(seed, () => {
-        const { segs } = chaosCracks(ww, wh, o), age = num(n, 'age', 0)/100;
+        const segs = K === 1 ? chaosCracks(ww, wh, o).segs : chaosCracks(GW, GH, o).segs.map(([a, b, c, d, g]) => [a*K, b*K, c*K, d*K, g]), age = num(n, 'age', 0)/100;
         // the cracks drawn: the first wide and deep, each generation after finer
         const [cc, cx] = kitCanvas(ww, wh), [fc, fx] = kitCanvas(ww, wh), [kc, kx] = kitCanvas(ww, wh);
         for(const x of [cx, fx, kx]){ x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.lineCap = 'round'; }

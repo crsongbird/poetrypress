@@ -97,9 +97,14 @@ check('the second surface blended into the letters, Shape Aware, saved as its ow
   s.baseLayer.textureTextBlend === true && s.baseLayer.textureShapeAware === true && s.textureTextAware === false && !s.textureTextBlend);
 show('upper'); load(s); show('lower');
 check('…and they come back with it', reg['textureTextBlend'].checked === true && reg['textureShapeAware'].checked === true && !reg['textureShapeAware'].disabled);
+check('Cut Out by Text waits, greyed, while the surface is drawn only in the letters', reg['textureTextCut'].disabled === true);
 tick('textureTextBlend', false);
-check('Shape Aware waits, greyed, while the surface is not blended into the letters', reg['textureShapeAware'].disabled === true);
-show('upper');
+check('…and is there again once it is not; Shape Aware stays (round the words, on the page)', reg['textureTextCut'].disabled === false && reg['textureShapeAware'].disabled === false);
+tick('textureTextCut', true); show('upper');
+check('Cut Out by Text is the surface\'s own, saved with it', save().baseLayer.textureTextCut === true && !save().textureTextCut);
+check('the first surface\'s Shape Aware waits, greyed, while it is not Text Aware (it needs the words)', reg['textureShapeAware'].disabled === true);
+tick('textureTextAware', true);
+check('…and is there again once it is', reg['textureShapeAware'].disabled === false);
 
 // ---- a preset turns the lower off ----
 load({ ...base, texture: true, baseToggle: true, baseLayer: { textureType: 'linen' } });

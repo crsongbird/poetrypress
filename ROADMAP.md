@@ -230,11 +230,13 @@ Ripples from the Words, Protect the Text, Ink.
   - Depends on: A3 (a group whose one input fans out through remappers).
 - **G5 · The inset box as an input** (shared with F3).
 - **G6 · Text as a mask** (Ruby). Done: letters filled with a surface (the
-  second surface's Blend with Text, with Shape Aware), and Text Aware for
-  each surface. Still to do: the words knocking a surface out (the page
-  shows through the letters), and the letters' own shape (not only the
-  lines' boxes) as a mask any part can take, which means handing the
-  worker the glyph mask. More parts that answer Shape Aware.
+  second surface's Blend with Text, with Shape Aware), Text Aware for each
+  surface, Shape Aware round the words on the page, and Cut Out by Text.
+  Still to do: the letters' own shape (not only the lines' boxes) as a mask
+  any part can take, which means handing the worker the glyph mask. More
+  parts that answer Shape Aware (Ruby: "literally anything that generates
+  high contrast patterns all over the page"): Knotwork, Stained Glass,
+  Tessellate, Deep Field's stars, Turing Skin.
 
 ### H · The three levels (Ruby's future-directions doc)
 

@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
+import { lightVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
 
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
@@ -1380,15 +1380,18 @@ export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
   const feather=Math.max(0,Math.min(1, form==null?0.55:form)), rm=Math.max(0,Math.min(1, rime==null?0.3:rime));
   const ice=parseHex(tint||'#EAF4FF'), ICE=[ice.r, ice.g, ice.b];
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const step=unit*0.0055*zoom, Ri=unit*0.085*zoom, Kr=unit*0.013*zoom;
-  const edgeD=(x,y)=>Math.min(x, ww-x, y, wh-y)/unit;            // 0 at the frame
+  // the ferns grow on the export's grid (SW × SH) at every size, and are drawn scaled (K): growth by chance on a
+  // preview's own grid grew other ferns
+  const [SW, SH]=pageGrid(ww, wh, 2), SU=Math.min(SW, SH), K=unit/SU;
+  const step=SU*0.0055*zoom, Ri=SU*0.085*zoom, Kr=SU*0.013*zoom;
+  const edgeD=(x,y)=>Math.min(x, SW-x, y, SH-y)/SU;            // 0 at the frame
   const patch=fbmSampler(4, 2);
   // the room to grow into: denser toward the frame, in drifts
-  const area=(ww*wh)/(unit*unit), nA=Math.round(2200*Math.min(2.5, amt)*area/(zoom*zoom)*0.6 + 300);
+  const area=(SW*SH)/(SU*SU), nA=Math.round(2200*Math.min(2.5, amt)*area/(zoom*zoom)*0.6 + 300);
   const AT=[];
   for(let tries=0; AT.length<nA && tries<nA*12; tries++){
-    const x=Math.random()*ww, y=Math.random()*wh;
-    const p=(0.12 + 0.88*Math.exp(-edgeD(x,y)/(0.12 + 0.25*Math.min(1.5, amt))))*(0.4 + 0.9*patch(x/ww, y/wh));
+    const x=Math.random()*SW, y=Math.random()*SH;
+    const p=(0.12 + 0.88*Math.exp(-edgeD(x,y)/(0.12 + 0.25*Math.min(1.5, amt))))*(0.4 + 0.9*patch(x/SW, y/SH));
     if(Math.random()<p) AT.push({ x, y, alive:true });
   }
   // the seeds: along the frame (pointing in) and a few specks in the open
@@ -1397,12 +1400,12 @@ export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
   const nEdge=Math.round(8 + 10*Math.min(2, amt)), nIn=Math.round(2 + 4*Math.min(2, amt)*Math.random());
   for(let s=0;s<nEdge;s++){
     const side=Math.floor(Math.random()*4), t=Math.random();
-    const [x,y,dx,dy]= side===0 ? [t*ww, 0.5, 0, 1] : side===1 ? [ww-0.5, t*wh, -1, 0] : side===2 ? [t*ww, wh-0.5, 0, -1] : [0.5, t*wh, 1, 0];
+    const [x,y,dx,dy]= side===0 ? [t*SW, 0.5, 0, 1] : side===1 ? [SW-0.5, t*SH, -1, 0] : side===2 ? [t*SW, SH-0.5, 0, -1] : [0.5, t*SH, 1, 0];
     addNode(x, y, dx, dy, -1, Math.random()*Math.PI/3);
   }
-  for(let s=0;s<nIn;s++){ const a=Math.random()*6.28; addNode(Math.random()*ww, Math.random()*wh, Math.cos(a), Math.sin(a), -1, Math.random()*Math.PI/3); }
+  for(let s=0;s<nIn;s++){ const a=Math.random()*6.28; addNode(Math.random()*SW, Math.random()*SH, Math.cos(a), Math.sin(a), -1, Math.random()*Math.PI/3); }
   // a grid of nodes, so each attractor finds its nearest quickly
-  const CELL=Ri, gcol=Math.ceil(ww/CELL)+1, grow=Math.ceil(wh/CELL)+1, NG=Array.from({ length: gcol*grow }, () => []);
+  const CELL=Ri, gcol=Math.ceil(SW/CELL)+1, grow=Math.ceil(SH/CELL)+1, NG=Array.from({ length: gcol*grow }, () => []);
   const cellOf=(x,y)=>Math.max(0,Math.min(grow-1,Math.floor(y/CELL)))*gcol + Math.max(0,Math.min(gcol-1,Math.floor(x/CELL)));
   NODES.forEach((nd,i)=>NG[cellOf(nd.x,nd.y)].push(i));
   const SUMX=[], SUMY=[], CNT=[];
@@ -1426,7 +1429,7 @@ export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
       const wob=(Math.random()-0.5)*0.22;
       const fx=Math.cos(sa+wob)*0.58 + dx*0.42, fy=Math.sin(sa+wob)*0.58 + dy*0.42, fl=Math.hypot(fx,fy)||1;
       const nx=nd.x + fx/fl*step, ny=nd.y + fy/fl*step;
-      if(nx<0||ny<0||nx>=ww||ny>=wh) continue;
+      if(nx<0||ny<0||nx>=SW||ny>=SH) continue;
       born.push(addNode(nx, ny, fx/fl, fy/fl, i, nd.axis));
     }
     for(const j of born){ const nd=NODES[j]; NG[cellOf(nd.x,nd.y)].push(j);
@@ -1440,7 +1443,9 @@ export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
   const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh;
   const cx2=cv.getContext('2d', CPU); cx2.fillStyle='#000'; cx2.fillRect(0,0,ww,wh);
   cx2.lineCap='round'; cx2.strokeStyle='#fff';
-  const tw=Math.max(0.35, unit*0.0011*zoom);
+  // (drawn in the growth's own units: widths below are the page's, so they are divided back by K)
+  cx2.setTransform(K, 0, 0, K, 0, 0);
+  const tw=Math.max(0.35, unit*0.0011*zoom)/K;
   for(let i=0;i<NODES.length;i++){ const nd=NODES[i]; if(nd.parent<0) continue; const p=NODES[nd.parent];
     cx2.globalAlpha=Math.min(1, 0.6 + 0.08*Math.log(1+nd.kids));
     cx2.lineWidth=tw*Math.pow(1+nd.kids, 0.2); cx2.beginPath(); cx2.moveTo(p.x,p.y); cx2.lineTo(nd.x,nd.y); cx2.stroke();
@@ -1457,11 +1462,11 @@ export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
     }
   }
   // the rime: a fine matte of crystals, thickest toward the frame
-  const nR=Math.round((ww*wh)/(unit*unit)*1536*1536*0.05*rm*0.25);   // (counted against the pane, not its pixels: the same rime at any size)
+  const nR=Math.round((SW*SH)/(SU*SU)*1536*1536*0.05*rm*0.25);   // (counted against the pane, not its pixels: the same rime at any size)
   cx2.fillStyle='#fff';
-  for(let k=0;k<nR;k++){ const x=Math.random()*ww, y=Math.random()*wh; if(Math.random() > Math.exp(-edgeD(x,y)/0.1)*1.2) continue;
-    const rs=unit/1536; cx2.globalAlpha=0.25+Math.random()*0.5; cx2.fillRect(x, y, (0.6+Math.random()*1.4)*rs*1.5, (0.6+Math.random()*1.4)*rs*1.5); }
-  cx2.globalAlpha=1;
+  for(let k=0;k<nR;k++){ const x=Math.random()*SW, y=Math.random()*SH; if(Math.random() > Math.exp(-edgeD(x,y)/0.1)*1.2) continue;
+    const rs=SU/1536; cx2.globalAlpha=0.25+Math.random()*0.5; cx2.fillRect(x, y, (0.6+Math.random()*1.4)*rs*1.5, (0.6+Math.random()*1.4)*rs*1.5); }
+  cx2.globalAlpha=1; cx2.setTransform(1, 0, 0, 1, 0, 0);
   const px=cx2.getImageData(0,0,ww,wh).data, H=new Float32Array(N), Cv=new Float32Array(N);
   for(let i=0;i<N;i++){ const v=px[i*4]/255; Cv[i]=v; H[i]=v*unit*0.0035; }
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.85, shadow:0.25, ao:0.2, ambient:0.6 });

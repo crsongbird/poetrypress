@@ -186,7 +186,7 @@ function scratchCanvas(w, h){
 /** BLEND WITH TEXT (Ruby: the second surface "uses the text as a blend layer"): while the words are drawn, each glyph is
  *  also filled white on this mask (the same font, place and turn), so the surface can be blended into the letters alone.
  *  Kept between renders; null when no surface asks for it. */
-let GLYPH_MASK = null, GLYPH_CANVAS = null, FILL_CANVAS = null;
+let GLYPH_MASK = null, GLYPH_CANVAS = null, FILL_CANVAS = null, CUT_CANVAS = null;
 function maskGlyphs(ctx, str, x, y){
   const M = GLYPH_MASK; if(!M) return;
   M.save(); if(typeof ctx.getTransform === 'function' && typeof M.setTransform === 'function') M.setTransform(ctx.getTransform());
@@ -1088,13 +1088,13 @@ function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spaci
 }
 
 let LAST_RENDER_MS = 0, LAST_PROFILE = '';
-// S: this render's scale against the canonical export canvas (texCore.js).
-// Always 1 today — the preview IS the export size. setRenderScale is where a
-// screen-sized preview will set it, once every generator measures in cpx().
-let RENDER_SCALE = 1;
+// S: this render's scale against the canonical export canvas (texCore.js): the preview is drawn at the size it is
+// shown, the saved image at 1. PAGE_SIZE is the export's own size, which the preview's rounding can't tell exactly
+// (a surface laid out in whole cells counts them from it: textureGenerators `pageOf`).
+let RENDER_SCALE = 1, PAGE_SIZE = null;
 // a texture finished in the worker: draw the page again
 onTextureReady(() => scheduleRender());
-export function setRenderScale(s){ RENDER_SCALE = (s > 0 && isFinite(s)) ? s : 1; }
+export function setRenderScale(s, page){ RENDER_SCALE = (s > 0 && isFinite(s)) ? s : 1; if(page && page[0] > 0 && page[1] > 0) PAGE_SIZE = [Math.round(page[0]), Math.round(page[1])]; }
 /** n canonical pixels at this render's scale — for code outside render()
  *  (the text effects) that can't see its S. Identical at S = 1. */
 const rpx = n => n * RENDER_SCALE;
@@ -1127,7 +1127,7 @@ export function surfaceFromDom(){
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
-    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false),
+    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false),
     ...(ground ? { textureGround: ground } : {}) };
 }
 /** An Athanor surface's own sliders and hues, read from its graph (each layer may carry a different one):
@@ -1192,9 +1192,11 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
     // (the poem's layout, only for a graph that asks for it, and only while the surface is Text Aware or fills the
     //  letters Shape Aware; `fill` tells it it is inside them)
-    const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware, aware = L.textureTextAware !== false;
-    const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type)) && (aware || fill) ? TEXT_LAYOUT : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, aware, fill, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    // (Shape Aware on a surface drawn on the page, `around`: it shapes itself round the words — keeps off them, flows round
+    //  them — Ruby: "the option to make it avoid the text or highlight the text or interact with the text")
+    const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware, aware = L.textureTextAware !== false, around = !fill && aware && !!L.textureShapeAware;
+    const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type, fill || around)) && (aware || fill) ? TEXT_LAYOUT : undefined;
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -1236,7 +1238,7 @@ function renderInto(canvas){
     ctx.fillRect(0,0,W,H);
   }
 
-  let textFill = null;
+  let textFill = null, textCut = false;
   // SURFACE LAYERS (Ruby: every control for both, any blend for each): the lower first, then the upper,
   // each drawn the same way from its settings. appEvents hands over the layer the controls are not
   // showing (setSurfaceSource); the one they show is read from the page.
@@ -1249,6 +1251,10 @@ function renderInto(canvas){
     for(const [L, slot] of [[lower, 'base'], [upper, 'main']]){
       if(!L || !L.textureType) continue;
       if(slot === 'base' && L.textureTextBlend){ textFill = { L, env }; continue; }   // (drawn into the letters, after them)
+      // CUT OUT BY TEXT (Ruby: "should the words also be able to cut a surface out, so the page shows through the letters?
+      // Yes"): the page as it is before the first such surface, kept, to be laid back inside the letters after them
+      if(L.textureTextCut && !textCut){ textCut = true; if(!CUT_CANVAS) CUT_CANVAS = document.createElement('canvas'); CUT_CANVAS.width = W; CUT_CANVAS.height = H;
+        const kx = CUT_CANVAS.getContext('2d', { willReadFrequently: true }); kx.globalCompositeOperation = 'source-over'; kx.globalAlpha = 1; kx.drawImage(canvas, 0, 0); }
       drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env });
     }
   }
@@ -1539,8 +1545,8 @@ function renderInto(canvas){
     PROBE_INKS = { now: [], words: '' }; }
   let cursorY = startY;
   ctx.textBaseline = 'top';
-  // (Blend with Text: the letters' shapes gathered as they are drawn)
-  if(textFill){ if(!GLYPH_CANVAS) GLYPH_CANVAS = document.createElement('canvas'); GLYPH_CANVAS.width = W; GLYPH_CANVAS.height = H;
+  // (Blend with Text, Cut Out by Text: the letters' shapes gathered as they are drawn)
+  if(textFill || textCut){ if(!GLYPH_CANVAS) GLYPH_CANVAS = document.createElement('canvas'); GLYPH_CANVAS.width = W; GLYPH_CANVAS.height = H;
     GLYPH_MASK = GLYPH_CANVAS.getContext('2d', { willReadFrequently: true }); GLYPH_MASK.clearRect(0, 0, W, H); }
   // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
   const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0;
@@ -1705,6 +1711,12 @@ function renderInto(canvas){
     rec(startX, startX + totalWidth, cursorY, size*1.15);
     cursorY += lineHeight;
   }
+  // CUT OUT BY TEXT: inside the letters, the page as it was before the surface (the ink goes with the surface; the
+  // effects round the letters stay)
+  if(textCut && GLYPH_MASK){
+    try { const kx = CUT_CANVAS.getContext('2d', { willReadFrequently: true }); kx.globalCompositeOperation = 'destination-in'; kx.globalAlpha = 1; kx.drawImage(GLYPH_CANVAS, 0, 0); kx.globalCompositeOperation = 'source-over';
+      ctx.save(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(CUT_CANVAS, 0, 0); ctx.restore();
+    } catch(err){ if(typeof console !== 'undefined') console.warn('text cut skipped:', err && err.message); } }
   // BLEND WITH TEXT: the page as it is now, the second surface blended onto it (its own blend and opacity), kept only
   // inside the letters, laid back over the page
   if(textFill && GLYPH_MASK){ GLYPH_MASK = null;
@@ -1722,7 +1734,7 @@ function renderInto(canvas){
       GROUND_PROBE.result = groundContrast(data, gw, gh, runs, READABLE.allowance, inkField);
       GROUND_PROBE.result.settled = lay === TEXT_LAYOUT; GROUND_PROBE.ground = null; PROBE_INKS = null; }
     if(lay !== TEXT_LAYOUT){ TEXT_LAYOUT = lay;
-      const reads = L => !!L && ((L.textureType === 'athanor' && graphUsesPoem(L.forgeGraph || '')) || chainReadsPoem(L.textureType));
+      const reads = L => !!L && ((L.textureType === 'athanor' && graphUsesPoem(L.forgeGraph || '')) || chainReadsPoem(L.textureType, !!L.textureShapeAware));
       const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null, g = reads(surfaceFromDom()) || !!(src && src.lowerOn && reads(src.other));
       if($('textureToggle').checked && (clearing > 0 || g)) setTimeout(scheduleRender, 0); } }
 

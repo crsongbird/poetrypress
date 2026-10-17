@@ -32,7 +32,7 @@
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
-import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField, CPU } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField, CPU, wordsRoom } from './texCore.js';
 import { drawStitch, pathFromPoints, roundRectPoints } from './stitches.js';
 import { TOUCH_STEPS } from './stepsTouch.js';
 import { WHIMSY_STEPS } from './stepsWhimsy.js';
@@ -152,7 +152,7 @@ const STEP_PARTS = {
               STEP_R('mortar', 'Mortar', 12, 0, 40), STEP_R('stagger', 'Stagger', 50), STEP_R('bevel', 'Bevel', 30), STEP_R('vary', 'Variety', 30)] },
   // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
   // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
-  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas', 'rhymes', 'aware', 'in the letters'],
+  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas', 'rhymes', 'aware', 'in the letters', 'round the words'],
               params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100),
                 STEP_SEL('rhyme', 'Rhymes', ['every rhyme', 'A', 'B', 'C', 'D', 'E', 'F'])] },
   // more ways to reshape a gray map (Filter Forge's and Blender's staples)
@@ -678,8 +678,11 @@ const STEP_RUN = {
   // along the angle (the dial's way). Out: how much ink covers each point.
   hatching(E, n){ const { ww, wh, unit, input, num, asField, marks, px } = E;
     const tone = asField(input(n, 1)), at = (u, v) => tone ? tone[Math.min(wh - 1, (v*wh) | 0)*ww + Math.min(ww - 1, (u*ww) | 0)] : 0.5;
+    // (Shape Aware: round the words, the strokes stop short of them and fade as they near, leaving the lines on clean
+    //  paper; in the letters, the patches are smaller, to show in a stroke)
+    const room = wordsRoom(E.ctx, ww, wh, 0.25, 1.3), roomAt = (x, y) => room ? room[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))] : 1;
     const base = (num(n, 'angle', 125) - 90)*Math.PI/180, cross = num(n, 'cross', 38)/100, ca2 = num(n, 'crossAngle', 54)*Math.PI/180;
-    const zoom = num(n, 'size', 100)/100, patches = Math.round(150*num(n, 'density', 100)/100), wt = num(n, 'weight', 50)/50;
+    const zoom = num(n, 'size', 100)/100*(E.ctx.fill ? 0.5 : 1), patches = Math.round(150*num(n, 'density', 100)/100*(E.ctx.fill ? 3 : 1)), wt = num(n, 'weight', 50)/50;
     const noise = makeNoiseGrid(6, 6);
     return [marks(null, 0, g => {
       const stroke = (x, y, a, len, wd, bend, alpha) => {
@@ -701,8 +704,9 @@ const STEP_RUN = {
           for(let j = 0; j < k; j++){
             const off = (j - (k - 1)/2)*gap, len = size*(0.55 + Math.random()*0.45)*Math.sqrt(1 - Math.min(0.9, (off/size*1.6)**2));
             const sx = qx - Math.sin(la)*off + (Math.random() - 0.5)*gap*0.4, sy = qy + Math.cos(la)*off + (Math.random() - 0.5)*gap*0.4;
-            const press = 0.6 + Math.random()*0.4;
-            stroke(sx, sy, la + (Math.random() - 0.5)*0.06, len, px(2.6 + t*3)*press*wt, len*(Math.random() - 0.5)*0.08, (0.5 + t*0.45)*press);
+            const press = 0.6 + Math.random()*0.4, ra = la + (Math.random() - 0.5)*0.06, bend = len*(Math.random() - 0.5)*0.08;
+            const rm = room ? Math.min(roomAt(sx, sy), roomAt(sx + Math.cos(ra)*len*0.5, sy + Math.sin(ra)*len*0.5), roomAt(sx - Math.cos(ra)*len*0.5, sy - Math.sin(ra)*len*0.5)) : 1;
+            if(rm > 0.08) stroke(sx, sy, ra, len, px(2.6 + t*3)*press*wt, bend, (0.5 + t*0.45)*press*rm);
           }
         }
       }
@@ -895,9 +899,10 @@ Object.assign(STEP_RUN, {
   poem(E, n){ const { ctx, ww, wh, N, num, P, boxBlur } = E;
     // (two globals: whether this surface is Text Aware, and whether it fills the letters themselves — Blend with Text,
     //  Shape Aware — so a graph can answer either; a surface that is not aware is handed no words at all)
-    const aware = ctx.aware === false ? 0 : 1, inside = ctx.fill ? 1 : 0;
+    // (and a third: Shape Aware on a surface drawn on the page, asking it to shape itself round the words)
+    const aware = ctx.aware === false ? 0 : 1, inside = ctx.fill ? 1 : 0, around = ctx.around ? 1 : 0;
     const runs = poemRuns(ctx.text);
-    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N), new Float32Array(N), aware, inside];
+    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N), new Float32Array(N), aware, inside, around];
     // RHYMES (Ruby's doc, a rhyme group's mask): the words of the lines that rhyme (~A, ~B…: the run's 7th number, A = 1)
     const want = P(n, 'rhyme', 'every rhyme'), wantN = want === 'every rhyme' ? -1 : want.charCodeAt(0) - 64, rhymeHard = new Float32Array(N);
     const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
@@ -920,7 +925,7 @@ Object.assign(STEP_RUN, {
     const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
     for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
     const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
-    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard, aware, inside];
+    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard, aware, inside, around];
   },
   grow(E, n){ const { ww, wh, N, unit, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
     const AM = map(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2));
@@ -1001,7 +1006,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 export const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, poem: { outs: ['field', 'field', 'field', 'field', 'field', 'value', 'value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, poem: { outs: ['field', 'field', 'field', 'field', 'field', 'value', 'value', 'value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, seed: { outs: ['value'] },

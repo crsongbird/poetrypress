@@ -12,7 +12,7 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare, wholeCam, wholeTurned } from './texCore.js';
+import { CPU, wordsRoom, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare, wholeCam, wholeTurned } from './texCore.js';
 import { genColdPress, genCupRing, genOldPaper, genBurntLetter, genHoarfrost, genGlassRain, genWater, genDunes, genMoss, genKintsugi, genSpangle, genCrystalLeaf, genSuminagashi } from './texTouch.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -244,7 +244,7 @@ export const TOUCH_STEPS = {
   terrain: { cat: 'Noise', label: 'Terrain', ins: [], outs: ['height'],
     params: [TOUCH_R('scale', 'Scale', 100, 40, 300), TOUCH_R('crests', 'Crests', 22), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 3,
     run(E, n){ const { ww, wh, N, unit, num, ctx } = E;
-      const sc = 100/Math.max(1, num(n, 'scale', 100)), cr = num(n, 'crests', 22)/100, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      const sc = 100/Math.max(1, num(n, 'scale', 100))*(ctx.fill ? 2.2 : 1), cr = num(n, 'crests', 22)/100, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       return withSeed(seed, () => {
         const broad = fbmSampler(3, 4), ridge = fbmSampler(5, 3), warp = fbmSampler(3, 2), H = new Float32Array(N);
         for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
@@ -254,6 +254,11 @@ export const TOUCH_STEPS = {
         }
         let lo = Infinity, hi = -Infinity; for(let i = 0; i < N; i++){ if(H[i] < lo) lo = H[i]; if(H[i] > hi) hi = H[i]; }
         for(let i = 0; i < N; i++) H[i] = (H[i] - lo)/Math.max(1e-6, hi - lo);
+        // (Shape Aware, round the words: the land under them is levelled to one height, the average about them, so its
+        //  contours run round the poem as round a plateau, never through it; in the letters it is finer, to show in a stroke)
+        const room = wordsRoom(ctx, ww, wh, 0.3, 2.2);
+        if(room){ let m = 0, wsum = 0; for(let i = 0; i < N; i++){ const k = 1 - room[i]; m += H[i]*k; wsum += k; }
+          const lev = wsum > 0 ? m/wsum + 0.013 : 0.5; for(let i = 0; i < N; i++) H[i] = H[i]*room[i] + lev*(1 - room[i]); }
         return [H]; }); } },
   // Every line a promise
   // kept at one height all the way

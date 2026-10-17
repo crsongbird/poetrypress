@@ -61,8 +61,9 @@ check('the renderer records each run as fractions of the page, and asks one more
   /let TEXT_LAYOUT = '';/.test(cr) && /textRuns\.push\(\[x0\/W, top\/H, x1\/W, \(top \+ h\)\/H, lineNo, stanza, rhyme\]/.test(cr) && /if\(lay !== TEXT_LAYOUT\)\{ TEXT_LAYOUT = lay;/.test(cr));
 check('Text Clearing takes a soft mask of the words out of each surface layer (destination-out), the mask made small in page fractions',
   /c\.globalCompositeOperation = 'destination-out'; c\.globalAlpha = Math\.min\(1, amount\);/.test(cr) && /const mw = 192, mh = Math\.max\(8, Math\.round\(192\*H\/W\)\)/.test(cr));
-check('only a graph with The Poem in it, or a texture whose chain reads it (Circuit Board, Broken Glass, Dewy Webs), is sent the layout, and only while it is Text Aware or fills the letters',
-  /const text = \(\(graph && graphUsesPoem\(graph\)\) \|\| chainReadsPoem\(type\)\) && \(aware \|\| fill\) \? TEXT_LAYOUT : undefined;/.test(cr));
+{ const { chainReadsPoem } = await import('../textureGenerators.js');
+  check('Circuit Board, Broken Glass and Dewy Webs always read it; Halftone, Flow-Field Ink, Contour Map and Silverpoint Hatch only under Shape Aware; Clouds never',
+    ['circuit', 'brokenglass', 'dewwebs'].every(t => chainReadsPoem(t, false)) && ['halftone', 'flowfield', 'contour', 'hatch'].every(t => !chainReadsPoem(t, false) && chainReadsPoem(t, true)) && !chainReadsPoem('clouds', true)); }
 // Circuit Board keeps clear of the poem's lines, keyed by them coarsely: a keystroke inside a line draws nothing again
 { const T = await import('../textureGenerators.js');
   const a = '0.1,0.2,0.3,0.23,0,0,0;0.31,0.2,0.4,0.23,0,0,0', b = '0.1,0.2,0.3,0.23,0,0,0;0.31,0.2,0.401,0.23,0,0,0', c = a + ';0.1,0.3,0.6,0.33,1,0,0';

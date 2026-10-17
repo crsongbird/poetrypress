@@ -105,7 +105,7 @@ export function lightFrom(deg, tilt){
  *   poem: [plain lines], font, textColours: [hex], effects: [type],
  *   background: [hex], surface: null | { type, name, reading, element, opacity, blend,
  *     knobs: [{label, value, min, max}], hues: [hex], light: null | {deg, tilt} },
- *   base: null | { name, inText }, border: null | { colour, stitch }, box: bool, vignette: bool,
+ *   base: null | { name, inText }, cut: bool (the words cut the surface away), border: null | { colour, stitch }, box: bool, vignette: bool,
  *   credit: the credit field, as plain text ('' for none)
  * }
  */
@@ -137,6 +137,7 @@ export function describeLook(L){
     if(k.length) s.push('Its settings: ' + k.join(', ') + '.');
   }
   if(L.base) s.push(L.base.inText ? `The letters themselves are filled with a second surface: ${L.base.name}.` : `Beneath it, a second surface: ${L.base.name}.`);
+  if(L.cut) s.push('The words are cut out of the surface, the page showing through the letters.');
   const frame = [];
   if(L.border) frame.push(`a ${L.border.stitch && L.border.stitch !== 'solid' ? L.border.stitch + ' ' : ''}border in ${colourName(L.border.colour) || 'a single colour'}`);
   if(L.box) frame.push('an inset panel behind the words');

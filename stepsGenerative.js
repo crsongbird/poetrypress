@@ -448,21 +448,53 @@ const CIR_FONT = { U: '101101101101111', R: '110101110101101', C: '1111001001001
   I: '111010010010111', J: '001001001101111', K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '110101101101101', O: '111101101101111',
   P: '110101110100100', Q: '111101101111001', S: '111100111001111', T: '111010010010010', V: '101101101101010', W: '101101111111101', X: '101101010101101',
   Y: '101101010010010', Z: '111001010100111', '-': '000000111000000', '.': '000000000000010', '/': '001001010100100', ' ': '000000000000000', '+': '000010111010000',
+  ':': '000010000010000', '!': '010010010000010', '?': '111001011000010', '>': '100010001010100', '<': '001010100010001', '=': '000111000111000',
+  '#': '101111101111101', ',': '000000000010100', "'": '010010000000000', '%': '101001010100101', '*': '000101010101000', '(': '010100100100010', ')': '010001001001010',
   // RUNES (Magitech's silkscreen: made up, a stave and its branches), written as a–l
   a: '010011010110010', b: '010111010010010', c: '101010010010101', d: '010010111010010', e: '110011010110011', f: '010101010101010',
   g: '011010010010110', h: '101110100110101', i: '010010010101101', j: '100110111110100', k: '001011111011001', l: '111010010010111' };
-// the Markings' little pictures, 7×7 (the board's Easter eggs): a fox, a bird, a crescent moon, a star, a witch's hat, an eye
+// the Markings' little pictures, 7×7 (the board's Easter eggs): a fox, a bird, a crescent moon, a star, a witch's hat,
+// an eye; a moth (Ruby's light mode: the moths will find you), a cat, a ghost, a heart, a key, a mushroom, a potion, a
+// ringed planet; and the page's own: a quill, an open book, an inkwell, a candle, a spiral, a speech bubble
 const CIR_EGGS = [
   '1000001110001111111111011101111111101111100011100', '0000110000111101111101111100001110000010000010100',
   '0011100011000011000001100000110000001100000011100', '0001000000100011111110011100011011001000100000000',
-  '0001000000110000111000011110011111011111110000000', '0000000011111011000111011101110001101111100000000'];
-// what a stamp says, by its era (Today, Future, Quantum, Atomic, Magitech): made up, every word of it
+  '0001000000110000111000011110011111011111110000000', '0000000011111011000111011101110001101111100000000',
+  '0100010001010011010111111111011111011010111000001', '1000001110001111111111011101111111111010110111110',
+  '0011100011111011010111111111111111111111111010101', '0110110111111111111110111110001110000010000000000',
+  '0000000011000010010001001111011010100000000000000', '0011100011111011010111111111001010000101000111110',
+  '0011100000100000010000011100011111001111100011100', '0000011001111001111101111111011111001111001100000',
+  '0000011000011100011100011100011100001000001000000', '0000000111011110010011001001100100111101110001000',
+  '0000100000100000111000100010111111111111110111110', '0001000001110000010000011100001110000111000111110',
+  '1111111100000010111101010010101011010000101111110', '1111111100000110101011000001111111100110000010000'];
+// what a stamp says, by its era (Today, Future, Quantum, Atomic, Magitech): made up, every word of it (no real marks,
+// names or brands), the board's own and, now and then, the page's (Ruby: text Easter eggs and tech labels)
 const CIR_SAYS = [
-  ['REV A', 'REV B', 'REV C', 'LOT 0427', 'DO NOT FLEX', 'ESD SAFE', 'TP1', 'GND', '3V3', '5V0', 'MADE BY HAND', 'KEEP DRY', 'PASS QC', 'SER 0091'],
-  ['PHOTONIC BUS', 'NEURAL MESH', 'FUSION OK', 'GRAV LINK', 'SYNTH CORE', 'LIGHT PIPE 4', 'SELF HEAL', 'ORBITAL', 'NANO FAB 9', 'DREAM CACHE'],
-  ['KEEP BELOW 20 MK', 'QUBIT ARRAY', 'ENTANGLED', 'OBSERVE GENTLY', 'SUPERPOSED', 'COHERENT', 'DO NOT LOOK', 'PHASE 0/1', 'SPIN UP', 'TUNNEL'],
-  ['WARDED', 'BOUND', 'THIRD MOON', 'SPELLBOUND', 'HEX SAFE', 'FAMILIAR PORT', 'MANA 9', 'BRAZIER', 'SIGIL 7', 'WITCH OK'],
-  ['LEYLINE 3', 'AETHER BUS', 'SUMMON GATE', 'PRISM CORE', 'STAR SEAL', 'ARCANE IO', 'SPELL CACHE', 'HALO 7', 'CRYSTAL OK', 'MANA 12', 'LIGHT ONLY', 'SING TO IT']];
+  ['REV A', 'REV B', 'REV C', 'LOT 0427', 'DO NOT FLEX', 'ESD SAFE', 'TP1', 'GND', '3V3', '5V0', 'MADE BY HAND', 'KEEP DRY', 'PASS QC', 'SER 0091',
+   'VBAT', 'AGND', 'SDA', 'SCL', 'MOSI', 'MISO', 'TX >', '< RX', 'RST', 'BOOT', 'CLK IN', 'EN', 'PWR', 'LED1', 'SW1', 'J1', 'FB1', 'F1 2A', 'BAT+', 'BAT-',
+   'PROTO 2', 'EVAL ONLY', 'NOT FOR SALE', 'DO NOT PROBE', 'CUT HERE', 'BRIDGE TO ENABLE', 'V1.3', 'WK 42', 'HAND SOLDER', 'NO CLEAN', 'THIS SIDE UP',
+   'POEM IN', 'VERSE OUT', 'LINE 14', 'STANZA 3', 'RHYME BUS', 'METER CLK', 'IAMB X5', 'EM DASH', 'KERNING', 'LEADING 1.4', 'DRAFT 9', 'NO ADVERBS', 'INK ONLY'],
+  ['PHOTONIC BUS', 'NEURAL MESH', 'FUSION OK', 'GRAV LINK', 'SYNTH CORE', 'LIGHT PIPE 4', 'SELF HEAL', 'ORBITAL', 'NANO FAB 9', 'DREAM CACHE',
+   'WARP SAFE', 'FIELD COIL 2', 'ION BUS', 'PLASMA OK', 'HOLO IO', 'SENTIENT? NO', 'MESH NODE 7', 'GRAPHENE', 'COLD FUSION', 'VAC SEALED', 'ZERO G OK', 'LUNAR LOT 3',
+   'MUSE LINK', 'VERSE CORE', 'SONNET ENGINE', 'METAPHOR UNIT', 'SIMILE CACHE', 'HAIKU 5-7-5', 'LYRIC BUS', 'ODE PROC', 'ELEGY SAFE', 'GHAZAL MODE'],
+  ['KEEP BELOW 20 MK', 'QUBIT ARRAY', 'ENTANGLED', 'OBSERVE GENTLY', 'SUPERPOSED', 'COHERENT', 'DO NOT LOOK', 'PHASE 0/1', 'SPIN UP', 'TUNNEL',
+   'DECOHERE', 'BOTH AND NEITHER', 'Q0 Q1 Q2', 'BELL PAIR', 'UNMEASURED', 'CRYO ONLY', 'HERE AND THERE', 'COLLAPSE ON READ', 'NOISE FLOOR', 'GATE H',
+   'ENJAMBED', 'CAESURA', 'BOTH MEANINGS', 'UNREAD UNTIL READ', 'VOLTA', 'UNCERTAIN METER', 'THE CAT IS FINE', 'MEANING: ?'],
+  ['WARDED', 'BOUND', 'THIRD MOON', 'SPELLBOUND', 'HEX SAFE', 'FAMILIAR PORT', 'MANA 9', 'BRAZIER', 'SIGIL 7', 'WITCH OK',
+   'VALVE 6', 'BRASS WORKS', 'RADIANT', 'PRESSURE OK', 'TUBE WARM', 'GEAR 12', 'STEAM VENT', 'DIAL 0-9', 'LAMPLIT', 'MOTH LAMP', 'CANDLE OK',
+   'QUILL WIRE', 'INKWELL 3', 'THE SCRIBE', 'BOOK OF HOURS', 'WAX SEAL', 'LETTERPRESS', 'TYPE CASE 4'],
+  ['LEYLINE 3', 'AETHER BUS', 'SUMMON GATE', 'PRISM CORE', 'STAR SEAL', 'ARCANE IO', 'SPELL CACHE', 'HALO 7', 'CRYSTAL OK', 'MANA 12', 'LIGHT ONLY', 'SING TO IT',
+   'MOON WELL', 'CIRCLE CLOSED', 'SIGIL ROM', 'RITE 3', 'ASTRAL OUT', 'GLYPH CORE', 'FAMILIAR LINK', 'WARD 9', 'MOTHS WELCOME',
+   'RUNE INK', 'WORDS OF POWER', 'TRUE NAME', 'SPEAK IT', 'VERSE OF BINDING', 'SAY IT TWICE', 'THE SPELL IS A POEM']];
+// the kinds of stamp each era prints, and how often (Today, Future, Quantum, Atomic, Magitech)
+const CIR_STAMPS = [
+  [['say', 50], ['barcode', 10], ['tp', 10], ['warn', 6], ['maker', 6], ['egg', 6]],
+  [['say', 50], ['matrix', 12], ['barcode', 8], ['tp', 6], ['warn', 6], ['maker', 6], ['egg', 6]],
+  [['say', 50], ['matrix', 14], ['barcode', 4], ['tp', 6], ['warn', 6], ['maker', 6], ['egg', 6]],
+  [['say', 60], ['moons', 10], ['maker', 8], ['warn', 5], ['egg', 6]],
+  [['say', 60], ['moons', 10], ['maker', 8], ['warn', 5], ['egg', 6]]];
+// a small part's value, printed beside it (resistors · capacitors), and a chip's own marking on its package
+const CIR_VALUES = [['10K', '4K7', '220', '1M', '47R', '100K', '2K2', '330', '68K', '1K'], ['100N', '10U', '4U7', '22P', '1N', '47U', '220N', '10P']];
 const CIR_SYLL = ['AR', 'VEL', 'ION', 'KAI', 'SOL', 'NYX', 'OR', 'TEL', 'LUM', 'QUA', 'MER', 'ZEN', 'RHO', 'AXI', 'DRA', 'FEN'];
 function genCircuit(cw, ch, o){
   const R = Math.random, occ = new Int32Array(cw*ch), age = new Int32Array(cw*ch);
@@ -592,11 +624,35 @@ function genCircuit(cw, ch, o){
   const era = Math.max(0, Math.min(4, (o.era || 0)*4)), level = k => Math.min(4, Math.floor(era + eh(k)));
   const runes = (k, n) => Array.from({ length: n }, (_, i) => 'abcdefghijkl'[Math.floor(eh(k*7 + i)*12)]).join('');
   chips.forEach((c, i) => { c.era = level(100 + i); }); smd.forEach((p, i) => { p.era = level(501 + i); });
-  const fits = (nm, txt) => room(Math.floor(nm.x), Math.floor(nm.y), Math.ceil(txt.length*0.96), 2, 0);
+  // ---- WHAT IS WRITTEN, NEVER ON ANYTHING ELSE (Ruby: nothing placed on top of anything at high density) ----
+  // Every word, rune, value and stamp takes its cells as it is placed (`taken`), and is placed only where neither
+  // copper, a part nor another word lies. A name the era lengthens past its room is left off, as before.
+  const taken = new Uint8Array(cw*ch);
+  const clear = (x, y, w, h, m = 0) => { x = Math.floor(x); y = Math.floor(y);
+    for(let j = y - m; j < y + h + m; j++) for(let i = x - m; i < x + w + m; i++) if(!inb(i, j) || occ[j*cw + i] || taken[j*cw + i]) return false; return true; };
+  const take = (x, y, w, h) => { x = Math.floor(x); y = Math.floor(y); for(let j = y; j < y + h; j++) for(let i = x; i < x + w; i++) if(inb(i, j)) taken[j*cw + i] = 1; };
+  const span = (txt, px = 0.24) => Math.ceil(txt.length*px*4);
   const shown = named.filter(nm => {
-    const lv = nm.chip ? nm.chip.era : level(500 + nm.n); if(!lv) return true;
-    const txt = nm.kind === 'U' ? ['', 'NX' + nm.n, 'Q' + nm.n, runes(nm.n, 3), runes(nm.n + 40, 2)][lv] : ['', (nm.kind === 'C' ? 'CL' : 'PH') + nm.n, (nm.kind === 'C' ? 'CQ' : 'JJ') + nm.n, runes(600 + nm.n, 2), runes(640 + nm.n, 1)][lv];
-    nm.text = txt; return fits(nm, txt); });
+    const lv = nm.chip ? nm.chip.era : level(500 + nm.n);
+    const txt = !lv ? nm.kind + nm.n : nm.kind === 'U' ? ['', 'NX' + nm.n, 'Q' + nm.n, runes(nm.n, 3), runes(nm.n + 40, 2)][lv] : ['', (nm.kind === 'C' ? 'CL' : 'PH') + nm.n, (nm.kind === 'C' ? 'CQ' : 'JJ') + nm.n, runes(600 + nm.n, 2), runes(640 + nm.n, 1)][lv];
+    // (a magitech chip's name stands a little higher, over its hologram)
+    if(lv === 4 && nm.chip) nm.y = nm.chip.y - 2.9;
+    if(!clear(nm.x, nm.y, span(txt), 2)) return false;
+    if(lv) nm.text = txt; take(nm.x, nm.y, span(txt), 2); return true; });
+  // ---- THE MARKINGS (Ruby: stamps, labels, glyphs, made-up technology, by the seed; "a much wider variety of text
+  //      related Easter eggs and tech labels") ----
+  // What each part says of itself comes first, by its own hash (more Markings marks more of them, and moves nothing):
+  // today's chips carry a maker's code and a date on their packages, today's small parts their values.
+  const marks = o.marks || 0, syl = k => CIR_SYLL[Math.floor(eh(k)*16)];
+  if(marks > 0){
+    chips.forEach((c, i) => { if(c.era || eh(1500 + i) >= marks || c.w < 4 || c.h < 2) return;
+      const room1 = Math.floor((c.w - 0.5)/0.72), code = (syl(1510 + i) + syl(1520 + i) + (eh(1530 + i) < 0.5 ? '-' : '') + Math.floor(10 + eh(1540 + i)*89)).slice(0, room1);
+      c.mark = c.h >= 3 ? [code, ['WK', 'L', 'D', 'R'][Math.floor(eh(1550 + i)*4)] + Math.floor(10 + eh(1560 + i)*89)].map(t => t.slice(0, room1)) : [code]; });
+    smd.forEach((p, i) => { if(p.era || eh(1600 + i) >= marks*0.8) return;
+      const list = CIR_VALUES[p.cap ? 1 : 0], txt = list[Math.floor(eh(1610 + i)*list.length)], wc = span(txt, 0.2);
+      for(const [x, y] of p.horiz ? [[p.x, p.y + p.h + 0.25], [p.x, p.y - 1.3]] : [[p.x - wc - 0.2, p.y + 1], [p.x + p.w + 0.3, p.y + 1]])
+        if(clear(x, y, wc, 1)){ take(x, y, wc, 1); shown.push({ kind: 'V', n: i, x, y: y + 0.05, text: txt, px: 0.2 }); break; } });
+  }
   // a rune or three beside a magitech trace's longest run
   const glyphs = [];
   traces.forEach((tr, ti) => { tr.id = ti; tr.era = level(800 + ti); });
@@ -604,22 +660,33 @@ function genCircuit(cw, ch, o){
     let best = 0, A = null, Bp = null; for(let i = 1; i < tr.pts.length; i++){ const l = Math.hypot(tr.pts[i][0] - tr.pts[i - 1][0], tr.pts[i][1] - tr.pts[i - 1][1]); if(l > best){ best = l; A = tr.pts[i - 1]; Bp = tr.pts[i]; } }
     if(best < 6) return; const mx = (A[0] + Bp[0])/2, my = (A[1] + Bp[1])/2, dx = (Bp[0] - A[0])/best, dy = (Bp[1] - A[1])/best;
     const txt = runes(900 + ti, 1 + Math.floor(eh(950 + ti)*3)), x = mx - dy*1.4 - txt.length*0.48, y = my + dx*1.4 - 0.6;
-    if(room(Math.floor(x), Math.floor(y), Math.ceil(txt.length*0.96), 2, 0)) glyphs.push({ x, y, text: txt }); });
-  // ---- THE MARKINGS (Ruby: stamps, labels, glyphs, made-up technology, by the seed) ----
-  // Found room for last, so they move nothing; each says what its own era would say.
-  const stamps = [], nMarks = Math.round((o.marks || 0)*(1 + cw*ch/700));
+    if(clear(x, y, span(txt), 2)){ take(x, y, span(txt), 2); glyphs.push({ x, y, text: txt }); } });
+  // Then the stamps, found room for last, so they move nothing: each says what its own era would say.
+  const stamps = [], nMarks = Math.round(marks*(1 + cw*ch/700));
   if(nMarks > 0){
     const name = () => CIR_SYLL[R()*16 | 0] + CIR_SYLL[R()*16 | 0] + (R() < 0.6 ? '-' + (2 + (R()*98 | 0)) : '');
     const place = (wc, hc) => { for(let t = 0; t < 60; t++){ const x = 1 + (R()*Math.max(1, cw - wc - 2) | 0), y = 1 + (R()*Math.max(1, ch - hc - 2) | 0);
-      if(room(x, y, wc, hc, 1)){ for(let j = y; j < y + hc; j++) for(let i = x; i < x + wc; i++) occ[j*cw + i] = -4; return [x, y]; } } return null; };
+      if(clear(x, y, wc, hc, 1)){ for(let j = y; j < y + hc; j++) for(let i = x; i < x + wc; i++) occ[j*cw + i] = -4; take(x, y, wc, hc); return [x, y]; } } return null; };
+    const at = (kind, wc, hc, more) => { const p = place(wc, hc); if(p) stamps.push({ kind, x: p[0], y: p[1], w: wc, h: hc, ...more }); };
     for(let k = 0; k < nMarks; k++){
-      const lv = level(1000 + k), kind = k === 0 ? 'title' : k === 1 && o.marks > 0.35 ? 'egg' : R() < 0.25 && lv > 0 && lv < 3 ? 'matrix' : 'say';
-      if(kind === 'egg'){ const at = place(3, 3); if(at) stamps.push({ kind, x: at[0] + 0.15, y: at[1] + 0.15, egg: R()*CIR_EGGS.length | 0 }); continue; }
-      if(kind === 'matrix'){ const at = place(2, 2); if(at) stamps.push({ kind, x: at[0] + 0.1, y: at[1] + 0.1, bits: Array.from({ length: 36 }, () => R() < 0.5) }); continue; }
+      // what kind of stamp: by its era's own weights (a line of words most often)
+      const lv = level(1000 + k), r = k === 0 ? 0 : R();
+      let kind = k === 0 ? 'title' : k === 1 && marks > 0.35 ? 'egg' : null;
+      if(!kind){ const W = CIR_STAMPS[lv]; let x = r*W.reduce((a, q) => a + q[1], 0); for(const [kd, wt] of W){ if(x < wt){ kind = kd; break; } x -= wt; } kind = kind || 'say'; }
+      if(kind === 'egg'){ at(kind, 3, 3, { egg: R()*CIR_EGGS.length | 0 }); continue; }
+      if(kind === 'matrix'){ at(kind, 2, 2, { bits: Array.from({ length: 36 }, () => R() < 0.5) }); continue; }
+      if(kind === 'barcode'){ let x = 0; const bars = []; while(x < 5.4){ const w = 0.12 + (R()*3 | 0)*0.1; if(R() < 0.55) bars.push([x, w]); x += w + 0.1; }
+        at(kind, 6, 3, { bars, code: Array.from({ length: 6 }, () => R()*10 | 0).join('') }); continue; }
+      if(kind === 'warn'){ const word = [['HOT', 'HV', 'ESD', 'LASER', 'HIGH VOLTAGE'], ['PLASMA', 'FIELD', 'G FORCE', 'RADIATION'], ['CRYO', 'OBSERVER', 'DO NOT LOOK', 'COHERENCE'],
+          ['RADIANT', 'PRESSURE', 'HOT BRASS', 'STEAM'], ['MANA', 'SUMMONING', 'WILD MAGIC', 'DO NOT SPEAK']][lv], txt = word[R()*word.length | 0];
+        at(kind, span(txt) + 3, 2, { text: txt }); continue; }
+      if(kind === 'tp'){ const txt = 'TP' + (1 + (R()*40 | 0)); at(kind, span(txt) + 2, 2, { text: txt }); continue; }
+      if(kind === 'maker'){ at(kind, 3, 3, { text: 'ABCDEFGHJKLMNPRSTVWXYZ'[R()*22 | 0] + 'ABCDEFGHJKLMNPRSTVWXYZ'[R()*22 | 0], lv }); continue; }
+      if(kind === 'moons'){ at(kind, 6, 2, { phase: R() }); continue; }
       const lines = kind === 'title' ? [lv >= 3 ? runes(1100, 4) + ' ' + name() : name(), lv >= 3 ? runes(1200, 3) : ['REV ', 'MK ', 'GEN ', 'CIRCLE '][lv] + 'ABCDEFGH'[R()*8 | 0]]
         : [lv >= 3 && R() < 0.4 ? runes(1300 + k, 2 + (R()*4 | 0)) : CIR_SAYS[lv][R()*CIR_SAYS[lv].length | 0]];
-      const wc = Math.ceil(Math.max(...lines.map(t => t.length))*0.96 + 0.6), hc = Math.ceil(lines.length*1.45 + 0.4), at = place(wc, hc);
-      if(at) stamps.push({ kind, x: at[0], y: at[1], w: wc, h: hc, lines, box: kind === 'title' || R() < 0.35 });
+      const wc = Math.ceil(Math.max(...lines.map(t => t.length))*0.96 + 0.6), hc = Math.ceil(lines.length*1.45 + 0.4);
+      at(kind, wc, hc, { lines, box: kind === 'title' || R() < 0.35 });
     }
   }
   // ---- THE POEM KEPT CLEAR (Ruby: no traces under the text), cut away last, so the rest of the board never moves
@@ -755,8 +822,9 @@ function cirMagitekChip(c, K, h, e, mx, my, m, long, wide){
       const pts = Array.from({ length: 9 }, (_, i) => { const t = i/8; return [(1 - t)*(1 - t)*sx + 2*(1 - t)*t*k1[0] + t*t*p.x, (1 - t)*(1 - t)*sy + 2*(1 - t)*t*k1[1] + t*t*p.y]; });
       line(HT, pts, 0.16*s, 'rgb(150,150,150)'); line(AR, pts, 0.1*s, '#fff'); line(EA, pts, 0.22*s, K.g(0.1 + 0.85*p.rank)); }
     // a hologram over some: broken rings of light hanging above the chip, ticks round them
-    if(h(8) < 0.55){ AR.globalAlpha = 0.4; for(const [rr, a0, span] of [[R*1.18, h(9)*6.3, 4.2], [R*1.32, h(10)*6.3, 2.6]]){ ring(AR, mx, my, rr, 0.07, '#fff', a0, a0 + span);
-        for(let k = 0; k < 24; k++){ const a = a0 + span*k/24; line(AR, [[mx + Math.cos(a)*rr, my + Math.sin(a)*rr], [mx + Math.cos(a)*(rr + 0.25), my + Math.sin(a)*(rr + 0.25)]], 0.05*s, '#fff'); } }
+    // (close about the circle, inside the room the chip keeps: Ruby, nothing on top of anything)
+    if(h(8) < 0.55){ AR.globalAlpha = 0.4; for(const [rr, a0, span] of [[R + 0.28, h(9)*6.3, 4.2], [R + 0.5, h(10)*6.3, 2.6]]){ ring(AR, mx, my, rr, 0.07, '#fff', a0, a0 + span);
+        for(let k = 0; k < 24; k++){ const a = a0 + span*k/24; line(AR, [[mx + Math.cos(a)*rr, my + Math.sin(a)*rr], [mx + Math.cos(a)*(rr + 0.16), my + Math.sin(a)*(rr + 0.16)]], 0.05*s, '#fff'); } }
       AR.globalAlpha = 1; }
   } else {
     // a crystal rod lying in a cradle, its facets running its length, runes along it
@@ -816,6 +884,8 @@ function genDrawCircuit(B, ww, wh, s, o){
     // the silkscreen: an outline round the body and its pins, a notch at pin one
     LG.strokeStyle = '#fff'; LG.lineWidth = 0.12*s; LG.strokeRect((c.x - 1.15)*s, (c.y - 1.15)*s, (c.w + 2.3)*s, (c.h + 2.3)*s);
     disc(LG, [c.x - 1.15, c.y - 1.15], 0.32, '#fff');
+    // (Markings: the maker's code and a date printed on the package, small and centred)
+    if(c.mark) c.mark.forEach((t, i) => write(t, c.x + c.w/2 - t.length*0.36 + 0.04, c.y + c.h/2 - c.mark.length*0.5 + i*1.0 + 0.1, 0.18));
   }
   // small parts: two pads and a body between
   for(const p of B.smd){
@@ -855,13 +925,25 @@ function genDrawCircuit(B, ww, wh, s, o){
         X.ellipse(cx*s, cy*s, 0.12*s, 0.42*s, Math.atan2(dy, dx), 0, Math.PI*2); X.stroke(); } } }
   for(const v of B.vias){ disc(CU, v, 0.38, '#fff'); disc(CU, v, 0.15, '#000'); disc(PD, v, 0.38, '#fff'); disc(PD, v, 0.15, '#000'); disc(HT, v, 0.38, 'rgb(115,115,115)'); disc(HT, v, 0.15, 'rgb(31,31,31)'); }
   // the parts' names, in the silkscreen's little font (each in its era's words)
-  for(const nm of B.names) write(nm.text || nm.kind + nm.n, nm.x, nm.y);
+  for(const nm of B.names) write(nm.text || nm.kind + nm.n, nm.x, nm.y, nm.px);
   for(const gl of B.glyphs || []) write(gl.text, gl.x, gl.y);
   // the Markings: stamps of what each era would print, a code block, and once a little picture
   for(const st of B.stamps || []){
     if(st.kind === 'egg'){ const bits = CIR_EGGS[st.egg], px = 0.38; for(let r = 0; r < 7; r++) for(let q = 0; q < 7; q++) if(bits[r*7 + q] === '1') rect(LG, st.x + q*px, st.y + r*px, px*0.9, px*0.9, '#fff'); continue; }
     if(st.kind === 'matrix'){ const px = 0.3; LG.strokeStyle = '#fff'; LG.lineWidth = 0.08*s; LG.strokeRect(st.x*s, st.y*s, 6*px*s, 6*px*s);
       st.bits.forEach((b, i) => { if(b) rect(LG, st.x + (i % 6)*px, st.y + Math.floor(i/6)*px, px*0.9, px*0.9, '#fff'); }); continue; }
+    if(st.kind === 'barcode'){ for(const [x, w] of st.bars) rect(LG, st.x + 0.3 + x, st.y + 0.3, w, 1.5, '#fff'); write(st.code, st.x + 0.3, st.y + 2.05, 0.16); continue; }
+    if(st.kind === 'warn'){ const cx = st.x + 1.2, cy = st.y + 1.05; poly(LG, [[cx, cy - 0.85], [cx + 0.95, cy + 0.75], [cx - 0.95, cy + 0.75]], '#fff', false, 0.12);
+      write('!', cx - 0.3, cy - 0.35, 0.2); write(st.text, st.x + 2.6, st.y + 0.4); continue; }
+    if(st.kind === 'tp'){ const p = [st.x + 0.9, st.y + 1]; disc(CU, p, 0.42, '#fff'); disc(PD, p, 0.42, '#fff'); disc(HT, p, 0.42, 'rgb(122,122,122)');
+      LG.strokeStyle = '#fff'; LG.lineWidth = 0.08*s; LG.beginPath(); LG.arc(p[0]*s, p[1]*s, 0.68*s, 0, Math.PI*2); LG.stroke(); write(st.text, st.x + 1.8, st.y + 0.4); continue; }
+    if(st.kind === 'maker'){ const cx = st.x + 1.5, cy = st.y + 1.5, n = st.lv === 3 ? 10 : st.lv === 4 ? 7 : st.lv ? 6 : 0;
+      // a maker's mark: a ring (today), a hexagon (the future, quantum), a cog (atomic), a seven-pointed star (magitech)
+      if(!n){ LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.beginPath(); LG.arc(cx*s, cy*s, 1.25*s, 0, Math.PI*2); LG.stroke(); }
+      else poly(LG, Array.from({ length: st.lv === 3 ? n*2 : st.lv === 4 ? n : n }, (_, k) => { const N = st.lv === 3 ? n*2 : n, a = -Math.PI/2 + k/N*Math.PI*2*(st.lv === 4 ? 3 : 1), r = st.lv === 3 && k % 2 ? 1.05 : 1.3; return [cx + Math.cos(a)*r, cy + Math.sin(a)*r]; }), '#fff', false, 0.1);
+      write(st.lv >= 3 ? 'abcdefghijkl'[st.text.charCodeAt(0) % 12] + 'abcdefghijkl'[st.text.charCodeAt(1) % 12] : st.text, cx - 0.9, cy - 0.6); continue; }
+    if(st.kind === 'moons'){ for(let k = 0; k < 5; k++){ const cx = st.x + 0.75 + k*1.12, cy = st.y + 1, f = ((st.phase + k/8) % 1)*2 - 1;
+        disc(LG, [cx, cy], 0.45, '#fff'); if(Math.abs(f) < 0.97) disc(LG, [cx + f*0.9, cy], 0.45, '#000'); } continue; }
     st.lines.forEach((t, i) => write(t, st.x + 0.3, st.y + 0.35 + i*1.45));
     if(st.box){ LG.strokeStyle = '#fff'; LG.lineWidth = 0.1*s; LG.strokeRect((st.x + 0.05)*s, (st.y + 0.05)*s, (st.w - 0.1)*s, (st.h - 0.1)*s); }
   }
@@ -927,14 +1009,23 @@ function ringLook(o){
 // slider names. Cities (o.build, 0.25 at its lowest; past its first quarter it spreads cities too) says how much;
 // Landforms what the land itself raises; Traffic how busy the sky is. Each kind of work draws from its own stream, so
 // more of any adds works and moves none.
-//            spires · arches · towers · ships · city · crystals · circles · pillars · scaffolding; the lights' colours
+//            spires · arches · towers · ships · city · crystals · circles · pillars · scaffolding · (monoliths, rim towers,
+//            light bridges); the lights' colours (the engineers' the Forerunners' blue: Ruby, "push it more that way")
 const RING_BUILDERS = ['wilds', 'engineers', 'cities', 'magi', 'ruins'];
+// the forms of arch each builder raises, and how often: spans (wall top to wall top, holding the air), flying buttresses
+// (a wall's top down to the land), arcades (arches striding on piers), gates (on the land), the land's own stone arches
+const RING_ARCHES = {
+  wilds:     [['stone', 1], ['span', 0.35], ['gate', 0.3]],
+  engineers: [['buttress', 1], ['span', 0.8], ['arcade', 0.5]],
+  cities:    [['arcade', 1], ['span', 0.5], ['gate', 0.6], ['buttress', 0.3]],
+  magi:      [['span', 1], ['gate', 0.8], ['buttress', 0.4], ['stone', 0.3]],
+  ruins:     [['span', 1], ['arcade', 0.9], ['gate', 0.7], ['stone', 0.4]] };
 const RING_WORKS = {
   wilds:     { sp: 0.35, ar: 0.5, tw: 0,    sh: 0.12, ci: 0,    cr: 0.1,  rc: 0.25, pl: 0.35, sc: 0.15, mo: 1, pal: [[1, 0.82, 0.55], [0.6, 1, 0.75], [0.85, 0.95, 1]] },
-  engineers: { sp: 1,    ar: 0.8, tw: 0.45, sh: 0.8,  ci: 0.35, cr: 0,    rc: 0,    pl: 0,    sc: 1,    pal: [[1, 0.68, 0.32], [0.72, 0.9, 1], [1, 0.38, 0.25]] },
-  cities:    { sp: 0.35, ar: 0.4, tw: 1,    sh: 1,    ci: 1,    cr: 0,    rc: 0,    pl: 0.15, sc: 0.3,  pal: [[1, 0.76, 0.42], [1, 0.93, 0.8], [0.55, 0.82, 1]] },
-  magi:      { sp: 0.5,  ar: 0.9, tw: 0.25, sh: 0.3,  ci: 0.25, cr: 1,    rc: 1,    pl: 1,    sc: 0,    pal: [[0.72, 0.5, 1], [0.4, 0.95, 1], [1, 0.82, 0.45]] },
-  ruins:     { sp: 0.5,  ar: 1,   tw: 0.35, sh: 0.15, ci: 0.15, cr: 0.25, rc: 0.3,  pl: 0.1,  sc: 0.6, mo: 0.6, broken: 1, pal: [[1, 0.5, 0.28], [0.5, 1, 0.8], [0.9, 0.85, 0.7]] },
+  engineers: { sp: 1,    ar: 0.8, tw: 0.45, sh: 0.8,  ci: 0.35, cr: 0,    rc: 0,    pl: 0,    sc: 1,    rt: 1,   br: 1,   pal: [[0.55, 0.82, 1], [0.78, 0.94, 1], [1, 0.62, 0.3]] },
+  cities:    { sp: 0.35, ar: 0.4, tw: 1,    sh: 1,    ci: 1,    cr: 0,    rc: 0,    pl: 0.15, sc: 0.3,  rt: 0.3, br: 0.3, pal: [[1, 0.76, 0.42], [1, 0.93, 0.8], [0.55, 0.82, 1]] },
+  magi:      { sp: 0.5,  ar: 0.9, tw: 0.25, sh: 0.3,  ci: 0.25, cr: 1,    rc: 1,    pl: 1,    sc: 0,    rt: 0.4, br: 0.6, pal: [[0.72, 0.5, 1], [0.4, 0.95, 1], [1, 0.82, 0.45]] },
+  ruins:     { sp: 0.5,  ar: 1,   tw: 0.35, sh: 0.15, ci: 0.15, cr: 0.25, rc: 0.3,  pl: 0.1,  sc: 0.6, mo: 0.6, rt: 0.6, broken: 1, pal: [[1, 0.5, 0.28], [0.5, 1, 0.8], [0.9, 0.85, 0.7]] },
 };
 const ringRand = (seed, k) => { let st = (Math.imul((seed >>> 0) ^ 0x9E3779B9, 2*k + 1) ^ Math.imul(k + 7, 0x85EBCA6B)) | 0;
   return () => { st = st + 0x6D2B79F5 | 0; let t = Math.imul(st ^ (st >>> 15), 1 | st); t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t; return ((t ^ (t >>> 14)) >>> 0)/4294967296; }; };
@@ -951,16 +1042,22 @@ function ringBuild(L, o){
   const floorAt = (phi, z, up = 0) => [(L.R - up)*Math.cos(phi), (L.R - up)*Math.sin(phi), z];
   const upAt = phi => [-Math.cos(phi), -Math.sin(phi), 0], alongAt = phi => [-Math.sin(phi), Math.cos(phi), 0];
   const near = (r, lo, hi) => (r() < 0.5 ? -1 : 1)*W*(lo + Math.pow(r(), 1.5)*(hi - lo));
+  // (a thing standing on the land never stands where you are: a mountain or a mesa over the camera filled the view from
+  //  inside it; an arch's pieces are kept whatever, so no arch is cut into floating pieces)
   const beam = (B0, A0, h, r0, r1, more) => { const c = [B0[0] + A0[0]*h/2, B0[1] + A0[1]*h/2, B0[2] + A0[2]*h/2];
+    if(!(more && more.arch)){ const dc = Math.hypot(Math.atan2(B0[1], B0[0]), B0[2] - L.z0);
+      // (nor looms over you: a tower or a mesa closer than its height, its top cut off in the sky, read as a slab in the air)
+      if(dc < Math.max(r0, r1)*1.2 + W*0.006 || ((more.tower || more.cap || more.stone) && dc < h)) return; }
     P.push({ k: 0, bx: B0[0], by: B0[1], bz: B0[2], ax: A0[0], ay: A0[1], az: A0[2], h, r0, r1, c, rad: h/2 + Math.max(r0, (more && more.glowR) || 0)*3, ...more }); };
   // SPIRES: needles standing up from the floor, many near you and a few far round the ring (the seed may grow a forest)
   { const r = ringRand(seed, 1), forest = style < 0.3, k = how('sp'), nSp = Math.max(3, Math.round(((forest ? 18 : 8) + (forest ? 40 : 22)*b*(0.5 + r()))*k));
     for(let i = 0; i < nSp; i++){
       // (none closer than a quarter of the band: a needle at your elbow would fill the view)
       const isNear = i < nSp*0.7, phi = isNear ? near(r, 0.3, 4) : (r()*2 - 1)*Math.PI, z = (r()*2 - 1)*W*0.45;
-      const snapped = broken > 0 && r() < 0.6*broken, h = L.Hw*(0.8 + r()*(forest ? 1.8 : 3))*(0.6 + b*0.8)*(snapped ? 0.35 + r()*0.3 : 1), rr = Math.max(W*0.0015, h*(0.008 + r()*0.012));
+      // (Ruby: "thicker geometry": a spire is a tapering tower, not a needle)
+      const snapped = broken > 0 && r() < 0.6*broken, h = L.Hw*(0.8 + r()*(forest ? 1.8 : 3))*(0.6 + b*0.8)*(snapped ? 0.35 + r()*0.3 : 1), rr = Math.max(W*0.003, h*(0.018 + r()*0.022));
       const U = upAt(phi), base = floorAt(phi, z), tip = [base[0] + U[0]*h - L.Px, base[1] + U[1]*h, base[2] + U[2]*h - L.z0], tl = Math.hypot(tip[0], tip[1], tip[2]), glowR = Math.max(rr*1.2, W*0.002);
-      beam(base, U, h, rr, snapped ? rr*0.8 : rr*0.15, { spire: true, glowR, beacon: !snapped, tip: [tip[0]/tl, tip[1]/tl, tip[2]/tl], tl, tipCos: Math.cos(Math.min(1.5, 3*glowR/tl)) });
+      beam(base, U, h, rr, snapped ? rr*0.8 : rr*0.12, { spire: true, glowR, beacon: !snapped, tip: [tip[0]/tl, tip[1]/tl, tip[2]/tl], tl, tipCos: Math.cos(Math.min(1.5, 3*glowR/tl)) });
     } }
   // THE CITY: blocks of streets laid on the land where the seed's noise is high (lit at night), and towers in it.
   // (Cities, the fourth slider, says how built-up the ring is: past its first quarter the cities spread whoever built it)
@@ -981,22 +1078,64 @@ function ringBuild(L, o){
       for(let j = 0; j < ring && i < nM; j++, i++){ const a = j/ring*Math.PI*2, ph = phi + (ring > 1 ? Math.cos(a)*rr : 0), zz = z + (ring > 1 ? Math.sin(a)*rr : 0);
         const h = W*(0.006 + 0.03*Math.pow(r(), 1.5)), U = upAt(ph), T = alongAt(ph), lean = (r() - 0.5)*0.3, A0 = ringNorm([U[0] + T[0]*lean, U[1] + T[1]*lean, U[2] + lean*0.5]);
         beam(floorAt(ph, zz), A0, h, h*(0.14 + 0.1*r()), h*(0.1 + 0.08*r()), { stone: true }); } } }
-  // ARCHES: great arches spanning the band (seen far off as bands across the arch overhead), and gateways standing on
-  // the land, across the ring or along it. A ruin's arches stand broken. (Ruby: "archways should go across the mountains
-  // as if they contain the atmosphere": the band's arches spring from the rim walls' tops, and the air they hold shows
-  // as a faint field beneath each, brightest edge-on and along the arch)
-  { const r = ringRand(seed, 3), k = how('ar'), nA = Math.round(k*(1.5 + 5*b*r())), nG = Math.round(k*(5 + 26*b*r()));
-    const arch = (phi, zc, span, ht, across, rad, segs, lift = 0) => { const U = upAt(phi), S = across ? [0, 0, 1] : alongAt(phi), C0 = floorAt(phi, zc);
-      const pt = th => { const a = Math.cos(th)*span/2, e = lift + Math.sin(th)*ht; return [C0[0] + S[0]*a + U[0]*e, C0[1] + S[1]*a + U[1]*e, C0[2] + S[2]*a + U[2]*e]; };
-      for(let s = 0; s < segs; s++){ if(broken > 0 && r() < 0.32*broken) continue;
-        const p0 = pt(Math.PI*s/segs), p1 = pt(Math.PI*(s + 1)/segs), d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], l = Math.hypot(d[0], d[1], d[2]);
-        beam(p0, [d[0]/l, d[1]/l, d[2]/l], l*1.04, rad, rad, { arch: true }); } };
-    for(let i = 0; i < nA; i++){ const phi = i === 0 ? near(r, 0.5, 1.6) : (r() < 0.5 ? near(r, 1, 8) : (r()*2 - 1)*Math.PI);
-      const ht = W*(0.12 + 0.4*r()), rad = W*(0.012 + 0.02*r());
-      arch(phi, 0, W, ht, true, rad, 22, L.Hw);
-      if(broken < 0.5) P.push({ k: 7, O: floorAt(phi, 0, L.Hw), N: alongAt(phi), E1: [0, 0, 1], E2: upAt(phi), a: W/2, ht, c: floorAt(phi, 0, L.Hw + ht/2), rad: Math.hypot(W/2, ht), col: [0.62, 0.86, 1] }); }
-    for(let i = 0; i < nG; i++){ const phi = near(r, 0.05, 1.5), span = W*(0.03 + 0.2*Math.pow(r(), 1.5)), z = (r()*2 - 1)*(W*0.48 - span/2);
-      arch(phi, z, span, span*(0.5 + 0.6*r()), r() < 0.5, span*(0.035 + 0.03*r()), 10); } }
+  // ARCHES (Ruby: "archways should go across the mountains as if they contain the atmosphere"; then "arches are only in
+  // some ringworld designs and they only always go from edge to edge … thicker geometry … nothing floating"): every ring
+  // raises arches now, of one or two forms by whoever built it (RING_ARCHES): SPANS from wall top to wall top, the air
+  // they hold a faint field beneath each; flying BUTTRESSES from a wall's top down to a pier on the land, in rows along
+  // the ring as the Forerunners' walls stand; ARCADES striding on piers, along the ring or across it; GATES on the land;
+  // and the land's own STONE ARCHES. A ruin's arch breaks in its middle and stands as two stubs: nothing floats.
+  { const r = ringRand(seed, 3), k = Math.max(0.55, how('ar')), lf = o.landforms ?? 0.5;
+    const pickArch = T => { let x = r()*T.reduce((a, q) => a + q[1], 0); for(const [f, wt] of T){ if(x < wt) return f; x -= wt; } return T[0][0]; };
+    const forms = new Set([pickArch(RING_ARCHES[lead])]); if(r() < 0.6) forms.add(pickArch(RING_ARCHES[r() < 0.5 ? lead : second]));
+    if(lf < 0.05) forms.delete('stone'); if(!forms.size) forms.add('span');
+    const brk = () => broken > 0 && r() < 0.65*broken ? (a0 => [a0, a0 + 0.1 + r()*0.35])(0.22 + r()*0.28) : null;
+    // a tube along points (each piece a little longer than its stretch, so the joints close however thick it is)
+    const tube = (pts, rad, more, cut, radAt) => { const n = pts.length - 1;
+      for(let i = 0; i < n; i++){ const u = (i + 0.5)/n; if(cut && u > cut[0] && u < cut[1]) continue;
+        const p0 = pts[i], p1 = pts[i + 1], d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], l = Math.hypot(d[0], d[1], d[2]), A0 = [d[0]/l, d[1]/l, d[2]/l], rr = radAt ? radAt(u) : rad, e = rr*0.45;
+        beam([p0[0] - A0[0]*e, p0[1] - A0[1]*e, p0[2] - A0[2]*e], A0, l + 2*e, rr, radAt ? radAt((i + 1)/n) : rr, { arch: true, ...more }); } };
+    // an arch on a line at angle phi: along the ring (across false) or across it, its middle at zc, springing at height lift
+    const arch = (phi, zc, span, ht, across, rad, segs, lift = 0, more, cut, radAt) => { const U = upAt(phi), S = across ? [0, 0, 1] : alongAt(phi), C0 = floorAt(phi, zc);
+      const pts = Array.from({ length: segs + 1 }, (_, i) => { const th = Math.PI*i/segs, a = Math.cos(th)*span/2, e = lift + Math.sin(th)*ht;
+        return [C0[0] + S[0]*a + U[0]*e, C0[1] + S[1]*a + U[1]*e, C0[2] + S[2]*a + U[2]*e]; });
+      tube(pts, rad, more, cut, radAt); };
+    // (none stands about the camera: an arch seen from under it, its feet out of sight, looked like a slab in the air)
+    const clearOf = (phi, z, r0) => Math.hypot(phi, z - L.z0) > r0 + W*0.05;
+    const pier = (phi, z, h, rad, more) => beam(floorAt(phi, z), upAt(phi), h, rad, rad*0.92, { arch: true, ...more });
+    if(forms.has('span')){ const nA = Math.max(1, Math.round(k*(1.5 + 5*b*r())));
+      for(let i = 0; i < nA; i++){ const phi = i === 0 ? near(r, 0.5, 1.6) : (r() < 0.5 ? near(r, 1, 8) : (r()*2 - 1)*Math.PI);
+        const ht = W*(0.12 + 0.4*r()), rad = W*(0.022 + 0.03*r()), cut = brk();
+        arch(phi, 0, W, ht, true, rad, 26, L.Hw, null, cut);
+        if(!cut) P.push({ k: 7, O: floorAt(phi, 0, L.Hw), N: alongAt(phi), E1: [0, 0, 1], E2: upAt(phi), a: W/2, ht, c: floorAt(phi, 0, L.Hw + ht/2), rad: Math.hypot(W/2, ht), col: [0.62, 0.86, 1] }); } }
+    if(forms.has('buttress')){
+      // a row of them along the ring (both walls, or one), from just under a wall's top down to a pier partway across
+      const nB = Math.round(k*(5 + 14*b*r())), step = W*(0.35 + 0.6*r()), reach = W*(0.1 + 0.18*r()), hb = L.Hw*(0.7 + 0.25*r()), both = r() < 0.7, ph0 = near(r, 0.2, 1.2);
+      for(let i = 0; i < nB; i++){ const phi = ph0 + (i - nB/2)*step; if(Math.abs(phi) < W*0.3) continue;   // (never one over your head)
+        for(const sg of both ? [-1, 1] : [i % 2 ? -1 : 1]){ const rad = W*(0.012 + 0.008*r())*(0.7 + 0.6*hb/W*3), cut = brk(), U = upAt(phi);
+          const pts = Array.from({ length: 17 }, (_, j) => { const th = Math.PI/2*j/16, z = sg*(W/2 - reach*Math.sin(th)), h = hb*Math.cos(th); return floorAt(phi, z, h); });
+          tube(pts, rad, null, cut, u => rad*(0.8 + 0.6*u));
+          pier(phi, sg*(W/2 - reach), hb*0.12, rad*2.4); } } }
+    if(forms.has('arcade')){
+      const nC = Math.max(1, Math.round(k*(1 + 3*b*r())));
+      for(let c = 0; c < nC; c++){ const across = r() < 0.4, span = W*(across ? 0.05 + 0.05*r() : 0.025 + 0.05*r()), n = across ? Math.round(W/span) : 6 + Math.floor(r()*18);
+        const hp = span*(0.6 + 0.8*r()), ht = span*(0.45 + 0.1*r()), rad = span*(0.08 + 0.04*r()), phi0 = near(r, 0.15, 3), z0a = across ? -W/2 + span/2 : (r()*2 - 1)*W*0.38, cut = brk();
+        for(let j = 0; j < n; j++){ if(cut && (j + 0.5)/n > cut[0] && (j + 0.5)/n < cut[1]) continue;
+          const phi = across ? phi0 : phi0 + (j - n/2)*span, z = across ? z0a + j*span : z0a; if(!clearOf(phi, z, span)) continue;
+          arch(phi, z, span, ht, across, rad, 8, hp);
+          // its piers, and the deck along its top
+          const ps = across ? [[phi, z - span/2], [phi, z + span/2]] : [[phi - span/2, z], [phi + span/2, z]];
+          for(const [pp, zz] of ps) pier(pp, zz, hp + rad, rad*1.5);
+          const D0 = floorAt(ps[0][0], ps[0][1], hp + ht + rad*1.4), D1 = floorAt(ps[1][0], ps[1][1], hp + ht + rad*1.4), dd = [D1[0] - D0[0], D1[1] - D0[1], D1[2] - D0[2]], dl = Math.hypot(dd[0], dd[1], dd[2]);
+          beam(D0, [dd[0]/dl, dd[1]/dl, dd[2]/dl], dl, rad*1.2, rad*1.2, { arch: true }); } } }
+    // (a few gates stand on every ring; a ring of gate-builders raises many)
+    { const nG = Math.round(k*(forms.has('gate') ? 8 + 26*b*r() : 2 + 6*b*r()));
+      for(let i = 0; i < nG; i++){ const phi = near(r, 0.05, 1.5), span = W*(0.03 + 0.2*Math.pow(r(), 1.5)), z = (r()*2 - 1)*(W*0.48 - span/2); if(!clearOf(phi, z, span*0.7)){ r(); r(); continue; }
+        arch(phi, z, span, span*(0.5 + 0.6*r()), r() < 0.5, span*(0.06 + 0.04*r()), 12, 0, null, brk()); } }
+    if(forms.has('stone')){ const nS = Math.round((3 + 12*r())*Math.pow(lf, 1.2)*k);
+      // the land's own: a thick, uneven bow of rock, heaviest at its feet
+      for(let i = 0; i < nS; i++){ const phi = near(r, 0.04, 2.5), span = W*(0.012 + 0.07*Math.pow(r(), 1.6)), z = (r()*2 - 1)*(W*0.46 - span/2), rad = span*(0.12 + 0.08*r()), wob = r()*6;
+        if(!clearOf(phi, z, span*0.7)){ r(); r(); continue; }
+        arch(phi, z, span, span*(0.35 + 0.45*r()), r() < 0.5, rad, 12, 0, { rock: true }, null, u => rad*(1.5 - 0.7*Math.sin(Math.PI*u))*(0.85 + 0.3*Math.sin(u*9 + wob))); } } }
   // SHIPS: hulls in the air, going along the ring or across it, engines lit behind, some drawing a trail
   { const r = ringRand(seed, 4), k = how('sh'), T = L.traffic, nS = Math.round(k*(4 + 30*b*r())*(T <= 0.5 ? Math.pow(T/0.5, 1.2) : 1 + (T - 0.5)*3));
     for(let i = 0; i < nS; i++){
@@ -1009,29 +1148,48 @@ function ringBuild(L, o){
       if(trail){ const S1 = [E[0] - F[0]*trail, E[1] - F[1]*trail, E[2] - F[2]*trail];
         P.push({ k: 5, bx: E[0], by: E[1], bz: E[2], ax: -F[0], ay: -F[1], az: -F[2], h: trail, w: Math.min(ax*0.12, W*0.002), c: [(E[0] + S1[0])/2, (E[1] + S1[1])/2, (E[2] + S1[2])/2], rad: trail/2 + ax*4 }); }
     } }
-  // CRYSTALS: floating stones of light, upright, turning slowly (the magi's), glowing from within
+  // CRYSTALS: stones of light growing out of the land (the magi's), in clusters, leaning, glowing from within
+  // (Ruby: "nothing floating": they stood in the air once; now each is sunk a third of its height in the ground)
   { const r = ringRand(seed, 5), k = how('cr'), nC = Math.round(k*(6 + 30*b*r()));
+    let cPhi = 0, cZ = 0, cSize = 0;
     for(let i = 0; i < nC; i++){
-      const phi = near(r, 0.04, 2), z = (r()*2 - 1)*W*0.45, size = W*(0.004 + 0.03*Math.pow(r(), 2)), alt = W*0.004 + size*(1.5 + 6*r()), C = floorAt(phi, z, alt);
-      const U = upAt(phi), a = r()*Math.PI*2, tilt = (r() - 0.5)*0.5, T = alongAt(phi), E1 = ringNorm([T[0]*Math.cos(a), T[1]*Math.cos(a), Math.sin(a)]);
+      const cluster = i > 0 && r() < 0.55, size = cluster ? cSize*(0.35 + 0.5*r()) : W*(0.004 + 0.03*Math.pow(r(), 2));
+      const phi = cluster ? cPhi + (r() - 0.5)*cSize*3 : near(r, 0.04, 2), z = cluster ? Math.max(-W*0.46, Math.min(W*0.46, cZ + (r() - 0.5)*cSize*3)) : (r()*2 - 1)*W*0.45;
+      if(!cluster){ cPhi = phi; cZ = z; cSize = size; }
+      const e0 = 1.6 + r()*0.9, C = floorAt(phi, z, size*e0*0.62);
+      const U = upAt(phi), a = r()*Math.PI*2, tilt = (r() - 0.5)*(cluster ? 1.3 : 0.5), T = alongAt(phi), E1 = ringNorm([T[0]*Math.cos(a), T[1]*Math.cos(a), Math.sin(a)]);
       const E3 = ringNorm([U[0] + E1[0]*tilt, U[1] + E1[1]*tilt, U[2] + E1[2]*tilt]), E2 = ringNorm([E3[1]*E1[2] - E3[2]*E1[1], E3[2]*E1[0] - E3[0]*E1[2], E3[0]*E1[1] - E3[1]*E1[0]]);
-      const e = 1.6 + r()*0.9, planes = [];
+      const e = e0, planes = [];
       for(const s1 of [-1, 1]) for(const s2 of [-1, 1]) for(const s3 of [-1, 1]) planes.push([(s1*E1[0] + s2*E2[0])/size + s3*E3[0]/(e*size), (s1*E1[1] + s2*E2[1])/size + s3*E3[1]/(e*size), (s1*E1[2] + s2*E2[2])/size + s3*E3[2]/(e*size)]);
       P.push({ k: 2, c: C, size, planes, U, rad: size*e*1.2 + size*5, col: L.pal[i % L.pal.length] });
     } }
-  // CIRCLES: summoning circles laid on the land, and halos hanging in the air: two rings, a star inside, runes between
+  // CIRCLES: summoning circles laid on the land, and rings standing on it, gates of light: two rings, a star inside, runes
+  // between (Ruby: "nothing floating": they hung in the air; a standing one now rests on a plinth of stone)
   { const r = ringRand(seed, 6), k = how('rc'), nR = Math.round(k*(3 + 12*b*r()));
     for(let i = 0; i < nR; i++){
-      // (laid on the land they show only from above, the camera drawn out past the rim; most hang upright in the air)
+      // (laid on the land they show only from above, the camera drawn out past the rim)
       const onFloor = r() < 0.3, phi = near(r, 0.04, 2), z = (r()*2 - 1)*W*0.42, rad = W*(onFloor ? 0.04 + 0.12*r() : 0.012 + 0.06*r());
-      const U = upAt(phi), T = alongAt(phi), C = floorAt(phi, z, onFloor ? W*0.0003 : rad*1.1 + W*(0.01 + 0.08*r())), upright = !onFloor && r() < 0.75;
+      const upright = !onFloor && r() < 0.75, lay = !upright, base = rad*0.14;
+      const U = upAt(phi), T = alongAt(phi), C = floorAt(phi, z, lay ? W*0.0003 : rad + base);
       const N = upright ? T : U, E1 = upright ? [0, 0, 1] : T, E2 = upright ? U : [0, 0, 1];
       P.push({ k: 4, c: C, N, E1, E2, R: rad, rad: rad*1.15, points: 5 + Math.floor(r()*3), runes: 12 + Math.floor(r()*14), salt: (r()*1e6) | 0, col: L.pal[i % L.pal.length] });
+      if(upright){ const B0 = floorAt(phi, z); beam(B0, U, base*1.25, rad*0.42, rad*0.34, { stone: true, cap: true }); }
     } }
   // PILLARS: beams of light from the land toward the star, seen far round the ring rising from the arch
   { const r = ringRand(seed, 7), k = how('pl'), nP = Math.round(k*(2 + 8*b*r()));
     for(let i = 0; i < nP; i++){ const phi = i % 2 ? (r()*2 - 1)*Math.PI : near(r, 0.5, 6), z = (r()*2 - 1)*W*0.4, U = upAt(phi), B0 = floorAt(phi, z), Lp = 0.25 + 0.65*r();
       P.push({ k: 3, bx: B0[0], by: B0[1], bz: B0[2], ax: U[0], ay: U[1], az: U[2], h: Lp, w: W*(0.002 + 0.008*r()), c: floorAt(phi, z, Lp/2), rad: Lp/2 + W*0.06, col: L.pal[i % L.pal.length] }); } }
+  // RIM TOWERS (Ruby: "it's kind of reminding me of Halo … push it more that way"): pylons standing on the walls' tops at
+  // even steps, the Forerunners' way, a light at each head; and LIGHT BRIDGES, bars of hard light from wall to wall
+  { const r = ringRand(seed, 18), k = how('rt'), n = Math.round(k*(4 + 16*b*r()));
+    if(n > 0){ const step = W*(0.35 + 0.8*r()), ph0 = near(r, 0.1, 1), both = r() < 0.6;
+      for(let i = 0; i < n; i++){ const phi = ph0 + (i - n/2)*step;
+        for(const sg of both ? [-1, 1] : [i % 2 ? 1 : -1]){ const h = L.Hw*(0.25 + 0.4*r()), rr = h*(0.1 + 0.06*r()), U = upAt(phi), base = floorAt(phi, sg*(W/2 - rr*0.9), L.Hw - h*0.05);
+          const tip = [base[0] + U[0]*h - L.Px, base[1] + U[1]*h, base[2] + U[2]*h - L.z0], tl = Math.hypot(tip[0], tip[1], tip[2]), glowR = Math.max(rr*0.9, W*0.002);
+          beam(base, U, h, rr, rr*0.3, { spire: true, glowR, beacon: true, tip: [tip[0]/tl, tip[1]/tl, tip[2]/tl], tl, tipCos: Math.cos(Math.min(1.5, 3*glowR/tl)) }); } } } }
+  { const r = ringRand(seed, 19), k = how('br'), n = Math.round(k*(0.6 + 4*b*r()));
+    for(let i = 0; i < n; i++){ const phi = near(r, 0.3, 4), h = L.Hw*(0.55 + 0.4*r()), B0 = floorAt(phi, -W/2, h);
+      P.push({ k: 3, bx: B0[0], by: B0[1], bz: B0[2], ax: 0, ay: 0, az: 1, h: W, w: W*(0.0012 + 0.0018*r()), c: floorAt(phi, 0, h), rad: W/2 + W*0.06, col: L.pal[1], even: true }); } }
   // scaffolding: stretches of floor left unfinished, an open lattice over the void (more of it on some rings)
   { const k = how('sc'); L.scaf = { on: k > 0.1 && style > 0.1, amount: (0.08 + 0.3*b)*k*(style > 0.7 ? 1.6 : 1), cell: 0.05 + rnd()*0.07, beam: 0.14 + rnd()*0.1, salt: (rnd()*1e6) | 0 }; }
   // DOMES over the city's heart (the cities' way of holding air): glass, seen only by the light it catches at its rim
@@ -1052,9 +1210,10 @@ function ringBuild(L, o){
         P.push({ k: 6, c: [C[0] - F[0]*size*1.05, C[1] - F[1]*size*1.05, C[2]], rad: size*4, g: size*0.8, col: [1, 0.86, 0.62] }); } } }
   // LANDFORMS (the second slider; Ruby: "additional structures and mountains, ways to do sparse nearby geometry"): what
   // the land itself raises, from the seed's own country: peaks (snow-capped when tall) near the walls and far round the
-  // ring, mesas, boulders strewn near you, pinnacles, and the magi's floating isles. Each kind its own stream.
+  // ring, mesas, boulders strewn near you, pinnacles, and ranges along the walls' feet. Each kind its own stream. (The
+  // magi's floating isles are gone: Ruby, "artistic cohesion, nothing floating"; the karst raises stone arches instead.)
   { const lf = o.landforms ?? 0.5, g = Math.pow(lf, 1.4), r0 = ringRand(seed, 10), country = RING_LANDS[Math.floor(r0()*RING_LANDS.length)];
-    const isles = Math.max(country[4], how('cr')*(lead === 'magi' ? 0.9 : 0.4)), rock = { rock: true };
+    const rock = { rock: true };
     const zAt = (r, edge) => r() < edge ? (r() < 0.5 ? -1 : 1)*W*(0.47 - 0.12*Math.pow(r(), 2)) : (r()*2 - 1)*W*0.42;
     { const r = ringRand(seed, 11), n = Math.round(country[0]*g*16);   // peaks: cones, a few huge
       for(let i = 0; i < n; i++){ const phi = i % 3 === 2 ? (r()*2 - 1)*Math.PI : near(r, 0.3, 5), z = zAt(r, 0.6), h = W*(0.03 + 0.22*Math.pow(r(), 2))*(0.6 + lf), rb = h*(0.55 + 0.4*r());
@@ -1070,13 +1229,28 @@ function ringBuild(L, o){
     { const r = ringRand(seed, 15), n = Math.round(country[3]*g*40);   // pinnacles: hoodoos and needles of stone
       for(let i = 0; i < n; i++){ const phi = near(r, 0.01, 2), z = zAt(r, 0.15), h = W*(0.005 + 0.05*Math.pow(r(), 1.5))*(0.6 + lf), rb = h*(0.08 + 0.08*r());
         beam(floorAt(phi, z), upAt(phi), h, rb, rb*(0.35 + 0.35*r()), { ...rock, cap: true }); } }
-    { const r = ringRand(seed, 16), n = Math.round(isles*g*10);   // floating isles: inverted cones of rock, flat-topped, in the air
-      for(let i = 0; i < n; i++){ const phi = near(r, 0.05, 3), z = (r()*2 - 1)*W*0.4, alt = W*(0.02 + 0.22*r()), rr = W*(0.008 + 0.05*Math.pow(r(), 1.5)), d = rr*(0.8 + 0.9*r());
-        beam(floorAt(phi, z, alt), upAt(phi), d, rr*0.04, rr, { ...rock, cap: true, isle: true }); } } }
-  // the rare seam: now and then the edge of the world shows (Ruby's egg), one ring in seven
-  L.seam = ((o.seed >>> 0) % 7) === 3;
+    { const r = ringRand(seed, 16), n = Math.round(country[4]*g*30);   // the karst's arches of stone: thick bows, heaviest at the feet
+      for(let i = 0; i < n; i++){ const phi = near(r, 0.04, 2.5), span = W*(0.01 + 0.05*Math.pow(r(), 1.6)), z = (r()*2 - 1)*(W*0.46 - span/2), rad = span*(0.13 + 0.07*r()), ht = span*(0.4 + 0.4*r());
+        const U = upAt(phi), S = r() < 0.5 ? [0, 0, 1] : alongAt(phi), C0 = floorAt(phi, z), wob = r()*6; if(Math.hypot(phi, z - L.z0) < span*0.7 + W*0.05) continue;
+        for(let j = 0; j < 10; j++){ const t0 = Math.PI*j/10, t1 = Math.PI*(j + 1)/10, pt = th => [C0[0] + S[0]*Math.cos(th)*span/2 + U[0]*Math.sin(th)*ht, C0[1] + S[1]*Math.cos(th)*span/2 + U[1]*Math.sin(th)*ht, C0[2] + S[2]*Math.cos(th)*span/2 + U[2]*Math.sin(th)*ht];
+          const a0 = pt(t0), a1 = pt(t1), d = [a1[0] - a0[0], a1[1] - a0[1], a1[2] - a0[2]], l = Math.hypot(d[0], d[1], d[2]), rr = u => rad*(1.5 - 0.7*Math.sin(Math.PI*u))*(0.85 + 0.3*Math.sin(u*9 + wob)), e = rr(j/10)*0.45;
+          beam([a0[0] - d[0]/l*e, a0[1] - d[1]/l*e, a0[2] - d[2]/l*e], [d[0]/l, d[1]/l, d[2]/l], l + 2*e, rr(j/10), rr((j + 1)/10), { ...rock }); } } }
+    // RANGES AGAINST THE WALLS (Ruby: "better landforms around the border mountains"): the walls rise out of mountains,
+    // a range along each rim's foot, foothills before it, the tallest snow-capped; never above the wall's top
+    if(g > 0.01){ const r = ringRand(seed, 17), spread = 4.5*W;
+      for(const sg of [-1, 1]){ let phi = -spread - r()*W*0.3;
+        while(phi < spread){ const h = Math.min(L.Hw*0.96, L.Hw*(0.25 + 0.75*Math.pow(r(), 1.2))*(0.45 + 0.9*lf)), rb = h*(0.9 + 0.8*r()), z = sg*(W/2 - rb*(0.2 + 0.25*r()));
+          beam(floorAt(phi, z), upAt(phi), h, rb, rb*0.03, { ...rock, peak: true, snow: h > W*0.07 });
+          // (its shoulders, lower, either side along the ring: a range has many summits, not one cone)
+          for(const sd of [-1, 1]){ const hs = h*(0.45 + 0.3*r()), rs = rb*(0.55 + 0.25*r()), ps = phi + sd*rb*(0.45 + 0.25*r());
+            beam(floorAt(ps, sg*(W/2 - rs*(0.25 + 0.3*r()))), upAt(ps), hs, rs, rs*0.04, { ...rock, peak: true, snow: hs > W*0.07 }); }
+          if(r() < 0.65){ const h2 = h*(0.25 + 0.3*r()), rb2 = h2*(1.2 + 0.7*r()), p2 = phi + (r() - 0.5)*rb;
+            beam(floorAt(p2, sg*(W/2 - rb*0.75 - rb2*0.6)), upAt(p2), h2, rb2, rb2*0.05, { ...rock, peak: true }); }
+          phi += rb*(1.1 + 0.9*r())*(Math.abs(phi) > 1.5*W ? 1.6 : 1); } } } }
+  // the rare seam: now and then the edge of the world shows (Ruby's egg; "make it significantly more rare"), about one ring in fifty
+  L.seam = mnHash(o.seed | 0, 61, 3) < 1/50;
 }
-// the lands a seed may give a ring: how much of each landform it raises (peaks, mesas, boulders, pinnacles, floating isles)
+// the lands a seed may give a ring: how much of each landform it raises (peaks, mesas, boulders, pinnacles, stone arches)
 //               alpine · mesa country · boulder fields · hoodoos · karst · mixed
 const RING_LANDS = [[1, 0.1, 0.6, 0.2, 0], [0.15, 1, 0.4, 0.6, 0], [0.3, 0.2, 1, 0.3, 0], [0.2, 0.4, 0.5, 1, 0], [0.7, 0, 0.3, 0.8, 0.2], [0.35, 0.3, 0.6, 0.4, 0.12]];
 // the city's cover where it stands (0..1): the seed's noise, never at the walls' feet
@@ -1158,7 +1332,7 @@ function ringRay(L, dx, dy, dz, air, list){
   if(list) for(const p of list){
     if(p.k === 0){
       // the closest approach of the ray (P + tD) and the beam's axis (B + A·s, 0 ≤ s ≤ h), then where it enters the beam
-      // (and, for a capped one — a mesa, a pinnacle, a floating isle — where it meets the flat top, if that is nearer)
+      // (and, for a capped one — a mesa, a pinnacle, a plinth — where it meets the flat top, if that is nearer)
       const wx = Px - p.bx, wy = -p.by, wz = z0 - p.bz, b2 = dx*p.ax + dy*p.ay + dz*p.az, d1 = dx*wx + dy*wy + dz*wz, e1 = p.ax*wx + p.ay*wy + p.az*wz, den = 1 - b2*b2;
       let te = Infinity, se = 0, nx = 0, ny = 0, nz = 0;
       if(den >= 1e-9){ const t = (b2*e1 - d1)/den, sv = (e1 - b2*d1)/den;
@@ -1218,7 +1392,8 @@ function ringGlow(L, dx, dy, dz, tHit, list, alpha, out){
       const qx = Px + t*dx - (p.bx + p.ax*sv), qy = t*dy - (p.by + p.ay*sv), qz = z0 + t*dz - (p.bz + p.az*sv), d = Math.sqrt(qx*qx + qy*qy + qz*qz);
       const w = p.k === 5 ? p.w*(1 + 4*sv/p.h) : p.w, we = Math.max(w, t*alpha*1.2), kk = w/we, u = sv/p.h;
       let v; let col;
-      if(p.k === 3){ v = (Math.exp(-(d*d)/(we*we))*Math.max(0.4, kk) + 0.35*Math.exp(-(d*d)/(25*we*we))*Math.max(0.3, Math.sqrt(kk)))*Math.pow(1 - u, 0.7); col = p.col; }
+      // (a light bridge is even along its length; a pillar fades toward the star)
+      if(p.k === 3){ v = (Math.exp(-(d*d)/(we*we))*Math.max(0.4, kk) + 0.35*Math.exp(-(d*d)/(25*we*we))*Math.max(0.3, Math.sqrt(kk)))*(p.even ? 0.85 : Math.pow(1 - u, 0.7)); col = p.col; }
       else { v = 0.22*Math.exp(-(d*d)/(we*we))*Math.sqrt(kk)*Math.pow(1 - u, 1.5); col = [0.95, 0.97, 1]; }
       if(v > 1e-4){ out[0] += col[0]*v; out[1] += col[1]*v; out[2] += col[2]*v; }
     } else if(p.k === 6 || p.k === 2){
@@ -1683,8 +1858,10 @@ export const GEN_STEPS = {
     params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99),
       GEN_R('era', 'Era', 0), GEN_R('marks', 'Markings', 0), ['clearing', 'Keep Clear By', 'select', 'routing around it', { options: ['routing around it', 'cutting it away'] }]], cost: () => 6,
     // (filling the letters, Shape Aware: the board is finer, to show in their strokes, and keeps nothing clear)
+    // (its cells are counted on the export's grid, `ctx.page`, so a preview and the saved image are one board)
     paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100)*(E.ctx.fill ? 1.7 : 1), s = unit/across;
-      const cw = Math.max(4, Math.ceil(w/s)), ch = Math.max(4, Math.ceil(h/s)), kv = E.ctx.fill ? null : E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
+      const [PW, PH] = E.ctx.page || [w, h], sp = Math.min(PW, PH)/across;
+      const cw = Math.max(4, Math.ceil(PW/sp)), ch = Math.max(4, Math.ceil(PH/sp)), kv = E.ctx.fill ? null : E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
       const bends = E.num(n, 'bends', 70)/100;
       const o = { traces: E.num(n, 'traces', 55)/100, parts: E.num(n, 'parts', 45)/100, bends, diag: bends > 0, flow: E.num(n, 'flow', 40)/100,
         era: E.num(n, 'era', 0)/100, marks: E.num(n, 'marks', 0)/100,
@@ -1693,7 +1870,8 @@ export const GEN_STEPS = {
       // KEEP CLEAR: routed around (the cells are taken before anything is placed), or, for a mask that moves (the poem),
       // cut away after, so the rest of the board stays where it was
       const look = keep ? (x, y) => keep[Math.min(h - 1, Math.max(0, y*s | 0))*w + Math.min(w - 1, Math.max(0, x*s | 0))] : null;
-      if(look){ if(E.P(n, 'clearing', 'routing around it') !== 'cutting it away') o.clear = look; else if(keep.some(v => v > 0.5)) o.cut = (x, y) => look(x, y) > 0.5; }
+      // (Shape Aware, round the words: the board is routed round the poem, whatever Keep Clear By says)
+      if(look){ if(E.ctx.around || E.P(n, 'clearing', 'routing around it') !== 'cutting it away') o.clear = look; else if(keep.some(v => v > 0.5)) o.cut = (x, y) => look(x, y) > 0.5; }
       const B = withSeed(genSeed(E, n), () => genCircuit(cw, ch, o)), cv = genDrawCircuit(B, w, h, s, o);
       return ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend', 'brass', 'arcana'].map(k => cv[k][0]); },
     run(E, n){ return this.paint(E, n).map(c => E.asField(E.readCanvas(c))); } },
@@ -1790,7 +1968,9 @@ export const GEN_STEPS = {
       GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 14,
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, off = num(n, 'offset', 0)/100;
       const o = { growth: num(n, 'growth', 55)/100, fold: num(n, 'fold', 100)/100, seeds: num(n, 'seeds', 1), photo: num(n, 'photo', 40)/100, sun: { x: dial.x, y: dial.y } };
-      const { loops } = withSeed(genSeed(E, n), () => genGrowth(ww/unit, wh/unit, o));
+      // (grown on the export's grid's shape, so the preview grows the saved image's loops)
+      const [GW, GH] = E.ctx.page || [ww, wh], gu = Math.min(GW, GH);
+      const { loops } = withSeed(genSeed(E, n), () => genGrowth(GW/gu, GH/gu, o));
       // into the page: zoomed about the page's middle, then slid along the dial's line (the sun's)
       const cx = ww/unit/2, cy = wh/unit/2, sx = cx + dial.x*off*cx*0.9, sy = cy + dial.y*off*cy*0.9;
       for(const L of loops) for(const p of L){ p[0] = sx + (p[0] - cx)*zoom; p[1] = sy + (p[1] - cy)*zoom; }

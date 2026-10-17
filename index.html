@@ -719,7 +719,8 @@ held on till bright~B</code></p>
               <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Trade the two surfaces: each keeps everything it has, its blend, hues, light, seed and locks too">⇅ Swap</button>
             </div>
             <!-- THE SURFACE AND THE WORDS (Ruby): the first surface may know where the poem is (Text Aware); the second may be
-                 blended into the letters themselves (Blend with Text), and then may know it fills them (Shape Aware) -->
+                 blended into the letters themselves (Blend with Text); either may shape itself to the words (Shape Aware: round
+                 them on the page, to them in the letters), and either may be cut away by them (Cut Out by Text) -->
             <div class="layer-words">
               <div class="check-row words-aware">
                 <input type="checkbox" id="textureTextAware" checked>
@@ -731,7 +732,11 @@ held on till bright~B</code></p>
               </div>
               <div class="check-row words-shape">
                 <input type="checkbox" id="textureShapeAware">
-                <label for="textureShapeAware" data-str="label.shape_aware" title="Tells the surface it is filling letters, so a surface that can (Broken Glass, Dewy Webs, Circuit Board, a graph with The Poem) shapes itself to the lines.">Shape Aware</label>
+                <label for="textureShapeAware" data-str="label.shape_aware" title="Lets a surface that can shape itself to the words: on the page it keeps round them (Halftone's dots and Silverpoint Hatch's strokes leave them clean paper, Flow-Field Ink flows round them, Contour Map's land is a plateau under them, Circuit Board is routed round them); blended into the letters it fits itself to them (Broken Glass, Dewy Webs, Circuit Board and those four go finer). A graph reads it from The Poem.">Shape Aware</label>
+              </div>
+              <div class="check-row words-cut">
+                <input type="checkbox" id="textureTextCut">
+                <label for="textureTextCut" data-str="label.text_cut" title="The words cut this surface away: inside the letters, the page beneath the surface shows through instead of the ink, and the text's effects still glow round them.">Cut Out by Text</label>
               </div>
             </div>
           </div>

@@ -339,7 +339,7 @@ toggleSubblock('textureToggle','textureBlock');
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
-  'textureTextAware', 'textureTextBlend', 'textureShapeAware'];
+  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
   'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
@@ -373,7 +373,7 @@ function exchangeLayers(){
 function editLayer(which){
   if(which === 'lower' && !lowerOn()) which = 'upper';
   if(which === state.layers.editing) { paintLayerBar(); return; }
-  exchangeLayers(); state.layers.editing = which;
+  exchangeLayers(); state.layers.editing = which; paintLayerWords();
   refreshUi(); scheduleRender();
 }
 /** Trade the two surfaces (Ruby: everything about each, blend and locks too): the controls keep their place. */
@@ -397,10 +397,12 @@ function paintLayerBar(){
   if(document.body && document.body.classList) document.body.classList.toggle('editing-lower', on && state.layers.editing === 'lower');
 }
 function syncBaseUi(){ if(!lowerOn() && state.layers.editing === 'lower') editLayer('upper'); paintLayerBar(); }
-/** Shape Aware means something only while the surface is blended into the letters. */
-function paintLayerWords(){ const sh = $('textureShapeAware'), on = !!($('textureTextBlend') && $('textureTextBlend').checked);
-  if(sh){ sh.disabled = !on; if(sh.closest){ const row = sh.closest('.check-row'); if(row && row.classList) row.classList.toggle('off', !on); } } }
-for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
+/** Shape Aware needs the words: on the first surface, it waits (greyed) while the surface is not Text Aware. Cut Out by
+ *  Text means nothing for a surface drawn only inside the letters, so it waits while Blend with Text is on. */
+function paintLayerWords(){ const lower = state.layers && state.layers.editing === 'lower', chk = id => !!($(id) && $(id).checked);
+  const grey = (id, off) => { const el = $(id); if(!el) return; el.disabled = off; if(el.closest){ const row = el.closest('.check-row'); if(row && row.classList) row.classList.toggle('off', off); } };
+  grey('textureShapeAware', !lower && !chk('textureTextAware')); grey('textureTextCut', lower && chk('textureTextBlend')); }
+for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
 if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
 if($('layerSwap') && $('layerSwap').addEventListener) $('layerSwap').addEventListener('click', swapLayers);
@@ -487,7 +489,7 @@ function applyPreviewScale(allowDown = true){
   // shown at its own size (in the screen's real pixels), not blown up to fill
   // the box
   capPreviewDisplay();
-  setRenderScale(w / state.page.exportW);
+  setRenderScale(w / state.page.exportW, [state.page.exportW, state.page.exportH]);
   scheduleRender();
 }
 function capPreviewDisplay(){
@@ -757,6 +759,7 @@ function poemAltText(){
     background: [v('bgColor1Hex'), on('bgGradientToggle') ? v('bgColor2Hex') : null],
     surface: on('textureToggle') && upperL.textureType ? describeSurface(upperL, !editingLower) : null,
     base: lowerOn() && lowerL && lowerL.textureType ? { name: surfaceNameOf(lowerL.textureType, lowerL.forgeGraph), inText: !!lowerL.textureTextBlend } : null,
+    cut: on('textureToggle') && ((upperL.textureType && upperL.textureTextCut) || (lowerOn() && lowerL && lowerL.textureType && lowerL.textureTextCut && !lowerL.textureTextBlend)),
     border: on('borderToggle') ? { colour: v('borderColorHex'), stitch: text('borderStitch').toLowerCase() } : null,
     box: on('cardToggle'), vignette: on('vignetteToggle'),
     // the credit, as words (any PML colour markup is only colour)
@@ -780,7 +783,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
   try {
     canvas.width = state.page.exportW || pw; canvas.height = state.page.exportH || ph;
     setDrafting(false); clearTimeout(draftTimer);
-    setRenderScale(1); render();
+    setRenderScale(1, [canvas.width, canvas.height]); render();
     await texturesSettled();
     render();
     // the poem's words go inside the file as its alt text (jpegMeta.js)
@@ -788,7 +791,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
     link.href = withAltText(canvas.toDataURL('image/jpeg', 1.0), state.ui.lastAlt);
   } finally {
     canvas.width = pw; canvas.height = ph;
-    setRenderScale(pw / (state.page.exportW || pw));
+    setRenderScale(pw / (state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
     state.ui.saving = false; btn.textContent = label; btn.disabled = false; setWorking(null);
     // the full-size textures go: a phone shouldn't keep several 38 MB textures it won't reuse soon
     dropLargeTextures((state.page.exportW || pw)*(state.page.exportH || ph));
@@ -1188,7 +1191,7 @@ function restoreSurfaceDetails(s){
   if(s.textureBlend) $('textureBlend').value = s.textureBlend;
   // the surface and the words (a look from before them: aware, as every surface was; neither blended into the letters)
   { const set = (id, v) => { if($(id)) $(id).checked = v; };
-    set('textureTextAware', s.textureTextAware !== false); set('textureTextBlend', !!s.textureTextBlend); set('textureShapeAware', !!s.textureShapeAware); paintLayerWords(); }
+    set('textureTextAware', s.textureTextAware !== false); set('textureTextBlend', !!s.textureTextBlend); set('textureShapeAware', !!s.textureShapeAware); set('textureTextCut', !!s.textureTextCut); paintLayerWords(); }
   keepGround(s.textureGround);
   if(s.textureLight !== undefined || s.textureLightTilt !== undefined){
     if(s.textureLight !== undefined) $('textureLight').value = s.textureLight;

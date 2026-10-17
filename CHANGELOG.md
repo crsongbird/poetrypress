@@ -4,6 +4,57 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Kiviuq (2026-10-17)
+
+- **The preview is the saved image again.** Circuit Board could save a
+  different board from the one on screen (on some page shapes and scales the
+  preview's grid came out a row taller, and the whole board was routed
+  anew). It, Fractured Glaze, Hoarfrost and Ruffled Growth now grow on the
+  saved image's own grid at every size and are drawn scaled, so what you
+  see is what you save. Saved images don't change.
+- **Circuit Board:**
+  - **More to read.** Markings now prints far more: each era's own words
+    (power rails, test pads, revisions, made-up physics, witchy brass, runes,
+    and now and then a line about poems and type), barcodes, warning
+    triangles, test points, makers' marks, moon phases, and fourteen new
+    little pictures (a moth, a cat, a ghost, a quill, an inkwell, an open
+    book…). By the same slider, today's chips carry a maker's code and a date,
+    and today's small parts their values.
+  - **Nothing on top of anything.** Every name, value, rune and stamp is
+    placed only where no copper, part or other word lies; a magitech chip's
+    hologram stays close about its circle. Boards with names that collided
+    lose the later name.
+- **Ringworld:**
+  - **Arches on every ring**, of one or two forms by whoever built it: the
+    great spans from wall top to wall top, rows of flying buttresses from the
+    walls down to the land, arcades striding on piers along the ring or
+    across it, gates, and the land's own stone arches.
+  - **Nothing floats but the ships.** Crystals grow from the land in
+    clusters, rings of light stand on stone plinths, a ruined arch stands as
+    two stubs, and the floating isles are gone. Nothing stands over the
+    camera.
+  - **Mountains at the walls:** ranges along both rims' feet, with shoulders
+    and foothills, snow on the tallest.
+  - **Thicker:** spires are tapering towers now, and every arch is heavier.
+  - **The Forerunners' way:** the Engineers' lights are blue, towers stand
+    on the walls' tops, and bars of hard light run from wall to wall.
+  - The seam shows on about one ring in fifty (it was one in seven).
+- **The surface and the words:**
+  - **Shape Aware** is on both surfaces now. On a surface drawn on the page
+    it shapes itself round the words: Halftone's dots and Silverpoint
+    Hatch's strokes leave each line on clean paper, Flow-Field Ink flows
+    round the lines like water round stones, Contour Map's land is a plateau
+    under them so its contours ring the poem, and Circuit Board is routed
+    round them. In the letters, those four go finer too.
+  - **Cut Out by Text**, a new box on either surface: the words cut that
+    surface away, and the page beneath it shows through the letters.
+  - In the Athanor, The Poem has a third number, **Round the Words**.
+- **Under the hood:**
+  - reviewed the tests: checks that read the code for a refactor long done,
+    or for what a behavior check now proves, are gone; new checks prove the
+    preview grows the saved image's picture, and which surfaces read the
+    poem when.
+
 ## Saturn–Iapetus (2026-10-17)
 
 - **The surface and the words**, two new boxes under the surface's name:
