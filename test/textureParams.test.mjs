@@ -30,7 +30,8 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-check('the picker offers 65 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 66 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
+// Saturn–Kiviuq on: the Painted Ringworld and Ring in the Sky joined Sky & Cosmos
+check('the picker offers 67 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 68 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -43,6 +44,9 @@ check('every texture declares two params, plus an optional third that must be Fo
     || (t === 'lichtenberg' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'angle' && d[7].key === 'slide')
     // (Ringworld: eight, its camera on the camera dial, its day on the light dial, Builders the sixth)
     || (t === 'ringworld' && d.length === 8 && d[5].label === 'Builders')
+    // (the Painted Ringworld: eight, World third, Altitude sixth, Paint and Brush last; Ring in the Sky: seven, Paint and Brush last)
+    || (t === 'ringpaint' && d.length === 8 && d[2].label === 'World' && d[5].key === 'alt' && d[7].label === 'Brush')
+    || (t === 'skyring' && d.length === 7 && d[4].label === 'Star Height' && d[6].label === 'Brush')
     // (Under Glass: eight, each a thing the glass catches, Cracks and Edge last but one and last)
     || (t === 'underglass' && d.length === 8 && d[5].label === 'Cracks' && d[7].label === 'Edge')
     // (Broken Glass: eight, its camera on the camera dial, its light the light dial; Dewy Webs: eight, Iridescence seventh)

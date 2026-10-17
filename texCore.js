@@ -124,7 +124,8 @@ export function pageGrid(ww, wh, d = 1){
 /** THE WORDS' ROOM (Shape Aware on a surface drawn on the page; Ruby: "the option to make it avoid the text or highlight
  *  the text or interact with the text"): on a ww × wh grid, 0 on each line of the poem and a margin about it (pad, in
  *  line heights), rising smoothly to 1 a reach further off. `ctx.text` is the layout's runs in page fractions. Null when
- *  the surface is not asked to shape itself round the words (`ctx.around`), or there are none. */
+ *  the surface is not asked to shape itself round the words (`ctx.around`, how strongly: Shape Strength, 0..1), or there
+ *  are none; below full strength the words keep some room, never none (Ruby: "soften the shape awareness"). */
 export function wordsRoom(ctx, ww, wh, pad = 0.35, reach = 1.6){
   if(!ctx || !ctx.around || !ctx.text) return null;
   const runs = String(ctx.text).split(';').map(p => p.split(',').map(Number)).filter(v => v.length >= 4 && v.slice(0, 4).every(isFinite) && v[2] > v[0] && v[3] > v[1]);
@@ -136,7 +137,19 @@ export function wordsRoom(ctx, ww, wh, pad = 0.35, reach = 1.6){
       const dx = Math.max(x0 - x, 0, x - x1), dy = Math.max(y0 - y, 0, y - y1), d = Math.sqrt(dx*dx + dy*dy)/R;
       if(d < 1){ const i = y*ww + x, v = d*d*(3 - 2*d); if(v < room[i]) room[i] = v; } }
   }
+  const a = Math.min(1, +ctx.around); if(a < 1) for(let i = 0; i < room.length; i++) room[i] = 1 - a*(1 - room[i]);
   return room;
+}
+/** How far (in grid cells, a 3-4 chamfer) each cell of a ww × wh grid lies from the nearest cell where `mask` is set. */
+export function chamferDistance(mask, ww, wh){
+  const D = new Float32Array(ww*wh), BIG = 1e9;
+  for(let i = 0; i < D.length; i++) D[i] = mask[i] ? 0 : BIG;
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const i = y*ww + x; let d = D[i];
+    if(x > 0) d = Math.min(d, D[i - 1] + 3); if(y > 0){ d = Math.min(d, D[i - ww] + 3); if(x > 0) d = Math.min(d, D[i - ww - 1] + 4); if(x < ww - 1) d = Math.min(d, D[i - ww + 1] + 4); } D[i] = d; }
+  for(let y = wh - 1; y >= 0; y--) for(let x = ww - 1; x >= 0; x--){ const i = y*ww + x; let d = D[i];
+    if(x < ww - 1) d = Math.min(d, D[i + 1] + 3); if(y < wh - 1){ d = Math.min(d, D[i + ww] + 3); if(x < ww - 1) d = Math.min(d, D[i + ww + 1] + 4); if(x > 0) d = Math.min(d, D[i + ww - 1] + 4); } D[i] = d; }
+  for(let i = 0; i < D.length; i++) D[i] /= 3;
+  return D;
 }
 /** The scale the current generation runs at. */
 /**

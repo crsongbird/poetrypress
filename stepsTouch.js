@@ -12,7 +12,7 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, wordsRoom, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare, wholeCam, wholeTurned } from './texCore.js';
+import { CPU, wordsRoom, chamferDistance, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare, wholeCam, wholeTurned } from './texCore.js';
 import { genColdPress, genCupRing, genOldPaper, genBurntLetter, genHoarfrost, genGlassRain, genWater, genDunes, genMoss, genKintsugi, genSpangle, genCrystalLeaf, genSuminagashi } from './texTouch.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -244,7 +244,7 @@ export const TOUCH_STEPS = {
   terrain: { cat: 'Noise', label: 'Terrain', ins: [], outs: ['height'],
     params: [TOUCH_R('scale', 'Scale', 100, 40, 300), TOUCH_R('crests', 'Crests', 22), TOUCH_R('variant', 'Variant', 0, 0, 99)], cost: () => 3,
     run(E, n){ const { ww, wh, N, unit, num, ctx } = E;
-      const sc = 100/Math.max(1, num(n, 'scale', 100))*(ctx.fill ? 2.2 : 1), cr = num(n, 'crests', 22)/100, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
+      const sc = 100/Math.max(1, num(n, 'scale', 100))*(1 + 1.2*(+ctx.fill || 0)), cr = num(n, 'crests', 22)/100, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       return withSeed(seed, () => {
         const broad = fbmSampler(3, 4), ridge = fbmSampler(5, 3), warp = fbmSampler(3, 2), H = new Float32Array(N);
         for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
@@ -616,6 +616,9 @@ export function paneLayout(ww, wh, zoom, amt, order, more = {}){
   const arc3 = (() => { const gap = unit*0.05, wd = (ww - mg*2 - gap*2)/3, A = [0, 1, 2].map(k => lancet(mg + k*(wd + gap), mg + k*(wd + gap) + wd, mg + (k === 1 ? 0 : wh*0.08), wh - mg));
     return (x, y) => Math.max(A[0](x, y), A[1](x, y), A[2](x, y)); })();
   const frameD = frame === 1 ? lancet(mg, ww - mg, mg, wh - mg) : frame === 2 ? (x, y) => Math.min(ww, wh)/2 - mg - Math.hypot(x - ww/2, y - wh/2) : frame === 3 ? arc3 : null;
+  // ROUND THE WORDS (Shape Aware): each line of the poem set in one pane of pale clear glass, a heavier came round it, so
+  // no lead crosses the words (more.room: the words' room; inside where it falls below a half)
+  const inW = more.room ? more.room.map(v => v < 0.5 ? 1 : 0) : null, dIn = inW ? chamferDistance(inW.map(v => 1 - v), ww, wh) : null, dOut = inW ? chamferDistance(inW, ww, wh) : null;
   const joint = new Float32Array(N);
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const bx = Math.floor(x/bs) + 2, by = Math.floor(y/bs) + 2;
@@ -632,8 +635,10 @@ export function paneLayout(ww, wh, zoom, amt, order, more = {}){
     if(frameD){ const fd = frameD(x, y), af = Math.abs(fd);
       if(fd < 0){ win[p] = 0; own2 = (own2 + 0.5) % 1; }                    // beyond the outline: the border's glass, its own pane
       if(af/1.8 < e){ e2 = e; e = af/1.8; lwHere = lw; } else if(af/1.8 < e2) e2 = af/1.8; }   // the outline: a came 1.8× as broad
+    let slotHere = slot[best];
+    if(inW){ if(inW[p]){ e = dIn[p]/1.8; e2 = Infinity; own2 = 0.97; slotHere = 9; } else { const af = dOut[p]/1.8; if(af < e){ e2 = e; e = af; } else if(af < e2) e2 = af; } }
     const q = e/lwHere;
-    lead[p] = q < 1 ? Math.sqrt(Math.max(0, 1 - q*q)) : 0; edge[p] = Math.min(1, e/(lw*8)); pane[p] = own2; pal[p] = (slot[best] + 0.5)/10;
+    lead[p] = q < 1 ? Math.sqrt(Math.max(0, 1 - q*q)) : 0; edge[p] = Math.min(1, e/(lw*8)); pane[p] = own2; pal[p] = (slotHere + 0.5)/10;
     joint[p] = lead[p] > 0 ? Math.max(0, 1 - e2/(lw*2.4)) : 0;
   }
   return { lead, edge, pane, pal, win, joint };
@@ -809,8 +814,9 @@ const touchRGB = (v, def) => { if(Array.isArray(v)) return v.map(q => Math.round
 Object.assign(TOUCH_STEPS, {
   panes: { cat: 'Noise', label: 'Panes', ins: [], outs: ['lead', 'edge', 'pane', 'palette', 'window', 'joints'],
     params: [TOUCH_R('size', 'Pane Size', 100, 50, 250), TOUCH_R('leading', 'Leading', 100, 30, 250), TOUCH_R('shape', 'Shape', 25), TOUCH_R('variety', 'Size Variety', 0), TOUCH_R('frame', 'Window: None · Lancet · Arcade · Round', 0)], cost: () => 10,
-    run(E, n){ const fr = E.num(n, 'frame', 0), more = { variety: E.num(n, 'variety', 0)/100, frame: fr < 30 ? 0 : fr < 55 ? 1 : fr < 80 ? 3 : 2 };   // (Round stays at the top, where it was)
-      const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100, E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)), more);
+    // (Shape Aware: round the words, each line in a clear pane of its own; in the letters, smaller panes)
+    run(E, n){ const fr = E.num(n, 'frame', 0), more = { variety: E.num(n, 'variety', 0)/100, frame: fr < 30 ? 0 : fr < 55 ? 1 : fr < 80 ? 3 : 2, room: wordsRoom(E.ctx, E.ww, E.wh, 0.35, 0.7) };   // (Round stays at the top, where it was)
+      const L = paneLayout(E.ww, E.wh, E.num(n, 'size', 100)/100*(1 - 0.55*(+E.ctx.fill || 0)), E.num(n, 'leading', 100)/100, Math.max(0, Math.min(1, E.num(n, 'shape', 25)/100)), more);
       return [L.lead, L.edge, L.pane, L.pal, L.win, L.joint]; } },
   glass: { cat: 'Light & Color', label: 'Stained Glass', ins: ['lead', 'edge', 'pane', 'palette', 'glass hue', 'second hue', 'window', 'scene', 'joints'],
     outs: ['image'], io: { ins: ['field', 'field', 'field', 'field', 'colour', 'colour', 'field', 'image', 'field'], outs: ['image'] },

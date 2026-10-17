@@ -235,8 +235,7 @@ Ripples from the Words, Protect the Text, Ink.
   Still to do: the letters' own shape (not only the lines' boxes) as a mask
   any part can take, which means handing the worker the glyph mask. More
   parts that answer Shape Aware (Ruby: "literally anything that generates
-  high contrast patterns all over the page"): Knotwork, Stained Glass,
-  Tessellate, Deep Field's stars, Turing Skin.
+  high contrast patterns all over the page") as they are touched.
 
 ### H · The three levels (Ruby's future-directions doc)
 

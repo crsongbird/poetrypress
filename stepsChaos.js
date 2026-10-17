@@ -14,7 +14,7 @@
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
-import { makeNoiseGrid, sampleNoiseGrid, lightHeights, litK, litS, withSeed, kitCanvas, CPU, cpx, canonArea, lightVec, kitWhole, wholeDial, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, wordsRoom, lightHeights, litK, litS, withSeed, kitCanvas, CPU, cpx, canonArea, lightVec, kitWhole, wholeDial, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genSigils, genInkBleed, genTessellate, genBlackHole, genSummoningCircles } from './texChaos.js';
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -47,7 +47,7 @@ function crackNet(ww, wh, size){
 // feeding the other, walked along the feed/kill map by Pattern — spots → coral → maze → worms → holes (Pearson
 // 1993's classes; Karl Sims's tutorial). Its own grid, whatever the page's; then sampled bicubically and given a
 // crisp edge. Returns the pattern as a field 0..1 on the ww×wh grid.
-function chaosTuring(ww, wh, growth, zoom, form){
+function chaosTuring(ww, wh, growth, zoom, form, room){
   const FK = [[0.0367, 0.0649], [0.0545, 0.062], [0.029, 0.057], [0.078, 0.061], [0.039, 0.058]];
   const t = Math.max(0, Math.min(1, form))*(FK.length - 1), i0 = Math.min(FK.length - 2, Math.floor(t)), fr = t - i0;
   const Fd = FK[i0][0] + (FK[i0 + 1][0] - FK[i0][0])*fr, Kd = FK[i0][1] + (FK[i0 + 1][1] - FK[i0][1])*fr;
@@ -61,6 +61,9 @@ function chaosTuring(ww, wh, growth, zoom, form){
   for(let k = 0; k < n; k++) if(Math.random() < 0.002) B[k] = 0.5;
   // (a budget of cell-updates, so a fine pattern on a wide page stays quick)
   const iters = Math.min(Math.round(900 + 5100*growth), Math.round(55e6/n));
+  // ROUND THE WORDS (Shape Aware): where the poem is, the second chemical is killed off, so the pattern grows up to the
+  // lines and lies along their edges, as a skin's marks follow a limb's (room: the words' room, on the page's grid)
+  const KILL = room ? Float32Array.from({ length: n }, (_, k) => { const x = k % gx, y = (k/gx) | 0, v = room[Math.min(wh - 1, (y + 0.5)/gy*wh | 0)*ww + Math.min(ww - 1, (x + 0.5)/gx*ww | 0)]; return 1 - 0.35*(1 - v); }) : null;
   for(let it = 0; it < iters; it++){
     for(let y = 0; y < gy; y++){
       const yu = ((y - 1 + gy) % gy)*gx, yc = y*gx, yd = ((y + 1) % gy)*gx;
@@ -70,6 +73,7 @@ function chaosTuring(ww, wh, growth, zoom, form){
         const lb = 0.2*(B[yu + x] + B[yd + x] + B[yc + xl] + B[yc + xr]) + 0.05*(B[yu + xl] + B[yu + xr] + B[yd + xl] + B[yd + xr]) - b;
         const abb = a*b*b;
         A2[k] = a + (1.0*la - abb + Fd*(1 - a)); B2[k] = b + (0.5*lb + abb - (Kd + Fd)*b);
+        if(KILL) B2[k] *= KILL[k];
       }
     }
     let tmp = A; A = A2; A2 = tmp; tmp = B; B = B2; B2 = tmp;
@@ -248,7 +252,8 @@ export const CHAOS_STEPS = {
     params: [CHAOS_R('zoom', 'Facet Size', 100, 50, 400), CHAOS_R('amount', 'Irregularity', 0, 0, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), t = E.ctx.tints || [];
       const t1 = chaosHex(E.input(n, 2)) || t[0] || null, t2 = chaosHex(E.input(n, 3)) || t[1] || null;
-      return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null))]; },
+      // (Shape Aware: round the words, a polished plate under them; in the letters, smaller facets)
+      return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100*(1 - 0.55*(+E.ctx.fill || 0))), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null, E.ctx))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
@@ -303,7 +308,8 @@ export const CHAOS_STEPS = {
   grayscott: { cat: 'Noise', label: 'Turing Pattern', ins: [], outs: ['pattern'],
     params: [CHAOS_R('pattern', 'Pattern', 25), CHAOS_R('growth', 'Growth', 80, 20, 100), CHAOS_R('scale', 'Scale', 100, 50, 250), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 30,
     run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
-      return withSeed(seed, () => [chaosTuring(ww, wh, Math.max(0.1, Math.min(1, num(n, 'growth', 80)/100)), num(n, 'scale', 100)/100, num(n, 'pattern', 25)/100)]); } },
+      // (Shape Aware: round the words, the pattern grows up to them and follows their edges; in the letters, finer)
+      return withSeed(seed, () => [chaosTuring(ww, wh, Math.max(0.1, Math.min(1, num(n, 'growth', 80)/100)), num(n, 'scale', 100)/100*(1 - 0.45*(+ctx.fill || 0)), num(n, 'pattern', 25)/100, wordsRoom(ctx, ww, wh, 0.25, 0.8))]); } },
   crazing: { cat: 'Textures', label: 'Crazing', ins: [], outs: ['height', 'glaze', 'grime', 'fine'],
     params: [CHAOS_R('scale', 'Fracture Scale', 100, 60, 400), CHAOS_R('density', 'Crack Density', 100, 10, 900), CHAOS_R('age', 'Enameling', 0)], cost: () => 14,
     // Crazing as it really looks: hairline cracks in a glassy surface that is

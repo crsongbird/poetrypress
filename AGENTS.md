@@ -226,6 +226,7 @@ default.
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes. Touch: also the glass (Scratches, Smudges, Window Reflection, Shatter, Glass Pane) |
+| `stepsRing.js` | the Painted Ringworld's parts (`RING_STEPS`): The Arch (`rgPaintArch`) and Land on the Ring (`rgPaintLand`), seen through Ringworld's own camera (`ringCamera`) in a painter's curved perspective, with the Worlds (`RG_WORLDS`, `RG_PROF`) and their painted things |
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh (`patDelaunay`), Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum; Split and Merge HSB and Lab, Median (`patRank`), Map Switch, Flip, Perspective, Rotate and Scale (`patResample`) |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in the Athanor's Open menu; bundled before chains.js |
@@ -499,11 +500,22 @@ Other parts of a look:
       words`: the surface gives way round the words (Ruby: "literally
       anything that generates high contrast patterns all over the page …
       avoid the text or highlight the text or interact with the text").
-      `wordsRoom(ctx, ww, wh, pad, reach)` (texCore) is 0 on and about each
-      line, 1 a reach away: Halftone Screen's dots and Hatching's strokes
-      shrink by it, Flow Lines bend along its contour and end on the words,
-      Terrain levels the land under them to one height (contours ring the
-      poem), Circuit Traces routes round what Keep Clear gives. A chain that
+      **Shape Strength** (`textureShapeStrength`, per layer, 100 for a look
+      without it; Ruby: "a slider to soften the shape awareness") makes both
+      numbers 0..1 (`fill`, `around`; keyed `_F` and `_R` followed by the strength); a part scales
+      what it does by them. `wordsRoom(ctx, ww, wh, pad, reach)` (texCore)
+      is 0 on and about each line, 1 a reach away (below full strength the
+      words keep `1 - strength` of it): Halftone Screen's dots and
+      Hatching's strokes shrink by it, Flow Lines bend along its contour and
+      end on the words, Terrain levels the land under them to one height
+      (contours ring the poem), Circuit Traces routes round what Keep Clear
+      gives, Glass Shards drops a shard that would touch a line, Dewy Webs
+      keeps a web to its hub's room, Knotwork leaves the cells out
+      (`o.hole`), Panes sets the poem in one pale pane (`chamferDistance` for
+      the came round it), Facet Field flattens whole facets, Turing Pattern
+      kills its second chemical there, and Deep Field's star layer fades its
+      stars (the renderer hands `astral_stars` the layout under Shape
+      Aware). A chain that
       answers always says `poem: 'lines'`; one that answers only Shape Aware
       says `poem: 'shape'` (handed the layout only then, so typing never
       redraws it otherwise; `chainReadsPoem(type, shaped)`).
@@ -1160,12 +1172,52 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - `landScene(seed, …)` is the shared scene.
   - Color keeps the grey painting's value and sets only its hue
     (`landPalette`). Color 0 is exactly the grey of before.
+- **Painted Ringworld** (chain `ringpaint`, canvas, stepsRing.js; Ruby: "a
+  generative art piece that still looks like being on a ringworld … the same
+  logic as the 3D generator but 2D", and of the flat style, "simplified, but
+  cosmic"): Starfield → The Arch → Land on the Ring → Oil Paint (Paint 0: the
+  flat shapes alone).
+  - Both parts see through Ringworld's own camera (`ringCamera`, from
+    `ringParams`, so the 'ring' guide shows the shot; `curved` draws it the
+    same way) in a **stereographic** projection: a pinhole draws the arch, a
+    great circle through the eye's plane, as a straight line; the painter's
+    curved perspective bows it across the sky. `proj` returns the depth that
+    sizes things there (F over it is pixels per ring unit).
+  - One world for both (`rgView`): the land's heights (`rgTerrain`: ridged big
+    octaves, ranges at the walls' feet, flatter in cities, terraced by the
+    builders), the sea below the camera's ground, the biomes by world
+    coordinates (`rgGround`), the camera standing on the land (`Px` lifted by
+    its height). Far land is drawn up to 3.2× taller than it is (a painter's
+    exaggeration), its colour by its true height (`T.true`).
+  - **World** (`RG_WORLDS`, `RG_PROF`): By the Seed, Wilds, Cities, Neon,
+    Builders, Magic, Ruins, Mixed (three, region by region). Each world's
+    weights say what it raises; its ground, its lights (the page's accents for
+    Neon and Magic, through two Accent parts: `ringpaint` is colorKeyed), its
+    air's tint.
+  - The land is 16 ridges at distances growing from your feet to the walls'
+    feet, each a cross-section of the terrain: a wash (lit crest, deeper
+    below), facets where steep, a bright rim; on each crest what grows and
+    stands (trees, buildings, rocks, creatures, grass, by stochastic counts so
+    small segments still get their share). The works stand in world cells
+    (`cw`), drawn between the ridges they lie between (so hills hide them),
+    roads slab by slab; nothing anchored is drawn larger than it can be seen
+    whole (`big`), and spans only where they are far and seen along.
+  - The creatures live on some rings (`beasts`), a herd or two, never on the
+    nearest ridge.
 - **Particles** (First Snow, Burning Mana, Euphoria Dust) draw under
   `withSeed(ctx.seed + Scatter·7919)`. This keeps them pixel-identical;
   Euphoria is a perfect preset.
 - **Poured Wax** (chain `wax`): Pours (Splatter after every pour's draws) →
   Meniscus → colour by thickness → Light Engine with Translucency → Glow
   Hue screened where thick.
+- **Ring in the Sky** (chain `skyring`; Ruby: "a beautiful background layer
+  … that simplified, but cosmic"): Starfield → Ring in the Sky (stepsWhimsy.js
+  `paintRingSky`) → Oil Paint (Paint 0). The ring is an annulus opened by
+  View and a ribbon closed by it, so its band keeps its width edge-on and
+  face-on; its far arc in blocks three across with blocks of cloud, the halo
+  of the air it holds one wide faint stroke. The camera guide is 'ellipse'
+  (Star Height from the knob keyed `height`). Land of Shapes, made for its
+  first painting, stays an Athanor part: wired after it, a land beneath.
 - **Ringworld** (chain `ringworld`, Sky & Cosmos; Ruby: abstract, lit by
   its star; the camera dial the camera, the light dial the day):
   - Ringworld View (`genRingView`) follows each pixel's ray to the floor, a

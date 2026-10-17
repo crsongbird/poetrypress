@@ -1127,7 +1127,7 @@ export function surfaceFromDom(){
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
-    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false),
+    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
     ...(ground ? { textureGround: ground } : {}) };
 }
 /** An Athanor surface's own sliders and hues, read from its graph (each layer may carry a different one):
@@ -1181,10 +1181,14 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     ctx.drawImage(img, 0, 0, W, H);
   } catch(err){ if(typeof console !== 'undefined') console.warn('texture skipped:', err && err.message); } };
   const layer = (gco, t) => { ctx.save(); ctx.globalAlpha = gpu ? 1 : opacity; ctx.globalCompositeOperation = gpu ? 'source-over' : gco; put(t); ctx.restore(); };
+  // (Shape Strength, how strongly: `fill` and `around` are 0..1, 0 when off)
+  const strength = Math.max(0, Math.min(1, (isFinite(+L.textureShapeStrength) ? +L.textureShapeStrength : 100)/100));
   if(type === 'astral'){
     // the light slot stays empty here; the nebula colour is a TINT
     layer(blend === 'lighten' ? 'overlay' : blend, requestTexture(name('fog'), 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
-    layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S }));   // (tint5: the airglow's own colour)
+    // (Shape Aware on the page: its stars fade round the words)
+    const around = slot !== 'base' || !L.textureTextBlend ? (L.textureTextAware !== false && L.textureShapeAware ? strength : 0) : 0;
+    layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S, ...(around ? { around, text: TEXT_LAYOUT } : {}) }));   // (tint5: the airglow's own colour)
   } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
     layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera }));
   } else {
@@ -1194,7 +1198,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     //  letters Shape Aware; `fill` tells it it is inside them)
     // (Shape Aware on a surface drawn on the page, `around`: it shapes itself round the words — keeps off them, flows round
     //  them — Ruby: "the option to make it avoid the text or highlight the text or interact with the text")
-    const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware, aware = L.textureTextAware !== false, around = !fill && aware && !!L.textureShapeAware;
+    const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware ? strength : 0, aware = L.textureTextAware !== false, around = !fill && aware && !!L.textureShapeAware ? strength : 0;
     const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type, fill || around)) && (aware || fill) ? TEXT_LAYOUT : undefined;
     layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }

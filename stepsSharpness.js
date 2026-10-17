@@ -198,7 +198,7 @@ export const SHARP_STEPS = {
     // (Shape Aware: round the words the dots shrink away, a clean margin of paper about each line; in the letters the
     //  screen is finer, to show in a stroke)
     paint(E, n){ const tone = kitField(E.input(n, 1) ?? 0.5, E.ww, E.wh) || new Float32Array(E.ww*E.wh).fill(0.5);
-      return [paintScreen(E.ww, E.wh, tone, E.num(n, 'weight', 100)/100, E.num(n, 'scale', 100)/100*(E.ctx.fill ? 0.45 : 1), E.num(n, 'angle', 0), wordsRoom(E.ctx, E.ww, E.wh, 0.3, 1.4))]; },
+      return [paintScreen(E.ww, E.wh, tone, E.num(n, 'weight', 100)/100, E.num(n, 'scale', 100)/100*(1 - 0.55*(+E.ctx.fill || 0)), E.num(n, 'angle', 0), wordsRoom(E.ctx, E.ww, E.wh, 0.3, 1.4))]; },
     run(E, n){ return [kitField(this.paint(E, n)[0], E.ww, E.wh)]; } },
   grain: { cat: 'Noise', label: 'Film Grain', ins: [], outs: ['grain'], io: { outs: ['image'] },
     params: [SH_R('size', 'Grain Size', 100, 100, 600), SH_R('contrast', 'Contrast', 100, 30, 240), SH_R('kind', 'Kind', 33)], cost: () => 3,

@@ -36,7 +36,7 @@
  * any size, so a preview is the export, smaller. Their randomness is the
  * texture's seed (+ Variant), like the other parts that grow.
  */
-import { CPU, withSeed, kitCanvas, makeNoiseGrid, sampleNoiseGrid, lightVec, mulberry32 } from './texCore.js';
+import { CPU, withSeed, wordsRoom, kitCanvas, makeNoiseGrid, sampleNoiseGrid, lightVec, mulberry32 } from './texCore.js';
 
 const GEN_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const genClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -294,7 +294,9 @@ function genKnot(o){
   };
   const R = n*2, span = shape === 5 ? Math.ceil(n*Math.max(o.aspX, o.aspY)) + 1 : n + 1;
   const cells = new Set(), ck = (x, y) => x + ',' + y;
-  for(let b = -span; b < span; b++) for(let a = -span; a < span; a++){ const x = 2*a + 1, y = 2*b + 1; if(inShape(x/R, y/R)) cells.add(ck(x, y)); }
+  // (o.hole: a cell left out, as the words are when Shape Aware asks the knot to go round them: the strands turn back at
+  //  its edges as they do at the panel's own)
+  for(let b = -span; b < span; b++) for(let a = -span; a < span; a++){ const x = 2*a + 1, y = 2*b + 1; if(inShape(x/R, y/R) && !(o.hole && o.hole(x, y))) cells.add(ck(x, y)); }
   const cell = (x, y) => cells.has(ck(x, y));
   const hsh = (a, b, k) => { const t = Math.sin(a*127.1 + b*311.7 + k*74.7 + o.salt*13.37)*43758.5453; return t - Math.floor(t); };
   // the ends: NE (+1,-1) NW (-1,-1) SE (+1,+1) SW (-1,+1), each half way to the next crossing
@@ -981,9 +983,10 @@ function genDrawCircuit(B, ww, wh, s, o){
 // into the arch overhead), a rim wall, the star, the shadow squares that make its nights, or open space. What the
 // part hands on are maps OF the world — where on the ring each pixel shows (along it and across it, in band widths),
 // how far off, how fine a pixel is there, and where it is day — so any noise or picture can be laid on the ring.
-const RING_COV = 0.36, RING_SQR = 0.15;   // the share of each turn the shadow squares cover (night), and their ring's radius
+export const RING_COV = 0.36, RING_SQR = 0.15;   // the share of each turn the shadow squares cover (night), and their ring's radius
 const RING_SQS = [6, 8, 10, 10, 12, 14];   // how many squares circle the star: by the seed (more of them, shorter nights)
-function ringLook(o){
+// the camera on the floor and the day (the Painted Ringworld's parts paint from the same camera)
+export function ringCamera(o){
   const W = o.band, Hw = o.walls, hc = o.altitude, R = 1, z0 = o.place*W*0.45, fov = o.lens*Math.PI/180, f = 0.5/Math.tan(fov/2);
   const psi = o.look*Math.PI/180, th = o.lift*Math.PI/180, hx = Math.cos(psi), hz = Math.sin(psi);
   // up is toward the ring's axis (−x); along the ring is +y, across it +z. f: forward; r: right; u: the screen's up
@@ -999,10 +1002,9 @@ function ringLook(o){
   // (its optical depth) and the ground far along is hazed far more than the ground at your feet
   const Hs = Math.min(Hw*0.5, W*0.025) + 1e-6, L0 = Hs/Math.max(0.005, o.air);
   // the clouds float this high over the floor (above you, unless you fly higher)
-  const L = { W, Hw, hc, R, z0, f, fx, fy, fz, rx, ry, rz, ux, uy, uz, per, q0, Hs, L0, Px: R - hc, side: o.side < 0 ? -1 : 1, Rc: R - W*0.012 };
-  ringBuild(L, o);
-  return L;
+  return { W, Hw, hc, R, z0, f, fx, fy, fz, rx, ry, rz, ux, uy, uz, per, q0, Hs, L0, Px: R - hc, side: o.side < 0 ? -1 : 1, Rc: R - W*0.012 };
 }
+function ringLook(o){ const L = ringCamera(o); ringBuild(L, o); return L; }
 // THE WORKS (Ruby: "spires, archways, cities, lights, spaceships, structures, and magical/magitech … seed dependent as
 // much as you can so users see large varieties of ringworlds"; and before, "never bare"). Whoever built the ring
 // decides what stands on it: five builders, the seed's two (one leading, one in its shadow), or the one the Builders
@@ -1281,7 +1283,7 @@ function ringLattice(L, a, c, foot){
 }
 // day at a ring angle: 1 in a gap between the squares, 0 behind one, a soft edge (the star's own size) between
 // (L.side: which way round the dusk comes, by the light dial)
-function ringDay(L, phi){ let u = (phi*L.side - L.q0)/L.per; u -= Math.floor(u);
+export function ringDay(L, phi){ let u = (phi*L.side - L.q0)/L.per; u -= Math.floor(u);
   const sd = u >= RING_COV ? Math.min(u - RING_COV, 1 - u) : -Math.min(u, RING_COV - u), t = genClamp(0.5 + sd/0.09); return t*t*(3 - 2*t); }
 // THE WORKS ON SCREEN: each work's bounding cube, projected, puts it in the tiles of the picture it can touch, so a
 // pixel tests only the few that could be in its way (they were tested for every pixel: a third of the time)
@@ -1560,14 +1562,26 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
     return lines;
   }
   if(kind === 'ring' && ring){
-    const L = ringLook(ringParams(ring)), F = L.f, cx = aspX/2, cy = aspY/2;
-    const proj = (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, zc = dx*L.fx + dy*L.fy + dz*L.fz; if(zc <= 1e-6) return null;
-      return [cx + F*(dx*L.rx + dy*L.ry + dz*L.rz)/zc, cy - F*(dx*L.ux + dy*L.uy + dz*L.uz)/zc]; };
+    const L = ringCamera(ringParams(ring)), F = L.f, cx = aspX/2, cy = aspY/2;
+    // (the Painted Ringworld sees in a painter's curved perspective, stereographic: stepsRing.js)
+    const proj = ring.curved ? (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, q = Math.sqrt(dx*dx + dy*dy + dz*dz) + dx*L.fx + dy*L.fy + dz*L.fz; if(q <= 1e-6) return null;
+        return [cx + 2*F*(dx*L.rx + dy*L.ry + dz*L.rz)/q, cy - 2*F*(dx*L.ux + dy*L.uy + dz*L.uz)/q]; }
+      : (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, zc = dx*L.fx + dy*L.fy + dz*L.fz; if(zc <= 1e-6) return null;
+        return [cx + F*(dx*L.rx + dy*L.ry + dz*L.rz)/zc, cy - F*(dx*L.ux + dy*L.uy + dz*L.uz)/zc]; };
     const run = (fn, n, bold) => { let cur = []; for(let i = 0; i <= n; i++){ const p = fn(i/n); if(p && Math.abs(p[0] - cx) < aspX*3 && Math.abs(p[1] - cy) < aspY*3) cur.push(p); else { if(cur.length > 1) lines.push({ pts: cur, bold }); cur = []; } } if(cur.length > 1) lines.push({ pts: cur, bold }); };
     // the floor's two edges and the walls' tops, round the whole ring; the band's middle, faint; rungs across it near you
     for(const [zf, rr, bold] of [[0.5, 1, true], [-0.5, 1, true], [0.5, 1 - L.Hw, false], [-0.5, 1 - L.Hw, false], [0, 1, false]])
       run(t => { const a = (t*2 - 1)*Math.PI; return proj(rr*Math.cos(a), rr*Math.sin(a), zf*L.W); }, 720, bold);
     for(let k = -12; k <= 12; k++){ const a = k*L.W*0.5; run(t => proj(Math.cos(a), Math.sin(a), (t - 0.5)*L.W), 8, false); }
+    return lines;
+  }
+  if(kind === 'ellipse'){
+    // (the Painted Ringworld's ring, as Ring in the Sky draws it from the dial: Turn spins it, View opens it, Zoom sizes it)
+    const size = (63 + Math.max(0, Math.min(1, (cam.zoom - 25)/375))*187)/100, tilt = 2 + Math.max(0, Math.min(100, cam.view))*0.88, rot = cam.turn*Math.PI/180;
+    const phi = tilt*Math.PI/180, cx = aspX/2, cy = aspY*(ring && ring.centre != null ? ring.centre : 0.45), A = Math.sqrt(aspX*aspY)*0.56*size, B = A*Math.max(0.035, Math.sin(phi)), bw = 0.147, vb = bw*A*Math.cos(phi)*0.55, cr = Math.cos(rot), sr = Math.sin(rot);
+    const P = (t, z) => { const k = 1 - z*bw, ex = Math.cos(t)*A*k, ey = Math.sin(t)*(B*k - z*vb); return [cx + ex*cr - ey*sr, cy + ex*sr + ey*cr]; };
+    for(const z of [0, 1]) for(const far of [true, false]) lines.push({ pts: Array.from({ length: 91 }, (_, i) => P((far ? Math.PI : 0) + i/90*Math.PI, z)), bold: far });
+    lines.push({ pts: [[cx - 0.03, cy], [cx + 0.03, cy]], bold: true }, { pts: [[cx, cy - 0.03], [cx, cy + 0.03]], bold: true });
     return lines;
   }
   return lines;
@@ -1577,9 +1591,9 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
 // Noise read wherever two maps say (any projection: a ring's floor, a polar wrap, a perspective), never repeating, and
 // never finer than a pixel where it lands: a third map (Detail, how much ground a pixel spans there) ends the octaves
 // a pixel can't show, so far ground is smooth and near ground sharp.
-const mnHash = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041) | 0;
+export const mnHash = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0)/4294967296; };
-function mnValue(x, y, s){ const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx*fx*(3 - 2*fx), v = fy*fy*(3 - 2*fy);
+export function mnValue(x, y, s){ const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx*fx*(3 - 2*fx), v = fy*fy*(3 - 2*fy);
   const a = mnHash(xi, yi, s), b = mnHash(xi + 1, yi, s), c = mnHash(xi, yi + 1, s), d = mnHash(xi + 1, yi + 1, s);
   return a + (b - a)*u + (c - a)*v + (a - b - c + d)*u*v; }
 function genMapNoise(X, Y, D, N, o){
@@ -1631,6 +1645,10 @@ function gsShards(aspX, aspY, o){
     if(o.lines && o.lines.length){
       if(o.fill){ const r2 = mulberry32((salt ^ 0x51ED27) + Math.imul(i + 1, 0x2545F491) >>> 0), Ln = gsPickLine(o.lines, r2()), lh = (Ln[3] - Ln[1])*aspY;
         cx = (Ln[0] + (Ln[2] - Ln[0])*r2())*aspX; cy = (Ln[1] + (Ln[3] - Ln[1])*r2())*aspY; size = lh*o.size*(0.1 + 0.55*Math.pow(r2(), 2)); }
+      // ROUND THEM (Shape Aware on the page; Ruby: "shattered glass also, generally avoid the text"): a shard that would
+      // touch a line is swept away, or at a softer Shape Strength only made smaller
+      else if(o.around){ const pad = size*1.15;
+        if(o.lines.some(L => cx >= L[0]*aspX - pad && cx <= L[2]*aspX + pad && cy >= L[1]*aspY - pad && cy <= L[3]*aspY + pad)){ size *= 1 - o.around; if(size < 0.002) continue; } }
       else if(o.lines.some(L => cx >= L[0]*aspX && cx <= L[2]*aspX && cy >= (L[1] - (L[3] - L[1])*0.2)*aspY && cy <= (L[3] + (L[3] - L[1])*0.2)*aspY)) size *= 0.4; }
     // its outline: corners at uneven angles and distances, drawn out into a sliver as Slivers rises, turned any way
     const angs = Array.from({ length: k }, (_, j) => (j + (r() - 0.5)*0.7)/k*Math.PI*2).sort((a, b) => a - b);
@@ -1738,6 +1756,9 @@ function dwWebs(aspX, aspY, o){
       if(d > best){ best = d; hx = x; hy = y; } }
     // FILLING THE LETTERS (Shape Aware): each web strung across a line of the poem, as tall as two of its lines
     if(o.fill && o.lines && o.lines.length){ const Ln = o.lines[w % o.lines.length], u = r(); hx = (Ln[0] + (Ln[2] - Ln[0])*(0.15 + 0.7*u))*aspX; hy = (Ln[1] + Ln[3])/2*aspY; size = (Ln[3] - Ln[1])*aspY*1.1*o.size; }
+    // ROUND THEM (Shape Aware on the page): a web is strung no wider than the room its hub has from the words
+    else if(o.around && o.lines && o.lines.length){ const room = o.lines.reduce((m, L) => Math.min(m, Math.hypot(Math.max(L[0]*aspX - hx, 0, hx - L[2]*aspX), Math.max(L[1]*aspY - hy, 0, hy - L[3]*aspY))), 9);
+      size = size*(1 - o.around) + Math.max(Math.min(aspX, aspY)*0.05, Math.min(size, room*0.8))*o.around; }
     // the frame: a ring of anchor points round the hub at uneven reach (an orb web's hub sits a little above its middle)
     const nf = 4 + Math.floor(r()*4), rot = r()*Math.PI*2, frame = Array.from({ length: nf }, (_, k) => { const t = rot + (k + (r() - 0.5)*0.55)/nf*Math.PI*2, s2 = Math.sin(t) > 0 ? 1.15 : 0.9;
       return [hx + Math.cos(t)*size*(0.8 + 0.35*r()), hy + Math.sin(t)*size*(0.75 + 0.35*r())*s2]; });
@@ -1859,7 +1880,7 @@ export const GEN_STEPS = {
       GEN_R('era', 'Era', 0), GEN_R('marks', 'Markings', 0), ['clearing', 'Keep Clear By', 'select', 'routing around it', { options: ['routing around it', 'cutting it away'] }]], cost: () => 6,
     // (filling the letters, Shape Aware: the board is finer, to show in their strokes, and keeps nothing clear)
     // (its cells are counted on the export's grid, `ctx.page`, so a preview and the saved image are one board)
-    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100)*(E.ctx.fill ? 1.7 : 1), s = unit/across;
+    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100)*(1 + 0.7*(+E.ctx.fill || 0)), s = unit/across;
       const [PW, PH] = E.ctx.page || [w, h], sp = Math.min(PW, PH)/across;
       const cw = Math.max(4, Math.ceil(PW/sp)), ch = Math.max(4, Math.ceil(PH/sp)), kv = E.ctx.fill ? null : E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
       const bends = E.num(n, 'bends', 70)/100;
@@ -1897,12 +1918,16 @@ export const GEN_STEPS = {
     params: [GEN_R('size', 'Size', 100, 40, 300), GEN_R('cells', 'Strands', 8, 3, 24), GEN_R('breaks', 'Breaks', 45), GEN_R('shape', 'Circle · Square · Diamond · Cross · Quatrefoil · Page', 0),
       GEN_R('width', 'Ribbon Width', 55, 20, 90), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
     paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), dial = genDial(E, n, 1), sh = E.num(n, 'shape', 0);
-      const o = { cells: E.num(n, 'cells', 8), breaks: E.num(n, 'breaks', 45)/100, shape: Math.min(5, Math.floor(sh/100*6)), salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
+      // (Shape Aware: in the letters, more strands, finer; round the words, the knot leaves them a hole and weaves round it)
+      const o = { cells: E.num(n, 'cells', 8)*(1 + 1.5*(+E.ctx.fill || 0)), breaks: E.num(n, 'breaks', 45)/100, shape: Math.min(5, Math.floor(sh/100*6)), salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
         aspX: w/unit, aspY: h/unit };
-      const pieces = genKnot(o), size = E.num(n, 'size', 100)/100, off = E.num(n, 'offset', 0)/100;
+      const size = E.num(n, 'size', 100)/100, off = E.num(n, 'offset', 0)/100;
       // the panel: its radius a share of the page, zoomed by Size; slid along the dial's line
       const s = unit*0.44*size/Math.max(2, Math.round(o.cells))*2, cx = w/2 + dial.x*off*w*0.42, cy = h/2 + dial.y*off*h*0.42;
       const T = p => [cx + p[0]*s/2, cy + p[1]*s/2], wd = s*0.5*0.707*E.num(n, 'width', 55)/100*1.3;
+      const room = wordsRoom(E.ctx, w, h, 0.3, 0.9);
+      if(room) o.hole = (x, y) => { const [px, py] = T([x, y]); return px >= 0 && py >= 0 && px < w && py < h && room[(py | 0)*w + (px | 0)] < 0.55; };
+      const pieces = genKnot(o);
       const [pc, px] = kitCanvas(w, h), [hc, hx] = kitCanvas(w, h);
       px.fillStyle = 'rgb(128,128,128)'; px.fillRect(0, 0, w, h); hx.fillStyle = '#000'; hx.fillRect(0, 0, w, h);
       genDrawKnot(px, pieces, T, s, wd, 'rgb(28,26,24)', 'rgb(232,226,214)', 'rgb(128,128,128)');
@@ -1999,7 +2024,7 @@ export const GEN_STEPS = {
         glints: num(n, 'glints', 60)/100, colors: num(n, 'colors', 25)/100, shadows: num(n, 'shadows', 50)/100, deg: dial.deg,
         reach: typeof h === 'number' ? h : Math.max(0, Math.min(1.3, (E.ctx.lightTilt ?? 100)/100)) };
       // (the poem's lines, when the graph is handed them: kept readable, or filled; filling them, the camera stays put)
-      o.lines = genLinesOf(E.ctx.text); o.fill = !!E.ctx.fill && o.lines.length > 0;
+      o.lines = genLinesOf(E.ctx.text); o.fill = !!E.ctx.fill && o.lines.length > 0; o.around = Math.min(1, +E.ctx.around || 0);
       const cam = o.fill ? null : groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       if(cam) o.lines = [];   // (through the camera the glass lies on another plane than the words)
       const S = withSeed(genSeed(E, n), () => gsShards(ww/unit, wh/unit, o));
@@ -2013,7 +2038,7 @@ export const GEN_STEPS = {
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1);
       const o = { webs: num(n, 'webs', 30)/100, size: num(n, 'size', 100)/100, dew: num(n, 'dew', 60)/100, dropSize: num(n, 'drops', 100)/100, torn: num(n, 'torn', 20)/100,
         sag: num(n, 'sag', 40)/100, irid: num(n, 'irid', 50)/100, threads: num(n, 'threads', 50)/100, width: num(n, 'width', 100)/100, deg: dial.deg };
-      o.lines = genLinesOf(E.ctx.text); o.fill = !!E.ctx.fill && o.lines.length > 0;
+      o.lines = genLinesOf(E.ctx.text); o.fill = !!E.ctx.fill && o.lines.length > 0; o.around = Math.min(1, +E.ctx.around || 0);
       const [tc, gc, dc] = withSeed(genSeed(E, n), () => dwDraw(ww, wh, unit, dwWebs(ww/unit, wh/unit, o), o, E));
       return [E.asField(E.readCanvas(tc)), E.readCanvas(gc), E.asField(E.readCanvas(dc))]; } },
 };

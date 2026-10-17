@@ -194,6 +194,15 @@ held on till bright~B</code></p>
         </dl>
         <p class="pml-ex" data-try="&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;"><code>&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;</code></p>
 
+        <h4>Over many lines, and within each other</h4>
+        <p>A bracket or a segment can run over several lines: open it on one line and close it on a later one, and every line between takes it. Directives right after a bracket’s closer make it a segment of its own, so <code>[words]/jitter:150</code> works without angle brackets. An alignment alone at the end of a block aligns every line of it. Marks nest: a segment inside a segment takes both, its own directives last. A bracket that never closes still ends with its line.</p>
+        <p class="pml-ex" data-try="[This is a stanza&#10;that should be colored&#10;and centered]/c&#10;{[We are doing something strange&#10;but bear with me, dear}]/jitter:200&#10;&lt;a &lt;nested/scale:150&gt; segment/track:130&gt;"><code>[This is a stanza
+that should be colored
+and centered]/c
+{[We are doing something strange
+but bear with me, dear}]/jitter:200
+&lt;a &lt;nested/scale:150&gt; segment/track:130&gt;</code></p>
+
         <h4>Rules and stitches</h4>
         <p>A line of three dashes draws a rule across the page, to divide stanzas. In a segment it takes a width, an alignment and a stitch: a motif sewn along it, pointing down (the default) or up.</p>
 <dl>
@@ -638,6 +647,8 @@ held on till bright~B</code></p>
                 <option value="blackhole" data-str="option.blackhole">Black Hole</option>
                 <option value="astral" data-str="option.deep_field">Deep Field</option>
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
+                <option value="ringpaint" data-str="option.painted_ringworld">Painted Ringworld</option>
+                <option value="skyring" data-str="option.ring_in_the_sky">Ring in the Sky</option>
                 <option value="ringworld" data-str="option.ringworld">Ringworld</option>
               </optgroup>
               <optgroup label="🜥 Places &amp; Scenes">
@@ -732,7 +743,12 @@ held on till bright~B</code></p>
               </div>
               <div class="check-row words-shape">
                 <input type="checkbox" id="textureShapeAware">
-                <label for="textureShapeAware" data-str="label.shape_aware" title="Lets a surface that can shape itself to the words: on the page it keeps round them (Halftone's dots and Silverpoint Hatch's strokes leave them clean paper, Flow-Field Ink flows round them, Contour Map's land is a plateau under them, Circuit Board is routed round them); blended into the letters it fits itself to them (Broken Glass, Dewy Webs, Circuit Board and those four go finer). A graph reads it from The Poem.">Shape Aware</label>
+                <label for="textureShapeAware" data-str="label.shape_aware" title="Lets a surface that can shape itself to the words: on the page it gives way round them (Halftone, Silverpoint Hatch, Flow-Field Ink, Contour Map, Circuit Board, Broken Glass, Dewy Webs, Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's stars); blended into the letters it fits itself to them, finer. Shape Strength says how strongly. A graph reads it from The Poem.">Shape Aware</label>
+              </div>
+              <div class="field full words-strength">
+                <label for="textureShapeStrength" data-str="label.shape_strength" title="How strongly Shape Aware works: at 100% the surface gives way round the words fully (or fits the letters fully); lower, only partly, so a pattern thins near the lines instead of leaving them on clean paper.">Shape Strength</label>
+                <input type="range" id="textureShapeStrength" min="0" max="100" value="100">
+                <span class="range-val" id="textureShapeStrengthVal">100%</span>
               </div>
               <div class="check-row words-cut">
                 <input type="checkbox" id="textureTextCut">

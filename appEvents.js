@@ -339,9 +339,9 @@ toggleSubblock('textureToggle','textureBlock');
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
-  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut'];
+  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
-  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
 /** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
@@ -401,7 +401,8 @@ function syncBaseUi(){ if(!lowerOn() && state.layers.editing === 'lower') editLa
  *  Text means nothing for a surface drawn only inside the letters, so it waits while Blend with Text is on. */
 function paintLayerWords(){ const lower = state.layers && state.layers.editing === 'lower', chk = id => !!($(id) && $(id).checked);
   const grey = (id, off) => { const el = $(id); if(!el) return; el.disabled = off; if(el.closest){ const row = el.closest('.check-row'); if(row && row.classList) row.classList.toggle('off', off); } };
-  grey('textureShapeAware', !lower && !chk('textureTextAware')); grey('textureTextCut', lower && chk('textureTextBlend')); }
+  grey('textureShapeAware', !lower && !chk('textureTextAware')); grey('textureTextCut', lower && chk('textureTextBlend'));
+  grey('textureShapeStrength', !chk('textureShapeAware') || !!($('textureShapeAware') || {}).disabled); }
 for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
 if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
@@ -1191,7 +1192,10 @@ function restoreSurfaceDetails(s){
   if(s.textureBlend) $('textureBlend').value = s.textureBlend;
   // the surface and the words (a look from before them: aware, as every surface was; neither blended into the letters)
   { const set = (id, v) => { if($(id)) $(id).checked = v; };
-    set('textureTextAware', s.textureTextAware !== false); set('textureTextBlend', !!s.textureTextBlend); set('textureShapeAware', !!s.textureShapeAware); set('textureTextCut', !!s.textureTextCut); paintLayerWords(); }
+    set('textureTextAware', s.textureTextAware !== false); set('textureTextBlend', !!s.textureTextBlend); set('textureShapeAware', !!s.textureShapeAware); set('textureTextCut', !!s.textureTextCut);
+    // (how strongly: a look from before the slider, fully)
+    if($('textureShapeStrength')){ $('textureShapeStrength').value = s.textureShapeStrength ?? 100; if($('textureShapeStrengthVal')) $('textureShapeStrengthVal').textContent = $('textureShapeStrength').value + '%'; }
+    paintLayerWords(); }
   keepGround(s.textureGround);
   if(s.textureLight !== undefined || s.textureLightTilt !== undefined){
     if(s.textureLight !== undefined) $('textureLight').value = s.textureLight;
@@ -2357,7 +2361,10 @@ function drawCameraGuide(on){
   const x = g.getContext('2d'); if(!x) return;
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), v = id => parseFloat(($(id) || {}).value);
   // (Ringworld's walls follow Landforms, half its range; where you stand across the band is the seed's)
-  const ring = kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v('texP7'), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100 } : null;
+  // (a knob found by its key: Altitude is the seventh on Ringworld, the sixth on the Painted Ringworld)
+  const type = ($('textureType') || {}).value, slot = key => 'texP' + (paramsFor(type).findIndex(p => p.key === key) + 1);
+  const ring = kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v(slot('alt')), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100, curved: type === 'ringpaint' }
+    : kind === 'ellipse' ? { centre: 0.15 + 0.7*(v(slot('height')) || 0)/100 } : null;
   const lines = cameraGuide(kind, aspX, aspY, c, ring);
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
   const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';
@@ -3125,7 +3132,7 @@ applyStrings(document);
 }
 // ---------- frame and box controls: readouts, visibility, moons ----------
 const RANGE_UNITS = { borderGradientAngle:'°', bgRadialX:'%', bgRadialY:'%', bgRadialR:'%', borderThickness:'px', borderOffset:'px',
-  borderGrain:'%', textureClearing:'%', borderRadius:'px', cardGradientAngle:'°', cardOffset:'px', cardThickness:'px', cardRadius:'px', cardFxAmount:'', cardFxScale:'' };
+  borderGrain:'%', textureClearing:'%', textureShapeStrength:'%', borderRadius:'px', cardGradientAngle:'°', cardOffset:'px', cardThickness:'px', cardRadius:'px', cardFxAmount:'', cardFxScale:'' };
 function refreshReadouts(){
   for(const [id, unit] of Object.entries(RANGE_UNITS)){ const el = $(id), out = $(id + 'Val'); if(el && out) out.textContent = el.value + unit; }
   paintMoons();
@@ -3962,7 +3969,7 @@ const WORKING_WORDS = {
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',
-  water: 'Stilling the pool', glassrain: 'Beading the glass', rainwater: 'Letting the rain fall', ringworld: 'Raising the arch', frost: 'Growing the frost', contour: 'Surveying the contours',
+  water: 'Stilling the pool', glassrain: 'Beading the glass', rainwater: 'Letting the rain fall', ringworld: 'Raising the arch', ringpaint: 'Painting the ring', skyring: 'Hanging the ring', frost: 'Growing the frost', contour: 'Surveying the contours',
   watercolour: 'Wetting the wash', athanor: 'Stoking the athanor', athanorsteps: 'Showing each step', saving: 'Pressing the page at full size',
 };
 const workingLine = $('workingLine');

@@ -64,6 +64,9 @@ const SENT_LG1_OPEN = String.fromCodePoint(0xE010), SENT_LG1_CLOSE = String.from
 const SENT_RG1_OPEN = String.fromCodePoint(0xE012), SENT_RG1_CLOSE = String.fromCodePoint(0xE013);
 const SENT_LG2_OPEN = String.fromCodePoint(0xE014), SENT_LG2_CLOSE = String.fromCodePoint(0xE015);
 const SENT_RG2_OPEN = String.fromCodePoint(0xE016), SENT_RG2_CLOSE = String.fromCodePoint(0xE017);
+// a joint between brackets a carried block puts back to back ("[" then "{"), so they are never read as a gradient's
+// "[{" — read as nothing at all
+const SENT_JOINT = String.fromCodePoint(0xE018);
 
 /** Names /effect: accepts. The renderer reads this same list, so the parser
  *  and the drawing code can never disagree about which effects exist. */
@@ -93,7 +96,12 @@ function findLastStackIndex(stack, type){
   for(let i=stack.length-1;i>=0;i--) if(stack[i].type===type) return i;
   return -1;
 }
-export function tokenizeInline(text, accent1On, accent2On){
+// the bracket kinds that may run on past a segment's end into the next part of the line
+const CARRIED_KINDS = new Set(['accent1', 'accent2', 'gradFwd', 'gradRev']);
+/** A line's text as styled runs. `state` (optional, buildLines' own): brackets left open carry in from the parts before
+ *  ({ stack, next, closed, keep }) — each bracket gets an id, `closed` gathers the ids that close, and at the end the
+ *  still-open ones are handed on (only those in `keep`, when given: the ones known to close in a later part). */
+export function tokenizeInline(text, accent1On, accent2On, state){
   // Pre-pass: [content/lg] etc become sentinel-wrapped so the main scanner
   // below can treat them as simple push/pop delimiters (like plain [ ]),
   // while the wrapped content itself is untouched and still gets scanned
@@ -107,8 +115,11 @@ export function tokenizeInline(text, accent1On, accent2On){
     text = text.replace(/\{([^\{\}]*?)\/rg\}/g, (m,inner)=>SENT_RG2_OPEN+inner+SENT_RG2_CLOSE);
   }
 
-  const stack = [];
+  const stack = state ? state.stack.slice() : [];
   const chars = [];
+  // (with a carried state: each bracket its id, so the parts before and after can tell which closes where)
+  const push = type => stack.push(state && CARRIED_KINDS.has(type) ? { type, id: state.next++ } : { type });
+  const closeAt = idx => { const it = stack.splice(idx, 1)[0]; if(state && it.id != null) state.closed.add(it.id); };
   function snapshot(){
     let bold=false, italic=false, underline=false, strike=false, color=null;
     for(const item of stack){
@@ -131,6 +142,7 @@ export function tokenizeInline(text, accent1On, accent2On){
   const n = text.length;
   let i = 0;
   while(i<n){
+    if(text[i]===SENT_JOINT){ i+=1; continue; }
     if(text[i]===SENT_LG1_OPEN){ stack.push({type:'lgAccent1'}); i+=1; continue; }
     if(text[i]===SENT_LG1_CLOSE){
       const idx = findLastStackIndex(stack,'lgAccent1');
@@ -151,13 +163,13 @@ export function tokenizeInline(text, accent1On, accent2On){
       const idx = findLastStackIndex(stack,'rgAccent2');
       if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
     }
-    if(accent1On && accent2On && text.startsWith('{[', i)){ stack.push({type:'gradFwd'}); i+=2; continue; }
-    if(accent1On && accent2On && text.startsWith('[{', i)){ stack.push({type:'gradRev'}); i+=2; continue; }
+    if(accent1On && accent2On && text.startsWith('{[', i)){ push('gradFwd'); i+=2; continue; }
+    if(accent1On && accent2On && text.startsWith('[{', i)){ push('gradRev'); i+=2; continue; }
     if(text.startsWith(']}', i) || text.startsWith('}]', i)){
       const idxFwd = findLastStackIndex(stack,'gradFwd');
       const idxRev = findLastStackIndex(stack,'gradRev');
       if(idxFwd!==-1 || idxRev!==-1){
-        if(idxFwd > idxRev){ stack.splice(idxFwd,1); } else { stack.splice(idxRev,1); }
+        if(idxFwd > idxRev){ closeAt(idxFwd); } else { closeAt(idxRev); }
         i+=2; continue;
       }
       // no gradient open — fall through so the plain ] and } handlers below
@@ -185,15 +197,15 @@ export function tokenizeInline(text, accent1On, accent2On){
       if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=1; continue; }
       if(idx===-1 && !isSpace(text[i+1])){ stack.push({type:'underline'}); i+=1; continue; }
     }
-    if(accent1On && c==='['){ stack.push({type:'accent1'}); i+=1; continue; }
+    if(accent1On && c==='['){ push('accent1'); i+=1; continue; }
     if(accent1On && c===']'){
       const idx = findLastStackIndex(stack,'accent1');
-      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+      if(idx!==-1){ closeAt(idx); i+=1; continue; }
     }
-    if(accent2On && c==='{'){ stack.push({type:'accent2'}); i+=1; continue; }
+    if(accent2On && c==='{'){ push('accent2'); i+=1; continue; }
     if(accent2On && c==='}'){
       const idx = findLastStackIndex(stack,'accent2');
-      if(idx!==-1){ stack.splice(idx,1); i+=1; continue; }
+      if(idx!==-1){ closeAt(idx); i+=1; continue; }
     }
     chars.push({ch:c, ...snapshot()});
     i += 1;
@@ -209,6 +221,7 @@ export function tokenizeInline(text, accent1On, accent2On){
     }
   }
   if(runs.length===0) runs.push({text:'', bold:false, italic:false, underline:false, strike:false, color:null});
+  if(state) state.stack = stack.filter(it => it.id != null && (!state.keep || state.keep.has(it.id)));
   return runs;
 }
 
@@ -362,7 +375,27 @@ function parseSegmentDirective(dirStr, part){
   // unrecognized directive — ignored rather than thrown, so a typo doesn't break the whole line
 }
 
+// A line's segment groups, nested: each closer (/dirs>) closes the innermost open '<'. An opener left open before a
+// closed group (a literal '<', as in "<3") means the line is read the old way instead (the first '<' with the first
+// closer after it), so every line PML has always read the same is read the same. Also hands on the openers left open
+// and the closers that found none (`free`): a segment carried over lines (expandBlocks).
+const SEG_CLOSER = /^((?:\/[^\/<>\n]+)+)>/;
+function segGroupsOf(line){
+  const st = [], groups = [], freeClose = [];
+  for(let i = 0; i < line.length; i++){
+    if(line[i] === '<'){ st.push(i); continue; }
+    if(line[i] !== '/') continue;
+    const m = SEG_CLOSER.exec(line.slice(i)); if(!m) continue;
+    if(st.length){ const o = st.pop(); groups.push({ open: o, cs: i, end: i + m[0].length, dirs: m[1], depth: st.length }); }
+    else freeClose.push({ at: i, end: i + m[0].length, dirs: m[1] });
+    i += m[0].length - 1;
+  }
+  if(st.length && groups.some(g => g.open > st[0])) return { old: true };
+  return { old: false, groups, freeOpen: st, freeClose };
+}
 function parseSegmentedLine(content){
+  const G = segGroupsOf(content);
+  if(!G.old && G.groups.some(g => g.depth > 0)) return parseNestedSegments(content, G.groups);
   const re = /<([\s\S]*?)((?:\/[^\/<>]+)+)>/g;
   let m, lastIndex=0, found=false;
   const parts = [];
@@ -386,6 +419,92 @@ function parseSegmentedLine(content){
   }
   return parts;
 }
+const blankSegPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customTracking:null, customBasis:null, customJitter:null, customEffect:null, customTypeEffect:null, customGradient:null});
+// segments within segments: each piece of text takes the directives of every group round it, the outer first, so an
+// inner one's own directive wins where they set the same thing
+function parseNestedSegments(content, groups){
+  const parts = [];
+  const walk = (from, to, depth, dirs) => {
+    let at = from;
+    for(const g of groups.filter(g => g.depth === depth && g.open >= from && g.end <= to).sort((a, b) => a.open - b.open)){
+      if(g.open > at) addPart(content.slice(at, g.open), dirs);
+      const inner = dirs.concat(g.dirs.split('/').filter(Boolean)), n0 = parts.length;
+      walk(g.open + 1, g.cs, depth + 1, inner);
+      if(parts.length === n0) addPart('', inner);
+      at = g.end;
+    }
+    if(at < to) addPart(content.slice(at, to), dirs);
+  };
+  const addPart = (text, dirs) => { if(!text.length && !dirs.length) return; const part = blankSegPart(text); for(const d of dirs) parseSegmentDirective(d, part); parts.push(part); };
+  walk(0, content.length, 0, []);
+  return parts;
+}
+
+// ---------- BLOCKS OVER LINES (Ruby: "treat [] {} like a pseudo segment operator and allow it (and the normal segment
+// operator) to split lines … it should still allow hierarchy — all the weird things should be able to nest") ----------
+// A bracket ([ ] { } {[ ]} [{ }]) or a segment (<…/dirs>) left open at the end of a line and closed on a later line is
+// carried: closed at the end of each line it runs over and opened again at the start of the next (after a line's
+// prefix, before its suffix), so every line stays one-line PML. Directives right after a bracket's closer
+// ("[…]/jitter:200/f:12") make the bracket a segment of its own; alignment alone after a block's closer at the end of
+// its last line ("…]/c") aligns every line of the block. A bracket never closed ends with its line, as it always did,
+// and a poem that uses none of this is not touched.
+const PML_PREFIX = /^(## |-# |> |#D |#S )/, PML_SUFFIX = /(\s*~[A-Da-d])?(\s*\/[lcrLCR])?\s*$/;
+const DIR_RUN = /^(?:\/(?:[^\s\/<>\[\]{}()]|\([^)\n]*\))+)+/, ALIGN_DIRS = new Set(['l', 'c', 'r', 'left', 'center', 'centre', 'right']);
+const knownDirective = d => { const part = {}; parseSegmentDirective(d, part); return Object.keys(part).length > 0; };
+// the [x/lg] gradient forms, masked (same length) so their brackets are not taken for a block's
+const maskGradients = (t, a1, a2) => { const mask = m => '\u0001'.repeat(m.length);
+  if(a1) t = t.replace(/\[([^\[\]]*?)\/(?:lg|rg)\]/g, mask); if(a2) t = t.replace(/\{([^\{\}]*?)\/(?:lg|rg)\}/g, mask); return t; };
+export function expandBlocks(rawText, accent1On, accent2On){
+  const raw = rawText.replace(/\r\n/g,'\n').split('\n');
+  if(!/[\[{<]/.test(rawText)) return raw;
+  const lines = raw.map(applyEscapes), isText = lines.map((l, k) => raw[k] !== '' && !parseRule(raw[k].trim(), accent1On, accent2On));
+  const items = [], br = [], segOpen = [];   // items: { kind: 'br'|'seg', l0, p0, l1, p1, open, close, dirs }
+  for(let k = 0; k < lines.length; k++){ if(!isText[k]) continue;
+    const L = lines[k], M = maskGradients(L, accent1On, accent2On), G = segGroupsOf(L);
+    // the segments: openers left open and closers with no opener on their line pair across lines
+    if(!G.old){ for(const c of G.freeClose){ const o = segOpen.pop(); if(o) items.push({ kind: 'seg', l0: o.l, p0: o.p, l1: k, p1: c.at, open: '<', close: c.dirs + '>' }); }
+      for(const p of G.freeOpen) segOpen.push({ l: k, p }); }
+    // the brackets, by the tokenizer's own rules
+    for(let i = 0; i < M.length; i++){
+      const two = M.slice(i, i + 2), last = t => { for(let j = br.length - 1; j >= 0; j--) if(br[j].t === t) return j; return -1; };
+      if(accent1On && accent2On && (two === '{[' || two === '[{')){ br.push({ t: two === '{[' ? 'gradFwd' : 'gradRev', open: two, l: k, p: i }); i++; continue; }
+      if(two === ']}' || two === '}]'){ const f = last('gradFwd'), r = last('gradRev');
+        if(f !== -1 || r !== -1){ const o = br.splice(Math.max(f, r), 1)[0]; items.push({ kind: 'br', l0: o.l, p0: o.p, l1: k, p1: i, end: i + 2, open: o.open, close: ']}' }); i++; continue; } }
+      const ch = M[i], t = ch === '[' && accent1On ? 'accent1' : ch === '{' && accent2On ? 'accent2' : null;
+      if(t){ br.push({ t, open: ch, l: k, p: i }); continue; }
+      const ct = ch === ']' && accent1On ? 'accent1' : ch === '}' && accent2On ? 'accent2' : null;
+      if(ct){ const j = last(ct); if(j !== -1){ const o = br.splice(j, 1)[0]; items.push({ kind: 'br', l0: o.l, p0: o.p, l1: k, p1: i, end: i + 1, open: o.open, close: ch }); } } } }
+  // directives right after a bracket's closer: alignment alone at the end of a block's line aligns the block; anything
+  // else makes the bracket a segment of its own (a '<' before its opener, a '>' after its directives)
+  const edits = lines.map(() => []), align = new Map();
+  for(const it of items.filter(it => it.kind === 'br')){
+    const after = lines[it.l1].slice(it.end), m = DIR_RUN.exec(after); if(!m) continue;
+    const dirs = m[0].split('/').filter(Boolean); if(!dirs.every(knownDirective)) continue;
+    const rest = after.slice(m[0].length); if(rest[0] === '>') continue;   // (those directives are a segment's own closer)
+    if(dirs.every(d => ALIGN_DIRS.has(d.trim().toLowerCase())) && /^(\s*~[A-Da-d])?\s*$/.test(rest)){ if(it.l1 > it.l0 && dirs.length === 1 && dirs[0].length === 1) align.set(it, '/' + dirs[0]); continue; }
+    edits[it.l0].push([it.p0, '<']); edits[it.l1].push([it.end + m[0].length, '>']);
+    if(it.l1 > it.l0) items.push({ kind: 'seg', l0: it.l0, p0: it.p0 - 0.5, l1: it.l1, p1: it.end, open: '<', close: m[0] + '>' });
+  }
+  const multi = items.filter(it => it.l1 > it.l0);
+  if(!multi.length && !edits.some(e => e.length)) return raw;
+  // each line a block runs over: its carried openers after the prefix (the outer first), its closers before the suffix
+  // (the inner first), the alignment of a block that asked for it
+  const out = raw.slice();
+  for(let k = 0; k < lines.length; k++){
+    if(!isText[k]) continue;
+    const runs = multi.filter(it => it.l0 <= k && it.l1 >= k), ins = edits[k].slice();
+    if(!runs.length && !ins.length) continue;
+    let L = lines[k];
+    for(const [p, t] of ins.sort((a, b) => b[0] - a[0])) L = L.slice(0, p) + t + L.slice(p);
+    const pre = (PML_PREFIX.exec(L) || [''])[0], sufM = PML_SUFFIX.exec(L.slice(pre.length)), body = L.slice(pre.length, pre.length + sufM.index), suf = L.slice(pre.length + sufM.index);
+    const openers = runs.filter(it => it.l0 < k).sort((a, b) => a.l0 - b.l0 || a.p0 - b.p0).map(it => it.open + SENT_JOINT).join('');
+    const closers = runs.filter(it => it.l1 > k).sort((a, b) => b.l0 - a.l0 || b.p0 - a.p0).map(it => SENT_JOINT + it.close).join('');
+    let al = ''; for(const [it, a] of align) if(it.l0 <= k && it.l1 > k && !sufM[2]) al = a;
+    out[k] = pre + openers + body + closers + suf + al;
+  }
+  return out;
+}
+
 /** A horizontal rule line, or null. Directives in <---...> may be separated
  *  by / (as in all PML) or \ (a rule has nothing to escape). */
 export function parseRule(t, accent1On, accent2On){
@@ -414,7 +533,7 @@ export function parseRule(t, accent1On, accent2On){
 }
 
 export function buildLines(rawText, accent1On, accent2On){
-  const rawLines = rawText.replace(/\r\n/g,'\n').split('\n');
+  const rawLines = expandBlocks(rawText, accent1On, accent2On);
   return rawLines.map(rawLine=>{
     if(rawLine === '') return {isBlank:true};
     // a horizontal rule: ---, [---] or {---} for the accents, or a segment
@@ -447,8 +566,12 @@ export function buildLines(rawText, accent1On, accent2On){
 
     const rawParts = parseSegmentedLine(content);
     if(rawParts){
+      // a bracket left open in one part runs on into the next while a later part closes it (first find which do)
+      const seen = { stack: [], next: 0, closed: new Set() };
+      for(const p of rawParts) tokenizeInline(p.text, accent1On, accent2On, seen);
+      const carry = { stack: [], next: 0, closed: new Set(), keep: seen.closed };
       const parts = rawParts.map(p=>{
-        let segments = tokenizeInline(p.text, accent1On, accent2On);
+        let segments = tokenizeInline(p.text, accent1On, accent2On, carry);
         if(type==='quote') segments = segments.map(s=>({...s, italic:true}));
         // every field a directive can set must be copied here, or it is
         // parsed and then silently dropped — which is what /effect did

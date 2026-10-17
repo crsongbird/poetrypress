@@ -708,7 +708,7 @@ export const TEXTURE_GROUPS = [
   { glyph: '🜃', name: 'Paper & Grounds', types: ['coldpress', 'grain', 'linen', 'oldpaper'] },
   { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'magicparticles', 'clouds', 'embers', 'aurora'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
-  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringworld'] },
+  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'skyring', 'ringworld'] },
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
   { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackle', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass', 'underglass', 'brokenglass'] },

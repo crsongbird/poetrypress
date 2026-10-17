@@ -87,6 +87,34 @@ Split a line between alignments:
 
 Emoji inside a colored span are tinted to match.
 
+### Over many lines, and nesting
+
+A bracket (`[ ]` `{ }` `{[ ]}` `[{ ]}`) or a segment (`<…/dirs>`) may run over
+several lines: open it on one line, close it on a later one, and every line
+between takes it. A bracket that never closes still ends with its line.
+
+| Syntax | Result |
+|---|---|
+| `[line one`↵`line two]` | both lines in accent one |
+| `[stanza`↵`…`↵`end]/c` | alignment alone after the closer: every line of the block centered |
+| `[words]/jitter:150` | directives after a bracket's closer: the bracket is a segment of its own |
+| `{[one`↵`two}]/jitter:200/f:12` | the same over lines: each line its own segment |
+| `<line one`↵`line two/c>` | a segment over lines |
+| `<a <b/f:3> c/scale:150>` | a segment inside a segment: `b` takes both, its own last |
+| `[a <b/f:3> c]` | a bracket runs through a segment inside it |
+
+Try:
+
+```
+[This is a stanza
+that should be colored
+and centered]/c
+```
+
+*Changed (Saturn–Ijiraq on):* a poem that left a bracket open on one line and
+wrote a closer on a later one used to show that closer as text; the block now
+runs between them. `<` read as a literal (as in `<3`) is read as it always was.
+
 ---
 
 ### Effects and underlines

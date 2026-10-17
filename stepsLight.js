@@ -138,7 +138,8 @@ function oilPaint(src, w, h, o){
       const col = `rgba(${Math.round(c[0]*j + warm)},${Math.round(c[1]*j)},${Math.round(c[2]*j - warm)},${0.92*o.amount})`;
       const path = (x, off) => { x.beginPath(); pts.forEach(([a, b], q) => { const nx = q < pts.length - 1 ? pts[q+1][1] - b : b - pts[q-1][1], ny = q < pts.length - 1 ? -(pts[q+1][0] - a) : -(a - pts[q-1][0]), m = Math.hypot(nx, ny) || 1;
         const X = a + nx/m*off, Y = b + ny/m*off; q ? x.lineTo(X, Y) : x.moveTo(X, Y); }); };
-      // the paint
+      // the paint, as the BRUSH lays it (Ruby: "you get to make brushes and paint with them"); the round brush as it always was
+      if(o.brush){ oilBrush(px, hx, pts, c, j, warm, r, o, colAt, w, h); continue; }
       px.strokeStyle = col; px.lineWidth = r*1.6; path(px, 0); px.stroke();
       // its bristles: a few threads a little lighter and darker along it
       for(let b = 0; b < 4; b++){ const off = (R() - 0.5)*r*1.3, t = R() < 0.5 ? 0.88 : 1.12;
@@ -203,7 +204,48 @@ function oilPaint(src, w, h, o){
   }
   return [pc, hc];
 }
-const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, 'length', 100)/100, detail: E.num(n, 'detail', 50)/100, vary: E.num(n, 'vary', 50)/100, amount: E.num(n, 'amount', 100)/100 });
+const oilOpts = (E, n) => ({ size: E.num(n, 'size', 100)/100, length: E.num(n, 'length', 100)/100, detail: E.num(n, 'detail', 50)/100, vary: E.num(n, 'vary', 50)/100, amount: E.num(n, 'amount', 100)/100,
+  brush: Math.min(3, Math.floor(E.num(n, 'brush', 0)/100*4)) });
+// THE BRUSHES (the round one is oilPaint's own): one stroke along pts in colour c, its heights on hx.
+//   1 · FLAT: a ribbon of even width with square ends, loaded with two tones across it, its bristles' streaks along it
+//   2 · PALETTE KNIFE: a short straight plane of paint, crisp-edged, smeared from this colour into the colour where it
+//       ends, a lip of paint along one edge where the knife lifted (the geometric painter's tool)
+//   3 · DRY BRUSH: little paint on many bristles: broken threads that skip, the ground showing between
+function oilBrush(px, hx, pts, c, j, warm, r, o, colAt, w, h){
+  const R = Math.random, rgba = (k, a) => `rgba(${Math.round(c[0]*j*k + warm)},${Math.round(c[1]*j*k)},${Math.round(c[2]*j*k - warm)},${a})`;
+  const lum0 = (0.299*c[0] + 0.587*c[1] + 0.114*c[2])/255, tk = 0.6 + 0.8*lum0, H = v => { const g = Math.max(0, Math.min(255, 60 + (v - 60)*tk))|0; return `rgb(${g},${g},${g})`; };
+  const off = (q, d) => { const [a, b] = pts[q], nx = q < pts.length - 1 ? pts[q+1][1] - b : b - pts[q-1][1], ny = q < pts.length - 1 ? -(pts[q+1][0] - a) : -(a - pts[q-1][0]), m = Math.hypot(nx, ny) || 1; return [a + nx/m*d, b + ny/m*d]; };
+  const line = (x, d, wd, style, cap = 'butt') => { x.lineCap = cap; x.strokeStyle = style; x.lineWidth = wd; x.beginPath(); pts.forEach((_, q) => { const [X, Y] = off(q, d); q ? x.lineTo(X, Y) : x.moveTo(X, Y); }); x.stroke(); };
+  if(o.brush === 1){
+    const wd = r*2.1;
+    line(px, 0, wd, rgba(1, 0.94*o.amount));
+    line(px, -wd*0.3, wd*0.4, rgba(1.12, 0.45*o.amount)); line(px, wd*0.3, wd*0.35, rgba(0.88, 0.4*o.amount));
+    for(let b = 0; b < 6; b++){ const d = (R() - 0.5)*wd*0.9; line(px, d, Math.max(cpx(0.5), r*0.08), rgba(R() < 0.5 ? 0.85 : 1.15, 0.3*o.amount)); }
+    line(hx, 0, wd, H(130)); line(hx, -wd*0.48, Math.max(cpx(0.6), r*0.2), H(165)); line(hx, wd*0.48, Math.max(cpx(0.6), r*0.2), H(165));
+    for(let b = 0; b < 4; b++) line(hx, (R() - 0.5)*wd*0.8, Math.max(cpx(0.4), r*0.08), H(108));
+  } else if(o.brush === 2){
+    // straight, from the stroke's first point to its last; as wide as a knife's blade is long
+    const [ax, ay] = pts[0], [bx, by] = pts[pts.length - 1], dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || r, ux = dx/L, uy = dy/L, nx = -uy, ny = ux;
+    const wd = r*(1.3 + R()*0.9), skew = (R() - 0.5)*r*0.8, L2 = Math.max(r*2.6, L*1.05), e = colAt(Math.min(1, Math.max(0, bx/w)), Math.min(1, Math.max(0, by/h)));
+    const P = [[ax - nx*wd/2, ay - ny*wd/2], [ax + ux*L2 - nx*wd/2 + ux*skew, ay + uy*L2 - ny*wd/2 + uy*skew], [ax + ux*L2 + nx*wd/2, ay + uy*L2 + ny*wd/2], [ax + nx*wd/2 - ux*skew*0.4, ay + ny*wd/2 - uy*skew*0.4]];
+    const g = px.createLinearGradient(ax, ay, ax + ux*L2, ay + uy*L2), mixc = t => [0, 1, 2].map(i => Math.round((c[i]*(1 - t) + e[i]*t)*j));
+    const [c0, c1] = [mixc(0), mixc(0.55)]; g.addColorStop(0, `rgba(${c0[0] + Math.round(warm)},${c0[1]},${c0[2] - Math.round(warm)},${0.97*o.amount})`); g.addColorStop(1, `rgba(${c1[0]},${c1[1]},${c1[2]},${0.97*o.amount})`);
+    const poly = (x, style) => { x.fillStyle = style; x.beginPath(); P.forEach(([X, Y], q) => q ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.closePath(); x.fill(); };
+    poly(px, g);
+    // drag: the knife's own scrape across the plane, and the lip where it lifted, catching the light
+    for(let b = 0; b < 3; b++){ const t = 0.15 + 0.7*R(); px.strokeStyle = rgba(R() < 0.5 ? 0.9 : 1.1, 0.25*o.amount); px.lineWidth = Math.max(cpx(0.4), r*0.06);
+      px.beginPath(); px.moveTo(P[0][0] + (P[3][0] - P[0][0])*t, P[0][1] + (P[3][1] - P[0][1])*t); px.lineTo(P[1][0] + (P[2][0] - P[1][0])*t, P[1][1] + (P[2][1] - P[1][1])*t); px.stroke(); }
+    px.strokeStyle = rgba(1.22, 0.6*o.amount); px.lineWidth = Math.max(cpx(0.6), r*0.12); px.lineCap = 'butt'; px.beginPath(); px.moveTo(P[1][0], P[1][1]); px.lineTo(P[2][0], P[2][1]); px.stroke();
+    poly(hx, H(140)); hx.strokeStyle = H(190); hx.lineWidth = Math.max(cpx(0.7), r*0.18); hx.beginPath(); hx.moveTo(P[1][0], P[1][1]); hx.lineTo(P[2][0], P[2][1]); hx.stroke();
+  } else {
+    const wd = r*2;
+    for(let b = 0; b < 14; b++){ const d = (R() - 0.5)*wd, a = (0.25 + 0.55*R())*o.amount, k = R() < 0.5 ? 0.85 : 1.15;
+      px.setLineDash ? px.setLineDash([r*(0.6 + R()*2.2), r*(0.2 + R()*0.9)]) : 0; line(px, d, Math.max(cpx(0.5), r*0.11), rgba(k, a), 'round');
+      hx.setLineDash ? hx.setLineDash([r*(0.6 + R()*2), r*0.4]) : 0; line(hx, d, Math.max(cpx(0.4), r*0.1), H(100 + R()*30), 'round'); }
+    if(px.setLineDash){ px.setLineDash([]); hx.setLineDash([]); }
+  }
+  px.lineCap = 'round'; hx.lineCap = 'round';
+}
 
 /** A plain-weave canvas as heights, on a w×h grid (thread every `pitch` px). */
 function weaveField(w, h, pitch){
@@ -415,7 +457,8 @@ export const LIGHT_STEPS = {
         for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*ltK(K[i], M, c) + s*(M ? M.hi[c] : 1); }
       return [out, lf, S]; } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
-    params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50)],
+    params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),
+      LT_R('brush', 'Brush: Round · Flat · Knife · Dry', 0)],
     cost: () => 16,
     paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
     run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));

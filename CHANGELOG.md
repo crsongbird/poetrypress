@@ -4,6 +4,58 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Ijiraq (2026-10-17)
+
+- **Two new surfaces in Sky & Cosmos:**
+  - **Painted Ringworld.** The view from a ringworld's floor, painted in flat
+    shapes. The land rises into the arch, which bows across the sky through
+    its star, and the rim wall stands at the horizon. Hills, forests and
+    whatever the builders left are drawn ridge behind ridge.
+    - **World** chooses who and what lives there: By the Seed, Wilds, Cities,
+      Neon, Builders, Magic, Ruins, or Mixed (three worlds side by side).
+      Rings can also have little creatures, crashed ships, ships overhead,
+      roads, great spans from wall to wall, spires, summoning circles and
+      crystals.
+    - **Life**, **Works** and **Altitude** (from the grass to high over the
+      land) set how much grows, how much is built, and how high you stand.
+    - The camera dial is the camera, as on Ringworld. The light dial is the
+      time of day: at night the cities light, and the arch still shines
+      where its own day is.
+    - The lights take the page's accents.
+    - **Paint** lays oil paint over the shapes with the **Brush** you choose.
+      At 0 the shapes stay flat.
+  - **Ring in the Sky.** A ring round its star, seen from out in space, in
+    flat blocks of land, sea and cloud: a simple, cosmic page to lay behind a
+    poem. The camera dial spins it, opens it from edge-on to a full circle,
+    and sizes it. Star Height places it on the page.
+- **Oil Paint has four brushes** in the Athanor: Round (as before), Flat,
+  Palette Knife and Dry.
+- **Shape Aware:**
+  - **Shape Strength**, a new slider beside it, softens how strongly the
+    surface answers the words, from barely to fully.
+  - **More surfaces answer it.** Knotwork leaves its cells off the lines.
+    Stained Glass sets the poem in one pale pane. Facet Field lies flat under
+    the words. Turing Skin thins out there. Deep Field's stars fade. Broken
+    Glass keeps its shards off the lines, and Dewy Webs keeps its webs off
+    them.
+- **PML:**
+  - **Blocks over many lines.** A bracket left open on one line and closed
+    on a later one now colors every line between. So does a segment
+    (`<…/dirs>`).
+  - **Directives after a bracket.** Directives straight after a bracket's
+    closer make it a segment of its own, so `[words]/jitter:150` works
+    without angle brackets, also over lines. An alignment alone after a
+    block's last line (`…]/c`) aligns the whole block.
+  - **Nesting.** A segment inside a segment takes both sets of directives,
+    its own last. A bracket runs through a segment inside it.
+  - **Changed:** a poem that left a bracket open on one line and wrote its
+    closer on a later line used to show that closer as text. The block now
+    runs between them. Everything else reads as it did.
+- **Under the hood:**
+  - The Painted Ringworld's parts (The Arch, Land on the Ring) live in
+    stepsRing.js and share Ringworld's camera.
+  - Ring in the Sky and Land of Shapes are Athanor parts.
+
 ## Saturn–Kiviuq (2026-10-17)
 
 - **The preview is the saved image again.** Circuit Board could save a

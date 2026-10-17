@@ -6,7 +6,7 @@
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
 import { PLANETS, ZODIAC } from './symbolLore.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, greyLit, pickWeighted } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, wordsRoom, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, greyLit, pickWeighted } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -457,7 +457,7 @@ export function genInkBleed(w,h,amt,zoom,form,colour,tint1,tint2){
 // (Fractured Glaze is a chain of steps now: chains.js — stepsChaos.js
 // 'crazing', 'brushwork' and 'glaze')
 
-export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL){
+export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
   amt = (amt==null?0:amt); zoom = (zoom==null?1:zoom);
   // A CARVED surface: triangles sharing their corners (no gaps), each a tilted
   // plane at its own depth — some sunk deeper than their neighbours. Lit by
@@ -474,11 +474,15 @@ export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL){
     const edge = rx === 0 || ry === 0 || rx === cols || ry === rows;
     row.push([(rx - 1)*cell + (edge ? 0 : (Math.random() - 0.5)*J), (ry - 1)*cell + (edge ? 0 : (Math.random() - 0.5)*J)]); } V.push(row); }
   const H = new Float32Array(ww*wh);
+  // ROUND THE WORDS (Shape Aware): a facet near the poem is ground flat, whole, so the words sit on a plate of polished
+  // facets whose edge is the cut field's own
+  const room = ctx ? wordsRoom(ctx, ww, wh, 0.35, 1.3) : null;
   // one facet: a plane through its centre, with a depth and a tilt
   const facet = (A, Bv, C) => {
-    const depth = -Math.pow(Math.random(), 1.6)*cell*0.32;               // most shallow, a few sunk deep
-    const tx = (Math.random() - 0.5)*0.55, ty = (Math.random() - 0.5)*0.55;
+    let depth = -Math.pow(Math.random(), 1.6)*cell*0.32;               // most shallow, a few sunk deep
+    let tx = (Math.random() - 0.5)*0.55, ty = (Math.random() - 0.5)*0.55;
     const cx = (A[0] + Bv[0] + C[0])/3, cy = (A[1] + Bv[1] + C[1])/3;
+    if(room){ const k = room[Math.min(wh - 1, Math.max(0, cy | 0))*ww + Math.min(ww - 1, Math.max(0, cx | 0))], f = k < 0.5 ? 0 : (k - 0.5)*2; depth *= f; tx *= f; ty *= f; }
     const x0 = Math.max(0, Math.floor(Math.min(A[0], Bv[0], C[0]))), x1 = Math.min(ww - 1, Math.ceil(Math.max(A[0], Bv[0], C[0])));
     const y0 = Math.max(0, Math.floor(Math.min(A[1], Bv[1], C[1]))), y1 = Math.min(wh - 1, Math.ceil(Math.max(A[1], Bv[1], C[1])));
     const area = (Bv[0] - A[0])*(C[1] - A[1]) - (C[0] - A[0])*(Bv[1] - A[1]);

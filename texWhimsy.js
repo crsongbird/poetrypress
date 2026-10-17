@@ -75,7 +75,7 @@ export function genAstralFog(w,h,amt,zoom,light,tint,form){
   return full;
 }
 
-export function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL){
+export function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL,room){
   amt = (amt==null?1:amt);
   const M = buildMatterMap();                 // FIRST: the same map the nebula uses
   const atm = Math.max(0, Math.min(1, form==null ? 0.2 : form));
@@ -128,6 +128,8 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL){
       glowAt(x - dx, y, core*1.6, [80, 130, 255], 0.32*atm);
       fctx.globalCompositeOperation = 'source-over';
     }
+    // (Shape Aware: round the words the stars fade, leaving the poem a clearing of dark sky)
+    const rm = room ? room[Math.min(h - 1, Math.max(0, y | 0))*w + Math.min(w - 1, Math.max(0, x | 0))] : 1; fctx.globalAlpha = rm;
     glowAt(x, y, halo, c, Math.min(1, 0.35 + b*0.75));
     glowAt(x, y, core, [Math.min(255, c[0] + 40), Math.min(255, c[1] + 40), Math.min(255, c[2] + 40)], 1);
     if(b > 0.8){
@@ -144,6 +146,7 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL){
         fctx.beginPath(); fctx.moveTo(x, y); fctx.lineTo(x + Math.cos(a)*len, y + Math.sin(a)*len); fctx.stroke();
       }
     }
+    fctx.globalAlpha = 1;
   }
   // AIRGLOW in the Glow Hue: the night sky's own faint light, from the high
   // atmosphere, rippled by gravity waves into slow bands across the whole

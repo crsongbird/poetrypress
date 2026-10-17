@@ -26,7 +26,7 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, wordsRoom, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh } from './texWhimsy.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -767,6 +767,188 @@ function whimAurora(x, w, h, o, px){
   x.restore();
 }
 const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math.round(c*255))).toString(16).padStart(2, '0')).join('');
+// ---------------- A RINGWORLD, PAINTED (Ruby: "an abstract ring world on a space background and then something made
+// of shapes then painted in the foreground and blend it … abstract, painterly, geometric, and blended representations";
+// the 3D one "looks kind of bad" rendered) ----------------
+// Two scene parts, each a stack of flat shapes laid as a painter blocks in a canvas before the brush goes over it: the
+// RING IN THE SKY (an ellipse of land and sea round its star, the far arc lit, the near arc its dark underside, the air
+// rising at the horizon), and the LAND OF SHAPES (faceted ridges band behind band, hazier as they go back, with spires,
+// arches, monoliths and crystals on them and trees on the near hills). Oil Paint's brushes paint them.
+export const rsMix = (a, b, t) => a.map((v, i) => v + (b[i] - v)*t);
+export const rsCss = (c, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`;
+export const rsPoly = (x, pts, fill) => { x.fillStyle = fill; x.beginPath(); pts.forEach(([X, Y], i) => i ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.closePath(); x.fill(); };
+// a face's colour by how squarely it faces the light: (nx, ny) its outward normal on the page, L the way to the light
+export const rsFace = (dark, lit, nx, ny, L) => { const l = Math.hypot(nx, ny) || 1; return rsMix(dark, lit, 0.5 + 0.5*Math.max(-1, Math.min(1, (nx*L[0] + ny*L[1])/l))); };
+export const rsSmooth = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a)/(b - a))); return t*t*(3 - 2*t); };
+function paintRingSky(x, mk, w, h, o){
+  const unit = Math.min(w, h), R = o.rnd, S = o.sky, Lh = o.land, px = o.px;
+  const SEA = rsMix([22, 58, 120], S, 0.3), CLOUD = [244, 245, 250], NIGHT = [20, 22, 48], METAL = rsMix([46, 50, 70], S, 0.2), SAND = rsMix(Lh, [218, 186, 128], 0.6), FOREST = rsMix(Lh, [20, 52, 34], 0.45);
+  const VIOLET = [150, 92, 206], ROSE = [210, 98, 128], SC = [255, 246, 226], la = (o.light - 90)*Math.PI/180, L = [Math.cos(la), Math.sin(la)];
+  // THE NEBULA: long washes of the sky's hue and its neighbours (violet, rose) along one band, the galaxy's, and a few
+  // broad ones anywhere; laid as light, so the dark between them stays space
+  x.save(); x.globalCompositeOperation = 'screen';
+  const wash = (cx, cy, rx, ry, a, col, al) => { x.save(); x.translate(cx, cy); x.rotate(a); x.scale(1, ry/rx); const g = x.createRadialGradient(0, 0, 0, 0, 0, rx);
+    g.addColorStop(0, rsCss(col, al)); g.addColorStop(0.5, rsCss(col, al*0.35)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(-rx, -rx, rx*2, rx*2); x.restore(); };
+  const ga = (R() - 0.5)*1.4, gx = w*(0.3 + 0.4*R()), gy = h*(0.12 + 0.22*R()), nW = Math.round(3 + 9*o.nebula);
+  for(let i = 0; i < nW; i++){ const d = (R() - 0.5)*unit*1.8, col = [S, VIOLET, ROSE, S][Math.floor(R()*4)];
+    wash(gx + Math.cos(ga)*d + (R() - 0.5)*unit*0.12, gy + Math.sin(ga)*d + (R() - 0.5)*unit*0.12, unit*(0.16 + 0.3*R()), unit*(0.05 + 0.09*R()), ga + (R() - 0.5)*0.5, col, 0.24*o.nebula); }
+  for(let i = 0; i < Math.round(1 + 3*o.nebula); i++) wash(R()*w, R()*h*0.6, unit*(0.3 + 0.5*R()), unit*(0.15 + 0.25*R()), R()*3, R() < 0.5 ? S : VIOLET, 0.12*o.nebula);
+  // THE AIR: the sky's hue rising from the horizon, held in by the ring's walls
+  const hz = x.createLinearGradient(0, h*0.3, 0, h); hz.addColorStop(0, rsCss(S, 0)); hz.addColorStop(0.55, rsCss(S, 0.32*o.haze)); hz.addColorStop(1, rsCss(rsMix(S, [255, 255, 255], 0.4), 0.9*o.haze));
+  x.fillStyle = hz; x.fillRect(0, 0, w, h); x.restore();
+  // THE RING round its star (Turn spins it, View opens it, Zoom sizes it). Its band is drawn as an annulus opened by
+  // the view and a ribbon closed by it, so it keeps its width from edge-on to face-on; cut in short blocks, three across
+  const phi = o.tilt*Math.PI/180, sphi = Math.max(0.035, Math.sin(phi)), cx = w*0.5, cy = h*o.centre, A = Math.sqrt(w*h)*0.56*o.size, B = A*sphi;
+  const bw = 0.03 + 0.26*o.width, vb = bw*A*Math.cos(phi)*0.55, rot = o.turn*Math.PI/180, cr = Math.cos(rot), sr = Math.sin(rot);
+  const P = (t, z) => { const k = 1 - z*bw, s = Math.sin(t), ex = Math.cos(t)*A*k, ey = s*(B*k - z*vb); return [cx + ex*cr - ey*sr, cy + ex*sr + ey*cr]; };
+  const s1 = R()*10, s2 = R()*10, s3 = R()*10, s4 = R()*10, nsq = 6 + Math.floor(R()*8), sq0 = R();
+  const nz = (t, f, s) => { let v = 0, amp = 1, nm = 0; for(let k = 0; k < 3; k++){ v += amp*Math.sin(t*f*(k + 1)*1.31 + s*(k + 1)*2.3 + Math.sin(t*f*0.7 + s)*1.6); nm += amp; amp *= 0.5; } return v/nm; };
+  // night where a shadow square stands between the star and the land, its edges a short dusk
+  const nightOf = t => { const ph = ((t/(Math.PI*2))*nsq + sq0) % 1; return ph < 0.34 ? rsSmooth(0, 0.045, Math.min(ph, 0.34 - ph)) : 0; };
+  const N = 200, LANES = 3, step = Math.PI*2/N, isFar = i => Math.sin((i + 0.5)*step) < 0;
+  const block = (i, far) => { const t0 = i*step, t1 = (i + 1)*step + step*0.08, tm = (t0 + t1)/2;
+    for(let j = 0; j < LANES; j++){ const z0 = j/LANES, z1 = (j + 1)/LANES + (j < LANES - 1 ? 0.02 : 0), zm = (z0 + z1)/2, q = [P(t0, z0), P(t1, z0), P(t1, z1), P(t0, z1)];
+      let col;
+      if(far){ const v = nz(tm, 2.2, s1) + 0.2*nz(tm*3 + zm*0.9, 5, s2), dry = nz(tm*1.4 + zm*0.4, 3, s3), nf = nightOf(tm);
+        col = v < -0.1 ? rsMix(SEA, [255, 255, 255], 0.1*Math.max(0, v + 0.35)) : dry > 0.45 ? SAND : v > 0.5 ? FOREST : rsMix(Lh, FOREST, 0.25 + 0.3*nz(tm, 9, s4));
+        // the inner face is always lit by its star; the far reach of it hazed with the ring's own air
+        // (its clouds as blocks of white: Ruby, "that simplified, but cosmic")
+        const cl = nz(tm*1.6 + zm*0.5, 6, s4 + 1); if(cl > 0.4) col = rsMix(col, CLOUD, Math.min(0.75, (cl - 0.4)*4));
+        col = rsMix(rsMix(col, [255, 255, 255], 0.1), S, 0.16*o.haze);
+        if(nf > 0) col = rsMix(col, NIGHT, 0.86*nf); }
+      else { const nx = Math.cos(tm), ny = Math.sin(tm), d = nx*L[0] + ny*L[1];
+        col = rsMix(METAL, j === 1 ? [0, 0, 0] : [255, 255, 255], j === 1 ? 0.12 : 0.04); col = rsMix(col, d > 0 ? [235, 238, 248] : [0, 0, 0], Math.abs(d)*0.22);
+        if(i % 5 === 0) col = rsMix(col, [0, 0, 0], 0.2); }
+      rsPoly(x, q, rsCss(col)); rsPoly(mk, q, '#fff'); }
+    // the night side's cities: warm sparks on its land
+    if(far && nightOf(tm) > 0.5 && nz(tm, 3, s1) > -0.1) for(let k = 0; k < 3; k++){ if(R() > 0.55) continue; const [X, Y] = P(t0 + (t1 - t0)*R(), 0.15 + 0.7*R());
+      x.fillStyle = 'rgba(255,214,150,0.9)'; x.fillRect(X, Y, px(2.4), px(2.4)); } };
+  for(let i = 0; i < N; i++) if(isFar(i)) block(i, true);
+  // its rims catching the light, and the light it sheds into the air about it
+  const farArc = z => { x.beginPath(); for(let i = 0; i <= N/2; i++){ const [X, Y] = P(Math.PI + i*step, z); i ? x.lineTo(X, Y) : x.moveTo(X, Y); } };
+  // the air it holds, lit about its far arc
+  x.save(); x.globalCompositeOperation = 'screen'; x.lineWidth = bw*A*2.2; x.strokeStyle = rsCss(rsMix(S, [255, 255, 255], 0.3), 0.05*(0.5 + o.haze)); farArc(0.5); x.stroke(); x.restore();
+  x.lineWidth = px(2.6); x.strokeStyle = rsCss(rsMix([232, 238, 250], S, 0.2), 0.8);
+  for(const z of [0, 1]){ farArc(z); x.stroke(); }
+  // THE STAR at its middle: its glow, its long thin rays, its disc; the shadow squares circling close about it
+  const rs = unit*0.022*Math.sqrt(o.size);
+  x.save(); x.globalCompositeOperation = 'screen';
+  for(const [r, a] of [[rs*16, 0.35], [rs*6, 0.6]]){ const gl = x.createRadialGradient(cx, cy, 0, cx, cy, r); gl.addColorStop(0, rsCss(SC, a)); gl.addColorStop(0.2, rsCss(SC, a*0.35)); gl.addColorStop(1, rsCss(SC, 0)); x.fillStyle = gl; x.fillRect(cx - r, cy - r, r*2, r*2); }
+  for(let k = 0; k < 12; k++){ const a = k/12*Math.PI*2 + R()*0.2, Lr = rs*(k % 2 ? 4 : 9)*(0.8 + 0.4*R()), wd = rs*0.2;
+    rsPoly(x, [[cx + Math.cos(a + Math.PI/2)*wd, cy + Math.sin(a + Math.PI/2)*wd], [cx + Math.cos(a)*Lr, cy + Math.sin(a)*Lr], [cx - Math.cos(a + Math.PI/2)*wd, cy - Math.sin(a + Math.PI/2)*wd]], rsCss(SC, 0.4)); }
+  x.restore();
+  x.fillStyle = rsCss(SC); x.beginPath(); x.arc(cx, cy, rs, 0, Math.PI*2); x.fill();
+  for(let k = 0; k < nsq; k++){ const t = (k/nsq + sq0)*Math.PI*2, ex = Math.cos(t)*A*0.2, ey = Math.sin(t)*B*0.2, X = cx + ex*cr - ey*sr, Y = cy + ex*sr + ey*cr;
+    const a = Math.atan2(Y - cy, X - cx) + Math.PI/2, Ls = rs*1.5, Wd = rs*0.4, ca = Math.cos(a), sa = Math.sin(a);
+    rsPoly(x, [[X - ca*Ls, Y - sa*Ls], [X + ca*Ls, Y + sa*Ls], [X + ca*Ls - sa*Wd, Y + sa*Ls + ca*Wd], [X - ca*Ls - sa*Wd, Y - sa*Ls + ca*Wd]], rsCss(NIGHT, 0.92)); }
+  // the near arc, in front of the star: the band's underside, its panels, its lower rim lit
+  for(let i = 0; i < N; i++) if(!isFar(i)) block(i, false);
+  x.lineWidth = px(1.8); x.strokeStyle = rsCss(rsMix(METAL, [255, 255, 255], 0.4), 0.65);
+  x.beginPath(); for(let i = 0; i <= N/2; i++){ const [X, Y] = P(i*step, 0); i ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke();
+}
+function paintShapeLand(x, mk, dk, w, h, o){
+  const R = o.rnd, unit = Math.min(w, h), px = o.px, la = (o.light - 90)*Math.PI/180, L = [Math.cos(la), Math.sin(la)], Lh = o.land, HZ = o.haze3, SUN = [255, 244, 222], BLACK = [0, 0, 0];
+  const AIR = rsMix(HZ, [255, 255, 255], 0.3), METAL = [204, 210, 226], GLOW = [150, 224, 255], GREEN = rsMix([40, 88, 54], Lh, 0.45);
+  const nL = 3 + Math.round(o.layers*3), hy = h*o.horizon, rnd = (a, b) => a + (b - a)*R();
+  const jit = (c, k = 0.07) => { const q = (R() - 0.5)*2*k; return q > 0 ? rsMix(c, [255, 255, 255], q) : rsMix(c, BLACK, -q); };
+  // one tree, as a painter blocks it: a fir of stacked triangles, a round crown of facets, or a poplar; lit on the light's side
+  const tree = (X, Y, sz, fa, kind) => { const gc = rsMix(jit(GREEN, 0.1), AIR, fa*0.7), dark = rsMix(gc, BLACK, 0.3*(1 - fa)), lit = rsMix(gc, SUN, 0.28*(1 - fa*0.6)), sd = L[0] > 0 ? 1 : -1;
+    x.strokeStyle = rsCss(rsMix([70, 52, 40], AIR, fa*0.7)); x.lineWidth = Math.max(px(1), sz*0.08); x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - sz*0.4); x.stroke();
+    if(kind < 0.45){ for(let tier = 0; tier < 3; tier++){ const ty = Y - sz*(0.2 + tier*0.42), tw = sz*(0.42 - tier*0.1), th = sz*0.7;
+        rsPoly(x, [[X - tw, ty], [X, ty - th], [X + tw, ty]], rsCss(dark)); rsPoly(x, [[X, ty], [X, ty - th], [X + sd*tw, ty]], rsCss(lit)); } }
+    else if(kind < 0.75){ const r = sz*0.5, cy = Y - sz*0.75, pts = Array.from({ length: 7 }, (_, k) => { const a = k/7*Math.PI*2 + 0.3, rr = r*(0.85 + 0.25*R()); return [X + Math.cos(a)*rr, cy + Math.sin(a)*rr*0.9]; });
+      rsPoly(x, pts, rsCss(dark)); rsPoly(x, pts.map(([X1, Y1]) => [X + (X1 - X)*0.62 + L[0]*r*0.24, cy + (Y1 - cy)*0.62 + L[1]*r*0.24]), rsCss(lit)); }
+    else { const pw = sz*0.22, ph = sz*1.5; rsPoly(x, [[X, Y - sz*0.2], [X - pw, Y - sz*0.2 - ph*0.35], [X, Y - sz*0.2 - ph], [X + pw, Y - sz*0.2 - ph*0.35]], rsCss(dark));
+      rsPoly(x, [[X, Y - sz*0.2], [X + sd*pw, Y - sz*0.2 - ph*0.35], [X, Y - sz*0.2 - ph]], rsCss(lit)); } };
+  // THE BUILDERS' SHAPES: a spire, a gate, a standing ring (the ring overhead, echoed), a monolith, crystals
+  const structure = (ax, ay, s, fa) => { const kind = R(), m = rsMix(METAL, AIR, fa*0.75), md = rsMix(m, BLACK, 0.32*(1 - fa*0.5)), gl = rsMix(GLOW, AIR, fa*0.4), sd = L[0] > 0 ? 1 : -1;
+    const glow = (X, Y, r) => { x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(gl, 0.8)); g.addColorStop(1, rsCss(gl, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); };
+    if(kind < 0.3){ const bw2 = unit*0.022*s, sh = unit*(0.16 + 0.16*R())*s;
+      rsPoly(x, [[ax - bw2*1.6, ay + bw2], [ax - bw2, ay - bw2*1.2], [ax + bw2, ay - bw2*1.2], [ax + bw2*1.6, ay + bw2]], rsCss(md));
+      rsPoly(x, [[ax - bw2, ay], [ax, ay - sh], [ax + bw2, ay]], rsCss(md)); rsPoly(x, [[ax, ay], [ax, ay - sh], [ax + sd*bw2, ay]], rsCss(m));
+      rsPoly(x, [[ax - bw2*0.75, ay - sh*0.42], [ax + bw2*0.75, ay - sh*0.42], [ax + bw2*0.6, ay - sh*0.47], [ax - bw2*0.6, ay - sh*0.47]], rsCss(gl, 0.85));
+      glow(ax, ay - sh, bw2*3); }
+    else if(kind < 0.52){ const gw = unit*(0.07 + 0.06*R())*s, gh = gw*(1.15 + 0.5*R()), th = gw*0.24, gy = ay + th*0.4, ry = gy - gh + gw/2;
+      x.fillStyle = rsCss(md); x.beginPath(); x.moveTo(ax - gw/2, gy); x.lineTo(ax - gw/2, ry); x.arc(ax, ry, gw/2, Math.PI, 0); x.lineTo(ax + gw/2, gy);
+      x.lineTo(ax + gw/2 - th, gy); x.lineTo(ax + gw/2 - th, ry); x.arc(ax, ry, gw/2 - th, 0, Math.PI, true); x.lineTo(ax - gw/2 + th, gy); x.closePath(); x.fill();
+      x.fillStyle = rsCss(m); x.beginPath(); x.moveTo(ax + sd*gw/2, gy); x.lineTo(ax + sd*gw/2, ry); x.arc(ax, ry, gw/2, sd > 0 ? 0 : Math.PI, -Math.PI/2, sd > 0);
+      x.lineTo(ax, ry - gw/2 + th); x.arc(ax, ry, gw/2 - th, -Math.PI/2, sd > 0 ? 0 : Math.PI, sd < 0); x.lineTo(ax + sd*(gw/2 - th), gy); x.closePath(); x.fill();
+      x.save(); x.globalAlpha = 0.28; rsPoly(x, [[ax - gw/2 + th, gy], [ax - gw/2 + th, ry], [ax + gw/2 - th, ry], [ax + gw/2 - th, gy]], rsCss(gl)); x.restore(); }
+    else if(kind < 0.7){ const rr = unit*(0.035 + 0.025*R())*s, ph = rr*0.5, ccy = ay - ph - rr;
+      rsPoly(x, [[ax - rr*0.5, ay + rr*0.2], [ax - rr*0.3, ay - ph], [ax + rr*0.3, ay - ph], [ax + rr*0.5, ay + rr*0.2]], rsCss(md));
+      x.fillStyle = rsCss(md); x.beginPath(); x.arc(ax, ccy, rr, 0, Math.PI*2); x.arc(ax, ccy, rr*0.74, 0, Math.PI*2, true); x.fill();
+      const a0 = sd > 0 ? -Math.PI/2 : Math.PI/2; x.fillStyle = rsCss(m); x.beginPath(); x.arc(ax, ccy, rr, a0, a0 + Math.PI); x.arc(ax, ccy, rr*0.74, a0 + Math.PI, a0, true); x.closePath(); x.fill();
+      x.strokeStyle = rsCss(gl, 0.9); x.lineWidth = Math.max(px(1.5), rr*0.06); x.beginPath(); x.arc(ax, ccy, rr*0.74, 0, Math.PI*2); x.stroke(); glow(ax, ccy, rr*0.9); }
+    else if(kind < 0.86){ const mw = unit*(0.014 + 0.012*R())*s, mh = unit*(0.07 + 0.08*R())*s, tl = mh*0.14*(R() < 0.5 ? 1 : -1);
+      rsPoly(x, [[ax - mw, ay + mw*0.5], [ax - mw, ay - mh], [ax + mw, ay - mh + tl], [ax + mw, ay + mw*0.5]], rsCss(sd > 0 ? md : m));
+      rsPoly(x, [[ax + mw, ay + mw*0.5], [ax + mw, ay - mh + tl], [ax + mw*1.6, ay - mh + tl + mw*0.35], [ax + mw*1.6, ay + mw*0.8]], rsCss(sd > 0 ? m : md)); }
+    else for(let q = 0; q < 3 + Math.floor(R()*3); q++){ const cs = unit*(0.012 + 0.012*R())*s, a = (R() - 0.5)*0.9, ox = (R() - 0.5)*cs*3, c2 = rsMix(rsMix(GLOW, [176, 146, 255], R()), AIR, fa*0.5);
+        const tipX = ax + ox + Math.sin(a)*cs*4, tipY = ay - Math.cos(a)*cs*4, nx = Math.cos(a)*cs, ny = Math.sin(a)*cs;
+        rsPoly(x, [[ax + ox - nx, ay - ny], [tipX, tipY], [ax + ox + nx, ay + ny], [ax + ox, ay + cs*0.5]], rsCss(rsMix(c2, BLACK, 0.3)));
+        rsPoly(x, [[ax + ox, ay + cs*0.5], [tipX, tipY], [ax + ox + sd*nx, ay + sd*ny]], rsCss(c2)); glow(tipX, tipY, cs*1.5); } };
+  for(let i = 0; i < nL; i++){
+    const t = nL > 1 ? i/(nL - 1) : 1, base = hy + (h - hy)*Math.pow(t, 1.15)*0.82, amp = h*(0.03 + 0.2*o.height)*(1 - 0.5*t);
+    const fa = Math.pow(1 - t, 1.2)*(0.35 + 0.65*o.haze), col = rsMix(rsMix(Lh, BLACK, 0.1 + 0.42*t), AIR, fa*0.8);
+    const lit = rsMix(col, SUN, 0.32*(1 - fa*0.5)), dark = rsMix(col, BLACK, 0.36*(1 - fa*0.7));
+    const style = t < 0.3 ? 'peaks' : t > 0.72 ? 'hills' : ['peaks', 'mesas', 'hills'][Math.floor(R()*3)];
+    // THE RIDGE'S LINE, across the page and past it: a few great mountains (each a peak with its shoulders), flat-topped
+    // mesas, or rolling hills
+    const pts = [];
+    if(style === 'peaks'){ let xx = -w*rnd(0.05, 0.2);
+      while(xx < w*1.05){ const hw = w*rnd(0.12, 0.26)*(1 + 0.4*t), H = amp*rnd(0.55, 1), X = xx + hw, sk = rnd(-0.15, 0.15);
+        for(const [u, v] of [[-1, 0.04], [-0.62, rnd(0.25, 0.45)], [-0.3 + sk, rnd(0.6, 0.78)], [sk, 1], [0.25 + sk, rnd(0.66, 0.84)], [0.6, rnd(0.3, 0.5)]]) pts.push([X + u*hw, base - H*v, v === 1 ? 1 : 0]);
+        xx += hw*1.6; }
+      pts.push([xx + w*0.1, base - amp*0.05, 0]); }
+    else if(style === 'mesas'){ let xx = -w*rnd(0, 0.1);
+      while(xx < w*1.05){ const mw = w*rnd(0.1, 0.3), top = base - amp*rnd(0.4, 1.05), side = mw*rnd(0.1, 0.22);
+        pts.push([xx, base - amp*0.06*R(), 0], [xx + side, top, 2], [xx + mw - side, top + amp*(R() - 0.5)*0.08, 2], [xx + mw, base - amp*0.08*R(), 0]); xx += mw + w*rnd(0.03, 0.12); } }
+    else { const f = [rnd(2, 4), rnd(5, 9), rnd(11, 17)].map(v => v*Math.PI*2/w), ph = [R(), R(), R()].map(v => v*7), st = w*rnd(0.05, 0.08);
+      for(let xx = -st; xx < w + st*2; xx += st*rnd(0.8, 1.2)) pts.push([xx, base - amp*(0.45 + 0.3*Math.sin(xx*f[0] + ph[0]) + 0.17*Math.sin(xx*f[1] + ph[1]) + 0.08*Math.sin(xx*f[2] + ph[2])), 3]); }
+    const cand = [], sil = [...pts.map(p => [p[0], p[1]]), [pts[pts.length - 1][0], h + 2], [pts[0][0], h + 2]];
+    rsPoly(x, sil, rsCss(col)); rsPoly(mk, sil, '#fff'); const g = Math.round(255*(1 - t)); rsPoly(dk, sil, `rgb(${g},${g},${g})`);
+    // ITS FACETS, each shaded by how it faces the light: two down from each stretch of the line and one below them
+    // (crisp on mountains, soft on hills); snow on the far tall peaks; a mesa's cliffs, its lit top and its strata
+    if(style !== 'mesas'){ const rough = style === 'peaks' ? 1 : 0.45, foot = base + (h - base)*0.14;
+      for(let k = 0; k < pts.length - 1; k++){ const p0 = pts[k], p1 = pts[k + 1], q0 = [p0[0] + (p1[0] - p0[0])*(R() - 0.5)*0.3, p0[1] + (base - p0[1])*rnd(0.45, 0.7) + amp*0.1], q1 = [p1[0], p1[1] + (base - p1[1])*rnd(0.45, 0.7) + amp*0.1];
+        const face = rsFace(dark, lit, p1[1] - p0[1], p0[0] - p1[0], L);
+        rsPoly(x, [p0, p1, q0], rsCss(jit(face, 0.05*rough + 0.02))); rsPoly(x, [p1, q1, q0], rsCss(jit(rsMix(face, dark, 0.22*rough), 0.04)));
+        rsPoly(x, [q0, q1, [(q0[0] + q1[0])/2, foot]], rsCss(jit(rsMix(rsMix(face, col, 0.55), dark, 0.12), 0.04)));
+        if(style === 'peaks' ? p1[2] === 1 || (k % 6 === 2 && t > 0.2) : k % 3 === 1) cand.push([p1[0], p1[1]]); }
+      if(style === 'peaks' && t < 0.45 && o.height > 0.25) for(let k = 1; k < pts.length - 1; k++){ if(pts[k][2] !== 1 || base - pts[k][1] < amp*0.7) continue;
+        const pk = pts[k], pl = pts[k - 1], pr = pts[k + 1], f = rnd(0.3, 0.5), lf = [pk[0] + (pl[0] - pk[0])*f, pk[1] + (pl[1] - pk[1])*f], rf = [pk[0] + (pr[0] - pk[0])*f, pk[1] + (pr[1] - pk[1])*f], c = [pk[0] + (R() - 0.5)*(pr[0] - pl[0])*0.06, pk[1] + (base - pk[1])*f*0.5];
+        const sl = rsMix([250, 251, 255], AIR, fa*0.4), sd2 = rsMix(rsMix([176, 188, 216], HZ, 0.3), AIR, fa*0.4);
+        rsPoly(x, [pk, lf, [lf[0] + (c[0] - lf[0])*0.4, lf[1] + (base - lf[1])*0.08], c], rsCss(rsFace(sd2, sl, pk[1] - pl[1], pl[0] - pk[0], L)));
+        rsPoly(x, [pk, c, [rf[0] + (c[0] - rf[0])*0.4, rf[1] + (base - rf[1])*0.1], rf], rsCss(rsFace(sd2, sl, pr[1] - pk[1], pk[0] - pr[0], L))); } }
+    else for(let k = 0; k + 3 < pts.length; k += 4){ const [a, b, c, d] = pts.slice(k, k + 4), dep = (base - b[1])*0.8, front = rsMix(col, L[1] < 0 ? lit : dark, 0.2);
+      // its cliff in a few upright facets, its two sides shaded by the light, a lit rim along its top, a band of strata
+      const nf = 2 + Math.floor(R()*3), xs = Array.from({ length: nf + 1 }, (_, q) => b[0] + (c[0] - b[0])*(q/nf + (q && q < nf ? (R() - 0.5)*0.3/nf : 0)));
+      for(let q = 0; q < nf; q++){ const y0 = b[1] + (c[1] - b[1])*(xs[q] - b[0])/(c[0] - b[0] || 1), y1 = b[1] + (c[1] - b[1])*(xs[q + 1] - b[0])/(c[0] - b[0] || 1);
+        rsPoly(x, [[xs[q], y0], [xs[q + 1], y1], [xs[q + 1] + (R() - 0.5)*dep*0.1, y1 + dep], [xs[q], y0 + dep]], rsCss(jit(front, 0.06))); }
+      rsPoly(x, [a, b, [b[0], b[1] + dep], [a[0] - dep*0.2, a[1] + dep*0.3]], rsCss(jit(rsFace(dark, lit, b[1] - a[1], a[0] - b[0], L))));
+      rsPoly(x, [c, d, [d[0] + dep*0.2, d[1] + dep*0.3], [c[0], c[1] + dep]], rsCss(jit(rsFace(dark, lit, d[1] - c[1], c[0] - d[0], L))));
+      rsPoly(x, [b, c, [c[0], c[1] + dep*0.06], [b[0], b[1] + dep*0.06]], rsCss(rsMix(lit, SUN, 0.25*(1 - fa))));
+      const sy = b[1] + dep*rnd(0.3, 0.5); x.fillStyle = rsCss(rsMix(front, dark, 0.35)); x.fillRect(b[0], sy, c[0] - b[0], Math.max(px(1), dep*0.05));
+      if(R() < 0.4 && c[0] - b[0] > w*0.08){ const tw = (c[0] - b[0])*rnd(0.3, 0.5), tx = b[0] + (c[0] - b[0] - tw)*R(), th = dep*rnd(0.2, 0.4), ty = b[1] + (c[1] - b[1])*(tx - b[0])/(c[0] - b[0]);
+        rsPoly(x, [[tx, ty], [tx + tw*0.12, ty - th], [tx + tw*0.88, ty - th], [tx + tw, ty]], rsCss(jit(front, 0.05))); rsPoly(x, [[tx + tw*0.12, ty - th], [tx + tw*0.88, ty - th], [tx + tw*0.88, ty - th + dep*0.05], [tx + tw*0.12, ty - th + dep*0.05]], rsCss(rsMix(lit, SUN, 0.25*(1 - fa))));
+        cand.push([tx + tw/2, ty - th]); }
+      else cand.push([(b[0] + c[0])/2, (b[1] + c[1])/2]); }
+    // the builders' shapes, a few, on the middle and far ridges, nearer ones larger
+    if(t > 0.12 && t < 0.85){ const nS = Math.round(o.structures*2.6*rnd(0.4, 1.6));
+      for(let k = 0; k < nS && cand.length; k++){ const [ax, ay] = cand.splice(Math.floor(R()*cand.length), 1)[0]; if(ax > w*0.04 && ax < w*0.96) structure(ax, ay + unit*0.004, rnd(0.7, 1.3)*(0.5 + 0.7*t), fa); } }
+    // TREES in clumps on the nearer hills, some on the skyline, the rest down the slope
+    if(t >= 0.4 && o.foliage > 0){ const clumps = Math.round(o.foliage*7*(0.5 + R())*(0.6 + t));
+      const yAt = X => { for(let k = 0; k < pts.length - 1; k++) if(pts[k][0] <= X && pts[k + 1][0] > X){ const u = (X - pts[k][0])/(pts[k + 1][0] - pts[k][0]); return pts[k][1] + (pts[k + 1][1] - pts[k][1])*u; } return base; };
+      for(let c = 0; c < clumps; c++){ const X0 = R()*w, kind = R(), n = 2 + Math.floor(R()*6*o.foliage + R()*3), down = R() < 0.35 ? 0 : amp*rnd(0.1, 0.5);
+        const trees = Array.from({ length: n }, () => { const X = X0 + (R() - 0.5)*w*0.08*(0.5 + t); return [X, yAt(X) + down + R()*amp*0.15, unit*rnd(0.03, 0.065)*(0.35 + 0.9*t), kind < 0.85 ? kind : R()]; }).sort((a, b) => a[1] - b[1]);
+        for(const [X, Y, sz, k] of trees) tree(X, Y, sz, fa, k); } }
+  }
+  // AT YOUR FEET: a tree or two framing the page at one side, nearest and darkest, and grass in tufts along the near hill
+  if(o.foliage > 0.15){ const side = R() < 0.5 ? -1 : 1, X0 = side < 0 ? w*rnd(-0.04, 0.08) : w*rnd(0.92, 1.04), n = 2 + Math.floor(R()*3*o.foliage), kind = R() < 0.7 ? R()*0.45 : rnd(0.76, 1);
+    for(let k = 0; k < n; k++) tree(X0 + side*k*w*rnd(0.03, 0.07), h*rnd(1, 1.05), unit*rnd(0.2, 0.32)*(0.6 + 0.6*o.foliage)*(1 - 0.15*k), -0.25, kind); }
+  const gr = rsMix(GREEN, BLACK, 0.25), grl = rsMix(GREEN, SUN, 0.2);
+  for(let k = 0; k < Math.round(30*o.foliage + 6); k++){ const X = R()*w, Y = h*rnd(0.9, 1.0), sz = unit*rnd(0.01, 0.025);
+    for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*sz*0.25, Y], [X + b*sz*0.5 + (R() - 0.5)*sz*0.4, Y - sz*rnd(0.7, 1.4)], [X + b*sz*0.25 + sz*0.15, Y]], rsCss(b*L[0] > 0 ? grl : gr)); }
+}
 export const WHIMSY_STEPS = {
   // Silk Ribbons and Dream Bloom, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
   ribbons: kitWhole({ cat: 'Marks', label: 'Silk Ribbons', ins: ['blend from', 'curtain hue', 'hem hue'], outs: ['ribbons'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
@@ -809,7 +991,7 @@ export const WHIMSY_STEPS = {
       if(mv != null){ const mw = Math.max(8, Math.min(512, w >> 2)), mh = Math.max(8, Math.round(mw*h/w)); o.map = kitField(mv, mw, mh); o.mw = mw; o.mh = mh; }
       // (Shape Aware: round the words the lines flow round them, as water round stones, and end at their margin; in the
       //  letters they run closer, to show in a stroke)
-      o.room = wordsRoom(E.ctx, w, h, 0.3, 1.8); if(E.ctx.fill) o.zoom *= 0.45;
+      o.room = wordsRoom(E.ctx, w, h, 0.3, 1.8); o.zoom *= 1 - 0.55*(+E.ctx.fill || 0);
       // the texture's own seed (+ Variant): Flow-Field Ink draws the lines it always drew
       const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
       return withSeed(seed, () => { const c = whimFlowLines(w, h, o, E.px, E.carea);
@@ -864,6 +1046,28 @@ export const WHIMSY_STEPS = {
       paintRidges(x, E.ww, E.wh, S, { amt: E.num(n, 'bands', 100)/100, zoom: E.num(n, 'distance', 100)/100, colour });
       return [c]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  ringsky: { cat: 'Textures', label: 'Ring in the Sky', ins: ['over', 'light from', 'land hue', 'sky hue'], outs: ['picture', 'ring'], io: { ins: ['image', 'value', 'colour', 'colour'], outs: ['image', 'field'] },
+    params: [WHIM_R('width', 'Ring Width', 45), WHIM_R('tilt', 'Ring Open', 72, 2, 90), WHIM_R('turn', 'Turn', 8, 0, 360), WHIM_R('size', 'Ring Size', 100, 40, 250), WHIM_R('centre', 'Star Height', 38, 10, 90),
+      WHIM_R('haze', 'Air', 60), WHIM_R('nebula', 'Nebula', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    paint(E, n){ const { ww: w, wh: h } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, w, h), [mc, mk] = kitCanvas(w, h), dv = E.input(n, 2), lh = E.input(n, 3), sh = E.input(n, 4);
+      mk.fillStyle = '#000'; mk.fillRect(0, 0, w, h);
+      const rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d;
+      paintRingSky(x, mk, w, h, { width: E.num(n, 'width', 45)/100, tilt: E.num(n, 'tilt', 72), turn: E.num(n, 'turn', 8), size: E.num(n, 'size', 100)/100, centre: E.num(n, 'centre', 38)/100,
+        haze: E.num(n, 'haze', 60)/100, nebula: E.num(n, 'nebula', 50)/100, light: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), land: rgb(lh, [111, 143, 85]), sky: rgb(sh, [134, 174, 220]), px: E.px,
+        rnd: mulberry32((((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) ^ 0x51A9E) >>> 0) });
+      return [c, mc]; },
+    run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },
+  shapeland: { cat: 'Marks', label: 'Land of Shapes', ins: ['over', 'light from', 'land hue', 'haze hue'], outs: ['picture', 'land', 'distance'], io: { ins: ['image', 'value', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
+    params: [WHIM_R('height', 'Landforms', 50), WHIM_R('layers', 'Ridges', 50), WHIM_R('structures', 'Structures', 40), WHIM_R('foliage', 'Trees', 40), WHIM_R('haze', 'Haze', 60), WHIM_R('horizon', 'Horizon', 66, 30, 90),
+      WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    paint(E, n){ const { ww: w, wh: h } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, w, h), [mc, mk] = kitCanvas(w, h), [dc, dk] = kitCanvas(w, h), dv = E.input(n, 2), lh = E.input(n, 3), hh = E.input(n, 4);
+      mk.fillStyle = '#000'; mk.fillRect(0, 0, w, h); dk.fillStyle = '#fff'; dk.fillRect(0, 0, w, h);
+      const rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d;
+      paintShapeLand(x, mk, dk, w, h, { height: E.num(n, 'height', 50)/100, layers: E.num(n, 'layers', 50)/100, structures: E.num(n, 'structures', 40)/100, foliage: E.num(n, 'foliage', 40)/100,
+        haze: E.num(n, 'haze', 60)/100, horizon: E.num(n, 'horizon', 66)/100, light: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), land: rgb(lh, [111, 143, 85]), haze3: rgb(hh, [134, 174, 220]), px: E.px,
+        rnd: mulberry32((((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) ^ 0x1A4D5) >>> 0) });
+      return [c, mc, dc]; },
+    run(E, n){ const [c, m, d] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m)), E.asField(E.readCanvas(d))]; } },
   wash: { cat: 'Shape', label: 'Watercolor Bleed', ins: ['picture'], outs: ['image'], io: { ins: ['image'], outs: ['image'] },
     params: [WHIM_R('wet', 'Wetness', 50)], cost: () => 2,
     paint(E, n){ const [c, x] = kitPicture(E.input(n, 1), E.ww, E.wh, E.ww, E.wh); paintWash(x, c, E.ww, E.wh, E.num(n, 'wet', 50)/100); return [c]; },

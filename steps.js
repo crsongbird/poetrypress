@@ -40,6 +40,7 @@ import { LIGHT_STEPS } from './stepsLight.js';
 import { SHARP_STEPS } from './stepsSharpness.js';
 import { CHAOS_STEPS } from './stepsChaos.js';
 import { GEN_STEPS } from './stepsGenerative.js';
+import { RING_STEPS } from './stepsRing.js';
 import { PATTERN_STEPS } from './stepsPatterns.js';
 import { CARD_STEPS } from './cartomancy.js';
 
@@ -323,6 +324,10 @@ export const STEP_DOCS = {
   burn: 'Burns a gray map into a picture: charred into wood, glowing embers, or etched into acrylic.',
   growline: 'A line that ruffles and folds as it grows, like lettuce or coral (differential growth).',
   starfield: 'Stars over the input (or on black), each colored by its temperature; the brightest get spikes.',
+  ringsky: 'A ring round its star seen from out in space, painted in flat blocks: its far arc lit land, sea and cloud, its near arc the dark underside across the star.',
+  shapeland: 'Land made of flat shapes: faceted ridges band behind band, the far ones hazy, with builders’ spires, gates, standing rings and crystals on them and trees on the near hills.',
+  ringarch: 'The sky over a ringworld’s floor, painted in flat shapes: space and the star, its shadow squares, and the ring’s far floor rising into the arch overhead between its rim walls.',
+  ringland: 'The floor of a ringworld you stand on, painted in flat shapes: ridge behind ridge from the walls’ feet to your own, with what grows, lives and stands on it.',
   curtains: 'An aurora: curtains of fine vertical rays rising from a folded hem, added as light.',
   terrain: 'Heights for an imagined landscape: hills, valleys and a few sharp ridges.',
   contours: 'Draws the contour lines of any gray map, as on a survey map.',
@@ -682,7 +687,7 @@ const STEP_RUN = {
     //  paper; in the letters, the patches are smaller, to show in a stroke)
     const room = wordsRoom(E.ctx, ww, wh, 0.25, 1.3), roomAt = (x, y) => room ? room[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))] : 1;
     const base = (num(n, 'angle', 125) - 90)*Math.PI/180, cross = num(n, 'cross', 38)/100, ca2 = num(n, 'crossAngle', 54)*Math.PI/180;
-    const zoom = num(n, 'size', 100)/100*(E.ctx.fill ? 0.5 : 1), patches = Math.round(150*num(n, 'density', 100)/100*(E.ctx.fill ? 3 : 1)), wt = num(n, 'weight', 50)/50;
+    const f = +E.ctx.fill || 0, zoom = num(n, 'size', 100)/100*(1 - 0.5*f), patches = Math.round(150*num(n, 'density', 100)/100*(1 + 2*f)), wt = num(n, 'weight', 50)/50;
     const noise = makeNoiseGrid(6, 6);
     return [marks(null, 0, g => {
       const stroke = (x, y, a, len, wd, bend, alpha) => {
@@ -900,7 +905,8 @@ Object.assign(STEP_RUN, {
     // (two globals: whether this surface is Text Aware, and whether it fills the letters themselves — Blend with Text,
     //  Shape Aware — so a graph can answer either; a surface that is not aware is handed no words at all)
     // (and a third: Shape Aware on a surface drawn on the page, asking it to shape itself round the words)
-    const aware = ctx.aware === false ? 0 : 1, inside = ctx.fill ? 1 : 0, around = ctx.around ? 1 : 0;
+    // (each how strongly: Shape Strength, 0..1)
+    const aware = ctx.aware === false ? 0 : 1, inside = Math.min(1, +ctx.fill || 0), around = Math.min(1, +ctx.around || 0);
     const runs = poemRuns(ctx.text);
     if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N), new Float32Array(N), aware, inside, around];
     // RHYMES (Ruby's doc, a rhyme group's mask): the words of the lines that rhyme (~A, ~B…: the run's 7th number, A = 1)
@@ -1043,7 +1049,7 @@ const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...PATTERN_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...PATTERN_STEPS };
 export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);

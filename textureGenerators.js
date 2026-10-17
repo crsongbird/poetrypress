@@ -33,7 +33,7 @@
 import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
-import { withSeed, withScale, withPage, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
+import { withSeed, withScale, withPage, wordsRoom, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genAstralFog, genAstralStars } from './texWhimsy.js';
 
 /**
@@ -102,6 +102,24 @@ export const TEXTURE_PARAMS = {
   halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
   // RINGWORLD (chains.js 'ringworld'; Ruby: the camera on the camera dial, the day on the light dial; who built it, by the seed or chosen)
+  // ◯ RING IN THE SKY (chains.js 'skyring'; Ruby: "a beautiful background layer … simplified, but cosmic"): the camera dial moves the ring
+  skyring:       [{key:'zoom',  label:'Ring Width',      min:0,  max:100, def:45,  unit:''},
+                  {key:'amt',   label:'Stars',           min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Nebula',          min:0,  max:100, def:50,  unit:''},
+                  {key:'shape', label:'Air',             min:0,  max:100, def:60,  unit:''},
+                  {key:'height', label:'Star Height',    min:0,  max:100, def:45,  unit:''},
+                  {key:'paint', label:'Paint',           min:0,  max:100, def:0,   unit:''},
+                  {key:'brush', label:'Brush',           min:0,  max:100, def:37,  unit:'', ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry']}],
+  // ◯ PAINTED RINGWORLD (chains.js 'ringpaint'; Ruby: "a generative art piece that still looks like being on a ringworld"): Ringworld's camera, painted
+  ringpaint:     [{key:'zoom',  label:'Band Width',      min:0,  max:100, def:45,  unit:''},
+                  {key:'amt',   label:'Landforms',       min:0,  max:100, def:50,  unit:''},
+                  // who and what: the seed's own world, or one chosen; Mixed lays three side by side
+                  {key:'world', label:'World',           min:0,  max:100, def:0,   unit:'', ticks:[0,14,29,43,57,71,86,100], names:['By the Seed','Wilds','Cities','Neon','Builders','Magic','Ruins','Mixed']},
+                  {key:'shape', label:'Life',            min:0,  max:100, def:50,  unit:''},
+                  {key:'form',  label:'Works',           min:0,  max:100, def:50,  unit:''},
+                  {key:'alt',   label:'Altitude',        min:0,  max:100, def:15,  unit:''},
+                  {key:'paint', label:'Paint',           min:0,  max:100, def:0,   unit:''},
+                  {key:'brush', label:'Brush',           min:0,  max:100, def:37,  unit:'', ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry']}],
   ringworld:     [{key:'zoom',  label:'Band Width',      min:0,  max:100, def:45,  unit:''},
                   // the land's relief, its rim walls and the mountains against them, and the seed's own landforms (ranges at the walls, peaks, mesas, boulders, pinnacles, stone arches)
                   {key:'amt',   label:'Landforms',       min:0,  max:100, def:50,  unit:''},
@@ -543,6 +561,10 @@ export const TEXTURE_CAPS = {
   // the camera dial is the camera: its turn where you look round the ring, its view how far up (the middle: the arch
   // overhead), its zoom the lens. The light dial is the day (the star never moves; the shadow squares do): at its middle
   // noon, at its rim dusk, past it night; its direction which way round the dusk comes
+  skyring:       { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, tints:2,
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse' } },
+  ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring' } },
   ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
@@ -744,7 +766,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
-    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow);
+    result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow,wordsRoom({ around: extra.around, text: extra.text ? poemLines(extra.text) : '' }, w, h, 0.4, 1.8));
   } else if(type === 'snow'){
     result = genChain(type, w, h, light, extra);           // Particles (flakes), blown by the dial (chains.js)
   } else if(type === 'magicparticles'){
@@ -807,6 +829,10 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
   } else if(type === 'flowfield'){
     result = genChain(type, w, h, light, extra, tint1 || '#2B2A3A', tint2 || '#7A4A6A');   // Flow Lines, the dial its current (chains.js)
+  } else if(type === 'skyring'){
+    result = genChain(type, w, h, light, extra, tint1 || '#6F8F55', tint2 || '#86AEDC');   // Starfield → Ring in the Sky → Oil Paint (chains.js)
+  } else if(type === 'ringpaint'){
+    result = genChain(type, w, h, light, extra, tint1 || '#6F8F55', tint2 || '#86AEDC');   // Starfield → The Arch → Land on the Ring → Oil Paint (chains.js)
   } else if(type === 'ringworld'){
     result = genChain(type, w, h, light, extra, tint1 || '#6F8F55', tint2 || '#86AEDC');   // Ringworld View → Noise at Coordinates → color → Light Engine → air (chains.js)
   } else if(type === 'rainwater'){
@@ -970,7 +996,8 @@ export function poemLines(text){
 }
 /** Whether a texture's own chain reads the poem (and so is given its layout). A chain marked `poem: 'shape'` reads it only
  *  while Shape Aware asks it to (`shaped`): round the words, or filling the letters. */
-export function chainReadsPoem(type, shaped = true){ const c = TEXTURE_CHAINS[RETIRED[type] || type]; return !!(c && c.poem && (c.poem !== 'shape' || shaped)); }
+export function chainReadsPoem(type, shaped = true){ const c = TEXTURE_CHAINS[RETIRED[type] || type], p = c ? c.poem : (type === 'astral' || type === 'astral_stars') ? 'shape' : null;   // (Deep Field's stars too)
+  return !!(p && (p !== 'shape' || shaped)); }
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
@@ -1007,7 +1034,7 @@ function describeRequest(type, w, h, opts){
   const v7 = defs[6] ? ((opts.p7 == null) ? defs[6].def : opts.p7) : null, v8 = defs[7] ? ((opts.p8 == null) ? defs[7].def : opts.p8) : null;
 
   // (Cartomancy's first two suits are the accents; an Athanor graph with an Accent node reads them too)
-  const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards'
+  const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards' || type === 'ringpaint'
     || ((type === 'athanor' || type === 'athanorsteps') && /"name":\s*"accent"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''))));
   // (and a graph with an Ink part changes with the poem's ink; any other surface never sees it)
   const inkKeyed = (type === 'athanor' || type === 'athanorsteps') && /"name":\s*"ink"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''));
@@ -1023,7 +1050,7 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
             // (whether it is Text Aware, and whether it fills the letters, only for a surface that reads the poem)
-            + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' : '') + (opts.around ? '_R' : '') + (opts.aware === false ? '_A0' : '') : '')
+            + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' + Math.round(+opts.fill*100) : '') + (opts.around ? '_R' + Math.round(+opts.around*100) : '') + (opts.aware === false ? '_A0' : '') : '')
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
@@ -1040,7 +1067,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null, camera: extra.camera || null,
-      aware: extra.aware !== false, fill: !!extra.fill, around: !!extra.around, page: gridAtExport(extra.page, 2*B.scale), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*B.scale), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -1091,14 +1118,14 @@ function genChain(type, w, h, light, extra, tint1, tint2){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
       accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true,
-      text: chain.poem && extra.text ? poemLines(extra.text) : '', aware: extra.aware !== false, fill: !!extra.fill, around: !!extra.around, page: gridAtExport(extra.page, 1) }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      text: chain.poem && extra.text ? poemLines(extra.text) : '', aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 1) }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
-      aware: extra.aware !== false, fill: !!extra.fill, around: !!extra.around, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
+      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -1157,7 +1184,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', aware: opts.aware !== false, fill: !!opts.fill, around: !!opts.around, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

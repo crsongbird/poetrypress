@@ -6,12 +6,30 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
-- THE SURFACE AND THE WORDS: Text Aware (first surface), Blend with Text (second), Shape Aware on both (on the page
-  the surface gives way round the words: Halftone, Silverpoint Hatch, Flow-Field Ink, Contour Map, Circuit Board; in
-  the letters Broken Glass, Dewy Webs and those go finer), and Cut Out by Text on both (the page shows through the
-  letters; on a backdrop close to the surface's color the letters read faint). Sheet sent. Which surfaces next
-  (ROADMAP G6 names Knotwork, Stained Glass, Tessellate, Deep Field's stars, Turing Skin)?
+## 1 · Ruby to judge (new in Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
+  arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
+  Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
+  Band Width 45? Should the seed nudge the camera too, for more varied angles by itself? Are the creatures
+  the right size and rarity? The 3D Ringworld stays as it was, beside it.
+- RING IN THE SKY (sheet sent): the out-in-space ring Ruby liked, alone as a background (Paint 0). Land of Shapes
+  (the land it first stood over) is an Athanor part: wired after it, the old picture.
+- SHAPE STRENGTH and the new Shape Aware surfaces (Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's
+  stars, Broken Glass and Dewy Webs round the words): which want a softer default than 100?
+- PML BLOCKS AND NESTING: brackets and segments over lines, directives after a bracket, segments in segments. The one
+  change to old poems: a bracket left open and closed on a later line now runs between (it showed the closer as
+  text). Proposals for more PML, to choose from (none built):
+  - GLASS: `/glass` (frosted letters: the page behind them blurred and brightened, a bright rim), `/glass:clear`,
+    `/glass:#hex` (tinted); `/cut` (the letters as windows to the page under the surface, per segment).
+  - BLENDS: `/blend:multiply` (ink pressed into the paper), screen, overlay, difference; `/op:60` (opacity).
+  - SHAPED LINES: `/arc:30` (a line on an arc), `/wave:20` (on a wave), `/rot:-8` (turned), `/gap:150` (space after a
+    line), `/indent:4`.
+  - FRIENDLIER NAMES: `/font:Cinzel` beside `/f:N` (a number shifts meaning as the list grows only by appending, but
+    a name says what it is); `/color:rose` (CSS names) beside `/#:hex`; `/size:150` for `/scale:150`.
+  - STYLES BY NAME: define a style once (`§style ember = /f:3/fx:glow(#fa4,40)`) and use it as `/@ember`.
+  - THE EDITOR: unknown directives underlined with a hint; a menu of directives after `/` inside a segment.
+  - BREAKING, if wanted: `**bold` and `*italic*` running over lines as the brackets now do (a poem with an
+    unclosed `**` and a later one would change); `<3` always a heart, never a segment's opener.
 - RINGWORLD's cohesion pass (sheet sent): arches on every ring (spans, flying buttresses, arcades, gates, stone
   arches), ranges at the walls' feet, thicker spires and arches, nothing floating but the ships (crystals grow from
   the land, rings of light stand on plinths, ruined arches stand as stubs, the floating isles are gone), the

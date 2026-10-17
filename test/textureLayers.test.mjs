@@ -105,6 +105,10 @@ check('Cut Out by Text is the surface\'s own, saved with it', save().baseLayer.t
 check('the first surface\'s Shape Aware waits, greyed, while it is not Text Aware (it needs the words)', reg['textureShapeAware'].disabled === true);
 tick('textureTextAware', true);
 check('…and is there again once it is', reg['textureShapeAware'].disabled === false);
+tick('textureShapeAware', true); reg['textureShapeStrength'].value = '40'; reg['textureShapeStrength'].dispatchEvent({ type: 'input' }); s = save();
+check('Shape Strength is the surface\'s own, saved with it (the lower keeps its full strength)', +s.textureShapeStrength === 40 && +(s.baseLayer.textureShapeStrength ?? 100) === 100);
+load({ ...base, texture: true, textureType: 'hatch', baseToggle: false, locks: [] });
+check('…and a look from before it is at full strength', +reg['textureShapeStrength'].value === 100);
 
 // ---- a preset turns the lower off ----
 load({ ...base, texture: true, baseToggle: true, baseLayer: { textureType: 'linen' } });
