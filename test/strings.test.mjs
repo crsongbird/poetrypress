@@ -128,7 +128,7 @@ const british = visible.filter(v => /\b(colour|centre|grey|favour)/i.test(v));
 check('user-facing text uses American spelling', british.length === 0);
 if(british.length) console.log('   british:', british.join(' | '));
 
-const lowerWord = /(^|\s)(?!of\b|and\b|a\b|the\b|to\b|in\b|or\b|by\b|for\b|vs\b)[a-z][a-z]+/;
+const lowerWord = /(^|\s)(?!of\b|and\b|a\b|the\b|to\b|in\b|or\b|by\b|for\b|vs\b|with\b)[a-z][a-z]+/;
 const labelLike = Object.entries(UI_STRINGS).filter(([k]) => k.startsWith('label.'))
   .map(([, v]) => v).filter(v => !/[.?!]$/.test(v) && v.split(' ').length <= 5);
 const sentenceCase = labelLike.filter(v => lowerWord.test(v.replace(/\([^)]*\)/g, '')));

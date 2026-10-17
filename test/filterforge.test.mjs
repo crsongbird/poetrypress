@@ -84,6 +84,12 @@ check('Math has Filter Forge\'s useful RGB Math (divide, power, average, screen,
   check('Flip turns a picture over: a left-to-right gradient runs right to left', Math.abs(fp.r[20*W + 5] - g0.r[20*W + 34]) < 1e-6 && fp.r[20*W + 5] > fp.r[20*W + 34]);
   const flat = run([...pic, node(5, 'perspective', { tilt: 0 }, { 1: [4, 1] })], [5, 1], T2), slant = run([...pic, node(5, 'perspective', { tilt: 80 }, { 1: [4, 1] })], [5, 1], T2);
   check('Perspective at Tilt 0 is the picture as it is; tilted, the bottom row stays and the top changes', err(flat) < 1e-5 && Math.abs(slant.r[39*W + 20] - orig.r[39*W + 20]) < 0.05 && err(slant) > 0.05);
+  const rot = a => run([node(1, 'gradient', { angle: 0 }), node(2, 'rotate', { angle: a }, { 1: [1, 1] })], [2, 1]), r0 = rot(0), r90 = rot(90), r180 = rot(180);
+  check('Rotate: at 0 the picture as it is; a half turn runs a left-to-right gradient right to left; a quarter turn runs it top to bottom',
+    Math.abs(r0.r[20*W + 7] - g0.r[20*W + 7]) < 1e-5 && Math.abs(r180.r[20*W + 8] - g0.r[20*W + 31]) < 0.03 && Math.abs(r90.r[8*W + 20] - r90.r[8*W + 30]) < 0.03 && Math.abs(r90.r[8*W + 20] - r90.r[30*W + 20]) > 0.2);
+  const sc1 = run([...pic, node(5, 'scale', { scale: 100 }, { 1: [4, 1] })], [5, 1], T2), sc2 = run([node(1, 'gradient', { angle: 0 }), node(2, 'scale', { scale: 200 }, { 1: [1, 1] })], [2, 1]);
+  check('Scale: at 100 the picture as it is; at 200 a gradient climbs half as fast, its middle where it was',
+    err(sc1) < 1e-5 && Math.abs(sc2.r[20*W + 30] - g0.r[20*W + 25]) < 0.03 && Math.abs(sc2.r[20*W + 10] - g0.r[20*W + 15]) < 0.03);
   // Glow: a bloom in one part
   const dot = [node(1, 'shape', { form: 'circle', size: 6, soft: 1 })], gw = run([...dot, node(2, 'glow', { radius: 100, aura: 0, core: 0 }, { 2: [1, 1] })], [2, 1]);
   const none = run([...pic, node(5, 'glow', {}, { 1: [4, 1] })], [5, 1], T2), over = run([...pic, ...[node(6, 'shape', { form: 'circle', size: 6, soft: 1 })], node(5, 'glow', {}, { 1: [4, 1], 2: [6, 1] })], [5, 1], T2);

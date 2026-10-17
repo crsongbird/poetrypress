@@ -6,7 +6,22 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- THE SURFACE AND THE WORDS (Ruby's two boxes): Text Aware on the first surface (ticked: it knows where the poem
+  is; Broken Glass keeps its shards small on the lines, Dewy Webs keeps its hubs off them, Circuit Board cuts
+  clear); Blend with Text on the second (that surface fills the letters only, with its own blend and opacity) and
+  Shape Aware beside it (Broken Glass lies only on the lines, Dewy Webs strings a web across each, Circuit Board
+  routes finer). The Poem part has two new numbers for graphs: Aware and In the Letters. Next could be the words
+  knocking a surface out (the page through the letters) and the glyphs' own shape as a mask in graphs (ROADMAP G6).
+  Which other surfaces should answer Shape Aware?
+- RINGWORLD's new sliders (sheet sent): Landforms (the relief, the rim walls and the mountains against them, and
+  the seed's own country of peaks with snow, mesas, boulders near you, pinnacles and floating isles), Cities (the
+  works, and past 25 cities and glass domes whoever built it) and Traffic (ships, and past its middle lanes of
+  small craft, busier streets at night). Stand At went to the seed. The band's arches now spring from the walls'
+  tops with the air they hold shimmering beneath them. Old looks keep Terrain and Structures as Landforms and
+  Cities; Stand At became Traffic at its middle.
+- ROTATE and SCALE, two new parts in Shape: a picture turned or scaled about any center, past its edges repeated,
+  mirrored or stretched (ROADMAP F8 done).
 - BROKEN GLASS (sheet sent): shards on nothing, faces that flash, edges split into colors, caustics in pale
   shadows, six glasses; the camera dial lays it on a floor. Readings: Shattered Bottle, Cobalt Spill, Shards
   Underfoot. The starter A Dropped Frame lays it over Aurora, bent through each shard. More glass to come?
@@ -16,13 +31,11 @@ Recommendations".
 - THE CAMERA DIAL on Scrying Pool, Dune Ripples and Moss on Stone (their Tilt is the dial's View; Turn turns the
   ground under a sun that stays put; Zoom from 60% to 400%). Rain on Water waits: rain looks the same every way
   round, so Turn would do nothing (ROADMAP C5).
-- RINGWORLD's builders (sheet sent): the Builders slider (By the Seed, Wilds, Engineers, Cities, Magi, Ruins);
-  arches, gateways, cities lit at night, ships and their trails, crystals, pillars of light, summoning circles,
-  standing stones; the shadow squares' size and the ring's spin from the seed; clouds' shadows on the far land. The
-  light dial is the time of day (the middle noon, the rim dusk, past it night). Black space shows only where there
-  is no air or by night. Its camera dial is there (a reload brings it, if a page was cached). One ring in seven
-  (seed % 7 = 3) still shows its seam as a wireframe, a misreading of "the edge of the skybox": keep it, or take
-  it out? Its presets wait for Stage 4.
+- RINGWORLD's builders: the Builders slider (By the Seed, Wilds, Engineers, Cities, Magi, Ruins); arches,
+  gateways, cities lit at night, ships and their trails, crystals, pillars of light, summoning circles, standing
+  stones; the shadow squares' size and the ring's spin from the seed; clouds' shadows on the far land. The light
+  dial is the time of day. One ring in seven (seed % 7 = 3) still shows its seam as a wireframe, a misreading of
+  "the edge of the skybox": keep it, or take it out? Its presets wait for Stage 4.
 - RAIN ON WATER: the rings, the splashes and the reflection toward the horizon (View). Its readings: Lantern Pond,
   Downpour, Last Drops.
 - LICHTENBERG FIGURES remade (sheet sent): Strike Angle, Depth, a Glow Hue, Charred Wood · Slate · Brass · Acrylic, and

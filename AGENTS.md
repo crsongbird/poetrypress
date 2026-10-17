@@ -226,7 +226,7 @@ default.
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes. Touch: also the glass (Scratches, Smudges, Window Reflection, Shatter, Glass Pane) |
-| `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh (`patDelaunay`), Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum; Split and Merge HSB and Lab, Median (`patRank`), Map Switch, Flip, Perspective |
+| `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh (`patDelaunay`), Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum; Split and Merge HSB and Lab, Median (`patRank`), Map Switch, Flip, Perspective, Rotate and Scale (`patResample`) |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in the Athanor's Open menu; bundled before chains.js |
 | `athanor.js` | the graph evaluator (in the worker), its cache (`ATHANOR_KEPT`), budget, versions, starters, `validateGraph` |
@@ -249,7 +249,8 @@ current), `tools/` (§2).
 3. vignette;
 4. inset box;
 5. border (its bloom on its own half-resolution layer);
-6. text (effects under the glyphs, then the glyphs);
+6. text (effects under the glyphs, then the glyphs), and a lower surface set
+   to Blend with Text blended into the letters;
 7. credit and spell.
 
 Stages are timed (`§Profile`).
@@ -475,6 +476,26 @@ Other parts of a look:
     named by its words and left out of the aim.
   - The **Ink** part hands a graph the text color (after the two accents in
     `ctx.accents`); only a graph with one keys its cache on the ink.
+  - **The surface and the words** (Ruby; layer keys `textureTextAware`,
+    `textureTextBlend`, `textureShapeAware`, saved with each layer, a look
+    without them aware and unblended):
+    - **Text Aware** (the first surface's box, ticked by default): only an
+      aware surface is handed the layout; unticked, it is drawn as if the
+      page had no words. The Poem's `aware` output says which.
+    - **Blend with Text** (the second surface's box): the lower layer is not
+      drawn under the page; while the words are drawn, every glyph fill is
+      mirrored white onto `GLYPH_MASK` (`maskGlyphs`, with the context's own
+      transform), and after them the page is copied, the surface drawn onto
+      the copy with its own blend and opacity (`drawSurfaceLayer`), the copy
+      cut to the mask and laid back. Effects and underlines stay unfilled.
+    - **Shape Aware** (with Blend with Text): the request carries `fill`
+      (keyed `_F` for a poem-reading surface) → `ctx.fill`; The Poem's
+      `in the letters` is 1. Parts that answer it read `ctx.fill` and the
+      lines (`genLinesOf(ctx.text)`): Glass Shards lies only on the lines,
+      Dewy Webs strings a web across each, Circuit Traces routes finer and
+      keeps nothing clear. A chain that answers says `poem: 'lines'`.
+    - Text Aware used quietly (readability, never dramatic): a shard on a
+      line is a small one; a web's hub is never on the words.
 - **Stitches** (stitches.js):
   - `STITCH_STYLES` is the menu; parse with `STITCH_NAMES`; draw through
     `stitchOf()`.
@@ -714,9 +735,10 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
 - **The reach rule** (`athanorReach`): only Knobs and Hues that reach the
   Surface are offered on the page. A slot bound by `'@kN'` counts.
 - **The poem as input:** the **The Poem** part (words, distance, lines,
-  stanzas) gets the layout as `ctx.text`, and only when its graph contains
-  it (`graphUsesPoem`). The cache key carries it then (`_q`), never
-  otherwise.
+  stanzas, rhymes, and two numbers: aware, in the letters) gets the layout as
+  `ctx.text`, and only when its graph contains it (`graphUsesPoem`) and the
+  surface is Text Aware or fills the letters. The cache key carries it then
+  (`_q`, with `_F` and `_A0`), never otherwise.
 
 ### 6.4 · What the Athanor took from Filter Forge
 The full study and what is still to do are in ROADMAP.md §1.
@@ -1124,7 +1146,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     and across in band widths, distance, detail, daylight, air). It draws
     nothing; Noise at Coordinates lays the land and clouds on those maps.
   - The camera dial is the camera (turn: where you look round the ring;
-    view: how far up; zoom: the lens); Stand At places you across the band.
+    view: how far up; zoom: the lens). Where across the band you stand is
+    the seed's (`ringPlaceOf`, the part's Stand set to "where the seed
+    says"; an Athanor graph keeps Stand At).
+  - **The eight sliders** (Ruby kept eight; format 5 turned Stand At into
+    Traffic): Band Width, **Landforms** (the relief, the rim walls at half
+    its range, the spill mountains, and the land's own forms), Seas,
+    **Cities** (the works' amount as Structures was; past 25 `moreCity`
+    spreads city cover and towers whoever built the ring), Atmosphere,
+    Builders, Altitude, **Traffic** (ships ×0–2.5, its middle the old count;
+    past it lanes of small craft; the streets' lamps).
   - The light dial is the day (`caps.dial: 'Daylight'`, `lowLight`): its
     height is the time (the middle noon, the rim dusk, past it night), its
     direction which side dusk comes from (`L.side`). The part maps it onto
@@ -1147,13 +1178,26 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     straight up once took 1.7 s; keep the binning when adding works.
   - Clouds are their own crossing of a layer just under the air
     (`Rc`), with their shadow laid on the far land (outs 21–24).
+  - **The band's arches spring from the rim walls' tops** (Ruby: "as if
+    they contain the atmosphere"); each holds a field (`k: 7`, a glow in its
+    plane, brighter edge-on and along the arch). Domes of glass (`k: 8`,
+    glow only, the rim catching light) stand over the city.
+  - **Landforms** (`RING_LANDS`: alpine, mesa country, boulder fields,
+    hoodoos, karst, mixed, by the seed): peaks (cones, snow on the tall
+    ones), mesas and pinnacles (beams with `cap`: the ray meets the flat
+    top too), boulders (rock ellipsoids, half sunk, never larger than a
+    tenth of their distance), floating isles (inverted capped cones). Rock
+    works hand on `rock` and `snow` (outs 25, 26) and their own Across
+    (`ac`: where they stand, rising with height), so the land noise lays
+    stone on them; the chain mixes the walls' metal toward rock by it.
   - Corner rays are shared between pixels for its edges; keep `Math.hypot`
     out of its loops (it was a third of the time).
   - **The construction** (`ringBuild`, from the seed; Ruby: never bare):
     spires (tapered needles along each spot's own up, beacons at their tips),
     scaffolding (unfinished floor: a lattice box-filtered by the pixel's
     footprint, the void seen through it), spill mountains (in the chain:
-    Across → Map Range → × the land → added). Structures raises all of it;
+    Across → Map Range → × the land → added, by Landforms). Cities raises the
+    builders' works;
     at 0 a few still stand. One ring in seven shows the world's seam.
   - The air is sampled densely where it is (near the camera, near the far
     floor) and thins away past the walls; an even spacing stepped past the

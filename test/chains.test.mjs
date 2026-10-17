@@ -88,7 +88,7 @@ if(canvasOK){
   const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
   const load = obj => { reg['advancedJson'].value = JSON.stringify(obj); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
   const base = save();
-  check('a look says which format it was saved in', base.lookVersion === 4);
+  check('a look says which format it was saved in', base.lookVersion === 5);
   const { lookVersion, ...old } = base;
   load({ ...old, texture: true, textureType: 'rainstreaks', texP1: '200', texP2: '-30', textureLight: '315' });
   let s = save();
@@ -109,6 +109,10 @@ if(canvasOK){
   load({ ...old, lookVersion: 3, texture: true, textureType: 'circuit', texP7: '100' });
   s = save();
   check('an old Circuit Board look at Magitech (four eras) stays the board it was: Atomic, at 75 of five eras', +s.texP7 === 75);
+  // format 5: Ringworld's Stand At became Traffic (its middle: the ships as they were)
+  load({ ...old, lookVersion: 4, texture: true, textureType: 'ringworld', texP2: '70', texP4: '40', texP8: '-60', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('an old Ringworld look: Stand At gives way to Traffic at its middle; Terrain and Structures carry on as Landforms and Cities', +s.texP8 === 50 && +s.texP2 === 70 && +s.texP4 === 40);
   // format 4: the Tilt sliders onto the camera dial (Dune Ripples' fourth, Moss on Stone's fourth, Scrying Pool's sixth)
   load({ ...old, lookVersion: 3, texture: true, textureType: 'dunes', texP1: '140', texP4: '60', cameraTurn: '90', cameraView: '0', cameraZoom: '100' });
   s = save();
@@ -155,7 +159,11 @@ if(canvasOK){
     2: { id: 2, name: 'glasspane', data: {}, inputs: { input_1: { connections: [{ node: '1', input: 'output_1' }] } }, outputs: { output_1: { connections: [] } } },
     3: { id: 3, name: 'surface', data: { name: 'G', ground: 'colour' }, inputs: { input_1: { connections: [{ node: '2', input: 'output_1' }] } }, outputs: {} } } } } });
   const seen = A.evalAthanor(pane, 16, 16, { seed: 1, knobs: [], tints: [] }, {});
-  check('…and a Glass Pane with nothing on its glass shows its picture exactly', !!seen && seen.r.every(v => Math.round(v*255) === 0x33) && seen.b.every(v => Math.round(v*255) === 0x99)); }
+  check('…and a Glass Pane with nothing on its glass shows its picture exactly', !!seen && seen.r.every(v => Math.round(v*255) === 0x33) && seen.b.every(v => Math.round(v*255) === 0x99));
+// THE POEM's two globals: Aware (the surface is Text Aware) and In the Letters (blended into them, Shape Aware)
+{ const run = (await import('../steps.js')).STEPS.poem.run, E = o => ({ ctx: { text: '0.1,0.1,0.9,0.2,0,0,0', ...o }, ww: 8, wh: 8, N: 64, num: (n, k, d) => d, P: (n, k, d) => d, boxBlur: f => f });
+  const a = run(E({}), {}), b = run(E({ aware: false }), {}), c = run(E({ fill: true }), {});
+  check('The Poem hands on two numbers: Aware (1 unless the surface is not Text Aware) and In the Letters (1 when it fills them)', a[5] === 1 && a[6] === 0 && b[5] === 0 && c[6] === 1 && a.length === 7); } }
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

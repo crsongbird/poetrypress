@@ -13,7 +13,7 @@
  *   Pyramids · Border Mask · Lookup · Displace · Gradient Map (3- and
  *   5-color, Elevation Gradient) · Noise Gradient · Spectrum · Extract and
  *   Assemble HSB and Lab · Median (Percentile) · Map Switch · Flip ·
- *   Perspective.
+ *   Perspective · Rotate · Scale.
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
@@ -22,6 +22,18 @@ import { CPU } from './texCore.js';
 const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
 const patClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+// a picture read again through a map of where each pixel looks (`from(x, y)` → [x, y] in the picture's pixels, at
+// pixel centres), between pixels, with what lies past the edges repeated, mirrored, or the edge stretched
+function patResample(im, ww, wh, edges, from){
+  const N = ww*wh, o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+  const fold = (v, m) => { if(edges === 'stretch the edge') return Math.max(0, Math.min(m - 1, v));
+    if(edges === 'mirror'){ const p = 2*m, t = ((v % p) + p) % p; return t < m ? t : p - 1 - t; } return ((v % m) + m) % m; };
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const [sx, sy] = from(x + 0.5, y + 0.5), fx0 = sx - 0.5, fy0 = sy - 0.5, x0 = Math.floor(fx0), y0 = Math.floor(fy0), tx = fx0 - x0, ty = fy0 - y0;
+    const a = fold(x0, ww), b = fold(x0 + 1, ww), c = fold(y0, wh)*ww, d = fold(y0 + 1, wh)*ww, q = y*ww + x;
+    for(const ch of ['r', 'g', 'b']){ const A = im[ch]; o[ch][q] = (A[c + a]*(1 - tx) + A[c + b]*tx)*(1 - ty) + (A[d + a]*(1 - tx) + A[d + b]*tx)*ty; } }
+  return o;
+}
 const patHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16)/255, ((n >> 8) & 255)/255, (n & 255)/255]; };
 // a soft edge in the page's units: 1 well inside (sd < −s), 0 well outside (sd > s), smooth between
 const patInside = (sd, s) => { const t = patClamp(0.5 - sd/(2*s)); return t*t*(3 - 2*t); };
@@ -442,6 +454,26 @@ export const PATTERN_STEPS = {
       const ax = P(n, 'axis', 'left to right'), fx = ax !== 'top to bottom', fy = ax !== 'left to right', o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
       for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, s = (fy ? wh - 1 - y : y)*ww + (fx ? ww - 1 - x : x); o.r[q] = im.r[s]; o.g[q] = im.g[s]; o.b[q] = im.b[s]; }
       return [o]; } },
+
+  // FILTER FORGE'S ROTATE and SCALE (ROADMAP F8; Tile & Rotate did both, on gray maps only, without a centre or a choice
+  // of edges): a picture turned, or made larger or smaller, about a centre anywhere on the page; what lies past its edges
+  // repeats, mirrors, or stretches the edge. Read between pixels (bilinear), so a slow turn never steps.
+  rotate: { cat: 'Shape', label: 'Rotate', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('cx', 'Center Across', 50), PAT_R('cy', 'Center Down', 50), PAT_SEL('edges', 'Past the Edges', ['repeat', 'mirror', 'stretch the edge'])],
+    cost: () => 1,
+    doc: 'Turns a picture about a center anywhere on the page, by any angle; past its edges it repeats, mirrors or stretches.',
+    run(E, n){ const { ww, wh, input, num, P, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const a = -num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a), cx = num(n, 'cx', 50)/100*ww, cy = num(n, 'cy', 50)/100*wh;
+      return [patResample(im, ww, wh, P(n, 'edges', 'repeat'), (x, y) => { const dx = x - cx, dy = y - cy; return [cx + dx*ca - dy*sa, cy + dx*sa + dy*ca]; })]; } },
+  scale: { cat: 'Shape', label: 'Scale', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
+    params: [PAT_R('scale', 'Scale', 100, 10, 400), PAT_R('stretch', 'Stretch', 0, -100, 100), PAT_R('cx', 'Center Across', 50), PAT_R('cy', 'Center Down', 50),
+      PAT_SEL('edges', 'Past the Edges', ['repeat', 'mirror', 'stretch the edge'])],
+    cost: () => 1,
+    doc: 'Makes a picture larger or smaller about a center anywhere on the page, wider or taller by Stretch; past its edges it repeats, mirrors or stretches.',
+    run(E, n){ const { ww, wh, input, num, P, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
+      const k = Math.max(0.1, num(n, 'scale', 100)/100), st = num(n, 'stretch', 0)/100, kx = k*Math.pow(2, st), ky = k*Math.pow(2, -st);
+      const cx = num(n, 'cx', 50)/100*ww, cy = num(n, 'cy', 50)/100*wh;
+      return [patResample(im, ww, wh, P(n, 'edges', 'repeat'), (x, y) => [cx + (x - cx)/kx, cy + (y - cy)/ky])]; } },
 
   // FILTER FORGE'S PERSPECTIVE: a picture laid flat on the ground and seen at a slant, repeating to the horizon
   perspective: { cat: 'Shape', label: 'Perspective', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,

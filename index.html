@@ -718,6 +718,22 @@ held on till bright~B</code></p>
               <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Show the settings of the surface beneath">Lower</button>
               <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Trade the two surfaces: each keeps everything it has, its blend, hues, light, seed and locks too">⇅ Swap</button>
             </div>
+            <!-- THE SURFACE AND THE WORDS (Ruby): the first surface may know where the poem is (Text Aware); the second may be
+                 blended into the letters themselves (Blend with Text), and then may know it fills them (Shape Aware) -->
+            <div class="layer-words">
+              <div class="check-row words-aware">
+                <input type="checkbox" id="textureTextAware" checked>
+                <label for="textureTextAware" data-str="label.text_aware" title="The surface knows where the poem is: surfaces made to keep clear of the words, or to answer them, do (The Poem part in a graph gets the layout). Off, the surface is drawn as if the page had no words.">Text Aware</label>
+              </div>
+              <div class="check-row words-blend">
+                <input type="checkbox" id="textureTextBlend">
+                <label for="textureTextBlend" data-str="label.text_blend" title="Blends this surface into the letters of the poem, with its own blend and opacity, instead of under the whole page: textured words.">Blend with Text</label>
+              </div>
+              <div class="check-row words-shape">
+                <input type="checkbox" id="textureShapeAware">
+                <label for="textureShapeAware" data-str="label.shape_aware" title="Tells the surface it is filling letters, so a surface that can (Broken Glass, Dewy Webs, Circuit Board, a graph with The Poem) shapes itself to the lines.">Shape Aware</label>
+              </div>
+            </div>
           </div>
           <div class="field full">
             <label id="texP1Label" data-str="label.x">—</label>

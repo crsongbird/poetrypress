@@ -103,15 +103,18 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
   // RINGWORLD (chains.js 'ringworld'; Ruby: the camera on the camera dial, the day on the light dial; who built it, by the seed or chosen)
   ringworld:     [{key:'zoom',  label:'Band Width',      min:0,  max:100, def:45,  unit:''},
-                  {key:'amt',   label:'Terrain',         min:0,  max:100, def:50,  unit:''},
+                  // the land's relief, its rim walls and the mountains against them, and the seed's own landforms (peaks, mesas, boulders, pinnacles, isles)
+                  {key:'amt',   label:'Landforms',       min:0,  max:100, def:50,  unit:''},
                   {key:'form',  label:'Seas',            min:0,  max:100, def:40,  unit:''},
-                  {key:'shape', label:'Structures',      min:0,  max:100, def:25,  unit:''},
+                  // how built-up the ring is: the builders' works, and past a quarter, cities whoever built it
+                  {key:'shape', label:'Cities',          min:0,  max:100, def:25,  unit:''},
                   {key:'hue',   label:'Atmosphere',      min:0,  max:100, def:50,  unit:''},
                   // who built the ring (its works, its lights): the seed's own pair, or one chosen
                   {key:'builders', label:'Builders',     min:0,  max:100, def:0,   unit:'', ticks:[0,20,40,60,80,100], names:['By the Seed','Wilds','Engineers','Cities','Magi','Ruins']},
                   {key:'alt',   label:'Altitude',        min:0,  max:100, def:15,  unit:''},
-                  // where across the band you stand: the middle, or near a wall (the lens is the camera dial's zoom)
-                  {key:'place', label:'Stand At',        min:-100, max:100, def:0, unit:''}],
+                  // ships in the sky (the middle: what the builders fly), and past it lanes of small craft; busier streets at night
+                  // (where across the band you stand is the seed's now; the lens is the camera dial's zoom)
+                  {key:'traffic', label:'Traffic',       min:0,  max:100, def:50,  unit:''}],
   // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon
   rainwater:     [{key:'zoom',  label:'Ripple Size',     min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Rain',            min:0,  max:100, def:50,  unit:''},
@@ -1002,6 +1005,8 @@ function describeRequest(type, w, h, opts){
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
+            // (whether it is Text Aware, and whether it fills the letters, only for a surface that reads the poem)
+            + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' : '') + (opts.aware === false ? '_A0' : '') : '')
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '');
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, camera: cameraOf(type, opts) };
@@ -1017,7 +1022,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null, camera: extra.camera || null,
-      ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      aware: extra.aware !== false, fill: !!extra.fill, ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -1067,13 +1072,15 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true,
+      text: chain.poem && extra.text ? poemLines(extra.text) : '', aware: extra.aware !== false, fill: !!extra.fill }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
-      mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null },
+      mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
+      aware: extra.aware !== false, fill: !!extra.fill },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -1132,7 +1139,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', aware: opts.aware !== false, fill: !!opts.fill, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

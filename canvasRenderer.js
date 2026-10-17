@@ -183,6 +183,20 @@ function scratchCanvas(w, h){
   SCRATCH.width = w; SCRATCH.height = h;
   return SCRATCH;
 }
+/** BLEND WITH TEXT (Ruby: the second surface "uses the text as a blend layer"): while the words are drawn, each glyph is
+ *  also filled white on this mask (the same font, place and turn), so the surface can be blended into the letters alone.
+ *  Kept between renders; null when no surface asks for it. */
+let GLYPH_MASK = null, GLYPH_CANVAS = null, FILL_CANVAS = null;
+function maskGlyphs(ctx, str, x, y){
+  const M = GLYPH_MASK; if(!M) return;
+  M.save(); if(typeof ctx.getTransform === 'function' && typeof M.setTransform === 'function') M.setTransform(ctx.getTransform());
+  M.font = ctx.font; M.textBaseline = ctx.textBaseline; M.textAlign = ctx.textAlign; M.globalAlpha = ctx.globalAlpha; M.fillStyle = '#fff';
+  M.fillText(str, x, y); M.restore();
+}
+function maskImage(ctx, img, x, y){
+  const M = GLYPH_MASK; if(!M) return;
+  M.save(); if(typeof ctx.getTransform === 'function' && typeof M.setTransform === 'function') M.setTransform(ctx.getTransform()); M.drawImage(img, x, y); M.restore();
+}
 /** The inset box's own layer, kept between renders (see the box, in render()). */
 let CARD_LAYER = null;
 function cardLayer(w, h){
@@ -701,6 +715,7 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
       } else {
         ctx.fillText(seg.text, x, cursorY);
       }
+      maskGlyphs(ctx, seg.text, x, cursorY);
     } else {
       const normalFont = ctx.font;
       const seed0 = charSeed;
@@ -751,7 +766,7 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
         if(isEmojiChar(ch)){
           const tinted = tintedEmojiCanvas(ch, ctx.font, emojiTint, size);
           ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-          ctx.drawImage(tinted, gx, gy);
+          ctx.drawImage(tinted, gx, gy); maskImage(ctx, tinted, gx, gy);
           return;
         }
         ctx.fillStyle = segFill;
@@ -760,6 +775,7 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
         } else {
           ctx.fillText(drawCh, gx, gy);
         }
+        maskGlyphs(ctx, drawCh, gx, gy);
       });
     }
 
@@ -1101,7 +1117,7 @@ export function pageEnvNow(stops = parseInt(getActiveRadioValue('bgStopsGroup'),
 }
 /** The surface the controls show, as a layer: the same keys a look saves. */
 export function surfaceFromDom(){
-  const v = id => { const el = $(id); return el ? el.value : undefined; };
+  const v = id => { const el = $(id); return el ? el.value : undefined; }, chk = (id, d) => { const el = $(id); return el ? !!el.checked : d; };
   const b = $('textureBlend'), ds = (b && b.dataset) || {};
   const ground = ds.ground && ds.groundFor === b.value ? ds.ground : '';   // (appEvents keepGround)
   return { textureType: v('textureType'), texP1: v('texP1'), texP2: v('texP2'), texP3: v('texP3'), texP4: v('texP4'), texP5: v('texP5'), texP6: v('texP6'), texP7: v('texP7'), texP8: v('texP8'),
@@ -1111,6 +1127,7 @@ export function surfaceFromDom(){
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
+    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false),
     ...(ground ? { textureGround: ground } : {}) };
 }
 /** An Athanor surface's own sliders and hues, read from its graph (each layer may carry a different one):
@@ -1173,8 +1190,11 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   } else {
     // (an Athanor surface carries its graph: the worker makes it from that)
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
-    const text = (graph && graphUsesPoem(graph)) || chainReadsPoem(type) ? TEXT_LAYOUT : undefined;   // (the poem's layout, only for a graph that asks for it)
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    // (the poem's layout, only for a graph that asks for it, and only while the surface is Text Aware or fills the
+    //  letters Shape Aware; `fill` tells it it is inside them)
+    const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware, aware = L.textureTextAware !== false;
+    const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type)) && (aware || fill) ? TEXT_LAYOUT : undefined;
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, aware, fill, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -1216,6 +1236,7 @@ function renderInto(canvas){
     ctx.fillRect(0,0,W,H);
   }
 
+  let textFill = null;
   // SURFACE LAYERS (Ruby: every control for both, any blend for each): the lower first, then the upper,
   // each drawn the same way from its settings. appEvents hands over the layer the controls are not
   // showing (setSurfaceSource); the one they show is read from the page.
@@ -1227,6 +1248,7 @@ function renderInto(canvas){
     const lower = src && src.lowerOn ? (src.editing === 'lower' ? dom : src.other) : null;
     for(const [L, slot] of [[lower, 'base'], [upper, 'main']]){
       if(!L || !L.textureType) continue;
+      if(slot === 'base' && L.textureTextBlend){ textFill = { L, env }; continue; }   // (drawn into the letters, after them)
       drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env });
     }
   }
@@ -1517,6 +1539,9 @@ function renderInto(canvas){
     PROBE_INKS = { now: [], words: '' }; }
   let cursorY = startY;
   ctx.textBaseline = 'top';
+  // (Blend with Text: the letters' shapes gathered as they are drawn)
+  if(textFill){ if(!GLYPH_CANVAS) GLYPH_CANVAS = document.createElement('canvas'); GLYPH_CANVAS.width = W; GLYPH_CANVAS.height = H;
+    GLYPH_MASK = GLYPH_CANVAS.getContext('2d', { willReadFrequently: true }); GLYPH_MASK.clearRect(0, 0, W, H); }
   // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
   const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0;
   const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(','));
@@ -1680,13 +1705,25 @@ function renderInto(canvas){
     rec(startX, startX + totalWidth, cursorY, size*1.15);
     cursorY += lineHeight;
   }
+  // BLEND WITH TEXT: the page as it is now, the second surface blended onto it (its own blend and opacity), kept only
+  // inside the letters, laid back over the page
+  if(textFill && GLYPH_MASK){ GLYPH_MASK = null;
+    try { if(!FILL_CANVAS) FILL_CANVAS = document.createElement('canvas'); FILL_CANVAS.width = W; FILL_CANVAS.height = H;
+      const fx = FILL_CANVAS.getContext('2d', { willReadFrequently: true });
+      fx.globalCompositeOperation = 'source-over'; fx.globalAlpha = 1; fx.drawImage(canvas, 0, 0);
+      drawSurfaceLayer(fx, textFill.L, 'base', { W, H, S, canvas: FILL_CANVAS, clearing: 0, env: textFill.env });
+      fx.globalCompositeOperation = 'destination-in'; fx.globalAlpha = 1; fx.drawImage(GLYPH_CANVAS, 0, 0); fx.globalCompositeOperation = 'source-over';
+      ctx.save(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(FILL_CANVAS, 0, 0); ctx.restore();
+    } catch(err){ if(typeof console !== 'undefined') console.warn('text blend skipped:', err && err.message); } }
+  GLYPH_MASK = null;
   // the layout changed: a surface that reads it is drawn again, once, with the new one
   { const lay = textRuns.join(';');
     if(GROUND_PROBE && GROUND_PROBE.ground){ const { data, gw, gh, runs, inkField } = GROUND_PROBE.ground;
       GROUND_PROBE.result = groundContrast(data, gw, gh, runs, READABLE.allowance, inkField);
       GROUND_PROBE.result.settled = lay === TEXT_LAYOUT; GROUND_PROBE.ground = null; PROBE_INKS = null; }
     if(lay !== TEXT_LAYOUT){ TEXT_LAYOUT = lay;
-      const g = ($('textureType').value === 'athanor' && graphUsesPoem(($('forgeGraph') || {}).value || '')) || chainReadsPoem($('textureType').value);
+      const reads = L => !!L && ((L.textureType === 'athanor' && graphUsesPoem(L.forgeGraph || '')) || chainReadsPoem(L.textureType));
+      const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null, g = reads(surfaceFromDom()) || !!(src && src.lowerOn && reads(src.other));
       if($('textureToggle').checked && (clearing > 0 || g)) setTimeout(scheduleRender, 0); } }
 
   // the spell is tied to the texture seed even when textures are off

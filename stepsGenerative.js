@@ -924,8 +924,9 @@ function ringLook(o){
 // THE WORKS (Ruby: "spires, archways, cities, lights, spaceships, structures, and magical/magitech … seed dependent as
 // much as you can so users see large varieties of ringworlds"; and before, "never bare"). Whoever built the ring
 // decides what stands on it: five builders, the seed's two (one leading, one in its shadow), or the one the Builders
-// slider names. Structures (o.build, 0.25 at its lowest) says how much. Each kind of work draws from its own stream,
-// so more Structures adds works and moves none.
+// slider names. Cities (o.build, 0.25 at its lowest; past its first quarter it spreads cities too) says how much;
+// Landforms what the land itself raises; Traffic how busy the sky is. Each kind of work draws from its own stream, so
+// more of any adds works and moves none.
 //            spires · arches · towers · ships · city · crystals · circles · pillars · scaffolding; the lights' colours
 const RING_BUILDERS = ['wilds', 'engineers', 'cities', 'magi', 'ruins'];
 const RING_WORKS = {
@@ -961,11 +962,14 @@ function ringBuild(L, o){
       const U = upAt(phi), base = floorAt(phi, z), tip = [base[0] + U[0]*h - L.Px, base[1] + U[1]*h, base[2] + U[2]*h - L.z0], tl = Math.hypot(tip[0], tip[1], tip[2]), glowR = Math.max(rr*1.2, W*0.002);
       beam(base, U, h, rr, snapped ? rr*0.8 : rr*0.15, { spire: true, glowR, beacon: !snapped, tip: [tip[0]/tl, tip[1]/tl, tip[2]/tl], tl, tipCos: Math.cos(Math.min(1.5, 3*glowR/tl)) });
     } }
-  // THE CITY: blocks of streets laid on the land where the seed's noise is high (lit at night), and towers in it
-  { const r = ringRand(seed, 2), k = how('ci');
+  // THE CITY: blocks of streets laid on the land where the seed's noise is high (lit at night), and towers in it.
+  // (Cities, the fourth slider, says how built-up the ring is: past its first quarter the cities spread whoever built it)
+  const moreCity = genClamp(((o.cities ?? 0.25) - 0.25)/0.75), kCity = Math.max(how('ci'), moreCity);
+  L.traffic = o.traffic ?? 0.5;
+  { const r = ringRand(seed, 2), k = kCity;
     L.city = { on: k > 0.05, cut: 1 - 0.8*k*(0.4 + 0.6*b), f: 0.9 + r()*1.6, cell: 0.003 + r()*0.004, salt: (r()*1e6) | 0 };
     // (a city's own builders raise a skyline: more than twice the towers anyone else does)
-    const nTw = Math.round(how('tw')*(6 + 40*b)*(0.6 + 0.8*r())*(lead === 'cities' ? 2.4 : 1));
+    const nTw = Math.round(Math.max(how('tw'), moreCity)*(6 + 40*b)*(0.6 + 0.8*r())*(lead === 'cities' ? 2.4 : 1));
     for(let i = 0, tries = 0; i < nTw && tries < nTw*30; tries++){
       const phi = tries % 5 === 4 ? (r()*2 - 1)*Math.PI : near(r, 0.04, 2.5), z = (r()*2 - 1)*W*0.44, a = phi/W, c = z/W + 0.5;
       if(L.city.on && ringCityCover(L, a, c) < 0.5 && r() < 0.85) continue;
@@ -977,20 +981,24 @@ function ringBuild(L, o){
       for(let j = 0; j < ring && i < nM; j++, i++){ const a = j/ring*Math.PI*2, ph = phi + (ring > 1 ? Math.cos(a)*rr : 0), zz = z + (ring > 1 ? Math.sin(a)*rr : 0);
         const h = W*(0.006 + 0.03*Math.pow(r(), 1.5)), U = upAt(ph), T = alongAt(ph), lean = (r() - 0.5)*0.3, A0 = ringNorm([U[0] + T[0]*lean, U[1] + T[1]*lean, U[2] + lean*0.5]);
         beam(floorAt(ph, zz), A0, h, h*(0.14 + 0.1*r()), h*(0.1 + 0.08*r()), { stone: true }); } } }
-  // ARCHES: great arches spanning the band from wall to wall (seen far off as bands across the arch overhead), and
-  // gateways standing on the land, across the ring or along it. A ruin's arches stand broken.
-  { const r = ringRand(seed, 3), k = how('ar'), nA = Math.round(k*(1 + 4*b*r())), nG = Math.round(k*(5 + 26*b*r()));
-    const arch = (phi, zc, span, ht, across, rad, segs) => { const U = upAt(phi), S = across ? [0, 0, 1] : alongAt(phi), C0 = floorAt(phi, zc);
-      const pt = th => [C0[0] + S[0]*Math.cos(th)*span/2 + U[0]*Math.sin(th)*ht, C0[1] + S[1]*Math.cos(th)*span/2 + U[1]*Math.sin(th)*ht, C0[2] + S[2]*Math.cos(th)*span/2 + U[2]*Math.sin(th)*ht];
+  // ARCHES: great arches spanning the band (seen far off as bands across the arch overhead), and gateways standing on
+  // the land, across the ring or along it. A ruin's arches stand broken. (Ruby: "archways should go across the mountains
+  // as if they contain the atmosphere": the band's arches spring from the rim walls' tops, and the air they hold shows
+  // as a faint field beneath each, brightest edge-on and along the arch)
+  { const r = ringRand(seed, 3), k = how('ar'), nA = Math.round(k*(1.5 + 5*b*r())), nG = Math.round(k*(5 + 26*b*r()));
+    const arch = (phi, zc, span, ht, across, rad, segs, lift = 0) => { const U = upAt(phi), S = across ? [0, 0, 1] : alongAt(phi), C0 = floorAt(phi, zc);
+      const pt = th => { const a = Math.cos(th)*span/2, e = lift + Math.sin(th)*ht; return [C0[0] + S[0]*a + U[0]*e, C0[1] + S[1]*a + U[1]*e, C0[2] + S[2]*a + U[2]*e]; };
       for(let s = 0; s < segs; s++){ if(broken > 0 && r() < 0.32*broken) continue;
         const p0 = pt(Math.PI*s/segs), p1 = pt(Math.PI*(s + 1)/segs), d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], l = Math.hypot(d[0], d[1], d[2]);
         beam(p0, [d[0]/l, d[1]/l, d[2]/l], l*1.04, rad, rad, { arch: true }); } };
-    for(let i = 0; i < nA; i++){ const phi = i === 0 ? near(r, 0.8, 3) : (r() < 0.5 ? near(r, 1, 8) : (r()*2 - 1)*Math.PI);
-      arch(phi, 0, W*0.98, W*0.5*(0.45 + 0.7*r()), true, W*(0.004 + 0.008*r()), 18); }
+    for(let i = 0; i < nA; i++){ const phi = i === 0 ? near(r, 0.5, 1.6) : (r() < 0.5 ? near(r, 1, 8) : (r()*2 - 1)*Math.PI);
+      const ht = W*(0.12 + 0.4*r()), rad = W*(0.012 + 0.02*r());
+      arch(phi, 0, W, ht, true, rad, 22, L.Hw);
+      if(broken < 0.5) P.push({ k: 7, O: floorAt(phi, 0, L.Hw), N: alongAt(phi), E1: [0, 0, 1], E2: upAt(phi), a: W/2, ht, c: floorAt(phi, 0, L.Hw + ht/2), rad: Math.hypot(W/2, ht), col: [0.62, 0.86, 1] }); }
     for(let i = 0; i < nG; i++){ const phi = near(r, 0.05, 1.5), span = W*(0.03 + 0.2*Math.pow(r(), 1.5)), z = (r()*2 - 1)*(W*0.48 - span/2);
       arch(phi, z, span, span*(0.5 + 0.6*r()), r() < 0.5, span*(0.035 + 0.03*r()), 10); } }
   // SHIPS: hulls in the air, going along the ring or across it, engines lit behind, some drawing a trail
-  { const r = ringRand(seed, 4), k = how('sh'), nS = Math.round(k*(4 + 30*b*r()));
+  { const r = ringRand(seed, 4), k = how('sh'), T = L.traffic, nS = Math.round(k*(4 + 30*b*r())*(T <= 0.5 ? Math.pow(T/0.5, 1.2) : 1 + (T - 0.5)*3));
     for(let i = 0; i < nS; i++){
       const big = r() < 0.08, phi = big || r() < 0.25 ? (r()*2 - 1)*Math.PI*0.5 : near(r, 0.05, 3), z = (r()*2 - 1)*W*0.45, alt = W*(big ? 0.15 + 0.3*r() : 0.01 + 0.2*Math.pow(r(), 2));
       const U = upAt(phi), T = alongAt(phi), psi = r()*Math.PI*2, F = ringNorm([T[0]*Math.cos(psi), T[1]*Math.cos(psi), Math.sin(psi)]), Sd = ringNorm([F[1]*U[2] - F[2]*U[1], F[2]*U[0] - F[0]*U[2], F[0]*U[1] - F[1]*U[0]]);
@@ -1026,9 +1034,51 @@ function ringBuild(L, o){
       P.push({ k: 3, bx: B0[0], by: B0[1], bz: B0[2], ax: U[0], ay: U[1], az: U[2], h: Lp, w: W*(0.002 + 0.008*r()), c: floorAt(phi, z, Lp/2), rad: Lp/2 + W*0.06, col: L.pal[i % L.pal.length] }); } }
   // scaffolding: stretches of floor left unfinished, an open lattice over the void (more of it on some rings)
   { const k = how('sc'); L.scaf = { on: k > 0.1 && style > 0.1, amount: (0.08 + 0.3*b)*k*(style > 0.7 ? 1.6 : 1), cell: 0.05 + rnd()*0.07, beam: 0.14 + rnd()*0.1, salt: (rnd()*1e6) | 0 }; }
+  // DOMES over the city's heart (the cities' way of holding air): glass, seen only by the light it catches at its rim
+  { const r = ringRand(seed, 9), nD = L.city.on ? Math.round(kCity*(1 + 10*b*r())) : 0;
+    for(let i = 0, tries = 0; i < nD && tries < nD*20; tries++){ const phi = near(r, 0.05, 3), z = (r()*2 - 1)*W*0.4;
+      if(ringCityCover(L, phi/W, z/W + 0.5) < 0.6) continue;
+      const R0 = W*(0.015 + 0.08*Math.pow(r(), 2)), Rv = R0*(0.45 + 0.4*r());
+      P.push({ k: 8, c: floorAt(phi, z), U: upAt(phi), R: R0, Rv, rad: R0*1.05, col: [0.72, 0.88, 1] }); i++; } }
+  // TRAFFIC LANES (Traffic past its middle): streams of small craft along the ring at their own heights, their engines
+  // a dotted line of lights far off
+  { const r = ringRand(seed, 12), nL = Math.floor(genClamp((L.traffic - 0.5)/0.5)*5.99);
+    for(let l = 0; l < nL; l++){
+      const alt = W*(0.008 + 0.12*Math.pow(r(), 1.5)), z = (r()*2 - 1)*W*0.4, dir = r() < 0.5 ? -1 : 1, gap = W*(0.006 + 0.02*r()), size = W*(0.002 + 0.004*r());
+      const n = 30 + Math.floor(r()*40), ph0 = (r() - 0.5)*W*2, col = L.pal[(l + 1) % L.pal.length];
+      for(let j = 0; j < n; j++){ const phi = ph0 + (j - n/2)*gap*(0.7 + 0.6*r()), U = upAt(phi), T = alongAt(phi), F = [T[0]*dir, T[1]*dir, 0];
+        const Sd = ringNorm([F[1]*U[2] - F[2]*U[1], F[2]*U[0] - F[0]*U[2], F[0]*U[1] - F[1]*U[0]]), C = floorAt(phi, z + (r() - 0.5)*W*0.012, alt + (r() - 0.5)*W*0.004);
+        P.push({ k: 1, c: C, F, U, S: Sd, ax: size, ay: size*0.3, az: size*0.4, rad: size*1.2, col });
+        P.push({ k: 6, c: [C[0] - F[0]*size*1.05, C[1] - F[1]*size*1.05, C[2]], rad: size*4, g: size*0.8, col: [1, 0.86, 0.62] }); } } }
+  // LANDFORMS (the second slider; Ruby: "additional structures and mountains, ways to do sparse nearby geometry"): what
+  // the land itself raises, from the seed's own country: peaks (snow-capped when tall) near the walls and far round the
+  // ring, mesas, boulders strewn near you, pinnacles, and the magi's floating isles. Each kind its own stream.
+  { const lf = o.landforms ?? 0.5, g = Math.pow(lf, 1.4), r0 = ringRand(seed, 10), country = RING_LANDS[Math.floor(r0()*RING_LANDS.length)];
+    const isles = Math.max(country[4], how('cr')*(lead === 'magi' ? 0.9 : 0.4)), rock = { rock: true };
+    const zAt = (r, edge) => r() < edge ? (r() < 0.5 ? -1 : 1)*W*(0.47 - 0.12*Math.pow(r(), 2)) : (r()*2 - 1)*W*0.42;
+    { const r = ringRand(seed, 11), n = Math.round(country[0]*g*16);   // peaks: cones, a few huge
+      for(let i = 0; i < n; i++){ const phi = i % 3 === 2 ? (r()*2 - 1)*Math.PI : near(r, 0.3, 5), z = zAt(r, 0.6), h = W*(0.03 + 0.22*Math.pow(r(), 2))*(0.6 + lf), rb = h*(0.55 + 0.4*r());
+        beam(floorAt(phi, z), upAt(phi), h, rb, rb*0.02, { ...rock, peak: true, snow: h > W*0.07 }); } }
+    { const r = ringRand(seed, 13), n = Math.round(country[1]*g*16);   // mesas: flat-topped, steep-sided
+      for(let i = 0; i < n; i++){ const phi = near(r, 0.1, 4), z = zAt(r, 0.2), rr = W*(0.01 + 0.06*Math.pow(r(), 1.5)), h = rr*(0.35 + 0.8*r())*(0.6 + lf);
+        beam(floorAt(phi, z), upAt(phi), h, rr, rr*(0.78 + 0.15*r()), { ...rock, cap: true }); } }
+    { const r = ringRand(seed, 14), n = Math.round(country[2]*g*90);   // boulders near you: half sunk, never at your elbow
+      for(let i = 0; i < n; i++){ const phi = near(r, 0.002, 0.6), z = Math.max(-W*0.46, Math.min(W*0.46, L.z0 + (r()*2 - 1)*W*0.35)), far = Math.hypot(phi, z - L.z0);
+        const sz = Math.min(far*0.09, W*(0.0006 + 0.012*Math.pow(r(), 3))), U = upAt(phi), T = alongAt(phi), yaw = r()*Math.PI, F = ringNorm([T[0]*Math.cos(yaw), T[1]*Math.cos(yaw), Math.sin(yaw)]);
+        const Sd = ringNorm([F[1]*U[2] - F[2]*U[1], F[2]*U[0] - F[0]*U[2], F[0]*U[1] - F[1]*U[0]]), ay = sz*(0.45 + 0.3*r());
+        P.push({ k: 1, c: floorAt(phi, z, ay*0.35), F, U, S: Sd, ax: sz, ay, az: sz*(0.65 + 0.3*r()), rad: sz*1.1, ...rock }); } }
+    { const r = ringRand(seed, 15), n = Math.round(country[3]*g*40);   // pinnacles: hoodoos and needles of stone
+      for(let i = 0; i < n; i++){ const phi = near(r, 0.01, 2), z = zAt(r, 0.15), h = W*(0.005 + 0.05*Math.pow(r(), 1.5))*(0.6 + lf), rb = h*(0.08 + 0.08*r());
+        beam(floorAt(phi, z), upAt(phi), h, rb, rb*(0.35 + 0.35*r()), { ...rock, cap: true }); } }
+    { const r = ringRand(seed, 16), n = Math.round(isles*g*10);   // floating isles: inverted cones of rock, flat-topped, in the air
+      for(let i = 0; i < n; i++){ const phi = near(r, 0.05, 3), z = (r()*2 - 1)*W*0.4, alt = W*(0.02 + 0.22*r()), rr = W*(0.008 + 0.05*Math.pow(r(), 1.5)), d = rr*(0.8 + 0.9*r());
+        beam(floorAt(phi, z, alt), upAt(phi), d, rr*0.04, rr, { ...rock, cap: true, isle: true }); } } }
   // the rare seam: now and then the edge of the world shows (Ruby's egg), one ring in seven
   L.seam = ((o.seed >>> 0) % 7) === 3;
 }
+// the lands a seed may give a ring: how much of each landform it raises (peaks, mesas, boulders, pinnacles, floating isles)
+//               alpine · mesa country · boulder fields · hoodoos · karst · mixed
+const RING_LANDS = [[1, 0.1, 0.6, 0.2, 0], [0.15, 1, 0.4, 0.6, 0], [0.3, 0.2, 1, 0.3, 0], [0.2, 0.4, 0.5, 1, 0], [0.7, 0, 0.3, 0.8, 0.2], [0.35, 0.3, 0.6, 0.4, 0.12]];
 // the city's cover where it stands (0..1): the seed's noise, never at the walls' feet
 function ringCityCover(L, a, c){ const C = L.city; if(!C || !C.on) return 0;
   return genClamp((mnValue(a*C.f + 11.3, c*C.f*1.6 + 2.9, C.salt) - C.cut)/0.06)*genClamp((0.47 - Math.abs(c - 0.5))/0.03); }
@@ -1039,7 +1089,7 @@ function ringCity(L, a, c, foot){
   const ux = fx - ix, uy = fy - iy, street = ux < 0.14 || uy < 0.14;
   // lights: the street's lamps in a line, and the block's lit windows as points (a 4×4 of them, some lit)
   let light = 0;
-  if(street) light = (ux < 0.14 && uy < 0.14) ? 1 : 0.35;
+  if(street) light = (ux < 0.14 && uy < 0.14) ? 1 : 0.35*(0.6 + 0.8*L.traffic);   // (Traffic: the streets' own lights)
   else { const gx = Math.floor((ux - 0.14)/0.86*4), gy = Math.floor((uy - 0.14)/0.86*4), lx = (ux - 0.14)/0.86*4 - gx, ly = (uy - 0.14)/0.86*4 - gy;
     light = (lx > 0.3 && lx < 0.7 && ly > 0.3 && ly < 0.7 && mnHash(ix*4 + gx, iy*4 + gy, C.salt + 5) < 0.25 + 0.5*h) ? 1 : 0; }
   const fineL = genClamp(1.5 - foot*4/C.cell);
@@ -1108,16 +1158,21 @@ function ringRay(L, dx, dy, dz, air, list){
   if(list) for(const p of list){
     if(p.k === 0){
       // the closest approach of the ray (P + tD) and the beam's axis (B + A·s, 0 ≤ s ≤ h), then where it enters the beam
+      // (and, for a capped one — a mesa, a pinnacle, a floating isle — where it meets the flat top, if that is nearer)
       const wx = Px - p.bx, wy = -p.by, wz = z0 - p.bz, b2 = dx*p.ax + dy*p.ay + dz*p.az, d1 = dx*wx + dy*wy + dz*wz, e1 = p.ax*wx + p.ay*wy + p.az*wz, den = 1 - b2*b2;
-      if(den < 1e-9) continue;
-      const t = (b2*e1 - d1)/den, sv = (e1 - b2*d1)/den;
-      if(sv < 0 || sv > p.h || t <= 0 || (hit && t > hit.t)) continue;
-      const qx = Px + t*dx - (p.bx + p.ax*sv), qy = t*dy - (p.by + p.ay*sv), qz = z0 + t*dz - (p.bz + p.az*sv), q2 = qx*qx + qy*qy + qz*qz, rr = p.r0 + (p.r1 - p.r0)*sv/p.h;
-      if(q2 > rr*rr) continue;
-      const te = Math.max(1e-6, t - Math.sqrt(rr*rr - q2)/Math.sqrt(den)), Ex = Px + te*dx, Ey = te*dy, Ez = z0 + te*dz, se = (Ex - p.bx)*p.ax + (Ey - p.by)*p.ay + (Ez - p.bz)*p.az;
-      let nx = Ex - p.bx - p.ax*se, ny = Ey - p.by - p.ay*se, nz = Ez - p.bz - p.az*se; const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
-      const phi = Math.atan2(Ey, Ex), Ux = -Math.cos(phi), Uy = -Math.sin(phi), view = Math.max(0, -(nx*dx + ny*dy + nz*dz)), top = Math.max(0, nx*Ux + ny*Uy);
-      hit = { kind: 2, t: te, phi, z: (p.bz >= 0 ? 1 : -1)*L.W*0.5, h: Math.max(0, se)/L.W + 0.3, cosI: 0.5, spire: p.spire ? sv/p.h : undefined,
+      let te = Infinity, se = 0, nx = 0, ny = 0, nz = 0;
+      if(den >= 1e-9){ const t = (b2*e1 - d1)/den, sv = (e1 - b2*d1)/den;
+        if(sv >= 0 && sv <= p.h && t > 0 && !(hit && t > hit.t)){
+          const qx = Px + t*dx - (p.bx + p.ax*sv), qy = t*dy - (p.by + p.ay*sv), qz = z0 + t*dz - (p.bz + p.az*sv), q2 = qx*qx + qy*qy + qz*qz, rr = p.r0 + (p.r1 - p.r0)*sv/p.h;
+          if(q2 <= rr*rr){ te = Math.max(1e-6, t - Math.sqrt(rr*rr - q2)/Math.sqrt(den)); const Ex = Px + te*dx, Ey = te*dy, Ez = z0 + te*dz; se = (Ex - p.bx)*p.ax + (Ey - p.by)*p.ay + (Ez - p.bz)*p.az;
+            nx = Ex - p.bx - p.ax*se; ny = Ey - p.by - p.ay*se; nz = Ez - p.bz - p.az*se; const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl; } } }
+      if(p.cap && Math.abs(b2) > 1e-9){ const tc = ((p.bx + p.ax*p.h - Px)*p.ax + (p.by + p.ay*p.h)*p.ay + (p.bz + p.az*p.h - z0)*p.az)/b2;
+        if(tc > 0 && tc < te && !(hit && tc > hit.t)){ const cx = Px + tc*dx - (p.bx + p.ax*p.h), cy = tc*dy - (p.by + p.ay*p.h), cz = z0 + tc*dz - (p.bz + p.az*p.h);
+          if(cx*cx + cy*cy + cz*cz <= p.r1*p.r1){ te = tc; se = p.h; const sg = b2 < 0 ? 1 : -1; nx = p.ax*sg; ny = p.ay*sg; nz = p.az*sg; } } }
+      if(!(te < Infinity)) continue;
+      const Ex = Px + te*dx, Ey = te*dy, phi = Math.atan2(Ey, Ex), Ux = -Math.cos(phi), Uy = -Math.sin(phi), view = Math.max(0, -(nx*dx + ny*dy + nz*dz)), top = Math.max(0, nx*Ux + ny*Uy);
+      hit = { kind: 2, t: te, phi, z: (p.bz >= 0 ? 1 : -1)*L.W*0.5, h: Math.max(0, se)/L.W + 0.3, cosI: 0.5, spire: p.spire ? se/p.h : undefined,
+        ac: p.rock ? (z0 + te*dz)/L.W + 0.5 + (L.R - Math.hypot(Ex, Ey))/L.W*2 : undefined,
         shade: (0.5 + 0.5*view)*(0.62 + 0.38*top)*(p.arch ? 1.05 : p.tower ? 0.8 : 1), work: p, n: [nx, ny, nz], se };
     } else if(p.k === 1){
       // a hull: an ellipsoid along its heading
@@ -1130,7 +1185,8 @@ function ringRay(L, dx, dy, dz, air, list){
       const p1 = (o1 + t*d1)/p.ax, p2 = (o2 + t*d2)/p.ay, p3 = (o3 + t*d3)/p.az;
       const n = ringNorm([p.F[0]*p1 + p.U[0]*p2 + p.S[0]*p3, p.F[1]*p1 + p.U[1]*p2 + p.S[1]*p3, p.F[2]*p1 + p.U[2]*p2 + p.S[2]*p3]);
       const X = Px + t*dx, Y = t*dy, top = Math.max(0, n[0]*p.U[0] + n[1]*p.U[1] + n[2]*p.U[2]), view = Math.max(0, -(n[0]*dx + n[1]*dy + n[2]*dz));
-      hit = { kind: 2, t, phi: Math.atan2(Y, X), z: (p.c[2] >= 0 ? 1 : -1)*L.W*0.5, h: 0.3, cosI: 0.5, shade: 0.55*(0.35 + 0.65*top)*(0.6 + 0.4*view), work: p };
+      hit = { kind: 2, t, phi: Math.atan2(Y, X), z: (p.c[2] >= 0 ? 1 : -1)*L.W*0.5, h: 0.3, cosI: 0.5, work: p, ac: p.rock ? (z0 + t*dz)/L.W + 0.5 + (L.R - Math.hypot(X, Y))/L.W*2 : undefined,
+        shade: p.rock ? (0.5 + 0.5*view)*(0.5 + 0.5*top) : 0.55*(0.35 + 0.65*top)*(0.6 + 0.4*view) };
     } else if(p.k === 2){
       // a crystal: an upright octahedron, clipped plane by plane
       const ox = Px - p.c[0], oy = -p.c[1], oz = z0 - p.c[2]; let tn = 0, tf = Infinity, nIn = null;
@@ -1171,6 +1227,27 @@ function ringGlow(L, dx, dy, dz, tHit, list, alpha, out){
       if(t0 <= 0 || t0 > tHit + g*2) continue;
       const d2 = vx*vx + vy*vy + vz*vz - t0*t0, s = Math.max(g, t0*alpha*1.2), v = (p.k === 6 ? 1.2 : 0.45)*Math.exp(-d2/(s*s))*Math.max(0.2, Math.sqrt(g/s));
       if(v > 1e-4){ out[0] += p.col[0]*v; out[1] += p.col[1]*v; out[2] += p.col[2]*v; }
+    } else if(p.k === 7){
+      // an arch's field (the air it holds): a sheet in the arch's plane, between the walls' tops and the arch, faint face-on,
+      // brighter seen edge-on, brightest along the arch itself, with slow bands as of something moving in it
+      const dn = dx*p.N[0] + dy*p.N[1] + dz*p.N[2]; if(Math.abs(dn) < 1e-6) continue;
+      const t = ((p.O[0] - Px)*p.N[0] + p.O[1]*p.N[1] + (p.O[2] - z0)*p.N[2])/dn; if(t <= 0 || t >= tHit) continue;
+      const qx = Px + t*dx - p.O[0], qy = t*dy - p.O[1], qz = z0 + t*dz - p.O[2], x = (qx*p.E1[0] + qy*p.E1[1] + qz*p.E1[2])/p.a, y = (qx*p.E2[0] + qy*p.E2[1] + qz*p.E2[2])/p.ht;
+      if(y < 0) continue; const e = Math.sqrt(x*x + y*y); if(e > 1.06) continue;
+      const we = Math.max(0.012, t*alpha*1.5/(p.ht*Math.max(0.15, Math.abs(dn)))), edge = Math.exp(-((e - 1)*(e - 1))/(we*we));
+      const v = (e < 1 ? Math.min(0.32, 0.07/Math.max(0.2, Math.abs(dn)))*(0.8 + 0.2*Math.sin(y*38 + x*5))*(0.6 + 0.4*y) : 0) + 0.45*edge;
+      if(v > 1e-4){ out[0] += p.col[0]*v; out[1] += p.col[1]*v; out[2] += p.col[2]*v; }
+    } else if(p.k === 8){
+      // a dome of glass: the ray against its ellipsoid (round across, Rv high), its upper half; the light it catches grows
+      // toward its rim, where the ray glances off it
+      const k = p.R/p.Rv, ox = Px - p.c[0], oy = -p.c[1], oz = z0 - p.c[2], ou = ox*p.U[0] + oy*p.U[1] + oz*p.U[2], du = dx*p.U[0] + dy*p.U[1] + dz*p.U[2];
+      const Ox = ox + p.U[0]*ou*(k - 1), Oy = oy + p.U[1]*ou*(k - 1), Oz = oz + p.U[2]*ou*(k - 1), Dx = dx + p.U[0]*du*(k - 1), Dy = dy + p.U[1]*du*(k - 1), Dz = dz + p.U[2]*du*(k - 1);
+      const A2 = Dx*Dx + Dy*Dy + Dz*Dz, B2 = Ox*Dx + Oy*Dy + Oz*Dz, C2 = Ox*Ox + Oy*Oy + Oz*Oz - p.R*p.R, disc = B2*B2 - A2*C2; if(disc <= 0) continue;
+      const t = (-B2 - Math.sqrt(disc))/A2; if(t <= 0 || t >= tHit) continue;
+      const hx = ox + t*dx, hy = oy + t*dy, hz = oz + t*dz, hu = hx*p.U[0] + hy*p.U[1] + hz*p.U[2]; if(hu < 0) continue;
+      const kk = k*k - 1, nx = hx + p.U[0]*hu*kk, ny = hy + p.U[1]*hu*kk, nz = hz + p.U[2]*hu*kk, nl = Math.hypot(nx, ny, nz) || 1, cv = Math.abs(nx*dx + ny*dy + nz*dz)/nl;
+      const v = 0.05 + 0.55*Math.pow(1 - cv, 3);
+      out[0] += p.col[0]*v; out[1] += p.col[1]*v; out[2] += p.col[2]*v;
     } else if(p.k === 4){
       // a circle: where the ray crosses its plane, two rings, a star inside, runes between them
       const dn = dx*p.N[0] + dy*p.N[1] + dz*p.N[2]; if(Math.abs(dn) < 1e-5) continue;
@@ -1219,6 +1296,7 @@ function genRingView(ww, wh, unit, o){
   const scaf = new Float32Array(N), open = new Float32Array(N), seam = new Float32Array(N), skyAir = new Float32Array(N);
   const city = new Float32Array(N), cityL = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lights = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
   const shade = new Float32Array(N).fill(1), cA = new Float32Array(N), cC = new Float32Array(N), cD = new Float32Array(N).fill(1), cHere = new Float32Array(N);
+  const rock = new Float32Array(N), snow = new Float32Array(N);
   // (the day where the camera stands: the air about it is lit by it, whatever lies beyond)
   const here = new Float32Array(N).fill(ringDay(L, 0)), beacon = new Float32Array(N);
   const px = 1/unit, alpha = px/L.f, D3 = new Float64Array(3), G = [0, 0, 0], bins = ringBin(L, ww, wh, unit), cityCol = L.pal[0], winCol = L.pal[1];
@@ -1240,9 +1318,11 @@ function genRingView(ww, wh, unit, o){
     let H = c.kind === 1 || c.kind === 2 ? c : null;
     // (an edge pixel whose centre missed the ring: the ring's coordinates from a corner that met it)
     if(!H) for(let k = 0; k < 4 && !H; k++) if(ks[k] === 1 || ks[k] === 2){ const e = ray(sx + ((k & 1) - 0.5)*px, sy + ((k >> 1) - 0.5)*px), h = ringRay(L, e[0], e[1], e[2], false, list); if(h.kind === 1 || h.kind === 2) H = h; }
-    if(H){ along[q] = H.phi/L.W; across[q] = H.kind === 2 ? (H.z > 0 ? 1 + H.h : -H.h) : H.z/L.W + 0.5;
+    if(H){ along[q] = H.phi/L.W; across[q] = H.ac !== undefined ? H.ac : H.kind === 2 ? (H.z > 0 ? 1 + H.h : -H.h) : H.z/L.W + 0.5;
       dist[q] = 1 - Math.exp(-H.t/(L.W*6)); detail[q] = H.t*alpha/Math.max(0.03, H.cosI)/L.W; day[q] = ringDay(L, H.phi);
       if(H.shade !== undefined) shade[q] = 1 - w(2) + w(2)*H.shade;
+      // the land's own forms are rock (and a tall peak's head snow), not the builders' metal
+      if(H.work && (H.work.rock || H.work.stone)){ rock[q] = w(2); if(H.work.snow) snow[q] = w(2)*genClamp((H.se/H.work.h - 0.66)/0.08); }
       const night = 1 - day[q];
       // the unfinished floor: its beams (metal), and the void seen between them (space shows through); the city on the land
       if(H.kind === 1){ const [bm, op] = ringLattice(L, along[q], across[q], detail[q]); const fl = 1 - space - w(2); scaf[q] = bm*fl; open[q] = op*fl;
@@ -1275,7 +1355,7 @@ function genRingView(ww, wh, unit, o){
       const edge = Math.exp(-Math.pow((mxA - mid)/(px*1.5), 2)), u = (ax === mxA ? dy/ax : dx/mxA)*4, v = (az === mxA ? dy/az : dz/mxA)*4, gu = Math.abs(u - Math.round(u)), gv = Math.abs(v - Math.round(v));
       seam[q] = space*Math.min(1, edge + 0.35*Math.exp(-Math.pow(Math.min(gu, gv)/(px*6), 2))); }
   }
-  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere];
+  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere, rock, snow];
 }
 
 // a Ringworld View's settings (as its sliders give them) as the world it draws — shared with the camera's guide
@@ -1283,10 +1363,13 @@ export function ringParams(r){
   const b = r.band/100, W = 0.012 + 0.22*b*b, z = Math.max(0.25, (r.zoom ?? 100)/100);
   return { band: W, walls: W*(0.04 + 0.7*r.walls/100), altitude: W*Math.pow(10, -3.2 + 3*r.altitude/100), look: r.look,
     lift: Math.max(-30, Math.min(89.5, r.up != null ? 90 - 90*Math.min(1.3, r.up) : (r.lift ?? 15)*0.9)),
-    lens: 2*Math.atan(Math.tan((r.lens ?? 75)*Math.PI/360)/z)*180/Math.PI, place: (r.place ?? 0)/100, daylight: (r.daylight ?? 80)/100,
+    lens: 2*Math.atan(Math.tan((r.lens ?? 75)*Math.PI/360)/z)*180/Math.PI, place: (r.placeBy === 'where the seed says' ? ringPlaceOf(r.seed >>> 0) : r.place ?? 0)/100, daylight: (r.daylight ?? 80)/100,
     air: (a => 0.01 + 0.4*a*a)((r.air ?? 50)/100), build: 0.25 + 0.75*(r.build ?? 35)/100, seed: r.seed >>> 0,
-    side: r.side ?? 1, builders: Math.max(0, Math.min(5, Math.round((r.builders ?? 0)/20))) };
+    side: r.side ?? 1, builders: Math.max(0, Math.min(5, Math.round((r.builders ?? 0)/20))),
+    landforms: (r.landforms ?? 50)/100, cities: (r.cities ?? 25)/100, traffic: (r.traffic ?? 50)/100 };
 }
+// where across the band the seed stands you (Ringworld's own: its Stand At slider became Traffic), −0.65…0.65 of the half-band
+export const ringPlaceOf = seed => (mnHash(seed | 0, 91, 7) - 0.5)*130;
 // THE CAMERA'S GUIDE (Ruby: "a fast render … almost a guide while you're adjusting the camera"): the shot as a few
 // lines, in page units (the short side 1), drawn over the page while the camera dial moves and the surface is still
 // being made. A plane (Wood, Discharge): its grid, the page's own square bold. A ring: its floor's edges, its walls.
@@ -1366,8 +1449,14 @@ function gsShards(aspX, aspY, o){
     const g = () => { let u = 0; while(!u) u = r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r()); };
     // where: about a pile, flung wider as Spread rises (a gaussian's tail: a few fly far); and, more as it rises, anywhere
     const sig = 0.06 + 0.5*o.spread, flung = r() < Math.pow(o.spread, 1.5)*0.85, gx = g(), gy = g(), ux = r(), uy = r();
-    const cx = flung ? aspX*(-0.05 + 1.1*ux) : P[0] + gx*sig*aspX*0.5, cy = flung ? aspY*(-0.05 + 1.1*uy) : P[1] + gy*sig*aspY*0.5;
-    const size = o.size*(0.012 + 0.1*Math.pow(r(), 2.4)), k = r() < 0.4 ? 3 : r() < 0.75 ? 4 : 5;
+    let cx = flung ? aspX*(-0.05 + 1.1*ux) : P[0] + gx*sig*aspX*0.5, cy = flung ? aspY*(-0.05 + 1.1*uy) : P[1] + gy*sig*aspY*0.5;
+    let size = o.size*(0.012 + 0.1*Math.pow(r(), 2.4)); const k = r() < 0.4 ? 3 : r() < 0.75 ? 4 : 5;
+    // THE WORDS (Text Aware): a shard that fell on a line of the poem is a small one, so the line reads; FILLING THEM
+    // (Shape Aware, blended into the letters): every shard lies on a line, sized to its letters (its own second stream)
+    if(o.lines && o.lines.length){
+      if(o.fill){ const r2 = mulberry32((salt ^ 0x51ED27) + Math.imul(i + 1, 0x2545F491) >>> 0), Ln = gsPickLine(o.lines, r2()), lh = (Ln[3] - Ln[1])*aspY;
+        cx = (Ln[0] + (Ln[2] - Ln[0])*r2())*aspX; cy = (Ln[1] + (Ln[3] - Ln[1])*r2())*aspY; size = lh*o.size*(0.1 + 0.55*Math.pow(r2(), 2)); }
+      else if(o.lines.some(L => cx >= L[0]*aspX && cx <= L[2]*aspX && cy >= (L[1] - (L[3] - L[1])*0.2)*aspY && cy <= (L[3] + (L[3] - L[1])*0.2)*aspY)) size *= 0.4; }
     // its outline: corners at uneven angles and distances, drawn out into a sliver as Slivers rises, turned any way
     const angs = Array.from({ length: k }, (_, j) => (j + (r() - 0.5)*0.7)/k*Math.PI*2).sort((a, b) => a - b);
     const stretch = 1 + o.slivers*3.5*r(), rot = r()*Math.PI, cr = Math.cos(rot), sr = Math.sin(rot);
@@ -1381,6 +1470,11 @@ function gsShards(aspX, aspY, o){
   }
   return out;
 }
+// a line of the poem, chosen by its area (so long lines take more), from a roll 0..1
+function gsPickLine(lines, u){ const a = lines.map(L => Math.max(1e-6, (L[2] - L[0])*(L[3] - L[1]))), tot = a.reduce((x, y) => x + y, 0); let acc = 0;
+  for(let i = 0; i < lines.length; i++){ acc += a[i]/tot; if(u <= acc) return lines[i]; } return lines[lines.length - 1]; }
+// the poem's lines as the part is given them (x0, y0, x1, y1 as shares of the page), or none
+const genLinesOf = text => String(text || '').split(';').map(p => p.split(',').map(Number)).filter(v => v.length >= 4 && v.slice(0, 4).every(isFinite) && v[2] > v[0] && v[3] > v[1]);
 // signed distance from a point to a shard's outline (+ inside), and the nearest edge's outward normal
 function gsDist(pts, x, y){
   let d2 = Infinity, ex = 0, ey = 0, inside = false;
@@ -1457,14 +1551,18 @@ function gsRender(ww, wh, unit, S, o, cam, ground){
 // the web; each drop a tiny lens: a bright point toward the light, a rim, a dark heart. The silk glints where it runs
 // across the way to the light, and near the light it shows the colours thin silk splits it into.
 function dwWebs(aspX, aspY, o){
-  const R = Math.random, salt = (R()*4294967296) >>> 0, webs = [], nW = 1 + Math.round(o.webs*4);
+  const R = Math.random, salt = (R()*4294967296) >>> 0, webs = [], nW = o.fill && o.lines && o.lines.length ? Math.max(o.lines.length, 1 + Math.round(o.webs*4)) : 1 + Math.round(o.webs*4);
   for(let w = 0; w < nW; w++){
     // (each web its own draw: more Webs adds webs and moves none)
-    const r = mulberry32((salt + Math.imul(w + 1, 0x85EBCA6B)) >>> 0), size = Math.min(aspX, aspY)*(w ? 0.16 + 0.22*r() : 0.32 + 0.12*r())*o.size;
-    // its hub: of a few places, the one farthest from the webs already strung
-    let hx = 0, hy = 0, best = -1;
-    for(let t = 0; t < 6; t++){ const x = aspX*(0.12 + 0.76*r()), y = aspY*(0.12 + 0.76*r()), d = webs.reduce((m, W) => Math.min(m, Math.hypot(x - W.hx, y - W.hy) - W.size*0.8), 9);
+    const r = mulberry32((salt + Math.imul(w + 1, 0x85EBCA6B)) >>> 0); let size = Math.min(aspX, aspY)*(w ? 0.16 + 0.22*r() : 0.32 + 0.12*r())*o.size;
+    // its hub: of a few places, the one farthest from the webs already strung (Text Aware: and off the poem's lines,
+    // so no hub sits on the words)
+    let hx = 0, hy = 0, best = -Infinity;
+    const onWords = (x, y) => (o.lines || []).some(L => x >= L[0]*aspX && x <= L[2]*aspX && y >= L[1]*aspY - 0.03 && y <= L[3]*aspY + 0.03);
+    for(let t = 0; t < 6; t++){ const x = aspX*(0.12 + 0.76*r()), y = aspY*(0.12 + 0.76*r()), d = webs.reduce((m, W) => Math.min(m, Math.hypot(x - W.hx, y - W.hy) - W.size*0.8), 9) - (o.fill ? 0 : onWords(x, y) ? 5 : 0);
       if(d > best){ best = d; hx = x; hy = y; } }
+    // FILLING THE LETTERS (Shape Aware): each web strung across a line of the poem, as tall as two of its lines
+    if(o.fill && o.lines && o.lines.length){ const Ln = o.lines[w % o.lines.length], u = r(); hx = (Ln[0] + (Ln[2] - Ln[0])*(0.15 + 0.7*u))*aspX; hy = (Ln[1] + Ln[3])/2*aspY; size = (Ln[3] - Ln[1])*aspY*1.1*o.size; }
     // the frame: a ring of anchor points round the hub at uneven reach (an orb web's hub sits a little above its middle)
     const nf = 4 + Math.floor(r()*4), rot = r()*Math.PI*2, frame = Array.from({ length: nf }, (_, k) => { const t = rot + (k + (r() - 0.5)*0.55)/nf*Math.PI*2, s2 = Math.sin(t) > 0 ? 1.15 : 0.9;
       return [hx + Math.cos(t)*size*(0.8 + 0.35*r()), hy + Math.sin(t)*size*(0.75 + 0.35*r())*s2]; });
@@ -1538,12 +1636,13 @@ export const GEN_STEPS = {
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
   ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
     outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',
-      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here'],
+      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here', 'rock', 'snow'],
     io: { ins: ['value', 'value', 'value', 'value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field',
-      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field'] },
+      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [GEN_R('band', 'Band Width', 45), GEN_R('walls', 'Rim Walls', 25), GEN_R('altitude', 'Altitude', 15), GEN_R('look', 'Look Toward', 0, 0, 360), GEN_R('lift', 'Look Up', 15, -30, 100),
       GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50), GEN_R('build', 'Construction', 35),
-      GEN_R('builders', 'Builders: Seed · Wilds · Engineers · Cities · Magi · Ruins', 0)], cost: () => 9,
+      GEN_R('builders', 'Builders: Seed · Wilds · Engineers · Cities · Magi · Ruins', 0), GEN_R('landforms', 'Landforms', 50), GEN_R('cities', 'Cities', 25), GEN_R('traffic', 'Traffic', 50),
+      ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }]], cost: () => 9,
     doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, what its builders raised, open space.',
     // (a dial wired in is the camera — the Camera Dial: its turn where you look round the ring, its view how far up (at the
     //  middle, straight up at the arch; at the rim, level; past it, a little down), its zoom the lens. The Light Dial is
@@ -1553,7 +1652,8 @@ export const GEN_STEPS = {
       return genRingView(ww, wh, unit, ringParams({ band: num(n, 'band', 45), walls: num(n, 'walls', 25), altitude: num(n, 'altitude', 15),
         look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0), up: typeof up === 'number' ? up : null, lift: num(n, 'lift', 15),
         lens: num(n, 'lens', 75), zoom: typeof zoom === 'number' ? 25 + 375*zoom : 100, place: num(n, 'place', 0), daylight, air: num(n, 'air', 50), build: num(n, 'build', 35),
-        side: typeof from === 'number' && Math.cos((from*360 - 90)*Math.PI/180) < 0 ? -1 : 1, builders: num(n, 'builders', 0), seed: E.ctx.seed >>> 0 })); } },
+        side: typeof from === 'number' && Math.cos((from*360 - 90)*Math.PI/180) < 0 ? -1 : 1, builders: num(n, 'builders', 0), seed: E.ctx.seed >>> 0,
+        landforms: num(n, 'landforms', 50), cities: num(n, 'cities', 25), traffic: num(n, 'traffic', 50), placeBy: E.P(n, 'placeBy', 'at Stand At') })); } },
   // the GROUND CAMERA's view as maps (Wood and Discharge see the plank this way): where on the page's plane each pixel
   // looks, and how much of it a pixel spans — for Noise at Coordinates (or a Lookup) to lay anything on the same plank
   groundview: { cat: 'Shape', label: 'Ground Coordinates', ins: [], outs: ['across', 'down', 'detail'], io: { outs: ['field', 'field', 'field'] },
@@ -1582,8 +1682,9 @@ export const GEN_STEPS = {
     io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99),
       GEN_R('era', 'Era', 0), GEN_R('marks', 'Markings', 0), ['clearing', 'Keep Clear By', 'select', 'routing around it', { options: ['routing around it', 'cutting it away'] }]], cost: () => 6,
-    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100), s = unit/across;
-      const cw = Math.max(4, Math.ceil(w/s)), ch = Math.max(4, Math.ceil(h/s)), kv = E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
+    // (filling the letters, Shape Aware: the board is finer, to show in their strokes, and keeps nothing clear)
+    paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), across = 80/(E.num(n, 'scale', 100)/100)*(E.ctx.fill ? 1.7 : 1), s = unit/across;
+      const cw = Math.max(4, Math.ceil(w/s)), ch = Math.max(4, Math.ceil(h/s)), kv = E.ctx.fill ? null : E.input(n, 1), keep = kv != null ? E.asField(kv) : null;
       const bends = E.num(n, 'bends', 70)/100;
       const o = { traces: E.num(n, 'traces', 55)/100, parts: E.num(n, 'parts', 45)/100, bends, diag: bends > 0, flow: E.num(n, 'flow', 40)/100,
         era: E.num(n, 'era', 0)/100, marks: E.num(n, 'marks', 0)/100,
@@ -1717,7 +1818,11 @@ export const GEN_STEPS = {
       const o = { count: num(n, 'count', 40)/100, size: num(n, 'size', 100)/100, spread: num(n, 'spread', 55)/100, slivers: num(n, 'slivers', 35)/100, caustics: num(n, 'caustics', 60)/100,
         glints: num(n, 'glints', 60)/100, colors: num(n, 'colors', 25)/100, shadows: num(n, 'shadows', 50)/100, deg: dial.deg,
         reach: typeof h === 'number' ? h : Math.max(0, Math.min(1.3, (E.ctx.lightTilt ?? 100)/100)) };
-      const cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100)), S = withSeed(genSeed(E, n), () => gsShards(ww/unit, wh/unit, o));
+      // (the poem's lines, when the graph is handed them: kept readable, or filled; filling them, the camera stays put)
+      o.lines = genLinesOf(E.ctx.text); o.fill = !!E.ctx.fill && o.lines.length > 0;
+      const cam = o.fill ? null : groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
+      if(cam) o.lines = [];   // (through the camera the glass lies on another plane than the words)
+      const S = withSeed(genSeed(E, n), () => gsShards(ww/unit, wh/unit, o));
       return gsRender(ww, wh, unit, S, o, cam, pic != null ? E.asImage(pic) : null); } },
   // DEWY WEBS (Ruby: "dewy spider webs getting caught by the light"): orb webs, beaded with dew, the silk glinting where
   // it runs across the light's way, in the colours thin silk splits light into; the drops each a lens with a point of light
@@ -1728,6 +1833,7 @@ export const GEN_STEPS = {
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1);
       const o = { webs: num(n, 'webs', 30)/100, size: num(n, 'size', 100)/100, dew: num(n, 'dew', 60)/100, dropSize: num(n, 'drops', 100)/100, torn: num(n, 'torn', 20)/100,
         sag: num(n, 'sag', 40)/100, irid: num(n, 'irid', 50)/100, threads: num(n, 'threads', 50)/100, width: num(n, 'width', 100)/100, deg: dial.deg };
+      o.lines = genLinesOf(E.ctx.text); o.fill = !!E.ctx.fill && o.lines.length > 0;
       const [tc, gc, dc] = withSeed(genSeed(E, n), () => dwDraw(ww, wh, unit, dwWebs(ww/unit, wh/unit, o), o, E));
       return [E.asField(E.readCanvas(tc)), E.readCanvas(gc), E.asField(E.readCanvas(dc))]; } },
 };

@@ -211,8 +211,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   - The Basics' chains can become starters using them.
 - **F7 · Processing.** Refraction (needs F1), Smudge, Multiblend. (Done:
   Median with Percentile, Map Switch, Displace.)
-- **F8 · Transform.** Rotate and Scale as their own parts (Tile & Rotate does
-  both today). (Done: Flip, Perspective.)
 - **F11 · Shader parts** (Ruby: the pixel-shader parts, Oil Paint and the
   per-pixel blends, are fast and versatile): more parts run as fragment
   shaders on the GPU, with the CPU path beside each (AGENTS §5.5), and a way
@@ -231,9 +229,12 @@ Ripples from the Words, Protect the Text, Ink.
   contrast together.
   - Depends on: A3 (a group whose one input fans out through remappers).
 - **G5 · The inset box as an input** (shared with F3).
-- **G6 · Text as a mask** (Ruby): the words knocking a surface out (the page
-  shows through the letters), letters filled with a surface, and the text's
-  shape as a mask any part can take. More parts that work with the text.
+- **G6 · Text as a mask** (Ruby). Done: letters filled with a surface (the
+  second surface's Blend with Text, with Shape Aware), and Text Aware for
+  each surface. Still to do: the words knocking a surface out (the page
+  shows through the letters), and the letters' own shape (not only the
+  lines' boxes) as a mask any part can take, which means handing the
+  worker the glyph mask. More parts that answer Shape Aware.
 
 ### H · The three levels (Ruby's future-directions doc)
 
@@ -319,7 +320,7 @@ superseded) wait for Stage 4.
 
 ### Stage 1 · Components: the parts library
 - **F2** Glyph Scatter's rest, **F3** from the box.
-- **F6, F7, F8, F10**, the rest of Filter Forge's primitives, in the order of
+- **F6, F7, F10**, the rest of Filter Forge's primitives, in the order of
   what they unlock (§2 F).
 - **A9** the older Variant params onto Variation.
 - **A10** ports saved by name (with A3's v5: both change the format once).

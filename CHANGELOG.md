@@ -4,6 +4,42 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Iapetus (2026-10-17)
+
+- **The surface and the words**, two new boxes under the surface's name:
+  - **Text Aware** (on the first surface, ticked to begin with): the
+    surface knows where the poem is. Broken Glass keeps the shards that fall
+    on a line small, Dewy Webs never hangs a web's hub on the words, and
+    Circuit Board cuts clear of the lines. Untick it and the surface is
+    drawn as if the page had no words.
+  - **Blend with Text** (on the second of Two Surfaces): that surface fills
+    the letters of the poem, with its own blend and opacity, and leaves the
+    rest of the page alone. **Shape Aware** beside it tells the surface it
+    is filling letters: Broken Glass then lies only on the lines, sized to
+    the words, Dewy Webs strings a web across each line, and Circuit Board
+    routes finer to show in the strokes.
+  - In the Athanor, The Poem has two new numbers, **Aware** and **In the
+    Letters**, so a graph of your own can answer either.
+- **Ringworld**, reworked within its eight sliders:
+  - **Landforms** (it was Terrain) raises the land itself: the relief, the
+    rim walls and the mountains against them, and each seed's own country of
+    snow-capped peaks, mesas, boulders strewn near you, pinnacles and, where
+    the magi built, floating isles.
+  - **Cities** (it was Structures) still raises the builders' works, and
+    past its first quarter spreads cities, towers and glass domes whoever
+    built the ring.
+  - **Traffic** (it was Stand At) fills the sky with ships, and past its
+    middle with lanes of small craft whose engines draw dotted lines of
+    light; the streets get busier at night. Where you stand across the band
+    is now the seed's.
+  - The great arches across the band now spring from the tops of the rim
+    walls, the air they hold shimmering beneath them.
+  - Looks saved before keep their relief and works; their Stand At becomes
+    Traffic at its middle.
+- **In the Athanor:** two new parts, **Rotate** and **Scale**: a picture
+  turned or made larger or smaller about any center, repeated, mirrored or
+  stretched past its edges.
+
 ## Saturn–Hyperion (2026-10-16)
 
 - **Ringworld's builders.** A new Builders slider chooses who raised the

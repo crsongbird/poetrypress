@@ -338,7 +338,8 @@ toggleSubblock('textureToggle','textureBlock');
 // saves the upper under its own keys and the lower as `baseLayer`, whichever the controls show; Swap
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
-  'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround'];
+  'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
+  'textureTextAware', 'textureTextBlend', 'textureShapeAware'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
   'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
@@ -396,6 +397,10 @@ function paintLayerBar(){
   if(document.body && document.body.classList) document.body.classList.toggle('editing-lower', on && state.layers.editing === 'lower');
 }
 function syncBaseUi(){ if(!lowerOn() && state.layers.editing === 'lower') editLayer('upper'); paintLayerBar(); }
+/** Shape Aware means something only while the surface is blended into the letters. */
+function paintLayerWords(){ const sh = $('textureShapeAware'), on = !!($('textureTextBlend') && $('textureTextBlend').checked);
+  if(sh){ sh.disabled = !on; if(sh.closest){ const row = sh.closest('.check-row'); if(row && row.classList) row.classList.toggle('off', !on); } } }
+for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
 if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
 if($('layerSwap') && $('layerSwap').addEventListener) $('layerSwap').addEventListener('click', swapLayers);
@@ -751,7 +756,7 @@ function poemAltText(){
     effects: ['fx1Type', 'fx2Type', 'fx3Type'].map(v).filter(t => t && t !== 'none'),
     background: [v('bgColor1Hex'), on('bgGradientToggle') ? v('bgColor2Hex') : null],
     surface: on('textureToggle') && upperL.textureType ? describeSurface(upperL, !editingLower) : null,
-    base: lowerOn() && lowerL && lowerL.textureType ? { name: surfaceNameOf(lowerL.textureType, lowerL.forgeGraph) } : null,
+    base: lowerOn() && lowerL && lowerL.textureType ? { name: surfaceNameOf(lowerL.textureType, lowerL.forgeGraph), inText: !!lowerL.textureTextBlend } : null,
     border: on('borderToggle') ? { colour: v('borderColorHex'), stitch: text('borderStitch').toLowerCase() } : null,
     box: on('cardToggle'), vignette: on('vignetteToggle'),
     // the credit, as words (any PML colour markup is only colour)
@@ -911,9 +916,9 @@ function applyPersisted(s){
 
 // a look's FORMAT: 2 since the dial took over Harsh Rain's slant and Silverpoint
 // Hatch's angle (their sliders took new jobs); 3 every blend for every surface; 4 Ringworld's day on the light dial and
-// Circuit Board's five eras.
+// Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic.
 // Older looks are translated on load
-const LOOK_VERSION = 4;
+const LOOK_VERSION = 5;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -978,7 +983,12 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))); }
+function retireLook(s){ return retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))); }
+/** A look from before format 5 (Saturn–Hyperion and earlier): Ringworld's eighth slider was Stand At (where across the
+ *  band you stood); it is Traffic now, at its middle (the ships as they were), and the seed says where you stand.
+ *  Terrain and Structures keep their values as Landforms and Cities (the same relief, the same works). */
+function retireFormat5Layer(L){ return L && L.textureType === 'ringworld' ? { ...L, texP8: '50' } : L; }
+function retireFormat5(s){ if(!s || +s.lookVersion >= 5) return s; let o = retireFormat5Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat5Layer(o.baseLayer) }; return o; }
 /** A look from before format 4 (Saturn–Titan and earlier): Ringworld's Daylight slider (6) onto the light dial (noon at
  *  its middle, dusk at its rim, midnight past it), the sixth slider becoming Builders, by the seed; Circuit Board's Era
  *  from four eras to five (the one that was Magitech is Atomic now, at 75 where it stood at 100); and the Tilt sliders of
@@ -1176,6 +1186,9 @@ function restoreSurfaceLayer(L){
 /** A surface's blend, light, hues, knobs, opacity and seed into the controls. */
 function restoreSurfaceDetails(s){
   if(s.textureBlend) $('textureBlend').value = s.textureBlend;
+  // the surface and the words (a look from before them: aware, as every surface was; neither blended into the letters)
+  { const set = (id, v) => { if($(id)) $(id).checked = v; };
+    set('textureTextAware', s.textureTextAware !== false); set('textureTextBlend', !!s.textureTextBlend); set('textureShapeAware', !!s.textureShapeAware); paintLayerWords(); }
   keepGround(s.textureGround);
   if(s.textureLight !== undefined || s.textureLightTilt !== undefined){
     if(s.textureLight !== undefined) $('textureLight').value = s.textureLight;
@@ -2340,7 +2353,8 @@ function drawCameraGuide(on){
   g.width = Math.max(1, Math.round(r.width*dpr)); g.height = Math.max(1, Math.round(r.height*dpr));
   const x = g.getContext('2d'); if(!x) return;
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), v = id => parseFloat(($(id) || {}).value);
-  const ring = kind === 'ring' ? { band: v('texP1'), walls: v('texP4'), altitude: v('texP7'), place: v('texP8'), lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100 } : null;
+  // (Ringworld's walls follow Landforms, half its range; where you stand across the band is the seed's)
+  const ring = kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v('texP7'), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100 } : null;
   const lines = cameraGuide(kind, aspX, aspY, c, ring);
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
   const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';

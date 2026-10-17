@@ -85,6 +85,22 @@ check('every blend a layer can take has a name; the ⚡ ones are those a canvas 
   SURFACE_BLENDS.every(b => BLEND_NAMES[b]) && SURFACE_BLENDS.filter(b => /⚡/.test(BLEND_NAMES[b])).sort().join() === [...BOX_GPU_BLENDS].sort().join());
 check('…and every surface\'s own blends are among them', ['hatch', 'linen', 'clouds', 'stainedglass', 'cards', 'astral'].every(t => capsFor(t).blends.every(b => SURFACE_BLENDS.includes(b))));
 
+// ---- the surface and the words: Text Aware (each surface), Blend with Text and Shape Aware (the second) ----
+load({ ...base, texture: true, textureType: 'hatch', baseToggle: false, locks: [] });
+s = save();
+check('a look from before the words\' boxes: its surface is Text Aware, nothing blended into the letters', s.textureTextAware === true && s.textureTextBlend === false && s.textureShapeAware === false);
+const tick = (id, on) => { reg[id].checked = on; reg[id].dispatchEvent({ type: 'change' }); };
+tick('textureTextAware', false); s = save();
+check('Text Aware off is the surface\'s own, saved with it', s.textureTextAware === false);
+two(true); show('lower'); tick('textureTextBlend', true); tick('textureShapeAware', true); s = save();
+check('the second surface blended into the letters, Shape Aware, saved as its own (the first keeps its own box)',
+  s.baseLayer.textureTextBlend === true && s.baseLayer.textureShapeAware === true && s.textureTextAware === false && !s.textureTextBlend);
+show('upper'); load(s); show('lower');
+check('…and they come back with it', reg['textureTextBlend'].checked === true && reg['textureShapeAware'].checked === true && !reg['textureShapeAware'].disabled);
+tick('textureTextBlend', false);
+check('Shape Aware waits, greyed, while the surface is not blended into the letters', reg['textureShapeAware'].disabled === true);
+show('upper');
+
 // ---- a preset turns the lower off ----
 load({ ...base, texture: true, baseToggle: true, baseLayer: { textureType: 'linen' } });
 const walk = (n, cls, out = []) => { for(const c of n.children || []){ if(String(c.className || '').split(' ').includes(cls)) out.push(c); walk(c, cls, out); } return out; };
