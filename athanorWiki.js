@@ -260,7 +260,15 @@ export const WIKI_ARTICLES = [
 </ul>` },
   { id: 'resolution', group: 'Building techniques', title: 'Size and resolution', body: `
 <p>The same surface is drawn small in the preview and large (3072 pixels) when the page is saved, and it should look the same at both. So every distance in the Athanor (blur radius, line width, scale) is measured relative to the page, not in screen pixels.</p>
-<p>The Surface’s <b>Size</b> scales every distance in the graph at once: at 200, everything is twice as large. It is the quickest way to make a texture coarser or finer.</p>` },
+<p>The Surface’s <b>Size</b> scales every distance in the graph at once: at 200, everything is twice as large. It is the quickest way to make a texture coarser or finer.</p>
+<h3>Anti-aliasing</h3>
+<p>A graph is worked out on a grid of points, coarser than the saved image, and the grid is then smoothed up to the page’s size. A hard edge (a Threshold’s, a brick’s, a polygon’s) can only turn at a grid point, so where it runs at a slant it comes out in small steps. That is <i>aliasing</i>. The Surface’s <b>Anti-aliasing</b> setting deals with it, as Filter Forge’s menu of the same name does:</p>
+<ul>
+<li><b>off</b>: as drawn. Every graph made before the setting existed draws this way.</li>
+<li><b>edges only</b>: finds where neighbouring points differ sharply, follows each edge to its ends, and blends the points along it, so the steps become a smooth line. Soft areas are left alone. It costs little. (The method is FXAA, a standard in games.)</li>
+<li><b>all pixels</b>: draws the whole graph on a grid twice as fine, then smooths it. Edges are sharper and smoother, and fine lines hold. It is up to four times the work, so a heavy graph keeps the grid its budget allows.</li>
+</ul>
+<p>Try: a Value Noise into a Threshold with Softness at 0, then compare the three.</p>` },
 
   // ------------------------------------------------------------------ The page and your graph
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `

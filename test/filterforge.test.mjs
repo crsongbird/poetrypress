@@ -146,6 +146,19 @@ check('a Note makes nothing and breaks nothing', run([node(5, 'note', { text: 'h
 { const g = graph([node(1, 'knob', { slot: '1', name: 'Wired' }), node(2, 'knob', { slot: '2', name: 'Loose' }), node(3, 'number', {}), node(4, 'blur', {}, { 1: [3, 1], [S.paramPort('blur', 'radius')]: [1, 1] }),
     node(6, 'hue', { slot: '2', name: 'Loose Hue' }), node(99, 'surface', {}, { 1: [4, 1] })]);
   check('controls show only when they reach the Surface (Filter Forge: a control not connected to the Result isn\'t shown)', JSON.stringify(C.athanorKnobs(g).map(k => k.label)) === '["Wired"]' && C.athanorHues(g).length === 0); }
+// ---- the Surface's Anti-aliasing (Filter Forge's menu, A6) ----
+{ const hard = [node(1, 'noise', { scale: 30 }), node(2, 'threshold', { at: 50, soft: 0 }, { 1: [1, 1] })];
+  const off = run(hard, [2, 1]), off2 = run(hard, [2, 1], { surface: { aa: 'off' } }), edge = run(hard, [2, 1], { surface: { aa: 'edges only' } });
+  const soft = [node(1, 'noise', { scale: 40 })], s0 = run(soft, [1, 1]), s1 = run(soft, [1, 1], { surface: { aa: 'edges only' } });
+  const mid = im => im.r.filter(v => v > 0.05 && v < 0.95).length;
+  // (a point is by an edge when a point near it differs at all — FXAA's least contrast, 0.03: where none does, nothing may change)
+  const nearEdge = i => { const x = i % W, y = (i/W) | 0; for(let dy = -2; dy <= 2; dy++) for(let dx = -2; dx <= 2; dx++){ const xx = Math.max(0, Math.min(W - 1, x + dx)), yy = Math.max(0, Math.min(H - 1, y + dy)); if(Math.abs(off.r[yy*W + xx] - off.r[i]) > 0.03) return true; } return false; };
+  check('Anti-aliasing off (and a Surface without the setting, as every older graph) draws exactly as before', off.r.every((v, i) => v === off2.r[i]));
+  check('edges only smooths a hard edge where it steps across the grid: in-between grays along it, and nothing changed away from it',
+    mid(edge) > 3*Math.max(1, mid(off)) && edge.r.every((v, i) => v === off.r[i] || nearEdge(i)));
+  check('…and leaves a soft picture almost alone (on average under a 500th)', s0.r.reduce((t, v, i) => t + Math.abs(v - s1.r[i]), 0)/s0.r.length < 0.002);
+  check('the setting is read by name, and anything else is off', C.athanorAA(graph([node(99, 'surface', { aa: 'all pixels' })])) === 'all pixels' && C.athanorAA(graph([node(99, 'surface', { aa: 'sideways' })])) === 'off'
+    && C.athanorAA(graph([node(99, 'surface', {})])) === 'off'); }
 // ---- Smudge, Multiblend (F7) and the rest of the curve shapes and operations (F10) ----
 { // a top-to-bottom ramp, smudged downward: each point takes on the darker ramp above it; the top row has nothing above
   const ramp = node(1, 'gradient', {}), raw = run([ramp], [1, 1]), im = run([ramp, node(4, 'smudge', { angle: 90, length: 40, strength: 100, trail: 60 }, { 1: [1, 1] })], [4, 1]);

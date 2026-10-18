@@ -66,7 +66,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Global Size (all distances relative; resolution-independent) | Canonical pixels everywhere; the Surface's **Size** (25–400) scales a graph | ✅ |
 | Global Variation (one seed into every random part, plus each part's own) | The page seed; v2 seeds each node from (seed, id); every random part has a Variation | ✅ |
 | Seamless Tiling | Not needed: a page is not tiled | parked |
-| Anti-aliasing: supersampling, "edges only" by AA zones | Grids drawn at a divisor and scaled up smooth | **A6** |
+| Anti-aliasing: supersampling, "edges only" by AA zones | The Surface's Anti-aliasing: edges only (FXAA on the grid), all pixels (a grid twice as fine, within the budget) | ✅ (Saturn–Bebhionn) |
 | Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | One dial light, ambient, materials (Highlight, Shade, Diffuse hues), soft shadows, AO | **C1–C4** |
 | Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (6 slots), Hue (2), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ reach rule, Knob kinds (slider, steps, angle, switch), Order of the sliders; **D1** a dial |
 | Groups (control components inside a group define its inputs) | **Group** parts: their insides a module of the editor's; each Group Input and Knob inside an input, the Group Result its outputs; laid out flat before drawing | ✅ (Saturn–Paaliaq) |
@@ -85,11 +85,11 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### A · The engine (athanor.js, steps.js)
 
-- **A6 · Edges-only supersampling.** Parts that draw hard edges (Threshold,
-  Bricks, Pixelate, Step curves) report an edge mask; the Surface
-  re-evaluates those pixels at 2× and averages. Filter Forge's "AA zones".
-  - Prove: scale-audit improves on Bricks and Threshold; cost measured on the
-    baseline phone (AGENTS: measure on the right machine).
+- **A7 · Anti-aliasing for the menu's textures.** The Surface's Anti-aliasing
+  is for graphs; a texture's chain stays v2 and draws as it always did. A
+  reading or a knob could switch it on for the hard-edged textures (Circuit
+  Board, Stained Glass, Knotwork), each through compare.mjs and Ruby's eye.
+  - Measure on the baseline phone first: all pixels is four times the work.
 
 ### B · The output stage (the Surface)
 
@@ -150,8 +150,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 - **F5 · Alpha** is a design decision: the Athanor has no alpha today. Park
   it unless needed. (Channels as RGB, HSB and Lab are done.)
-- **F6 · The Basics as starters.** The Basics' chains can become starters
-  using the pattern parts (Blocks, Pyramids, Pavements, Grid & Dots, Bricks…).
 - **F7 · Refraction** (needs F1).
 - **F11 · Shader parts** (Ruby: the pixel-shader parts, Oil Paint and the
   per-pixel blends, are fast and versatile): more parts run as fragment
@@ -260,9 +258,8 @@ no preset of its own. Questions about presets (which are redundant or
 superseded) wait for Stage 4.
 
 ### Stage 1 · Components: the parts library
-- **F6, F7, F10**, the rest of Filter Forge's primitives, in the order of
+- **F7, F10**, the rest of Filter Forge's primitives, in the order of
   what they unlock (§2 F).
-- **A6** edges-only supersampling.
 
 ### Stage 2 · Features: the engine, the controls, the poem
 - **B2** channels view.
@@ -310,7 +307,7 @@ superseded) wait for Stage 4.
  Scatter ───────────────────► G2 punctuation ─────────────────► I studies → textures ───┐
                                                                 J black boxes apart  ───┤
  F5–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
- A6 AA                                                         Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
+ A7 AA for textures                                            Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
  (groups, loops) ─┬───────                                                              │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               D1 dial · D3 two handles ─► D4 curve control ──────────────┘      ├─► E4 author locks
@@ -320,10 +317,10 @@ superseded) wait for Stage 4.
 
 **Suggested passes** (one release each, AGENTS' recipe):
 
-1. Stage 1: A6 edges-only supersampling; the Basics as starters (F6).
-2. Stage 2: D1's dial, D3's two handles, D4 the curve control.
-3. Stage 2: B2 channels; then C1–C4.
-4. Stage 2: G2, G4.
+1. Stage 2: D1's dial, D3's two handles, D4 the curve control.
+2. Stage 2: B2 channels; then C1–C4.
+3. Stage 2: G2, G4.
+4. Stage 1: F7 Refraction (with F1), F10 Bezier curves (with D4's editor).
 5. Stage 3: the Surface Studies become textures, a few per pass; black boxes
    taken apart and the rest rebuilt as chains, two or three per pass.
 6. Stage 4: H2, H3, H4, E4, then the presets pass.

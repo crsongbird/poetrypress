@@ -105,7 +105,10 @@ const STEP_PARTS = {
   // metallic it is and where it glows; with none of them wired it draws exactly as it always has)
   surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height', 'reflectivity', 'reflection blur', 'metallic', 'emission'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour']),
               // Filter Forge's SIZE: every distance in the graph is measured against it, so one slider scales the whole surface
-              STEP_R('size', 'Size', 100, 25, 400)] },
+              STEP_R('size', 'Size', 100, 25, 400),
+              // ANTI-ALIASING (Filter Forge's menu, ROADMAP A6): off as every graph always drew; edges only smooths the hard
+              // edges where they step across the grid (FXAA); all pixels also draws the whole graph on a grid twice as fine
+              STEP_SEL('aa', 'Anti-aliasing', ['off', 'edges only', 'all pixels'])] },
   // a NOTE on the graph (Filter Forge's Note component): words for whoever opens it next; it makes nothing
   note:     { cat: 'Inputs', label: 'Note', ins: [], outs: [], params: [['text', 'Note', 'text', 'A note to the next reader']] },
   // newer parts (the chains' own)

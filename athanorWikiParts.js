@@ -1369,9 +1369,11 @@ export const WIKI_PARTS = {
   },
   surface: {
     line: 'The end of every graph: whatever reaches it is the texture. One per graph.',
-    about: 'The Surface is where a graph comes out. Its Image input is the texture; its Height input (optional) is lit by the page’s dial so the texture looks raised. Four more inputs make it a material: how much it reflects, how blurred the reflection is, how metallic it is, and where it glows. Each is a gray map, so one surface can be part polished metal and part matte stone. Leave them unwired and the Surface draws as it always has.',
+    about: 'The Surface is where a graph comes out. Its picture input is the texture; its height input (optional) is lit by the page’s dial so the texture looks raised. Four more inputs make it a material: how much it reflects, how blurred the reflection is, how metallic it is, and where it glows. Each is a gray map, so one surface can be part polished metal and part matte stone. Leave them unwired and the Surface draws as it always has.',
     ins: { image: 'The texture.', height: 'Optional heights, lit by the dial.', reflectivity: 'How strongly it reflects the light (white: a strong highlight; black: hardly any). Unwired: 0.6.', 'reflection blur': 'How soft the highlight is: black, a sharp mirror glint; white, a broad sheen.', metallic: 'Where it is metal: little diffuse light, and a highlight in its own color, as gold or copper shines.', emission: 'Where it glows with its own color, whatever the light.' },
-    set: { name: 'The surface’s name, shown on the page and used when you keep it.', ground: 'Gray: the page tints and blends it with its hues. Color: shown in its own colors.', size: 'Scales every distance in the graph.' },
-    see: ['surface'],
+    set: { name: 'The surface’s name, shown on the page and used when you keep it.', ground: 'Gray: the page tints and blends it with its hues. Color: shown in its own colors.', size: 'Scales every distance in the graph.',
+      aa: 'Smooths hard edges that step across the grid. Off: as drawn. Edges only: the steps smoothed along each edge, quickly. All pixels: the whole graph drawn on a grid twice as fine, then smoothed (up to four times the work; a heavy graph keeps its usual grid).' },
+    tips: ['A graph with crisp edges (Threshold, Bricks, Polygon, Blocks) looks stepped at the edges; Edges only fixes most of that for little cost. Use All pixels where fine lines matter.'],
+    see: ['surface', 'resolution'],
   },
 };

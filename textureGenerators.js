@@ -31,7 +31,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion, athanorStepIds } from './athanor.js';
+import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion, athanorStepIds, athanorAA, ATHANOR_LIMITS } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withPage, wordsRoom, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genAstralFog, genAstralStars } from './texWhimsy.js';
@@ -1066,12 +1066,17 @@ function describeRequest(type, w, h, opts){
 function genAthanor(w, h, light, tint1, tint2, extra){
   // the work budget: a heavy graph is made on a coarser grid; too many nodes, not at all
   const B = athanorBudget(extra.graph || '');
-  const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  // ANTI-ALIASING, all pixels (A6): the graph drawn on a grid twice as fine and laid down smaller, as far as the budget
+  // allows (four times the work: a heavy graph keeps the grid its budget gives it). A v3 graph and newer, whose sizes
+  // and counts are canonical, so the finer grid draws the same picture, finer.
+  const fine = athanorAA(extra.graph || '') === 'all pixels' && athanorVersion(extra.graph || '') >= 3 && !B.tooMany;
+  const k = fine ? Math.min(3, Math.max(1, Math.sqrt(B.cost*4/ATHANOR_LIMITS.cost)))/2 : B.scale;
+  const div = canonDiv(2)*k, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*B.scale), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;

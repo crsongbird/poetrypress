@@ -1338,9 +1338,10 @@ export async function openForge(deps){
     if(v.ok) saved = v.graph; if(v.problems && v.problems.length && deps.warn) deps.warn(v.problems); }
   if(saved && saved.drawflow) F.load(saved);
   else { F.quiet = true; ed.clear(); F.version = ATHANOR_VERSION; F.quiet = false;
-    const add = (type, x, y) => { const N = FORGE_NODES[type]; return ed.addNode(type, N.ins.length, N.outs.length, x, y, forgeCatClass(N.cat), forgeNodeData(type), forgeNodeHtml(type, { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' })); };
+    const add = (type, x, y, data) => { const N = FORGE_NODES[type], d = Object.assign(forgeNodeData(type), data || {}); return ed.addNode(type, N.ins.length, N.outs.length, x, y, forgeCatClass(N.cat), d, forgeNodeHtml(type, { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' }, d)); };
     // (wired, so the first preview is a picture, not flat gray — the usability review)
-    F.quiet = true; const a = add('noise', 40, 60), b = add('surface', 420, 90); if(a && b) ed.addConnection(a, b, 'output_1', 'input_1'); F.quiet = false; F.paintAll(); F.save(); }
+    // (a new graph's Surface smooths its edges: Anti-aliasing, edges only — A6; older graphs keep drawing as they did)
+    F.quiet = true; const a = add('noise', 40, 60), b = add('surface', 420, 90, { aa: 'edges only' }); if(a && b) ed.addConnection(a, b, 'output_1', 'input_1'); F.quiet = false; F.paintAll(); F.save(); }
   F.opened = JSON.stringify(ed.export());
   F.dirty = false;
   if(F.paintPage) F.paintPage();

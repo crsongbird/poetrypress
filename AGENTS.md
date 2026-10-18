@@ -215,7 +215,7 @@ default.
 |---|---|
 | `textureGenerators.js` | the registry (`TEXTURE_PARAMS`: knobs; `TEXTURE_CAPS`: what each can do), dispatch, the cache and its keys |
 | `textureService.js` · `textureWorker.js` | textures made off the page's thread |
-| `texCore.js` | shared maths: seeded random, noise, `pixelPass`, canonical pixels, `lightHeights` (the lighting engine, CPU and WebGL2), the steps' kit |
+| `texCore.js` | shared maths: seeded random, noise, `pixelPass`, canonical pixels, `lightHeights` (the lighting engine, CPU and WebGL2), FXAA (`fxaaImage`), the steps' kit |
 | `texWhimsy.js` `texSharpness.js` `texChaos.js` `texTouch.js` | the older generators, one file per element (being taken apart into steps) |
 | `textureElements.js` | each texture's four readings (🜂 🜄 🜁 🜃), one of them its default |
 | `cartomancy.js` · `cartomancyTable.js` | Cartomancy and its parts · what else is on its table (bundled BEFORE cartomancy.js) |
@@ -773,6 +773,12 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   Clear leaves one; a graph without one gets one.
   - The Surface's **Size** (25–400) scales `unit`, `px` and `carea` for the
     whole graph (Filter Forge's Size). At 100 nothing changes.
+  - The Surface's **Anti-aliasing** (`aa`, Filter Forge's menu; `athanorAA`):
+    absent or `off` draws as every graph always did; `edges only` runs FXAA
+    3.11 (`fxaaImage`, texCore.js) on the result at the end of `evalAthanor`;
+    `all pixels` also halves `genAthanor`'s grid divisor, as far as the work
+    budget allows, for v3+ graphs (whose sizes are canonical). A new graph's
+    Surface starts at edges only; chains have none, so textures never change.
 - **Safety** (`validateGraph`):
   - A graph holds only its work in flight: each part's result is let go once
     every part that reads it has run (the step previews keep them all).

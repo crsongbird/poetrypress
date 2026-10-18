@@ -4,6 +4,26 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Bebhionn (2026-10-17)
+
+- **Anti-aliasing in the Athanor.** The Surface has Filter Forge's
+  **Anti-aliasing** setting, for graphs with hard edges (a Threshold, bricks,
+  polygons), which came out in small steps where they ran at a slant:
+  - **edges only** smooths the steps along each edge and leaves soft areas
+    alone. It costs little (the method is FXAA, a standard in games).
+  - **all pixels** draws the whole graph on a grid twice as fine, then
+    smooths it: sharper edges and fine lines that hold, for up to four times
+    the work. A heavy graph keeps the grid its budget allows.
+  - **off** is how every graph drew before, and how every saved graph still
+    draws. A new graph starts at edges only. The menu's textures don't
+    change.
+- **Five new starters,** each a lesson in one pattern part, colored by your
+  two Hues and lit by the dial: **Paving Stones** (Pavements), **Brick Wall**
+  (Bricks), **Pyramid Studs** (Pyramids), **Dot Grid** (Grid & Dots) and
+  **Techno Blocks** (Blocks), in Open › Starters to take apart.
+- The wiki's Size and resolution page explains anti-aliasing, with a thing to
+  try.
+
 ## Saturn–Albiorix (2026-10-17)
 
 - **Loops in the Athanor.** Set a group's **Repeats** above 1 and it runs that

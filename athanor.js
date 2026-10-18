@@ -28,7 +28,7 @@
  * web fonts, which must be drawn at full size; the same graph on the
  * Athanor's grid runs each part's RUN instead.
  */
-import { lightHeights, parseHex, withSeed, cpx, scaleNow } from './texCore.js';
+import { lightHeights, parseHex, withSeed, cpx, scaleNow, fxaaImage } from './texCore.js';
 import { STEPS, stepRange, paramPort, curveAt } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { ATHANOR_STUDIES } from './athanorStudies.js';
@@ -500,7 +500,15 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   }
   const res = evalNode(String(surface.id));
   if(ctx.canvas) return res && res[0] && typeof res[0].getContext === 'function' ? res[0] : null;
-  return res && res[0] ? asImage(res[0]) : null;
+  const img = res && res[0] ? asImage(res[0]) : null;
+  // ANTI-ALIASING (A6): the hard edges smoothed where they step across the grid, at either setting (all pixels is also
+  // drawn on a finer grid: textureGenerators genAthanor); absent, off, as every graph always drew
+  return img && athanorAA(flatG) !== 'off' ? fxaaImage(img, ww, wh) : img;
+}
+/** The Surface's Anti-aliasing: 'off' (absent, as every graph drew before it), 'edges only' or 'all pixels'. */
+export function athanorAA(graph){
+  const s = Object.values(graph && graph.nodes ? graph.nodes : athanorFlat(graph).nodes).find(n => n.name === 'surface'), v = s && (s.data || {}).aa;
+  return v === 'edges only' || v === 'all pixels' ? v : 'off';
 }
 
 // ---- starter graphs: a few to begin from (Material Maker's and Blender's
@@ -570,6 +578,33 @@ export const ATHANOR_STARTERS = {
       ['surface', { name: 'A Dropped Frame', ground: 'colour' }, 600, 220]],
     wires: [[1, 1, 4, 1], [2, 1, 4, 2], [2, 2, 4, 3], [3, 1, 4, paramPort('shards', 'turn')], [3, 2, 4, paramPort('shards', 'view')], [3, 3, 4, paramPort('shards', 'lens')],
       [5, 1, 4, paramPort('shards', 'count')], [4, 1, 6, 1]] },
+  // THE PATTERN PARTS AS STARTERS (ROADMAP F6): each a working lesson in one general pattern part, colored by your two
+  // Hues, raised by the dial, and anti-aliased (their edges are hard: Surface › Anti-aliasing, edges only)
+  paving: { label: 'Paving Stones', teach: 'A path of laid stones. Pavements lays the stones in rows and gives three maps: the stones (white, with dark joints), a bevel rising from each joint, and a different gray for each stone. A Color Ramp turns those grays into stone colors between your two Hues; Blend, set to Multiply, darkens the joints; and the bevel goes into the Surface\'s height, so the dial lights every stone\'s edge. Try: turn Irregularity up for an old road, then the Rows knob down for flagstones.', nodes: [
+      ['pavement', { rows: 7, '~rows': '3,30', irreg: 55, gap: 25, round: 45, bevel: 40, angle: 0 }, 40, 80], ['knob', { slot: '1', name: 'Rows', def: 15 }, 40, 420],
+      ['knob', { slot: '2', name: 'Irregularity', def: 55 }, 40, 540], ['hue', { slot: '1', name: 'Stone Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Stone Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'multiply', opacity: 100 }, 540, 60], ['surface', { name: 'Paving Stones', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 3, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [7, 1, 8, 1], [1, 2, 8, 2], [2, 1, 1, paramPort('pavement', 'rows')], [3, 1, 1, paramPort('pavement', 'irreg')]] },
+  brickwall: { label: 'Brick Wall', teach: 'Bricks in courses. Bricks gives the wall\'s heights (each brick raised, its edges bevelled), the mortar, and a gray for each brick. A Color Ramp colors each brick between your two Hues, so no two are quite alike; Blend, set to Multiply, lays the wall\'s heights over the colors to shade the mortar; and the heights go into the Surface\'s height for the dial to light. Try: raise Mortar, then set Bricks\' Stagger to 0 for a stack bond.', nodes: [
+      ['bricks', { rows: 12, '~rows': '6,40', ratio: 220, mortar: 14, stagger: 50, bevel: 35, vary: 40 }, 40, 80], ['knob', { slot: '1', name: 'Mortar', def: 35 }, 40, 420],
+      ['knob', { slot: '2', name: 'Courses', def: 20 }, 40, 540], ['hue', { slot: '1', name: 'Brick Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Brick Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'multiply', opacity: 100 }, 540, 60], ['surface', { name: 'Brick Wall', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 3, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [7, 1, 8, 1], [1, 1, 8, 2], [2, 1, 1, paramPort('bricks', 'mortar')], [3, 1, 1, paramPort('bricks', 'rows')]] },
+  studs: { label: 'Pyramid Studs', teach: 'Rows of studs, like a rivet plate or a cut gem\'s facets. Pyramids raises a pyramid in each square of a grid and gives a gray for each square; its heights go into the Surface\'s height, so the dial lights one face of every pyramid and shades the other. A Color Ramp colors the squares between your two Hues. Roundness turns the pyramids into domes. Try: raise Pyramids\' Octaves for smaller studs among the large.', nodes: [
+      ['pyramids', { scale: 12, '~scale': '4,40', octaves: 1, round: 0, vary: 30 }, 40, 80], ['knob', { slot: '1', name: 'Roundness', def: 0 }, 40, 380],
+      ['knob', { slot: '2', name: 'Studs', def: 15 }, 40, 500], ['hue', { slot: '1', name: 'Metal Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Metal Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['surface', { name: 'Pyramid Studs', ground: 'colour', aa: 'edges only' }, 560, 100]],
+    wires: [[1, 2, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('pyramids', 'round')], [3, 1, 1, paramPort('pyramids', 'scale')]] },
+  dotgrid: { label: 'Dot Grid', teach: 'Even dots in rows, as on a halftone print or a perforated sheet. Grid & Dots draws a regular pattern (here, dots) as a gray map: white dots on black. Tint colors it between your two Hues. Dot Size is its Line or Dot Size, and Turn its Angle (a Knob of the Angle kind reads in degrees). Try: set the Pattern to hex dots, or to grid lines for graph paper.', nodes: [
+      ['grid', { kind: 'dots', cells: 16, weight: 45, angle: 45, soft: 0 }, 40, 80], ['knob', { slot: '1', name: 'Dot Size', def: 45 }, 40, 340],
+      ['knob', { slot: '2', name: 'Turn', def: 12.5, kind: 'angle' }, 40, 460], ['hue', { slot: '1', name: 'Dot Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
+      ['tint', {}, 300, 60], ['surface', { name: 'Dot Grid', ground: 'colour', aa: 'edges only' }, 540, 80]],
+    wires: [[1, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [2, 1, 1, paramPort('grid', 'weight')], [3, 1, 1, paramPort('grid', 'angle')]] },
+  techno: { label: 'Techno Blocks', teach: 'Rectangles inside rectangles, like a city seen from above or a circuit\'s floor plan. Blocks splits the page again and again (each Octave a finer split) and gives the blocks, a gray each, and their outlines. A Color Ramp colors the blocks between your two Hues, Blend (Screen) lays the outlines over them as light, and the blocks go into the Surface\'s height so the dial raises them. Density sets how many blocks are filled. Try: raise Blocks\' Octaves, then the Line Width.', nodes: [
+      ['blocks', { scale: 6, octaves: 3, fill: 60, line: 12 }, 40, 80], ['knob', { slot: '1', name: 'Density', def: 60 }, 40, 380],
+      ['hue', { slot: '1', name: 'Block Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'screen', opacity: 100 }, 540, 60], ['surface', { name: 'Techno Blocks', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1], [1, 2, 6, 2], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('blocks', 'fill')]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

@@ -6,7 +6,7 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
@@ -22,6 +22,11 @@ Recommendations".
   starter (growth by steps)?
 - THE LIT SURFACE: Reflectivity, Reflection Blur, Metallic and Emission maps. Metals look plain until there is an
   environment to reflect (ROADMAP C4); should C4 come next, or a fake sky reflection now?
+- ANTI-ALIASING (the Surface's setting; sheet sent): edges only is FXAA, a smoothing of the steps along hard edges,
+  cheap but a touch soft; all pixels is the real thing at four times the work. Should a new graph start at edges
+  only (as now), or at all pixels where the budget allows? And should the menu's hard-edged textures get it
+  (ROADMAP A7: each would look a little different)?
+- THE PATTERN STARTERS: Paving Stones, Brick Wall, Pyramid Studs, Dot Grid, Techno Blocks. Do they teach the parts?
 - THE USABILITY REVIEW (a fresh pair of eyes on desk and phone, 38 findings): the fixes shipped are in the
   changelog. These change names or design, so they wait for Ruby's word:
   - Plain names for working controls, the flavor kept in card titles and tabs: West/Neutral/East → Left/Center/

@@ -3987,6 +3987,58 @@ function fieldOn(F, step, fn){
   return out;
 }
 
+// ---------- ANTI-ALIASING, EDGES ONLY (ROADMAP A6) ----------
+// Filter Forge samples each pixel several times where its AA zones meet; a grid engine can't re-evaluate one pixel,
+// so it takes the established screen-space way instead: Timothy Lottes' FXAA 3.11 (NVIDIA, 2011), its Quality
+// path ported line for line to the grid. It finds where neighbours differ sharply, walks along the edge to its two
+// ends, and moves each pixel's sample across the edge by how far along the step it lies; smooth ground is untouched.
+const FXAA_STEPS = [1, 1, 1, 1, 1, 1.5, 2, 2, 2, 2, 4, 8];      // the search's strides (Lottes' quality preset 39)
+/** A picture ({ r, g, b } on a w×h grid, 0..1) anti-aliased along its hard edges; a new picture, the input untouched. */
+function fxaaImage(img, w, h, { subpix = 0.75, edge = 0.125, edgeMin = 0.0312 } = {}){
+  const N = w*h, L = new Float32Array(N);
+  for(let i = 0; i < N; i++) L[i] = Math.max(0, Math.min(1, 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]));
+  const out = { r: new Float32Array(img.r), g: new Float32Array(img.g), b: new Float32Array(img.b) };
+  if(w < 3 || h < 3) return out;
+  const lu = (x, y) => L[Math.max(0, Math.min(h - 1, y))*w + Math.max(0, Math.min(w - 1, x))];
+  // (bilinear, with pixel centres on whole numbers, as a texture fetch between texels)
+  const lerpL = (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+    return (lu(x0, y0)*(1 - fx) + lu(x0 + 1, y0)*fx)*(1 - fy) + (lu(x0, y0 + 1)*(1 - fx) + lu(x0 + 1, y0 + 1)*fx)*fy; };
+  const pick = (ch, x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+    const at = (xx, yy) => ch[Math.max(0, Math.min(h - 1, yy))*w + Math.max(0, Math.min(w - 1, xx))];
+    return (at(x0, y0)*(1 - fx) + at(x0 + 1, y0)*fx)*(1 - fy) + (at(x0, y0 + 1)*(1 - fx) + at(x0 + 1, y0 + 1)*fx)*fy; };
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const lM = lu(x, y), lS = lu(x, y + 1), lE = lu(x + 1, y), lN = lu(x, y - 1), lW = lu(x - 1, y);
+    const rMax = Math.max(lS, lE, lN, lW, lM), rMin = Math.min(lS, lE, lN, lW, lM), range = rMax - rMin;
+    if(range < Math.max(edgeMin, rMax*edge)) continue;
+    const lNW = lu(x - 1, y - 1), lSE = lu(x + 1, y + 1), lNE = lu(x + 1, y - 1), lSW = lu(x - 1, y + 1);
+    const lNS = lN + lS, lWE = lW + lE, subA = (lNS + lWE)*2 + (lNW + lSW + lNE + lSE);
+    const edgeH = Math.abs(-2*lW + lNW + lSW) + Math.abs(-2*lM + lNS)*2 + Math.abs(-2*lE + lNE + lSE);
+    const edgeV = Math.abs(-2*lS + lSW + lSE) + Math.abs(-2*lM + lWE)*2 + Math.abs(-2*lN + lNW + lNE);
+    const horz = edgeH >= edgeV;
+    let a = horz ? lN : lW, b = horz ? lS : lE;          // the two neighbours across the edge
+    let sign = 1;
+    const gA = a - lM, gB = b - lM, pairA = Math.abs(gA) >= Math.abs(gB), grad = Math.max(Math.abs(gA), Math.abs(gB));
+    if(pairA) sign = -1;
+    const subC = Math.max(0, Math.min(1, Math.abs(subA/12 - lM)/range));
+    const pair = pairA ? a + lM : b + lM;
+    // the edge's middle, half a step toward the side it divides from
+    const bx = horz ? x : x + sign*0.5, by = horz ? y + sign*0.5 : y, ox = horz ? 1 : 0, oy = horz ? 0 : 1;
+    const gS = grad/4, lMM = lM - pair*0.5, mNeg = lMM < 0;
+    let nx = bx - ox*FXAA_STEPS[0], ny = by - oy*FXAA_STEPS[0], px = bx + ox*FXAA_STEPS[0], py = by + oy*FXAA_STEPS[0];
+    let eN = lerpL(nx, ny) - pair*0.5, eP = lerpL(px, py) - pair*0.5, doneN = Math.abs(eN) >= gS, doneP = Math.abs(eP) >= gS;
+    for(let k = 1; k < FXAA_STEPS.length && !(doneN && doneP); k++){
+      if(!doneN){ nx -= ox*FXAA_STEPS[k]; ny -= oy*FXAA_STEPS[k]; eN = lerpL(nx, ny) - pair*0.5; doneN = Math.abs(eN) >= gS; }
+      if(!doneP){ px += ox*FXAA_STEPS[k]; py += oy*FXAA_STEPS[k]; eP = lerpL(px, py) - pair*0.5; doneP = Math.abs(eP) >= gS; }
+    }
+    const dN = horz ? x - nx : y - ny, dP = horz ? px - x : py - y, span = dN + dP;
+    const towardN = dN < dP, dst = Math.min(dN, dP), good = towardN ? ((eN < 0) !== mNeg) : ((eP < 0) !== mNeg);
+    const off = good ? 0.5 - dst/span : 0, subF = (-2*subC + 3)*subC*subC, subH = subF*subF*subpix, o = Math.max(off, subH);
+    const sx = horz ? x : x + o*sign, sy = horz ? y + o*sign : y, i = y*w + x;
+    out.r[i] = pick(img.r, sx, sy); out.g[i] = pick(img.g, sx, sy); out.b[i] = pick(img.b, sx, sy);
+  }
+  return out;
+}
+
 // ---------- THE STEPS' KIT: pictures between parts, on the grid or in a canvas pass ----------
 // On the Athanor's grid a part is handed FIELDS (Float32Array, ww·wh) and
 // IMAGES ({ r, g, b } fields); in a CANVAS PASS (athanor.js ctx.canvas: a
@@ -15839,7 +15891,10 @@ const STEP_PARTS = {
   // metallic it is and where it glows; with none of them wired it draws exactly as it always has)
   surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height', 'reflectivity', 'reflection blur', 'metallic', 'emission'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour']),
               // Filter Forge's SIZE: every distance in the graph is measured against it, so one slider scales the whole surface
-              STEP_R('size', 'Size', 100, 25, 400)] },
+              STEP_R('size', 'Size', 100, 25, 400),
+              // ANTI-ALIASING (Filter Forge's menu, ROADMAP A6): off as every graph always drew; edges only smooths the hard
+              // edges where they step across the grid (FXAA); all pixels also draws the whole graph on a grid twice as fine
+              STEP_SEL('aa', 'Anti-aliasing', ['off', 'edges only', 'all pixels'])] },
   // a NOTE on the graph (Filter Forge's Note component): words for whoever opens it next; it makes nothing
   note:     { cat: 'Inputs', label: 'Note', ins: [], outs: [], params: [['text', 'Note', 'text', 'A note to the next reader']] },
   // newer parts (the chains' own)
@@ -18712,7 +18767,15 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   }
   const res = evalNode(String(surface.id));
   if(ctx.canvas) return res && res[0] && typeof res[0].getContext === 'function' ? res[0] : null;
-  return res && res[0] ? asImage(res[0]) : null;
+  const img = res && res[0] ? asImage(res[0]) : null;
+  // ANTI-ALIASING (A6): the hard edges smoothed where they step across the grid, at either setting (all pixels is also
+  // drawn on a finer grid: textureGenerators genAthanor); absent, off, as every graph always drew
+  return img && athanorAA(flatG) !== 'off' ? fxaaImage(img, ww, wh) : img;
+}
+/** The Surface's Anti-aliasing: 'off' (absent, as every graph drew before it), 'edges only' or 'all pixels'. */
+function athanorAA(graph){
+  const s = Object.values(graph && graph.nodes ? graph.nodes : athanorFlat(graph).nodes).find(n => n.name === 'surface'), v = s && (s.data || {}).aa;
+  return v === 'edges only' || v === 'all pixels' ? v : 'off';
 }
 
 // ---- starter graphs: a few to begin from (Material Maker's and Blender's
@@ -18782,6 +18845,33 @@ const ATHANOR_STARTERS = {
       ['surface', { name: 'A Dropped Frame', ground: 'colour' }, 600, 220]],
     wires: [[1, 1, 4, 1], [2, 1, 4, 2], [2, 2, 4, 3], [3, 1, 4, paramPort('shards', 'turn')], [3, 2, 4, paramPort('shards', 'view')], [3, 3, 4, paramPort('shards', 'lens')],
       [5, 1, 4, paramPort('shards', 'count')], [4, 1, 6, 1]] },
+  // THE PATTERN PARTS AS STARTERS (ROADMAP F6): each a working lesson in one general pattern part, colored by your two
+  // Hues, raised by the dial, and anti-aliased (their edges are hard: Surface › Anti-aliasing, edges only)
+  paving: { label: 'Paving Stones', teach: 'A path of laid stones. Pavements lays the stones in rows and gives three maps: the stones (white, with dark joints), a bevel rising from each joint, and a different gray for each stone. A Color Ramp turns those grays into stone colors between your two Hues; Blend, set to Multiply, darkens the joints; and the bevel goes into the Surface\'s height, so the dial lights every stone\'s edge. Try: turn Irregularity up for an old road, then the Rows knob down for flagstones.', nodes: [
+      ['pavement', { rows: 7, '~rows': '3,30', irreg: 55, gap: 25, round: 45, bevel: 40, angle: 0 }, 40, 80], ['knob', { slot: '1', name: 'Rows', def: 15 }, 40, 420],
+      ['knob', { slot: '2', name: 'Irregularity', def: 55 }, 40, 540], ['hue', { slot: '1', name: 'Stone Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Stone Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'multiply', opacity: 100 }, 540, 60], ['surface', { name: 'Paving Stones', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 3, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [7, 1, 8, 1], [1, 2, 8, 2], [2, 1, 1, paramPort('pavement', 'rows')], [3, 1, 1, paramPort('pavement', 'irreg')]] },
+  brickwall: { label: 'Brick Wall', teach: 'Bricks in courses. Bricks gives the wall\'s heights (each brick raised, its edges bevelled), the mortar, and a gray for each brick. A Color Ramp colors each brick between your two Hues, so no two are quite alike; Blend, set to Multiply, lays the wall\'s heights over the colors to shade the mortar; and the heights go into the Surface\'s height for the dial to light. Try: raise Mortar, then set Bricks\' Stagger to 0 for a stack bond.', nodes: [
+      ['bricks', { rows: 12, '~rows': '6,40', ratio: 220, mortar: 14, stagger: 50, bevel: 35, vary: 40 }, 40, 80], ['knob', { slot: '1', name: 'Mortar', def: 35 }, 40, 420],
+      ['knob', { slot: '2', name: 'Courses', def: 20 }, 40, 540], ['hue', { slot: '1', name: 'Brick Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Brick Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'multiply', opacity: 100 }, 540, 60], ['surface', { name: 'Brick Wall', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 3, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [7, 1, 8, 1], [1, 1, 8, 2], [2, 1, 1, paramPort('bricks', 'mortar')], [3, 1, 1, paramPort('bricks', 'rows')]] },
+  studs: { label: 'Pyramid Studs', teach: 'Rows of studs, like a rivet plate or a cut gem\'s facets. Pyramids raises a pyramid in each square of a grid and gives a gray for each square; its heights go into the Surface\'s height, so the dial lights one face of every pyramid and shades the other. A Color Ramp colors the squares between your two Hues. Roundness turns the pyramids into domes. Try: raise Pyramids\' Octaves for smaller studs among the large.', nodes: [
+      ['pyramids', { scale: 12, '~scale': '4,40', octaves: 1, round: 0, vary: 30 }, 40, 80], ['knob', { slot: '1', name: 'Roundness', def: 0 }, 40, 380],
+      ['knob', { slot: '2', name: 'Studs', def: 15 }, 40, 500], ['hue', { slot: '1', name: 'Metal Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Metal Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['surface', { name: 'Pyramid Studs', ground: 'colour', aa: 'edges only' }, 560, 100]],
+    wires: [[1, 2, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('pyramids', 'round')], [3, 1, 1, paramPort('pyramids', 'scale')]] },
+  dotgrid: { label: 'Dot Grid', teach: 'Even dots in rows, as on a halftone print or a perforated sheet. Grid & Dots draws a regular pattern (here, dots) as a gray map: white dots on black. Tint colors it between your two Hues. Dot Size is its Line or Dot Size, and Turn its Angle (a Knob of the Angle kind reads in degrees). Try: set the Pattern to hex dots, or to grid lines for graph paper.', nodes: [
+      ['grid', { kind: 'dots', cells: 16, weight: 45, angle: 45, soft: 0 }, 40, 80], ['knob', { slot: '1', name: 'Dot Size', def: 45 }, 40, 340],
+      ['knob', { slot: '2', name: 'Turn', def: 12.5, kind: 'angle' }, 40, 460], ['hue', { slot: '1', name: 'Dot Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
+      ['tint', {}, 300, 60], ['surface', { name: 'Dot Grid', ground: 'colour', aa: 'edges only' }, 540, 80]],
+    wires: [[1, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [2, 1, 1, paramPort('grid', 'weight')], [3, 1, 1, paramPort('grid', 'angle')]] },
+  techno: { label: 'Techno Blocks', teach: 'Rectangles inside rectangles, like a city seen from above or a circuit\'s floor plan. Blocks splits the page again and again (each Octave a finer split) and gives the blocks, a gray each, and their outlines. A Color Ramp colors the blocks between your two Hues, Blend (Screen) lays the outlines over them as light, and the blocks go into the Surface\'s height so the dial raises them. Density sets how many blocks are filled. Try: raise Blocks\' Octaves, then the Line Width.', nodes: [
+      ['blocks', { scale: 6, octaves: 3, fill: 60, line: 12 }, 40, 80], ['knob', { slot: '1', name: 'Density', def: 60 }, 40, 380],
+      ['hue', { slot: '1', name: 'Block Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'screen', opacity: 100 }, 540, 60], ['surface', { name: 'Techno Blocks', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1], [1, 2, 6, 2], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('blocks', 'fill')]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -19977,12 +20067,17 @@ function describeRequest(type, w, h, opts){
 function genAthanor(w, h, light, tint1, tint2, extra){
   // the work budget: a heavy graph is made on a coarser grid; too many nodes, not at all
   const B = athanorBudget(extra.graph || '');
-  const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  // ANTI-ALIASING, all pixels (A6): the graph drawn on a grid twice as fine and laid down smaller, as far as the budget
+  // allows (four times the work: a heavy graph keeps the grid its budget gives it). A v3 graph and newer, whose sizes
+  // and counts are canonical, so the finer grid draws the same picture, finer.
+  const fine = athanorAA(extra.graph || '') === 'all pixels' && athanorVersion(extra.graph || '') >= 3 && !B.tooMany;
+  const k = fine ? Math.min(3, Math.max(1, Math.sqrt(B.cost*4/ATHANOR_LIMITS.cost)))/2 : B.scale;
+  const div = canonDiv(2)*k, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*B.scale), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -25908,6 +26003,58 @@ function fieldOn(F, step, fn){
   return out;
 }
 
+// ---------- ANTI-ALIASING, EDGES ONLY (ROADMAP A6) ----------
+// Filter Forge samples each pixel several times where its AA zones meet; a grid engine can't re-evaluate one pixel,
+// so it takes the established screen-space way instead: Timothy Lottes' FXAA 3.11 (NVIDIA, 2011), its Quality
+// path ported line for line to the grid. It finds where neighbours differ sharply, walks along the edge to its two
+// ends, and moves each pixel's sample across the edge by how far along the step it lies; smooth ground is untouched.
+const FXAA_STEPS = [1, 1, 1, 1, 1, 1.5, 2, 2, 2, 2, 4, 8];      // the search's strides (Lottes' quality preset 39)
+/** A picture ({ r, g, b } on a w×h grid, 0..1) anti-aliased along its hard edges; a new picture, the input untouched. */
+function fxaaImage(img, w, h, { subpix = 0.75, edge = 0.125, edgeMin = 0.0312 } = {}){
+  const N = w*h, L = new Float32Array(N);
+  for(let i = 0; i < N; i++) L[i] = Math.max(0, Math.min(1, 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]));
+  const out = { r: new Float32Array(img.r), g: new Float32Array(img.g), b: new Float32Array(img.b) };
+  if(w < 3 || h < 3) return out;
+  const lu = (x, y) => L[Math.max(0, Math.min(h - 1, y))*w + Math.max(0, Math.min(w - 1, x))];
+  // (bilinear, with pixel centres on whole numbers, as a texture fetch between texels)
+  const lerpL = (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+    return (lu(x0, y0)*(1 - fx) + lu(x0 + 1, y0)*fx)*(1 - fy) + (lu(x0, y0 + 1)*(1 - fx) + lu(x0 + 1, y0 + 1)*fx)*fy; };
+  const pick = (ch, x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+    const at = (xx, yy) => ch[Math.max(0, Math.min(h - 1, yy))*w + Math.max(0, Math.min(w - 1, xx))];
+    return (at(x0, y0)*(1 - fx) + at(x0 + 1, y0)*fx)*(1 - fy) + (at(x0, y0 + 1)*(1 - fx) + at(x0 + 1, y0 + 1)*fx)*fy; };
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const lM = lu(x, y), lS = lu(x, y + 1), lE = lu(x + 1, y), lN = lu(x, y - 1), lW = lu(x - 1, y);
+    const rMax = Math.max(lS, lE, lN, lW, lM), rMin = Math.min(lS, lE, lN, lW, lM), range = rMax - rMin;
+    if(range < Math.max(edgeMin, rMax*edge)) continue;
+    const lNW = lu(x - 1, y - 1), lSE = lu(x + 1, y + 1), lNE = lu(x + 1, y - 1), lSW = lu(x - 1, y + 1);
+    const lNS = lN + lS, lWE = lW + lE, subA = (lNS + lWE)*2 + (lNW + lSW + lNE + lSE);
+    const edgeH = Math.abs(-2*lW + lNW + lSW) + Math.abs(-2*lM + lNS)*2 + Math.abs(-2*lE + lNE + lSE);
+    const edgeV = Math.abs(-2*lS + lSW + lSE) + Math.abs(-2*lM + lWE)*2 + Math.abs(-2*lN + lNW + lNE);
+    const horz = edgeH >= edgeV;
+    let a = horz ? lN : lW, b = horz ? lS : lE;          // the two neighbours across the edge
+    let sign = 1;
+    const gA = a - lM, gB = b - lM, pairA = Math.abs(gA) >= Math.abs(gB), grad = Math.max(Math.abs(gA), Math.abs(gB));
+    if(pairA) sign = -1;
+    const subC = Math.max(0, Math.min(1, Math.abs(subA/12 - lM)/range));
+    const pair = pairA ? a + lM : b + lM;
+    // the edge's middle, half a step toward the side it divides from
+    const bx = horz ? x : x + sign*0.5, by = horz ? y + sign*0.5 : y, ox = horz ? 1 : 0, oy = horz ? 0 : 1;
+    const gS = grad/4, lMM = lM - pair*0.5, mNeg = lMM < 0;
+    let nx = bx - ox*FXAA_STEPS[0], ny = by - oy*FXAA_STEPS[0], px = bx + ox*FXAA_STEPS[0], py = by + oy*FXAA_STEPS[0];
+    let eN = lerpL(nx, ny) - pair*0.5, eP = lerpL(px, py) - pair*0.5, doneN = Math.abs(eN) >= gS, doneP = Math.abs(eP) >= gS;
+    for(let k = 1; k < FXAA_STEPS.length && !(doneN && doneP); k++){
+      if(!doneN){ nx -= ox*FXAA_STEPS[k]; ny -= oy*FXAA_STEPS[k]; eN = lerpL(nx, ny) - pair*0.5; doneN = Math.abs(eN) >= gS; }
+      if(!doneP){ px += ox*FXAA_STEPS[k]; py += oy*FXAA_STEPS[k]; eP = lerpL(px, py) - pair*0.5; doneP = Math.abs(eP) >= gS; }
+    }
+    const dN = horz ? x - nx : y - ny, dP = horz ? px - x : py - y, span = dN + dP;
+    const towardN = dN < dP, dst = Math.min(dN, dP), good = towardN ? ((eN < 0) !== mNeg) : ((eP < 0) !== mNeg);
+    const off = good ? 0.5 - dst/span : 0, subF = (-2*subC + 3)*subC*subC, subH = subF*subF*subpix, o = Math.max(off, subH);
+    const sx = horz ? x : x + o*sign, sy = horz ? y + o*sign : y, i = y*w + x;
+    out.r[i] = pick(img.r, sx, sy); out.g[i] = pick(img.g, sx, sy); out.b[i] = pick(img.b, sx, sy);
+  }
+  return out;
+}
+
 // ---------- THE STEPS' KIT: pictures between parts, on the grid or in a canvas pass ----------
 // On the Athanor's grid a part is handed FIELDS (Float32Array, ww·wh) and
 // IMAGES ({ r, g, b } fields); in a CANVAS PASS (athanor.js ctx.canvas: a
@@ -37760,7 +37907,10 @@ const STEP_PARTS = {
   // metallic it is and where it glows; with none of them wired it draws exactly as it always has)
   surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height', 'reflectivity', 'reflection blur', 'metallic', 'emission'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour']),
               // Filter Forge's SIZE: every distance in the graph is measured against it, so one slider scales the whole surface
-              STEP_R('size', 'Size', 100, 25, 400)] },
+              STEP_R('size', 'Size', 100, 25, 400),
+              // ANTI-ALIASING (Filter Forge's menu, ROADMAP A6): off as every graph always drew; edges only smooths the hard
+              // edges where they step across the grid (FXAA); all pixels also draws the whole graph on a grid twice as fine
+              STEP_SEL('aa', 'Anti-aliasing', ['off', 'edges only', 'all pixels'])] },
   // a NOTE on the graph (Filter Forge's Note component): words for whoever opens it next; it makes nothing
   note:     { cat: 'Inputs', label: 'Note', ins: [], outs: [], params: [['text', 'Note', 'text', 'A note to the next reader']] },
   // newer parts (the chains' own)
@@ -40633,7 +40783,15 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   }
   const res = evalNode(String(surface.id));
   if(ctx.canvas) return res && res[0] && typeof res[0].getContext === 'function' ? res[0] : null;
-  return res && res[0] ? asImage(res[0]) : null;
+  const img = res && res[0] ? asImage(res[0]) : null;
+  // ANTI-ALIASING (A6): the hard edges smoothed where they step across the grid, at either setting (all pixels is also
+  // drawn on a finer grid: textureGenerators genAthanor); absent, off, as every graph always drew
+  return img && athanorAA(flatG) !== 'off' ? fxaaImage(img, ww, wh) : img;
+}
+/** The Surface's Anti-aliasing: 'off' (absent, as every graph drew before it), 'edges only' or 'all pixels'. */
+function athanorAA(graph){
+  const s = Object.values(graph && graph.nodes ? graph.nodes : athanorFlat(graph).nodes).find(n => n.name === 'surface'), v = s && (s.data || {}).aa;
+  return v === 'edges only' || v === 'all pixels' ? v : 'off';
 }
 
 // ---- starter graphs: a few to begin from (Material Maker's and Blender's
@@ -40703,6 +40861,33 @@ const ATHANOR_STARTERS = {
       ['surface', { name: 'A Dropped Frame', ground: 'colour' }, 600, 220]],
     wires: [[1, 1, 4, 1], [2, 1, 4, 2], [2, 2, 4, 3], [3, 1, 4, paramPort('shards', 'turn')], [3, 2, 4, paramPort('shards', 'view')], [3, 3, 4, paramPort('shards', 'lens')],
       [5, 1, 4, paramPort('shards', 'count')], [4, 1, 6, 1]] },
+  // THE PATTERN PARTS AS STARTERS (ROADMAP F6): each a working lesson in one general pattern part, colored by your two
+  // Hues, raised by the dial, and anti-aliased (their edges are hard: Surface › Anti-aliasing, edges only)
+  paving: { label: 'Paving Stones', teach: 'A path of laid stones. Pavements lays the stones in rows and gives three maps: the stones (white, with dark joints), a bevel rising from each joint, and a different gray for each stone. A Color Ramp turns those grays into stone colors between your two Hues; Blend, set to Multiply, darkens the joints; and the bevel goes into the Surface\'s height, so the dial lights every stone\'s edge. Try: turn Irregularity up for an old road, then the Rows knob down for flagstones.', nodes: [
+      ['pavement', { rows: 7, '~rows': '3,30', irreg: 55, gap: 25, round: 45, bevel: 40, angle: 0 }, 40, 80], ['knob', { slot: '1', name: 'Rows', def: 15 }, 40, 420],
+      ['knob', { slot: '2', name: 'Irregularity', def: 55 }, 40, 540], ['hue', { slot: '1', name: 'Stone Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Stone Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'multiply', opacity: 100 }, 540, 60], ['surface', { name: 'Paving Stones', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 3, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [7, 1, 8, 1], [1, 2, 8, 2], [2, 1, 1, paramPort('pavement', 'rows')], [3, 1, 1, paramPort('pavement', 'irreg')]] },
+  brickwall: { label: 'Brick Wall', teach: 'Bricks in courses. Bricks gives the wall\'s heights (each brick raised, its edges bevelled), the mortar, and a gray for each brick. A Color Ramp colors each brick between your two Hues, so no two are quite alike; Blend, set to Multiply, lays the wall\'s heights over the colors to shade the mortar; and the heights go into the Surface\'s height for the dial to light. Try: raise Mortar, then set Bricks\' Stagger to 0 for a stack bond.', nodes: [
+      ['bricks', { rows: 12, '~rows': '6,40', ratio: 220, mortar: 14, stagger: 50, bevel: 35, vary: 40 }, 40, 80], ['knob', { slot: '1', name: 'Mortar', def: 35 }, 40, 420],
+      ['knob', { slot: '2', name: 'Courses', def: 20 }, 40, 540], ['hue', { slot: '1', name: 'Brick Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Brick Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'multiply', opacity: 100 }, 540, 60], ['surface', { name: 'Brick Wall', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 3, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [7, 1, 8, 1], [1, 1, 8, 2], [2, 1, 1, paramPort('bricks', 'mortar')], [3, 1, 1, paramPort('bricks', 'rows')]] },
+  studs: { label: 'Pyramid Studs', teach: 'Rows of studs, like a rivet plate or a cut gem\'s facets. Pyramids raises a pyramid in each square of a grid and gives a gray for each square; its heights go into the Surface\'s height, so the dial lights one face of every pyramid and shades the other. A Color Ramp colors the squares between your two Hues. Roundness turns the pyramids into domes. Try: raise Pyramids\' Octaves for smaller studs among the large.', nodes: [
+      ['pyramids', { scale: 12, '~scale': '4,40', octaves: 1, round: 0, vary: 30 }, 40, 80], ['knob', { slot: '1', name: 'Roundness', def: 0 }, 40, 380],
+      ['knob', { slot: '2', name: 'Studs', def: 15 }, 40, 500], ['hue', { slot: '1', name: 'Metal Hue' }, 300, 300], ['hue', { slot: '2', name: 'Second Metal Hue' }, 300, 420],
+      ['ramp', { mid: 50 }, 300, 60], ['surface', { name: 'Pyramid Studs', ground: 'colour', aa: 'edges only' }, 560, 100]],
+    wires: [[1, 2, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('pyramids', 'round')], [3, 1, 1, paramPort('pyramids', 'scale')]] },
+  dotgrid: { label: 'Dot Grid', teach: 'Even dots in rows, as on a halftone print or a perforated sheet. Grid & Dots draws a regular pattern (here, dots) as a gray map: white dots on black. Tint colors it between your two Hues. Dot Size is its Line or Dot Size, and Turn its Angle (a Knob of the Angle kind reads in degrees). Try: set the Pattern to hex dots, or to grid lines for graph paper.', nodes: [
+      ['grid', { kind: 'dots', cells: 16, weight: 45, angle: 45, soft: 0 }, 40, 80], ['knob', { slot: '1', name: 'Dot Size', def: 45 }, 40, 340],
+      ['knob', { slot: '2', name: 'Turn', def: 12.5, kind: 'angle' }, 40, 460], ['hue', { slot: '1', name: 'Dot Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
+      ['tint', {}, 300, 60], ['surface', { name: 'Dot Grid', ground: 'colour', aa: 'edges only' }, 540, 80]],
+    wires: [[1, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [2, 1, 1, paramPort('grid', 'weight')], [3, 1, 1, paramPort('grid', 'angle')]] },
+  techno: { label: 'Techno Blocks', teach: 'Rectangles inside rectangles, like a city seen from above or a circuit\'s floor plan. Blocks splits the page again and again (each Octave a finer split) and gives the blocks, a gray each, and their outlines. A Color Ramp colors the blocks between your two Hues, Blend (Screen) lays the outlines over them as light, and the blocks go into the Surface\'s height so the dial raises them. Density sets how many blocks are filled. Try: raise Blocks\' Octaves, then the Line Width.', nodes: [
+      ['blocks', { scale: 6, octaves: 3, fill: 60, line: 12 }, 40, 80], ['knob', { slot: '1', name: 'Density', def: 60 }, 40, 380],
+      ['hue', { slot: '1', name: 'Block Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
+      ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'screen', opacity: 100 }, 540, 60], ['surface', { name: 'Techno Blocks', ground: 'colour', aa: 'edges only' }, 780, 100]],
+    wires: [[1, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1], [1, 2, 6, 2], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('blocks', 'fill')]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -41898,12 +42083,17 @@ function describeRequest(type, w, h, opts){
 function genAthanor(w, h, light, tint1, tint2, extra){
   // the work budget: a heavy graph is made on a coarser grid; too many nodes, not at all
   const B = athanorBudget(extra.graph || '');
-  const div = canonDiv(2)*B.scale, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  // ANTI-ALIASING, all pixels (A6): the graph drawn on a grid twice as fine and laid down smaller, as far as the budget
+  // allows (four times the work: a heavy graph keeps the grid its budget gives it). A v3 graph and newer, whose sizes
+  // and counts are canonical, so the finer grid draws the same picture, finer.
+  const fine = athanorAA(extra.graph || '') === 'all pixels' && athanorVersion(extra.graph || '') >= 3 && !B.tooMany;
+  const k = fine ? Math.min(3, Math.max(1, Math.sqrt(B.cost*4/ATHANOR_LIMITS.cost)))/2 : B.scale;
+  const div = canonDiv(2)*k, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*B.scale), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -42729,7 +42919,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Albiorix';
+const RELEASE = 'Saturn–Bebhionn';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -43566,7 +43756,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · b9f1706";
+const STAMP = "2026-10-18 · 64fd4f0";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -48677,10 +48867,12 @@ const WIKI_PARTS = {
   },
   surface: {
     line: 'The end of every graph: whatever reaches it is the texture. One per graph.',
-    about: 'The Surface is where a graph comes out. Its Image input is the texture; its Height input (optional) is lit by the page’s dial so the texture looks raised. Four more inputs make it a material: how much it reflects, how blurred the reflection is, how metallic it is, and where it glows. Each is a gray map, so one surface can be part polished metal and part matte stone. Leave them unwired and the Surface draws as it always has.',
+    about: 'The Surface is where a graph comes out. Its picture input is the texture; its height input (optional) is lit by the page’s dial so the texture looks raised. Four more inputs make it a material: how much it reflects, how blurred the reflection is, how metallic it is, and where it glows. Each is a gray map, so one surface can be part polished metal and part matte stone. Leave them unwired and the Surface draws as it always has.',
     ins: { image: 'The texture.', height: 'Optional heights, lit by the dial.', reflectivity: 'How strongly it reflects the light (white: a strong highlight; black: hardly any). Unwired: 0.6.', 'reflection blur': 'How soft the highlight is: black, a sharp mirror glint; white, a broad sheen.', metallic: 'Where it is metal: little diffuse light, and a highlight in its own color, as gold or copper shines.', emission: 'Where it glows with its own color, whatever the light.' },
-    set: { name: 'The surface’s name, shown on the page and used when you keep it.', ground: 'Gray: the page tints and blends it with its hues. Color: shown in its own colors.', size: 'Scales every distance in the graph.' },
-    see: ['surface'],
+    set: { name: 'The surface’s name, shown on the page and used when you keep it.', ground: 'Gray: the page tints and blends it with its hues. Color: shown in its own colors.', size: 'Scales every distance in the graph.',
+      aa: 'Smooths hard edges that step across the grid. Off: as drawn. Edges only: the steps smoothed along each edge, quickly. All pixels: the whole graph drawn on a grid twice as fine, then smoothed (up to four times the work; a heavy graph keeps its usual grid).' },
+    tips: ['A graph with crisp edges (Threshold, Bricks, Polygon, Blocks) looks stepped at the edges; Edges only fixes most of that for little cost. Use All pixels where fine lines matter.'],
+    see: ['surface', 'resolution'],
   },
 };
 
@@ -48947,7 +49139,15 @@ const WIKI_ARTICLES = [
 </ul>` },
   { id: 'resolution', group: 'Building techniques', title: 'Size and resolution', body: `
 <p>The same surface is drawn small in the preview and large (3072 pixels) when the page is saved, and it should look the same at both. So every distance in the Athanor (blur radius, line width, scale) is measured relative to the page, not in screen pixels.</p>
-<p>The Surface’s <b>Size</b> scales every distance in the graph at once: at 200, everything is twice as large. It is the quickest way to make a texture coarser or finer.</p>` },
+<p>The Surface’s <b>Size</b> scales every distance in the graph at once: at 200, everything is twice as large. It is the quickest way to make a texture coarser or finer.</p>
+<h3>Anti-aliasing</h3>
+<p>A graph is worked out on a grid of points, coarser than the saved image, and the grid is then smoothed up to the page’s size. A hard edge (a Threshold’s, a brick’s, a polygon’s) can only turn at a grid point, so where it runs at a slant it comes out in small steps. That is <i>aliasing</i>. The Surface’s <b>Anti-aliasing</b> setting deals with it, as Filter Forge’s menu of the same name does:</p>
+<ul>
+<li><b>off</b>: as drawn. Every graph made before the setting existed draws this way.</li>
+<li><b>edges only</b>: finds where neighbouring points differ sharply, follows each edge to its ends, and blends the points along it, so the steps become a smooth line. Soft areas are left alone. It costs little. (The method is FXAA, a standard in games.)</li>
+<li><b>all pixels</b>: draws the whole graph on a grid twice as fine, then smooths it. Edges are sharper and smoother, and fine lines hold. It is up to four times the work, so a heavy graph keeps the grid its budget allows.</li>
+</ul>
+<p>Try: a Value Noise into a Threshold with Softness at 0, then compare the three.</p>` },
 
   // ------------------------------------------------------------------ The page and your graph
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
@@ -50611,9 +50811,10 @@ async function openForge(deps){
     if(v.ok) saved = v.graph; if(v.problems && v.problems.length && deps.warn) deps.warn(v.problems); }
   if(saved && saved.drawflow) F.load(saved);
   else { F.quiet = true; ed.clear(); F.version = ATHANOR_VERSION; F.quiet = false;
-    const add = (type, x, y) => { const N = FORGE_NODES[type]; return ed.addNode(type, N.ins.length, N.outs.length, x, y, forgeCatClass(N.cat), forgeNodeData(type), forgeNodeHtml(type, { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' })); };
+    const add = (type, x, y, data) => { const N = FORGE_NODES[type], d = Object.assign(forgeNodeData(type), data || {}); return ed.addNode(type, N.ins.length, N.outs.length, x, y, forgeCatClass(N.cat), d, forgeNodeHtml(type, { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' }, d)); };
     // (wired, so the first preview is a picture, not flat gray — the usability review)
-    F.quiet = true; const a = add('noise', 40, 60), b = add('surface', 420, 90); if(a && b) ed.addConnection(a, b, 'output_1', 'input_1'); F.quiet = false; F.paintAll(); F.save(); }
+    // (a new graph's Surface smooths its edges: Anti-aliasing, edges only — A6; older graphs keep drawing as they did)
+    F.quiet = true; const a = add('noise', 40, 60), b = add('surface', 420, 90, { aa: 'edges only' }); if(a && b) ed.addConnection(a, b, 'output_1', 'input_1'); F.quiet = false; F.paintAll(); F.save(); }
   F.opened = JSON.stringify(ed.export());
   F.dirty = false;
   if(F.paintPage) F.paintPage();

@@ -783,6 +783,58 @@ export function fieldOn(F, step, fn){
   return out;
 }
 
+// ---------- ANTI-ALIASING, EDGES ONLY (ROADMAP A6) ----------
+// Filter Forge samples each pixel several times where its AA zones meet; a grid engine can't re-evaluate one pixel,
+// so it takes the established screen-space way instead: Timothy Lottes' FXAA 3.11 (NVIDIA, 2011), its Quality
+// path ported line for line to the grid. It finds where neighbours differ sharply, walks along the edge to its two
+// ends, and moves each pixel's sample across the edge by how far along the step it lies; smooth ground is untouched.
+const FXAA_STEPS = [1, 1, 1, 1, 1, 1.5, 2, 2, 2, 2, 4, 8];      // the search's strides (Lottes' quality preset 39)
+/** A picture ({ r, g, b } on a w×h grid, 0..1) anti-aliased along its hard edges; a new picture, the input untouched. */
+export function fxaaImage(img, w, h, { subpix = 0.75, edge = 0.125, edgeMin = 0.0312 } = {}){
+  const N = w*h, L = new Float32Array(N);
+  for(let i = 0; i < N; i++) L[i] = Math.max(0, Math.min(1, 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]));
+  const out = { r: new Float32Array(img.r), g: new Float32Array(img.g), b: new Float32Array(img.b) };
+  if(w < 3 || h < 3) return out;
+  const lu = (x, y) => L[Math.max(0, Math.min(h - 1, y))*w + Math.max(0, Math.min(w - 1, x))];
+  // (bilinear, with pixel centres on whole numbers, as a texture fetch between texels)
+  const lerpL = (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+    return (lu(x0, y0)*(1 - fx) + lu(x0 + 1, y0)*fx)*(1 - fy) + (lu(x0, y0 + 1)*(1 - fx) + lu(x0 + 1, y0 + 1)*fx)*fy; };
+  const pick = (ch, x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+    const at = (xx, yy) => ch[Math.max(0, Math.min(h - 1, yy))*w + Math.max(0, Math.min(w - 1, xx))];
+    return (at(x0, y0)*(1 - fx) + at(x0 + 1, y0)*fx)*(1 - fy) + (at(x0, y0 + 1)*(1 - fx) + at(x0 + 1, y0 + 1)*fx)*fy; };
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const lM = lu(x, y), lS = lu(x, y + 1), lE = lu(x + 1, y), lN = lu(x, y - 1), lW = lu(x - 1, y);
+    const rMax = Math.max(lS, lE, lN, lW, lM), rMin = Math.min(lS, lE, lN, lW, lM), range = rMax - rMin;
+    if(range < Math.max(edgeMin, rMax*edge)) continue;
+    const lNW = lu(x - 1, y - 1), lSE = lu(x + 1, y + 1), lNE = lu(x + 1, y - 1), lSW = lu(x - 1, y + 1);
+    const lNS = lN + lS, lWE = lW + lE, subA = (lNS + lWE)*2 + (lNW + lSW + lNE + lSE);
+    const edgeH = Math.abs(-2*lW + lNW + lSW) + Math.abs(-2*lM + lNS)*2 + Math.abs(-2*lE + lNE + lSE);
+    const edgeV = Math.abs(-2*lS + lSW + lSE) + Math.abs(-2*lM + lWE)*2 + Math.abs(-2*lN + lNW + lNE);
+    const horz = edgeH >= edgeV;
+    let a = horz ? lN : lW, b = horz ? lS : lE;          // the two neighbours across the edge
+    let sign = 1;
+    const gA = a - lM, gB = b - lM, pairA = Math.abs(gA) >= Math.abs(gB), grad = Math.max(Math.abs(gA), Math.abs(gB));
+    if(pairA) sign = -1;
+    const subC = Math.max(0, Math.min(1, Math.abs(subA/12 - lM)/range));
+    const pair = pairA ? a + lM : b + lM;
+    // the edge's middle, half a step toward the side it divides from
+    const bx = horz ? x : x + sign*0.5, by = horz ? y + sign*0.5 : y, ox = horz ? 1 : 0, oy = horz ? 0 : 1;
+    const gS = grad/4, lMM = lM - pair*0.5, mNeg = lMM < 0;
+    let nx = bx - ox*FXAA_STEPS[0], ny = by - oy*FXAA_STEPS[0], px = bx + ox*FXAA_STEPS[0], py = by + oy*FXAA_STEPS[0];
+    let eN = lerpL(nx, ny) - pair*0.5, eP = lerpL(px, py) - pair*0.5, doneN = Math.abs(eN) >= gS, doneP = Math.abs(eP) >= gS;
+    for(let k = 1; k < FXAA_STEPS.length && !(doneN && doneP); k++){
+      if(!doneN){ nx -= ox*FXAA_STEPS[k]; ny -= oy*FXAA_STEPS[k]; eN = lerpL(nx, ny) - pair*0.5; doneN = Math.abs(eN) >= gS; }
+      if(!doneP){ px += ox*FXAA_STEPS[k]; py += oy*FXAA_STEPS[k]; eP = lerpL(px, py) - pair*0.5; doneP = Math.abs(eP) >= gS; }
+    }
+    const dN = horz ? x - nx : y - ny, dP = horz ? px - x : py - y, span = dN + dP;
+    const towardN = dN < dP, dst = Math.min(dN, dP), good = towardN ? ((eN < 0) !== mNeg) : ((eP < 0) !== mNeg);
+    const off = good ? 0.5 - dst/span : 0, subF = (-2*subC + 3)*subC*subC, subH = subF*subF*subpix, o = Math.max(off, subH);
+    const sx = horz ? x : x + o*sign, sy = horz ? y + o*sign : y, i = y*w + x;
+    out.r[i] = pick(img.r, sx, sy); out.g[i] = pick(img.g, sx, sy); out.b[i] = pick(img.b, sx, sy);
+  }
+  return out;
+}
+
 // ---------- THE STEPS' KIT: pictures between parts, on the grid or in a canvas pass ----------
 // On the Athanor's grid a part is handed FIELDS (Float32Array, ww·wh) and
 // IMAGES ({ r, g, b } fields); in a CANVAS PASS (athanor.js ctx.canvas: a
