@@ -38,6 +38,16 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
   check('no CSS styles a class or id that nothing makes', !r.css.length, r.css);
   check('no fixture goes unread, no test helper unimported', !r.fixtures.length && !r.helpers.length, [...r.fixtures, ...r.helpers]);
   check('no tool goes unmentioned', !r.tools.length, r.tools);
+  // SEDIMENT: a declaration overridden by a LATER block of the same selector is dead (repeated iteration left many; they
+  // were removed, and this keeps the count from climbing back). A property set twice in ONE block is a fallback, not dead.
+  const css = rd('poetrypress.css').replace(/\/\*[\s\S]*?\*\//g, m => ' '.repeat(m.length)), seen = new Map(); let dead = 0, i = 0, ri = 0;
+  while(i < css.length){ const b = css.indexOf('{', i); if(b < 0) break;
+    const sel = css.slice(i, b).trim().replace(/\s+/g, ' '); let d = 1, j = b + 1;
+    while(j < css.length && d){ if(css[j] === '{') d++; else if(css[j] === '}') d--; j++; }
+    if(!sel.startsWith('@')) for(const dec of css.slice(b + 1, j - 1).split(';')){ const k = dec.split(':')[0].trim(); if(!k || !dec.includes(':')) continue;
+      const key = sel + '|' + k; if(seen.has(key) && seen.get(key) !== ri) dead++; seen.set(key, ri); }
+    i = j; ri++; }
+  check('the stylesheet keeps its overridden declarations near zero (a later block of the same selector wins)', dead <= 10, dead > 10 ? [String(dead)] : []);
 }
 
 // ---------- 2 · the docs name only what exists ----------
@@ -194,10 +204,11 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
   const silent = TESTS.filter(t => !/ALL PASSED|PASS \(no throw\)/.test(rd('test/' + t)));
   check('every suite reports ALL PASSED, so test.sh can count it', !silent.length, silent);
   // the pictures are guarded by the fingerprints: a test that reads a surface's code tests how, not what
-  const SURFACE = /(?:'|\.\.\/)(tex(?:Whimsy|Sharpness|Chaos|Touch)|steps\w*|cartomancy\w*|chains|athanorStudies)\.js/;
+  const SURFACE = /(?:'|\.\.\/)(tex(?:Whimsy|Sharpness|Chaos|Touch|Core)|steps\w*|cartomancy\w*|chains|athanorStudies|textureGenerators)\.js/;
   const peek = TESTS.filter(t => t !== 'invariants.test.mjs' && t !== 'hygiene.test.mjs').filter(t => {
     const s = pruneStrip(rd('test/' + t));
-    return [...s.matchAll(/readFileSync\([^)]*\)|src\(\s*['"][^'"]+['"]\s*\)/g)].some(m => SURFACE.test(m[0]));
+    // (read directly, or through a suite's own helper: src, rd, read, raw)
+    return [...s.matchAll(/readFileSync\([^)]*\)|\b(?:src|rd|read|raw)\(\s*['"][^'"]+['"]\s*\)/g)].some(m => SURFACE.test(m[0]));
   });
   check('no suite reads a surface\'s source (invariants.test.mjs scans for pitfalls; the fingerprints guard pictures)', !peek.length, peek);
   const seen = new Map();

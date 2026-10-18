@@ -1615,6 +1615,23 @@ export const ringPlaceOf = seed => (mnHash(seed | 0, 91, 7) - 0.5)*130;
 // THE CAMERA'S GUIDE (Ruby: "a fast render … almost a guide while you're adjusting the camera"): the shot as a few
 // lines, in page units (the short side 1), drawn over the page while the camera dial moves and the surface is still
 // being made. A plane (Wood, Discharge): its grid, the page's own square bold. A ring: its floor's edges, its walls.
+/** THE PAINTED RINGWORLD'S SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it and the
+ *  light on the land comes from where it is): its direction from the eye, a unit vector in the ring's coordinates. Its way
+ *  round is the dial's (the way you face at that camera turn: the two dials agree), its height the dial's reach (the
+ *  middle overhead, the rim the horizon, past it below); overhead it is the ring's own star, at the ring's middle. */
+export function ringSunDir(L, deg, reach){
+  const a = (deg == null ? 315 : deg)*Math.PI/180, e = (90 - 90*Math.max(0, Math.min(1.3, reach == null ? 0.4 : reach)))*Math.PI/180;
+  const s = Math.hypot(L.Px, L.z0) || 1, S0 = [-L.Px/s, 0, -L.z0/s], ce = Math.cos(e), se = Math.sin(e);
+  return ringNorm([S0[0]*se, Math.cos(a)*ce, Math.sin(a)*ce + S0[2]*se]);
+}
+/** Where the Painted Ringworld's sun falls on the page (0..aspX, 0..aspY), for the guide drawn while the light dial moves:
+ *  { x, y, up } (up: above the horizon), or null when it is behind you. */
+export function ringSunGuide(aspX, aspY, ring, deg, reach){
+  const L = ringCamera(ringParams(ring)), D = ringSunDir(L, deg, reach), F = L.f, cx = aspX/2, cy = aspY/2;
+  const vf = D[0]*L.fx + D[1]*L.fy + D[2]*L.fz, q = 1 + vf;
+  if(q <= 0.12) return null;
+  return { x: cx + 2*F*(D[0]*L.rx + D[1]*L.ry + D[2]*L.rz)/q, y: cy - 2*F*(D[0]*L.ux + D[1]*L.uy + D[2]*L.uz)/q, up: reach == null || reach <= 1 };
+}
 export function cameraGuide(kind, aspX, aspY, cam, ring){
   const lines = [];
   if(kind === 'plane'){

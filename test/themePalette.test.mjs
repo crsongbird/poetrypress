@@ -48,6 +48,10 @@ global.document.dispatchEvent(fakeOpenEvent);
 const afterOpen = global.Coloris.lastCall;
 check('picker open keeps 18 swatches', afterOpen.swatches.length === 18);
 check('the FIRST swatch is the field\'s live value (tap it to get back)', afterOpen.swatches[0] === '#ff00ff');
+// (the hues whose alpha is how much of them to use, or a light's strength, are given the picker's alpha slider at boot)
+{ const withAlpha = (global.Coloris.instances || []).filter(c => c.alpha === true).map(c => String(c.instance || '')).join(',');
+  check('the Specular, Shadow, Glow and the three lights\' pickers (Main Light, Rim Light, Ambient) keep their alpha slider',
+    [3, 4, 5, 6, 7, 8].every(k => withAlpha.includes('#textureTint' + k + 'Hex'))); }
 check('then the theme\'s 15, then white and black', JSON.stringify(afterOpen.swatches.slice(1,16)) === JSON.stringify(afterPresetClick.swatches.slice(1,16)) && afterOpen.swatches[16] === '#FFFFFF' && afterOpen.swatches[17] === '#000000');
 
 console.log();

@@ -11,7 +11,7 @@
  * and the land at your feet are the same ring.
  */
 import { mulberry32, kitCanvas, kitPicture, seedChoice } from './texCore.js';
-import { ringParams, ringCamera, ringDay, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
+import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -102,7 +102,15 @@ function rgView(E, n, ww, wh){
   const dryAt = (a, z) => mnValue(a/(W*0.6) + 11.7, z/(W*0.6) - 3.3, s + 13), forestAt = (a, z) => rsSmooth(0.38, 0.62, mnValue(a/(W*0.09) + 2.1, z/(W*0.09) + 5.9, s + 17));
   const cityAt = (a, z, cv) => { if(cv <= 0) return 0; const t = 0.62 - 0.6*cv; return rsSmooth(t - 0.06, t + 0.06, mnValue(a/(W*0.22) + 7.7, z/(W*0.22) - 1.1, s + 19)); };
   const lightsOf = w => RG_LIGHTS[w] || [g1.map(c => Math.min(255, c*1.15 + 30)), g2.map(c => Math.min(255, c*1.15 + 30))];
-  return { E, L, p, W, seed, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
+  // THE SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it, and the light on the land
+  // comes from where it is): its way round the dial's, its height the dial's reach (overhead it is the ring's own star, on
+  // the arch; at the dial's rim it sets; past it, night). Where it falls on the screen, and which way its light comes there
+  const reach = typeof sun === 'number' ? sun : 2*(1 - num(n, 'daylight', 80)/100), D = ringSunDir(L, typeof from === 'number' ? from*360 : (E.ctx.light ?? 315), reach);
+  const sunR = D[0]*L.rx + D[1]*L.ry + D[2]*L.rz, sunU = D[0]*L.ux + D[1]*L.uy + D[2]*L.uz, sunUp = reach <= 1.02;
+  const sunAt = sunUp ? proj(L.Px + D[0], D[1], L.z0 + D[2]) : null;
+  // (the land's facets and the painted things, lit from the sun's side of the screen, and from above as it rises)
+  const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
+  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU] }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
     life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed') };
 }
 // the ground's own colour at a point (before light, night and haze): the Land Hue as each world lays it, dry land,
@@ -163,12 +171,12 @@ function rgPaintArch(x, mk, V, R){
     rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); }
   // THE STAR, at the ring's middle (so on the arch's own line), and the SHADOW SQUARES circling close about it: they
   // stand between it and the land, and make its nights (where you stand under one, it hides the star)
-  const sp = proj(0, 0, 0);
+  const sp = V.sun.at;
   if(satSky){ // SATURN in the sky, lit from the ring's star (or the light dial's side when the star is out of sight);
     // now and then ENCELADUS beside it, its plume rising (Ruby's favorite moon)
     const yH = yAt(6*Math.PI/180), yT = yAt(38*Math.PI/180), y0 = yT == null ? wh*0.1 : Math.max(-wh*0.1, yT), y1 = yH == null ? wh*0.55 : Math.min(wh*0.9, yH);
     const rS = unit*(0.1 + 0.11*SC_()), X = ww*(0.12 + 0.76*SC_()), Y = y0 + (y1 - y0)*(0.25 + 0.6*SC_()), axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
-    const sun = sp ? [sp[0] - X, sp[1] - Y] : [L.side, -0.5], sa = 0.62 + 0.38*(1 - kday);
+    const sun = sp ? [sp[0] - X, sp[1] - Y] : V.sun.screen, sa = 0.62 + 0.38*(1 - kday);
     paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday) });
     if(SC_() < 0.45){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
       paintEnceladus(x, X + ex*Math.cos(axis) - ey*Math.sin(axis), Y + ex*Math.sin(axis) + ey*Math.cos(axis), Math.max(px(3), rS*0.05), { axis, sun, alpha: sa, px }); } }
@@ -286,7 +294,7 @@ function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCo
 function rgPaintLand(x, mk, dk, V, R){
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, rnd = (a, b) => a + (b - a)*R(), BLACK = [0, 0, 0];
-  const sd = L.side, LT = [0.55*sd, -0.85], cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
+  const sd = V.sun.sd, LT = V.sun.LT, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
   // the layers: from the walls' feet (or as far as the eye goes) to your own feet, nearer ever closer together
   const K = 16, d0 = Math.max(L.hc*2.2, W*0.0012), d1 = W*4, dOf = k => d0*Math.pow(d1/d0, k/(K - 1));
   const half = (ww/2/unit)/L.f, Sof = d => d*half*cth*1.35 + d*0.12 + W*0.002;

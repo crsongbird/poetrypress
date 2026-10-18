@@ -114,8 +114,16 @@ check('it renders across the whole depth range', wthrew === null);
     ['aurora', 'clouds', 'crystal', 'ringworld', 'linen'].every(t => key(t, L) === key(t, {})));
   check('…and at their "none" (the surface\'s own ambient, white hues, the rim light at alpha 0) neither does a surface they reach',
     rigged.every(t => key(t, { ambient: 100, ambientHue: '#FFFFFF', rimDeg: 200, rimTilt: 60, rimHue: '#CFE3FF00', tint6: '#FFFFFF' }) === key(t, {})));
-  // (that each surface listed changes under them is measured on real pixels, which the stand-in canvas does not draw: the
-  //  list's comment in textureGenerators says how; texCore.test proves the engine's part)
+  // measured, not guessed, on real pixels (the real canvas, if it is here): every surface they reach draws differently
+  // under the rim light and under the Ambient slider
+  let real = null; try { real = await import('@napi-rs/canvas'); } catch(e){ console.log('(no @napi-rs/canvas here: the drawing check is skipped)'); }
+  if(real){ const doc = globalThis.document, P2 = globalThis.Path2D; globalThis.document = { createElement: () => real.createCanvas(1, 1) }; globalThis.Path2D = real.Path2D;
+    const px = (t, o) => { T.clearTextureCache(); return T.getTextureCanvas(t, 96, 96, { seed: 7, light: 315, lightTilt: 100, scale: 96/1024, ...o }).getContext('2d').getImageData(0, 0, 96, 96).data; };
+    const moved = (A, B) => { let s = 0; for(let i = 0; i < A.length; i += 4) s += Math.abs(A[i] - B[i]) + Math.abs(A[i+1] - B[i+1]) + Math.abs(A[i+2] - B[i+2]); return s/(A.length*0.75); };
+    const still = rigged.filter(t => { const a = px(t, {}); return moved(a, px(t, { rimDeg: 135, rimTilt: 100, rimHue: '#FFFFFFFF' })) < 0.2 || moved(a, px(t, { ambient: 20 })) < 0.2; });
+    check('every surface the page\'s lights reach changes under the rim light and under the Ambient slider (real pixels)', still.length === 0);
+    if(still.length) console.log('   unchanged:', still.join(', '));
+    globalThis.document = doc; globalThis.Path2D = P2; }
 }
 
 console.log();

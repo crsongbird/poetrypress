@@ -107,6 +107,15 @@ check('§10 the texture service starts no timers of its own (nothing to keep Nod
   check('§7 phone rules size by --vvh or dvh, never bare vh (a phone\'s toolbar changes the viewport)', !bareVh.length, bareVh);
 }
 
+// ---- §7 Phones: a fallback pair survives a cleanup ----
+{
+  // `height:var(--vvh); height:100dvh` sets one property twice IN ONE BLOCK on purpose: a browser that does not know dvh
+  // drops that line and keeps the first. A "last one wins" dedupe cannot see that and deleted the fallback, once.
+  const css = raw('poetrypress.css');
+  check('§7 the app\'s height and the tab bar\'s top keep their --vvh fallback before dvh (a cleanup deleted one, once)',
+    /\.app\{\s*height:var\(--vvh\);\s*height:100dvh/.test(css) && /top:calc\(var\(--vvh\) - var\(--tabbar-h\)\);\s*top:calc\(100dvh - var\(--tabbar-h\)\)/.test(css));
+}
+
 // ---- §7 Phones: the editor mirror matches the textarea's metrics ----
 {
   // the highlight is a mirror drawn under a transparent textarea: a .pml-* class that changes a glyph's advance

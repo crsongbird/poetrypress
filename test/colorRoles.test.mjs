@@ -6,12 +6,13 @@
  *   Light     lighter marks          Dark      darker marks
  *   Material  the surface between    Highlight glints        Shade  cast shadow
  *   Glow      light it gives off     (a coloured texture's fifth hue)
+ *   Main Light, Rim Light, Ambient   the three lights' own colours (the rim's
+ *             alpha its strength), where the page's lights reach
  *
  * A texture with a base colour of its own gets a Glow as its fifth hue; a
  * grey one gets a Material (ground) colour; one with no colour at all gets
  * a base colour. Each hue's "none" draws exactly as before.
  */
-import { readFileSync } from 'fs';
 let failures = 0;
 const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
 
@@ -29,7 +30,7 @@ check('a texture with a base colour of its own gets a GLOW, never a second mater
 check('a texture with no colour at all (First Snow) gets a BASE colour, white by default',
   T.TEXTURE_CAPS.snow.hue5.role === 'base' && T.TEXTURE_CAPS.snow.hue5.def === '#FFFFFF');
 check('no texture names two hues alike',
-  caps.every(([, c]) => { const names = [...(c.tintLabels || []).slice(0, c.tints), ...(c.material ? ['Specular Hue', 'Shadow Hue'] : []), ...(c.diffuse ? ['Diffuse Hue'] : []), ...(c.hue5 ? [c.hue5.label] : [])];
+  caps.every(([, c]) => { const names = [...(c.tintLabels || []).slice(0, c.tints), ...(c.material ? ['Specular Hue', 'Shadow Hue'] : []), ...(c.diffuse || c.rig ? ['Main Light Hue'] : []), ...(c.rig ? ['Rim Light Hue', 'Ambient Hue'] : []), ...(c.hue5 ? [c.hue5.label] : [])];
     return new Set(names).size === names.length; }));
 check('a texture that already emits light in its own hues gets no Glow (it would repeat them)',
   ['magicparticles', 'embers', 'aurora'].every(t => !T.TEXTURE_CAPS[t].hue5));
@@ -55,9 +56,6 @@ check('a glow at 0% alpha keys the cache exactly like no glow',
   T.textureKeyFor('kintsugi', 64, 64, { tint5: '#FFB04000' }) === T.textureKeyFor('kintsugi', 64, 64, {}));
 check('DIFFUSE (the light\'s own colour) only where nothing else says it: not beside a Sun or Light hue, not on grey textures',
   caps.filter(([, c]) => c.diffuse).every(([, c]) => !c.genericTint && !(c.tintLabels || []).some(l => /^(Sun|Light) Hue$/.test(l))) && T.TEXTURE_CAPS.kintsugi.diffuse);
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
-check('the Specular, Shadow, Glow and the three light pickers (Main Light, Rim Light, Ambient) keep their alpha slider',
-  ev.includes("safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex, #textureTint7Hex, #textureTint8Hex', alpha: true, format: 'hex' });"));
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

@@ -6,7 +6,12 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Tarvos, Saturn–Jarnsaxa, Saturn–Hyrrokkin, Saturn–Greip, Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Mundilfari, Saturn–Tarvos, Saturn–Jarnsaxa, Saturn–Hyrrokkin, Saturn–Greip, Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- THE PAINTED RINGWORLD'S SUN, placed by the light dial in the world (sheets sent: before and after, and a row of camera
+  turns): the light comes from it, and turning the camera turns past it. Seen less often than when it stood on the arch
+  (only when you face it). Right? And the sun guide over the image while the dial moves. Should the Painted Landscape's sun
+  follow the dial too (it is the seed's now, and its time of day; the dial lights only its paint)? And the 3D Ringworld's
+  star, which stays at the ring's middle as a real ringworld's does?
 - THE LIGHT DIAL'S RIM LIGHT AND THE AMBIENT SLIDER (sheet sent): Main / Rim above the dial, the rim's handle under the
   main's (white where they overlap, black on Vellum), the Ambient slider under the dial, and the Main Light, Rim Light and
   Ambient Hues beside it (the rim's alpha is its strength; it fades while off). Is 60% the right strength for a rim
@@ -261,13 +266,10 @@ the parts → presets, last. No new or reworked presets before Stage 4. Delete i
 - Dream Bloom's convolution on the GPU (PERFORMANCE-AUDIT "Next on the GPU").
 - Split appEvents.js into modules — the tests read its source
   by regex, so they move with it.
-- THE NEXT TEST REVIEW (Saturn–Tarqeq's left these, larger rewrites): persistenceCoverage slices appEvents'
-  functions out of its source (rewrite on audit.test's save-and-load harness, every control in index.html);
-  poem.test's renderer checks (the layout record, Text Clearing) as behavior; mobileCss's phone invariants
-  into invariants.test (§7 Phones) and the rest as behavior in mobileLayout; cssReduction retired (its fallback
-  pairs to invariants, its count to hygiene); chains.test's retireLook block into audit.test's old looks;
-  colorRoles' alpha-slider check into themePalette; and hygiene's source-reading check widened to
-  textureGenerators.js and to helpers that read sources (wiki's `read`, `'../' + file`).
+- THE NEXT TEST REVIEW (left by Saturn–Tarqeq's and Saturn–Mundilfari's, larger rewrites): persistenceCoverage slices
+  appEvents' functions out of its source (rewrite on audit.test's save-and-load harness, every control in index.html);
+  poem.test's renderer checks (the layout record, Text Clearing) as behavior; mobileCss's phone invariants into
+  invariants.test (§7 Phones) and the rest as behavior in mobileLayout.
 
 ## 5 · Check on a phone (new)
 - Hints: ⓘ in a section's heading writes its hints out, and again hides them; Esoterica → Interface → Hints writes

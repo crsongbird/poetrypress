@@ -1531,8 +1531,8 @@ body:not(.is-mobile) .tool-row:not(.has-camera) > #lightRow{ grid-column:1 / -1;
 body:not(.is-mobile) .tool-row:not(.has-camera) > .field{ min-width:0; }
 
 /* the camera's guide: a wireframe of the shot over the preview while the camera dial moves */
-.cam-guide{ position:absolute; pointer-events:none; z-index:6; opacity:0; transition:opacity .5s ease; }
-.cam-guide.on{ opacity:1; transition:opacity .08s linear; }
+.cam-guide, .sun-guide{ position:absolute; pointer-events:none; z-index:6; opacity:0; transition:opacity .5s ease; }
+.cam-guide.on, .sun-guide.on{ opacity:1; transition:opacity .08s linear; }
 
 /* the sidebar's drag edge exists only in the desktop layout */
 .side-resize{ display:none; }

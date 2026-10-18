@@ -31,7 +31,7 @@ import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiri
 import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds, athanorCamera, athanorCurves } from './athanor.js';
 import { curvePoints, curveFromPoints, curveAt } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
-import { cameraGuide } from './stepsGenerative.js';
+import { cameraGuide, ringSunGuide } from './stepsGenerative.js';
 import { graphScattersGlyphs } from './stepsPatterns.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser, chMatches } from './chooser.js';
@@ -2394,8 +2394,7 @@ function syncLightPad(){
 // typing the dial's numbers turns the chosen light exactly
 for(const id of ['lightDegIn', 'lightTiltIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
   const deg = parseFloat($('lightDegIn').value), tilt = parseFloat($('lightTiltIn').value);
-  if(lightPick() === 'rim'){ const R = rimNow(); setRim(isNaN(deg) ? R.deg : deg, isNaN(tilt) ? R.tilt : tilt, true); return; }
-  setLight(isNaN(deg) ? (parseFloat($('textureLight').value) || 0) : deg, isNaN(tilt) ? (parseFloat(($('textureLightTilt') || {}).value) || 100) : tilt, true);
+  const p = pickedNow(); movePicked(isNaN(deg) ? p.deg : deg, isNaN(tilt) ? p.tilt : tilt, true);
 });
 function setLight(deg, tilt, commit){
   if(!commit) draftWhileDragging();
@@ -2410,7 +2409,8 @@ function setRim(deg, tilt, commit){
   syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
 }
 /** The chosen light to (deg, tilt). */
-function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); }
+// (the dial's own moves show the sun's guide: held while dragging, a moment after a click, a key or a typed number)
+function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); drawSunGuide(true, !!commit); }
 function pickedNow(){ if(lightPick() === 'rim'){ const R = rimNow(); return { deg: R.deg, tilt: R.tilt }; }
   const t = parseFloat(($('textureLightTilt') || {}).value); return { deg: parseFloat($('textureLight').value) || 0, tilt: isNaN(t) ? 100 : t }; }
 if($('lightSeg') && $('lightSeg').addEventListener) $('lightSeg').addEventListener('click', e => {
@@ -2440,7 +2440,7 @@ if($('lightDial') && $('lightDial').addEventListener){
   let dragging = false;
   dial.addEventListener('pointerdown', e => { dragging = true; if(dial.setPointerCapture) dial.setPointerCapture(e.pointerId); fromPointer(e, e.target && e.target.classList && e.target.classList.contains('ld-tick')); });
   dial.addEventListener('pointermove', e => { if(dragging) fromPointer(e, false); });
-  const end = () => { if(dragging){ dragging = false; if(typeof commitSoon === 'function') commitSoon(); } };
+  const end = () => { if(dragging){ dragging = false; drawSunGuide(false); if(typeof commitSoon === 'function') commitSoon(); } };
   dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
   // keys: arrows turn it by 15°, page up/down raise and lower it
   dial.addEventListener('keydown', e => {
@@ -2452,7 +2452,7 @@ if($('lightDial') && $('lightDial').addEventListener){
 // ⟲ resets the chosen light (the rim light: off, back where it starts)
 if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => {
   if(lightPick() === 'rim'){ putRim(RIM_DEFAULT.deg, RIM_DEFAULT.tilt); setRimOn(false); syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); return; }
-  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); });
+  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); drawSunGuide(true, true); });
 // ◎ to the centre (overhead / the middle of the page), keeping the angle; ⚄ a
 // random angle, keeping the distance. Neither is sticky. Each moves the chosen light.
 if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => movePicked(pickedNow().deg, 0, true));
@@ -2517,24 +2517,34 @@ function setCamera(turn, view, zoom, commit){
 }
 // THE GUIDE: the shot as lines over the page, at once, while the surface is still being made
 let camGuideT = 0;
-function drawCameraGuide(on){
-  const caps = capsFor(($('textureType') || {}).value) || {}, kind = caps.camera && caps.camera.guide;
+/** A guide's canvas over the page (made the first time), sized to it now; null where there is no page to draw over. */
+function guideCanvas(cls){
   const pc = $('poemCanvas'), wrap = pc && pc.parentElement;
-  if(!kind || !pc || !wrap || typeof document.createElement !== 'function' || !pc.getBoundingClientRect) return;
-  let g = wrap.querySelector && wrap.querySelector('.cam-guide');
-  if(!g){ g = document.createElement('canvas'); g.className = 'cam-guide'; g.setAttribute('aria-hidden', 'true'); wrap.appendChild(g); }
-  clearTimeout(camGuideT);
-  if(!on){ camGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
-  const r = pc.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dpr = Math.min(1.5, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
-  Object.assign(g.style, { left: (r.left - wr.left) + 'px', top: (r.top - wr.top) + 'px', width: r.width + 'px', height: r.height + 'px' });
-  g.width = Math.max(1, Math.round(r.width*dpr)); g.height = Math.max(1, Math.round(r.height*dpr));
-  const x = g.getContext('2d'); if(!x) return;
-  const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), v = id => parseFloat(($(id) || {}).value);
+  if(!pc || !wrap || typeof document.createElement !== 'function' || !pc.getBoundingClientRect) return null;
+  let g = wrap.querySelector && wrap.querySelector('.' + cls);
+  if(!g){ g = document.createElement('canvas'); g.className = cls; g.setAttribute('aria-hidden', 'true'); wrap.appendChild(g); }
+  return { g, size(){ const r = pc.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dpr = Math.min(1.5, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
+    Object.assign(g.style, { left: (r.left - wr.left) + 'px', top: (r.top - wr.top) + 'px', width: r.width + 'px', height: r.height + 'px' });
+    g.width = Math.max(1, Math.round(r.width*dpr)); g.height = Math.max(1, Math.round(r.height*dpr)); return dpr; } };
+}
+/** The Ringworlds' view as the guides need it (the camera's, and where on the ring you stand). */
+function ringGuideOf(kind, type, c){
+  const v = id => parseFloat(($(id) || {}).value);
   // (Ringworld's walls follow Landforms, half its range; where you stand across the band is the seed's)
   // (a knob found by its key: Altitude is the seventh on Ringworld, the sixth on the Painted Ringworld)
-  const type = ($('textureType') || {}).value, slot = key => 'texP' + (paramsFor(type).findIndex(p => p.key === key) + 1);
-  const ring = kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v(slot('alt')), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100, curved: type === 'ringpaint' }
+  const slot = key => 'texP' + (paramsFor(type).findIndex(p => p.key === key) + 1);
+  return kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v(slot('alt')), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100, curved: type === 'ringpaint' }
     : kind === 'ellipse' ? { centre: 0.15 + 0.7*(v(slot('height')) || 0)/100 } : null;
+}
+function drawCameraGuide(on){
+  const caps = capsFor(($('textureType') || {}).value) || {}, kind = caps.camera && caps.camera.guide;
+  const G = kind ? guideCanvas('cam-guide') : null; if(!G) return;
+  const g = G.g;
+  clearTimeout(camGuideT);
+  if(!on){ camGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
+  const dpr = G.size(), x = g.getContext('2d'); if(!x) return;
+  const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow();
+  const type = ($('textureType') || {}).value, ring = ringGuideOf(kind, type, c);
   const lines = cameraGuide(kind, aspX, aspY, c, ring);
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
   const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';
@@ -2543,6 +2553,48 @@ function drawCameraGuide(on){
     x.lineWidth = (L.bold ? 2.2 : 1)*dpr*(pass ? 1 : 2.6);
     x.beginPath(); L.pts.forEach((p, i) => i ? x.lineTo(p[0]*u, p[1]*u) : x.moveTo(p[0]*u, p[1]*u)); x.stroke(); }
   g.classList.add('on');
+}
+// THE SUN'S GUIDE (Ruby: "a sun position guide that shows up on the image also before the render"): while the light dial
+// moves, where the light comes from is drawn over the page at once, before the surface is made: the Painted Ringworld's
+// sun where it will stand in the picture (an arrow at the edge when it is out of the frame); any other lit surface's
+// light as a sun at the dial's place on the page (the middle overhead, the rim the page's edge), turned with the camera
+// where the camera turns the ground under it; the rim light's in its own colour
+let sunGuideT = 0;
+/** Whether the light dial is a light this surface shows from somewhere (not a wind, a flow, or the Ringworlds' day). */
+function sunGuideKind(type){ const caps = capsFor(type) || {};
+  if(type === 'ringpaint') return 'ring';
+  if(type === 'landscape') return null;   // (its painted sun is the seed's: the dial lights only the paint's relief)
+  return caps.light && !caps.dirOnly && (!caps.dial || /Light|Sun/.test(caps.dial)) ? 'page' : null; }
+function drawSunGuide(on, linger){
+  const type = ($('textureType') || {}).value, kind = sunGuideKind(type), G = kind ? guideCanvas('sun-guide') : null; if(!G) return;
+  const g = G.g;
+  clearTimeout(sunGuideT);
+  if(!on){ sunGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
+  const dpr = G.size(), x = g.getContext('2d'); if(!x) return;
+  const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), caps = capsFor(type) || {};
+  const cs = getComputedStyle(document.body), col = n => (cs.getPropertyValue(n) || '').trim();
+  const main = col('--accent') || '#E7A0B8', rimC = col('--accent-2') || '#9FD0E8';
+  // a light's place on the page: the Painted Ringworld's sun through its camera; else the dial stretched onto the page
+  // (its rim at the corners, as dialSquare has it), turned against a camera that turns the ground
+  const turn = caps.camera && caps.camera.guide === 'plane' ? c.turn : 0;
+  const placeOf = (deg, tilt) => {
+    if(kind === 'ring'){ const p = ringSunGuide(aspX, aspY, ringGuideOf('ring', type, c), deg, tilt/100); return p ? { x: p.x, y: p.y, up: p.up } : null; }
+    const a = (deg - turn)*Math.PI/180, k = Math.min(1, Math.max(0, tilt)/100), dx = Math.sin(a), dy = -Math.cos(a), m = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+    return { x: aspX/2 + dx/m*k*aspX*0.46, y: aspY/2 + dy/m*k*aspY*0.46, up: true }; };
+  const lights = [[parseFloat($('textureLight').value) || 0, parseFloat(($('textureLightTilt') || {}).value), main]];
+  if(lightsReach(type)){ const R = rimNow(); if(R.on || lightPick() === 'rim') lights.push([R.deg, R.tilt, rimC]); }
+  x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
+  for(const [deg, t, colr] of lights){ const p = placeOf(deg, isNaN(t) ? 100 : t); if(!p) continue;
+    // (out of the frame: at its edge, with an arrow pointing out toward it)
+    const m = 0.045, ex = Math.max(m, Math.min(aspX - m, p.x)), ey = Math.max(m, Math.min(aspY - m, p.y)), out = ex !== p.x || ey !== p.y;
+    const X = ex*u, Y = ey*u, rs = u*0.022, rays = (len, w) => { for(let k = 0; k < 8; k++){ const a = k*Math.PI/4; x.lineWidth = w;
+      x.beginPath(); x.moveTo(X + Math.cos(a)*rs*1.6, Y + Math.sin(a)*rs*1.6); x.lineTo(X + Math.cos(a)*rs*len, Y + Math.sin(a)*rs*len); x.stroke(); } };
+    for(const pass of [0, 1]){ x.strokeStyle = pass ? colr : 'rgba(0,0,0,.55)'; x.fillStyle = pass ? colr : 'rgba(0,0,0,.55)'; x.globalAlpha = p.up ? 0.95 : 0.5;
+      const w = (pass ? 2 : 5)*dpr; x.lineWidth = w; x.beginPath(); x.arc(X, Y, rs, 0, Math.PI*2); pass ? x.fill() : x.stroke(); rays(2.6, w);
+      if(out){ const a = Math.atan2(p.y - ey, p.x - ex), tx = X + Math.cos(a)*rs*3.6, ty = Y + Math.sin(a)*rs*3.6;
+        x.beginPath(); x.moveTo(tx, ty); x.lineTo(tx - Math.cos(a - 0.5)*rs*1.4, ty - Math.sin(a - 0.5)*rs*1.4); x.moveTo(tx, ty); x.lineTo(tx - Math.cos(a + 0.5)*rs*1.4, ty - Math.sin(a + 0.5)*rs*1.4); x.stroke(); } } }
+  x.globalAlpha = 1; g.classList.add('on');
+  if(linger) sunGuideT = setTimeout(() => g.classList.remove('on'), 900);
 }
 if($('cameraDial') && $('cameraDial').addEventListener){
   const dial = $('cameraDial'), ptrs = new Map();

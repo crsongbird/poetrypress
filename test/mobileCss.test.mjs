@@ -255,7 +255,7 @@ check('line anchors take up no space', /\.ln-mark\{[^}]*display:inline !importan
 // gap under the tab bar.
 check('the keyboard resizes the layout viewport (which is also what keeps the docked color picker above it)',
   /name="viewport"[^>]*interactive-widget=resizes-content/.test(html));
-// (the app's height and the tab bar's top fall back to --vvh before dvh: cssReduction.test.mjs keeps those pairs)
+// (the app's height and the tab bar's top fall back to --vvh before dvh: invariants.test.mjs keeps those pairs)
 
 // ---- the editor must be allowed to be shorter than its content ----
 // A flex item defaults to min-height:auto, which refuses to shrink below its

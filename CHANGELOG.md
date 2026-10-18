@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Mundilfari (2026-10-18)
+
+- **The Painted Ringworld's sun is where the light dial puts it.** The
+  dial's direction is where the sun stands around you, read the way the
+  camera dial's turn is read: turn the camera to the light's angle and you
+  face the sun. Turning the camera now turns past the sun instead of
+  carrying it along. The dial's height is how high it stands: at the middle
+  it is overhead, the ring's own star on the arch; at the rim it sets on the
+  horizon; past the rim it is night. The land, the things on it and Saturn
+  are lit from the sun's side, so the light always comes from where the sun
+  is.
+- **A sun guide on the image while the light dial moves**, drawn at once
+  before the surface is made, as the camera's wireframe is:
+  - On the Painted Ringworld, the sun where it will stand in the picture,
+    with an arrow at the edge when it is out of the frame.
+  - On any other surface lit by the dial, a sun where the light comes from:
+    the middle of the page when overhead, the edge at the dial's rim.
+  - The rim light's own sun shows in its own color.
+- **Under the hood:** reviewed the tests. Old looks are checked in one
+  place, with every other old look. A retired suite's two checks moved:
+  the stylesheet's fallbacks to the invariants, its count of dead rules to
+  the hygiene checks. The color pickers' alpha sliders are tested on the
+  booted page rather than in the code. The check that no suite reads a
+  surface's code also sees the suites' own helpers. The lit surfaces'
+  response to the page's lights is measured on real pixels.
+
 ## Saturn–Tarvos (2026-10-18)
 
 - **A rim light on the light dial.** Surfaces lit by the dial now have a

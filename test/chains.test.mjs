@@ -1,9 +1,9 @@
 /**
  * chains.test.mjs — the textures as CHAINS (chains.js) of the one library of
  * STEPS (steps.js) that both the Athanor and Vellum's textures are made of:
- * each chain opens in the Athanor as a template, reads its own sliders and
- * the dial, and old looks made before the dial took over Harsh Rain's slant
- * and the Hatch's angle come back as they were.
+ * each chain opens in the Athanor as a template and reads its own sliders
+ * and the dials. (Old looks from before a chain's change open in
+ * audit.test.mjs, with every other old look.)
  */
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
@@ -86,7 +86,7 @@ if(canvasOK){
     check(`${type}: the preview grows the saved image's picture (${(d/A.length).toFixed(1)})`, d/A.length < 4.5); }
 }
 
-// old looks: the slider's old job becomes the dial's direction
+// the Athanor's Knob kinds on the page (the booted app)
 {
   installCanvasMock();
   const reg = installDomMock(makeMockContext, makeMockCanvas);
@@ -94,41 +94,6 @@ if(canvasOK){
   const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
   const load = obj => { reg['advancedJson'].value = JSON.stringify(obj); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
   const base = save();
-  check('a look says which format it was saved in', base.lookVersion === 5);
-  const { lookVersion, ...old } = base;
-  load({ ...old, texture: true, textureType: 'rainstreaks', texP1: '200', texP2: '-30', textureLight: '315' });
-  let s = save();
-  check('an old Harsh Rain look: Slant −30° becomes the dial at 30°, no gusts', s.textureLight === '30' && +s.texP2 === 0 && +s.texP1 === 200);
-  load({ ...old, texture: true, textureType: 'hatch', texP1: '64', texP2: '400', textureLight: '315' });
-  s = save();
-  check('an old Silverpoint Hatch look: Hatch Angle 64° becomes the dial at 154°, Cross-Hatching as it was', s.textureLight === '154' && +s.texP1 === 38 && +s.texP2 === 400);
-  load({ ...base, texture: true, textureType: 'rainstreaks', texP2: '30', textureLight: '200' });
-  s = save();
-  check('a new look is left as it is', s.textureLight === '200' && +s.texP2 === 30);
-  // format 4: Ringworld's Daylight slider onto the light dial (noon at its middle, dusk at its rim, past it night)
-  load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '80', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
-  s = save();
-  check('an old Ringworld look: Daylight 80 becomes the light dial at 40 (morning), the sixth slider Builders by the seed', +s.textureLightTilt === 40 && +s.texP6 === 0 && s.cameraTurn === '40');
-  load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '20', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
-  s = save();
-  check('…and Daylight 20 (night) past the dial\'s rim', +s.textureLightTilt === 118);
-  load({ ...old, lookVersion: 3, texture: true, textureType: 'circuit', texP7: '100' });
-  s = save();
-  check('an old Circuit Board look at Magitech (four eras) stays the board it was: Atomic, at 75 of five eras', +s.texP7 === 75);
-  // format 5: Ringworld's Stand At became Traffic (its middle: the ships as they were)
-  load({ ...old, lookVersion: 4, texture: true, textureType: 'ringworld', texP2: '70', texP4: '40', texP8: '-60', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
-  s = save();
-  check('an old Ringworld look: Stand At gives way to Traffic at its middle; Terrain and Structures carry on as Landforms and Cities', +s.texP8 === 50 && +s.texP2 === 70 && +s.texP4 === 40);
-  // format 4: the Tilt sliders onto the camera dial (Dune Ripples' fourth, Moss on Stone's fourth, Scrying Pool's sixth)
-  load({ ...old, lookVersion: 3, texture: true, textureType: 'dunes', texP1: '140', texP4: '60', cameraTurn: '90', cameraView: '0', cameraZoom: '100' });
-  s = save();
-  check('an old Dune Ripples look: Tilt 60 becomes the camera dial\'s View 60, unturned', s.cameraView === '60' && s.cameraTurn === '0' && s.cameraZoom === '100' && +s.texP1 === 140);
-  load({ ...old, lookVersion: 3, texture: true, textureType: 'water', texP6: '0', cameraTurn: '0', cameraView: '55', cameraZoom: '100' });
-  s = save();
-  check('…a Scrying Pool looking straight down stays straight down', s.cameraView === '0');
-  load({ ...old, lookVersion: 3, texture: true, textureType: 'moss' });
-  s = save();
-  check('…and a Moss on Stone look saved with no Tilt at all takes its old default, 30', s.cameraView === '30');
   // A KNOB'S KIND (ROADMAP D1): on the page, a switch is a slider of two marks named Off and On, locked to them;
   // steps are their marks; in the graph, a switch hands on 0 or 1 and steps only their marks
   const knobGraph = (kind, extra = {}) => JSON.stringify({ v: 4, drawflow: { Home: { data: {
@@ -175,6 +140,18 @@ if(canvasOK){
   check('…By the Seed picks among them (and sometimes Mixed), each world a single list but Mixed\'s three, all different',
     seeded.every(w => RG_WORLDS.includes(w.name) && w.name !== 'seed') && new Set(seeded.map(w => w.name)).size >= 5 && seeded.every(w => w.name === 'mixed' ? w.list.length === 3 : w.list.join() === w.name)
     && mixed.name === 'mixed' && new Set(mixed.list).size === 3); }
+
+// the Painted Ringworld's SUN (Ruby: the light dial sets it, in the world, whatever the camera's turn): overhead it is the
+// ring's own star; at the dial's rim it is on the horizon; facing the dial's way (camera Turn = the dial's angle) puts it
+// straight ahead; east of where you look it stands to the right; its guide is where the painting puts it
+{ const G = await import('../stepsGenerative.js'), ring = look => ({ band: 45, walls: 12, altitude: 15, placeBy: 'where the seed says', seed: 9, lens: 75, zoom: 100, look, up: 0.6, curved: true });
+  const L = G.ringCamera(G.ringParams(ring(0))), star = G.ringSunDir(L, 315, 0), s = Math.hypot(L.Px, L.z0);
+  check('the Painted Ringworld\'s sun: overhead it is the ring\'s own star, at the ring\'s middle; at the dial\'s rim, on the horizon',
+    Math.abs(star[0] + L.Px/s) < 1e-9 && Math.abs(star[2] + L.z0/s) < 1e-9 && Math.abs(G.ringSunDir(L, 120, 1)[0]) < 1e-9);
+  const ahead = G.ringSunGuide(1, 1, ring(120), 120, 0.9), east = G.ringSunGuide(1, 1, ring(0), 90, 0.9), west = G.ringSunGuide(1, 1, ring(0), 270, 0.9), behind = G.ringSunGuide(1, 1, ring(180), 0, 0.95);
+  const off = p => p === null || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1;
+  check('…facing the dial\'s way puts it straight ahead; east of where you look it stands right, west left; behind you, off the frame',
+    !!ahead && Math.abs(ahead.x - 0.5) < 0.01 && !!east && !!west && east.x > 0.5 && west.x < 0.5 && off(behind)); }
 
 // the Painted Ringworld orbiting Saturn (Ruby; The Arch's Saturn): never draws no Saturn, always does, and by the seed
 // it is one ring in four, the rest drawn exactly as with never

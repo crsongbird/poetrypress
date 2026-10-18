@@ -1564,8 +1564,8 @@ body:not(.is-mobile) .tool-row:not(.has-camera) > #lightRow{ grid-column:1 / -1;
 body:not(.is-mobile) .tool-row:not(.has-camera) > .field{ min-width:0; }
 
 /* the camera's guide: a wireframe of the shot over the preview while the camera dial moves */
-.cam-guide{ position:absolute; pointer-events:none; z-index:6; opacity:0; transition:opacity .5s ease; }
-.cam-guide.on{ opacity:1; transition:opacity .08s linear; }
+.cam-guide, .sun-guide{ position:absolute; pointer-events:none; z-index:6; opacity:0; transition:opacity .5s ease; }
+.cam-guide.on, .sun-guide.on{ opacity:1; transition:opacity .08s linear; }
 
 /* the sidebar's drag edge exists only in the desktop layout */
 .side-resize{ display:none; }
@@ -14572,6 +14572,23 @@ const ringPlaceOf = seed => (mnHash(seed | 0, 91, 7) - 0.5)*130;
 // THE CAMERA'S GUIDE (Ruby: "a fast render … almost a guide while you're adjusting the camera"): the shot as a few
 // lines, in page units (the short side 1), drawn over the page while the camera dial moves and the surface is still
 // being made. A plane (Wood, Discharge): its grid, the page's own square bold. A ring: its floor's edges, its walls.
+/** THE PAINTED RINGWORLD'S SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it and the
+ *  light on the land comes from where it is): its direction from the eye, a unit vector in the ring's coordinates. Its way
+ *  round is the dial's (the way you face at that camera turn: the two dials agree), its height the dial's reach (the
+ *  middle overhead, the rim the horizon, past it below); overhead it is the ring's own star, at the ring's middle. */
+function ringSunDir(L, deg, reach){
+  const a = (deg == null ? 315 : deg)*Math.PI/180, e = (90 - 90*Math.max(0, Math.min(1.3, reach == null ? 0.4 : reach)))*Math.PI/180;
+  const s = Math.hypot(L.Px, L.z0) || 1, S0 = [-L.Px/s, 0, -L.z0/s], ce = Math.cos(e), se = Math.sin(e);
+  return ringNorm([S0[0]*se, Math.cos(a)*ce, Math.sin(a)*ce + S0[2]*se]);
+}
+/** Where the Painted Ringworld's sun falls on the page (0..aspX, 0..aspY), for the guide drawn while the light dial moves:
+ *  { x, y, up } (up: above the horizon), or null when it is behind you. */
+function ringSunGuide(aspX, aspY, ring, deg, reach){
+  const L = ringCamera(ringParams(ring)), D = ringSunDir(L, deg, reach), F = L.f, cx = aspX/2, cy = aspY/2;
+  const vf = D[0]*L.fx + D[1]*L.fy + D[2]*L.fz, q = 1 + vf;
+  if(q <= 0.12) return null;
+  return { x: cx + 2*F*(D[0]*L.rx + D[1]*L.ry + D[2]*L.rz)/q, y: cy - 2*F*(D[0]*L.ux + D[1]*L.uy + D[2]*L.uz)/q, up: reach == null || reach <= 1 };
+}
 function cameraGuide(kind, aspX, aspY, cam, ring){
   const lines = [];
   if(kind === 'plane'){
@@ -15170,7 +15187,15 @@ function rgView(E, n, ww, wh){
   const dryAt = (a, z) => mnValue(a/(W*0.6) + 11.7, z/(W*0.6) - 3.3, s + 13), forestAt = (a, z) => rsSmooth(0.38, 0.62, mnValue(a/(W*0.09) + 2.1, z/(W*0.09) + 5.9, s + 17));
   const cityAt = (a, z, cv) => { if(cv <= 0) return 0; const t = 0.62 - 0.6*cv; return rsSmooth(t - 0.06, t + 0.06, mnValue(a/(W*0.22) + 7.7, z/(W*0.22) - 1.1, s + 19)); };
   const lightsOf = w => RG_LIGHTS[w] || [g1.map(c => Math.min(255, c*1.15 + 30)), g2.map(c => Math.min(255, c*1.15 + 30))];
-  return { E, L, p, W, seed, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
+  // THE SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it, and the light on the land
+  // comes from where it is): its way round the dial's, its height the dial's reach (overhead it is the ring's own star, on
+  // the arch; at the dial's rim it sets; past it, night). Where it falls on the screen, and which way its light comes there
+  const reach = typeof sun === 'number' ? sun : 2*(1 - num(n, 'daylight', 80)/100), D = ringSunDir(L, typeof from === 'number' ? from*360 : (E.ctx.light ?? 315), reach);
+  const sunR = D[0]*L.rx + D[1]*L.ry + D[2]*L.rz, sunU = D[0]*L.ux + D[1]*L.uy + D[2]*L.uz, sunUp = reach <= 1.02;
+  const sunAt = sunUp ? proj(L.Px + D[0], D[1], L.z0 + D[2]) : null;
+  // (the land's facets and the painted things, lit from the sun's side of the screen, and from above as it rises)
+  const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
+  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU] }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
     life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed') };
 }
 // the ground's own colour at a point (before light, night and haze): the Land Hue as each world lays it, dry land,
@@ -15231,12 +15256,12 @@ function rgPaintArch(x, mk, V, R){
     rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); }
   // THE STAR, at the ring's middle (so on the arch's own line), and the SHADOW SQUARES circling close about it: they
   // stand between it and the land, and make its nights (where you stand under one, it hides the star)
-  const sp = proj(0, 0, 0);
+  const sp = V.sun.at;
   if(satSky){ // SATURN in the sky, lit from the ring's star (or the light dial's side when the star is out of sight);
     // now and then ENCELADUS beside it, its plume rising (Ruby's favorite moon)
     const yH = yAt(6*Math.PI/180), yT = yAt(38*Math.PI/180), y0 = yT == null ? wh*0.1 : Math.max(-wh*0.1, yT), y1 = yH == null ? wh*0.55 : Math.min(wh*0.9, yH);
     const rS = unit*(0.1 + 0.11*SC_()), X = ww*(0.12 + 0.76*SC_()), Y = y0 + (y1 - y0)*(0.25 + 0.6*SC_()), axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
-    const sun = sp ? [sp[0] - X, sp[1] - Y] : [L.side, -0.5], sa = 0.62 + 0.38*(1 - kday);
+    const sun = sp ? [sp[0] - X, sp[1] - Y] : V.sun.screen, sa = 0.62 + 0.38*(1 - kday);
     paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday) });
     if(SC_() < 0.45){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
       paintEnceladus(x, X + ex*Math.cos(axis) - ey*Math.sin(axis), Y + ex*Math.sin(axis) + ey*Math.cos(axis), Math.max(px(3), rS*0.05), { axis, sun, alpha: sa, px }); } }
@@ -15354,7 +15379,7 @@ function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCo
 function rgPaintLand(x, mk, dk, V, R){
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, rnd = (a, b) => a + (b - a)*R(), BLACK = [0, 0, 0];
-  const sd = L.side, LT = [0.55*sd, -0.85], cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
+  const sd = V.sun.sd, LT = V.sun.LT, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
   // the layers: from the walls' feet (or as far as the eye goes) to your own feet, nearer ever closer together
   const K = 16, d0 = Math.max(L.hc*2.2, W*0.0012), d1 = W*4, dOf = k => d0*Math.pow(d1/d0, k/(K - 1));
   const half = (ww/2/unit)/L.f, Sof = d => d*half*cth*1.35 + d*0.12 + W*0.002;
@@ -18453,7 +18478,7 @@ const TEXTURE_CHAINS = {
       [5, 1, 13, paramPort('ringsky', 'centre')], [6, 1, 14, paramPort('oilpaint', 'amount')], [7, 1, 14, paramPort('oilpaint', 'brush')],
       [8, 1, 13, 2], [9, 1, 13, paramPort('ringsky', 'turn')], [9, 2, 13, paramPort('ringsky', 'tilt')], [9, 3, 13, paramPort('ringsky', 'size')],
       [10, 1, 13, 3], [11, 1, 13, 4], [12, 1, 13, 1], [13, 1, 14, 1], [14, 1, 15, 1], [14, 2, 15, 2], [15, 1, 16, 1]] },
-  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the day: overhead noon, at its rim dusk, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits Saturn, which hangs huge in its sky beyond the far arch: The Arch\'s Saturn setting), and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits Saturn, which hangs huge in its sky beyond the far arch: The Arch\'s Saturn setting), and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],               // 1
       ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],               // 2
       ['knob', { slot: '3', name: 'World', def: 0 }, 40, 200],                    // 3
@@ -36940,6 +36965,23 @@ const ringPlaceOf = seed => (mnHash(seed | 0, 91, 7) - 0.5)*130;
 // THE CAMERA'S GUIDE (Ruby: "a fast render … almost a guide while you're adjusting the camera"): the shot as a few
 // lines, in page units (the short side 1), drawn over the page while the camera dial moves and the surface is still
 // being made. A plane (Wood, Discharge): its grid, the page's own square bold. A ring: its floor's edges, its walls.
+/** THE PAINTED RINGWORLD'S SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it and the
+ *  light on the land comes from where it is): its direction from the eye, a unit vector in the ring's coordinates. Its way
+ *  round is the dial's (the way you face at that camera turn: the two dials agree), its height the dial's reach (the
+ *  middle overhead, the rim the horizon, past it below); overhead it is the ring's own star, at the ring's middle. */
+function ringSunDir(L, deg, reach){
+  const a = (deg == null ? 315 : deg)*Math.PI/180, e = (90 - 90*Math.max(0, Math.min(1.3, reach == null ? 0.4 : reach)))*Math.PI/180;
+  const s = Math.hypot(L.Px, L.z0) || 1, S0 = [-L.Px/s, 0, -L.z0/s], ce = Math.cos(e), se = Math.sin(e);
+  return ringNorm([S0[0]*se, Math.cos(a)*ce, Math.sin(a)*ce + S0[2]*se]);
+}
+/** Where the Painted Ringworld's sun falls on the page (0..aspX, 0..aspY), for the guide drawn while the light dial moves:
+ *  { x, y, up } (up: above the horizon), or null when it is behind you. */
+function ringSunGuide(aspX, aspY, ring, deg, reach){
+  const L = ringCamera(ringParams(ring)), D = ringSunDir(L, deg, reach), F = L.f, cx = aspX/2, cy = aspY/2;
+  const vf = D[0]*L.fx + D[1]*L.fy + D[2]*L.fz, q = 1 + vf;
+  if(q <= 0.12) return null;
+  return { x: cx + 2*F*(D[0]*L.rx + D[1]*L.ry + D[2]*L.rz)/q, y: cy - 2*F*(D[0]*L.ux + D[1]*L.uy + D[2]*L.uz)/q, up: reach == null || reach <= 1 };
+}
 function cameraGuide(kind, aspX, aspY, cam, ring){
   const lines = [];
   if(kind === 'plane'){
@@ -37538,7 +37580,15 @@ function rgView(E, n, ww, wh){
   const dryAt = (a, z) => mnValue(a/(W*0.6) + 11.7, z/(W*0.6) - 3.3, s + 13), forestAt = (a, z) => rsSmooth(0.38, 0.62, mnValue(a/(W*0.09) + 2.1, z/(W*0.09) + 5.9, s + 17));
   const cityAt = (a, z, cv) => { if(cv <= 0) return 0; const t = 0.62 - 0.6*cv; return rsSmooth(t - 0.06, t + 0.06, mnValue(a/(W*0.22) + 7.7, z/(W*0.22) - 1.1, s + 19)); };
   const lightsOf = w => RG_LIGHTS[w] || [g1.map(c => Math.min(255, c*1.15 + 30)), g2.map(c => Math.min(255, c*1.15 + 30))];
-  return { E, L, p, W, seed, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
+  // THE SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it, and the light on the land
+  // comes from where it is): its way round the dial's, its height the dial's reach (overhead it is the ring's own star, on
+  // the arch; at the dial's rim it sets; past it, night). Where it falls on the screen, and which way its light comes there
+  const reach = typeof sun === 'number' ? sun : 2*(1 - num(n, 'daylight', 80)/100), D = ringSunDir(L, typeof from === 'number' ? from*360 : (E.ctx.light ?? 315), reach);
+  const sunR = D[0]*L.rx + D[1]*L.ry + D[2]*L.rz, sunU = D[0]*L.ux + D[1]*L.uy + D[2]*L.uz, sunUp = reach <= 1.02;
+  const sunAt = sunUp ? proj(L.Px + D[0], D[1], L.z0 + D[2]) : null;
+  // (the land's facets and the painted things, lit from the sun's side of the screen, and from above as it rises)
+  const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
+  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU] }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
     life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed') };
 }
 // the ground's own colour at a point (before light, night and haze): the Land Hue as each world lays it, dry land,
@@ -37599,12 +37649,12 @@ function rgPaintArch(x, mk, V, R){
     rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); }
   // THE STAR, at the ring's middle (so on the arch's own line), and the SHADOW SQUARES circling close about it: they
   // stand between it and the land, and make its nights (where you stand under one, it hides the star)
-  const sp = proj(0, 0, 0);
+  const sp = V.sun.at;
   if(satSky){ // SATURN in the sky, lit from the ring's star (or the light dial's side when the star is out of sight);
     // now and then ENCELADUS beside it, its plume rising (Ruby's favorite moon)
     const yH = yAt(6*Math.PI/180), yT = yAt(38*Math.PI/180), y0 = yT == null ? wh*0.1 : Math.max(-wh*0.1, yT), y1 = yH == null ? wh*0.55 : Math.min(wh*0.9, yH);
     const rS = unit*(0.1 + 0.11*SC_()), X = ww*(0.12 + 0.76*SC_()), Y = y0 + (y1 - y0)*(0.25 + 0.6*SC_()), axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
-    const sun = sp ? [sp[0] - X, sp[1] - Y] : [L.side, -0.5], sa = 0.62 + 0.38*(1 - kday);
+    const sun = sp ? [sp[0] - X, sp[1] - Y] : V.sun.screen, sa = 0.62 + 0.38*(1 - kday);
     paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday) });
     if(SC_() < 0.45){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
       paintEnceladus(x, X + ex*Math.cos(axis) - ey*Math.sin(axis), Y + ex*Math.sin(axis) + ey*Math.cos(axis), Math.max(px(3), rS*0.05), { axis, sun, alpha: sa, px }); } }
@@ -37722,7 +37772,7 @@ function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCo
 function rgPaintLand(x, mk, dk, V, R){
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, rnd = (a, b) => a + (b - a)*R(), BLACK = [0, 0, 0];
-  const sd = L.side, LT = [0.55*sd, -0.85], cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
+  const sd = V.sun.sd, LT = V.sun.LT, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
   // the layers: from the walls' feet (or as far as the eye goes) to your own feet, nearer ever closer together
   const K = 16, d0 = Math.max(L.hc*2.2, W*0.0012), d1 = W*4, dOf = k => d0*Math.pow(d1/d0, k/(K - 1));
   const half = (ww/2/unit)/L.f, Sof = d => d*half*cth*1.35 + d*0.12 + W*0.002;
@@ -41032,7 +41082,7 @@ const TEXTURE_CHAINS = {
       [5, 1, 13, paramPort('ringsky', 'centre')], [6, 1, 14, paramPort('oilpaint', 'amount')], [7, 1, 14, paramPort('oilpaint', 'brush')],
       [8, 1, 13, 2], [9, 1, 13, paramPort('ringsky', 'turn')], [9, 2, 13, paramPort('ringsky', 'tilt')], [9, 3, 13, paramPort('ringsky', 'size')],
       [10, 1, 13, 3], [11, 1, 13, 4], [12, 1, 13, 1], [13, 1, 14, 1], [14, 1, 15, 1], [14, 2, 15, 2], [15, 1, 16, 1]] },
-  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the day: overhead noon, at its rim dusk, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits Saturn, which hangs huge in its sky beyond the far arch: The Arch\'s Saturn setting), and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits Saturn, which hangs huge in its sky beyond the far arch: The Arch\'s Saturn setting), and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],               // 1
       ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],               // 2
       ['knob', { slot: '3', name: 'World', def: 0 }, 40, 200],                    // 3
@@ -44030,7 +44080,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Tarvos';
+const RELEASE = 'Saturn–Mundilfari';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -44867,7 +44917,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · 9085a1c";
+const STAMP = "2026-10-18 · d0d6883";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -49544,7 +49594,7 @@ const WIKI_PARTS = {
   ringarch: {
     line: 'The sky over a ringworld’s floor, painted in flat shapes: space and the star, its shadow squares, and the ring’s far floor rising into the arch overhead between its rim walls.',
     about: 'The Arch sees through Ringworld’s own camera (the same Camera Dial: where you look, how far up, the lens), in a painter’s curved perspective rather than a pinhole’s, so the arch bows across the sky as it does in the old paintings of ringworlds instead of standing as a straight line. What it paints is everything above the land. The sky: the air thick and lit at the horizon, thinning upward until space and its stars show (wire a Starfield into Over), now and then a planet or a comet, and washes of nebula in the page’s accents. The star, at the ring’s middle, which is on the arch’s own line; the shadow squares circling it, which stand between it and the land and make its nights (stand under one and it hides the star). The ring’s far floor, in flat patches: land, sea, forest and city as the World lays them, night where the squares’ shadows fall (with the cities’ lights), hazed low down and clear overhead, with streaks of cloud. And the rim walls along both edges, standing at the horizon as a sheer wall when you look across the ring. Its settings are Land on the Ring’s, so wire the same knobs into both: the land at your feet and the arch overhead are one ring.',
-    ins: { over: 'Space behind it all: wire a Starfield.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn): along it, the land rising ahead into the arch; across it, the rim wall at the horizon and the arch crossing the sky.', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day (wire the Light Dial’s Height): its middle noon, its rim dusk, past it night.', 'sun from': 'Which way the dusk comes (wire the Light Dial’s Direction).', 'land hue': 'The land’s color.', 'sky hue': 'The air’s color.', 'light hue': 'The first light: neon, magic, the page’s first accent (wire an Accent).', 'second light hue': 'The second light (wire the second Accent).' },
+    ins: { over: 'Space behind it all: wire a Starfield.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn): along it, the land rising ahead into the arch; across it, the rim wall at the horizon and the arch crossing the sky.', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day, and how high the sun stands (wire the Light Dial’s Height): its middle noon, the sun overhead as the ring’s own star; its rim dusk, the sun on the horizon; past it night.', 'sun from': 'Where the sun stands round you (wire the Light Dial’s Direction): the way you face at that camera turn, so turning the camera turns past it.', 'land hue': 'The land’s color.', 'sky hue': 'The air’s color.', 'light hue': 'The first light: neon, magic, the page’s first accent (wire an Accent).', 'second light hue': 'The second light (wire the second Accent).' },
     outs: { picture: 'The sky, the arch and the walls.', ring: 'Where the ring’s floor and walls are (1).' },
     set: { band: 'How wide the ring is against its size: a thin ribbon of an arch, or a broad one.', walls: 'How tall the rim walls are.', altitude: 'How high you stand: on the ground, or high over the land.', landforms: 'How much the land rises: hills, mountains, the ranges at the walls’ feet (it decides where the seas are).', world: 'Who and what the ring holds, in eight bands: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed (three worlds side by side, region by region).', life: 'How much grows: forests, on the arch as on the land.', works: 'How much is built: cities, and their lights by night.', air: 'How much air: the haze at the horizon and on the far arch.', look: 'Where you look round the ring, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height: 0 midnight, 50 dusk, 100 noon.', variant: 'Another ring with the same settings: other land, seas and builders.' , saturn: 'Whether the ring orbits Saturn, so Saturn hangs huge in its sky beyond the far arch, lit by the ring’s star (now and then with Enceladus, its plume rising): by the seed (one ring in four), never, or always.' },
     tips: ['Look across the ring and up (Camera Dial: Turn near 90, View low) to see the arch cross the whole sky.', 'Past the Light Dial’s rim it is night where you stand, but the arch still shines where its own day is.', 'Set <b>Saturn</b> to always and turn the Camera Dial to find it; change the seed (or Variation) for another view of it.'],
@@ -49553,7 +49603,7 @@ const WIKI_PARTS = {
   ringland: {
     line: 'The floor of a ringworld you stand on, painted in flat shapes: ridge behind ridge from the walls’ feet to your own, with what grows, lives and stands on it.',
     about: 'Land on the Ring sees through the same camera as The Arch and paints over it. The land is cut into ridges at distances growing from your feet to the walls’ feet (or as far as the eye goes): each is the land’s line across your view at its distance, washed lit along its crest and deeper below, cut in facets where it is steep, with a bright rim where it catches the light, and the sea flat with a glint. As a painter does, the far land’s forms are drawn taller than they are, so its ranges read. On each ridge stands what the World puts there: forests (firs, round trees, poplars; dead trees in ruin; trees that glow in magic), cities whose windows light at night (edged in neon in a Neon world, broken in Ruins), rocks, grass and flowers, and on some rings a little small life, found rather than seen: insects over the grass, fairies, a patch of flowers, slime. Between the ridges stand the works, each where its own patch of the floor puts it, so turning the camera turns past them: spires, standing stones, domes, summoning circles, pillars of light, crystals, craters with smoke and fire, crashed ships, ships in the air, great spans from wall to wall and bars of light across the band, and roads or paths: a city’s road, a neon street, the builders’ way with its line of light, a ley line, a trail. The light hues are the lights: wire the page’s Accents.',
-    ins: { over: 'The sky behind the land: wire The Arch.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn).', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day (wire the Light Dial’s Height): at night the land darkens and the windows light.', 'sun from': 'Which way the dusk comes, and so which side of each ridge is lit (wire the Light Dial’s Direction).', 'land hue': 'The land’s color, as each world lays it.', 'sky hue': 'The air’s color: the far ridges fade into it, and the sea takes it.', 'light hue': 'The first light: neon, magic, the fairies and the flowers (wire the first Accent).', 'second light hue': 'The second light (wire the second Accent).' },
+    ins: { over: 'The sky behind the land: wire The Arch.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn).', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day, and how high the sun stands (wire the Light Dial’s Height): at night the land darkens and the windows light.', 'sun from': 'Where the sun stands round you, and so which side of each ridge and each thing is lit (wire the Light Dial’s Direction).', 'land hue': 'The land’s color, as each world lays it.', 'sky hue': 'The air’s color: the far ridges fade into it, and the sea takes it.', 'light hue': 'The first light: neon, magic, the fairies and the flowers (wire the first Accent).', 'second light hue': 'The second light (wire the second Accent).' },
     outs: { picture: 'The sky with the land over it.', land: 'Where the land is (1).', distance: 'How far off each ridge is: 1 the nearest, 0 the farthest.' },
     set: { band: 'How wide the ring is (as The Arch’s).', walls: 'How tall the rim walls are (as The Arch’s).', altitude: 'How high you stand: low, the grass and trees about you; high, the land spread far below.', landforms: 'How much the land rises: rolling at the low end, mountains and ranges at the walls’ feet at the top.', world: 'Who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region).', life: 'How much grows and lives: forests, grass and flowers, and how often there is small life to find (insects, fairies, flowers, slime).', works: 'How much is built: cities, spires, spans, roads, ships and wrecks.', air: 'How much air lies over the far land.', look: 'Where you look, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height.', variant: 'Another ring with the same settings.' },
     tips: ['Wire the same knobs into The Arch and Land on the Ring, so the land and the arch agree.', 'Altitude high and the Camera Dial looking down a little: the land spread out to the walls’ feet.'],
@@ -54381,8 +54431,7 @@ function syncLightPad(){
 // typing the dial's numbers turns the chosen light exactly
 for(const id of ['lightDegIn', 'lightTiltIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
   const deg = parseFloat($('lightDegIn').value), tilt = parseFloat($('lightTiltIn').value);
-  if(lightPick() === 'rim'){ const R = rimNow(); setRim(isNaN(deg) ? R.deg : deg, isNaN(tilt) ? R.tilt : tilt, true); return; }
-  setLight(isNaN(deg) ? (parseFloat($('textureLight').value) || 0) : deg, isNaN(tilt) ? (parseFloat(($('textureLightTilt') || {}).value) || 100) : tilt, true);
+  const p = pickedNow(); movePicked(isNaN(deg) ? p.deg : deg, isNaN(tilt) ? p.tilt : tilt, true);
 });
 function setLight(deg, tilt, commit){
   if(!commit) draftWhileDragging();
@@ -54397,7 +54446,8 @@ function setRim(deg, tilt, commit){
   syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
 }
 /** The chosen light to (deg, tilt). */
-function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); }
+// (the dial's own moves show the sun's guide: held while dragging, a moment after a click, a key or a typed number)
+function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); drawSunGuide(true, !!commit); }
 function pickedNow(){ if(lightPick() === 'rim'){ const R = rimNow(); return { deg: R.deg, tilt: R.tilt }; }
   const t = parseFloat(($('textureLightTilt') || {}).value); return { deg: parseFloat($('textureLight').value) || 0, tilt: isNaN(t) ? 100 : t }; }
 if($('lightSeg') && $('lightSeg').addEventListener) $('lightSeg').addEventListener('click', e => {
@@ -54427,7 +54477,7 @@ if($('lightDial') && $('lightDial').addEventListener){
   let dragging = false;
   dial.addEventListener('pointerdown', e => { dragging = true; if(dial.setPointerCapture) dial.setPointerCapture(e.pointerId); fromPointer(e, e.target && e.target.classList && e.target.classList.contains('ld-tick')); });
   dial.addEventListener('pointermove', e => { if(dragging) fromPointer(e, false); });
-  const end = () => { if(dragging){ dragging = false; if(typeof commitSoon === 'function') commitSoon(); } };
+  const end = () => { if(dragging){ dragging = false; drawSunGuide(false); if(typeof commitSoon === 'function') commitSoon(); } };
   dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
   // keys: arrows turn it by 15°, page up/down raise and lower it
   dial.addEventListener('keydown', e => {
@@ -54439,7 +54489,7 @@ if($('lightDial') && $('lightDial').addEventListener){
 // ⟲ resets the chosen light (the rim light: off, back where it starts)
 if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => {
   if(lightPick() === 'rim'){ putRim(RIM_DEFAULT.deg, RIM_DEFAULT.tilt); setRimOn(false); syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); return; }
-  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); });
+  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); drawSunGuide(true, true); });
 // ◎ to the centre (overhead / the middle of the page), keeping the angle; ⚄ a
 // random angle, keeping the distance. Neither is sticky. Each moves the chosen light.
 if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => movePicked(pickedNow().deg, 0, true));
@@ -54504,24 +54554,34 @@ function setCamera(turn, view, zoom, commit){
 }
 // THE GUIDE: the shot as lines over the page, at once, while the surface is still being made
 let camGuideT = 0;
-function drawCameraGuide(on){
-  const caps = capsFor(($('textureType') || {}).value) || {}, kind = caps.camera && caps.camera.guide;
+/** A guide's canvas over the page (made the first time), sized to it now; null where there is no page to draw over. */
+function guideCanvas(cls){
   const pc = $('poemCanvas'), wrap = pc && pc.parentElement;
-  if(!kind || !pc || !wrap || typeof document.createElement !== 'function' || !pc.getBoundingClientRect) return;
-  let g = wrap.querySelector && wrap.querySelector('.cam-guide');
-  if(!g){ g = document.createElement('canvas'); g.className = 'cam-guide'; g.setAttribute('aria-hidden', 'true'); wrap.appendChild(g); }
-  clearTimeout(camGuideT);
-  if(!on){ camGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
-  const r = pc.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dpr = Math.min(1.5, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
-  Object.assign(g.style, { left: (r.left - wr.left) + 'px', top: (r.top - wr.top) + 'px', width: r.width + 'px', height: r.height + 'px' });
-  g.width = Math.max(1, Math.round(r.width*dpr)); g.height = Math.max(1, Math.round(r.height*dpr));
-  const x = g.getContext('2d'); if(!x) return;
-  const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), v = id => parseFloat(($(id) || {}).value);
+  if(!pc || !wrap || typeof document.createElement !== 'function' || !pc.getBoundingClientRect) return null;
+  let g = wrap.querySelector && wrap.querySelector('.' + cls);
+  if(!g){ g = document.createElement('canvas'); g.className = cls; g.setAttribute('aria-hidden', 'true'); wrap.appendChild(g); }
+  return { g, size(){ const r = pc.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dpr = Math.min(1.5, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
+    Object.assign(g.style, { left: (r.left - wr.left) + 'px', top: (r.top - wr.top) + 'px', width: r.width + 'px', height: r.height + 'px' });
+    g.width = Math.max(1, Math.round(r.width*dpr)); g.height = Math.max(1, Math.round(r.height*dpr)); return dpr; } };
+}
+/** The Ringworlds' view as the guides need it (the camera's, and where on the ring you stand). */
+function ringGuideOf(kind, type, c){
+  const v = id => parseFloat(($(id) || {}).value);
   // (Ringworld's walls follow Landforms, half its range; where you stand across the band is the seed's)
   // (a knob found by its key: Altitude is the seventh on Ringworld, the sixth on the Painted Ringworld)
-  const type = ($('textureType') || {}).value, slot = key => 'texP' + (paramsFor(type).findIndex(p => p.key === key) + 1);
-  const ring = kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v(slot('alt')), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100, curved: type === 'ringpaint' }
+  const slot = key => 'texP' + (paramsFor(type).findIndex(p => p.key === key) + 1);
+  return kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v(slot('alt')), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100, curved: type === 'ringpaint' }
     : kind === 'ellipse' ? { centre: 0.15 + 0.7*(v(slot('height')) || 0)/100 } : null;
+}
+function drawCameraGuide(on){
+  const caps = capsFor(($('textureType') || {}).value) || {}, kind = caps.camera && caps.camera.guide;
+  const G = kind ? guideCanvas('cam-guide') : null; if(!G) return;
+  const g = G.g;
+  clearTimeout(camGuideT);
+  if(!on){ camGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
+  const dpr = G.size(), x = g.getContext('2d'); if(!x) return;
+  const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow();
+  const type = ($('textureType') || {}).value, ring = ringGuideOf(kind, type, c);
   const lines = cameraGuide(kind, aspX, aspY, c, ring);
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
   const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';
@@ -54530,6 +54590,48 @@ function drawCameraGuide(on){
     x.lineWidth = (L.bold ? 2.2 : 1)*dpr*(pass ? 1 : 2.6);
     x.beginPath(); L.pts.forEach((p, i) => i ? x.lineTo(p[0]*u, p[1]*u) : x.moveTo(p[0]*u, p[1]*u)); x.stroke(); }
   g.classList.add('on');
+}
+// THE SUN'S GUIDE (Ruby: "a sun position guide that shows up on the image also before the render"): while the light dial
+// moves, where the light comes from is drawn over the page at once, before the surface is made: the Painted Ringworld's
+// sun where it will stand in the picture (an arrow at the edge when it is out of the frame); any other lit surface's
+// light as a sun at the dial's place on the page (the middle overhead, the rim the page's edge), turned with the camera
+// where the camera turns the ground under it; the rim light's in its own colour
+let sunGuideT = 0;
+/** Whether the light dial is a light this surface shows from somewhere (not a wind, a flow, or the Ringworlds' day). */
+function sunGuideKind(type){ const caps = capsFor(type) || {};
+  if(type === 'ringpaint') return 'ring';
+  if(type === 'landscape') return null;   // (its painted sun is the seed's: the dial lights only the paint's relief)
+  return caps.light && !caps.dirOnly && (!caps.dial || /Light|Sun/.test(caps.dial)) ? 'page' : null; }
+function drawSunGuide(on, linger){
+  const type = ($('textureType') || {}).value, kind = sunGuideKind(type), G = kind ? guideCanvas('sun-guide') : null; if(!G) return;
+  const g = G.g;
+  clearTimeout(sunGuideT);
+  if(!on){ sunGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
+  const dpr = G.size(), x = g.getContext('2d'); if(!x) return;
+  const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), caps = capsFor(type) || {};
+  const cs = getComputedStyle(document.body), col = n => (cs.getPropertyValue(n) || '').trim();
+  const main = col('--accent') || '#E7A0B8', rimC = col('--accent-2') || '#9FD0E8';
+  // a light's place on the page: the Painted Ringworld's sun through its camera; else the dial stretched onto the page
+  // (its rim at the corners, as dialSquare has it), turned against a camera that turns the ground
+  const turn = caps.camera && caps.camera.guide === 'plane' ? c.turn : 0;
+  const placeOf = (deg, tilt) => {
+    if(kind === 'ring'){ const p = ringSunGuide(aspX, aspY, ringGuideOf('ring', type, c), deg, tilt/100); return p ? { x: p.x, y: p.y, up: p.up } : null; }
+    const a = (deg - turn)*Math.PI/180, k = Math.min(1, Math.max(0, tilt)/100), dx = Math.sin(a), dy = -Math.cos(a), m = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+    return { x: aspX/2 + dx/m*k*aspX*0.46, y: aspY/2 + dy/m*k*aspY*0.46, up: true }; };
+  const lights = [[parseFloat($('textureLight').value) || 0, parseFloat(($('textureLightTilt') || {}).value), main]];
+  if(lightsReach(type)){ const R = rimNow(); if(R.on || lightPick() === 'rim') lights.push([R.deg, R.tilt, rimC]); }
+  x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
+  for(const [deg, t, colr] of lights){ const p = placeOf(deg, isNaN(t) ? 100 : t); if(!p) continue;
+    // (out of the frame: at its edge, with an arrow pointing out toward it)
+    const m = 0.045, ex = Math.max(m, Math.min(aspX - m, p.x)), ey = Math.max(m, Math.min(aspY - m, p.y)), out = ex !== p.x || ey !== p.y;
+    const X = ex*u, Y = ey*u, rs = u*0.022, rays = (len, w) => { for(let k = 0; k < 8; k++){ const a = k*Math.PI/4; x.lineWidth = w;
+      x.beginPath(); x.moveTo(X + Math.cos(a)*rs*1.6, Y + Math.sin(a)*rs*1.6); x.lineTo(X + Math.cos(a)*rs*len, Y + Math.sin(a)*rs*len); x.stroke(); } };
+    for(const pass of [0, 1]){ x.strokeStyle = pass ? colr : 'rgba(0,0,0,.55)'; x.fillStyle = pass ? colr : 'rgba(0,0,0,.55)'; x.globalAlpha = p.up ? 0.95 : 0.5;
+      const w = (pass ? 2 : 5)*dpr; x.lineWidth = w; x.beginPath(); x.arc(X, Y, rs, 0, Math.PI*2); pass ? x.fill() : x.stroke(); rays(2.6, w);
+      if(out){ const a = Math.atan2(p.y - ey, p.x - ex), tx = X + Math.cos(a)*rs*3.6, ty = Y + Math.sin(a)*rs*3.6;
+        x.beginPath(); x.moveTo(tx, ty); x.lineTo(tx - Math.cos(a - 0.5)*rs*1.4, ty - Math.sin(a - 0.5)*rs*1.4); x.moveTo(tx, ty); x.lineTo(tx - Math.cos(a + 0.5)*rs*1.4, ty - Math.sin(a + 0.5)*rs*1.4); x.stroke(); } } }
+  x.globalAlpha = 1; g.classList.add('on');
+  if(linger) sunGuideT = setTimeout(() => g.classList.remove('on'), 900);
 }
 if($('cameraDial') && $('cameraDial').addEventListener){
   const dial = $('cameraDial'), ptrs = new Map();

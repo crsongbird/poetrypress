@@ -8,7 +8,8 @@
  * how to change it, the test fails and says so, rather than skipping it.
  *
  * Covers the three ways settings move: the Workbench JSON (save/load), saved
- * spells (create/apply), and spell export/import.
+ * spells (create/apply), and spell export/import; and old looks open as they
+ * were, each format's translations (retireLook) among them.
  *
  * Run: node test/audit.test.mjs
  */
@@ -206,6 +207,46 @@ check('importing the same spell twice does not duplicate it',
     && opened({ textureType: 'foldghost' }).textureType === 'oldpaper');
   const ink = opened({ textureType: 'inkbleed', textureTint1: '#FFFFFF', textureTint2: '#000000' });
   check('an old Rorschach look (white and black hues) opens with ink and accent', /^#141414$/i.test(ink.textureTint1) && /^#B0283A$/i.test(ink.textureTint2));
+  load(base);
+}
+// …and each format's translations: an old slider's job handed to a dial, a slider retired or renamed (lookVersion)
+{
+  // (the camera taken out: an old look of a surface with a camera, saved before it, has none)
+  const base = save(), { lookVersion, cameraTurn, cameraView, cameraZoom, ...old } = base;
+  check('a look says which format it was saved in', base.lookVersion === 5);
+  load({ ...old, texture: true, textureType: 'rainstreaks', texP1: '200', texP2: '-30', textureLight: '315' });
+  let s = save();
+  check('an old Harsh Rain look: Slant −30° becomes the dial at 30°, no gusts', s.textureLight === '30' && +s.texP2 === 0 && +s.texP1 === 200);
+  load({ ...old, texture: true, textureType: 'hatch', texP1: '64', texP2: '400', textureLight: '315' });
+  s = save();
+  check('an old Silverpoint Hatch look: Hatch Angle 64° becomes the dial at 154°, Cross-Hatching as it was', s.textureLight === '154' && +s.texP1 === 38 && +s.texP2 === 400);
+  load({ ...base, texture: true, textureType: 'rainstreaks', texP2: '30', textureLight: '200' });
+  s = save();
+  check('a new look is left as it is', s.textureLight === '200' && +s.texP2 === 30);
+  // format 4: Ringworld's Daylight slider onto the light dial (noon at its middle, dusk at its rim, past it night)
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '80', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('an old Ringworld look: Daylight 80 becomes the light dial at 40 (morning), the sixth slider Builders by the seed', +s.textureLightTilt === 40 && +s.texP6 === 0 && s.cameraTurn === '40');
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '20', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('…and Daylight 20 (night) past the dial\'s rim', +s.textureLightTilt === 118);
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'circuit', texP7: '100' });
+  s = save();
+  check('an old Circuit Board look at Magitech (four eras) stays the board it was: Atomic, at 75 of five eras', +s.texP7 === 75);
+  // format 5: Ringworld's Stand At became Traffic (its middle: the ships as they were)
+  load({ ...old, lookVersion: 4, texture: true, textureType: 'ringworld', texP2: '70', texP4: '40', texP8: '-60', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('an old Ringworld look: Stand At gives way to Traffic at its middle; Terrain and Structures carry on as Landforms and Cities', +s.texP8 === 50 && +s.texP2 === 70 && +s.texP4 === 40);
+  // format 4: the Tilt sliders onto the camera dial (Dune Ripples' fourth, Moss on Stone's fourth, Scrying Pool's sixth)
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'dunes', texP1: '140', texP4: '60', cameraTurn: '90', cameraView: '0', cameraZoom: '100' });
+  s = save();
+  check('an old Dune Ripples look: Tilt 60 becomes the camera dial\'s View 60, unturned', s.cameraView === '60' && s.cameraTurn === '0' && s.cameraZoom === '100' && +s.texP1 === 140);
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'water', texP6: '0', cameraTurn: '0', cameraView: '55', cameraZoom: '100' });
+  s = save();
+  check('…a Scrying Pool looking straight down stays straight down', s.cameraView === '0');
+  load({ ...old, lookVersion: 3, texture: true, textureType: 'moss', texP4: undefined });
+  s = save();
+  check('…and a Moss on Stone look saved with no Tilt at all takes its old default, 30', s.cameraView === '30');
   load(base);
 }
 

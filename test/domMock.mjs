@@ -484,6 +484,8 @@ export function installDomMock(makeMockContext, makeMockCanvas){
   global.Coloris = function(config){
     global.Coloris.lastCall = config;
   };
+  // (and the settings given one field's picker: which fields keep an alpha slider)
+  global.Coloris.setInstance = (instance, config) => { (global.Coloris.instances ||= []).push({ instance, ...config }); };
 
   const documentListeners = {};
   global.document = {

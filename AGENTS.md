@@ -611,7 +611,15 @@ Other parts of a look:
     dial (Turn, View, Zoom). Any light is placed with the light dial
     (direction and height; `caps.lowLight` lets it past the rim).
   - Use them creatively where it stays intuitive (Ringworld: the light dial
-    is the time of day). But every control on a dial must do what its
+    is the time of day).
+  - **The sun's guide** (`drawSunGuide`; Ruby: "a sun position guide that
+    shows up on the image also before the render"): while the light dial
+    moves, a sun over the page where the light comes from, at once: the
+    Painted Ringworld's where it will stand in the picture
+    (`ringSunGuide`, an arrow at the edge when out of the frame); any other
+    surface lit by the dial at the dial's place stretched onto the page,
+    turned against a camera that turns the ground; the rim light's in the
+    second accent. Not for a dial that is a wind, a flow or the day. But every control on a dial must do what its
     handle suggests: a turn that changes nothing is worse than no dial.
   - Done: Lichtenberg, Ringworld, Broken Glass, Scrying Pool, Dune Ripples,
     Moss on Stone. Waiting: ROADMAP C5.
@@ -1309,6 +1317,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     great circle through the eye's plane, as a straight line; the painter's
     curved perspective bows it across the sky. `proj` returns the depth that
     sizes things there (F over it is pixels per ring unit).
+  - **The sun is placed by the light dial, in the world** (Ruby: "the light
+    dial sets the sun position consistently and independently from the ring
+    rotation"; `ringSunDir`): its way round is the dial's direction, read as
+    the camera's Turn reads (so the two dials agree, and turning the camera
+    turns past it); its height the dial's reach (the middle overhead, where
+    it is the ring's own star on the arch; the rim the horizon; past it
+    night, and no sun). The land's facets and the painted things are lit
+    from its side of the screen and from above as it rises (`V.sun.LT`,
+    `V.sun.sd`); Saturn takes its light from it. The shadow squares and
+    `L.side` still make the arch's days.
   - One world for both (`rgView`): the land's heights (`rgTerrain`: ridged big
     octaves, ranges at the walls' feet, flatter in cities, terraced by the
     builders), the sea below the camera's ground, the biomes by world
