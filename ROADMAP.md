@@ -67,7 +67,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Global Variation (one seed into every random part, plus each part's own) | The page seed; v2 seeds each node from (seed, id); every random part has a Variation | ✅ |
 | Seamless Tiling | Not needed: a page is not tiled | parked |
 | Anti-aliasing: supersampling, "edges only" by AA zones | The Surface's Anti-aliasing: edges only (FXAA on the grid), all pixels (a grid twice as fine, within the budget) | ✅ (Saturn–Bebhionn) |
-| Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | One dial light, ambient (its color on the Light Engine: Ambient Hue), a Second Light on the Light Engine (rim, fill or backlight; color, softness, negative), materials (Highlight, Shade, Diffuse hues), soft shadows, AO | **C1–C4** |
+| Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | The dial's light and its rim light (the dial's second handle), the Ambient slider, the Main Light, Rim Light and Ambient Hues; a Second Light on the Light Engine (rim, fill or backlight; color, softness, negative); materials (Highlight, Shade hues), soft shadows, AO | **C3, C4** |
 | Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (8 slots), Hue (2), Curve Control (2 pads), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ (the Angle's dial, the Curve Control: Saturn–Erriapus) |
 | Groups (control components inside a group define its inputs) | **Group** parts: their insides a module of the editor's; each Group Input and Knob inside an input, the Group Result its outputs; laid out flat before drawing | ✅ (Saturn–Paaliaq) |
 | Loop and its slaves (Iteration, Accumulated, Randomizer); Bitmap Cache; Lua script components | A group's Repeats (the first result fed back as Accumulated; an Iteration part); results kept automatically (ATHANOR_KEPT) | ✅ (Saturn–Albiorix); scripts parked (security) |
@@ -85,14 +85,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### C · Lighting (texCore.js lightHeights + shader; the dial UI)
 
-- **C1 · Ambient light color, on the page.** The Light Engine has its
-  Ambient Hue; the menu textures' own lighting (texCore `litK`) and the
-  Surface's height lighting could take one too, as a hue on the page. Its
-  "none" draws exactly as today (colour roles rule).
-- **C2 · More lights, on the page.** The Light Engine has its Second Light
-  (color, negative, softness, light or shine only). The menu's lit textures
-  could take one too: a second handle on the light dial, perhaps.
-  - Prove: with one light, fingerprints unchanged.
 - **C3 · Occlusion quality.** Low, medium or high presets for the AO march
   and the shadow trace, chosen per device. The baseline phone uses medium.
 - **C4 · An environment from the page, everywhere.** The lit Surface already
@@ -249,7 +241,7 @@ superseded) wait for Stage 4.
   what they unlock (§2 F).
 
 ### Stage 2 · Features: the engine, the controls, the poem
-- **C1–C4** lighting; **C5** the camera dial on more textures.
+- **C3, C4** lighting; **C5** the camera dial on more textures.
 - **G2** punctuation, **G4** Emotional Seed.
 
 ### Stage 3 · Textures: built from the parts
@@ -298,12 +290,12 @@ superseded) wait for Stage 4.
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               (controls: dial, two handles, curves) ─────────────────────┘      ├─► E4 author locks
                                                                                                 └─► THE PRESETS PASS
-                              C1 ─► C2 ─► C4; C3
+                              C3; C4
 ```
 
 **Suggested passes** (one release each, AGENTS' recipe):
 
-1. Stage 2: C1 on the page, then C2–C4.
+1. Stage 2: C3, C4.
 2. Stage 2: G2, G4.
 3. Stage 1: F7 Refraction (with F1), F10 Bezier curves.
 4. Stage 3: the Surface Studies become textures, a few per pass; black boxes

@@ -323,7 +323,7 @@ check('focus mode leaves room for the focus ring beside the scrollbar', parseFlo
 
 // ---- the light dial (☉ at the centre, an arrow toward it) ----
 check('dragging the dial never scrolls the page', /\.light-dial\{[^}]*touch-action:none/.test(css));
-check('⟲ resets the light', /\$\('lightReset'\)\.addEventListener\('click', \(\) => setLight\(LIGHT_DEFAULT\.deg, LIGHT_DEFAULT\.tilt, true\)\)/.test(js));
+// (⟲ resetting the light, the main light and the rim light: textureLayers.test, by behavior)
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

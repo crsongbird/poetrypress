@@ -1517,6 +1517,30 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .ld-low{ fill:none; stroke:var(--accent); stroke-width:.9; stroke-dasharray:1.6 2.2; opacity:0; pointer-events:none; }
 .light-dial.low-ok .ld-low{ opacity:.45; }
 .light-dial.past-rim .ld-handle{ fill:var(--rose, var(--accent)); }
+/* THE RIM LIGHT (Ruby): a second handle in a second colour, under the main light's; hollow while the rim light is off;
+   where the two overlap the lens they share mixes to white (to black on the light theme), as two lights do */
+.ld-rim-handle{ fill:none; stroke:var(--accent-2); stroke-width:1.3; stroke-dasharray:1.6 1.4; display:none; }
+.light-dial.has-rim .ld-rim-handle{ display:inline; }
+.light-dial.rim-on .ld-rim-handle{ fill:var(--accent-2); stroke:none; }
+.light-dial.pick-rim .ld-rim-handle{ stroke:var(--text-main); stroke-width:1.1; stroke-dasharray:none; }
+.light-dial.pick-rim:not(.rim-on) .ld-rim-handle{ stroke:var(--accent-2); stroke-width:1.6; }
+.ld-overlap{ fill:#FFFFFF; display:none; pointer-events:none; }
+:root[data-theme="vellum"] .ld-overlap{ fill:#000000; }
+.light-dial.has-rim.rim-on .ld-overlap{ display:inline; }
+/* which light the finger moves, and the Ambient slider: only where the page's lights reach the surface */
+.light-seg, #lightRow .light-amb, #lightAmbField{ display:none; }
+#lightRow.has-rig .light-seg{ display:flex; margin:2px 0 4px; }
+#lightRow.has-rig .light-amb{ display:block; }
+#lightRow.has-rig #lightAmbField{ display:flex; }
+#lightRow.has-rig .ld-values{ flex-wrap:wrap; gap:4px 12px; }
+.light-seg .radio-btn{ flex:1 1 0; padding:4px 8px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+/* each button's dot is its handle's colour: the main light's, the rim light's (hollow while it is off) */
+.light-seg .ls-dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); flex:0 0 auto; }
+.light-seg [data-light="rim"] .ls-dot{ background:var(--accent-2); }
+.light-seg [data-light="rim"].dim .ls-dot{ background:none; border:1.3px dashed var(--accent-2); box-sizing:border-box; }
+.light-seg .radio-btn.dim:not(.active){ opacity:.6; }
+/* the rim light's hue fades while it is off (its alpha is its strength: 0 is off) */
+#tint7Row.rim-off{ opacity:.5; }
 
 /* THE CAMERA DIAL (Ruby): beside the light dial, the hues below it in two columns. Its handle is where the camera stands
    (the middle: straight down; the rim: low across), the line from it the way it looks, the frame what it sees */
@@ -1534,6 +1558,10 @@ body.is-mobile .tool-row.has-camera > #lightRow{ grid-row:1; }
 .tool-row.has-camera .light-dial-row{ min-height:124px; }
 .tool-row.has-camera .light-dial{ width:116px; height:116px; }
 .tool-row.has-camera .ld-values{ flex-wrap:wrap; gap:4px 8px; }
+/* ON A DESK without a camera: the dial across the top, the hues beneath in two columns (Ruby: every slot used well) */
+body:not(.is-mobile) .tool-row:not(.has-camera){ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:10px; row-gap:6px; align-items:start; }
+body:not(.is-mobile) .tool-row:not(.has-camera) > #lightRow{ grid-column:1 / -1; }
+body:not(.is-mobile) .tool-row:not(.has-camera) > .field{ min-width:0; }
 
 /* the camera's guide: a wireframe of the shot over the preview while the camera dial moves */
 .cam-guide{ position:absolute; pointer-events:none; z-index:6; opacity:0; transition:opacity .5s ease; }
@@ -1656,7 +1684,9 @@ body.is-mobile #clr-picker #clr-close{ display:block; width:calc(100% - 20px); m
    The dial, and the seed beneath it, on the left; every hue stacked on the
    right. Ruby: the two halves roughly 50/50, the seed under the dial. */
 body.is-mobile .tool-row{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
-body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 4; }
+/* (the dial spans the rows of hues beside it; the last row is the slack, so a tall dial never spreads the hues apart) */
+body.is-mobile .tool-row:not(.has-camera){ grid-template-rows:repeat(9, auto) 1fr; }
+body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 10; }
 body.is-mobile .tool-row > #seedRow{   padding-right:12px;   }
 /* one rule between the halves: the hues' own left edge (no second one beside it) */
 body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }
@@ -3453,6 +3483,48 @@ function lightVec(light){
  *  engine reads it, sinking the light from 12° toward 4° above the horizon —
  *  long, raking shadows. Textures that shade themselves never see it. */
 function lightLow(){ return Math.max(0, Math.min(1, (LIGHT_TILT - 1) / 0.3)); }
+
+// ---------- THE PAGE'S LIGHTS: a rim light and the ambient (ROADMAP C1, C2) ----------
+// Beside the dial's light the page may give an engine-lit surface a RIM LIGHT (the dial's second handle: a light from
+// its own way and height, in its own colour) and set its AMBIENT light (how much: the slider under the dial, 1 the
+// surface's own; and its colour). Set round one texture's making, as withLightTilt is. Null, the default, is the one
+// light exactly as ever.
+//   amb      the ambient share, times this
+//   ambHue   the ambient light's colour at white's brightness (null: none)
+//   mainHue  the dial's own light's colour, on what it reaches (null: none)
+//   rim      { deg, tilt (as the dial's: 0 overhead, 1 its rim, on to 1.3 lower), k (0..1: its strength), hue (null: white) }
+let LIGHT_RIG = null;
+function withLightRig(rig, fn){
+  const prev = LIGHT_RIG; LIGHT_RIG = rig || null;
+  try { return fn(); } finally { LIGHT_RIG = prev; }
+}
+/** The page's lights now (null: the dial's light alone). */
+function lightRig(){ return LIGHT_RIG; }
+/** The rig from the page's settings, null when they change nothing: `ambient` 0..200 (100: the surface's own),
+ *  `ambientHue` and `mainHue` (#RRGGBB[AA]; white is none, alpha how much of it), and the rim: `rimDeg`, `rimTilt`
+ *  (0..130) and `rimHue` (#RRGGBBAA: its colour, its alpha its strength; 0 is off). */
+function lightRigOf({ ambient, ambientHue, mainHue, rimDeg, rimTilt, rimHue } = {}){
+  const a = +ambient, amb = ambient != null && ambient !== '' && isFinite(a) ? Math.max(0, Math.min(200, Math.round(a)))/100 : 1;
+  const hueOf = x => { const h = x ? resolveAlpha(String(x), '#FFFFFF') : null; return h && !isWhiteHex(h) ? rgb01(h) : null; };
+  const ambHue = hueOf(ambientHue), main = hueOf(mainHue);
+  let rim = null;
+  const h = rimHue ? String(rimHue).replace('#', '') : '';
+  if(/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(h)){
+    const k = h.length === 8 ? parseInt(h.slice(6, 8), 16)/255 : 1, c = '#' + h.slice(0, 6);
+    const t = +rimTilt;
+    if(k > 0) rim = { deg: ((Math.round(+rimDeg || 0) % 360) + 360) % 360, tilt: Math.max(0, Math.min(1.3, (rimTilt == null || rimTilt === '' || !isFinite(t) ? 100 : Math.round(t))/100)), k, hue: isWhiteHex(c) ? null : rgb01(c) };
+  }
+  return amb === 1 && !ambHue && !main && !rim ? null : { amb, ambHue, mainHue: main, rim };
+}
+/** A light's way as lightHeights sees it, from its direction (degrees, as the dial's) and height (0..1.3): toward the
+ *  light (L), Blinn's half vector (H), and its shadow march (one step toward it, and how fast a ray climbs). */
+function lightWay(deg, T){
+  const a = ((deg == null ? 315 : deg) - 90)*Math.PI/180, tilt = Math.max(0, Math.min(1, T)), low = Math.max(0, Math.min(1, (T - 1)/0.3));
+  const elev = (90 - tilt*78 - low*8)*Math.PI/180, horiz = Math.cos(elev);
+  const Lx = tilt > 1e-6 ? -Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? -Math.sin(a)*horiz : 0, Lz = Math.sin(elev);
+  const hz = Lz + 1, hl = Math.hypot(Lx, Ly, hz) || 1, lxy = Math.hypot(Lx, Ly);
+  return { Lx, Ly, Lz, Hx: Lx/hl, Hy: Ly/hl, Hz: hz/hl, lxy, stepX: lxy > 1e-6 ? Lx/lxy : 0, stepY: lxy > 1e-6 ? Ly/lxy : 0, rise: lxy > 1e-6 ? Lz/lxy : 1e9 };
+}
 /** The dial as a PLACE on the page, for textures that use it as a position:
  *  the round dial stretched onto the square page, so its rim at 45° reaches
  *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
@@ -3475,6 +3547,7 @@ uniform highp sampler2D uH;
 uniform ivec2 uSize; uniform vec3 uL, uHalf;
 uniform float uRelief, uShine, uSpecK, uShadow, uAO, uAmbient, uRise, uStepX, uStepY;
 uniform int uSteps, uStride, uDoShadow, uR, uHasN, uMode, uHasG;
+uniform int uRim, uSteps2, uStride2, uDoShadow2; uniform vec3 uL2, uHalf2; uniform float uK2, uRise2, uStep2X, uStep2Y;
 uniform highp sampler2D uN;
 uniform highp sampler2D uG;
 out vec4 o;
@@ -3509,8 +3582,25 @@ void main(){
   if(uHasG == 1){ float g = texelFetch(uG, p, 0).r; shine = 4.0 + g*120.0; specK = 0.15 + g*0.85; }
   float spec = pow(nh, shine)*specK*(0.35 + 0.65*lit);
   float dsh = diffuse*(1.0 - uShadow*(1.0 - lit));
-  float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
-  float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
+  float r2 = 0.0, s2 = 0.0;
+  if(uRim == 1){
+    float d2 = dot(n, uL2);
+    if(d2 > 0.0){
+      float lit2 = 1.0;
+      if(uDoShadow2 == 1){
+        for(int k = uStride2; k <= uSteps2; k += uStride2){
+          ivec2 q = ivec2(floor(vec2(p) + vec2(uStep2X, uStep2Y)*float(k) + 0.5));
+          float over = at(q)*uRelief - (h0 + uRise2*float(k));
+          if(over > 0.0){ lit2 = min(lit2, max(0.0, 1.0 - over*0.6)); if(lit2 == 0.0) break; }
+        }
+      }
+      r2 = uK2*(1.0 - uAmbient)*d2*(1.0 - uShadow*(1.0 - lit2))*(1.0 - occl);
+      s2 = pow(max(0.0, dot(n, uHalf2)), shine)*specK*(0.35 + 0.65*lit2)*uK2;
+      light += r2; spec += s2;
+    }
+  }
+  float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : uMode == 2 ? clamp(r2, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
+  float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : uMode == 2 ? clamp(s2, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
   float ah = floor(a/256.0), bh = floor(b/256.0);
   o = vec4(ah/255.0, (a - ah*256.0)/255.0, bh/255.0, (b - bh*256.0)/255.0);
 }`;
@@ -3550,7 +3640,8 @@ in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
     const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = n => gl.getUniformLocation(prog, n);
-    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG'].map(n => [n, U(n)])) };
+    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG',
+      'uRim','uSteps2','uStride2','uDoShadow2','uL2','uHalf2','uK2','uRise2','uStep2X','uStep2Y'].map(n => [n, U(n)])) };
   } catch(e){ GPU = null; }
   return GPU;
 }
@@ -3577,6 +3668,10 @@ function gpuLightHeights(H, ww, wh, P){
     gl.uniform1f(u.uShadow, P.shadow); gl.uniform1f(u.uAO, P.ao); gl.uniform1f(u.uAmbient, P.ambient);
     gl.uniform1f(u.uRise, P.rise); gl.uniform1f(u.uStepX, P.stepX); gl.uniform1f(u.uStepY, P.stepY);
     gl.uniform1i(u.uSteps, P.steps); gl.uniform1i(u.uStride, P.stride); gl.uniform1i(u.uDoShadow, P.doShadow ? 1 : 0); gl.uniform1i(u.uR, P.R);
+    // the page's rim light (withLightRig), its own way, height and march
+    const R2 = P.R2; gl.uniform1i(u.uRim, R2 ? 1 : 0);
+    if(R2){ gl.uniform3f(u.uL2, R2.Lx, R2.Ly, R2.Lz); gl.uniform3f(u.uHalf2, R2.Hx, R2.Hy, R2.Hz); gl.uniform1f(u.uK2, R2.k); gl.uniform1f(u.uRise2, R2.rise);
+      gl.uniform1f(u.uStep2X, R2.stepX); gl.uniform1f(u.uStep2Y, R2.stepY); gl.uniform1i(u.uSteps2, R2.steps); gl.uniform1i(u.uStride2, R2.stride); gl.uniform1i(u.uDoShadow2, R2.doShadow ? 1 : 0); }
     // a detail normal map, if given, on its own texture unit
     let nTex = null;
     if(P.N){
@@ -3596,17 +3691,21 @@ function gpuLightHeights(H, ww, wh, P){
       gl.uniform1i(u.uG, 2); gl.uniform1i(u.uHasG, 1);
     } else { gl.uniform1i(u.uG, 0); gl.uniform1i(u.uHasG, 0); }
     gl.viewport(0, 0, ww, wh);
-    // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion
+    // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion; pass 2 (a coloured rim light): its light and shine
     const read = mode => { gl.uniform1i(u.uMode, mode); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       const px = new Uint8Array(ww*wh*4); gl.readPixels(0, 0, ww, wh, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
-    const px = read(0), px1 = P.comp ? read(1) : null;
+    const px = read(0), px1 = P.comp ? read(1) : null, px2 = R2 && P.rimParts ? read(2) : null;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex); if(nTex) gl.deleteTexture(nTex); if(gTex) gl.deleteTexture(gTex);
     const light = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
     for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ light[i] = (px[q]*256 + px[q+1])/65535*2; spec[i] = (px[q+2]*256 + px[q+3])/65535; }
-    if(!px1) return { light, spec };
-    const diffuse = new Float32Array(ww*wh), occl = new Float32Array(ww*wh);
-    for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ diffuse[i] = (px1[q]*256 + px1[q+1])/65535; occl[i] = (px1[q+2]*256 + px1[q+3])/65535; }
-    return { light, spec, diffuse, occl };
+    const res = { light, spec };
+    if(px1){ const diffuse = new Float32Array(ww*wh), occl = new Float32Array(ww*wh);
+      for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ diffuse[i] = (px1[q]*256 + px1[q+1])/65535; occl[i] = (px1[q+2]*256 + px1[q+3])/65535; }
+      res.diffuse = diffuse; res.occl = occl; }
+    if(px2){ const ra = new Float32Array(ww*wh), rs = new Float32Array(ww*wh);
+      for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ ra[i] = (px2[q]*256 + px2[q+1])/65535; rs[i] = (px2[q+2]*256 + px2[q+3])/65535; }
+      res.ra = ra; res.rs = rs; }
+    return res;
   } catch(e){ GPU = null; return null; }
 }
 
@@ -3643,7 +3742,16 @@ function gpuLightHeights(H, ww, wh, P){
  * what counts as "in shadow" — see materialOf / litK / litS).
  */
 function lightHeights(H, ww, wh, opts = {}){
-  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, ambient = 0.35, normals = null, components = false } = opts;
+  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, normals = null } = opts;
+  // THE PAGE'S LIGHTS (withLightRig): the ambient scaled, and a rim light beside the dial's. `rig: false` keeps them out;
+  // `rig: 'ambient'` takes the ambient only (a part that lights a second way of its own takes the rim as that)
+  const RG = opts.rig === false ? null : LIGHT_RIG, RM = RG && RG.rim && opts.rig !== 'ambient' ? RG.rim : null;
+  // (the slider scales the ambient light against the direct: its share's odds, so 200% is twice as much fill and never
+  //  more than all the light; 0 is none)
+  const a0 = opts.ambient === undefined ? 0.35 : opts.ambient, ambient = RG && RG.amb !== 1 ? Math.max(0, Math.min(1, a0*RG.amb/(1 + a0*(RG.amb - 1)))) : a0;
+  // (the coloured lights' shares, per pixel, for litK and litS: the ambient's, and the rim's light and shine)
+  const HUE = RG && (RG.ambHue || RG.mainHue || (RM && RM.hue)) ? { a: RG.ambHue || null, m: RG.mainHue || null, r: (RM && RM.hue) || null } : null;
+  const components = !!opts.components || !!(HUE && (HUE.a || HUE.m));
   const N = normals && normals.length >= ww*wh*3 ? normals : null;
   const GM = opts.glossMap && opts.glossMap.length >= ww*wh ? opts.glossMap : null;
   const { lx, ly } = lightVec(light);
@@ -3662,14 +3770,21 @@ function lightHeights(H, ww, wh, opts = {}){
   // march as far as the tallest height can throw a shadow at this elevation
   let hMax = 0, hMin = Infinity; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
   const steps = opts.marchSteps || Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);   // (lightSparse passes the whole field's)
+  // THE RIM LIGHT: its own way and height, its own shadows; its direct light and shine added to the dial's, at its strength
+  let R2 = null;
+  if(RM){ const w = lightWay(RM.deg, RM.tilt), st = opts.marchSteps2 || Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, w.rise)) + 2);
+    R2 = { ...w, k: RM.k, steps: st, stride: Math.max(1, Math.ceil(st/40)), doShadow: shadow > 0 && w.lxy > 0.02 && w.rise < 1e8 }; }
+  // flat: the light on open, flat ground — what "in shadow" is measured against (the rim's too: it lights open ground)
+  const flat = ambient + (1 - ambient)*Lz + (R2 ? R2.k*(1 - ambient)*R2.Lz : 0);
   // on the GPU when it's there (the same maths, per pixel, at once)
   if(GPU_LIGHT && ww*wh >= 4096){
     const g = gpuLightHeights(H, ww, wh, { Lx, Ly, Lz, hx, hy, hz, hl, shininess, specK, relief, shadow, ao, ambient, rise,
-      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, G: GM, comp: components });
-    if(g){ g.flat = ambient + (1 - ambient)*Lz; return g; }
+      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, G: GM, comp: components, R2, rimParts: !!(HUE && HUE.r) });
+    if(g){ g.flat = flat; return rigParts(g, RG, HUE, ambient); }
   }
   const out = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
   const dif = components ? new Float32Array(ww*wh) : null, occA = components ? new Float32Array(ww*wh) : null;
+  const RA = HUE && HUE.r ? new Float32Array(ww*wh) : null, RS = RA ? new Float32Array(ww*wh) : null;
   // occlusion compares each height with its neighbourhood's (a box average)
   const R = 4, avg = new Float32Array(ww*wh);
   if(ao > 0){
@@ -3710,11 +3825,36 @@ function lightHeights(H, ww, wh, opts = {}){
       const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
       if(GM){ const g = GM[i]; spec[i] = Math.pow(nh, 4 + g*120)*(0.15 + g*0.85)*(0.35 + 0.65*lit); }
       else spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
+      // the rim light, where a face turns toward it: its own march, its light and its shine
+      if(R2){ const d2 = nx*R2.Lx + ny*R2.Ly + nz*R2.Lz;
+        if(d2 > 0){ let lit2 = 1;
+          if(R2.doShadow) for(let k = R2.stride; k <= R2.steps; k += R2.stride){
+            const rayH = h0 + R2.rise*k;
+            if(rayH >= hTop) break;
+            let sx = Math.round(x + R2.stepX*k), sy = Math.round(y + R2.stepY*k);
+            sx = sx < 0 ? 0 : sx >= ww ? ww - 1 : sx; sy = sy < 0 ? 0 : sy >= wh ? wh - 1 : sy;
+            const over = H[sy*ww + sx]*relief - rayH;
+            if(over > 0){ lit2 = Math.min(lit2, Math.max(0, 1 - over*0.6)); if(lit2 === 0) break; }
+          }
+          const r2 = R2.k*(1 - ambient)*d2*(1 - shadow*(1 - lit2))*(1 - occl), nh2 = Math.max(0, nx*R2.Hx + ny*R2.Hy + nz*R2.Hz);
+          const s2 = (GM ? Math.pow(nh2, 4 + GM[i]*120)*(0.15 + GM[i]*0.85) : Math.pow(nh2, shininess)*specK)*(0.35 + 0.65*lit2)*R2.k;
+          out[i] += r2; spec[i] += s2; if(RA){ RA[i] = r2; RS[i] = s2; } } }
     }
   }
-  // flat: the light on open, flat ground — what "in shadow" is measured against
-  const flat = ambient + (1 - ambient)*Lz;
-  return components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+  const res = components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+  if(RA){ res.ra = RA; res.rs = RS; }
+  return rigParts(res, RG, HUE, ambient);
+}
+/** lightHeights' answer with the page's lights' shares (only when there are coloured ones): the effective ambient, the
+ *  ambient's share per pixel (ambient × (1 − occlusion)), the dial's light's own (its direct light), the rim's light and
+ *  shine (`ra`, `rs`), and their hues. */
+function rigParts(L, RG, HUE, ambient){
+  if(!RG) return L;
+  L.ambient = ambient;
+  if(HUE){ L.hue = HUE;
+    if(HUE.a){ const A = new Float32Array(L.light.length); for(let i = 0; i < A.length; i++) A[i] = ambient*(1 - L.occl[i]); L.aa = A; }
+    if(HUE.m){ const A = new Float32Array(L.light.length); for(let i = 0; i < A.length; i++) A[i] = (1 - ambient)*L.diffuse[i]*(1 - L.occl[i]); L.ma = A; } }
+  return L;
 }
 
 /**
@@ -3760,12 +3900,20 @@ function lightSparse(H, ww, wh, opts = {}, T = 64){
   // length; every side needs the occlusion box (and a pixel for the slope)
   const Ms = tilt > 1e-6 && lxy > 0.02 && (opts.shadow ?? 0.6) > 0 ? Math.min(170, Math.ceil(((hMax - hMin)*relief)/rise) + 3) : 0, m0 = 6;
   const sX = tilt > 1e-6 ? -lx/tilt : 0, sY = tilt > 1e-6 ? -ly/tilt : 0;        // one step toward the light
+  // (the page's rim light casts shadows its own way: as far, each way, as its own march reaches)
+  const RM = opts.rig === false || opts.rig === 'ambient' || !LIGHT_RIG ? null : LIGHT_RIG.rim, W2 = RM ? lightWay(RM.deg, RM.tilt) : null;
+  const Ms2 = W2 && W2.lxy > 0.02 && (opts.shadow ?? 0.6) > 0 ? Math.min(170, Math.ceil(((hMax - hMin)*relief)/W2.rise) + 3) : 0;
+  const reachOf = (s1, s2) => Math.max(Math.ceil(Math.max(0, s1)*Ms), W2 ? Math.ceil(Math.max(0, s2)*Ms2) : 0) + m0;
   // a detail's shadow reaches this far from it, each way (left, right, up, down)…
-  const fl = Math.ceil(Math.max(0, sX)*Ms) + m0, fr = Math.ceil(Math.max(0, -sX)*Ms) + m0;
-  const fu = Math.ceil(Math.max(0, sY)*Ms) + m0, fd = Math.ceil(Math.max(0, -sY)*Ms) + m0;
+  const fl = reachOf(sX, W2 && W2.stepX), fr = reachOf(-sX, W2 && -W2.stepX);
+  const fu = reachOf(sY, W2 && W2.stepY), fd = reachOf(-sY, W2 && -W2.stepY);
   const M = Math.max(fl, fr, fu, fd);
   // every piece marches as the whole field would (the same steps, the same stride)
   const marchSteps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
+  const marchSteps2 = W2 ? Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, W2.rise)) + 2) : undefined;
+  // (the coloured lights' shares, as open ground has them, then each piece's)
+  const RA = ground.ra ? new Float32Array(ww*wh).fill(ground.ra[0]) : null, RS = RA ? new Float32Array(ww*wh).fill(ground.rs[0]) : null;
+  const AA = ground.aa ? new Float32Array(ww*wh).fill(ground.aa[0]) : null, MA = ground.ma ? new Float32Array(ww*wh).fill(ground.ma[0]) : null;
   // where the details are: each tile's box around its non-flat points
   const tx = Math.ceil(ww/T), ty = Math.ceil(wh/T), box = new Int32Array(tx*ty*4).fill(-1);
   for(let y = 0; y < wh; y++){ const r = y*ww, b = ((y/T)|0)*tx;
@@ -3799,11 +3947,15 @@ function lightSparse(H, ww, wh, opts = {}, T = 64){
     const ex0 = Math.max(0, x0 - fr), ey0 = Math.max(0, y0 - fd), ex1 = Math.min(ww, x1 + fl), ey1 = Math.min(wh, y1 + fu);
     const ew = ex1 - ex0, eh = ey1 - ey0, E = new Float32Array(ew*eh);
     for(let y = 0; y < eh; y++) E.set(H.subarray((ey0 + y)*ww + ex0, (ey0 + y)*ww + ex1), y*ew);
-    const L = lightHeights(E, ew, eh, { ...opts, marchSteps }); lit += (e - i + 1)*(j1 - j0 + 1);
+    const L = lightHeights(E, ew, eh, { ...opts, marchSteps, ...(W2 ? { marchSteps2 } : {}) }); lit += (e - i + 1)*(j1 - j0 + 1);
     for(let y = y0; y < y1; y++){ const s = (y - ey0)*ew - ex0, r = y*ww;
-      out.set(L.light.subarray(s + x0, s + x1), r + x0); spec.set(L.spec.subarray(s + x0, s + x1), r + x0); }
+      out.set(L.light.subarray(s + x0, s + x1), r + x0); spec.set(L.spec.subarray(s + x0, s + x1), r + x0);
+      if(RA){ RA.set(L.ra.subarray(s + x0, s + x1), r + x0); RS.set(L.rs.subarray(s + x0, s + x1), r + x0); }
+      if(AA) AA.set(L.aa.subarray(s + x0, s + x1), r + x0); if(MA) MA.set(L.ma.subarray(s + x0, s + x1), r + x0); }
   }
-  return { light: out, spec, flat: ground.flat, lit, of: tx*ty };
+  const res = { light: out, spec, flat: ground.flat, lit, of: tx*ty };
+  if(ground.hue){ res.hue = ground.hue; res.ambient = ground.ambient; if(RA){ res.ra = RA; res.rs = RS; } if(AA) res.aa = AA; if(MA) res.ma = MA; }
+  return res;
 }
 
 
@@ -3942,16 +4094,23 @@ function resolveAlpha(hex, noneHex){
  *  slopes turned away — the more, the deeper the shadow; lit faces keep their
  *  own colour. (`ambient` is kept for callers; the shadow depth comes from L.) */
 function litK(L, i, ambient, M, c){
-  const k = L.light[i];
-  if(!M) return k;
+  const k = L.light[i], t = L.hue ? litT(L, i, c) : 0;
+  if(!M) return k + t;
   // a shadow half as bright as open ground takes the shade hue fully
   const deep = Math.max(0, Math.min(1, 2*(L.flat - k)/L.flat));
   // DIFFUSE: the light's own colour, on what it reaches (lit faces: not the shadow)
   const di = M.di ? 1 + (M.di[c] - 1)*Math.min(1, k/L.flat)*(1 - deep) : 1;
-  return k*(1 + (M.sh[c] - 1)*deep)*di;
+  return k*(1 + (M.sh[c] - 1)*deep)*di + t;
 }
-/** The highlight's colour in channel c (1 with no material). */
-function litS(M, c){ return M ? M.hi[c] : 1; }
+/** The page's coloured lights in channel c at pixel i (ROADMAP C1, C2): what the Ambient Hue, the main light's hue and
+ *  the rim light's shift the grey light by (0 without them). Their shares are already in L.light, in white. */
+function litT(L, i, c){ const H = L.hue; if(!H) return 0;
+  return (H.a ? L.aa[i]*(H.a[c] - 1) : 0) + (H.m ? L.ma[i]*(H.m[c] - 1) : 0) + (H.r ? L.ra[i]*(H.r[c] - 1) : 0); }
+/** The highlight's colour in channel c (1 with no material). Given the light (L, i), a coloured rim light's share of
+ *  the shine takes its own colour. */
+function litS(M, c, L, i){ let f = M ? M.hi[c] : 1;
+  if(L && L.hue && L.hue.r && i != null){ const s = L.spec[i]; if(s > 1e-6) f += (L.rs[i]/s)*(L.hue.r[c] - f); }
+  return f; }
 /** Whether a highlight/shade hue counts as unset (white). */
 function noMaterialHue(h){ return isWhiteHex(h); }
 
@@ -5855,7 +6014,10 @@ function genSigils(w,h,amt,zoom,light,form,M3){
     const k=L.light[i]/fl, s=(L.spec[i]-sFlat)*110;
     if(k===1 && s===0) continue;
     const q=i*4;
-    if(!M3){ d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s)); }
+    if(L.hue) for(let c=0;c<3;c++){                               // (the page's coloured lights: each channel its own light)
+      const k1 = k + litT(L,i,c)/fl, kc = M3 && k1<1 ? 1 - (1-k1)*Math.max(0, 1 + (1 - M3.sh[c])*0.7) : k1;
+      d[q+c]=Math.max(0,Math.min(255,d[q+c]*kc + s*(M3 ? M3.hi[c] : 1)*litS(null,c,L,i))); }
+    else if(!M3){ d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s)); }
     else for(let c=0;c<3;c++){                                    // a shadowed wall takes the Shade hue, a glint the Highlight
       const kc = k<1 ? 1 - (1-k)*Math.max(0, 1 + (1 - M3.sh[c])*0.7) : k;
       d[q+c]=Math.max(0,Math.min(255,d[q+c]*kc + s*M3.hi[c])); }
@@ -6237,9 +6399,9 @@ function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
     const K = c => litK(L, i, 0.4, M3, c)/flat, sp = L.spec[i]*0.6, q = i*4;
     // GLOW: molten light in the sunken facets, as if lava showed through
     const e = GL ? 255*Math.pow(Math.min(1, Math.max(0, (-H[i]/(cell*0.3) - 0.4)/0.6)), 1.6) : 0;   // only the deepest
-    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0) + (GL ? GL.r*e : 0)));
-    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1) + (GL ? GL.g*e : 0)));
-    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2) + (GL ? GL.b*e : 0)));
+    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0, L, i) + (GL ? GL.r*e : 0)));
+    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1, L, i) + (GL ? GL.g*e : 0)));
+    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2, L, i) + (GL ? GL.b*e : 0)));
     dta[q+3] = 255;
   }
   sctx.putImageData(img, 0, 0);
@@ -6444,6 +6606,13 @@ function genBlackHole(w,h,amt,zoom,light,form){
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
 
+/** A grey lit texture's pixel under the page's coloured lights (texCore litT): each channel's light shifted by the
+ *  Ambient Hue's and the rim light's, as its grey light is (dl: the light over open ground's, at the texture's scale). */
+function litGrey(L, i, fl, dl, sp, M3){
+  const v = c => { const d = dl + litT(L, i, c)/fl*120; return clamp255(M3 ? greyLit(d, sp, M3, c) : 128 + d + sp); };
+  return [v(0), v(1), v(2)];
+}
+
 // The paper says no
 // to the pencil, very softly,
 // ten thousand times.
@@ -6494,6 +6663,7 @@ function genColdPress(w,h,amt,zoom,light,form,M3){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.06, shadow:0.55, ao:0.3, ambient:0.45, normals:N });
   const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, gloss:0.06, shadow:0, ao:0, ambient:0.45 }).spec[0];
   return paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*60;
+    if(L.hue) return litGrey(L, i, fl, dl, sp, M3);   // (the page's coloured lights)
     if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
     return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
 }
@@ -6603,7 +6773,7 @@ function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
     const sh=Math.max(0, L.spec[i]-fs)*Math.min(1, dn)*60;       // the sheen
     const col=c=>{ const base=[t.r,t.g,t.b][c], dp=deep[c];
       // (GLOW: where it dried at its edge, faintly)
-      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*b*a*0.8 : 0); };
+      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c, L, i) + (GL ? 255*[GL.r,GL.g,GL.b][c]*b*a*0.8 : 0); };
     return [clamp255(col(0)), clamp255(col(1)), clamp255(col(2))];
   });
 }
@@ -7088,7 +7258,7 @@ function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   for(let i=0;i<N;i++){
     const s=L.spec[i]*0.35, tone=1.05 - 0.09*TR[i], e=CR ? CR[i]*180 : 0;
     for(let c=0;c<3;c++){ const sc=c===0?sand.r:c===1?sand.g:sand.b, uc=c===0?sun.r:c===1?sun.g:sun.b, gc=GL ? (c===0?GL.r:c===1?GL.g:GL.b) : 0;
-      RGB[i*3+c]=clamp255(sc*litK(L,i,0.42,M3,c)*tone + uc*s*litS(M3,c) + gc*e); }
+      RGB[i*3+c]=clamp255(sc*litK(L,i,0.42,M3,c)*tone + uc*s*litS(M3,c, L, i) + gc*e); }
   }
   let OUT=RGB;
   if(!F.flat){
@@ -7158,7 +7328,7 @@ function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
   const L=lightHeights(H, ww, wh, { light, relief:1.2, gloss:gz, shadow:0.5, ao:0.3, ambient:0.66, normals:CN, glossMap:GM });
   return paintLit(w,h,div,ww,wh, i => {
     const k0=litK(L,i,0.66,M3,0), k1=litK(L,i,0.66,M3,1), k2=litK(L,i,0.66,M3,2), s=L.spec[i], g=Math.min(1, G[i]*1.6);
-    const s0=s*litS(M3,0), s1=s*litS(M3,1), s2=s*litS(M3,2);
+    const s0=s*litS(M3,0, L, i), s1=s*litS(M3,1, L, i), s2=s*litS(M3,2, L, i);
     const gc=[gold.r*(0.35+0.75*k0) + 255*s0*1.2, gold.g*(0.35+0.75*k1) + 235*s1*1.2, gold.b*(0.35+0.75*k2) + 170*s2*1.0];
     const cc=[glaze.r*k0*1.12 + 255*s0*gloss, glaze.g*k1*1.12 + 255*s1*gloss, glaze.b*k2*1.12 + 255*s2*gloss];
     // GLOW: the gold seams give off light, and a little spills onto the glaze beside them
@@ -7209,7 +7379,7 @@ function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   const sd=1 - damp*0.35, mg=1 + damp*0.25, RGB=new Float32Array(N*3);
   for(let i=0;i<N;i++){
     const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1 - m*(1 - damp*0.6));   // moss is matte (its own gloss map); dew on it when damp
-    const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
+    const sc=[stone.r*sd*k0 + 255*s*litS(M3,0, L, i), stone.g*sd*k1 + 255*s*litS(M3,1, L, i), stone.b*sd*k2 + 255*s*litS(M3,2, L, i)];
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     // GLOW: bioluminescent moss, brightest at the tips
     if(TIP){ const e=255*Math.min(1, TIP[i])*0.9; mc[0]+=GL.r*e; mc[1]+=GL.g*e; mc[2]+=GL.b*e; }
@@ -7348,7 +7518,7 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
     for(let c=0;c<3;c++){
       const k=litK(L,i,0.3,M3,c)/fl;
       let hc=hue[c]; if(film){ const fn=film[c]/Math.max(0.2,(0.2126*film[0]+0.7152*film[1]+0.0722*film[2])); hc=hc*(1-iri)+Math.min(2.2,fn)*iri; }
-      const v=128*(0.45+0.55*k) + 150*sp*litS(M3,c);
+      const v=128*(0.45+0.55*k) + 150*sp*litS(M3,c, L, i);
       // (oxide is saturated: the film's colour weighs more than the metal's own)
       const sat=film ? 0.55 - 0.3*iri : 0.55;
       d[q+c]=Math.max(0,Math.min(255, v*(sat+(1-sat)*hc) + 40*sp*(hc-1)));
@@ -7442,6 +7612,7 @@ function genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,crinkle,M3,GL){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.1, shadow:0.4, ao:0.2, ambient:0.5 });
   const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.1, shadow:0, ao:0, ambient:0.5 }).spec[0];
   const c=paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*90;
+    if(L.hue) return litGrey(L, i, fl, dl, sp, M3);   // (the page's coloured lights)
     if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
     return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
   const ctx=c.getContext('2d', CPU), U=Math.min(w,h), rgba=(o,a)=>`rgba(${o.r|0},${o.g|0},${o.b|0},${a})`;
@@ -7644,7 +7815,7 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
     for(let c=0;c<3;c++){
       // deep (dark) stone carries the hue fully; the bright fire, less (hue^(1.2 − inside), from a table: a power per channel per pixel was half the time)
       const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], u=(inside<0?0:inside>1?1:inside)*1024, u0=u|0, T=HT[c], tint=u0>=1024 ? T[1024] : T[u0]+(T[u0+1]-T[u0])*(u-u0);
-      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c);
+      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c, L, i);
       d[q+c]=val<0?0:val>255?255:val;
     }
     d[q+3]=255;
@@ -7787,7 +7958,7 @@ function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,M3){
       let ground=128*(1-s*0.55)*Math.min(1.1, k);
       // the powder of a pile: pale ash speckled toward char, lit as a mound
       if(P[i]>0){ const powder=(ASH[c]*0.88 + (CHAR[c]-ASH[c]*0.88)*PT[i])*litK(L, i, 0.45, M3, c)/L.flat; ground += (powder-ground)*P[i]; }
-      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c);
+      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c, L, i);
       const e=E[i], glow=e>0 ? (EM[c]+(HOT[c]-EM[c])*e*e)*e : 0;
       out[c]=clamp255(ground+(flake-ground)*a + glow*1.1);
     }
@@ -7909,7 +8080,7 @@ function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
     const out=[0,0,0];
     for(let c=0;c<3;c++){
       const lit=ICE[c]*litK(L, i, 0.6, M3, c)/L.flat;
-      out[c]=clamp255(128 + (lit-128)*cov + sp*litS(M3, c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*cov*0.35 : 0));
+      out[c]=clamp255(128 + (lit-128)*cov + sp*litS(M3, c, L, i) + (GL ? 255*[GL.r,GL.g,GL.b][c]*cov*0.35 : 0));
     }
     return out;
   });
@@ -12059,7 +12230,7 @@ const CHAOS_STEPS = {
         for(let c = 0; c < 3; c++){
           const gzc = GZ[c]*(1 - hv) + G2[c]*hv;
           const alb = g > 0 ? gzc*(1.12 - 0.3*th)*(1 - thin) + BS[c]*thin : BS[c]*gr;
-          let v = alb*(litK(L, k, 0.45, M3, c)/fl)*dirt + 255*sp*litS(M3, c);
+          let v = alb*(litK(L, k, 0.45, M3, c)/fl)*dirt + 255*sp*litS(M3, c, L, k);
           if(GW && g > 0) v += 255*GW[c]*(0.4 + 0.6*th)*0.55;
           OUT[c][k] = (v < 0 ? 0 : v > 255 ? 255 : v)/255;
         }
@@ -12106,7 +12277,8 @@ const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
 /** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
 function ltMaterial(E, n){
   const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
-  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di'), am = pick(8, 'am');
+  // (the Diffuse and Ambient Hues unwired: the page's light's and its ambient's, from its light rig)
+  const RG = lightRig(), sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di') || (RG && RG.mainHue) || null, am = pick(8, 'am') || (RG && RG.ambHue) || null;
   return (sh || hi || di || am) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di, am } : null;
 }
 /** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
@@ -12124,18 +12296,19 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   // (a light at its own height, whatever the page's dial says: Ringworld's dial is its camera, and its star its own light)
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb });
+  // (the page's ambient slider reaches it; the page's rim light is its second light, below)
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient' });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
   // (the AMBIENT share, for an Ambient Hue (ROADMAP C1): the light from everywhere, less what the hollows keep out)
-  const A = o.amb ? new Float32Array(K.length) : null; if(A) for(let i = 0; i < A.length; i++) A[i] = o.ambient*(1 - L.occl[i])/f;
+  const A = o.amb ? new Float32Array(K.length) : null, am = L.ambient ?? o.ambient; if(A) for(let i = 0; i < A.length; i++) A[i] = am*(1 - L.occl[i])/f;
   // THE SECOND LIGHT (C2): the same engine from another way, at its own height, its direct light and shine alone (the
   // ambient and the hollows are the first light's); soft, it is three ways averaged across its width
   let K2 = null, S2 = null;
   if(o.second){ const n = o.secondSoft > 0.02 ? 3 : 1, w = o.secondSoft*60; K2 = new Float32Array(K.length); S2 = new Float32Array(K.length);
     for(let q = 0; q < n; q++){ const d = deg + o.secondTurn + (n > 1 ? (q - 1)*w/2 : 0);
-      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true }));
+      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false }));
       for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
@@ -12160,7 +12333,7 @@ function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
   const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25);
   const per = M => { const o = new Float32Array(M.length); for(let i = 0; i < M.length; i++) o[i] = M[i]/100; return o; };
-  return { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
+  const o = { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
     ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
     tilt: E.P(n, 'from', 'the dial') === 'its own height' ? E.num(n, 'height', 60)/100 : null,
     // a SECOND LIGHT beside the dial's (ROADMAP C2): its strength (negative draws light out), where it comes from (turned
@@ -12169,6 +12342,11 @@ function ltSettings(E, n, byPoint){
     secondSoft: E.num(n, 'secondSoft', 30)/100, secondKind: E.P(n, 'secondKind', 'light and shine'),
     secondHue: (v => Array.isArray(v) ? ltHue(v) : null)(E.input(n, 9)),
     reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
+  // THE PAGE'S RIM LIGHT (the light dial's second handle) is the second light of a part that has none of its own: from
+  // its own way and height, in its own colour, at its strength
+  const PR = lightRig() && lightRig().rim;
+  if(PR && !o.second) Object.assign(o, { second: PR.k, secondTurn: PR.deg - deg, secondHeight: PR.tilt, secondSoft: 0, secondKind: 'light and shine', secondHue: PR.hue });
+  return o;
 }
 
 // ---- OIL PAINT: strokes laid along the picture's forms ----
@@ -12737,6 +12915,8 @@ function shGuilloche(w,h,amt,zoom,light,form){
     // the plate mid-grey; a groove darker, its lit wall catching the light
     const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
     const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+    // (the page's coloured lights: the Ambient Hue and the rim light's, on each channel)
+    if(L.hue) for(let c=0;c<3;c++){ const vc=v + 128*litT(L,i,c)/L.flat + L.spec[i]*90*(litS(null,c,L,i) - 1); d[q+c]=vc<0?0:vc>255?255:vc; }
   }
   sx.putImageData(im,0,0);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
@@ -16749,7 +16929,12 @@ const STEP_RUN = {
         const r = img.r[i], g = img.g[i], b = img.b[i];
         o.r[i] = r*dk + er*(r*rm + rd) + s*(1 - mt + mt*r) + r*em;
         o.g[i] = g*dk + eg*(g*rm + rd) + s*(1 - mt + mt*g) + g*em;
-        o.b[i] = b*dk + eb*(b*rm + rd) + s*(1 - mt + mt*b) + b*em; }
+        o.b[i] = b*dk + eb*(b*rm + rd) + s*(1 - mt + mt*b) + b*em;
+        // (the page's coloured lights: their shift of the light on each channel, and the rim's colour on its shine)
+        if(L.hue){ const f = (1 - 0.85*mt)/L.flat;
+          o.r[i] += r*litT(L, i, 0)*f + s*(1 - mt + mt*r)*(litS(null, 0, L, i) - 1);
+          o.g[i] += g*litT(L, i, 1)*f + s*(1 - mt + mt*g)*(litS(null, 1, L, i) - 1);
+          o.b[i] += b*litT(L, i, 2)*f + s*(1 - mt + mt*b)*(litS(null, 2, L, i) - 1); } }
       return [o];
     }
     if(!h0) return [img];
@@ -16757,6 +16942,11 @@ const STEP_RUN = {
     const H = new Float32Array(N); for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
     const L = lightOf(H, ctx.light ?? 315, 1, 0.3, 0.6), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
     for(let i = 0; i < N; i++){ const k = L.light[i]/L.flat, s = L.spec[i]*0.6; o.r[i] = img.r[i]*k + s; o.g[i] = img.g[i]*k + s; o.b[i] = img.b[i]*k + s; }
+    // (the page's coloured lights, ROADMAP C1, C2: the Ambient Hue and the rim light's hue on each channel)
+    if(L.hue) for(let i = 0; i < N; i++){ const s = L.spec[i]*0.6;
+      o.r[i] += img.r[i]*litT(L, i, 0)/L.flat + s*(litS(null, 0, L, i) - 1);
+      o.g[i] += img.g[i]*litT(L, i, 1)/L.flat + s*(litS(null, 1, L, i) - 1);
+      o.b[i] += img.b[i]*litT(L, i, 2)/L.flat + s*(litS(null, 2, L, i) - 1); }
     return [o];
   },
   colour(E, n){ const { P, hexCol } = E;
@@ -18913,7 +19103,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null, lightRig()]);   // (the page's lights, set round the making: texCore withLightRig)
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -20025,6 +20215,12 @@ for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate
 // Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
 // guessed: each of these draws the same picture at every height.
 for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminagashi', 'flowfield']) TEXTURE_CAPS[t].dirOnly = true;
+// THE PAGE'S LIGHTS (ROADMAP C1, C2: the dial's rim light, the Ambient slider under it, the Main Light, Rim Light and
+// Ambient Hues) for the surfaces the engine lights whose dial is a light. Measured, not guessed: each of these changes
+// under them (texCore withLightRig); the rest draw as they always did and never show them. (Linen Tooth, Stained Glass
+// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day.)
+for(const t of ['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
+  'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -20360,6 +20556,12 @@ function describeRequest(type, w, h, opts){
   // up to 130 for the engine-lit textures (past the dial's rim: lower light); 100 for the rest
   const tiltMax = (TEXTURE_CAPS[RETIRED[type] || type] || {}).lowLight ? 130 : 100;
   const lightTilt = (opts.lightTilt >= 0) ? Math.round(Math.min(tiltMax, opts.lightTilt)) : 100;
+  // THE PAGE'S LIGHTS (ROADMAP C1, C2): the Ambient slider and hue, and the rim light (the dial's second handle), for a
+  // surface they light (`rig`, measured) or a graph; any other surface never sees them, and keys as it always did
+  const rig = ((TEXTURE_CAPS[type] || {}).rig || type === 'athanor' || type === 'athanorsteps')
+    ? lightRigOf({ ambient: opts.ambient, ambientHue: opts.ambientHue, rimDeg: opts.rimDeg, rimTilt: opts.rimTilt == null ? null : Math.min(tiltMax, +opts.rimTilt), rimHue: opts.rimHue,
+        // (the main light's colour: a surface with a Diffuse Hue has it as that, in its material)
+        mainHue: (TEXTURE_CAPS[type] || {}).diffuse ? null : opts.tint6 }) : null;
   const defs = paramsFor(type === 'athanorsteps' ? 'athanor' : type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
@@ -20379,6 +20581,7 @@ function describeRequest(type, w, h, opts){
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
+            + (rig ? `_L${rigKey(rig)}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
@@ -20397,8 +20600,15 @@ function describeRequest(type, w, h, opts){
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
 }
+/** A surface layer's lights (the look's keys) as a request's (ROADMAP C1, C2): the Ambient slider (0–200; 100 the
+ *  surface's own) and the Ambient Hue, and the rim light, the light dial's second handle (its way and height; its hue,
+ *  whose alpha is its strength). */
+function layerLights(L){ return { ambient: L.textureAmbient, ambientHue: L.textureTint8, rimDeg: L.textureRim, rimTilt: L.textureRimTilt, rimHue: L.textureTint7 }; }
+// the page's lights in a texture's key: the ambient (×100), its hue, and the rim (way, height, strength, hue)
+function rigKey(r){ const q = v => v.map(x => Math.round(x*1000)).join('.');
+  return Math.round(r.amb*100) + (r.ambHue ? 'a' + q(r.ambHue) : '') + (r.mainHue ? 'm' + q(r.mainHue) : '') + (r.rim ? `r${r.rim.deg},${Math.round(r.rim.tilt*100)},${Math.round(r.rim.k*255)}` + (r.rim.hue ? ',' + q(r.rim.hue) : '') : ''); }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
 // usual way. No graph, or no Surface in it: a flat mid-grey (nothing shows).
@@ -20490,7 +20700,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
 }
 function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, t3, t4, t5, t6, env, camera, page } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -20531,8 +20741,8 @@ function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+  let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -21412,6 +21622,13 @@ but bear with me, dear}]/jitter:200
           <div class="tool-row" id="textureToolRow">
 <div class="field full" id="lightRow">
             <label data-str="label.light_direction">Light Direction</label>
+            <!-- WHICH LIGHT THE FINGER MOVES (Ruby: a second handle on the dial, chosen as Two Surfaces' Upper and Lower are):
+                 the main light, or the RIM LIGHT, a second light from its own place on the dial in its own color. Shown only
+                 for a surface the page's lights reach (TEXTURE_CAPS rig) -->
+            <div class="radio-group light-seg" id="lightSeg" role="group" aria-label="Which light the dial moves">
+              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main</span></button>
+              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim</span></button>
+            </div>
             <div class="light-dial-row">
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
@@ -21429,20 +21646,32 @@ but bear with me, dear}]/jitter:200
                   <!-- the halfway mark (it catches lightly) and the centre -->
                   <circle class="ld-half" r="7.5"></circle>
                   <circle class="ld-centre" r="1.4"></circle>
+                  <!-- the rim light's handle, under the main light's; where the two overlap they mix to white (to black on a light
+                       theme), as two lights do -->
+                  <defs><clipPath id="lightMainClip"><circle id="lightMainClipDot" r="5.6" cx="0" cy="0"></circle></clipPath></defs>
+                  <circle class="ld-rim-handle" id="lightRimHandle" r="5.6" cx="0" cy="0"></circle>
                   <circle class="ld-handle" id="lightHandle" r="5.6" cx="0" cy="0"></circle>
+                  <circle class="ld-overlap" id="lightOverlap" r="5.6" cx="0" cy="0" clip-path="url(#lightMainClip)"></circle>
                 </svg>
               </div>
               <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset the light" aria-label="Reset the light to its default">⟲</button>
               <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="Light from straight overhead" aria-label="Move the light straight overhead, keeping its angle">◎</button>
               <button type="button" class="ld-btn ld-random" id="lightRandom" data-sound="dialRandom" title="Roll the light, the way the dice roll" aria-label="Roll the light direction, the way the dice roll">⚄</button>
             </div>
-            <!-- the dial's two numbers, shown and typed: its angle, and how far out it reaches (100 the rim; past it, lower) -->
+            <!-- THE AMBIENT LIGHT (Ruby: its strength a slider under the dial, as the camera's zoom is): the light from
+                 everywhere. Halfway is the surface's own; left, deeper shadows; right, softer -->
+            <input type="range" class="cam-zoom light-amb" id="textureAmbient" min="0" max="200" step="1" value="100" aria-label="Ambient light" title="Ambient: the light from everywhere. Halfway is the surface's own; to the left, deeper shadows; to the right, softer.">
+            <!-- the dial's numbers, shown and typed: the chosen light's angle and how far out it reaches (100 the rim; past it,
+                 lower), and the ambient -->
             <div class="ld-values">
               <label>Angle <input type="number" id="lightDegIn" min="0" max="359" step="1" inputmode="numeric">°</label>
               <label id="lightTiltField">Height <input type="number" id="lightTiltIn" min="0" max="130" step="1" inputmode="numeric">%</label>
+              <label id="lightAmbField">Ambient <input type="number" id="lightAmbIn" min="0" max="200" step="1" inputmode="numeric">%</label>
             </div>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
+            <input type="hidden" id="textureRim" value="135">
+            <input type="hidden" id="textureRimTilt" value="100">
           <input type="hidden" id="activeSpell" value="">
           </div>
           <!-- THE CAMERA DIAL (Ruby: a second dial, the camera's, so the light dial is the light's alone). Drag from the
@@ -21480,6 +21709,21 @@ but bear with me, dear}]/jitter:200
             <input type="hidden" id="cameraView" value="0">
             <input type="hidden" id="cameraZoom" value="100">
           </div>
+          <!-- THE LIGHTS' COLORS (Ruby: the color selectors beside the dial that places the lights): the main light's, the rim
+               light's (its alpha its strength: 0 is off, and the row fades), the ambient's. Then the surface's own hues, then
+               the material's -->
+          <div class="field full tool-hidden" id="tint6Row">
+            <label id="tint6Label" data-str="label.diffuse_hue" title="The color of the main light, on everything it reaches. White leaves it unchanged; alpha sets the strength.">Main Light Hue</label>
+            <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
+          </div>
+          <div class="field full tool-hidden" id="tint7Row">
+            <label id="tint7Label" data-str="label.rim_hue" title="The rim light: a second light from its own place on the dial (Rim, above it). Its color; its alpha is how strong it is, and 0 turns it off.">Rim Light Hue</label>
+            <input type="text" id="textureTint7Hex" value="#CFE3FF00" data-coloris>
+          </div>
+          <div class="field full tool-hidden" id="tint8Row">
+            <label id="tint8Label" data-str="label.ambient_hue" title="The color of the light from everywhere, strongest in the shade. White leaves it unchanged; alpha sets the strength.">Ambient Hue</label>
+            <input type="text" id="textureTint8Hex" value="#FFFFFF" data-coloris>
+          </div>
           <div class="field full" id="tint1Row">
             <label id="tint1Label" data-str="label.tint">Tint</label>
             <input type="text" id="textureTint1Hex" value="#7A2B2B" data-coloris>
@@ -21488,6 +21732,10 @@ but bear with me, dear}]/jitter:200
             <label id="tint2Label" data-str="label.second_tint">Second Tint</label>
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
+          <div class="field full tool-hidden" id="tint5Row">
+            <label id="tint5Label" data-str="label.fifth_hue" title="Light glowing from within the surface. Black is none.">Glow Hue</label>
+            <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
+          </div>
           <div class="field full tool-hidden" id="tint3Row">
             <label id="tint3Label" data-str="label.highlight_hue" title="Tints the shine where light catches the surface. White leaves it unchanged; alpha sets the strength.">Specular Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
@@ -21495,14 +21743,6 @@ but bear with me, dear}]/jitter:200
           <div class="field full tool-hidden" id="tint4Row">
             <label id="tint4Label" data-str="label.shade_hue" title="Tints the shadows, like sky light bouncing in. White leaves them unchanged; alpha sets the strength.">Shadow Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
-          </div>
-          <div class="field full tool-hidden" id="tint6Row">
-            <label id="tint6Label" data-str="label.diffuse_hue" title="Tints the light itself, on everything it reaches. White leaves it unchanged; alpha sets the strength.">Diffuse Hue</label>
-            <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
-          </div>
-          <div class="field full tool-hidden" id="tint5Row">
-            <label id="tint5Label" data-str="label.fifth_hue" title="Light glowing from within the surface. Black is none.">Glow Hue</label>
-            <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full" id="seedRow">
             <label data-str="label.texture_seed">Texture Seed</label>
@@ -22176,7 +22416,9 @@ const UI_STRINGS = {
   'label.breathing_room':                      "Breathing Room",
   'label.highlight_hue':                       "Specular Hue",
   'label.shade_hue':                           "Shadow Hue",
-  'label.diffuse_hue':                         "Diffuse Hue",
+  'label.diffuse_hue':                         "Main Light Hue",
+  'label.rim_hue':                             "Rim Light Hue",
+  'label.ambient_hue':                         "Ambient Hue",
   'label.fifth_hue':                           "Glow Hue",
   'label.text_margins':                        "Text Margins",
   'label.radial_gradient_text':                "Gradient Text?",
@@ -22288,6 +22530,8 @@ const UI_STRINGS = {
   'label.text_cut':                          "Cut Out by Text",
   'label.shape_strength':                    "Shape Strength",
   'button.layer_upper':                      "Upper",
+  'button.light_main':                       "Main",
+  'button.light_rim':                        "Rim",
   'button.layer_lower':                      "Lower",
   'button.layer_swap':                       "⇅ Swap",
   'label.glass_strength':                    "Strength",
@@ -25818,6 +26062,48 @@ function lightVec(light){
  *  engine reads it, sinking the light from 12° toward 4° above the horizon —
  *  long, raking shadows. Textures that shade themselves never see it. */
 function lightLow(){ return Math.max(0, Math.min(1, (LIGHT_TILT - 1) / 0.3)); }
+
+// ---------- THE PAGE'S LIGHTS: a rim light and the ambient (ROADMAP C1, C2) ----------
+// Beside the dial's light the page may give an engine-lit surface a RIM LIGHT (the dial's second handle: a light from
+// its own way and height, in its own colour) and set its AMBIENT light (how much: the slider under the dial, 1 the
+// surface's own; and its colour). Set round one texture's making, as withLightTilt is. Null, the default, is the one
+// light exactly as ever.
+//   amb      the ambient share, times this
+//   ambHue   the ambient light's colour at white's brightness (null: none)
+//   mainHue  the dial's own light's colour, on what it reaches (null: none)
+//   rim      { deg, tilt (as the dial's: 0 overhead, 1 its rim, on to 1.3 lower), k (0..1: its strength), hue (null: white) }
+let LIGHT_RIG = null;
+function withLightRig(rig, fn){
+  const prev = LIGHT_RIG; LIGHT_RIG = rig || null;
+  try { return fn(); } finally { LIGHT_RIG = prev; }
+}
+/** The page's lights now (null: the dial's light alone). */
+function lightRig(){ return LIGHT_RIG; }
+/** The rig from the page's settings, null when they change nothing: `ambient` 0..200 (100: the surface's own),
+ *  `ambientHue` and `mainHue` (#RRGGBB[AA]; white is none, alpha how much of it), and the rim: `rimDeg`, `rimTilt`
+ *  (0..130) and `rimHue` (#RRGGBBAA: its colour, its alpha its strength; 0 is off). */
+function lightRigOf({ ambient, ambientHue, mainHue, rimDeg, rimTilt, rimHue } = {}){
+  const a = +ambient, amb = ambient != null && ambient !== '' && isFinite(a) ? Math.max(0, Math.min(200, Math.round(a)))/100 : 1;
+  const hueOf = x => { const h = x ? resolveAlpha(String(x), '#FFFFFF') : null; return h && !isWhiteHex(h) ? rgb01(h) : null; };
+  const ambHue = hueOf(ambientHue), main = hueOf(mainHue);
+  let rim = null;
+  const h = rimHue ? String(rimHue).replace('#', '') : '';
+  if(/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(h)){
+    const k = h.length === 8 ? parseInt(h.slice(6, 8), 16)/255 : 1, c = '#' + h.slice(0, 6);
+    const t = +rimTilt;
+    if(k > 0) rim = { deg: ((Math.round(+rimDeg || 0) % 360) + 360) % 360, tilt: Math.max(0, Math.min(1.3, (rimTilt == null || rimTilt === '' || !isFinite(t) ? 100 : Math.round(t))/100)), k, hue: isWhiteHex(c) ? null : rgb01(c) };
+  }
+  return amb === 1 && !ambHue && !main && !rim ? null : { amb, ambHue, mainHue: main, rim };
+}
+/** A light's way as lightHeights sees it, from its direction (degrees, as the dial's) and height (0..1.3): toward the
+ *  light (L), Blinn's half vector (H), and its shadow march (one step toward it, and how fast a ray climbs). */
+function lightWay(deg, T){
+  const a = ((deg == null ? 315 : deg) - 90)*Math.PI/180, tilt = Math.max(0, Math.min(1, T)), low = Math.max(0, Math.min(1, (T - 1)/0.3));
+  const elev = (90 - tilt*78 - low*8)*Math.PI/180, horiz = Math.cos(elev);
+  const Lx = tilt > 1e-6 ? -Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? -Math.sin(a)*horiz : 0, Lz = Math.sin(elev);
+  const hz = Lz + 1, hl = Math.hypot(Lx, Ly, hz) || 1, lxy = Math.hypot(Lx, Ly);
+  return { Lx, Ly, Lz, Hx: Lx/hl, Hy: Ly/hl, Hz: hz/hl, lxy, stepX: lxy > 1e-6 ? Lx/lxy : 0, stepY: lxy > 1e-6 ? Ly/lxy : 0, rise: lxy > 1e-6 ? Lz/lxy : 1e9 };
+}
 /** The dial as a PLACE on the page, for textures that use it as a position:
  *  the round dial stretched onto the square page, so its rim at 45° reaches
  *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
@@ -25840,6 +26126,7 @@ uniform highp sampler2D uH;
 uniform ivec2 uSize; uniform vec3 uL, uHalf;
 uniform float uRelief, uShine, uSpecK, uShadow, uAO, uAmbient, uRise, uStepX, uStepY;
 uniform int uSteps, uStride, uDoShadow, uR, uHasN, uMode, uHasG;
+uniform int uRim, uSteps2, uStride2, uDoShadow2; uniform vec3 uL2, uHalf2; uniform float uK2, uRise2, uStep2X, uStep2Y;
 uniform highp sampler2D uN;
 uniform highp sampler2D uG;
 out vec4 o;
@@ -25874,8 +26161,25 @@ void main(){
   if(uHasG == 1){ float g = texelFetch(uG, p, 0).r; shine = 4.0 + g*120.0; specK = 0.15 + g*0.85; }
   float spec = pow(nh, shine)*specK*(0.35 + 0.65*lit);
   float dsh = diffuse*(1.0 - uShadow*(1.0 - lit));
-  float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
-  float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
+  float r2 = 0.0, s2 = 0.0;
+  if(uRim == 1){
+    float d2 = dot(n, uL2);
+    if(d2 > 0.0){
+      float lit2 = 1.0;
+      if(uDoShadow2 == 1){
+        for(int k = uStride2; k <= uSteps2; k += uStride2){
+          ivec2 q = ivec2(floor(vec2(p) + vec2(uStep2X, uStep2Y)*float(k) + 0.5));
+          float over = at(q)*uRelief - (h0 + uRise2*float(k));
+          if(over > 0.0){ lit2 = min(lit2, max(0.0, 1.0 - over*0.6)); if(lit2 == 0.0) break; }
+        }
+      }
+      r2 = uK2*(1.0 - uAmbient)*d2*(1.0 - uShadow*(1.0 - lit2))*(1.0 - occl);
+      s2 = pow(max(0.0, dot(n, uHalf2)), shine)*specK*(0.35 + 0.65*lit2)*uK2;
+      light += r2; spec += s2;
+    }
+  }
+  float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : uMode == 2 ? clamp(r2, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
+  float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : uMode == 2 ? clamp(s2, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
   float ah = floor(a/256.0), bh = floor(b/256.0);
   o = vec4(ah/255.0, (a - ah*256.0)/255.0, bh/255.0, (b - bh*256.0)/255.0);
 }`;
@@ -25915,7 +26219,8 @@ in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
     const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = n => gl.getUniformLocation(prog, n);
-    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG'].map(n => [n, U(n)])) };
+    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG',
+      'uRim','uSteps2','uStride2','uDoShadow2','uL2','uHalf2','uK2','uRise2','uStep2X','uStep2Y'].map(n => [n, U(n)])) };
   } catch(e){ GPU = null; }
   return GPU;
 }
@@ -25942,6 +26247,10 @@ function gpuLightHeights(H, ww, wh, P){
     gl.uniform1f(u.uShadow, P.shadow); gl.uniform1f(u.uAO, P.ao); gl.uniform1f(u.uAmbient, P.ambient);
     gl.uniform1f(u.uRise, P.rise); gl.uniform1f(u.uStepX, P.stepX); gl.uniform1f(u.uStepY, P.stepY);
     gl.uniform1i(u.uSteps, P.steps); gl.uniform1i(u.uStride, P.stride); gl.uniform1i(u.uDoShadow, P.doShadow ? 1 : 0); gl.uniform1i(u.uR, P.R);
+    // the page's rim light (withLightRig), its own way, height and march
+    const R2 = P.R2; gl.uniform1i(u.uRim, R2 ? 1 : 0);
+    if(R2){ gl.uniform3f(u.uL2, R2.Lx, R2.Ly, R2.Lz); gl.uniform3f(u.uHalf2, R2.Hx, R2.Hy, R2.Hz); gl.uniform1f(u.uK2, R2.k); gl.uniform1f(u.uRise2, R2.rise);
+      gl.uniform1f(u.uStep2X, R2.stepX); gl.uniform1f(u.uStep2Y, R2.stepY); gl.uniform1i(u.uSteps2, R2.steps); gl.uniform1i(u.uStride2, R2.stride); gl.uniform1i(u.uDoShadow2, R2.doShadow ? 1 : 0); }
     // a detail normal map, if given, on its own texture unit
     let nTex = null;
     if(P.N){
@@ -25961,17 +26270,21 @@ function gpuLightHeights(H, ww, wh, P){
       gl.uniform1i(u.uG, 2); gl.uniform1i(u.uHasG, 1);
     } else { gl.uniform1i(u.uG, 0); gl.uniform1i(u.uHasG, 0); }
     gl.viewport(0, 0, ww, wh);
-    // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion
+    // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion; pass 2 (a coloured rim light): its light and shine
     const read = mode => { gl.uniform1i(u.uMode, mode); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       const px = new Uint8Array(ww*wh*4); gl.readPixels(0, 0, ww, wh, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
-    const px = read(0), px1 = P.comp ? read(1) : null;
+    const px = read(0), px1 = P.comp ? read(1) : null, px2 = R2 && P.rimParts ? read(2) : null;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex); if(nTex) gl.deleteTexture(nTex); if(gTex) gl.deleteTexture(gTex);
     const light = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
     for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ light[i] = (px[q]*256 + px[q+1])/65535*2; spec[i] = (px[q+2]*256 + px[q+3])/65535; }
-    if(!px1) return { light, spec };
-    const diffuse = new Float32Array(ww*wh), occl = new Float32Array(ww*wh);
-    for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ diffuse[i] = (px1[q]*256 + px1[q+1])/65535; occl[i] = (px1[q+2]*256 + px1[q+3])/65535; }
-    return { light, spec, diffuse, occl };
+    const res = { light, spec };
+    if(px1){ const diffuse = new Float32Array(ww*wh), occl = new Float32Array(ww*wh);
+      for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ diffuse[i] = (px1[q]*256 + px1[q+1])/65535; occl[i] = (px1[q+2]*256 + px1[q+3])/65535; }
+      res.diffuse = diffuse; res.occl = occl; }
+    if(px2){ const ra = new Float32Array(ww*wh), rs = new Float32Array(ww*wh);
+      for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ ra[i] = (px2[q]*256 + px2[q+1])/65535; rs[i] = (px2[q+2]*256 + px2[q+3])/65535; }
+      res.ra = ra; res.rs = rs; }
+    return res;
   } catch(e){ GPU = null; return null; }
 }
 
@@ -26008,7 +26321,16 @@ function gpuLightHeights(H, ww, wh, P){
  * what counts as "in shadow" — see materialOf / litK / litS).
  */
 function lightHeights(H, ww, wh, opts = {}){
-  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, ambient = 0.35, normals = null, components = false } = opts;
+  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, normals = null } = opts;
+  // THE PAGE'S LIGHTS (withLightRig): the ambient scaled, and a rim light beside the dial's. `rig: false` keeps them out;
+  // `rig: 'ambient'` takes the ambient only (a part that lights a second way of its own takes the rim as that)
+  const RG = opts.rig === false ? null : LIGHT_RIG, RM = RG && RG.rim && opts.rig !== 'ambient' ? RG.rim : null;
+  // (the slider scales the ambient light against the direct: its share's odds, so 200% is twice as much fill and never
+  //  more than all the light; 0 is none)
+  const a0 = opts.ambient === undefined ? 0.35 : opts.ambient, ambient = RG && RG.amb !== 1 ? Math.max(0, Math.min(1, a0*RG.amb/(1 + a0*(RG.amb - 1)))) : a0;
+  // (the coloured lights' shares, per pixel, for litK and litS: the ambient's, and the rim's light and shine)
+  const HUE = RG && (RG.ambHue || RG.mainHue || (RM && RM.hue)) ? { a: RG.ambHue || null, m: RG.mainHue || null, r: (RM && RM.hue) || null } : null;
+  const components = !!opts.components || !!(HUE && (HUE.a || HUE.m));
   const N = normals && normals.length >= ww*wh*3 ? normals : null;
   const GM = opts.glossMap && opts.glossMap.length >= ww*wh ? opts.glossMap : null;
   const { lx, ly } = lightVec(light);
@@ -26027,14 +26349,21 @@ function lightHeights(H, ww, wh, opts = {}){
   // march as far as the tallest height can throw a shadow at this elevation
   let hMax = 0, hMin = Infinity; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
   const steps = opts.marchSteps || Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);   // (lightSparse passes the whole field's)
+  // THE RIM LIGHT: its own way and height, its own shadows; its direct light and shine added to the dial's, at its strength
+  let R2 = null;
+  if(RM){ const w = lightWay(RM.deg, RM.tilt), st = opts.marchSteps2 || Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, w.rise)) + 2);
+    R2 = { ...w, k: RM.k, steps: st, stride: Math.max(1, Math.ceil(st/40)), doShadow: shadow > 0 && w.lxy > 0.02 && w.rise < 1e8 }; }
+  // flat: the light on open, flat ground — what "in shadow" is measured against (the rim's too: it lights open ground)
+  const flat = ambient + (1 - ambient)*Lz + (R2 ? R2.k*(1 - ambient)*R2.Lz : 0);
   // on the GPU when it's there (the same maths, per pixel, at once)
   if(GPU_LIGHT && ww*wh >= 4096){
     const g = gpuLightHeights(H, ww, wh, { Lx, Ly, Lz, hx, hy, hz, hl, shininess, specK, relief, shadow, ao, ambient, rise,
-      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, G: GM, comp: components });
-    if(g){ g.flat = ambient + (1 - ambient)*Lz; return g; }
+      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, G: GM, comp: components, R2, rimParts: !!(HUE && HUE.r) });
+    if(g){ g.flat = flat; return rigParts(g, RG, HUE, ambient); }
   }
   const out = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
   const dif = components ? new Float32Array(ww*wh) : null, occA = components ? new Float32Array(ww*wh) : null;
+  const RA = HUE && HUE.r ? new Float32Array(ww*wh) : null, RS = RA ? new Float32Array(ww*wh) : null;
   // occlusion compares each height with its neighbourhood's (a box average)
   const R = 4, avg = new Float32Array(ww*wh);
   if(ao > 0){
@@ -26075,11 +26404,36 @@ function lightHeights(H, ww, wh, opts = {}){
       const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
       if(GM){ const g = GM[i]; spec[i] = Math.pow(nh, 4 + g*120)*(0.15 + g*0.85)*(0.35 + 0.65*lit); }
       else spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
+      // the rim light, where a face turns toward it: its own march, its light and its shine
+      if(R2){ const d2 = nx*R2.Lx + ny*R2.Ly + nz*R2.Lz;
+        if(d2 > 0){ let lit2 = 1;
+          if(R2.doShadow) for(let k = R2.stride; k <= R2.steps; k += R2.stride){
+            const rayH = h0 + R2.rise*k;
+            if(rayH >= hTop) break;
+            let sx = Math.round(x + R2.stepX*k), sy = Math.round(y + R2.stepY*k);
+            sx = sx < 0 ? 0 : sx >= ww ? ww - 1 : sx; sy = sy < 0 ? 0 : sy >= wh ? wh - 1 : sy;
+            const over = H[sy*ww + sx]*relief - rayH;
+            if(over > 0){ lit2 = Math.min(lit2, Math.max(0, 1 - over*0.6)); if(lit2 === 0) break; }
+          }
+          const r2 = R2.k*(1 - ambient)*d2*(1 - shadow*(1 - lit2))*(1 - occl), nh2 = Math.max(0, nx*R2.Hx + ny*R2.Hy + nz*R2.Hz);
+          const s2 = (GM ? Math.pow(nh2, 4 + GM[i]*120)*(0.15 + GM[i]*0.85) : Math.pow(nh2, shininess)*specK)*(0.35 + 0.65*lit2)*R2.k;
+          out[i] += r2; spec[i] += s2; if(RA){ RA[i] = r2; RS[i] = s2; } } }
     }
   }
-  // flat: the light on open, flat ground — what "in shadow" is measured against
-  const flat = ambient + (1 - ambient)*Lz;
-  return components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+  const res = components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+  if(RA){ res.ra = RA; res.rs = RS; }
+  return rigParts(res, RG, HUE, ambient);
+}
+/** lightHeights' answer with the page's lights' shares (only when there are coloured ones): the effective ambient, the
+ *  ambient's share per pixel (ambient × (1 − occlusion)), the dial's light's own (its direct light), the rim's light and
+ *  shine (`ra`, `rs`), and their hues. */
+function rigParts(L, RG, HUE, ambient){
+  if(!RG) return L;
+  L.ambient = ambient;
+  if(HUE){ L.hue = HUE;
+    if(HUE.a){ const A = new Float32Array(L.light.length); for(let i = 0; i < A.length; i++) A[i] = ambient*(1 - L.occl[i]); L.aa = A; }
+    if(HUE.m){ const A = new Float32Array(L.light.length); for(let i = 0; i < A.length; i++) A[i] = (1 - ambient)*L.diffuse[i]*(1 - L.occl[i]); L.ma = A; } }
+  return L;
 }
 
 /**
@@ -26125,12 +26479,20 @@ function lightSparse(H, ww, wh, opts = {}, T = 64){
   // length; every side needs the occlusion box (and a pixel for the slope)
   const Ms = tilt > 1e-6 && lxy > 0.02 && (opts.shadow ?? 0.6) > 0 ? Math.min(170, Math.ceil(((hMax - hMin)*relief)/rise) + 3) : 0, m0 = 6;
   const sX = tilt > 1e-6 ? -lx/tilt : 0, sY = tilt > 1e-6 ? -ly/tilt : 0;        // one step toward the light
+  // (the page's rim light casts shadows its own way: as far, each way, as its own march reaches)
+  const RM = opts.rig === false || opts.rig === 'ambient' || !LIGHT_RIG ? null : LIGHT_RIG.rim, W2 = RM ? lightWay(RM.deg, RM.tilt) : null;
+  const Ms2 = W2 && W2.lxy > 0.02 && (opts.shadow ?? 0.6) > 0 ? Math.min(170, Math.ceil(((hMax - hMin)*relief)/W2.rise) + 3) : 0;
+  const reachOf = (s1, s2) => Math.max(Math.ceil(Math.max(0, s1)*Ms), W2 ? Math.ceil(Math.max(0, s2)*Ms2) : 0) + m0;
   // a detail's shadow reaches this far from it, each way (left, right, up, down)…
-  const fl = Math.ceil(Math.max(0, sX)*Ms) + m0, fr = Math.ceil(Math.max(0, -sX)*Ms) + m0;
-  const fu = Math.ceil(Math.max(0, sY)*Ms) + m0, fd = Math.ceil(Math.max(0, -sY)*Ms) + m0;
+  const fl = reachOf(sX, W2 && W2.stepX), fr = reachOf(-sX, W2 && -W2.stepX);
+  const fu = reachOf(sY, W2 && W2.stepY), fd = reachOf(-sY, W2 && -W2.stepY);
   const M = Math.max(fl, fr, fu, fd);
   // every piece marches as the whole field would (the same steps, the same stride)
   const marchSteps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
+  const marchSteps2 = W2 ? Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, W2.rise)) + 2) : undefined;
+  // (the coloured lights' shares, as open ground has them, then each piece's)
+  const RA = ground.ra ? new Float32Array(ww*wh).fill(ground.ra[0]) : null, RS = RA ? new Float32Array(ww*wh).fill(ground.rs[0]) : null;
+  const AA = ground.aa ? new Float32Array(ww*wh).fill(ground.aa[0]) : null, MA = ground.ma ? new Float32Array(ww*wh).fill(ground.ma[0]) : null;
   // where the details are: each tile's box around its non-flat points
   const tx = Math.ceil(ww/T), ty = Math.ceil(wh/T), box = new Int32Array(tx*ty*4).fill(-1);
   for(let y = 0; y < wh; y++){ const r = y*ww, b = ((y/T)|0)*tx;
@@ -26164,11 +26526,15 @@ function lightSparse(H, ww, wh, opts = {}, T = 64){
     const ex0 = Math.max(0, x0 - fr), ey0 = Math.max(0, y0 - fd), ex1 = Math.min(ww, x1 + fl), ey1 = Math.min(wh, y1 + fu);
     const ew = ex1 - ex0, eh = ey1 - ey0, E = new Float32Array(ew*eh);
     for(let y = 0; y < eh; y++) E.set(H.subarray((ey0 + y)*ww + ex0, (ey0 + y)*ww + ex1), y*ew);
-    const L = lightHeights(E, ew, eh, { ...opts, marchSteps }); lit += (e - i + 1)*(j1 - j0 + 1);
+    const L = lightHeights(E, ew, eh, { ...opts, marchSteps, ...(W2 ? { marchSteps2 } : {}) }); lit += (e - i + 1)*(j1 - j0 + 1);
     for(let y = y0; y < y1; y++){ const s = (y - ey0)*ew - ex0, r = y*ww;
-      out.set(L.light.subarray(s + x0, s + x1), r + x0); spec.set(L.spec.subarray(s + x0, s + x1), r + x0); }
+      out.set(L.light.subarray(s + x0, s + x1), r + x0); spec.set(L.spec.subarray(s + x0, s + x1), r + x0);
+      if(RA){ RA.set(L.ra.subarray(s + x0, s + x1), r + x0); RS.set(L.rs.subarray(s + x0, s + x1), r + x0); }
+      if(AA) AA.set(L.aa.subarray(s + x0, s + x1), r + x0); if(MA) MA.set(L.ma.subarray(s + x0, s + x1), r + x0); }
   }
-  return { light: out, spec, flat: ground.flat, lit, of: tx*ty };
+  const res = { light: out, spec, flat: ground.flat, lit, of: tx*ty };
+  if(ground.hue){ res.hue = ground.hue; res.ambient = ground.ambient; if(RA){ res.ra = RA; res.rs = RS; } if(AA) res.aa = AA; if(MA) res.ma = MA; }
+  return res;
 }
 
 
@@ -26307,16 +26673,23 @@ function resolveAlpha(hex, noneHex){
  *  slopes turned away — the more, the deeper the shadow; lit faces keep their
  *  own colour. (`ambient` is kept for callers; the shadow depth comes from L.) */
 function litK(L, i, ambient, M, c){
-  const k = L.light[i];
-  if(!M) return k;
+  const k = L.light[i], t = L.hue ? litT(L, i, c) : 0;
+  if(!M) return k + t;
   // a shadow half as bright as open ground takes the shade hue fully
   const deep = Math.max(0, Math.min(1, 2*(L.flat - k)/L.flat));
   // DIFFUSE: the light's own colour, on what it reaches (lit faces: not the shadow)
   const di = M.di ? 1 + (M.di[c] - 1)*Math.min(1, k/L.flat)*(1 - deep) : 1;
-  return k*(1 + (M.sh[c] - 1)*deep)*di;
+  return k*(1 + (M.sh[c] - 1)*deep)*di + t;
 }
-/** The highlight's colour in channel c (1 with no material). */
-function litS(M, c){ return M ? M.hi[c] : 1; }
+/** The page's coloured lights in channel c at pixel i (ROADMAP C1, C2): what the Ambient Hue, the main light's hue and
+ *  the rim light's shift the grey light by (0 without them). Their shares are already in L.light, in white. */
+function litT(L, i, c){ const H = L.hue; if(!H) return 0;
+  return (H.a ? L.aa[i]*(H.a[c] - 1) : 0) + (H.m ? L.ma[i]*(H.m[c] - 1) : 0) + (H.r ? L.ra[i]*(H.r[c] - 1) : 0); }
+/** The highlight's colour in channel c (1 with no material). Given the light (L, i), a coloured rim light's share of
+ *  the shine takes its own colour. */
+function litS(M, c, L, i){ let f = M ? M.hi[c] : 1;
+  if(L && L.hue && L.hue.r && i != null){ const s = L.spec[i]; if(s > 1e-6) f += (L.rs[i]/s)*(L.hue.r[c] - f); }
+  return f; }
 /** Whether a highlight/shade hue counts as unset (white). */
 function noMaterialHue(h){ return isWhiteHex(h); }
 
@@ -28220,7 +28593,10 @@ function genSigils(w,h,amt,zoom,light,form,M3){
     const k=L.light[i]/fl, s=(L.spec[i]-sFlat)*110;
     if(k===1 && s===0) continue;
     const q=i*4;
-    if(!M3){ d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s)); }
+    if(L.hue) for(let c=0;c<3;c++){                               // (the page's coloured lights: each channel its own light)
+      const k1 = k + litT(L,i,c)/fl, kc = M3 && k1<1 ? 1 - (1-k1)*Math.max(0, 1 + (1 - M3.sh[c])*0.7) : k1;
+      d[q+c]=Math.max(0,Math.min(255,d[q+c]*kc + s*(M3 ? M3.hi[c] : 1)*litS(null,c,L,i))); }
+    else if(!M3){ d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s)); }
     else for(let c=0;c<3;c++){                                    // a shadowed wall takes the Shade hue, a glint the Highlight
       const kc = k<1 ? 1 - (1-k)*Math.max(0, 1 + (1 - M3.sh[c])*0.7) : k;
       d[q+c]=Math.max(0,Math.min(255,d[q+c]*kc + s*M3.hi[c])); }
@@ -28602,9 +28978,9 @@ function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
     const K = c => litK(L, i, 0.4, M3, c)/flat, sp = L.spec[i]*0.6, q = i*4;
     // GLOW: molten light in the sunken facets, as if lava showed through
     const e = GL ? 255*Math.pow(Math.min(1, Math.max(0, (-H[i]/(cell*0.3) - 0.4)/0.6)), 1.6) : 0;   // only the deepest
-    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0) + (GL ? GL.r*e : 0)));
-    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1) + (GL ? GL.g*e : 0)));
-    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2) + (GL ? GL.b*e : 0)));
+    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0, L, i) + (GL ? GL.r*e : 0)));
+    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1, L, i) + (GL ? GL.g*e : 0)));
+    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2, L, i) + (GL ? GL.b*e : 0)));
     dta[q+3] = 255;
   }
   sctx.putImageData(img, 0, 0);
@@ -28809,6 +29185,13 @@ function genBlackHole(w,h,amt,zoom,light,form){
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
 
+/** A grey lit texture's pixel under the page's coloured lights (texCore litT): each channel's light shifted by the
+ *  Ambient Hue's and the rim light's, as its grey light is (dl: the light over open ground's, at the texture's scale). */
+function litGrey(L, i, fl, dl, sp, M3){
+  const v = c => { const d = dl + litT(L, i, c)/fl*120; return clamp255(M3 ? greyLit(d, sp, M3, c) : 128 + d + sp); };
+  return [v(0), v(1), v(2)];
+}
+
 // The paper says no
 // to the pencil, very softly,
 // ten thousand times.
@@ -28859,6 +29242,7 @@ function genColdPress(w,h,amt,zoom,light,form,M3){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.06, shadow:0.55, ao:0.3, ambient:0.45, normals:N });
   const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, gloss:0.06, shadow:0, ao:0, ambient:0.45 }).spec[0];
   return paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*60;
+    if(L.hue) return litGrey(L, i, fl, dl, sp, M3);   // (the page's coloured lights)
     if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
     return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
 }
@@ -28968,7 +29352,7 @@ function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
     const sh=Math.max(0, L.spec[i]-fs)*Math.min(1, dn)*60;       // the sheen
     const col=c=>{ const base=[t.r,t.g,t.b][c], dp=deep[c];
       // (GLOW: where it dried at its edge, faintly)
-      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*b*a*0.8 : 0); };
+      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c, L, i) + (GL ? 255*[GL.r,GL.g,GL.b][c]*b*a*0.8 : 0); };
     return [clamp255(col(0)), clamp255(col(1)), clamp255(col(2))];
   });
 }
@@ -29453,7 +29837,7 @@ function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   for(let i=0;i<N;i++){
     const s=L.spec[i]*0.35, tone=1.05 - 0.09*TR[i], e=CR ? CR[i]*180 : 0;
     for(let c=0;c<3;c++){ const sc=c===0?sand.r:c===1?sand.g:sand.b, uc=c===0?sun.r:c===1?sun.g:sun.b, gc=GL ? (c===0?GL.r:c===1?GL.g:GL.b) : 0;
-      RGB[i*3+c]=clamp255(sc*litK(L,i,0.42,M3,c)*tone + uc*s*litS(M3,c) + gc*e); }
+      RGB[i*3+c]=clamp255(sc*litK(L,i,0.42,M3,c)*tone + uc*s*litS(M3,c, L, i) + gc*e); }
   }
   let OUT=RGB;
   if(!F.flat){
@@ -29523,7 +29907,7 @@ function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
   const L=lightHeights(H, ww, wh, { light, relief:1.2, gloss:gz, shadow:0.5, ao:0.3, ambient:0.66, normals:CN, glossMap:GM });
   return paintLit(w,h,div,ww,wh, i => {
     const k0=litK(L,i,0.66,M3,0), k1=litK(L,i,0.66,M3,1), k2=litK(L,i,0.66,M3,2), s=L.spec[i], g=Math.min(1, G[i]*1.6);
-    const s0=s*litS(M3,0), s1=s*litS(M3,1), s2=s*litS(M3,2);
+    const s0=s*litS(M3,0, L, i), s1=s*litS(M3,1, L, i), s2=s*litS(M3,2, L, i);
     const gc=[gold.r*(0.35+0.75*k0) + 255*s0*1.2, gold.g*(0.35+0.75*k1) + 235*s1*1.2, gold.b*(0.35+0.75*k2) + 170*s2*1.0];
     const cc=[glaze.r*k0*1.12 + 255*s0*gloss, glaze.g*k1*1.12 + 255*s1*gloss, glaze.b*k2*1.12 + 255*s2*gloss];
     // GLOW: the gold seams give off light, and a little spills onto the glaze beside them
@@ -29574,7 +29958,7 @@ function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   const sd=1 - damp*0.35, mg=1 + damp*0.25, RGB=new Float32Array(N*3);
   for(let i=0;i<N;i++){
     const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1 - m*(1 - damp*0.6));   // moss is matte (its own gloss map); dew on it when damp
-    const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
+    const sc=[stone.r*sd*k0 + 255*s*litS(M3,0, L, i), stone.g*sd*k1 + 255*s*litS(M3,1, L, i), stone.b*sd*k2 + 255*s*litS(M3,2, L, i)];
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     // GLOW: bioluminescent moss, brightest at the tips
     if(TIP){ const e=255*Math.min(1, TIP[i])*0.9; mc[0]+=GL.r*e; mc[1]+=GL.g*e; mc[2]+=GL.b*e; }
@@ -29713,7 +30097,7 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
     for(let c=0;c<3;c++){
       const k=litK(L,i,0.3,M3,c)/fl;
       let hc=hue[c]; if(film){ const fn=film[c]/Math.max(0.2,(0.2126*film[0]+0.7152*film[1]+0.0722*film[2])); hc=hc*(1-iri)+Math.min(2.2,fn)*iri; }
-      const v=128*(0.45+0.55*k) + 150*sp*litS(M3,c);
+      const v=128*(0.45+0.55*k) + 150*sp*litS(M3,c, L, i);
       // (oxide is saturated: the film's colour weighs more than the metal's own)
       const sat=film ? 0.55 - 0.3*iri : 0.55;
       d[q+c]=Math.max(0,Math.min(255, v*(sat+(1-sat)*hc) + 40*sp*(hc-1)));
@@ -29807,6 +30191,7 @@ function genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,crinkle,M3,GL){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.1, shadow:0.4, ao:0.2, ambient:0.5 });
   const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.1, shadow:0, ao:0, ambient:0.5 }).spec[0];
   const c=paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*90;
+    if(L.hue) return litGrey(L, i, fl, dl, sp, M3);   // (the page's coloured lights)
     if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
     return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
   const ctx=c.getContext('2d', CPU), U=Math.min(w,h), rgba=(o,a)=>`rgba(${o.r|0},${o.g|0},${o.b|0},${a})`;
@@ -30009,7 +30394,7 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
     for(let c=0;c<3;c++){
       // deep (dark) stone carries the hue fully; the bright fire, less (hue^(1.2 − inside), from a table: a power per channel per pixel was half the time)
       const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], u=(inside<0?0:inside>1?1:inside)*1024, u0=u|0, T=HT[c], tint=u0>=1024 ? T[1024] : T[u0]+(T[u0+1]-T[u0])*(u-u0);
-      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c);
+      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c, L, i);
       d[q+c]=val<0?0:val>255?255:val;
     }
     d[q+3]=255;
@@ -30152,7 +30537,7 @@ function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,M3){
       let ground=128*(1-s*0.55)*Math.min(1.1, k);
       // the powder of a pile: pale ash speckled toward char, lit as a mound
       if(P[i]>0){ const powder=(ASH[c]*0.88 + (CHAR[c]-ASH[c]*0.88)*PT[i])*litK(L, i, 0.45, M3, c)/L.flat; ground += (powder-ground)*P[i]; }
-      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c);
+      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c, L, i);
       const e=E[i], glow=e>0 ? (EM[c]+(HOT[c]-EM[c])*e*e)*e : 0;
       out[c]=clamp255(ground+(flake-ground)*a + glow*1.1);
     }
@@ -30274,7 +30659,7 @@ function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
     const out=[0,0,0];
     for(let c=0;c<3;c++){
       const lit=ICE[c]*litK(L, i, 0.6, M3, c)/L.flat;
-      out[c]=clamp255(128 + (lit-128)*cov + sp*litS(M3, c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*cov*0.35 : 0));
+      out[c]=clamp255(128 + (lit-128)*cov + sp*litS(M3, c, L, i) + (GL ? 255*[GL.r,GL.g,GL.b][c]*cov*0.35 : 0));
     }
     return out;
   });
@@ -34424,7 +34809,7 @@ const CHAOS_STEPS = {
         for(let c = 0; c < 3; c++){
           const gzc = GZ[c]*(1 - hv) + G2[c]*hv;
           const alb = g > 0 ? gzc*(1.12 - 0.3*th)*(1 - thin) + BS[c]*thin : BS[c]*gr;
-          let v = alb*(litK(L, k, 0.45, M3, c)/fl)*dirt + 255*sp*litS(M3, c);
+          let v = alb*(litK(L, k, 0.45, M3, c)/fl)*dirt + 255*sp*litS(M3, c, L, k);
           if(GW && g > 0) v += 255*GW[c]*(0.4 + 0.6*th)*0.55;
           OUT[c][k] = (v < 0 ? 0 : v > 255 ? 255 : v)/255;
         }
@@ -34471,7 +34856,8 @@ const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
 /** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
 function ltMaterial(E, n){
   const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
-  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di'), am = pick(8, 'am');
+  // (the Diffuse and Ambient Hues unwired: the page's light's and its ambient's, from its light rig)
+  const RG = lightRig(), sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di') || (RG && RG.mainHue) || null, am = pick(8, 'am') || (RG && RG.ambHue) || null;
   return (sh || hi || di || am) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di, am } : null;
 }
 /** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
@@ -34489,18 +34875,19 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   // (a light at its own height, whatever the page's dial says: Ringworld's dial is its camera, and its star its own light)
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb });
+  // (the page's ambient slider reaches it; the page's rim light is its second light, below)
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient' });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
   // (the AMBIENT share, for an Ambient Hue (ROADMAP C1): the light from everywhere, less what the hollows keep out)
-  const A = o.amb ? new Float32Array(K.length) : null; if(A) for(let i = 0; i < A.length; i++) A[i] = o.ambient*(1 - L.occl[i])/f;
+  const A = o.amb ? new Float32Array(K.length) : null, am = L.ambient ?? o.ambient; if(A) for(let i = 0; i < A.length; i++) A[i] = am*(1 - L.occl[i])/f;
   // THE SECOND LIGHT (C2): the same engine from another way, at its own height, its direct light and shine alone (the
   // ambient and the hollows are the first light's); soft, it is three ways averaged across its width
   let K2 = null, S2 = null;
   if(o.second){ const n = o.secondSoft > 0.02 ? 3 : 1, w = o.secondSoft*60; K2 = new Float32Array(K.length); S2 = new Float32Array(K.length);
     for(let q = 0; q < n; q++){ const d = deg + o.secondTurn + (n > 1 ? (q - 1)*w/2 : 0);
-      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true }));
+      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false }));
       for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
@@ -34525,7 +34912,7 @@ function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
   const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25);
   const per = M => { const o = new Float32Array(M.length); for(let i = 0; i < M.length; i++) o[i] = M[i]/100; return o; };
-  return { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
+  const o = { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
     ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
     tilt: E.P(n, 'from', 'the dial') === 'its own height' ? E.num(n, 'height', 60)/100 : null,
     // a SECOND LIGHT beside the dial's (ROADMAP C2): its strength (negative draws light out), where it comes from (turned
@@ -34534,6 +34921,11 @@ function ltSettings(E, n, byPoint){
     secondSoft: E.num(n, 'secondSoft', 30)/100, secondKind: E.P(n, 'secondKind', 'light and shine'),
     secondHue: (v => Array.isArray(v) ? ltHue(v) : null)(E.input(n, 9)),
     reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
+  // THE PAGE'S RIM LIGHT (the light dial's second handle) is the second light of a part that has none of its own: from
+  // its own way and height, in its own colour, at its strength
+  const PR = lightRig() && lightRig().rim;
+  if(PR && !o.second) Object.assign(o, { second: PR.k, secondTurn: PR.deg - deg, secondHeight: PR.tilt, secondSoft: 0, secondKind: 'light and shine', secondHue: PR.hue });
+  return o;
 }
 
 // ---- OIL PAINT: strokes laid along the picture's forms ----
@@ -38375,6 +38767,8 @@ function shGuilloche(w,h,amt,zoom,light,form){
     // the plate mid-grey; a groove darker, its lit wall catching the light
     const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
     const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+    // (the page's coloured lights: the Ambient Hue and the rim light's, on each channel)
+    if(L.hue) for(let c=0;c<3;c++){ const vc=v + 128*litT(L,i,c)/L.flat + L.spec[i]*90*(litS(null,c,L,i) - 1); d[q+c]=vc<0?0:vc>255?255:vc; }
   }
   sx.putImageData(im,0,0);
   const c=document.createElement('canvas'); c.width=w; c.height=h;
@@ -39114,7 +39508,12 @@ const STEP_RUN = {
         const r = img.r[i], g = img.g[i], b = img.b[i];
         o.r[i] = r*dk + er*(r*rm + rd) + s*(1 - mt + mt*r) + r*em;
         o.g[i] = g*dk + eg*(g*rm + rd) + s*(1 - mt + mt*g) + g*em;
-        o.b[i] = b*dk + eb*(b*rm + rd) + s*(1 - mt + mt*b) + b*em; }
+        o.b[i] = b*dk + eb*(b*rm + rd) + s*(1 - mt + mt*b) + b*em;
+        // (the page's coloured lights: their shift of the light on each channel, and the rim's colour on its shine)
+        if(L.hue){ const f = (1 - 0.85*mt)/L.flat;
+          o.r[i] += r*litT(L, i, 0)*f + s*(1 - mt + mt*r)*(litS(null, 0, L, i) - 1);
+          o.g[i] += g*litT(L, i, 1)*f + s*(1 - mt + mt*g)*(litS(null, 1, L, i) - 1);
+          o.b[i] += b*litT(L, i, 2)*f + s*(1 - mt + mt*b)*(litS(null, 2, L, i) - 1); } }
       return [o];
     }
     if(!h0) return [img];
@@ -39122,6 +39521,11 @@ const STEP_RUN = {
     const H = new Float32Array(N); for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
     const L = lightOf(H, ctx.light ?? 315, 1, 0.3, 0.6), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
     for(let i = 0; i < N; i++){ const k = L.light[i]/L.flat, s = L.spec[i]*0.6; o.r[i] = img.r[i]*k + s; o.g[i] = img.g[i]*k + s; o.b[i] = img.b[i]*k + s; }
+    // (the page's coloured lights, ROADMAP C1, C2: the Ambient Hue and the rim light's hue on each channel)
+    if(L.hue) for(let i = 0; i < N; i++){ const s = L.spec[i]*0.6;
+      o.r[i] += img.r[i]*litT(L, i, 0)/L.flat + s*(litS(null, 0, L, i) - 1);
+      o.g[i] += img.g[i]*litT(L, i, 1)/L.flat + s*(litS(null, 1, L, i) - 1);
+      o.b[i] += img.b[i]*litT(L, i, 2)/L.flat + s*(litS(null, 2, L, i) - 1); }
     return [o];
   },
   colour(E, n){ const { P, hexCol } = E;
@@ -41278,7 +41682,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null, lightRig()]);   // (the page's lights, set round the making: texCore withLightRig)
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -42390,6 +42794,12 @@ for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate
 // Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
 // guessed: each of these draws the same picture at every height.
 for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminagashi', 'flowfield']) TEXTURE_CAPS[t].dirOnly = true;
+// THE PAGE'S LIGHTS (ROADMAP C1, C2: the dial's rim light, the Ambient slider under it, the Main Light, Rim Light and
+// Ambient Hues) for the surfaces the engine lights whose dial is a light. Measured, not guessed: each of these changes
+// under them (texCore withLightRig); the rest draw as they always did and never show them. (Linen Tooth, Stained Glass
+// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day.)
+for(const t of ['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
+  'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -42725,6 +43135,12 @@ function describeRequest(type, w, h, opts){
   // up to 130 for the engine-lit textures (past the dial's rim: lower light); 100 for the rest
   const tiltMax = (TEXTURE_CAPS[RETIRED[type] || type] || {}).lowLight ? 130 : 100;
   const lightTilt = (opts.lightTilt >= 0) ? Math.round(Math.min(tiltMax, opts.lightTilt)) : 100;
+  // THE PAGE'S LIGHTS (ROADMAP C1, C2): the Ambient slider and hue, and the rim light (the dial's second handle), for a
+  // surface they light (`rig`, measured) or a graph; any other surface never sees them, and keys as it always did
+  const rig = ((TEXTURE_CAPS[type] || {}).rig || type === 'athanor' || type === 'athanorsteps')
+    ? lightRigOf({ ambient: opts.ambient, ambientHue: opts.ambientHue, rimDeg: opts.rimDeg, rimTilt: opts.rimTilt == null ? null : Math.min(tiltMax, +opts.rimTilt), rimHue: opts.rimHue,
+        // (the main light's colour: a surface with a Diffuse Hue has it as that, in its material)
+        mainHue: (TEXTURE_CAPS[type] || {}).diffuse ? null : opts.tint6 }) : null;
   const defs = paramsFor(type === 'athanorsteps' ? 'athanor' : type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
@@ -42744,6 +43160,7 @@ function describeRequest(type, w, h, opts){
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
+            + (rig ? `_L${rigKey(rig)}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
@@ -42762,8 +43179,15 @@ function describeRequest(type, w, h, opts){
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
 }
+/** A surface layer's lights (the look's keys) as a request's (ROADMAP C1, C2): the Ambient slider (0–200; 100 the
+ *  surface's own) and the Ambient Hue, and the rim light, the light dial's second handle (its way and height; its hue,
+ *  whose alpha is its strength). */
+function layerLights(L){ return { ambient: L.textureAmbient, ambientHue: L.textureTint8, rimDeg: L.textureRim, rimTilt: L.textureRimTilt, rimHue: L.textureTint7 }; }
+// the page's lights in a texture's key: the ambient (×100), its hue, and the rim (way, height, strength, hue)
+function rigKey(r){ const q = v => v.map(x => Math.round(x*1000)).join('.');
+  return Math.round(r.amb*100) + (r.ambHue ? 'a' + q(r.ambHue) : '') + (r.mainHue ? 'm' + q(r.mainHue) : '') + (r.rim ? `r${r.rim.deg},${Math.round(r.rim.tilt*100)},${Math.round(r.rim.k*255)}` + (r.rim.hue ? ',' + q(r.rim.hue) : '') : ''); }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
 // usual way. No graph, or no Surface in it: a flat mid-grey (nothing shows).
@@ -42855,7 +43279,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
 }
 function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, t3, t4, t5, t6, env, camera, page } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -42896,8 +43320,8 @@ function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+  let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -43606,12 +44030,12 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Jarnsaxa';
+const RELEASE = 'Saturn–Tarvos';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
 const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"lveY9-4D","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"aYDyL6O_","ringpaint":"nIPj4L7t","ringworld":"Glj7XdIW","sigils":"oFaAKxnj","skyring":"SCZEdr-0","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"Xf6pf_7_","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","underglass":"yw9UZYdJ","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
-const SWATCH_STAMP = 'jgHa9TE9';
+const SWATCH_STAMP = 'JaZ-ztYp';
 
 
 /* ==== altText.js ==== */
@@ -44443,7 +44867,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · ece524f";
+const STAMP = "2026-10-18 · 9085a1c";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -45710,7 +46134,11 @@ function pmlVarContext(W, H){
   for(let i = 0; i < Math.min(2, caps.tints || 0); i++) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Second Hue' : 'Hue'), hex: hex(i + 1) });
   // the material hues and the fifth, when they are in use (not their "none")
   if(caps.material) [[3, 'Specular Hue'], [4, 'Shadow Hue']].forEach(([n, label]) => { if(hex(n) && hex(n).toUpperCase() !== '#FFFFFF') hues.push({ label, hex: hex(n) }); });
-  if(caps.diffuse && hex(6) && hex(6).toUpperCase() !== '#FFFFFF') hues.push({ label: 'Diffuse Hue', hex: hex(6) });
+  const lit = caps.diffuse || caps.rig || type === 'athanor';
+  if(lit && hex(6) && !/^#?FFFFFF([0-9a-f]{2})?$/i.test(hex(6)) && !/^#[0-9a-f]{6}00$/i.test(hex(6))) hues.push({ label: 'Main Light Hue', hex: hex(6) });
+  // (the page's lights: the rim light while it is on, the Ambient Hue when it is set)
+  if((caps.rig || type === 'athanor') && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(hex(7)) && !/^#[0-9a-f]{6}00$/i.test(hex(7))) hues.push({ label: 'Rim Light Hue', hex: hex(7) });
+  if((caps.rig || type === 'athanor') && hex(8) && !/^#?FFFFFF([0-9a-f]{2})?$/i.test(hex(8)) && !/^#[0-9a-f]{6}00$/i.test(hex(8))) hues.push({ label: 'Ambient Hue', hex: hex(8) });
   if(caps.hue5 && hex(5) && hex(5).toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(hex(5))) hues.push({ label: caps.hue5.label, hex: hex(5) });   // (fully transparent is none)
   const optionOf = (id, value) => { const el = $(id), o = el && el.querySelector ? el.querySelector(`option[value="${value}"]`) : null; return (o && o.textContent) || value || ''; };
   const tilt = +L.textureLightTilt;
@@ -45863,6 +46291,8 @@ function surfaceFromDom(){
     cameraTurn: v('cameraTurn'), cameraView: v('cameraView'), cameraZoom: v('cameraZoom'),
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
+    // the page's lights (ROADMAP C1, C2): the rim light, the light dial's second handle; the Ambient slider; their hues
+    textureRim: v('textureRim'), textureRimTilt: v('textureRimTilt'), textureAmbient: v('textureAmbient'), textureTint7: v('textureTint7Hex'), textureTint8: v('textureTint8Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
     textureCurve1: v('textureCurve1') || '', textureCurve2: v('textureCurve2') || '',
     textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
@@ -45897,7 +46327,10 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const tints = shape ? shape.tints : caps.tints;
   const tint = (n, on) => on ? (L['textureTint' + n] || null) : null;
   const tint1 = tint(1, tints >= 1), tint2 = tint(2, tints >= 2), tint3 = tint(3, caps.material), tint4 = tint(4, caps.material);
-  const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse);
+  // (the Main Light Hue: a surface's Diffuse Hue, or the page's light's colour where the page's lights reach it)
+  const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse || !!caps.rig || type === 'athanor');
+  // the page's lights: the rim light, the Ambient slider and hue (a surface they reach, or a graph)
+  const lights = caps.rig || type === 'athanor' ? layerLights(L) : {};
   // the page's own colors: for a surface made of them (Rain on Glass, Circuit Board), or a graph with a Page Backdrop
   const envs = caps.pageEnv || (type === 'athanor' && graphUsesBackdrop(L.forgeGraph || '')) ? env() : undefined;
   const seed = parseInt(L.textureSeed, 10) || 0;
@@ -45942,7 +46375,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
     // (the curves drawn under Surface, for a graph with a Curve Control: '' is the control's own Default)
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -46755,7 +47188,7 @@ function swLayer(c, L, w, h){
       camera: L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom } : undefined,
       light: L.textureLight != null ? +L.textureLight : 315, lightTilt: L.textureLightTilt != null ? +L.textureLightTilt : undefined,
       tint1: L.textureTint1 || null, tint2: L.textureTint2 || null, tint3: L.textureTint3 || null, tint4: L.textureTint4 || null, tint5: L.textureTint5 || null, tint6: L.textureTint6 || null,
-      blend: L.textureGround || blend,
+      blend: L.textureGround || blend, ...layerLights(L),
       // the look's own backdrop, for a surface made of it (Rain on Glass, Circuit Board)
       env: [L.bg1, ...(L.bgGradient ? [L.bg2, L.bg3, L.bg4] : [])].filter(Boolean).join(',') || undefined };
     const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);
@@ -48946,7 +49379,8 @@ const WIKI_PARTS = {
     ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).', 'ambient hue': 'The color of the light that comes from everywhere (the sky’s, a room’s): it tints the whole surface by Ambient’s share, and the shaded sides most, where little else reaches. Empty or white: neutral, as before. For a subtle cast, lower Ambient or pick a paler hue.', 'second light hue': 'The second light’s color (empty: white). A cool rim against a warm key is the classic portrait’s light.' },
     outs: { image: 'The lit picture.', light: 'The lighting alone, as gray.', highlight: 'The shine alone.' },
     set: { relief: 'How tall the heights are (a map on its ⚙: taller in some places than others).', gloss: 'How tight the highlights are (a map on its ⚙ works as the gloss map does).', shine: 'How bright the highlights are.', shadow: 'How dark cast shadows are.', occlusion: 'How dark crevices get.', ambient: 'Light that reaches everywhere, filling the shadows.', translucency: 'Light passing into the surface and back out (wax, skin).', from: 'Where the light’s height comes from: the page’s dial (as every lit surface takes it), or its own Light Height, for a graph whose dial does something else (Ringworld’s is its camera).', height: 'The light’s own height, when Light Height From says so: 0 straight overhead, 100 at the horizon, past that lower still, with long shadows.', second: 'A second light beside the dial’s, as a photographer’s rim light or backlight: how strong (0: none, as before; below 0 it draws light out, for a shadowed side darker still).', secondTurn: 'Where the second light comes from, turned from the dial’s light: 180 straight behind (a backlight, edges glowing), 90 from the side.', secondHeight: 'How high the second light stands, read as Light Height is: 0 straight overhead (it lights everything), 100 low, past 100 lower still, until it only grazes the edges facing it, as a rim light does (120, as it starts).', secondSoft: 'How wide the second light is: 0 a point (crisp), higher a broad light (softer edges and shadows), at three times the work.', secondKind: 'What the second light gives: light and shine, the light alone (no highlight), or the shine alone (a glint without lighting).' },
-    tips: ['Don’t also wire the height into the Surface: it would be lit twice.', 'For a rim light: Second Light 70, From 180, Height 120, and a pale hue: the edges turned away from the dial catch a thin line of light.'],
+    tips: ['Don’t also wire the height into the Surface: it would be lit twice.', 'For a rim light: Second Light 70, From 180, Height 120, and a pale hue: the edges turned away from the dial catch a thin line of light.',
+      'On the page, the light dial’s Rim handle is this part’s second light whenever its own Second Light is 0, and the Ambient slider under the dial scales its Ambient. Left empty, its light hue and ambient hue inputs take the page’s Main Light and Ambient Hues.'],
     see: ['heights', 'part:light'],
   },
   pigment: {
@@ -51715,7 +52149,7 @@ safeColoris({
 });
 // the lighting hues keep an ALPHA slider: how much of the colour to use, so
 // each effect is optional (a glow at 0% alpha is no glow at all)
-safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex', alpha: true, format: 'hex' });
+safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex, #textureTint7Hex, #textureTint8Hex', alpha: true, format: 'hex' });
 
 // ---------- lock state ----------
 // The lock set itself lives in `state.locks` (top of the file). This is the
@@ -51725,12 +52159,12 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight','cameraTurn',
-  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','textureTint7Hex','textureTint8Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
 ];
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
 if(typeof document.querySelectorAll === 'function'){
-  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider']);   // (the zoom's slider is a view of the camera, locked with it)
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider', 'textureAmbient']);   // (the zoom's slider is a view of the camera, locked with it; the Ambient slider is the light's, locked with it)
   for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
       + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
     if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
@@ -51905,16 +52339,18 @@ toggleSubblock('textureToggle','textureBlock');
 // saves the upper under its own keys and the lower as `baseLayer`, whichever the controls show; Swap
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
+  'textureRim', 'textureRimTilt', 'textureAmbient', 'textureTint7', 'textureTint8',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
   'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
-  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
 /** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
 function freshLower(){
   const defs = paramsFor('grain'), caps = capsFor('grain');
   const L = { textureType: 'grain', textureOpacity: 50, textureBlend: 'overlay', textureLight: $('textureLight').value, textureLightTilt: '100', cameraTurn: '0', cameraView: '0', cameraZoom: '100',
+    textureRim: String(RIM_DEFAULT.deg), textureRimTilt: String(RIM_DEFAULT.tilt), textureAmbient: '100', textureTint7: RIM_DEFAULT.hex + '00', textureTint8: '#FFFFFF',
     textureSeed: ((parseInt($('textureSeedValue').value, 10) || 0) ^ 0x5bd1e995) >>> 0, textureSeedWords: '', forgeGraph: '' };
   defs.forEach((d, i) => { L['texP' + (i + 1)] = String(d.def); });
   (caps.tintDefaults || []).forEach((c, i) => { L['textureTint' + (i + 1)] = c === 'accent1' ? $('accent1ColorHex').value : c === 'accent2' ? $('accent2ColorHex').value : c; });
@@ -52776,6 +53212,11 @@ function restoreSurfaceDetails(s){
     // looks saved before the dial had raking light only: 100
     if($('textureLightTilt')) $('textureLightTilt').value = s.textureLightTilt !== undefined ? s.textureLightTilt : '100';
     syncLightPad(); }
+  // THE PAGE'S LIGHTS: the rim light (off, unless the look has one), the Ambient slider (the surface's own), their hues
+  { putRim(s.textureRim !== undefined ? s.textureRim : RIM_DEFAULT.deg, s.textureRimTilt !== undefined ? s.textureRimTilt : RIM_DEFAULT.tilt);
+    if($('textureAmbient')) $('textureAmbient').value = s.textureAmbient !== undefined ? String(s.textureAmbient) : '100';
+    setColorField('textureTint7Hex', s.textureTint7 || RIM_DEFAULT.hex + '00'); setColorField('textureTint8Hex', s.textureTint8 || '#FFFFFF');
+    syncLightPad(); }
   // the camera: the look's own, or where its surface's camera starts
   { const d = cameraStart(s.textureType || $('textureType').value);
     putCamera(s.cameraTurn !== undefined ? s.cameraTurn : d.turn, s.cameraView !== undefined ? s.cameraView : d.view, s.cameraZoom !== undefined ? s.cameraZoom : d.zoom); }
@@ -53244,6 +53685,9 @@ function applyPreset(p){
     setColorField('textureTint4Hex', p.textureTint4 || '#FFFFFF');
     setColorField('textureTint5Hex', p.textureTint5 || hue5Default(p.textureType || $('textureType').value));
     setColorField('textureTint6Hex', p.textureTint6 || '#FFFFFF');
+    // the page's lights: the preset's own, else none (a locked light keeps its rim and ambient too)
+    if(!state.locks.has('textureLight')){ putRim(p.textureRim ?? RIM_DEFAULT.deg, p.textureRimTilt ?? RIM_DEFAULT.tilt); if($('textureAmbient')) $('textureAmbient').value = String(p.textureAmbient ?? 100);
+      setColorField('textureTint7Hex', p.textureTint7 || RIM_DEFAULT.hex + '00'); setColorField('textureTint8Hex', p.textureTint8 || '#FFFFFF'); }
     syncLightPad();
     restoreLocked(__locks);
     // a preset changes opacity and seed without anyone touching them
@@ -53804,14 +54248,18 @@ function syncTextureTools(resetToDefaults){
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
   // a hue the texture doesn't use is HIDDEN, as an unused slider is (Ruby)
-  ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
+  ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row','tint7Row','tint8Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
   if(t1) t1.classList.toggle('tool-hidden', caps.tints < 1);
   if(t2) t2.classList.toggle('tool-hidden', caps.tints < 2);
   // material hues, for lit textures that are coloured (not the grey ones that blend)
   ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-hidden', !caps.material); });
   if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); setColorField('textureTint6Hex', '#FFFFFF'); }
-  // DIFFUSE, the light's own colour, where nothing else already says it
-  const r6 = $('tint6Row'); if(r6) r6.classList.toggle('tool-hidden', !caps.diffuse);
+  // THE LIGHTS' COLOURS: the main light's (a surface's Diffuse Hue, or the page's light's where the page's lights reach),
+  // the rim light's and the ambient's (where they reach)
+  const reach = lightsReach(type), r6 = $('tint6Row'); if(r6) r6.classList.toggle('tool-hidden', !caps.diffuse && !reach);
+  ['tint7Row', 'tint8Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.toggle('tool-hidden', !reach); });
+  { const rt = $('textureRimTilt'); if(rt && !caps.lowLight && +rt.value > 100) rt.value = '100'; }
+  syncLightPad();
   // the fifth hue: Glow, Material or Snow Hue, by what the texture has (or none)
   const r5 = $('tint5Row');
   if(r5){
@@ -53878,27 +54326,62 @@ function followAccents(){
 // The arrow points the way the light travels and strengthens as it lowers.
 // Eight ticks on the rim snap to 45°; ⟲ resets.
 const LIGHT_DEFAULT = { deg: 315, tilt: 100 };
+// THE RIM LIGHT (ROADMAP C2; Ruby: a second handle on the dial, in a second colour, under the first, chosen with a
+// button as Two Surfaces' Upper and Lower are): a second light from its own place on the dial, in its own colour. Its
+// hue (textureTint7Hex) holds its strength in its alpha: 0 is off. Moving its handle turns it on, at RIM_ON; ⟲ while it
+// is chosen turns it off. Where the page's lights reach a surface (caps.rig) the dial shows ☉ Main / ◐ Rim, the Ambient
+// slider and the light hues; the finger moves the light chosen.
+const RIM_DEFAULT = { deg: 135, tilt: 100, hex: '#CFE3FF' }, RIM_ON = '99';   // a cool light from the far side; on at 60%
+/** Whether the page's lights reach this surface (the rim, the Ambient slider, the light hues). */
+function lightsReach(type = ($('textureType') || {}).value){ return !!((capsFor(type) || {}).rig || type === 'athanor'); }
+function rimHex(){ const v = String(($('textureTint7Hex') || {}).value || ''); return /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v) ? v : RIM_DEFAULT.hex + '00'; }
+/** The rim light now: its way and height (as the dial's), and whether it is on (its hue's alpha above 0). */
+function rimNow(){ const d = parseFloat(($('textureRim') || {}).value), t = parseFloat(($('textureRimTilt') || {}).value), h = rimHex();
+  return { deg: isNaN(d) ? RIM_DEFAULT.deg : d, tilt: isNaN(t) ? RIM_DEFAULT.tilt : t, on: h.length === 7 || h.slice(7, 9).toUpperCase() !== '00' }; }
+/** Which light the finger moves: 'main', or 'rim' (only where the page's lights reach). */
+function lightPick(){ return state.ui.lightPick === 'rim' && lightsReach() ? 'rim' : 'main'; }
+/** The rim light's place into its two hidden fields (no render: a look or a preset is being put back). */
+function putRim(deg, tilt){
+  const set = (id, v) => { const el = $(id); if(el) el.value = String(v); };
+  set('textureRim', Math.round((((+deg || 0) % 360) + 360) % 360)); set('textureRimTilt', Math.round(Math.max(0, Math.min(dialMax(), isNaN(+tilt) ? RIM_DEFAULT.tilt : +tilt))));
+}
+/** The rim light on (at RIM_ON, its own colour kept) or off (its alpha 0). */
+function setRimOn(on){ const h = rimHex().slice(0, 7); setColorField('textureTint7Hex', h + (on ? RIM_ON : '00')); }
 function syncLightPad(){
   const deg = parseFloat($('textureLight').value) || 0, tilt = $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
   const k = Math.max(0, Math.min(130, isNaN(tilt) ? 100 : tilt)) / 100, a = deg * Math.PI / 180;
   const set = (id, attrs) => { const el = $(id); if(el && el.setAttribute) for(const key in attrs) el.setAttribute(key, attrs[key]); };
   // the dot slides from the heart of ☉ toward the rim
-  set('lightHandle', { cx: (Math.sin(a) * 15 * k).toFixed(2), cy: (-Math.cos(a) * 15 * k).toFixed(2) });
+  const hx = Math.sin(a) * 15 * k, hy = -Math.cos(a) * 15 * k;
+  set('lightHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) }); set('lightMainClipDot', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
   // 🜚's spike grows out of the rim the same way: longer and stronger as the light lowers
   const tip = 26 + 3 + 15 * k;
   set('lightSpikeBody', { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
   set('lightSpike', { transform: `rotate(${deg.toFixed(1)})`, opacity: k < 0.04 ? 0 : (0.35 + 0.65 * k).toFixed(2) });
+  // the rim light's handle, under the main's: hollow while it is off; where the two meet, the lens they share mixes to white
+  const reach = lightsReach(), R = rimNow(), rk = Math.max(0, Math.min(130, R.tilt))/100, ra = R.deg*Math.PI/180;
+  const rx = Math.sin(ra)*15*rk, ry = -Math.cos(ra)*15*rk;
+  set('lightRimHandle', { cx: rx.toFixed(2), cy: ry.toFixed(2) }); set('lightOverlap', { cx: rx.toFixed(2), cy: ry.toFixed(2) });
+  const pick = lightPick();
   const dial = $('lightDial');
-  if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', tilt >= 99 && Math.abs(((deg - +t.dataset.deg + 540) % 360) - 180) < 0.5));
-  if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${Math.round(deg)}°, ${Math.round(tilt)}% low`);
+  if(dial && dial.classList){ dial.classList.toggle('has-rim', reach); dial.classList.toggle('rim-on', reach && R.on); dial.classList.toggle('pick-rim', pick === 'rim'); }
+  const row = $('lightRow'); if(row && row.classList) row.classList.toggle('has-rig', reach);
+  { const seg = $('lightSeg'); if(seg && seg.querySelectorAll) seg.querySelectorAll('[data-light]').forEach(b => { const me = b.dataset.light === pick; b.classList.toggle('active', me); b.setAttribute('aria-pressed', String(me)); b.classList.toggle('dim', b.dataset.light === 'rim' && !R.on); }); }
+  { const r7 = $('tint7Row'); if(r7 && r7.classList) r7.classList.toggle('rim-off', !R.on); }
+  // the numbers beneath are the chosen light's
+  const pd = pick === 'rim' ? R.deg : deg, pt = pick === 'rim' ? R.tilt : tilt;
+  if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', pt >= 99 && Math.abs(((pd - +t.dataset.deg + 540) % 360) - 180) < 0.5));
+  if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${pick === 'rim' ? 'rim light ' : ''}${Math.round(pd)}°, ${Math.round(isNaN(pt) ? 100 : pt)}% low`);
   if(dial && dial.classList) dial.classList.toggle('past-rim', tilt > 100);
   // its numbers, beneath (not while one is being typed)
-  const di = $('lightDegIn'), ti = $('lightTiltIn'), ae = typeof document !== 'undefined' ? document.activeElement : null;
-  if(di && ae !== di) di.value = String(Math.round(deg)); if(ti && ae !== ti){ ti.value = String(Math.round(isNaN(tilt) ? 100 : tilt)); ti.max = String(dialMax()); }
+  const di = $('lightDegIn'), ti = $('lightTiltIn'), ai = $('lightAmbIn'), ae = typeof document !== 'undefined' ? document.activeElement : null;
+  if(di && ae !== di) di.value = String(Math.round(pd)); if(ti && ae !== ti){ ti.value = String(Math.round(isNaN(pt) ? 100 : pt)); ti.max = String(dialMax()); }
+  if(ai && ae !== ai) ai.value = String(Math.round(parseFloat(($('textureAmbient') || {}).value) || 0));
 }
-// typing the dial's numbers turns it exactly
+// typing the dial's numbers turns the chosen light exactly
 for(const id of ['lightDegIn', 'lightTiltIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
   const deg = parseFloat($('lightDegIn').value), tilt = parseFloat($('lightTiltIn').value);
+  if(lightPick() === 'rim'){ const R = rimNow(); setRim(isNaN(deg) ? R.deg : deg, isNaN(tilt) ? R.tilt : tilt, true); return; }
   setLight(isNaN(deg) ? (parseFloat($('textureLight').value) || 0) : deg, isNaN(tilt) ? (parseFloat(($('textureLightTilt') || {}).value) || 100) : tilt, true);
 });
 function setLight(deg, tilt, commit){
@@ -53907,6 +54390,19 @@ function setLight(deg, tilt, commit){
   if($('textureLightTilt')) $('textureLightTilt').value = String(Math.round(Math.max(0, Math.min(dialMax(), tilt))));
   syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
 }
+/** The rim light moved (and so on, if it was off: a light moved that gives nothing would be a control that does nothing). */
+function setRim(deg, tilt, commit){
+  if(!commit) draftWhileDragging();
+  putRim(deg, tilt); if(!rimNow().on) setRimOn(true);
+  syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
+}
+/** The chosen light to (deg, tilt). */
+function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); }
+function pickedNow(){ if(lightPick() === 'rim'){ const R = rimNow(); return { deg: R.deg, tilt: R.tilt }; }
+  const t = parseFloat(($('textureLightTilt') || {}).value); return { deg: parseFloat($('textureLight').value) || 0, tilt: isNaN(t) ? 100 : t }; }
+if($('lightSeg') && $('lightSeg').addEventListener) $('lightSeg').addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('[data-light]') : null; if(!b) return;
+  state.ui.lightPick = b.dataset.light === 'rim' ? 'rim' : 'main'; syncLightPad(); });
 if($('lightDial') && $('lightDial').addEventListener){
   const dial = $('lightDial');
   const fromPointer = (e, snapTicks) => {
@@ -53926,7 +54422,7 @@ if($('lightDial') && $('lightDial').addEventListener){
     if(snapTicks || tilt > 88){ const nearest = Math.round(deg / 45) * 45; if(Math.abs(nearest - deg) < 7) deg = nearest; }
     // the halfway ring catches lightly
     if(Math.abs(tilt - 50) < 4) tilt = 50;
-    setLight(deg, tilt, false);
+    movePicked(deg, tilt, false);
   };
   let dragging = false;
   dial.addEventListener('pointerdown', e => { dragging = true; if(dial.setPointerCapture) dial.setPointerCapture(e.pointerId); fromPointer(e, e.target && e.target.classList && e.target.classList.contains('ld-tick')); });
@@ -53935,22 +54431,33 @@ if($('lightDial') && $('lightDial').addEventListener){
   dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
   // keys: arrows turn it by 15°, page up/down raise and lower it
   dial.addEventListener('keydown', e => {
-    const deg = parseFloat($('textureLight').value) || 0, tilt = parseFloat(($('textureLightTilt') || {}).value) || 100;
+    const p = pickedNow();
     const map = { ArrowRight: [15, 0], ArrowDown: [15, 0], ArrowLeft: [-15, 0], ArrowUp: [-15, 0], PageUp: [0, -10], PageDown: [0, 10] };
-    if(map[e.key]){ e.preventDefault(); setLight(deg + map[e.key][0], tilt + map[e.key][1], true); }
+    if(map[e.key]){ e.preventDefault(); movePicked(p.deg + map[e.key][0], p.tilt + map[e.key][1], true); }
   });
 }
-if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true));
+// ⟲ resets the chosen light (the rim light: off, back where it starts)
+if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => {
+  if(lightPick() === 'rim'){ putRim(RIM_DEFAULT.deg, RIM_DEFAULT.tilt); setRimOn(false); syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); return; }
+  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); });
 // ◎ to the centre (overhead / the middle of the page), keeping the angle; ⚄ a
-// random angle, keeping the distance. Neither is sticky.
-if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => setLight(parseFloat($('textureLight').value) || 0, 0, true));
+// random angle, keeping the distance. Neither is sticky. Each moves the chosen light.
+if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => movePicked(pickedNow().deg, 0, true));
 if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEventListener('click', () => {
   // a locked light stays; otherwise it turns the way the dice roll (a little, anywhere, or anywhere and any height)
   if(state.locks.has('textureLight')){ toast(DIE.locked); murmur.play('blocked'); return; }
-  const lv = dieLevel(), deg = parseFloat($('textureLight').value) || 0, tt = parseFloat(($('textureLightTilt') || {}).value), t = isNaN(tt) ? 100 : tt;
-  if(lv === 'gentle') setLight(deg + (Math.random()*2 - 1)*15, t + (Math.random()*2 - 1)*8, true);
-  else if(lv === 'wild') setLight(Math.random()*360, Math.random()*dialMax(), true);
-  else setLight(Math.random()*360, t, true); });
+  const lv = dieLevel(), { deg, tilt: t } = pickedNow();
+  if(lv === 'gentle') movePicked(deg + (Math.random()*2 - 1)*15, t + (Math.random()*2 - 1)*8, true);
+  else if(lv === 'wild') movePicked(Math.random()*360, Math.random()*dialMax(), true);
+  else movePicked(Math.random()*360, t, true); });
+// THE AMBIENT SLIDER (Ruby: under the dial, as the camera's zoom), and its number
+if($('textureAmbient') && $('textureAmbient').addEventListener){
+  $('textureAmbient').addEventListener('input', () => { draftWhileDragging(); syncLightPad(); scheduleRender(); });
+  $('textureAmbient').addEventListener('change', () => { syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
+}
+if($('lightAmbIn') && $('lightAmbIn').addEventListener) $('lightAmbIn').addEventListener('change', () => {
+  const v = parseFloat($('lightAmbIn').value); if(!isNaN(v) && $('textureAmbient')) $('textureAmbient').value = String(Math.round(Math.max(0, Math.min(200, v))));
+  syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
 // ---------- THE CAMERA DIAL ----------
 // (Ruby: a second dial for the camera, so the light dial is the light's alone.) Its handle is where the camera stands:
 // round the dial, its turn; drawn out from the middle, how low it looks (the middle straight down — or, on Ringworld,
@@ -54079,6 +54586,8 @@ bindColorField('textureTint3Hex', ()=>scheduleRender());
 bindColorField('textureTint4Hex', ()=>scheduleRender());
 bindColorField('textureTint5Hex', ()=>scheduleRender());
 bindColorField('textureTint6Hex', ()=>scheduleRender());
+bindColorField('textureTint7Hex', ()=>{ syncLightPad(); scheduleRender(); });   // (the rim light: its alpha turns it on and off)
+bindColorField('textureTint8Hex', ()=>scheduleRender());
 /** A label's own words, leaving what else lives in it (its padlock) alone —
  *  writing textContent wiped the lock off every hue whose name changes. */
 // (a function, not a const: labels are renamed at boot, before this line runs)
@@ -54319,12 +54828,14 @@ function rollControl(id, level, shift = 0){ const el = $(id); if(!el) return;
       : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
     el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
   else if(/Hex$/.test(id)){
+    // (the rim light's hue rolls its colour only: its alpha is whether it is on, and how strongly)
+    const keepA = id === 'textureTint7Hex' && /^#[0-9a-f]{8}$/i.test(el.value || '') ? el.value.slice(7, 9) : '', set = (k, v) => setColorField(k, keepA ? v.slice(0, 7) + keepA : v);
     // …and each moves a touch of its own
     if(level === 'gentle'){ const [h, sa, l] = dieHsl(el.value);
-      setColorField(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
-    else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
+      set(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
+    else if(level === 'wild') set(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
     else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
-      setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
+      set(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
   else if(el.tagName === 'SELECT' && level !== 'gentle'){ const o = dieOptions(el, level); if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
   // (switches are never rolled: they show and hide whole sections, and sit beside the locks)
 }
@@ -54995,6 +55506,8 @@ function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100), camera: cameraNow(),
+    ...layerLights({ textureRim: k('textureRim', 135), textureRimTilt: k('textureRimTilt', 100), textureAmbient: k('textureAmbient', 100), textureTint7: ($('textureTint7Hex') || {}).value, textureTint8: ($('textureTint8Hex') || {}).value }),
+    tint6: ($('textureTint6Hex') || {}).value,
     tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined,   // (the page's backdrop, for a graph with a Page Backdrop)

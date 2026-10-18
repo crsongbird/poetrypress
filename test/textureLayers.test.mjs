@@ -4,7 +4,9 @@
  * control edits whichever the layer bar shows; a look saves the upper under
  * its own keys and the lower as `baseLayer` (its locks as `baseLocks`); Swap
  * trades the two whole. Old looks' base layers open as lower surfaces that
- * draw as before. Tested by behavior, on the booted app.
+ * draw as before. Each surface keeps its own lights too (the light dial's rim
+ * light, the Ambient slider, their hues), and the dial's ☉ Main / ◐ Rim
+ * chooses which light the finger moves. Tested by behavior, on the booted app.
  *
  * Run: node test/textureLayers.test.mjs
  */
@@ -117,6 +119,36 @@ const tile = walk(reg['presetGrid'], 'preset-btn').find(t => t.dataset.name === 
 if(tile){ tile.dispatchEvent({ type: 'click' }); await new Promise(r => setTimeout(r, 60)); }
 s = save();
 check('a preset turns the lower surface off (it never leaks from one look to the next)', !!tile && s.baseToggle === false && s.baseLayer === undefined);
+
+// ---- THE PAGE'S LIGHTS, per surface: the rim light (the dial's second handle), the Ambient slider, their hues ----
+{ const lit = { textureRim: '60', textureRimTilt: '90', textureAmbient: '140', textureTint7: '#FF8040B3', textureTint8: '#3050FF80' };
+  load({ ...base, texture: true, textureType: 'kintsugi', ...lit, baseToggle: true, baseLayer: { textureType: 'moss', textureRim: '250', textureAmbient: '40' }, locks: [] });
+  s = save();
+  check('a look keeps each surface\'s lights: the upper\'s rim, ambient and hues, and the lower\'s own',
+    s.textureRim === '60' && s.textureRimTilt === '90' && s.textureAmbient === '140' && /^#FF8040B3$/i.test(s.textureTint7) && /^#3050FF80$/i.test(s.textureTint8)
+    && s.baseLayer.textureRim === '250' && s.baseLayer.textureAmbient === '40' && (!s.baseLayer.textureTint7 || /00$/.test(s.baseLayer.textureTint7)));
+  reg['layerSwap'].dispatchEvent({ type: 'click' }); s = save();
+  check('…and Swap trades them with their surfaces', s.textureRim === '250' && s.textureAmbient === '40' && s.baseLayer.textureRim === '60' && s.baseLayer.textureAmbient === '140');
+  load({ ...base, texture: true, textureType: 'kintsugi', baseToggle: false, locks: [] }); s = save();
+  check('a look from before them opens with none: the rim light off, the surface\'s own ambient, white hues',
+    /00$/.test(s.textureTint7) && s.textureAmbient === '100' && /^#FFFFFF/i.test(s.textureTint8)); }
+
+// ---- the dial's second handle: ☉ Main / ◐ Rim chooses which light the finger moves ----
+{ load({ ...base, texture: true, textureType: 'kintsugi', baseToggle: false, locks: [] });
+  const dial = reg['lightDial']; dial.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 });
+  const pick = which => reg['lightSeg'].dispatchEvent({ type: 'click', target: { closest: () => ({ dataset: { light: which } }) } });
+  const reached = reg['lightRow'].classList.contains('has-rig'), main0 = save().textureLight;
+  pick('rim'); dial.dispatchEvent({ type: 'pointerdown', clientX: 80, clientY: 50, pointerId: 1, target: {} }); dial.dispatchEvent({ type: 'pointerup', pointerId: 1 });
+  s = save();
+  check('with Rim chosen the dial moves the rim light, and moving it turns it on; the main light stays where it was',
+    reached && s.textureRim === '90' && s.textureRimTilt === '100' && !/00$/i.test(s.textureTint7) && s.textureLight === main0);
+  reg['lightReset'].dispatchEvent({ type: 'click' }); s = save();
+  check('…and ⟲, with Rim chosen, turns the rim light off again', /00$/i.test(s.textureTint7) && s.textureLight === main0);
+  pick('main'); dial.dispatchEvent({ type: 'pointerdown', clientX: 50, clientY: 80, pointerId: 2, target: {} }); dial.dispatchEvent({ type: 'pointerup', pointerId: 2 });
+  const moved = save().textureLight; reg['lightReset'].dispatchEvent({ type: 'click' }); s = save();
+  check('with Main chosen the dial moves the main light, and ⟲ puts it back (315°, at the rim)', moved === '180' && s.textureLight === '315' && s.textureLightTilt === '100');
+  load({ ...base, texture: true, textureType: 'hatch', baseToggle: false, locks: [] });
+  check('a surface the page\'s lights do not reach shows the dial alone (no Main / Rim, no Ambient slider)', !reg['lightRow'].classList.contains('has-rig')); }
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

@@ -28,7 +28,7 @@
  * web fonts, which must be drawn at full size; the same graph on the
  * Athanor's grid runs each part's RUN instead.
  */
-import { lightHeights, parseHex, withSeed, cpx, scaleNow, fxaaImage } from './texCore.js';
+import { lightHeights, lightRig, parseHex, withSeed, cpx, scaleNow, fxaaImage } from './texCore.js';
 import { STEPS, stepRange, paramPort, curveAt } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { ATHANOR_STUDIES } from './athanorStudies.js';
@@ -335,7 +335,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null, lightRig()]);   // (the page's lights, set round the making: texCore withLightRig)
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {

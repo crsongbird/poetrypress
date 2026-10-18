@@ -82,6 +82,46 @@ check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never 
     if(B.lit >= B.of) fewer = false;
   }
   check('lightSparse lights only the tiles near a detail, and matches lightHeights exactly', worst === 0 && fewer);
+  // …with the page's rim light too, whose shadows fall their own way (its margins are the union of both lights')
+  let worst2 = 0, parts = true;
+  for(const [light, rimDeg] of [[315, 135], [0, 90], [225, 300]]){
+    const rig = C.lightRigOf({ rimDeg, rimTilt: 110, rimHue: '#6080FFB0', ambientHue: '#FF9050' });
+    const o = { light, gloss: 0.7, shadow: 0.7, ao: 0.45, ambient: 0.4 };
+    const A = C.withLightTilt(1.2, () => C.withLightRig(rig, () => C.lightHeights(H, ww, wh, o))), B = C.withLightTilt(1.2, () => C.withLightRig(rig, () => C.lightSparse(H, ww, wh, o, 32)));
+    for(let i = 0; i < ww*wh; i++) worst2 = Math.max(worst2, Math.abs(A.light[i] - B.light[i]), Math.abs(A.spec[i] - B.spec[i]), Math.abs(A.ra[i] - B.ra[i]), Math.abs(A.aa[i] - B.aa[i]));
+    if(!B.hue || !B.ra || !B.aa) parts = false;
+  }
+  check('…and with the page\'s rim light and coloured lights, exactly too (the rim\'s own shadows, its shares)', worst2 === 0 && parts);
+}
+
+// ---- THE PAGE'S LIGHTS (ROADMAP C1, C2): the rim light, the ambient, their colours ----
+{
+  const ww = 120, wh = 90, H = new Float32Array(ww*wh);
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) H[y*ww + x] = 8*Math.sin(x*0.15)*Math.cos(y*0.12);
+  const o = { light: 315, gloss: 0.4, shadow: 0.6, ao: 0.35, ambient: 0.4 };
+  const plain = C.lightHeights(H, ww, wh, o), none = C.withLightRig(null, () => C.lightHeights(H, ww, wh, o));
+  check('the page\'s lights changing nothing are no rig at all (every surface draws as it did)',
+    C.lightRigOf({}) === null && C.lightRigOf({ ambient: 100, ambientHue: '#FFFFFF', mainHue: '#FFFFFF80', rimHue: '#CFE3FF00' }) === null
+    && plain.light.every((v, i) => v === none.light[i]) && plain.spec.every((v, i) => v === none.spec[i]) && !('hue' in plain));
+  const r = C.lightRigOf({ rimDeg: 135, rimTilt: 100, rimHue: '#FFFFFF80', ambient: 150 });
+  check('a rig reads the picker\'s alpha as the rim light\'s strength, white as no colour, and the ambient as a share',
+    r && Math.abs(r.rim.k - 128/255) < 1e-9 && r.rim.hue === null && r.rim.deg === 135 && r.rim.tilt === 1 && r.amb === 1.5 && r.ambHue === null);
+  const rim = C.withLightRig(C.lightRigOf({ rimDeg: 135, rimTilt: 100, rimHue: '#FFFFFFFF' }), () => C.lightHeights(H, ww, wh, o));
+  // a face turned toward the rim light brightens (the faces the dial's own light lights from its place, 135°); one turned
+  // from it keeps its light
+  const lit135 = C.lightHeights(H, ww, wh, { ...o, light: 135 });
+  let toward = 0, away = 0, nT = 0, nA = 0;
+  for(let i = 0; i < ww*wh; i++){ const f = lit135.light[i]/lit135.flat; if(f > 1.25){ toward += rim.light[i] - plain.light[i]; nT++; } else if(f < 0.75){ away += rim.light[i] - plain.light[i]; nA++; } }
+  check('the rim light lights the faces turned toward it, as the dial\'s light from there would, and hardly those turned away', nT > 20 && nA > 20 && toward/nT > 0.15 && away/nA < toward/nT*0.4);
+  const low = C.withLightRig(C.lightRigOf({ ambient: 30 }), () => C.lightHeights(H, ww, wh, o)), high = C.withLightRig(C.lightRigOf({ ambient: 180 }), () => C.lightHeights(H, ww, wh, o));
+  let minP = Infinity, minL = Infinity, minH = Infinity; for(let i = 0; i < ww*wh; i++){ minP = Math.min(minP, plain.light[i]/plain.flat); minL = Math.min(minL, low.light[i]/low.flat); minH = Math.min(minH, high.light[i]/high.flat); }
+  check('the Ambient slider deepens the shadows below halfway and softens them above (against open ground)', minL < minP - 0.05 && minH > minP + 0.05);
+  const col = C.withLightRig(C.lightRigOf({ ambientHue: '#3060FF', rimDeg: 135, rimTilt: 100, rimHue: '#FF6020FF', mainHue: '#FFD080' }), () => C.lightHeights(H, ww, wh, o));
+  let shadeBlue = 0, n = 0, warmShine = true;
+  for(let i = 0; i < ww*wh; i++){ if(col.light[i] < col.flat*0.7){ shadeBlue += C.litK(col, i, 0.4, null, 2) - C.litK(col, i, 0.4, null, 0); n++; }
+    if(col.rs[i] > col.spec[i]*0.5 && col.spec[i] > 0.02 && !(C.litS(null, 0, col, i) > C.litS(null, 2, col, i))) warmShine = false; }
+  check('the Ambient Hue colours the shade most, and a rim light\'s own shine takes its colour', n > 20 && shadeBlue/n > 0.02 && warmShine);
+  check('with no coloured lights, litK and litS are what they were', C.litK(plain, 5, 0.4, null, 1) === plain.light[5] && C.litS(null, 0, plain, 5) === 1 && C.litS({ hi: [0.5, 1, 2] }, 2) === 2);
 }
 
 // ---- weighted choices; the camera tilt ----

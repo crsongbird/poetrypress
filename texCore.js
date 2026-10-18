@@ -204,6 +204,48 @@ export function lightVec(light){
  *  engine reads it, sinking the light from 12° toward 4° above the horizon —
  *  long, raking shadows. Textures that shade themselves never see it. */
 export function lightLow(){ return Math.max(0, Math.min(1, (LIGHT_TILT - 1) / 0.3)); }
+
+// ---------- THE PAGE'S LIGHTS: a rim light and the ambient (ROADMAP C1, C2) ----------
+// Beside the dial's light the page may give an engine-lit surface a RIM LIGHT (the dial's second handle: a light from
+// its own way and height, in its own colour) and set its AMBIENT light (how much: the slider under the dial, 1 the
+// surface's own; and its colour). Set round one texture's making, as withLightTilt is. Null, the default, is the one
+// light exactly as ever.
+//   amb      the ambient share, times this
+//   ambHue   the ambient light's colour at white's brightness (null: none)
+//   mainHue  the dial's own light's colour, on what it reaches (null: none)
+//   rim      { deg, tilt (as the dial's: 0 overhead, 1 its rim, on to 1.3 lower), k (0..1: its strength), hue (null: white) }
+let LIGHT_RIG = null;
+export function withLightRig(rig, fn){
+  const prev = LIGHT_RIG; LIGHT_RIG = rig || null;
+  try { return fn(); } finally { LIGHT_RIG = prev; }
+}
+/** The page's lights now (null: the dial's light alone). */
+export function lightRig(){ return LIGHT_RIG; }
+/** The rig from the page's settings, null when they change nothing: `ambient` 0..200 (100: the surface's own),
+ *  `ambientHue` and `mainHue` (#RRGGBB[AA]; white is none, alpha how much of it), and the rim: `rimDeg`, `rimTilt`
+ *  (0..130) and `rimHue` (#RRGGBBAA: its colour, its alpha its strength; 0 is off). */
+export function lightRigOf({ ambient, ambientHue, mainHue, rimDeg, rimTilt, rimHue } = {}){
+  const a = +ambient, amb = ambient != null && ambient !== '' && isFinite(a) ? Math.max(0, Math.min(200, Math.round(a)))/100 : 1;
+  const hueOf = x => { const h = x ? resolveAlpha(String(x), '#FFFFFF') : null; return h && !isWhiteHex(h) ? rgb01(h) : null; };
+  const ambHue = hueOf(ambientHue), main = hueOf(mainHue);
+  let rim = null;
+  const h = rimHue ? String(rimHue).replace('#', '') : '';
+  if(/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(h)){
+    const k = h.length === 8 ? parseInt(h.slice(6, 8), 16)/255 : 1, c = '#' + h.slice(0, 6);
+    const t = +rimTilt;
+    if(k > 0) rim = { deg: ((Math.round(+rimDeg || 0) % 360) + 360) % 360, tilt: Math.max(0, Math.min(1.3, (rimTilt == null || rimTilt === '' || !isFinite(t) ? 100 : Math.round(t))/100)), k, hue: isWhiteHex(c) ? null : rgb01(c) };
+  }
+  return amb === 1 && !ambHue && !main && !rim ? null : { amb, ambHue, mainHue: main, rim };
+}
+/** A light's way as lightHeights sees it, from its direction (degrees, as the dial's) and height (0..1.3): toward the
+ *  light (L), Blinn's half vector (H), and its shadow march (one step toward it, and how fast a ray climbs). */
+function lightWay(deg, T){
+  const a = ((deg == null ? 315 : deg) - 90)*Math.PI/180, tilt = Math.max(0, Math.min(1, T)), low = Math.max(0, Math.min(1, (T - 1)/0.3));
+  const elev = (90 - tilt*78 - low*8)*Math.PI/180, horiz = Math.cos(elev);
+  const Lx = tilt > 1e-6 ? -Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? -Math.sin(a)*horiz : 0, Lz = Math.sin(elev);
+  const hz = Lz + 1, hl = Math.hypot(Lx, Ly, hz) || 1, lxy = Math.hypot(Lx, Ly);
+  return { Lx, Ly, Lz, Hx: Lx/hl, Hy: Ly/hl, Hz: hz/hl, lxy, stepX: lxy > 1e-6 ? Lx/lxy : 0, stepY: lxy > 1e-6 ? Ly/lxy : 0, rise: lxy > 1e-6 ? Lz/lxy : 1e9 };
+}
 /** The dial as a PLACE on the page, for textures that use it as a position:
  *  the round dial stretched onto the square page, so its rim at 45° reaches
  *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
@@ -226,6 +268,7 @@ uniform highp sampler2D uH;
 uniform ivec2 uSize; uniform vec3 uL, uHalf;
 uniform float uRelief, uShine, uSpecK, uShadow, uAO, uAmbient, uRise, uStepX, uStepY;
 uniform int uSteps, uStride, uDoShadow, uR, uHasN, uMode, uHasG;
+uniform int uRim, uSteps2, uStride2, uDoShadow2; uniform vec3 uL2, uHalf2; uniform float uK2, uRise2, uStep2X, uStep2Y;
 uniform highp sampler2D uN;
 uniform highp sampler2D uG;
 out vec4 o;
@@ -260,8 +303,25 @@ void main(){
   if(uHasG == 1){ float g = texelFetch(uG, p, 0).r; shine = 4.0 + g*120.0; specK = 0.15 + g*0.85; }
   float spec = pow(nh, shine)*specK*(0.35 + 0.65*lit);
   float dsh = diffuse*(1.0 - uShadow*(1.0 - lit));
-  float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
-  float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
+  float r2 = 0.0, s2 = 0.0;
+  if(uRim == 1){
+    float d2 = dot(n, uL2);
+    if(d2 > 0.0){
+      float lit2 = 1.0;
+      if(uDoShadow2 == 1){
+        for(int k = uStride2; k <= uSteps2; k += uStride2){
+          ivec2 q = ivec2(floor(vec2(p) + vec2(uStep2X, uStep2Y)*float(k) + 0.5));
+          float over = at(q)*uRelief - (h0 + uRise2*float(k));
+          if(over > 0.0){ lit2 = min(lit2, max(0.0, 1.0 - over*0.6)); if(lit2 == 0.0) break; }
+        }
+      }
+      r2 = uK2*(1.0 - uAmbient)*d2*(1.0 - uShadow*(1.0 - lit2))*(1.0 - occl);
+      s2 = pow(max(0.0, dot(n, uHalf2)), shine)*specK*(0.35 + 0.65*lit2)*uK2;
+      light += r2; spec += s2;
+    }
+  }
+  float a = uMode == 1 ? clamp(dsh, 0.0, 1.0)*65535.0 : uMode == 2 ? clamp(r2, 0.0, 1.0)*65535.0 : clamp(light*0.5, 0.0, 1.0)*65535.0;
+  float b = uMode == 1 ? clamp(occl, 0.0, 1.0)*65535.0 : uMode == 2 ? clamp(s2, 0.0, 1.0)*65535.0 : clamp(spec, 0.0, 1.0)*65535.0;
   float ah = floor(a/256.0), bh = floor(b/256.0);
   o = vec4(ah/255.0, (a - ah*256.0)/255.0, bh/255.0, (b - bh*256.0)/255.0);
 }`;
@@ -301,7 +361,8 @@ in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
     const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = n => gl.getUniformLocation(prog, n);
-    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG'].map(n => [n, U(n)])) };
+    GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG',
+      'uRim','uSteps2','uStride2','uDoShadow2','uL2','uHalf2','uK2','uRise2','uStep2X','uStep2Y'].map(n => [n, U(n)])) };
   } catch(e){ GPU = null; }
   return GPU;
 }
@@ -328,6 +389,10 @@ function gpuLightHeights(H, ww, wh, P){
     gl.uniform1f(u.uShadow, P.shadow); gl.uniform1f(u.uAO, P.ao); gl.uniform1f(u.uAmbient, P.ambient);
     gl.uniform1f(u.uRise, P.rise); gl.uniform1f(u.uStepX, P.stepX); gl.uniform1f(u.uStepY, P.stepY);
     gl.uniform1i(u.uSteps, P.steps); gl.uniform1i(u.uStride, P.stride); gl.uniform1i(u.uDoShadow, P.doShadow ? 1 : 0); gl.uniform1i(u.uR, P.R);
+    // the page's rim light (withLightRig), its own way, height and march
+    const R2 = P.R2; gl.uniform1i(u.uRim, R2 ? 1 : 0);
+    if(R2){ gl.uniform3f(u.uL2, R2.Lx, R2.Ly, R2.Lz); gl.uniform3f(u.uHalf2, R2.Hx, R2.Hy, R2.Hz); gl.uniform1f(u.uK2, R2.k); gl.uniform1f(u.uRise2, R2.rise);
+      gl.uniform1f(u.uStep2X, R2.stepX); gl.uniform1f(u.uStep2Y, R2.stepY); gl.uniform1i(u.uSteps2, R2.steps); gl.uniform1i(u.uStride2, R2.stride); gl.uniform1i(u.uDoShadow2, R2.doShadow ? 1 : 0); }
     // a detail normal map, if given, on its own texture unit
     let nTex = null;
     if(P.N){
@@ -347,17 +412,21 @@ function gpuLightHeights(H, ww, wh, P){
       gl.uniform1i(u.uG, 2); gl.uniform1i(u.uHasG, 1);
     } else { gl.uniform1i(u.uG, 0); gl.uniform1i(u.uHasG, 0); }
     gl.viewport(0, 0, ww, wh);
-    // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion
+    // pass 0: light and highlight; pass 1 (materials only): diffuse and occlusion; pass 2 (a coloured rim light): its light and shine
     const read = mode => { gl.uniform1i(u.uMode, mode); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       const px = new Uint8Array(ww*wh*4); gl.readPixels(0, 0, ww, wh, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
-    const px = read(0), px1 = P.comp ? read(1) : null;
+    const px = read(0), px1 = P.comp ? read(1) : null, px2 = R2 && P.rimParts ? read(2) : null;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteTexture(hTex); gl.deleteTexture(outTex); if(nTex) gl.deleteTexture(nTex); if(gTex) gl.deleteTexture(gTex);
     const light = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
     for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ light[i] = (px[q]*256 + px[q+1])/65535*2; spec[i] = (px[q+2]*256 + px[q+3])/65535; }
-    if(!px1) return { light, spec };
-    const diffuse = new Float32Array(ww*wh), occl = new Float32Array(ww*wh);
-    for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ diffuse[i] = (px1[q]*256 + px1[q+1])/65535; occl[i] = (px1[q+2]*256 + px1[q+3])/65535; }
-    return { light, spec, diffuse, occl };
+    const res = { light, spec };
+    if(px1){ const diffuse = new Float32Array(ww*wh), occl = new Float32Array(ww*wh);
+      for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ diffuse[i] = (px1[q]*256 + px1[q+1])/65535; occl[i] = (px1[q+2]*256 + px1[q+3])/65535; }
+      res.diffuse = diffuse; res.occl = occl; }
+    if(px2){ const ra = new Float32Array(ww*wh), rs = new Float32Array(ww*wh);
+      for(let i = 0, q = 0; i < ww*wh; i++, q += 4){ ra[i] = (px2[q]*256 + px2[q+1])/65535; rs[i] = (px2[q+2]*256 + px2[q+3])/65535; }
+      res.ra = ra; res.rs = rs; }
+    return res;
   } catch(e){ GPU = null; return null; }
 }
 
@@ -394,7 +463,16 @@ function gpuLightHeights(H, ww, wh, P){
  * what counts as "in shadow" — see materialOf / litK / litS).
  */
 export function lightHeights(H, ww, wh, opts = {}){
-  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, ambient = 0.35, normals = null, components = false } = opts;
+  const { light = 315, relief = 1, gloss = 0.3, shadow = 0.6, ao = 0.35, normals = null } = opts;
+  // THE PAGE'S LIGHTS (withLightRig): the ambient scaled, and a rim light beside the dial's. `rig: false` keeps them out;
+  // `rig: 'ambient'` takes the ambient only (a part that lights a second way of its own takes the rim as that)
+  const RG = opts.rig === false ? null : LIGHT_RIG, RM = RG && RG.rim && opts.rig !== 'ambient' ? RG.rim : null;
+  // (the slider scales the ambient light against the direct: its share's odds, so 200% is twice as much fill and never
+  //  more than all the light; 0 is none)
+  const a0 = opts.ambient === undefined ? 0.35 : opts.ambient, ambient = RG && RG.amb !== 1 ? Math.max(0, Math.min(1, a0*RG.amb/(1 + a0*(RG.amb - 1)))) : a0;
+  // (the coloured lights' shares, per pixel, for litK and litS: the ambient's, and the rim's light and shine)
+  const HUE = RG && (RG.ambHue || RG.mainHue || (RM && RM.hue)) ? { a: RG.ambHue || null, m: RG.mainHue || null, r: (RM && RM.hue) || null } : null;
+  const components = !!opts.components || !!(HUE && (HUE.a || HUE.m));
   const N = normals && normals.length >= ww*wh*3 ? normals : null;
   const GM = opts.glossMap && opts.glossMap.length >= ww*wh ? opts.glossMap : null;
   const { lx, ly } = lightVec(light);
@@ -413,14 +491,21 @@ export function lightHeights(H, ww, wh, opts = {}){
   // march as far as the tallest height can throw a shadow at this elevation
   let hMax = 0, hMin = Infinity; for(let i = 0; i < H.length; i++){ if(H[i] > hMax) hMax = H[i]; if(H[i] < hMin) hMin = H[i]; }
   const steps = opts.marchSteps || Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);   // (lightSparse passes the whole field's)
+  // THE RIM LIGHT: its own way and height, its own shadows; its direct light and shine added to the dial's, at its strength
+  let R2 = null;
+  if(RM){ const w = lightWay(RM.deg, RM.tilt), st = opts.marchSteps2 || Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, w.rise)) + 2);
+    R2 = { ...w, k: RM.k, steps: st, stride: Math.max(1, Math.ceil(st/40)), doShadow: shadow > 0 && w.lxy > 0.02 && w.rise < 1e8 }; }
+  // flat: the light on open, flat ground — what "in shadow" is measured against (the rim's too: it lights open ground)
+  const flat = ambient + (1 - ambient)*Lz + (R2 ? R2.k*(1 - ambient)*R2.Lz : 0);
   // on the GPU when it's there (the same maths, per pixel, at once)
   if(GPU_LIGHT && ww*wh >= 4096){
     const g = gpuLightHeights(H, ww, wh, { Lx, Ly, Lz, hx, hy, hz, hl, shininess, specK, relief, shadow, ao, ambient, rise,
-      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, G: GM, comp: components });
-    if(g){ g.flat = ambient + (1 - ambient)*Lz; return g; }
+      stepX, stepY, steps, stride: Math.max(1, Math.ceil(steps/40)), doShadow: shadow > 0 && lxy > 0.02 && rise < 1e8, R: 4, N, G: GM, comp: components, R2, rimParts: !!(HUE && HUE.r) });
+    if(g){ g.flat = flat; return rigParts(g, RG, HUE, ambient); }
   }
   const out = new Float32Array(ww*wh), spec = new Float32Array(ww*wh);
   const dif = components ? new Float32Array(ww*wh) : null, occA = components ? new Float32Array(ww*wh) : null;
+  const RA = HUE && HUE.r ? new Float32Array(ww*wh) : null, RS = RA ? new Float32Array(ww*wh) : null;
   // occlusion compares each height with its neighbourhood's (a box average)
   const R = 4, avg = new Float32Array(ww*wh);
   if(ao > 0){
@@ -461,11 +546,36 @@ export function lightHeights(H, ww, wh, opts = {}){
       const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/hl);
       if(GM){ const g = GM[i]; spec[i] = Math.pow(nh, 4 + g*120)*(0.15 + g*0.85)*(0.35 + 0.65*lit); }
       else spec[i] = Math.pow(nh, shininess)*specK*(0.35 + 0.65*lit);
+      // the rim light, where a face turns toward it: its own march, its light and its shine
+      if(R2){ const d2 = nx*R2.Lx + ny*R2.Ly + nz*R2.Lz;
+        if(d2 > 0){ let lit2 = 1;
+          if(R2.doShadow) for(let k = R2.stride; k <= R2.steps; k += R2.stride){
+            const rayH = h0 + R2.rise*k;
+            if(rayH >= hTop) break;
+            let sx = Math.round(x + R2.stepX*k), sy = Math.round(y + R2.stepY*k);
+            sx = sx < 0 ? 0 : sx >= ww ? ww - 1 : sx; sy = sy < 0 ? 0 : sy >= wh ? wh - 1 : sy;
+            const over = H[sy*ww + sx]*relief - rayH;
+            if(over > 0){ lit2 = Math.min(lit2, Math.max(0, 1 - over*0.6)); if(lit2 === 0) break; }
+          }
+          const r2 = R2.k*(1 - ambient)*d2*(1 - shadow*(1 - lit2))*(1 - occl), nh2 = Math.max(0, nx*R2.Hx + ny*R2.Hy + nz*R2.Hz);
+          const s2 = (GM ? Math.pow(nh2, 4 + GM[i]*120)*(0.15 + GM[i]*0.85) : Math.pow(nh2, shininess)*specK)*(0.35 + 0.65*lit2)*R2.k;
+          out[i] += r2; spec[i] += s2; if(RA){ RA[i] = r2; RS[i] = s2; } } }
     }
   }
-  // flat: the light on open, flat ground — what "in shadow" is measured against
-  const flat = ambient + (1 - ambient)*Lz;
-  return components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+  const res = components ? { light: out, spec, diffuse: dif, occl: occA, flat } : { light: out, spec, flat };
+  if(RA){ res.ra = RA; res.rs = RS; }
+  return rigParts(res, RG, HUE, ambient);
+}
+/** lightHeights' answer with the page's lights' shares (only when there are coloured ones): the effective ambient, the
+ *  ambient's share per pixel (ambient × (1 − occlusion)), the dial's light's own (its direct light), the rim's light and
+ *  shine (`ra`, `rs`), and their hues. */
+function rigParts(L, RG, HUE, ambient){
+  if(!RG) return L;
+  L.ambient = ambient;
+  if(HUE){ L.hue = HUE;
+    if(HUE.a){ const A = new Float32Array(L.light.length); for(let i = 0; i < A.length; i++) A[i] = ambient*(1 - L.occl[i]); L.aa = A; }
+    if(HUE.m){ const A = new Float32Array(L.light.length); for(let i = 0; i < A.length; i++) A[i] = (1 - ambient)*L.diffuse[i]*(1 - L.occl[i]); L.ma = A; } }
+  return L;
 }
 
 /**
@@ -511,12 +621,20 @@ export function lightSparse(H, ww, wh, opts = {}, T = 64){
   // length; every side needs the occlusion box (and a pixel for the slope)
   const Ms = tilt > 1e-6 && lxy > 0.02 && (opts.shadow ?? 0.6) > 0 ? Math.min(170, Math.ceil(((hMax - hMin)*relief)/rise) + 3) : 0, m0 = 6;
   const sX = tilt > 1e-6 ? -lx/tilt : 0, sY = tilt > 1e-6 ? -ly/tilt : 0;        // one step toward the light
+  // (the page's rim light casts shadows its own way: as far, each way, as its own march reaches)
+  const RM = opts.rig === false || opts.rig === 'ambient' || !LIGHT_RIG ? null : LIGHT_RIG.rim, W2 = RM ? lightWay(RM.deg, RM.tilt) : null;
+  const Ms2 = W2 && W2.lxy > 0.02 && (opts.shadow ?? 0.6) > 0 ? Math.min(170, Math.ceil(((hMax - hMin)*relief)/W2.rise) + 3) : 0;
+  const reachOf = (s1, s2) => Math.max(Math.ceil(Math.max(0, s1)*Ms), W2 ? Math.ceil(Math.max(0, s2)*Ms2) : 0) + m0;
   // a detail's shadow reaches this far from it, each way (left, right, up, down)…
-  const fl = Math.ceil(Math.max(0, sX)*Ms) + m0, fr = Math.ceil(Math.max(0, -sX)*Ms) + m0;
-  const fu = Math.ceil(Math.max(0, sY)*Ms) + m0, fd = Math.ceil(Math.max(0, -sY)*Ms) + m0;
+  const fl = reachOf(sX, W2 && W2.stepX), fr = reachOf(-sX, W2 && -W2.stepX);
+  const fu = reachOf(sY, W2 && W2.stepY), fd = reachOf(-sY, W2 && -W2.stepY);
   const M = Math.max(fl, fr, fu, fd);
   // every piece marches as the whole field would (the same steps, the same stride)
   const marchSteps = Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, rise)) + 2);
+  const marchSteps2 = W2 ? Math.min(160, Math.ceil(((hMax - hMin)*relief)/Math.max(1e-6, W2.rise)) + 2) : undefined;
+  // (the coloured lights' shares, as open ground has them, then each piece's)
+  const RA = ground.ra ? new Float32Array(ww*wh).fill(ground.ra[0]) : null, RS = RA ? new Float32Array(ww*wh).fill(ground.rs[0]) : null;
+  const AA = ground.aa ? new Float32Array(ww*wh).fill(ground.aa[0]) : null, MA = ground.ma ? new Float32Array(ww*wh).fill(ground.ma[0]) : null;
   // where the details are: each tile's box around its non-flat points
   const tx = Math.ceil(ww/T), ty = Math.ceil(wh/T), box = new Int32Array(tx*ty*4).fill(-1);
   for(let y = 0; y < wh; y++){ const r = y*ww, b = ((y/T)|0)*tx;
@@ -550,11 +668,15 @@ export function lightSparse(H, ww, wh, opts = {}, T = 64){
     const ex0 = Math.max(0, x0 - fr), ey0 = Math.max(0, y0 - fd), ex1 = Math.min(ww, x1 + fl), ey1 = Math.min(wh, y1 + fu);
     const ew = ex1 - ex0, eh = ey1 - ey0, E = new Float32Array(ew*eh);
     for(let y = 0; y < eh; y++) E.set(H.subarray((ey0 + y)*ww + ex0, (ey0 + y)*ww + ex1), y*ew);
-    const L = lightHeights(E, ew, eh, { ...opts, marchSteps }); lit += (e - i + 1)*(j1 - j0 + 1);
+    const L = lightHeights(E, ew, eh, { ...opts, marchSteps, ...(W2 ? { marchSteps2 } : {}) }); lit += (e - i + 1)*(j1 - j0 + 1);
     for(let y = y0; y < y1; y++){ const s = (y - ey0)*ew - ex0, r = y*ww;
-      out.set(L.light.subarray(s + x0, s + x1), r + x0); spec.set(L.spec.subarray(s + x0, s + x1), r + x0); }
+      out.set(L.light.subarray(s + x0, s + x1), r + x0); spec.set(L.spec.subarray(s + x0, s + x1), r + x0);
+      if(RA){ RA.set(L.ra.subarray(s + x0, s + x1), r + x0); RS.set(L.rs.subarray(s + x0, s + x1), r + x0); }
+      if(AA) AA.set(L.aa.subarray(s + x0, s + x1), r + x0); if(MA) MA.set(L.ma.subarray(s + x0, s + x1), r + x0); }
   }
-  return { light: out, spec, flat: ground.flat, lit, of: tx*ty };
+  const res = { light: out, spec, flat: ground.flat, lit, of: tx*ty };
+  if(ground.hue){ res.hue = ground.hue; res.ambient = ground.ambient; if(RA){ res.ra = RA; res.rs = RS; } if(AA) res.aa = AA; if(MA) res.ma = MA; }
+  return res;
 }
 
 
@@ -693,16 +815,23 @@ export function resolveAlpha(hex, noneHex){
  *  slopes turned away — the more, the deeper the shadow; lit faces keep their
  *  own colour. (`ambient` is kept for callers; the shadow depth comes from L.) */
 export function litK(L, i, ambient, M, c){
-  const k = L.light[i];
-  if(!M) return k;
+  const k = L.light[i], t = L.hue ? litT(L, i, c) : 0;
+  if(!M) return k + t;
   // a shadow half as bright as open ground takes the shade hue fully
   const deep = Math.max(0, Math.min(1, 2*(L.flat - k)/L.flat));
   // DIFFUSE: the light's own colour, on what it reaches (lit faces: not the shadow)
   const di = M.di ? 1 + (M.di[c] - 1)*Math.min(1, k/L.flat)*(1 - deep) : 1;
-  return k*(1 + (M.sh[c] - 1)*deep)*di;
+  return k*(1 + (M.sh[c] - 1)*deep)*di + t;
 }
-/** The highlight's colour in channel c (1 with no material). */
-export function litS(M, c){ return M ? M.hi[c] : 1; }
+/** The page's coloured lights in channel c at pixel i (ROADMAP C1, C2): what the Ambient Hue, the main light's hue and
+ *  the rim light's shift the grey light by (0 without them). Their shares are already in L.light, in white. */
+export function litT(L, i, c){ const H = L.hue; if(!H) return 0;
+  return (H.a ? L.aa[i]*(H.a[c] - 1) : 0) + (H.m ? L.ma[i]*(H.m[c] - 1) : 0) + (H.r ? L.ra[i]*(H.r[c] - 1) : 0); }
+/** The highlight's colour in channel c (1 with no material). Given the light (L, i), a coloured rim light's share of
+ *  the shine takes its own colour. */
+export function litS(M, c, L, i){ let f = M ? M.hi[c] : 1;
+  if(L && L.hue && L.hue.r && i != null){ const s = L.spec[i]; if(s > 1e-6) f += (L.rs[i]/s)*(L.hue.r[c] - f); }
+  return f; }
 /** Whether a highlight/shade hue counts as unset (white). */
 export function noMaterialHue(h){ return isWhiteHex(h); }
 

@@ -370,6 +370,33 @@ Other parts of a look:
     `ltSecondS`), in its own color (the ninth input); negative draws light
     out. At 0 the loops are the old ones exactly. The GPU path is the same
     engine, so it stays line for line with the CPU.
+- **The page's lights** (ROADMAP C1, C2 on the page; texCore
+  `withLightRig`, built by `lightRigOf` from a layer's keys through
+  `layerLights`): set round one texture's making, as `withLightTilt` is.
+  - The **rim light** is the light dial's second handle (`textureRim`,
+    `textureRimTilt`; its hue `textureTint7Hex`, whose alpha is its
+    strength: 0 is off). lightHeights adds its direct light and shine, with
+    shadows marched its own way (`lightWay`); lightSparse widens its margins
+    to both lights' reach. Flat ground's `flat` includes it.
+  - The **Ambient slider** (`textureAmbient`, 0–200, 100 the surface's own)
+    scales the ambient share's odds against the direct light, so 200% is
+    twice the fill and never more than all the light.
+  - The **light hues**: Main Light (`textureTint6Hex`: a Diffuse Hue
+    surface's material `di`, else the rig's `mainHue`), Rim Light, Ambient.
+    lightHeights then returns the shares (`aa`, `ma`, `ra`, `rs`) and `hue`;
+    `litK` adds `litT(L, i, c)` and `litS(M, c, L, i)` colours a rim's own
+    shine. A texture compositing its own way takes `litT`/`litS` where it
+    uses the light (Cold Press and Old Paper through `litGrey`, Sigil
+    Scatter, Guilloché, the Surface's heights).
+  - The Light Engine takes the ambient (`rig: 'ambient'`) and makes the
+    page's rim its Second Light when its own is 0; unwired, its Diffuse and
+    Ambient Hue inputs are the page's.
+  - Which surfaces: `TEXTURE_CAPS[t].rig`, measured (each changes under
+    them; tools: a sheet of real pixels). Never a dial that is only a
+    direction or the day. Others never see the rig and key as before.
+  - Null rig, white hues, alpha 0, ambient 100: no rig at all; the
+    fingerprints prove it. The GPU agrees with the CPU to 0.01/255
+    (compared under `?softgl`-style SwiftShader).
 - **GPU lighting:** the WebGL2 shader must stay line-for-line with the CPU
   `lightHeights`.
   - Change both together and compare them (`opts.cpuLight`; they agree to
@@ -399,6 +426,9 @@ Other parts of a look:
   - Light / Dark: lighter and darker marks.
   - Material: a grey texture's surface.
   - Specular / Shadow: glints and cast shadow.
+  - Main Light / Rim Light / Ambient: the three lights' colours (the rim's
+    alpha is its strength), shown beside the dial where the page's lights
+    reach.
   - Glow (`hue5.role: 'glow'`): a coloured texture's emitted light. It is
     black by default, and must be a no-op when black: screen it, or skip it
     when the colour sums to ~0.
@@ -1647,7 +1677,11 @@ competing.
 **Symbols.**
 - **🜚** is Touch, the Return glyph, and the app's mark for "touch this". Use
   this exact variant: it is personally significant, so never substitute it.
-- The light dial is ☉ at rest and grows 🜚's spike as it is pulled.
+- The light dial is ☉ at rest and grows 🜚's spike as it is pulled. Its
+  second handle, the rim light's, is a smaller dot in the second accent
+  under the first, hollow while off; where the two overlap they mix to
+  white (black on Vellum). ☉ Main / ◐ Rim above it choose which the finger
+  moves (each button's dot its handle's colour), as Upper and Lower do.
 - **Navigation glyphs** are hand-drawn and scratchy: each stroke gone over
   two or three times, never clean vector.
   - They relax when deselected and stiffen when selected. State must read

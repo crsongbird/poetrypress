@@ -6,10 +6,17 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
+import { litT, lightVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
 
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
+
+/** A grey lit texture's pixel under the page's coloured lights (texCore litT): each channel's light shifted by the
+ *  Ambient Hue's and the rim light's, as its grey light is (dl: the light over open ground's, at the texture's scale). */
+function litGrey(L, i, fl, dl, sp, M3){
+  const v = c => { const d = dl + litT(L, i, c)/fl*120; return clamp255(M3 ? greyLit(d, sp, M3, c) : 128 + d + sp); };
+  return [v(0), v(1), v(2)];
+}
 
 // The paper says no
 // to the pencil, very softly,
@@ -61,6 +68,7 @@ export function genColdPress(w,h,amt,zoom,light,form,M3){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.06, shadow:0.55, ao:0.3, ambient:0.45, normals:N });
   const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, gloss:0.06, shadow:0, ao:0, ambient:0.45 }).spec[0];
   return paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*60;
+    if(L.hue) return litGrey(L, i, fl, dl, sp, M3);   // (the page's coloured lights)
     if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
     return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
 }
@@ -170,7 +178,7 @@ export function genCupRing(w,h,amt,zoom,light,tint,form,M3,GL){
     const sh=Math.max(0, L.spec[i]-fs)*Math.min(1, dn)*60;       // the sheen
     const col=c=>{ const base=[t.r,t.g,t.b][c], dp=deep[c];
       // (GLOW: where it dried at its edge, faintly)
-      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*b*a*0.8 : 0); };
+      return 128 + ((base + (dp-base)*b) - 128)*a + sh*litS(M3,c, L, i) + (GL ? 255*[GL.r,GL.g,GL.b][c]*b*a*0.8 : 0); };
     return [clamp255(col(0)), clamp255(col(1)), clamp255(col(2))];
   });
 }
@@ -655,7 +663,7 @@ export function genDunes(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   for(let i=0;i<N;i++){
     const s=L.spec[i]*0.35, tone=1.05 - 0.09*TR[i], e=CR ? CR[i]*180 : 0;
     for(let c=0;c<3;c++){ const sc=c===0?sand.r:c===1?sand.g:sand.b, uc=c===0?sun.r:c===1?sun.g:sun.b, gc=GL ? (c===0?GL.r:c===1?GL.g:GL.b) : 0;
-      RGB[i*3+c]=clamp255(sc*litK(L,i,0.42,M3,c)*tone + uc*s*litS(M3,c) + gc*e); }
+      RGB[i*3+c]=clamp255(sc*litK(L,i,0.42,M3,c)*tone + uc*s*litS(M3,c, L, i) + gc*e); }
   }
   let OUT=RGB;
   if(!F.flat){
@@ -725,7 +733,7 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
   const L=lightHeights(H, ww, wh, { light, relief:1.2, gloss:gz, shadow:0.5, ao:0.3, ambient:0.66, normals:CN, glossMap:GM });
   return paintLit(w,h,div,ww,wh, i => {
     const k0=litK(L,i,0.66,M3,0), k1=litK(L,i,0.66,M3,1), k2=litK(L,i,0.66,M3,2), s=L.spec[i], g=Math.min(1, G[i]*1.6);
-    const s0=s*litS(M3,0), s1=s*litS(M3,1), s2=s*litS(M3,2);
+    const s0=s*litS(M3,0, L, i), s1=s*litS(M3,1, L, i), s2=s*litS(M3,2, L, i);
     const gc=[gold.r*(0.35+0.75*k0) + 255*s0*1.2, gold.g*(0.35+0.75*k1) + 235*s1*1.2, gold.b*(0.35+0.75*k2) + 170*s2*1.0];
     const cc=[glaze.r*k0*1.12 + 255*s0*gloss, glaze.g*k1*1.12 + 255*s1*gloss, glaze.b*k2*1.12 + 255*s2*gloss];
     // GLOW: the gold seams give off light, and a little spills onto the glaze beside them
@@ -776,7 +784,7 @@ export function genMoss(w,h,amt,zoom,light,tint1,tint2,form,tilt,M3,GL,cam){
   const sd=1 - damp*0.35, mg=1 + damp*0.25, RGB=new Float32Array(N*3);
   for(let i=0;i<N;i++){
     const k0=litK(L,i,0.36,M3,0), k1=litK(L,i,0.36,M3,1), k2=litK(L,i,0.36,M3,2), m=M[i], s=L.spec[i]*(1 - m*(1 - damp*0.6));   // moss is matte (its own gloss map); dew on it when damp
-    const sc=[stone.r*sd*k0 + 255*s*litS(M3,0), stone.g*sd*k1 + 255*s*litS(M3,1), stone.b*sd*k2 + 255*s*litS(M3,2)];
+    const sc=[stone.r*sd*k0 + 255*s*litS(M3,0, L, i), stone.g*sd*k1 + 255*s*litS(M3,1, L, i), stone.b*sd*k2 + 255*s*litS(M3,2, L, i)];
     const mc=[moss.r*k0*0.95, moss.g*k1*mg, moss.b*k2*0.9];
     // GLOW: bioluminescent moss, brightest at the tips
     if(TIP){ const e=255*Math.min(1, TIP[i])*0.9; mc[0]+=GL.r*e; mc[1]+=GL.g*e; mc[2]+=GL.b*e; }
@@ -915,7 +923,7 @@ export function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
     for(let c=0;c<3;c++){
       const k=litK(L,i,0.3,M3,c)/fl;
       let hc=hue[c]; if(film){ const fn=film[c]/Math.max(0.2,(0.2126*film[0]+0.7152*film[1]+0.0722*film[2])); hc=hc*(1-iri)+Math.min(2.2,fn)*iri; }
-      const v=128*(0.45+0.55*k) + 150*sp*litS(M3,c);
+      const v=128*(0.45+0.55*k) + 150*sp*litS(M3,c, L, i);
       // (oxide is saturated: the film's colour weighs more than the metal's own)
       const sat=film ? 0.55 - 0.3*iri : 0.55;
       d[q+c]=Math.max(0,Math.min(255, v*(sat+(1-sat)*hc) + 40*sp*(hc-1)));
@@ -1009,6 +1017,7 @@ export function genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,crinkle,M3,GL){
   const L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.1, shadow:0.4, ao:0.2, ambient:0.5 });
   const fl=L.flat||1, fs=lightHeights(new Float32Array(1), 1, 1, { light, relief:1, gloss:0.1, shadow:0, ao:0, ambient:0.5 }).spec[0];
   const c=paintLit(w,h,div,ww,wh, i => { const dl=(L.light[i]/fl - 1)*120, sp=(L.spec[i]-fs)*90;
+    if(L.hue) return litGrey(L, i, fl, dl, sp, M3);   // (the page's coloured lights)
     if(!M3){ const v=128 + dl + sp; return [clamp255(v), clamp255(v), clamp255(v)]; }
     return [clamp255(greyLit(dl, sp, M3, 0)), clamp255(greyLit(dl, sp, M3, 1)), clamp255(greyLit(dl, sp, M3, 2))]; });
   const ctx=c.getContext('2d', CPU), U=Math.min(w,h), rgba=(o,a)=>`rgba(${o.r|0},${o.g|0},${o.b|0},${a})`;
@@ -1211,7 +1220,7 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     for(let c=0;c<3;c++){
       // deep (dark) stone carries the hue fully; the bright fire, less (hue^(1.2 − inside), from a table: a power per channel per pixel was half the time)
       const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], u=(inside<0?0:inside>1?1:inside)*1024, u0=u|0, T=HT[c], tint=u0>=1024 ? T[1024] : T[u0]+(T[u0+1]-T[u0])*(u-u0);
-      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c);
+      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c, L, i);
       d[q+c]=val<0?0:val>255?255:val;
     }
     d[q+3]=255;
@@ -1354,7 +1363,7 @@ export function genBurntLetter(w,h,amt,zoom,light,tintAsh,tintEmber,form,embers,
       let ground=128*(1-s*0.55)*Math.min(1.1, k);
       // the powder of a pile: pale ash speckled toward char, lit as a mound
       if(P[i]>0){ const powder=(ASH[c]*0.88 + (CHAR[c]-ASH[c]*0.88)*PT[i])*litK(L, i, 0.45, M3, c)/L.flat; ground += (powder-ground)*P[i]; }
-      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c);
+      const flake=(ASH[c]+(CHAR[c]-ASH[c])*t)*litK(L, i, 0.45, M3, c)/L.flat + sheen*litS(M3, c, L, i);
       const e=E[i], glow=e>0 ? (EM[c]+(HOT[c]-EM[c])*e*e)*e : 0;
       out[c]=clamp255(ground+(flake-ground)*a + glow*1.1);
     }
@@ -1476,7 +1485,7 @@ export function genHoarfrost(w,h,amt,zoom,light,tint,form,rime,M3,GL){
     const out=[0,0,0];
     for(let c=0;c<3;c++){
       const lit=ICE[c]*litK(L, i, 0.6, M3, c)/L.flat;
-      out[c]=clamp255(128 + (lit-128)*cov + sp*litS(M3, c) + (GL ? 255*[GL.r,GL.g,GL.b][c]*cov*0.35 : 0));
+      out[c]=clamp255(128 + (lit-128)*cov + sp*litS(M3, c, L, i) + (GL ? 255*[GL.r,GL.g,GL.b][c]*cov*0.35 : 0));
     }
     return out;
   });

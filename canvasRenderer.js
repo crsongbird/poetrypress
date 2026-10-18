@@ -28,7 +28,7 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, graphUsesCurves, chainReadsPoem } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, graphUsesCurves, chainReadsPoem, layerLights } from './textureGenerators.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { fill, CHOOSER } from './strings.js';
 import { resolvePmlVariables } from './pmlVars.js';
@@ -1139,7 +1139,11 @@ function pmlVarContext(W, H){
   for(let i = 0; i < Math.min(2, caps.tints || 0); i++) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Second Hue' : 'Hue'), hex: hex(i + 1) });
   // the material hues and the fifth, when they are in use (not their "none")
   if(caps.material) [[3, 'Specular Hue'], [4, 'Shadow Hue']].forEach(([n, label]) => { if(hex(n) && hex(n).toUpperCase() !== '#FFFFFF') hues.push({ label, hex: hex(n) }); });
-  if(caps.diffuse && hex(6) && hex(6).toUpperCase() !== '#FFFFFF') hues.push({ label: 'Diffuse Hue', hex: hex(6) });
+  const lit = caps.diffuse || caps.rig || type === 'athanor';
+  if(lit && hex(6) && !/^#?FFFFFF([0-9a-f]{2})?$/i.test(hex(6)) && !/^#[0-9a-f]{6}00$/i.test(hex(6))) hues.push({ label: 'Main Light Hue', hex: hex(6) });
+  // (the page's lights: the rim light while it is on, the Ambient Hue when it is set)
+  if((caps.rig || type === 'athanor') && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(hex(7)) && !/^#[0-9a-f]{6}00$/i.test(hex(7))) hues.push({ label: 'Rim Light Hue', hex: hex(7) });
+  if((caps.rig || type === 'athanor') && hex(8) && !/^#?FFFFFF([0-9a-f]{2})?$/i.test(hex(8)) && !/^#[0-9a-f]{6}00$/i.test(hex(8))) hues.push({ label: 'Ambient Hue', hex: hex(8) });
   if(caps.hue5 && hex(5) && hex(5).toUpperCase() !== caps.hue5.def.toUpperCase() && !/^#[0-9a-f]{6}00$/i.test(hex(5))) hues.push({ label: caps.hue5.label, hex: hex(5) });   // (fully transparent is none)
   const optionOf = (id, value) => { const el = $(id), o = el && el.querySelector ? el.querySelector(`option[value="${value}"]`) : null; return (o && o.textContent) || value || ''; };
   const tilt = +L.textureLightTilt;
@@ -1292,6 +1296,8 @@ export function surfaceFromDom(){
     cameraTurn: v('cameraTurn'), cameraView: v('cameraView'), cameraZoom: v('cameraZoom'),
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
+    // the page's lights (ROADMAP C1, C2): the rim light, the light dial's second handle; the Ambient slider; their hues
+    textureRim: v('textureRim'), textureRimTilt: v('textureRimTilt'), textureAmbient: v('textureAmbient'), textureTint7: v('textureTint7Hex'), textureTint8: v('textureTint8Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
     textureCurve1: v('textureCurve1') || '', textureCurve2: v('textureCurve2') || '',
     textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
@@ -1326,7 +1332,10 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const tints = shape ? shape.tints : caps.tints;
   const tint = (n, on) => on ? (L['textureTint' + n] || null) : null;
   const tint1 = tint(1, tints >= 1), tint2 = tint(2, tints >= 2), tint3 = tint(3, caps.material), tint4 = tint(4, caps.material);
-  const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse);
+  // (the Main Light Hue: a surface's Diffuse Hue, or the page's light's colour where the page's lights reach it)
+  const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse || !!caps.rig || type === 'athanor');
+  // the page's lights: the rim light, the Ambient slider and hue (a surface they reach, or a graph)
+  const lights = caps.rig || type === 'athanor' ? layerLights(L) : {};
   // the page's own colors: for a surface made of them (Rain on Glass, Circuit Board), or a graph with a Page Backdrop
   const envs = caps.pageEnv || (type === 'athanor' && graphUsesBackdrop(L.forgeGraph || '')) ? env() : undefined;
   const seed = parseInt(L.textureSeed, 10) || 0;
@@ -1371,7 +1380,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
     // (the curves drawn under Surface, for a graph with a Curve Control: '' is the control's own Default)
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 

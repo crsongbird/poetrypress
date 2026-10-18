@@ -10,7 +10,7 @@
  *            formation and fibres) or a digital sensor (per-channel noise,
  *            rows and columns), blended between neighbours by Kind.
  */
-import { CPU, scaleNow, wordsRoom, kitCanvas, kitField, kitImage, withSeed, canonDiv, lightHeights, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { CPU, scaleNow, wordsRoom, kitCanvas, kitField, kitImage, withSeed, canonDiv, lightHeights, litT, litS, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genCityscape, genFlowers } from './texSharpness.js';
 
 const SH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -169,6 +169,8 @@ function shGuilloche(w,h,amt,zoom,light,form){
     // the plate mid-grey; a groove darker, its lit wall catching the light
     const k=L.light[i]/L.flat, v=128*k - C[i]*34 + L.spec[i]*90;
     const q=i*4; d[q]=d[q+1]=d[q+2]=v<0?0:v>255?255:v; d[q+3]=255;
+    // (the page's coloured lights: the Ambient Hue and the rim light's, on each channel)
+    if(L.hue) for(let c=0;c<3;c++){ const vc=v + 128*litT(L,i,c)/L.flat + L.spec[i]*90*(litS(null,c,L,i) - 1); d[q+c]=vc<0?0:vc>255?255:vc; }
   }
   sx.putImageData(im,0,0);
   const c=document.createElement('canvas'); c.width=w; c.height=h;

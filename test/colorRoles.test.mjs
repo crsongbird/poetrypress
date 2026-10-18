@@ -56,8 +56,8 @@ check('a glow at 0% alpha keys the cache exactly like no glow',
 check('DIFFUSE (the light\'s own colour) only where nothing else says it: not beside a Sun or Light hue, not on grey textures',
   caps.filter(([, c]) => c.diffuse).every(([, c]) => !c.genericTint && !(c.tintLabels || []).some(l => /^(Sun|Light) Hue$/.test(l))) && T.TEXTURE_CAPS.kintsugi.diffuse);
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
-check('the Specular, Shadow, Glow and Diffuse pickers keep their alpha slider',
-  ev.includes("safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex', alpha: true, format: 'hex' });"));
+check('the Specular, Shadow, Glow and the three light pickers (Main Light, Rim Light, Ambient) keep their alpha slider',
+  ev.includes("safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex, #textureTint7Hex, #textureTint8Hex', alpha: true, format: 'hex' });"));
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

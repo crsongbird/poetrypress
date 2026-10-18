@@ -423,7 +423,7 @@ export const CHAOS_STEPS = {
         for(let c = 0; c < 3; c++){
           const gzc = GZ[c]*(1 - hv) + G2[c]*hv;
           const alb = g > 0 ? gzc*(1.12 - 0.3*th)*(1 - thin) + BS[c]*thin : BS[c]*gr;
-          let v = alb*(litK(L, k, 0.45, M3, c)/fl)*dirt + 255*sp*litS(M3, c);
+          let v = alb*(litK(L, k, 0.45, M3, c)/fl)*dirt + 255*sp*litS(M3, c, L, k);
           if(GW && g > 0) v += 255*GW[c]*(0.4 + 0.6*th)*0.55;
           OUT[c][k] = (v < 0 ? 0 : v > 255 ? 255 : v)/255;
         }

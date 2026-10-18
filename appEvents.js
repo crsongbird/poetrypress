@@ -43,7 +43,7 @@ import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DE
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName, boxNow } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox } from './textureGenerators.js';
+import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox, layerLights } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme, DEFAULT_THEME } from './theme.js';
@@ -162,7 +162,7 @@ safeColoris({
 });
 // the lighting hues keep an ALPHA slider: how much of the colour to use, so
 // each effect is optional (a glow at 0% alpha is no glow at all)
-safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex', alpha: true, format: 'hex' });
+safeColoris({ instance: '#textureTint3Hex, #textureTint4Hex, #textureTint5Hex, #textureTint6Hex, #textureTint7Hex, #textureTint8Hex', alpha: true, format: 'hex' });
 
 // ---------- lock state ----------
 // The lock set itself lives in `state.locks` (top of the file). This is the
@@ -172,12 +172,12 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight','cameraTurn',
-  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','textureTint7Hex','textureTint8Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
 ];
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
 if(typeof document.querySelectorAll === 'function'){
-  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider']);   // (the zoom's slider is a view of the camera, locked with it)
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider', 'textureAmbient']);   // (the zoom's slider is a view of the camera, locked with it; the Ambient slider is the light's, locked with it)
   for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
       + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
     if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
@@ -352,16 +352,18 @@ toggleSubblock('textureToggle','textureBlock');
 // saves the upper under its own keys and the lower as `baseLayer`, whichever the controls show; Swap
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
+  'textureRim', 'textureRimTilt', 'textureAmbient', 'textureTint7', 'textureTint8',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
   'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
-  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
 /** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
 function freshLower(){
   const defs = paramsFor('grain'), caps = capsFor('grain');
   const L = { textureType: 'grain', textureOpacity: 50, textureBlend: 'overlay', textureLight: $('textureLight').value, textureLightTilt: '100', cameraTurn: '0', cameraView: '0', cameraZoom: '100',
+    textureRim: String(RIM_DEFAULT.deg), textureRimTilt: String(RIM_DEFAULT.tilt), textureAmbient: '100', textureTint7: RIM_DEFAULT.hex + '00', textureTint8: '#FFFFFF',
     textureSeed: ((parseInt($('textureSeedValue').value, 10) || 0) ^ 0x5bd1e995) >>> 0, textureSeedWords: '', forgeGraph: '' };
   defs.forEach((d, i) => { L['texP' + (i + 1)] = String(d.def); });
   (caps.tintDefaults || []).forEach((c, i) => { L['textureTint' + (i + 1)] = c === 'accent1' ? $('accent1ColorHex').value : c === 'accent2' ? $('accent2ColorHex').value : c; });
@@ -1223,6 +1225,11 @@ function restoreSurfaceDetails(s){
     // looks saved before the dial had raking light only: 100
     if($('textureLightTilt')) $('textureLightTilt').value = s.textureLightTilt !== undefined ? s.textureLightTilt : '100';
     syncLightPad(); }
+  // THE PAGE'S LIGHTS: the rim light (off, unless the look has one), the Ambient slider (the surface's own), their hues
+  { putRim(s.textureRim !== undefined ? s.textureRim : RIM_DEFAULT.deg, s.textureRimTilt !== undefined ? s.textureRimTilt : RIM_DEFAULT.tilt);
+    if($('textureAmbient')) $('textureAmbient').value = s.textureAmbient !== undefined ? String(s.textureAmbient) : '100';
+    setColorField('textureTint7Hex', s.textureTint7 || RIM_DEFAULT.hex + '00'); setColorField('textureTint8Hex', s.textureTint8 || '#FFFFFF');
+    syncLightPad(); }
   // the camera: the look's own, or where its surface's camera starts
   { const d = cameraStart(s.textureType || $('textureType').value);
     putCamera(s.cameraTurn !== undefined ? s.cameraTurn : d.turn, s.cameraView !== undefined ? s.cameraView : d.view, s.cameraZoom !== undefined ? s.cameraZoom : d.zoom); }
@@ -1691,6 +1698,9 @@ function applyPreset(p){
     setColorField('textureTint4Hex', p.textureTint4 || '#FFFFFF');
     setColorField('textureTint5Hex', p.textureTint5 || hue5Default(p.textureType || $('textureType').value));
     setColorField('textureTint6Hex', p.textureTint6 || '#FFFFFF');
+    // the page's lights: the preset's own, else none (a locked light keeps its rim and ambient too)
+    if(!state.locks.has('textureLight')){ putRim(p.textureRim ?? RIM_DEFAULT.deg, p.textureRimTilt ?? RIM_DEFAULT.tilt); if($('textureAmbient')) $('textureAmbient').value = String(p.textureAmbient ?? 100);
+      setColorField('textureTint7Hex', p.textureTint7 || RIM_DEFAULT.hex + '00'); setColorField('textureTint8Hex', p.textureTint8 || '#FFFFFF'); }
     syncLightPad();
     restoreLocked(__locks);
     // a preset changes opacity and seed without anyone touching them
@@ -2251,14 +2261,18 @@ function syncTextureTools(resetToDefaults){
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
   // a hue the texture doesn't use is HIDDEN, as an unused slider is (Ruby)
-  ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
+  ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row','tint7Row','tint8Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
   if(t1) t1.classList.toggle('tool-hidden', caps.tints < 1);
   if(t2) t2.classList.toggle('tool-hidden', caps.tints < 2);
   // material hues, for lit textures that are coloured (not the grey ones that blend)
   ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-hidden', !caps.material); });
   if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); setColorField('textureTint6Hex', '#FFFFFF'); }
-  // DIFFUSE, the light's own colour, where nothing else already says it
-  const r6 = $('tint6Row'); if(r6) r6.classList.toggle('tool-hidden', !caps.diffuse);
+  // THE LIGHTS' COLOURS: the main light's (a surface's Diffuse Hue, or the page's light's where the page's lights reach),
+  // the rim light's and the ambient's (where they reach)
+  const reach = lightsReach(type), r6 = $('tint6Row'); if(r6) r6.classList.toggle('tool-hidden', !caps.diffuse && !reach);
+  ['tint7Row', 'tint8Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.toggle('tool-hidden', !reach); });
+  { const rt = $('textureRimTilt'); if(rt && !caps.lowLight && +rt.value > 100) rt.value = '100'; }
+  syncLightPad();
   // the fifth hue: Glow, Material or Snow Hue, by what the texture has (or none)
   const r5 = $('tint5Row');
   if(r5){
@@ -2325,27 +2339,62 @@ function followAccents(){
 // The arrow points the way the light travels and strengthens as it lowers.
 // Eight ticks on the rim snap to 45°; ⟲ resets.
 const LIGHT_DEFAULT = { deg: 315, tilt: 100 };
+// THE RIM LIGHT (ROADMAP C2; Ruby: a second handle on the dial, in a second colour, under the first, chosen with a
+// button as Two Surfaces' Upper and Lower are): a second light from its own place on the dial, in its own colour. Its
+// hue (textureTint7Hex) holds its strength in its alpha: 0 is off. Moving its handle turns it on, at RIM_ON; ⟲ while it
+// is chosen turns it off. Where the page's lights reach a surface (caps.rig) the dial shows ☉ Main / ◐ Rim, the Ambient
+// slider and the light hues; the finger moves the light chosen.
+const RIM_DEFAULT = { deg: 135, tilt: 100, hex: '#CFE3FF' }, RIM_ON = '99';   // a cool light from the far side; on at 60%
+/** Whether the page's lights reach this surface (the rim, the Ambient slider, the light hues). */
+function lightsReach(type = ($('textureType') || {}).value){ return !!((capsFor(type) || {}).rig || type === 'athanor'); }
+function rimHex(){ const v = String(($('textureTint7Hex') || {}).value || ''); return /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v) ? v : RIM_DEFAULT.hex + '00'; }
+/** The rim light now: its way and height (as the dial's), and whether it is on (its hue's alpha above 0). */
+function rimNow(){ const d = parseFloat(($('textureRim') || {}).value), t = parseFloat(($('textureRimTilt') || {}).value), h = rimHex();
+  return { deg: isNaN(d) ? RIM_DEFAULT.deg : d, tilt: isNaN(t) ? RIM_DEFAULT.tilt : t, on: h.length === 7 || h.slice(7, 9).toUpperCase() !== '00' }; }
+/** Which light the finger moves: 'main', or 'rim' (only where the page's lights reach). */
+function lightPick(){ return state.ui.lightPick === 'rim' && lightsReach() ? 'rim' : 'main'; }
+/** The rim light's place into its two hidden fields (no render: a look or a preset is being put back). */
+function putRim(deg, tilt){
+  const set = (id, v) => { const el = $(id); if(el) el.value = String(v); };
+  set('textureRim', Math.round((((+deg || 0) % 360) + 360) % 360)); set('textureRimTilt', Math.round(Math.max(0, Math.min(dialMax(), isNaN(+tilt) ? RIM_DEFAULT.tilt : +tilt))));
+}
+/** The rim light on (at RIM_ON, its own colour kept) or off (its alpha 0). */
+function setRimOn(on){ const h = rimHex().slice(0, 7); setColorField('textureTint7Hex', h + (on ? RIM_ON : '00')); }
 function syncLightPad(){
   const deg = parseFloat($('textureLight').value) || 0, tilt = $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
   const k = Math.max(0, Math.min(130, isNaN(tilt) ? 100 : tilt)) / 100, a = deg * Math.PI / 180;
   const set = (id, attrs) => { const el = $(id); if(el && el.setAttribute) for(const key in attrs) el.setAttribute(key, attrs[key]); };
   // the dot slides from the heart of ☉ toward the rim
-  set('lightHandle', { cx: (Math.sin(a) * 15 * k).toFixed(2), cy: (-Math.cos(a) * 15 * k).toFixed(2) });
+  const hx = Math.sin(a) * 15 * k, hy = -Math.cos(a) * 15 * k;
+  set('lightHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) }); set('lightMainClipDot', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
   // 🜚's spike grows out of the rim the same way: longer and stronger as the light lowers
   const tip = 26 + 3 + 15 * k;
   set('lightSpikeBody', { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
   set('lightSpike', { transform: `rotate(${deg.toFixed(1)})`, opacity: k < 0.04 ? 0 : (0.35 + 0.65 * k).toFixed(2) });
+  // the rim light's handle, under the main's: hollow while it is off; where the two meet, the lens they share mixes to white
+  const reach = lightsReach(), R = rimNow(), rk = Math.max(0, Math.min(130, R.tilt))/100, ra = R.deg*Math.PI/180;
+  const rx = Math.sin(ra)*15*rk, ry = -Math.cos(ra)*15*rk;
+  set('lightRimHandle', { cx: rx.toFixed(2), cy: ry.toFixed(2) }); set('lightOverlap', { cx: rx.toFixed(2), cy: ry.toFixed(2) });
+  const pick = lightPick();
   const dial = $('lightDial');
-  if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', tilt >= 99 && Math.abs(((deg - +t.dataset.deg + 540) % 360) - 180) < 0.5));
-  if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${Math.round(deg)}°, ${Math.round(tilt)}% low`);
+  if(dial && dial.classList){ dial.classList.toggle('has-rim', reach); dial.classList.toggle('rim-on', reach && R.on); dial.classList.toggle('pick-rim', pick === 'rim'); }
+  const row = $('lightRow'); if(row && row.classList) row.classList.toggle('has-rig', reach);
+  { const seg = $('lightSeg'); if(seg && seg.querySelectorAll) seg.querySelectorAll('[data-light]').forEach(b => { const me = b.dataset.light === pick; b.classList.toggle('active', me); b.setAttribute('aria-pressed', String(me)); b.classList.toggle('dim', b.dataset.light === 'rim' && !R.on); }); }
+  { const r7 = $('tint7Row'); if(r7 && r7.classList) r7.classList.toggle('rim-off', !R.on); }
+  // the numbers beneath are the chosen light's
+  const pd = pick === 'rim' ? R.deg : deg, pt = pick === 'rim' ? R.tilt : tilt;
+  if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', pt >= 99 && Math.abs(((pd - +t.dataset.deg + 540) % 360) - 180) < 0.5));
+  if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `${pick === 'rim' ? 'rim light ' : ''}${Math.round(pd)}°, ${Math.round(isNaN(pt) ? 100 : pt)}% low`);
   if(dial && dial.classList) dial.classList.toggle('past-rim', tilt > 100);
   // its numbers, beneath (not while one is being typed)
-  const di = $('lightDegIn'), ti = $('lightTiltIn'), ae = typeof document !== 'undefined' ? document.activeElement : null;
-  if(di && ae !== di) di.value = String(Math.round(deg)); if(ti && ae !== ti){ ti.value = String(Math.round(isNaN(tilt) ? 100 : tilt)); ti.max = String(dialMax()); }
+  const di = $('lightDegIn'), ti = $('lightTiltIn'), ai = $('lightAmbIn'), ae = typeof document !== 'undefined' ? document.activeElement : null;
+  if(di && ae !== di) di.value = String(Math.round(pd)); if(ti && ae !== ti){ ti.value = String(Math.round(isNaN(pt) ? 100 : pt)); ti.max = String(dialMax()); }
+  if(ai && ae !== ai) ai.value = String(Math.round(parseFloat(($('textureAmbient') || {}).value) || 0));
 }
-// typing the dial's numbers turns it exactly
+// typing the dial's numbers turns the chosen light exactly
 for(const id of ['lightDegIn', 'lightTiltIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
   const deg = parseFloat($('lightDegIn').value), tilt = parseFloat($('lightTiltIn').value);
+  if(lightPick() === 'rim'){ const R = rimNow(); setRim(isNaN(deg) ? R.deg : deg, isNaN(tilt) ? R.tilt : tilt, true); return; }
   setLight(isNaN(deg) ? (parseFloat($('textureLight').value) || 0) : deg, isNaN(tilt) ? (parseFloat(($('textureLightTilt') || {}).value) || 100) : tilt, true);
 });
 function setLight(deg, tilt, commit){
@@ -2354,6 +2403,19 @@ function setLight(deg, tilt, commit){
   if($('textureLightTilt')) $('textureLightTilt').value = String(Math.round(Math.max(0, Math.min(dialMax(), tilt))));
   syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
 }
+/** The rim light moved (and so on, if it was off: a light moved that gives nothing would be a control that does nothing). */
+function setRim(deg, tilt, commit){
+  if(!commit) draftWhileDragging();
+  putRim(deg, tilt); if(!rimNow().on) setRimOn(true);
+  syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
+}
+/** The chosen light to (deg, tilt). */
+function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); }
+function pickedNow(){ if(lightPick() === 'rim'){ const R = rimNow(); return { deg: R.deg, tilt: R.tilt }; }
+  const t = parseFloat(($('textureLightTilt') || {}).value); return { deg: parseFloat($('textureLight').value) || 0, tilt: isNaN(t) ? 100 : t }; }
+if($('lightSeg') && $('lightSeg').addEventListener) $('lightSeg').addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('[data-light]') : null; if(!b) return;
+  state.ui.lightPick = b.dataset.light === 'rim' ? 'rim' : 'main'; syncLightPad(); });
 if($('lightDial') && $('lightDial').addEventListener){
   const dial = $('lightDial');
   const fromPointer = (e, snapTicks) => {
@@ -2373,7 +2435,7 @@ if($('lightDial') && $('lightDial').addEventListener){
     if(snapTicks || tilt > 88){ const nearest = Math.round(deg / 45) * 45; if(Math.abs(nearest - deg) < 7) deg = nearest; }
     // the halfway ring catches lightly
     if(Math.abs(tilt - 50) < 4) tilt = 50;
-    setLight(deg, tilt, false);
+    movePicked(deg, tilt, false);
   };
   let dragging = false;
   dial.addEventListener('pointerdown', e => { dragging = true; if(dial.setPointerCapture) dial.setPointerCapture(e.pointerId); fromPointer(e, e.target && e.target.classList && e.target.classList.contains('ld-tick')); });
@@ -2382,22 +2444,33 @@ if($('lightDial') && $('lightDial').addEventListener){
   dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
   // keys: arrows turn it by 15°, page up/down raise and lower it
   dial.addEventListener('keydown', e => {
-    const deg = parseFloat($('textureLight').value) || 0, tilt = parseFloat(($('textureLightTilt') || {}).value) || 100;
+    const p = pickedNow();
     const map = { ArrowRight: [15, 0], ArrowDown: [15, 0], ArrowLeft: [-15, 0], ArrowUp: [-15, 0], PageUp: [0, -10], PageDown: [0, 10] };
-    if(map[e.key]){ e.preventDefault(); setLight(deg + map[e.key][0], tilt + map[e.key][1], true); }
+    if(map[e.key]){ e.preventDefault(); movePicked(p.deg + map[e.key][0], p.tilt + map[e.key][1], true); }
   });
 }
-if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true));
+// ⟲ resets the chosen light (the rim light: off, back where it starts)
+if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => {
+  if(lightPick() === 'rim'){ putRim(RIM_DEFAULT.deg, RIM_DEFAULT.tilt); setRimOn(false); syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); return; }
+  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); });
 // ◎ to the centre (overhead / the middle of the page), keeping the angle; ⚄ a
-// random angle, keeping the distance. Neither is sticky.
-if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => setLight(parseFloat($('textureLight').value) || 0, 0, true));
+// random angle, keeping the distance. Neither is sticky. Each moves the chosen light.
+if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => movePicked(pickedNow().deg, 0, true));
 if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEventListener('click', () => {
   // a locked light stays; otherwise it turns the way the dice roll (a little, anywhere, or anywhere and any height)
   if(state.locks.has('textureLight')){ toast(DIE.locked); murmur.play('blocked'); return; }
-  const lv = dieLevel(), deg = parseFloat($('textureLight').value) || 0, tt = parseFloat(($('textureLightTilt') || {}).value), t = isNaN(tt) ? 100 : tt;
-  if(lv === 'gentle') setLight(deg + (Math.random()*2 - 1)*15, t + (Math.random()*2 - 1)*8, true);
-  else if(lv === 'wild') setLight(Math.random()*360, Math.random()*dialMax(), true);
-  else setLight(Math.random()*360, t, true); });
+  const lv = dieLevel(), { deg, tilt: t } = pickedNow();
+  if(lv === 'gentle') movePicked(deg + (Math.random()*2 - 1)*15, t + (Math.random()*2 - 1)*8, true);
+  else if(lv === 'wild') movePicked(Math.random()*360, Math.random()*dialMax(), true);
+  else movePicked(Math.random()*360, t, true); });
+// THE AMBIENT SLIDER (Ruby: under the dial, as the camera's zoom), and its number
+if($('textureAmbient') && $('textureAmbient').addEventListener){
+  $('textureAmbient').addEventListener('input', () => { draftWhileDragging(); syncLightPad(); scheduleRender(); });
+  $('textureAmbient').addEventListener('change', () => { syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
+}
+if($('lightAmbIn') && $('lightAmbIn').addEventListener) $('lightAmbIn').addEventListener('change', () => {
+  const v = parseFloat($('lightAmbIn').value); if(!isNaN(v) && $('textureAmbient')) $('textureAmbient').value = String(Math.round(Math.max(0, Math.min(200, v))));
+  syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
 // ---------- THE CAMERA DIAL ----------
 // (Ruby: a second dial for the camera, so the light dial is the light's alone.) Its handle is where the camera stands:
 // round the dial, its turn; drawn out from the middle, how low it looks (the middle straight down — or, on Ringworld,
@@ -2526,6 +2599,8 @@ bindColorField('textureTint3Hex', ()=>scheduleRender());
 bindColorField('textureTint4Hex', ()=>scheduleRender());
 bindColorField('textureTint5Hex', ()=>scheduleRender());
 bindColorField('textureTint6Hex', ()=>scheduleRender());
+bindColorField('textureTint7Hex', ()=>{ syncLightPad(); scheduleRender(); });   // (the rim light: its alpha turns it on and off)
+bindColorField('textureTint8Hex', ()=>scheduleRender());
 /** A label's own words, leaving what else lives in it (its padlock) alone —
  *  writing textContent wiped the lock off every hue whose name changes. */
 // (a function, not a const: labels are renamed at boot, before this line runs)
@@ -2766,12 +2841,14 @@ function rollControl(id, level, shift = 0){ const el = $(id); if(!el) return;
       : lo + (level === 'wild' ? Math.random() : 0.1 + Math.random()*0.8)*(hi - lo);
     el.value = String(Math.round(v/st)*st); el.dispatchEvent(new Event('input', { bubbles: true })); }
   else if(/Hex$/.test(id)){
+    // (the rim light's hue rolls its colour only: its alpha is whether it is on, and how strongly)
+    const keepA = id === 'textureTint7Hex' && /^#[0-9a-f]{8}$/i.test(el.value || '') ? el.value.slice(7, 9) : '', set = (k, v) => setColorField(k, keepA ? v.slice(0, 7) + keepA : v);
     // …and each moves a touch of its own
     if(level === 'gentle'){ const [h, sa, l] = dieHsl(el.value);
-      setColorField(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
-    else if(level === 'wild') setColorField(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
+      set(id, hslHex((((h + shift + (Math.random()*2 - 1)*4) % 360) + 360) % 360, dieClamp(sa + (Math.random()*2 - 1)*0.05, 0, 1), dieClamp(l + (Math.random()*2 - 1)*0.03, 0.02, 0.98))); }
+    else if(level === 'wild') set(id, hslHex(Math.random()*360, Math.random(), 0.05 + Math.random()*0.9));
     else { const c = hexToRgbObj(el.value || '#808080'), l = (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b))/510;
-      setColorField(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
+      set(id, hslHex(Math.random()*360, 0.3 + Math.random()*0.5, dieClamp(l + (Math.random() - 0.5)*0.2, 0.08, 0.92))); } }
   else if(el.tagName === 'SELECT' && level !== 'gentle'){ const o = dieOptions(el, level); if(o.length > 1){ el.value = o[Math.floor(Math.random()*o.length)].value; el.dispatchEvent(new Event('change', { bubbles: true })); } }
   // (switches are never rolled: they show and hide whole sections, and sit beside the locks)
 }
@@ -3442,6 +3519,8 @@ function athanorOpts(json, n){
   const k = (id, d) => { const v = parseFloat(($(id) || {}).value); return isNaN(v) ? d : v; };
   const own = ($('textureType') || {}).value === 'athanor', defs = athanorKnobs(json), knob = i => own ? k('texP' + i, 50) : ((defs.find(x => x.slot === i) || {}).def ?? 50);
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100), camera: cameraNow(),
+    ...layerLights({ textureRim: k('textureRim', 135), textureRimTilt: k('textureRimTilt', 100), textureAmbient: k('textureAmbient', 100), textureTint7: ($('textureTint7Hex') || {}).value, textureTint8: ($('textureTint8Hex') || {}).value }),
+    tint6: ($('textureTint6Hex') || {}).value,
     tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined,   // (the page's backdrop, for a graph with a Page Backdrop)

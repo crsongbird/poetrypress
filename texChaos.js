@@ -6,7 +6,7 @@
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
 import { PLANETS, ZODIAC } from './symbolLore.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, wordsRoom, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, greyLit, pickWeighted } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, wordsRoom, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, litT, greyLit, pickWeighted } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -127,7 +127,10 @@ export function genSigils(w,h,amt,zoom,light,form,M3){
     const k=L.light[i]/fl, s=(L.spec[i]-sFlat)*110;
     if(k===1 && s===0) continue;
     const q=i*4;
-    if(!M3){ d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s)); }
+    if(L.hue) for(let c=0;c<3;c++){                               // (the page's coloured lights: each channel its own light)
+      const k1 = k + litT(L,i,c)/fl, kc = M3 && k1<1 ? 1 - (1-k1)*Math.max(0, 1 + (1 - M3.sh[c])*0.7) : k1;
+      d[q+c]=Math.max(0,Math.min(255,d[q+c]*kc + s*(M3 ? M3.hi[c] : 1)*litS(null,c,L,i))); }
+    else if(!M3){ d[q]=Math.max(0,Math.min(255,d[q]*k+s)); d[q+1]=Math.max(0,Math.min(255,d[q+1]*k+s)); d[q+2]=Math.max(0,Math.min(255,d[q+2]*k+s)); }
     else for(let c=0;c<3;c++){                                    // a shadowed wall takes the Shade hue, a glint the Highlight
       const kc = k<1 ? 1 - (1-k)*Math.max(0, 1 + (1 - M3.sh[c])*0.7) : k;
       d[q+c]=Math.max(0,Math.min(255,d[q+c]*kc + s*M3.hi[c])); }
@@ -509,9 +512,9 @@ export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
     const K = c => litK(L, i, 0.4, M3, c)/flat, sp = L.spec[i]*0.6, q = i*4;
     // GLOW: molten light in the sunken facets, as if lava showed through
     const e = GL ? 255*Math.pow(Math.min(1, Math.max(0, (-H[i]/(cell*0.3) - 0.4)/0.6)), 1.6) : 0;   // only the deepest
-    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0) + (GL ? GL.r*e : 0)));
-    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1) + (GL ? GL.g*e : 0)));
-    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2) + (GL ? GL.b*e : 0)));
+    dta[q]   = Math.max(0, Math.min(255, mat.r*K(0)*(lightCol.r/255) + lightCol.r*sp*litS(M3, 0, L, i) + (GL ? GL.r*e : 0)));
+    dta[q+1] = Math.max(0, Math.min(255, mat.g*K(1)*(lightCol.g/255) + lightCol.g*sp*litS(M3, 1, L, i) + (GL ? GL.g*e : 0)));
+    dta[q+2] = Math.max(0, Math.min(255, mat.b*K(2)*(lightCol.b/255) + lightCol.b*sp*litS(M3, 2, L, i) + (GL ? GL.b*e : 0)));
     dta[q+3] = 255;
   }
   sctx.putImageData(img, 0, 0);

@@ -1484,6 +1484,30 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .ld-low{ fill:none; stroke:var(--accent); stroke-width:.9; stroke-dasharray:1.6 2.2; opacity:0; pointer-events:none; }
 .light-dial.low-ok .ld-low{ opacity:.45; }
 .light-dial.past-rim .ld-handle{ fill:var(--rose, var(--accent)); }
+/* THE RIM LIGHT (Ruby): a second handle in a second colour, under the main light's; hollow while the rim light is off;
+   where the two overlap the lens they share mixes to white (to black on the light theme), as two lights do */
+.ld-rim-handle{ fill:none; stroke:var(--accent-2); stroke-width:1.3; stroke-dasharray:1.6 1.4; display:none; }
+.light-dial.has-rim .ld-rim-handle{ display:inline; }
+.light-dial.rim-on .ld-rim-handle{ fill:var(--accent-2); stroke:none; }
+.light-dial.pick-rim .ld-rim-handle{ stroke:var(--text-main); stroke-width:1.1; stroke-dasharray:none; }
+.light-dial.pick-rim:not(.rim-on) .ld-rim-handle{ stroke:var(--accent-2); stroke-width:1.6; }
+.ld-overlap{ fill:#FFFFFF; display:none; pointer-events:none; }
+:root[data-theme="vellum"] .ld-overlap{ fill:#000000; }
+.light-dial.has-rim.rim-on .ld-overlap{ display:inline; }
+/* which light the finger moves, and the Ambient slider: only where the page's lights reach the surface */
+.light-seg, #lightRow .light-amb, #lightAmbField{ display:none; }
+#lightRow.has-rig .light-seg{ display:flex; margin:2px 0 4px; }
+#lightRow.has-rig .light-amb{ display:block; }
+#lightRow.has-rig #lightAmbField{ display:flex; }
+#lightRow.has-rig .ld-values{ flex-wrap:wrap; gap:4px 12px; }
+.light-seg .radio-btn{ flex:1 1 0; padding:4px 8px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+/* each button's dot is its handle's colour: the main light's, the rim light's (hollow while it is off) */
+.light-seg .ls-dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); flex:0 0 auto; }
+.light-seg [data-light="rim"] .ls-dot{ background:var(--accent-2); }
+.light-seg [data-light="rim"].dim .ls-dot{ background:none; border:1.3px dashed var(--accent-2); box-sizing:border-box; }
+.light-seg .radio-btn.dim:not(.active){ opacity:.6; }
+/* the rim light's hue fades while it is off (its alpha is its strength: 0 is off) */
+#tint7Row.rim-off{ opacity:.5; }
 
 /* THE CAMERA DIAL (Ruby): beside the light dial, the hues below it in two columns. Its handle is where the camera stands
    (the middle: straight down; the rim: low across), the line from it the way it looks, the frame what it sees */
@@ -1501,6 +1525,10 @@ body.is-mobile .tool-row.has-camera > #lightRow{ grid-row:1; }
 .tool-row.has-camera .light-dial-row{ min-height:124px; }
 .tool-row.has-camera .light-dial{ width:116px; height:116px; }
 .tool-row.has-camera .ld-values{ flex-wrap:wrap; gap:4px 8px; }
+/* ON A DESK without a camera: the dial across the top, the hues beneath in two columns (Ruby: every slot used well) */
+body:not(.is-mobile) .tool-row:not(.has-camera){ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:10px; row-gap:6px; align-items:start; }
+body:not(.is-mobile) .tool-row:not(.has-camera) > #lightRow{ grid-column:1 / -1; }
+body:not(.is-mobile) .tool-row:not(.has-camera) > .field{ min-width:0; }
 
 /* the camera's guide: a wireframe of the shot over the preview while the camera dial moves */
 .cam-guide{ position:absolute; pointer-events:none; z-index:6; opacity:0; transition:opacity .5s ease; }
@@ -1623,7 +1651,9 @@ body.is-mobile #clr-picker #clr-close{ display:block; width:calc(100% - 20px); m
    The dial, and the seed beneath it, on the left; every hue stacked on the
    right. Ruby: the two halves roughly 50/50, the seed under the dial. */
 body.is-mobile .tool-row{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
-body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 4; }
+/* (the dial spans the rows of hues beside it; the last row is the slack, so a tall dial never spreads the hues apart) */
+body.is-mobile .tool-row:not(.has-camera){ grid-template-rows:repeat(9, auto) 1fr; }
+body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 10; }
 body.is-mobile .tool-row > #seedRow{   padding-right:12px;   }
 /* one rule between the halves: the hues' own left edge (no second one beside it) */
 body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }

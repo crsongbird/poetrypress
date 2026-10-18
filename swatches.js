@@ -5,7 +5,7 @@
  * border, and its glyphs. The texture is generated at tile size rather than
  * rendered full and scaled down, so sixteen tiles cost about one repaint.
  */
-import { capsFor, getTextureCanvas } from './textureGenerators.js';
+import { capsFor, getTextureCanvas, layerLights } from './textureGenerators.js';
 
 // WHERE A SWATCH'S TEXTURE COMES FROM. By default it is made here, at once
 // (Node's tests; the old way). The page hands in a source that only ever
@@ -45,7 +45,7 @@ function swLayer(c, L, w, h){
       camera: L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom } : undefined,
       light: L.textureLight != null ? +L.textureLight : 315, lightTilt: L.textureLightTilt != null ? +L.textureLightTilt : undefined,
       tint1: L.textureTint1 || null, tint2: L.textureTint2 || null, tint3: L.textureTint3 || null, tint4: L.textureTint4 || null, tint5: L.textureTint5 || null, tint6: L.textureTint6 || null,
-      blend: L.textureGround || blend,
+      blend: L.textureGround || blend, ...layerLights(L),
       // the look's own backdrop, for a surface made of it (Rain on Glass, Circuit Board)
       env: [L.bg1, ...(L.bgGradient ? [L.bg2, L.bg3, L.bg4] : [])].filter(Boolean).join(',') || undefined };
     const tex = swatchSource ? swatchSource(type, w, h, opts) : getTextureCanvas(type, w, h, opts);

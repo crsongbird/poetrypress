@@ -103,6 +103,21 @@ check('it renders across the whole depth range', wthrew === null);
   check('a locked tint is left alone', held !== '#222222' && tint() === held);
 }
 
+// ---- THE PAGE'S LIGHTS (ROADMAP C1, C2): the rim light, the Ambient slider and the light hues ----
+{
+  const rigged = Object.entries(T.TEXTURE_CAPS).filter(([, c]) => c.rig).map(([t]) => t);
+  check('the page\'s lights reach only surfaces the dial lights (never a dial that is only a direction, or the day)',
+    rigged.length >= 20 && rigged.every(t => T.TEXTURE_CAPS[t].light && !T.TEXTURE_CAPS[t].dirOnly && !/Daylight|Direction|Position|View|Field Lines/.test(T.TEXTURE_CAPS[t].dial || '')));
+  const L = { ambient: 60, ambientHue: '#3050FFAA', rimDeg: 135, rimTilt: 100, rimHue: '#FF8040C0' };
+  const key = (t, o) => T.textureKeyFor(t, 96, 96, { seed: 7, light: 315, lightTilt: 100, ...o });
+  check('a surface they do not reach keys (and so draws) exactly as it did, whatever they are',
+    ['aurora', 'clouds', 'crystal', 'ringworld', 'linen'].every(t => key(t, L) === key(t, {})));
+  check('…and at their "none" (the surface\'s own ambient, white hues, the rim light at alpha 0) neither does a surface they reach',
+    rigged.every(t => key(t, { ambient: 100, ambientHue: '#FFFFFF', rimDeg: 200, rimTilt: 60, rimHue: '#CFE3FF00', tint6: '#FFFFFF' }) === key(t, {})));
+  // (that each surface listed changes under them is measured on real pixels, which the stand-in canvas does not draw: the
+  //  list's comment in textureGenerators says how; texCore.test proves the engine's part)
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

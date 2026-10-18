@@ -33,7 +33,7 @@
 import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion, athanorStepIds, athanorAA, ATHANOR_LIMITS, ATHANOR_CHANNELS } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
-import { withSeed, withScale, withPage, wordsRoom, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
+import { withSeed, withScale, withPage, wordsRoom, withLightTilt, withLightRig, lightRigOf, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genAstralFog, genAstralStars } from './texWhimsy.js';
 
 /**
@@ -695,6 +695,12 @@ for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate
 // Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
 // guessed: each of these draws the same picture at every height.
 for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminagashi', 'flowfield']) TEXTURE_CAPS[t].dirOnly = true;
+// THE PAGE'S LIGHTS (ROADMAP C1, C2: the dial's rim light, the Ambient slider under it, the Main Light, Rim Light and
+// Ambient Hues) for the surfaces the engine lights whose dial is a light. Measured, not guessed: each of these changes
+// under them (texCore withLightRig); the rest draw as they always did and never show them. (Linen Tooth, Stained Glass
+// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day.)
+for(const t of ['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
+  'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -1030,6 +1036,12 @@ function describeRequest(type, w, h, opts){
   // up to 130 for the engine-lit textures (past the dial's rim: lower light); 100 for the rest
   const tiltMax = (TEXTURE_CAPS[RETIRED[type] || type] || {}).lowLight ? 130 : 100;
   const lightTilt = (opts.lightTilt >= 0) ? Math.round(Math.min(tiltMax, opts.lightTilt)) : 100;
+  // THE PAGE'S LIGHTS (ROADMAP C1, C2): the Ambient slider and hue, and the rim light (the dial's second handle), for a
+  // surface they light (`rig`, measured) or a graph; any other surface never sees them, and keys as it always did
+  const rig = ((TEXTURE_CAPS[type] || {}).rig || type === 'athanor' || type === 'athanorsteps')
+    ? lightRigOf({ ambient: opts.ambient, ambientHue: opts.ambientHue, rimDeg: opts.rimDeg, rimTilt: opts.rimTilt == null ? null : Math.min(tiltMax, +opts.rimTilt), rimHue: opts.rimHue,
+        // (the main light's colour: a surface with a Diffuse Hue has it as that, in its material)
+        mainHue: (TEXTURE_CAPS[type] || {}).diffuse ? null : opts.tint6 }) : null;
   const defs = paramsFor(type === 'athanorsteps' ? 'athanor' : type);
   const v1 = (p1 == null) ? (defs[0] ? defs[0].def : 100) : p1;
   const v2 = (p2 == null) ? (defs[1] ? defs[1].def : 100) : p2;
@@ -1049,6 +1061,7 @@ function describeRequest(type, w, h, opts){
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
+            + (rig ? `_L${rigKey(rig)}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
@@ -1067,8 +1080,15 @@ function describeRequest(type, w, h, opts){
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
 }
+/** A surface layer's lights (the look's keys) as a request's (ROADMAP C1, C2): the Ambient slider (0–200; 100 the
+ *  surface's own) and the Ambient Hue, and the rim light, the light dial's second handle (its way and height; its hue,
+ *  whose alpha is its strength). */
+export function layerLights(L){ return { ambient: L.textureAmbient, ambientHue: L.textureTint8, rimDeg: L.textureRim, rimTilt: L.textureRimTilt, rimHue: L.textureTint7 }; }
+// the page's lights in a texture's key: the ambient (×100), its hue, and the rim (way, height, strength, hue)
+function rigKey(r){ const q = v => v.map(x => Math.round(x*1000)).join('.');
+  return Math.round(r.amb*100) + (r.ambHue ? 'a' + q(r.ambHue) : '') + (r.mainHue ? 'm' + q(r.mainHue) : '') + (r.rim ? `r${r.rim.deg},${Math.round(r.rim.tilt*100)},${Math.round(r.rim.k*255)}` + (r.rim.hue ? ',' + q(r.rim.hue) : '') : ''); }
 // A Athanor surface: its graph evaluated (athanor.js) on the working grid,
 // then laid on the page. Another texture inside the graph is made here, the
 // usual way. No graph, or no Surface in it: a flat mid-grey (nothing shows).
@@ -1160,7 +1180,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, t3, t4, t5, t6, env, camera, page } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -1201,8 +1221,8 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // an explicit tint overrides the accent a colour-keyed texture would
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
-  let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+  let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

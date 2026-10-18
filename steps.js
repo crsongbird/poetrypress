@@ -32,7 +32,7 @@
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
-import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField, CPU, wordsRoom } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, canonDiv, smoothField, CPU, wordsRoom, litT, litS } from './texCore.js';
 import { drawStitch, pathFromPoints, roundRectPoints } from './stitches.js';
 import { TOUCH_STEPS } from './stepsTouch.js';
 import { WHIMSY_STEPS } from './stepsWhimsy.js';
@@ -699,7 +699,12 @@ const STEP_RUN = {
         const r = img.r[i], g = img.g[i], b = img.b[i];
         o.r[i] = r*dk + er*(r*rm + rd) + s*(1 - mt + mt*r) + r*em;
         o.g[i] = g*dk + eg*(g*rm + rd) + s*(1 - mt + mt*g) + g*em;
-        o.b[i] = b*dk + eb*(b*rm + rd) + s*(1 - mt + mt*b) + b*em; }
+        o.b[i] = b*dk + eb*(b*rm + rd) + s*(1 - mt + mt*b) + b*em;
+        // (the page's coloured lights: their shift of the light on each channel, and the rim's colour on its shine)
+        if(L.hue){ const f = (1 - 0.85*mt)/L.flat;
+          o.r[i] += r*litT(L, i, 0)*f + s*(1 - mt + mt*r)*(litS(null, 0, L, i) - 1);
+          o.g[i] += g*litT(L, i, 1)*f + s*(1 - mt + mt*g)*(litS(null, 1, L, i) - 1);
+          o.b[i] += b*litT(L, i, 2)*f + s*(1 - mt + mt*b)*(litS(null, 2, L, i) - 1); } }
       return [o];
     }
     if(!h0) return [img];
@@ -707,6 +712,11 @@ const STEP_RUN = {
     const H = new Float32Array(N); for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
     const L = lightOf(H, ctx.light ?? 315, 1, 0.3, 0.6), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
     for(let i = 0; i < N; i++){ const k = L.light[i]/L.flat, s = L.spec[i]*0.6; o.r[i] = img.r[i]*k + s; o.g[i] = img.g[i]*k + s; o.b[i] = img.b[i]*k + s; }
+    // (the page's coloured lights, ROADMAP C1, C2: the Ambient Hue and the rim light's hue on each channel)
+    if(L.hue) for(let i = 0; i < N; i++){ const s = L.spec[i]*0.6;
+      o.r[i] += img.r[i]*litT(L, i, 0)/L.flat + s*(litS(null, 0, L, i) - 1);
+      o.g[i] += img.g[i]*litT(L, i, 1)/L.flat + s*(litS(null, 1, L, i) - 1);
+      o.b[i] += img.b[i]*litT(L, i, 2)/L.flat + s*(litS(null, 2, L, i) - 1); }
     return [o];
   },
   colour(E, n){ const { P, hexCol } = E;

@@ -855,6 +855,13 @@ but bear with me, dear}]/jitter:200
           <div class="tool-row" id="textureToolRow">
 <div class="field full" id="lightRow">
             <label data-str="label.light_direction">Light Direction</label>
+            <!-- WHICH LIGHT THE FINGER MOVES (Ruby: a second handle on the dial, chosen as Two Surfaces' Upper and Lower are):
+                 the main light, or the RIM LIGHT, a second light from its own place on the dial in its own color. Shown only
+                 for a surface the page's lights reach (TEXTURE_CAPS rig) -->
+            <div class="radio-group light-seg" id="lightSeg" role="group" aria-label="Which light the dial moves">
+              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main</span></button>
+              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim</span></button>
+            </div>
             <div class="light-dial-row">
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
@@ -872,20 +879,32 @@ but bear with me, dear}]/jitter:200
                   <!-- the halfway mark (it catches lightly) and the centre -->
                   <circle class="ld-half" r="7.5"></circle>
                   <circle class="ld-centre" r="1.4"></circle>
+                  <!-- the rim light's handle, under the main light's; where the two overlap they mix to white (to black on a light
+                       theme), as two lights do -->
+                  <defs><clipPath id="lightMainClip"><circle id="lightMainClipDot" r="5.6" cx="0" cy="0"></circle></clipPath></defs>
+                  <circle class="ld-rim-handle" id="lightRimHandle" r="5.6" cx="0" cy="0"></circle>
                   <circle class="ld-handle" id="lightHandle" r="5.6" cx="0" cy="0"></circle>
+                  <circle class="ld-overlap" id="lightOverlap" r="5.6" cx="0" cy="0" clip-path="url(#lightMainClip)"></circle>
                 </svg>
               </div>
               <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset the light" aria-label="Reset the light to its default">⟲</button>
               <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="Light from straight overhead" aria-label="Move the light straight overhead, keeping its angle">◎</button>
               <button type="button" class="ld-btn ld-random" id="lightRandom" data-sound="dialRandom" title="Roll the light, the way the dice roll" aria-label="Roll the light direction, the way the dice roll">⚄</button>
             </div>
-            <!-- the dial's two numbers, shown and typed: its angle, and how far out it reaches (100 the rim; past it, lower) -->
+            <!-- THE AMBIENT LIGHT (Ruby: its strength a slider under the dial, as the camera's zoom is): the light from
+                 everywhere. Halfway is the surface's own; left, deeper shadows; right, softer -->
+            <input type="range" class="cam-zoom light-amb" id="textureAmbient" min="0" max="200" step="1" value="100" aria-label="Ambient light" title="Ambient: the light from everywhere. Halfway is the surface's own; to the left, deeper shadows; to the right, softer.">
+            <!-- the dial's numbers, shown and typed: the chosen light's angle and how far out it reaches (100 the rim; past it,
+                 lower), and the ambient -->
             <div class="ld-values">
               <label>Angle <input type="number" id="lightDegIn" min="0" max="359" step="1" inputmode="numeric">°</label>
               <label id="lightTiltField">Height <input type="number" id="lightTiltIn" min="0" max="130" step="1" inputmode="numeric">%</label>
+              <label id="lightAmbField">Ambient <input type="number" id="lightAmbIn" min="0" max="200" step="1" inputmode="numeric">%</label>
             </div>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
+            <input type="hidden" id="textureRim" value="135">
+            <input type="hidden" id="textureRimTilt" value="100">
           <input type="hidden" id="activeSpell" value="">
           </div>
           <!-- THE CAMERA DIAL (Ruby: a second dial, the camera's, so the light dial is the light's alone). Drag from the
@@ -923,6 +942,21 @@ but bear with me, dear}]/jitter:200
             <input type="hidden" id="cameraView" value="0">
             <input type="hidden" id="cameraZoom" value="100">
           </div>
+          <!-- THE LIGHTS' COLORS (Ruby: the color selectors beside the dial that places the lights): the main light's, the rim
+               light's (its alpha its strength: 0 is off, and the row fades), the ambient's. Then the surface's own hues, then
+               the material's -->
+          <div class="field full tool-hidden" id="tint6Row">
+            <label id="tint6Label" data-str="label.diffuse_hue" title="The color of the main light, on everything it reaches. White leaves it unchanged; alpha sets the strength.">Main Light Hue</label>
+            <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
+          </div>
+          <div class="field full tool-hidden" id="tint7Row">
+            <label id="tint7Label" data-str="label.rim_hue" title="The rim light: a second light from its own place on the dial (Rim, above it). Its color; its alpha is how strong it is, and 0 turns it off.">Rim Light Hue</label>
+            <input type="text" id="textureTint7Hex" value="#CFE3FF00" data-coloris>
+          </div>
+          <div class="field full tool-hidden" id="tint8Row">
+            <label id="tint8Label" data-str="label.ambient_hue" title="The color of the light from everywhere, strongest in the shade. White leaves it unchanged; alpha sets the strength.">Ambient Hue</label>
+            <input type="text" id="textureTint8Hex" value="#FFFFFF" data-coloris>
+          </div>
           <div class="field full" id="tint1Row">
             <label id="tint1Label" data-str="label.tint">Tint</label>
             <input type="text" id="textureTint1Hex" value="#7A2B2B" data-coloris>
@@ -931,6 +965,10 @@ but bear with me, dear}]/jitter:200
             <label id="tint2Label" data-str="label.second_tint">Second Tint</label>
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
+          <div class="field full tool-hidden" id="tint5Row">
+            <label id="tint5Label" data-str="label.fifth_hue" title="Light glowing from within the surface. Black is none.">Glow Hue</label>
+            <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
+          </div>
           <div class="field full tool-hidden" id="tint3Row">
             <label id="tint3Label" data-str="label.highlight_hue" title="Tints the shine where light catches the surface. White leaves it unchanged; alpha sets the strength.">Specular Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
@@ -938,14 +976,6 @@ but bear with me, dear}]/jitter:200
           <div class="field full tool-hidden" id="tint4Row">
             <label id="tint4Label" data-str="label.shade_hue" title="Tints the shadows, like sky light bouncing in. White leaves them unchanged; alpha sets the strength.">Shadow Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
-          </div>
-          <div class="field full tool-hidden" id="tint6Row">
-            <label id="tint6Label" data-str="label.diffuse_hue" title="Tints the light itself, on everything it reaches. White leaves it unchanged; alpha sets the strength.">Diffuse Hue</label>
-            <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
-          </div>
-          <div class="field full tool-hidden" id="tint5Row">
-            <label id="tint5Label" data-str="label.fifth_hue" title="Light glowing from within the surface. Black is none.">Glow Hue</label>
-            <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full" id="seedRow">
             <label data-str="label.texture_seed">Texture Seed</label>

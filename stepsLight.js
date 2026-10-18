@@ -24,7 +24,7 @@
  * Each paints at full size in a canvas pass (the page's own textures) and runs
  * on the Athanor's grid otherwise; the same code does both.
  */
-import { cpx, canonDiv, lightHeights, withLightTilt, kitCanvas, kitPicture, kitField, kitFieldCanvas, kitImage, isCanvasLike, CPU } from './texCore.js';
+import { cpx, canonDiv, lightHeights, lightRig, withLightTilt, kitCanvas, kitPicture, kitField, kitFieldCanvas, kitImage, isCanvasLike, CPU } from './texCore.js';
 
 const LT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const ltClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -35,7 +35,8 @@ const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
 /** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
 function ltMaterial(E, n){
   const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
-  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di'), am = pick(8, 'am');
+  // (the Diffuse and Ambient Hues unwired: the page's light's and its ambient's, from its light rig)
+  const RG = lightRig(), sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di') || (RG && RG.mainHue) || null, am = pick(8, 'am') || (RG && RG.ambHue) || null;
   return (sh || hi || di || am) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di, am } : null;
 }
 /** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
@@ -53,18 +54,19 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   // (a light at its own height, whatever the page's dial says: Ringworld's dial is its camera, and its star its own light)
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb });
+  // (the page's ambient slider reaches it; the page's rim light is its second light, below)
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient' });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
   // (the AMBIENT share, for an Ambient Hue (ROADMAP C1): the light from everywhere, less what the hollows keep out)
-  const A = o.amb ? new Float32Array(K.length) : null; if(A) for(let i = 0; i < A.length; i++) A[i] = o.ambient*(1 - L.occl[i])/f;
+  const A = o.amb ? new Float32Array(K.length) : null, am = L.ambient ?? o.ambient; if(A) for(let i = 0; i < A.length; i++) A[i] = am*(1 - L.occl[i])/f;
   // THE SECOND LIGHT (C2): the same engine from another way, at its own height, its direct light and shine alone (the
   // ambient and the hollows are the first light's); soft, it is three ways averaged across its width
   let K2 = null, S2 = null;
   if(o.second){ const n = o.secondSoft > 0.02 ? 3 : 1, w = o.secondSoft*60; K2 = new Float32Array(K.length); S2 = new Float32Array(K.length);
     for(let q = 0; q < n; q++){ const d = deg + o.secondTurn + (n > 1 ? (q - 1)*w/2 : 0);
-      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true }));
+      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false }));
       for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
@@ -89,7 +91,7 @@ function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
   const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25);
   const per = M => { const o = new Float32Array(M.length); for(let i = 0; i < M.length; i++) o[i] = M[i]/100; return o; };
-  return { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
+  const o = { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
     ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
     tilt: E.P(n, 'from', 'the dial') === 'its own height' ? E.num(n, 'height', 60)/100 : null,
     // a SECOND LIGHT beside the dial's (ROADMAP C2): its strength (negative draws light out), where it comes from (turned
@@ -98,6 +100,11 @@ function ltSettings(E, n, byPoint){
     secondSoft: E.num(n, 'secondSoft', 30)/100, secondKind: E.P(n, 'secondKind', 'light and shine'),
     secondHue: (v => Array.isArray(v) ? ltHue(v) : null)(E.input(n, 9)),
     reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
+  // THE PAGE'S RIM LIGHT (the light dial's second handle) is the second light of a part that has none of its own: from
+  // its own way and height, in its own colour, at its strength
+  const PR = lightRig() && lightRig().rim;
+  if(PR && !o.second) Object.assign(o, { second: PR.k, secondTurn: PR.deg - deg, secondHeight: PR.tilt, secondSoft: 0, secondKind: 'light and shine', secondHue: PR.hue });
+  return o;
 }
 
 // ---- OIL PAINT: strokes laid along the picture's forms ----

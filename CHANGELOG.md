@@ -4,6 +4,37 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Tarvos (2026-10-18)
+
+- **A rim light on the light dial.** Surfaces lit by the dial now have a
+  second light: a second handle on the dial, in the second accent color,
+  under the first. **Main** and **Rim** above the dial choose which one your
+  finger moves. Moving the rim light turns it on; ⟲ with Rim chosen turns
+  it off. It casts its own shadows and catches its own shine, so the edges
+  facing it light up. Where the two handles overlap they mix to white (to
+  black on the Vellum theme), as two lights do.
+- **The Ambient slider** sits under the dial, as the camera's zoom does: the
+  light from everywhere. Halfway is the surface as it was; to the left the
+  shadows deepen, to the right they soften.
+- **The lights' colors sit beside the dial:**
+  - **Main Light Hue**: the dial's light (it was Diffuse Hue on the surfaces
+    that had one, and is now on every surface the dial lights).
+  - **Rim Light Hue**: its alpha is how strong the rim light is, and the row
+    fades while it is off.
+  - **Ambient Hue**: the color of the fill, strongest in the shade.
+- These are on 25 surfaces, among them Kintsugi, Moss on Stone, Dune
+  Ripples, Poured Wax, Turing Skin, Painter's Frustration, Lichtenberg Figures, Cold
+  Press, Old Paper, Circuit Board and the Athanor's own. Each surface keeps
+  its own lights, Two Surfaces too. At their defaults every look draws
+  exactly as before.
+- **On a desk**, a surface's hues sit in two columns under the dial.
+- **In the Athanor:** with no Second Light of its own, the Light Engine takes
+  the page's rim light as its second light. Its empty light hue and ambient
+  hue inputs take the page's hues.
+- **Under the hood:** pruned the stylesheet (every rule it questioned still
+  does something, so nothing was cut); the rim light runs on the graphics
+  card as it does on the processor, line for line.
+
 ## Saturn–Jarnsaxa (2026-10-18)
 
 - **Fixed:** in Firefox on a phone, tapping a section's name (Border

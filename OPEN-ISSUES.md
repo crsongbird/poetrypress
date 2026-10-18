@@ -6,7 +6,12 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Jarnsaxa, Saturn–Hyrrokkin, Saturn–Greip, Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Tarvos, Saturn–Jarnsaxa, Saturn–Hyrrokkin, Saturn–Greip, Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- THE LIGHT DIAL'S RIM LIGHT AND THE AMBIENT SLIDER (sheet sent): Main / Rim above the dial, the rim's handle under the
+  main's (white where they overlap, black on Vellum), the Ambient slider under the dial, and the Main Light, Rim Light and
+  Ambient Hues beside it (the rim's alpha is its strength; it fades while off). Is 60% the right strength for a rim
+  light switched on by moving it? Is the Ambient slider's reach (0 to 200%) right? Diffuse Hue is now Main Light Hue.
+  Linen Tooth, Stained Glass and Rain on Glass changed too little under them to offer them: worth making them respond?
 - FIREFOX ON A PHONE: a section's name (Border Options, Inset Box, Vignette) now opens and folds it in every browser.
   Made without a Firefox to try it in: does a tap open them now?
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
