@@ -46,6 +46,18 @@ import { CARD_STEPS } from './cartomancy.js';
 
 const STEP_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const STEP_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
+// PUNCTUATION (ROADMAP G2): the marks the page records, each by its number (1-based) in the layout's "x,y,mark" points
+// (three numbers, so every reader of the runs passes them over), and how far down its line each sits (0 top, 1 bottom)
+export const POEM_PUNCT = [{ marks: '.', at: 0.74 }, { marks: ',', at: 0.76 }, { marks: ';', at: 0.6 }, { marks: ':', at: 0.55 }, { marks: '!', at: 0.45 },
+  { marks: '?', at: 0.45 }, { marks: '—–-', at: 0.5 }, { marks: '…', at: 0.74 }, { marks: '"“”‘’\'«»', at: 0.2 }, { marks: '()[]{}', at: 0.5 }];
+export function punctMark(ch){ for(let i = 0; i < POEM_PUNCT.length; i++) if(POEM_PUNCT[i].marks.includes(ch)) return i + 1; return 0; }
+const POEM_MARK_SETS = { 'every mark': null, 'stops . ! ? …': [1, 5, 6, 8], 'pauses , ; :': [2, 3, 4], 'dashes': [7], 'quotes and brackets': [9, 10] };
+/** The punctuation the page recorded: [x, y, mark] in fractions of the page. */
+export function poemMarks(text){
+  const out = [];
+  for(const part of String(text || '').split(';')){ const v = part.split(',').map(Number); if(v.length === 3 && v.every(isFinite) && v[2] >= 1) out.push(v); }
+  return out;
+}
 export const STEP_BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft-light', 'hard-light', 'darken', 'lighten', 'color-dodge', 'color-burn',
   'difference', 'exclusion', 'vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
 export const STEP_CATEGORIES = ['Inputs', 'Noise', 'Marks', 'Textures', 'Shape', 'Curves', 'Combine', 'Light & Color', 'Output'];
@@ -142,6 +154,10 @@ const STEP_PARTS = {
   groupin:  { cat: 'Inputs', label: 'Group Input', ins: [], outs: ['input'], params: [['name', 'Name', 'text', 'Input'], STEP_R('def', 'Default', 50)] },
   groupout: { cat: 'Output', label: 'Group Result', ins: ['result', 'result 2', 'result 3', 'result 4'], outs: [], params: [], hidden: true },
   random:   { cat: 'Inputs', label: 'Random Number', ins: [], outs: ['value'], params: [STEP_R('lo', 'Lowest', 0), STEP_R('hi', 'Highest', 100)] },
+  // THE EMOTIONAL SEED (ROADMAP G4, the prior-art review's named macro): one feeling, from calm (0) to fierce (1),
+  // fanned out at once into a color and three numbers, each through its own remapper (the mood's, or a Curve wired in)
+  feeling:  { cat: 'Inputs', label: 'Emotional Seed', ins: ['feeling', 'density curve', 'turbulence curve', 'contrast curve'], outs: ['colour', 'density', 'turbulence', 'contrast'],
+              params: [STEP_SEL('mood', 'Mood', ['storm', 'joy', 'longing', 'accents', 'page hues']), STEP_R('def', 'Feeling', 50)] },
   // reshaping a grey map's values; masks drawn from shapes
   maprange: { cat: 'Shape', label: 'Map Range', ins: ['field'], outs: ['field'], params: [STEP_R('inLo', 'From Low', 0), STEP_R('inHi', 'From High', 100), STEP_R('outLo', 'To Low', 0), STEP_R('outHi', 'To High', 100)] },
   shape:    { cat: 'Noise', label: 'Shape Mask', ins: [], outs: ['mask'], params: [STEP_SEL('form', 'Shape', ['circle', 'ring', 'square', 'diamond', 'star', 'vignette']),
@@ -175,9 +191,11 @@ const STEP_PARTS = {
               STEP_R('mortar', 'Mortar', 12, 0, 40), STEP_R('stagger', 'Stagger', 50), STEP_R('bevel', 'Bevel', 30), STEP_R('vary', 'Variety', 30)] },
   // THE POEM ITSELF as an input (the doc of future directions: "readability as part of the shader"): where its words,
   // lines and stanzas sit on the page, measured by the page as it sets the text (canvasRenderer's text layout)
-  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas', 'rhymes', 'aware', 'in the letters', 'round the words'],
+  poem:     { cat: 'Inputs', label: 'The Poem', ins: [], outs: ['words', 'distance', 'lines', 'stanzas', 'rhymes', 'aware', 'in the letters', 'round the words', 'punctuation'],
               params: [STEP_R('padding', 'Padding', 40, 0, 200), STEP_R('softness', 'Softness', 40), STEP_R('reach', 'Reach', 35, 5, 100),
-                STEP_SEL('rhyme', 'Rhymes', ['every rhyme', 'A', 'B', 'C', 'D', 'E', 'F'])] },
+                STEP_SEL('rhyme', 'Rhymes', ['every rhyme', 'A', 'B', 'C', 'D', 'E', 'F']),
+                // (G2: where the punctuation sits, each mark a soft glow; which marks, and how far each glows, in line heights)
+                STEP_SEL('marks', 'Punctuation', Object.keys(POEM_MARK_SETS)), STEP_R('glow', 'Punctuation Glow', 100, 10, 400)] },
   // more ways to reshape a gray map (Filter Forge's and Blender's staples)
   grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
   pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
@@ -258,6 +276,7 @@ export const STEP_DOCS = {
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
+  feeling: 'One feeling, from calm to fierce, turned at once into a color and three numbers (density, turbulence, contrast) to wire into settings.',
   smudge: 'Smears the picture one way, as a finger drags wet paint: each point takes on what lies behind it along the stroke.',
   multiblend: 'Lays up to four layers over a base at once, in one blend mode, each at its own strength.',
   group: 'Several parts made one, with a graph of their own inside (Open shows it). Each Group Input and Knob inside is one of its inputs, and each result wired to the Group Result inside is one of its outputs.',
@@ -311,7 +330,7 @@ export const STEP_DOCS = {
   curveops: 'Changes a curve, or combines two: repeat, shift, flip, scale, blend, multiply.',
   tonecurve: 'Runs every value of a picture through a curve, like Curves in a photo editor.',
   profile: 'A gradient whose shape is a curve: across the page, around the center, toward the edges, or along any map.',
-  poem: 'Hands the graph the poem’s layout: where the words, lines, stanzas and rhymes sit on the page.',
+  poem: 'Hands the graph the poem’s layout: where the words, lines, stanzas, rhymes and punctuation sit on the page.',
   grow: 'Grows the bright parts of a gray map outward, or shrinks them inward.',
   pixelate: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers.',
   twirl: 'Twists a gray map around a point, strongest at the center and fading out at the radius.',
@@ -425,6 +444,15 @@ function stepScaleByPoint(E, SC, layer){
   return o;
 }
 
+// THE EMOTIONAL SEED'S MOODS: three colors (calm, between, fierce) and how density, turbulence and contrast answer
+// the feeling. A storm gathers fast and hardens; joy fills and brightens; longing empties, stirs a little, and blurs.
+// (Accents and the page's hues take their colors from the page and answer the feeling evenly.)
+const FEELING_MOODS = {
+  storm:   { c: ['#A7D3D0', '#8C9BC4', '#E0566E'], d: f => 0.25 + 0.6*f, t: f => Math.pow(f, 0.6), k: f => 0.2 + 0.75*f*Math.sqrt(f) },
+  joy:     { c: ['#6E7598', '#E59AB8', '#FFD36E'], d: f => 0.3 + 0.5*f, t: f => 0.15 + 0.5*f, k: f => 0.25 + 0.6*f },
+  longing: { c: ['#F1EAD8', '#A9C1DA', '#5C79B8'], d: f => 0.8 - 0.6*f, t: f => 0.1 + 0.4*f*f, k: f => 0.7 - 0.5*f },
+};
+const FEELING_LINEAR = { d: f => f, t: f => f, k: f => f };
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
@@ -861,6 +889,20 @@ Object.assign(STEP_RUN, {
   group(){ return null; }, groupout(){ return null; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
   random(E, n){ const lo = E.num(n, 'lo', 0), hi = E.num(n, 'hi', 100); return [(lo + (hi - lo)*Math.random())/100]; },
+  // (the Emotional Seed: the feeling wired in, or its own; each number through the mood's curve, or a Curve on its port
+  // read with the feeling across; the color along the mood's three colors, calm → between → fierce)
+  feeling(E, n){ const { ctx, input, num, P, asField, isCurve, hexCol } = E, w = input(n, 1);
+    const val = v => typeof v === 'number' ? v : Array.isArray(v) ? 0.299*v[0] + 0.587*v[1] + 0.114*v[2] : isCurve(v) ? curveAt(v, 0.5)
+      : (f => { let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0.5; })(asField(v));
+    const f = Math.max(0, Math.min(1, w == null ? num(n, 'def', 50)/100 : val(w)));
+    const mood = P(n, 'mood', 'storm'), M = FEELING_MOODS[mood] || FEELING_LINEAR;
+    const cols = mood === 'accents' ? [1, 0].map(k => (ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k])
+      : mood === 'page hues' ? [1, 0].map((k, j) => /^#?[0-9a-f]{6}/i.test((ctx.tints || [])[k] || '') ? ctx.tints[k] : FEELING_MOODS.joy.c[j*2]) : M.c;
+    const C = cols.map(hexCol), mid = cols.length > 2 ? C[1] : C[0].map((x, i) => (x + C[1][i])/2), last = C[C.length - 1];
+    const colour = f < 0.5 ? C[0].map((x, i) => x + (mid[i] - x)*f*2) : mid.map((x, i) => x + (last[i] - x)*(f - 0.5)*2);
+    const out = (j, fn) => { const c = input(n, j); return Math.max(0, Math.min(1, isCurve(c) ? curveAt(c, f) : fn(f))); };
+    return [colour, out(2, M.d), out(3, M.t), out(4, M.k)];
+  },
   maprange(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
     const A = map(n, 'inLo', 0), B = map(n, 'inHi', 100), C = map(n, 'outLo', 0), D = map(n, 'outHi', 100), o = new Float32Array(N);
@@ -1052,7 +1094,7 @@ Object.assign(STEP_RUN, {
     // (each how strongly: Shape Strength, 0..1)
     const aware = ctx.aware === false ? 0 : 1, inside = Math.min(1, +ctx.fill || 0), around = Math.min(1, +ctx.around || 0);
     const runs = poemRuns(ctx.text);
-    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N), new Float32Array(N), aware, inside, around];
+    if(!runs.length) return [new Float32Array(N), new Float32Array(N).fill(1), new Float32Array(N), new Float32Array(N), new Float32Array(N), aware, inside, around, new Float32Array(N)];
     // RHYMES (Ruby's doc, a rhyme group's mask): the words of the lines that rhyme (~A, ~B…: the run's 7th number, A = 1)
     const want = P(n, 'rhyme', 'every rhyme'), wantN = want === 'every rhyme' ? -1 : want.charCodeAt(0) - 64, rhymeHard = new Float32Array(N);
     const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
@@ -1075,7 +1117,12 @@ Object.assign(STEP_RUN, {
     const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
     for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
     const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
-    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard, aware, inside, around];
+    // PUNCTUATION (G2): each mark a soft round glow, 1 at the mark, gone a Glow's line heights away (the brightest wins)
+    const pick = POEM_MARK_SETS[P(n, 'marks', 'every mark')], R = Math.max(1, num(n, 'glow', 100)/100*lh*0.75), punct = new Float32Array(N);
+    for(const [mx, my, m] of poemMarks(ctx.text)){ if(pick && !pick.includes(m)) continue;
+      const cx = mx*ww, cy = my*wh, x0 = Math.max(0, Math.floor(cx - R)), x1 = Math.min(ww, Math.ceil(cx + R)), y0 = Math.max(0, Math.floor(cy - R)), y1 = Math.min(wh, Math.ceil(cy + R));
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++){ const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy)/R; if(d < 1){ const v = (1 - d)*(1 - d)*(1 + 2*d), q = y*ww + x; if(v > punct[q]) punct[q] = v; } } }
+    return [words, dist, soft > 0 ? boxBlur(lines, lh*soft*0.25) : lines, stanzas, soft > 0 ? boxBlur(rhymeHard, lh*soft*0.8) : rhymeHard, aware, inside, around, punct];
   },
   grow(E, n){ const { ww, wh, N, unit, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
     const AM = map(n, 'amount', 60), rad = Math.max(1, Math.round(num(n, 'radius', 12)*unit/1536*1.2));
@@ -1156,7 +1203,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 export const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, poem: { outs: ['field', 'field', 'field', 'field', 'field', 'value', 'value', 'value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, feeling: { ins: ['value', 'curve', 'curve', 'curve'], outs: ['colour', 'value', 'value', 'value'] }, poem: { outs: ['field', 'field', 'field', 'field', 'field', 'value', 'value', 'value', 'field'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   smudge: { ins: ['image', 'field'], outs: ['image'] }, multiblend: { ins: ['image', 'image', 'image', 'image', 'image'], outs: ['image'] },

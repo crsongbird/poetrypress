@@ -30,6 +30,7 @@ import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
 import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, graphUsesCurves, chainReadsPoem, layerLights } from './textureGenerators.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
+import { POEM_PUNCT, punctMark } from './steps.js';
 import { fill, CHOOSER } from './strings.js';
 import { resolvePmlVariables } from './pmlVars.js';
 import { seedPhrase } from './seedWords.js';
@@ -210,6 +211,16 @@ function cardLayer(w, h){
 // it asks for one more frame, which then agrees with itself.
 let TEXT_LAYOUT = '';
 export function textLayoutNow(){ return TEXT_LAYOUT; }
+// PUNCTUATION (ROADMAP G2): where each mark sits, recorded after the runs as "x,y,mark" (three numbers: every reader of
+// the runs passes them over). drawTextRun notes them while PUNCT_NOW is a list, which it is for the poem's own lines.
+let PUNCT_NOW = null;
+function notePunct(ctx, text, x, w, top, size, along){
+  const all = ctx.measureText(text).width || 1, k = w/all; let i = 0;
+  for(const ch of text){ const m = punctMark(ch);
+    if(m){ const cx = x + (ctx.measureText(text.slice(0, i)).width + ctx.measureText(ch).width/2)*k, sh = along ? along(cx) : null;
+      PUNCT_NOW.push([cx + (sh ? sh.dx : 0), top + size*POEM_PUNCT[m - 1].at + (sh ? sh.dy : 0), m]); }
+    i += ch.length; }
+}
 /** A graph that asks for the poem (its The Poem part) is made with the layout; any other graph never sees it. */
 export function graphUsesPoem(graph){ return /"name":\s*"poem"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 // TEXT CLEARING: a surface quieted behind the words. The mask is made small (192 across, in page fractions,
@@ -816,6 +827,8 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
       });
     }
 
+    // (where its punctuation sits, for The Poem: across the segment as measured, on its arc or wave if it has one)
+    if(PUNCT_NOW && /[^\p{L}\p{N}\s]/u.test(seg.text || '')) notePunct(ctx, seg.text, x, w, cursorY, size, shape ? (px => shape(px - startX)) : null);
     if(style.under){
       // an underline decoration (/under:…), drawn by the stitch library
       const u = style.under, wt = (u.weight || 100)/100;
@@ -1739,7 +1752,7 @@ function renderInto(canvas){
   if(textFill || textCut){ if(!GLYPH_CANVAS) GLYPH_CANVAS = document.createElement('canvas'); GLYPH_CANVAS.width = W; GLYPH_CANVAS.height = H;
     GLYPH_MASK = GLYPH_CANVAS.getContext('2d', { willReadFrequently: true }); GLYPH_MASK.clearRect(0, 0, W, H); }
   // where the words land, for the next frame's surfaces (see TEXT_LAYOUT)
-  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0;
+  const textRuns = []; let lineNo = 0, stanza = 0, inStanza = false, rhyme = 0; PUNCT_NOW = [];
   const rec = (x0, x1, top, h) => { if(!(x1 > x0) || !(h > 0)) return; textRuns.push([x0/W, top/H, x1/W, (top + h)/H, lineNo, stanza, rhyme].map((v, i) => i < 4 ? Math.round(v*10000)/10000 : v).join(','));
     if(PROBE_INKS){ GROUND_PROBE.ground.runs.push({ box: [x0/W, top/H, x1/W, (top + h)/H], line: lineNo, spans: PROBE_INKS.now, words: PROBE_INKS.words.replace(/\s+/g, ' ').trim() }); PROBE_INKS.now = []; PROBE_INKS.words = ''; } };
 
@@ -1923,7 +1936,8 @@ function renderInto(canvas){
     } catch(err){ if(typeof console !== 'undefined') console.warn('text blend skipped:', err && err.message); } }
   GLYPH_MASK = null;
   // the layout changed: a surface that reads it is drawn again, once, with the new one
-  { const lay = textRuns.join(';');
+  { const marks = (PUNCT_NOW || []).map(([x, y, m]) => [Math.round(x/W*10000)/10000, Math.round(y/H*10000)/10000, m].join(',')); PUNCT_NOW = null;
+    const lay = textRuns.concat(marks).join(';');
     if(GROUND_PROBE && GROUND_PROBE.ground){ const { data, gw, gh, runs, inkField } = GROUND_PROBE.ground;
       GROUND_PROBE.result = groundContrast(data, gw, gh, runs, READABLE.allowance, inkField);
       GROUND_PROBE.result.settled = lay === TEXT_LAYOUT; GROUND_PROBE.ground = null; PROBE_INKS = null; }

@@ -271,6 +271,9 @@ export function athanorHues(graph){
     const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
     if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
   }
+  // (an Emotional Seed of the page's hues reads both pickers: the second calm, the first fierce; a Hue's own name wins)
+  for(const n of Object.values(athanorFlat(graph).nodes)) if(n.name === 'feeling' && (n.data || {}).mood === 'page hues' && reach.has(String(n.id)))
+    for(const [slot, label] of [[1, 'Fierce Hue'], [2, 'Calm Hue']]) if(!out.find(h => h.slot === slot)) out.push({ slot, label });
   return out.sort((a, b) => a.slot - b.slot);
 }
 /** The Surface node's name (what the texture is called in the list). */
@@ -623,6 +626,21 @@ export const ATHANOR_STARTERS = {
       ['tonecurve', { mix: 100 }, 300, 140], ['hue', { slot: '1', name: 'Light Hue' }, 300, 360], ['hue', { slot: '2', name: 'Dark Hue' }, 300, 480],
       ['ramp', { mid: 50 }, 540, 140], ['surface', { name: 'Hand-Drawn Tones', ground: 'colour', aa: 'edges only' }, 780, 160]],
     wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1]] },
+  // the Emotional Seed (G4): one feeling fanned out to every setting that carries it
+  weather: { label: 'Weather of Feeling', teach: 'One slider that changes everything at once. A Knob (Feeling) goes into an Emotional Seed, which turns it into a color and three numbers. Density sets the Perlin Noise\'s Scale, Turbulence its Roughness and a Warp\'s Strength, Contrast its Contrast, and the color lights a Tint over the ground Hue. Each wire has its own range, so each setting moves as far as suits it. Try: turn the Feeling knob, then change the Seed\'s Mood.', nodes: [
+      ['knob', { slot: '1', name: 'Feeling', def: 35 }, 40, 80], ['feeling', { mood: 'storm', def: 35 }, 280, 80],
+      ['perlin', { scale: 20, details: 5, rough: 50, contrast: 30, '~scale': '6,48', '~rough': '25,80', '~contrast': '10,75' }, 540, 60],
+      ['warp', { amount: 20, '~amount': '0,45' }, 780, 60], ['hue', { slot: '2', name: 'Ground Hue' }, 780, 340],
+      ['tint', {}, 1020, 120], ['surface', { name: 'Weather of Feeling', ground: 'colour' }, 1260, 140]],
+    wires: [[1, 1, 2, 1], [2, 2, 3, paramPort('perlin', 'scale')], [2, 3, 3, paramPort('perlin', 'rough')], [2, 4, 3, paramPort('perlin', 'contrast')],
+      [3, 1, 4, 1], [3, 1, 4, 2], [2, 3, 4, paramPort('warp', 'amount')], [4, 1, 6, 1], [2, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1], [4, 1, 7, 2]] },
+  // the poem's punctuation (G2): marks thrown from where the commas and full stops sit
+  sparks: { label: 'Punctuation Particles', teach: 'Sparks thrown from your poem\'s punctuation. The Poem\'s Punctuation output is a soft glow on every comma, full stop, dash and quote; Scatter throws its marks only where a map is light, so the sparks gather round the marks and thin out away from them. Tint colors them with your two Hues, and their heights go to the Surface, so the dial lights them. Try: set The Poem\'s Punctuation to Pauses, or turn up its Punctuation Glow; then type a line with more commas.', nodes: [
+      ['poem', { padding: 30, softness: 0, reach: 35, marks: 'every mark', glow: 180 }, 40, 80],
+      ['scatter', { shape: 'spark', count: 160, size: 16, vary: 70, turn: 100, clump: 0, fade: 45 }, 300, 80],
+      ['hue', { slot: '1', name: 'Spark Hue' }, 300, 420], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 540],
+      ['tint', {}, 560, 160], ['surface', { name: 'Punctuation Particles', ground: 'colour' }, 800, 160]],
+    wires: [[1, 9, 2, 2], [2, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1], [2, 2, 6, 2]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

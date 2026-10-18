@@ -130,11 +130,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 Done: The Poem (words, distance, lines, stanzas, rhymes), Text Clearing,
 Ripples from the Words, Protect the Text, Ink.
 
-- **G2 · Punctuation positions.** A layout of points where punctuation sits,
-  for "Punctuation Particles", for Scatter to throw marks from.
-- **G4 · Emotional Seed.** One knob driving color, density, turbulence and
-  contrast together.
-  - A group whose one input fans out through remappers.
 - **G6 · Text as a mask** (Ruby). Done: letters filled with a surface (the
   second surface's Blend with Text, with Shape Aware), Text Aware for each
   surface, Shape Aware round the words on the page, and Cut Out by Text.
@@ -242,7 +237,6 @@ superseded) wait for Stage 4.
 
 ### Stage 2 · Features: the engine, the controls, the poem
 - **C3, C4** lighting; **C5** the camera dial on more textures.
-- **G2** punctuation, **G4** Emotional Seed.
 
 ### Stage 3 · Textures: built from the parts
 - **I**: the 36 Surface Studies become textures in the menu, each a chain
@@ -282,12 +276,12 @@ superseded) wait for Stage 4.
 
 ```
  STAGE 1 · COMPONENTS        STAGE 2 · FEATURES                 STAGE 3 · TEXTURES          STAGE 4 · PRESETS
- Scatter ───────────────────► G2 punctuation ─────────────────► I studies → textures ───┐
+ Scatter ──────────────────────────────────────────────────────► I studies → textures ───┐
                                                                 J black boxes apart  ───┤
  F5–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
                                                                Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
- (groups, loops) ─┬───────                                                              │      ├─► H3 Crossbreed
-                 └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
+                                                                                        │      ├─► H3 Crossbreed
+                                                                                        │      ├─► H4 Bind to Ink
                               (controls: dial, two handles, curves) ─────────────────────┘      ├─► E4 author locks
                                                                                                 └─► THE PRESETS PASS
                               C3; C4
@@ -296,11 +290,10 @@ superseded) wait for Stage 4.
 **Suggested passes** (one release each, AGENTS' recipe):
 
 1. Stage 2: C3, C4.
-2. Stage 2: G2, G4.
-3. Stage 1: F7 Refraction (with F1), F10 Bezier curves.
-4. Stage 3: the Surface Studies become textures, a few per pass; black boxes
+2. Stage 1: F7 Refraction (with F1), F10 Bezier curves.
+3. Stage 3: the Surface Studies become textures, a few per pass; black boxes
    taken apart and the rest rebuilt as chains, two or three per pass.
-5. Stage 4: H2, H3, H4, E4, then the presets pass.
+4. Stage 4: H2, H3, H4, E4, then the presets pass.
 
 The stages overlap at their edges: a texture whose parts all exist may be
 built while the next part is being written. The order that matters is that

@@ -44,12 +44,24 @@ check('The Poem has a Rhymes output and a rhyme to pick', STEPS.poem.outs.includ
 { const E = o => ({ ctx: { text: '0.1,0.1,0.9,0.2,0,0,0', ...o }, ww: 8, wh: 8, N: 64, num: (n, k, d) => d, P: (n, k, d) => d, boxBlur: f => f });
   const a = STEPS.poem.run(E({}), {}), b = STEPS.poem.run(E({ aware: false }), {}), c = STEPS.poem.run(E({ fill: true }), {}), d = STEPS.poem.run(E({ around: true }), {}), h = STEPS.poem.run(E({ around: 0.4 }), {});
   check('The Poem hands on three numbers: Aware (1 unless the surface is not Text Aware), In the Letters (1 when it fills them) and Round the Words (1 under Shape Aware on the page)',
-    a[5] === 1 && a[6] === 0 && a[7] === 0 && b[5] === 0 && c[6] === 1 && d[7] === 1 && a.length === 8);
+    a[5] === 1 && a[6] === 0 && a[7] === 0 && b[5] === 0 && c[6] === 1 && d[7] === 1 && a.length === 9);
   check('…each as strong as Shape Strength says', Math.abs(h[7] - 0.4) < 1e-9);
   const { wordsRoom } = await import('../texCore.js'), t = '0.4,0.4,0.6,0.5,0,0,0', full = wordsRoom({ around: 1, text: t }, 20, 20), half = wordsRoom({ around: 0.5, text: t }, 20, 20);
   check('the words\' room: none on the words at full strength, half at half, the page far off untouched', full[10*20 + 10] === 0 && Math.abs(half[10*20 + 10] - 0.5) < 1e-6 && full[0] === 1 && half[0] === 1 && wordsRoom({ text: t }, 20, 20) === null); }
 check('every new part has its doc', ['poem', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma'].every(k => STEPS[k] && STEPS[k].doc.length > 40));
 check('the Ripples from the Words starter teaches with The Poem', /"name":"poem"/.test(JSON.stringify(athanorStarter('ripples'))));
+
+// PUNCTUATION (ROADMAP G2): the page's "x,y,mark" points, read by The Poem's ninth output; every reader of the runs passes them over
+{ const { poemMarks, punctMark } = await import('../steps.js'), { wordsRoom } = await import('../texCore.js');
+  const lay = '0.1,0.4,0.9,0.5,0,0,0;0.3,0.47,2;0.85,0.47,1', P = (marks, glow = 100) => STEPS.poem.run({ ctx: { text: lay }, ww: 100, wh: 100, N: 10000,
+    num: (n, k, d) => k === 'glow' ? glow : d, P: (n, k, d) => k === 'marks' ? marks : d, boxBlur: f => f }, {})[8];
+  const every = P('every mark'), pauses = P('pauses , ; :'), wide = P('every mark', 300);
+  check('the marks parse as three numbers each; a run of six or more is never a mark, and the runs\' readers pass the marks over',
+    poemMarks(lay).length === 2 && poemRuns(lay).length === 1 && poemMarks('0.1,0.1,0.5,0.15,0,0').length === 0 && punctMark(',') === 2 && punctMark('a') === 0
+    && wordsRoom({ around: 1, text: lay }, 20, 20)[0] === 1);
+  check('The Poem\'s Punctuation: bright on each mark, dark away from them; Pauses keeps the comma and drops the full stop',
+    STEPS.poem.outs[8] === 'punctuation' && every[47*100 + 30] > 0.9 && every[47*100 + 85] > 0.9 && every[10*100 + 10] === 0 && pauses[47*100 + 30] > 0.9 && pauses[47*100 + 85] === 0);
+  check('…and its Glow reaches further when turned up', wide[47*100 + 40] > every[47*100 + 40]); }
 
 // the cache: the layout is part of a graph's key only when the graph asks for it
 { const g = JSON.stringify(athanorStarter('ripples'));

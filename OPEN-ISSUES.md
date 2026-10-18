@@ -6,7 +6,15 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Mundilfari, Saturn–Tarvos, Saturn–Jarnsaxa, Saturn–Hyrrokkin, Saturn–Greip, Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Bergelmir, Saturn–Mundilfari, Saturn–Tarvos, Saturn–Jarnsaxa, Saturn–Hyrrokkin, Saturn–Greip, Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+- THE EMOTIONAL SEED (sheet sent: Weather of Feeling at four feelings, in each mood): one feeling turned into a color and
+  Density, Turbulence and Contrast. Do Storm, Joy and Longing feel like their names, and are their colors right (storm:
+  sea glass → slate → red; joy: dusk → rose → gold; longing: parchment → pale blue → deep periwinkle)? More moods
+  wanted? Page Hues runs from the second hue (calm) to the first (fierce): in the starter the ground is the second hue, so
+  calm there melts into the ground. Is that the right way round?
+- PUNCTUATION PARTICLES (sheet sent: every mark, and the pauses only): The Poem's new Punctuation output, a glow on each
+  mark, into Scatter's Where. Enough sparks, and the right size? Should apostrophes inside words (don't, it's) count
+  as marks? They do now, with the quotes.
 - THE PAINTED RINGWORLD'S SUN, placed by the light dial in the world (sheets sent: before and after, and a row of camera
   turns): the light comes from it, and turning the camera turns past it. Seen less often than when it stood on the arch
   (only when you face it). Right? And the sun guide over the image while the dial moves. Should the Painted Landscape's sun

@@ -515,6 +515,11 @@ Other parts of a look:
 - **THE POEM'S LAYOUT** (`TEXT_LAYOUT`, `textLayoutNow()`):
   - Each frame records its text runs as `x0,y0,x1,y1,line,stanza,rhyme;…` in page
     fractions.
+  - After the runs come the punctuation marks as `x,y,mark` (`notePunct` in
+    drawTextRun, while `PUNCT_NOW` is a list; `POEM_PUNCT` and `punctMark` in
+    steps.js; `poemMarks` reads them). They are three numbers so every reader
+    of the runs (which all want four or more) passes them over: keep it so.
+    The Poem's ninth output, Punctuation, glows on them.
   - A surface drawn before the text reads the previous frame's record. A
     change asks for one more frame, and only when something reads it.
   - **Text Clearing** (`textureClearing`) takes a soft mask of the runs out
@@ -864,8 +869,14 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
     `curveFromPoints` is a monotone cubic (it never overshoots a point).
   - A wired ⚙'s range and a binding's range are set with two handles
     (`modalPrompt({ range })`).
+  - The **Emotional Seed** (`feeling`) turns one feeling into a color and
+    three numbers (density, turbulence, contrast) through its mood's curves
+    (`FEELING_MOODS`), or through a Curve wired onto a number's port. Its
+    Page Hues mood reads both pickers, so `athanorHues` offers them for it.
+    Starter: Weather of Feeling.
 - **The poem as input:** the **The Poem** part (words, distance, lines,
-  stanzas, rhymes, and two numbers: aware, in the letters) gets the layout as
+  stanzas, rhymes, punctuation, and three numbers: aware, in the letters,
+  round the words) gets the layout as
   `ctx.text`, and only when its graph contains it (`graphUsesPoem`) and the
   surface is Text Aware or fills the letters. The cache key carries it then
   (`_q`, with `_F` and `_A0`), never otherwise.

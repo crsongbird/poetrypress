@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Bergelmir (2026-10-18)
+
+- **The Emotional Seed**, a new part under Page Inputs: one feeling, from
+  calm to fierce, turned at once into a color and three numbers, Density,
+  Turbulence and Contrast, to wire into any settings. Wire a Knob into its
+  Feeling and one slider on the page moves them all together.
+  - Its Mood says how each answers: a **storm** gathers fast and hardens
+    toward red; **joy** fills and brightens toward gold; **longing** empties,
+    stirs a little and blurs toward a deep blue.
+  - **Accents** runs from the page's Conjunction Hue (calm) to its
+    Opposition Hue (fierce); **Page Hues** from the surface's second hue to
+    its first, and puts both pickers on the page.
+  - A Curve wired onto a number's port reshapes how that number answers
+    the feeling.
+  - New starter, **Weather of Feeling**: one Feeling knob sets a cloud's
+    color, size, roughness, swirl and contrast.
+- **The Poem knows where the punctuation is.** The page now records where
+  every comma, full stop, dash, quote and bracket sits, and The Poem has a
+  ninth output, **Punctuation**: a soft glow on each mark.
+  - Its **Punctuation** setting picks which marks glow: every mark, the
+    stops, the pauses, the dashes, or the quotes and brackets. **Punctuation
+    Glow** sets how far each glow reaches.
+  - Into a Scatter's Where, marks are thrown from the poem's punctuation.
+  - New starter, **Punctuation Particles**: sparks thrown from every mark,
+    lit by the dial.
+
 ## Saturn–Mundilfari (2026-10-18)
 
 - **The Painted Ringworld's sun is where the light dial puts it.** The

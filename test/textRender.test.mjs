@@ -111,6 +111,16 @@ check('a wave rises first, to its height', wave(100).dy < 0 && Math.abs(Math.abs
 check('a straight run has no shape', runShape({}, 300, 50) === null && runShape({ arc: 30 }, 0, 50) === null);
 check('a font by its name, any case', fontIndexByName('cinzel') >= 0 && fontIndexByName('Cormorant') >= 0 && fontIndexByName('nowhere') === -1);
 
+// PUNCTUATION (ROADMAP G2): the page records where each mark sits, after the runs, as "x,y,mark" (which every reader
+// of the runs passes over), each inside its line's run and in reading order
+{ const { textLayoutNow } = await import('../canvasRenderer.js'), { poemMarks, poemRuns } = await import('../steps.js');
+  registry['poemText'].value = 'Wait, then go.\nNo marks here';
+  render();
+  const lay = textLayoutNow(), marks = poemMarks(lay), runs = poemRuns(lay), r = runs[0] || [0, 0, 0, 0];
+  check('the page records the poem\'s punctuation: a comma then a full stop, inside the first line\'s run, in reading order',
+    marks.length === 2 && marks[0][2] === 2 && marks[1][2] === 1 && marks[0][0] < marks[1][0] && marks.every(([x, y]) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]));
+  check('…and the runs read as they did (the marks are three numbers: passed over by every reader of the runs)', runs.length === 2 && lay.split(';').length === 4); }
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);
