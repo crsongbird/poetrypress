@@ -68,14 +68,16 @@ check('a part page lists its inputs, outputs and settings', (() => { const h = W
   check('every figure is shown in an article, and every article\'s figure exists', [...used].every(k => F[k]) && Object.keys(F).every(k => used.has(k)));
   check('a figure is drawn as tiles for the editor to fill, with its caption', /<canvas data-n="1"/.test(W.wikiArticleHtml('graymap')) && /<figcaption>/.test(W.wikiArticleHtml('graymap'))); }
 check('search finds articles and parts', W.wikiSearch('mask').length > 3 && W.wikiSearch('levels').some(h => h.id === 'part:levels'));
-{
-  const ctx = { categories: S.STEP_CATEGORIES, catName: c => c };
-  const order = W.wikiOrder(ctx);
-  check('the reading order holds every article and every part, once each', new Set(order).size === order.length
-    && W.WIKI_ARTICLES.every(a => order.includes(a.id)) && keys.every(k => order.includes('part:' + k)));
-  const first = W.wikiNeighbors(order[0], ctx), last = W.wikiNeighbors(order.at(-1), ctx), mid = W.wikiNeighbors('part:levels', ctx);
-  check('previous and next walk it: none before the first page, none after the last, two around a part',
-    !first.prev && first.next && first.next.id === order[1] && !last.next && mid.prev && mid.next && mid.prev.title && mid.next.title);
-}
+// THE TREE (Ruby: better organization, more than one heading level, no pager on every page)
+{ const ctx = { categories: S.STEP_CATEGORIES, catName: c => c, catDoc: () => '' };
+  const listed = W.WIKI_TREE.flatMap(t => (t.subs || []).flatMap(sub => sub.pages));
+  check('every article sits in the contents\' tree exactly once', new Set(listed).size === listed.length && W.WIKI_ARTICLES.every(a => listed.includes(a.id)) && listed.every(id => W.WIKI_ARTICLES.find(a => a.id === id)));
+  const nav = W.wikiContentsHtml(ctx);
+  check('every part is in the contents, under its category', keys.filter(k => !S.STEPS[k].hidden).every(k => nav.includes(`data-wiki="part:${k}"`)));
+  check('the contents have three levels: sections, subsections, and parts under each category', /<h3 class="wk-nav-sec">/.test(nav) && /<h4>/.test(nav) && /<details class="wk-nav-cat">/.test(nav) && /data-wiki="part:levels"/.test(nav));
+  check('every section has a page that lists what it holds', W.WIKI_TREE.every(t => { const h = W.wikiArticleHtml('sec:' + t.id, ctx); return h.includes('<h2>') && (t.parts ? /part:levels/.test(h) : (t.subs || []).every(sub => sub.pages.every(p => h.includes(`data-wiki="${p}"`)))); }));
+  check('a page shows where it sits: its section, then its subsection', /wk-kicker">.*sec:data.*Ports and settings/.test(W.wikiArticleHtml('ranges', ctx)) && /sec:parts/.test(W.wikiArticleHtml('part:levels', ctx)));
+  check('only Getting Started is read in order (Previous and Next); its last page leads to the next section',
+    W.wikiWalks('welcome') && W.wikiWalks('reading') && !W.wikiWalks('ranges') && !W.wikiWalks('part:levels') && W.wikiWalkNeighbors('reading').next.id === 'sec:data' && !W.wikiWalkNeighbors('welcome').prev); }
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

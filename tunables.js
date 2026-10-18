@@ -74,6 +74,8 @@ export const MARKS = {
   /** Inset from the page edge, as a share of width/height. */
   insetX: 0.035,
   insetY: 0.025,
+  /** How strongly the spell code is drawn (Ruby: faded a lot). */
+  spellAlpha: 0.3,
 };
 
 /** Protect the Text: how readable the words must be against what they sit on. */

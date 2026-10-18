@@ -2133,7 +2133,21 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .wk-contents-btn{ display:none; }
 .wk-body{ display:grid; grid-template-columns:minmax(170px, 210px) 1fr; gap:22px; padding-top:8px; }
 .wk-nav{ position:sticky; top:58px; align-self:start; max-height:calc(var(--vvh, 100vh) - 140px); overflow-y:auto; font-family:var(--ui-sans); font-size:13px; padding-right:6px; border-right:1px solid var(--fg-line); }
-.wk-nav h4{ margin:12px 0 4px; font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:.08em; font-size:13px; color:var(--fg-dim); }
+/* the contents in three levels (Ruby): a section (its own page), its subsections, their pages; Parts folds by category */
+.wk-nav h3.wk-nav-sec{ margin:14px 0 4px; font:500 14px var(--ui-caps); letter-spacing:.06em; text-transform:lowercase; }
+.wk-nav h3.wk-nav-sec:first-child{ margin-top:2px; }
+.wk-nav h3.wk-nav-sec a{ color:var(--fg-accent); padding-left:0; }
+.wk-nav h4{ margin:8px 0 2px 6px; font:italic 12.5px var(--ui-text, var(--ui-sans)); color:var(--fg-dim); }
+.wk-nav ul ul, .wk-nav details ul{ margin-left:8px; }
+.wk-nav details.wk-nav-cat summary{ cursor:pointer; padding:2px 6px; color:var(--fg-text); list-style-position:inside; }
+.wk-nav details.wk-nav-cat[open] summary{ color:var(--fg-accent); }
+.wk-page h3{ margin:18px 0 6px; font:500 16px var(--ui-caps); letter-spacing:.05em; color:var(--fg-text); border-bottom:1px solid var(--fg-line); padding-bottom:3px; }
+.wk-page h4{ margin:12px 0 4px; font:italic 14px var(--ui-text, var(--ui-sans)); color:var(--fg-dim); }
+.wk-index{ display:grid; grid-template-columns:minmax(150px, 220px) 1fr; gap:6px 14px; margin:6px 0 4px; }
+.wk-index dt{ font-weight:500; } .wk-index dd{ margin:0; color:var(--fg-dim); font-size:13.5px; }
+.wk-sec-doc{ margin:0 0 4px; color:var(--fg-dim); font-size:13.5px; }
+.wk-chips{ margin:0 0 8px; font-size:13.5px; line-height:1.8; }
+body.is-mobile .wk-index{ grid-template-columns:1fr; } body.is-mobile .wk-index dd{ margin-bottom:6px; }
 .wk-nav ul{ list-style:none; margin:0; padding:0; } .wk-nav li{ margin:2px 0; }
 .wk-nav a{ color:var(--fg-text); text-decoration:none; display:block; padding:2px 6px; border-left:2px solid transparent; }
 .wk-nav a:hover{ color:var(--fg-accent); } .wk-nav a.on{ color:var(--fg-accent); border-left-color:var(--fg-accent); }
@@ -2284,6 +2298,8 @@ body.is-mobile .forge-crumb, body.is-mobile .forge-pick{ top:8px; bottom:auto; }
 body.is-mobile .forge-veil.in-group .forge-pick, body.is-mobile .forge-veil.in-group #forgePending{ top:56px; }
 body.is-mobile .forge-crumb .fc-how{ display:none; }
 .drawflow-node .forge-open-group{ width:100%; margin:2px 0 0; padding:4px 8px; font-size:12px; letter-spacing:.04em; background:var(--fg-panel); border:1px solid var(--fg-accent); color:var(--fg-accent); }
+.forge-box{ position:absolute; z-index:8; pointer-events:none; border:1.5px dashed var(--fg-accent); background:color-mix(in srgb, var(--fg-accent) 10%, transparent); }
+.forge-box[hidden]{ display:none; }
 
 </style>
 
@@ -2366,6 +2382,8 @@ const MARKS = {
   /** Inset from the page edge, as a share of width/height. */
   insetX: 0.035,
   insetY: 0.025,
+  /** How strongly the spell code is drawn (Ruby: faded a lot). */
+  spellAlpha: 0.3,
 };
 
 /** Protect the Text: how readable the words must be against what they sit on. */
@@ -19993,11 +20011,6 @@ Have fun!</textarea>
           </select>
         </div>
       </div>
-      <!-- the spell code, diagonally opposite the credit: part of the look (spells and shares keep it) -->
-      <div class="check-row spell-mark-row" style="margin-top:6px;">
-        <input type="checkbox" id="spellMark" checked>
-        <label for="spellMark" data-str="label.spell_mark" title="The spell code in the corner opposite the credit">Show Spell Code?</label>
-      </div>
     </div>
 
     <details class="card" data-tab="write" id="formattingGuidePanel">
@@ -20071,8 +20084,8 @@ held on till bright~B</code></p>
         <p>Words can be made of glass, cut through the surface, pressed into the page, or set on a curve. Each of these works bare too.</p>
         <dl>
           <dt><code>/glass</code></dt><dd>frosted glass letters: the page behind them blurred and lit</dd>
-          <dt><code>/glass:clear</code> <code>/glass:rose</code></dt><dd>clear glass, which only bends the page; or glass tinted any color</dd>
-          <dt><code>/cut</code></dt><dd>the letters as windows through the surface, to the page under it</dd>
+          <dt><code>/glass:clear</code> <code>/glass:rose</code> <code>/glass:80</code></dt><dd>clear glass, which only bends the page; glass tinted any color; and its strength, 0–100 (<code>/glass:rose,30</code>)</dd>
+          <dt><code>/cut</code></dt><dd>the letters as windows through the surface, to the page under it. With no surface on, plain letters.</dd>
           <dt><code>/blend:multiply</code></dt><dd>how the letters lie on the page: multiply (ink pressed into the paper), screen, overlay, soft-light and the rest of the blends</dd>
           <dt><code>/op:60</code></dt><dd>opacity, as a percent</dd>
           <dt><code>/arc:30</code></dt><dd>the words on an arc, spanning so many degrees of a circle; a negative arc sags</dd>
@@ -21108,6 +21121,11 @@ but bear with me, dear}]/jitter:200
           <button class="btn-major" id="poemApplyBtn" type="button" disabled data-str="button.poemApplyBtn">Invoke</button>
           <button class="btn-danger" id="poemDeleteBtn" type="button" disabled data-str="button.poemDeleteBtn">Dissolve</button>
         </div>
+        <!-- the spell code, faint, in the corner opposite the credit: part of the look (spells and shares keep it) -->
+        <div class="check-row spell-mark-row" style="margin-top:8px;">
+          <input type="checkbox" id="spellMark" checked>
+          <label for="spellMark" data-str="label.spell_mark" title="Shows this look's spell code, faintly, in the corner opposite your name">Show Spell Code</label>
+        </div>
         <details class="subcard">
           <summary>Advanced</summary>
           <div class="btn-row">
@@ -21308,6 +21326,8 @@ const MARKS = {
   /** Inset from the page edge, as a share of width/height. */
   insetX: 0.035,
   insetY: 0.025,
+  /** How strongly the spell code is drawn (Ruby: faded a lot). */
+  spellAlpha: 0.3,
 };
 
 /** Protect the Text: how readable the words must be against what they sit on. */
@@ -21420,7 +21440,7 @@ const UI_STRINGS = {
   'label.script_highlighting':                 "Script Highlighting",
   'label.witch_artificer':                     "Witch / Artificer",
   'label.corner':                              "Corner",
-  'label.spell_mark':                          "Show Spell Code?",
+  'label.spell_mark':                          "Show Spell Code",
   'label.aspect_ratio':                        "Aspect Ratio",
   'label.custom_resolution':                   "Custom Resolution",
   'label.width':                               "Width",
@@ -23623,8 +23643,13 @@ function parseSegmentDirective(dirStr, part){
   // a color by its name or hex: /color:rose, /color:midnightblue, /color:#a33
   if(lower.startsWith('color:') || lower.startsWith('colour:')){ const c = pmlColor(d.slice(d.indexOf(':') + 1)); if(c) part.customColor = c; return; }
   // glass letters: frosted (the page behind them blurred and lit), clear (only bent), or tinted by a color
-  if(lower === 'glass' || lower.startsWith('glass:')){ const v = lower.slice(6).trim(), tint = v && v !== 'frost' && v !== 'clear' ? pmlColor(v) : null;
-    part.glass = { kind: v === 'clear' ? 'clear' : 'frost', tint }; return; }
+  // (and a strength, 0–100, 50 as before: /glass:80, /glass:rose,30 — Ruby)
+  if(lower === 'glass' || lower.startsWith('glass:')){ let kind = 'frost', tint = null, strength = 50;
+    for(const b of lower.slice(6).split(',').map(x => x.trim()).filter(Boolean)){
+      if(/^-?\d*\.?\d+$/.test(b)) strength = pmlNum(b, 50, 0, 100);
+      else if(b === 'clear' || b === 'frost') kind = b;
+      else { const c = pmlColor(b); if(c) tint = c; } }
+    part.glass = { kind, tint, ...(strength !== 50 ? { strength } : {}) }; return; }
   // the letters as windows to the page beneath the surface
   if(lower === 'cut'){ part.cut = true; return; }
   if(lower==='l' || lower==='left'){ part.justify='left'; return; }
@@ -42219,7 +42244,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Paaliaq';
+const RELEASE = 'Saturn–Skathi';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -43056,7 +43081,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · 1778ee4";
+const STAMP = "2026-10-18 · 463489e";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -44033,7 +44058,8 @@ function drawPartRun(ctx, part, x, y, w, size, lineHeight, fontDef, prep){
   ctx.save(); turn(ctx);
   try {
     const style = prep(ctx);
-    if(part.glass || part.cut){ ctx.restore(); ctx.save(); drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn); }
+    // (a cut needs a surface to cut: with none on the page, the letters are plain ink — Ruby)
+    if(part.glass || (part.cut && CUT_LIVE)){ ctx.restore(); ctx.save(); drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn); }
     else end = drawTextRun(ctx, part.segments, x, y, size, lineHeight, fontDef, style);
   } finally { ctx.restore(); }
   return end;
@@ -44055,7 +44081,7 @@ function winLayer(i, w, h){
   x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetX = 0; x.shadowOffsetY = 0; x.clearRect(0, 0, w, h);
   return [c, x];
 }
-let UNDER_CANVAS = null, UNDER_NOW = false;
+let UNDER_CANVAS = null, UNDER_NOW = false, CUT_LIVE = false;
 function drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn){
   const PW = ctx.canvas.width, PH = ctx.canvas.height;
   // the run's reach: its box, bowed by an arc, lifted by a wave, turned by /rot, and room for its edges
@@ -44081,14 +44107,15 @@ function drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot
   lx.drawImage(M, 0, 0); lx.globalCompositeOperation = 'source-in'; lx.imageSmoothingEnabled = true;
   if(part.cut) lx.drawImage(UNDER_NOW && UNDER_CANVAS ? UNDER_CANVAS : ctx.canvas, bx, by, bw, bh, 0, 0, bw, bh);
   else {
-    const g = part.glass, clear = g.kind === 'clear';
-    const amt = Math.max(0, Math.min(1, (size*(clear ? 0.05 : 0.12)/S - 3)/57));
-    const soft = boxGlass(ctx.canvas, { x: bx, y: by, w: bw, h: bh }, clear ? 'lens' : 'frost', clear ? 0.35 : amt, clear ? 0.15 : 0.35, S, 11);
+    // (its strength, 0–100: 50 is the glass as it first was; more frosts and tints it further)
+    const g = part.glass, clear = g.kind === 'clear', k = Math.max(0, Math.min(2, (g.strength ?? 50)/50));
+    const amt = Math.max(0, Math.min(1, (size*(clear ? 0.05 : 0.12)*k/S - 3)/57));
+    const soft = boxGlass(ctx.canvas, { x: bx, y: by, w: bw, h: bh }, clear ? 'lens' : 'frost', clear ? Math.min(1, 0.35*k) : amt, clear ? 0.15 : 0.35, S, 11);
     lx.drawImage(soft || ctx.canvas, ...(soft ? [0, 0, soft.width, soft.height] : [bx, by, bw, bh]), 0, 0, bw, bh);
     // lit like frosted glass, and coloured: by its tint, or faintly by the ink the words would have had
     lx.globalCompositeOperation = 'source-atop';
-    if(!clear && !g.tint){ lx.globalAlpha = 0.16; lx.fillStyle = '#fff'; lx.fillRect(0, 0, bw, bh); }
-    lx.globalAlpha = g.tint ? 0.34 : clear ? 0.12 : 0.22; lx.fillStyle = g.tint || ink; lx.fillRect(0, 0, bw, bh); lx.globalAlpha = 1;
+    if(!clear && !g.tint){ lx.globalAlpha = Math.min(0.6, 0.16*k); lx.fillStyle = '#fff'; lx.fillRect(0, 0, bw, bh); }
+    lx.globalAlpha = Math.min(0.85, (g.tint ? 0.34 : clear ? 0.12 : 0.22)*k); lx.fillStyle = g.tint || ink; lx.fillRect(0, 0, bw, bh); lx.globalAlpha = 1;
   }
   // 3. the edges, inside the letters: the letters' outside (a sheet with letter-shaped holes), its shadow thrown in
   const [O, ox] = winLayer(2, bw, bh), e = Math.max(S, size*0.028), blur = Math.max(S, size*0.035);
@@ -44580,7 +44607,7 @@ function renderInto(canvas){
   if(UNDER_NOW){ if(!UNDER_CANVAS) UNDER_CANVAS = document.createElement('canvas'); if(UNDER_CANVAS.width !== W || UNDER_CANVAS.height !== H){ UNDER_CANVAS.width = W; UNDER_CANVAS.height = H; }
     const ux = UNDER_CANVAS.getContext('2d', { willReadFrequently: true }); ux.globalCompositeOperation = 'copy'; ux.globalAlpha = 1; ux.drawImage(canvas, 0, 0); ux.globalCompositeOperation = 'source-over'; }
 
-  let textFill = null, textCut = false;
+  let textFill = null, textCut = false, surfaced = false;
   // SURFACE LAYERS (Ruby: every control for both, any blend for each): the lower first, then the upper,
   // each drawn the same way from its settings. appEvents hands over the layer the controls are not
   // showing (setSurfaceSource); the one they show is read from the page.
@@ -44597,9 +44624,10 @@ function renderInto(canvas){
       // Yes"): the page as it is before the first such surface, kept, to be laid back inside the letters after them
       if(L.textureTextCut && !textCut){ textCut = true; if(!CUT_CANVAS) CUT_CANVAS = document.createElement('canvas'); CUT_CANVAS.width = W; CUT_CANVAS.height = H;
         const kx = CUT_CANVAS.getContext('2d', { willReadFrequently: true }); kx.globalCompositeOperation = 'source-over'; kx.globalAlpha = 1; kx.drawImage(canvas, 0, 0); }
-      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env });
+      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }); surfaced = true;
     }
   }
+  CUT_LIVE = surfaced;
 
   // --- vignette (drawn here, before border/text, so it only affects the
   // background+texture layers underneath rather than the whole composed image) ---
@@ -45107,8 +45135,16 @@ function renderInto(canvas){
   ctx.globalAlpha = 0.9;
   ctx.textBaseline = isTop ? 'top' : 'alphabetic';
   ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
-  const wmX = isRight ? (W - W*MARKS.insetX) : (W*MARKS.insetX);
-  const wmY = isTop ? (H*MARKS.insetY) : (H - H*MARKS.insetY);
+  // INSIDE THE FRAME (Ruby: the name was sometimes badly placed): with a border or an inset box drawn, the credit and
+  // the spell sit inside the innermost of them — past its line, its stitch and the round of its corner — rather than
+  // at a fixed share of the page, where a wide offset put them on the line or outside it
+  const markIn = (() => { const pad = Math.max(rpx(4), Math.min(W, H)*0.018); let m = 0;
+    if($('borderToggle').checked) m = Math.max(m, bOffset + bThick + ((($('borderStitch') || {}).value || 'solid') !== 'solid' ? stitchSpec.amp : 0) + frameCorner*0.3);
+    if(cardOn) m = Math.max(m, cOffset + cThick + (cStitch !== 'solid' ? cSpec.amp : 0) + cCorner*0.3);
+    return m > 0 ? m + pad : 0; })();
+  const mX = Math.max(W*MARKS.insetX, markIn), mY = Math.max(H*MARKS.insetY, markIn);
+  const wmX = isRight ? (W - mX) : mX;
+  const wmY = isTop ? mY : (H - mY);
   const runs = [];
   for(const part of creditParts) for(const sg of part.segments) runs.push({ text: sg.text,
     color: part.customColor || (sg.color === 'accent1' ? accent1Color : sg.color === 'accent2' ? accent2Color : ink) });
@@ -45137,7 +45173,8 @@ function renderInto(canvas){
   const spellSegs = showSpell ? buildLines(spellToPML(activeSpell), true, true)[0].segments : [];
   ctx.save();
   const spellSize = Math.round(((W + H)/2)*MARKS.scale);
-  ctx.globalAlpha = 0.95;
+  // (faint, Ruby: a mark to find, not to read first)
+  ctx.globalAlpha = MARKS.spellAlpha;
   ctx.textBaseline = isTop ? 'alphabetic' : 'top';
   ctx.textAlign = isRight ? 'left' : 'right';
   ctx.shadowColor='transparent'; ctx.shadowBlur=0;
@@ -45145,8 +45182,8 @@ function renderInto(canvas){
   // the 67 glyphs; Symbols 2 has only one of them. The UI face almost
   // certainly does not, hence the explicit stack rather than the poem's font
   const spellFont = `${spellSize}px "Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif`;
-  const spX = isRight ? (W*MARKS.insetX) : (W - W*MARKS.insetX);
-  const spY = isTop ? (H - H*MARKS.insetY) : (H*MARKS.insetY);
+  const spX = isRight ? mX : (W - mX);
+  const spY = isTop ? (H - mY) : mY;
   ctx.font = spellFont;
   let spellW = 0;
   for(const sg of spellSegs) spellW += ctx.measureText(sg.text).width;
@@ -48108,7 +48145,34 @@ const wkEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&
 // the five kinds of data, and the article that explains each
 const WIKI_KINDS = { field: ['gray map', 'graymap'], image: ['picture', 'picture'], colour: ['color', 'color'], value: ['number', 'number'], curve: ['curve', 'curve'] };
 
-const WIKI_GROUPS = ['Start here', 'Data and wires', 'Building techniques', 'The page and your graph', 'Using the editor', 'Parts', 'Glossary'];
+/**
+ * THE CONTENTS AS A TREE (Ruby: better organization, two or three heading levels): sections, the subsections in a
+ * section, the pages in each. Every section has a page of its own ('sec:<id>') listing what it holds; Parts lists
+ * each category, and each category its parts (a third level). Only Getting Started is read in order, with a pager.
+ */
+const WIKI_TREE = [
+  { id: 'start', title: 'Getting started', walk: true, subs: [{ pages: ['welcome', 'first', 'reading'] }] },
+  { id: 'data', title: 'Data and wires', subs: [
+    { title: 'The kinds of data', pages: ['kinds', 'graymap', 'picture', 'color', 'number', 'curve', 'convert'] },
+    { title: 'Ports and settings', pages: ['ports', 'required', 'mapping', 'ranges'] }] },
+  { id: 'tech', title: 'Techniques', subs: [
+    { title: 'Combining layers', pages: ['masks', 'blendmodes'] },
+    { title: 'Light, chance and size', pages: ['heights', 'seeds', 'resolution'] }] },
+  { id: 'page', title: 'Your surface on the page', subs: [{ pages: ['controls', 'surface', 'poem', 'keeping'] }] },
+  { id: 'editor', title: 'Using the editor', subs: [
+    { title: 'Mouse, touch and menus', pages: ['mouse', 'touch', 'menus'] },
+    { title: 'Organizing a graph', pages: ['tidy', 'groups', 'limits'] }] },
+  { id: 'parts', title: 'Parts', parts: true },
+  { id: 'glossary', title: 'Glossary', subs: [{ pages: ['glossary'] }] },
+];
+/** Where a page sits: { sec, sub } (sub null for a part or a section page), or null. */
+function wikiPlace(id){
+  id = String(id);
+  if(id.startsWith('part:') || id.startsWith('cat:')) return { sec: WIKI_TREE.find(t => t.parts), sub: null };
+  if(id.startsWith('sec:')) return { sec: WIKI_TREE.find(t => 'sec:' + t.id === id) || null, sub: null };
+  for(const sec of WIKI_TREE) for(const sub of sec.subs || []) if(sub.pages.includes(id)) return { sec, sub };
+  return null;
+}
 
 const WIKI_ARTICLES = [
   // ------------------------------------------------------------------ Start here
@@ -48557,37 +48621,64 @@ function wkCatHtml(cat, ctx){
   return `<p class="wk-lead">${wkEsc((ctx && ctx.catDoc && ctx.catDoc(cat)) || '')}</p><dl class="wk-gloss">`
     + parts.map(([k, s]) => `<dt><a href="#" data-wiki="part:${k}">${wkEsc(s.label)}</a></dt><dd>${wkEsc((WIKI_PARTS[k] || {}).line || s.doc || '')}</dd>`).join('') + '</dl>';
 }
-/** One page of the wiki, by id ('welcome', 'part:levels', 'cat:Noise'). */
+/** An article's first sentence, as plain text (a section's page lists each page with it). */
+const wkFirst = id => { const a = wkArticle(id); if(!a) return '';
+  const t = a.body.replace(/\{\{[^}]*\}\}/g, '').replace(/<[^>]+>/g, ' ').replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g, (m, x, y) => y || wikiTitle(x)).replace(/\s+/g, ' ').trim();
+  const m = /^(.{20,220}?[.!?])(\s|$)/.exec(t); return m ? m[1] : t.slice(0, 160); };
+const wkLink = (id, text) => `<a href="#" data-wiki="${wkEsc(id)}">${wkEsc(text || wikiTitle(id))}</a>`;
+/** The trail above a page: its section (a link) › its subsection. */
+function wkTrail(id, ctx){
+  const pl = wikiPlace(id); if(!pl || !pl.sec) return '';
+  const bits = [wkLink('sec:' + pl.sec.id, pl.sec.title)];
+  if(pl.sub && pl.sub.title) bits.push(wkEsc(pl.sub.title));
+  if(String(id).startsWith('part:')){ const c = (STEPS[String(id).slice(5)] || {}).cat; if(c) bits.push(wkLink('cat:' + c, ctx.catName ? ctx.catName(c) : c)); }
+  return `<p class="wk-kicker">${bits.join(' › ')}</p>`;
+}
+/** A section's own page: each subsection (a heading) and each page in it, with its first sentence. */
+function wkSectionHtml(sec, ctx){
+  if(sec.parts){ const cats = ctx.categories || [];
+    return `<p class="wk-lead">Every part, by what it does. Each part’s page lists its inputs, outputs and settings.</p>`
+      + cats.map(c => { const parts = Object.entries(STEPS).filter(([, s]) => s.cat === c && !s.hidden).sort((a, b) => a[1].label.localeCompare(b[1].label));
+        return `<h3>${wkLink('cat:' + c, ctx.catName ? ctx.catName(c) : c)}</h3><p class="wk-sec-doc">${wkEsc((ctx.catDoc && ctx.catDoc(c)) || '')}</p>`
+          + `<p class="wk-chips">${parts.map(([k, s]) => wkLink('part:' + k, s.label)).join(' · ')}</p>`; }).join(''); }
+  return (sec.subs || []).map(sub => (sub.title ? `<h3>${wkEsc(sub.title)}</h3>` : '')
+    + `<dl class="wk-index">${sub.pages.map(p => `<dt>${wkLink(p)}</dt><dd>${wkEsc(wkFirst(p))}</dd>`).join('')}</dl>`).join('');
+}
+/** The other pages beside this one (its subsection's), at the foot of an article: where to go next without a pager. */
+function wkSiblings(id){
+  const pl = wikiPlace(id); if(!pl || !pl.sub || pl.sec.walk || pl.sub.pages.length < 2) return '';
+  return `<p class="wk-see">${pl.sub.title ? 'More in ' + wkEsc(pl.sub.title) : 'More in ' + wkEsc(pl.sec.title)}: `
+    + pl.sub.pages.map(p => p === id ? `<b>${wkEsc(wikiTitle(p))}</b>` : wkLink(p)).join(' · ') + '</p>';
+}
+/** One page of the wiki, by id ('welcome', 'part:levels', 'cat:Noise', 'sec:data'). */
 function wikiArticleHtml(id, ctx = {}){
   id = String(id || 'welcome');
-  if(id.startsWith('part:')) return `<h2>${wkEsc(wkPartLabel(id.slice(5)))}</h2>` + wkPartHtml(id.slice(5), ctx);
-  if(id.startsWith('cat:')){ const c = id.slice(4); return `<h2>${wkEsc(ctx.catName ? ctx.catName(c) : c)}</h2>` + wkCatHtml(c, ctx); }
+  if(id.startsWith('part:')) return wkTrail(id, ctx) + `<h2>${wkEsc(wkPartLabel(id.slice(5)))}</h2>` + wkPartHtml(id.slice(5), ctx);
+  if(id.startsWith('cat:')){ const c = id.slice(4); return wkTrail(id, ctx) + `<h2>${wkEsc(ctx.catName ? ctx.catName(c) : c)}</h2>` + wkCatHtml(c, ctx); }
+  if(id.startsWith('sec:')){ const sec = WIKI_TREE.find(t => 'sec:' + t.id === id); if(sec) return `<h2>${wkEsc(sec.title)}</h2>` + wkSectionHtml(sec, ctx); }
   const a = wkArticle(id) || wkArticle('welcome');
-  return `<h2>${wkEsc(a.title)}</h2>` + wkLinks(a.body, ctx);
+  return wkTrail(a.id, ctx) + `<h2>${wkEsc(a.title)}</h2>` + wkLinks(a.body, ctx) + wkSiblings(a.id);
 }
-/** The contents: every group, its articles; Parts by category. */
+/** Whether a page is read in order, with Previous and Next under it (Getting Started's pages only). */
+function wikiWalks(id){ const pl = wikiPlace(id); return !!(pl && pl.sec && pl.sec.walk && pl.sub); }
+/** Previous and Next in a section read in order: its pages, and after the last, the next section's page. */
+function wikiWalkNeighbors(id){
+  const pl = wikiPlace(id); if(!pl || !pl.sec || !pl.sec.walk) return { prev: null, next: null };
+  const pages = (pl.sec.subs || []).flatMap(sub => sub.pages), i = pages.indexOf(String(id)), after = WIKI_TREE[WIKI_TREE.indexOf(pl.sec) + 1];
+  const at = p => p ? { id: p, title: String(p).startsWith('sec:') ? (WIKI_TREE.find(t => 'sec:' + t.id === p) || {}).title : wikiTitle(p) } : null;
+  return { prev: at(pages[i - 1]), next: at(pages[i + 1] || (after ? 'sec:' + after.id : null)) };
+}
+/** The contents: each section (its own page a link), its subsections as headings, their pages; Parts by category,
+ *  each category folding open to its parts. */
 function wikiContentsHtml(ctx = {}){
   const cats = ctx.categories || [];
-  return WIKI_GROUPS.map(g => {
-    let items = WIKI_ARTICLES.filter(a => a.group === g).map(a => [a.id, a.title]);
-    if(g === 'Parts') items = cats.map(c => ['cat:' + c, ctx.catName ? ctx.catName(c) : c]);
-    if(!items.length) return '';
-    return `<h4>${wkEsc(g)}</h4><ul>` + items.map(([id, t]) => `<li><a href="#" data-wiki="${wkEsc(id)}">${wkEsc(t)}</a></li>`).join('') + '</ul>';
+  const li = (id, t) => `<li><a href="#" data-wiki="${wkEsc(id)}">${wkEsc(t || wikiTitle(id))}</a></li>`;
+  return WIKI_TREE.map(sec => {
+    let h = `<h3 class="wk-nav-sec"><a href="#" data-wiki="sec:${wkEsc(sec.id)}">${wkEsc(sec.title)}</a></h3>`;
+    if(sec.parts) return h + cats.map(c => { const parts = Object.entries(STEPS).filter(([, s]) => s.cat === c && !s.hidden).sort((a, b) => a[1].label.localeCompare(b[1].label));
+      return `<details class="wk-nav-cat"><summary>${wkEsc(ctx.catName ? ctx.catName(c) : c)}</summary><ul>${li('cat:' + c, 'All ' + (ctx.catName ? ctx.catName(c) : c))}${parts.map(([k, s]) => li('part:' + k, s.label)).join('')}</ul></details>`; }).join('');
+    return h + (sec.subs || []).map(sub => (sub.title ? `<h4>${wkEsc(sub.title)}</h4>` : '') + `<ul>${sub.pages.map(p => li(p)).join('')}</ul>`).join('');
   }).join('');
-}
-/** The reading order, as the contents lists it: each group's articles; under Parts, each category's
- *  page followed by its parts (as its page lists them). Previous and next walk it. */
-function wikiOrder(ctx = {}){
-  const cats = ctx.categories || [];
-  return WIKI_GROUPS.flatMap(g => g === 'Parts'
-    ? cats.flatMap(c => ['cat:' + c, ...Object.entries(STEPS).filter(([, s]) => s.cat === c).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([k]) => 'part:' + k)])
-    : WIKI_ARTICLES.filter(a => a.group === g).map(a => a.id));
-}
-/** The pages either side of one in the reading order: { prev, next }, each { id, title } or null. */
-function wikiNeighbors(id, ctx = {}){
-  const order = wikiOrder(ctx), i = order.indexOf(String(id));
-  const at = j => (i >= 0 && order[j]) ? { id: order[j], title: String(order[j]).startsWith('cat:') && ctx.catName ? ctx.catName(order[j].slice(4)) : wikiTitle(order[j]) } : null;
-  return { prev: at(i - 1), next: at(i + 1) };
 }
 /** Search: titles first, then words in the text. Returns [{ id, title, where }]. */
 function wikiSearch(q){
@@ -48740,7 +48831,7 @@ function forgeHelpHtml(){
 }
 /** The bar along the wiki's foot: the pages before and after this one, in the contents' order. */
 function forgePagerHtml(id){
-  const { prev, next } = wikiNeighbors(id, forgeWikiCtx());
+  const { prev, next } = wikiWalkNeighbors(id);
   const side = (p, dir) => p ? `<a href="#" class="wk-${dir}" data-wiki="${forgeEsc(p.id)}"><small>${dir === 'prev' ? '‹ Previous' : 'Next ›'}</small><span>${forgeEsc(p.title)}</span></a>` : '<span></span>';
   return side(prev, 'prev') + side(next, 'next');
 }
@@ -49261,7 +49352,7 @@ async function openForge(deps){
       area.classList.toggle('picking', !!picking);
       if(!pickBar) return;
       if(!picking){ pickBar.hidden = true; pickBar.innerHTML = ''; return; }
-      pickBar.innerHTML = `<span><b>${picking.size}</b> ${picking.size === 1 ? 'part' : 'parts'} chosen. ${forgeClick(true)} the parts to put in the group (again to take one out).</span>`
+      pickBar.innerHTML = `<span><b>${picking.size}</b> ${picking.size === 1 ? 'part' : 'parts'} chosen. ${forgeClick(true)} parts to add or remove, or drag a box around them.</span>`
         + `<button type="button" class="forge-pending-x" data-act="make"${picking.size ? '' : ' disabled'}>Make the group</button><button type="button" class="forge-pending-x" data-act="cancel">Cancel</button>`;
       pickBar.hidden = false; };
     const startPick = id => { stopWire(); picking = new Set(id != null ? [String(id)] : []); paintPick(); };
@@ -49278,6 +49369,35 @@ async function openForge(deps){
         if(n.name === 'surface' || n.name === 'groupout'){ sound('blocked'); return; }
         picking.has(id) ? picking.delete(id) : picking.add(id); paintPick(); e.preventDefault(); }, true);
       document.addEventListener('keydown', e => { if(e.key === 'Escape' && picking && !veil.hidden){ e.preventDefault(); stopPick(); } }, true); }
+    // A BOX DRAWN ACROSS THE GRID chooses every part it touches (Ruby): while choosing parts for a group, a drag on the
+    // empty grid draws the box instead of panning; with a mouse, Shift and a drag starts choosing with a box anywhere
+    { let box = null, boxEl = null, fingers = 0;
+      const draw = () => { if(!boxEl){ boxEl = document.createElement('div'); boxEl.className = 'forge-box'; (body || area).appendChild(boxEl); }
+        const r = (body || area).getBoundingClientRect(), x0 = Math.min(box.x0, box.x1), y0 = Math.min(box.y0, box.y1);
+        Object.assign(boxEl.style, { left: (x0 - r.left) + 'px', top: (y0 - r.top) + 'px', width: Math.abs(box.x1 - box.x0) + 'px', height: Math.abs(box.y1 - box.y0) + 'px' }); boxEl.hidden = false; };
+      const end = () => { box = null; if(boxEl) boxEl.hidden = true; };
+      area.addEventListener('pointerdown', e => {
+        if(e.pointerType === 'touch') fingers++;
+        if(fingers > 1){ end(); return; }                                   // (two fingers: a pinch, never a box)
+        const onGrid = !(e.target.closest && e.target.closest('.drawflow-node, .forge-menu, input, select, button'));
+        if(!onGrid || e.button > 0) return;
+        if(!picking && !(e.shiftKey && e.pointerType === 'mouse')) return;
+        if(!picking) startPick(null);
+        box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY, id: e.pointerId };
+        e.preventDefault(); e.stopImmediatePropagation(); try { area.setPointerCapture(e.pointerId); } catch(_){}
+      }, true);
+      // (Drawflow pans on mousedown and touchstart: not while a box is drawn)
+      for(const ev of ['mousedown', 'touchstart']) area.addEventListener(ev, e => { if(box){ e.stopImmediatePropagation(); if(e.cancelable) e.preventDefault(); } }, { capture: true, passive: false });
+      area.addEventListener('pointermove', e => { if(!box || e.pointerId !== box.id) return; e.stopImmediatePropagation(); box.x1 = e.clientX; box.y1 = e.clientY;
+        if(Math.hypot(box.x1 - box.x0, box.y1 - box.y0) > 6) draw(); }, true);
+      const lift = e => { if(e.pointerType === 'touch') fingers = Math.max(0, fingers - 1); if(!box || e.pointerId !== box.id) return;
+        const b = box; end(); if(Math.hypot(b.x1 - b.x0, b.y1 - b.y0) <= 6 || !picking) return;
+        const x0 = Math.min(b.x0, b.x1), x1 = Math.max(b.x0, b.x1), y0 = Math.min(b.y0, b.y1), y1 = Math.max(b.y0, b.y1);
+        area.querySelectorAll('.drawflow-node').forEach(el => { const r = el.getBoundingClientRect(), id = el.id.slice(5), n = nodeOf(id);
+          if(!n || n.name === 'surface' || n.name === 'groupout') return;
+          if(r.right >= x0 && r.left <= x1 && r.bottom >= y0 && r.top <= y1) picking.add(id); });
+        paintPick(); sound('nodeAdd'); };
+      area.addEventListener('pointerup', lift, true); area.addEventListener('pointercancel', e => { if(e.pointerType === 'touch') fingers = Math.max(0, fingers - 1); end(); }, true); }
     // the next id free in every module (Drawflow numbers its nodes across them all)
     const nextId = df => { let next = 1; for(const m of Object.values(df)) for(const id of Object.keys((m || {}).data || {})) next = Math.max(next, (+id || 0) + 1); return next; };
     const bare = (id, name, data, x, y) => ({ id, name, data, class: forgeCatClass(FORGE_NODES[name].cat), html: '', typenode: false, inputs: {}, outputs: {}, pos_x: Math.round(x), pos_y: Math.round(y) });
@@ -49437,7 +49557,7 @@ async function openForge(deps){
         { glyph: '⌖', label: isPinned(id) ? 'Unpin it' : 'Pin it in place', hint: isPinned(id) ? 'it can be dragged and tidied again' : 'it stays put when dragged or tidied', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
         { glyph: '⧉', label: 'Duplicate', disabled: n.name === 'surface' || n.name === 'groupout', hint: n.name === 'surface' ? 'a graph has exactly one Surface' : n.name === 'groupout' ? 'a group has exactly one Group Result' : n.name === 'group' ? 'a copy of the group and everything inside it, without wires' : 'a copy with the same settings, without wires',
           act: () => { if(n.name === 'group'){ dupGroup(id); return; } const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
-        ...(groupable ? [{ glyph: '▣', label: 'Make a group…', hint: `choose the parts to make one: ${forgeClick()} each, then Make the group`, act: () => startPick(id) }] : []),
+        ...(groupable ? [{ glyph: '▣', label: 'Make a group…', hint: `${forgeClick()} parts or drag a box around them, then Make the group`, act: () => startPick(id) }] : []),
         { glyph: '↺', label: 'Reset all settings', hint: 'every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
             for(const k of Object.keys(n.data || {})) if(k[0] !== '_') patch[k] = undefined; Object.assign(patch, d); setData(id, patch); } },
         { glyph: '✂', label: wires ? `Disconnect all wires (${wires})` : 'No wires connected', hint: wires ? 'the part stays; its connections go' : '', disabled: !wires, act: () => { ed.removeConnectionNodeId('node-' + id); paintNode(id); save(); touched(); } },
@@ -49835,9 +49955,12 @@ async function openForge(deps){
     const goWiki = (id, push = true) => { const pg = page(); if(!pg) return;
       if(push && wiki.at && wiki.at !== id) wiki.back.push(wiki.at); wiki.at = id;
       pg.innerHTML = wikiArticleHtml(id, forgeWikiCtx()); pg.scrollTop = 0; doc.scrollTop = 0; paintFigures(pg);
-      const pager = doc.querySelector('.wk-pager'); if(pager){ pager.innerHTML = forgePagerHtml(id); pager.hidden = false; }
+      // (Previous and Next only where pages are read in order: Getting Started — Ruby)
+      const pager = doc.querySelector('.wk-pager'); if(pager){ const w = wikiWalks(id); pager.innerHTML = w ? forgePagerHtml(id) : ''; pager.hidden = !w; }
       doc.classList.remove('wk-show-nav');
-      doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id || (id.startsWith('part:') && a.dataset.wiki === 'cat:' + ((FORGE_NODES[id.slice(5)] || {}).cat))));
+      doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id));
+      // (the category a part is in opens in the contents, so the part shows there)
+      doc.querySelectorAll('.wk-nav details.wk-nav-cat').forEach(d => { if(d.querySelector(`a[data-wiki="${CSS.escape(id)}"]`)) d.open = true; });
       const b = doc.querySelector('.wk-back'); if(b) b.disabled = !wiki.back.length; };
     const showDoc = (on, id) => { if(!doc) return; if(on) F.onlyThis('doc'); if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; goWiki(wiki.at, false); }
       doc.hidden = !on; if(on && id) goWiki(id);

@@ -271,8 +271,13 @@ function parseSegmentDirective(dirStr, part){
   // a color by its name or hex: /color:rose, /color:midnightblue, /color:#a33
   if(lower.startsWith('color:') || lower.startsWith('colour:')){ const c = pmlColor(d.slice(d.indexOf(':') + 1)); if(c) part.customColor = c; return; }
   // glass letters: frosted (the page behind them blurred and lit), clear (only bent), or tinted by a color
-  if(lower === 'glass' || lower.startsWith('glass:')){ const v = lower.slice(6).trim(), tint = v && v !== 'frost' && v !== 'clear' ? pmlColor(v) : null;
-    part.glass = { kind: v === 'clear' ? 'clear' : 'frost', tint }; return; }
+  // (and a strength, 0–100, 50 as before: /glass:80, /glass:rose,30 — Ruby)
+  if(lower === 'glass' || lower.startsWith('glass:')){ let kind = 'frost', tint = null, strength = 50;
+    for(const b of lower.slice(6).split(',').map(x => x.trim()).filter(Boolean)){
+      if(/^-?\d*\.?\d+$/.test(b)) strength = pmlNum(b, 50, 0, 100);
+      else if(b === 'clear' || b === 'frost') kind = b;
+      else { const c = pmlColor(b); if(c) tint = c; } }
+    part.glass = { kind, tint, ...(strength !== 50 ? { strength } : {}) }; return; }
   // the letters as windows to the page beneath the surface
   if(lower === 'cut'){ part.cut = true; return; }
   if(lower==='l' || lower==='left'){ part.justify='left'; return; }

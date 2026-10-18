@@ -19,7 +19,7 @@ import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS } from './appOptions.js';
 import { KEPT, FORGE_BAR, fill } from './strings.js';
-import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiNeighbors, WIKI_FIGURES } from './athanorWiki.js';
+import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiWalkNeighbors, wikiWalks, WIKI_FIGURES } from './athanorWiki.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';
@@ -136,7 +136,7 @@ export function forgeHelpHtml(){
 }
 /** The bar along the wiki's foot: the pages before and after this one, in the contents' order. */
 export function forgePagerHtml(id){
-  const { prev, next } = wikiNeighbors(id, forgeWikiCtx());
+  const { prev, next } = wikiWalkNeighbors(id);
   const side = (p, dir) => p ? `<a href="#" class="wk-${dir}" data-wiki="${forgeEsc(p.id)}"><small>${dir === 'prev' ? '‹ Previous' : 'Next ›'}</small><span>${forgeEsc(p.title)}</span></a>` : '<span></span>';
   return side(prev, 'prev') + side(next, 'next');
 }
@@ -657,7 +657,7 @@ export async function openForge(deps){
       area.classList.toggle('picking', !!picking);
       if(!pickBar) return;
       if(!picking){ pickBar.hidden = true; pickBar.innerHTML = ''; return; }
-      pickBar.innerHTML = `<span><b>${picking.size}</b> ${picking.size === 1 ? 'part' : 'parts'} chosen. ${forgeClick(true)} the parts to put in the group (again to take one out).</span>`
+      pickBar.innerHTML = `<span><b>${picking.size}</b> ${picking.size === 1 ? 'part' : 'parts'} chosen. ${forgeClick(true)} parts to add or remove, or drag a box around them.</span>`
         + `<button type="button" class="forge-pending-x" data-act="make"${picking.size ? '' : ' disabled'}>Make the group</button><button type="button" class="forge-pending-x" data-act="cancel">Cancel</button>`;
       pickBar.hidden = false; };
     const startPick = id => { stopWire(); picking = new Set(id != null ? [String(id)] : []); paintPick(); };
@@ -674,6 +674,35 @@ export async function openForge(deps){
         if(n.name === 'surface' || n.name === 'groupout'){ sound('blocked'); return; }
         picking.has(id) ? picking.delete(id) : picking.add(id); paintPick(); e.preventDefault(); }, true);
       document.addEventListener('keydown', e => { if(e.key === 'Escape' && picking && !veil.hidden){ e.preventDefault(); stopPick(); } }, true); }
+    // A BOX DRAWN ACROSS THE GRID chooses every part it touches (Ruby): while choosing parts for a group, a drag on the
+    // empty grid draws the box instead of panning; with a mouse, Shift and a drag starts choosing with a box anywhere
+    { let box = null, boxEl = null, fingers = 0;
+      const draw = () => { if(!boxEl){ boxEl = document.createElement('div'); boxEl.className = 'forge-box'; (body || area).appendChild(boxEl); }
+        const r = (body || area).getBoundingClientRect(), x0 = Math.min(box.x0, box.x1), y0 = Math.min(box.y0, box.y1);
+        Object.assign(boxEl.style, { left: (x0 - r.left) + 'px', top: (y0 - r.top) + 'px', width: Math.abs(box.x1 - box.x0) + 'px', height: Math.abs(box.y1 - box.y0) + 'px' }); boxEl.hidden = false; };
+      const end = () => { box = null; if(boxEl) boxEl.hidden = true; };
+      area.addEventListener('pointerdown', e => {
+        if(e.pointerType === 'touch') fingers++;
+        if(fingers > 1){ end(); return; }                                   // (two fingers: a pinch, never a box)
+        const onGrid = !(e.target.closest && e.target.closest('.drawflow-node, .forge-menu, input, select, button'));
+        if(!onGrid || e.button > 0) return;
+        if(!picking && !(e.shiftKey && e.pointerType === 'mouse')) return;
+        if(!picking) startPick(null);
+        box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY, id: e.pointerId };
+        e.preventDefault(); e.stopImmediatePropagation(); try { area.setPointerCapture(e.pointerId); } catch(_){}
+      }, true);
+      // (Drawflow pans on mousedown and touchstart: not while a box is drawn)
+      for(const ev of ['mousedown', 'touchstart']) area.addEventListener(ev, e => { if(box){ e.stopImmediatePropagation(); if(e.cancelable) e.preventDefault(); } }, { capture: true, passive: false });
+      area.addEventListener('pointermove', e => { if(!box || e.pointerId !== box.id) return; e.stopImmediatePropagation(); box.x1 = e.clientX; box.y1 = e.clientY;
+        if(Math.hypot(box.x1 - box.x0, box.y1 - box.y0) > 6) draw(); }, true);
+      const lift = e => { if(e.pointerType === 'touch') fingers = Math.max(0, fingers - 1); if(!box || e.pointerId !== box.id) return;
+        const b = box; end(); if(Math.hypot(b.x1 - b.x0, b.y1 - b.y0) <= 6 || !picking) return;
+        const x0 = Math.min(b.x0, b.x1), x1 = Math.max(b.x0, b.x1), y0 = Math.min(b.y0, b.y1), y1 = Math.max(b.y0, b.y1);
+        area.querySelectorAll('.drawflow-node').forEach(el => { const r = el.getBoundingClientRect(), id = el.id.slice(5), n = nodeOf(id);
+          if(!n || n.name === 'surface' || n.name === 'groupout') return;
+          if(r.right >= x0 && r.left <= x1 && r.bottom >= y0 && r.top <= y1) picking.add(id); });
+        paintPick(); sound('nodeAdd'); };
+      area.addEventListener('pointerup', lift, true); area.addEventListener('pointercancel', e => { if(e.pointerType === 'touch') fingers = Math.max(0, fingers - 1); end(); }, true); }
     // the next id free in every module (Drawflow numbers its nodes across them all)
     const nextId = df => { let next = 1; for(const m of Object.values(df)) for(const id of Object.keys((m || {}).data || {})) next = Math.max(next, (+id || 0) + 1); return next; };
     const bare = (id, name, data, x, y) => ({ id, name, data, class: forgeCatClass(FORGE_NODES[name].cat), html: '', typenode: false, inputs: {}, outputs: {}, pos_x: Math.round(x), pos_y: Math.round(y) });
@@ -833,7 +862,7 @@ export async function openForge(deps){
         { glyph: '⌖', label: isPinned(id) ? 'Unpin it' : 'Pin it in place', hint: isPinned(id) ? 'it can be dragged and tidied again' : 'it stays put when dragged or tidied', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
         { glyph: '⧉', label: 'Duplicate', disabled: n.name === 'surface' || n.name === 'groupout', hint: n.name === 'surface' ? 'a graph has exactly one Surface' : n.name === 'groupout' ? 'a group has exactly one Group Result' : n.name === 'group' ? 'a copy of the group and everything inside it, without wires' : 'a copy with the same settings, without wires',
           act: () => { if(n.name === 'group'){ dupGroup(id); return; } const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
-        ...(groupable ? [{ glyph: '▣', label: 'Make a group…', hint: `choose the parts to make one: ${forgeClick()} each, then Make the group`, act: () => startPick(id) }] : []),
+        ...(groupable ? [{ glyph: '▣', label: 'Make a group…', hint: `${forgeClick()} parts or drag a box around them, then Make the group`, act: () => startPick(id) }] : []),
         { glyph: '↺', label: 'Reset all settings', hint: 'every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
             for(const k of Object.keys(n.data || {})) if(k[0] !== '_') patch[k] = undefined; Object.assign(patch, d); setData(id, patch); } },
         { glyph: '✂', label: wires ? `Disconnect all wires (${wires})` : 'No wires connected', hint: wires ? 'the part stays; its connections go' : '', disabled: !wires, act: () => { ed.removeConnectionNodeId('node-' + id); paintNode(id); save(); touched(); } },
@@ -1231,9 +1260,12 @@ export async function openForge(deps){
     const goWiki = (id, push = true) => { const pg = page(); if(!pg) return;
       if(push && wiki.at && wiki.at !== id) wiki.back.push(wiki.at); wiki.at = id;
       pg.innerHTML = wikiArticleHtml(id, forgeWikiCtx()); pg.scrollTop = 0; doc.scrollTop = 0; paintFigures(pg);
-      const pager = doc.querySelector('.wk-pager'); if(pager){ pager.innerHTML = forgePagerHtml(id); pager.hidden = false; }
+      // (Previous and Next only where pages are read in order: Getting Started — Ruby)
+      const pager = doc.querySelector('.wk-pager'); if(pager){ const w = wikiWalks(id); pager.innerHTML = w ? forgePagerHtml(id) : ''; pager.hidden = !w; }
       doc.classList.remove('wk-show-nav');
-      doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id || (id.startsWith('part:') && a.dataset.wiki === 'cat:' + ((FORGE_NODES[id.slice(5)] || {}).cat))));
+      doc.querySelectorAll('.wk-nav a').forEach(a => a.classList.toggle('on', a.dataset.wiki === id));
+      // (the category a part is in opens in the contents, so the part shows there)
+      doc.querySelectorAll('.wk-nav details.wk-nav-cat').forEach(d => { if(d.querySelector(`a[data-wiki="${CSS.escape(id)}"]`)) d.open = true; });
       const b = doc.querySelector('.wk-back'); if(b) b.disabled = !wiki.back.length; };
     const showDoc = (on, id) => { if(!doc) return; if(on) F.onlyThis('doc'); if(on && !doc.dataset.built){ doc.innerHTML = forgeHelpHtml(); doc.dataset.built = '1'; goWiki(wiki.at, false); }
       doc.hidden = !on; if(on && id) goWiki(id);

@@ -58,6 +58,7 @@ tryRender('everything combined in one poem renders without throwing',
 tryRender('/glass renders without throwing', 'a <frosted/glass/scale:150> word');
 tryRender('/glass:clear and a tinted glass render', '<clear/glass:clear> and <rose/glass:rose>');
 tryRender('/cut renders without throwing', 'a <window/cut> through');
+tryRender('/glass with a strength renders', '<soft/glass:20> <strong/glass:rose,90>');
 tryRender('/glass turned, on an arc, renders', '<turned glass/glass/rot:-12/arc:40>');
 tryRender('/blend and /op render without throwing', '<pressed/blend:multiply> <faint/op:40> <lit/blend:screen/op:80>');
 tryRender('/arc and /wave render without throwing', '<over the hill/arc:40> <under/arc:-30> <and away/wave:30,2>');

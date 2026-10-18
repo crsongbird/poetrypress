@@ -2100,7 +2100,21 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 .wk-contents-btn{ display:none; }
 .wk-body{ display:grid; grid-template-columns:minmax(170px, 210px) 1fr; gap:22px; padding-top:8px; }
 .wk-nav{ position:sticky; top:58px; align-self:start; max-height:calc(var(--vvh, 100vh) - 140px); overflow-y:auto; font-family:var(--ui-sans); font-size:13px; padding-right:6px; border-right:1px solid var(--fg-line); }
-.wk-nav h4{ margin:12px 0 4px; font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:.08em; font-size:13px; color:var(--fg-dim); }
+/* the contents in three levels (Ruby): a section (its own page), its subsections, their pages; Parts folds by category */
+.wk-nav h3.wk-nav-sec{ margin:14px 0 4px; font:500 14px var(--ui-caps); letter-spacing:.06em; text-transform:lowercase; }
+.wk-nav h3.wk-nav-sec:first-child{ margin-top:2px; }
+.wk-nav h3.wk-nav-sec a{ color:var(--fg-accent); padding-left:0; }
+.wk-nav h4{ margin:8px 0 2px 6px; font:italic 12.5px var(--ui-text, var(--ui-sans)); color:var(--fg-dim); }
+.wk-nav ul ul, .wk-nav details ul{ margin-left:8px; }
+.wk-nav details.wk-nav-cat summary{ cursor:pointer; padding:2px 6px; color:var(--fg-text); list-style-position:inside; }
+.wk-nav details.wk-nav-cat[open] summary{ color:var(--fg-accent); }
+.wk-page h3{ margin:18px 0 6px; font:500 16px var(--ui-caps); letter-spacing:.05em; color:var(--fg-text); border-bottom:1px solid var(--fg-line); padding-bottom:3px; }
+.wk-page h4{ margin:12px 0 4px; font:italic 14px var(--ui-text, var(--ui-sans)); color:var(--fg-dim); }
+.wk-index{ display:grid; grid-template-columns:minmax(150px, 220px) 1fr; gap:6px 14px; margin:6px 0 4px; }
+.wk-index dt{ font-weight:500; } .wk-index dd{ margin:0; color:var(--fg-dim); font-size:13.5px; }
+.wk-sec-doc{ margin:0 0 4px; color:var(--fg-dim); font-size:13.5px; }
+.wk-chips{ margin:0 0 8px; font-size:13.5px; line-height:1.8; }
+body.is-mobile .wk-index{ grid-template-columns:1fr; } body.is-mobile .wk-index dd{ margin-bottom:6px; }
 .wk-nav ul{ list-style:none; margin:0; padding:0; } .wk-nav li{ margin:2px 0; }
 .wk-nav a{ color:var(--fg-text); text-decoration:none; display:block; padding:2px 6px; border-left:2px solid transparent; }
 .wk-nav a:hover{ color:var(--fg-accent); } .wk-nav a.on{ color:var(--fg-accent); border-left-color:var(--fg-accent); }
@@ -2251,3 +2265,5 @@ body.is-mobile .forge-crumb, body.is-mobile .forge-pick{ top:8px; bottom:auto; }
 body.is-mobile .forge-veil.in-group .forge-pick, body.is-mobile .forge-veil.in-group #forgePending{ top:56px; }
 body.is-mobile .forge-crumb .fc-how{ display:none; }
 .drawflow-node .forge-open-group{ width:100%; margin:2px 0 0; padding:4px 8px; font-size:12px; letter-spacing:.04em; background:var(--fg-panel); border:1px solid var(--fg-accent); color:var(--fg-accent); }
+.forge-box{ position:absolute; z-index:8; pointer-events:none; border:1.5px dashed var(--fg-accent); background:color-mix(in srgb, var(--fg-accent) 10%, transparent); }
+.forge-box[hidden]{ display:none; }

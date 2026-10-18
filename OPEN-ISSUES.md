@@ -6,31 +6,24 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
   Band Width 45? Are the creatures the right size and rarity? The 3D Ringworld stays as it was, beside it.
-- THE SEED PLACES THE CAMERA (Painted Ringworld, Ring in the Sky): each seed starts from its own turn, view and zoom
-  (Painted Ringworld: view 35–75, zoom 75–135; Ring in the Sky: view 8–70, zoom 80–145; any turn). Are the ranges
-  right, or should some seeds go further (edge-on, very close)? Should the 3D Ringworld do the same?
 - RING IN THE SKY (sheet sent): the out-in-space ring Ruby liked, alone as a background (Paint 0). Land of Shapes
   (the land it first stood over) is an Athanor part: wired after it, the old picture.
 - SHAPE STRENGTH and the new Shape Aware surfaces (Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's
   stars, Broken Glass and Dewy Webs round the words): which want a softer default than 100?
-- GROUPS IN THE ATHANOR (sheet sent): Make a group… (a part's menu), then tap the parts and Make the group; Open the
-  group and Back; Group Input and Group Result; a Knob inside stays its page slider unless the group's port is wired.
-  Is choosing parts by tapping clear enough, or should a drag-box select too? Wanted next: a group kept on the shelf by
-  itself to drop into other graphs, and a group's inputs shown as sliders on its face.
-- THE NEW PML (sheet sent): `/glass` (frosted: the page behind blurred, lit, faintly tinted by the ink; light along
-  the top edges, shade along the bottom), `/glass:clear`, `/glass:rose`; `/cut` (windows to the page under the
-  surface: on a page with no surface they show the page itself, so they read only as their edges); `/blend:`,
-  `/op:`; `/arc:` (positive bows up), `/wave:amp,cycles`, `/rot:`, `/gap:`; `/font:Name`, `/color:name`, named
-  styles (`§style ember = …`, `/@ember`); the editor's underline and hint line. Is the frost strong enough, and
-  should glass carry the ink's tint by default? Should `/cut` letters show a little ink on a page with no surface?
-  Two changes to old poems went in as approved: bold and italic over lines, and `<3` always a heart.
-  - Still only proposals: `/indent:4`, `/size:` as another name for `/scale:`, and a menu of directives after `/`
-    in the editor.
+- GROUPS IN THE ATHANOR: choosing parts by tap or by a box dragged across the grid (Shift and a drag with a mouse).
+  Wanted next: a group kept on the shelf by itself to drop into other graphs, and a group's inputs shown as sliders
+  on its face.
+- THE NEW PML: `/glass` now takes a strength (`/glass:80`, `/glass:rose,30`; 50 is as before); `/cut` is plain letters
+  with no surface on. Still only proposals: `/indent:4`, `/size:` for `/scale:`, a menu of directives after `/`.
+- THE CREDIT AND THE SPELL CODE inside the innermost frame (border or box), and the spell code at 30% strength: faint
+  enough? The spell code's checkbox is now in Esoterica → Grimoire.
+- THE WIKI'S NEW CONTENTS: sections → subsections → pages, Parts folding by category, a page for each section, the
+  trail above each page, and Previous/Next only in Getting Started. Are the sections named and split well?
 - ONE FACE FOR THE CONTROLS: number fields, dropdowns, slider readouts and the color pickers' buttons in the
   controls' sans-serif; dialog buttons in small capitals. Anything left in another face?
 - RINGWORLD's cohesion pass (sheet sent): arches on every ring (spans, flying buttresses, arcades, gates, stone

@@ -123,11 +123,6 @@ Have fun!</textarea>
           </select>
         </div>
       </div>
-      <!-- the spell code, diagonally opposite the credit: part of the look (spells and shares keep it) -->
-      <div class="check-row spell-mark-row" style="margin-top:6px;">
-        <input type="checkbox" id="spellMark" checked>
-        <label for="spellMark" data-str="label.spell_mark" title="The spell code in the corner opposite the credit">Show Spell Code?</label>
-      </div>
     </div>
 
     <details class="card" data-tab="write" id="formattingGuidePanel">
@@ -201,8 +196,8 @@ held on till bright~B</code></p>
         <p>Words can be made of glass, cut through the surface, pressed into the page, or set on a curve. Each of these works bare too.</p>
         <dl>
           <dt><code>/glass</code></dt><dd>frosted glass letters: the page behind them blurred and lit</dd>
-          <dt><code>/glass:clear</code> <code>/glass:rose</code></dt><dd>clear glass, which only bends the page; or glass tinted any color</dd>
-          <dt><code>/cut</code></dt><dd>the letters as windows through the surface, to the page under it</dd>
+          <dt><code>/glass:clear</code> <code>/glass:rose</code> <code>/glass:80</code></dt><dd>clear glass, which only bends the page; glass tinted any color; and its strength, 0–100 (<code>/glass:rose,30</code>)</dd>
+          <dt><code>/cut</code></dt><dd>the letters as windows through the surface, to the page under it. With no surface on, plain letters.</dd>
           <dt><code>/blend:multiply</code></dt><dd>how the letters lie on the page: multiply (ink pressed into the paper), screen, overlay, soft-light and the rest of the blends</dd>
           <dt><code>/op:60</code></dt><dd>opacity, as a percent</dd>
           <dt><code>/arc:30</code></dt><dd>the words on an arc, spanning so many degrees of a circle; a negative arc sags</dd>
@@ -1237,6 +1232,11 @@ but bear with me, dear}]/jitter:200
           <button class="btn-major" id="poemSaveBtn" data-sound="poemRecord" type="button" disabled data-str="button.poemSaveBtn">Record</button>
           <button class="btn-major" id="poemApplyBtn" type="button" disabled data-str="button.poemApplyBtn">Invoke</button>
           <button class="btn-danger" id="poemDeleteBtn" type="button" disabled data-str="button.poemDeleteBtn">Dissolve</button>
+        </div>
+        <!-- the spell code, faint, in the corner opposite the credit: part of the look (spells and shares keep it) -->
+        <div class="check-row spell-mark-row" style="margin-top:8px;">
+          <input type="checkbox" id="spellMark" checked>
+          <label for="spellMark" data-str="label.spell_mark" title="Shows this look's spell code, faintly, in the corner opposite your name">Show Spell Code</label>
         </div>
         <details class="subcard">
           <summary>Advanced</summary>

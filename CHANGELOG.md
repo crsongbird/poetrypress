@@ -4,6 +4,31 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Skathi (2026-10-17)
+
+- **Your name stays inside the frame.** With a border or an inset box on, the
+  credit and the spell code now sit inside the innermost frame, clear of its
+  line, its stitch and its rounded corner. Before, a wide border could put
+  them on the line or outside it.
+- **The spell code is much fainter,** and its checkbox has moved to
+  Esoterica → Grimoire.
+- **PML:**
+  - `/glass` takes a strength from 0 to 100: `/glass:80`, `/glass:rose,30`,
+    `/glass:clear,70`. 50 is the glass as it was.
+  - `/cut` letters are plain letters when no surface is on, since there is
+    nothing to cut through.
+- **The Athanor:** while choosing parts for a group, drag a box across the
+  grid to choose every part it touches. With a mouse, Shift and a drag
+  starts choosing with a box.
+- **The wiki is easier to find your way in:**
+  - The contents are in sections, with subsections inside them, and Parts
+    folds open by category to list every part.
+  - Every section has its own page listing what it holds, with a line
+    about each page.
+  - Each page shows where it sits, and ends with links to the pages beside
+    it. Previous and Next appear only in Getting Started, where the pages
+    are read in order.
+
 ## Saturn–Paaliaq (2026-10-17)
 
 - **Groups in the Athanor.** Several parts can now be made one:

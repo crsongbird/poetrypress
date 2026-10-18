@@ -96,6 +96,9 @@ const bare = firstPart('<w/op/blend/rot/arc/wave/gap/glass>');
 check('bare forms take their defaults', bare.customOpacity === 60 && bare.customBlend === 'multiply' && bare.customRotate === -8
   && bare.customArc === 30 && bare.customWave.amp === 25 && bare.customWave.cycles === 2 && bare.customGap === 100 && bare.glass.kind === 'frost');
 check('/glass:clear is clear glass', firstPart('<w/glass:clear>').glass.kind === 'clear');
+check('/glass takes a strength, alone or with a tint or kind', firstPart('<w/glass:80>').glass.strength === 80
+  && (g => g.tint === '#e7a0b8' && g.strength === 30)(firstPart('<w/glass:rose,30>').glass) && (g => g.kind === 'clear' && g.strength === 70)(firstPart('<w/glass:clear,70>').glass)
+  && !('strength' in firstPart('<w/glass>').glass) && firstPart('<w/glass:250>').glass.strength === 100);
 check('/blend:dodge reads as color-dodge', firstPart('<w/blend:dodge>').customBlend === 'color-dodge');
 check('an unknown blend sets nothing', firstPart('<w/blend:fizz>').customBlend == null);
 check('/colour: is /color:', firstPart('<w/colour:midnightblue>').customColor === '#191970');

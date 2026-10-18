@@ -21,7 +21,34 @@ const wkEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&
 // the five kinds of data, and the article that explains each
 export const WIKI_KINDS = { field: ['gray map', 'graymap'], image: ['picture', 'picture'], colour: ['color', 'color'], value: ['number', 'number'], curve: ['curve', 'curve'] };
 
-export const WIKI_GROUPS = ['Start here', 'Data and wires', 'Building techniques', 'The page and your graph', 'Using the editor', 'Parts', 'Glossary'];
+/**
+ * THE CONTENTS AS A TREE (Ruby: better organization, two or three heading levels): sections, the subsections in a
+ * section, the pages in each. Every section has a page of its own ('sec:<id>') listing what it holds; Parts lists
+ * each category, and each category its parts (a third level). Only Getting Started is read in order, with a pager.
+ */
+export const WIKI_TREE = [
+  { id: 'start', title: 'Getting started', walk: true, subs: [{ pages: ['welcome', 'first', 'reading'] }] },
+  { id: 'data', title: 'Data and wires', subs: [
+    { title: 'The kinds of data', pages: ['kinds', 'graymap', 'picture', 'color', 'number', 'curve', 'convert'] },
+    { title: 'Ports and settings', pages: ['ports', 'required', 'mapping', 'ranges'] }] },
+  { id: 'tech', title: 'Techniques', subs: [
+    { title: 'Combining layers', pages: ['masks', 'blendmodes'] },
+    { title: 'Light, chance and size', pages: ['heights', 'seeds', 'resolution'] }] },
+  { id: 'page', title: 'Your surface on the page', subs: [{ pages: ['controls', 'surface', 'poem', 'keeping'] }] },
+  { id: 'editor', title: 'Using the editor', subs: [
+    { title: 'Mouse, touch and menus', pages: ['mouse', 'touch', 'menus'] },
+    { title: 'Organizing a graph', pages: ['tidy', 'groups', 'limits'] }] },
+  { id: 'parts', title: 'Parts', parts: true },
+  { id: 'glossary', title: 'Glossary', subs: [{ pages: ['glossary'] }] },
+];
+/** Where a page sits: { sec, sub } (sub null for a part or a section page), or null. */
+export function wikiPlace(id){
+  id = String(id);
+  if(id.startsWith('part:') || id.startsWith('cat:')) return { sec: WIKI_TREE.find(t => t.parts), sub: null };
+  if(id.startsWith('sec:')) return { sec: WIKI_TREE.find(t => 'sec:' + t.id === id) || null, sub: null };
+  for(const sec of WIKI_TREE) for(const sub of sec.subs || []) if(sub.pages.includes(id)) return { sec, sub };
+  return null;
+}
 
 export const WIKI_ARTICLES = [
   // ------------------------------------------------------------------ Start here
@@ -470,37 +497,64 @@ function wkCatHtml(cat, ctx){
   return `<p class="wk-lead">${wkEsc((ctx && ctx.catDoc && ctx.catDoc(cat)) || '')}</p><dl class="wk-gloss">`
     + parts.map(([k, s]) => `<dt><a href="#" data-wiki="part:${k}">${wkEsc(s.label)}</a></dt><dd>${wkEsc((WIKI_PARTS[k] || {}).line || s.doc || '')}</dd>`).join('') + '</dl>';
 }
-/** One page of the wiki, by id ('welcome', 'part:levels', 'cat:Noise'). */
+/** An article's first sentence, as plain text (a section's page lists each page with it). */
+const wkFirst = id => { const a = wkArticle(id); if(!a) return '';
+  const t = a.body.replace(/\{\{[^}]*\}\}/g, '').replace(/<[^>]+>/g, ' ').replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g, (m, x, y) => y || wikiTitle(x)).replace(/\s+/g, ' ').trim();
+  const m = /^(.{20,220}?[.!?])(\s|$)/.exec(t); return m ? m[1] : t.slice(0, 160); };
+const wkLink = (id, text) => `<a href="#" data-wiki="${wkEsc(id)}">${wkEsc(text || wikiTitle(id))}</a>`;
+/** The trail above a page: its section (a link) › its subsection. */
+function wkTrail(id, ctx){
+  const pl = wikiPlace(id); if(!pl || !pl.sec) return '';
+  const bits = [wkLink('sec:' + pl.sec.id, pl.sec.title)];
+  if(pl.sub && pl.sub.title) bits.push(wkEsc(pl.sub.title));
+  if(String(id).startsWith('part:')){ const c = (STEPS[String(id).slice(5)] || {}).cat; if(c) bits.push(wkLink('cat:' + c, ctx.catName ? ctx.catName(c) : c)); }
+  return `<p class="wk-kicker">${bits.join(' › ')}</p>`;
+}
+/** A section's own page: each subsection (a heading) and each page in it, with its first sentence. */
+function wkSectionHtml(sec, ctx){
+  if(sec.parts){ const cats = ctx.categories || [];
+    return `<p class="wk-lead">Every part, by what it does. Each part’s page lists its inputs, outputs and settings.</p>`
+      + cats.map(c => { const parts = Object.entries(STEPS).filter(([, s]) => s.cat === c && !s.hidden).sort((a, b) => a[1].label.localeCompare(b[1].label));
+        return `<h3>${wkLink('cat:' + c, ctx.catName ? ctx.catName(c) : c)}</h3><p class="wk-sec-doc">${wkEsc((ctx.catDoc && ctx.catDoc(c)) || '')}</p>`
+          + `<p class="wk-chips">${parts.map(([k, s]) => wkLink('part:' + k, s.label)).join(' · ')}</p>`; }).join(''); }
+  return (sec.subs || []).map(sub => (sub.title ? `<h3>${wkEsc(sub.title)}</h3>` : '')
+    + `<dl class="wk-index">${sub.pages.map(p => `<dt>${wkLink(p)}</dt><dd>${wkEsc(wkFirst(p))}</dd>`).join('')}</dl>`).join('');
+}
+/** The other pages beside this one (its subsection's), at the foot of an article: where to go next without a pager. */
+function wkSiblings(id){
+  const pl = wikiPlace(id); if(!pl || !pl.sub || pl.sec.walk || pl.sub.pages.length < 2) return '';
+  return `<p class="wk-see">${pl.sub.title ? 'More in ' + wkEsc(pl.sub.title) : 'More in ' + wkEsc(pl.sec.title)}: `
+    + pl.sub.pages.map(p => p === id ? `<b>${wkEsc(wikiTitle(p))}</b>` : wkLink(p)).join(' · ') + '</p>';
+}
+/** One page of the wiki, by id ('welcome', 'part:levels', 'cat:Noise', 'sec:data'). */
 export function wikiArticleHtml(id, ctx = {}){
   id = String(id || 'welcome');
-  if(id.startsWith('part:')) return `<h2>${wkEsc(wkPartLabel(id.slice(5)))}</h2>` + wkPartHtml(id.slice(5), ctx);
-  if(id.startsWith('cat:')){ const c = id.slice(4); return `<h2>${wkEsc(ctx.catName ? ctx.catName(c) : c)}</h2>` + wkCatHtml(c, ctx); }
+  if(id.startsWith('part:')) return wkTrail(id, ctx) + `<h2>${wkEsc(wkPartLabel(id.slice(5)))}</h2>` + wkPartHtml(id.slice(5), ctx);
+  if(id.startsWith('cat:')){ const c = id.slice(4); return wkTrail(id, ctx) + `<h2>${wkEsc(ctx.catName ? ctx.catName(c) : c)}</h2>` + wkCatHtml(c, ctx); }
+  if(id.startsWith('sec:')){ const sec = WIKI_TREE.find(t => 'sec:' + t.id === id); if(sec) return `<h2>${wkEsc(sec.title)}</h2>` + wkSectionHtml(sec, ctx); }
   const a = wkArticle(id) || wkArticle('welcome');
-  return `<h2>${wkEsc(a.title)}</h2>` + wkLinks(a.body, ctx);
+  return wkTrail(a.id, ctx) + `<h2>${wkEsc(a.title)}</h2>` + wkLinks(a.body, ctx) + wkSiblings(a.id);
 }
-/** The contents: every group, its articles; Parts by category. */
+/** Whether a page is read in order, with Previous and Next under it (Getting Started's pages only). */
+export function wikiWalks(id){ const pl = wikiPlace(id); return !!(pl && pl.sec && pl.sec.walk && pl.sub); }
+/** Previous and Next in a section read in order: its pages, and after the last, the next section's page. */
+export function wikiWalkNeighbors(id){
+  const pl = wikiPlace(id); if(!pl || !pl.sec || !pl.sec.walk) return { prev: null, next: null };
+  const pages = (pl.sec.subs || []).flatMap(sub => sub.pages), i = pages.indexOf(String(id)), after = WIKI_TREE[WIKI_TREE.indexOf(pl.sec) + 1];
+  const at = p => p ? { id: p, title: String(p).startsWith('sec:') ? (WIKI_TREE.find(t => 'sec:' + t.id === p) || {}).title : wikiTitle(p) } : null;
+  return { prev: at(pages[i - 1]), next: at(pages[i + 1] || (after ? 'sec:' + after.id : null)) };
+}
+/** The contents: each section (its own page a link), its subsections as headings, their pages; Parts by category,
+ *  each category folding open to its parts. */
 export function wikiContentsHtml(ctx = {}){
   const cats = ctx.categories || [];
-  return WIKI_GROUPS.map(g => {
-    let items = WIKI_ARTICLES.filter(a => a.group === g).map(a => [a.id, a.title]);
-    if(g === 'Parts') items = cats.map(c => ['cat:' + c, ctx.catName ? ctx.catName(c) : c]);
-    if(!items.length) return '';
-    return `<h4>${wkEsc(g)}</h4><ul>` + items.map(([id, t]) => `<li><a href="#" data-wiki="${wkEsc(id)}">${wkEsc(t)}</a></li>`).join('') + '</ul>';
+  const li = (id, t) => `<li><a href="#" data-wiki="${wkEsc(id)}">${wkEsc(t || wikiTitle(id))}</a></li>`;
+  return WIKI_TREE.map(sec => {
+    let h = `<h3 class="wk-nav-sec"><a href="#" data-wiki="sec:${wkEsc(sec.id)}">${wkEsc(sec.title)}</a></h3>`;
+    if(sec.parts) return h + cats.map(c => { const parts = Object.entries(STEPS).filter(([, s]) => s.cat === c && !s.hidden).sort((a, b) => a[1].label.localeCompare(b[1].label));
+      return `<details class="wk-nav-cat"><summary>${wkEsc(ctx.catName ? ctx.catName(c) : c)}</summary><ul>${li('cat:' + c, 'All ' + (ctx.catName ? ctx.catName(c) : c))}${parts.map(([k, s]) => li('part:' + k, s.label)).join('')}</ul></details>`; }).join('');
+    return h + (sec.subs || []).map(sub => (sub.title ? `<h4>${wkEsc(sub.title)}</h4>` : '') + `<ul>${sub.pages.map(p => li(p)).join('')}</ul>`).join('');
   }).join('');
-}
-/** The reading order, as the contents lists it: each group's articles; under Parts, each category's
- *  page followed by its parts (as its page lists them). Previous and next walk it. */
-export function wikiOrder(ctx = {}){
-  const cats = ctx.categories || [];
-  return WIKI_GROUPS.flatMap(g => g === 'Parts'
-    ? cats.flatMap(c => ['cat:' + c, ...Object.entries(STEPS).filter(([, s]) => s.cat === c).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([k]) => 'part:' + k)])
-    : WIKI_ARTICLES.filter(a => a.group === g).map(a => a.id));
-}
-/** The pages either side of one in the reading order: { prev, next }, each { id, title } or null. */
-export function wikiNeighbors(id, ctx = {}){
-  const order = wikiOrder(ctx), i = order.indexOf(String(id));
-  const at = j => (i >= 0 && order[j]) ? { id: order[j], title: String(order[j]).startsWith('cat:') && ctx.catName ? ctx.catName(order[j].slice(4)) : wikiTitle(order[j]) } : null;
-  return { prev: at(i - 1), next: at(i + 1) };
 }
 /** Search: titles first, then words in the text. Returns [{ id, title, where }]. */
 export function wikiSearch(q){

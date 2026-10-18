@@ -849,7 +849,8 @@ function drawPartRun(ctx, part, x, y, w, size, lineHeight, fontDef, prep){
   ctx.save(); turn(ctx);
   try {
     const style = prep(ctx);
-    if(part.glass || part.cut){ ctx.restore(); ctx.save(); drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn); }
+    // (a cut needs a surface to cut: with none on the page, the letters are plain ink — Ruby)
+    if(part.glass || (part.cut && CUT_LIVE)){ ctx.restore(); ctx.save(); drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn); }
     else end = drawTextRun(ctx, part.segments, x, y, size, lineHeight, fontDef, style);
   } finally { ctx.restore(); }
   return end;
@@ -871,7 +872,7 @@ function winLayer(i, w, h){
   x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetX = 0; x.shadowOffsetY = 0; x.clearRect(0, 0, w, h);
   return [c, x];
 }
-let UNDER_CANVAS = null, UNDER_NOW = false;
+let UNDER_CANVAS = null, UNDER_NOW = false, CUT_LIVE = false;
 function drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn){
   const PW = ctx.canvas.width, PH = ctx.canvas.height;
   // the run's reach: its box, bowed by an arc, lifted by a wave, turned by /rot, and room for its edges
@@ -897,14 +898,15 @@ function drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot
   lx.drawImage(M, 0, 0); lx.globalCompositeOperation = 'source-in'; lx.imageSmoothingEnabled = true;
   if(part.cut) lx.drawImage(UNDER_NOW && UNDER_CANVAS ? UNDER_CANVAS : ctx.canvas, bx, by, bw, bh, 0, 0, bw, bh);
   else {
-    const g = part.glass, clear = g.kind === 'clear';
-    const amt = Math.max(0, Math.min(1, (size*(clear ? 0.05 : 0.12)/S - 3)/57));
-    const soft = boxGlass(ctx.canvas, { x: bx, y: by, w: bw, h: bh }, clear ? 'lens' : 'frost', clear ? 0.35 : amt, clear ? 0.15 : 0.35, S, 11);
+    // (its strength, 0–100: 50 is the glass as it first was; more frosts and tints it further)
+    const g = part.glass, clear = g.kind === 'clear', k = Math.max(0, Math.min(2, (g.strength ?? 50)/50));
+    const amt = Math.max(0, Math.min(1, (size*(clear ? 0.05 : 0.12)*k/S - 3)/57));
+    const soft = boxGlass(ctx.canvas, { x: bx, y: by, w: bw, h: bh }, clear ? 'lens' : 'frost', clear ? Math.min(1, 0.35*k) : amt, clear ? 0.15 : 0.35, S, 11);
     lx.drawImage(soft || ctx.canvas, ...(soft ? [0, 0, soft.width, soft.height] : [bx, by, bw, bh]), 0, 0, bw, bh);
     // lit like frosted glass, and coloured: by its tint, or faintly by the ink the words would have had
     lx.globalCompositeOperation = 'source-atop';
-    if(!clear && !g.tint){ lx.globalAlpha = 0.16; lx.fillStyle = '#fff'; lx.fillRect(0, 0, bw, bh); }
-    lx.globalAlpha = g.tint ? 0.34 : clear ? 0.12 : 0.22; lx.fillStyle = g.tint || ink; lx.fillRect(0, 0, bw, bh); lx.globalAlpha = 1;
+    if(!clear && !g.tint){ lx.globalAlpha = Math.min(0.6, 0.16*k); lx.fillStyle = '#fff'; lx.fillRect(0, 0, bw, bh); }
+    lx.globalAlpha = Math.min(0.85, (g.tint ? 0.34 : clear ? 0.12 : 0.22)*k); lx.fillStyle = g.tint || ink; lx.fillRect(0, 0, bw, bh); lx.globalAlpha = 1;
   }
   // 3. the edges, inside the letters: the letters' outside (a sheet with letter-shaped holes), its shadow thrown in
   const [O, ox] = winLayer(2, bw, bh), e = Math.max(S, size*0.028), blur = Math.max(S, size*0.035);
@@ -1396,7 +1398,7 @@ function renderInto(canvas){
   if(UNDER_NOW){ if(!UNDER_CANVAS) UNDER_CANVAS = document.createElement('canvas'); if(UNDER_CANVAS.width !== W || UNDER_CANVAS.height !== H){ UNDER_CANVAS.width = W; UNDER_CANVAS.height = H; }
     const ux = UNDER_CANVAS.getContext('2d', { willReadFrequently: true }); ux.globalCompositeOperation = 'copy'; ux.globalAlpha = 1; ux.drawImage(canvas, 0, 0); ux.globalCompositeOperation = 'source-over'; }
 
-  let textFill = null, textCut = false;
+  let textFill = null, textCut = false, surfaced = false;
   // SURFACE LAYERS (Ruby: every control for both, any blend for each): the lower first, then the upper,
   // each drawn the same way from its settings. appEvents hands over the layer the controls are not
   // showing (setSurfaceSource); the one they show is read from the page.
@@ -1413,9 +1415,10 @@ function renderInto(canvas){
       // Yes"): the page as it is before the first such surface, kept, to be laid back inside the letters after them
       if(L.textureTextCut && !textCut){ textCut = true; if(!CUT_CANVAS) CUT_CANVAS = document.createElement('canvas'); CUT_CANVAS.width = W; CUT_CANVAS.height = H;
         const kx = CUT_CANVAS.getContext('2d', { willReadFrequently: true }); kx.globalCompositeOperation = 'source-over'; kx.globalAlpha = 1; kx.drawImage(canvas, 0, 0); }
-      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env });
+      drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }); surfaced = true;
     }
   }
+  CUT_LIVE = surfaced;
 
   // --- vignette (drawn here, before border/text, so it only affects the
   // background+texture layers underneath rather than the whole composed image) ---
@@ -1923,8 +1926,16 @@ function renderInto(canvas){
   ctx.globalAlpha = 0.9;
   ctx.textBaseline = isTop ? 'top' : 'alphabetic';
   ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
-  const wmX = isRight ? (W - W*MARKS.insetX) : (W*MARKS.insetX);
-  const wmY = isTop ? (H*MARKS.insetY) : (H - H*MARKS.insetY);
+  // INSIDE THE FRAME (Ruby: the name was sometimes badly placed): with a border or an inset box drawn, the credit and
+  // the spell sit inside the innermost of them — past its line, its stitch and the round of its corner — rather than
+  // at a fixed share of the page, where a wide offset put them on the line or outside it
+  const markIn = (() => { const pad = Math.max(rpx(4), Math.min(W, H)*0.018); let m = 0;
+    if($('borderToggle').checked) m = Math.max(m, bOffset + bThick + ((($('borderStitch') || {}).value || 'solid') !== 'solid' ? stitchSpec.amp : 0) + frameCorner*0.3);
+    if(cardOn) m = Math.max(m, cOffset + cThick + (cStitch !== 'solid' ? cSpec.amp : 0) + cCorner*0.3);
+    return m > 0 ? m + pad : 0; })();
+  const mX = Math.max(W*MARKS.insetX, markIn), mY = Math.max(H*MARKS.insetY, markIn);
+  const wmX = isRight ? (W - mX) : mX;
+  const wmY = isTop ? mY : (H - mY);
   const runs = [];
   for(const part of creditParts) for(const sg of part.segments) runs.push({ text: sg.text,
     color: part.customColor || (sg.color === 'accent1' ? accent1Color : sg.color === 'accent2' ? accent2Color : ink) });
@@ -1953,7 +1964,8 @@ function renderInto(canvas){
   const spellSegs = showSpell ? buildLines(spellToPML(activeSpell), true, true)[0].segments : [];
   ctx.save();
   const spellSize = Math.round(((W + H)/2)*MARKS.scale);
-  ctx.globalAlpha = 0.95;
+  // (faint, Ruby: a mark to find, not to read first)
+  ctx.globalAlpha = MARKS.spellAlpha;
   ctx.textBaseline = isTop ? 'alphabetic' : 'top';
   ctx.textAlign = isRight ? 'left' : 'right';
   ctx.shadowColor='transparent'; ctx.shadowBlur=0;
@@ -1961,8 +1973,8 @@ function renderInto(canvas){
   // the 67 glyphs; Symbols 2 has only one of them. The UI face almost
   // certainly does not, hence the explicit stack rather than the poem's font
   const spellFont = `${spellSize}px "Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", sans-serif`;
-  const spX = isRight ? (W*MARKS.insetX) : (W - W*MARKS.insetX);
-  const spY = isTop ? (H - H*MARKS.insetY) : (H*MARKS.insetY);
+  const spX = isRight ? mX : (W - mX);
+  const spY = isTop ? (H - mY) : mY;
   ctx.font = spellFont;
   let spellW = 0;
   for(const sg of spellSegs) spellW += ctx.measureText(sg.text).width;

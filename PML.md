@@ -77,9 +77,9 @@ Wrap part of a line in `<…>` and chain directives after it.
 | `arc:N` | the letters on an arc spanning N degrees of a circle; positive bows up, negative sags | 30 |
 | `wave:amp,cycles` | the letters on a wave: height as % of the size, and how many waves | 25, 2 |
 | `gap:N` | room after the line, % of its height; negative draws the next line in | 100 |
-| `glass` | frosted glass letters: the page behind them blurred and lit, faintly tinted by the ink | frost |
-| `glass:clear` · `glass:color` | clear glass (the page only bent) · glass tinted any color | — |
-| `cut` | letters as windows through the surface, to the page under it | — |
+| `glass` | frosted glass letters: the page behind them blurred and lit, faintly tinted by the ink | frost, 50 |
+| `glass:clear` · `glass:color` · `glass:80` | clear glass (the page only bent) · glass tinted any color · its strength, 0–100; combine them: `glass:rose,30` | — |
+| `cut` | letters as windows through the surface, to the page under it (with no surface on, plain letters) | — |
 | `@name` | a named style's directives (below) | — |
 | `scale:N` | size, % of fitted size | 100 |
 | `track:N` | letter-spacing, % | 100 |
