@@ -59,12 +59,22 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
   // (the AMBIENT share, for an Ambient Hue (ROADMAP C1): the light from everywhere, less what the hollows keep out)
   const A = o.amb ? new Float32Array(K.length) : null; if(A) for(let i = 0; i < A.length; i++) A[i] = o.ambient*(1 - L.occl[i])/f;
+  // THE SECOND LIGHT (C2): the same engine from another way, at its own height, its direct light and shine alone (the
+  // ambient and the hollows are the first light's); soft, it is three ways averaged across its width
+  let K2 = null, S2 = null;
+  if(o.second){ const n = o.secondSoft > 0.02 ? 3 : 1, w = o.secondSoft*60; K2 = new Float32Array(K.length); S2 = new Float32Array(K.length);
+    for(let q = 0; q < n; q++){ const d = deg + o.secondTurn + (n > 1 ? (q - 1)*w/2 : 0);
+      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true }));
+      for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
   if(o.sss > 0){ const r = Math.max(1, Math.round(unit*0.006*(0.5 + o.sss))), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
     for(let i = 0; i < K.length; i++){ const k = K[i] + (B[i] - K[i])*o.sss*0.85; K[i] = k + (1 - Math.min(1, k))*0.22*o.sss; S[i] = S[i]*(1 - o.sss*0.5) + SB[i]*o.sss*0.6; } }
-  return { K, S, A };
+  return { K, S, A, K2, S2 };
 }
+// the second light's two shares (C2), per channel: what multiplies the picture (its light) and what adds to it (its shine)
+function ltSecondK(o){ const h = o.secondHue || [1, 1, 1], g = o.secondKind; return [0, 1, 2].map(c => g === 'shine only' ? 0 : o.second*h[c]); }
+function ltSecondS(o){ const h = o.secondHue || [1, 1, 1], g = o.secondKind; return [0, 1, 2].map(c => g === 'light only' ? 0 : o.second*h[c]*o.shine); }
 // a box blur on a gw×gh grid (rows, then columns)
 function ltBlur(F, gw, gh, r){
   const T = new Float32Array(F.length), O = new Float32Array(F.length);
@@ -82,6 +92,11 @@ function ltSettings(E, n, byPoint){
   return { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
     ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
     tilt: E.P(n, 'from', 'the dial') === 'its own height' ? E.num(n, 'height', 60)/100 : null,
+    // a SECOND LIGHT beside the dial's (ROADMAP C2): its strength (negative draws light out), where it comes from (turned
+    // from the dial's way: 180 a backlight), how high, how soft (its angular width), and what it gives
+    second: E.num(n, 'second', 0)/100, secondTurn: E.num(n, 'secondTurn', 180), secondHeight: E.num(n, 'secondHeight', 120)/100,
+    secondSoft: E.num(n, 'secondSoft', 30)/100, secondKind: E.P(n, 'secondKind', 'light and shine'),
+    secondHue: (v => Array.isArray(v) ? ltHue(v) : null)(E.input(n, 9)),
     reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
 }
 
@@ -424,10 +439,12 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 export const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
-    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour'], outs: ['image', 'field', 'field'] },
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
-      ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130)],
+      ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130),
+      LT_R('second', 'Second Light', 0, -100, 100), LT_R('secondTurn', 'Second Light From', 180, 0, 360), LT_R('secondHeight', 'Second Light Height', 120, 0, 130),
+      LT_R('secondSoft', 'Second Light Softness', 30), ['secondKind', 'Second Light Gives', 'select', 'light and shine', { options: ['light and shine', 'light only', 'shine only'] }]],
     cost: () => 10,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){
@@ -437,14 +454,16 @@ export const LIGHT_STEPS = {
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
       const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
-      const { K, S, A } = ltLight(H, gw, gh, o.deg, o, G);
+      const { K, S, A, K2, S2 } = ltLight(H, gw, gh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null;
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
         for(let x = 0; x < w; x++){ const gx = Math.min(gw - 1.001, (x + 0.5)/dv - 0.5), x0 = Math.max(0, gx|0), fx = Math.max(0, gx - x0), x1 = Math.min(gw - 1, x0 + 1);
           const k = (K[r0 + x0]*(1 - fx) + K[r0 + x1]*fx)*(1 - fy) + (K[r1 + x0]*(1 - fx) + K[r1 + x1]*fx)*fy;
           const s = ((S[r0 + x0]*(1 - fx) + S[r0 + x1]*fx)*(1 - fy) + (S[r1 + x0]*(1 - fx) + S[r1 + x1]*fx)*fy)*sk, q = (y*w + x)*4;
           const am = A ? (A[r0 + x0]*(1 - fx) + A[r0 + x1]*fx)*(1 - fy) + (A[r1 + x0]*(1 - fx) + A[r1 + x1]*fx)*fy : 0;
-          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); } }
+          if(K2){ const k2 = (K2[r0 + x0]*(1 - fx) + K2[r0 + x1]*fx)*(1 - fy) + (K2[r1 + x0]*(1 - fx) + K2[r1 + x1]*fx)*fy, s2 = ((S2[r0 + x0]*(1 - fx) + S2[r0 + x1]*fx)*(1 - fy) + (S2[r1 + x0]*(1 - fx) + S2[r1 + x1]*fx)*fy)*255;
+            for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0) + k2*SK[c]) + s*(M ? M.hi[c] : 1) + s2*SS[c]; }
+          else for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); } }
       px.putImageData(im, 0, 0);
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
       return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
@@ -454,10 +473,11 @@ export const LIGHT_STEPS = {
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
       // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
-      const { K, S, A } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
+      const { K, S, A, K2, S2 } = ltLight(H, ww, wh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null, out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
-        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); }
+        if(K2) for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0) + K2[i]*SK[c]) + s*(M ? M.hi[c] : 1) + S2[i]*SS[c];
+        else for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); }
       return [out, lf, S]; } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),

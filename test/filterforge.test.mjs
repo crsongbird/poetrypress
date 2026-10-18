@@ -183,6 +183,21 @@ check('a Note makes nothing and breaks nothing', run([node(5, 'note', { text: 'h
   const lean = set => set.reduce((t, i) => t + blue.b[i]/Math.max(1e-3, blue.r[i]) - none.b[i]/Math.max(1e-3, none.r[i]), 0)/set.length;
   check('…a blue one turns the shade blue, more than the lit faces', lean(dark) > 0.05 && lean(dark) > lean(bright)); }
 
+// ---- the Light Engine's Second Light (C2): a rim light or backlight beside the dial's; none draws as ever ----
+{ const lit = (set = {}, hex) => C.evalAthanor(graph([node(1, 'colour', { hex: '#909090' }), node(2, 'pyramids', { scale: 5, round: 60 }), ...(hex ? [node(3, 'colour', { hex })] : []),
+    node(4, 'material', { relief: 120, shadow: 60, occlusion: 30, ambient: 30, ...set }, { 1: [1, 1], 2: [2, 1], ...(hex ? { 9: [3, 1] } : {}) }), node(99, 'surface', { ground: 'colour' }, { 1: [4, 1] })]), W, H, { seed: 3, knobs: [], tints: [], light: 90 }, {});
+  const sum = im => im.r.reduce((t, v) => t + v, 0), none = lit(), zero = lit({ second: 0, secondTurn: 90 });
+  check('Second Light at 0 draws exactly as before', zero.r.every((v, i) => v === none.r[i]));
+  // (lit from the right, the faces turned left are the dark ones: a light from behind brightens them, and them most)
+  const back = lit({ second: 80, secondTurn: 180, secondHeight: 30, secondSoft: 0 }), idx = [...none.r.keys()].sort((a, b) => none.r[a] - none.r[b]);
+  const gain = set => set.reduce((t, i) => t + back.r[i] - none.r[i], 0)/set.length;
+  check('…from behind, it lights the faces the first light misses, more than the lit ones', gain(idx.slice(0, 150)) > 0.02 && gain(idx.slice(0, 150)) > gain(idx.slice(-150)));
+  check('…below 0 it draws light out', sum(lit({ second: -60, secondTurn: 180, secondSoft: 0 })) < sum(none));
+  const shine = lit({ second: 80, secondTurn: 180, secondKind: 'shine only', secondSoft: 0 }), light = lit({ second: 80, secondTurn: 180, secondKind: 'light only', secondSoft: 0 });
+  check('…Shine Only adds a glint and no light, Light Only the light and no glint', sum(shine) > sum(none) && sum(light) > sum(none) && sum(shine) < sum(back) + 1e-6);
+  const blue = lit({ second: 80, secondTurn: 180, secondSoft: 30 }, '#5070FF');
+  check('…in its own color, and soft (a wide light)', blue.b.reduce((t, v, i) => t + v - blue.r[i], 0) > none.b.reduce((t, v, i) => t + v - none.r[i], 0)); }
+
 // ---- the Surface's Anti-aliasing (Filter Forge's menu, A6) ----
 { const hard = [node(1, 'noise', { scale: 30 }), node(2, 'threshold', { at: 50, soft: 0 }, { 1: [1, 1] })];
   const off = run(hard, [2, 1]), off2 = run(hard, [2, 1], { surface: { aa: 'off' } }), edge = run(hard, [2, 1], { surface: { aa: 'edges only' } });

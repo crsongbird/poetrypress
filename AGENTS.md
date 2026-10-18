@@ -363,6 +363,13 @@ Other parts of a look:
     eighth input, `ambient hue`; ROADMAP C1): the ambient share of the light (`ambient × (1 −
     occlusion)`, from `opts.components`) is tinted by it per channel, so the
     shade, lit mostly by it, takes its color most. Empty or white: unchanged.
+  - And a **Second Light** (ROADMAP C2): the same engine called again from
+    another way (turned from the dial's: 180 a backlight), at its own height
+    (read as Light Height: past 100 it grazes, a rim light), soft as three
+    ways averaged, its direct light and shine alone (`ltSecondK`,
+    `ltSecondS`), in its own color (the ninth input); negative draws light
+    out. At 0 the loops are the old ones exactly. The GPU path is the same
+    engine, so it stays line for line with the CPU.
 - **GPU lighting:** the WebGL2 shader must stay line-for-line with the CPU
   `lightHeights`.
   - Change both together and compare them (`opts.cpuLight`; they agree to

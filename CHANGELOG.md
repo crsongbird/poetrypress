@@ -4,6 +4,22 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Hyrrokkin (2026-10-17)
+
+- **A second light in the Athanor.** The Light Engine can light a surface
+  from a second way, as a photographer's rim light, fill or backlight:
+  - **Second Light**: how strong (0 is none, as before; below 0 it draws
+    light out, for a shadowed side darker still).
+  - **Second Light From**: where it comes from, turned from the dial's
+    light (180: straight behind).
+  - **Second Light Height**: read as Light Height; past 100 it only grazes
+    the edges facing it, a rim.
+  - **Second Light Softness**: a point or a broad light.
+  - **Second Light Gives**: light and shine, the light alone, or the shine
+    alone.
+  - A **second light hue** input for its color: a cool rim against a warm
+    key is the classic portrait's light.
+
 ## Saturn–Greip (2026-10-17)
 
 - **See what a surface is made of.** A menu under the Athanor's preview
