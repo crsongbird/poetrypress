@@ -477,6 +477,9 @@ export const CHOOSER = {
   surfaceTitle: 'Surface Variant',
   athanorNamed: 'The Athanor: {name}',
   athanorEmpty: 'The Athanor (empty)',
+  // (the Athanor's starters and Surface Studies, in the surface menu to try on the page)
+  starters: 'Athanor Starters',
+  studies: 'Surface Studies',
 };
 
 /** The dice (a die beside each section's lock) and their menu: a long press on a phone, ▾ on a desk.

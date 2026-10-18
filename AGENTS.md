@@ -169,6 +169,12 @@ segment.
 5. `node build.mjs`, then `sh test.sh` again.
 6. Update OPEN-ISSUES.md (delete what's done; add what Ruby should judge)
    and ROADMAP.md (delete what shipped).
+   **Every pass, not only at a release** (Ruby: "You can just remove resolved
+   issues!!"): when Ruby answers an item, speaks to it, or asks for it to be
+   changed, delete it (what she asks for becomes the work, or a ROADMAP
+   item). A question she passes over once she has seen it is settled: it
+   goes too. "Ruby to judge" holds only what she hasn't seen yet, a line or
+   two each; it is never a history of releases.
    Check the help is current (§1 rule 11): for each CHANGELOG line, the
    wiki page, tooltip or guide that explains it says what the app now does.
    **Housekeeping** (§1 rule 12), said in that release's notes under **Under
@@ -951,6 +957,11 @@ The full study and what is still to do are in ROADMAP.md §1.
     worker and stored with the surface (`thumb: { of, url }`) until its
     wiring changes. A long press or right-click on one (chooser
     `opts.hold`) opens its menu (`holdSurface`).
+  - **The starters and the Surface Studies** are in the surface menu too
+    (Ruby: to try them on the page): options `starter:<key>` and
+    `study:<key>` in two groups before Your Surfaces (`paintTryOptions`).
+    Choosing one puts its graph on the page as a kept surface does, so the
+    value becomes `athanor`. The dice pass over them (`TRY_GRAPH`).
 - **Ports in their own order:** `faces` sorts a node's inputs and outputs by
   number before Drawflow draws them. Drawflow makes ports in list order and
   the face lines them up by that order, so a graph wired in another order
@@ -1804,6 +1815,6 @@ background) don't belong in it.
   asked for.
 - **Presets come last:** parts → features → textures → presets (ROADMAP.md).
 - **OPEN-ISSUES.md holds open items only.** When something is finished,
-  delete it; don't edit it into a history.
+  or Ruby has answered it, delete it; don't edit it into a history (§3, step 6).
 - Hand-editable text lives in `strings.js`; hand-editable numbers in
   `tunables.js`.

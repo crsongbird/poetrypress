@@ -1157,7 +1157,7 @@ export async function openForge(deps){
       const starter = (k, S) => async () => { const g = athanorStarter(k); if(g) await openGraph(g, S.label, S.teach); };
       const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
       group('🜉', FORGE_BAR.yours, forgeShelf().slice().reverse().map(rec => ['kept:' + encodeURIComponent(rec.name), rec.name, () => openKept(rec)]));
-      group('🝆', FORGE_BAR.starters, Object.entries(ATHANOR_STARTERS).map(([k, S]) => ['starter:' + k, S.label, starter(k, S), S.teach]));
+      group('🜈', FORGE_BAR.starters, Object.entries(ATHANOR_STARTERS).map(([k, S]) => ['starter:' + k, S.label, starter(k, S), S.teach]));
       group(ATHANOR_BASICS.glyph, FORGE_BAR.basics, ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t]).map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
       group('🜍', FORGE_BAR.studies, Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, S]) => ['study:' + k, S.label, starter(k, S), S.teach]));
       for(const [g, ts] of chained) group(g.glyph, g.name, ts.map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));

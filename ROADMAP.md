@@ -167,8 +167,10 @@ the Athanor).
 ### I · Surfaces from the document (Stage 3: as textures in the menu, each with four readings; presets wait for Stage 4)
 
 All 36 exist as **Surface Studies** (athanorStudies.js; Open →
-Surface Studies): graphs of general parts with TEACH and Knobs, first
-drafts tuned by eye. Stage 3 turns each into a texture: a chain in chains.js
+Surface Studies, and the Surface menu's 🜍 Surface Studies, to try on the
+page): graphs of general parts with TEACH and Knobs, first drafts tuned by
+eye. Ruby's verdict so far: "The surface studies are... hmmm." Before each
+becomes a texture, ask which read right and what each is missing. Stage 3 turns each into a texture: a chain in chains.js
 (knobs bound to sliders), four readings, alt-text words, a fingerprint. Its
 study stays as the graph to learn from.
 
@@ -271,7 +273,8 @@ superseded) wait for Stage 4.
     from the dial; clouds mostly, now and then something flying across
     (aircraft and contrails, birds, balloons, dragons, witches), seeded.
   - Presets for Ringworld (Ruby: in this pass), Rain on Water, Circuit
-    Board's eras and Markings, Lichtenberg's camera, and Under Glass over
+    Board's eras and Markings (the Circuitry preset could wear Circuit Board
+    instead of Veins of Light), Lichtenberg's camera, and Under Glass over
     another surface (Two Surfaces).
 
 ```

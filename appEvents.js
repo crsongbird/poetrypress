@@ -28,7 +28,8 @@ import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './
 import { STITCH_STYLES, STITCH_LABELS, stitchSided } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
-import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds, athanorCamera, athanorCurves } from './athanor.js';
+import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds, athanorCamera, athanorCurves, ATHANOR_STARTERS } from './athanor.js';
+import { ATHANOR_STUDIES } from './athanorStudies.js';
 import { curvePoints, curveFromPoints, curveAt } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { cameraGuide, ringSunGuide } from './stepsGenerative.js';
@@ -56,6 +57,8 @@ import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS, READABLE } from './tunables.js';
 import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS, MODAL_RANGE } from './strings.js';
+// (a starter's or a Surface Study's place in the surface menu: 'starter:agate', 'study:fibers'; see paintTryOptions)
+const TRY_GRAPH = /^(starter|study):/;
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -693,7 +696,7 @@ if($('randomSurfaceBtn') && $('randomSurfaceBtn').addEventListener) $('randomSur
     if(!$('textureToggle').checked){ $('textureToggle').checked = true; $('textureToggle').dispatchEvent(new Event('change', { bubbles: true })); }
     if(!state.locks.has('textureType')){
       const graph = (($('forgeGraph') || {}).value || '').length > 40;
-      const types = [...$('textureType').options].filter(o => !o.hidden).map(o => o.value).filter(v => v && (v !== 'athanor' || graph) && v !== $('textureType').value);
+      const types = [...$('textureType').options].filter(o => !o.hidden).map(o => o.value).filter(v => v && !TRY_GRAPH.test(v) && (v !== 'athanor' || graph) && v !== $('textureType').value);
       $('textureType').value = types[Math.floor(Math.random()*types.length)];
       $('textureType').dispatchEvent(new Event('change', { bubbles: true }));
     }
@@ -2859,7 +2862,7 @@ function similarFont(i){
 function dieOptions(el, level){
   const graph = (($('forgeGraph') || {}).value || '').length > 40;
   const suits = el.id === 'textureBlend' && level !== 'wild' ? capsFor($('textureType').value).blends : null;
-  return [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '' && !(el.id === 'textureType' && o.value === 'athanor' && !graph) && (!suits || suits.includes(o.value)));
+  return [...el.options].filter(o => !o.disabled && !o.hidden && o.value !== '' && !(el.id === 'textureType' && (TRY_GRAPH.test(o.value) || (o.value === 'athanor' && !graph))) && (!suits || suits.includes(o.value)));
 }
 function rollSection(root, level = 'usual', opts = {}){
   const shift = (Math.random()*2 - 1)*15;     // gently: every colour drifts by the same few degrees…
@@ -3611,6 +3614,34 @@ function paintShelfOptions(){
   forgeShelf().forEach(rec => { const o = document.createElement('option'); o.value = 'kept:' + encodeURIComponent(rec.name); o.className = 'kept'; o.textContent = rec.name; g.appendChild(o); });
   if(typeof CHOOSERS !== 'undefined') CHOOSERS.forEach(c => c && c.refresh && c.refresh());
 }
+// THE ATHANOR'S STARTERS AND SURFACE STUDIES in the texture menu too (Ruby: to try them on the page), in groups of
+// their own before Your Surfaces. Choosing one puts its graph on the page as choosing a kept surface does (the menu's
+// value is then 'athanor', so a look saves as before); the dice pass over them (TRY_GRAPH).
+let tryGroupsPainted = false;
+function paintTryOptions(){
+  const sel = $('textureType'), before = $('athanorGroup');
+  if(tryGroupsPainted || !sel || typeof document.createElement !== 'function') return;
+  tryGroupsPainted = true;
+  for(const [glyph, label, list] of [['🜈', CHOOSER.starters, Object.entries(ATHANOR_STARTERS).map(([k, S]) => ['starter:' + k, S.label])],
+      ['🜍', CHOOSER.studies, Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, S]) => ['study:' + k, S.label])]]){
+    const g = document.createElement('optgroup'); g.label = glyph + ' ' + label; g.className = 'try-graphs';
+    for(const [v, text] of list){ const o = document.createElement('option'); o.value = v; o.textContent = text; g.appendChild(o); }
+    if(before && typeof sel.insertBefore === 'function') sel.insertBefore(g, before); else sel.appendChild(g);
+  }
+  if(typeof CHOOSERS !== 'undefined') CHOOSERS.forEach(c => c && c.refresh && c.refresh());
+}
+/** A starter's or a study's graph, by its menu value ('starter:agate', 'study:fibers'). */
+const tryGraphOf = value => { const m = /^(starter|study):(.+)$/.exec(String(value)); if(!m) return null;
+  const S = (m[1] === 'study' ? ATHANOR_STUDIES : ATHANOR_STARTERS)[m[2]]; return S ? athanorStarter(m[2]) : null; };
+if(document.addEventListener) for(const ev of ['input', 'change']) document.addEventListener(ev, e => {
+  const t = e.target; if(!t || t.id !== 'textureType' || !TRY_GRAPH.test(String(t.value))) return;
+  const g = tryGraphOf(t.value), v = g ? validateGraph(JSON.stringify(g)) : { ok: false, problems: ['it is not in this version'] };
+  if(!v.ok){ t.value = 'athanor'; hardNo('That surface can’t be used', v.problems.join('; ') + '.'); return; }
+  // (only the PAGE takes it: the Athanor's bench keeps its work)
+  $('forgeGraph').value = JSON.stringify(v.graph); t.value = 'athanor';
+  applyAthanorGraph(true); paintForgeSummary();
+  if(openForge.paintPage) openForge.paintPage();
+}, true);
 const keptByValue = value => { const name = decodeURIComponent(String(value).slice(5)); return forgeShelf().find(r => r.name === name) || null; };
 if(document.addEventListener) for(const ev of ['input', 'change']) document.addEventListener(ev, e => {
   const t = e.target; if(!t || t.id !== 'textureType' || !String(t.value).startsWith('kept:')) return;
@@ -3641,7 +3672,7 @@ function setBench(json){
 }
 /** Whether the bench holds work found nowhere else: not on the shelf, not on the page (replacing it asks first). */
 function benchUnkept(){ const j = bench(); return Object.keys(athanorNodes(j)).length > 2 && !benchOnPage(j) && !forgeShelf().some(r => r.graph === j); }
-setTimeout(paintShelfOptions, 0);
+setTimeout(paintShelfOptions, 0); setTimeout(paintTryOptions, 0);
 const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept,
   chooser: (sel, o) => attachChooser(sel, { id: 'forgeOpen', thumb: openTileThumb, stamp: openTileStamp, glyphFor: () => '🜉', size: 160, side: true, wide: true, hold: holdSurface, ...o }),
   reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); seedCamera(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
@@ -4502,6 +4533,7 @@ function openTileStamp(value){
   };
   const thumb = (value, canvas, done) => {
     if(String(value).startsWith('kept:')) return keptThumb(keptByValue(value), canvas);
+    if(TRY_GRAPH.test(String(value))) return openTileThumb(value, canvas, done);
     if(value === 'athanor') return keptThumb({ name: '', graph: ($('forgeGraph') || {}).value || '' }, canvas, true);
     if(!TEXTURE_PARAMS[value]) return false;
     // made at three times the tile and drawn down: grown and simulated surfaces need room to show what they are
@@ -4510,11 +4542,11 @@ function openTileStamp(value){
       const c = canvas.getContext('2d'); c.imageSmoothingQuality = 'high'; c.drawImage(big, 0, 0, canvas.width, canvas.height); done(); });
     return true;
   };
-  const stamp = value => String(value).startsWith('kept:') || value === 'athanor' ? ''
+  const stamp = value => TRY_GRAPH.test(String(value)) ? openTileStamp(value) : String(value).startsWith('kept:') || value === 'athanor' ? ''
     : `${TEXTURE_STAMPS[value] || ''}|${SWATCH_STAMP}|${keptHash(JSON.stringify(thumbLook(value)))}`;
   // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
-  const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : '◈';
+  const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : String(value).startsWith('starter:') ? '🜈' : String(value).startsWith('study:') ? '🜍' : '◈';
   surfaceTiles = { thumb, stamp, extra };
   // (one menu serves both surfaces: the layer bar says which one it changes)
   const sel = $('textureType');

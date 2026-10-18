@@ -4,6 +4,18 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Narvi (2026-10-18)
+
+- **Every Athanor starter and Surface Study is in the Surface menu**, to try
+  on the page without opening the Athanor: 🜈 Athanor Starters (Weather of
+  Feeling and Punctuation Particles among them) and 🜍 Surface Studies, each
+  with its picture. Choosing one puts it on the page, its knobs on the
+  sliders and its hues on the pickers, as choosing one of Your Surfaces
+  does. New Random Surface and the dice pass over them.
+- The starters wear 🜈 in the Athanor's Open too (🝆 is Grown & Generated's).
+- **Under the hood:** the open issues trimmed to what is still open, and a
+  standing rule to keep them so.
+
 ## Saturn–Bergelmir (2026-10-18)
 
 - **The Emotional Seed**, a new part under Page Inputs: one feeling, from
