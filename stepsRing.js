@@ -10,9 +10,9 @@
  * one world (the land's heights, its seas, forests and cities, who built it) is shared by both, so the arch overhead
  * and the land at your feet are the same ring.
  */
-import { mulberry32, kitCanvas, kitPicture } from './texCore.js';
+import { mulberry32, kitCanvas, kitPicture, seedChoice } from './texCore.js';
 import { ringParams, ringCamera, ringDay, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
-import { rsMix, rsCss, rsPoly, rsFace, rsSmooth } from './stepsWhimsy.js';
+import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
@@ -103,7 +103,7 @@ function rgView(E, n, ww, wh){
   const cityAt = (a, z, cv) => { if(cv <= 0) return 0; const t = 0.62 - 0.6*cv; return rsSmooth(t - 0.06, t + 0.06, mnValue(a/(W*0.22) + 7.7, z/(W*0.22) - 1.1, s + 19)); };
   const lightsOf = w => RG_LIGHTS[w] || [g1.map(c => Math.min(255, c*1.15 + 30)), g2.map(c => Math.min(255, c*1.15 + 30))];
   return { E, L, p, W, seed, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
-    life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px };
+    life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed') };
 }
 // the ground's own colour at a point (before light, night and haze): the Land Hue as each world lays it, dry land,
 // forest, city, rock high up, snow on the tallest; the sea below its level
@@ -147,16 +147,31 @@ function rgPaintArch(x, mk, V, R){
     const X = gx + Math.cos(ga)*d, Y = gy + Math.sin(ga)*d, rx = unit*rnd(0.15, 0.4), ry = rx*rnd(0.2, 0.45); x.save(); x.translate(X, Y); x.rotate(ga + (R() - 0.5)*0.5); x.scale(1, ry/rx);
     const gr = x.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, rsCss(col, nebA)); gr.addColorStop(0.5, rsCss(col, nebA*0.35)); gr.addColorStop(1, rsCss(col, 0)); x.fillStyle = gr; x.fillRect(-rx, -rx, rx*2, rx*2); x.restore(); }
   x.restore();
+  // (Ruby: "Ringworld should sometimes be orbiting Saturn": a ring in four orbits it, as the old games' rings orbit
+  //  their gas giants, and SATURN hangs huge in its sky, beyond the far arch; by the seed, or The Arch's Saturn. Now and
+  //  then, when it doesn't, the far planet is Saturn: an Easter egg)
+  const SC_ = seedChoice(V.seed, 'saturn'), byS = SC_() < 0.25, satSky = V.saturn === 'always' || (V.saturn !== 'never' && byS), satFar = !satSky && SC_() < 0.2;
   if(R() < 0.35){ const r = unit*rnd(0.04, 0.12), X = ww*rnd(0.1, 0.9), Y = wh*rnd(0.06, 0.3), c1 = rsMix(rsMix(g2, S, 0.5), [255, 255, 255], 0.2), c2 = rsMix(c1, SPACE, 0.45), a = 0.55 + 0.4*(1 - kday), lit = rnd(-1, 1);
-    x.save(); x.globalAlpha = a; x.fillStyle = rsCss(c2); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); x.clip();
-    for(let b = 0; b < 5; b++){ x.fillStyle = rsCss(b % 2 ? c1 : rsMix(c1, c2, 0.5)); x.fillRect(X - r, Y - r + (b*0.4 + R()*0.2)*r, r*2, r*rnd(0.12, 0.3)); }
-    x.fillStyle = rsCss(SPACE, 0.55); x.beginPath(); x.arc(X + lit*r*0.55, Y - r*0.2, r*1.05, 0, Math.PI*2); x.fill(); x.restore(); }
+    const bands = Array.from({ length: 5 }, (_, b) => [(b*0.4 + R()*0.2)*r, r*rnd(0.12, 0.3)]);
+    if(satFar) paintSaturn(x, X, Y, r*0.6, { axis: (SC_() - 0.5)*0.9, open: (SC_() < 0.5 ? -1 : 1)*(0.2 + 0.25*SC_()), sun: [lit < 0 ? 1 : -1, -0.3], alpha: a, tint: S });
+    else if(satSky){ /* (Saturn fills the sky instead: no second planet) */ }
+    else { x.save(); x.globalAlpha = a; x.fillStyle = rsCss(c2); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); x.clip();
+      for(let b = 0; b < 5; b++){ x.fillStyle = rsCss(b % 2 ? c1 : rsMix(c1, c2, 0.5)); x.fillRect(X - r, Y - r + bands[b][0], r*2, bands[b][1]); }
+      x.fillStyle = rsCss(SPACE, 0.55); x.beginPath(); x.arc(X + lit*r*0.55, Y - r*0.2, r*1.05, 0, Math.PI*2); x.fill(); x.restore(); } }
   if(R() < 0.25){ const X = ww*rnd(0.1, 0.9), Y = wh*rnd(0.05, 0.3), ang = rnd(0.2, 0.9)*(R() < 0.5 ? 1 : -1) + Math.PI/2, len = unit*rnd(0.12, 0.3), wd = unit*0.012;
     const tx = X - Math.cos(ang)*len, ty = Y - Math.sin(ang)*len, g = x.createLinearGradient(X, Y, tx, ty); g.addColorStop(0, rsCss([240, 250, 255], 0.8*(1 - 0.6*kday))); g.addColorStop(1, rsCss(S, 0));
     rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); }
   // THE STAR, at the ring's middle (so on the arch's own line), and the SHADOW SQUARES circling close about it: they
   // stand between it and the land, and make its nights (where you stand under one, it hides the star)
   const sp = proj(0, 0, 0);
+  if(satSky){ // SATURN in the sky, lit from the ring's star (or the light dial's side when the star is out of sight);
+    // now and then ENCELADUS beside it, its plume rising (Ruby's favorite moon)
+    const yH = yAt(6*Math.PI/180), yT = yAt(38*Math.PI/180), y0 = yT == null ? wh*0.1 : Math.max(-wh*0.1, yT), y1 = yH == null ? wh*0.55 : Math.min(wh*0.9, yH);
+    const rS = unit*(0.1 + 0.11*SC_()), X = ww*(0.12 + 0.76*SC_()), Y = y0 + (y1 - y0)*(0.25 + 0.6*SC_()), axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
+    const sun = sp ? [sp[0] - X, sp[1] - Y] : [L.side, -0.5], sa = 0.62 + 0.38*(1 - kday);
+    paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday) });
+    if(SC_() < 0.45){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
+      paintEnceladus(x, X + ex*Math.cos(axis) - ey*Math.sin(axis), Y + ex*Math.sin(axis) + ey*Math.cos(axis), Math.max(px(3), rS*0.05), { axis, sun, alpha: sa, px }); } }
   if(sp){ const rs = unit*0.018, SC = [255, 246, 226];
     x.save(); x.globalCompositeOperation = 'screen';
     for(const [r, a] of [[rs*18, 0.3], [rs*6, 0.6]]){ const gl = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); gl.addColorStop(0, rsCss(SC, a)); gl.addColorStop(0.2, rsCss(SC, a*0.35)); gl.addColorStop(1, rsCss(SC, 0)); x.fillStyle = gl; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); }
@@ -473,7 +488,8 @@ export const RING_STEPS = {
   ringarch: { cat: 'Textures', label: 'The Arch', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
-      RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
+      RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99),
+      ['saturn', 'Saturn', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }]], cost: () => 4,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
       const V = rgView(E, n, ww, wh); rgPaintArch(x, mk, V, mulberry32((V.seed ^ 0xA5C4) >>> 0)); return [c, mc]; },
     run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },

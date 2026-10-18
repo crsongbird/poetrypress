@@ -780,6 +780,64 @@ export const rsPoly = (x, pts, fill) => { x.fillStyle = fill; x.beginPath(); pts
 // a face's colour by how squarely it faces the light: (nx, ny) its outward normal on the page, L the way to the light
 export const rsFace = (dark, lit, nx, ny, L) => { const l = Math.hypot(nx, ny) || 1; return rsMix(dark, lit, 0.5 + 0.5*Math.max(-1, Math.min(1, (nx*L[0] + ny*L[1])/l))); };
 export const rsSmooth = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a)/(b - a))); return t*t*(3 - 2*t); };
+// SATURN, in flat shapes (Ruby's favorite planet: "Easter eggs should include Saturn"): pale gold bands, the C, B and A
+// rings with the Cassini gap between, the night side and the planet's shadow across the rings away from the sun, the
+// rings' shadow on the globe; the near half of the rings crossing in front of it. (X, Y) its middle, r its radius;
+// o.axis the rings' long axis on the page (radians), o.open how far they open (0 edge-on, ±1 face-on; the sign says
+// which face shows), o.sun the way to the sun on the page, o.alpha, o.tint a color the planet leans a little toward,
+// o.behind the sky's color behind it (the globe is solid, so the far rings never show through it).
+//   ringed and patient,
+//   the old god keeps his hours —
+//   gold dust, and the gap
+export function paintSaturn(x, X, Y, r, o = {}){
+  if(!(r > 0.5)) return;
+  const axis = o.axis || 0, open = Math.abs(o.open ?? 0.3) < 0.04 ? 0.04*Math.sign(o.open || 1) : (o.open ?? 0.3), a = o.alpha ?? 1, SPACE = [8, 10, 24];
+  const tint = c => o.tint ? rsMix(c, o.tint, 0.12) : c;
+  const BANDS = [[214, 194, 150], [230, 212, 168], [204, 178, 128], [238, 224, 188], [198, 170, 122], [226, 204, 158], [184, 160, 120]].map(tint);
+  const RINGS = [[1.24, 1.53, tint([168, 150, 122]), 0.4], [1.53, 1.95, tint([234, 220, 186]), 0.88], [2.03, 2.27, tint([206, 192, 162]), 0.7]];
+  const sl = Math.hypot(...(o.sun || [0.8, -0.6])) || 1, sun = (o.sun || [0.8, -0.6]).map(v => v/sl), sx = sun[0]*Math.cos(axis) + sun[1]*Math.sin(axis);
+  const frame = () => { x.translate(X, Y); x.rotate(axis); };
+  // the rings, one half (the far half first, behind the globe), and the globe's shadow across them, away from the sun
+  const rings = far => {
+    for(const [r0, r1, c, al] of RINGS){ x.save(); frame(); x.scale(1, open); x.strokeStyle = rsCss(c, al*a); x.lineWidth = (r1 - r0)*r;
+      x.beginPath(); x.arc(0, 0, (r0 + r1)/2*r, far ? Math.PI : 0, far ? Math.PI*2 : Math.PI); x.stroke(); x.restore(); }
+    if(Math.abs(sx) > 0.15){ x.save(); frame(); x.scale(1, open); x.beginPath(); x.rect(sx > 0 ? -2.4*r : 0, far ? -r : 0, 2.4*r, r); x.clip();
+      x.strokeStyle = rsCss(SPACE, 0.55*a); x.lineWidth = (2.27 - 1.24)*r; x.beginPath(); x.arc(0, 0, 1.755*r, far ? Math.PI : 0, far ? Math.PI*2 : Math.PI); x.stroke(); x.restore(); } };
+  rings(true);
+  // the globe: its bands along the rings, darker toward the poles, the night side away from the sun, the rings' shadow
+  x.fillStyle = rsCss(o.behind || SPACE); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill();
+  x.save(); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.clip(); frame();
+  let y = -r; for(let i = 0; y < r; i++){ const hh = r*(i === 0 ? 0.3 : 0.12 + 0.13*((i*0.618) % 1)); x.fillStyle = rsCss(BANDS[i % BANDS.length], a); x.fillRect(-r, y, 2*r, hh + 0.5); y += hh; }
+  x.fillStyle = rsCss(rsMix(BANDS[6], SPACE, 0.2), 0.45*a); x.fillRect(-r, -r, 2*r, r*0.22); x.fillRect(-r, r*0.78, 2*r, r*0.22);
+  x.strokeStyle = rsCss(SPACE, 0.32*a); x.lineWidth = r*0.07; x.save(); x.scale(1, open); x.beginPath(); x.arc(0, r*0.1/open, 1.3*r, 0, Math.PI); x.stroke(); x.restore();
+  x.restore();
+  x.save(); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.clip();
+  x.fillStyle = rsCss(SPACE, 0.62*a); x.beginPath(); x.arc(X - sun[0]*r*1.25, Y - sun[1]*r*1.25, r*1.02, 0, Math.PI*2); x.fill();
+  x.fillStyle = rsCss(SPACE, 0.22*a); x.beginPath(); x.arc(X - sun[0]*r*0.85, Y - sun[1]*r*0.85, r*1.02, 0, Math.PI*2); x.fill();
+  x.restore();
+  rings(false);
+}
+// ENCELADUS (Ruby's favorite moon, home of the kitsune): small and white, its night side grey-blue, blue tiger stripes at
+// its south pole and the plume rising from them, a fan of faint jets. (X, Y), r; o.axis the way its north points on the
+// page (radians from up), o.sun, o.alpha; o.px a canonical pixel (for the finest lines).
+export function paintEnceladus(x, X, Y, r, o = {}){
+  if(!(r > 0.3)) return;
+  const a = o.alpha ?? 1, px = o.px || (v => v), sl = Math.hypot(...(o.sun || [0.8, -0.6])) || 1, sun = (o.sun || [0.8, -0.6]).map(v => v/sl);
+  x.save(); x.translate(X, Y); x.rotate(o.axis || 0);
+  // the plume, from the south pole down and out: a soft fan, then its jets
+  x.save(); x.globalCompositeOperation = 'screen';
+  const g = x.createRadialGradient(0, r*1.6, 0, 0, r*1.6, r*3.2); g.addColorStop(0, rsCss([200, 226, 255], 0.35*a)); g.addColorStop(1, rsCss([200, 226, 255], 0)); x.fillStyle = g; x.fillRect(-r*3.2, -r*1.6, r*6.4, r*6.4);
+  for(let k = -2; k <= 2; k++){ const jg = x.createLinearGradient(k*r*0.2, r*0.85, k*r*0.9, r*4); jg.addColorStop(0, rsCss([226, 240, 255], 0.5*a)); jg.addColorStop(1, rsCss([226, 240, 255], 0));
+    x.strokeStyle = jg; x.lineWidth = Math.max(px(0.6), r*0.14); x.beginPath(); x.moveTo(k*r*0.2, r*0.85); x.lineTo(k*r*0.9, r*4); x.stroke(); }
+  x.restore();
+  x.fillStyle = rsCss([244, 247, 252], a); x.beginPath(); x.arc(0, 0, r, 0, Math.PI*2); x.fill();
+  x.save(); x.beginPath(); x.arc(0, 0, r, 0, Math.PI*2); x.clip();
+  if(r > px(5)){ x.strokeStyle = rsCss([110, 170, 226], 0.85*a); x.lineWidth = Math.max(px(0.5), r*0.07);
+    for(let k = 0; k < 4; k++){ const yy = r*(0.42 + k*0.13); x.beginPath(); x.moveTo(-r*0.5 + k*r*0.05, yy - r*0.08); x.lineTo(r*0.45 - k*r*0.04, yy + r*0.06); x.stroke(); } }
+  const sa = -(o.axis || 0), su = [sun[0]*Math.cos(sa) - sun[1]*Math.sin(sa), sun[0]*Math.sin(sa) + sun[1]*Math.cos(sa)];
+  x.fillStyle = rsCss([60, 72, 98], 0.6*a); x.beginPath(); x.arc(-su[0]*r*1.3, -su[1]*r*1.3, r*1.05, 0, Math.PI*2); x.fill();
+  x.restore(); x.restore();
+}
 function paintRingSky(x, mk, w, h, o){
   const unit = Math.min(w, h), R = o.rnd, S = o.sky, Lh = o.land, px = o.px;
   const SEA = rsMix([22, 58, 120], S, 0.3), CLOUD = [244, 245, 250], NIGHT = [20, 22, 48], METAL = rsMix([46, 50, 70], S, 0.2), SAND = rsMix(Lh, [218, 186, 128], 0.6), FOREST = rsMix(Lh, [20, 52, 34], 0.45);
@@ -970,7 +1028,12 @@ export const WHIMSY_STEPS = {
     // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
       const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
-      const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0); return [pc]; },
+      const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0);
+      // (Ruby's favorite planet, very rarely among the stars, about one sky in twenty-five: a small Saturn, an Easter egg;
+      //  from a stream of its own, so every other sky is as it was)
+      const eg = seedChoice(seed, 'starfield saturn');
+      if(eg() < 0.04){ const r = Math.min(w, h)*(0.012 + 0.012*eg()); paintSaturn(x, w*(0.1 + 0.8*eg()), h*(0.08 + 0.4*eg()), r, { axis: (eg() - 0.5)*0.8, open: (eg() < 0.5 ? -1 : 1)*(0.25 + 0.2*eg()), sun: [eg() - 0.5, -0.5], alpha: 0.85 }); }
+      return [pc]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   curtains: { cat: 'Marks', label: 'Aurora Curtains', ins: ['over', 'field from'], outs: ['image'], io: { ins: ['image', 'value'], outs: ['image'] },
     params: [WHIM_R('curtains', 'Curtains', 2, 1, 5), WHIM_R('rays', 'Rays', 100, 20, 250), WHIM_R('height', 'Height', 100, 40, 180), WHIM_R('red', 'Red Sky', 30),

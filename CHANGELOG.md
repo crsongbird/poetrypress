@@ -4,6 +4,28 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Siarnaq (2026-10-17)
+
+- **The Painted Ringworld orbits Saturn**, one ring in four: Saturn hangs
+  huge in its sky beyond the far arch, its rings open, lit from the ring's
+  star, with the arch and its haze passing in front. Now and then Enceladus
+  is beside it, its plume rising. The Arch's new **Saturn** setting in the
+  Athanor chooses: by the seed, never, or always. A kept graph with The
+  Arch in it shows Saturn on the same seeds; set Saturn to never for the
+  sky it had.
+- **Easter eggs**, rare:
+  - On rings that don't orbit Saturn, the far planet is now and then
+    Saturn.
+  - About one starry sky in thirty-six has a small Saturn among its stars
+    (Aurora, Ring in the Sky, the Painted Ringworld, any graph with a
+    Starfield).
+  - Circuit Board's Markings now and then print a stamp about Saturn,
+    Enceladus or the old stories of space, and a little picture of
+    Enceladus.
+  - Pictures without an egg draw exactly as before.
+- **Under the hood:** the Athanor's Anti-aliasing (edges only) is about
+  twice as fast on pictures full of edges, with the same result.
+
 ## Saturn–Skoll (2026-10-17)
 
 - **Plainer words** (from the usability review, as approved):

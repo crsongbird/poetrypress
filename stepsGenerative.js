@@ -36,7 +36,7 @@
  * any size, so a preview is the export, smaller. Their randomness is the
  * texture's seed (+ Variant), like the other parts that grow.
  */
-import { CPU, withSeed, wordsRoom, kitCanvas, makeNoiseGrid, sampleNoiseGrid, lightVec, mulberry32 } from './texCore.js';
+import { CPU, withSeed, wordsRoom, kitCanvas, makeNoiseGrid, sampleNoiseGrid, lightVec, mulberry32, seedChoice } from './texCore.js';
 
 const GEN_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const genClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -488,6 +488,16 @@ const CIR_SAYS = [
   ['LEYLINE 3', 'AETHER BUS', 'SUMMON GATE', 'PRISM CORE', 'STAR SEAL', 'ARCANE IO', 'SPELL CACHE', 'HALO 7', 'CRYSTAL OK', 'MANA 12', 'LIGHT ONLY', 'SING TO IT',
    'MOON WELL', 'CIRCLE CLOSED', 'SIGIL ROM', 'RITE 3', 'ASTRAL OUT', 'GLYPH CORE', 'FAMILIAR LINK', 'WARD 9', 'MOTHS WELCOME',
    'RUNE INK', 'WORDS OF POWER', 'TRUE NAME', 'SPEAK IT', 'VERSE OF BINDING', 'SAY IT TWICE', 'THE SPELL IS A POEM']];
+// the board's rarest stamps (Ruby: "Enceladus and sci-fi references … peppered into various surfaces … as a rare Easter
+// egg"): now and then a stamp speaks of Saturn, Enceladus or the old stories of space, by its era, and a little
+// picture is Enceladus with its plume. They draw from a stream of their own, so a board without one is as it was.
+const CIR_SPACE = [
+  ['ICE MOON', 'E RING', 'TIGER STRIPES', 'PLUME OK', 'SATURN 6', 'RINGED', "DON'T PANIC", '42'],
+  ['ENCELADUS BASE', 'PLUME SAMPLER', 'E-RING DUST', 'RING HABITAT', 'GENERATION SHIP', 'ANSIBLE', 'DYSON GRID', 'FTL INHIBIT', 'HYPERSPACE OK'],
+  ['SUBSURFACE SEA', 'UNDER THE ICE', 'GEYSER FIELD', 'FIRST CONTACT', 'WORMHOLE SAFE', 'TACHYON?', 'SATURN SIX'],
+  ['SATURNINE', 'RINGED GOD', 'LEAD OF SATURN', 'ICE AND STEAM', 'GEYSER VALVE', 'ORRERY 6'],
+  ['KITSUNE OF ENCELADUS', 'SEVEN TAILS', 'SATURN SEAL', 'RING OF ICE', 'MOON OF GEYSERS', 'THE E RING SINGS']];
+const CIR_ENCELADUS = '0011100011111001101100111110001110001010101010101';
 // the kinds of stamp each era prints, and how often (Today, Future, Quantum, Atomic, Magitech)
 const CIR_STAMPS = [
   [['say', 50], ['barcode', 10], ['tp', 10], ['warn', 6], ['maker', 6], ['egg', 6]],
@@ -664,7 +674,7 @@ function genCircuit(cw, ch, o){
     const txt = runes(900 + ti, 1 + Math.floor(eh(950 + ti)*3)), x = mx - dy*1.4 - txt.length*0.48, y = my + dx*1.4 - 0.6;
     if(clear(x, y, span(txt), 2)){ take(x, y, span(txt), 2); glyphs.push({ x, y, text: txt }); } });
   // Then the stamps, found room for last, so they move nothing: each says what its own era would say.
-  const stamps = [], nMarks = Math.round(marks*(1 + cw*ch/700));
+  const stamps = [], nMarks = Math.round(marks*(1 + cw*ch/700)), CE = seedChoice(o.salt >>> 0, 'circuit eggs');
   if(nMarks > 0){
     const name = () => CIR_SYLL[R()*16 | 0] + CIR_SYLL[R()*16 | 0] + (R() < 0.6 ? '-' + (2 + (R()*98 | 0)) : '');
     const place = (wc, hc) => { for(let t = 0; t < 60; t++){ const x = 1 + (R()*Math.max(1, cw - wc - 2) | 0), y = 1 + (R()*Math.max(1, ch - hc - 2) | 0);
@@ -675,7 +685,7 @@ function genCircuit(cw, ch, o){
       const lv = level(1000 + k), r = k === 0 ? 0 : R();
       let kind = k === 0 ? 'title' : k === 1 && marks > 0.35 ? 'egg' : null;
       if(!kind){ const W = CIR_STAMPS[lv]; let x = r*W.reduce((a, q) => a + q[1], 0); for(const [kd, wt] of W){ if(x < wt){ kind = kd; break; } x -= wt; } kind = kind || 'say'; }
-      if(kind === 'egg'){ at(kind, 3, 3, { egg: R()*CIR_EGGS.length | 0 }); continue; }
+      if(kind === 'egg'){ const e = R()*CIR_EGGS.length | 0; at(kind, 3, 3, { egg: CE() < 0.2 ? -1 : e }); continue; }
       if(kind === 'matrix'){ at(kind, 2, 2, { bits: Array.from({ length: 36 }, () => R() < 0.5) }); continue; }
       if(kind === 'barcode'){ let x = 0; const bars = []; while(x < 5.4){ const w = 0.12 + (R()*3 | 0)*0.1; if(R() < 0.55) bars.push([x, w]); x += w + 0.1; }
         at(kind, 6, 3, { bars, code: Array.from({ length: 6 }, () => R()*10 | 0).join('') }); continue; }
@@ -686,7 +696,7 @@ function genCircuit(cw, ch, o){
       if(kind === 'maker'){ at(kind, 3, 3, { text: 'ABCDEFGHJKLMNPRSTVWXYZ'[R()*22 | 0] + 'ABCDEFGHJKLMNPRSTVWXYZ'[R()*22 | 0], lv }); continue; }
       if(kind === 'moons'){ at(kind, 6, 2, { phase: R() }); continue; }
       const lines = kind === 'title' ? [lv >= 3 ? runes(1100, 4) + ' ' + name() : name(), lv >= 3 ? runes(1200, 3) : ['REV ', 'MK ', 'GEN ', 'CIRCLE '][lv] + 'ABCDEFGH'[R()*8 | 0]]
-        : [lv >= 3 && R() < 0.4 ? runes(1300 + k, 2 + (R()*4 | 0)) : CIR_SAYS[lv][R()*CIR_SAYS[lv].length | 0]];
+        : [lv >= 3 && R() < 0.4 ? runes(1300 + k, 2 + (R()*4 | 0)) : (t => CE() < 0.07 ? CIR_SPACE[lv][CE()*CIR_SPACE[lv].length | 0] : t)(CIR_SAYS[lv][R()*CIR_SAYS[lv].length | 0])];
       const wc = Math.ceil(Math.max(...lines.map(t => t.length))*0.96 + 0.6), hc = Math.ceil(lines.length*1.45 + 0.4);
       at(kind, wc, hc, { lines, box: kind === 'title' || R() < 0.35 });
     }
@@ -931,7 +941,7 @@ function genDrawCircuit(B, ww, wh, s, o){
   for(const gl of B.glyphs || []) write(gl.text, gl.x, gl.y);
   // the Markings: stamps of what each era would print, a code block, and once a little picture
   for(const st of B.stamps || []){
-    if(st.kind === 'egg'){ const bits = CIR_EGGS[st.egg], px = 0.38; for(let r = 0; r < 7; r++) for(let q = 0; q < 7; q++) if(bits[r*7 + q] === '1') rect(LG, st.x + q*px, st.y + r*px, px*0.9, px*0.9, '#fff'); continue; }
+    if(st.kind === 'egg'){ const bits = st.egg < 0 ? CIR_ENCELADUS : CIR_EGGS[st.egg], px = 0.38; for(let r = 0; r < 7; r++) for(let q = 0; q < 7; q++) if(bits[r*7 + q] === '1') rect(LG, st.x + q*px, st.y + r*px, px*0.9, px*0.9, '#fff'); continue; }
     if(st.kind === 'matrix'){ const px = 0.3; LG.strokeStyle = '#fff'; LG.lineWidth = 0.08*s; LG.strokeRect(st.x*s, st.y*s, 6*px*s, 6*px*s);
       st.bits.forEach((b, i) => { if(b) rect(LG, st.x + (i % 6)*px, st.y + Math.floor(i/6)*px, px*0.9, px*0.9, '#fff'); }); continue; }
     if(st.kind === 'barcode'){ for(const [x, w] of st.bars) rect(LG, st.x + 0.3 + x, st.y + 0.3, w, 1.5, '#fff'); write(st.code, st.x + 0.3, st.y + 2.05, 0.16); continue; }

@@ -795,18 +795,23 @@ export function fxaaImage(img, w, h, { subpix = 0.75, edge = 0.125, edgeMin = 0.
   for(let i = 0; i < N; i++) L[i] = Math.max(0, Math.min(1, 0.299*img.r[i] + 0.587*img.g[i] + 0.114*img.b[i]));
   const out = { r: new Float32Array(img.r), g: new Float32Array(img.g), b: new Float32Array(img.b) };
   if(w < 3 || h < 3) return out;
-  const lu = (x, y) => L[Math.max(0, Math.min(h - 1, y))*w + Math.max(0, Math.min(w - 1, x))];
+  // (the reads clamp to the edge with plain comparisons, and a sample exactly on a pixel skips its other three: the same
+  //  sums in the same order as a full bilinear read, about three times faster where a picture is all edges)
+  const W1 = w - 1, H1 = h - 1, lu = (x, y) => L[(y < 0 ? 0 : y > H1 ? H1 : y)*w + (x < 0 ? 0 : x > W1 ? W1 : x)];
   // (bilinear, with pixel centres on whole numbers, as a texture fetch between texels)
   const lerpL = (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+    if(fx === 0 && fy === 0) return lu(x0, y0);
+    if(fx === 0) return lu(x0, y0)*(1 - fy) + lu(x0, y0 + 1)*fy;
+    if(fy === 0) return lu(x0, y0)*(1 - fx) + lu(x0 + 1, y0)*fx;
     return (lu(x0, y0)*(1 - fx) + lu(x0 + 1, y0)*fx)*(1 - fy) + (lu(x0, y0 + 1)*(1 - fx) + lu(x0 + 1, y0 + 1)*fx)*fy; };
-  const pick = (ch, x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
-    const at = (xx, yy) => ch[Math.max(0, Math.min(h - 1, yy))*w + Math.max(0, Math.min(w - 1, xx))];
-    return (at(x0, y0)*(1 - fx) + at(x0 + 1, y0)*fx)*(1 - fy) + (at(x0, y0 + 1)*(1 - fx) + at(x0 + 1, y0 + 1)*fx)*fy; };
-  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
-    const lM = lu(x, y), lS = lu(x, y + 1), lE = lu(x + 1, y), lN = lu(x, y - 1), lW = lu(x - 1, y);
+  const R = img.r, G = img.g, B = img.b;
+  for(let y = 0; y < h; y++){ const inY = y > 0 && y < H1;
+    for(let x = 0; x < w; x++){
+    const c = y*w + x, inner = inY && x > 0 && x < W1;
+    const lM = L[c], lS = inner ? L[c + w] : lu(x, y + 1), lE = inner ? L[c + 1] : lu(x + 1, y), lN = inner ? L[c - w] : lu(x, y - 1), lW = inner ? L[c - 1] : lu(x - 1, y);
     const rMax = Math.max(lS, lE, lN, lW, lM), rMin = Math.min(lS, lE, lN, lW, lM), range = rMax - rMin;
     if(range < Math.max(edgeMin, rMax*edge)) continue;
-    const lNW = lu(x - 1, y - 1), lSE = lu(x + 1, y + 1), lNE = lu(x + 1, y - 1), lSW = lu(x - 1, y + 1);
+    const lNW = inner ? L[c - w - 1] : lu(x - 1, y - 1), lSE = inner ? L[c + w + 1] : lu(x + 1, y + 1), lNE = inner ? L[c - w + 1] : lu(x + 1, y - 1), lSW = inner ? L[c + w - 1] : lu(x - 1, y + 1);
     const lNS = lN + lS, lWE = lW + lE, subA = (lNS + lWE)*2 + (lNW + lSW + lNE + lSE);
     const edgeH = Math.abs(-2*lW + lNW + lSW) + Math.abs(-2*lM + lNS)*2 + Math.abs(-2*lE + lNE + lSE);
     const edgeV = Math.abs(-2*lS + lSW + lSE) + Math.abs(-2*lM + lWE)*2 + Math.abs(-2*lN + lNW + lNE);
@@ -829,9 +834,14 @@ export function fxaaImage(img, w, h, { subpix = 0.75, edge = 0.125, edgeMin = 0.
     const dN = horz ? x - nx : y - ny, dP = horz ? px - x : py - y, span = dN + dP;
     const towardN = dN < dP, dst = Math.min(dN, dP), good = towardN ? ((eN < 0) !== mNeg) : ((eP < 0) !== mNeg);
     const off = good ? 0.5 - dst/span : 0, subF = (-2*subC + 3)*subC*subC, subH = subF*subF*subpix, o = Math.max(off, subH);
-    const sx = horz ? x : x + o*sign, sy = horz ? y + o*sign : y, i = y*w + x;
-    out.r[i] = pick(img.r, sx, sy); out.g[i] = pick(img.g, sx, sy); out.b[i] = pick(img.b, sx, sy);
-  }
+    const sx = horz ? x : x + o*sign, sy = horz ? y + o*sign : y;
+    // (the picture read there, bilinear, its four corners found once for all three channels)
+    const x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0, xa = x0 < 0 ? 0 : x0 > W1 ? W1 : x0, xb = x0 + 1 > W1 ? W1 : x0 + 1 < 0 ? 0 : x0 + 1;
+    const ya = (y0 < 0 ? 0 : y0 > H1 ? H1 : y0)*w, yb = (y0 + 1 > H1 ? H1 : y0 + 1 < 0 ? 0 : y0 + 1)*w, i00 = ya + xa, i10 = ya + xb, i01 = yb + xa, i11 = yb + xb;
+    out.r[c] = (R[i00]*(1 - fx) + R[i10]*fx)*(1 - fy) + (R[i01]*(1 - fx) + R[i11]*fx)*fy;
+    out.g[c] = (G[i00]*(1 - fx) + G[i10]*fx)*(1 - fy) + (G[i01]*(1 - fx) + G[i11]*fx)*fy;
+    out.b[c] = (B[i00]*(1 - fx) + B[i10]*fx)*(1 - fy) + (B[i01]*(1 - fx) + B[i11]*fx)*fy;
+  } }
   return out;
 }
 

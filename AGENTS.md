@@ -1193,6 +1193,24 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - The old crazed glaze is `crackedglaze`, hidden.
 - **Deep Field** is two requests (`astral_fog`, `astral_stars`). Its Glow
   Hue rides on `astral_stars`.
+- **Easter eggs** (Ruby: "Easter eggs should include Saturn", and Enceladus and
+  sci-fi "peppered into various surfaces and generators when it makes sense as
+  a rare Easter egg"; Saturn is Ruby's favorite planet, Enceladus its moon).
+  Rare, and decided by a stream of their own (`seedChoice(seed, '<name>')`),
+  never the texture's own: a picture without an egg draws exactly as before.
+  The painters are shared (stepsWhimsy.js): `paintSaturn` (bands, rings with
+  the Cassini gap, the night side, the globe's shadow on the rings, the rings'
+  in front) and `paintEnceladus` (white, tiger stripes, the plume).
+  - Painted Ringworld: one ring in four orbits Saturn (The Arch's Saturn), and
+    now and then Enceladus beside it; otherwise the far planet is sometimes
+    Saturn.
+  - Starfield: about one sky in thirty-six, a small Saturn among the stars
+    (Aurora, Ring in the Sky, the Painted Ringworld and any graph with one).
+  - Circuit Board's Markings: a stamp now and then speaks of Saturn, Enceladus
+    or the old stories of space, by its era (`CIR_SPACE`), and a little
+    picture is Enceladus (`CIR_ENCELADUS`).
+  - Cartomancy's rare cards (Saturn, Enceladus, the Kitsune), the stitches
+    Saturn and Enceladus, the seed words.
 - **Dream Bloom** is a thin-lens camera (50 mm f/1.8): its blur is a real
   convolution.
 - **Flow-Field Ink:** Flow Lines (Jobard–Lefer spacing). An Angle Map input
@@ -1257,6 +1275,12 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     (`cw`), drawn between the ridges they lie between (so hills hide them),
     roads slab by slab; nothing anchored is drawn larger than it can be seen
     whole (`big`), and spans only where they are far and seen along.
+  - **Saturn** (Ruby: "Ringworld should sometimes be orbiting Saturn"): by the
+    seed (one ring in four) or The Arch's Saturn setting, the ring orbits it as
+    the old games' rings orbit their gas giants, and Saturn hangs huge in the
+    sky beyond the far arch, lit from the ring's star (`paintSaturn`), drawn
+    before the arch and its air so they pass in front; now and then Enceladus
+    beside it. It takes the far planet's place.
   - **Small life** (`rgSmallLife`; Ruby: "insects, fairies, flowers, slime
     creatures … all subtle", in place of the little creatures): on some rings
     (`lively`), a few finds (more with Life), each on its own ridge whose crest

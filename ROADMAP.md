@@ -91,8 +91,15 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   Board, Stained Glass, Knotwork), each through compare.mjs and Ruby's eye.
   Ruby: yes, and new graphs stay at edges only ("anti aliasing is
   expensive").
-  - Edges only first (it is cheap); all pixels only where the budget and the
-    baseline phone allow, since it is four times the work.
+  - Measured (Saturn–Siarnaq): edges only changes 3–6% of the pixels of the
+    hard-edged chains (Ruffled Growth, Knotwork, Dewy Webs, Contour Map,
+    Circuit Board, Rain on Water, Fractured Glaze, Stained Glass, Linen,
+    Hatching) and almost none of the soft ones; it costs ~0.1 s per million
+    edge-filled pixels here. The sheet is with Ruby: switch on the ones Ruby
+    picks (`aa: 'edges only'` on the chain's Surface) and accept their
+    fingerprints.
+  - All pixels only where the budget and the baseline phone allow, since it
+    is four times the work.
 
 ### B · The output stage (the Surface)
 
@@ -235,6 +242,21 @@ comes apart into general parts plus, at most, one process primitive:
 Prove each: compare.mjs sheets to Ruby; a pixel-identical rebuild needs no
 approval, a changed one does.
 
+### K · Easter eggs (Ruby: Saturn, Enceladus and sci-fi, rare, where a surface invites them)
+
+Each by a stream of its own (`seedChoice`), so a picture without one is as it
+was; the painters `paintSaturn` and `paintEnceladus` are shared (AGENTS §9,
+Easter eggs).
+
+- **K1 · The 3D Ringworld orbiting Saturn** (Ruby: "Ringworld should
+  sometimes be orbiting Saturn"): Saturn as a sphere with its rings in the
+  ray-traced sky, beyond the far arch, lit by the ring's star; Enceladus now
+  and then. The Painted Ringworld has it.
+- **K2 · Fractal Moon as Enceladus**, rarely: icy white, the tiger stripes,
+  the plume.
+- **K3 · More nods** where a surface's own subject invites one (a wreck's
+  hull markings, a black hole's accretion disk seen past a ringed planet).
+
 ---
 
 ## 3 · Order of work: four stages, presets last (Ruby)
@@ -263,6 +285,7 @@ superseded) wait for Stage 4.
   with four readings. The approximations wait on their parts (§2 I).
 - **J**: whole-texture parts taken apart (§2 J), each through compare.mjs and
   Ruby's approval when its look changes.
+- **K**: the Easter eggs still to place (§2 K).
 - **Rebuild the textures that aren't chains yet**, so every texture is a
   graph. The list (menu ids; test/hygiene keeps it the code's, so delete
   one here when it becomes a chain):

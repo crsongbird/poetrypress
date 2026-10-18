@@ -177,6 +177,19 @@ if(canvasOK){
     seeded.every(w => RG_WORLDS.includes(w.name) && w.name !== 'seed') && new Set(seeded.map(w => w.name)).size >= 5 && seeded.every(w => w.name === 'mixed' ? w.list.length === 3 : w.list.join() === w.name)
     && mixed.name === 'mixed' && new Set(mixed.list).size === 3); }
 
+// the Painted Ringworld orbiting Saturn (Ruby; The Arch's Saturn): never draws no Saturn, always does, and by the seed
+// it is one ring in four, the rest drawn exactly as with never
+{ const M = await import('./canvasMock.mjs'), doc = globalThis.document; M.installCanvasMock();   // (the DOM mock's canvases go uncounted)
+  const drawn = (saturn, seed) => { const g = A.athanorStarter('ringpaint');
+    for(const n of Object.values(A.athanorNodes(g))) if(n.name === 'ringarch') n.data = { ...n.data, saturn };
+    M.resetCreatedCanvases(); A.evalAthanor(g, 160, 160, { seed, knobs: [], tints: [], canvas: true }, {});
+    return JSON.stringify(M.createdCanvases.map(c => c.getContext('2d')._stats)); };
+  const seeds = Array.from({ length: 24 }, (_, i) => i + 1), saturnine = seeds.filter(s => drawn('by the seed', s) !== drawn('never', s));
+  check('The Arch\'s Saturn: always draws something never does', seeds.slice(0, 4).every(s => drawn('always', s) !== drawn('never', s)));
+  check(`…by the seed, about one ring in four orbits Saturn (${saturnine.length} of 24), the others exactly as never`, saturnine.length >= 2 && saturnine.length <= 12
+    && saturnine.every(s => drawn('by the seed', s) === drawn('always', s)));
+  globalThis.document = doc; }
+
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);
