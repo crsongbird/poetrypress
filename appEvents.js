@@ -2564,6 +2564,13 @@ function drawCameraGuide(on){
 // where the camera turns the ground under it; the rim light's in its own colour
 let sunGuideT = 0;
 /** Whether the light dial is a light this surface shows from somewhere (not a wind, a flow, or the Ringworlds' day). */
+/** Where the light dial's light stands on a page aspX × aspY (the shorter side 1): its direction the dial's exactly,
+ *  as far out as the handle (tilt 0..100: the middle to the page's edge along that way, a little inside it). */
+export function pageSunAt(deg, tilt, aspX, aspY){
+  const a = deg*Math.PI/180, k = Math.min(1, Math.max(0, tilt)/100), dx = Math.sin(a), dy = -Math.cos(a);
+  const reach = Math.min(Math.abs(dx) > 1e-9 ? aspX/2/Math.abs(dx) : Infinity, Math.abs(dy) > 1e-9 ? aspY/2/Math.abs(dy) : Infinity)*0.92;
+  return { x: aspX/2 + dx*k*reach, y: aspY/2 + dy*k*reach };
+}
 function sunGuideKind(type){ const caps = capsFor(type) || {};
   if(type === 'ringpaint') return 'ring';
   if(type === 'landscape') return null;   // (its painted sun is the seed's: the dial lights only the paint's relief)
@@ -2577,13 +2584,14 @@ function drawSunGuide(on, linger){
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), caps = capsFor(type) || {};
   const cs = getComputedStyle(document.body), col = n => (cs.getPropertyValue(n) || '').trim();
   const main = col('--accent') || '#E7A0B8', rimC = col('--accent-2') || '#9FD0E8';
-  // a light's place on the page: the Painted Ringworld's sun through its camera; else the dial stretched onto the page
-  // (its rim at the corners, as dialSquare has it), turned against a camera that turns the ground
+  // a light's place on the page: the Painted Ringworld's sun through its camera; else the dial laid on the page, its middle
+  // the page's, in the dial's own direction exactly (Ruby: "light guide seems off": stretched to a tall page it stood
+  // nearer upright than the dial), as far out as the dial's handle is, its rim at the page's edge along that way; turned
+  // against a camera that turns the ground
   const turn = caps.camera && caps.camera.guide === 'plane' ? c.turn : 0;
   const placeOf = (deg, tilt) => {
     if(kind === 'ring'){ const p = ringSunGuide(aspX, aspY, ringGuideOf('ring', type, c), deg, tilt/100); return p ? { x: p.x, y: p.y, up: p.up } : null; }
-    const a = (deg - turn)*Math.PI/180, k = Math.min(1, Math.max(0, tilt)/100), dx = Math.sin(a), dy = -Math.cos(a), m = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
-    return { x: aspX/2 + dx/m*k*aspX*0.46, y: aspY/2 + dy/m*k*aspY*0.46, up: true }; };
+    return { ...pageSunAt(deg - turn, tilt, aspX, aspY), up: true }; };
   const lights = [[parseFloat($('textureLight').value) || 0, parseFloat(($('textureLightTilt') || {}).value), main]];
   if(lightsReach(type)){ const R = rimNow(); if(R.on || lightPick() === 'rim') lights.push([R.deg, R.tilt, rimC]); }
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';

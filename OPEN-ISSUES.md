@@ -20,6 +20,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE PAINTED RINGWORLD'S SUN follows the dial now. Should the Painted Landscape's sun follow it too (it is the seed's
   now, with its time of day)? The 3D Ringworld's star stays at the ring's middle, as a real ringworld's does: right?
 
+- RING IN THE SKY WITH DEPTH (sheets sent: before and after, four views): a solid band, land inside between rim walls,
+  the hull across the near side, a gentle perspective. Not shipped until Ruby says yes.
+- THE LIGHT GUIDE on Crystal "seems off": its direction is now the dial's exactly on a tall page. Was that it, or that
+  Crystal's facets don't look lit from where the sun is (then the guide should skip Crystal)?
+
 ## 2 · Ruby's notes to act on
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble

@@ -150,6 +150,15 @@ check('a preset turns the lower surface off (it never leaks from one look to the
   load({ ...base, texture: true, textureType: 'hatch', baseToggle: false, locks: [] });
   check('a surface the page\'s lights do not reach shows the dial alone (no Main / Rim, no Ambient slider)', !reg['lightRow'].classList.contains('has-rig')); }
 
+// THE SUN GUIDE on a lit surface (Ruby: "light guide seems off"): the light stands on the page in the dial's own direction,
+// as far out as the handle, even on a tall page (stretched to one, it stood nearer upright than the dial)
+{ const { pageSunAt } = await import('../appEvents.js'), aspX = 1, aspY = 1080/608;
+  const dirOf = p => (Math.atan2(p.x - aspX/2, -(p.y - aspY/2))*180/Math.PI + 360) % 360;
+  const at = deg => pageSunAt(deg, 57, aspX, aspY), mid = pageSunAt(200, 0, aspX, aspY), rim = pageSunAt(90, 100, aspX, aspY);
+  check('the page\'s sun guide points the way the dial does, on a tall page too (327°, 45°, 200°)', [327, 45, 200].every(d => Math.abs(dirOf(at(d)) - d) < 0.5));
+  check('…overhead at the middle, near the page\'s edge at the dial\'s rim, and further out as the handle goes out',
+    Math.abs(mid.x - 0.5) < 1e-9 && Math.abs(mid.y - aspY/2) < 1e-9 && rim.x > 0.94 && rim.x < 1 && pageSunAt(327, 30, aspX, aspY).y > at(327).y); }
+
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

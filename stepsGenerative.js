@@ -1632,6 +1632,26 @@ export function ringSunGuide(aspX, aspY, ring, deg, reach){
   if(q <= 0.12) return null;
   return { x: cx + 2*F*(D[0]*L.rx + D[1]*L.ry + D[2]*L.rz)/q, y: cy - 2*F*(D[0]*L.ux + D[1]*L.uy + D[2]*L.uz)/q, up: reach == null || reach <= 1 };
 }
+/**
+ * RING IN THE SKY's ring as a solid (Ruby: "some depth… at the moment it's a flat disc"), shared by its painter
+ * (stepsWhimsy paintRingSky) and the camera's wireframe guide: a band round its star, its land on the inside, a rim
+ * wall standing in from each edge (Dw deep), seen from Dc ring-radii away in a gentle perspective, so the near arc is
+ * nearer and larger than the far. w, h: the picture (any units); o: { width 0..1, tilt (the eye's height above the
+ * ring's plane, degrees), turn (degrees), size, centre (the star's height, 0..1 of h) }.
+ * P(t, r, z): the page point at angle t round the ring (its far side where sin t < 0), r in ring-radii, z across the
+ * band (-1 its lower edge, 1 its upper). depthAt(t, r, z): larger is nearer the eye (0 the star's). faceSeen(n, t, r, z):
+ * whether a face of normal n (the world's: x across, y away from the eye's side, z along the ring's axis) there faces the eye.
+ */
+export function skyRingFrame(w, h, o){
+  const phi = o.tilt*Math.PI/180, sp = Math.sin(phi), cp = Math.cos(phi), cx = w*0.5, cy = h*o.centre, A = Math.sqrt(w*h)*0.56*o.size;
+  const bw = 0.03 + 0.26*o.width, Hw = bw*0.72, Dw = Math.max(0.014, bw*0.3), Dc = 5, rot = o.turn*Math.PI/180, cr = Math.cos(rot), sr = Math.sin(rot);
+  const W = (t, r, z) => [r*Math.cos(t), -r*Math.sin(t), z*Hw];
+  const depthAt = (t, r, z) => { const p = W(t, r, z); return -p[1]*cp + p[2]*sp; };
+  const P = (t, r, z) => { const [X, Y, Z] = W(t, r, z), up = Z*cp + Y*sp, f = Dc/(Dc - (-Y*cp + Z*sp)), ex = X*A*f, ey = -up*A*f;
+    return [cx + ex*cr - ey*sr, cy + ex*sr + ey*cr]; };
+  const faceSeen = (n, t, r, z) => { const p = W(t, r, z); return n[0]*(0 - p[0]) + n[1]*(-Dc*cp - p[1]) + n[2]*(Dc*sp - p[2]) > 0; };
+  return { P, depthAt, faceSeen, A, Hw, Dw, cx, cy, cp, sp, cr, sr };
+}
 export function cameraGuide(kind, aspX, aspY, cam, ring){
   const lines = [];
   if(kind === 'plane'){
@@ -1658,11 +1678,14 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
     return lines;
   }
   if(kind === 'ellipse'){
-    // (the Painted Ringworld's ring, as Ring in the Sky draws it from the dial: Turn spins it, View opens it, Zoom sizes it)
-    const size = (63 + Math.max(0, Math.min(1, (cam.zoom - 25)/375))*187)/100, tilt = 2 + Math.max(0, Math.min(100, cam.view))*0.88, rot = cam.turn*Math.PI/180;
-    const phi = tilt*Math.PI/180, cx = aspX/2, cy = aspY*(ring && ring.centre != null ? ring.centre : 0.45), A = Math.sqrt(aspX*aspY)*0.56*size, B = A*Math.max(0.035, Math.sin(phi)), bw = 0.147, vb = bw*A*Math.cos(phi)*0.55, cr = Math.cos(rot), sr = Math.sin(rot);
-    const P = (t, z) => { const k = 1 - z*bw, ex = Math.cos(t)*A*k, ey = Math.sin(t)*(B*k - z*vb); return [cx + ex*cr - ey*sr, cy + ex*sr + ey*cr]; };
-    for(const z of [0, 1]) for(const far of [true, false]) lines.push({ pts: Array.from({ length: 91 }, (_, i) => P((far ? Math.PI : 0) + i/90*Math.PI, z)), bold: far });
+    // (Ring in the Sky's ring, as it is drawn from the dial: Turn spins it, View raises the eye, Zoom sizes it; the
+    //  band's two edges and its walls' inner edges, the far half bold)
+    const size = (63 + Math.max(0, Math.min(1, (cam.zoom - 25)/375))*187)/100, tilt = 2 + Math.max(0, Math.min(100, cam.view))*0.88;
+    const F = skyRingFrame(aspX, aspY, { width: 0.45, tilt, turn: cam.turn, size, centre: ring && ring.centre != null ? ring.centre : 0.45 });
+    for(const [r, z] of [[1, 1], [1, -1], [1 - F.Dw, 1], [1 - F.Dw, -1]]) for(const far of [true, false])
+      lines.push({ pts: Array.from({ length: 91 }, (_, i) => F.P((far ? Math.PI : 0) + i/90*Math.PI, r, z)), bold: far && r === 1 });
+    for(let k = 0; k < 12; k++){ const t = k/12*Math.PI*2; lines.push({ pts: [F.P(t, 1, -1), F.P(t, 1, 1)], bold: false }); }
+    const [cx, cy] = [F.cx, F.cy];
     lines.push({ pts: [[cx - 0.03, cy], [cx + 0.03, cy]], bold: true }, { pts: [[cx, cy - 0.03], [cx, cy + 0.03]], bold: true });
     return lines;
   }

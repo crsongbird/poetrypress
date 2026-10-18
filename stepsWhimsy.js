@@ -28,6 +28,7 @@
  */
 import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh } from './texWhimsy.js';
+import { skyRingFrame } from './stepsGenerative.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
@@ -771,8 +772,8 @@ const whimHex = v => '#' + v.slice(0, 3).map(c => Math.max(0, Math.min(255, Math
 // of shapes then painted in the foreground and blend it … abstract, painterly, geometric, and blended representations";
 // the 3D one "looks kind of bad" rendered) ----------------
 // Two scene parts, each a stack of flat shapes laid as a painter blocks in a canvas before the brush goes over it: the
-// RING IN THE SKY (an ellipse of land and sea round its star, the far arc lit, the near arc its dark underside, the air
-// rising at the horizon), and the LAND OF SHAPES (faceted ridges band behind band, hazier as they go back, with spires,
+// RING IN THE SKY (a solid band round its star: land and sea on its inside between two rim walls, its hull across the
+// near side, the air rising at the horizon), and the LAND OF SHAPES (faceted ridges band behind band, hazier as they go back, with spires,
 // arches, monoliths and crystals on them and trees on the near hills). Oil Paint's brushes paint them.
 export const rsMix = (a, b, t) => a.map((v, i) => v + (b[i] - v)*t);
 export const rsCss = (c, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`;
@@ -854,41 +855,57 @@ function paintRingSky(x, mk, w, h, o){
   // THE AIR: the sky's hue rising from the horizon, held in by the ring's walls
   const hz = x.createLinearGradient(0, h*0.3, 0, h); hz.addColorStop(0, rsCss(S, 0)); hz.addColorStop(0.55, rsCss(S, 0.32*o.haze)); hz.addColorStop(1, rsCss(rsMix(S, [255, 255, 255], 0.4), 0.9*o.haze));
   x.fillStyle = hz; x.fillRect(0, 0, w, h); x.restore();
-  // THE RING round its star (Turn spins it, View opens it, Zoom sizes it). Its band is drawn as an annulus opened by
-  // the view and a ribbon closed by it, so it keeps its width from edge-on to face-on; cut in short blocks, three across
-  const phi = o.tilt*Math.PI/180, sphi = Math.max(0.035, Math.sin(phi)), cx = w*0.5, cy = h*o.centre, A = Math.sqrt(w*h)*0.56*o.size, B = A*sphi;
-  const bw = 0.03 + 0.26*o.width, vb = bw*A*Math.cos(phi)*0.55, rot = o.turn*Math.PI/180, cr = Math.cos(rot), sr = Math.sin(rot);
-  const P = (t, z) => { const k = 1 - z*bw, s = Math.sin(t), ex = Math.cos(t)*A*k, ey = s*(B*k - z*vb); return [cx + ex*cr - ey*sr, cy + ex*sr + ey*cr]; };
+  // THE RING round its star, as a solid (Ruby: "some depth… at the moment it's a flat disc"): a band whose land faces
+  // in to the star, its hull outside, a rim wall standing in from each edge to hold the air, seen in a gentle perspective
+  // (skyRingFrame: Turn spins it, View raises the eye above its plane, Zoom sizes it). Cut in short blocks, three lanes
+  // across the land; every face is laid farthest first, the star at the ring's middle between the far faces and the near
+  const F = skyRingFrame(w, h, o), { P, faceSeen, depthAt, A, cx, cy, Dw } = F;
   const s1 = R()*10, s2 = R()*10, s3 = R()*10, s4 = R()*10, nsq = 6 + Math.floor(R()*8), sq0 = R();
   const nz = (t, f, s) => { let v = 0, amp = 1, nm = 0; for(let k = 0; k < 3; k++){ v += amp*Math.sin(t*f*(k + 1)*1.31 + s*(k + 1)*2.3 + Math.sin(t*f*0.7 + s)*1.6); nm += amp; amp *= 0.5; } return v/nm; };
   // night where a shadow square stands between the star and the land, its edges a short dusk
   const nightOf = t => { const ph = ((t/(Math.PI*2))*nsq + sq0) % 1; return ph < 0.34 ? rsSmooth(0, 0.045, Math.min(ph, 0.34 - ph)) : 0; };
-  const N = 200, LANES = 3, step = Math.PI*2/N, isFar = i => Math.sin((i + 0.5)*step) < 0;
-  const block = (i, far) => { const t0 = i*step, t1 = (i + 1)*step + step*0.08, tm = (t0 + t1)/2;
-    for(let j = 0; j < LANES; j++){ const z0 = j/LANES, z1 = (j + 1)/LANES + (j < LANES - 1 ? 0.02 : 0), zm = (z0 + z1)/2, q = [P(t0, z0), P(t1, z0), P(t1, z1), P(t0, z1)];
-      let col;
-      if(far){ const v = nz(tm, 2.2, s1) + 0.2*nz(tm*3 + zm*0.9, 5, s2), dry = nz(tm*1.4 + zm*0.4, 3, s3), nf = nightOf(tm);
-        col = v < -0.1 ? rsMix(SEA, [255, 255, 255], 0.1*Math.max(0, v + 0.35)) : dry > 0.45 ? SAND : v > 0.5 ? FOREST : rsMix(Lh, FOREST, 0.25 + 0.3*nz(tm, 9, s4));
-        // the inner face is always lit by its star; the far reach of it hazed with the ring's own air
-        // (its clouds as blocks of white: Ruby, "that simplified, but cosmic")
-        const cl = nz(tm*1.6 + zm*0.5, 6, s4 + 1); if(cl > 0.4) col = rsMix(col, CLOUD, Math.min(0.75, (cl - 0.4)*4));
-        col = rsMix(rsMix(col, [255, 255, 255], 0.1), S, 0.16*o.haze);
-        if(nf > 0) col = rsMix(col, NIGHT, 0.86*nf); }
-      else { const nx = Math.cos(tm), ny = Math.sin(tm), d = nx*L[0] + ny*L[1];
-        col = rsMix(METAL, j === 1 ? [0, 0, 0] : [255, 255, 255], j === 1 ? 0.12 : 0.04); col = rsMix(col, d > 0 ? [235, 238, 248] : [0, 0, 0], Math.abs(d)*0.22);
-        if(i % 5 === 0) col = rsMix(col, [0, 0, 0], 0.2); }
-      rsPoly(x, q, rsCss(col)); rsPoly(mk, q, '#fff'); }
+  const N = 200, LANES = 3, step = Math.PI*2/N, ov = step*0.08, WALL = rsMix(METAL, [255, 255, 255], 0.3), LIP = rsMix(METAL, S, 0.25);
+  // the land at (t, lane z): sea, sand, forest or meadow, clouds as blocks of white (Ruby, "that simplified, but cosmic"),
+  // always lit by its star but where a shadow square's night falls; hazed with the ring's own air, darker by the walls
+  const landAt = (tm, zm) => { const v = nz(tm, 2.2, s1) + 0.2*nz(tm*3 + zm*0.9, 5, s2), dry = nz(tm*1.4 + zm*0.4, 3, s3), nf = nightOf(tm);
+    let col = v < -0.1 ? rsMix(SEA, [255, 255, 255], 0.1*Math.max(0, v + 0.35)) : dry > 0.45 ? SAND : v > 0.5 ? FOREST : rsMix(Lh, FOREST, 0.25 + 0.3*nz(tm, 9, s4));
+    const cl = nz(tm*1.6 + zm*0.5, 6, s4 + 1); if(cl > 0.4) col = rsMix(col, CLOUD, Math.min(0.75, (cl - 0.4)*4));
+    col = rsMix(rsMix(col, [255, 255, 255], 0.1), S, 0.16*o.haze);
+    col = rsMix(col, [0, 0, 0], 0.12*Math.pow(Math.abs(zm*2 - 1), 3));
+    return nf > 0 ? rsMix(col, NIGHT, 0.86*nf) : col; };
+  // the hull and the walls' faces, metal lit by the dial's light from where it falls on them (n: the face's way on the page)
+  const litMetal = (base, n, k) => { const d = n[0]*L[0] + n[1]*L[1]; return rsMix(base, d > 0 ? [235, 238, 248] : [0, 0, 0], Math.min(1, Math.abs(d))*k); };
+  const faces = [];
+  for(let i = 0; i < N; i++){
+    const t0 = i*step, t1 = (i + 1)*step + ov, tm = (t0 + t1)/2, seam = i % 5 === 0, ct = Math.cos(tm), st = Math.sin(tm);
+    // the band: its land where its inside faces the eye, else its hull (three lanes across, either way)
+    const inside = faceSeen([-ct, st, 0], tm, 1, 0);
+    for(let j = 0; j < LANES; j++){ const z0 = -1 + 2*j/LANES, z1 = -1 + 2*(j + 1)/LANES + (j < LANES - 1 ? 0.04 : 0), zm = (j + 0.5)/LANES;
+      const q = [P(t0, 1, z0), P(t1, 1, z0), P(t1, 1, z1), P(t0, 1, z1)], d = depthAt(tm, 1, (z0 + z1)/2);
+      if(inside) faces.push({ d, q, col: landAt(tm, zm), land: tm });
+      else { let col = rsMix(METAL, j === 1 ? [0, 0, 0] : [255, 255, 255], j === 1 ? 0.12 : 0.04); col = litMetal(col, [ct, st], 0.22); if(seam) col = rsMix(col, [0, 0, 0], 0.2);
+        faces.push({ d, q, col }); } }
+    // the rim walls: each a shelf standing in from an edge, seen from the side it shows (its top above, the face to the land below)
+    for(const z of [1, -1]){ const up = faceSeen([0, 0, 1], tm, 1 - Dw/2, z), q = [P(t0, 1, z), P(t1, 1, z), P(t1, 1 - Dw, z), P(t0, 1 - Dw, z)];
+      if(!up && !faceSeen([0, 0, -1], tm, 1 - Dw/2, z)) continue;
+      let col = z > 0 === up ? litMetal(WALL, [0, -1], 0.3) : rsMix(LIP, [0, 0, 0], 0.18);
+      if(seam) col = rsMix(col, [0, 0, 0], 0.16);
+      faces.push({ d: depthAt(tm, 1 - Dw/2, z), q, col, edge: z > 0 && up ? [P(t0, 1, z), P(t1, 1, z)] : null }); }
+  }
+  faces.sort((p, q) => p.d - q.d);
+  const lay = f => { rsPoly(x, f.q, rsCss(f.col)); rsPoly(mk, f.q, '#fff');
+    // the wall's top catching the light along its outer edge
+    if(f.edge){ x.strokeStyle = rsCss(rsMix([232, 238, 250], S, 0.2), 0.7); x.lineWidth = px(1.6); x.beginPath(); x.moveTo(...f.edge[0]); x.lineTo(...f.edge[1]); x.stroke(); }
     // the night side's cities: warm sparks on its land
-    if(far && nightOf(tm) > 0.5 && nz(tm, 3, s1) > -0.1) for(let k = 0; k < 3; k++){ if(R() > 0.55) continue; const [X, Y] = P(t0 + (t1 - t0)*R(), 0.15 + 0.7*R());
+    if(f.land != null && nightOf(f.land) > 0.5 && nz(f.land, 3, s1) > -0.1 && R() < 0.45){ const u = R(), v = R(), [a0, a1, a2, a3] = f.q;
+      const X = (a0[0]*(1 - u) + a1[0]*u)*(1 - v) + (a3[0]*(1 - u) + a2[0]*u)*v, Y = (a0[1]*(1 - u) + a1[1]*u)*(1 - v) + (a3[1]*(1 - u) + a2[1]*u)*v;
       x.fillStyle = 'rgba(255,214,150,0.9)'; x.fillRect(X, Y, px(2.4), px(2.4)); } };
-  for(let i = 0; i < N; i++) if(isFar(i)) block(i, true);
-  // its rims catching the light, and the light it sheds into the air about it
-  const farArc = z => { x.beginPath(); for(let i = 0; i <= N/2; i++){ const [X, Y] = P(Math.PI + i*step, z); i ? x.lineTo(X, Y) : x.moveTo(X, Y); } };
+  let k = 0;
+  for(; k < faces.length && faces[k].d < 0; k++) lay(faces[k]);
   // the air it holds, lit about its far arc
-  x.save(); x.globalCompositeOperation = 'screen'; x.lineWidth = bw*A*2.2; x.strokeStyle = rsCss(rsMix(S, [255, 255, 255], 0.3), 0.05*(0.5 + o.haze)); farArc(0.5); x.stroke(); x.restore();
-  x.lineWidth = px(2.6); x.strokeStyle = rsCss(rsMix([232, 238, 250], S, 0.2), 0.8);
-  for(const z of [0, 1]){ farArc(z); x.stroke(); }
-  // THE STAR at its middle: its glow, its long thin rays, its disc; the shadow squares circling close about it
+  x.save(); x.globalCompositeOperation = 'screen'; x.lineWidth = F.Hw*2*A*Math.max(0.3, F.cp)*1.6; x.strokeStyle = rsCss(rsMix(S, [255, 255, 255], 0.3), 0.05*(0.5 + o.haze));
+  x.beginPath(); for(let i = 0; i <= N/2; i++){ const [X, Y] = P(Math.PI + i*step, 1 - Dw, 0); i ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke(); x.restore();
+  // THE STAR at its middle: its glow, its long thin rays, its disc; the shadow squares circling close about it, in the ring's plane
   const rs = unit*0.022*Math.sqrt(o.size);
   x.save(); x.globalCompositeOperation = 'screen';
   for(const [r, a] of [[rs*16, 0.35], [rs*6, 0.6]]){ const gl = x.createRadialGradient(cx, cy, 0, cx, cy, r); gl.addColorStop(0, rsCss(SC, a)); gl.addColorStop(0.2, rsCss(SC, a*0.35)); gl.addColorStop(1, rsCss(SC, 0)); x.fillStyle = gl; x.fillRect(cx - r, cy - r, r*2, r*2); }
@@ -896,13 +913,11 @@ function paintRingSky(x, mk, w, h, o){
     rsPoly(x, [[cx + Math.cos(a + Math.PI/2)*wd, cy + Math.sin(a + Math.PI/2)*wd], [cx + Math.cos(a)*Lr, cy + Math.sin(a)*Lr], [cx - Math.cos(a + Math.PI/2)*wd, cy - Math.sin(a + Math.PI/2)*wd]], rsCss(SC, 0.4)); }
   x.restore();
   x.fillStyle = rsCss(SC); x.beginPath(); x.arc(cx, cy, rs, 0, Math.PI*2); x.fill();
-  for(let k = 0; k < nsq; k++){ const t = (k/nsq + sq0)*Math.PI*2, ex = Math.cos(t)*A*0.2, ey = Math.sin(t)*B*0.2, X = cx + ex*cr - ey*sr, Y = cy + ex*sr + ey*cr;
+  for(let k = 0; k < nsq; k++){ const t = (k/nsq + sq0)*Math.PI*2, [X, Y] = P(t, 0.2, 0);
     const a = Math.atan2(Y - cy, X - cx) + Math.PI/2, Ls = rs*1.5, Wd = rs*0.4, ca = Math.cos(a), sa = Math.sin(a);
     rsPoly(x, [[X - ca*Ls, Y - sa*Ls], [X + ca*Ls, Y + sa*Ls], [X + ca*Ls - sa*Wd, Y + sa*Ls + ca*Wd], [X - ca*Ls - sa*Wd, Y - sa*Ls + ca*Wd]], rsCss(NIGHT, 0.92)); }
-  // the near arc, in front of the star: the band's underside, its panels, its lower rim lit
-  for(let i = 0; i < N; i++) if(!isFar(i)) block(i, false);
-  x.lineWidth = px(1.8); x.strokeStyle = rsCss(rsMix(METAL, [255, 255, 255], 0.4), 0.65);
-  x.beginPath(); for(let i = 0; i <= N/2; i++){ const [X, Y] = P(i*step, 0); i ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke();
+  // the near faces, in front of the star
+  for(; k < faces.length; k++) lay(faces[k]);
 }
 function paintShapeLand(x, mk, dk, w, h, o){
   const R = o.rnd, unit = Math.min(w, h), px = o.px, la = (o.light - 90)*Math.PI/180, L = [Math.cos(la), Math.sin(la)], Lh = o.land, HZ = o.haze3, SUN = [255, 244, 222], BLACK = [0, 0, 0];

@@ -393,7 +393,7 @@ export const STEP_DOCS = {
   burn: 'Burns a gray map into a picture: charred into wood, glowing embers, or etched into acrylic.',
   growline: 'A line that ruffles and folds as it grows, like lettuce or coral (differential growth).',
   starfield: 'Stars over the input (or on black), each colored by its temperature; the brightest get spikes.',
-  ringsky: 'A ring round its star seen from out in space, painted in flat blocks: its far arc lit land, sea and cloud, its near arc the dark underside across the star.',
+  ringsky: 'A ringworld seen from out in space, painted in flat blocks: a band round its star, its land on the inside facing the star, a rim wall at each edge, its hull across the near side.',
   shapeland: 'Land made of flat shapes: faceted ridges band behind band, the far ones hazy, with builders’ spires, gates, standing rings and crystals on them and trees on the near hills.',
   ringarch: 'The sky over a ringworld’s floor, painted in flat shapes: space and the star, its shadow squares, and the ring’s far floor rising into the arch overhead between its rim walls.',
   ringland: 'The floor of a ringworld you stand on, painted in flat shapes: ridge behind ridge from the walls’ feet to your own, with what grows, lives and stands on it.',

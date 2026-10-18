@@ -96,10 +96,10 @@ const ORDER = [
   'cartomancyTable.js',   // what else is on the table (candle, cup, letter…) and what has happened to the cards
   'cartomancy.js',        // a card game on a table: its parts (table, cards, coins, the deal) and the texture
   'stepsTouch.js',        // steps for 🜚 surfaces: weave, cloth (Linen); panes, glass; flakes; pours; the older Touch textures as whole parts
+  'stepsGenerative.js',   // parts that grow: Discharge (Lichtenberg), Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces; Ring in the Sky's frame (before stepsWhimsy, which draws with it)
   'stepsWhimsy.js',       // steps for ♡ surfaces: smoke, light shaft, motes; painted sky, ridges, wash; Silk Ribbons, Dream Bloom, Fractal Moon
   'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze); sigils, blots, facets, the black hole, the transmutation circle
   'stepsLight.js',        // the engine's own parts: Light Engine, Oil Paint, Canvas Weave, Paint Swipes
-  'stepsGenerative.js',   // parts that grow: Discharge (Lichtenberg), Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces
   'stepsRing.js',         // the Painted Ringworld's parts: The Arch, Land on the Ring
   'stepsPatterns.js',     // general parts, second shelf: Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh, Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum, HSB and Lab, Median, Map Switch, Flip, Perspective
   'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain, Guilloché; Night City, Lotus Pond
@@ -169,7 +169,7 @@ if (!html.includes(js)) throw new Error('the bundle was not inlined verbatim');
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsGenerative.js', 'stepsRing.js', 'stepsPatterns.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsPatterns.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');
