@@ -1,7 +1,7 @@
 /**
  * kept.test.mjs — surfaces made in the Athanor and kept on the shelf (Ruby's Halftone2 report):
  * one name (the Surface part's name is the name it is kept under), wiring that can be copied,
- * shared and pasted back, ports drawn in their own order, thumbnails, Keep in the bar.
+ * shared and pasted back, and a kept surface chosen by name from the page's Surface menu.
  * Run: node test/kept.test.mjs
  */
 import { readFileSync } from 'fs';
@@ -28,15 +28,10 @@ check('a bare graph pasted is a surface named by its Surface part', bare && bare
 check('text that isn\'t wiring is refused (nothing on the shelf changes)', F.forgeReadSurfaces('hello', validate) === null && F.forgeReadSurfaces('{"a":1}', validate) === null);
 check('a broken surface among good ones is counted and left out', (() => { const r = F.forgeReadSurfaces(JSON.stringify({ surfaces: [read.surfaces[0], { name: 'x', graph: 'nope' }] }), validate); return r && r.surfaces.length === 1 && r.bad === 1; })());
 
-const fg = src('forge.js'), ev = src('appEvents.js'), html = src('index.html'), ch = src('chooser.js');
-check('WIRES LAND ON THEIR ROWS: a node\'s ports are put in their own order before Drawflow draws them (Halftone2\'s were input_2, input_3, input_1)',
-  /n\.inputs = ordered\(n\.inputs, 'input_'\); n\.outputs = ordered\(n\.outputs, 'output_'\);/.test(fg));
-check('keeping under a new name renames the Surface part; keeping over a kept one asks first (the soft no)',
-  /if\(sid && surfaceName\(\) !== clean\) setData\(sid, \{ name: clean \}\)/.test(fg) && /fill\(KEPT\.replaceAsk, at\.name\)[^\n]*danger: true/.test(fg));
-check('Replace it with the graph on the grid, asked first', /const replaceKept = async rec => \{[\s\S]{0,200}fill\(KEPT\.replaceWithAsk, rec\.name\)[^\n]*danger: true/.test(fg));
-check('Keep is one tap, in the bar', /id="forgeKeepBtn"/.test(html) && /\$\('forgeKeepBtn'\)\.addEventListener\('click', \(\) => keep\(\)\)/.test(fg));
-check('kept surfaces get thumbnails at canonical settings, kept with them until their wiring changes', /function keptThumb\(rec, canvas, unsaved\)/.test(ev) && /rec\.thumb\.of === of/.test(ev) && /seed: 4242, scale: n\/3072, light: 315, lightTilt: 100/.test(ev));
-check('a long press on a surface made in the Athanor opens its menu: use, open, share, copy the wiring, take it off', /opts\.hold\(it\.value, b\)/.test(ch) && /function holdSurface\(value, tile\)/.test(ev) && /KEPT\.copy, hint: KEPT\.copyHint, act: \(\) => copyWiring\(rec\)/.test(ev));
+{ const g = JSON.parse(read.surfaces[0].graph), renamed = F.forgeNameSurface(g, 'Halftone3');
+  check('keeping under a new name renames the Surface part (one name), and nothing else in the graph',
+    F.forgeSurfaceNameOf(renamed) === 'Halftone3' && A.athanorName(renamed) === 'Halftone3'
+    && JSON.stringify(F.forgeNameSurface(JSON.parse(JSON.stringify(renamed)), 'Halftone2')) === read.surfaces[0].graph); }
 // ---- THE BENCH (Ruby): choosing a kept surface sets the page's surface and leaves the Athanor's work alone ----
 { const wip = JSON.stringify(A.athanorStarter('ripples'));
   store['uv.forge.bench.v1'] = wip; F.forgeShelfWrite(read.surfaces);

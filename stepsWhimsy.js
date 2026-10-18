@@ -1029,10 +1029,11 @@ export const WHIMSY_STEPS = {
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
       const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
       const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0);
-      // (Ruby's favorite planet, very rarely among the stars, about one sky in twenty-five: a small Saturn, an Easter egg;
-      //  from a stream of its own, so every other sky is as it was)
-      const eg = seedChoice(seed, 'starfield saturn');
-      if(eg() < 0.04){ const r = Math.min(w, h)*(0.012 + 0.012*eg()); paintSaturn(x, w*(0.1 + 0.8*eg()), h*(0.08 + 0.4*eg()), r, { axis: (eg() - 0.5)*0.8, open: (eg() < 0.5 ? -1 : 1)*(0.25 + 0.2*eg()), sun: [eg() - 0.5, -0.5], alpha: 0.85 }); }
+      // (Ruby's favorite planet, very rarely among the stars, about one sky in thirty-six: a small Saturn, an Easter egg;
+      //  from a stream of its own, so every other sky is as it was. Seen through an atmosphere (an Earth sky, the
+      //  aurora's) it is what it would be there, Ruby: "much dimmer and fainter": a faint warm point, its rings a hint)
+      const eg = seedChoice(seed, 'starfield saturn'), air = rsSmooth(0.12, 0.3, E.num(n, 'atmosphere', 20)/100);
+      if(eg() < 0.04){ const r = Math.min(w, h)*(0.012 + 0.012*eg())*(1 - 0.9*air); paintSaturn(x, w*(0.1 + 0.8*eg()), h*(0.08 + 0.4*eg()), r, { axis: (eg() - 0.5)*0.8, open: (eg() < 0.5 ? -1 : 1)*(0.25 + 0.2*eg()), sun: [eg() - 0.5, -0.5], alpha: 0.85 - 0.65*air }); }
       return [pc]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   curtains: { cat: 'Marks', label: 'Aurora Curtains', ins: ['over', 'field from'], outs: ['image'], io: { ins: ['image', 'value'], outs: ['image'] },

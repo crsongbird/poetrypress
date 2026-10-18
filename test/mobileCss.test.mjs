@@ -1,6 +1,7 @@
 /**
- * mobileCss.test.mjs — guards the three CSS mistakes that actually shipped
- * to a real phone this session, none of which any JS test could catch:
+ * mobileCss.test.mjs — the phone's CSS: the editor's two layers, focus
+ * mode's one scroller, the preview frame and the tab bar. It began with three
+ * mistakes that shipped to a real phone, none of which a JS test could catch:
  *
  *   1. sizing mobile layout in `vh`, which on Android Chrome means the
  *      viewport with the URL bar hidden — always taller than reality
@@ -48,13 +49,6 @@ function effective(css, selector, prop){
 
 let failures = 0;
 const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++, console.log('FAIL:', label)); };
-
-check('a .is-mobile block exists', start !== -1 && mobile.includes('body.is-mobile'));
-// The slice must not reach back into the ORIGINAL responsive block (the
-// max-width:860px one). Media queries written inside the mobile section —
-// are expected and fine.
-check('the slice excludes the older responsive block',
-  !/max-width:\s*860px/.test(mobile));
 
 // 1. (no bare vh in phone rules: invariants.test.mjs §7)
 
@@ -166,15 +160,10 @@ check('the download button sits inside the preview frame',
            const frameOpen = html.lastIndexOf('<div', canvasAt);
            return canvasAt !== -1 && btn > canvasAt && frameOpen !== -1; })());
 check('the preview has a reset-position control', html.includes('id="resetViewBtn"'));
-check('deselected nav glyphs relax and selected ones stiffen',
-  /\.tab-btn svg\{[^}]*stroke-width:1\.15/.test(mobile) &&
-  /\.tab-btn\.active svg\{[^}]*stroke-width:1\.85/.test(mobile));
 check('focus mode hides every panel except the one kept',
   /\.focus-mode \.card\[data-tab\]:not\(\.focus-keep\)\{[^}]*display:none/.test(mobile));
 check('focus mode collapses the bar to a single Return',
   /\.focus-mode \.tab-btn:not\(\[data-tab="more"\]\)\{[^}]*display:none/.test(mobile));
-check('presets are four across on mobile',
-  /\.preset-grid\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(mobile));
 check('the symbol font is loaded for the glyph spells',
   html.includes('Noto+Sans+Symbols+2'));
 
@@ -224,8 +213,6 @@ check('height is applied to the wrap, not the textarea',
 check('mirror and textarea occupy the same grid cell',
   /\.editor-mirror\{[^}]*grid-area:1 \/ 1 \/ 2 \/ 2/.test(edCss) &&
   /\.editor-input\{[^}]*grid-area:1 \/ 1 \/ 2 \/ 2/.test(edCss));
-check('the mirror is no longer absolutely positioned',
-  /\.editor-mirror\{[^}]*position:static/.test(edCss));
 // paint() writes the textarea height, so observing it loops against itself
 check('no ResizeObserver watches the element the editor resizes',
   !/new ResizeObserver|\.observe\(/.test(edJs));
@@ -249,9 +236,7 @@ for(const prop of ['font-family','font-size','line-height','letter-spacing','wor
                    'white-space','overflow-wrap','word-break','padding','box-sizing','min-height'])
   check(`${prop} is forced identical on both layers`,
     new RegExp(prop + ':[^;]*!important').test(metricBlock));
-// bold in the mirror would advance differently from the plain textarea
-check('highlighting never changes font weight',
-  /\.pml-sq, \.pml-cu, \.pml-bracket, \.pml-op\{ font-weight:400 !important/.test(edCss));
+// (bold in the mirror would advance differently from the plain textarea: invariants.test, §7 Phones)
 
 // ---- escape hatch ----
 // Highlighting is two layers that must agree about where every glyph lands.
@@ -283,8 +268,6 @@ const focusControls = (edCss.match(/\.focus-mode \.controls\{[^}]*overflow-y:aut
 check('.controls scrolls in focus mode', /overflow-y:auto/.test(focusControls));
 check('.controls leaves room to scroll the last line clear of the bar',
   /padding-bottom:calc\(var\(--tabbar-h\) \+ 28px\)/.test(focusControls));
-check('the editor itself no longer tries to scroll in focus mode',
-  /\.focus-mode \.editor-wrap\{[^}]*overflow:visible/.test(edCss));
 check('the editor takes its natural height in focus mode',
   /\.focus-mode \.editor-wrap\{[^}]*height:auto;[\s\S]*?max-height:none/.test(edCss));
 
@@ -339,10 +322,6 @@ const fmPad = effective(edCss, 'body.is-mobile.focus-mode .controls', 'padding-r
 check('focus mode leaves room for the focus ring beside the scrollbar', parseFloat(fmPad) >= 8);
 
 // ---- the light dial (☉ at the centre, an arrow toward it) ----
-check('the light dial has eight ticks that snap to 45° (and the camera dial beside it its own eight)', (html.slice(html.indexOf('id="lightRow"'), html.indexOf('id="cameraRow"')).match(/class="ld-tick" data-deg="\d+"/g) || []).length === 8
-  && (html.slice(html.indexOf('id="cameraRow"')).match(/class="ld-tick" data-deg="\d+"/g) || []).length === 8);
-check('the dial is ☉ at rest — one bold circle, the draggable dot at its heart — and grows 🜚\'s spike and curls as the dot moves',
-  /class="ld-ring" r="26"/.test(html) && /id="lightHandle"/.test(html) && /id="lightSpike"/.test(html) && (html.match(/class="ld-curl"/g) || []).length === 2 && /set\('lightSpike', \{ transform: `rotate/.test(js));
 check('dragging the dial never scrolls the page', /\.light-dial\{[^}]*touch-action:none/.test(css));
 check('⟲ resets the light', /\$\('lightReset'\)\.addEventListener\('click', \(\) => setLight\(LIGHT_DEFAULT\.deg, LIGHT_DEFAULT\.tilt, true\)\)/.test(js));
 

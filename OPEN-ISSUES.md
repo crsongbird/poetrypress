@@ -6,16 +6,19 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
   Band Width 45? The small life that replaced the creatures (insects, fairies, flowers, slime; sheet sent): subtle
   enough, and found often enough? SATURN (sheet sent): one ring in four orbits it, Saturn hanging huge beyond the far
   arch, now and then Enceladus beside it. The right size and how often? The 3D Ringworld stays as it was, beside it.
-- EASTER EGGS (sheet sent): a small Saturn among Starfield's stars (about one sky in thirty-six), Circuit Board stamps
-  of Saturn, Enceladus and the old stories of space (DON'T PANIC, ANSIBLE, GENERATION SHIP…) and an Enceladus picture
-  among its little pictures. Rare enough, or too rare? More to place: ROADMAP K.
+- SATURN IN THE 3D RINGWORLD (sheet sent): one ring in four orbits it, fixed in the world where the opening shot looks,
+  hazed by day. Big enough? Should it ever stand lower, half behind the arch?
+- EASTER EGGS (sheet sent): a small Saturn among Starfield's stars (about one sky in thirty-six; under Aurora's air a
+  faint point), Circuit Board stamps of Saturn, Enceladus and the old stories of space (DON'T PANIC, ANSIBLE,
+  GENERATION SHIP…) and an Enceladus picture among its little pictures. Rare enough, or too rare? More to place:
+  ROADMAP K.
 - RING IN THE SKY (sheet sent): the out-in-space ring Ruby liked, alone as a background (Paint 0). Land of Shapes
   (the land it first stood over) is an Athanor part: wired after it, the old picture.
 - SHAPE STRENGTH and the new Shape Aware surfaces (Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's
@@ -30,9 +33,6 @@ Recommendations".
 - THE CURVE CONTROL (Hand-Drawn Tones shows it): a pad under the sliders, its points dragged, added by a tap, taken
   away by a double-tap or a hold. Is it easy on the phone? Should a point get handles (ROADMAP F10, Bezier)?
 - THE ANGLE DIAL beside an Angle knob (Dot Grid's Turn), and the WIRE RANGE's two handles: clearer than before?
-- ANTI-ALIASING FOR THE MENU'S TEXTURES (ROADMAP A7; sheet sent, 6× crops): which get edges only? The candidates
-  with stair-steps it smooths: Knotwork, Contour Map, Ruffled Growth, Fractured Glaze, Stained Glass, Dewy Webs, Rain
-  on Water, Circuit Board. Each costs a little time (Stained Glass none, Knotwork ~15%).
 - THE PATTERN STARTERS: Paving Stones, Brick Wall, Pyramid Studs, Dot Grid, Techno Blocks. Do they teach the parts?
 - THE TAB CAPTIONS, the SWITCHES and the CAMERA DIAL'S ZOOM SLIDER (screenshots sent): right on the phone?
 - GROUPS IN THE ATHANOR: choosing parts by tap or by a box dragged across the grid (Shift and a drag with a mouse).
@@ -248,6 +248,13 @@ the parts → presets, last. No new or reworked presets before Stage 4. Delete i
 - Dream Bloom's convolution on the GPU (PERFORMANCE-AUDIT "Next on the GPU").
 - Split appEvents.js into modules — the tests read its source
   by regex, so they move with it.
+- THE NEXT TEST REVIEW (Saturn–Tarqeq's left these, larger rewrites): persistenceCoverage slices appEvents'
+  functions out of its source (rewrite on audit.test's save-and-load harness, every control in index.html);
+  poem.test's renderer checks (the layout record, Text Clearing) as behavior; mobileCss's phone invariants
+  into invariants.test (§7 Phones) and the rest as behavior in mobileLayout; cssReduction retired (its fallback
+  pairs to invariants, its count to hygiene); chains.test's retireLook block into audit.test's old looks;
+  colorRoles' alpha-slider check into themePalette; and hygiene's source-reading check widened to
+  textureGenerators.js and to helpers that read sources (wiki's `read`, `'../' + file`).
 
 ## 5 · Check on a phone (new)
 - Hints: ⓘ in a section's heading writes its hints out, and again hides them; Esoterica → Interface → Hints writes

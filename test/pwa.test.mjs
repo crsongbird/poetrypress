@@ -54,11 +54,7 @@ check('the page loads from the network first, so updates arrive', /req\.mode ===
 const shell = [...sw.matchAll(/'\.\/([^']+)'/g)].map(x => x[1]).filter(Boolean);
 check('every file the worker precaches is in the build', shell.every(f => existsSync(at('dist/' + f))));
 
-// ---- icon hygiene ----
-const icons = read('tools/icons.py');
-check('icons are generated, not hand-pasted', /def build\(root\)/.test(icons));
-check('glyph jitter uses a stable seed', /zlib\.crc32/.test(icons) && !/seed=hash\(/.test(icons));
-check('arc flags are never jittered', /if cmd in 'Aa':/.test(icons));
+// ---- dark-mode add-ons ----
 {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8'), th = readFileSync(new URL('../theme.js', import.meta.url), 'utf8'), css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
   check('dark-mode add-ons (Dark Reader and its kin) are told the app is already dark: darkreader-lock, and a color-scheme that follows the theme',

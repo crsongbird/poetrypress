@@ -4,6 +4,7 @@
  * Every texture is rendered at three knob settings with a fixed seed, and its
  * drawing is summarised: arc radii, path lengths and directions, pixel sums,
  * rotations, canvases created. The summary is compared with a stored one.
+ * Slow (about half a minute): it renders every texture three times.
  *
  * WHEN THIS FAILS:
  *   - after moving, renaming or tidying code: something changed behaviour.

@@ -5,6 +5,8 @@
  * time; a stand-in audio graph plays them; settings kept apart from looks.
  */
 import { readFileSync } from 'fs';
+import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
+import { installDomMock } from './domMock.mjs';
 let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
@@ -82,14 +84,22 @@ check('a design missing parts still plays (filled from the defaults)', M.normali
 const app = src('appEvents.js'), html = src('index.html');
 const used = new Set([...app.matchAll(/murmur\.play\('(\w+)'[),]/g)].map(x => x[1]).concat([...html.matchAll(/data-sound="(\w+)"/g)].map(x => x[1])));
 check('Vellum names only UI functions the design knows', [...used].every(k => ids.has(k)) && used.size >= 12);
-check('wired: tabs, readings, presets, undo/redo, locks, saving, the Athanor, summoning',
-  ["play('tab'", "'reading' + b.dataset.el", "play('preset')", "'undo' : 'redo'", "'lock' : 'unlock'", "play('saveImage')", 'murmur.bind(document)'].every(x => app.includes(x))
-  && ['data-sound="summonType"', 'data-sound="athanorOpen"', 'data-sound="athanorClose"'].every(x => html.includes(x)));
 check('Esoterica → Appearance has its switch and volume, off by default', /id="soundToggle"(?![^>]*checked)/.test(html) && html.includes('id="soundVolume"'));
-check('kept in this browser (uv.sound.on, uv.sound.volume), never in a look',
-  app.includes("'uv.sound.on'") && app.includes("'uv.sound.volume'") && /soundToggle:/.test(src('test/persistenceCoverage.test.mjs')));
 check('the Murmur Studio carries this very engine (node tools/make-murmur-studio.mjs after changing murmur.js)',
   src('tools/murmur-studio.html').includes(src('murmur.js').replace(/^export /gm, '')));
+
+// ---- the switch and the volume are this browser's, never a look's (booted, with a browser's storage in memory) ----
+{ const store = new Map([['uv.firstvisit.v1', '1']]);
+  globalThis.localStorage = { getItem: k => store.has(k) ? store.get(k) : null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
+  installCanvasMock(); const reg = installDomMock(makeMockContext, makeMockCanvas);
+  await import('../appEvents.js');
+  const box = reg['soundToggle'], vol = reg['soundVolume'];
+  box.checked = true; box.dispatchEvent({ type: 'change', target: box });
+  vol.value = '70'; vol.dispatchEvent({ type: 'input', target: vol });
+  reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' });
+  const look = JSON.parse(reg['advancedJson'].value);
+  check('kept in this browser (uv.sound.on, uv.sound.volume), never in a look',
+    store.get('uv.sound.on') === '1' && store.get('uv.sound.volume') === '0.7' && !Object.keys(look).some(k => /sound|volume/i.test(k))); }
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

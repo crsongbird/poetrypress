@@ -109,8 +109,6 @@ check('§UVIcon draws the sigil', R('§UVIcon') === R('§Glyph!sigil'));
   check('their !param and :number are highlighted too', (h.match(/pml-varp/g) || []).length === 2);
   check('an escaped \\§ is not a variable', !/pml-var">§Plain/.test(h));
   check('highlighting never changes the text', text === t);
-  check('the variable colors cannot move text (the editor\'s mirror must match the textarea)',
-    !/\.pml-varp?\s*\{[^}]*(font-weight|letter-spacing|padding|margin)/.test(src('poetrypress.css')));
 }
 
 // ---- the inline-glyph wrapper: glyphs measure as a glyph's width and draw as shapes ----

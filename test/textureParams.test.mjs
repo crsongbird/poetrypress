@@ -5,6 +5,7 @@
  * in the picker with no params declared (two sliders labelled "—"), a param
  * whose default sits outside its own range, a preset pointing at a texture
  * that no longer exists, and generation blowing up at either extreme.
+ * Slow (longer than half a minute): it renders every texture at its knobs' extremes.
  *
  * Run: node test/textureParams.test.mjs
  */

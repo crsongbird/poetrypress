@@ -782,7 +782,11 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
     3.11 (`fxaaImage`, texCore.js) on the result at the end of `evalAthanor`;
     `all pixels` also halves `genAthanor`'s grid divisor, as far as the work
     budget allows, for v3+ graphs (whose sizes are canonical). A new graph's
-    Surface starts at edges only; chains have none, so textures never change.
+    Surface starts at edges only. A texture's chain has none, so it draws as
+    it always did, but for the eight Ruby chose from compare sheets
+    (Saturn–Tarqeq): Knotwork, Contour Map, Ruffled Growth, Fractured Glaze,
+    Stained Glass, Dewy Webs, Rain on Water and Circuit Board, whose Surface
+    is at edges only (FXAA runs on the working grid, before it is scaled).
 - **Safety** (`validateGraph`):
   - A graph holds only its work in flight: each part's result is let go once
     every part that reads it has run (the step previews keep them all).
@@ -1203,7 +1207,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   in front) and `paintEnceladus` (white, tiger stripes, the plume).
   - Painted Ringworld: one ring in four orbits Saturn (The Arch's Saturn), and
     now and then Enceladus beside it; otherwise the far planet is sometimes
-    Saturn.
+    Saturn. Ringworld likewise (Ringworld View's Saturn).
+  - Starfield's small Saturn follows its Atmosphere: in space a ringed disk,
+    under air (Aurora's) a faint point (Ruby: "much dimmer and fainter").
   - Starfield: about one sky in thirty-six, a small Saturn among the stars
     (Aurora, Ring in the Sky, the Painted Ringworld and any graph with one).
   - Circuit Board's Markings: a stamp now and then speaks of Saturn, Enceladus
@@ -1388,6 +1394,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     Across → Map Range → × the land → added, by Landforms). Cities raises the
     builders' works;
     at 0 a few still stand. About one ring in fifty shows the world's seam.
+  - **Saturn** (Ruby: "Ringworld should sometimes be orbiting Saturn"; one
+    ring in four by `seedChoice(seed, 'ring saturn')`, or the part's Saturn
+    setting): `ringSaturn` fixes it in the world where the opening shot
+    (turn 40, view 55) looks, a little off by the seed, 6–11° across;
+    `ringSatSee` meets each space ray with its globe (banded by latitude, lit
+    by the star at the ring's middle, the rings' shadow on it) and its ring
+    plane (`RING_SAT_BANDS`: C, B, the Cassini gap, A and Encke's; the globe's
+    shadow on them), and now and then Enceladus. Outputs 27 and 28 (saturn,
+    saturn cover); the chain mixes it over the stars (part 100), before the
+    shadow squares and the air.
   - The air is sampled densely where it is (near the camera, near the far
     floor) and thins away past the walls; an even spacing stepped past the
     thin air beside a low wall and left a black band.
@@ -1543,6 +1559,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   layout changes may not (hysteresis).
 - The box's glass (boxFx.js) reads the page's own canvas, so it must run
   after the backdrop, texture and vignette, and before the text.
+
+- **Drawflow's `[df-…]` lookups are escaped** (forge.js wraps
+  `querySelectorAll` with `CSS.escape`): a wire's range is kept as `'~key'`
+  in a node's data, and Drawflow finds data as `[df-KEY]`. Unescaped, a graph
+  carrying a range threw mid-load and opened half-built.
 
 **Tests and tools**
 - The Node canvas mock has no `Path2D` or `isPointInPath`, and doesn't parse

@@ -11523,10 +11523,11 @@ const WHIMSY_STEPS = {
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
       const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
       const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0);
-      // (Ruby's favorite planet, very rarely among the stars, about one sky in twenty-five: a small Saturn, an Easter egg;
-      //  from a stream of its own, so every other sky is as it was)
-      const eg = seedChoice(seed, 'starfield saturn');
-      if(eg() < 0.04){ const r = Math.min(w, h)*(0.012 + 0.012*eg()); paintSaturn(x, w*(0.1 + 0.8*eg()), h*(0.08 + 0.4*eg()), r, { axis: (eg() - 0.5)*0.8, open: (eg() < 0.5 ? -1 : 1)*(0.25 + 0.2*eg()), sun: [eg() - 0.5, -0.5], alpha: 0.85 }); }
+      // (Ruby's favorite planet, very rarely among the stars, about one sky in thirty-six: a small Saturn, an Easter egg;
+      //  from a stream of its own, so every other sky is as it was. Seen through an atmosphere (an Earth sky, the
+      //  aurora's) it is what it would be there, Ruby: "much dimmer and fainter": a faint warm point, its rings a hint)
+      const eg = seedChoice(seed, 'starfield saturn'), air = rsSmooth(0.12, 0.3, E.num(n, 'atmosphere', 20)/100);
+      if(eg() < 0.04){ const r = Math.min(w, h)*(0.012 + 0.012*eg())*(1 - 0.9*air); paintSaturn(x, w*(0.1 + 0.8*eg()), h*(0.08 + 0.4*eg()), r, { axis: (eg() - 0.5)*0.8, open: (eg() < 0.5 ? -1 : 1)*(0.25 + 0.2*eg()), sun: [eg() - 0.5, -0.5], alpha: 0.85 - 0.65*air }); }
       return [pc]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   curtains: { cat: 'Marks', label: 'Aurora Curtains', ins: ['over', 'field from'], outs: ['image'], io: { ins: ['image', 'value'], outs: ['image'] },
@@ -14229,13 +14230,66 @@ function ringAir(L, dx, dy, dz, a, b, hit){
       const X = Px + t*dx, Y = t*dy, h = L.R - Math.sqrt(X*X + Y*Y); if(h < 0) continue; tau += Math.exp(-h/L.Hs - (over > 0 ? over/(L.W*0.08) : 0))*dt; } });
   return tau/L.L0;
 }
-function genRingView(ww, wh, unit, o){
+// SATURN for the ring (Ruby: "Ringworld should sometimes be orbiting Saturn"; ROADMAP K1): by the seed (one ring in four,
+// from a stream of its own, so every other ring is as it was) or the part's Saturn setting, the ring orbits it and it
+// hangs huge in the sky beyond. It is placed in the world where the opening shot looks (turn 40, view 55), a little off
+// by the seed, so the first picture shows it and turning the camera turns past it; its rings opened a little, lit by the
+// ring's star at the ring's middle; now and then Enceladus beside it. Saturn's radius is the unit here; null: no Saturn.
+function ringSaturn(o, mode){
+  const S = seedChoice(o.seed >>> 0, 'ring saturn'), by = S() < 0.25;
+  if(!(mode === 'always' || (mode !== 'never' && by))) return null;
+  const L0 = ringCamera({ ...o, look: 40, lift: 90 - 90*0.55 }), f = [L0.fx, L0.fy, L0.fz], r = [L0.rx, L0.ry, L0.rz], u = [L0.ux, L0.uy, L0.uz];
+  const a = (S() - 0.5)*0.6, b = -0.02 + 0.25*S(), sv = ringNorm([0, 1, 2].map(i => f[i]*Math.cos(a)*Math.cos(b) + r[i]*Math.sin(a)*Math.cos(b) + u[i]*Math.sin(b)));
+  const rho = 0.1 + 0.09*S(), D = 1/Math.sin(rho), dot = (p, q) => p[0]*q[0] + p[1]*q[1] + p[2]*q[2], cross = (p, q) => [p[1]*q[2] - p[2]*q[1], p[2]*q[0] - p[0]*q[2], p[0]*q[1] - p[1]*q[0]];
+  const up = ringNorm(u.map((v, i) => v - sv[i]*dot(u, sv))), roll = (S() - 0.5)*0.5, side = cross(sv, up), u2 = ringNorm(up.map((v, i) => v*Math.cos(roll) + side[i]*Math.sin(roll)));
+  const open = (S() < 0.5 ? -1 : 1)*(0.2 + 0.25*S()), nR = ringNorm(u2.map((v, i) => v*Math.cos(open) + sv[i]*Math.sin(open)));
+  // (where it is, from the camera, in Saturn's radii; the way to the star from it; the ring plane's own two ways)
+  const C = sv.map(v => v*D), O = [L0.Px, 0, L0.z0], Ls = ringNorm(C.map((v, i) => -(O[i] + v))), a1 = ringNorm(sv.map((v, i) => v - nR[i]*dot(sv, nR))), a2 = cross(nR, a1);
+  const enc = S() < 0.45 ? (th => C.map((v, i) => v + 3.95*(a1[i]*Math.cos(th) + a2[i]*Math.sin(th))))((S() < 0.5 ? -1 : 1)*(0.35 + 0.15*S())*Math.PI) : null;
+  return { C, nR, Ls, D, enc, phase: S()*6.283 };
+}
+// a ring's opacity at r Saturn radii out: the C ring faint, the B ring bright, the Cassini gap, the A ring with Encke's
+const RING_SAT_BANDS = [[1.24, 1.53, 0.28, 0.62], [1.53, 1.95, 0.88, 0.95], [1.95, 2.03, 0.06, 0.7], [2.03, 2.205, 0.62, 0.85], [2.215, 2.27, 0.55, 0.82]];
+function ringSatRing(r, span){ let a = 0, b = 0; for(const [r0, r1, al, br] of RING_SAT_BANDS){ const k = genClamp(Math.min(r - r0, r1 - r)/Math.max(1e-4, span) + 0.5); a += al*k; b += br*al*k; } return [a, a > 0 ? b/a : 0]; }
+const RING_SAT_TONES = [[0.85, 0.79, 0.62], [0.91, 0.85, 0.70], [0.80, 0.71, 0.52], [0.93, 0.88, 0.74], [0.76, 0.67, 0.49], [0.88, 0.81, 0.64], [0.72, 0.66, 0.53]];
+// what a ray d (unit, from the camera) sees of Saturn: [r, g, b, cover], or null; px the pixel's angle
+function ringSatSee(sat, d, px){
+  const { C, nR, Ls } = sat, dot = (p, q) => p[0]*q[0] + p[1]*q[1] + p[2]*q[2], Cl = sat.D;
+  let pc = 0, pr = 0, pg = 0, pb = 0, tS = Infinity;
+  // the globe: where the ray meets it (its edge as wide as a pixel), banded by latitude, lit by the star, the rings' shadow on it
+  const bb = dot(d, C), c2 = Cl*Cl - bb*bb;
+  if(bb > 0 && c2 < 1.2){ const miss = Math.sqrt(Math.max(0, c2)); pc = genClamp(0.5 - (miss - 1)/(Cl*px));
+    if(pc > 0){ const tq = bb - Math.sqrt(Math.max(0, 1 - Math.min(1, c2))); tS = tq; const n = [d[0]*tq - C[0], d[1]*tq - C[1], d[2]*tq - C[2]], nl = Math.hypot(n[0], n[1], n[2]) || 1; for(let i = 0; i < 3; i++) n[i] /= nl;
+      const lat = dot(n, nR), t = (lat*0.5 + 0.5)*13 + 0.35*Math.sin(lat*29 + sat.phase), i0 = Math.floor(t), fr = t - i0, k = fr*fr*(3 - 2*fr), A = RING_SAT_TONES[((i0 % 7) + 7) % 7], B = RING_SAT_TONES[(((i0 + 1) % 7) + 7) % 7];
+      let col = [0, 1, 2].map(j => A[j] + (B[j] - A[j])*k); const pole = genClamp((Math.abs(lat) - 0.78)/0.15); col = col.map((v, j) => v + ([0.6, 0.6, 0.56][j] - v)*pole*0.7);
+      let lit = 0.05 + 0.95*Math.pow(Math.max(0, dot(n, Ls)), 0.9); const mu = Math.max(0, -dot(d, n)); lit *= 0.6 + 0.4*mu;
+      const den = dot(Ls, nR); if(Math.abs(den) > 1e-4){ const ts = -dot(n, nR)/den; if(ts > 0){ const q = [n[0] + Ls[0]*ts, n[1] + Ls[1]*ts, n[2] + Ls[2]*ts], rr = Math.hypot(q[0], q[1], q[2]); lit *= 1 - 0.7*ringSatRing(rr, 0.02)[0]; } }
+      pr = col[0]*lit; pg = col[1]*lit; pb = col[2]*lit; } }
+  // the rings: where the ray crosses their plane, their opacity by the distance out; the globe's shadow across them
+  let ra = 0, rc = 0, tR = Infinity; const dn = dot(d, nR);
+  if(Math.abs(dn) > 1e-6){ const t = dot(C, nR)/dn; if(t > 0){ const q = [d[0]*t - C[0], d[1]*t - C[1], d[2]*t - C[2]], rr = Math.hypot(q[0], q[1], q[2]);
+    if(rr > 1.1 && rr < 2.4){ const [al, br] = ringSatRing(rr, t*px/Math.max(0.05, Math.abs(dn))); ra = al; tR = t;
+      const qa = dot(q, Ls), sh = qa < 0 && rr*rr - qa*qa < 1 ? 0.18 : 1; rc = br*(0.45 + 0.55*Math.abs(dot(Ls, nR)))*sh; } } }
+  // Enceladus: small and white, lit
+  let ec = 0, er = 0, tE = Infinity;
+  if(sat.enc){ const E = sat.enc, er0 = 0.08, eb = dot(d, E), el = Math.hypot(E[0], E[1], E[2]), e2 = el*el - eb*eb;
+    if(eb > 0 && e2 < er0*er0*1.6){ ec = genClamp(0.5 - (Math.sqrt(Math.max(0, e2)) - er0)/(el*px)); tE = eb;
+      const n = ringNorm([d[0]*eb - E[0], d[1]*eb - E[1], d[2]*eb - E[2]]); er = 0.08 + 0.9*Math.max(0, dot(n, Ls)); } }
+  if(pc <= 0 && ra <= 0 && ec <= 0) return null;
+  // laid far to near: the globe or the ring behind it, then what is in front
+  const layers = [[tS, pc, [pr, pg, pb]], [tR, ra, [rc*0.93, rc*0.87, rc*0.74]], [tE, ec, [er*0.95, er*0.97, er]]].filter(l => l[1] > 0).sort((p, q) => q[0] - p[0]);
+  let R = 0, Gc = 0, Bc = 0, cov = 0;
+  for(const [, al, col] of layers){ R = R*(1 - al) + col[0]*al; Gc = Gc*(1 - al) + col[1]*al; Bc = Bc*(1 - al) + col[2]*al; cov = cov*(1 - al) + al; }
+  return cov > 0 ? [R/cov, Gc/cov, Bc/cov, cov] : null;
+}
+function genRingView(ww, wh, unit, o, saturnMode){
   const L = ringLook(o), N = ww*wh, along = new Float32Array(N), across = new Float32Array(N), dist = new Float32Array(N), detail = new Float32Array(N);
   const sky = new Float32Array(N), walls = new Float32Array(N), star = new Float32Array(N), day = new Float32Array(N), squares = new Float32Array(N), airs = new Float32Array(N);
   const scaf = new Float32Array(N), open = new Float32Array(N), seam = new Float32Array(N), skyAir = new Float32Array(N);
   const city = new Float32Array(N), cityL = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lights = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
   const shade = new Float32Array(N).fill(1), cA = new Float32Array(N), cC = new Float32Array(N), cD = new Float32Array(N).fill(1), cHere = new Float32Array(N);
-  const rock = new Float32Array(N), snow = new Float32Array(N);
+  const rock = new Float32Array(N), snow = new Float32Array(N), satP = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, satC = new Float32Array(N);
+  const sat = ringSaturn(o, saturnMode);
   // (the day where the camera stands: the air about it is lit by it, whatever lies beyond)
   const here = new Float32Array(N).fill(ringDay(L, 0)), beacon = new Float32Array(N);
   const px = 1/unit, alpha = px/L.f, D3 = new Float64Array(3), G = [0, 0, 0], bins = ringBin(L, ww, wh, unit), cityCol = L.pal[0], winCol = L.pal[1];
@@ -14251,6 +14305,8 @@ function genRingView(ww, wh, unit, o){
     const w = k => (k === c.kind ? 0.5 : 0) + 0.125*(k === 0 ? n0 : k === 2 ? n2 : k === 3 ? n3 : n4);
     const space = w(0) + w(3) + w(4);
     sky[q] = space; walls[q] = w(2); star[q] = w(3); squares[q] = w(4);
+    // Saturn, where the pixel sees open space
+    if(sat && w(0) > 0){ const sv = ringSatSee(sat, d, alpha); if(sv){ satP.r[q] = sv[0]; satP.g[q] = sv[1]; satP.b[q] = sv[2]; satC[q] = sv[3]*w(0); } }
     // the star's glow in the air: by the angle from it (it stands straight up, at −x)
     const cosA = Math.max(-1, Math.min(1, -dx));
     if(cosA > 0.9){ const ang = Math.acos(cosA), glow = (space - w(4))*(Math.exp(-ang*ang/0.0016)*0.8 + Math.exp(-ang*ang/0.04)*0.25); star[q] = Math.min(1, star[q] + glow); }
@@ -14294,7 +14350,7 @@ function genRingView(ww, wh, unit, o){
       const edge = Math.exp(-Math.pow((mxA - mid)/(px*1.5), 2)), u = (ax === mxA ? dy/ax : dx/mxA)*4, v = (az === mxA ? dy/az : dz/mxA)*4, gu = Math.abs(u - Math.round(u)), gv = Math.abs(v - Math.round(v));
       seam[q] = space*Math.min(1, edge + 0.35*Math.exp(-Math.pow(Math.min(gu, gv)/(px*6), 2))); }
   }
-  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere, rock, snow];
+  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere, rock, snow, satP, satC];
 }
 
 // a Ringworld View's settings (as its sliders give them) as the world it draws — shared with the camera's guide
@@ -14594,13 +14650,13 @@ const GEN_STEPS = {
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
   ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
     outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',
-      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here', 'rock', 'snow'],
+      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here', 'rock', 'snow', 'saturn', 'saturn cover'],
     io: { ins: ['value', 'value', 'value', 'value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field',
-      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'image', 'field'] },
     params: [GEN_R('band', 'Band Width', 45), GEN_R('walls', 'Rim Walls', 25), GEN_R('altitude', 'Altitude', 15), GEN_R('look', 'Look Toward', 0, 0, 360), GEN_R('lift', 'Look Up', 15, -30, 100),
       GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50), GEN_R('build', 'Construction', 35),
       GEN_R('builders', 'Builders: Seed · Wilds · Engineers · Cities · Magi · Ruins', 0), GEN_R('landforms', 'Landforms', 50), GEN_R('cities', 'Cities', 25), GEN_R('traffic', 'Traffic', 50),
-      ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }]], cost: () => 9,
+      ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }], ['saturn', 'Saturn', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }]], cost: () => 9,
     doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, what its builders raised, open space.',
     // (a dial wired in is the camera — the Camera Dial: its turn where you look round the ring, its view how far up (at the
     //  middle, straight up at the arch; at the rim, level; past it, a little down), its zoom the lens. The Light Dial is
@@ -14611,7 +14667,7 @@ const GEN_STEPS = {
         look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0), up: typeof up === 'number' ? up : null, lift: num(n, 'lift', 15),
         lens: num(n, 'lens', 75), zoom: typeof zoom === 'number' ? 25 + 375*zoom : 100, place: num(n, 'place', 0), daylight, air: num(n, 'air', 50), build: num(n, 'build', 35),
         side: typeof from === 'number' && Math.cos((from*360 - 90)*Math.PI/180) < 0 ? -1 : 1, builders: num(n, 'builders', 0), seed: E.ctx.seed >>> 0,
-        landforms: num(n, 'landforms', 50), cities: num(n, 'cities', 25), traffic: num(n, 'traffic', 50), placeBy: E.P(n, 'placeBy', 'at Stand At') })); } },
+        landforms: num(n, 'landforms', 50), cities: num(n, 'cities', 25), traffic: num(n, 'traffic', 50), placeBy: E.P(n, 'placeBy', 'at Stand At') }), E.P(n, 'saturn', 'by the seed')); } },
   // the GROUND CAMERA's view as maps (Wood and Discharge see the plank this way): where on the page's plane each pixel
   // looks, and how much of it a pixel spans — for Noise at Coordinates (or a Lookup) to lay anything on the same plank
   groundview: { cat: 'Shape', label: 'Ground Coordinates', ins: [], outs: ['across', 'down', 'detail'], io: { outs: ['field', 'field', 'field'] },
@@ -17642,7 +17698,7 @@ const TEXTURE_CHAINS = {
       ['hue', { slot: '2', name: 'Second Glass Hue' }, 40, 440],                  // 5
       ['panes', { size: 100, leading: 100, shape: 25, variety: 0, '~variety': '0,45', frame: 0, '~frame': '0,100' }, 320, 60],   // 6
       ['glass', { relief: 100, scene: 0, '~scene': '0,100', texture: 0, '~texture': '0,100', reflect: 100 }, 600, 140],   // 7
-      ['surface', { name: 'Stained Glass', ground: 'colour' }, 880, 180],         // 8
+      ['surface', { name: 'Stained Glass', ground: 'colour', aa: 'edges only' }, 880, 180],         // 8
       ['knob', { slot: '4', name: 'Scene', def: 0 }, 40, 540],                    // 9
       ['knob', { slot: '5', name: 'Glass Texture', def: 0 }, 40, 640],            // 10
       ['knob', { slot: '6', name: 'Window', def: 0 }, 40, 740],                   // 11
@@ -17679,7 +17735,7 @@ const TEXTURE_CHAINS = {
       ['brushwork', { streaks: 55, runs: 30, pools: 60 }, 320, 380],              // 8
       ['hue', { slot: '1', name: 'Glaze Hue' }, 320, 500], ['hue', { slot: '2', name: 'Body Hue' }, 320, 600],   // 9, 10
       ['glaze', { scale: 100, gloss: 85, grime: 40 }, 620, 160],                  // 11
-      ['surface', { name: 'Fractured Glaze', ground: 'colour' }, 900, 220]],      // 12
+      ['surface', { name: 'Fractured Glaze', ground: 'colour', aa: 'edges only' }, 900, 220]],      // 12
     wires: [[1, 1, 7, paramPort('cracks', 'scale')], [2, 1, 7, paramPort('cracks', 'count')], [3, 1, 7, paramPort('cracks', 'spread')], [4, 1, 7, paramPort('cracks', 'wander')], [5, 1, 7, paramPort('cracks', 'age')],
       [6, 1, 7, 1], [1, 1, 11, paramPort('glaze', 'scale')], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
   // 🝆 Veins of Light: a network grown (space colonization) through a material's ways, glowing inside it
@@ -17745,7 +17801,7 @@ const TEXTURE_CHAINS = {
       ['blur', { radius: 8 }, 1040, 300],                                          // 39
       ['math', { op: 'screen' }, 1280, 300],                                       // 40
       ['blend', { mode: 'screen', opacity: 100 }, 2960, 420],                      // 41 (sparks)
-      ['surface', { name: 'Circuit Board', ground: 'colour' }, 3200, 440],         // 42
+      ['surface', { name: 'Circuit Board', ground: 'colour', aa: 'edges only' }, 3200, 440],         // 42
       ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
       ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
       // (Ruby: an Era slider, today → future and quantum → magitech; and markings, stamps and glyphs by the seed)
@@ -18032,7 +18088,7 @@ const TEXTURE_CHAINS = {
       ['knotwork', { size: 100, '~size': '40,300', cells: 6, '~cells': '3,24', breaks: 45, '~breaks': '0,100', shape: 0, '~shape': '0,100', width: 55, '~width': '20,90', offset: 0, '~offset': '-100,100' }, 320, 160],   // 8
       ['blur', { radius: 5 }, 600, 260],                                           // 9
       ['material', { relief: 30, gloss: 45, shine: 40, shadow: 60, occlusion: 45, ambient: 40 }, 840, 180],   // 10
-      ['surface', { name: 'Knotwork', ground: 'grey' }, 1080, 200]],               // 11
+      ['surface', { name: 'Knotwork', ground: 'grey', aa: 'edges only' }, 1080, 200]],               // 11
     wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
       [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
@@ -18089,7 +18145,7 @@ const TEXTURE_CHAINS = {
       ['number', { value: 18 }, 560, 460],                                         // 10 (the line's crease)
       ['mix', { t: 50 }, 780, 300],                                                // 11
       ['material', { relief: 40, '~relief': '0,90', gloss: 35, shine: 30, shadow: 55, occlusion: 45, ambient: 40 }, 1000, 200],   // 12
-      ['surface', { name: 'Ruffled Growth', ground: 'grey' }, 1240, 220],          // 13
+      ['surface', { name: 'Ruffled Growth', ground: 'grey', aa: 'edges only' }, 1240, 220],          // 13
       ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 540], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 620]],   // 14 (100 of 50–400), 15
     wires: [[1, 1, 6, paramPort('growline', 'growth')], [2, 1, 6, paramPort('growline', 'fold')], [3, 1, 6, paramPort('growline', 'seeds')], [4, 1, 12, paramPort('material', 'relief')],
       [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1], [14, 1, 6, paramPort('growline', 'zoom')], [15, 1, 6, paramPort('growline', 'offset')]] },
@@ -18128,7 +18184,7 @@ const TEXTURE_CHAINS = {
       ['contours', { levels: 20, '~levels': '6,50', weight: 100, index: 5, strength: 90 }, 560, 0],   // 8
       ['colour', { hex: '#222222' }, 820, 20],                                     // 9  (the ink)
       ['mix', { t: 50 }, 1060, 100],                                               // 10 (the lines inked over it)
-      ['surface', { name: 'Contour Map', ground: 'grey' }, 1300, 100]],            // 11
+      ['surface', { name: 'Contour Map', ground: 'grey', aa: 'edges only' }, 1300, 100]],            // 11
     wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
       [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
   // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
@@ -18192,7 +18248,7 @@ const TEXTURE_CHAINS = {
       [9, 2, 16, 5], [9, 1, 16, 6], [9, 2, 17, 5], [9, 1, 17, 6], [10, 1, 16, 2], [10, 2, 16, 3], [10, 3, 16, 4], [10, 1, 17, 2], [10, 2, 17, 3], [10, 3, 17, 4],
       [11, 1, 16, 7], [11, 1, 17, 7], [12, 1, 16, 8], [12, 1, 17, 8], [13, 1, 16, 9], [13, 1, 17, 9], [14, 1, 16, 10], [14, 1, 17, 10],
       [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [18, 2, 19, 2], [19, 1, 20, 1]] },
-  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
+  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. One ring in four orbits Saturn (Ringworld View\'s Saturn setting): it hangs huge in the sky beyond, laid over the stars by its Saturn Cover, behind the shadow squares and the air. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],                 // 1
       ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],                 // 2  (the relief, the walls, the land's own forms)
       ['knob', { slot: '3', name: 'Seas', def: 40 }, 40, 200],                      // 3
@@ -18266,7 +18322,9 @@ const TEXTURE_CHAINS = {
       ['blend', { mode: 'multiply', opacity: 100 }, 3440, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3680, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3920, 1300],   // 93, 94, 95 (the city's lights on land; the other lights)
       ['random', { lo: 0, hi: 100 }, 2720, 460],                                    // 96 (the star's color)
       // THE LAND'S OWN FORMS are rock, not metal (its peaks' heads snow): the dry land's color and the stone's, by the land noise
-      ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860]],   // 97 (rock), 98 (metal or rock), 99 (snow)
+      ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860],   // 97 (rock), 98 (metal or rock), 99 (snow)
+      // SATURN (one ring in four orbits it: Ringworld View's Saturn), laid over the stars, behind the shadow squares and the air
+      ['mix', { t: 50 }, 2120, 1260]],                                               // 100
     wires: [[66, 1, 11, 1], [66, 2, 11, 2], [66, 3, 11, 3], [4, 1, 11, paramPort('ringview', 'build')], [4, 1, 11, paramPort('ringview', 'cities')], [2, 1, 11, paramPort('ringview', 'landforms')], [8, 1, 11, paramPort('ringview', 'traffic')],
       [11, 2, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [2, 1, 69, paramPort('maprange', 'outHi')], [69, 1, 70, 1], [12, 1, 70, 2], [12, 1, 71, 1], [70, 1, 71, 2],
       [78, 1, 79, 1], [80, 1, 12, paramPort('mapnoise', 'warp')], [81, 1, 13, paramPort('mapnoise', 'size')], [1, 1, 11, paramPort('ringview', 'band')], [2, 1, 11, paramPort('ringview', 'walls')], [7, 1, 11, paramPort('ringview', 'altitude')],
@@ -18283,7 +18341,7 @@ const TEXTURE_CHAINS = {
       [88, 1, 36, 1], [35, 1, 36, 2], [34, 1, 36, 3],
       [11, 8, 37, 1], [36, 1, 38, 1], [37, 1, 38, 2], [10, 1, 39, 1], [11, 11, 63, 1], [63, 1, 39, 2],
       [38, 1, 40, 1], [39, 1, 40, 2], [11, 10, 40, 3],
-      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [65, 1, 43, 1], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
+      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [100, 1, 43, 1], [65, 1, 100, 1], [11, 27, 100, 2], [11, 28, 100, 3], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
       [40, 1, 46, 1], [45, 1, 46, 2], [72, 1, 46, 3], [11, 5, 72, 1], [11, 13, 72, 2],
       [46, 1, 48, 1], [47, 1, 48, 2], [11, 7, 48, 3], [48, 1, 74, 1], [73, 1, 74, 2], [11, 14, 74, 3], [74, 1, 76, 1], [75, 1, 76, 2], [11, 15, 76, 3],
       [11, 1, 50, 1], [11, 2, 50, 2], [11, 4, 50, 3], [50, 1, 51, 1], [11, 8, 52, 1], [51, 1, 53, 1], [52, 1, 53, 2], [53, 1, 54, 1], [4, 1, 54, 2],
@@ -18302,7 +18360,7 @@ const TEXTURE_CHAINS = {
       ['tint', {}, 560, 520],                                                      // 10 (the water by distance: near, far)
       ['material', { relief: 110, gloss: 85, shine: 90, shadow: 20, occlusion: 10, ambient: 40 }, 1060, 300],   // 11
       ['glow', { radius: 4, aura: 14, strength: 45, auraK: 10, core: 40, hex: '#EAF4FF' }, 1300, 300],   // 12
-      ['surface', { name: 'Rain on Water', ground: 'colour' }, 1540, 320],          // 13
+      ['surface', { name: 'Rain on Water', ground: 'colour', aa: 'edges only' }, 1540, 320],          // 13
       ['displace', { amount: 35, blur: 10 }, 800, 520]],                           // 14 (the reflection bent by the rings)
     wires: [[1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
       [9, 3, 10, 1], [8, 1, 10, 2], [7, 1, 10, 3], [10, 1, 14, 1], [9, 1, 14, 2], [14, 1, 11, 1], [9, 1, 11, 2], [6, 1, 11, 7], [11, 1, 12, 1], [9, 2, 12, 2], [12, 1, 13, 1]] },
@@ -18470,7 +18528,7 @@ const TEXTURE_CHAINS = {
       ['blur', { radius: 5 }, 800, 620],                                          // 19 (the glints' bloom)
       ['blend', { mode: 'screen', opacity: 70 }, 1520, 300],                      // 20
       ['blend', { mode: 'screen', opacity: 100 }, 1760, 300],                     // 21
-      ['surface', { name: 'Dewy Webs', ground: 'grey' }, 2000, 320]],             // 22
+      ['surface', { name: 'Dewy Webs', ground: 'grey', aa: 'edges only' }, 2000, 320]],             // 22
     wires: [[1, 1, 10, paramPort('dewwebs', 'webs')], [2, 1, 10, paramPort('dewwebs', 'size')], [3, 1, 10, paramPort('dewwebs', 'dew')], [4, 1, 10, paramPort('dewwebs', 'drops')],
       [5, 1, 10, paramPort('dewwebs', 'torn')], [6, 1, 10, paramPort('dewwebs', 'sag')], [7, 1, 10, paramPort('dewwebs', 'irid')], [8, 1, 10, paramPort('dewwebs', 'threads')], [9, 1, 10, 1],
       [10, 1, 12, 1], [11, 1, 13, 1], [12, 1, 13, 2], [10, 3, 14, 1], [14, 1, 15, 1], [13, 1, 16, 1], [15, 1, 16, 2], [10, 3, 17, 1], [16, 1, 18, 1], [17, 1, 18, 2],
@@ -33782,10 +33840,11 @@ const WHIMSY_STEPS = {
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
       const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
       const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0);
-      // (Ruby's favorite planet, very rarely among the stars, about one sky in twenty-five: a small Saturn, an Easter egg;
-      //  from a stream of its own, so every other sky is as it was)
-      const eg = seedChoice(seed, 'starfield saturn');
-      if(eg() < 0.04){ const r = Math.min(w, h)*(0.012 + 0.012*eg()); paintSaturn(x, w*(0.1 + 0.8*eg()), h*(0.08 + 0.4*eg()), r, { axis: (eg() - 0.5)*0.8, open: (eg() < 0.5 ? -1 : 1)*(0.25 + 0.2*eg()), sun: [eg() - 0.5, -0.5], alpha: 0.85 }); }
+      // (Ruby's favorite planet, very rarely among the stars, about one sky in thirty-six: a small Saturn, an Easter egg;
+      //  from a stream of its own, so every other sky is as it was. Seen through an atmosphere (an Earth sky, the
+      //  aurora's) it is what it would be there, Ruby: "much dimmer and fainter": a faint warm point, its rings a hint)
+      const eg = seedChoice(seed, 'starfield saturn'), air = rsSmooth(0.12, 0.3, E.num(n, 'atmosphere', 20)/100);
+      if(eg() < 0.04){ const r = Math.min(w, h)*(0.012 + 0.012*eg())*(1 - 0.9*air); paintSaturn(x, w*(0.1 + 0.8*eg()), h*(0.08 + 0.4*eg()), r, { axis: (eg() - 0.5)*0.8, open: (eg() < 0.5 ? -1 : 1)*(0.25 + 0.2*eg()), sun: [eg() - 0.5, -0.5], alpha: 0.85 - 0.65*air }); }
       return [pc]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   curtains: { cat: 'Marks', label: 'Aurora Curtains', ins: ['over', 'field from'], outs: ['image'], io: { ins: ['image', 'value'], outs: ['image'] },
@@ -36279,13 +36338,66 @@ function ringAir(L, dx, dy, dz, a, b, hit){
       const X = Px + t*dx, Y = t*dy, h = L.R - Math.sqrt(X*X + Y*Y); if(h < 0) continue; tau += Math.exp(-h/L.Hs - (over > 0 ? over/(L.W*0.08) : 0))*dt; } });
   return tau/L.L0;
 }
-function genRingView(ww, wh, unit, o){
+// SATURN for the ring (Ruby: "Ringworld should sometimes be orbiting Saturn"; ROADMAP K1): by the seed (one ring in four,
+// from a stream of its own, so every other ring is as it was) or the part's Saturn setting, the ring orbits it and it
+// hangs huge in the sky beyond. It is placed in the world where the opening shot looks (turn 40, view 55), a little off
+// by the seed, so the first picture shows it and turning the camera turns past it; its rings opened a little, lit by the
+// ring's star at the ring's middle; now and then Enceladus beside it. Saturn's radius is the unit here; null: no Saturn.
+function ringSaturn(o, mode){
+  const S = seedChoice(o.seed >>> 0, 'ring saturn'), by = S() < 0.25;
+  if(!(mode === 'always' || (mode !== 'never' && by))) return null;
+  const L0 = ringCamera({ ...o, look: 40, lift: 90 - 90*0.55 }), f = [L0.fx, L0.fy, L0.fz], r = [L0.rx, L0.ry, L0.rz], u = [L0.ux, L0.uy, L0.uz];
+  const a = (S() - 0.5)*0.6, b = -0.02 + 0.25*S(), sv = ringNorm([0, 1, 2].map(i => f[i]*Math.cos(a)*Math.cos(b) + r[i]*Math.sin(a)*Math.cos(b) + u[i]*Math.sin(b)));
+  const rho = 0.1 + 0.09*S(), D = 1/Math.sin(rho), dot = (p, q) => p[0]*q[0] + p[1]*q[1] + p[2]*q[2], cross = (p, q) => [p[1]*q[2] - p[2]*q[1], p[2]*q[0] - p[0]*q[2], p[0]*q[1] - p[1]*q[0]];
+  const up = ringNorm(u.map((v, i) => v - sv[i]*dot(u, sv))), roll = (S() - 0.5)*0.5, side = cross(sv, up), u2 = ringNorm(up.map((v, i) => v*Math.cos(roll) + side[i]*Math.sin(roll)));
+  const open = (S() < 0.5 ? -1 : 1)*(0.2 + 0.25*S()), nR = ringNorm(u2.map((v, i) => v*Math.cos(open) + sv[i]*Math.sin(open)));
+  // (where it is, from the camera, in Saturn's radii; the way to the star from it; the ring plane's own two ways)
+  const C = sv.map(v => v*D), O = [L0.Px, 0, L0.z0], Ls = ringNorm(C.map((v, i) => -(O[i] + v))), a1 = ringNorm(sv.map((v, i) => v - nR[i]*dot(sv, nR))), a2 = cross(nR, a1);
+  const enc = S() < 0.45 ? (th => C.map((v, i) => v + 3.95*(a1[i]*Math.cos(th) + a2[i]*Math.sin(th))))((S() < 0.5 ? -1 : 1)*(0.35 + 0.15*S())*Math.PI) : null;
+  return { C, nR, Ls, D, enc, phase: S()*6.283 };
+}
+// a ring's opacity at r Saturn radii out: the C ring faint, the B ring bright, the Cassini gap, the A ring with Encke's
+const RING_SAT_BANDS = [[1.24, 1.53, 0.28, 0.62], [1.53, 1.95, 0.88, 0.95], [1.95, 2.03, 0.06, 0.7], [2.03, 2.205, 0.62, 0.85], [2.215, 2.27, 0.55, 0.82]];
+function ringSatRing(r, span){ let a = 0, b = 0; for(const [r0, r1, al, br] of RING_SAT_BANDS){ const k = genClamp(Math.min(r - r0, r1 - r)/Math.max(1e-4, span) + 0.5); a += al*k; b += br*al*k; } return [a, a > 0 ? b/a : 0]; }
+const RING_SAT_TONES = [[0.85, 0.79, 0.62], [0.91, 0.85, 0.70], [0.80, 0.71, 0.52], [0.93, 0.88, 0.74], [0.76, 0.67, 0.49], [0.88, 0.81, 0.64], [0.72, 0.66, 0.53]];
+// what a ray d (unit, from the camera) sees of Saturn: [r, g, b, cover], or null; px the pixel's angle
+function ringSatSee(sat, d, px){
+  const { C, nR, Ls } = sat, dot = (p, q) => p[0]*q[0] + p[1]*q[1] + p[2]*q[2], Cl = sat.D;
+  let pc = 0, pr = 0, pg = 0, pb = 0, tS = Infinity;
+  // the globe: where the ray meets it (its edge as wide as a pixel), banded by latitude, lit by the star, the rings' shadow on it
+  const bb = dot(d, C), c2 = Cl*Cl - bb*bb;
+  if(bb > 0 && c2 < 1.2){ const miss = Math.sqrt(Math.max(0, c2)); pc = genClamp(0.5 - (miss - 1)/(Cl*px));
+    if(pc > 0){ const tq = bb - Math.sqrt(Math.max(0, 1 - Math.min(1, c2))); tS = tq; const n = [d[0]*tq - C[0], d[1]*tq - C[1], d[2]*tq - C[2]], nl = Math.hypot(n[0], n[1], n[2]) || 1; for(let i = 0; i < 3; i++) n[i] /= nl;
+      const lat = dot(n, nR), t = (lat*0.5 + 0.5)*13 + 0.35*Math.sin(lat*29 + sat.phase), i0 = Math.floor(t), fr = t - i0, k = fr*fr*(3 - 2*fr), A = RING_SAT_TONES[((i0 % 7) + 7) % 7], B = RING_SAT_TONES[(((i0 + 1) % 7) + 7) % 7];
+      let col = [0, 1, 2].map(j => A[j] + (B[j] - A[j])*k); const pole = genClamp((Math.abs(lat) - 0.78)/0.15); col = col.map((v, j) => v + ([0.6, 0.6, 0.56][j] - v)*pole*0.7);
+      let lit = 0.05 + 0.95*Math.pow(Math.max(0, dot(n, Ls)), 0.9); const mu = Math.max(0, -dot(d, n)); lit *= 0.6 + 0.4*mu;
+      const den = dot(Ls, nR); if(Math.abs(den) > 1e-4){ const ts = -dot(n, nR)/den; if(ts > 0){ const q = [n[0] + Ls[0]*ts, n[1] + Ls[1]*ts, n[2] + Ls[2]*ts], rr = Math.hypot(q[0], q[1], q[2]); lit *= 1 - 0.7*ringSatRing(rr, 0.02)[0]; } }
+      pr = col[0]*lit; pg = col[1]*lit; pb = col[2]*lit; } }
+  // the rings: where the ray crosses their plane, their opacity by the distance out; the globe's shadow across them
+  let ra = 0, rc = 0, tR = Infinity; const dn = dot(d, nR);
+  if(Math.abs(dn) > 1e-6){ const t = dot(C, nR)/dn; if(t > 0){ const q = [d[0]*t - C[0], d[1]*t - C[1], d[2]*t - C[2]], rr = Math.hypot(q[0], q[1], q[2]);
+    if(rr > 1.1 && rr < 2.4){ const [al, br] = ringSatRing(rr, t*px/Math.max(0.05, Math.abs(dn))); ra = al; tR = t;
+      const qa = dot(q, Ls), sh = qa < 0 && rr*rr - qa*qa < 1 ? 0.18 : 1; rc = br*(0.45 + 0.55*Math.abs(dot(Ls, nR)))*sh; } } }
+  // Enceladus: small and white, lit
+  let ec = 0, er = 0, tE = Infinity;
+  if(sat.enc){ const E = sat.enc, er0 = 0.08, eb = dot(d, E), el = Math.hypot(E[0], E[1], E[2]), e2 = el*el - eb*eb;
+    if(eb > 0 && e2 < er0*er0*1.6){ ec = genClamp(0.5 - (Math.sqrt(Math.max(0, e2)) - er0)/(el*px)); tE = eb;
+      const n = ringNorm([d[0]*eb - E[0], d[1]*eb - E[1], d[2]*eb - E[2]]); er = 0.08 + 0.9*Math.max(0, dot(n, Ls)); } }
+  if(pc <= 0 && ra <= 0 && ec <= 0) return null;
+  // laid far to near: the globe or the ring behind it, then what is in front
+  const layers = [[tS, pc, [pr, pg, pb]], [tR, ra, [rc*0.93, rc*0.87, rc*0.74]], [tE, ec, [er*0.95, er*0.97, er]]].filter(l => l[1] > 0).sort((p, q) => q[0] - p[0]);
+  let R = 0, Gc = 0, Bc = 0, cov = 0;
+  for(const [, al, col] of layers){ R = R*(1 - al) + col[0]*al; Gc = Gc*(1 - al) + col[1]*al; Bc = Bc*(1 - al) + col[2]*al; cov = cov*(1 - al) + al; }
+  return cov > 0 ? [R/cov, Gc/cov, Bc/cov, cov] : null;
+}
+function genRingView(ww, wh, unit, o, saturnMode){
   const L = ringLook(o), N = ww*wh, along = new Float32Array(N), across = new Float32Array(N), dist = new Float32Array(N), detail = new Float32Array(N);
   const sky = new Float32Array(N), walls = new Float32Array(N), star = new Float32Array(N), day = new Float32Array(N), squares = new Float32Array(N), airs = new Float32Array(N);
   const scaf = new Float32Array(N), open = new Float32Array(N), seam = new Float32Array(N), skyAir = new Float32Array(N);
   const city = new Float32Array(N), cityL = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lights = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
   const shade = new Float32Array(N).fill(1), cA = new Float32Array(N), cC = new Float32Array(N), cD = new Float32Array(N).fill(1), cHere = new Float32Array(N);
-  const rock = new Float32Array(N), snow = new Float32Array(N);
+  const rock = new Float32Array(N), snow = new Float32Array(N), satP = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, satC = new Float32Array(N);
+  const sat = ringSaturn(o, saturnMode);
   // (the day where the camera stands: the air about it is lit by it, whatever lies beyond)
   const here = new Float32Array(N).fill(ringDay(L, 0)), beacon = new Float32Array(N);
   const px = 1/unit, alpha = px/L.f, D3 = new Float64Array(3), G = [0, 0, 0], bins = ringBin(L, ww, wh, unit), cityCol = L.pal[0], winCol = L.pal[1];
@@ -36301,6 +36413,8 @@ function genRingView(ww, wh, unit, o){
     const w = k => (k === c.kind ? 0.5 : 0) + 0.125*(k === 0 ? n0 : k === 2 ? n2 : k === 3 ? n3 : n4);
     const space = w(0) + w(3) + w(4);
     sky[q] = space; walls[q] = w(2); star[q] = w(3); squares[q] = w(4);
+    // Saturn, where the pixel sees open space
+    if(sat && w(0) > 0){ const sv = ringSatSee(sat, d, alpha); if(sv){ satP.r[q] = sv[0]; satP.g[q] = sv[1]; satP.b[q] = sv[2]; satC[q] = sv[3]*w(0); } }
     // the star's glow in the air: by the angle from it (it stands straight up, at −x)
     const cosA = Math.max(-1, Math.min(1, -dx));
     if(cosA > 0.9){ const ang = Math.acos(cosA), glow = (space - w(4))*(Math.exp(-ang*ang/0.0016)*0.8 + Math.exp(-ang*ang/0.04)*0.25); star[q] = Math.min(1, star[q] + glow); }
@@ -36344,7 +36458,7 @@ function genRingView(ww, wh, unit, o){
       const edge = Math.exp(-Math.pow((mxA - mid)/(px*1.5), 2)), u = (ax === mxA ? dy/ax : dx/mxA)*4, v = (az === mxA ? dy/az : dz/mxA)*4, gu = Math.abs(u - Math.round(u)), gv = Math.abs(v - Math.round(v));
       seam[q] = space*Math.min(1, edge + 0.35*Math.exp(-Math.pow(Math.min(gu, gv)/(px*6), 2))); }
   }
-  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere, rock, snow];
+  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere, rock, snow, satP, satC];
 }
 
 // a Ringworld View's settings (as its sliders give them) as the world it draws — shared with the camera's guide
@@ -36644,13 +36758,13 @@ const GEN_STEPS = {
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
   ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
     outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',
-      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here', 'rock', 'snow'],
+      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here', 'rock', 'snow', 'saturn', 'saturn cover'],
     io: { ins: ['value', 'value', 'value', 'value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field',
-      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'image', 'field'] },
     params: [GEN_R('band', 'Band Width', 45), GEN_R('walls', 'Rim Walls', 25), GEN_R('altitude', 'Altitude', 15), GEN_R('look', 'Look Toward', 0, 0, 360), GEN_R('lift', 'Look Up', 15, -30, 100),
       GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50), GEN_R('build', 'Construction', 35),
       GEN_R('builders', 'Builders: Seed · Wilds · Engineers · Cities · Magi · Ruins', 0), GEN_R('landforms', 'Landforms', 50), GEN_R('cities', 'Cities', 25), GEN_R('traffic', 'Traffic', 50),
-      ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }]], cost: () => 9,
+      ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }], ['saturn', 'Saturn', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }]], cost: () => 9,
     doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, what its builders raised, open space.',
     // (a dial wired in is the camera — the Camera Dial: its turn where you look round the ring, its view how far up (at the
     //  middle, straight up at the arch; at the rim, level; past it, a little down), its zoom the lens. The Light Dial is
@@ -36661,7 +36775,7 @@ const GEN_STEPS = {
         look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0), up: typeof up === 'number' ? up : null, lift: num(n, 'lift', 15),
         lens: num(n, 'lens', 75), zoom: typeof zoom === 'number' ? 25 + 375*zoom : 100, place: num(n, 'place', 0), daylight, air: num(n, 'air', 50), build: num(n, 'build', 35),
         side: typeof from === 'number' && Math.cos((from*360 - 90)*Math.PI/180) < 0 ? -1 : 1, builders: num(n, 'builders', 0), seed: E.ctx.seed >>> 0,
-        landforms: num(n, 'landforms', 50), cities: num(n, 'cities', 25), traffic: num(n, 'traffic', 50), placeBy: E.P(n, 'placeBy', 'at Stand At') })); } },
+        landforms: num(n, 'landforms', 50), cities: num(n, 'cities', 25), traffic: num(n, 'traffic', 50), placeBy: E.P(n, 'placeBy', 'at Stand At') }), E.P(n, 'saturn', 'by the seed')); } },
   // the GROUND CAMERA's view as maps (Wood and Discharge see the plank this way): where on the page's plane each pixel
   // looks, and how much of it a pixel spans — for Noise at Coordinates (or a Lookup) to lay anything on the same plank
   groundview: { cat: 'Shape', label: 'Ground Coordinates', ins: [], outs: ['across', 'down', 'detail'], io: { outs: ['field', 'field', 'field'] },
@@ -39901,7 +40015,7 @@ const TEXTURE_CHAINS = {
       ['hue', { slot: '2', name: 'Second Glass Hue' }, 40, 440],                  // 5
       ['panes', { size: 100, leading: 100, shape: 25, variety: 0, '~variety': '0,45', frame: 0, '~frame': '0,100' }, 320, 60],   // 6
       ['glass', { relief: 100, scene: 0, '~scene': '0,100', texture: 0, '~texture': '0,100', reflect: 100 }, 600, 140],   // 7
-      ['surface', { name: 'Stained Glass', ground: 'colour' }, 880, 180],         // 8
+      ['surface', { name: 'Stained Glass', ground: 'colour', aa: 'edges only' }, 880, 180],         // 8
       ['knob', { slot: '4', name: 'Scene', def: 0 }, 40, 540],                    // 9
       ['knob', { slot: '5', name: 'Glass Texture', def: 0 }, 40, 640],            // 10
       ['knob', { slot: '6', name: 'Window', def: 0 }, 40, 740],                   // 11
@@ -39938,7 +40052,7 @@ const TEXTURE_CHAINS = {
       ['brushwork', { streaks: 55, runs: 30, pools: 60 }, 320, 380],              // 8
       ['hue', { slot: '1', name: 'Glaze Hue' }, 320, 500], ['hue', { slot: '2', name: 'Body Hue' }, 320, 600],   // 9, 10
       ['glaze', { scale: 100, gloss: 85, grime: 40 }, 620, 160],                  // 11
-      ['surface', { name: 'Fractured Glaze', ground: 'colour' }, 900, 220]],      // 12
+      ['surface', { name: 'Fractured Glaze', ground: 'colour', aa: 'edges only' }, 900, 220]],      // 12
     wires: [[1, 1, 7, paramPort('cracks', 'scale')], [2, 1, 7, paramPort('cracks', 'count')], [3, 1, 7, paramPort('cracks', 'spread')], [4, 1, 7, paramPort('cracks', 'wander')], [5, 1, 7, paramPort('cracks', 'age')],
       [6, 1, 7, 1], [1, 1, 11, paramPort('glaze', 'scale')], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
   // 🝆 Veins of Light: a network grown (space colonization) through a material's ways, glowing inside it
@@ -40004,7 +40118,7 @@ const TEXTURE_CHAINS = {
       ['blur', { radius: 8 }, 1040, 300],                                          // 39
       ['math', { op: 'screen' }, 1280, 300],                                       // 40
       ['blend', { mode: 'screen', opacity: 100 }, 2960, 420],                      // 41 (sparks)
-      ['surface', { name: 'Circuit Board', ground: 'colour' }, 3200, 440],         // 42
+      ['surface', { name: 'Circuit Board', ground: 'colour', aa: 'edges only' }, 3200, 440],         // 42
       ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
       ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
       // (Ruby: an Era slider, today → future and quantum → magitech; and markings, stamps and glyphs by the seed)
@@ -40291,7 +40405,7 @@ const TEXTURE_CHAINS = {
       ['knotwork', { size: 100, '~size': '40,300', cells: 6, '~cells': '3,24', breaks: 45, '~breaks': '0,100', shape: 0, '~shape': '0,100', width: 55, '~width': '20,90', offset: 0, '~offset': '-100,100' }, 320, 160],   // 8
       ['blur', { radius: 5 }, 600, 260],                                           // 9
       ['material', { relief: 30, gloss: 45, shine: 40, shadow: 60, occlusion: 45, ambient: 40 }, 840, 180],   // 10
-      ['surface', { name: 'Knotwork', ground: 'grey' }, 1080, 200]],               // 11
+      ['surface', { name: 'Knotwork', ground: 'grey', aa: 'edges only' }, 1080, 200]],               // 11
     wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
       [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
@@ -40348,7 +40462,7 @@ const TEXTURE_CHAINS = {
       ['number', { value: 18 }, 560, 460],                                         // 10 (the line's crease)
       ['mix', { t: 50 }, 780, 300],                                                // 11
       ['material', { relief: 40, '~relief': '0,90', gloss: 35, shine: 30, shadow: 55, occlusion: 45, ambient: 40 }, 1000, 200],   // 12
-      ['surface', { name: 'Ruffled Growth', ground: 'grey' }, 1240, 220],          // 13
+      ['surface', { name: 'Ruffled Growth', ground: 'grey', aa: 'edges only' }, 1240, 220],          // 13
       ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 540], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 620]],   // 14 (100 of 50–400), 15
     wires: [[1, 1, 6, paramPort('growline', 'growth')], [2, 1, 6, paramPort('growline', 'fold')], [3, 1, 6, paramPort('growline', 'seeds')], [4, 1, 12, paramPort('material', 'relief')],
       [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1], [14, 1, 6, paramPort('growline', 'zoom')], [15, 1, 6, paramPort('growline', 'offset')]] },
@@ -40387,7 +40501,7 @@ const TEXTURE_CHAINS = {
       ['contours', { levels: 20, '~levels': '6,50', weight: 100, index: 5, strength: 90 }, 560, 0],   // 8
       ['colour', { hex: '#222222' }, 820, 20],                                     // 9  (the ink)
       ['mix', { t: 50 }, 1060, 100],                                               // 10 (the lines inked over it)
-      ['surface', { name: 'Contour Map', ground: 'grey' }, 1300, 100]],            // 11
+      ['surface', { name: 'Contour Map', ground: 'grey', aa: 'edges only' }, 1300, 100]],            // 11
     wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
       [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
   // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
@@ -40451,7 +40565,7 @@ const TEXTURE_CHAINS = {
       [9, 2, 16, 5], [9, 1, 16, 6], [9, 2, 17, 5], [9, 1, 17, 6], [10, 1, 16, 2], [10, 2, 16, 3], [10, 3, 16, 4], [10, 1, 17, 2], [10, 2, 17, 3], [10, 3, 17, 4],
       [11, 1, 16, 7], [11, 1, 17, 7], [12, 1, 16, 8], [12, 1, 17, 8], [13, 1, 16, 9], [13, 1, 17, 9], [14, 1, 16, 10], [14, 1, 17, 10],
       [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [18, 2, 19, 2], [19, 1, 20, 1]] },
-  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
+  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. One ring in four orbits Saturn (Ringworld View\'s Saturn setting): it hangs huge in the sky beyond, laid over the stars by its Saturn Cover, behind the shadow squares and the air. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],                 // 1
       ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],                 // 2  (the relief, the walls, the land's own forms)
       ['knob', { slot: '3', name: 'Seas', def: 40 }, 40, 200],                      // 3
@@ -40525,7 +40639,9 @@ const TEXTURE_CHAINS = {
       ['blend', { mode: 'multiply', opacity: 100 }, 3440, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3680, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3920, 1300],   // 93, 94, 95 (the city's lights on land; the other lights)
       ['random', { lo: 0, hi: 100 }, 2720, 460],                                    // 96 (the star's color)
       // THE LAND'S OWN FORMS are rock, not metal (its peaks' heads snow): the dry land's color and the stone's, by the land noise
-      ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860]],   // 97 (rock), 98 (metal or rock), 99 (snow)
+      ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860],   // 97 (rock), 98 (metal or rock), 99 (snow)
+      // SATURN (one ring in four orbits it: Ringworld View's Saturn), laid over the stars, behind the shadow squares and the air
+      ['mix', { t: 50 }, 2120, 1260]],                                               // 100
     wires: [[66, 1, 11, 1], [66, 2, 11, 2], [66, 3, 11, 3], [4, 1, 11, paramPort('ringview', 'build')], [4, 1, 11, paramPort('ringview', 'cities')], [2, 1, 11, paramPort('ringview', 'landforms')], [8, 1, 11, paramPort('ringview', 'traffic')],
       [11, 2, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [2, 1, 69, paramPort('maprange', 'outHi')], [69, 1, 70, 1], [12, 1, 70, 2], [12, 1, 71, 1], [70, 1, 71, 2],
       [78, 1, 79, 1], [80, 1, 12, paramPort('mapnoise', 'warp')], [81, 1, 13, paramPort('mapnoise', 'size')], [1, 1, 11, paramPort('ringview', 'band')], [2, 1, 11, paramPort('ringview', 'walls')], [7, 1, 11, paramPort('ringview', 'altitude')],
@@ -40542,7 +40658,7 @@ const TEXTURE_CHAINS = {
       [88, 1, 36, 1], [35, 1, 36, 2], [34, 1, 36, 3],
       [11, 8, 37, 1], [36, 1, 38, 1], [37, 1, 38, 2], [10, 1, 39, 1], [11, 11, 63, 1], [63, 1, 39, 2],
       [38, 1, 40, 1], [39, 1, 40, 2], [11, 10, 40, 3],
-      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [65, 1, 43, 1], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
+      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [100, 1, 43, 1], [65, 1, 100, 1], [11, 27, 100, 2], [11, 28, 100, 3], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
       [40, 1, 46, 1], [45, 1, 46, 2], [72, 1, 46, 3], [11, 5, 72, 1], [11, 13, 72, 2],
       [46, 1, 48, 1], [47, 1, 48, 2], [11, 7, 48, 3], [48, 1, 74, 1], [73, 1, 74, 2], [11, 14, 74, 3], [74, 1, 76, 1], [75, 1, 76, 2], [11, 15, 76, 3],
       [11, 1, 50, 1], [11, 2, 50, 2], [11, 4, 50, 3], [50, 1, 51, 1], [11, 8, 52, 1], [51, 1, 53, 1], [52, 1, 53, 2], [53, 1, 54, 1], [4, 1, 54, 2],
@@ -40561,7 +40677,7 @@ const TEXTURE_CHAINS = {
       ['tint', {}, 560, 520],                                                      // 10 (the water by distance: near, far)
       ['material', { relief: 110, gloss: 85, shine: 90, shadow: 20, occlusion: 10, ambient: 40 }, 1060, 300],   // 11
       ['glow', { radius: 4, aura: 14, strength: 45, auraK: 10, core: 40, hex: '#EAF4FF' }, 1300, 300],   // 12
-      ['surface', { name: 'Rain on Water', ground: 'colour' }, 1540, 320],          // 13
+      ['surface', { name: 'Rain on Water', ground: 'colour', aa: 'edges only' }, 1540, 320],          // 13
       ['displace', { amount: 35, blur: 10 }, 800, 520]],                           // 14 (the reflection bent by the rings)
     wires: [[1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
       [9, 3, 10, 1], [8, 1, 10, 2], [7, 1, 10, 3], [10, 1, 14, 1], [9, 1, 14, 2], [14, 1, 11, 1], [9, 1, 11, 2], [6, 1, 11, 7], [11, 1, 12, 1], [9, 2, 12, 2], [12, 1, 13, 1]] },
@@ -40729,7 +40845,7 @@ const TEXTURE_CHAINS = {
       ['blur', { radius: 5 }, 800, 620],                                          // 19 (the glints' bloom)
       ['blend', { mode: 'screen', opacity: 70 }, 1520, 300],                      // 20
       ['blend', { mode: 'screen', opacity: 100 }, 1760, 300],                     // 21
-      ['surface', { name: 'Dewy Webs', ground: 'grey' }, 2000, 320]],             // 22
+      ['surface', { name: 'Dewy Webs', ground: 'grey', aa: 'edges only' }, 2000, 320]],             // 22
     wires: [[1, 1, 10, paramPort('dewwebs', 'webs')], [2, 1, 10, paramPort('dewwebs', 'size')], [3, 1, 10, paramPort('dewwebs', 'dew')], [4, 1, 10, paramPort('dewwebs', 'drops')],
       [5, 1, 10, paramPort('dewwebs', 'torn')], [6, 1, 10, paramPort('dewwebs', 'sag')], [7, 1, 10, paramPort('dewwebs', 'irid')], [8, 1, 10, paramPort('dewwebs', 'threads')], [9, 1, 10, 1],
       [10, 1, 12, 1], [11, 1, 13, 1], [12, 1, 13, 2], [10, 3, 14, 1], [14, 1, 15, 1], [13, 1, 16, 1], [15, 1, 16, 2], [10, 3, 17, 1], [16, 1, 18, 1], [17, 1, 18, 2],
@@ -43398,11 +43514,11 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Siarnaq';
+const RELEASE = 'Saturn–Tarqeq';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"diqF4TTe","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"puqcxPGZ","ringpaint":"nIPj4L7t","ringworld":"MQ4pbwu0","sigils":"oFaAKxnj","skyring":"SCZEdr-0","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"aVKpXREs","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","underglass":"yw9UZYdJ","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
+const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"lveY9-4D","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"aYDyL6O_","ringpaint":"nIPj4L7t","ringworld":"Glj7XdIW","sigils":"oFaAKxnj","skyring":"SCZEdr-0","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"Xf6pf_7_","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","underglass":"yw9UZYdJ","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
 const SWATCH_STAMP = 'jgHa9TE9';
 
 
@@ -44235,7 +44351,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · 6317182";
+const STAMP = "2026-10-18 · ffaa192";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -48921,8 +49037,8 @@ const WIKI_PARTS = {
     line: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, what its builders raised, open space.',
     about: 'A ring of land round its star, walled at both rims to hold its air, and you stand on its inner floor. Each pixel’s line of sight is followed to what it meets. Nothing is drawn here: the part hands on maps of the world, so any noise or picture can be laid on it. Along and Across say where on the ring a pixel shows, in band widths (the ring’s width is 1), so a Noise at Coordinates fed them lays land that is sharp at your feet and smooth on the far arch. Detail says how much ground one pixel spans there, for that noise to stop before it would shimmer. Daylight says where the star reaches: the shadow squares circling close round it put stripes of night along the ring, the dusk line soft as the star’s own size (how many squares there are is the seed’s). Air is the haze on the way, thicker along the ground than straight up. The clouds float over the land: Cloud Along and Cloud Across say where a line of sight crosses their layer before the ground, so clouds stand off the land with their shade beneath them. And the ring was built by someone: the seed’s two builders (or the one Builders names) decide what stands on it — spires, towers on the walls’ tops, arches (great spans from wall top to wall top, the air they hold a faint field beneath them; flying buttresses from a wall down to the land; arcades on piers; gates; the land’s own stone arches), bars of hard light from wall to wall, standing stones, towers in cities and glass domes over them, ships and their trails, crystals of light growing from the land, summoning circles and rings of light standing on plinths, pillars of light toward the star — and Construction how much. Nothing floats but the ships. Cities spreads the cities further, Traffic fills the sky with ships and lanes of small craft, and Landforms raises the land’s own forms: ranges at the walls’ feet, peaks (snow on the tall ones), mesas, boulders strewn near you, pinnacles and stone arches, from the seed’s own country.',
     ins: { 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn): along it, toward a wall, back.', 'look up': 'How far up you look (wire the Camera Dial’s View): its middle straight up at the arch, its rim level, past the rim a little down.', zoom: 'The Camera Dial’s Zoom: it narrows the Lens.', 'sun height': 'The time of day (wire the Light Dial’s Height): at the dial’s middle noon, at its rim dusk, past the rim night. Unwired: Daylight.', 'sun from': 'Which way round the ring the dusk comes (wire the Light Dial’s Direction): the dial’s left half or its right.' },
-    outs: { along: 'Where along the ring each pixel shows, in band widths from where you stand.', across: 'Where across the ring: 0 at one wall, 1 at the other; up a wall it runs on past them.', distance: 'How far off, 0 near to 1 far.', detail: 'How much ground one pixel spans there (for Noise at Coordinates’ Detail).', space: 'Where you see past the ring: the sky, the star, the squares (1).', walls: 'The rim walls, and every solid work the builders raised (1).', star: 'The star, and its glow in the air.', daylight: 'Where the star reaches the ground each pixel shows: 1 day, 0 night.', 'shadow squares': 'The squares that circle the star, seen against it (1).', air: 'How much air lies between you and what you see: the haze.', 'daylight here': 'The day where you stand: the light the air about you is lit by.', scaffolding: 'The beams of the floor where it was left unfinished (1): a lattice over the void.', 'open floor': 'The void between those beams, where you see space through the ring (1).', seam: 'Rarely (about one ring in fifty) the edges of the world’s own box, faint, out in space.', beacons: 'A light at the tip of every spire.', 'sky air': 'The air before the sky, read even at a pixel whose middle met a wall (Air is the ground’s).', city: 'The city’s blocks on the floor (0 none): streets between, lighter blocks.', 'city lights': 'The city’s lamps and windows at night, in the builders’ colors (a picture): multiply it by the land, so no city shines on the sea.', lights: 'Every other light, in the builders’ colors (a picture): towers’ windows at night, ships’ engines and trails, crystals glowing, summoning circles, pillars of light. Screen it over the rest.', 'works shade': 'The form of each work (1 on the rim walls): multiply the walls’ color by it so spires, towers, arches and hulls look round.', 'cloud along': 'Where along the ring a line of sight crosses the cloud layer before the ground (for the clouds’ Noise at Coordinates).', 'cloud across': 'Where across the ring it crosses.', 'cloud detail': 'How much of the cloud layer one pixel spans there.', 'clouds here': 'Where there is a crossing at all (1): the far land; the ground at your feet lies under the clouds, not behind them.', rock: 'Where a work is the land’s own rock (1): peaks, mesas, boulders, pinnacles, floating isles, standing stones. Mix the walls’ metal toward a stone color by it.', snow: 'The snow on the tall peaks’ heads (1): mix toward white by it.' },
-    set: { band: 'How wide the ring is against its size: a thin ribbon of an arch, or a broad one.', walls: 'How tall the rim walls are.', altitude: 'How high you stand: on the ground, on a mountain, or flying.', look: 'Where you look round the ring, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', lens: 'How wide the lens is, in degrees across the page’s short side.', place: 'Where across the ring you stand: the middle, or near a wall (when Stand is at Stand At).', placeBy: 'Where you stand across the ring: at Stand At, or where the seed says (each seed its own spot).', landforms: 'How much the land raises of itself: ranges at the walls’ feet, peaks, mesas, boulders near you, pinnacles, stone arches. Which of them is the seed’s country.', cities: 'How far the cities spread: below 25 only where the builders build them; above it, whoever built the ring, more blocks, towers and glass domes.', traffic: 'How busy the sky is: none at 0, the builders’ ships at 50, and past the middle lanes of small craft whose engines make dotted lines of light, and busier streets at night.', daylight: 'Where the shadow squares stand, when nothing is wired into Sun Height: 0 midnight, 50 the dusk line, 100 noon.', air: 'How thick the air is.', build: 'How much the builders built: more works of every kind they make, taller spires, more of the floor left as scaffolding. Never none: even at 0 a few stand. Each kind draws from its own stream, so more adds works and moves none.', builders: 'Who built the ring: at 0 the seed’s own pair (one leading, one in its shadow); then the Wilds (standing stones, stone arches, a few lights), Engineers (the Forerunners’ way: spires and beacons, towers on the walls, flying buttresses, bars of hard light, scaffolding, ships, blue lights), Cities (towers and city lights, arcades, many ships), Magi (crystals, summoning circles and rings of light, pillars of light, great spans) or Ruins (broken spires, arches standing as stubs).' },
+    outs: { along: 'Where along the ring each pixel shows, in band widths from where you stand.', across: 'Where across the ring: 0 at one wall, 1 at the other; up a wall it runs on past them.', distance: 'How far off, 0 near to 1 far.', detail: 'How much ground one pixel spans there (for Noise at Coordinates’ Detail).', space: 'Where you see past the ring: the sky, the star, the squares (1).', walls: 'The rim walls, and every solid work the builders raised (1).', star: 'The star, and its glow in the air.', daylight: 'Where the star reaches the ground each pixel shows: 1 day, 0 night.', 'shadow squares': 'The squares that circle the star, seen against it (1).', air: 'How much air lies between you and what you see: the haze.', 'daylight here': 'The day where you stand: the light the air about you is lit by.', scaffolding: 'The beams of the floor where it was left unfinished (1): a lattice over the void.', 'open floor': 'The void between those beams, where you see space through the ring (1).', seam: 'Rarely (about one ring in fifty) the edges of the world’s own box, faint, out in space.', beacons: 'A light at the tip of every spire.', 'sky air': 'The air before the sky, read even at a pixel whose middle met a wall (Air is the ground’s).', city: 'The city’s blocks on the floor (0 none): streets between, lighter blocks.', 'city lights': 'The city’s lamps and windows at night, in the builders’ colors (a picture): multiply it by the land, so no city shines on the sea.', lights: 'Every other light, in the builders’ colors (a picture): towers’ windows at night, ships’ engines and trails, crystals glowing, summoning circles, pillars of light. Screen it over the rest.', 'works shade': 'The form of each work (1 on the rim walls): multiply the walls’ color by it so spires, towers, arches and hulls look round.', 'cloud along': 'Where along the ring a line of sight crosses the cloud layer before the ground (for the clouds’ Noise at Coordinates).', 'cloud across': 'Where across the ring it crosses.', 'cloud detail': 'How much of the cloud layer one pixel spans there.', 'clouds here': 'Where there is a crossing at all (1): the far land; the ground at your feet lies under the clouds, not behind them.', rock: 'Where a work is the land’s own rock (1): peaks, mesas, boulders, pinnacles, floating isles, standing stones. Mix the walls’ metal toward a stone color by it.', snow: 'The snow on the tall peaks’ heads (1): mix toward white by it.', saturn: 'Saturn, where the ring orbits it (by the Saturn setting): its banded globe and rings, lit by the star, and now and then Enceladus. Mix it over the space behind the shadow squares by Saturn Cover.', 'saturn cover': 'How much of each pixel is Saturn (its rings half-clear): 0 where it is not, or hidden by the ring.' },
+    set: { band: 'How wide the ring is against its size: a thin ribbon of an arch, or a broad one.', walls: 'How tall the rim walls are.', altitude: 'How high you stand: on the ground, on a mountain, or flying.', look: 'Where you look round the ring, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', lens: 'How wide the lens is, in degrees across the page’s short side.', place: 'Where across the ring you stand: the middle, or near a wall (when Stand is at Stand At).', placeBy: 'Where you stand across the ring: at Stand At, or where the seed says (each seed its own spot).', saturn: 'Whether the ring orbits Saturn, so it hangs huge in the sky beyond (fixed in the world near where the opening shot looks): by the seed (one ring in four), never, or always.', landforms: 'How much the land raises of itself: ranges at the walls’ feet, peaks, mesas, boulders near you, pinnacles, stone arches. Which of them is the seed’s country.', cities: 'How far the cities spread: below 25 only where the builders build them; above it, whoever built the ring, more blocks, towers and glass domes.', traffic: 'How busy the sky is: none at 0, the builders’ ships at 50, and past the middle lanes of small craft whose engines make dotted lines of light, and busier streets at night.', daylight: 'Where the shadow squares stand, when nothing is wired into Sun Height: 0 midnight, 50 the dusk line, 100 noon.', air: 'How thick the air is.', build: 'How much the builders built: more works of every kind they make, taller spires, more of the floor left as scaffolding. Never none: even at 0 a few stand. Each kind draws from its own stream, so more adds works and moves none.', builders: 'Who built the ring: at 0 the seed’s own pair (one leading, one in its shadow); then the Wilds (standing stones, stone arches, a few lights), Engineers (the Forerunners’ way: spires and beacons, towers on the walls, flying buttresses, bars of hard light, scaffolding, ships, blue lights), Cities (towers and city lights, arcades, many ships), Magi (crystals, summoning circles and rings of light, pillars of light, great spans) or Ruins (broken spires, arches standing as stubs).' },
     tips: ['Wire Along and Across into a Noise at Coordinates (with Detail into its Detail) to lay land on the ring.', 'Daylight into a Map Range and then a Multiply darkens the night side and leaves the arch’s day stripes lit.', 'The same cloud noise read twice, once at the cloud layer and once at the floor (Along, Across), gives clouds and the shade they cast.'],
     see: ['part:mapnoise', 'part:material', 'part:starfield', 'part:camdial', 'part:dial'],
   },
@@ -49639,6 +49755,7 @@ const WIKI_ARTICLES = [
 <li><b>edges only</b>: finds where neighbouring points differ sharply, follows each edge to its ends, and blends the points along it, so the steps become a smooth line. Soft areas are left alone. It costs little. (The method is FXAA, a standard in games.)</li>
 <li><b>all pixels</b>: draws the whole graph on a grid twice as fine, then smooths it. Edges are sharper and smoother, and fine lines hold. It is up to four times the work, so a heavy graph keeps the grid its budget allows.</li>
 </ul>
+<p>Some of the app’s own surfaces open with their Surface at <b>edges only</b>: Knotwork, Contour Map, Ruffled Growth, Fractured Glaze, Stained Glass, Dewy Webs, Rain on Water and Circuit Board, whose lines and borders are hard. Set it to <b>off</b> in one of them to see the steps it smooths.</p>
 <p>Try: a Value Noise into a Threshold with Softness at 0, then compare the three.</p>` },
 
   // ------------------------------------------------------------------ The page and your graph

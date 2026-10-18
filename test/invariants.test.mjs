@@ -107,6 +107,38 @@ check('§10 the texture service starts no timers of its own (nothing to keep Nod
   check('§7 phone rules size by --vvh or dvh, never bare vh (a phone\'s toolbar changes the viewport)', !bareVh.length, bareVh);
 }
 
+// ---- §7 Phones: the editor mirror matches the textarea's metrics ----
+{
+  // the highlight is a mirror drawn under a transparent textarea: a .pml-* class that changes a glyph's advance
+  // (its weight, spacing, size, face, or a box's edges) slides the colours off the real text and misplaces the
+  // caret. A weight is allowed only where a later rule forces it back (font-weight:400 !important). The help
+  // panel's classes, which the page's markup uses, are not the mirror's.
+  const css = raw('poetrypress.css').replace(/\/\*[\s\S]*?\*\//g, ''), page = raw('index.html');
+  const inPage = c => new RegExp('class="[^"]*\\b' + c + '\\b').test(page);
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => [m[1].trim().split(/\s*,\s*/).map(x => x.slice(1)), m[2]])
+    .filter(([cls]) => cls.every(c => /^pml-[\w-]+$/.test(c) && !inPage(c)));
+  const moves = [], weighted = new Set(), forced = new Set();
+  for(const [cls, body] of rules) for(const d of body.split(';')){
+    const [p, v = ''] = d.split(':').map(x => x.trim());
+    if(/^(padding|margin|border(?!-radius)|letter-spacing|word-spacing|width|font-size|font-family|font-style|font-stretch|line-height)/.test(p)) moves.push(cls.join(',') + ' ' + p);
+    if(p === 'font-weight') for(const c of cls) (/^400\s*!important$/.test(v) ? forced : weighted).add(c);
+  }
+  const named = new Set(rules.flatMap(([cls]) => cls));
+  for(const c of weighted) if(!forced.has(c)) moves.push(c + ' font-weight');
+  check('§7 highlighting never moves text: no .pml-* rule of the mirror changes a glyph\'s advance or box (' + named.size + ' classes)',
+    ['pml-match', 'pml-var', 'pml-varp', 'pml-sq', 'pml-op', 'pml-line'].every(c => named.has(c)) && !moves.length, moves);
+}
+
+// ---- §10 Drawflow's [df-…] lookups are escaped ----
+{
+  // a wire's range is kept as '~key' in a node's data, and Drawflow looks data up as [df-KEY]: unescaped, that
+  // threw mid-load and a graph carrying a range opened half-built
+  const { TEXTURE_CHAINS } = await import('../chains.js'), fs = src('forge.js');
+  const ranged = Object.values(TEXTURE_CHAINS).filter(c => c.nodes.some(([, d]) => Object.keys(d).some(k => k[0] === '~'))).length;
+  check('§10 graphs with a wire\'s range ("~key") load whole: Drawflow\'s [df-…] selectors are escaped (' + ranged + ' chains carry ranges)',
+    ranged > 5 && /Element\.prototype\.querySelectorAll = safe/.test(fs) && /CSS\.escape\(m\[1\]\)/.test(fs));
+}
+
 // ---- §6.5 Libraries load from a CDN at an exact version ----
 {
   const urls = [...MODULES.map(raw), raw('index.html')].join('\n').match(/https:\/\/(cdn\.jsdelivr\.net|unpkg\.com)\/[^"'`\s)]+/g) || [];

@@ -269,6 +269,7 @@ export const WIKI_ARTICLES = [
 <li><b>edges only</b>: finds where neighbouring points differ sharply, follows each edge to its ends, and blends the points along it, so the steps become a smooth line. Soft areas are left alone. It costs little. (The method is FXAA, a standard in games.)</li>
 <li><b>all pixels</b>: draws the whole graph on a grid twice as fine, then smooths it. Edges are sharper and smoother, and fine lines hold. It is up to four times the work, so a heavy graph keeps the grid its budget allows.</li>
 </ul>
+<p>Some of the app’s own surfaces open with their Surface at <b>edges only</b>: Knotwork, Contour Map, Ruffled Growth, Fractured Glaze, Stained Glass, Dewy Webs, Rain on Water and Circuit Board, whose lines and borders are hard. Set it to <b>off</b> in one of them to see the steps it smooths.</p>
 <p>Try: a Value Noise into a Threshold with Softness at 0, then compare the three.</p>` },
 
   // ------------------------------------------------------------------ The page and your graph

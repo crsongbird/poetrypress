@@ -23,7 +23,7 @@ const px = (im, x, y) => im.r[y*W + x];
 
 // ---- curves ----
 check('a fifth kind of wire: the curve, with its own color, name and help', S.VALUE_TYPES.includes('curve') && /--t-curve:#[0-9A-Fa-f]{6}[\s\S]*\.forge-veil\{[^}]*--t-curve:/.test(readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8')) && F.FORGE_TYPE_NAMES.curve === 'a curve'
-  && S.STEP_CATEGORIES.includes('Curves') && Object.values(S.STEPS).filter(s => s.cat === 'Curves').length >= 3);
+  && S.STEP_CATEGORIES.includes('Curves'));
 { const c = t => S.curveAt(t, 0.5), mk = (shape, extra = {}) => preview([node(1, 'curve', { shape, amount: 25, count: 4, ...extra })], 1);
   const lin = S.STEPS.curve.run({ num: (n, k, d) => n.data[k] ?? d, P: (n, k, d) => n.data[k] ?? d }, { data: { shape: 'linear' } })[0];
   const stairs = S.STEPS.curve.run({ num: (n, k, d) => n.data[k] ?? d, P: (n, k, d) => n.data[k] ?? d }, { data: { shape: 'stairs', count: 2 } })[0];

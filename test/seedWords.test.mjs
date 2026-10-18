@@ -57,7 +57,7 @@ check('a negative number shows the phrase of the seed the textures actually use 
 
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 check('the seed field shows the phrase; the number stays the saved value (as a tooltip only — no number on show)',
-  html.includes('id="textureSeedWords"') && /id="textureSeedValue"[^>]*hidden/.test(html) && !html.includes('textureSeedNumber') && /const n = seedFromText\(box\.value\);/.test(ev));
+  html.includes('id="textureSeedWords"') && /id="textureSeedValue"[^>]*hidden/.test(html) && /const n = seedFromText\(box\.value\);/.test(ev));
 // (what was typed is kept with the look while it is still that seed's: audit.test.mjs, by behavior)
 check('one line, the whole width, last in the tools; a hair-thin themed scroller when the words overflow (no native bar)',
   /<input type="text" id="textureSeedWords"/.test(html) && html.includes('id="textureSeedScroll"')

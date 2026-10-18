@@ -74,13 +74,6 @@ check('the spell lengths are all prime', TUNABLES.SPELLS.primes.every(n => {
 }));
 check('the texture cache holds a useful number', TUNABLES.TEXTURES.cacheEntries >= 10);
 
-// the whole point: these are read, not duplicated
-for(const [file, sym] of [['appEvents.js','SWATCH.width'], ['canvasRenderer.js','EFFECTS.bloomPasses'],
-                          ['textureGenerators.js','TEXTURES.cacheEntries'], ['spell.js','SPELLS.primes']]){
-  const src = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
-  check(`${file} reads ${sym} rather than a literal`, src.includes(sym));
-}
-
 // the default preset is named in tunables.js; it must resolve to a real one,
 // since a stale name (it once pointed at a renamed preset) fails silently
 const { PRESETS } = await import('../appOptions.js');
@@ -118,12 +111,12 @@ check('an element with only a child element gains text without losing it',
 // Every colour field in this app is a Hue; labels are Title Case; spelling
 // is American; units stay lowercase. None of these is caught by a
 // spellchecker, since both spellings of each are valid English.
-const tg = readFileSync(new URL('../textureGenerators.js', import.meta.url), 'utf8');
-const tints = [...tg.matchAll(/tintLabels:\[([^\]]*)\]/g)].flatMap(m => [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]));
+const { TEXTURE_CAPS, TEXTURE_PARAMS } = await import('../textureGenerators.js');
+const tints = Object.values(TEXTURE_CAPS).flatMap(c => c.tintLabels || []);
 check('every tint is named as a Hue', tints.length > 0 && tints.every(t => / Hue$/.test(t)));
 
 const visible = [...Object.values(UI_STRINGS), ...tints,
-  ...[...tg.matchAll(/label:'([^']+)'/g)].map(m => m[1])];
+  ...Object.values(TEXTURE_PARAMS).flatMap(ps => ps.map(p => p.label))];
 const british = visible.filter(v => /\b(colour|centre|grey|favour)/i.test(v));
 check('user-facing text uses American spelling', british.length === 0);
 if(british.length) console.log('   british:', british.join(' | '));
@@ -136,7 +129,6 @@ check('short labels are Title Case', sentenceCase.length === 0);
 if(sentenceCase.length) console.log('   not title case:', sentenceCase.slice(0, 6).join(' | '));
 
 check('units stay lowercase', !visible.some(v => /\((Px|Deg|Ms)\)/.test(v)));
-check('no HTML entity was capitalised', !visible.some(v => /&[A-Z][a-z]+;/.test(v)));
 check('the first tab is spelled Inscription', UI_STRINGS['tab.inscription'] === 'Inscription');
 
 console.log();

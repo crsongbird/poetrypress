@@ -7,6 +7,7 @@
  * sizes including the app's real production dimensions, and that the cache
  * stays bounded however many textures are made. (That a fixed seed draws the
  * same texture every time is the fingerprints' job: they would change.)
+ * Slow (longer than half a minute): it renders every texture, at several sizes and seeds.
  */
 import { installCanvasMock } from './canvasMock.mjs';
 installCanvasMock();

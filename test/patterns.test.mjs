@@ -1,6 +1,6 @@
 /**
- * patterns.test.mjs — ROADMAP F2 and F6 (Saturn–Paaliaq's next pass): Scatter's glyphs, layers and per-mark color,
- * and Pavements. The canvas mock draws no pixels, so what is checked is the wiring: each runs through the real
+ * patterns.test.mjs — the pattern parts (stepsPatterns.js): Scatter's glyphs, layers and per-mark color, and
+ * Pavements. The canvas mock draws no pixels, so what is checked is the wiring: each runs through the real
  * evaluator without throwing, gives its outputs, draws what it says (glyphs as text in the symbol fonts), keeps
  * its old ⚙ ports where they were, and a graph that scatters glyphs is made on the page.
  *

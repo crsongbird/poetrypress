@@ -83,7 +83,7 @@ check('no control is saved both by the table and by hand', !tableKeys.some(k => 
 check('the Workbench JSON shows serializeCurrentSettings() and loads with restoreSettings()',
   /\$\('advancedJson'\)\.value = JSON\.stringify\(serializeCurrentSettings\(\), null, 2\);/.test(ev) && /safeRestore\(obj, 'This JSON'\);/.test(ev) && /try \{ restoreSettings\(look\); \}/.test(ev));
 // (the Grimoire and shared spells save and apply through serializeCurrentSettings, restoreSettings and the look
-// filter, which drops only the poem, locks, highlighting and credit: audit.test.mjs, pass 4)
+// filter, which drops only the poem, locks, highlighting and credit: audit.test.mjs, "a saved spell carries the look")
 check('undo and redo step through restoreSettings()', /restoreSettings\(JSON\.parse\(h\.stack\[to\]\)\);/.test(ev));
 
 console.log();

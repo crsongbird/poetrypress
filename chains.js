@@ -210,7 +210,7 @@ export const TEXTURE_CHAINS = {
       ['hue', { slot: '2', name: 'Second Glass Hue' }, 40, 440],                  // 5
       ['panes', { size: 100, leading: 100, shape: 25, variety: 0, '~variety': '0,45', frame: 0, '~frame': '0,100' }, 320, 60],   // 6
       ['glass', { relief: 100, scene: 0, '~scene': '0,100', texture: 0, '~texture': '0,100', reflect: 100 }, 600, 140],   // 7
-      ['surface', { name: 'Stained Glass', ground: 'colour' }, 880, 180],         // 8
+      ['surface', { name: 'Stained Glass', ground: 'colour', aa: 'edges only' }, 880, 180],         // 8
       ['knob', { slot: '4', name: 'Scene', def: 0 }, 40, 540],                    // 9
       ['knob', { slot: '5', name: 'Glass Texture', def: 0 }, 40, 640],            // 10
       ['knob', { slot: '6', name: 'Window', def: 0 }, 40, 740],                   // 11
@@ -247,7 +247,7 @@ export const TEXTURE_CHAINS = {
       ['brushwork', { streaks: 55, runs: 30, pools: 60 }, 320, 380],              // 8
       ['hue', { slot: '1', name: 'Glaze Hue' }, 320, 500], ['hue', { slot: '2', name: 'Body Hue' }, 320, 600],   // 9, 10
       ['glaze', { scale: 100, gloss: 85, grime: 40 }, 620, 160],                  // 11
-      ['surface', { name: 'Fractured Glaze', ground: 'colour' }, 900, 220]],      // 12
+      ['surface', { name: 'Fractured Glaze', ground: 'colour', aa: 'edges only' }, 900, 220]],      // 12
     wires: [[1, 1, 7, paramPort('cracks', 'scale')], [2, 1, 7, paramPort('cracks', 'count')], [3, 1, 7, paramPort('cracks', 'spread')], [4, 1, 7, paramPort('cracks', 'wander')], [5, 1, 7, paramPort('cracks', 'age')],
       [6, 1, 7, 1], [1, 1, 11, paramPort('glaze', 'scale')], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
   // 🝆 Veins of Light: a network grown (space colonization) through a material's ways, glowing inside it
@@ -313,7 +313,7 @@ export const TEXTURE_CHAINS = {
       ['blur', { radius: 8 }, 1040, 300],                                          // 39
       ['math', { op: 'screen' }, 1280, 300],                                       // 40
       ['blend', { mode: 'screen', opacity: 100 }, 2960, 420],                      // 41 (sparks)
-      ['surface', { name: 'Circuit Board', ground: 'colour' }, 3200, 440],         // 42
+      ['surface', { name: 'Circuit Board', ground: 'colour', aa: 'edges only' }, 3200, 440],         // 42
       ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
       ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
       // (Ruby: an Era slider, today → future and quantum → magitech; and markings, stamps and glyphs by the seed)
@@ -600,7 +600,7 @@ export const TEXTURE_CHAINS = {
       ['knotwork', { size: 100, '~size': '40,300', cells: 6, '~cells': '3,24', breaks: 45, '~breaks': '0,100', shape: 0, '~shape': '0,100', width: 55, '~width': '20,90', offset: 0, '~offset': '-100,100' }, 320, 160],   // 8
       ['blur', { radius: 5 }, 600, 260],                                           // 9
       ['material', { relief: 30, gloss: 45, shine: 40, shadow: 60, occlusion: 45, ambient: 40 }, 840, 180],   // 10
-      ['surface', { name: 'Knotwork', ground: 'grey' }, 1080, 200]],               // 11
+      ['surface', { name: 'Knotwork', ground: 'grey', aa: 'edges only' }, 1080, 200]],               // 11
     wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
       [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
@@ -657,7 +657,7 @@ export const TEXTURE_CHAINS = {
       ['number', { value: 18 }, 560, 460],                                         // 10 (the line's crease)
       ['mix', { t: 50 }, 780, 300],                                                // 11
       ['material', { relief: 40, '~relief': '0,90', gloss: 35, shine: 30, shadow: 55, occlusion: 45, ambient: 40 }, 1000, 200],   // 12
-      ['surface', { name: 'Ruffled Growth', ground: 'grey' }, 1240, 220],          // 13
+      ['surface', { name: 'Ruffled Growth', ground: 'grey', aa: 'edges only' }, 1240, 220],          // 13
       ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 540], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 620]],   // 14 (100 of 50–400), 15
     wires: [[1, 1, 6, paramPort('growline', 'growth')], [2, 1, 6, paramPort('growline', 'fold')], [3, 1, 6, paramPort('growline', 'seeds')], [4, 1, 12, paramPort('material', 'relief')],
       [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1], [14, 1, 6, paramPort('growline', 'zoom')], [15, 1, 6, paramPort('growline', 'offset')]] },
@@ -696,7 +696,7 @@ export const TEXTURE_CHAINS = {
       ['contours', { levels: 20, '~levels': '6,50', weight: 100, index: 5, strength: 90 }, 560, 0],   // 8
       ['colour', { hex: '#222222' }, 820, 20],                                     // 9  (the ink)
       ['mix', { t: 50 }, 1060, 100],                                               // 10 (the lines inked over it)
-      ['surface', { name: 'Contour Map', ground: 'grey' }, 1300, 100]],            // 11
+      ['surface', { name: 'Contour Map', ground: 'grey', aa: 'edges only' }, 1300, 100]],            // 11
     wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
       [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
   // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
@@ -760,7 +760,7 @@ export const TEXTURE_CHAINS = {
       [9, 2, 16, 5], [9, 1, 16, 6], [9, 2, 17, 5], [9, 1, 17, 6], [10, 1, 16, 2], [10, 2, 16, 3], [10, 3, 16, 4], [10, 1, 17, 2], [10, 2, 17, 3], [10, 3, 17, 4],
       [11, 1, 16, 7], [11, 1, 17, 7], [12, 1, 16, 8], [12, 1, 17, 8], [13, 1, 16, 9], [13, 1, 17, 9], [14, 1, 16, 10], [14, 1, 17, 10],
       [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [18, 2, 19, 2], [19, 1, 20, 1]] },
-  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
+  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. One ring in four orbits Saturn (Ringworld View\'s Saturn setting): it hangs huge in the sky beyond, laid over the stars by its Saturn Cover, behind the shadow squares and the air. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],                 // 1
       ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],                 // 2  (the relief, the walls, the land's own forms)
       ['knob', { slot: '3', name: 'Seas', def: 40 }, 40, 200],                      // 3
@@ -834,7 +834,9 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'multiply', opacity: 100 }, 3440, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3680, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3920, 1300],   // 93, 94, 95 (the city's lights on land; the other lights)
       ['random', { lo: 0, hi: 100 }, 2720, 460],                                    // 96 (the star's color)
       // THE LAND'S OWN FORMS are rock, not metal (its peaks' heads snow): the dry land's color and the stone's, by the land noise
-      ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860]],   // 97 (rock), 98 (metal or rock), 99 (snow)
+      ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860],   // 97 (rock), 98 (metal or rock), 99 (snow)
+      // SATURN (one ring in four orbits it: Ringworld View's Saturn), laid over the stars, behind the shadow squares and the air
+      ['mix', { t: 50 }, 2120, 1260]],                                               // 100
     wires: [[66, 1, 11, 1], [66, 2, 11, 2], [66, 3, 11, 3], [4, 1, 11, paramPort('ringview', 'build')], [4, 1, 11, paramPort('ringview', 'cities')], [2, 1, 11, paramPort('ringview', 'landforms')], [8, 1, 11, paramPort('ringview', 'traffic')],
       [11, 2, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [2, 1, 69, paramPort('maprange', 'outHi')], [69, 1, 70, 1], [12, 1, 70, 2], [12, 1, 71, 1], [70, 1, 71, 2],
       [78, 1, 79, 1], [80, 1, 12, paramPort('mapnoise', 'warp')], [81, 1, 13, paramPort('mapnoise', 'size')], [1, 1, 11, paramPort('ringview', 'band')], [2, 1, 11, paramPort('ringview', 'walls')], [7, 1, 11, paramPort('ringview', 'altitude')],
@@ -851,7 +853,7 @@ export const TEXTURE_CHAINS = {
       [88, 1, 36, 1], [35, 1, 36, 2], [34, 1, 36, 3],
       [11, 8, 37, 1], [36, 1, 38, 1], [37, 1, 38, 2], [10, 1, 39, 1], [11, 11, 63, 1], [63, 1, 39, 2],
       [38, 1, 40, 1], [39, 1, 40, 2], [11, 10, 40, 3],
-      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [65, 1, 43, 1], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
+      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [100, 1, 43, 1], [65, 1, 100, 1], [11, 27, 100, 2], [11, 28, 100, 3], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
       [40, 1, 46, 1], [45, 1, 46, 2], [72, 1, 46, 3], [11, 5, 72, 1], [11, 13, 72, 2],
       [46, 1, 48, 1], [47, 1, 48, 2], [11, 7, 48, 3], [48, 1, 74, 1], [73, 1, 74, 2], [11, 14, 74, 3], [74, 1, 76, 1], [75, 1, 76, 2], [11, 15, 76, 3],
       [11, 1, 50, 1], [11, 2, 50, 2], [11, 4, 50, 3], [50, 1, 51, 1], [11, 8, 52, 1], [51, 1, 53, 1], [52, 1, 53, 2], [53, 1, 54, 1], [4, 1, 54, 2],
@@ -870,7 +872,7 @@ export const TEXTURE_CHAINS = {
       ['tint', {}, 560, 520],                                                      // 10 (the water by distance: near, far)
       ['material', { relief: 110, gloss: 85, shine: 90, shadow: 20, occlusion: 10, ambient: 40 }, 1060, 300],   // 11
       ['glow', { radius: 4, aura: 14, strength: 45, auraK: 10, core: 40, hex: '#EAF4FF' }, 1300, 300],   // 12
-      ['surface', { name: 'Rain on Water', ground: 'colour' }, 1540, 320],          // 13
+      ['surface', { name: 'Rain on Water', ground: 'colour', aa: 'edges only' }, 1540, 320],          // 13
       ['displace', { amount: 35, blur: 10 }, 800, 520]],                           // 14 (the reflection bent by the rings)
     wires: [[1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
       [9, 3, 10, 1], [8, 1, 10, 2], [7, 1, 10, 3], [10, 1, 14, 1], [9, 1, 14, 2], [14, 1, 11, 1], [9, 1, 11, 2], [6, 1, 11, 7], [11, 1, 12, 1], [9, 2, 12, 2], [12, 1, 13, 1]] },
@@ -1038,7 +1040,7 @@ export const TEXTURE_CHAINS = {
       ['blur', { radius: 5 }, 800, 620],                                          // 19 (the glints' bloom)
       ['blend', { mode: 'screen', opacity: 70 }, 1520, 300],                      // 20
       ['blend', { mode: 'screen', opacity: 100 }, 1760, 300],                     // 21
-      ['surface', { name: 'Dewy Webs', ground: 'grey' }, 2000, 320]],             // 22
+      ['surface', { name: 'Dewy Webs', ground: 'grey', aa: 'edges only' }, 2000, 320]],             // 22
     wires: [[1, 1, 10, paramPort('dewwebs', 'webs')], [2, 1, 10, paramPort('dewwebs', 'size')], [3, 1, 10, paramPort('dewwebs', 'dew')], [4, 1, 10, paramPort('dewwebs', 'drops')],
       [5, 1, 10, paramPort('dewwebs', 'torn')], [6, 1, 10, paramPort('dewwebs', 'sag')], [7, 1, 10, paramPort('dewwebs', 'irid')], [8, 1, 10, paramPort('dewwebs', 'threads')], [9, 1, 10, 1],
       [10, 1, 12, 1], [11, 1, 13, 1], [12, 1, 13, 2], [10, 3, 14, 1], [14, 1, 15, 1], [13, 1, 16, 1], [15, 1, 16, 2], [10, 3, 17, 1], [16, 1, 18, 1], [17, 1, 18, 2],

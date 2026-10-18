@@ -83,24 +83,6 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 Each item lists its **files**, what it **depends on**, and how to **prove** it.
 IDs are for cross-reference. They are not priorities (see §3 for the order).
 
-### A · The engine (athanor.js, steps.js)
-
-- **A7 · Anti-aliasing for the menu's textures.** The Surface's Anti-aliasing
-  is for graphs; a texture's chain stays v2 and draws as it always did. A
-  reading or a knob could switch it on for the hard-edged textures (Circuit
-  Board, Stained Glass, Knotwork), each through compare.mjs and Ruby's eye.
-  Ruby: yes, and new graphs stay at edges only ("anti aliasing is
-  expensive").
-  - Measured (Saturn–Siarnaq): edges only changes 3–6% of the pixels of the
-    hard-edged chains (Ruffled Growth, Knotwork, Dewy Webs, Contour Map,
-    Circuit Board, Rain on Water, Fractured Glaze, Stained Glass, Linen,
-    Hatching) and almost none of the soft ones; it costs ~0.1 s per million
-    edge-filled pixels here. The sheet is with Ruby: switch on the ones Ruby
-    picks (`aa: 'edges only'` on the chain's Surface) and accept their
-    fingerprints.
-  - All pixels only where the budget and the baseline phone allow, since it
-    is four times the work.
-
 ### B · The output stage (the Surface)
 
 - **B2 · Channels in the Athanor preview.** A selector under the preview:
@@ -248,10 +230,6 @@ Each by a stream of its own (`seedChoice`), so a picture without one is as it
 was; the painters `paintSaturn` and `paintEnceladus` are shared (AGENTS §9,
 Easter eggs).
 
-- **K1 · The 3D Ringworld orbiting Saturn** (Ruby: "Ringworld should
-  sometimes be orbiting Saturn"): Saturn as a sphere with its rings in the
-  ray-traced sky, beyond the far arch, lit by the ring's star; Enceladus now
-  and then. The Painted Ringworld has it.
 - **K2 · Fractal Moon as Enceladus**, rarely: icy white, the tiger stripes,
   the plume.
 - **K3 · More nods** where a surface's own subject invites one (a wreck's
@@ -321,7 +299,7 @@ superseded) wait for Stage 4.
  Scatter ───────────────────► G2 punctuation ─────────────────► I studies → textures ───┐
                                                                 J black boxes apart  ───┤
  F5–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
- A7 AA for textures                                            Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
+                                                               Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
  (groups, loops) ─┬───────                                                              │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               (controls: dial, two handles, curves) ─────────────────────┘      ├─► E4 author locks

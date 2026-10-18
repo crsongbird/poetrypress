@@ -4,6 +4,35 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Tarqeq (2026-10-17)
+
+- **Ringworld orbits Saturn too**, one ring in four: Saturn hangs huge in
+  the sky beyond the ring, banded and ringed, lit by the ring's star, with
+  the rings' shadow across it and its own across the rings. It stands fixed
+  in the world where the opening shot looks, so the first picture shows it
+  and turning the camera turns past it; the shadow squares and the day's air
+  pass in front of it. Now and then Enceladus is beside it. Ringworld View's
+  new **Saturn** setting in the Athanor chooses: by the seed, never, or
+  always.
+- **Smoother edges** on Knotwork, Contour Map, Ruffled Growth, Fractured
+  Glaze, Stained Glass, Dewy Webs, Rain on Water and Circuit Board (as Ruby
+  chose from the sheets): their Surface's Anti-aliasing is now edges only,
+  so lines and borders that ran at a slant no longer come out in small
+  steps. Most take a little longer to make; Stained Glass takes no longer.
+- **Saturn among the stars is now faint under an atmosphere:** in Aurora's
+  sky it is a dim point, as Saturn is from the ground; out in space (Ring in
+  the Sky) it is still a small ringed disk.
+- **Under the hood:**
+  - reviewed the tests: checks that read the app's source where behavior
+    could be tested now test the behavior (the Athanor's graph is no undo
+    step, the sound settings stay out of a look, kept surfaces rename their
+    Surface, the preset tiles' frames and glyphs, the readings' marks); checks
+    of things long gone and copies of other suites' checks are gone; two
+    pitfalls joined the invariants (Drawflow's escaped lookups; highlighting
+    never moves text, now one check over every PML mark); suites named for a
+    pass are named for what they guard, and the slow ones say why. What is
+    left for the next review is in OPEN-ISSUES.
+
 ## Saturn–Siarnaq (2026-10-17)
 
 - **The Painted Ringworld orbits Saturn**, one ring in four: Saturn hangs

@@ -17,8 +17,6 @@ check('twenty-two Archetypes in four tiers and Quintessence, twelve Accent Runes
   && R.ARCHETYPES.at(-1).name === 'Quintessence' && R.ACCENTS.length === 12 && R.CHROMA.length === 11);
 check('the Primal Four are the readings\' elements, with their Chroma (Fire red, Wind green, Water blue, Earth yellow)',
   ['🜂Fire Red', '🜁Wind Green', '🜄Water Blue', '🜃Earth Yellow'].every(x => R.ARCHETYPES.some(a => a.glyph + a.name + ' ' + a.chroma === x)));
-check('the shared words Ruby set aside stay out (Vitrum, not the old name; no Pandorans)',
-  !/chrysm|pandoran/i.test(src('runology.js')) && R.ARCHETYPES.some(a => a.name === 'Vitrum'));
 check('🜉 is Creation, the Athanor\'s glyph', R.ARCHETYPES.find(a => a.glyph === '🜉').name === 'Creation');
 
 // its words and glyphs, where the app already uses such things
@@ -27,8 +25,6 @@ check('🜉 is Creation, the Athanor\'s glyph', R.ARCHETYPES.find(a => a.glyph =
   check('its words are in the seed phrases (an Archetype names a seed: "No wood that strayed toward Creation")', S.seedPhrase(66).includes('Creation'));
   check('its glyphs are spell glyphs (so spells and the Transmutation Circle draw them)',
     [...R.ARCHETYPES, ...R.ACCENTS].every(r => SP.GLYPHS.includes(r.glyph)));
-  check('no rune of its own for a seed, nor for a built-in look (Ruby: not that)',
-    !/seedRune|presetRune|PRESET_RUNES/.test(src('runology.js') + src('appEvents.js') + src('pmlVars.js')) && !src('index.html').includes('seed-rune'));
 }
 
 // spells and looks

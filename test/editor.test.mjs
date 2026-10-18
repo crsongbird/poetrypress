@@ -150,12 +150,7 @@ check('without marks, nothing is marked', !/pml-match/.test(highlightDocument(T)
 highlightDocument(T, new Set([2, 10]));
 check('marks do not leak into the next paint', !/pml-match/.test(highlightDocument(T)));
 
-// the mark may paint, but must never take up space
-const cssSrc = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
-const matchRule = (cssSrc.match(/\.pml-match\{[^}]*\}/) || [''])[0];
-check('the match style exists', matchRule.length > 0);
-check('the match style cannot move text',
-  !/(padding|margin|border(?!-radius)|font-weight|letter-spacing|width|font-size)\s*:/.test(matchRule));
+// (the mark may paint, but must never take up space: invariants.test, §7 Phones)
 
 // the caret moves without typing, so the pair must follow taps and keys
 const edSrc = readFileSync(new URL('../editor.js', import.meta.url), 'utf8');

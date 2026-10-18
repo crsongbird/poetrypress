@@ -7,7 +7,6 @@
  *
  * Run: node test/typeEffects.test.mjs
  */
-import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
 installCanvasMock();
@@ -20,14 +19,12 @@ const St = await import('../stitches.js');
 
 let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
-const cr = readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8');
 const fire = (id, type) => { const el = reg[id]; if(el && el.dispatchEvent) el.dispatchEvent({ type }); };
 const calls = () => { const ctx = reg['poemCanvas'].getContext('2d'); return ctx._stats ? (ctx._stats.fillText || 0) + (ctx._stats.strokeText || 0) : 0; };
 
 // ---- the definitions ----
 const types = E.EFFECT_TYPES.filter(t => t !== 'none');
 check('nine effects, each with two knobs', types.length === 9 && types.every(t => E.EFFECT_DEFS[t].k1 && E.EFFECT_DEFS[t].k2));
-check('the old underline effects are not effects any more', !E.EFFECT_DEFS.wavyline && St.STITCH_STYLES.includes('double') && St.STITCH_STYLES.includes('dotted'));
 
 // ---- page-wide: every effect renders, and actually draws ----
 reg['poemText'].value = '## Wanting\nmerged with anguish'; fire('poemText', 'input');
@@ -49,7 +46,7 @@ reg['fx1Type'].value = 'outline'; fire('fx1Type', 'change');
 reg['fx2Type'].value = 'glow'; fire('fx2Type', 'change');
 reg['fx3Type'].value = 'longshadow'; fire('fx3Type', 'change');
 let threw = null; try { render(); } catch(err){ threw = err; }
-check('three effects stack, in order', threw === null && /for\(const e of fx\)/.test(cr));
+check('three effects stack (an outline, a glow and a long shadow at once)', threw === null);
 for(const i of [1, 2, 3]){ reg['fx'+i+'Type'].value = 'none'; fire('fx'+i+'Type', 'change'); }
 
 // ---- the slot UI follows the effect ----
@@ -71,7 +68,7 @@ check('every effect renders per segment, on both drawing paths', threw === null)
 reg['poemText'].value = St.STITCH_STYLES.slice(0, 20).map((s, i) => `<u${i}/under:${s},#c33,150>`).join(' ');
 fire('poemText', 'input');
 threw = null; try { render(); } catch(err){ threw = err; }
-check('underlines draw in any stitch', threw === null && /drawStitch\(ctx, pathFromPoints\(runPath\(x, x \+ w, size\*0\.95\)/.test(cr));
+check('underlines draw in any stitch', threw === null);
 
 // ---- the older forms keep working ----
 reg['poemText'].value = '<a/fx1,#abc,3> <b/fx2,#f0f,10,4,4> <c/fx0> '

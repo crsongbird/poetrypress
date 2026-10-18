@@ -1,5 +1,5 @@
 /**
- * groups.test.mjs — graph v5 (Saturn–Paaliaq): GROUPS (ROADMAP A3) and PORTS SAVED BY NAME (A10).
+ * groups.test.mjs — groups in an Athanor graph (a group is a part made of parts) and ports saved by name.
  *   - a grouped Agate draws exactly what the loose one drew, and its slider stays on the page
  *   - ports by name: every starter and texture chain goes to names and back unchanged; a part that gains an input
  *     keeps every saved wire on the setting it was on

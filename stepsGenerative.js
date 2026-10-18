@@ -1477,13 +1477,66 @@ function ringAir(L, dx, dy, dz, a, b, hit){
       const X = Px + t*dx, Y = t*dy, h = L.R - Math.sqrt(X*X + Y*Y); if(h < 0) continue; tau += Math.exp(-h/L.Hs - (over > 0 ? over/(L.W*0.08) : 0))*dt; } });
   return tau/L.L0;
 }
-function genRingView(ww, wh, unit, o){
+// SATURN for the ring (Ruby: "Ringworld should sometimes be orbiting Saturn"; ROADMAP K1): by the seed (one ring in four,
+// from a stream of its own, so every other ring is as it was) or the part's Saturn setting, the ring orbits it and it
+// hangs huge in the sky beyond. It is placed in the world where the opening shot looks (turn 40, view 55), a little off
+// by the seed, so the first picture shows it and turning the camera turns past it; its rings opened a little, lit by the
+// ring's star at the ring's middle; now and then Enceladus beside it. Saturn's radius is the unit here; null: no Saturn.
+function ringSaturn(o, mode){
+  const S = seedChoice(o.seed >>> 0, 'ring saturn'), by = S() < 0.25;
+  if(!(mode === 'always' || (mode !== 'never' && by))) return null;
+  const L0 = ringCamera({ ...o, look: 40, lift: 90 - 90*0.55 }), f = [L0.fx, L0.fy, L0.fz], r = [L0.rx, L0.ry, L0.rz], u = [L0.ux, L0.uy, L0.uz];
+  const a = (S() - 0.5)*0.6, b = -0.02 + 0.25*S(), sv = ringNorm([0, 1, 2].map(i => f[i]*Math.cos(a)*Math.cos(b) + r[i]*Math.sin(a)*Math.cos(b) + u[i]*Math.sin(b)));
+  const rho = 0.1 + 0.09*S(), D = 1/Math.sin(rho), dot = (p, q) => p[0]*q[0] + p[1]*q[1] + p[2]*q[2], cross = (p, q) => [p[1]*q[2] - p[2]*q[1], p[2]*q[0] - p[0]*q[2], p[0]*q[1] - p[1]*q[0]];
+  const up = ringNorm(u.map((v, i) => v - sv[i]*dot(u, sv))), roll = (S() - 0.5)*0.5, side = cross(sv, up), u2 = ringNorm(up.map((v, i) => v*Math.cos(roll) + side[i]*Math.sin(roll)));
+  const open = (S() < 0.5 ? -1 : 1)*(0.2 + 0.25*S()), nR = ringNorm(u2.map((v, i) => v*Math.cos(open) + sv[i]*Math.sin(open)));
+  // (where it is, from the camera, in Saturn's radii; the way to the star from it; the ring plane's own two ways)
+  const C = sv.map(v => v*D), O = [L0.Px, 0, L0.z0], Ls = ringNorm(C.map((v, i) => -(O[i] + v))), a1 = ringNorm(sv.map((v, i) => v - nR[i]*dot(sv, nR))), a2 = cross(nR, a1);
+  const enc = S() < 0.45 ? (th => C.map((v, i) => v + 3.95*(a1[i]*Math.cos(th) + a2[i]*Math.sin(th))))((S() < 0.5 ? -1 : 1)*(0.35 + 0.15*S())*Math.PI) : null;
+  return { C, nR, Ls, D, enc, phase: S()*6.283 };
+}
+// a ring's opacity at r Saturn radii out: the C ring faint, the B ring bright, the Cassini gap, the A ring with Encke's
+const RING_SAT_BANDS = [[1.24, 1.53, 0.28, 0.62], [1.53, 1.95, 0.88, 0.95], [1.95, 2.03, 0.06, 0.7], [2.03, 2.205, 0.62, 0.85], [2.215, 2.27, 0.55, 0.82]];
+function ringSatRing(r, span){ let a = 0, b = 0; for(const [r0, r1, al, br] of RING_SAT_BANDS){ const k = genClamp(Math.min(r - r0, r1 - r)/Math.max(1e-4, span) + 0.5); a += al*k; b += br*al*k; } return [a, a > 0 ? b/a : 0]; }
+const RING_SAT_TONES = [[0.85, 0.79, 0.62], [0.91, 0.85, 0.70], [0.80, 0.71, 0.52], [0.93, 0.88, 0.74], [0.76, 0.67, 0.49], [0.88, 0.81, 0.64], [0.72, 0.66, 0.53]];
+// what a ray d (unit, from the camera) sees of Saturn: [r, g, b, cover], or null; px the pixel's angle
+function ringSatSee(sat, d, px){
+  const { C, nR, Ls } = sat, dot = (p, q) => p[0]*q[0] + p[1]*q[1] + p[2]*q[2], Cl = sat.D;
+  let pc = 0, pr = 0, pg = 0, pb = 0, tS = Infinity;
+  // the globe: where the ray meets it (its edge as wide as a pixel), banded by latitude, lit by the star, the rings' shadow on it
+  const bb = dot(d, C), c2 = Cl*Cl - bb*bb;
+  if(bb > 0 && c2 < 1.2){ const miss = Math.sqrt(Math.max(0, c2)); pc = genClamp(0.5 - (miss - 1)/(Cl*px));
+    if(pc > 0){ const tq = bb - Math.sqrt(Math.max(0, 1 - Math.min(1, c2))); tS = tq; const n = [d[0]*tq - C[0], d[1]*tq - C[1], d[2]*tq - C[2]], nl = Math.hypot(n[0], n[1], n[2]) || 1; for(let i = 0; i < 3; i++) n[i] /= nl;
+      const lat = dot(n, nR), t = (lat*0.5 + 0.5)*13 + 0.35*Math.sin(lat*29 + sat.phase), i0 = Math.floor(t), fr = t - i0, k = fr*fr*(3 - 2*fr), A = RING_SAT_TONES[((i0 % 7) + 7) % 7], B = RING_SAT_TONES[(((i0 + 1) % 7) + 7) % 7];
+      let col = [0, 1, 2].map(j => A[j] + (B[j] - A[j])*k); const pole = genClamp((Math.abs(lat) - 0.78)/0.15); col = col.map((v, j) => v + ([0.6, 0.6, 0.56][j] - v)*pole*0.7);
+      let lit = 0.05 + 0.95*Math.pow(Math.max(0, dot(n, Ls)), 0.9); const mu = Math.max(0, -dot(d, n)); lit *= 0.6 + 0.4*mu;
+      const den = dot(Ls, nR); if(Math.abs(den) > 1e-4){ const ts = -dot(n, nR)/den; if(ts > 0){ const q = [n[0] + Ls[0]*ts, n[1] + Ls[1]*ts, n[2] + Ls[2]*ts], rr = Math.hypot(q[0], q[1], q[2]); lit *= 1 - 0.7*ringSatRing(rr, 0.02)[0]; } }
+      pr = col[0]*lit; pg = col[1]*lit; pb = col[2]*lit; } }
+  // the rings: where the ray crosses their plane, their opacity by the distance out; the globe's shadow across them
+  let ra = 0, rc = 0, tR = Infinity; const dn = dot(d, nR);
+  if(Math.abs(dn) > 1e-6){ const t = dot(C, nR)/dn; if(t > 0){ const q = [d[0]*t - C[0], d[1]*t - C[1], d[2]*t - C[2]], rr = Math.hypot(q[0], q[1], q[2]);
+    if(rr > 1.1 && rr < 2.4){ const [al, br] = ringSatRing(rr, t*px/Math.max(0.05, Math.abs(dn))); ra = al; tR = t;
+      const qa = dot(q, Ls), sh = qa < 0 && rr*rr - qa*qa < 1 ? 0.18 : 1; rc = br*(0.45 + 0.55*Math.abs(dot(Ls, nR)))*sh; } } }
+  // Enceladus: small and white, lit
+  let ec = 0, er = 0, tE = Infinity;
+  if(sat.enc){ const E = sat.enc, er0 = 0.08, eb = dot(d, E), el = Math.hypot(E[0], E[1], E[2]), e2 = el*el - eb*eb;
+    if(eb > 0 && e2 < er0*er0*1.6){ ec = genClamp(0.5 - (Math.sqrt(Math.max(0, e2)) - er0)/(el*px)); tE = eb;
+      const n = ringNorm([d[0]*eb - E[0], d[1]*eb - E[1], d[2]*eb - E[2]]); er = 0.08 + 0.9*Math.max(0, dot(n, Ls)); } }
+  if(pc <= 0 && ra <= 0 && ec <= 0) return null;
+  // laid far to near: the globe or the ring behind it, then what is in front
+  const layers = [[tS, pc, [pr, pg, pb]], [tR, ra, [rc*0.93, rc*0.87, rc*0.74]], [tE, ec, [er*0.95, er*0.97, er]]].filter(l => l[1] > 0).sort((p, q) => q[0] - p[0]);
+  let R = 0, Gc = 0, Bc = 0, cov = 0;
+  for(const [, al, col] of layers){ R = R*(1 - al) + col[0]*al; Gc = Gc*(1 - al) + col[1]*al; Bc = Bc*(1 - al) + col[2]*al; cov = cov*(1 - al) + al; }
+  return cov > 0 ? [R/cov, Gc/cov, Bc/cov, cov] : null;
+}
+function genRingView(ww, wh, unit, o, saturnMode){
   const L = ringLook(o), N = ww*wh, along = new Float32Array(N), across = new Float32Array(N), dist = new Float32Array(N), detail = new Float32Array(N);
   const sky = new Float32Array(N), walls = new Float32Array(N), star = new Float32Array(N), day = new Float32Array(N), squares = new Float32Array(N), airs = new Float32Array(N);
   const scaf = new Float32Array(N), open = new Float32Array(N), seam = new Float32Array(N), skyAir = new Float32Array(N);
   const city = new Float32Array(N), cityL = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lights = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
   const shade = new Float32Array(N).fill(1), cA = new Float32Array(N), cC = new Float32Array(N), cD = new Float32Array(N).fill(1), cHere = new Float32Array(N);
-  const rock = new Float32Array(N), snow = new Float32Array(N);
+  const rock = new Float32Array(N), snow = new Float32Array(N), satP = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, satC = new Float32Array(N);
+  const sat = ringSaturn(o, saturnMode);
   // (the day where the camera stands: the air about it is lit by it, whatever lies beyond)
   const here = new Float32Array(N).fill(ringDay(L, 0)), beacon = new Float32Array(N);
   const px = 1/unit, alpha = px/L.f, D3 = new Float64Array(3), G = [0, 0, 0], bins = ringBin(L, ww, wh, unit), cityCol = L.pal[0], winCol = L.pal[1];
@@ -1499,6 +1552,8 @@ function genRingView(ww, wh, unit, o){
     const w = k => (k === c.kind ? 0.5 : 0) + 0.125*(k === 0 ? n0 : k === 2 ? n2 : k === 3 ? n3 : n4);
     const space = w(0) + w(3) + w(4);
     sky[q] = space; walls[q] = w(2); star[q] = w(3); squares[q] = w(4);
+    // Saturn, where the pixel sees open space
+    if(sat && w(0) > 0){ const sv = ringSatSee(sat, d, alpha); if(sv){ satP.r[q] = sv[0]; satP.g[q] = sv[1]; satP.b[q] = sv[2]; satC[q] = sv[3]*w(0); } }
     // the star's glow in the air: by the angle from it (it stands straight up, at −x)
     const cosA = Math.max(-1, Math.min(1, -dx));
     if(cosA > 0.9){ const ang = Math.acos(cosA), glow = (space - w(4))*(Math.exp(-ang*ang/0.0016)*0.8 + Math.exp(-ang*ang/0.04)*0.25); star[q] = Math.min(1, star[q] + glow); }
@@ -1542,7 +1597,7 @@ function genRingView(ww, wh, unit, o){
       const edge = Math.exp(-Math.pow((mxA - mid)/(px*1.5), 2)), u = (ax === mxA ? dy/ax : dx/mxA)*4, v = (az === mxA ? dy/az : dz/mxA)*4, gu = Math.abs(u - Math.round(u)), gv = Math.abs(v - Math.round(v));
       seam[q] = space*Math.min(1, edge + 0.35*Math.exp(-Math.pow(Math.min(gu, gv)/(px*6), 2))); }
   }
-  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere, rock, snow];
+  return [along, across, dist, detail, sky, walls, star, day, squares, airs, here, scaf, open, seam, beacon, skyAir, city, cityL, lights, shade, cA, cC, cD, cHere, rock, snow, satP, satC];
 }
 
 // a Ringworld View's settings (as its sliders give them) as the world it draws — shared with the camera's guide
@@ -1842,13 +1897,13 @@ export const GEN_STEPS = {
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
   ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
     outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',
-      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here', 'rock', 'snow'],
+      'city', 'city lights', 'lights', 'works shade', 'cloud along', 'cloud across', 'cloud detail', 'clouds here', 'rock', 'snow', 'saturn', 'saturn cover'],
     io: { ins: ['value', 'value', 'value', 'value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field',
-      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+      'field', 'image', 'image', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'image', 'field'] },
     params: [GEN_R('band', 'Band Width', 45), GEN_R('walls', 'Rim Walls', 25), GEN_R('altitude', 'Altitude', 15), GEN_R('look', 'Look Toward', 0, 0, 360), GEN_R('lift', 'Look Up', 15, -30, 100),
       GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50), GEN_R('build', 'Construction', 35),
       GEN_R('builders', 'Builders: Seed · Wilds · Engineers · Cities · Magi · Ruins', 0), GEN_R('landforms', 'Landforms', 50), GEN_R('cities', 'Cities', 25), GEN_R('traffic', 'Traffic', 50),
-      ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }]], cost: () => 9,
+      ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }], ['saturn', 'Saturn', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }]], cost: () => 9,
     doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, what its builders raised, open space.',
     // (a dial wired in is the camera — the Camera Dial: its turn where you look round the ring, its view how far up (at the
     //  middle, straight up at the arch; at the rim, level; past it, a little down), its zoom the lens. The Light Dial is
@@ -1859,7 +1914,7 @@ export const GEN_STEPS = {
         look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0), up: typeof up === 'number' ? up : null, lift: num(n, 'lift', 15),
         lens: num(n, 'lens', 75), zoom: typeof zoom === 'number' ? 25 + 375*zoom : 100, place: num(n, 'place', 0), daylight, air: num(n, 'air', 50), build: num(n, 'build', 35),
         side: typeof from === 'number' && Math.cos((from*360 - 90)*Math.PI/180) < 0 ? -1 : 1, builders: num(n, 'builders', 0), seed: E.ctx.seed >>> 0,
-        landforms: num(n, 'landforms', 50), cities: num(n, 'cities', 25), traffic: num(n, 'traffic', 50), placeBy: E.P(n, 'placeBy', 'at Stand At') })); } },
+        landforms: num(n, 'landforms', 50), cities: num(n, 'cities', 25), traffic: num(n, 'traffic', 50), placeBy: E.P(n, 'placeBy', 'at Stand At') }), E.P(n, 'saturn', 'by the seed')); } },
   // the GROUND CAMERA's view as maps (Wood and Discharge see the plank this way): where on the page's plane each pixel
   // looks, and how much of it a pixel spans — for Noise at Coordinates (or a Lookup) to lay anything on the same plank
   groundview: { cat: 'Shape', label: 'Ground Coordinates', ins: [], outs: ['across', 'down', 'detail'], io: { outs: ['field', 'field', 'field'] },

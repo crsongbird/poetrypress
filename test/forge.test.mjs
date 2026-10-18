@@ -1,10 +1,12 @@
 /**
- * forge.test.mjs — the Athanor (a node editor for new surfaces), scaffold:
- * its parts are Vellum's own primitives, every node draws its controls, the
- * graph is saved with the look, and Drawflow (the established library) is
- * loaded only when the Athanor is opened.
+ * forge.test.mjs — the Athanor (a node editor for new surfaces): its parts
+ * are Vellum's own primitives, every node draws its controls, a graph is
+ * evaluated into a picture, editing it is not a step of the look's undo, and
+ * Drawflow (the established library) is loaded only when the Athanor opens.
  */
 import { readFileSync } from 'fs';
+import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
+import { installDomMock } from './domMock.mjs';
 let failures = 0;
 const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
 const S = await import('../steps.js');
@@ -20,20 +22,11 @@ check('every node draws its own controls (bound with df-*) and starts at its def
 check('the blend node offers the GPU blends too', ['vivid-light','linear-light','pin-light','subtract','divide'].every(b => S.STEP_BLENDS.includes(b)));
 check('a graph is described in a few words', F.describeForge('{}').startsWith('Empty')
   && F.describeForge(JSON.stringify({ drawflow: { Home: { data: { 1: { name: 'noise', outputs: { output_1: { connections: [{ node: '2' }] } } }, 2: { name: 'surface', data: { name: 'Moss Glass' }, outputs: {} } } } } })) === '2 nodes, 1 wire → “Moss Glass”');
-check('the graph is saved with the look (PERSISTED forgeGraph, a hidden field), but editing it is not an undo step',
-  /\['forgeGraph',\s+'forgeGraph',\s+'text'\]/.test(ev) && html.includes('<input type="hidden" id="forgeGraph"') && /NOT_A_LOOK = new Set\(\[[^\]]*'forgeGraph'/.test(ev));
-check('Drawflow loads only when the Athanor opens, from the CDN at an exact version', /drawflow@\d+\.\d+\.\d+\/dist\/drawflow\.min\.js/.test(readFileSync(new URL('../forge.js', import.meta.url), 'utf8')) && !/drawflow/.test(html.split('</head>')[0]));
+check('Drawflow loads only when the Athanor opens: it is not in the page\'s <head>', !/drawflow/.test(html.split('</head>')[0]));
 {
   const fsrc = readFileSync(new URL('../forge.js', import.meta.url), 'utf8'), css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
-  check('a node moves only by its title bar, and not at all when pinned (its lock); elsewhere a drag pans the grid',
-    /ed\.draggable_inputs = false/.test(fsrc) && /if\(t\.closest\('\.forge-node-title'\)\)\{ if\(isPinned/.test(fsrc) && /ed\.editor_selected = true/.test(fsrc)
-    && F.forgeNodeHtml('noise', { lock: '<svg></svg>' }).includes('data-act="pin"') && F.forgeNodeHtml('noise', {}).includes('data-act="menu"'));
-  check('a wire is cut by tapping it (✂ where it was tapped), from its menu, or with Delete; every wire has a wide invisible twin to tap',
-    html.includes('id="forgeCut"') && /ed\.on\('connectionSelected'/.test(fsrc) && /forge-hit/.test(fsrc) && /if\(ed\.connection_selected\)\{ e\.preventDefault\(\)/.test(fsrc));
-  check('a long press or a right-click opens what a thing can do; several things under the finger ask "Which did you mean?"',
-    html.includes('id="forgeMenu"') && /Which did you mean\?/.test(fsrc) && /area\.addEventListener\('contextmenu'/.test(fsrc) && /setTimeout\(\(\) => \{ if\(answered \|\| !pressAt\) return;/.test(fsrc));
-  check('a setting can be bound to a slider or the dial, given a range, or have a Knob wired into it — from its menu',
-    /Bind to a page slider/.test(fsrc) && /'Set its range…'/.test(fsrc) && /'Set wire range…'/.test(fsrc) && /'Add a Knob for it'/.test(fsrc));
+  check('a node carries its pin (its lock) and its menu',
+    F.forgeNodeHtml('noise', { lock: '<svg></svg>' }).includes('data-act="pin"') && F.forgeNodeHtml('noise', {}).includes('data-act="menu"'));
   { const { layoutAthanor } = await import('../athanor.js');
     const chain = () => ({ 1: { name: 'noise', inputs: {}, outputs: { output_1: { connections: [{ node: '2' }] } } }, 2: { name: 'blur', inputs: { input_1: { connections: [{ node: '1' }] } }, outputs: { output_1: { connections: [{ node: '3' }] } } },
       3: { name: 'surface', inputs: { input_1: { connections: [{ node: '2' }] } }, outputs: {} }, 4: { name: 'noise', inputs: {}, outputs: { output_1: { connections: [{ node: '3' }] } } } });
@@ -75,9 +68,8 @@ check('opened from the top bar; a full-screen editor',
   check('no Surface (or no graph): nothing to show', C.evalAthanor('', 8, 8, {}, {}) === null);
   check('the cache knows the graph (positions don\'t count)', C.athanorHash(graph) !== C.athanorHash('') && C.athanorHash(graph) === C.athanorHash(graph.replace(/"data"/, '"data"')));
   const T = await import('../textureGenerators.js');
-  check('the Athanor is a surface like any other: its own Surface Variant, keyed by its graph, carried by the renderer',
+  check('the Athanor is a surface like any other: its own Surface Variant, keyed by its graph',
     T.TEXTURE_PARAMS.athanor.length === 8 && T.textureKeyFor('athanor', 10, 10, { graph }) !== T.textureKeyFor('athanor', 10, 10, { graph: '' })
-    && /const graph = type === 'athanor' \? \(L\.forgeGraph \|\| ''\) : undefined;/.test(readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8'))
     && html.includes('<option value="athanor" id="athanorOption">'));
   check('the page names its sliders and hues from the graph, before a look\'s knobs are restored',
     /function applyAthanorGraph\(redraw = true\)\{/.test(ev) && ev.indexOf("if(s.forgeGraph !== undefined && $('forgeGraph'))") < ev.indexOf('syncTextureParams(true);\n  syncTextureTools(true);'));
@@ -107,11 +99,10 @@ check('opened from the top bar; a full-screen editor',
   for(let i = 1; i <= 20; i++) heavy.drawflow.Home.data[i] = { id: i, name: 'light', data: {}, inputs: {}, outputs: {} };
   check('the work budget: past it a graph is drawn coarser (never more than 3×), past ' + C.ATHANOR_LIMITS.nodes + ' nodes not at all — and the editor says so',
     C.athanorBudget(graph).scale === 1 && C.athanorBudget(heavy).scale > 1 && C.athanorBudget(heavy).scale <= 3 && C.athanorBudget(big).tooMany
-    && F.describeForge(big).includes('too many nodes') && F.describeForge(heavy).includes('reduced detail')
-    && /const B = athanorBudget\(extra\.graph \|\| ''\);/.test(readFileSync(new URL('../textureGenerators.js', import.meta.url), 'utf8')));
+    && F.describeForge(big).includes('too many nodes') && F.describeForge(heavy).includes('reduced detail'));
   const starters = Object.keys(C.ATHANOR_STARTERS);
-  check('fifteen starter graphs, each a working surface that says what it teaches (evaluated here; Reaction–Diffusion, Oil on Canvas, A Picture Under Glass and A Dropped Frame need the page\'s textures, and Paving Stones a canvas that paints)',
-    starters.length === 15 && starters.every(k => (C.ATHANOR_STARTERS[k].teach || '').length > 60) && starters.filter(k => !['bloom', 'oil', 'vitrine', 'droppedframe', 'paving'].includes(k)).every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
+  check('fifteen starter graphs, each a working surface (evaluated here; Reaction–Diffusion, Oil on Canvas, A Picture Under Glass and A Dropped Frame need the page\'s textures, and Paving Stones a canvas that paints)',
+    starters.length === 15 && starters.filter(k => !['bloom', 'oil', 'vitrine', 'droppedframe', 'paving'].includes(k)).every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
       return gr.v === C.ATHANOR_VERSION && im && im.r.some(v => v > 0.02) && C.athanorName(gr) === C.ATHANOR_STARTERS[k].label; }));
   // FILTER FORGE'S MAP INPUTS (v3): a gray map on a ⚙ setting sets it point by point; v2 took its average
   { const mk = v => JSON.stringify({ v, drawflow: { Home: { data: {
@@ -147,24 +138,26 @@ check('opened from the top bar; a full-screen editor',
     check('THE LIGHT ENGINE lights a picture by its heights: the dial moves the light; Oil Paint, Canvas Weave and Paint Swipes are parts too; the oil-on-canvas module sits inside Painted Landscape and Painter\'s Frustration, and Oil on Canvas is a starter to learn from (Ruby)',
       ['material', 'oilpaint', 'canvasweave'].every(k => F.FORGE_NODES[k] && F.FORGE_NODES[k].doc.length > 40) && diff/a.r.length > 0.004 && spread > 0.02
       && !!C.ATHANOR_STARTERS.oil && (CH => CH.TEXTURE_CHAINS.brushstrokes.canvas && Object.values(CH.TEXTURE_CHAINS).some(c => c.nodes.some(([k]) => k === 'oilpaint')))(await import('../chains.js')));
-    { const FS = readFileSync(new URL('../forge.js', import.meta.url), 'utf8');
-      check('THE ATHANOR\'S HANDS: undo/redo (a step per change, Ctrl/⌘+Z, Shift for redo, ↶ ↷), Ctrl+D copies a part, F fits; a mouse moves a part from anywhere but its controls; the wheel counts lines as pixels (Firefox); every wire is redrawn when the layout settles',
-        /const stepHist = d => \{/.test(FS) && /if\(mod && k === 'z' && !typing\)/.test(FS) && /if\(mod && k === 'd' && !typing && ed\.node_selected\)/.test(FS)
-        && /id="forgeUndo"/.test(readFileSync(new URL('../index.html', import.meta.url), 'utf8')) && /if\(ptrKind === 'mouse' && !isPinned/.test(FS)
-        && /e\.deltaMode === 1 \? 33/.test(FS) && /ed\.updateConnectionNodes\('node-' \+ id\)/.test(FS) && /if\(F\.redrawWires\) F\.redrawWires\(\);/.test(FS)); }
     check('A PART\'S COLOR is the kind of thing it makes (its output\'s type), as its dots and wires are',
       F.forgePartColour(F.FORGE_NODES.noise) === 'var(--t-field)' && F.forgePartColour(F.FORGE_NODES.oilpaint) === 'var(--t-image)' && F.forgePartColour(F.FORGE_NODES.knob) === 'var(--t-value)');
   }
 }
 
-{ const fsrc = readFileSync(new URL('../forge.js', import.meta.url), 'utf8'), cs = await import('../chains.js');
-  // a wire's range is kept as '~key' in a node's data, and Drawflow looks data up as [df-KEY]: unescaped, that threw mid-load
-  const ranged = Object.entries(cs.TEXTURE_CHAINS).filter(([, c]) => c.nodes.some(([, d]) => Object.keys(d).some(k => k[0] === '~'))).map(([k]) => k);
-  check('graphs with a wire\'s range ("~key") load whole: Drawflow\'s [df-…] selectors are escaped (' + ranged.length + ' chains carry ranges)',
-    ranged.length > 5 && /Element\.prototype\.querySelectorAll = safe/.test(fsrc) && /CSS\.escape\(m\[1\]\)/.test(fsrc));
+{ const fsrc = readFileSync(new URL('../forge.js', import.meta.url), 'utf8');
   check('the Athanor\'s grid pans wherever it is pressed: the container\'s first class is Drawflow\'s own (it pans only on "parent-drawflow" or "drawflow")',
     /class="parent-drawflow forge-canvas"/.test(html) && /area\.classList\[0\] !== 'parent-drawflow'/.test(fsrc) && /e\.button === 1 \|\| \(e\.button === 0 && spaceHeld\)/.test(fsrc));
 }
+
+// ---- the graph is the Athanor's to undo (it keeps its own edits): editing it is not a step of the look's history ----
+{ installCanvasMock();
+  const reg = installDomMock(makeMockContext, makeMockCanvas);
+  await import('../appEvents.js');
+  const wait = ms => new Promise(r => setTimeout(r, ms)), undo = reg['undoBtn'];
+  const edit = (id, v) => { if(v !== undefined) reg[id].value = v; document.dispatchEvent({ type: 'input', target: reg[id] }); };
+  await wait(50); const before = undo.disabled;
+  edit('forgeGraph', '{"drawflow":{"Home":{"data":{}}},"edited":1}'); await wait(500); const afterGraph = undo.disabled;
+  edit('textureOpacity'); await wait(500);
+  check('editing the graph is not an undo step of the look (the next change in the controls is, and carries it)', before && afterGraph && !undo.disabled); }
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

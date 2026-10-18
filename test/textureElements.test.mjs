@@ -4,6 +4,7 @@
  * other three stay inside the texture's own ranges, blend list and hues, and
  * every one of them generates. The four buttons sit under Surface Variant and
  * apply a reading the way Randomize does (locked controls keep their values).
+ * Slow (longer than half a minute): it renders every reading of every texture.
  */
 import { readFileSync } from 'fs';
 import { installCanvasMock } from './canvasMock.mjs';
@@ -16,7 +17,6 @@ const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++,
 const bad = (label, list) => { check(label, list.length === 0); if(list.length) console.log('   ', list.slice(0, 12).join(' | ')); };
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 const sel = html.slice(html.indexOf('<select id="textureType">'), html.indexOf('</select>', html.indexOf('<select id="textureType">')));
 const picker = [...sel.matchAll(/<option value="([a-z]+)"/g)].map(m => m[1]);
 const HEX = /^#[0-9A-F]{6}$/i;
@@ -68,8 +68,6 @@ bad('every reading of every texture generates', thrown);
 const fieldAt = html.indexOf('id="elementRow"'), pickAt = html.indexOf('<select id="textureType">'), knobAt = html.indexOf('id="texP1Label"');
 check('four buttons — 🜂 🜄 🜁 🜃 — right under Surface Variant, before its knobs',
   fieldAt > pickAt && fieldAt < knobAt && /data-el="fire"[^>]*>🜂<[\s\S]*data-el="water"[^>]*>🜄<[\s\S]*data-el="wind"[^>]*>🜁<[\s\S]*data-el="earth"[^>]*>🜃</.test(html));
-check('the default is marked, the one applied is lit and named; a new texture clears it',
-  /b\.classList\.toggle\('is-default', !!v\.isDefault\)/.test(ev) && /state\.ui\.element = null; paintElements\(\);/.test(ev));
 check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', html.includes('<optgroup label="🜉 Your Surfaces" id="athanorGroup"') && html.includes('forge-glyph" aria-hidden="true">🜉<'));
 
 // ---- a reading applied, on the booted app ----
@@ -78,6 +76,10 @@ check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', htm
   const { makeMockContext, makeMockCanvas } = await import('./canvasMock.mjs');
   const reg = installDomMock(makeMockContext, makeMockCanvas);
   await import('../appEvents.js');
+  // the four buttons as the markup has them (the mock does not parse markup)
+  const row = reg['elementRow'], btns = PRIMAL_ELEMENTS.map(e => { const b = document.createElement('button'); b.dataset.el = e.id; return b; });
+  row.querySelectorAll = sel => sel === '.el-btn' ? btns : [];
+  const lit = () => btns.filter(b => b.classList.contains('on')).map(b => b.dataset.el), marked = el => btns.find(b => b.dataset.el === el).classList.contains('is-default');
   const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
   const load = o => { reg['advancedJson'].value = JSON.stringify(o); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -85,6 +87,9 @@ check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', htm
   const hatch = elementsFor('hatch'), other = hatch.find(v => !v.isDefault && v.k[0] !== 60), own = hatch.find(v => v.isDefault), P = TEXTURE_PARAMS.hatch;
   load({ ...save(), texture: true, textureType: 'hatch', locks: ['texP1'], texP1: '60' }); await wait(60);
   read(other.el); await wait(60);
+  check('the default is marked, the one applied is lit and named',
+    marked(own.el) && !marked(other.el) && JSON.stringify(lit()) === JSON.stringify([other.el]) && row.dataset.applied === other.glyph + ' ' + other.name
+    && reg['elementName'].textContent.startsWith(other.name + ', '));
   let s = save();
   check('a reading is applied as Randomize applies its changes: locked controls are put back', +s.texP1 === 60 && +s.texP2 === other.k[1]);
   const Hc = TEXTURE_CAPS.hatch;
@@ -96,7 +101,9 @@ check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', htm
   // a surface whose first hue follows the first accent, and a reading that sets it
   const keyed = picker.find(t => (TEXTURE_CAPS[t].tintDefaults || [])[0] === 'accent1' && elementsFor(t).some(v => !v.isDefault && v.t && v.t.length && v.k));
   const hued = elementsFor(keyed).find(v => !v.isDefault && v.t && v.t.length && v.k);
+  const was = row.dataset.applied;
   reg['textureType'].value = keyed; reg['textureType'].dispatchEvent({ type: 'change' });
+  check('…a new texture clears it', was === own.glyph + ' ' + own.name && row.dataset.applied === '' && !lit().length);
   document.dispatchEvent({ type: 'change', target: reg['textureType'] }); await wait(600);   // (one undo step: the look before the reading)
   const before = save();
   read(hued.el); await wait(600);

@@ -1,8 +1,8 @@
 /**
- * themePalette.test.mjs — verifies the Coloris theme-palette feature:
- * 15 valid colors derived per-preset, the palette changes when the preset
- * changes, and a picker "open" event correctly appends the field's live
- * value as a 16th swatch.
+ * themePalette.test.mjs — the Coloris theme palette: 18 swatches in three
+ * even rows of six (the field's color, the 15 derived from the look, white
+ * and black), a palette that changes when the preset changes, and a picker
+ * "open" event that puts the field's live value in the first place.
  *
  * Run with: node test/themePalette.test.mjs
  */
@@ -21,7 +21,7 @@ function check(label, cond){
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
-// boot default (Midnight Page) should have applied a 15-color palette
+// boot default (Midnight Page) should have applied its palette
 const bootCall = global.Coloris.lastCall;
 check('Coloris got a swatches config at boot', bootCall && Array.isArray(bootCall.swatches));
 // 18 swatches, three even rows of six: [the field's colour, the theme's 15, white, black]
@@ -39,8 +39,8 @@ check('applying a different preset produces a different palette',
   JSON.stringify(afterPresetClick.swatches) !== JSON.stringify(bootCall.swatches));
 check('after a preset, still exactly 18 swatches', afterPresetClick.swatches.length === 18);
 
-// simulate a color picker opening on a specific field -- should append that
-// field's current value as a 16th swatch
+// simulate a color picker opening on a specific field -- that field's current
+// value should take the first swatch
 const textColorField = registry['textColorHex'];
 textColorField.value = '#ff00ff';
 const fakeOpenEvent = { type: 'open', target: { value: '#ff00ff', matches: (sel) => sel === '[data-coloris]' } };
