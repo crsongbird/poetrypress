@@ -6,7 +6,7 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
@@ -18,6 +18,10 @@ Recommendations".
   (the land it first stood over) is an Athanor part: wired after it, the old picture.
 - SHAPE STRENGTH and the new Shape Aware surfaces (Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's
   stars, Broken Glass and Dewy Webs round the words): which want a softer default than 100?
+- GROUPS IN THE ATHANOR (sheet sent): Make a group… (a part's menu), then tap the parts and Make the group; Open the
+  group and Back; Group Input and Group Result; a Knob inside stays its page slider unless the group's port is wired.
+  Is choosing parts by tapping clear enough, or should a drag-box select too? Wanted next: a group kept on the shelf by
+  itself to drop into other graphs, and a group's inputs shown as sliders on its face.
 - THE NEW PML (sheet sent): `/glass` (frosted: the page behind blurred, lit, faintly tinted by the ink; light along
   the top edges, shade along the bottom), `/glass:clear`, `/glass:rose`; `/cut` (windows to the page under the
   surface: on a page with no surface they show the page itself, so they read only as their edges); `/blend:`,

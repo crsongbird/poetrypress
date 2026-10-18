@@ -116,6 +116,26 @@ export const WIKI_PARTS = {
     tips: ['Distance → Invert → a Mix’s Amount: the texture fades away around the poem.', 'In the Letters into a Mix’s Amount, between a fine pattern and a coarse one: fine when the surface fills the words, coarse when it lies behind them.'],
     see: ['poem', 'masks'],
   },
+  // ---- GROUPS (Saturn–Paaliaq) ----
+  group: {
+    line: 'Several parts made one, with a graph of their own inside (Open shows it). Each Group Input and Knob inside is one of its inputs, and each result wired to the Group Result inside is one of its outputs.',
+    about: 'A Group keeps a piece of a graph together under one name, so a large graph reads as a few big steps. Choose parts and make them a group from a part’s menu; open it to change what is inside, close it to come back, or Ungroup it to take the parts back out. A group draws exactly what its parts drew loose, and counts every part inside it toward the limit.',
+    set: { name: 'The group’s name, shown on its face.' },
+    see: ['groups'],
+  },
+  groupin: {
+    line: 'Inside a group: one of the group’s inputs. Whatever is wired into that port of the group comes out here; unwired, it gives its Default (0 to 1).',
+    about: 'Each Group Input inside a group is a port on the group, named after it. Making a group adds one for every wire that came in from outside. A Knob inside a group is an input too: wired, the wire takes its place; unwired, it is still its slider on the page.',
+    outs: { input: 'Whatever reaches the group’s port: a map, a picture, a color or a number.' },
+    set: { name: 'The port’s name, on the group’s face.', def: 'What it gives when nothing is wired to the group’s port.' },
+    see: ['groups'],
+  },
+  groupout: {
+    line: 'Inside a group: what the group gives. Each result wired here is one of the group’s outputs, in order.',
+    about: 'Every group has one Group Result. Making a group wires to it everything that went out to the rest of the graph. The group has as many outputs as the last result wired here.',
+    ins: { result: 'The group’s first output.', 'result 2': 'Its second.', 'result 3': 'Its third.', 'result 4': 'Its fourth.' },
+    see: ['groups'],
+  },
   note: {
     line: 'A text note on the graph, for explaining what a group of parts does. It takes and makes nothing.',
     about: 'Notes are for people, not for the picture. Write why a graph is built the way it is, so that you (or whoever you share it with) can follow it later.',

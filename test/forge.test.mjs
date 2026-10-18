@@ -89,7 +89,7 @@ check('opened from the top bar; a full-screen editor; its graph kept in a hidden
     check('a graph holds only the work in flight: Circuit Board (' + n + ' parts) never holds more than a third of its results at once (' + held + ')', !!TEXTURE_CHAINS.circuit && held > 0 && held <= n/3); }
   // ---- stages 4–5: versions, kept results, the budget, starters, more parts ----
   check('a graph has a version (none = 1); new ones are the newest, and the cache knows it',
-    C.athanorVersion(graph) === 1 && C.athanorVersion(JSON.stringify({ v: 2 })) === 2 && C.ATHANOR_VERSION === 4
+    C.athanorVersion(graph) === 1 && C.athanorVersion(JSON.stringify({ v: 2 })) === 2 && C.ATHANOR_VERSION === 5
     && C.athanorHash(graph) !== C.athanorHash(JSON.stringify({ ...JSON.parse(graph), v: 2 })));
   const g2 = JSON.stringify({ ...JSON.parse(graph), v: 2 });
   const run2 = (gr, knob = 40, seed = 5) => C.evalAthanor(gr, 48, 48, { knobs: [knob, 50, 50, 50, 50, 50], tints: ['#FFFFFF', '#203040'], light: 315, seed }, {});

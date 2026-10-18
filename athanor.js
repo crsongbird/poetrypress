@@ -47,7 +47,11 @@ import { ATHANOR_STUDIES } from './athanorStudies.js';
 // v4: more settings take a map point by point (Blur's Radius, the noises' Scale, Motion Blur, Grow & Shrink,
 // Twirl, Edge Detect, Scatter's Size, the lights' Relief and the Light Engine's Gloss: steps.js STEP_MAPS,
 // `name:4`); a v3 graph still reads those whole, as it did.
-export const ATHANOR_VERSION = 4;
+// v5: GROUPS and PORTS BY NAME (ROADMAP A3, A10). A group's own graph is another of the editor's modules (Drawflow's
+// drawflow.<name>), and a v5 graph is saved with its ports by name ('in:field', 'set:scale', 'out:image'), so a part
+// that gains a port never moves a saved wire. Neither changes what is made: a v5 graph draws as a v4 one, and every
+// older graph loads (and is walked) as it always was.
+export const ATHANOR_VERSION = 5;
 export function athanorVersion(graph){
   try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return Math.max(1, parseInt(g.v, 10) || 1); }
   catch(e){ return 1; }
@@ -61,7 +65,7 @@ export function athanorVersion(graph){
  */
 export const ATHANOR_LIMITS = { nodes: 96, cost: 160 };   // (Ruby: 96 parts, now a graph holds only its work in flight)
 export function athanorBudget(graph){
-  const nodes = Object.values(athanorNodes(graph));
+  const nodes = Object.values(athanorFlat(graph).nodes);   // (a group counts every part inside it)
   let cost = 0;
   for(const n of nodes){ const f = (STEPS[n.name] || {}).cost; cost += f ? f(n.data || {}) : 1;
     if(n.name === 'surface' && ((n.inputs || {}).input_2 || {}).connections && n.inputs.input_2.connections.length) cost += 14; }
@@ -69,14 +73,143 @@ export function athanorBudget(graph){
   return { nodes: nodes.length, cost: Math.round(cost), tooMany, scale: tooMany ? 1 : Math.min(3, Math.max(1, Math.sqrt(cost/ATHANOR_LIMITS.cost))) };
 }
 
-/** The graph's nodes, by id ({} if it can't be read). */
+/** The graph's nodes (its top level, Home), by id, with their ports numbered as the editor draws them ({} if it can't be read). */
 export function athanorNodes(graph){
-  try { const g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); return ((g.drawflow || {}).Home || {}).data || {}; }
+  try { let g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {});
+    if(athanorIsNamed(g)) g = athanorNumbered(g);
+    return ((g.drawflow || {}).Home || {}).data || {}; }
   catch(e){ return {}; }
+}
+
+// ---- PORTS BY NAME (A10) ----
+// Drawflow knows a node's ports only by their place ('input_3'); a part that gained an input moved every saved ⚙ wire
+// after it. Saved, a port is its meaning: a data input `in:<its name>`, a ⚙ port `set:<the setting's key>`, an output
+// `out:<its name>`; a Group's are its insides' (`in:<the inner part's id>`, `out:<1…>`). Translated to places only
+// for the editor and the walk (athanorNumbered), and back when saved (athanorNamed).
+const PORT_PLACE = /^(input|output)_\d+$/;
+const portSlug = x => String(x).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'port';
+const PORT_NAMES = new Map();
+/** A part's ports by name, in its ports' order: { ins, outs } (null for an unknown part). */
+export function stepPortNames(name){
+  if(PORT_NAMES.has(name)) return PORT_NAMES.get(name);
+  const S = STEPS[name]; if(!S) return null;
+  const dedupe = list => { const seen = {}; return list.map(x => (seen[x] = (seen[x] || 0) + 1) > 1 ? x + '-' + seen[x] : x); };
+  const r = { ins: dedupe(S.ins.slice(0, S.dataIns).map(x => 'in:' + portSlug(x))).concat(S.paramPorts.map(k => 'set:' + k)),
+              outs: dedupe(S.outs.map(x => 'out:' + portSlug(x))) };
+  PORT_NAMES.set(name, r); return r;
+}
+export function athanorPortNamesReset(){ PORT_NAMES.clear(); }   // test hook: names read again (a test that gives a part another port)
+/** A port's place (1-based) among a list of names, from either form ('input_3' or its name); 0 if it has none. */
+const placeOf = (key, names, kind) => { const k = String(key); if(PORT_PLACE.test(k)) return k.startsWith(kind) ? +k.slice(kind.length + 1) : 0; const i = names.indexOf(k); return i + 1; };
+/**
+ * A GROUP's ports, from what is inside it (a module's { data }): its inputs, each Group Input and Knob inside in the
+ * order they were made ({ id, name, kind }), and how many outputs it has (the last result wired to its Group Result;
+ * at least one).
+ */
+export function groupPorts(mod){
+  const data = (mod && mod.data) || {};
+  const ins = Object.values(data).filter(n => n && (n.name === 'groupin' || n.name === 'knob')).sort((a, b) => (+a.id || 0) - (+b.id || 0))
+    .map(n => ({ id: String(n.id), name: String((n.data || {}).name || (n.name === 'knob' ? 'Amount' : 'Input')).slice(0, 24), kind: n.name === 'knob' ? 'value' : 'field' }));
+  let outs = 1; const R = Object.values(data).find(n => n && n.name === 'groupout'), rn = stepPortNames('groupout').ins;
+  if(R) for(const [k, v] of Object.entries(R.inputs || {})) if(((v || {}).connections || []).length) outs = Math.max(outs, placeOf(k, rn, 'input'));
+  return { ins, outs: Math.min(4, outs) };
+}
+/** A node's ports by name: a part's own, or a Group's from its module. */
+function portsOf(n, mods){
+  if(n && n.name === 'group'){ const P = groupPorts(mods[String((n.data || {}).module || '')]); return { ins: P.ins.map(m => 'in:' + m.id), outs: Array.from({ length: P.outs }, (_, k) => 'out:' + (k + 1)) }; }
+  return n ? stepPortNames(n.name) : null;
+}
+/** Whether a graph has any port saved by name. */
+export function athanorIsNamed(g){
+  for(const M of Object.values((g && g.drawflow) || {})) for(const n of Object.values((M && M.data) || {})){
+    if(!n) continue;
+    for(const k of Object.keys(n.inputs || {})) if(!PORT_PLACE.test(k)) return true;
+    for(const k of Object.keys(n.outputs || {})) if(!PORT_PLACE.test(k)) return true; }
+  return false;
+}
+// one graph's ports, every module, turned to names (toNames) or to places; a port or wire with no counterpart is let go
+function translatePorts(graph, toNames){
+  const g = JSON.parse(JSON.stringify(typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {})));
+  const mods = g.drawflow || {};
+  // (every module's ports are read from it as it came, before any is turned)
+  const ports = new Map();
+  for(const [mn, M] of Object.entries(mods)) for(const [id, n] of Object.entries((M && M.data) || {})) ports.set(mn + '\u0000' + id, portsOf(n, mods));
+  const key = (names, place, kind) => toNames ? names[place - 1] : kind + '_' + place;
+  for(const [mn, M] of Object.entries(mods)) for(const [id, n] of Object.entries((M && M.data) || {})){
+    const P = ports.get(mn + '\u0000' + id); if(!P || !n) continue;
+    const of = other => ports.get(mn + '\u0000' + String(other));
+    const ins = {}, outs = {};
+    for(const [k, v] of Object.entries(n.inputs || {})){ const j = placeOf(k, P.ins, 'input'), name = j && key(P.ins, j, 'input'); if(!name || j > P.ins.length) continue;
+      ins[name] = { connections: ((v || {}).connections || []).map(c => { const Q = c && of(c.node), o = Q && placeOf(c.input, Q.outs, 'output');
+        return o && o <= Q.outs.length ? { node: String(c.node), input: key(Q.outs, o, 'output') } : null; }).filter(Boolean) }; }
+    for(const [k, v] of Object.entries(n.outputs || {})){ const j = placeOf(k, P.outs, 'output'), name = j && key(P.outs, j, 'output'); if(!name || j > P.outs.length) continue;
+      outs[name] = { connections: ((v || {}).connections || []).map(c => { const Q = c && of(c.node), o = Q && placeOf(c.output, Q.ins, 'input');
+        return o && o <= Q.ins.length ? { node: String(c.node), output: key(Q.ins, o, 'input') } : null; }).filter(Boolean) }; }
+    n.inputs = ins; n.outputs = outs;
+  }
+  return g;
+}
+/** The graph with its ports by name, as it is saved (v5). */
+export function athanorNamed(graph){ return translatePorts(graph, true); }
+/** The graph with its ports by place ('input_3'), as the editor draws it and the walk reads it. */
+export function athanorNumbered(graph){ return translatePorts(graph, false); }
+
+// ---- GROUPS (A3) ----
+/** How deep groups may sit inside groups. */
+export const ATHANOR_GROUP_DEPTH = 4;
+const hasGroups = g => { for(const n of Object.values((((g || {}).drawflow || {}).Home || {}).data || {})) if(n && n.name === 'group') return true; return false; };
+/**
+ * THE GRAPH MADE FLAT: every group replaced by the parts inside it, wired where the group was — what is wired into a
+ * group's input comes out of the part inside it stands for, what reads a group's output reads what reaches its
+ * result. Parts keep their ids (so their randomness: a group draws exactly what its parts drew loose); a module used
+ * twice is renamed the second time ('<group id>/<id>'). A Knob inside a group, its port unwired, is still its page
+ * slider (grouping changes nothing on the page); wired, the wire takes its place.
+ * Returns { nodes (numbered, by id), alias (a group's id → the part its first result comes from, for its preview) }.
+ */
+export function athanorFlat(graph){
+  let g; try { g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); } catch(e){ return { nodes: {}, alias: new Map() }; }
+  if(!hasGroups(g)) return { nodes: athanorNodes(g), alias: new Map() };
+  const mods = athanorNumbered(g).drawflow || {}, used = new Set(), alias = new Map();
+  const expand = (data, prefix, stack) => {
+    const out = {};
+    for(const [id, n] of Object.entries(data || {})){ if(!n || (stack.length && n.name === 'surface')) continue;   // (a Surface belongs at the top)
+      const nid = prefix + id;
+      out[nid] = { ...n, id: nid, data: { ...(n.data || {}) }, outputs: {},
+        inputs: Object.fromEntries(Object.entries(n.inputs || {}).map(([k, v]) => [k, { connections: ((v || {}).connections || []).map(c => ({ node: prefix + c.node, input: c.input })) }])) }; }
+    const rewire = (from, to) => { for(const n of Object.values(out)) for(const v of Object.values(n.inputs || {}))
+      v.connections = v.connections.flatMap(c => c.node !== from ? [c] : to ? [to(c)].filter(Boolean) : []); };
+    for(const id of Object.keys(out)){
+      const G = out[id]; if(!G || G.name !== 'group') continue;
+      const mod = String((G.data || {}).module || ''), M = mods[mod];
+      if(!M || mod === 'Home' || stack.includes(mod) || stack.length >= ATHANOR_GROUP_DEPTH){ delete out[id]; rewire(id, null); continue; }
+      const ip = used.has(mod) ? id + '/' : prefix; used.add(mod);
+      const inner = expand(M.data, ip, stack.concat(mod)), P = groupPorts(M);
+      const redirect = (from, src) => { for(const n of Object.values(inner)) for(const v of Object.values(n.inputs || {}))
+        v.connections = v.connections.map(c => c.node === from ? { node: src.node, input: src.input } : c); };
+      P.ins.forEach((m, j) => { const I = ip + m.id, src = (((G.inputs || {})['input_' + (j + 1)] || {}).connections || [])[0];
+        if(!inner[I]) return;
+        if(src){ redirect(I, src); delete inner[I]; }
+      });
+      const R = Object.values(inner).find(n => n.name === 'groupout');
+      Object.assign(out, inner); delete out[id];
+      rewire(id, c => { const s = R && (((R.inputs || {})['input_' + (parseInt(String(c.input).slice(7), 10) || 1)] || {}).connections || [])[0]; return s ? { node: s.node, input: s.input } : null; });
+      if(R){ const s0 = ((R.inputs.input_1 || {}).connections || [])[0]; if(s0) alias.set(id, s0.node); }
+      for(const n of Object.values(inner)) if(n.name === 'groupout') delete out[n.id];
+    }
+    return out;
+  };
+  return { nodes: expand((mods.Home || {}).data, '', []), alias };
+}
+
+/** The parts whose previews the editor shows (the step sheet): every module's, a group's insides too, by id. */
+export function athanorStepIds(graph){
+  let g; try { g = typeof graph === 'string' ? JSON.parse(graph || '{}') : (graph || {}); } catch(e){ return []; }
+  const ids = new Set(); for(const M of Object.values(g.drawflow || {})) for(const id of Object.keys((M && M.data) || {})) ids.add(id);
+  return [...ids].sort((a, b) => +a - +b);
 }
 /** The nodes whose work reaches the Surface (Filter Forge: a control that doesn't reach the Result isn't shown). */
 export function athanorReach(graph){
-  const nodes = athanorNodes(graph), seen = new Set(), s = Object.values(nodes).find(n => n.name === 'surface');
+  const nodes = athanorFlat(graph).nodes, seen = new Set(), s = Object.values(nodes).find(n => n.name === 'surface');
   const walk = id => { if(seen.has(id) || !nodes[id]) return; seen.add(id);
     for(const inp of Object.values(nodes[id].inputs || {})) for(const c of inp.connections || []) walk(String(c.node)); };
   if(s) walk(String(s.id));
@@ -85,7 +218,7 @@ export function athanorReach(graph){
 /** The sliders a graph offers: its Knob nodes, by slot (1–8) — those that reach the Surface by a wire, or whose
  *  slot a part on the way binds ('@k3'); a Knob left unwired offers nothing (it would move nothing). */
 export function athanorKnobs(graph){
-  const out = [], reach = athanorReach(graph), all = athanorNodes(graph);
+  const out = [], reach = athanorReach(graph), all = athanorFlat(graph).nodes;
   const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-8])/.exec(v); if(m) boundSlots.add(+m[1]); }
   for(const n of Object.values(all)){
     if(n.name !== 'knob') continue;
@@ -108,7 +241,7 @@ export function athanorKnobs(graph){
 /** The hues a graph uses: its Hue nodes, by slot (1–2). */
 export function athanorHues(graph){
   const out = [], reach = athanorReach(graph);
-  for(const n of Object.values(athanorNodes(graph))){
+  for(const n of Object.values(athanorFlat(graph).nodes)){
     if(n.name !== 'hue' || !reach.has(String(n.id))) continue;
     const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
     if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
@@ -127,7 +260,7 @@ export function athanorWork(data){
   return o;
 }
 export function athanorHash(graph){
-  const nodes = athanorNodes(graph);
+  const nodes = athanorFlat(graph).nodes;
   const sig = athanorVersion(graph) + JSON.stringify(Object.keys(nodes).sort().map(id => { const n = nodes[id];
     return [id, n.name, athanorWork(n.data), Object.values(n.inputs || {}).map(i => (i.connections || []).map(c => c.node + ':' + c.input))]; }));
   let h = 2166136261; for(let i = 0; i < sig.length; i++){ h ^= sig.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -171,7 +304,7 @@ function curvePlot(c, ww, wh){
   return { r: f, g: f, b: f };
 }
 export function evalAthanor(graph, ww, wh, ctx, deps = {}){
-  const nodes = athanorNodes(graph);
+  const flatG = athanorFlat(graph), nodes = flatG.nodes;
   const surface = Object.values(nodes).find(n => n.name === 'surface');
   if(!surface && !ctx.all) return null;
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
@@ -345,6 +478,8 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     for(const id of Object.keys(nodes).sort((a, b) => +a - +b)){ const r = evalNode(id); const v = r && r[0];
       // (a curve previews as its graph: a line on dark, the way a curve editor shows it)
       out.set(id, v == null ? null : isCurve(v) ? curvePlot(v, ww, wh) : asImage(v)); }
+    // (a group shows what its first result shows)
+    for(const [gid, src] of flatG.alias) if(out.has(src)) out.set(gid, out.get(src));
     return out;
   }
   const res = evalNode(String(surface.id));
@@ -493,36 +628,54 @@ export function validateGraph(json){
   const text = typeof json === 'string' ? json : (() => { try { return JSON.stringify(json); } catch(e){ return ''; } })();
   if(text.length > ATHANOR_MAX_JSON) return { ok: false, graph: null, problems: [`the graph is too large (${Math.round(text.length/1024)} KB; at most ${ATHANOR_MAX_JSON/1024} KB)`] };
   let g; try { g = JSON.parse(text); } catch(e){ return { ok: false, graph: null, problems: ['the graph is not readable JSON'] }; }
-  const data = (((g || {}).drawflow || {}).Home || {}).data;
-  if(!data || typeof data !== 'object' || Array.isArray(data)) return { ok: false, graph: null, problems: ['it is not an Athanor graph'] };
-  const ids = Object.keys(data);
-  if(ids.length > ATHANOR_LIMITS.nodes*2) return { ok: false, graph: null, problems: [`it has ${ids.length} nodes (at most ${ATHANOR_LIMITS.nodes})`] };
-  const clean = {};
-  for(const id of ids){
-    const n = data[id];
-    if(!n || typeof n !== 'object' || !STEPS[n.name]){ problems.push(`an unknown part (${String(n && n.name).slice(0, 24)}) was left out`); continue; }
-    const d = {};
-    for(const [k, v] of Object.entries(n.data || {})){
-      if(typeof v === 'number' && isFinite(v)) d[k] = v;
-      else if(typeof v === 'string' && v.length <= 64) d[k] = v;
-      else if(typeof v === 'boolean') d[k] = v;
-      else problems.push(`a setting of ${n.name} was not plain and was left out`);
+  const df = (g || {}).drawflow, home = ((df || {}).Home || {}).data;
+  if(!home || typeof home !== 'object' || Array.isArray(home)) return { ok: false, graph: null, problems: ['it is not an Athanor graph'] };
+  // its modules: Home, and each group's own (a name, a few dozen at most)
+  const names = Object.keys(df).filter(m => m === 'Home' || (/^[A-Za-z][\w-]{0,31}$/.test(m) && df[m] && typeof (df[m].data || null) === 'object' && !Array.isArray(df[m].data))).slice(0, 33);
+  if(Object.keys(df).length > names.length) problems.push('a part of the graph that was not a group was left out');
+  let total = 0; for(const m of names) total += Object.keys(df[m].data || {}).length;
+  if(total > ATHANOR_LIMITS.nodes*2) return { ok: false, graph: null, problems: [`it has ${total} nodes (at most ${ATHANOR_LIMITS.nodes})`] };
+  // (ports saved by name are checked by place, and saved by name again)
+  const named = athanorIsNamed(g);
+  let src; try { src = named ? athanorNumbered({ drawflow: Object.fromEntries(names.map(m => [m, df[m]])) }).drawflow : df; } catch(e){ return { ok: false, graph: null, problems: ['the graph is not readable'] }; }
+  const cleanMods = {};
+  for(const m of names){
+    const data = (src[m] || {}).data || {}, clean = {};
+    for(const id of Object.keys(data)){
+      const n = data[id];
+      if(!n || typeof n !== 'object' || !STEPS[n.name]){ problems.push(`an unknown part (${String(n && n.name).slice(0, 24)}) was left out`); continue; }
+      if(m !== 'Home' && n.name === 'surface'){ problems.push('a Surface inside a group was left out'); continue; }
+      const d = {};
+      for(const [k, v] of Object.entries(n.data || {})){
+        if(typeof v === 'number' && isFinite(v)) d[k] = v;
+        else if(typeof v === 'string' && v.length <= 64) d[k] = v;
+        else if(typeof v === 'boolean') d[k] = v;
+        else problems.push(`a setting of ${n.name} was not plain and was left out`);
+      }
+      if(n.name === 'group' && !(typeof d.module === 'string' && d.module !== 'Home' && names.includes(d.module))){ problems.push('a group whose insides were missing was left out'); continue; }
+      clean[id] = { id: isFinite(+n.id) ? +n.id : +id, name: n.name, data: d, class: String(n.class || '').slice(0, 64), html: '', typenode: false,
+        inputs: {}, outputs: {}, pos_x: isFinite(+n.pos_x) ? +n.pos_x : 0, pos_y: isFinite(+n.pos_y) ? +n.pos_y : 0, _in: n.inputs, _out: n.outputs };
     }
-    clean[id] = { id: isFinite(+n.id) ? +n.id : +id, name: n.name, data: d, class: String(n.class || '').slice(0, 64), html: '', typenode: false,
-      inputs: {}, outputs: {}, pos_x: isFinite(+n.pos_x) ? +n.pos_x : 0, pos_y: isFinite(+n.pos_y) ? +n.pos_y : 0, _in: n.inputs, _out: n.outputs };
+    cleanMods[m] = { data: clean };
   }
-  // wires only between parts that exist, on ports they have
-  for(const n of Object.values(clean)){
-    const S = STEPS[n.name];
-    for(const [k, v] of Object.entries(n._in || {})){ const j = parseInt(String(k).replace('input_', ''), 10); if(!(j >= 1 && j <= S.ins.length)) continue;
-      n.inputs['input_' + j] = { connections: ((v || {}).connections || []).filter(c => c && clean[String(c.node)] && /^output_\d+$/.test(c.input || '')
-        && parseInt(c.input.slice(7), 10) <= STEPS[clean[String(c.node)].name].outs.length).map(c => ({ node: String(c.node), input: c.input })) }; }
-    for(const [k, v] of Object.entries(n._out || {})){ const j = parseInt(String(k).replace('output_', ''), 10); if(!(j >= 1 && j <= S.outs.length)) continue;
-      n.outputs['output_' + j] = { connections: ((v || {}).connections || []).filter(c => c && clean[String(c.node)] && /^input_\d+$/.test(c.output || '')
-        && parseInt(c.output.slice(6), 10) <= STEPS[clean[String(c.node)].name].ins.length).map(c => ({ node: String(c.node), output: c.output })) }; }
-    delete n._in; delete n._out;
+  // wires only between parts that exist, on ports they have (a group's are its insides')
+  const insOf = n => n.name === 'group' ? groupPorts(cleanMods[n.data.module]).ins.length : STEPS[n.name].ins.length;
+  const outsOf = n => n.name === 'group' ? groupPorts(cleanMods[n.data.module]).outs : STEPS[n.name].outs.length;
+  for(const m of names){ const clean = cleanMods[m].data;
+    for(const n of Object.values(clean)){
+      const ni = insOf(n), no = outsOf(n);
+      for(const [k, v] of Object.entries(n._in || {})){ const j = parseInt(String(k).replace('input_', ''), 10); if(!(j >= 1 && j <= ni)) continue;
+        n.inputs['input_' + j] = { connections: ((v || {}).connections || []).filter(c => c && clean[String(c.node)] && /^output_\d+$/.test(c.input || '')
+          && parseInt(c.input.slice(7), 10) <= outsOf(clean[String(c.node)])).map(c => ({ node: String(c.node), input: c.input })) }; }
+      for(const [k, v] of Object.entries(n._out || {})){ const j = parseInt(String(k).replace('output_', ''), 10); if(!(j >= 1 && j <= no)) continue;
+        n.outputs['output_' + j] = { connections: ((v || {}).connections || []).filter(c => c && clean[String(c.node)] && /^input_\d+$/.test(c.output || '')
+          && parseInt(c.output.slice(6), 10) <= insOf(clean[String(c.node)])).map(c => ({ node: String(c.node), output: c.output })) }; }
+      delete n._in; delete n._out;
+    }
   }
-  const out = { v: Math.max(1, parseInt(g.v, 10) || 1), drawflow: { Home: { data: clean } } };
-  if(Object.keys(clean).length > ATHANOR_LIMITS.nodes) problems.push(`it has more than ${ATHANOR_LIMITS.nodes} nodes, so it will not be drawn`);
+  let out = { v: Math.max(1, parseInt(g.v, 10) || 1), drawflow: cleanMods };
+  // (the limit counts every part inside every group, as the walk will meet them)
+  if(Object.keys(athanorFlat(out).nodes).length > ATHANOR_LIMITS.nodes) problems.push(`it has more than ${ATHANOR_LIMITS.nodes} nodes, so it will not be drawn`);
+  if(named) out = athanorNamed(out);
   return { ok: true, graph: out, problems };
 }

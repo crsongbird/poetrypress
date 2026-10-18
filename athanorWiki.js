@@ -318,6 +318,28 @@ export const WIKI_ARTICLES = [
 <li><b>Snap parts to the grid</b>, in <b>⋯</b>, makes a part you move settle on the grid, so columns line up (<b>Stop snapping to the grid</b> turns it off).</li>
 <li>In <b>⋯</b>: <b>Revert</b> goes back to the graph as it was when the Athanor opened; <b>Clear the grid</b> empties it. Both ask first.</li>
 </ul>` },
+  { id: 'groups', group: 'Using the editor', title: 'Groups', body: `
+<p>A <b>group</b> is several parts made one. A big graph reads better as a few named steps, a group of parts that works well can be copied whole, and what is inside a group can still be opened and changed at any time.</p>
+<h3>Making a group</h3>
+<ol>
+<li>Open a part’s menu (right-click it, or hold it on touch, or its ⋯) and choose <b>Make a group…</b>.</li>
+<li>Click or tap the other parts that belong in it. A dashed outline marks each one chosen; click or tap one again to take it out.</li>
+<li>Choose <b>Make the group</b> in the bar below the grid.</li>
+</ol>
+<p>The parts move inside the group, and the group takes their place, wired as they were, so the picture doesn’t change. Every wire that came in from outside now comes through a <b>Group Input</b> inside it, and everything read outside goes out through its <b>Group Result</b>.</p>
+<h3>Inside a group</h3>
+<ul>
+<li><b>Open the group</b> (the button on its face, or its menu) shows its parts in place of the graph. <b>Back</b>, in the bar below, closes it again.</li>
+<li>Each <b>Group Input</b> and each <b>Knob</b> inside is one of the group’s inputs, named after it. Add a Group Input to give the group another input. Unwired, a Group Input gives its Default, and a Knob is still its slider on the page.</li>
+<li>Each result wired to the <b>Group Result</b> is one of the group’s outputs (up to four).</li>
+<li>A group can hold other groups.</li>
+</ul>
+<h3>Key facts</h3>
+<ul>
+<li>A group draws exactly what its parts drew loose, and every part inside it counts toward the limit (see [[limits]]).</li>
+<li><b>Duplicate</b> copies a group and everything inside it; changing one copy doesn’t change the other.</li>
+<li><b>Ungroup</b>, in a group’s menu, puts its parts back out where it stands, wired as it was.</li>
+</ul>` },
   { id: 'limits', group: 'Using the editor', title: 'Limits and speed', body: `
 <p>A graph can hold up to {{nodes}} parts. Heavy graphs are drawn on a coarser grid so the page stays responsive on a phone; the status line in the corner says when. Turning off <b>Steps</b> (the small previews) makes editing faster on slow devices.</p>` },
 

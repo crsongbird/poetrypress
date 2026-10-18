@@ -2238,3 +2238,16 @@ button.preset-group-head:focus-visible{ outline:1px solid var(--accent-2); outli
 .forge-canvas .drawflow .drawflow-node .input.req{ background:#D2404A !important; box-shadow:0 0 0 2px color-mix(in srgb, #D2404A 35%, transparent); }
 .fp-in.req{ color:#E06070; }
 .fp-in.req::after{ content:' !'; font-weight:700; }
+
+/* ---- GROUPS in the Athanor (Saturn–Paaliaq): parts chosen for a group, the way back out of one, its Open button ---- */
+#forgeCanvas.picking .drawflow-node{ cursor:copy; }
+#forgeCanvas .drawflow-node.picked{ outline:2px dashed var(--fg-accent); outline-offset:3px; }
+.forge-crumb{ top:auto; bottom:10px; }
+.forge-pick{ top:auto; bottom:10px; }
+.forge-crumb:not([hidden]) ~ .forge-pick{ bottom:58px; }
+.forge-crumb span, .forge-pick span{ min-width:0; }
+/* (on a phone: at the top, out of the preview's way, and the crumb in a few words) */
+body.is-mobile .forge-crumb, body.is-mobile .forge-pick{ top:8px; bottom:auto; }
+body.is-mobile .forge-veil.in-group .forge-pick, body.is-mobile .forge-veil.in-group #forgePending{ top:56px; }
+body.is-mobile .forge-crumb .fc-how{ display:none; }
+.drawflow-node .forge-open-group{ width:100%; margin:2px 0 0; padding:4px 8px; font-size:12px; letter-spacing:.04em; background:var(--fg-panel); border:1px solid var(--fg-accent); color:var(--fg-accent); }

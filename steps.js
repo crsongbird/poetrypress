@@ -124,6 +124,12 @@ const STEP_PARTS = {
   polar:    { cat: 'Shape', label: 'Polar Wrap', ins: ['field'], outs: ['field'], params: [STEP_R('rings', 'Rings', 100, 25, 400), STEP_R('turn', 'Turn', 0, 0, 360)] },
   // numbers to wire into any ⚙ setting (Ruby: some settings could only be set by a wire — now anything can be random)
   number:   { cat: 'Inputs', label: 'Number', ins: [], outs: ['value'], params: [STEP_R('value', 'Value', 50)] },
+  // GROUPS (Filter Forge's groups, ROADMAP A3): a Group carries a graph of its own (one of the editor's modules), and is
+  // made into its parts before the graph is walked (athanor.js athanorFlat), so nothing runs as a group. Its ports are
+  // its insides': each Group Input and Knob inside is an input, each result wired to its Group Result an output.
+  group:    { cat: 'Combine', label: 'Group', ins: [], outs: [], params: [['name', 'Name', 'text', 'Group']], hidden: true },
+  groupin:  { cat: 'Inputs', label: 'Group Input', ins: [], outs: ['input'], params: [['name', 'Name', 'text', 'Input'], STEP_R('def', 'Default', 50)] },
+  groupout: { cat: 'Output', label: 'Group Result', ins: ['result', 'result 2', 'result 3', 'result 4'], outs: [], params: [], hidden: true },
   random:   { cat: 'Inputs', label: 'Random Number', ins: [], outs: ['value'], params: [STEP_R('lo', 'Lowest', 0), STEP_R('hi', 'Highest', 100)] },
   // reshaping a grey map's values; masks drawn from shapes
   maprange: { cat: 'Shape', label: 'Map Range', ins: ['field'], outs: ['field'], params: [STEP_R('inLo', 'From Low', 0), STEP_R('inHi', 'From High', 100), STEP_R('outLo', 'To Low', 0), STEP_R('outHi', 'To High', 100)] },
@@ -214,6 +220,9 @@ export const STEP_DOCS = {
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
+  group: 'Several parts made one, with a graph of their own inside (Open shows it). Each Group Input and Knob inside is one of its inputs, and each result wired to the Group Result inside is one of its outputs.',
+  groupin: 'Inside a group: one of the group’s inputs. Whatever is wired into that port of the group comes out here; unwired, it gives its Default (0 to 1).',
+  groupout: 'Inside a group: what the group gives. Each result wired here is one of the group’s outputs, in order.',
   random: 'A number picked at random between two limits, new every time the page’s seed changes.',
   noise: 'Soft, cloudy value noise: the simplest random pattern, as a gray map.',
   cells: 'Cellular (Voronoi) noise: the page divided into cells around scattered points, like cobbles, scales or a sponge.',
@@ -747,6 +756,9 @@ Object.assign(STEP_RUN, {
 Object.assign(STEP_COST, { note: () => 0, bricon: () => 1, highpass: () => 1.5, sharpen: () => 1.5, motionblur: () => 3, offset: () => 0.5, perlin: () => 2.5, bricks: () => 1, curve: () => 0.1, curveops: () => 0.1, tonecurve: () => 1, profile: () => 1, kaleidoscope: () => 1.5, polar: () => 1.5, poem: () => 2, grow: () => 2, pixelate: () => 1.5, twirl: () => 1.5, mirror: () => 1, chroma: () => 1.5 });
 Object.assign(STEP_RUN, {
   number(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'value', 50)))/100]; },
+  // (a group and its result are made into their parts before the walk; a Group Input left unwired gives its Default)
+  groupin(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'def', 50)))/100]; },
+  group(){ return null; }, groupout(){ return null; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
   random(E, n){ const lo = E.num(n, 'lo', 0), hi = E.num(n, 'hi', 100); return [(lo + (hi - lo)*Math.random())/100]; },
   maprange(E, n){ const { N, input, map, at, asField } = E;

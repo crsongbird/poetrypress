@@ -31,7 +31,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion } from './athanor.js';
+import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion, athanorStepIds } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withPage, wordsRoom, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genAstralFog, genAstralStars } from './texWhimsy.js';
@@ -1086,7 +1086,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
 // the texture worker like any texture, so the editor stays responsive.
 export function athanorSheetLayout(n){ const cols = Math.max(1, Math.ceil(Math.sqrt(n))); return { cols, rows: Math.max(1, Math.ceil(n/cols)) }; }
 function genAthanorSteps(w, h, light, tint1, tint2, extra){
-  const ids = Object.keys(((((typeof extra.graph === 'string' ? (() => { try { return JSON.parse(extra.graph); } catch(e){ return {}; } })() : extra.graph) || {}).drawflow || {}).Home || {}).data || {});
+  const ids = athanorStepIds(extra.graph || '');   // (a group's insides too: the editor shows them when it is opened)
   const { cols } = athanorSheetLayout(ids.length), t = Math.max(8, Math.floor(w/cols));
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);

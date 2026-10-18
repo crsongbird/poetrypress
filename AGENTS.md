@@ -230,7 +230,7 @@ default.
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh (`patDelaunay`), Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum; Split and Merge HSB and Lab, Median (`patRank`), Map Switch, Flip, Perspective, Rotate and Scale (`patResample`) |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
 | `athanorStudies.js` | the 36 Surface Studies (`ATHANOR_STUDIES`): the future-directions doc's surfaces as graphs of general parts, in the Athanor's Open menu; bundled before chains.js |
-| `athanor.js` | the graph evaluator (in the worker), its cache (`ATHANOR_KEPT`), budget, versions, starters, `validateGraph` |
+| `athanor.js` | the graph evaluator (in the worker), its cache (`ATHANOR_KEPT`), budget, versions, groups (`athanorFlat`) and port names, starters, `validateGraph` |
 | `athanorWiki.js` · `athanorWikiParts.js` | the Athanor's wiki: concept articles, the first-surface tutorial, glossary, search (`WIKI_ARTICLES`, `wikiArticleHtml`, `wikiSearch`), and figures (`WIKI_FIGURES`, `{{fig:key}}`: a small graph whose every part the worker draws when the page opens) · every part's page (`WIKI_PARTS`). Bundled before forge.js |
 | `forge.js` | the editor UI (Drawflow): menus, wiring, the wiki panel, the shelf of kept surfaces |
 
@@ -739,6 +739,24 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   - v4: more settings take maps (those marked `key:4` in `STEP_MAPS`).
     Kept results are keyed by the version, so a v3 graph never borrows a v4
     result.
+  - v5 (Saturn–Paaliaq): GROUPS and PORTS BY NAME. Neither changes a
+    picture: a v5 graph walks as a v4 one.
+    - A group's insides are a module of Drawflow's own
+      (`drawflow.<module>`; the group node's `data.module`). Its ports come
+      from inside (`groupPorts`): each `groupin` and `knob` an input, in id
+      order; the `groupout`'s last wired result its output count (≤ 4).
+    - `athanorFlat` lays the graph out flat before the walk, the budget, the
+      knobs, the hues and the hash: parts keep their ids (and so their
+      seeds), a module used twice is renamed (`<group id>/<id>`), a group
+      that holds itself or whose module is gone gives nothing. An unwired
+      Knob inside a group is still its page slider.
+    - Saved, every port is a name (`athanorNamed`): `in:<label>`,
+      `set:<param key>`, `out:<label>`, and a group's `in:<inner id>`,
+      `out:<k>`. The editor and the walk work by place (`athanorNumbered`;
+      `athanorNodes` translates). Either form loads, at any version.
+    - **Port names are frozen** like saved keys: a part's input and output
+      labels and its range params' keys are what saved wires hold. Rename
+      one only with a way for the old name to still be read.
   - **Texture chains stay v2**, so their pictures never change. Starters
     take the newest.
 - **THE SURFACE STAYS:** exactly one per graph, never removed or copied.

@@ -69,7 +69,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Anti-aliasing: supersampling, "edges only" by AA zones | Grids drawn at a divisor and scaled up smooth | **A6** |
 | Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | One dial light, ambient, materials (Highlight, Shade, Diffuse hues), soft shadows, AO | **C1–C4** |
 | Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (6 slots), Hue (2), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ reach rule, Knob kinds (slider, steps, angle, switch), Order of the sliders; **D1** a dial |
-| Groups (control components inside a group define its inputs) | none | **A3** |
+| Groups (control components inside a group define its inputs) | **Group** parts: their insides a module of the editor's; each Group Input and Knob inside an input, the Group Result its outputs; laid out flat before drawing | ✅ (Saturn–Paaliaq) |
 | Loop and its slaves (Iteration, Accumulated, Randomizer); Bitmap Cache; Lua script components | Results kept automatically (ATHANOR_KEPT) | **A4**; scripts parked (security) |
 | Note component | **Note** part | ✅ |
 | Randomizer: Next Variant / Back, per-parameter locks, Ctrl-click one setting, High/Medium/Low levels (color relationships kept) | A die and a lock on every section, with Gently / As usual / Wildly and Back; Ctrl-click (or hold) a control's name to roll it alone | **E4** |
@@ -85,23 +85,10 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### A · The engine (athanor.js, steps.js)
 
-- **A3 · Groups.** A selection of parts saved as one part (Filter Forge's
-  groups; Unreal's material functions):
-  - Knob, Hue and Number nodes inside a group become its inputs.
-  - Its Surface-like "Group Result" becomes its output.
-  - It is kept on the shelf, shared as JSON, and shown collapsed with an
-    "open" action.
-  - Files: athanor.js (evaluate a group as a sub-graph with its own memo),
-    forge.js (collapse, expand, edit inside), steps.js (a `group` step that
-    carries its graph).
-  - Depends on: A3a, the graph format's sub-graph field. Add a version (v5):
-    a v4 graph must load unchanged.
-  - Prove: a grouped Agate draws identically to the ungrouped one; validateGraph
-    limits nodes inside groups too.
 - **A4 · Loop.** Repeat a sub-graph N times, feeding each pass the last, with
   Iteration (0..1) and Accumulated as inputs. For recursive patterns and
   growth by steps.
-  - Depends on: A3, because a loop body is a group.
+  - Its body is a group.
   - Prove: a budget test (a loop counts its body × N against
     ATHANOR_LIMITS).
 - **A6 · Edges-only supersampling.** Parts that draw hard edges (Threshold,
@@ -109,17 +96,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   re-evaluates those pixels at 2× and averages. Filter Forge's "AA zones".
   - Prove: scale-audit improves on Bricks and Threshold; cost measured on the
     baseline phone (AGENTS: measure on the right machine).
-- **A10 · Ports saved by name, not by number** (Ruby's question, after
-  Halftone2's wires were drawn on the wrong rows). Nodes already have unique
-  ids. Ports are still saved as `input_N`, and a ⚙ port's N is
-  `dataIns + its place among the settings`, so a part that gains an input
-  would quietly shift every saved ⚙ wire on it.
-  - Save ports by their meaning (`in:tone`, `set:scale`) and translate to
-    Drawflow's `input_N` only when the editor draws. (The editor still lines
-    ports up by order; `faces` sorting them stays.)
-  - Old graphs load through a v5 translation; `validateGraph` checks names.
-  - Prove: add an input to a part in a test, and an old graph's wires still
-    reach the same settings.
 - **A9 · Variation on every random part.** Done for Value Noise, Perlin
   Noise, Cells, Curve (noise) and Scatter (`variation` mixed into the node's
   seed; 0 is the old stream). Still to do: map the older parts' own Variant
@@ -227,7 +203,7 @@ Ripples from the Words, Protect the Text, Ink.
   for "Punctuation Particles". Needs F2 to scatter from them.
 - **G4 · Emotional Seed.** One knob driving color, density, turbulence and
   contrast together.
-  - Depends on: A3 (a group whose one input fans out through remappers).
+  - A group whose one input fans out through remappers.
 - **G5 · The inset box as an input** (shared with F3).
 - **G6 · Text as a mask** (Ruby). Done: letters filled with a surface (the
   second surface's Blend with Text, with Shape Aware), Text Aware for each
@@ -252,7 +228,7 @@ the Athanor).
 
   "Customize Surface" shows only the exposed controls; "All settings" shows
   the rest.
-  - Depends on: A3, D1, D2, and the texture being a chain (Stage 3 lists
+  - Depends on: D1, D2, and the texture being a chain (Stage 3 lists
     those that aren't yet).
   - PERSISTED keys stay frozen: a preset-as-graph saves through forgeGraph
     and the existing keys.
@@ -324,15 +300,14 @@ superseded) wait for Stage 4.
 - **F6, F7, F10**, the rest of Filter Forge's primitives, in the order of
   what they unlock (§2 F).
 - **A9** the older Variant params onto Variation.
-- **A10** ports saved by name (with A3's v5: both change the format once).
-- **A3** Groups (v5), then **A4** Loop (its body is a group).
+- **A4** Loop (its body is a group).
 - **A6** edges-only supersampling.
 
 ### Stage 2 · Features: the engine, the controls, the poem
 - **B1** a lit Surface (CPU and shader together), then **B2** channels view.
 - **C1–C4** lighting (C needs B1); **C5** the camera dial on more textures.
 - **D1**'s dial, **D3**'s two handles, **D4** curve control.
-- **G2** punctuation (needs F2), **G4** Emotional Seed (needs A3), **G5**
+- **G2** punctuation (needs F2), **G4** Emotional Seed, **G5**
   the box as an input.
 
 ### Stage 3 · Textures: built from the parts
@@ -351,7 +326,7 @@ superseded) wait for Stage 4.
   - Stage 4 can only offer what is a chain.
 
 ### Stage 4 · Presets: the last pass
-- **H2** presets as graphs with exposed settings (needs A3, D1, D2 and every
+- **H2** presets as graphs with exposed settings (needs D1, D2 and every
   texture a chain).
 - **H3** Crossbreed, **H4** Bind to Ink, **E4** an author's default locks.
 - **The presets pass**:
@@ -375,8 +350,8 @@ superseded) wait for Stage 4.
  F2 Glyph Scatter (rest) ───► G2 punctuation ─────────────────► I studies → textures ───┐
  F3 from the box ────────────► G5 box input                      J black boxes apart  ───┤
  F5–F10 primitives ──────────────────────────────────────────► I's approximations    ───┤
- A10 ports by name · A9 Variant→Variation · A6 AA              Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
- A3 GROUPS (v5) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
+ A9 Variant→Variation · A6 AA                                  Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
+ (groups, done) ─┬─► A4 Loop                                                             │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               D1 dial · D3 two handles ─► D4 curve control ──────────────┘      ├─► E4 author locks
                                                                                                 └─► THE PRESETS PASS
@@ -385,14 +360,13 @@ superseded) wait for Stage 4.
 
 **Suggested passes** (one release each, AGENTS' recipe):
 
-1. Stage 1: A3 Groups (v5) + A10 (ports saved by name: both change the format once).
-2. Stage 1: F2's rest (glyphs in web fonts, layers, a color per mark) + F6's Pavements.
-3. Stage 2: D1's dial, D3's two handles, D4 the curve control.
-4. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
-5. Stage 2: G2, G4, G5.
-6. Stage 3: the Surface Studies become textures, a few per pass; black boxes
+1. Stage 1: F2's rest (glyphs in web fonts, layers, a color per mark) + F6's Pavements.
+2. Stage 2: D1's dial, D3's two handles, D4 the curve control.
+3. Stage 2: B1 lit Surface + B2 channels; then C1–C4.
+4. Stage 2: G2, G4, G5.
+5. Stage 3: the Surface Studies become textures, a few per pass; black boxes
    taken apart and the rest rebuilt as chains, two or three per pass.
-7. Stage 4: H2, H3, H4, E4, then the presets pass.
+6. Stage 4: H2, H3, H4, E4, then the presets pass.
 
 The stages overlap at their edges: a texture whose parts all exist may be
 built while the next part is being written. The order that matters is that

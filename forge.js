@@ -14,7 +14,7 @@
  * No imports of app state: the page hands in what it needs (deps).
  */
 import { ATHANOR_STUDIES } from './athanorStudies.js';
-import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, athanorGraphOf, layoutAthanor } from './athanor.js';
+import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, athanorGraphOf, layoutAthanor, ATHANOR_NODE, groupPorts, athanorNamed, athanorNumbered, athanorIsNamed } from './athanor.js';
 import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS } from './appOptions.js';
@@ -27,7 +27,7 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 // ---- the parts: every node a step of steps.js (shared with the textures
 // rebuilt as chains) — ports, params and category as the editor shows them
 export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
-  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [], maps: s.maps || [], mapsSince: s.mapsSince || {} }]));
+  inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [], maps: s.maps || [], mapsSince: s.mapsSince || {}, hidden: !!s.hidden }]));
 export const FORGE_CATEGORIES = STEP_CATEGORIES;
 /**
  * COLOUR CARRIES MEANING in the grid, whatever the app's theme: each part's
@@ -79,8 +79,22 @@ const forgeEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&
 // a port's name as shown (the names are the parts' own words; the app speaks American English)
 // port names as people read them: 'field' and 'image' are the code's words for a gray map and a picture
 export const forgeWord = s => String(s).replace(/colour/g, 'color').replace(/Colour/g, 'Color').replace(/\bgrey\b/g, 'gray').replace(/^field$/, 'map').replace(/^image$/, 'picture');
-export function forgeNodeHtml(type, lists = {}, data = {}){
-  const N = FORGE_NODES[type]; if(!N) return '';
+/**
+ * A GROUP as the editor shows it: a part whose ports are its insides' (athanor.js groupPorts) — each Group Input and
+ * Knob inside an input, named after it; each result wired to its Group Result an output, of the kind that reaches it.
+ * `mod`: the group's module ({ data }), its ports numbered.
+ */
+export function forgeGroupPart(mod, data = {}){
+  const G = FORGE_NODES.group, P = groupPorts(mod), inner = (mod && mod.data) || {};
+  const R = Object.values(inner).find(n => n && n.name === 'groupout');
+  const outTypes = Array.from({ length: P.outs }, (_, k) => { const c = R && (((R.inputs || {})['input_' + (k + 1)] || {}).connections || [])[0], src = c && inner[String(c.node)];
+    const N = src && (src.name === 'group' ? null : FORGE_NODES[src.name]); return (N && N.outTypes[(parseInt(String(c.input).slice(7), 10) || 1) - 1]) || 'image'; });
+  return { ...G, label: String(data.name || G.label).slice(0, 32), group: true,
+    ins: P.ins.map(m => m.name), inTypes: P.ins.map(m => m.kind), dataIns: P.ins.length, paramPorts: [], required: [],
+    outs: Array.from({ length: P.outs }, (_, k) => P.outs > 1 ? 'result ' + (k + 1) : 'result'), outTypes };
+}
+export function forgeNodeHtml(type, lists = {}, data = {}, part = null){
+  const N = part || FORGE_NODES[type]; if(!N) return '';
   const ctl = ([key, label, kind, def, x]) => {
     // a param bound to a slider or the dial ('@k2', '@dial'): shown as written, and editable
     const v = data[key];
@@ -96,6 +110,7 @@ export function forgeNodeHtml(type, lists = {}, data = {}){
   let html = `<div class="forge-node-title"><span class="forge-node-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[N.cat] || ''}</span><span class="forge-node-name">${forgeEsc(N.label)}</span>`
     + `<button type="button" class="forge-node-btn forge-pin" data-act="pin" title="Pin in place" aria-label="Pin in place">${lists.lock || '⌖'}</button>`
     + `<button type="button" class="forge-node-btn" data-act="menu" title="What it can do" aria-label="What it can do">⋯</button></div><div class="forge-rows">`;
+
   for(let i = 0; i < rows; i++){
     const left = i < N.dataIns ? `<span class="fp-in" data-t="${N.inTypes[i]}">${forgeEsc(forgeWord(N.ins[i]))}</span>` : i < N.ins.length ? ctl(byKey[N.paramPorts[i - N.dataIns]]) : '<span></span>';
     const right = i < N.outs.length ? `<span class="fp-out" data-t="${N.outTypes[i]}">${forgeEsc(forgeWord(N.outs[i]))}</span>` : '';
@@ -103,6 +118,8 @@ export function forgeNodeHtml(type, lists = {}, data = {}){
   }
   // (a setting that matters only for some choice of another, `when: 'kind:steps|switch'`, shows only then: paintNode)
   html += N.params.filter(p => !N.paramPorts.includes(p[0])).map(p => `<div class="forge-row extra"${p[4] && p[4].when ? ` data-when="${forgeEsc(p[4].when)}"` : ''}>${ctl(p)}</div>`).join('');
+  // (a group opens, to show and change what is inside it)
+  if(N.group) html += `<div class="forge-row extra"><button type="button" class="forge-node-btn forge-open-group" data-act="open" title="Open the group: its parts, inside">Open the group ▸</button></div>`;
   return html + `</div><canvas class="forge-node-preview" width="64" height="64" aria-hidden="true"></canvas>`;
 }
 /**
@@ -267,14 +284,18 @@ export async function openForge(deps){
     ed.draggable_inputs = false;                         // a slider slides; it never drags its node
     ed.start();
     const lists = { textures: deps.textures || [], stitches: deps.stitches || [], lock: deps.lock || '' };
-    const nodesOf = () => ((ed.export().drawflow || {}).Home || {}).data || {};
+    // (the module shown: Home, or the inside of the group opened)
+    const nodesOf = () => ((ed.export().drawflow || {})[ed.module] || {}).data || {};
     const rawNodes = () => ((ed.drawflow.drawflow || {})[ed.module] || {}).data || {};
+    const mods = () => ((ed.drawflow || {}).drawflow) || {};
+    // a node's part: its step's, or a group's, from what is inside it
+    const partOf = n => !n ? null : n.name === 'group' ? forgeGroupPart(mods()[String((n.data || {}).module || '')], n.data || {}) : FORGE_NODES[n.name];
     const nodeOf = id => rawNodes()[id];
-    const labelOf = id => { const n = nodeOf(id); return n ? ((FORGE_NODES[n.name] || {}).label || n.name) : '?'; };
+    const labelOf = id => { const n = nodeOf(id); return n ? ((partOf(n) || {}).label || n.name) : '?'; };
     const isPinned = id => { const n = nodeOf(id); return !!(n && n.data && n.data._pin); };
     // ---- colour: ports and wires by what travels on them; rows show which params a wire drives ----
     const paintNode = id => {
-      const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && FORGE_NODES[n.name]; if(!el || !N) return;
+      const el = area.querySelector('#node-' + id), n = ed.getNodeFromId(id), N = n && partOf(n); if(!el || !N) return;
       el.style.setProperty('--cat', forgePartColour(N));
       el.classList.toggle('pinned', !!(n.data && n.data._pin));
       el.querySelectorAll('[data-when]').forEach(r => { const [k, vals] = r.dataset.when.split(':'), P = N.params.find(p => p[0] === k);
@@ -295,7 +316,7 @@ export async function openForge(deps){
     // every wire: its colour (what it carries), and a wide, invisible twin that is easy to tap
     const paintWires = () => area.querySelectorAll('svg.connection').forEach(svg => {
       const c = svg.getAttribute('class') || '', a = /node_out_node-(\d+)/.exec(c), o = /output_(\d+)/.exec(c); if(!a || !o) return;
-      const n = ed.getNodeFromId(a[1]), N = n && FORGE_NODES[n.name]; svg.dataset.t = (N && N.outTypes[+o[1] - 1]) || 'field';
+      const n = ed.getNodeFromId(a[1]), N = n && partOf(n); svg.dataset.t = (N && N.outTypes[+o[1] - 1]) || 'field';
       const vis = svg.children[0]; if(!vis) return;
       let hit = svg.querySelector('.forge-hit');
       if(!hit){ hit = document.createElementNS('http://www.w3.org/2000/svg', 'path'); hit.setAttribute('class', 'main-path forge-hit'); svg.appendChild(hit); }
@@ -316,10 +337,26 @@ export async function openForge(deps){
     // saved without each node's face (it is drawn again from the parts list on
     // load): a graph stays small, and an old graph gets the newest controls
     // (and with its VERSION: a graph loaded keeps its own, a new one is the newest — athanor.js)
-    const slim = () => { const g = ed.export(); for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})) n.html = ''; g.v = F.version || ATHANOR_VERSION; return g; };
+    // (every module: Home and each group's insides; a group's insides no group reaches any more are let go; the ports
+    // are saved by name, v5)
+    const slim = () => { const g = ed.export(), df = g.drawflow || {};
+      for(const M of Object.values(df)) for(const n of Object.values((M || {}).data || {})) n.html = '';
+      const keep = new Set(['Home', ed.module]), walk = m => { for(const n of Object.values((df[m] || {}).data || {})) if(n && n.name === 'group'){ const k = String((n.data || {}).module || ''); if(df[k] && !keep.has(k)){ keep.add(k); walk(k); } } };
+      walk('Home'); for(const k of Object.keys(df)) if(!keep.has(k)) delete df[k];
+      g.v = F.version || ATHANOR_VERSION; return athanorNamed(g); };
+    // each wire listed at both its ends, from its input's end (a group made or opened rewires by its inputs alone)
+    const syncOutputs = data => { for(const n of Object.values(data)) for(const o of Object.values(n.outputs || {})) o.connections = [];
+      for(const [id, n] of Object.entries(data)) for(const [k, v] of Object.entries(n.inputs || {})){
+        v.connections = (v.connections || []).filter(c => { const src = data[String(c.node)], o = parseInt(String(c.input).slice(7), 10); if(!src || !(o >= 1)) return false;
+          ((src.outputs ||= {})[c.input] ||= { connections: [] }).connections.push({ node: String(id), output: k }); return true; }); } };
     const faces = g => { F.version = athanorVersion(g);
-      for(const n of Object.values(((g.drawflow || {}).Home || {}).data || {})){ const P = FORGE_NODES[n.name]; if(!P) continue;
-        n.html = forgeNodeHtml(n.name, lists, n.data || {}); n.class = forgeCatClass(P.cat);
+      const df = g.drawflow || {};
+      for(const M of Object.values(df)) for(const n of Object.values((M || {}).data || {})){
+        const P = n.name === 'group' ? forgeGroupPart(df[String((n.data || {}).module || '')], n.data || {}) : FORGE_NODES[n.name]; if(!P) continue;
+        n.html = forgeNodeHtml(n.name, lists, n.data || {}, n.name === 'group' ? P : null); n.class = forgeCatClass(P.cat);
+        // (a group has the ports its insides give it now: none past them)
+        if(n.name === 'group'){ for(const k of Object.keys(n.inputs || {})) if(+k.slice(6) > P.ins.length) delete n.inputs[k];
+          for(const k of Object.keys(n.outputs || {})) if(+k.slice(7) > P.outs.length) delete n.outputs[k]; }
         // every port the part has, wired or not (a starter, or a part that gained one, lists only its wires)
         n.inputs = n.inputs || {}; n.outputs = n.outputs || {};
         P.ins.forEach((_, j) => { n.inputs['input_' + (j + 1)] = n.inputs['input_' + (j + 1)] || { connections: [] }; });
@@ -329,6 +366,7 @@ export async function openForge(deps){
         // another order ({input_2, input_3, input_1}) drew its wires to the wrong rows (Ruby's Halftone)
         const ordered = (o, pre) => Object.fromEntries(Object.keys(o).sort((a, b) => (+a.slice(pre.length) || 0) - (+b.slice(pre.length) || 0)).map(k => [k, o[k]]));
         n.inputs = ordered(n.inputs, 'input_'); n.outputs = ordered(n.outputs, 'output_'); }
+      for(const M of Object.values(df)) syncOutputs((M || {}).data || {});
       return g; };
     F.faces = faces;
     const save = () => { const json = JSON.stringify(slim()); deps.setBench(json); if(deps.onSave) deps.onSave(json); if(status){ status.textContent = describeForge(json); status.title = status.textContent; } previews(); snapshot(); };
@@ -343,7 +381,7 @@ export async function openForge(deps){
     function snapshot(){ if(hist.applying || F.quiet) return; clearTimeout(hist.timer); hist.timer = setTimeout(pushNow, 300); }
     const stepHist = d => { clearTimeout(hist.timer); pushNow(); const to = hist.at + d;
       if(to < 0 || to >= hist.stack.length){ sound('nothingToUndo'); return; }
-      hist.at = to; hist.applying = true; try { load(JSON.parse(hist.stack[to]), true); F.dirty = true; } finally { hist.applying = false; } paintHist(); sound(d < 0 ? 'undo' : 'redo'); };
+      hist.at = to; hist.applying = true; try { load(JSON.parse(hist.stack[to]), true, ed.module); F.dirty = true; } finally { hist.applying = false; } paintHist(); sound(d < 0 ? 'undo' : 'redo'); };
     F.undo = () => stepHist(-1); F.redo = () => stepHist(1); F.pushHist = pushNow; F.paintHist = paintHist;
     // what has changed since the graph was opened or loaded (the guards ask only then)
     const touched = () => { F.dirty = true; };
@@ -361,10 +399,15 @@ export async function openForge(deps){
     const redrawSoon = () => { redrawWires(); requestAnimationFrame(() => { redrawWires(); setTimeout(redrawWires, 250); }); };
     F.redrawWires = redrawSoon;
     if(document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { if(!veil.hidden) redrawSoon(); });
-    const load = (g, keepDirty) => { const was = F.dirty; F.quiet = true; ed.clear(); ed.import(faces(g));
+    // (`module`: which of the graph's modules to show — the group open, kept through an undo; Home if it is gone)
+    const load = (g, keepDirty, module) => { const was = F.dirty; F.quiet = true;
+      const gn = athanorIsNamed(g) ? athanorNumbered(g) : g; if(!gn.drawflow || !gn.drawflow.Home) gn.drawflow = { ...(gn.drawflow || {}), Home: { data: {} } };
+      const at = module && gn.drawflow[module] ? module : 'Home';
+      if(at === 'Home') F.path = []; else F.path = (F.path || []).filter(p => gn.drawflow[p.module]);
+      ed.module = 'Home'; ed.clear(); ed.module = at; ed.import(faces(gn));
       // (a graph from anywhere, without a Surface: it gets one)
-      if(!Object.values(rawNodes()).some(n => n.name === 'surface')) add('surface', 900, 120);
-      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; redrawSoon(); if(F.fillOpen) F.fillOpen(); };
+      if(at === 'Home' && !Object.values(rawNodes()).some(n => n.name === 'surface')) add('surface', 900, 120);
+      F.quiet = false; paintAll(); save(); F.dirty = keepDirty ? was : false; redrawSoon(); if(F.fillOpen) F.fillOpen(); if(F.paintCrumb) F.paintCrumb(); };
     F.load = load;
     // a node's face drawn again from its data (a param bound or unbound changes its control)
     const reface = id => {
@@ -401,7 +444,7 @@ export async function openForge(deps){
       palette.innerHTML = `<input type="search" class="forge-find" id="forgeFind" placeholder="Find a part…" aria-label="Find a part" autocomplete="off">`
         + FORGE_CATEGORIES.filter(cat => cat !== 'Output').map(cat => `<details class="forge-cat" open style="--cat:var(--fg-dim)"><summary><span class="forge-cat-glyph" aria-hidden="true">${FORGE_CAT_GLYPHS[cat] || ''}</span> ${forgeEsc(forgeCatName(cat))}</summary>`
         + `<p class="forge-cat-doc">${forgeEsc(FORGE_CAT_DOCS[cat] || '')}</p>`
-        + Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}" style="--cat:${forgePartColour(n)}" title="${forgeEsc(n.doc)}"><span class="fpart-name">${forgeEsc(n.label)}</span><span class="fpart-doc">${forgeEsc(n.doc)}</span></button>`).join('') + `</details>`).join('');
+        + Object.entries(FORGE_NODES).filter(([, n]) => n.cat === cat && !n.hidden).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([type, n]) => `<button type="button" class="forge-part"${finePointer ? ' draggable="true"' : ''} data-type="${type}" style="--cat:${forgePartColour(n)}" title="${forgeEsc(n.doc)}"><span class="fpart-name">${forgeEsc(n.label)}</span><span class="fpart-doc">${forgeEsc(n.doc)}</span></button>`).join('') + `</details>`).join('');
       const find = palette.querySelector('#forgeFind');
       if(find) find.addEventListener('input', () => { const q = find.value.trim().toLowerCase();
         palette.querySelectorAll('.forge-cat').forEach(c => { let any = 0;
@@ -468,10 +511,11 @@ export async function openForge(deps){
       const nodeEl = b.closest('.drawflow-node'); if(!nodeEl) return; const id = nodeEl.id.slice(5);
       e.preventDefault(); e.stopPropagation();
       if(b.dataset.act === 'pin'){ setData(id, { _pin: isPinned(id) ? undefined : true }); }
+      else if(b.dataset.act === 'open'){ if(F.openGroup) F.openGroup(id); }
       else { const r = b.getBoundingClientRect(); openMenu(r.left, r.bottom, nodeMenu(id)); }
     });
     // ---- the guards: deleting work asks first (a node that carries settings or wires, once anything has changed) ----
-    const carries = id => { const n = ed.getNodeFromId(id); if(!n) return false; const N = FORGE_NODES[n.name];
+    const carries = id => { const n = ed.getNodeFromId(id); if(!n) return false; const N = partOf(n);
       const wired = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].some(p => (p.connections || []).length);
       const changed = N && N.params.some(p => n.data && n.data[p[0]] !== undefined && String(n.data[p[0]]) !== String(p[3]));
       return wired || changed; };
@@ -517,7 +561,8 @@ export async function openForge(deps){
       if(mod && k === 'z' && !typing){ e.preventDefault(); e.stopImmediatePropagation(); e.shiftKey ? stepHist(1) : stepHist(-1); return; }
       if(mod && k === 'y' && !typing){ e.preventDefault(); e.stopImmediatePropagation(); stepHist(1); return; }
       if(mod && k === 'd' && !typing && ed.node_selected){ e.preventDefault(); e.stopImmediatePropagation(); const id = String(ed.node_selected.id).replace('node-', ''), n = nodeOf(id);
-        if(!n) return; if(n.name === 'surface'){ sound('blocked'); if(deps.warn) deps.warn(['a graph has one Surface']); return; }
+        if(!n) return; if(n.name === 'surface' || n.name === 'groupout'){ sound('blocked'); if(deps.warn) deps.warn([n.name === 'surface' ? 'a graph has one Surface' : 'a group has one Group Result']); return; }
+        if(n.name === 'group'){ F.dupGroup(id); return; }
         const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); return; }
       if(!mod && !e.altKey && k === 'f' && !typing && !(t && t.tagName === 'SELECT')){ e.preventDefault(); fitView(); return; }
       if(!(e.key === 'Delete' || e.key === 'Backspace')) return;
@@ -566,7 +611,7 @@ export async function openForge(deps){
       document.addEventListener('pointerdown', e => { if(!menu.hidden && !menu.contains(e.target)) closeMenu(); }, true);
     }
     // what each thing is called in a menu, and its colour
-    const N_ = id => FORGE_NODES[(nodeOf(id) || {}).name] || null;
+    const N_ = id => partOf(nodeOf(id)) || null;
     const wireDesc = w => { const a = N_(w.outId), b = N_(w.inId); const oi = +w.output.slice(7) - 1, ii = +w.input.slice(6) - 1;
       return { label: `${labelOf(w.outId)} → ${labelOf(w.inId)}`, hint: `${(a && a.outs[oi]) || ''} into ${(b && b.ins[ii]) || ''}`, colour: `var(--t-${(a && a.outTypes[oi]) || 'field'})`, glyph: '〰' }; };
     // ---- WIRING BY MENU: choose one end, then the other (no dragging) ----
@@ -584,6 +629,140 @@ export async function openForge(deps){
     const stopWire = () => { pending = null; showPending(); area.classList.remove('wiring'); };
     F.stopWire = stopWire; F.startWire = startWire; F.pending = () => pending;
     if(pendBar) pendBar.addEventListener('click', e => { if(e.target.closest && e.target.closest('.forge-pending-x')) stopWire(); });
+
+    // ---- GROUPS (ROADMAP A3, Filter Forge's groups): parts chosen and made one; a group opened, its insides
+    // shown in place of the graph, and closed again. Each group's insides are a module of Drawflow's own. ----
+    const bar = (id, cls) => { let el = $(id); if(!el && body){ el = document.createElement('div'); el.id = id; el.className = cls; el.hidden = true; el.setAttribute('role', 'status'); body.appendChild(el); } return el; };
+    // the way back out: which group is open, inside which
+    const crumb = bar('forgeCrumb', 'forge-pending forge-crumb');
+    const paintCrumb = () => { if(!crumb) return; const path = F.path || [];
+      const inside = ed.module !== 'Home' && path.length > 0; veil.classList.toggle('in-group', inside);
+      if(!inside){ crumb.hidden = true; crumb.innerHTML = ''; return; }
+      const top = path[path.length - 1], up = path.length > 1 ? path[path.length - 2].name : 'the graph';
+      crumb.innerHTML = `<button type="button" class="forge-pending-x" data-act="close">‹ Back to ${forgeEsc(up)}</button><span>Inside <b>${forgeEsc(top.name)}</b><span class="fc-how">: its Group Inputs and Knobs are its inputs; what reaches its Group Result is what it gives.</span></span>`;
+      crumb.hidden = false; };
+    F.paintCrumb = paintCrumb;
+    const openGroup = id => { const n = nodeOf(id); if(!n || n.name !== 'group') return; const mod = String((n.data || {}).module || ''); if(!mods()[mod]) return;
+      stopWire(); stopPick(); closeMenu();
+      F.path = (F.path || []).concat({ module: mod, from: ed.module, name: labelOf(id) }); load(slim(), true, mod); setTimeout(fitView, 30); sound('graphLoad'); };
+    const closeGroup = () => { const path = F.path || []; if(!path.length) return; const top = path[path.length - 1];
+      stopWire(); stopPick(); F.path = path.slice(0, -1); load(slim(), true, top.from); setTimeout(fitView, 30); sound('graphLoad'); };
+    F.openGroup = openGroup; F.closeGroup = closeGroup;
+    if(crumb) crumb.addEventListener('click', e => { if(e.target.closest && e.target.closest('[data-act="close"]')) closeGroup(); });
+    // CHOOSING THE PARTS for a group: a tap adds a part or takes it away (the Surface stays out)
+    let picking = null;
+    const pickBar = bar('forgePick', 'forge-pending forge-pick');
+    const paintPick = () => {
+      area.querySelectorAll('.drawflow-node').forEach(el => el.classList.toggle('picked', !!picking && picking.has(el.id.slice(5))));
+      area.classList.toggle('picking', !!picking);
+      if(!pickBar) return;
+      if(!picking){ pickBar.hidden = true; pickBar.innerHTML = ''; return; }
+      pickBar.innerHTML = `<span><b>${picking.size}</b> ${picking.size === 1 ? 'part' : 'parts'} chosen. ${forgeClick(true)} the parts to put in the group (again to take one out).</span>`
+        + `<button type="button" class="forge-pending-x" data-act="make"${picking.size ? '' : ' disabled'}>Make the group</button><button type="button" class="forge-pending-x" data-act="cancel">Cancel</button>`;
+      pickBar.hidden = false; };
+    const startPick = id => { stopWire(); picking = new Set(id != null ? [String(id)] : []); paintPick(); };
+    function stopPick(){ if(!picking) return; picking = null; paintPick(); }
+    F.startPick = startPick; F.picking = () => picking;
+    if(pickBar) pickBar.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-act]'); if(!b) return;
+      if(b.dataset.act === 'make'){ const ids = [...(picking || [])]; stopPick(); makeGroup(ids); } else stopPick(); });
+    { let at = null;
+      area.addEventListener('pointerdown', e => { at = picking ? { x: e.clientX, y: e.clientY, t: Date.now() } : null; }, true);
+      area.addEventListener('pointerup', e => { const t0 = at; at = null; if(!picking || !t0) return;
+        if(Math.hypot(e.clientX - t0.x, e.clientY - t0.y) > 10 || Date.now() - t0.t > 500) return;
+        const el = document.elementFromPoint(e.clientX, e.clientY), nodeEl = el && el.closest && el.closest('.drawflow-node'); if(!nodeEl || el.closest('input, select, textarea, button')) return;
+        const id = nodeEl.id.slice(5), n = nodeOf(id); if(!n) return;
+        if(n.name === 'surface' || n.name === 'groupout'){ sound('blocked'); return; }
+        picking.has(id) ? picking.delete(id) : picking.add(id); paintPick(); e.preventDefault(); }, true);
+      document.addEventListener('keydown', e => { if(e.key === 'Escape' && picking && !veil.hidden){ e.preventDefault(); stopPick(); } }, true); }
+    // the next id free in every module (Drawflow numbers its nodes across them all)
+    const nextId = df => { let next = 1; for(const m of Object.values(df)) for(const id of Object.keys((m || {}).data || {})) next = Math.max(next, (+id || 0) + 1); return next; };
+    const bare = (id, name, data, x, y) => ({ id, name, data, class: forgeCatClass(FORGE_NODES[name].cat), html: '', typenode: false, inputs: {}, outputs: {}, pos_x: Math.round(x), pos_y: Math.round(y) });
+    /**
+     * MAKE A GROUP of the parts chosen: they move into a module of their own, in their places; every wire that came
+     * in from a part outside comes through a Group Input (one for each output outside that fed them), and every
+     * result read outside goes out through the Group Result (at most four). The group stands where they stood and
+     * is wired where they were, so the picture doesn't change.
+     */
+    const makeGroup = ids => {
+      const g = athanorNumbered(slim()), df = g.drawflow, here = ed.module, M = (df[here] || {}).data || {};
+      const pick = new Set(ids.map(String).filter(id => M[id] && M[id].name !== 'surface' && M[id].name !== 'groupout'));
+      if(!pick.size){ sound('blocked'); return; }
+      // (the results read outside, counted first: a group gives at most four)
+      const outKeys = new Set(); for(const [id, n] of Object.entries(M)) if(!pick.has(id)) for(const v of Object.values(n.inputs || {})) for(const c of v.connections || []) if(pick.has(String(c.node))) outKeys.add(c.node + '.' + c.input);
+      if(outKeys.size > 4){ sound('blocked'); if(deps.warn) deps.warn([`a group gives at most four results, and these parts send out ${outKeys.size}: choose fewer, or more of what reads them`]); return; }
+      let next = nextId(df), mod = 'g' + next; while(df[mod]) mod += 'x';
+      const inner = {}; let x0 = Infinity, x1 = -Infinity, ys = 0;
+      for(const id of pick){ const n = M[id]; inner[id] = n; delete M[id]; x0 = Math.min(x0, n.pos_x); x1 = Math.max(x1, n.pos_x); ys += n.pos_y; }
+      const ym = ys/pick.size, gid = next++, rid = next++;
+      const G = bare(gid, 'group', { name: 'Group', module: mod }, (x0 + x1)/2, ym), R = bare(rid, 'groupout', {}, x1 + ATHANOR_NODE.w + 80, ym);
+      // wires in: each output outside that feeds the chosen parts, one Group Input named after it
+      const ins = new Map();
+      for(const n of Object.values(inner)) for(const v of Object.values(n.inputs || {})) v.connections = (v.connections || []).map(c => {
+        if(pick.has(String(c.node))) return c;
+        const key = c.node + '.' + c.input;
+        if(!ins.has(key)){ const src = M[String(c.node)], SP = src && (src.name === 'group' ? forgeGroupPart(df[String((src.data || {}).module || '')], src.data || {}) : FORGE_NODES[src.name]);
+          const o = (parseInt(String(c.input).slice(7), 10) || 1) - 1, name = SP ? (SP.outs.length > 1 ? SP.label + ' ' + forgeWord(SP.outs[o] || '') : SP.label) : 'Input';
+          const id = next++; inner[id] = bare(id, 'groupin', { name: name.slice(0, 24), def: 50 }, x0 - ATHANOR_NODE.w - 80, 0); ins.set(key, { id: String(id), src: { node: String(c.node), input: c.input } }); }
+        return { node: ins.get(key).id, input: 'output_1' }; });
+      [...ins.values()].forEach((m, i) => { inner[m.id].pos_y = Math.round(ym + (i - (ins.size - 1)/2)*140); });
+      // wires out: each result read outside, one of the Group Result's, and the group's output in its place
+      const outs = new Map();
+      for(const n of Object.values(M)) for(const v of Object.values(n.inputs || {})) v.connections = (v.connections || []).map(c => {
+        if(!pick.has(String(c.node))) return c;
+        const key = c.node + '.' + c.input;
+        if(!outs.has(key)){ outs.set(key, outs.size + 1); R.inputs['input_' + outs.size] = { connections: [{ node: String(c.node), input: c.input }] }; }
+        return { node: String(gid), input: 'output_' + outs.get(key) }; });
+      inner[rid] = R;
+      // the group's own inputs, in the order its insides give them
+      groupPorts({ data: inner }).ins.forEach((m, j) => { const hit = [...ins.values()].find(q => q.id === m.id); if(hit) G.inputs['input_' + (j + 1)] = { connections: [hit.src] }; });
+      M[gid] = G; df[mod] = { data: inner };
+      syncOutputs(M); syncOutputs(inner);
+      load(g, true, here); touched(); sound('nodeAdd');
+      setTimeout(() => toFront(String(gid)), 0);
+    };
+    F.makeGroup = makeGroup;
+    // a group copied: its insides copied too (new ids), so changing one never changes the other
+    const dupGroup = id => {
+      const g = athanorNumbered(slim()), df = g.drawflow, here = ed.module, n = ((df[here] || {}).data || {})[id]; if(!n) return;
+      const from = df[String((n.data || {}).module || '')]; if(!from) return;
+      let next = nextId(df), mod = 'g' + next; while(df[mod]) mod += 'x';
+      const map = {}, inner = {}; for(const oid of Object.keys(from.data || {})) map[oid] = String(next++);
+      for(const [oid, m] of Object.entries(from.data || {})){ const c = JSON.parse(JSON.stringify(m)); c.id = +map[oid];
+        for(const v of Object.values(c.inputs || {})) v.connections = (v.connections || []).filter(q => map[q.node]).map(q => ({ node: map[q.node], input: q.input }));
+        c.outputs = {}; inner[map[oid]] = c; }
+      syncOutputs(inner); df[mod] = { data: inner };
+      const gid = next++, d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; d.module = mod;
+      df[here].data[gid] = bare(gid, 'group', d, n.pos_x + 30, n.pos_y + 40);
+      load(g, true, here); touched(); sound('nodeAdd');
+    };
+    F.dupGroup = dupGroup;
+    /**
+     * UNGROUP: the parts back out where the group stood, wired as the group was — what came into a port goes
+     * straight to the parts it fed (a Group Input left unwired becomes a Number at its Default; a Knob stays a Knob),
+     * and what read a result reads the part that gave it. The picture doesn't change.
+     */
+    const ungroup = id => {
+      const g = athanorNumbered(slim()), df = g.drawflow, here = ed.module, M = (df[here] || {}).data || {}, G = M[id]; if(!G || G.name !== 'group') return;
+      const mod = String((G.data || {}).module || ''), from = df[mod]; if(!from) return;
+      // (insides another group also uses are copied out, with ids of their own)
+      const shared = Object.values(df).some(m => Object.values((m || {}).data || {}).some(n => n && n !== G && n.name === 'group' && String((n.data || {}).module || '') === mod));
+      let next = nextId(df); const map = {}; for(const oid of Object.keys(from.data || {})) map[oid] = shared ? String(next++) : oid;
+      const inner = {}; for(const [oid, m] of Object.entries(from.data || {})){ const c = JSON.parse(JSON.stringify(m)); c.id = +map[oid];
+        for(const v of Object.values(c.inputs || {})) v.connections = (v.connections || []).filter(q => map[q.node]).map(q => ({ node: map[q.node], input: q.input })); inner[map[oid]] = c; }
+      const redirect = (from_, src) => { for(const n of Object.values(inner)) for(const v of Object.values(n.inputs || {}))
+        v.connections = (v.connections || []).flatMap(c => c.node !== from_ ? [c] : src ? [{ node: src.node, input: src.input }] : []); };
+      groupPorts(from).ins.forEach((m, j) => { const I = map[m.id], src = (((G.inputs || {})['input_' + (j + 1)] || {}).connections || [])[0]; if(!inner[I]) return;
+        if(src){ redirect(I, src); delete inner[I]; }
+        else if(inner[I].name === 'groupin') inner[I] = { ...inner[I], name: 'number', class: forgeCatClass(FORGE_NODES.number.cat), data: { value: Math.max(0, Math.min(100, +((inner[I].data || {}).def ?? 50))) } }; });
+      const R = Object.values(inner).find(n => n.name === 'groupout');
+      for(const n of Object.values(M)) for(const v of Object.values(n.inputs || {})) v.connections = (v.connections || []).flatMap(c => {
+        if(c.node !== String(id)) return [c];
+        const s = R && (((R.inputs || {})['input_' + (parseInt(String(c.input).slice(7), 10) || 1)] || {}).connections || [])[0]; return s ? [{ node: s.node, input: s.input }] : []; });
+      for(const n of Object.values(inner)) if(n.name !== 'groupout') M[n.id] = n;
+      delete M[id]; if(!shared) delete df[mod];
+      syncOutputs(M); load(g, true, here); touched(); sound('nodeRemove');
+    };
+    F.ungroup = ungroup;
     // an input takes one wire: a new one replaces what was there
     const connect = (outId, output, inId, input) => {
       const n = nodeOf(inId); if(!n) return;
@@ -641,15 +820,20 @@ export async function openForge(deps){
     const nodeMenu = id => { const n = nodeOf(id), N = N_(id); if(!n || !N) return null;
       const wires = [...Object.values(n.inputs || {}), ...Object.values(n.outputs || {})].reduce((a, p) => a + ((p.connections || []).length), 0);
       const from = N.outs.length ? wireStart(id, 'out') : null, into = N.ins.length ? wireStart(id, 'in') : null;
+      const groupable = n.name !== 'surface' && n.name !== 'groupout';
       return { title: labelOf(id), hint: N.doc || forgeCatName(N.cat), items: [
         { glyph: '?', label: 'About this part', hint: 'its page in the wiki: what it does, its inputs, outputs and settings', act: () => F.goWiki && F.goWiki('part:' + n.name) },
         { sep: true },
+        ...(n.name === 'group' ? [{ glyph: '▸', label: 'Open the group', hint: 'its parts, inside it, to see and change', act: () => openGroup(id) },
+          { glyph: '⊟', label: 'Ungroup', hint: 'its parts back out where it stands, wired as it was', act: () => ungroup(id) }, { sep: true }] : []),
         ...(from ? [{ glyph: '⟿', label: 'Connect its output…', hint: (N.outs.length === 1 ? `${forgeWord(N.outs[0])}: ` : 'choose an output, then ') + `${forgeClick()} the part it should feed`, ...from }] : []),
         ...(into ? [{ glyph: '⟾', label: 'Connect an input…', hint: `choose an input, then ${forgeClick()} the part it should come from`, ...into }] : []),
         ...(from || into ? [{ sep: true }] : []),
         ...(n.name === 'surface' && Object.keys(knobsBySlot()).length ? [{ glyph: '☰', label: 'Order of the sliders…', hint: 'which slider on the page each Knob is, and moving them', sub: orderSpec }, { sep: true }] : []),
         { glyph: '⌖', label: isPinned(id) ? 'Unpin it' : 'Pin it in place', hint: isPinned(id) ? 'it can be dragged and tidied again' : 'it stays put when dragged or tidied', act: () => setData(id, { _pin: isPinned(id) ? undefined : true }) },
-        { glyph: '⧉', label: 'Duplicate', disabled: n.name === 'surface', hint: n.name === 'surface' ? 'a graph has exactly one Surface' : 'a copy with the same settings, without wires', act: () => { const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
+        { glyph: '⧉', label: 'Duplicate', disabled: n.name === 'surface' || n.name === 'groupout', hint: n.name === 'surface' ? 'a graph has exactly one Surface' : n.name === 'groupout' ? 'a group has exactly one Group Result' : n.name === 'group' ? 'a copy of the group and everything inside it, without wires' : 'a copy with the same settings, without wires',
+          act: () => { if(n.name === 'group'){ dupGroup(id); return; } const d = JSON.parse(JSON.stringify(n.data || {})); delete d._pin; add(n.name, n.pos_x + 30, n.pos_y + 40, d); } },
+        ...(groupable ? [{ glyph: '▣', label: 'Make a group…', hint: `choose the parts to make one: ${forgeClick()} each, then Make the group`, act: () => startPick(id) }] : []),
         { glyph: '↺', label: 'Reset all settings', hint: 'every setting back to its default', disabled: !N.params.length, act: () => { const d = forgeNodeData(n.name); const patch = {};
             for(const k of Object.keys(n.data || {})) if(k[0] !== '_') patch[k] = undefined; Object.assign(patch, d); setData(id, patch); } },
         { glyph: '✂', label: wires ? `Disconnect all wires (${wires})` : 'No wires connected', hint: wires ? 'the part stays; its connections go' : '', disabled: !wires, act: () => { ed.removeConnectionNodeId('node-' + id); paintNode(id); save(); touched(); } },
@@ -725,7 +909,7 @@ export async function openForge(deps){
     };
     const canvasMenu = (cx, cy) => { const g = toGrid(cx, cy); return { title: 'The grid', items: [
       { glyph: '＋', label: 'Add a part here', sub: () => ({ title: 'Add a part here', items: FORGE_CATEGORIES.map(cat => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: forgeCatName(cat), colour: FORGE_CAT_COLOURS[cat],
-        sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: forgePartColour(nn), act: () => add(type, g.x, g.y) })) }) })) }) },
+        sub: () => ({ title: forgeCatName(cat), items: Object.entries(FORGE_NODES).filter(([, nn]) => nn.cat === cat && !nn.hidden).map(([type, nn]) => ({ glyph: FORGE_CAT_GLYPHS[cat] || '', label: nn.label, colour: forgePartColour(nn), act: () => add(type, g.x, g.y) })) }) })) }) },
       { glyph: '⌖', label: 'Fit everything in view', act: () => fitView() },
       { glyph: '▦', label: 'Tidy into columns', hint: 'left to right, in the order data flows; pinned parts stay put', act: () => tidy() }] }; };
     // ---- what is under a point: the things there, nearest first ----
@@ -823,10 +1007,10 @@ export async function openForge(deps){
       ed.precanvas.style.transform = `translate(${ed.canvas_x}px, ${ed.canvas_y}px) scale(${ed.zoom})`;
     }, { capture: true, passive: false });
     const tidy = (spread = 1) => {
-      const g = slim(), data = g.drawflow.Home.data, pins = {};
+      const g = athanorNumbered(slim()), data = (g.drawflow[ed.module] || g.drawflow.Home).data, pins = {};
       for(const [id, n] of Object.entries(data)) if(n.data && n.data._pin) pins[id] = [n.pos_x, n.pos_y];
       layoutAthanor(data, spread); for(const [id, p] of Object.entries(pins)){ data[id].pos_x = p[0]; data[id].pos_y = p[1]; }
-      load(g, true); touched(); setTimeout(fitView, 30);
+      load(g, true, ed.module); touched(); setTimeout(fitView, 30);
     };
     // PINCH (Ruby: the zoom was touchy): Drawflow zoomed a fixed step on every move of two fingers, so quick fingers
     // flew. Here the zoom follows the fingers' spread (twice as far apart, twice as near), about the point between
@@ -850,7 +1034,7 @@ export async function openForge(deps){
     // SNAP TO THE GRID (Ruby): a moved part settles on the grid, when asked (an app preference)
     const SNAP_KEY = 'uv.forge.snap', SNAP = 24;
     const snapOn = () => { try { return localStorage.getItem(SNAP_KEY) === '1'; } catch(e){ return false; } };
-    const snapNode = id => { const n = (((ed.drawflow || {}).drawflow || {}).Home || {}).data, d = n && n[id]; if(!d) return;
+    const snapNode = id => { const n = (((ed.drawflow || {}).drawflow || {})[ed.module] || {}).data, d = n && n[id]; if(!d) return;
       const x = Math.round(d.pos_x/SNAP)*SNAP, y = Math.round(d.pos_y/SNAP)*SNAP; if(x === d.pos_x && y === d.pos_y) return;
       d.pos_x = x; d.pos_y = y; const el = area.querySelector('#node-' + id); if(el){ el.style.left = x + 'px'; el.style.top = y + 'px'; } ed.updateConnectionNodes('node-' + id); };
     F.snapNode = id => { if(snapOn()) snapNode(id); };
@@ -858,7 +1042,7 @@ export async function openForge(deps){
     const count = () => Object.keys(nodesOf()).length;
     const clearAll = async () => {
       if(count() && F.dirty && !await ask({ title: 'Clear the whole graph?', body: 'Every part and wire is removed. Undo or Revert can bring them back.', confirmLabel: 'Clear', danger: true })) return;
-      F.quiet = true; ed.clear(); add('surface', 420, 90); F.quiet = false; F.version = ATHANOR_VERSION; save(); F.dirty = false; sound('nodeRemove');
+      F.quiet = true; ed.module = 'Home'; F.path = []; ed.clear(); add('surface', 420, 90); F.quiet = false; F.version = ATHANOR_VERSION; save(); F.dirty = false; sound('nodeRemove'); if(F.paintCrumb) F.paintCrumb();
     };
     const revert = async () => {
       if(!F.opened) return;
@@ -932,7 +1116,7 @@ export async function openForge(deps){
         { glyph: '?', label: FORGE_BAR.help, hint: FORGE_BAR.helpHint, act: () => F.showDoc && F.showDoc(true) }] }); });
     // ---- the shelf: keep a surface by name, open one kept, carry them as a file ----
     const surfaceId = () => { const e = Object.entries(rawNodes()).find(([, n]) => n.name === 'surface'); return e ? e[0] : null; };
-    const surfaceName = () => { const s = Object.values(rawNodes()).find(n => n.name === 'surface'); return ((s && s.data && s.data.name) || 'My Surface').trim(); };
+    const surfaceName = () => { const s = Object.values((mods().Home || {}).data || {}).find(n => n.name === 'surface'); return ((s && s.data && s.data.name) || 'My Surface').trim(); };
     // ONE NAME: the name it is kept under is the Surface part's name; keeping it under another renames the part
     const keep = async () => {
       if(!count()){ if(deps.warn) deps.warn(['there is nothing on the grid to keep']); return; }

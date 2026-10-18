@@ -28,7 +28,7 @@ import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
-import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph } from './athanor.js';
+import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { cameraGuide } from './stepsGenerative.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
@@ -3247,7 +3247,7 @@ function previewAthanor(json, cv){
 }
 /** The STEP PREVIEWS: every node's own result, as one sheet of tiles made in the worker. */
 function athanorStepSheet(json, paint){
-  const ids = Object.keys(athanorNodes(json)).sort((a, b) => +a - +b); if(!ids.length) return;
+  const ids = athanorStepIds(json); if(!ids.length) return;
   const T = 64, { cols, rows } = athanorSheetLayout(ids.length);
   whenTexture('athanorSteps', 'athanorsteps', cols*T, rows*T, athanorOpts(json, T), sheet => paint(sheet, ids, T, cols));
 }

@@ -4,6 +4,31 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Paaliaq (2026-10-17)
+
+- **Groups in the Athanor.** Several parts can now be made one:
+  - **Make a group…** in a part's menu, then click or tap the other parts
+    that belong in it and choose **Make the group**. The parts move inside
+    the group and it takes their place, wired as they were, so the picture
+    doesn't change.
+  - **Open the group** shows its parts in place of the graph; **Back**
+    closes it again. A group can hold other groups.
+  - Each **Group Input** and **Knob** inside is one of the group's inputs,
+    named after it. Each result wired to its **Group Result** is one of its
+    outputs, up to four. A Knob inside a group, left unwired, is still its
+    slider on the page.
+  - **Ungroup** puts the parts back out, wired as they were. **Duplicate**
+    copies a group with everything inside it. Every part inside counts
+    toward the part limit.
+  - The wiki has a page on groups, and one for each new part.
+- **Graphs save their wires by port name.** A part that gains a new input in
+  a later release no longer shifts the wires saved on its settings (as
+  Halftone's once were drawn to the wrong rows). Graphs saved before load
+  and draw as they did.
+- **Under the hood:** graph version 5. A group's insides are a module of the
+  editor's own, and the graph is laid out flat before it is drawn. Saved
+  ports are named (`in:field`, `set:scale`, `out:image`).
+
 ## Saturn–Phoebe (2026-10-17)
 
 - **PML: glass, cut, blends and shaped lines.** Each also works bare.
