@@ -4,6 +4,47 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Phoebe (2026-10-17)
+
+- **PML: glass, cut, blends and shaped lines.** Each also works bare.
+  - **Glass letters.** `/glass` makes frosted letters: the page behind them
+    is blurred and lit, with light along their top edges. `/glass:clear`
+    only bends the page, and `/glass:rose` (or any color) tints the glass.
+  - **Cut letters.** `/cut` makes the letters windows through the surface,
+    to the page under it.
+  - **Blends and opacity.** `/blend:multiply` presses the ink into the paper.
+    Screen, overlay, soft-light and the other blends work too. `/op:60`
+    sets the opacity.
+  - **Shaped lines.** `/arc:30` sets the words on an arc (a negative arc
+    sags), and `/wave:25,2` on a wave. The line is given room for the curve.
+    `/rot:-8` turns the words about their middle, and `/gap:100` leaves room
+    after the line (a negative gap draws the next line in).
+- **PML: friendlier names.**
+  - `/font:Cinzel` picks a typeface by its name, beside `/f:N`.
+  - `/color:rose` picks a color by its name: any web color name, or one of
+    the app's own (rose, oxblood, moss, bone, parchment, graphite, teastain,
+    clay, sage, ink, starlight, ember).
+  - **Named styles.** `§style ember = /color:ember/glass` on a line of its
+    own names a style; `<coals/@ember>` uses it. The naming line isn't
+    drawn, and a style can use another.
+- **The editor points out mistakes.** A directive PML can't read is
+  underlined: a misspelt name, a value it doesn't take, or a style or
+  typeface no one has named. The line under the poem says why, and suggests
+  the nearest name (`/glas` → `/glass`).
+- **PML, two changes to old poems:**
+  - **Bold and italic run over lines,** as brackets do. Before, `**` or `*`
+    left open at a line's end showed as text and stopped there.
+  - **`<3` is always a heart.** Before, a line such as `<3 you <word/c>`
+    read the heart's `<` as the start of the segment.
+- **The seed places the camera.** On Painted Ringworld and Ring in the Sky,
+  each new seed starts from its own shot: a turn, a view and a zoom within a
+  pleasing range. The camera dial still moves it, and locking the camera
+  keeps it put.
+- **One face for the controls.** Number fields, dropdowns, slider readouts
+  and the color pickers' buttons now use the same sans-serif as the rest of
+  the controls, and a dialog's buttons are set in small capitals like the
+  other large buttons.
+
 ## Saturn–Ijiraq (2026-10-17)
 
 - **Two new surfaces in Sky & Cosmos:**

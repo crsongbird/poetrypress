@@ -51,6 +51,11 @@
  *   §Fonts              how many typeface families have been fetched
  *   §Build              which build this is (stamped by build.mjs)
  *
+ * NAMED STYLES — a line `§style name = /c:rose/glass/op:80` defines a style
+ * (the line itself is not drawn); `/@name` anywhere a directive may go stands
+ * for those directives: `<embers/@name>`, `<embers/@name/s:120>`. A style may
+ * use another. An unknown name is left as written, for the editor to point at.
+ *
  * `code` — backticks mark a code segment: its PML prints literally, its
  * §Variables resolve except §Glyph and §MoonPhase, and it is drawn in a
  * monospace face on a backdrop that contrasts with the page behind it.
@@ -80,6 +85,13 @@ export const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
  */
 export function resolvePmlVariables(text, ctx){
   if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1)) return text;
+  // named styles: their definitions, taken out of the poem before anything else reads it
+  const styles = new Map();
+  if(/§style/i.test(text)) text = text.split('\n').filter(line => {
+    const m = line.match(STYLE_LINE); if(!m) return true;
+    const v = m[2].trim().replace(/\s*\/\s*/g, '/');
+    styles.set(m[1].toLowerCase(), v && v[0] !== '/' ? '/' + v : v); return false;
+  }).join('\n');
   const one = (name, param, num) => {
     // with the surface off, its own readouts have nothing to say: the line
     // that carries one goes (Ruby: 'Uses Surface: None' hides them)
@@ -148,6 +160,12 @@ export function resolvePmlVariables(text, ctx){
     const literal = resolved.replace(/[\\*_~\[\]{}<>\/]/g, ch => '\\' + ch).replace(/§/g, '\\§');
     return `${pre}<${literal}/code>`;
   });
+  // /@name: a style's directives in its place (a style may name another; a loop stops after a few rounds)
+  if(styles.size) for(let round = 0; round < 6 && /\/@/.test(out); round++){
+    const before = out;
+    out = out.replace(STYLE_USE, (m, pre, name) => { const v = styles.get(name.toLowerCase()); return v == null ? m : pre + v; });
+    if(out === before) break;
+  }
   // two passes: §SurfParamsA expands to text that itself contains a variable
   for(let pass = 0; pass < 2; pass++){
     out = out.replace(TOKEN, (m, esc, name, param, num) => {
@@ -170,5 +188,8 @@ export function resolvePmlVariables(text, ctx){
   return out;
 }
 const ROW_BREAK = '\u0001';
+/** `§style name = directives`, alone on its line; and `/@name` where it is used (not after a backslash). */
+export const STYLE_LINE = /^\s*§style\s+([A-Za-z][\w-]*)\s*=\s*(.*?)\s*$/i;
+const STYLE_USE = /(^|[^\\])\/@([A-Za-z][\w-]*)/g;
 const LINE_DROP = '\u0002';
 const SURF_ONLY = new Set(['SurfParamsA', 'SurfParamsB', 'SurfBlendMode', 'LightDir', 'SeedPhrase', 'TextureSeed']);

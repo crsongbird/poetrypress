@@ -164,6 +164,24 @@ check('the pair repaints when the caret moves',
 check('no pair is shown while selecting a range',
   /selectionStart !== textarea\.selectionEnd\) return null/.test(edSrc));
 
+// ---- unknown directives, underlined, with a hint (Saturn–Phoebe) ----
+{
+  const { hintText } = await import('../editor.js');
+  const hs = [];
+  const html = highlightDocument('§style ember = /color:ember\nI <3 you <hot/@ember/glas/blend:fizz> <a/@nope/op:50>', null, hs);
+  check('the text is unchanged by underlining', textOf(html).split('\n')[1] === 'I <3 you <hot/@ember/glas/blend:fizz> <a/@nope/op:50>');
+  check('three directives are flagged: a misspelling, a bad value, an unnamed style', hs.length === 3);
+  check('a misspelling suggests the nearest name', /\/glass\?/.test(hs[0].text));
+  check('a known name with a bad value says so', /PML knows \/blend/.test(hs[1].text));
+  check('an unnamed style says how to name one', /§style nope/.test(hs[2].text));
+  check('a style the poem names is not flagged', !hs.some(h => /@ember/.test(h.text)));
+  check('the hint follows the caret into a flagged directive', hintText(hs, hs[1].at + 3) === hs[1].text);
+  check('elsewhere, the first one with its line', hintText(hs, 0).startsWith(hs[0].text) && /line 2/.test(hintText(hs, 0)));
+  check('nothing to say, no hint', hintText([], 0) === '');
+  check('<3 is a heart, not a segment bracket', !/pml-bracket">&lt;<\/span>3/.test(highlightLine('I <3 you')));
+  check('a flagged directive carries the underline class', /pml-unknown/.test(highlightLine('<x/zzz>')) && !/pml-unknown/.test(highlightLine('<x/glass/op:50>')));
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

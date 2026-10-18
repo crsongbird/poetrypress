@@ -391,6 +391,17 @@ export const PML_GUIDE = {
   tryHint: 'Put this example in your poem, where the cursor is (undo takes it back)',
   tried: 'Added to your poem. Undo takes it back.',
 };
+/** The editor's hint line, under the poem, for a directive PML can't read ({d} is the directive as written). */
+export const PML_HINTS = {
+  unknown:     "/{d} isn't a directive PML knows, so it does nothing.",
+  unknownLike: "/{d} isn't a directive PML knows. Did you mean /{like}?",
+  value:       "/{d}: PML knows /{name}, but not what follows it, so it does nothing.",
+  valueLike:   "/{d}: /{name} takes nothing after it. Did you mean /{like}?",
+  style:       "/@{name}: no style has that name. Name one on its own line: §style {name} = /color:rose",
+  font:        "/{d}: no typeface has that name, so the line's own is used.",
+  where:       " (line {n}{more})",
+  more:        ", and {n} more",
+};
 /** The two surface layers (the layer bar above the surface's controls). */
 export const SURFACE_LAYERS = {
   swappedUp: 'The surfaces traded places: the one that was beneath is on top.',

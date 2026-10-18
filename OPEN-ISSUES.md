@@ -6,30 +6,29 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
-  Band Width 45? Should the seed nudge the camera too, for more varied angles by itself? Are the creatures
-  the right size and rarity? The 3D Ringworld stays as it was, beside it.
+  Band Width 45? Are the creatures the right size and rarity? The 3D Ringworld stays as it was, beside it.
+- THE SEED PLACES THE CAMERA (Painted Ringworld, Ring in the Sky): each seed starts from its own turn, view and zoom
+  (Painted Ringworld: view 35–75, zoom 75–135; Ring in the Sky: view 8–70, zoom 80–145; any turn). Are the ranges
+  right, or should some seeds go further (edge-on, very close)? Should the 3D Ringworld do the same?
 - RING IN THE SKY (sheet sent): the out-in-space ring Ruby liked, alone as a background (Paint 0). Land of Shapes
   (the land it first stood over) is an Athanor part: wired after it, the old picture.
 - SHAPE STRENGTH and the new Shape Aware surfaces (Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's
   stars, Broken Glass and Dewy Webs round the words): which want a softer default than 100?
-- PML BLOCKS AND NESTING: brackets and segments over lines, directives after a bracket, segments in segments. The one
-  change to old poems: a bracket left open and closed on a later line now runs between (it showed the closer as
-  text). Proposals for more PML, to choose from (none built):
-  - GLASS: `/glass` (frosted letters: the page behind them blurred and brightened, a bright rim), `/glass:clear`,
-    `/glass:#hex` (tinted); `/cut` (the letters as windows to the page under the surface, per segment).
-  - BLENDS: `/blend:multiply` (ink pressed into the paper), screen, overlay, difference; `/op:60` (opacity).
-  - SHAPED LINES: `/arc:30` (a line on an arc), `/wave:20` (on a wave), `/rot:-8` (turned), `/gap:150` (space after a
-    line), `/indent:4`.
-  - FRIENDLIER NAMES: `/font:Cinzel` beside `/f:N` (a number shifts meaning as the list grows only by appending, but
-    a name says what it is); `/color:rose` (CSS names) beside `/#:hex`; `/size:150` for `/scale:150`.
-  - STYLES BY NAME: define a style once (`§style ember = /f:3/fx:glow(#fa4,40)`) and use it as `/@ember`.
-  - THE EDITOR: unknown directives underlined with a hint; a menu of directives after `/` inside a segment.
-  - BREAKING, if wanted: `**bold` and `*italic*` running over lines as the brackets now do (a poem with an
-    unclosed `**` and a later one would change); `<3` always a heart, never a segment's opener.
+- THE NEW PML (sheet sent): `/glass` (frosted: the page behind blurred, lit, faintly tinted by the ink; light along
+  the top edges, shade along the bottom), `/glass:clear`, `/glass:rose`; `/cut` (windows to the page under the
+  surface: on a page with no surface they show the page itself, so they read only as their edges); `/blend:`,
+  `/op:`; `/arc:` (positive bows up), `/wave:amp,cycles`, `/rot:`, `/gap:`; `/font:Name`, `/color:name`, named
+  styles (`§style ember = …`, `/@ember`); the editor's underline and hint line. Is the frost strong enough, and
+  should glass carry the ink's tint by default? Should `/cut` letters show a little ink on a page with no surface?
+  Two changes to old poems went in as approved: bold and italic over lines, and `<3` always a heart.
+  - Still only proposals: `/indent:4`, `/size:` as another name for `/scale:`, and a menu of directives after `/`
+    in the editor.
+- ONE FACE FOR THE CONTROLS: number fields, dropdowns, slider readouts and the color pickers' buttons in the
+  controls' sans-serif; dialog buttons in small capitals. Anything left in another face?
 - RINGWORLD's cohesion pass (sheet sent): arches on every ring (spans, flying buttresses, arcades, gates, stone
   arches), ranges at the walls' feet, thicker spires and arches, nothing floating but the ships (crystals grow from
   the land, rings of light stand on plinths, ruined arches stand as stubs, the floating isles are gone), the

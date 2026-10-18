@@ -562,9 +562,9 @@ export const TEXTURE_CAPS = {
   // overhead), its zoom the lens. The light dial is the day (the star never moves; the shadow squares do): at its middle
   // noon, at its rim dusk, past it night; its direction which way round the dusk comes
   skyring:       { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse' } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse', seeded:{ turn:[0, 360], view:[8, 70], zoom:[80, 145] } } },
   ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring' } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
   ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,

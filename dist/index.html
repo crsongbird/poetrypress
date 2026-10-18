@@ -702,6 +702,10 @@ body.is-mobile .tab-btn.active svg{
 .pml-rhyme    { color:#E0526F; opacity:.9; }
 .pml-escape   { color:#6E6880; }
 .pml-prefix   { color:#9B7FE8; }                 
+/* a directive PML can't read: a wavy rule under it (a decoration, so nothing moves), and the hint line below says why */
+.pml-unknown  { text-decoration:underline wavy #E0526F; text-decoration-thickness:1px; text-underline-offset:2px; }
+.editor-hint  { color:var(--rose); margin-top:4px; }
+.editor-hint[hidden]{ display:none; }
 
 body.is-mobile .editor-input,
 body.is-mobile .editor-mirror,
@@ -2021,8 +2025,12 @@ label, .field > label, .check-row label, .hint small, .ld-values, .fp-in, .fp-ou
 button.ghost, .chip, .seg button, .shortcut-btn, .forge-part, .forge-menu-item, .toast, .toast-act{ font-family:var(--ui-sans); font-weight:400; letter-spacing:0.02em; }
 .hint{ font-family:var(--ui-text); font-style:italic; }
 .hint code, code, kbd{ font-style:normal; }
-output, .val, .readout{ font-family:var(--ui-sans); font-variant-numeric:tabular-nums; }
-select, input[type=text], input[type=number]{ font-family:var(--ui-text); }
+output, .val, .readout, .range-val, .angle-val{ font-family:var(--ui-sans); font-variant-numeric:tabular-nums; }
+/* every control's own words in one face (Ruby: the fonts must agree): what you set or press (fields, menus, the
+   surface chooser, switches, plain buttons) in Alegreya Sans; a dialog's two buttons in the same small capitals */
+select, input[type=text], input[type=number]{ font-family:var(--ui-sans); }
+.modal .btn-row > button{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; font-size:13px; }
+body.is-mobile .modal .btn-row > button{ font-size:clamp(12px,3vw,13px); }
 strong, b{ font-weight:600; }
 
 /* ---------- the top bar: the title in the middle; the Athanor, help and Support at the right ---------- */
@@ -2055,7 +2063,7 @@ body.is-mobile .support-btn{ padding:2px 6px; font-size:11px; }
 @media (max-width: 420px){ body.is-mobile .athanor-top .at-label{ display:none; } body.is-mobile .app-header-title{ font-size:1.15em; } }
 
 /* numbers in the controls stand on the line (Alegreya's figures are old-style by default: lovely in a poem, not in a field) */
-input, select, output, .ld-values, .radio-btn, .seg button, .btn-row button, .val, .readout, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
+input, select, output, .ld-values, .radio-btn, .seg button, .btn-row button, .val, .readout, .range-val, .angle-val, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
 body.is-mobile .card-title, body.is-mobile summary.card-title{ letter-spacing:0.08em; }
 .radio-btn{ font-family:var(--ui-sans); letter-spacing:0.02em; }
 .athanor-top .at-label{ white-space:nowrap; }
@@ -2196,7 +2204,7 @@ select.ch-native{ position:absolute !important; width:1px !important; height:1px
   margin:-1px !important; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; opacity:0; pointer-events:none; }
 .ch-trigger{ width:100%; display:flex; align-items:center; gap:9px; padding:4px 8px 4px 4px; min-height:44px; text-align:left; cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
-  border:1px solid var(--line); color:var(--text-main); font:inherit; font-size:14px; box-shadow:inset 0 1px 2px var(--well); border-radius:0; }
+  border:1px solid var(--line); color:var(--text-main); font:inherit; font-family:var(--ui-sans); font-size:14px; box-shadow:inset 0 1px 2px var(--well); border-radius:0; }
 .ch-trigger:hover{ border-color:color-mix(in srgb, var(--accent-dim) 60%, var(--line)); }
 .ch-trigger:focus-visible{ outline:none; border-color:var(--accent-2); box-shadow:inset 0 1px 2px var(--well), 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent); }
 .ch-trig-thumb{ flex:0 0 34px; width:34px; height:34px; overflow:hidden; border:1px solid var(--line); background:var(--bg-deep); display:grid; place-items:center; }
@@ -19037,9 +19045,9 @@ const TEXTURE_CAPS = {
   // overhead), its zoom the lens. The light dial is the day (the star never moves; the shadow squares do): at its middle
   // noon, at its rim dusk, past it night; its direction which way round the dusk comes
   skyring:       { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse' } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse', seeded:{ turn:[0, 360], view:[8, 70], zoom:[80, 145] } } },
   ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring' } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
   ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
@@ -19790,6 +19798,7 @@ and it just happens to be {**Completely FREE**}.
 Have fun!</textarea>
         </div>
       </div>
+      <p class="hint editor-hint" id="poemHint" role="status" aria-live="polite" hidden></p>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
@@ -19862,7 +19871,9 @@ held on till bright~B</code></p>
         <p>Angle brackets set part of a line apart, so it can be styled on its own. After the words, a slash and a directive say how; chain as many as you like. Each directive also works bare, with a sensible amount: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>, <code>/effect</code>.</p>
         <dl>
           <dt><code>/#:ff00ff</code></dt><dd>a color of its own (a hex code)</dd>
+          <dt><code>/color:rose</code></dt><dd>a color by its name: any web color name (<code>midnightblue</code>), the app’s own (rose, oxblood, moss, bone, parchment, graphite, teastain, clay, sage, ink, starlight, ember), or a hex code</dd>
           <dt><code>/f:4</code></dt><dd>a typeface, by its number in the list at the end</dd>
+          <dt><code>/font:Cinzel</code></dt><dd>a typeface, by its name</dd>
           <dt><code>/scale:150</code></dt><dd>size, as a percent of the size the poem was fitted to</dd>
           <dt><code>/track:150</code></dt><dd>letter-spacing, as a percent</dd>
           <dt><code>/basis:50</code></dt><dd>raises the words; a negative number lowers them</dd>
@@ -19878,8 +19889,30 @@ held on till bright~B</code></p>
         </dl>
         <p class="pml-ex" data-try="&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;"><code>&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;</code></p>
 
+        <h4>Glass, blends and shaped lines</h4>
+        <p>Words can be made of glass, cut through the surface, pressed into the page, or set on a curve. Each of these works bare too.</p>
+        <dl>
+          <dt><code>/glass</code></dt><dd>frosted glass letters: the page behind them blurred and lit</dd>
+          <dt><code>/glass:clear</code> <code>/glass:rose</code></dt><dd>clear glass, which only bends the page; or glass tinted any color</dd>
+          <dt><code>/cut</code></dt><dd>the letters as windows through the surface, to the page under it</dd>
+          <dt><code>/blend:multiply</code></dt><dd>how the letters lie on the page: multiply (ink pressed into the paper), screen, overlay, soft-light and the rest of the blends</dd>
+          <dt><code>/op:60</code></dt><dd>opacity, as a percent</dd>
+          <dt><code>/arc:30</code></dt><dd>the words on an arc, spanning so many degrees of a circle; a negative arc sags</dd>
+          <dt><code>/wave:25,2</code></dt><dd>the words on a wave: its height, as a percent of the size, and how many waves</dd>
+          <dt><code>/rot:-8</code></dt><dd>the words turned, in degrees, about their middle</dd>
+          <dt><code>/gap:100</code></dt><dd>room after the line, as a percent of its height; a negative gap draws the next line in</dd>
+        </dl>
+        <p class="pml-ex" data-try="&lt;frosted/glass/scale:150&gt; &lt;and pressed/blend:multiply&gt;&#10;&lt;over the hill/arc:40&gt; &lt;and away/wave:30,2&gt;&#10;&lt;a turned word/rot:-6/op:70/gap:60&gt;"><code>&lt;frosted/glass/scale:150&gt; &lt;and pressed/blend:multiply&gt;
+&lt;over the hill/arc:40&gt; &lt;and away/wave:30,2&gt;
+&lt;a turned word/rot:-6/op:70/gap:60&gt;</code></p>
+
+        <h4>Named styles</h4>
+        <p>Name a set of directives once, on a line of its own, and use it anywhere a directive goes with <code>/@</code> and the name. The naming line isn’t drawn, and a style can use another. The editor underlines a directive it can’t read (a misspelt name, a value it doesn’t take, a style or typeface no one has named) and says why under the poem.</p>
+        <p class="pml-ex" data-try="§style ember = /color:ember/glass/scale:120&#10;the &lt;coals/@ember&gt; and the &lt;sparks/@ember/rot:4&gt;"><code>§style ember = /color:ember/glass/scale:120
+the &lt;coals/@ember&gt; and the &lt;sparks/@ember/rot:4&gt;</code></p>
+
         <h4>Over many lines, and within each other</h4>
-        <p>A bracket or a segment can run over several lines: open it on one line and close it on a later one, and every line between takes it. Directives right after a bracket’s closer make it a segment of its own, so <code>[words]/jitter:150</code> works without angle brackets. An alignment alone at the end of a block aligns every line of it. Marks nest: a segment inside a segment takes both, its own directives last. A bracket that never closes still ends with its line.</p>
+        <p>A bracket or a segment can run over several lines: open it on one line and close it on a later one, and every line between takes it. Directives right after a bracket’s closer make it a segment of its own, so <code>[words]/jitter:150</code> works without angle brackets. An alignment alone at the end of a block aligns every line of it. Marks nest: a segment inside a segment takes both, its own directives last. Bold and italic run over lines the same way. A bracket that never closes still ends with its line, and <code>&lt;3</code> is always a heart.</p>
         <p class="pml-ex" data-try="[This is a stanza&#10;that should be colored&#10;and centered]/c&#10;{[We are doing something strange&#10;but bear with me, dear}]/jitter:200&#10;&lt;a &lt;nested/scale:150&gt; segment/track:130&gt;"><code>[This is a stanza
 that should be colored
 and centered]/c
@@ -21520,6 +21553,17 @@ const PML_GUIDE = {
   try: '⤓ Try',
   tryHint: 'Put this example in your poem, where the cursor is (undo takes it back)',
   tried: 'Added to your poem. Undo takes it back.',
+};
+/** The editor's hint line, under the poem, for a directive PML can't read ({d} is the directive as written). */
+const PML_HINTS = {
+  unknown:     "/{d} isn't a directive PML knows, so it does nothing.",
+  unknownLike: "/{d} isn't a directive PML knows. Did you mean /{like}?",
+  value:       "/{d}: PML knows /{name}, but not what follows it, so it does nothing.",
+  valueLike:   "/{d}: /{name} takes nothing after it. Did you mean /{like}?",
+  style:       "/@{name}: no style has that name. Name one on its own line: §style {name} = /color:rose",
+  font:        "/{d}: no typeface has that name, so the line's own is used.",
+  where:       " (line {n}{more})",
+  more:        ", and {n} more",
 };
 /** The two surface layers (the layer bar above the surface's controls). */
 const SURFACE_LAYERS = {
@@ -23227,7 +23271,7 @@ function findLastStackIndex(stack, type){
   return -1;
 }
 // the bracket kinds that may run on past a segment's end into the next part of the line
-const CARRIED_KINDS = new Set(['accent1', 'accent2', 'gradFwd', 'gradRev']);
+const CARRIED_KINDS = new Set(['accent1', 'accent2', 'gradFwd', 'gradRev', 'bold', 'italic']);
 /** A line's text as styled runs. `state` (optional, buildLines' own): brackets left open carry in from the parts before
  *  ({ stack, next, closed, keep }) — each bracket gets an id, `closed` gathers the ids that close, and at the end the
  *  still-open ones are handed on (only those in `keep`, when given: the ones known to close in a later part). */
@@ -23305,7 +23349,7 @@ function tokenizeInline(text, accent1On, accent2On, state){
       // no gradient open — fall through so the plain ] and } handlers below
       // process this as two ordinary (non-gradient) closes instead
     }
-    const prevCh = chars.length ? chars[chars.length-1].ch : undefined;
+    const prevCh = chars.length ? chars[chars.length-1].ch : state ? state.prev : undefined;
     if(text.startsWith('~~', i)){
       const idx = findLastStackIndex(stack,'strike');
       if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=2; continue; }
@@ -23313,14 +23357,14 @@ function tokenizeInline(text, accent1On, accent2On, state){
     }
     if(text.startsWith('**', i)){
       const idx = findLastStackIndex(stack,'bold');
-      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=2; continue; }
-      if(idx===-1 && !isSpace(text[i+2])){ stack.push({type:'bold'}); i+=2; continue; }
+      if(idx!==-1 && !isSpace(prevCh)){ closeAt(idx); i+=2; continue; }
+      if(idx===-1 && !isSpace(text[i+2])){ push('bold'); i+=2; continue; }
     }
     const c = text[i];
     if(c==='*'){
       const idx = findLastStackIndex(stack,'italic');
-      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=1; continue; }
-      if(idx===-1 && !isSpace(text[i+1])){ stack.push({type:'italic'}); i+=1; continue; }
+      if(idx!==-1 && !isSpace(prevCh)){ closeAt(idx); i+=1; continue; }
+      if(idx===-1 && !isSpace(text[i+1])){ push('italic'); i+=1; continue; }
     }
     if(c==='_'){
       const idx = findLastStackIndex(stack,'underline');
@@ -23351,7 +23395,7 @@ function tokenizeInline(text, accent1On, accent2On, state){
     }
   }
   if(runs.length===0) runs.push({text:'', bold:false, italic:false, underline:false, strike:false, color:null});
-  if(state) state.stack = stack.filter(it => it.id != null && (!state.keep || state.keep.has(it.id)));
+  if(state){ state.stack = stack.filter(it => it.id != null && (!state.keep || state.keep.has(it.id))); if(chars.length) state.prev = chars[chars.length - 1].ch; }
   return runs;
 }
 
@@ -23371,9 +23415,40 @@ const FLAG_GRADIENTS = {
   lesbian: ['#D52D00','#EF7627','#FF9A56','#FFFFFF','#D162A4','#B55690','#A30262'],
 };
 
+// COLOR NAMES for /color: (Ruby: friendlier names): the CSS named colors, and a few of the app's own
+const CSS_COLOR_NAMES = Object.fromEntries('aliceblue:f0f8ff antiquewhite:faebd7 aqua:00ffff aquamarine:7fffd4 azure:f0ffff beige:f5f5dc bisque:ffe4c4 black:000000 blanchedalmond:ffebcd blue:0000ff blueviolet:8a2be2 brown:a52a2a burlywood:deb887 cadetblue:5f9ea0 chartreuse:7fff00 chocolate:d2691e coral:ff7f50 cornflowerblue:6495ed cornsilk:fff8dc crimson:dc143c cyan:00ffff darkblue:00008b darkcyan:008b8b darkgoldenrod:b8860b darkgray:a9a9a9 darkgreen:006400 darkgrey:a9a9a9 darkkhaki:bdb76b darkmagenta:8b008b darkolivegreen:556b2f darkorange:ff8c00 darkorchid:9932cc darkred:8b0000 darksalmon:e9967a darkseagreen:8fbc8f darkslateblue:483d8b darkslategray:2f4f4f darkslategrey:2f4f4f darkturquoise:00ced1 darkviolet:9400d3 deeppink:ff1493 deepskyblue:00bfff dimgray:696969 dimgrey:696969 dodgerblue:1e90ff firebrick:b22222 floralwhite:fffaf0 forestgreen:228b22 fuchsia:ff00ff gainsboro:dcdcdc ghostwhite:f8f8ff gold:ffd700 goldenrod:daa520 gray:808080 green:008000 greenyellow:adff2f grey:808080 honeydew:f0fff0 hotpink:ff69b4 indianred:cd5c5c indigo:4b0082 ivory:fffff0 khaki:f0e68c lavender:e6e6fa lavenderblush:fff0f5 lawngreen:7cfc00 lemonchiffon:fffacd lightblue:add8e6 lightcoral:f08080 lightcyan:e0ffff lightgoldenrodyellow:fafad2 lightgray:d3d3d3 lightgreen:90ee90 lightgrey:d3d3d3 lightpink:ffb6c1 lightsalmon:ffa07a lightseagreen:20b2aa lightskyblue:87cefa lightslategray:778899 lightslategrey:778899 lightsteelblue:b0c4de lightyellow:ffffe0 lime:00ff00 limegreen:32cd32 linen:faf0e6 magenta:ff00ff maroon:800000 mediumaquamarine:66cdaa mediumblue:0000cd mediumorchid:ba55d3 mediumpurple:9370db mediumseagreen:3cb371 mediumslateblue:7b68ee mediumspringgreen:00fa9a mediumturquoise:48d1cc mediumvioletred:c71585 midnightblue:191970 mintcream:f5fffa mistyrose:ffe4e1 moccasin:ffe4b5 navajowhite:ffdead navy:000080 oldlace:fdf5e6 olive:808000 olivedrab:6b8e23 orange:ffa500 orangered:ff4500 orchid:da70d6 palegoldenrod:eee8aa palegreen:98fb98 paleturquoise:afeeee palevioletred:db7093 papayawhip:ffefd5 peachpuff:ffdab9 peru:cd853f pink:ffc0cb plum:dda0dd powderblue:b0e0e6 purple:800080 rebeccapurple:663399 red:ff0000 rosybrown:bc8f8f royalblue:4169e1 saddlebrown:8b4513 salmon:fa8072 sandybrown:f4a460 seagreen:2e8b57 seashell:fff5ee sienna:a0522d silver:c0c0c0 skyblue:87ceeb slateblue:6a5acd slategray:708090 slategrey:708090 snow:fffafa springgreen:00ff7f steelblue:4682b4 tan:d2b48c teal:008080 thistle:d8bfd8 tomato:ff6347 turquoise:40e0d0 violet:ee82ee wheat:f5deb3 white:ffffff whitesmoke:f5f5f5 yellow:ffff00 yellowgreen:9acd32'.split(' ').map(p => p.split(':')));
+const APP_COLOR_NAMES = { rose: 'e7a0b8', oxblood: '5c1a1b', moss: '5a6b3a', bone: 'e8e0cc', parchment: 'f1e6c8', graphite: '3a3a3e',
+  teastain: 'b08a5a', clay: 'b0734f', sage: '9caf88', ink: '1a1a22', starlight: 'f4f1ff', ember: 'e8653a' };
+/** A color written in PML (a name, #hex or hex) as #hex, or null. */
+function pmlColor(v){
+  const k = String(v || '').trim().toLowerCase().replace(/[\s_-]/g, ''), h = APP_COLOR_NAMES[k] || CSS_COLOR_NAMES[k] || k.replace(/^#/, '');
+  return /^([0-9a-f]{3}|[0-9a-f]{6})$/.test(h) ? '#' + h : null;
+}
+// the blends /blend: takes (the canvas's own composite modes, and plainer names for two of them)
+const PML_BLENDS = { multiply: 'multiply', screen: 'screen', overlay: 'overlay', darken: 'darken', lighten: 'lighten', 'color-dodge': 'color-dodge',
+  dodge: 'color-dodge', 'color-burn': 'color-burn', burn: 'color-burn', 'hard-light': 'hard-light', hardlight: 'hard-light', 'soft-light': 'soft-light',
+  softlight: 'soft-light', difference: 'difference', exclusion: 'exclusion', hue: 'hue', saturation: 'saturation', color: 'color', luminosity: 'luminosity' };
+const pmlNum = (s, def, lo, hi) => { const v = parseFloat(s); return Math.max(lo, Math.min(hi, isNaN(v) ? def : v)); };
 function parseSegmentDirective(dirStr, part){
   const d = dirStr.trim();
   const lower = d.toLowerCase();
+  // ---- the newer directives (Ruby approved, Saturn–Phoebe): each also works bare, with a sensible amount ----
+  // opacity, a blend with what lies under the words, a turn, a line bent on an arc or a wave, space after the line
+  if(lower === 'op' || lower.startsWith('op:')){ part.customOpacity = pmlNum(d.slice(3), 60, 0, 100); return; }
+  if(lower === 'blend' || lower.startsWith('blend:')){ const m = PML_BLENDS[lower.slice(6).trim() || 'multiply']; if(m) part.customBlend = m; return; }
+  if(lower === 'rot' || lower.startsWith('rot:')){ part.customRotate = pmlNum(d.slice(4), -8, -360, 360); return; }
+  if(lower === 'arc' || lower.startsWith('arc:')){ part.customArc = pmlNum(d.slice(4), 30, -200, 200); return; }
+  if(lower === 'wave' || lower.startsWith('wave:')){ const b = d.slice(5).split(','); part.customWave = { amp: pmlNum(b[0], 25, -200, 200), cycles: pmlNum(b[1], 2, 0.25, 12) }; return; }
+  if(lower === 'gap' || lower.startsWith('gap:')){ part.customGap = pmlNum(d.slice(4), 100, -80, 400); return; }
+  // a typeface by its name (the list's own: /font:Cinzel), beside /f:N
+  if(lower.startsWith('font:')){ const n = d.slice(5).trim(); if(n) part.customFontName = n; return; }
+  // a color by its name or hex: /color:rose, /color:midnightblue, /color:#a33
+  if(lower.startsWith('color:') || lower.startsWith('colour:')){ const c = pmlColor(d.slice(d.indexOf(':') + 1)); if(c) part.customColor = c; return; }
+  // glass letters: frosted (the page behind them blurred and lit), clear (only bent), or tinted by a color
+  if(lower === 'glass' || lower.startsWith('glass:')){ const v = lower.slice(6).trim(), tint = v && v !== 'frost' && v !== 'clear' ? pmlColor(v) : null;
+    part.glass = { kind: v === 'clear' ? 'clear' : 'frost', tint }; return; }
+  // the letters as windows to the page beneath the surface
+  if(lower === 'cut'){ part.cut = true; return; }
   if(lower==='l' || lower==='left'){ part.justify='left'; return; }
   if(lower==='c' || lower==='center' || lower==='centre'){ part.justify='center'; return; }
   if(lower==='r' || lower==='right'){ part.justify='right'; return; }
@@ -23513,7 +23588,7 @@ const SEG_CLOSER = /^((?:\/[^\/<>\n]+)+)>/;
 function segGroupsOf(line){
   const st = [], groups = [], freeClose = [];
   for(let i = 0; i < line.length; i++){
-    if(line[i] === '<'){ st.push(i); continue; }
+    if(line[i] === '<'){ if(line[i + 1] !== '3') st.push(i); continue; }   // ("<3" is always a heart: Ruby)
     if(line[i] !== '/') continue;
     const m = SEG_CLOSER.exec(line.slice(i)); if(!m) continue;
     if(st.length){ const o = st.pop(); groups.push({ open: o, cs: i, end: i + m[0].length, dirs: m[1], depth: st.length }); }
@@ -23526,7 +23601,7 @@ function segGroupsOf(line){
 function parseSegmentedLine(content){
   const G = segGroupsOf(content);
   if(!G.old && G.groups.some(g => g.depth > 0)) return parseNestedSegments(content, G.groups);
-  const re = /<([\s\S]*?)((?:\/[^\/<>]+)+)>/g;
+  const re = /<(?!3)([\s\S]*?)((?:\/[^\/<>]+)+)>/g;   // ("<3" is always a heart, never a segment's opener)
   let m, lastIndex=0, found=false;
   const parts = [];
   const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customTracking:null, customBasis:null, customJitter:null, customEffect:null, customTypeEffect:null, customGradient:null});
@@ -23581,29 +23656,71 @@ function parseNestedSegments(content, groups){
 const PML_PREFIX = /^(## |-# |> |#D |#S )/, PML_SUFFIX = /(\s*~[A-Da-d])?(\s*\/[lcrLCR])?\s*$/;
 const DIR_RUN = /^(?:\/(?:[^\s\/<>\[\]{}()]|\([^)\n]*\))+)+/, ALIGN_DIRS = new Set(['l', 'c', 'r', 'left', 'center', 'centre', 'right']);
 const knownDirective = d => { const part = {}; parseSegmentDirective(d, part); return Object.keys(part).length > 0; };
+/** Every directive by its name, for the editor's hints (a name, then :value where it takes one). */
+const DIRECTIVE_NAMES = ['l', 'c', 'r', 'left', 'center', 'right', 'f', 'font', 'scale', 'track', 'basis', 'jitter', 'color', 'colour',
+  'op', 'blend', 'rot', 'arc', 'wave', 'gap', 'glass', 'cut', 'code', 'fx', 'fx0', 'fx1', 'fx2', 'effect', 'under', 'grad',
+  ...Object.keys(FLAG_GRADIENTS)];
+/**
+ * What the editor says of a directive PML can't read (null when it reads it): `{ kind, name, like }` — kind 'value'
+ * when the name is one PML knows but what follows it isn't (/blend:fizz, /f with no number), 'name' when the name is
+ * unknown, with `like` the nearest known name when one is close (/glas → glass). Named styles (/@name) are checked
+ * against `styles`, the names the poem defines.
+ */
+function directiveHint(d, styles){
+  const t = String(d || '').trim();
+  if(!t) return null;
+  if(t[0] === '@') return styles && styles.has(t.slice(1).toLowerCase()) ? null : { kind: 'style', name: t.slice(1) };
+  if(knownDirective(t)) return null;
+  const name = t.toLowerCase().split(/[:,]/)[0];
+  if(name === 'c' && t.length > 1) return { kind: 'value', name, like: 'color' };   // (/c is centring: a colour is /color:)
+  if(DIRECTIVE_NAMES.includes(name) || name === '#') return { kind: 'value', name };
+  const dist = (a, b) => { const m = a.length, n = b.length, D = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+    for(let j = 1; j <= n; j++) D[0][j] = j;
+    for(let i = 1; i <= m; i++) for(let j = 1; j <= n; j++) D[i][j] = Math.min(D[i-1][j] + 1, D[i][j-1] + 1, D[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return D[m][n]; };
+  let like = null, best = 3;
+  for(const k of DIRECTIVE_NAMES){ if(k.length < 2) continue; const v = dist(name, k); if(v < best || (v === best && like && k.length < like.length)){ best = v; like = k; } }
+  return { kind: 'name', name, like: best <= (name.length > 4 ? 2 : 1) ? like : null };
+}
 // the [x/lg] gradient forms, masked (same length) so their brackets are not taken for a block's
 const maskGradients = (t, a1, a2) => { const mask = m => '\u0001'.repeat(m.length);
   if(a1) t = t.replace(/\[([^\[\]]*?)\/(?:lg|rg)\]/g, mask); if(a2) t = t.replace(/\{([^\{\}]*?)\/(?:lg|rg)\}/g, mask); return t; };
 function expandBlocks(rawText, accent1On, accent2On){
   const raw = rawText.replace(/\r\n/g,'\n').split('\n');
-  if(!/[\[{<]/.test(rawText)) return raw;
+  if(!/[\[{<*]/.test(rawText)) return raw;
   const lines = raw.map(applyEscapes), isText = lines.map((l, k) => raw[k] !== '' && !parseRule(raw[k].trim(), accent1On, accent2On));
-  const items = [], br = [], segOpen = [];   // items: { kind: 'br'|'seg', l0, p0, l1, p1, open, close, dirs }
-  for(let k = 0; k < lines.length; k++){ if(!isText[k]) continue;
-    const L = lines[k], M = maskGradients(L, accent1On, accent2On), G = segGroupsOf(L);
-    // the segments: openers left open and closers with no opener on their line pair across lines
-    if(!G.old){ for(const c of G.freeClose){ const o = segOpen.pop(); if(o) items.push({ kind: 'seg', l0: o.l, p0: o.p, l1: k, p1: c.at, open: '<', close: c.dirs + '>' }); }
-      for(const p of G.freeOpen) segOpen.push({ l: k, p }); }
-    // the brackets, by the tokenizer's own rules
-    for(let i = 0; i < M.length; i++){
-      const two = M.slice(i, i + 2), last = t => { for(let j = br.length - 1; j >= 0; j--) if(br[j].t === t) return j; return -1; };
-      if(accent1On && accent2On && (two === '{[' || two === '[{')){ br.push({ t: two === '{[' ? 'gradFwd' : 'gradRev', open: two, l: k, p: i }); i++; continue; }
-      if(two === ']}' || two === '}]'){ const f = last('gradFwd'), r = last('gradRev');
-        if(f !== -1 || r !== -1){ const o = br.splice(Math.max(f, r), 1)[0]; items.push({ kind: 'br', l0: o.l, p0: o.p, l1: k, p1: i, end: i + 2, open: o.open, close: ']}' }); i++; continue; } }
-      const ch = M[i], t = ch === '[' && accent1On ? 'accent1' : ch === '{' && accent2On ? 'accent2' : null;
-      if(t){ br.push({ t, open: ch, l: k, p: i }); continue; }
-      const ct = ch === ']' && accent1On ? 'accent1' : ch === '}' && accent2On ? 'accent2' : null;
-      if(ct){ const j = last(ct); if(j !== -1){ const o = br.splice(j, 1)[0]; items.push({ kind: 'br', l0: o.l, p0: o.p, l1: k, p1: i, end: i + 1, open: o.open, close: ch }); } } } }
+  // (the delimiters are found as the tokenizer finds them; one opened and never closed ends with its line, as in the
+  //  tokenizer, so it is dropped there: found by looking again until nothing more is dropped)
+  let items, drop = new Set();
+  for(let round = 0; round < 4; round++){
+    items = []; const br = [], segOpen = [], dangling = new Set();
+    for(let k = 0; k < lines.length; k++){ if(!isText[k]) continue;
+      const L = lines[k], M = maskGradients(L, accent1On, accent2On), G = segGroupsOf(L);
+      // the segments: openers left open and closers with no opener on their line pair across lines
+      if(!G.old){ for(const c of G.freeClose){ const o = segOpen.pop(); if(o) items.push({ kind: 'seg', l0: o.l, p0: o.p, l1: k, p1: c.at, open: '<', close: c.dirs + '>' }); }
+        for(const p of G.freeOpen) segOpen.push({ l: k, p }); }
+      // the brackets, bold and italic, by the tokenizer's own rules (strike and underline are each line's own)
+      let prev, strike = false, under = false;
+      const isSp = c => c === ' ' || c === '\t' || c === undefined, last = t => { for(let j = br.length - 1; j >= 0; j--) if(br[j].t === t) return j; return -1; };
+      const close = (j, i, len, tok, kind) => { const o = br.splice(j, 1)[0]; items.push({ kind, l0: o.l, p0: o.p, l1: k, p1: i, end: i + len, open: o.open, close: tok }); };
+      for(let i = 0; i < M.length; i++){
+        const two = M.slice(i, i + 2), ch = M[i];
+        if(accent1On && accent2On && (two === '{[' || two === '[{')){ br.push({ t: two === '{[' ? 'gradFwd' : 'gradRev', open: two, l: k, p: i }); i++; continue; }
+        if(two === ']}' || two === '}]'){ const f = last('gradFwd'), r = last('gradRev'); if(f !== -1 || r !== -1){ close(Math.max(f, r), i, 2, ']}', 'br'); i++; continue; } }
+        if(two === '~~'){ if(strike && !isSp(prev)){ strike = false; i++; continue; } if(!strike && !isSp(M[i + 2])){ strike = true; i++; continue; } }
+        if(two === '**'){ const j = last('bold'); if(j !== -1 && !isSp(prev)){ close(j, i, 2, '**', 'em'); i++; continue; } if(j === -1 && !isSp(M[i + 2])){ br.push({ t: 'bold', open: '**', l: k, p: i }); i++; continue; } }
+        if(ch === '*'){ const j = last('italic'); if(j !== -1 && !isSp(prev)){ close(j, i, 1, '*', 'em'); continue; } if(j === -1 && !isSp(M[i + 1])){ br.push({ t: 'italic', open: '*', l: k, p: i }); continue; } }
+        if(ch === '_'){ if(under && !isSp(prev)){ under = false; continue; } if(!under && !isSp(M[i + 1])){ under = true; continue; } }
+        const t = ch === '[' && accent1On ? 'accent1' : ch === '{' && accent2On ? 'accent2' : null;
+        if(t){ br.push({ t, open: ch, l: k, p: i }); continue; }
+        const ct = ch === ']' && accent1On ? 'accent1' : ch === '}' && accent2On ? 'accent2' : null;
+        if(ct){ const j = last(ct); if(j !== -1){ close(j, i, 1, ch, 'br'); continue; } }
+        if(ch !== SENT_JOINT) prev = ch; }
+      // what was opened and is known never to close ends here
+      for(let j = br.length - 1; j >= 0; j--) if(drop.has(br[j].l + ':' + br[j].p)) br.splice(j, 1); }
+    for(const o of br) dangling.add(o.l + ':' + o.p);
+    const before = drop.size; for(const d of dangling) drop.add(d); if(drop.size === before) break;
+  }
   // directives right after a bracket's closer: alignment alone at the end of a block's line aligns the block; anything
   // else makes the bracket a segment of its own (a '<' before its opener, a '>' after its directives)
   const edits = lines.map(() => []), align = new Map();
@@ -23708,10 +23825,14 @@ function buildLines(rawText, accent1On, accent2On){
         return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customTypeEffect:p.customTypeEffect, customGradient:p.customGradient,
                  // undefined unless used, so they vanish when a poem is serialized
                  customFx:p.customFx, under:p.under,
+                 customOpacity:p.customOpacity, customBlend:p.customBlend, customRotate:p.customRotate, customArc:p.customArc, customWave:p.customWave, customGap:p.customGap, customFontName:p.customFontName,
+                 ...(p.glass ? { glass: p.glass } : {}), ...(p.cut ? { cut: true } : {}),
                  // present only on code segments, so every existing poem parses byte-identically
                  ...(p.code ? { code: true } : {}), segments };
       });
-      return {isBlank:false, type, scale, parts, dropCap, smallCaps, rhymeLetter};
+      // a part's /gap is its line's: space after it, as a share of the line's height (only when used)
+      const gap = parts.reduce((g, p) => p.customGap != null ? p.customGap : g, null);
+      return {isBlank:false, type, scale, parts, dropCap, smallCaps, rhymeLetter, ...(gap != null ? { gap } : {})};
     }
 
     let alignOverride = null;
@@ -40426,9 +40547,9 @@ const TEXTURE_CAPS = {
   // overhead), its zoom the lens. The light dial is the day (the star never moves; the shadow squares do): at its middle
   // noon, at its rim dusk, past it night; its direction which way round the dusk comes
   skyring:       { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse' } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse', seeded:{ turn:[0, 360], view:[8, 70], zoom:[80, 145] } } },
   ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring' } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
   ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
@@ -41755,9 +41876,9 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Ijiraq';
+const RELEASE = 'Saturn–Phoebe';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
-const RELEASE_DATE = '2026-10-17';
+const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
 const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"diqF4TTe","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"puqcxPGZ","ringpaint":"Oz7nPSbI","ringworld":"MQ4pbwu0","sigils":"oFaAKxnj","skyring":"SCZEdr-0","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"aVKpXREs","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","underglass":"yw9UZYdJ","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
 const SWATCH_STAMP = 'jgHa9TE9';
@@ -42576,6 +42697,11 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
  *   §Fonts              how many typeface families have been fetched
  *   §Build              which build this is (stamped by build.mjs)
  *
+ * NAMED STYLES — a line `§style name = /c:rose/glass/op:80` defines a style
+ * (the line itself is not drawn); `/@name` anywhere a directive may go stands
+ * for those directives: `<embers/@name>`, `<embers/@name/s:120>`. A style may
+ * use another. An unknown name is left as written, for the editor to point at.
+ *
  * `code` — backticks mark a code segment: its PML prints literally, its
  * §Variables resolve except §Glyph and §MoonPhase, and it is drawn in a
  * monospace face on a backdrop that contrasts with the page behind it.
@@ -42587,7 +42713,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-17 · 0a96bb1";
+const STAMP = "2026-10-18 · 5e9b3cd";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -42604,6 +42730,13 @@ const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
  */
 function resolvePmlVariables(text, ctx){
   if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1)) return text;
+  // named styles: their definitions, taken out of the poem before anything else reads it
+  const styles = new Map();
+  if(/§style/i.test(text)) text = text.split('\n').filter(line => {
+    const m = line.match(STYLE_LINE); if(!m) return true;
+    const v = m[2].trim().replace(/\s*\/\s*/g, '/');
+    styles.set(m[1].toLowerCase(), v && v[0] !== '/' ? '/' + v : v); return false;
+  }).join('\n');
   const one = (name, param, num) => {
     // with the surface off, its own readouts have nothing to say: the line
     // that carries one goes (Ruby: 'Uses Surface: None' hides them)
@@ -42672,6 +42805,12 @@ function resolvePmlVariables(text, ctx){
     const literal = resolved.replace(/[\\*_~\[\]{}<>\/]/g, ch => '\\' + ch).replace(/§/g, '\\§');
     return `${pre}<${literal}/code>`;
   });
+  // /@name: a style's directives in its place (a style may name another; a loop stops after a few rounds)
+  if(styles.size) for(let round = 0; round < 6 && /\/@/.test(out); round++){
+    const before = out;
+    out = out.replace(STYLE_USE, (m, pre, name) => { const v = styles.get(name.toLowerCase()); return v == null ? m : pre + v; });
+    if(out === before) break;
+  }
   // two passes: §SurfParamsA expands to text that itself contains a variable
   for(let pass = 0; pass < 2; pass++){
     out = out.replace(TOKEN, (m, esc, name, param, num) => {
@@ -42694,6 +42833,9 @@ function resolvePmlVariables(text, ctx){
   return out;
 }
 const ROW_BREAK = '\u0001';
+/** `§style name = directives`, alone on its line; and `/@name` where it is used (not after a backslash). */
+const STYLE_LINE = /^\s*§style\s+([A-Za-z][\w-]*)\s*=\s*(.*?)\s*$/i;
+const STYLE_USE = /(^|[^\\])\/@([A-Za-z][\w-]*)/g;
 const LINE_DROP = '\u0002';
 const SURF_ONLY = new Set(['SurfParamsA', 'SurfParamsB', 'SurfBlendMode', 'LightDir', 'SeedPhrase', 'TextureSeed']);
 
@@ -43133,8 +43275,13 @@ function drawCodeBackdrop(ctx, x, y, w, size, style){
 
 function resolvePartStyle(part, baseStyle){
   // nothing of its own: the run's style stands (every field a segment can set must be listed here)
-  if(!part.customColor && !part.customEffect && !part.customTypeEffect && !part.customFx && !part.under && !part.customGradient && part.customTracking==null && part.customJitter==null) return baseStyle;
+  if(!part.customColor && !part.customEffect && !part.customTypeEffect && !part.customFx && !part.under && !part.customGradient && part.customTracking==null && part.customJitter==null && part.customOpacity==null && !part.customBlend && part.customArc==null && !part.customWave) return baseStyle;
   const s = { ...baseStyle };
+  // /op: and /blend: — how the part's ink lies on the page; /arc and /wave — the path its letters follow
+  if(part.customOpacity!=null) s.opacity = part.customOpacity/100;
+  if(part.customBlend) s.blend = part.customBlend;
+  if(part.customArc!=null && part.customArc !== 0) s.arc = part.customArc;
+  if(part.customWave && part.customWave.amp) s.wave = part.customWave;
   if(part.customColor){
     s.baseFillStyle = part.customColor;
     s.accent1Color = part.customColor;
@@ -43333,11 +43480,38 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
   ctx.drawImage(off, px - pad, py - pad);
 }
 
+/** /arc and /wave: where a letter sits on its run's path. Given how far along the run (0 … its width) a letter's middle
+ *  is, how far the letter moves and turns — so the letters follow a circle's arc (positive bows up, like a rainbow;
+ *  negative sags, like a bowl; N is the degrees of circle the run spans) or a wave (amp a share of the size, so many
+ *  cycles across the run). Neither changes the run's width, so fitting and alignment are as for a straight line. */
+function runShape(style, total, size){
+  const arc = style.arc ? style.arc*Math.PI/180 : 0, wave = style.wave && style.wave.amp ? style.wave : null;
+  if(!(total > 0) || (!arc && !wave)) return null;
+  const R = arc ? total/arc : 0, A = wave ? wave.amp/100*size : 0, k = wave ? 2*Math.PI*wave.cycles/total : 0;
+  // (the arc is hung about the line's own height: its middle rises half as far as its ends fall)
+  const sag = arc ? R*(1 - Math.cos(arc/2))/2 : 0;
+  return s => {
+    let dx = 0, dy = 0, rot = 0; const m = s - total/2;
+    if(arc){ const f = m/R; dx = R*Math.sin(f) - m; dy = R*(1 - Math.cos(f)) - sag; rot = f; }
+    if(wave){ dy -= A*Math.sin(k*s); rot += Math.atan(-A*k*Math.cos(k*s)); }
+    return { dx, dy, rot };
+  };
+}
+
 function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, style){
   const { baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
   const fx = style.fx || [], erode = erosionOf(fx);
 
   const widths = segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size, style.customTracking, style.smallCaps));
+  const shape = runShape(style, widths.reduce((a, b) => a + b, 0), size);
+  // a rule along the run (an underline, a strike, an /under: stitch), v below the letters' top: straight, or on the run's path
+  const runPath = (x0, x1, v) => {
+    if(!shape) return [[x0, cursorY + v], [x1, cursorY + v]];
+    const n = Math.max(2, Math.ceil((x1 - x0)/(size*0.15))), a = v - size/2, pts = [];
+    for(let j = 0; j <= n; j++){ const xx = x0 + (x1 - x0)*j/n, sh = shape(xx - startX);
+      pts.push([xx + sh.dx - Math.sin(sh.rot)*a, cursorY + size/2 + sh.dy + Math.cos(sh.rot)*a]); }
+    return pts;
+  };
   let x = startX;
   let charSeed = 0; // advances across the whole run, not just per-segment, so jitter doesn't repeat identically at the start of every segment
 
@@ -43348,7 +43522,8 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     ctx.font = fontString(fontDef, seg, size);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.globalAlpha = quoteAlpha;
+    ctx.globalAlpha = quoteAlpha*(style.opacity != null ? style.opacity : 1);
+    if(style.blend) ctx.globalCompositeOperation = style.blend;
 
     let segFill = baseFillStyle;
     if(style.customGradientColors && style.customGradientColors.length>=2){
@@ -43404,7 +43579,7 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     // glyphs draw with no leftover shadow: effects are their own passes
     ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
 
-    const needsPerChar = tracking !== 0 || hasEmoji || style.smallCaps || jitterMag > 0;
+    const needsPerChar = tracking !== 0 || hasEmoji || style.smallCaps || jitterMag > 0 || !!shape;
 
     if(!needsPerChar){
       drawEffects(ctx, seg.text, x, cursorY, size, segFill, fx);
@@ -43439,15 +43614,19 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
           // past that letters stop reading as letters.
           const maxRot = Math.min(12, 4 * ((style.customJitter || 0) / 100)) * Math.PI / 180;
           const rot = jitterMag > 0 ? charJitterOffset(charSeed*31.7 + 9.3) * maxRot : 0;
-          const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0);
+          // (on an /arc or a /wave, the letter moves onto the path and turns with it)
+          const sh = shape ? shape(cx - startX + chW/2) : null;
+          const gx = cx + jx + (sh ? sh.dx : 0);
+          const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0) + (sh ? sh.dy : 0);
+          const turn = rot + (sh ? sh.rot : 0);
           // Rotate ABOUT the glyph's centre while keeping absolute coordinates,
           // so a gradient fill (defined in absolute space) stays aligned.
-          const rotating = rot !== 0;
+          const rotating = turn !== 0;
           if(rotating){
-            const rx = cx + jx + chW/2, ry = py + size/2;
-            ctx.save(); ctx.translate(rx, ry); ctx.rotate(rot); ctx.translate(-rx, -ry);
+            const rx = gx + chW/2, ry = py + size/2;
+            ctx.save(); ctx.translate(rx, ry); ctx.rotate(turn); ctx.translate(-rx, -ry);
           }
-          draw(ch, drawCh, cx + jx, py);
+          draw(ch, drawCh, gx, py);
           if(rotating) ctx.restore();
           if(isLower) ctx.font = normalFont;
           cx += chW + tracking;
@@ -43481,15 +43660,15 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     if(style.under){
       // an underline decoration (/under:…), drawn by the stitch library
       const u = style.under, wt = (u.weight || 100)/100;
-      drawStitch(ctx, pathFromPoints([[x, cursorY + size*0.95], [x + w, cursorY + size*0.95]], false), u.style,
+      drawStitch(ctx, pathFromPoints(runPath(x, x + w, size*0.95), false), u.style,
         { period: size*0.38, amp: size*0.075, width: Math.max(rpx(1), size*0.04*wt),
           color: u.color || (typeof segFill === 'string' ? segFill : (style.plainTextColor || '#000')), side: 1 });
     }
     if(seg.underline || seg.strike){
-      const lineY = seg.underline ? cursorY + size*0.92 : cursorY + size*0.55;
+      const pts = runPath(x, x + w, seg.underline ? size*0.92 : size*0.55);
       ctx.beginPath();
-      ctx.moveTo(x, lineY);
-      ctx.lineTo(x+w, lineY);
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
       ctx.strokeStyle = segFill;
       ctx.lineWidth = Math.max(rpx(1), size*0.045);
       ctx.stroke();
@@ -43499,6 +43678,88 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     x += w;
   }
   return x;
+}
+
+/** A part drawn: its letters as drawTextRun draws them, turned by /rot about the part's middle, or — for /glass and
+ *  /cut — as windows (drawWindowRun). `prep(c)` draws what goes under the letters (a code backdrop) and returns the
+ *  style to draw them in. Returns where the run ends, as drawTextRun does (a turn moves no other part). */
+function drawPartRun(ctx, part, x, y, w, size, lineHeight, fontDef, prep){
+  const rot = part.customRotate ? part.customRotate*Math.PI/180 : 0;
+  const turn = c => { if(!rot) return; const rx = x + w/2, ry = y + size*0.55; c.translate(rx, ry); c.rotate(rot); c.translate(-rx, -ry); };
+  let end = x + w;
+  ctx.save(); turn(ctx);
+  try {
+    const style = prep(ctx);
+    if(part.glass || part.cut){ ctx.restore(); ctx.save(); drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn); }
+    else end = drawTextRun(ctx, part.segments, x, y, size, lineHeight, fontDef, style);
+  } finally { ctx.restore(); }
+  return end;
+}
+
+/** GLASS AND CUT LETTERS. The letters, white, on a small layer the size of the run's reach; what shows in them is
+ *  laid into that shape (source-in): for /glass, the page behind them as it is now, softened through the inset box's
+ *  own glass (boxFx.js — frosted, or for glass:clear only bent) and lit; for /cut, the page as it was before the
+ *  surfaces (kept as UNDER_CANVAS when the poem asks for it), so the letters are windows through the surface. Their
+ *  edges are drawn inside them — a shadow thrown by the letters' outside: light along the top and shade along the
+ *  bottom for glass, the surface's own edge for a cut — and the layer goes onto the page with the part's /op and
+ *  /blend. Effects (/fx) are not drawn for windows; the letters still count for Blend with Text and Cut Out by Text. */
+const WIN_LAYERS = [null, null, null];
+function winLayer(i, w, h){
+  const c = WIN_LAYERS[i] || (WIN_LAYERS[i] = document.createElement('canvas'));
+  if(c.width !== w || c.height !== h){ c.width = w; c.height = h; }
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetX = 0; x.shadowOffsetY = 0; x.clearRect(0, 0, w, h);
+  return [c, x];
+}
+let UNDER_CANVAS = null, UNDER_NOW = false;
+function drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn){
+  const PW = ctx.canvas.width, PH = ctx.canvas.height;
+  // the run's reach: its box, bowed by an arc, lifted by a wave, turned by /rot, and room for its edges
+  const arcA = style.arc ? Math.min(Math.PI*1.9, Math.abs(style.arc)*Math.PI/180) : 0;
+  const bend = (arcA ? (w/arcA)*(1 - Math.cos(arcA/2)) : 0) + (style.wave ? Math.abs(style.wave.amp)/100*size : 0);
+  const bh0 = size*1.2 + 2*bend, cs = Math.abs(Math.cos(rot)), sn = Math.abs(Math.sin(rot));
+  const hw = (cs*w + sn*bh0)/2 + size*0.4, hh = (sn*w + cs*bh0)/2 + size*0.4, cx = x + w/2, cy = y + size*0.55;
+  const bx = Math.max(0, Math.floor(cx - hw)), by = Math.max(0, Math.floor(cy - hh));
+  const bw = Math.min(PW, Math.ceil(cx + hw)) - bx, bh = Math.min(PH, Math.ceil(cy + hh)) - by;
+  if(bw < 2 || bh < 2) return;
+  // 1. the letters' shapes (no ink sampling for Protect the Text: what shows in them is the page itself)
+  const [M, mx] = winLayer(0, bw, bh);
+  mx.translate(-bx, -by); turn(mx);
+  const keepMask = GLYPH_MASK, keepInks = PROBE_INKS; GLYPH_MASK = null; PROBE_INKS = null;
+  try {
+    drawTextRun(mx, part.segments, x, y, size, lineHeight, fontDef, { ...style, baseFillStyle: '#fff', accent1Color: '#fff', accent2Color: '#fff',
+      plainTextColor: '#fff', customGradientColors: null, fx: [], under: style.under ? { ...style.under, color: '#fff' } : null, opacity: null, blend: null, quoteAlpha: 1 });
+  } finally { GLYPH_MASK = keepMask; PROBE_INKS = keepInks; }
+  mx.setTransform(1, 0, 0, 1, 0, 0);
+  if(GLYPH_MASK){ GLYPH_MASK.save(); GLYPH_MASK.setTransform(1, 0, 0, 1, 0, 0); GLYPH_MASK.globalAlpha = style.quoteAlpha; GLYPH_MASK.drawImage(M, bx, by); GLYPH_MASK.restore(); }
+  // 2. what shows through them
+  const [L, lx] = winLayer(1, bw, bh), S = RENDER_SCALE, ink = typeof style.baseFillStyle === 'string' ? style.baseFillStyle : (style.plainTextColor || '#000');
+  lx.drawImage(M, 0, 0); lx.globalCompositeOperation = 'source-in'; lx.imageSmoothingEnabled = true;
+  if(part.cut) lx.drawImage(UNDER_NOW && UNDER_CANVAS ? UNDER_CANVAS : ctx.canvas, bx, by, bw, bh, 0, 0, bw, bh);
+  else {
+    const g = part.glass, clear = g.kind === 'clear';
+    const amt = Math.max(0, Math.min(1, (size*(clear ? 0.05 : 0.12)/S - 3)/57));
+    const soft = boxGlass(ctx.canvas, { x: bx, y: by, w: bw, h: bh }, clear ? 'lens' : 'frost', clear ? 0.35 : amt, clear ? 0.15 : 0.35, S, 11);
+    lx.drawImage(soft || ctx.canvas, ...(soft ? [0, 0, soft.width, soft.height] : [bx, by, bw, bh]), 0, 0, bw, bh);
+    // lit like frosted glass, and coloured: by its tint, or faintly by the ink the words would have had
+    lx.globalCompositeOperation = 'source-atop';
+    if(!clear && !g.tint){ lx.globalAlpha = 0.16; lx.fillStyle = '#fff'; lx.fillRect(0, 0, bw, bh); }
+    lx.globalAlpha = g.tint ? 0.34 : clear ? 0.12 : 0.22; lx.fillStyle = g.tint || ink; lx.fillRect(0, 0, bw, bh); lx.globalAlpha = 1;
+  }
+  // 3. the edges, inside the letters: the letters' outside (a sheet with letter-shaped holes), its shadow thrown in
+  const [O, ox] = winLayer(2, bw, bh), e = Math.max(S, size*0.028), blur = Math.max(S, size*0.035);
+  ox.fillStyle = '#000'; ox.fillRect(0, 0, bw, bh); ox.globalCompositeOperation = 'destination-out'; ox.drawImage(M, 0, 0);
+  const edge = (color, dx, dy, b) => { lx.save(); lx.globalCompositeOperation = 'source-atop'; lx.shadowColor = color; lx.shadowBlur = b;
+    lx.shadowOffsetX = dx; lx.shadowOffsetY = dy; lx.globalAlpha = 1; lx.drawImage(O, -PW*4, 0); lx.restore(); };
+  // (drawn far off the layer, its shadow brought back by the offset: only the shadow falls inside the letters)
+  const off = PW*4;
+  if(part.cut){ edge('rgba(0,0,0,0.55)', off + e, e, blur); edge('rgba(255,255,255,0.22)', off - e*0.6, -e*0.6, blur); }
+  else { edge('rgba(255,255,255,0.75)', off + e, e, blur); edge('rgba(0,0,0,0.32)', off - e, -e, blur); }
+  // 4. onto the page
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = (style.quoteAlpha || 1)*(style.opacity != null ? style.opacity : 1);
+  if(style.blend) ctx.globalCompositeOperation = style.blend;
+  ctx.drawImage(L, bx, by); ctx.restore();
 }
 
 // Computes a line's full width once, with measureSegWidth — the same measure
@@ -43549,8 +43810,8 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
     const widths = new Map();
     for(const line of lines){
       if(line.isBlank){ totalHeight += size*0.55*spacing; continue; }
-      totalHeight += size*line.scale*1.32*spacing;
       const w = computeLineWidths(ctx, line, size, fontDef);
+      totalHeight += size*line.scale*1.32*spacing*lineGapK(line) + lineBend(line, w.partWidths, size*line.scale);
       widths.set(line, w);
       if(w.total > maxLineWidth) maxLineWidth = w.total;
     }
@@ -43593,12 +43854,30 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
 // letter) and the actual draw code.
 const DROP_CAP_SCALE = 2.2;
 
-function blockHeight(lines, size, spacing){
+/** /gap:N — the room a line takes, grown (or, below 0, drawn in) by N% of its own height (100: a line's worth more). */
+function lineGapK(line){ return line.gap != null ? Math.max(0.2, 1 + line.gap/100) : 1; }
+/** How far a line's /arc or /wave carries its letters up and down, all told (partWidths: its parts' widths at `size`,
+ *  the line's own size): room the line is given besides its height, half above it and half below. 0 for a straight line. */
+function lineBend(line, partWidths, size){
+  if(!line.parts || !partWidths) return 0;
+  let b = 0;
+  line.parts.forEach((p, i) => {
+    const w = partWidths[i] || 0, ps = partSizeFor(p, size);
+    let e = 0;
+    if(p.customArc){ const a = Math.min(Math.PI*1.9, Math.abs(p.customArc)*Math.PI/180); e += (w/a)*(1 - Math.cos(a/2)); }
+    if(p.customWave && p.customWave.amp) e += 2*Math.abs(p.customWave.amp)/100*ps;
+    if(e > b) b = e;
+  });
+  return b;
+}
+
+function blockHeight(lines, size, spacing, widths){
   let total = 0;
   for(const line of lines){
     if(line.isBlank){ total += size*0.55*spacing; continue; }
     const lineOwnHeight = size*line.scale*1.32*spacing;
-    total += line.dropCap ? Math.max(lineOwnHeight, size*line.scale*DROP_CAP_SCALE*1.05) : lineOwnHeight;
+    total += (line.dropCap ? Math.max(lineOwnHeight, size*line.scale*DROP_CAP_SCALE*1.05) : lineOwnHeight) + lineOwnHeight*(lineGapK(line) - 1)
+      + (widths && widths.get(line) ? lineBend(line, widths.get(line).partWidths, size*line.scale) : 0);
   }
   return total;
 }
@@ -43735,12 +44014,25 @@ function pmlVarContext(W, H){
   };
 }
 
+/** A font by its name: the family exactly (any case, spaces or none), then a family that starts with it, then a label
+ *  that holds it ("Cinzel", "cormorant", "Bodoni"); -1 when none does. */
+function fontIndexByName(name){
+  const k = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''), n = k(name);
+  if(!n) return -1;
+  let i = FONTS.findIndex(f => k(f.family) === n);
+  if(i < 0) i = FONTS.findIndex(f => k(f.family).startsWith(n));
+  if(i < 0) i = FONTS.findIndex(f => k(f.label).includes(n));
+  return i;
+}
+
 let linesCacheKey = null;
 let linesCacheValue = null;
 function getCachedLines(rawText, accent1On, accent2On){
   const key = rawText + '\u0000' + accent1On + '\u0000' + accent2On;
   if(key === linesCacheKey) return linesCacheValue;
   linesCacheValue = buildLines(rawText, accent1On, accent2On);
+  // (/font:Name — a face by its name, found among the page's fonts; an unknown name leaves the line's own)
+  for(const ln of linesCacheValue) if(ln.parts) for(const pt of ln.parts) if(pt.customFontName && pt.customFontIdx == null){ const i = fontIndexByName(pt.customFontName); if(i >= 0) pt.customFontIdx = i; }
   linesCacheKey = key;
   return linesCacheValue;
 }
@@ -43940,6 +44232,10 @@ function renderInto(canvas){
     ctx.fillStyle = bg1;
     ctx.fillRect(0,0,W,H);
   }
+  // (/cut letters are windows to the page under the surfaces: when the poem has one, the page is kept as it is now)
+  UNDER_NOW = /\/cut(?![a-z0-9])/i.test(($('poemText') || {}).value || '');
+  if(UNDER_NOW){ if(!UNDER_CANVAS) UNDER_CANVAS = document.createElement('canvas'); if(UNDER_CANVAS.width !== W || UNDER_CANVAS.height !== H){ UNDER_CANVAS.width = W; UNDER_CANVAS.height = H; }
+    const ux = UNDER_CANVAS.getContext('2d', { willReadFrequently: true }); ux.globalCompositeOperation = 'copy'; ux.globalAlpha = 1; ux.drawImage(canvas, 0, 0); ux.globalCompositeOperation = 'source-over'; }
 
   let textFill = null, textCut = false;
   // SURFACE LAYERS (Ruby: every control for both, any blend for each): the lower first, then the upper,
@@ -44211,7 +44507,7 @@ function renderInto(canvas){
 
   const shapeKey = (linesCacheKey && linesCacheKey.startsWith(rawText)) ? shapeText + linesCacheKey.slice(rawText.length) : null;
   const { size: baseSize, widths: fitWidths } = getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing, shapeKey);
-  const totalHeight = blockHeight(lines, baseSize, lineSpacing);
+  const totalHeight = blockHeight(lines, baseSize, lineSpacing, fitWidths);
 
   let startY;
   if(currentValign==='top') startY = paddingY;
@@ -44303,6 +44599,9 @@ function renderInto(canvas){
     if(line.parts){
       const cached = fitWidths.get(line);
       const partWidthMap = new Map(line.parts.map((p,i)=>[p, cached.partWidths[i]]));
+      // (a line on an arc or a wave is given room for it: half above, and half below, after it's drawn)
+      const bend = lineBend(line, cached.partWidths, size);
+      cursorY += bend/2;
       const flowingParts = line.parts.filter(p=>p.justify===null);
       const anchoredParts = line.parts.filter(p=>p.justify!==null);
 
@@ -44342,10 +44641,10 @@ function renderInto(canvas){
       }
 
       for(const part of flowingParts){
-        const partSize = partSizeFor(part, size);
-        let pStyle = resolvePartStyle(part, style);
-        if(part.code) pStyle = drawCodeBackdrop(ctx, flowX, partCursorY(part, partSize), partWidthMap.get(part), partSize, pStyle);
-        flowX = drawTextRun(ctx, part.segments, flowX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
+        const partSize = partSizeFor(part, size), pY = partCursorY(part, partSize), pW = partWidthMap.get(part), at = flowX;
+        flowX = drawPartRun(ctx, part, at, pY, pW, partSize, lineHeight, partFont(part), c => {
+          const pStyle = resolvePartStyle(part, style);
+          return part.code ? drawCodeBackdrop(c, at, pY, pW, partSize, pStyle) : pStyle; });
       }
 
       drawRhymeMarker(flowX);
@@ -44357,13 +44656,14 @@ function renderInto(canvas){
         const pX = part.justify==='center' ? (W/2 - pWidth/2)
           : part.justify==='right' ? (W - paddingX - pWidth)
           : paddingX;
-        let pStyle = resolvePartStyle(part, style);
-        if(part.code) pStyle = drawCodeBackdrop(ctx, pX, partCursorY(part, partSize), pWidth, partSize, pStyle);
-        drawTextRun(ctx, part.segments, pX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
-        rec(pX, pX + pWidth, partCursorY(part, partSize), partSize*1.15);
+        const pY = partCursorY(part, partSize);
+        drawPartRun(ctx, part, pX, pY, pWidth, partSize, lineHeight, partFont(part), c => {
+          const pStyle = resolvePartStyle(part, style);
+          return part.code ? drawCodeBackdrop(c, pX, pY, pWidth, partSize, pStyle) : pStyle; });
+        rec(pX, pX + pWidth, pY, partSize*1.15);
       }
 
-      cursorY += lineHeight;
+      cursorY += lineHeight*lineGapK(line) + bend/2;
       continue;
     }
 
@@ -45170,6 +45470,8 @@ function savedTheme(){
  *   Whimsy    — accent and gradient wraps, which are about colour anyway
  */
 
+
+
 const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;' };
 const escapeHtml = t => String(t).replace(/[&<>]/g, c => ESC[c]);
 // a §Variable: its name, then an optional !param or :number (see pmlVars.js)
@@ -45185,16 +45487,37 @@ let BRACKET_MARKS = null;          // Set of absolute indices to mark, or null
 const bspan = (cls, ch, at) =>
   `<span class="pml-${cls}${BRACKET_MARKS && BRACKET_MARKS.has(at) ? ' pml-match' : ''}">${escapeHtml(ch)}</span>`;
 
-/** Colours the directive run inside a segment: <content/f:4/scale:150>. */
-function highlightDirectives(run){
+// UNKNOWN DIRECTIVES (Ruby approved): a directive PML can't read is underlined, and the editor's hint line says why
+// (textParsers.directiveHint). Gathered while a document is highlighted: { at, end, line, text } in the document.
+let HINTS = null, STYLES = null, FONT_CHECK = null, LINE_NO = 0;
+const STYLE_DEF = /^(\s*)(§style)(\s+)([A-Za-z][\w-]*)(\s*=\s*)(.*)$/i;
+const fmt = (key, v) => String(PML_HINTS[key] || '').replace(/\{(\w+)\}/g, (m, k) => v[k] == null ? '' : v[k]);
+function hintFor(body){
+  const h = directiveHint(body, STYLES);
+  if(!h){
+    // a typeface asked for by a name the page doesn't have
+    const f = body.match(/^font:(.+)$/i);
+    if(f && FONT_CHECK && !FONT_CHECK(f[1].trim())) return fmt('font', { d: body });
+    return null;
+  }
+  if(h.kind === 'style') return fmt('style', { d: body, name: h.name });
+  if(h.kind === 'value') return h.like ? fmt('valueLike', { d: body, name: h.name, like: h.like }) : fmt('value', { d: body, name: h.name });
+  return h.like ? fmt('unknownLike', { d: body, like: h.like }) : fmt('unknown', { d: body });
+}
+
+/** Colours the directive run inside a segment: <content/f:4/scale:150>. `base`: where the run starts in the document. */
+function highlightDirectives(run, base){
+  base = base || 0;
   // split on the slashes that separate directives, keeping them
-  return run.replace(/\/([^/]*)/g, (_, body) => {
-    const m = body.match(/^([a-zA-Z#]+)(:?)([\s\S]*)$/);
+  return run.replace(/\/([^/]*)/g, (_, body, at) => {
+    const m = body.match(/^([a-zA-Z#@]+)(:?)([\s\S]*)$/);
     if(!m) return span('op', '/') + escapeHtml(body);
     const [, name, colon, value] = m;
-    return span('op', '/') + span('directive', name)
-         + (colon ? span('op', colon) : '')
-         + (value ? span('value', value) : '');
+    const inner = span('directive', name) + (colon ? span('op', colon) : '') + (value ? span('value', value) : '');
+    const hint = hintFor(body);
+    if(!hint) return span('op', '/') + inner;
+    if(HINTS) HINTS.push({ at: base + at, end: base + at + 1 + body.length, line: LINE_NO, text: hint });
+    return span('op', '/') + `<span class="pml-unknown">${inner}</span>`;
   });
 }
 
@@ -45207,6 +45530,15 @@ function highlightLine(line, base){
   let out = '';
   let i = 0;
   const src = String(line);
+
+  // a named style's definition (pmlVars.js): §style name = /directives — not drawn, its directives checked
+  const def = src.match(STYLE_DEF);
+  if(def){
+    const v = def[6], at = base + src.length - v.length;
+    // (written without its first slash, the value is read as if it had one)
+    const dirs = !v ? '' : v[0] === '/' ? highlightDirectives(v, at) : highlightDirectives('/' + v, at - 1).replace(/^<span class="pml-op">\/<\/span>/, '');
+    return escapeHtml(def[1]) + span('var', def[2]) + escapeHtml(def[3]) + span('varp', def[4]) + span('op', def[5]) + dirs;
+  }
 
   // line prefixes, which only count at the very start
   const prefix = src.match(/^(##|-#|#D|#S|>)\s/);
@@ -45230,6 +45562,8 @@ function highlightLine(line, base){
       if(m){ out += varSpan(m); i += m[0].length; continue; }
     }
 
+    // "<3" is always a heart (Ruby), never a segment's opener
+    if(ch === '<' && src[i + 1] === '3'){ out += escapeHtml('<3'); i += 2; continue; }
     // segmentation operator: brackets are structure, the inside is directives
     if(ch === '<'){
       const close = src.indexOf('>', i);
@@ -45241,7 +45575,7 @@ function highlightLine(line, base){
           out += highlightInline(inner, base + i + 1);
         } else {
           out += highlightInline(inner.slice(0, cut), base + i + 1);
-          out += highlightDirectives(inner.slice(cut));
+          out += highlightDirectives(inner.slice(cut), base + i + 1 + cut);
         }
         out += bspan('bracket', '>', base + close);
         i = close + 1;
@@ -45316,17 +45650,28 @@ function highlightInline(text, base){
  * zero-width inline anchors, which the gutter measures without introducing
  * any block box of their own.
  */
-function highlightDocument(text, marks){
+function highlightDocument(text, marks, hints){
   BRACKET_MARKS = marks && marks.size ? marks : null;
   const lines = String(text).split('\n');
+  // the styles the poem names (§style name = …), so their uses are known
+  STYLES = new Set(); for(const line of lines){ const m = line.match(STYLE_DEF); if(m) STYLES.add(m[4].toLowerCase()); }
+  HINTS = hints || [];
   let base = 0;
   const html = lines.map((line, i) => {
+    LINE_NO = i + 1;
     const out = `<span class="ln-mark" data-n="${i + 1}"></span>` + highlightLine(line, base);
     base += line.length + 1;          // + the newline
     return out;
   }).join('\n') + '\u200b';
-  BRACKET_MARKS = null;
+  BRACKET_MARKS = null; HINTS = null;
   return html;
+}
+
+/** The hint line's words: the directive the caret is in, else the first one PML can't read (with its line). */
+function hintText(hints, caret){
+  if(!hints || !hints.length) return '';
+  const here = caret != null ? hints.find(h => caret >= h.at && caret <= h.end) : null;
+  return here ? here.text : hints[0].text + fmt('where', { n: hints[0].line, more: hints.length > 1 ? fmt('more', { n: hints.length - 1 }) : '' });
 }
 
 const OPEN = { '(': ')', '[': ']', '{': '}', '<': '>' };
@@ -45366,8 +45711,9 @@ function findBracketPair(text, caret){
  * Wires mirror, gutter and textarea together.
  * deps: { textarea, mirror, gutter, onInput }
  */
-function installEditor({ textarea, mirror, gutter, onInput }){
+function installEditor({ textarea, mirror, gutter, hint, knownFont, onInput }){
   if(!textarea || !mirror) return null;
+  if(knownFont) FONT_CHECK = knownFont;
 
   function currentMarks(){
     if(typeof textarea.selectionStart !== 'number') return null;
@@ -45377,7 +45723,10 @@ function installEditor({ textarea, mirror, gutter, onInput }){
   }
 
   function paint(){
-    mirror.innerHTML = highlightDocument(textarea.value, currentMarks());
+    const hints = [];
+    mirror.innerHTML = highlightDocument(textarea.value, currentMarks(), hints);
+    if(hint){ const t = hintText(hints, typeof textarea.selectionStart === 'number' ? textarea.selectionStart : null);
+      if(hint.textContent !== t) hint.textContent = t; hint.hidden = !t; }
     fitHeight();
     if(gutter) paintGutter();
   }
@@ -49536,10 +49885,11 @@ function maybeRerollSeed(explicitSeed){
   // the seed field's lock is the one control for this now
   if(state.locks.has('textureSeedValue')) return;
   $('textureSeedValue').value = (explicitSeed !== undefined) ? explicitSeed : randomSeed();
+  if(explicitSeed === undefined) seedCamera();
 }
 $('textureSeedValue').addEventListener('input', scheduleRender);
 $('textureSeedReroll').addEventListener('click', ()=>{
-  $('textureSeedValue').value = randomSeed();
+  $('textureSeedValue').value = randomSeed(); seedCamera();
   scheduleRender();
 });
 
@@ -51130,7 +51480,7 @@ function syncTextureTools(resetToDefaults){
   { const cam = caps.camera, row = $('cameraRow'), tools = $('textureToolRow');
     if(row && row.classList) row.classList.toggle('tool-hidden', !cam);
     if(tools && tools.classList) tools.classList.toggle('has-camera', !!cam);
-    if(cam && resetToDefaults && !state.locks.has('cameraTurn')) putCamera(cam.turn ?? 0, cam.view ?? 0, cam.zoom ?? 100);
+    if(cam && resetToDefaults && !state.locks.has('cameraTurn')){ const d = cameraStart(($('textureType') || {}).value); putCamera(d.turn, d.view, d.zoom); }
     else syncCameraPad(); }
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
@@ -51288,7 +51638,15 @@ if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEv
 // straight up — the rim low across); ＋ and −, a wheel or a pinch zoom it. While it moves, a guide of the shot is drawn
 // over the page at once (a plank's grid, a ring's edges), and the surface follows when it has been made.
 /** Where a surface's camera starts. */
-function cameraStart(type){ const c = (capsFor(type) || {}).camera || {}; return { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100 }; }
+function cameraStart(type){ const c = (capsFor(type) || {}).camera || {};
+  // a surface whose camera the seed places (Ruby: "randomize the initial camera position with the seed"): each seed its
+  // own shot within the ranges it names, still the dial's to change
+  if(c.seeded){ const seed = parseInt(($('textureSeedValue') || {}).value, 10) || 0, r = k => { let h = Math.imul((seed ^ 0x3C6EF372) >>> 0, 2654435761) ^ Math.imul(k + 1, 0x85EBCA6B); h = Math.imul(h ^ (h >>> 15), 0x2C1B3C6D); return ((h ^ (h >>> 13)) >>> 0)/4294967296; };
+    const at = (rg, k) => Math.round(rg[0] + (rg[1] - rg[0])*r(k)); return { turn: at(c.seeded.turn, 1), view: at(c.seeded.view, 2), zoom: at(c.seeded.zoom, 3) }; }
+  return { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100 }; }
+// a new seed rolled: a surface whose camera the seed places takes its new shot (unless the camera is locked)
+function seedCamera(){ const type = ($('textureType') || {}).value, c = (capsFor(type) || {}).camera;
+  if(!c || !c.seeded || state.locks.has('cameraTurn')) return; const d = cameraStart(type); putCamera(d.turn, d.view, d.zoom); }
 function cameraNow(){ const v = id => parseFloat(($(id) || {}).value); const t = v('cameraTurn'), w = v('cameraView'), z = v('cameraZoom');
   return { turn: isNaN(t) ? 0 : t, view: isNaN(w) ? 0 : w, zoom: isNaN(z) ? 100 : z }; }
 /** The camera into its three hidden fields (no render: a look or a preset is being put back). */
@@ -51859,6 +52217,8 @@ const pmlEditor = installEditor({
   textarea: $('poemText'),
   mirror: $('poemMirror'),
   gutter: $('poemGutter'),
+  hint: $('poemHint'),
+  knownFont: name => fontIndexByName(name) >= 0,
 });
 function repaintEditor(){ if(pmlEditor) pmlEditor.paint(); }
 
@@ -52255,7 +52615,7 @@ function benchUnkept(){ const j = bench(); return Object.keys(athanorNodes(j)).l
 setTimeout(paintShelfOptions, 0);
 const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept,
   chooser: (sel, o) => attachChooser(sel, { id: 'forgeOpen', thumb: openTileThumb, stamp: openTileStamp, glyphFor: () => '🜉', size: 160, side: true, wide: true, hold: holdSurface, ...o }),
-  reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+  reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); seedCamera(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { if(!benchOnPage()) return; paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
   // a wiki figure: every part of its little graph, at canonical settings, each in its own slot so figures don't wait on each other

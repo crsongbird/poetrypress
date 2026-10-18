@@ -40,7 +40,7 @@ import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './ef
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow } from './canvasRenderer.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
@@ -564,10 +564,11 @@ function maybeRerollSeed(explicitSeed){
   // the seed field's lock is the one control for this now
   if(state.locks.has('textureSeedValue')) return;
   $('textureSeedValue').value = (explicitSeed !== undefined) ? explicitSeed : randomSeed();
+  if(explicitSeed === undefined) seedCamera();
 }
 $('textureSeedValue').addEventListener('input', scheduleRender);
 $('textureSeedReroll').addEventListener('click', ()=>{
-  $('textureSeedValue').value = randomSeed();
+  $('textureSeedValue').value = randomSeed(); seedCamera();
   scheduleRender();
 });
 
@@ -2158,7 +2159,7 @@ function syncTextureTools(resetToDefaults){
   { const cam = caps.camera, row = $('cameraRow'), tools = $('textureToolRow');
     if(row && row.classList) row.classList.toggle('tool-hidden', !cam);
     if(tools && tools.classList) tools.classList.toggle('has-camera', !!cam);
-    if(cam && resetToDefaults && !state.locks.has('cameraTurn')) putCamera(cam.turn ?? 0, cam.view ?? 0, cam.zoom ?? 100);
+    if(cam && resetToDefaults && !state.locks.has('cameraTurn')){ const d = cameraStart(($('textureType') || {}).value); putCamera(d.turn, d.view, d.zoom); }
     else syncCameraPad(); }
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
@@ -2316,7 +2317,15 @@ if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEv
 // straight up — the rim low across); ＋ and −, a wheel or a pinch zoom it. While it moves, a guide of the shot is drawn
 // over the page at once (a plank's grid, a ring's edges), and the surface follows when it has been made.
 /** Where a surface's camera starts. */
-function cameraStart(type){ const c = (capsFor(type) || {}).camera || {}; return { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100 }; }
+function cameraStart(type){ const c = (capsFor(type) || {}).camera || {};
+  // a surface whose camera the seed places (Ruby: "randomize the initial camera position with the seed"): each seed its
+  // own shot within the ranges it names, still the dial's to change
+  if(c.seeded){ const seed = parseInt(($('textureSeedValue') || {}).value, 10) || 0, r = k => { let h = Math.imul((seed ^ 0x3C6EF372) >>> 0, 2654435761) ^ Math.imul(k + 1, 0x85EBCA6B); h = Math.imul(h ^ (h >>> 15), 0x2C1B3C6D); return ((h ^ (h >>> 13)) >>> 0)/4294967296; };
+    const at = (rg, k) => Math.round(rg[0] + (rg[1] - rg[0])*r(k)); return { turn: at(c.seeded.turn, 1), view: at(c.seeded.view, 2), zoom: at(c.seeded.zoom, 3) }; }
+  return { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100 }; }
+// a new seed rolled: a surface whose camera the seed places takes its new shot (unless the camera is locked)
+function seedCamera(){ const type = ($('textureType') || {}).value, c = (capsFor(type) || {}).camera;
+  if(!c || !c.seeded || state.locks.has('cameraTurn')) return; const d = cameraStart(type); putCamera(d.turn, d.view, d.zoom); }
 function cameraNow(){ const v = id => parseFloat(($(id) || {}).value); const t = v('cameraTurn'), w = v('cameraView'), z = v('cameraZoom');
   return { turn: isNaN(t) ? 0 : t, view: isNaN(w) ? 0 : w, zoom: isNaN(z) ? 100 : z }; }
 /** The camera into its three hidden fields (no render: a look or a preset is being put back). */
@@ -2887,6 +2896,8 @@ const pmlEditor = installEditor({
   textarea: $('poemText'),
   mirror: $('poemMirror'),
   gutter: $('poemGutter'),
+  hint: $('poemHint'),
+  knownFont: name => fontIndexByName(name) >= 0,
 });
 function repaintEditor(){ if(pmlEditor) pmlEditor.paint(); }
 
@@ -3283,7 +3294,7 @@ function benchUnkept(){ const j = bench(); return Object.keys(athanorNodes(j)).l
 setTimeout(paintShelfOptions, 0);
 const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept,
   chooser: (sel, o) => attachChooser(sel, { id: 'forgeOpen', thumb: openTileThumb, stamp: openTileStamp, glyphFor: () => '🜉', size: 160, side: true, wide: true, hold: holdSurface, ...o }),
-  reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
+  reseed: () => { const f = $('textureSeedValue'); if(!f) return; f.value = randomSeed(); seedCamera(); f.dispatchEvent(new Event('input', { bubbles: true })); scheduleRender(); commitSoon(); }, textures: Object.keys(TEXTURE_PARAMS).filter(t => t !== 'athanor'), stitches: STITCH_STYLES,
   onSave: () => { if(!benchOnPage()) return; paintForgeSummary(); applyAthanorGraph(true); if(typeof commitSoon === 'function') commitSoon(); },
   preview: previewAthanor, steps: athanorStepSheet,
   // a wiki figure: every part of its little graph, at canonical settings, each in its own slot so figures don't wait on each other

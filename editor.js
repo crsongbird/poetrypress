@@ -26,6 +26,9 @@
  *   Whimsy    — accent and gradient wraps, which are about colour anyway
  */
 
+import { directiveHint } from './textParsers.js';
+import { PML_HINTS } from './strings.js';
+
 const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;' };
 const escapeHtml = t => String(t).replace(/[&<>]/g, c => ESC[c]);
 // a §Variable: its name, then an optional !param or :number (see pmlVars.js)
@@ -41,16 +44,37 @@ let BRACKET_MARKS = null;          // Set of absolute indices to mark, or null
 const bspan = (cls, ch, at) =>
   `<span class="pml-${cls}${BRACKET_MARKS && BRACKET_MARKS.has(at) ? ' pml-match' : ''}">${escapeHtml(ch)}</span>`;
 
-/** Colours the directive run inside a segment: <content/f:4/scale:150>. */
-function highlightDirectives(run){
+// UNKNOWN DIRECTIVES (Ruby approved): a directive PML can't read is underlined, and the editor's hint line says why
+// (textParsers.directiveHint). Gathered while a document is highlighted: { at, end, line, text } in the document.
+let HINTS = null, STYLES = null, FONT_CHECK = null, LINE_NO = 0;
+const STYLE_DEF = /^(\s*)(§style)(\s+)([A-Za-z][\w-]*)(\s*=\s*)(.*)$/i;
+const fmt = (key, v) => String(PML_HINTS[key] || '').replace(/\{(\w+)\}/g, (m, k) => v[k] == null ? '' : v[k]);
+function hintFor(body){
+  const h = directiveHint(body, STYLES);
+  if(!h){
+    // a typeface asked for by a name the page doesn't have
+    const f = body.match(/^font:(.+)$/i);
+    if(f && FONT_CHECK && !FONT_CHECK(f[1].trim())) return fmt('font', { d: body });
+    return null;
+  }
+  if(h.kind === 'style') return fmt('style', { d: body, name: h.name });
+  if(h.kind === 'value') return h.like ? fmt('valueLike', { d: body, name: h.name, like: h.like }) : fmt('value', { d: body, name: h.name });
+  return h.like ? fmt('unknownLike', { d: body, like: h.like }) : fmt('unknown', { d: body });
+}
+
+/** Colours the directive run inside a segment: <content/f:4/scale:150>. `base`: where the run starts in the document. */
+function highlightDirectives(run, base){
+  base = base || 0;
   // split on the slashes that separate directives, keeping them
-  return run.replace(/\/([^/]*)/g, (_, body) => {
-    const m = body.match(/^([a-zA-Z#]+)(:?)([\s\S]*)$/);
+  return run.replace(/\/([^/]*)/g, (_, body, at) => {
+    const m = body.match(/^([a-zA-Z#@]+)(:?)([\s\S]*)$/);
     if(!m) return span('op', '/') + escapeHtml(body);
     const [, name, colon, value] = m;
-    return span('op', '/') + span('directive', name)
-         + (colon ? span('op', colon) : '')
-         + (value ? span('value', value) : '');
+    const inner = span('directive', name) + (colon ? span('op', colon) : '') + (value ? span('value', value) : '');
+    const hint = hintFor(body);
+    if(!hint) return span('op', '/') + inner;
+    if(HINTS) HINTS.push({ at: base + at, end: base + at + 1 + body.length, line: LINE_NO, text: hint });
+    return span('op', '/') + `<span class="pml-unknown">${inner}</span>`;
   });
 }
 
@@ -63,6 +87,15 @@ export function highlightLine(line, base){
   let out = '';
   let i = 0;
   const src = String(line);
+
+  // a named style's definition (pmlVars.js): §style name = /directives — not drawn, its directives checked
+  const def = src.match(STYLE_DEF);
+  if(def){
+    const v = def[6], at = base + src.length - v.length;
+    // (written without its first slash, the value is read as if it had one)
+    const dirs = !v ? '' : v[0] === '/' ? highlightDirectives(v, at) : highlightDirectives('/' + v, at - 1).replace(/^<span class="pml-op">\/<\/span>/, '');
+    return escapeHtml(def[1]) + span('var', def[2]) + escapeHtml(def[3]) + span('varp', def[4]) + span('op', def[5]) + dirs;
+  }
 
   // line prefixes, which only count at the very start
   const prefix = src.match(/^(##|-#|#D|#S|>)\s/);
@@ -86,6 +119,8 @@ export function highlightLine(line, base){
       if(m){ out += varSpan(m); i += m[0].length; continue; }
     }
 
+    // "<3" is always a heart (Ruby), never a segment's opener
+    if(ch === '<' && src[i + 1] === '3'){ out += escapeHtml('<3'); i += 2; continue; }
     // segmentation operator: brackets are structure, the inside is directives
     if(ch === '<'){
       const close = src.indexOf('>', i);
@@ -97,7 +132,7 @@ export function highlightLine(line, base){
           out += highlightInline(inner, base + i + 1);
         } else {
           out += highlightInline(inner.slice(0, cut), base + i + 1);
-          out += highlightDirectives(inner.slice(cut));
+          out += highlightDirectives(inner.slice(cut), base + i + 1 + cut);
         }
         out += bspan('bracket', '>', base + close);
         i = close + 1;
@@ -172,17 +207,28 @@ function highlightInline(text, base){
  * zero-width inline anchors, which the gutter measures without introducing
  * any block box of their own.
  */
-export function highlightDocument(text, marks){
+export function highlightDocument(text, marks, hints){
   BRACKET_MARKS = marks && marks.size ? marks : null;
   const lines = String(text).split('\n');
+  // the styles the poem names (§style name = …), so their uses are known
+  STYLES = new Set(); for(const line of lines){ const m = line.match(STYLE_DEF); if(m) STYLES.add(m[4].toLowerCase()); }
+  HINTS = hints || [];
   let base = 0;
   const html = lines.map((line, i) => {
+    LINE_NO = i + 1;
     const out = `<span class="ln-mark" data-n="${i + 1}"></span>` + highlightLine(line, base);
     base += line.length + 1;          // + the newline
     return out;
   }).join('\n') + '\u200b';
-  BRACKET_MARKS = null;
+  BRACKET_MARKS = null; HINTS = null;
   return html;
+}
+
+/** The hint line's words: the directive the caret is in, else the first one PML can't read (with its line). */
+export function hintText(hints, caret){
+  if(!hints || !hints.length) return '';
+  const here = caret != null ? hints.find(h => caret >= h.at && caret <= h.end) : null;
+  return here ? here.text : hints[0].text + fmt('where', { n: hints[0].line, more: hints.length > 1 ? fmt('more', { n: hints.length - 1 }) : '' });
 }
 
 const OPEN = { '(': ')', '[': ']', '{': '}', '<': '>' };
@@ -222,8 +268,9 @@ export function findBracketPair(text, caret){
  * Wires mirror, gutter and textarea together.
  * deps: { textarea, mirror, gutter, onInput }
  */
-export function installEditor({ textarea, mirror, gutter, onInput }){
+export function installEditor({ textarea, mirror, gutter, hint, knownFont, onInput }){
   if(!textarea || !mirror) return null;
+  if(knownFont) FONT_CHECK = knownFont;
 
   function currentMarks(){
     if(typeof textarea.selectionStart !== 'number') return null;
@@ -233,7 +280,10 @@ export function installEditor({ textarea, mirror, gutter, onInput }){
   }
 
   function paint(){
-    mirror.innerHTML = highlightDocument(textarea.value, currentMarks());
+    const hints = [];
+    mirror.innerHTML = highlightDocument(textarea.value, currentMarks(), hints);
+    if(hint){ const t = hintText(hints, typeof textarea.selectionStart === 'number' ? textarea.selectionStart : null);
+      if(hint.textContent !== t) hint.textContent = t; hint.hidden = !t; }
     fitHeight();
     if(gutter) paintGutter();
   }

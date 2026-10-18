@@ -73,7 +73,7 @@ check('every effect renders per segment, on both drawing paths', threw === null)
 reg['poemText'].value = St.STITCH_STYLES.slice(0, 20).map((s, i) => `<u${i}/under:${s},#c33,150>`).join(' ');
 fire('poemText', 'input');
 threw = null; try { render(); } catch(err){ threw = err; }
-check('underlines draw in any stitch', threw === null && /drawStitch\(ctx, pathFromPoints\(\[\[x, cursorY \+ size\*0\.95\]/.test(cr));
+check('underlines draw in any stitch', threw === null && /drawStitch\(ctx, pathFromPoints\(runPath\(x, x \+ w, size\*0\.95\)/.test(cr));
 
 // ---- the older forms keep working ----
 reg['poemText'].value = '<a/fx1,#abc,3> <b/fx2,#f0f,10,4,4> <c/fx0> '
@@ -101,7 +101,7 @@ check('/under: takes a stitch, a colour and a weight', (() => { const u = E.pars
 // field missing from that guard is silently ignored (that hid /fx: and /under:)
 {
   const tp = readFileSync(new URL('../textParsers.js', import.meta.url), 'utf8');
-  const fields = [...new Set([...tp.matchAll(/part\.(custom\w+|under)\s*=/g)].map(m => m[1]))].filter(f => !['customSize', 'customFontIdx', 'customBasis'].includes(f));   // these position the part; they are read directly, not through its style
+  const fields = [...new Set([...tp.matchAll(/part\.(custom\w+|under)\s*=/g)].map(m => m[1]))].filter(f => !['customSize', 'customFontIdx', 'customBasis', 'customRotate', 'customGap', 'customFontName'].includes(f));   // these position the part (or its line, or pick its face); they are read directly, not through its style
   const guard = (cr.match(/if\(!part\.customColor[^\n]*return baseStyle;/) || [''])[0];
   const missing = fields.filter(f => !guard.includes(f));
   check('every styling field a segment can set is in resolvePartStyle\'s guard', missing.length === 0);

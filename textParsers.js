@@ -97,7 +97,7 @@ function findLastStackIndex(stack, type){
   return -1;
 }
 // the bracket kinds that may run on past a segment's end into the next part of the line
-const CARRIED_KINDS = new Set(['accent1', 'accent2', 'gradFwd', 'gradRev']);
+const CARRIED_KINDS = new Set(['accent1', 'accent2', 'gradFwd', 'gradRev', 'bold', 'italic']);
 /** A line's text as styled runs. `state` (optional, buildLines' own): brackets left open carry in from the parts before
  *  ({ stack, next, closed, keep }) — each bracket gets an id, `closed` gathers the ids that close, and at the end the
  *  still-open ones are handed on (only those in `keep`, when given: the ones known to close in a later part). */
@@ -175,7 +175,7 @@ export function tokenizeInline(text, accent1On, accent2On, state){
       // no gradient open — fall through so the plain ] and } handlers below
       // process this as two ordinary (non-gradient) closes instead
     }
-    const prevCh = chars.length ? chars[chars.length-1].ch : undefined;
+    const prevCh = chars.length ? chars[chars.length-1].ch : state ? state.prev : undefined;
     if(text.startsWith('~~', i)){
       const idx = findLastStackIndex(stack,'strike');
       if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=2; continue; }
@@ -183,14 +183,14 @@ export function tokenizeInline(text, accent1On, accent2On, state){
     }
     if(text.startsWith('**', i)){
       const idx = findLastStackIndex(stack,'bold');
-      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=2; continue; }
-      if(idx===-1 && !isSpace(text[i+2])){ stack.push({type:'bold'}); i+=2; continue; }
+      if(idx!==-1 && !isSpace(prevCh)){ closeAt(idx); i+=2; continue; }
+      if(idx===-1 && !isSpace(text[i+2])){ push('bold'); i+=2; continue; }
     }
     const c = text[i];
     if(c==='*'){
       const idx = findLastStackIndex(stack,'italic');
-      if(idx!==-1 && !isSpace(prevCh)){ stack.splice(idx,1); i+=1; continue; }
-      if(idx===-1 && !isSpace(text[i+1])){ stack.push({type:'italic'}); i+=1; continue; }
+      if(idx!==-1 && !isSpace(prevCh)){ closeAt(idx); i+=1; continue; }
+      if(idx===-1 && !isSpace(text[i+1])){ push('italic'); i+=1; continue; }
     }
     if(c==='_'){
       const idx = findLastStackIndex(stack,'underline');
@@ -221,7 +221,7 @@ export function tokenizeInline(text, accent1On, accent2On, state){
     }
   }
   if(runs.length===0) runs.push({text:'', bold:false, italic:false, underline:false, strike:false, color:null});
-  if(state) state.stack = stack.filter(it => it.id != null && (!state.keep || state.keep.has(it.id)));
+  if(state){ state.stack = stack.filter(it => it.id != null && (!state.keep || state.keep.has(it.id))); if(chars.length) state.prev = chars[chars.length - 1].ch; }
   return runs;
 }
 
@@ -241,9 +241,40 @@ const FLAG_GRADIENTS = {
   lesbian: ['#D52D00','#EF7627','#FF9A56','#FFFFFF','#D162A4','#B55690','#A30262'],
 };
 
+// COLOR NAMES for /color: (Ruby: friendlier names): the CSS named colors, and a few of the app's own
+const CSS_COLOR_NAMES = Object.fromEntries('aliceblue:f0f8ff antiquewhite:faebd7 aqua:00ffff aquamarine:7fffd4 azure:f0ffff beige:f5f5dc bisque:ffe4c4 black:000000 blanchedalmond:ffebcd blue:0000ff blueviolet:8a2be2 brown:a52a2a burlywood:deb887 cadetblue:5f9ea0 chartreuse:7fff00 chocolate:d2691e coral:ff7f50 cornflowerblue:6495ed cornsilk:fff8dc crimson:dc143c cyan:00ffff darkblue:00008b darkcyan:008b8b darkgoldenrod:b8860b darkgray:a9a9a9 darkgreen:006400 darkgrey:a9a9a9 darkkhaki:bdb76b darkmagenta:8b008b darkolivegreen:556b2f darkorange:ff8c00 darkorchid:9932cc darkred:8b0000 darksalmon:e9967a darkseagreen:8fbc8f darkslateblue:483d8b darkslategray:2f4f4f darkslategrey:2f4f4f darkturquoise:00ced1 darkviolet:9400d3 deeppink:ff1493 deepskyblue:00bfff dimgray:696969 dimgrey:696969 dodgerblue:1e90ff firebrick:b22222 floralwhite:fffaf0 forestgreen:228b22 fuchsia:ff00ff gainsboro:dcdcdc ghostwhite:f8f8ff gold:ffd700 goldenrod:daa520 gray:808080 green:008000 greenyellow:adff2f grey:808080 honeydew:f0fff0 hotpink:ff69b4 indianred:cd5c5c indigo:4b0082 ivory:fffff0 khaki:f0e68c lavender:e6e6fa lavenderblush:fff0f5 lawngreen:7cfc00 lemonchiffon:fffacd lightblue:add8e6 lightcoral:f08080 lightcyan:e0ffff lightgoldenrodyellow:fafad2 lightgray:d3d3d3 lightgreen:90ee90 lightgrey:d3d3d3 lightpink:ffb6c1 lightsalmon:ffa07a lightseagreen:20b2aa lightskyblue:87cefa lightslategray:778899 lightslategrey:778899 lightsteelblue:b0c4de lightyellow:ffffe0 lime:00ff00 limegreen:32cd32 linen:faf0e6 magenta:ff00ff maroon:800000 mediumaquamarine:66cdaa mediumblue:0000cd mediumorchid:ba55d3 mediumpurple:9370db mediumseagreen:3cb371 mediumslateblue:7b68ee mediumspringgreen:00fa9a mediumturquoise:48d1cc mediumvioletred:c71585 midnightblue:191970 mintcream:f5fffa mistyrose:ffe4e1 moccasin:ffe4b5 navajowhite:ffdead navy:000080 oldlace:fdf5e6 olive:808000 olivedrab:6b8e23 orange:ffa500 orangered:ff4500 orchid:da70d6 palegoldenrod:eee8aa palegreen:98fb98 paleturquoise:afeeee palevioletred:db7093 papayawhip:ffefd5 peachpuff:ffdab9 peru:cd853f pink:ffc0cb plum:dda0dd powderblue:b0e0e6 purple:800080 rebeccapurple:663399 red:ff0000 rosybrown:bc8f8f royalblue:4169e1 saddlebrown:8b4513 salmon:fa8072 sandybrown:f4a460 seagreen:2e8b57 seashell:fff5ee sienna:a0522d silver:c0c0c0 skyblue:87ceeb slateblue:6a5acd slategray:708090 slategrey:708090 snow:fffafa springgreen:00ff7f steelblue:4682b4 tan:d2b48c teal:008080 thistle:d8bfd8 tomato:ff6347 turquoise:40e0d0 violet:ee82ee wheat:f5deb3 white:ffffff whitesmoke:f5f5f5 yellow:ffff00 yellowgreen:9acd32'.split(' ').map(p => p.split(':')));
+const APP_COLOR_NAMES = { rose: 'e7a0b8', oxblood: '5c1a1b', moss: '5a6b3a', bone: 'e8e0cc', parchment: 'f1e6c8', graphite: '3a3a3e',
+  teastain: 'b08a5a', clay: 'b0734f', sage: '9caf88', ink: '1a1a22', starlight: 'f4f1ff', ember: 'e8653a' };
+/** A color written in PML (a name, #hex or hex) as #hex, or null. */
+export function pmlColor(v){
+  const k = String(v || '').trim().toLowerCase().replace(/[\s_-]/g, ''), h = APP_COLOR_NAMES[k] || CSS_COLOR_NAMES[k] || k.replace(/^#/, '');
+  return /^([0-9a-f]{3}|[0-9a-f]{6})$/.test(h) ? '#' + h : null;
+}
+// the blends /blend: takes (the canvas's own composite modes, and plainer names for two of them)
+const PML_BLENDS = { multiply: 'multiply', screen: 'screen', overlay: 'overlay', darken: 'darken', lighten: 'lighten', 'color-dodge': 'color-dodge',
+  dodge: 'color-dodge', 'color-burn': 'color-burn', burn: 'color-burn', 'hard-light': 'hard-light', hardlight: 'hard-light', 'soft-light': 'soft-light',
+  softlight: 'soft-light', difference: 'difference', exclusion: 'exclusion', hue: 'hue', saturation: 'saturation', color: 'color', luminosity: 'luminosity' };
+const pmlNum = (s, def, lo, hi) => { const v = parseFloat(s); return Math.max(lo, Math.min(hi, isNaN(v) ? def : v)); };
 function parseSegmentDirective(dirStr, part){
   const d = dirStr.trim();
   const lower = d.toLowerCase();
+  // ---- the newer directives (Ruby approved, Saturn–Phoebe): each also works bare, with a sensible amount ----
+  // opacity, a blend with what lies under the words, a turn, a line bent on an arc or a wave, space after the line
+  if(lower === 'op' || lower.startsWith('op:')){ part.customOpacity = pmlNum(d.slice(3), 60, 0, 100); return; }
+  if(lower === 'blend' || lower.startsWith('blend:')){ const m = PML_BLENDS[lower.slice(6).trim() || 'multiply']; if(m) part.customBlend = m; return; }
+  if(lower === 'rot' || lower.startsWith('rot:')){ part.customRotate = pmlNum(d.slice(4), -8, -360, 360); return; }
+  if(lower === 'arc' || lower.startsWith('arc:')){ part.customArc = pmlNum(d.slice(4), 30, -200, 200); return; }
+  if(lower === 'wave' || lower.startsWith('wave:')){ const b = d.slice(5).split(','); part.customWave = { amp: pmlNum(b[0], 25, -200, 200), cycles: pmlNum(b[1], 2, 0.25, 12) }; return; }
+  if(lower === 'gap' || lower.startsWith('gap:')){ part.customGap = pmlNum(d.slice(4), 100, -80, 400); return; }
+  // a typeface by its name (the list's own: /font:Cinzel), beside /f:N
+  if(lower.startsWith('font:')){ const n = d.slice(5).trim(); if(n) part.customFontName = n; return; }
+  // a color by its name or hex: /color:rose, /color:midnightblue, /color:#a33
+  if(lower.startsWith('color:') || lower.startsWith('colour:')){ const c = pmlColor(d.slice(d.indexOf(':') + 1)); if(c) part.customColor = c; return; }
+  // glass letters: frosted (the page behind them blurred and lit), clear (only bent), or tinted by a color
+  if(lower === 'glass' || lower.startsWith('glass:')){ const v = lower.slice(6).trim(), tint = v && v !== 'frost' && v !== 'clear' ? pmlColor(v) : null;
+    part.glass = { kind: v === 'clear' ? 'clear' : 'frost', tint }; return; }
+  // the letters as windows to the page beneath the surface
+  if(lower === 'cut'){ part.cut = true; return; }
   if(lower==='l' || lower==='left'){ part.justify='left'; return; }
   if(lower==='c' || lower==='center' || lower==='centre'){ part.justify='center'; return; }
   if(lower==='r' || lower==='right'){ part.justify='right'; return; }
@@ -383,7 +414,7 @@ const SEG_CLOSER = /^((?:\/[^\/<>\n]+)+)>/;
 function segGroupsOf(line){
   const st = [], groups = [], freeClose = [];
   for(let i = 0; i < line.length; i++){
-    if(line[i] === '<'){ st.push(i); continue; }
+    if(line[i] === '<'){ if(line[i + 1] !== '3') st.push(i); continue; }   // ("<3" is always a heart: Ruby)
     if(line[i] !== '/') continue;
     const m = SEG_CLOSER.exec(line.slice(i)); if(!m) continue;
     if(st.length){ const o = st.pop(); groups.push({ open: o, cs: i, end: i + m[0].length, dirs: m[1], depth: st.length }); }
@@ -396,7 +427,7 @@ function segGroupsOf(line){
 function parseSegmentedLine(content){
   const G = segGroupsOf(content);
   if(!G.old && G.groups.some(g => g.depth > 0)) return parseNestedSegments(content, G.groups);
-  const re = /<([\s\S]*?)((?:\/[^\/<>]+)+)>/g;
+  const re = /<(?!3)([\s\S]*?)((?:\/[^\/<>]+)+)>/g;   // ("<3" is always a heart, never a segment's opener)
   let m, lastIndex=0, found=false;
   const parts = [];
   const blankPart = text => ({text, justify:null, customColor:null, customFontIdx:null, customSize:null, customTracking:null, customBasis:null, customJitter:null, customEffect:null, customTypeEffect:null, customGradient:null});
@@ -451,29 +482,71 @@ function parseNestedSegments(content, groups){
 const PML_PREFIX = /^(## |-# |> |#D |#S )/, PML_SUFFIX = /(\s*~[A-Da-d])?(\s*\/[lcrLCR])?\s*$/;
 const DIR_RUN = /^(?:\/(?:[^\s\/<>\[\]{}()]|\([^)\n]*\))+)+/, ALIGN_DIRS = new Set(['l', 'c', 'r', 'left', 'center', 'centre', 'right']);
 const knownDirective = d => { const part = {}; parseSegmentDirective(d, part); return Object.keys(part).length > 0; };
+/** Every directive by its name, for the editor's hints (a name, then :value where it takes one). */
+export const DIRECTIVE_NAMES = ['l', 'c', 'r', 'left', 'center', 'right', 'f', 'font', 'scale', 'track', 'basis', 'jitter', 'color', 'colour',
+  'op', 'blend', 'rot', 'arc', 'wave', 'gap', 'glass', 'cut', 'code', 'fx', 'fx0', 'fx1', 'fx2', 'effect', 'under', 'grad',
+  ...Object.keys(FLAG_GRADIENTS)];
+/**
+ * What the editor says of a directive PML can't read (null when it reads it): `{ kind, name, like }` — kind 'value'
+ * when the name is one PML knows but what follows it isn't (/blend:fizz, /f with no number), 'name' when the name is
+ * unknown, with `like` the nearest known name when one is close (/glas → glass). Named styles (/@name) are checked
+ * against `styles`, the names the poem defines.
+ */
+export function directiveHint(d, styles){
+  const t = String(d || '').trim();
+  if(!t) return null;
+  if(t[0] === '@') return styles && styles.has(t.slice(1).toLowerCase()) ? null : { kind: 'style', name: t.slice(1) };
+  if(knownDirective(t)) return null;
+  const name = t.toLowerCase().split(/[:,]/)[0];
+  if(name === 'c' && t.length > 1) return { kind: 'value', name, like: 'color' };   // (/c is centring: a colour is /color:)
+  if(DIRECTIVE_NAMES.includes(name) || name === '#') return { kind: 'value', name };
+  const dist = (a, b) => { const m = a.length, n = b.length, D = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+    for(let j = 1; j <= n; j++) D[0][j] = j;
+    for(let i = 1; i <= m; i++) for(let j = 1; j <= n; j++) D[i][j] = Math.min(D[i-1][j] + 1, D[i][j-1] + 1, D[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return D[m][n]; };
+  let like = null, best = 3;
+  for(const k of DIRECTIVE_NAMES){ if(k.length < 2) continue; const v = dist(name, k); if(v < best || (v === best && like && k.length < like.length)){ best = v; like = k; } }
+  return { kind: 'name', name, like: best <= (name.length > 4 ? 2 : 1) ? like : null };
+}
 // the [x/lg] gradient forms, masked (same length) so their brackets are not taken for a block's
 const maskGradients = (t, a1, a2) => { const mask = m => '\u0001'.repeat(m.length);
   if(a1) t = t.replace(/\[([^\[\]]*?)\/(?:lg|rg)\]/g, mask); if(a2) t = t.replace(/\{([^\{\}]*?)\/(?:lg|rg)\}/g, mask); return t; };
 export function expandBlocks(rawText, accent1On, accent2On){
   const raw = rawText.replace(/\r\n/g,'\n').split('\n');
-  if(!/[\[{<]/.test(rawText)) return raw;
+  if(!/[\[{<*]/.test(rawText)) return raw;
   const lines = raw.map(applyEscapes), isText = lines.map((l, k) => raw[k] !== '' && !parseRule(raw[k].trim(), accent1On, accent2On));
-  const items = [], br = [], segOpen = [];   // items: { kind: 'br'|'seg', l0, p0, l1, p1, open, close, dirs }
-  for(let k = 0; k < lines.length; k++){ if(!isText[k]) continue;
-    const L = lines[k], M = maskGradients(L, accent1On, accent2On), G = segGroupsOf(L);
-    // the segments: openers left open and closers with no opener on their line pair across lines
-    if(!G.old){ for(const c of G.freeClose){ const o = segOpen.pop(); if(o) items.push({ kind: 'seg', l0: o.l, p0: o.p, l1: k, p1: c.at, open: '<', close: c.dirs + '>' }); }
-      for(const p of G.freeOpen) segOpen.push({ l: k, p }); }
-    // the brackets, by the tokenizer's own rules
-    for(let i = 0; i < M.length; i++){
-      const two = M.slice(i, i + 2), last = t => { for(let j = br.length - 1; j >= 0; j--) if(br[j].t === t) return j; return -1; };
-      if(accent1On && accent2On && (two === '{[' || two === '[{')){ br.push({ t: two === '{[' ? 'gradFwd' : 'gradRev', open: two, l: k, p: i }); i++; continue; }
-      if(two === ']}' || two === '}]'){ const f = last('gradFwd'), r = last('gradRev');
-        if(f !== -1 || r !== -1){ const o = br.splice(Math.max(f, r), 1)[0]; items.push({ kind: 'br', l0: o.l, p0: o.p, l1: k, p1: i, end: i + 2, open: o.open, close: ']}' }); i++; continue; } }
-      const ch = M[i], t = ch === '[' && accent1On ? 'accent1' : ch === '{' && accent2On ? 'accent2' : null;
-      if(t){ br.push({ t, open: ch, l: k, p: i }); continue; }
-      const ct = ch === ']' && accent1On ? 'accent1' : ch === '}' && accent2On ? 'accent2' : null;
-      if(ct){ const j = last(ct); if(j !== -1){ const o = br.splice(j, 1)[0]; items.push({ kind: 'br', l0: o.l, p0: o.p, l1: k, p1: i, end: i + 1, open: o.open, close: ch }); } } } }
+  // (the delimiters are found as the tokenizer finds them; one opened and never closed ends with its line, as in the
+  //  tokenizer, so it is dropped there: found by looking again until nothing more is dropped)
+  let items, drop = new Set();
+  for(let round = 0; round < 4; round++){
+    items = []; const br = [], segOpen = [], dangling = new Set();
+    for(let k = 0; k < lines.length; k++){ if(!isText[k]) continue;
+      const L = lines[k], M = maskGradients(L, accent1On, accent2On), G = segGroupsOf(L);
+      // the segments: openers left open and closers with no opener on their line pair across lines
+      if(!G.old){ for(const c of G.freeClose){ const o = segOpen.pop(); if(o) items.push({ kind: 'seg', l0: o.l, p0: o.p, l1: k, p1: c.at, open: '<', close: c.dirs + '>' }); }
+        for(const p of G.freeOpen) segOpen.push({ l: k, p }); }
+      // the brackets, bold and italic, by the tokenizer's own rules (strike and underline are each line's own)
+      let prev, strike = false, under = false;
+      const isSp = c => c === ' ' || c === '\t' || c === undefined, last = t => { for(let j = br.length - 1; j >= 0; j--) if(br[j].t === t) return j; return -1; };
+      const close = (j, i, len, tok, kind) => { const o = br.splice(j, 1)[0]; items.push({ kind, l0: o.l, p0: o.p, l1: k, p1: i, end: i + len, open: o.open, close: tok }); };
+      for(let i = 0; i < M.length; i++){
+        const two = M.slice(i, i + 2), ch = M[i];
+        if(accent1On && accent2On && (two === '{[' || two === '[{')){ br.push({ t: two === '{[' ? 'gradFwd' : 'gradRev', open: two, l: k, p: i }); i++; continue; }
+        if(two === ']}' || two === '}]'){ const f = last('gradFwd'), r = last('gradRev'); if(f !== -1 || r !== -1){ close(Math.max(f, r), i, 2, ']}', 'br'); i++; continue; } }
+        if(two === '~~'){ if(strike && !isSp(prev)){ strike = false; i++; continue; } if(!strike && !isSp(M[i + 2])){ strike = true; i++; continue; } }
+        if(two === '**'){ const j = last('bold'); if(j !== -1 && !isSp(prev)){ close(j, i, 2, '**', 'em'); i++; continue; } if(j === -1 && !isSp(M[i + 2])){ br.push({ t: 'bold', open: '**', l: k, p: i }); i++; continue; } }
+        if(ch === '*'){ const j = last('italic'); if(j !== -1 && !isSp(prev)){ close(j, i, 1, '*', 'em'); continue; } if(j === -1 && !isSp(M[i + 1])){ br.push({ t: 'italic', open: '*', l: k, p: i }); continue; } }
+        if(ch === '_'){ if(under && !isSp(prev)){ under = false; continue; } if(!under && !isSp(M[i + 1])){ under = true; continue; } }
+        const t = ch === '[' && accent1On ? 'accent1' : ch === '{' && accent2On ? 'accent2' : null;
+        if(t){ br.push({ t, open: ch, l: k, p: i }); continue; }
+        const ct = ch === ']' && accent1On ? 'accent1' : ch === '}' && accent2On ? 'accent2' : null;
+        if(ct){ const j = last(ct); if(j !== -1){ close(j, i, 1, ch, 'br'); continue; } }
+        if(ch !== SENT_JOINT) prev = ch; }
+      // what was opened and is known never to close ends here
+      for(let j = br.length - 1; j >= 0; j--) if(drop.has(br[j].l + ':' + br[j].p)) br.splice(j, 1); }
+    for(const o of br) dangling.add(o.l + ':' + o.p);
+    const before = drop.size; for(const d of dangling) drop.add(d); if(drop.size === before) break;
+  }
   // directives right after a bracket's closer: alignment alone at the end of a block's line aligns the block; anything
   // else makes the bracket a segment of its own (a '<' before its opener, a '>' after its directives)
   const edits = lines.map(() => []), align = new Map();
@@ -578,10 +651,14 @@ export function buildLines(rawText, accent1On, accent2On){
         return { justify:p.justify, customColor:p.customColor, customFontIdx:p.customFontIdx, customSize:p.customSize, customTracking:p.customTracking, customBasis:p.customBasis, customJitter:p.customJitter, customEffect:p.customEffect, customTypeEffect:p.customTypeEffect, customGradient:p.customGradient,
                  // undefined unless used, so they vanish when a poem is serialized
                  customFx:p.customFx, under:p.under,
+                 customOpacity:p.customOpacity, customBlend:p.customBlend, customRotate:p.customRotate, customArc:p.customArc, customWave:p.customWave, customGap:p.customGap, customFontName:p.customFontName,
+                 ...(p.glass ? { glass: p.glass } : {}), ...(p.cut ? { cut: true } : {}),
                  // present only on code segments, so every existing poem parses byte-identically
                  ...(p.code ? { code: true } : {}), segments };
       });
-      return {isBlank:false, type, scale, parts, dropCap, smallCaps, rhymeLetter};
+      // a part's /gap is its line's: space after it, as a share of the line's height (only when used)
+      const gap = parts.reduce((g, p) => p.customGap != null ? p.customGap : g, null);
+      return {isBlank:false, type, scale, parts, dropCap, smallCaps, rhymeLetter, ...(gap != null ? { gap } : {})};
     }
 
     let alignOverride = null;

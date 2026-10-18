@@ -197,7 +197,7 @@ default.
 | `index.html` · `poetrypress.css` | markup and all styles |
 | `appEvents.js` | UI wiring and the entry point. The app's state is ONE object (`state`) at its top. Persistence (`PERSISTED`), presets, locks, dice, undo, the draft, dialogs |
 | `canvasRenderer.js` | `render()`: backdrop, texture, vignette, box, border, text, credit, spell. Also the poem's layout (`TEXT_LAYOUT`) and Text Clearing |
-| `textParsers.js` · `pmlVars.js` · `effects.js` | PML → lines and segments (`buildLines`) · `§Variables`, resolved before PML parses · the text effect stack and `/fx:` |
+| `textParsers.js` · `pmlVars.js` · `effects.js` | PML → lines and segments (`buildLines`) · `§Variables` and named styles (`§style`), resolved before PML parses · the text effect stack and `/fx:` |
 | `stitches.js` | decorative motifs along any path (rules, borders, seams, inner edges) |
 | `boxFx.js` | the inset box's glass and GPU blends |
 | `chooser.js` · `swatches.js` | the surface menus shown as tiles (thumbnails kept in localStorage `uv.thumbs.v2`, each with a stamp: its surface's fingerprints, written into release.js by the build, the look it wears and the painter; only a changed surface is painted again) · the painted preset tiles |
@@ -881,6 +881,9 @@ the test to the new intent; never weaken it just to pass.
   - New parser fields are absent (or `undefined`) when unused.
   - Every styling field a segment can set is listed in `resolvePartStyle`'s
     early-return guard, or it is silently ignored.
+  - Breaks so far, each approved by Ruby and noted in PML.md: brackets over
+    lines (Saturn–Ijiraq); bold and italic over lines, and `<3` always a
+    heart (Saturn–Phoebe).
 - **Font order is frozen** (`/f:N` picks by position): append only.
 - **Word-seed banks are frozen:** never edit, reorder or append.
 - **The perfect presets** (Andromeda, Euphoria, Lotus Bloom, Gateway,
@@ -1012,9 +1015,13 @@ faster, with Ruby's approval from test renders)
 `persistenceCoverage.test.mjs` fails until it is saved and restored.
 
 **Add PML:** parse in textParsers.js (the field is absent when unused); add
-it to the line-rebuild copy list and to `resolvePartStyle`'s guard; document
+it to the line-rebuild copy list and to `resolvePartStyle`'s guard (or, for
+what acts on the whole part — `/rot`, `/glass`, `/cut` — to `drawPartRun`);
+add its name to `DIRECTIVE_NAMES`, so the editor's hints know it; document
 it in the in-app help and PML.md, with an example (§11: teaching, not
-shortening).
+shortening). Anything that moves letters off their line (`/arc`, `/wave`)
+must also give the line room (`lineBend`), in fitting, the block's height
+and the draw loop alike.
 
 **Add a test** (keep the suite worth running)
 1. Test **behavior**: call the module, or boot the app in the mock (`load` a

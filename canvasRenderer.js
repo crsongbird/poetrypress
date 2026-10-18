@@ -434,8 +434,13 @@ function drawCodeBackdrop(ctx, x, y, w, size, style){
 
 function resolvePartStyle(part, baseStyle){
   // nothing of its own: the run's style stands (every field a segment can set must be listed here)
-  if(!part.customColor && !part.customEffect && !part.customTypeEffect && !part.customFx && !part.under && !part.customGradient && part.customTracking==null && part.customJitter==null) return baseStyle;
+  if(!part.customColor && !part.customEffect && !part.customTypeEffect && !part.customFx && !part.under && !part.customGradient && part.customTracking==null && part.customJitter==null && part.customOpacity==null && !part.customBlend && part.customArc==null && !part.customWave) return baseStyle;
   const s = { ...baseStyle };
+  // /op: and /blend: — how the part's ink lies on the page; /arc and /wave — the path its letters follow
+  if(part.customOpacity!=null) s.opacity = part.customOpacity/100;
+  if(part.customBlend) s.blend = part.customBlend;
+  if(part.customArc!=null && part.customArc !== 0) s.arc = part.customArc;
+  if(part.customWave && part.customWave.amp) s.wave = part.customWave;
   if(part.customColor){
     s.baseFillStyle = part.customColor;
     s.accent1Color = part.customColor;
@@ -634,11 +639,38 @@ function drawErodedText(ctx, str, px, py, fill, size, k){
   ctx.drawImage(off, px - pad, py - pad);
 }
 
+/** /arc and /wave: where a letter sits on its run's path. Given how far along the run (0 … its width) a letter's middle
+ *  is, how far the letter moves and turns — so the letters follow a circle's arc (positive bows up, like a rainbow;
+ *  negative sags, like a bowl; N is the degrees of circle the run spans) or a wave (amp a share of the size, so many
+ *  cycles across the run). Neither changes the run's width, so fitting and alignment are as for a straight line. */
+export function runShape(style, total, size){
+  const arc = style.arc ? style.arc*Math.PI/180 : 0, wave = style.wave && style.wave.amp ? style.wave : null;
+  if(!(total > 0) || (!arc && !wave)) return null;
+  const R = arc ? total/arc : 0, A = wave ? wave.amp/100*size : 0, k = wave ? 2*Math.PI*wave.cycles/total : 0;
+  // (the arc is hung about the line's own height: its middle rises half as far as its ends fall)
+  const sag = arc ? R*(1 - Math.cos(arc/2))/2 : 0;
+  return s => {
+    let dx = 0, dy = 0, rot = 0; const m = s - total/2;
+    if(arc){ const f = m/R; dx = R*Math.sin(f) - m; dy = R*(1 - Math.cos(f)) - sag; rot = f; }
+    if(wave){ dy -= A*Math.sin(k*s); rot += Math.atan(-A*k*Math.cos(k*s)); }
+    return { dx, dy, rot };
+  };
+}
+
 function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, style){
   const { baseFillStyle, accent1Color, accent2Color, quoteAlpha } = style;
   const fx = style.fx || [], erode = erosionOf(fx);
 
   const widths = segments.map(seg=>measureSegWidth(ctx, fontDef, seg, size, style.customTracking, style.smallCaps));
+  const shape = runShape(style, widths.reduce((a, b) => a + b, 0), size);
+  // a rule along the run (an underline, a strike, an /under: stitch), v below the letters' top: straight, or on the run's path
+  const runPath = (x0, x1, v) => {
+    if(!shape) return [[x0, cursorY + v], [x1, cursorY + v]];
+    const n = Math.max(2, Math.ceil((x1 - x0)/(size*0.15))), a = v - size/2, pts = [];
+    for(let j = 0; j <= n; j++){ const xx = x0 + (x1 - x0)*j/n, sh = shape(xx - startX);
+      pts.push([xx + sh.dx - Math.sin(sh.rot)*a, cursorY + size/2 + sh.dy + Math.cos(sh.rot)*a]); }
+    return pts;
+  };
   let x = startX;
   let charSeed = 0; // advances across the whole run, not just per-segment, so jitter doesn't repeat identically at the start of every segment
 
@@ -649,7 +681,8 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     ctx.font = fontString(fontDef, seg, size);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.globalAlpha = quoteAlpha;
+    ctx.globalAlpha = quoteAlpha*(style.opacity != null ? style.opacity : 1);
+    if(style.blend) ctx.globalCompositeOperation = style.blend;
 
     let segFill = baseFillStyle;
     if(style.customGradientColors && style.customGradientColors.length>=2){
@@ -705,7 +738,7 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     // glyphs draw with no leftover shadow: effects are their own passes
     ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
 
-    const needsPerChar = tracking !== 0 || hasEmoji || style.smallCaps || jitterMag > 0;
+    const needsPerChar = tracking !== 0 || hasEmoji || style.smallCaps || jitterMag > 0 || !!shape;
 
     if(!needsPerChar){
       drawEffects(ctx, seg.text, x, cursorY, size, segFill, fx);
@@ -740,15 +773,19 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
           // past that letters stop reading as letters.
           const maxRot = Math.min(12, 4 * ((style.customJitter || 0) / 100)) * Math.PI / 180;
           const rot = jitterMag > 0 ? charJitterOffset(charSeed*31.7 + 9.3) * maxRot : 0;
-          const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0);
+          // (on an /arc or a /wave, the letter moves onto the path and turns with it)
+          const sh = shape ? shape(cx - startX + chW/2) : null;
+          const gx = cx + jx + (sh ? sh.dx : 0);
+          const py = cursorY + jy + (isLower ? size*(1-SMALL_CAP_RATIO) : 0) + (sh ? sh.dy : 0);
+          const turn = rot + (sh ? sh.rot : 0);
           // Rotate ABOUT the glyph's centre while keeping absolute coordinates,
           // so a gradient fill (defined in absolute space) stays aligned.
-          const rotating = rot !== 0;
+          const rotating = turn !== 0;
           if(rotating){
-            const rx = cx + jx + chW/2, ry = py + size/2;
-            ctx.save(); ctx.translate(rx, ry); ctx.rotate(rot); ctx.translate(-rx, -ry);
+            const rx = gx + chW/2, ry = py + size/2;
+            ctx.save(); ctx.translate(rx, ry); ctx.rotate(turn); ctx.translate(-rx, -ry);
           }
-          draw(ch, drawCh, cx + jx, py);
+          draw(ch, drawCh, gx, py);
           if(rotating) ctx.restore();
           if(isLower) ctx.font = normalFont;
           cx += chW + tracking;
@@ -782,15 +819,15 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     if(style.under){
       // an underline decoration (/under:…), drawn by the stitch library
       const u = style.under, wt = (u.weight || 100)/100;
-      drawStitch(ctx, pathFromPoints([[x, cursorY + size*0.95], [x + w, cursorY + size*0.95]], false), u.style,
+      drawStitch(ctx, pathFromPoints(runPath(x, x + w, size*0.95), false), u.style,
         { period: size*0.38, amp: size*0.075, width: Math.max(rpx(1), size*0.04*wt),
           color: u.color || (typeof segFill === 'string' ? segFill : (style.plainTextColor || '#000')), side: 1 });
     }
     if(seg.underline || seg.strike){
-      const lineY = seg.underline ? cursorY + size*0.92 : cursorY + size*0.55;
+      const pts = runPath(x, x + w, seg.underline ? size*0.92 : size*0.55);
       ctx.beginPath();
-      ctx.moveTo(x, lineY);
-      ctx.lineTo(x+w, lineY);
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
       ctx.strokeStyle = segFill;
       ctx.lineWidth = Math.max(rpx(1), size*0.045);
       ctx.stroke();
@@ -800,6 +837,88 @@ function drawTextRun(ctx, segments, startX, cursorY, size, lineHeight, fontDef, 
     x += w;
   }
   return x;
+}
+
+/** A part drawn: its letters as drawTextRun draws them, turned by /rot about the part's middle, or — for /glass and
+ *  /cut — as windows (drawWindowRun). `prep(c)` draws what goes under the letters (a code backdrop) and returns the
+ *  style to draw them in. Returns where the run ends, as drawTextRun does (a turn moves no other part). */
+function drawPartRun(ctx, part, x, y, w, size, lineHeight, fontDef, prep){
+  const rot = part.customRotate ? part.customRotate*Math.PI/180 : 0;
+  const turn = c => { if(!rot) return; const rx = x + w/2, ry = y + size*0.55; c.translate(rx, ry); c.rotate(rot); c.translate(-rx, -ry); };
+  let end = x + w;
+  ctx.save(); turn(ctx);
+  try {
+    const style = prep(ctx);
+    if(part.glass || part.cut){ ctx.restore(); ctx.save(); drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn); }
+    else end = drawTextRun(ctx, part.segments, x, y, size, lineHeight, fontDef, style);
+  } finally { ctx.restore(); }
+  return end;
+}
+
+/** GLASS AND CUT LETTERS. The letters, white, on a small layer the size of the run's reach; what shows in them is
+ *  laid into that shape (source-in): for /glass, the page behind them as it is now, softened through the inset box's
+ *  own glass (boxFx.js — frosted, or for glass:clear only bent) and lit; for /cut, the page as it was before the
+ *  surfaces (kept as UNDER_CANVAS when the poem asks for it), so the letters are windows through the surface. Their
+ *  edges are drawn inside them — a shadow thrown by the letters' outside: light along the top and shade along the
+ *  bottom for glass, the surface's own edge for a cut — and the layer goes onto the page with the part's /op and
+ *  /blend. Effects (/fx) are not drawn for windows; the letters still count for Blend with Text and Cut Out by Text. */
+const WIN_LAYERS = [null, null, null];
+function winLayer(i, w, h){
+  const c = WIN_LAYERS[i] || (WIN_LAYERS[i] = document.createElement('canvas'));
+  if(c.width !== w || c.height !== h){ c.width = w; c.height = h; }
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetX = 0; x.shadowOffsetY = 0; x.clearRect(0, 0, w, h);
+  return [c, x];
+}
+let UNDER_CANVAS = null, UNDER_NOW = false;
+function drawWindowRun(ctx, part, x, y, w, size, lineHeight, fontDef, style, rot, turn){
+  const PW = ctx.canvas.width, PH = ctx.canvas.height;
+  // the run's reach: its box, bowed by an arc, lifted by a wave, turned by /rot, and room for its edges
+  const arcA = style.arc ? Math.min(Math.PI*1.9, Math.abs(style.arc)*Math.PI/180) : 0;
+  const bend = (arcA ? (w/arcA)*(1 - Math.cos(arcA/2)) : 0) + (style.wave ? Math.abs(style.wave.amp)/100*size : 0);
+  const bh0 = size*1.2 + 2*bend, cs = Math.abs(Math.cos(rot)), sn = Math.abs(Math.sin(rot));
+  const hw = (cs*w + sn*bh0)/2 + size*0.4, hh = (sn*w + cs*bh0)/2 + size*0.4, cx = x + w/2, cy = y + size*0.55;
+  const bx = Math.max(0, Math.floor(cx - hw)), by = Math.max(0, Math.floor(cy - hh));
+  const bw = Math.min(PW, Math.ceil(cx + hw)) - bx, bh = Math.min(PH, Math.ceil(cy + hh)) - by;
+  if(bw < 2 || bh < 2) return;
+  // 1. the letters' shapes (no ink sampling for Protect the Text: what shows in them is the page itself)
+  const [M, mx] = winLayer(0, bw, bh);
+  mx.translate(-bx, -by); turn(mx);
+  const keepMask = GLYPH_MASK, keepInks = PROBE_INKS; GLYPH_MASK = null; PROBE_INKS = null;
+  try {
+    drawTextRun(mx, part.segments, x, y, size, lineHeight, fontDef, { ...style, baseFillStyle: '#fff', accent1Color: '#fff', accent2Color: '#fff',
+      plainTextColor: '#fff', customGradientColors: null, fx: [], under: style.under ? { ...style.under, color: '#fff' } : null, opacity: null, blend: null, quoteAlpha: 1 });
+  } finally { GLYPH_MASK = keepMask; PROBE_INKS = keepInks; }
+  mx.setTransform(1, 0, 0, 1, 0, 0);
+  if(GLYPH_MASK){ GLYPH_MASK.save(); GLYPH_MASK.setTransform(1, 0, 0, 1, 0, 0); GLYPH_MASK.globalAlpha = style.quoteAlpha; GLYPH_MASK.drawImage(M, bx, by); GLYPH_MASK.restore(); }
+  // 2. what shows through them
+  const [L, lx] = winLayer(1, bw, bh), S = RENDER_SCALE, ink = typeof style.baseFillStyle === 'string' ? style.baseFillStyle : (style.plainTextColor || '#000');
+  lx.drawImage(M, 0, 0); lx.globalCompositeOperation = 'source-in'; lx.imageSmoothingEnabled = true;
+  if(part.cut) lx.drawImage(UNDER_NOW && UNDER_CANVAS ? UNDER_CANVAS : ctx.canvas, bx, by, bw, bh, 0, 0, bw, bh);
+  else {
+    const g = part.glass, clear = g.kind === 'clear';
+    const amt = Math.max(0, Math.min(1, (size*(clear ? 0.05 : 0.12)/S - 3)/57));
+    const soft = boxGlass(ctx.canvas, { x: bx, y: by, w: bw, h: bh }, clear ? 'lens' : 'frost', clear ? 0.35 : amt, clear ? 0.15 : 0.35, S, 11);
+    lx.drawImage(soft || ctx.canvas, ...(soft ? [0, 0, soft.width, soft.height] : [bx, by, bw, bh]), 0, 0, bw, bh);
+    // lit like frosted glass, and coloured: by its tint, or faintly by the ink the words would have had
+    lx.globalCompositeOperation = 'source-atop';
+    if(!clear && !g.tint){ lx.globalAlpha = 0.16; lx.fillStyle = '#fff'; lx.fillRect(0, 0, bw, bh); }
+    lx.globalAlpha = g.tint ? 0.34 : clear ? 0.12 : 0.22; lx.fillStyle = g.tint || ink; lx.fillRect(0, 0, bw, bh); lx.globalAlpha = 1;
+  }
+  // 3. the edges, inside the letters: the letters' outside (a sheet with letter-shaped holes), its shadow thrown in
+  const [O, ox] = winLayer(2, bw, bh), e = Math.max(S, size*0.028), blur = Math.max(S, size*0.035);
+  ox.fillStyle = '#000'; ox.fillRect(0, 0, bw, bh); ox.globalCompositeOperation = 'destination-out'; ox.drawImage(M, 0, 0);
+  const edge = (color, dx, dy, b) => { lx.save(); lx.globalCompositeOperation = 'source-atop'; lx.shadowColor = color; lx.shadowBlur = b;
+    lx.shadowOffsetX = dx; lx.shadowOffsetY = dy; lx.globalAlpha = 1; lx.drawImage(O, -PW*4, 0); lx.restore(); };
+  // (drawn far off the layer, its shadow brought back by the offset: only the shadow falls inside the letters)
+  const off = PW*4;
+  if(part.cut){ edge('rgba(0,0,0,0.55)', off + e, e, blur); edge('rgba(255,255,255,0.22)', off - e*0.6, -e*0.6, blur); }
+  else { edge('rgba(255,255,255,0.75)', off + e, e, blur); edge('rgba(0,0,0,0.32)', off - e, -e, blur); }
+  // 4. onto the page
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = (style.quoteAlpha || 1)*(style.opacity != null ? style.opacity : 1);
+  if(style.blend) ctx.globalCompositeOperation = style.blend;
+  ctx.drawImage(L, bx, by); ctx.restore();
 }
 
 // Computes a line's full width once, with measureSegWidth — the same measure
@@ -850,8 +969,8 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
     const widths = new Map();
     for(const line of lines){
       if(line.isBlank){ totalHeight += size*0.55*spacing; continue; }
-      totalHeight += size*line.scale*1.32*spacing;
       const w = computeLineWidths(ctx, line, size, fontDef);
+      totalHeight += size*line.scale*1.32*spacing*lineGapK(line) + lineBend(line, w.partWidths, size*line.scale);
       widths.set(line, w);
       if(w.total > maxLineWidth) maxLineWidth = w.total;
     }
@@ -894,12 +1013,30 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
 // letter) and the actual draw code.
 const DROP_CAP_SCALE = 2.2;
 
-function blockHeight(lines, size, spacing){
+/** /gap:N — the room a line takes, grown (or, below 0, drawn in) by N% of its own height (100: a line's worth more). */
+function lineGapK(line){ return line.gap != null ? Math.max(0.2, 1 + line.gap/100) : 1; }
+/** How far a line's /arc or /wave carries its letters up and down, all told (partWidths: its parts' widths at `size`,
+ *  the line's own size): room the line is given besides its height, half above it and half below. 0 for a straight line. */
+function lineBend(line, partWidths, size){
+  if(!line.parts || !partWidths) return 0;
+  let b = 0;
+  line.parts.forEach((p, i) => {
+    const w = partWidths[i] || 0, ps = partSizeFor(p, size);
+    let e = 0;
+    if(p.customArc){ const a = Math.min(Math.PI*1.9, Math.abs(p.customArc)*Math.PI/180); e += (w/a)*(1 - Math.cos(a/2)); }
+    if(p.customWave && p.customWave.amp) e += 2*Math.abs(p.customWave.amp)/100*ps;
+    if(e > b) b = e;
+  });
+  return b;
+}
+
+function blockHeight(lines, size, spacing, widths){
   let total = 0;
   for(const line of lines){
     if(line.isBlank){ total += size*0.55*spacing; continue; }
     const lineOwnHeight = size*line.scale*1.32*spacing;
-    total += line.dropCap ? Math.max(lineOwnHeight, size*line.scale*DROP_CAP_SCALE*1.05) : lineOwnHeight;
+    total += (line.dropCap ? Math.max(lineOwnHeight, size*line.scale*DROP_CAP_SCALE*1.05) : lineOwnHeight) + lineOwnHeight*(lineGapK(line) - 1)
+      + (widths && widths.get(line) ? lineBend(line, widths.get(line).partWidths, size*line.scale) : 0);
   }
   return total;
 }
@@ -1036,12 +1173,25 @@ function pmlVarContext(W, H){
   };
 }
 
+/** A font by its name: the family exactly (any case, spaces or none), then a family that starts with it, then a label
+ *  that holds it ("Cinzel", "cormorant", "Bodoni"); -1 when none does. */
+export function fontIndexByName(name){
+  const k = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''), n = k(name);
+  if(!n) return -1;
+  let i = FONTS.findIndex(f => k(f.family) === n);
+  if(i < 0) i = FONTS.findIndex(f => k(f.family).startsWith(n));
+  if(i < 0) i = FONTS.findIndex(f => k(f.label).includes(n));
+  return i;
+}
+
 let linesCacheKey = null;
 let linesCacheValue = null;
 function getCachedLines(rawText, accent1On, accent2On){
   const key = rawText + '\u0000' + accent1On + '\u0000' + accent2On;
   if(key === linesCacheKey) return linesCacheValue;
   linesCacheValue = buildLines(rawText, accent1On, accent2On);
+  // (/font:Name — a face by its name, found among the page's fonts; an unknown name leaves the line's own)
+  for(const ln of linesCacheValue) if(ln.parts) for(const pt of ln.parts) if(pt.customFontName && pt.customFontIdx == null){ const i = fontIndexByName(pt.customFontName); if(i >= 0) pt.customFontIdx = i; }
   linesCacheKey = key;
   return linesCacheValue;
 }
@@ -1241,6 +1391,10 @@ function renderInto(canvas){
     ctx.fillStyle = bg1;
     ctx.fillRect(0,0,W,H);
   }
+  // (/cut letters are windows to the page under the surfaces: when the poem has one, the page is kept as it is now)
+  UNDER_NOW = /\/cut(?![a-z0-9])/i.test(($('poemText') || {}).value || '');
+  if(UNDER_NOW){ if(!UNDER_CANVAS) UNDER_CANVAS = document.createElement('canvas'); if(UNDER_CANVAS.width !== W || UNDER_CANVAS.height !== H){ UNDER_CANVAS.width = W; UNDER_CANVAS.height = H; }
+    const ux = UNDER_CANVAS.getContext('2d', { willReadFrequently: true }); ux.globalCompositeOperation = 'copy'; ux.globalAlpha = 1; ux.drawImage(canvas, 0, 0); ux.globalCompositeOperation = 'source-over'; }
 
   let textFill = null, textCut = false;
   // SURFACE LAYERS (Ruby: every control for both, any blend for each): the lower first, then the upper,
@@ -1512,7 +1666,7 @@ function renderInto(canvas){
 
   const shapeKey = (linesCacheKey && linesCacheKey.startsWith(rawText)) ? shapeText + linesCacheKey.slice(rawText.length) : null;
   const { size: baseSize, widths: fitWidths } = getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing, shapeKey);
-  const totalHeight = blockHeight(lines, baseSize, lineSpacing);
+  const totalHeight = blockHeight(lines, baseSize, lineSpacing, fitWidths);
 
   let startY;
   if(currentValign==='top') startY = paddingY;
@@ -1604,6 +1758,9 @@ function renderInto(canvas){
     if(line.parts){
       const cached = fitWidths.get(line);
       const partWidthMap = new Map(line.parts.map((p,i)=>[p, cached.partWidths[i]]));
+      // (a line on an arc or a wave is given room for it: half above, and half below, after it's drawn)
+      const bend = lineBend(line, cached.partWidths, size);
+      cursorY += bend/2;
       const flowingParts = line.parts.filter(p=>p.justify===null);
       const anchoredParts = line.parts.filter(p=>p.justify!==null);
 
@@ -1643,10 +1800,10 @@ function renderInto(canvas){
       }
 
       for(const part of flowingParts){
-        const partSize = partSizeFor(part, size);
-        let pStyle = resolvePartStyle(part, style);
-        if(part.code) pStyle = drawCodeBackdrop(ctx, flowX, partCursorY(part, partSize), partWidthMap.get(part), partSize, pStyle);
-        flowX = drawTextRun(ctx, part.segments, flowX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
+        const partSize = partSizeFor(part, size), pY = partCursorY(part, partSize), pW = partWidthMap.get(part), at = flowX;
+        flowX = drawPartRun(ctx, part, at, pY, pW, partSize, lineHeight, partFont(part), c => {
+          const pStyle = resolvePartStyle(part, style);
+          return part.code ? drawCodeBackdrop(c, at, pY, pW, partSize, pStyle) : pStyle; });
       }
 
       drawRhymeMarker(flowX);
@@ -1658,13 +1815,14 @@ function renderInto(canvas){
         const pX = part.justify==='center' ? (W/2 - pWidth/2)
           : part.justify==='right' ? (W - paddingX - pWidth)
           : paddingX;
-        let pStyle = resolvePartStyle(part, style);
-        if(part.code) pStyle = drawCodeBackdrop(ctx, pX, partCursorY(part, partSize), pWidth, partSize, pStyle);
-        drawTextRun(ctx, part.segments, pX, partCursorY(part, partSize), partSize, lineHeight, partFont(part), pStyle);
-        rec(pX, pX + pWidth, partCursorY(part, partSize), partSize*1.15);
+        const pY = partCursorY(part, partSize);
+        drawPartRun(ctx, part, pX, pY, pWidth, partSize, lineHeight, partFont(part), c => {
+          const pStyle = resolvePartStyle(part, style);
+          return part.code ? drawCodeBackdrop(c, pX, pY, pWidth, partSize, pStyle) : pStyle; });
+        rec(pX, pX + pWidth, pY, partSize*1.15);
       }
 
-      cursorY += lineHeight;
+      cursorY += lineHeight*lineGapK(line) + bend/2;
       continue;
     }
 

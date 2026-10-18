@@ -25,6 +25,8 @@ once renders the same ever after.
 
 Nesting works: `**bold [with accent] still bold**`
 
+`<3` is always a heart: it never opens a segment.
+
 Try: `a [red] word, a {blue} word, and {[both at once]}`
 
 ### Line prefixes
@@ -66,7 +68,19 @@ Wrap part of a line in `<…>` and chain directives after it.
 | Directive | Effect | Bare form |
 |---|---|---|
 | `#:hex` | custom color | — |
+| `color:name` | a color by its name: any CSS name (`midnightblue`), the app's own (`rose` `oxblood` `moss` `bone` `parchment` `graphite` `teastain` `clay` `sage` `ink` `starlight` `ember`), or `#hex` | — |
 | `f:N` | typeface by index | — |
+| `font:Name` | typeface by its name: `font:Cinzel`, `font:cormorant` | — |
+| `op:N` | opacity, % | 60 |
+| `blend:mode` | how the letters lie on the page: `multiply` (ink pressed into the paper), `screen`, `overlay`, `soft-light`, `hard-light`, `darken`, `lighten`, `dodge`, `burn`, `difference`, `exclusion`, `hue`, `saturation`, `color`, `luminosity` | multiply |
+| `rot:N` | turn the segment by N degrees, about its middle | −8 |
+| `arc:N` | the letters on an arc spanning N degrees of a circle; positive bows up, negative sags | 30 |
+| `wave:amp,cycles` | the letters on a wave: height as % of the size, and how many waves | 25, 2 |
+| `gap:N` | room after the line, % of its height; negative draws the next line in | 100 |
+| `glass` | frosted glass letters: the page behind them blurred and lit, faintly tinted by the ink | frost |
+| `glass:clear` · `glass:color` | clear glass (the page only bent) · glass tinted any color | — |
+| `cut` | letters as windows through the surface, to the page under it | — |
+| `@name` | a named style's directives (below) | — |
 | `scale:N` | size, % of fitted size | 100 |
 | `track:N` | letter-spacing, % | 100 |
 | `basis:N` | raise; negative lowers | 30 |
@@ -86,6 +100,23 @@ Split a line between alignments:
 ```
 
 Emoji inside a colored span are tinted to match.
+
+Try: `<frosted/glass/scale:140> <and bowed/arc:40> <and turned/rot:-6/op:70>`
+
+### Named styles
+
+Define a style once, on a line of its own, and use it anywhere a directive
+goes with `/@name`. The definition line isn't drawn. A style may use another.
+
+```
+§style ember = /color:ember/glass/scale:120
+§style bright = /@ember/blend:screen
+the <coals/@ember> and the <sparks/@bright/rot:4>
+```
+
+The editor underlines a directive PML can't read (a misspelt name, a value it
+doesn't take, a style or typeface no one has named) and says why on the line
+under the poem.
 
 ### Over many lines, and nesting
 
@@ -111,9 +142,17 @@ that should be colored
 and centered]/c
 ```
 
+Bold and italic run over lines the same way: `**open on one line` and
+`closed on another**` makes both bold.
+
 *Changed (Saturn–Ijiraq on):* a poem that left a bracket open on one line and
 wrote a closer on a later one used to show that closer as text; the block now
-runs between them. `<` read as a literal (as in `<3`) is read as it always was.
+runs between them.
+
+*Changed (Saturn–Phoebe on):* bold and italic left open at a line's end used
+to show their marks as text and end there; they now run on to their closer.
+And `<3` is always a heart: a line such as `<3 you <word/c>` once read the
+heart's `<` as the segment's opener.
 
 ---
 

@@ -54,6 +54,31 @@ tryRender('everything combined in one poem renders without throwing',
   'plain closing line'
 );
 
+// ---- Saturn–Phoebe: glass, cut, blends, shaped lines, named styles, fonts by name ----
+tryRender('/glass renders without throwing', 'a <frosted/glass/scale:150> word');
+tryRender('/glass:clear and a tinted glass render', '<clear/glass:clear> and <rose/glass:rose>');
+tryRender('/cut renders without throwing', 'a <window/cut> through');
+tryRender('/glass turned, on an arc, renders', '<turned glass/glass/rot:-12/arc:40>');
+tryRender('/blend and /op render without throwing', '<pressed/blend:multiply> <faint/op:40> <lit/blend:screen/op:80>');
+tryRender('/arc and /wave render without throwing', '<over the hill/arc:40> <under/arc:-30> <and away/wave:30,2>');
+tryRender('a shaped line with an underline and a stitch renders', '<_bowed_/arc:30/under:wave>');
+tryRender('/rot renders without throwing', '<a turned word/rot:-6>');
+tryRender('/gap renders, either way', 'one<w/gap:120>\ntwo<w/gap:-60>\nthree');
+tryRender('/font:Cinzel renders without throwing', 'a <carved/font:Cinzel> word, an <unknown/font:Nowhere> one');
+tryRender('a named style renders without throwing', '§style ember = /color:ember/glass/scale:120\nthe <coals/@ember> glow');
+tryRender('a code segment turned renders without throwing', '`code` <and `more`/rot:8>');
+
+const { runShape, fontIndexByName } = await import('../canvasRenderer.js');
+const arc = runShape({ arc: 60 }, 300, 50);
+check('an arc is hung about its line: the middle rises as far as the ends fall', Math.abs(arc(150).dx) < 1e-9 && arc(150).dy < 0
+  && Math.abs(arc(150).dy + arc(0).dy) < 1e-9 && Math.abs(arc(150).rot) < 1e-9);
+check('a positive arc bows up: its ends sit lower, turned down the slope', arc(0).dy > 0 && arc(300).dy > 0 && arc(300).rot > 0 && arc(0).rot < 0);
+check('a negative arc sags: its ends sit higher', runShape({ arc: -60 }, 300, 50)(0).dy < runShape({ arc: -60 }, 300, 50)(150).dy);
+const wave = runShape({ wave: { amp: 40, cycles: 1 } }, 400, 50);
+check('a wave rises first, to its height', wave(100).dy < 0 && Math.abs(Math.abs(wave(100).dy) - 20) < 1e-6 && wave(300).dy > 0);
+check('a straight run has no shape', runShape({}, 300, 50) === null && runShape({ arc: 30 }, 0, 50) === null);
+check('a font by its name, any case', fontIndexByName('cinzel') >= 0 && fontIndexByName('Cormorant') >= 0 && fontIndexByName('nowhere') === -1);
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

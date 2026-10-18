@@ -80,6 +80,41 @@ check('#S marks smallCaps and strips the prefix', smallCapsLine.smallCaps === tr
 const normalLine = buildLines('plain text', true, true)[0];
 check('normal lines have dropCap/smallCaps false', normalLine.dropCap === false && normalLine.smallCaps === false);
 
+// ---- Saturn–Phoebe (Ruby approved): glass, cut, blends, opacity, shaped lines, names ----
+const P = firstPart('<w/op:50/blend:screen/rot:-10/arc:30/wave:20,3/gap:150/font:Cinzel/color:rose/glass:#8af/cut>');
+check('/op:50 stores 50', P.customOpacity === 50);
+check('/blend:screen stores screen', P.customBlend === 'screen');
+check('/rot:-10 stores -10', P.customRotate === -10);
+check('/arc:30 stores 30', P.customArc === 30);
+check('/wave:20,3 stores amp and cycles', P.customWave && P.customWave.amp === 20 && P.customWave.cycles === 3);
+check('/gap:150 stores 150, and the line takes it', P.customGap === 150 && buildLines('<w/gap:150>', true, true)[0].gap === 150);
+check('/font:Cinzel keeps the name for the renderer', P.customFontName === 'Cinzel');
+check('/color:rose is the app rose', P.customColor === '#e7a0b8');
+check('/glass:#8af is tinted glass', P.glass && P.glass.kind === 'frost' && P.glass.tint);
+check('/cut marks a window', P.cut === true);
+const bare = firstPart('<w/op/blend/rot/arc/wave/gap/glass>');
+check('bare forms take their defaults', bare.customOpacity === 60 && bare.customBlend === 'multiply' && bare.customRotate === -8
+  && bare.customArc === 30 && bare.customWave.amp === 25 && bare.customWave.cycles === 2 && bare.customGap === 100 && bare.glass.kind === 'frost');
+check('/glass:clear is clear glass', firstPart('<w/glass:clear>').glass.kind === 'clear');
+check('/blend:dodge reads as color-dodge', firstPart('<w/blend:dodge>').customBlend === 'color-dodge');
+check('an unknown blend sets nothing', firstPart('<w/blend:fizz>').customBlend == null);
+check('/colour: is /color:', firstPart('<w/colour:midnightblue>').customColor === '#191970');
+check('/op is held to 0…100', firstPart('<w/op:250>').customOpacity === 100);
+check('a part without the new directives has none of them set',
+  ['customOpacity', 'customBlend', 'customRotate', 'customArc', 'customWave', 'customGap', 'customFontName', 'glass', 'cut'].every(k => firstPart('<w/scale:120>')[k] == null));
+check('a line without /gap has no gap', !('gap' in buildLines('<w/scale:120>', true, true)[0]));
+// <3 is always a heart
+const heart = buildLines('I <3 you <so/scale:150>', true, true)[0];
+check('<3 never opens a segment', heart.parts && heart.parts.some(p => p.customSize === 150 && p.segments.map(s => s.text).join('') === 'so')
+  && heart.parts.map(p => p.segments.map(s => s.text).join('')).join('').includes('<3'));
+// bold and italic run over lines
+const bl = buildLines('**bold over\nlines** done', true, true);
+check('bold left open runs on to its closer', bl[0].segments.every(s => s.bold) && bl[1].segments[0].bold && bl[1].segments[0].text === 'lines'
+  && !bl[1].segments[bl[1].segments.length - 1].bold);
+const it = buildLines('*leaning\nstill* not', true, true);
+check('italic left open runs on to its closer', it[0].segments.every(s => s.italic) && it[1].segments[0].italic && !it[1].segments[it[1].segments.length - 1].italic);
+check('a bold never closed still ends with its line', buildLines('**alone\nplain', true, true)[1].segments.every(s => !s.bold));
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

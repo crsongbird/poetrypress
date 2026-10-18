@@ -106,6 +106,7 @@ and it just happens to be {**Completely FREE**}.
 Have fun!</textarea>
         </div>
       </div>
+      <p class="hint editor-hint" id="poemHint" role="status" aria-live="polite" hidden></p>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
@@ -178,7 +179,9 @@ held on till bright~B</code></p>
         <p>Angle brackets set part of a line apart, so it can be styled on its own. After the words, a slash and a directive say how; chain as many as you like. Each directive also works bare, with a sensible amount: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>, <code>/effect</code>.</p>
         <dl>
           <dt><code>/#:ff00ff</code></dt><dd>a color of its own (a hex code)</dd>
+          <dt><code>/color:rose</code></dt><dd>a color by its name: any web color name (<code>midnightblue</code>), the app’s own (rose, oxblood, moss, bone, parchment, graphite, teastain, clay, sage, ink, starlight, ember), or a hex code</dd>
           <dt><code>/f:4</code></dt><dd>a typeface, by its number in the list at the end</dd>
+          <dt><code>/font:Cinzel</code></dt><dd>a typeface, by its name</dd>
           <dt><code>/scale:150</code></dt><dd>size, as a percent of the size the poem was fitted to</dd>
           <dt><code>/track:150</code></dt><dd>letter-spacing, as a percent</dd>
           <dt><code>/basis:50</code></dt><dd>raises the words; a negative number lowers them</dd>
@@ -194,8 +197,30 @@ held on till bright~B</code></p>
         </dl>
         <p class="pml-ex" data-try="&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;"><code>&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;</code></p>
 
+        <h4>Glass, blends and shaped lines</h4>
+        <p>Words can be made of glass, cut through the surface, pressed into the page, or set on a curve. Each of these works bare too.</p>
+        <dl>
+          <dt><code>/glass</code></dt><dd>frosted glass letters: the page behind them blurred and lit</dd>
+          <dt><code>/glass:clear</code> <code>/glass:rose</code></dt><dd>clear glass, which only bends the page; or glass tinted any color</dd>
+          <dt><code>/cut</code></dt><dd>the letters as windows through the surface, to the page under it</dd>
+          <dt><code>/blend:multiply</code></dt><dd>how the letters lie on the page: multiply (ink pressed into the paper), screen, overlay, soft-light and the rest of the blends</dd>
+          <dt><code>/op:60</code></dt><dd>opacity, as a percent</dd>
+          <dt><code>/arc:30</code></dt><dd>the words on an arc, spanning so many degrees of a circle; a negative arc sags</dd>
+          <dt><code>/wave:25,2</code></dt><dd>the words on a wave: its height, as a percent of the size, and how many waves</dd>
+          <dt><code>/rot:-8</code></dt><dd>the words turned, in degrees, about their middle</dd>
+          <dt><code>/gap:100</code></dt><dd>room after the line, as a percent of its height; a negative gap draws the next line in</dd>
+        </dl>
+        <p class="pml-ex" data-try="&lt;frosted/glass/scale:150&gt; &lt;and pressed/blend:multiply&gt;&#10;&lt;over the hill/arc:40&gt; &lt;and away/wave:30,2&gt;&#10;&lt;a turned word/rot:-6/op:70/gap:60&gt;"><code>&lt;frosted/glass/scale:150&gt; &lt;and pressed/blend:multiply&gt;
+&lt;over the hill/arc:40&gt; &lt;and away/wave:30,2&gt;
+&lt;a turned word/rot:-6/op:70/gap:60&gt;</code></p>
+
+        <h4>Named styles</h4>
+        <p>Name a set of directives once, on a line of its own, and use it anywhere a directive goes with <code>/@</code> and the name. The naming line isn’t drawn, and a style can use another. The editor underlines a directive it can’t read (a misspelt name, a value it doesn’t take, a style or typeface no one has named) and says why under the poem.</p>
+        <p class="pml-ex" data-try="§style ember = /color:ember/glass/scale:120&#10;the &lt;coals/@ember&gt; and the &lt;sparks/@ember/rot:4&gt;"><code>§style ember = /color:ember/glass/scale:120
+the &lt;coals/@ember&gt; and the &lt;sparks/@ember/rot:4&gt;</code></p>
+
         <h4>Over many lines, and within each other</h4>
-        <p>A bracket or a segment can run over several lines: open it on one line and close it on a later one, and every line between takes it. Directives right after a bracket’s closer make it a segment of its own, so <code>[words]/jitter:150</code> works without angle brackets. An alignment alone at the end of a block aligns every line of it. Marks nest: a segment inside a segment takes both, its own directives last. A bracket that never closes still ends with its line.</p>
+        <p>A bracket or a segment can run over several lines: open it on one line and close it on a later one, and every line between takes it. Directives right after a bracket’s closer make it a segment of its own, so <code>[words]/jitter:150</code> works without angle brackets. An alignment alone at the end of a block aligns every line of it. Marks nest: a segment inside a segment takes both, its own directives last. Bold and italic run over lines the same way. A bracket that never closes still ends with its line, and <code>&lt;3</code> is always a heart.</p>
         <p class="pml-ex" data-try="[This is a stanza&#10;that should be colored&#10;and centered]/c&#10;{[We are doing something strange&#10;but bear with me, dear}]/jitter:200&#10;&lt;a &lt;nested/scale:150&gt; segment/track:130&gt;"><code>[This is a stanza
 that should be colored
 and centered]/c

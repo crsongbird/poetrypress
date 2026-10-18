@@ -139,6 +139,17 @@ check('§UVIcon draws the sigil', R('§UVIcon') === R('§Glyph!sigil'));
   check('text without glyphs goes straight to the original', calls.length === 1 && calls[0][1] === 'no glyphs here');
 }
 
+// ---- named styles (Saturn–Phoebe) ----
+{
+  const out = resolvePmlVariables('§style ember = /color:ember/op:80\n§style hot = /@ember /glass\n<embers/@hot/s:120> and <x/@nope>\n`a /@ember`', {});
+  check('a style line is not drawn', !/§style/.test(out));
+  check('a style stands for its directives, one style using another', out.split('\n')[0] === '<embers/color:ember/op:80/glass/s:120> and <x/@nope>');
+  check('an unknown style stays as written', /\/@nope/.test(out));
+  check('a style in code is shown as typed', /\\\/@ember\/code>/.test(out.split('\n')[1]));
+  check('a definition written without its first slash works', resolvePmlVariables('§style a = color:rose\n<w/@a>', {}) === '<w/color:rose>');
+  check('a style that names itself stops', typeof resolvePmlVariables('§style a = /@a\n<w/@a>', {}) === 'string');
+}
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

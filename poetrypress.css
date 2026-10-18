@@ -669,6 +669,10 @@ body.is-mobile .tab-btn.active svg{
 .pml-rhyme    { color:#E0526F; opacity:.9; }
 .pml-escape   { color:#6E6880; }
 .pml-prefix   { color:#9B7FE8; }                 
+/* a directive PML can't read: a wavy rule under it (a decoration, so nothing moves), and the hint line below says why */
+.pml-unknown  { text-decoration:underline wavy #E0526F; text-decoration-thickness:1px; text-underline-offset:2px; }
+.editor-hint  { color:var(--rose); margin-top:4px; }
+.editor-hint[hidden]{ display:none; }
 
 body.is-mobile .editor-input,
 body.is-mobile .editor-mirror,
@@ -1988,8 +1992,12 @@ label, .field > label, .check-row label, .hint small, .ld-values, .fp-in, .fp-ou
 button.ghost, .chip, .seg button, .shortcut-btn, .forge-part, .forge-menu-item, .toast, .toast-act{ font-family:var(--ui-sans); font-weight:400; letter-spacing:0.02em; }
 .hint{ font-family:var(--ui-text); font-style:italic; }
 .hint code, code, kbd{ font-style:normal; }
-output, .val, .readout{ font-family:var(--ui-sans); font-variant-numeric:tabular-nums; }
-select, input[type=text], input[type=number]{ font-family:var(--ui-text); }
+output, .val, .readout, .range-val, .angle-val{ font-family:var(--ui-sans); font-variant-numeric:tabular-nums; }
+/* every control's own words in one face (Ruby: the fonts must agree): what you set or press (fields, menus, the
+   surface chooser, switches, plain buttons) in Alegreya Sans; a dialog's two buttons in the same small capitals */
+select, input[type=text], input[type=number]{ font-family:var(--ui-sans); }
+.modal .btn-row > button{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; font-size:13px; }
+body.is-mobile .modal .btn-row > button{ font-size:clamp(12px,3vw,13px); }
 strong, b{ font-weight:600; }
 
 /* ---------- the top bar: the title in the middle; the Athanor, help and Support at the right ---------- */
@@ -2022,7 +2030,7 @@ body.is-mobile .support-btn{ padding:2px 6px; font-size:11px; }
 @media (max-width: 420px){ body.is-mobile .athanor-top .at-label{ display:none; } body.is-mobile .app-header-title{ font-size:1.15em; } }
 
 /* numbers in the controls stand on the line (Alegreya's figures are old-style by default: lovely in a poem, not in a field) */
-input, select, output, .ld-values, .radio-btn, .seg button, .btn-row button, .val, .readout, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
+input, select, output, .ld-values, .radio-btn, .seg button, .btn-row button, .val, .readout, .range-val, .angle-val, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
 body.is-mobile .card-title, body.is-mobile summary.card-title{ letter-spacing:0.08em; }
 .radio-btn{ font-family:var(--ui-sans); letter-spacing:0.02em; }
 .athanor-top .at-label{ white-space:nowrap; }
@@ -2163,7 +2171,7 @@ select.ch-native{ position:absolute !important; width:1px !important; height:1px
   margin:-1px !important; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; opacity:0; pointer-events:none; }
 .ch-trigger{ width:100%; display:flex; align-items:center; gap:9px; padding:4px 8px 4px 4px; min-height:44px; text-align:left; cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
-  border:1px solid var(--line); color:var(--text-main); font:inherit; font-size:14px; box-shadow:inset 0 1px 2px var(--well); border-radius:0; }
+  border:1px solid var(--line); color:var(--text-main); font:inherit; font-family:var(--ui-sans); font-size:14px; box-shadow:inset 0 1px 2px var(--well); border-radius:0; }
 .ch-trigger:hover{ border-color:color-mix(in srgb, var(--accent-dim) 60%, var(--line)); }
 .ch-trigger:focus-visible{ outline:none; border-color:var(--accent-2); box-shadow:inset 0 1px 2px var(--well), 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent); }
 .ch-trig-thumb{ flex:0 0 34px; width:34px; height:34px; overflow:hidden; border:1px solid var(--line); background:var(--bg-deep); display:grid; place-items:center; }
