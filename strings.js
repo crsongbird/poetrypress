@@ -51,11 +51,6 @@ export const UI_STRINGS = {
   'hint.create_saves_the_current_look_as_a': "Create saves the current look as a spell. Invoke puts it back on the page.",
   'hint.the_grimoire_is_empty_record_a_poe': "The Grimoire is empty. Record saves your poem's text here.",
   'hint.readings':                          "Readings",
-  'hint.tab_write':                         "Write the poem and sign it. The guide below teaches PML, the marks that style it.",
-  'hint.tab_style':                         "The page's shape and how the poem sits on it, and whole looks to start from: presets and your own.",
-  'hint.tab_type':                          "The poem's type: typeface, size, colors, accents and effects.",
-  'hint.tab_page':                          "What the page is made of: backdrop, surface, border, inset box and vignette.",
-  'hint.tab_more':                          "Theme and sound, saved looks and poems, and the Workbench.",
   'hint.spells_are_looks':                  "Spells keep looks: every setting, but not the poem's words.",
   'hint.grimoire_keeps_words':              "The Grimoire keeps poems: the words only. Choose one, then Invoke or Dissolve.",
 

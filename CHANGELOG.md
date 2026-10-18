@@ -4,6 +4,17 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Jarnsaxa (2026-10-18)
+
+- **Fixed:** in Firefox on a phone, tapping a section's name (Border
+  Options, Inset Box, Vignette) did not open it. A section's name now opens
+  and folds it in every browser; a tap on its eye, die, lock or ⓘ still
+  only does that control's work.
+- **More room on a phone:** the line under each tab saying what it holds is
+  gone.
+- **Cut Out by Text** sits on Shape Aware's row, at its right; Shape
+  Strength has the row beneath to itself.
+
 ## Saturn–Hyrrokkin (2026-10-17)
 
 - **A second light in the Athanor.** The Light Engine can light a surface

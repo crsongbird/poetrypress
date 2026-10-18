@@ -134,6 +134,8 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
 body.editing-lower .layer-words .words-aware{ display:none; }
 body.editing-lower .layer-words .words-blend{ display:flex; }
 .layer-words .check-row.off{ opacity:.45; }
+.layer-words .words-pair{ display:flex; flex:1 1 auto; justify-content:space-between; align-items:center; gap:4px 16px; }
+.layer-words .words-strength{ flex:1 1 100%; }
 /* while the lower surface is shown, the card says so: its border takes the second accent */
 body.editing-lower #textureBlock{ box-shadow:inset 2px 0 0 var(--accent-2); padding-left:8px; }
 
@@ -2311,8 +2313,6 @@ body.is-mobile .forge-crumb .fc-how{ display:none; }
 .forge-box[hidden]{ display:none; }
 
 /* ---------- THE USABILITY REVIEW (Saturn–Albiorix) ---------- */
-/* a tab's one-line caption: what its cards hold (a card only so the tab shows and hides it; drawn as a quiet line) */
-.card.tab-caption{ margin:0 0 6px; padding:0 4px; border:0; background:none; box-shadow:none; font:12px/1.4 var(--ui-sans); color:var(--text-dim); }
 /* ⓘ in a heading: the section's hints written out under their controls (a touch screen never shows a title) */
 .hint-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:15px/1 var(--ui-text); opacity:.6; cursor:pointer; }
 .hint-btn:hover, .hint-btn:focus-visible, .hint-btn[aria-pressed="true"]{ opacity:1; color:var(--accent); }

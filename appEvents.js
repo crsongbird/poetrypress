@@ -2907,8 +2907,25 @@ const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the b
 // show/hide when they are not)
 const EYES = ['spellMark'];
 const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle'];
+// A SECTION'S NAME OPENS AND FOLDS IT, in every browser (Ruby, in Firefox on a phone: tapping Border Options, Inset Box
+// or Vignette did nothing). Firefox on a phone moves a tap that lands on something it thinks cannot be tapped to the
+// nearest thing that can, and a heading whose only tappable parts are its eye, die, lock and ⓘ lost its taps. A heading
+// that listens for taps counts as tappable there; it opens or folds its section itself, once (the browser's own toggle
+// is cancelled), and leaves a tap on its own controls to them.
+export function headingTaps(root){   // test hook: interface.test taps a heading and its eye
+  if(!root || typeof root.querySelectorAll !== 'function') return;
+  for(const s of root.querySelectorAll('details > summary')){
+    if(s._taps || !s.addEventListener) continue; s._taps = true;
+    s.addEventListener('click', e => {
+      const d = s.parentElement, t = e.target, ctl = t && t.closest ? t.closest('button, input, select, textarea, a, label') : null;
+      if(!d || d.tagName !== 'DETAILS' || (ctl && ctl !== s && s.contains(ctl))) return;
+      e.preventDefault(); d.open = !d.open;
+    });
+  }
+}
 function installHeadings(){
   if(typeof document.querySelectorAll !== 'function') return;
+  headingTaps(document);
   for(const [id, title] of Object.entries(CARD_EYES)){
     const box = $(id), card = box && box.closest && box.closest('details.card'), head = card && card.querySelector(':scope > summary');
     if(!head) continue;

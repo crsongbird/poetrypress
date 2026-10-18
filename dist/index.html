@@ -167,6 +167,8 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
 body.editing-lower .layer-words .words-aware{ display:none; }
 body.editing-lower .layer-words .words-blend{ display:flex; }
 .layer-words .check-row.off{ opacity:.45; }
+.layer-words .words-pair{ display:flex; flex:1 1 auto; justify-content:space-between; align-items:center; gap:4px 16px; }
+.layer-words .words-strength{ flex:1 1 100%; }
 /* while the lower surface is shown, the card says so: its border takes the second accent */
 body.editing-lower #textureBlock{ box-shadow:inset 2px 0 0 var(--accent-2); padding-left:8px; }
 
@@ -2344,8 +2346,6 @@ body.is-mobile .forge-crumb .fc-how{ display:none; }
 .forge-box[hidden]{ display:none; }
 
 /* ---------- THE USABILITY REVIEW (Saturn–Albiorix) ---------- */
-/* a tab's one-line caption: what its cards hold (a card only so the tab shows and hides it; drawn as a quiet line) */
-.card.tab-caption{ margin:0 0 6px; padding:0 4px; border:0; background:none; box-shadow:none; font:12px/1.4 var(--ui-sans); color:var(--text-dim); }
 /* ⓘ in a heading: the section's hints written out under their controls (a touch screen never shows a title) */
 .hint-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:15px/1 var(--ui-text); opacity:.6; cursor:pointer; }
 .hint-btn:hover, .hint-btn:focus-visible, .hint-btn[aria-pressed="true"]{ opacity:1; color:var(--accent); }
@@ -20607,7 +20607,6 @@ self.onmessage = (e) => {
   <div class="controls">
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-    <p class="card tab-caption" data-tab="write" data-str="hint.tab_write">Write the poem and sign it. The guide below teaches PML, the marks that style it.</p>
     <div class="card" data-tab="write">
       <p class="card-title" data-str="card.incantation_editor_poetic_magick_l">  Incantation Editor (Poetic Magick Language)</p>
       <div class="check-row editor-toggle">
@@ -20819,7 +20818,6 @@ but bear with me, dear}]/jitter:200
     </details>
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-    <p class="card tab-caption" data-tab="style" data-str="hint.tab_style">The page's shape and how the poem sits on it, and whole looks to start from: presets and your own.</p>
     <details class="card" data-tab="style" open>
       <summary class="card-title" data-str="card.form_amp_bearing">  Form &amp; Bearing</summary>
       <div class="card-grid">
@@ -20892,7 +20890,6 @@ but bear with me, dear}]/jitter:200
 
 
         <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-        <p class="card tab-caption" data-tab="type" data-str="hint.tab_type">The poem's type: typeface, size, colors, accents and effects.</p>
         <details class="card" data-tab="type" open>
       <summary class="card-title" data-str="card.script_options">Script Options</summary>
       
@@ -21100,7 +21097,6 @@ but bear with me, dear}]/jitter:200
     </details>
 
         <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-        <p class="card tab-caption" data-tab="page" data-str="hint.tab_page">What the page is made of: backdrop, surface, border, inset box and vignette.</p>
         <details class="card" data-tab="page" open>
       <summary class="card-title" data-str="card.backdrop_color">Backdrop Color</summary>
       <div class="card-grid">
@@ -21332,18 +21328,21 @@ but bear with me, dear}]/jitter:200
                 <input type="checkbox" id="textureTextBlend">
                 <label for="textureTextBlend" data-str="label.text_blend" title="Fill the letters with this surface, using its blend and opacity, instead of laying it under the page.">Blend with Text</label>
               </div>
-              <div class="check-row words-shape">
-                <input type="checkbox" id="textureShapeAware">
-                <label for="textureShapeAware" data-str="label.shape_aware" title="Surfaces that support it make room around the words, or fit the letters with Blend with Text.">Shape Aware</label>
+              <!-- (Ruby: Cut Out by Text on Shape Aware's row, at its right; the two stay together when the row wraps) -->
+              <div class="words-pair">
+                <div class="check-row words-shape">
+                  <input type="checkbox" id="textureShapeAware">
+                  <label for="textureShapeAware" data-str="label.shape_aware" title="Surfaces that support it make room around the words, or fit the letters with Blend with Text.">Shape Aware</label>
+                </div>
+                <div class="check-row words-cut">
+                  <input type="checkbox" id="textureTextCut">
+                  <label for="textureTextCut" data-str="label.text_cut" title="Cut the letters out of this surface, so what lies beneath it shows through the words. Text effects stay.">Cut Out by Text</label>
+                </div>
               </div>
               <div class="field full words-strength">
                 <label for="textureShapeStrength" data-str="label.shape_strength" title="How fully Shape Aware works. At 100% the surface clears the words completely; lower values only thin it near the lines.">Shape Strength</label>
                 <input type="range" id="textureShapeStrength" min="0" max="100" value="100">
                 <span class="range-val" id="textureShapeStrengthVal">100%</span>
-              </div>
-              <div class="check-row words-cut">
-                <input type="checkbox" id="textureTextCut">
-                <label for="textureTextCut" data-str="label.text_cut" title="Cut the letters out of this surface, so what lies beneath it shows through the words. Text effects stay.">Cut Out by Text</label>
               </div>
             </div>
           </div>
@@ -21770,7 +21769,6 @@ but bear with me, dear}]/jitter:200
     </details>
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-    <p class="card tab-caption" data-tab="more" data-str="hint.tab_more">Theme and sound, saved looks and poems, and the Workbench.</p>
     <details class="card" data-tab="more">
       <summary class="card-title" data-str="card.appearance">Interface</summary>
       <div class="field full">
@@ -22131,11 +22129,6 @@ const UI_STRINGS = {
   'hint.create_saves_the_current_look_as_a': "Create saves the current look as a spell. Invoke puts it back on the page.",
   'hint.the_grimoire_is_empty_record_a_poe': "The Grimoire is empty. Record saves your poem's text here.",
   'hint.readings':                          "Readings",
-  'hint.tab_write':                         "Write the poem and sign it. The guide below teaches PML, the marks that style it.",
-  'hint.tab_style':                         "The page's shape and how the poem sits on it, and whole looks to start from: presets and your own.",
-  'hint.tab_type':                          "The poem's type: typeface, size, colors, accents and effects.",
-  'hint.tab_page':                          "What the page is made of: backdrop, surface, border, inset box and vignette.",
-  'hint.tab_more':                          "Theme and sound, saved looks and poems, and the Workbench.",
   'hint.spells_are_looks':                  "Spells keep looks: every setting, but not the poem's words.",
   'hint.grimoire_keeps_words':              "The Grimoire keeps poems: the words only. Choose one, then Invoke or Dissolve.",
 
@@ -43613,7 +43606,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Hyrrokkin';
+const RELEASE = 'Saturn–Jarnsaxa';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -44450,7 +44443,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · 558e145";
+const STAMP = "2026-10-18 · ece524f";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -54467,8 +54460,25 @@ const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the b
 // show/hide when they are not)
 const EYES = ['spellMark'];
 const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle'];
+// A SECTION'S NAME OPENS AND FOLDS IT, in every browser (Ruby, in Firefox on a phone: tapping Border Options, Inset Box
+// or Vignette did nothing). Firefox on a phone moves a tap that lands on something it thinks cannot be tapped to the
+// nearest thing that can, and a heading whose only tappable parts are its eye, die, lock and ⓘ lost its taps. A heading
+// that listens for taps counts as tappable there; it opens or folds its section itself, once (the browser's own toggle
+// is cancelled), and leaves a tap on its own controls to them.
+function headingTaps(root){   // test hook: interface.test taps a heading and its eye
+  if(!root || typeof root.querySelectorAll !== 'function') return;
+  for(const s of root.querySelectorAll('details > summary')){
+    if(s._taps || !s.addEventListener) continue; s._taps = true;
+    s.addEventListener('click', e => {
+      const d = s.parentElement, t = e.target, ctl = t && t.closest ? t.closest('button, input, select, textarea, a, label') : null;
+      if(!d || d.tagName !== 'DETAILS' || (ctl && ctl !== s && s.contains(ctl))) return;
+      e.preventDefault(); d.open = !d.open;
+    });
+  }
+}
 function installHeadings(){
   if(typeof document.querySelectorAll !== 'function') return;
+  headingTaps(document);
   for(const [id, title] of Object.entries(CARD_EYES)){
     const box = $(id), card = box && box.closest && box.closest('details.card'), head = card && card.querySelector(':scope > summary');
     if(!head) continue;

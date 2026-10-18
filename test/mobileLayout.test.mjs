@@ -70,6 +70,19 @@ global.window.visualViewport.height = 670;
 global.window.visualViewport._fire();
 check('closing the keyboard returns the bar to the bottom', vars['--kb-height'] === '0px');
 
+// ---- a section's name opens and folds it, in any browser (Ruby, in Firefox on a phone: tapping Border Options did nothing) ----
+{ const { headingTaps } = await import('../appEvents.js');
+  const on = {}, details = { tagName: 'DETAILS', open: false };
+  const eye = { tagName: 'INPUT' }; eye.closest = () => eye;
+  const name = { closest: () => null };
+  const summary = { parentElement: details, addEventListener: (t, f) => { on[t] = f; }, contains: c => c === eye || c === name };
+  headingTaps({ querySelectorAll: () => [summary] }); headingTaps({ querySelectorAll: () => [summary] });   // (twice: one listener)
+  let cancelled = 0; const tap = target => on.click({ target, preventDefault(){ cancelled++; } });
+  tap(name); const opened = details.open; tap(name); const folded = !details.open; tap(eye);
+  check('a tap on a section\'s name opens it and a second folds it, the browser\'s own toggle cancelled (so it happens once)',
+    opened && folded && cancelled === 2);
+  check('…and a tap on the heading\'s own controls (its eye) is left to them', !details.open && cancelled === 2); }
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

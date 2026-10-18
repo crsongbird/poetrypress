@@ -1576,6 +1576,15 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   layout changes may not (hysteresis).
 - The box's glass (boxFx.js) reads the page's own canvas, so it must run
   after the backdrop, texture and vignette, and before the text.
+- **A heading opens and folds its section itself** (`headingTaps`; Ruby, in
+  Firefox on a phone: tapping Border Options did nothing). Firefox on a
+  phone moves a tap that lands on something it thinks cannot be tapped to
+  the nearest thing that can: a `<summary>` whose only listeners were on its
+  eye, die, lock and ⓘ lost its own taps. Every `details > summary` listens
+  for clicks, cancels the browser's toggle and toggles once; a tap on its
+  own controls is left to them. A `<details>` made later (the chooser's
+  groups) does the same through `headingTaps(root)` if Firefox misbehaves
+  there too.
 
 - **Drawflow's `[df-…]` lookups are escaped** (forge.js wraps
   `querySelectorAll` with `CSS.escape`): a wire's range is kept as `'~key'`

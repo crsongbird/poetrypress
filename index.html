@@ -50,7 +50,6 @@
   <div class="controls">
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-    <p class="card tab-caption" data-tab="write" data-str="hint.tab_write">Write the poem and sign it. The guide below teaches PML, the marks that style it.</p>
     <div class="card" data-tab="write">
       <p class="card-title" data-str="card.incantation_editor_poetic_magick_l">  Incantation Editor (Poetic Magick Language)</p>
       <div class="check-row editor-toggle">
@@ -262,7 +261,6 @@ but bear with me, dear}]/jitter:200
     </details>
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-    <p class="card tab-caption" data-tab="style" data-str="hint.tab_style">The page's shape and how the poem sits on it, and whole looks to start from: presets and your own.</p>
     <details class="card" data-tab="style" open>
       <summary class="card-title" data-str="card.form_amp_bearing">  Form &amp; Bearing</summary>
       <div class="card-grid">
@@ -335,7 +333,6 @@ but bear with me, dear}]/jitter:200
 
 
         <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-        <p class="card tab-caption" data-tab="type" data-str="hint.tab_type">The poem's type: typeface, size, colors, accents and effects.</p>
         <details class="card" data-tab="type" open>
       <summary class="card-title" data-str="card.script_options">Script Options</summary>
       
@@ -543,7 +540,6 @@ but bear with me, dear}]/jitter:200
     </details>
 
         <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-        <p class="card tab-caption" data-tab="page" data-str="hint.tab_page">What the page is made of: backdrop, surface, border, inset box and vignette.</p>
         <details class="card" data-tab="page" open>
       <summary class="card-title" data-str="card.backdrop_color">Backdrop Color</summary>
       <div class="card-grid">
@@ -775,18 +771,21 @@ but bear with me, dear}]/jitter:200
                 <input type="checkbox" id="textureTextBlend">
                 <label for="textureTextBlend" data-str="label.text_blend" title="Fill the letters with this surface, using its blend and opacity, instead of laying it under the page.">Blend with Text</label>
               </div>
-              <div class="check-row words-shape">
-                <input type="checkbox" id="textureShapeAware">
-                <label for="textureShapeAware" data-str="label.shape_aware" title="Surfaces that support it make room around the words, or fit the letters with Blend with Text.">Shape Aware</label>
+              <!-- (Ruby: Cut Out by Text on Shape Aware's row, at its right; the two stay together when the row wraps) -->
+              <div class="words-pair">
+                <div class="check-row words-shape">
+                  <input type="checkbox" id="textureShapeAware">
+                  <label for="textureShapeAware" data-str="label.shape_aware" title="Surfaces that support it make room around the words, or fit the letters with Blend with Text.">Shape Aware</label>
+                </div>
+                <div class="check-row words-cut">
+                  <input type="checkbox" id="textureTextCut">
+                  <label for="textureTextCut" data-str="label.text_cut" title="Cut the letters out of this surface, so what lies beneath it shows through the words. Text effects stay.">Cut Out by Text</label>
+                </div>
               </div>
               <div class="field full words-strength">
                 <label for="textureShapeStrength" data-str="label.shape_strength" title="How fully Shape Aware works. At 100% the surface clears the words completely; lower values only thin it near the lines.">Shape Strength</label>
                 <input type="range" id="textureShapeStrength" min="0" max="100" value="100">
                 <span class="range-val" id="textureShapeStrengthVal">100%</span>
-              </div>
-              <div class="check-row words-cut">
-                <input type="checkbox" id="textureTextCut">
-                <label for="textureTextCut" data-str="label.text_cut" title="Cut the letters out of this surface, so what lies beneath it shows through the words. Text effects stay.">Cut Out by Text</label>
               </div>
             </div>
           </div>
@@ -1213,7 +1212,6 @@ but bear with me, dear}]/jitter:200
     </details>
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
-    <p class="card tab-caption" data-tab="more" data-str="hint.tab_more">Theme and sound, saved looks and poems, and the Workbench.</p>
     <details class="card" data-tab="more">
       <summary class="card-title" data-str="card.appearance">Interface</summary>
       <div class="field full">
