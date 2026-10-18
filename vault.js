@@ -546,7 +546,7 @@ export function createVault(deps){
     await prompt({
       title: fill(DIALOGS.shareSpell.title, rec.name),
       body: copied ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareSpell.bodyManual,
-      input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm,
+      input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm, alert: true,   // (one Done: the link is copied already)
     });
   }
 

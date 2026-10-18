@@ -417,8 +417,8 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 }
 .pml-help h4:first-child{ margin-top:2px; }
 .pml-help p{ margin:0 0 4px; }
-.pml-help dl{ margin:0 0 4px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
-.pml-help dt{ color:var(--text-main); }
+.pml-help dl{ margin:0 0 4px; display:grid; grid-template-columns:fit-content(50%) minmax(0, 1fr); gap:2px 10px; }
+.pml-help dt{ color:var(--text-main); overflow-wrap:anywhere; }
 .pml-help dd{ margin:0; }
 /* the guide teaches: an opening line, and an example after each section with ⤓ Try (it goes in the poem) */
 .pml-help .pml-intro{ color:var(--text-main); margin-bottom:8px; }
@@ -602,6 +602,16 @@ body.is-mobile.focus-mode .card.focus-keep{ flex-direction:column; margin:0; }
 body.is-mobile.focus-mode .card.focus-keep .card-title{ display:none; }
 body.is-mobile.focus-mode .tab-btn:not([data-tab="more"]){ display:none; }
 body.is-mobile.focus-mode .tab-btn[data-tab="more"]{ flex:1 1 100%; }
+/* writing on a phone: PML beside Done Writing opens the guide as a sheet above the bar */
+.pml-tab{ display:none; }
+body.is-mobile.focus-mode .pml-tab{ display:flex; align-items:center; justify-content:center; flex:0 0 72px; margin:0; border:0; border-right:1px solid var(--line);
+  background:transparent; color:var(--text-dim); font:13px var(--ui-caps); letter-spacing:.08em; }
+body.is-mobile.focus-mode.guide-open .pml-tab{ color:var(--accent); }
+body.is-mobile.focus-mode.guide-open #formattingGuidePanel{ display:block; position:fixed; left:0; right:0; z-index:70; margin:0; overflow:auto; overscroll-behavior:contain;
+  height:calc(var(--vvh) * 0.5); top:calc(var(--vv-bottom, var(--vvh)) - var(--tabbar-h) - var(--vvh) * 0.5); background:var(--bg-panel); border-top:1px solid var(--accent-dim); box-shadow:0 -10px 30px -12px rgba(0,0,0,.7); }
+/* and while the keyboard is up, the preview folds to a strip (a tap on it puts the keyboard away) */
+body.is-mobile.focus-mode.keyboard-open .stage{ height:64px; min-height:64px; max-height:64px; }
+body.is-mobile.focus-mode.keyboard-open .stage .reset-view-btn, body.is-mobile.focus-mode.keyboard-open .stage .download-btn, body.is-mobile.focus-mode.keyboard-open .stage .filmstrip{ display:none; }
 
 /* ---------- nav glyph states ----------
    Deselected glyphs RELAX: thinner stroke, softer, slightly smaller, cooled
@@ -1416,7 +1426,7 @@ body.is-mobile .tool-row #textureSeedValue{ width:100%; min-width:0; box-sizing:
    (Earlier fixes widened the fields within that sliver; the row was the cause.) */
 .subblock.open > .tool-row{ grid-column:1/-1; }
 
-/* undo ☋ and redo ☊, beside the reset button */
+/* undo ↶ and redo ↷, beside the reset button (as in the Athanor) */
 #undoBtn{ left:48px; } #redoBtn{ left:89px; }
 body.is-mobile #undoBtn{ left:6px; bottom:138px; } body.is-mobile #redoBtn{ left:6px; bottom:94px; }
 .history-btn:disabled{ opacity:0.2; cursor:default; }
@@ -1477,8 +1487,9 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
    (the middle: straight down; the rim: low across), the line from it the way it looks, the frame what it sees */
 .cam-frame{ fill:none; stroke:var(--accent-2, var(--accent)); stroke-width:1.1; opacity:.7; pointer-events:none; }
 .cam-sight{ stroke:var(--accent); stroke-width:1.2; stroke-dasharray:1.8 1.6; opacity:.8; pointer-events:none; }
-.cam-zoom-in{ right:0; top:0; }
-.cam-zoom-out{ left:0; top:0; }
+.cam-corner{ fill:none; stroke:var(--text-dim); stroke-width:1.6; stroke-linecap:square; opacity:.75; pointer-events:none; }
+.cam-dial .cam-ring{ stroke-dasharray:3 2.2; }
+.cam-zoom{ display:block; width:100%; margin:2px 0 4px; }
 .cam-values input{ width:3.6em; }
 .tool-row.has-camera{ display:grid !important; grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; column-gap:10px; row-gap:6px; align-items:start; }
 .tool-row.has-camera > #lightRow{ grid-column:1; grid-row:1; padding-right:0 !important; border-left:none !important; }
@@ -1867,11 +1878,13 @@ body.is-mobile .forge-menu-item{ padding:11px 14px; font-size:14px; }
 .surface-pick{ display:flex; gap:6px; align-items:stretch; min-width:0; }
 .surface-pick .ch-trigger{ flex:1 1 auto; min-width:0; width:auto; }
 .surface-pick .element-row{ flex:0 0 auto; flex-wrap:nowrap; gap:3px; }
+/* the four readings named above their buttons (the usability review: four glyphs said nothing on a phone) */
+.surface-variant{ position:relative; } .surface-variant > .el-cap{ position:absolute; right:2px; top:0; font:11px/1.6 var(--ui-sans); color:var(--text-dim); letter-spacing:.04em; }
 .surface-pick .el-btn{ height:auto; min-height:44px; width:34px; }
 .ch-trig-sub{ color:var(--text-dim); font-size:.86em; }
 .surface-acts{ display:flex; gap:6px; }
 .surface-acts > button{ flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.layer-bar{ margin-top:4px; padding-top:8px; border-top:1px solid var(--line); }
+.words-bar{ margin-top:4px; padding-top:8px; border-top:1px solid var(--line); }
 .el-name{ margin-left:6px; font-size:13px; color:var(--text-dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 120px; }
 .el-name b{ color:var(--text-main); font-weight:600; }
 /* already dark (Dark Reader and its kin read this, with <meta name="darkreader-lock">): Vellum alone is light */
@@ -1901,6 +1914,8 @@ body.is-mobile .ld-values input{  width:4.4em; }
 input.switch{ appearance:none; -webkit-appearance:none; width:34px; height:18px; margin:0; border:1px solid var(--line); background:var(--bg-card); position:relative; cursor:pointer; flex:0 0 auto; }
 input.switch::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--text-dim); transition:left .15s; }
 input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{ left:18px; background:var(--accent); }
+/* (in a row of options the switch keeps its own size: the row's 16px checkbox rule would squash it to a square) */
+.check-row input[type="checkbox"].switch{ width:34px; height:18px; margin:0 2px 0 0; flex:0 0 auto; accent-color:auto; }
 
 /* ---------- the headings' tools: a section's EYE (shown or not) and its MASTER LOCK ----------
    at the heading's far end, spaced well apart and away from the fold itself */
@@ -2048,7 +2063,9 @@ body.is-mobile .athanor-top{ padding:2px 6px; gap:4px; }
 body.is-mobile .athanor-top .at-glyph{ font-size:18px; }
 body.is-mobile .athanor-top .at-label{ font-size:11px; }
 body.is-mobile .support-btn{ padding:2px 6px; font-size:11px; }
-@media (max-width: 420px){ body.is-mobile .athanor-top .at-label{ display:none; } body.is-mobile .app-header-title{ font-size:1.15em; } }
+/* a narrow phone: the Athanor keeps its name, and Support says it with its heart alone (the usability review: the
+   app's own workshop was the unnamed icon, the tip jar the labelled button) */
+@media (max-width: 420px){ body.is-mobile .support-word{ display:none; } body.is-mobile .app-header-title{ font-size:1.15em; } }
 
 /* numbers in the controls stand on the line (Alegreya's figures are old-style by default: lovely in a poem, not in a field) */
 input, select, output, .ld-values, .radio-btn, .seg button, .btn-row button, .val, .readout, .range-val, .angle-val, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
@@ -2066,6 +2083,9 @@ body.is-mobile .card-title, body.is-mobile summary.card-title{ letter-spacing:0.
 .tab-face{ grid-area:1 / 1; display:flex; flex-direction:inherit; align-items:center; justify-content:center; gap:inherit; }
 .tab-face.ret{ visibility:hidden; }
 body.more-open:not(.is-mobile) .tab-face.eso, body.focus-mode .tab-face.eso{ visibility:hidden; }
+/* the same button's other face says what it does where it is: Close on a desk (Esoterica's drawer), Done Writing on a
+   phone (writing mode) — one word, Return, meant both (the usability review) */
+body.is-mobile .tab-face.ret .ret-desk, body:not(.is-mobile) .tab-face.ret .ret-phone{ display:none; }
 body.more-open:not(.is-mobile) .tab-face.ret, body.focus-mode .tab-face.ret{ visibility:visible; }
 body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); background:var(--bg-panel-2); border-color:var(--accent-dim); }
 
@@ -2290,6 +2310,8 @@ body.is-mobile .forge-crumb .fc-how{ display:none; }
 .forge-box[hidden]{ display:none; }
 
 /* ---------- THE USABILITY REVIEW (Saturn–Albiorix) ---------- */
+/* a tab's one-line caption: what its cards hold (a card only so the tab shows and hides it; drawn as a quiet line) */
+.card.tab-caption{ margin:0 0 6px; padding:0 4px; border:0; background:none; box-shadow:none; font:12px/1.4 var(--ui-sans); color:var(--text-dim); }
 /* ⓘ in a heading: the section's hints written out under their controls (a touch screen never shows a title) */
 .hint-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:15px/1 var(--ui-text); opacity:.6; cursor:pointer; }
 .hint-btn:hover, .hint-btn:focus-visible, .hint-btn[aria-pressed="true"]{ opacity:1; color:var(--accent); }
@@ -2298,7 +2320,7 @@ body.is-mobile .hint-btn{ font-size:18px; }
 body.is-mobile .tip-line{ font-size:11.5px; }
 /* the explanations that are hints too: only with the section's hints */
 .card:not(.hints-open) .hint-extra{ display:none; }
-.check-row:has(> .tip-line), .btn-row:has(> .tip-line){ flex-wrap:wrap; }
+:has(> .tip-line){ flex-wrap:wrap; }   /* a written-out hint takes its own line in any row (Ruby: one in a row of buttons slid the panel sideways) */
 /* a box that does nothing here (Points Outward? on a stitch with no side) */
 .check-row input:disabled + label{ opacity:.45; }
 /* the wiki's search: a line from each page under its title */

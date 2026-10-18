@@ -177,7 +177,7 @@ const LOCKABLE = [
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
 if(typeof document.querySelectorAll === 'function'){
-  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme']);
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider']);   // (the zoom's slider is a view of the camera, locked with it)
   for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
       + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
     if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
@@ -2238,6 +2238,8 @@ function syncTextureTools(resetToDefaults){
     // a texture may use the dial for something else, and says so: First Snow's wind
     const lbl = lightRow.querySelector('label');
     if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = labelText(lbl); setLabelText(lbl, caps.dial || lbl.dataset.lightName); }
+    // (a dial that is only a direction has no height to show)
+    const hf = $('lightTiltField'); if(hf && hf.style) hf.style.display = caps.dirOnly ? 'none' : '';
   }
 
   // THE CAMERA DIAL: shown for a surface with a camera, beside the light dial, the hues below in two columns
@@ -2399,7 +2401,7 @@ if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEv
 // ---------- THE CAMERA DIAL ----------
 // (Ruby: a second dial for the camera, so the light dial is the light's alone.) Its handle is where the camera stands:
 // round the dial, its turn; drawn out from the middle, how low it looks (the middle straight down — or, on Ringworld,
-// straight up — the rim low across); ＋ and −, a wheel or a pinch zoom it. While it moves, a guide of the shot is drawn
+// straight up — the rim low across); the slider under it, a wheel or a pinch zoom it. While it moves, a guide of the shot is drawn
 // over the page at once (a plank's grid, a ring's edges), and the surface follows when it has been made.
 /** Where a surface's camera starts. */
 function cameraStart(type){ const c = (capsFor(type) || {}).camera || {};
@@ -2433,6 +2435,7 @@ function syncCameraPad(){
   if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `turned ${Math.round(c.turn)}°, ${Math.round(c.view)}% low, zoom ${Math.round(c.zoom)}%`);
   const ae = typeof document !== 'undefined' ? document.activeElement : null;
   for(const [id, v] of [['cameraTurnIn', c.turn], ['cameraViewIn', c.view], ['cameraZoomInput', c.zoom]]){ const el = $(id); if(el && ae !== el) el.value = String(Math.round(v)); }
+  { const z = $('cameraZoomSlider'); if(z && ae !== z) z.value = String(Math.round(Math.log2(Math.max(25, Math.min(400, c.zoom))/100)*100)); }
 }
 function setCamera(turn, view, zoom, commit){
   if(!commit) draftWhileDragging();
@@ -2494,7 +2497,11 @@ if($('cameraDial') && $('cameraDial').addEventListener){
     const map = { ArrowRight: [15, 0, 1], ArrowDown: [15, 0, 1], ArrowLeft: [-15, 0, 1], ArrowUp: [-15, 0, 1], PageUp: [0, -10, 1], PageDown: [0, 10, 1], '+': [0, 0, 1.25], '=': [0, 0, 1.25], '-': [0, 0, 0.8] };
     if(map[e.key]){ e.preventDefault(); const [dt, dv, dz] = map[e.key]; setCamera(c.turn + dt, c.view + dv, c.zoom*dz, true); } });
 }
-for(const [id, f] of [['cameraZoomIn', 1.25], ['cameraZoomOut', 0.8]]) if($(id) && $(id).addEventListener) $(id).addEventListener('click', () => { const c = cameraNow(); setCamera(c.turn, c.view, c.zoom*f, true); });
+// the zoom's slider: twice as close for every hundred to the right (100% at its middle, 25% and 400% at its ends)
+{ const z = $('cameraZoomSlider');
+  if(z && z.addEventListener){
+    z.addEventListener('input', () => { const c = cameraNow(); setCamera(c.turn, c.view, 100*Math.pow(2, (+z.value || 0)/100), false); });
+    z.addEventListener('change', () => { const c = cameraNow(); setCamera(c.turn, c.view, 100*Math.pow(2, (+z.value || 0)/100), true); }); } }
 if($('cameraReset') && $('cameraReset').addEventListener) $('cameraReset').addEventListener('click', () => { const d = cameraStart($('textureType').value); setCamera(d.turn, d.view, d.zoom, true); });
 // typing the camera's numbers sets it exactly
 for(const id of ['cameraTurnIn', 'cameraViewIn', 'cameraZoomInput']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
@@ -2895,8 +2902,11 @@ function addDie(root, head){
 }
 // the switches that show a whole card, moved into its heading as an eye
 const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the border', cardToggle: 'Show the inset box', vignetteToggle: 'Show the vignette' };
-// the switches inside a card, eyes where they are
-const EYES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle', 'spellMark'];
+// inside a card, an eye only where a box shows or hides something (the spell code); an option that turns a feature on
+// is a switch (Ruby approved, from the usability review: eyes on Gradient Border? and Allow [Opposition] read as
+// show/hide when they are not)
+const EYES = ['spellMark'];
+const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle'];
 function installHeadings(){
   if(typeof document.querySelectorAll !== 'function') return;
   for(const [id, title] of Object.entries(CARD_EYES)){
@@ -2910,6 +2920,7 @@ function installHeadings(){
     if(row) row.hidden = true;
   }
   for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
+  for(const id of SWITCHES){ const box = $(id); if(box && box.classList) box.classList.add('switch'); }
   for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')){ addDie(card, card.querySelector(':scope > summary')); addMasterLock(card, card.querySelector(':scope > summary')); }
   for(const card of document.querySelectorAll('details.card[data-tab]')) addHintsButton(card, card.querySelector(':scope > summary'));
   // a sub-section's lock sits in the row that switches it on (its eye and name)
@@ -3078,7 +3089,8 @@ if(typeof document.querySelectorAll === 'function'){
   }
   function exitFocus(){
     if(!body.classList || !body.classList.contains('focus-mode')) return;
-    body.classList.remove('focus-mode', 'editor-fit');
+    body.classList.remove('focus-mode', 'editor-fit', 'guide-open');
+    if($('pmlTabBtn') && $('pmlTabBtn').setAttribute) $('pmlTabBtn').setAttribute('aria-expanded', 'false');
     document.querySelectorAll('.focus-keep').forEach(c => c.classList.remove('focus-keep'));
     if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
     if(poem.blur) poem.blur();
@@ -3098,6 +3110,18 @@ if(typeof document.querySelectorAll === 'function'){
       }
     }, true);
   }
+  // THE GUIDE WHILE WRITING (the usability review: on a phone the PML guide was out of reach in writing mode): PML in
+  // the bar opens it as a sheet above the bar; ⤓ Try still writes into the poem
+  const pmlBtn = $('pmlTabBtn');
+  if(pmlBtn && pmlBtn.addEventListener) pmlBtn.addEventListener('click', e => {
+    e.preventDefault(); const on = !body.classList.contains('guide-open');
+    body.classList.toggle('guide-open', on); pmlBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    const g = $('formattingGuidePanel'); if(on && g && 'open' in g) g.open = true; });
+  // WHILE THE KEYBOARD IS UP the preview folds to a strip, so the poem has the room (the usability review: four lines
+  // of editor under a full preview); a tap on the strip puts the keyboard away, and the preview opens again with it
+  const stage = typeof document.querySelector === 'function' ? document.querySelector('.stage') : null;
+  if(stage && stage.addEventListener) stage.addEventListener('pointerdown', () => {
+    if(body.classList.contains('focus-mode') && body.classList.contains('keyboard-open') && poem.blur) poem.blur(); });
   // the phone's own back gesture should leave focus mode, not the page
   if(typeof window !== 'undefined' && window.addEventListener){
     window.addEventListener('popstate', ()=>{
@@ -4013,7 +4037,7 @@ if(document.fonts && document.fonts.addEventListener){
   document.fonts.addEventListener('loadingdone', () => { clearTimeout(fontTimer); fontTimer = setTimeout(remeasureAndRender, 60); });
 }
 
-// ---------- undo ☋ and redo ☊ ----------
+// ---------- undo ↶ and redo ↷ ----------
 // History is a stack of LOOK snapshots — the same filtered snapshot a saved
 // spell uses, so it covers every setting but never the poem (the text box has
 // its own undo), your locks, or your name. A change is recorded a moment after
@@ -4100,8 +4124,8 @@ function stepHistory(dir){
   refreshUi(); scheduleRender(); paintHistoryButtons(); checkLitPreset();
 }
 // THE POEM'S OWN HISTORY (the usability review: on a phone nothing undid a cleared poem — Android's keyboards have no
-// undo): the text kept a moment after typing stops (at once when much of it vanishes), and ☋ ☊ step it while the poem
-// is what was last changed; once it is back at its start, ☋ goes on through the look's history
+// undo): the text kept a moment after typing stops (at once when much of it vanishes), and ↶ ↷ step it while the poem
+// is what was last changed; once it is back at its start, ↶ goes on through the look's history
 const POEM_MAX = 80;
 function poemHistoryNow(){ const h = state.poemHist || (state.poemHist = { stack: [], index: -1, timer: null, restoring: false }); return h; }
 function notePoem(){
@@ -4113,7 +4137,7 @@ function notePoem(){
 }
 function notePoemSoon(){ const h = poemHistoryNow(), t = $('poemText') ? $('poemText').value : '', was = h.stack[h.index] || '';
   clearTimeout(h.timer);
-  // (a big cut is kept at once, so one ☋ brings it all back)
+  // (a big cut is kept at once, so one ↶ brings it all back)
   if(was.length > 40 && t.length < was.length*0.5){ notePoemFirst(was); notePoem(); toast(PAGE_SAYS.poemCut, { label: PAGE_SAYS.undo, act: () => stepPoem(-1) }); return; }
   h.timer = setTimeout(notePoem, 700); }
 // (the text as it was before a change, if it was never kept: the first keystroke after a pause)

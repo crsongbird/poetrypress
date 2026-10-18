@@ -15,8 +15,8 @@ once renders the same ever after.
 | `*italic*` | italic |
 | `_underline_` | underline |
 | `~~strike~~` | strikethrough |
-| `[text]` | accent one |
-| `{text}` | accent two |
+| `[text]` | accent one (the Opposition Hue) |
+| `{text}` | accent two (the Conjunction Hue) |
 | `{[text]}` | accent one → accent two |
 | `[{text]}` | accent two → accent one |
 | `[text/lg]` `[text/rg]` | fade accent one into the ink |

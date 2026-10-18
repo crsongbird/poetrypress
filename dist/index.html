@@ -450,8 +450,8 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 }
 .pml-help h4:first-child{ margin-top:2px; }
 .pml-help p{ margin:0 0 4px; }
-.pml-help dl{ margin:0 0 4px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
-.pml-help dt{ color:var(--text-main); }
+.pml-help dl{ margin:0 0 4px; display:grid; grid-template-columns:fit-content(50%) minmax(0, 1fr); gap:2px 10px; }
+.pml-help dt{ color:var(--text-main); overflow-wrap:anywhere; }
 .pml-help dd{ margin:0; }
 /* the guide teaches: an opening line, and an example after each section with ⤓ Try (it goes in the poem) */
 .pml-help .pml-intro{ color:var(--text-main); margin-bottom:8px; }
@@ -635,6 +635,16 @@ body.is-mobile.focus-mode .card.focus-keep{ flex-direction:column; margin:0; }
 body.is-mobile.focus-mode .card.focus-keep .card-title{ display:none; }
 body.is-mobile.focus-mode .tab-btn:not([data-tab="more"]){ display:none; }
 body.is-mobile.focus-mode .tab-btn[data-tab="more"]{ flex:1 1 100%; }
+/* writing on a phone: PML beside Done Writing opens the guide as a sheet above the bar */
+.pml-tab{ display:none; }
+body.is-mobile.focus-mode .pml-tab{ display:flex; align-items:center; justify-content:center; flex:0 0 72px; margin:0; border:0; border-right:1px solid var(--line);
+  background:transparent; color:var(--text-dim); font:13px var(--ui-caps); letter-spacing:.08em; }
+body.is-mobile.focus-mode.guide-open .pml-tab{ color:var(--accent); }
+body.is-mobile.focus-mode.guide-open #formattingGuidePanel{ display:block; position:fixed; left:0; right:0; z-index:70; margin:0; overflow:auto; overscroll-behavior:contain;
+  height:calc(var(--vvh) * 0.5); top:calc(var(--vv-bottom, var(--vvh)) - var(--tabbar-h) - var(--vvh) * 0.5); background:var(--bg-panel); border-top:1px solid var(--accent-dim); box-shadow:0 -10px 30px -12px rgba(0,0,0,.7); }
+/* and while the keyboard is up, the preview folds to a strip (a tap on it puts the keyboard away) */
+body.is-mobile.focus-mode.keyboard-open .stage{ height:64px; min-height:64px; max-height:64px; }
+body.is-mobile.focus-mode.keyboard-open .stage .reset-view-btn, body.is-mobile.focus-mode.keyboard-open .stage .download-btn, body.is-mobile.focus-mode.keyboard-open .stage .filmstrip{ display:none; }
 
 /* ---------- nav glyph states ----------
    Deselected glyphs RELAX: thinner stroke, softer, slightly smaller, cooled
@@ -1449,7 +1459,7 @@ body.is-mobile .tool-row #textureSeedValue{ width:100%; min-width:0; box-sizing:
    (Earlier fixes widened the fields within that sliver; the row was the cause.) */
 .subblock.open > .tool-row{ grid-column:1/-1; }
 
-/* undo ☋ and redo ☊, beside the reset button */
+/* undo ↶ and redo ↷, beside the reset button (as in the Athanor) */
 #undoBtn{ left:48px; } #redoBtn{ left:89px; }
 body.is-mobile #undoBtn{ left:6px; bottom:138px; } body.is-mobile #redoBtn{ left:6px; bottom:94px; }
 .history-btn:disabled{ opacity:0.2; cursor:default; }
@@ -1510,8 +1520,9 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
    (the middle: straight down; the rim: low across), the line from it the way it looks, the frame what it sees */
 .cam-frame{ fill:none; stroke:var(--accent-2, var(--accent)); stroke-width:1.1; opacity:.7; pointer-events:none; }
 .cam-sight{ stroke:var(--accent); stroke-width:1.2; stroke-dasharray:1.8 1.6; opacity:.8; pointer-events:none; }
-.cam-zoom-in{ right:0; top:0; }
-.cam-zoom-out{ left:0; top:0; }
+.cam-corner{ fill:none; stroke:var(--text-dim); stroke-width:1.6; stroke-linecap:square; opacity:.75; pointer-events:none; }
+.cam-dial .cam-ring{ stroke-dasharray:3 2.2; }
+.cam-zoom{ display:block; width:100%; margin:2px 0 4px; }
 .cam-values input{ width:3.6em; }
 .tool-row.has-camera{ display:grid !important; grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; column-gap:10px; row-gap:6px; align-items:start; }
 .tool-row.has-camera > #lightRow{ grid-column:1; grid-row:1; padding-right:0 !important; border-left:none !important; }
@@ -1900,11 +1911,13 @@ body.is-mobile .forge-menu-item{ padding:11px 14px; font-size:14px; }
 .surface-pick{ display:flex; gap:6px; align-items:stretch; min-width:0; }
 .surface-pick .ch-trigger{ flex:1 1 auto; min-width:0; width:auto; }
 .surface-pick .element-row{ flex:0 0 auto; flex-wrap:nowrap; gap:3px; }
+/* the four readings named above their buttons (the usability review: four glyphs said nothing on a phone) */
+.surface-variant{ position:relative; } .surface-variant > .el-cap{ position:absolute; right:2px; top:0; font:11px/1.6 var(--ui-sans); color:var(--text-dim); letter-spacing:.04em; }
 .surface-pick .el-btn{ height:auto; min-height:44px; width:34px; }
 .ch-trig-sub{ color:var(--text-dim); font-size:.86em; }
 .surface-acts{ display:flex; gap:6px; }
 .surface-acts > button{ flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.layer-bar{ margin-top:4px; padding-top:8px; border-top:1px solid var(--line); }
+.words-bar{ margin-top:4px; padding-top:8px; border-top:1px solid var(--line); }
 .el-name{ margin-left:6px; font-size:13px; color:var(--text-dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 120px; }
 .el-name b{ color:var(--text-main); font-weight:600; }
 /* already dark (Dark Reader and its kin read this, with <meta name="darkreader-lock">): Vellum alone is light */
@@ -1934,6 +1947,8 @@ body.is-mobile .ld-values input{  width:4.4em; }
 input.switch{ appearance:none; -webkit-appearance:none; width:34px; height:18px; margin:0; border:1px solid var(--line); background:var(--bg-card); position:relative; cursor:pointer; flex:0 0 auto; }
 input.switch::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--text-dim); transition:left .15s; }
 input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{ left:18px; background:var(--accent); }
+/* (in a row of options the switch keeps its own size: the row's 16px checkbox rule would squash it to a square) */
+.check-row input[type="checkbox"].switch{ width:34px; height:18px; margin:0 2px 0 0; flex:0 0 auto; accent-color:auto; }
 
 /* ---------- the headings' tools: a section's EYE (shown or not) and its MASTER LOCK ----------
    at the heading's far end, spaced well apart and away from the fold itself */
@@ -2081,7 +2096,9 @@ body.is-mobile .athanor-top{ padding:2px 6px; gap:4px; }
 body.is-mobile .athanor-top .at-glyph{ font-size:18px; }
 body.is-mobile .athanor-top .at-label{ font-size:11px; }
 body.is-mobile .support-btn{ padding:2px 6px; font-size:11px; }
-@media (max-width: 420px){ body.is-mobile .athanor-top .at-label{ display:none; } body.is-mobile .app-header-title{ font-size:1.15em; } }
+/* a narrow phone: the Athanor keeps its name, and Support says it with its heart alone (the usability review: the
+   app's own workshop was the unnamed icon, the tip jar the labelled button) */
+@media (max-width: 420px){ body.is-mobile .support-word{ display:none; } body.is-mobile .app-header-title{ font-size:1.15em; } }
 
 /* numbers in the controls stand on the line (Alegreya's figures are old-style by default: lovely in a poem, not in a field) */
 input, select, output, .ld-values, .radio-btn, .seg button, .btn-row button, .val, .readout, .range-val, .angle-val, .preset-label{ font-variant-numeric:lining-nums tabular-nums; }
@@ -2099,6 +2116,9 @@ body.is-mobile .card-title, body.is-mobile summary.card-title{ letter-spacing:0.
 .tab-face{ grid-area:1 / 1; display:flex; flex-direction:inherit; align-items:center; justify-content:center; gap:inherit; }
 .tab-face.ret{ visibility:hidden; }
 body.more-open:not(.is-mobile) .tab-face.eso, body.focus-mode .tab-face.eso{ visibility:hidden; }
+/* the same button's other face says what it does where it is: Close on a desk (Esoterica's drawer), Done Writing on a
+   phone (writing mode) — one word, Return, meant both (the usability review) */
+body.is-mobile .tab-face.ret .ret-desk, body:not(.is-mobile) .tab-face.ret .ret-phone{ display:none; }
 body.more-open:not(.is-mobile) .tab-face.ret, body.focus-mode .tab-face.ret{ visibility:visible; }
 body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); background:var(--bg-panel-2); border-color:var(--accent-dim); }
 
@@ -2323,6 +2343,8 @@ body.is-mobile .forge-crumb .fc-how{ display:none; }
 .forge-box[hidden]{ display:none; }
 
 /* ---------- THE USABILITY REVIEW (Saturn–Albiorix) ---------- */
+/* a tab's one-line caption: what its cards hold (a card only so the tab shows and hides it; drawn as a quiet line) */
+.card.tab-caption{ margin:0 0 6px; padding:0 4px; border:0; background:none; box-shadow:none; font:12px/1.4 var(--ui-sans); color:var(--text-dim); }
 /* ⓘ in a heading: the section's hints written out under their controls (a touch screen never shows a title) */
 .hint-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:15px/1 var(--ui-text); opacity:.6; cursor:pointer; }
 .hint-btn:hover, .hint-btn:focus-visible, .hint-btn[aria-pressed="true"]{ opacity:1; color:var(--accent); }
@@ -2331,7 +2353,7 @@ body.is-mobile .hint-btn{ font-size:18px; }
 body.is-mobile .tip-line{ font-size:11.5px; }
 /* the explanations that are hints too: only with the section's hints */
 .card:not(.hints-open) .hint-extra{ display:none; }
-.check-row:has(> .tip-line), .btn-row:has(> .tip-line){ flex-wrap:wrap; }
+:has(> .tip-line){ flex-wrap:wrap; }   /* a written-out hint takes its own line in any row (Ruby: one in a row of buttons slid the panel sideways) */
 /* a box that does nothing here (Points Outward? on a stitch with no side) */
 .check-row input:disabled + label{ opacity:.45; }
 /* the wiki's search: a line from each page under its title */
@@ -14719,13 +14741,14 @@ const GEN_STEPS = {
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
-// sometimes mixed, sometimes apocalyptic, sometimes destroyed, sometimes populated by cute little alien creatures,
-// sometimes with crashed spaceships"). By the Seed picks one; Mixed lays three side by side, region by region.
+// sometimes mixed, sometimes apocalyptic, sometimes destroyed, sometimes populated by [small life], sometimes with
+// crashed spaceships"). By the Seed picks one; Mixed lays three side by side, region by region. (The small life was
+// once cute little creatures; Ruby: "too cute and childish … insects, fairies, flowers, slime creatures. All subtle.")
 const RG_WORLDS = ['seed', 'wilds', 'cities', 'neon', 'builders', 'magic', 'ruins', 'mixed'];
 // what each world raises, as weights (Life and Works scale them):
 //   tr trees · de dead trees · gt glowing trees · to towers · sp spires · sa spans (wall to wall) · mo monoliths and
 //   standing stones · cr crystals · ci circles · pi pillars of light · do domes · br bridges of light · ca craters, smoke
-//   and fire · wr wrecks · sh ships · be creatures · ro rocks · gr grass and flowers · cv how much of the land is city
+//   and fire · wr wrecks · sh ships · be small life · ro rocks · gr grass and flowers · cv how much of the land is city
 const RG_PROF = {
   wilds:    { tr: 1,    de: 0.05, gt: 0,   to: 0,    sp: 0.05, sa: 0.12, mo: 0.35, cr: 0.12, ci: 0,   pi: 0,    do: 0,    br: 0,   ca: 0,   wr: 0.25, sh: 0.15, be: 1,    ro: 0.8,  gr: 1,    cv: 0 },
   cities:   { tr: 0.45, de: 0,    gt: 0,   to: 1,    sp: 0.2,  sa: 0.25, mo: 0,    cr: 0,    ci: 0,   pi: 0,    do: 0.5,  br: 0.2, ca: 0,   wr: 0.1,  sh: 0.8,  be: 0.3,  ro: 0.15, gr: 0.5,  cv: 1 },
@@ -14939,25 +14962,33 @@ function rgTower(x, X, Y, h, wdt, c, neon, broken, night, R){
     if(R() < 0.6 && h > 12){ const sh = h*0.12, sy = top + h*(0.15 + 0.4*R()); x.fillStyle = rsCss(R() < 0.5 ? c.glow : c.glow2, 0.9); x.fillRect(X - w2 - wdt*0.1, sy, wdt*0.55, sh);
       x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, sy, 0, X, sy, wdt*1.3); g.addColorStop(0, rsCss(c.glow, 0.35)); g.addColorStop(1, rsCss(c.glow, 0)); x.fillStyle = g; x.fillRect(X - wdt*1.3, sy - wdt*1.3, wdt*2.6, wdt*2.6); x.restore(); } }
 }
-// a little creature (Ruby: "cute little alien creatures"): a round body in one of the page's colours, big eyes,
-// feelers; some long-necked grazers, some with ears, standing on two or four little legs
-function rgCreature(x, X, Y, h, col, kind, sd, R){
-  const body = rsCss(col), shade = rsCss(rsMix(col, [0, 0, 0], 0.25)), r = h*0.32, by = Y - h*0.3;
-  x.strokeStyle = shade; x.lineWidth = Math.max(rgPx(0.8), h*0.06);
-  x.beginPath(); for(const lx of kind === 1 ? [-0.6, -0.25, 0.25, 0.6] : [-0.3, 0.3]){ x.moveTo(X + lx*r, by + r*0.6); x.lineTo(X + lx*r, Y); } x.stroke();
-  if(kind === 1){ // a grazer: a long body, a long neck up to a small head
-    x.fillStyle = body; x.beginPath(); x.ellipse(X, by, r*1.1, r*0.7, 0, 0, Math.PI*2); x.fill();
-    const hx2 = X + sd*r*1.3, hy = by - h*0.55; x.strokeStyle = body; x.lineWidth = r*0.4; x.beginPath(); x.moveTo(X + sd*r*0.7, by - r*0.2); x.lineTo(hx2, hy); x.stroke();
-    x.fillStyle = body; x.beginPath(); x.arc(hx2, hy, r*0.38, 0, Math.PI*2); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(hx2 + sd*r*0.12, hy - r*0.05, r*0.17, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#111'; x.beginPath(); x.arc(hx2 + sd*r*0.16, hy - r*0.03, r*0.08, 0, Math.PI*2); x.fill(); return; }
-  x.fillStyle = body; x.beginPath(); x.ellipse(X, by, r, r*(kind === 2 ? 1.15 : 0.92), 0, 0, Math.PI*2); x.fill();
-  x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.3)); x.beginPath(); x.ellipse(X - sd*r*0.25, by - r*0.35, r*0.35, r*0.22, 0, 0, Math.PI*2); x.fill();
-  if(kind === 2){ x.fillStyle = body; for(const s of [-1, 1]){ x.beginPath(); x.ellipse(X + s*r*0.45, by - r*1.2, r*0.18, r*0.5, s*0.2, 0, Math.PI*2); x.fill(); } }
-  else { x.strokeStyle = shade; x.lineWidth = Math.max(rgPx(0.6), h*0.035); x.beginPath(); for(const s of [-1, 1]){ x.moveTo(X + s*r*0.3, by - r*0.8); x.lineTo(X + s*r*0.6, by - r*1.5); } x.stroke();
-    x.fillStyle = body; for(const s of [-1, 1]){ x.beginPath(); x.arc(X + s*r*0.6, by - r*1.5, r*0.14, 0, Math.PI*2); x.fill(); } }
-  for(const s of [-1, 1]){ x.fillStyle = '#fff'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.1, by - r*0.1, r*0.28, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#121212'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.18, by - r*0.06, r*0.14, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#fff'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.12, by - r*0.13, r*0.05, 0, Math.PI*2); x.fill(); }
+// SMALL LIFE (Ruby: "insects, fairies, flowers, slime creatures … all subtle"): never more than a few marks, small for
+// their distance and quiet in colour, so they are found rather than seen. Each kind at the ground point (X, Y), at
+// h, the height a body would stand there.
+function rgSmallLife(x, X, Y, h, kind, c, R){
+  // (each mark has a floor in the export's pixels: smaller than that, a find is not subtle but missing)
+  const rnd = (a, b) => a + (b - a)*R(), dot = (cx, cy, r, lo, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(rgPx(lo), r), 0, Math.PI*2); x.fill(); };
+  if(kind === 'insects'){ // a small cloud of specks over the grass, a pair of wings catching the light on the nearer
+    const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
+    for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4, iy = cy + (R() - 0.5)*h*0.6; dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));
+      if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
+    return; }
+  if(kind === 'fairies'){ // a few points of light drifting low, each with a faint trail behind it
+    const n = 1 + Math.floor(R()*3);
+    for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2, fy = Y - h*rnd(0.4, 1.4), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);
+      rgGlow(x, fx, fy, Math.max(rgPx(12), h*0.32), c.glow, 0.4);
+      for(let t = 1; t <= 3; t++) dot(fx - dx*t, fy + dx*0.15*t*t*Math.sign(dx), h*0.025*(1 - t*0.22), 1 - t*0.2, rsCss(c.glow, 0.32/t));
+      dot(fx, fy, h*0.04, 2.2, rsCss(rsMix(c.glow, [255, 255, 255], 0.6), 0.85)); }
+    return; }
+  if(kind === 'flowers'){ // a patch of small blossoms in the page's colours
+    const n = 4 + Math.floor(R()*6);
+    for(let q = 0; q < n; q++) dot(X + (R() - 0.5)*Math.max(rgPx(24), h*1.6), Y - h*rnd(0.02, 0.18), h*rnd(0.04, 0.07), 2.4, rsCss(c.flowers[Math.floor(R()*c.flowers.length)], 0.8));
+    return; }
+  // slime: one to three low, glistening mounds, half see-through, a highlight on each
+  const n = 1 + Math.floor(R()*3);
+  for(let q = 0; q < n; q++){ const sx = X + (R() - 0.5)*h*1.2, sw = Math.max(rgPx(7), h*rnd(0.18, 0.32)), sh = sw*rnd(0.45, 0.7);
+    x.fillStyle = rsCss(c.slime, 0.68); x.beginPath(); x.ellipse(sx, Y, sw, sh, 0, Math.PI, Math.PI*2); x.fill();
+    x.fillStyle = rsCss([255, 255, 255], 0.45); x.beginPath(); x.ellipse(sx - sw*0.3, Y - sh*0.55, sw*0.22, sh*0.16, -0.3, 0, Math.PI*2); x.fill(); }
 }
 function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
@@ -15078,9 +15109,21 @@ function rgPaintLand(x, mk, dk, V, R){
       else if(r.kind === 'neon'){ line(L2, rsCss(c.glow, 0.9), wpx*1.2); line(R2, rsCss(c.glow2, 0.9), wpx*1.2); }
       else if(r.kind === 'path' || r.kind === 'ley'){ x.save(); x.globalCompositeOperation = 'screen'; line(ctr, rsCss(c.glow, 0.3), wpx*5); line(ctr, rsCss(c.glow, 0.9), wpx*1.3); x.restore(); }
       else if(r.kind === 'broken') for(let q = 0; q + 1 < ctr.length; q += 2) line([L2[q], R2[q + 1]], rsCss(rgLit(V, [40, 36, 32], day, haze, AIR)), wpx); } };
-  // the little creatures live on some rings, not all (Ruby: "sometimes populated by cute little alien creatures")
-  const beasts = R() < 0.2 + 0.6*V.life*Math.max(...V.world.list.map(w => RG_PROF[w].be));
-  let prevY = null;
+  // small life lives on some rings, not all: insects, fairies, flowers and slime, each world its own mix. A few finds
+  // in the whole picture (more with Life), each on its own ridge. Only a ridge whose crest is in the frame and near
+  // enough to see a find on is chosen (a ridge runs past both edges, and the near ones are often below the frame),
+  // and each offers eight places across the frame: the find takes the first that nothing nearer covers
+  const lively = R() < 0.25 + 0.6*V.life*Math.max(...V.world.list.map(w => RG_PROF[w].be)), finds = new Map();
+  if(lively){ const ok = [];
+    for(let k = 1; k < K; k++){ let d = dOf(k); if(d > dWall*1.02){ if(dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
+      const a = d*hx, z = Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*hz)), p = at(a, z, Math.max(T(a, z, 2*Sof(d)/96*1.3), TR.sea));
+      if(p && p[1] > wh*0.04 && p[1] < wh*0.9 && W*0.0007*F/p[2] >= px(5)) ok.push(k); }
+    // (nearer ridges likelier; far off, a find keeps the floor of its marks, as the far land is drawn taller than it is)
+    for(let q = 0, n = Math.min(ok.length, Math.round(V.life*4)); q < n; q++) { const xs = Array.from({ length: 8 }, (_, i) => ww*(0.06 + 0.88*(i + R())/8));
+      for(let i = xs.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [xs[i], xs[j]] = [xs[j], xs[i]]; }   // (in a shuffled order, the same in every browser)
+      xs.seed = (R()*4294967296) >>> 0;   // (each find its own stream: whether one is seen never changes another)
+      finds.set(ok.splice(Math.floor(R()*R()*ok.length), 1)[0], xs); } }
+  let prevY = null; const seen = [];
   for(let k = K - 1; k >= 0; k--){
     let d = dOf(k); if(d > dWall*1.02){ if(k === 0 || dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
     const Sd = Sof(d), M = 96, pts = [], fine = 2*Sd/M*1.3;
@@ -15105,8 +15148,8 @@ function rgPaintLand(x, mk, dk, V, R){
         rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03))); }
       else { const bd = depth*rnd(0.1, 0.22); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bd*rnd(0.6, 1.2)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02))); }
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
-    // what grows and stands on it: trees in the forests, the city's buildings, rocks, crystals, creatures, grass
-    const near = k <= 1; let herds = 1 + (R() < 0.4 ? 1 : 0);
+    // what grows and stands on it: trees in the forests, the city's buildings, rocks, crystals, small life, grass
+    const near = k <= 1, fXs = finds.get(k), spots = []; R();   // (a draw kept, so a picture without small life is as it was)
     for(let i = 0; i + 1 < pts.length; i++){ const p0 = pts[i], p1 = pts[i + 1]; if(p0.sea && p1.sea) continue;
       const am = (p0.a + p1.a)/2, zm = (p0.z + p1.z)/2, w = V.worldAt(am, zm), P = RG_PROF[w], kpx = F/((p0.zc + p1.zc)/2), segW = 2*Sd/(M - 1), wday = ringDay(L, am), night = 1 - rsSmooth(0.3, 0.7, wday);
       const c = colsOf(w, wday, haze), place = (n, fn) => { n = Math.floor(n) + (R() < n % 1 ? 1 : 0); for(let q = 0; q < n; q++){ const u = R(), X = p0.X + (p1.X - p0.X)*u, Y = p0.Y + (p1.Y - p0.Y)*u + depth*Math.pow(R(), 1.6)*0.55; fn(X, Y); } };
@@ -15121,15 +15164,35 @@ function rgPaintLand(x, mk, dk, V, R){
       if(rH > 2 && P.ro*V.forms > 0.05){ place(P.ro*V.forms*segW/(W*0.004)*(k <= 1 ? 0.4 : 1), (X, Y) => { const r = rH*rnd(0.4, 1.5), rc = rgLit(V, [128, 122, 114], wday, haze, AIR), pts2 = Array.from({ length: 6 }, (_, q) => { const t = Math.PI + q/5*Math.PI; return [X + Math.cos(t)*r*rnd(0.8, 1.2), Y + Math.sin(t)*r*rnd(0.6, 1)]; });
         rsPoly(x, pts2, rsCss(rsMix(rc, BLACK, 0.2))); rsPoly(x, [[X, Y], pts2[2], pts2[3], pts2[4]].map(([a2, b2]) => [a2, b2]), rsCss(rsMix(rc, [255, 244, 222], 0.15))); }); }
       const cH = W*0.0007*kpx;
-      if(beasts && cH > 4 && k >= 1 && k <= 5 && herds > 0 && R() < P.be*V.life*0.08){ herds--; const n = 1 + Math.floor(R()*4), cols = [V.g1, V.g2, rsMix(V.g1, [255, 255, 255], 0.45), rsMix(V.g2, V.sky, 0.5), [240, 200, 220]], ck = Math.floor(R()*3), col = rgLit(V, cols[Math.floor(R()*cols.length)], Math.max(0.35, wday), haze, AIR);
-        let X = p0.X + (p1.X - p0.X)*R(); const dir = R() < 0.5 ? -1 : 1; for(let q = 0; q < n; q++){ const Y = p0.Y + (p1.Y - p0.Y)*rgClamp((X - p0.X)/((p1.X - p0.X) || 1)) + depth*R()*0.3; rgCreature(x, X, Y, cH*rnd(0.7, 1.3), col, ck, dir, R); X += cH*rnd(0.9, 1.8)*dir; } }
+      if(fXs && cH >= px(3)) for(const fX of fXs){ const fu = (fX - p0.X)/(p1.X - p0.X || 1e-6), Y = p0.Y + (p1.Y - p0.Y)*fu;
+        if(fu >= 0 && fu < 1 && Y > px(4) && Y < wh*0.95) spots.push({ X: fX, Y, h: cH, w, wday, haze, glow: c.glow, seed: fXs.seed }); }
       if(near && P.gr*V.life > 0.05){ const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), wday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), gH = W*0.00025*kpx, flw = [V.g1, V.g2, [250, 246, 240]];
         place(P.gr*V.life*(p1.X - p0.X)/Math.max(2, gH)*0.5, (X, Y) => { for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
           if(R() < 0.25*P.gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); } }); } }
+    // a find's places, once its ridge is done: it is drawn at the end, in the first that nothing nearer has covered since
+    if(spots.length) seen.push(spots.map(f => [f, rgSpot(x, f.X, f.Y, px(4))]));
     // the roads, then the works, between this layer and the next nearer one
     const dn = k > 0 ? dOf(k - 1) : 0; drawRoads(dn, d); while(wi < works.length && works[wi].d >= dn){ if(works[wi].d <= d) drawWork(works[wi]); wi++; }
   }
+  // the finds nothing nearer stands in front of (a forest whose ridge is below the frame rises over most of them)
+  for(const ridge of seen){ const f = (ridge.find(([f2, before]) => rgSame(rgSpot(x, f2.X, f2.Y, px(4)), before)) || [])[0];
+    if(!f) continue; const Rf = mulberry32(f.seed), rf = (a, b) => a + (b - a)*Rf();
+    if(Rf() >= 0.3 + 0.7*RG_PROF[f.w].be) continue;
+    // (which kind, by the world: fairies where there is magic, insects and flowers in the wilds, slime in the ruins)
+    const mix = { magic: [1, 3, 1, 1], wilds: [3, 1, 3, 1], ruins: [2, 0.5, 1, 3], neon: [1, 2, 0.5, 1], cities: [2, 0.5, 2, 0.5], builders: [2, 1, 2, 1] }[f.w] || [2, 1, 2, 1];
+    const kinds = ['insects', 'fairies', 'flowers', 'slime'], tot = mix.reduce((a2, b2) => a2 + b2, 0); let pick = Rf()*tot, ki = 0; while(ki < 3 && pick > mix[ki]){ pick -= mix[ki]; ki++; }
+    const lc = { dark: rgLit(V, [34, 30, 28], f.wday, f.haze, AIR), lit: rgLit(V, [236, 240, 246], f.wday, f.haze, AIR), glow: f.glow || V.g1,
+      flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, f.wday), f.haze, AIR)),
+      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, f.wday), f.haze, AIR) };
+    rgSmallLife(x, f.X, f.Y, f.h*rf(0.8, 1.2), kinds[ki], lc, Rf); }
 }
+// what the canvas holds about a ground point (X, Y): a few pixels just above it; the same while nothing has been
+// painted over it (a passing glow or haze aside: a little change is allowed)
+function rgSpot(x, X, Y, r){
+  const W = x.canvas.width, H = x.canvas.height, at = (a, b) => [...x.getImageData(Math.max(0, Math.min(W - 1, Math.round(a))), Math.max(0, Math.min(H - 1, Math.round(b))), 1, 1).data].slice(0, 3);
+  return [at(X - r, Y - 1), at(X, Y - 1), at(X + r, Y - 1), at(X, Y - r*2)].flat();
+}
+function rgSame(a, b){ for(let i = 0; i < a.length; i += 3) if(Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 24) return false; return true; }
 
 const RING_STEPS = {
   ringarch: { cat: 'Textures', label: 'The Arch', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
@@ -16056,7 +16119,7 @@ const STEP_DOCS = {
   glowhue: 'Brings the surface’s Glow Hue into the graph: a color for light that seems to come from inside the surface.',
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
-  accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  accent: 'Brings one of the page’s two accent colors (the Opposition or Conjunction Hue, under Thoughtforms) into the graph.',
   ink: 'Brings the poem’s ink, the color its words are written in, into the graph.',
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
@@ -18005,7 +18068,7 @@ const TEXTURE_CHAINS = {
       [5, 1, 13, paramPort('ringsky', 'centre')], [6, 1, 14, paramPort('oilpaint', 'amount')], [7, 1, 14, paramPort('oilpaint', 'brush')],
       [8, 1, 13, 2], [9, 1, 13, paramPort('ringsky', 'turn')], [9, 2, 13, paramPort('ringsky', 'tilt')], [9, 3, 13, paramPort('ringsky', 'size')],
       [10, 1, 13, 3], [11, 1, 13, 4], [12, 1, 13, 1], [13, 1, 14, 1], [14, 1, 15, 1], [14, 2, 15, 2], [15, 1, 16, 1]] },
-  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the day: overhead noon, at its rim dusk, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass, flowers and little creatures; Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the creatures). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the day: overhead noon, at its rim dusk, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the creatures). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],               // 1
       ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],               // 2
       ['knob', { slot: '3', name: 'World', def: 0 }, 40, 200],                    // 3
@@ -19758,6 +19821,10 @@ for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle',
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
 for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
+// THE DIAL AS A DIRECTION ONLY: where a texture reads only which way the dial points (a wind, a hatch, a flow), its
+// Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
+// guessed: each of these draws the same picture at every height.
+for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminagashi', 'flowfield']) TEXTURE_CAPS[t].dirOnly = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -20332,12 +20399,14 @@ self.onmessage = (e) => {
     <div class="app-header-tools">
       <button class="athanor-top" id="athanorTopBtn" data-sound="athanorOpen" type="button" title="Open the Athanor, a node editor for building surface textures from parts"><span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span></button>
       <button class="shortcut-btn" id="shortcutBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
-      <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="support-btn" id="supportBtn" title="PoetryPress is free and always will be. You can support it on Ko-fi."><span class="support-heart" aria-hidden="true">♡</span><span class="support-word">Support</span></a>
+      <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="support-btn" id="supportBtn" aria-label="Support PoetryPress on Ko-fi" title="PoetryPress is free and always will be. You can support it on Ko-fi."><span class="support-heart" aria-hidden="true">♡</span><span class="support-word">Support</span></a>
     </div>
   </div>
 
   <div class="controls">
 
+    <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
+    <p class="card tab-caption" data-tab="write" data-str="hint.tab_write">Write the poem and sign it. The guide below teaches PML, the marks that style it.</p>
     <div class="card" data-tab="write">
       <p class="card-title" data-str="card.incantation_editor_poetic_magick_l">  Incantation Editor (Poetic Magick Language)</p>
       <div class="check-row editor-toggle">
@@ -20399,8 +20468,8 @@ Have fun!</textarea>
 
       <div class="row" style="margin-top:7px;">
         <div class="field">
-          <label data-str="label.witch_artificer">Witch / Artificer</label>
-          <input type="text" id="usernameField" value="@unfixable.place">
+          <label data-str="label.witch_artificer">Credit</label>
+          <input type="text" id="usernameField" value="" placeholder="Your name or @handle" title="Signed on the image, in the corner you choose. Empty: no credit." autocomplete="nickname">
         </div>
         <div class="field">
           <label data-str="label.corner">Corner</label>
@@ -20419,14 +20488,14 @@ Have fun!</textarea>
       <div class="pml-help" style="margin-top:6px; font-size:12px; color:var(--text-dim); line-height:1.6;">
         <!-- THE GUIDE TEACHES (Ruby: the Athanor's voice, here too): what each mark is, why you'd use it, one thing to try.
              Every ⤓ Try puts its example in the poem where the cursor is (one step of the poem's undo). -->
-        <p class="pml-intro">PML (Poetic Magick Language) styles a poem with a few marks. Plain text stays plain, and a mark PML doesn’t understand is shown as typed, so nothing here can break a poem. Each section ends with an example: <b>⤓ Try</b> inserts it at the cursor, and ☋ takes it out again.</p>
+        <p class="pml-intro">PML (Poetic Magick Language) styles a poem with a few marks. Plain text stays plain, and a mark PML doesn’t understand is shown as typed, so nothing here can break a poem. Each section ends with an example: <b>⤓ Try</b> inserts it at the cursor, and ↶ takes it out again.</p>
 
         <h4>Emphasis</h4>
         <p>Wrap words to change their weight or line: <code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strike~~</code>. They combine and nest: a bold phrase can hold one italic word.</p>
         <p class="pml-ex" data-try="the **heart** of it, *softly*, ~~never~~ always"><code>the **heart** of it, *softly*, ~~never~~ always</code></p>
 
         <h4>Accents and gradients</h4>
-        <p>The page has two accent colors, set under Thoughtforms. Square brackets use the first, braces the second, and both together blend from one to the other across the words. A slash fades an accent into the ink, from the left (<code>/lg</code>) or the right (<code>/rg</code>). Emoji inside take the color too.</p>
+        <p>The page has two accent colors, set under Thoughtforms: the Opposition Hue and the Conjunction Hue. Square brackets use the Opposition Hue, braces the Conjunction Hue, and both together blend from one to the other across the words. A slash fades an accent into the ink, from the left (<code>/lg</code>) or the right (<code>/rg</code>). Emoji inside take the color too.</p>
         <dl>
           <dt><code>[one]</code> <code>{two}</code></dt><dd>accent one, accent two</dd>
           <dt><code>{[text]}</code> <code>[{text]}</code></dt><dd>one accent blending into the other, and the reverse</dd>
@@ -20548,6 +20617,8 @@ but bear with me, dear}]/jitter:200
       </div>
     </details>
 
+    <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
+    <p class="card tab-caption" data-tab="style" data-str="hint.tab_style">The page's shape and how the poem sits on it, and whole looks to start from: presets and your own.</p>
     <details class="card" data-tab="style" open>
       <summary class="card-title" data-str="card.form_amp_bearing">  Form &amp; Bearing</summary>
       <div class="card-grid">
@@ -20619,6 +20690,8 @@ but bear with me, dear}]/jitter:200
 
 
 
+        <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
+        <p class="card tab-caption" data-tab="type" data-str="hint.tab_type">The poem's type: typeface, size, colors, accents and effects.</p>
         <details class="card" data-tab="type" open>
       <summary class="card-title" data-str="card.script_options">Script Options</summary>
       
@@ -20629,7 +20702,7 @@ but bear with me, dear}]/jitter:200
         </div>
 
         <div class="field">
-          <label data-str="label.inscription_hue">Inscription Hue</label>
+          <label data-str="label.inscription_hue">Text Color</label>
           <div class="color-pair">
             <input type="text" class="hex-input" id="textColorHex" value="#F2F2EF" data-coloris>
           </div>
@@ -20657,11 +20730,11 @@ but bear with me, dear}]/jitter:200
 
         <div class="check-row">
           <input type="checkbox" id="textGradientToggle" title="Fill the text with a gradient instead of one color">
-          <label for="textGradientToggle" data-str="label.radial_gradient_text" title="Fill the text with a gradient of two to four hues instead of one.">Radial Gradient Text?</label>
+          <label for="textGradientToggle" data-str="label.radial_gradient_text" title="Fill the text with a gradient of two to four hues instead of one.">Gradient Text?</label>
         </div>
         <div class="subblock" id="gradientBlock">
           <div class="field full">
-            <label data-str="label.aura_stops">Aura Stops</label>
+            <label data-str="label.aura_stops">Gradient Stops</label>
             <div class="radio-group" id="textStopsGroup">
               <div class="radio-btn active" data-val="2">2</div>
               <div class="radio-btn" data-val="3">3</div>
@@ -20669,19 +20742,19 @@ but bear with me, dear}]/jitter:200
             </div>
           </div>
           <div class="field">
-            <label data-str="label.inscription_hue_2">Inscription Hue 2</label>
+            <label data-str="label.inscription_hue_2">Text Color 2</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="textColor2Hex" value="#B98A8A" data-coloris>
             </div>
           </div>
           <div class="field" id="textColor3Field" style="display:none;">
-            <label data-str="label.inscription_hue_3">Inscription Hue 3</label>
+            <label data-str="label.inscription_hue_3">Text Color 3</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="textColor3Hex" value="#C9A876" data-coloris>
             </div>
           </div>
           <div class="field" id="textColor4Field" style="display:none;">
-            <label data-str="label.inscription_hue_4">Inscription Hue 4</label>
+            <label data-str="label.inscription_hue_4">Text Color 4</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="textColor4Hex" value="#7A8CA3" data-coloris>
             </div>
@@ -20825,6 +20898,8 @@ but bear with me, dear}]/jitter:200
       </div>
     </details>
 
+        <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
+        <p class="card tab-caption" data-tab="page" data-str="hint.tab_page">What the page is made of: backdrop, surface, border, inset box and vignette.</p>
         <details class="card" data-tab="page" open>
       <summary class="card-title" data-str="card.backdrop_color">Backdrop Color</summary>
       <div class="card-grid">
@@ -20838,11 +20913,11 @@ but bear with me, dear}]/jitter:200
 
         <div class="check-row">
           <input type="checkbox" id="bgGradientToggle" title="Use a gradient instead of one color">
-          <label for="bgGradientToggle" data-str="label.radial_aura" title="Fill the backdrop with a gradient of two to four hues instead of one.">Radial Aura?</label>
+          <label for="bgGradientToggle" data-str="label.radial_aura" title="Fill the backdrop with a gradient of two to four hues instead of one.">Background Gradient?</label>
         </div>
         <div class="subblock" id="bgGradientBlock">
           <div class="field full">
-            <label data-str="label.aura_stops2">Aura Stops</label>
+            <label data-str="label.aura_stops2">Gradient Stops</label>
             <div class="radio-group" id="bgStopsGroup">
               <div class="radio-btn active" data-val="2">2</div>
               <div class="radio-btn" data-val="3">3</div>
@@ -20850,19 +20925,19 @@ but bear with me, dear}]/jitter:200
             </div>
           </div>
           <div class="field">
-            <label data-str="label.aura_stop_2">Aura Stop 2</label>
+            <label data-str="label.aura_stop_2">Gradient Stop 2</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="bgColor2Hex" value="#D8CFC0" data-coloris>
             </div>
           </div>
           <div class="field" id="bgColor3Field" style="display:none;">
-            <label data-str="label.aura_stop_3">Aura Stop 3</label>
+            <label data-str="label.aura_stop_3">Gradient Stop 3</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="bgColor3Hex" value="#B8A088" data-coloris>
             </div>
           </div>
           <div class="field" id="bgColor4Field" style="display:none;">
-            <label data-str="label.aura_stop_4">Aura Stop 4</label>
+            <label data-str="label.aura_stop_4">Gradient Stop 4</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="bgColor4Hex" value="#8A7048" data-coloris>
             </div>
@@ -20912,10 +20987,26 @@ but bear with me, dear}]/jitter:200
           <label for="textureToggle" data-str="label.customize_surface">Customize Surface</label>
         </div>
         <div class="subblock" id="textureBlock">
-          <!-- THE SURFACE (Ruby's order): its variant with the four readings beside it (the applied reading's name rides in
-               the variant's own field, quietly), then New Random Surface and Edit in the Athanor, then Two Surfaces -->
+          <!-- THE SURFACE (Ruby's order): Two Surfaces and which one these controls change, then its variant with the four
+               readings beside it (the applied reading's name rides in the variant's own field, quietly), then New Random
+               Surface and Edit in the Athanor, then the surface and the words -->
+          <!-- SURFACE LAYERS: a second surface beneath the first. Every control below edits the layer chosen here (Ruby
+               approved moving this above the picker it switches, from the usability review), and Swap trades them whole
+               (blend, hues, light, seed, locks) -->
+          <div class="layer-bar full" id="layerBar">
+            <div class="check-row">
+              <input type="checkbox" id="baseToggle" title="Add a second surface beneath the first">
+              <label for="baseToggle" data-str="label.base_layer" title="Add a second surface beneath the first, with its own settings and blend.">Two Surfaces</label>
+            </div>
+            <div class="radio-group layer-seg" id="layerSeg" role="group" aria-label="Which surface the settings below change">
+              <button type="button" class="radio-btn active" data-layer="upper" aria-pressed="true" data-str="button.layer_upper" title="Edit the upper surface">Upper</button>
+              <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Edit the lower surface">Lower</button>
+              <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Swap the upper and lower surfaces, with all their settings and locks">⇅ Swap</button>
+            </div>
+          </div>
           <div class="field full surface-variant">
             <label data-str="label.surface_variant">Surface Variant</label>
+            <span class="el-cap" aria-hidden="true" data-str="hint.readings">Readings</span>
             <div class="surface-pick">
             <select id="textureType">
               <!-- grouped by what a surface IS (each group alphabetical); each group's glyph a Runology Archetype that means it (appOptions.js TEXTURE_GROUPS) -->
@@ -21026,18 +21117,8 @@ but bear with me, dear}]/jitter:200
             <button class="ghost" id="randomSurfaceBtn" data-sound="summonBackdrop" type="button" data-str="button.randomSurfaceBtn">⟳ New Random Surface</button>
             <button class="ghost" id="revealSurfaceBtn" data-sound="athanorOpen" type="button" data-str="button.revealSurfaceBtn" title="Open this surface's parts and wires in the Athanor. The page keeps this surface until you Apply your version.">🜉 Edit in the Athanor</button>
           </div>
-          <!-- SURFACE LAYERS (Ruby; below the surface's own buttons, her order): a second surface beneath the first; every control below edits the layer
-               chosen here, and Swap trades them whole (blend, hues, light, seed, locks) -->
-          <div class="layer-bar full" id="layerBar">
-            <div class="check-row">
-              <input type="checkbox" id="baseToggle" title="Add a second surface beneath the first">
-              <label for="baseToggle" data-str="label.base_layer" title="Add a second surface beneath the first, with its own settings and blend.">Two Surfaces</label>
-            </div>
-            <div class="radio-group layer-seg" id="layerSeg" role="group" aria-label="Which surface the settings below change">
-              <button type="button" class="radio-btn active" data-layer="upper" aria-pressed="true" data-str="button.layer_upper" title="Edit the upper surface">Upper</button>
-              <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Edit the lower surface">Lower</button>
-              <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Swap the upper and lower surfaces, with all their settings and locks">⇅ Swap</button>
-            </div>
+          <!-- THE SURFACE AND THE WORDS sit under the surface's own buttons -->
+          <div class="words-bar full">
             <!-- THE SURFACE AND THE WORDS (Ruby): the first surface may know where the poem is (Text Aware); the second may be
                  blended into the letters themselves (Blend with Text); either may shape itself to the words (Shape Aware: round
                  them on the page, to them in the letters), and either may be cut away by them (Cut Out by Text) -->
@@ -21158,7 +21239,7 @@ but bear with me, dear}]/jitter:200
             <!-- the dial's two numbers, shown and typed: its angle, and how far out it reaches (100 the rim; past it, lower) -->
             <div class="ld-values">
               <label>Angle <input type="number" id="lightDegIn" min="0" max="359" step="1" inputmode="numeric">°</label>
-              <label>Reach <input type="number" id="lightTiltIn" min="0" max="130" step="1" inputmode="numeric">%</label>
+              <label id="lightTiltField">Height <input type="number" id="lightTiltIn" min="0" max="130" step="1" inputmode="numeric">%</label>
             </div>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
@@ -21166,7 +21247,7 @@ but bear with me, dear}]/jitter:200
           </div>
           <!-- THE CAMERA DIAL (Ruby: a second dial, the camera's, so the light dial is the light's alone). Drag from the
                middle toward where the camera stands: the middle looks straight down (or, on Ringworld, straight up),
-               the rim looks low across; ＋ and − (or a wheel, or a pinch) zoom. While it moves, a wireframe guide shows
+               the rim looks low across; the slider under it (or a wheel, or a pinch) zooms. While it moves, a wireframe guide shows
                the shot before the surface is made. Shown only for a surface with a camera. -->
           <div class="field full tool-hidden" id="cameraRow">
             <label data-str="label.camera">Camera</label>
@@ -21174,7 +21255,10 @@ but bear with me, dear}]/jitter:200
               <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: the center looks straight down; drag toward the rim to look lower across the ground">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
                   <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
-                  <circle class="ld-ring" r="26"></circle>
+                  <!-- its own face (the usability review: it looked like the light dial with other buttons): a viewfinder's
+                       corners round a ring drawn as a lens barrel -->
+                  <path class="cam-corner" d="M -42 -30 V -42 H -30 M 30 -42 H 42 V -30 M 42 30 V 42 H 30 M -30 42 H -42 V 30"></path>
+                  <circle class="ld-ring cam-ring" r="26"></circle>
                   <circle class="ld-half" r="7.5"></circle>
                   <!-- what the camera sees: a frame round the middle, smaller as it zooms in -->
                   <rect class="cam-frame" id="cameraFrame" x="-9" y="-12" width="18" height="24"></rect>
@@ -21183,10 +21267,10 @@ but bear with me, dear}]/jitter:200
                   <circle class="ld-handle cam-handle" id="cameraHandle" r="5.6" cx="0" cy="0"></circle>
                 </svg>
               </div>
-              <button type="button" class="ld-btn cam-zoom-in" id="cameraZoomIn" title="Zoom in" aria-label="Zoom in">＋</button>
-              <button type="button" class="ld-btn cam-zoom-out" id="cameraZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
               <button type="button" class="ld-btn ld-reset" id="cameraReset" title="Reset the camera" aria-label="Reset the camera">⟲</button>
             </div>
+            <!-- the zoom, a slider of its own (a wheel or a pinch on the dial zooms too); halfway is 100%, the ends 25% and 400% -->
+            <input type="range" class="cam-zoom" id="cameraZoomSlider" min="-200" max="200" step="1" value="0" aria-label="Camera zoom" title="Zoom: left is wider, right is closer">
             <div class="ld-values cam-values">
               <label>Turn <input type="number" id="cameraTurnIn" min="0" max="359" step="1" inputmode="numeric">°</label>
               <label>View <input type="number" id="cameraViewIn" min="0" max="100" step="1" inputmode="numeric">%</label>
@@ -21484,6 +21568,8 @@ but bear with me, dear}]/jitter:200
             </div>
     </details>
 
+    <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
+    <p class="card tab-caption" data-tab="more" data-str="hint.tab_more">Theme and sound, saved looks and poems, and the Workbench.</p>
     <details class="card" data-tab="more">
       <summary class="card-title" data-str="card.appearance">Interface</summary>
       <div class="field full">
@@ -21586,8 +21672,8 @@ but bear with me, dear}]/jitter:200
       <div class="work-bar" aria-hidden="true"><i></i></div>
       <p class="working-line" id="workingLine" aria-live="polite"></p>
       <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset the preview's size, zoom and position (0)" data-str="button.resetViewBtn">⟲</button>
-      <button class="reset-view-btn history-btn" id="undoBtn" type="button" title="Undo (Ctrl+Z)" aria-label="Undo">☋</button>
-      <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">☊</button>
+      <button class="reset-view-btn history-btn" id="undoBtn" type="button" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+      <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
       <button class="reset-view-btn" id="filmBtn" type="button" title="Show or hide the history filmstrip (H)" aria-label="History filmstrip">🎞</button>
       <div class="filmstrip" id="filmstrip" aria-label="History: click a frame to go back to it"></div>
       <button class="download-btn" id="downloadBtn" data-str="button.downloadBtn">Save image</button>
@@ -21661,11 +21747,13 @@ but bear with me, dear}]/jitter:200
   </div>
 
   <nav class="tabbar" id="tabBar">
+    <!-- writing on a phone: the PML guide as a sheet (the guide's card is put away while writing — the usability review) -->
+    <button class="pml-tab" id="pmlTabBtn" type="button" aria-expanded="false" aria-controls="formattingGuidePanel" title="Show or hide the PML guide while you write" data-str="tab.pml">PML</button>
     <button class="tab-btn active" data-tab="write" type="button" title="Write the poem in PML" data-str="tab.inscription"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z" stroke="currentColor" opacity="1.0"/><path d="M6.14 4.42A2.5 2.5 0 0 1 9.26 6.83V9.43h6.17V6.57A2.5 2.5 0 1 1 17.95 9.61H14.90v6.42h2.32A2.5 2.5 0 1 1 15.51 18.00V14.65H8.85v2.32A2.5 2.5 0 1 1 6.70 14.96H8.98V8.88H6.69A2.5 2.5 0 0 1 6.87 4.77Z" stroke="currentColor" opacity="0.72"/><path d="M6.75 4.61A2.5 2.5 0 0 1 9.23 6.79V9.26h5.95V7.22A2.5 2.5 0 1 1 17.88 8.87H14.72v5.41h3.10A2.5 2.5 0 1 1 15.11 18.02V14.94H8.94v2.89A2.5 2.5 0 1 1 6.27 15.57H9.42V9.64H6.32A2.5 2.5 0 0 1 6.50 3.78Z" stroke="currentColor" opacity="0.56"/><path d="M6.72 3.44A2.5 2.5 0 0 1 8.61 6.65V9.37h6.67V6.22A2.5 2.5 0 1 1 17.40 9.11H15.71v5.63h2.48A2.5 2.5 0 1 1 14.78 17.77V14.93H8.42v2.92A2.5 2.5 0 1 1 7.11 14.64H8.15V9.90H7.13A2.5 2.5 0 0 1 6.84 3.44Z" stroke="currentColor" opacity="0.4"/></svg></span>Inscription</button>
     <button class="tab-btn" data-tab="style" type="button" title="Page shape, alignment and presets" data-str="tab.rituals"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="11.60" r="9.60" stroke="currentColor" opacity="1.0"/><path d="M12.24 20.77 7.06 5.05 20.77 14.65H3.44L16.99 4.30Z" stroke="currentColor" opacity="0.72"/><circle cx="11.91" cy="11.49" r="9.84" stroke="currentColor" opacity="0.72"/><path d="M12.20 20.76 6.16 4.66 20.38 14.46H2.96L18.02 5.14Z" stroke="currentColor" opacity="0.56"/><circle cx="11.42" cy="12.12" r="9.44" stroke="currentColor" opacity="0.56"/><path d="M11.37 20.09 6.56 5.21 21.22 14.61H3.83L17.29 4.23Z" stroke="currentColor" opacity="0.4"/><circle cx="11.32" cy="12.11" r="9.20" stroke="currentColor" opacity="0.4"/></svg></span>Rituals</button>
     <button class="tab-btn" data-tab="type" type="button" title="Typeface, text colors and text effects" data-str="tab.thoughtforms"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.4V12.4" stroke="currentColor" opacity="1.0"/><path d="M2.4 16.1H21.6" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="20.00" r="2.25" stroke="currentColor" opacity="1.0"/><path d="M4.95 4.86H20.16L11.94 15.95Z" stroke="currentColor" opacity="0.72"/><path d="M12.28 7.85V12.79" stroke="currentColor" opacity="0.72"/><path d="M2.15 15.87H21.17" stroke="currentColor" opacity="0.72"/><circle cx="11.55" cy="20.49" r="2.12" stroke="currentColor" opacity="0.72"/><path d="M4.87 4.12H19.09L12.13 15.68Z" stroke="currentColor" opacity="0.56"/><path d="M11.88 6.89V13.02" stroke="currentColor" opacity="0.56"/><path d="M3.12 16.42H21.66" stroke="currentColor" opacity="0.56"/><circle cx="11.64" cy="20.51" r="2.16" stroke="currentColor" opacity="0.56"/><path d="M4.53 3.96H19.77L12.09 15.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.97 7.54V12.95" stroke="currentColor" opacity="0.4"/><path d="M2.65 15.60H21.60" stroke="currentColor" opacity="0.4"/><circle cx="11.85" cy="19.79" r="2.49" stroke="currentColor" opacity="0.4"/></svg></span>Thoughtforms</button>
     <button class="tab-btn" data-tab="page" type="button" title="Backdrop, surfaces, border, inset box and vignette" data-str="tab.materia"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M11.87 3.13 20.73 11.72 12.10 21.61 2.14 11.88Z" stroke="currentColor" opacity="0.72"/><path d="M12.23 2.89 21.63 12.62 11.34 21.92 2.13 12.46Z" stroke="currentColor" opacity="0.56"/><path d="M12.24 2.89 20.75 12.09 12.13 21.01 2.85 11.62Z" stroke="currentColor" opacity="0.4"/></svg></span>Materia</button>
-    <button class="tab-btn" data-tab="more" type="button" title="Theme, saved spells and poems, and the Workbench" id="moreTabBtn"><span class="tab-swap"><span class="tab-face eso"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span><span data-str="tab.esoterica">Esoterica</span></span><span class="tab-face ret" aria-hidden="true"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span><span>Return</span></span></span></button>
+    <button class="tab-btn" data-tab="more" type="button" title="Theme, saved spells and poems, and the Workbench" id="moreTabBtn"><span class="tab-swap"><span class="tab-face eso"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span><span data-str="tab.esoterica">Esoterica</span></span><span class="tab-face ret" aria-hidden="true"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span><span class="ret-desk" data-str="tab.close">Close</span><span class="ret-phone" data-str="tab.done_writing">Done Writing</span></span></span></button>
   </nav>
 
 </div>
@@ -21806,6 +21894,9 @@ const UI_STRINGS = {
   'tab.thoughtforms':                      "Thoughtforms",
   'tab.materia':                           "Materia",
   'tab.esoterica':                         "Esoterica",
+  'tab.close':                                 "Close",
+  'tab.pml':                                   "PML",
+  'tab.done_writing':                          "Done Writing",
 
   // ---- card ----
   'card.incantation_editor_poetic_magick_l': "Incantation Editor (Poetic Magick Language)",
@@ -21831,6 +21922,12 @@ const UI_STRINGS = {
   'hint.landscape':                        "Landscape",
   'hint.create_saves_the_current_look_as_a': "Create saves the current look as a spell. Invoke puts it back on the page.",
   'hint.the_grimoire_is_empty_record_a_poe': "The Grimoire is empty. Record saves your poem's text here.",
+  'hint.readings':                          "Readings",
+  'hint.tab_write':                         "Write the poem and sign it. The guide below teaches PML, the marks that style it.",
+  'hint.tab_style':                         "The page's shape and how the poem sits on it, and whole looks to start from: presets and your own.",
+  'hint.tab_type':                          "The poem's type: typeface, size, colors, accents and effects.",
+  'hint.tab_page':                          "What the page is made of: backdrop, surface, border, inset box and vignette.",
+  'hint.tab_more':                          "Theme and sound, saved looks and poems, and the Workbench.",
   'hint.spells_are_looks':                  "Spells keep looks: every setting, but not the poem's words.",
   'hint.grimoire_keeps_words':              "The Grimoire keeps poems: the words only. Choose one, then Invoke or Dissolve.",
 
@@ -21863,7 +21960,7 @@ const UI_STRINGS = {
   'button.modalCancel':                    "Cancel",
   // ---- labels ----
   'label.script_highlighting':                 "Script Highlighting",
-  'label.witch_artificer':                     "Witch / Artificer",
+  'label.witch_artificer':                     "Credit",
   'label.corner':                              "Corner",
   'label.spell_mark':                          "Show Spell Code",
   'label.aspect_ratio':                        "Aspect Ratio",
@@ -21873,7 +21970,7 @@ const UI_STRINGS = {
   'label.alignment':                           "Alignment",
   'label.attunement_vertical':                 "Attunement (Vertical)",
   'label.typeface':                            "Typeface",
-  'label.inscription_hue':                      "Inscription Hue",
+  'label.inscription_hue':                      "Text Color",
   'label.maximum_size_px':                     "Maximum Size (px)",
   'label.breathing_room':                      "Breathing Room",
   'label.highlight_hue':                       "Specular Hue",
@@ -21881,20 +21978,20 @@ const UI_STRINGS = {
   'label.diffuse_hue':                         "Diffuse Hue",
   'label.fifth_hue':                           "Glow Hue",
   'label.text_margins':                        "Text Margins",
-  'label.radial_gradient_text':                "Radial Gradient Text?",
-  'label.aura_stops':                          "Aura Stops",
-  'label.inscription_hue_2':                    "Inscription Hue 2",
-  'label.inscription_hue_3':                    "Inscription Hue 3",
-  'label.inscription_hue_4':                    "Inscription Hue 4",
+  'label.radial_gradient_text':                "Gradient Text?",
+  'label.aura_stops':                          "Gradient Stops",
+  'label.inscription_hue_2':                    "Text Color 2",
+  'label.inscription_hue_3':                    "Text Color 3",
+  'label.inscription_hue_4':                    "Text Color 4",
   'label.radial_gradient_angle':               "Gradient Angle",
   'label.opposition_hue':                      "Opposition Hue",
   'label.conjunction_hue':                     "Conjunction Hue",
   'label.background_hue':                      "Background Hue",
-  'label.radial_aura':                         "Radial Aura?",
-  'label.aura_stops2':                         "Aura Stops",
-  'label.aura_stop_2':                         "Aura Stop 2",
-  'label.aura_stop_3':                         "Aura Stop 3",
-  'label.aura_stop_4':                         "Aura Stop 4",
+  'label.radial_aura':                         "Background Gradient?",
+  'label.aura_stops2':                         "Gradient Stops",
+  'label.aura_stop_2':                         "Gradient Stop 2",
+  'label.aura_stop_3':                         "Gradient Stop 3",
+  'label.aura_stop_4':                         "Gradient Stop 4",
   'label.arc_angle':                           "Arc Angle",
   'label.customize_surface':                   "Customize Surface",
   'label.surface_variant':                     "Surface Variant",
@@ -22116,20 +22213,20 @@ const DIALOGS = {
   spellCreate: {
     title: 'Keep this look?',
     body: 'Name it. Only the look is saved, not the poem (Record keeps poems in the Grimoire).',
-    confirm: 'Yes (Inscribe)',
-    cancel: 'No (Ignore)',
+    confirm: 'Save Look',
+    cancel: 'Cancel',
   },
   spellDelete: {
     title: 'Dissolve this spell?',
     body: '“{name}” will be removed from this browser.',
-    confirm: 'Yes (Remove)',
-    cancel: 'No (Retain)',
+    confirm: 'Delete',
+    cancel: 'Keep',
   },
   poemSave: {
     title: 'Record in the Grimoire?',
     body: 'Save the text of “{name}”? The look isn’t included (Create saves looks as spells).',
-    confirm: 'Yes (Decide)',
-    cancel: 'No (Deny)',
+    confirm: 'Record Poem',
+    cancel: 'Cancel',
   },
   overwrite: {
     title: 'Overwrite?',
@@ -22156,8 +22253,8 @@ const DIALOGS = {
   poemDelete: {
     title: 'Tear out this page?',
     body: 'Remove “{name}” from the Grimoire. This cannot be undone.',
-    confirm: 'Yes (Preclude)',
-    cancel: 'No (Preserve)',
+    confirm: 'Delete',
+    cancel: 'Keep',
   },
 };
 
@@ -22176,7 +22273,7 @@ const BLEND_NAMES = {
 const PML_GUIDE = {
   try: '⤓ Try',
   tryHint: 'Insert this example at the cursor, or at the end',
-  tried: 'Added to your poem. ☋ Undo takes it out.',
+  tried: 'Added to your poem. ↶ Undo takes it out.',
 };
 /** The editor's hint line, under the poem, for a directive PML can't read ({d} is the directive as written). */
 const PML_HINTS = {
@@ -36595,13 +36692,14 @@ const GEN_STEPS = {
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
-// sometimes mixed, sometimes apocalyptic, sometimes destroyed, sometimes populated by cute little alien creatures,
-// sometimes with crashed spaceships"). By the Seed picks one; Mixed lays three side by side, region by region.
+// sometimes mixed, sometimes apocalyptic, sometimes destroyed, sometimes populated by [small life], sometimes with
+// crashed spaceships"). By the Seed picks one; Mixed lays three side by side, region by region. (The small life was
+// once cute little creatures; Ruby: "too cute and childish … insects, fairies, flowers, slime creatures. All subtle.")
 const RG_WORLDS = ['seed', 'wilds', 'cities', 'neon', 'builders', 'magic', 'ruins', 'mixed'];
 // what each world raises, as weights (Life and Works scale them):
 //   tr trees · de dead trees · gt glowing trees · to towers · sp spires · sa spans (wall to wall) · mo monoliths and
 //   standing stones · cr crystals · ci circles · pi pillars of light · do domes · br bridges of light · ca craters, smoke
-//   and fire · wr wrecks · sh ships · be creatures · ro rocks · gr grass and flowers · cv how much of the land is city
+//   and fire · wr wrecks · sh ships · be small life · ro rocks · gr grass and flowers · cv how much of the land is city
 const RG_PROF = {
   wilds:    { tr: 1,    de: 0.05, gt: 0,   to: 0,    sp: 0.05, sa: 0.12, mo: 0.35, cr: 0.12, ci: 0,   pi: 0,    do: 0,    br: 0,   ca: 0,   wr: 0.25, sh: 0.15, be: 1,    ro: 0.8,  gr: 1,    cv: 0 },
   cities:   { tr: 0.45, de: 0,    gt: 0,   to: 1,    sp: 0.2,  sa: 0.25, mo: 0,    cr: 0,    ci: 0,   pi: 0,    do: 0.5,  br: 0.2, ca: 0,   wr: 0.1,  sh: 0.8,  be: 0.3,  ro: 0.15, gr: 0.5,  cv: 1 },
@@ -36815,25 +36913,33 @@ function rgTower(x, X, Y, h, wdt, c, neon, broken, night, R){
     if(R() < 0.6 && h > 12){ const sh = h*0.12, sy = top + h*(0.15 + 0.4*R()); x.fillStyle = rsCss(R() < 0.5 ? c.glow : c.glow2, 0.9); x.fillRect(X - w2 - wdt*0.1, sy, wdt*0.55, sh);
       x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, sy, 0, X, sy, wdt*1.3); g.addColorStop(0, rsCss(c.glow, 0.35)); g.addColorStop(1, rsCss(c.glow, 0)); x.fillStyle = g; x.fillRect(X - wdt*1.3, sy - wdt*1.3, wdt*2.6, wdt*2.6); x.restore(); } }
 }
-// a little creature (Ruby: "cute little alien creatures"): a round body in one of the page's colours, big eyes,
-// feelers; some long-necked grazers, some with ears, standing on two or four little legs
-function rgCreature(x, X, Y, h, col, kind, sd, R){
-  const body = rsCss(col), shade = rsCss(rsMix(col, [0, 0, 0], 0.25)), r = h*0.32, by = Y - h*0.3;
-  x.strokeStyle = shade; x.lineWidth = Math.max(rgPx(0.8), h*0.06);
-  x.beginPath(); for(const lx of kind === 1 ? [-0.6, -0.25, 0.25, 0.6] : [-0.3, 0.3]){ x.moveTo(X + lx*r, by + r*0.6); x.lineTo(X + lx*r, Y); } x.stroke();
-  if(kind === 1){ // a grazer: a long body, a long neck up to a small head
-    x.fillStyle = body; x.beginPath(); x.ellipse(X, by, r*1.1, r*0.7, 0, 0, Math.PI*2); x.fill();
-    const hx2 = X + sd*r*1.3, hy = by - h*0.55; x.strokeStyle = body; x.lineWidth = r*0.4; x.beginPath(); x.moveTo(X + sd*r*0.7, by - r*0.2); x.lineTo(hx2, hy); x.stroke();
-    x.fillStyle = body; x.beginPath(); x.arc(hx2, hy, r*0.38, 0, Math.PI*2); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(hx2 + sd*r*0.12, hy - r*0.05, r*0.17, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#111'; x.beginPath(); x.arc(hx2 + sd*r*0.16, hy - r*0.03, r*0.08, 0, Math.PI*2); x.fill(); return; }
-  x.fillStyle = body; x.beginPath(); x.ellipse(X, by, r, r*(kind === 2 ? 1.15 : 0.92), 0, 0, Math.PI*2); x.fill();
-  x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.3)); x.beginPath(); x.ellipse(X - sd*r*0.25, by - r*0.35, r*0.35, r*0.22, 0, 0, Math.PI*2); x.fill();
-  if(kind === 2){ x.fillStyle = body; for(const s of [-1, 1]){ x.beginPath(); x.ellipse(X + s*r*0.45, by - r*1.2, r*0.18, r*0.5, s*0.2, 0, Math.PI*2); x.fill(); } }
-  else { x.strokeStyle = shade; x.lineWidth = Math.max(rgPx(0.6), h*0.035); x.beginPath(); for(const s of [-1, 1]){ x.moveTo(X + s*r*0.3, by - r*0.8); x.lineTo(X + s*r*0.6, by - r*1.5); } x.stroke();
-    x.fillStyle = body; for(const s of [-1, 1]){ x.beginPath(); x.arc(X + s*r*0.6, by - r*1.5, r*0.14, 0, Math.PI*2); x.fill(); } }
-  for(const s of [-1, 1]){ x.fillStyle = '#fff'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.1, by - r*0.1, r*0.28, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#121212'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.18, by - r*0.06, r*0.14, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#fff'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.12, by - r*0.13, r*0.05, 0, Math.PI*2); x.fill(); }
+// SMALL LIFE (Ruby: "insects, fairies, flowers, slime creatures … all subtle"): never more than a few marks, small for
+// their distance and quiet in colour, so they are found rather than seen. Each kind at the ground point (X, Y), at
+// h, the height a body would stand there.
+function rgSmallLife(x, X, Y, h, kind, c, R){
+  // (each mark has a floor in the export's pixels: smaller than that, a find is not subtle but missing)
+  const rnd = (a, b) => a + (b - a)*R(), dot = (cx, cy, r, lo, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(rgPx(lo), r), 0, Math.PI*2); x.fill(); };
+  if(kind === 'insects'){ // a small cloud of specks over the grass, a pair of wings catching the light on the nearer
+    const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
+    for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4, iy = cy + (R() - 0.5)*h*0.6; dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));
+      if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
+    return; }
+  if(kind === 'fairies'){ // a few points of light drifting low, each with a faint trail behind it
+    const n = 1 + Math.floor(R()*3);
+    for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2, fy = Y - h*rnd(0.4, 1.4), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);
+      rgGlow(x, fx, fy, Math.max(rgPx(12), h*0.32), c.glow, 0.4);
+      for(let t = 1; t <= 3; t++) dot(fx - dx*t, fy + dx*0.15*t*t*Math.sign(dx), h*0.025*(1 - t*0.22), 1 - t*0.2, rsCss(c.glow, 0.32/t));
+      dot(fx, fy, h*0.04, 2.2, rsCss(rsMix(c.glow, [255, 255, 255], 0.6), 0.85)); }
+    return; }
+  if(kind === 'flowers'){ // a patch of small blossoms in the page's colours
+    const n = 4 + Math.floor(R()*6);
+    for(let q = 0; q < n; q++) dot(X + (R() - 0.5)*Math.max(rgPx(24), h*1.6), Y - h*rnd(0.02, 0.18), h*rnd(0.04, 0.07), 2.4, rsCss(c.flowers[Math.floor(R()*c.flowers.length)], 0.8));
+    return; }
+  // slime: one to three low, glistening mounds, half see-through, a highlight on each
+  const n = 1 + Math.floor(R()*3);
+  for(let q = 0; q < n; q++){ const sx = X + (R() - 0.5)*h*1.2, sw = Math.max(rgPx(7), h*rnd(0.18, 0.32)), sh = sw*rnd(0.45, 0.7);
+    x.fillStyle = rsCss(c.slime, 0.68); x.beginPath(); x.ellipse(sx, Y, sw, sh, 0, Math.PI, Math.PI*2); x.fill();
+    x.fillStyle = rsCss([255, 255, 255], 0.45); x.beginPath(); x.ellipse(sx - sw*0.3, Y - sh*0.55, sw*0.22, sh*0.16, -0.3, 0, Math.PI*2); x.fill(); }
 }
 function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
@@ -36954,9 +37060,21 @@ function rgPaintLand(x, mk, dk, V, R){
       else if(r.kind === 'neon'){ line(L2, rsCss(c.glow, 0.9), wpx*1.2); line(R2, rsCss(c.glow2, 0.9), wpx*1.2); }
       else if(r.kind === 'path' || r.kind === 'ley'){ x.save(); x.globalCompositeOperation = 'screen'; line(ctr, rsCss(c.glow, 0.3), wpx*5); line(ctr, rsCss(c.glow, 0.9), wpx*1.3); x.restore(); }
       else if(r.kind === 'broken') for(let q = 0; q + 1 < ctr.length; q += 2) line([L2[q], R2[q + 1]], rsCss(rgLit(V, [40, 36, 32], day, haze, AIR)), wpx); } };
-  // the little creatures live on some rings, not all (Ruby: "sometimes populated by cute little alien creatures")
-  const beasts = R() < 0.2 + 0.6*V.life*Math.max(...V.world.list.map(w => RG_PROF[w].be));
-  let prevY = null;
+  // small life lives on some rings, not all: insects, fairies, flowers and slime, each world its own mix. A few finds
+  // in the whole picture (more with Life), each on its own ridge. Only a ridge whose crest is in the frame and near
+  // enough to see a find on is chosen (a ridge runs past both edges, and the near ones are often below the frame),
+  // and each offers eight places across the frame: the find takes the first that nothing nearer covers
+  const lively = R() < 0.25 + 0.6*V.life*Math.max(...V.world.list.map(w => RG_PROF[w].be)), finds = new Map();
+  if(lively){ const ok = [];
+    for(let k = 1; k < K; k++){ let d = dOf(k); if(d > dWall*1.02){ if(dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
+      const a = d*hx, z = Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*hz)), p = at(a, z, Math.max(T(a, z, 2*Sof(d)/96*1.3), TR.sea));
+      if(p && p[1] > wh*0.04 && p[1] < wh*0.9 && W*0.0007*F/p[2] >= px(5)) ok.push(k); }
+    // (nearer ridges likelier; far off, a find keeps the floor of its marks, as the far land is drawn taller than it is)
+    for(let q = 0, n = Math.min(ok.length, Math.round(V.life*4)); q < n; q++) { const xs = Array.from({ length: 8 }, (_, i) => ww*(0.06 + 0.88*(i + R())/8));
+      for(let i = xs.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [xs[i], xs[j]] = [xs[j], xs[i]]; }   // (in a shuffled order, the same in every browser)
+      xs.seed = (R()*4294967296) >>> 0;   // (each find its own stream: whether one is seen never changes another)
+      finds.set(ok.splice(Math.floor(R()*R()*ok.length), 1)[0], xs); } }
+  let prevY = null; const seen = [];
   for(let k = K - 1; k >= 0; k--){
     let d = dOf(k); if(d > dWall*1.02){ if(k === 0 || dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
     const Sd = Sof(d), M = 96, pts = [], fine = 2*Sd/M*1.3;
@@ -36981,8 +37099,8 @@ function rgPaintLand(x, mk, dk, V, R){
         rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03))); }
       else { const bd = depth*rnd(0.1, 0.22); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bd*rnd(0.6, 1.2)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02))); }
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
-    // what grows and stands on it: trees in the forests, the city's buildings, rocks, crystals, creatures, grass
-    const near = k <= 1; let herds = 1 + (R() < 0.4 ? 1 : 0);
+    // what grows and stands on it: trees in the forests, the city's buildings, rocks, crystals, small life, grass
+    const near = k <= 1, fXs = finds.get(k), spots = []; R();   // (a draw kept, so a picture without small life is as it was)
     for(let i = 0; i + 1 < pts.length; i++){ const p0 = pts[i], p1 = pts[i + 1]; if(p0.sea && p1.sea) continue;
       const am = (p0.a + p1.a)/2, zm = (p0.z + p1.z)/2, w = V.worldAt(am, zm), P = RG_PROF[w], kpx = F/((p0.zc + p1.zc)/2), segW = 2*Sd/(M - 1), wday = ringDay(L, am), night = 1 - rsSmooth(0.3, 0.7, wday);
       const c = colsOf(w, wday, haze), place = (n, fn) => { n = Math.floor(n) + (R() < n % 1 ? 1 : 0); for(let q = 0; q < n; q++){ const u = R(), X = p0.X + (p1.X - p0.X)*u, Y = p0.Y + (p1.Y - p0.Y)*u + depth*Math.pow(R(), 1.6)*0.55; fn(X, Y); } };
@@ -36997,15 +37115,35 @@ function rgPaintLand(x, mk, dk, V, R){
       if(rH > 2 && P.ro*V.forms > 0.05){ place(P.ro*V.forms*segW/(W*0.004)*(k <= 1 ? 0.4 : 1), (X, Y) => { const r = rH*rnd(0.4, 1.5), rc = rgLit(V, [128, 122, 114], wday, haze, AIR), pts2 = Array.from({ length: 6 }, (_, q) => { const t = Math.PI + q/5*Math.PI; return [X + Math.cos(t)*r*rnd(0.8, 1.2), Y + Math.sin(t)*r*rnd(0.6, 1)]; });
         rsPoly(x, pts2, rsCss(rsMix(rc, BLACK, 0.2))); rsPoly(x, [[X, Y], pts2[2], pts2[3], pts2[4]].map(([a2, b2]) => [a2, b2]), rsCss(rsMix(rc, [255, 244, 222], 0.15))); }); }
       const cH = W*0.0007*kpx;
-      if(beasts && cH > 4 && k >= 1 && k <= 5 && herds > 0 && R() < P.be*V.life*0.08){ herds--; const n = 1 + Math.floor(R()*4), cols = [V.g1, V.g2, rsMix(V.g1, [255, 255, 255], 0.45), rsMix(V.g2, V.sky, 0.5), [240, 200, 220]], ck = Math.floor(R()*3), col = rgLit(V, cols[Math.floor(R()*cols.length)], Math.max(0.35, wday), haze, AIR);
-        let X = p0.X + (p1.X - p0.X)*R(); const dir = R() < 0.5 ? -1 : 1; for(let q = 0; q < n; q++){ const Y = p0.Y + (p1.Y - p0.Y)*rgClamp((X - p0.X)/((p1.X - p0.X) || 1)) + depth*R()*0.3; rgCreature(x, X, Y, cH*rnd(0.7, 1.3), col, ck, dir, R); X += cH*rnd(0.9, 1.8)*dir; } }
+      if(fXs && cH >= px(3)) for(const fX of fXs){ const fu = (fX - p0.X)/(p1.X - p0.X || 1e-6), Y = p0.Y + (p1.Y - p0.Y)*fu;
+        if(fu >= 0 && fu < 1 && Y > px(4) && Y < wh*0.95) spots.push({ X: fX, Y, h: cH, w, wday, haze, glow: c.glow, seed: fXs.seed }); }
       if(near && P.gr*V.life > 0.05){ const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), wday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), gH = W*0.00025*kpx, flw = [V.g1, V.g2, [250, 246, 240]];
         place(P.gr*V.life*(p1.X - p0.X)/Math.max(2, gH)*0.5, (X, Y) => { for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
           if(R() < 0.25*P.gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); } }); } }
+    // a find's places, once its ridge is done: it is drawn at the end, in the first that nothing nearer has covered since
+    if(spots.length) seen.push(spots.map(f => [f, rgSpot(x, f.X, f.Y, px(4))]));
     // the roads, then the works, between this layer and the next nearer one
     const dn = k > 0 ? dOf(k - 1) : 0; drawRoads(dn, d); while(wi < works.length && works[wi].d >= dn){ if(works[wi].d <= d) drawWork(works[wi]); wi++; }
   }
+  // the finds nothing nearer stands in front of (a forest whose ridge is below the frame rises over most of them)
+  for(const ridge of seen){ const f = (ridge.find(([f2, before]) => rgSame(rgSpot(x, f2.X, f2.Y, px(4)), before)) || [])[0];
+    if(!f) continue; const Rf = mulberry32(f.seed), rf = (a, b) => a + (b - a)*Rf();
+    if(Rf() >= 0.3 + 0.7*RG_PROF[f.w].be) continue;
+    // (which kind, by the world: fairies where there is magic, insects and flowers in the wilds, slime in the ruins)
+    const mix = { magic: [1, 3, 1, 1], wilds: [3, 1, 3, 1], ruins: [2, 0.5, 1, 3], neon: [1, 2, 0.5, 1], cities: [2, 0.5, 2, 0.5], builders: [2, 1, 2, 1] }[f.w] || [2, 1, 2, 1];
+    const kinds = ['insects', 'fairies', 'flowers', 'slime'], tot = mix.reduce((a2, b2) => a2 + b2, 0); let pick = Rf()*tot, ki = 0; while(ki < 3 && pick > mix[ki]){ pick -= mix[ki]; ki++; }
+    const lc = { dark: rgLit(V, [34, 30, 28], f.wday, f.haze, AIR), lit: rgLit(V, [236, 240, 246], f.wday, f.haze, AIR), glow: f.glow || V.g1,
+      flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, f.wday), f.haze, AIR)),
+      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, f.wday), f.haze, AIR) };
+    rgSmallLife(x, f.X, f.Y, f.h*rf(0.8, 1.2), kinds[ki], lc, Rf); }
 }
+// what the canvas holds about a ground point (X, Y): a few pixels just above it; the same while nothing has been
+// painted over it (a passing glow or haze aside: a little change is allowed)
+function rgSpot(x, X, Y, r){
+  const W = x.canvas.width, H = x.canvas.height, at = (a, b) => [...x.getImageData(Math.max(0, Math.min(W - 1, Math.round(a))), Math.max(0, Math.min(H - 1, Math.round(b))), 1, 1).data].slice(0, 3);
+  return [at(X - r, Y - 1), at(X, Y - 1), at(X + r, Y - 1), at(X, Y - r*2)].flat();
+}
+function rgSame(a, b){ for(let i = 0; i < a.length; i += 3) if(Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 24) return false; return true; }
 
 const RING_STEPS = {
   ringarch: { cat: 'Textures', label: 'The Arch', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
@@ -38141,7 +38279,7 @@ const STEP_DOCS = {
   glowhue: 'Brings the surface’s Glow Hue into the graph: a color for light that seems to come from inside the surface.',
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
-  accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  accent: 'Brings one of the page’s two accent colors (the Opposition or Conjunction Hue, under Thoughtforms) into the graph.',
   ink: 'Brings the poem’s ink, the color its words are written in, into the graph.',
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
@@ -40090,7 +40228,7 @@ const TEXTURE_CHAINS = {
       [5, 1, 13, paramPort('ringsky', 'centre')], [6, 1, 14, paramPort('oilpaint', 'amount')], [7, 1, 14, paramPort('oilpaint', 'brush')],
       [8, 1, 13, 2], [9, 1, 13, paramPort('ringsky', 'turn')], [9, 2, 13, paramPort('ringsky', 'tilt')], [9, 3, 13, paramPort('ringsky', 'size')],
       [10, 1, 13, 3], [11, 1, 13, 4], [12, 1, 13, 1], [13, 1, 14, 1], [14, 1, 15, 1], [14, 2, 15, 2], [15, 1, 16, 1]] },
-  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the day: overhead noon, at its rim dusk, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass, flowers and little creatures; Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the creatures). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+  ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the day: overhead noon, at its rim dusk, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the creatures). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],               // 1
       ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],               // 2
       ['knob', { slot: '3', name: 'World', def: 0 }, 40, 200],                    // 3
@@ -41843,6 +41981,10 @@ for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle',
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
 for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
+// THE DIAL AS A DIRECTION ONLY: where a texture reads only which way the dial points (a wind, a hatch, a flow), its
+// Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
+// guessed: each of these draws the same picture at every height.
+for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminagashi', 'flowfield']) TEXTURE_CAPS[t].dirOnly = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
@@ -43058,7 +43200,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Erriapus';
+const RELEASE = 'Saturn–Skoll';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -43895,7 +44037,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · 4cb751d";
+const STAMP = "2026-10-18 · 88bb4d6";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -47552,7 +47694,7 @@ function createVault(deps){
     await prompt({
       title: fill(DIALOGS.shareSpell.title, rec.name),
       body: copied ? DIALOGS.shareSpell.bodyCopied : DIALOGS.shareSpell.bodyManual,
-      input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm,
+      input: true, defaultValue: link, rows: 3, confirmLabel: DIALOGS.shareSpell.confirm, alert: true,   // (one Done: the link is copied already)
     });
   }
 
@@ -47688,7 +47830,7 @@ const WIKI_PARTS = {
   },
   camdial: {
     line: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
-    about: 'The camera dial sits beside the light dial for a surface that has a camera (Ruby: so the light dial is the light’s alone). Its handle is where the camera stands: round the dial, its turn; drawn out from the middle, how low it looks. Its ＋ and − (or a wheel, or a pinch) zoom. Wire Turn, View and Zoom into the same settings of every part that sees the scene (Wood, Ground Coordinates and Discharge all take them), so the whole picture moves as one camera.',
+    about: 'The camera dial sits beside the light dial for a surface that has a camera (Ruby: so the light dial is the light’s alone). Its handle is where the camera stands: round the dial, its turn; drawn out from the middle, how low it looks. The slider under it (or a wheel, or a pinch) zooms. Wire Turn, View and Zoom into the same settings of every part that sees the scene (Wood, Ground Coordinates and Discharge all take them), so the whole picture moves as one camera.',
     outs: { turn: 'The turn as a number: 0 at the top of the dial, going clockwise round to 1.', view: 'How low the camera looks: 0 at the dial’s middle, 1 at its rim.', zoom: 'The zoom: 0 at 25%, 1 at 400% (give the setting it drives the range 25–400).' },
     tips: ['Wire all three into Wood, Ground Coordinates and Discharge, with their ranges set to 0–360, 0–100 and 25–400.'],
     see: ['part:dial', 'part:groundview', 'part:discharge'],
@@ -47728,7 +47870,7 @@ const WIKI_PARTS = {
     see: ['part:accent', 'part:blend', 'picture'],
   },
   accent: {
-    line: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+    line: 'Brings one of the page’s two accent colors (the Opposition or Conjunction Hue, under Thoughtforms) into the graph.',
     about: 'Accents are the colors the poem uses for highlighted words. Building a surface from them makes it match the text automatically.',
     outs: { colour: 'The accent color.' },
     set: { slot: 'Accent 1 or Accent 2.', name: 'A name for your own reference.' },
@@ -48570,10 +48712,10 @@ const WIKI_PARTS = {
   },
   ringland: {
     line: 'The floor of a ringworld you stand on, painted in flat shapes: ridge behind ridge from the walls’ feet to your own, with what grows, lives and stands on it.',
-    about: 'Land on the Ring sees through the same camera as The Arch and paints over it. The land is cut into ridges at distances growing from your feet to the walls’ feet (or as far as the eye goes): each is the land’s line across your view at its distance, washed lit along its crest and deeper below, cut in facets where it is steep, with a bright rim where it catches the light, and the sea flat with a glint. As a painter does, the far land’s forms are drawn taller than they are, so its ranges read. On each ridge stands what the World puts there: forests (firs, round trees, poplars; dead trees in ruin; trees that glow in magic), cities whose windows light at night (edged in neon in a Neon world, broken in Ruins), rocks, grass and flowers, and on some rings herds of little creatures. Between the ridges stand the works, each where its own patch of the floor puts it, so turning the camera turns past them: spires, standing stones, domes, summoning circles, pillars of light, crystals, craters with smoke and fire, crashed ships, ships in the air, great spans from wall to wall and bars of light across the band, and roads or paths: a city’s road, a neon street, the builders’ way with its line of light, a ley line, a trail. The light hues are the lights: wire the page’s Accents.',
-    ins: { over: 'The sky behind the land: wire The Arch.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn).', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day (wire the Light Dial’s Height): at night the land darkens and the windows light.', 'sun from': 'Which way the dusk comes, and so which side of each ridge is lit (wire the Light Dial’s Direction).', 'land hue': 'The land’s color, as each world lays it.', 'sky hue': 'The air’s color: the far ridges fade into it, and the sea takes it.', 'light hue': 'The first light: neon, magic, the creatures’ colors (wire the first Accent).', 'second light hue': 'The second light (wire the second Accent).' },
+    about: 'Land on the Ring sees through the same camera as The Arch and paints over it. The land is cut into ridges at distances growing from your feet to the walls’ feet (or as far as the eye goes): each is the land’s line across your view at its distance, washed lit along its crest and deeper below, cut in facets where it is steep, with a bright rim where it catches the light, and the sea flat with a glint. As a painter does, the far land’s forms are drawn taller than they are, so its ranges read. On each ridge stands what the World puts there: forests (firs, round trees, poplars; dead trees in ruin; trees that glow in magic), cities whose windows light at night (edged in neon in a Neon world, broken in Ruins), rocks, grass and flowers, and on some rings a little small life, found rather than seen: insects over the grass, fairies, a patch of flowers, slime. Between the ridges stand the works, each where its own patch of the floor puts it, so turning the camera turns past them: spires, standing stones, domes, summoning circles, pillars of light, crystals, craters with smoke and fire, crashed ships, ships in the air, great spans from wall to wall and bars of light across the band, and roads or paths: a city’s road, a neon street, the builders’ way with its line of light, a ley line, a trail. The light hues are the lights: wire the page’s Accents.',
+    ins: { over: 'The sky behind the land: wire The Arch.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn).', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day (wire the Light Dial’s Height): at night the land darkens and the windows light.', 'sun from': 'Which way the dusk comes, and so which side of each ridge is lit (wire the Light Dial’s Direction).', 'land hue': 'The land’s color, as each world lays it.', 'sky hue': 'The air’s color: the far ridges fade into it, and the sea takes it.', 'light hue': 'The first light: neon, magic, the fairies and the flowers (wire the first Accent).', 'second light hue': 'The second light (wire the second Accent).' },
     outs: { picture: 'The sky with the land over it.', land: 'Where the land is (1).', distance: 'How far off each ridge is: 1 the nearest, 0 the farthest.' },
-    set: { band: 'How wide the ring is (as The Arch’s).', walls: 'How tall the rim walls are (as The Arch’s).', altitude: 'How high you stand: low, the grass and trees about you; high, the land spread far below.', landforms: 'How much the land rises: rolling at the low end, mountains and ranges at the walls’ feet at the top.', world: 'Who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region).', life: 'How much grows and lives: forests, grass and flowers, and the creatures.', works: 'How much is built: cities, spires, spans, roads, ships and wrecks.', air: 'How much air lies over the far land.', look: 'Where you look, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height.', variant: 'Another ring with the same settings.' },
+    set: { band: 'How wide the ring is (as The Arch’s).', walls: 'How tall the rim walls are (as The Arch’s).', altitude: 'How high you stand: low, the grass and trees about you; high, the land spread far below.', landforms: 'How much the land rises: rolling at the low end, mountains and ranges at the walls’ feet at the top.', world: 'Who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region).', life: 'How much grows and lives: forests, grass and flowers, and how often there is small life to find (insects, fairies, flowers, slime).', works: 'How much is built: cities, spires, spans, roads, ships and wrecks.', air: 'How much air lies over the far land.', look: 'Where you look, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height.', variant: 'Another ring with the same settings.' },
     tips: ['Wire the same knobs into The Arch and Land on the Ring, so the land and the arch agree.', 'Altitude high and the Camera Dial looking down a little: the land spread out to the walls’ feet.'],
     see: ['part:ringarch', 'part:oilpaint', 'part:accent', 'part:camdial'],
   },
@@ -51168,7 +51310,7 @@ const LOCKABLE = [
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
 if(typeof document.querySelectorAll === 'function'){
-  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme']);
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider']);   // (the zoom's slider is a view of the camera, locked with it)
   for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
       + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
     if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
@@ -53229,6 +53371,8 @@ function syncTextureTools(resetToDefaults){
     // a texture may use the dial for something else, and says so: First Snow's wind
     const lbl = lightRow.querySelector('label');
     if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = labelText(lbl); setLabelText(lbl, caps.dial || lbl.dataset.lightName); }
+    // (a dial that is only a direction has no height to show)
+    const hf = $('lightTiltField'); if(hf && hf.style) hf.style.display = caps.dirOnly ? 'none' : '';
   }
 
   // THE CAMERA DIAL: shown for a surface with a camera, beside the light dial, the hues below in two columns
@@ -53390,7 +53534,7 @@ if($('lightRandom') && $('lightRandom').addEventListener) $('lightRandom').addEv
 // ---------- THE CAMERA DIAL ----------
 // (Ruby: a second dial for the camera, so the light dial is the light's alone.) Its handle is where the camera stands:
 // round the dial, its turn; drawn out from the middle, how low it looks (the middle straight down — or, on Ringworld,
-// straight up — the rim low across); ＋ and −, a wheel or a pinch zoom it. While it moves, a guide of the shot is drawn
+// straight up — the rim low across); the slider under it, a wheel or a pinch zoom it. While it moves, a guide of the shot is drawn
 // over the page at once (a plank's grid, a ring's edges), and the surface follows when it has been made.
 /** Where a surface's camera starts. */
 function cameraStart(type){ const c = (capsFor(type) || {}).camera || {};
@@ -53424,6 +53568,7 @@ function syncCameraPad(){
   if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `turned ${Math.round(c.turn)}°, ${Math.round(c.view)}% low, zoom ${Math.round(c.zoom)}%`);
   const ae = typeof document !== 'undefined' ? document.activeElement : null;
   for(const [id, v] of [['cameraTurnIn', c.turn], ['cameraViewIn', c.view], ['cameraZoomInput', c.zoom]]){ const el = $(id); if(el && ae !== el) el.value = String(Math.round(v)); }
+  { const z = $('cameraZoomSlider'); if(z && ae !== z) z.value = String(Math.round(Math.log2(Math.max(25, Math.min(400, c.zoom))/100)*100)); }
 }
 function setCamera(turn, view, zoom, commit){
   if(!commit) draftWhileDragging();
@@ -53485,7 +53630,11 @@ if($('cameraDial') && $('cameraDial').addEventListener){
     const map = { ArrowRight: [15, 0, 1], ArrowDown: [15, 0, 1], ArrowLeft: [-15, 0, 1], ArrowUp: [-15, 0, 1], PageUp: [0, -10, 1], PageDown: [0, 10, 1], '+': [0, 0, 1.25], '=': [0, 0, 1.25], '-': [0, 0, 0.8] };
     if(map[e.key]){ e.preventDefault(); const [dt, dv, dz] = map[e.key]; setCamera(c.turn + dt, c.view + dv, c.zoom*dz, true); } });
 }
-for(const [id, f] of [['cameraZoomIn', 1.25], ['cameraZoomOut', 0.8]]) if($(id) && $(id).addEventListener) $(id).addEventListener('click', () => { const c = cameraNow(); setCamera(c.turn, c.view, c.zoom*f, true); });
+// the zoom's slider: twice as close for every hundred to the right (100% at its middle, 25% and 400% at its ends)
+{ const z = $('cameraZoomSlider');
+  if(z && z.addEventListener){
+    z.addEventListener('input', () => { const c = cameraNow(); setCamera(c.turn, c.view, 100*Math.pow(2, (+z.value || 0)/100), false); });
+    z.addEventListener('change', () => { const c = cameraNow(); setCamera(c.turn, c.view, 100*Math.pow(2, (+z.value || 0)/100), true); }); } }
 if($('cameraReset') && $('cameraReset').addEventListener) $('cameraReset').addEventListener('click', () => { const d = cameraStart($('textureType').value); setCamera(d.turn, d.view, d.zoom, true); });
 // typing the camera's numbers sets it exactly
 for(const id of ['cameraTurnIn', 'cameraViewIn', 'cameraZoomInput']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
@@ -53886,8 +54035,11 @@ function addDie(root, head){
 }
 // the switches that show a whole card, moved into its heading as an eye
 const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the border', cardToggle: 'Show the inset box', vignetteToggle: 'Show the vignette' };
-// the switches inside a card, eyes where they are
-const EYES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle', 'spellMark'];
+// inside a card, an eye only where a box shows or hides something (the spell code); an option that turns a feature on
+// is a switch (Ruby approved, from the usability review: eyes on Gradient Border? and Allow [Opposition] read as
+// show/hide when they are not)
+const EYES = ['spellMark'];
+const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle'];
 function installHeadings(){
   if(typeof document.querySelectorAll !== 'function') return;
   for(const [id, title] of Object.entries(CARD_EYES)){
@@ -53901,6 +54053,7 @@ function installHeadings(){
     if(row) row.hidden = true;
   }
   for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
+  for(const id of SWITCHES){ const box = $(id); if(box && box.classList) box.classList.add('switch'); }
   for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')){ addDie(card, card.querySelector(':scope > summary')); addMasterLock(card, card.querySelector(':scope > summary')); }
   for(const card of document.querySelectorAll('details.card[data-tab]')) addHintsButton(card, card.querySelector(':scope > summary'));
   // a sub-section's lock sits in the row that switches it on (its eye and name)
@@ -54069,7 +54222,8 @@ if(typeof document.querySelectorAll === 'function'){
   }
   function exitFocus(){
     if(!body.classList || !body.classList.contains('focus-mode')) return;
-    body.classList.remove('focus-mode', 'editor-fit');
+    body.classList.remove('focus-mode', 'editor-fit', 'guide-open');
+    if($('pmlTabBtn') && $('pmlTabBtn').setAttribute) $('pmlTabBtn').setAttribute('aria-expanded', 'false');
     document.querySelectorAll('.focus-keep').forEach(c => c.classList.remove('focus-keep'));
     if(typeof requestAnimationFrame === 'function') requestAnimationFrame(repaintEditor);
     if(poem.blur) poem.blur();
@@ -54089,6 +54243,18 @@ if(typeof document.querySelectorAll === 'function'){
       }
     }, true);
   }
+  // THE GUIDE WHILE WRITING (the usability review: on a phone the PML guide was out of reach in writing mode): PML in
+  // the bar opens it as a sheet above the bar; ⤓ Try still writes into the poem
+  const pmlBtn = $('pmlTabBtn');
+  if(pmlBtn && pmlBtn.addEventListener) pmlBtn.addEventListener('click', e => {
+    e.preventDefault(); const on = !body.classList.contains('guide-open');
+    body.classList.toggle('guide-open', on); pmlBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    const g = $('formattingGuidePanel'); if(on && g && 'open' in g) g.open = true; });
+  // WHILE THE KEYBOARD IS UP the preview folds to a strip, so the poem has the room (the usability review: four lines
+  // of editor under a full preview); a tap on the strip puts the keyboard away, and the preview opens again with it
+  const stage = typeof document.querySelector === 'function' ? document.querySelector('.stage') : null;
+  if(stage && stage.addEventListener) stage.addEventListener('pointerdown', () => {
+    if(body.classList.contains('focus-mode') && body.classList.contains('keyboard-open') && poem.blur) poem.blur(); });
   // the phone's own back gesture should leave focus mode, not the page
   if(typeof window !== 'undefined' && window.addEventListener){
     window.addEventListener('popstate', ()=>{
@@ -55004,7 +55170,7 @@ if(document.fonts && document.fonts.addEventListener){
   document.fonts.addEventListener('loadingdone', () => { clearTimeout(fontTimer); fontTimer = setTimeout(remeasureAndRender, 60); });
 }
 
-// ---------- undo ☋ and redo ☊ ----------
+// ---------- undo ↶ and redo ↷ ----------
 // History is a stack of LOOK snapshots — the same filtered snapshot a saved
 // spell uses, so it covers every setting but never the poem (the text box has
 // its own undo), your locks, or your name. A change is recorded a moment after
@@ -55091,8 +55257,8 @@ function stepHistory(dir){
   refreshUi(); scheduleRender(); paintHistoryButtons(); checkLitPreset();
 }
 // THE POEM'S OWN HISTORY (the usability review: on a phone nothing undid a cleared poem — Android's keyboards have no
-// undo): the text kept a moment after typing stops (at once when much of it vanishes), and ☋ ☊ step it while the poem
-// is what was last changed; once it is back at its start, ☋ goes on through the look's history
+// undo): the text kept a moment after typing stops (at once when much of it vanishes), and ↶ ↷ step it while the poem
+// is what was last changed; once it is back at its start, ↶ goes on through the look's history
 const POEM_MAX = 80;
 function poemHistoryNow(){ const h = state.poemHist || (state.poemHist = { stack: [], index: -1, timer: null, restoring: false }); return h; }
 function notePoem(){
@@ -55104,7 +55270,7 @@ function notePoem(){
 }
 function notePoemSoon(){ const h = poemHistoryNow(), t = $('poemText') ? $('poemText').value : '', was = h.stack[h.index] || '';
   clearTimeout(h.timer);
-  // (a big cut is kept at once, so one ☋ brings it all back)
+  // (a big cut is kept at once, so one ↶ brings it all back)
   if(was.length > 40 && t.length < was.length*0.5){ notePoemFirst(was); notePoem(); toast(PAGE_SAYS.poemCut, { label: PAGE_SAYS.undo, act: () => stepPoem(-1) }); return; }
   h.timer = setTimeout(notePoem, 700); }
 // (the text as it was before a change, if it was never kept: the first keystroke after a pause)

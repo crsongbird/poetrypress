@@ -248,7 +248,7 @@ export const STEP_DOCS = {
   glowhue: 'Brings the surface’s Glow Hue into the graph: a color for light that seems to come from inside the surface.',
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',
-  accent: 'Brings one of the page’s two accent colors (set under Thoughtforms) into the graph.',
+  accent: 'Brings one of the page’s two accent colors (the Opposition or Conjunction Hue, under Thoughtforms) into the graph.',
   ink: 'Brings the poem’s ink, the color its words are written in, into the graph.',
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',

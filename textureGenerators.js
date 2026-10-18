@@ -691,6 +691,10 @@ for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle',
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
 for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
+// THE DIAL AS A DIRECTION ONLY: where a texture reads only which way the dial points (a wind, a hatch, a flow), its
+// Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
+// guessed: each of these draws the same picture at every height.
+for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminagashi', 'flowfield']) TEXTURE_CAPS[t].dirOnly = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 

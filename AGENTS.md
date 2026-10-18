@@ -133,6 +133,7 @@ node tools/look.mjs '<json>' out.png <cols>    # a quick look at specific textur
 node tools/scale-audit.mjs [--knobs min|max]   # does a texture look the same drawn small?
 node tools/texture-gallery.mjs --only a,b      # four backgrounds each — ONLY when a visual review is asked for
 python tools/page-audit.py                     # whole pages, every preset (needs Playwright)
+python3 tools/fit-audit.py                     # does every control fit its panel? Every tab at 360, 412 and 1280 px, hints out (needs Playwright)
 python3 tools/icons.py                         # redraw the nav glyphs, the sigil and the app icons
 node test/textureFingerprints.test.mjs --update   # accept new texture renders — only those you meant to change
 node tools/compare.mjs a,b [--ref HEAD]          # before/after renders of a texture's readings, for Ruby's approval
@@ -438,7 +439,10 @@ Other parts of a look:
   by `refreshHints` in `refreshUi`); the **Hints** switch (Esoterica →
   Interface, localStorage `uv.hints.on`, an app preference) writes them out
   everywhere. A `.hint-extra` note shows only with its card's hints. So a
-  control's tooltip is its phone hint too: write it as one.
+  control's tooltip is its phone hint too: write it as one. A hint takes its own
+  line in any row it is written into (`:has(> .tip-line)` wraps the row): one
+  laid beside a row of buttons once slid a phone's panel sideways, and
+  `tools/fit-audit.py` looks for that.
 - **Asking and refusing:**
   - `askSure({title, body, confirmLabel, danger})` is the soft no, the app's
     own modal (never `confirm()`).
@@ -1248,13 +1252,25 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - The land is 16 ridges at distances growing from your feet to the walls'
     feet, each a cross-section of the terrain: a wash (lit crest, deeper
     below), facets where steep, a bright rim; on each crest what grows and
-    stands (trees, buildings, rocks, creatures, grass, by stochastic counts so
+    stands (trees, buildings, rocks, grass, by stochastic counts so
     small segments still get their share). The works stand in world cells
     (`cw`), drawn between the ridges they lie between (so hills hide them),
     roads slab by slab; nothing anchored is drawn larger than it can be seen
     whole (`big`), and spans only where they are far and seen along.
-  - The creatures live on some rings (`beasts`), a herd or two, never on the
-    nearest ridge.
+  - **Small life** (`rgSmallLife`; Ruby: "insects, fairies, flowers, slime
+    creatures … all subtle", in place of the little creatures): on some rings
+    (`lively`), a few finds (more with Life), each on its own ridge whose crest
+    is in the frame and near enough to see, nearer ones likelier. A ridge offers
+    eight places across the frame; once it is painted their pixels are noted
+    (`rgSpot`), and at the end the find goes to the first place nothing nearer
+    has covered since, drawn on top (the forest of a ridge below the frame rises
+    over most of the land; `rgSame` allows a passing glow). The kind is by the
+    world (fairies in magic, slime in ruins); every mark has a floor in
+    canonical pixels. Each find draws from its own stream (a seed rolled when
+    it is chosen), so whether one is seen never changes another: a preview and
+    its export show the same finds, though where a nearer edge passes close by
+    one may stand at another of its ridge's places. A picture without small
+    life draws exactly as it did.
 - **Particles** (First Snow, Burning Mana, Euphoria Dust) draw under
   `withSeed(ctx.seed + Scatter·7919)`. This keeps them pixel-identical;
   Euphoria is a perfect preset.
@@ -1604,8 +1620,10 @@ competing.
   Highlighting", not "Illuminate the script").
 - Names must be honest: describe what a thing actually does.
 - Vary the vocabulary: three "…Drift"s was a failure.
-- **Dialogs** pair a plain verb with a flavoured one: *Yes (Inscribe)* /
-  *No (Ignore)*. Confirm on the left, cancel on the right, a light touch.
+- **Dialogs** say what each button does, plainly (Ruby approved, from the
+  usability review): *Save Look* / *Cancel*, *Delete* / *Keep*. The flavour
+  is in the title ("Tear out this page?"). Confirm on the left, cancel on the
+  right; a dialog with nothing to cancel has one button.
 - Light mode is gently shamed: the moths will find you.
 - Code comments may be haiku, especially on texture generators. Comments
   explain WHY.

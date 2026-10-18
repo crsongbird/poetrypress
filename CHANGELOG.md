@@ -4,6 +4,57 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Skoll (2026-10-17)
+
+- **Plainer words** (from the usability review, as approved):
+  - **Credit** (was Witch / Artificer) starts empty, with "Your name or
+    @handle" as its hint. Empty signs nothing.
+  - **Text Color** 1–4 (was Inscription Hue), **Gradient Text?** (was Radial
+    Gradient Text?), **Background Gradient?** (was Radial Aura?), **Gradient
+    Stops** and **Gradient Stop** 2–4 (were Aura Stops).
+  - Dialog buttons say what they do: **Save Look** / **Cancel**, **Delete** /
+    **Keep**, **Record Poem** / **Cancel**.
+  - Kept as they were: West, Neutral and East; Breathing Room; the Opposition
+    and Conjunction Hues (the PML guide now names them where it explains
+    accents).
+- **Easier to find your way:**
+  - Each tab opens with a line saying what it holds.
+  - **Two Surfaces** and its Upper / Lower / Swap now sit above the surface
+    picker they switch. The four readings are labeled **Readings**.
+  - Options that turn a feature on (Gradient Text?, Background Gradient?, the
+    Allow switches, Two Surfaces, Gradient Border?, Box Gradient?) are
+    switches; an eye now only shows or hides something.
+  - Undo and redo are ↶ and ↷.
+  - Return is **Close** on a desk and **Done Writing** on a phone.
+- **Writing on a phone:**
+  - **PML** in the bar opens the guide while you write; ⤓ Try still writes
+    into the poem.
+  - While the keyboard is up, the preview folds to a strip so the poem has
+    the room. Tap the strip to put the keyboard away.
+- **The camera dial's zoom is a slider** under the dial (100% in the middle,
+  25% and 400% at the ends), in place of ＋ and −.
+- **The light dial hides Height** for surfaces where only the direction does
+  anything (Aurora, Silk Ribbons, First Snow, Harsh Rain, Silverpoint
+  Hatch, Suminagashi, Flow-Field Ink).
+- **Painted Ringworld:** the little creatures are gone. In their place, on
+  some rings, small life to find rather than see: insects over the grass,
+  fairies, a patch of flowers, slime, each world its own mix (fairies where
+  there is magic, slime in the ruins). Only where it can be seen: never
+  behind a nearer forest or off the frame. A picture without them is
+  unchanged.
+- **Fixed:**
+  - With hints written out, a hint beside a row of buttons (New Random
+    Surface and Edit in the Athanor, the seed's moon, Sounds, the guide's
+    ⤓ Try) pushed its section past a phone's screen, and the panel slid
+    sideways. Each hint now takes its own line.
+  - On narrow phones (360 px) the PML guide's list of marks ran off the
+    screen. It fits.
+- **Under the hood:**
+  - `tools/fit-audit.py` opens every tab at 360, 412 and 1280 px with the
+    hints out and every section unfolded, and names anything wider than its
+    panel.
+  - The release's commit message no longer holds its notes twice.
+
 ## Saturn–Erriapus (2026-10-17)
 
 - **Draw a curve on the page.** A new Athanor part, **Curve Control**

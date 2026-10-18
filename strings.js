@@ -22,6 +22,9 @@ export const UI_STRINGS = {
   'tab.thoughtforms':                      "Thoughtforms",
   'tab.materia':                           "Materia",
   'tab.esoterica':                         "Esoterica",
+  'tab.close':                                 "Close",
+  'tab.pml':                                   "PML",
+  'tab.done_writing':                          "Done Writing",
 
   // ---- card ----
   'card.incantation_editor_poetic_magick_l': "Incantation Editor (Poetic Magick Language)",
@@ -47,6 +50,12 @@ export const UI_STRINGS = {
   'hint.landscape':                        "Landscape",
   'hint.create_saves_the_current_look_as_a': "Create saves the current look as a spell. Invoke puts it back on the page.",
   'hint.the_grimoire_is_empty_record_a_poe': "The Grimoire is empty. Record saves your poem's text here.",
+  'hint.readings':                          "Readings",
+  'hint.tab_write':                         "Write the poem and sign it. The guide below teaches PML, the marks that style it.",
+  'hint.tab_style':                         "The page's shape and how the poem sits on it, and whole looks to start from: presets and your own.",
+  'hint.tab_type':                          "The poem's type: typeface, size, colors, accents and effects.",
+  'hint.tab_page':                          "What the page is made of: backdrop, surface, border, inset box and vignette.",
+  'hint.tab_more':                          "Theme and sound, saved looks and poems, and the Workbench.",
   'hint.spells_are_looks':                  "Spells keep looks: every setting, but not the poem's words.",
   'hint.grimoire_keeps_words':              "The Grimoire keeps poems: the words only. Choose one, then Invoke or Dissolve.",
 
@@ -79,7 +88,7 @@ export const UI_STRINGS = {
   'button.modalCancel':                    "Cancel",
   // ---- labels ----
   'label.script_highlighting':                 "Script Highlighting",
-  'label.witch_artificer':                     "Witch / Artificer",
+  'label.witch_artificer':                     "Credit",
   'label.corner':                              "Corner",
   'label.spell_mark':                          "Show Spell Code",
   'label.aspect_ratio':                        "Aspect Ratio",
@@ -89,7 +98,7 @@ export const UI_STRINGS = {
   'label.alignment':                           "Alignment",
   'label.attunement_vertical':                 "Attunement (Vertical)",
   'label.typeface':                            "Typeface",
-  'label.inscription_hue':                      "Inscription Hue",
+  'label.inscription_hue':                      "Text Color",
   'label.maximum_size_px':                     "Maximum Size (px)",
   'label.breathing_room':                      "Breathing Room",
   'label.highlight_hue':                       "Specular Hue",
@@ -97,20 +106,20 @@ export const UI_STRINGS = {
   'label.diffuse_hue':                         "Diffuse Hue",
   'label.fifth_hue':                           "Glow Hue",
   'label.text_margins':                        "Text Margins",
-  'label.radial_gradient_text':                "Radial Gradient Text?",
-  'label.aura_stops':                          "Aura Stops",
-  'label.inscription_hue_2':                    "Inscription Hue 2",
-  'label.inscription_hue_3':                    "Inscription Hue 3",
-  'label.inscription_hue_4':                    "Inscription Hue 4",
+  'label.radial_gradient_text':                "Gradient Text?",
+  'label.aura_stops':                          "Gradient Stops",
+  'label.inscription_hue_2':                    "Text Color 2",
+  'label.inscription_hue_3':                    "Text Color 3",
+  'label.inscription_hue_4':                    "Text Color 4",
   'label.radial_gradient_angle':               "Gradient Angle",
   'label.opposition_hue':                      "Opposition Hue",
   'label.conjunction_hue':                     "Conjunction Hue",
   'label.background_hue':                      "Background Hue",
-  'label.radial_aura':                         "Radial Aura?",
-  'label.aura_stops2':                         "Aura Stops",
-  'label.aura_stop_2':                         "Aura Stop 2",
-  'label.aura_stop_3':                         "Aura Stop 3",
-  'label.aura_stop_4':                         "Aura Stop 4",
+  'label.radial_aura':                         "Background Gradient?",
+  'label.aura_stops2':                         "Gradient Stops",
+  'label.aura_stop_2':                         "Gradient Stop 2",
+  'label.aura_stop_3':                         "Gradient Stop 3",
+  'label.aura_stop_4':                         "Gradient Stop 4",
   'label.arc_angle':                           "Arc Angle",
   'label.customize_surface':                   "Customize Surface",
   'label.surface_variant':                     "Surface Variant",
@@ -332,20 +341,20 @@ export const DIALOGS = {
   spellCreate: {
     title: 'Keep this look?',
     body: 'Name it. Only the look is saved, not the poem (Record keeps poems in the Grimoire).',
-    confirm: 'Yes (Inscribe)',
-    cancel: 'No (Ignore)',
+    confirm: 'Save Look',
+    cancel: 'Cancel',
   },
   spellDelete: {
     title: 'Dissolve this spell?',
     body: '“{name}” will be removed from this browser.',
-    confirm: 'Yes (Remove)',
-    cancel: 'No (Retain)',
+    confirm: 'Delete',
+    cancel: 'Keep',
   },
   poemSave: {
     title: 'Record in the Grimoire?',
     body: 'Save the text of “{name}”? The look isn’t included (Create saves looks as spells).',
-    confirm: 'Yes (Decide)',
-    cancel: 'No (Deny)',
+    confirm: 'Record Poem',
+    cancel: 'Cancel',
   },
   overwrite: {
     title: 'Overwrite?',
@@ -372,8 +381,8 @@ export const DIALOGS = {
   poemDelete: {
     title: 'Tear out this page?',
     body: 'Remove “{name}” from the Grimoire. This cannot be undone.',
-    confirm: 'Yes (Preclude)',
-    cancel: 'No (Preserve)',
+    confirm: 'Delete',
+    cancel: 'Keep',
   },
 };
 
@@ -392,7 +401,7 @@ export const BLEND_NAMES = {
 export const PML_GUIDE = {
   try: '⤓ Try',
   tryHint: 'Insert this example at the cursor, or at the end',
-  tried: 'Added to your poem. ☋ Undo takes it out.',
+  tried: 'Added to your poem. ↶ Undo takes it out.',
 };
 /** The editor's hint line, under the poem, for a directive PML can't read ({d} is the directive as written). */
 export const PML_HINTS = {

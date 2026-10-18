@@ -89,7 +89,10 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   is for graphs; a texture's chain stays v2 and draws as it always did. A
   reading or a knob could switch it on for the hard-edged textures (Circuit
   Board, Stained Glass, Knotwork), each through compare.mjs and Ruby's eye.
-  - Measure on the baseline phone first: all pixels is four times the work.
+  Ruby: yes, and new graphs stay at edges only ("anti aliasing is
+  expensive").
+  - Edges only first (it is cheap); all pixels only where the budget and the
+    baseline phone allow, since it is four times the work.
 
 ### B · The output stage (the Surface)
 

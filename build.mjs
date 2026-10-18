@@ -42,7 +42,7 @@ const SATURN = ['Pan', 'Daphnis', 'Atlas', 'Prometheus', 'Epimetheus', 'Janus', 
 if(process.argv.includes('--notes')){
   const log = readFileSync('CHANGELOG.md', 'utf8'), at = log.indexOf('\n## '), next = log.indexOf('\n## ', at + 4);
   const sec = log.slice(at + 1, next < 0 ? undefined : next).trim();
-  console.log('PoetryPress-' + sec.replace(/^## (\S+).*/, '$1') + '\n\n' + sec.split('\n').slice(1).join('\n').trim());
+  console.log('PoetryPress-' + sec.split('\n')[0].replace(/^## (\S+).*/, '$1') + '\n\n' + sec.split('\n').slice(1).join('\n').trim());   // (the name from the heading's line alone: the whole section once rode on it, so every message held its notes twice)
   process.exit(0);
 }
 if(process.argv.includes('--next')){

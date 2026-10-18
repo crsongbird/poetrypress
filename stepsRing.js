@@ -16,13 +16,14 @@ import { rsMix, rsCss, rsPoly, rsFace, rsSmooth } from './stepsWhimsy.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
-// sometimes mixed, sometimes apocalyptic, sometimes destroyed, sometimes populated by cute little alien creatures,
-// sometimes with crashed spaceships"). By the Seed picks one; Mixed lays three side by side, region by region.
+// sometimes mixed, sometimes apocalyptic, sometimes destroyed, sometimes populated by [small life], sometimes with
+// crashed spaceships"). By the Seed picks one; Mixed lays three side by side, region by region. (The small life was
+// once cute little creatures; Ruby: "too cute and childish … insects, fairies, flowers, slime creatures. All subtle.")
 export const RG_WORLDS = ['seed', 'wilds', 'cities', 'neon', 'builders', 'magic', 'ruins', 'mixed'];
 // what each world raises, as weights (Life and Works scale them):
 //   tr trees · de dead trees · gt glowing trees · to towers · sp spires · sa spans (wall to wall) · mo monoliths and
 //   standing stones · cr crystals · ci circles · pi pillars of light · do domes · br bridges of light · ca craters, smoke
-//   and fire · wr wrecks · sh ships · be creatures · ro rocks · gr grass and flowers · cv how much of the land is city
+//   and fire · wr wrecks · sh ships · be small life · ro rocks · gr grass and flowers · cv how much of the land is city
 const RG_PROF = {
   wilds:    { tr: 1,    de: 0.05, gt: 0,   to: 0,    sp: 0.05, sa: 0.12, mo: 0.35, cr: 0.12, ci: 0,   pi: 0,    do: 0,    br: 0,   ca: 0,   wr: 0.25, sh: 0.15, be: 1,    ro: 0.8,  gr: 1,    cv: 0 },
   cities:   { tr: 0.45, de: 0,    gt: 0,   to: 1,    sp: 0.2,  sa: 0.25, mo: 0,    cr: 0,    ci: 0,   pi: 0,    do: 0.5,  br: 0.2, ca: 0,   wr: 0.1,  sh: 0.8,  be: 0.3,  ro: 0.15, gr: 0.5,  cv: 1 },
@@ -236,25 +237,33 @@ function rgTower(x, X, Y, h, wdt, c, neon, broken, night, R){
     if(R() < 0.6 && h > 12){ const sh = h*0.12, sy = top + h*(0.15 + 0.4*R()); x.fillStyle = rsCss(R() < 0.5 ? c.glow : c.glow2, 0.9); x.fillRect(X - w2 - wdt*0.1, sy, wdt*0.55, sh);
       x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, sy, 0, X, sy, wdt*1.3); g.addColorStop(0, rsCss(c.glow, 0.35)); g.addColorStop(1, rsCss(c.glow, 0)); x.fillStyle = g; x.fillRect(X - wdt*1.3, sy - wdt*1.3, wdt*2.6, wdt*2.6); x.restore(); } }
 }
-// a little creature (Ruby: "cute little alien creatures"): a round body in one of the page's colours, big eyes,
-// feelers; some long-necked grazers, some with ears, standing on two or four little legs
-function rgCreature(x, X, Y, h, col, kind, sd, R){
-  const body = rsCss(col), shade = rsCss(rsMix(col, [0, 0, 0], 0.25)), r = h*0.32, by = Y - h*0.3;
-  x.strokeStyle = shade; x.lineWidth = Math.max(rgPx(0.8), h*0.06);
-  x.beginPath(); for(const lx of kind === 1 ? [-0.6, -0.25, 0.25, 0.6] : [-0.3, 0.3]){ x.moveTo(X + lx*r, by + r*0.6); x.lineTo(X + lx*r, Y); } x.stroke();
-  if(kind === 1){ // a grazer: a long body, a long neck up to a small head
-    x.fillStyle = body; x.beginPath(); x.ellipse(X, by, r*1.1, r*0.7, 0, 0, Math.PI*2); x.fill();
-    const hx2 = X + sd*r*1.3, hy = by - h*0.55; x.strokeStyle = body; x.lineWidth = r*0.4; x.beginPath(); x.moveTo(X + sd*r*0.7, by - r*0.2); x.lineTo(hx2, hy); x.stroke();
-    x.fillStyle = body; x.beginPath(); x.arc(hx2, hy, r*0.38, 0, Math.PI*2); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(hx2 + sd*r*0.12, hy - r*0.05, r*0.17, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#111'; x.beginPath(); x.arc(hx2 + sd*r*0.16, hy - r*0.03, r*0.08, 0, Math.PI*2); x.fill(); return; }
-  x.fillStyle = body; x.beginPath(); x.ellipse(X, by, r, r*(kind === 2 ? 1.15 : 0.92), 0, 0, Math.PI*2); x.fill();
-  x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.3)); x.beginPath(); x.ellipse(X - sd*r*0.25, by - r*0.35, r*0.35, r*0.22, 0, 0, Math.PI*2); x.fill();
-  if(kind === 2){ x.fillStyle = body; for(const s of [-1, 1]){ x.beginPath(); x.ellipse(X + s*r*0.45, by - r*1.2, r*0.18, r*0.5, s*0.2, 0, Math.PI*2); x.fill(); } }
-  else { x.strokeStyle = shade; x.lineWidth = Math.max(rgPx(0.6), h*0.035); x.beginPath(); for(const s of [-1, 1]){ x.moveTo(X + s*r*0.3, by - r*0.8); x.lineTo(X + s*r*0.6, by - r*1.5); } x.stroke();
-    x.fillStyle = body; for(const s of [-1, 1]){ x.beginPath(); x.arc(X + s*r*0.6, by - r*1.5, r*0.14, 0, Math.PI*2); x.fill(); } }
-  for(const s of [-1, 1]){ x.fillStyle = '#fff'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.1, by - r*0.1, r*0.28, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#121212'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.18, by - r*0.06, r*0.14, 0, Math.PI*2); x.fill();
-    x.fillStyle = '#fff'; x.beginPath(); x.arc(X + s*r*0.36 + sd*r*0.12, by - r*0.13, r*0.05, 0, Math.PI*2); x.fill(); }
+// SMALL LIFE (Ruby: "insects, fairies, flowers, slime creatures … all subtle"): never more than a few marks, small for
+// their distance and quiet in colour, so they are found rather than seen. Each kind at the ground point (X, Y), at
+// h, the height a body would stand there.
+function rgSmallLife(x, X, Y, h, kind, c, R){
+  // (each mark has a floor in the export's pixels: smaller than that, a find is not subtle but missing)
+  const rnd = (a, b) => a + (b - a)*R(), dot = (cx, cy, r, lo, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(rgPx(lo), r), 0, Math.PI*2); x.fill(); };
+  if(kind === 'insects'){ // a small cloud of specks over the grass, a pair of wings catching the light on the nearer
+    const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
+    for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4, iy = cy + (R() - 0.5)*h*0.6; dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));
+      if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
+    return; }
+  if(kind === 'fairies'){ // a few points of light drifting low, each with a faint trail behind it
+    const n = 1 + Math.floor(R()*3);
+    for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2, fy = Y - h*rnd(0.4, 1.4), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);
+      rgGlow(x, fx, fy, Math.max(rgPx(12), h*0.32), c.glow, 0.4);
+      for(let t = 1; t <= 3; t++) dot(fx - dx*t, fy + dx*0.15*t*t*Math.sign(dx), h*0.025*(1 - t*0.22), 1 - t*0.2, rsCss(c.glow, 0.32/t));
+      dot(fx, fy, h*0.04, 2.2, rsCss(rsMix(c.glow, [255, 255, 255], 0.6), 0.85)); }
+    return; }
+  if(kind === 'flowers'){ // a patch of small blossoms in the page's colours
+    const n = 4 + Math.floor(R()*6);
+    for(let q = 0; q < n; q++) dot(X + (R() - 0.5)*Math.max(rgPx(24), h*1.6), Y - h*rnd(0.02, 0.18), h*rnd(0.04, 0.07), 2.4, rsCss(c.flowers[Math.floor(R()*c.flowers.length)], 0.8));
+    return; }
+  // slime: one to three low, glistening mounds, half see-through, a highlight on each
+  const n = 1 + Math.floor(R()*3);
+  for(let q = 0; q < n; q++){ const sx = X + (R() - 0.5)*h*1.2, sw = Math.max(rgPx(7), h*rnd(0.18, 0.32)), sh = sw*rnd(0.45, 0.7);
+    x.fillStyle = rsCss(c.slime, 0.68); x.beginPath(); x.ellipse(sx, Y, sw, sh, 0, Math.PI, Math.PI*2); x.fill();
+    x.fillStyle = rsCss([255, 255, 255], 0.45); x.beginPath(); x.ellipse(sx - sw*0.3, Y - sh*0.55, sw*0.22, sh*0.16, -0.3, 0, Math.PI*2); x.fill(); }
 }
 function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
@@ -375,9 +384,21 @@ function rgPaintLand(x, mk, dk, V, R){
       else if(r.kind === 'neon'){ line(L2, rsCss(c.glow, 0.9), wpx*1.2); line(R2, rsCss(c.glow2, 0.9), wpx*1.2); }
       else if(r.kind === 'path' || r.kind === 'ley'){ x.save(); x.globalCompositeOperation = 'screen'; line(ctr, rsCss(c.glow, 0.3), wpx*5); line(ctr, rsCss(c.glow, 0.9), wpx*1.3); x.restore(); }
       else if(r.kind === 'broken') for(let q = 0; q + 1 < ctr.length; q += 2) line([L2[q], R2[q + 1]], rsCss(rgLit(V, [40, 36, 32], day, haze, AIR)), wpx); } };
-  // the little creatures live on some rings, not all (Ruby: "sometimes populated by cute little alien creatures")
-  const beasts = R() < 0.2 + 0.6*V.life*Math.max(...V.world.list.map(w => RG_PROF[w].be));
-  let prevY = null;
+  // small life lives on some rings, not all: insects, fairies, flowers and slime, each world its own mix. A few finds
+  // in the whole picture (more with Life), each on its own ridge. Only a ridge whose crest is in the frame and near
+  // enough to see a find on is chosen (a ridge runs past both edges, and the near ones are often below the frame),
+  // and each offers eight places across the frame: the find takes the first that nothing nearer covers
+  const lively = R() < 0.25 + 0.6*V.life*Math.max(...V.world.list.map(w => RG_PROF[w].be)), finds = new Map();
+  if(lively){ const ok = [];
+    for(let k = 1; k < K; k++){ let d = dOf(k); if(d > dWall*1.02){ if(dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
+      const a = d*hx, z = Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*hz)), p = at(a, z, Math.max(T(a, z, 2*Sof(d)/96*1.3), TR.sea));
+      if(p && p[1] > wh*0.04 && p[1] < wh*0.9 && W*0.0007*F/p[2] >= px(5)) ok.push(k); }
+    // (nearer ridges likelier; far off, a find keeps the floor of its marks, as the far land is drawn taller than it is)
+    for(let q = 0, n = Math.min(ok.length, Math.round(V.life*4)); q < n; q++) { const xs = Array.from({ length: 8 }, (_, i) => ww*(0.06 + 0.88*(i + R())/8));
+      for(let i = xs.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [xs[i], xs[j]] = [xs[j], xs[i]]; }   // (in a shuffled order, the same in every browser)
+      xs.seed = (R()*4294967296) >>> 0;   // (each find its own stream: whether one is seen never changes another)
+      finds.set(ok.splice(Math.floor(R()*R()*ok.length), 1)[0], xs); } }
+  let prevY = null; const seen = [];
   for(let k = K - 1; k >= 0; k--){
     let d = dOf(k); if(d > dWall*1.02){ if(k === 0 || dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
     const Sd = Sof(d), M = 96, pts = [], fine = 2*Sd/M*1.3;
@@ -402,8 +423,8 @@ function rgPaintLand(x, mk, dk, V, R){
         rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03))); }
       else { const bd = depth*rnd(0.1, 0.22); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bd*rnd(0.6, 1.2)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02))); }
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
-    // what grows and stands on it: trees in the forests, the city's buildings, rocks, crystals, creatures, grass
-    const near = k <= 1; let herds = 1 + (R() < 0.4 ? 1 : 0);
+    // what grows and stands on it: trees in the forests, the city's buildings, rocks, crystals, small life, grass
+    const near = k <= 1, fXs = finds.get(k), spots = []; R();   // (a draw kept, so a picture without small life is as it was)
     for(let i = 0; i + 1 < pts.length; i++){ const p0 = pts[i], p1 = pts[i + 1]; if(p0.sea && p1.sea) continue;
       const am = (p0.a + p1.a)/2, zm = (p0.z + p1.z)/2, w = V.worldAt(am, zm), P = RG_PROF[w], kpx = F/((p0.zc + p1.zc)/2), segW = 2*Sd/(M - 1), wday = ringDay(L, am), night = 1 - rsSmooth(0.3, 0.7, wday);
       const c = colsOf(w, wday, haze), place = (n, fn) => { n = Math.floor(n) + (R() < n % 1 ? 1 : 0); for(let q = 0; q < n; q++){ const u = R(), X = p0.X + (p1.X - p0.X)*u, Y = p0.Y + (p1.Y - p0.Y)*u + depth*Math.pow(R(), 1.6)*0.55; fn(X, Y); } };
@@ -418,15 +439,35 @@ function rgPaintLand(x, mk, dk, V, R){
       if(rH > 2 && P.ro*V.forms > 0.05){ place(P.ro*V.forms*segW/(W*0.004)*(k <= 1 ? 0.4 : 1), (X, Y) => { const r = rH*rnd(0.4, 1.5), rc = rgLit(V, [128, 122, 114], wday, haze, AIR), pts2 = Array.from({ length: 6 }, (_, q) => { const t = Math.PI + q/5*Math.PI; return [X + Math.cos(t)*r*rnd(0.8, 1.2), Y + Math.sin(t)*r*rnd(0.6, 1)]; });
         rsPoly(x, pts2, rsCss(rsMix(rc, BLACK, 0.2))); rsPoly(x, [[X, Y], pts2[2], pts2[3], pts2[4]].map(([a2, b2]) => [a2, b2]), rsCss(rsMix(rc, [255, 244, 222], 0.15))); }); }
       const cH = W*0.0007*kpx;
-      if(beasts && cH > 4 && k >= 1 && k <= 5 && herds > 0 && R() < P.be*V.life*0.08){ herds--; const n = 1 + Math.floor(R()*4), cols = [V.g1, V.g2, rsMix(V.g1, [255, 255, 255], 0.45), rsMix(V.g2, V.sky, 0.5), [240, 200, 220]], ck = Math.floor(R()*3), col = rgLit(V, cols[Math.floor(R()*cols.length)], Math.max(0.35, wday), haze, AIR);
-        let X = p0.X + (p1.X - p0.X)*R(); const dir = R() < 0.5 ? -1 : 1; for(let q = 0; q < n; q++){ const Y = p0.Y + (p1.Y - p0.Y)*rgClamp((X - p0.X)/((p1.X - p0.X) || 1)) + depth*R()*0.3; rgCreature(x, X, Y, cH*rnd(0.7, 1.3), col, ck, dir, R); X += cH*rnd(0.9, 1.8)*dir; } }
+      if(fXs && cH >= px(3)) for(const fX of fXs){ const fu = (fX - p0.X)/(p1.X - p0.X || 1e-6), Y = p0.Y + (p1.Y - p0.Y)*fu;
+        if(fu >= 0 && fu < 1 && Y > px(4) && Y < wh*0.95) spots.push({ X: fX, Y, h: cH, w, wday, haze, glow: c.glow, seed: fXs.seed }); }
       if(near && P.gr*V.life > 0.05){ const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), wday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), gH = W*0.00025*kpx, flw = [V.g1, V.g2, [250, 246, 240]];
         place(P.gr*V.life*(p1.X - p0.X)/Math.max(2, gH)*0.5, (X, Y) => { for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
           if(R() < 0.25*P.gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); } }); } }
+    // a find's places, once its ridge is done: it is drawn at the end, in the first that nothing nearer has covered since
+    if(spots.length) seen.push(spots.map(f => [f, rgSpot(x, f.X, f.Y, px(4))]));
     // the roads, then the works, between this layer and the next nearer one
     const dn = k > 0 ? dOf(k - 1) : 0; drawRoads(dn, d); while(wi < works.length && works[wi].d >= dn){ if(works[wi].d <= d) drawWork(works[wi]); wi++; }
   }
+  // the finds nothing nearer stands in front of (a forest whose ridge is below the frame rises over most of them)
+  for(const ridge of seen){ const f = (ridge.find(([f2, before]) => rgSame(rgSpot(x, f2.X, f2.Y, px(4)), before)) || [])[0];
+    if(!f) continue; const Rf = mulberry32(f.seed), rf = (a, b) => a + (b - a)*Rf();
+    if(Rf() >= 0.3 + 0.7*RG_PROF[f.w].be) continue;
+    // (which kind, by the world: fairies where there is magic, insects and flowers in the wilds, slime in the ruins)
+    const mix = { magic: [1, 3, 1, 1], wilds: [3, 1, 3, 1], ruins: [2, 0.5, 1, 3], neon: [1, 2, 0.5, 1], cities: [2, 0.5, 2, 0.5], builders: [2, 1, 2, 1] }[f.w] || [2, 1, 2, 1];
+    const kinds = ['insects', 'fairies', 'flowers', 'slime'], tot = mix.reduce((a2, b2) => a2 + b2, 0); let pick = Rf()*tot, ki = 0; while(ki < 3 && pick > mix[ki]){ pick -= mix[ki]; ki++; }
+    const lc = { dark: rgLit(V, [34, 30, 28], f.wday, f.haze, AIR), lit: rgLit(V, [236, 240, 246], f.wday, f.haze, AIR), glow: f.glow || V.g1,
+      flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, f.wday), f.haze, AIR)),
+      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, f.wday), f.haze, AIR) };
+    rgSmallLife(x, f.X, f.Y, f.h*rf(0.8, 1.2), kinds[ki], lc, Rf); }
 }
+// what the canvas holds about a ground point (X, Y): a few pixels just above it; the same while nothing has been
+// painted over it (a passing glow or haze aside: a little change is allowed)
+function rgSpot(x, X, Y, r){
+  const W = x.canvas.width, H = x.canvas.height, at = (a, b) => [...x.getImageData(Math.max(0, Math.min(W - 1, Math.round(a))), Math.max(0, Math.min(H - 1, Math.round(b))), 1, 1).data].slice(0, 3);
+  return [at(X - r, Y - 1), at(X, Y - 1), at(X + r, Y - 1), at(X, Y - r*2)].flat();
+}
+function rgSame(a, b){ for(let i = 0; i < a.length; i += 3) if(Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 24) return false; return true; }
 
 export const RING_STEPS = {
   ringarch: { cat: 'Textures', label: 'The Arch', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],

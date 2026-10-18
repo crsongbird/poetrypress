@@ -6,11 +6,12 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
-  Band Width 45? Are the creatures the right size and rarity? The 3D Ringworld stays as it was, beside it.
+  Band Width 45? The small life that replaced the creatures (insects, fairies, flowers, slime; sheet sent): subtle
+  enough, and found often enough? The 3D Ringworld stays as it was, beside it.
 - RING IN THE SKY (sheet sent): the out-in-space ring Ruby liked, alone as a background (Paint 0). Land of Shapes
   (the land it first stood over) is an Athanor part: wired after it, the old picture.
 - SHAPE STRENGTH and the new Shape Aware surfaces (Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's
@@ -25,35 +26,10 @@ Recommendations".
 - THE CURVE CONTROL (Hand-Drawn Tones shows it): a pad under the sliders, its points dragged, added by a tap, taken
   away by a double-tap or a hold. Is it easy on the phone? Should a point get handles (ROADMAP F10, Bezier)?
 - THE ANGLE DIAL beside an Angle knob (Dot Grid's Turn), and the WIRE RANGE's two handles: clearer than before?
-- ANTI-ALIASING (the Surface's setting; sheet sent): edges only is FXAA, a smoothing of the steps along hard edges,
-  cheap but a touch soft; all pixels is the real thing at four times the work. Should a new graph start at edges
-  only (as now), or at all pixels where the budget allows? And should the menu's hard-edged textures get it
-  (ROADMAP A7: each would look a little different)?
 - THE PATTERN STARTERS: Paving Stones, Brick Wall, Pyramid Studs, Dot Grid, Techno Blocks. Do they teach the parts?
-- THE USABILITY REVIEW (a fresh pair of eyes on desk and phone, 38 findings): the fixes shipped are in the
-  changelog. These change names or design, so they wait for Ruby's word:
-  - Plain names for working controls, the flavor kept in card titles and tabs: West/Neutral/East → Left/Center/
-    Right; Crest/Heart/Root → Top/Middle/Bottom; Breathing Room → Line Spacing; Inscription Hue → Text Color;
-    Opposition/Conjunction Hue → Accent 1 [ ] / Accent 2 { } (the PML guide and the Athanor already say "accent
-    colors"); Witch Artificer → Credit; Radial Aura? → Background Gradient and Radial Gradient Text? → Gradient
-    Text (both start Linear); Aura Stops → Gradient Stops.
-  - ☋ ☊ as ↶ ↷ (as in the Athanor)? The 🜂 🜄 🜁 🜃 readings labeled as such on a phone?
-  - Dialog buttons: "Yes (Preclude)" means prevent, not delete. "Save Look / Cancel", "Delete / Keep"? And a
-    single Done on the share dialog, since the link is already copied.
-  - The default credit is "@unfixable.place", so a newcomer's images are signed with the app's handle: an empty
-    field ("Your name or @handle") instead?
-  - The light and camera dials look alike but have different buttons in the same corners: a different face for
-    the camera, its zoom as a slider? Reach % means nothing on Silverpoint Hatch: hide it where only direction
-    matters?
-  - Eyes for whole sections only, switches for options (Gradient Border?, Box Gradient?, Allow [Opposition])?
-  - A one-line caption at the top of each tab, saying what is in it.
-  - Two Surfaces: Upper | Lower | ⇅ Swap sits below the controls it switches. Move it above Surface Variant?
-  - Writing on a phone: the preview keeps its height while the keyboard is up (on purpose), leaving the editor
-    about four lines. Collapse the preview to a strip while typing (tap to open)? And a PML button in the
-    focus bar, since the guide is hidden while writing.
-  - Desk: Esoterica dims the left column but leaves it usable. "Return" closes Esoterica on a desk and ends
-    writing on a phone. The phone header labels Support but shows the Athanor as a bare icon.
-  - The Athanor's teaching note covers parts on a desk; it stays as set (read first, closed by any click).
+- PLAIN NAMES, the last one from the usability review: Crest/Heart/Root (where the poem sits on the page) →
+  Top/Middle/Bottom?
+- THE TAB CAPTIONS, the SWITCHES and the CAMERA DIAL'S ZOOM SLIDER (screenshots sent): right on the phone?
 - GROUPS IN THE ATHANOR: choosing parts by tap or by a box dragged across the grid (Shift and a drag with a mouse).
   Wanted next: a group kept on the shelf by itself to drop into other graphs, and a group's inputs shown as sliders
   on its face.

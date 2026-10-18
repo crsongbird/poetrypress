@@ -29,6 +29,7 @@ const EXEMPT = {
   fullPreview:  'a view preference (the preview at full size), not part of an image',
   advancedJson: 'the Workbench JSON box IS the saved look',
   modalInput:   'the text field of a dialog',
+  cameraZoomSlider: 'a view of the camera\'s zoom (cameraZoom, saved with the layer)',
   modalRangeA:  'a dialog\'s low handle (a wire\'s range, kept in the graph)',
   modalRangeB:  'a dialog\'s high handle (a wire\'s range, kept in the graph)',
   lightDegIn:   'the dial\'s angle typed or read: a view of textureLight, which is saved and restored',
