@@ -55,7 +55,10 @@ const OFF = { borderToggle: false, vignetteToggle: false };
   const [W, H] = page(), a = vig({}), b = vig({ vignetteAperture: 80 }), off = vig({ vignetteCx: 10, vignetteCy: 20 });
   check('aperture moves where the falloff begins (its inner circle grows with it)', a && b && b.a[2] > a.a[2] && Math.abs(a.a[5] - b.a[5]) < 1e-6);
   check('the centre can be moved off-axis', off && Math.abs(off.a[0] - W*0.1) < 1 && Math.abs(off.a[1] - H*0.2) < 1);
-  check('an off-centre vignette still reaches the furthest corner', off && off.a[5] >= Math.hypot(W - W*0.1, H - H*0.2)); }
+  check('an off-centre vignette still reaches the furthest corner', off && off.a[5] >= Math.hypot(W - W*0.1, H - H*0.2));
+  const edge = vig({ vignetteCx: 0, vignetteCy: 0 }), past = vig({ vignetteCx: 130, vignetteCy: -40 });
+  check('the centre reaches the slider\'s whole range: 0 is the edge (not the middle), and past the page is past it',
+    edge && edge.a[0] === 0 && edge.a[1] === 0 && past && Math.abs(past.a[0] - W*1.3) < 1 && Math.abs(past.a[1] + H*0.4) < 1); }
 { const grit = o => { const got = draw({ ...OFF, vignetteToggle: true, vignetteIntensity: 80, vignetteNoise: 100, vignetteCx: 50, vignetteCy: 50, vignetteAperture: 50, ...o });
     return got.filter(e => e.k === 'fillRect' && e.alpha < 1 && e.a[2] < 20); };
   const [W, H] = page(), dots = grit({}), R0 = Math.hypot(W/2, H/2);
@@ -83,6 +86,12 @@ const OFF = { borderToggle: false, vignetteToggle: false };
   const wavy = k => { const e = St.stitchInnerEdge(St.pathFromPoints(St.roundRectPoints(0, 0, 300, 300, 0), true), k, { period: 30, amp: 10, width: 2, side: 1 });
     const ys = e.slice(0, 40).map(p => p[1]); return Math.max(...ys) - Math.min(...ys) > 4; };
   check('beads bite and scallops scallop: their inner edges move in and out along the border', wavy('beads') && wavy('scallop'));
+  check('a stitch has a side to point only where it leaves the line: Points Outward? does nothing for a line, dashes or dots (nor a retired name for them)',
+    ['solid', 'dashed', 'dotted', 'running'].every(k => !St.stitchSided(k)) && ['wave', 'beads', 'hearts', 'double'].every(k => St.stitchSided(k)));
+  set({ borderStitch: 'solid' }); reg['borderStitch'].dispatchEvent({ type: 'change' });
+  const offSolid = reg['borderStitchOut'].disabled;
+  set({ borderStitch: 'hearts' }); reg['borderStitch'].dispatchEvent({ type: 'change' });
+  check('…so the box is grayed for those, and live for the rest (its tick kept either way)', offSolid === true && reg['borderStitchOut'].disabled === false);
   const path = St.pathFromPoints([[0, 0], [100, 0]], false);
   check('a path measures its length, and its normal points down for a left-to-right line', path.len === 100 && path.point(50, 10)[1] === 10 && path.point(50, 10)[0] === 50);
   const ring = St.pathFromPoints(St.roundRectPoints(0, 0, 100, 60, 10), true);

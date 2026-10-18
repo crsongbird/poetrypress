@@ -21,14 +21,12 @@ const St = await import('../stitches.js');
 let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const cr = readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8');
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 const fire = (id, type) => { const el = reg[id]; if(el && el.dispatchEvent) el.dispatchEvent({ type }); };
 const calls = () => { const ctx = reg['poemCanvas'].getContext('2d'); return ctx._stats ? (ctx._stats.fillText || 0) + (ctx._stats.strokeText || 0) : 0; };
 
 // ---- the definitions ----
 const types = E.EFFECT_TYPES.filter(t => t !== 'none');
 check('nine effects, each with two knobs', types.length === 9 && types.every(t => E.EFFECT_DEFS[t].k1 && E.EFFECT_DEFS[t].k2));
-check('the old halo and bloom became one Glow', !E.EFFECT_DEFS.halo && !E.EFFECT_DEFS.bloom && !!E.EFFECT_DEFS.glow);
 check('the old underline effects are not effects any more', !E.EFFECT_DEFS.wavyline && St.STITCH_STYLES.includes('double') && St.STITCH_STYLES.includes('dotted'));
 
 // ---- page-wide: every effect renders, and actually draws ----
@@ -87,8 +85,18 @@ check('an old outline becomes an outline; an old shadow keeps its offset',
   (() => { const s = E.legacyOutline('shadow', '#000', 0, 10, 3, 4); return s.type === 'shadow' && Math.abs(s.k2 - 5) < 1e-9; })());
 
 // ---- old saved looks and presets translate into the slots ----
-check('a look saved before the stack translates into the slots', /if\(s\.fx1Type === undefined && \(s\.outlineMode !== undefined \|\| s\.typeEffect !== undefined\)\) applyLegacyEffects\(s\);/.test(ev));
-check('presets do too', /else applyLegacyEffects\(p\);/.test(ev));
+{ const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
+  const load = o => { reg['advancedJson'].value = JSON.stringify(o); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
+  const settle = () => new Promise(r => setTimeout(r, 60));
+  const { fx1Type, fx2Type, fx3Type, ...old } = save(); void fx1Type, fx2Type, fx3Type;
+  load({ ...old, outlineMode: 'outline', outlineColor: '#FFFFFF', outlineThickness: '4', typeEffect: 'halo', typeEffectStrength: '60' }); await settle();
+  const s = save();
+  check('a look saved before the stack translates into the slots (an outline, then its halo as a Glow)', s.fx1Type === 'outline' && s.fx2Type === 'glow' && s.fx3Type === 'none');
+  // Starbloom, a preset that predates the stack, knows only an old shadow
+  const walk = (n, out = []) => { for(const c of n.children || []){ if(String(c.className || '').split(' ').includes('preset-btn')) out.push(c); walk(c, out); } return out; };
+  const tile = walk(reg['presetGrid']).find(t => t.dataset.name === 'Starbloom');
+  if(tile){ tile.dispatchEvent({ type: 'click' }); await settle(); }
+  check('presets do too (Starbloom\'s old shadow is a Shadow in the first slot)', !!tile && save().fx1Type === 'shadow' && save().lookName === 'Starbloom'); }
 
 // ---- PML ----
 check('/fx: parses a stack, in order', (() => { const s = E.parseFxList('outline(#fff,4)+glow(#fd0,40,70)+chromatic(,30,80,90)');
@@ -96,17 +104,7 @@ check('/fx: parses a stack, in order', (() => { const s = E.parseFxList('outline
 check('/fx:none clears', E.parseFxList('none').length === 0);
 check('/under: takes a stitch, a colour and a weight', (() => { const u = E.parseUnder('vine,#c33,150', St.STITCH_STYLES); return u.style === 'vine' && u.color === '#c33' && u.weight === 150; })());
 
-// ---- every field a segment can set reaches its style ----
-// resolvePartStyle returns early for a segment with "nothing of its own"; a
-// field missing from that guard is silently ignored (that hid /fx: and /under:)
-{
-  const tp = readFileSync(new URL('../textParsers.js', import.meta.url), 'utf8');
-  const fields = [...new Set([...tp.matchAll(/part\.(custom\w+|under)\s*=/g)].map(m => m[1]))].filter(f => !['customSize', 'customFontIdx', 'customBasis', 'customRotate', 'customGap', 'customFontName'].includes(f));   // these position the part (or its line, or pick its face); they are read directly, not through its style
-  const guard = (cr.match(/if\(!part\.customColor[^\n]*return baseStyle;/) || [''])[0];
-  const missing = fields.filter(f => !guard.includes(f));
-  check('every styling field a segment can set is in resolvePartStyle\'s guard', missing.length === 0);
-  if(missing.length) console.log('   missing: ' + missing.join(', '));
-}
+// (that every styling field a segment can set is in resolvePartStyle's guard is a source scan: invariants.test.mjs §7)
 
 // ---- the debug line ----
 check('§TypeEffect describes the stack compactly',

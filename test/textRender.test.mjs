@@ -1,17 +1,27 @@
 /**
- * newRenderFeatures.test.mjs — exercises every new rendering feature
- * (drop caps, small caps, /track, /basis, /jitter, the flag gradients,
- * rhyme markers) through the REAL render() pipeline, not just the parser.
- * Doesn't check pixels (see canvasMock.mjs for why), but confirms none of
- * it throws and that render() actually draws something for each case.
+ * textRender.test.mjs — the poem drawn through the REAL render(), not just the
+ * parser: every PML feature that shapes or colors text renders without
+ * throwing (drop caps, small caps, /track, /basis, /jitter, the flag
+ * gradients, rhyme markers, glass, cut, blends, arcs and waves, named styles,
+ * fonts by name); a tracked segment takes the room it is drawn in (a measure
+ * once blind to /track drew the next words on top of it); the text's caches
+ * follow the poem and the typeface; and the shaped lines' geometry.
+ * Pixels are the eye's to judge (see canvasMock.mjs); what is checked is what
+ * render() draws, and where.
  *
- * Run with: node test/newRenderFeatures.test.mjs
+ * Run: node test/textRender.test.mjs
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
 
+// every 2D context the page makes, watched: each run of text it draws, where, and in which font
+const drawn = [];
+const watch = c => { if(c._watched) return c; c._watched = true;
+  const f = c.fillText; c.fillText = function(t, x, y){ drawn.push({ t: String(t), x, y, font: c.font }); return f.apply(c, arguments); };
+  return c; };
+const watchedCanvas = () => { const cv = makeMockCanvas(), g = cv.getContext.bind(cv); cv.getContext = (...a) => watch(g(...a)); return cv; };
 installCanvasMock();
-const registry = installDomMock(makeMockContext, makeMockCanvas);
+const registry = installDomMock((w, h) => watch(makeMockContext(w, h)), watchedCanvas);
 await import('../appEvents.js');
 const { render } = await import('../canvasRenderer.js');
 
@@ -53,8 +63,6 @@ tryRender('everything combined in one poem renders without throwing',
   'a <rainbow/rainbow:rev> and a <trans/trans> flag\n' +
   'plain closing line'
 );
-
-// ---- Saturn–Phoebe: glass, cut, blends, shaped lines, named styles, fonts by name ----
 tryRender('/glass renders without throwing', 'a <frosted/glass/scale:150> word');
 tryRender('/glass:clear and a tinted glass render', '<clear/glass:clear> and <rose/glass:rose>');
 tryRender('/cut renders without throwing', 'a <window/cut> through');
@@ -69,6 +77,29 @@ tryRender('/font:Cinzel renders without throwing', 'a <carved/font:Cinzel> word,
 tryRender('a named style renders without throwing', '§style ember = /color:ember/glass/scale:120\nthe <coals/@ember> glow');
 tryRender('a code segment turned renders without throwing', '`code` <and `more`/rot:8>');
 
+// ---- a tracked segment takes the room it is drawn in ----
+// A tracked word is drawn letter by letter, each a tracked step apart; what follows it must start one more
+// step past its last letter. (Found from a screenshot: "color" measured narrow but drew wide, and
+// "learns to spread" was drawn over it.)
+{ const draw = poem => { registry['poemText'].value = poem; drawn.length = 0; render(); return drawn.slice(); };
+  const runs = draw('a <color/track:140> learns to spread');
+  const at = t => runs.findIndex(r => r.t === t), r = at('r'), after = runs.findIndex(x => /^\s*learns to spread$/.test(x.t));
+  const step = r > 0 ? runs[r].x - runs[r - 1].x : 0;
+  check('a tracked segment takes the room it is drawn in: the words after /track:140 start one tracked step past its last letter, not on top of it',
+    r > 0 && after > r && step > 10 && Math.abs((runs[after].x - runs[r].x) - step) < 1);
+
+  // ---- the text's caches follow the poem and the typeface ----
+  const a = draw('## A Totally Different Poem\n\nJust checking.'), again = draw('## A Totally Different Poem\n\nJust checking.');
+  check('a poem drawn twice unchanged draws the same runs', JSON.stringify(a.map(x => [x.t, x.x, x.y])) === JSON.stringify(again.map(x => [x.t, x.x, x.y])));
+  const b = draw('## Flood\n\nBack to something else.');
+  check('a changed poem is drawn anew (the line cache follows the poem): the new lines, none of the old',
+    a.some(x => x.t === 'Just checking.') && b.some(x => x.t === 'Back to something else.') && !b.some(x => x.t === 'Just checking.'));
+  const { FONTS } = await import('../appOptions.js'), other = FONTS.findIndex(f => !b.some(x => x.font.includes('"' + f.family + '"')));
+  registry['fontFamily'].value = String(other); registry['fontFamily'].dispatchEvent({ type: 'change' });
+  const c = draw('## Flood\n\nBack to something else.');
+  check('a new typeface is drawn in (the measures follow the font)', other >= 0 && c.some(x => x.t === 'Back to something else.' && x.font.includes('"' + FONTS[other].family + '"'))); }
+
+// ---- the shaped lines' geometry ----
 const { runShape, fontIndexByName } = await import('../canvasRenderer.js');
 const arc = runShape({ arc: 60 }, 300, 50);
 check('an arc is hung about its line: the middle rises as far as the ends fall', Math.abs(arc(150).dx) < 1e-9 && arc(150).dy < 0

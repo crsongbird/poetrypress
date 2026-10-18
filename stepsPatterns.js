@@ -17,7 +17,9 @@
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
-import { CPU } from './texCore.js';
+import { CPU, chamferDistance } from './texCore.js';
+import { LORE } from './symbolLore.js';
+import { GLYPH_FONT } from './spell.js';
 
 const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
@@ -103,7 +105,22 @@ function patRings(d, m, K, lw, sf){
 
 // ---- SCATTER: the shapes it can throw ----
 // each drawn white on a canvas, centred at 0,0 with radius 1 (the caller scales and turns)
-const PAT_SHAPES = ['dot', 'ring', 'star', 'cross', 'dash', 'diamond', 'spark', 'sigil', 'picture'];
+const PAT_SHAPES = ['dot', 'ring', 'star', 'cross', 'dash', 'diamond', 'spark', 'sigil', 'picture', 'glyph'];
+// GLYPHS TO SCATTER (ROADMAP F2): Symbology's families (symbolLore.js), in the symbol fonts the page loads — so a graph
+// that scatters them is made on the page, where those fonts are (textureService)
+const PAT_GLYPH_SETS = { mixed: null, alchemy: 'Alchemy', heavens: 'Heavens', zodiac: 'Zodiac', occult: 'Occult', runes: 'Elder Futhark', stars: 'Stars' };
+const PAT_GLYPHS = Object.fromEntries(Object.entries(PAT_GLYPH_SETS).map(([k, fam]) => [k, LORE.filter(([g, , f]) => (fam ? f === fam : true) && Array.from(g.replace('\uFE0E', '')).length === 1).map(r => r[0])]));
+/** THE INSET BOX (ROADMAP G5): how far in from the box's line each point lies, in grid pixels (negative outside it), as
+ *  a rounded rectangle; from the page's own edges when the box is off. Returns { d(x, y), thick } (thick: its line's width). */
+function patBox(E){
+  const { ww, wh } = E, b = String((E.ctx && E.ctx.box) || '').split(',').map(Number), on = b.length >= 6 && b.every(isFinite);
+  const [x0, y0, x1, y1, cr, th] = on ? b : [0, 0, 1, 1, 0, 0], m = Math.min(ww, wh);
+  const cx = (x0 + x1)/2*ww, cy = (y0 + y1)/2*wh, hx = Math.max(0, (x1 - x0)/2*ww), hy = Math.max(0, (y1 - y0)/2*wh), r = Math.min(cr*m, hx, hy);
+  return { thick: th*m, d: (x, y) => { const qx = Math.abs(x - cx) - (hx - r), qy = Math.abs(y - cy) - (hy - r);
+    return -(Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r); } };
+}
+/** Whether a graph scatters glyphs in the symbol fonts (it must then be made on the page, which has them). */
+export function graphScattersGlyphs(graph){ return /"shape":\s*"glyph"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function patShape(x, kind, rand){
   x.beginPath();
   if(kind === 'dot'){ x.arc(0, 0, 1, 0, Math.PI*2); x.fill(); return; }
@@ -130,24 +147,36 @@ function patShape(x, kind, rand){
 export const PATTERN_STEPS = {
   // FILTER FORGE'S BOMBER: throw copies of a shape (or of a picture) across the page, each of its own size, turn
   // and brightness; where they may fall can be a gray map, and which way they turn an angle map (a vector field)
-  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark'], maps: ['size:4'],
-    io: { ins: ['image', 'field', 'field'], outs: ['field', 'field', 'field'] },
+  scatter: { cat: 'Marks', label: 'Scatter', ins: ['picture', 'where', 'which way'], outs: ['marks', 'heights', 'each mark', 'in color'], maps: ['size:4'],
+    io: { ins: ['image', 'field', 'field'], outs: ['field', 'field', 'field', 'image'] },
     params: [PAT_SEL('shape', 'Shape', PAT_SHAPES), PAT_R('count', 'Count', 60, 1, 400), PAT_R('size', 'Size', 20, 1, 100), PAT_R('vary', 'Size Variety', 50),
-      PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99)],
+      PAT_R('turn', 'Turn', 100, 0, 100), PAT_R('clump', 'Clumping', 0), PAT_R('fade', 'Brightness Variety', 30), PAT_R('variation', 'Variation', 0, 0, 99),
+      // (F2: glyphs, which mark lies on top, and each mark's own color — after the old settings, so no ⚙ port moves)
+      ['glyphs', 'Glyphs', 'select', 'mixed', { options: Object.keys(PAT_GLYPH_SETS), when: 'shape:glyph' }],
+      PAT_SEL('layers', 'On Top', ['brightest', 'last thrown', 'largest', 'smallest']),
+      PAT_SEL('color', 'Mark Colors', ['white', 'from the picture'])],
     cost: () => 3,
-    doc: 'Scatters copies of a mark across the page (dots, stars, sigils, or any picture), each with its own size, turn and brightness.',
+    doc: 'Scatters copies of a mark across the page (dots, stars, sigils, glyphs or any picture), each with its own size, turn, brightness and, if you like, color.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
-      const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3)), pic = shape === 'picture' ? asImage(input(n, 1)) : null;
+      const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3));
+      const tinted = P(n, 'color', 'white') === 'from the picture', layers = P(n, 'layers', 'brightest');
+      const pic = shape === 'picture' || tinted ? asImage(input(n, 1)) : null, glyphs = shape === 'glyph' ? (PAT_GLYPHS[P(n, 'glyphs', 'mixed')] || PAT_GLYPHS.mixed) : null;
       // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
       const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
       const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
       const [mc, mx] = mk(), [ic, ix] = mk();
-      mx.globalCompositeOperation = 'lighten';
+      // ON TOP (F2): the brightest mark wins where marks overlap (as Scatter always drew), or they lie in the order
+      // thrown, or the largest (or smallest) on top; and in color, a third pass, each mark the picture's color where it lands
+      const colored = tinted || shape === 'picture', deferred = layers !== 'brightest' || shape === 'glyph' || colored;
+      if(layers === 'brightest') mx.globalCompositeOperation = 'lighten';
+      const [cc, cx] = colored ? mk() : [null, null];
+      if(cx && layers === 'brightest') cx.globalCompositeOperation = 'lighten';
+      const marks = [];
       // a picture to stamp, as a small canvas
       let stamp = null;
-      if(pic){ const s = document.createElement('canvas'); s.width = ww; s.height = wh; const sx = s.getContext('2d', CPU), im = sx.createImageData(ww, wh);
+      if(pic && shape === 'picture'){ const s = document.createElement('canvas'); s.width = ww; s.height = wh; const sx = s.getContext('2d', CPU), im = sx.createImageData(ww, wh);
         for(let i = 0; i < N; i++){ im.data[i*4] = pic.r[i]*255; im.data[i*4 + 1] = pic.g[i]*255; im.data[i*4 + 2] = pic.b[i]*255; im.data[i*4 + 3] = 255; } sx.putImageData(im, 0, 0); stamp = s; }
       // Variation turns the throw without moving the seed (Filter Forge's local Variation)
       const v0 = Math.round(num(n, 'variation', 0)); let st = 0x9e3779b9 ^ Math.floor(Math.random()*4294967296) ^ Math.imul(v0 + 1, 2654435761);
@@ -169,14 +198,29 @@ export const PATTERN_STEPS = {
         let ang = (rand() - 0.5)*Math.PI*2*turn;
         if(way){ const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0)); ang = way[q]*Math.PI*2 + (rand() - 0.5)*turn*0.6; }
         const g = Math.round(255*(1 - fade*rand())), id = Math.round(20 + rand()*235);
+        if(deferred){ marks.push({ x, y, r, ang, g, id, s0: st, glyph: glyphs && glyphs.length ? glyphs[Math.floor(rand()*glyphs.length)] : null }); continue; }
         for(const [ctx, col] of [[mx, `rgb(${g},${g},${g})`], [ix, `rgb(${id},${id},${id})`]]){
           ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(r, r); ctx.fillStyle = ctx.strokeStyle = col;
           if(stamp){ if(ctx === mx){ ctx.globalAlpha = g/255; ctx.drawImage(stamp, -1, -1, 2, 2); } else ctx.fillRect(-1, -1, 2, 2); }
           else { const s0 = st; patShape(ctx, shape, rand); if(ctx === mx) st = s0; }     // (the id pass draws the same sigil)
           ctx.restore(); }
       }
-      const marks = E.lum(readCanvas(mc)), each = E.lum(readCanvas(ic));
-      return [marks, E.boxBlur(marks, Math.max(1, R0*0.18)), each];
+      if(deferred){
+        if(layers === 'largest') marks.sort((a, b) => a.r - b.r); else if(layers === 'smallest') marks.sort((a, b) => b.r - a.r);
+        const at = (m, img) => { const q = Math.min(wh - 1, Math.max(0, m.y | 0))*ww + Math.min(ww - 1, Math.max(0, m.x | 0)); return [img.r[q], img.g[q], img.b[q]]; };
+        for(const m of marks){
+          const k = m.g/255, c = tinted && pic ? at(m, pic).map(v => Math.round(Math.max(0, Math.min(1, v))*255*k)) : [m.g, m.g, m.g];
+          for(const [ctx, col, isMark] of [[mx, `rgb(${m.g},${m.g},${m.g})`, true], [ix, `rgb(${m.id},${m.id},${m.id})`, false], ...(cx ? [[cx, `rgb(${c[0]},${c[1]},${c[2]})`, true]] : [])]){
+            ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.ang); ctx.fillStyle = ctx.strokeStyle = col;
+            if(m.glyph){ ctx.font = `${Math.max(1, m.r*2.2)}px ${GLYPH_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(m.glyph, 0, 0); }
+            else { ctx.scale(m.r, m.r);
+              if(stamp){ if(isMark){ ctx.globalAlpha = ctx === cx ? 1 : m.g/255; if(ctx === cx && !tinted) ctx.globalAlpha = k; ctx.drawImage(stamp, -1, -1, 2, 2); } else ctx.fillRect(-1, -1, 2, 2); }
+              else { st = m.s0; patShape(ctx, shape, rand); } }     // (every pass draws the same sigil)
+            ctx.restore(); }
+        }
+      }
+      const markF = E.lum(readCanvas(mc)), each = E.lum(readCanvas(ic));
+      return [markF, E.boxBlur(markF, Math.max(1, R0*0.18)), each, cc ? readCanvas(cc) : markF];
     } },
 
   // FILTER FORGE'S CHECKER, TILES and DOTS in one: a regular pattern, turned and sized
@@ -202,20 +246,37 @@ export const PATTERN_STEPS = {
 
   // A FRAME from the page's edges (ROADMAP F3): white at the edge, fading inward, square-cornered or round
   border: { cat: 'Noise', label: 'Border Mask', ins: ['roughen'], outs: ['frame'], io: { ins: ['field'] },
-    params: [PAT_SEL('shape', 'Shape', ['square', 'rounded', 'oval']), PAT_R('width', 'Width', 12, 0, 50), PAT_R('soft', 'Softness', 50), PAT_R('rough', 'Roughness', 0)],
+    // (Inset Box: the frame measured from the page's inset box, its offset and corners — ROADMAP F3)
+    params: [PAT_SEL('shape', 'Shape', ['square', 'rounded', 'oval', 'inset box']), PAT_R('width', 'Width', 12, 0, 50), PAT_R('soft', 'Softness', 50), PAT_R('rough', 'Roughness', 0)],
     cost: () => 1,
     doc: 'A frame-shaped mask from the page’s edges: white at the edge, fading to black inward.',
     run(E, n){ const { ww, wh, unit, P, num, input, asField, field } = E;
       const shape = P(n, 'shape', 'square'), W = Math.max(0.001, num(n, 'width', 12)/100*unit), soft = Math.max(0.02, num(n, 'soft', 50)/100), rough = num(n, 'rough', 0)/100, R = asField(input(n, 1));
+      const box = shape === 'inset box' ? patBox(E) : null;
       let q = -1;
       return [field((u, v, x, y) => { q++;
         let d;                                                     // distance in from the edge, in pixels
-        if(shape === 'oval'){ const dx = (x - ww/2)/(ww/2), dy = (y - wh/2)/(wh/2); d = (1 - Math.hypot(dx, dy))*Math.min(ww, wh)/2; }
+        if(box) d = box.d(x, y);
+        else if(shape === 'oval'){ const dx = (x - ww/2)/(ww/2), dy = (y - wh/2)/(wh/2); d = (1 - Math.hypot(dx, dy))*Math.min(ww, wh)/2; }
         else if(shape === 'rounded'){ const r = W*1.5, cx = Math.min(Math.max(x, r), ww - r), cy = Math.min(Math.max(y, r), wh - r); d = Math.min(x, y, ww - x, wh - y);
           if((x < r || x > ww - r) && (y < r || y > wh - r)) d = r - Math.hypot(x - cx, y - cy); }
         else d = Math.min(x, y, ww - x, wh - y);
         if(R) d -= (R[q] - 0.5)*W*rough*2;
         const t = d/W; return patClamp(1 - (t - (1 - soft))/soft); })];
+    } },
+
+  // THE INSET BOX AS AN INPUT (ROADMAP G5): the page's box as masks — inside it, a rise in from its edge, its line
+  insetbox: { cat: 'Inputs', label: 'Inset Box', ins: [], outs: ['inside', 'edge', 'line'],
+    params: [PAT_R('width', 'Edge Width', 10, 1, 50), PAT_R('soft', 'Softness', 0)],
+    cost: () => 1,
+    doc: 'The page’s inset box as masks: white inside it, a rise in from its edge, and its line. With the box off, the page’s own edges.',
+    run(E, n){ const { N, ww, wh, unit, num, field } = E;
+      const B = patBox(E), W = Math.max(0.5, num(n, 'width', 10)/100*unit), sf = Math.max(0.75, num(n, 'soft', 0)/100*unit*0.2), half = Math.max(0.5, B.thick/2);
+      const D = new Float32Array(N); let q = 0; for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) D[q++] = B.d(x + 0.5, y + 0.5);
+      const inside = new Float32Array(N), edge = new Float32Array(N), line = new Float32Array(N);
+      for(let i = 0; i < N; i++){ const d = D[i]; inside[i] = patClamp(0.5 + d/sf); edge[i] = d <= 0 ? 0 : Math.min(1, d/W);
+        line[i] = B.thick > 0 ? patClamp(half + 0.5 - Math.abs(d)) : 0; }
+      return [inside, edge, line];
     } },
 
   // FILTER FORGE'S LOOKUP: a picture read at the places two gray maps name — refraction, foil, interference
@@ -348,6 +409,54 @@ export const PATTERN_STEPS = {
         const L = E.lum(readCanvas(c)); for(let i = 0; i < N; i++) sum[i] += L[i]*a; norm += a; }
       for(let i = 0; i < N; i++) sum[i] /= norm;
       return [sum, E.lum(readCanvas(oc))];
+    } },
+
+  // FILTER FORGE'S PAVEMENTS (ROADMAP F6): irregular paving stones laid in rows — each row its own height, each stone
+  // its own width, its corners pushed a little off square, the joints between them of a width, the corners worn round
+  pavement: { cat: 'Noise', label: 'Pavements', ins: [], outs: ['stones', 'bevel', 'each stone'],
+    params: [PAT_R('rows', 'Rows', 8, 2, 40), PAT_R('irreg', 'Irregularity', 50), PAT_R('gap', 'Joint Width', 20), PAT_R('round', 'Roundness', 30),
+      PAT_R('bevel', 'Bevel Width', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('variation', 'Variation', 0, 0, 99)],
+    cost: () => 3,
+    doc: 'Paving stones laid in rows, each row its own height and each stone its own width, a little out of true, with joints between: for paths, walls and flagstones.',
+    run(E, n){ const { ww, wh, N, unit, num, readCanvas } = E;
+      const rows = Math.max(2, num(n, 'rows', 8)), irr = num(n, 'irreg', 50)/100, rh = unit/rows, gap = num(n, 'gap', 20)/100*rh*0.25;
+      const round = num(n, 'round', 30)/100*rh*0.35, bev = Math.max(1, num(n, 'bevel', 30)/100*rh*0.4), a = num(n, 'angle', 0)*Math.PI/180;
+      const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
+      const [sc, sx] = mk(), [ic, ix] = mk();
+      // laid over a square the page's diagonal across, about its middle, so any angle covers it
+      const D = Math.hypot(ww, wh), half = D/2;
+      for(const x of [sx, ix]){ x.translate(ww/2, wh/2); x.rotate(a); x.lineJoin = 'round'; }
+      // the rows, and the corner points along each joint between them (shared by the rows above and below, so they fit)
+      const ys = [-half]; while(ys[ys.length - 1] < half) ys.push(ys[ys.length - 1] + rh*(1 + irr*(Math.random() - 0.5)*0.8));
+      const wob = () => (Math.random() - 0.5)*irr*rh*0.3;
+      // a quad drawn in from each of its edges by d (each edge's line moved inward, the corners where they meet)
+      const inset = (P, d) => { const L = P.map((p, i) => { const q = P[(i + 1) % 4], dx = q[0] - p[0], dy = q[1] - p[1], len = Math.hypot(dx, dy) || 1, nx = -dy/len, ny = dx/len;
+          return [p[0] + nx*d, p[1] + ny*d, dx, dy]; });
+        return L.map((l, i) => { const m = L[(i + 3) % 4], det = m[2]*l[3] - m[3]*l[2];
+          if(Math.abs(det) < 1e-9) return [l[0], l[1]];
+          const t = ((l[0] - m[0])*l[3] - (l[1] - m[1])*l[2])/det; return [m[0] + m[2]*t, m[1] + m[3]*t]; }); };
+      for(let r = 0; r + 1 < ys.length; r++){
+        const y0 = ys[r], y1 = ys[r + 1], h = y1 - y0;
+        // the joints along the row, each leaning its own way: a stone's right edge is the next one's left
+        const joints = []; let x = -half - Math.random()*h*1.5;
+        while(x < half + h*2){ joints.push([x + wob(), x + wob()]); x += h*(0.9 + Math.random()*(0.6 + 1.6*irr)); }
+        for(let j = 0; j + 1 < joints.length; j++){
+          const [a0, a1] = joints[j], [b0, b1] = joints[j + 1];
+          const P = [[a0, y0 + wob()*0.4], [b0, y0 + wob()*0.4], [b1, y1 + wob()*0.4], [a1, y1 + wob()*0.4]];
+          const Q = inset(P, gap/2 + round);
+          if(Q.some(q => !isFinite(q[0]) || !isFinite(q[1]))) continue;
+          const g = Math.round(30 + Math.random()*225);
+          for(const [ctx, col] of [[sx, '#fff'], [ix, `rgb(${g},${g},${g})`]]){
+            ctx.beginPath(); Q.forEach(([qx, qy], i) => i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)); ctx.closePath();
+            ctx.fillStyle = ctx.strokeStyle = col; ctx.fill(); if(round > 0.3){ ctx.lineWidth = round*2; ctx.stroke(); } }
+        }
+      }
+      const stones = E.lum(readCanvas(sc)), each = E.lum(readCanvas(ic));
+      // the bevel: how far in from a stone's edge, up to the bevel's width (a chamfer distance from the joints)
+      const joint = new Uint8Array(N); for(let i = 0; i < N; i++) joint[i] = stones[i] < 0.5 ? 1 : 0;
+      const dist = chamferDistance(joint, ww, wh), bevel = new Float32Array(N);
+      for(let i = 0; i < N; i++){ const t = Math.min(1, dist[i]/bev); bevel[i] = stones[i] < 0.5 ? 0 : Math.sin(t*Math.PI/2); }
+      return [stones, bevel, each];
     } },
 
   // FILTER FORGE'S PYRAMIDS: a grid of pyramids (or cones, or domes), each its own height, at one or more sizes

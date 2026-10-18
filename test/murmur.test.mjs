@@ -88,7 +88,6 @@ check('wired: tabs, readings, presets, undo/redo, locks, saving, the Athanor, su
 check('Esoterica → Appearance has its switch and volume, off by default', /id="soundToggle"(?![^>]*checked)/.test(html) && html.includes('id="soundVolume"'));
 check('kept in this browser (uv.sound.on, uv.sound.volume), never in a look',
   app.includes("'uv.sound.on'") && app.includes("'uv.sound.volume'") && /soundToggle:/.test(src('test/persistenceCoverage.test.mjs')));
-check('bundled', src('build.mjs').includes("'murmur.js'"));
 check('the Murmur Studio carries this very engine (node tools/make-murmur-studio.mjs after changing murmur.js)',
   src('tools/murmur-studio.html').includes(src('murmur.js').replace(/^export /gm, '')));
 

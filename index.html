@@ -41,9 +41,9 @@
     <span class="app-header-spacer header-moon" id="headerMoon"></span>
     <strong class="app-header-title">PoetryPress <svg class="vellum-sigil" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1.9 21.9 12 12 22.1 2.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 7.1 16.9 12 12 16.9 7.1 12Z" stroke="#6FA8FF" opacity="0.88"/><path d="M12 4.4V19.6" stroke="#6FA8FF" opacity="0.88"/><path d="M11.95 1.73 21.42 12.48 11.35 22.10 2.63 11.45Z" stroke="#C9A0FF" opacity="0.88"/><path d="M12.07 7.25 16.29 11.84 12.27 16.84 7.40 11.55Z" stroke="#C9A0FF" opacity="0.88"/><path d="M11.65 3.89V19.61" stroke="#C9A0FF" opacity="0.88"/><path d="M12.66 2.04 22.33 11.82 12.38 21.48 1.77 12.27Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.35 6.98 16.26 11.64 11.55 16.56 7.58 11.53Z" stroke="#9B7FE8" opacity="0.88"/><path d="M12.60 4.99V18.91" stroke="#9B7FE8" opacity="0.88"/><path d="M11.78 1.89 21.04 11.86 12.73 21.40 2.27 11.32Z" stroke="#E0526F" opacity="0.88"/><path d="M12.14 7.81 16.37 11.11 11.25 16.97 6.23 11.25Z" stroke="#E0526F" opacity="0.88"/><path d="M11.99 5.16V19.46" stroke="#E0526F" opacity="0.88"/><circle cx="12" cy="12" r="1.35" fill="#E0526F" stroke="none"/></svg></strong>
     <div class="app-header-tools">
-      <button class="athanor-top" id="athanorTopBtn" data-sound="athanorOpen" type="button" title="Open the Athanor, the node editor: build a surface texture from parts, or open one of the app's textures to see how it is made"><span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span></button>
+      <button class="athanor-top" id="athanorTopBtn" data-sound="athanorOpen" type="button" title="Open the Athanor, a node editor for building surface textures from parts"><span class="at-glyph" aria-hidden="true">🜉</span><span class="at-label">The Athanor</span></button>
       <button class="shortcut-btn" id="shortcutBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
-      <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="support-btn" id="supportBtn" title="PoetryPress is free and always will be. If it has given you something, you can give back on Ko-fi."><span class="support-heart" aria-hidden="true">♡</span><span class="support-word">Support</span></a>
+      <a href="https://ko-fi.com/c0222f" target="_blank" rel="noopener" class="support-btn" id="supportBtn" title="PoetryPress is free and always will be. You can support it on Ko-fi."><span class="support-heart" aria-hidden="true">♡</span><span class="support-word">Support</span></a>
     </div>
   </div>
 
@@ -129,15 +129,15 @@ Have fun!</textarea>
       <summary class="card-title" data-str="card.arcane_guidance_pml_syntax">Arcane Guidance (PML Syntax)</summary>
       <div class="pml-help" style="margin-top:6px; font-size:12px; color:var(--text-dim); line-height:1.6;">
         <!-- THE GUIDE TEACHES (Ruby: the Athanor's voice, here too): what each mark is, why you'd use it, one thing to try.
-             Every ⤓ Try puts its example in the poem where the cursor is; undo takes it back. -->
-        <p class="pml-intro">PML (Poetic Magick Language) is how a poem is dressed. Write plainly and it reads plainly; a few marks change how part of it looks. A mark that isn’t understood is simply shown as typed, so nothing here can break a poem. Each section ends with an example: <b>⤓ Try</b> puts it in your poem, and undo takes it back.</p>
+             Every ⤓ Try puts its example in the poem where the cursor is (one step of the poem's undo). -->
+        <p class="pml-intro">PML (Poetic Magick Language) styles a poem with a few marks. Plain text stays plain, and a mark PML doesn’t understand is shown as typed, so nothing here can break a poem. Each section ends with an example: <b>⤓ Try</b> inserts it at the cursor, and ☋ takes it out again.</p>
 
         <h4>Emphasis</h4>
-        <p>Wrap words to change their weight or line: <code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strike~~</code>. They mix and nest, so a phrase can be bold with one italic word inside.</p>
+        <p>Wrap words to change their weight or line: <code>**bold**</code>, <code>*italic*</code>, <code>_underline_</code>, <code>~~strike~~</code>. They combine and nest: a bold phrase can hold one italic word.</p>
         <p class="pml-ex" data-try="the **heart** of it, *softly*, ~~never~~ always"><code>the **heart** of it, *softly*, ~~never~~ always</code></p>
 
         <h4>Accents and gradients</h4>
-        <p>The page has two accent colors (set under Thoughtforms). Square brackets color words in the first, braces in the second, and the two together blend one into the other across the words. A slash fades an accent into the ordinary ink, from the left (<code>/lg</code>) or the right (<code>/rg</code>). An emoji inside takes the color too.</p>
+        <p>The page has two accent colors, set under Thoughtforms. Square brackets use the first, braces the second, and both together blend from one to the other across the words. A slash fades an accent into the ink, from the left (<code>/lg</code>) or the right (<code>/rg</code>). Emoji inside take the color too.</p>
         <dl>
           <dt><code>[one]</code> <code>{two}</code></dt><dd>accent one, accent two</dd>
           <dt><code>{[text]}</code> <code>[{text]}</code></dt><dd>one accent blending into the other, and the reverse</dd>
@@ -159,36 +159,36 @@ Have fun!</textarea>
 #D Once there was a light that would not go out.</code></p>
 
         <h4>Alignment</h4>
-        <p>End a line with <code>/l</code>, <code>/c</code> or <code>/r</code> (or <code>/left</code>, <code>/center</code>, <code>/right</code>) to set it apart from the page’s alignment. To split one line between alignments, put part of it in a segment (below) with its own.</p>
+        <p>End a line with <code>/l</code>, <code>/c</code> or <code>/r</code> (or <code>/left</code>, <code>/center</code>, <code>/right</code>) to override the page’s alignment for that line. To split a line between alignments, put part of it in a segment (below) with its own.</p>
         <p class="pml-ex" data-try="this line leans right/r&#10;left words &lt;and right words/r&gt;"><code>this line leans right/r
 left words &lt;and right words/r&gt;</code></p>
 
         <h4>Rhyme markers</h4>
-        <p>End a line with <code>~A</code>, <code>~B</code>, <code>~C</code> or <code>~D</code> to mark which rhyme it belongs to. Each is shown as a small colored bar beside the line, not as text: A and B in the accents, C and D in colors that sit opposite them. They combine with alignment: <code>text~A/r</code>.</p>
+        <p>End a line with <code>~A</code>, <code>~B</code>, <code>~C</code> or <code>~D</code> to mark its rhyme. Each shows as a small colored bar beside the line, not as text: A and B in the accent colors, C and D in the accents’ opposite hues. They combine with alignment: <code>text~A/r</code>.</p>
         <p class="pml-ex" data-try="the night was cold~A&#10;the stars were old~A&#10;and still the light~B&#10;held on till bright~B"><code>the night was cold~A
 the stars were old~A
 and still the light~B
 held on till bright~B</code></p>
 
         <h4>Segments <code>&lt;…&gt;</code></h4>
-        <p>Angle brackets set part of a line apart, so it can be styled on its own. After the words, a slash and a directive say how; chain as many as you like. Each directive also works bare, with a sensible amount: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>, <code>/effect</code>.</p>
+        <p>Angle brackets mark part of a line to style on its own. After the words, add a slash and a directive; chain as many as you like. These also work bare, with a default amount: <code>/scale</code>, <code>/track</code>, <code>/jitter</code>, <code>/basis</code>, <code>/fx1</code>, <code>/fx2</code>, <code>/effect</code>.</p>
         <dl>
           <dt><code>/#:ff00ff</code></dt><dd>a color of its own (a hex code)</dd>
           <dt><code>/color:rose</code></dt><dd>a color by its name: any web color name (<code>midnightblue</code>), the app’s own (rose, oxblood, moss, bone, parchment, graphite, teastain, clay, sage, ink, starlight, ember), or a hex code</dd>
           <dt><code>/f:4</code></dt><dd>a typeface, by its number in the list at the end</dd>
           <dt><code>/font:Cinzel</code></dt><dd>a typeface, by its name</dd>
-          <dt><code>/scale:150</code></dt><dd>size, as a percent of the size the poem was fitted to</dd>
+          <dt><code>/scale:150</code></dt><dd>size, as a percent of the poem’s fitted size</dd>
           <dt><code>/track:150</code></dt><dd>letter-spacing, as a percent</dd>
           <dt><code>/basis:50</code></dt><dd>raises the words; a negative number lowers them</dd>
           <dt><code>/jitter:150</code></dt><dd>shakes each letter a little, like a hand that trembles</dd>
           <dt><code>/grad:1#f00,2#00f</code></dt><dd>a gradient of its own, up to four stops</dd>
-          <dt><code>/rainbow</code> <code>/trans</code> <code>/lesbian</code></dt><dd>gradients ready-made; add <code>:rev</code> to reverse one</dd>
+          <dt><code>/rainbow</code> <code>/trans</code> <code>/lesbian</code></dt><dd>ready-made gradients; add <code>:rev</code> to reverse one</dd>
           <dt><code>/fx1,#abc,3</code></dt><dd>an outline: its color and thickness</dd>
-          <dt><code>/fx2,#f0f,10,4,4</code></dt><dd>a shadow: its color, blur, and how far across and down</dd>
+          <dt><code>/fx2,#f0f,10,4,4</code></dt><dd>a shadow: its color, blur, and offset across and down</dd>
           <dt><code>/effect:halo,60,#fff</code></dt><dd>a typeface effect (letterpress, longshadow, doublestrike, chromatic, halo, bevel, erosion, doubleline, wavyline, dottedline or bloom), then its strength, hue, angle, distance and grain, each optional</dd>
           <dt><code>/fx:outline(#fff,4)+glow(#fd0,40,70)</code></dt><dd>up to three effects, in order, each with its color, two amounts and an angle: outline, shadow, longshadow, glow, letterpress, bevel, chromatic, doublestrike or erosion (<code>/fx:none</code> clears them)</dd>
           <dt><code>/under:wave,#c33,150</code></dt><dd>an underline sewn in any of the stitches: its color and size</dd>
-          <dt><code>/fx0</code></dt><dd>no effects for this segment, whatever the page has</dd>
+          <dt><code>/fx0</code></dt><dd>no effects on this segment, even if the page has some</dd>
         </dl>
         <p class="pml-ex" data-try="&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;"><code>&lt;grow/scale:160/track:130&gt; and &lt;fall/basis:-40/jitter:200&gt; and &lt;glow/effect:halo,70&gt;</code></p>
 
@@ -200,7 +200,7 @@ held on till bright~B</code></p>
           <dt><code>/cut</code></dt><dd>the letters as windows through the surface, to the page under it. With no surface on, plain letters.</dd>
           <dt><code>/blend:multiply</code></dt><dd>how the letters lie on the page: multiply (ink pressed into the paper), screen, overlay, soft-light and the rest of the blends</dd>
           <dt><code>/op:60</code></dt><dd>opacity, as a percent</dd>
-          <dt><code>/arc:30</code></dt><dd>the words on an arc, spanning so many degrees of a circle; a negative arc sags</dd>
+          <dt><code>/arc:30</code></dt><dd>the words on an arc of this many degrees; a negative arc sags</dd>
           <dt><code>/wave:25,2</code></dt><dd>the words on a wave: its height, as a percent of the size, and how many waves</dd>
           <dt><code>/rot:-8</code></dt><dd>the words turned, in degrees, about their middle</dd>
           <dt><code>/gap:100</code></dt><dd>room after the line, as a percent of its height; a negative gap draws the next line in</dd>
@@ -210,12 +210,12 @@ held on till bright~B</code></p>
 &lt;a turned word/rot:-6/op:70/gap:60&gt;</code></p>
 
         <h4>Named styles</h4>
-        <p>Name a set of directives once, on a line of its own, and use it anywhere a directive goes with <code>/@</code> and the name. The naming line isn’t drawn, and a style can use another. The editor underlines a directive it can’t read (a misspelt name, a value it doesn’t take, a style or typeface no one has named) and says why under the poem.</p>
+        <p>Name a set of directives once, on its own line, then use it anywhere a directive goes with <code>/@</code> and the name. The naming line isn’t drawn, and one style can use another. The editor underlines any directive it can’t read (a misspelling, a value it doesn’t take, a style or typeface no one has named) and explains why under the poem.</p>
         <p class="pml-ex" data-try="§style ember = /color:ember/glass/scale:120&#10;the &lt;coals/@ember&gt; and the &lt;sparks/@ember/rot:4&gt;"><code>§style ember = /color:ember/glass/scale:120
 the &lt;coals/@ember&gt; and the &lt;sparks/@ember/rot:4&gt;</code></p>
 
         <h4>Over many lines, and within each other</h4>
-        <p>A bracket or a segment can run over several lines: open it on one line and close it on a later one, and every line between takes it. Directives right after a bracket’s closer make it a segment of its own, so <code>[words]/jitter:150</code> works without angle brackets. An alignment alone at the end of a block aligns every line of it. Marks nest: a segment inside a segment takes both, its own directives last. Bold and italic run over lines the same way. A bracket that never closes still ends with its line, and <code>&lt;3</code> is always a heart.</p>
+        <p>A bracket or segment can span lines: open it on one line, close it on a later one, and every line between takes it. Directives right after a closing bracket make it a segment, so <code>[words]/jitter:150</code> works without angle brackets. An alignment alone at the end of a block aligns all its lines. Marks nest: a segment inside a segment takes both sets of directives, its own last. Bold and italic span lines the same way. A bracket that never closes ends with its line, and <code>&lt;3</code> is always a heart.</p>
         <p class="pml-ex" data-try="[This is a stanza&#10;that should be colored&#10;and centered]/c&#10;{[We are doing something strange&#10;but bear with me, dear}]/jitter:200&#10;&lt;a &lt;nested/scale:150&gt; segment/track:130&gt;"><code>[This is a stanza
 that should be colored
 and centered]/c
@@ -240,13 +240,13 @@ but bear with me, dear}]/jitter:200
 <p class="pml-ex" data-try="`**not bold**, [not an accent]`"><code>`**not bold**, [not an accent]`</code></p>
 
 <h4>Variables</h4>
-<p>A <code>§</code> and a name is replaced by a value before anything else is read: the surface’s name, tonight’s moon, the look’s spell. They let a page describe itself (the Instrument Panel in the Grimoire is made of them). A name the app doesn’t know stays visible; <code>\§</code> prints a plain §.</p>
+<p>A <code>§</code> and a name is replaced by a value before anything else is read: the surface’s name, tonight’s moon, the look’s spell. They let a page describe itself (the Grimoire’s Instrument Panel is made of them). A name the app doesn’t know stays as typed; <code>\§</code> prints a plain §.</p>
 <dl>
 <dt><code>§SurfName</code> <code>§SurfParamsA</code> <code>§SurfParamsB</code></dt><dd>the surface, its knobs, its hues (with Two Surfaces, the one on top)</dd>
 <dt><code>§MoonPhase!tonight</code> <code>!seed</code> <code>:0.5</code></dt><dd>a moon (−1…1: 0 full, ±1 new)</dd>
 <dt><code>§Glyph!fire</code> <code>§Glyph!materia</code> <code>§UVIcon</code></dt><dd>glyphs, by name</dd>
 <dt><code>§SpellName</code> <code>§Spell</code> <code>§Font</code> <code>§TypeEffect</code></dt><dd>the look</dd>
-<dt><code>§RenderMs</code> <code>§Profile</code> <code>§CacheMB</code> <code>§Canvas</code> <code>§Scale</code> <code>§Build</code></dt><dd>the renderer</dd>
+<dt><code>§RenderMs</code> <code>§Profile</code> <code>§CacheMB</code> <code>§Canvas</code> <code>§Scale</code> <code>§Build</code></dt><dd>the renderer’s timings and sizes, and the release</dd>
 </dl>
 <p class="pml-ex" data-try="tonight&#x27;s moon: §MoonPhase!tonight, on §SurfName"><code>tonight&#x27;s moon: §MoonPhase!tonight, on §SurfName</code></p>
 
@@ -281,17 +281,17 @@ but bear with me, dear}]/jitter:200
           </div>
           <div class="check-row full">
             <input type="checkbox" id="customSizeToggle">
-            <label for="customSizeToggle" data-str="label.custom_resolution">Custom Resolution</label>
+            <label for="customSizeToggle" data-str="label.custom_resolution" title="Set the saved image's exact size in pixels, 256 to 4096 on each side.">Custom Resolution</label>
           </div>
           <div class="row" id="customSizeRow">
             <div class="field"><label for="customW" data-str="label.width">Width</label>
-              <input type="number" id="customW" min="256" max="4096" step="1" value="2304"></div>
+              <input type="number" id="customW" min="256" max="4096" step="1" title="256 to 4096 px" value="2304"></div>
             <div class="field"><label for="customH" data-str="label.height">Height</label>
-              <input type="number" id="customH" min="256" max="4096" step="1" value="4096"></div>
+              <input type="number" id="customH" min="256" max="4096" step="1" title="256 to 4096 px" value="4096"></div>
           </div>
         </div>
         <div class="field">
-          <label data-str="label.alignment">Alignment</label>
+          <label data-str="label.alignment" title="Where lines sit across the page: left (West), centered (Neutral) or right (East).">Alignment</label>
           <div class="radio-group" id="alignGroup">
             <div class="radio-btn active" data-val="left">West</div>
             <div class="radio-btn" data-val="center">Neutral</div>
@@ -299,7 +299,7 @@ but bear with me, dear}]/jitter:200
           </div>
         </div>
         <div class="field">
-          <label class="group-split" data-str="label.attunement_vertical">Attunement (Vertical)</label>
+          <label class="group-split" data-str="label.attunement_vertical" title="Where the poem sits on the page: top (Crest), middle (Heart) or bottom (Root).">Attunement (Vertical)</label>
           <div class="radio-group" id="valignGroup">
             <div class="radio-btn" data-val="top">Crest</div>
             <div class="radio-btn active" data-val="center">Heart</div>
@@ -313,19 +313,19 @@ but bear with me, dear}]/jitter:200
       <summary class="card-title" data-str="card.builtin_presets">Built-In Presets</summary>
       <!-- THE PRESET LEVEL'S ACTIONS (ROADMAP H1): more of the look on the page, without opening a section -->
       <div class="preset-actions">
-        <button class="ghost" id="summonVariationBtn" type="button" data-str="button.summonVariationBtn" title="The same look, grown again: a new seed for its surface, and now and then another of the surface's four readings. Nothing else changes.">⟳ Summon Variation</button>
-        <button class="ghost" id="mutateGentlyBtn" type="button" data-str="button.mutateGentlyBtn" title="Every section rolled gently at once: sliders nudged a little, colors drifting together, the light turned a touch. Menus, switches and anything locked stay as they are.">≈ Mutate Gently</button>
-        <button class="ghost" id="freezeSeedBtn" type="button" aria-pressed="false" data-str="button.freezeSeedBtn" title="Lock the surface's seed (the padlock beside the seed, under Materia), so presets, dice and variations keep this exact pattern. Press again to thaw it.">❄︎ Freeze This Seed</button>
+        <button class="ghost" id="summonVariationBtn" type="button" data-str="button.summonVariationBtn" title="New random pattern for this surface, sometimes one of its other readings (🜂 🜄 🜁 🜃). Nothing else changes.">⟳ Summon Variation</button>
+        <button class="ghost" id="mutateGentlyBtn" type="button" data-str="button.mutateGentlyBtn" title="Nudge every section slightly: sliders, colors, light, maybe a similar typeface. The surface and locked controls stay.">≈ Mutate Gently</button>
+        <button class="ghost" id="freezeSeedBtn" type="button" aria-pressed="false" data-str="button.freezeSeedBtn" title="Lock the surface seed so presets, dice and variations keep this pattern. Press again to thaw it.">❄︎ Freeze This Seed</button>
       </div>
       <input type="search" id="presetSearch" class="preset-search" data-str-ph="ph.preset_search" placeholder="Search looks: a name, a mood, a surface…" autocomplete="off" spellcheck="false" aria-label="Search the presets">
       <div class="preset-grid" id="presetGrid"></div>
-      <p class="preset-none" id="presetNone" hidden data-str="note.preset_none">No look by that name. Try a mood (rain, gold) or a surface (glass, paper).</p>
+      <p class="preset-none" id="presetNone" hidden data-str="note.preset_none">No preset matches. Try a mood (rain, gold) or a surface (glass, paper).</p>
     </details>
 
     <details class="card" data-tab="style" id="customPresetsCard" open>
       <summary class="card-title" data-str="card.custom_presets">Custom Presets</summary>
       <div class="preset-grid" id="customPresetGrid"></div>
-      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">Your own looks: ＋ Save this look keeps the look on the page here, under a name you give it.</p>
+      <p class="hint" id="customPresetsEmpty" data-str="hint.custom_presets_empty">Use ＋ Save this look to keep the current look here, under a name you choose.</p>
     </details>
 
 
@@ -347,19 +347,19 @@ but bear with me, dear}]/jitter:200
         </div>
 
         <div class="field">
-          <label data-str="label.maximum_size_px">Maximum Size (px)</label>
+          <label data-str="label.maximum_size_px" title="The largest the text may grow. Below that, the poem is sized to fit the page.">Maximum Size (px)</label>
           <input type="number" id="maxSize" value="120" min="10" max="400" step="2">
         </div>
 
         <div class="field full">
-          <label data-str="label.breathing_room">Breathing Room</label>
+          <label data-str="label.breathing_room" title="Space between lines, from 0.5× to 2× the normal spacing.">Breathing Room</label>
           <div class="angle-wrap">
             <input type="range" id="lineSpacing" min="-1" max="1" step="0.01" value="0">
             <span class="angle-val" id="lineSpacingVal">1.00x</span>
           </div>
         </div>
         <div class="field full">
-          <label data-str="label.text_margins" title="How much room the text keeps from the page edges and the frame. Lower lets the poem grow larger.">Text Margins</label>
+          <label data-str="label.text_margins" title="Space between the text and the page edges, border or inset box. Lower lets the poem grow larger.">Text Margins</label>
           <div class="angle-wrap">
             <input type="range" id="textMargin" min="20" max="150" step="5" value="100">
             <span class="angle-val" id="textMarginVal">100%</span>
@@ -367,8 +367,8 @@ but bear with me, dear}]/jitter:200
         </div>
 
         <div class="check-row">
-          <input type="checkbox" id="textGradientToggle">
-          <label for="textGradientToggle" data-str="label.radial_gradient_text">Radial Gradient Text?</label>
+          <input type="checkbox" id="textGradientToggle" title="Fill the text with a gradient instead of one color">
+          <label for="textGradientToggle" data-str="label.radial_gradient_text" title="Fill the text with a gradient of two to four hues instead of one.">Radial Gradient Text?</label>
         </div>
         <div class="subblock" id="gradientBlock">
           <div class="field full">
@@ -416,12 +416,12 @@ but bear with me, dear}]/jitter:200
         </div>
 
         <div class="check-row">
-          <input type="checkbox" id="accent1Toggle" checked>
+          <input type="checkbox" id="accent1Toggle" checked title="Color [bracketed] words with the first accent. Off, brackets print as typed.">
           <label for="accent1Toggle">Allow <code>[Opposition]</code></label>
         </div>
         <div class="subblock" id="accent1Block">
           <div class="field full">
-            <label data-str="label.opposition_hue">Opposition Hue</label>
+            <label data-str="label.opposition_hue" title="Color of words in [square brackets].">Opposition Hue</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="accent1ColorHex" value="#C9A876" data-coloris>
             </div>
@@ -429,12 +429,12 @@ but bear with me, dear}]/jitter:200
         </div>
 
         <div class="check-row">
-          <input type="checkbox" id="accent2Toggle" checked>
+          <input type="checkbox" id="accent2Toggle" checked title="Color {braced} words with the second accent. Off, braces print as typed.">
           <label for="accent2Toggle">Allow <code>{Conjunction}</code></label>
         </div>
         <div class="subblock" id="accent2Block">
           <div class="field full">
-            <label data-str="label.conjunction_hue">Conjunction Hue</label>
+            <label data-str="label.conjunction_hue" title="Color of words in {braces}.">Conjunction Hue</label>
             <div class="color-pair">
               <input type="text" class="hex-input" id="accent2ColorHex" value="#7A8CA3" data-coloris>
             </div>
@@ -449,7 +449,7 @@ but bear with me, dear}]/jitter:200
       <summary class="card-title" data-str="card.typeface_effects">Text Effects</summary>
       
       <div class="card-grid">
-        <p class="hint full">Up to three effects, drawn in order beneath the letters. A segment can set its own: <code>&lt;word/fx:glow(#fd0,40,70)&gt;</code></p>
+        <p class="hint full">Up to three effects, drawn under the letters in order. A segment can set its own: <code>&lt;word/fx:glow(#fd0,40,70)&gt;</code></p>
         <div class="fx-slot full" id="fxSlot1">
           <div class="field">
             <label data-str="label.fx1_type">Effect 1</label>
@@ -528,11 +528,11 @@ but bear with me, dear}]/jitter:200
         <input type="hidden" id="underAll" value="">
         <!-- TEXT CLEARING (Ruby: it belongs with the text): quiets every surface layer behind the words -->
         <div class="field full">
-          <label data-str="label.text_clearing" title="Quiets the surfaces behind the words, fading them out around the letters, so small text stays readable over a busy surface. Both surface layers clear.">Text Clearing</label>
+          <label data-str="label.text_clearing" title="Fade both surface layers around the letters, so text stays readable over a busy surface.">Text Clearing</label>
           <input type="range" id="textureClearing" min="0" max="100" value="0">
           <span class="range-val" id="textureClearingVal">0%</span>
         </div>
-        <button class="ghost full" id="protectTextBtn" type="button" data-str="button.protectTextBtn" title="Raises Text Clearing just far enough that every line of the poem stands at 3:1 contrast or better against what it sits on (its ink against the ground beneath it, measured on the page itself). It never lowers the clearing. A line whose own ink is too close to the backdrop beneath can't be helped by clearing: it is named, and left out of the aim.">◐ Protect the Text</button>
+        <button class="ghost full" id="protectTextBtn" type="button" data-str="button.protectTextBtn" title="Raise Text Clearing until every line has 3:1 contrast. Never lowers it. A line it can't fix is named.">◐ Protect the Text</button>
       </div>
     </details>
 
@@ -548,8 +548,8 @@ but bear with me, dear}]/jitter:200
         </div>
 
         <div class="check-row">
-          <input type="checkbox" id="bgGradientToggle">
-          <label for="bgGradientToggle" data-str="label.radial_aura">Radial Aura?</label>
+          <input type="checkbox" id="bgGradientToggle" title="Use a gradient instead of one color">
+          <label for="bgGradientToggle" data-str="label.radial_aura" title="Fill the backdrop with a gradient of two to four hues instead of one.">Radial Aura?</label>
         </div>
         <div class="subblock" id="bgGradientBlock">
           <div class="field full">
@@ -735,19 +735,19 @@ but bear with me, dear}]/jitter:200
           </div>
           <div class="surface-acts full">
             <button class="ghost" id="randomSurfaceBtn" data-sound="summonBackdrop" type="button" data-str="button.randomSurfaceBtn">⟳ New Random Surface</button>
-            <button class="ghost" id="revealSurfaceBtn" data-sound="athanorOpen" type="button" data-str="button.revealSurfaceBtn" title="See how this surface is made: its parts and wires, opened in the Athanor (the node editor) at these sliders and hues. Change it there and keep it as your own; the page keeps this surface until you show yours.">🜉 Edit in the Athanor</button>
+            <button class="ghost" id="revealSurfaceBtn" data-sound="athanorOpen" type="button" data-str="button.revealSurfaceBtn" title="Open this surface's parts and wires in the Athanor. The page keeps this surface until you Apply your version.">🜉 Edit in the Athanor</button>
           </div>
           <!-- SURFACE LAYERS (Ruby; below the surface's own buttons, her order): a second surface beneath the first; every control below edits the layer
                chosen here, and Swap trades them whole (blend, hues, light, seed, locks) -->
           <div class="layer-bar full" id="layerBar">
             <div class="check-row">
-              <input type="checkbox" id="baseToggle">
-              <label for="baseToggle" data-str="label.base_layer" title="Adds a second surface beneath this one, with all its own settings. The two blend into each other and into the page.">Two Surfaces</label>
+              <input type="checkbox" id="baseToggle" title="Add a second surface beneath the first">
+              <label for="baseToggle" data-str="label.base_layer" title="Add a second surface beneath the first, with its own settings and blend.">Two Surfaces</label>
             </div>
             <div class="radio-group layer-seg" id="layerSeg" role="group" aria-label="Which surface the settings below change">
-              <button type="button" class="radio-btn active" data-layer="upper" aria-pressed="true" data-str="button.layer_upper" title="Show the settings of the surface on top">Upper</button>
-              <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Show the settings of the surface beneath">Lower</button>
-              <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Trade the two surfaces: each keeps everything it has, its blend, hues, light, seed and locks too">⇅ Swap</button>
+              <button type="button" class="radio-btn active" data-layer="upper" aria-pressed="true" data-str="button.layer_upper" title="Edit the upper surface">Upper</button>
+              <button type="button" class="radio-btn" data-layer="lower" aria-pressed="false" data-str="button.layer_lower" title="Edit the lower surface">Lower</button>
+              <button type="button" class="radio-btn layer-swap" id="layerSwap" data-str="button.layer_swap" title="Swap the upper and lower surfaces, with all their settings and locks">⇅ Swap</button>
             </div>
             <!-- THE SURFACE AND THE WORDS (Ruby): the first surface may know where the poem is (Text Aware); the second may be
                  blended into the letters themselves (Blend with Text); either may shape itself to the words (Shape Aware: round
@@ -755,24 +755,24 @@ but bear with me, dear}]/jitter:200
             <div class="layer-words">
               <div class="check-row words-aware">
                 <input type="checkbox" id="textureTextAware" checked>
-                <label for="textureTextAware" data-str="label.text_aware" title="The surface knows where the poem is: surfaces made to keep clear of the words, or to answer them, do (The Poem part in a graph gets the layout). Off, the surface is drawn as if the page had no words.">Text Aware</label>
+                <label for="textureTextAware" data-str="label.text_aware" title="Let the surface see where the lines are, so effects that follow the poem work. Off, it is drawn as if there were no text.">Text Aware</label>
               </div>
               <div class="check-row words-blend">
                 <input type="checkbox" id="textureTextBlend">
-                <label for="textureTextBlend" data-str="label.text_blend" title="Blends this surface into the letters of the poem, with its own blend and opacity, instead of under the whole page: textured words.">Blend with Text</label>
+                <label for="textureTextBlend" data-str="label.text_blend" title="Fill the letters with this surface, using its blend and opacity, instead of laying it under the page.">Blend with Text</label>
               </div>
               <div class="check-row words-shape">
                 <input type="checkbox" id="textureShapeAware">
-                <label for="textureShapeAware" data-str="label.shape_aware" title="Lets a surface that can shape itself to the words: on the page it gives way round them (Halftone, Silverpoint Hatch, Flow-Field Ink, Contour Map, Circuit Board, Broken Glass, Dewy Webs, Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's stars); blended into the letters it fits itself to them, finer. Shape Strength says how strongly. A graph reads it from The Poem.">Shape Aware</label>
+                <label for="textureShapeAware" data-str="label.shape_aware" title="Surfaces that support it make room around the words, or fit the letters with Blend with Text.">Shape Aware</label>
               </div>
               <div class="field full words-strength">
-                <label for="textureShapeStrength" data-str="label.shape_strength" title="How strongly Shape Aware works: at 100% the surface gives way round the words fully (or fits the letters fully); lower, only partly, so a pattern thins near the lines instead of leaving them on clean paper.">Shape Strength</label>
+                <label for="textureShapeStrength" data-str="label.shape_strength" title="How fully Shape Aware works. At 100% the surface clears the words completely; lower values only thin it near the lines.">Shape Strength</label>
                 <input type="range" id="textureShapeStrength" min="0" max="100" value="100">
                 <span class="range-val" id="textureShapeStrengthVal">100%</span>
               </div>
               <div class="check-row words-cut">
                 <input type="checkbox" id="textureTextCut">
-                <label for="textureTextCut" data-str="label.text_cut" title="The words cut this surface away: inside the letters, the page beneath the surface shows through instead of the ink, and the text's effects still glow round them.">Cut Out by Text</label>
+                <label for="textureTextCut" data-str="label.text_cut" title="Cut the letters out of this surface, so what lies beneath it shows through the words. Text effects stay.">Cut Out by Text</label>
               </div>
             </div>
           </div>
@@ -829,7 +829,7 @@ but bear with me, dear}]/jitter:200
 <div class="field full" id="lightRow">
             <label data-str="label.light_direction">Light Direction</label>
             <div class="light-dial-row">
-              <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward where the light comes from">
+              <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
                   <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="-0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
                   <!-- 🜚: the spike and its two curls grow out of the rim toward the light; the curls flare outward -->
@@ -848,9 +848,9 @@ but bear with me, dear}]/jitter:200
                   <circle class="ld-handle" id="lightHandle" r="5.6" cx="0" cy="0"></circle>
                 </svg>
               </div>
-              <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset" aria-label="Reset the dial">⟲</button>
-              <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="To the center" aria-label="Move the dial to its center">◎</button>
-              <button type="button" class="ld-btn ld-random" id="lightRandom" data-sound="dialRandom" title="A random angle" aria-label="Turn the dial to a random angle">⚄</button>
+              <button type="button" class="ld-btn ld-reset" id="lightReset" title="Reset the light" aria-label="Reset the light to its default">⟲</button>
+              <button type="button" class="ld-btn ld-centre-btn" id="lightCentre" title="Light from straight overhead" aria-label="Move the light straight overhead, keeping its angle">◎</button>
+              <button type="button" class="ld-btn ld-random" id="lightRandom" data-sound="dialRandom" title="Roll the light, the way the dice roll" aria-label="Roll the light direction, the way the dice roll">⚄</button>
             </div>
             <!-- the dial's two numbers, shown and typed: its angle, and how far out it reaches (100 the rim; past it, lower) -->
             <div class="ld-values">
@@ -868,7 +868,7 @@ but bear with me, dear}]/jitter:200
           <div class="field full tool-hidden" id="cameraRow">
             <label data-str="label.camera">Camera</label>
             <div class="light-dial-row">
-              <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: drag from the middle toward where the camera stands; the rim looks low across">
+              <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: the center looks straight down; drag toward the rim to look lower across the ground">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
                   <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
                   <circle class="ld-ring" r="26"></circle>
@@ -902,19 +902,19 @@ but bear with me, dear}]/jitter:200
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint3Row">
-            <label id="tint3Label" data-str="label.highlight_hue" title="Specular: the color of the shine where light catches the surface. White leaves it as it is; the alpha sets how strong it is.">Specular Hue</label>
+            <label id="tint3Label" data-str="label.highlight_hue" title="Tints the shine where light catches the surface. White leaves it unchanged; alpha sets the strength.">Specular Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint4Row">
-            <label id="tint4Label" data-str="label.shade_hue" title="Shadow: the color the shadows fill with, like sky light bouncing back. White leaves it as it is; the alpha sets how strong it is.">Shadow Hue</label>
+            <label id="tint4Label" data-str="label.shade_hue" title="Tints the shadows, like sky light bouncing in. White leaves them unchanged; alpha sets the strength.">Shadow Hue</label>
             <input type="text" id="textureTint4Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint6Row">
-            <label id="tint6Label" data-str="label.diffuse_hue" title="Diffuse: the color of the light itself, on everything it reaches. White leaves it as it is; the alpha sets how strong it is.">Diffuse Hue</label>
+            <label id="tint6Label" data-str="label.diffuse_hue" title="Tints the light itself, on everything it reaches. White leaves it unchanged; alpha sets the strength.">Diffuse Hue</label>
             <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint5Row">
-            <label id="tint5Label" data-str="label.fifth_hue" title="Glow for a colored texture (light from within; black is none), or Material for a gray texture (the color of the surface itself; mid-gray is none).">Glow Hue</label>
+            <label id="tint5Label" data-str="label.fifth_hue" title="Light glowing from within the surface. Black is none.">Glow Hue</label>
             <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full" id="seedRow">
@@ -923,7 +923,7 @@ but bear with me, dear}]/jitter:200
               <div class="field">
                 <!-- the seed is a NUMBER (saved, shared, locked as one), shown as its PHRASE: type either, or any words -->
                 <div class="seed-field">
-                  <input type="text" id="textureSeedWords" spellcheck="false" autocomplete="off" aria-label="Texture seed: a phrase, a number, or any words">
+                  <input type="text" id="textureSeedWords" spellcheck="false" autocomplete="off" aria-label="Texture seed: type a phrase, a number or any words">
                   <div class="seed-scroll" id="textureSeedScroll" aria-hidden="true"><div class="seed-thumb"></div></div>
                 </div>
                 <input type="number" id="textureSeedValue" value="12345" step="1" hidden>
@@ -951,7 +951,7 @@ but bear with me, dear}]/jitter:200
               <input type="text" class="hex-input" id="borderColorHex" value="#C9A876" data-coloris>
             </div>
           <div class="check-row full">
-            <input type="checkbox" id="borderGradientToggle">
+            <input type="checkbox" id="borderGradientToggle" title="Use a gradient instead of one color">
             <label for="borderGradientToggle" data-str="label.radial_gradient_border">Gradient Border?</label>
           </div>
           <div class="field" id="borderColor2Field">
@@ -968,25 +968,25 @@ but bear with me, dear}]/jitter:200
             <span class="range-val" id="borderGradientAngleVal">45°</span>
           </div>
           <div class="field full">
-            <label data-str="label.bloom">Bloom</label>
+            <label data-str="label.bloom" title="A soft glow around the border, in the border's own colors.">Bloom</label>
             <input type="range" id="borderBloom" min="0" max="100" value="0">
             <span class="range-val" id="borderBloomVal">0</span>
           </div>
           </div>
           <div class="field">
-            <label data-str="label.border_stitch">Border Stitch</label>
+            <label data-str="label.border_stitch" title="Draw the border as a stitched motif instead of a plain line. Its size follows Thickness.">Border Stitch</label>
             <select id="borderStitch" data-link="cardStitch" data-link-switch="cardLink"><option value="solid">Solid</option></select>
           </div>
           <div class="check-row">
             <input type="checkbox" id="borderStitchOut" data-link="cardStitchOut" data-link-switch="cardLink">
-            <label for="borderStitchOut" data-str="label.border_stitch_out">Points Outward?</label>
+            <label for="borderStitchOut" data-str="label.border_stitch_out" title="Point the stitch toward the page edge instead of inward.">Points Outward?</label>
           </div>
           <div class="field">
-            <label data-str="label.border_blend">Border Blend</label>
+            <label data-str="label.border_blend" title="How the border line mixes with what lies under it.">Border Blend</label>
             <select id="borderBlend"><option value="source-over">Normal</option><option value="overlay">Overlay</option><option value="hard-light">Hard Light</option><option value="soft-light">Soft Light</option><option value="color-dodge">Color Dodge</option><option value="screen">Screen</option><option value="color-burn">Color Burn</option><option value="multiply">Multiply</option></select>
           </div>
           <div class="field">
-            <label data-str="label.bloom_blend">Bloom Blend</label>
+            <label data-str="label.bloom_blend" title="How the border's glow mixes with what lies under it.">Bloom Blend</label>
             <select id="borderBloomBlend"><option value="source-over">Normal</option><option value="overlay">Overlay</option><option value="hard-light">Hard Light</option><option value="soft-light">Soft Light</option><option value="color-dodge">Color Dodge</option><option value="screen">Screen</option><option value="color-burn">Color Burn</option><option value="multiply">Multiply</option></select>
           </div>
           <div class="field full">
@@ -995,12 +995,12 @@ but bear with me, dear}]/jitter:200
             <span class="range-val" id="borderThicknessVal">2px</span>
           </div>
           <div class="field full">
-            <label data-str="label.offset">Offset</label>
+            <label data-str="label.offset" title="Distance from the page edge to the border.">Offset</label>
             <input type="range" id="borderOffset" data-link="cardOffset" data-link-switch="cardLink" min="0" max="400" value="14">
             <span class="range-val" id="borderOffsetVal">14px</span>
           </div>
           <div class="field full">
-            <label data-str="label.grain">Grain</label>
+            <label data-str="label.grain" title="Speckles the border's glow. Works only when Bloom is above 0.">Grain</label>
             <input type="range" id="borderGrain" min="0" max="100" value="0">
             <span class="range-val" id="borderGrainVal">0%</span>
           </div>
@@ -1030,7 +1030,7 @@ but bear with me, dear}]/jitter:200
             <input type="text" class="hex-input" id="cardColor1Hex" value="#FFF6EE" data-coloris>
           </div>
           <div class="check-row full">
-            <input type="checkbox" id="cardGradientToggle">
+            <input type="checkbox" id="cardGradientToggle" title="Use a gradient instead of one color">
             <label for="cardGradientToggle" data-str="label.box_gradient">Box Gradient?</label>
           </div>
           <div class="field" id="cardColor2Field">
@@ -1075,7 +1075,7 @@ but bear with me, dear}]/jitter:200
             </select>
           </div>
           <div class="field full">
-            <label data-str="label.box_glass">Glass</label>
+            <label data-str="label.box_glass" title="An effect on what shows through the box, such as frosted glass, a lens or a prism.">Glass</label>
             <select id="cardFx">
               <option value="none" data-str="option.glass_none">None</option>
               <option value="frost" data-str="option.glass_frost">Frosted Glass</option>
@@ -1098,10 +1098,10 @@ but bear with me, dear}]/jitter:200
           </div>
           <div class="check-row full link-row">
             <input type="checkbox" id="cardLink" checked>
-            <label for="cardLink" data-str="label.box_link">⛓ Shape Linked to Border</label>
+            <label for="cardLink" data-str="label.box_link" title="While on, the box's offset, thickness, stitch and corners match the border's, both ways.">⛓ Shape Linked to Border</label>
           </div>
           <div class="field full">
-            <label data-str="label.box_offset">Offset</label>
+            <label data-str="label.box_offset" title="Distance from the page edge to the box.">Offset</label>
             <input type="range" id="cardOffset" min="0" max="400" value="14" data-link="borderOffset" data-link-switch="cardLink">
             <span class="range-val" id="cardOffsetVal">14px</span>
           </div>
@@ -1111,12 +1111,12 @@ but bear with me, dear}]/jitter:200
             <span class="range-val" id="cardThicknessVal">2px</span>
           </div>
           <div class="field">
-            <label data-str="label.box_stitch">Edge Stitch</label>
+            <label data-str="label.box_stitch" title="Shape the box's edge like a stitch motif instead of a straight line.">Edge Stitch</label>
             <select id="cardStitch" data-link="borderStitch" data-link-switch="cardLink"><option value="solid">Solid</option></select>
           </div>
           <div class="check-row">
             <input type="checkbox" id="cardStitchOut" data-link="borderStitchOut" data-link-switch="cardLink">
-            <label for="cardStitchOut" data-str="label.box_stitch_out">Points Outward?</label>
+            <label for="cardStitchOut" data-str="label.box_stitch_out" title="Point the edge stitch toward the page edge instead of inward.">Points Outward?</label>
           </div>
           <div class="check-row full">
             <input type="checkbox" id="cardRounded" data-link="borderRounded" data-link-switch="cardLink">
@@ -1141,7 +1141,7 @@ but bear with me, dear}]/jitter:200
         </div>
         <div class="subblock" id="vignetteBlock">
           <div class="field full">
-            <label data-str="label.blend_mode2">Blend Mode</label>
+            <label data-str="label.blend_mode2" title="How the vignette mixes with the page. Lighten and Color Dodge brighten the edges instead of darkening them.">Blend Mode</label>
             <select id="vignetteBlend">
               <option value="overlay" data-str="option.overlay">Overlay</option>
               <option value="color-burn" data-str="option.color_burn">Color Burn</option>
@@ -1150,29 +1150,29 @@ but bear with me, dear}]/jitter:200
             </select>
           </div>
           <div class="field full">
-            <label data-str="label.intensity">Intensity</label>
+            <label data-str="label.intensity" title="How strongly the edges darken (or brighten, with Lighten or Color Dodge).">Intensity</label>
             <div class="angle-wrap">
               <input type="range" id="vignetteIntensity" min="0" max="100" value="50">
               <span class="angle-val" id="vignetteIntensityVal">50%</span>
             </div>
           </div>
           <div class="field full">
-            <label data-str="label.aperture">Aperture</label>
+            <label data-str="label.aperture" title="Where the falloff begins: low darkens most of the page, high only the corners.">Aperture</label>
             <input type="range" id="vignetteAperture" min="0" max="100" value="35">
             <span class="range-val" id="vignetteApertureVal">35</span>
           </div>
           <div class="field full">
-            <label data-str="label.centre_x">Center X</label>
+            <label data-str="label.centre_x" title="The vignette's horizontal center, as a percent of the page width.">Center X</label>
             <input type="range" id="vignetteCx" min="-50" max="150" value="50">
             <span class="range-val" id="vignetteCxVal">50</span>
           </div>
           <div class="field full">
-            <label data-str="label.centre_y">Center Y</label>
+            <label data-str="label.centre_y" title="The vignette's vertical center, as a percent of the page height.">Center Y</label>
             <input type="range" id="vignetteCy" min="-50" max="150" value="50">
             <span class="range-val" id="vignetteCyVal">50</span>
           </div>
           <div class="field full">
-            <label data-str="label.grit">Grit</label>
+            <label data-str="label.grit" title="Speckle in the vignette, thickest where it is strongest.">Grit</label>
             <input type="range" id="vignetteNoise" min="0" max="100" value="0">
             <span class="range-val" id="vignetteNoiseVal">0</span>
           </div>
@@ -1199,23 +1199,30 @@ but bear with me, dear}]/jitter:200
         <label for="soundToggle" data-str="label.soundToggle">Sound</label>
         <input type="range" id="soundVolume" min="0" max="100" step="1" value="40" aria-label="Sound volume" title="Volume">
       </div>
+      <!-- hints: written out under every section's controls, or only where ⓘ asks (Ruby: both smaller and switchable,
+           since the page's density matters too); this browser's preference, never part of a look -->
+      <div class="sound-row">
+        <input type="checkbox" id="hintsToggle" class="switch">
+        <label for="hintsToggle" data-str="label.hintsToggle" title="Write every section's hints under its controls. Off: ⓘ in a section's heading shows that section's alone.">Hints</label>
+      </div>
     </details>
     <details class="card" data-tab="more" id="spellPanel" open>
       <summary class="card-title" data-str="card.spellcrafting">Spellcrafting</summary>
       <div style="margin-top:6px;">
+        <p class="hint hint-extra" style="margin:0 0 6px;" data-str="hint.spells_are_looks">Spells keep looks: every setting, but not the poem's words.</p>
         <div class="spell-wheel" id="spellWheel"></div>
-        <p class="hint" id="spellEmpty" style="margin:5px 0 0;" data-str="hint.create_saves_the_current_look_as_a">Create saves the current look as a spell you can call back later.</p>
+        <p class="hint" id="spellEmpty" style="margin:5px 0 0;" data-str="hint.create_saves_the_current_look_as_a">Create saves the current look as a spell. Invoke puts it back on the page.</p>
         <div class="btn-row">
-          <button class="btn-major" id="spellCreateBtn" data-sound="spellCreate" type="button" disabled data-str="button.spellCreateBtn">Create</button>
-          <button class="btn-major" id="spellApplyBtn" data-sound="spellApply" type="button" disabled data-str="button.spellApplyBtn">Invoke</button>
-          <button class="ghost" id="spellShareBtn" data-sound="spellShare" type="button" disabled data-str="button.spellShareBtn">Share</button>
-          <button class="btn-danger" id="spellDeleteBtn" data-sound="spellDissolve" type="button" disabled data-str="button.spellDeleteBtn">Dissolve</button>
+          <button class="btn-major" id="spellCreateBtn" title="Save the current look as a new spell" data-sound="spellCreate" type="button" disabled data-str="button.spellCreateBtn">Create</button>
+          <button class="btn-major" id="spellApplyBtn" title="Apply the selected spell's look to the page" data-sound="spellApply" type="button" disabled data-str="button.spellApplyBtn">Invoke</button>
+          <button class="ghost" id="spellShareBtn" title="Copy a link to the selected spell, or name and share the current look" data-sound="spellShare" type="button" disabled data-str="button.spellShareBtn">Share</button>
+          <button class="btn-danger" id="spellDeleteBtn" title="Delete the selected spell from this browser" data-sound="spellDissolve" type="button" disabled data-str="button.spellDeleteBtn">Dissolve</button>
         </div>
         <details class="subcard">
           <summary>Advanced</summary>
           <div class="btn-row">
-            <button class="ghost" id="spellExportBtn" type="button" data-str="button.spellExportBtn">Export JSON</button>
-            <button class="ghost" id="spellImportBtn" type="button" data-str="button.spellImportBtn">Import JSON</button>
+            <button class="ghost" id="spellExportBtn" title="Show all your spells as JSON text, to copy and keep" type="button" data-str="button.spellExportBtn">Export JSON</button>
+            <button class="ghost" id="spellImportBtn" title="Add spells from JSON text made by Export JSON" type="button" data-str="button.spellImportBtn">Import JSON</button>
           </div>
         </details>
       </div>
@@ -1224,25 +1231,26 @@ but bear with me, dear}]/jitter:200
     <details class="card" data-tab="more" id="grimoirePanel" open>
       <summary class="card-title" data-str="card.grimoire">Grimoire</summary>
       <div style="margin-top:6px;">
+        <p class="hint hint-extra" style="margin:0 0 6px;" data-str="hint.grimoire_keeps_words">The Grimoire keeps poems: the words only. Choose one, then Invoke or Dissolve.</p>
         <div class="field full">
           <div id="grimoireList" class="grimoire-list" role="listbox" aria-label="Grimoire"></div>
         </div>
-        <p class="hint" id="grimoireEmpty" style="margin:5px 0 0;" data-str="hint.the_grimoire_is_empty_record_a_poe">The Grimoire is empty. Record a poem to keep it.</p>
+        <p class="hint" id="grimoireEmpty" style="margin:5px 0 0;" data-str="hint.the_grimoire_is_empty_record_a_poe">The Grimoire is empty. Record saves your poem's text here.</p>
         <div class="btn-row">
-          <button class="btn-major" id="poemSaveBtn" data-sound="poemRecord" type="button" disabled data-str="button.poemSaveBtn">Record</button>
-          <button class="btn-major" id="poemApplyBtn" type="button" disabled data-str="button.poemApplyBtn">Invoke</button>
-          <button class="btn-danger" id="poemDeleteBtn" type="button" disabled data-str="button.poemDeleteBtn">Dissolve</button>
+          <button class="btn-major" id="poemSaveBtn" title="Save the poem's text to the Grimoire" data-sound="poemRecord" type="button" disabled data-str="button.poemSaveBtn">Record</button>
+          <button class="btn-major" id="poemApplyBtn" title="Replace the poem in the editor with the selected one" type="button" disabled data-str="button.poemApplyBtn">Invoke</button>
+          <button class="btn-danger" id="poemDeleteBtn" title="Delete the selected poem from the Grimoire" type="button" disabled data-str="button.poemDeleteBtn">Dissolve</button>
         </div>
         <!-- the spell code, faint, in the corner opposite the credit: part of the look (spells and shares keep it) -->
         <div class="check-row spell-mark-row" style="margin-top:8px;">
-          <input type="checkbox" id="spellMark" checked>
-          <label for="spellMark" data-str="label.spell_mark" title="Shows this look's spell code, faintly, in the corner opposite your name">Show Spell Code</label>
+          <input type="checkbox" id="spellMark" checked title="Show this look's spell code in the corner">
+          <label for="spellMark" data-str="label.spell_mark" title="Add a faint code for this look's settings in the corner opposite your credit">Show Spell Code</label>
         </div>
         <details class="subcard">
           <summary>Advanced</summary>
           <div class="btn-row">
-            <button class="ghost" id="poemExportBtn" type="button" data-str="button.poemExportBtn">Export JSON</button>
-            <button class="ghost" id="poemImportBtn" type="button" data-str="button.poemImportBtn">Import JSON</button>
+            <button class="ghost" id="poemExportBtn" title="Show all your poems as JSON text, to copy and keep" type="button" data-str="button.poemExportBtn">Export JSON</button>
+            <button class="ghost" id="poemImportBtn" title="Add poems from JSON text made by Export JSON" type="button" data-str="button.poemImportBtn">Import JSON</button>
           </div>
         </details>
       </div>
@@ -1256,14 +1264,14 @@ but bear with me, dear}]/jitter:200
       <div class="card-grid" style="margin-top:8px;">
         <div class="check-row full">
           <input type="checkbox" id="fullPreview">
-          <label for="fullPreview" data-str="label.full_preview">Full-size preview (slower — to compare)</label>
+          <label for="fullPreview" data-str="label.full_preview">Full-Size Preview (slower; exactly as saved)</label>
         </div>
         <div class="field full">
           <textarea id="advancedJson" style="min-height:140px; font-family:'Courier Prime',monospace; font-size:11px;"></textarea>
         </div>
-        <button class="ghost" id="advancedRefreshBtn" type="button" data-str="button.advancedRefreshBtn">↻ Refresh</button>
-        <button class="ghost" id="advancedCopyBtn" type="button" data-str="button.advancedCopyBtn">⧉ Copy</button>
-        <button class="ghost full" id="advancedLoadBtn" type="button" data-str="button.advancedLoadBtn">⇩ Load settings from JSON above</button>
+        <button class="ghost" id="advancedRefreshBtn" title="Fill the box with the page's current settings, as JSON" type="button" data-str="button.advancedRefreshBtn">↻ Refresh</button>
+        <button class="ghost" id="advancedCopyBtn" title="Copy the JSON in the box" type="button" data-str="button.advancedCopyBtn">⧉ Copy</button>
+        <button class="ghost full" id="advancedLoadBtn" title="Apply the settings in the box to the page" type="button" data-str="button.advancedLoadBtn">⇩ Load settings from JSON above</button>
       </div>
     </details>
 
@@ -1274,10 +1282,10 @@ but bear with me, dear}]/jitter:200
       <canvas id="poemCanvas" width="2304" height="4096"></canvas>
       <div class="work-bar" aria-hidden="true"><i></i></div>
       <p class="working-line" id="workingLine" aria-live="polite"></p>
-      <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset preview position" data-str="button.resetViewBtn">⟲</button>
-      <button class="reset-view-btn history-btn" id="undoBtn" type="button" title="Undo" aria-label="Undo">☋</button>
-      <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo" aria-label="Redo">☊</button>
-      <button class="reset-view-btn" id="filmBtn" type="button" title="History filmstrip" aria-label="History filmstrip">🎞</button>
+      <button class="reset-view-btn" id="resetViewBtn" type="button" title="Reset the preview's size, zoom and position (0)" data-str="button.resetViewBtn">⟲</button>
+      <button class="reset-view-btn history-btn" id="undoBtn" type="button" title="Undo (Ctrl+Z)" aria-label="Undo">☋</button>
+      <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">☊</button>
+      <button class="reset-view-btn" id="filmBtn" type="button" title="Show or hide the history filmstrip (H)" aria-label="History filmstrip">🎞</button>
       <div class="filmstrip" id="filmstrip" aria-label="History: click a frame to go back to it"></div>
       <button class="download-btn" id="downloadBtn" data-str="button.downloadBtn">Save image</button>
     </div>
@@ -1286,23 +1294,23 @@ but bear with me, dear}]/jitter:200
   <div class="forge-veil" id="forgeVeil" hidden>
     <div class="forge-bar">
       <span class="forge-title"><span class="forge-glyph" aria-hidden="true">🜉</span><span class="forge-name"> The Athanor</span> <small class="forge-sub">Surface texture node editor</small></span>
-      <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="The parts, to add to the grid" aria-label="Parts">＋<span class="fp-word"> Parts</span></button>
+      <button type="button" class="ghost forge-parts-btn" id="forgePartsBtn" aria-expanded="false" title="Show or hide the parts list, to add parts to the grid" aria-label="Parts">＋<span class="fp-word"> Parts</span></button>
       <!-- THE BAR (Ruby): ＋ Parts · Open (every graph to begin from, as a drawer of tiles across the bar's free width) ·
            undo and redo · the view · Apply and Keep together · Done, where the Athanor was opened · ⋯ last -->
-      <select id="forgeOpenSelect" class="forge-open-select" aria-label="Open a graph: one of your kept surfaces, a starter, a study, or one of the app's own textures"></select>
+      <select id="forgeOpenSelect" class="forge-open-select" aria-label="Open a graph: a kept surface, a starter, a study or one of the app's textures"></select>
       <button type="button" class="ghost forge-hist" id="forgeUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
       <button type="button" class="ghost forge-hist" id="forgeRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
       <span class="forge-zoom">
         <button type="button" class="ghost" id="forgeZoomOut" title="Zoom out" aria-label="Zoom out">−</button>
-        <button type="button" class="ghost" id="forgeFit" title="Everything in view" aria-label="Everything in view">⌖</button>
+        <button type="button" class="ghost" id="forgeFit" title="Fit every part in view (F)" aria-label="Fit every part in view">⌖</button>
         <button type="button" class="ghost" id="forgeZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
       </span>
       <span class="forge-use">
         <button type="button" class="ghost forge-page-btn" id="forgePageBtn"></button>
-        <button type="button" class="ghost" id="forgeKeepBtn" title="Keep this surface on the shelf, by its name" data-str="kept.keep">Keep</button>
+        <button type="button" class="ghost" id="forgeKeepBtn" title="Save this graph by name to your shelf in this browser" data-str="kept.keep">Keep</button>
       </span>
       <button type="button" class="btn-major" id="forgeCloseBtn" data-sound="athanorClose">Done</button>
-      <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: your shelf, copy, Tidy, Revert, Clear, the wiki" title="Your shelf, copy and share, Tidy, Revert, Clear, the wiki">⋯</button>
+      <button type="button" class="ghost forge-more-btn" id="forgeMoreBtn" aria-label="More: your shelf, copy, Tidy, Revert, Clear, the wiki" title="More: your shelf, copy and share, Tidy, Revert, Clear, the wiki">⋯</button>
     </div>
     <div class="forge-body">
       <!-- (Ruby) the Athanor shows when it is busy, as the page does: a shimmer under the bar, and what it is making -->
@@ -1312,12 +1320,12 @@ but bear with me, dear}]/jitter:200
       <!-- what it makes: bottom right, over the grid; as small as it can be around the preview -->
       <aside class="forge-dock" id="forgeDock" aria-label="What it makes">
         <p class="forge-working" id="forgeWorking" aria-live="polite"></p>
-        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes. Click or tap to enlarge."></canvas>
+        <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes. Click or tap to enlarge or shrink."></canvas>
         <div class="forge-dock-row">
           <span class="forge-status" id="forgeStatus"></span>
-          <label class="forge-check" title="Each node shows what it makes"><input type="checkbox" id="forgeSteps"> Steps</label>
-          <button type="button" class="forge-seed-btn" id="forgeSeedBtn" title="A new seed: every part that uses chance draws it from the page's seed">⟳ Seed</button>
-          <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeDoc" title="How the Athanor works">?</button>
+          <label class="forge-check" title="Show a small preview of each part's result"><input type="checkbox" id="forgeSteps"> Steps</label>
+          <button type="button" class="forge-seed-btn" id="forgeSeedBtn" title="New texture seed (shared with the page); every part that uses chance changes">⟳ Seed</button>
+          <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeDoc" title="Show or hide the wiki: how the Athanor works, and a page for every part">?</button>
         </div>
       </aside>
       <button type="button" class="forge-cut" id="forgeCut" hidden title="Cut this wire">✂ Cut</button>
@@ -1335,26 +1343,26 @@ but bear with me, dear}]/jitter:200
         <dt><kbd>Ctrl</kbd> <kbd>S</kbd></dt><dd>Save image</dd>
         <dt><kbd>R</kbd></dt><dd>Reroll the texture seed</dd>
         <dt><kbd>B</kbd></dt><dd>Summon a new backdrop</dd>
-        <dt><kbd>F</kbd></dt><dd>A random font</dd>
-        <dt><kbd>Ctrl</kbd>-click a control's name</dt><dd>Roll only that control, the dice's way</dd>
+        <dt><kbd>F</kbd></dt><dd>Summon a new typeface</dd>
+        <dt><kbd>Ctrl</kbd>-click a control's name</dt><dd>Roll only that control, the way the dice roll</dd>
         <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>The previous / next preset</dd>
         <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Inscription · Rituals · Thoughtforms · Materia · Esoterica</dd>
         <dt><kbd>H</kbd></dt><dd>Show or hide the history filmstrip</dd>
-        <dt><kbd>0</kbd></dt><dd>Fit the preview</dd>
-        <dt>Wheel · drag · double-click</dt><dd>Zoom toward the cursor · pan · fit (the preview)</dd>
-        <dt><kbd>←</kbd><kbd>→</kbd> <kbd>PgUp</kbd><kbd>PgDn</kbd></dt><dd>Turn and raise the light dial (when it has focus)</dd>
+        <dt><kbd>0</kbd></dt><dd>Reset the preview's size, zoom and position</dd>
+        <dt>Ctrl/⌘ + wheel · drag · double-click</dt><dd>On the preview: zoom toward the cursor · pan · fit</dd>
+        <dt><kbd>←</kbd><kbd>→</kbd> <kbd>PgUp</kbd><kbd>PgDn</kbd></dt><dd>Turn the light dial · move the light higher or lower (when the dial has focus)</dd>
         <dt><kbd>Esc</kbd></dt><dd>Close this sheet</dd>
       </dl>
-      <p class="hint">Keys work whenever you aren't typing in a field.</p>
+      <p class="hint">Keys work unless you are typing in a field.</p>
     </div>
   </div>
 
   <nav class="tabbar" id="tabBar">
-    <button class="tab-btn active" data-tab="write" type="button" title="Write text in markup" data-str="tab.inscription"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z" stroke="currentColor" opacity="1.0"/><path d="M6.14 4.42A2.5 2.5 0 0 1 9.26 6.83V9.43h6.17V6.57A2.5 2.5 0 1 1 17.95 9.61H14.90v6.42h2.32A2.5 2.5 0 1 1 15.51 18.00V14.65H8.85v2.32A2.5 2.5 0 1 1 6.70 14.96H8.98V8.88H6.69A2.5 2.5 0 0 1 6.87 4.77Z" stroke="currentColor" opacity="0.72"/><path d="M6.75 4.61A2.5 2.5 0 0 1 9.23 6.79V9.26h5.95V7.22A2.5 2.5 0 1 1 17.88 8.87H14.72v5.41h3.10A2.5 2.5 0 1 1 15.11 18.02V14.94H8.94v2.89A2.5 2.5 0 1 1 6.27 15.57H9.42V9.64H6.32A2.5 2.5 0 0 1 6.50 3.78Z" stroke="currentColor" opacity="0.56"/><path d="M6.72 3.44A2.5 2.5 0 0 1 8.61 6.65V9.37h6.67V6.22A2.5 2.5 0 1 1 17.40 9.11H15.71v5.63h2.48A2.5 2.5 0 1 1 14.78 17.77V14.93H8.42v2.92A2.5 2.5 0 1 1 7.11 14.64H8.15V9.90H7.13A2.5 2.5 0 0 1 6.84 3.44Z" stroke="currentColor" opacity="0.4"/></svg></span>Inscription</button>
-    <button class="tab-btn" data-tab="style" type="button" title="Aspect ratio and presets" data-str="tab.rituals"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="11.60" r="9.60" stroke="currentColor" opacity="1.0"/><path d="M12.24 20.77 7.06 5.05 20.77 14.65H3.44L16.99 4.30Z" stroke="currentColor" opacity="0.72"/><circle cx="11.91" cy="11.49" r="9.84" stroke="currentColor" opacity="0.72"/><path d="M12.20 20.76 6.16 4.66 20.38 14.46H2.96L18.02 5.14Z" stroke="currentColor" opacity="0.56"/><circle cx="11.42" cy="12.12" r="9.44" stroke="currentColor" opacity="0.56"/><path d="M11.37 20.09 6.56 5.21 21.22 14.61H3.83L17.29 4.23Z" stroke="currentColor" opacity="0.4"/><circle cx="11.32" cy="12.11" r="9.20" stroke="currentColor" opacity="0.4"/></svg></span>Rituals</button>
-    <button class="tab-btn" data-tab="type" type="button" title="Fonts and text effects" data-str="tab.thoughtforms"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.4V12.4" stroke="currentColor" opacity="1.0"/><path d="M2.4 16.1H21.6" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="20.00" r="2.25" stroke="currentColor" opacity="1.0"/><path d="M4.95 4.86H20.16L11.94 15.95Z" stroke="currentColor" opacity="0.72"/><path d="M12.28 7.85V12.79" stroke="currentColor" opacity="0.72"/><path d="M2.15 15.87H21.17" stroke="currentColor" opacity="0.72"/><circle cx="11.55" cy="20.49" r="2.12" stroke="currentColor" opacity="0.72"/><path d="M4.87 4.12H19.09L12.13 15.68Z" stroke="currentColor" opacity="0.56"/><path d="M11.88 6.89V13.02" stroke="currentColor" opacity="0.56"/><path d="M3.12 16.42H21.66" stroke="currentColor" opacity="0.56"/><circle cx="11.64" cy="20.51" r="2.16" stroke="currentColor" opacity="0.56"/><path d="M4.53 3.96H19.77L12.09 15.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.97 7.54V12.95" stroke="currentColor" opacity="0.4"/><path d="M2.65 15.60H21.60" stroke="currentColor" opacity="0.4"/><circle cx="11.85" cy="19.79" r="2.49" stroke="currentColor" opacity="0.4"/></svg></span>Thoughtforms</button>
-    <button class="tab-btn" data-tab="page" type="button" title="Backgrounds, textures and borders" data-str="tab.materia"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M11.87 3.13 20.73 11.72 12.10 21.61 2.14 11.88Z" stroke="currentColor" opacity="0.72"/><path d="M12.23 2.89 21.63 12.62 11.34 21.92 2.13 12.46Z" stroke="currentColor" opacity="0.56"/><path d="M12.24 2.89 20.75 12.09 12.13 21.01 2.85 11.62Z" stroke="currentColor" opacity="0.4"/></svg></span>Materia</button>
-    <button class="tab-btn" data-tab="more" type="button" title="Advanced options" id="moreTabBtn"><span class="tab-swap"><span class="tab-face eso"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span><span data-str="tab.esoterica">Esoterica</span></span><span class="tab-face ret" aria-hidden="true"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span><span>Return</span></span></span></button>
+    <button class="tab-btn active" data-tab="write" type="button" title="Write the poem in PML" data-str="tab.inscription"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z" stroke="currentColor" opacity="1.0"/><path d="M6.14 4.42A2.5 2.5 0 0 1 9.26 6.83V9.43h6.17V6.57A2.5 2.5 0 1 1 17.95 9.61H14.90v6.42h2.32A2.5 2.5 0 1 1 15.51 18.00V14.65H8.85v2.32A2.5 2.5 0 1 1 6.70 14.96H8.98V8.88H6.69A2.5 2.5 0 0 1 6.87 4.77Z" stroke="currentColor" opacity="0.72"/><path d="M6.75 4.61A2.5 2.5 0 0 1 9.23 6.79V9.26h5.95V7.22A2.5 2.5 0 1 1 17.88 8.87H14.72v5.41h3.10A2.5 2.5 0 1 1 15.11 18.02V14.94H8.94v2.89A2.5 2.5 0 1 1 6.27 15.57H9.42V9.64H6.32A2.5 2.5 0 0 1 6.50 3.78Z" stroke="currentColor" opacity="0.56"/><path d="M6.72 3.44A2.5 2.5 0 0 1 8.61 6.65V9.37h6.67V6.22A2.5 2.5 0 1 1 17.40 9.11H15.71v5.63h2.48A2.5 2.5 0 1 1 14.78 17.77V14.93H8.42v2.92A2.5 2.5 0 1 1 7.11 14.64H8.15V9.90H7.13A2.5 2.5 0 0 1 6.84 3.44Z" stroke="currentColor" opacity="0.4"/></svg></span>Inscription</button>
+    <button class="tab-btn" data-tab="style" type="button" title="Page shape, alignment and presets" data-str="tab.rituals"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="11.60" r="9.60" stroke="currentColor" opacity="1.0"/><path d="M12.24 20.77 7.06 5.05 20.77 14.65H3.44L16.99 4.30Z" stroke="currentColor" opacity="0.72"/><circle cx="11.91" cy="11.49" r="9.84" stroke="currentColor" opacity="0.72"/><path d="M12.20 20.76 6.16 4.66 20.38 14.46H2.96L18.02 5.14Z" stroke="currentColor" opacity="0.56"/><circle cx="11.42" cy="12.12" r="9.44" stroke="currentColor" opacity="0.56"/><path d="M11.37 20.09 6.56 5.21 21.22 14.61H3.83L17.29 4.23Z" stroke="currentColor" opacity="0.4"/><circle cx="11.32" cy="12.11" r="9.20" stroke="currentColor" opacity="0.4"/></svg></span>Rituals</button>
+    <button class="tab-btn" data-tab="type" type="button" title="Typeface, text colors and text effects" data-str="tab.thoughtforms"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.4V12.4" stroke="currentColor" opacity="1.0"/><path d="M2.4 16.1H21.6" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="20.00" r="2.25" stroke="currentColor" opacity="1.0"/><path d="M4.95 4.86H20.16L11.94 15.95Z" stroke="currentColor" opacity="0.72"/><path d="M12.28 7.85V12.79" stroke="currentColor" opacity="0.72"/><path d="M2.15 15.87H21.17" stroke="currentColor" opacity="0.72"/><circle cx="11.55" cy="20.49" r="2.12" stroke="currentColor" opacity="0.72"/><path d="M4.87 4.12H19.09L12.13 15.68Z" stroke="currentColor" opacity="0.56"/><path d="M11.88 6.89V13.02" stroke="currentColor" opacity="0.56"/><path d="M3.12 16.42H21.66" stroke="currentColor" opacity="0.56"/><circle cx="11.64" cy="20.51" r="2.16" stroke="currentColor" opacity="0.56"/><path d="M4.53 3.96H19.77L12.09 15.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.97 7.54V12.95" stroke="currentColor" opacity="0.4"/><path d="M2.65 15.60H21.60" stroke="currentColor" opacity="0.4"/><circle cx="11.85" cy="19.79" r="2.49" stroke="currentColor" opacity="0.4"/></svg></span>Thoughtforms</button>
+    <button class="tab-btn" data-tab="page" type="button" title="Backdrop, surfaces, border, inset box and vignette" data-str="tab.materia"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M11.87 3.13 20.73 11.72 12.10 21.61 2.14 11.88Z" stroke="currentColor" opacity="0.72"/><path d="M12.23 2.89 21.63 12.62 11.34 21.92 2.13 12.46Z" stroke="currentColor" opacity="0.56"/><path d="M12.24 2.89 20.75 12.09 12.13 21.01 2.85 11.62Z" stroke="currentColor" opacity="0.4"/></svg></span>Materia</button>
+    <button class="tab-btn" data-tab="more" type="button" title="Theme, saved spells and poems, and the Workbench" id="moreTabBtn"><span class="tab-swap"><span class="tab-face eso"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span><span data-str="tab.esoterica">Esoterica</span></span><span class="tab-face ret" aria-hidden="true"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span><span>Return</span></span></span></button>
   </nav>
 
 </div>

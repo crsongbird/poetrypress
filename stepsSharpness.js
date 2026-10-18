@@ -179,15 +179,15 @@ function shGuilloche(w,h,amt,zoom,light,form){
 export const SHARP_STEPS = {
   // Night City and Lotus Pond, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
   cityscape: kitWhole({ cat: 'Textures', label: 'Night City', ins: ['window hue', 'water hue'], outs: ['city'], io: { ins: ['colour', 'colour'], outs: ['image'] },
-    params: [SH_R('zoom', 'Skyline Height', 100, 60, 180), SH_R('amount', 'Lit Windows', 100, 0, 300), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 5 },
+    params: [SH_R('zoom', 'Skyline Height', 100, 60, 180), SH_R('amount', 'Lit Windows', 100, 0, 300), SH_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
     (E, n, w, h) => { const t1 = wholeHex(E, n, 1), t2 = wholeHex(E, n, 2), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100);
       return () => genCityscape(w, h, a, z, t1, t2, E.ctx.glow || null); }),
   lotus: kitWhole({ cat: 'Marks', label: 'Lotus Pond', ins: ['light from', 'petal hue', 'heart hue'], outs: ['blooms'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [SH_R('zoom', 'Bloom Size', 150, 50, 450), SH_R('amount', 'Bloom Count', 60, 10, 300), SH_R('form', 'Flower', 50), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    params: [SH_R('zoom', 'Bloom Size', 150, 50, 450), SH_R('amount', 'Bloom Count', 60, 10, 300), SH_R('form', 'Flower', 50), SH_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 60), z = wholeZoom(E, n, 'zoom', 150), f = wholeShare(E, n, 'form', 50);
       return () => genFlowers(w, h, a, z, t1, t2, f, light, E.ctx.glow || null); }),
   rosettes: { cat: 'Marks', label: 'Guilloché', ins: ['light from'], outs: ['engraving', 'lines'], io: { ins: ['value'], outs: ['image', 'field'] },
-    params: [SH_R('zoom', 'Rosette Size', 100, 50, 250), SH_R('amount', 'Line Density', 100, 30, 200), SH_R('form', 'Lobes', 45), SH_R('variant', 'Variant', 0, 0, 99)], cost: () => 8,
+    params: [SH_R('zoom', 'Rosette Size', 100, 50, 250), SH_R('amount', 'Line Density', 100, 30, 200), SH_R('form', 'Lobes', 45), SH_R('variant', 'Variation', 0, 0, 99)], cost: () => 8,
     // a canvas pass at full size, under the texture's own seed (+ Variant): Guilloché as it was
     paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
       const seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;

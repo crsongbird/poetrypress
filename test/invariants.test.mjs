@@ -19,6 +19,24 @@ const MODULES = readdirSync(new URL('..', import.meta.url)).filter(f => /^\w+\.j
 const SURFACE = MODULES.filter(f => /^(tex|steps|cartomancy|athanor\.js|textureGenerators|chains)/.test(f) && f !== 'textureService.js' && f !== 'textureWorker.js');
 const cr = src('canvasRenderer.js'), ev = src('appEvents.js');
 
+// ---- §7 PML is a contract: what a directive sets must reach the page ----
+{
+  const tp = raw('textParsers.js'), crRaw = raw('canvasRenderer.js');
+  // buildLines copies each part into a fresh object field by field; a field a directive sets but the copy
+  // omits is parsed and then silently dropped (§8 Add PML: the line-rebuild copy list)
+  const setFields = [...new Set([...tp.matchAll(/part\.(custom\w+)\s*=/g)].map(m => m[1]))];
+  const copyLine = (tp.match(/return \{ justify:p\.justify,[^}]*\}/) || [''])[0];
+  const dropped = setFields.filter(f => !copyLine.includes(f + ':p.' + f));
+  check('§7 every field a directive sets is carried through the line rebuild (one left out is parsed, then dropped)', setFields.length > 10 && !dropped.length, dropped);
+  // resolvePartStyle returns early for a segment with "nothing of its own"; a field missing from that guard is
+  // silently ignored (that hid /fx: and /under:). Fields that position the part (or its line, or pick its face)
+  // are read directly, not through its style.
+  const fields = [...new Set([...tp.matchAll(/part\.(custom\w+|under)\s*=/g)].map(m => m[1]))].filter(f => !['customSize', 'customFontIdx', 'customBasis', 'customRotate', 'customGap', 'customFontName'].includes(f));
+  const guard = (crRaw.match(/if\(!part\.customColor[^\n]*return baseStyle;/) || [''])[0];
+  const missing = fields.filter(f => !guard.includes(f));
+  check('§7 every styling field a segment can set is in resolvePartStyle\'s guard (one left out is silently ignored)', guard.length > 0 && !missing.length, missing);
+}
+
 // ---- §7 Texture options by name ----
 {
   const positional = [];

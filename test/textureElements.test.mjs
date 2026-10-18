@@ -68,13 +68,45 @@ bad('every reading of every texture generates', thrown);
 const fieldAt = html.indexOf('id="elementRow"'), pickAt = html.indexOf('<select id="textureType">'), knobAt = html.indexOf('id="texP1Label"');
 check('four buttons — 🜂 🜄 🜁 🜃 — right under Surface Variant, before its knobs',
   fieldAt > pickAt && fieldAt < knobAt && /data-el="fire"[^>]*>🜂<[\s\S]*data-el="water"[^>]*>🜄<[\s\S]*data-el="wind"[^>]*>🜁<[\s\S]*data-el="earth"[^>]*>🜃</.test(html));
-check('a reading is applied as Randomize applies its changes: locked controls are put back', /function applyElement\(id\)\{[\s\S]*?withLocksPreserved\(\(\) => \{/.test(ev));
-check('…its default puts the texture\'s own knobs, hues, blend and light back', /if\(v\.isDefault\)\{\s*\/\/[^\n]*\n\s*syncTextureParams\(true\); syncTextureTools\(true\);/.test(ev));
-check('…a hue set by a reading is the person\'s (it stops following the accent), and it is one undo step',
-  /setColorField\('textureTint' \+ \(i \+ 1\) \+ 'Hex', hex\); state\.ui\.tintFollows\[i\] = false;/.test(ev) && /applyElement[\s\S]{0,2000}commitSoon\(\)/.test(ev));
 check('the default is marked, the one applied is lit and named; a new texture clears it',
   /b\.classList\.toggle\('is-default', !!v\.isDefault\)/.test(ev) && /state\.ui\.element = null; paintElements\(\);/.test(ev));
 check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', html.includes('<optgroup label="🜉 Your Surfaces" id="athanorGroup"') && html.includes('forge-glyph" aria-hidden="true">🜉<'));
+
+// ---- a reading applied, on the booted app ----
+{
+  const { installDomMock } = await import('./domMock.mjs');
+  const { makeMockContext, makeMockCanvas } = await import('./canvasMock.mjs');
+  const reg = installDomMock(makeMockContext, makeMockCanvas);
+  await import('../appEvents.js');
+  const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
+  const load = o => { reg['advancedJson'].value = JSON.stringify(o); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const read = el => reg['elementRow'].dispatchEvent({ type: 'click', target: { closest: s => s === '.el-btn' ? { disabled: false, dataset: { el } } : null } });
+  const hatch = elementsFor('hatch'), other = hatch.find(v => !v.isDefault && v.k[0] !== 60), own = hatch.find(v => v.isDefault), P = TEXTURE_PARAMS.hatch;
+  load({ ...save(), texture: true, textureType: 'hatch', locks: ['texP1'], texP1: '60' }); await wait(60);
+  read(other.el); await wait(60);
+  let s = save();
+  check('a reading is applied as Randomize applies its changes: locked controls are put back', +s.texP1 === 60 && +s.texP2 === other.k[1]);
+  const Hc = TEXTURE_CAPS.hatch;
+  load({ ...s, locks: [], textureBlend: Hc.blends[3], textureTint1: '#123456', textureLight: '200' }); await wait(60);
+  read(own.el); await wait(60);
+  s = save();
+  check('…its default puts the texture\'s own knobs, hues, blend and light back', P.every((d, i) => +s['texP' + (i + 1)] === d.def) && s.textureBlend === Hc.blends[0]
+    && s.textureTint1.toUpperCase() === Hc.tintDefaults[0] && s.textureTint2.toUpperCase() === Hc.tintDefaults[1] && String(s.textureLight) === String(Hc.lightDeg));
+  // a surface whose first hue follows the first accent, and a reading that sets it
+  const keyed = picker.find(t => (TEXTURE_CAPS[t].tintDefaults || [])[0] === 'accent1' && elementsFor(t).some(v => !v.isDefault && v.t && v.t.length && v.k));
+  const hued = elementsFor(keyed).find(v => !v.isDefault && v.t && v.t.length && v.k);
+  reg['textureType'].value = keyed; reg['textureType'].dispatchEvent({ type: 'change' });
+  document.dispatchEvent({ type: 'change', target: reg['textureType'] }); await wait(600);   // (one undo step: the look before the reading)
+  const before = save();
+  read(hued.el); await wait(600);
+  reg['accent1ColorHex'].value = '#123456'; reg['accent1ColorHex'].dispatchEvent({ type: 'input' });
+  const kept = reg['textureTint1Hex'].value.toUpperCase();
+  reg['undoBtn'].dispatchEvent({ type: 'click' }); await wait(60);
+  s = save();
+  check('…a hue set by a reading is the person\'s (it stops following the accent), and it is one undo step',
+    kept === hued.t[0].toUpperCase() && kept !== before.textureTint1.toUpperCase() && String(s.texP1) === String(before.texP1) && s.textureTint1.toUpperCase() === before.textureTint1.toUpperCase());
+}
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

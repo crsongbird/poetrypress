@@ -90,6 +90,20 @@ check('a saved v5 graph is named, and walks as the numbered one', (() => { const
   const flat = A.athanorFlat(g).nodes;
   check('a group whose insides are gone gives nothing (and its readers nothing from it)', !flat['10'] && !flat['8'].inputs.input_1.connections.length); }
 
+// ---- loops (A4): a group with Repeats above 1 runs again and again, its first result fed back into its first input ----
+{ const loop = reps => ({ v: 5, drawflow: { Home: { data: { '1': node(1, 'perlin', { scale: 30 }), '10': node(10, 'group', { name: 'Soften', module: 'g10', repeats: reps }, { input_1: wire(1) }),
+    '99': node(99, 'surface', {}, { input_1: wire(10) }) } }, g10: { data: { '2': node(2, 'groupin', { name: 'Accumulated' }), '3': node(3, 'blur', { radius: 8 }, { input_1: wire(2) }),
+    '4': node(4, 'groupout', {}, { input_1: wire(3) }) } } } });
+  const chained = { v: 5, drawflow: { Home: { data: { '1': node(1, 'perlin', { scale: 30 }), '3': node(3, 'blur', { radius: 8 }, { input_1: wire(1) }), '5': node(5, 'blur', { radius: 8 }, { input_1: wire(3) }),
+    '6': node(6, 'blur', { radius: 8 }, { input_1: wire(5) }), '99': node(99, 'surface', {}, { input_1: wire(6) }) } } } };
+  check('a loop of three passes is the insides three times over, each fed the last', same(A.evalAthanor(loop(3), 32, 32, ctx), A.evalAthanor(chained, 32, 32, ctx)));
+  check('a group that repeats once is the plain group', same(A.evalAthanor(loop(1), 32, 32, ctx), A.evalAthanor({ ...chained, drawflow: { Home: { data: { '1': chained.drawflow.Home.data['1'], '3': chained.drawflow.Home.data['3'], '99': node(99, 'surface', {}, { input_1: wire(3) }) } } } }, 32, 32, ctx)));
+  check('each pass counts toward the part limit', A.athanorBudget(loop(4)).nodes === 2 + 4);
+  const it = copy(loop(3)); it.drawflow.g10.data['5'] = node(5, 'loopiter');
+  const flat = A.athanorFlat(it).nodes, vals = Object.values(flat).filter(n => n.name === 'number').map(n => n.data.value).sort((a, b) => a - b);
+  check('Iteration counts the passes, 0 on the first and 1 on the last', vals.join() === '0,50,100');
+  check('a loop runs at most sixteen times', Object.values(A.athanorFlat(loop(400)).nodes).filter(n => n.name === 'blur').length === A.ATHANOR_LOOP_MAX); }
+
 // ---- validateGraph ----
 { const v = A.validateGraph(JSON.stringify(A.athanorNamed(grouped)));
   check('validateGraph keeps a group\'s insides, named as it was given', v.ok && !!v.graph.drawflow.g10 && A.athanorIsNamed(v.graph) && !v.problems.length

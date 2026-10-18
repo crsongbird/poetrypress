@@ -4,6 +4,88 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Albiorix (2026-10-17)
+
+- **Loops in the Athanor.** Set a group's **Repeats** above 1 and it runs that
+  many times (up to 16), its first result fed back into its first input each
+  time. An **Iteration** part inside counts the passes, from 0 to 1, so a
+  setting can change from pass to pass.
+- **Scatter, the rest:**
+  - **Glyph** marks: symbols from Symbology's sets (alchemy, the heavens,
+    the zodiac, occult signs, runes, stars), in the app's symbol fonts.
+  - **On Top** chooses which mark covers which: the brightest (as before),
+    the last thrown, the largest or the smallest.
+  - **Mark Colors: from the picture** colors each mark by the picture where
+    it lands, in a new **In Color** output.
+- **New parts:**
+  - **Pavements**: paving stones in rows, each row and stone its own size,
+    a little out of true, with joints, rounded corners and a bevel for the
+    Light Engine.
+  - **Smudge**: the picture smeared one way, as a finger drags wet paint,
+    or along a map of directions.
+  - **Multiblend**: up to four layers over a base at once, in one mode.
+- **The Surface is a material.** Four new inputs beside picture and height:
+  **reflectivity**, **reflection blur**, **metallic** and **emission**, each
+  a gray map. One surface can be part polished metal, part matte stone, with
+  spots that glow. Left unwired, the Surface draws as it always has.
+- **The inset box reaches the Athanor:**
+  - A new **Inset Box** part gives the box as masks: inside it, a rise in
+    from its edge, and its line. It follows the box's offset, thickness and
+    corners. With the box off, it gives the page's own edges.
+  - **Border Mask** can frame from the inset box.
+- **Curves:** three more shapes (Arc Slow, Half Circle, Quarter Circles),
+  and Curve Ops gains Transition (one curve into another across the page)
+  and Fade (a curve eased to nothing at both ends).
+- **Every part's Variant is now called Variation,** the same name as on the
+  other parts. It works as it did.
+- **Easier to use** (from a usability review):
+  - **Hints you can read on a phone.** ⓘ in a section's heading writes its
+    hints out, small, under the controls (a touch screen never showed them).
+    **Hints** in Esoterica → Interface writes them out everywhere. The page's
+    own notes are a little smaller too.
+- **The camera dial for graphs from the Athanor.** A graph whose Camera Dial
+  part reaches its Surface now shows the dial on the page (it never
+  appeared). One opened from a menu texture starts where that texture's
+  camera starts.
+  - **Undo for the poem.** ☋ and ☊ step the poem's text when it was the
+    last thing changed. Cutting most of a poem offers Undo at once, and
+    ⤓ Try is one undo step. ⤓ Try adds its example at the end until the
+    cursor has been placed in the poem.
+  - **The Athanor on a phone:** tap a port to start a wire, then tap a port
+    on another part to finish it. Fit never shrinks a graph below 60%, so
+    ports stay within reach. New parts land in free space, never on another
+    part or under the preview. The first graph is wired, so its preview
+    shows a picture.
+  - **Done asks** whether to put a changed graph on the page.
+  - **The Grimoire:** a recorded poem is chosen at once, a grayed Record says
+    why, and Spellcrafting and the Grimoire each say what they keep. Poem
+    titles leave out PML's marks ("WTF is PoetryPress?", not "WTF is
+    PoetryPress ?").
+  - **The keyboard** reaches the choice tiles (alignment, aspect, stops),
+    the presets and the Grimoire's poems: Tab, then Enter or Space.
+  - **Small things:** Freeze This Seed reads "Seed Frozen · Thaw" while
+    frozen. Points Outward? is grayed for stitches with no side (Solid,
+    Dashed, Dotted). A custom size past 256–4096 px says so. Save image no
+    longer copies to the clipboard unasked: Copy alt text is the toast's
+    button. The wiki's search puts titles first and shows a line from each
+    page. The shortcut sheet says Ctrl/⌘ + wheel zooms the preview. Each
+    Summon button says what it rolls.
+- **Clearer words.** The tooltips and notes are shorter and more specific,
+  and the border, inset box, vignette, Esoterica's buttons and the eyes have
+  the hints they lacked.
+- **Fixed:** the vignette's Center sliders reach past the page's edges, as
+  their range says, and 0 is 0 (it jumped to the middle). A look saved with a
+  center outside 0–100 now draws it where it was set.
+- **Under the hood:**
+  - reviewed the tests: checks that tested nothing, or only read the app's
+    source, are gone or now test what the app does; repeated checks are
+    merged; The Poem's and the presets' checks moved to their own suites and
+    the PML source scans to the invariants; six suites named for a pass or a
+    fix joined the suites of their concern. A new suite covers undo and redo,
+    the poem's and the look's.
+  - pruned the stylesheet: two declarations that never won anywhere are gone,
+    checked in every state (no drawn element changed).
+
 ## Saturn–Skathi (2026-10-17)
 
 - **Your name stays inside the frame.** With a border or an inset box on, the

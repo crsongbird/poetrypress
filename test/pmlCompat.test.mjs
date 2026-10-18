@@ -13,7 +13,7 @@
  * Run: node test/pmlCompat.test.mjs
  */
 import { readFileSync } from 'fs';
-import { buildLines, TYPE_EFFECT_NAMES } from '../textParsers.js';
+import { buildLines } from '../textParsers.js';
 
 let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
@@ -55,13 +55,7 @@ check('an effect can sit alongside an outline',
   (()=>{ const p = buildLines('<w/fx1,#000,3/effect:halo>', true, true)[0].parts[0];
          return p.customEffect && p.customEffect.type === 'outline' && p.customTypeEffect; })());
 
-// ---- one list, owned by the parser ----
-const cr = readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8');
-// every typeface effect PML has ever accepted still means something: it
-// translates into the effect stack (or, for the old underlines, an underline)
-const E = await import('../effects.js');
-check('every old /effect name still translates (effects.js)',
-  TYPE_EFFECT_NAMES.filter(n => n !== 'none').every(n => { const L = E.legacyTypeEffect(n, 60, '#000', 45, 100, 30); return !!(L.fx || L.under); }));
+// (every typeface effect PML has ever accepted still translates into the effect stack: typeEffects.test.mjs)
 
 // ---- Ruby's Aether (both pieces, as written in PML): captured when it joined the fixtures, never regenerated ----
 {
@@ -71,16 +65,8 @@ check('every old /effect name still translates (effects.js)',
   check('Aether still parses exactly as it did (the square card and the full piece)', pieces.length === want.length && pieces.every((p, i) => strip(buildLines(p, true, true)) === want[i]));
 }
 
-// ---- fields must survive the rebuild ----
-// buildLines copies each part into a fresh object field by field; a field a
-// directive sets but the copy omits is parsed and then silently dropped.
-const tp = readFileSync(new URL('../textParsers.js', import.meta.url), 'utf8');
-const setFields = [...new Set([...tp.matchAll(/part\.(custom\w+)\s*=/g)].map(m => m[1]))];
-const copyLine = (tp.match(/return \{ justify:p\.justify,[^}]*\}/) || [''])[0];
-const dropped = setFields.filter(f => !copyLine.includes(f + ':p.' + f));
-check('every field a directive sets is carried through', dropped.length === 0);
-if(dropped.length) console.log('   dropped:', dropped.join(', '));
-
+// (that every field a directive sets survives the line rebuild, and reaches the segment's style, is a source
+// scan: invariants.test.mjs §7)
 
 // ---- fonts: /f:N picks by position, so the order is frozen (AGENTS.md §7) ----
 {

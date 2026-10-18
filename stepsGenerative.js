@@ -1876,7 +1876,7 @@ export const GEN_STEPS = {
         tilt: num(n, 'view', 35)/100, salt: ((E.ctx.seed >>> 0) + Math.round(num(n, 'variation', 0))*7919) >>> 0 }); } },
   traces: { cat: 'Marks', label: 'Circuit Traces', ins: ['keep clear'], outs: ['copper', 'height', 'each trace', 'data', 'pads', 'parts', 'silkscreen', 'brass', 'arcana'],
     io: { ins: ['field'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
-    params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variant', 0, 0, 99),
+    params: [GEN_R('traces', 'Traces', 55), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('bends', 'Bends', 70), GEN_R('parts', 'Components', 45), GEN_R('flow', 'Data Flow', 40), GEN_R('variant', 'Variation', 0, 0, 99),
       GEN_R('era', 'Era', 0), GEN_R('marks', 'Markings', 0), ['clearing', 'Keep Clear By', 'select', 'routing around it', { options: ['routing around it', 'cutting it away'] }]], cost: () => 6,
     // (filling the letters, Shape Aware: the board is finer, to show in their strokes, and keeps nothing clear)
     // (its cells are counted on the export's grid, `ctx.page`, so a preview and the saved image are one board)
@@ -1897,12 +1897,12 @@ export const GEN_STEPS = {
       return ['copper', 'height', 'each', 'data', 'pads', 'parts', 'legend', 'brass', 'arcana'].map(k => cv[k][0]); },
     run(E, n){ return this.paint(E, n).map(c => E.asField(E.readCanvas(c))); } },
   matrix: { cat: 'Textures', label: 'Growth Medium', ins: [], outs: ['picture', 'height', 'ways'], io: { outs: ['field', 'field', 'field'] },
-    params: [GEN_R('kind', 'Strata · Pebbles · Sand · Fibres · Skin', 25), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('angle', 'Angle', 0, 0, 180), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    params: [GEN_R('kind', 'Strata · Pebbles · Sand · Fibres · Skin', 25), GEN_R('scale', 'Scale', 100, 40, 300), GEN_R('angle', 'Angle', 0, 0, 180), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
     run(E, n){ const k = Math.min(4, Math.floor(E.num(n, 'kind', 25)/100*5));
       return withSeed(genSeed(E, n), () => genMatrix(E.ww, E.wh, E.unit, { kind: k, zoom: E.num(n, 'scale', 100)/100, angle: E.num(n, 'angle', 0)*Math.PI/180 })); } },
   tendrils: { cat: 'Marks', label: 'Tendrils', ins: ['ways', 'grow from'], outs: ['wires', 'glow'], io: { ins: ['field', 'value'], outs: ['field', 'field'] },
     params: [GEN_R('amount', 'Reach', 60), GEN_R('branching', 'Branching', 50), GEN_R('roots', 'Roots', 2, 1, 6), GEN_R('inner', 'Start Inside', 0), GEN_R('slide', 'Slide', 0, -100, 100),
-      GEN_R('zoom', 'Scale', 100, 40, 300), GEN_R('width', 'Wire Width', 100, 30, 300), GEN_R('keep', 'Follow the Ways', 60), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 14,
+      GEN_R('zoom', 'Scale', 100, 40, 300), GEN_R('width', 'Wire Width', 100, 30, 300), GEN_R('keep', 'Follow the Ways', 60), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 14,
     run(E, n){ const { ww, wh, unit, N, num } = E, dial = genDial(E, n, 2), Wv = E.asField(E.input(n, 1)) || new Float32Array(N).fill(0.6);
       const o = { amount: num(n, 'amount', 60)/100 + 0.05, branching: num(n, 'branching', 50)/100, roots: num(n, 'roots', 2), inner: num(n, 'inner', 0)/100, slide: num(n, 'slide', 0)/100,
         zoom: num(n, 'zoom', 100)/100, dx: dial.x, dy: dial.y, keep: num(n, 'keep', 60)/100 };
@@ -1916,7 +1916,7 @@ export const GEN_STEPS = {
       return [wires, glow]; } },
   knotwork: { cat: 'Marks', label: 'Knotwork', ins: ['slide toward'], outs: ['picture', 'height'], io: { ins: ['value'], outs: ['image', 'field'] },
     params: [GEN_R('size', 'Size', 100, 40, 300), GEN_R('cells', 'Strands', 8, 3, 24), GEN_R('breaks', 'Breaks', 45), GEN_R('shape', 'Circle · Square · Diamond · Cross · Quatrefoil · Page', 0),
-      GEN_R('width', 'Ribbon Width', 55, 20, 90), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+      GEN_R('width', 'Ribbon Width', 55, 20, 90), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
     paint(E, n){ const { ww: w, wh: h } = E, unit = Math.min(w, h), dial = genDial(E, n, 1), sh = E.num(n, 'shape', 0);
       // (Shape Aware: in the letters, more strands, finer; round the words, the knot leaves them a hole and weaves round it)
       const o = { cells: E.num(n, 'cells', 8)*(1 + 1.5*(+E.ctx.fill || 0)), breaks: E.num(n, 'breaks', 45)/100, shape: Math.min(5, Math.floor(sh/100*6)), salt: Math.round(E.num(n, 'variant', 0)) + ((E.ctx.seed >>> 0) % 997),
@@ -1937,7 +1937,7 @@ export const GEN_STEPS = {
     run(E, n){ const [pc, hc] = this.paint(E, n); return [E.readCanvas(pc), E.asField(E.readCanvas(hc))]; } },
   discharge: { cat: 'Marks', label: 'Discharge', ins: ['strike from'], outs: ['channels'], io: { ins: ['value'], outs: ['field'] },
     params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
-      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99),
+      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variation', 0, 0, 99),
       GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12,
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
@@ -1956,7 +1956,7 @@ export const GEN_STEPS = {
         x.beginPath(); x.moveTo(p[0]*unit, p[1]*unit); x.lineTo(q[0]*unit, q[1]*unit); x.stroke(); }
       return [E.asField(E.readCanvas(c))]; } },
   wood: { cat: 'Textures', label: 'Wood', ins: ['light wood', 'dark wood'], outs: ['picture', 'height'], io: { ins: ['colour', 'colour'], outs: ['image', 'field'] },
-    params: [GEN_R('rings', 'Rings', 40), GEN_R('figure', 'Figure', 50), GEN_R('variant', 'Variant', 0, 0, 99), GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 4,
+    params: [GEN_R('rings', 'Rings', 40), GEN_R('figure', 'Figure', 50), GEN_R('variant', 'Variation', 0, 0, 99), GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 4,
     run(E, n){ const a = E.input(n, 1), b = E.input(n, 2);
       const o = { rings: E.num(n, 'rings', 40)/100, figure: E.num(n, 'figure', 50)/100, light: Array.isArray(a) ? a : [0.80, 0.64, 0.45], dark: Array.isArray(b) ? b : [0.42, 0.26, 0.15],
         cam: groundCam(E.ww/E.unit, E.wh/E.unit, E.num(n, 'turn', 0), E.num(n, 'view', 0), E.num(n, 'lens', 100)) };
@@ -1990,7 +1990,7 @@ export const GEN_STEPS = {
       return [out, H]; } },
   growline: { cat: 'Marks', label: 'Differential Growth', ins: ['sun'], outs: ['line', 'body', 'relief'], io: { ins: ['value'], outs: ['field', 'field', 'field'] },
     params: [GEN_R('growth', 'Growth', 55), GEN_R('fold', 'Fold Size', 100, 50, 250), GEN_R('seeds', 'Seeds', 1, 1, 7), GEN_R('photo', 'Toward the Sun', 40),
-      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 14,
+      GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 14,
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, off = num(n, 'offset', 0)/100;
       const o = { growth: num(n, 'growth', 55)/100, fold: num(n, 'fold', 100)/100, seeds: num(n, 'seeds', 1), photo: num(n, 'photo', 40)/100, sun: { x: dial.x, y: dial.y } };
       // (grown on the export's grid's shape, so the preview grows the saved image's loops)
@@ -2016,7 +2016,7 @@ export const GEN_STEPS = {
   shards: { cat: 'Marks', label: 'Glass Shards', ins: ['picture', 'light from', 'light height'], outs: ['picture', 'shards', 'caustics'],
     io: { ins: ['image', 'value', 'value'], outs: ['image', 'field', 'field'] },
     params: [GEN_R('count', 'Shards', 40), GEN_R('size', 'Size', 100, 30, 300), GEN_R('spread', 'Spread', 55), GEN_R('slivers', 'Slivers', 35), GEN_R('caustics', 'Caustics', 60),
-      GEN_R('glints', 'Glints', 60), GEN_R('colors', 'Colored Glass', 25), GEN_R('shadows', 'Shadows', 50), GEN_R('variant', 'Variant', 0, 0, 99),
+      GEN_R('glints', 'Glints', 60), GEN_R('colors', 'Colored Glass', 25), GEN_R('shadows', 'Shadows', 50), GEN_R('variant', 'Variation', 0, 0, 99),
       GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 10,
     doc: 'Broken glass lying on the page, or on a picture: sharp shards, a little tilted, lit by the light dial, each throwing its light beside it.',
     run(E, n){ const { ww, wh, unit, num, input } = E, dial = genDial(E, n, 2), h = input(n, 3), pic = input(n, 1);
@@ -2033,7 +2033,7 @@ export const GEN_STEPS = {
   // it runs across the light's way, in the colours thin silk splits light into; the drops each a lens with a point of light
   dewwebs: { cat: 'Marks', label: 'Dewy Webs', ins: ['light from'], outs: ['silk', 'glints', 'dew'], io: { ins: ['value'], outs: ['field', 'image', 'field'] },
     params: [GEN_R('webs', 'Webs', 30), GEN_R('size', 'Size', 100, 40, 250), GEN_R('dew', 'Dew', 60), GEN_R('drops', 'Drop Size', 100, 30, 300), GEN_R('torn', 'Torn', 20),
-      GEN_R('sag', 'Sag', 40), GEN_R('irid', 'Iridescence', 50), GEN_R('threads', 'Threads', 50), GEN_R('width', 'Thread Width', 100, 30, 300), GEN_R('variant', 'Variant', 0, 0, 99)], cost: () => 5,
+      GEN_R('sag', 'Sag', 40), GEN_R('irid', 'Iridescence', 50), GEN_R('threads', 'Threads', 50), GEN_R('width', 'Thread Width', 100, 30, 300), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 5,
     doc: 'Orb webs strung across the page and beaded with dew: the silk, its glints in the colours thin silk makes, and the drops, each a tiny lens.',
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1);
       const o = { webs: num(n, 'webs', 30)/100, size: num(n, 'size', 100)/100, dew: num(n, 'dew', 60)/100, dropSize: num(n, 'drops', 100)/100, torn: num(n, 'torn', 20)/100,

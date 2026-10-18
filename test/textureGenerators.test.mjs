@@ -4,14 +4,15 @@
  *
  * Not a visual test (see canvasMock.mjs for why) — this checks that every
  * texture type generates without throwing, across several seeds and canvas
- * sizes including the app's real production dimensions, and that a fixed
- * seed produces byte-identical draw-call counts on repeat (the property the
- * seed-lock feature in the UI depends on).
+ * sizes including the app's real production dimensions, and that the cache
+ * stays bounded however many textures are made. (That a fixed seed draws the
+ * same texture every time is the fingerprints' job: they would change.)
  */
 import { installCanvasMock } from './canvasMock.mjs';
 installCanvasMock();
 
-const { getTextureCanvas } = await import('../textureGenerators.js');
+const { getTextureCanvas, clearTextureCache, textureCacheMB } = await import('../textureGenerators.js');
+const { TEXTURES } = await import('../tunables.js');
 
 const TEXTURE_TYPES = [
   'clouds','bokeh','astral','magicparticles','embers','snow',
@@ -39,24 +40,23 @@ for(const type of TEXTURE_TYPES){
     }
   }
 }
-console.log(`${total} generation calls across ${TEXTURE_TYPES.length} texture types.`);
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
+console.log(`${failures ? 'FAIL' : 'ok'}: ${total} generation calls across ${TEXTURE_TYPES.length} texture types, at every size`);
 
-// determinism check
-const s1 = getTextureCanvas('sigils', 400, 400, { seed: 424242 });
-const s2 = getTextureCanvas('sigils', 400, 400, { seed: 424242 });
-console.log('Determinism (same seed, same dims):', s1.getContext('2d')._stats.arcs === s2.getContext('2d')._stats.arcs ? 'PASS' : 'FAIL');
-
-// --- cache eviction check ---
-// Generate well past the cache's cap with distinct seeds/sizes (each one a
-// genuinely new cache key) and confirm the cache doesn't grow unbounded.
+// --- the cache stays bounded ---
+// Generate twice the cache's cap with distinct sizes (each one a genuinely new
+// cache key): it keeps at most TEXTURES.cacheEntries of them, the newest.
+const N = TEXTURES.cacheEntries*2, largest = 100 + N - 1;
 let evictionThrew = null;
+clearTextureCache();
 try {
-  for(let i=0;i<80;i++){
-    getTextureCanvas('grain', 100+i, 100+i, { seed: i });
-  }
+  for(let i=0;i<N;i++) getTextureCanvas('grain', 100+i, 100+i, { seed: i });
 } catch(e){ evictionThrew = e; }
-console.log('80 distinct textures past the cache cap:', evictionThrew ? 'FAILED ('+evictionThrew.message+')' : 'PASS (no throw)');
-if(evictionThrew) failures++;
+const cap = TEXTURES.cacheEntries*largest*largest*4/1e6;   // (all N kept would be past it)
+const held = textureCacheMB();
+const bounded = !evictionThrew && held > 0 && held <= cap;
+if(!bounded) failures++;
+console.log(`${bounded ? 'ok' : 'FAIL'}: ${N} distinct textures past the cache's cap of ${TEXTURES.cacheEntries}: it holds ${held.toFixed(2)} MB, no more than its newest ${TEXTURES.cacheEntries}${evictionThrew ? ' (threw: ' + evictionThrew.message + ')' : ''}`);
 
+console.log();
+console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

@@ -11,7 +11,7 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock } from './canvasMock.mjs';
 installCanvasMock();
-const { TEXTURE_PARAMS, TEXTURE_CAPS, paramsFor, getTextureCanvas, clearTextureCache } = await import('../textureGenerators.js');
+const { TEXTURE_PARAMS, TEXTURE_CAPS, paramsFor, paramReadout, getTextureCanvas, clearTextureCache } = await import('../textureGenerators.js');
 const { clearAthanorCache } = await import('../athanor.js');
 // a probe measures the drawing itself: a texture (or a chain's part) served from a cache draws nothing
 const fresh = () => { clearTextureCache(); clearAthanorCache(); };
@@ -76,19 +76,12 @@ for(const t of Object.keys(TEXTURE_PARAMS)){
   for(const [v1, v2] of [[a.min,b.max],[a.max,b.min]]){
     try {
       const c = getTextureCanvas(t, 320, 320, { accent1: '#c9a876', accent2: '#7a8ca3', seed: 99, p1: v1, p2: v2 });
-      if(!c || c.width !== 320) throw new Error('wrong size');
+      if(!c || c.width !== 320 || c.height !== 320) throw new Error('wrong size');
     } catch(e){ broke++; console.log('   FAIL', t, v1, v2, e.message); }
   }
 }
-check('every texture generates at the crossed corners of its two knobs (one low, one high)', broke === 0);
-
-// zoom must actually change the output, or the knob is decorative
-const zoomable = Object.keys(TEXTURE_PARAMS).find(t => TEXTURE_PARAMS[t][0].key === 'zoom');
-const flat = getTextureCanvas(zoomable, 600, 600, { seed: 7, p1: 100, p2: 100 });
-const deep = getTextureCanvas(zoomable, 600, 600, { seed: 7, p1: TEXTURE_PARAMS[zoomable][0].max, p2: 100 });
-check('zoom produces a genuinely different canvas', flat !== deep);
-check('both zoom levels still fill the requested size',
-  flat.width === 600 && deep.width === 600 && deep.height === 600);
+check('every texture generates at the crossed corners of its two knobs (one low, one high), filling the size asked for', broke === 0);
+// (that a zoom knob really changes the picture is the knob probes' below: every first knob must move it)
 
 // presets
 const presetTex = PRESETS.filter(p => !p.full && p.textureType).map(p => p.textureType + '|' + (p.textureBlend || 'default'));
@@ -203,10 +196,9 @@ check('most textures report an absolute count', counted.length >= 13);
 const badBase = Object.keys(TEXTURE_PARAMS).filter(t =>
   TEXTURE_PARAMS[t].some(d => d.base != null && !(d.base > 0)));
 check('every declared base is a positive count', badBase.length === 0);
-// the readout must stay sane at both ends
-const sample = TEXTURE_PARAMS['magicparticles'][1];
-check('an absolute readout never reaches zero',
-  Math.max(1, Math.round(sample.base * sample.min / 100)) >= 1);
+// the readout must stay sane at both ends: a count slider at its lowest still draws something
+const sample = TEXTURE_PARAMS['magicparticles'][1], count = v => parseInt(paramReadout(sample, v).replace(/\D/g, ''), 10);
+check('an absolute readout never reaches zero', sample.base > 0 && count(sample.min) >= 1 && count(0) >= 1 && count(sample.max) > count(sample.min));
 
 // ---- tints reach their generators ----
 for(const t of ['metalleaf','aurora','astral'])

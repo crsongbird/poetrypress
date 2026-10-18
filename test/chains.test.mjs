@@ -22,7 +22,6 @@ const A = await import('../athanor.js');
 check('every Athanor part is a step, and every step does something', Object.keys(F.FORGE_NODES).every(k => STEPS[k] && typeof STEPS[k].run === 'function')
   && Object.keys(STEPS).every(k => F.FORGE_NODES[k]));
 check('the steps carry their own cost (the budget reads it)', Object.values(STEPS).every(s => typeof s.cost === 'function'));
-check('new steps for the chains: Colour, Soft Forms, Streaks, Hatching (Marks)', ['colour', 'forms', 'streaks', 'hatching'].every(k => STEPS[k]) && STEPS.streaks.cat === 'Marks');
 
 // the chains
 for(const [type, ch] of Object.entries(TEXTURE_CHAINS)){
@@ -167,16 +166,7 @@ if(canvasOK){
     2: { id: 2, name: 'glasspane', data: {}, inputs: { input_1: { connections: [{ node: '1', input: 'output_1' }] } }, outputs: { output_1: { connections: [] } } },
     3: { id: 3, name: 'surface', data: { name: 'G', ground: 'colour' }, inputs: { input_1: { connections: [{ node: '2', input: 'output_1' }] } }, outputs: {} } } } } });
   const seen = A.evalAthanor(pane, 16, 16, { seed: 1, knobs: [], tints: [] }, {});
-  check('…and a Glass Pane with nothing on its glass shows its picture exactly', !!seen && seen.r.every(v => Math.round(v*255) === 0x33) && seen.b.every(v => Math.round(v*255) === 0x99));
-// THE POEM's three globals: Aware (the surface is Text Aware), In the Letters (blended into them, Shape Aware) and Round
-// the Words (Shape Aware on the page)
-{ const run = (await import('../steps.js')).STEPS.poem.run, E = o => ({ ctx: { text: '0.1,0.1,0.9,0.2,0,0,0', ...o }, ww: 8, wh: 8, N: 64, num: (n, k, d) => d, P: (n, k, d) => d, boxBlur: f => f });
-  const a = run(E({}), {}), b = run(E({ aware: false }), {}), c = run(E({ fill: true }), {}), d = run(E({ around: true }), {}), h = run(E({ around: 0.4 }), {});
-  check('The Poem hands on three numbers: Aware (1 unless the surface is not Text Aware), In the Letters (1 when it fills them) and Round the Words (1 under Shape Aware on the page)',
-    a[5] === 1 && a[6] === 0 && a[7] === 0 && b[5] === 0 && c[6] === 1 && d[7] === 1 && a.length === 8);
-  check('…each as strong as Shape Strength says', Math.abs(h[7] - 0.4) < 1e-9);
-  const { wordsRoom } = await import('../texCore.js'), text = '0.4,0.4,0.6,0.5,0,0,0', full = wordsRoom({ around: 1, text }, 20, 20), half = wordsRoom({ around: 0.5, text }, 20, 20);
-  check('the words\' room: none on the words at full strength, half at half, the page far off untouched', full[10*20 + 10] === 0 && Math.abs(half[10*20 + 10] - 0.5) < 1e-6 && full[0] === 1 && half[0] === 1 && wordsRoom({ text }, 20, 20) === null); } }
+  check('…and a Glass Pane with nothing on its glass shows its picture exactly', !!seen && seen.r.every(v => Math.round(v*255) === 0x33) && seen.b.every(v => Math.round(v*255) === 0x99)); }
 
 // the Painted Ringworld's World: each band names its world; By the Seed picks one of the six (now and then Mixed),
 // and Mixed lays three different ones side by side

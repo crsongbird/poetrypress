@@ -103,7 +103,7 @@ function mutate(key, v){
 // Keys derived from others, and so legitimately not independent:
 //   customW/customH are mirrored from the chosen aspect while Custom is off
 //   customSize is exercised in its own pass below (it overrides aspect)
-const DERIVED = new Set(['customW', 'customH', 'customSize', 'aspect', 'textureSeedWords', 'lookVersion']);   // (aspect: a loaded look never changes the page's shape — Ruby; pass 2)   // (lookVersion: the format a look was saved in, written fresh each save)   // (the seed's words follow the seed: seedWords.test checks they survive)
+const DERIVED = new Set(['customW', 'customH', 'customSize', 'aspect', 'textureSeedWords', 'lookVersion']);   // (aspect: a loaded look never changes the page's shape — Ruby; pass 2)   // (lookVersion: the format a look was saved in, written fresh each save)   // (the seed's words follow the seed: pass 2½)
 
 // ---------- pass 1: every key ----------
 // (with Two Surfaces on, so the lower surface is saved too)
@@ -143,6 +143,14 @@ check('loading does not invent keys that saving never produced', invented.length
     a.aspect === before.aspect && b.aspect === before.aspect && norm(a.customW) === norm(before.customW) && norm(b.customH) === norm(before.customH));
   check('the shape is still saved with a look (so an old reader can see it), only not applied on loading', typeof before.aspect === 'string' && 'customW' in before); }
 
+// ---------- pass 2½: what was typed as the seed is kept while it is still that seed's ----------
+{ const { seedFromText, seedPhrase } = await import('../seedWords.js');
+  const typed = (seed, words) => { load({ ...back, textureSeed: seed, textureSeedWords: words }); return [reg['textureSeedWords'].value, save().textureSeedWords]; };
+  const [shown, saved] = typed(seedFromText('my cat Lily'), 'my cat Lily'), [num] = typed(12345, '12345'), [stale] = typed(7, 'my cat Lily');
+  check('what was typed is kept: saved with the look, and restored when it is still that seed\'s (a typed number stays a number)',
+    shown === 'my cat Lily' && saved === 'my cat Lily' && num === '12345' && stale === seedPhrase(7));
+  load(back); }
+
 // ---------- pass 3: four-stop gradients ----------
 load({ ...back, bgGradient: true, bg3: '#303132', bg4: '#404142',
        textGradient: true, text3: '#505152', text4: '#606162' });
@@ -158,8 +166,7 @@ check('spells are saved through the look filter', /getSettings:\s*settingsForSpe
   /function settingsForSpell\(\)\{\s*return stripToLook\(serializeCurrentSettings\(\)\)/.test(src));
 check('spells are applied through the look filter',
   /applySettings:[^\n]*safeRestore\(stripToLook\(/.test(src) && /function safeRestore\(obj, what = 'This look'\)\{[\s\S]*?const look = \{ \.\.\.c\.look \};[\s\S]*?try \{ restoreSettings\(look\); \}/.test(src) && /import \{ createVault, stripToLook \} from '\.\/vault\.js'/.test(src));
-check('saved-spell tiles in the Rituals grid use the same filter',
-  /safeRestore\(stripToLook\(Object\.assign\(\{\}, rec\.settings/.test(src));
+// (a saved spell's tile in the Rituals grid applies it through the same filter: swatches.test.mjs, by behavior)
 // behaviour: a spell carrying someone else's identity and UI state
 const { stripToLook, NOT_PART_OF_A_LOOK } = await import('../vault.js');
 const foreign = { ...back, username: '@theirs', highlight: false, spellMark: false,
@@ -167,8 +174,8 @@ const foreign = { ...back, username: '@theirs', highlight: false, spellMark: fal
 const look = stripToLook(foreign);
 for(const k of ['poemText', 'locks', 'highlight', 'username'])
   check(`a spell never carries "${k}"`, NOT_PART_OF_A_LOOK.includes(k) && !(k in look));
-check('everything that IS the look is kept',
-  Object.keys(back).filter(k => !NOT_PART_OF_A_LOOK.includes(k)).every(k => k in look) && look.bg1 === '#0d0e0f');
+check('everything that IS the look is kept: only the poem, locks, highlighting and credit stay behind',
+  NOT_PART_OF_A_LOOK.length === 4 && Object.keys(back).filter(k => !NOT_PART_OF_A_LOOK.includes(k)).every(k => k in look) && look.bg1 === '#0d0e0f');
 check('filtering does not mutate the original', foreign.username === '@theirs');
 check('the spell code can be hidden: saved, restored, kept by a spell (it is part of the look), and the renderer draws no glyphs when it is off',
   'spellMark' in back && look.spellMark === false &&

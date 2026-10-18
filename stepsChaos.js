@@ -233,35 +233,35 @@ export const CHAOS_STEPS = {
   // Transmutation Circle, one part (kitWhole: drawn as it always was, under the texture's own seed + Variant);
   // lettered in web fonts, so the texture is made on the page (textureService ON_PAGE)
   transmutation: kitWhole({ cat: 'Marks', label: 'Transmutation Circle', ins: ['position'], outs: ['circle'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
       return () => genSummoningCircles(w, h, a, z, light, f); }),
   // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
   sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
       return [withSeed(chaosSeed(E, n), () => genSigils(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 20)/100, E.ctx.mat || null))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   blot: { cat: 'Marks', label: 'Ink Blot', ins: ['ink', 'accent'], outs: ['blot'], io: { ins: ['colour', 'colour'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Blot Scale', 100, 60, 400), CHAOS_R('amount', 'Spread', 100, 30, 240), CHAOS_R('form', 'Wetness', 50), CHAOS_R('color', 'Color', 35), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [CHAOS_R('zoom', 'Blot Scale', 100, 60, 400), CHAOS_R('amount', 'Spread', 100, 30, 240), CHAOS_R('form', 'Wetness', 50), CHAOS_R('color', 'Color', 35), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, t = E.ctx.tints || [];
       const ink = chaosHex(E.input(n, 1)) || t[0] || '#141414', acc = chaosHex(E.input(n, 2)) || t[1] || '#B0283A';
       return [withSeed(chaosSeed(E, n), () => genInkBleed(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 50)/100, E.num(n, 'color', 35)/100, ink, acc))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   facets: { cat: 'Textures', label: 'Facet Field', ins: ['light from', 'light hue', 'material hue'], outs: ['facets'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Facet Size', 100, 50, 400), CHAOS_R('amount', 'Irregularity', 0, 0, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [CHAOS_R('zoom', 'Facet Size', 100, 50, 400), CHAOS_R('amount', 'Irregularity', 0, 0, 240), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315), t = E.ctx.tints || [];
       const t1 = chaosHex(E.input(n, 2)) || t[0] || null, t2 = chaosHex(E.input(n, 3)) || t[1] || null;
       // (Shape Aware: round the words, a polished plate under them; in the letters, smaller facets)
       return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100*(1 - 0.55*(+E.ctx.fill || 0))), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null, E.ctx))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 12,
+    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 12,
     paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
       return [withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
     // a canvas pass at full size, its grains under the texture's own seed (+ Variant): Chladni Sand as it was
     paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null, dv = E.input(n, 2);
       const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null, light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
@@ -269,7 +269,7 @@ export const CHAOS_STEPS = {
       return [withSeed(seed, () => chaosSand(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 40)/100, where))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   bits: { cat: 'Marks', label: 'Bit Grid', ins: ['where'], outs: ['pattern'], io: { ins: ['field'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Cell Size', 140, 100, 500), CHAOS_R('amount', 'Emergence', 130, 30, 240), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 2,
+    params: [CHAOS_R('zoom', 'Cell Size', 140, 100, 500), CHAOS_R('amount', 'Emergence', 130, 30, 240), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 2,
     // a canvas pass at full size; its marks drawn under the texture's own seed (+ Variant), so Binary Pattern is as it was
     paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null;
       const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null;
@@ -277,7 +277,7 @@ export const CHAOS_STEPS = {
       return [withSeed(seed, () => chaosBitGrid(w, h, Math.max(0.02, E.num(n, 'amount', 130)/100), Math.max(0.25, E.num(n, 'zoom', 140)/100), where))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
-    params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 10,
+    params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
       const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;
       // (the cracks run on the export's grid, `ctx.page`, at every size, and are drawn scaled: a crack walks pixel by
@@ -306,7 +306,7 @@ export const CHAOS_STEPS = {
           DIRT[i] = Math.min(1, lip[i]*1.6 + c*0.8); }
         return [H, GL, DIRT, FN]; }); } },
   grayscott: { cat: 'Noise', label: 'Turing Pattern', ins: [], outs: ['pattern'],
-    params: [CHAOS_R('pattern', 'Pattern', 25), CHAOS_R('growth', 'Growth', 80, 20, 100), CHAOS_R('scale', 'Scale', 100, 50, 250), CHAOS_R('variant', 'Variant', 0, 0, 99)], cost: () => 30,
+    params: [CHAOS_R('pattern', 'Pattern', 25), CHAOS_R('growth', 'Growth', 80, 20, 100), CHAOS_R('scale', 'Scale', 100, 50, 250), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 30,
     run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       // (Shape Aware: round the words, the pattern grows up to them and follows their edges; in the letters, finer)
       return withSeed(seed, () => [chaosTuring(ww, wh, Math.max(0.1, Math.min(1, num(n, 'growth', 80)/100)), num(n, 'scale', 100)/100*(1 - 0.45*(+ctx.fill || 0)), num(n, 'pattern', 25)/100, wordsRoom(ctx, ww, wh, 0.25, 0.8))]); } },

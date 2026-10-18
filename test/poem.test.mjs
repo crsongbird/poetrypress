@@ -38,6 +38,16 @@ check('Distance is 0 at the words and grows away from them', at(dist, 30, 12) < 
 check('Lines are bands across the whole page, a different gray for each line', at(lines, 95, 12) > 0 && at(lines, 95, 22) > at(lines, 95, 12) && at(lines, 95, 45) === 0);
 check('Stanzas split the page between them', at(stanzas, 50, 5) !== at(stanzas, 50, 95));
 check('with no poem laid out, Distance is 1 everywhere (nothing is near any words)', none.r.every(v => v === 1));
+check('The Poem has a Rhymes output and a rhyme to pick', STEPS.poem.outs.includes('rhymes') && STEPS.poem.params.some(p => p[0] === 'rhyme'));
+// its three globals: Aware (the surface is Text Aware), In the Letters (blended into them, Shape Aware) and Round
+// the Words (Shape Aware on the page)
+{ const E = o => ({ ctx: { text: '0.1,0.1,0.9,0.2,0,0,0', ...o }, ww: 8, wh: 8, N: 64, num: (n, k, d) => d, P: (n, k, d) => d, boxBlur: f => f });
+  const a = STEPS.poem.run(E({}), {}), b = STEPS.poem.run(E({ aware: false }), {}), c = STEPS.poem.run(E({ fill: true }), {}), d = STEPS.poem.run(E({ around: true }), {}), h = STEPS.poem.run(E({ around: 0.4 }), {});
+  check('The Poem hands on three numbers: Aware (1 unless the surface is not Text Aware), In the Letters (1 when it fills them) and Round the Words (1 under Shape Aware on the page)',
+    a[5] === 1 && a[6] === 0 && a[7] === 0 && b[5] === 0 && c[6] === 1 && d[7] === 1 && a.length === 8);
+  check('…each as strong as Shape Strength says', Math.abs(h[7] - 0.4) < 1e-9);
+  const { wordsRoom } = await import('../texCore.js'), t = '0.4,0.4,0.6,0.5,0,0,0', full = wordsRoom({ around: 1, text: t }, 20, 20), half = wordsRoom({ around: 0.5, text: t }, 20, 20);
+  check('the words\' room: none on the words at full strength, half at half, the page far off untouched', full[10*20 + 10] === 0 && Math.abs(half[10*20 + 10] - 0.5) < 1e-6 && full[0] === 1 && half[0] === 1 && wordsRoom({ text: t }, 20, 20) === null); }
 check('every new part has its doc', ['poem', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma'].every(k => STEPS[k] && STEPS[k].doc.length > 40));
 check('the Ripples from the Words starter teaches with The Poem', /"name":"poem"/.test(JSON.stringify(athanorStarter('ripples'))));
 

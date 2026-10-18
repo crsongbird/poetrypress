@@ -157,6 +157,8 @@ export function athanorNumbered(graph){ return translatePorts(graph, false); }
 // ---- GROUPS (A3) ----
 /** How deep groups may sit inside groups. */
 export const ATHANOR_GROUP_DEPTH = 4;
+/** How many times a loop may run (each pass counts toward the part limit). */
+export const ATHANOR_LOOP_MAX = 16;
 const hasGroups = g => { for(const n of Object.values((((g || {}).drawflow || {}).Home || {}).data || {})) if(n && n.name === 'group') return true; return false; };
 /**
  * THE GRAPH MADE FLAT: every group replaced by the parts inside it, wired where the group was — what is wired into a
@@ -182,19 +184,27 @@ export function athanorFlat(graph){
       const G = out[id]; if(!G || G.name !== 'group') continue;
       const mod = String((G.data || {}).module || ''), M = mods[mod];
       if(!M || mod === 'Home' || stack.includes(mod) || stack.length >= ATHANOR_GROUP_DEPTH){ delete out[id]; rewire(id, null); continue; }
-      const ip = used.has(mod) ? id + '/' : prefix; used.add(mod);
-      const inner = expand(M.data, ip, stack.concat(mod)), P = groupPorts(M);
-      const redirect = (from, src) => { for(const n of Object.values(inner)) for(const v of Object.values(n.inputs || {}))
-        v.connections = v.connections.map(c => c.node === from ? { node: src.node, input: src.input } : c); };
-      P.ins.forEach((m, j) => { const I = ip + m.id, src = (((G.inputs || {})['input_' + (j + 1)] || {}).connections || [])[0];
-        if(!inner[I]) return;
-        if(src){ redirect(I, src); delete inner[I]; }
-      });
-      const R = Object.values(inner).find(n => n.name === 'groupout');
-      Object.assign(out, inner); delete out[id];
+      const P = groupPorts(M), reps = Math.max(1, Math.min(ATHANOR_LOOP_MAX, Math.round(+((G.data || {}).repeats) || 1)));
+      // A LOOP (A4): the insides laid out once per pass, each pass's first input what the pass before gave (its first
+      // result: Accumulated), its Iteration a Number (0 … 1 across the passes); the first pass is the group as it is
+      let prev = null, R = null;
+      for(let k = 0; k < reps; k++){
+        const ip = k === 0 ? (used.has(mod) ? id + '/' : prefix) : id + '#' + k + '/'; if(k === 0) used.add(mod);
+        const inner = expand(M.data, ip, stack.concat(mod));
+        const redirect = (from, src) => { for(const n of Object.values(inner)) for(const v of Object.values(n.inputs || {}))
+          v.connections = v.connections.flatMap(c => c.node !== from ? [c] : src ? [{ node: src.node, input: src.input }] : []); };
+        P.ins.forEach((m, j) => { const I = ip + m.id; if(!inner[I]) return;
+          const src = j === 0 && k > 0 ? prev : (((G.inputs || {})['input_' + (j + 1)] || {}).connections || [])[0];
+          if(src){ redirect(I, src); delete inner[I]; } });
+        for(const n of Object.values(inner)) if(n.name === 'loopiter') inner[n.id] = { ...n, name: 'number', data: { value: reps > 1 ? k/(reps - 1)*100 : 0 } };
+        R = Object.values(inner).find(n => n.name === 'groupout');
+        prev = R ? ((R.inputs.input_1 || {}).connections || [])[0] || null : null;
+        Object.assign(out, inner);
+        for(const n of Object.values(inner)) if(n.name === 'groupout') delete out[n.id];
+      }
+      delete out[id];
       rewire(id, c => { const s = R && (((R.inputs || {})['input_' + (parseInt(String(c.input).slice(7), 10) || 1)] || {}).connections || [])[0]; return s ? { node: s.node, input: s.input } : null; });
       if(R){ const s0 = ((R.inputs.input_1 || {}).connections || [])[0]; if(s0) alias.set(id, s0.node); }
-      for(const n of Object.values(inner)) if(n.name === 'groupout') delete out[n.id];
     }
     return out;
   };
@@ -214,6 +224,12 @@ export function athanorReach(graph){
     for(const inp of Object.values(nodes[id].inputs || {})) for(const c of inp.connections || []) walk(String(c.node)); };
   if(s) walk(String(s.id));
   return seen;
+}
+/** Whether a graph's Camera Dial reaches its Surface: then the page shows the camera dial for it, as for a menu
+ *  texture with a camera (Ruby: on a graph from the Athanor the dial never appeared). */
+export function athanorCamera(graph){
+  const all = athanorFlat(graph).nodes, reach = athanorReach(graph);
+  return Object.values(all).some(n => n.name === 'camdial' && reach.has(String(n.id)));
 }
 /** The sliders a graph offers: its Knob nodes, by slot (1–8) — those that reach the Surface by a wire, or whose
  *  slot a part on the way binds ('@k3'); a Knob left unwired offers nothing (it would move nothing). */
@@ -310,7 +326,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.env || null, ctx.camera || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -450,7 +466,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
     return { r, g, b };
   };
-  const lightOf = (H, dialDeg, relief, gloss, shadow) => lightHeights(H, ww, wh, { light: dialDeg, relief, gloss, shadow, ao: 0.3, ambient: 0.4 });
+  const lightOf = (H, dialDeg, relief, gloss, shadow, more) => lightHeights(H, ww, wh, { light: dialDeg, relief, gloss, shadow, ao: 0.3, ambient: 0.4, ...(more || {}) });
   // MARKS: strokes drawn on a canvas the grid's size, over a grey field (or a
   // flat grey), read back as a field; sizes in canonical pixels (px)
   const div = ctx.div > 0 ? ctx.div : 1, S = scaleNow();

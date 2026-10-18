@@ -28,7 +28,7 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, chainReadsPoem } from './textureGenerators.js';
+import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, chainReadsPoem } from './textureGenerators.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { fill, CHOOSER } from './strings.js';
 import { resolvePmlVariables } from './pmlVars.js';
@@ -1264,6 +1264,20 @@ export function setSurfaceSource(fn){ SURFACE_SOURCE = fn; }
 /** Every blend a surface layer can take (Ruby): the canvas's own, and the ones mixed per pixel (boxFx.js). */
 export const SURFACE_BLENDS = [...CANVAS_BLENDS, ...BOX_GPU_BLENDS];
 /** The page's backdrop colors, as a surface made of them is told them: the color, or the gradient's stops. */
+/**
+ * THE INSET BOX'S PLACE (ROADMAP G5), for a graph that reads it: its line's middle as fractions of the page
+ * ("x0,y0,x1,y1,corner,thickness", corner and thickness as fractions of the page's shorter side, three decimals),
+ * or '' with the box off. The same reading the renderer draws the box by (offset, thickness, corners).
+ */
+export function boxNow(){
+  if(!($('cardToggle') && $('cardToggle').checked)) return '';
+  const n = (id, d) => { const el = $(id), v = el ? parseFloat(el.value) : NaN; return isNaN(v) ? d : v; };
+  const page = PAGE_SIZE || [3072, 3072], Wc = page[0], Hc = page[1], m = Math.min(Wc, Hc);
+  const thick = Math.max(1, n('cardThickness', n('borderThickness', 1))), off = Math.max(0, n('cardOffset', n('borderOffset', 0))), inset = off + thick/2;
+  const rounded = $('cardRounded') ? $('cardRounded').checked : !!($('borderRounded') && $('borderRounded').checked);
+  const corner = rounded ? Math.max(0, n('cardRadius', n('borderRadius', 0))) : 0, f = v => Math.round(v*1000)/1000;
+  return [f(inset/Wc), f(inset/Hc), f(1 - inset/Wc), f(1 - inset/Hc), f(corner/m), f(thick/m)].join(',');
+}
 export function pageEnvNow(stops = parseInt(getActiveRadioValue('bgStopsGroup'), 10) || 2, bg1 = $('bgColor1Hex').value){
   return ($('bgGradientToggle').checked ? collectGradientColors(bg1, 'bgColor2Hex', 'bgColor3Hex', 'bgColor4Hex', stops) : [bg1]).join(',');
 }
@@ -1352,7 +1366,9 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     //  them — Ruby: "the option to make it avoid the text or highlight the text or interact with the text")
     const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware ? strength : 0, aware = L.textureTextAware !== false, around = !fill && aware && !!L.textureShapeAware ? strength : 0;
     const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type, fill || around)) && (aware || fill) ? TEXT_LAYOUT : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    // (the inset box's place, for a graph that reads it)
+    const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -1428,8 +1444,9 @@ function renderInto(canvas){
     // aperture moves where the darkening BEGINS: low pulls it inward until
     // the whole page is falling off, high pushes it out to the corners only
     const aperture = Math.max(0, Math.min(100, parseFloat($('vignetteAperture').value) || 0)) / 100;
-    const vcx = W * (Math.max(0, Math.min(100, parseFloat($('vignetteCx').value) || 50)) / 100);
-    const vcy = H * (Math.max(0, Math.min(100, parseFloat($('vignetteCy').value) || 50)) / 100);
+    // the center across the slider's whole range (−50 to 150: past the page's edge), and 0 is 0, not the middle
+    const vcOf = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? Math.max(-50, Math.min(150, v)) : 50; };
+    const vcx = W * vcOf('vignetteCx') / 100, vcy = H * vcOf('vignetteCy') / 100;
     const grit = Math.max(0, Math.min(100, parseFloat($('vignetteNoise').value) || 0)) / 100;
     // off-centre means one corner is further away than the others; reach to
     // the furthest so the falloff still covers the page

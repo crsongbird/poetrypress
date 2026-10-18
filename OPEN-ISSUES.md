@@ -6,7 +6,7 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
@@ -15,6 +15,37 @@ Recommendations".
   (the land it first stood over) is an Athanor part: wired after it, the old picture.
 - SHAPE STRENGTH and the new Shape Aware surfaces (Knotwork, Stained Glass, Facet Field, Turing Skin, Deep Field's
   stars, Broken Glass and Dewy Webs round the words): which want a softer default than 100?
+- NEW PARTS (sheet sent): Pavements (rows of stones, joints, rounded corners, a bevel), Smudge (one-way smear, or along a
+  map), Multiblend (four layers, one mode), Inset Box (the page's box as masks) and Border Mask from the box; Scatter's
+  Glyph marks, On Top and Mark Colors; Curve's Arc Slow, Half Circle, Quarter Circles; Curve Ops' Transition and Fade.
+- LOOPS: a group's Repeats (up to 16), its first result fed back each pass, an Iteration part inside. Wanted: a loop
+  starter (growth by steps)?
+- THE LIT SURFACE: Reflectivity, Reflection Blur, Metallic and Emission maps. Metals look plain until there is an
+  environment to reflect (ROADMAP C4); should C4 come next, or a fake sky reflection now?
+- THE USABILITY REVIEW (a fresh pair of eyes on desk and phone, 38 findings): the fixes shipped are in the
+  changelog. These change names or design, so they wait for Ruby's word:
+  - Plain names for working controls, the flavor kept in card titles and tabs: West/Neutral/East → Left/Center/
+    Right; Crest/Heart/Root → Top/Middle/Bottom; Breathing Room → Line Spacing; Inscription Hue → Text Color;
+    Opposition/Conjunction Hue → Accent 1 [ ] / Accent 2 { } (the PML guide and the Athanor already say "accent
+    colors"); Witch Artificer → Credit; Radial Aura? → Background Gradient and Radial Gradient Text? → Gradient
+    Text (both start Linear); Aura Stops → Gradient Stops.
+  - ☋ ☊ as ↶ ↷ (as in the Athanor)? The 🜂 🜄 🜁 🜃 readings labeled as such on a phone?
+  - Dialog buttons: "Yes (Preclude)" means prevent, not delete. "Save Look / Cancel", "Delete / Keep"? And a
+    single Done on the share dialog, since the link is already copied.
+  - The default credit is "@unfixable.place", so a newcomer's images are signed with the app's handle: an empty
+    field ("Your name or @handle") instead?
+  - The light and camera dials look alike but have different buttons in the same corners: a different face for
+    the camera, its zoom as a slider? Reach % means nothing on Silverpoint Hatch: hide it where only direction
+    matters?
+  - Eyes for whole sections only, switches for options (Gradient Border?, Box Gradient?, Allow [Opposition])?
+  - A one-line caption at the top of each tab, saying what is in it.
+  - Two Surfaces: Upper | Lower | ⇅ Swap sits below the controls it switches. Move it above Surface Variant?
+  - Writing on a phone: the preview keeps its height while the keyboard is up (on purpose), leaving the editor
+    about four lines. Collapse the preview to a strip while typing (tap to open)? And a PML button in the
+    focus bar, since the guide is hidden while writing.
+  - Desk: Esoterica dims the left column but leaves it usable. "Return" closes Esoterica on a desk and ends
+    writing on a phone. The phone header labels Support but shows the Athanor as a bare icon.
+  - The Athanor's teaching note covers parts on a desk; it stays as set (read first, closed by any click).
 - GROUPS IN THE ATHANOR: choosing parts by tap or by a box dragged across the grid (Shift and a drag with a mouse).
   Wanted next: a group kept on the shelf by itself to drop into other graphs, and a group's inputs shown as sliders
   on its face.
@@ -230,9 +261,12 @@ the parts → presets, last. No new or reworked presets before Stage 4. Delete i
   by regex, so they move with it.
 
 ## 5 · Check on a phone (new)
-- The Athanor: hold a setting, a wire, a port, the empty grid; tap a wire and
+- Hints: ⓘ in a section's heading writes its hints out, and again hides them; Esoterica → Interface → Hints writes
+  them everywhere. Small enough, and dense enough?
+- The camera dial on a graph from the Athanor: open Lichtenberg Figures in the Athanor, Apply, and the dial is there.
+- The Athanor: tap a port, then a port on another part, to wire them. Hold a setting, a wire, a port, the empty grid; tap a wire and
   ✂; one finger pans; the parts drawer scrolls; the dock is out of the way.
 - Share on Firefox: the box stays put.
-- Save image: the alt text is copied (or the Copy button works) and pastes
+- Save image: Copy alt text (the toast's button) pastes
   into Bluesky's alt text box with its headings and line breaks.
 - Sounds: on, the volume, and that iOS's silent switch silences them.

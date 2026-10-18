@@ -107,7 +107,7 @@ check('Math has Filter Forge\'s useful RGB Math (divide, power, average, screen,
     curve: (id, nodes) => (nodes.push(node(id, 'curve', { shape: 'wave', count: 2 })), [id, 1]) };
   // only the inputs a part needs (a mask on Mix, or a gloss map on the Light Engine, would stand in for the setting), and settings that let the mapped one show
   const only = { mix: [1, 2], material: [1, 2] };
-  const extra = { motionblur: { length: 100 }, grow: { radius: 60 }, highpass: { radius: 100 }, sharpen: { radius: 100 }, material: { relief: 200, shine: 100 }, grid: { kind: 'dots' } };
+  const extra = { motionblur: { length: 100 }, grow: { radius: 60 }, highpass: { radius: 100 }, sharpen: { radius: 100 }, material: { relief: 200, shine: 100 }, grid: { kind: 'dots' }, multiblend: { mode: 'multiply' } };
   const canvasDrawn = new Set(['scatter']);   // (draws its marks on a canvas, which Node can't rasterize: checked by eye)
   // the setting driven by a gradient (angle 0 or 180), or by a Number at the gradient's average (`flat`)
   const avg = (() => { const g = C.evalAthanor(graph([node(1, 'gradient', { shape: 'linear', angle: 0 }), node(99, 'surface', { ground: 'grey' }, { 1: [1, 1] })]), W, H, { seed: 3, knobs: [], tints: T }, {});
@@ -146,5 +146,20 @@ check('a Note makes nothing and breaks nothing', run([node(5, 'note', { text: 'h
 { const g = graph([node(1, 'knob', { slot: '1', name: 'Wired' }), node(2, 'knob', { slot: '2', name: 'Loose' }), node(3, 'number', {}), node(4, 'blur', {}, { 1: [3, 1], [S.paramPort('blur', 'radius')]: [1, 1] }),
     node(6, 'hue', { slot: '2', name: 'Loose Hue' }), node(99, 'surface', {}, { 1: [4, 1] })]);
   check('controls show only when they reach the Surface (Filter Forge: a control not connected to the Result isn\'t shown)', JSON.stringify(C.athanorKnobs(g).map(k => k.label)) === '["Wired"]' && C.athanorHues(g).length === 0); }
+// ---- Smudge, Multiblend (F7) and the rest of the curve shapes and operations (F10) ----
+{ // a top-to-bottom ramp, smudged downward: each point takes on the darker ramp above it; the top row has nothing above
+  const ramp = node(1, 'gradient', {}), raw = run([ramp], [1, 1]), im = run([ramp, node(4, 'smudge', { angle: 90, length: 40, strength: 100, trail: 60 }, { 1: [1, 1] })], [4, 1]);
+  check('Smudge carries what lies behind each point forward (a ramp smudged down is pulled toward its darker top)', !!im && px(im, 20, 30) < px(raw, 20, 30) - 0.02 && Math.abs(px(im, 20, 0) - px(raw, 20, 0)) < 0.02); }
+{ const mb = run([node(1, 'number', { value: 50 }), node(2, 'number', { value: 100 }), node(3, 'multiblend', { mode: 'normal', op1: 50 }, { 1: [1, 1], 2: [2, 1] })], [3, 1]);
+  const two = run([node(1, 'number', { value: 50 }), node(2, 'number', { value: 100 }), node(5, 'number', { value: 0 }), node(3, 'multiblend', { mode: 'normal', op1: 100, op2: 50 }, { 1: [1, 1], 2: [2, 1], 3: [5, 1] })], [3, 1]);
+  check('Multiblend lays its layers over the base in turn, each at its own strength', Math.abs(px(mb, 5, 5) - 0.75) < 0.01 && Math.abs(px(two, 5, 5) - 0.5) < 0.01); }
+{ const E0 = { num: (n, k, d) => n.data[k] ?? d, P: (n, k, d) => n.data[k] ?? d }, cv = (shape, x = {}) => S.STEPS.curve.run(E0, { data: { shape, ...x } })[0];
+  const half = cv('half circle'), slow = cv('arc slow'), q = cv('quarter circles', { count: 2 });
+  check('Curve: a half circle, an arc that rises slowly, and a row of quarter circles', Math.abs(S.curveAt(half, 0.5) - 1) < 0.01 && S.curveAt(half, 0) < 0.05
+    && S.curveAt(slow, 0) < 0.01 && S.curveAt(slow, 1) > 0.99 && S.curveAt(slow, 0.5) < 0.2 && S.curveAt(q, 0.5) < S.curveAt(q, 0.45));
+  const ops = (op, a, b, amount = 50) => S.STEPS.curveops.run({ ...E0, isCurve: v => !!(v && v.curve), input: (n, j) => j === 1 ? a : j === 2 ? b : undefined }, { data: { op, amount } })[0];
+  const lo = cv('linear', { low: 0, high: 0 }), hi = cv('linear', { low: 100, high: 100 }), tr = ops('transition', lo, hi, 20), fd = ops('fade', hi, null, 40);
+  check('Curve Ops: Transition crosses from the first curve to the second; Fade eases a curve to nothing at its ends',
+    S.curveAt(tr, 0.1) < 0.01 && S.curveAt(tr, 0.9) > 0.99 && Math.abs(S.curveAt(tr, 0.5) - 0.5) < 0.05 && S.curveAt(fd, 0) < 0.01 && S.curveAt(fd, 1) < 0.01 && S.curveAt(fd, 0.5) > 0.99); }
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

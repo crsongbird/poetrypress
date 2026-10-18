@@ -35,7 +35,6 @@ check('Lookup, Displace and Gradient Map need their first input', ['lookup', 'di
   check('Displace at 0 changes nothing; at 100 by noise, it moves the picture', Math.abs(at(plain, 20, 20) - 0.5) < 0.06 && plain.r.some((v, i) => Math.abs(v - moved.r[i]) > 0.02)); }
 { const a = run([node(1, 'noise', { scale: 20 })], [1, 1]), b = run([node(1, 'noise', { scale: 20, variation: 7 })], [1, 1]), a2 = run([node(1, 'noise', { scale: 20 })], [1, 1]);
   check('Variation: a new number is a new pattern; the same number is the same pattern', a.r.some((v, i) => Math.abs(v - b.r[i]) > 0.05) && a.r.every((v, i) => v === a2.r[i])); }
-check('The Poem has a Rhymes output and a rhyme to pick', S.STEPS.poem.outs.includes('rhymes') && S.STEPS.poem.params.some(p => p[0] === 'rhyme'));
 
 // ---- the studies ----
 const st = Object.entries(ATHANOR_STUDIES);

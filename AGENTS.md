@@ -432,6 +432,13 @@ Other parts of a look:
   - **Locks supersede every roll** (Ruby): rolls skip locked controls, and
     `restoreLocked` puts menus back before sliders (a surface put back resets
     its sliders).
+- **Hints written out** (Ruby: readable on a phone, and switchable for
+  density): every card's heading has ⓘ (`addHintsButton`), which writes each
+  control's `title` under it as a small `.tip-line` (`writeHints`, kept current
+  by `refreshHints` in `refreshUi`); the **Hints** switch (Esoterica →
+  Interface, localStorage `uv.hints.on`, an app preference) writes them out
+  everywhere. A `.hint-extra` note shows only with its card's hints. So a
+  control's tooltip is its phone hint too: write it as one.
 - **Asking and refusing:**
   - `askSure({title, body, confirmLabel, danger})` is the soft no, the app's
     own modal (never `confirm()`).
@@ -542,6 +549,9 @@ Other parts of a look:
   - A texture opts in with `caps.camera {turn, view, zoom, guide}` (its
     defaults; guide `'plane'` or `'ring'`). Its chain takes the camera from a
     `camdial` part (Turn, View, Zoom), wired like a knob.
+  - An Athanor graph gets the dial when its Camera Dial reaches the Surface
+    (`athanorCamera`; `applyAthanorGraph` sets `TEXTURE_CAPS.athanor.camera`,
+    from the menu texture of the same name when there is one).
   - `opts.camera` → `cameraOf()` → the cache key `_cm` and `ctx.camera`; only
     a texture with the caps keys on it. Layer keys `cameraTurn/View/Zoom`,
     locked with the light (LOCKABLE), saved and restored (`putCamera`).
@@ -837,8 +847,8 @@ The full study and what is still to do are in ROADMAP.md §1.
   Revert, Clear the grid, the wiki), the page chip (`forgePageBtn`: ✓ On the
   Page, or ⇱ Show on Page, which is what Use did; `deps.onPage`), **Done**.
   - `closeForge` returns whether the graph changed while open; Done then
-    offers to show a changed graph the page doesn't (a toast with an
-    action). Bar words live in strings.js `FORGE_BAR`.
+    asks whether to put a changed graph the page doesn't show on the page
+    (Apply to Page / Not Now). Bar words live in strings.js `FORGE_BAR`.
 - **Asking first:** before Clear, Revert, Open, or deleting a node,
   the editor asks whenever the grid has work on it.
 - **Kept surfaces:** localStorage `uv.forge.kept.v1` (`forgeShelf`,

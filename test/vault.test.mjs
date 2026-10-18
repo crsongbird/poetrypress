@@ -73,8 +73,13 @@ check('same title with different text is kept', pm.added === 1);
 // parentheses are literal text in PML, not markup, so they stay -- only the
 // accent brackets around them are stripped
 check('a heading becomes the title', poemTitleFrom('## Wanting [(Aether)]\nbody') === 'Wanting (Aether)');
-check('markup is stripped from titles',
-  poemTitleFrom('## <big/scale:150> **loud**') === 'loud');
+check('markup is stripped from titles, the words kept',
+  poemTitleFrom('## <big/scale:150> **loud**') === 'big loud');
+// (the usability review: titles kept PML's marks and stray spaces, and dropped a styled word)
+check('…no space left where a mark was, before punctuation', poemTitleFrom('## WTF is [PoetryPress]?') === 'WTF is PoetryPress?');
+check('…a line\'s alignment is not part of its words', poemTitleFrom('## *ANYWAY*/c') === 'ANYWAY');
+check('…a styled word is kept', poemTitleFrom('hello <world/glow>') === 'hello world');
+check('…a §Variable\'s call is not a word', poemTitleFrom('[§Glyph!input **Inscription**]') === 'Inscription');
 check('with no heading it falls back to the first words',
   poemTitleFrom('the quiet part of the evening arrives late').split(' ').length === 7);
 check('an empty poem gets the fallback title', poemTitleFrom('', 'Untitled') === 'Untitled');
@@ -147,6 +152,7 @@ h.$('poemSaveBtn')._fire('click');
 await new Promise(r => setTimeout(r, 0));
 check('saving a poem stores it', h.vault._state().poems.length === 1);
 check('Save goes hollow after saving', h.$('poemSaveBtn').disabled === true);
+check('…and the poem just recorded is chosen, ready to Invoke or Dissolve', !h.$('poemApplyBtn').disabled && !h.$('poemDeleteBtn').disabled);
 h.setText('something else entirely');
 h.vault.refresh();
 check('Save wakes up when the poem is edited', h.$('poemSaveBtn').disabled === false);

@@ -63,24 +63,7 @@ check('nothing renders as a gradient', segs.every(s => !String(s.color||'').star
 check('the same seed gives the same spell', spellForSeed(12345) === spellForSeed(12345));
 check('different seeds give different spells', spellForSeed(1) !== spellForSeed(2));
 check('a seeded spell is valid', validateSpell(spellForSeed(99)).ok);
-
-// ---- stored spells on the presets ----
-// A spell identifies which preset a page came from, so it must be DATA on the
-// preset, not something re-derived from the texture seed (which changes when
-// the seed rerolls).
-const { PRESETS, FONTS } = await import('../appOptions.js');
-check('every preset carries a stored spell', PRESETS.every(p => typeof p.spell === 'string' && p.spell));
-const invalid = PRESETS.filter(p => !validateSpell(p.spell || '').ok);
-check('every stored spell validates', invalid.length === 0);
-if(invalid.length) console.log('   bad:', invalid.map(p => p.name + ': ' + validateSpell(p.spell||'').msg).join('; '));
-check('no two presets share a spell', new Set(PRESETS.map(p => p.spell)).size === PRESETS.length);
-
-// This guard exists because a bad edit once appended preset objects into the
-// FONTS array instead of PRESETS — the arrays are adjacent and both end in
-// "];", so a naive replace hit the wrong one and the damage was invisible
-// until font indices were inspected.
-check('FONTS contains only fonts', FONTS.every(f => f && f.family && f.label && !f.spell));
-check('PRESETS contains only presets', PRESETS.every(p => p && p.name && p.bg1 && !p.family));
+// (the spells stored on the presets: presets.test.mjs)
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

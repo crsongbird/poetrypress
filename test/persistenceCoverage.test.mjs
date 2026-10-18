@@ -17,7 +17,7 @@ import { readFileSync } from 'fs';
 let failures = 0;
 const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-const html = src('index.html'), ev = src('appEvents.js'), vault = src('vault.js'), renderer = src('canvasRenderer.js');
+const html = src('index.html'), ev = src('appEvents.js'), renderer = src('canvasRenderer.js');
 
 // controls that are deliberately NOT part of a look — each with its reason
 const EXEMPT = {
@@ -25,6 +25,7 @@ const EXEMPT = {
   forgeSteps:   'the Athanor\'s step previews on or off: a working preference of this browser (localStorage), not part of an image',
   soundToggle:  'interface sounds on or off (murmur.js): this browser\'s preference, kept in localStorage, not part of an image',
   soundVolume:  'interface sound volume: this browser\'s preference, kept in localStorage, not part of an image',
+  hintsToggle:  'hints written out under every section: this browser\'s preference, kept in localStorage, not part of an image',
   fullPreview:  'a view preference (the preview at full size), not part of an image',
   advancedJson: 'the Workbench JSON box IS the saved look',
   modalInput:   'the text field of a dialog',
@@ -78,12 +79,9 @@ check('no control is saved both by the table and by hand', !tableKeys.some(k => 
 // everything built on save/restore uses them — so covering them covers all of it
 check('the Workbench JSON shows serializeCurrentSettings() and loads with restoreSettings()',
   /\$\('advancedJson'\)\.value = JSON\.stringify\(serializeCurrentSettings\(\), null, 2\);/.test(ev) && /safeRestore\(obj, 'This JSON'\);/.test(ev) && /try \{ restoreSettings\(look\); \}/.test(ev));
-check('the Grimoire and shared spells save serializeCurrentSettings() and restore with restoreSettings()',
-  /return stripToLook\(serializeCurrentSettings\(\)\);/.test(ev) && /applySettings: \(settings, name\)=>\{ if\(!safeRestore\(stripToLook\(settings\), 'This spell'\)\) return;/.test(ev));
+// (the Grimoire and shared spells save and apply through serializeCurrentSettings, restoreSettings and the look
+// filter, which drops only the poem, locks, highlighting and credit: audit.test.mjs, pass 4)
 check('undo and redo step through restoreSettings()', /restoreSettings\(JSON\.parse\(h\.stack\[to\]\)\);/.test(ev));
-// a spell carries the whole look: only the poem, locks, highlighting and credit stay behind
-check('a spell drops only the poem, locks, highlighting and credit — nothing else',
-  /export const NOT_PART_OF_A_LOOK = \['poemText', 'locks', 'highlight', 'username'\];/.test(vault));
 
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');

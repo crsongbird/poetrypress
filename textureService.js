@@ -14,6 +14,7 @@
  * the page's web fonts, which a worker can't see.
  */
 import { getTextureCanvas, textureKeyFor, peekTexture, storeTexture, dropLargeTextures } from './textureGenerators.js';
+import { graphScattersGlyphs } from './stepsPatterns.js';
 
 const ON_PAGE = new Set(['summoning', 'cards']);      // they draw glyphs and card faces in web fonts
 // ?softgl in the address (AGENTS.md §5.5): the workers may light on software WebGL, to test the GPU path without a GPU
@@ -119,7 +120,8 @@ export function requestTexture(slot, type, w, h, opts){
   const key = textureKeyFor(type, w, h, opts);
   const hit = peekTexture(key);
   if(hit){ wanted.delete(slot); lastGood.set(slot, { type, tex: hit }); return hit; }
-  if(ON_PAGE.has(type) || !boot()){
+  // (and a graph that scatters glyphs: the symbol fonts are the page's)
+  if(ON_PAGE.has(type) || ((type === 'athanor' || type === 'athanorsteps') && opts && graphScattersGlyphs(opts.graph)) || !boot()){
     // made on the page: not at once, but after the page has painted its
     // "working" line and shimmer (which then keep moving: they run off the
     // main thread) — a final render (Save image) and Node's tests still wait for it here

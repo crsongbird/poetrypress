@@ -70,8 +70,8 @@ export const WIKI_ARTICLES = [
 <h3>1. Start clean</h3>
 <p>Open <b>⋯</b> in the bar and choose <b>Clear the grid</b>. Only the <b>Surface</b> is left: the end of every graph.</p>
 <h3>2. Make a pattern</h3>
-<p>Open <b>＋ Parts</b>, find <b>Perlin Noise</b> (in Noise), and add it. Its preview shows soft gray hills. Wire its output (the dot on its right edge) into the Surface’s <b>Image</b> input (a dot on the Surface’s left edge). The big preview in the corner now shows the noise: you have made a texture.</p>
-<p>With a mouse, drag from dot to dot. On a touch screen, hold the noise, choose <b>Connect its output…</b>, then tap the Surface and pick <b>picture</b>. See [[mouse]] and [[touch]].</p>
+<p>Open <b>＋ Parts</b>, find <b>Perlin Noise</b> (in Noise), and add it. Its preview shows soft gray hills. Wire its output (the dot on its right edge) into the Surface’s <b>picture</b> input (a dot on the Surface’s left edge). The big preview in the corner now shows the noise: you have made a texture.</p>
+<p>With a mouse, drag from dot to dot. On a touch screen, tap the noise’s output dot, then the Surface’s <b>picture</b> dot. See [[mouse]] and [[touch]].</p>
 <h3>3. Shape it</h3>
 <p>Add <b>Levels</b> (in Shape) and put it between the two: noise → Levels → Surface. Wiring Levels’ output into the Surface replaces the old wire, because an input takes only one. Raise <b>Black Point</b> and the noise becomes darker blotches with brighter peaks. This is the heart of node work: <b>generate, then shape</b>.</p>
 <h3>4. Color it</h3>
@@ -85,7 +85,7 @@ export const WIKI_ARTICLES = [
   { id: 'reading', group: 'Start here', title: 'Reading a graph', body: `
 <p>A graph shows its own working. To understand one you didn’t build, follow it the way the data flows.</p>
 <ol>
-<li><b>Find the Surface</b> at the right. What is wired into its Image is the final picture.</li>
+<li><b>Find the Surface</b> at the right. What is wired into its <b>picture</b> is the final picture.</li>
 <li><b>Walk back</b> along that wire. Each part’s preview shows what it hands on; compare it with the preview of the part before it to see what that part did.</li>
 <li><b>Look at the colors.</b> A wire’s color says what it carries (see [[kinds]]). A part’s title color shows what it makes.</li>
 <li><b>Look at the ⚙ ports.</b> A wire into a setting means something else is driving it: a Knob from the page, the light dial, or a map. See [[ports]].</li>
@@ -255,7 +255,7 @@ export const WIKI_ARTICLES = [
 <li>Every random part uses the <b>page’s seed</b> combined with its own place in the graph, so two copies of a part still differ.</li>
 <li><b>⟳ Seed</b> (in the corner here, or beside the seed on the page) rolls a new seed: everything random changes together.</li>
 <li><b>Variation</b> on a single part changes only that part’s pattern, leaving the rest of the graph as it is.</li>
-<li>The parts that draw one of the app’s whole textures have <b>Variant</b> instead: at 0 the part draws exactly what the texture draws for this seed; any other number gives another of its kind.</li>
+<li>On the parts that draw one of the app’s whole textures, <b>Variation</b> at 0 draws exactly what the texture draws for this seed; any other number gives another of its kind.</li>
 <li><b>Random Number</b> makes an ordinary setting part of the roll.</li>
 </ul>` },
   { id: 'resolution', group: 'Building techniques', title: 'Size and resolution', body: `
@@ -264,7 +264,7 @@ export const WIKI_ARTICLES = [
 
   // ------------------------------------------------------------------ The page and your graph
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
-<p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Apply</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app offers to). The page shows only the controls you give it:</p>
+<p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Apply</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app asks whether to). The page shows only the controls you give it:</p>
 <ul>
 <li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
@@ -280,8 +280,9 @@ export const WIKI_ARTICLES = [
   { id: 'surface', group: 'The page and your graph', title: 'The Surface', body: `
 <p>The Surface is the end of every graph. There is always exactly one: it can’t be deleted or copied, and Clear leaves a new one.</p>
 <ul>
-<li><b>Image</b>: the texture.</li>
-<li><b>Height</b> (optional): a gray map the page lights with its dial. See [[heights]].</li>
+<li><b>picture</b>: the texture.</li>
+<li><b>height</b> (optional): a gray map the page lights with its dial. See [[heights]].</li>
+<li><b>reflectivity</b>, <b>reflection blur</b>, <b>metallic</b> and <b>emission</b> (optional): gray maps that make it a material. Reflectivity sets how strong the highlight is, Reflection Blur how soft, Metallic where it is metal (a highlight in its own color, little diffuse light), and Emission where it glows whatever the light. Unwired, the Surface draws as it always has.</li>
 <li><b>Name</b>: the surface’s name on the page and on the shelf. Keeping it under a new name renames it here too.</li>
 <li><b>Ground</b>: <i>gray</i> means the page tints it with its Light and Dark hues and blends it, like the app’s gray textures; <i>color</i> means it is shown in its own colors.</li>
 <li><b>Size</b>: scales the whole graph. See [[resolution]].</li>
@@ -322,8 +323,8 @@ export const WIKI_ARTICLES = [
 <li><b>Move a part:</b> drag its title bar. Dragging anywhere else pans the grid.</li>
 <li><b>Zoom:</b> pinch. The zoom follows your fingers: twice as far apart is twice as near.</li>
 <li><b>Menus:</b> hold anything. See [[menus]].</li>
-<li><b>Wire:</b> hold a part and choose <b>Connect its output…</b> (or <b>Connect an input…</b>). A bar at the top shows what is being wired; tap the other part and choose its port. Cancel stops.</li>
-<li><b>Add parts:</b> <b>＋</b> (Parts), at the left of the bar, opens the drawer; tap a part to add it.</li>
+<li><b>Wire:</b> tap a port (the small square at a part’s edge). A bar at the top shows what is being wired; tap a port on the other part to finish, or tap the part itself and choose its port. Or hold a part and choose <b>Connect its output…</b> (or <b>Connect an input…</b>). Cancel stops.</li>
+<li><b>Add parts:</b> <b>＋</b> (Parts), at the left of the bar, opens the drawer; tap a part to add it. It lands in free space in view.</li>
 <li><b>Open a graph:</b> the wide button beside it, named for the graph on the grid, opens a drawer of everything to begin from, as pictures. On a phone one thing opens at a time: the drawer, the parts, the wiki or a menu.</li>
 <li><b>When things overlap,</b> the Athanor asks which you meant.</li>
 </ul>` },
@@ -360,6 +361,13 @@ export const WIKI_ARTICLES = [
 <li>Each <b>Group Input</b> and each <b>Knob</b> inside is one of the group’s inputs, named after it. Add a Group Input to give the group another input. Unwired, a Group Input gives its Default, and a Knob is still its slider on the page.</li>
 <li>Each result wired to the <b>Group Result</b> is one of the group’s outputs (up to four).</li>
 <li>A group can hold other groups.</li>
+</ul>
+<h3>Loops</h3>
+<p>Set a group’s <b>Repeats</b> above 1 and it becomes a loop: its insides run that many times, and each time its first result is fed back into its first input (Filter Forge calls this the Accumulated value). A blur in a loop of four blurs four times; a scatter in a loop throws four times over what the last pass made.</p>
+<ul>
+<li>Add an <b>Iteration</b> part inside to know which pass is running: 0 on the first, 1 on the last. Wire it into a ⚙ to change a setting from pass to pass.</li>
+<li>Each pass draws its own randomness, so a noise inside differs from pass to pass.</li>
+<li>Every pass counts toward the part limit: a loop of eight passes over five parts uses forty.</li>
 </ul>
 <h3>Key facts</h3>
 <ul>
@@ -556,14 +564,21 @@ export function wikiContentsHtml(ctx = {}){
     return h + (sec.subs || []).map(sub => (sub.title ? `<h4>${wkEsc(sub.title)}</h4>` : '') + `<ul>${sub.pages.map(p => li(p)).join('')}</ul>`).join('');
   }).join('');
 }
-/** Search: titles first, then words in the text. Returns [{ id, title, where }]. */
+/** Search: titles first, then headings, then words in the text, the articles a newcomer needs before the part
+ *  pages at the same rank. Returns [{ id, title, score, snip }] (snip: a line of the text round the match). */
 export function wikiSearch(q){
   q = String(q || '').trim().toLowerCase(); if(q.length < 2) return [];
-  const plain = s => String(s).replace(/<[^>]+>/g, ' ').replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g, (m, a, b) => b || a);
+  const plain = s => String(s).replace(/\{\{[^}]*\}\}/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g, (m, a, b) => b || wikiTitle(a)).replace(/\s+/g, ' ').trim();
+  const snipOf = t => { const k = t.toLowerCase().indexOf(q); if(k < 0) return ''; const a = Math.max(0, t.lastIndexOf(' ', Math.max(0, k - 50)) + 1), b = Math.min(t.length, k + q.length + 70);
+    return (a > 0 ? '…' : '') + t.slice(a, b).trim() + (b < t.length ? '…' : ''); };
   const hits = [];
-  for(const a of WIKI_ARTICLES){ const t = a.title.toLowerCase(), b = plain(a.body).toLowerCase();
-    if(t.includes(q)) hits.push({ id: a.id, title: a.title, score: 3 }); else if(b.includes(q)) hits.push({ id: a.id, title: a.title, score: 1 }); }
-  for(const [k, s] of Object.entries(STEPS)){ const W = WIKI_PARTS[k] || {}, t = s.label.toLowerCase(), b = [W.line, W.about, s.doc, ...Object.values(W.set || {})].join(' ').toLowerCase();
-    if(t.includes(q)) hits.push({ id: 'part:' + k, title: s.label, score: 3 }); else if(b.includes(q)) hits.push({ id: 'part:' + k, title: s.label, score: 1 }); }
+  for(const a of WIKI_ARTICLES){ const t = a.title.toLowerCase(), body = plain(a.body), heads = [...a.body.matchAll(/<h[34]>([^<]*)<\/h[34]>/g)].map(m => m[1].toLowerCase());
+    // (in the text: the more often, the better; and the pages that start a newcomer off a little ahead)
+    const lb = body.toLowerCase(), times = q.length > 1 ? lb.split(q).length - 1 : 0, start = (wikiPlace(a.id) || {}).sec && wikiPlace(a.id).sec.walk ? 0.6 : 0;
+    const score = t === q ? 7 : t.startsWith(q) ? 6 : t.includes(q) ? 5 : heads.some(h => h.includes(q)) ? 3 + start : times ? 1.5 + Math.min(1, times/6) + start : 0;
+    if(score) hits.push({ id: a.id, title: a.title, score, snip: score < 5 ? snipOf(body) : snipOf(body) || '' }); }
+  for(const [k, s] of Object.entries(STEPS)){ if(s.hidden) continue; const W = WIKI_PARTS[k] || {}, t = s.label.toLowerCase(), body = plain([W.line, W.about, s.doc, ...Object.values(W.set || {})].join(' '));
+    const score = t === q ? 6.5 : t.startsWith(q) ? 4.5 : t.includes(q) ? 4 : body.toLowerCase().includes(q) ? 1 : 0;
+    if(score) hits.push({ id: 'part:' + k, title: s.label, score, snip: score < 4 ? snipOf(body) : (W.line || s.doc || '') }); }
   return hits.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title)).slice(0, 30);
 }

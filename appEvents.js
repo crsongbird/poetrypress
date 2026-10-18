@@ -25,12 +25,13 @@
  */
 
 import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './textureService.js';
-import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
+import { STITCH_STYLES, STITCH_LABELS, stitchSided } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
-import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds } from './athanor.js';
+import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds, athanorCamera } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { cameraGuide } from './stepsGenerative.js';
+import { graphScattersGlyphs } from './stepsPatterns.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser, chMatches } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
@@ -40,8 +41,8 @@ import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './ef
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop } from './textureGenerators.js';
+import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName, boxNow } from './canvasRenderer.js';
+import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme, DEFAULT_THEME } from './theme.js';
@@ -53,7 +54,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS, READABLE } from './tunables.js';
-import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS } from './strings.js';
+import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -211,14 +212,15 @@ const fontSelect = $('fontFamily');
 fontSelect.value = 3;
 
 $('fontIndexList').innerHTML = FONTS.map((f,i)=>`${i} &nbsp;${f.family}`).join('<br>');
-// THE GUIDE'S EXAMPLES: ⤓ Try puts one in the poem where the cursor is, on lines of its own (a step undo takes back)
+// THE GUIDE'S EXAMPLES: ⤓ Try puts one in the poem where the cursor is, on lines of its own (its input event makes it a step of the poem's undo)
 if($('formattingGuidePanel') && $('formattingGuidePanel').querySelectorAll) $('formattingGuidePanel').querySelectorAll('.pml-ex[data-try]').forEach(p => {
   if(typeof document.createElement !== 'function') return;
   const b = document.createElement('button'); b.type = 'button'; b.className = 'ghost pml-try'; b.textContent = PML_GUIDE.try; b.title = PML_GUIDE.tryHint; p.appendChild(b); });
 if($('formattingGuidePanel') && $('formattingGuidePanel').addEventListener) $('formattingGuidePanel').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('.pml-try') : null; if(!b) return;
   const host = b.closest ? b.closest('.pml-ex') : null, ta = $('poemText'), ex = (host && host.getAttribute('data-try')) || ''; if(!ta || !ex) return;
-  const v = ta.value, at = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : v.length;
+  // (at the cursor once one has been placed in the poem; before that, at the end — never above its title)
+  const v = ta.value, at = state.ui.poemCaret && typeof ta.selectionEnd === 'number' ? ta.selectionEnd : v.length;
   const before = v.slice(0, at), after = v.slice(at);
   const text = (before && !before.endsWith('\n') ? '\n' : '') + ex + (after && !after.startsWith('\n') ? '\n' : '');
   ta.value = before + text + after;
@@ -292,25 +294,34 @@ function refreshUi(){
   run(paintElements); run(() => { for(const [, b] of lockButtons) if(b._paint) b._paint(); }); run(paintMasterLocks); run(paintReveal);
   run(() => syncSeedWords(false));
   run(() => { for(const ch of CHOOSERS) ch.refresh(); });
+  run(refreshHints);
 }
 // the surface menus as tiles (chooser.js), filled in below once the swatch source is set
 const CHOOSERS = [];
 
+// (a radio group is a row of tiles: for a keyboard and a screen reader, each is a radio that Tab reaches and Enter or
+// Space chooses — the usability review: they were bare tiles no keyboard could reach)
+const radioAria = group => group.querySelectorAll('.radio-btn').forEach(b => { if(b.setAttribute) b.setAttribute('aria-checked', b.classList.contains('active') ? 'true' : 'false'); });
 function bindRadioGroup(containerId, onSelect){
   const group = $(containerId);
+  if(group.setAttribute) group.setAttribute('role', 'radiogroup');
   group.querySelectorAll('.radio-btn').forEach(btn=>{
+    if(btn.setAttribute){ btn.setAttribute('role', 'radio'); btn.tabIndex = 0; }
     btn.addEventListener('click', ()=>{
       group.querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
+      btn.classList.add('active'); radioAria(group);
       onSelect(btn.dataset.val);
     });
+    if(btn.addEventListener) btn.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); btn.click(); } });
   });
+  radioAria(group);
 }
 function setActiveRadioValue(containerId, val){
   const group = $(containerId);
   group.querySelectorAll('.radio-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.val === String(val));
   });
+  radioAria(group);
 }
 
 bindColorField('textColorHex', scheduleRender);
@@ -526,9 +537,11 @@ function pickAspect(v){
 bindRadioGroup('aspectGroup', pickAspect);
 bindRadioGroup('aspectGroupWide', pickAspect);
 
-function applyCustomSize(){
+function applyCustomSize(said){
   const w = clampSize($('customW').value);
   const h = clampSize($('customH').value);
+  // a size typed past the range is said, not quietly changed (the usability review)
+  if(said && (String(w) !== String($('customW').value).trim() || String(h) !== String($('customH').value).trim())) toast(fill(PAGE_SAYS.sizeClamped, w + ' × ' + h));
   $('customW').value = w; $('customH').value = h;
   state.page.aspect = 'custom';
   setPageSize(w, h, false);
@@ -543,7 +556,7 @@ function syncCustomSize(){
 }
 $('customSizeToggle').addEventListener('change', syncCustomSize);
 ['customW','customH'].forEach(id => $(id).addEventListener('change', ()=>{
-  if($('customSizeToggle').checked) applyCustomSize();
+  if($('customSizeToggle').checked) applyCustomSize(true);
 }));
 bindRadioGroup('bgStopsGroup', v=>{
   state.page.bgStops = parseInt(v,10);
@@ -582,7 +595,10 @@ $('spellMark').addEventListener('change', scheduleRender);
 $('poemText').addEventListener('input', ()=>{
   clearTimeout(state.ui.poemTimer);
   state.ui.poemTimer = setTimeout(scheduleRender, 150);
+  notePoemSoon();
 });
+// (where the cursor is counts only once the poem has been touched: ⤓ Try goes at the end until then)
+for(const ev of ['focus', 'click', 'keyup']) if($('poemText').addEventListener) $('poemText').addEventListener(ev, () => { state.ui.poemCaret = true; });
 
 // Text Margins: how much room the text keeps from the page edges and the frame
 // (100% is the layout as it always was; lower lets the poem grow)
@@ -803,14 +819,13 @@ $('downloadBtn').addEventListener('click', async ()=>{
   link.click();
   murmur.play('saveImage');
   // Bluesky (and most places) don't read alt text from inside the file: it is
-  // offered for pasting too — copied at once where the browser allows, a button otherwise
+  // offered for pasting too, as the toast's button (never copied unasked: the
+  // clipboard is the person's — the usability review)
   offerAltText(state.ui.lastAlt);
 });
-async function offerAltText(alt){
+function offerAltText(alt){
   if(!alt) return;
-  let copied = false;
-  try { if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(alt); copied = true; } } catch(e){}
-  toast(copied ? 'Saved. Its alt text is copied, ready to paste where you post it.' : 'Saved, with its alt text inside.', copied ? null : { label: 'Copy alt text', act: async () => {
+  toast('Saved, with its alt text inside.', { label: 'Copy alt text', act: async () => {
     try { await navigator.clipboard.writeText(alt); toast('Alt text copied.'); }
     catch(e){ modalPrompt({ title: 'The alt text', body: 'Copy it from here.', input: true, defaultValue: alt, rows: 6, confirmLabel: 'Done', alert: true }); } } });
 }
@@ -1285,6 +1300,9 @@ function presetTile(p, onPick, extraClass){
   const btn = document.createElement('div');
   btn.className = 'preset-btn' + (extraClass ? ' ' + extraClass : '');
   if(btn.dataset) btn.dataset.name = p.name || '';
+  // (a tile a keyboard reaches and Enter or Space chooses)
+  if(btn.setAttribute){ btn.setAttribute('role', 'button'); btn.tabIndex = 0; }
+  if(btn.addEventListener) btn.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target === btn){ e.preventDefault(); btn.click(); } });
   const swatch = document.createElement('canvas');
   swatch.className = 'preset-swatch';
   paintWhenSeen(swatch, () => paintPresetSwatch(swatch, p, SWATCH.width, SWATCH.height));
@@ -1413,7 +1431,9 @@ function freezeSeed(){
   if(b) b.click(); else { state.locks.has('textureSeedValue') ? state.locks.delete('textureSeedValue') : state.locks.add('textureSeedValue'); paintMasterLocks(); }
   toast(state.locks.has('textureSeedValue') ? PRESET_ACTS.frozen : PRESET_ACTS.thawed);
 }
-function paintFreeze(){ const b = $('freezeSeedBtn'); if(b && b.setAttribute) b.setAttribute('aria-pressed', state.locks.has('textureSeedValue') ? 'true' : 'false'); }
+// (its label says which it is: frozen, it reads as the way to thaw — the usability review)
+function paintFreeze(){ const b = $('freezeSeedBtn'), on = state.locks.has('textureSeedValue'); if(!b || !b.setAttribute) return;
+  b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.textContent = on ? PRESET_ACTS.thawLabel : PRESET_ACTS.freezeLabel; }
 for(const [id, act] of [['summonVariationBtn', summonVariation], ['mutateGentlyBtn', mutateGently], ['freezeSeedBtn', freezeSeed]])
   if($(id) && $(id).addEventListener) $(id).addEventListener('click', () => act());
 
@@ -2176,7 +2196,7 @@ function syncTextureTools(resetToDefaults){
   const r5 = $('tint5Row');
   if(r5){
     r5.classList.toggle('tool-hidden', !caps.hue5);
-    if(caps.hue5){ setLabelText($('tint5Label'), caps.hue5.label); $('tint5Label').title = caps.hue5.why; }
+    if(caps.hue5){ setLabelText($('tint5Label'), caps.hue5.label); $('tint5Label').title = fill(HUE5_HINTS[caps.hue5.role] || '{name}', caps.hue5.why); }
     if(resetToDefaults || !caps.hue5) setColorField('textureTint5Hex', caps.hue5 ? caps.hue5.def : '#000000');
   }
   // (a hue the texture doesn't have says so plainly, not the last texture's name)
@@ -2488,14 +2508,13 @@ function installLocks(){
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'lock-btn';
-    btn.title = 'Lock this — Randomize and presets will leave it alone';
+    btn.title = PAGE_SAYS.lock;
     btn.innerHTML = LOCK_GLYPH;
     const paint = ()=>{
       const on = state.locks.has(id);
       btn.classList.toggle('locked', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-      btn.title = on ? 'Locked — Randomize and presets leave this alone'
-                     : 'Lock this against Randomize and presets';
+      btn.title = on ? PAGE_SAYS.locked : PAGE_SAYS.lock;
       // the control itself dims, so a locked setting is obvious at a glance
       if(field && field.classList) field.classList.toggle('field-locked', on);
     };
@@ -2547,6 +2566,52 @@ function headTools(head){
   if(!t){ t = document.createElement('span'); t.className = 'head-tools'; head.insertBefore(t, head.firstChild); }
   return t;
 }
+// THE HINTS, WRITTEN OUT (the usability review: some two hundred hints lived only in title attributes, which a touch
+// screen never shows): ⓘ in a card's heading writes each hint under the control it belongs to, as it reads now
+// (some change with the surface), and takes them away again
+const HINT_SKIP = '.head-tools, .lock-btn, .die-pair, .tip-line, option, .grimoire-row, .chip, .preset-btn, .preset-grid, .filmstrip';
+function writeHints(card){
+  for(const t of card.querySelectorAll('.tip-line')) t.remove();
+  const said = new Map();          // each place's hints so far: a hint said once there is said once
+  for(const el of card.querySelectorAll('[title]')){
+    const text = String(el.title || '').trim(); if(!text || (el.closest && el.closest(HINT_SKIP))) continue;
+    // (a box whose own label has a hint: the label's is the one said)
+    if(el.tagName === 'INPUT' && el.id && card.querySelector(`label[for="${el.id}"][title]`)) continue;
+    const home = (el.tagName === 'LABEL' || el.tagName === 'INPUT' || el.tagName === 'SELECT') ? nearestField(el) : (el.closest && el.closest('.btn-row, .field, .check-row, .row')) || el.parentElement;
+    if(!home) continue;
+    const here = said.get(home) || new Set(); if(here.has(text)) continue; here.add(text); said.set(home, here);
+    // (a button among others is named in its hint; one alone, or a hint shorter than a phrase, needs no more)
+    if(text.length < 8) continue;
+    const name = el.tagName === 'BUTTON' && [...(home.children || [])].filter(c => c.tagName === 'BUTTON' && c.title).length > 1 ? String(el.textContent || el.getAttribute('aria-label') || '').trim() : '';
+    const tip = document.createElement('small'); tip.className = 'tip-line';
+    tip.textContent = name && name.length < 40 ? name + ': ' + text : text;
+    home.appendChild(tip);
+  }
+}
+// a card's hints shown or taken away (opened: its section unfolds too, as ⓘ was pressed to read it)
+function showHints(card, on, unfold){
+  card.classList.toggle('hints-open', on);
+  if(on){ writeHints(card); if(unfold && !card.open) card.open = true; } else for(const t of card.querySelectorAll('.tip-line')) t.remove();
+  const btn = card.querySelector(':scope > summary .hint-btn');
+  if(btn){ btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.title = on ? PAGE_SAYS.hintsHide : PAGE_SAYS.hintsShow; btn.setAttribute('aria-label', btn.title); }
+}
+function addHintsButton(card, head){
+  if(!card || !head || !card.querySelector('[title]')) return;
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'hint-btn'; btn.textContent = 'ⓘ';
+  btn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
+    showHints(card, !card.classList.contains('hints-open'), true);
+  });
+  headTools(head).appendChild(btn); showHints(card, false);
+}
+// THE HINTS SWITCH (Esoterica → Interface; Ruby: smaller, and switchable — "information density is necessary too"):
+// on, every section's hints are written out (and kept current as the page changes); off, only where ⓘ asks.
+// This browser's preference, never part of a look.
+const HINTS_ON = 'uv.hints.on';
+function hintsEverywhere(){ const b = $('hintsToggle'); return !!(b && b.checked); }
+function refreshHints(){ if(typeof document.querySelectorAll !== 'function') return;
+  for(const card of document.querySelectorAll('details.card[data-tab]')) if(card.querySelector(':scope > summary .hint-btn')){
+    if(hintsEverywhere()) showHints(card, true, false); else if(card.classList.contains('hints-open')) writeHints(card); } }
 function addMasterLock(root, head){
   if(!root || !head || !lockablesIn(root).length) return;
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'lock-btn master-lock'; btn.innerHTML = LOCK_GLYPH;
@@ -2692,7 +2757,7 @@ function paintDice(){
   const lv = dieLevel(), phone = !!(document.body && document.body.classList && document.body.classList.contains('is-mobile'));
   for(const d of dieButtons){ d.btn.textContent = DIE_GLYPH[lv];
     d.btn.title = fill(phone ? DIE.titlePhone : d.surface ? DIE.titleSurface : DIE.title, dieWord(lv)); d.btn.setAttribute('aria-label', d.btn.title); d.btn.dataset.level = lv; }
-  for(const id of Object.keys(DIE_SUMMONS)){ const b = $(id); if(b && b.setAttribute){ b.title = fill(DIE.summonTitle, dieWord(lv)); b.dataset.level = lv; } }
+  for(const id of Object.keys(DIE_SUMMONS)){ const b = $(id); if(b && b.setAttribute){ b.title = fill((DIE.summon && DIE.summon[id]) || DIE.summonTitle, dieWord(lv)); b.dataset.level = lv; } }
 }
 // the dice's menu: beside the die on a desk, a sheet from the bottom on a phone (CSS)
 let dieMenu = null;
@@ -2781,6 +2846,7 @@ function installHeadings(){
   }
   for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
   for(const card of document.querySelectorAll('details.card[data-tab]:not([data-tab="more"])')){ addDie(card, card.querySelector(':scope > summary')); addMasterLock(card, card.querySelector(':scope > summary')); }
+  for(const card of document.querySelectorAll('details.card[data-tab]')) addHintsButton(card, card.querySelector(':scope > summary'));
   // a sub-section's lock sits in the row that switches it on (its eye and name)
   for(const sub of document.querySelectorAll('.subblock[id]')){
     const prev = sub.previousElementSibling; if(prev && prev.classList && prev.classList.contains('check-row') && !prev.hidden) addMasterLock(sub, prev);
@@ -3167,6 +3233,10 @@ function syncFrameVisibility(){
   for(const id of ['cardColor2Field','cardTypeField']) show(id, grad);
   show('cardAngleField', grad && ['linear', 'mirror', 'conic'].includes($('cardGradientType').value));
   show('cardRadiusField', $('cardRounded') && $('cardRounded').checked);
+  // Points Outward? only where the stitch has a side to point (a solid line is the same either way); its tick is kept
+  for(const [sel, box] of [['borderStitch', 'borderStitchOut'], ['cardStitch', 'cardStitchOut']]){
+    const b = $(box), on = stitchSided((($(sel) || {}).value) || 'solid');
+    if(b) b.disabled = !on; }
   // the glass's knobs only with glass, and the second named for what it moves
   const glass = ($('cardFx') && $('cardFx').value) || 'none';
   show('cardFxAmountField', glass !== 'none'); show('cardFxScaleField', glass !== 'none' && glass !== 'lens');
@@ -3215,7 +3285,13 @@ function applyAthanorGraph(redraw = true){
     return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}) }; });
   const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
-    caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue')); }
+    caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue'));
+    // THE CAMERA DIAL for a graph whose Camera Dial reaches its Surface (Ruby: it never appeared for one). A graph that
+    // is a menu texture's chain, by name, starts where that texture's camera starts; its wireframe guide only where it
+    // is a plane's (a ring's or an ellipse's guide reads the texture's own sliders)
+    if(athanorCamera(g)){ const from = Object.keys(TEXTURE_CHAINS).find(t => TEXTURE_CHAINS[t].label === name && (TEXTURE_CAPS[t] || {}).camera), c = from ? TEXTURE_CAPS[from].camera : {};
+      caps.camera = { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100, guide: !from || c.guide === 'plane' ? 'plane' : null }; }
+    else delete caps.camera; }
   if($('athanorOption')) $('athanorOption').textContent = athanorTitleOf(g);
   if(redraw && $('textureType') && $('textureType').value === 'athanor'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
 }
@@ -3227,7 +3303,8 @@ function athanorOpts(json, n){
   return { graph: json, seed: parseInt(($('textureSeedValue') || {}).value, 10) || 0, scale: n/3072, light: k('textureLight', 315), lightTilt: k('textureLightTilt', 100), camera: cameraNow(),
     tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
-    env: graphUsesBackdrop(json) ? pageEnvNow() : undefined };   // (the page's backdrop, for a graph with a Page Backdrop)
+    env: graphUsesBackdrop(json) ? pageEnvNow() : undefined,   // (the page's backdrop, for a graph with a Page Backdrop)
+    box: graphUsesBox(json) ? boxNow() : undefined };   // (the inset box's place, for a graph that reads it)
 }
 /** A texture made in the worker, handed to `done` when it is ready (the newest wish per slot wins). */
 const workerWish = new Map();
@@ -3366,10 +3443,13 @@ function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') |
 if($('revealSurfaceBtn') && $('revealSurfaceBtn').addEventListener) $('revealSurfaceBtn').addEventListener('click', () => { revealSurface(); });
 $('textureType').addEventListener('change', paintReveal);
 if($('athanorTopBtn') && $('athanorTopBtn').addEventListener) $('athanorTopBtn').addEventListener('click', () => openAthanorNow());
-// Done: closed; a graph changed here that the page doesn't show is offered to it (Ruby: Use was redundant)
-if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', () => {
+// Done: closed; a graph changed here that the page doesn't show is offered to it (Ruby: Use was redundant), and
+// asked outright: a toast was easy to miss, and the page looked as though the edit had been lost (the usability review)
+if($('forgeCloseBtn') && $('forgeCloseBtn').addEventListener) $('forgeCloseBtn').addEventListener('click', async () => {
   const d = forgeDeps(), changed = closeForge(d); paintForgeSummary();
-  if(changed && !d.onPage()) toast(FORGE_BAR.notOnPage, { label: FORGE_BAR.showIt, act: () => d.use() }); });
+  if(!changed || d.onPage()) return;
+  murmur.play('confirm');
+  if((await modalPrompt({ title: FORGE_BAR.applyAskTitle, body: FORGE_BAR.applyAskBody, confirmLabel: FORGE_BAR.applyAskYes, cancelLabel: FORGE_BAR.applyAskNo, danger: false })) === true) d.use(); });
 setTimeout(() => { paintForgeSummary(); applyAthanorGraph(true); }, 0);
 
 // ---------- LINKED CONTROLS ----------
@@ -3514,6 +3594,12 @@ const SOUND_ON = 'uv.sound.on', SOUND_VOL = 'uv.sound.volume';
   if(document.addEventListener) murmur.bind(document);
 }
 
+{ const box = $('hintsToggle');
+  if(box){ try { box.checked = localStorage.getItem(HINTS_ON) === '1'; } catch(e){}
+    if(box.addEventListener) box.addEventListener('change', () => { try { localStorage.setItem(HINTS_ON, box.checked ? '1' : '0'); } catch(e){}
+      if(typeof document.querySelectorAll === 'function') for(const card of document.querySelectorAll('details.card[data-tab]')) if(card.querySelector(':scope > summary .hint-btn')) showHints(card, box.checked, false); });
+    if(box.checked) setTimeout(refreshHints, 0); } }
+
 // installable, and usable offline once visited (on https only)
 registerServiceWorker();
 
@@ -3577,6 +3663,8 @@ function toast(text, action){
   let t = document.getElementById && document.getElementById('toast');
   if(!t && document.createElement && document.body){ t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
   if(!t) return;
+  // (a tap anywhere on it but its button puts it away: on a phone it sits over the tabs — the usability review)
+  if(!t._tap && t.addEventListener){ t._tap = true; t.addEventListener('click', e => { if(!(e.target && e.target.closest && e.target.closest('.toast-act'))){ t.hidden = true; clearTimeout(toastTimer); } }); }
   t.textContent = text; t.hidden = false; clearTimeout(toastTimer);
   // a toast may carry one action (Copy alt text): it then stays a little longer
   if(action && document.createElement){ const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-act'; b.textContent = action.label;
@@ -3802,7 +3890,7 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(remeasureAn
 // a copy generated before the symbol font arrived — it would be empty boxes.
 if(document.fonts && document.fonts.load){
   document.fonts.load('32px "Noto Sans Symbols"', '\u{1F701}')
-    .then(()=>{ clearTexturesOfTypes(['summoning', 'cards']); scheduleRender(); }).catch(()=>{});   // only the two that draw symbols
+    .then(()=>{ clearTexturesOfTypes(['summoning', 'cards', ...(graphScattersGlyphs(($('forgeGraph') || {}).value || '') ? ['athanor', 'athanorsteps'] : [])]); scheduleRender(); }).catch(()=>{});   // only those that draw symbols
 }
 // Re-measure when a font actually ARRIVES (the browser says so), coalescing a
 // burst into one — rather than on blind timers that re-fit even when nothing
@@ -3820,9 +3908,9 @@ if(document.fonts && document.fonts.addEventListener){
 const HISTORY_MAX = 60;
 function lookSnapshot(){ return JSON.stringify(stripToLook(serializeCurrentSettings())); }
 function paintHistoryButtons(){
-  const h = state.history;
-  if($('undoBtn')) $('undoBtn').disabled = h.index <= 0;
-  if($('redoBtn')) $('redoBtn').disabled = h.index >= h.stack.length - 1;
+  const h = state.history, p = state.poemHist || { index: 0, stack: [] }, poemLast = state.ui.lastEdit === 'poem';
+  if($('undoBtn')) $('undoBtn').disabled = h.index <= 0 && !(poemLast && p.index > 0);
+  if($('redoBtn')) $('redoBtn').disabled = h.index >= h.stack.length - 1 && !(poemLast && p.index < p.stack.length - 1);
   paintFilmstrip();
 }
 
@@ -3884,6 +3972,7 @@ function commitHistory(){
   if(h.stack.length > HISTORY_MAX) h.stack.shift();
   h.index = h.stack.length - 1;
   state.ui.edits = (state.ui.edits || 0) + 1;
+  state.ui.lastEdit = 'look';
   paintHistoryButtons();
   checkLitPreset();
 }
@@ -3897,8 +3986,40 @@ function stepHistory(dir){
   try { restoreSettings(JSON.parse(h.stack[to])); } finally { h.restoring = false; }
   refreshUi(); scheduleRender(); paintHistoryButtons(); checkLitPreset();
 }
-if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepHistory(-1));
-if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepHistory(1));
+// THE POEM'S OWN HISTORY (the usability review: on a phone nothing undid a cleared poem — Android's keyboards have no
+// undo): the text kept a moment after typing stops (at once when much of it vanishes), and ☋ ☊ step it while the poem
+// is what was last changed; once it is back at its start, ☋ goes on through the look's history
+const POEM_MAX = 80;
+function poemHistoryNow(){ const h = state.poemHist || (state.poemHist = { stack: [], index: -1, timer: null, restoring: false }); return h; }
+function notePoem(){
+  const h = poemHistoryNow(), t = $('poemText') ? $('poemText').value : ''; if(h.restoring) return;
+  clearTimeout(h.timer); if(h.stack[h.index] === t) return;
+  h.stack = h.stack.slice(0, h.index + 1); h.stack.push(t); if(h.stack.length > POEM_MAX) h.stack.shift(); h.index = h.stack.length - 1;
+  if(h.stack.length > 1) state.ui.lastEdit = 'poem';
+  paintHistoryButtons();
+}
+function notePoemSoon(){ const h = poemHistoryNow(), t = $('poemText') ? $('poemText').value : '', was = h.stack[h.index] || '';
+  clearTimeout(h.timer);
+  // (a big cut is kept at once, so one ☋ brings it all back)
+  if(was.length > 40 && t.length < was.length*0.5){ notePoemFirst(was); notePoem(); toast(PAGE_SAYS.poemCut, { label: PAGE_SAYS.undo, act: () => stepPoem(-1) }); return; }
+  h.timer = setTimeout(notePoem, 700); }
+// (the text as it was before a change, if it was never kept: the first keystroke after a pause)
+function notePoemFirst(t){ const h = poemHistoryNow(); if(h.stack[h.index] !== t){ h.stack = h.stack.slice(0, h.index + 1); h.stack.push(t); h.index = h.stack.length - 1; } }
+function stepPoem(dir){
+  const h = poemHistoryNow(); clearTimeout(h.timer); notePoem();
+  const to = h.index + dir; if(to < 0 || to >= h.stack.length) return false;
+  h.index = to; h.restoring = true;
+  try { $('poemText').value = h.stack[to]; repaintEditor(); scheduleRender(); } finally { h.restoring = false; }
+  murmur.play(dir < 0 ? 'undo' : 'redo'); paintHistoryButtons(); return true;
+}
+function stepAny(dir){
+  const p = poemHistoryNow();
+  if(state.ui.lastEdit === 'poem' && ((dir < 0 && p.index > 0) || (dir > 0 && p.index < p.stack.length - 1))){ stepPoem(dir); return; }
+  stepHistory(dir);
+}
+if($('undoBtn')) $('undoBtn').addEventListener('click', ()=>stepAny(-1));
+if($('redoBtn')) $('redoBtn').addEventListener('click', ()=>stepAny(1));
+setTimeout(() => { const h = poemHistoryNow(); if(!h.stack.length && $('poemText')) { h.stack = [$('poemText').value]; h.index = 0; } }, 0);
 // any change in the controls — typed, dragged, picked, or a button that
 // rewrites many at once (presets, randomize, spells) — records a step
 const NOT_A_LOOK = new Set(['poemText', 'usernameField', 'advancedJson', 'forgeGraph']);   // (the Athanor keeps its own edits)
@@ -3924,8 +4045,8 @@ document.addEventListener('keydown', (e)=>{
   if(tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || (ae && ae.isContentEditable)) return;
   const k = (e.key || '').toLowerCase();
   if(e.ctrlKey || e.metaKey){
-    if(k === 'z'){ e.preventDefault(); stepHistory(e.shiftKey ? 1 : -1); }
-    else if(k === 'y'){ e.preventDefault(); stepHistory(1); }
+    if(k === 'z'){ e.preventDefault(); stepAny(e.shiftKey ? 1 : -1); }
+    else if(k === 'y'){ e.preventDefault(); stepAny(1); }
     else if(k === 's'){ e.preventDefault(); clickId('downloadBtn'); }
     return;
   }

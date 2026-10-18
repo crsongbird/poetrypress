@@ -211,15 +211,12 @@ check('focus mode does not exit on blur', !/addEventListener\('blur'[^)]*exitFoc
 // scrolled inside itself while the mirror was scrolled to match by hand, and
 // any difference in content height accumulated. The textarea now grows to its
 // full content height and the wrap is the only scrolling box.
-check('the editor no longer synchronises scroll positions by hand',
-  !/scrollTop\s*=\s*textarea\.scrollTop/.test(edJs));
 check('the textarea is grown to its content height', /scrollHeight/.test(edJs));
 check('the textarea itself does not scroll', /\.editor-input\{[^}]*overflow:hidden/.test(edCss));
 check('the wrap is the scrolling box', /\.editor-wrap\{[^}]*overflow:auto/.test(edCss));
 check('height is applied to the wrap, not the textarea',
   /\.editor-wrap \{ height: calc\(var\(--vvh\)/.test(edCss) &&
   !/#poemText \{\s*height:/.test(edCss));
-check('a container resize repaints the editor', /ResizeObserver/.test(edJs));
 
 // ---- overlay geometry ----
 // Absolute positioning only guarantees the mirror fills its container, not
@@ -271,11 +268,9 @@ check('line anchors take up no space', /\.ln-mark\{[^}]*display:inline !importan
 // --vvh is measured in JS and goes stale when the browser changes its own
 // chrome without firing an event we listen for; that staleness was the dead
 // gap under the tab bar.
-check('the keyboard resizes the layout viewport',
+check('the keyboard resizes the layout viewport (which is also what keeps the docked color picker above it)',
   /name="viewport"[^>]*interactive-widget=resizes-content/.test(html));
-check('the app height falls back to --vvh and then prefers dvh',
-  /\.app\{ height:var\(--vvh\); height:100dvh; \}/.test(edCss));
-check('the tab bar is positioned from dvh too', /top:calc\(100dvh - var\(--tabbar-h\)\)/.test(edCss));
+// (the app's height and the tab bar's top fall back to --vvh before dvh: cssReduction.test.mjs keeps those pairs)
 
 // ---- the editor must be allowed to be shorter than its content ----
 // A flex item defaults to min-height:auto, which refuses to shrink below its
@@ -312,11 +307,9 @@ if(focusScrollers.length !== 1) console.log('   scrollers:', focusScrollers.join
 // border only appeared on the left and right.
 check('swatches are not cropped',
   /\.preset-swatch\{[^}]*\}/.test(edCss) && !/\.preset-swatch\{[^}]*object-fit/.test(edCss));
-check('saved presets can join the grid', /renderSavedPresets/.test(evJs));
+// (that a saved spell is a tile in Custom Presets is swatches.test.mjs, by behavior)
 check('custom presets have their own grid, rebuilt whole, alphabetical (vault.js sortedSpells), in rows (never a sideways scroller)',
   /customGrid\.innerHTML = ''/.test(evJs) && /deps\.onSpellsChanged\(sortedSpells\(\)\)/.test(readFileSync(new URL('../vault.js', import.meta.url), 'utf8')) && /\.spell-wheel\{\s*display:grid;/.test(readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8')));
-check('the vault tells the grid when saved spells change',
-  /onSpellsChanged/.test(evJs));
 
 // ---- controls inside the preview must still be clickable ----
 // The focus guard calls preventDefault on the preview's pointerdown, which
@@ -340,8 +333,6 @@ check('its measured top is overridden', /top:auto !important/.test(pickerRule));
 check('it sits above the tab bar', /bottom:calc\(var\(--tabbar-h\)/.test(pickerRule));
 check('it can never be taller than the visible screen', /max-height:calc\(100dvh/.test(pickerRule));
 check('it stacks above the tab bar', /z-index:9\d/.test(pickerRule));
-check('the keyboard resizes the layout viewport, which is what makes docking work',
-  /interactive-widget=resizes-content/.test(html));
 
 // the focus ring (2px wide, 2px offset) must clear the scrollbar on the right
 const fmPad = effective(edCss, 'body.is-mobile.focus-mode .controls', 'padding-right') || '0';

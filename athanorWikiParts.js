@@ -15,7 +15,7 @@
 export const WIKI_PARTS = {
   // ================= INPUTS: values from the page =================
   knob: {
-    line: 'Puts one of the page’s eight surface sliders into the graph as a number, so a setting here can be moved from the page.',
+    line: 'One of the 8 surface sliders on the page, as a number: wire it into a setting to move that setting from the page.',
     about: 'A Knob is how a graph gets controls. When your surface is used on the page, the eight sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts. Its Kind decides what the slider is: a plain slider; Steps, a few marks it locks to (Filter Forge’s IntSlider), named or numbered; an Angle, read in degrees and marked every 45°; or a Switch, off or on. The Surface’s menu has Order of the sliders, to move them.',
     outs: { value: 'The slider’s position as a number from 0 (far left) to 1 (far right); for Steps, only its marks; for a Switch, 0 or 1. Wire it into a setting’s ⚙ port.' },
     set: { slot: 'Which of the eight sliders this Knob is. Two Knobs on the same slider move together.', name: 'The label the slider shows on the page.', def: 'Where the slider sits when the surface is first chosen (0–100).',
@@ -38,7 +38,7 @@ export const WIKI_PARTS = {
     see: ['blendmodes', 'masks'],
   },
   camdial: {
-    line: 'Brings the page’s camera dial into the graph: where the camera turns, how low it looks, and its zoom.',
+    line: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
     about: 'The camera dial sits beside the light dial for a surface that has a camera (Ruby: so the light dial is the light’s alone). Its handle is where the camera stands: round the dial, its turn; drawn out from the middle, how low it looks. Its ＋ and − (or a wheel, or a pinch) zoom. Wire Turn, View and Zoom into the same settings of every part that sees the scene (Wood, Ground Coordinates and Discharge all take them), so the whole picture moves as one camera.',
     outs: { turn: 'The turn as a number: 0 at the top of the dial, going clockwise round to 1.', view: 'How low the camera looks: 0 at the dial’s middle, 1 at its rim.', zoom: 'The zoom: 0 at 25%, 1 at 400% (give the setting it drives the range 25–400).' },
     tips: ['Wire all three into Wood, Ground Coordinates and Discharge, with their ranges set to 0–360, 0–100 and 25–400.'],
@@ -120,7 +120,13 @@ export const WIKI_PARTS = {
   group: {
     line: 'Several parts made one, with a graph of their own inside (Open shows it). Each Group Input and Knob inside is one of its inputs, and each result wired to the Group Result inside is one of its outputs.',
     about: 'A Group keeps a piece of a graph together under one name, so a large graph reads as a few big steps. Choose parts and make them a group from a part’s menu; open it to change what is inside, close it to come back, or Ungroup it to take the parts back out. A group draws exactly what its parts drew loose, and counts every part inside it toward the limit.',
-    set: { name: 'The group’s name, shown on its face.' },
+    set: { name: 'The group’s name, shown on its face.', repeats: 'Above 1, the group is a loop: it runs that many times, its first result fed back into its first input each time.' },
+    see: ['groups'],
+  },
+  loopiter: {
+    line: 'Inside a group that repeats: which pass this is, from 0 on the first to 1 on the last (0 when the group runs once).',
+    about: 'A group with Repeats above 1 runs its insides again and again. Iteration tells each pass where it is in the run, so a setting can change from pass to pass: wire it into a ⚙ to make each pass a little bigger, darker or more turned than the last.',
+    outs: { iteration: 'The pass, 0 to 1.' },
     see: ['groups'],
   },
   groupin: {
@@ -206,8 +212,16 @@ export const WIKI_PARTS = {
     about: 'Border Mask makes it easy to keep an effect to the margins (frost, burns, aging) or away from them. A gray map in Roughen breaks up its inner edge so it creeps in unevenly.',
     ins: { roughen: 'A gray map (noise) that makes the inner edge ragged.' },
     outs: { frame: 'The frame mask.' },
-    set: { shape: 'Square, rounded or oval.', width: 'How far the frame reaches in from the edge.', soft: 'How gradually it fades.', rough: 'How strongly Roughen breaks up the edge.' },
-    see: ['masks'],
+    set: { shape: 'Square, rounded or oval from the page’s edges; or Inset Box, from the page’s inset box (its offset and corners), so the frame fills what lies outside the box.', width: 'How far the frame reaches in from the edge.', soft: 'How gradually it fades.', rough: 'How strongly Roughen breaks up the edge.' },
+    see: ['masks', 'part:insetbox'],
+  },
+  insetbox: {
+    line: 'The page’s inset box as masks: white inside it, a rise in from its edge, and its line. With the box off, the page’s own edges.',
+    about: 'Inset Box brings the box you set in Materia into the graph, so a surface can know where the box is: light only inside it, a glow along its edge, a stitch along its line. It follows the box’s offset, thickness and rounded corners as you change them.',
+    outs: { inside: 'White inside the box, black outside.', edge: 'Inside the box, rising from 0 at its edge to 1 an Edge Width in: a bevel, or a fade.', line: 'The box’s line itself, as wide as its thickness.' },
+    set: { width: 'How far in the Edge output rises.', soft: 'Softens the Inside mask’s edge.' },
+    tips: ['Inside as the mask of a Blend: a texture only inside the box.', 'Edge into the Light Engine’s height: the box’s inside raised like a tray.'],
+    see: ['part:border', 'masks', 'poem'],
   },
   spectrum: {
     line: 'A rainbow: every hue in turn, across the page, from the center, around it, or along any gray map.',
@@ -249,6 +263,14 @@ export const WIKI_PARTS = {
     set: { scale: 'How many cells fit across the page at the largest size.', octaves: 'How many sizes, each half the last.', fill: 'How many rectangles each size lays.', line: 'The width of the outlines.', variation: 'Other rectangles.' },
     tips: ['Outlines into the Light Engine’s height at a low Relief: an engraved circuit plate.', 'Blocks into a Posterize at 4 steps: a city map.'],
     see: ['part:traces', 'part:bricks', 'part:pixelate'],
+  },
+  pavement: {
+    line: 'Paving stones laid in rows, each row its own height and each stone its own width, a little out of true, with joints between: for paths, walls and flagstones.',
+    about: 'Pavements lays stones the way a path is laid: in rows across the page, each row a little taller or shorter than the last, each stone a little wider or narrower, its corners pushed off square by Irregularity. The joints between them are Joint Width wide, and Roundness wears the corners. Its Bevel output rises from 0 at each stone’s edge to 1 a Bevel Width in, ready for the Light Engine as heights.',
+    outs: { stones: 'The stones, white, on black joints.', bevel: 'Each stone rising from its edge: heights for lighting.', 'each stone': 'A different gray per stone, to color or vary them.' },
+    set: { rows: 'How many rows fit down the page.', irreg: 'How far rows, stones and corners stray from regular.', gap: 'The width of the joints.', round: 'How worn round the corners are.', bevel: 'How far in from the edge the bevel rises.', angle: 'Turns the whole pavement.', variation: 'Other stones.' },
+    tips: ['Bevel into the Light Engine’s height, Each Stone through a Gradient Map into its picture: a lit flagstone path.', 'Rows at 3 and Irregularity at 90: crazy paving.'],
+    see: ['part:bricks', 'part:cells', 'heights'],
   },
   pyramids: {
     line: 'A grid of pyramids, cones or domes, each of its own height, at one or more sizes: heights for studs, rivets and tiles.',
@@ -460,6 +482,23 @@ export const WIKI_PARTS = {
     tips: ['Blur a height map a little before lighting it: edges become rounded instead of stepped.', 'Wire a Gradient into Radius’s ⚙ for a focus fall-off: sharp on one side of the page, soft on the other.'],
     see: ['part:motionblur', 'mapping'],
   },
+  smudge: {
+    line: 'Smears the picture one way, as a finger drags wet paint: each point takes on what lies behind it along the stroke.',
+    about: 'Smudge drags color along a direction. Unlike Motion Blur, which smears both ways evenly, a smudge carries what is behind each point forward, the nearest most strongly, so edges trail off in one direction. A map in Which Way gives each point its own direction (0 to 1 around the circle), so a smudge can follow a flow. Length and Strength take a map point by point.',
+    ins: { picture: 'The picture to smudge.', 'which way': 'Each point’s direction, around the circle: overrides Direction.' },
+    outs: { picture: 'The smudged picture.' },
+    set: { angle: 'Which way the smear runs.', length: 'How far each point reaches back.', strength: 'How much of the smear replaces the picture.', trail: 'How long the smear lingers: low, a short drag; high, a long fading trail.' },
+    tips: ['A Perlin Noise in Which Way: paint stirred in swirls.', 'Length by a Gradient: a smear that grows across the page.'],
+    see: ['part:motionblur', 'mapping'],
+  },
+  multiblend: {
+    line: 'Lays up to four layers over a base at once, in one blend mode, each at its own strength.',
+    about: 'Multiblend is four Blends in one part: each layer is laid over what lies beneath it in turn, all in the same mode, each at its own opacity. A map on a layer’s ⚙ sets its strength point by point, so it works as that layer’s mask.',
+    ins: { base: 'What the layers are laid over.', 'layer 1': 'The first layer, nearest the base.', 'layer 2': 'The second.', 'layer 3': 'The third.', 'layer 4': 'The fourth, on top.' },
+    outs: { picture: 'The layers combined.' },
+    set: { mode: 'The blend mode for every layer.', op1: 'Layer 1’s strength (a map: its mask).', op2: 'Layer 2’s strength.', op3: 'Layer 3’s strength.', op4: 'Layer 4’s strength.' },
+    see: ['part:blend', 'blendmodes', 'masks'],
+  },
   motionblur: {
     line: 'Smears a gray map along one direction, like a moving camera.',
     ins: { field: 'The gray map.' },
@@ -643,7 +682,7 @@ export const WIKI_PARTS = {
     line: 'Changes a curve, or combines two: repeat, shift, flip, scale, blend, multiply.',
     ins: { curve: 'The curve to change.', 'curve b': 'A second curve, for operations that combine two.' },
     outs: { curve: 'The result.' },
-    set: { op: 'The operation.', amount: 'How strong it is.', count: 'Repeats.' },
+    set: { op: 'The operation. Transition crosses from the first curve on the left to the second on the right, over a width set by Amount; Fade eases the curve to nothing at both ends.', amount: 'How strong it is.', count: 'Repeats.' },
   },
   tonecurve: {
     line: 'Runs every value of a picture through a curve, like Curves in a photo editor.',
@@ -749,11 +788,13 @@ export const WIKI_PARTS = {
 
   // ================= MARKS: drawing over what comes in =================
   scatter: {
-    line: 'Scatters copies of a mark across the page (dots, stars, sigils, or any picture), each with its own size, turn and brightness.',
-    about: 'Scatter (Filter Forge calls this a bomber) places many copies of a small mark. A map in Where decides where they may land, and a map in Which Way turns them all to follow it, like iron filings.',
-    ins: { picture: 'A picture to use as the mark (Shape: picture).', where: 'Where marks may fall: they land only on light areas.', 'which way': 'Turns each mark to the map’s value at that point.' },
-    outs: { marks: 'All the marks, white on black.', heights: 'The marks as heights.', 'each mark': 'A different gray per mark.' },
-    set: { shape: 'The mark.', count: 'How many.', size: 'Their size (a map on its ⚙: each mark sized by the map where it lands).', vary: 'How much sizes differ.', turn: 'How randomly each is rotated.', clump: 'Gathers them into clusters.', fade: 'How much their brightness varies.', variation: 'Another arrangement.' },
+    line: 'Scatters copies of a mark across the page (dots, stars, sigils, glyphs or any picture), each with its own size, turn, brightness and, if you like, color.',
+    about: 'Scatter (Filter Forge calls this a bomber) places many copies of a small mark. A map in Where decides where they may land, and a map in Which Way turns them all to follow it, like iron filings. The Glyph shape throws symbols from Symbology’s sets (alchemy, the heavens, the zodiac, occult signs, runes, stars) in the app’s symbol fonts. On Top decides which mark covers which where they overlap, and Mark Colors can take each mark’s color from the picture where it lands.',
+    ins: { picture: 'A picture to use as the mark (Shape: picture), or to color the marks from (Mark Colors: from the picture).', where: 'Where marks may fall: they land only on light areas.', 'which way': 'Turns each mark to the map’s value at that point.' },
+    outs: { marks: 'All the marks, white on black.', heights: 'The marks as heights.', 'each mark': 'A different gray per mark.', 'in color': 'The marks in their colors, on black: the picture’s color where each lands, or the stamped picture itself.' },
+    set: { shape: 'The mark.', count: 'How many.', size: 'Their size (a map on its ⚙: each mark sized by the map where it lands).', vary: 'How much sizes differ.', turn: 'How randomly each is rotated.', clump: 'Gathers them into clusters.', fade: 'How much their brightness varies.', variation: 'Another arrangement.',
+      glyphs: 'Which symbols the Glyph shape throws.', layers: 'Where marks overlap: the brightest shows, or the last thrown, the largest or the smallest lies on top.', color: 'White marks, or each in the picture’s color where it lands (the In Color output).' },
+    tips: ['Shape: glyph, Glyphs: alchemy, Mark Colors: from the picture with a Spectrum in Picture: a rain of colored sigils.', 'On Top: largest, with Size Variety high: big marks cover the small, like leaves.'],
     see: ['mapping', 'masks'],
   },
   screen: {
@@ -992,7 +1033,7 @@ export const WIKI_PARTS = {
     tips: ["Clouds at 0 and Night Sky at 100 for a clear night."],
     see: ["part:starfield", "seeds"],
   },
-  // ---- the older textures, each one part (drawn exactly as its menu entry draws it, at Variant 0)
+  // ---- the older textures, each one part (drawn exactly as its menu entry draws it, at Variation 0)
   coldpress: {
     line: "Watercolor paper’s tooth: rounded hills and hollows pressed in by felt, with fine fibers, lit by the dial.",
     about: "Watercolor paper is pressed between felts, and the felt leaves its texture behind: soft rounded hills and hollows over a gentle larger swell. These are heights, so a low light fills the hollows with shadow. The paper’s fibers are far too fine to cast shadows but still catch the light, so they are a detail normal map: they shade without shadowing. Press runs from hot press (smooth and fine) through cold press to rough (big, deep tooth).",
@@ -1328,8 +1369,8 @@ export const WIKI_PARTS = {
   },
   surface: {
     line: 'The end of every graph: whatever reaches it is the texture. One per graph.',
-    about: 'The Surface is where a graph comes out. Its Image input is the texture; its Height input (optional) is lit by the page’s dial so the texture looks raised.',
-    ins: { image: 'The texture.', height: 'Optional heights, lit by the dial.' },
+    about: 'The Surface is where a graph comes out. Its Image input is the texture; its Height input (optional) is lit by the page’s dial so the texture looks raised. Four more inputs make it a material: how much it reflects, how blurred the reflection is, how metallic it is, and where it glows. Each is a gray map, so one surface can be part polished metal and part matte stone. Leave them unwired and the Surface draws as it always has.',
+    ins: { image: 'The texture.', height: 'Optional heights, lit by the dial.', reflectivity: 'How strongly it reflects the light (white: a strong highlight; black: hardly any). Unwired: 0.6.', 'reflection blur': 'How soft the highlight is: black, a sharp mirror glint; white, a broad sheen.', metallic: 'Where it is metal: little diffuse light, and a highlight in its own color, as gold or copper shines.', emission: 'Where it glows with its own color, whatever the light.' },
     set: { name: 'The surface’s name, shown on the page and used when you keep it.', ground: 'Gray: the page tints and blends it with its hues. Color: shown in its own colors.', size: 'Scales every distance in the graph.' },
     see: ['surface'],
   },

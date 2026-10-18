@@ -30,9 +30,10 @@
  */
 
 import { generateSpell, validateSpell } from './spell.js';
-import { DIALOGS, fill } from './strings.js';
+import { DIALOGS, PAGE_SAYS, fill } from './strings.js';
 import { moonPhase, moonGlyph, phaseName } from './moon.js';
 import { SHARE_HOME } from './tunables.js';
+import { buildLines } from './textParsers.js';
 
 export const SPELL_KEY = 'uv.spells.v1';
 export const POEM_KEY  = 'uv.poems.v1';
@@ -105,11 +106,15 @@ export const poemKeyOf  = r => String(r.title).trim().toLowerCase() + '\u0000' +
 export function poemTitleFrom(text, fallback){
   const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
   const heading = lines.find(l => l.startsWith('## '));
-  let base = heading ? heading.slice(3) : (lines[0] || '');
-  base = base.replace(/<[^>]*>/g, ' ')          // strip segment directives
-             .replace(/[*_~\[\]{}#>]/g, ' ')    // strip inline markers
-             .replace(/\s+/g, ' ')
-             .trim();
+  // THE WORDS AS THE PAGE SHOWS THEM (the usability review: "## *ANYWAY*/c" titled "ANYWAY /c", "<world/glow>" lost
+  // its word): the line read by the PML parser, its segments' text kept, its marks and directives gone, §Variables
+  // left out (a title has no page to resolve them), and no space left before punctuation
+  const src = (heading || lines[0] || '').replace(/§[A-Za-z]+(?:![\w-]+|:-?\d*\.?\d+)?/g, '');
+  let base;
+  try { const L = buildLines(src, true, true)[0] || {};
+    base = (L.parts || [{ segments: L.segments || [] }]).map(p => (p.segments || []).map(s => s.text || '').join('')).join(' '); }
+  catch(e){ base = src.replace(/<[^>]*>/g, ' ').replace(/[*_~\[\]{}#>]/g, ' '); }
+  base = base.replace(/\s+/g, ' ').replace(/\s+([?!.,;:)])/g, '$1').replace(/([(])\s+/g, '$1').trim();
   if(!base) return fallback || 'Untitled';
   const words = base.split(' ').slice(0, 7).join(' ');
   return words.length > 60 ? words.slice(0, 60).trim() : words;
@@ -326,6 +331,7 @@ export function createVault(deps){
         row.className = 'grimoire-row' + (p.id === selectedPoem ? ' selected' : '');
         row.setAttribute('role', 'option');
         row.setAttribute('aria-selected', p.id === selectedPoem ? 'true' : 'false');
+        row.tabIndex = 0;   // reached by Tab, chosen by Enter or Space
         row.dataset.id = p.id;
         const phase = moonPhase(new Date(poemTime(p)));
         row.title = phaseName(phase);
@@ -340,6 +346,9 @@ export function createVault(deps){
     setDisabled('poemApplyBtn', !selectedPoem);
     setDisabled('poemDeleteBtn', !selectedPoem);
     setDisabled('poemSaveBtn', !poemIsDirty());
+    // a Record that can't be pressed says why (the usability review: it went gray without a word)
+    const rec = el('poemSaveBtn');
+    if(rec){ if(rec._title == null) rec._title = rec.title || ''; rec.title = rec.disabled && String(getText() || '').trim() ? PAGE_SAYS.recorded : rec._title; }
   }
 
   function refresh(){
@@ -439,10 +448,11 @@ export function createVault(deps){
       confirmLabel: DIALOGS.poemSave.confirm, cancelLabel: DIALOGS.poemSave.cancel,
     });
     if(!ok) return;
-    poems.push({ id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-                 title, text, savedAt: stamp(), savedTs: Date.now() });
+    const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    poems.push({ id, title, text, savedAt: stamp(), savedTs: Date.now() });
     if(!persistPoems()) return;
     appliedPoemText = text;
+    selectedPoem = id;   // the new entry chosen, as Create chooses a new spell (the usability review)
     refresh();
   }
 
@@ -573,6 +583,16 @@ export function createVault(deps){
       if(!row) return;
       selectedPoem = row.dataset.id || null;
       renderPoems();
+    });
+    list.addEventListener('keydown', (e)=>{
+      if(e.key !== 'Enter' && e.key !== ' ') return;
+      const row = e.target && e.target.closest ? e.target.closest('.grimoire-row') : null;
+      if(!row) return;
+      e.preventDefault();
+      selectedPoem = row.dataset.id || null;
+      renderPoems();
+      const again = list.querySelector && list.querySelector('.grimoire-row.selected');
+      if(again && again.focus) again.focus();
     });
   }
 

@@ -101,7 +101,9 @@ const STEP_PARTS = {
   ramp:     { cat: 'Light & Color', label: 'Color Ramp', ins: ['field', 'color a', 'color b'], outs: ['image'], params: [STEP_R('mid', 'Midpoint', 50)] },
   blend:    { cat: 'Combine', label: 'Blend', ins: ['base', 'layer', 'mask'], outs: ['image'], params: [STEP_SEL('mode', 'Mode', STEP_BLENDS), STEP_R('opacity', 'Opacity', 100)] },
   // the end
-  surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour']),
+  // (A LIT SURFACE, ROADMAP B1: beside picture and height, maps for how it reflects, how blurred its reflection, how
+  // metallic it is and where it glows; with none of them wired it draws exactly as it always has)
+  surface:  { cat: 'Output', label: 'Surface', ins: ['image', 'height', 'reflectivity', 'reflection blur', 'metallic', 'emission'], outs: [], params: [['name', 'Name', 'text', 'My Surface'], STEP_SEL('ground', 'Ground', ['grey', 'colour']),
               // Filter Forge's SIZE: every distance in the graph is measured against it, so one slider scales the whole surface
               STEP_R('size', 'Size', 100, 25, 400)] },
   // a NOTE on the graph (Filter Forge's Note component): words for whoever opens it next; it makes nothing
@@ -127,7 +129,11 @@ const STEP_PARTS = {
   // GROUPS (Filter Forge's groups, ROADMAP A3): a Group carries a graph of its own (one of the editor's modules), and is
   // made into its parts before the graph is walked (athanor.js athanorFlat), so nothing runs as a group. Its ports are
   // its insides': each Group Input and Knob inside is an input, each result wired to its Group Result an output.
-  group:    { cat: 'Combine', label: 'Group', ins: [], outs: [], params: [['name', 'Name', 'text', 'Group']], hidden: true },
+  group:    { cat: 'Combine', label: 'Group', ins: [], outs: [], params: [['name', 'Name', 'text', 'Group'],
+              // A LOOP (ROADMAP A4, Filter Forge's Loop): Repeats above 1 makes the group run again and again, its first
+              // result fed back into its first input each time (Accumulated); an Iteration inside counts the passes
+              [...STEP_R('repeats', 'Repeats', 1, 1, 16)]], hidden: true },
+  loopiter: { cat: 'Inputs', label: 'Iteration', ins: [], outs: ['iteration'], params: [] },
   groupin:  { cat: 'Inputs', label: 'Group Input', ins: [], outs: ['input'], params: [['name', 'Name', 'text', 'Input'], STEP_R('def', 'Default', 50)] },
   groupout: { cat: 'Output', label: 'Group Result', ins: ['result', 'result 2', 'result 3', 'result 4'], outs: [], params: [], hidden: true },
   random:   { cat: 'Inputs', label: 'Random Number', ins: [], outs: ['value'], params: [STEP_R('lo', 'Lowest', 0), STEP_R('hi', 'Highest', 100)] },
@@ -139,12 +145,17 @@ const STEP_PARTS = {
   split:    { cat: 'Combine', label: 'Split Channels', ins: ['picture'], outs: ['red', 'green', 'blue', 'brightness'], params: [] },
   merge:    { cat: 'Combine', label: 'Merge Channels', ins: ['red', 'green', 'blue'], outs: ['picture'], params: [] },
   switch:   { cat: 'Combine', label: 'Switch', ins: ['a', 'b', 'choose'], outs: ['result'], params: [STEP_R('at', 'Switch At', 50)] },
+  // FILTER FORGE'S SMUDGE (ROADMAP F7): the picture smeared one way, as a finger drags paint — each point takes what lies
+  // behind it along the stroke, the nearest most; and MULTIBLEND: four layers laid over a base at once, one mode
+  smudge:   { cat: 'Shape', label: 'Smudge', ins: ['picture', 'which way'], outs: ['picture'], params: [STEP_R('angle', 'Direction', 0, 0, 360), STEP_R('length', 'Length', 25), STEP_R('strength', 'Strength', 70), STEP_R('trail', 'Trail', 50)] },
+  multiblend: { cat: 'Combine', label: 'Multiblend', ins: ['base', 'layer 1', 'layer 2', 'layer 3', 'layer 4'], outs: ['picture'],
+              params: [STEP_SEL('mode', 'Mode', STEP_BLENDS), STEP_R('op1', 'Layer 1', 100), STEP_R('op2', 'Layer 2', 100), STEP_R('op3', 'Layer 3', 100), STEP_R('op4', 'Layer 4', 100)] },
   hsv:      { cat: 'Light & Color', label: 'Hue & Saturation', ins: ['picture'], outs: ['picture'], params: [STEP_R('hue', 'Hue Turn', 0, 0, 360), STEP_R('sat', 'Saturation', 100, 0, 200), STEP_R('val', 'Brightness', 100, 0, 200)] },
   // CURVES (Filter Forge's third kind of part): a shape from 0 to 1 that other parts read through — a tone curve,
   // a gradient's profile, a bevel. Made by Curve, changed by Curve Ops, used by Tone Curve and Profile Gradient.
-  curve:    { cat: 'Curves', label: 'Curve', ins: [], outs: ['curve'], params: [STEP_SEL('shape', 'Shape', ['linear', 'bias', 'gain', 'gamma', 'gaussian', 'impulse', 'stairs', 'step', 'wave', 'arc', 'noise']),
+  curve:    { cat: 'Curves', label: 'Curve', ins: [], outs: ['curve'], params: [STEP_SEL('shape', 'Shape', ['linear', 'bias', 'gain', 'gamma', 'gaussian', 'impulse', 'stairs', 'step', 'wave', 'arc', 'noise', 'arc slow', 'half circle', 'quarter circles']),
               STEP_R('amount', 'Bend', 50), STEP_R('count', 'Count', 4, 1, 24), STEP_R('low', 'Lowest', 0), STEP_R('high', 'Highest', 100), STEP_R('variation', 'Variation', 0, 0, 99)] },
-  curveops: { cat: 'Curves', label: 'Curve Ops', ins: ['curve', 'curve b'], outs: ['curve'], params: [STEP_SEL('op', 'Operation', ['frequency', 'phase', 'repeat', 'reverse', 'invert', 'amplitude', 'blend', 'multiply', 'max', 'min']),
+  curveops: { cat: 'Curves', label: 'Curve Ops', ins: ['curve', 'curve b'], outs: ['curve'], params: [STEP_SEL('op', 'Operation', ['frequency', 'phase', 'repeat', 'reverse', 'invert', 'amplitude', 'blend', 'multiply', 'max', 'min', 'transition', 'fade']),
               STEP_R('amount', 'Amount', 50), STEP_R('count', 'Times', 2, 1, 16)] },
   tonecurve:{ cat: 'Curves', label: 'Tone Curve', ins: ['picture', 'curve'], outs: ['picture'], params: [STEP_R('mix', 'Strength', 100)] },
   profile:  { cat: 'Curves', label: 'Profile Gradient', ins: ['curve', 'along'], outs: ['field'], params: [STEP_SEL('shape', 'Shape', ['linear', 'radial', 'rectangular', 'along a map']), STEP_R('angle', 'Angle', 90, 0, 360), STEP_R('repeat', 'Repeat', 1, 1, 12)] },
@@ -206,7 +217,7 @@ export function stepDistance(mask, ww, wh){
  * comes out, what to try.
  */
 export const STEP_DOCS = {
-  knob: 'Puts one of the page’s eight surface sliders into the graph as a number, so a setting here can be moved from the page.',
+  knob: 'One of the 8 surface sliders on the page, as a number: wire it into a setting to move that setting from the page.',
   hue: 'Brings one of the surface’s two hue pickers into the graph as a color.',
   glowhue: 'Brings the surface’s Glow Hue into the graph: a color for light that seems to come from inside the surface.',
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
@@ -216,13 +227,16 @@ export const STEP_DOCS = {
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
-  camdial: 'Brings the page’s camera dial into the graph: where the camera turns, how low it looks, and its zoom.',
+  camdial: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
+  smudge: 'Smears the picture one way, as a finger drags wet paint: each point takes on what lies behind it along the stroke.',
+  multiblend: 'Lays up to four layers over a base at once, in one blend mode, each at its own strength.',
   group: 'Several parts made one, with a graph of their own inside (Open shows it). Each Group Input and Knob inside is one of its inputs, and each result wired to the Group Result inside is one of its outputs.',
   groupin: 'Inside a group: one of the group’s inputs. Whatever is wired into that port of the group comes out here; unwired, it gives its Default (0 to 1).',
   groupout: 'Inside a group: what the group gives. Each result wired here is one of the group’s outputs, in order.',
+  loopiter: 'Inside a group that repeats: which pass this is, from 0 on the first to 1 on the last (0 when the group runs once).',
   random: 'A number picked at random between two limits, new every time the page’s seed changes.',
   noise: 'Soft, cloudy value noise: the simplest random pattern, as a gray map.',
   cells: 'Cellular (Voronoi) noise: the page divided into cells around scattered points, like cobbles, scales or a sponge.',
@@ -349,6 +363,7 @@ export const STEP_DOCS = {
   surface: 'The end of every graph: whatever reaches it is the texture. One per graph.',
 };
 const STEP_COST = {
+  smudge: () => 6, multiblend: () => 2,
   noise: d => Math.max(1, +d.octaves || 3),
   cells: () => 9,
   turing: () => 60,
@@ -613,6 +628,32 @@ const STEP_RUN = {
   },
   surface(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
     const img = asImage(input(n, 1) ?? 0.5), h0 = asField(input(n, 2));
+    // THE LIT SURFACE (B1): only when one of its material maps is wired, so every older graph draws as it did
+    const RF = asField(input(n, 3)), BL = asField(input(n, 4)), MT = asField(input(n, 5)), EM = asField(input(n, 6));
+    if(RF || BL || MT || EM){
+      const H = new Float32Array(N); if(h0) for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
+      // reflection blur is the gloss turned over (0: a mirror's sharp highlight; 1: a broad, soft one)
+      const gloss = BL ? (() => { const g = new Float32Array(N); for(let i = 0; i < N; i++) g[i] = 1 - Math.max(0, Math.min(1, BL[i])); return g; })() : null;
+      const L = lightOf(H, ctx.light ?? 315, 1, 0.3, 0.6, gloss ? { glossMap: gloss } : null), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      // WHAT IT REFLECTS (ROADMAP C4, cheaply — Filter Forge's HDRI): a sky over a ground, from the page's backdrop when the
+      // graph has it, else the surface's two hues; each point reflects the part of it its slope faces (the viewer overhead)
+      const { ww, wh, hexCol } = E, env = Array.isArray(ctx.env) && ctx.env.length ? ctx.env.map(c => hexCol(String(c))) : null;
+      const t = ctx.tints || [], sky = env ? env[0] : hexCol(t[0] || '#E8ECF2'), ground = env ? env[env.length - 1] : hexCol(t[1] || '#2A2622');
+      for(let y = 0, i = 0; y < wh; y++) for(let x = 0; x < ww; x++, i++){
+        const k = L.light[i]/L.flat, rf = RF ? Math.max(0, Math.min(1, RF[i])) : 0.6, mt = MT ? Math.max(0, Math.min(1, MT[i])) : 0, em = EM ? Math.max(0, EM[i]) : 0;
+        const gx = (H[y*ww + Math.min(ww - 1, x + 1)] - H[y*ww + Math.max(0, x - 1)])*0.5, gy = (H[Math.min(wh - 1, y + 1)*ww + x] - H[Math.max(0, y - 1)*ww + x])*0.5;
+        const nl = Math.hypot(gx, gy, 1), ny = -gy/nl, nz = 1/nl, ry = 2*nz*ny, rz = 2*nz*nz - 1;
+        const u = Math.max(0, Math.min(1, 0.5 + (rz*0.6 - ry*0.4)*0.8)), er = ground[0] + (sky[0] - ground[0])*u, eg = ground[1] + (sky[1] - ground[1])*u, eb = ground[2] + (sky[2] - ground[2])*u;
+        // a metal shows little diffuse light and mirrors the sky in its own color; anything else reflects a little of it,
+        // white (a dielectric's few percent head-on, more at a slant), with a highlight
+        const fres = 0.04 + 0.96*Math.pow(1 - nz, 5), dk = k*(1 - 0.85*mt), s = L.spec[i]*Math.max(0.05*(1 - mt), rf);
+        const rm = rf*mt*(0.35 + 0.65*k), rd = rf*(1 - mt)*fres*0.6;
+        const r = img.r[i], g = img.g[i], b = img.b[i];
+        o.r[i] = r*dk + er*(r*rm + rd) + s*(1 - mt + mt*r) + r*em;
+        o.g[i] = g*dk + eg*(g*rm + rd) + s*(1 - mt + mt*g) + g*em;
+        o.b[i] = b*dk + eb*(b*rm + rd) + s*(1 - mt + mt*b) + b*em; }
+      return [o];
+    }
     if(!h0) return [img];
     // heights: the picture lit by the dial, as the engine lights a texture
     const H = new Float32Array(N); for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
@@ -758,6 +799,7 @@ Object.assign(STEP_RUN, {
   number(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'value', 50)))/100]; },
   // (a group and its result are made into their parts before the walk; a Group Input left unwired gives its Default)
   groupin(E, n){ return [Math.max(0, Math.min(100, E.num(n, 'def', 50)))/100]; },
+  loopiter(){ return [0]; },   // (inside a loop each pass's Iteration is made a Number: athanorFlat)
   group(){ return null; }, groupout(){ return null; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
   random(E, n){ const lo = E.num(n, 'lo', 0), hi = E.num(n, 'hi', 100); return [(lo + (hi - lo)*Math.random())/100]; },
@@ -803,6 +845,30 @@ Object.assign(STEP_RUN, {
   sharpen(E, n){ const { N, unit, input, num, map, at, asField, boxBlur } = E; const f = asField(input(n, 1)); if(!f) return null;
     const lo = boxBlur(f, num(n, 'radius', 4)*unit/1536*1.2), A = map(n, 'amount', 50), o = new Float32Array(N);
     for(let i = 0; i < N; i++) o[i] = Math.max(0, Math.min(1, f[i] + (f[i] - lo[i])*at(A, i)/50));
+    return [o];
+  },
+  smudge(E, n){ const { ww, wh, N, unit, input, map, at, num, asImage, asField } = E; const img = asImage(input(n, 1)); if(!img) return null;
+    const way = asField(input(n, 2)), LM = map(n, 'length', 25), SM = map(n, 'strength', 70), a0 = num(n, 'angle', 0)*Math.PI/180;
+    const tr = Math.max(0, Math.min(1, num(n, 'trail', 50)/100)), K = 16, pw = 0.4 + (1 - tr)*3;
+    const W = Array.from({ length: K }, (_, k) => Math.pow(1 - k/K, pw)), Wt = W.reduce((s, v) => s + v, 0);
+    const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, L = at(LM, q)/100*unit*0.25, st = Math.max(0, Math.min(1, at(SM, q)/100));
+      if(L < 0.5 || st === 0){ o.r[q] = img.r[q]; o.g[q] = img.g[q]; o.b[q] = img.b[q]; continue; }
+      const an = way ? way[q]*Math.PI*2 : a0, dx = -Math.cos(an)*L/K, dy = -Math.sin(an)*L/K;
+      let r = 0, g = 0, b = 0;
+      for(let k = 0; k < K; k++){ const sx = Math.min(ww - 1, Math.max(0, Math.round(x + dx*k))), sy = Math.min(wh - 1, Math.max(0, Math.round(y + dy*k))), p = sy*ww + sx, w = W[k];
+        r += img.r[p]*w; g += img.g[p]*w; b += img.b[p]*w; }
+      o.r[q] = img.r[q] + (r/Wt - img.r[q])*st; o.g[q] = img.g[q] + (g/Wt - img.g[q])*st; o.b[q] = img.b[q] + (b/Wt - img.b[q])*st; }
+    return [o];
+  },
+  multiblend(E, n){ const { N, input, P, asImage } = E;
+    let o = asImage(input(n, 1) ?? 0.5); const fn = STEP_BLEND_FN[P(n, 'mode', 'normal')] || STEP_BLEND_FN.normal, cl = v => Math.max(0, Math.min(1, v));
+    for(let j = 2; j <= 5; j++){ const lay = input(n, j); if(lay == null) continue;
+      const col = Array.isArray(lay) ? lay : null, L = col ? null : asImage(lay), OP = E.map(n, 'op' + (j - 1), 100);
+      const nx = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const k = E.at(OP, i)/100, r0 = o.r[i], g0 = o.g[i], b0 = o.b[i];
+        nx.r[i] = r0 + (cl(fn(r0, col ? col[0] : L.r[i])) - r0)*k; nx.g[i] = g0 + (cl(fn(g0, col ? col[1] : L.g[i])) - g0)*k; nx.b[i] = b0 + (cl(fn(b0, col ? col[2] : L.b[i])) - b0)*k; }
+      o = nx; }
     return [o];
   },
   motionblur(E, n){ const { ww, wh, N, unit, input, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
@@ -880,6 +946,9 @@ Object.assign(STEP_RUN, {
       impulse: t => { const c = Math.max(0.001, Math.min(0.999, a)); return t < c ? t/c : (1 - t)/(1 - c); },
       stairs: t => Math.min(k, Math.floor(t*(k + 1)))/k, step: t => t >= a ? 1 : 0,
       wave: t => 0.5 - 0.5*Math.cos(t*k*Math.PI*2), arc: t => Math.sqrt(Math.max(0, 1 - (1 - t)**2)),
+      // (Filter Forge's Circular Arc, its other ways: rising slowly, a half circle, and a row of quarter circles)
+      'arc slow': t => 1 - Math.sqrt(Math.max(0, 1 - t*t)), 'half circle': t => Math.sqrt(Math.max(0, 1 - (2*t - 1)**2)),
+      'quarter circles': t => { const x = t*k, u = x - Math.min(k - 1, Math.floor(x)); return Math.sqrt(Math.max(0, 1 - (1 - u)**2)); },
       noise: t => { const x = t*(k + 1), i = Math.min(k, Math.floor(x)), u = x - i, w = u*u*(3 - 2*u); return knots[i] + (knots[i + 1] - knots[i])*w; },
     }[shape] || (t => t);
     return [stepCurve(t => lo + (hi - lo)*f(t))];
@@ -892,7 +961,12 @@ Object.assign(STEP_RUN, {
       repeat: t => { const x = t*k, i = Math.floor(x), u = x - i; return curveAt(c, i % 2 ? 1 - u : u); },
       reverse: t => curveAt(c, 1 - t), invert: t => 1 - curveAt(c, t), amplitude: t => 0.5 + (curveAt(c, t) - 0.5)*a*2,
       blend: t => cb ? curveAt(c, t) + (curveAt(cb, t) - curveAt(c, t))*a : curveAt(c, t), multiply: t => curveAt(c, t)*(cb ? curveAt(cb, t) : 1),
-      max: t => Math.max(curveAt(c, t), cb ? curveAt(cb, t) : -Infinity), min: t => Math.min(curveAt(c, t), cb ? curveAt(cb, t) : Infinity) }[op] || (t => curveAt(c, t));
+      max: t => Math.max(curveAt(c, t), cb ? curveAt(cb, t) : -Infinity), min: t => Math.min(curveAt(c, t), cb ? curveAt(cb, t) : Infinity),
+      // (Filter Forge's Transition: the first curve on the left, the second on the right, crossing over a width set by
+      // Amount; and Fade: the curve eased to nothing at both ends, over Amount of its length)
+      transition: t => { const w = Math.max(0.02, a), u = Math.max(0, Math.min(1, (t - (0.5 - w/2))/w)), s = u*u*(3 - 2*u);
+        return cb ? curveAt(c, t) + (curveAt(cb, t) - curveAt(c, t))*s : curveAt(c, t)*(1 - s); },
+      fade: t => { const w = Math.max(0.01, a*0.5), e = Math.min(1, t/w, (1 - t)/w), s = e*e*(3 - 2*e); return curveAt(c, t)*s; } }[op] || (t => curveAt(c, t));
     return [stepCurve(g)];
   },
   tonecurve(E, n){ const { N, input, map, at, isCurve, isImg, asField } = E;
@@ -1027,11 +1101,12 @@ const STEP_IO = {
   knob: { outs: ['value'] }, poem: { outs: ['field', 'field', 'field', 'field', 'field', 'value', 'value', 'value'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
+  smudge: { ins: ['image', 'field'], outs: ['image'] }, multiblend: { ins: ['image', 'image', 'image', 'image', 'image'], outs: ['image'] },
   curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
-  blend: { ins: ['image', 'image', 'field'], outs: ['image'] }, surface: { ins: ['image', 'field'] },
+  blend: { ins: ['image', 'image', 'field'], outs: ['image'] }, surface: { ins: ['image', 'field', 'field', 'field', 'field', 'field'] },
   cloth: { ins: ['field', 'field', 'colour', 'colour'], outs: ['image'] },
   glaze: { ins: ['field', 'field', 'field', 'field', 'field', 'colour', 'colour'], outs: ['image'] },
 };
@@ -1044,14 +1119,14 @@ const PARAM_PORTS_OFF = new Set(['Inputs', 'Output']);
 // REQUIRED INPUTS (Filter Forge): a part that has nothing to work on without its first input. The editor marks
 // the port while it is empty, and a step preview shows a warning pattern in its place, so the rest of the
 // part still shows what it does; the Surface itself never sees the stand-in (an old graph draws as it did).
-const STEP_REQUIRED = new Set(['levels', 'threshold', 'blur', 'warp', 'invert', 'posterize', 'transform', 'edges', 'light', 'tint', 'ramp', 'kaleidoscope', 'polar',
+const STEP_REQUIRED = new Set(['smudge', 'levels', 'threshold', 'blur', 'warp', 'invert', 'posterize', 'transform', 'edges', 'light', 'tint', 'ramp', 'kaleidoscope', 'polar',
   'maprange', 'split', 'hsv', 'curveops', 'tonecurve', 'bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma',
   'meniscus', 'pigment', 'contours', 'glaze', 'burn']);
 // SETTINGS THAT TAKE A MAP (Filter Forge's parameter mapping): in a v3 graph a gray map or a picture on one of
 // these ⚙ ports sets it point by point (athanor.js E.map); any other setting reads a map's average. One list: the
 // evaluator maps only what is here, the wiki marks these settings, the editor's menu says so. (A family's part
 // carries its own `maps`.) `key:4`: from graph version 4 on (an older graph reads it whole, as it always did).
-const STEP_MAPS = { levels: ['lo', 'hi', 'gamma'], threshold: ['at', 'soft'], warp: ['amount'], mix: ['t'], posterize: ['steps'], blend: ['opacity'],
+const STEP_MAPS = { smudge: ['length', 'strength'], multiblend: ['op1', 'op2', 'op3', 'op4'], levels: ['lo', 'hi', 'gamma'], threshold: ['at', 'soft'], warp: ['amount'], mix: ['t'], posterize: ['steps'], blend: ['opacity'],
   maprange: ['inLo', 'inHi', 'outLo', 'outHi'], bricon: ['bright', 'contrast'], highpass: ['gain'], sharpen: ['amount'], tonecurve: ['mix'], chroma: ['amount'],
   hsv: ['hue', 'sat', 'val'], noise: ['scale:4'], perlin: ['scale:4', 'rough', 'contrast'], blur: ['radius:4'], motionblur: ['length:4', 'angle:4'], grow: ['amount:4'],
   twirl: ['angle:4'], edges: ['strength:4'], light: ['relief:4'] };

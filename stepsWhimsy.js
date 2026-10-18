@@ -952,21 +952,21 @@ function paintShapeLand(x, mk, dk, w, h, o){
 export const WHIMSY_STEPS = {
   // Silk Ribbons and Dream Bloom, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
   ribbons: kitWhole({ cat: 'Marks', label: 'Silk Ribbons', ins: ['blend from', 'curtain hue', 'hem hue'], outs: ['ribbons'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [WHIM_R('zoom', 'Curtain Height', 100, 40, 220), WHIM_R('amount', 'Ribbon Count', 100, 20, 1800), WHIM_R('form', 'Bloom', 0), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    params: [WHIM_R('zoom', 'Curtain Height', 100, 40, 220), WHIM_R('amount', 'Ribbon Count', 100, 20, 1800), WHIM_R('form', 'Bloom', 0), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0);
       return () => genAuroraVeil(w, h, a, z, light, t1, t2, f); }),
   bokeh: kitWhole({ cat: 'Marks', label: 'Dream Bloom', ins: ['light hue'], outs: ['bloom'], io: { ins: ['colour'], outs: ['image'] },
-    params: [WHIM_R('zoom', 'Focal Plane', 100, 25, 400), WHIM_R('amount', 'Orb Count', 100, 20, 260), WHIM_R('form', 'Aperture', 0), WHIM_R('object', 'Object Shape', 0), WHIM_R('spread', 'Color Variation', 0, 0, 180), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6 },
+    params: [WHIM_R('zoom', 'Focal Plane', 100, 25, 400), WHIM_R('amount', 'Orb Count', 100, 20, 260), WHIM_R('form', 'Aperture', 0), WHIM_R('object', 'Object Shape', 0), WHIM_R('spread', 'Color Variation', 0, 0, 180), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
     (E, n, w, h) => { const t1 = wholeHex(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), o = E.num(n, 'object', 0), sp = E.num(n, 'spread', 0);
       return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
-    params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
       return [withSeed(seed, () => genMoon(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), E.num(n, 'form', 30)/100, E.num(n, 'night', 70)/100))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   starfield: { cat: 'Marks', label: 'Starfield', ins: ['over', 'color a', 'color b'], outs: ['image'], io: { ins: ['image', 'colour', 'colour'], outs: ['image'] },
-    params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
       const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
@@ -974,7 +974,7 @@ export const WHIMSY_STEPS = {
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   curtains: { cat: 'Marks', label: 'Aurora Curtains', ins: ['over', 'field from'], outs: ['image'], io: { ins: ['image', 'value'], outs: ['image'] },
     params: [WHIM_R('curtains', 'Curtains', 2, 1, 5), WHIM_R('rays', 'Rays', 100, 20, 250), WHIM_R('height', 'Height', 100, 40, 180), WHIM_R('red', 'Red Sky', 30),
-      WHIM_R('fringe', 'Pink Hem', 50), WHIM_R('glow', 'Brightness', 100, 20, 250), WHIM_R('horizon', 'Horizon', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+      WHIM_R('fringe', 'Pink Hem', 50), WHIM_R('glow', 'Brightness', 100, 20, 250), WHIM_R('horizon', 'Horizon', 50), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 2), deg = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0), a = (deg - 90)*Math.PI/180;
       const o = { curtains: E.num(n, 'curtains', 2), rays: E.num(n, 'rays', 100)/100, height: E.num(n, 'height', 100)/100, red: E.num(n, 'red', 30)/100,
         fringe: E.num(n, 'fringe', 50)/100, glow: E.num(n, 'glow', 100)/100, lean: Math.cos(a)*0.35, arc: Math.sin(a)*0.5, horizon: E.num(n, 'horizon', 50)/100 };
@@ -983,7 +983,7 @@ export const WHIMSY_STEPS = {
       return [pc]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   flowlines: { cat: 'Marks', label: 'Flow Lines', ins: ['over', 'angle map', 'ink', 'second ink', 'flow from'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'colour', 'value'], outs: ['image'] },
-    params: [WHIM_R('amount', 'Lines', 100, 30, 300), WHIM_R('size', 'Scale', 100, 40, 250), WHIM_R('turbulence', 'Turbulence', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [WHIM_R('amount', 'Lines', 100, 30, 300), WHIM_R('size', 'Scale', 100, 40, 250), WHIM_R('turbulence', 'Turbulence', 50), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, i1 = E.input(n, 3), i2 = E.input(n, 4), dv = E.input(n, 5), mv = E.input(n, 2);
       const o = { amt: E.num(n, 'amount', 100)/100, zoom: E.num(n, 'size', 100)/100, turb: E.num(n, 'turbulence', 50)/100,
         light: typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 0),
@@ -999,7 +999,7 @@ export const WHIMSY_STEPS = {
         const [pc, px] = kitPicture(over, w, h); px.drawImage(c, 0, 0); return [pc]; }); },
     run(E, n){ const [c] = this.paint(E, n); return [E.readCanvas(c)]; } },
   particles: { cat: 'Marks', label: 'Particles', ins: ['over', 'color a', 'color b', 'wind from'], outs: ['image'], io: { ins: ['image', 'colour', 'colour', 'value'], outs: ['image'] },
-    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Variant', 0, 0, 99)], cost: () => 6,
+    params: [WHIM_SEL('kind', 'Kind', ['flakes', 'sparks', 'motes']), WHIM_R('amount', 'Amount', 100, 10, 500), WHIM_R('size', 'Size', 100, 20, 600), WHIM_R('form', 'Wind · Drift · Chaos', 50), WHIM_R('scatter', 'Variation', 0, 0, 99)], cost: () => 6,
     paint(E, n){ const { ww: w, wh: h } = E, kind = String(E.P(n, 'kind', 'flakes')), amt = Math.max(0.02, E.num(n, 'amount', 100)/100), zoom = Math.max(0.2, E.num(n, 'size', 100)/100), form = E.num(n, 'form', 50)/100;
       const ca = E.input(n, 2), cb = E.input(n, 3), dv = E.input(n, 4), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
       // the texture's own seed (+ Scatter), not the part's: so First Snow, Burning Mana and Euphoria Dust fall exactly as they always did
@@ -1048,7 +1048,7 @@ export const WHIMSY_STEPS = {
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   ringsky: { cat: 'Textures', label: 'Ring in the Sky', ins: ['over', 'light from', 'land hue', 'sky hue'], outs: ['picture', 'ring'], io: { ins: ['image', 'value', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [WHIM_R('width', 'Ring Width', 45), WHIM_R('tilt', 'Ring Open', 72, 2, 90), WHIM_R('turn', 'Turn', 8, 0, 360), WHIM_R('size', 'Ring Size', 100, 40, 250), WHIM_R('centre', 'Star Height', 38, 10, 90),
-      WHIM_R('haze', 'Air', 60), WHIM_R('nebula', 'Nebula', 50), WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+      WHIM_R('haze', 'Air', 60), WHIM_R('nebula', 'Nebula', 50), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
     paint(E, n){ const { ww: w, wh: h } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, w, h), [mc, mk] = kitCanvas(w, h), dv = E.input(n, 2), lh = E.input(n, 3), sh = E.input(n, 4);
       mk.fillStyle = '#000'; mk.fillRect(0, 0, w, h);
       const rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d;
@@ -1059,7 +1059,7 @@ export const WHIMSY_STEPS = {
     run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },
   shapeland: { cat: 'Marks', label: 'Land of Shapes', ins: ['over', 'light from', 'land hue', 'haze hue'], outs: ['picture', 'land', 'distance'], io: { ins: ['image', 'value', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
     params: [WHIM_R('height', 'Landforms', 50), WHIM_R('layers', 'Ridges', 50), WHIM_R('structures', 'Structures', 40), WHIM_R('foliage', 'Trees', 40), WHIM_R('haze', 'Haze', 60), WHIM_R('horizon', 'Horizon', 66, 30, 90),
-      WHIM_R('variant', 'Variant', 0, 0, 99)], cost: () => 4,
+      WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
     paint(E, n){ const { ww: w, wh: h } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, w, h), [mc, mk] = kitCanvas(w, h), [dc, dk] = kitCanvas(w, h), dv = E.input(n, 2), lh = E.input(n, 3), hh = E.input(n, 4);
       mk.fillStyle = '#000'; mk.fillRect(0, 0, w, h); dk.fillStyle = '#fff'; dk.fillRect(0, 0, w, h);
       const rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d;

@@ -33,9 +33,24 @@ const families = new Set(FONTS.map(f => f.family));
 const badFont = PRESETS.filter(p => p.font && !families.has(p.font));
 check('every preset\'s font is one of the app\'s fonts', badFont.length === 0);
 if(badFont.length) console.log('   offenders:', badFont.map(p => p.name + ' (' + p.font + ')').join(', '));
-check('every spell is a valid one', PRESETS.every(p => validateSpell(p.spell || '').ok));
+// ---- stored spells ----
+// A spell identifies which preset a page came from, so it must be DATA on the
+// preset, not something re-derived from the texture seed (which changes when
+// the seed rerolls).
+check('every preset carries a stored spell', PRESETS.every(p => typeof p.spell === 'string' && p.spell));
+const invalid = PRESETS.filter(p => !validateSpell(p.spell || '').ok);
+check('every stored spell validates', invalid.length === 0);
+if(invalid.length) console.log('   bad:', invalid.map(p => p.name + ': ' + validateSpell(p.spell||'').msg).join('; '));
+check('no two presets share a spell', new Set(PRESETS.map(p => p.spell)).size === PRESETS.length);
 { const { PANDORAN_RUNES } = await import('../spell.js');
   check('every preset\'s spell is written in Pandoran runes only (Ruby: Runology\'s Archetypes and Accents)', PRESETS.every(p => Array.from(p.spell.replace(/[\[\]{}]/g, '')).every(g => PANDORAN_RUNES.includes(g))) && PANDORAN_RUNES.length === 35); }
+
+// This guard exists because a bad edit once appended preset objects into the
+// FONTS array instead of PRESETS — the arrays are adjacent and both end in
+// "];", so a naive replace hit the wrong one and the damage was invisible
+// until font indices were inspected.
+check('FONTS contains only fonts', FONTS.every(f => f && f.family && f.label && !f.spell));
+check('PRESETS contains only presets', PRESETS.every(p => p && p.name && p.bg1 && !p.family));
 
 
 // ---- every preset is readable (AGENTS.md §5.8: 3:1 or better against what is behind the text) ----

@@ -1,33 +1,33 @@
 /**
  * blendsAndTints.test.mjs — every blend a texture offers must make sense, and
- * tints must colour marks without staining the page.
+ * tints must colour marks without staining the page; a texture's hues follow
+ * the page's accents until one is chosen by hand or locked.
  *
  * Run: node test/blendsAndTints.test.mjs
  */
-import { readFileSync } from 'fs';
 import * as M from './canvasMock.mjs';
 M.installCanvasMock();
-const { blendFamily } = await import('../texCore.js');
+const { blendFamily, pixelPass } = await import('../texCore.js');
 const T = await import('../textureGenerators.js');
 
 let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
-const core = readFileSync(new URL('../texCore.js', import.meta.url), 'utf8');
-const tg = readFileSync(new URL('../textureGenerators.js', import.meta.url), 'utf8');
+// the tint pass (texCore pixelPass) on real pixels: a row of them on a stand-in canvas
+const pass = (px, light, dark, family, ground) => { const data = new Uint8ClampedArray(px.flat());
+  pixelPass({ width: px.length, height: 1, getContext: () => ({ getImageData: () => ({ data }), putImageData: () => {} }) }, light, dark, family, ground); return [...data]; };
+const grey = v => [v, v, v, 255];
 
 // ---- each blend has the right neutral ----
 check('overlay-type blends keep mid-grey', ['overlay','soft-light','hard-light'].every(b => blendFamily(b) === 'mid'));
 check('multiply-type blends use white', ['multiply','darken','color-burn'].every(b => blendFamily(b) === 'white'));
 check('screen-type blends use black', ['screen','lighten','color-dodge'].every(b => blendFamily(b) === 'black'));
 
-// the remap arithmetic: 128 becomes the blend's neutral; marks survive
-const remap = (v, fam) => fam === 'white' ? (v < 128 ? v * 2 : 255) : (v > 128 ? (v - 128) * 2 : 0);
-check('mid-grey vanishes under multiply', remap(128, 'white') === 255);
-check('a dark mark survives multiply', remap(20, 'white') === 40);
-check('mid-grey vanishes under screen', remap(128, 'black') === 0);
-check('a light mark survives screen', remap(250, 'black') === 244);
-check('the remap is the one the code uses',
-  /v < 128 \? v \* 2 : 255/.test(core) && /v > 128 \? \(v - 128\) \* 2 : 0/.test(core));
+// the remap: 128 becomes the blend's neutral; marks survive
+const mul = pass([grey(128), grey(20)], null, null, 'white'), scr = pass([grey(128), grey(250)], null, null, 'black');
+check('mid-grey vanishes under multiply', mul[0] === 255);
+check('a dark mark survives multiply', mul[4] === 40);
+check('mid-grey vanishes under screen', scr[0] === 0);
+check('a light mark survives screen', scr[4] === 244);
 
 // ---- every grey-ground texture offers all nine, first is its default ----
 const greys = Object.entries(T.TEXTURE_CAPS).filter(([, c]) => c.ground === 'grey');
@@ -41,35 +41,26 @@ check('the Rorschach is ink on paper: multiply by default', T.TEXTURE_CAPS.inkbl
 check('Aurora Veil keeps its default look: screen is exempt from the remap',
   T.TEXTURE_CAPS.aurora.ground === 'grey' && T.TEXTURE_CAPS.aurora.keepGround.includes('screen') &&
   T.TEXTURE_CAPS.aurora.blends[0] === 'screen');
-check('the renderer honours the exemption',
-  /!\(caps\.keepGround \|\| \[\]\)\.includes\(blend\)/.test(tg));
+// (a remap is one more pass over the texture's pixels: count them)
+const remapped = (type, blend) => { T.clearTextureCache(); return T.getTextureCanvas(type, 120, 120, { seed: 3, p1: 100, p2: 100, blend }).getContext('2d')._stats.imageDataWrites; };
+check('the renderer honours the exemption (Aurora under screen is drawn as it is; under multiply, and any other grey texture under screen, it is remapped)',
+  remapped('aurora', 'screen') === remapped('aurora') && remapped('aurora', 'multiply') === remapped('aurora') + 1 && remapped('hatch', 'screen') === remapped('hatch') + 1);
 check('Aurora Veil has two hues, the hem defaulting to the curtain\'s colour',
   T.TEXTURE_CAPS.aurora.tints === 2 && T.TEXTURE_CAPS.aurora.tintDefaults[1] === T.TEXTURE_CAPS.aurora.tintDefaults[0]);
 
 // ---- generic tint: marks only, white is no tint ----
+// (white over black is the identity, pixel for pixel: colorRoles.test.mjs)
+const lit = pass([grey(200), grey(50), grey(128)], '#FF0000', '#0000FF');
 check('light marks take the light hue and dark marks the dark hue — two tints, not one',
-  /d\[i\] = gr \+ k \* \(L\.r - gr\) \+ cr;/.test(core) && /d\[i\] = gr \+ k \* \(D\.r - gr\) \+ cr;/.test(core));
+  lit[0] > lit[2] + 100 && lit[0] === 200 && lit[6] > lit[4] + 100 && lit[4] === 50);
 check('the lotus is painted in its own colours: petals and heart',
   T.TEXTURE_CAPS.flowers.tintLabels.join('|') === 'Petal Hue|Heart Hue' && !T.TEXTURE_CAPS.flowers.genericTint &&
   T.TEXTURE_CAPS.flowers.blends[0] === 'source-over');
-check('only exactly-mid pixels — the ground — are left alone', /if\(v > 128\)\{[\s\S]*?\} else if\(v < 128\)\{/.test(core));
+check('only exactly-mid pixels — the ground — are left alone', lit.slice(8, 11).join() === '128,128,128');
 const tinted = Object.entries(T.TEXTURE_CAPS).filter(([, c]) => c.genericTint);
-check('white over black is the identity: nothing changes until a hue is chosen',
-  /const tint = \(!!\(lightHex \|\| darkHex\) && !\(lightIsWhite && darkIsBlack\)\) \|\| !groundIsGrey;/.test(core) && /if\(!tint && !remap\) return src;/.test(core));
 check('generic tints default to white and black',
   tinted.every(([, c]) => c.tints === 2 && c.tintDefaults[0] === '#FFFFFF' && c.tintDefaults[1] === '#000000'));
 check('monochrome textures can be tinted', tinted.length >= 15);
-
-
-// ---- the size knob works below 100% ----
-
-// ---- accents are followed until a tint is chosen or locked ----
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
-check('changing an accent re-derives tints that come from it',
-  /bindColorField\('accent1ColorHex', \(\)=>\{ followAccents\(\)/.test(ev));
-check('a locked tint is left alone', /state\.locks\.has\(ids\[i\]\)\) continue;/.test(ev));
-check('a hand-picked tint stops following', /if\(!state\.ui\.tintBySystem\) state\.ui\.tintFollows\[0\] = false/.test(ev));
-check('the app writing a tint is not mistaken for a person', /state\.ui\.tintBySystem = true;\s*setColorField/.test(ev));
 
 // ---- the moon ----
 check('the Fractal Moon exists: Moon Size, Fractal Depth, Clouds, Night Sky', T.paramsFor('moon').map(d => d.label).join('|') === 'Moon Size|Fractal Depth|Clouds|Night Sky');
@@ -85,6 +76,32 @@ let wthrew = null;
 try { for(const d of [0, 35, 50, 100]) T.getTextureCanvas('water', 240, 240, { seed: 5, p1: 100, p2: d, light: 45, blend: 'soft-light' }); }
 catch(e){ wthrew = e; }
 check('it renders across the whole depth range', wthrew === null);
+
+// ---- accents are followed until a tint is chosen or locked (on the booted app) ----
+{
+  const { installDomMock } = await import('./domMock.mjs');
+  const reg = installDomMock(M.makeMockContext, M.makeMockCanvas);
+  await import('../appEvents.js');
+  const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
+  const load = o => { reg['advancedJson'].value = JSON.stringify(o); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
+  const settle = () => new Promise(r => setTimeout(r, 60));
+  const choose = t => { reg['textureType'].value = t; reg['textureType'].dispatchEvent({ type: 'input' }); reg['textureType'].dispatchEvent({ type: 'change' }); };
+  const accent = hex => { reg['accent1ColorHex'].value = hex; reg['accent1ColorHex'].dispatchEvent({ type: 'input' }); };
+  const tint = () => reg['textureTint1Hex'].value.toUpperCase();
+  // a surface whose first hue starts at the first accent
+  const keyed = Object.keys(T.TEXTURE_CAPS).find(t => (T.TEXTURE_CAPS[t].tintDefaults || [])[0] === 'accent1' && T.TEXTURE_CAPS[t].tints >= 1);
+  load({ ...save(), texture: true, locks: [] }); choose(keyed); await settle();
+  accent('#123456');
+  check('changing an accent re-derives tints that come from it', tint() === '#123456');
+  accent('#654321');
+  check('the app writing a tint is not mistaken for a person (it follows again)', tint() === '#654321');
+  reg['textureTint1Hex'].value = '#ABCDEF'; reg['textureTint1Hex'].dispatchEvent({ type: 'input' });
+  accent('#111111');
+  check('a hand-picked tint stops following', tint() === '#ABCDEF');
+  load({ ...save(), locks: ['textureTint1Hex'] }); choose('hatch'); choose(keyed); await settle();   // (a surface chosen afresh follows again)
+  const held = tint(); accent('#222222');
+  check('a locked tint is left alone', held !== '#222222' && tint() === held);
+}
 
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);

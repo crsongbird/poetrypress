@@ -230,6 +230,10 @@ export const STITCH_ALIASES = { running:'dashed', triple:'double', dotdash:'dash
   clubs:'beads', plus:'sparkle', asterisk:'snowflakes', flowers:'daisy' };
 /** Every name PML and saved looks may use: the kept ones and the retired. */
 export const STITCH_NAMES = STITCH_STYLES.concat(Object.keys(STITCH_ALIASES));
+/** Whether a stitch has a side to point (Points Outward? changes it): a line,
+ *  dashes and dots lie on the path itself, the same either way. */
+const UNSIDED = new Set(['solid', 'dashed', 'dotted']);
+export function stitchSided(style){ return !UNSIDED.has(stitchOf(style)); }
 /** A stitch name as it is drawn now (a retired one becomes its relative). */
 export function stitchOf(style){ return MOTIFS[style] ? style : (STITCH_ALIASES[style] || 'solid'); }
 /** Display names for menus: the PML name, made readable. */

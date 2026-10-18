@@ -984,6 +984,8 @@ function pageOf(type, w, h, opts){
 }
 // (and a graph's working grid, as the export makes it: the page over the grid's divisor there)
 const gridAtExport = (page, d) => page ? [Math.ceil(page[0]/Math.max(1, d)), Math.ceil(page[1]/Math.max(1, d))] : null;
+/** Whether a graph reads the inset box (an Inset Box part, or a Border Mask from it): it is then made with the box's place. */
+export function graphUsesBox(graph){ return /"name":\s*"insetbox"|"shape":\s*"inset box"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 export function graphUsesBackdrop(graph){ return /"name":\s*"(?:backdrop|glassrain)"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 /** The poem's layout as whole LINES, each box rounded out to 1/64 of the page (a chain with `poem: 'lines'` reads
  *  only this: typing within a line changes nothing, so the surface is drawn again only when a line grows past a step). */
@@ -1046,6 +1048,8 @@ function describeRequest(type, w, h, opts){
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
+            // (the inset box's place, for a graph that reads it)
+            + ((type === 'athanor' || type === 'athanorsteps') && opts.box && graphUsesBox(opts.graph) ? `_x${opts.box}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
@@ -1066,7 +1070,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', env: extra.env || null, camera: extra.camera || null,
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*B.scale), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -1091,7 +1095,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', env: extra.env || null, camera: extra.camera || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -1184,7 +1188,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

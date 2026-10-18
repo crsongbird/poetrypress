@@ -9,9 +9,13 @@
  * Run: node test/swatches.test.mjs
  */
 import { readFileSync } from 'fs';
-import { installCanvasMock, makeMockContext, makeMockCanvas, createdCanvases, resetCreatedCanvases } from './canvasMock.mjs';
+import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
 
+// this browser's storage, holding one saved spell (a custom preset) that carries more than a look
+const store = new Map([['uv.firstvisit.v1', '1'], ['uv.spells.v1', JSON.stringify([{ name: 'Mine',
+  settings: { bg1: '#102030', texture: true, textureType: 'linen', poemText: 'their poem', locks: ['bg1'], username: '@theirs' } }])]]);
+globalThis.localStorage = { getItem: k => store.has(k) ? store.get(k) : null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
 installCanvasMock();
 const registry = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
@@ -22,19 +26,14 @@ const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('
 
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 const vault = readFileSync(new URL('../vault.js', import.meta.url), 'utf8');
+const walk = (n, cls, out = []) => { for(const c of n.children || []){ if(String(c.className || '').split(' ').includes(cls)) out.push(c); walk(c, cls, out); } return out; };
 
 check('every preset button was built (and a heading for each group)', registry['presetGrid'].children.length === PRESETS.length + (await import('../appOptions.js')).PRESET_GROUPS.length);
-
-// the swatch must be a canvas, not a div with a background
-check('swatches are painted, not CSS gradients',
-  /const swatch = document\.createElement\('canvas'\)/.test(ev) &&
-  !/swatch\.style\.background/.test(ev));
 
 // each element of the snapshot
 // the painter moved to its own module in the refactor
 const sw = readFileSync(new URL('../swatches.js', import.meta.url), 'utf8');
 const paint = (sw.match(/function paintPresetSwatch[\s\S]*?\n\}/) || [''])[0];
-check('the painter exists', paint.length > 400);
 // what it paints, by behavior: a canvas that writes down what is drawn on it, and a texture source that
 // writes down what it is asked for (the app's own is put back at the end)
 const { paintPresetSwatch, setSwatchTextureSource } = await import('../swatches.js');
@@ -70,40 +69,45 @@ check('the wheel uses the same painter', /deps\.paintSwatch/.test(vault));
 check('the wheel still works without one', /else \{[\s\S]{0,200}chip-swatch/.test(vault));
 check('the painter is injected into the vault', /paintSwatch: paintPresetSwatch/.test(ev));
 
-// painting sixteen swatches must not be extravagant
-resetCreatedCanvases();
-const before = createdCanvases.length;
-check('painting is cheap enough to do at boot', before < 400);
-
 // ---- snapshot geometry ----
 // The canvas is painted at roughly the display box's aspect so filling it
 // introduces no visible distortion, and the border is inset by a full stroke
 // width so all four edges land inside the canvas.
 // the dimensions moved into tunables.js so they can be edited by hand
 const { SWATCH } = await import('../tunables.js');
-check('the swatch is painted from the tunable size',
-  /paintPresetSwatch\(swatch, p, SWATCH\.width, SWATCH\.height\)/.test(ev));
 check('that size still matches the box\'s aspect',
   Math.abs((SWATCH.width / SWATCH.height) - (208 / 48)) < 0.6);
 check('the frame is inset past its stroke, so no edge falls off the tile', /const inset = bw \* 1\.6;/.test(paint));
 check('the glyphs are centred both ways',
   /textBaseline = 'middle'/.test(paint) && /\(w - total\) \/ 2/.test(paint) && /const y = h \/ 2/.test(paint));
 
-// ---- saved presets in the grid ----
-const savedFn = (ev.match(/function renderSavedPresets[\s\S]*?\n\}/) || [''])[0];
-check('saved presets go in their own grid (Custom Presets), never among the built-ins',
-  /customGrid\.appendChild\(presetTile\(/.test(savedFn) && !/presetGrid\.appendChild/.test(savedFn));
-check('an empty Custom Presets says how to fill it', /customPresetsEmpty/.test(savedFn));
-check('a saved preset applies its own look and spell, through the look filter',
-  /safeRestore\(stripToLook\(Object\.assign\(\{\}, rec\.settings, \{ spell: rec\.spell \}\)\), 'This spell'\)/.test(savedFn));
-check('tiles are built by one shared helper', /function presetTile/.test(ev));
-
-
-// ---- tiles paint when they are seen (paintWhenSeen) ----
+// ---- saved presets in the grid: a spell kept in this browser is a tile of its own ----
 {
+  const save = () => { registry['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(registry['advancedJson'].value); };
+  const mine = walk(registry['customPresetGrid'], 'preset-custom').find(t => t.dataset.name === 'Mine');
+  check('saved presets go in their own grid (Custom Presets), never among the built-ins',
+    !!mine && !walk(registry['presetGrid'], 'preset-btn').some(t => t.dataset.name === 'Mine'));
+  check('an empty Custom Presets says how to fill it', /customPresetsEmpty/.test((ev.match(/function renderSavedPresets[\s\S]*?\n\}/) || [''])[0]));
+  const built = walk(registry['presetGrid'], 'preset-btn')[0], parts = t => (t ? t.children : []).map(c => c.className).join();
+  check('tiles are built by one shared helper (a saved preset\'s tile is made as a built-in\'s is)', !!mine && parts(mine) === parts(built) && parts(built) === 'preset-swatch,preset-label');
+  registry['poemText'].value = 'my own poem';
+  const before = save();
+  if(mine){ mine.dispatchEvent({ type: 'click' }); await new Promise(r => setTimeout(r, 60)); }
+  const s = save();
+  check('a saved preset applies its own look and spell, through the look filter (never the poem, the locks or the credit it carried)',
+    s.textureType === 'linen' && /^#102030$/i.test(s.bg1) && s.poemText === 'my own poem' && JSON.stringify(s.locks) === JSON.stringify(before.locks) && s.username === before.username);
+}
+
+// ---- tiles paint when they are seen (paintWhenSeen), one a frame ----
+{
+  const swatches = walk(registry['presetGrid'], 'preset-swatch');
   let threw = null;
-  try { globalThis.IntersectionObserver.showAll(); await new Promise(r => setTimeout(r, 50)); } catch(e){ threw = e; }
-  check('preset tiles paint once seen, each without throwing', threw === null);
+  try { globalThis.IntersectionObserver.showAll();
+    for(let t = 0; t < 100 && swatches.some(c => !c.width); t++) await new Promise(r => setTimeout(r, 50)); } catch(e){ threw = e; }
+  check('preset tiles paint once seen, each without throwing', threw === null && swatches.every(c => c.width > 0));
+  // the swatch must be a canvas, not a div with a background, painted at the tunable size
+  check('swatches are painted, not CSS gradients', swatches.length === PRESETS.length && swatches.every(c => typeof c.getContext === 'function' && !(c.style && c.style.background)));
+  check('the swatch is painted from the tunable size', swatches.every(c => c.width === SWATCH.width && c.height === SWATCH.height));
 }
 
 console.log();

@@ -22,7 +22,7 @@ const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8')
 
 // ---- fallback pairs must survive ----
 check('the app height keeps its --vvh fallback before dvh',
-  /height:var\(--vvh\);\s*height:100dvh/.test(css));
+  /\.app\{\s*height:var\(--vvh\);\s*height:100dvh/.test(css));
 check('the tab bar keeps its --vvh fallback before dvh',
   /top:calc\(var\(--vvh\) - var\(--tabbar-h\)\);\s*top:calc\(100dvh - var\(--tabbar-h\)\)/.test(css));
 
